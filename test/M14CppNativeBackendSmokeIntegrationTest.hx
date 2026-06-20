@@ -1045,6 +1045,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(assertSameStatusLiteral, "recursive_bool", "C++ Assert.same status literal should use the bool aggregate shape");
 		assertContains(assertSameStatusLiteral, "error_std__string", "C++ Assert.same status literal should use the string error aggregate shape");
 		assertContains(assertSameStatusLiteral, "std::string()", "C++ Assert.same status null error should initialize as an empty string");
+		final assertPass = new HxFunctionDecl("pass", Public, true, [
+			new HxFunctionArg("msg", "String", Default(EString("pass expected")), true, false),
+			new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+		], "Bool", [SReturn(EBool(true), HxPos.unknown())], "");
+		final assertPassFromPos = new HxFunctionDecl("passFromPos", Public, true, [new HxFunctionArg("pos", "PosInfos", NoDefault, false, false)], "Bool",
+			[SReturn(ECall(EIdent("pass"), [EIdent("pos")]), HxPos.unknown())], "");
+		final assertPassOwner = new HxClassDecl("Assert", false, [assertPass, assertPassFromPos], []);
+		final assertPassNames = new StringMap<Bool>();
+		for (name in ["Assert", "PosInfos"])
+			assertPassNames.set(name, true);
+		final assertPassClasses = new StringMap<HxClassDecl>();
+		assertPassClasses.set("Assert", assertPassOwner);
+		assertPassClasses.set("PosInfos", new HxClassDecl("PosInfos", false, [], []));
+		final assertPassLookup = {names: assertPassNames, byName: assertPassClasses};
+		final assertPassFromPosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(assertPassFromPos, assertPassOwner, assertPassLookup)
+			.join("\n");
+		assertContains(assertPassFromPosLines, "return pass(std::string(\"pass expected\"), pos);",
+			"C++ same-owner calls should pad skipped optional arguments when a PosInfos argument targets the trailing position parameter");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",

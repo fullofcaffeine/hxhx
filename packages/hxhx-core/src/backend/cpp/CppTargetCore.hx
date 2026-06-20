@@ -2626,7 +2626,7 @@ class CppTargetCore {
 			case ECall(EIdent(name), args) if (exprHasOptionalType(EIdent(name), scope)):
 				sanitizeIdentifier(name) + ".value()(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EIdent(name), args):
-				sanitizeIdentifier(name) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+				directCallExpr(name, args, scope);
 			case ECall(EField(receiver, method), args):
 				fieldCallExpr(receiver, method, args, scope);
 			case ECall(callee, args):
@@ -3061,9 +3061,127 @@ class CppTargetCore {
 		if (receiverTypeName != null) {
 			if (method == "create")
 				return "std::make_shared<" + receiverTypeName + ">(" + renderedArgs + ")";
-			return receiverTypeName + "::" + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+			return receiverTypeName
+				+ "::"
+				+ sanitizeIdentifier(method)
+				+ "("
+				+ renderClassMethodCallArgs(receiverTypeName, method, true, args, scope).join(", ")
+				+ ")";
 		}
 		return renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+	}
+
+	static function directCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final fn = currentOwnerMethod(name, scope);
+		final renderedArgs = fn == null ? renderSimpleCallArgs(args, scope) : renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope);
+		return sanitizeIdentifier(name) + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function renderSimpleCallArgs(args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		return [for (arg in args) renderExpr(arg, scope)];
+	}
+
+	static function renderClassMethodCallArgs(className:String, methodName:String, wantStatic:Bool, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		final fn = classMethodDecl(className, methodName, wantStatic, scope);
+		return fn == null ? renderSimpleCallArgs(args, scope) : renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope);
+	}
+
+	static function renderFunctionCallArgs(params:Array<HxFunctionArg>, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		if (params == null || params.length == 0 || args == null || args.length == 0)
+			return renderSimpleCallArgs(args, scope);
+		final out = new Array<String>();
+		var paramIndex = 0;
+		var argIndex = 0;
+		while (argIndex < args.length) {
+			if (paramIndex >= params.length) {
+				out.push(renderExpr(args[argIndex], scope));
+				argIndex++;
+				continue;
+			}
+			final param = params[paramIndex];
+			final arg = args[argIndex];
+			if (callArgMatchesParam(arg, param, scope) || !callParamCanBeSkipped(param)) {
+				out.push(callArgExprForParam(arg, param, scope));
+				paramIndex++;
+				argIndex++;
+				continue;
+			}
+			final later = findLaterMatchingParam(params, arg, paramIndex + 1, scope);
+			if (later < 0) {
+				out.push(callArgExprForParam(arg, param, scope));
+				paramIndex++;
+				argIndex++;
+				continue;
+			}
+			while (paramIndex < later) {
+				out.push(callDefaultArgExpr(params[paramIndex], scope));
+				paramIndex++;
+			}
+			out.push(callArgExprForParam(arg, params[paramIndex], scope));
+			paramIndex++;
+			argIndex++;
+		}
+		return out;
+	}
+
+	static function findLaterMatchingParam(params:Array<HxFunctionArg>, arg:HxExpr, startIndex:Int, ?scope:CppRenderScope):Int {
+		for (i in startIndex...params.length) {
+			var skippable = true;
+			for (j in startIndex...i)
+				if (!callParamCanBeSkipped(params[j]))
+					skippable = false;
+			if (skippable && callArgMatchesParam(arg, params[i], scope))
+				return i;
+		}
+		return -1;
+	}
+
+	static function callParamCanBeSkipped(param:HxFunctionArg):Bool {
+		if (HxFunctionArg.getIsOptional(param))
+			return true;
+		return switch (HxFunctionArg.getDefaultValue(param)) {
+			case NoDefault:
+				false;
+			case Default(_):
+				true;
+		};
+	}
+
+	static function callArgMatchesParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope):Bool {
+		final argType = exprCppType(arg, scope);
+		if (argType == null || argType.length == 0)
+			return false;
+		final paramType = cppFunctionArgType(param, scope);
+		if (argType == paramType)
+			return true;
+		final inner = cppOptionalInnerType(paramType);
+		return inner.length > 0 && argType == inner;
+	}
+
+	static function callArgExprForParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope):String {
+		final paramType = cppFunctionArgType(param, scope);
+		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
+		if (valueType == "std::shared_ptr<PosInfos>")
+			return posInfosSharedPtrExpr(arg, scope);
+		return renderExpr(arg, scope);
+	}
+
+	static function callDefaultArgExpr(param:HxFunctionArg, ?scope:CppRenderScope):String {
+		final paramType = cppFunctionArgType(param, scope);
+		return switch (HxFunctionArg.getDefaultValue(param)) {
+			case Default(expr):
+				final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
+				valueType == "std::string" ? stringExpr(expr, scope) : callArgExprForParam(expr, param, scope);
+			case NoDefault:
+				cppDefaultValue(paramType, scope);
+		};
+	}
+
+	static function cppOptionalInnerType(typeName:String):String {
+		final prefix = "std::optional<";
+		return typeName != null
+			&& StringTools.startsWith(typeName, prefix)
+			&& StringTools.endsWith(typeName, ">") ? typeName.substr(prefix.length, typeName.length - prefix.length - 1) : "";
 	}
 
 	static function globalIntrinsicCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -3259,32 +3377,45 @@ class CppTargetCore {
 	}
 
 	static function classMethodCppReturnType(className:String, methodName:String, wantStatic:Bool, scope:CppRenderScope):String {
-		if (scope == null || className == null || className.length == 0)
+		final fn = classMethodDecl(className, methodName, wantStatic, scope);
+		if (fn == null)
 			return "";
+		return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
+	}
+
+	static function classMethodDecl(className:String, methodName:String, wantStatic:Bool, scope:CppRenderScope):Null<HxFunctionDecl> {
+		if (scope == null || className == null || className.length == 0)
+			return null;
 		final cls = scope.classByName.get(className);
 		if (cls == null)
-			return "";
-		for (fn in HxClassDecl.getFunctions(cls)) {
+			return null;
+		for (fn in HxClassDecl.getFunctions(cls))
 			if (HxFunctionDecl.getName(fn) == methodName
 				&& HxFunctionDecl.getName(fn) != "new"
 				&& HxFunctionDecl.getIsStatic(fn) == wantStatic)
-				return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
-		}
-		return "";
+				return fn;
+		return null;
 	}
 
 	static function currentOwnerMethodCppReturnType(methodName:String, scope:CppRenderScope):String {
-		if (scope == null || scope.owner == null)
+		final fn = currentOwnerMethod(methodName, scope);
+		if (fn == null)
 			return "";
+		final className = sanitizeTypePath(HxClassDecl.getName(scope.owner));
+		return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
+	}
+
+	static function currentOwnerMethod(methodName:String, scope:CppRenderScope):Null<HxFunctionDecl> {
+		if (scope == null || scope.owner == null)
+			return null;
 		final className = sanitizeTypePath(HxClassDecl.getName(scope.owner));
 		final cls = scope.classByName.get(className);
 		if (cls == null)
-			return "";
-		for (fn in HxClassDecl.getFunctions(cls)) {
+			return null;
+		for (fn in HxClassDecl.getFunctions(cls))
 			if (HxFunctionDecl.getName(fn) == methodName && HxFunctionDecl.getName(fn) != "new")
-				return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
-		}
-		return "";
+				return fn;
+		return null;
 	}
 
 	static function callableOrSameOwnerReturnCppType(name:String, ?scope:CppRenderScope):String {
