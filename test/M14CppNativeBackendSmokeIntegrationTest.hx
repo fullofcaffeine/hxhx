@@ -930,8 +930,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SReturn(ETernary(EIdent("fullStack"), EBool(true), EBool(false)), HxPos.unknown())
 			], "");
 		final defaultBoolLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(defaultBoolMethod, optionalOwner, optionalLookup).join("\n");
-		assertContains(defaultBoolLines, "static bool exceptionStackLike(bool fullStack) {",
-			"C++ default false arguments without explicit type hints should infer bool, not std::string");
+		assertContains(defaultBoolLines, "static bool exceptionStackLike(bool fullStack = false) {",
+			"C++ default false arguments without explicit type hints should infer bool and preserve the default value");
 		assertContains(defaultBoolLines, "return ((fullStack) ? true : false);", "C++ default false arguments should be usable as boolean ternary conditions");
 		assertTrue(defaultBoolLines.indexOf("std::string fullStack") < 0, "C++ default false arguments should not fall back to std::string");
 		final switchPatternMethod = new HxFunctionDecl("equalItemsLike", Public, true, [
@@ -1325,6 +1325,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ subclasses without explicit constructors should forward to the base constructor shape");
 		assertTrue(inheritedCtorSubLines.indexOf("InheritedCtorSub()") < 0,
 			"C++ subclasses whose base needs constructor args should not emit an invalid default constructor");
+		final defaultCtorBase = new HxClassDecl("DefaultCtorBase", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("s", "String", Default(EString("test")), false, false),
+				new HxFunctionArg("i", "Int", Default(EInt(-5)), false, false),
+				new HxFunctionArg("b", "Bool", Default(EBool(true)), false, false)
+			], "Void", [], "")
+		], []);
+		final defaultCtorSub = new HxClassDecl("DefaultCtorSub", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("s", "String", Default(EString("test2")), false, false),
+				new HxFunctionArg("i", "Int", Default(EInt(-6)), false, false)
+			], "Void",
+				[SExpr(ECall(ESuper, [EIdent("s"), EIdent("i"), EBool(true)]), HxPos.unknown())], "")
+		], [], "DefaultCtorBase");
+		final defaultCtorNames = new StringMap<Bool>();
+		for (name in ["DefaultCtorBase", "DefaultCtorSub"])
+			defaultCtorNames.set(name, true);
+		final defaultCtorClasses = new StringMap<HxClassDecl>();
+		defaultCtorClasses.set("DefaultCtorBase", defaultCtorBase);
+		defaultCtorClasses.set("DefaultCtorSub", defaultCtorSub);
+		final defaultCtorLookup = {names: defaultCtorNames, byName: defaultCtorClasses};
+		final defaultCtorBaseLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(defaultCtorBase, defaultCtorLookup).join("\n");
+		final defaultCtorSubLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(defaultCtorSub, defaultCtorLookup).join("\n");
+		assertContains(defaultCtorBaseLines, "DefaultCtorBase(std::string s = \"test\", int i = -5, bool b = true) {",
+			"C++ constructors should preserve ordinary String/Int/Bool default argument values");
+		assertContains(defaultCtorSubLines, "DefaultCtorSub(std::string s = \"test2\", int i = -6) : DefaultCtorBase(s, i, true) {",
+			"C++ subclass constructors should preserve defaults while forwarding explicit super args");
 		final optionalCtorBase = new HxClassDecl("OptionalCtorBase", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, false, false)], "Void", [], "")
 		], []);

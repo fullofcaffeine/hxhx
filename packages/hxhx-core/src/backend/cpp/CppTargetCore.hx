@@ -1524,17 +1524,15 @@ class CppTargetCore {
 	}
 
 	static function cppFunctionArgDefaultSuffix(arg:HxFunctionArg, typeName:String):String {
-		if (!HxFunctionArg.getIsOptional(arg) || HxFunctionArg.getIsRest(arg))
+		if (HxFunctionArg.getIsRest(arg))
 			return "";
 		final isOptionalType = isCppOptionalType(typeName);
 		final isReferenceType = isCppReferenceType(typeName);
-		if (!isOptionalType && !isReferenceType)
-			return "";
 		return switch (HxFunctionArg.getDefaultValue(arg)) {
 			case NoDefault:
-				isOptionalType ? " = std::nullopt" : " = nullptr";
+				if (HxFunctionArg.getIsOptional(arg) && (isOptionalType || isReferenceType)) isOptionalType ? " = std::nullopt" : " = nullptr"; else "";
 			case Default(ENull):
-				isOptionalType ? " = std::nullopt" : " = nullptr";
+				if (isOptionalType || isReferenceType) isOptionalType ? " = std::nullopt" : " = nullptr"; else " = " + cppDefaultValue(typeName);
 			case Default(expr):
 				" = " + renderExpr(expr);
 		};
