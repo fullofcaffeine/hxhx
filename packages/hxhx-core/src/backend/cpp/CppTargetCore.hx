@@ -2150,6 +2150,10 @@ class CppTargetCore {
 				"__hxhx_macro_expr_field(" + renderExpr(receiver, scope) + ")";
 			case EField(receiver, "code") if (inferExprCppType(receiver, scope) == "std::string"):
 				stringCodeAtExpr(receiver, EInt(0), scope);
+			case EField(receiver, "low") if (exprCppType(receiver, scope) == "long long"):
+				"static_cast<int>(static_cast<unsigned long long>(" + renderExpr(receiver, scope) + ") & 0xFFFFFFFFULL)";
+			case EField(receiver, "high") if (exprCppType(receiver, scope) == "long long"):
+				"static_cast<int>((static_cast<unsigned long long>(" + renderExpr(receiver, scope) + ") >> 32) & 0xFFFFFFFFULL)";
 			case ENew(typePath, args):
 				newExpr(typePath, args, scope);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
@@ -2288,6 +2292,14 @@ class CppTargetCore {
 				"(" + optionalStorageExpr(left, scope) + ".has_value())";
 			case EBinop("!=", ENull, right) if (exprHasOptionalType(right, scope)):
 				"(" + optionalStorageExpr(right, scope) + ".has_value())";
+			case EBinop("==", left, ENull) if (exprHasNonNullableValueType(left, scope)):
+				"false";
+			case EBinop("==", ENull, right) if (exprHasNonNullableValueType(right, scope)):
+				"false";
+			case EBinop("!=", left, ENull) if (exprHasNonNullableValueType(left, scope)):
+				"true";
+			case EBinop("!=", ENull, right) if (exprHasNonNullableValueType(right, scope)):
+				"true";
 			case EBinop("is", left, right):
 				isTypeExpr(left, right, scope);
 			case EBinop("=>", left, right):
@@ -2773,6 +2785,11 @@ class CppTargetCore {
 
 	static function exprHasOptionalType(expr:HxExpr, ?scope:CppRenderScope):Bool {
 		return isCppOptionalType(exprCppType(expr, scope));
+	}
+
+	static function exprHasNonNullableValueType(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		final typeName = exprCppType(expr, scope);
+		return typeName.length > 0 && !isCppOptionalType(typeName) && !isCppReferenceType(typeName);
 	}
 
 	static function optionalStorageExpr(expr:HxExpr, ?scope:CppRenderScope):String {

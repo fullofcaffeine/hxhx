@@ -1140,6 +1140,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final int64Carrier = new HxClassDecl("__Int64", false, [], [], "", []);
 		final int64CarrierLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(int64Carrier, int64Lookup).join("\n");
 		assertTrue(int64CarrierLines.length == 0, "C++ __Int64 abstract carriers should not emit stale high/low helper bodies");
+		final valueNullComparison = new HxClassDecl("ValueNullComparison", false, [
+			new HxFunctionDecl("stringIsNull", Public, true, [new HxFunctionArg("value", "String", NoDefault, false, false)], "Bool",
+				[SReturn(EBinop("==", EIdent("value"), ENull), HxPos.unknown())], ""),
+			new HxFunctionDecl("stringNotNull", Public, true, [new HxFunctionArg("value", "String", NoDefault, false, false)], "Bool",
+				[SReturn(EBinop("!=", EIdent("value"), ENull), HxPos.unknown())], "")
+		], [], "", []);
+		final valueNullNames = new StringMap<Bool>();
+		valueNullNames.set("ValueNullComparison", true);
+		final valueNullClasses = new StringMap<HxClassDecl>();
+		valueNullClasses.set("ValueNullComparison", valueNullComparison);
+		final valueNullLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(valueNullComparison, {names: valueNullNames, byName: valueNullClasses}).join("\n");
+		assertContains(valueNullLines, "return false;", "C++ non-nullable value == null should lower to false instead of comparing to nullptr");
+		assertContains(valueNullLines, "return true;", "C++ non-nullable value != null should lower to true instead of comparing to nullptr");
 		final bytesData = new HxClassDecl("BytesData", false, [], [], "", []);
 		final bytes = new HxClassDecl("Bytes", false, [
 			new HxFunctionDecl("new", Public, false, [
@@ -1174,6 +1188,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				new HxFunctionArg("v", "Float", NoDefault, false, false)
 			], "Void", [
 				SExpr(ECall(EField(EIdent("__global__"), "__hxcpp_memory_set_double"), [EIdent("b"), EIdent("pos"), EIdent("v")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("setInt64", Public, false, [
+				new HxFunctionArg("pos", "Int", NoDefault, false, false),
+				new HxFunctionArg("v", "Int64", NoDefault, false, false)
+			], "Void", [
+				SExpr(ECall(EIdent("setInt32"), [EIdent("pos"), EField(EIdent("v"), "low")]), HxPos.unknown()),
+				SExpr(ECall(EIdent("setInt32"), [EBinop("+", EIdent("pos"), EInt(4)), EField(EIdent("v"), "high")]), HxPos.unknown())
 			], ""),
 			new HxFunctionDecl("getString", Public, false, [
 				new HxFunctionArg("pos", "Int", NoDefault, false, false),
@@ -1239,6 +1260,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Bytes.fill should lower hxcpp memset without returning a void helper");
 		assertContains(bytesLines, "return __hxhx_memory_get_double(b, pos);", "C++ Bytes.getDouble should lower through target byte-memory helpers");
 		assertContains(bytesLines, "__hxhx_memory_set_double(b, pos, v);", "C++ Bytes.setDouble should lower through target byte-memory helpers");
+		assertContains(bytesLines, "setInt32(pos, static_cast<int>(static_cast<unsigned long long>(v) & 0xFFFFFFFFULL));",
+			"C++ Int64.low on primitive Int64 should lower to a low 32-bit projection");
+		assertContains(bytesLines, "setInt32((pos + 4), static_cast<int>((static_cast<unsigned long long>(v) >> 32) & 0xFFFFFFFFULL));",
+			"C++ Int64.high on primitive Int64 should lower to a high 32-bit projection");
 		assertContains(bytesLines, "__hxhx_string_of_bytes(b, result, pos, len);", "C++ Bytes.getString should lower through target string byte helpers");
 		assertContains(bytesLines, "__hxhx_bytes_of_string(a, s);", "C++ Bytes.ofString should lower through target byte string helpers");
 		assertContains(bytesLines, "__hxhx_bytes_blit(b, pos, (src->b), srcpos, len);", "C++ BytesData.blit should lower through target runtime support");
