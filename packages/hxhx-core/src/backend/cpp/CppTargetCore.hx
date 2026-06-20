@@ -1114,7 +1114,24 @@ class CppTargetCore {
 				}
 			}
 		}
+		for (typed in program.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				if (shouldEmitGenericClassFactory(cls, mainName))
+					out.push(renderGenericClassFactoryDeclaration(cls, classLookup));
+			}
+		}
 		return out;
+	}
+
+	static function shouldEmitGenericClassFactory(cls:HxClassDecl, mainName:String):Bool {
+		final rawName = HxClassDecl.getName(cls);
+		if (rawName == mainName || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName) || isBytesDataTypeName(rawName))
+			return false;
+		if (isPosInfosSupportClass(cls) || isStdVectorHelperClass(cls) || isArrayBackedAbstractClass(cls) || isPrimitiveBackedAbstractClass(cls)
+			|| isStdArrayHelperClass(cls))
+			return false;
+		return genericClassTemplateParams(cls).length > 0 && findConstructor(cls) != null;
 	}
 
 	/**
@@ -1536,6 +1553,26 @@ class CppTargetCore {
 			+ ");",
 			"}"
 		];
+	}
+
+	static function renderGenericClassFactoryDeclaration(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final typeParams = genericClassTemplateParams(cls);
+		final ctor = findConstructor(cls);
+		if (typeParams.length == 0 || ctor == null)
+			return [];
+		final scope = renderScope(cls, classLookup, "void");
+		prepareFunctionScope(scope, ctor);
+		return [genericTemplatePrefix(typeParams),
+			"std::shared_ptr<"
+			+ className
+			+ "<"
+			+ typeParams.join(", ")
+			+ ">> __hxhx_make_shared_"
+			+ className
+			+ "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(ctor), scope)
+			+ ");"];
 	}
 
 	static function renderImplicitConstructors(className:String, baseType:Null<String>, scope:CppRenderScope):Array<String> {

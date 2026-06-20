@@ -3047,6 +3047,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should compare Assert.sameAs Dynamic values through the compile-safe helper");
 		assertContains(source, "(__hxhx_status.expectedValue) = __hxhx_stringify(expected);", "C++ smoke should stringify retained structural status fields");
 		assertContains(source, "struct Class;", "C++ smoke should forward-declare Class when Class-valued parameters are emitted");
+		final genericNodeFactoryDecl = "std::shared_ptr<GenericListNode<T>> __hxhx_make_shared_GenericListNode(T item, std::shared_ptr<GenericListNode<T>> next);";
+		final genericNodeStruct = "template<typename T>\nstruct GenericListNode {";
+		final genericNodeFactoryBody = "std::shared_ptr<GenericListNode<T>> __hxhx_make_shared_GenericListNode(T item, std::shared_ptr<GenericListNode<T>> next) {";
+		assertContains(source, genericNodeFactoryDecl, "C++ smoke should forward-declare generic factories before template bodies can call them");
+		assertTrue(source.indexOf(genericNodeFactoryDecl) < source.indexOf(genericNodeStruct),
+			"C++ generic factory declarations should appear before generic class template definitions");
+		assertTrue(source.indexOf(genericNodeStruct) < source.indexOf(genericNodeFactoryBody),
+			"C++ generic factory bodies should remain after the generic class template definition");
 		assertContains(source, "static bool isOfType(std::string v, std::shared_ptr<Class> t)",
 			"C++ smoke should preserve Class-valued helper parameters instead of falling back to strings");
 		assertContains(source, "int casted = helper(5);", "C++ smoke should lower cast expression with explicit local type");
