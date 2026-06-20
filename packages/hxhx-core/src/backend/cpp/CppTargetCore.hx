@@ -148,6 +148,9 @@ class CppTargetCore {
 		out.push("  explicit ConstPointer(const char* ptr = nullptr) : ptr(ptr) {}");
 		out.push("};");
 		out.push("");
+		for (line in CppRuntimeSupport.enumValueTypeLines())
+			out.push(line);
+		out.push("");
 		out.push("static std::string __hxhx_string_from_pointer(const char* ptr) {");
 		out.push("  return ptr == nullptr ? std::string() : std::string(ptr);");
 		out.push("}");
@@ -504,6 +507,9 @@ class CppTargetCore {
 		out.push("  return type == \"Bool\" || type == \"StdTypes.Bool\" || type == \"Dynamic\" || type == \"Any\";");
 		out.push("}");
 		out.push("");
+		for (line in CppRuntimeSupport.anyIsTypeLines())
+			out.push(line);
+		out.push("");
 		out.push("template<typename T>");
 		out.push("static bool __hxhx_is_type(const std::vector<T>&, const std::string& type) {");
 		out.push("  return type == \"Array\" || type == \"Dynamic\" || type == \"Any\";");
@@ -534,6 +540,10 @@ class CppTargetCore {
 		out.push("  return std::string(\"Bool\");");
 		out.push("}");
 		out.push("");
+		out.push("static std::string __hxhx_type_name(const std::shared_ptr<EnumValue>& value) {");
+		out.push("  return value == nullptr ? std::string(\"Null\") : value->getName();");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_type_name(const std::any& value) {");
 		out.push("  if (!value.has_value()) return std::string(\"Null\");");
 		out.push("  const std::type_info& type = value.type();");
@@ -541,6 +551,7 @@ class CppTargetCore {
 		out.push("  if (type == typeid(bool)) return std::string(\"Bool\");");
 		out.push("  if (type == typeid(int)) return std::string(\"Int\");");
 		out.push("  if (type == typeid(double) || type == typeid(float)) return std::string(\"Float\");");
+		out.push("  if (type == typeid(std::shared_ptr<EnumValue>)) return __hxhx_type_name(std::any_cast<std::shared_ptr<EnumValue>>(value));");
 		out.push("  return std::string(\"Dynamic\");");
 		out.push("}");
 		out.push("");
@@ -561,6 +572,10 @@ class CppTargetCore {
 		out.push("  return value ? std::string(\"true\") : std::string(\"false\");");
 		out.push("}");
 		out.push("");
+		out.push("static std::string __hxhx_stringify(const std::shared_ptr<EnumValue>& value) {");
+		out.push("  return value == nullptr ? std::string(\"null\") : value->getName();");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_stringify(const std::any& value) {");
 		out.push("  if (!value.has_value()) return std::string();");
 		out.push("  const std::type_info& type = value.type();");
@@ -570,8 +585,12 @@ class CppTargetCore {
 		out.push("  if (type == typeid(int)) return std::to_string(std::any_cast<int>(value));");
 		out.push("  if (type == typeid(double)) return std::to_string(std::any_cast<double>(value));");
 		out.push("  if (type == typeid(float)) return std::to_string(std::any_cast<float>(value));");
+		out.push("  if (type == typeid(std::shared_ptr<EnumValue>)) return __hxhx_stringify(std::any_cast<std::shared_ptr<EnumValue>>(value));");
 		out.push("  return __hxhx_type_name(value);");
 		out.push("}");
+		out.push("");
+		for (line in CppRuntimeSupport.enumValueDynamicLines())
+			out.push(line);
 		out.push("");
 		out.push("template<typename T, typename = void>");
 		out.push("struct __hxhx_is_streamable : std::false_type {};");
@@ -589,6 +608,9 @@ class CppTargetCore {
 		out.push("    return __hxhx_type_name(value);");
 		out.push("  }");
 		out.push("}");
+		out.push("");
+		for (line in CppRuntimeSupport.compareLines())
+			out.push(line);
 		out.push("");
 		out.push("template<typename T>");
 		out.push("static std::string __hxhx_stringify(const std::vector<T>& values) {");
@@ -3671,6 +3693,8 @@ class CppTargetCore {
 			return "__hxhx_join(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "compare")
 			return reflectCompareExpr(args, scope);
+		if (isReflectStaticReceiver(receiver) && method == "isEnumValue" && args.length == 1)
+			return "__hxhx_is_enum_value(" + renderExpr(args[0], scope) + ")";
 		if (isCppConstPointerStaticReceiver(receiver) && method == "fromPointer" && args.length == 1)
 			return "std::make_shared<ConstPointer>(" + renderExpr(args[0], scope) + ")";
 		if (receiverTypeName != null) {
@@ -3699,7 +3723,7 @@ class CppTargetCore {
 			+ reflectCompareArgExpr(args[0], scope)
 			+ "; auto __hxhx_cmp_right = "
 			+ reflectCompareArgExpr(args[1], scope)
-			+ "; return (__hxhx_cmp_left < __hxhx_cmp_right ? -1 : (__hxhx_cmp_left > __hxhx_cmp_right ? 1 : 0)); })()";
+			+ "; return __hxhx_compare(__hxhx_cmp_left, __hxhx_cmp_right); })()";
 	}
 
 	static function reflectCompareArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -3793,6 +3817,10 @@ class CppTargetCore {
 		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
 		if (valueType == "std::shared_ptr<PosInfos>")
 			return posInfosSharedPtrExpr(arg, scope);
+		if (valueType == "std::shared_ptr<EnumValue>" && exprCppType(arg, scope) == "std::any")
+			return "__hxhx_enum_value_ptr(" + renderExpr(arg, scope) + ")";
+		if (valueType == "std::vector<std::string>" && exprCppType(arg, scope) == "std::any")
+			return "__hxhx_string_vector_any(" + renderExpr(arg, scope) + ")";
 		if (isCppVectorType(valueType)) {
 			switch (arg) {
 				case EArrayDecl([]):
@@ -4162,9 +4190,9 @@ class CppTargetCore {
 
 	static function isCppCoreExternClass(name:String):Bool {
 		final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
-		return clean == "Math" || clean == "NativeArray" || clean == "Pointer" || clean == "ConstPointer" || clean == "RawConstPointer"
-			|| clean == "Reference" || clean == "Star" || clean == "AutoCast" || clean == "ArrayBase" || isBytesDataTypeName(clean)
-			|| isCppPrimitiveIntrinsicClass(clean);
+		return clean == "Math" || clean == "NativeArray" || clean == "EnumValue" || clean == "Pointer" || clean == "ConstPointer"
+			|| clean == "RawConstPointer" || clean == "Reference" || clean == "Star" || clean == "AutoCast" || clean == "ArrayBase"
+			|| isBytesDataTypeName(clean) || isCppPrimitiveIntrinsicClass(clean);
 	}
 
 	static function isBytesDataTypeName(name:String):Bool {
@@ -4246,6 +4274,8 @@ class CppTargetCore {
 				"int";
 			case ECall(EField(receiver, "compare"), _) if (isReflectStaticReceiver(receiver)):
 				"int";
+			case ECall(EField(receiver, "isEnumValue"), _) if (isReflectStaticReceiver(receiver)):
+				"bool";
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				inferExprCppType(args[2], scope);
 			case ECall(EIdent(name), _):

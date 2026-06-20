@@ -821,7 +821,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "compare"), [EString("a"), EString("b")]));
 		assertContains(reflectCompareExpr, "auto __hxhx_cmp_left = std::string(\"a\");",
 			"C++ Reflect.compare string literals should compare std::string values instead of raw C string addresses");
-		assertContains(reflectCompareExpr, "return (__hxhx_cmp_left < __hxhx_cmp_right ? -1",
+		assertContains(reflectCompareExpr, "return __hxhx_compare(__hxhx_cmp_left, __hxhx_cmp_right);",
 			"C++ Reflect.compare should lower to a target-owned numeric comparison expression");
 		assertTrue(reflectCompareExpr.indexOf("Reflect::compare") < 0, "C++ Reflect.compare should not emit an undeclared generated static helper call");
 		final reflectCompareOwner = new HxClassDecl("ReflectCompareOwner", false, [], []);
@@ -838,6 +838,43 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(reflectCompareLines, "int compareLike(std::string left, std::string right) {",
 			"C++ helpers returning Reflect.compare should infer Int instead of falling back to String");
 		assertTrue(reflectCompareLines.indexOf("std::string compareLike") < 0, "C++ Reflect.compare helpers should not infer std::string returns");
+		final enumValueMapOwner = new HxClassDecl("EnumValueMap", false, [
+			new HxFunctionDecl("compare", Public, false, [
+				new HxFunctionArg("k1", "EnumValue", NoDefault, false, false),
+				new HxFunctionArg("k2", "EnumValue", NoDefault, false, false)
+			], "Int", [SReturn(EInt(0), HxPos.unknown())], ""),
+			new HxFunctionDecl("compareArgs", Public, false, [
+				new HxFunctionArg("a1", "Array<String>", NoDefault, false, false),
+				new HxFunctionArg("a2", "Array<String>", NoDefault, false, false)
+			], "Int", [SReturn(EInt(0), HxPos.unknown())], "")
+		], []);
+		final enumValueMapNames = new StringMap<Bool>();
+		enumValueMapNames.set("EnumValueMap", true);
+		final enumValueMapClasses = new StringMap<HxClassDecl>();
+		enumValueMapClasses.set("EnumValueMap", enumValueMapOwner);
+		final enumValueMapLookup = {names: enumValueMapNames, byName: enumValueMapClasses};
+		final enumValueMapCompareArg = new HxFunctionDecl("compareArg", Public, false, [
+			new HxFunctionArg("v1", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("v2", "Dynamic", NoDefault, false, false)
+		], "Int", [
+			SIf(ECall(EField(EIdent("Reflect"), "isEnumValue"), [EIdent("v1")]),
+				SReturn(ECall(EIdent("compare"), [EIdent("v1"), EIdent("v2")]), HxPos.unknown()), null, HxPos.unknown()),
+			SIf(EBinop("is", EIdent("v1"), EIdent("Array")), SReturn(ECall(EIdent("compareArgs"), [EIdent("v1"), EIdent("v2")]), HxPos.unknown()), null,
+				HxPos.unknown()),
+			SReturn(ECall(EField(EIdent("Reflect"), "compare"), [EIdent("v1"), EIdent("v2")]), HxPos.unknown())
+		], "");
+		final enumValueMapCompareArgLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(enumValueMapCompareArg, enumValueMapOwner, enumValueMapLookup).join("\n");
+		assertContains(enumValueMapCompareArgLines, "int compareArg(std::any v1, std::any v2) {",
+			"C++ EnumValueMap-style Dynamic compare helpers should keep erased std::any arguments");
+		assertContains(enumValueMapCompareArgLines, "if (__hxhx_is_enum_value(v1)) {",
+			"C++ Reflect.isEnumValue should lower to target-owned enum-value detection for erased values");
+		assertContains(enumValueMapCompareArgLines, "compare(__hxhx_enum_value_ptr(v1), __hxhx_enum_value_ptr(v2))",
+			"C++ erased enum compare calls should extract EnumValue pointers from std::any arguments");
+		assertContains(enumValueMapCompareArgLines, "compareArgs(__hxhx_string_vector_any(v1), __hxhx_string_vector_any(v2))",
+			"C++ erased array compare calls should extract string arrays from std::any arguments");
+		assertContains(enumValueMapCompareArgLines, "return __hxhx_compare(__hxhx_cmp_left, __hxhx_cmp_right);",
+			"C++ Reflect.compare should not emit raw std::any less-than/greater-than comparisons");
 		final typeNameStringTernary = @:privateAccess backend.cpp.CppTargetCore.stringExpr(ECall(EField(EIdent("Std"), "string"), [
 			ETernary(EBinop("!=", EIdent("type"), ENull), ECall(EField(EIdent("Type"), "getClassName"), [EIdent("type")]), EString("Dynamic"))
 		]));
