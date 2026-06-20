@@ -1146,20 +1146,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(assertCreateEventLines.indexOf("std::to_string([&](auto e)") < 0, "C++ createEvent-like helpers should not stringify returned lambdas");
 		final typeHelper = new HxClassDecl("Type", false, [
 			new HxFunctionDecl("getClass", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "Class<Dynamic>", [], ""),
-			new HxFunctionDecl("getEnum", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "EnumValue", [], "")
+			new HxFunctionDecl("getEnum", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "Enum<Dynamic>", [], "")
 		], []);
 		final classValue = new HxClassDecl("Class", false, [], []);
-		final enumValue = new HxClassDecl("EnumValue", false, [], []);
+		final enumValue = new HxClassDecl("Enum", false, [], []);
 		final typeStringOwner = new HxClassDecl("TypeStringOwner", false, [], []);
 		final typeStringNames = new StringMap<Bool>();
-		for (name in ["TypeStringOwner", "Type", "Class", "EnumValue"])
+		for (name in ["TypeStringOwner", "Type", "Class", "Enum"])
 			typeStringNames.set(name, true);
 		final typeStringClasses = new StringMap<HxClassDecl>();
 		typeStringClasses.set("TypeStringOwner", typeStringOwner);
 		typeStringClasses.set("Type", typeHelper);
 		typeStringClasses.set("Class", classValue);
-		typeStringClasses.set("EnumValue", enumValue);
+		typeStringClasses.set("Enum", enumValue);
 		final typeStringLookup = {names: typeStringNames, byName: typeStringClasses};
+		final typeHelperLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(typeHelper)[0], typeHelper,
+			typeStringLookup)
+			.join("\n");
+		assertContains(typeHelperLines, "template<typename TValue>\n  static std::shared_ptr<Class> getClass(const TValue& value)",
+			"C++ Type.getClass should accept erased values through a template boundary");
 		final typeStringMethod = new HxFunctionDecl("typeToStringLike", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)],
 			"String", [
 				SVar("cls", "Dynamic", ENull, HxPos.unknown()),
@@ -1175,11 +1180,43 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(typeStringLines, "std::shared_ptr<Class> cls = nullptr;",
 			"C++ Dynamic locals assigned Type.getClass results should declare Class meta-value storage");
 		assertContains(typeStringLines, "cls = Type::getClass(value);", "C++ Class meta-value locals should accept Type.getClass assignments");
-		assertContains(typeStringLines, "std::shared_ptr<EnumValue> enm = nullptr;",
-			"C++ Dynamic locals assigned Type.getEnum results should declare EnumValue meta-value storage");
-		assertContains(typeStringLines, "enm = Type::getEnum(value);", "C++ EnumValue meta-value locals should accept Type.getEnum assignments");
+		assertContains(typeStringLines, "std::shared_ptr<Enum> enm = nullptr;",
+			"C++ Dynamic locals assigned Type.getEnum results should declare Enum meta-value storage");
+		assertContains(typeStringLines, "enm = Type::getEnum(value);", "C++ Enum meta-value locals should accept Type.getEnum assignments");
 		assertTrue(typeStringLines.indexOf("std::string cls") < 0, "C++ Type.getClass locals should not be declared as std::string");
 		assertTrue(typeStringLines.indexOf("std::string enm") < 0, "C++ Type.getEnum locals should not be declared as std::string");
+		final heteroTypeStringMethod = new HxFunctionDecl("typeToStringHetero", Public, true,
+			[new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "String", [
+				STry(SBlock([
+					SVar("_t", "", ECall(EField(EIdent("Type"), "getClass"), [EIdent("value")]), HxPos.unknown()),
+					SIf(EBinop("!=", EIdent("_t"), ENull), SExpr(EBinop("=", EIdent("value"), EIdent("_t")), HxPos.unknown()), null, HxPos.unknown())
+				], HxPos.unknown()), [
+					{
+						name: "e",
+						typeHint: "Dynamic",
+						body: SBlock([], HxPos.unknown())
+					}
+				], HxPos.unknown()),
+				STry(SBlock([
+					SVar("_t2", "", ECall(EField(EIdent("Type"), "getEnum"), [EIdent("value")]), HxPos.unknown()),
+					SIf(EBinop("!=", EIdent("_t2"), ENull), SExpr(EBinop("=", EIdent("value"), EIdent("_t2")), HxPos.unknown()), null, HxPos.unknown())
+				], HxPos.unknown()), [
+					{
+						name: "e",
+						typeHint: "Dynamic",
+						body: SBlock([], HxPos.unknown())
+					}
+				], HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("value")]), HxPos.unknown())
+			], "");
+		final heteroTypeStringLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(heteroTypeStringMethod, typeStringOwner, typeStringLookup).join("\n");
+		assertContains(heteroTypeStringLines, "static std::string typeToStringHetero(std::any value)",
+			"C++ Dynamic parameters reassigned across Class/Enum meta-values should use erased std::any storage");
+		assertContains(heteroTypeStringLines, "value = _t;", "C++ erased Dynamic parameters should accept Class meta-value reassignment");
+		assertContains(heteroTypeStringLines, "value = _t2;", "C++ erased Dynamic parameters should accept Enum meta-value reassignment");
+		assertTrue(heteroTypeStringLines.indexOf("static std::string typeToStringHetero(std::string value)") < 0,
+			"C++ heterogeneously reassigned Dynamic parameters should not remain std::string");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",
