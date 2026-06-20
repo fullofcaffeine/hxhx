@@ -1308,6 +1308,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(metadataType == "std::string", "C++ expression metadata should infer from the wrapped expression, got: " + metadataType);
 		assertTrue(metadataExpr.indexOf("__hxhx_expr_meta") < 0 && metadataStringExpr.indexOf("__hxhx_expr_meta") < 0,
 			"C++ expression metadata should not leak as a runtime helper call");
+		final iMapInterface = new HxClassDecl("IMap", false, [
+			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("k", "K", NoDefault, false, false)], "Null<V>", [], ""),
+			new HxFunctionDecl("keys", Public, false, [], "Iterator<K>", [], ""),
+			new HxFunctionDecl("keyValueIterator", Public, false, [], "KeyValueIterator<K,V>", [], "")
+		], [], "", null, true);
+		final iMapNames = new StringMap<Bool>();
+		iMapNames.set("IMap", true);
+		final iMapClasses = new StringMap<HxClassDecl>();
+		iMapClasses.set("IMap", iMapInterface);
+		final iMapLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(iMapInterface, {names: iMapNames, byName: iMapClasses}).join("\n");
+		assertContains(iMapLines, "struct IMap {", "C++ interfaces should render as abstract structs instead of being dropped");
+		assertContains(iMapLines, "virtual ~IMap() = default;", "C++ interfaces should expose a virtual destructor");
+		assertContains(iMapLines, "virtual std::optional<std::string> get(std::string k) = 0;",
+			"C++ IMap-like interfaces should declare get instead of leaving only a forward declaration");
+		assertContains(iMapLines, "virtual std::shared_ptr<__hxhx_iterator<std::string>> keys() = 0;",
+			"C++ IMap-like interfaces should declare keys for MapKeyValueIterator");
+		assertContains(iMapLines, "virtual std::shared_ptr<KeyValueIterator> keyValueIterator() = 0;",
+			"C++ IMap-like interfaces should preserve class-like iterator return declarations");
 		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [
 			new HxFunctionArg("ex", "Dynamic", NoDefault, false, false),
 			new HxFunctionArg("msg", "String", NoDefault, false, false)

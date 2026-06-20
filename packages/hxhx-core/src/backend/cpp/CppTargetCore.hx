@@ -1003,8 +1003,6 @@ class CppTargetCore {
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
-				if (HxClassDecl.getIsInterface(cls))
-					continue;
 				final name = sanitizeTypePath(HxClassDecl.getName(cls));
 				names.set(name, true);
 				byName.set(name, cls);
@@ -1022,7 +1020,7 @@ class CppTargetCore {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
-				if (rawName == mainName || emitted.exists(rawName) || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName))
+				if (rawName == mainName || emitted.exists(rawName) || isCppCoreExternClass(rawName))
 					continue;
 				emitted.set(rawName, true);
 				helpers.push(cls);
@@ -1223,6 +1221,8 @@ class CppTargetCore {
 			return [];
 		if (isBytesDataTypeName(HxClassDecl.getName(cls)))
 			return [];
+		if (HxClassDecl.getIsInterface(cls))
+			return renderInterfaceClass(cls, classLookup);
 		if (isPosInfosPlaceholder(cls))
 			return renderPosInfosClass();
 		if (isStdVectorHelperClass(cls))
@@ -1281,6 +1281,23 @@ class CppTargetCore {
 		out.push("};");
 		for (line in renderGenericClassFactory(className, typeParams, ctor, scope))
 			out.push(line);
+		return out;
+	}
+
+	static function renderInterfaceClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final scope = renderScope(cls, classLookup, "void");
+		final out = ["struct " + className + " {", "  virtual ~" + className + "() = default;"];
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getIsStatic(fn))
+				continue;
+			final returnType = cppFunctionReturnType(fn, cls, classLookup);
+			scope.returnType = returnType;
+			prepareFunctionScope(scope, fn);
+			out.push("  virtual " + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
+				+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") = 0;");
+		}
+		out.push("};");
 		return out;
 	}
 
