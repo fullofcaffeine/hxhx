@@ -1072,8 +1072,13 @@ class CppTargetCore {
 				out.push(missingInterface);
 			else if (typeParams != null && typeParams.length > 0)
 				out.push([genericTemplatePrefix(typeParams), "struct " + name + ";"]);
-			else
-				out.push(["struct " + name + ";"]);
+			else {
+				final missingParams = missingGenericForwardParams(name);
+				if (missingParams.length > 0)
+					out.push([genericTemplatePrefix(missingParams), "struct " + name + ";"]);
+				else
+					out.push(["struct " + name + ";"]);
+			}
 		}
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
@@ -1081,7 +1086,7 @@ class CppTargetCore {
 				final rawName = HxClassDecl.getName(cls);
 				if (rawName == mainName || emitted.exists(rawName) || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName))
 					continue;
-				emitType(rawName, genericClassTemplateParams(cls));
+				emitType(rawName, isStdArrayHelperClass(cls) ? [] : genericClassTemplateParams(cls));
 			}
 		}
 		for (typed in program.getTypedModules()) {
@@ -1141,6 +1146,17 @@ class CppTargetCore {
 			case _:
 				null;
 		}
+	}
+
+	static function missingGenericForwardParams(name:String):Array<String> {
+		return switch (sanitizeTypePath(typeBaseName(name == null ? "" : name))) {
+			case "Binop" | "IMap" | "TreeNode" | "BalancedTree" | "EnumValueMap":
+				["K", "V"];
+			case "Constant" | "Tree":
+				["T"];
+			case _:
+				[];
+		};
 	}
 
 	static function shouldForwardDeclareMissingType(name:String, classLookup:CppClassLookup):Bool {
@@ -1422,7 +1438,7 @@ class CppTargetCore {
 		if (isStdArrayHelperClass(cls))
 			return renderStdArrayHelperClass(cls, classLookup);
 		final typeParams = genericClassTemplateParams(cls);
-		final baseType = baseTypeName(cls);
+		final baseType = inheritedCppBaseTypeName(cls, classLookup);
 		final baseTypes = inheritedCppBaseTypes(cls, classLookup);
 		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
 		out.push("struct " + className + (baseTypes.length == 0 ? "" : " : " + baseTypes.join(", ")) + " {");
@@ -1476,8 +1492,11 @@ class CppTargetCore {
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		if (HxClassDecl.getFunctions(cls).length == 0 && renderMissingInterfaceDeclaration(className) != null)
 			return [];
+		final typeParams = genericClassTemplateParams(cls);
 		final scope = renderScope(cls, classLookup, "void");
-		final out = ["struct " + className + " {", "  virtual ~" + className + "() = default;"];
+		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
+		out.push("struct " + className + " {");
+		out.push("  virtual ~" + className + "() = default;");
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getIsStatic(fn))
 				continue;
@@ -1848,9 +1867,16 @@ class CppTargetCore {
 		return sanitizeTypePath(typeBaseName(extendsPath));
 	}
 
+	static function inheritedCppBaseTypeName(cls:HxClassDecl, classLookup:CppClassLookup):Null<String> {
+		final extendsPath = HxClassDecl.getExtendsPath(cls);
+		if (extendsPath == null || extendsPath.length == 0)
+			return null;
+		return cppClassTemplateTypeName(extendsPath, renderScope(cls, classLookup, "void"), classLookup);
+	}
+
 	static function inheritedCppBaseTypes(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final bases = new Array<String>();
-		final baseType = baseTypeName(cls);
+		final baseType = inheritedCppBaseTypeName(cls, classLookup);
 		if (baseType != null && baseType.length > 0)
 			bases.push("public " + baseType);
 		for (iface in implementedInterfaceNames(cls, classLookup))
@@ -1878,6 +1904,13 @@ class CppTargetCore {
 		for (name in syntheticStructuralInterfaceNames(cls, classLookup))
 			add(name);
 		return out;
+	}
+
+	static function cppClassTemplateTypeName(typeHint:String, scope:CppRenderScope, classLookup:CppClassLookup):String {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final base = sanitizeTypePath(typeBaseName(hint));
+		final args = genericTypeHintArgs(hint);
+		return args.length == 0 ? base : base + "<" + [for (arg in args) cppTypeHint(arg, scope, classLookup)].join(", ") + ">";
 	}
 
 	static function syntheticStructuralInterfaceNames(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -2098,6 +2131,13 @@ class CppTargetCore {
 		if (ctor != null)
 			for (arg in HxFunctionDecl.getArgs(ctor))
 				addHint(HxFunctionArg.getTypeHint(arg));
+		if (HxClassDecl.getIsInterface(cls)) {
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				for (arg in HxFunctionDecl.getArgs(fn))
+					addHint(HxFunctionArg.getTypeHint(arg));
+				addHint(HxFunctionDecl.getReturnTypeHint(fn));
+			}
+		}
 		return params;
 	}
 
@@ -2153,7 +2193,10 @@ class CppTargetCore {
 
 	static function constructorInitializerList(ctor:HxFunctionDecl, scope:CppRenderScope):String {
 		final parts = new Array<String>();
-		final baseType = scope == null || scope.owner == null ? null : baseTypeName(scope.owner);
+		final baseType = scope == null || scope.owner == null ? null : inheritedCppBaseTypeName(scope.owner, {
+			names: scope.classNames,
+			byName: scope.classByName
+		});
 		if (baseType != null)
 			switch (constructorSuperCallArgs(HxFunctionDecl.getBody(ctor))) {
 				case null:
@@ -3531,6 +3574,8 @@ class CppTargetCore {
 		return switch (init) {
 			case ENull if (isCppOptionalType(declaredType)):
 				"std::nullopt";
+			case ENew(typePath, args):
+				newExpr(typePath, args, scope, localType);
 			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
 				nativeArrayCreateExpr(args[0], scope, localType);
 			case ECall(EField(receiver, "create"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
@@ -3568,7 +3613,7 @@ class CppTargetCore {
 		return nativeArrayUnsafeGetExpr(array, index, scope) + " = " + renderExpr(value, scope);
 	}
 
-	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?expectedCppType:String):String {
 		final className = sanitizeTypePath(typeBaseName(typePath));
 		if (isBytesDataTypeName(typePath)) {
 			if (args.length > 0)
@@ -3581,7 +3626,11 @@ class CppTargetCore {
 			return className + "(" + renderConstructorArgs(className, args, scope).join(", ") + ")";
 		final renderedArgs = renderConstructorArgs(className, args, scope).join(", ");
 		if (scopeHasClass(scope, className) && genericClassTypeParamsForName(className, scope).length > 0) {
-			final templateArgs = scopedTemplateArgsForClass(className, scope);
+			var templateArgs = scopedTemplateArgsForClass(className, scope);
+			if (templateArgs.length == 0)
+				templateArgs = templateArgsFromExpectedClassType(className, expectedCppType);
+			if (templateArgs.length == 0 && args.length == 0)
+				templateArgs = templateArgsFromExpectedClassType(className, scope == null ? "" : scope.returnType);
 			return "__hxhx_make_shared_"
 				+ className
 				+ (templateArgs.length > 0 ? "<" + templateArgs.join(", ") + ">" : "")
@@ -3593,6 +3642,16 @@ class CppTargetCore {
 			+ "("
 			+ renderedArgs
 			+ ")";
+	}
+
+	static function templateArgsFromExpectedClassType(className:String, expectedCppType:String):Array<String> {
+		if (expectedCppType == null || expectedCppType.length == 0)
+			return [];
+		final prefix = "std::shared_ptr<" + className + "<";
+		if (!StringTools.startsWith(expectedCppType, prefix) || !StringTools.endsWith(expectedCppType, ">>"))
+			return [];
+		final inner = expectedCppType.substr(prefix.length, expectedCppType.length - prefix.length - 2);
+		return splitTopLevelComma(inner).map(arg -> StringTools.trim(arg)).filter(arg -> arg.length > 0);
 	}
 
 	static function genericClassTypeParamsForName(className:String, ?scope:CppRenderScope):Array<String> {

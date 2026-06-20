@@ -1631,11 +1631,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final iMapClasses = new StringMap<HxClassDecl>();
 		iMapClasses.set("IMap", iMapInterface);
 		final iMapLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(iMapInterface, {names: iMapNames, byName: iMapClasses}).join("\n");
-		assertContains(iMapLines, "struct IMap {", "C++ interfaces should render as abstract structs instead of being dropped");
+		assertContains(iMapLines, "template<typename K, typename V>\nstruct IMap {",
+			"C++ generic interfaces should render as templates instead of erasing their method type parameters");
 		assertContains(iMapLines, "virtual ~IMap() = default;", "C++ interfaces should expose a virtual destructor");
-		assertContains(iMapLines, "virtual std::optional<std::string> get(std::string k) = 0;",
-			"C++ IMap-like interfaces should declare get instead of leaving only a forward declaration");
-		assertContains(iMapLines, "virtual std::shared_ptr<__hxhx_iterator<std::string>> keys() = 0;",
+		assertContains(iMapLines, "virtual std::optional<V> get(K k) = 0;", "C++ IMap-like interfaces should preserve key/value type parameters");
+		assertContains(iMapLines, "virtual std::shared_ptr<__hxhx_iterator<K>> keys() = 0;",
 			"C++ IMap-like interfaces should declare keys for MapKeyValueIterator");
 		assertContains(iMapLines, "virtual std::shared_ptr<KeyValueIterator> keyValueIterator() = 0;",
 			"C++ IMap-like interfaces should preserve class-like iterator return declarations");
@@ -2689,6 +2689,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic container methods should preserve owner template parameters in returns and function args");
 		assertContains(selfGenericListLines, "auto l2 = __hxhx_make_shared_SelfGenericList<T>();",
 			"C++ zero-arg construction inside a generic owner should pass explicit template args to the deducing factory");
+		final stringGenericListOwner = new HxClassDecl("StringGenericListOwner", false, [
+			new HxFunctionDecl("make", Public, false, [], "SelfGenericList<String>", [
+				SVar("list", "", ENew("SelfGenericList", []), HxPos.unknown()),
+				SReturn(EIdent("list"), HxPos.unknown())
+			], "")
+		], []);
+		genericBoxNames.set("StringGenericListOwner", true);
+		genericBoxClasses.set("StringGenericListOwner", stringGenericListOwner);
+		final stringGenericListOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(stringGenericListOwner)[0], stringGenericListOwner, genericBoxLookup)
+				.join("\n");
+		assertContains(stringGenericListOwnerLines, "auto list = __hxhx_make_shared_SelfGenericList<std::string>();",
+			"C++ zero-arg generic construction should use the expected return type when constructor arguments cannot deduce T");
+		final genericBase = new HxClassDecl("GenericBase", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")],
+			[new HxFieldDecl("value", Public, false, "T", null)], "", ["__hxhx_type_params=T"]);
+		final genericSub = new HxClassDecl("GenericSub", false, [], [], "GenericBase<T>", ["__hxhx_type_params=T"]);
+		genericBoxNames.set("GenericBase", true);
+		genericBoxNames.set("GenericSub", true);
+		genericBoxClasses.set("GenericBase", genericBase);
+		genericBoxClasses.set("GenericSub", genericSub);
+		final genericSubLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(genericSub, genericBoxLookup).join("\n");
+		assertContains(genericSubLines, "template<typename T>\nstruct GenericSub : public GenericBase<T> {",
+			"C++ generic subclasses should preserve template arguments in their base type");
 		final methodGenericBuffer = new HxClassDecl("MethodGenericBuffer", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
 			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",
