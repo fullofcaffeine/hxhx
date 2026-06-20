@@ -152,6 +152,12 @@ class CppTargetCore {
 		out.push("  return -1;");
 		out.push("}");
 		out.push("");
+		out.push("static int __hxhx_index_of(const std::vector<int>& values, int needle, int start) {");
+		out.push("  int begin = start < 0 ? 0 : start;");
+		out.push("  for (int i = begin; i < static_cast<int>(values.size()); ++i) if (values[i] == needle) return i;");
+		out.push("  return -1;");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_join(const std::vector<std::string>& values, const std::string& separator) {");
 		out.push("  std::ostringstream out;");
 		out.push("  for (std::size_t i = 0; i < values.size(); ++i) {");
@@ -1317,6 +1323,8 @@ class CppTargetCore {
 		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
 		if (isStringIteratorHelper(owner) && (field == "offset" || field == "byteOffset" || field == "charOffset"))
 			return "int";
+		if (field == "winMetaCharacters" && (owner == "SysTools" || owner == "StringTools"))
+			return "std::vector<int>";
 		if (field == "__hx_enum_ctors" || isEnumMetadataAnonInit(init)) {
 			final inferred = init == null ? "" : inferExprCppType(init, scope);
 			if (inferred.length > 0)
@@ -3995,7 +4003,8 @@ class CppTargetCore {
 
 	static function indexOfExpr(receiver:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final source = renderExpr(receiver, scope);
-		final needle = stringExpr(args[0], scope);
+		final receiverType = exprCppType(receiver, scope);
+		final needle = receiverType == "std::vector<int>" ? renderExpr(args[0], scope) : stringExpr(args[0], scope);
 		final start = args.length == 2 ? renderExpr(args[1], scope) : "0";
 		return "__hxhx_index_of(" + source + ", " + needle + ", " + start + ")";
 	}

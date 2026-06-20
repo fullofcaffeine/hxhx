@@ -1699,18 +1699,38 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper classes should emit static fields instead of dropping them from the struct");
 		assertContains(staticFieldLines, "store = v;", "C++ static methods should type unqualified same-owner static field access");
 		assertContains(staticFieldLines, "StaticFieldOwner::store = \"class\";", "C++ static field access through the owner type should use scope resolution");
-		final sysToolsOwner = new HxClassDecl("SysTools", false, [], [
-			new HxFieldDecl("winMetaCharacters", Public, true, "Array<Int>", EArrayDecl([EInt(32)]))
+		final sysToolsOwner = new HxClassDecl("SysTools", false, [
+			new HxFunctionDecl("needsEscape", Public, true, [new HxFunctionArg("c", "Int", NoDefault, false, false)], "Bool", [
+				SReturn(EBinop(">=", ECall(EField(EIdent("winMetaCharacters"), "indexOf"), [EIdent("c")]), EInt(0)), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("winMetaCharacters", Public, true, "ReadOnlyArray<Int>", EArrayDecl([EInt(32)]))
+		]);
+		final stringToolsOwner = new HxClassDecl("StringTools", false, [], [
+			new HxFieldDecl("winMetaCharacters", Public, true, "Array<Int>", EField(EField(EIdent("haxe"), "SysTools"), "winMetaCharacters"))
 		]);
 		final timerOwner = new HxClassDecl("Timer", false, [
 			new HxFunctionDecl("stamp", Public, true, [], "Float", [SReturn(EFloat(0.0), HxPos.unknown())], "")
 		], []);
 		final qualifiedStdNames = new StringMap<Bool>();
-		for (name in ["SysTools", "Timer"])
+		for (name in ["SysTools", "StringTools", "Timer"])
 			qualifiedStdNames.set(name, true);
 		final qualifiedStdClasses = new StringMap<HxClassDecl>();
 		qualifiedStdClasses.set("SysTools", sysToolsOwner);
+		qualifiedStdClasses.set("StringTools", stringToolsOwner);
 		qualifiedStdClasses.set("Timer", timerOwner);
+		final sysToolsLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(sysToolsOwner,
+			{names: qualifiedStdNames, byName: qualifiedStdClasses})
+			.join("\n");
+		final stringToolsLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringToolsOwner,
+			{names: qualifiedStdNames, byName: qualifiedStdClasses})
+			.join("\n");
+		assertContains(sysToolsLines, "inline static std::vector<int> winMetaCharacters = std::vector<int>{32};",
+			"C++ SysTools.winMetaCharacters should erase ReadOnlyArray<Int> to vector<int> for native field initialization");
+		assertContains(sysToolsLines, "return (__hxhx_index_of(winMetaCharacters, c, 0) >= 0);",
+			"C++ indexOf on winMetaCharacters should pass the integer needle directly");
+		assertContains(stringToolsLines, "inline static std::vector<int> winMetaCharacters = SysTools::winMetaCharacters;",
+			"C++ StringTools.winMetaCharacters should consume the SysTools vector<int> field directly");
 		final qualifiedStdScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(sysToolsOwner,
 			{names: qualifiedStdNames, byName: qualifiedStdClasses}, "void");
 		assertTrue(@:privateAccess
