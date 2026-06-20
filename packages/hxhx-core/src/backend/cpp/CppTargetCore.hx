@@ -1012,11 +1012,9 @@ class CppTargetCore {
 	}
 
 	static function addStaticReceiverClassDependency(receiver:HxExpr, add:String->Void):Void {
-		switch (receiver) {
-			case EIdent(typeName):
-				add(sanitizeTypePath(typeBaseName(typeName)));
-			case _:
-		}
+		final typePath = staticReceiverTypePath(receiver);
+		if (typePath != null)
+			add(sanitizeTypePath(typeBaseName(typePath)));
 	}
 
 	static function addTypeHintDependencies(typeHint:String, add:String->Void):Void {
@@ -3003,9 +3001,18 @@ class CppTargetCore {
 	}
 
 	static function staticReceiverClassName(receiver:HxExpr, ?scope:CppRenderScope):Null<String> {
+		final typePath = staticReceiverTypePath(receiver);
+		if (typePath == null)
+			return null;
+		final clean = sanitizeTypePath(typeBaseName(typePath));
+		return scopeHasClass(scope, clean) && !isCppCoreExternClass(clean) ? clean : null;
+	}
+
+	static function staticReceiverTypePath(receiver:HxExpr):Null<String> {
 		return switch (receiver) {
-			case EIdent(typeName): final clean = sanitizeTypePath(typeBaseName(typeName)); scopeHasClass(scope,
-					clean) && !isCppCoreExternClass(clean) ? clean : null;
+			case EIdent(typeName):
+				typeName;
+			case EField(obj, field): final base = staticReceiverTypePath(obj); base == null || base.length == 0 ? null : base + "." + field;
 			case _:
 				null;
 		};

@@ -1654,6 +1654,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper classes should emit static fields instead of dropping them from the struct");
 		assertContains(staticFieldLines, "store = v;", "C++ static methods should type unqualified same-owner static field access");
 		assertContains(staticFieldLines, "StaticFieldOwner::store = \"class\";", "C++ static field access through the owner type should use scope resolution");
+		final sysToolsOwner = new HxClassDecl("SysTools", false, [], [
+			new HxFieldDecl("winMetaCharacters", Public, true, "Array<Int>", EArrayDecl([EInt(32)]))
+		]);
+		final timerOwner = new HxClassDecl("Timer", false, [
+			new HxFunctionDecl("stamp", Public, true, [], "Float", [SReturn(EFloat(0.0), HxPos.unknown())], "")
+		], []);
+		final qualifiedStdNames = new StringMap<Bool>();
+		for (name in ["SysTools", "Timer"])
+			qualifiedStdNames.set(name, true);
+		final qualifiedStdClasses = new StringMap<HxClassDecl>();
+		qualifiedStdClasses.set("SysTools", sysToolsOwner);
+		qualifiedStdClasses.set("Timer", timerOwner);
+		final qualifiedStdScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(sysToolsOwner,
+			{names: qualifiedStdNames, byName: qualifiedStdClasses}, "void");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(EField(EField(EIdent("haxe"), "SysTools"), "winMetaCharacters"),
+				qualifiedStdScope) == "SysTools::winMetaCharacters",
+			"C++ qualified stdlib static field access should lower to the generated helper type");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EField(EIdent("haxe"), "Timer"), "stamp"), []),
+			qualifiedStdScope) == "Timer::stamp()",
+			"C++ qualified stdlib static calls should lower to the generated helper type");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.shouldForwardDeclareMissingType("EventArg", staticFieldLookup),
 			"C++ forward declarations should include referenced non-core type hints even when the class is not emitted as a helper");
 		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.shouldForwardDeclareMissingType("String", staticFieldLookup),
