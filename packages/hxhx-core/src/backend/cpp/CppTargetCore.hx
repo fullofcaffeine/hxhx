@@ -1187,6 +1187,8 @@ class CppTargetCore {
 			classNames: classLookup.names,
 			classByName: classLookup.byName,
 			localTypes: new haxe.ds.StringMap<String>(),
+			localNames: new haxe.ds.StringMap<String>(),
+			localNameCounts: new haxe.ds.StringMap<Int>(),
 			argTypeOverrides: new haxe.ds.StringMap<String>(),
 			returnType: returnType
 		};
@@ -1195,8 +1197,12 @@ class CppTargetCore {
 	static function registerFunctionArgs(scope:CppRenderScope, args:Array<HxFunctionArg>):Void {
 		if (scope == null || args == null)
 			return;
-		for (arg in args)
-			scope.localTypes.set(sanitizeIdentifier(HxFunctionArg.getName(arg)), cppFunctionArgType(arg, scope));
+		for (arg in args) {
+			final name = sanitizeIdentifier(HxFunctionArg.getName(arg));
+			scope.localTypes.set(name, cppFunctionArgType(arg, scope));
+			scope.localNames.set(name, name);
+			scope.localNameCounts.set(name, 1);
+		}
 	}
 
 	static function prepareFunctionScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
@@ -1705,13 +1711,43 @@ class CppTargetCore {
 		}
 		final hadPrevious = scope.localTypes.exists(name);
 		final previous = hadPrevious ? scope.localTypes.get(name) : "";
+		final hadPreviousName = scope.localNames.exists(name);
+		final previousName = hadPreviousName ? scope.localNames.get(name) : "";
 		if (typeName != null && typeName.length > 0)
 			scope.localTypes.set(name, typeName);
+		scope.localNames.set(name, name);
 		fn();
 		if (hadPrevious)
 			scope.localTypes.set(name, previous);
 		else
 			scope.localTypes.remove(name);
+		if (hadPreviousName)
+			scope.localNames.set(name, previousName);
+		else
+			scope.localNames.remove(name);
+	}
+
+	static function localCppName(name:String, ?scope:CppRenderScope):String {
+		final local = sanitizeIdentifier(name);
+		if (scope != null && scope.localNames.exists(local))
+			return scope.localNames.get(local);
+		return local;
+	}
+
+	static function declareLocalName(name:String, ?scope:CppRenderScope):String {
+		final local = sanitizeIdentifier(name);
+		if (scope == null)
+			return local;
+		if (!scope.localTypes.exists(local) && !scope.localNames.exists(local)) {
+			scope.localNames.set(local, local);
+			scope.localNameCounts.set(local, 1);
+			return local;
+		}
+		final next = scope.localNameCounts.exists(local) ? scope.localNameCounts.get(local) + 1 : 2;
+		scope.localNameCounts.set(local, next);
+		final cppName = local + "_" + next;
+		scope.localNames.set(local, cppName);
+		return cppName;
 	}
 
 	static function cppFunctionArgDefaultType(arg:HxFunctionArg, ?scope:CppRenderScope):String {
@@ -1812,13 +1848,14 @@ class CppTargetCore {
 				[indent + "throw std::runtime_error(" + stringExpr(expr, scope) + ");"];
 			case SVar(name, typeHint, init, _):
 				final localType = cppLocalTypeHint(typeHint, init, scope);
+				final localName = declareLocalName(name, scope);
 				if (scope != null)
 					scope.localTypes.set(sanitizeIdentifier(name), localType);
 				final hasExplicitType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
 				final declaredType = hasExplicitType && localType.length > 0 ? localType : "auto";
 				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
 					scope) : renderLocalInitExpr(init, declaredType, localType, scope);
-					[indent + declaredType + " " + sanitizeIdentifier(name) + " = " + rhs + ";"];
+					[indent + declaredType + " " + localName + " = " + rhs + ";"];
 			case SReturn(expr, _):
 				[indent + returnStmtForExpr(expr, scope)];
 			case SReturnVoid(_):
@@ -2058,7 +2095,7 @@ class CppTargetCore {
 			case ESuper:
 				superExpr(scope);
 			case EIdent(name):
-				final local = sanitizeIdentifier(name);
+				final local = localCppName(name, scope);
 				exprHasOptionalType(expr, scope) ? local + ".value()" : local;
 			case EField(EThis, "length") if (scopeOwnerIsArrayBackedAbstract(scope)):
 				"this->__values.size()";
@@ -3362,7 +3399,7 @@ class CppTargetCore {
 				+ stringExpr(elseExpr, scope)
 				+ ")";
 			case EIdent(name):
-				final local = sanitizeIdentifier(name);
+				final local = localCppName(name, scope);
 				if (exprCppType(expr, scope) == CppMacroExpr.CPP_TYPE) "__hxhx_macro_to_string(" + local + ")" else "std::string(" + local + ")";
 			case ENull:
 				"std::string()";

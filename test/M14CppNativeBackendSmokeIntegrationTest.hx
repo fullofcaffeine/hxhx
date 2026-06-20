@@ -1478,6 +1478,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic helper construction should use the deducing factory for function values");
 		assertTrue(genericBoxOwnerLines.indexOf("std::make_shared<GenericBox>(") < 0,
 			"C++ generic helper construction should not instantiate the erased non-template class shape");
+		final redeclaredLocalOwner = new HxClassDecl("RedeclaredLocalOwner", false, [
+			new HxFunctionDecl("pick", Public, false, [], "String", [
+				SVar("mg", "", EInt(12), HxPos.unknown()),
+				SVar("mg", "", EString("12"), HxPos.unknown()),
+				SReturn(EIdent("mg"), HxPos.unknown())
+			], "")
+		], []);
+		final redeclaredLocalNames = new StringMap<Bool>();
+		redeclaredLocalNames.set("RedeclaredLocalOwner", true);
+		final redeclaredLocalClasses = new StringMap<HxClassDecl>();
+		redeclaredLocalClasses.set("RedeclaredLocalOwner", redeclaredLocalOwner);
+		final redeclaredLocalLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(redeclaredLocalOwner)[0],
+			redeclaredLocalOwner, {
+				names: redeclaredLocalNames,
+				byName: redeclaredLocalClasses
+			})
+			.join("\n");
+		assertContains(redeclaredLocalLines, "auto mg = 12;", "C++ local emission should keep the first Haxe local name stable");
+		assertContains(redeclaredLocalLines, "auto mg_2 = std::string(\"12\");", "C++ local emission should uniquify same-scope Haxe local redeclarations");
+		assertContains(redeclaredLocalLines, "return std::string(mg_2);",
+			"C++ identifier emission should resolve to the latest same-name Haxe local after redeclaration");
 		final restIterator = new HxClassDecl("RestIterator", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("args", "Rest", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "args"), EIdent("args")), HxPos.unknown())], "")
