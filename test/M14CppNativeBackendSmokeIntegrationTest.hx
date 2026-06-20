@@ -812,8 +812,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(opaqueStringMapBlock, 'h["quot"] = "\\"";', "opaque StringMap escape-table block should preserve escaped quote values");
 		assertContains(opaqueStringMapBlock, "return h;", "opaque StringMap escape-table block should return the constructed map");
 		final enumMetaOwner = new HxClassDecl("EnumMetaOwner", false, [], [
-			new HxFieldDecl("__hx_enum_ctors", Public, true, "", EArrayDecl([EString("U1"), EString("U2")])),
-			new HxFieldDecl("U2", Public, true, "",
+			new HxFieldDecl("__hx_enum_ctors", Public, true, "Dynamic", EArrayDecl([EString("U1"), EString("U2")])),
+			new HxFieldDecl("U2", Public, true, "Dynamic",
 				EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString("EnumMetaOwner"), EString("U2"), EInt(1), EArrayDecl([])]))
 		]);
 		final enumMetaNames = new StringMap<Bool>();
@@ -829,6 +829,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ static fields with erased type hints should infer generated anon struct types from object initializers");
 		assertTrue(enumMetaLines.indexOf("inline static std::string __hx_enum_ctors = std::vector") < 0,
 			"C++ enum metadata arrays should not fall back to string-typed static fields");
+		assertTrue(enumMetaLines.indexOf("inline static std::string U2 = __hxhx_anon") < 0,
+			"C++ enum metadata values should not fall back to string-typed static fields");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getClassName"), [EIdent("t")])) == "__hxhx_type_name(t)",
 			"direct Type.getClassName calls should lower through the C++ type-name helper");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getEnumName"), [EIdent("t")])) == "__hxhx_type_name(t)",

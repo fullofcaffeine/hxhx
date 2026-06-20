@@ -1240,11 +1240,29 @@ class CppTargetCore {
 		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
 		if (isStringIteratorHelper(owner) && (field == "offset" || field == "byteOffset" || field == "charOffset"))
 			return "int";
+		if (field == "__hx_enum_ctors" || isEnumMetadataAnonInit(init)) {
+			final inferred = init == null ? "" : inferExprCppType(init, scope);
+			if (inferred.length > 0)
+				return inferred;
+		}
 		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
 		if (explicit.length > 0)
 			return cppTypeHint(explicit, scope);
 		final inferred = init == null ? "" : inferExprCppType(init, scope);
 		return inferred.length > 0 ? inferred : cppTypeHint(typeHint, scope);
+	}
+
+	static function isEnumMetadataAnonInit(init:Null<HxExpr>):Bool {
+		return switch (init) {
+			case EAnon(fieldNames, _):
+				fieldNames.length >= 4
+				&& fieldNames[0] == "__hx_enum"
+				&& fieldNames[1] == "__hx_ctor"
+				&& fieldNames[2] == "__hx_index"
+				&& fieldNames[3] == "__hx_params";
+			case _:
+				false;
+		};
 	}
 
 	static function knownStdlibMethodReturnCppType(className:String, methodName:String, typeHint:String, ?scope:CppRenderScope,
