@@ -184,6 +184,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"      Sys.println(\"enum:eq\");",
 			"    }",
 			"    Sys.println(Std.string(mode == Macro));",
+			"    var cls:Class<Dynamic> = null;",
+			"    Sys.println(Std.string(Misc.isOfType(\"value\", cls)));",
 			"    var ignored = Ignore(\"reason\");",
 			"    Sys.println(ignored);",
 			"    var id = x -> x + 1;",
@@ -588,6 +590,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  }",
 			"  static function _floatEquals(expected:Float, value:Float, approx:Float):Bool {",
 			"    return Math.abs(expected - value) <= approx;",
+			"  }",
+			"}",
+			"class Misc {",
+			"  public static function isOfType(v:Dynamic, t:Class<Dynamic>):Bool {",
+			"    return true;",
 			"  }",
 			"}",
 			"class Box {",
@@ -2029,6 +2036,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "__hxhx_same_as(expected, value, __hxhx_same_as_approx)",
 			"C++ smoke should compare Assert.sameAs Dynamic values through the compile-safe helper");
 		assertContains(source, "(__hxhx_status.expectedValue) = __hxhx_stringify(expected);", "C++ smoke should stringify retained structural status fields");
+		assertContains(source, "struct Class;", "C++ smoke should forward-declare Class when Class-valued parameters are emitted");
+		assertContains(source, "static bool isOfType(std::string v, std::shared_ptr<Class> t)",
+			"C++ smoke should preserve Class-valued helper parameters instead of falling back to strings");
 		assertContains(source, "int casted = helper(5);", "C++ smoke should lower cast expression with explicit local type");
 		assertContains(source, "total += 4;", "C++ smoke should lower compound plus assignment");
 		assertContains(source, "total -= 2;", "C++ smoke should lower compound minus assignment");
@@ -2340,7 +2350,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

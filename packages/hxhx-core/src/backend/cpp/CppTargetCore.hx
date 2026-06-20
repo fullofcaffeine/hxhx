@@ -924,7 +924,7 @@ class CppTargetCore {
 		if (primitiveTypeHintCppType(clean) != null || knownPrimitiveBackedAbstractCppType(clean) != null)
 			return false;
 		return switch (clean) {
-			case "Any" | "Array" | "Bool" | "Class" | "Dynamic" | "Float" | "Function" | "Int" | "Iterable" | "Iterator" | "Null" | "String" | "Void":
+			case "Any" | "Array" | "Bool" | "Dynamic" | "Float" | "Function" | "Int" | "Iterable" | "Iterator" | "Null" | "String" | "Void":
 				false;
 			case _:
 				true;

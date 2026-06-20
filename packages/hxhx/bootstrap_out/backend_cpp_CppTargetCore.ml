@@ -3488,7 +3488,7 @@ let shouldForwardDeclareMissingType = fun name classLookup -> try let __fallback
     ignore (if primitiveTypeHintCppType (clean : string) != Obj.magic (HxRuntime.hx_null) || knownPrimitiveBackedAbstractCppType (clean : string) != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let tempResult = ref (false : bool) in (
       ignore (match clean with
-        | "Any" | "Array" | "Bool" | "Class" | "Dynamic" | "Float" | "Function" | "Int" | "Iterable" | "Iterator" | "Null" | "String" | "Void" -> let __assign_149 = false in (
+        | "Any" | "Array" | "Bool" | "Dynamic" | "Float" | "Function" | "Int" | "Iterable" | "Iterator" | "Null" | "String" | "Void" -> let __assign_149 = false in (
           tempResult := __assign_149;
           __assign_149
         )
