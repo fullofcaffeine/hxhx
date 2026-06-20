@@ -2194,7 +2194,7 @@ class CppTargetCore {
 				out.push(indent + "}");
 				out;
 			case SIf(cond, thenBranch, elseBranch, _):
-				final out = [indent + "if " + conditionExpr(cond, scope) + " {"];
+				final out = [indent + "if " + cStyleConditionExpr(cond, scope) + " {"];
 				for (line in renderStmtBlockContent(thenBranch, indent + "  ", scope))
 					out.push(line);
 				if (elseBranch == null) {
@@ -2207,7 +2207,7 @@ class CppTargetCore {
 				}
 				out;
 			case SWhile(cond, body, _):
-				final out = [indent + "while " + conditionExpr(cond, scope) + " {"];
+				final out = [indent + "while " + cStyleConditionExpr(cond, scope) + " {"];
 				for (line in renderStmtBlockContent(body, indent + "  ", scope))
 					out.push(line);
 				out.push(indent + "}");
@@ -2216,7 +2216,7 @@ class CppTargetCore {
 				final out = [indent + "do {"];
 				for (line in renderStmtBlockContent(body, indent + "  ", scope))
 					out.push(line);
-				out.push(indent + "} while " + conditionExpr(cond, scope) + ";");
+				out.push(indent + "} while " + cStyleConditionExpr(cond, scope) + ";");
 				out;
 			case SForIn(name, iterable, body, _):
 				renderForInStmt(name, iterable, body, indent, scope);
@@ -4696,7 +4696,7 @@ class CppTargetCore {
 		if (guardExpr == null) {
 			addComprehensionYieldLines(out, "    ", yieldExpr, scope);
 		} else {
-			out.push("    if " + conditionExpr(guardExpr, scope) + " {");
+			out.push("    if " + cStyleConditionExpr(guardExpr, scope) + " {");
 			addComprehensionYieldLines(out, "      ", yieldExpr, scope);
 			out.push("    }");
 		}
@@ -5251,6 +5251,11 @@ class CppTargetCore {
 
 	static function cppDefaultValue(typeName:String, ?scope:CppRenderScope):String {
 		return CppTypeModel.cppDefaultValue(typeName, scope);
+	}
+
+	static function cStyleConditionExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final rendered = conditionExpr(expr, scope);
+		return StringTools.startsWith(rendered, "(") && StringTools.endsWith(rendered, ")") ? rendered : "(" + rendered + ")";
 	}
 
 	static function isPolymorphicIsOfTypeHelper(fn:HxFunctionDecl):Bool {

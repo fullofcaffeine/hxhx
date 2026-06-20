@@ -928,6 +928,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final rangeComprehension = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(EArrayComprehension("i", ERange(EInt(0), EInt(3)), null, EBinop("*", EIdent("i"), EInt(2))));
 		assertContains(rangeComprehension, "for (int i = 0; i < 3; i++) {", "array comprehensions should keep optimized range iteration");
+		final falseGuardComprehension = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(EArrayComprehension("i", ERange(EInt(0), EInt(3)), EBool(false), EIdent("i")));
+		assertContains(falseGuardComprehension, "if (false) {", "C++ array-comprehension guards should not emit `if false {`");
+		assertTrue(falseGuardComprehension.indexOf("if false {") < 0, "C++ array-comprehension guards must use valid C-style condition syntax");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("%", EIdent("index"), EInt(2))) == "(index % 2)",
 			"C++ modulo expressions should lower as simple binary operators");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("^", EIdent("mask"), EInt(1))) == "(mask ^ 1)",
@@ -1097,6 +1101,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(assertRaisesLines, "std::string ex = std::string();",
 			"C++ catch blocks should bind the Haxe catch variable before rendering catch-body references");
 		assertContains(assertRaisesLines, "return use(ex, msg);", "C++ catch-body calls should keep using the declared catch variable name");
+		final assertStringSequenceLike = new HxFunctionDecl("stringSequenceLike", Public, true,
+			[new HxFunctionArg("value", "String", NoDefault, false, false)], "Bool", [
+				SIf(EBool(false), SReturn(EBool(false), HxPos.unknown()), null, HxPos.unknown()),
+				SIf(EBinop("is", EIdent("value"), EIdent("String")), SReturn(EBool(true), HxPos.unknown()), null, HxPos.unknown()),
+				SReturn(EBool(false), HxPos.unknown())
+			], "");
+		final assertStringSequenceLikeLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(assertStringSequenceLike, assertOwner, assertLookup).join("\n");
+		assertContains(assertStringSequenceLikeLines, "if (false) {", "C++ if statements should not emit `if false {`");
+		assertContains(assertStringSequenceLikeLines, "if (__hxhx_is_type(value, \"String\")) {",
+			"C++ if statements should parenthesize raw helper-call conditions");
+		assertTrue(assertStringSequenceLikeLines.indexOf("if false {") < 0, "C++ if statements must use valid C-style condition syntax");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",
