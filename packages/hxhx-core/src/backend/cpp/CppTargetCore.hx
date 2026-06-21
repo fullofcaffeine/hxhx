@@ -6699,7 +6699,7 @@ class CppTargetCore {
 
 	static function isDynamicLikeTypeHint(typeHint:String):Bool {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-		return hint == "Dynamic" || hint == "Any";
+		return hint == "Dynamic" || hint == "Any" || CppTypeModel.isGenericDynamicLikeTypeHint(hint);
 	}
 
 	static function copyStringMap(values:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {

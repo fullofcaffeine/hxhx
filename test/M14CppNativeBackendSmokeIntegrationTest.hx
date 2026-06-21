@@ -1905,6 +1905,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(heteroTypeStringLines, "value = _t2;", "C++ erased Dynamic parameters should accept Enum meta-value reassignment");
 		assertTrue(heteroTypeStringLines.indexOf("static std::string typeToStringHetero(std::string value)") < 0,
 			"C++ heterogeneously reassigned Dynamic parameters should not remain std::string");
+		final metaObject = new HxClassDecl("MetaObject", false, [], [
+			new HxFieldDecl("fields", Public, false, "Dynamic<Dynamic<Null<Array<String>>>>", null),
+			new HxFieldDecl("statics", Public, false, "Dynamic<Dynamic<Null<Array<String>>>>", null),
+			new HxFieldDecl("obj", Public, false, "Dynamic<Null<Array<String>>>", null)
+		]);
+		final metaObjectNames = new StringMap<Bool>();
+		metaObjectNames.set("MetaObject", true);
+		final metaObjectClasses = new StringMap<HxClassDecl>();
+		metaObjectClasses.set("MetaObject", metaObject);
+		final metaObjectLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(metaObject, {names: metaObjectNames, byName: metaObjectClasses}).join("\n");
+		assertContains(metaObjectLines, "std::any fields = std::any();",
+			"C++ generic Dynamic metadata fields should use erased target storage instead of an undefined Dynamic template");
+		assertContains(metaObjectLines, "std::any obj = std::any();", "C++ nested generic Dynamic metadata fields should use erased target storage");
+		assertTrue(metaObjectLines.indexOf("Dynamic<") < 0, "C++ generic Dynamic type hints must not emit fake Dynamic template classes");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",

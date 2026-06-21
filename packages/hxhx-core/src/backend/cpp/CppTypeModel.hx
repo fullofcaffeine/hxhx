@@ -197,6 +197,8 @@ class CppTypeModel {
 				"bool";
 			case "Dynamic" | "Any":
 				"std::string";
+			case _ if (isGenericDynamicLikeTypeHint(hint)):
+				"std::any";
 			case _ if (isCppPointerTypeHint(hint)):
 				"std::shared_ptr<" + cppPointerTypeName(hint, scope, classLookup) + ">";
 			case _ if (isIteratorTypeHint(hint)):
@@ -212,6 +214,18 @@ class CppTypeModel {
 			case _:
 				"std::string";
 		};
+	}
+
+	/**
+		Detect `Dynamic<T>`/`Any<T>` shapes produced by upstream metadata helpers.
+
+		These are erased value surfaces in the C++ MVP, not real generated template
+		classes named `Dynamic` or `Any`.
+	**/
+	public static function isGenericDynamicLikeTypeHint(typeHint:String):Bool {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final base = sanitizeTypePath(typeBaseName(hint));
+		return (base == "Dynamic" || base == "Any") && genericTypeHintArgs(hint).length > 0;
 	}
 
 	static function erasedClassLikeTypeName(typeHint:String):Null<String> {
@@ -608,6 +622,8 @@ class CppTypeModel {
 				"0.0";
 			case "bool":
 				"false";
+			case "std::any":
+				"std::any()";
 			case _ if (StringTools.startsWith(typeName, "std::vector<")):
 				"{}";
 			case _ if (isCppArrayBackedAbstractType(typeName, scope)):

@@ -3479,7 +3479,7 @@ let isDynamicLikeTypeHint = fun typeHint -> let tempString = ref ("" : string) i
     tempString := __assign_4195;
     __assign_4195
   ));
-  let hint = (removeTypeHintWhitespace (StringTools.trim (!tempString : string) : string) : string) in HxString.equals hint "Dynamic" || HxString.equals hint "Any"
+  let hint = (removeTypeHintWhitespace (StringTools.trim (!tempString : string) : string) : string) in HxString.equals hint "Dynamic" || HxString.equals hint "Any" || Backend_cpp_CppTypeModel.isGenericDynamicLikeTypeHint (hint : string)
 )
 
 let typeBaseName = fun typeHint -> Backend_cpp_CppTypeModel.typeBaseName (typeHint : string)
