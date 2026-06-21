@@ -2705,6 +2705,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic helper constructors should not body-assign T fields because lambdas can delete copy assignment");
 		assertContains(genericBoxLines, "std::shared_ptr<GenericBox<T>> __hxhx_make_shared_GenericBox(T value) {",
 			"C++ generic helper classes should emit a factory that can deduce lambdas and anonymous value types");
+		final genericDefaultNode = new HxClassDecl("GenericDefaultNode", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("item", "T", NoDefault, false, false),
+				new HxFunctionArg("height", "Int", Default(EInt(-1)), false, false)
+			], "Void", [], "")
+		], [], "", ["__hxhx_type_params=T"]);
+		genericBoxNames.set("GenericDefaultNode", true);
+		genericBoxClasses.set("GenericDefaultNode", genericDefaultNode);
+		final genericDefaultNodeFactoryDecl = @:privateAccess
+			backend.cpp.CppTargetCore.renderGenericClassFactoryDeclaration(genericDefaultNode, genericBoxLookup).join("\n");
+		final genericDefaultNodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(genericDefaultNode, genericBoxLookup).join("\n");
+		assertContains(genericDefaultNodeFactoryDecl,
+			"std::shared_ptr<GenericDefaultNode<T>> __hxhx_make_shared_GenericDefaultNode(T item, int height = -1);",
+			"C++ generic factory declarations may carry constructor defaults");
+		assertContains(genericDefaultNodeLines, "std::shared_ptr<GenericDefaultNode<T>> __hxhx_make_shared_GenericDefaultNode(T item, int height) {",
+			"C++ generic factory definitions should omit defaults because declarations already provide them");
+		assertTrue(genericDefaultNodeLines.indexOf("__hxhx_make_shared_GenericDefaultNode(T item, int height = -1)") < 0,
+			"C++ generic factory definitions must not redeclare default arguments");
 		assertContains(genericBoxOwnerLines, "auto intBox = __hxhx_make_shared_GenericBox(12);",
 			"C++ generic helper construction should use the deducing factory for primitive values");
 		assertContains(genericBoxOwnerLines, "auto stringBox = __hxhx_make_shared_GenericBox(\"12\");",
@@ -2741,6 +2759,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("filter", Public, false, [new HxFunctionArg("f", "T -> Bool", NoDefault, false, false)], "SelfGenericList<T>", [
 				SVar("l2", "", ENew("SelfGenericList", []), HxPos.unknown()),
 				SReturn(EIdent("l2"), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("rawFilter", Public, false, [], "SelfGenericList", [
+				SVar("l3", "", ENew("SelfGenericList", []), HxPos.unknown()),
+				SReturn(EIdent("l3"), HxPos.unknown())
 			], "")
 		], [new HxFieldDecl("h", Public, false, "SelfGenericNode<T>", null)]);
 		for (name in ["SelfGenericNode", "SelfGenericList"])
@@ -2757,6 +2779,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic containers with self-returning methods should stay templates");
 		assertContains(selfGenericListLines, "std::shared_ptr<SelfGenericList<T>> filter(std::function<bool(T)> f) {",
 			"C++ generic container methods should preserve owner template parameters in returns and function args");
+		assertContains(selfGenericListLines, "std::shared_ptr<SelfGenericList<T>> rawFilter() {",
+			"C++ raw generic return hints inside a matching generic scope should preserve owner template parameters");
 		assertContains(selfGenericListLines, "auto l2 = __hxhx_make_shared_SelfGenericList<T>();",
 			"C++ zero-arg construction inside a generic owner should pass explicit template args to the deducing factory");
 		final stringGenericListOwner = new HxClassDecl("StringGenericListOwner", false, [
@@ -2775,13 +2799,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final genericBase = new HxClassDecl("GenericBase", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")],
 			[new HxFieldDecl("value", Public, false, "T", null)], "", ["__hxhx_type_params=T"]);
 		final genericSub = new HxClassDecl("GenericSub", false, [], [], "GenericBase<T>", ["__hxhx_type_params=T"]);
+		final genericRawSub = new HxClassDecl("GenericRawSub", false, [], [], "GenericBase", ["__hxhx_type_params=T"]);
 		genericBoxNames.set("GenericBase", true);
 		genericBoxNames.set("GenericSub", true);
+		genericBoxNames.set("GenericRawSub", true);
 		genericBoxClasses.set("GenericBase", genericBase);
 		genericBoxClasses.set("GenericSub", genericSub);
+		genericBoxClasses.set("GenericRawSub", genericRawSub);
 		final genericSubLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(genericSub, genericBoxLookup).join("\n");
+		final genericRawSubLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(genericRawSub, genericBoxLookup).join("\n");
 		assertContains(genericSubLines, "template<typename T>\nstruct GenericSub : public GenericBase<T> {",
 			"C++ generic subclasses should preserve template arguments in their base type");
+		assertContains(genericRawSubLines, "template<typename T>\nstruct GenericRawSub : public GenericBase<T> {",
+			"C++ raw generic base hints inside a matching generic scope should preserve template arguments");
 		final methodGenericBuffer = new HxClassDecl("MethodGenericBuffer", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
 			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",

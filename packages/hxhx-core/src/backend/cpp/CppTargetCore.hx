@@ -1549,7 +1549,7 @@ class CppTargetCore {
 			+ ">> __hxhx_make_shared_"
 			+ className
 			+ "("
-			+ renderFunctionArgs(args, scope)
+			+ renderFunctionArgs(args, scope, false)
 			+ ") {",
 			"  return std::make_shared<"
 			+ className
@@ -1958,7 +1958,11 @@ class CppTargetCore {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		final base = sanitizeTypePath(typeBaseName(hint));
 		final args = genericTypeHintArgs(hint);
-		return args.length == 0 ? base : base + "<" + [for (arg in args) cppTypeHint(arg, scope, classLookup)].join(", ") + ">";
+		if (args.length == 0) {
+			final scoped = scopedRawGenericClassTypeName(hint, scope);
+			return scoped == null ? base : scoped;
+		}
+		return base + "<" + [for (arg in args) cppTypeHint(arg, scope, classLookup)].join(", ") + ">";
 	}
 
 	static function syntheticStructuralInterfaceNames(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -2331,16 +2335,19 @@ class CppTargetCore {
 		return null;
 	}
 
-	static function renderFunctionArgs(args:Array<HxFunctionArg>, ?scope:CppRenderScope):String {
+	static function renderFunctionArgs(args:Array<HxFunctionArg>, ?scope:CppRenderScope, includeDefaults:Bool = true):String {
 		return [
 			for (arg in args)
-				renderFunctionArg(arg, scope)
+				renderFunctionArg(arg, scope, includeDefaults)
 		].join(", ");
 	}
 
-	static function renderFunctionArg(arg:HxFunctionArg, ?scope:CppRenderScope):String {
+	static function renderFunctionArg(arg:HxFunctionArg, ?scope:CppRenderScope, includeDefaults:Bool = true):String {
 		final typeName = cppFunctionArgType(arg, scope);
-		return typeName + " " + sanitizeIdentifier(HxFunctionArg.getName(arg)) + cppFunctionArgDefaultSuffix(arg, typeName);
+		return typeName
+			+ " "
+			+ sanitizeIdentifier(HxFunctionArg.getName(arg))
+			+ (includeDefaults ? cppFunctionArgDefaultSuffix(arg, typeName) : "");
 	}
 
 	static function cppFunctionArgType(arg:HxFunctionArg, ?scope:CppRenderScope):String {
@@ -6399,11 +6406,26 @@ class CppTargetCore {
 			if (struct != null)
 				return struct.name;
 		}
+		final scopedGenericClass = scopedRawGenericClassTypeName(typeHint, scope);
+		if (scopedGenericClass != null)
+			return "std::shared_ptr<" + scopedGenericClass + ">";
 		return CppTypeModel.cppTypeHint(typeHint, scope, classLookup);
 	}
 
 	static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final scopedGenericClass = scopedRawGenericClassTypeName(CppTypeModel.unwrapNullTypeHint(typeHint), scope);
+		if (scopedGenericClass != null)
+			return "std::shared_ptr<" + scopedGenericClass + ">";
 		return CppTypeModel.cppReturnTypeHint(typeHint, scope, classLookup);
+	}
+
+	static function scopedRawGenericClassTypeName(typeHint:String, ?scope:CppRenderScope):Null<String> {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (hint.length == 0 || hint.indexOf("<") >= 0 || scope == null)
+			return null;
+		final className = sanitizeTypePath(typeBaseName(hint));
+		final templateArgs = scopedTemplateArgsForClass(className, scope);
+		return templateArgs.length == 0 ? null : className + "<" + templateArgs.join(", ") + ">";
 	}
 
 	static function typeIntrinsicReturnCppType(method:String, args:Array<HxExpr>):String {
