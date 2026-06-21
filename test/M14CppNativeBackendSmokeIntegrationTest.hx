@@ -853,7 +853,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 
 	static function contextLoadCallableProgram():GenIrProgram {
 		final src = [
+			"class Message {",
+			"  public function new() {}",
+			"}",
 			"class Position {",
+			"  public function new() {}",
+			"}",
+			"class Type {",
 			"  public function new() {}",
 			"}",
 			"class Context {",
@@ -865,6 +871,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  }",
 			"  public static function reportError(msg:String, pos:Position, depth:Int):Void {",
 			"    load(\"report_error\", 2)(msg, pos, depth);",
+			"  }",
+			"  public static function getMessages():Array<Message> {",
+			"    return load(\"get_messages\", 0);",
+			"  }",
+			"  public static function initMacrosDone():Bool {",
+			"    return load(\"init_macros_done\", 0);",
+			"  }",
+			"  public static function localType():Type {",
+			"    var l:Type = load(\"get_local_type\", 0);",
+			"    return l;",
 			"  }",
 			"}",
 			"class Main {",
@@ -4018,8 +4034,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Context.load immediate calls in string-returning methods should lower through a typed macro API callable seam");
 		assertContains(contextLoadCallableSource, "__hxhx_call_macro_api<void>(std::string(\"report_error\"), 2, msg, pos, depth);",
 			"C++ Context.load immediate calls used as statements should lower through a void macro API callable seam");
+		assertContains(contextLoadCallableSource, "return __hxhx_call_macro_api<std::vector<std::shared_ptr<Message>>>(std::string(\"get_messages\"), 0);",
+			"C++ direct Context.load calls in vector-returning helpers should use the helper return type");
+		assertContains(contextLoadCallableSource, "return __hxhx_call_macro_api<bool>(std::string(\"init_macros_done\"), 0);",
+			"C++ direct Context.load calls in bool-returning helpers should use the helper return type");
+		assertContains(contextLoadCallableSource,
+			"std::shared_ptr<Type> l = __hxhx_call_macro_api<std::shared_ptr<Type>>(std::string(\"get_local_type\"), 0);",
+			"C++ direct Context.load calls in typed local initializers should use the declared local type");
 		assertTrue(contextLoadCallableSource.indexOf("(load(\"error\", 2))(") < 0,
 			"C++ Context.load immediate calls should not emit a call against the string-returning load helper");
+		assertTrue(contextLoadCallableSource.indexOf("__hxhx_call_macro_api<std::any>(std::string(\"get_messages\"), 0)") < 0,
+			"C++ direct Context.load calls should not use std::any when the expected return type is known");
 		assertTrue(contextLoadCallableSource.indexOf("std::to_string((load(\"error\", 2))(") < 0,
 			"C++ Context.load immediate calls in string contexts should not fall through to generic std::to_string wrapping");
 

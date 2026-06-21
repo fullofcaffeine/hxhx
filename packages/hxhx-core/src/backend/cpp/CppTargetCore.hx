@@ -3585,6 +3585,9 @@ class CppTargetCore {
 
 	static function returnStmtForExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		final returnType = scope == null ? "int" : scope.returnType;
+		final macroApiCall = macroApiCallExprForExpected(expr, returnType, scope);
+		if (macroApiCall != null)
+			return returnType == "void" ? macroApiCall + "; return;" : "return " + macroApiCall + ";";
 		return switch (returnType) {
 			case "void":
 				renderExpr(expr, scope) + "; return;";
@@ -3801,6 +3804,8 @@ class CppTargetCore {
 				enumCtorExpr(name, args, scope);
 			case ECall(ECall(loadCallee, loadArgs), callArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				macroApiLoadCallExpr("std::any", loadArgs, callArgs, scope);
+			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
+				macroApiLoadCallExpr("std::any", loadArgs, [], scope);
 			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
 				macroApiDirectCallExpr("std::any", args, scope);
 			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
@@ -3966,6 +3971,9 @@ class CppTargetCore {
 	}
 
 	static function renderLocalInitExpr(init:HxExpr, declaredType:String, localType:String, ?scope:CppRenderScope):String {
+		final macroApiCall = macroApiCallExprForExpected(init, localType, scope);
+		if (macroApiCall != null)
+			return macroApiCall;
 		return switch (init) {
 			case ENull if (isCppOptionalType(declaredType)):
 				"std::nullopt";
@@ -4718,6 +4726,8 @@ class CppTargetCore {
 				"bool";
 			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
+			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
+				"std::any";
 			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
 				"std::any";
 			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
@@ -5194,6 +5204,8 @@ class CppTargetCore {
 			case ECall(EField(receiver, "isFunction"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
 				"bool";
 			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
+				"std::any";
+			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
 			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
 				"std::any";
@@ -5937,6 +5949,8 @@ class CppTargetCore {
 		return switch (expr) {
 			case ECall(ECall(loadCallee, loadArgs), callArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				macroApiLoadCallExpr(expectedType, loadArgs, callArgs, scope);
+			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
+				macroApiLoadCallExpr(expectedType, loadArgs, [], scope);
 			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
 				macroApiDirectCallExpr(expectedType, args, scope);
 			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
