@@ -800,6 +800,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedExprTools], []);
 	}
 
+	static function vendorTemplateProgramWhenAvailable():Null<GenIrProgram> {
+		final templatePath = "vendor/haxe/std/haxe/Template.hx";
+		if (!FileSystem.exists(templatePath))
+			return null;
+		final templateSource = File.getContent(templatePath);
+		final mainSource = "class Main { static function main() {} }";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedTemplate = TyperStage.typeModule(ParserStage.parse(templateSource, templatePath));
+		return MacroStage.expandProgram([typedMain, typedTemplate], []);
+	}
+
 	static function assertVendorBalancedTreeReturnTypesWhenAvailable():Void {
 		final treeProgram = vendorBalancedTreeProgramWhenAvailable();
 		if (treeProgram == null)
@@ -892,6 +903,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			}
 		}
 		throw "vendor ExprTools fixture should expose getValue";
+	}
+
+	static function assertVendorTemplateReturnTypesWhenAvailable():Void {
+		final templateProgram = vendorTemplateProgramWhenAvailable();
+		if (templateProgram == null)
+			return;
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		var template:Null<HxClassDecl> = null;
+		for (typed in templateProgram.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases(HxClassDecl.getName(cls), cls, names, classes);
+				if (HxClassDecl.getName(cls) == "Template")
+					template = cls;
+			}
+		}
+		assertTrue(template != null, "vendor Template fixture should expose Template class");
+		for (fn in HxClassDecl.getFunctions(template)) {
+			if (HxFunctionDecl.getName(fn) == "parse") {
+				final returnType = @:privateAccess backend.cpp.CppTargetCore.cppFunctionReturnType(fn, template, {names: names, byName: classes});
+				assertContains(returnType, "std::shared_ptr<TemplateExpr>",
+					"C++ Template.parse should use the TemplateExpr return fact instead of recursive enum-constructor inference");
+				return;
+			}
+		}
+		throw "vendor Template fixture should expose parse";
 	}
 
 	static function missingIMapProgram():GenIrProgram {
@@ -4410,6 +4448,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		}
 		assertVendorJsonParserReturnTypesWhenAvailable();
 		assertVendorExprToolsReturnTypesWhenAvailable();
+		assertVendorTemplateReturnTypesWhenAvailable();
 		final vendorReadOnlyArrayProgram = vendorReadOnlyArrayProgramWhenAvailable();
 		if (vendorReadOnlyArrayProgram != null) {
 			final vendorReadOnlyArrayDir = Path.join([root, "vendor-readonlyarray-source-only"]);

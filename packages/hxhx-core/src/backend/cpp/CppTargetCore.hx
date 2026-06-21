@@ -1985,6 +1985,8 @@ class CppTargetCore {
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
 		}
+		if (owner == "Template" && (method == "parse" || method == "parseBlock"))
+			return cppTypeHint("TemplateExpr", scope, classLookup);
 		if (owner == "Bytes" && method == "fill")
 			return "void";
 		return StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";

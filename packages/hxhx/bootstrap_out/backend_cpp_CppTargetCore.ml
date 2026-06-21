@@ -4932,6 +4932,7 @@ let knownStdlibMethodReturnCppType = fun className methodName typeHint scope cla
           ));
         raise (HxRuntime.Hx_return (Obj.repr (!tempResult1)))
       )) else ());
+      ignore (if HxString.equals owner "Template" && (HxString.equals hx_method "parse" || HxString.equals hx_method "parseBlock") then raise (HxRuntime.Hx_return (Obj.repr (cppTypeHint ("TemplateExpr" : string) scope classLookup : string))) else ());
       ignore (if HxString.equals owner "Bytes" && HxString.equals hx_method "fill" then raise (HxRuntime.Hx_return (Obj.repr ("void" : string))) else ());
       let tempResult2 = ref ("" : string) in let tempString3 = ref ("" : string) in (
         ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_424 = ("" : string) in (
