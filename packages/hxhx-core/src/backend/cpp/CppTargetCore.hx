@@ -3584,6 +3584,8 @@ class CppTargetCore {
 				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppReferenceType(returnType)):
 				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
+			case _ if (isCppFunctionType(returnType)):
+				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
 			case _ if (isCppAnonStructType(returnType)):
 				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isScopedGenericCppType(returnType, scope)):
@@ -7100,6 +7102,10 @@ class CppTargetCore {
 
 	static function isCppOptionalType(typeName:String):Bool {
 		return CppTypeModel.isCppOptionalType(typeName);
+	}
+
+	static function isCppFunctionType(typeName:String):Bool {
+		return CppTypeModel.isCppFunctionType(typeName);
 	}
 
 	static function isScopedGenericCppType(typeName:String, ?scope:CppRenderScope):Bool {

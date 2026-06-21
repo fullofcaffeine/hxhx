@@ -352,6 +352,10 @@ class CppTypeModel {
 		return "";
 	}
 
+	public static function isCppFunctionType(typeName:String):Bool {
+		return typeName != null && StringTools.startsWith(typeName, "std::function<") && StringTools.endsWith(typeName, ">");
+	}
+
 	public static function splitTopLevelFunctionType(typeHint:String):Array<String> {
 		final parts = [];
 		var start = 0;
@@ -629,6 +633,8 @@ class CppTypeModel {
 			case _ if (isCppArrayBackedAbstractType(typeName, scope)):
 				typeName + "()";
 			case _ if (isCppReferenceType(typeName)):
+				"nullptr";
+			case _ if (isCppFunctionType(typeName)):
 				"nullptr";
 			case _ if (isCppOptionalType(typeName)):
 				"std::nullopt";

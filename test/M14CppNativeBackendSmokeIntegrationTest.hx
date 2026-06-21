@@ -3056,6 +3056,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ ListSort-like generic null returns should preserve nullable generic defaults");
 		assertTrue(parsedListSortNullLines.indexOf("static_cast<int>(nullptr)") < 0,
 			"C++ ListSort-like generic null returns should not collapse through the int fallback");
+		final parsedFunctionNullModule = new HxParser("class DispatcherLike { public function remove(handler:String->Void):String->Void { return null; } }")
+			.parseModule("DispatcherLike");
+		final parsedFunctionNullOwner = HxModuleDecl.getMainClass(parsedFunctionNullModule);
+		final parsedFunctionNullNames = new StringMap<Bool>();
+		parsedFunctionNullNames.set("DispatcherLike", true);
+		final parsedFunctionNullClasses = new StringMap<HxClassDecl>();
+		parsedFunctionNullClasses.set("DispatcherLike", parsedFunctionNullOwner);
+		final parsedFunctionNullLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(parsedFunctionNullOwner, {
+			names: parsedFunctionNullNames,
+			byName: parsedFunctionNullClasses
+		}).join("\n");
+		assertContains(parsedFunctionNullLines,
+			"std::function<void(std::string)> remove(std::function<void(std::string)> handler) {\n    return nullptr;\n  }",
+			"C++ function-typed null returns should use the callable default instead of numeric fallback casts");
+		assertTrue(parsedFunctionNullLines.indexOf("static_cast<int>(nullptr)") < 0,
+			"C++ function-typed null returns should not collapse through the int fallback");
 		final parsedShadowGenericModule = new HxParser("class ShadowGenericOwner<T> { public var item:T; public function new(item:T) this.item = item; public function same<T>(value:T):T { return value; } }")
 			.parseModule("ShadowGenericOwner");
 		final parsedShadowGenericOwner = HxModuleDecl.getMainClass(parsedShadowGenericModule);
