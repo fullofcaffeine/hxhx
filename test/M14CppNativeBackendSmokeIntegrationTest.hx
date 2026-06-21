@@ -832,6 +832,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function macroAbstractOperatorShapeProgram():GenIrProgram {
+		final src = [
+			"class Main { static function main() {} }",
+			"enum Binop {",
+			"  OpAdd;",
+			"}",
+			"enum Unop {",
+			"  OpIncrement;",
+			"}",
+			"class ClassField {",
+			"  public function new() {}",
+			"}",
+			"typedef AbstractType = {",
+			"  var binops:Array<{op:Binop, field:ClassField}>;",
+			"  var unops:Array<{op:Unop, postFix:Bool, field:ClassField}>;",
+			"}",
+			"class AbstractTypeUser {",
+			"  public static function emptyBinops():Array<{op:Binop, field:ClassField}> {",
+			"    return [];",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "MacroAbstractOperatorShape.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function mainLoopRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Lock {",
@@ -3928,6 +3955,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ enum carrier forward declarations should not guess a generic Constant<T>");
 		assertTrue(enumCarrierSource.indexOf("template<typename K, typename V>\nstruct Binop;") < 0,
 			"C++ enum carrier forward declarations should not guess a generic Binop<K,V>");
+
+		final macroAbstractShapeDir = Path.join([root, "macro-abstract-operator-shape-source-only"]);
+		final macroAbstractShapeEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(macroAbstractOperatorShapeProgram(), context(macroAbstractShapeDir, true, true));
+		final macroAbstractShapeSource = File.getContent(macroAbstractShapeEmit.entryPath);
+		final binopShapeName = "__hxhx_anon_op_std__shared_ptr_Binop__field_std__shared_ptr_ClassField_";
+		final unopShapeName = "__hxhx_anon_op_std__shared_ptr_Unop__postFix_bool__field_std__shared_ptr_ClassField_";
+		assertContains(macroAbstractShapeSource, "struct " + binopShapeName + " {",
+			"C++ structural arrays should declare the Binop/ClassField aggregate before AbstractType uses it");
+		assertContains(macroAbstractShapeSource, "struct " + unopShapeName + " {",
+			"C++ structural arrays should declare the Unop/postFix/ClassField aggregate before AbstractType uses it");
+		assertContains(macroAbstractShapeSource, "std::vector<" + binopShapeName + "> binops = {};",
+			"C++ structural arrays should preserve AbstractType.binops as a typed aggregate vector");
+		assertContains(macroAbstractShapeSource, "std::vector<" + unopShapeName + "> unops = {};",
+			"C++ structural arrays should preserve AbstractType.unops as a typed aggregate vector");
+		assertContains(macroAbstractShapeSource, "static std::vector<" + binopShapeName + "> emptyBinops() {",
+			"C++ structural array returns should preserve typed aggregate vectors");
+		assertTrue(macroAbstractShapeSource.indexOf("struct " + binopShapeName + " {") < macroAbstractShapeSource.indexOf("struct AbstractType {"),
+			"C++ structural array aggregates should be declared before the typedef helper that stores them");
+		assertTrue(macroAbstractShapeSource.indexOf("std::vector<std::string> binops") < 0,
+			"C++ structural arrays should not collapse macro AbstractType.binops to string vectors");
 
 		final mainLoopDir = Path.join([root, "main-loop-runtime-source-only"]);
 		final mainLoopEmit = BackendRegistry.createForTarget("cpp-native").emit(mainLoopRuntimeProgram(), context(mainLoopDir, true, true));

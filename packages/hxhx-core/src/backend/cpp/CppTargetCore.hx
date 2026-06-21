@@ -799,12 +799,27 @@ class CppTargetCore {
 			}
 		}
 		function addTypeHint(typeHint:String, ?scope:CppRenderScope):Void {
-			final fields = CppTypeModel.structuralTypeHintFields(typeHint);
-			if (fields.length == 0)
+			final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+			if (hint.length == 0)
 				return;
-			for (field in fields)
-				addTypeHint(field.typeHint, scope);
-			addStruct(structuralTypeHintStruct(typeHint, scope, classLookup));
+			if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint) || CppTypeModel.isIteratorTypeHint(hint)) {
+				addTypeHint(genericTypeHintArg(hint), scope);
+				return;
+			}
+			if (isFunctionTypeHint(hint)) {
+				for (part in splitTopLevelFunctionType(hint))
+					addTypeHint(functionTypePartHint(part), scope);
+				return;
+			}
+			if (isStructuralTypeHint(hint)) {
+				final fields = CppTypeModel.structuralTypeHintFields(hint);
+				for (field in fields)
+					addTypeHint(field.typeHint, scope);
+				addStruct(structuralTypeHintStruct(hint, scope, classLookup));
+				return;
+			}
+			for (arg in genericTypeHintArgs(hint))
+				addTypeHint(arg, scope);
 		}
 		function addExpr(expr:HxExpr, ?scope:CppRenderScope):Void {
 			switch (expr) {
@@ -6931,24 +6946,41 @@ class CppTargetCore {
 	}
 
 	static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
-		if (scope != null && scope.owner != null && isGenericTypeParamHint(typeHint, scope.owner))
-			return cppTypeParamName(genericTypeParamName(typeHint), scope);
-		if (isStructuralTypeHint(typeHint)) {
-			final struct = structuralTypeHintStruct(typeHint, scope, classLookup);
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (StringTools.startsWith(hint, "Null<") && StringTools.endsWith(hint, ">"))
+			return cppNullableTypeHint(hint.substr("Null<".length, hint.length - "Null<".length - 1), scope, classLookup);
+		if (scope != null && scope.owner != null && isGenericTypeParamHint(hint, scope.owner))
+			return cppTypeParamName(genericTypeParamName(hint), scope);
+		if (isStructuralTypeHint(hint)) {
+			final struct = structuralTypeHintStruct(hint, scope, classLookup);
 			if (struct != null)
 				return struct.name;
 		}
-		final scopedGenericClass = scopedRawGenericClassTypeName(typeHint, scope);
+		final scopedGenericClass = scopedRawGenericClassTypeName(hint, scope);
 		if (scopedGenericClass != null)
 			return "std::shared_ptr<" + scopedGenericClass + ">";
-		return CppTypeModel.cppTypeHint(typeHint, scope, classLookup);
+		if (CppTypeModel.isIteratorTypeHint(hint))
+			return "std::shared_ptr<__hxhx_iterator<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">>";
+		if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint))
+			return "std::vector<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">";
+		if (isFunctionTypeHint(hint))
+			return cppFunctionTypeHint(hint, scope, classLookup);
+		return CppTypeModel.cppTypeHint(hint, scope, classLookup);
+	}
+
+	static function functionTypePartHint(part:String):String {
+		return CppTypeModel.functionArgTypePartType(part);
 	}
 
 	static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
-		final scopedGenericClass = scopedRawGenericClassTypeName(CppTypeModel.unwrapNullTypeHint(typeHint), scope);
+		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		final hint = CppTypeModel.unwrapNullTypeHint(raw);
+		if (isStructuralTypeHint(hint))
+			return "auto";
+		final scopedGenericClass = scopedRawGenericClassTypeName(hint, scope);
 		if (scopedGenericClass != null)
 			return "std::shared_ptr<" + scopedGenericClass + ">";
-		return CppTypeModel.cppReturnTypeHint(typeHint, scope, classLookup);
+		return cppTypeHint(raw, scope, classLookup);
 	}
 
 	static function scopedRawGenericClassTypeName(typeHint:String, ?scope:CppRenderScope):Null<String> {
@@ -7189,7 +7221,10 @@ class CppTargetCore {
 	}
 
 	static function cppNullableTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
-		return CppTypeModel.cppNullableTypeHint(typeHint, scope, classLookup);
+		final inner = cppTypeHint(typeHint, scope, classLookup);
+		if (isCppReferenceType(inner) || isCppOptionalType(inner))
+			return inner;
+		return "std::optional<" + inner + ">";
 	}
 
 	static function unwrapNullTypeHint(typeHint:String):String {
@@ -7201,7 +7236,13 @@ class CppTargetCore {
 	}
 
 	static function cppFunctionTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
-		return CppTypeModel.cppFunctionTypeHint(typeHint, scope, classLookup);
+		final parts = splitTopLevelFunctionType(typeHint);
+		if (parts.length <= 1)
+			return "std::function<std::string()>";
+		final returnType = cppTypeHint(parts[parts.length - 1], scope, classLookup);
+		final argParts = CppTypeModel.functionArgTypeParts(parts.slice(0, parts.length - 1));
+		final args = [for (arg in argParts) cppTypeHint(functionTypePartHint(arg), scope, classLookup)].filter(t -> t != "void");
+		return "std::function<" + returnType + "(" + args.join(", ") + ")>";
 	}
 
 	static function cppFunctionReturnTypeFromCppType(typeName:String):String {

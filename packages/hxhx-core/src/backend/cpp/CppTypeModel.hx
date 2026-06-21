@@ -486,7 +486,7 @@ class CppTypeModel {
 		return out;
 	}
 
-	static function topLevelColonIndex(text:String):Int {
+	public static function topLevelColonIndex(text:String):Int {
 		var angleDepth = 0;
 		var parenDepth = 0;
 		var braceDepth = 0;
@@ -649,7 +649,7 @@ class CppTypeModel {
 		return sanitizeTypePath(typeBaseName(name == null ? "" : name)) == "BytesData";
 	}
 
-	static function functionArgTypeParts(parts:Array<String>):Array<String> {
+	public static function functionArgTypeParts(parts:Array<String>):Array<String> {
 		if (parts.length != 1)
 			return parts;
 		final single = stripTypeParens(parts[0]);
@@ -658,7 +658,7 @@ class CppTypeModel {
 		return splitTopLevelComma(single);
 	}
 
-	static function functionArgTypePartType(part:String):String {
+	public static function functionArgTypePartType(part:String):String {
 		final text = stripTypeParens(part);
 		final colon = topLevelColonIndex(text);
 		if (colon <= 0)
@@ -669,7 +669,7 @@ class CppTypeModel {
 		return isIdentifierText(name) ? StringTools.trim(text.substr(colon + 1)) : text;
 	}
 
-	static function isIdentifierText(text:String):Bool {
+	public static function isIdentifierText(text:String):Bool {
 		if (text == null || text.length == 0)
 			return false;
 		for (i in 0...text.length) {
