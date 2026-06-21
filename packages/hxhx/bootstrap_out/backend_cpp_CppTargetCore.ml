@@ -3352,7 +3352,7 @@ let missingGenericForwardParams = fun name -> let tempResult = ref (Obj.magic (H
       __assign_206
     ));
     let _g = (sanitizeTypePath (typeBaseName (!tempString : string) : string) : string) in match _g with
-      | "BalancedTree" | "Binop" | "EnumValueMap" | "IMap" | "TreeNode" -> let __assign_209 = Obj.magic (let __arr_210 = HxArray.create () in (
+      | "BalancedTree" | "EnumValueMap" | "IMap" | "TreeNode" -> let __assign_209 = Obj.magic (let __arr_210 = HxArray.create () in (
         ignore (HxArray.push __arr_210 "K");
         ignore (HxArray.push __arr_210 "V");
         __arr_210
@@ -3360,7 +3360,7 @@ let missingGenericForwardParams = fun name -> let tempResult = ref (Obj.magic (H
         tempResult := __assign_209;
         __assign_209
       )
-      | "Constant" | "Tree" -> let __assign_211 = Obj.magic (let __arr_212 = HxArray.create () in (
+      | "Tree" -> let __assign_211 = Obj.magic (let __arr_212 = HxArray.create () in (
         ignore (HxArray.push __arr_212 "T");
         __arr_212
       )) in (

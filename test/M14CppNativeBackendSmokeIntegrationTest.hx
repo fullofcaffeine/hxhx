@@ -811,6 +811,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function enumCarrierNameCollisionProgram():GenIrProgram {
+		final src = [
+			"enum Constant {",
+			"  CIdent(name:String);",
+			"}",
+			"enum Binop {",
+			"  OpAdd;",
+			"}",
+			"enum Expr {",
+			"  EConst(c:Constant);",
+			"  EBinop(op:Binop, e1:Expr, e2:Expr);",
+			"}",
+			"class Main {",
+			"  static function main() {}",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function mainLoopRuntimeProgram():GenIrProgram {
 		final src = [
 			"class Lock {",
@@ -3897,6 +3918,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(macroRefSource.indexOf("finaltype") < 0, "C++ structural final fields should not merge modifiers into field names");
 		assertTrue(macroRefSource.indexOf("std::shared_ptr<Ref>") < 0, "C++ generic class-like type hints should not erase template arguments to raw Ref");
 		assertTrue(macroRefSource.indexOf("public_") < 0, "C++ typedef function surfaces should not be mis-scanned as duplicate public_ fields");
+
+		final enumCarrierDir = Path.join([root, "enum-carrier-name-collision-source-only"]);
+		final enumCarrierEmit = BackendRegistry.createForTarget("cpp-native").emit(enumCarrierNameCollisionProgram(), context(enumCarrierDir, true, true));
+		final enumCarrierSource = File.getContent(enumCarrierEmit.entryPath);
+		assertContains(enumCarrierSource, "struct Constant;", "C++ enum carrier forward declarations should preserve non-generic Constant as a plain type");
+		assertContains(enumCarrierSource, "struct Binop;", "C++ enum carrier forward declarations should preserve non-generic Binop as a plain type");
+		assertTrue(enumCarrierSource.indexOf("template<typename T>\nstruct Constant;") < 0,
+			"C++ enum carrier forward declarations should not guess a generic Constant<T>");
+		assertTrue(enumCarrierSource.indexOf("template<typename K, typename V>\nstruct Binop;") < 0,
+			"C++ enum carrier forward declarations should not guess a generic Binop<K,V>");
 
 		final mainLoopDir = Path.join([root, "main-loop-runtime-source-only"]);
 		final mainLoopEmit = BackendRegistry.createForTarget("cpp-native").emit(mainLoopRuntimeProgram(), context(mainLoopDir, true, true));
