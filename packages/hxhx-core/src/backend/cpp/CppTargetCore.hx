@@ -3669,8 +3669,15 @@ class CppTargetCore {
 			switch (expr) {
 				case EArrayDecl(elements):
 					return arrayExprWithElementType(elements, cppVectorElementType(expectedType), scope);
+				case ESwitch(scrutinee, patterns, exprs):
+					return switchExpr(scrutinee, patterns, exprs, scope, expectedType);
 				case _:
 			}
+		}
+		switch (expr) {
+			case ESwitch(scrutinee, patterns, exprs):
+				return switchExpr(scrutinee, patterns, exprs, scope, expectedType);
+			case _:
 		}
 		return renderExpr(expr, scope);
 	}
@@ -3983,6 +3990,8 @@ class CppTargetCore {
 				nativeArrayCreateExpr(args[0], scope, localType);
 			case ECall(EField(receiver, "create"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
 				nativeArrayCreateExpr(args[0], scope, localType);
+			case ESwitch(scrutinee, patterns, exprs):
+				switchExpr(scrutinee, patterns, exprs, scope, localType);
 			case EArrayDecl([]) if (isCppVectorType(localType)):
 				localType + "{}";
 			case _ if (isCppVectorType(localType)):
@@ -6029,12 +6038,20 @@ class CppTargetCore {
 		than full Haxe pattern matching: simple scalar patterns become comparisons,
 		wildcard/bind patterns become the default branch, and complex pattern shapes
 		do not match until they get explicit C++ semantics.
+
+		When the caller knows the expected C++ result type, thread that type into the
+		lambda return and fallback. Without the explicit result, C++ deduces mixed
+		branches like `Ref<T>`/`null`/synthetic fallback as incompatible lambda
+		returns before the surrounding method return type can help.
 	**/
-	static function switchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>, ?scope:CppRenderScope):String {
-		final typeName = switchExprResultType(exprs);
+	static function switchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>, ?scope:CppRenderScope, ?expectedType:String):String {
+		final typeName = switchExprExpectedResultType(exprs, expectedType);
 		final switchValue = "__hxhx_switch";
 		final scrutineeExpr = isStringLike(scrutinee) ? stringExpr(scrutinee, scope) : renderExpr(scrutinee, scope);
-		final out = ["([&]() {", "  auto " + switchValue + " = " + scrutineeExpr + ";"];
+		final out = [
+			"([&]() -> " + typeName + " {",
+			"  auto " + switchValue + " = " + scrutineeExpr + ";"
+		];
 		var defaultExpr:Null<HxExpr> = null;
 		var defaultPattern:Null<HxSwitchPattern> = null;
 		var emitted = 0;
@@ -6050,7 +6067,7 @@ class CppTargetCore {
 			}
 			final cond = switchPatternCond(pattern, switchValue);
 			out.push("  " + (emitted == 0 ? "if" : "else if") + " (" + cond + ") {");
-			for (line in switchPatternBindingLines(pattern, switchValue, "    "))
+			for (line in switchPatternBindingLines(pattern, switchValue, "    ", scope, typeName, exprs[i]))
 				out.push(line);
 			out.push("    return " + switchBranchExpr(exprs[i], typeName, scope) + ";");
 			out.push("  }");
@@ -6058,12 +6075,12 @@ class CppTargetCore {
 		}
 		if (defaultExpr != null) {
 			out.push("  else {");
-			for (line in switchPatternBindingLines(defaultPattern, switchValue, "    "))
+			for (line in switchPatternBindingLines(defaultPattern, switchValue, "    ", scope, typeName, defaultExpr))
 				out.push(line);
 			out.push("    return " + switchBranchExpr(defaultExpr, typeName, scope) + ";");
 			out.push("  }");
 		}
-		out.push("  return " + switchFallbackExpr(typeName) + ";");
+		out.push("  return " + switchFallbackExpr(typeName, scope) + ";");
 		out.push("})()");
 		return out.join("\n");
 	}
@@ -6078,7 +6095,14 @@ class CppTargetCore {
 	}
 
 	static function switchBranchExpr(expr:HxExpr, typeName:String, ?scope:CppRenderScope):String {
-		return typeName == "std::string" ? stringExpr(expr, scope) : renderExpr(expr, scope);
+		return typeName == "std::string" ? stringExpr(expr, scope) : valueExprForExpectedType(expr, typeName, scope);
+	}
+
+	static function switchExprExpectedResultType(exprs:Array<HxExpr>, ?expectedType:String):String {
+		final typeName = StringTools.trim(expectedType == null ? "" : expectedType);
+		if (typeName.length > 0 && typeName != "auto")
+			return typeName;
+		return switchExprResultType(exprs);
 	}
 
 	static function switchExprResultType(exprs:Array<HxExpr>):String {
@@ -6100,7 +6124,7 @@ class CppTargetCore {
 		return "int";
 	}
 
-	static function switchFallbackExpr(typeName:String):String {
+	static function switchFallbackExpr(typeName:String, ?scope:CppRenderScope):String {
 		return switch (typeName) {
 			case "std::string":
 				"std::string()";
@@ -6109,7 +6133,7 @@ class CppTargetCore {
 			case "bool":
 				"false";
 			case _:
-				"0";
+				cppDefaultValue(typeName, scope);
 		};
 	}
 
@@ -6205,15 +6229,26 @@ class CppTargetCore {
 		What/How:
 		- Bind every captured name to the current switch value, or to an indexed
 		  element for exact-length array patterns.
+		- If a non-macro enum payload binder is returned directly from a switch with
+		  a known expected result type, bind it as a typed default value so C++ can
+		  type-check the branch until real enum payload extraction owns semantics.
+		  Macro-expression extraction keeps the real `__hxhx_macro_param` value.
 		- This intentionally does not claim full enum/array/object destructuring
 		  semantics. Real extraction from `__hx_params` or target runtime enum
 		  values should land as a separate behavior-owned seam.
 	**/
-	static function switchPatternBindingLines(pattern:HxSwitchPattern, switchValue:String, indent:String):Array<String> {
+	static function switchPatternBindingLines(pattern:HxSwitchPattern, switchValue:String, indent:String, ?scope:CppRenderScope, ?expectedType:String,
+			?branchExpr:HxExpr):Array<String> {
 		final out = new Array<String>();
 		function bind(name:String, value:String):Void {
-			if (name != null && name.length > 0 && name != "_")
-				out.push(indent + "auto " + sanitizeIdentifier(name) + " = " + value + ";");
+			if (name != null && name.length > 0 && name != "_") {
+				final local = sanitizeIdentifier(name);
+				final typeName = switchPatternValueIsMacroExtraction(value) ? "" : switchPatternExpectedBindingType(name, expectedType, branchExpr);
+				if (typeName.length > 0)
+					out.push(indent + typeName + " " + local + " = " + cppDefaultValue(typeName, scope) + ";");
+				else
+					out.push(indent + "auto " + local + " = " + value + ";");
+			}
 		}
 		function walk(p:HxSwitchPattern, value:String):Void {
 			if (p == null)
@@ -6258,6 +6293,28 @@ class CppTargetCore {
 		}
 		walk(pattern, switchValue);
 		return out;
+	}
+
+	static function switchPatternValueIsMacroExtraction(value:String):Bool {
+		return value != null && StringTools.startsWith(StringTools.trim(value), "__hxhx_macro_");
+	}
+
+	static function switchPatternExpectedBindingType(name:String, ?expectedType:String, ?branchExpr:HxExpr):String {
+		final typeName = StringTools.trim(expectedType == null ? "" : expectedType);
+		if (typeName.length == 0 || typeName == "auto" || branchExpr == null)
+			return "";
+		return exprIsIdentifier(branchExpr, name) ? typeName : "";
+	}
+
+	static function exprIsIdentifier(expr:HxExpr, name:String):Bool {
+		return switch (expr) {
+			case EIdent(id):
+				sanitizeIdentifier(id) == sanitizeIdentifier(name);
+			case ECast(inner, _) | EUntyped(inner):
+				exprIsIdentifier(inner, name);
+			case _:
+				false;
+		};
 	}
 
 	static function switchPatternIsMacroExprCtor(name:String):Bool {

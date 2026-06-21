@@ -892,6 +892,38 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function switchExpectedRefProgram():GenIrProgram {
+		final src = [
+			"class ClassType {",
+			"  public function new() {}",
+			"}",
+			"class Ref<T> {",
+			"  public var value:T;",
+			"  public function new(value:T) {",
+			"    this.value = value;",
+			"  }",
+			"}",
+			"enum LocalType {",
+			"  TInst(c:Ref<ClassType>);",
+			"  TOther;",
+			"}",
+			"class Context {",
+			"  public static function getLocalClass(l:LocalType):Ref<ClassType> {",
+			"    return switch (l) {",
+			"      case TInst(c): c;",
+			"      case _: null;",
+			"    }",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {}",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "SwitchExpectedRefShape.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function macroAbstractOperatorShapeProgram():GenIrProgram {
 		final src = [
 			"class Main { static function main() {} }",
@@ -3926,7 +3958,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "auto macroQuote = __hxhx_macro_expr(", "C++ smoke should lower macro quotes to structural macro objects");
 		assertContains(source, "__hxhx_macro_enum(\"EParenthesis\"", "C++ smoke should preserve macro quote wrappers structurally");
 		assertContains(source, "auto macroType = std::string(\"X -> Y\");", "C++ smoke should lower macro type quotes to stable text");
-		assertContains(source, "auto switched = ([&]() {", "C++ smoke should lower switch expressions through an IIFE");
+		assertContains(source, "auto switched = ([&]() -> std::string {", "C++ smoke should lower switch expressions through an explicitly typed IIFE");
 		assertContains(source, "auto __hxhx_switch = 2;", "C++ smoke should bind switch expression scrutinee");
 		assertContains(source, "else if (__hxhx_switch == 2) {", "C++ smoke should lower switch expression int cases");
 		assertContains(source, "auto __hxhx_switch_stmt = (native[0]);", "C++ smoke should bind switch statement scrutinee");
@@ -4047,6 +4079,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ direct Context.load calls should not use std::any when the expected return type is known");
 		assertTrue(contextLoadCallableSource.indexOf("std::to_string((load(\"error\", 2))(") < 0,
 			"C++ Context.load immediate calls in string contexts should not fall through to generic std::to_string wrapping");
+
+		final switchExpectedRefDir = Path.join([root, "switch-expected-ref-source-only"]);
+		final switchExpectedRefEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(switchExpectedRefProgram(), context(switchExpectedRefDir, true, true));
+		final switchExpectedRefSource = File.getContent(switchExpectedRefEmit.entryPath);
+		assertContains(switchExpectedRefSource, "return ([&]() -> std::shared_ptr<Ref<std::shared_ptr<ClassType>>> {",
+			"C++ switch expressions in reference-returning methods should emit an explicitly typed IIFE");
+		assertContains(switchExpectedRefSource, "std::shared_ptr<Ref<std::shared_ptr<ClassType>>> c = nullptr;",
+			"C++ enum-pattern binders returned directly from an expected reference switch should use the expected branch type");
+		assertTrue(switchExpectedRefSource.indexOf("  return 0;\n})()") < 0,
+			"C++ switch expression fallback in an expected reference context should not return int zero");
 
 		final macroAbstractShapeDir = Path.join([root, "macro-abstract-operator-shape-source-only"]);
 		final macroAbstractShapeEmit = BackendRegistry.createForTarget("cpp-native")
