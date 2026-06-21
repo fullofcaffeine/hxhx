@@ -668,6 +668,16 @@ class CppTargetCore {
 		out.push("  throw std::runtime_error(__hxhx_stringify(value));");
 		out.push("}");
 		out.push("");
+		out.push("template<typename TResult, typename... Args>");
+		out.push("static TResult __hxhx_call_macro_api(const std::string&, int, Args&&...) {");
+		out.push("  if constexpr (std::is_void_v<TResult>) { return; } else { return TResult{}; }");
+		out.push("}");
+		out.push("");
+		out.push("template<typename TResult>");
+		out.push("static TResult __hxhx_call_macro_api(const std::string& name) {");
+		out.push("  return __hxhx_call_macro_api<TResult>(name, 0);");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T>");
 		out.push("T& __hxhx_status_ref(T& status) {");
 		out.push("  return status;");
@@ -3388,7 +3398,8 @@ class CppTargetCore {
 			case SExpr(ECall(ESuper, _), _):
 				[indent + "/* base constructor call omitted */"];
 			case SExpr(expr, _):
-				[indent + renderExpr(expr, scope) + ";"];
+				final macroApiCall = macroApiCallExprForExpected(expr, "void", scope);
+				[indent + (macroApiCall == null ? renderExpr(expr, scope) : macroApiCall) + ";"];
 			case SThrow(expr, _):
 				[indent + "throw std::runtime_error(" + stringExpr(expr, scope) + ");"];
 			case SVar(name, typeHint, init, _):
@@ -3635,6 +3646,9 @@ class CppTargetCore {
 	}
 
 	static function valueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
+		final macroApiCall = macroApiCallExprForExpected(expr, expectedType, scope);
+		if (macroApiCall != null)
+			return macroApiCall;
 		final typedEnum = enumCtorExprForExpectedType(expr, expectedType, scope);
 		if (typedEnum != null)
 			return typedEnum;
@@ -3785,6 +3799,12 @@ class CppTargetCore {
 				"__hxhx_throw(" + renderExpr(args[0], scope) + ")";
 			case ECall(EEnumValue(name), args):
 				enumCtorExpr(name, args, scope);
+			case ECall(ECall(loadCallee, loadArgs), callArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
+				macroApiLoadCallExpr("std::any", loadArgs, callArgs, scope);
+			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
+				macroApiDirectCallExpr("std::any", args, scope);
+			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
+				macroApiDirectCallExpr("std::any", args, scope);
 			case EArrayDecl(elements):
 				arrayExpr(elements, scope);
 			case ERange(start, end):
@@ -4696,6 +4716,12 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "isFunction"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
 				"bool";
+			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
+				"std::any";
+			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
+				"std::any";
+			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
+				"std::any";
 			case ECall(EField(receiver, "getProperty"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"std::any";
@@ -5167,6 +5193,12 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "isFunction"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
 				"bool";
+			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
+				"std::any";
+			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
+				"std::any";
+			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
+				"std::any";
 			case ECall(EField(receiver, "getProperty"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"std::any";
@@ -5799,6 +5831,9 @@ class CppTargetCore {
 	}
 
 	static function stringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final macroApiCall = macroApiCallExprForExpected(expr, "std::string", scope);
+		if (macroApiCall != null)
+			return macroApiCall;
 		final enumCtor = enumMetadataCtorStringExpr(expr, scope);
 		if (enumCtor != null)
 			return enumCtor;
@@ -5888,6 +5923,66 @@ class CppTargetCore {
 			case _:
 				"std::to_string(" + renderExpr(expr, scope) + ")";
 		};
+	}
+
+	/**
+		Lower the `haxe.macro.Context.load(name, arity)(...)` shape used by
+		upstream macro helpers to a typed C++ support call.
+
+		This is intentionally compile-safe callable plumbing, not a C++ macro
+		runtime. The helper returns target defaults so Gate3 source can keep
+		advancing until native macro execution owns the real behavior.
+	**/
+	static function macroApiCallExprForExpected(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case ECall(ECall(loadCallee, loadArgs), callArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
+				macroApiLoadCallExpr(expectedType, loadArgs, callArgs, scope);
+			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
+				macroApiDirectCallExpr(expectedType, args, scope);
+			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
+				macroApiDirectCallExpr(expectedType, args, scope);
+			case _:
+				null;
+		};
+	}
+
+	static function macroApiLoadCallExpr(expectedType:String, loadArgs:Array<HxExpr>, callArgs:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final rendered = [stringExpr(loadArgs[0], scope), renderExpr(loadArgs[1], scope)];
+		for (arg in callArgs)
+			rendered.push(renderExpr(arg, scope));
+		return "__hxhx_call_macro_api<" + macroApiResultType(expectedType) + ">(" + rendered.join(", ") + ")";
+	}
+
+	static function macroApiDirectCallExpr(expectedType:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final rendered = [renderExpr(args[0], scope)];
+		for (i in 1...args.length)
+			rendered.push(renderExpr(args[i], scope));
+		return "__hxhx_call_macro_api<" + macroApiResultType(expectedType) + ">(" + rendered.join(", ") + ")";
+	}
+
+	static function macroApiResultType(expectedType:String):String {
+		final typeName = StringTools.trim(expectedType == null ? "" : expectedType);
+		return typeName.length == 0 || typeName == "auto" ? "std::any" : typeName;
+	}
+
+	static function isMacroApiLoadCallee(callee:HxExpr):Bool {
+		return switch (callee) {
+			case EIdent("load"):
+				true;
+			case EField(receiver, "load") if (isContextStaticReceiver(receiver)):
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function isContextStaticReceiver(receiver:HxExpr):Bool {
+		final path = staticReceiverTypePath(receiver);
+		return path != null && sanitizeTypePath(typeBaseName(path)) == "Context";
+	}
+
+	static function scopeOwnerIsContext(?scope:CppRenderScope):Bool {
+		return scope != null && scope.owner != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(scope.owner))) == "Context";
 	}
 
 	/**

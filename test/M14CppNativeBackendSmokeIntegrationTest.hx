@@ -851,6 +851,31 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function contextLoadCallableProgram():GenIrProgram {
+		final src = [
+			"class Position {",
+			"  public function new() {}",
+			"}",
+			"class Context {",
+			"  static function load(name:String, nargs:Int):Dynamic {",
+			"    return null;",
+			"  }",
+			"  public static function error(msg:String, pos:Position, depth:Int):String {",
+			"    return load(\"error\", 2)(msg, pos, depth);",
+			"  }",
+			"  public static function reportError(msg:String, pos:Position, depth:Int):Void {",
+			"    load(\"report_error\", 2)(msg, pos, depth);",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {}",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "ContextLoadCallableShape.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function macroAbstractOperatorShapeProgram():GenIrProgram {
 		final src = [
 			"class Main { static function main() {} }",
@@ -3984,6 +4009,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ enum constructor payload types should qualify carrier names that collide with owner constructor members");
 		assertTrue(enumCtorCarrierSource.indexOf("static std::string TFor(std::shared_ptr<TVar> v") < 0,
 			"C++ enum constructor payload types should not resolve TVar through TypedExprDef::TVar");
+
+		final contextLoadCallableDir = Path.join([root, "context-load-callable-source-only"]);
+		final contextLoadCallableEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(contextLoadCallableProgram(), context(contextLoadCallableDir, true, true));
+		final contextLoadCallableSource = File.getContent(contextLoadCallableEmit.entryPath);
+		assertContains(contextLoadCallableSource, "return __hxhx_call_macro_api<std::string>(std::string(\"error\"), 2, msg, pos, depth);",
+			"C++ Context.load immediate calls in string-returning methods should lower through a typed macro API callable seam");
+		assertContains(contextLoadCallableSource, "__hxhx_call_macro_api<void>(std::string(\"report_error\"), 2, msg, pos, depth);",
+			"C++ Context.load immediate calls used as statements should lower through a void macro API callable seam");
+		assertTrue(contextLoadCallableSource.indexOf("(load(\"error\", 2))(") < 0,
+			"C++ Context.load immediate calls should not emit a call against the string-returning load helper");
+		assertTrue(contextLoadCallableSource.indexOf("std::to_string((load(\"error\", 2))(") < 0,
+			"C++ Context.load immediate calls in string contexts should not fall through to generic std::to_string wrapping");
 
 		final macroAbstractShapeDir = Path.join([root, "macro-abstract-operator-shape-source-only"]);
 		final macroAbstractShapeEmit = BackendRegistry.createForTarget("cpp-native")
