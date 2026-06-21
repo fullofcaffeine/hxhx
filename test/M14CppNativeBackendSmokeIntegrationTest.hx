@@ -2389,6 +2389,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stdArrayLines, "__hxhx_comp_out.push_back(v);", "C++ std Array helper comprehensions should push string binders into string vectors");
 		assertTrue(stdArrayLines.indexOf("std::vector<int> __hxhx_comp_out;") < 0,
 			"C++ std Array helper comprehensions should not default string binder output to vector<int>");
+		final genericStdArray = new HxClassDecl("Array", false, [
+			new HxFunctionDecl("push", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Int", [], "")
+		], [new HxFieldDecl("length", Public, false, "Int", null)], "",
+			["__hxhx_type_params=T"]);
+		final genericStdArrayLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(genericStdArray, stdArrayLookup).join("\n");
+		assertTrue(genericStdArrayLines.length == 0,
+			"C++ upstream extern Array<T> should lower through std::vector<T>, not emit a fake non-template Array helper with incomplete T");
 		final erasedMapiMethod = new HxFunctionDecl("mapiErased", Public, true, [
 			new HxFunctionArg("it", "Iterable<String>", NoDefault, false, false),
 			new HxFunctionArg("f", "String", NoDefault, false, false)
@@ -3430,6 +3438,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				.emit(vendorReadOnlyArrayProgram, context(vendorReadOnlyArrayDir, true, true));
 			final vendorReadOnlyArraySource = File.getContent(vendorReadOnlyArrayEmit.entryPath);
 			assertContains(vendorReadOnlyArraySource, "struct ReadOnlyArray {", "C++ smoke should emit upstream haxe.ds.ReadOnlyArray as a helper");
+			assertTrue(vendorReadOnlyArraySource.indexOf("template<typename T>\nstruct ReadOnlyArray;") < 0,
+				"C++ ReadOnlyArray forward declarations should match the current non-template target-owned support shape");
 			assertContains(vendorReadOnlyArraySource, "auto operator[](int index) const { return __values[index]; }",
 				"C++ smoke should expose operator[] for upstream haxe.ds.ReadOnlyArray array access");
 			assertContains(vendorReadOnlyArraySource, "((*this)[i])", "C++ smoke should preserve upstream ReadOnlyArray.get through the wrapper operator[]");
@@ -3440,6 +3450,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			final vendorVectorEmit = BackendRegistry.createForTarget("cpp-native").emit(vendorVectorProgram, context(vendorVectorDir, true, true));
 			final vendorVectorSource = File.getContent(vendorVectorEmit.entryPath);
 			assertContains(vendorVectorSource, "struct Vector {", "C++ smoke should emit target-owned haxe.ds.Vector support");
+			assertTrue(vendorVectorSource.indexOf("template<typename T>\nstruct Vector;") < 0,
+				"C++ Vector forward declarations should match the current non-template target-owned support shape");
 			assertContains(vendorVectorSource, "Vector(int length) : __values(length), length(length) {}",
 				"C++ smoke should render haxe.ds.Vector through target-owned support, not upstream inactive branches");
 			assertContains(vendorVectorSource, "std::string unsafeGet(int index) const { return __values[index]; }",

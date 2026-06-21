@@ -1088,7 +1088,7 @@ class CppTargetCore {
 				final rawName = HxClassDecl.getName(cls);
 				if (rawName == mainName || emitted.exists(rawName) || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName))
 					continue;
-				emitType(rawName, isStdArrayHelperClass(cls) ? [] : genericClassTemplateParams(cls));
+				emitType(rawName, forwardDeclarationTypeParams(cls));
 			}
 		}
 		for (typed in program.getTypedModules()) {
@@ -1132,6 +1132,12 @@ class CppTargetCore {
 			|| isStdArrayHelperClass(cls))
 			return false;
 		return genericClassTemplateParams(cls).length > 0 && findConstructor(cls) != null;
+	}
+
+	static function forwardDeclarationTypeParams(cls:HxClassDecl):Array<String> {
+		if (isStdArrayHelperClass(cls) || isStdVectorHelperClass(cls) || isArrayBackedAbstractClass(cls) || isPrimitiveBackedAbstractClass(cls))
+			return [];
+		return genericClassTemplateParams(cls);
 	}
 
 	/**
@@ -1595,6 +1601,8 @@ class CppTargetCore {
 	}
 
 	static function renderStdArrayHelperClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		if (genericClassTemplateParams(cls).length > 0)
+			return [];
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		final out = ["struct " + className + " {"];
 		out.push("  std::vector<std::string> __values;");
