@@ -2199,6 +2199,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ vector-valued return expressions should return directly instead of falling through to int casts");
 		assertTrue(vectorReturnLines.indexOf("static_cast<int>(VectorProvider::items())") < 0,
 			"C++ vector-valued return expressions should not emit static_cast<int>");
+		final vectorPopMethod = new HxFunctionDecl("popStackLike", Public, true, [new HxFunctionArg("stack", "Array<VectorItem>", NoDefault, false, false)],
+			"VectorItem", [SReturn(ECall(EField(EIdent("stack"), "pop"), []), HxPos.unknown())], "");
+		final vectorPopLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(vectorPopMethod, vectorReturnOwner, vectorReturnLookup).join("\n");
+		assertContains(vectorPopLines, "return __hxhx_vector_pop(stack);",
+			"C++ vector pop expressions should lower through target-owned vector support instead of a nonexistent std::vector::pop");
+		assertTrue(vectorPopLines.indexOf("stack.pop()") < 0, "C++ vector pop expressions should not call std::vector::pop()");
+		final vectorPopDiscardMethod = new HxFunctionDecl("discardPopStackLike", Public, true,
+			[new HxFunctionArg("stack", "Array<VectorItem>", NoDefault, false, false)], "Void",
+			[SExpr(ECall(EField(EIdent("stack"), "pop"), []), HxPos.unknown())], "");
+		final vectorPopDiscardLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(vectorPopDiscardMethod, vectorReturnOwner, vectorReturnLookup).join("\n");
+		assertContains(vectorPopDiscardLines, "__hxhx_vector_pop(stack);",
+			"C++ vector pop statements should use the same support boundary and discard the returned value");
 		final stackItem = new HxClassDecl("StackItem", false, [], []);
 		final nativeTraceProvider = new HxClassDecl("NativeTraceProvider", false, [
 			new HxFunctionDecl("toHaxe", Public, true, [], "Array<StackItem>", [SReturn(EArrayDecl([]), HxPos.unknown())], "")

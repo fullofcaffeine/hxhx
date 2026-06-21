@@ -171,6 +171,9 @@ class CppTargetCore {
 		for (line in CppRuntimeSupport.dateIntrinsicLines())
 			out.push(line);
 		out.push("");
+		for (line in CppRuntimeSupport.vectorSupportLines())
+			out.push(line);
+		out.push("");
 		for (line in CppRuntimeSupport.sysEventLoopLines())
 			out.push(line);
 		out.push("");
@@ -4247,6 +4250,8 @@ class CppTargetCore {
 		if (isCppVectorType(receiverCppType)) {
 			final target = renderExpr(receiver, scope);
 			final lowered = switch (method) {
+				case "pop" if (args.length == 0):
+					"__hxhx_vector_pop(" + target + ")";
 				case "join" if (args.length == 1 && receiverCppType == "std::vector<std::string>"):
 					"__hxhx_join("
 					+ target
@@ -4693,6 +4698,8 @@ class CppTargetCore {
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				"std::string";
+			case ECall(EField(receiver, "pop"), _) if (isCppVectorType(exprCppType(receiver, scope))):
+				cppVectorElementType(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "next"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
 				cppIteratorElementType(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "hasNext"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
@@ -5149,6 +5156,8 @@ class CppTargetCore {
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				"std::string";
+			case ECall(EField(receiver, "pop"), _) if (isCppVectorType(exprCppType(receiver, scope))):
+				cppVectorElementType(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "next"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
 				cppIteratorElementType(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "hasNext"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):

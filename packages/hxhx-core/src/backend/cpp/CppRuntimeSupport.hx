@@ -90,6 +90,18 @@ class CppRuntimeSupport {
 		];
 	}
 
+	public static function vectorSupportLines():Array<String> {
+		return [
+			"template<typename T>",
+			"static T __hxhx_vector_pop(std::vector<T>& values) {",
+			"  if (values.empty()) return T{};",
+			"  T value = values.back();",
+			"  values.pop_back();",
+			"  return value;",
+			"}"
+		];
+	}
+
 	public static function sysEventLoopLines():Array<String> {
 		return [
 			"template<typename T>",
