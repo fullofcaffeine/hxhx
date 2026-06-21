@@ -2048,6 +2048,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(classRefStringLines, "return __hxhx_type_name(next);",
 			"C++ class-like reference stringification should use the target type-name helper instead of std::to_string(shared_ptr)");
 		assertTrue(classRefStringLines.indexOf("std::to_string(next)") < 0, "C++ class-like reference stringification should not call std::to_string");
+		final classConstructStringMethod = new HxFunctionDecl("constructStringLike", Public, true, [], "String",
+			[SReturn(ENew("SelfStringOwner", []), HxPos.unknown())], "");
+		final classConstructStringLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(classConstructStringMethod, selfStringOwner, selfStringLookup).join("\n");
+		assertContains(classConstructStringLines, "return __hxhx_type_name(std::make_shared<SelfStringOwner>());",
+			"C++ class-like construction in a String return should use target-owned stringification");
+		assertTrue(classConstructStringLines.indexOf("std::to_string(std::make_shared<SelfStringOwner>") < 0,
+			"C++ class-like construction in a String return should not call numeric std::to_string");
+		final classConstructArgStringMethod = new HxFunctionDecl("constructArgStringLike", Public, true, [], "String",
+			[SReturn(ENew("SelfStringOwner", [ENull]), HxPos.unknown())], "");
+		final classConstructArgStringLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(classConstructArgStringMethod, selfStringOwner, selfStringLookup).join("\n");
+		assertContains(classConstructArgStringLines, "return __hxhx_type_name(std::make_shared<SelfStringOwner>(nullptr));",
+			"C++ class-like construction with args in a String return should use target-owned stringification");
+		assertTrue(classConstructArgStringLines.indexOf("std::to_string(std::make_shared<SelfStringOwner>") < 0,
+			"C++ class-like construction with args in a String return should not call numeric std::to_string");
 		final vectorItem = new HxClassDecl("VectorItem", false, [], []);
 		final vectorProvider = new HxClassDecl("VectorProvider", false, [
 			new HxFunctionDecl("items", Public, true, [], "Array<VectorItem>", [SReturn(EArrayDecl([]), HxPos.unknown())], "")
@@ -2160,6 +2176,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ primitive-backed abstract helpers should not emit instance wrapper methods that require abstract this semantics");
 		assertTrue(primitiveLines.indexOf("std::shared_ptr<Int32>") < 0,
 			"C++ primitive-backed abstracts should not leak shared_ptr wrapper types into helper signatures");
+		final stringPrimitiveAbstract = new HxClassDecl("StringBackedFixture", false, [
+			new HxFunctionDecl("NotIgnored", Public, true, [], "StringBackedFixture", [SReturn(ENew("StringBackedFixture", [ENull]), HxPos.unknown())], ""),
+			new HxFunctionDecl("Ignored", Public, true, [new HxFunctionArg("reason", "String", NoDefault, false, false)], "StringBackedFixture",
+				[SReturn(ENew("StringBackedFixture", [EIdent("reason")]), HxPos.unknown())], "")
+		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=String"]);
+		final stringPrimitiveNames = new StringMap<Bool>();
+		stringPrimitiveNames.set("StringBackedFixture", true);
+		final stringPrimitiveClasses = new StringMap<HxClassDecl>();
+		stringPrimitiveClasses.set("StringBackedFixture", stringPrimitiveAbstract);
+		final stringPrimitiveLookup = {names: stringPrimitiveNames, byName: stringPrimitiveClasses};
+		final stringPrimitiveLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(stringPrimitiveAbstract, stringPrimitiveLookup).join("\n");
+		assertContains(stringPrimitiveLines, "static std::string NotIgnored() {",
+			"C++ string-backed abstract static helpers should erase return types to std::string");
+		assertContains(stringPrimitiveLines, "return std::string();",
+			"C++ string-backed abstract construction from null should lower to the underlying string default");
+		assertContains(stringPrimitiveLines, "return std::string(reason);",
+			"C++ string-backed abstract construction from a string should lower to the underlying string value");
+		assertTrue(stringPrimitiveLines.indexOf("std::make_shared<StringBackedFixture>") < 0,
+			"C++ primitive-backed abstract constructors should not emit fake shared_ptr wrapper allocations");
+		assertTrue(stringPrimitiveLines.indexOf("std::to_string(std::make_shared<StringBackedFixture>") < 0,
+			"C++ string-backed abstract constructors should not be numerically stringified");
 		final int64Abstract = new HxClassDecl("Int64", false, [
 			new HxFunctionDecl("ofInt", Public, true, [new HxFunctionArg("x", "Int", NoDefault, false, false)], "Int64",
 				[SReturn(EIdent("x"), HxPos.unknown())], ""),

@@ -3879,6 +3879,9 @@ class CppTargetCore {
 				throw "C++ source backend MVP unsupported BytesData constructor arity: " + args.length;
 			return "std::vector<int>{}";
 		}
+		final primitiveAbstract = primitiveBackedAbstractNewExpr(typePath, args, scope);
+		if (primitiveAbstract != null)
+			return primitiveAbstract;
 		if (isStdArrayTypePath(typePath))
 			return stdArrayConstructionExpr(typePath, args, scope);
 		if (scopeHasClass(scope, className) && isStdVectorHelperClass(scope.classByName.get(className)))
@@ -3901,6 +3904,28 @@ class CppTargetCore {
 			+ "("
 			+ renderedArgs
 			+ ")";
+	}
+
+	/**
+		Erase simple primitive-backed abstract construction to the underlying C++ value.
+
+		Primitive-backed abstracts are already erased in C++ signatures. Keeping `new`
+		as a heap allocation would produce impossible wrapper objects like
+		`std::make_shared<MyStringAbstract>(...)` inside methods that return
+		`std::string`.
+	**/
+	static function primitiveBackedAbstractNewExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		final valueType = primitiveBackedAbstractCppTypeForTypeHint(typePath, scope);
+		if (valueType == null || args.length > 1)
+			return null;
+		if (args.length == 0)
+			return cppDefaultValue(valueType, scope);
+		return switch (args[0]) {
+			case ENull:
+				cppDefaultValue(valueType, scope);
+			case _:
+				valueExprForExpectedType(args[0], valueType, scope);
+		};
 	}
 
 	static function templateArgsFromExpectedClassType(className:String, expectedCppType:String):Array<String> {
@@ -5526,6 +5551,8 @@ class CppTargetCore {
 			case ECall(EIdent(_), _) if (exprCppType(expr, scope) == "std::string"):
 				renderExpr(expr, scope);
 			case ECall(EField(_, _), _) if (exprCppType(expr, scope) == "std::string"):
+				renderExpr(expr, scope);
+			case ENew(typePath, _) if (primitiveBackedAbstractCppTypeForTypeHint(typePath, scope) == "std::string"):
 				renderExpr(expr, scope);
 			case ECall(EIdent(_), _) | ECall(EField(_, _), _):
 				callStringExpr(expr, scope);
