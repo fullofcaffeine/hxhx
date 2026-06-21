@@ -684,6 +684,8 @@ class ParserStageScanHelpers {
 				return {nextPos: i, fields: fields};
 			if (!tok.isIdent) {
 				switch (tok.text) {
+					case "@" if (depth == 1):
+						i = skipMetadataPayload(source, i);
 					case "{":
 						depth += 1;
 					case "}":
@@ -720,6 +722,45 @@ class ParserStageScanHelpers {
 			if (end.closed)
 				return {nextPos: i, fields: fields};
 		}
+	}
+
+	static function skipMetadataPayload(source:String, start:Int):Int {
+		var i = start;
+		final colon = scanNextToken(source, i);
+		if (colon.text == ":")
+			i = colon.nextPos;
+		var tok = scanNextToken(source, i);
+		if (!tok.isIdent || tok.text.length == 0)
+			return start;
+		i = tok.nextPos;
+		while (true) {
+			final dot = scanNextToken(source, i);
+			if (dot.text != ".")
+				break;
+			final segment = scanNextToken(source, dot.nextPos);
+			if (!segment.isIdent || segment.text.length == 0)
+				break;
+			i = segment.nextPos;
+		}
+		tok = scanNextToken(source, i);
+		if (tok.text != "(")
+			return i;
+		i = tok.nextPos;
+		var depth = 1;
+		while (depth > 0) {
+			tok = scanNextToken(source, i);
+			if (tok.text.length == 0)
+				return i;
+			i = tok.nextPos;
+			switch (tok.text) {
+				case "(":
+					depth += 1;
+				case ")":
+					depth -= 1;
+				case _:
+			}
+		}
+		return i;
 	}
 
 	static function scanNextFieldNameToken(source:String, start:Int):{

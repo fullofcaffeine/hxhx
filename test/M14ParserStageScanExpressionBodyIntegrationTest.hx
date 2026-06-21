@@ -63,5 +63,28 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 			"expected Dynamic expectedValue field");
 		assertTrue(HxFieldDecl.getName(fields[4]) == "recursive"
 			&& HxFieldDecl.getTypeHint(fields[4]) == "Bool", "expected Bool recursive field");
+
+		final optionalTypedefSource = [
+			"typedef MetadataDescription = {",
+			"  final metadata:String;",
+			"  final doc:String;",
+			"  @:optional final links:Array<String>;",
+			"  @:optional final params:Array<String>;",
+			"  @:optional final platforms:Array<Platform>;",
+			"  @:optional final targets:Array<MetadataTarget>;",
+			"}"
+		].join("\n");
+		final optionalTypedefs = ParserStageScanHelpers.scanModuleLocalHelperTypedefs(optionalTypedefSource, null);
+		assertTrue(optionalTypedefs.length == 1, "expected optional metadata structural typedef helper");
+		final optionalFields = HxClassDecl.getFields(optionalTypedefs[0]);
+		assertTrue(optionalFields.length == 6, "expected metadata structural fields to be retained");
+		assertTrue(HxFieldDecl.getName(optionalFields[0]) == "metadata", "expected metadata field");
+		assertTrue(HxFieldDecl.getName(optionalFields[1]) == "doc", "expected doc field");
+		assertTrue(HxFieldDecl.getName(optionalFields[2]) == "links", "expected @:optional links field name");
+		assertTrue(HxFieldDecl.getName(optionalFields[3]) == "params", "expected @:optional params field name");
+		assertTrue(HxFieldDecl.getName(optionalFields[4]) == "platforms", "expected @:optional platforms field name");
+		assertTrue(HxFieldDecl.getName(optionalFields[5]) == "targets", "expected @:optional targets field name");
+		for (field in optionalFields)
+			assertTrue(HxFieldDecl.getName(field) != "optional", "metadata name should not become a typedef field name");
 	}
 }

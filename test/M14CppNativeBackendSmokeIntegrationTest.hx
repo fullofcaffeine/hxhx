@@ -644,6 +644,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  var path:String;",
 			"  var recursive:Bool;",
 			"}",
+			"typedef MetadataDescription = {",
+			"  final metadata:String;",
+			"  final doc:String;",
+			"  @:optional final links:Array<String>;",
+			"  @:optional final params:Array<String>;",
+			"  @:optional final platforms:Array<Platform>;",
+			"  @:optional final targets:Array<MetadataTarget>;",
+			"}",
 			"class Assert {",
 			"  public static function q(v:Dynamic):String {",
 			"    return Std.string(v);",
@@ -3743,6 +3751,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::string error = std::string();", "C++ smoke should retain LikeStatus error field");
 		assertContains(source, "std::string path = std::string();", "C++ smoke should retain LikeStatus path field");
 		assertContains(source, "bool recursive = false;", "C++ smoke should retain LikeStatus recursive field");
+		assertContains(source, "struct MetadataDescription {", "C++ smoke should emit optional-metadata structural typedef helpers");
+		assertContains(source, "std::string metadata = std::string();", "C++ smoke should retain MetadataDescription metadata field");
+		assertContains(source, "std::string doc = std::string();", "C++ smoke should retain MetadataDescription doc field");
+		assertContains(source, "std::vector<std::string> links = {};", "C++ smoke should preserve @:optional links field name");
+		assertContains(source, "std::vector<std::string> params = {};", "C++ smoke should preserve @:optional params field name");
+		assertContains(source, "std::vector<std::shared_ptr<Platform>> platforms = {};", "C++ smoke should preserve @:optional platforms field name");
+		assertContains(source, "std::vector<std::shared_ptr<MetadataTarget>> targets = {};", "C++ smoke should preserve @:optional targets field name");
+		assertTrue(source.indexOf("std::vector<std::string> optional =") < 0, "C++ smoke should not render metadata name optional as a structural field");
 		assertContains(source,
 			"template<typename TExpected, typename TValue, typename TStatus>\n  static bool sameAs(const TExpected& expected, const TValue& value, TStatus& status, double approx)",
 			"C++ smoke should keep Assert.sameAs Dynamic expected/value args and status values polymorphic");
