@@ -921,15 +921,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			}
 		}
 		assertTrue(template != null, "vendor Template fixture should expose Template class");
+		final expected = [
+			"parse" => "std::shared_ptr<TemplateExpr>",
+			"parseBlock" => "std::shared_ptr<TemplateExpr>",
+			"parseTokens" => "std::shared_ptr<List",
+			"parseExpr" => "std::function"
+		];
+		final seen = new StringMap<Bool>();
 		for (fn in HxClassDecl.getFunctions(template)) {
-			if (HxFunctionDecl.getName(fn) == "parse") {
+			final name = HxFunctionDecl.getName(fn);
+			if (expected.exists(name)) {
 				final returnType = @:privateAccess backend.cpp.CppTargetCore.cppFunctionReturnType(fn, template, {names: names, byName: classes});
-				assertContains(returnType, "std::shared_ptr<TemplateExpr>",
-					"C++ Template.parse should use the TemplateExpr return fact instead of recursive enum-constructor inference");
-				return;
+				assertContains(returnType, expected.get(name),
+					"C++ Template." + name + " should use a known return fact instead of recursive helper inference");
+				seen.set(name, true);
 			}
 		}
-		throw "vendor Template fixture should expose parse";
+		for (name in expected.keys())
+			assertTrue(seen.exists(name), "vendor Template fixture should expose " + name);
 	}
 
 	static function missingIMapProgram():GenIrProgram {
@@ -4449,6 +4458,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertVendorJsonParserReturnTypesWhenAvailable();
 		assertVendorExprToolsReturnTypesWhenAvailable();
 		assertVendorTemplateReturnTypesWhenAvailable();
+		final vendorTemplateProgram = vendorTemplateProgramWhenAvailable();
+		if (vendorTemplateProgram != null) {
+			final vendorTemplateDir = Path.join([root, "vendor-template-source-only"]);
+			final vendorTemplateEmit = BackendRegistry.createForTarget("cpp-native").emit(vendorTemplateProgram, context(vendorTemplateDir, true, true));
+			final vendorTemplateSource = File.getContent(vendorTemplateEmit.entryPath);
+			assertContains(vendorTemplateSource, "struct Template {", "C++ smoke should emit upstream haxe.Template as a helper");
+			assertContains(vendorTemplateSource, "std::shared_ptr<TemplateExpr> parse(",
+				"C++ smoke should keep Template.parse return typing concrete without recursive inference");
+		}
 		final vendorReadOnlyArrayProgram = vendorReadOnlyArrayProgramWhenAvailable();
 		if (vendorReadOnlyArrayProgram != null) {
 			final vendorReadOnlyArrayDir = Path.join([root, "vendor-readonlyarray-source-only"]);

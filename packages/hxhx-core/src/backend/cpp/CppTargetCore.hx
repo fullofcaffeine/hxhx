@@ -55,6 +55,7 @@ typedef CppConstructorFieldInitializer = {
 class CppTargetCore {
 	static final inferredSignatureStack = new haxe.ds.StringMap<Bool>();
 	static final erasedDynamicReturnStack = new haxe.ds.StringMap<Bool>();
+	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		traceCppPhase("emit_before_main_module");
@@ -1985,8 +1986,18 @@ class CppTargetCore {
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
 		}
-		if (owner == "Template" && (method == "parse" || method == "parseBlock"))
-			return cppTypeHint("TemplateExpr", scope, classLookup);
+		if (owner == "Template") {
+			return switch (method) {
+				case "parse" | "parseBlock":
+					cppTypeHint("TemplateExpr", scope, classLookup);
+				case "parseTokens":
+					cppTypeHint("List<Token>", scope, classLookup);
+				case "parseExpr":
+					cppTypeHint("Void->Dynamic", scope, classLookup);
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "Bytes" && method == "fill")
 			return "void";
 		return StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
@@ -2065,10 +2076,27 @@ class CppTargetCore {
 	}
 
 	static function prepareFunctionScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null)
+			return;
 		applyFunctionTypeParams(scope, fn);
-		inferCallableArgTypeOverrides(scope, fn);
-		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
-		inferDynamicLocalTypeOverrides(scope, fn);
+		final key = functionSignatureKey(scope.owner, fn);
+		if (functionScopePrepStack.exists(key)) {
+			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+			return;
+		}
+		functionScopePrepStack.set(key, true);
+		try {
+			inferCallableArgTypeOverrides(scope, fn);
+			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+			inferDynamicLocalTypeOverrides(scope, fn);
+		} catch (e:haxe.Exception) {
+			functionScopePrepStack.remove(key);
+			throw e;
+		} catch (e:String) {
+			functionScopePrepStack.remove(key);
+			throw e;
+		}
+		functionScopePrepStack.remove(key);
 	}
 
 	static function baseTypeName(cls:HxClassDecl):Null<String> {
