@@ -1892,11 +1892,19 @@ class CppTargetCore {
 	}
 
 	static function renderScope(cls:HxClassDecl, classLookup:CppClassLookup, returnType:String):CppRenderScope {
+		final typeParams = genericClassTemplateParams(cls);
+		final typeParamCppNames = new haxe.ds.StringMap<String>();
+		for (param in typeParams) {
+			final clean = sanitizeIdentifier(param);
+			if (clean.length > 0)
+				typeParamCppNames.set(clean, clean);
+		}
 		return {
 			owner: cls,
 			classNames: classLookup.names,
 			classByName: classLookup.byName,
-			typeParams: genericClassTemplateParams(cls),
+			typeParams: typeParams,
+			typeParamCppNames: typeParamCppNames,
 			localTypes: new haxe.ds.StringMap<String>(),
 			localNames: new haxe.ds.StringMap<String>(),
 			localNameCounts: new haxe.ds.StringMap<Int>(),
@@ -2266,15 +2274,32 @@ class CppTargetCore {
 		if (params.length == 0)
 			return;
 		final merged = scope.typeParams == null ? [] : scope.typeParams.copy();
-		final seen = new haxe.ds.StringMap<Bool>();
-		for (param in merged)
-			seen.set(param, true);
+		if (scope.typeParamCppNames == null)
+			scope.typeParamCppNames = new haxe.ds.StringMap<String>();
+		final seenRaw = new haxe.ds.StringMap<Bool>();
+		final seenCpp = new haxe.ds.StringMap<Bool>();
+		for (param in merged) {
+			final clean = sanitizeIdentifier(param);
+			if (clean.length == 0)
+				continue;
+			seenRaw.set(clean, true);
+			final mapped = cppTypeParamName(clean, scope);
+			if (mapped.length > 0)
+				seenCpp.set(mapped, true);
+		}
 		for (param in params) {
 			final clean = sanitizeIdentifier(param);
-			if (clean.length > 0 && !seen.exists(clean)) {
-				seen.set(clean, true);
+			if (clean.length == 0)
+				continue;
+			var cppName = clean;
+			if (seenRaw.exists(clean) || seenCpp.exists(cppName))
+				cppName = uniqueFunctionTypeParamCppName(clean, seenCpp);
+			if (!seenRaw.exists(clean)) {
+				seenRaw.set(clean, true);
 				merged.push(clean);
 			}
+			seenCpp.set(cppName, true);
+			scope.typeParamCppNames.set(clean, cppName);
 		}
 		scope.typeParams = merged;
 	}
@@ -2282,18 +2307,42 @@ class CppTargetCore {
 	static function emittedFunctionTypeParams(fn:HxFunctionDecl, returnType:String, scope:CppRenderScope):Array<String> {
 		final out = new Array<String>();
 		for (param in genericFunctionTypeParams(fn)) {
-			if (cppTypeTextMentionsParam(returnType, param)) {
-				out.push(param);
+			final cppName = cppTypeParamName(param, scope);
+			if (cppTypeTextMentionsParam(returnType, cppName)) {
+				out.push(cppName);
 				continue;
 			}
 			for (arg in HxFunctionDecl.getArgs(fn)) {
-				if (cppTypeTextMentionsParam(cppFunctionArgType(arg, scope), param)) {
-					out.push(param);
+				if (cppTypeTextMentionsParam(cppFunctionArgType(arg, scope), cppName)) {
+					out.push(cppName);
 					break;
 				}
 			}
 		}
 		return out;
+	}
+
+	static function cppTypeParamName(param:String, ?scope:CppRenderScope):String {
+		final clean = sanitizeIdentifier(StringTools.trim(param == null ? "" : param));
+		if (clean.length == 0)
+			return "";
+		if (scope != null && scope.typeParamCppNames != null) {
+			final mapped = scope.typeParamCppNames.get(clean);
+			if (mapped != null && mapped.length > 0)
+				return mapped;
+		}
+		return clean;
+	}
+
+	static function uniqueFunctionTypeParamCppName(param:String, seenCpp:haxe.ds.StringMap<Bool>):String {
+		final base = sanitizeIdentifier(param) + "__fn";
+		var candidate = base;
+		var index = 2;
+		while (seenCpp.exists(candidate)) {
+			candidate = base + index;
+			index++;
+		}
+		return candidate;
 	}
 
 	static function cppTypeTextMentionsParam(typeText:String, param:String):Bool {
@@ -6530,7 +6579,7 @@ class CppTargetCore {
 
 	static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		if (scope != null && scope.owner != null && isGenericTypeParamHint(typeHint, scope.owner))
-			return genericTypeParamName(typeHint);
+			return cppTypeParamName(genericTypeParamName(typeHint), scope);
 		if (isStructuralTypeHint(typeHint)) {
 			final struct = structuralTypeHintStruct(typeHint, scope, classLookup);
 			if (struct != null)

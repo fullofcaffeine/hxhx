@@ -235,7 +235,7 @@ class CppTypeModel {
 			for (param in scope.typeParams) {
 				final candidate = sanitizeTypePath(StringTools.trim(param));
 				if (candidate == clean)
-					return candidate;
+					return mappedScopeTypeParam(candidate, scope);
 			}
 		for (meta in HxClassDecl.getMetadata(scope.owner)) {
 			final prefix = "__hxhx_type_params=";
@@ -244,10 +244,20 @@ class CppTypeModel {
 			for (param in meta.substr(prefix.length).split(",")) {
 				final candidate = sanitizeTypePath(StringTools.trim(param));
 				if (candidate == clean)
-					return candidate;
+					return mappedScopeTypeParam(candidate, scope);
 			}
 		}
 		return null;
+	}
+
+	static function mappedScopeTypeParam(param:String, ?scope:CppRenderScope):String {
+		final clean = sanitizeTypePath(StringTools.trim(param == null ? "" : param));
+		if (scope != null && scope.typeParamCppNames != null) {
+			final mapped = scope.typeParamCppNames.get(clean);
+			if (mapped != null && mapped.length > 0)
+				return mapped;
+		}
+		return clean;
 	}
 
 	static function isCppPointerTypeHint(typeHint:String):Bool {

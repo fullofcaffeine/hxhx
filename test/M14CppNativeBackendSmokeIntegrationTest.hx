@@ -2862,6 +2862,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(parsedListSortLines, "(q.prev) = p;", "C++ ListSort-like prev field access should stay on the generic node type");
 		assertTrue(parsedListSortLines.indexOf("std::string list") < 0,
 			"C++ ListSort-like method args should not collapse function-level generic T to std::string");
+		final parsedShadowGenericModule = new HxParser("class ShadowGenericOwner<T> { public var item:T; public function new(item:T) this.item = item; public function same<T>(value:T):T { return value; } }")
+			.parseModule("ShadowGenericOwner");
+		final parsedShadowGenericOwner = HxModuleDecl.getMainClass(parsedShadowGenericModule);
+		final parsedShadowGenericNames = new StringMap<Bool>();
+		parsedShadowGenericNames.set("ShadowGenericOwner", true);
+		final parsedShadowGenericClasses = new StringMap<HxClassDecl>();
+		parsedShadowGenericClasses.set("ShadowGenericOwner", parsedShadowGenericOwner);
+		final parsedShadowGenericLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedShadowGenericOwner, {
+				names: parsedShadowGenericNames,
+				byName: parsedShadowGenericClasses
+			}).join("\n");
+		assertContains(parsedShadowGenericLines, "template<typename T>\nstruct ShadowGenericOwner {",
+			"C++ owner generic should keep the source template parameter");
+		assertContains(parsedShadowGenericLines, "template<typename T__fn>\n  T__fn same(T__fn value) {",
+			"C++ method generics that shadow owner generics should be renamed instead of emitting illegal nested typename T");
+		assertTrue(parsedShadowGenericLines.indexOf("template<typename T>\n  T same(T value)") < 0,
+			"C++ method generics must not shadow the owner template parameter name");
 		final methodGenericBuffer = new HxClassDecl("MethodGenericBuffer", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
 			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",
