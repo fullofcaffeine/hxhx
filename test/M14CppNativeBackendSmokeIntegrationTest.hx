@@ -1943,21 +1943,46 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				], "")
 		], []);
 		metaObjectNames.set("Meta", true);
+		for (name in ["Type", "Class"])
+			metaObjectNames.set(name, true);
 		metaObjectClasses.set("Meta", metaHelper);
+		metaObjectClasses.set("Type", typeHelper);
+		metaObjectClasses.set("Class", classValue);
 		final getMetaLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(metaHelper)[0], metaHelper, metaObjectLookup).join("\n");
 		final getTypeLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(metaHelper)[1], metaHelper, metaObjectLookup).join("\n");
 		final getFieldsLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(metaHelper)[2], metaHelper, metaObjectLookup).join("\n");
+		final metaFieldsProbe = new HxFunctionDecl("getIgnoredLike", Public, false, [
+			new HxFunctionArg("target", "String", NoDefault, false, false),
+			new HxFunctionArg("method", "String", NoDefault, false, false)
+		], "Dynamic", [
+			SVar("metas", "Dynamic", ECall(EField(EIdent("Meta"), "getFields"), [ECall(EField(EIdent("Type"), "getClass"), [EIdent("target")])]),
+				HxPos.unknown()),
+			SVar("metasForTestMetas", "", ECall(EField(EIdent("Reflect"), "getProperty"), [EIdent("metas"), EIdent("method")]), HxPos.unknown()),
+			SReturn(EIdent("metasForTestMetas"), HxPos.unknown())
+		], "");
+		final metaProbeOwner = new HxClassDecl("MetaProbe", false, [metaFieldsProbe], []);
+		metaObjectNames.set("MetaProbe", true);
+		metaObjectClasses.set("MetaProbe", metaProbeOwner);
+		final metaProbeLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(metaFieldsProbe, metaProbeOwner, metaObjectLookup).join("\n");
 		assertContains(getMetaLines, "return __hxhx_meta_get_as<std::shared_ptr<MetaObject>>(t);",
 			"C++ haxe.rtti.Meta.getMeta should lower through target-owned metadata support instead of direct __meta__ field reads");
 		assertTrue(getMetaLines.indexOf("t.__meta__") < 0, "C++ haxe.rtti.Meta.getMeta must not emit invalid std::string.__meta__ reads");
-		assertContains(getTypeLines, "static std::any getType(std::string t)", "C++ Dynamic metadata return helpers should keep erased std::any return types");
+		assertContains(getTypeLines, "template<typename T>", "C++ Dynamic metadata accessors should accept class/meta values generically");
+		assertContains(getTypeLines, "static std::any getType(const T& t)", "C++ Dynamic metadata return helpers should keep erased std::any return types");
 		assertContains(getTypeLines, "return __hxhx_meta_section_as<std::any>(t, std::string(\"obj\"));",
 			"C++ haxe.rtti.Meta.getType should lower through target-owned metadata support");
 		assertContains(getFieldsLines, "return __hxhx_meta_section_as<std::any>(t, std::string(\"fields\"));",
 			"C++ haxe.rtti.Meta.getFields should lower through target-owned metadata support");
+		assertContains(metaProbeLines, "std::any metas = Meta::getFields(Type::getClass(target));",
+			"C++ haxe.rtti.Meta.getFields should accept Type.getClass metadata values at call sites");
+		assertContains(metaProbeLines, "auto metasForTestMetas = __hxhx_reflect_get_property_any(metas, std::string(method));",
+			"C++ Reflect.getProperty should accept erased metadata maps without requiring a std::string receiver");
+		assertTrue(metaProbeLines.indexOf("Reflect::getProperty(metas") < 0,
+			"C++ erased metadata map property access must not call the std::string Reflect helper");
 		assertTrue(getTypeLines.indexOf("static_cast<int>(") < 0, "C++ std::any returns must not use numeric fallback casts");
 		assertTrue(getFieldsLines.indexOf("static_cast<int>(") < 0, "C++ std::any field returns must not use numeric fallback casts");
 		final optionalStringCtor = new HxClassDecl("FixtureLike", false, [

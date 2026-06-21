@@ -216,6 +216,10 @@ class CppRuntimeSupport {
 			"template<typename TResult, typename T>",
 			"static TResult __hxhx_meta_section_as(const T&, const std::string&) {",
 			"  return TResult{};",
+			"}",
+			"",
+			"static std::any __hxhx_reflect_get_property_any(const std::any&, const std::string&) {",
+			"  return std::any();",
 			"}"
 		];
 	}

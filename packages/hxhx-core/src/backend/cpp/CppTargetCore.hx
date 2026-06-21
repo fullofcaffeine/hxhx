@@ -2080,12 +2080,13 @@ class CppTargetCore {
 			case _:
 				cppDefaultValue(returnType, scope);
 		};
-		return ["  static "
+		return ["  template<typename T>",
+			"  static "
 			+ returnType
 			+ " "
 			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
-			+ "("
-			+ renderFunctionArgs(args, scope)
+			+ "(const T& "
+			+ target
 			+ ") {",
 			"    return " + call + ";",
 			"  }"
@@ -4317,6 +4318,11 @@ class CppTargetCore {
 			return "__hxhx_join(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "compare")
 			return reflectCompareExpr(args, scope);
+		if (isReflectStaticReceiver(receiver)
+			&& method == "getProperty"
+			&& args.length == 2
+			&& exprCppType(args[0], scope) == "std::any")
+			return "__hxhx_reflect_get_property_any(" + renderExpr(args[0], scope) + ", " + stringExpr(args[1], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "isEnumValue" && args.length == 1)
 			return "__hxhx_is_enum_value(" + renderExpr(args[0], scope) + ")";
 		if (isCppConstPointerStaticReceiver(receiver) && method == "fromPointer" && args.length == 1)
@@ -4639,6 +4645,9 @@ class CppTargetCore {
 				int64DivModStruct().name;
 			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
 				"int";
+			case ECall(EField(receiver, "getProperty"), args)
+				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
+				"std::any";
 			case ECall(EField(EIdent("Type"), method), args):
 				typeIntrinsicReturnCppType(method, args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
@@ -5002,6 +5011,9 @@ class CppTargetCore {
 				"int";
 			case ECall(EField(receiver, "compare"), _) if (isReflectStaticReceiver(receiver)):
 				"int";
+			case ECall(EField(receiver, "getProperty"), args)
+				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
+				"std::any";
 			case ECall(EField(receiver, "isEnumValue"), _) if (isReflectStaticReceiver(receiver)):
 				"bool";
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
