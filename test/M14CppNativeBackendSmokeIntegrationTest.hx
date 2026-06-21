@@ -832,6 +832,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function enumConstructorCarrierCollisionProgram():GenIrProgram {
+		final src = [
+			"class Main { static function main() {} }",
+			"class TVar {",
+			"  public function new() {}",
+			"}",
+			"class TypedExpr {",
+			"  public function new() {}",
+			"}",
+			"enum TypedExprDef {",
+			"  TVar(v:TVar);",
+			"  TFor(v:TVar, e1:TypedExpr, e2:TypedExpr);",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "TypedExprDefShape.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function macroAbstractOperatorShapeProgram():GenIrProgram {
 		final src = [
 			"class Main { static function main() {} }",
@@ -3955,6 +3974,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ enum carrier forward declarations should not guess a generic Constant<T>");
 		assertTrue(enumCarrierSource.indexOf("template<typename K, typename V>\nstruct Binop;") < 0,
 			"C++ enum carrier forward declarations should not guess a generic Binop<K,V>");
+
+		final enumCtorCarrierDir = Path.join([root, "enum-constructor-carrier-collision-source-only"]);
+		final enumCtorCarrierEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(enumConstructorCarrierCollisionProgram(), context(enumCtorCarrierDir, true, true));
+		final enumCtorCarrierSource = File.getContent(enumCtorCarrierEmit.entryPath);
+		assertContains(enumCtorCarrierSource,
+			"static std::string TFor(std::shared_ptr<::TVar> v, std::shared_ptr<TypedExpr> e1, std::shared_ptr<TypedExpr> e2)",
+			"C++ enum constructor payload types should qualify carrier names that collide with owner constructor members");
+		assertTrue(enumCtorCarrierSource.indexOf("static std::string TFor(std::shared_ptr<TVar> v") < 0,
+			"C++ enum constructor payload types should not resolve TVar through TypedExprDef::TVar");
 
 		final macroAbstractShapeDir = Path.join([root, "macro-abstract-operator-shape-source-only"]);
 		final macroAbstractShapeEmit = BackendRegistry.createForTarget("cpp-native")

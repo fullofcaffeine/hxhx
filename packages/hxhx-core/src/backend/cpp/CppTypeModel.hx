@@ -292,10 +292,25 @@ class CppTypeModel {
 
 	static function cppClassLikeTypeName(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final base = sanitizeTypePath(typeBaseName(typeHint));
+		final cppBase = shouldQualifyGlobalClassLikeType(base, scope, classLookup) ? "::" + base : base;
 		final args = genericTypeHintArgs(typeHint);
 		if (args.length == 0)
-			return base;
-		return base + "<" + [for (arg in args) cppTypeHint(arg, scope, classLookup)].join(", ") + ">";
+			return cppBase;
+		return cppBase + "<" + [for (arg in args) cppTypeHint(arg, scope, classLookup)].join(", ") + ">";
+	}
+
+	static function shouldQualifyGlobalClassLikeType(base:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Bool {
+		if (base == null || base.length == 0 || scope == null || scope.owner == null)
+			return false;
+		if (!scopeHasClass(scope, base) && (classLookup == null || !classLookup.names.exists(base)))
+			return false;
+		for (field in HxClassDecl.getFields(scope.owner))
+			if (sanitizeIdentifier(HxFieldDecl.getName(field)) == base)
+				return true;
+		for (fn in HxClassDecl.getFunctions(scope.owner))
+			if (sanitizeIdentifier(HxFunctionDecl.getName(fn)) == base)
+				return true;
+		return false;
 	}
 
 	public static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
@@ -530,6 +545,8 @@ class CppTypeModel {
 
 	public static function typeBaseName(typeHint:String):String {
 		var hint = unwrapNullTypeHint(typeHint);
+		if (StringTools.startsWith(hint, "::"))
+			hint = hint.substr(2);
 		final generic = hint.indexOf("<");
 		if (generic >= 0)
 			hint = hint.substr(0, generic);
@@ -606,7 +623,8 @@ class CppTypeModel {
 	public static function classNameFromCppType(typeName:String):Null<String> {
 		if (!isCppReferenceType(typeName))
 			return null;
-		return typeName.substr("std::shared_ptr<".length, typeName.length - "std::shared_ptr<".length - 1);
+		final className = typeName.substr("std::shared_ptr<".length, typeName.length - "std::shared_ptr<".length - 1);
+		return StringTools.startsWith(className, "::") ? className.substr(2) : className;
 	}
 
 	public static function classNameFromCppExprType(typeName:String, ?scope:CppRenderScope):Null<String> {
