@@ -108,6 +108,15 @@ class CppTargetCore {
 			Sys.println("cpp_target_phase=" + label);
 	}
 
+	static function traceCppSnippet(value:String):String {
+		if (value == null)
+			return "";
+		var out = StringTools.replace(value, "\n", " ");
+		out = StringTools.replace(out, "\r", " ");
+		out = StringTools.replace(out, "\t", " ");
+		return out.length > 160 ? out.substr(0, 160) + "..." : out;
+	}
+
 	static function findMainModule(program:GenIrProgram, context:BackendContext):Null<{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}> {
 		final wanted = context.mainModule == null ? "" : context.mainModule;
 		var fallback:Null<{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}> = null;
@@ -791,7 +800,11 @@ class CppTargetCore {
 			out.push("");
 		}
 		traceCppPhase("render_before_anon_structs");
-		final anonStructs = renderAnonStructs(collectAnonStructs(program, classLookup));
+		traceCppPhase("render_before_collect_anon_structs");
+		final collectedAnonStructs = collectAnonStructs(program, classLookup);
+		traceCppPhase("render_after_collect_anon_structs count=" + collectedAnonStructs.length);
+		traceCppPhase("render_before_render_anon_structs");
+		final anonStructs = renderAnonStructs(collectedAnonStructs);
 		traceCppPhase("render_after_anon_structs count=" + anonStructs.length);
 		for (decl in anonStructs) {
 			for (line in decl)
@@ -847,6 +860,20 @@ class CppTargetCore {
 	static function collectAnonStructs(program:GenIrProgram, classLookup:CppClassLookup):Array<CppAnonStruct> {
 		final out = new Array<CppAnonStruct>();
 		final seen = new haxe.ds.StringMap<Bool>();
+		var typeHintTraceCount = 0;
+		var typeHintTraceSuppressed = false;
+		traceCppPhase("anon_collect_enter typed_modules=" + program.getTypedModules().length);
+		function traceAnonTypeHint(hint:String):Void {
+			if (!traceCppEnabled())
+				return;
+			if (typeHintTraceCount < 1000) {
+				typeHintTraceCount++;
+				traceCppPhase("anon_collect_type_hint hint=" + traceCppSnippet(hint));
+			} else if (!typeHintTraceSuppressed) {
+				typeHintTraceSuppressed = true;
+				traceCppPhase("anon_collect_type_hint_suppressed limit=1000");
+			}
+		}
 		function addStruct(struct:CppAnonStruct):Void {
 			if (struct != null && !seen.exists(struct.name)) {
 				seen.set(struct.name, true);
@@ -857,6 +884,7 @@ class CppTargetCore {
 			final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 			if (hint.length == 0)
 				return;
+			traceAnonTypeHint(hint);
 			if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint) || CppTypeModel.isIteratorTypeHint(hint)) {
 				addTypeHint(genericTypeHintArg(hint), scope);
 				return;
@@ -972,14 +1000,21 @@ class CppTargetCore {
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
+				final className = sanitizeTypePath(HxClassDecl.getName(cls));
+				traceCppPhase("anon_collect_class_begin name=" + className);
 				final fieldScope = renderScope(cls, classLookup, "void");
 				for (field in HxClassDecl.getFields(cls)) {
+					final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+					traceCppPhase("anon_collect_field_begin class=" + className + " name=" + fieldName);
 					addTypeHint(HxFieldDecl.getTypeHint(field), fieldScope);
 					final init = HxFieldDecl.getInit(field);
 					if (init != null)
 						addExpr(init, fieldScope);
+					traceCppPhase("anon_collect_field_end class=" + className + " name=" + fieldName);
 				}
 				for (fn in HxClassDecl.getFunctions(cls)) {
+					final fnName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+					traceCppPhase("anon_collect_fn_begin class=" + className + " name=" + fnName);
 					final scope = renderScope(cls, classLookup, cppFunctionReturnType(fn, cls, classLookup));
 					prepareFunctionScope(scope, fn);
 					addTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope);
@@ -987,9 +1022,12 @@ class CppTargetCore {
 						addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
 					for (stmt in HxFunctionDecl.getBody(fn))
 						addStmt(stmt, scope);
+					traceCppPhase("anon_collect_fn_end class=" + className + " name=" + fnName);
 				}
+				traceCppPhase("anon_collect_class_end name=" + className);
 			}
 		}
+		traceCppPhase("anon_collect_done count=" + out.length);
 		return out;
 	}
 
