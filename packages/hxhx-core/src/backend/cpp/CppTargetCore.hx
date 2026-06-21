@@ -7331,6 +7331,14 @@ class CppTargetCore {
 		return out;
 	}
 
+	static function copyBoolMap(values:haxe.ds.StringMap<Bool>):haxe.ds.StringMap<Bool> {
+		final out = new haxe.ds.StringMap<Bool>();
+		if (values != null)
+			for (key in values.keys())
+				out.set(key, values.get(key));
+		return out;
+	}
+
 	static function setAssignedArgTypeOverride(scope:CppRenderScope, local:String, typeName:String):Void {
 		if (scope == null || local == null || local.length == 0 || typeName == null || typeName.length == 0)
 			return;
@@ -7477,7 +7485,7 @@ class CppTargetCore {
 		return switch (expr) {
 			case EAnon(_, _):
 				enumMetadataCtorStringExpr(expr, scope) == null;
-			case EArrayDecl(_):
+			case EArrayDecl(_) | EArrayComprehension(_, _, _, _):
 				true;
 			case EIdent(name):
 				final local = sanitizeIdentifier(name);
@@ -7486,6 +7494,21 @@ class CppTargetCore {
 					|| typeName == "std::any"
 					|| typeName == "std::vector<std::any>"
 					|| isCppAnonStructType(typeName);
+			case ECall(ELambda(lambdaArgs, body), args):
+				final lambdaLocals = erasedLocals == null ? null : copyBoolMap(erasedLocals);
+				if (lambdaLocals != null) {
+					final count = lambdaArgs.length < args.length ? lambdaArgs.length : args.length;
+					for (i in 0...count)
+						if (exprReturnsErasedDynamicValue(args[i], scope, erasedLocals))
+							lambdaLocals.set(sanitizeIdentifier(lambdaArgs[i]), true);
+				}
+				exprReturnsErasedDynamicValue(body, scope, lambdaLocals);
+			case ECall(EIdent(name), args)
+				if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while" || name == "__hxhx_try")
+					&& args.length >= 3):
+				exprReturnsErasedDynamicValue(args[2], scope, erasedLocals);
+			case ECall(EField(_, "map"), _):
+				true;
 			case ECall(EIdent(name), _):
 				sameOwnerCallReturnsErasedDynamicValue(name, scope);
 			case ETernary(_, thenExpr, elseExpr): exprReturnsErasedDynamicValue(thenExpr, scope,
@@ -7496,6 +7519,8 @@ class CppTargetCore {
 					if (exprReturnsErasedDynamicValue(value, scope, erasedLocals))
 						found = true;
 				found;
+			case ESwitchRaw(_):
+				true;
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				exprReturnsErasedDynamicValue(inner, scope, erasedLocals);
 			case _:

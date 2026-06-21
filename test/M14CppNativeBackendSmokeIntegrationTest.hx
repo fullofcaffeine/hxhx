@@ -789,6 +789,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedParser], []);
 	}
 
+	static function vendorExprToolsProgramWhenAvailable():Null<GenIrProgram> {
+		final exprToolsPath = "vendor/haxe/std/haxe/macro/ExprTools.hx";
+		if (!FileSystem.exists(exprToolsPath))
+			return null;
+		final exprToolsSource = File.getContent(exprToolsPath);
+		final mainSource = "class Main { static function main() {} }";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedExprTools = TyperStage.typeModule(ParserStage.parse(exprToolsSource, exprToolsPath));
+		return MacroStage.expandProgram([typedMain, typedExprTools], []);
+	}
+
 	static function assertVendorBalancedTreeReturnTypesWhenAvailable():Void {
 		final treeProgram = vendorBalancedTreeProgramWhenAvailable();
 		if (treeProgram == null)
@@ -841,6 +852,46 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			}
 		}
 		throw "vendor JsonParser fixture should expose doParse";
+	}
+
+	static function assertRawSwitchDynamicReturnType():Void {
+		final getValueLike = new HxFunctionDecl("getValueLike", Public, true, [new HxFunctionArg("e", "Dynamic", NoDefault, false, false)], "Dynamic", [
+			SReturn(ESwitchRaw("switch (e) { case object: {}; case array: []; case _: getValueLike(e); }"), HxPos.unknown())
+		], "");
+		final owner = new HxClassDecl("ExprToolsLike", false, [getValueLike], []);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("ExprToolsLike", owner);
+		final names = new StringMap<Bool>();
+		names.set("ExprToolsLike", true);
+		final returnType = @:privateAccess backend.cpp.CppTargetCore.cppFunctionReturnType(getValueLike, owner, {names: names, byName: classes});
+		assertContains(returnType, "std::any",
+			"C++ raw switch expressions returned from Dynamic helpers should erase before function-scope inference recurses");
+	}
+
+	static function assertVendorExprToolsReturnTypesWhenAvailable():Void {
+		final exprToolsProgram = vendorExprToolsProgramWhenAvailable();
+		if (exprToolsProgram == null)
+			return;
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		var exprTools:Null<HxClassDecl> = null;
+		for (typed in exprToolsProgram.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases(HxClassDecl.getName(cls), cls, names, classes);
+				if (HxClassDecl.getName(cls) == "ExprTools")
+					exprTools = cls;
+			}
+		}
+		assertTrue(exprTools != null, "vendor ExprTools fixture should expose ExprTools class");
+		for (fn in HxClassDecl.getFunctions(exprTools)) {
+			if (HxFunctionDecl.getName(fn) == "getValue") {
+				final returnType = @:privateAccess backend.cpp.CppTargetCore.cppFunctionReturnType(fn, exprTools, {names: names, byName: classes});
+				assertContains(returnType, "std::any", "C++ ExprTools.getValue should erase raw switch Dynamic returns before recursive inference");
+				return;
+			}
+		}
+		throw "vendor ExprTools fixture should expose getValue";
 	}
 
 	static function missingIMapProgram():GenIrProgram {
@@ -1303,6 +1354,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Reflect.isFunction should accept erased Reflect.field results through target-owned support");
 		assertTrue(reflectIsFunctionExpr.indexOf("Reflect::isFunction") < 0,
 			"C++ Reflect.isFunction should not require the generated string-only helper for erased field values");
+		assertRawSwitchDynamicReturnType();
 		final fixtureDecl = new HxClassDecl("TestFixture", false, [], [
 			new HxFieldDecl("target", Public, false, "String", null),
 			new HxFieldDecl("method", Public, false, "String", null)
@@ -4357,6 +4409,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				"C++ smoke should keep BalancedTree.setLoop return typing concrete without recursive inference");
 		}
 		assertVendorJsonParserReturnTypesWhenAvailable();
+		assertVendorExprToolsReturnTypesWhenAvailable();
 		final vendorReadOnlyArrayProgram = vendorReadOnlyArrayProgramWhenAvailable();
 		if (vendorReadOnlyArrayProgram != null) {
 			final vendorReadOnlyArrayDir = Path.join([root, "vendor-readonlyarray-source-only"]);
