@@ -3674,6 +3674,8 @@ class CppTargetCore {
 				exprHasOptionalType(expr, scope) ? local + ".value()" : local;
 			case EField(EThis, "length") if (scopeOwnerIsArrayBackedAbstract(scope)):
 				"this->__values.size()";
+			case EField(receiver, field) if (primitiveBackedAbstractPropertyExpr(receiver, field, scope) != null):
+				primitiveBackedAbstractPropertyExpr(receiver, field, scope);
 			case EField(EThis, field):
 				"this->" + sanitizeIdentifier(field);
 			case EField(receiver, "expr") if (exprCppType(receiver, scope) == CppMacroExpr.CPP_TYPE):
@@ -4712,15 +4714,20 @@ class CppTargetCore {
 			case EField(EIdent("Error"), _):
 				"std::string";
 			case EField(receiver, field):
-				final staticOwner = staticReceiverClassName(receiver, scope);
-				if (staticOwner != null) classFieldCppType(staticOwner, field, scope); else {
-					final receiverType = exprCppType(receiver, scope);
-					final anonFieldType = anonStructFieldCppType(receiverType, field, scope);
-					if (anonFieldType.length > 0)
-						anonFieldType;
+				final abstractPropertyType = primitiveBackedAbstractPropertyCppType(receiver, field, scope);
+				if (abstractPropertyType.length > 0) abstractPropertyType; else {
+					final staticOwner = staticReceiverClassName(receiver, scope);
+					if (staticOwner != null)
+						classFieldCppType(staticOwner, field, scope);
 					else {
-						final ownerType = classNameFromCppExprType(receiverType, scope);
-						ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
+						final receiverType = exprCppType(receiver, scope);
+						final anonFieldType = anonStructFieldCppType(receiverType, field, scope);
+						if (anonFieldType.length > 0)
+							anonFieldType;
+						else {
+							final ownerType = classNameFromCppExprType(receiverType, scope);
+							ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
+						}
 					}
 				}
 			case EBinop(op, _, _) if (isBoolBinaryOp(op)):
@@ -4730,6 +4737,95 @@ class CppTargetCore {
 			case _:
 				"";
 		};
+	}
+
+	static function primitiveBackedAbstractPropertyExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
+		final cls = primitiveBackedAbstractClassForExpr(receiver, scope);
+		if (cls == null)
+			return null;
+		final getter = classMethodDecl(sanitizeTypePath(HxClassDecl.getName(cls)), "get_" + field, false, scope);
+		if (getter == null)
+			return null;
+		final underlying = primitiveAbstractUnderlyingCppType(cls);
+		if (underlying == null || underlying.length == 0)
+			return null;
+		return primitiveBackedAbstractGetterExpr(receiver, getter, underlying, scope);
+	}
+
+	static function primitiveBackedAbstractGetterExpr(receiver:HxExpr, getter:HxFunctionDecl, underlying:String, ?scope:CppRenderScope):Null<String> {
+		final body = HxFunctionDecl.getBody(getter);
+		if (body.length != 1)
+			return null;
+		final self = renderExpr(receiver, scope);
+		final nullDefault = cppDefaultValue(underlying, scope);
+		return switch (body[0]) {
+			case SReturn(EThis, _):
+				self;
+			case SReturn(EBinop("!=", EThis, ENull), _):
+				"(" + self + " != " + nullDefault + ")";
+			case SReturn(EBinop("!=", ENull, EThis), _):
+				"(" + nullDefault + " != " + self + ")";
+			case SReturn(EBinop("==", EThis, ENull), _):
+				"(" + self + " == " + nullDefault + ")";
+			case SReturn(EBinop("==", ENull, EThis), _):
+				"(" + nullDefault + " == " + self + ")";
+			case _:
+				null;
+		};
+	}
+
+	static function primitiveBackedAbstractPropertyCppType(receiver:HxExpr, field:String, ?scope:CppRenderScope):String {
+		final cls = primitiveBackedAbstractClassForExpr(receiver, scope);
+		if (cls == null)
+			return "";
+		for (decl in HxClassDecl.getFields(cls))
+			if (HxFieldDecl.getName(decl) == field)
+				return cppTypeHint(HxFieldDecl.getTypeHint(decl), scope);
+		return "";
+	}
+
+	static function primitiveBackedAbstractClassForExpr(expr:HxExpr, ?scope:CppRenderScope):Null<HxClassDecl> {
+		if (scope == null)
+			return null;
+		final hint = exprHaxeTypeHint(expr, scope);
+		if (hint.length == 0 || primitiveBackedAbstractCppTypeForTypeHint(hint, scope) == null)
+			return null;
+		final cls = scope.classByName.get(sanitizeTypePath(typeBaseName(hint)));
+		return cls != null && primitiveAbstractUnderlyingCppType(cls) != null ? cls : null;
+	}
+
+	static function exprHaxeTypeHint(expr:HxExpr, scope:CppRenderScope):String {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner):
+				exprHaxeTypeHint(inner, scope);
+			case EThis:
+				HxClassDecl.getName(scope.owner);
+			case ENew(typePath, _):
+				typePath;
+			case EField(receiver, field):
+				final staticOwner = staticReceiverClassName(receiver, scope);
+				if (staticOwner != null) {
+					classFieldTypeHint(staticOwner, field, scope);
+				} else {
+					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+					ownerType == null ? "" : classFieldTypeHint(ownerType, field, scope);
+				}
+			case _:
+				"";
+		};
+	}
+
+	static function classFieldTypeHint(className:String, fieldName:String, scope:CppRenderScope):String {
+		if (scope == null || className == null || className.length == 0)
+			return "";
+		final cls = scope.classByName.get(sanitizeTypePath(typeBaseName(className)));
+		if (cls == null)
+			return "";
+		final wanted = sanitizeIdentifier(fieldName);
+		for (field in HxClassDecl.getFields(cls))
+			if (sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
+				return HxFieldDecl.getTypeHint(field);
+		return "";
 	}
 
 	static function currentOwnerFieldCppType(name:String, scope:CppRenderScope):String {

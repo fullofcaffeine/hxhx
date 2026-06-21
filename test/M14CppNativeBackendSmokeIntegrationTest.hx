@@ -2312,6 +2312,40 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ primitive-backed abstract constructors should not emit fake shared_ptr wrapper allocations");
 		assertTrue(stringPrimitiveLines.indexOf("std::to_string(std::make_shared<StringBackedFixture>") < 0,
 			"C++ string-backed abstract constructors should not be numerically stringified");
+		final ignoredFixture = new HxClassDecl("IgnoredFixture", false, [
+			new HxFunctionDecl("NotIgnored", Public, true, [], "IgnoredFixture", [SReturn(ENew("IgnoredFixture", [ENull]), HxPos.unknown())], ""),
+			new HxFunctionDecl("get_isIgnored", Public, false, [], "Bool", [SReturn(EBinop("!=", EThis, ENull), HxPos.unknown())], ""),
+			new HxFunctionDecl("get_ignoreReason", Public, false, [], "String", [SReturn(EThis, HxPos.unknown())], "")
+		], [
+			new HxFieldDecl("isIgnored", Public, false, "Bool", null),
+			new HxFieldDecl("ignoreReason", Public, false, "String", null)
+		], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=String"]);
+		final fixtureOwner = new HxClassDecl("FixtureOwner", false, [], [new HxFieldDecl("ignoringInfo", Public, false, "IgnoredFixture", null)]);
+		final fixtureHandler = new HxClassDecl("FixtureHandler", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("fixture", "FixtureOwner", NoDefault, false, false)], "Void", [
+				SIf(EField(EField(EIdent("fixture"), "ignoringInfo"), "isIgnored"),
+					SVar("reason", "String", EField(EField(EIdent("fixture"), "ignoringInfo"), "ignoreReason"), HxPos.unknown()), null, HxPos.unknown())
+			], "")
+		]);
+		final ignoredFixtureNames = new StringMap<Bool>();
+		final ignoredFixtureClasses = new StringMap<HxClassDecl>();
+		for (cls in [ignoredFixture, fixtureOwner, fixtureHandler]) {
+			final name = HxClassDecl.getName(cls);
+			ignoredFixtureNames.set(name, true);
+			ignoredFixtureClasses.set(name, cls);
+		}
+		final ignoredFixtureLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(fixtureHandler, {
+			names: ignoredFixtureNames,
+			byName: ignoredFixtureClasses
+		}).join("\n");
+		assertContains(ignoredFixtureLines, "if (((fixture->ignoringInfo) != std::string())) {",
+			"C++ string-backed abstract Bool getters should lower through the abstract getter body instead of raw string field access");
+		assertContains(ignoredFixtureLines, "std::string reason = (fixture->ignoringInfo);",
+			"C++ string-backed abstract String getters should lower to the underlying string expression");
+		assertTrue(ignoredFixtureLines.indexOf(".isIgnored") < 0,
+			"C++ string-backed abstract property reads should not emit object fields on std::string values");
+		assertTrue(ignoredFixtureLines.indexOf(".ignoreReason") < 0,
+			"C++ string-backed abstract property reads should not emit object fields on std::string values");
 		final int64Abstract = new HxClassDecl("Int64", false, [
 			new HxFunctionDecl("ofInt", Public, true, [new HxFunctionArg("x", "Int", NoDefault, false, false)], "Int64",
 				[SReturn(EIdent("x"), HxPos.unknown())], ""),
