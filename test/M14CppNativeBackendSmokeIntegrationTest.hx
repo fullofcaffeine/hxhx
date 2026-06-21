@@ -355,6 +355,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    this.next = next;",
 			"  }",
 			"}",
+			"class GenericImplicitNode<T> {",
+			"  public var item:T;",
+			"}",
 			"class GenericListKeyValueIterator<T> {",
 			"  var idx:Int;",
 			"  var head:GenericListNode<T>;",
@@ -2808,10 +2811,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		genericBoxClasses.set("GenericRawSub", genericRawSub);
 		final genericSubLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(genericSub, genericBoxLookup).join("\n");
 		final genericRawSubLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(genericRawSub, genericBoxLookup).join("\n");
+		final genericRawSubFactoryDecl = @:privateAccess
+			backend.cpp.CppTargetCore.renderGenericClassFactoryDeclaration(genericRawSub, genericBoxLookup).join("\n");
 		assertContains(genericSubLines, "template<typename T>\nstruct GenericSub : public GenericBase<T> {",
 			"C++ generic subclasses should preserve template arguments in their base type");
 		assertContains(genericRawSubLines, "template<typename T>\nstruct GenericRawSub : public GenericBase<T> {",
 			"C++ raw generic base hints inside a matching generic scope should preserve template arguments");
+		assertContains(genericRawSubFactoryDecl, "std::shared_ptr<GenericRawSub<T>> __hxhx_make_shared_GenericRawSub();",
+			"C++ generic classes with implicit constructors should still declare zero-arg factories");
+		assertContains(genericRawSubLines, "std::shared_ptr<GenericRawSub<T>> __hxhx_make_shared_GenericRawSub() {",
+			"C++ generic classes with implicit constructors should still emit zero-arg factories");
 		final methodGenericBuffer = new HxClassDecl("MethodGenericBuffer", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
 			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",
@@ -3137,11 +3146,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final genericNodeFactoryDecl = "std::shared_ptr<GenericListNode<T>> __hxhx_make_shared_GenericListNode(T item, std::shared_ptr<GenericListNode<T>> next);";
 		final genericNodeStruct = "template<typename T>\nstruct GenericListNode {";
 		final genericNodeFactoryBody = "std::shared_ptr<GenericListNode<T>> __hxhx_make_shared_GenericListNode(T item, std::shared_ptr<GenericListNode<T>> next) {";
+		final genericImplicitNodeFactoryDecl = "std::shared_ptr<GenericImplicitNode<T>> __hxhx_make_shared_GenericImplicitNode();";
+		final genericImplicitNodeStruct = "template<typename T>\nstruct GenericImplicitNode {";
+		final genericImplicitNodeFactoryBody = "std::shared_ptr<GenericImplicitNode<T>> __hxhx_make_shared_GenericImplicitNode() {";
 		assertContains(source, genericNodeFactoryDecl, "C++ smoke should forward-declare generic factories before template bodies can call them");
 		assertTrue(source.indexOf(genericNodeFactoryDecl) < source.indexOf(genericNodeStruct),
 			"C++ generic factory declarations should appear before generic class template definitions");
 		assertTrue(source.indexOf(genericNodeStruct) < source.indexOf(genericNodeFactoryBody),
 			"C++ generic factory bodies should remain after the generic class template definition");
+		assertContains(source, genericImplicitNodeFactoryDecl, "C++ smoke should forward-declare zero-arg generic factories for implicit constructors");
+		assertTrue(source.indexOf(genericImplicitNodeFactoryDecl) < source.indexOf(genericImplicitNodeStruct),
+			"C++ zero-arg generic factory declarations should appear before implicit-constructor template definitions");
+		assertTrue(source.indexOf(genericImplicitNodeStruct) < source.indexOf(genericImplicitNodeFactoryBody),
+			"C++ zero-arg generic factory bodies should remain after implicit-constructor template definitions");
 		assertContains(source, "static bool isOfType(std::string v, std::shared_ptr<Class> t)",
 			"C++ smoke should preserve Class-valued helper parameters instead of falling back to strings");
 		assertContains(source, "int casted = helper(5);", "C++ smoke should lower cast expression with explicit local type");

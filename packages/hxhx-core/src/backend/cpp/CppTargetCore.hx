@@ -1131,7 +1131,7 @@ class CppTargetCore {
 		if (isPosInfosSupportClass(cls) || isStdVectorHelperClass(cls) || isArrayBackedAbstractClass(cls) || isPrimitiveBackedAbstractClass(cls)
 			|| isStdArrayHelperClass(cls))
 			return false;
-		return genericClassTemplateParams(cls).length > 0 && findConstructor(cls) != null;
+		return genericClassTemplateParams(cls).length > 0;
 	}
 
 	static function forwardDeclarationTypeParams(cls:HxClassDecl):Array<String> {
@@ -1537,9 +1537,9 @@ class CppTargetCore {
 	}
 
 	static function renderGenericClassFactory(className:String, typeParams:Array<String>, ctor:Null<HxFunctionDecl>, scope:CppRenderScope):Array<String> {
-		if (typeParams.length == 0 || ctor == null)
+		if (typeParams.length == 0)
 			return [];
-		final args = HxFunctionDecl.getArgs(ctor);
+		final args = ctor == null ? [] : HxFunctionDecl.getArgs(ctor);
 		final argNames = [for (arg in args) sanitizeIdentifier(HxFunctionArg.getName(arg))];
 		return [genericTemplatePrefix(typeParams),
 			"std::shared_ptr<"
@@ -1566,10 +1566,12 @@ class CppTargetCore {
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		final typeParams = genericClassTemplateParams(cls);
 		final ctor = findConstructor(cls);
-		if (typeParams.length == 0 || ctor == null)
+		if (typeParams.length == 0)
 			return [];
 		final scope = renderScope(cls, classLookup, "void");
-		prepareFunctionScope(scope, ctor);
+		if (ctor != null)
+			prepareFunctionScope(scope, ctor);
+		final args = ctor == null ? [] : HxFunctionDecl.getArgs(ctor);
 		return [genericTemplatePrefix(typeParams),
 			"std::shared_ptr<"
 			+ className
@@ -1578,7 +1580,7 @@ class CppTargetCore {
 			+ ">> __hxhx_make_shared_"
 			+ className
 			+ "("
-			+ renderFunctionArgs(HxFunctionDecl.getArgs(ctor), scope)
+			+ renderFunctionArgs(args, scope)
 			+ ");"];
 	}
 
