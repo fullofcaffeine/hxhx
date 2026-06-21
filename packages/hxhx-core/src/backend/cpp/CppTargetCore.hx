@@ -54,6 +54,7 @@ typedef CppConstructorFieldInitializer = {
 **/
 class CppTargetCore {
 	static final inferredSignatureStack = new haxe.ds.StringMap<Bool>();
+	static final erasedDynamicReturnStack = new haxe.ds.StringMap<Bool>();
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		traceCppPhase("emit_before_main_module");
@@ -4866,6 +4867,8 @@ class CppTargetCore {
 				typeIntrinsicReturnCppType(method, args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				"std::string";
+			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
+				"std::any";
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -5361,6 +5364,8 @@ class CppTargetCore {
 				inferExprCppType(args[2], scope);
 			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
 				inferExprCppType(args[0], scope);
+			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
+				"std::any";
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -7418,10 +7423,18 @@ class CppTargetCore {
 	static function functionReturnsErasedDynamicValue(fn:HxFunctionDecl, ?scope:CppRenderScope):Bool {
 		if (fn == null)
 			return false;
+		final key = functionSignatureKey(scope == null ? null : scope.owner, fn);
+		if (erasedDynamicReturnStack.exists(key))
+			return false;
+		erasedDynamicReturnStack.set(key, true);
 		final erasedLocals = new haxe.ds.StringMap<Bool>();
-		for (stmt in HxFunctionDecl.getBody(fn))
-			if (stmtReturnsErasedDynamicValue(stmt, scope, erasedLocals))
+		for (stmt in HxFunctionDecl.getBody(fn)) {
+			if (stmtReturnsErasedDynamicValue(stmt, scope, erasedLocals)) {
+				erasedDynamicReturnStack.remove(key);
 				return true;
+			}
+		}
+		erasedDynamicReturnStack.remove(key);
 		return false;
 	}
 
@@ -7441,6 +7454,20 @@ class CppTargetCore {
 				found;
 			case SIf(_, thenBranch, elseBranch, _): stmtReturnsErasedDynamicValue(thenBranch, scope,
 					erasedLocals) || (elseBranch != null && stmtReturnsErasedDynamicValue(elseBranch, scope, erasedLocals));
+			case SWhile(cond, body, _): exprReturnsErasedDynamicValue(cond, scope, erasedLocals) || stmtReturnsErasedDynamicValue(body, scope, erasedLocals);
+			case SDoWhile(body, cond, _): stmtReturnsErasedDynamicValue(body, scope, erasedLocals) || exprReturnsErasedDynamicValue(cond, scope, erasedLocals);
+			case SSwitch(scrutinee, _, bodies, _):
+				var found = exprReturnsErasedDynamicValue(scrutinee, scope, erasedLocals);
+				for (body in bodies)
+					if (stmtReturnsErasedDynamicValue(body, scope, erasedLocals))
+						found = true;
+				found;
+			case STry(tryBody, catches, _):
+				var found = stmtReturnsErasedDynamicValue(tryBody, scope, erasedLocals);
+				for (c in catches)
+					if (stmtReturnsErasedDynamicValue(c.body, scope, erasedLocals))
+						found = true;
+				found;
 			case _:
 				false;
 		};
@@ -7459,6 +7486,8 @@ class CppTargetCore {
 					|| typeName == "std::any"
 					|| typeName == "std::vector<std::any>"
 					|| isCppAnonStructType(typeName);
+			case ECall(EIdent(name), _):
+				sameOwnerCallReturnsErasedDynamicValue(name, scope);
 			case ETernary(_, thenExpr, elseExpr): exprReturnsErasedDynamicValue(thenExpr, scope,
 					erasedLocals) || exprReturnsErasedDynamicValue(elseExpr, scope, erasedLocals);
 			case ESwitch(_, _, exprs):
@@ -7472,6 +7501,13 @@ class CppTargetCore {
 			case _:
 				false;
 		};
+	}
+
+	static function sameOwnerCallReturnsErasedDynamicValue(name:String, ?scope:CppRenderScope):Bool {
+		final fn = currentOwnerMethod(name, scope);
+		if (fn == null || !isDynamicLikeTypeHint(HxFunctionDecl.getReturnTypeHint(fn)))
+			return false;
+		return functionReturnsErasedDynamicValue(fn, scope);
 	}
 
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
@@ -7496,10 +7532,10 @@ class CppTargetCore {
 			if (knownReturn.length > 0)
 				return knownReturn;
 		}
+		if (raw.length > 0 && isDynamicLikeTypeHint(raw) && functionReturnsErasedDynamicValue(fn, returnScope))
+			return "std::any";
 		prepareFunctionScope(returnScope, fn);
 		if (raw.length > 0) {
-			if (isDynamicLikeTypeHint(raw) && functionReturnsErasedDynamicValue(fn, returnScope))
-				return "std::any";
 			return cppReturnTypeHint(raw, returnScope, returnLookup);
 		}
 		if (functionReturnsLambda(fn))

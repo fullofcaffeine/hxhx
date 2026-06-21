@@ -660,6 +660,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  function parseRec():Dynamic {",
 			"    return {};",
 			"  }",
+			"  public function doParseLike():Dynamic {",
+			"    var result = parseRec();",
+			"    return result;",
+			"  }",
 			"  public function parseObjectLike():Dynamic {",
 			"    var obj = {}, field = null, comma:Null<Bool> = null;",
 			"    Reflect.setField(obj, field, parseRec());",
@@ -774,6 +778,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedTree], []);
 	}
 
+	static function vendorJsonParserProgramWhenAvailable():Null<GenIrProgram> {
+		final parserPath = "vendor/haxe/std/haxe/format/JsonParser.hx";
+		if (!FileSystem.exists(parserPath))
+			return null;
+		final parserSource = File.getContent(parserPath);
+		final mainSource = "class Main { static function main() {} }";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedParser = TyperStage.typeModule(ParserStage.parse(parserSource, parserPath));
+		return MacroStage.expandProgram([typedMain, typedParser], []);
+	}
+
 	static function assertVendorBalancedTreeReturnTypesWhenAvailable():Void {
 		final treeProgram = vendorBalancedTreeProgramWhenAvailable();
 		if (treeProgram == null)
@@ -799,6 +814,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			}
 		}
 		throw "vendor BalancedTree fixture should expose setLoop";
+	}
+
+	static function assertVendorJsonParserReturnTypesWhenAvailable():Void {
+		final parserProgram = vendorJsonParserProgramWhenAvailable();
+		if (parserProgram == null)
+			return;
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		var jsonParser:Null<HxClassDecl> = null;
+		for (typed in parserProgram.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases(HxClassDecl.getName(cls), cls, names, classes);
+				if (HxClassDecl.getName(cls) == "JsonParser")
+					jsonParser = cls;
+			}
+		}
+		assertTrue(jsonParser != null, "vendor JsonParser fixture should expose JsonParser class");
+		for (fn in HxClassDecl.getFunctions(jsonParser)) {
+			if (HxFunctionDecl.getName(fn) == "doParse") {
+				final returnType = @:privateAccess backend.cpp.CppTargetCore.cppFunctionReturnType(fn, jsonParser, {names: names, byName: classes});
+				assertContains(returnType, "std::any",
+					"C++ JsonParser.doParse should propagate erased Dynamic through parseRec instead of recursive inference");
+				return;
+			}
+		}
+		throw "vendor JsonParser fixture should expose doParse";
 	}
 
 	static function missingIMapProgram():GenIrProgram {
@@ -3834,6 +3876,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::vector<std::shared_ptr<MetadataTarget>> targets = {};", "C++ smoke should preserve @:optional targets field name");
 		assertTrue(source.indexOf("std::vector<std::string> optional =") < 0, "C++ smoke should not render metadata name optional as a structural field");
 		assertContains(source, "std::any parseRec()", "C++ smoke should erase Dynamic returns as std::any for JsonParser-shaped flows");
+		assertContains(source, "std::any doParseLike()",
+			"C++ smoke should propagate erased Dynamic through same-owner parseRec-style calls before return inference recurses");
 		assertContains(source, "std::any parseObjectLike()", "C++ smoke should erase Dynamic object returns as std::any");
 		assertContains(source, "static std::string callStack()",
 			"C++ smoke should keep string-shaped Dynamic native stack traces compatible with toHaxe(String)");
@@ -4312,6 +4356,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertContains(vendorBalancedTreeSource, "std::shared_ptr<TreeNode<K, V>> setLoop",
 				"C++ smoke should keep BalancedTree.setLoop return typing concrete without recursive inference");
 		}
+		assertVendorJsonParserReturnTypesWhenAvailable();
 		final vendorReadOnlyArrayProgram = vendorReadOnlyArrayProgramWhenAvailable();
 		if (vendorReadOnlyArrayProgram != null) {
 			final vendorReadOnlyArrayDir = Path.join([root, "vendor-readonlyarray-source-only"]);
