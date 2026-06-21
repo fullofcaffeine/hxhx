@@ -356,6 +356,12 @@ class Stage3DiagnosticsSupport {
 			if (ex.message != null && ex.message.length > 0)
 				return ex.message;
 		}
+		final reflectedMessage = try Reflect.field(error, "message") catch (_:Dynamic) null;
+		if (reflectedMessage != null) {
+			final message = Std.string(reflectedMessage);
+			if (message.length > 0)
+				return message;
+		}
 		return Std.string(error);
 	}
 }

@@ -6,6 +6,7 @@ import backend.GenIrProgram;
 import backend.ITargetBackendProvider;
 import backend.TargetCoreBackend;
 import hxhx.Stage3Compiler;
+import hxhx.Stage3DiagnosticsSupport;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -33,6 +34,11 @@ class M14Stage3EmitDynamicExceptionDiagnosticIntegrationTest {
 	}
 
 	static function main():Void {
+		assertTrue(Stage3DiagnosticsSupport.formatDynamicException(new haxe.Exception("fixture exception message")) == "fixture exception message",
+			"dynamic exception formatter should preserve haxe.Exception.message");
+		assertTrue(Stage3DiagnosticsSupport.formatDynamicException(cast {message: "fixture object message"}) == "fixture object message",
+			"dynamic exception formatter should preserve object-shaped message fields instead of opaque object strings");
+
 		final tmpRoot = ".tmp/m14_stage3_emit_dynamic_exception_diagnostic";
 		final srcDir = haxe.io.Path.join([tmpRoot, "src"]);
 		deleteRecursive(tmpRoot);
