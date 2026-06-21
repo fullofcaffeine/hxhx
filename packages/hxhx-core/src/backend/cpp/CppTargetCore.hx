@@ -3303,7 +3303,7 @@ class CppTargetCore {
 			case _ if (isCppArrayBackedAbstractType(returnType, scope)):
 				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppReferenceType(returnType)):
-				"return " + renderExpr(expr, scope) + ";";
+				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
 			case _ if (isCppAnonStructType(returnType)):
 				"return " + renderExpr(expr, scope) + ";";
 			case "int":
@@ -3331,6 +3331,9 @@ class CppTargetCore {
 		final typedEnum = enumCtorExprForExpectedType(expr, expectedType, scope);
 		if (typedEnum != null)
 			return typedEnum;
+		final typedPointer = pointerCtorExprForExpectedType(expr, expectedType, scope);
+		if (typedPointer != null)
+			return typedPointer;
 		final optionalInner = cppOptionalInnerType(exprCppType(expr, scope));
 		if (optionalInner.length > 0 && optionalInner == expectedType)
 			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
@@ -5191,6 +5194,35 @@ class CppTargetCore {
 		final payload = args == null
 			|| args.length == 0 ? "{}" : "std::vector<std::string>{" + [for (arg in args) stringExpr(arg, scope)].join(", ") + "}";
 		return "std::make_shared<EnumValue>(std::string(" + quoteString(name) + "), 0, " + payload + ")";
+	}
+
+	static function pointerCtorExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case ECall(EField(receiver, "raw_ptr"), args) if (args.length == 0 && exprCppType(receiver, scope) == "std::string"):
+				final carrier = pointerCarrierType(expectedType, "RawConstPointer");
+				carrier == null ? null : "std::make_shared<"
+				+ carrier
+				+ ">("
+				+ renderExpr(receiver, scope)
+				+ ".c_str())";
+			case ECall(EField(receiver, "fromPointer"), args) if (args.length == 1 && isCppConstPointerStaticReceiver(receiver)):
+				final carrier = pointerCarrierType(expectedType, "ConstPointer");
+				carrier == null ? null : "std::make_shared<"
+				+ carrier
+				+ ">("
+				+ renderExpr(args[0], scope)
+				+ ")";
+			case _:
+				null;
+		};
+	}
+
+	static function pointerCarrierType(expectedType:String, baseName:String):Null<String> {
+		final carrier = classNameFromCppType(expectedType);
+		if (carrier == null || carrier.length == 0)
+			return null;
+		final base = sanitizeTypePath(typeBaseName(carrier));
+		return base == baseName ? carrier : null;
 	}
 
 	static function assignmentRhsExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {

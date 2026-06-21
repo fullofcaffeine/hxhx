@@ -1576,8 +1576,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ ArraySort-like helper indexes should not stay string-shaped");
 		final nativeStringRaw = new HxFunctionDecl("raw", Public, true, [new HxFunctionArg("inString", "String", NoDefault, false, false)], "RawConstPointer",
 			[SReturn(ECall(EField(EIdent("inString"), "raw_ptr"), []), HxPos.unknown())], "");
+		final nativeStringRawChar = new HxFunctionDecl("rawChar", Public, true, [new HxFunctionArg("inString", "String", NoDefault, false, false)],
+			"RawConstPointer<Char>", [SReturn(ECall(EField(EIdent("inString"), "raw_ptr"), []), HxPos.unknown())], "");
 		final nativeStringCStr = new HxFunctionDecl("c_str", Public, true, [new HxFunctionArg("inString", "String", NoDefault, false, false)], "ConstPointer",
 			[
+				SReturn(ECall(EField(EField(EIdent("cpp"), "ConstPointer"), "fromPointer"), [ECall(EField(EIdent("inString"), "c_str"), [])]), HxPos.unknown())
+			], "");
+		final nativeStringCStrChar = new HxFunctionDecl("cStrChar", Public, true, [new HxFunctionArg("inString", "String", NoDefault, false, false)],
+			"ConstPointer<Char>", [
 				SReturn(ECall(EField(EField(EIdent("cpp"), "ConstPointer"), "fromPointer"), [ECall(EField(EIdent("inString"), "c_str"), [])]), HxPos.unknown())
 			], "");
 		final nativeStringFromPointer = new HxFunctionDecl("fromPointer", Public, true, [new HxFunctionArg("inPtr", "ConstPointer", NoDefault, false, false)],
@@ -1592,7 +1598,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], "");
 		final nativeStringOwner = new HxClassDecl("NativeString", false, [
 			nativeStringRaw,
+			nativeStringRawChar,
 			nativeStringCStr,
+			nativeStringCStrChar,
 			nativeStringFromPointer,
 			nativeStringFromGcPointer
 		], []);
@@ -1604,7 +1612,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final nativeStringLookup = {names: nativeStringNames, byName: nativeStringClasses};
 		final nativeStringRawLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(nativeStringRaw, nativeStringOwner, nativeStringLookup)
 			.join("\n");
+		final nativeStringRawCharLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(nativeStringRawChar, nativeStringOwner,
+			nativeStringLookup)
+			.join("\n");
 		final nativeStringCStrLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(nativeStringCStr, nativeStringOwner, nativeStringLookup)
+			.join("\n");
+		final nativeStringCStrCharLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(nativeStringCStrChar, nativeStringOwner,
+			nativeStringLookup)
 			.join("\n");
 		final nativeStringFromPointerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(nativeStringFromPointer, nativeStringOwner,
 			nativeStringLookup)
@@ -1614,8 +1628,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			.join("\n");
 		assertContains(nativeStringRawLines, "return std::make_shared<RawConstPointer<void>>(inString.c_str());",
 			"C++ NativeString.raw should lower raw_ptr through target-owned pointer support");
+		assertContains(nativeStringRawCharLines, "return std::make_shared<RawConstPointer<std::shared_ptr<Char>>>(inString.c_str());",
+			"C++ NativeString.raw should preserve typed RawConstPointer<T> return arguments");
 		assertContains(nativeStringCStrLines, "return std::make_shared<ConstPointer<void>>(inString.c_str());",
 			"C++ cpp.ConstPointer.fromPointer should lower to target-owned pointer support");
+		assertContains(nativeStringCStrCharLines, "return std::make_shared<ConstPointer<std::shared_ptr<Char>>>(inString.c_str());",
+			"C++ cpp.ConstPointer.fromPointer should preserve typed ConstPointer<T> return arguments");
 		assertTrue(@:privateAccess backend.cpp.CppTypeModel.cppTypeHint("RawConstPointer<Char>") == "std::shared_ptr<RawConstPointer<std::shared_ptr<Char>>>",
 			"C++ RawConstPointer<T> extern hints should preserve the target-owned generic argument");
 		assertContains(nativeStringFromPointerLines, "return __hxhx_string_from_pointer((inPtr->ptr));",
