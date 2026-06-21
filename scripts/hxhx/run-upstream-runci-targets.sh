@@ -110,6 +110,8 @@ retry_delay_sec="$retry_delay_raw"
 
 retry_targets_raw="${HXHX_GATE3_RETRY_TARGETS:-Js}"
 retry_targets_normalized="$(echo "$retry_targets_raw" | tr ',' ' ')"
+trace_stage3_targets_raw="${HXHX_GATE3_TRACE_STAGE3_TARGETS:-}"
+trace_stage3_targets_normalized="$(echo "$trace_stage3_targets_raw" | tr ',' ' ')"
 
 js_server_timeout_raw="${HXHX_GATE3_JS_SERVER_TIMEOUT_MS:-60000}"
 case "$js_server_timeout_raw" in
@@ -145,6 +147,18 @@ should_retry_target() {
   for token in $retry_targets_normalized; do
     token="$(echo "$token" | tr '[:upper:]' '[:lower:]')"
     if [ -n "$token" ] && [ "$token" = "$target_lower" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+should_trace_stage3_target() {
+  local target_lower="$1"
+  local token=""
+  for token in $trace_stage3_targets_normalized; do
+    token="$(echo "$token" | tr '[:upper:]' '[:lower:]')"
+    if [ -n "$token" ] && { [ "$token" = "$target_lower" ] || [ "$token" = "all" ]; }; then
       return 0
     fi
   done
@@ -936,6 +950,12 @@ run_target_attempt() {
       cd "$UPSTREAM_DIR/tests"
       if [ -n "${STAGE0_STD_PATH:-}" ]; then
         export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+      fi
+      if should_trace_stage3_target "$t_lower"; then
+        export HXHX_TRACE_STAGE3_DRIVER=1
+        export HXHX_TRACE_STAGE3_MODULE_EMIT=1
+        export HXHX_RUNCI_FILTER_STAGE3_OUTPUT=0
+        echo "gate3_stage3_trace_enabled target=${target}"
       fi
       HXHX_GATE3_NODE_ECHO_SERVER="$strict_node_echo_server" TEST="$target" PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
     )
