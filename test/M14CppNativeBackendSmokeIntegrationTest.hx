@@ -1751,6 +1751,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ enum-tag arguments inside erased string-context calls should preserve their string payload");
 		assertTrue(assertWarnAddString.indexOf("std::to_string(results->add") < 0,
 			"C++ Assert.warn-like results.add calls should not become std::to_string(std::string)");
+		final typedEnumArg = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(ECall(EEnumValue("Warning"), [EIdent("msg")]),
+			"std::shared_ptr<Assertation>", assertWarnScope);
+		assertContains(typedEnumArg, "return std::make_shared<Assertation>();",
+			"C++ typed enum-constructor arguments should construct the expected enum carrier instead of a tag string");
+		assertTrue(typedEnumArg.indexOf("return std::string(\"Warning\")") < 0,
+			"C++ typed enum-constructor arguments should not leak tag strings into shared_ptr enum carriers");
+		assertWarnScope.localTypes.set("typedResults", "std::shared_ptr<List<std::shared_ptr<Assertation>>>");
+		final typedAssertWarnAdd:HxExpr = ECall(EField(EIdent("typedResults"), "add"), [ECall(EEnumValue("Warning"), [EIdent("msg")])]);
+		final typedAssertWarnAddExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedAssertWarnAdd, assertWarnScope);
+		assertContains(typedAssertWarnAddExpr, "typedResults->add(([&]() {", "C++ List<T>.add should render arguments with the list element expected type");
+		assertContains(typedAssertWarnAddExpr, "return std::make_shared<Assertation>();",
+			"C++ List<Assertation>.add should receive an Assertation carrier, not a string tag");
+		assertTrue(typedAssertWarnAddExpr.indexOf("return std::string(\"Warning\")") < 0,
+			"C++ typed List enum arguments should not preserve the erased string-tag lowering");
 		final lambdaStringContext = @:privateAccess backend.cpp.CppTargetCore.stringExpr(ECall(ELambda(["t"],
 			ETernary(EBinop("==", EIdent("t"), EInt(0)), EString("7"), ECall(EField(EIdent("Std"), "string"), [EIdent("t")]))), [EInt(1)]),
 			assertWarnScope);

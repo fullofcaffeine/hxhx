@@ -3328,6 +3328,9 @@ class CppTargetCore {
 	}
 
 	static function valueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
+		final typedEnum = enumCtorExprForExpectedType(expr, expectedType, scope);
+		if (typedEnum != null)
+			return typedEnum;
 		final optionalInner = cppOptionalInnerType(exprCppType(expr, scope));
 		if (optionalInner.length > 0 && optionalInner == expectedType)
 			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
@@ -3914,8 +3917,8 @@ class CppTargetCore {
 
 	static function fieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final receiverTypeName = staticReceiverClassName(receiver, scope);
-		final renderedArgs = [for (arg in args) renderExpr(arg, scope)].join(", ");
 		final receiverCppType = exprCppType(receiver, scope);
+		final renderedArgs = renderFieldCallArgs(receiverCppType, method, args, scope).join(", ");
 		if (method == "push" && isCppVectorType(receiverCppType))
 			return renderExpr(receiver, scope) + ".push_back(" + renderedArgs + ")";
 		if (isCppVectorType(receiverCppType)) {
@@ -4015,6 +4018,20 @@ class CppTargetCore {
 				+ ")";
 		}
 		return renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+	}
+
+	static function renderFieldCallArgs(receiverCppType:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		final listElementType = listElementCppType(receiverCppType);
+		if (sanitizeIdentifier(method) == "add" && args.length == 1 && listElementType.length > 0)
+			return [valueExprForExpectedType(args[0], listElementType, scope)];
+		return renderSimpleCallArgs(args, scope);
+	}
+
+	static function listElementCppType(receiverCppType:String):String {
+		final prefix = "std::shared_ptr<List<";
+		if (receiverCppType == null || !StringTools.startsWith(receiverCppType, prefix) || !StringTools.endsWith(receiverCppType, ">>"))
+			return "";
+		return receiverCppType.substr(prefix.length, receiverCppType.length - prefix.length - 2);
 	}
 
 	static function directCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -5140,6 +5157,40 @@ class CppTargetCore {
 			parts.push(" (void)__hxhx_enum_arg_" + i + ";");
 		parts.push(" return " + tag + "; })()");
 		return parts.join("");
+	}
+
+	static function enumCtorExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case EEnumValue(name):
+				enumCtorValueForExpectedType(name, [], expectedType, scope);
+			case ECall(EEnumValue(name), args):
+				enumCtorValueForExpectedType(name, args, expectedType, scope);
+			case _:
+				null;
+		};
+	}
+
+	static function enumCtorValueForExpectedType(name:String, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		final carrierType = classNameFromCppExprType(expectedType, scope);
+		if (carrierType == null || carrierType.length == 0)
+			return null;
+		if (carrierType == "EnumValue")
+			return enumValuePtrExpr(name, args, scope);
+		if (args == null || args.length == 0)
+			return "std::make_shared<" + carrierType + ">()";
+		final parts = ["([&]() {"];
+		for (i in 0...args.length)
+			parts.push(" auto __hxhx_enum_arg_" + i + " = " + renderExpr(args[i], scope) + ";");
+		for (i in 0...args.length)
+			parts.push(" (void)__hxhx_enum_arg_" + i + ";");
+		parts.push(" return std::make_shared<" + carrierType + ">(); })()");
+		return parts.join("");
+	}
+
+	static function enumValuePtrExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final payload = args == null
+			|| args.length == 0 ? "{}" : "std::vector<std::string>{" + [for (arg in args) stringExpr(arg, scope)].join(", ") + "}";
+		return "std::make_shared<EnumValue>(std::string(" + quoteString(name) + "), 0, " + payload + ")";
 	}
 
 	static function assignmentRhsExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
