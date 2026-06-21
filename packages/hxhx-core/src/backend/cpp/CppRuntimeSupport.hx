@@ -220,6 +220,10 @@ class CppRuntimeSupport {
 			"",
 			"static std::any __hxhx_reflect_get_property_any(const std::any&, const std::string&) {",
 			"  return std::any();",
+			"}",
+			"",
+			"static bool __hxhx_reflect_has_field_any(const std::any&, const std::string&) {",
+			"  return false;",
 			"}"
 		];
 	}

@@ -214,6 +214,10 @@ let rttiMetaLines = fun () -> let __arr_5 = HxArray.create () in (
   ignore (HxArray.push __arr_5 "static std::any __hxhx_reflect_get_property_any(const std::any&, const std::string&) {");
   ignore (HxArray.push __arr_5 "  return std::any();");
   ignore (HxArray.push __arr_5 "}");
+  ignore (HxArray.push __arr_5 "");
+  ignore (HxArray.push __arr_5 "static bool __hxhx_reflect_has_field_any(const std::any&, const std::string&) {");
+  ignore (HxArray.push __arr_5 "  return false;");
+  ignore (HxArray.push __arr_5 "}");
   __arr_5
 )
 

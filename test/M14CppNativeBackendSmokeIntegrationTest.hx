@@ -1961,6 +1961,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			SVar("metas", "Dynamic", ECall(EField(EIdent("Meta"), "getFields"), [ECall(EField(EIdent("Type"), "getClass"), [EIdent("target")])]),
 				HxPos.unknown()),
 			SVar("metasForTestMetas", "", ECall(EField(EIdent("Reflect"), "getProperty"), [EIdent("metas"), EIdent("method")]), HxPos.unknown()),
+			SIf(ECall(EField(EIdent("Reflect"), "hasField"), [EIdent("metasForTestMetas"), EString("Ignored")]),
+				SVar("ignoredArgs", "Array<String>", ECall(EField(EIdent("Reflect"), "getProperty"), [EIdent("metasForTestMetas"), EString("Ignored")]),
+					HxPos.unknown()),
+				null, HxPos.unknown()),
 			SReturn(EIdent("metasForTestMetas"), HxPos.unknown())
 		], "");
 		final metaProbeOwner = new HxClassDecl("MetaProbe", false, [metaFieldsProbe], []);
@@ -1981,8 +1985,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ haxe.rtti.Meta.getFields should accept Type.getClass metadata values at call sites");
 		assertContains(metaProbeLines, "auto metasForTestMetas = __hxhx_reflect_get_property_any(metas, std::string(method));",
 			"C++ Reflect.getProperty should accept erased metadata maps without requiring a std::string receiver");
+		assertContains(metaProbeLines, "if (__hxhx_reflect_has_field_any(metasForTestMetas, std::string(\"Ignored\")))",
+			"C++ Reflect.hasField should accept erased metadata maps without requiring a std::string receiver");
+		assertContains(metaProbeLines,
+			"std::vector<std::string> ignoredArgs = __hxhx_string_vector_any(__hxhx_reflect_get_property_any(metasForTestMetas, std::string(\"Ignored\")));",
+			"C++ erased metadata array property extraction should cast through target-owned vector support");
 		assertTrue(metaProbeLines.indexOf("Reflect::getProperty(metas") < 0,
 			"C++ erased metadata map property access must not call the std::string Reflect helper");
+		assertTrue(metaProbeLines.indexOf("Reflect::hasField(metasForTestMetas") < 0,
+			"C++ erased metadata map field probing must not call the std::string Reflect helper");
 		assertTrue(getTypeLines.indexOf("static_cast<int>(") < 0, "C++ std::any returns must not use numeric fallback casts");
 		assertTrue(getFieldsLines.indexOf("static_cast<int>(") < 0, "C++ std::any field returns must not use numeric fallback casts");
 		final optionalStringCtor = new HxClassDecl("FixtureLike", false, [

@@ -3626,6 +3626,8 @@ class CppTargetCore {
 			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
 		if (expectedType == "std::string")
 			return stringExpr(expr, scope);
+		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
+			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
 		if (isCppVectorType(expectedType)) {
 			switch (expr) {
 				case EArrayDecl(elements):
@@ -3933,6 +3935,8 @@ class CppTargetCore {
 				nativeArrayCreateExpr(args[0], scope, localType);
 			case EArrayDecl([]) if (isCppVectorType(localType)):
 				localType + "{}";
+			case _ if (isCppVectorType(localType)):
+				valueExprForExpectedType(init, localType, scope);
 			case _ if (localType == "std::string"):
 				stringExpr(init, scope);
 			case _:
@@ -4319,6 +4323,11 @@ class CppTargetCore {
 		if (isReflectStaticReceiver(receiver) && method == "compare")
 			return reflectCompareExpr(args, scope);
 		if (isReflectStaticReceiver(receiver)
+			&& method == "hasField"
+			&& args.length == 2
+			&& exprCppType(args[0], scope) == "std::any")
+			return "__hxhx_reflect_has_field_any(" + renderExpr(args[0], scope) + ", " + stringExpr(args[1], scope) + ")";
+		if (isReflectStaticReceiver(receiver)
 			&& method == "getProperty"
 			&& args.length == 2
 			&& exprCppType(args[0], scope) == "std::any")
@@ -4648,6 +4657,9 @@ class CppTargetCore {
 			case ECall(EField(receiver, "getProperty"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"std::any";
+			case ECall(EField(receiver, "hasField"), args)
+				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
+				"bool";
 			case ECall(EField(EIdent("Type"), method), args):
 				typeIntrinsicReturnCppType(method, args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
@@ -5014,6 +5026,9 @@ class CppTargetCore {
 			case ECall(EField(receiver, "getProperty"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"std::any";
+			case ECall(EField(receiver, "hasField"), args)
+				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
+				"bool";
 			case ECall(EField(receiver, "isEnumValue"), _) if (isReflectStaticReceiver(receiver)):
 				"bool";
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
