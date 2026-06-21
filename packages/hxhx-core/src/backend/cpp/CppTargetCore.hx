@@ -2525,10 +2525,39 @@ class CppTargetCore {
 		return switch (stmt) {
 			case SExpr(EBinop("=", EField(EThis, fieldName), EIdent(argName)), _)
 				if (constructorHasField(scope, fieldName) && constructorHasArg(ctor, argName)):
-				{field: sanitizeIdentifier(fieldName), arg: sanitizeIdentifier(argName)};
+				{field: sanitizeIdentifier(fieldName), arg: constructorFieldInitializerArg(fieldName, argName, ctor, scope)};
 			case _:
 				null;
 		};
+	}
+
+	static function constructorFieldInitializerArg(fieldName:String, argName:String, ctor:HxFunctionDecl, scope:CppRenderScope):String {
+		final renderedArg = sanitizeIdentifier(argName);
+		final fieldType = constructorFieldCppType(scope, fieldName);
+		final argType = constructorArgCppType(ctor, argName, scope);
+		final optionalInner = cppOptionalInnerType(argType);
+		if (fieldType != null && optionalInner.length > 0 && optionalInner == fieldType)
+			return renderedArg + ".value_or(" + cppDefaultValue(fieldType, scope) + ")";
+		return renderedArg;
+	}
+
+	static function constructorFieldCppType(scope:CppRenderScope, fieldName:String):Null<String> {
+		if (scope == null || scope.owner == null)
+			return null;
+		final wanted = sanitizeIdentifier(fieldName);
+		final className = sanitizeTypePath(HxClassDecl.getName(scope.owner));
+		for (field in HxClassDecl.getFields(scope.owner))
+			if (!HxFieldDecl.getIsStatic(field) && sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
+				return knownStdlibFieldCppType(className, HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
+		return null;
+	}
+
+	static function constructorArgCppType(ctor:HxFunctionDecl, argName:String, scope:CppRenderScope):String {
+		final wanted = sanitizeIdentifier(argName);
+		for (arg in HxFunctionDecl.getArgs(ctor))
+			if (sanitizeIdentifier(HxFunctionArg.getName(arg)) == wanted)
+				return cppFunctionArgType(arg, scope);
+		return "";
 	}
 
 	static function constructorHasField(scope:CppRenderScope, fieldName:String):Bool {

@@ -1960,6 +1960,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ haxe.rtti.Meta.getFields should lower through target-owned metadata support");
 		assertTrue(getTypeLines.indexOf("static_cast<int>(") < 0, "C++ std::any returns must not use numeric fallback casts");
 		assertTrue(getFieldsLines.indexOf("static_cast<int>(") < 0, "C++ std::any field returns must not use numeric fallback casts");
+		final optionalStringCtor = new HxClassDecl("FixtureLike", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("target", "String", NoDefault, false, false),
+				new HxFunctionArg("setup", "String", NoDefault, true, false)
+			], "", [
+				SExpr(EBinop("=", EField(EThis, "target"), EIdent("target")), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EThis, "setup"), EIdent("setup")), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("target", Public, false, "String", null),
+			new HxFieldDecl("setup", Public, false, "String", null)
+		]);
+		final optionalStringNames = new StringMap<Bool>();
+		optionalStringNames.set("FixtureLike", true);
+		final optionalStringClasses = new StringMap<HxClassDecl>();
+		optionalStringClasses.set("FixtureLike", optionalStringCtor);
+		final optionalStringCtorLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(optionalStringCtor, {names: optionalStringNames, byName: optionalStringClasses}).join("\n");
+		assertContains(optionalStringCtorLines,
+			"FixtureLike(std::string target, std::optional<std::string> setup = std::nullopt) : target(target), setup(setup.value_or(std::string())) {",
+			"C++ constructor initializer lists should unwrap optional args when assigning to non-optional fields");
+		assertTrue(optionalStringCtorLines.indexOf("setup(setup)") < 0,
+			"C++ constructor initializer lists must not initialize std::string fields directly from std::optional<std::string>");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",
