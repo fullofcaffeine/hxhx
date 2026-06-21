@@ -135,6 +135,7 @@ class CppTargetCore {
 		out.push("#include <sstream>");
 		out.push("#include <stdexcept>");
 		out.push("#include <string>");
+		out.push("#include <ctime>");
 		out.push("#include <type_traits>");
 		out.push("#include <typeinfo>");
 		out.push("#include <utility>");
@@ -165,6 +166,9 @@ class CppTargetCore {
 		out.push("}");
 		out.push("");
 		for (line in CppRuntimeSupport.fpReinterpretLines())
+			out.push(line);
+		out.push("");
+		for (line in CppRuntimeSupport.dateIntrinsicLines())
 			out.push(line);
 		out.push("");
 		for (line in CppRuntimeSupport.sysEventLoopLines())
@@ -4227,6 +4231,8 @@ class CppTargetCore {
 				+ ")";
 			case "__hxcpp_bytes_of_string" if (args.length == 2):
 				"__hxhx_bytes_of_string(" + rendered.join(", ") + ")";
+			case "__hxcpp_utc_date" if (args.length == 6):
+				"__hxhx_utc_date(" + rendered.join(", ") + ")";
 			case "String" if (args.length == 1):
 				"__hxhx_string_from_pointer(" + renderExpr(args[0], scope) + ")";
 			case "String" if (args.length == 2):
@@ -4243,6 +4249,8 @@ class CppTargetCore {
 	static function globalIntrinsicReturnCppType(method:String):String {
 		return switch (method) {
 			case "__hxcpp_memory_get_double" | "__hxcpp_memory_get_float":
+				"double";
+			case "__hxcpp_utc_date":
 				"double";
 			case "__hxcpp_reinterpret_le_int32_as_float32" | "__hxcpp_reinterpret_le_int32s_as_float64":
 				"double";

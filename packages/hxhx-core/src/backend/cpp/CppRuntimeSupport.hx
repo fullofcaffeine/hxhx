@@ -52,6 +52,25 @@ class CppRuntimeSupport {
 		];
 	}
 
+	public static function dateIntrinsicLines():Array<String> {
+		return [
+			"static double __hxhx_utc_date(int year, int month, int day, int hour, int min, int sec) {",
+			"  std::tm tm = {};",
+			"  tm.tm_year = year - 1900;",
+			"  tm.tm_mon = month;",
+			"  tm.tm_mday = day;",
+			"  tm.tm_hour = hour;",
+			"  tm.tm_min = min;",
+			"  tm.tm_sec = sec;",
+			"#if defined(_WIN32)",
+			"  return static_cast<double>(_mkgmtime(&tm));",
+			"#else",
+			"  return static_cast<double>(timegm(&tm));",
+			"#endif",
+			"}"
+		];
+	}
+
 	public static function sysEventLoopLines():Array<String> {
 		return [
 			"template<typename T>",

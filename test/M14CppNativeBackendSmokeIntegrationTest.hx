@@ -1090,9 +1090,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("__global__"), "__hxcpp_reinterpret_float64_as_le_int32_high"),
 				[EIdent("v")])) == "__hxhx_reinterpret_float64_as_le_int32_high(v)",
 			"C++ hxcpp float64 high-word reinterpret intrinsics should lower to target-owned helpers");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("__global__"), "__hxcpp_utc_date"),
+			[
+				EIdent("year"),
+				EIdent("month"),
+				EIdent("day"),
+				EIdent("hour"),
+				EIdent("min"),
+				EIdent("sec")
+			])) == "__hxhx_utc_date(year, month, day, hour, min, sec)",
+			"C++ hxcpp UTC date intrinsic should lower to target-owned support instead of unresolved __global__");
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.inferExprCppType(ECall(EField(EIdent("__global__"), "__hxcpp_reinterpret_float32_as_le_int32"), [EFloat(1.0)])) == "int",
 			"C++ hxcpp float-to-int reinterpret intrinsics should infer integer return types");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.inferExprCppType(ECall(EField(EIdent("__global__"), "__hxcpp_utc_date"),
+				[EInt(1970), EInt(0), EInt(1), EInt(0), EInt(0), EInt(0)])) == "double",
+			"C++ hxcpp UTC date intrinsic should infer Float/double return type");
 		final parenthesizedAssignmentExpr = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("__hxhx_parenthesized"), [EBinop("=", EIdent("last"), ECall(EIdent("readByte"), []))]));
 		assertTrue(parenthesizedAssignmentExpr == "(last = readByte())",
@@ -3075,7 +3089,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], "", [
 			SReturn(EBinop("+", EField(EIdent("o"), "ms"), EField(EIdent("o"), "seconds")), HxPos.unknown())
 		], "");
-		final dateToolsOwner = new HxClassDecl("DateToolsLike", false, [dateToolsMake], []);
+		final dateToolsMakeUtc = new HxFunctionDecl("makeUtc", Public, true, [
+			new HxFunctionArg("year", "Int", NoDefault, false, false),
+			new HxFunctionArg("month", "Int", NoDefault, false, false),
+			new HxFunctionArg("day", "Int", NoDefault, false, false),
+			new HxFunctionArg("hour", "Int", NoDefault, false, false),
+			new HxFunctionArg("min", "Int", NoDefault, false, false),
+			new HxFunctionArg("sec", "Int", NoDefault, false, false)
+		], "Float", [
+			SReturn(EBinop("*", ECall(EField(EIdent("__global__"), "__hxcpp_utc_date"), [
+				EIdent("year"),
+				EIdent("month"),
+				EIdent("day"),
+				EIdent("hour"),
+				EIdent("min"),
+				EIdent("sec")
+			]), EFloat(1000.0)), HxPos.unknown())
+		], "");
+		final dateToolsOwner = new HxClassDecl("DateToolsLike", false, [dateToolsMake, dateToolsMakeUtc], []);
 		final dateToolsNames = new StringMap<Bool>();
 		dateToolsNames.set("DateToolsLike", true);
 		final dateToolsClasses = new StringMap<HxClassDecl>();
@@ -3086,6 +3117,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ structural argument hints should render as concrete aggregate parameters, not strings");
 		assertContains(dateToolsMakeLines, "return ((o.ms) + (o.seconds));", "C++ structural argument fields should be read through value field access");
 		assertTrue(dateToolsMakeLines.indexOf("make(std::string o)") < 0, "C++ structural argument hints should not collapse to std::string");
+		final dateToolsMakeUtcLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(dateToolsMakeUtc, dateToolsOwner, dateToolsLookup)
+			.join("\n");
+		assertContains(dateToolsMakeUtcLines, "return (__hxhx_utc_date(year, month, day, hour, min, sec) * 1000);",
+			"C++ DateTools.makeUtc-like helper should lower hxcpp UTC date support instead of unresolved __global__");
+		assertTrue(dateToolsMakeUtcLines.indexOf("__global__") < 0, "C++ DateTools.makeUtc-like helper should not leak __global__");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
@@ -3122,6 +3158,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "Assert::q(1.5)", "C++ smoke should allow numeric Assert.q calls");
 		assertContains(source, "static std::string __hxhx_stringify(const __HxMacroExpr& value)",
 			"C++ smoke should stringify macro-expression values without falling through to ostream fallback");
+		assertContains(source, "static double __hxhx_utc_date(int year, int month, int day, int hour, int min, int sec)",
+			"C++ smoke should include target-owned hxcpp UTC date support");
 		assertContains(source, "struct __hxhx_is_streamable", "C++ stringify support should detect non-streamable values before using ostream fallback");
 		assertContains(source, "return __hxhx_type_name(value);", "C++ stringify support should fall back for non-streamable closure values");
 		assertContains(source, "struct __hxhx_throw_bottom", "C++ smoke should include target-owned throw-expression bottom support");
