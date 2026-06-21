@@ -2242,6 +2242,41 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ optional scalar args should use std::optional instead of invalid int/nullptr pairs");
 		assertContains(optionalLenLines, "if (!len.has_value()) {", "C++ optional scalar null checks should test optional presence");
 		assertContains(optionalLenLines, "useLen(len.value());", "C++ optional scalar value uses should unwrap after null checks");
+		final importExprClass = new HxClassDecl("ImportExpr", false, [], []);
+		final typePathClass = new HxClassDecl("TypePath", false, [], []);
+		final typeDefinitionClass = new HxClassDecl("TypeDefinition", false, [], []);
+		final defineModuleOwner = new HxClassDecl("DefineModuleOwner", false, [
+			new HxFunctionDecl("defineModuleLike", Public, true, [
+				new HxFunctionArg("modulePath", "String", NoDefault, false, false),
+				new HxFunctionArg("types", "Array<TypeDefinition>", NoDefault, false, false),
+				new HxFunctionArg("imports", "Array<ImportExpr>", NoDefault, true, false),
+				new HxFunctionArg("usings", "Array<TypePath>", NoDefault, true, false)
+			], "Void", [
+				SIf(EBinop("==", EIdent("imports"), ENull), SExpr(EBinop("=", EIdent("imports"), EArrayDecl([])), HxPos.unknown()), null, HxPos.unknown()),
+				SIf(EBinop("==", EIdent("usings"), ENull), SExpr(EBinop("=", EIdent("usings"), EArrayDecl([])), HxPos.unknown()), null, HxPos.unknown())
+			], "")
+		], []);
+		final defineModuleNames = new StringMap<Bool>();
+		for (name in ["DefineModuleOwner", "ImportExpr", "TypePath", "TypeDefinition"])
+			defineModuleNames.set(name, true);
+		final defineModuleClasses = new StringMap<HxClassDecl>();
+		defineModuleClasses.set("DefineModuleOwner", defineModuleOwner);
+		defineModuleClasses.set("ImportExpr", importExprClass);
+		defineModuleClasses.set("TypePath", typePathClass);
+		defineModuleClasses.set("TypeDefinition", typeDefinitionClass);
+		final defineModuleLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(defineModuleOwner)[0], defineModuleOwner, {
+				names: defineModuleNames,
+				byName: defineModuleClasses
+			}).join("\n");
+		assertContains(defineModuleLines, "imports = std::vector<std::shared_ptr<ImportExpr>>{};",
+			"C++ optional vector assignments should type empty array RHS values from the optional payload type");
+		assertContains(defineModuleLines, "usings = std::vector<std::shared_ptr<TypePath>>{};",
+			"C++ optional vector assignments should not fall back to std::vector<int> for empty arrays");
+		assertTrue(defineModuleLines.indexOf("imports.value() = std::vector<int>{}") < 0,
+			"C++ optional vector defaulting should not mutate value() with an int-vector fallback");
+		assertTrue(defineModuleLines.indexOf("usings.value() = std::vector<int>{}") < 0,
+			"C++ optional vector defaulting should not reproduce the remote Gate3 compile failure");
 		final optionalReturnMethod = new HxFunctionDecl("firstLike", Public, false, [new HxFunctionArg("value", "String", NoDefault, false, false)],
 			"Null<String>", [
 				SIf(EBinop("==", EIdent("value"), EString("")), SReturn(ENull, HxPos.unknown()), SReturn(EIdent("value"), HxPos.unknown()), HxPos.unknown())

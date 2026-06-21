@@ -4782,6 +4782,9 @@ class CppTargetCore {
 				cppIteratorElementType(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "hasNext"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
 				"bool";
+			case ECall(EField(receiver, "value"), args) if (args.length == 0):
+				final optionalInner = cppOptionalInnerType(exprCppType(receiver, scope));
+				optionalInner.length > 0 ? optionalInner : "";
 			case ECall(EField(receiver, method), _):
 				final staticOwner = staticReceiverClassName(receiver, scope);
 				if (staticOwner != null) {
@@ -5798,21 +5801,30 @@ class CppTargetCore {
 	}
 
 	static function assignmentRhsExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
-		final leftType = exprCppType(left, scope);
-		if (leftType == "std::shared_ptr<PosInfos>")
+		final expectedType = assignmentExpectedCppType(left, scope);
+		if (expectedType == "std::shared_ptr<PosInfos>")
 			return posInfosSharedPtrExpr(right, scope);
-		if (isCppVectorType(leftType)) {
+		if (isCppVectorType(expectedType)) {
 			switch (right) {
 				case ENull:
-					return cppDefaultValue(leftType, scope);
+					return cppDefaultValue(expectedType, scope);
 				case _:
+					return valueExprForExpectedType(right, expectedType, scope);
 			}
 		}
 		return renderExpr(right, scope);
 	}
 
+	static function assignmentExpectedCppType(left:HxExpr, ?scope:CppRenderScope):String {
+		final leftType = exprCppType(left, scope);
+		final optionalInner = cppOptionalInnerType(leftType);
+		return optionalInner.length > 0 ? optionalInner : leftType;
+	}
+
 	static function assignmentLhsExpr(left:HxExpr, ?scope:CppRenderScope):String {
 		return switch (left) {
+			case EIdent(name) if (exprHasOptionalType(left, scope)):
+				sanitizeIdentifier(name);
 			case EField(receiver, field):
 				final known = staticFieldExpr(receiver, field, scope);
 				if (known != null) known; else {
