@@ -235,6 +235,10 @@ let rttiMetaLines = fun () -> let __arr_6 = HxArray.create () in (
   ignore (HxArray.push __arr_6 "  return std::any();");
   ignore (HxArray.push __arr_6 "}");
   ignore (HxArray.push __arr_6 "");
+  ignore (HxArray.push __arr_6 "template<typename TObject, typename TValue>");
+  ignore (HxArray.push __arr_6 "static void __hxhx_reflect_set_field(TObject&, const std::string&, const TValue&) {");
+  ignore (HxArray.push __arr_6 "}");
+  ignore (HxArray.push __arr_6 "");
   ignore (HxArray.push __arr_6 "template<typename TObject, typename TFunc, typename TArgs>");
   ignore (HxArray.push __arr_6 "static std::any __hxhx_reflect_call_method(const TObject&, const TFunc&, const TArgs&) {");
   ignore (HxArray.push __arr_6 "  return std::any();");

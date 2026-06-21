@@ -652,6 +652,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  @:optional final platforms:Array<Platform>;",
 			"  @:optional final targets:Array<MetadataTarget>;",
 			"}",
+			"class JsonParserLike {",
+			"  public function new() {}",
+			"  function parseString():String {",
+			"    return \"field\";",
+			"  }",
+			"  function parseRec():Dynamic {",
+			"    return \"value\";",
+			"  }",
+			"  public function parseObjectLike():Dynamic {",
+			"    var obj = {}, field = null, comma:Null<Bool> = null;",
+			"    Reflect.setField(obj, field, parseRec());",
+			"    field = parseString();",
+			"    comma = false;",
+			"    return obj;",
+			"  }",
+			"  public function parseArrayLike():Dynamic {",
+			"    var arr = [], comma:Null<Bool> = null;",
+			"    arr.push(parseRec());",
+			"    comma = true;",
+			"    return arr;",
+			"  }",
+			"}",
 			"class Assert {",
 			"  public static function q(v:Dynamic):String {",
 			"    return Std.string(v);",
@@ -3759,6 +3781,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::vector<std::shared_ptr<Platform>> platforms = {};", "C++ smoke should preserve @:optional platforms field name");
 		assertContains(source, "std::vector<std::shared_ptr<MetadataTarget>> targets = {};", "C++ smoke should preserve @:optional targets field name");
 		assertTrue(source.indexOf("std::vector<std::string> optional =") < 0, "C++ smoke should not render metadata name optional as a structural field");
+		assertContains(source, "std::any parseRec()", "C++ smoke should erase Dynamic returns as std::any for JsonParser-shaped flows");
+		assertContains(source, "std::any parseObjectLike()", "C++ smoke should erase Dynamic object returns as std::any");
+		assertContains(source, "auto field = std::string();", "C++ smoke should infer null-then-string grouped locals as strings instead of std::nullptr_t");
+		assertContains(source, "std::optional<bool> comma = std::nullopt;", "C++ smoke should preserve grouped Null<Bool> locals instead of dropping comma");
+		assertContains(source, "__hxhx_reflect_set_field(obj, std::string(field), parseRec());",
+			"C++ smoke should lower Reflect.setField through backend-owned erased reflection support");
+		assertTrue(source.indexOf("Reflect::setField(obj, field, parseRec())") < 0,
+			"C++ smoke should not call the string-only parsed Reflect.setField helper for Dynamic object writes");
+		assertContains(source, "auto arr = std::vector<std::any>{};", "C++ smoke should infer Dynamic pushes into empty arrays as std::vector<std::any>");
+		assertContains(source, "arr.push_back(parseRec());", "C++ smoke should keep Dynamic array pushes compile-safe");
 		assertContains(source,
 			"template<typename TExpected, typename TValue, typename TStatus>\n  static bool sameAs(const TExpected& expected, const TValue& value, TStatus& status, double approx)",
 			"C++ smoke should keep Assert.sameAs Dynamic expected/value args and status values polymorphic");

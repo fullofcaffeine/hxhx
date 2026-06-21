@@ -2726,7 +2726,8 @@ class CppTargetCore {
 				final local = sanitizeIdentifier(name);
 				final unhintedNoInit = isUnhintedNoInitLocal(typeHint, init);
 				final unhintedEmptyArray = isUnhintedEmptyArray(typeHint, init);
-				if (isDynamicLikeTypeHint(typeHint) || unhintedNoInit || unhintedEmptyArray) {
+				final unhintedNull = isUnhintedNullLocal(typeHint, init);
+				if (isDynamicLikeTypeHint(typeHint) || unhintedNoInit || unhintedEmptyArray || unhintedNull) {
 					candidates.set(local, true);
 					final inferred = init == null || unhintedEmptyArray ? "" : dynamicLocalAssignedType(init, scope);
 					if (inferred.length > 0)
@@ -2751,6 +2752,11 @@ class CppTargetCore {
 				final inferred = dynamicLocalAssignedType(rhs, scope);
 				if (inferred.length > 0)
 					setDynamicLocalTypeOverride(scope, sanitizeIdentifier(name), inferred);
+			case ECall(EField(EIdent(name), "push"), [value]) if (candidates.exists(sanitizeIdentifier(name))):
+				collectDynamicLocalTypeOverridesFromExpr(value, scope, candidates);
+				final inferred = dynamicLocalAssignedType(value, scope);
+				if (inferred.length > 0)
+					setDynamicLocalTypeOverride(scope, sanitizeIdentifier(name), "std::vector<" + inferred + ">");
 			case EBinop(_, left, right):
 				collectDynamicLocalTypeOverridesFromExpr(left, scope, candidates);
 				collectDynamicLocalTypeOverridesFromExpr(right, scope, candidates);
@@ -4385,6 +4391,14 @@ class CppTargetCore {
 			return reflectCompareExpr(args, scope);
 		if (isReflectStaticReceiver(receiver) && method == "field" && args.length == 2)
 			return "__hxhx_reflect_field(" + renderExpr(args[0], scope) + ", " + stringExpr(args[1], scope) + ")";
+		if (isReflectStaticReceiver(receiver) && method == "setField" && args.length == 3)
+			return "__hxhx_reflect_set_field("
+				+ renderExpr(args[0], scope)
+				+ ", "
+				+ stringExpr(args[1], scope)
+				+ ", "
+				+ renderExpr(args[2], scope)
+				+ ")";
 		if (isReflectStaticReceiver(receiver) && method == "callMethod" && args.length == 3)
 			return "__hxhx_reflect_call_method("
 				+ renderExpr(args[0], scope)
@@ -5182,6 +5196,17 @@ class CppTargetCore {
 		return switch (init) {
 			case EArrayDecl(values):
 				values.length == 0;
+			case _:
+				false;
+		};
+	}
+
+	static function isUnhintedNullLocal(typeHint:String, init:Null<HxExpr>):Bool {
+		if (StringTools.trim(typeHint == null ? "" : typeHint).length > 0)
+			return false;
+		return switch (init) {
+			case ENull:
+				true;
 			case _:
 				false;
 		};
@@ -7155,6 +7180,8 @@ class CppTargetCore {
 		final hint = CppTypeModel.unwrapNullTypeHint(raw);
 		if (isStructuralTypeHint(hint))
 			return "auto";
+		if (isDynamicLikeTypeHint(hint))
+			return "std::any";
 		final scopedGenericClass = scopedRawGenericClassTypeName(hint, scope);
 		if (scopedGenericClass != null)
 			return "std::shared_ptr<" + scopedGenericClass + ">";
@@ -7248,6 +7275,15 @@ class CppTargetCore {
 		return false;
 	}
 
+	static function functionReturnsEnumMetadataCtor(fn:HxFunctionDecl):Bool {
+		if (fn == null)
+			return false;
+		for (stmt in HxFunctionDecl.getBody(fn))
+			if (stmtReturnsEnumMetadataCtor(stmt))
+				return true;
+		return false;
+	}
+
 	static function stmtReturnsLambda(stmt:HxStmt):Bool {
 		return switch (stmt) {
 			case SReturn(ELambda(_, _), _):
@@ -7259,6 +7295,22 @@ class CppTargetCore {
 						found = true;
 				found;
 			case SIf(_, thenBranch, elseBranch, _): stmtReturnsLambda(thenBranch) || (elseBranch != null && stmtReturnsLambda(elseBranch));
+			case _:
+				false;
+		};
+	}
+
+	static function stmtReturnsEnumMetadataCtor(stmt:HxStmt):Bool {
+		return switch (stmt) {
+			case SReturn(expr, _):
+				enumMetadataCtorStringExpr(expr) != null;
+			case SBlock(stmts, _):
+				var found = false;
+				for (s in stmts)
+					if (stmtReturnsEnumMetadataCtor(s))
+						found = true;
+				found;
+			case SIf(_, thenBranch, elseBranch, _): stmtReturnsEnumMetadataCtor(thenBranch) || (elseBranch != null && stmtReturnsEnumMetadataCtor(elseBranch));
 			case _:
 				false;
 		};
@@ -7277,6 +7329,8 @@ class CppTargetCore {
 		if (isStringIteratorHelper(ownerName))
 			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
 				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+		if (isDynamicLikeTypeHint(raw) && functionReturnsEnumMetadataCtor(fn))
+			return "std::string";
 		final returnScope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, "auto");
 		applyFunctionTypeParams(returnScope, fn);
 		if (raw.length > 0)
