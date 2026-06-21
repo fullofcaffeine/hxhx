@@ -4341,6 +4341,8 @@ class CppTargetCore {
 				+ ", "
 				+ renderExpr(args[2], scope)
 				+ ")";
+		if (isReflectStaticReceiver(receiver) && method == "isFunction" && args.length == 1)
+			return "__hxhx_reflect_is_function(" + renderExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver)
 			&& method == "hasField"
 			&& args.length == 2
@@ -4677,6 +4679,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "callMethod"), args) if (isReflectStaticReceiver(receiver) && args.length == 3):
 				"std::any";
+			case ECall(EField(receiver, "isFunction"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
+				"bool";
 			case ECall(EField(receiver, "getProperty"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"std::any";
@@ -5146,6 +5150,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "callMethod"), args) if (isReflectStaticReceiver(receiver) && args.length == 3):
 				"std::any";
+			case ECall(EField(receiver, "isFunction"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
+				"bool";
 			case ECall(EField(receiver, "getProperty"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"std::any";

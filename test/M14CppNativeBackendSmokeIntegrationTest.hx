@@ -1032,6 +1032,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Reflect.callMethod should not force generated helper signatures while Full1 reflection is still erased");
 		assertTrue(reflectCallMethodExpr.indexOf("Reflect::field") < 0,
 			"C++ Reflect.field should not render as a generated helper returning a string where callMethod expects a callable");
+		final reflectIsFunctionExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "isFunction"), [
+			ECall(EField(EIdent("Reflect"), "field"), [EIdent("value"), EString("iterator")])
+		]));
+		assertTrue(reflectIsFunctionExpr == "__hxhx_reflect_is_function(__hxhx_reflect_field(value, std::string(\"iterator\")))",
+			"C++ Reflect.isFunction should accept erased Reflect.field results through target-owned support");
+		assertTrue(reflectIsFunctionExpr.indexOf("Reflect::isFunction") < 0,
+			"C++ Reflect.isFunction should not require the generated string-only helper for erased field values");
 		final reflectCompareOwner = new HxClassDecl("ReflectCompareOwner", false, [], []);
 		final reflectCompareMethod = new HxFunctionDecl("compareLike", Public, false, [
 			new HxFunctionArg("left", "String", NoDefault, false, false),

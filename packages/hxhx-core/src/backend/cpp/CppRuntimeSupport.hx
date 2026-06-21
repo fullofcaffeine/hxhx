@@ -246,6 +246,16 @@ class CppRuntimeSupport {
 			"template<typename TObject, typename TFunc, typename TArgs>",
 			"static std::any __hxhx_reflect_call_method(const TObject&, const TFunc&, const TArgs&) {",
 			"  return std::any();",
+			"}",
+			"",
+			"template<typename T>",
+			"static bool __hxhx_reflect_is_function(const T&) {",
+			"  return false;",
+			"}",
+			"",
+			"template<typename R, typename... Args>",
+			"static bool __hxhx_reflect_is_function(const std::function<R(Args...)>&) {",
+			"  return true;",
 			"}"
 		];
 	}
