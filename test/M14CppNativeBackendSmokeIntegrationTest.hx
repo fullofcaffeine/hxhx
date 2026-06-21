@@ -2841,6 +2841,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(genericRawSubLines, "std::shared_ptr<GenericRawSub<T>> __hxhx_make_shared_GenericRawSub() {",
 			"C++ generic classes with implicit constructors should still emit zero-arg factories");
 		assertContains(genericRawSubLines, "(copied->value) = this->value;", "C++ generic subclasses should qualify inherited dependent-base field reads");
+		final parsedListSortModule = new HxParser("class ListSortLike { public static function sort<T:{prev:T, next:T}>(list:T, cmp:T->T->Int):T { var p:T = list; var q:T = p; q = q.next; q.prev = p; return list; } }")
+			.parseModule("ListSortLike");
+		final parsedListSortOwner = HxModuleDecl.getMainClass(parsedListSortModule);
+		final parsedListSortFn = HxClassDecl.getFunctions(parsedListSortOwner)[0];
+		final parsedListSortNames = new StringMap<Bool>();
+		parsedListSortNames.set("ListSortLike", true);
+		final parsedListSortClasses = new StringMap<HxClassDecl>();
+		parsedListSortClasses.set("ListSortLike", parsedListSortOwner);
+		final parsedListSortLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(parsedListSortFn, parsedListSortOwner, {
+				names: parsedListSortNames,
+				byName: parsedListSortClasses
+			}).join("\n");
+		assertContains(parsedListSortLines, "template<typename T>\n  static T sort(T list, std::function<int(T, T)> cmp) {",
+			"C++ function-level generic methods should preserve method type params instead of erasing T to string");
+		assertContains(parsedListSortLines, "T p = list;", "C++ ListSort-like locals with T hints should stay typed as T");
+		assertContains(parsedListSortLines, "T q = p;", "C++ ListSort-like dependent node locals should stay typed as T");
+		assertContains(parsedListSortLines, "q = (q.next);", "C++ ListSort-like next field access should stay on the generic node type");
+		assertContains(parsedListSortLines, "(q.prev) = p;", "C++ ListSort-like prev field access should stay on the generic node type");
+		assertTrue(parsedListSortLines.indexOf("std::string list") < 0,
+			"C++ ListSort-like method args should not collapse function-level generic T to std::string");
 		final methodGenericBuffer = new HxClassDecl("MethodGenericBuffer", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
 			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",
@@ -3604,8 +3625,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			final vendorLambdaEmit = BackendRegistry.createForTarget("cpp-native").emit(vendorLambdaProgram, context(vendorLambdaDir, true, true));
 			final vendorLambdaSource = File.getContent(vendorLambdaEmit.entryPath);
 			assertContains(vendorLambdaSource,
-				"static std::vector<std::string> mapi(std::vector<std::string> it, std::function<std::string(int, std::string)> f) {",
-				"C++ smoke should preserve upstream Lambda.mapi callback type shape");
+				"template<typename A, typename B>\n  static std::vector<B> mapi(std::vector<A> it, std::function<B(int, A)> f) {",
+				"C++ smoke should preserve upstream Lambda.mapi method-level generic callback shape");
+			assertTrue(vendorLambdaSource.indexOf("struct T;\n") < 0
+				&& vendorLambdaSource.indexOf("struct A;\n") < 0
+				&& vendorLambdaSource.indexOf("struct B;\n") < 0,
+				"C++ smoke should not forward-declare method-level generic type params as fake classes");
 			assertContains(vendorLambdaSource, "__hxhx_comp_out.push_back(f((i++), x));",
 				"C++ smoke should keep upstream Lambda.mapi callback invocation callable");
 		}

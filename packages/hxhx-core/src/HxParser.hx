@@ -1252,6 +1252,51 @@ class HxParser {
 		}
 	}
 
+	function readTypeParameterNamesFromCurrentAngles():Array<String> {
+		final params = new Array<String>();
+		if (!isOtherChar("<"))
+			return params;
+		var depth = 0;
+		var expectingName = true;
+		while (true) {
+			switch (cur.kind) {
+				case TEof:
+					fail("Unterminated angle bracket group");
+				case TOther(c) if (c == "<".code):
+					depth++;
+					bump();
+				case TOther(c) if (c == ">".code):
+					depth--;
+					bump();
+					if (depth <= 0)
+						return params;
+				case TComma if (depth == 1):
+					expectingName = true;
+					bump();
+				case TColon if (depth == 1):
+					expectingName = false;
+					bump();
+				case TIdent(name) if (depth == 1 && expectingName):
+					params.push(name);
+					expectingName = false;
+					bump();
+				case TLParen:
+					bump();
+					skipBalancedParens();
+				case TLBrace:
+					bump();
+					skipBalancedBraces();
+				case _:
+					bump();
+			}
+		}
+		return params;
+	}
+
+	static function functionTypeParamsMetadata(params:Array<String>):Array<String> {
+		return params == null || params.length == 0 ? [] : ["__hxhx_fn_type_params=" + params.join(",")];
+	}
+
 	function skipBalancedBraces():Void {
 		// Called when current token is '{' already consumed by caller.
 		var depth = 1;
@@ -4442,11 +4487,7 @@ class HxParser {
 		}
 		// Generic function declarations can carry a type-parameter group immediately after the
 		// function name, e.g. `static function coalesce<T>(left:T, right:T):T;`.
-		//
-		// Drop the `<...>` group in this bootstrap parser, matching the existing constructor
-		// behavior for `new Foo<Bar>(...)`. Stage3 only needs the callable surface here.
-		if (isOtherChar("<"))
-			skipBalancedAngles();
+		final functionTypeParams = isOtherChar("<") ? readTypeParameterNamesFromCurrentAngles() : [];
 		expect(TLParen, "'('");
 
 		final args = new Array<HxFunctionArg>();
@@ -4537,7 +4578,8 @@ class HxParser {
 				}
 		}
 
-		return new HxFunctionDecl(name, visibility, isStatic, args, returnType, body, capturedReturnStringLiteral, metadata, startPos, cur.getPos(), bodyText);
+		return new HxFunctionDecl(name, visibility, isStatic, args, returnType, body, capturedReturnStringLiteral,
+			metadata.concat(functionTypeParamsMetadata(functionTypeParams)), startPos, cur.getPos(), bodyText);
 	}
 
 	function parseClassMembers():{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {

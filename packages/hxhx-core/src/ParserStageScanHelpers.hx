@@ -273,6 +273,10 @@ class ParserStageScanHelpers {
 		return params == null || params.length == 0 ? [] : ["__hxhx_type_params=" + params.join(",")];
 	}
 
+	static function functionTypeParamsMetadata(params:Array<String>):Array<String> {
+		return params == null || params.length == 0 ? [] : ["__hxhx_fn_type_params=" + params.join(",")];
+	}
+
 	/**
 		Best-effort scanner for top-level `enum` declarations.
 
@@ -1721,6 +1725,8 @@ class ParserStageScanHelpers {
 						nameTok = scanNextToken(source, nameTok.nextPos);
 					final fnName = (nameTok.isIdent && nameTok.text.length > 0) ? nameTok.text : "";
 					i = nameTok.nextPos;
+					final functionTypeParams = scanTypeParameterNames(source, i);
+					i = functionTypeParams.nextPos;
 
 					// Seek `(` for the parameter list while skipping generic type-parameter
 					// constraints such as `<A:{x:Int} & {y:Float}>`.
@@ -1833,7 +1839,7 @@ class ParserStageScanHelpers {
 						i = bodyCapture.nextPos;
 
 					if (fnName.length > 0) {
-						final metadata = pendingMetadata.copy();
+						final metadata = pendingMetadata.copy().concat(functionTypeParamsMetadata(functionTypeParams.params));
 						if (sawMacro)
 							metadata.push("macro");
 						if (sawOverload)

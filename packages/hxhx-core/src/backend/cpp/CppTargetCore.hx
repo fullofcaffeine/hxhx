@@ -931,13 +931,12 @@ class CppTargetCore {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
-		final out = ["static "
-			+ returnType
-			+ " "
-			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
-			+ "("
-			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
-			+ ") {"];
+		final out = new Array<String>();
+		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
+		if (methodTypeParams.length > 0)
+			out.push(genericTemplatePrefix(methodTypeParams));
+		out.push("static " + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
+			+ ") {");
 		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "  ", scope))
 			out.push(line);
 		out.push("}");
@@ -1051,6 +1050,11 @@ class CppTargetCore {
 		return false;
 	}
 
+	static function scopedGenericTypeParamName(typeHint:String, ?scope:CppRenderScope):String {
+		final param = genericTypeParamName(typeHint);
+		return param.length > 0 && isScopeTypeParam(param, scope) ? param : "";
+	}
+
 	static function isAssertStatusStringField(fieldName:String):Bool {
 		return fieldName == "expectedValue" || fieldName == "actualValue" || fieldName == "error" || fieldName == "path";
 	}
@@ -1112,9 +1116,11 @@ class CppTargetCore {
 				for (field in HxClassDecl.getFields(cls))
 					addTypeHintDependencies(HxFieldDecl.getTypeHint(field), addMissing);
 				for (fn in HxClassDecl.getFunctions(cls)) {
-					addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), addMissing);
+					final fnScope = renderScope(cls, classLookup, "void");
+					applyFunctionTypeParams(fnScope, fn);
+					addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), addMissing, fnScope);
 					for (arg in HxFunctionDecl.getArgs(fn))
-						addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), addMissing);
+						addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), addMissing, fnScope);
 				}
 			}
 		}
@@ -1294,10 +1300,12 @@ class CppTargetCore {
 		for (field in HxClassDecl.getFields(cls))
 			addTypeHintDependencies(HxFieldDecl.getTypeHint(field), add);
 		for (fn in HxClassDecl.getFunctions(cls)) {
-			addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), add);
+			final fnScope = renderScope(cls, classLookup, "void");
+			applyFunctionTypeParams(fnScope, fn);
+			addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), add, fnScope);
 			for (arg in HxFunctionDecl.getArgs(fn))
-				addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), add);
-			addStmtClassDependencies(HxFunctionDecl.getBody(fn), add);
+				addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), add, fnScope);
+			addStmtClassDependencies(HxFunctionDecl.getBody(fn), add, fnScope);
 		}
 		return deps;
 	}
@@ -1309,45 +1317,45 @@ class CppTargetCore {
 		for inline method bodies that instantiate `T` or call through a `T` reference.
 		Those body-only dependencies must therefore participate in helper ordering.
 	**/
-	static function addStmtClassDependencies(stmts:Array<HxStmt>, add:String->Void):Void {
+	static function addStmtClassDependencies(stmts:Array<HxStmt>, add:String->Void, ?scope:CppRenderScope):Void {
 		for (stmt in stmts)
-			addOneStmtClassDependencies(stmt, add);
+			addOneStmtClassDependencies(stmt, add, scope);
 	}
 
-	static function addOneStmtClassDependencies(stmt:HxStmt, add:String->Void):Void {
+	static function addOneStmtClassDependencies(stmt:HxStmt, add:String->Void, ?scope:CppRenderScope):Void {
 		switch (stmt) {
 			case SBlock(stmts, _):
-				addStmtClassDependencies(stmts, add);
+				addStmtClassDependencies(stmts, add, scope);
 			case SVar(_, typeHint, init, _):
-				addTypeHintDependencies(typeHint, add);
+				addTypeHintDependencies(typeHint, add, scope);
 				if (init != null)
 					addExprClassDependencies(init, add);
 			case SIf(cond, thenBranch, elseBranch, _):
 				addExprClassDependencies(cond, add);
-				addOneStmtClassDependencies(thenBranch, add);
+				addOneStmtClassDependencies(thenBranch, add, scope);
 				if (elseBranch != null)
-					addOneStmtClassDependencies(elseBranch, add);
+					addOneStmtClassDependencies(elseBranch, add, scope);
 			case SForIn(_, iterable, body, _):
 				addExprClassDependencies(iterable, add);
-				addOneStmtClassDependencies(body, add);
+				addOneStmtClassDependencies(body, add, scope);
 			case SForKeyValue(_, _, iterable, body, _):
 				addExprClassDependencies(iterable, add);
-				addOneStmtClassDependencies(body, add);
+				addOneStmtClassDependencies(body, add, scope);
 			case SWhile(cond, body, _):
 				addExprClassDependencies(cond, add);
-				addOneStmtClassDependencies(body, add);
+				addOneStmtClassDependencies(body, add, scope);
 			case SDoWhile(body, cond, _):
-				addOneStmtClassDependencies(body, add);
+				addOneStmtClassDependencies(body, add, scope);
 				addExprClassDependencies(cond, add);
 			case SSwitch(scrutinee, _, bodies, _):
 				addExprClassDependencies(scrutinee, add);
 				for (body in bodies)
-					addOneStmtClassDependencies(body, add);
+					addOneStmtClassDependencies(body, add, scope);
 			case STry(tryBody, catches, _):
-				addOneStmtClassDependencies(tryBody, add);
+				addOneStmtClassDependencies(tryBody, add, scope);
 				for (c in catches) {
-					addTypeHintDependencies(c.typeHint, add);
-					addOneStmtClassDependencies(c.body, add);
+					addTypeHintDependencies(c.typeHint, add, scope);
+					addOneStmtClassDependencies(c.body, add, scope);
 				}
 			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
 				addExprClassDependencies(expr, add);
@@ -1418,30 +1426,32 @@ class CppTargetCore {
 			add(sanitizeTypePath(typeBaseName(typePath)));
 	}
 
-	static function addTypeHintDependencies(typeHint:String, add:String->Void):Void {
+	static function addTypeHintDependencies(typeHint:String, add:String->Void, ?scope:CppRenderScope):Void {
 		final hint = unwrapNullTypeHint(StringTools.trim(typeHint == null ? "" : typeHint));
 		if (hint.length == 0)
 			return;
+		if (scopedGenericTypeParamName(hint, scope).length > 0)
+			return;
 		if (isArrayLikeTypeHint(hint)) {
-			addTypeHintDependencies(genericTypeHintArg(hint), add);
+			addTypeHintDependencies(genericTypeHintArg(hint), add, scope);
 			return;
 		}
 		if (isIterableTypeHint(hint)) {
-			addTypeHintDependencies(genericTypeHintArg(hint), add);
+			addTypeHintDependencies(genericTypeHintArg(hint), add, scope);
 			return;
 		}
 		if (isFunctionTypeHint(hint)) {
 			for (part in splitTopLevelFunctionType(hint))
-				addTypeHintDependencies(part, add);
+				addTypeHintDependencies(part, add, scope);
 			return;
 		}
 		if (isStructuralTypeHint(hint)) {
 			for (field in CppTypeModel.structuralTypeHintFields(hint))
-				addTypeHintDependencies(field.typeHint, add);
+				addTypeHintDependencies(field.typeHint, add, scope);
 			return;
 		}
 		for (arg in genericTypeHintArgs(hint))
-			addTypeHintDependencies(arg, add);
+			addTypeHintDependencies(arg, add, scope);
 		add(sanitizeTypePath(typeBaseName(hint)));
 	}
 
@@ -1909,6 +1919,7 @@ class CppTargetCore {
 	}
 
 	static function prepareFunctionScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		applyFunctionTypeParams(scope, fn);
 		inferCallableArgTypeOverrides(scope, fn);
 		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 		inferDynamicLocalTypeOverrides(scope, fn);
@@ -1996,14 +2007,12 @@ class CppTargetCore {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
-		final out = ["  "
-			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
-			+ returnType
-			+ " "
-			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
-			+ "("
-			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
-			+ ") {"];
+		final out = new Array<String>();
+		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
+		if (methodTypeParams.length > 0)
+			out.push("  " + genericTemplatePrefix(methodTypeParams));
+		out.push("  " + (HxFunctionDecl.getIsStatic(fn) ? "static " : "") + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
 		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
 			out.push(line);
 		out.push("  }");
@@ -2228,6 +2237,83 @@ class CppTargetCore {
 	static function genericClassTemplateParams(cls:HxClassDecl):Array<String> {
 		final params = genericClassTypeParams(cls);
 		return params;
+	}
+
+	static function genericFunctionTypeParams(fn:HxFunctionDecl):Array<String> {
+		final params = new Array<String>();
+		final seen = new haxe.ds.StringMap<Bool>();
+		function add(raw:String):Void {
+			final clean = sanitizeIdentifier(StringTools.trim(raw == null ? "" : raw));
+			if (clean.length > 0 && !seen.exists(clean)) {
+				seen.set(clean, true);
+				params.push(clean);
+			}
+		}
+		for (meta in HxFunctionDecl.getMetadata(fn)) {
+			final prefix = "__hxhx_fn_type_params=";
+			if (!StringTools.startsWith(meta, prefix))
+				continue;
+			for (param in meta.substr(prefix.length).split(","))
+				add(param);
+		}
+		return params;
+	}
+
+	static function applyFunctionTypeParams(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null)
+			return;
+		final params = genericFunctionTypeParams(fn);
+		if (params.length == 0)
+			return;
+		final merged = scope.typeParams == null ? [] : scope.typeParams.copy();
+		final seen = new haxe.ds.StringMap<Bool>();
+		for (param in merged)
+			seen.set(param, true);
+		for (param in params) {
+			final clean = sanitizeIdentifier(param);
+			if (clean.length > 0 && !seen.exists(clean)) {
+				seen.set(clean, true);
+				merged.push(clean);
+			}
+		}
+		scope.typeParams = merged;
+	}
+
+	static function emittedFunctionTypeParams(fn:HxFunctionDecl, returnType:String, scope:CppRenderScope):Array<String> {
+		final out = new Array<String>();
+		for (param in genericFunctionTypeParams(fn)) {
+			if (cppTypeTextMentionsParam(returnType, param)) {
+				out.push(param);
+				continue;
+			}
+			for (arg in HxFunctionDecl.getArgs(fn)) {
+				if (cppTypeTextMentionsParam(cppFunctionArgType(arg, scope), param)) {
+					out.push(param);
+					break;
+				}
+			}
+		}
+		return out;
+	}
+
+	static function cppTypeTextMentionsParam(typeText:String, param:String):Bool {
+		final text = typeText == null ? "" : typeText;
+		final clean = sanitizeIdentifier(StringTools.trim(param == null ? "" : param));
+		if (clean.length == 0)
+			return false;
+		var start = 0;
+		while (start < text.length) {
+			final index = text.indexOf(clean, start);
+			if (index < 0)
+				return false;
+			final beforeOk = index == 0 || !isIdentifierCharAt(text, index - 1, true);
+			final after = index + clean.length;
+			final afterOk = after >= text.length || !isIdentifierCharAt(text, after, true);
+			if (beforeOk && afterOk)
+				return true;
+			start = index + clean.length;
+		}
+		return false;
 	}
 
 	static function genericTemplatePrefix(typeParams:Array<String>):String {
@@ -6580,6 +6666,7 @@ class CppTargetCore {
 			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
 				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
 		final returnScope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, "auto");
+		applyFunctionTypeParams(returnScope, fn);
 		if (raw.length > 0)
 			return cppReturnTypeHint(raw, returnScope, {names: classNamesFromByName(classByName), byName: classByName});
 		if (functionReturnsLambda(fn))
@@ -6589,8 +6676,7 @@ class CppTargetCore {
 			return "";
 		inferredSignatureStack.set(key, true);
 		final scope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, "auto");
-		inferCallableArgTypeOverrides(scope, fn);
-		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+		prepareFunctionScope(scope, fn);
 		for (stmt in HxFunctionDecl.getBody(fn)) {
 			final inferred = inferReturnTypeFromStmt(stmt, scope);
 			if (inferred.length > 0) {
@@ -6604,13 +6690,16 @@ class CppTargetCore {
 
 	static function inferredFunctionArgCppTypes(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>):Array<String> {
 		final rawReturn = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
-		final returnType = rawReturn.length > 0 ? cppReturnTypeHint(rawReturn, null, {names: classNamesFromByName(classByName), byName: classByName}) : "auto";
+		final returnScope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, "auto");
+		applyFunctionTypeParams(returnScope, fn);
+		final returnType = rawReturn.length > 0 ? cppReturnTypeHint(rawReturn, returnScope,
+			{names: classNamesFromByName(classByName), byName: classByName}) : "auto";
 		final key = functionSignatureKey(owner, fn);
 		if (inferredSignatureStack.exists(key))
 			return [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgBaseType(arg, null)];
 		inferredSignatureStack.set(key, true);
 		final scope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, returnType);
-		inferCallableArgTypeOverrides(scope, fn);
+		prepareFunctionScope(scope, fn);
 		final types = [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgType(arg, scope)];
 		inferredSignatureStack.remove(key);
 		return types;

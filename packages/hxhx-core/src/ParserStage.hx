@@ -1283,6 +1283,10 @@ class ParserStage {
 		return params == null || params.length == 0 ? [] : ["__hxhx_type_params=" + params.join(",")];
 	}
 
+	static function functionTypeParamsMetadata(params:Array<String>):Array<String> {
+		return params == null || params.length == 0 ? [] : ["__hxhx_fn_type_params=" + params.join(",")];
+	}
+
 	/**
 		Best-effort scanner for top-level `enum` declarations.
 
@@ -2545,6 +2549,8 @@ class ParserStage {
 						nameTok = scanNextToken(source, nameTok.nextPos);
 					final fnName = (nameTok.isIdent && nameTok.text.length > 0) ? nameTok.text : "";
 					i = nameTok.nextPos;
+					final functionTypeParams = scanTypeParameterNames(source, i);
+					i = functionTypeParams.nextPos;
 
 					// Seek `(` for the parameter list while skipping generic type-parameter
 					// constraints such as `<A:{x:Int} & {y:Float}>`.
@@ -2633,7 +2639,7 @@ class ParserStage {
 						i = bodyCapture.nextPos;
 
 					if (fnName.length > 0) {
-						final metadata = pendingMetadata.copy();
+						final metadata = pendingMetadata.copy().concat(functionTypeParamsMetadata(functionTypeParams.params));
 						if (sawMacro)
 							metadata.push("macro");
 						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", body, "", metadata, null, null, bodyText));
@@ -3491,6 +3497,61 @@ class ParserStage {
 		return first;
 	}
 
+	static function sourceFunctionTypeParams(name:String, ?source:String, methodBodyStart:Int = -1, ?argNames:Array<String>):Array<String> {
+		if (source == null || source.length == 0 || name == null || name.length == 0)
+			return [];
+		final needle = "function " + name;
+		function paramsAt(fnIndex:Int):Array<String> {
+			if (fnIndex < 0)
+				return [];
+			final afterName = fnIndex + needle.length;
+			final open = source.indexOf("(", fnIndex);
+			if (open < 0)
+				return [];
+			final close = findMatchingParen(source, open);
+			if (close < 0)
+				return [];
+			final hints = parseSourceSignatureArgs(source.substr(open + 1, close - open - 1));
+			if (!sourceArgHintsMatchNames(hints, argNames))
+				return [];
+			final genericText = StringTools.trim(source.substring(afterName, open));
+			return parseSourceTypeParamNames(genericText);
+		}
+		final anchoredIndex = methodBodyStart > 0 ? source.lastIndexOf(needle, methodBodyStart) : -1;
+		final anchoredParams = paramsAt(anchoredIndex);
+		if (anchoredParams.length > 0)
+			return anchoredParams;
+		var searchFrom = 0;
+		while (searchFrom < source.length) {
+			final fnIndex = source.indexOf(needle, searchFrom);
+			if (fnIndex < 0)
+				break;
+			final params = paramsAt(fnIndex);
+			if (params.length > 0)
+				return params;
+			searchFrom = fnIndex + needle.length;
+		}
+		return [];
+	}
+
+	static function parseSourceTypeParamNames(text:String):Array<String> {
+		final params = new Array<String>();
+		final trimmed = StringTools.trim(text == null ? "" : text);
+		if (!StringTools.startsWith(trimmed, "<") || !StringTools.endsWith(trimmed, ">"))
+			return params;
+		for (segment in splitTopLevelComma(trimmed.substr(1, trimmed.length - 2))) {
+			final name = sourceTypeParamName(segment);
+			if (name.length > 0)
+				params.push(name);
+		}
+		return params;
+	}
+
+	static function sourceTypeParamName(text:String):String {
+		final match = ~/^[ \t\r\n]*([A-Za-z_][A-Za-z0-9_]*)/;
+		return match.match(text == null ? "" : text) ? match.matched(1) : "";
+	}
+
 	static function sourceArgHintsMatchNames(hints:Array<{
 		name:String,
 		isOptional:Bool,
@@ -3739,7 +3800,9 @@ class ParserStage {
 
 		final argsPayload = parts[3];
 		final args = new Array<HxFunctionArg>();
-		final sourceHints = sourceSignatureArgHints(name, source, methodBodyStart, protocolArgNames(argsPayload));
+		final argNames = protocolArgNames(argsPayload);
+		final sourceHints = sourceSignatureArgHints(name, source, methodBodyStart, argNames);
+		final functionMetadata = functionTypeParamsMetadata(sourceFunctionTypeParams(name, source, methodBodyStart, argNames));
 		if (argsPayload.length > 0) {
 			for (a in argsPayload.split(",")) {
 				if (a.length == 0)
@@ -3846,7 +3909,7 @@ class ParserStage {
 		}
 		#end
 
-		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
+		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr, functionMetadata);
 	}
 
 	static function normalizeMethodReturnTypeHint(typeHint:String):String {
