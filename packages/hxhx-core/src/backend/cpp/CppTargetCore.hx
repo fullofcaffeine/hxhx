@@ -4331,6 +4331,16 @@ class CppTargetCore {
 			return "__hxhx_join(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "compare")
 			return reflectCompareExpr(args, scope);
+		if (isReflectStaticReceiver(receiver) && method == "field" && args.length == 2)
+			return "__hxhx_reflect_field(" + renderExpr(args[0], scope) + ", " + stringExpr(args[1], scope) + ")";
+		if (isReflectStaticReceiver(receiver) && method == "callMethod" && args.length == 3)
+			return "__hxhx_reflect_call_method("
+				+ renderExpr(args[0], scope)
+				+ ", "
+				+ renderExpr(args[1], scope)
+				+ ", "
+				+ renderExpr(args[2], scope)
+				+ ")";
 		if (isReflectStaticReceiver(receiver)
 			&& method == "hasField"
 			&& args.length == 2
@@ -4663,6 +4673,10 @@ class CppTargetCore {
 				int64DivModStruct().name;
 			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
 				"int";
+			case ECall(EField(receiver, "field"), args) if (isReflectStaticReceiver(receiver) && args.length == 2):
+				"std::any";
+			case ECall(EField(receiver, "callMethod"), args) if (isReflectStaticReceiver(receiver) && args.length == 3):
+				"std::any";
 			case ECall(EField(receiver, "getProperty"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"std::any";
@@ -5128,6 +5142,10 @@ class CppTargetCore {
 				"int";
 			case ECall(EField(receiver, "compare"), _) if (isReflectStaticReceiver(receiver)):
 				"int";
+			case ECall(EField(receiver, "field"), args) if (isReflectStaticReceiver(receiver) && args.length == 2):
+				"std::any";
+			case ECall(EField(receiver, "callMethod"), args) if (isReflectStaticReceiver(receiver) && args.length == 3):
+				"std::any";
 			case ECall(EField(receiver, "getProperty"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"std::any";

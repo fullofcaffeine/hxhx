@@ -1021,6 +1021,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(reflectCompareExpr, "return __hxhx_compare(__hxhx_cmp_left, __hxhx_cmp_right);",
 			"C++ Reflect.compare should lower to a target-owned numeric comparison expression");
 		assertTrue(reflectCompareExpr.indexOf("Reflect::compare") < 0, "C++ Reflect.compare should not emit an undeclared generated static helper call");
+		final reflectCallMethodExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "callMethod"), [
+			EIdent("target"),
+			ECall(EField(EIdent("Reflect"), "field"), [EIdent("target"), EIdent("name")]),
+			EArrayDecl([])
+		]));
+		assertContains(reflectCallMethodExpr, "__hxhx_reflect_call_method(target, __hxhx_reflect_field(target, __hxhx_stringify(name))",
+			"C++ Reflect.callMethod with Reflect.field should lower through target-owned erased helpers");
+		assertTrue(reflectCallMethodExpr.indexOf("Reflect::callMethod") < 0,
+			"C++ Reflect.callMethod should not force generated helper signatures while Full1 reflection is still erased");
+		assertTrue(reflectCallMethodExpr.indexOf("Reflect::field") < 0,
+			"C++ Reflect.field should not render as a generated helper returning a string where callMethod expects a callable");
 		final reflectCompareOwner = new HxClassDecl("ReflectCompareOwner", false, [], []);
 		final reflectCompareMethod = new HxFunctionDecl("compareLike", Public, false, [
 			new HxFunctionArg("left", "String", NoDefault, false, false),

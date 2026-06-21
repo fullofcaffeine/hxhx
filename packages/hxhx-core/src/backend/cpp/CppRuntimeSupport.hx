@@ -236,6 +236,16 @@ class CppRuntimeSupport {
 			"",
 			"static bool __hxhx_reflect_has_field_any(const std::any&, const std::string&) {",
 			"  return false;",
+			"}",
+			"",
+			"template<typename TObject>",
+			"static std::any __hxhx_reflect_field(const TObject&, const std::string&) {",
+			"  return std::any();",
+			"}",
+			"",
+			"template<typename TObject, typename TFunc, typename TArgs>",
+			"static std::any __hxhx_reflect_call_method(const TObject&, const TFunc&, const TArgs&) {",
+			"  return std::any();",
 			"}"
 		];
 	}
