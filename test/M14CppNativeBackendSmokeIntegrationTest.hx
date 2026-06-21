@@ -2461,6 +2461,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ target-owned Vector support should keep join separators string-shaped even if native metadata says method-level T");
 		assertTrue(vectorJoinCorruptedLines.indexOf("join(T__fn sep)") < 0,
 			"C++ target-owned Vector support should not render metadata-corrupted upstream join declarations");
+		final lambdaHasOwner = new HxClassDecl("Lambda", false, [
+			new HxFunctionDecl("has", Public, true, [
+				new HxFunctionArg("it", "Iterable<A>", NoDefault, false, false),
+				new HxFunctionArg("elt", "A", NoDefault, false, false)
+			], "Bool", [SReturn(EBool(false), HxPos.unknown())], "",
+				["__hxhx_fn_type_params=A"])
+		], []);
+		final lambdaHasNames = new StringMap<Bool>();
+		lambdaHasNames.set("Lambda", true);
+		final lambdaHasClasses = new StringMap<HxClassDecl>();
+		lambdaHasClasses.set("Lambda", lambdaHasOwner);
+		final lambdaHasLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(lambdaHasOwner, {names: lambdaHasNames, byName: lambdaHasClasses}).join("\n");
+		assertContains(lambdaHasLines, "static bool has(const std::vector<A>& it, typename std::vector<A>::value_type elt) {",
+			"C++ Lambda.has should deduce the element type from the iterable so string literals can convert to std::string");
+		assertTrue(lambdaHasLines.indexOf("static bool has(std::vector<T> it, A elt)") < 0,
+			"C++ Lambda.has should not emit an undeclared T iterable with separately deduced element arguments");
 		final erasedMapiMethod = new HxFunctionDecl("mapiErased", Public, true, [
 			new HxFunctionArg("it", "Iterable<String>", NoDefault, false, false),
 			new HxFunctionArg("f", "String", NoDefault, false, false)

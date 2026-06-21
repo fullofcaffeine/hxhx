@@ -2011,6 +2011,8 @@ class CppTargetCore {
 			return renderAssertPolymorphicSameHelper(fn, owner, classLookup);
 		if (isAssertPolymorphicSameAsHelper(fn, owner))
 			return renderAssertPolymorphicSameAsHelper(fn, owner, classLookup);
+		if (isLambdaHasHelper(fn, owner))
+			return renderLambdaHasHelper();
 		if (isPolymorphicIsOfTypeHelper(fn))
 			return renderPolymorphicIsOfTypeHelper(fn, owner, classLookup);
 		if (isTypeErasedValueHelper(fn, owner))
@@ -2028,6 +2030,26 @@ class CppTargetCore {
 			out.push(line);
 		out.push("  }");
 		return out;
+	}
+
+	static function isLambdaHasHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Lambda")
+			return false;
+		return HxFunctionDecl.getIsStatic(fn)
+			&& sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "has"
+			&& HxFunctionDecl.getArgs(fn).length == 2;
+	}
+
+	static function renderLambdaHasHelper():Array<String> {
+		return [
+			"  template<typename A>",
+			"  static bool has(const std::vector<A>& it, typename std::vector<A>::value_type elt) {",
+			"    for (const auto& x : it) {",
+			"      if (x == elt) return true;",
+			"    }",
+			"    return false;",
+			"  }"
+		];
 	}
 
 	static function isAssertPolymorphicStringifyHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
