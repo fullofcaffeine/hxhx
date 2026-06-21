@@ -1469,7 +1469,7 @@ class CppTargetCore {
 			return renderInterfaceClass(cls, classLookup);
 		if (isPosInfosSupportClass(cls))
 			return renderPosInfosClass();
-		if (isStdVectorHelperClass(cls))
+		if (isStdVectorHelperClass(cls) || isStdVectorHelperName(className))
 			return renderStdVectorSupportClass(cls, classLookup);
 		if (isArrayBackedAbstractClass(cls))
 			return renderArrayBackedAbstractClass(cls, classLookup);
@@ -1643,8 +1643,9 @@ class CppTargetCore {
 		out.push("  auto end() { return __values.end(); }");
 		out.push("  auto begin() const { return __values.begin(); }");
 		out.push("  auto end() const { return __values.end(); }");
+		out.push("  std::string join(std::string sep) const { return __hxhx_join(__values, sep); }");
 		for (fn in HxClassDecl.getFunctions(cls)) {
-			if (HxFunctionDecl.getName(fn) == "new")
+			if (HxFunctionDecl.getName(fn) == "new" || HxFunctionDecl.getName(fn) == "join")
 				continue;
 			for (line in renderHelperMethod(fn, cls, classLookup))
 				out.push(line);
@@ -6443,6 +6444,10 @@ class CppTargetCore {
 
 	static function isStdVectorHelperClass(cls:HxClassDecl):Bool {
 		return CppTypeModel.isStdVectorHelperClass(cls);
+	}
+
+	static function isStdVectorHelperName(name:String):Bool {
+		return sanitizeTypePath(typeBaseName(name == null ? "" : name)) == "Vector";
 	}
 
 	static function isPrimitiveBackedAbstractClass(cls:HxClassDecl):Bool {

@@ -2452,6 +2452,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderHelperClass(genericStdArray, stdArrayLookup).join("\n");
 		assertTrue(genericStdArrayLines.length == 0,
 			"C++ upstream extern Array<T> should lower through std::vector<T>, not emit a fake non-template Array helper with incomplete T");
+		final vectorJoinCorrupted = new HxClassDecl("Vector", false, [
+			new HxFunctionDecl("join", Public, false, [new HxFunctionArg("sep", "T", NoDefault, false, false)], "String", [], "", ["__hxhx_fn_type_params=T"])
+		], []);
+		final vectorJoinCorruptedLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(vectorJoinCorrupted, stdArrayLookup).join("\n");
+		assertContains(vectorJoinCorruptedLines, "std::string join(std::string sep) const { return __hxhx_join(__values, sep); }",
+			"C++ target-owned Vector support should keep join separators string-shaped even if native metadata says method-level T");
+		assertTrue(vectorJoinCorruptedLines.indexOf("join(T__fn sep)") < 0,
+			"C++ target-owned Vector support should not render metadata-corrupted upstream join declarations");
 		final erasedMapiMethod = new HxFunctionDecl("mapiErased", Public, true, [
 			new HxFunctionArg("it", "Iterable<String>", NoDefault, false, false),
 			new HxFunctionArg("f", "String", NoDefault, false, false)
@@ -3624,6 +3633,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				"C++ smoke should render haxe.ds.Vector through target-owned support, not upstream inactive branches");
 			assertContains(vendorVectorSource, "std::string unsafeGet(int index) const { return __values[index]; }",
 				"C++ smoke should expose haxe.ds.Vector unsafeGet through native vector storage");
+			assertContains(vendorVectorSource, "std::string join(std::string sep) const { return __hxhx_join(__values, sep); }",
+				"C++ smoke should keep haxe.ds.Vector.join separator string-shaped even though upstream declares method-level <T>");
+			assertTrue(vendorVectorSource.indexOf("join(T__fn sep)") < 0,
+				"C++ smoke should not leak renamed method generics into haxe.ds.Vector.join separator type");
 			assertTrue(vendorVectorSource.indexOf("(*this) = std::make_shared<Vector>") < 0,
 				"C++ smoke should not emit inactive non-C++ haxe.ds.Vector constructor branches");
 			assertTrue(vendorVectorSource.indexOf("((python.internal).ArrayImpl)") < 0, "C++ smoke should not emit inactive Python haxe.ds.Vector branches");
