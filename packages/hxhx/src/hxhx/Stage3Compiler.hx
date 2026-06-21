@@ -879,6 +879,9 @@ class Stage3Compiler {
 		} catch (e:String) {
 			closeMacroSession();
 			return error("emit failed: " + e);
+		} catch (e:haxe.Exception) {
+			closeMacroSession();
+			return error("emit failed: " + formatDynamicException(e));
 		} catch (e:Dynamic) {
 			// Exception boundary: target backends may throw haxe.Exception or other non-string
 			// values. Keep Stage3 diagnostics structured instead of leaking an OCaml runtime fatal.
