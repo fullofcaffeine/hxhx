@@ -658,7 +658,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return \"field\";",
 			"  }",
 			"  function parseRec():Dynamic {",
-			"    return \"value\";",
+			"    return {};",
 			"  }",
 			"  public function parseObjectLike():Dynamic {",
 			"    var obj = {}, field = null, comma:Null<Bool> = null;",
@@ -672,6 +672,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    arr.push(parseRec());",
 			"    comma = true;",
 			"    return arr;",
+			"  }",
+			"}",
+			"class NativeStackTraceLike {",
+			"  static function callStack():Dynamic {}",
+			"  static function exceptionStack():Dynamic {}",
+			"  static function toHaxe(nativeStackTrace:String, skip:Null<Int> = 0):Array<String> {",
+			"    var out:Array<String> = [];",
+			"    return out;",
+			"  }",
+			"  public static function callStackHaxe():Array<String> {",
+			"    return toHaxe(callStack());",
+			"  }",
+			"  public static function exceptionStackHaxe():Array<String> {",
+			"    return toHaxe(exceptionStack(), 1);",
 			"  }",
 			"}",
 			"class Assert {",
@@ -3783,6 +3797,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(source.indexOf("std::vector<std::string> optional =") < 0, "C++ smoke should not render metadata name optional as a structural field");
 		assertContains(source, "std::any parseRec()", "C++ smoke should erase Dynamic returns as std::any for JsonParser-shaped flows");
 		assertContains(source, "std::any parseObjectLike()", "C++ smoke should erase Dynamic object returns as std::any");
+		assertContains(source, "static std::string callStack()",
+			"C++ smoke should keep string-shaped Dynamic native stack traces compatible with toHaxe(String)");
+		assertContains(source, "return toHaxe(callStack());",
+			"C++ smoke should pass NativeStackTrace-like Dynamic stubs to String-typed toHaxe without std::any conversion errors");
 		assertContains(source, "auto field = std::string();", "C++ smoke should infer null-then-string grouped locals as strings instead of std::nullptr_t");
 		assertContains(source, "std::optional<bool> comma = std::nullopt;", "C++ smoke should preserve grouped Null<Bool> locals instead of dropping comma");
 		assertContains(source, "__hxhx_reflect_set_field(obj, std::string(field), parseRec());",

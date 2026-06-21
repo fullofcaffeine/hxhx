@@ -7180,8 +7180,6 @@ class CppTargetCore {
 		final hint = CppTypeModel.unwrapNullTypeHint(raw);
 		if (isStructuralTypeHint(hint))
 			return "auto";
-		if (isDynamicLikeTypeHint(hint))
-			return "std::any";
 		final scopedGenericClass = scopedRawGenericClassTypeName(hint, scope);
 		if (scopedGenericClass != null)
 			return "std::shared_ptr<" + scopedGenericClass + ">";
@@ -7316,6 +7314,65 @@ class CppTargetCore {
 		};
 	}
 
+	static function functionReturnsErasedDynamicValue(fn:HxFunctionDecl, ?scope:CppRenderScope):Bool {
+		if (fn == null)
+			return false;
+		final erasedLocals = new haxe.ds.StringMap<Bool>();
+		for (stmt in HxFunctionDecl.getBody(fn))
+			if (stmtReturnsErasedDynamicValue(stmt, scope, erasedLocals))
+				return true;
+		return false;
+	}
+
+	static function stmtReturnsErasedDynamicValue(stmt:HxStmt, ?scope:CppRenderScope, ?erasedLocals:haxe.ds.StringMap<Bool>):Bool {
+		return switch (stmt) {
+			case SVar(name, _, init, _):
+				if (init != null && exprReturnsErasedDynamicValue(init, scope, erasedLocals) && erasedLocals != null)
+					erasedLocals.set(sanitizeIdentifier(name), true);
+				false;
+			case SReturn(expr, _):
+				exprReturnsErasedDynamicValue(expr, scope, erasedLocals);
+			case SBlock(stmts, _):
+				var found = false;
+				for (s in stmts)
+					if (stmtReturnsErasedDynamicValue(s, scope, erasedLocals))
+						found = true;
+				found;
+			case SIf(_, thenBranch, elseBranch, _): stmtReturnsErasedDynamicValue(thenBranch, scope,
+					erasedLocals) || (elseBranch != null && stmtReturnsErasedDynamicValue(elseBranch, scope, erasedLocals));
+			case _:
+				false;
+		};
+	}
+
+	static function exprReturnsErasedDynamicValue(expr:HxExpr, ?scope:CppRenderScope, ?erasedLocals:haxe.ds.StringMap<Bool>):Bool {
+		return switch (expr) {
+			case EAnon(_, _):
+				enumMetadataCtorStringExpr(expr, scope) == null;
+			case EArrayDecl(_):
+				true;
+			case EIdent(name):
+				final local = sanitizeIdentifier(name);
+				final typeName = scope == null ? "" : scope.localTypes.get(local);
+					(erasedLocals != null && erasedLocals.exists(local))
+					|| typeName == "std::any"
+					|| typeName == "std::vector<std::any>"
+					|| isCppAnonStructType(typeName);
+			case ETernary(_, thenExpr, elseExpr): exprReturnsErasedDynamicValue(thenExpr, scope,
+					erasedLocals) || exprReturnsErasedDynamicValue(elseExpr, scope, erasedLocals);
+			case ESwitch(_, _, exprs):
+				var found = false;
+				for (value in exprs)
+					if (exprReturnsErasedDynamicValue(value, scope, erasedLocals))
+						found = true;
+				found;
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				exprReturnsErasedDynamicValue(inner, scope, erasedLocals);
+			case _:
+				false;
+		};
+	}
+
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
 		return inferredFunctionReturnCppType(fn, owner, classLookup.byName);
 	}
@@ -7332,9 +7389,12 @@ class CppTargetCore {
 		if (isDynamicLikeTypeHint(raw) && functionReturnsEnumMetadataCtor(fn))
 			return "std::string";
 		final returnScope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, "auto");
-		applyFunctionTypeParams(returnScope, fn);
-		if (raw.length > 0)
+		prepareFunctionScope(returnScope, fn);
+		if (raw.length > 0) {
+			if (isDynamicLikeTypeHint(raw) && functionReturnsErasedDynamicValue(fn, returnScope))
+				return "std::any";
 			return cppReturnTypeHint(raw, returnScope, {names: classNamesFromByName(classByName), byName: classByName});
+		}
 		if (functionReturnsLambda(fn))
 			return "auto";
 		final key = functionSignatureKey(owner, fn);
