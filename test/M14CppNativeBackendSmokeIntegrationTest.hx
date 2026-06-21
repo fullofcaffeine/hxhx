@@ -1914,12 +1914,39 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		metaObjectNames.set("MetaObject", true);
 		final metaObjectClasses = new StringMap<HxClassDecl>();
 		metaObjectClasses.set("MetaObject", metaObject);
+		final metaObjectLookup = {names: metaObjectNames, byName: metaObjectClasses};
 		final metaObjectLines = @:privateAccess
-			backend.cpp.CppTargetCore.renderHelperClass(metaObject, {names: metaObjectNames, byName: metaObjectClasses}).join("\n");
+			backend.cpp.CppTargetCore.renderHelperClass(metaObject, metaObjectLookup).join("\n");
 		assertContains(metaObjectLines, "std::any fields = std::any();",
 			"C++ generic Dynamic metadata fields should use erased target storage instead of an undefined Dynamic template");
 		assertContains(metaObjectLines, "std::any obj = std::any();", "C++ nested generic Dynamic metadata fields should use erased target storage");
 		assertTrue(metaObjectLines.indexOf("Dynamic<") < 0, "C++ generic Dynamic type hints must not emit fake Dynamic template classes");
+		final metaHelper = new HxClassDecl("Meta", false, [
+			new HxFunctionDecl("getType", Public, true, [new HxFunctionArg("t", "String", NoDefault, false, false)], "Dynamic<Null<Array<String>>>", [
+				SVar("meta", "Null<MetaObject>", ENull, HxPos.unknown()),
+				SReturn(ETernary(EBinop("||", EBinop("==", EIdent("meta"), ENull), EBool(false)), EAnon([], []), EField(EIdent("meta"), "obj")),
+					HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("getFields", Public, true, [new HxFunctionArg("t", "String", NoDefault, false, false)],
+				"Dynamic<Dynamic<Null<Array<String>>>>", [
+					SVar("meta", "Null<MetaObject>", ENull, HxPos.unknown()),
+					SReturn(ETernary(EBinop("||", EBinop("==", EIdent("meta"), ENull), EBool(false)), EAnon([], []), EField(EIdent("meta"), "fields")),
+						HxPos.unknown())
+				], "")
+		], []);
+		metaObjectNames.set("Meta", true);
+		metaObjectClasses.set("Meta", metaHelper);
+		final getTypeLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(metaHelper)[0], metaHelper, metaObjectLookup).join("\n");
+		final getFieldsLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(metaHelper)[1], metaHelper, metaObjectLookup).join("\n");
+		assertContains(getTypeLines, "static std::any getType(std::string t)", "C++ Dynamic metadata return helpers should keep erased std::any return types");
+		assertContains(getTypeLines, "return (((meta == nullptr) || false) ? __hxhx_anon{} : (meta->obj));",
+			"C++ Dynamic metadata returns should not cast erased values through int");
+		assertContains(getFieldsLines, "return (((meta == nullptr) || false) ? __hxhx_anon{} : (meta->fields));",
+			"C++ Dynamic metadata field returns should not cast erased values through int");
+		assertTrue(getTypeLines.indexOf("static_cast<int>(") < 0, "C++ std::any returns must not use numeric fallback casts");
+		assertTrue(getFieldsLines.indexOf("static_cast<int>(") < 0, "C++ std::any field returns must not use numeric fallback casts");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
 		assertStringScope.localTypes.set("i", "int");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("i"), assertStringScope) == "std::to_string(i)",

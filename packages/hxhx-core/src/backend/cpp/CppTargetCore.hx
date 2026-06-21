@@ -3479,6 +3479,8 @@ class CppTargetCore {
 				"return " + renderExpr(expr, scope) + ";";
 			case "double":
 				"return " + renderExpr(expr, scope) + ";";
+			case "std::any":
+				"return " + renderExpr(expr, scope) + ";";
 			case "long long" | "unsigned int":
 				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppVectorType(returnType)):
