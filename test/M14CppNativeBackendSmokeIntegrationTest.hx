@@ -1575,16 +1575,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(arraySortRecLines.indexOf("std::string from") < 0 && arraySortRecLines.indexOf("std::string to") < 0,
 			"C++ ArraySort-like helper indexes should not stay string-shaped");
 		final nativeStringRaw = new HxFunctionDecl("raw", Public, true, [new HxFunctionArg("inString", "String", NoDefault, false, false)], "RawConstPointer",
-			[SReturn(ECall(EField(EIdent("inString"), "raw_ptr"), []), HxPos.unknown())], "");
+			[
+				SReturn(EUntyped(ECall(EField(EIdent("inString"), "raw_ptr"), [])), HxPos.unknown())
+			], "");
 		final nativeStringRawChar = new HxFunctionDecl("rawChar", Public, true, [new HxFunctionArg("inString", "String", NoDefault, false, false)],
-			"RawConstPointer<Char>", [SReturn(ECall(EField(EIdent("inString"), "raw_ptr"), []), HxPos.unknown())], "");
+			"RawConstPointer<Char>", [
+				SReturn(EUntyped(ECall(EField(EIdent("inString"), "raw_ptr"), [])), HxPos.unknown())
+			], "");
 		final nativeStringCStr = new HxFunctionDecl("c_str", Public, true, [new HxFunctionArg("inString", "String", NoDefault, false, false)], "ConstPointer",
 			[
-				SReturn(ECall(EField(EField(EIdent("cpp"), "ConstPointer"), "fromPointer"), [ECall(EField(EIdent("inString"), "c_str"), [])]), HxPos.unknown())
+				SReturn(ECall(EField(EField(EIdent("cpp"), "ConstPointer"), "fromPointer"), [EUntyped(ECall(EField(EIdent("inString"), "c_str"), []))]),
+					HxPos.unknown())
 			], "");
 		final nativeStringCStrChar = new HxFunctionDecl("cStrChar", Public, true, [new HxFunctionArg("inString", "String", NoDefault, false, false)],
 			"ConstPointer<Char>", [
-				SReturn(ECall(EField(EField(EIdent("cpp"), "ConstPointer"), "fromPointer"), [ECall(EField(EIdent("inString"), "c_str"), [])]), HxPos.unknown())
+				SReturn(ECall(EField(EField(EIdent("cpp"), "ConstPointer"), "fromPointer"), [EUntyped(ECall(EField(EIdent("inString"), "c_str"), []))]),
+					HxPos.unknown())
 			], "");
 		final nativeStringFromPointer = new HxFunctionDecl("fromPointer", Public, true, [new HxFunctionArg("inPtr", "ConstPointer", NoDefault, false, false)],
 			"String", [

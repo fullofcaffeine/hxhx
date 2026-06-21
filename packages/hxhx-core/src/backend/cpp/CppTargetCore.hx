@@ -5198,6 +5198,8 @@ class CppTargetCore {
 
 	static function pointerCtorExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
 		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				pointerCtorExprForExpectedType(inner, expectedType, scope);
 			case ECall(EField(receiver, "raw_ptr"), args) if (args.length == 0 && exprCppType(receiver, scope) == "std::string"):
 				final carrier = pointerCarrierType(expectedType, "RawConstPointer");
 				carrier == null ? null : "std::make_shared<"
