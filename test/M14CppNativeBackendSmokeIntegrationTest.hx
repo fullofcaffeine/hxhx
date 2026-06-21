@@ -763,6 +763,44 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedList], []);
 	}
 
+	static function vendorBalancedTreeProgramWhenAvailable():Null<GenIrProgram> {
+		final treePath = "vendor/haxe/std/haxe/ds/BalancedTree.hx";
+		if (!FileSystem.exists(treePath))
+			return null;
+		final treeSource = File.getContent(treePath);
+		final mainSource = "class Main { static function main() {} }";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedTree = TyperStage.typeModule(ParserStage.parse(treeSource, treePath));
+		return MacroStage.expandProgram([typedMain, typedTree], []);
+	}
+
+	static function assertVendorBalancedTreeReturnTypesWhenAvailable():Void {
+		final treeProgram = vendorBalancedTreeProgramWhenAvailable();
+		if (treeProgram == null)
+			return;
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		var balancedTree:Null<HxClassDecl> = null;
+		for (typed in treeProgram.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases(HxClassDecl.getName(cls), cls, names, classes);
+				if (HxClassDecl.getName(cls) == "BalancedTree")
+					balancedTree = cls;
+			}
+		}
+		assertTrue(balancedTree != null, "vendor BalancedTree fixture should expose BalancedTree class");
+		for (fn in HxClassDecl.getFunctions(balancedTree)) {
+			if (HxFunctionDecl.getName(fn) == "setLoop") {
+				final returnType = @:privateAccess backend.cpp.CppTargetCore.cppFunctionReturnType(fn, balancedTree, {names: names, byName: classes});
+				assertContains(returnType, "std::shared_ptr<TreeNode",
+					"C++ BalancedTree.setLoop should use a known TreeNode return instead of recursive inference");
+				return;
+			}
+		}
+		throw "vendor BalancedTree fixture should expose setLoop";
+	}
+
 	static function missingIMapProgram():GenIrProgram {
 		final src = [
 			"class UsesMissingIMap {",
@@ -4262,6 +4300,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertContains(vendorListSource,
 				"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{__hxhx_stringify(val), (idx++)};\n  }",
 				"C++ smoke should preserve upstream ListKeyValueIterator.next key/value return body");
+		}
+		assertVendorBalancedTreeReturnTypesWhenAvailable();
+		final vendorBalancedTreeProgram = vendorBalancedTreeProgramWhenAvailable();
+		if (vendorBalancedTreeProgram != null) {
+			final vendorBalancedTreeDir = Path.join([root, "vendor-balancedtree-source-only"]);
+			final vendorBalancedTreeEmit = BackendRegistry.createForTarget("cpp-native")
+				.emit(vendorBalancedTreeProgram, context(vendorBalancedTreeDir, true, true));
+			final vendorBalancedTreeSource = File.getContent(vendorBalancedTreeEmit.entryPath);
+			assertContains(vendorBalancedTreeSource, "struct BalancedTree {", "C++ smoke should emit upstream haxe.ds.BalancedTree as a helper");
+			assertContains(vendorBalancedTreeSource, "std::shared_ptr<TreeNode<K, V>> setLoop",
+				"C++ smoke should keep BalancedTree.setLoop return typing concrete without recursive inference");
 		}
 		final vendorReadOnlyArrayProgram = vendorReadOnlyArrayProgramWhenAvailable();
 		if (vendorReadOnlyArrayProgram != null) {

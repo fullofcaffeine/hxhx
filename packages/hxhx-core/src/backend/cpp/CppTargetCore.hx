@@ -1973,9 +1973,20 @@ class CppTargetCore {
 			if (method == "next")
 				return owner == "StringIterator" || owner == "StringIteratorUnicode" ? "int" : "auto";
 		}
+		if (owner == "BalancedTree") {
+			final treeNode = cppTypeHint("TreeNode<K,V>", scope, classLookup);
+			return switch (method) {
+				case "setLoop" | "removeLoop" | "merge" | "minBinding" | "removeMinBinding" | "balance":
+					treeNode;
+				case "compare":
+					"int";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "Bytes" && method == "fill")
 			return "void";
-		return cppReturnTypeHint(typeHint, scope, classLookup);
+		return StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 	}
 
 	static function cppPreludeMethodReturnType(className:String, methodName:String):String {
@@ -7478,12 +7489,18 @@ class CppTargetCore {
 				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
 		if (isDynamicLikeTypeHint(raw) && functionReturnsEnumMetadataCtor(fn))
 			return "std::string";
-		final returnScope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, "auto");
+		final returnLookup = {names: classNamesFromByName(classByName), byName: classByName};
+		final returnScope = renderScope(owner, returnLookup, "auto");
+		if (raw.length == 0) {
+			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, returnScope, returnLookup);
+			if (knownReturn.length > 0)
+				return knownReturn;
+		}
 		prepareFunctionScope(returnScope, fn);
 		if (raw.length > 0) {
 			if (isDynamicLikeTypeHint(raw) && functionReturnsErasedDynamicValue(fn, returnScope))
 				return "std::any";
-			return cppReturnTypeHint(raw, returnScope, {names: classNamesFromByName(classByName), byName: classByName});
+			return cppReturnTypeHint(raw, returnScope, returnLookup);
 		}
 		if (functionReturnsLambda(fn))
 			return "auto";
