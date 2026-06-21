@@ -3834,7 +3834,7 @@ class CppTargetCore {
 				+ stringExpr(right, scope)
 				+ ")";
 			case EBinop("=", left, right):
-				renderExpr(left, scope) + " = " + assignmentRhsExpr(left, right, scope);
+				assignmentLhsExpr(left, scope) + " = " + assignmentRhsExpr(left, right, scope);
 			case EBinop("==", left, ENull) if (exprHasOptionalType(left, scope)):
 				"(!" + optionalStorageExpr(left, scope) + ".has_value())";
 			case EBinop("==", ENull, right) if (exprHasOptionalType(right, scope)):
@@ -5717,6 +5717,37 @@ class CppTargetCore {
 			}
 		}
 		return renderExpr(right, scope);
+	}
+
+	static function assignmentLhsExpr(left:HxExpr, ?scope:CppRenderScope):String {
+		return switch (left) {
+			case EField(receiver, field):
+				final known = staticFieldExpr(receiver, field, scope);
+				if (known != null) known; else {
+					final typePath = staticReceiverTypePath(receiver);
+					if (typePath != null
+						&& typePath.length > 0
+						&& !exprNameHasLocalStorage(typePath, scope)
+						&& startsWithUppercaseTypeName(typePath))
+						sanitizeTypePath(typeBaseName(typePath)) + "::" + sanitizeIdentifier(field);
+					else
+						renderExpr(left, scope);
+				}
+			case _:
+				renderExpr(left, scope);
+		}
+	}
+
+	static function exprNameHasLocalStorage(name:String, ?scope:CppRenderScope):Bool {
+		return scope != null && name != null && scope.localTypes.exists(sanitizeIdentifier(name));
+	}
+
+	static function startsWithUppercaseTypeName(typePath:String):Bool {
+		final clean = sanitizeTypePath(typeBaseName(typePath == null ? "" : typePath));
+		if (clean.length == 0)
+			return false;
+		final first = clean.charCodeAt(0);
+		return first >= "A".code && first <= "Z".code;
 	}
 
 	static function posInfosSharedPtrExpr(expr:HxExpr, ?scope:CppRenderScope):String {

@@ -3261,6 +3261,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper classes should emit static fields instead of dropping them from the struct");
 		assertContains(staticFieldLines, "store = v;", "C++ static methods should type unqualified same-owner static field access");
 		assertContains(staticFieldLines, "StaticFieldOwner::store = \"class\";", "C++ static field access through the owner type should use scope resolution");
+		final staticHookOwner = new HxClassDecl("StaticHookOwner", false, [
+			new HxFunctionDecl("bind", Public, false, [new HxFunctionArg("hook", "Void->Void", NoDefault, false, false)], "Void", [
+				SExpr(EBinop("=", EField(EIdent("Assert"), "createAsync"), EIdent("hook")), HxPos.unknown())
+			], "")
+		], []);
+		final staticHookNames = new StringMap<Bool>();
+		staticHookNames.set("StaticHookOwner", true);
+		final staticHookClasses = new StringMap<HxClassDecl>();
+		staticHookClasses.set("StaticHookOwner", staticHookOwner);
+		final staticHookLookup = {names: staticHookNames, byName: staticHookClasses};
+		final staticHookLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(staticHookOwner, staticHookLookup).join("\n");
+		assertContains(staticHookLines, "Assert::createAsync = hook;",
+			"C++ assignment to type-shaped static extern fields should use scope resolution even when the extern class is not in the local registry");
+		assertTrue(staticHookLines.indexOf("(Assert.createAsync) = hook") < 0,
+			"C++ static extern field assignments must not preserve Haxe dotted field syntax");
 		final sysToolsOwner = new HxClassDecl("SysTools", false, [
 			new HxFunctionDecl("needsEscape", Public, true, [new HxFunctionArg("c", "Int", NoDefault, false, false)], "Bool", [
 				SReturn(EBinop(">=", ECall(EField(EIdent("winMetaCharacters"), "indexOf"), [EIdent("c")]), EInt(0)), HxPos.unknown())
