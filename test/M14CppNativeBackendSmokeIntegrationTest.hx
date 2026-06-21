@@ -2802,7 +2802,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final genericBase = new HxClassDecl("GenericBase", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")],
 			[new HxFieldDecl("value", Public, false, "T", null)], "", ["__hxhx_type_params=T"]);
 		final genericSub = new HxClassDecl("GenericSub", false, [], [], "GenericBase<T>", ["__hxhx_type_params=T"]);
-		final genericRawSub = new HxClassDecl("GenericRawSub", false, [], [], "GenericBase", ["__hxhx_type_params=T"]);
+		final genericRawSub = new HxClassDecl("GenericRawSub", false, [
+			new HxFunctionDecl("copyValue", Public, false, [], "Void", [
+				SVar("copied", "GenericRawSub<T>", ENew("GenericRawSub", []), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EIdent("copied"), "value"), EIdent("value")), HxPos.unknown())
+			], "")
+		], [], "GenericBase", ["__hxhx_type_params=T"]);
 		genericBoxNames.set("GenericBase", true);
 		genericBoxNames.set("GenericSub", true);
 		genericBoxNames.set("GenericRawSub", true);
@@ -2821,6 +2826,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic classes with implicit constructors should still declare zero-arg factories");
 		assertContains(genericRawSubLines, "std::shared_ptr<GenericRawSub<T>> __hxhx_make_shared_GenericRawSub() {",
 			"C++ generic classes with implicit constructors should still emit zero-arg factories");
+		assertContains(genericRawSubLines, "(copied->value) = this->value;", "C++ generic subclasses should qualify inherited dependent-base field reads");
 		final methodGenericBuffer = new HxClassDecl("MethodGenericBuffer", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
 			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",

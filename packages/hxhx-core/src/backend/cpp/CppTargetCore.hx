@@ -2992,6 +2992,15 @@ class CppTargetCore {
 		return local;
 	}
 
+	static function bareIdentifierCppName(name:String, ?scope:CppRenderScope):String {
+		final local = sanitizeIdentifier(name);
+		if (scope != null && scope.localNames.exists(local))
+			return scope.localNames.get(local);
+		if (scope != null && inheritedInstanceFieldCppType(name, scope).length > 0)
+			return "this->" + local;
+		return local;
+	}
+
 	static function declareLocalName(name:String, ?scope:CppRenderScope):String {
 		final local = sanitizeIdentifier(name);
 		if (scope == null)
@@ -3388,7 +3397,7 @@ class CppTargetCore {
 			case ESuper:
 				superExpr(scope);
 			case EIdent(name):
-				final local = localCppName(name, scope);
+				final local = bareIdentifierCppName(name, scope);
 				exprHasOptionalType(expr, scope) ? local + ".value()" : local;
 			case EField(EThis, "length") if (scopeOwnerIsArrayBackedAbstract(scope)):
 				"this->__values.size()";
@@ -4307,7 +4316,12 @@ class CppTargetCore {
 		return switch (expr) {
 			case EIdent(name):
 				final local = scope.localTypes.get(sanitizeIdentifier(name));
-				if (local != null && local.length > 0) local; else currentInstanceFieldCppType(name, scope);
+				if (local != null && local.length > 0) {
+					local;
+				} else {
+					final currentField = currentOwnerFieldCppType(name, scope);
+					currentField.length > 0 ? currentField : inheritedInstanceFieldCppType(name, scope);
+				}
 			case ECast(inner, _) | EUntyped(inner):
 				exprCppType(inner, scope);
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
@@ -4398,7 +4412,7 @@ class CppTargetCore {
 		};
 	}
 
-	static function currentInstanceFieldCppType(name:String, scope:CppRenderScope):String {
+	static function currentOwnerFieldCppType(name:String, scope:CppRenderScope):String {
 		if (scope == null || scope.owner == null)
 			return "";
 		for (field in HxClassDecl.getFields(scope.owner)) {
@@ -4407,6 +4421,26 @@ class CppTargetCore {
 					HxFieldDecl.getInit(field), scope);
 		}
 		return "";
+	}
+
+	static function inheritedInstanceFieldCppType(name:String, scope:CppRenderScope):String {
+		if (scope == null || scope.owner == null)
+			return "";
+		return inheritedInstanceFieldCppTypeFromClass(name, scope.owner, scope);
+	}
+
+	static function inheritedInstanceFieldCppTypeFromClass(name:String, cls:HxClassDecl, scope:CppRenderScope):String {
+		final baseName = baseTypeName(cls);
+		if (baseName == null || baseName.length == 0)
+			return "";
+		final baseCls = scope.classByName.get(baseName);
+		if (baseCls == null)
+			return "";
+		for (field in HxClassDecl.getFields(baseCls)) {
+			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name)
+				return knownStdlibFieldCppType(baseName, name, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
+		}
+		return inheritedInstanceFieldCppTypeFromClass(name, baseCls, scope);
 	}
 
 	static function classFieldCppType(className:String, fieldName:String, scope:CppRenderScope):String {
