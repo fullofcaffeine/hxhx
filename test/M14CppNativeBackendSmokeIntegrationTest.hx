@@ -3189,6 +3189,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(dateToolsMakeUtcLines, "return (__hxhx_utc_date(year, month, day, hour, min, sec) * 1000);",
 			"C++ DateTools.makeUtc-like helper should lower hxcpp UTC date support instead of unresolved __global__");
 		assertTrue(dateToolsMakeUtcLines.indexOf("__global__") < 0, "C++ DateTools.makeUtc-like helper should not leak __global__");
+		final anyOwner = new HxClassDecl("Any", false, [
+			new HxFunctionDecl("__promote", Public, false, [], "T", [SReturn(EThis, HxPos.unknown())], ""),
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(ECall(EField(EIdent("Std"), "string"), [EThis]), HxPos.unknown())], "")
+		], []);
+		final anyNames = new StringMap<Bool>();
+		anyNames.set("Any", true);
+		final anyClasses = new StringMap<HxClassDecl>();
+		anyClasses.set("Any", anyOwner);
+		final anyLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(anyOwner, {names: anyNames, byName: anyClasses}).join("\n");
+		assertContains(anyLines, "struct Any {", "C++ Any should render as a target-owned support surface");
+		assertContains(anyLines, "std::any __value;", "C++ Any support should carry the erased payload instead of casting the wrapper");
+		assertContains(anyLines, "std::any_cast<T>(__value)", "C++ Any.__promote should extract from the payload");
+		assertTrue(anyLines.indexOf("static_cast<int>((*this))") < 0, "C++ Any.__promote must not cast the wrapper object itself");
 
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");

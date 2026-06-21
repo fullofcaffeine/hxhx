@@ -3821,6 +3821,8 @@ let isStringToolsIntrinsicCall = fun receiver hx_method -> try let __fallback_re
 ) in Obj.magic __fallback_result_2673 with
   | HxRuntime.Hx_return __ret_2672 -> Obj.obj __ret_2672
 
+let isAnySupportClass = fun cls -> cls != Obj.magic (HxRuntime.hx_null) && HxString.equals (sanitizeTypePath (typeBaseName (HxClassDecl.getName (Obj.magic cls) : string) : string)) "Any"
+
 let isCppPreludeStaticClass = fun name -> let tempResult = ref (false : bool) in (
   ignore (let tempString = ref ("" : string) in (
     ignore (if name == Obj.magic (HxRuntime.hx_null) then let __assign_2682 = ("" : string) in (
@@ -21438,6 +21440,7 @@ let renderHelperClass = fun cls classLookup -> try let __fallback_result_304 = (
   let className = (sanitizeTypePath (HxClassDecl.getName (Obj.magic cls) : string) : string) in (
     ignore (if HxArray.length (HxClassDecl.getFields (Obj.magic cls)) = 0 && HxArray.length (HxClassDecl.getFunctions (Obj.magic cls)) = 0 && renderMissingInterfaceDeclaration (className : string) != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_280 = HxArray.create () in __arr_280)))) else ());
     ignore (if HxClassDecl.getIsInterface (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderInterfaceClass (Obj.magic cls) classLookup)))) else ());
+    ignore (if isAnySupportClass (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Backend_cpp_CppRuntimeSupport.anySupportLines ())))) else ());
     ignore (if isPosInfosSupportClass (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderPosInfosClass ())))) else ());
     ignore (if isStdVectorHelperClass (Obj.magic cls) || isStdVectorHelperName (className : string) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderStdVectorSupportClass (Obj.magic cls) classLookup)))) else ());
     ignore (if isArrayBackedAbstractClass (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderArrayBackedAbstractClass (Obj.magic cls) classLookup)))) else ());

@@ -1467,6 +1467,8 @@ class CppTargetCore {
 			return [];
 		if (HxClassDecl.getIsInterface(cls))
 			return renderInterfaceClass(cls, classLookup);
+		if (isAnySupportClass(cls))
+			return CppRuntimeSupport.anySupportLines();
 		if (isPosInfosSupportClass(cls))
 			return renderPosInfosClass();
 		if (isStdVectorHelperClass(cls) || isStdVectorHelperName(className))
@@ -4755,6 +4757,10 @@ class CppTargetCore {
 		return clean == "Math" || clean == "NativeArray" || clean == "EnumValue" || clean == "Pointer" || clean == "ConstPointer"
 			|| clean == "RawConstPointer" || clean == "Reference" || clean == "Star" || clean == "AutoCast" || clean == "ArrayBase"
 			|| isCppPreludeStaticClass(clean) || isBytesDataTypeName(clean) || isCppPrimitiveIntrinsicClass(clean);
+	}
+
+	static function isAnySupportClass(cls:HxClassDecl):Bool {
+		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Any";
 	}
 
 	static function isCppPreludeStaticClass(name:String):Bool {

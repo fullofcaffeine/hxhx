@@ -15,6 +15,25 @@ package backend.cpp;
 	  declaration order remains explicit at the call site.
 **/
 class CppRuntimeSupport {
+	public static function anySupportLines():Array<String> {
+		return [
+			"struct Any {",
+			"  std::any __value;",
+			"  Any() = default;",
+			"  template<typename T>",
+			"  Any(T value) : __value(value) {}",
+			"  template<typename T>",
+			"  T __promote() const {",
+			"    if constexpr (std::is_same_v<T, std::any>) return __value;",
+			"    else if constexpr (std::is_same_v<T, std::string>) return __hxhx_stringify(__value);",
+			"    else if (__value.has_value() && __value.type() == typeid(T)) return std::any_cast<T>(__value);",
+			"    else return T{};",
+			"  }",
+			"  std::string toString() const { return __hxhx_stringify(__value); }",
+			"};"
+		];
+	}
+
 	public static function fpReinterpretLines():Array<String> {
 		return [
 			"static double __hxhx_reinterpret_le_int32_as_float32(int value) {",
