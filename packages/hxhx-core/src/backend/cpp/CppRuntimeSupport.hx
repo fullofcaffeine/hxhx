@@ -206,6 +206,20 @@ class CppRuntimeSupport {
 		];
 	}
 
+	public static function rttiMetaLines():Array<String> {
+		return [
+			"template<typename TResult, typename T>",
+			"static TResult __hxhx_meta_get_as(const T&) {",
+			"  return TResult{};",
+			"}",
+			"",
+			"template<typename TResult, typename T>",
+			"static TResult __hxhx_meta_section_as(const T&, const std::string&) {",
+			"  return TResult{};",
+			"}"
+		];
+	}
+
 	public static function enumValueTypeLines():Array<String> {
 		return [
 			"struct EnumValue {",

@@ -174,6 +174,9 @@ class CppTargetCore {
 		for (line in CppRuntimeSupport.sysEventLoopLines())
 			out.push(line);
 		out.push("");
+		for (line in CppRuntimeSupport.rttiMetaLines())
+			out.push(line);
+		out.push("");
 		out.push("template<typename T>");
 		out.push("struct __hxhx_iterator {");
 		out.push("  virtual ~__hxhx_iterator() = default;");
@@ -2005,6 +2008,8 @@ class CppTargetCore {
 	}
 
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		if (isRttiMetaHelper(fn, owner))
+			return renderRttiMetaHelper(fn, owner, classLookup);
 		if (isAssertPolymorphicStringifyHelper(fn, owner))
 			return renderAssertPolymorphicStringifyHelper(fn);
 		if (isAssertPolymorphicSameHelper(fn, owner))
@@ -2030,6 +2035,61 @@ class CppTargetCore {
 			out.push(line);
 		out.push("  }");
 		return out;
+	}
+
+	static function isRttiMetaHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Meta")
+			return false;
+		if (!hasRttiMetaAccessorSurface(owner))
+			return false;
+		if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getArgs(fn).length != 1)
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "getMeta" | "getFields" | "getStatics" | "getType":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function hasRttiMetaAccessorSurface(owner:HxClassDecl):Bool {
+		final found = new haxe.ds.StringMap<Bool>();
+		for (candidate in HxClassDecl.getFunctions(owner)) {
+			if (!HxFunctionDecl.getIsStatic(candidate) || HxFunctionDecl.getArgs(candidate).length != 1)
+				continue;
+			found.set(sanitizeIdentifier(HxFunctionDecl.getName(candidate)), true);
+		}
+		return found.exists("getMeta") && found.exists("getFields") && found.exists("getStatics") && found.exists("getType");
+	}
+
+	static function renderRttiMetaHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final target = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final call = switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "getMeta":
+				"__hxhx_meta_get_as<" + returnType + ">(" + target + ")";
+			case "getFields":
+				"__hxhx_meta_section_as<" + returnType + ">(" + target + ", std::string(\"fields\"))";
+			case "getStatics":
+				"__hxhx_meta_section_as<" + returnType + ">(" + target + ", std::string(\"statics\"))";
+			case "getType":
+				"__hxhx_meta_section_as<" + returnType + ">(" + target + ", std::string(\"obj\"))";
+			case _:
+				cppDefaultValue(returnType, scope);
+		};
+		return ["  static "
+			+ returnType
+			+ " "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(args, scope)
+			+ ") {",
+			"    return " + call + ";",
+			"  }"
+		];
 	}
 
 	static function isLambdaHasHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {

@@ -200,88 +200,101 @@ let sysEventLoopLines = fun () -> let __arr_4 = HxArray.create () in (
   __arr_4
 )
 
-let enumValueTypeLines = fun () -> let __arr_5 = HxArray.create () in (
-  ignore (HxArray.push __arr_5 "struct EnumValue {");
-  ignore (HxArray.push __arr_5 "  std::string tag;");
-  ignore (HxArray.push __arr_5 "  int index;");
-  ignore (HxArray.push __arr_5 "  std::vector<std::string> parameters;");
-  ignore (HxArray.push __arr_5 "  explicit EnumValue(std::string tag = std::string(), int index = 0, std::vector<std::string> parameters = {}) : tag(tag), index(index), parameters(parameters) {}");
-  ignore (HxArray.push __arr_5 "  std::string getName() const { return tag; }");
-  ignore (HxArray.push __arr_5 "  int getIndex() const { return index; }");
-  ignore (HxArray.push __arr_5 "  std::vector<std::string> getParameters() const { return parameters; }");
-  ignore (HxArray.push __arr_5 "};");
+let rttiMetaLines = fun () -> let __arr_5 = HxArray.create () in (
+  ignore (HxArray.push __arr_5 "template<typename TResult, typename T>");
+  ignore (HxArray.push __arr_5 "static TResult __hxhx_meta_get_as(const T&) {");
+  ignore (HxArray.push __arr_5 "  return TResult{};");
+  ignore (HxArray.push __arr_5 "}");
+  ignore (HxArray.push __arr_5 "");
+  ignore (HxArray.push __arr_5 "template<typename TResult, typename T>");
+  ignore (HxArray.push __arr_5 "static TResult __hxhx_meta_section_as(const T&, const std::string&) {");
+  ignore (HxArray.push __arr_5 "  return TResult{};");
+  ignore (HxArray.push __arr_5 "}");
   __arr_5
 )
 
-let anyIsTypeLines = fun () -> let __arr_6 = HxArray.create () in (
-  ignore (HxArray.push __arr_6 "static bool __hxhx_is_type(const std::any& value, const std::string& type) {");
-  ignore (HxArray.push __arr_6 "  if (type == \"Dynamic\" || type == \"Any\") return true;");
-  ignore (HxArray.push __arr_6 "  if (!value.has_value()) return type == \"Null\";");
-  ignore (HxArray.push __arr_6 "  const std::type_info& valueType = value.type();");
-  ignore (HxArray.push __arr_6 "  if (type == \"Array\") return valueType == typeid(std::vector<std::string>) || valueType == typeid(std::vector<int>);");
-  ignore (HxArray.push __arr_6 "  if (type == \"String\" || type == \"StdTypes.String\") return valueType == typeid(std::string) || valueType == typeid(const char*);");
-  ignore (HxArray.push __arr_6 "  if (type == \"Bool\" || type == \"StdTypes.Bool\") return valueType == typeid(bool);");
-  ignore (HxArray.push __arr_6 "  if (type == \"Int\" || type == \"StdTypes.Int\") return valueType == typeid(int);");
-  ignore (HxArray.push __arr_6 "  if (type == \"Float\" || type == \"StdTypes.Float\") return valueType == typeid(double) || valueType == typeid(float);");
-  ignore (HxArray.push __arr_6 "  return false;");
-  ignore (HxArray.push __arr_6 "}");
+let enumValueTypeLines = fun () -> let __arr_6 = HxArray.create () in (
+  ignore (HxArray.push __arr_6 "struct EnumValue {");
+  ignore (HxArray.push __arr_6 "  std::string tag;");
+  ignore (HxArray.push __arr_6 "  int index;");
+  ignore (HxArray.push __arr_6 "  std::vector<std::string> parameters;");
+  ignore (HxArray.push __arr_6 "  explicit EnumValue(std::string tag = std::string(), int index = 0, std::vector<std::string> parameters = {}) : tag(tag), index(index), parameters(parameters) {}");
+  ignore (HxArray.push __arr_6 "  std::string getName() const { return tag; }");
+  ignore (HxArray.push __arr_6 "  int getIndex() const { return index; }");
+  ignore (HxArray.push __arr_6 "  std::vector<std::string> getParameters() const { return parameters; }");
+  ignore (HxArray.push __arr_6 "};");
   __arr_6
 )
 
-let enumValueDynamicLines = fun () -> let __arr_7 = HxArray.create () in (
-  ignore (HxArray.push __arr_7 "static bool __hxhx_is_enum_value(const std::shared_ptr<EnumValue>& value) {");
-  ignore (HxArray.push __arr_7 "  return value != nullptr;");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "static bool __hxhx_is_enum_value(const std::any& value) {");
-  ignore (HxArray.push __arr_7 "  return value.has_value() && value.type() == typeid(std::shared_ptr<EnumValue>) && std::any_cast<std::shared_ptr<EnumValue>>(value) != nullptr;");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "template<typename T>");
-  ignore (HxArray.push __arr_7 "static bool __hxhx_is_enum_value(const T&) {");
+let anyIsTypeLines = fun () -> let __arr_7 = HxArray.create () in (
+  ignore (HxArray.push __arr_7 "static bool __hxhx_is_type(const std::any& value, const std::string& type) {");
+  ignore (HxArray.push __arr_7 "  if (type == \"Dynamic\" || type == \"Any\") return true;");
+  ignore (HxArray.push __arr_7 "  if (!value.has_value()) return type == \"Null\";");
+  ignore (HxArray.push __arr_7 "  const std::type_info& valueType = value.type();");
+  ignore (HxArray.push __arr_7 "  if (type == \"Array\") return valueType == typeid(std::vector<std::string>) || valueType == typeid(std::vector<int>);");
+  ignore (HxArray.push __arr_7 "  if (type == \"String\" || type == \"StdTypes.String\") return valueType == typeid(std::string) || valueType == typeid(const char*);");
+  ignore (HxArray.push __arr_7 "  if (type == \"Bool\" || type == \"StdTypes.Bool\") return valueType == typeid(bool);");
+  ignore (HxArray.push __arr_7 "  if (type == \"Int\" || type == \"StdTypes.Int\") return valueType == typeid(int);");
+  ignore (HxArray.push __arr_7 "  if (type == \"Float\" || type == \"StdTypes.Float\") return valueType == typeid(double) || valueType == typeid(float);");
   ignore (HxArray.push __arr_7 "  return false;");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "static std::shared_ptr<EnumValue> __hxhx_enum_value_ptr(const std::any& value) {");
-  ignore (HxArray.push __arr_7 "  if (__hxhx_is_enum_value(value)) return std::any_cast<std::shared_ptr<EnumValue>>(value);");
-  ignore (HxArray.push __arr_7 "  return nullptr;");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "static std::vector<std::string> __hxhx_string_vector_any(const std::any& value) {");
-  ignore (HxArray.push __arr_7 "  if (!value.has_value()) return {};");
-  ignore (HxArray.push __arr_7 "  if (value.type() == typeid(std::vector<std::string>)) return std::any_cast<std::vector<std::string>>(value);");
-  ignore (HxArray.push __arr_7 "  return {};");
   ignore (HxArray.push __arr_7 "}");
   __arr_7
 )
 
-let compareLines = fun () -> let __arr_8 = HxArray.create () in (
-  ignore (HxArray.push __arr_8 "template<typename L, typename R>");
-  ignore (HxArray.push __arr_8 "static int __hxhx_compare(const L& left, const R& right) {");
-  ignore (HxArray.push __arr_8 "  return __hxhx_stringify(left).compare(__hxhx_stringify(right));");
+let enumValueDynamicLines = fun () -> let __arr_8 = HxArray.create () in (
+  ignore (HxArray.push __arr_8 "static bool __hxhx_is_enum_value(const std::shared_ptr<EnumValue>& value) {");
+  ignore (HxArray.push __arr_8 "  return value != nullptr;");
+  ignore (HxArray.push __arr_8 "}");
+  ignore (HxArray.push __arr_8 "");
+  ignore (HxArray.push __arr_8 "static bool __hxhx_is_enum_value(const std::any& value) {");
+  ignore (HxArray.push __arr_8 "  return value.has_value() && value.type() == typeid(std::shared_ptr<EnumValue>) && std::any_cast<std::shared_ptr<EnumValue>>(value) != nullptr;");
   ignore (HxArray.push __arr_8 "}");
   ignore (HxArray.push __arr_8 "");
   ignore (HxArray.push __arr_8 "template<typename T>");
-  ignore (HxArray.push __arr_8 "static int __hxhx_compare(const T& left, const T& right) {");
-  ignore (HxArray.push __arr_8 "  if constexpr (std::is_arithmetic_v<T>) return left < right ? -1 : (left > right ? 1 : 0);");
-  ignore (HxArray.push __arr_8 "  else return left < right ? -1 : (left > right ? 1 : 0);");
+  ignore (HxArray.push __arr_8 "static bool __hxhx_is_enum_value(const T&) {");
+  ignore (HxArray.push __arr_8 "  return false;");
   ignore (HxArray.push __arr_8 "}");
   ignore (HxArray.push __arr_8 "");
-  ignore (HxArray.push __arr_8 "static int __hxhx_compare(const std::shared_ptr<EnumValue>& left, const std::shared_ptr<EnumValue>& right) {");
-  ignore (HxArray.push __arr_8 "  if (left == nullptr && right == nullptr) return 0;");
-  ignore (HxArray.push __arr_8 "  if (left == nullptr) return -1;");
-  ignore (HxArray.push __arr_8 "  if (right == nullptr) return 1;");
-  ignore (HxArray.push __arr_8 "  int indexDiff = left->getIndex() - right->getIndex();");
-  ignore (HxArray.push __arr_8 "  if (indexDiff != 0) return indexDiff < 0 ? -1 : 1;");
-  ignore (HxArray.push __arr_8 "  return left->getName().compare(right->getName());");
+  ignore (HxArray.push __arr_8 "static std::shared_ptr<EnumValue> __hxhx_enum_value_ptr(const std::any& value) {");
+  ignore (HxArray.push __arr_8 "  if (__hxhx_is_enum_value(value)) return std::any_cast<std::shared_ptr<EnumValue>>(value);");
+  ignore (HxArray.push __arr_8 "  return nullptr;");
   ignore (HxArray.push __arr_8 "}");
   ignore (HxArray.push __arr_8 "");
-  ignore (HxArray.push __arr_8 "static int __hxhx_compare(const std::any& left, const std::any& right) {");
-  ignore (HxArray.push __arr_8 "  if (__hxhx_is_enum_value(left) && __hxhx_is_enum_value(right)) return __hxhx_compare(__hxhx_enum_value_ptr(left), __hxhx_enum_value_ptr(right));");
-  ignore (HxArray.push __arr_8 "  if (left.has_value() && right.has_value() && left.type() == typeid(std::string) && right.type() == typeid(std::string)) return __hxhx_compare(std::any_cast<std::string>(left), std::any_cast<std::string>(right));");
-  ignore (HxArray.push __arr_8 "  if (left.has_value() && right.has_value() && left.type() == typeid(int) && right.type() == typeid(int)) return __hxhx_compare(std::any_cast<int>(left), std::any_cast<int>(right));");
-  ignore (HxArray.push __arr_8 "  if (left.has_value() && right.has_value() && left.type() == typeid(double) && right.type() == typeid(double)) return __hxhx_compare(std::any_cast<double>(left), std::any_cast<double>(right));");
-  ignore (HxArray.push __arr_8 "  return __hxhx_stringify(left).compare(__hxhx_stringify(right));");
+  ignore (HxArray.push __arr_8 "static std::vector<std::string> __hxhx_string_vector_any(const std::any& value) {");
+  ignore (HxArray.push __arr_8 "  if (!value.has_value()) return {};");
+  ignore (HxArray.push __arr_8 "  if (value.type() == typeid(std::vector<std::string>)) return std::any_cast<std::vector<std::string>>(value);");
+  ignore (HxArray.push __arr_8 "  return {};");
   ignore (HxArray.push __arr_8 "}");
   __arr_8
+)
+
+let compareLines = fun () -> let __arr_9 = HxArray.create () in (
+  ignore (HxArray.push __arr_9 "template<typename L, typename R>");
+  ignore (HxArray.push __arr_9 "static int __hxhx_compare(const L& left, const R& right) {");
+  ignore (HxArray.push __arr_9 "  return __hxhx_stringify(left).compare(__hxhx_stringify(right));");
+  ignore (HxArray.push __arr_9 "}");
+  ignore (HxArray.push __arr_9 "");
+  ignore (HxArray.push __arr_9 "template<typename T>");
+  ignore (HxArray.push __arr_9 "static int __hxhx_compare(const T& left, const T& right) {");
+  ignore (HxArray.push __arr_9 "  if constexpr (std::is_arithmetic_v<T>) return left < right ? -1 : (left > right ? 1 : 0);");
+  ignore (HxArray.push __arr_9 "  else return left < right ? -1 : (left > right ? 1 : 0);");
+  ignore (HxArray.push __arr_9 "}");
+  ignore (HxArray.push __arr_9 "");
+  ignore (HxArray.push __arr_9 "static int __hxhx_compare(const std::shared_ptr<EnumValue>& left, const std::shared_ptr<EnumValue>& right) {");
+  ignore (HxArray.push __arr_9 "  if (left == nullptr && right == nullptr) return 0;");
+  ignore (HxArray.push __arr_9 "  if (left == nullptr) return -1;");
+  ignore (HxArray.push __arr_9 "  if (right == nullptr) return 1;");
+  ignore (HxArray.push __arr_9 "  int indexDiff = left->getIndex() - right->getIndex();");
+  ignore (HxArray.push __arr_9 "  if (indexDiff != 0) return indexDiff < 0 ? -1 : 1;");
+  ignore (HxArray.push __arr_9 "  return left->getName().compare(right->getName());");
+  ignore (HxArray.push __arr_9 "}");
+  ignore (HxArray.push __arr_9 "");
+  ignore (HxArray.push __arr_9 "static int __hxhx_compare(const std::any& left, const std::any& right) {");
+  ignore (HxArray.push __arr_9 "  if (__hxhx_is_enum_value(left) && __hxhx_is_enum_value(right)) return __hxhx_compare(__hxhx_enum_value_ptr(left), __hxhx_enum_value_ptr(right));");
+  ignore (HxArray.push __arr_9 "  if (left.has_value() && right.has_value() && left.type() == typeid(std::string) && right.type() == typeid(std::string)) return __hxhx_compare(std::any_cast<std::string>(left), std::any_cast<std::string>(right));");
+  ignore (HxArray.push __arr_9 "  if (left.has_value() && right.has_value() && left.type() == typeid(int) && right.type() == typeid(int)) return __hxhx_compare(std::any_cast<int>(left), std::any_cast<int>(right));");
+  ignore (HxArray.push __arr_9 "  if (left.has_value() && right.has_value() && left.type() == typeid(double) && right.type() == typeid(double)) return __hxhx_compare(std::any_cast<double>(left), std::any_cast<double>(right));");
+  ignore (HxArray.push __arr_9 "  return __hxhx_stringify(left).compare(__hxhx_stringify(right));");
+  ignore (HxArray.push __arr_9 "}");
+  __arr_9
 )

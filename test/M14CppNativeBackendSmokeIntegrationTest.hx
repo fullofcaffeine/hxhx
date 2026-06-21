@@ -1922,6 +1922,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(metaObjectLines, "std::any obj = std::any();", "C++ nested generic Dynamic metadata fields should use erased target storage");
 		assertTrue(metaObjectLines.indexOf("Dynamic<") < 0, "C++ generic Dynamic type hints must not emit fake Dynamic template classes");
 		final metaHelper = new HxClassDecl("Meta", false, [
+			new HxFunctionDecl("getMeta", Public, true, [new HxFunctionArg("t", "String", NoDefault, false, false)], "Null<MetaObject>",
+				[SReturn(EField(EIdent("t"), "__meta__"), HxPos.unknown())], ""),
 			new HxFunctionDecl("getType", Public, true, [new HxFunctionArg("t", "String", NoDefault, false, false)], "Dynamic<Null<Array<String>>>", [
 				SVar("meta", "Null<MetaObject>", ENull, HxPos.unknown()),
 				SReturn(ETernary(EBinop("||", EBinop("==", EIdent("meta"), ENull), EBool(false)), EAnon([], []), EField(EIdent("meta"), "obj")),
@@ -1932,19 +1934,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 					SVar("meta", "Null<MetaObject>", ENull, HxPos.unknown()),
 					SReturn(ETernary(EBinop("||", EBinop("==", EIdent("meta"), ENull), EBool(false)), EAnon([], []), EField(EIdent("meta"), "fields")),
 						HxPos.unknown())
+				], ""),
+			new HxFunctionDecl("getStatics", Public, true, [new HxFunctionArg("t", "String", NoDefault, false, false)],
+				"Dynamic<Dynamic<Null<Array<String>>>>", [
+					SVar("meta", "Null<MetaObject>", ENull, HxPos.unknown()),
+					SReturn(ETernary(EBinop("||", EBinop("==", EIdent("meta"), ENull), EBool(false)), EAnon([], []), EField(EIdent("meta"), "statics")),
+						HxPos.unknown())
 				], "")
 		], []);
 		metaObjectNames.set("Meta", true);
 		metaObjectClasses.set("Meta", metaHelper);
-		final getTypeLines = @:privateAccess
+		final getMetaLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(metaHelper)[0], metaHelper, metaObjectLookup).join("\n");
-		final getFieldsLines = @:privateAccess
+		final getTypeLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(metaHelper)[1], metaHelper, metaObjectLookup).join("\n");
+		final getFieldsLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(metaHelper)[2], metaHelper, metaObjectLookup).join("\n");
+		assertContains(getMetaLines, "return __hxhx_meta_get_as<std::shared_ptr<MetaObject>>(t);",
+			"C++ haxe.rtti.Meta.getMeta should lower through target-owned metadata support instead of direct __meta__ field reads");
+		assertTrue(getMetaLines.indexOf("t.__meta__") < 0, "C++ haxe.rtti.Meta.getMeta must not emit invalid std::string.__meta__ reads");
 		assertContains(getTypeLines, "static std::any getType(std::string t)", "C++ Dynamic metadata return helpers should keep erased std::any return types");
-		assertContains(getTypeLines, "return (((meta == nullptr) || false) ? __hxhx_anon{} : (meta->obj));",
-			"C++ Dynamic metadata returns should not cast erased values through int");
-		assertContains(getFieldsLines, "return (((meta == nullptr) || false) ? __hxhx_anon{} : (meta->fields));",
-			"C++ Dynamic metadata field returns should not cast erased values through int");
+		assertContains(getTypeLines, "return __hxhx_meta_section_as<std::any>(t, std::string(\"obj\"));",
+			"C++ haxe.rtti.Meta.getType should lower through target-owned metadata support");
+		assertContains(getFieldsLines, "return __hxhx_meta_section_as<std::any>(t, std::string(\"fields\"));",
+			"C++ haxe.rtti.Meta.getFields should lower through target-owned metadata support");
 		assertTrue(getTypeLines.indexOf("static_cast<int>(") < 0, "C++ std::any returns must not use numeric fallback casts");
 		assertTrue(getFieldsLines.indexOf("static_cast<int>(") < 0, "C++ std::any field returns must not use numeric fallback casts");
 		final assertStringScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "std::string");
