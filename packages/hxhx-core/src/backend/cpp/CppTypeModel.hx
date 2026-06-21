@@ -701,7 +701,7 @@ class CppTypeModel {
 	}
 
 	static function scopeHasClass(?scope:CppRenderScope, className:String):Bool {
-		return scope != null && className != null && scope.classNames.exists(className);
+		return scope != null && className != null && (scope.classNames.exists(className) || scope.classByName.exists(className));
 	}
 
 	static function sanitizeTypePath(path:String):String {

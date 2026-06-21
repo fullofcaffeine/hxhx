@@ -637,7 +637,7 @@ let functionArgTypePartType = fun part -> try let __fallback_result_288 = let te
 ) in Obj.magic __fallback_result_288 with
   | HxRuntime.Hx_return __ret_287 -> Obj.obj __ret_287
 
-let scopeHasClass = fun scope className -> scope != Obj.magic (HxRuntime.hx_null) && className != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.obj (HxAnon.get scope "classNames")) className
+let scopeHasClass = fun scope className -> scope != Obj.magic (HxRuntime.hx_null) && className != Obj.magic (HxRuntime.hx_null) && (HxMap.exists_string (Obj.obj (HxAnon.get scope "classNames")) className || HxMap.exists_string (Obj.obj (HxAnon.get scope "classByName")) className)
 
 let classNameFromCppExprType = fun typeName scope -> try let __fallback_result_266 = let referenceName = (classNameFromCppType (typeName : string) : string) in (
   ignore (if referenceName != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (referenceName : string))) else ());

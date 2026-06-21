@@ -4890,7 +4890,7 @@ class CppTargetCore {
 		final posInfosFieldType = posInfosFieldCppType(className, fieldName);
 		if (posInfosFieldType.length > 0)
 			return posInfosFieldType;
-		final cls = scope.classByName.get(className);
+		final cls = scope.classByName.exists(className) ? scope.classByName.get(className) : scope.classByName.get(sanitizeTypePath(typeBaseName(className)));
 		if (cls == null)
 			return "";
 		for (field in HxClassDecl.getFields(cls)) {

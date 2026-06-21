@@ -1039,6 +1039,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Reflect.isFunction should accept erased Reflect.field results through target-owned support");
 		assertTrue(reflectIsFunctionExpr.indexOf("Reflect::isFunction") < 0,
 			"C++ Reflect.isFunction should not require the generated string-only helper for erased field values");
+		final fixtureDecl = new HxClassDecl("TestFixture", false, [], [
+			new HxFieldDecl("target", Public, false, "String", null),
+			new HxFieldDecl("method", Public, false, "String", null)
+		]);
+		final handlerDecl = new HxClassDecl("TestHandler", false, [], [new HxFieldDecl("fixture", Public, false, "TestFixture", null)]);
+		final handlerClasses = new StringMap<HxClassDecl>();
+		handlerClasses.set("TestFixture", fixtureDecl);
+		handlerClasses.set("TestHandler", handlerDecl);
+		final handlerScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(handlerDecl, {names: new StringMap<Bool>(), byName: handlerClasses},
+			"String");
+		handlerScope.localTypes.set("handler", "std::shared_ptr<TestHandler>");
+		final nestedReferenceFieldExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EField(EIdent("handler"), "fixture"), "target"),
+			handlerScope);
+		assertContains(nestedReferenceFieldExpr, "(handler->fixture)->target",
+			"C++ nested field access should use -> after an intermediate std::shared_ptr field");
+		assertTrue(nestedReferenceFieldExpr.indexOf("(handler->fixture).target") < 0,
+			"C++ nested field access should not use dot access on std::shared_ptr fields");
+		final genericHandlerScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(handlerDecl, {names: new StringMap<Bool>(), byName: handlerClasses},
+			"String");
+		genericHandlerScope.localTypes.set("handler", "std::shared_ptr<TestHandler<std::string>>");
+		final genericNestedReferenceFieldExpr = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(EField(EField(EIdent("handler"), "fixture"), "target"), genericHandlerScope);
+		assertContains(genericNestedReferenceFieldExpr, "(handler->fixture)->target",
+			"C++ nested field access should preserve intermediate reference fields on generic class receivers");
+		assertTrue(genericNestedReferenceFieldExpr.indexOf("(handler->fixture).target") < 0,
+			"C++ nested field access should not lose field type information for generic class receivers");
 		final reflectCompareOwner = new HxClassDecl("ReflectCompareOwner", false, [], []);
 		final reflectCompareMethod = new HxFunctionDecl("compareLike", Public, false, [
 			new HxFunctionArg("left", "String", NoDefault, false, false),
