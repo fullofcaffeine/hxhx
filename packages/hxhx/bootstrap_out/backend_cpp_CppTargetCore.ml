@@ -3301,16 +3301,17 @@ let renderMissingInterfaceDeclaration = fun name -> let tempResult = ref (Obj.ma
     ));
     let _g = (sanitizeTypePath (typeBaseName (!tempString : string) : string) : string) in match _g with
       | "IMap" -> let __assign_194 = Obj.magic (Obj.magic (let __arr_195 = HxArray.create () in (
+        ignore (HxArray.push __arr_195 "template<typename K, typename V>");
         ignore (HxArray.push __arr_195 "struct IMap {");
         ignore (HxArray.push __arr_195 "  virtual ~IMap() = default;");
-        ignore (HxArray.push __arr_195 "  virtual std::optional<std::string> get(std::string k) = 0;");
-        ignore (HxArray.push __arr_195 "  virtual void set(std::string k, std::string v) = 0;");
-        ignore (HxArray.push __arr_195 "  virtual bool exists(std::string k) = 0;");
-        ignore (HxArray.push __arr_195 "  virtual bool remove(std::string k) = 0;");
-        ignore (HxArray.push __arr_195 "  virtual std::shared_ptr<__hxhx_iterator<std::string>> keys() = 0;");
-        ignore (HxArray.push __arr_195 "  virtual std::shared_ptr<__hxhx_iterator<std::string>> iterator() = 0;");
+        ignore (HxArray.push __arr_195 "  virtual std::optional<V> get(K k) = 0;");
+        ignore (HxArray.push __arr_195 "  virtual void set(K k, V v) = 0;");
+        ignore (HxArray.push __arr_195 "  virtual bool exists(K k) = 0;");
+        ignore (HxArray.push __arr_195 "  virtual bool remove(K k) = 0;");
+        ignore (HxArray.push __arr_195 "  virtual std::shared_ptr<__hxhx_iterator<K>> keys() = 0;");
+        ignore (HxArray.push __arr_195 "  virtual std::shared_ptr<__hxhx_iterator<V>> iterator() = 0;");
         ignore (HxArray.push __arr_195 "  virtual std::shared_ptr<KeyValueIterator> keyValueIterator() = 0;");
-        ignore (HxArray.push __arr_195 "  virtual std::shared_ptr<IMap> copy() = 0;");
+        ignore (HxArray.push __arr_195 "  virtual std::shared_ptr<IMap<K, V>> copy() = 0;");
         ignore (HxArray.push __arr_195 "  virtual std::string toString() = 0;");
         ignore (HxArray.push __arr_195 "  virtual void clear() = 0;");
         ignore (HxArray.push __arr_195 "};");
@@ -4266,52 +4267,53 @@ let genericClassTypeParams = fun cls -> let params = Obj.magic (HxArray.create (
     ignore (HxMap.set_string seen clean true);
     HxArray.push params clean
   )) else ()
-)) in (
+)) in let addHint = fun typeHint -> ignore (addGenericTypeParamsFromHint (typeHint : string) addParam) in (
   ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getMetadata (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let meta = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
     ignore (let __old_460 = !_g in let __new_461 = HxInt.add __old_460 1 in (
       ignore (_g := __new_461);
       __new_461
     ));
-    let prefix = ("__hxhx_type_params=" : string) in if StringTools.startsWith (meta : string) (prefix : string) then ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxString.split (HxString.substr meta (HxString.length prefix) (-1)) ",") in while !_g2 < HxArray.length _g3 do ignore (let param = (HxArray.get (Obj.magic _g3) (!_g2) : string) in (
-      ignore (let __old_462 = !_g2 in let __new_463 = HxInt.add __old_462 1 in (
-        ignore (_g2 := __new_463);
-        __new_463
-      ));
-      addParam (param : string)
-    )) done) else ()
+    let prefix = ("__hxhx_type_params=" : string) in (
+      ignore (if StringTools.startsWith (meta : string) (prefix : string) then ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxString.split (HxString.substr meta (HxString.length prefix) (-1)) ",") in while !_g2 < HxArray.length _g3 do ignore (let param = (HxArray.get (Obj.magic _g3) (!_g2) : string) in (
+        ignore (let __old_462 = !_g2 in let __new_463 = HxInt.add __old_462 1 in (
+          ignore (_g2 := __new_463);
+          __new_463
+        ));
+        addParam (param : string)
+      )) done) else ());
+      let underlyingPrefix = ("__hxhx_abstract_underlying=" : string) in if StringTools.startsWith (meta : string) (underlyingPrefix : string) then ignore (addHint (HxString.substr meta (HxString.length underlyingPrefix) (-1) : string)) else ()
+    )
   )) done);
-  let addHint = fun typeHint -> ignore (addGenericTypeParamsFromHint (typeHint : string) addParam) in (
-    ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_464 = !_g in let __new_465 = HxInt.add __old_464 1 in (
-        ignore (_g := __new_465);
-        __new_465
+  ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_464 = !_g in let __new_465 = HxInt.add __old_464 1 in (
+      ignore (_g := __new_465);
+      __new_465
+    ));
+    addHint (HxFieldDecl.getTypeHint (Obj.magic field) : string)
+  )) done);
+  let ctor = Obj.magic (findConstructor (Obj.magic cls)) in (
+    ignore (if ctor != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic ctor)) in while !_g < HxArray.length _g1 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+      ignore (let __old_466 = !_g in let __new_467 = HxInt.add __old_466 1 in (
+        ignore (_g := __new_467);
+        __new_467
       ));
-      addHint (HxFieldDecl.getTypeHint (Obj.magic field) : string)
-    )) done);
-    let ctor = Obj.magic (findConstructor (Obj.magic cls)) in (
-      ignore (if ctor != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic ctor)) in while !_g < HxArray.length _g1 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-        ignore (let __old_466 = !_g in let __new_467 = HxInt.add __old_466 1 in (
-          ignore (_g := __new_467);
-          __new_467
+      addHint (HxFunctionArg.getTypeHint (Obj.magic arg) : string)
+    )) done) else ());
+    ignore (if HxClassDecl.getIsInterface (Obj.magic cls) then ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+      ignore (let __old_468 = !_g in let __new_469 = HxInt.add __old_468 1 in (
+        ignore (_g := __new_469);
+        __new_469
+      ));
+      ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in while !_g2 < HxArray.length _g3 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
+        ignore (let __old_470 = !_g2 in let __new_471 = HxInt.add __old_470 1 in (
+          ignore (_g2 := __new_471);
+          __new_471
         ));
         addHint (HxFunctionArg.getTypeHint (Obj.magic arg) : string)
-      )) done) else ());
-      ignore (if HxClassDecl.getIsInterface (Obj.magic cls) then ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-        ignore (let __old_468 = !_g in let __new_469 = HxInt.add __old_468 1 in (
-          ignore (_g := __new_469);
-          __new_469
-        ));
-        ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in while !_g2 < HxArray.length _g3 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-          ignore (let __old_470 = !_g2 in let __new_471 = HxInt.add __old_470 1 in (
-            ignore (_g2 := __new_471);
-            __new_471
-          ));
-          addHint (HxFunctionArg.getTypeHint (Obj.magic arg) : string)
-        )) done);
-        addHint (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string)
-      )) done) else ());
-      params
-    )
+      )) done);
+      addHint (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string)
+    )) done) else ());
+    params
   )
 )
 

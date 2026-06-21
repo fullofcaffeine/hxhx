@@ -719,9 +719,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	static function missingIMapProgram():GenIrProgram {
 		final src = [
 			"class UsesMissingIMap {",
-			"  var map:IMap;",
+			"  var map:IMap<String,String>;",
 			"  var keys:Iterator<String>;",
-			"  public function new(map:IMap) {",
+			"  public function new(map:IMap<String,String>) {",
 			"    this.map = map;",
 			"    this.keys = map.keys();",
 			"  }",
@@ -1652,6 +1652,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ IMap-like interfaces should declare keys for MapKeyValueIterator");
 		assertContains(iMapLines, "virtual std::shared_ptr<KeyValueIterator> keyValueIterator() = 0;",
 			"C++ IMap-like interfaces should preserve class-like iterator return declarations");
+		final missingIMapLines = @:privateAccess backend.cpp.CppTargetCore.renderMissingInterfaceDeclaration("IMap").join("\n");
+		assertContains(missingIMapLines, "template<typename K, typename V>\nstruct IMap {",
+			"C++ target-owned IMap fallback declarations should preserve key/value type parameters");
+		assertContains(missingIMapLines, "virtual std::optional<V> get(K k) = 0;",
+			"C++ target-owned IMap fallback declarations should not collapse map get values to String");
+		assertContains(missingIMapLines, "virtual std::shared_ptr<IMap<K, V>> copy() = 0;",
+			"C++ target-owned IMap fallback copy declarations should keep the generic map surface");
+		final hashMapAbstract = new HxClassDecl("HashMap", false, [], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=HashMapData<K,V>"]);
+		final hashMapParams = @:privateAccess backend.cpp.CppTargetCore.genericClassTemplateParams(hashMapAbstract);
+		assertTrue(hashMapParams.length == 2 && hashMapParams[0] == "K" && hashMapParams[1] == "V",
+			"C++ generic abstract helpers such as HashMap should infer template parameters from their abstract underlying type");
 		final packagedIMapNames = new StringMap<Bool>();
 		final packagedIMapClasses = new StringMap<HxClassDecl>();
 		final packagedIMap = new HxClassDecl("haxe.Constraints.IMap", false, [], [], "", null, true);
@@ -3310,13 +3321,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final missingIMapDir = Path.join([root, "missing-imap-source-only"]);
 		final missingIMapEmit = BackendRegistry.createForTarget("cpp-native").emit(missingIMapProgram(), context(missingIMapDir, true, true));
 		final missingIMapSource = File.getContent(missingIMapEmit.entryPath);
-		assertContains(missingIMapSource, "struct IMap {",
+		assertContains(missingIMapSource, "template<typename K, typename V>\nstruct IMap {",
 			"C++ missing haxe.Constraints.IMap references should emit an abstract interface declaration, not a bare forward declaration");
-		assertTrue(missingIMapSource.indexOf("struct KeyValueIterator {") < missingIMapSource.indexOf("struct IMap {"),
+		assertTrue(missingIMapSource.indexOf("struct KeyValueIterator {") < missingIMapSource.indexOf("template<typename K, typename V>\nstruct IMap {"),
 			"C++ missing IMap declarations should emit KeyValueIterator before methods reference it");
-		assertContains(missingIMapSource, "virtual std::shared_ptr<__hxhx_iterator<std::string>> keys() = 0;",
+		assertContains(missingIMapSource, "virtual std::shared_ptr<__hxhx_iterator<K>> keys() = 0;",
 			"C++ missing IMap declarations should expose keys() for MapKeyValueIterator-style consumers");
-		assertTrue(missingIMapSource.indexOf("struct IMap {") < missingIMapSource.indexOf("struct UsesMissingIMap {"),
+		assertTrue(missingIMapSource.indexOf("template<typename K, typename V>\nstruct IMap {") < missingIMapSource.indexOf("struct UsesMissingIMap {"),
 			"C++ missing IMap declaration should appear before helper classes that call IMap methods");
 		assertTrue(missingIMapSource.indexOf("struct IMap;\n") < 0, "C++ missing IMap should not be emitted only as a bare forward declaration");
 		assertContains(missingIMapSource, "return __hxhx_anon_value_std__string_key_std__string{map->get(key).value_or(std::string()), std::string(key)};",

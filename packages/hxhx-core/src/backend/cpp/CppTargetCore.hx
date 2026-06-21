@@ -1148,16 +1148,17 @@ class CppTargetCore {
 				["struct KeyValueIterator {", "  virtual ~KeyValueIterator() = default;", "};"];
 			case "IMap":
 				[
+					"template<typename K, typename V>",
 					"struct IMap {",
 					"  virtual ~IMap() = default;",
-					"  virtual std::optional<std::string> get(std::string k) = 0;",
-					"  virtual void set(std::string k, std::string v) = 0;",
-					"  virtual bool exists(std::string k) = 0;",
-					"  virtual bool remove(std::string k) = 0;",
-					"  virtual std::shared_ptr<__hxhx_iterator<std::string>> keys() = 0;",
-					"  virtual std::shared_ptr<__hxhx_iterator<std::string>> iterator() = 0;",
+					"  virtual std::optional<V> get(K k) = 0;",
+					"  virtual void set(K k, V v) = 0;",
+					"  virtual bool exists(K k) = 0;",
+					"  virtual bool remove(K k) = 0;",
+					"  virtual std::shared_ptr<__hxhx_iterator<K>> keys() = 0;",
+					"  virtual std::shared_ptr<__hxhx_iterator<V>> iterator() = 0;",
 					"  virtual std::shared_ptr<KeyValueIterator> keyValueIterator() = 0;",
-					"  virtual std::shared_ptr<IMap> copy() = 0;",
+					"  virtual std::shared_ptr<IMap<K, V>> copy() = 0;",
 					"  virtual std::string toString() = 0;",
 					"  virtual void clear() = 0;",
 					"};"
@@ -2155,15 +2156,18 @@ class CppTargetCore {
 				params.push(clean);
 			}
 		}
+		function addHint(typeHint:String):Void
+			addGenericTypeParamsFromHint(typeHint, addParam);
 		for (meta in HxClassDecl.getMetadata(cls)) {
 			final prefix = "__hxhx_type_params=";
 			if (StringTools.startsWith(meta, prefix)) {
 				for (param in meta.substr(prefix.length).split(","))
 					addParam(param);
 			}
+			final underlyingPrefix = "__hxhx_abstract_underlying=";
+			if (StringTools.startsWith(meta, underlyingPrefix))
+				addHint(meta.substr(underlyingPrefix.length));
 		}
-		function addHint(typeHint:String):Void
-			addGenericTypeParamsFromHint(typeHint, addParam);
 		for (field in HxClassDecl.getFields(cls))
 			addHint(HxFieldDecl.getTypeHint(field));
 		final ctor = findConstructor(cls);
