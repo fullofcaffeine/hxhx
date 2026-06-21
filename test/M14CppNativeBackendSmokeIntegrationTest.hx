@@ -2889,6 +2889,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ method generics that shadow owner generics should be renamed instead of emitting illegal nested typename T");
 		assertTrue(parsedShadowGenericLines.indexOf("template<typename T>\n  T same(T value)") < 0,
 			"C++ method generics must not shadow the owner template parameter name");
+		final parsedForwardedStringModule = new HxParser("class PolyBuf { public function new() {} public function add<T>(x:T):Void {} } class JoinOwner<T> { public function join(sep:String):String { var b = new PolyBuf(); b.add(sep); return sep; } }")
+			.parseModule("JoinOwner");
+		final parsedForwardedStringNames = new StringMap<Bool>();
+		final parsedForwardedStringClasses = new StringMap<HxClassDecl>();
+		for (cls in HxModuleDecl.getClasses(parsedForwardedStringModule)) {
+			final name = HxClassDecl.getName(cls);
+			parsedForwardedStringNames.set(name, true);
+			parsedForwardedStringClasses.set(name, cls);
+		}
+		final parsedForwardedStringOwner = parsedForwardedStringClasses.get("JoinOwner");
+		final parsedForwardedStringLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedForwardedStringOwner, {
+				names: parsedForwardedStringNames,
+				byName: parsedForwardedStringClasses
+			}).join("\n");
+		assertContains(parsedForwardedStringLines, "std::string join(std::string sep) {",
+			"C++ callable inference must keep String args string-shaped when forwarding into another class' polymorphic helper");
+		assertTrue(parsedForwardedStringLines.indexOf("join(T__fn sep)") < 0,
+			"C++ callable inference must not borrow the current owner generic for unrelated receiver method type params");
 		final methodGenericBuffer = new HxClassDecl("MethodGenericBuffer", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
 			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",

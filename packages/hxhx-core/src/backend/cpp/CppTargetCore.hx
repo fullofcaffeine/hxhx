@@ -2867,7 +2867,7 @@ class CppTargetCore {
 	static function collectCallableArgTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>, expectedType:String):Void {
 		switch (expr) {
 			case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
-				final overrideType = concreteForwardedOverrideType(expectedType);
+				final overrideType = concreteForwardedOverrideType(expectedType, scope);
 				if (overrideType.length > 0)
 					setAssignedArgTypeOverride(scope, sanitizeIdentifier(name), overrideType);
 			case ECall(EIdent(name), args) if (candidates.exists(sanitizeIdentifier(name))):
@@ -2996,7 +2996,7 @@ class CppTargetCore {
 		for (i in 0...count) {
 			switch (args[i]) {
 				case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
-					final expectedType = concreteForwardedOverrideType(cppFunctionArgType(params[i], scope));
+					final expectedType = concreteForwardedOverrideType(cppFunctionArgType(params[i], scope), scope);
 					if (expectedType.length > 0)
 						setDynamicLocalTypeOverride(scope, sanitizeIdentifier(name), expectedType);
 				case _:
@@ -3054,8 +3054,12 @@ class CppTargetCore {
 		return switch (callee) {
 			case EField(receiver, _):
 				final staticOwner = staticReceiverClassName(receiver, scope);
-				if (staticOwner != null && scope != null && scope.classByName.exists(staticOwner)) scope.classByName.get(staticOwner); else
-					scope == null ? null : scope.owner;
+				if (staticOwner != null && scope != null && scope.classByName.exists(staticOwner)) scope.classByName.get(staticOwner); else {
+					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+					ownerType != null
+					&& scope != null
+					&& scope.classByName.exists(ownerType) ? scope.classByName.get(ownerType) : (scope == null ? null : scope.owner);
+				}
 			case _:
 				scope == null ? null : scope.owner;
 		};
@@ -3067,7 +3071,7 @@ class CppTargetCore {
 			case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
 				final paramType = inferredParamType != null
 					&& inferredParamType.length > 0 ? inferredParamType : cppFunctionArgType(param, scope);
-				final expectedType = concreteForwardedOverrideType(paramType);
+				final expectedType = concreteForwardedOverrideType(paramType, scope);
 				if (expectedType.length > 0) {
 					setAssignedArgTypeOverride(scope, sanitizeIdentifier(name), expectedType);
 					setDynamicLocalTypeOverride(scope, sanitizeIdentifier(name), expectedType);
@@ -3076,8 +3080,10 @@ class CppTargetCore {
 		}
 	}
 
-	static function concreteForwardedOverrideType(typeName:String):String {
+	static function concreteForwardedOverrideType(typeName:String, ?scope:CppRenderScope):String {
 		if (typeName == null || typeName.length == 0 || typeName == "auto" || typeName == "std::any" || typeName == "std::string")
+			return "";
+		if (genericTypeParamName(typeName).length > 0 || isScopeTypeParam(typeName, scope))
 			return "";
 		final inner = cppOptionalInnerType(typeName);
 		if (inner.length > 0)
