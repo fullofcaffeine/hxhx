@@ -3494,6 +3494,13 @@ class CppTargetCore {
 				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
 			case _ if (isCppAnonStructType(returnType)):
 				"return " + renderExpr(expr, scope) + ";";
+			case _ if (isScopedGenericCppType(returnType, scope)):
+				switch (expr) {
+					case ENull:
+						"return " + cppDefaultValue(returnType, scope) + ";";
+					case _:
+						"return " + renderExpr(expr, scope) + ";";
+				}
 			case "int":
 				"return static_cast<int>(" + renderExpr(expr, scope) + ");";
 			case _:
@@ -6948,6 +6955,10 @@ class CppTargetCore {
 
 	static function isCppOptionalType(typeName:String):Bool {
 		return CppTypeModel.isCppOptionalType(typeName);
+	}
+
+	static function isScopedGenericCppType(typeName:String, ?scope:CppRenderScope):Bool {
+		return CppTypeModel.isScopedGenericCppType(typeName, scope);
 	}
 
 	static function isCppAnonStructType(typeName:String):Bool {

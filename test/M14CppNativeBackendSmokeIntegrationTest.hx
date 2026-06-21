@@ -2888,6 +2888,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(parsedListSortLines, "(q.prev) = p;", "C++ ListSort-like prev field access should stay on the generic node type");
 		assertTrue(parsedListSortLines.indexOf("std::string list") < 0,
 			"C++ ListSort-like method args should not collapse function-level generic T to std::string");
+		final parsedListSortNullModule = new HxParser("class ListSortNullLike { public static function sort<T:{prev:T, next:T}>(list:T):T { return null; } }")
+			.parseModule("ListSortNullLike");
+		final parsedListSortNullOwner = HxModuleDecl.getMainClass(parsedListSortNullModule);
+		final parsedListSortNullNames = new StringMap<Bool>();
+		parsedListSortNullNames.set("ListSortNullLike", true);
+		final parsedListSortNullClasses = new StringMap<HxClassDecl>();
+		parsedListSortNullClasses.set("ListSortNullLike", parsedListSortNullOwner);
+		final parsedListSortNullLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(parsedListSortNullOwner)[0], parsedListSortNullOwner, {
+				names: parsedListSortNullNames,
+				byName: parsedListSortNullClasses
+			}).join("\n");
+		assertContains(parsedListSortNullLines, "template<typename T>\n  static T sort(T list) {\n    return nullptr;\n  }",
+			"C++ ListSort-like generic null returns should preserve nullable generic defaults");
+		assertTrue(parsedListSortNullLines.indexOf("static_cast<int>(nullptr)") < 0,
+			"C++ ListSort-like generic null returns should not collapse through the int fallback");
 		final parsedShadowGenericModule = new HxParser("class ShadowGenericOwner<T> { public var item:T; public function new(item:T) this.item = item; public function same<T>(value:T):T { return value; } }")
 			.parseModule("ShadowGenericOwner");
 		final parsedShadowGenericOwner = HxModuleDecl.getMainClass(parsedShadowGenericModule);

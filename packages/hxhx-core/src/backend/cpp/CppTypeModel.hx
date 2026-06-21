@@ -573,6 +573,18 @@ class CppTypeModel {
 		return typeName != null && StringTools.startsWith(typeName, "std::optional<");
 	}
 
+	public static function isScopedGenericCppType(typeName:String, ?scope:CppRenderScope):Bool {
+		final clean = sanitizeTypePath(StringTools.trim(typeName == null ? "" : typeName));
+		if (clean.length == 0 || scope == null || scope.typeParams == null)
+			return false;
+		for (param in scope.typeParams) {
+			final raw = sanitizeTypePath(StringTools.trim(param == null ? "" : param));
+			if (raw == clean || mappedScopeTypeParam(raw, scope) == clean)
+				return true;
+		}
+		return false;
+	}
+
 	public static function classNameFromCppType(typeName:String):Null<String> {
 		if (!isCppReferenceType(typeName))
 			return null;
@@ -604,6 +616,8 @@ class CppTypeModel {
 				"nullptr";
 			case _ if (isCppOptionalType(typeName)):
 				"std::nullopt";
+			case _ if (isScopedGenericCppType(typeName, scope)):
+				"nullptr";
 			case _:
 				"0";
 		};
