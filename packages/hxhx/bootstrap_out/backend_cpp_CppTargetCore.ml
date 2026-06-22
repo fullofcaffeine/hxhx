@@ -555,6 +555,8 @@ let callParamCanBeSkipped = fun param -> try let __fallback_result_2586 = (
 ) in Obj.magic __fallback_result_2586 with
   | HxRuntime.Hx_return __ret_2585 -> Obj.obj __ret_2585
 
+let isScalarStringCoercibleCppType = fun typeName -> HxString.equals typeName "int" || HxString.equals typeName "double" || HxString.equals typeName "float" || HxString.equals typeName "long long" || HxString.equals typeName "unsigned int" || HxString.equals typeName "bool"
+
 let cppOptionalInnerType = fun typeName -> let prefix = ("std::optional<" : string) in let tempResult = ref ("" : string) in (
   ignore (if typeName != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith (typeName : string) (prefix : string) && StringTools.endsWith (typeName : string) (">" : string) then let __assign_2615 = (HxString.substr typeName (HxString.length prefix) (HxInt.sub (HxInt.sub (HxString.length typeName) (HxString.length prefix)) 1) : string) in (
     tempResult := __assign_2615;
@@ -12729,7 +12731,7 @@ and callArgExprForParam = fun arg param scope expectedParamType -> try let __fal
     ignore (if HxString.equals (!tempMaybeString1) "std::shared_ptr<EnumValue>" && HxString.equals (exprCppType (Obj.magic arg) scope) "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_enum_value_ptr(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ ")" : string))) else ());
     ignore (if HxString.equals (!tempMaybeString1) "std::string" then ignore (let actualType = (exprCppType (Obj.magic arg) scope : string) in (
       ignore (if HxString.equals actualType "std::string" then raise (HxRuntime.Hx_return (Obj.repr (renderExpr (Obj.magic arg) scope : string))) else ());
-      if HxString.equals actualType "std::any" || argHasErasedArgTypeOverride (Obj.magic arg) scope then raise (HxRuntime.Hx_return (Obj.repr (stringExpr (Obj.magic arg) scope : string))) else ()
+      if HxString.equals actualType "std::any" || isScalarStringCoercibleCppType (actualType : string) || argHasErasedArgTypeOverride (Obj.magic arg) scope then raise (HxRuntime.Hx_return (Obj.repr (stringExpr (Obj.magic arg) scope : string))) else ()
     )) else ());
     ignore (if (HxString.equals (!tempMaybeString1) "double" || HxString.equals (!tempMaybeString1) "float") && HxString.equals (exprCppType (Obj.magic arg) scope) "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_any_double(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ ")" : string))) else ());
     ignore (if HxString.equals (!tempMaybeString1) "int" && HxString.equals (exprCppType (Obj.magic arg) scope) "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("static_cast<int>(__hxhx_any_double(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ "))" : string))) else ());

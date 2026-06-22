@@ -773,6 +773,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function write(k:String, v:Dynamic):Void {",
 			"    v = valueLike();",
 			"    v = replacer(k, v);",
+			"    var values:Array<Dynamic> = v;",
+			"    for (i in 0...values.length) write(i, values[i]);",
 			"    switch (Type.typeof(v)) {",
 			"      case TObject:",
 			"        objString(v);",
@@ -4143,6 +4145,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "void write(std::string k, std::any v)", "C++ smoke should keep reassigned JsonPrinter Dynamic parameters erased");
 		assertContains(source, "v = valueLike();", "C++ smoke should keep JsonPrinter Dynamic parameter reassignment erased");
 		assertContains(source, "v = replacer(k, __hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic when calling string-shaped function values");
+		assertContains(source, "write(std::to_string(i), (values[i]));",
+			"C++ smoke should stringify JsonPrinter array index keys at String-shaped recursive write call sites");
+		assertTrue(source.indexOf("write(i, (values[i]))") < 0, "C++ smoke should not pass raw Int array indexes to String-shaped recursive write call sites");
 		assertContains(source, "void inferredString(std::string s)", "C++ smoke should infer JsonPrinter helper parameters forwarded to String helpers");
 		assertContains(source, "inferredString(__hxhx_stringify(v));",
 			"C++ smoke should stringify erased Dynamic for inferred String-typed same-owner helper calls");

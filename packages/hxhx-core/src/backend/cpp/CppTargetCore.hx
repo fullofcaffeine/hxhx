@@ -4819,7 +4819,7 @@ class CppTargetCore {
 			final actualType = exprCppType(arg, scope);
 			if (actualType == "std::string")
 				return renderExpr(arg, scope);
-			if (actualType == "std::any" || argHasErasedArgTypeOverride(arg, scope))
+			if (actualType == "std::any" || isScalarStringCoercibleCppType(actualType) || argHasErasedArgTypeOverride(arg, scope))
 				return stringExpr(arg, scope);
 		}
 		if ((valueType == "double" || valueType == "float") && exprCppType(arg, scope) == "std::any")
@@ -4836,6 +4836,10 @@ class CppTargetCore {
 			}
 		}
 		return renderExpr(arg, scope);
+	}
+
+	static function isScalarStringCoercibleCppType(typeName:String):Bool {
+		return typeName == "int" || typeName == "double" || typeName == "float" || typeName == "long long" || typeName == "unsigned int" || typeName == "bool";
 	}
 
 	static function argHasErasedArgTypeOverride(arg:HxExpr, ?scope:CppRenderScope):Bool {
