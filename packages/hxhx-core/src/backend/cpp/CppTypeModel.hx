@@ -183,6 +183,10 @@ class CppTypeModel {
 		return switch (hint) {
 			case "" | "Void" | "StdTypes.Void":
 				hint.length == 0 ? "std::string" : "void";
+			case "__HxMacroExpr":
+				CppMacroExpr.CPP_TYPE;
+			case "Null" | "StdTypes.Null":
+				"std::any";
 			case "String" | "StdTypes.String":
 				"std::string";
 			case "Int" | "StdTypes.Int":
@@ -685,6 +689,8 @@ class CppTypeModel {
 				"false";
 			case "std::any":
 				"std::any()";
+			case "__HxMacroExpr":
+				"__HxMacroExpr{}";
 			case _ if (StringTools.startsWith(typeName, "std::vector<")):
 				"{}";
 			case _ if (isCppArrayBackedAbstractType(typeName, scope)):

@@ -3852,6 +3852,8 @@ class CppTargetCore {
 				"return " + stringExpr(expr, scope) + ";";
 			case "auto":
 				"return " + renderExpr(expr, scope) + ";";
+			case CppMacroExpr.CPP_TYPE:
+				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppOptionalType(returnType)):
 				"return " + optionalReturnExpr(expr, scope) + ";";
 			case "bool":
@@ -6457,7 +6459,7 @@ class CppTargetCore {
 				macroApiLoadCallExpr(expectedType, loadArgs, [], scope);
 			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
 				macroApiDirectCallExpr(expectedType, args, scope);
-			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
+			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsMacroApiHost(scope) && args.length >= 1):
 				macroApiDirectCallExpr(expectedType, args, scope);
 			case _:
 				null;
@@ -6472,7 +6474,7 @@ class CppTargetCore {
 	}
 
 	static function macroApiDirectCallExpr(expectedType:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
-		final rendered = [renderExpr(args[0], scope)];
+		final rendered = [stringExpr(args[0], scope)];
 		for (i in 1...args.length)
 			rendered.push(renderExpr(args[i], scope));
 		return "__hxhx_call_macro_api<" + macroApiResultType(expectedType) + ">(" + rendered.join(", ") + ")";
@@ -6480,7 +6482,14 @@ class CppTargetCore {
 
 	static function macroApiResultType(expectedType:String):String {
 		final typeName = StringTools.trim(expectedType == null ? "" : expectedType);
-		return typeName.length == 0 || typeName == "auto" ? "std::any" : typeName;
+		if (typeName.length == 0 || typeName == "auto")
+			return "std::any";
+		return switch (typeName) {
+			case "std::shared_ptr<Null>":
+				"std::any";
+			case _:
+				typeName;
+		};
 	}
 
 	static function isMacroApiLoadCallee(callee:HxExpr):Bool {
@@ -6501,6 +6510,17 @@ class CppTargetCore {
 
 	static function scopeOwnerIsContext(?scope:CppRenderScope):Bool {
 		return scope != null && scope.owner != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(scope.owner))) == "Context";
+	}
+
+	static function scopeOwnerIsMacroApiHost(?scope:CppRenderScope):Bool {
+		if (scope == null || scope.owner == null)
+			return false;
+		return switch (sanitizeTypePath(typeBaseName(HxClassDecl.getName(scope.owner)))) {
+			case "Context" | "Compiler":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	/**

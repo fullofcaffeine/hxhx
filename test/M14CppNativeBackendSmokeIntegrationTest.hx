@@ -61,6 +61,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return "ast " + key + " " + escaped.length + ":" + escaped;
 	}
 
+	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
+		final mainClass = HxModuleDecl.getMainClass(decl);
+		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getImports(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
+		return new TypedModule(new ParsedModule("", decl, filePath), env);
+	}
+
 	static function assertNativeProtocolStructuralArgTypeSplitting():Void {
 		final structural = "{ms:Float,seconds:Int,minutes:Int,hours:Int,days:Int}";
 		final encoded = [
@@ -1202,6 +1208,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final parsed = ParserStage.parse(src, "Main.hx");
 		final typed = TyperStage.typeModule(parsed);
 		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function macroCompilerNullSurfaceProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		final mainClass = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")]);
+		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final positionClass = new HxClassDecl("Position", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")]);
+		final compilerClass = new HxClassDecl("Compiler", false, [
+			new HxFunctionDecl("getDisplayPos", Public, true, [], "Null<Position>", [
+				SReturn(ECall(EIdent("callMacroApi"), [EString("get_display_pos"), EInt(0)]), pos)
+			], ""),
+			new HxFunctionDecl("getMalformedBareNull", Public, true, [], "Null", [
+				SReturn(ECall(EIdent("callMacroApi"), [EString("get_display_pos"), EInt(0)]), pos)
+			],
+				""),
+			new HxFunctionDecl("getDefine", Public, true, [new HxFunctionArg("key", "String", NoDefault, false, false)], "__HxMacroExpr",
+				[SReturn(EMacroExpr(EString("defined"), []), pos)], "")
+		]);
+		final compilerDecl = new HxModuleDecl("haxe.macro", [], compilerClass, [positionClass, compilerClass], false, false);
+		return MacroStage.expandProgram([
+			typedSyntheticModule("Main.hx", mainDecl),
+			typedSyntheticModule("std/haxe/macro/Compiler.hx", compilerDecl)
+		], []);
 	}
 
 	static function enumCarrierNameCollisionProgram():GenIrProgram {
@@ -4592,6 +4621,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(macroRefSource.indexOf("finaltype") < 0, "C++ structural final fields should not merge modifiers into field names");
 		assertTrue(macroRefSource.indexOf("std::shared_ptr<Ref>") < 0, "C++ generic class-like type hints should not erase template arguments to raw Ref");
 		assertTrue(macroRefSource.indexOf("public_") < 0, "C++ typedef function surfaces should not be mis-scanned as duplicate public_ fields");
+
+		final macroCompilerNullDir = Path.join([root, "macro-compiler-null-surface-source-only"]);
+		final macroCompilerNullEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(macroCompilerNullSurfaceProgram(), context(macroCompilerNullDir, true, true));
+		final macroCompilerNullSource = File.getContent(macroCompilerNullEmit.entryPath);
+		assertContains(macroCompilerNullSource, "static std::shared_ptr<Position> getDisplayPos()",
+			"C++ macro Compiler Null<Position> helpers should lower to the nullable Position carrier, not a fake Null class");
+		assertContains(macroCompilerNullSource, "return __hxhx_call_macro_api<std::shared_ptr<Position>>(std::string(\"get_display_pos\"), 0);",
+			"C++ macro Compiler API calls should use the normalized helper return type");
+		assertContains(macroCompilerNullSource, "static std::any getMalformedBareNull()",
+			"C++ malformed bare Null hints should erase instead of emitting std::shared_ptr<Null>");
+		assertContains(macroCompilerNullSource, "static __HxMacroExpr getDefine(std::string key)",
+			"C++ macro expression helper returns should preserve the native macro expression carrier");
+		assertContains(macroCompilerNullSource, "return __hxhx_macro_expr(",
+			"C++ macro expression helper returns should return the structural macro object directly");
+		assertTrue(macroCompilerNullSource.indexOf("std::shared_ptr<Null>") < 0, "C++ macro Compiler surfaces should not emit fake Null runtime references");
+		assertTrue(macroCompilerNullSource.indexOf("return static_cast<int>(__hxhx_macro_expr(") < 0,
+			"C++ macro expression helper returns should not fall through to the Int fallback cast");
 
 		final enumCarrierDir = Path.join([root, "enum-carrier-name-collision-source-only"]);
 		final enumCarrierEmit = BackendRegistry.createForTarget("cpp-native").emit(enumCarrierNameCollisionProgram(), context(enumCarrierDir, true, true));
