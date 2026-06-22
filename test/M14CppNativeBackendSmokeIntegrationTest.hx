@@ -18,6 +18,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			throw message + " (missing `" + needle + "` in `" + haystack + "`)";
 	}
 
+	static function countOccurrences(haystack:String, needle:String):Int {
+		var count = 0;
+		var offset = 0;
+		while (true) {
+			final found = haystack.indexOf(needle, offset);
+			if (found < 0)
+				return count;
+			count++;
+			offset = found + needle.length;
+		}
+	}
+
 	static function assertThrowsContains(fn:Void->Void, needle:String, message:String):Void {
 		try {
 			fn();
@@ -912,6 +924,40 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
 		final typedParser = TyperStage.typeModule(ParserStage.parse(parserSource, parserPath));
 		return MacroStage.expandProgram([typedMain, typedParser], []);
+	}
+
+	static function stdlibSupportDuplicationProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {}",
+			"}",
+			"class StringMap<V> {",
+			"  public function new() {}",
+			"  public function get(key:String):V return null;",
+			"  public function set(key:String, value:V):Void {}",
+			"  public function keys():Dynamic return null;",
+			"  public function toString():String return \"[object StringMap]\";",
+			"}",
+			"class Date {",
+			"  public function new() {}",
+			"  public function getDay():Int return 0;",
+			"  public function toString():String return \"\";",
+			"}",
+			"class UsesStdlibSupport {",
+			"  static function use(v:Dynamic, c:String):Void {",
+			"    if (c == haxe.ds.StringMap) {",
+			"      var map:haxe.ds.StringMap<Dynamic> = v;",
+			"      map.keys();",
+			"    } else if (c == Date) {",
+			"      var date:Date = v;",
+			"      date.toString();",
+			"    }",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
 	}
 
 	static function vendorExprToolsProgramWhenAvailable():Null<GenIrProgram> {
@@ -4180,6 +4226,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "auto __hxhx_iter_key = map->keys();", "C++ smoke should lower StringMap.keys() for-in through the Haxe iterator protocol");
 		assertContains(source, "objString(__hxhx_stringify(obj));",
 			"C++ smoke should stringify JsonPrinter anonymous objects at String-shaped helper call sites");
+		final stdlibSupportDupDir = Path.join([root, "stdlib-support-duplication-source-only"]);
+		final stdlibSupportDupEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(stdlibSupportDuplicationProgram(), context(stdlibSupportDupDir, true, true));
+		final stdlibSupportDupSource = File.getContent(stdlibSupportDupEmit.entryPath);
+		assertTrue(countOccurrences(stdlibSupportDupSource, "struct StringMap {") == 1,
+			"C++ should not emit both fallback and generated StringMap bodies when StringMap exists in the program");
+		assertTrue(countOccurrences(stdlibSupportDupSource, "struct Date {") == 1,
+			"C++ should not emit both fallback and generated Date bodies when Date exists in the program");
 		assertContains(source, "void inferredString(std::string s)", "C++ smoke should infer JsonPrinter helper parameters forwarded to String helpers");
 		assertContains(source, "inferredString(__hxhx_stringify(v));",
 			"C++ smoke should stringify erased Dynamic for inferred String-typed same-owner helper calls");

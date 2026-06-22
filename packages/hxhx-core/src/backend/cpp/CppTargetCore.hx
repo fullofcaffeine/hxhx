@@ -1202,7 +1202,7 @@ class CppTargetCore {
 			if (name == "IMap")
 				emitType("KeyValueIterator");
 			emitted.set(name, true);
-			final missingInterface = renderMissingInterfaceDeclaration(name);
+			final missingInterface = shouldRenderMissingDeclarationBody(name, classLookup) ? renderMissingInterfaceDeclaration(name) : null;
 			if (missingInterface != null)
 				out.push(missingInterface);
 			else if (typeParams != null && typeParams.length > 0)
@@ -1335,6 +1335,13 @@ class CppTargetCore {
 			case _:
 				null;
 		}
+	}
+
+	static function shouldRenderMissingDeclarationBody(name:String, classLookup:CppClassLookup):Bool {
+		final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
+		if ((clean == "StringMap" || clean == "Date") && classLookup.names.exists(clean))
+			return false;
+		return true;
 	}
 
 	static function missingGenericForwardParams(name:String):Array<String> {
