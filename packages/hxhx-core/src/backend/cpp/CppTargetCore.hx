@@ -3833,6 +3833,15 @@ class CppTargetCore {
 			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
 		if (expectedType == "std::string")
 			return stringExpr(expr, scope);
+		if (exprCppType(expr, scope) == "std::any") {
+			switch (expectedType) {
+				case "double" | "float":
+					return "__hxhx_any_double(" + renderExpr(expr, scope) + ")";
+				case "int":
+					return "static_cast<int>(__hxhx_any_double(" + renderExpr(expr, scope) + "))";
+				case _:
+			}
+		}
 		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
 		if (isCppVectorType(expectedType)) {
@@ -4366,7 +4375,7 @@ class CppTargetCore {
 				throw "C++ Math." + method + " expects " + count + " argument(s)";
 		}
 		function arg(index:Int):String {
-			return renderExpr(args[index], scope);
+			return numericExpr(args[index], scope);
 		}
 		return switch (method) {
 			case "abs":
@@ -4412,6 +4421,10 @@ class CppTargetCore {
 			case _:
 				throw "C++ source backend MVP unsupported Math method: " + method;
 		};
+	}
+
+	static function numericExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return exprCppType(expr, scope) == "std::any" ? "__hxhx_any_double(" + renderExpr(expr, scope) + ")" : renderExpr(expr, scope);
 	}
 
 	static function mathFieldExpr(field:String):String {
@@ -4622,7 +4635,11 @@ class CppTargetCore {
 
 	static function directCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final fn = currentOwnerMethod(name, scope);
-		final renderedArgs = fn == null ? renderSimpleCallArgs(args, scope) : renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope);
+		final renderedArgs = if (fn != null) {
+			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope);
+		} else {
+			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
+		}
 		return sanitizeIdentifier(name) + "(" + renderedArgs.join(", ") + ")";
 	}
 
@@ -4688,6 +4705,21 @@ class CppTargetCore {
 		return out;
 	}
 
+	static function renderFunctionTypeCallArgs(functionType:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		final argTypes = CppTypeModel.cppFunctionArgTypesFromCppType(functionType);
+		if (argTypes.length == 0 || args == null || args.length == 0)
+			return renderSimpleCallArgs(args, scope);
+		return [
+			for (i in 0...args.length)
+				if (i < argTypes.length) {
+					final actualType = exprCppType(args[i], scope);
+					actualType == "std::any" ? valueExprForExpectedType(args[i], argTypes[i], scope) : renderExpr(args[i], scope);
+				} else {
+					renderExpr(args[i], scope);
+				}
+		];
+	}
+
 	static function findLaterMatchingParam(params:Array<HxFunctionArg>, arg:HxExpr, startIndex:Int, ?scope:CppRenderScope):Int {
 		for (i in startIndex...params.length) {
 			var skippable = true;
@@ -4729,6 +4761,12 @@ class CppTargetCore {
 			return posInfosSharedPtrExpr(arg, scope);
 		if (valueType == "std::shared_ptr<EnumValue>" && exprCppType(arg, scope) == "std::any")
 			return "__hxhx_enum_value_ptr(" + renderExpr(arg, scope) + ")";
+		if (valueType == "std::string" && exprCppType(arg, scope) == "std::any")
+			return stringExpr(arg, scope);
+		if ((valueType == "double" || valueType == "float") && exprCppType(arg, scope) == "std::any")
+			return "__hxhx_any_double(" + renderExpr(arg, scope) + ")";
+		if (valueType == "int" && exprCppType(arg, scope) == "std::any")
+			return "static_cast<int>(__hxhx_any_double(" + renderExpr(arg, scope) + "))";
 		if (valueType == "std::vector<std::string>" && exprCppType(arg, scope) == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(arg, scope) + ")";
 		if (isCppVectorType(valueType)) {

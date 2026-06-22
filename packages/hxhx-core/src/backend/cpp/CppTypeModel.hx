@@ -367,6 +367,45 @@ class CppTypeModel {
 		return "";
 	}
 
+	public static function cppFunctionArgTypesFromCppType(typeName:String):Array<String> {
+		final prefix = "std::function<";
+		if (typeName == null || !StringTools.startsWith(typeName, prefix) || !StringTools.endsWith(typeName, ">"))
+			return [];
+		final signature = typeName.substr(prefix.length, typeName.length - prefix.length - 1);
+		var angleDepth = 0;
+		var parenStart = -1;
+		var i = 0;
+		while (i < signature.length) {
+			final c = signature.charAt(i);
+			if (c == "<")
+				angleDepth++;
+			else if (c == ">" && angleDepth > 0)
+				angleDepth--;
+			else if (c == "(" && angleDepth == 0) {
+				parenStart = i + 1;
+				break;
+			}
+			i++;
+		}
+		if (parenStart < 0)
+			return [];
+		angleDepth = 0;
+		i = parenStart;
+		while (i < signature.length) {
+			final c = signature.charAt(i);
+			if (c == "<")
+				angleDepth++;
+			else if (c == ">" && angleDepth > 0)
+				angleDepth--;
+			else if (c == ")" && angleDepth == 0) {
+				final args = StringTools.trim(signature.substring(parenStart, i));
+				return args.length == 0 ? [] : splitTopLevelComma(args);
+			}
+			i++;
+		}
+		return [];
+	}
+
 	public static function isCppFunctionType(typeName:String):Bool {
 		return typeName != null && StringTools.startsWith(typeName, "std::function<") && StringTools.endsWith(typeName, ">");
 	}

@@ -322,6 +322,22 @@ let enumValueDynamicLines = fun () -> let __arr_10 = HxArray.create () in (
   ignore (HxArray.push __arr_10 "  if (value.type() == typeid(std::vector<std::string>)) return std::any_cast<std::vector<std::string>>(value);");
   ignore (HxArray.push __arr_10 "  return {};");
   ignore (HxArray.push __arr_10 "}");
+  ignore (HxArray.push __arr_10 "");
+  ignore (HxArray.push __arr_10 "static double __hxhx_any_double(const std::any& value) {");
+  ignore (HxArray.push __arr_10 "  if (!value.has_value()) return 0.0;");
+  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(double)) return std::any_cast<double>(value);");
+  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(float)) return static_cast<double>(std::any_cast<float>(value));");
+  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(int)) return static_cast<double>(std::any_cast<int>(value));");
+  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(bool)) return std::any_cast<bool>(value) ? 1.0 : 0.0;");
+  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(std::string)) {");
+  ignore (HxArray.push __arr_10 "    try {");
+  ignore (HxArray.push __arr_10 "      return std::stod(std::any_cast<std::string>(value));");
+  ignore (HxArray.push __arr_10 "    } catch (...) {");
+  ignore (HxArray.push __arr_10 "      return 0.0;");
+  ignore (HxArray.push __arr_10 "    }");
+  ignore (HxArray.push __arr_10 "  }");
+  ignore (HxArray.push __arr_10 "  return 0.0;");
+  ignore (HxArray.push __arr_10 "}");
   __arr_10
 )
 

@@ -333,6 +333,22 @@ class CppRuntimeSupport {
 			"  if (!value.has_value()) return {};",
 			"  if (value.type() == typeid(std::vector<std::string>)) return std::any_cast<std::vector<std::string>>(value);",
 			"  return {};",
+			"}",
+			"",
+			"static double __hxhx_any_double(const std::any& value) {",
+			"  if (!value.has_value()) return 0.0;",
+			"  if (value.type() == typeid(double)) return std::any_cast<double>(value);",
+			"  if (value.type() == typeid(float)) return static_cast<double>(std::any_cast<float>(value));",
+			"  if (value.type() == typeid(int)) return static_cast<double>(std::any_cast<int>(value));",
+			"  if (value.type() == typeid(bool)) return std::any_cast<bool>(value) ? 1.0 : 0.0;",
+			"  if (value.type() == typeid(std::string)) {",
+			"    try {",
+			"      return std::stod(std::any_cast<std::string>(value));",
+			"    } catch (...) {",
+			"      return 0.0;",
+			"    }",
+			"  }",
+			"  return 0.0;",
 			"}"
 		];
 	}
