@@ -141,6 +141,27 @@ case "$target_timeout_raw" in
 esac
 target_timeout_sec="$target_timeout_raw"
 
+target_timeout_for() {
+  local target="$1"
+  local target_key
+  local env_name
+  local raw
+  target_key="$(printf '%s' "$target" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9_' '_')"
+  env_name="HXHX_GATE3_TARGET_TIMEOUT_${target_key}_SEC"
+  raw="${!env_name:-}"
+  if [ -z "$raw" ]; then
+    printf '%s\n' "$target_timeout_sec"
+    return 0
+  fi
+  case "$raw" in
+    ''|*[!0-9]*)
+      echo "Invalid ${env_name}: $raw (expected non-negative integer)." >&2
+      exit 2
+      ;;
+  esac
+  printf '%s\n' "$raw"
+}
+
 should_retry_target() {
   local target_lower="$1"
   local token=""
@@ -1054,8 +1075,10 @@ run_target_attempt_with_watch() {
   local target_pid=""
   local timeout_marker=""
   local code=0
+  local attempt_timeout_sec
+  attempt_timeout_sec="$(target_timeout_for "$target")"
 
-  if [ "$target_timeout_sec" -gt 0 ]; then
+  if [ "$attempt_timeout_sec" -gt 0 ]; then
     timeout_marker="$(mktemp)"
   fi
 
@@ -1064,7 +1087,7 @@ run_target_attempt_with_watch() {
   target_pid="$!"
   local attempt_start_epoch
   attempt_start_epoch="$(date +%s)"
-  echo "gate3_target_attempt_start target=${target} attempt=${attempt}/${max_attempts} pid=${target_pid} heartbeat=${target_heartbeat_sec}s timeout=${target_timeout_sec}s"
+  echo "gate3_target_attempt_start target=${target} attempt=${attempt}/${max_attempts} pid=${target_pid} heartbeat=${target_heartbeat_sec}s timeout=${attempt_timeout_sec}s"
 
   if [ "$target_heartbeat_sec" -gt 0 ]; then
     (
@@ -1085,16 +1108,16 @@ run_target_attempt_with_watch() {
     heartbeat_pid="$!"
   fi
 
-  if [ "$target_timeout_sec" -gt 0 ]; then
+  if [ "$attempt_timeout_sec" -gt 0 ]; then
     (
       local watch_sleep_pid=""
       trap 'if [ -n "${watch_sleep_pid:-}" ]; then kill "$watch_sleep_pid" 2>/dev/null || true; fi; exit 0' TERM INT
-      sleep "$target_timeout_sec" &
+      sleep "$attempt_timeout_sec" &
       watch_sleep_pid="$!"
       wait "$watch_sleep_pid" || exit 0
       watch_sleep_pid=""
       if kill -0 "$target_pid" 2>/dev/null; then
-        echo "Gate3 target timeout: target=${target} attempt=${attempt}/${max_attempts} exceeded ${target_timeout_sec}s." >&2
+        echo "Gate3 target timeout: target=${target} attempt=${attempt}/${max_attempts} exceeded ${attempt_timeout_sec}s." >&2
         if [ -n "$timeout_marker" ]; then
           printf 'timeout\n' >"$timeout_marker"
         fi

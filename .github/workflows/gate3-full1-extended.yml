@@ -381,6 +381,7 @@ jobs:
           HXHX_GATE3_PYTHON_ALLOW_INSTALL: "0"
           HXHX_GATE3_TARGET_HEARTBEAT_SEC: "20"
           HXHX_GATE3_TARGET_TIMEOUT_SEC: "4200"
+          HXHX_GATE3_TARGET_TIMEOUT_CPP_SEC: "5400"
           HXHX_GATE3_TRACE_STAGE3_TARGETS: "Cpp"
         run: |
           set -euo pipefail
