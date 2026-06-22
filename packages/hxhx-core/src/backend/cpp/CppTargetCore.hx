@@ -1970,6 +1970,9 @@ class CppTargetCore {
 		if (preludeReturn.length > 0)
 			return preludeReturn;
 		if (isStringIteratorHelper(owner)) {
+			if ((owner == "StringIteratorUnicode" && method == "unicodeIterator")
+				|| (owner == "StringKeyValueIteratorUnicode" && method == "unicodeKeyValueIterator"))
+				return cppTypeHint(owner, scope, classLookup);
 			if (method == "hasNext")
 				return "bool";
 			if (method == "next")

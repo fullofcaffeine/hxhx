@@ -4892,6 +4892,7 @@ let knownStdlibMethodReturnCppType = fun className methodName typeHint scope cla
     let hx_method = (sanitizeIdentifier (!tempString1 : string) : string) in let preludeReturn = (cppPreludeMethodReturnType (owner : string) (hx_method : string) : string) in (
       ignore (if HxString.length preludeReturn > 0 then raise (HxRuntime.Hx_return (Obj.repr (preludeReturn : string))) else ());
       ignore (if isStringIteratorHelper (owner : string) then ignore ((
+        ignore (if HxString.equals owner "StringIteratorUnicode" && HxString.equals hx_method "unicodeIterator" || HxString.equals owner "StringKeyValueIteratorUnicode" && HxString.equals hx_method "unicodeKeyValueIterator" then raise (HxRuntime.Hx_return (Obj.repr (cppTypeHint (owner : string) scope classLookup : string))) else ());
         ignore (if HxString.equals hx_method "hasNext" then raise (HxRuntime.Hx_return (Obj.repr ("bool" : string))) else ());
         if HxString.equals hx_method "next" then ignore (let tempResult = ref ("" : string) in (
           ignore (if HxString.equals owner "StringIterator" || HxString.equals owner "StringIteratorUnicode" then let __assign_416 = ("int" : string) in (

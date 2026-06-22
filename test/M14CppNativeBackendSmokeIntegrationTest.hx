@@ -584,6 +584,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"class StringIteratorUnicode {",
 			"  var offset = 0;",
 			"  var s:String;",
+			"  public static function unicodeIterator(s:String) {",
+			"    return new StringIteratorUnicode(s);",
+			"  }",
 			"  public function new(s:String) {",
 			"    this.s = s;",
 			"  }",
@@ -592,6 +595,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  }",
 			"  public function next() {",
 			"    return StringTools.unsafeCodeAt(s, offset++);",
+			"  }",
+			"}",
+			"class StringKeyValueIteratorUnicode {",
+			"  var byteOffset = 0;",
+			"  var charOffset = 0;",
+			"  var s:String;",
+			"  public static function unicodeKeyValueIterator(s:String) {",
+			"    return new StringKeyValueIteratorUnicode(s);",
+			"  }",
+			"  public function new(s:String) {",
+			"    this.s = s;",
+			"  }",
+			"  public function hasNext() {",
+			"    return byteOffset < s.length;",
+			"  }",
+			"  public function next() {",
+			"    return {key: charOffset++, value: StringTools.unsafeCodeAt(s, byteOffset++)};",
 			"  }",
 			"}",
 			"class CppStringIteratorForInLike {",
@@ -2979,6 +2999,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFieldDecl("offset", Public, false, "", EInt(0)),
 			new HxFieldDecl("s", Public, false, "String", null)
 		]);
+		final stringIteratorUnicode = new HxClassDecl("StringIteratorUnicode", false, [
+			new HxFunctionDecl("unicodeIterator", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "",
+				[SReturn(ENew("StringIteratorUnicode", [EIdent("s")]), HxPos.unknown())], "")
+		], []);
 		final stringKeyValueIterator = new HxClassDecl("StringKeyValueIterator", false, [
 			new HxFunctionDecl("next", Public, false, [], "", [
 				SReturn(EAnon(["key", "value"], [
@@ -2990,15 +3014,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFieldDecl("offset", Public, false, "", EInt(0)),
 			new HxFieldDecl("s", Public, false, "String", null)
 		]);
+		final stringKeyValueIteratorUnicode = new HxClassDecl("StringKeyValueIteratorUnicode", false, [
+			new HxFunctionDecl("unicodeKeyValueIterator", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "",
+				[SReturn(ENew("StringKeyValueIteratorUnicode", [EIdent("s")]), HxPos.unknown())], "")
+		], []);
 		final stringIteratorNames = new StringMap<Bool>();
-		for (name in ["StringIterator", "StringKeyValueIterator"])
+		for (name in [
+			"StringIterator",
+			"StringIteratorUnicode",
+			"StringKeyValueIterator",
+			"StringKeyValueIteratorUnicode"
+		])
 			stringIteratorNames.set(name, true);
 		final stringIteratorClasses = new StringMap<HxClassDecl>();
 		stringIteratorClasses.set("StringIterator", stringIterator);
+		stringIteratorClasses.set("StringIteratorUnicode", stringIteratorUnicode);
 		stringIteratorClasses.set("StringKeyValueIterator", stringKeyValueIterator);
+		stringIteratorClasses.set("StringKeyValueIteratorUnicode", stringKeyValueIteratorUnicode);
 		final stringIteratorLookup = {names: stringIteratorNames, byName: stringIteratorClasses};
 		final stringIteratorLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringIterator, stringIteratorLookup).join("\n");
+		final stringIteratorUnicodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringIteratorUnicode, stringIteratorLookup).join("\n");
 		final stringKeyValueIteratorLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringKeyValueIterator, stringIteratorLookup)
+			.join("\n");
+		final stringKeyValueIteratorUnicodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringKeyValueIteratorUnicode,
+			stringIteratorLookup)
 			.join("\n");
 		assertContains(stringIteratorLines, "int offset = 0;", "C++ string iterator offset fields should keep integer defaults");
 		assertContains(stringIteratorLines, "bool hasNext() {\n    return (offset < (s.size()));\n  }",
@@ -3009,6 +3048,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stringKeyValueIteratorLines,
 			"return __hxhx_anon_key_int__value_int_{offset, static_cast<int>(static_cast<unsigned char>(s[(offset++)]))};",
 			"C++ string key/value iterator records should infer integer key/value fields");
+		assertContains(stringIteratorUnicodeLines,
+			"static std::shared_ptr<StringIteratorUnicode> unicodeIterator(std::string s) {\n    return std::make_shared<StringIteratorUnicode>(s);\n  }",
+			"C++ unicode string iterator factory should return its iterator object, not an inferred int");
+		assertContains(stringKeyValueIteratorUnicodeLines,
+			"static std::shared_ptr<StringKeyValueIteratorUnicode> unicodeKeyValueIterator(std::string s) {\n    return std::make_shared<StringKeyValueIteratorUnicode>(s);\n  }",
+			"C++ unicode key/value iterator factory should return its iterator object, not an inferred int");
 		final iMapForIterator = new HxClassDecl("IMap", false, [
 			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("key", "K", NoDefault, false, false)], "Null<V>", [], "")
 		], [], "", null, true);
@@ -4209,6 +4254,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(source.indexOf("Int64::ofInt") < 0, "C++ smoke should not emit incomplete Int64 static helper calls");
 		assertContains(source, "auto __hxhx_iter_code = std::make_shared<StringIteratorUnicode>(s);",
 			"C++ smoke should bind Haxe iterator protocol objects before looping");
+		assertContains(source, "static std::shared_ptr<StringIteratorUnicode> unicodeIterator(std::string s)",
+			"C++ smoke should type StringIteratorUnicode.unicodeIterator as an iterator-object factory");
+		assertContains(source, "static std::shared_ptr<StringKeyValueIteratorUnicode> unicodeKeyValueIterator(std::string s)",
+			"C++ smoke should type StringKeyValueIteratorUnicode.unicodeKeyValueIterator as an iterator-object factory");
+		assertTrue(source.indexOf("static  unicodeIterator") < 0, "C++ smoke should not emit untyped unicode iterator factories");
+		assertTrue(source.indexOf("return static_cast<int>(std::make_shared<StringIteratorUnicode>(s));") < 0,
+			"C++ smoke should not narrow unicode iterator factories to int");
 		assertContains(source, "while (__hxhx_iter_code->hasNext()) {", "C++ smoke should lower Haxe iterator protocol loops through hasNext()");
 		assertContains(source, "auto code = __hxhx_iter_code->next();", "C++ smoke should lower Haxe iterator protocol loop values through next()");
 		assertTrue(source.indexOf("for (auto code : std::make_shared<StringIteratorUnicode>(s))") < 0,
