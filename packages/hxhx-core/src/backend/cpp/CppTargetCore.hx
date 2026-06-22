@@ -4636,7 +4636,7 @@ class CppTargetCore {
 	static function directCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final fn = currentOwnerMethod(name, scope);
 		final renderedArgs = if (fn != null) {
-			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope);
+			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredFunctionArgCppTypes(fn, scope.owner, scope.classByName));
 		} else {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
@@ -4664,10 +4664,14 @@ class CppTargetCore {
 
 	static function renderClassMethodCallArgs(className:String, methodName:String, wantStatic:Bool, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
 		final fn = classMethodDecl(className, methodName, wantStatic, scope);
-		return fn == null ? renderSimpleCallArgs(args, scope) : renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope);
+		if (fn == null)
+			return renderSimpleCallArgs(args, scope);
+		final owner = scope == null ? null : scope.classByName.get(className);
+		final paramTypes = owner == null ? null : inferredFunctionArgCppTypes(fn, owner, scope.classByName);
+		return renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, paramTypes);
 	}
 
-	static function renderFunctionCallArgs(params:Array<HxFunctionArg>, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+	static function renderFunctionCallArgs(params:Array<HxFunctionArg>, args:Array<HxExpr>, ?scope:CppRenderScope, ?paramTypes:Array<String>):Array<String> {
 		if (params == null || params.length == 0 || args == null || args.length == 0)
 			return renderSimpleCallArgs(args, scope);
 		final out = new Array<String>();
@@ -4682,14 +4686,14 @@ class CppTargetCore {
 			final param = params[paramIndex];
 			final arg = args[argIndex];
 			if (callArgMatchesParam(arg, param, scope) || !callParamCanBeSkipped(param)) {
-				out.push(callArgExprForParam(arg, param, scope));
+				out.push(callArgExprForParam(arg, param, scope, paramTypes == null ? "" : paramTypes[paramIndex]));
 				paramIndex++;
 				argIndex++;
 				continue;
 			}
 			final later = findLaterMatchingParam(params, arg, paramIndex + 1, scope);
 			if (later < 0) {
-				out.push(callArgExprForParam(arg, param, scope));
+				out.push(callArgExprForParam(arg, param, scope, paramTypes == null ? "" : paramTypes[paramIndex]));
 				paramIndex++;
 				argIndex++;
 				continue;
@@ -4698,7 +4702,7 @@ class CppTargetCore {
 				out.push(callDefaultArgExpr(params[paramIndex], scope));
 				paramIndex++;
 			}
-			out.push(callArgExprForParam(arg, params[paramIndex], scope));
+			out.push(callArgExprForParam(arg, params[paramIndex], scope, paramTypes == null ? "" : paramTypes[paramIndex]));
 			paramIndex++;
 			argIndex++;
 		}
@@ -4754,8 +4758,8 @@ class CppTargetCore {
 		return inner.length > 0 && argType == inner;
 	}
 
-	static function callArgExprForParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope):String {
-		final paramType = cppFunctionArgType(param, scope);
+	static function callArgExprForParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope, ?expectedParamType:String):String {
+		final paramType = expectedParamType != null && expectedParamType.length > 0 ? expectedParamType : cppFunctionArgType(param, scope);
 		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
 		if (valueType == "std::shared_ptr<PosInfos>")
 			return posInfosSharedPtrExpr(arg, scope);

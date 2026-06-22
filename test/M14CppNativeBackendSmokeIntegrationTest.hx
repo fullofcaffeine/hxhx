@@ -764,6 +764,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  function add(s:String):Void {}",
 			"  function quote(s:String):Void {}",
 			"  function objString(s:String):Void {}",
+			"  function inferredString(s):Void {",
+			"    quote(s);",
+			"  }",
 			"  function valueLike():Dynamic {",
 			"    return {};",
 			"  }",
@@ -780,6 +783,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"      case TBool:",
 			"        add(v);",
 			"      case _:",
+			"        inferredString(v);",
 			"        quote(v);",
 			"    }",
 			"  }",
@@ -4126,6 +4130,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "void write(std::string k, std::any v)", "C++ smoke should keep reassigned JsonPrinter Dynamic parameters erased");
 		assertContains(source, "v = valueLike();", "C++ smoke should keep JsonPrinter Dynamic parameter reassignment erased");
 		assertContains(source, "v = replacer(k, __hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic when calling string-shaped function values");
+		assertContains(source, "void inferredString(std::string s)", "C++ smoke should infer JsonPrinter helper parameters forwarded to String helpers");
+		assertContains(source, "inferredString(__hxhx_stringify(v));",
+			"C++ smoke should stringify erased Dynamic for inferred String-typed same-owner helper calls");
 		assertContains(source, "add(__hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic for String-typed same-owner helper calls");
 		assertContains(source, "quote(__hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic for JsonPrinter quote helpers");
 		assertContains(source, "objString(__hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic for JsonPrinter object helper calls");
