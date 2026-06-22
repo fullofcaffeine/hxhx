@@ -2221,7 +2221,7 @@ class CppTargetCore {
 		out.push("  " + (HxFunctionDecl.getIsStatic(fn) ? "static " : "") + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
 			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
 		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "after_signature");
-		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
+		for (line in renderTracedHelperFunctionBody(ownerName, methodName, HxFunctionDecl.getBody(fn), "    ", scope))
 			out.push(line);
 		out.push("  }");
 		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "end");
@@ -3529,6 +3529,31 @@ class CppTargetCore {
 			}
 		}
 		return renderStmts(stmts, indent, scope);
+	}
+
+	static function renderTracedHelperFunctionBody(ownerName:String, methodName:String, stmts:Array<HxStmt>, indent:String,
+			scope:CppRenderScope):Array<String> {
+		final returnType = scope == null ? "int" : scope.returnType;
+		if (returnType != "void" && stmts.length == 1) {
+			switch (stmts[0]) {
+				case SExpr(expr, _):
+					traceCppMemberPhase(ownerName, "render_helper_method_stmt", methodName, "index=0 kind=SExprReturn begin");
+					final out = [indent + returnStmtForExpr(expr, scope)];
+					traceCppMemberPhase(ownerName, "render_helper_method_stmt", methodName, "index=0 kind=SExprReturn end");
+					return out;
+				case _:
+			}
+		}
+		final out = new Array<String>();
+		for (i in 0...stmts.length) {
+			final stmt = stmts[i];
+			final kind = stmtKind(stmt);
+			traceCppMemberPhase(ownerName, "render_helper_method_stmt", methodName, "index=" + i + " kind=" + kind + " begin");
+			for (line in renderStmt(stmt, indent, scope))
+				out.push(line);
+			traceCppMemberPhase(ownerName, "render_helper_method_stmt", methodName, "index=" + i + " kind=" + kind + " end");
+		}
+		return out;
 	}
 
 	static function renderStmt(stmt:HxStmt, indent:String, ?scope:CppRenderScope):Array<String> {
