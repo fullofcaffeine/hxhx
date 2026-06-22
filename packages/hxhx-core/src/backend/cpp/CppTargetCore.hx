@@ -4761,8 +4761,13 @@ class CppTargetCore {
 			return posInfosSharedPtrExpr(arg, scope);
 		if (valueType == "std::shared_ptr<EnumValue>" && exprCppType(arg, scope) == "std::any")
 			return "__hxhx_enum_value_ptr(" + renderExpr(arg, scope) + ")";
-		if (valueType == "std::string" && exprCppType(arg, scope) == "std::any")
-			return stringExpr(arg, scope);
+		if (valueType == "std::string") {
+			final actualType = exprCppType(arg, scope);
+			if (actualType == "std::string")
+				return renderExpr(arg, scope);
+			if (actualType == "std::any" || argHasErasedArgTypeOverride(arg, scope))
+				return stringExpr(arg, scope);
+		}
 		if ((valueType == "double" || valueType == "float") && exprCppType(arg, scope) == "std::any")
 			return "__hxhx_any_double(" + renderExpr(arg, scope) + ")";
 		if (valueType == "int" && exprCppType(arg, scope) == "std::any")
@@ -4777,6 +4782,23 @@ class CppTargetCore {
 			}
 		}
 		return renderExpr(arg, scope);
+	}
+
+	static function argHasErasedArgTypeOverride(arg:HxExpr, ?scope:CppRenderScope):Bool {
+		if (scope == null)
+			return false;
+		return switch (arg) {
+			case EIdent(name):
+				scope.argTypeOverrides.get(sanitizeIdentifier(name)) == "std::any";
+			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
+				argHasErasedArgTypeOverride(args[2], scope);
+			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
+				argHasErasedArgTypeOverride(args[0], scope);
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				argHasErasedArgTypeOverride(inner, scope);
+			case _:
+				false;
+		};
 	}
 
 	static function callDefaultArgExpr(param:HxFunctionArg, ?scope:CppRenderScope):String {
