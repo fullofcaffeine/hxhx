@@ -5258,8 +5258,9 @@ class CppTargetCore {
 	}
 
 	static function classMethodDeclIn(cls:HxClassDecl, methodName:String, wantStatic:Bool):Null<HxFunctionDecl> {
+		final cleanMethodName = sanitizeIdentifier(methodName);
 		for (fn in HxClassDecl.getFunctions(cls))
-			if (HxFunctionDecl.getName(fn) == methodName
+			if ((HxFunctionDecl.getName(fn) == methodName || sanitizeIdentifier(HxFunctionDecl.getName(fn)) == cleanMethodName)
 				&& HxFunctionDecl.getName(fn) != "new"
 				&& HxFunctionDecl.getIsStatic(fn) == wantStatic)
 				return fn;
@@ -5267,8 +5268,10 @@ class CppTargetCore {
 	}
 
 	static function ownerMethodDeclIn(cls:HxClassDecl, methodName:String):Null<HxFunctionDecl> {
+		final cleanMethodName = sanitizeIdentifier(methodName);
 		for (fn in HxClassDecl.getFunctions(cls))
-			if (HxFunctionDecl.getName(fn) == methodName && HxFunctionDecl.getName(fn) != "new")
+			if ((HxFunctionDecl.getName(fn) == methodName || sanitizeIdentifier(HxFunctionDecl.getName(fn)) == cleanMethodName)
+				&& HxFunctionDecl.getName(fn) != "new")
 				return fn;
 		return null;
 	}

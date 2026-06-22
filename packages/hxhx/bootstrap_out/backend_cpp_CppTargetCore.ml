@@ -599,39 +599,6 @@ let globalIntrinsicReturnCppType = fun hx_method -> let tempResult = ref ("" : s
   !tempResult
 )
 
-let classMethodDeclIn = fun cls methodName wantStatic -> try let __fallback_result_4165 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
-  ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_4162 = !_g in let __new_4163 = HxInt.add __old_4162 1 in (
-      ignore (_g := __new_4163);
-      __new_4163
-    ));
-    if HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) methodName && not (HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new") && HxFunctionDecl.getIsStatic (Obj.magic fn) = wantStatic then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic fn))) else ()
-  )) done);
-  Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_4165 with
-  | HxRuntime.Hx_return __ret_4164 -> Obj.obj __ret_4164
-
-let classMethodDecl = fun className methodName wantStatic scope -> try let __fallback_result_4161 = (
-  ignore (if scope == Obj.magic (HxRuntime.hx_null) || className == Obj.magic (HxRuntime.hx_null) || HxString.length className = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
-  let cls = Obj.magic (HxMap.get_string (Obj.obj (HxAnon.get scope "classByName")) className) in (
-    ignore (if cls == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
-    classMethodDeclIn (Obj.magic cls) (methodName : string) wantStatic
-  )
-) in Obj.magic __fallback_result_4161 with
-  | HxRuntime.Hx_return __ret_4160 -> Obj.obj __ret_4160
-
-let ownerMethodDeclIn = fun cls methodName -> try let __fallback_result_4169 = let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
-  ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_4166 = !_g in let __new_4167 = HxInt.add __old_4166 1 in (
-      ignore (_g := __new_4167);
-      __new_4167
-    ));
-    if HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) methodName && not (HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new") then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic fn))) else ()
-  )) done);
-  Obj.magic (HxRuntime.hx_null)
-) in Obj.magic __fallback_result_4169 with
-  | HxRuntime.Hx_return __ret_4168 -> Obj.obj __ret_4168
-
 let rec staticReceiverTypePath = fun receiver -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match receiver with
     | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let typeName = (_g : string) in let __assign_4183 = Obj.magic (typeName : string) in (
@@ -2533,6 +2500,39 @@ let anonStructFieldCppType = fun typeName fieldName scope -> try let __fallback_
   )
 ) in Obj.magic __fallback_result_4134 with
   | HxRuntime.Hx_return __ret_4133 -> Obj.obj __ret_4133
+
+let classMethodDeclIn = fun cls methodName wantStatic -> try let __fallback_result_4165 = let cleanMethodName = (sanitizeIdentifier (methodName : string) : string) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_4162 = !_g in let __new_4163 = HxInt.add __old_4162 1 in (
+      ignore (_g := __new_4163);
+      __new_4163
+    ));
+    if (HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) methodName || HxString.equals (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string)) cleanMethodName) && not (HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new") && HxFunctionDecl.getIsStatic (Obj.magic fn) = wantStatic then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic fn))) else ()
+  )) done);
+  Obj.magic (HxRuntime.hx_null)
+) in Obj.magic __fallback_result_4165 with
+  | HxRuntime.Hx_return __ret_4164 -> Obj.obj __ret_4164
+
+let classMethodDecl = fun className methodName wantStatic scope -> try let __fallback_result_4161 = (
+  ignore (if scope == Obj.magic (HxRuntime.hx_null) || className == Obj.magic (HxRuntime.hx_null) || HxString.length className = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+  let cls = Obj.magic (HxMap.get_string (Obj.obj (HxAnon.get scope "classByName")) className) in (
+    ignore (if cls == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+    classMethodDeclIn (Obj.magic cls) (methodName : string) wantStatic
+  )
+) in Obj.magic __fallback_result_4161 with
+  | HxRuntime.Hx_return __ret_4160 -> Obj.obj __ret_4160
+
+let ownerMethodDeclIn = fun cls methodName -> try let __fallback_result_4169 = let cleanMethodName = (sanitizeIdentifier (methodName : string) : string) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_4166 = !_g in let __new_4167 = HxInt.add __old_4166 1 in (
+      ignore (_g := __new_4167);
+      __new_4167
+    ));
+    if (HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) methodName || HxString.equals (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string)) cleanMethodName) && not (HxString.equals (HxFunctionDecl.getName (Obj.magic fn)) "new") then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic fn))) else ()
+  )) done);
+  Obj.magic (HxRuntime.hx_null)
+) in Obj.magic __fallback_result_4169 with
+  | HxRuntime.Hx_return __ret_4168 -> Obj.obj __ret_4168
 
 let parseSimpleCallCatchValueRaw = fun raw -> let compact = (compactRawText (raw : string) : string) in let pattern = Obj.magic (EReg.create ("^try\\{([A-Za-z_][A-Za-z0-9_]*)\\(\\);\\}catch\\(e(:[^)]*)?\\)\\{e;\\}$" : string) ("" : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (if EReg.hx_match (Obj.magic pattern) (compact : string) then let __assign_5682 = Obj.magic (sanitizeIdentifier (EReg.matched (Obj.magic pattern) 1 : string) : string) in (

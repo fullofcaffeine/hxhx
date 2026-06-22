@@ -768,19 +768,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return {};",
 			"  }",
 			"  public function write(k:String, v:Dynamic):Void {",
-			"    var dyn = valueLike();",
-			"    var replaced = replacer(k, dyn);",
-			"    switch (Type.typeof(dyn)) {",
+			"    v = valueLike();",
+			"    v = replacer(k, v);",
+			"    switch (Type.typeof(v)) {",
 			"      case TObject:",
-			"        objString(dyn);",
+			"        objString(v);",
 			"      case TInt:",
-			"        add(dyn);",
+			"        add(v);",
 			"      case TFloat:",
-			"        if (Math.isFinite(dyn)) add(dyn);",
+			"        if (Math.isFinite(v)) add(v);",
 			"      case TBool:",
-			"        add(dyn);",
+			"        add(v);",
 			"      case _:",
-			"        quote(dyn);",
+			"        quote(v);",
 			"    }",
 			"  }",
 			"}",
@@ -4123,15 +4123,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should not assign std::optional<int> directly to int locals");
 		assertContains(source, "std::function<std::string(std::string, std::string)> replacer = nullptr;",
 			"C++ smoke should preserve JsonPrinter-shaped replacer callback signatures");
-		assertContains(source, "auto dyn = valueLike();", "C++ smoke should keep JsonPrinter Dynamic helper values erased");
-		assertContains(source, "auto replaced = replacer(k, __hxhx_stringify(dyn));",
-			"C++ smoke should stringify erased Dynamic when calling string-shaped function values");
-		assertContains(source, "add(__hxhx_stringify(dyn));", "C++ smoke should stringify erased Dynamic for String-typed same-owner helper calls");
-		assertContains(source, "quote(__hxhx_stringify(dyn));", "C++ smoke should stringify erased Dynamic for JsonPrinter quote helpers");
-		assertContains(source, "objString(__hxhx_stringify(dyn));", "C++ smoke should stringify erased Dynamic for JsonPrinter object helper calls");
-		assertContains(source, "std::isfinite(__hxhx_any_double(dyn))", "C++ smoke should unwrap numeric erased Dynamic before Math.isFinite");
-		assertTrue(source.indexOf("replacer(k, dyn)") < 0, "C++ smoke should not pass raw std::any to string-shaped replacer callbacks");
-		assertTrue(source.indexOf("std::isfinite(dyn)") < 0, "C++ smoke should not pass raw std::any to numeric Math intrinsics");
+		assertContains(source, "void write(std::string k, std::any v)", "C++ smoke should keep reassigned JsonPrinter Dynamic parameters erased");
+		assertContains(source, "v = valueLike();", "C++ smoke should keep JsonPrinter Dynamic parameter reassignment erased");
+		assertContains(source, "v = replacer(k, __hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic when calling string-shaped function values");
+		assertContains(source, "add(__hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic for String-typed same-owner helper calls");
+		assertContains(source, "quote(__hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic for JsonPrinter quote helpers");
+		assertContains(source, "objString(__hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic for JsonPrinter object helper calls");
+		assertContains(source, "std::isfinite(__hxhx_any_double(v))", "C++ smoke should unwrap numeric erased Dynamic before Math.isFinite");
+		assertTrue(source.indexOf("replacer(k, v)") < 0, "C++ smoke should not pass raw std::any to string-shaped replacer callbacks");
+		assertTrue(source.indexOf("std::isfinite(v)") < 0, "C++ smoke should not pass raw std::any to numeric Math intrinsics");
 		assertContains(source, "std::any parseObjectLike()", "C++ smoke should erase Dynamic object returns as std::any");
 		assertContains(source, "static std::string callStack()",
 			"C++ smoke should keep string-shaped Dynamic native stack traces compatible with toHaxe(String)");
