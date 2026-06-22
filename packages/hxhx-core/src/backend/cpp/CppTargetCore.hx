@@ -110,6 +110,12 @@ class CppTargetCore {
 			Sys.println("cpp_target_phase=" + label);
 	}
 
+	static function traceCppMemberPhase(className:String, kind:String, memberName:String, stage:String):Void {
+		if (!traceCppEnabled())
+			return;
+		traceCppPhase(kind + " class=" + className + " member=" + sanitizeIdentifier(memberName) + " stage=" + stage);
+	}
+
 	static function traceCppSnippet(value:String):String {
 		if (value == null)
 			return "";
@@ -1612,27 +1618,33 @@ class CppTargetCore {
 		out.push("struct " + className + (baseTypes.length == 0 ? "" : " : " + baseTypes.join(", ")) + " {");
 		final scope = renderScope(cls, classLookup, "void");
 		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = HxFieldDecl.getName(field);
+			traceCppMemberPhase(className, "render_helper_field", fieldName, "begin");
 			final init = HxFieldDecl.getInit(field);
-			final typeName = knownStdlibFieldCppType(className, HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field), init, scope);
+			final typeName = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), init, scope);
 			if (HxFieldDecl.getIsStatic(field)) {
 				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
-				out.push("  inline static " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
+				out.push("  inline static " + typeName + " " + sanitizeIdentifier(fieldName) + " = " + rhs + ";");
+				traceCppMemberPhase(className, "render_helper_field", fieldName, "end");
 				continue;
 			}
 			final genericField = isGenericTypeParamHint(HxFieldDecl.getTypeHint(field), cls);
 			if (init == null && genericField) {
-				out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + ";");
+				out.push("  " + typeName + " " + sanitizeIdentifier(fieldName) + ";");
 			} else {
 				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
-				out.push("  " + typeName + " " + sanitizeIdentifier(HxFieldDecl.getName(field)) + " = " + rhs + ";");
+				out.push("  " + typeName + " " + sanitizeIdentifier(fieldName) + " = " + rhs + ";");
 			}
+			traceCppMemberPhase(className, "render_helper_field", fieldName, "end");
 		}
 		final ctor = findConstructor(cls);
 		if (ctor == null) {
 			for (line in renderImplicitConstructors(className, baseType, scope))
 				out.push(line);
 		} else {
+			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "begin");
 			prepareFunctionScope(scope, ctor);
+			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "after_prepare");
 			out.push("  "
 				+ className
 				+ "("
@@ -1640,9 +1652,11 @@ class CppTargetCore {
 				+ ")"
 				+ constructorInitializerList(ctor, scope)
 				+ " {");
+			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "after_signature");
 			for (line in renderStmts(constructorBodyWithoutInitializerStmts(ctor, scope), "    ", scope))
 				out.push(line);
 			out.push("  }");
+			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "end");
 		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == "new")
@@ -2174,32 +2188,43 @@ class CppTargetCore {
 	}
 
 	static function renderHelperMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final ownerName = sanitizeTypePath(HxClassDecl.getName(owner));
+		final methodName = HxFunctionDecl.getName(fn);
+		function returnTraced(stage:String, lines:Array<String>):Array<String> {
+			traceCppMemberPhase(ownerName, "render_helper_method", methodName, stage);
+			traceCppMemberPhase(ownerName, "render_helper_method", methodName, "end");
+			return lines;
+		}
+		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "begin");
 		if (isRttiMetaHelper(fn, owner))
-			return renderRttiMetaHelper(fn, owner, classLookup);
+			return returnTraced("special_rtti_meta", renderRttiMetaHelper(fn, owner, classLookup));
 		if (isAssertPolymorphicStringifyHelper(fn, owner))
-			return renderAssertPolymorphicStringifyHelper(fn);
+			return returnTraced("special_assert_stringify", renderAssertPolymorphicStringifyHelper(fn));
 		if (isAssertPolymorphicSameHelper(fn, owner))
-			return renderAssertPolymorphicSameHelper(fn, owner, classLookup);
+			return returnTraced("special_assert_same", renderAssertPolymorphicSameHelper(fn, owner, classLookup));
 		if (isAssertPolymorphicSameAsHelper(fn, owner))
-			return renderAssertPolymorphicSameAsHelper(fn, owner, classLookup);
+			return returnTraced("special_assert_same_as", renderAssertPolymorphicSameAsHelper(fn, owner, classLookup));
 		if (isLambdaHasHelper(fn, owner))
-			return renderLambdaHasHelper();
+			return returnTraced("special_lambda_has", renderLambdaHasHelper());
 		if (isPolymorphicIsOfTypeHelper(fn))
-			return renderPolymorphicIsOfTypeHelper(fn, owner, classLookup);
+			return returnTraced("special_is_of_type", renderPolymorphicIsOfTypeHelper(fn, owner, classLookup));
 		if (isTypeErasedValueHelper(fn, owner))
-			return renderTypeErasedValueHelper(fn, owner, classLookup);
+			return returnTraced("special_type_erased_value", renderTypeErasedValueHelper(fn, owner, classLookup));
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
+		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "after_prepare");
 		final out = new Array<String>();
 		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
 		if (methodTypeParams.length > 0)
 			out.push("  " + genericTemplatePrefix(methodTypeParams));
 		out.push("  " + (HxFunctionDecl.getIsStatic(fn) ? "static " : "") + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
 			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
+		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "after_signature");
 		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
 			out.push(line);
 		out.push("  }");
+		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "end");
 		return out;
 	}
 
