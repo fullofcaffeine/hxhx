@@ -90,6 +90,21 @@ class CppRuntimeSupport {
 		];
 	}
 
+	public static function stdIntrinsicLines():Array<String> {
+		return [
+			"static std::optional<int> __hxhx_parse_int(const std::string& value) {",
+			"  try {",
+			"    std::size_t parsed = 0;",
+			"    int base = (value.size() >= 2 && value[0] == '0' && (value[1] == 'x' || value[1] == 'X')) ? 16 : 10;",
+			"    int out = std::stoi(value, &parsed, base);",
+			"    return parsed == 0 ? std::nullopt : std::optional<int>(out);",
+			"  } catch (...) {",
+			"    return std::nullopt;",
+			"  }",
+			"}"
+		];
+	}
+
 	public static function vectorSupportLines():Array<String> {
 		return [
 			"template<typename T>",

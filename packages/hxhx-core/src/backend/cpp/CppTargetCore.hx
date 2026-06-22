@@ -210,6 +210,9 @@ class CppTargetCore {
 		for (line in CppRuntimeSupport.dateIntrinsicLines())
 			out.push(line);
 		out.push("");
+		for (line in CppRuntimeSupport.stdIntrinsicLines())
+			out.push(line);
+		out.push("");
 		for (line in CppRuntimeSupport.vectorSupportLines())
 			out.push(line);
 		out.push("");
@@ -4022,6 +4025,8 @@ class CppTargetCore {
 				indexOfExpr(receiver, args, scope);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				stringExpr(args[0], scope);
+			case ECall(EField(receiver, "parseInt"), args) if (isStdStaticReceiver(receiver) && args.length == 1):
+				"__hxhx_parse_int(" + stringExpr(args[0], scope) + ")";
 			case ECall(EField(ECall(EField(receiver, "iterator"), []), "hasNext"), []) if (isCppVectorType(exprCppType(receiver, scope))):
 				"(!" + renderExpr(receiver, scope) + ".empty())";
 			case ECall(EField(_, "flatten"), [ECall(EField(_, "map"), [iterable, mapper])]):
@@ -4165,6 +4170,8 @@ class CppTargetCore {
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (localType == "std::string"):
 				stringExpr(init, scope);
+			case _ if (cppOptionalInnerType(exprCppType(init, scope)) == localType):
+				valueExprForExpectedType(init, localType, scope);
 			case _:
 				renderExpr(init, scope);
 		};
@@ -4550,6 +4557,8 @@ class CppTargetCore {
 			return "__hxhx_join(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "compare")
 			return reflectCompareExpr(args, scope);
+		if (isStdStaticReceiver(receiver) && method == "parseInt" && args.length == 1)
+			return "__hxhx_parse_int(" + stringExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "field" && args.length == 2)
 			return "__hxhx_reflect_field(" + renderExpr(args[0], scope) + ", " + stringExpr(args[1], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "setField" && args.length == 3)
@@ -4926,6 +4935,8 @@ class CppTargetCore {
 				typeIntrinsicReturnCppType(method, args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				"std::string";
+			case ECall(EField(receiver, "parseInt"), args) if (isStdStaticReceiver(receiver) && args.length == 1):
+				"std::optional<int>";
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
 				"std::any";
 			case ECall(EIdent(name), _):
@@ -5261,6 +5272,11 @@ class CppTargetCore {
 		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "Reflect";
 	}
 
+	static function isStdStaticReceiver(receiver:HxExpr):Bool {
+		final typePath = staticReceiverTypePath(receiver);
+		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "Std";
+	}
+
 	static function isCppConstPointerStaticReceiver(receiver:HxExpr):Bool {
 		final typePath = staticReceiverTypePath(receiver);
 		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "ConstPointer";
@@ -5391,6 +5407,8 @@ class CppTargetCore {
 				typeIntrinsicReturnCppType(method, args);
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				"std::string";
+			case ECall(EField(receiver, "parseInt"), args) if (isStdStaticReceiver(receiver) && args.length == 1):
+				"std::optional<int>";
 			case ENew(typePath, _) if (isStdArrayTypePath(typePath)):
 				isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope);
 			case ENew(typePath, _):

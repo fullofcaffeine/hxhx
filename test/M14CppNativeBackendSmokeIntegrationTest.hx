@@ -674,11 +674,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"}",
 			"class JsonParserLike {",
 			"  var str:String;",
+			"  var pos:Int;",
 			"  public static function parse(str:String):Dynamic {",
 			"    return new JsonParserLike(str).doParseLike();",
 			"  }",
 			"  public function new(?str:String) {",
 			"    this.str = str;",
+			"    this.pos = 0;",
 			"  }",
 			"  function parseString():String {",
 			"    return \"field\";",
@@ -709,6 +711,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  function invalidCharLike():Void {}",
 			"  function parseNumberLike(c:Int):Dynamic {",
 			"    return c;",
+			"  }",
+			"  public function parseStringEscapeLike():String {",
+			"    var uc:Int = Std.parseInt(\"0x\" + str.substr(pos, 4));",
+			"    return Std.string(uc);",
 			"  }",
 			"  public function parseRecScopeLike():Dynamic {",
 			"    while (true) {",
@@ -4083,6 +4089,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::any parseRecScopeLike()", "C++ smoke should include JsonParser-shaped nested switch/while scope regression coverage");
 		assertContains(source, "return parseNumberLike(c);", "C++ smoke should preserve outer switch locals after nested branches introduce same-named locals");
 		assertTrue(source.indexOf("return parseNumberLike(c_") < 0, "C++ smoke should not leak nested C++ block-local names into later switch branches");
+		assertContains(source, "int uc = __hxhx_parse_int((std::string(\"0x\") + str.substr(pos, 4))).value_or(0);",
+			"C++ smoke should unwrap optional Std.parseInt results when initializing concrete Int locals");
+		assertTrue(source.indexOf("int uc = __hxhx_parse_int((std::string(\"0x\") + str.substr(pos, 4)));") < 0,
+			"C++ smoke should not assign std::optional<int> directly to int locals");
 		assertContains(source, "std::any parseObjectLike()", "C++ smoke should erase Dynamic object returns as std::any");
 		assertContains(source, "static std::string callStack()",
 			"C++ smoke should keep string-shaped Dynamic native stack traces compatible with toHaxe(String)");
