@@ -1589,6 +1589,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ erased array compare calls should extract string arrays from std::any arguments");
 		assertContains(enumValueMapCompareArgLines, "return __hxhx_compare(__hxhx_cmp_left, __hxhx_cmp_right);",
 			"C++ Reflect.compare should not emit raw std::any less-than/greater-than comparisons");
+		final shadowOwner = new HxClassDecl("JsonPrinterShadow", false, [], []);
+		final shadowScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(shadowOwner,
+			{names: new StringMap<Bool>(), byName: new StringMap<HxClassDecl>()}, "void");
+		shadowScope.localTypes.set("v", "std::any");
+		shadowScope.localNames.set("v", "v");
+		shadowScope.localNameCounts.set("v", 1);
+		shadowScope.localTypeOverrides.set("v", "std::shared_ptr<EnumValue>");
+		final shadowLines = @:privateAccess backend.cpp.CppTargetCore.renderStmt(SVar("v", "Array<Dynamic>", EIdent("v"), HxPos.unknown()), "  ", shadowScope)
+			.join("\n");
+		assertContains(shadowLines, "std::vector<std::string> v_2 = __hxhx_string_vector_any(v);",
+			"C++ shadowing typed locals should render initializers against the previous binding and keep explicit Array<Dynamic> type hints");
+		assertTrue(shadowLines.indexOf("std::shared_ptr<EnumValue> v_2 = v_2") < 0,
+			"C++ explicit typed locals must not inherit stale Dynamic/enum overrides or self-initialize when shadowing a parameter");
 		final typeNameStringTernary = @:privateAccess backend.cpp.CppTargetCore.stringExpr(ECall(EField(EIdent("Std"), "string"), [
 			ETernary(EBinop("!=", EIdent("type"), ENull), ECall(EField(EIdent("Type"), "getClassName"), [EIdent("type")]), EString("Dynamic"))
 		]));

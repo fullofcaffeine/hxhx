@@ -3620,14 +3620,14 @@ class CppTargetCore {
 				[indent + "throw std::runtime_error(" + stringExpr(expr, scope) + ");"];
 			case SVar(name, typeHint, init, _):
 				final localType = cppLocalDeclaredType(name, typeHint, init, scope);
-				final localName = declareLocalName(name, scope);
-				if (scope != null)
-					scope.localTypes.set(sanitizeIdentifier(name), localType);
 				final hasExplicitType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
 				final declaredType = (hasExplicitType || init == null) && localType.length > 0 ? localType : "auto";
 				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
 					scope) : renderLocalInitExpr(init, declaredType, localType, scope);
-					[indent + declaredType + " " + localName + " = " + rhs + ";"];
+				final localName = declareLocalName(name, scope);
+				if (scope != null)
+					scope.localTypes.set(sanitizeIdentifier(name), localType);
+				[indent + declaredType + " " + localName + " = " + rhs + ";"];
 			case SReturn(expr, _):
 				[indent + returnStmtForExpr(expr, scope)];
 			case SReturnVoid(_):
@@ -5496,6 +5496,9 @@ class CppTargetCore {
 	}
 
 	static function cppLocalDeclaredType(name:String, typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
+		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (explicit.length > 0 && !isDynamicLikeTypeHint(explicit))
+			return cppLocalTypeHint(typeHint, init, scope);
 		final local = sanitizeIdentifier(name);
 		final overrideType = scope == null ? null : scope.localTypeOverrides.get(local);
 		return overrideType != null && overrideType.length > 0 ? overrideType : cppLocalTypeHint(typeHint, init, scope);
