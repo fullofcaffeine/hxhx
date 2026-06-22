@@ -3414,6 +3414,18 @@ class CppTargetCore {
 			scope.localNames.remove(name);
 	}
 
+	static function withLocalScope(scope:CppRenderScope, fn:Void->Void):Void {
+		if (scope == null) {
+			fn();
+			return;
+		}
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		fn();
+		scope.localTypes = savedLocalTypes;
+		scope.localNames = savedLocalNames;
+	}
+
 	static function localCppName(name:String, ?scope:CppRenderScope):String {
 		final local = sanitizeIdentifier(name);
 		if (scope != null && scope.localNames.exists(local))
@@ -3495,33 +3507,43 @@ class CppTargetCore {
 		return switch (stmt) {
 			case SBlock(stmts, _):
 				final out = [indent + "{"];
-				for (line in renderStmts(stmts, indent + "  ", scope))
-					out.push(line);
+				withLocalScope(scope, () -> {
+					for (line in renderStmts(stmts, indent + "  ", scope))
+						out.push(line);
+				});
 				out.push(indent + "}");
 				out;
 			case SIf(cond, thenBranch, elseBranch, _):
 				final out = [indent + "if " + cStyleConditionExpr(cond, scope) + " {"];
-				for (line in renderStmtBlockContent(thenBranch, indent + "  ", scope))
-					out.push(line);
+				withLocalScope(scope, () -> {
+					for (line in renderStmtBlockContent(thenBranch, indent + "  ", scope))
+						out.push(line);
+				});
 				if (elseBranch == null) {
 					out.push(indent + "}");
 				} else {
 					out.push(indent + "} else {");
-					for (line in renderStmtBlockContent(elseBranch, indent + "  ", scope))
-						out.push(line);
+					withLocalScope(scope, () -> {
+						for (line in renderStmtBlockContent(elseBranch, indent + "  ", scope))
+							out.push(line);
+					});
 					out.push(indent + "}");
 				}
 				out;
 			case SWhile(cond, body, _):
 				final out = [indent + "while " + cStyleConditionExpr(cond, scope) + " {"];
-				for (line in renderStmtBlockContent(body, indent + "  ", scope))
-					out.push(line);
+				withLocalScope(scope, () -> {
+					for (line in renderStmtBlockContent(body, indent + "  ", scope))
+						out.push(line);
+				});
 				out.push(indent + "}");
 				out;
 			case SDoWhile(body, cond, _):
 				final out = [indent + "do {"];
-				for (line in renderStmtBlockContent(body, indent + "  ", scope))
-					out.push(line);
+				withLocalScope(scope, () -> {
+					for (line in renderStmtBlockContent(body, indent + "  ", scope))
+						out.push(line);
+				});
 				out.push(indent + "} while " + cStyleConditionExpr(cond, scope) + ";");
 				out;
 			case SForIn(name, iterable, body, _):
@@ -3663,8 +3685,10 @@ class CppTargetCore {
 			out.push(indent + "  " + (emitted == 0 ? "if" : "else if") + " (" + switchPatternCond(pattern, switchValue) + ") {");
 			for (line in switchPatternBindingLines(pattern, switchValue, indent + "    "))
 				out.push(line);
-			for (line in renderStmtBlockContent(bodies[i], indent + "    ", scope))
-				out.push(line);
+			withLocalScope(scope, () -> {
+				for (line in renderStmtBlockContent(bodies[i], indent + "    ", scope))
+					out.push(line);
+			});
 			out.push(indent + "  }");
 			emitted++;
 		}
@@ -3672,8 +3696,10 @@ class CppTargetCore {
 			out.push(indent + "  else {");
 			for (line in switchPatternBindingLines(defaultPattern, switchValue, indent + "    "))
 				out.push(line);
-			for (line in renderStmtBlockContent(defaultBody, indent + "    ", scope))
-				out.push(line);
+			withLocalScope(scope, () -> {
+				for (line in renderStmtBlockContent(defaultBody, indent + "    ", scope))
+					out.push(line);
+			});
 			out.push(indent + "  }");
 		}
 		out.push(indent + "}");
