@@ -764,6 +764,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  function add(s:String):Void {}",
 			"  function quote(s:String):Void {}",
 			"  function objString(s:String):Void {}",
+			"  function classString(s:String):Void {}",
 			"  function inferredString(s):Void {",
 			"    quote(s);",
 			"  }",
@@ -784,6 +785,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"        if (Math.isFinite(v)) add(v);",
 			"      case TBool:",
 			"        add(v);",
+			"      case TClass(c):",
+			"        if (c == haxe.ds.StringMap) {",
+			"          var map:haxe.ds.StringMap<Dynamic> = v;",
+			"          var obj = {};",
+			"          for (key in map.keys()) Reflect.setField(obj, key, map.get(key));",
+			"          objString(obj);",
+			"        } else if (c == Date) {",
+			"          var date:Date = v;",
+			"          quote(date.toString());",
+			"        } else {",
+			"          classString(v);",
+			"        }",
 			"      case _:",
 			"        inferredString(v);",
 			"        quote(v);",
@@ -4148,6 +4161,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "write(std::to_string(i), (values[i]));",
 			"C++ smoke should stringify JsonPrinter array index keys at String-shaped recursive write call sites");
 		assertTrue(source.indexOf("write(i, (values[i]))") < 0, "C++ smoke should not pass raw Int array indexes to String-shaped recursive write call sites");
+		assertContains(source, "if (c == std::string(\"StringMap\"))",
+			"C++ smoke should lower JsonPrinter class-path comparisons to class-name values, not C++ field access");
+		assertTrue(source.indexOf("((haxe.ds).StringMap)") < 0, "C++ smoke should not render haxe.ds.StringMap class constants as nested field access");
+		assertContains(source, "template<typename V>\nstruct StringMap {",
+			"C++ smoke should emit target-owned StringMap support when upstream-shaped code references haxe.ds.StringMap locally");
+		assertContains(source, "struct Date {", "C++ smoke should emit target-owned Date support for JsonPrinter Date branches");
+		assertContains(source, "std::any_cast<std::shared_ptr<StringMap<std::string>>>(v)",
+			"C++ smoke should extract erased Dynamic values when a JsonPrinter class branch narrows to StringMap");
+		assertContains(source, "auto __hxhx_iter_key = map->keys();", "C++ smoke should lower StringMap.keys() for-in through the Haxe iterator protocol");
+		assertContains(source, "objString(__hxhx_stringify(obj));",
+			"C++ smoke should stringify JsonPrinter anonymous objects at String-shaped helper call sites");
 		assertContains(source, "void inferredString(std::string s)", "C++ smoke should infer JsonPrinter helper parameters forwarded to String helpers");
 		assertContains(source, "inferredString(__hxhx_stringify(v));",
 			"C++ smoke should stringify erased Dynamic for inferred String-typed same-owner helper calls");

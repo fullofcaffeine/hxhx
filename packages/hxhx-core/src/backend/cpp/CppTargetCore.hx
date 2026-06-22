@@ -1246,6 +1246,7 @@ class CppTargetCore {
 					addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), addMissing, fnScope);
 					for (arg in HxFunctionDecl.getArgs(fn))
 						addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), addMissing, fnScope);
+					addStmtClassDependencies(HxFunctionDecl.getBody(fn), addMissing, fnScope);
 				}
 			}
 		}
@@ -1304,6 +1305,33 @@ class CppTargetCore {
 					"  virtual void clear() = 0;",
 					"};"
 				];
+			case "StringMap":
+				[
+					"struct __hxhx_stringmap_key_iterator : public __hxhx_iterator<std::string> {",
+					"  std::vector<std::string> values;",
+					"  std::size_t index;",
+					"  explicit __hxhx_stringmap_key_iterator(std::vector<std::string> values) : values(std::move(values)), index(0) {}",
+					"  bool hasNext() override { return index < values.size(); }",
+					"  std::string next() override { return values[index++]; }",
+					"};",
+					"template<typename V>",
+					"struct StringMap {",
+					"  std::map<std::string, V> __values;",
+					"  V get(std::string key) {",
+					"    auto it = __values.find(key);",
+					"    return it == __values.end() ? V() : it->second;",
+					"  }",
+					"  void set(std::string key, V value) { __values[key] = value; }",
+					"  std::shared_ptr<__hxhx_iterator<std::string>> keys() {",
+					"    std::vector<std::string> out;",
+					"    for (const auto& item : __values) out.push_back(item.first);",
+					"    return std::make_shared<__hxhx_stringmap_key_iterator>(std::move(out));",
+					"  }",
+					"  std::string toString() { return std::string(\"[object StringMap]\"); }",
+					"};"
+				];
+			case "Date":
+				["struct Date {", "  std::string toString() { return std::string(); }", "};"];
 			case _:
 				null;
 		}
@@ -1313,6 +1341,8 @@ class CppTargetCore {
 		return switch (sanitizeTypePath(typeBaseName(name == null ? "" : name))) {
 			case "IMap" | "TreeNode" | "BalancedTree" | "EnumValueMap":
 				["K", "V"];
+			case "StringMap":
+				["V"];
 			case "Tree":
 				["T"];
 			case _:
@@ -3891,6 +3921,8 @@ class CppTargetCore {
 					return "static_cast<int>(__hxhx_any_double(" + renderExpr(expr, scope) + "))";
 				case _:
 			}
+			if (isCppReferenceType(expectedType))
+				return "std::any_cast<" + expectedType + ">(" + renderExpr(expr, scope) + ")";
 		}
 		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
@@ -4129,6 +4161,30 @@ class CppTargetCore {
 				"true";
 			case EBinop("!=", ENull, right) if (exprHasNonNullableValueType(right, scope)):
 				"true";
+			case EBinop("==", left, right) if (classValueComparisonExpr(right, scope) != null):
+				"("
+				+ renderExpr(left, scope)
+				+ " == "
+				+ classValueComparisonExpr(right, scope)
+				+ ")";
+			case EBinop("==", left, right) if (classValueComparisonExpr(left, scope) != null):
+				"("
+				+ classValueComparisonExpr(left, scope)
+				+ " == "
+				+ renderExpr(right, scope)
+				+ ")";
+			case EBinop("!=", left, right) if (classValueComparisonExpr(right, scope) != null):
+				"("
+				+ renderExpr(left, scope)
+				+ " != "
+				+ classValueComparisonExpr(right, scope)
+				+ ")";
+			case EBinop("!=", left, right) if (classValueComparisonExpr(left, scope) != null):
+				"("
+				+ classValueComparisonExpr(left, scope)
+				+ " != "
+				+ renderExpr(right, scope)
+				+ ")";
 			case EBinop("is", left, right):
 				isTypeExpr(left, right, scope);
 			case EBinop("=>", left, right):
@@ -4229,6 +4285,8 @@ class CppTargetCore {
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (localType == "std::string"):
 				stringExpr(init, scope);
+			case _ if (isCppReferenceType(localType)):
+				valueExprForExpectedType(init, localType, scope);
 			case _ if (cppOptionalInnerType(exprCppType(init, scope)) == localType):
 				valueExprForExpectedType(init, localType, scope);
 			case _:
@@ -4819,7 +4877,10 @@ class CppTargetCore {
 			final actualType = exprCppType(arg, scope);
 			if (actualType == "std::string")
 				return renderExpr(arg, scope);
-			if (actualType == "std::any" || isScalarStringCoercibleCppType(actualType) || argHasErasedArgTypeOverride(arg, scope))
+			if (actualType == "std::any"
+				|| isScalarStringCoercibleCppType(actualType)
+				|| isCppAnonStructType(actualType)
+				|| argHasErasedArgTypeOverride(arg, scope))
 				return stringExpr(arg, scope);
 		}
 		if ((valueType == "double" || valueType == "float") && exprCppType(arg, scope) == "std::any")
@@ -5320,6 +5381,17 @@ class CppTargetCore {
 						"std::shared_ptr<IMap>";
 					case "toString":
 						"std::string";
+					case _:
+						"";
+				}
+			case "StringMap":
+				switch (sanitizeIdentifier(methodName == null ? "" : methodName)) {
+					case "get" | "toString":
+						"std::string";
+					case "set":
+						"void";
+					case "keys":
+						"std::shared_ptr<__hxhx_iterator<std::string>>";
 					case _:
 						"";
 				}
@@ -6007,6 +6079,18 @@ class CppTargetCore {
 		if (typeName == null)
 			return "false";
 		return "__hxhx_is_type(" + renderExpr(left, scope) + ", " + quoteString(typeName) + ")";
+	}
+
+	static function classValueComparisonExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		final typePath = typePathText(expr);
+		if (typePath == null || typePath.length == 0)
+			return null;
+		final baseName = sanitizeTypePath(typeBaseName(typePath));
+		if (baseName.length == 0 || !startsWithUppercaseTypeName(typePath))
+			return null;
+		if (exprNameHasLocalStorage(typePath, scope) || exprNameHasLocalStorage(baseName, scope))
+			return null;
+		return "std::string(" + quoteString(baseName) + ")";
 	}
 
 	static function typePathText(expr:HxExpr):Null<String> {
@@ -7100,6 +7184,9 @@ class CppTargetCore {
 	}
 
 	static function iteratorProtocolElementType(iterable:HxExpr, ?scope:CppRenderScope):String {
+		final iteratorElement = cppIteratorElementType(exprCppType(iterable, scope));
+		if (iteratorElement.length > 0)
+			return iteratorElement;
 		final className = classNameFromCppExprType(exprCppType(iterable, scope), scope);
 		if (className == null)
 			return "";
@@ -8012,7 +8099,7 @@ class CppTargetCore {
 	}
 
 	static function isCppAnonStructType(typeName:String):Bool {
-		return typeName != null && StringTools.startsWith(typeName, "__hxhx_anon_");
+		return typeName != null && (typeName == "__hxhx_anon" || StringTools.startsWith(typeName, "__hxhx_anon_"));
 	}
 
 	static function classNameFromCppType(typeName:String):Null<String> {
