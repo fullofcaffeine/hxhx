@@ -673,7 +673,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  @:optional final targets:Array<MetadataTarget>;",
 			"}",
 			"class JsonParserLike {",
-			"  public function new() {}",
+			"  var str:String;",
+			"  public static function parse(str:String):Dynamic {",
+			"    return new JsonParserLike(str).doParseLike();",
+			"  }",
+			"  public function new(?str:String) {",
+			"    this.str = str;",
+			"  }",
 			"  function parseString():String {",
 			"    return \"field\";",
 			"  }",
@@ -696,6 +702,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    arr.push(parseRec());",
 			"    comma = true;",
 			"    return arr;",
+			"  }",
+			"}",
+			"class JsonUseStringLike {",
+			"  public static function parseAsString(s:String):String {",
+			"    return JsonParserLike.parse(s);",
 			"  }",
 			"}",
 			"class NativeStackTraceLike {",
@@ -4022,6 +4033,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::any parseRec()", "C++ smoke should erase Dynamic returns as std::any for JsonParser-shaped flows");
 		assertContains(source, "std::any doParseLike()",
 			"C++ smoke should propagate erased Dynamic through same-owner parseRec-style calls before return inference recurses");
+		assertContains(source, "static std::any parse(std::string str)",
+			"C++ smoke should propagate erased Dynamic through new Parser(str).doParse()-style static wrappers");
+		assertContains(source, "return __hxhx_stringify(JsonParserLike::parse(s));",
+			"C++ smoke should stringify erased Dynamic parser results only at String-expected call sites");
+		assertTrue(source.indexOf("static std::string parse(std::string str)") < 0,
+			"C++ smoke should not collapse Dynamic parser wrappers to string-returning helpers");
 		assertContains(source, "std::any parseObjectLike()", "C++ smoke should erase Dynamic object returns as std::any");
 		assertContains(source, "static std::string callStack()",
 			"C++ smoke should keep string-shaped Dynamic native stack traces compatible with toHaxe(String)");

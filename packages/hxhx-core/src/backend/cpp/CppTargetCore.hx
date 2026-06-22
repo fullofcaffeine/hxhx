@@ -5136,7 +5136,15 @@ class CppTargetCore {
 			final fallback = missingInterfaceMethodReturnCppType(className, methodName);
 			return fallback.length > 0 ? fallback : "";
 		}
-		return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
+		final ownerName = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
+		if (isStringIteratorHelper(ownerName)
+			|| ownerName == "BalancedTree"
+			|| ownerName == "Template"
+			|| (ownerName == "Bytes" && method == "fill"))
+			return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
+		final owner = scope == null ? null : scope.classByName.get(ownerName);
+		return owner == null ? cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope) : inferredFunctionReturnCppType(fn, owner, scope.classByName);
 	}
 
 	static function missingInterfaceMethodReturnCppType(className:String, methodName:String):String {
@@ -7544,6 +7552,8 @@ class CppTargetCore {
 				true;
 			case ECall(EIdent(name), _):
 				sameOwnerCallReturnsErasedDynamicValue(name, scope);
+			case ECall(EField(receiver, method), _):
+				memberCallReturnsErasedDynamicValue(receiver, method, scope);
 			case ETernary(_, thenExpr, elseExpr): exprReturnsErasedDynamicValue(thenExpr, scope,
 					erasedLocals) || exprReturnsErasedDynamicValue(elseExpr, scope, erasedLocals);
 			case ESwitch(_, _, exprs):
@@ -7566,6 +7576,22 @@ class CppTargetCore {
 		if (fn == null || !isDynamicLikeTypeHint(HxFunctionDecl.getReturnTypeHint(fn)))
 			return false;
 		return functionReturnsErasedDynamicValue(fn, scope);
+	}
+
+	static function memberCallReturnsErasedDynamicValue(receiver:HxExpr, method:String, ?scope:CppRenderScope):Bool {
+		if (scope == null)
+			return false;
+		final ownerName = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+		if (ownerName == null || ownerName.length == 0)
+			return false;
+		final fn = classMethodDecl(ownerName, method, false, scope);
+		if (fn == null || !isDynamicLikeTypeHint(HxFunctionDecl.getReturnTypeHint(fn)))
+			return false;
+		final owner = scope.classByName.get(ownerName);
+		if (owner == null)
+			return false;
+		final memberScope = renderScope(owner, {names: scope.classNames, byName: scope.classByName}, "std::any");
+		return functionReturnsErasedDynamicValue(fn, memberScope);
 	}
 
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
