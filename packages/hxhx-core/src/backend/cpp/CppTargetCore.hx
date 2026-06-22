@@ -5254,10 +5254,21 @@ class CppTargetCore {
 		final cls = scope.classByName.get(className);
 		if (cls == null)
 			return null;
+		return classMethodDeclIn(cls, methodName, wantStatic);
+	}
+
+	static function classMethodDeclIn(cls:HxClassDecl, methodName:String, wantStatic:Bool):Null<HxFunctionDecl> {
 		for (fn in HxClassDecl.getFunctions(cls))
 			if (HxFunctionDecl.getName(fn) == methodName
 				&& HxFunctionDecl.getName(fn) != "new"
 				&& HxFunctionDecl.getIsStatic(fn) == wantStatic)
+				return fn;
+		return null;
+	}
+
+	static function ownerMethodDeclIn(cls:HxClassDecl, methodName:String):Null<HxFunctionDecl> {
+		for (fn in HxClassDecl.getFunctions(cls))
+			if (HxFunctionDecl.getName(fn) == methodName && HxFunctionDecl.getName(fn) != "new")
 				return fn;
 		return null;
 	}
@@ -5272,14 +5283,14 @@ class CppTargetCore {
 	static function currentOwnerMethod(methodName:String, scope:CppRenderScope):Null<HxFunctionDecl> {
 		if (scope == null || scope.owner == null)
 			return null;
+		final ownerMethod = ownerMethodDeclIn(scope.owner, methodName);
+		if (ownerMethod != null)
+			return ownerMethod;
 		final className = sanitizeTypePath(HxClassDecl.getName(scope.owner));
 		final cls = scope.classByName.get(className);
 		if (cls == null)
 			return null;
-		for (fn in HxClassDecl.getFunctions(cls))
-			if (HxFunctionDecl.getName(fn) == methodName && HxFunctionDecl.getName(fn) != "new")
-				return fn;
-		return null;
+		return ownerMethodDeclIn(cls, methodName);
 	}
 
 	static function callableOrSameOwnerReturnCppType(name:String, ?scope:CppRenderScope):String {
