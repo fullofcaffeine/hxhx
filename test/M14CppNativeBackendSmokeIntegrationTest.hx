@@ -3018,8 +3018,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], ""),
 			new HxFunctionDecl("getString", Public, false, [
 				new HxFunctionArg("pos", "Int", NoDefault, false, false),
-				new HxFunctionArg("len", "Int", NoDefault, false, false)
+				new HxFunctionArg("len", "Int", NoDefault, false, false),
+				new HxFunctionArg("encoding", "Encoding", NoDefault, true, false)
 			], "String", [
+				SIf(EBinop("==", EIdent("encoding"), ENull), SExpr(EBinop("==", EIdent("encoding"), EIdent("UTF8")), HxPos.unknown()), null, HxPos.unknown()),
 				SVar("result", "String", EString(""), HxPos.unknown()),
 				SExpr(ECall(EField(EIdent("__global__"), "__hxcpp_string_of_bytes"), [EIdent("b"), EIdent("result"), EIdent("pos"), EIdent("len")]),
 					HxPos.unknown()),
@@ -3084,6 +3086,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Int64.low on primitive Int64 should lower to a low 32-bit projection");
 		assertContains(bytesLines, "setInt32((pos + 4), static_cast<int>((static_cast<unsigned long long>(v) >> 32) & 0xFFFFFFFFULL));",
 			"C++ Int64.high on primitive Int64 should lower to a high 32-bit projection");
+		assertContains(bytesLines, "std::string getString(int pos, int len, std::shared_ptr<Encoding> encoding = nullptr) {",
+			"C++ optional Encoding parameters should keep the target enum-carrier pointer shape");
+		assertContains(bytesLines, "(encoding == nullptr);",
+			"C++ Encoding.UTF8 comparisons should use the carrier null representation instead of class-value strings");
+		assertTrue(bytesLines.indexOf("encoding == std::string(\"UTF8\")") < 0,
+			"C++ Encoding.UTF8 comparisons must not be intercepted by generic class-value comparison lowering");
 		assertContains(bytesLines, "__hxhx_string_of_bytes(b, result, pos, len);", "C++ Bytes.getString should lower through target string byte helpers");
 		assertContains(bytesLines, "__hxhx_bytes_of_string(a, s);", "C++ Bytes.ofString should lower through target byte string helpers");
 		assertContains(bytesLines, "__hxhx_bytes_blit(b, pos, (src->b), srcpos, len);", "C++ BytesData.blit should lower through target runtime support");

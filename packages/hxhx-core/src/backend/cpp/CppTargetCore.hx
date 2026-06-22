@@ -4161,6 +4161,10 @@ class CppTargetCore {
 				"true";
 			case EBinop("!=", ENull, right) if (exprHasNonNullableValueType(right, scope)):
 				"true";
+			case EBinop("==", left, right) if (encodingEnumComparisonExpr("==", left, right, scope) != null):
+				encodingEnumComparisonExpr("==", left, right, scope);
+			case EBinop("!=", left, right) if (encodingEnumComparisonExpr("!=", left, right, scope) != null):
+				encodingEnumComparisonExpr("!=", left, right, scope);
 			case EBinop("==", left, right) if (classValueComparisonExpr(right, scope) != null):
 				"("
 				+ renderExpr(left, scope)
@@ -6091,6 +6095,43 @@ class CppTargetCore {
 		if (exprNameHasLocalStorage(typePath, scope) || exprNameHasLocalStorage(baseName, scope))
 			return null;
 		return "std::string(" + quoteString(baseName) + ")";
+	}
+
+	static function encodingEnumComparisonExpr(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
+		final leftEncoding = exprCppType(left, scope) == "std::shared_ptr<Encoding>";
+		final rightEncoding = exprCppType(right, scope) == "std::shared_ptr<Encoding>";
+		final leftCtor = encodingEnumCtorName(left);
+		final rightCtor = encodingEnumCtorName(right);
+		if (leftEncoding && rightCtor != null)
+			return encodingEnumComparisonFor(left, rightCtor, op, scope);
+		if (rightEncoding && leftCtor != null)
+			return encodingEnumComparisonFor(right, leftCtor, op, scope);
+		return null;
+	}
+
+	static function encodingEnumComparisonFor(value:HxExpr, ctor:String, op:String, ?scope:CppRenderScope):Null<String> {
+		final rendered = renderExpr(value, scope);
+		return switch (ctor) {
+			case "UTF8":
+				"(" + rendered + " " + op + " nullptr)";
+			case "RawNative":
+				"(" + rendered + " " + (op == "==" ? "!=" : "==") + " nullptr)";
+			case _:
+				null;
+		};
+	}
+
+	static function encodingEnumCtorName(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EIdent(name) if (name == "UTF8" || name == "RawNative"):
+				name;
+			case EField(_, "UTF8"):
+				"UTF8";
+			case EField(_, "RawNative"):
+				"RawNative";
+			case _:
+				null;
+		};
 	}
 
 	static function typePathText(expr:HxExpr):Null<String> {
