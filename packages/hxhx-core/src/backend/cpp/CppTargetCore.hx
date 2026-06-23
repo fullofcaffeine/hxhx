@@ -2323,6 +2323,8 @@ class CppTargetCore {
 			return returnTraced("special_utest_runner_add_cases", renderUtestRunnerAddCasesHelper(fn, owner, classLookup));
 		if (isPolymorphicIsOfTypeHelper(fn))
 			return returnTraced("special_is_of_type", renderPolymorphicIsOfTypeHelper(fn, owner, classLookup));
+		if (isTypeToolsTraversalHelper(fn, owner))
+			return returnTraced("special_typetools_traversal", renderTypeToolsTraversalHelper(fn, owner, classLookup));
 		if (isTypeErasedValueHelper(fn, owner))
 			return returnTraced("special_type_erased_value", renderTypeErasedValueHelper(fn, owner, classLookup));
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
@@ -8357,6 +8359,42 @@ class CppTargetCore {
 			return false;
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		return (method == "getClass" || method == "getEnum") && HxFunctionDecl.getArgs(fn).length == 1;
+	}
+
+	static function isTypeToolsTraversalHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "TypeTools")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "map" | "iter":
+				HxFunctionDecl.getArgs(fn).length == 2;
+			case _:
+				false;
+		};
+	}
+
+	static function renderTypeToolsTraversalHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final firstArg = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final secondArg = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
+		final out = [
+			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {",
+			"    (void)" + secondArg + ";"
+		];
+		if (method == "map" && returnType != "void") {
+			out.push("    return " + firstArg + ";");
+		} else {
+			out.push("    (void)" + firstArg + ";");
+			if (returnType != "void")
+				out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
 	}
 
 	static function renderTypeErasedValueHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {

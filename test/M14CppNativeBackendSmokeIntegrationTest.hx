@@ -3008,6 +3008,55 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ TypeTools.getClass-like branches should not return pointer payloads from string switches");
 		assertTrue(typeToolsGetEnumLikeLines.indexOf("return e.get();") < 0,
 			"C++ TypeTools.getEnum-like branches should not return pointer payloads from string switches");
+		final typeToolsTraversalOwner = new HxClassDecl("TypeTools", false, [
+			new HxFunctionDecl("map", Public, true, [
+				new HxFunctionArg("t", "Type", NoDefault, false, false),
+				new HxFunctionArg("f", "Type->Type", NoDefault, false, false)
+			], "Type", [
+				SReturn(ESwitch(EIdent("t"), [PEnumExtract("TMono", [PBind("tm")]), PWildcard], [
+					ECall(EIdent("f"), [ECall(EField(EIdent("tm"), "get"), [])]),
+					ECall(EEnumValue("TEnum"), [EIdent("t"), ECall(EField(EIdent("t"), "map"), [EIdent("f")])])
+				]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("iter", Public, true, [
+				new HxFunctionArg("t", "Type", NoDefault, false, false),
+				new HxFunctionArg("f", "Type->Void", NoDefault, false, false)
+			], "Void", [
+				SSwitch(EIdent("t"), [PEnumExtract("TInst", [PWildcard, PBind("tl")]), PWildcard], [
+					SForIn("next", EIdent("tl"), SExpr(ECall(EIdent("f"), [EIdent("next")]), HxPos.unknown()), HxPos.unknown()),
+					SBlock([], HxPos.unknown())
+				], HxPos.unknown())
+			], "")
+		], []);
+		final typeToolsTraversalNames = new StringMap<Bool>();
+		for (name in ["TypeTools", "Type"])
+			typeToolsTraversalNames.set(name, true);
+		final typeToolsTraversalClasses = new StringMap<HxClassDecl>();
+		typeToolsTraversalClasses.set("TypeTools", typeToolsTraversalOwner);
+		typeToolsTraversalClasses.set("Type", typeStringSwitchClass);
+		final typeToolsMapLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(typeToolsTraversalOwner)[0],
+			typeToolsTraversalOwner, {
+				names: typeToolsTraversalNames,
+				byName: typeToolsTraversalClasses
+			})
+			.join("\n");
+		final typeToolsIterLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(typeToolsTraversalOwner)[1],
+			typeToolsTraversalOwner, {
+				names: typeToolsTraversalNames,
+				byName: typeToolsTraversalClasses
+			})
+			.join("\n");
+		assertContains(typeToolsMapLines,
+			"static std::shared_ptr<Type> map(std::shared_ptr<Type> t, std::function<std::shared_ptr<Type>(std::shared_ptr<Type>)> f)",
+			"C++ TypeTools.map should preserve the macro Type traversal helper signature");
+		assertContains(typeToolsMapLines, "return t;", "C++ TypeTools.map should typecheck as a bounded identity helper in the C++ MVP");
+		assertTrue(typeToolsMapLines.indexOf(".map(f)") < 0, "C++ TypeTools.map should not emit unsupported map calls on Type payload placeholders");
+		assertTrue(typeToolsMapLines.indexOf("tm.get()") < 0, "C++ TypeTools.map should not pass raw Type pointers to typed callbacks");
+		assertContains(typeToolsIterLines, "static void iter(std::shared_ptr<Type> t, std::function<void(std::shared_ptr<Type>)> f)",
+			"C++ TypeTools.iter should preserve the macro Type traversal helper signature");
+		assertContains(typeToolsIterLines, "(void)t;", "C++ TypeTools.iter should consume the Type argument in the bounded helper");
+		assertContains(typeToolsIterLines, "(void)f;", "C++ TypeTools.iter should consume the callback argument in the bounded helper");
+		assertTrue(typeToolsIterLines.indexOf("for (auto") < 0, "C++ TypeTools.iter should not iterate over Type payload placeholders");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],
