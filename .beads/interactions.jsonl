@@ -49,3 +49,6 @@
 {"id":"int-5d4eb31c","kind":"field_change","created_at":"2026-06-23T21:54:05.130745Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-xi7b","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
 {"id":"int-83a33f93","kind":"field_change","created_at":"2026-06-23T22:00:51.576141Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-hpar","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
 {"id":"int-b88178f6","kind":"field_change","created_at":"2026-06-23T22:00:51.577801Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-hpar","extra":{"field":"assignee","new_value":"Marcelo Serpa","old_value":""}}
+{"id":"int-a2795348","kind":"field_change","created_at":"2026-06-23T22:28:45.480273Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-hpar","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
+{"id":"int-c0cb17fd","kind":"field_change","created_at":"2026-06-23T22:35:30.182959Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-jeom","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
+{"id":"int-c0ed8576","kind":"field_change","created_at":"2026-06-23T22:35:30.190514Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-jeom","extra":{"field":"assignee","new_value":"Marcelo Serpa","old_value":""}}
