@@ -1078,6 +1078,35 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ raw switch expressions returned from Dynamic helpers should erase before function-scope inference recurses");
 	}
 
+	static function anonCollectScopeProgram():GenIrProgram {
+		final capture = new HxFunctionDecl("capture", Public, false, [
+			new HxFunctionArg("arg", "{label:String}", NoDefault, false, false),
+			new HxFunctionArg("value", "T", NoDefault, false, false)
+		], "{label:String,count:Int,value:T}", [
+			SVar("local", "{count:Int}", EAnon(["count"], [EInt(1)]), HxPos.unknown()),
+			SReturn(EAnon(["label", "count", "value"], [
+				EField(EIdent("arg"), "label"),
+				EField(EIdent("local"), "count"),
+				EIdent("value")
+			]), HxPos.unknown())
+		], "", ["__hxhx_fn_type_params=T"]);
+		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
+		final owner = new HxClassDecl("AnonCollectScope", false, [capture], []);
+		final decl = new HxModuleDecl("", [], main, [main, owner], false, false);
+		return new GenIrProgram([typedSyntheticModule("AnonCollectScope.hx", decl)], false);
+	}
+
+	static function assertCppAnonCollectUsesLightweightFunctionScope():Void {
+		final program = anonCollectScopeProgram();
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
+		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup);
+		final names = [for (struct in structs) struct.name].join("\n");
+		assertContains(names, "__hxhx_anon_label_std__string", "C++ anonymous collection should preserve structural argument hints");
+		assertContains(names, "__hxhx_anon_count_int", "C++ anonymous collection should preserve local structural variable hints");
+		assertContains(names, "__hxhx_anon_label_std__string_count_int__value_std__string",
+			"C++ anonymous collection should preserve structural return hints while using function type-parameter scope");
+	}
+
 	static function assertVendorExprToolsReturnTypesWhenAvailable():Void {
 		final exprToolsProgram = vendorExprToolsProgramWhenAvailable();
 		if (exprToolsProgram == null)
@@ -1603,6 +1632,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Math method references should lower to callable target intrinsics");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Error"), "OutsideBounds")) == "std::string(\"OutsideBounds\")",
 			"C++ Error enum-like fields should lower to tag strings instead of invalid dotted values");
+		assertCppAnonCollectUsesLightweightFunctionScope();
 		final reflectCompareExpr = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "compare"), [EString("a"), EString("b")]));
 		assertContains(reflectCompareExpr, "auto __hxhx_cmp_left = std::string(\"a\");",

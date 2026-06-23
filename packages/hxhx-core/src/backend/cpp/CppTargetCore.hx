@@ -28,6 +28,11 @@ typedef CppConstructorFieldInitializer = {
 	var arg:String;
 }
 
+typedef CppFunctionScopePrep = {
+	var argTypeOverrides:haxe.ds.StringMap<String>;
+	var localTypeOverrides:haxe.ds.StringMap<String>;
+}
+
 /**
 	Small native C++ source-emission target core.
 
@@ -56,6 +61,7 @@ class CppTargetCore {
 	static final inferredSignatureStack = new haxe.ds.StringMap<Bool>();
 	static final erasedDynamicReturnStack = new haxe.ds.StringMap<Bool>();
 	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
+	static var functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		traceCppPhase("emit_before_main_module");
@@ -156,6 +162,7 @@ class CppTargetCore {
 	}
 
 	static function renderProgram(program:GenIrProgram, main:{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}):String {
+		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 		final className = sanitizeIdentifier(HxClassDecl.getName(main.cls));
 		final typedModules = program.getTypedModules();
 		traceCppPhase("render_enter main=" + className + " typed_modules=" + typedModules.length);
@@ -895,6 +902,8 @@ class CppTargetCore {
 			final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 			if (hint.length == 0)
 				return;
+			if (hint.indexOf("{") < 0)
+				return;
 			traceAnonTypeHint(hint);
 			if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint) || CppTypeModel.isIteratorTypeHint(hint)) {
 				addTypeHint(genericTypeHintArg(hint), scope);
@@ -1008,9 +1017,14 @@ class CppTargetCore {
 				case SReturnVoid(_) | SBreak(_) | SContinue(_):
 			}
 		}
+		final collectedClasses = new haxe.ds.StringMap<Bool>();
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
+				final rawName = HxClassDecl.getName(cls);
+				if (collectedClasses.exists(rawName))
+					continue;
+				collectedClasses.set(rawName, true);
 				final className = sanitizeTypePath(HxClassDecl.getName(cls));
 				traceCppPhase("anon_collect_class_begin name=" + className);
 				final fieldScope = renderScope(cls, classLookup, "void");
@@ -1026,8 +1040,8 @@ class CppTargetCore {
 				for (fn in HxClassDecl.getFunctions(cls)) {
 					final fnName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 					traceCppPhase("anon_collect_fn_begin class=" + className + " name=" + fnName);
-					final scope = renderScope(cls, classLookup, cppFunctionReturnType(fn, cls, classLookup));
-					prepareFunctionScope(scope, fn);
+					final scope = renderScope(cls, classLookup, "auto");
+					prepareAnonCollectFunctionScope(scope, fn);
 					addTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope);
 					for (arg in HxFunctionDecl.getArgs(fn))
 						addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
@@ -1040,6 +1054,24 @@ class CppTargetCore {
 		}
 		traceCppPhase("anon_collect_done count=" + out.length);
 		return out;
+	}
+
+	/**
+		Prepare only the local scope facts required while discovering anonymous
+		struct shapes.
+
+		Full `prepareFunctionScope` performs render-time type-flow inference over
+		the entire function body. `collectAnonStructs` already walks each body for
+		anonymous literals and type hints, so running the full render prep here
+		duplicates expensive expression traversal. The collection scope also uses
+		a neutral return type so it does not trigger `cppFunctionReturnType`
+		inference before doing that walk.
+	**/
+	static function prepareAnonCollectFunctionScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null)
+			return;
+		applyFunctionTypeParams(scope, fn);
+		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 	}
 
 	static function renderMainStaticFunctions(cls:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
@@ -2132,11 +2164,33 @@ class CppTargetCore {
 		}
 	}
 
+	static function applyFunctionScopePrep(scope:CppRenderScope, prep:CppFunctionScopePrep):Void {
+		if (scope == null || prep == null)
+			return;
+		for (name in prep.argTypeOverrides.keys())
+			scope.argTypeOverrides.set(name, prep.argTypeOverrides.get(name));
+		for (name in prep.localTypeOverrides.keys())
+			scope.localTypeOverrides.set(name, prep.localTypeOverrides.get(name));
+	}
+
+	static function snapshotFunctionScopePrep(scope:CppRenderScope):CppFunctionScopePrep {
+		return {
+			argTypeOverrides: copyStringMap(scope.argTypeOverrides),
+			localTypeOverrides: copyStringMap(scope.localTypeOverrides)
+		};
+	}
+
 	static function prepareFunctionScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
 		if (scope == null || fn == null)
 			return;
 		applyFunctionTypeParams(scope, fn);
 		final key = functionSignatureKey(scope.owner, fn);
+		final cached = functionScopePrepCache.get(key);
+		if (cached != null) {
+			applyFunctionScopePrep(scope, cached);
+			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+			return;
+		}
 		if (functionScopePrepStack.exists(key)) {
 			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 			return;
@@ -2153,6 +2207,7 @@ class CppTargetCore {
 			functionScopePrepStack.remove(key);
 			throw e;
 		}
+		functionScopePrepCache.set(key, snapshotFunctionScopePrep(scope));
 		functionScopePrepStack.remove(key);
 	}
 
@@ -7961,8 +8016,8 @@ class CppTargetCore {
 		}
 		if (raw.length > 0 && isDynamicLikeTypeHint(raw) && functionReturnsErasedDynamicValue(fn, returnScope))
 			return "std::any";
-		prepareFunctionScope(returnScope, fn);
 		if (raw.length > 0) {
+			applyFunctionTypeParams(returnScope, fn);
 			return cppReturnTypeHint(raw, returnScope, returnLookup);
 		}
 		if (functionReturnsLambda(fn))
