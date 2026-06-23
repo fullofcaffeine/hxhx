@@ -702,6 +702,21 @@ class CppTargetCore {
 		out.push("  return out.str();");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T, typename F>");
+		out.push("static std::vector<std::string> __hxhx_vector_map_string(const std::vector<T>& values, F f) {");
+		out.push("  std::vector<std::string> out;");
+		out.push("  out.reserve(values.size());");
+		out.push("  for (const auto& value : values) {");
+		out.push("    if constexpr (std::is_void_v<decltype(f(value))>) {");
+		out.push("      f(value);");
+		out.push("      out.push_back(std::string());");
+		out.push("    } else {");
+		out.push("      out.push_back(__hxhx_stringify(f(value)));");
+		out.push("    }");
+		out.push("  }");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
 		out.push("struct __hxhx_throw_bottom {");
 		out.push("  template<typename T>");
 		out.push("  operator T() const { throw std::runtime_error(\"unreachable throw expression\"); }");
@@ -4934,6 +4949,8 @@ class CppTargetCore {
 					+ ", "
 					+ stringExpr(args[0], scope)
 					+ ")";
+				case "map" if (args.length == 1):
+					"__hxhx_vector_map_string(" + target + ", " + vectorMapMapperExpr(args[0], scope) + ")";
 				case "iterator" if (args.length == 0):
 					"__hxhx_vector_iterator_of(" + target + ")";
 				case "copy" if (args.length == 0):
@@ -5106,6 +5123,35 @@ class CppTargetCore {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
 		return sanitizeIdentifier(name) + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function vectorMapMapperExpr(mapper:HxExpr, ?scope:CppRenderScope):String {
+		final instanceValue = instanceMethodValueExpr(mapper, scope);
+		if (instanceValue != null)
+			return instanceValue;
+		return switch (mapper) {
+			case EIdent(name):
+				final fn = currentOwnerMethod(name, scope);
+				if (fn == null) {
+					renderExpr(mapper, scope);
+				} else {final names = [
+					for (arg in HxFunctionDecl.getArgs(fn))
+						sanitizeIdentifier(HxFunctionArg.getName(arg))
+				];
+					final params = [for (paramName in names) "auto " + paramName];
+					final target = HxFunctionDecl.getIsStatic(fn) ? "" : "this->";
+					"[&]("
+					+ params.join(", ")
+					+ ") { return "
+					+ target
+					+ sanitizeIdentifier(name)
+					+ "("
+					+ names.join(", ")
+					+ "); }";
+				}
+			case _:
+				renderExpr(mapper, scope);
+		};
 	}
 
 	static function reflectCompareExpr(args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -5609,6 +5655,8 @@ class CppTargetCore {
 				stringMethodReturnCppType(method);
 			case ECall(EField(receiver, "iterator"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
+			case ECall(EField(receiver, "map"), _) if (isCppVectorType(exprCppType(receiver, scope))):
+				"std::vector<std::string>";
 			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				"std::string";
 			case ECall(EField(receiver, "copy"), _) if (isCppVectorType(exprCppType(receiver, scope))):
@@ -6125,6 +6173,8 @@ class CppTargetCore {
 				stringMethodReturnCppType(method);
 			case ECall(EField(receiver, "iterator"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
+			case ECall(EField(receiver, "map"), _) if (isCppVectorType(exprCppType(receiver, scope))):
+				"std::vector<std::string>";
 			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				"std::string";
 			case ECall(EField(receiver, "copy"), _) if (isCppVectorType(exprCppType(receiver, scope))):

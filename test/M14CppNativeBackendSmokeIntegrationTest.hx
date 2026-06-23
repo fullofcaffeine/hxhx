@@ -483,6 +483,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function filterInferred(it:Iterable<String>, f:String->Bool) {",
 			"    return [for (x in it) if (f(x)) x];",
 			"  }",
+			"  public function printItem(item:String):String {",
+			"    return item;",
+			"  }",
+			"  public function mapJoin(items:Array<String>):String {",
+			"    return items.map(printItem).join(\", \");",
+			"  }",
 			"  public static function count(it:Iterable<String>, ?pred:String->Bool):Int {",
 			"    var n = 0;",
 			"    if (pred == null) {",
@@ -5061,6 +5067,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower named function-typed mapi helpers to callable C++ signatures");
 		assertContains(source, "__hxhx_comp_out.push_back(f((i++), x));",
 			"C++ smoke should infer comprehension output from multi-argument local std::function calls");
+		assertContains(source, "return __hxhx_join(__hxhx_vector_map_string(items, [&](auto item) { return this->printItem(item); }), std::string(\", \"));",
+			"C++ smoke should lower vector map/join chains with same-owner method callbacks to support helpers");
+		assertTrue(source.indexOf(".map(printItem).join") < 0, "C++ smoke should not emit nonexistent std::vector map/join chains");
 		assertContains(source, "static std::vector<std::string> flattenLike(std::vector<std::vector<std::string>> it) {",
 			"C++ smoke should lower nested Iterable<T> arguments to vector values");
 		assertContains(source, "for (auto y : x) {", "C++ smoke should lower nested comprehension for-in markers to nested loops");
