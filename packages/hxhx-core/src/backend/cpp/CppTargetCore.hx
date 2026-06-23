@@ -4054,7 +4054,10 @@ class CppTargetCore {
 				}
 				continue;
 			}
-			out.push(indent + "  " + (emitted == 0 ? "if" : "else if") + " (" + switchPatternCond(pattern, switchValue) + ") {");
+			final cond = switchPatternCond(pattern, switchValue);
+			if (switchPatternShouldSkipKnownFalseBranch(pattern, cond))
+				continue;
+			out.push(indent + "  " + (emitted == 0 ? "if" : "else if") + " (" + cond + ") {");
 			for (line in switchPatternBindingLines(pattern, switchValue, indent + "    "))
 				out.push(line);
 			withLocalScope(scope, () -> {
@@ -4065,7 +4068,7 @@ class CppTargetCore {
 			emitted++;
 		}
 		if (defaultBody != null) {
-			out.push(indent + "  else {");
+			out.push(indent + "  " + (emitted == 0 ? "{" : "else {"));
 			for (line in switchPatternBindingLines(defaultPattern, switchValue, indent + "    "))
 				out.push(line);
 			withLocalScope(scope, () -> {
@@ -7021,6 +7024,8 @@ class CppTargetCore {
 				continue;
 			}
 			final cond = switchPatternCond(pattern, switchValue);
+			if (switchPatternShouldSkipKnownFalseBranch(pattern, cond))
+				continue;
 			out.push("  " + (emitted == 0 ? "if" : "else if") + " (" + cond + ") {");
 			for (line in switchPatternBindingLines(pattern, switchValue, "    ", scope, typeName, exprs[i]))
 				out.push(line);
@@ -7029,7 +7034,7 @@ class CppTargetCore {
 			emitted++;
 		}
 		if (defaultExpr != null) {
-			out.push("  else {");
+			out.push("  " + (emitted == 0 ? "{" : "else {"));
 			for (line in switchPatternBindingLines(defaultPattern, switchValue, "    ", scope, typeName, defaultExpr))
 				out.push(line);
 			out.push("    return " + switchBranchExpr(defaultExpr, typeName, scope) + ";");
@@ -7147,6 +7152,26 @@ class CppTargetCore {
 			}
 		}
 		return "(" + parts.join(" && ") + ")";
+	}
+
+	static function switchPatternCondIsKnownFalse(cond:String):Bool {
+		final compact = cond == null ? "" : removeTypeHintWhitespace(cond);
+		if (compact == "false" || compact == "(false)")
+			return true;
+		return compact.indexOf("&&false") >= 0 || compact.indexOf("&&(false)") >= 0 || compact.indexOf("false&&") >= 0 || compact.indexOf("(false)&&") >= 0;
+	}
+
+	static function switchPatternShouldSkipKnownFalseBranch(pattern:HxSwitchPattern, cond:String):Bool {
+		if (!switchPatternCondIsKnownFalse(cond))
+			return false;
+		return switch (pattern) {
+			case PEnumExtract(_, _):
+				true;
+			case PCapture(_, inner):
+				switchPatternShouldSkipKnownFalseBranch(inner, cond);
+			case _:
+				false;
+		};
 	}
 
 	static function switchObjectPatternCond(fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>, switchValue:String):String {

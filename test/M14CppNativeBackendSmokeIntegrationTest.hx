@@ -2928,6 +2928,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(switchPatternLines, "auto m2 = __hxhx_switch;",
 			"C++ nested switch branches should bind enum-pattern variables before rendering branch expressions");
 		assertContains(switchPatternLines, "return (m1 == m2);", "C++ switch branch expressions should use pattern variables after they are declared");
+		final typeClass = new HxClassDecl("Type", false, [], []);
+		final typeParamClass = new HxClassDecl("TypeParam", false, [], []);
+		final typeToolsOwner = new HxClassDecl("TypeToolsOwner", false, [], []);
+		final typeToolsNames = new StringMap<Bool>();
+		for (name in ["Type", "TypeParam", "TypeToolsOwner"])
+			typeToolsNames.set(name, true);
+		final typeToolsClasses = new StringMap<HxClassDecl>();
+		typeToolsClasses.set("Type", typeClass);
+		typeToolsClasses.set("TypeParam", typeParamClass);
+		typeToolsClasses.set("TypeToolsOwner", typeToolsOwner);
+		final impossibleEnumPayloadMethod = new HxFunctionDecl("toTypeParamLike", Public, true, [new HxFunctionArg("type", "Type", NoDefault, false, false)],
+			"TypeParam", [
+				SReturn(ESwitch(EIdent("type"), [PEnumExtract("TInst", [PUnsupportedGuard(PBind("e")), PWildcard]), PWildcard],
+					[ECall(EEnumValue("TPExpr"), [EIdent("e")]), EEnumValue("TPType")]),
+					HxPos.unknown())
+			], "");
+		final impossibleEnumPayloadLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(impossibleEnumPayloadMethod, typeToolsOwner, {
+			names: typeToolsNames,
+			byName: typeToolsClasses
+		}).join("\n");
+		assertTrue(impossibleEnumPayloadLines.indexOf("auto __hxhx_enum_arg_0 = e;") < 0,
+			"C++ impossible enum-pattern branches should not render unbound enum-constructor payload references");
+		assertContains(impossibleEnumPayloadLines, "return std::make_shared<TypeParam>();",
+			"C++ switch expressions should keep the reachable default branch when impossible enum payload branches are skipped");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],
