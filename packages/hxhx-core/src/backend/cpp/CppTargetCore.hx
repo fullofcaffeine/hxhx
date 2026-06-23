@@ -3419,7 +3419,7 @@ class CppTargetCore {
 	static function collectCallableArgTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>, expectedType:String):Void {
 		switch (expr) {
 			case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
-				final overrideType = concreteForwardedOverrideType(expectedType, scope);
+				final overrideType = callableExpectedArgOverrideType(expectedType, scope);
 				if (overrideType.length > 0)
 					setAssignedArgTypeOverride(scope, sanitizeIdentifier(name), overrideType);
 			case ECall(EIdent(name), args) if (candidates.exists(sanitizeIdentifier(name))):
@@ -3433,8 +3433,11 @@ class CppTargetCore {
 			case ECall(callee, args):
 				collectForwardedCallArgTypeOverrides(callee, args, scope, candidates);
 				collectCallableArgTypeOverridesFromExpr(callee, scope, candidates, "");
-				for (arg in args)
-					collectCallableArgTypeOverridesFromExpr(arg, scope, candidates, "");
+				final functionArgTypes = CppTypeModel.cppFunctionArgTypesFromCppType(exprCppType(callee, scope));
+				for (i in 0...args.length) {
+					final argExpected = i < functionArgTypes.length ? functionArgTypes[i] : "";
+					collectCallableArgTypeOverridesFromExpr(args[i], scope, candidates, argExpected);
+				}
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				collectCallableArgTypeOverridesFromExpr(iterable, scope, candidates, "");
 				final elementExpected = isCppVectorType(expectedType) ? cppVectorElementType(expectedType) : "";
@@ -3641,6 +3644,13 @@ class CppTargetCore {
 		if (inner.length > 0)
 			return inner == "std::string" ? "" : inner;
 		return typeName;
+	}
+
+	static function callableExpectedArgOverrideType(typeName:String, ?scope:CppRenderScope):String {
+		if (typeName == null || typeName.length == 0 || typeName == "auto" || typeName == "std::any" || typeName == "std::string")
+			return "";
+		final inner = cppOptionalInnerType(typeName);
+		return inner.length > 0 ? (inner == "std::string" ? "" : inner) : typeName;
 	}
 
 	static function callableArgExprType(expr:HxExpr, scope:CppRenderScope):String {
@@ -4842,6 +4852,8 @@ class CppTargetCore {
 					+ ")";
 				case "iterator" if (args.length == 0):
 					"__hxhx_vector_iterator_of(" + target + ")";
+				case "copy" if (args.length == 0):
+					target;
 				case "blit" if (args.length == 4 && isCppBytesDataVectorType(receiverCppType)):
 					"__hxhx_bytes_blit("
 					+ target
@@ -4966,7 +4978,15 @@ class CppTargetCore {
 		final listElementType = listElementCppType(receiverCppType);
 		if (sanitizeIdentifier(method) == "add" && args.length == 1 && listElementType.length > 0)
 			return [valueExprForExpectedType(args[0], listElementType, scope)];
+		final instanceArgs = renderInstanceMethodCallArgs(receiverCppType, method, args, scope);
+		if (instanceArgs.length == args.length && hasKnownInstanceMethod(receiverCppType, method, scope))
+			return instanceArgs;
 		return renderSimpleCallArgs(args, scope);
+	}
+
+	static function hasKnownInstanceMethod(receiverCppType:String, methodName:String, ?scope:CppRenderScope):Bool {
+		final className = instanceMethodReceiverClassName(receiverCppType, scope);
+		return className != null && classMethodDecl(className, methodName, false, scope) != null;
 	}
 
 	static function listElementCppType(receiverCppType:String):String {
@@ -5012,6 +5032,79 @@ class CppTargetCore {
 		final owner = scope == null ? null : scope.classByName.get(className);
 		final paramTypes = owner == null ? null : inferredFunctionArgCppTypes(fn, owner, scope.classByName);
 		return renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, paramTypes);
+	}
+
+	static function renderInstanceMethodCallArgs(receiverCppType:String, methodName:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		final className = instanceMethodReceiverClassName(receiverCppType, scope);
+		if (className == null)
+			return renderSimpleCallArgs(args, scope);
+		final fn = classMethodDecl(className, methodName, false, scope);
+		if (fn == null)
+			return renderSimpleCallArgs(args, scope);
+		final owner = scope == null ? null : scope.classByName.get(className);
+		final paramTypes = owner == null ? null : instantiateGenericClassParamTypes(className, receiverCppType,
+			inferredFunctionArgCppTypes(fn, owner, scope.classByName), scope);
+		return renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, paramTypes);
+	}
+
+	static function instanceMethodReceiverClassName(receiverCppType:String, ?scope:CppRenderScope):Null<String> {
+		final referenceName = classNameFromCppType(receiverCppType);
+		if (referenceName != null) {
+			final base = sanitizeTypePath(typeBaseName(referenceName));
+			return scopeHasClass(scope, base) ? base : null;
+		}
+		return classNameFromCppExprType(receiverCppType, scope);
+	}
+
+	static function instantiateGenericClassParamTypes(className:String, receiverCppType:String, paramTypes:Array<String>, ?scope:CppRenderScope):Array<String> {
+		if (paramTypes == null || paramTypes.length == 0)
+			return paramTypes;
+		final typeParams = genericClassTypeParamsForName(className, scope);
+		final typeArgs = templateArgsFromExpectedClassType(className, receiverCppType);
+		if (typeParams.length == 0 || typeArgs.length == 0)
+			return paramTypes;
+		return [
+			for (typeName in paramTypes)
+				substituteCppTypeParams(typeName, typeParams, typeArgs)
+		];
+	}
+
+	static function substituteCppTypeParams(typeName:String, typeParams:Array<String>, typeArgs:Array<String>):String {
+		var out = typeName;
+		final count = typeParams.length < typeArgs.length ? typeParams.length : typeArgs.length;
+		for (i in 0...count)
+			out = replaceCppTypeParamToken(out, typeParams[i], typeArgs[i]);
+		return out;
+	}
+
+	static function replaceCppTypeParamToken(typeName:String, param:String, replacement:String):String {
+		final clean = sanitizeIdentifier(param);
+		if (typeName == null || clean.length == 0 || replacement == null || replacement.length == 0)
+			return typeName;
+		final out = new StringBuf();
+		var i = 0;
+		while (i < typeName.length) {
+			if (typeName.substr(i, clean.length) == clean
+				&& !isCppIdentChar(typeName.charAt(i - 1))
+				&& !isCppIdentChar(typeName.charAt(i + clean.length))) {
+				out.add(replacement);
+				i += clean.length;
+			} else {
+				out.add(typeName.charAt(i));
+				i++;
+			}
+		}
+		return out.toString();
+	}
+
+	static function isCppIdentChar(ch:String):Bool {
+		if (ch == null || ch.length == 0)
+			return false;
+		final code = ch.charCodeAt(0);
+		return (code >= "A".code && code <= "Z".code)
+			|| (code >= "a".code && code <= "z".code)
+			|| (code >= "0".code && code <= "9".code)
+			|| ch == "_";
 	}
 
 	static function renderFunctionCallArgs(params:Array<HxFunctionArg>, args:Array<HxExpr>, ?scope:CppRenderScope, ?paramTypes:Array<String>):Array<String> {
@@ -5104,6 +5197,14 @@ class CppTargetCore {
 	static function callArgExprForParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope, ?expectedParamType:String):String {
 		final paramType = expectedParamType != null && expectedParamType.length > 0 ? expectedParamType : cppFunctionArgType(param, scope);
 		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
+		final expectedClass = classNameFromCppType(valueType);
+		if (expectedClass != null) {
+			switch (arg) {
+				case EThis if (currentOwnerIsOrExtends(expectedClass, scope)):
+					return CppRuntimeSupport.borrowedSharedPtrExpr(expectedClass, "this");
+				case _:
+			}
+		}
 		if (valueType == "std::shared_ptr<PosInfos>")
 			return posInfosSharedPtrExpr(arg, scope);
 		if (valueType == "std::shared_ptr<EnumValue>" && exprCppType(arg, scope) == "std::any")
@@ -5380,6 +5481,8 @@ class CppTargetCore {
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				"std::string";
+			case ECall(EField(receiver, "copy"), _) if (isCppVectorType(exprCppType(receiver, scope))):
+				exprCppType(receiver, scope);
 			case ECall(EField(receiver, "pop"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				cppVectorElementType(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "next"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
@@ -5879,6 +5982,8 @@ class CppTargetCore {
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				"std::string";
+			case ECall(EField(receiver, "copy"), _) if (isCppVectorType(exprCppType(receiver, scope))):
+				exprCppType(receiver, scope);
 			case ECall(EField(receiver, "pop"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				cppVectorElementType(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "next"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):

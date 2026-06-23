@@ -4512,6 +4512,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function clear():Void {",
 			"    handlers = new Array();",
 			"  }",
+			"  public function dispatch(e) {",
+			"    var list = handlers.copy();",
+			"    for (l in list) {",
+			"      l(e);",
+			"    }",
+			"    return true;",
+			"  }",
 			"}",
 			"class TestFixture {",
 			"  public function new() {}",
@@ -4519,8 +4526,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"class RunnerGenericLike {",
 			"  public var fixtures:Array<TestFixture> = [];",
 			"  public var onProgress:Dispatcher<String>;",
+			"  public var onRunner:Dispatcher<RunnerGenericLike>;",
 			"  public function new() {",
 			"    onProgress = new Dispatcher();",
+			"    onRunner = new Dispatcher();",
+			"  }",
+			"  public function runSelf():Void {",
+			"    onRunner.dispatch(this);",
 			"  }",
 			"  public function isTestFixtureName(prefixes:Array<String>):Bool {",
 			"    return true;",
@@ -4552,6 +4564,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ typed empty Array fields should render with the declared element type instead of vector<int>");
 		assertContains(parsedRunnerGenericLines, "onProgress = __hxhx_make_shared_Dispatcher<std::string>();",
 			"C++ zero-arg generic constructor assignments should infer template args from the destination field type");
+		assertContains(parsedRunnerGenericLines, "onRunner = __hxhx_make_shared_Dispatcher<std::shared_ptr<RunnerGenericLike>>();",
+			"C++ zero-arg generic constructor assignments should infer reference template args from the destination field type");
 		final parsedDispatcherLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(parsedRunnerGenericClasses.get("Dispatcher"), {
 			names: parsedRunnerGenericNames,
 			byName: parsedRunnerGenericClasses
@@ -4560,6 +4574,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic function-vector fields should preserve the function element type");
 		assertContains(parsedDispatcherLines, "handlers = std::vector<std::function<void(T)>>{};",
 			"C++ generic function-vector assignments should use the destination field element type");
+		assertContains(parsedDispatcherLines, "bool dispatch(T e) {", "C++ generic function-vector calls should infer unhinted dispatch args as T");
+		assertTrue(parsedDispatcherLines.indexOf("bool dispatch(std::string e)") < 0,
+			"C++ generic function-vector calls should not leave dispatch args as string");
+		assertContains(parsedRunnerGenericLines, "onRunner->dispatch(__hxhx_borrowed_shared<RunnerGenericLike>(this));",
+			"C++ generic method calls should instantiate T from the receiver and pass this as a borrowed reference payload");
 		assertTrue(parsedDispatcherLines.indexOf("handlers = std::vector<std::string>{};") < 0,
 			"C++ generic function-vector assignments should not fall back to string arrays");
 		assertContains(parsedRunnerGenericLines, "return isTestFixtureName(std::vector<std::string>{std::string(prefix)});",
