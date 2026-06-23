@@ -2366,6 +2366,8 @@ class CppTargetCore {
 			return returnTraced("special_assert_same_as", renderAssertPolymorphicSameAsHelper(fn, owner, classLookup));
 		if (isLambdaHasHelper(fn, owner))
 			return returnTraced("special_lambda_has", renderLambdaHasHelper());
+		if (isMacroCompilerApiShimHelper(fn, owner))
+			return returnTraced("special_macro_compiler_api", renderMacroCompilerApiShimHelper(fn, owner, classLookup));
 		if (isPolymorphicIsOfTypeHelper(fn))
 			return returnTraced("special_is_of_type", renderPolymorphicIsOfTypeHelper(fn, owner, classLookup));
 		if (isTypeErasedValueHelper(fn, owner))
@@ -2462,6 +2464,63 @@ class CppTargetCore {
 			"    return false;",
 			"  }"
 		];
+	}
+
+	static function isMacroCompilerApiShimHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Compiler")
+			return false;
+		if (!HxFunctionDecl.getIsStatic(fn))
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "include" | "exclude" | "excludeFile" | "excludeBaseType":
+				true;
+			case "getDisplayPos":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function renderMacroCompilerApiShimHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = macroCompilerApiShimReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = [
+			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"
+		];
+		final apiName = switch (method) {
+			case "excludeFile":
+				"exclude_file";
+			case "getDisplayPos":
+				"get_display_pos";
+			case "excludeBaseType":
+				"";
+			case _:
+				method;
+		};
+		if (apiName.length == 0) {
+			out.push("    " + returnVoidStmt(scope));
+		} else {
+			final renderedArgs = [for (arg in args) sanitizeIdentifier(HxFunctionArg.getName(arg))];
+			final call = "__hxhx_call_macro_api<"
+				+ returnType
+				+ ">(std::string("
+				+ quoteString(apiName)
+				+ "), "
+				+ args.length
+				+ (renderedArgs.length > 0 ? ", " + renderedArgs.join(", ") : "")
+				+ ")";
+			out.push("    " + (returnType == "void" ? call + ";" : "return " + call + ";"));
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function macroCompilerApiShimReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		if (sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "getDisplayPos")
+			return "std::any";
+		return cppFunctionReturnType(fn, owner, classLookup);
 	}
 
 	static function isAssertPolymorphicStringifyHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {

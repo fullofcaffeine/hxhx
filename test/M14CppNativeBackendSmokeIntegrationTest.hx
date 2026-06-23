@@ -1267,6 +1267,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
 		final nullClass = new HxClassDecl("Null", false, []);
 		final positionClass = new HxClassDecl("Position", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")]);
+		final baseTypeClass = new HxClassDecl("BaseType", false, []);
 		final compilerClass = new HxClassDecl("Compiler", false, [
 			new HxFunctionDecl("getDisplayPos", Public, true, [], "Null<Position>", [
 				SReturn(ECall(EIdent("callMacroApi"), [EString("get_display_pos"), EInt(0)]), pos)
@@ -1279,9 +1280,34 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			],
 				""),
 			new HxFunctionDecl("getDefine", Public, true, [new HxFunctionArg("key", "String", NoDefault, false, false)], "__HxMacroExpr",
-				[SReturn(EMacroExpr(EString("defined"), []), pos)], "")
+				[SReturn(EMacroExpr(EString("defined"), []), pos)], ""),
+			new HxFunctionDecl("include", Public, true, [
+				new HxFunctionArg("pack", "String", NoDefault, false, false),
+				new HxFunctionArg("rec", "Bool", Default(EBool(true)), true, false),
+				new HxFunctionArg("ignore", "Array<String>", Default(ENull), true, false),
+				new HxFunctionArg("classPaths", "Array<String>", Default(ENull), true, false),
+				new HxFunctionArg("strict", "Bool", Default(EBool(false)), true, false)
+			], "Void", [
+				SVar("include", "", ELambda(["pack"], ECall(EIdent("include"), [EIdent("pack")])), pos)
+			], ""),
+			new HxFunctionDecl("exclude", Public, true, [
+				new HxFunctionArg("pack", "String", NoDefault, false, false),
+				new HxFunctionArg("rec", "Bool", Default(EBool(true)), true, false)
+			], "Void", [
+				SExpr(ECall(EField(EIdent("Context"), "onGenerate"),
+					[
+						ELambda(["types"], ECall(EIdent("__hxhx_for_in"), [EIdent("types"), ELambda(["t"], ENull), ENull]))
+					]),
+					pos)
+			],
+				""),
+			new HxFunctionDecl("excludeFile", Public, true, [new HxFunctionArg("fileName", "String", NoDefault, false, false)], "Void",
+				[SVar("classes", "", ENew("StringMap", []), pos)], ""),
+			new HxFunctionDecl("excludeBaseType", Public, true, [new HxFunctionArg("baseType", "BaseType", NoDefault, false, false)], "Void", [
+				SExpr(ECall(EField(EField(EIdent("baseType"), "meta"), "add"), [EString(":hxGen")]), pos)
+			], "")
 		]);
-		final compilerDecl = new HxModuleDecl("haxe.macro", [], compilerClass, [nullClass, positionClass, compilerClass], false, false);
+		final compilerDecl = new HxModuleDecl("haxe.macro", [], compilerClass, [nullClass, positionClass, baseTypeClass, compilerClass], false, false);
 		return MacroStage.expandProgram([
 			typedSyntheticModule("Main.hx", mainDecl),
 			typedSyntheticModule("std/haxe/macro/Compiler.hx", compilerDecl)
@@ -4715,10 +4741,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final macroCompilerNullEmit = BackendRegistry.createForTarget("cpp-native")
 			.emit(macroCompilerNullSurfaceProgram(), context(macroCompilerNullDir, true, true));
 		final macroCompilerNullSource = File.getContent(macroCompilerNullEmit.entryPath);
-		assertContains(macroCompilerNullSource, "static std::shared_ptr<Position> getDisplayPos()",
-			"C++ macro Compiler Null<Position> helpers should lower to the nullable Position carrier, not a fake Null class");
-		assertContains(macroCompilerNullSource, "return __hxhx_call_macro_api<std::shared_ptr<Position>>(std::string(\"get_display_pos\"), 0);",
-			"C++ macro Compiler API calls should use the normalized helper return type");
+		assertContains(macroCompilerNullSource, "static std::any getDisplayPos()",
+			"C++ macro Compiler.getDisplayPos should erase to macro API data instead of requiring a fake Null carrier");
+		assertContains(macroCompilerNullSource, "return __hxhx_call_macro_api<std::any>(std::string(\"get_display_pos\"), 0);",
+			"C++ macro Compiler.getDisplayPos should route through erased macro API plumbing");
 		assertContains(macroCompilerNullSource, "static std::any getMalformedBareNull()",
 			"C++ malformed bare Null hints should erase instead of emitting std::shared_ptr<Null>");
 		assertContains(macroCompilerNullSource, "static std::any getDecodedStaleNullPointer()",
@@ -4727,9 +4753,48 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ macro expression helper returns should preserve the native macro expression carrier");
 		assertContains(macroCompilerNullSource, "return __hxhx_macro_expr(",
 			"C++ macro expression helper returns should return the structural macro object directly");
+		assertContains(macroCompilerNullSource, "static void include(std::string pack, std::optional<bool> rec = true",
+			"C++ macro Compiler.include should preserve the public helper signature");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<void>(std::string(\"include\"), 5, pack, rec, ignore, classPaths, strict);",
+			"C++ macro Compiler.include should lower to target-owned macro API plumbing instead of recursive local lambdas");
+		assertContains(macroCompilerNullSource, "static void exclude(std::string pack, std::optional<bool> rec = true)",
+			"C++ macro Compiler.exclude should preserve the public helper signature");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<void>(std::string(\"exclude\"), 2, pack, rec);",
+			"C++ macro Compiler.exclude should lower to target-owned macro API plumbing");
+		assertContains(macroCompilerNullSource, "static void excludeFile(std::string fileName)",
+			"C++ macro Compiler.excludeFile should preserve the public helper signature");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<void>(std::string(\"exclude_file\"), 1, fileName);",
+			"C++ macro Compiler.excludeFile should lower to target-owned macro API plumbing");
+		assertContains(macroCompilerNullSource, "static void excludeBaseType(std::shared_ptr<BaseType> baseType)",
+			"C++ macro Compiler.excludeBaseType should preserve its helper signature");
+		assertTrue(macroCompilerNullSource.indexOf("__hxhx_optional_lambda") < 0,
+			"C++ macro Compiler API shims should not emit recursive optional-lambda helper bodies");
+		assertTrue(macroCompilerNullSource.indexOf("__hxhx_for_in") < 0, "C++ macro Compiler API shims should not leak expression-only for-in markers");
+		assertTrue(macroCompilerNullSource.indexOf("baseType->meta") < 0,
+			"C++ macro Compiler.excludeBaseType shim should not force incomplete MetaAccess/BaseType member lowering");
 		assertTrue(macroCompilerNullSource.indexOf("std::shared_ptr<Null>") < 0, "C++ macro Compiler surfaces should not emit fake Null runtime references");
 		assertTrue(macroCompilerNullSource.indexOf("return static_cast<int>(__hxhx_macro_expr(") < 0,
 			"C++ macro expression helper returns should not fall through to the Int fallback cast");
+		final staleDisplayPosCompiler = new HxClassDecl("Compiler", false, [
+			new HxFunctionDecl("getDisplayPos", Public, true, [], "std::shared_ptr<Null>", [
+				SReturn(ECall(EIdent("callMacroApi"), [EString("get_display_pos"), EInt(0)]), HxPos.unknown())
+			], "")
+		]);
+		final staleDisplayPosNames = new StringMap<Bool>();
+		staleDisplayPosNames.set("Compiler", true);
+		final staleDisplayPosClasses = new StringMap<HxClassDecl>();
+		staleDisplayPosClasses.set("Compiler", staleDisplayPosCompiler);
+		final staleDisplayPosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(staleDisplayPosCompiler)[0],
+			staleDisplayPosCompiler, {
+				names: staleDisplayPosNames,
+				byName: staleDisplayPosClasses
+			})
+			.join("\n");
+		assertContains(staleDisplayPosLines, "static std::any getDisplayPos()", "C++ stale macro Compiler.getDisplayPos return hints should erase to std::any");
+		assertContains(staleDisplayPosLines, "__hxhx_call_macro_api<std::any>(std::string(\"get_display_pos\"), 0);",
+			"C++ stale macro Compiler.getDisplayPos should still route through macro API plumbing");
+		assertTrue(staleDisplayPosLines.indexOf("std::shared_ptr<Null>") < 0,
+			"C++ stale macro Compiler.getDisplayPos should not emit fake Null runtime references");
 
 		final enumCarrierDir = Path.join([root, "enum-carrier-name-collision-source-only"]);
 		final enumCarrierEmit = BackendRegistry.createForTarget("cpp-native").emit(enumCarrierNameCollisionProgram(), context(enumCarrierDir, true, true));
