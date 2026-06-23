@@ -2783,7 +2783,22 @@ class CppTargetCore {
 			for (param in meta.substr(prefix.length).split(","))
 				add(param);
 		}
+		for (arg in HxFunctionDecl.getArgs(fn))
+			collectDynamicGenericWildcardParamsFromHint(HxFunctionArg.getTypeHint(arg), add);
 		return params;
+	}
+
+	static function collectDynamicGenericWildcardParamsFromHint(typeHint:String, add:String->Void):Void {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final args = genericTypeHintArgs(hint);
+		if (args.length == 0)
+			return;
+		for (arg in args) {
+			if (isDynamicLikeTypeHint(arg))
+				add("TDynamic");
+			else
+				collectDynamicGenericWildcardParamsFromHint(arg, add);
+		}
 	}
 
 	static function applyFunctionTypeParams(scope:CppRenderScope, fn:HxFunctionDecl):Void {
@@ -3052,7 +3067,11 @@ class CppTargetCore {
 		final rawTypeHint = HxFunctionArg.getTypeHint(arg);
 		final explicit = StringTools.trim(rawTypeHint == null ? "" : rawTypeHint);
 		final inferred = explicit.length > 0 ? "" : cppFunctionArgDefaultType(arg, scope);
-		return explicit.length > 0 ? cppTypeHint(explicit, scope) : (inferred.length > 0 ? inferred : cppTypeHint("", scope));
+		if (explicit.length > 0) {
+			final wildcard = dynamicGenericWildcardCppTypeHint(explicit, scope);
+			return wildcard.length > 0 ? wildcard : cppTypeHint(explicit, scope);
+		}
+		return inferred.length > 0 ? inferred : cppTypeHint("", scope);
 	}
 
 	static function inferCallableArgTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
@@ -4633,9 +4652,7 @@ class CppTargetCore {
 		final expectedTemplateArgs = templateArgsFromExpectedClassType(className, expectedCppType);
 		if (scopeHasClass(scope, className)
 			&& (genericClassTypeParamsForName(className, scope).length > 0 || expectedTemplateArgs.length > 0)) {
-			var templateArgs = scopedTemplateArgsForClass(className, scope);
-			if (templateArgs.length == 0)
-				templateArgs = expectedTemplateArgs;
+			var templateArgs = expectedTemplateArgs.length > 0 ? expectedTemplateArgs : scopedTemplateArgsForClass(className, scope);
 			if (templateArgs.length == 0 && args.length == 0)
 				templateArgs = templateArgsFromExpectedClassType(className, scope == null ? "" : scope.returnType);
 			return "__hxhx_make_shared_"
@@ -7481,9 +7498,22 @@ class CppTargetCore {
 			case EIdent(name):
 				final fn = currentOwnerMethod(name, scope);
 				if (fn == null) null; else typedMethodValueLambda("this->", sanitizeIdentifier(name), fn, expectedType);
-			case EField(_, _):
-				final methodValue = instanceMethodValueExpr(expr, scope);
-				methodValue == null ? null : expectedType + "(" + methodValue + ")";
+			case EField(receiver, method):
+				final ownerType = instanceMethodReceiverClassName(exprCppType(receiver, scope), scope);
+				if (ownerType == null || ownerType.length == 0) null; else {
+					final fn = classMethodDecl(ownerType, method, false, scope);
+					if (fn == null)
+						null;
+					else {
+						final target = switch (receiver) {
+							case EThis:
+								"this->";
+							case _:
+								renderExpr(receiver, scope) + fieldAccessOp(receiver, scope);
+						}
+						typedMethodValueLambda(target, sanitizeIdentifier(method), fn, expectedType);
+					}
+				}
 			case _:
 				null;
 		};
@@ -8144,6 +8174,29 @@ class CppTargetCore {
 		if (isFunctionTypeHint(hint))
 			return cppFunctionTypeHint(hint, scope, classLookup);
 		return CppTypeModel.cppTypeHint(hint, scope, classLookup);
+	}
+
+	static function dynamicGenericWildcardCppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final args = genericTypeHintArgs(hint);
+		if (args.length == 0)
+			return "";
+		final base = sanitizeTypePath(typeBaseName(hint));
+		if (!scopeHasClass(scope, base) || genericClassTypeParamsForName(base, scope).length == 0)
+			return "";
+		var hasWildcard = false;
+		final renderedArgs = [
+			for (arg in args) {
+				if (isDynamicLikeTypeHint(arg)) {
+					hasWildcard = true;
+					cppTypeParamName("TDynamic", scope);
+				} else {
+					final nested = dynamicGenericWildcardCppTypeHint(arg, scope, classLookup);
+					nested.length > 0 ? nested : cppTypeHint(arg, scope, classLookup);
+				}
+			}
+		];
+		return hasWildcard ? "std::shared_ptr<" + base + "<" + renderedArgs.join(", ") + ">>" : "";
 	}
 
 	static function functionTypePartHint(part:String):String {

@@ -4532,9 +4532,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"class TestHandler<T> {",
 			"  public var fixture:T;",
 			"  public var onComplete:Dispatcher<TestHandler<T>>;",
+			"  public var onPrecheck:Dispatcher<TestHandler<T>>;",
 			"  public function new(fixture:T) {",
 			"    this.fixture = fixture;",
 			"    onComplete = new Dispatcher();",
+			"    onPrecheck = new Dispatcher();",
+			"  }",
+			"}",
+			"class TestResult {",
+			"  public function new() {}",
+			"  public static function ofHandler(handler:TestHandler<Dynamic>):TestResult {",
+			"    return new TestResult();",
 			"  }",
 			"}",
 			"class RunnerGenericLike {",
@@ -4542,11 +4550,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public var fixtureList:List<TestFixture>;",
 			"  public var onProgress:Dispatcher<String>;",
 			"  public var onRunner:Dispatcher<RunnerGenericLike>;",
+			"  public var onPrecheck:Dispatcher<TestHandler<TestFixture>>;",
 			"  var pos:Int = 0;",
 			"  public function new() {",
 			"    fixtureList = new List();",
 			"    onProgress = new Dispatcher();",
 			"    onRunner = new Dispatcher();",
+			"    onPrecheck = new Dispatcher();",
 			"  }",
 			"  public function runSelf():Void {",
 			"    onRunner.dispatch(this);",
@@ -4569,6 +4579,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function runNext(finishedHandler:TestHandler<TestFixture>):Void {}",
 			"  public function wireHandler(handler:TestHandler<TestFixture>):Void {",
 			"    handler.onComplete.add(runNext);",
+			"    handler.onPrecheck.add(onPrecheck.dispatch);",
+			"  }",
+			"  public function resultOf(handler:TestHandler<TestFixture>):TestResult {",
+			"    return TestResult.ofHandler(handler);",
 			"  }",
 			"  public function makeHandler(fixture:TestFixture):TestHandler<TestFixture> {",
 			"    var handler = new TestHandler(fixture);",
@@ -4618,6 +4632,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(parsedRunnerGenericLines,
 			"[&](std::shared_ptr<TestHandler<std::shared_ptr<TestFixture>>> finishedHandler) { this->runNext(finishedHandler); }",
 			"C++ same-owner method callback lambdas should use the instantiated handler payload type");
+		assertContains(parsedRunnerGenericLines, "(handler->onPrecheck)->add(std::function<void(std::shared_ptr<TestHandler<std::shared_ptr<TestFixture>>>)>",
+			"C++ field receiver method values passed to typed function params should lower to typed std::function lambdas");
+		assertContains(parsedRunnerGenericLines, "[&](std::shared_ptr<TestHandler<std::shared_ptr<TestFixture>>> e) { onPrecheck->dispatch(e); }",
+			"C++ field receiver method callback lambdas should bind the receiver and use the expected payload type");
+		assertContains(parsedRunnerGenericLines, "return TestResult::ofHandler(handler);",
+			"C++ static generic calls should accept TestHandler<TestFixture> without specializing the parameter to string");
 		assertContains(parsedRunnerGenericLines, "auto handler = __hxhx_make_shared_TestHandler<std::shared_ptr<TestFixture>>(fixture);",
 			"C++ unhinted locals returned from generic-return functions should pass expected template args into constructors");
 		assertContains(parsedRunnerGenericLines, "if ((fixture->isITest))",
@@ -4633,6 +4653,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			names: parsedRunnerGenericNames,
 			byName: parsedRunnerGenericClasses
 		}).join("\n");
+		final parsedTestHandlerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(parsedRunnerGenericClasses.get("TestHandler"), {
+			names: parsedRunnerGenericNames,
+			byName: parsedRunnerGenericClasses
+		}).join("\n");
+		assertContains(parsedTestHandlerLines, "onComplete = __hxhx_make_shared_Dispatcher<std::shared_ptr<TestHandler<T>>>();",
+			"C++ generic class constructors should infer nested generic field constructor args from the destination field type");
+		assertContains(parsedTestHandlerLines, "onPrecheck = __hxhx_make_shared_Dispatcher<std::shared_ptr<TestHandler<T>>>();",
+			"C++ generic class constructors should not use the ambient T directly for Dispatcher<TestHandler<T>> fields");
+		assertTrue(parsedTestHandlerLines.indexOf("onComplete = __hxhx_make_shared_Dispatcher<T>();") < 0,
+			"C++ nested generic field constructors should not collapse Dispatcher<TestHandler<T>> to Dispatcher<T>");
 		assertContains(parsedDispatcherLines, "std::vector<std::function<void(T)>> handlers",
 			"C++ generic function-vector fields should preserve the function element type");
 		assertContains(parsedDispatcherLines, "handlers = std::vector<std::function<void(T)>>{};",
@@ -4640,6 +4670,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(parsedDispatcherLines, "bool dispatch(T e) {", "C++ generic function-vector calls should infer unhinted dispatch args as T");
 		assertTrue(parsedDispatcherLines.indexOf("bool dispatch(std::string e)") < 0,
 			"C++ generic function-vector calls should not leave dispatch args as string");
+		final parsedTestResultLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(parsedRunnerGenericClasses.get("TestResult"), {
+			names: parsedRunnerGenericNames,
+			byName: parsedRunnerGenericClasses
+		}).join("\n");
+		assertContains(parsedTestResultLines, "template<typename TDynamic>", "C++ generic Dynamic function args should render a method template wildcard");
+		assertContains(parsedTestResultLines, "static std::shared_ptr<TestResult> ofHandler(std::shared_ptr<TestHandler<TDynamic>> handler)",
+			"C++ generic Dynamic helper method params should accept concrete generic payloads");
+		assertTrue(parsedTestResultLines.indexOf("ofHandler(std::shared_ptr<TestHandler<std::string>> handler)") < 0,
+			"C++ generic Dynamic helper methods should not specialize wildcard params to String");
 		assertContains(parsedRunnerGenericLines, "onRunner->dispatch(__hxhx_borrowed_shared<RunnerGenericLike>(this));",
 			"C++ generic method calls should instantiate T from the receiver and pass this as a borrowed reference payload");
 		assertTrue(parsedDispatcherLines.indexOf("handlers = std::vector<std::string>{};") < 0,
