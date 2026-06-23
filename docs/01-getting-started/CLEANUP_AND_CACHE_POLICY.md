@@ -57,15 +57,16 @@ These are committed bootstrap snapshots used for stage0-free builds.
 
 - `packages/hxhx/bootstrap_out/_build`
 - `packages/hxhx-macro-host/bootstrap_out/_build`
-- stale autocreated hxhx snapshot build workdirs under `.tmp/hxhx-bootstrap-build.*`
+- inactive autocreated hxhx snapshot build workdirs under `.tmp/hxhx-bootstrap-build.*`
 
 These are local build caches; deleting them is safe but the next build is slower.
 
-`scripts/hxhx/build-hxhx.sh` also prunes old autocreated `.tmp/hxhx-bootstrap-build.*`
-directories before creating a new snapshot build workspace. It keeps the newest inactive
-outputs by default (`HXHX_BOOTSTRAP_BUILD_RETAIN=2`) and skips any workspace whose owner
-PID is still alive. Set `HXHX_BOOTSTRAP_BUILD_PRUNE=0` only when deliberately preserving
-multiple historical build outputs for debugging.
+`npm run clean:deep` removes inactive autocreated `.tmp/hxhx-bootstrap-build.*`
+directories and skips any workspace whose owner PID is still alive.
+`scripts/hxhx/build-hxhx.sh` also prunes old autocreated workdirs before creating a new
+snapshot build workspace. That automatic build-time pruning keeps the newest inactive
+outputs by default (`HXHX_BOOTSTRAP_BUILD_RETAIN=2`). Set `HXHX_BOOTSTRAP_BUILD_PRUNE=0`
+only when deliberately preserving multiple historical build outputs for debugging.
 
 ## Log retention knobs
 

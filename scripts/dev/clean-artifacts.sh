@@ -124,6 +124,7 @@ if ! [[ "$MAX_SAMPLE" =~ ^[0-9]+$ ]] || [[ "$MAX_SAMPLE" -lt 1 ]]; then
 fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+BOOTSTRAP_BUILD_PID_FILE=".hxhx-bootstrap-build.pid"
 CANDIDATES="$(mktemp -t hxhx-clean-candidates.XXXXXX)"
 UNIQUE_CANDIDATES="$(mktemp -t hxhx-clean-candidates-uniq.XXXXXX)"
 SIZE_REPORT="$(mktemp -t hxhx-clean-size-report.XXXXXX)"
@@ -171,6 +172,27 @@ add_path_if_exists() {
   if [[ -e "$path" ]]; then
     printf '%s\n' "$path" >>"$CANDIDATES"
   fi
+}
+
+bootstrap_build_dir_is_active() {
+  local dir="${1:-}"
+  local pid_file=""
+  local owner_pid=""
+
+  if [[ -z "$dir" || ! -d "$dir" ]]; then
+    return 1
+  fi
+  pid_file="$dir/$BOOTSTRAP_BUILD_PID_FILE"
+  if [[ ! -f "$pid_file" ]]; then
+    return 1
+  fi
+  owner_pid="$(head -n 1 "$pid_file" 2>/dev/null | tr -d '[:space:]' || true)"
+  case "$owner_pid" in
+    ''|*[!0-9]*)
+      return 1
+      ;;
+  esac
+  kill -0 "$owner_pid" >/dev/null 2>&1
 }
 
 collect_safe_candidates() {
@@ -224,6 +246,14 @@ collect_deep_candidates() {
   collect_safe_candidates
   add_path_if_exists "$ROOT/packages/hxhx/bootstrap_out/_build"
   add_path_if_exists "$ROOT/packages/hxhx-macro-host/bootstrap_out/_build"
+
+  if [[ -d "$ROOT/.tmp" ]]; then
+    while IFS= read -r path; do
+      if [[ -d "$path" ]] && ! bootstrap_build_dir_is_active "$path"; then
+        printf '%s\n' "$path" >>"$CANDIDATES"
+      fi
+    done < <(find "$ROOT/.tmp" -mindepth 1 -maxdepth 1 -type d -name 'hxhx-bootstrap-build.*' -print 2>/dev/null || true)
+  fi
 
   if [[ -d "$ROOT/packages/hxhx/bootstrap_out" ]]; then
     find "$ROOT/packages/hxhx/bootstrap_out" -maxdepth 1 -type f -name '*.install' -print >>"$CANDIDATES" 2>/dev/null || true

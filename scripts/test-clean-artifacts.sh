@@ -8,6 +8,9 @@ PLACEHOLDER="$OUT_DIR/.gitignore"
 TEMP_FILE="$OUT_DIR/.clean-artifacts-regression.tmp"
 TEMP_SUBDIR="$OUT_DIR/.clean-artifacts-regression-dir"
 TEMP_SUBFILE="$TEMP_SUBDIR/tmp.txt"
+BOOTSTRAP_INACTIVE_DIR="$ROOT/.tmp/hxhx-bootstrap-build.clean-regression-inactive"
+BOOTSTRAP_ACTIVE_DIR="$ROOT/.tmp/hxhx-bootstrap-build.clean-regression-active"
+BOOTSTRAP_PID_FILE=".hxhx-bootstrap-build.pid"
 PLACEHOLDER_REL="${PLACEHOLDER#"$ROOT/"}"
 
 if [[ ! -f "$PLACEHOLDER" ]]; then
@@ -23,6 +26,8 @@ fi
 cleanup() {
   rm -f "$TEMP_FILE"
   rm -rf "$TEMP_SUBDIR"
+  rm -rf "$BOOTSTRAP_INACTIVE_DIR"
+  rm -rf "$BOOTSTRAP_ACTIVE_DIR"
 }
 trap cleanup EXIT
 
@@ -49,6 +54,32 @@ fi
 
 if [[ -e "$TEMP_FILE" || -e "$TEMP_SUBDIR" ]]; then
   echo "Cleanup failed to remove untracked artifacts from fixture out dir." >&2
+  exit 1
+fi
+
+mkdir -p "$BOOTSTRAP_INACTIVE_DIR" "$BOOTSTRAP_ACTIVE_DIR"
+printf 'stale\n' >"$BOOTSTRAP_INACTIVE_DIR/artifact.txt"
+printf 'active\n' >"$BOOTSTRAP_ACTIVE_DIR/artifact.txt"
+printf '%s\n' "$$" >"$BOOTSTRAP_ACTIVE_DIR/$BOOTSTRAP_PID_FILE"
+
+deep_preview="$(bash "$CLEAN_SCRIPT" --deep --yes --dry-run --verbose)"
+if [[ "$deep_preview" != *"$BOOTSTRAP_INACTIVE_DIR"* ]]; then
+  echo "Deep cleanup dry-run did not report inactive bootstrap build dir." >&2
+  exit 1
+fi
+if [[ "$deep_preview" == *"$BOOTSTRAP_ACTIVE_DIR"* ]]; then
+  echo "Deep cleanup dry-run reported active bootstrap build dir." >&2
+  exit 1
+fi
+
+bash "$CLEAN_SCRIPT" --deep --yes >/dev/null
+
+if [[ -e "$BOOTSTRAP_INACTIVE_DIR" ]]; then
+  echo "Deep cleanup failed to remove inactive bootstrap build dir." >&2
+  exit 1
+fi
+if [[ ! -d "$BOOTSTRAP_ACTIVE_DIR" ]]; then
+  echo "Deep cleanup removed active bootstrap build dir." >&2
   exit 1
 fi
 
