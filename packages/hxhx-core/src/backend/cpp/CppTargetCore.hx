@@ -7631,6 +7631,8 @@ class CppTargetCore {
 
 	static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (CppTypeModel.isStaleNullPointerTypeHint(hint))
+			return "std::any";
 		final nullArg = CppTypeModel.nullTypeHintArg(hint);
 		if (nullArg != null)
 			return cppNullableTypeHint(nullArg, scope, classLookup);
@@ -7661,6 +7663,8 @@ class CppTargetCore {
 
 	static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (CppTypeModel.isStaleNullPointerTypeHint(raw))
+			return "std::any";
 		if (CppTypeModel.isBareNullTypeHint(raw))
 			return "std::any";
 		final hint = CppTypeModel.unwrapNullTypeHint(raw);

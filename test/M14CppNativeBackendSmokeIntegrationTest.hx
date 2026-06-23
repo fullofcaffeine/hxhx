@@ -1244,6 +1244,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], ""),
 			new HxFunctionDecl("getMalformedBareNull", Public, true, [], "Null", [
 				SReturn(ECall(EIdent("callMacroApi"), [EString("get_display_pos"), EInt(0)]), pos)
+			], ""),
+			new HxFunctionDecl("getDecodedStaleNullPointer", Public, true, [], "std::shared_ptr<Null>", [
+				SReturn(ECall(EIdent("callMacroApi"), [EString("get_display_pos"), EInt(0)]), pos)
 			],
 				""),
 			new HxFunctionDecl("getDefine", Public, true, [new HxFunctionArg("key", "String", NoDefault, false, false)], "__HxMacroExpr",
@@ -4656,6 +4659,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ macro Compiler API calls should use the normalized helper return type");
 		assertContains(macroCompilerNullSource, "static std::any getMalformedBareNull()",
 			"C++ malformed bare Null hints should erase instead of emitting std::shared_ptr<Null>");
+		assertContains(macroCompilerNullSource, "static std::any getDecodedStaleNullPointer()",
+			"C++ stale target-shaped Null pointer hints from native decode should erase before method signatures");
 		assertContains(macroCompilerNullSource, "static __HxMacroExpr getDefine(std::string key)",
 			"C++ macro expression helper returns should preserve the native macro expression carrier");
 		assertContains(macroCompilerNullSource, "return __hxhx_macro_expr(",

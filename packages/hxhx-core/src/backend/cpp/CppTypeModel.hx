@@ -168,6 +168,8 @@ class CppTypeModel {
 
 	public static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (isStaleNullPointerTypeHint(raw))
+			return "std::any";
 		final nullArg = nullTypeHintArg(raw);
 		if (nullArg != null)
 			return cppNullableTypeHint(nullArg, scope, classLookup);
@@ -322,6 +324,8 @@ class CppTypeModel {
 
 	public static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (isStaleNullPointerTypeHint(raw))
+			return "std::any";
 		final hint = unwrapNullTypeHint(raw);
 		return isStructuralTypeHint(hint) ? "auto" : cppTypeHint(raw, scope, classLookup);
 	}
@@ -352,6 +356,11 @@ class CppTypeModel {
 	public static function isBareNullTypeHint(typeHint:String):Bool {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		return hint == "Null" || hint == "StdTypes.Null";
+	}
+
+	public static function isStaleNullPointerTypeHint(typeHint:String):Bool {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		return hint == "std::shared_ptr<Null>" || hint == "std::shared_ptr<StdTypes.Null>";
 	}
 
 	public static function isFunctionTypeHint(typeHint:String):Bool {
