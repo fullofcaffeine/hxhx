@@ -4009,7 +4009,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final staticHookOwner = new HxClassDecl("StaticHookOwner", false, [
 			new HxFunctionDecl("bind", Public, false, [new HxFunctionArg("hook", "Void->Void", NoDefault, false, false)], "Void", [
 				SExpr(EBinop("=", EField(EIdent("Assert"), "createAsync"), EIdent("hook")), HxPos.unknown())
-			], "")
+			], ""),
+			new HxFunctionDecl("bindInstance", Public, false, [], "Void", [
+				SExpr(EBinop("=", EField(EIdent("Assert"), "createAsync"), EField(EThis, "addAsync")), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("addAsync", Public, false, [
+				new HxFunctionArg("f", "Void->Void", NoDefault, true, false),
+				new HxFunctionArg("timeout", "Int", NoDefault, true, false)
+			], "Void->Void", [SReturn(ELambda([], ENull), HxPos.unknown())], "")
 		], []);
 		final staticHookNames = new StringMap<Bool>();
 		staticHookNames.set("StaticHookOwner", true);
@@ -4019,6 +4026,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final staticHookLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(staticHookOwner, staticHookLookup).join("\n");
 		assertContains(staticHookLines, "Assert::createAsync = hook;",
 			"C++ assignment to type-shaped static extern fields should use scope resolution even when the extern class is not in the local registry");
+		assertContains(staticHookLines, "Assert::createAsync = [&](auto f, auto timeout) { return this->addAsync(f, timeout); };",
+			"C++ instance method values assigned to static hooks should lower to callable wrappers");
+		assertTrue(staticHookLines.indexOf("Assert::createAsync = this->addAsync;") < 0,
+			"C++ instance method values must not render as uncalled member references");
 		assertTrue(staticHookLines.indexOf("(Assert.createAsync) = hook") < 0,
 			"C++ static extern field assignments must not preserve Haxe dotted field syntax");
 		final sysToolsOwner = new HxClassDecl("SysTools", false, [
@@ -4117,6 +4128,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper constructors should pass `this` through the expected class reference handle");
 		assertTrue(restLines.indexOf("std::make_shared<RestIterator>((*this))") < 0,
 			"C++ helper constructors should not pass the current object by value to shared_ptr-backed parameters");
+		final genericRest = new HxClassDecl("Rest", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("array", "Array<T>", NoDefault, false, false)], "Void", [], ""),
+			new HxFunctionDecl("copy", Public, false, [], "Array<T>", [SReturn(EThis, HxPos.unknown())], ""),
+			new HxFunctionDecl("append", Public, false, [new HxFunctionArg("item", "T", NoDefault, false, false)], "Rest<T>", [
+				SVar("result", "", ECall(EField(EThis, "copy"), []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("result"), "push"), [EIdent("item")]), HxPos.unknown()),
+				SReturn(ENew("Rest", [EIdent("result")]), HxPos.unknown())
+			], "")
+		], [new HxFieldDecl("length", Public, false, "Int", null)], "",
+			["__hxhx_type_params=T"]);
+		final genericRestNames = new StringMap<Bool>();
+		genericRestNames.set("Rest", true);
+		final genericRestClasses = new StringMap<HxClassDecl>();
+		genericRestClasses.set("Rest", genericRest);
+		final genericRestLookup = {names: genericRestNames, byName: genericRestClasses};
+		final genericRestLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(genericRest, genericRestLookup).join("\n");
+		assertContains(genericRestLines, "std::vector<T> __values;", "C++ Rest<T> support should own vector storage");
+		assertContains(genericRestLines, "std::vector<T> copy() const { return __values; }", "C++ Rest<T> support should provide copy()");
+		assertContains(genericRestLines, "result.push_back(item);", "C++ Rest<T>.append support should use vector push_back");
+		assertContains(genericRestLines, "std::shared_ptr<Rest<T>> __hxhx_make_shared_Rest(std::vector<T> array)",
+			"C++ Rest<T> support should preserve the generic factory used by constructor lowering");
 		final vectorPushMethod = new HxFunctionDecl("cloneInto", Public, true, [
 			new HxFunctionArg("seed", "", NoDefault, false, false),
 			new HxFunctionArg("items", "", NoDefault, false, false)

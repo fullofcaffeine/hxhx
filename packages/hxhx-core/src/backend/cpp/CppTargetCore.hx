@@ -1672,6 +1672,8 @@ class CppTargetCore {
 			return CppRuntimeSupport.anySupportLines();
 		if (isPosInfosSupportClass(cls))
 			return renderPosInfosClass();
+		if (isRestSupportClass(cls))
+			return renderRestSupportClass(cls);
 		if (isStdVectorHelperClass(cls) || isStdVectorHelperName(className))
 			return renderStdVectorSupportClass(cls, classLookup);
 		if (isArrayBackedAbstractClass(cls))
@@ -1981,6 +1983,72 @@ class CppTargetCore {
 			"  operator " + valueType + "() const { return __values; }",
 			"};"
 		];
+	}
+
+	static function renderRestSupportClass(cls:HxClassDecl):Array<String> {
+		final typeParams = genericClassTemplateParams(cls);
+		final itemType = typeParams.length > 0 ? typeParams[0] : "std::string";
+		final template = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final vectorType = "std::vector<" + itemType + ">";
+		return template.concat(["struct " + className + " {",
+			"  " + vectorType + " __values;",
+			"  int length = 0;",
+			"  " + className + "() {}",
+			"  "
+			+ className
+			+ "("
+			+ vectorType
+			+ " array) : __values(array), length(static_cast<int>(array.size())) {}",
+			"  int get_length() const { return static_cast<int>(__values.size()); }",
+			"  " + itemType + "& operator[](int index) { return __values[index]; }",
+			"  const " + itemType + "& operator[](int index) const { return __values[index]; }",
+			"  " + itemType + " get(int index) const { return __values[index]; }",
+			"  " + vectorType + " copy() const { return __values; }",
+			"  " + vectorType + " toArray() const { return __values; }",
+			"  std::shared_ptr<RestIterator<" + itemType + ">> iterator() {",
+			"    return __hxhx_make_shared_RestIterator<"
+			+ itemType
+			+ ">(std::shared_ptr<Rest<"
+			+ itemType
+			+ ">>(this, [](Rest<"
+			+ itemType
+			+ ">*) {}));",
+			"  }",
+			"  std::shared_ptr<RestKeyValueIterator<" + itemType + ">> keyValueIterator() {",
+			"    return __hxhx_make_shared_RestKeyValueIterator<"
+			+ itemType
+			+ ">(std::shared_ptr<Rest<"
+			+ itemType
+			+ ">>(this, [](Rest<"
+			+ itemType
+			+ ">*) {}));",
+			"  }",
+			"  std::shared_ptr<Rest<" + itemType + ">> append(" + itemType + " item) const {",
+			"    auto result = __values;",
+			"    result.push_back(item);",
+			"    return __hxhx_make_shared_Rest<" + itemType + ">(result);",
+			"  }",
+			"  std::shared_ptr<Rest<" + itemType + ">> prepend(" + itemType + " item) const {",
+			"    auto result = __values;",
+			"    result.insert(result.begin(), item);",
+			"    return __hxhx_make_shared_Rest<" + itemType + ">(result);",
+			"  }",
+			"  std::string toString() const { return __hxhx_stringify(__values); }",
+			"};",
+			genericTemplatePrefix(typeParams),
+			"std::shared_ptr<"
+			+ className
+			+ "<"
+			+ typeParams.join(", ")
+			+ ">> __hxhx_make_shared_"
+			+ className
+			+ "("
+			+ vectorType
+			+ " array) {",
+			"  return std::make_shared<" + className + "<" + typeParams.join(", ") + ">>(array);",
+			"}"
+		]);
 	}
 
 	static function renderPrimitiveBackedAbstractClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -3990,6 +4058,11 @@ class CppTargetCore {
 		}
 		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
+		if (isCppFunctionType(expectedType)) {
+			final methodValue = instanceMethodValueExpr(expr, scope);
+			if (methodValue != null)
+				return methodValue;
+		}
 		if (isCppVectorType(expectedType)) {
 			switch (expr) {
 				case EArrayDecl(elements):
@@ -4043,6 +4116,8 @@ class CppTargetCore {
 				"this->__values.size()";
 			case EField(receiver, field) if (primitiveBackedAbstractPropertyExpr(receiver, field, scope) != null):
 				primitiveBackedAbstractPropertyExpr(receiver, field, scope);
+			case EField(_, _) if (instanceMethodValueExpr(expr, scope) != null):
+				instanceMethodValueExpr(expr, scope);
 			case EField(EThis, field):
 				"this->" + sanitizeIdentifier(field);
 			case EField(receiver, "expr") if (exprCppType(receiver, scope) == CppMacroExpr.CPP_TYPE):
@@ -4156,6 +4231,12 @@ class CppTargetCore {
 				staticFieldExpr(receiver, field, scope);
 			case EField(receiver, "length"):
 				"(" + renderExpr(receiver, scope) + ".size())";
+			case EArrayAccess(array, index) if (exprHasReferenceType(array, scope)):
+				"((*"
+				+ renderExpr(array, scope)
+				+ ")["
+				+ renderExpr(index, scope)
+				+ "])";
 			case EArrayAccess(array, index):
 				"(" + renderExpr(array, scope) + "[" + renderExpr(index, scope) + "])";
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
@@ -7081,6 +7162,46 @@ class CppTargetCore {
 		return "[&](" + params.join(", ") + ") { return " + renderExpr(body, scope) + "; }";
 	}
 
+	static function instanceMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		return switch (expr) {
+			case EField(receiver, method):
+				final ownerType = switch (receiver) {
+					case EThis:
+						scope.owner == null ? null : sanitizeTypePath(HxClassDecl.getName(scope.owner));
+					case _:
+						classNameFromCppExprType(exprCppType(receiver, scope), scope);
+				}
+				if (ownerType == null || ownerType.length == 0)
+					return null;
+				final fn = classMethodDecl(ownerType, method, false, scope);
+				if (fn == null)
+					return null;
+				final names = [
+					for (arg in HxFunctionDecl.getArgs(fn))
+						sanitizeIdentifier(HxFunctionArg.getName(arg))
+				];
+				final params = [for (name in names) "auto " + name];
+				final target = switch (receiver) {
+					case EThis:
+						"this->";
+					case _:
+						renderExpr(receiver, scope) + fieldAccessOp(receiver, scope);
+				}
+				"[&]("
+				+ params.join(", ")
+				+ ") { return "
+				+ target
+				+ sanitizeIdentifier(method)
+				+ "("
+				+ names.join(", ")
+				+ "); }";
+			case _:
+				null;
+		};
+	}
+
 	static function macroExpr(expr:HxExpr, wrappers:Array<String>):String {
 		return "std::string(" + quoteString(macroExprText(expr, wrappers)) + ")";
 	}
@@ -7542,6 +7663,10 @@ class CppTargetCore {
 
 	static function isArrayBackedAbstractClass(cls:HxClassDecl):Bool {
 		return CppTypeModel.isArrayBackedAbstractClass(cls);
+	}
+
+	static function isRestSupportClass(cls:HxClassDecl):Bool {
+		return cls != null && sanitizeTypePath(HxClassDecl.getName(cls)) == "Rest" && genericClassTemplateParams(cls).length > 0;
 	}
 
 	static function isStdVectorHelperClass(cls:HxClassDecl):Bool {
