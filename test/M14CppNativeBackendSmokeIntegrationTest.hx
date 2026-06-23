@@ -4521,13 +4521,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 			"class TestFixture {",
+			"  public var isITest:Bool = false;",
+			"  public var target:String = \"\";",
 			"  public function new() {}",
 			"}",
 			"class RunnerGenericLike {",
 			"  public var fixtures:Array<TestFixture> = [];",
+			"  public var fixtureList:List<TestFixture>;",
 			"  public var onProgress:Dispatcher<String>;",
 			"  public var onRunner:Dispatcher<RunnerGenericLike>;",
 			"  public function new() {",
+			"    fixtureList = new List();",
 			"    onProgress = new Dispatcher();",
 			"    onRunner = new Dispatcher();",
 			"  }",
@@ -4539,6 +4543,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  }",
 			"  public function usePrefix(prefix:String):Bool {",
 			"    return isTestFixtureName([prefix]);",
+			"  }",
+			"  public function runFixtures():Void {",
+			"    for (fixture in fixtureList) {",
+			"      if (fixture.isITest) {}",
+			"      var t = fixture.target;",
+			"    }",
 			"  }",
 			"  public function isMethod(test:Dynamic, name:String) {",
 			"    try return Reflect.isFunction(Reflect.field(test, name));",
@@ -4562,6 +4572,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		}).join("\n");
 		assertContains(parsedRunnerGenericLines, "std::vector<std::shared_ptr<TestFixture>> fixtures = std::vector<std::shared_ptr<TestFixture>>{};",
 			"C++ typed empty Array fields should render with the declared element type instead of vector<int>");
+		assertContains(parsedRunnerGenericLines, "if ((fixture->isITest))",
+			"C++ List<T> loop locals should keep reference element types for pointer field access");
+		assertContains(parsedRunnerGenericLines, "auto t = (fixture->target);",
+			"C++ List<T> loop locals should use pointer field access for reference element fields");
+		assertTrue(parsedRunnerGenericLines.indexOf("fixture.isITest") < 0, "C++ List<T> loop locals should not fall back to dot access for reference fields");
 		assertContains(parsedRunnerGenericLines, "onProgress = __hxhx_make_shared_Dispatcher<std::string>();",
 			"C++ zero-arg generic constructor assignments should infer template args from the destination field type");
 		assertContains(parsedRunnerGenericLines, "onRunner = __hxhx_make_shared_Dispatcher<std::shared_ptr<RunnerGenericLike>>();",

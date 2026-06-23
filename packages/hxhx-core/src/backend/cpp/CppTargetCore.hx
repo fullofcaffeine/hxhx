@@ -7635,6 +7635,9 @@ class CppTargetCore {
 	static function cppIterableElementType(typeName:String, ?scope:CppRenderScope):String {
 		if (isCppVectorType(typeName))
 			return cppVectorElementType(typeName);
+		final listElement = listElementCppType(typeName);
+		if (listElement.length > 0)
+			return listElement;
 		if (typeName == "Array")
 			return "std::string";
 		return "";

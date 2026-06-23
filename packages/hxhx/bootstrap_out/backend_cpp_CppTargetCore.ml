@@ -5110,8 +5110,11 @@ let cppIterableElementType = fun typeName scope -> (
   ignore scope;
   try let __fallback_result_6599 = (
     ignore (if isCppVectorType (typeName : string) then raise (HxRuntime.Hx_return (Obj.repr (cppVectorElementType (typeName : string) : string))) else ());
-    ignore (if HxString.equals typeName "Array" then raise (HxRuntime.Hx_return (Obj.repr ("std::string" : string))) else ());
-    ""
+    let listElement = (listElementCppType (typeName : string) : string) in (
+      ignore (if HxString.length listElement > 0 then raise (HxRuntime.Hx_return (Obj.repr (listElement : string))) else ());
+      ignore (if HxString.equals typeName "Array" then raise (HxRuntime.Hx_return (Obj.repr ("std::string" : string))) else ());
+      ""
+    )
   ) in Obj.magic __fallback_result_6599 with
     | HxRuntime.Hx_return __ret_6598 -> Obj.obj __ret_6598
 )
