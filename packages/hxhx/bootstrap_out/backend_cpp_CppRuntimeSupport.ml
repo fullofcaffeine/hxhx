@@ -13,361 +13,495 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppR
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppRuntimeSupport" } : t)
 
-let anySupportLines = fun () -> let __arr_1 = HxArray.create () in (
-  ignore (HxArray.push __arr_1 "struct Any {");
-  ignore (HxArray.push __arr_1 "  std::any __value;");
-  ignore (HxArray.push __arr_1 "  Any() = default;");
-  ignore (HxArray.push __arr_1 "  template<typename T>");
-  ignore (HxArray.push __arr_1 "  Any(T value) : __value(value) {}");
-  ignore (HxArray.push __arr_1 "  template<typename T>");
-  ignore (HxArray.push __arr_1 "  T __promote() const {");
-  ignore (HxArray.push __arr_1 "    if constexpr (std::is_same_v<T, std::any>) return __value;");
-  ignore (HxArray.push __arr_1 "    else if constexpr (std::is_same_v<T, std::string>) return __hxhx_stringify(__value);");
-  ignore (HxArray.push __arr_1 "    else if (__value.has_value() && __value.type() == typeid(T)) return std::any_cast<T>(__value);");
-  ignore (HxArray.push __arr_1 "    else return T{};");
-  ignore (HxArray.push __arr_1 "  }");
-  ignore (HxArray.push __arr_1 "  std::string toString() const { return __hxhx_stringify(__value); }");
-  ignore (HxArray.push __arr_1 "};");
-  __arr_1
+let missingDeclarationLines = fun cleanName -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+  ignore (match cleanName with
+    | "Date" -> let __assign_2 = Obj.magic (Obj.magic (let __arr_3 = HxArray.create () in (
+      ignore (HxArray.push __arr_3 "struct Date {");
+      ignore (HxArray.push __arr_3 "  std::string toString() { return std::string(); }");
+      ignore (HxArray.push __arr_3 "};");
+      __arr_3
+    ))) in (
+      tempResult := __assign_2;
+      __assign_2
+    )
+    | "IMap" -> let __assign_4 = Obj.magic (Obj.magic (let __arr_5 = HxArray.create () in (
+      ignore (HxArray.push __arr_5 "template<typename K, typename V>");
+      ignore (HxArray.push __arr_5 "struct IMap {");
+      ignore (HxArray.push __arr_5 "  virtual ~IMap() = default;");
+      ignore (HxArray.push __arr_5 "  virtual std::optional<V> get(K k) = 0;");
+      ignore (HxArray.push __arr_5 "  virtual void set(K k, V v) = 0;");
+      ignore (HxArray.push __arr_5 "  virtual bool exists(K k) = 0;");
+      ignore (HxArray.push __arr_5 "  virtual bool remove(K k) = 0;");
+      ignore (HxArray.push __arr_5 "  virtual std::shared_ptr<__hxhx_iterator<K>> keys() = 0;");
+      ignore (HxArray.push __arr_5 "  virtual std::shared_ptr<__hxhx_iterator<V>> iterator() = 0;");
+      ignore (HxArray.push __arr_5 "  virtual std::shared_ptr<KeyValueIterator> keyValueIterator() = 0;");
+      ignore (HxArray.push __arr_5 "  virtual std::shared_ptr<IMap<K, V>> copy() = 0;");
+      ignore (HxArray.push __arr_5 "  virtual std::string toString() = 0;");
+      ignore (HxArray.push __arr_5 "  virtual void clear() = 0;");
+      ignore (HxArray.push __arr_5 "};");
+      __arr_5
+    ))) in (
+      tempResult := __assign_4;
+      __assign_4
+    )
+    | "KeyValueIterator" -> let __assign_6 = Obj.magic (Obj.magic (let __arr_7 = HxArray.create () in (
+      ignore (HxArray.push __arr_7 "struct KeyValueIterator {");
+      ignore (HxArray.push __arr_7 "  virtual ~KeyValueIterator() = default;");
+      ignore (HxArray.push __arr_7 "};");
+      __arr_7
+    ))) in (
+      tempResult := __assign_6;
+      __assign_6
+    )
+    | "StringMap" -> let __assign_8 = Obj.magic (Obj.magic (let __arr_9 = HxArray.create () in (
+      ignore (HxArray.push __arr_9 "struct __hxhx_stringmap_key_iterator : public __hxhx_iterator<std::string> {");
+      ignore (HxArray.push __arr_9 "  std::vector<std::string> values;");
+      ignore (HxArray.push __arr_9 "  std::size_t index;");
+      ignore (HxArray.push __arr_9 "  explicit __hxhx_stringmap_key_iterator(std::vector<std::string> values) : values(std::move(values)), index(0) {}");
+      ignore (HxArray.push __arr_9 "  bool hasNext() override { return index < values.size(); }");
+      ignore (HxArray.push __arr_9 "  std::string next() override { return values[index++]; }");
+      ignore (HxArray.push __arr_9 "};");
+      ignore (HxArray.push __arr_9 "template<typename V>");
+      ignore (HxArray.push __arr_9 "struct StringMap {");
+      ignore (HxArray.push __arr_9 "  std::map<std::string, V> __values;");
+      ignore (HxArray.push __arr_9 "  V get(std::string key) {");
+      ignore (HxArray.push __arr_9 "    auto it = __values.find(key);");
+      ignore (HxArray.push __arr_9 "    return it == __values.end() ? V() : it->second;");
+      ignore (HxArray.push __arr_9 "  }");
+      ignore (HxArray.push __arr_9 "  void set(std::string key, V value) { __values[key] = value; }");
+      ignore (HxArray.push __arr_9 "  std::shared_ptr<__hxhx_iterator<std::string>> keys() {");
+      ignore (HxArray.push __arr_9 "    std::vector<std::string> out;");
+      ignore (HxArray.push __arr_9 "    for (const auto& item : __values) out.push_back(item.first);");
+      ignore (HxArray.push __arr_9 "    return std::make_shared<__hxhx_stringmap_key_iterator>(std::move(out));");
+      ignore (HxArray.push __arr_9 "  }");
+      ignore (HxArray.push __arr_9 "  std::string toString() { return std::string(\"[object StringMap]\"); }");
+      ignore (HxArray.push __arr_9 "};");
+      __arr_9
+    ))) in (
+      tempResult := __assign_8;
+      __assign_8
+    )
+    | _ -> let __assign_1 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+      tempResult := __assign_1;
+      __assign_1
+    ));
+  !tempResult
 )
 
-let fpReinterpretLines = fun () -> let __arr_2 = HxArray.create () in (
-  ignore (HxArray.push __arr_2 "static double __hxhx_reinterpret_le_int32_as_float32(int value) {");
-  ignore (HxArray.push __arr_2 "  std::uint32_t bits = static_cast<std::uint32_t>(value);");
-  ignore (HxArray.push __arr_2 "  float out = 0;");
-  ignore (HxArray.push __arr_2 "  std::memcpy(&out, &bits, sizeof(out));");
-  ignore (HxArray.push __arr_2 "  return static_cast<double>(out);");
-  ignore (HxArray.push __arr_2 "}");
-  ignore (HxArray.push __arr_2 "");
-  ignore (HxArray.push __arr_2 "static int __hxhx_reinterpret_float32_as_le_int32(double value) {");
-  ignore (HxArray.push __arr_2 "  float narrowed = static_cast<float>(value);");
-  ignore (HxArray.push __arr_2 "  std::uint32_t bits = 0;");
-  ignore (HxArray.push __arr_2 "  std::memcpy(&bits, &narrowed, sizeof(bits));");
-  ignore (HxArray.push __arr_2 "  return static_cast<int>(bits);");
-  ignore (HxArray.push __arr_2 "}");
-  ignore (HxArray.push __arr_2 "");
-  ignore (HxArray.push __arr_2 "static double __hxhx_reinterpret_le_int32s_as_float64(int low, int high) {");
-  ignore (HxArray.push __arr_2 "  std::uint64_t bits = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(high)) << 32) | static_cast<std::uint32_t>(low);");
-  ignore (HxArray.push __arr_2 "  double out = 0;");
-  ignore (HxArray.push __arr_2 "  std::memcpy(&out, &bits, sizeof(out));");
-  ignore (HxArray.push __arr_2 "  return out;");
-  ignore (HxArray.push __arr_2 "}");
-  ignore (HxArray.push __arr_2 "");
-  ignore (HxArray.push __arr_2 "static int __hxhx_reinterpret_float64_as_le_int32_low(double value) {");
-  ignore (HxArray.push __arr_2 "  std::uint64_t bits = 0;");
-  ignore (HxArray.push __arr_2 "  std::memcpy(&bits, &value, sizeof(bits));");
-  ignore (HxArray.push __arr_2 "  return static_cast<int>(static_cast<std::uint32_t>(bits & 0xFFFFFFFFULL));");
-  ignore (HxArray.push __arr_2 "}");
-  ignore (HxArray.push __arr_2 "");
-  ignore (HxArray.push __arr_2 "static int __hxhx_reinterpret_float64_as_le_int32_high(double value) {");
-  ignore (HxArray.push __arr_2 "  std::uint64_t bits = 0;");
-  ignore (HxArray.push __arr_2 "  std::memcpy(&bits, &value, sizeof(bits));");
-  ignore (HxArray.push __arr_2 "  return static_cast<int>(static_cast<std::uint32_t>((bits >> 32) & 0xFFFFFFFFULL));");
-  ignore (HxArray.push __arr_2 "}");
-  __arr_2
+let missingMethodReturnType = fun cleanClassName cleanMethodName -> let tempResult = ref ("" : string) in (
+  ignore (match cleanClassName with
+    | "IMap" -> (match cleanMethodName with
+      | "clear" | "set" -> let __assign_12 = ("void" : string) in (
+        tempResult := __assign_12;
+        __assign_12
+      )
+      | "copy" -> let __assign_13 = ("std::shared_ptr<IMap>" : string) in (
+        tempResult := __assign_13;
+        __assign_13
+      )
+      | "get" -> let __assign_14 = ("std::optional<std::string>" : string) in (
+        tempResult := __assign_14;
+        __assign_14
+      )
+      | "iterator" | "keys" -> let __assign_15 = ("std::shared_ptr<__hxhx_iterator<std::string>>" : string) in (
+        tempResult := __assign_15;
+        __assign_15
+      )
+      | "keyValueIterator" -> let __assign_16 = ("std::shared_ptr<KeyValueIterator>" : string) in (
+        tempResult := __assign_16;
+        __assign_16
+      )
+      | "exists" | "remove" -> let __assign_17 = ("bool" : string) in (
+        tempResult := __assign_17;
+        __assign_17
+      )
+      | "toString" -> let __assign_18 = ("std::string" : string) in (
+        tempResult := __assign_18;
+        __assign_18
+      )
+      | _ -> let __assign_11 = ("" : string) in (
+        tempResult := __assign_11;
+        __assign_11
+      ))
+    | "StringMap" -> (match cleanMethodName with
+      | "keys" -> let __assign_20 = ("std::shared_ptr<__hxhx_iterator<std::string>>" : string) in (
+        tempResult := __assign_20;
+        __assign_20
+      )
+      | "set" -> let __assign_21 = ("void" : string) in (
+        tempResult := __assign_21;
+        __assign_21
+      )
+      | "get" | "toString" -> let __assign_22 = ("std::string" : string) in (
+        tempResult := __assign_22;
+        __assign_22
+      )
+      | _ -> let __assign_19 = ("" : string) in (
+        tempResult := __assign_19;
+        __assign_19
+      ))
+    | _ -> let __assign_10 = ("" : string) in (
+      tempResult := __assign_10;
+      __assign_10
+    ));
+  !tempResult
 )
 
-let dateIntrinsicLines = fun () -> let __arr_3 = HxArray.create () in (
-  ignore (HxArray.push __arr_3 "static double __hxhx_utc_date(int year, int month, int day, int hour, int min, int sec) {");
-  ignore (HxArray.push __arr_3 "  std::tm tm = {};");
-  ignore (HxArray.push __arr_3 "  tm.tm_year = year - 1900;");
-  ignore (HxArray.push __arr_3 "  tm.tm_mon = month;");
-  ignore (HxArray.push __arr_3 "  tm.tm_mday = day;");
-  ignore (HxArray.push __arr_3 "  tm.tm_hour = hour;");
-  ignore (HxArray.push __arr_3 "  tm.tm_min = min;");
-  ignore (HxArray.push __arr_3 "  tm.tm_sec = sec;");
-  ignore (HxArray.push __arr_3 "#if defined(_WIN32)");
-  ignore (HxArray.push __arr_3 "  return static_cast<double>(_mkgmtime(&tm));");
-  ignore (HxArray.push __arr_3 "#else");
-  ignore (HxArray.push __arr_3 "  return static_cast<double>(timegm(&tm));");
-  ignore (HxArray.push __arr_3 "#endif");
-  ignore (HxArray.push __arr_3 "}");
-  __arr_3
+let anySupportLines = fun () -> let __arr_23 = HxArray.create () in (
+  ignore (HxArray.push __arr_23 "struct Any {");
+  ignore (HxArray.push __arr_23 "  std::any __value;");
+  ignore (HxArray.push __arr_23 "  Any() = default;");
+  ignore (HxArray.push __arr_23 "  template<typename T>");
+  ignore (HxArray.push __arr_23 "  Any(T value) : __value(value) {}");
+  ignore (HxArray.push __arr_23 "  template<typename T>");
+  ignore (HxArray.push __arr_23 "  T __promote() const {");
+  ignore (HxArray.push __arr_23 "    if constexpr (std::is_same_v<T, std::any>) return __value;");
+  ignore (HxArray.push __arr_23 "    else if constexpr (std::is_same_v<T, std::string>) return __hxhx_stringify(__value);");
+  ignore (HxArray.push __arr_23 "    else if (__value.has_value() && __value.type() == typeid(T)) return std::any_cast<T>(__value);");
+  ignore (HxArray.push __arr_23 "    else return T{};");
+  ignore (HxArray.push __arr_23 "  }");
+  ignore (HxArray.push __arr_23 "  std::string toString() const { return __hxhx_stringify(__value); }");
+  ignore (HxArray.push __arr_23 "};");
+  __arr_23
 )
 
-let stdIntrinsicLines = fun () -> let __arr_4 = HxArray.create () in (
-  ignore (HxArray.push __arr_4 "static std::optional<int> __hxhx_parse_int(const std::string& value) {");
-  ignore (HxArray.push __arr_4 "  try {");
-  ignore (HxArray.push __arr_4 "    std::size_t parsed = 0;");
-  ignore (HxArray.push __arr_4 "    int base = (value.size() >= 2 && value[0] == '0' && (value[1] == 'x' || value[1] == 'X')) ? 16 : 10;");
-  ignore (HxArray.push __arr_4 "    int out = std::stoi(value, &parsed, base);");
-  ignore (HxArray.push __arr_4 "    return parsed == 0 ? std::nullopt : std::optional<int>(out);");
-  ignore (HxArray.push __arr_4 "  } catch (...) {");
-  ignore (HxArray.push __arr_4 "    return std::nullopt;");
-  ignore (HxArray.push __arr_4 "  }");
-  ignore (HxArray.push __arr_4 "}");
-  __arr_4
+let fpReinterpretLines = fun () -> let __arr_24 = HxArray.create () in (
+  ignore (HxArray.push __arr_24 "static double __hxhx_reinterpret_le_int32_as_float32(int value) {");
+  ignore (HxArray.push __arr_24 "  std::uint32_t bits = static_cast<std::uint32_t>(value);");
+  ignore (HxArray.push __arr_24 "  float out = 0;");
+  ignore (HxArray.push __arr_24 "  std::memcpy(&out, &bits, sizeof(out));");
+  ignore (HxArray.push __arr_24 "  return static_cast<double>(out);");
+  ignore (HxArray.push __arr_24 "}");
+  ignore (HxArray.push __arr_24 "");
+  ignore (HxArray.push __arr_24 "static int __hxhx_reinterpret_float32_as_le_int32(double value) {");
+  ignore (HxArray.push __arr_24 "  float narrowed = static_cast<float>(value);");
+  ignore (HxArray.push __arr_24 "  std::uint32_t bits = 0;");
+  ignore (HxArray.push __arr_24 "  std::memcpy(&bits, &narrowed, sizeof(bits));");
+  ignore (HxArray.push __arr_24 "  return static_cast<int>(bits);");
+  ignore (HxArray.push __arr_24 "}");
+  ignore (HxArray.push __arr_24 "");
+  ignore (HxArray.push __arr_24 "static double __hxhx_reinterpret_le_int32s_as_float64(int low, int high) {");
+  ignore (HxArray.push __arr_24 "  std::uint64_t bits = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(high)) << 32) | static_cast<std::uint32_t>(low);");
+  ignore (HxArray.push __arr_24 "  double out = 0;");
+  ignore (HxArray.push __arr_24 "  std::memcpy(&out, &bits, sizeof(out));");
+  ignore (HxArray.push __arr_24 "  return out;");
+  ignore (HxArray.push __arr_24 "}");
+  ignore (HxArray.push __arr_24 "");
+  ignore (HxArray.push __arr_24 "static int __hxhx_reinterpret_float64_as_le_int32_low(double value) {");
+  ignore (HxArray.push __arr_24 "  std::uint64_t bits = 0;");
+  ignore (HxArray.push __arr_24 "  std::memcpy(&bits, &value, sizeof(bits));");
+  ignore (HxArray.push __arr_24 "  return static_cast<int>(static_cast<std::uint32_t>(bits & 0xFFFFFFFFULL));");
+  ignore (HxArray.push __arr_24 "}");
+  ignore (HxArray.push __arr_24 "");
+  ignore (HxArray.push __arr_24 "static int __hxhx_reinterpret_float64_as_le_int32_high(double value) {");
+  ignore (HxArray.push __arr_24 "  std::uint64_t bits = 0;");
+  ignore (HxArray.push __arr_24 "  std::memcpy(&bits, &value, sizeof(bits));");
+  ignore (HxArray.push __arr_24 "  return static_cast<int>(static_cast<std::uint32_t>((bits >> 32) & 0xFFFFFFFFULL));");
+  ignore (HxArray.push __arr_24 "}");
+  __arr_24
 )
 
-let vectorSupportLines = fun () -> let __arr_5 = HxArray.create () in (
-  ignore (HxArray.push __arr_5 "template<typename T>");
-  ignore (HxArray.push __arr_5 "static T __hxhx_vector_pop(std::vector<T>& values) {");
-  ignore (HxArray.push __arr_5 "  if (values.empty()) return T{};");
-  ignore (HxArray.push __arr_5 "  T value = values.back();");
-  ignore (HxArray.push __arr_5 "  values.pop_back();");
-  ignore (HxArray.push __arr_5 "  return value;");
-  ignore (HxArray.push __arr_5 "}");
-  __arr_5
+let dateIntrinsicLines = fun () -> let __arr_25 = HxArray.create () in (
+  ignore (HxArray.push __arr_25 "static double __hxhx_utc_date(int year, int month, int day, int hour, int min, int sec) {");
+  ignore (HxArray.push __arr_25 "  std::tm tm = {};");
+  ignore (HxArray.push __arr_25 "  tm.tm_year = year - 1900;");
+  ignore (HxArray.push __arr_25 "  tm.tm_mon = month;");
+  ignore (HxArray.push __arr_25 "  tm.tm_mday = day;");
+  ignore (HxArray.push __arr_25 "  tm.tm_hour = hour;");
+  ignore (HxArray.push __arr_25 "  tm.tm_min = min;");
+  ignore (HxArray.push __arr_25 "  tm.tm_sec = sec;");
+  ignore (HxArray.push __arr_25 "#if defined(_WIN32)");
+  ignore (HxArray.push __arr_25 "  return static_cast<double>(_mkgmtime(&tm));");
+  ignore (HxArray.push __arr_25 "#else");
+  ignore (HxArray.push __arr_25 "  return static_cast<double>(timegm(&tm));");
+  ignore (HxArray.push __arr_25 "#endif");
+  ignore (HxArray.push __arr_25 "}");
+  __arr_25
 )
 
-let sysEventLoopLines = fun () -> let __arr_6 = HxArray.create () in (
-  ignore (HxArray.push __arr_6 "template<typename T>");
-  ignore (HxArray.push __arr_6 "static T __hxhx_shift(std::vector<T>& values) {");
-  ignore (HxArray.push __arr_6 "  T value = values.front();");
-  ignore (HxArray.push __arr_6 "  values.erase(values.begin());");
-  ignore (HxArray.push __arr_6 "  return value;");
-  ignore (HxArray.push __arr_6 "}");
-  ignore (HxArray.push __arr_6 "");
-  ignore (HxArray.push __arr_6 "struct Timer {");
-  ignore (HxArray.push __arr_6 "  static double stamp() {");
-  ignore (HxArray.push __arr_6 "    using clock = std::chrono::steady_clock;");
-  ignore (HxArray.push __arr_6 "    static const auto start = clock::now();");
-  ignore (HxArray.push __arr_6 "    return std::chrono::duration<double>(clock::now() - start).count();");
-  ignore (HxArray.push __arr_6 "  }");
-  ignore (HxArray.push __arr_6 "};");
-  ignore (HxArray.push __arr_6 "");
-  ignore (HxArray.push __arr_6 "struct Lock {");
-  ignore (HxArray.push __arr_6 "  void acquire() {}");
-  ignore (HxArray.push __arr_6 "  bool wait(std::optional<double> = std::nullopt) { return true; }");
-  ignore (HxArray.push __arr_6 "  void release() {}");
-  ignore (HxArray.push __arr_6 "};");
-  ignore (HxArray.push __arr_6 "");
-  ignore (HxArray.push __arr_6 "struct Mutex {");
-  ignore (HxArray.push __arr_6 "  void acquire() {}");
-  ignore (HxArray.push __arr_6 "  bool tryAcquire() { return true; }");
-  ignore (HxArray.push __arr_6 "  void release() {}");
-  ignore (HxArray.push __arr_6 "};");
-  ignore (HxArray.push __arr_6 "");
-  ignore (HxArray.push __arr_6 "struct MainLoop;");
-  ignore (HxArray.push __arr_6 "");
-  ignore (HxArray.push __arr_6 "struct MainEvent {");
-  ignore (HxArray.push __arr_6 "  std::function<void()> f;");
-  ignore (HxArray.push __arr_6 "  std::shared_ptr<MainEvent> prev = nullptr;");
-  ignore (HxArray.push __arr_6 "  std::shared_ptr<MainEvent> next = nullptr;");
-  ignore (HxArray.push __arr_6 "  double nextRun = -std::numeric_limits<double>::infinity();");
-  ignore (HxArray.push __arr_6 "  int priority = 0;");
-  ignore (HxArray.push __arr_6 "  bool isMain = false;");
-  ignore (HxArray.push __arr_6 "  MainEvent(std::function<void()> f = nullptr, std::optional<int> priority = std::nullopt) : f(f), priority(priority.value_or(0)) {}");
-  ignore (HxArray.push __arr_6 "  void delay(std::optional<double> t = std::nullopt);");
-  ignore (HxArray.push __arr_6 "  void stop();");
-  ignore (HxArray.push __arr_6 "  void wakeup() {}");
-  ignore (HxArray.push __arr_6 "};");
-  ignore (HxArray.push __arr_6 "");
-  ignore (HxArray.push __arr_6 "struct MainLoop {");
-  ignore (HxArray.push __arr_6 "  inline static std::shared_ptr<MainEvent> pending = nullptr;");
-  ignore (HxArray.push __arr_6 "  static std::shared_ptr<MainEvent> add(std::function<void()> f, std::optional<int> priority = std::nullopt) {");
-  ignore (HxArray.push __arr_6 "    auto event = std::make_shared<MainEvent>(f, priority);");
-  ignore (HxArray.push __arr_6 "    event->next = pending;");
-  ignore (HxArray.push __arr_6 "    if (pending != nullptr) pending->prev = event;");
-  ignore (HxArray.push __arr_6 "    pending = event;");
-  ignore (HxArray.push __arr_6 "    return event;");
-  ignore (HxArray.push __arr_6 "  }");
-  ignore (HxArray.push __arr_6 "  static bool hasEvents() { return pending != nullptr; }");
-  ignore (HxArray.push __arr_6 "  static void sortEvents() {}");
-  ignore (HxArray.push __arr_6 "  static double tick() {");
-  ignore (HxArray.push __arr_6 "    sortEvents();");
-  ignore (HxArray.push __arr_6 "    auto event = pending;");
-  ignore (HxArray.push __arr_6 "    if (event == nullptr) return -std::numeric_limits<double>::infinity();");
-  ignore (HxArray.push __arr_6 "    pending = event->next;");
-  ignore (HxArray.push __arr_6 "    if (pending != nullptr) pending->prev = nullptr;");
-  ignore (HxArray.push __arr_6 "    event->next = nullptr;");
-  ignore (HxArray.push __arr_6 "    if (event->f) event->f();");
-  ignore (HxArray.push __arr_6 "    return pending == nullptr ? -std::numeric_limits<double>::infinity() : pending->nextRun;");
-  ignore (HxArray.push __arr_6 "  }");
-  ignore (HxArray.push __arr_6 "};");
-  ignore (HxArray.push __arr_6 "");
-  ignore (HxArray.push __arr_6 "inline void MainEvent::delay(std::optional<double> t) {");
-  ignore (HxArray.push __arr_6 "  nextRun = !t.has_value() ? -std::numeric_limits<double>::infinity() : Timer::stamp() + t.value();");
-  ignore (HxArray.push __arr_6 "}");
-  ignore (HxArray.push __arr_6 "");
-  ignore (HxArray.push __arr_6 "inline void MainEvent::stop() {");
-  ignore (HxArray.push __arr_6 "  if (prev != nullptr) prev->next = next;");
-  ignore (HxArray.push __arr_6 "  if (next != nullptr) next->prev = prev;");
-  ignore (HxArray.push __arr_6 "  if (MainLoop::pending.get() == this) MainLoop::pending = next;");
-  ignore (HxArray.push __arr_6 "  prev = nullptr;");
-  ignore (HxArray.push __arr_6 "  next = nullptr;");
-  ignore (HxArray.push __arr_6 "}");
-  ignore (HxArray.push __arr_6 "");
-  ignore (HxArray.push __arr_6 "struct EntryPoint {");
-  ignore (HxArray.push __arr_6 "  inline static std::shared_ptr<Lock> sleepLock = std::make_shared<Lock>();");
-  ignore (HxArray.push __arr_6 "  inline static std::shared_ptr<Mutex> mutex = std::make_shared<Mutex>();");
-  ignore (HxArray.push __arr_6 "  inline static int threadCount = 0;");
-  ignore (HxArray.push __arr_6 "  inline static std::vector<std::function<void()>> pending = {};");
-  ignore (HxArray.push __arr_6 "  static void wakeup() { sleepLock->release(); }");
-  ignore (HxArray.push __arr_6 "  static void runInMainThread(std::function<void()> f) {");
-  ignore (HxArray.push __arr_6 "    mutex->acquire();");
-  ignore (HxArray.push __arr_6 "    pending.push_back(f);");
-  ignore (HxArray.push __arr_6 "    mutex->release();");
-  ignore (HxArray.push __arr_6 "    wakeup();");
-  ignore (HxArray.push __arr_6 "  }");
-  ignore (HxArray.push __arr_6 "  static void addThread(std::function<void()> f) {");
-  ignore (HxArray.push __arr_6 "    mutex->acquire();");
-  ignore (HxArray.push __arr_6 "    threadCount++;");
-  ignore (HxArray.push __arr_6 "    mutex->release();");
-  ignore (HxArray.push __arr_6 "    if (f) f();");
-  ignore (HxArray.push __arr_6 "    mutex->acquire();");
-  ignore (HxArray.push __arr_6 "    threadCount--;");
-  ignore (HxArray.push __arr_6 "    mutex->release();");
-  ignore (HxArray.push __arr_6 "  }");
-  ignore (HxArray.push __arr_6 "  static double processEvents() {");
-  ignore (HxArray.push __arr_6 "    mutex->acquire();");
-  ignore (HxArray.push __arr_6 "    while (!pending.empty()) {");
-  ignore (HxArray.push __arr_6 "      auto f = __hxhx_shift(pending);");
-  ignore (HxArray.push __arr_6 "      mutex->release();");
-  ignore (HxArray.push __arr_6 "      if (f) f();");
-  ignore (HxArray.push __arr_6 "      mutex->acquire();");
-  ignore (HxArray.push __arr_6 "    }");
-  ignore (HxArray.push __arr_6 "    mutex->release();");
-  ignore (HxArray.push __arr_6 "    double time = MainLoop::tick();");
-  ignore (HxArray.push __arr_6 "    return (!MainLoop::hasEvents() && threadCount == 0) ? -std::numeric_limits<double>::infinity() : time;");
-  ignore (HxArray.push __arr_6 "  }");
-  ignore (HxArray.push __arr_6 "};");
-  __arr_6
+let stdIntrinsicLines = fun () -> let __arr_26 = HxArray.create () in (
+  ignore (HxArray.push __arr_26 "static std::optional<int> __hxhx_parse_int(const std::string& value) {");
+  ignore (HxArray.push __arr_26 "  try {");
+  ignore (HxArray.push __arr_26 "    std::size_t parsed = 0;");
+  ignore (HxArray.push __arr_26 "    int base = (value.size() >= 2 && value[0] == '0' && (value[1] == 'x' || value[1] == 'X')) ? 16 : 10;");
+  ignore (HxArray.push __arr_26 "    int out = std::stoi(value, &parsed, base);");
+  ignore (HxArray.push __arr_26 "    return parsed == 0 ? std::nullopt : std::optional<int>(out);");
+  ignore (HxArray.push __arr_26 "  } catch (...) {");
+  ignore (HxArray.push __arr_26 "    return std::nullopt;");
+  ignore (HxArray.push __arr_26 "  }");
+  ignore (HxArray.push __arr_26 "}");
+  __arr_26
 )
 
-let rttiMetaLines = fun () -> let __arr_7 = HxArray.create () in (
-  ignore (HxArray.push __arr_7 "template<typename TResult, typename T>");
-  ignore (HxArray.push __arr_7 "static TResult __hxhx_meta_get_as(const T&) {");
-  ignore (HxArray.push __arr_7 "  return TResult{};");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "template<typename TResult, typename T>");
-  ignore (HxArray.push __arr_7 "static TResult __hxhx_meta_section_as(const T&, const std::string&) {");
-  ignore (HxArray.push __arr_7 "  return TResult{};");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "static std::any __hxhx_reflect_get_property_any(const std::any&, const std::string&) {");
-  ignore (HxArray.push __arr_7 "  return std::any();");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "static bool __hxhx_reflect_has_field_any(const std::any&, const std::string&) {");
-  ignore (HxArray.push __arr_7 "  return false;");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "template<typename TObject>");
-  ignore (HxArray.push __arr_7 "static std::any __hxhx_reflect_field(const TObject&, const std::string&) {");
-  ignore (HxArray.push __arr_7 "  return std::any();");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "template<typename TObject, typename TValue>");
-  ignore (HxArray.push __arr_7 "static void __hxhx_reflect_set_field(TObject&, const std::string&, const TValue&) {");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "template<typename TObject, typename TFunc, typename TArgs>");
-  ignore (HxArray.push __arr_7 "static std::any __hxhx_reflect_call_method(const TObject&, const TFunc&, const TArgs&) {");
-  ignore (HxArray.push __arr_7 "  return std::any();");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "template<typename T>");
-  ignore (HxArray.push __arr_7 "static bool __hxhx_reflect_is_function(const T&) {");
-  ignore (HxArray.push __arr_7 "  return false;");
-  ignore (HxArray.push __arr_7 "}");
-  ignore (HxArray.push __arr_7 "");
-  ignore (HxArray.push __arr_7 "template<typename R, typename... Args>");
-  ignore (HxArray.push __arr_7 "static bool __hxhx_reflect_is_function(const std::function<R(Args...)>&) {");
-  ignore (HxArray.push __arr_7 "  return true;");
-  ignore (HxArray.push __arr_7 "}");
-  __arr_7
+let vectorSupportLines = fun () -> let __arr_27 = HxArray.create () in (
+  ignore (HxArray.push __arr_27 "template<typename T>");
+  ignore (HxArray.push __arr_27 "static T __hxhx_vector_pop(std::vector<T>& values) {");
+  ignore (HxArray.push __arr_27 "  if (values.empty()) return T{};");
+  ignore (HxArray.push __arr_27 "  T value = values.back();");
+  ignore (HxArray.push __arr_27 "  values.pop_back();");
+  ignore (HxArray.push __arr_27 "  return value;");
+  ignore (HxArray.push __arr_27 "}");
+  __arr_27
 )
 
-let enumValueTypeLines = fun () -> let __arr_8 = HxArray.create () in (
-  ignore (HxArray.push __arr_8 "struct EnumValue {");
-  ignore (HxArray.push __arr_8 "  std::string tag;");
-  ignore (HxArray.push __arr_8 "  int index;");
-  ignore (HxArray.push __arr_8 "  std::vector<std::string> parameters;");
-  ignore (HxArray.push __arr_8 "  explicit EnumValue(std::string tag = std::string(), int index = 0, std::vector<std::string> parameters = {}) : tag(tag), index(index), parameters(parameters) {}");
-  ignore (HxArray.push __arr_8 "  std::string getName() const { return tag; }");
-  ignore (HxArray.push __arr_8 "  int getIndex() const { return index; }");
-  ignore (HxArray.push __arr_8 "  std::vector<std::string> getParameters() const { return parameters; }");
-  ignore (HxArray.push __arr_8 "};");
-  __arr_8
+let sysEventLoopLines = fun () -> let __arr_28 = HxArray.create () in (
+  ignore (HxArray.push __arr_28 "template<typename T>");
+  ignore (HxArray.push __arr_28 "static T __hxhx_shift(std::vector<T>& values) {");
+  ignore (HxArray.push __arr_28 "  T value = values.front();");
+  ignore (HxArray.push __arr_28 "  values.erase(values.begin());");
+  ignore (HxArray.push __arr_28 "  return value;");
+  ignore (HxArray.push __arr_28 "}");
+  ignore (HxArray.push __arr_28 "");
+  ignore (HxArray.push __arr_28 "struct Timer {");
+  ignore (HxArray.push __arr_28 "  static double stamp() {");
+  ignore (HxArray.push __arr_28 "    using clock = std::chrono::steady_clock;");
+  ignore (HxArray.push __arr_28 "    static const auto start = clock::now();");
+  ignore (HxArray.push __arr_28 "    return std::chrono::duration<double>(clock::now() - start).count();");
+  ignore (HxArray.push __arr_28 "  }");
+  ignore (HxArray.push __arr_28 "};");
+  ignore (HxArray.push __arr_28 "");
+  ignore (HxArray.push __arr_28 "struct Lock {");
+  ignore (HxArray.push __arr_28 "  void acquire() {}");
+  ignore (HxArray.push __arr_28 "  bool wait(std::optional<double> = std::nullopt) { return true; }");
+  ignore (HxArray.push __arr_28 "  void release() {}");
+  ignore (HxArray.push __arr_28 "};");
+  ignore (HxArray.push __arr_28 "");
+  ignore (HxArray.push __arr_28 "struct Mutex {");
+  ignore (HxArray.push __arr_28 "  void acquire() {}");
+  ignore (HxArray.push __arr_28 "  bool tryAcquire() { return true; }");
+  ignore (HxArray.push __arr_28 "  void release() {}");
+  ignore (HxArray.push __arr_28 "};");
+  ignore (HxArray.push __arr_28 "");
+  ignore (HxArray.push __arr_28 "struct MainLoop;");
+  ignore (HxArray.push __arr_28 "");
+  ignore (HxArray.push __arr_28 "struct MainEvent {");
+  ignore (HxArray.push __arr_28 "  std::function<void()> f;");
+  ignore (HxArray.push __arr_28 "  std::shared_ptr<MainEvent> prev = nullptr;");
+  ignore (HxArray.push __arr_28 "  std::shared_ptr<MainEvent> next = nullptr;");
+  ignore (HxArray.push __arr_28 "  double nextRun = -std::numeric_limits<double>::infinity();");
+  ignore (HxArray.push __arr_28 "  int priority = 0;");
+  ignore (HxArray.push __arr_28 "  bool isMain = false;");
+  ignore (HxArray.push __arr_28 "  MainEvent(std::function<void()> f = nullptr, std::optional<int> priority = std::nullopt) : f(f), priority(priority.value_or(0)) {}");
+  ignore (HxArray.push __arr_28 "  void delay(std::optional<double> t = std::nullopt);");
+  ignore (HxArray.push __arr_28 "  void stop();");
+  ignore (HxArray.push __arr_28 "  void wakeup() {}");
+  ignore (HxArray.push __arr_28 "};");
+  ignore (HxArray.push __arr_28 "");
+  ignore (HxArray.push __arr_28 "struct MainLoop {");
+  ignore (HxArray.push __arr_28 "  inline static std::shared_ptr<MainEvent> pending = nullptr;");
+  ignore (HxArray.push __arr_28 "  static std::shared_ptr<MainEvent> add(std::function<void()> f, std::optional<int> priority = std::nullopt) {");
+  ignore (HxArray.push __arr_28 "    auto event = std::make_shared<MainEvent>(f, priority);");
+  ignore (HxArray.push __arr_28 "    event->next = pending;");
+  ignore (HxArray.push __arr_28 "    if (pending != nullptr) pending->prev = event;");
+  ignore (HxArray.push __arr_28 "    pending = event;");
+  ignore (HxArray.push __arr_28 "    return event;");
+  ignore (HxArray.push __arr_28 "  }");
+  ignore (HxArray.push __arr_28 "  static bool hasEvents() { return pending != nullptr; }");
+  ignore (HxArray.push __arr_28 "  static void sortEvents() {}");
+  ignore (HxArray.push __arr_28 "  static double tick() {");
+  ignore (HxArray.push __arr_28 "    sortEvents();");
+  ignore (HxArray.push __arr_28 "    auto event = pending;");
+  ignore (HxArray.push __arr_28 "    if (event == nullptr) return -std::numeric_limits<double>::infinity();");
+  ignore (HxArray.push __arr_28 "    pending = event->next;");
+  ignore (HxArray.push __arr_28 "    if (pending != nullptr) pending->prev = nullptr;");
+  ignore (HxArray.push __arr_28 "    event->next = nullptr;");
+  ignore (HxArray.push __arr_28 "    if (event->f) event->f();");
+  ignore (HxArray.push __arr_28 "    return pending == nullptr ? -std::numeric_limits<double>::infinity() : pending->nextRun;");
+  ignore (HxArray.push __arr_28 "  }");
+  ignore (HxArray.push __arr_28 "};");
+  ignore (HxArray.push __arr_28 "");
+  ignore (HxArray.push __arr_28 "inline void MainEvent::delay(std::optional<double> t) {");
+  ignore (HxArray.push __arr_28 "  nextRun = !t.has_value() ? -std::numeric_limits<double>::infinity() : Timer::stamp() + t.value();");
+  ignore (HxArray.push __arr_28 "}");
+  ignore (HxArray.push __arr_28 "");
+  ignore (HxArray.push __arr_28 "inline void MainEvent::stop() {");
+  ignore (HxArray.push __arr_28 "  if (prev != nullptr) prev->next = next;");
+  ignore (HxArray.push __arr_28 "  if (next != nullptr) next->prev = prev;");
+  ignore (HxArray.push __arr_28 "  if (MainLoop::pending.get() == this) MainLoop::pending = next;");
+  ignore (HxArray.push __arr_28 "  prev = nullptr;");
+  ignore (HxArray.push __arr_28 "  next = nullptr;");
+  ignore (HxArray.push __arr_28 "}");
+  ignore (HxArray.push __arr_28 "");
+  ignore (HxArray.push __arr_28 "struct EntryPoint {");
+  ignore (HxArray.push __arr_28 "  inline static std::shared_ptr<Lock> sleepLock = std::make_shared<Lock>();");
+  ignore (HxArray.push __arr_28 "  inline static std::shared_ptr<Mutex> mutex = std::make_shared<Mutex>();");
+  ignore (HxArray.push __arr_28 "  inline static int threadCount = 0;");
+  ignore (HxArray.push __arr_28 "  inline static std::vector<std::function<void()>> pending = {};");
+  ignore (HxArray.push __arr_28 "  static void wakeup() { sleepLock->release(); }");
+  ignore (HxArray.push __arr_28 "  static void runInMainThread(std::function<void()> f) {");
+  ignore (HxArray.push __arr_28 "    mutex->acquire();");
+  ignore (HxArray.push __arr_28 "    pending.push_back(f);");
+  ignore (HxArray.push __arr_28 "    mutex->release();");
+  ignore (HxArray.push __arr_28 "    wakeup();");
+  ignore (HxArray.push __arr_28 "  }");
+  ignore (HxArray.push __arr_28 "  static void addThread(std::function<void()> f) {");
+  ignore (HxArray.push __arr_28 "    mutex->acquire();");
+  ignore (HxArray.push __arr_28 "    threadCount++;");
+  ignore (HxArray.push __arr_28 "    mutex->release();");
+  ignore (HxArray.push __arr_28 "    if (f) f();");
+  ignore (HxArray.push __arr_28 "    mutex->acquire();");
+  ignore (HxArray.push __arr_28 "    threadCount--;");
+  ignore (HxArray.push __arr_28 "    mutex->release();");
+  ignore (HxArray.push __arr_28 "  }");
+  ignore (HxArray.push __arr_28 "  static double processEvents() {");
+  ignore (HxArray.push __arr_28 "    mutex->acquire();");
+  ignore (HxArray.push __arr_28 "    while (!pending.empty()) {");
+  ignore (HxArray.push __arr_28 "      auto f = __hxhx_shift(pending);");
+  ignore (HxArray.push __arr_28 "      mutex->release();");
+  ignore (HxArray.push __arr_28 "      if (f) f();");
+  ignore (HxArray.push __arr_28 "      mutex->acquire();");
+  ignore (HxArray.push __arr_28 "    }");
+  ignore (HxArray.push __arr_28 "    mutex->release();");
+  ignore (HxArray.push __arr_28 "    double time = MainLoop::tick();");
+  ignore (HxArray.push __arr_28 "    return (!MainLoop::hasEvents() && threadCount == 0) ? -std::numeric_limits<double>::infinity() : time;");
+  ignore (HxArray.push __arr_28 "  }");
+  ignore (HxArray.push __arr_28 "};");
+  __arr_28
 )
 
-let anyIsTypeLines = fun () -> let __arr_9 = HxArray.create () in (
-  ignore (HxArray.push __arr_9 "static bool __hxhx_is_type(const std::any& value, const std::string& type) {");
-  ignore (HxArray.push __arr_9 "  if (type == \"Dynamic\" || type == \"Any\") return true;");
-  ignore (HxArray.push __arr_9 "  if (!value.has_value()) return type == \"Null\";");
-  ignore (HxArray.push __arr_9 "  const std::type_info& valueType = value.type();");
-  ignore (HxArray.push __arr_9 "  if (type == \"Array\") return valueType == typeid(std::vector<std::string>) || valueType == typeid(std::vector<int>);");
-  ignore (HxArray.push __arr_9 "  if (type == \"String\" || type == \"StdTypes.String\") return valueType == typeid(std::string) || valueType == typeid(const char*);");
-  ignore (HxArray.push __arr_9 "  if (type == \"Bool\" || type == \"StdTypes.Bool\") return valueType == typeid(bool);");
-  ignore (HxArray.push __arr_9 "  if (type == \"Int\" || type == \"StdTypes.Int\") return valueType == typeid(int);");
-  ignore (HxArray.push __arr_9 "  if (type == \"Float\" || type == \"StdTypes.Float\") return valueType == typeid(double) || valueType == typeid(float);");
-  ignore (HxArray.push __arr_9 "  return false;");
-  ignore (HxArray.push __arr_9 "}");
-  __arr_9
+let rttiMetaLines = fun () -> let __arr_29 = HxArray.create () in (
+  ignore (HxArray.push __arr_29 "template<typename TResult, typename T>");
+  ignore (HxArray.push __arr_29 "static TResult __hxhx_meta_get_as(const T&) {");
+  ignore (HxArray.push __arr_29 "  return TResult{};");
+  ignore (HxArray.push __arr_29 "}");
+  ignore (HxArray.push __arr_29 "");
+  ignore (HxArray.push __arr_29 "template<typename TResult, typename T>");
+  ignore (HxArray.push __arr_29 "static TResult __hxhx_meta_section_as(const T&, const std::string&) {");
+  ignore (HxArray.push __arr_29 "  return TResult{};");
+  ignore (HxArray.push __arr_29 "}");
+  ignore (HxArray.push __arr_29 "");
+  ignore (HxArray.push __arr_29 "static std::any __hxhx_reflect_get_property_any(const std::any&, const std::string&) {");
+  ignore (HxArray.push __arr_29 "  return std::any();");
+  ignore (HxArray.push __arr_29 "}");
+  ignore (HxArray.push __arr_29 "");
+  ignore (HxArray.push __arr_29 "static bool __hxhx_reflect_has_field_any(const std::any&, const std::string&) {");
+  ignore (HxArray.push __arr_29 "  return false;");
+  ignore (HxArray.push __arr_29 "}");
+  ignore (HxArray.push __arr_29 "");
+  ignore (HxArray.push __arr_29 "template<typename TObject>");
+  ignore (HxArray.push __arr_29 "static std::any __hxhx_reflect_field(const TObject&, const std::string&) {");
+  ignore (HxArray.push __arr_29 "  return std::any();");
+  ignore (HxArray.push __arr_29 "}");
+  ignore (HxArray.push __arr_29 "");
+  ignore (HxArray.push __arr_29 "template<typename TObject, typename TValue>");
+  ignore (HxArray.push __arr_29 "static void __hxhx_reflect_set_field(TObject&, const std::string&, const TValue&) {");
+  ignore (HxArray.push __arr_29 "}");
+  ignore (HxArray.push __arr_29 "");
+  ignore (HxArray.push __arr_29 "template<typename TObject, typename TFunc, typename TArgs>");
+  ignore (HxArray.push __arr_29 "static std::any __hxhx_reflect_call_method(const TObject&, const TFunc&, const TArgs&) {");
+  ignore (HxArray.push __arr_29 "  return std::any();");
+  ignore (HxArray.push __arr_29 "}");
+  ignore (HxArray.push __arr_29 "");
+  ignore (HxArray.push __arr_29 "template<typename T>");
+  ignore (HxArray.push __arr_29 "static bool __hxhx_reflect_is_function(const T&) {");
+  ignore (HxArray.push __arr_29 "  return false;");
+  ignore (HxArray.push __arr_29 "}");
+  ignore (HxArray.push __arr_29 "");
+  ignore (HxArray.push __arr_29 "template<typename R, typename... Args>");
+  ignore (HxArray.push __arr_29 "static bool __hxhx_reflect_is_function(const std::function<R(Args...)>&) {");
+  ignore (HxArray.push __arr_29 "  return true;");
+  ignore (HxArray.push __arr_29 "}");
+  __arr_29
 )
 
-let enumValueDynamicLines = fun () -> let __arr_10 = HxArray.create () in (
-  ignore (HxArray.push __arr_10 "static bool __hxhx_is_enum_value(const std::shared_ptr<EnumValue>& value) {");
-  ignore (HxArray.push __arr_10 "  return value != nullptr;");
-  ignore (HxArray.push __arr_10 "}");
-  ignore (HxArray.push __arr_10 "");
-  ignore (HxArray.push __arr_10 "static bool __hxhx_is_enum_value(const std::any& value) {");
-  ignore (HxArray.push __arr_10 "  return value.has_value() && value.type() == typeid(std::shared_ptr<EnumValue>) && std::any_cast<std::shared_ptr<EnumValue>>(value) != nullptr;");
-  ignore (HxArray.push __arr_10 "}");
-  ignore (HxArray.push __arr_10 "");
-  ignore (HxArray.push __arr_10 "template<typename T>");
-  ignore (HxArray.push __arr_10 "static bool __hxhx_is_enum_value(const T&) {");
-  ignore (HxArray.push __arr_10 "  return false;");
-  ignore (HxArray.push __arr_10 "}");
-  ignore (HxArray.push __arr_10 "");
-  ignore (HxArray.push __arr_10 "static std::shared_ptr<EnumValue> __hxhx_enum_value_ptr(const std::any& value) {");
-  ignore (HxArray.push __arr_10 "  if (__hxhx_is_enum_value(value)) return std::any_cast<std::shared_ptr<EnumValue>>(value);");
-  ignore (HxArray.push __arr_10 "  return nullptr;");
-  ignore (HxArray.push __arr_10 "}");
-  ignore (HxArray.push __arr_10 "");
-  ignore (HxArray.push __arr_10 "static std::vector<std::string> __hxhx_string_vector_any(const std::any& value) {");
-  ignore (HxArray.push __arr_10 "  if (!value.has_value()) return {};");
-  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(std::vector<std::string>)) return std::any_cast<std::vector<std::string>>(value);");
-  ignore (HxArray.push __arr_10 "  return {};");
-  ignore (HxArray.push __arr_10 "}");
-  ignore (HxArray.push __arr_10 "");
-  ignore (HxArray.push __arr_10 "static double __hxhx_any_double(const std::any& value) {");
-  ignore (HxArray.push __arr_10 "  if (!value.has_value()) return 0.0;");
-  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(double)) return std::any_cast<double>(value);");
-  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(float)) return static_cast<double>(std::any_cast<float>(value));");
-  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(int)) return static_cast<double>(std::any_cast<int>(value));");
-  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(bool)) return std::any_cast<bool>(value) ? 1.0 : 0.0;");
-  ignore (HxArray.push __arr_10 "  if (value.type() == typeid(std::string)) {");
-  ignore (HxArray.push __arr_10 "    try {");
-  ignore (HxArray.push __arr_10 "      return std::stod(std::any_cast<std::string>(value));");
-  ignore (HxArray.push __arr_10 "    } catch (...) {");
-  ignore (HxArray.push __arr_10 "      return 0.0;");
-  ignore (HxArray.push __arr_10 "    }");
-  ignore (HxArray.push __arr_10 "  }");
-  ignore (HxArray.push __arr_10 "  return 0.0;");
-  ignore (HxArray.push __arr_10 "}");
-  __arr_10
+let enumValueTypeLines = fun () -> let __arr_30 = HxArray.create () in (
+  ignore (HxArray.push __arr_30 "struct EnumValue {");
+  ignore (HxArray.push __arr_30 "  std::string tag;");
+  ignore (HxArray.push __arr_30 "  int index;");
+  ignore (HxArray.push __arr_30 "  std::vector<std::string> parameters;");
+  ignore (HxArray.push __arr_30 "  explicit EnumValue(std::string tag = std::string(), int index = 0, std::vector<std::string> parameters = {}) : tag(tag), index(index), parameters(parameters) {}");
+  ignore (HxArray.push __arr_30 "  std::string getName() const { return tag; }");
+  ignore (HxArray.push __arr_30 "  int getIndex() const { return index; }");
+  ignore (HxArray.push __arr_30 "  std::vector<std::string> getParameters() const { return parameters; }");
+  ignore (HxArray.push __arr_30 "};");
+  __arr_30
 )
 
-let compareLines = fun () -> let __arr_11 = HxArray.create () in (
-  ignore (HxArray.push __arr_11 "template<typename L, typename R>");
-  ignore (HxArray.push __arr_11 "static int __hxhx_compare(const L& left, const R& right) {");
-  ignore (HxArray.push __arr_11 "  return __hxhx_stringify(left).compare(__hxhx_stringify(right));");
-  ignore (HxArray.push __arr_11 "}");
-  ignore (HxArray.push __arr_11 "");
-  ignore (HxArray.push __arr_11 "template<typename T>");
-  ignore (HxArray.push __arr_11 "static int __hxhx_compare(const T& left, const T& right) {");
-  ignore (HxArray.push __arr_11 "  if constexpr (std::is_arithmetic_v<T>) return left < right ? -1 : (left > right ? 1 : 0);");
-  ignore (HxArray.push __arr_11 "  else return left < right ? -1 : (left > right ? 1 : 0);");
-  ignore (HxArray.push __arr_11 "}");
-  ignore (HxArray.push __arr_11 "");
-  ignore (HxArray.push __arr_11 "static int __hxhx_compare(const std::shared_ptr<EnumValue>& left, const std::shared_ptr<EnumValue>& right) {");
-  ignore (HxArray.push __arr_11 "  if (left == nullptr && right == nullptr) return 0;");
-  ignore (HxArray.push __arr_11 "  if (left == nullptr) return -1;");
-  ignore (HxArray.push __arr_11 "  if (right == nullptr) return 1;");
-  ignore (HxArray.push __arr_11 "  int indexDiff = left->getIndex() - right->getIndex();");
-  ignore (HxArray.push __arr_11 "  if (indexDiff != 0) return indexDiff < 0 ? -1 : 1;");
-  ignore (HxArray.push __arr_11 "  return left->getName().compare(right->getName());");
-  ignore (HxArray.push __arr_11 "}");
-  ignore (HxArray.push __arr_11 "");
-  ignore (HxArray.push __arr_11 "static int __hxhx_compare(const std::any& left, const std::any& right) {");
-  ignore (HxArray.push __arr_11 "  if (__hxhx_is_enum_value(left) && __hxhx_is_enum_value(right)) return __hxhx_compare(__hxhx_enum_value_ptr(left), __hxhx_enum_value_ptr(right));");
-  ignore (HxArray.push __arr_11 "  if (left.has_value() && right.has_value() && left.type() == typeid(std::string) && right.type() == typeid(std::string)) return __hxhx_compare(std::any_cast<std::string>(left), std::any_cast<std::string>(right));");
-  ignore (HxArray.push __arr_11 "  if (left.has_value() && right.has_value() && left.type() == typeid(int) && right.type() == typeid(int)) return __hxhx_compare(std::any_cast<int>(left), std::any_cast<int>(right));");
-  ignore (HxArray.push __arr_11 "  if (left.has_value() && right.has_value() && left.type() == typeid(double) && right.type() == typeid(double)) return __hxhx_compare(std::any_cast<double>(left), std::any_cast<double>(right));");
-  ignore (HxArray.push __arr_11 "  return __hxhx_stringify(left).compare(__hxhx_stringify(right));");
-  ignore (HxArray.push __arr_11 "}");
-  __arr_11
+let anyIsTypeLines = fun () -> let __arr_31 = HxArray.create () in (
+  ignore (HxArray.push __arr_31 "static bool __hxhx_is_type(const std::any& value, const std::string& type) {");
+  ignore (HxArray.push __arr_31 "  if (type == \"Dynamic\" || type == \"Any\") return true;");
+  ignore (HxArray.push __arr_31 "  if (!value.has_value()) return type == \"Null\";");
+  ignore (HxArray.push __arr_31 "  const std::type_info& valueType = value.type();");
+  ignore (HxArray.push __arr_31 "  if (type == \"Array\") return valueType == typeid(std::vector<std::string>) || valueType == typeid(std::vector<int>);");
+  ignore (HxArray.push __arr_31 "  if (type == \"String\" || type == \"StdTypes.String\") return valueType == typeid(std::string) || valueType == typeid(const char*);");
+  ignore (HxArray.push __arr_31 "  if (type == \"Bool\" || type == \"StdTypes.Bool\") return valueType == typeid(bool);");
+  ignore (HxArray.push __arr_31 "  if (type == \"Int\" || type == \"StdTypes.Int\") return valueType == typeid(int);");
+  ignore (HxArray.push __arr_31 "  if (type == \"Float\" || type == \"StdTypes.Float\") return valueType == typeid(double) || valueType == typeid(float);");
+  ignore (HxArray.push __arr_31 "  return false;");
+  ignore (HxArray.push __arr_31 "}");
+  __arr_31
+)
+
+let enumValueDynamicLines = fun () -> let __arr_32 = HxArray.create () in (
+  ignore (HxArray.push __arr_32 "static bool __hxhx_is_enum_value(const std::shared_ptr<EnumValue>& value) {");
+  ignore (HxArray.push __arr_32 "  return value != nullptr;");
+  ignore (HxArray.push __arr_32 "}");
+  ignore (HxArray.push __arr_32 "");
+  ignore (HxArray.push __arr_32 "static bool __hxhx_is_enum_value(const std::any& value) {");
+  ignore (HxArray.push __arr_32 "  return value.has_value() && value.type() == typeid(std::shared_ptr<EnumValue>) && std::any_cast<std::shared_ptr<EnumValue>>(value) != nullptr;");
+  ignore (HxArray.push __arr_32 "}");
+  ignore (HxArray.push __arr_32 "");
+  ignore (HxArray.push __arr_32 "template<typename T>");
+  ignore (HxArray.push __arr_32 "static bool __hxhx_is_enum_value(const T&) {");
+  ignore (HxArray.push __arr_32 "  return false;");
+  ignore (HxArray.push __arr_32 "}");
+  ignore (HxArray.push __arr_32 "");
+  ignore (HxArray.push __arr_32 "static std::shared_ptr<EnumValue> __hxhx_enum_value_ptr(const std::any& value) {");
+  ignore (HxArray.push __arr_32 "  if (__hxhx_is_enum_value(value)) return std::any_cast<std::shared_ptr<EnumValue>>(value);");
+  ignore (HxArray.push __arr_32 "  return nullptr;");
+  ignore (HxArray.push __arr_32 "}");
+  ignore (HxArray.push __arr_32 "");
+  ignore (HxArray.push __arr_32 "static std::vector<std::string> __hxhx_string_vector_any(const std::any& value) {");
+  ignore (HxArray.push __arr_32 "  if (!value.has_value()) return {};");
+  ignore (HxArray.push __arr_32 "  if (value.type() == typeid(std::vector<std::string>)) return std::any_cast<std::vector<std::string>>(value);");
+  ignore (HxArray.push __arr_32 "  return {};");
+  ignore (HxArray.push __arr_32 "}");
+  ignore (HxArray.push __arr_32 "");
+  ignore (HxArray.push __arr_32 "static double __hxhx_any_double(const std::any& value) {");
+  ignore (HxArray.push __arr_32 "  if (!value.has_value()) return 0.0;");
+  ignore (HxArray.push __arr_32 "  if (value.type() == typeid(double)) return std::any_cast<double>(value);");
+  ignore (HxArray.push __arr_32 "  if (value.type() == typeid(float)) return static_cast<double>(std::any_cast<float>(value));");
+  ignore (HxArray.push __arr_32 "  if (value.type() == typeid(int)) return static_cast<double>(std::any_cast<int>(value));");
+  ignore (HxArray.push __arr_32 "  if (value.type() == typeid(bool)) return std::any_cast<bool>(value) ? 1.0 : 0.0;");
+  ignore (HxArray.push __arr_32 "  if (value.type() == typeid(std::string)) {");
+  ignore (HxArray.push __arr_32 "    try {");
+  ignore (HxArray.push __arr_32 "      return std::stod(std::any_cast<std::string>(value));");
+  ignore (HxArray.push __arr_32 "    } catch (...) {");
+  ignore (HxArray.push __arr_32 "      return 0.0;");
+  ignore (HxArray.push __arr_32 "    }");
+  ignore (HxArray.push __arr_32 "  }");
+  ignore (HxArray.push __arr_32 "  return 0.0;");
+  ignore (HxArray.push __arr_32 "}");
+  __arr_32
+)
+
+let compareLines = fun () -> let __arr_33 = HxArray.create () in (
+  ignore (HxArray.push __arr_33 "template<typename L, typename R>");
+  ignore (HxArray.push __arr_33 "static int __hxhx_compare(const L& left, const R& right) {");
+  ignore (HxArray.push __arr_33 "  return __hxhx_stringify(left).compare(__hxhx_stringify(right));");
+  ignore (HxArray.push __arr_33 "}");
+  ignore (HxArray.push __arr_33 "");
+  ignore (HxArray.push __arr_33 "template<typename T>");
+  ignore (HxArray.push __arr_33 "static int __hxhx_compare(const T& left, const T& right) {");
+  ignore (HxArray.push __arr_33 "  if constexpr (std::is_arithmetic_v<T>) return left < right ? -1 : (left > right ? 1 : 0);");
+  ignore (HxArray.push __arr_33 "  else return left < right ? -1 : (left > right ? 1 : 0);");
+  ignore (HxArray.push __arr_33 "}");
+  ignore (HxArray.push __arr_33 "");
+  ignore (HxArray.push __arr_33 "static int __hxhx_compare(const std::shared_ptr<EnumValue>& left, const std::shared_ptr<EnumValue>& right) {");
+  ignore (HxArray.push __arr_33 "  if (left == nullptr && right == nullptr) return 0;");
+  ignore (HxArray.push __arr_33 "  if (left == nullptr) return -1;");
+  ignore (HxArray.push __arr_33 "  if (right == nullptr) return 1;");
+  ignore (HxArray.push __arr_33 "  int indexDiff = left->getIndex() - right->getIndex();");
+  ignore (HxArray.push __arr_33 "  if (indexDiff != 0) return indexDiff < 0 ? -1 : 1;");
+  ignore (HxArray.push __arr_33 "  return left->getName().compare(right->getName());");
+  ignore (HxArray.push __arr_33 "}");
+  ignore (HxArray.push __arr_33 "");
+  ignore (HxArray.push __arr_33 "static int __hxhx_compare(const std::any& left, const std::any& right) {");
+  ignore (HxArray.push __arr_33 "  if (__hxhx_is_enum_value(left) && __hxhx_is_enum_value(right)) return __hxhx_compare(__hxhx_enum_value_ptr(left), __hxhx_enum_value_ptr(right));");
+  ignore (HxArray.push __arr_33 "  if (left.has_value() && right.has_value() && left.type() == typeid(std::string) && right.type() == typeid(std::string)) return __hxhx_compare(std::any_cast<std::string>(left), std::any_cast<std::string>(right));");
+  ignore (HxArray.push __arr_33 "  if (left.has_value() && right.has_value() && left.type() == typeid(int) && right.type() == typeid(int)) return __hxhx_compare(std::any_cast<int>(left), std::any_cast<int>(right));");
+  ignore (HxArray.push __arr_33 "  if (left.has_value() && right.has_value() && left.type() == typeid(double) && right.type() == typeid(double)) return __hxhx_compare(std::any_cast<double>(left), std::any_cast<double>(right));");
+  ignore (HxArray.push __arr_33 "  return __hxhx_stringify(left).compare(__hxhx_stringify(right));");
+  ignore (HxArray.push __arr_33 "}");
+  __arr_33
 )

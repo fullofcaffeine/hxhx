@@ -1317,56 +1317,7 @@ class CppTargetCore {
 		real stdlib/runtime support, not in generated fake backend classes.
 	**/
 	static function renderMissingInterfaceDeclaration(name:String):Null<Array<String>> {
-		return switch (sanitizeTypePath(typeBaseName(name == null ? "" : name))) {
-			case "KeyValueIterator":
-				["struct KeyValueIterator {", "  virtual ~KeyValueIterator() = default;", "};"];
-			case "IMap":
-				[
-					"template<typename K, typename V>",
-					"struct IMap {",
-					"  virtual ~IMap() = default;",
-					"  virtual std::optional<V> get(K k) = 0;",
-					"  virtual void set(K k, V v) = 0;",
-					"  virtual bool exists(K k) = 0;",
-					"  virtual bool remove(K k) = 0;",
-					"  virtual std::shared_ptr<__hxhx_iterator<K>> keys() = 0;",
-					"  virtual std::shared_ptr<__hxhx_iterator<V>> iterator() = 0;",
-					"  virtual std::shared_ptr<KeyValueIterator> keyValueIterator() = 0;",
-					"  virtual std::shared_ptr<IMap<K, V>> copy() = 0;",
-					"  virtual std::string toString() = 0;",
-					"  virtual void clear() = 0;",
-					"};"
-				];
-			case "StringMap":
-				[
-					"struct __hxhx_stringmap_key_iterator : public __hxhx_iterator<std::string> {",
-					"  std::vector<std::string> values;",
-					"  std::size_t index;",
-					"  explicit __hxhx_stringmap_key_iterator(std::vector<std::string> values) : values(std::move(values)), index(0) {}",
-					"  bool hasNext() override { return index < values.size(); }",
-					"  std::string next() override { return values[index++]; }",
-					"};",
-					"template<typename V>",
-					"struct StringMap {",
-					"  std::map<std::string, V> __values;",
-					"  V get(std::string key) {",
-					"    auto it = __values.find(key);",
-					"    return it == __values.end() ? V() : it->second;",
-					"  }",
-					"  void set(std::string key, V value) { __values[key] = value; }",
-					"  std::shared_ptr<__hxhx_iterator<std::string>> keys() {",
-					"    std::vector<std::string> out;",
-					"    for (const auto& item : __values) out.push_back(item.first);",
-					"    return std::make_shared<__hxhx_stringmap_key_iterator>(std::move(out));",
-					"  }",
-					"  std::string toString() { return std::string(\"[object StringMap]\"); }",
-					"};"
-				];
-			case "Date":
-				["struct Date {", "  std::string toString() { return std::string(); }", "};"];
-			case _:
-				null;
-		}
+		return CppRuntimeSupport.missingDeclarationLines(sanitizeTypePath(typeBaseName(name == null ? "" : name)));
 	}
 
 	static function shouldRenderMissingDeclarationBody(name:String, classLookup:CppClassLookup):Bool {
@@ -5650,40 +5601,8 @@ class CppTargetCore {
 	}
 
 	static function missingInterfaceMethodReturnCppType(className:String, methodName:String):String {
-		return switch (sanitizeTypePath(typeBaseName(className == null ? "" : className))) {
-			case "IMap":
-				switch (sanitizeIdentifier(methodName == null ? "" : methodName)) {
-					case "get":
-						"std::optional<std::string>";
-					case "set" | "clear":
-						"void";
-					case "exists" | "remove":
-						"bool";
-					case "keys" | "iterator":
-						"std::shared_ptr<__hxhx_iterator<std::string>>";
-					case "keyValueIterator":
-						"std::shared_ptr<KeyValueIterator>";
-					case "copy":
-						"std::shared_ptr<IMap>";
-					case "toString":
-						"std::string";
-					case _:
-						"";
-				}
-			case "StringMap":
-				switch (sanitizeIdentifier(methodName == null ? "" : methodName)) {
-					case "get" | "toString":
-						"std::string";
-					case "set":
-						"void";
-					case "keys":
-						"std::shared_ptr<__hxhx_iterator<std::string>>";
-					case _:
-						"";
-				}
-			case _:
-				"";
-		};
+		return CppRuntimeSupport.missingMethodReturnType(sanitizeTypePath(typeBaseName(className == null ? "" : className)),
+			sanitizeIdentifier(methodName == null ? "" : methodName));
 	}
 
 	static function classMethodDecl(className:String, methodName:String, wantStatic:Bool, scope:CppRenderScope):Null<HxFunctionDecl> {
