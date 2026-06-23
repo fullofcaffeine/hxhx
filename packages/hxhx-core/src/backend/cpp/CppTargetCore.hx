@@ -1694,7 +1694,7 @@ class CppTargetCore {
 			final init = HxFieldDecl.getInit(field);
 			final typeName = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), init, scope);
 			if (HxFieldDecl.getIsStatic(field)) {
-				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
+				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderLocalInitExpr(init, typeName, typeName, scope);
 				out.push("  inline static " + typeName + " " + sanitizeIdentifier(fieldName) + " = " + rhs + ";");
 				traceCppMemberPhase(className, "render_helper_field", fieldName, "end");
 				continue;
@@ -1703,7 +1703,7 @@ class CppTargetCore {
 			if (init == null && genericField) {
 				out.push("  " + typeName + " " + sanitizeIdentifier(fieldName) + ";");
 			} else {
-				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderExpr(init, scope);
+				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderLocalInitExpr(init, typeName, typeName, scope);
 				out.push("  " + typeName + " " + sanitizeIdentifier(fieldName) + " = " + rhs + ";");
 			}
 			traceCppMemberPhase(className, "render_helper_field", fieldName, "end");
@@ -4175,6 +4175,8 @@ class CppTargetCore {
 			}
 		}
 		switch (expr) {
+			case ENew(typePath, args):
+				return newExpr(typePath, args, scope, expectedType);
 			case ESwitch(scrutinee, patterns, exprs):
 				return switchExpr(scrutinee, patterns, exprs, scope, expectedType);
 			case _:
@@ -4584,10 +4586,12 @@ class CppTargetCore {
 		if (scopeHasClass(scope, className) && isStdVectorHelperClass(scope.classByName.get(className)))
 			return className + "(" + renderConstructorArgs(className, args, scope).join(", ") + ")";
 		final renderedArgs = renderConstructorArgs(className, args, scope).join(", ");
-		if (scopeHasClass(scope, className) && genericClassTypeParamsForName(className, scope).length > 0) {
+		final expectedTemplateArgs = templateArgsFromExpectedClassType(className, expectedCppType);
+		if (scopeHasClass(scope, className)
+			&& (genericClassTypeParamsForName(className, scope).length > 0 || expectedTemplateArgs.length > 0)) {
 			var templateArgs = scopedTemplateArgsForClass(className, scope);
 			if (templateArgs.length == 0)
-				templateArgs = templateArgsFromExpectedClassType(className, expectedCppType);
+				templateArgs = expectedTemplateArgs;
 			if (templateArgs.length == 0 && args.length == 0)
 				templateArgs = templateArgsFromExpectedClassType(className, scope == null ? "" : scope.returnType);
 			return "__hxhx_make_shared_"
@@ -5144,6 +5148,8 @@ class CppTargetCore {
 			switch (arg) {
 				case EArrayDecl([]):
 					return valueType + "{}";
+				case EArrayDecl(_):
+					return valueExprForExpectedType(arg, valueType, scope);
 				case _:
 			}
 		}
@@ -6535,13 +6541,32 @@ class CppTargetCore {
 					return valueExprForExpectedType(right, expectedType, scope);
 			}
 		}
+		if (isCppReferenceType(expectedType))
+			return valueExprForExpectedType(right, expectedType, scope);
 		return renderExpr(right, scope);
 	}
 
 	static function assignmentExpectedCppType(left:HxExpr, ?scope:CppRenderScope):String {
+		final fieldType = assignmentExpectedFieldCppType(left, scope);
+		if (fieldType != null && fieldType.length > 0)
+			return fieldType;
 		final leftType = exprCppType(left, scope);
 		final optionalInner = cppOptionalInnerType(leftType);
 		return optionalInner.length > 0 ? optionalInner : leftType;
+	}
+
+	static function assignmentExpectedFieldCppType(left:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || scope.owner == null)
+			return null;
+		final fieldName = switch (left) {
+			case EIdent(name):
+				sanitizeIdentifier(name);
+			case EField(EThis, name):
+				sanitizeIdentifier(name);
+			case _:
+				return null;
+		};
+		return constructorFieldCppType(scope, fieldName);
 	}
 
 	static function assignmentLhsExpr(left:HxExpr, ?scope:CppRenderScope):String {

@@ -4106,7 +4106,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		staticFieldClasses.set("StaticFieldOwner", staticFieldOwner);
 		final staticFieldLookup = {names: staticFieldNames, byName: staticFieldClasses};
 		final staticFieldLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(staticFieldOwner, staticFieldLookup).join("\n");
-		assertContains(staticFieldLines, "inline static std::string store = \"init\";",
+		assertContains(staticFieldLines, "inline static std::string store = std::string(\"init\");",
 			"C++ helper classes should emit static fields instead of dropping them from the struct");
 		assertContains(staticFieldLines, "store = v;", "C++ static methods should type unqualified same-owner static field access");
 		assertContains(staticFieldLines, "StaticFieldOwner::store = \"class\";", "C++ static field access through the owner type should use scope resolution");
@@ -4501,6 +4501,44 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ zero-arg generic factory declarations should appear before implicit-constructor template definitions");
 		assertTrue(source.indexOf(genericImplicitNodeStruct) < source.indexOf(genericImplicitNodeFactoryBody),
 			"C++ zero-arg generic factory bodies should remain after implicit-constructor template definitions");
+		final parsedRunnerGenericModule = new HxParser([
+			"class Dispatcher<T> {",
+			"  public function new() {}",
+			"}",
+			"class TestFixture {",
+			"  public function new() {}",
+			"}",
+			"class RunnerGenericLike {",
+			"  public var fixtures:Array<TestFixture> = [];",
+			"  public var onProgress:Dispatcher<String>;",
+			"  public function new() {",
+			"    onProgress = new Dispatcher();",
+			"  }",
+			"  public function isTestFixtureName(prefixes:Array<String>):Bool {",
+			"    return true;",
+			"  }",
+			"  public function usePrefix(prefix:String):Bool {",
+			"    return isTestFixtureName([prefix]);",
+			"  }",
+			"}"
+		].join("\n")).parseModule("RunnerGenericLike");
+		final parsedRunnerGenericOwner = HxModuleDecl.getMainClass(parsedRunnerGenericModule);
+		final parsedRunnerGenericNames = new StringMap<Bool>();
+		final parsedRunnerGenericClasses = new StringMap<HxClassDecl>();
+		for (cls in HxModuleDecl.getClasses(parsedRunnerGenericModule)) {
+			parsedRunnerGenericNames.set(HxClassDecl.getName(cls), true);
+			parsedRunnerGenericClasses.set(HxClassDecl.getName(cls), cls);
+		}
+		final parsedRunnerGenericLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(parsedRunnerGenericOwner, {
+			names: parsedRunnerGenericNames,
+			byName: parsedRunnerGenericClasses
+		}).join("\n");
+		assertContains(parsedRunnerGenericLines, "std::vector<std::shared_ptr<TestFixture>> fixtures = std::vector<std::shared_ptr<TestFixture>>{};",
+			"C++ typed empty Array fields should render with the declared element type instead of vector<int>");
+		assertContains(parsedRunnerGenericLines, "onProgress = __hxhx_make_shared_Dispatcher<std::string>();",
+			"C++ zero-arg generic constructor assignments should infer template args from the destination field type");
+		assertContains(parsedRunnerGenericLines, "return isTestFixtureName(std::vector<std::string>{std::string(prefix)});",
+			"C++ array literals passed to typed Array parameters should render with the parameter element type");
 		assertContains(source, "static bool isOfType(std::string v, std::shared_ptr<Class> t)",
 			"C++ smoke should preserve Class-valued helper parameters instead of falling back to strings");
 		assertContains(source, "int casted = helper(5);", "C++ smoke should lower cast expression with explicit local type");
