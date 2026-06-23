@@ -3271,6 +3271,43 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(printerExprLines.indexOf("old") < 0, "C++ Printer.printExpr should not leak raw pattern locals from partial expression bodies");
 		assertTrue(printerExprLinesByName.get("printExpr").indexOf("return std::string();") < 0,
 			"C++ Printer.printExpr neutral helper should not return a string from a void helper");
+		final typeDefinitionCarrier = new HxClassDecl("TypeDefinition", false, [], []);
+		final printerTypeDefinitionOwner = new HxClassDecl("Printer", false, [
+			new HxFunctionDecl("printTypeDefinition", Public, false, [
+				new HxFunctionArg("t", "TypeDefinition", NoDefault, false, false),
+				new HxFunctionArg("printPackage", "Bool", Default(EBool(true)), true, false)
+			], "", [
+				SVar("old", "", EIdent("tabs"), HxPos.unknown()),
+				SReturn(EBinop("+", ECall(EField(ECall(EField(EField(EIdent("t"), "meta"), "map"), [EIdent("printMetadata")]), "join"), [EString(" ")]),
+					ESwitch(EField(EIdent("t"), "kind"), [PEnumValue("TDEnum"), PEnumValue("TDClass")], [
+						ECall(EIdent("printComplexType"), [EIdent("ct")]),
+						ECall(EIdent("printExtension"), [EIdent("tpl"), EIdent("fields")])
+					])), HxPos.unknown())
+			], "")
+		], []);
+		final printerTypeDefinitionNames = new StringMap<Bool>();
+		for (name in ["Printer", "TypeDefinition"])
+			printerTypeDefinitionNames.set(name, true);
+		final printerTypeDefinitionClasses = new StringMap<HxClassDecl>();
+		printerTypeDefinitionClasses.set("Printer", printerTypeDefinitionOwner);
+		printerTypeDefinitionClasses.set("TypeDefinition", typeDefinitionCarrier);
+		final printerTypeDefinitionLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(printerTypeDefinitionOwner)[0],
+			printerTypeDefinitionOwner, {
+			names: printerTypeDefinitionNames,
+			byName: printerTypeDefinitionClasses
+		})
+			.join("\n");
+		assertContains(printerTypeDefinitionLines,
+			"std::string printTypeDefinition(std::shared_ptr<TypeDefinition> t, std::optional<bool> printPackage = true)",
+			"C++ Printer.printTypeDefinition should keep its callable signature while TypeDefinition lowering is incomplete");
+		for (argName in ["t", "printPackage"])
+			assertContains(printerTypeDefinitionLines, "(void)" + argName + ";", "C++ Printer.printTypeDefinition should consume " + argName);
+		assertContains(printerTypeDefinitionLines, "return std::string();",
+			"C++ Printer.printTypeDefinition neutral helper should return a compile-safe string");
+		assertTrue(printerTypeDefinitionLines.indexOf(".map") < 0, "C++ Printer.printTypeDefinition should not emit unsupported metadata map syntax");
+		assertTrue(printerTypeDefinitionLines.indexOf("TDEnum") < 0, "C++ Printer.printTypeDefinition should not emit unsupported TypeDefKind comparisons");
+		assertTrue(printerTypeDefinitionLines.indexOf("printComplexType") < 0,
+			"C++ Printer.printTypeDefinition should not leak unsupported kind-payload callbacks");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],
