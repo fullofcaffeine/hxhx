@@ -1214,6 +1214,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final pos = HxPos.unknown();
 		final mainClass = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")]);
 		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
+		final nullClass = new HxClassDecl("Null", false, []);
 		final positionClass = new HxClassDecl("Position", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")]);
 		final compilerClass = new HxClassDecl("Compiler", false, [
 			new HxFunctionDecl("getDisplayPos", Public, true, [], "Null<Position>", [
@@ -1226,7 +1227,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("getDefine", Public, true, [new HxFunctionArg("key", "String", NoDefault, false, false)], "__HxMacroExpr",
 				[SReturn(EMacroExpr(EString("defined"), []), pos)], "")
 		]);
-		final compilerDecl = new HxModuleDecl("haxe.macro", [], compilerClass, [positionClass, compilerClass], false, false);
+		final compilerDecl = new HxModuleDecl("haxe.macro", [], compilerClass, [nullClass, positionClass, compilerClass], false, false);
 		return MacroStage.expandProgram([
 			typedSyntheticModule("Main.hx", mainDecl),
 			typedSyntheticModule("std/haxe/macro/Compiler.hx", compilerDecl)

@@ -7631,8 +7631,11 @@ class CppTargetCore {
 
 	static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-		if (StringTools.startsWith(hint, "Null<") && StringTools.endsWith(hint, ">"))
-			return cppNullableTypeHint(hint.substr("Null<".length, hint.length - "Null<".length - 1), scope, classLookup);
+		final nullArg = CppTypeModel.nullTypeHintArg(hint);
+		if (nullArg != null)
+			return cppNullableTypeHint(nullArg, scope, classLookup);
+		if (CppTypeModel.isBareNullTypeHint(hint))
+			return "std::any";
 		if (scope != null && scope.owner != null && isGenericTypeParamHint(hint, scope.owner))
 			return cppTypeParamName(genericTypeParamName(hint), scope);
 		if (isStructuralTypeHint(hint)) {
@@ -7658,6 +7661,8 @@ class CppTargetCore {
 
 	static function cppReturnTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (CppTypeModel.isBareNullTypeHint(raw))
+			return "std::any";
 		final hint = CppTypeModel.unwrapNullTypeHint(raw);
 		if (isStructuralTypeHint(hint))
 			return "auto";

@@ -168,8 +168,11 @@ class CppTypeModel {
 
 	public static function cppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
 		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-		if (StringTools.startsWith(raw, "Null<") && StringTools.endsWith(raw, ">"))
-			return cppNullableTypeHint(raw.substr("Null<".length, raw.length - "Null<".length - 1), scope, classLookup);
+		final nullArg = nullTypeHintArg(raw);
+		if (nullArg != null)
+			return cppNullableTypeHint(nullArg, scope, classLookup);
+		if (isBareNullTypeHint(raw))
+			return "std::any";
 		final hint = raw;
 		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
 		if (primitiveAbstractType != null)
@@ -332,9 +335,23 @@ class CppTypeModel {
 
 	public static function unwrapNullTypeHint(typeHint:String):String {
 		final hint = removeTypeHintWhitespace(typeHint);
-		if (StringTools.startsWith(hint, "Null<") && StringTools.endsWith(hint, ">"))
-			return hint.substr("Null<".length, hint.length - "Null<".length - 1);
+		final nullArg = nullTypeHintArg(hint);
+		if (nullArg != null)
+			return nullArg;
 		return hint;
+	}
+
+	public static function nullTypeHintArg(typeHint:String):Null<String> {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		for (prefix in ["Null<", "StdTypes.Null<"])
+			if (StringTools.startsWith(hint, prefix) && StringTools.endsWith(hint, ">"))
+				return hint.substr(prefix.length, hint.length - prefix.length - 1);
+		return null;
+	}
+
+	public static function isBareNullTypeHint(typeHint:String):Bool {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		return hint == "Null" || hint == "StdTypes.Null";
 	}
 
 	public static function isFunctionTypeHint(typeHint:String):Bool {
