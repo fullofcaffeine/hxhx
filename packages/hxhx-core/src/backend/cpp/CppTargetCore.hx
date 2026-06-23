@@ -2323,6 +2323,8 @@ class CppTargetCore {
 			return returnTraced("special_utest_runner_add_cases", renderUtestRunnerAddCasesHelper(fn, owner, classLookup));
 		if (isPolymorphicIsOfTypeHelper(fn))
 			return returnTraced("special_is_of_type", renderPolymorphicIsOfTypeHelper(fn, owner, classLookup));
+		if (isTypeToolsFindFieldHelper(fn, owner))
+			return returnTraced("special_typetools_find_field", renderTypeToolsFindFieldHelper(fn, owner, classLookup));
 		if (isTypeToolsTraversalHelper(fn, owner))
 			return returnTraced("special_typetools_traversal", renderTypeToolsTraversalHelper(fn, owner, classLookup));
 		if (isTypeErasedValueHelper(fn, owner))
@@ -8372,6 +8374,33 @@ class CppTargetCore {
 			case _:
 				false;
 		};
+	}
+
+	static function isTypeToolsFindFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "TypeTools")
+			return false;
+		return sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "findField" && HxFunctionDecl.getArgs(fn).length >= 2;
+	}
+
+	static function renderTypeToolsFindFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final out = ["  static "
+			+ returnType
+			+ " "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
+			+ ") {"];
+		for (arg in HxFunctionDecl.getArgs(fn))
+			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+		if (returnType != "void")
+			out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		out.push("  }");
+		return out;
 	}
 
 	static function renderTypeToolsTraversalHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {

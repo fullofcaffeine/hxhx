@@ -3057,6 +3057,49 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(typeToolsIterLines, "(void)t;", "C++ TypeTools.iter should consume the Type argument in the bounded helper");
 		assertContains(typeToolsIterLines, "(void)f;", "C++ TypeTools.iter should consume the callback argument in the bounded helper");
 		assertTrue(typeToolsIterLines.indexOf("for (auto") < 0, "C++ TypeTools.iter should not iterate over Type payload placeholders");
+		final classTypeCarrier = new HxClassDecl("ClassType", false, [], [
+			new HxFieldDecl("fields", Public, false, "Ref<Array<ClassField>>", null),
+			new HxFieldDecl("statics", Public, false, "Ref<Array<ClassField>>", null),
+			new HxFieldDecl("superClass", Public, false, "Null<{t:Ref<ClassType>}>", null)
+		]);
+		final classFieldCarrier = new HxClassDecl("ClassField", false, [], [new HxFieldDecl("name", Public, false, "String", null)]);
+		final typeToolsFindFieldOwner = new HxClassDecl("TypeTools", false, [
+			new HxFunctionDecl("findField", Public, true, [
+				new HxFunctionArg("c", "ClassType", NoDefault, false, false),
+				new HxFunctionArg("name", "String", NoDefault, false, false),
+				new HxFunctionArg("isStatic", "Bool", Default(EBool(false)), true, false)
+			], "ClassField", [
+				SVar("field", "",
+					ECall(EField(ECall(EField(ETernary(EIdent("isStatic"), EField(EIdent("c"), "statics"), EField(EIdent("c"), "fields")), "get"), []), "find"),
+						[
+							ELambda(["field"], EBinop("==", EField(EIdent("field"), "name"), EIdent("name")))
+						]), HxPos.unknown()),
+				SReturn(ETernary(EBinop("!=", EIdent("field"), ENull), EIdent("field"), ECall(EIdent("findField"), [
+					ECall(EField(EField(EIdent("c"), "superClass"), "t"), []),
+					EIdent("name"),
+					EIdent("isStatic")
+				])), HxPos.unknown())
+			], "")
+		], []);
+		final typeToolsFindFieldNames = new StringMap<Bool>();
+		for (name in ["TypeTools", "ClassType", "ClassField"])
+			typeToolsFindFieldNames.set(name, true);
+		final typeToolsFindFieldClasses = new StringMap<HxClassDecl>();
+		typeToolsFindFieldClasses.set("TypeTools", typeToolsFindFieldOwner);
+		typeToolsFindFieldClasses.set("ClassType", classTypeCarrier);
+		typeToolsFindFieldClasses.set("ClassField", classFieldCarrier);
+		final typeToolsFindFieldLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(typeToolsFindFieldOwner)[0],
+			typeToolsFindFieldOwner, {
+				names: typeToolsFindFieldNames,
+				byName: typeToolsFindFieldClasses
+			})
+			.join("\n");
+		assertContains(typeToolsFindFieldLines,
+			"static std::shared_ptr<ClassField> findField(std::shared_ptr<ClassType> c, std::string name, std::optional<bool> isStatic = false)",
+			"C++ TypeTools.findField should preserve the macro ClassField lookup helper signature");
+		assertContains(typeToolsFindFieldLines, "return nullptr;", "C++ TypeTools.findField should typecheck as a bounded neutral helper in the C++ MVP");
+		assertTrue(typeToolsFindFieldLines.indexOf(".get().find") < 0, "C++ TypeTools.findField should not emit unsupported Ref/vector find calls");
+		assertTrue(typeToolsFindFieldLines.indexOf("superClass).t") < 0, "C++ TypeTools.findField should not emit optional anonymous field access through .t");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],
