@@ -4228,6 +4228,8 @@ class CppTargetCore {
 			if (methodValue != null)
 				return methodValue;
 		}
+		if (isCppEnumCarrierReferenceType(expectedType, scope) && isStringLike(expr))
+			return cppDefaultValue(expectedType, scope);
 		if (isCppVectorType(expectedType)) {
 			switch (expr) {
 				case EArrayDecl(elements):
@@ -5468,6 +5470,19 @@ class CppTargetCore {
 
 	static function exprHasReferenceType(expr:HxExpr, ?scope:CppRenderScope):Bool {
 		return isCppReferenceType(exprCppType(expr, scope));
+	}
+
+	static function isCppEnumCarrierReferenceType(typeName:String, ?scope:CppRenderScope):Bool {
+		final className = classNameFromCppType(typeName);
+		if (className == null || scope == null)
+			return false;
+		final cls = scope.classByName.get(sanitizeTypePath(typeBaseName(className)));
+		if (cls == null)
+			return false;
+		for (field in HxClassDecl.getFields(cls))
+			if (HxFieldDecl.getIsStatic(field) && sanitizeIdentifier(HxFieldDecl.getName(field)) == "__hx_is_enum")
+				return true;
+		return false;
 	}
 
 	static function exprHasOptionalType(expr:HxExpr, ?scope:CppRenderScope):Bool {

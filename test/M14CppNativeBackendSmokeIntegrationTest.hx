@@ -2104,6 +2104,26 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ HelperMacros.typeError for-expression probes should fold to true");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EMacroType("X -> Y")) == "std::string(\"X -> Y\")",
 			"C++ macro type quotes should lower to stable printable text in the MVP");
+		final complexTypeCarrier = new HxClassDecl("ComplexType", false, [], [new HxFieldDecl("__hx_is_enum", Public, true, "Bool", EBool(true))]);
+		final typeToolsNullable = new HxFunctionDecl("nullable", Public, true, [new HxFunctionArg("complexType", "ComplexType", NoDefault, false, false)],
+			"ComplexType", [SReturn(EString("Null<$complexType>"), HxPos.unknown())], "");
+		final typeToolsOwner = new HxClassDecl("TypeTools", false, [typeToolsNullable], []);
+		final typeToolsNames = new StringMap<Bool>();
+		for (name in ["ComplexType", "TypeTools"])
+			typeToolsNames.set(name, true);
+		final typeToolsClasses = new StringMap<HxClassDecl>();
+		typeToolsClasses.set("ComplexType", complexTypeCarrier);
+		typeToolsClasses.set("TypeTools", typeToolsOwner);
+		final typeToolsNullableLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(typeToolsNullable, typeToolsOwner, {
+			names: typeToolsNames,
+			byName: typeToolsClasses
+		}).join("\n");
+		assertContains(typeToolsNullableLines, "static std::shared_ptr<ComplexType> nullable(std::shared_ptr<ComplexType> complexType) {",
+			"C++ ComplexType helper methods should preserve their enum-carrier reference return type");
+		assertContains(typeToolsNullableLines, "return nullptr;",
+			"C++ string-only macro ComplexType placeholders should lower to a neutral enum-carrier reference default");
+		assertTrue(typeToolsNullableLines.indexOf("return std::string(\"Null<$complexType>\");") < 0,
+			"C++ ComplexType-returning helpers must not return bare string placeholders");
 		final enumPayloadOwner = new HxClassDecl("EnumPayloadOwner", false, [], []);
 		final enumPayloadNames = new StringMap<Bool>();
 		enumPayloadNames.set("EnumPayloadOwner", true);
