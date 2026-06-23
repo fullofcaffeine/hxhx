@@ -3213,6 +3213,64 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(printerFunctionLines.indexOf("printComplexType,") < 0,
 			"C++ Printer type/function helpers should not pass non-static method values directly as callbacks");
 		assertTrue(printerFunctionLines.indexOf("kind ==") < 0, "C++ Printer.printFunction should not emit unsupported FunctionKind string comparisons");
+		final varCarrier = new HxClassDecl("Var", false, [], []);
+		final objectFieldCarrier = new HxClassDecl("ObjectField", false, [], []);
+		final exprCarrier = new HxClassDecl("Expr", false, [], []);
+		final printerExprOwner = new HxClassDecl("Printer", false, [
+			new HxFunctionDecl("printVar", Public, false, [new HxFunctionArg("v", "Var", NoDefault, false, false)], "", [
+				SVar("s", "", ECall(EIdent("opt"), [EField(EIdent("v"), "type"), EIdent("printComplexType"), EString(":")]), HxPos.unknown()),
+				SReturn(ECall(EField(ECall(EField(EField(EIdent("v"), "meta"), "map"), [EIdent("printMetadata")]), "join"), [EString(" ")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("printObjectFieldKey", Public, false, [new HxFunctionArg("of", "ObjectField", NoDefault, false, false)], "", [
+				SReturn(ESwitch(EField(EIdent("of"), "quotes"), [PEnumValue("Unquoted"), PEnumValue("Quoted")],
+					[EField(EIdent("of"), "field"), EString("quoted")]),
+					HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("printObjectField", Public, false, [new HxFunctionArg("of", "ObjectField", NoDefault, false, false)], "", [
+				SReturn(EBinop("+", ECall(EIdent("printObjectFieldKey"), [EIdent("of")]), ECall(EIdent("printExpr"), [EField(EIdent("of"), "expr")])),
+					HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("printExpr", Public, false, [new HxFunctionArg("e", "Expr", NoDefault, false, false)], "Void", [
+				SVar("s", "", EBinop("+", EIdent("old"), EIdent("e1")), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("cl"), "map"), [EIdent("printExpr")]), HxPos.unknown())
+			], "")
+		], []);
+		final printerExprNames = new StringMap<Bool>();
+		for (name in ["Printer", "Var", "ObjectField", "Expr"])
+			printerExprNames.set(name, true);
+		final printerExprClasses = new StringMap<HxClassDecl>();
+		printerExprClasses.set("Printer", printerExprOwner);
+		printerExprClasses.set("Var", varCarrier);
+		printerExprClasses.set("ObjectField", objectFieldCarrier);
+		printerExprClasses.set("Expr", exprCarrier);
+		final printerExprLinesByName = new StringMap<String>();
+		for (fn in HxClassDecl.getFunctions(printerExprOwner)) {
+			printerExprLinesByName.set(HxFunctionDecl.getName(fn), @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, printerExprOwner, {
+				names: printerExprNames,
+				byName: printerExprClasses
+			}).join("\n"));
+		}
+		final printerExprLines = [
+			for (name in ["printVar", "printObjectFieldKey", "printObjectField", "printExpr"])
+				printerExprLinesByName.get(name)
+		].join("\n");
+		assertContains(printerExprLinesByName.get("printVar"), "std::string printVar(std::shared_ptr<Var> v)",
+			"C++ Printer.printVar should stay string-callable while var metadata lowering is incomplete");
+		assertContains(printerExprLinesByName.get("printObjectFieldKey"), "std::string printObjectFieldKey(std::shared_ptr<ObjectField> of)",
+			"C++ Printer.printObjectFieldKey should stay string-callable while quote-status lowering is incomplete");
+		assertContains(printerExprLinesByName.get("printObjectField"), "std::string printObjectField(std::shared_ptr<ObjectField> of)",
+			"C++ Printer.printObjectField should stay string-callable while printExpr is void");
+		assertContains(printerExprLinesByName.get("printExpr"), "void printExpr(std::shared_ptr<Expr> e)",
+			"C++ Printer.printExpr should keep its void signature while expression printing is incomplete");
+		for (argName in ["v", "of", "e"])
+			assertContains(printerExprLines, "(void)" + argName + ";", "C++ Printer neutral helper should consume " + argName);
+		assertTrue(printerExprLines.indexOf(".map") < 0, "C++ Printer var/object/expr helpers should not emit unsupported map syntax");
+		assertTrue(printerExprLines.indexOf("printComplexType,") < 0,
+			"C++ Printer var/object/expr helpers should not pass non-static method values directly as callbacks");
+		assertTrue(printerExprLines.indexOf("Unquoted") < 0, "C++ Printer.printObjectFieldKey should not emit unsupported quote-status comparisons");
+		assertTrue(printerExprLines.indexOf("old") < 0, "C++ Printer.printExpr should not leak raw pattern locals from partial expression bodies");
+		assertTrue(printerExprLinesByName.get("printExpr").indexOf("return std::string();") < 0,
+			"C++ Printer.printExpr neutral helper should not return a string from a void helper");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],

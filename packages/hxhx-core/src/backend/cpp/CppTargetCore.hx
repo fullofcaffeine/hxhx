@@ -2348,6 +2348,8 @@ class CppTargetCore {
 			return returnTraced("special_printer_field", renderPrinterFieldHelper(fn, owner, classLookup));
 		if (isPrinterTypeParamFunctionHelper(fn, owner))
 			return returnTraced("special_printer_type_param_function", renderPrinterTypeParamFunctionHelper(fn, owner, classLookup));
+		if (isPrinterVarObjectExprHelper(fn, owner))
+			return returnTraced("special_printer_var_object_expr", renderPrinterVarObjectExprHelper(fn, owner, classLookup));
 		if (isTypeErasedValueHelper(fn, owner))
 			return returnTraced("special_type_erased_value", renderTypeErasedValueHelper(fn, owner, classLookup));
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
@@ -8489,6 +8491,24 @@ class CppTargetCore {
 		return renderPrinterNeutralStringHelper(fn, owner, classLookup);
 	}
 
+	static function isPrinterVarObjectExprHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Printer")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "printVar" | "printObjectFieldKey" | "printObjectField" | "printExpr":
+				HxFunctionDecl.getArgs(fn).length == 1;
+			case _:
+				false;
+		};
+	}
+
+	static function renderPrinterVarObjectExprHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		return sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "printExpr" ? renderPrinterNeutralVoidHelper(fn, owner,
+			classLookup) : renderPrinterNeutralStringHelper(fn, owner, classLookup);
+	}
+
 	static function renderPrinterNeutralStringHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final scope = renderScope(owner, classLookup, "std::string");
 		prepareFunctionScope(scope, fn);
@@ -8500,6 +8520,20 @@ class CppTargetCore {
 		for (arg in HxFunctionDecl.getArgs(fn))
 			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
 		out.push("    return std::string();");
+		out.push("  }");
+		return out;
+	}
+
+	static function renderPrinterNeutralVoidHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final scope = renderScope(owner, classLookup, "void");
+		prepareFunctionScope(scope, fn);
+		final out = ["  void "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
+			+ ") {"];
+		for (arg in HxFunctionDecl.getArgs(fn))
+			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
 		out.push("  }");
 		return out;
 	}
