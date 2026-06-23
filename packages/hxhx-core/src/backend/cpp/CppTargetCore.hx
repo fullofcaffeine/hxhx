@@ -8173,6 +8173,12 @@ class CppTargetCore {
 			return "std::vector<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">";
 		if (isFunctionTypeHint(hint))
 			return cppFunctionTypeHint(hint, scope, classLookup);
+		final args = genericTypeHintArgs(hint);
+		if (args.length > 0) {
+			final base = sanitizeTypePath(typeBaseName(hint));
+			if (scopeHasClass(scope, base) && genericClassTypeParamsForName(base, scope).length > 0)
+				return "std::shared_ptr<" + cppClassTemplateTypeName(hint, scope, classLookup) + ">";
+		}
 		return CppTypeModel.cppTypeHint(hint, scope, classLookup);
 	}
 

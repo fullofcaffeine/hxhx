@@ -4556,7 +4556,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"class RunnerGenericLike {",
 			"  var fixtures(default, null):Array<TestFixture> = [];",
 			"  public var fixtureList:List<TestFixture>;",
-			"  public var onProgress:Dispatcher<String>;",
+			"  public var onProgress:Dispatcher<{result:TestResult,done:Int,totals:Int}>;",
 			"  public var onRunner:Dispatcher<RunnerGenericLike>;",
 			"  public var onPrecheck:Dispatcher<TestHandler<TestFixture>>;",
 			"  var pos:Int = 0;",
@@ -4591,6 +4591,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  }",
 			"  public function resultOf(handler:TestHandler<TestFixture>):TestResult {",
 			"    return TestResult.ofHandler(handler);",
+			"  }",
+			"  public function emitProgress(handler:TestHandler<TestFixture>):Void {",
+			"    onProgress.dispatch({result:TestResult.ofHandler(handler), done:1, totals:2});",
 			"  }",
 			"  public function makeHandler(fixture:TestFixture):TestHandler<TestFixture> {",
 			"    var handler = new TestHandler(fixture);",
@@ -4653,8 +4656,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(parsedRunnerGenericLines, "auto t = (fixture->target);",
 			"C++ List<T> loop locals should use pointer field access for reference element fields");
 		assertTrue(parsedRunnerGenericLines.indexOf("fixture.isITest") < 0, "C++ List<T> loop locals should not fall back to dot access for reference fields");
-		assertContains(parsedRunnerGenericLines, "onProgress = __hxhx_make_shared_Dispatcher<std::string>();",
-			"C++ zero-arg generic constructor assignments should infer template args from the destination field type");
+		final progressShapeName = "__hxhx_anon_result_std__shared_ptr_TestResult__done_int__totals_int_";
+		assertContains(parsedRunnerGenericLines, "std::shared_ptr<Dispatcher<" + progressShapeName + ">> onProgress",
+			"C++ structural Dispatcher fields should preserve anonymous payload type");
+		assertContains(parsedRunnerGenericLines, "onProgress = __hxhx_make_shared_Dispatcher<" + progressShapeName + ">();",
+			"C++ zero-arg structural Dispatcher constructor assignments should infer template args from the destination field type");
+		assertContains(parsedRunnerGenericLines, "onProgress->dispatch(" + progressShapeName + "{TestResult::ofHandler(handler), 1, 2});",
+			"C++ structural Dispatcher.dispatch should accept matching anonymous record payloads");
+		assertTrue(parsedRunnerGenericLines.indexOf("std::shared_ptr<Dispatcher<std::string>> onProgress") < 0,
+			"C++ structural Dispatcher fields should not collapse to Dispatcher<string>");
 		assertContains(parsedRunnerGenericLines, "onRunner = __hxhx_make_shared_Dispatcher<std::shared_ptr<RunnerGenericLike>>();",
 			"C++ zero-arg generic constructor assignments should infer reference template args from the destination field type");
 		final parsedDispatcherLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(parsedRunnerGenericClasses.get("Dispatcher"), {

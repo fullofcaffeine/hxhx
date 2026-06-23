@@ -5369,6 +5369,38 @@ let rec structuralTypeHintStruct = fun typeHint scope classLookup -> try let __f
   )
 ) in Obj.magic __fallback_result_150 with
   | HxRuntime.Hx_return __ret_149 -> Obj.magic __ret_149
+and cppClassTemplateTypeName = fun typeHint scope classLookup -> try let __fallback_result_500 = let tempString = ref ("" : string) in (
+  ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_492 = ("" : string) in (
+    tempString := __assign_492;
+    __assign_492
+  ) else let __assign_493 = (typeHint : string) in (
+    tempString := __assign_493;
+    __assign_493
+  ));
+  let hint = (removeTypeHintWhitespace (StringTools.trim (!tempString : string) : string) : string) in let base = (sanitizeTypePath (typeBaseName (hint : string) : string) : string) in let args = Obj.magic (genericTypeHintArgs (hint : string)) in (
+    ignore (if HxArray.length args = 0 then ignore (let scoped = (scopedRawGenericClassTypeName (hint : string) scope : string) in let tempResult = ref ("" : string) in (
+      ignore (if scoped == Obj.magic (HxRuntime.hx_null) then let __assign_494 = (base : string) in (
+        tempResult := __assign_494;
+        __assign_494
+      ) else let __assign_495 = (scoped : string) in (
+        tempResult := __assign_495;
+        __assign_495
+      ));
+      raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
+    )) else ());
+    let _g = Obj.magic (let __arr_496 = HxArray.create () in __arr_496) in let _g1 = ref 0 in (
+      ignore (while !_g1 < HxArray.length args do ignore (let arg = (HxArray.get (Obj.magic args) (!_g1) : string) in (
+        ignore (let __old_497 = !_g1 in let __new_498 = HxInt.add __old_497 1 in (
+          ignore (_g1 := __new_498);
+          __new_498
+        ));
+        HxArray.push _g (cppTypeHint (arg : string) scope classLookup)
+      )) done);
+      ((HxString.toStdString base ^ "<") ^ HxString.toStdString (HxArray.join _g ", " (fun x -> x))) ^ ">"
+    )
+  )
+) in Obj.magic __fallback_result_500 with
+  | HxRuntime.Hx_return __ret_499 -> Obj.obj __ret_499
 and cppTypeHint = fun typeHint scope classLookup -> try let __fallback_result_6793 = let tempString = ref ("" : string) in (
   ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_6790 = ("" : string) in (
     tempString := __assign_6790;
@@ -5389,7 +5421,10 @@ and cppTypeHint = fun typeHint scope classLookup -> try let __fallback_result_67
         ignore (if Backend_cpp_CppTypeModel.isIteratorTypeHint (hint : string) then raise (HxRuntime.Hx_return (Obj.repr (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString (cppTypeHint (genericTypeHintArg (hint : string) : string) scope classLookup)) ^ ">>" : string))) else ());
         ignore (if isArrayLikeTypeHint (hint : string) || isIterableTypeHint (hint : string) then raise (HxRuntime.Hx_return (Obj.repr (("std::vector<" ^ HxString.toStdString (cppTypeHint (genericTypeHintArg (hint : string) : string) scope classLookup)) ^ ">" : string))) else ());
         ignore (if isFunctionTypeHint (hint : string) then raise (HxRuntime.Hx_return (Obj.repr (cppFunctionTypeHint (hint : string) scope classLookup : string))) else ());
-        Backend_cpp_CppTypeModel.cppTypeHint (hint : string) scope classLookup
+        let args = Obj.magic (genericTypeHintArgs (hint : string)) in (
+          ignore (if HxArray.length args > 0 then ignore (let base = (sanitizeTypePath (typeBaseName (hint : string) : string) : string) in if scopeHasClass scope (base : string) && HxArray.length (genericClassTypeParamsForName (base : string) scope) > 0 then raise (HxRuntime.Hx_return (Obj.repr (("std::shared_ptr<" ^ HxString.toStdString (cppClassTemplateTypeName (hint : string) scope classLookup)) ^ ">" : string))) else ()) else ());
+          Backend_cpp_CppTypeModel.cppTypeHint (hint : string) scope classLookup
+        )
       )
     )
   )
@@ -5433,39 +5468,6 @@ and cppFunctionTypeHint = fun typeHint scope classLookup -> try let __fallback_r
   )
 ) in Obj.magic __fallback_result_7011 with
   | HxRuntime.Hx_return __ret_7010 -> Obj.obj __ret_7010
-
-let cppClassTemplateTypeName = fun typeHint scope classLookup -> try let __fallback_result_500 = let tempString = ref ("" : string) in (
-  ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_492 = ("" : string) in (
-    tempString := __assign_492;
-    __assign_492
-  ) else let __assign_493 = (typeHint : string) in (
-    tempString := __assign_493;
-    __assign_493
-  ));
-  let hint = (removeTypeHintWhitespace (StringTools.trim (!tempString : string) : string) : string) in let base = (sanitizeTypePath (typeBaseName (hint : string) : string) : string) in let args = Obj.magic (genericTypeHintArgs (hint : string)) in (
-    ignore (if HxArray.length args = 0 then ignore (let scoped = (scopedRawGenericClassTypeName (hint : string) scope : string) in let tempResult = ref ("" : string) in (
-      ignore (if scoped == Obj.magic (HxRuntime.hx_null) then let __assign_494 = (base : string) in (
-        tempResult := __assign_494;
-        __assign_494
-      ) else let __assign_495 = (scoped : string) in (
-        tempResult := __assign_495;
-        __assign_495
-      ));
-      raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
-    )) else ());
-    let _g = Obj.magic (let __arr_496 = HxArray.create () in __arr_496) in let _g1 = ref 0 in (
-      ignore (while !_g1 < HxArray.length args do ignore (let arg = (HxArray.get (Obj.magic args) (!_g1) : string) in (
-        ignore (let __old_497 = !_g1 in let __new_498 = HxInt.add __old_497 1 in (
-          ignore (_g1 := __new_498);
-          __new_498
-        ));
-        HxArray.push _g (cppTypeHint (arg : string) scope classLookup)
-      )) done);
-      ((HxString.toStdString base ^ "<") ^ HxString.toStdString (HxArray.join _g ", " (fun x -> x))) ^ ">"
-    )
-  )
-) in Obj.magic __fallback_result_500 with
-  | HxRuntime.Hx_return __ret_499 -> Obj.obj __ret_499
 
 let inheritedCppBaseTypeName = fun cls classLookup -> try let __fallback_result_480 = let extendsPath = (HxClassDecl.getExtendsPath (Obj.magic cls) : string) in (
   ignore (if extendsPath == Obj.magic (HxRuntime.hx_null) || HxString.length extendsPath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
