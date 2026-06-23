@@ -3165,6 +3165,54 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(printerFieldLines.indexOf(".filter") < 0, "C++ Printer.printField should not emit unsupported access.filter syntax");
 		assertTrue(printerFieldLines.indexOf(".map") < 0, "C++ Printer.printField should not emit unsupported metadata map syntax");
 		assertTrue(printerFieldLines.indexOf("printComplexType,") < 0, "C++ Printer.printField should not pass non-static method values directly as callbacks");
+		final typeParamDeclCarrier = new HxClassDecl("TypeParamDecl", false, [], []);
+		final functionArgCarrier = new HxClassDecl("FunctionArg", false, [], []);
+		final functionCarrier = new HxClassDecl("Function", false, [], []);
+		final functionKindCarrier = new HxClassDecl("FunctionKind", false, [], []);
+		final printerFunctionOwner = new HxClassDecl("Printer", false, [
+			new HxFunctionDecl("printTypeParamDecl", Public, false, [new HxFunctionArg("tpd", "TypeParamDecl", NoDefault, false, false)], "", [
+				SReturn(ECall(EField(ECall(EField(EField(EIdent("tpd"), "meta"), "map"), [EIdent("printMetadata")]), "join"), [EString(" ")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("printFunctionArg", Public, false, [new HxFunctionArg("arg", "FunctionArg", NoDefault, false, false)], "", [
+				SReturn(ECall(EIdent("opt"), [EField(EIdent("arg"), "type"), EIdent("printComplexType"), EString(":")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("printFunction", Public, false, [
+				new HxFunctionArg("func", "Function", NoDefault, false, false),
+				new HxFunctionArg("kind", "FunctionKind", Default(ENull), true, false)
+			], "", [
+				SReturn(EBinop("+", ECall(EField(EField(EIdent("func"), "params"), "map"), [EIdent("printTypeParamDecl")]),
+					EBinop("==", EIdent("kind"), EString("FArrow"))),
+					HxPos.unknown())
+			], "")
+		], []);
+		final printerFunctionNames = new StringMap<Bool>();
+		for (name in ["Printer", "TypeParamDecl", "FunctionArg", "Function", "FunctionKind"])
+			printerFunctionNames.set(name, true);
+		final printerFunctionClasses = new StringMap<HxClassDecl>();
+		printerFunctionClasses.set("Printer", printerFunctionOwner);
+		printerFunctionClasses.set("TypeParamDecl", typeParamDeclCarrier);
+		printerFunctionClasses.set("FunctionArg", functionArgCarrier);
+		printerFunctionClasses.set("Function", functionCarrier);
+		printerFunctionClasses.set("FunctionKind", functionKindCarrier);
+		final printerFunctionLines = [
+			for (fn in HxClassDecl.getFunctions(printerFunctionOwner))
+				@:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, printerFunctionOwner, {
+					names: printerFunctionNames,
+					byName: printerFunctionClasses
+				}).join("\n")
+		].join("\n");
+		assertContains(printerFunctionLines, "std::string printTypeParamDecl(std::shared_ptr<TypeParamDecl> tpd)",
+			"C++ Printer.printTypeParamDecl should stay string-callable while metadata lowering is incomplete");
+		assertContains(printerFunctionLines, "std::string printFunctionArg(std::shared_ptr<FunctionArg> arg)",
+			"C++ Printer.printFunctionArg should stay string-callable while opt callback lowering is incomplete");
+		assertContains(printerFunctionLines, "std::string printFunction(std::shared_ptr<Function> func, std::shared_ptr<FunctionKind> kind = nullptr)",
+			"C++ Printer.printFunction should keep its callable signature while function pattern lowering is incomplete");
+		for (argName in ["tpd", "arg", "func", "kind"])
+			assertContains(printerFunctionLines, "(void)" + argName + ";", "C++ Printer neutral helper should consume " + argName);
+		assertTrue(printerFunctionLines.indexOf(".map") < 0, "C++ Printer type/function helpers should not emit unsupported map syntax");
+		assertTrue(printerFunctionLines.indexOf("printComplexType,") < 0,
+			"C++ Printer type/function helpers should not pass non-static method values directly as callbacks");
+		assertTrue(printerFunctionLines.indexOf("kind ==") < 0, "C++ Printer.printFunction should not emit unsupported FunctionKind string comparisons");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],

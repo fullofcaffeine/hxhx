@@ -2346,6 +2346,8 @@ class CppTargetCore {
 			return returnTraced("special_printer_complex_type", renderPrinterComplexTypeHelper(fn, owner, classLookup));
 		if (isPrinterFieldHelper(fn, owner))
 			return returnTraced("special_printer_field", renderPrinterFieldHelper(fn, owner, classLookup));
+		if (isPrinterTypeParamFunctionHelper(fn, owner))
+			return returnTraced("special_printer_type_param_function", renderPrinterTypeParamFunctionHelper(fn, owner, classLookup));
 		if (isTypeErasedValueHelper(fn, owner))
 			return returnTraced("special_type_erased_value", renderTypeErasedValueHelper(fn, owner, classLookup));
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
@@ -8467,6 +8469,23 @@ class CppTargetCore {
 	}
 
 	static function renderPrinterFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		return renderPrinterNeutralStringHelper(fn, owner, classLookup);
+	}
+
+	static function isPrinterTypeParamFunctionHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Printer")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "printTypeParamDecl" | "printFunctionArg" | "printFunction":
+				HxFunctionDecl.getArgs(fn).length >= 1;
+			case _:
+				false;
+		};
+	}
+
+	static function renderPrinterTypeParamFunctionHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		return renderPrinterNeutralStringHelper(fn, owner, classLookup);
 	}
 
