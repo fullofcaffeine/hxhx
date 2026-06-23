@@ -90,6 +90,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		throw "native protocol structural arg fixture should decode make";
 	}
 
+	static function assertNativeProtocolStructuralNullReturnRecovery():Void {
+		final structuralNull = "Null<{file:String, pos:Int}>";
+		final source = "class CompilerLike { public static function getDisplayPos():" + structuralNull + " { return null; } }";
+		final encoded = [
+			"hxhx_frontend_v=2",
+			protocolLine("class", "CompilerLike"),
+			"ast static_main 0",
+			protocolLine("method", "getDisplayPos|public|1||Null||||"),
+			"ok"
+		].join("\n");
+		final decl = ParserStageNativeDecode.decodeNativeProtocol(encoded, source);
+		final cls = HxModuleDecl.getMainClass(decl);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getName(fn) == "getDisplayPos") {
+				assertTrue(HxFunctionDecl.getReturnTypeHint(fn) == structuralNull,
+					"native protocol return recovery should preserve source Null<structural> hints instead of stale bare Null");
+				return;
+			}
+		}
+		throw "native protocol structural Null return fixture should decode getDisplayPos";
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -1550,6 +1572,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 
 	static function main():Void {
 		assertNativeProtocolStructuralArgTypeSplitting();
+		assertNativeProtocolStructuralNullReturnRecovery();
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("8")) == "8",
 			"numeric unsupported fragments should render as integer literals");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("=")) == "0",

@@ -3538,6 +3538,105 @@ class ParserStage {
 		return first;
 	}
 
+	static function sourceSignatureReturnHint(name:String, ?source:String, methodBodyStart:Int = -1, ?argNames:Array<String>):String {
+		if (source == null || source.length == 0 || name == null || name.length == 0)
+			return "";
+		final needle = "function " + name;
+		function hintAt(fnIndex:Int):String {
+			if (fnIndex < 0)
+				return "";
+			final open = source.indexOf("(", fnIndex);
+			if (open < 0)
+				return "";
+			final close = findMatchingParen(source, open);
+			if (close < 0)
+				return "";
+			final hints = parseSourceSignatureArgs(source.substr(open + 1, close - open - 1));
+			if (!sourceArgHintsMatchNames(hints, argNames))
+				return "";
+			return readSourceReturnHint(source, close + 1);
+		}
+		final anchoredIndex = methodBodyStart > 0 ? source.lastIndexOf(needle, methodBodyStart) : -1;
+		final anchoredHint = hintAt(anchoredIndex);
+		if (anchoredHint.length > 0)
+			return anchoredHint;
+		var searchFrom = 0;
+		while (searchFrom < source.length) {
+			final fnIndex = source.indexOf(needle, searchFrom);
+			if (fnIndex < 0)
+				break;
+			final hint = hintAt(fnIndex);
+			if (hint.length > 0)
+				return hint;
+			searchFrom = fnIndex + needle.length;
+		}
+		return "";
+	}
+
+	static function readSourceReturnHint(source:String, start:Int):String {
+		var i = start;
+		while (i < source.length && StringTools.isSpace(source, i))
+			i++;
+		if (i >= source.length || source.charAt(i) != ":")
+			return "";
+		i++;
+		final hintStart = i;
+		var parenDepth = 0;
+		var bracketDepth = 0;
+		var braceDepth = 0;
+		var angleDepth = 0;
+		var inString = false;
+		var quote = "";
+		while (i < source.length) {
+			final ch = source.charAt(i);
+			if (inString) {
+				if (ch == "\\") {
+					i += 2;
+					continue;
+				}
+				if (ch == quote)
+					inString = false;
+				i++;
+				continue;
+			}
+			if (ch == "\"" || ch == "'") {
+				inString = true;
+				quote = ch;
+			} else {
+				switch (ch) {
+					case "(":
+						parenDepth++;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth--;
+					case "[":
+						bracketDepth++;
+					case "]":
+						if (bracketDepth > 0)
+							bracketDepth--;
+					case "{":
+						if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0)
+							return StringTools.trim(source.substring(hintStart, i));
+						braceDepth++;
+					case "}":
+						if (braceDepth > 0)
+							braceDepth--;
+					case "<":
+						angleDepth++;
+					case ">":
+						if (angleDepth > 0)
+							angleDepth--;
+					case ";":
+						if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0)
+							return StringTools.trim(source.substring(hintStart, i));
+					case _:
+				}
+			}
+			i++;
+		}
+		return StringTools.trim(source.substr(hintStart));
+	}
+
 	static function sourceFunctionTypeParams(name:String, ?source:String, methodBodyStart:Int = -1, ?argNames:Array<String>):Array<String> {
 		if (source == null || source.length == 0 || name == null || name.length == 0)
 			return [];
@@ -3887,7 +3986,10 @@ class ParserStage {
 			}
 		}
 
-		final returnTypeHint = normalizeMethodReturnTypeHint(parts[4]);
+		var returnTypeHint = normalizeMethodReturnTypeHint(parts[4]);
+		final sourceReturnHint = sourceSignatureReturnHint(name, source, methodBodyStart, argNames);
+		if (sourceTypeHintIsMoreSpecific(returnTypeHint, sourceReturnHint))
+			returnTypeHint = sourceReturnHint;
 		final retStr = parts[5];
 		final retId = parts[6];
 		final retExpr = parts[8];
