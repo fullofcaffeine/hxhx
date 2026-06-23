@@ -4545,6 +4545,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return new TestResult();",
 			"  }",
 			"}",
+			"class ArrayDynamicLike {",
+			"  public static function createInstance(args:Array<Dynamic>):Dynamic {",
+			"    return args[0];",
+			"  }",
+			"  public function compareArgs(a1:Array<Dynamic>, a2:Array<Dynamic>):Int {",
+			"    return a1[0] == a2[0] ? 0 : 1;",
+			"  }",
+			"}",
 			"class RunnerGenericLike {",
 			"  var fixtures(default, null):Array<TestFixture> = [];",
 			"  public var fixtureList:List<TestFixture>;",
@@ -4679,6 +4687,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic Dynamic helper method params should accept concrete generic payloads");
 		assertTrue(parsedTestResultLines.indexOf("ofHandler(std::shared_ptr<TestHandler<std::string>> handler)") < 0,
 			"C++ generic Dynamic helper methods should not specialize wildcard params to String");
+		final parsedArrayDynamicLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(parsedRunnerGenericClasses.get("ArrayDynamicLike"), {
+			names: parsedRunnerGenericNames,
+			byName: parsedRunnerGenericClasses
+		}).join("\n");
+		assertContains(parsedArrayDynamicLines, "createInstance(std::vector<std::string> args)",
+			"C++ Array<Dynamic> function args should keep target-owned vector lowering");
+		assertContains(parsedArrayDynamicLines, "compareArgs(std::vector<std::string> a1, std::vector<std::string> a2)",
+			"C++ Array<Dynamic> instance args should not render shared_ptr<Array<TDynamic>>");
+		assertContains(parsedArrayDynamicLines, "(a1[0])", "C++ Array<Dynamic> indexing should lower to vector indexing, not Array helper pointer indexing");
+		assertTrue(parsedArrayDynamicLines.indexOf("std::shared_ptr<Array<TDynamic>>") < 0,
+			"C++ Array<Dynamic> args should not use generic Dynamic wildcard helper classes");
 		assertContains(parsedRunnerGenericLines, "onRunner->dispatch(__hxhx_borrowed_shared<RunnerGenericLike>(this));",
 			"C++ generic method calls should instantiate T from the receiver and pass this as a borrowed reference payload");
 		assertTrue(parsedDispatcherLines.indexOf("handlers = std::vector<std::string>{};") < 0,

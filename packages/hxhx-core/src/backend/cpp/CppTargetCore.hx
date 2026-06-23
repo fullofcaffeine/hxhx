@@ -8181,6 +8181,8 @@ class CppTargetCore {
 		final args = genericTypeHintArgs(hint);
 		if (args.length == 0)
 			return "";
+		if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint) || CppTypeModel.isIteratorTypeHint(hint))
+			return "";
 		final base = sanitizeTypePath(typeBaseName(hint));
 		if (!scopeHasClass(scope, base) || genericClassTypeParamsForName(base, scope).length == 0)
 			return "";
