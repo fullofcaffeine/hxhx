@@ -3337,6 +3337,36 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Printer.printFieldWithDelimiter should not emit unsupported FieldKind pattern comparisons");
 		assertTrue(printerFieldDelimiterLines.indexOf("func") < 0,
 			"C++ Printer.printFieldWithDelimiter should not leak unsupported nested function payload checks");
+		final printerExprPositionsOwner = new HxClassDecl("Printer", false, [
+			new HxFunctionDecl("printExprWithPositions", Public, false, [new HxFunctionArg("e", "Expr", NoDefault, false, false)], "", [
+				SVar("buffer", "", ECall(EIdent("StringBuf"), []), HxPos.unknown()),
+				SVar("loop", "", ELambda(["tabs", "e"], ESwitch(EField(EIdent("e"), "expr"), [PEnumValue("EConst"), PEnumValue("ESwitch")], [
+					ECall(EIdent("printConstant"), [EIdent("c")]),
+					ECall(EIdent("loop"), [EBinop("+", EIdent("tabs"), EIdent("tabString")), EIdent("edef")])
+				])), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("buffer"), "toString"), []), HxPos.unknown())
+			], "")
+		], []);
+		final printerExprPositionsNames = new StringMap<Bool>();
+		for (name in ["Printer", "Expr"])
+			printerExprPositionsNames.set(name, true);
+		final printerExprPositionsClasses = new StringMap<HxClassDecl>();
+		printerExprPositionsClasses.set("Printer", printerExprPositionsOwner);
+		printerExprPositionsClasses.set("Expr", exprCarrier);
+		final printerExprPositionsLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(printerExprPositionsOwner)[0],
+			printerExprPositionsOwner, {
+				names: printerExprPositionsNames,
+				byName: printerExprPositionsClasses
+			})
+			.join("\n");
+		assertContains(printerExprPositionsLines, "std::string printExprWithPositions(std::shared_ptr<Expr> e)",
+			"C++ Printer.printExprWithPositions should keep its callable signature while expression traversal lowering is incomplete");
+		assertContains(printerExprPositionsLines, "(void)e;", "C++ Printer.printExprWithPositions should consume e");
+		assertContains(printerExprPositionsLines, "return std::string();",
+			"C++ Printer.printExprWithPositions neutral helper should return a compile-safe string");
+		assertTrue(printerExprPositionsLines.indexOf("loop") < 0, "C++ Printer.printExprWithPositions should not emit unsupported recursive traversal lambdas");
+		assertTrue(printerExprPositionsLines.indexOf("EConst") < 0,
+			"C++ Printer.printExprWithPositions should not emit unsupported ExprDef pattern comparisons");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],
