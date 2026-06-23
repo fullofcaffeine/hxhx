@@ -509,6 +509,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function replaceLiteral(s:String):String {",
 			"    return StringTools.replace(s, \"na\", \"X\");",
 			"  }",
+			"  public static function replaceChain(s:String):String {",
+			"    return s.replace(\"\\\\\", \"\\\\\\\\\").replace(\"\\n\", \"\\\\n\").replace(\"\\t\", \"\\\\t\");",
+			"  }",
 			"  public static function startsWith(s:String, start:String):Bool {",
 			"    return s.length >= start.length && s.lastIndexOf(start, 0) == 0;",
 			"  }",
@@ -5088,9 +5091,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower split/join chains through target support helpers");
 		assertContains(source, "return __hxhx_replace(std::string(s), std::string(\"na\"), std::string(\"X\"));",
 			"C++ smoke should lower StringTools.replace to target support helpers");
+		assertContains(source,
+			"return __hxhx_replace(__hxhx_replace(__hxhx_replace(std::string(s), std::string(\"\\\\\"), std::string(\"\\\\\\\\\")), std::string(\"\\n\"), std::string(\"\\\\n\")), std::string(\"\\t\"), std::string(\"\\\\t\"));",
+			"C++ smoke should lower chained String.replace calls to target support helpers");
 		assertContains(source, "static std::string __hxhx_replace(", "C++ smoke should include target support for StringTools.replace");
 		assertTrue(source.indexOf("StringTools::replace(std::string(s)") < 0,
 			"C++ smoke should not emit generated StringTools static calls for replace intrinsic lowering");
+		assertTrue(source.indexOf(".replace(std::string(\"\\\\\"), std::string(\"\\\\\\\\\"))") < 0,
+			"C++ smoke should not emit C++ std::string replace overload calls for Haxe String.replace");
 		assertContains(source, "__hxhx_last_index_of(s, std::string(start), 0)", "C++ smoke should lower String.lastIndexOf to target support helpers");
 		assertContains(source, "auto c = static_cast<int>(static_cast<unsigned char>(s[pos]));",
 			"C++ smoke should lower String.charCodeAt to direct code-point reads");
