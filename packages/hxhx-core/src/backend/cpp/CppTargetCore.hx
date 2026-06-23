@@ -2218,6 +2218,7 @@ class CppTargetCore {
 			inferCallableArgTypeOverrides(scope, fn);
 			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 			inferDynamicLocalTypeOverrides(scope, fn);
+			inferReturnLocalTypeOverrides(scope, fn);
 		} catch (e:haxe.Exception) {
 			functionScopePrepStack.remove(key);
 			throw e;
@@ -3227,6 +3228,54 @@ class CppTargetCore {
 		scope.localTypes.set(local, typeName);
 	}
 
+	static function inferReturnLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null || !isUsefulReturnLocalOverrideType(scope.returnType))
+			return;
+		for (stmt in HxFunctionDecl.getBody(fn))
+			collectReturnLocalTypeOverridesFromStmt(stmt, scope, scope.returnType);
+	}
+
+	static function collectReturnLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, returnType:String):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectReturnLocalTypeOverridesFromStmt(s, scope, returnType);
+			case SIf(_, thenBranch, elseBranch, _):
+				collectReturnLocalTypeOverridesFromStmt(thenBranch, scope, returnType);
+				if (elseBranch != null)
+					collectReturnLocalTypeOverridesFromStmt(elseBranch, scope, returnType);
+			case SWhile(_, body, _) | SDoWhile(body, _, _):
+				collectReturnLocalTypeOverridesFromStmt(body, scope, returnType);
+			case SSwitch(_, _, bodies, _):
+				for (body in bodies)
+					collectReturnLocalTypeOverridesFromStmt(body, scope, returnType);
+			case STry(tryBody, catches, _):
+				collectReturnLocalTypeOverridesFromStmt(tryBody, scope, returnType);
+				for (c in catches)
+					collectReturnLocalTypeOverridesFromStmt(c.body, scope, returnType);
+			case SReturn(EIdent(name), _):
+				setReturnLocalTypeOverride(scope, sanitizeIdentifier(name), returnType);
+			case _:
+		}
+	}
+
+	static function setReturnLocalTypeOverride(scope:CppRenderScope, local:String, typeName:String):Void {
+		if (scope == null || local == null || local.length == 0 || typeName == null || typeName.length == 0)
+			return;
+		final existing = scope.localTypeOverrides.get(local);
+		if (existing != null && existing.length > 0 && existing != typeName)
+			return;
+		scope.localTypeOverrides.set(local, typeName);
+	}
+
+	static function isUsefulReturnLocalOverrideType(typeName:String):Bool {
+		return typeName != null
+			&& typeName.length > 0
+			&& typeName != "void"
+			&& typeName != "std::string"
+			&& isCppReferenceType(typeName);
+	}
+
 	static function collectForwardedConstructorArgTypeOverrides(stmts:Array<HxStmt>, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
 		final expectedTypes = baseConstructorArgCppTypes(scope);
 		if (expectedTypes.length == 0)
@@ -4149,6 +4198,12 @@ class CppTargetCore {
 		}
 		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
+		switch (expr) {
+			case ETernary(cond, thenExpr, elseExpr):
+				return "(" + renderExpr(cond, scope) + " ? " + valueExprForExpectedType(thenExpr, expectedType, scope) + " : "
+					+ valueExprForExpectedType(elseExpr, expectedType, scope) + ")";
+			case _:
+		}
 		if (isCppFunctionType(expectedType)) {
 			final methodValue = methodValueExprForExpectedFunction(expr, expectedType, scope);
 			if (methodValue != null)

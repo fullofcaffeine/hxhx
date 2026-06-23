@@ -4530,8 +4530,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function new() {}",
 			"}",
 			"class TestHandler<T> {",
+			"  public var fixture:T;",
 			"  public var onComplete:Dispatcher<TestHandler<T>>;",
-			"  public function new() {",
+			"  public function new(fixture:T) {",
+			"    this.fixture = fixture;",
 			"    onComplete = new Dispatcher();",
 			"  }",
 			"}",
@@ -4567,6 +4569,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function runNext(finishedHandler:TestHandler<TestFixture>):Void {}",
 			"  public function wireHandler(handler:TestHandler<TestFixture>):Void {",
 			"    handler.onComplete.add(runNext);",
+			"  }",
+			"  public function makeHandler(fixture:TestFixture):TestHandler<TestFixture> {",
+			"    var handler = new TestHandler(fixture);",
+			"    return handler;",
 			"  }",
 			"  public function isMethod(test:Dynamic, name:String) {",
 			"    try return Reflect.isFunction(Reflect.field(test, name));",
@@ -4612,6 +4618,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(parsedRunnerGenericLines,
 			"[&](std::shared_ptr<TestHandler<std::shared_ptr<TestFixture>>> finishedHandler) { this->runNext(finishedHandler); }",
 			"C++ same-owner method callback lambdas should use the instantiated handler payload type");
+		assertContains(parsedRunnerGenericLines, "auto handler = __hxhx_make_shared_TestHandler<std::shared_ptr<TestFixture>>(fixture);",
+			"C++ unhinted locals returned from generic-return functions should pass expected template args into constructors");
 		assertContains(parsedRunnerGenericLines, "if ((fixture->isITest))",
 			"C++ List<T> loop locals should keep reference element types for pointer field access");
 		assertContains(parsedRunnerGenericLines, "auto t = (fixture->target);",
