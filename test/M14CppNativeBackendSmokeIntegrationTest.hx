@@ -3109,6 +3109,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(typeToolsFindFieldLines, "return nullptr;", "C++ TypeTools.findField should typecheck as a bounded neutral helper in the C++ MVP");
 		assertTrue(typeToolsFindFieldLines.indexOf(".get().find") < 0, "C++ TypeTools.findField should not emit unsupported Ref/vector find calls");
 		assertTrue(typeToolsFindFieldLines.indexOf("superClass).t") < 0, "C++ TypeTools.findField should not emit optional anonymous field access through .t");
+		final complexTypeCarrier = new HxClassDecl("ComplexType", false, [], []);
+		final printerComplexTypeOwner = new HxClassDecl("Printer", false, [
+			new HxFunctionDecl("printComplexType", Public, false, [new HxFunctionArg("ct", "ComplexType", NoDefault, false, false)], "", [
+				SVar("argStr", "", ECall(EField(ECall(EField(EIdent("args"), "map"), [EIdent("printComplexType")]), "join"), [EString(", ")]), HxPos.unknown()),
+				SExpr(EBinop("+", EIdent("wrapArgumentsInParentheses"), EIdent("ret")), HxPos.unknown())
+			], "")
+		], []);
+		final printerComplexTypeNames = new StringMap<Bool>();
+		for (name in ["Printer", "ComplexType"])
+			printerComplexTypeNames.set(name, true);
+		final printerComplexTypeClasses = new StringMap<HxClassDecl>();
+		printerComplexTypeClasses.set("Printer", printerComplexTypeOwner);
+		printerComplexTypeClasses.set("ComplexType", complexTypeCarrier);
+		final printerComplexTypeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(printerComplexTypeOwner)[0],
+			printerComplexTypeOwner, {
+				names: printerComplexTypeNames,
+				byName: printerComplexTypeClasses
+			})
+			.join("\n");
+		assertContains(printerComplexTypeLines, "std::string printComplexType(std::shared_ptr<ComplexType> ct)",
+			"C++ Printer.printComplexType should stay string-callable even when its parsed body is incomplete");
+		assertContains(printerComplexTypeLines, "(void)ct;", "C++ Printer.printComplexType neutral helper should consume its argument");
+		assertContains(printerComplexTypeLines, "return std::string();", "C++ Printer.printComplexType neutral helper should return a compile-safe string");
+		assertTrue(printerComplexTypeLines.indexOf("args.map") < 0, "C++ Printer.printComplexType should not emit raw Haxe map/join syntax");
+		assertTrue(printerComplexTypeLines.indexOf("wrapArgumentsInParentheses") < 0,
+			"C++ Printer.printComplexType should not leak undeclared pattern locals from partial raw bodies");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],

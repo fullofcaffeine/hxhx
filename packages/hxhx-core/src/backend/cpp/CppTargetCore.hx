@@ -2342,6 +2342,8 @@ class CppTargetCore {
 			return returnTraced("special_typetools_find_field", renderTypeToolsFindFieldHelper(fn, owner, classLookup));
 		if (isTypeToolsTraversalHelper(fn, owner))
 			return returnTraced("special_typetools_traversal", renderTypeToolsTraversalHelper(fn, owner, classLookup));
+		if (isPrinterComplexTypeHelper(fn, owner))
+			return returnTraced("special_printer_complex_type", renderPrinterComplexTypeHelper(fn, owner, classLookup));
 		if (isTypeErasedValueHelper(fn, owner))
 			return returnTraced("special_type_erased_value", renderTypeErasedValueHelper(fn, owner, classLookup));
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
@@ -8440,6 +8442,29 @@ class CppTargetCore {
 		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "TypeTools")
 			return false;
 		return sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "findField" && HxFunctionDecl.getArgs(fn).length >= 2;
+	}
+
+	static function isPrinterComplexTypeHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Printer")
+			return false;
+		return sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "printComplexType" && HxFunctionDecl.getArgs(fn).length == 1;
+	}
+
+	static function renderPrinterComplexTypeHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final scope = renderScope(owner, classLookup, "std::string");
+		prepareFunctionScope(scope, fn);
+		final out = ["  std::string "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
+			+ ") {"];
+		for (arg in HxFunctionDecl.getArgs(fn))
+			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+		out.push("    return std::string();");
+		out.push("  }");
+		return out;
 	}
 
 	static function renderTypeToolsFindFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
