@@ -1268,6 +1268,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final nullClass = new HxClassDecl("Null", false, []);
 		final positionClass = new HxClassDecl("Position", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")]);
 		final baseTypeClass = new HxClassDecl("BaseType", false, []);
+		final nullSafetyModeClass = new HxClassDecl("NullSafetyMode", false, []);
+		final includePositionClass = new HxClassDecl("IncludePosition", false, []);
+		final metadataDescriptionClass = new HxClassDecl("MetadataDescription", false, []);
+		final defineDescriptionClass = new HxClassDecl("DefineDescription", false, []);
+		final jsGenApiClass = new HxClassDecl("JSGenApi", false, []);
 		final compilerClass = new HxClassDecl("Compiler", false, [
 			new HxFunctionDecl("getDisplayPos", Public, true, [], "Null<Position>", [
 				SReturn(ECall(EIdent("callMacroApi"), [EString("get_display_pos"), EInt(0)]), pos)
@@ -1305,9 +1310,82 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				[SVar("classes", "", ENew("StringMap", []), pos)], ""),
 			new HxFunctionDecl("excludeBaseType", Public, true, [new HxFunctionArg("baseType", "BaseType", NoDefault, false, false)], "Void", [
 				SExpr(ECall(EField(EField(EIdent("baseType"), "meta"), "add"), [EString(":hxGen")]), pos)
-			], "")
+			], ""),
+			new HxFunctionDecl("patchTypes", Public, true, [new HxFunctionArg("file", "String", NoDefault, false, false)], "Void", [
+				SVar("rp", "Array<String>", EArrayDecl([EString("field"), EString("type")]), pos),
+				SVar("r", "String", ECall(EField(EIdent("rp"), "shift"), []), pos)
+			], ""),
+			new HxFunctionDecl("keep", Public, true, [
+				new HxFunctionArg("path", "String", Default(ENull), true, false),
+				new HxFunctionArg("paths", "Array<String>", Default(ENull), true, false),
+				new HxFunctionArg("recursive", "Bool", Default(EBool(true)), true, false)
+			], "Void",
+				[SExpr(ECall(EField(EIdent("paths"), "push"), [EIdent("path")]), pos)], ""),
+			new HxFunctionDecl("nullSafety", Public, true, [
+				new HxFunctionArg("path", "String", NoDefault, false, false),
+				new HxFunctionArg("mode", "NullSafetyMode", Default(ENull), true, false),
+				new HxFunctionArg("recursive", "Bool", Default(EBool(true)), true, false)
+			], "Void", [
+				SExpr(ECall(EIdent("addGlobalMetadata"), [EIdent("path"), EString("@:nullSafety"), EIdent("recursive")]), pos)
+			], ""),
+			new HxFunctionDecl("addGlobalMetadata", Public, true, [
+				new HxFunctionArg("pathFilter", "String", NoDefault, false, false),
+				new HxFunctionArg("meta", "String", NoDefault, false, false),
+				new HxFunctionArg("recursive", "Bool", Default(EBool(true)), true, false),
+				new HxFunctionArg("toTypes", "Bool", Default(EBool(true)), true, false),
+				new HxFunctionArg("toFields", "Bool", Default(EBool(false)), true, false)
+			], "Void", [
+				SExpr(ECall(EIdent("load"), [EString("add_global_metadata_impl"), EInt(5)]), pos)
+			], ""),
+			new HxFunctionDecl("registerMetadataDescriptionFile", Public, true, [
+				new HxFunctionArg("path", "String", NoDefault, false, false),
+				new HxFunctionArg("source", "String", Default(ENull), true, false)
+			], "Void", [
+				SVar("content", "Array<MetadataDescription>", ECall(EField(EIdent("Json"), "parse"), [EIdent("path")]), pos)
+			], ""),
+			new HxFunctionDecl("registerDefinesDescriptionFile", Public, true, [
+				new HxFunctionArg("path", "String", NoDefault, false, false),
+				new HxFunctionArg("source", "String", Default(ENull), true, false)
+			], "Void", [
+				SVar("content", "Array<DefineDescription>", ECall(EField(EIdent("Json"), "parse"), [EIdent("path")]), pos)
+			], ""),
+			new HxFunctionDecl("registerCustomMetadata", Public, true, [
+				new HxFunctionArg("meta", "MetadataDescription", NoDefault, false, false),
+				new HxFunctionArg("source", "String", Default(ENull), true, false)
+			],
+				"Void", [SExpr(ECall(EIdent("load"), [EString("register_metadata_impl"), EInt(2)]), pos)], ""),
+			new HxFunctionDecl("registerCustomDefine", Public, true, [
+				new HxFunctionArg("define", "DefineDescription", NoDefault, false, false),
+				new HxFunctionArg("source", "String", Default(ENull), true, false)
+			],
+				"Void", [SExpr(ECall(EIdent("load"), [EString("register_define_impl"), EInt(2)]), pos)], ""),
+			new HxFunctionDecl("setCustomJSGenerator", Public, true, [new HxFunctionArg("callb", "JSGenApi->Void", NoDefault, false, false)], "Void",
+				[SExpr(ECall(EIdent("load"), [EString("set_custom_js_generator"), EInt(1)]), pos)], ""),
+			new HxFunctionDecl("load", Public, true, [
+				new HxFunctionArg("f", "String", NoDefault, false, false),
+				new HxFunctionArg("nargs", "", NoDefault, false, false)
+			], "Dynamic", [
+				SReturn(ECall(EIdent("__bad_untyped_callable"), [EIdent("f"), EIdent("nargs")]), pos)
+			],
+				""),
+			new HxFunctionDecl("flushDiskCache", Public, true, [], "Void", [SExpr(ECall(EIdent("load"), [EString("flush_disk_cache"), EInt(0)]), pos)], ""),
+			new HxFunctionDecl("includeFile", Public, true, [
+				new HxFunctionArg("file", "String", NoDefault, false, false),
+				new HxFunctionArg("position", "IncludePosition", Default(ENull), true, false)
+			], "String",
+				[SReturn(ECall(EField(EIdent("position"), "toLowerCase"), []), pos)], "")
 		]);
-		final compilerDecl = new HxModuleDecl("haxe.macro", [], compilerClass, [nullClass, positionClass, baseTypeClass, compilerClass], false, false);
+		final compilerDecl = new HxModuleDecl("haxe.macro", [], compilerClass, [
+			nullClass,
+			positionClass,
+			baseTypeClass,
+			nullSafetyModeClass,
+			includePositionClass,
+			metadataDescriptionClass,
+			defineDescriptionClass,
+			jsGenApiClass,
+			compilerClass
+		], false, false);
 		return MacroStage.expandProgram([
 			typedSyntheticModule("Main.hx", mainDecl),
 			typedSyntheticModule("std/haxe/macro/Compiler.hx", compilerDecl)
@@ -4767,11 +4845,41 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ macro Compiler.excludeFile should lower to target-owned macro API plumbing");
 		assertContains(macroCompilerNullSource, "static void excludeBaseType(std::shared_ptr<BaseType> baseType)",
 			"C++ macro Compiler.excludeBaseType should preserve its helper signature");
+		assertContains(macroCompilerNullSource, "static void patchTypes(std::string file)",
+			"C++ macro Compiler.patchTypes should preserve its public helper signature");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<void>(std::string(\"patch_types\"), 1, file);",
+			"C++ macro Compiler.patchTypes should lower to macro API plumbing instead of stdlib file parser helpers");
+		assertContains(macroCompilerNullSource, "static void keep(std::optional<std::string> path = std::nullopt",
+			"C++ macro Compiler.keep should preserve optional public helper arguments");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<void>(std::string(\"keep\"), 3, path, paths, recursive);",
+			"C++ macro Compiler.keep should lower to macro API plumbing instead of mutating optional arrays directly");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<void>(std::string(\"null_safety\"), 3, path, mode, recursive);",
+			"C++ macro Compiler.nullSafety should lower to macro API plumbing");
+		assertContains(macroCompilerNullSource,
+			"__hxhx_call_macro_api<void>(std::string(\"add_global_metadata_impl\"), 5, pathFilter, meta, recursive, toTypes, toFields);",
+			"C++ macro Compiler.addGlobalMetadata should use the compiler-owned metadata RPC seam");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<void>(std::string(\"register_metadata_description_file\"), 2, path, source);",
+			"C++ macro Compiler.registerMetadataDescriptionFile should not emit typed Json.parse helper bodies");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<void>(std::string(\"register_defines_description_file\"), 2, path, source);",
+			"C++ macro Compiler.registerDefinesDescriptionFile should not emit typed Json.parse helper bodies");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<std::string>(std::string(\"load\"), 2, f, nargs);",
+			"C++ macro Compiler.load should avoid callable Dynamic body emission");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<void>(std::string(\"flush_disk_cache\"), 0);",
+			"C++ macro Compiler.flushDiskCache should lower to macro API plumbing");
+		assertContains(macroCompilerNullSource, "__hxhx_call_macro_api<std::string>(std::string(\"include_file\"), 2, file, position);",
+			"C++ macro Compiler.includeFile should not emit target-specific macro expression construction");
 		assertTrue(macroCompilerNullSource.indexOf("__hxhx_optional_lambda") < 0,
 			"C++ macro Compiler API shims should not emit recursive optional-lambda helper bodies");
 		assertTrue(macroCompilerNullSource.indexOf("__hxhx_for_in") < 0, "C++ macro Compiler API shims should not leak expression-only for-in markers");
 		assertTrue(macroCompilerNullSource.indexOf("baseType->meta") < 0,
 			"C++ macro Compiler.excludeBaseType shim should not force incomplete MetaAccess/BaseType member lowering");
+		assertTrue(macroCompilerNullSource.indexOf(".shift()") < 0, "C++ macro Compiler.patchTypes shim should not emit Array.shift against std::vector");
+		assertTrue(macroCompilerNullSource.indexOf("paths.value().push") < 0,
+			"C++ macro Compiler.keep shim should not emit Haxe Array.push against std::vector");
+		assertTrue(macroCompilerNullSource.indexOf("Json::parse") < 0,
+			"C++ macro Compiler metadata registration shims should not require typed Json.parse support");
+		assertTrue(macroCompilerNullSource.indexOf("position->toLowerCase") < 0,
+			"C++ macro Compiler.includeFile shim should not treat IncludePosition as a string object");
 		assertTrue(macroCompilerNullSource.indexOf("std::shared_ptr<Null>") < 0, "C++ macro Compiler surfaces should not emit fake Null runtime references");
 		assertTrue(macroCompilerNullSource.indexOf("return static_cast<int>(__hxhx_macro_expr(") < 0,
 			"C++ macro expression helper returns should not fall through to the Int fallback cast");

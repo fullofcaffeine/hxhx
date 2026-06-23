@@ -2471,14 +2471,7 @@ class CppTargetCore {
 			return false;
 		if (!HxFunctionDecl.getIsStatic(fn))
 			return false;
-		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
-			case "include" | "exclude" | "excludeFile" | "excludeBaseType":
-				true;
-			case "getDisplayPos":
-				true;
-			case _:
-				false;
-		};
+		return macroCompilerApiShimName(sanitizeIdentifier(HxFunctionDecl.getName(fn))) != null;
 	}
 
 	static function renderMacroCompilerApiShimHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -2489,16 +2482,7 @@ class CppTargetCore {
 		final out = [
 			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"
 		];
-		final apiName = switch (method) {
-			case "excludeFile":
-				"exclude_file";
-			case "getDisplayPos":
-				"get_display_pos";
-			case "excludeBaseType":
-				"";
-			case _:
-				method;
-		};
+		final apiName = macroCompilerApiShimName(method);
 		if (apiName.length == 0) {
 			out.push("    " + returnVoidStmt(scope));
 		} else {
@@ -2515,6 +2499,65 @@ class CppTargetCore {
 		}
 		out.push("  }");
 		return out;
+	}
+
+	static function macroCompilerApiShimName(method:String):Null<String> {
+		return switch (method) {
+			case "allowPackage":
+				"allow_package";
+			case "define":
+				"define";
+			case "addMetadata":
+				"meta_patch";
+			case "addClassPath":
+				"add_class_path";
+			case "getOutput":
+				"get_output";
+			case "setOutput":
+				"set_output";
+			case "getDisplayPos":
+				"get_display_pos";
+			case "getConfiguration":
+				"get_configuration";
+			case "addNativeLib":
+				"add_native_lib";
+			case "addNativeArg":
+				"add_native_arg";
+			case "include":
+				"include";
+			case "excludeBaseType":
+				"";
+			case "exclude":
+				"exclude";
+			case "excludeFile":
+				"exclude_file";
+			case "patchTypes":
+				"patch_types";
+			case "keep":
+				"keep";
+			case "nullSafety":
+				"null_safety";
+			case "addGlobalMetadata":
+				"add_global_metadata_impl";
+			case "registerMetadataDescriptionFile":
+				"register_metadata_description_file";
+			case "registerDefinesDescriptionFile":
+				"register_defines_description_file";
+			case "registerCustomMetadata":
+				"register_metadata_impl";
+			case "registerCustomDefine":
+				"register_define_impl";
+			case "setCustomJSGenerator":
+				"set_custom_js_generator";
+			case "load":
+				"load";
+			case "flushDiskCache":
+				"flush_disk_cache";
+			case "includeFile":
+				"include_file";
+			case _:
+				null;
+		};
 	}
 
 	static function macroCompilerApiShimReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
