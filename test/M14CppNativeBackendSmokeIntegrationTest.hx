@@ -2938,6 +2938,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		typeToolsClasses.set("Type", typeClass);
 		typeToolsClasses.set("TypeParam", typeParamClass);
 		typeToolsClasses.set("TypeToolsOwner", typeToolsOwner);
+		typeToolsClasses.set("TypePath", typePathClass);
 		final impossibleEnumPayloadMethod = new HxFunctionDecl("toTypeParamLike", Public, true, [new HxFunctionArg("type", "Type", NoDefault, false, false)],
 			"TypeParam", [
 				SReturn(ESwitch(EIdent("type"), [PEnumExtract("TInst", [PUnsupportedGuard(PBind("e")), PWildcard]), PWildcard],
@@ -2952,6 +2953,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ impossible enum-pattern branches should not render unbound enum-constructor payload references");
 		assertContains(impossibleEnumPayloadLines, "return std::make_shared<TypeParam>();",
 			"C++ switch expressions should keep the reachable default branch when impossible enum payload branches are skipped");
+		final baseTypeClass = new HxClassDecl("BaseType", false, [], [new HxFieldDecl("module", Public, false, "String", null)]);
+		typeToolsNames.set("BaseType", true);
+		typeToolsNames.set("TypePath", true);
+		typeToolsClasses.set("BaseType", baseTypeClass);
+		final typePathCaptureMethod = new HxFunctionDecl("toTypePathLike", Public, true, [new HxFunctionArg("baseType", "BaseType", NoDefault, false, false)],
+			"TypePath", [
+				SReturn(ECall(ELambda(["module"], EIdent("pack")), [EField(EIdent("baseType"), "module")]), HxPos.unknown())
+			], "");
+		final typePathCaptureLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(typePathCaptureMethod, typeToolsOwner, {
+			names: typeToolsNames,
+			byName: typeToolsClasses
+		}).join("\n");
+		assertTrue(typePathCaptureLines.indexOf("return pack;") < 0, "C++ TypePath-returning continuation lambdas should not emit unbound pack references");
+		assertContains(typePathCaptureLines, "return nullptr;",
+			"C++ TypePath-returning unsupported continuation shapes should lower to a neutral TypePath reference");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],

@@ -4202,6 +4202,9 @@ class CppTargetCore {
 		final typedPointer = pointerCtorExprForExpectedType(expr, expectedType, scope);
 		if (typedPointer != null)
 			return typedPointer;
+		final typePathPlaceholder = typePathPlaceholderExprForExpectedType(expr, expectedType, scope);
+		if (typePathPlaceholder != null)
+			return typePathPlaceholder;
 		final optionalInner = cppOptionalInnerType(exprCppType(expr, scope));
 		if (optionalInner.length > 0 && optionalInner == expectedType)
 			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
@@ -5488,6 +5491,11 @@ class CppTargetCore {
 		return false;
 	}
 
+	static function isCppTypePathReferenceType(typeName:String):Bool {
+		final className = classNameFromCppType(typeName);
+		return className != null && sanitizeTypePath(typeBaseName(className)) == "TypePath";
+	}
+
 	static function exprHasOptionalType(expr:HxExpr, ?scope:CppRenderScope):Bool {
 		return isCppOptionalType(exprCppType(expr, scope));
 	}
@@ -6696,6 +6704,17 @@ class CppTargetCore {
 				+ ">("
 				+ renderExpr(args[0], scope)
 				+ ")";
+			case _:
+				null;
+		};
+	}
+
+	static function typePathPlaceholderExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (!isCppTypePathReferenceType(expectedType))
+			return null;
+		return switch (expr) {
+			case EAnon(_, _) | ECall(ELambda(_, _), _):
+				cppDefaultValue(expectedType, scope);
 			case _:
 				null;
 		};
