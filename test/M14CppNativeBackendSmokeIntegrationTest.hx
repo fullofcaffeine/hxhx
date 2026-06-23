@@ -3308,6 +3308,35 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(printerTypeDefinitionLines.indexOf("TDEnum") < 0, "C++ Printer.printTypeDefinition should not emit unsupported TypeDefKind comparisons");
 		assertTrue(printerTypeDefinitionLines.indexOf("printComplexType") < 0,
 			"C++ Printer.printTypeDefinition should not leak unsupported kind-payload callbacks");
+		final printerFieldDelimiterOwner = new HxClassDecl("Printer", false, [
+			new HxFunctionDecl("printFieldWithDelimiter", Public, false, [new HxFunctionArg("f", "Field", NoDefault, false, false)], "", [
+				SReturn(EBinop("+", ECall(EIdent("printField"), [EIdent("f")]),
+					ESwitch(EField(EIdent("f"), "kind"), [PEnumValue("FVar"), PEnumValue("FFun")],
+						[EString(";"), EBinop("==", EField(EIdent("func"), "expr"), ENull)])),
+					HxPos.unknown())
+			], "")
+		], []);
+		final printerFieldDelimiterNames = new StringMap<Bool>();
+		for (name in ["Printer", "Field"])
+			printerFieldDelimiterNames.set(name, true);
+		final printerFieldDelimiterClasses = new StringMap<HxClassDecl>();
+		printerFieldDelimiterClasses.set("Printer", printerFieldDelimiterOwner);
+		printerFieldDelimiterClasses.set("Field", fieldCarrier);
+		final printerFieldDelimiterLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(printerFieldDelimiterOwner)[0],
+			printerFieldDelimiterOwner, {
+			names: printerFieldDelimiterNames,
+			byName: printerFieldDelimiterClasses
+		})
+			.join("\n");
+		assertContains(printerFieldDelimiterLines, "std::string printFieldWithDelimiter(std::shared_ptr<Field> f)",
+			"C++ Printer.printFieldWithDelimiter should keep its callable signature while field-kind lowering is incomplete");
+		assertContains(printerFieldDelimiterLines, "(void)f;", "C++ Printer.printFieldWithDelimiter should consume f");
+		assertContains(printerFieldDelimiterLines, "return std::string();",
+			"C++ Printer.printFieldWithDelimiter neutral helper should return a compile-safe string");
+		assertTrue(printerFieldDelimiterLines.indexOf("FFun") < 0,
+			"C++ Printer.printFieldWithDelimiter should not emit unsupported FieldKind pattern comparisons");
+		assertTrue(printerFieldDelimiterLines.indexOf("func") < 0,
+			"C++ Printer.printFieldWithDelimiter should not leak unsupported nested function payload checks");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],
