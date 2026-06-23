@@ -2344,6 +2344,8 @@ class CppTargetCore {
 			return returnTraced("special_typetools_traversal", renderTypeToolsTraversalHelper(fn, owner, classLookup));
 		if (isPrinterComplexTypeHelper(fn, owner))
 			return returnTraced("special_printer_complex_type", renderPrinterComplexTypeHelper(fn, owner, classLookup));
+		if (isPrinterFieldHelper(fn, owner))
+			return returnTraced("special_printer_field", renderPrinterFieldHelper(fn, owner, classLookup));
 		if (isTypeErasedValueHelper(fn, owner))
 			return returnTraced("special_type_erased_value", renderTypeErasedValueHelper(fn, owner, classLookup));
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
@@ -8453,6 +8455,22 @@ class CppTargetCore {
 	}
 
 	static function renderPrinterComplexTypeHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		return renderPrinterNeutralStringHelper(fn, owner, classLookup);
+	}
+
+	static function isPrinterFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Printer")
+			return false;
+		return sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "printField" && HxFunctionDecl.getArgs(fn).length == 1;
+	}
+
+	static function renderPrinterFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		return renderPrinterNeutralStringHelper(fn, owner, classLookup);
+	}
+
+	static function renderPrinterNeutralStringHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final scope = renderScope(owner, classLookup, "std::string");
 		prepareFunctionScope(scope, fn);
 		final out = ["  std::string "

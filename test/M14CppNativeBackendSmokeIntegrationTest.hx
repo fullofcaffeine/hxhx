@@ -3135,6 +3135,36 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(printerComplexTypeLines.indexOf("args.map") < 0, "C++ Printer.printComplexType should not emit raw Haxe map/join syntax");
 		assertTrue(printerComplexTypeLines.indexOf("wrapArgumentsInParentheses") < 0,
 			"C++ Printer.printComplexType should not leak undeclared pattern locals from partial raw bodies");
+		final fieldCarrier = new HxClassDecl("Field", false, [], []);
+		final printerFieldOwner = new HxClassDecl("Printer", false, [
+			new HxFunctionDecl("printField", Public, false, [new HxFunctionArg("field", "Field", NoDefault, false, false)], "", [
+				SVar("orderAccess", "",
+					ELambda(["access"], ECall(EField(EIdent("access"), "filter"), [ELambda(["a"], ECall(EField(EIdent("a"), "match"), [EString("AFinal")]))])),
+					HxPos.unknown()),
+				SReturn(EBinop("+", ECall(EField(ECall(EField(EField(EIdent("field"), "meta"), "map"), [EIdent("printMetadata")]), "join"), [EString("\n")]),
+					ECall(EIdent("opt"), [EField(EIdent("field"), "type"), EIdent("printComplexType"), EString(" : ")])),
+					HxPos.unknown())
+			], "")
+		], []);
+		final printerFieldNames = new StringMap<Bool>();
+		for (name in ["Printer", "Field"])
+			printerFieldNames.set(name, true);
+		final printerFieldClasses = new StringMap<HxClassDecl>();
+		printerFieldClasses.set("Printer", printerFieldOwner);
+		printerFieldClasses.set("Field", fieldCarrier);
+		final printerFieldLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(printerFieldOwner)[0],
+			printerFieldOwner, {
+				names: printerFieldNames,
+				byName: printerFieldClasses
+			})
+			.join("\n");
+		assertContains(printerFieldLines, "std::string printField(std::shared_ptr<Field> field)",
+			"C++ Printer.printField should stay string-callable while metadata/access lowering is incomplete");
+		assertContains(printerFieldLines, "(void)field;", "C++ Printer.printField neutral helper should consume its argument");
+		assertContains(printerFieldLines, "return std::string();", "C++ Printer.printField neutral helper should return a compile-safe string");
+		assertTrue(printerFieldLines.indexOf(".filter") < 0, "C++ Printer.printField should not emit unsupported access.filter syntax");
+		assertTrue(printerFieldLines.indexOf(".map") < 0, "C++ Printer.printField should not emit unsupported metadata map syntax");
+		assertTrue(printerFieldLines.indexOf("printComplexType,") < 0, "C++ Printer.printField should not pass non-static method values directly as callbacks");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],
