@@ -229,6 +229,9 @@ class CppTargetCore {
 		for (line in CppRuntimeSupport.vectorSupportLines())
 			out.push(line);
 		out.push("");
+		for (line in CppRuntimeSupport.borrowedSharedPtrLines())
+			out.push(line);
+		out.push("");
 		for (line in CppRuntimeSupport.sysEventLoopLines())
 			out.push(line);
 		out.push("");
@@ -1960,20 +1963,16 @@ class CppTargetCore {
 			"  std::shared_ptr<RestIterator<" + itemType + ">> iterator() {",
 			"    return __hxhx_make_shared_RestIterator<"
 			+ itemType
-			+ ">(std::shared_ptr<Rest<"
-			+ itemType
-			+ ">>(this, [](Rest<"
-			+ itemType
-			+ ">*) {}));",
+			+ ">("
+			+ CppRuntimeSupport.borrowedSharedPtrExpr("Rest<" + itemType + ">", "this")
+			+ ");",
 			"  }",
 			"  std::shared_ptr<RestKeyValueIterator<" + itemType + ">> keyValueIterator() {",
 			"    return __hxhx_make_shared_RestKeyValueIterator<"
 			+ itemType
-			+ ">(std::shared_ptr<Rest<"
-			+ itemType
-			+ ">>(this, [](Rest<"
-			+ itemType
-			+ ">*) {}));",
+			+ ">("
+			+ CppRuntimeSupport.borrowedSharedPtrExpr("Rest<" + itemType + ">", "this")
+			+ ");",
 			"  }",
 			"  std::shared_ptr<Rest<" + itemType + ">> append(" + itemType + " item) const {",
 			"    auto result = __values;",
@@ -4670,8 +4669,7 @@ class CppTargetCore {
 		if (expectedClass != null) {
 			switch (arg) {
 				case EThis if (currentOwnerIsOrExtends(expectedClass, scope)):
-					final ownerName = sanitizeTypePath(HxClassDecl.getName(scope.owner));
-					return "std::shared_ptr<" + expectedClass + ">(this, [](" + ownerName + "*) {})";
+					return CppRuntimeSupport.borrowedSharedPtrExpr(expectedClass, "this");
 				case _:
 			}
 		}

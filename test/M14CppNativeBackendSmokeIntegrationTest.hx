@@ -4228,7 +4228,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final restLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(rest, restLookup).join("\n");
 		assertContains(restIteratorLines, "RestIterator(std::shared_ptr<Rest> args) : args(args) {",
 			"C++ helper constructors should keep class-typed parameters as reference handles");
-		assertContains(restLines, "return std::make_shared<RestIterator>(std::shared_ptr<Rest>(this, [](Rest*) {}));",
+		assertContains(restLines, "return std::make_shared<RestIterator>(__hxhx_borrowed_shared<Rest>(this));",
 			"C++ helper constructors should pass `this` through the expected class reference handle");
 		assertTrue(restLines.indexOf("std::make_shared<RestIterator>((*this))") < 0,
 			"C++ helper constructors should not pass the current object by value to shared_ptr-backed parameters");
@@ -4373,6 +4373,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::cout << (std::string(\"cpp-native:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit println");
 		assertContains(source, "std::cout << (std::string(\"trace:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit trace");
 		assertContains(source, "static std::string __hxhx_stringify(bool value)", "C++ smoke should include target-owned stringify support");
+		assertContains(source, "static std::shared_ptr<T> __hxhx_borrowed_shared(T* value)",
+			"C++ smoke should include target-owned borrowed receiver handle support");
 		assertContains(source, "__hxhx_args(argc, argv)", "C++ smoke should emit Sys.args helper call");
 		assertContains(source, "__hxhx_index_of(\"abc\", std::string(\"b\"), 0)", "C++ smoke should emit string indexOf helper call");
 		assertContains(source, "__hxhx_index_of(args, std::string(\"needle\"), 0)", "C++ smoke should emit vector indexOf helper call");

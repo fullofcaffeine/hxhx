@@ -60,3 +60,27 @@ Grow this target by CI-discovered seams:
 Do not add large inline runtime stubs to unrelated shared emitters to satisfy one
 Cpp failure. Target runtime/API surfaces should live behind C++ target-owned
 modules or small templates.
+
+## Class Reference Ownership Model
+
+Current `cpp-native` class emission uses a source-MVP ownership model:
+
+- `new SomeClass(...)` and generated `__hxhx_make_shared_*` factories return
+  owning `std::shared_ptr<SomeClass>` handles.
+- Class-typed fields, constructor arguments, method arguments, and return values
+  use `std::shared_ptr<T>` handles so helper/runtime classes have one consistent
+  reference shape.
+- Passing the current receiver (`this`) to another helper constructor uses
+  `__hxhx_borrowed_shared<T>(this)`. This is a non-owning `shared_ptr` handle
+  with a no-op deleter, valid only for immediate helper/runtime aliasing where
+  the receiver outlives the borrowed call path. It must not be used as a general
+  lifetime-extension mechanism.
+- Primitive values, strings, arrays/vectors, and primitive-backed abstracts keep
+  value semantics unless a target runtime API explicitly requires a handle.
+- Target runtime wrappers such as `Any`, `EnumValue`, iterators, event-loop
+  helpers, and Cpp-specific extern support live in C++ target-owned runtime
+  support, not in shared emitters or broad fake generated classes.
+
+If a future Cpp gate needs persistent aliasing, cyclic object graphs, hxcpp ABI
+layout, or ownership transfer across runtime queues, file a dedicated follow-up
+instead of expanding the borrowed receiver helper.

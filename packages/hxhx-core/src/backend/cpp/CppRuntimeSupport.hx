@@ -15,6 +15,19 @@ package backend.cpp;
 	  declaration order remains explicit at the call site.
 **/
 class CppRuntimeSupport {
+	public static function borrowedSharedPtrLines():Array<String> {
+		return [
+			"template<typename T>",
+			"static std::shared_ptr<T> __hxhx_borrowed_shared(T* value) {",
+			"  return std::shared_ptr<T>(value, [](T*) {});",
+			"}"
+		];
+	}
+
+	public static function borrowedSharedPtrExpr(typeName:String, valueExpr:String):String {
+		return "__hxhx_borrowed_shared<" + typeName + ">(" + valueExpr + ")";
+	}
+
 	public static function missingDeclarationLines(cleanName:String):Null<Array<String>> {
 		return switch (cleanName) {
 			case "KeyValueIterator":
