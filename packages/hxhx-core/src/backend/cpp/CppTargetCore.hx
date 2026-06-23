@@ -5626,8 +5626,9 @@ class CppTargetCore {
 	static function currentOwnerFieldCppType(name:String, scope:CppRenderScope):String {
 		if (scope == null || scope.owner == null)
 			return "";
+		final wanted = sanitizeIdentifier(name);
 		for (field in HxClassDecl.getFields(scope.owner)) {
-			if (HxFieldDecl.getName(field) == name)
+			if (sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
 				return knownStdlibFieldCppType(sanitizeTypePath(HxClassDecl.getName(scope.owner)), name, HxFieldDecl.getTypeHint(field),
 					HxFieldDecl.getInit(field), scope);
 		}
@@ -5647,8 +5648,9 @@ class CppTargetCore {
 		final baseCls = scope.classByName.get(baseName);
 		if (baseCls == null)
 			return "";
+		final wanted = sanitizeIdentifier(name);
 		for (field in HxClassDecl.getFields(baseCls)) {
-			if (!HxFieldDecl.getIsStatic(field) && HxFieldDecl.getName(field) == name)
+			if (!HxFieldDecl.getIsStatic(field) && sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
 				return knownStdlibFieldCppType(baseName, name, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
 		}
 		return inheritedInstanceFieldCppTypeFromClass(name, baseCls, scope);
@@ -5663,8 +5665,9 @@ class CppTargetCore {
 		final cls = scope.classByName.exists(className) ? scope.classByName.get(className) : scope.classByName.get(sanitizeTypePath(typeBaseName(className)));
 		if (cls == null)
 			return "";
+		final wanted = sanitizeIdentifier(fieldName);
 		for (field in HxClassDecl.getFields(cls)) {
-			if (HxFieldDecl.getName(field) == fieldName)
+			if (sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
 				return knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
 		}
 		return "";
@@ -6020,6 +6023,8 @@ class CppTargetCore {
 				"std::vector<" + arrayElementType(elements, scope) + ">";
 			case EArrayComprehension(name, iterable, _, yieldExpr):
 				"std::vector<" + arrayComprehensionElementType(name, iterable, yieldExpr, scope) + ">";
+			case EArrayAccess(array, _):
+				cppVectorElementType(exprCppType(array, scope));
 			case EAnon(fieldNames, fieldValues):
 				anonStruct(fieldNames, fieldValues, scope).name;
 			case EUnop("-", inner):

@@ -4526,10 +4526,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function new() {}",
 			"}",
 			"class RunnerGenericLike {",
-			"  public var fixtures:Array<TestFixture> = [];",
+			"  var fixtures(default, null):Array<TestFixture> = [];",
 			"  public var fixtureList:List<TestFixture>;",
 			"  public var onProgress:Dispatcher<String>;",
 			"  public var onRunner:Dispatcher<RunnerGenericLike>;",
+			"  var pos:Int = 0;",
 			"  public function new() {",
 			"    fixtureList = new List();",
 			"    onProgress = new Dispatcher();",
@@ -4545,6 +4546,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return isTestFixtureName([prefix]);",
 			"  }",
 			"  public function runFixtures():Void {",
+			"    var fixture = fixtures[pos++];",
+			"    if (fixture.isITest) return;",
+			"    var arrayTarget = fixture.target;",
 			"    for (fixture in fixtureList) {",
 			"      if (fixture.isITest) {}",
 			"      var t = fixture.target;",
@@ -4570,8 +4574,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			names: parsedRunnerGenericNames,
 			byName: parsedRunnerGenericClasses
 		}).join("\n");
+		final parsedRunnerGenericScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(parsedRunnerGenericOwner, {
+			names: parsedRunnerGenericNames,
+			byName: parsedRunnerGenericClasses
+		}, "String");
+		final fixturesCppType = @:privateAccess backend.cpp.CppTargetCore.exprCppType(EIdent("fixtures"), parsedRunnerGenericScope);
+		assertTrue(fixturesCppType == "std::vector<std::shared_ptr<TestFixture>>",
+			"C++ owner field type lookup should recover Array<TestFixture> fields, got " + fixturesCppType);
+		final fixtureAccessCppType = @:privateAccess
+			backend.cpp.CppTargetCore.inferExprCppType(EArrayAccess(EIdent("fixtures"), EUnop("post++", EIdent("pos"))), parsedRunnerGenericScope);
+		assertTrue(fixtureAccessCppType == "std::shared_ptr<TestFixture>",
+			"C++ Array<T> access inference should recover reference element type, got " + fixtureAccessCppType);
 		assertContains(parsedRunnerGenericLines, "std::vector<std::shared_ptr<TestFixture>> fixtures = std::vector<std::shared_ptr<TestFixture>>{};",
 			"C++ typed empty Array fields should render with the declared element type instead of vector<int>");
+		assertContains(parsedRunnerGenericLines, "auto fixture = (fixtures[(pos++)]);",
+			"C++ unhinted locals initialized from Array<T> access may use auto while keeping the inferred reference element type in scope");
+		assertContains(parsedRunnerGenericLines, "if ((fixture->isITest))",
+			"C++ Array<T> access locals should keep reference element types for pointer field access");
+		assertContains(parsedRunnerGenericLines, "auto arrayTarget = (fixture->target);",
+			"C++ Array<T> access locals should use pointer field access for reference element fields");
 		assertContains(parsedRunnerGenericLines, "if ((fixture->isITest))",
 			"C++ List<T> loop locals should keep reference element types for pointer field access");
 		assertContains(parsedRunnerGenericLines, "auto t = (fixture->target);",
