@@ -5414,16 +5414,25 @@ and cppTypeHint = fun typeHint scope classLookup -> try let __fallback_result_67
     let nullArg = (Backend_cpp_CppTypeModel.nullTypeHintArg (hint : string) : string) in (
       ignore (if nullArg != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (cppNullableTypeHint (nullArg : string) scope classLookup : string))) else ());
       ignore (if Backend_cpp_CppTypeModel.isBareNullTypeHint (hint : string) then raise (HxRuntime.Hx_return (Obj.repr ("std::any" : string))) else ());
-      ignore (if scope != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get scope "owner") != Obj.magic (HxRuntime.hx_null) && isGenericTypeParamHint (hint : string) (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) then raise (HxRuntime.Hx_return (Obj.repr (cppTypeParamName (genericTypeParamName (hint : string) : string) scope : string))) else ());
-      ignore (if isStructuralTypeHint (hint : string) then ignore (let hx_struct = structuralTypeHintStruct (hint : string) scope classLookup in if hx_struct != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get hx_struct "name") : string))) else ()) else ());
-      let scopedGenericClass = (scopedRawGenericClassTypeName (hint : string) scope : string) in (
-        ignore (if scopedGenericClass != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (("std::shared_ptr<" ^ HxString.toStdString scopedGenericClass) ^ ">" : string))) else ());
-        ignore (if Backend_cpp_CppTypeModel.isIteratorTypeHint (hint : string) then raise (HxRuntime.Hx_return (Obj.repr (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString (cppTypeHint (genericTypeHintArg (hint : string) : string) scope classLookup)) ^ ">>" : string))) else ());
-        ignore (if isArrayLikeTypeHint (hint : string) || isIterableTypeHint (hint : string) then raise (HxRuntime.Hx_return (Obj.repr (("std::vector<" ^ HxString.toStdString (cppTypeHint (genericTypeHintArg (hint : string) : string) scope classLookup)) ^ ">" : string))) else ());
-        ignore (if isFunctionTypeHint (hint : string) then raise (HxRuntime.Hx_return (Obj.repr (cppFunctionTypeHint (hint : string) scope classLookup : string))) else ());
-        let args = Obj.magic (genericTypeHintArgs (hint : string)) in (
-          ignore (if HxArray.length args > 0 then ignore (let base = (sanitizeTypePath (typeBaseName (hint : string) : string) : string) in if scopeHasClass scope (base : string) && HxArray.length (genericClassTypeParamsForName (base : string) scope) > 0 then raise (HxRuntime.Hx_return (Obj.repr (("std::shared_ptr<" ^ HxString.toStdString (cppClassTemplateTypeName (hint : string) scope classLookup)) ^ ">" : string))) else ()) else ());
-          Backend_cpp_CppTypeModel.cppTypeHint (hint : string) scope classLookup
+      let primitiveAbstractType = (primitiveBackedAbstractCppTypeForTypeHint (hint : string) scope classLookup : string) in (
+        ignore (if primitiveAbstractType != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (primitiveAbstractType : string))) else ());
+        let abstractName = (arrayBackedAbstractNameForTypeHint (hint : string) scope classLookup : string) in (
+          ignore (if abstractName != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (abstractName : string))) else ());
+          ignore (if scope != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get scope "owner") != Obj.magic (HxRuntime.hx_null) && isGenericTypeParamHint (hint : string) (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) then raise (HxRuntime.Hx_return (Obj.repr (cppTypeParamName (genericTypeParamName (hint : string) : string) scope : string))) else ());
+          ignore (if isStructuralTypeHint (hint : string) then ignore (let hx_struct = structuralTypeHintStruct (hint : string) scope classLookup in if hx_struct != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get hx_struct "name") : string))) else ()) else ());
+          let scopedGenericClass = (scopedRawGenericClassTypeName (hint : string) scope : string) in (
+            ignore (if scopedGenericClass != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (("std::shared_ptr<" ^ HxString.toStdString scopedGenericClass) ^ ">" : string))) else ());
+            ignore (if Backend_cpp_CppTypeModel.isIteratorTypeHint (hint : string) then raise (HxRuntime.Hx_return (Obj.repr (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString (cppTypeHint (genericTypeHintArg (hint : string) : string) scope classLookup)) ^ ">>" : string))) else ());
+            ignore (if isArrayLikeTypeHint (hint : string) || isIterableTypeHint (hint : string) then raise (HxRuntime.Hx_return (Obj.repr (("std::vector<" ^ HxString.toStdString (cppTypeHint (genericTypeHintArg (hint : string) : string) scope classLookup)) ^ ">" : string))) else ());
+            ignore (if isFunctionTypeHint (hint : string) then raise (HxRuntime.Hx_return (Obj.repr (cppFunctionTypeHint (hint : string) scope classLookup : string))) else ());
+            let args = Obj.magic (genericTypeHintArgs (hint : string)) in (
+              ignore (if HxArray.length args > 0 then ignore (let base = (sanitizeTypePath (typeBaseName (hint : string) : string) : string) in if scopeHasClass scope (base : string) then ignore ((
+                ignore (if HxArray.length (genericClassTypeParamsForName (base : string) scope) > 0 then raise (HxRuntime.Hx_return (Obj.repr (("std::shared_ptr<" ^ HxString.toStdString (cppClassTemplateTypeName (hint : string) scope classLookup)) ^ ">" : string))) else ());
+                raise (HxRuntime.Hx_return (Obj.repr (("std::shared_ptr<" ^ HxString.toStdString base) ^ ">")))
+              )) else ()) else ());
+              Backend_cpp_CppTypeModel.cppTypeHint (hint : string) scope classLookup
+            )
+          )
         )
       )
     )

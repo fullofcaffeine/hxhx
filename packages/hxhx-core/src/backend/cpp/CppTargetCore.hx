@@ -8157,6 +8157,12 @@ class CppTargetCore {
 			return cppNullableTypeHint(nullArg, scope, classLookup);
 		if (CppTypeModel.isBareNullTypeHint(hint))
 			return "std::any";
+		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
+		if (primitiveAbstractType != null)
+			return primitiveAbstractType;
+		final abstractName = arrayBackedAbstractNameForTypeHint(hint, scope, classLookup);
+		if (abstractName != null)
+			return abstractName;
 		if (scope != null && scope.owner != null && isGenericTypeParamHint(hint, scope.owner))
 			return cppTypeParamName(genericTypeParamName(hint), scope);
 		if (isStructuralTypeHint(hint)) {
@@ -8176,8 +8182,11 @@ class CppTargetCore {
 		final args = genericTypeHintArgs(hint);
 		if (args.length > 0) {
 			final base = sanitizeTypePath(typeBaseName(hint));
-			if (scopeHasClass(scope, base) && genericClassTypeParamsForName(base, scope).length > 0)
-				return "std::shared_ptr<" + cppClassTemplateTypeName(hint, scope, classLookup) + ">";
+			if (scopeHasClass(scope, base)) {
+				if (genericClassTypeParamsForName(base, scope).length > 0)
+					return "std::shared_ptr<" + cppClassTemplateTypeName(hint, scope, classLookup) + ">";
+				return "std::shared_ptr<" + base + ">";
+			}
 		}
 		return CppTypeModel.cppTypeHint(hint, scope, classLookup);
 	}

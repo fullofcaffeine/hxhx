@@ -3823,6 +3823,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic helper construction should use the deducing factory for function values");
 		assertTrue(genericBoxOwnerLines.indexOf("std::make_shared<GenericBox>(") < 0,
 			"C++ generic helper construction should not instantiate the erased non-template class shape");
+		final templateSurfaceKind = new HxClassDecl("TemplateSurfaceKind", false, [], [
+			new HxFieldDecl("Alpha", Public, true, "String", EString("alpha")),
+			new HxFieldDecl("Beta", Public, true, "String", EString("beta"))
+		]);
+		final templateSurfaceBox = new HxClassDecl("TemplateSurfaceBox", false, [], [new HxFieldDecl("kind", Public, false, "TemplateSurfaceKind<T>", null)],
+			"", ["__hxhx_type_params=T"]);
+		genericBoxNames.set("TemplateSurfaceKind", true);
+		genericBoxNames.set("TemplateSurfaceBox", true);
+		genericBoxClasses.set("TemplateSurfaceKind", templateSurfaceKind);
+		genericBoxClasses.set("TemplateSurfaceBox", templateSurfaceBox);
+		final templateSurfaceKindLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(templateSurfaceKind, genericBoxLookup).join("\n");
+		final templateSurfaceBoxLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(templateSurfaceBox, genericBoxLookup).join("\n");
+		assertContains(templateSurfaceKindLines, "struct TemplateSurfaceKind {",
+			"C++ enum-kind-style helper classes with static values should render as non-template structs");
+		assertTrue(templateSurfaceKindLines.indexOf("template<typename T>\nstruct TemplateSurfaceKind") < 0,
+			"C++ enum-kind-style helper classes should not gain fake template params");
+		assertContains(templateSurfaceBoxLines, "std::shared_ptr<TemplateSurfaceKind> kind = nullptr;",
+			"C++ fields typed as non-template helper classes with generic-looking hints should drop invalid template args");
+		assertTrue(templateSurfaceBoxLines.indexOf("TemplateSurfaceKind<T>") < 0,
+			"C++ non-template helper class references must not leak source generic args into generated C++");
 		final nestedGenericHolder = new HxClassDecl("NestedGenericHolder", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("box", "GenericBox<T>", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "box"), EIdent("box")), HxPos.unknown())], "")
@@ -5300,6 +5321,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertContains(vendorReadOnlyArraySource, "struct ReadOnlyArray {", "C++ smoke should emit upstream haxe.ds.ReadOnlyArray as a helper");
 			assertTrue(vendorReadOnlyArraySource.indexOf("template<typename T>\nstruct ReadOnlyArray;") < 0,
 				"C++ ReadOnlyArray forward declarations should match the current non-template target-owned support shape");
+			assertTrue(vendorReadOnlyArraySource.indexOf("ReadOnlyArray<T>") < 0,
+				"C++ ReadOnlyArray helper methods should not render target-owned ReadOnlyArray as a C++ template");
 			assertContains(vendorReadOnlyArraySource, "auto operator[](int index) const { return __values[index]; }",
 				"C++ smoke should expose operator[] for upstream haxe.ds.ReadOnlyArray array access");
 			assertContains(vendorReadOnlyArraySource, "((*this)[i])", "C++ smoke should preserve upstream ReadOnlyArray.get through the wrapper operator[]");
