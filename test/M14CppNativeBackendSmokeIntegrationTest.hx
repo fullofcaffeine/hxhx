@@ -4512,6 +4512,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function clear():Void {",
 			"    handlers = new Array();",
 			"  }",
+			"  public function add(h:T->Void):T->Void {",
+			"    handlers.push(h);",
+			"    return h;",
+			"  }",
 			"  public function dispatch(e) {",
 			"    var list = handlers.copy();",
 			"    for (l in list) {",
@@ -4524,6 +4528,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public var isITest:Bool = false;",
 			"  public var target:String = \"\";",
 			"  public function new() {}",
+			"}",
+			"class TestHandler<T> {",
+			"  public var onComplete:Dispatcher<TestHandler<T>>;",
+			"  public function new() {",
+			"    onComplete = new Dispatcher();",
+			"  }",
 			"}",
 			"class RunnerGenericLike {",
 			"  var fixtures(default, null):Array<TestFixture> = [];",
@@ -4553,6 +4563,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"      if (fixture.isITest) {}",
 			"      var t = fixture.target;",
 			"    }",
+			"  }",
+			"  public function runNext(finishedHandler:TestHandler<TestFixture>):Void {}",
+			"  public function wireHandler(handler:TestHandler<TestFixture>):Void {",
+			"    handler.onComplete.add(runNext);",
 			"  }",
 			"  public function isMethod(test:Dynamic, name:String) {",
 			"    try return Reflect.isFunction(Reflect.field(test, name));",
@@ -4593,6 +4607,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Array<T> access locals should keep reference element types for pointer field access");
 		assertContains(parsedRunnerGenericLines, "auto arrayTarget = (fixture->target);",
 			"C++ Array<T> access locals should use pointer field access for reference element fields");
+		assertContains(parsedRunnerGenericLines, "(handler->onComplete)->add(std::function<void(std::shared_ptr<TestHandler<std::shared_ptr<TestFixture>>>)>",
+			"C++ same-owner method values passed to typed function params should lower to typed std::function lambdas");
+		assertContains(parsedRunnerGenericLines,
+			"[&](std::shared_ptr<TestHandler<std::shared_ptr<TestFixture>>> finishedHandler) { this->runNext(finishedHandler); }",
+			"C++ same-owner method callback lambdas should use the instantiated handler payload type");
 		assertContains(parsedRunnerGenericLines, "if ((fixture->isITest))",
 			"C++ List<T> loop locals should keep reference element types for pointer field access");
 		assertContains(parsedRunnerGenericLines, "auto t = (fixture->target);",

@@ -4150,7 +4150,7 @@ class CppTargetCore {
 		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
 		if (isCppFunctionType(expectedType)) {
-			final methodValue = instanceMethodValueExpr(expr, scope);
+			final methodValue = methodValueExprForExpectedFunction(expr, expectedType, scope);
 			if (methodValue != null)
 				return methodValue;
 		}
@@ -4978,6 +4978,11 @@ class CppTargetCore {
 		final listElementType = listElementCppType(receiverCppType);
 		if (sanitizeIdentifier(method) == "add" && args.length == 1 && listElementType.length > 0)
 			return [valueExprForExpectedType(args[0], listElementType, scope)];
+		final dispatcherElementType = dispatcherElementCppType(receiverCppType);
+		if (sanitizeIdentifier(method) == "add" && args.length == 1 && dispatcherElementType.length > 0)
+			return [
+				valueExprForExpectedType(args[0], "std::function<void(" + dispatcherElementType + ")>", scope)
+			];
 		final instanceArgs = renderInstanceMethodCallArgs(receiverCppType, method, args, scope);
 		if (instanceArgs.length == args.length && hasKnownInstanceMethod(receiverCppType, method, scope))
 			return instanceArgs;
@@ -4994,6 +4999,11 @@ class CppTargetCore {
 		if (receiverCppType == null || !StringTools.startsWith(receiverCppType, prefix) || !StringTools.endsWith(receiverCppType, ">>"))
 			return "";
 		return receiverCppType.substr(prefix.length, receiverCppType.length - prefix.length - 2);
+	}
+
+	static function dispatcherElementCppType(receiverCppType:String):String {
+		final args = templateArgsFromExpectedClassType("Dispatcher", receiverCppType);
+		return args.length == 1 ? args[0] : "";
 	}
 
 	static function directCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -5067,6 +5077,16 @@ class CppTargetCore {
 			for (typeName in paramTypes)
 				substituteCppTypeParams(typeName, typeParams, typeArgs)
 		];
+	}
+
+	static function instantiateGenericClassFieldType(className:String, receiverCppType:String, fieldType:String, ?scope:CppRenderScope):String {
+		if (fieldType == null || fieldType.length == 0)
+			return fieldType;
+		final typeParams = genericClassTypeParamsForName(className, scope);
+		final typeArgs = templateArgsFromExpectedClassType(className, receiverCppType);
+		if (typeParams.length == 0 || typeArgs.length == 0)
+			return fieldType;
+		return substituteCppTypeParams(fieldType, typeParams, typeArgs);
 	}
 
 	static function substituteCppTypeParams(typeName:String, typeParams:Array<String>, typeArgs:Array<String>):String {
@@ -5521,7 +5541,7 @@ class CppTargetCore {
 							anonFieldType;
 						else {
 							final ownerType = classNameFromCppExprType(receiverType, scope);
-							ownerType == null ? "" : classFieldCppType(ownerType, field, scope);
+							ownerType == null ? "" : receiverClassFieldCppType(ownerType, receiverType, field, scope);
 						}
 					}
 				}
@@ -5671,6 +5691,18 @@ class CppTargetCore {
 				return knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
 		}
 		return "";
+	}
+
+	static function receiverClassFieldCppType(className:String, receiverCppType:String, fieldName:String, scope:CppRenderScope):String {
+		if (scope == null || className == null || className.length == 0)
+			return "";
+		final baseClassName = sanitizeTypePath(typeBaseName(className));
+		final cls = scope.classByName.exists(baseClassName) ? scope.classByName.get(baseClassName) : scope.classByName.get(className);
+		if (cls == null)
+			return "";
+		final ownerScope = renderScope(cls, {names: scope.classNames, byName: scope.classByName}, scope.returnType);
+		final fieldType = classFieldCppType(baseClassName, fieldName, ownerScope);
+		return instantiateGenericClassFieldType(baseClassName, receiverCppType, fieldType, ownerScope);
 	}
 
 	static function anonStructFieldCppType(typeName:String, fieldName:String, scope:CppRenderScope):String {
@@ -7385,6 +7417,40 @@ class CppTargetCore {
 			case _:
 				null;
 		};
+	}
+
+	static function methodValueExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || !isCppFunctionType(expectedType))
+			return null;
+		return switch (expr) {
+			case EIdent(name):
+				final fn = currentOwnerMethod(name, scope);
+				if (fn == null) null; else typedMethodValueLambda("this->", sanitizeIdentifier(name), fn, expectedType);
+			case EField(_, _):
+				final methodValue = instanceMethodValueExpr(expr, scope);
+				methodValue == null ? null : expectedType + "(" + methodValue + ")";
+			case _:
+				null;
+		};
+	}
+
+	static function typedMethodValueLambda(targetPrefix:String, methodName:String, fn:HxFunctionDecl, expectedType:String):String {
+		final expectedArgs = CppTypeModel.cppFunctionArgTypesFromCppType(expectedType);
+		final fnArgs = HxFunctionDecl.getArgs(fn);
+		final names = [
+			for (i in 0...fnArgs.length)
+				sanitizeIdentifier(HxFunctionArg.getName(fnArgs[i]))
+		];
+		final params = [
+			for (i in 0...names.length) {
+				final typeName = i < expectedArgs.length && expectedArgs[i].length > 0 ? expectedArgs[i] : "auto";
+				typeName + " " + names[i];
+			}
+		];
+		final call = targetPrefix + methodName + "(" + names.join(", ") + ")";
+		final returnType = cppFunctionReturnTypeFromCppType(expectedType);
+		final body = returnType == "void" ? call + ";" : "return " + call + ";";
+		return expectedType + "([&](" + params.join(", ") + ") { " + body + " })";
 	}
 
 	static function macroExpr(expr:HxExpr, wrappers:Array<String>):String {
