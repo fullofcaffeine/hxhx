@@ -4505,7 +4505,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ zero-arg generic factory bodies should remain after implicit-constructor template definitions");
 		final parsedRunnerGenericModule = new HxParser([
 			"class Dispatcher<T> {",
-			"  public function new() {}",
+			"  var handlers:Array<T->Void>;",
+			"  public function new() {",
+			"    handlers = new Array();",
+			"  }",
+			"  public function clear():Void {",
+			"    handlers = new Array();",
+			"  }",
 			"}",
 			"class TestFixture {",
 			"  public function new() {}",
@@ -4546,6 +4552,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ typed empty Array fields should render with the declared element type instead of vector<int>");
 		assertContains(parsedRunnerGenericLines, "onProgress = __hxhx_make_shared_Dispatcher<std::string>();",
 			"C++ zero-arg generic constructor assignments should infer template args from the destination field type");
+		final parsedDispatcherLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(parsedRunnerGenericClasses.get("Dispatcher"), {
+			names: parsedRunnerGenericNames,
+			byName: parsedRunnerGenericClasses
+		}).join("\n");
+		assertContains(parsedDispatcherLines, "std::vector<std::function<void(T)>> handlers",
+			"C++ generic function-vector fields should preserve the function element type");
+		assertContains(parsedDispatcherLines, "handlers = std::vector<std::function<void(T)>>{};",
+			"C++ generic function-vector assignments should use the destination field element type");
+		assertTrue(parsedDispatcherLines.indexOf("handlers = std::vector<std::string>{};") < 0,
+			"C++ generic function-vector assignments should not fall back to string arrays");
 		assertContains(parsedRunnerGenericLines, "return isTestFixtureName(std::vector<std::string>{std::string(prefix)});",
 			"C++ array literals passed to typed Array parameters should render with the parameter element type");
 		assertContains(parsedRunnerGenericLines, "bool isMethod(std::string test, std::string name) {",

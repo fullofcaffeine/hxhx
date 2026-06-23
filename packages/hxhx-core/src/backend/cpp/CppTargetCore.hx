@@ -4561,7 +4561,7 @@ class CppTargetCore {
 		if (primitiveAbstract != null)
 			return primitiveAbstract;
 		if (isStdArrayTypePath(typePath))
-			return stdArrayConstructionExpr(typePath, args, scope);
+			return stdArrayConstructionExpr(typePath, args, scope, expectedCppType);
 		if (scopeHasClass(scope, className) && isStdVectorHelperClass(scope.classByName.get(className)))
 			return className + "(" + renderConstructorArgs(className, args, scope).join(", ") + ")";
 		final renderedArgs = renderConstructorArgs(className, args, scope).join(", ");
@@ -4690,14 +4690,16 @@ class CppTargetCore {
 		return false;
 	}
 
-	static function stdArrayConstructionExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+	static function stdArrayConstructionExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?expectedCppType:String):String {
 		if (args.length > 0)
 			throw "C++ source backend MVP unsupported Array constructor arity: " + args.length;
-		final typeName = isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope);
+		final typeName = isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope, expectedCppType);
 		return typeName + "{}";
 	}
 
-	static function stdArrayDefaultVectorType(?scope:CppRenderScope):String {
+	static function stdArrayDefaultVectorType(?scope:CppRenderScope, ?expectedCppType:String):String {
+		if (isCppVectorType(expectedCppType))
+			return expectedCppType;
 		return scope != null && isCppVectorType(scope.returnType) ? scope.returnType : "std::vector<std::string>";
 	}
 
