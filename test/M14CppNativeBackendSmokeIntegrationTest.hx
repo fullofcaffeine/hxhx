@@ -4520,6 +4520,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function usePrefix(prefix:String):Bool {",
 			"    return isTestFixtureName([prefix]);",
 			"  }",
+			"  public function isMethod(test:Dynamic, name:String) {",
+			"    try return Reflect.isFunction(Reflect.field(test, name));",
+			"    catch(e:Dynamic) return false;",
+			"  }",
+			"  public function guardMethod(test:Dynamic, name:String):Void {",
+			"    if (!isMethod(test, name)) return;",
+			"  }",
 			"}"
 		].join("\n")).parseModule("RunnerGenericLike");
 		final parsedRunnerGenericOwner = HxModuleDecl.getMainClass(parsedRunnerGenericModule);
@@ -4539,6 +4546,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ zero-arg generic constructor assignments should infer template args from the destination field type");
 		assertContains(parsedRunnerGenericLines, "return isTestFixtureName(std::vector<std::string>{std::string(prefix)});",
 			"C++ array literals passed to typed Array parameters should render with the parameter element type");
+		assertContains(parsedRunnerGenericLines, "bool isMethod(std::string test, std::string name) {",
+			"C++ try/catch return inference should preserve bool helpers instead of falling back to string");
+		assertContains(parsedRunnerGenericLines, "return __hxhx_reflect_is_function(__hxhx_reflect_field(test, std::string(name)));",
+			"C++ bool-returning Reflect.isFunction probes should return bool directly");
+		assertTrue(parsedRunnerGenericLines.indexOf("std::string isMethod(") < 0, "C++ try/catch bool helper inference should not stringify boolean returns");
+		final runnerAddCases = new HxClassDecl("Runner", false, [
+			new HxFunctionDecl("addCases", Public, false, [
+				new HxFunctionArg("eThis", "haxe.macro.Expr", NoDefault, false, false),
+				new HxFunctionArg("path", "haxe.macro.Expr", NoDefault, false, false),
+				new HxFunctionArg("recursive", "Bool", Default(EBool(true)), true, false)
+			], "haxe.macro.Expr",
+				[SExpr(EUnsupported("body_parse_error"), HxPos.unknown())], "", ["macro"])
+		]);
+		final runnerAddCasesNames = new StringMap<Bool>();
+		runnerAddCasesNames.set("Runner", true);
+		runnerAddCasesNames.set("Expr", true);
+		final runnerAddCasesClasses = new StringMap<HxClassDecl>();
+		runnerAddCasesClasses.set("Runner", runnerAddCases);
+		runnerAddCasesClasses.set("Expr", new HxClassDecl("Expr", false));
+		final runnerAddCasesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(runnerAddCases, {
+			names: runnerAddCasesNames,
+			byName: runnerAddCasesClasses
+		}).join("\n");
+		assertContains(runnerAddCasesLines, "std::shared_ptr<Expr> addCases(std::shared_ptr<Expr> eThis, std::shared_ptr<Expr> path",
+			"C++ utest Runner.addCases macro helper should keep a callable runtime signature");
+		assertContains(runnerAddCasesLines, "return nullptr;", "C++ utest Runner.addCases macro helper should emit a neutral runtime stub");
+		assertTrue(runnerAddCasesLines.indexOf("body_parse_error") < 0, "C++ utest Runner.addCases should not emit its macro-only body");
 		assertContains(source, "static bool isOfType(std::string v, std::shared_ptr<Class> t)",
 			"C++ smoke should preserve Class-valued helper parameters instead of falling back to strings");
 		assertContains(source, "int casted = helper(5);", "C++ smoke should lower cast expression with explicit local type");

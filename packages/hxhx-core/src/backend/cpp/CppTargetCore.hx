@@ -2368,6 +2368,8 @@ class CppTargetCore {
 			return returnTraced("special_lambda_has", renderLambdaHasHelper());
 		if (isMacroCompilerApiShimHelper(fn, owner))
 			return returnTraced("special_macro_compiler_api", renderMacroCompilerApiShimHelper(fn, owner, classLookup));
+		if (isUtestRunnerAddCasesHelper(fn, owner))
+			return returnTraced("special_utest_runner_add_cases", renderUtestRunnerAddCasesHelper(fn, owner, classLookup));
 		if (isPolymorphicIsOfTypeHelper(fn))
 			return returnTraced("special_is_of_type", renderPolymorphicIsOfTypeHelper(fn, owner, classLookup));
 		if (isTypeErasedValueHelper(fn, owner))
@@ -2462,6 +2464,33 @@ class CppTargetCore {
 			"      if (x == elt) return true;",
 			"    }",
 			"    return false;",
+			"  }"
+		];
+	}
+
+	static function isUtestRunnerAddCasesHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Runner")
+			return false;
+		if (HxFunctionDecl.getIsStatic(fn) || sanitizeIdentifier(HxFunctionDecl.getName(fn)) != "addCases")
+			return false;
+		for (meta in HxFunctionDecl.getMetadata(fn))
+			if (StringTools.trim(meta) == "macro")
+				return true;
+		return false;
+	}
+
+	static function renderUtestRunnerAddCasesHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		return ["  "
+			+ returnType
+			+ " "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
+			+ ") {",
+			"    " + returnVoidStmt(scope),
 			"  }"
 		];
 	}
@@ -8375,6 +8404,24 @@ class CppTargetCore {
 				final elseType = elseBranch == null ? "" : inferReturnTypeFromStmt(elseBranch, scope);
 				if (thenType.length > 0 && thenType != "void") thenType; else if (elseType.length > 0 && elseType != "void") elseType; else
 					if (thenType.length > 0) thenType; else elseType;
+			case STry(tryBody, catches, _):
+				final tryType = inferReturnTypeFromStmt(tryBody, scope);
+				if (tryType.length > 0 && tryType != "void") {
+					tryType;
+				} else {
+					var catchType = "";
+					for (c in catches) {
+						final inferred = inferReturnTypeFromStmt(c.body, scope);
+						if (inferred.length > 0) {
+							catchType = inferred;
+							break;
+						}
+					}
+					if (tryType.length > 0)
+						tryType;
+					else
+						catchType;
+				}
 			case _:
 				"";
 		};
