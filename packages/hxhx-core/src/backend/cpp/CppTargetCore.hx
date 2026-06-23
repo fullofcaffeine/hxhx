@@ -4134,7 +4134,7 @@ class CppTargetCore {
 			case "void":
 				renderExpr(expr, scope) + "; return;";
 			case "std::string":
-				"return " + stringExpr(expr, scope) + ";";
+				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
 			case "auto":
 				"return " + renderExpr(expr, scope) + ";";
 			case CppMacroExpr.CPP_TYPE:
@@ -4208,6 +4208,14 @@ class CppTargetCore {
 		final optionalInner = cppOptionalInnerType(exprCppType(expr, scope));
 		if (optionalInner.length > 0 && optionalInner == expectedType)
 			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
+		switch (expr) {
+			case ETernary(cond, thenExpr, elseExpr):
+				return "(" + renderExpr(cond, scope) + " ? " + valueExprForExpectedType(thenExpr, expectedType, scope) + " : "
+					+ valueExprForExpectedType(elseExpr, expectedType, scope) + ")";
+			case ESwitch(scrutinee, patterns, exprs):
+				return switchExpr(scrutinee, patterns, exprs, scope, expectedType);
+			case _:
+		}
 		if (expectedType == "std::string")
 			return stringExpr(expr, scope);
 		if (exprCppType(expr, scope) == "std::any") {
@@ -4223,12 +4231,6 @@ class CppTargetCore {
 		}
 		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
-		switch (expr) {
-			case ETernary(cond, thenExpr, elseExpr):
-				return "(" + renderExpr(cond, scope) + " ? " + valueExprForExpectedType(thenExpr, expectedType, scope) + " : "
-					+ valueExprForExpectedType(elseExpr, expectedType, scope) + ")";
-			case _:
-		}
 		if (isCppFunctionType(expectedType)) {
 			final methodValue = methodValueExprForExpectedFunction(expr, expectedType, scope);
 			if (methodValue != null)
@@ -4248,8 +4250,6 @@ class CppTargetCore {
 		switch (expr) {
 			case ENew(typePath, args):
 				return newExpr(typePath, args, scope, expectedType);
-			case ESwitch(scrutinee, patterns, exprs):
-				return switchExpr(scrutinee, patterns, exprs, scope, expectedType);
 			case _:
 		}
 		return renderExpr(expr, scope);

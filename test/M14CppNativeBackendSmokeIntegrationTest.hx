@@ -2968,6 +2968,46 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(typePathCaptureLines.indexOf("return pack;") < 0, "C++ TypePath-returning continuation lambdas should not emit unbound pack references");
 		assertContains(typePathCaptureLines, "return nullptr;",
 			"C++ TypePath-returning unsupported continuation shapes should lower to a neutral TypePath reference");
+		final typeStringSwitchOwner = new HxClassDecl("TypeTools", false, [], []);
+		final typeStringSwitchClass = new HxClassDecl("Type", false, [], []);
+		final typeStringSwitchNames = new StringMap<Bool>();
+		for (name in ["TypeTools", "Type"])
+			typeStringSwitchNames.set(name, true);
+		final typeStringSwitchClasses = new StringMap<HxClassDecl>();
+		typeStringSwitchClasses.set("TypeTools", typeStringSwitchOwner);
+		typeStringSwitchClasses.set("Type", typeStringSwitchClass);
+		final typeToolsGetClassLike = new HxFunctionDecl("getClassLike", Public, true, [new HxFunctionArg("t", "Type", NoDefault, false, false)], "String", [
+			SReturn(ETernary(EBinop("==", EIdent("t"), ENull), ENull,
+				ESwitch(ECall(EIdent("follow"), [EIdent("t")]), [PEnumExtract("TInst", [PBind("c"), PWildcard]), PWildcard],
+					[EIdent("c"), ECall(EIdent("__hxhx_throw"), [EString("Class instance expected")])])),
+				HxPos.unknown())
+		], "");
+		final typeToolsGetEnumLike = new HxFunctionDecl("getEnumLike", Public, true, [new HxFunctionArg("t", "Type", NoDefault, false, false)], "String", [
+			SReturn(ETernary(EBinop("==", EIdent("t"), ENull), ENull,
+				ESwitch(ECall(EIdent("follow"), [EIdent("t")]), [PEnumExtract("TEnum", [PBind("e"), PWildcard]), PWildcard],
+					[EIdent("e"), ECall(EIdent("__hxhx_throw"), [EString("Enum instance expected")])])),
+				HxPos.unknown())
+		], "");
+		final typeToolsGetClassLikeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(typeToolsGetClassLike, typeStringSwitchOwner, {
+			names: typeStringSwitchNames,
+			byName: typeStringSwitchClasses
+		}).join("\n");
+		final typeToolsGetEnumLikeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(typeToolsGetEnumLike, typeStringSwitchOwner, {
+			names: typeStringSwitchNames,
+			byName: typeStringSwitchClasses
+		}).join("\n");
+		assertContains(typeToolsGetClassLikeLines, "([&]() -> std::string {",
+			"C++ TypeTools.getClass-like switch expressions should receive the String return type");
+		assertContains(typeToolsGetEnumLikeLines, "([&]() -> std::string {",
+			"C++ TypeTools.getEnum-like switch expressions should receive the String return type");
+		assertTrue(typeToolsGetClassLikeLines.indexOf("std::to_string(((t == nullptr)") < 0,
+			"C++ TypeTools.getClass-like ternaries should not wrap string-typed switches in std::to_string");
+		assertTrue(typeToolsGetEnumLikeLines.indexOf("std::to_string(((t == nullptr)") < 0,
+			"C++ TypeTools.getEnum-like ternaries should not wrap string-typed switches in std::to_string");
+		assertTrue(typeToolsGetClassLikeLines.indexOf("return c.get();") < 0,
+			"C++ TypeTools.getClass-like branches should not return pointer payloads from string switches");
+		assertTrue(typeToolsGetEnumLikeLines.indexOf("return e.get();") < 0,
+			"C++ TypeTools.getEnum-like branches should not return pointer payloads from string switches");
 		final arrayPatternMethod = new HxFunctionDecl("equalArrayItemsLike", Public, true,
 			[new HxFunctionArg("items", "Array<String>", NoDefault, false, false)], "Bool", [
 				SReturn(ESwitch(EIdent("items"), [PArray([PBind("item1"), PBind("item2")]), PWildcard],
