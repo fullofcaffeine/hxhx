@@ -2148,6 +2148,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(helperMacrosLines, "static std::shared_ptr<Expr> isNullable(std::shared_ptr<Expr> expr)",
 			"C++ HelperMacros.isNullable should preserve the typed helper signature");
 		assertContains(helperMacrosLines, "return nullptr;", "C++ HelperMacros pointer-shaped shims should return neutral references");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.helperMacrosShimDefaultValue("__hxhx_anon_pos_int__expr_std__string", null) == "__hxhx_anon_pos_int__expr_std__string{}",
+			"C++ HelperMacros anonymous carrier shims should return aggregate defaults");
 		assertTrue(helperMacrosLines.indexOf("typeExpr(") < 0, "C++ HelperMacros shims should not emit missing typeExpr calls");
 		assertTrue(helperMacrosLines.indexOf("typeof(") < 0, "C++ HelperMacros shims should not emit missing typeof calls");
 		assertTrue(helperMacrosLines.indexOf("parse(") < 0, "C++ HelperMacros shims should not emit missing parse calls");

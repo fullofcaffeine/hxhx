@@ -2576,9 +2576,15 @@ class CppTargetCore {
 		for (arg in args)
 			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
 		if (returnType != "void")
-			out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+			out.push("    return " + helperMacrosShimDefaultValue(returnType, scope) + ";");
 		out.push("  }");
 		return out;
+	}
+
+	static function helperMacrosShimDefaultValue(returnType:String, scope:CppRenderScope):String {
+		if (StringTools.startsWith(returnType, "__hxhx_anon_"))
+			return returnType + "{}";
+		return cppDefaultValue(returnType, scope);
 	}
 
 	static function helperMacrosShimReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
