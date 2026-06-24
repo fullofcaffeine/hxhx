@@ -2336,6 +2336,8 @@ class CppTargetCore {
 			return returnTraced("special_macro_compiler_api", renderMacroCompilerApiShimHelper(fn, owner, classLookup));
 		if (isUtestRunnerAddCasesHelper(fn, owner))
 			return returnTraced("special_utest_runner_add_cases", renderUtestRunnerAddCasesHelper(fn, owner, classLookup));
+		if (isUtestCallbackHelper(fn, owner))
+			return returnTraced("special_utest_callback", renderUtestCallbackHelper(fn, owner, classLookup));
 		if (isPolymorphicIsOfTypeHelper(fn))
 			return returnTraced("special_is_of_type", renderPolymorphicIsOfTypeHelper(fn, owner, classLookup));
 		if (isTypeToolsFindFieldHelper(fn, owner))
@@ -8450,6 +8452,19 @@ class CppTargetCore {
 		};
 	}
 
+	static function isUtestCallbackHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || HxFunctionDecl.getIsStatic(fn))
+			return false;
+		final ownerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return switch (ownerName) {
+			case "Notifier": method == "remove" && HxFunctionDecl.getArgs(fn).length == 1;
+			case "ResultStats": method == "unwire" && HxFunctionDecl.getArgs(fn).length == 1;
+			case _:
+				false;
+		};
+	}
+
 	static function isTypeToolsFindFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
 			return false;
@@ -8651,6 +8666,24 @@ class CppTargetCore {
 		for (arg in args)
 			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
 		if (method == "map" && returnType != "void") {
+			out.push("    return " + sanitizeIdentifier(HxFunctionArg.getName(args[0])) + ";");
+		} else if (returnType != "void") {
+			out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function renderUtestCallbackHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final out = ["  " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"];
+		for (arg in args)
+			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+		if (method == "remove" && returnType != "void") {
 			out.push("    return " + sanitizeIdentifier(HxFunctionArg.getName(args[0])) + ";");
 		} else if (returnType != "void") {
 			out.push("    return " + cppDefaultValue(returnType, scope) + ";");

@@ -3123,6 +3123,43 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertContains(exprToolsLines, "(void)" + argName + ";", "C++ ExprTools helpers should consume " + argName);
 		assertTrue(exprToolsLines.indexOf("EArray") < 0, "C++ ExprTools helpers should not emit unsupported ExprDef traversal constructors");
 		assertTrue(exprToolsLines.indexOf("for (auto") < 0, "C++ ExprTools helpers should not iterate over ExprDef payload placeholders");
+		final notifierOwner = new HxClassDecl("Notifier", false, [
+			new HxFunctionDecl("remove", Public, false, [new HxFunctionArg("h", "Void->Void", NoDefault, false, false)], "Void->Void", [
+				SReturn(EArrayAccess(ECall(EField(EIdent("handlers"), "splice"), [EInt(0), EInt(1)]), EInt(0)), HxPos.unknown())
+			], "")
+		], []);
+		final resultStatsOwner = new HxClassDecl("ResultStats", false, [
+			new HxFunctionDecl("unwire", Public, false, [new HxFunctionArg("dependant", "ResultStats", NoDefault, false, false)], "Void", [
+				SExpr(ECall(EField(EField(EIdent("dependant"), "onAddSuccesses"), "remove"), [EIdent("addSuccesses")]), HxPos.unknown())
+			], "")
+		], []);
+		final utestCallbackNames = new StringMap<Bool>();
+		for (name in ["Notifier", "ResultStats"])
+			utestCallbackNames.set(name, true);
+		final utestCallbackClasses = new StringMap<HxClassDecl>();
+		utestCallbackClasses.set("Notifier", notifierOwner);
+		utestCallbackClasses.set("ResultStats", resultStatsOwner);
+		final notifierRemoveLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(notifierOwner)[0], notifierOwner, {
+			names: utestCallbackNames,
+			byName: utestCallbackClasses
+		}).join("\n");
+		final resultStatsUnwireLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(resultStatsOwner)[0],
+			resultStatsOwner, {
+				names: utestCallbackNames,
+				byName: utestCallbackClasses
+			})
+			.join("\n");
+		assertContains(notifierRemoveLines, "std::function<void()> remove(std::function<void()> h)",
+			"C++ Notifier.remove should preserve its callback removal signature");
+		assertContains(notifierRemoveLines, "return h;", "C++ Notifier.remove should typecheck as a bounded identity helper");
+		assertTrue(notifierRemoveLines.indexOf("splice") < 0, "C++ Notifier.remove should not emit unsupported vector splice calls");
+		assertTrue(notifierRemoveLines.indexOf("compareMethods") < 0,
+			"C++ Notifier.remove should not route std::function identity through Reflect.compareMethods");
+		assertContains(resultStatsUnwireLines, "void unwire(std::shared_ptr<ResultStats> dependant)",
+			"C++ ResultStats.unwire should preserve its callback unwire signature");
+		assertContains(resultStatsUnwireLines, "(void)dependant;", "C++ ResultStats.unwire should consume dependant");
+		assertTrue(resultStatsUnwireLines.indexOf("addSuccesses") < 0,
+			"C++ ResultStats.unwire should not pass non-static member functions directly as callbacks");
 		final classTypeCarrier = new HxClassDecl("ClassType", false, [], [
 			new HxFieldDecl("fields", Public, false, "Ref<Array<ClassField>>", null),
 			new HxFieldDecl("statics", Public, false, "Ref<Array<ClassField>>", null),
