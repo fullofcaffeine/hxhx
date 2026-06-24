@@ -1647,6 +1647,8 @@ class CppTargetCore {
 			return renderRestSupportClass(cls);
 		if (isStdVectorHelperClass(cls) || isStdVectorHelperName(className))
 			return renderStdVectorSupportClass(cls, classLookup);
+		if (isTemplateWrapSupportClass(cls))
+			return renderTemplateWrapSupportClass(cls);
 		if (isArrayBackedAbstractClass(cls))
 			return renderArrayBackedAbstractClass(cls, classLookup);
 		if (isPrimitiveBackedAbstractClass(cls))
@@ -1912,6 +1914,55 @@ class CppTargetCore {
 		return [
 			for (arg in args)
 				"    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";"
+		];
+	}
+
+	static function isTemplateWrapSupportClass(cls:HxClassDecl):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "TemplateWrap")
+			return false;
+		final underlying = abstractUnderlyingTypeHint(cls);
+		return sanitizeTypePath(typeBaseName(underlying == null ? "" : underlying)) == "Template";
+	}
+
+	static function renderTemplateWrapSupportClass(cls:HxClassDecl):Array<String> {
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		return ["struct " + className + " {",
+			"  std::shared_ptr<Template> __value = nullptr;",
+			"  " + className + "() {}",
+			"  " + className + "(std::string value) : __value(std::make_shared<Template>(value)) {}",
+			"  " + className + "(std::shared_ptr<Template> value) : __value(value) {}",
+			"  " + className + "& operator=(std::string value) {",
+			"    __value = std::make_shared<Template>(value);",
+			"    return *this;",
+			"  }",
+			"  " + className + "& operator=(std::shared_ptr<Template> value) {",
+			"    __value = value;",
+			"    return *this;",
+			"  }",
+			"  operator std::shared_ptr<Template>() const { return __value; }",
+			"  std::string execute(std::string context = std::string(), std::optional<std::string> macros = std::nullopt) {",
+			"    return __value == nullptr ? std::string() : __value->execute(context, macros);",
+			"  }",
+			"  template<typename Context>",
+			"  std::string execute(Context context) {",
+			"    (void)context;",
+			"    return execute(std::string());",
+			"  }",
+			"  template<typename Context, typename Macros>",
+			"  std::string execute(Context context, Macros macros) {",
+			"    (void)context;",
+			"    (void)macros;",
+			"    return execute(std::string());",
+			"  }",
+			"  std::string get() { return __hxhx_type_name(__value); }",
+			"  static "
+			+ className
+			+ " fromString(std::string value) { return "
+			+ className
+			+ "(value); }",
+			"  std::string toString() { return execute(std::string()); }",
+			"  operator std::string() { return toString(); }",
+			"};"
 		];
 	}
 
@@ -4930,6 +4981,8 @@ class CppTargetCore {
 			return primitiveAbstract;
 		if (isStdArrayTypePath(typePath))
 			return stdArrayConstructionExpr(typePath, args, scope, expectedCppType);
+		if (scopeHasClass(scope, className) && isTemplateWrapSupportClass(scope.classByName.get(className)))
+			return className + "(" + renderConstructorArgs(className, args, scope).join(", ") + ")";
 		if (scopeHasClass(scope, className) && isStdVectorHelperClass(scope.classByName.get(className)))
 			return className + "(" + renderConstructorArgs(className, args, scope).join(", ") + ")";
 		final renderedArgs = renderConstructorArgs(className, args, scope).join(", ");

@@ -3988,6 +3988,49 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final abstractFieldLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(abstractFieldOwner, abstractLookup).join("\n");
 		assertContains(abstractFieldLines, "LocalCallStack stack = LocalCallStack();",
 			"C++ fields typed as array-backed abstracts should default to value wrappers instead of int zero");
+		final templateStub = new HxClassDecl("Template", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("value", "String", NoDefault, false, false)], "Void", [], ""),
+			new HxFunctionDecl("execute", Public, false, [
+				new HxFunctionArg("context", "String", NoDefault, false, false),
+				new HxFunctionArg("macros", "String", NoDefault, true, false)
+			], "String", [SReturn(EString(""), HxPos.unknown())], "")
+		], []);
+		final templateWrap = new HxClassDecl("TemplateWrap", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("value", "String", NoDefault, false, false)], "Void",
+				[SExpr(EBinop("=", EThis, ENew("Template", [EIdent("value")])), HxPos.unknown())], ""),
+			new HxFunctionDecl("fromString", Public, true, [new HxFunctionArg("value", "String", NoDefault, false, false)], "TemplateWrap",
+				[SReturn(ENew("TemplateWrap", [EIdent("value")]), HxPos.unknown())], ""),
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(ECall(EField(EThis, "execute"), [EString("ok")]), HxPos.unknown())], "")
+		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=Template"]);
+		final templateWrapOwner = new HxClassDecl("TemplateWrapOwner", false, [
+			new HxFunctionDecl("use", Public, true, [], "String", [
+				SVar("tpl", "TemplateWrap", EString("Hi ::t::"), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("tpl"), "execute"), [EString("ok")]), HxPos.unknown())
+			], "")
+		], []);
+		final templateWrapNames = new StringMap<Bool>();
+		for (name in ["Template", "TemplateWrap", "TemplateWrapOwner"])
+			templateWrapNames.set(name, true);
+		final templateWrapClasses = new StringMap<HxClassDecl>();
+		templateWrapClasses.set("Template", templateStub);
+		templateWrapClasses.set("TemplateWrap", templateWrap);
+		templateWrapClasses.set("TemplateWrapOwner", templateWrapOwner);
+		final templateWrapLookup = {names: templateWrapNames, byName: templateWrapClasses};
+		final templateWrapLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(templateWrap, templateWrapLookup).join("\n");
+		assertContains(templateWrapLines, "std::shared_ptr<Template> __value = nullptr;",
+			"C++ TemplateWrap should store the underlying Template reference explicitly");
+		assertContains(templateWrapLines, "TemplateWrap(std::string value) : __value(std::make_shared<Template>(value)) {}",
+			"C++ TemplateWrap construction from String should initialize the underlying Template reference");
+		assertContains(templateWrapLines, "TemplateWrap& operator=(std::string value) {", "C++ TemplateWrap should support reassignment from String values");
+		assertContains(templateWrapLines, "template<typename Context>", "C++ TemplateWrap should accept erased Template.execute context payloads");
+		assertTrue(templateWrapLines.indexOf("(*this) = std::make_shared<Template>") < 0,
+			"C++ TemplateWrap should not assign the underlying Template reference into the wrapper object");
+		final templateWrapOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(templateWrapOwner)[0], templateWrapOwner, templateWrapLookup).join("\n");
+		assertContains(templateWrapOwnerLines, "TemplateWrap tpl = \"Hi ::t::\";",
+			"C++ locals typed as TemplateWrap should use the value wrapper instead of std::shared_ptr<TemplateWrap>");
+		assertContains(templateWrapOwnerLines, "return __hxhx_stringify(tpl.execute(\"ok\"));",
+			"C++ TemplateWrap locals should call execute through value access");
 		final stdVector = new HxClassDecl("Vector", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("length", "Int", NoDefault, false, false)], "Void", [], "")
 		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=VectorData<T>"]);

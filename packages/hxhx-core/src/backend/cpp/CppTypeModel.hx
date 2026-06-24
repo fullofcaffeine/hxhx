@@ -119,6 +119,14 @@ class CppTypeModel {
 		return cls != null && isArrayBackedAbstractClass(cls) ? sanitizeTypePath(HxClassDecl.getName(cls)) : null;
 	}
 
+	public static function templateWrapAbstractNameForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
+		final cls = lookupClassForTypeHint(typeHint, scope, classLookup);
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "TemplateWrap")
+			return null;
+		final underlying = abstractUnderlyingTypeHint(cls);
+		return sanitizeTypePath(typeBaseName(underlying == null ? "" : underlying)) == "Template" ? sanitizeTypePath(HxClassDecl.getName(cls)) : null;
+	}
+
 	public static function lookupClassForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		if (hint.length == 0
@@ -182,6 +190,9 @@ class CppTypeModel {
 		final abstractName = arrayBackedAbstractNameForTypeHint(hint, scope, classLookup);
 		if (abstractName != null)
 			return abstractName;
+		final templateWrapName = templateWrapAbstractNameForTypeHint(hint, scope, classLookup);
+		if (templateWrapName != null)
+			return templateWrapName;
 		final scopedTypeParam = scopedGenericTypeParam(hint, scope);
 		if (scopedTypeParam != null)
 			return scopedTypeParam;
@@ -725,6 +736,8 @@ class CppTypeModel {
 			case _ if (StringTools.startsWith(typeName, "std::vector<")):
 				"{}";
 			case _ if (isCppArrayBackedAbstractType(typeName, scope)):
+				typeName + "()";
+			case _ if (templateWrapAbstractNameForTypeHint(typeName, scope, null) != null):
 				typeName + "()";
 			case _ if (isCppReferenceType(typeName)):
 				"nullptr";
