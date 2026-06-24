@@ -2476,6 +2476,7 @@ class CppTargetCore {
 		try {
 			inferCallableArgTypeOverrides(scope, fn);
 			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+			inferStringMapLocalTypeOverrides(scope, fn);
 			inferDynamicLocalTypeOverrides(scope, fn);
 			inferReturnLocalTypeOverrides(scope, fn);
 		} catch (e:haxe.Exception) {
@@ -3482,6 +3483,139 @@ class CppTargetCore {
 		for (stmt in HxFunctionDecl.getBody(fn))
 			collectDynamicLocalTypeOverridesFromStmt(stmt, scope, candidates);
 		scope.localTypes = savedLocalTypes;
+	}
+
+	static function inferStringMapLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null)
+			return;
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final candidates = new haxe.ds.StringMap<Bool>();
+		for (stmt in HxFunctionDecl.getBody(fn))
+			collectStringMapLocalTypeOverridesFromStmt(stmt, scope, candidates);
+		scope.localTypes = savedLocalTypes;
+	}
+
+	static function collectStringMapLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectStringMapLocalTypeOverridesFromStmt(s, scope, candidates);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectStringMapLocalTypeOverridesFromExpr(cond, scope, candidates);
+				collectStringMapLocalTypeOverridesFromStmt(thenBranch, scope, candidates);
+				if (elseBranch != null)
+					collectStringMapLocalTypeOverridesFromStmt(elseBranch, scope, candidates);
+			case SForIn(name, iterable, body, _):
+				collectStringMapLocalTypeOverridesFromExpr(iterable, scope, candidates);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					collectStringMapLocalTypeOverridesFromStmt(body, scope, candidates);
+				});
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				collectStringMapLocalTypeOverridesFromExpr(iterable, scope, candidates);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), "int", () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), iterableElementType(iterable, scope), () -> {
+						collectStringMapLocalTypeOverridesFromStmt(body, scope, candidates);
+					});
+				});
+			case SWhile(cond, body, _) | SDoWhile(body, cond, _):
+				collectStringMapLocalTypeOverridesFromExpr(cond, scope, candidates);
+				collectStringMapLocalTypeOverridesFromStmt(body, scope, candidates);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectStringMapLocalTypeOverridesFromExpr(scrutinee, scope, candidates);
+				for (body in bodies)
+					collectStringMapLocalTypeOverridesFromStmt(body, scope, candidates);
+			case STry(tryBody, catches, _):
+				collectStringMapLocalTypeOverridesFromStmt(tryBody, scope, candidates);
+				for (c in catches)
+					collectStringMapLocalTypeOverridesFromStmt(c.body, scope, candidates);
+			case SVar(name, typeHint, init, _):
+				if (init != null)
+					collectStringMapLocalTypeOverridesFromExpr(init, scope, candidates);
+				final local = sanitizeIdentifier(name);
+				if (StringTools.trim(typeHint == null ? "" : typeHint).length == 0 && isStringMapNewExpr(init)) {
+					candidates.set(local, true);
+					scope.localTypes.set(local, "std::shared_ptr<StringMap<std::string>>");
+				} else {
+					final localType = cppLocalTypeHint(typeHint, init, scope);
+					if (localType.length > 0)
+						scope.localTypes.set(local, localType);
+				}
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectStringMapLocalTypeOverridesFromExpr(expr, scope, candidates);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function collectStringMapLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+		switch (expr) {
+			case ECall(EField(EIdent(name), "set"), [_, value]) if (candidates.exists(sanitizeIdentifier(name))):
+				collectStringMapLocalTypeOverridesFromExpr(value, scope, candidates);
+				final valueType = stringMapValueTypeFromExpr(value, scope);
+				if (valueType.length > 0)
+					setStringMapLocalTypeOverride(scope, sanitizeIdentifier(name), valueType);
+			case EBinop(_, left, right):
+				collectStringMapLocalTypeOverridesFromExpr(left, scope, candidates);
+				collectStringMapLocalTypeOverridesFromExpr(right, scope, candidates);
+			case ECall(callee, args):
+				collectStringMapLocalTypeOverridesFromExpr(callee, scope, candidates);
+				for (arg in args)
+					collectStringMapLocalTypeOverridesFromExpr(arg, scope, candidates);
+			case EArrayAccess(array, index):
+				collectStringMapLocalTypeOverridesFromExpr(array, scope, candidates);
+				collectStringMapLocalTypeOverridesFromExpr(index, scope, candidates);
+			case EField(receiver, _):
+				collectStringMapLocalTypeOverridesFromExpr(receiver, scope, candidates);
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectStringMapLocalTypeOverridesFromExpr(element, scope, candidates);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				collectStringMapLocalTypeOverridesFromExpr(iterable, scope, candidates);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					if (guardExpr != null)
+						collectStringMapLocalTypeOverridesFromExpr(guardExpr, scope, candidates);
+					collectStringMapLocalTypeOverridesFromExpr(yieldExpr, scope, candidates);
+				});
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				collectStringMapLocalTypeOverridesFromExpr(inner, scope, candidates);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectStringMapLocalTypeOverridesFromExpr(cond, scope, candidates);
+				collectStringMapLocalTypeOverridesFromExpr(thenExpr, scope, candidates);
+				collectStringMapLocalTypeOverridesFromExpr(elseExpr, scope, candidates);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectStringMapLocalTypeOverridesFromExpr(value, scope, candidates);
+			case ESwitch(scrutinee, _, exprs):
+				collectStringMapLocalTypeOverridesFromExpr(scrutinee, scope, candidates);
+				for (caseExpr in exprs)
+					collectStringMapLocalTypeOverridesFromExpr(caseExpr, scope, candidates);
+			case _:
+		}
+	}
+
+	static function isStringMapNewExpr(expr:Null<HxExpr>):Bool {
+		return switch (expr) {
+			case ENew(typePath, _):
+				sanitizeTypePath(typeBaseName(typePath)) == "StringMap";
+			case _:
+				false;
+		}
+	}
+
+	static function stringMapValueTypeFromExpr(expr:HxExpr, scope:CppRenderScope):String {
+		final explicit = exprCppType(expr, scope);
+		if (explicit.length > 0)
+			return explicit;
+		final inferred = inferExprCppType(expr, scope);
+		return inferred.length > 0 ? inferred : "std::string";
+	}
+
+	static function setStringMapLocalTypeOverride(scope:CppRenderScope, local:String, valueType:String):Void {
+		final typeName = "std::shared_ptr<StringMap<" + valueType + ">>";
+		final existing = scope.localTypeOverrides.get(local);
+		if (existing != null && existing.length > 0 && existing != typeName)
+			return;
+		scope.localTypeOverrides.set(local, typeName);
+		scope.localTypes.set(local, typeName);
 	}
 
 	static function collectDynamicLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
@@ -7284,9 +7418,24 @@ class CppTargetCore {
 		final fieldType = assignmentExpectedFieldCppType(left, scope);
 		if (fieldType != null && fieldType.length > 0)
 			return fieldType;
+		final abstractUnderlying = assignmentExpectedAbstractUnderlyingCppType(left, scope);
+		if (abstractUnderlying.length > 0)
+			return abstractUnderlying;
 		final leftType = exprCppType(left, scope);
 		final optionalInner = cppOptionalInnerType(leftType);
 		return optionalInner.length > 0 ? optionalInner : leftType;
+	}
+
+	static function assignmentExpectedAbstractUnderlyingCppType(left:HxExpr, ?scope:CppRenderScope):String {
+		if (scope == null || scope.owner == null)
+			return "";
+		return switch (left) {
+			case EThis:
+				final underlying = abstractUnderlyingTypeHint(scope.owner);
+				underlying == null ? "" : cppTypeHint(underlying, scope, {names: scope.classNames, byName: scope.classByName});
+			case _:
+				"";
+		}
 	}
 
 	static function assignmentExpectedFieldCppType(left:HxExpr, ?scope:CppRenderScope):Null<String> {

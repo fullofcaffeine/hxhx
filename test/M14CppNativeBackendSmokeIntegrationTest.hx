@@ -2664,6 +2664,53 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(genericMapLines, "V get(K key)", "C++ generic Map support should expose concrete get values for Haxe Map callers");
 		assertContains(genericMapLines, "bool exists(K key)", "C++ generic Map support should expose exists for Haxe Map callers");
 		assertContains(genericMapLines, "std::shared_ptr<__hxhx_iterator<K>> keys()", "C++ generic Map support should expose keys for Haxe Map iteration");
+		final stringMapGeneric = new HxClassDecl("StringMap", false, [
+			new HxFunctionDecl("set", Public, false, [
+				new HxFunctionArg("k", "String", NoDefault, false, false),
+				new HxFunctionArg("v", "T", NoDefault, false, false)
+			], "Void", [], "")
+		], [], "", ["__hxhx_type_params=T"]);
+		final stringMapAbstract = new HxClassDecl("MyHash", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [SExpr(EBinop("=", EThis, ENew("StringMap", [])), HxPos.unknown())], "")
+		], [], "", [
+			"__hxhx_abstract",
+			"__hxhx_abstract_underlying=StringMap<V>",
+			"__hxhx_type_params=V"
+		]);
+		final stringMapOwner = new HxClassDecl("StringMapOwner", false, [
+			new HxFunctionDecl("ints", Public, true, [], "StringMap<Int>", [
+				SVar("h", "", ENew("StringMap", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("h"), "set"), [EString("x"), EInt(-1)]), HxPos.unknown()),
+				SReturn(EIdent("h"), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("strings", Public, true, [new HxFunctionArg("arr", "Array<String>", NoDefault, false, false)], "StringMap<String>", [
+				SVar("h", "", ENew("StringMap", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("h"), "set"), [EString("x"), EArrayAccess(EIdent("arr"), EInt(0))]), HxPos.unknown()),
+				SReturn(EIdent("h"), HxPos.unknown())
+			], "")
+		], []);
+		final stringMapNames = new StringMap<Bool>();
+		for (name in ["StringMap", "MyHash", "StringMapOwner"])
+			stringMapNames.set(name, true);
+		final stringMapClasses = new StringMap<HxClassDecl>();
+		stringMapClasses.set("StringMap", stringMapGeneric);
+		stringMapClasses.set("MyHash", stringMapAbstract);
+		stringMapClasses.set("StringMapOwner", stringMapOwner);
+		final stringMapLookup = {names: stringMapNames, byName: stringMapClasses};
+		final stringMapAbstractLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringMapAbstract, stringMapLookup).join("\n");
+		assertContains(stringMapAbstractLines, "(*this) = __hxhx_make_shared_StringMap<V>();",
+			"C++ generic abstract constructors should provide StringMap factory type arguments from their underlying type");
+		assertTrue(stringMapAbstractLines.indexOf("__hxhx_make_shared_StringMap();") < 0,
+			"C++ generic abstract constructors should not rely on impossible StringMap factory deduction");
+		final stringMapOwnerLines = @:privateAccess [
+			for (fn in HxClassDecl.getFunctions(stringMapOwner))
+				backend.cpp.CppTargetCore.renderHelperMethod(fn, stringMapOwner, stringMapLookup).join("\n")
+		].join("\n");
+		assertContains(stringMapOwnerLines, "auto h = __hxhx_make_shared_StringMap<int>();",
+			"C++ unhinted StringMap locals should infer Int values from set calls before rendering the factory");
+		assertContains(stringMapOwnerLines, "auto h = __hxhx_make_shared_StringMap<std::string>();",
+			"C++ unhinted StringMap locals should infer String values from vector element set calls before rendering the factory");
+		assertTrue(stringMapOwnerLines.indexOf("__hxhx_make_shared_StringMap();") < 0, "C++ inferred StringMap locals should not emit undeducible factories");
 		final iMapImplementingClass = new HxClassDecl("StringMap", false, [
 			new HxFunctionDecl("copy", Public, false, [], "StringMap", [SReturn(EThis, HxPos.unknown())], "")
 		], [], "", null, false, ["haxe.Constraints.IMap"]);
