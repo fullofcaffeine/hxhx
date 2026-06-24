@@ -1997,30 +1997,30 @@ class CppTargetCore {
 			"    return *this;",
 			"  }",
 			"  operator std::shared_ptr<Template>() const { return __value; }",
-			"  std::string execute(std::string context = std::string(), std::optional<std::string> macros = std::nullopt) {",
+			"  std::string execute(std::string context = std::string(), std::optional<std::string> macros = std::nullopt) const {",
 			"    (void)context;",
 			"    (void)macros;",
 			"    return std::string();",
 			"  }",
 			"  template<typename Context>",
-			"  std::string execute(Context context) {",
+			"  std::string execute(Context context) const {",
 			"    (void)context;",
 			"    return execute(std::string());",
 			"  }",
 			"  template<typename Context, typename Macros>",
-			"  std::string execute(Context context, Macros macros) {",
+			"  std::string execute(Context context, Macros macros) const {",
 			"    (void)context;",
 			"    (void)macros;",
 			"    return execute(std::string());",
 			"  }",
-			"  " + className + " get() { return *this; }",
+			"  " + className + " get() const { return *this; }",
 			"  static "
 			+ className
 			+ " fromString(std::string value) { return "
 			+ className
 			+ "(value); }",
-			"  std::string toString() { return execute(std::string()); }",
-			"  operator std::string() { return toString(); }",
+			"  std::string toString() const { return execute(std::string()); }",
+			"  operator std::string() const { return toString(); }",
 			"};"
 		];
 	}

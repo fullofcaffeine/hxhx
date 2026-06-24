@@ -4026,6 +4026,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(templateWrapLines, "TemplateWrap& operator=(std::string value) {", "C++ TemplateWrap should support reassignment from String values");
 		assertContains(templateWrapLines, "TemplateWrap& operator=(const char* value) {", "C++ TemplateWrap should support reassignment from string literals");
 		assertContains(templateWrapLines, "template<typename Context>", "C++ TemplateWrap should accept erased Template.execute context payloads");
+		assertContains(templateWrapLines, "operator std::string() const { return toString(); }",
+			"C++ TemplateWrap should convert to String from const anonymous payload fields");
 		assertTrue(templateWrapLines.indexOf("(*this) = std::make_shared<Template>") < 0,
 			"C++ TemplateWrap should not assign the underlying Template reference into the wrapper object");
 		final templateWrapAnonLines = @:privateAccess [

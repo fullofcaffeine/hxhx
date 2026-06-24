@@ -3225,26 +3225,26 @@ let renderTemplateWrapSupportClass = fun cls -> let className = (sanitizeTypePat
   ignore (HxArray.push __arr_427 "    return *this;");
   ignore (HxArray.push __arr_427 "  }");
   ignore (HxArray.push __arr_427 "  operator std::shared_ptr<Template>() const { return __value; }");
-  ignore (HxArray.push __arr_427 "  std::string execute(std::string context = std::string(), std::optional<std::string> macros = std::nullopt) {");
+  ignore (HxArray.push __arr_427 "  std::string execute(std::string context = std::string(), std::optional<std::string> macros = std::nullopt) const {");
   ignore (HxArray.push __arr_427 "    (void)context;");
   ignore (HxArray.push __arr_427 "    (void)macros;");
   ignore (HxArray.push __arr_427 "    return std::string();");
   ignore (HxArray.push __arr_427 "  }");
   ignore (HxArray.push __arr_427 "  template<typename Context>");
-  ignore (HxArray.push __arr_427 "  std::string execute(Context context) {");
+  ignore (HxArray.push __arr_427 "  std::string execute(Context context) const {");
   ignore (HxArray.push __arr_427 "    (void)context;");
   ignore (HxArray.push __arr_427 "    return execute(std::string());");
   ignore (HxArray.push __arr_427 "  }");
   ignore (HxArray.push __arr_427 "  template<typename Context, typename Macros>");
-  ignore (HxArray.push __arr_427 "  std::string execute(Context context, Macros macros) {");
+  ignore (HxArray.push __arr_427 "  std::string execute(Context context, Macros macros) const {");
   ignore (HxArray.push __arr_427 "    (void)context;");
   ignore (HxArray.push __arr_427 "    (void)macros;");
   ignore (HxArray.push __arr_427 "    return execute(std::string());");
   ignore (HxArray.push __arr_427 "  }");
-  ignore (HxArray.push __arr_427 (("  " ^ HxString.toStdString className) ^ " get() { return *this; }"));
+  ignore (HxArray.push __arr_427 (("  " ^ HxString.toStdString className) ^ " get() const { return *this; }"));
   ignore (HxArray.push __arr_427 (((("  static " ^ HxString.toStdString className) ^ " fromString(std::string value) { return ") ^ HxString.toStdString className) ^ "(value); }"));
-  ignore (HxArray.push __arr_427 "  std::string toString() { return execute(std::string()); }");
-  ignore (HxArray.push __arr_427 "  operator std::string() { return toString(); }");
+  ignore (HxArray.push __arr_427 "  std::string toString() const { return execute(std::string()); }");
+  ignore (HxArray.push __arr_427 "  operator std::string() const { return toString(); }");
   ignore (HxArray.push __arr_427 "};");
   __arr_427
 )
