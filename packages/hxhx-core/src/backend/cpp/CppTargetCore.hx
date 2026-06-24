@@ -2388,6 +2388,8 @@ class CppTargetCore {
 			return returnTraced("special_utest_callback", renderUtestCallbackHelper(fn, owner, classLookup));
 		if (isUtestResultAggregationHelper(fn, owner))
 			return returnTraced("special_utest_result_aggregation", renderUtestResultAggregationHelper(fn, owner, classLookup));
+		if (isCppLibReportHelper(fn, owner))
+			return returnTraced("special_cpp_lib_report", renderCppLibReportHelper(fn, owner, classLookup));
 		if (isPolymorphicIsOfTypeHelper(fn))
 			return returnTraced("special_is_of_type", renderPolymorphicIsOfTypeHelper(fn, owner, classLookup));
 		if (isTypeToolsFindFieldHelper(fn, owner))
@@ -8555,6 +8557,28 @@ class CppTargetCore {
 		};
 	}
 
+	static function isCppLibReportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null)
+			return false;
+		final ownerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return switch (ownerName) {
+			case "Lib":
+				switch (method) {
+					case "load" | "unloadAllLibraries" | "_loadPrime" | "loadLazy" | "do_rethrow" | "rethrow" | "stringReference" | "pushDllSearchPath" |
+						"getDllExtension" | "getBinDirectory" | "bytesReference" | "print" | "haxeToNeko" | "nekoToHaxe" | "println" | "setFloatFormat":
+						true;
+					case _:
+						false;
+				}
+			case "Report":
+				method == "create";
+			case "ReportTools": method == "hasHeader" || method == "skipResult";
+			case _:
+				false;
+		};
+	}
+
 	static function isTypeToolsFindFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
 			return false;
@@ -8862,6 +8886,49 @@ class CppTargetCore {
 			out.push("    return false;");
 		else if (returnType != "void")
 			out.push("    return nullptr;");
+		out.push("  }");
+		return out;
+	}
+
+	static function renderCppLibReportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final ownerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = switch (ownerName + "." + method) {
+			case "Lib.unloadAllLibraries":
+				"int";
+			case "Lib.bytesReference":
+				"std::shared_ptr<Bytes>";
+			case "Lib.print" | "Lib.println" | "Lib.setFloatFormat" | "Lib.do_rethrow" | "Lib.rethrow":
+				"void";
+			case "Report.create":
+				"std::shared_ptr<IReport<std::string>>";
+			case "ReportTools.hasHeader" | "ReportTools.skipResult":
+				"bool";
+			case _:
+				"std::string";
+		};
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = ["  "
+			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
+			+ returnType
+			+ " "
+			+ method
+			+ "("
+			+ renderFunctionArgs(args, scope)
+			+ ") {"];
+		for (arg in args)
+			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+		if (returnType == "int") {
+			out.push("    return 0;");
+		} else if (returnType == "bool") {
+			out.push("    return false;");
+		} else if (returnType == "std::string") {
+			out.push("    return std::string();");
+		} else if (returnType != "void") {
+			out.push("    return nullptr;");
+		}
 		out.push("  }");
 		return out;
 	}
