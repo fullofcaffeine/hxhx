@@ -3066,6 +3066,63 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(typeToolsIterLines, "(void)t;", "C++ TypeTools.iter should consume the Type argument in the bounded helper");
 		assertContains(typeToolsIterLines, "(void)f;", "C++ TypeTools.iter should consume the callback argument in the bounded helper");
 		assertTrue(typeToolsIterLines.indexOf("for (auto") < 0, "C++ TypeTools.iter should not iterate over Type payload placeholders");
+		final exprToolsExprCarrier = new HxClassDecl("Expr", false, [], []);
+		final exprToolsOwner = new HxClassDecl("ExprTools", false, [
+			new HxFunctionDecl("toString", Public, true, [new HxFunctionArg("e", "Expr", NoDefault, false, false)], "String",
+				[SReturn(ECall(EIdent("printExpr"), [EIdent("e")]), HxPos.unknown())], ""),
+			new HxFunctionDecl("iter", Public, true, [
+				new HxFunctionArg("e", "Expr", NoDefault, false, false),
+				new HxFunctionArg("f", "Expr->Void", NoDefault, false, false)
+			], "Void", [
+				SSwitch(EField(EIdent("e"), "expr"), [PEnumValue("EConst"), PEnumValue("EArray")], [
+					SBlock([], HxPos.unknown()),
+					SExpr(ECall(EIdent("f"), [EIdent("e1")]), HxPos.unknown())
+				], HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("map", Public, true, [
+				new HxFunctionArg("e", "Expr", NoDefault, false, false),
+				new HxFunctionArg("f", "Expr->Expr", NoDefault, false, false)
+			], "Expr", [
+				SReturn(ECall(EEnumValue("EArray"), [ECall(EIdent("f"), [EIdent("e1")]), ECall(EIdent("f"), [EIdent("e2")])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("getValue", Public, true, [new HxFunctionArg("e", "Expr", NoDefault, false, false)], "Dynamic", [
+				SReturn(ESwitch(EField(EIdent("e"), "expr"), [PEnumValue("EConst"), PWildcard], [EIdent("v"), ENull]), HxPos.unknown())
+			], "")
+		], []);
+		final exprToolsNames = new StringMap<Bool>();
+		for (name in ["ExprTools", "Expr"])
+			exprToolsNames.set(name, true);
+		final exprToolsClasses = new StringMap<HxClassDecl>();
+		exprToolsClasses.set("ExprTools", exprToolsOwner);
+		exprToolsClasses.set("Expr", exprToolsExprCarrier);
+		final exprToolsLinesByName = new StringMap<String>();
+		for (fn in HxClassDecl.getFunctions(exprToolsOwner)) {
+			exprToolsLinesByName.set(HxFunctionDecl.getName(fn), @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, exprToolsOwner, {
+				names: exprToolsNames,
+				byName: exprToolsClasses
+			}).join("\n"));
+		}
+		assertContains(exprToolsLinesByName.get("toString"), "static std::string toString(std::shared_ptr<Expr> e)",
+			"C++ ExprTools.toString should preserve the macro Expr helper signature");
+		assertContains(exprToolsLinesByName.get("toString"), "return std::string();",
+			"C++ ExprTools.toString should not call void Printer.printExpr in the bounded C++ MVP");
+		assertContains(exprToolsLinesByName.get("iter"), "static void iter(std::shared_ptr<Expr> e, std::function<void(std::shared_ptr<Expr>)> f)",
+			"C++ ExprTools.iter should preserve the macro Expr traversal helper signature");
+		assertContains(exprToolsLinesByName.get("map"),
+			"static std::shared_ptr<Expr> map(std::shared_ptr<Expr> e, std::function<std::shared_ptr<Expr>(std::shared_ptr<Expr>)> f)",
+			"C++ ExprTools.map should preserve the macro Expr traversal helper signature");
+		assertContains(exprToolsLinesByName.get("map"), "return e;", "C++ ExprTools.map should typecheck as a bounded identity helper");
+		assertContains(exprToolsLinesByName.get("getValue"), "static std::any getValue(std::shared_ptr<Expr> e)",
+			"C++ ExprTools.getValue should keep erased Dynamic returns");
+		assertContains(exprToolsLinesByName.get("getValue"), "return std::any();", "C++ ExprTools.getValue should return a compile-safe erased value");
+		final exprToolsLines = [
+			for (name in ["toString", "iter", "map", "getValue"])
+				exprToolsLinesByName.get(name)
+		].join("\n");
+		for (argName in ["e", "f"])
+			assertContains(exprToolsLines, "(void)" + argName + ";", "C++ ExprTools helpers should consume " + argName);
+		assertTrue(exprToolsLines.indexOf("EArray") < 0, "C++ ExprTools helpers should not emit unsupported ExprDef traversal constructors");
+		assertTrue(exprToolsLines.indexOf("for (auto") < 0, "C++ ExprTools helpers should not iterate over ExprDef payload placeholders");
 		final classTypeCarrier = new HxClassDecl("ClassType", false, [], [
 			new HxFieldDecl("fields", Public, false, "Ref<Array<ClassField>>", null),
 			new HxFieldDecl("statics", Public, false, "Ref<Array<ClassField>>", null),

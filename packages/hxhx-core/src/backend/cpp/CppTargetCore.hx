@@ -2342,6 +2342,8 @@ class CppTargetCore {
 			return returnTraced("special_typetools_find_field", renderTypeToolsFindFieldHelper(fn, owner, classLookup));
 		if (isTypeToolsTraversalHelper(fn, owner))
 			return returnTraced("special_typetools_traversal", renderTypeToolsTraversalHelper(fn, owner, classLookup));
+		if (isExprToolsHelper(fn, owner))
+			return returnTraced("special_exprtools", renderExprToolsHelper(fn, owner, classLookup));
 		if (isPrinterComplexTypeHelper(fn, owner))
 			return returnTraced("special_printer_complex_type", renderPrinterComplexTypeHelper(fn, owner, classLookup));
 		if (isPrinterFieldHelper(fn, owner))
@@ -8456,6 +8458,21 @@ class CppTargetCore {
 		return sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "findField" && HxFunctionDecl.getArgs(fn).length >= 2;
 	}
 
+	static function isExprToolsHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "ExprTools")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "toString" | "getValue":
+				HxFunctionDecl.getArgs(fn).length == 1;
+			case "iter" | "map":
+				HxFunctionDecl.getArgs(fn).length == 2;
+			case _:
+				false;
+		};
+	}
+
 	static function isPrinterComplexTypeHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		if (fn == null || owner == null || HxFunctionDecl.getIsStatic(fn))
 			return false;
@@ -8617,6 +8634,26 @@ class CppTargetCore {
 			out.push("    (void)" + firstArg + ";");
 			if (returnType != "void")
 				out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function renderExprToolsHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = method == "getValue" ? "std::any" : cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = [
+			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"
+		];
+		for (arg in args)
+			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+		if (method == "map" && returnType != "void") {
+			out.push("    return " + sanitizeIdentifier(HxFunctionArg.getName(args[0])) + ";");
+		} else if (returnType != "void") {
+			out.push("    return " + cppDefaultValue(returnType, scope) + ";");
 		}
 		out.push("  }");
 		return out;
