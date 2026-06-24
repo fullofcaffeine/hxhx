@@ -2314,7 +2314,12 @@ class CppTargetCore {
 	}
 
 	static function shouldInheritCppInterface(name:String):Bool {
-		return sanitizeTypePath(typeBaseName(name == null ? "" : name)) != "IMap";
+		return switch (sanitizeTypePath(typeBaseName(name == null ? "" : name))) {
+			case "IMap" | "IReport":
+				false;
+			case _:
+				true;
+		};
 	}
 
 	static function implementedInterfaceNames(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -8531,6 +8536,20 @@ class CppTargetCore {
 					case _:
 						false;
 				}
+			case "ResultAggregator":
+				switch (method) {
+					case "getOrCreateClass" | "createFixture" | "progress":
+						true;
+					case _:
+						false;
+				}
+			case "PlainTextReport":
+				switch (method) {
+					case "setHandler" | "start" | "addHeader" | "getResults" | "complete" | "hasHeader" | "skipResult":
+						true;
+					case _:
+						false;
+				}
 			case _:
 				false;
 		};
@@ -8775,13 +8794,20 @@ class CppTargetCore {
 				"std::vector<std::string>";
 			case "PackageResult.getPackage" | "PackageResult.getOrCreatePackage":
 				"std::shared_ptr<PackageResult>";
-			case "PackageResult.getClass" | "PackageResult.getOrCreateClass":
+			case "PackageResult.getClass" | "PackageResult.getOrCreateClass" | "ResultAggregator.getOrCreateClass":
 				"std::shared_ptr<ClassResult>";
-			case "PackageResult.createFixture":
+			case "PackageResult.createFixture" | "ResultAggregator.createFixture":
 				"std::shared_ptr<FixtureResult>";
+			case "PlainTextReport.getResults":
+				"std::string";
+			case "PlainTextReport.hasHeader" | "PlainTextReport.skipResult":
+				"bool";
 			case _:
 				"void";
 		};
+		final templateArg = utestResultAggregationTemplateArg(ownerName, method, HxFunctionDecl.getArgs(fn));
+		if (templateArg != null)
+			return renderUtestTemplatedNeutralHelper(fn, owner, classLookup, returnType, templateArg);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
@@ -8792,6 +8818,8 @@ class CppTargetCore {
 			out.push("    return std::vector<std::string>();");
 		} else if (returnType == "bool") {
 			out.push("    return false;");
+		} else if (returnType == "std::string") {
+			out.push("    return std::string();");
 		} else if (returnType != "void") {
 			final refArg = findFunctionArgByName(args, "ref");
 			if (method == "getOrCreatePackage" && refArg != null) {
@@ -8800,6 +8828,40 @@ class CppTargetCore {
 				out.push("    return nullptr;");
 			}
 		}
+		out.push("  }");
+		return out;
+	}
+
+	static function utestResultAggregationTemplateArg(ownerName:String, method:String, args:Array<HxFunctionArg>):Null<String> {
+		if (args.length != 1)
+			return null;
+		return switch (ownerName + "." + method) {
+			case "ResultAggregator.progress":
+				"TProgress";
+			case "PlainTextReport.start":
+				"TStart";
+			case _:
+				null;
+		};
+	}
+
+	static function renderUtestTemplatedNeutralHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup, returnType:String,
+			templateArg:String):Array<String> {
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final argName = sanitizeIdentifier(HxFunctionArg.getName(HxFunctionDecl.getArgs(fn)[0]));
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final out = [
+			"  template<typename " + templateArg + ">",
+			"  " + returnType + " " + method + "(" + templateArg + " " + argName + ") {",
+			"    (void)" + argName + ";"
+		];
+		if (returnType == "std::string")
+			out.push("    return std::string();");
+		else if (returnType == "bool")
+			out.push("    return false;");
+		else if (returnType != "void")
+			out.push("    return nullptr;");
 		out.push("  }");
 		return out;
 	}

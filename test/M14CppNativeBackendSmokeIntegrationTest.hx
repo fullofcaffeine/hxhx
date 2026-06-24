@@ -3240,6 +3240,80 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ utest result aggregation helpers should not emit unsupported std::vector.sort calls");
 		assertTrue((classResultLines + packageResultLines).indexOf("__hxhx_stringify") < 0,
 			"C++ utest result aggregation helpers should not stringify typed Map get/exists results");
+		final resultAggregatorOwner = new HxClassDecl("ResultAggregator", false, [
+			new HxFunctionDecl("progress", Public, false, [new HxFunctionArg("e", "Dynamic", NoDefault, false, false)], "Void", [
+				SExpr(ECall(EField(EIdent("root"), "addResult"), [EField(EIdent("e"), "result"), EIdent("flattenPackage")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("getOrCreateClass", Public, false, [
+				new HxFunctionArg("pack", "PackageResult", NoDefault, false, false),
+				new HxFunctionArg("cls", "String", NoDefault, false, false),
+				new HxFunctionArg("setup", "String", NoDefault, false, false),
+				new HxFunctionArg("teardown", "String", NoDefault, false, false)
+			], "Dynamic", [
+				SReturn(ECall(EField(EIdent("pack"), "getClass"), [EIdent("cls")]), HxPos.unknown())
+			],
+				""),
+			new HxFunctionDecl("createFixture", Public, false, [new HxFunctionArg("result", "TestResult", NoDefault, false, false)], "FixtureResult",
+				[SReturn(ENew("FixtureResult", []), HxPos.unknown())], "")
+		], []);
+		final plainTextReportOwner = new HxClassDecl("PlainTextReport", false, [
+			new HxFunctionDecl("start", Public, false, [new HxFunctionArg("e", "Dynamic", NoDefault, false, false)], "Void",
+				[SExpr(EIdent("e"), HxPos.unknown())], ""),
+			new HxFunctionDecl("getResults", Public, false, [], "String", [SReturn(EString(""), HxPos.unknown())], ""),
+			new HxFunctionDecl("hasHeader", Public, false, [new HxFunctionArg("stats", "ResultStats", NoDefault, false, false)], "Bool",
+				[SReturn(EBool(true), HxPos.unknown())], ""),
+			new HxFunctionDecl("skipResult", Public, false, [
+				new HxFunctionArg("stats", "ResultStats", NoDefault, false, false),
+				new HxFunctionArg("allOk", "Bool", NoDefault, false, false)
+			], "Bool", [SReturn(EBool(false), HxPos.unknown())], "")
+		], [], "", null, false, ["IReport"]);
+		for (name in [
+			"ResultAggregator",
+			"PlainTextReport",
+			"ResultStats",
+			"TestResult",
+			"IReport",
+			"Runner"
+		])
+			utestResultNames.set(name, true);
+		utestResultClasses.set("ResultAggregator", resultAggregatorOwner);
+		utestResultClasses.set("PlainTextReport", plainTextReportOwner);
+		utestResultClasses.set("ResultStats", new HxClassDecl("ResultStats", false, [], []));
+		utestResultClasses.set("TestResult", new HxClassDecl("TestResult", false, [], []));
+		utestResultClasses.set("IReport", new HxClassDecl("IReport", false, [], [], "", ["__hxhx_type_params=T"], true));
+		final resultAggregatorLines = [
+			for (fn in HxClassDecl.getFunctions(resultAggregatorOwner))
+				@:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, resultAggregatorOwner, {
+					names: utestResultNames,
+					byName: utestResultClasses
+				}).join("\n")
+		].join("\n");
+		final plainTextReportLines = [
+			for (fn in HxClassDecl.getFunctions(plainTextReportOwner))
+				@:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, plainTextReportOwner, {
+					names: utestResultNames,
+					byName: utestResultClasses
+				}).join("\n")
+		].join("\n");
+		final plainTextReportClassLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(plainTextReportOwner, {
+			names: utestResultNames,
+			byName: utestResultClasses
+		}).join("\n");
+		assertContains(resultAggregatorLines, "template<typename TProgress>\n  void progress(TProgress e)",
+			"C++ ResultAggregator.progress should accept anonymous progress payload callbacks");
+		assertContains(resultAggregatorLines, "std::shared_ptr<ClassResult> getOrCreateClass",
+			"C++ ResultAggregator.getOrCreateClass should keep class result pointer shape");
+		assertContains(resultAggregatorLines, "std::shared_ptr<FixtureResult> createFixture",
+			"C++ ResultAggregator.createFixture should keep fixture result pointer shape");
+		assertContains(plainTextReportLines, "template<typename TStart>\n  void start(TStart e)",
+			"C++ PlainTextReport.start should accept runner callback payloads");
+		assertContains(plainTextReportLines, "std::string getResults()", "C++ PlainTextReport.getResults should stay string-shaped");
+		assertContains(plainTextReportLines, "bool hasHeader(std::shared_ptr<ResultStats> stats)",
+			"C++ PlainTextReport.hasHeader should expose report predicate shape");
+		assertContains(plainTextReportLines, "bool skipResult(std::shared_ptr<ResultStats> stats, bool allOk)",
+			"C++ PlainTextReport.skipResult should expose report predicate shape");
+		assertTrue(plainTextReportClassLines.indexOf(": public IReport") < 0,
+			"C++ PlainTextReport should not inherit the unparameterized generic IReport surface");
 		final classTypeCarrier = new HxClassDecl("ClassType", false, [], [
 			new HxFieldDecl("fields", Public, false, "Ref<Array<ClassField>>", null),
 			new HxFieldDecl("statics", Public, false, "Ref<Array<ClassField>>", null),
