@@ -2384,6 +2384,8 @@ class CppTargetCore {
 			return returnTraced("special_lambda_has", renderLambdaHasHelper());
 		if (isHelperMacrosShimHelper(fn, owner))
 			return returnTraced("special_helper_macros", renderHelperMacrosShimHelper(fn, owner, classLookup));
+		if (isMacroStringToolsShimHelper(fn, owner))
+			return returnTraced("special_macro_string_tools", renderMacroStringToolsShimHelper(fn, owner, classLookup));
 		if (isMacroCompilerApiShimHelper(fn, owner))
 			return returnTraced("special_macro_compiler_api", renderMacroCompilerApiShimHelper(fn, owner, classLookup));
 		if (isUtestRunnerAddCasesHelper(fn, owner))
@@ -2594,6 +2596,39 @@ class CppTargetCore {
 			case _:
 				cppFunctionReturnType(fn, owner, classLookup);
 		};
+	}
+
+	static function isMacroStringToolsShimHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "MacroStringTools")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "isFormatExpr" | "toFieldExpr":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function renderMacroStringToolsShimHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = ["  static "
+			+ returnType
+			+ " "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(args, scope)
+			+ ") {"];
+		for (arg in args)
+			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+		if (returnType != "void")
+			out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		out.push("  }");
+		return out;
 	}
 
 	static function renderMacroCompilerApiShimHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {

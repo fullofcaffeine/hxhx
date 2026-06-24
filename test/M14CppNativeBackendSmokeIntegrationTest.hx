@@ -2156,6 +2156,40 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(helperMacrosLines.indexOf("parse(") < 0, "C++ HelperMacros shims should not emit missing parse calls");
 		assertTrue(helperMacrosLines.indexOf("currentPos(") < 0, "C++ HelperMacros shims should not emit missing currentPos calls");
 		assertTrue(helperMacrosLines.indexOf("formatString(") < 0, "C++ HelperMacros shims should not emit unresolved markup formatting helpers");
+		final macroStringToolsOwner = new HxClassDecl("MacroStringTools", false, [
+			new HxFunctionDecl("isFormatExpr", Public, true, [new HxFunctionArg("e", "ExprOf<String>", NoDefault, false, false)], "Bool",
+				[SReturn(EField(EIdent("e"), "expr"), HxPos.unknown())], ""),
+			new HxFunctionDecl("toFieldExpr", Public, true, [
+				new HxFunctionArg("sl", "Array<String>", NoDefault, false, false),
+				new HxFunctionArg("pos", "String", NoDefault, true, false)
+			], "Expr", [
+				SReturn(ECall(EField(EIdent("Lambda"), "fold"), [EIdent("sl"), EUnsupported("macro_expr_builder"), ENull]), HxPos.unknown())
+			], "")
+		], []);
+		final macroStringToolsNames = new StringMap<Bool>();
+		for (name in ["MacroStringTools", "Expr", "ExprOf", "Lambda"])
+			macroStringToolsNames.set(name, true);
+		final macroStringToolsClasses = new StringMap<HxClassDecl>();
+		macroStringToolsClasses.set("MacroStringTools", macroStringToolsOwner);
+		final macroStringToolsLines = [
+			for (fn in HxClassDecl.getFunctions(macroStringToolsOwner))
+				@:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, macroStringToolsOwner, {
+					names: macroStringToolsNames,
+					byName: macroStringToolsClasses
+				}).join("\n")
+		].join("\n");
+		assertContains(macroStringToolsLines, "static bool isFormatExpr(std::shared_ptr<ExprOf> e)",
+			"C++ MacroStringTools.isFormatExpr should preserve its public helper signature");
+		assertContains(macroStringToolsLines,
+			"static std::shared_ptr<Expr> toFieldExpr(std::vector<std::string> sl, std::optional<std::string> pos = std::nullopt)",
+			"C++ MacroStringTools.toFieldExpr should preserve its optional helper signature");
+		assertContains(macroStringToolsLines, "return false;", "C++ MacroStringTools bool shims should return a neutral bool");
+		assertContains(macroStringToolsLines, "return nullptr;", "C++ MacroStringTools Expr shims should return a neutral macro expression reference");
+		assertTrue(macroStringToolsLines.indexOf("e->expr") < 0, "C++ MacroStringTools shims should not emit ExprOf.expr access");
+		assertTrue(macroStringToolsLines.indexOf(".match(") < 0, "C++ MacroStringTools shims should not emit incomplete enum match lowering");
+		assertTrue(macroStringToolsLines.indexOf("Lambda::fold") < 0, "C++ MacroStringTools shims should not emit Lambda.fold null-seed helpers");
+		assertTrue(macroStringToolsLines.indexOf(".value_or(std::string())") < 0,
+			"C++ MacroStringTools shims should not emit optional value_or calls on concrete strings");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EMacroType("X -> Y")) == "std::string(\"X -> Y\")",
 			"C++ macro type quotes should lower to stable printable text in the MVP");
 		final complexTypeCarrier = new HxClassDecl("ComplexType", false, [], [new HxFieldDecl("__hx_is_enum", Public, true, "Bool", EBool(true))]);
