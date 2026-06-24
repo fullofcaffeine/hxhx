@@ -6232,6 +6232,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertContains(vendorTemplateSource, "struct Template {", "C++ smoke should emit upstream haxe.Template as a helper");
 			assertContains(vendorTemplateSource, "std::shared_ptr<TemplateExpr> parse(",
 				"C++ smoke should keep Template.parse return typing concrete without recursive inference");
+			assertContains(vendorTemplateSource, "inline static std::shared_ptr<EReg> splitter =",
+				"C++ smoke should keep Template EReg fields as EReg references");
 			assertContains(vendorTemplateSource, "inline static std::string globals = std::string();",
 				"C++ smoke should keep Template.globals as a neutral string field");
 			assertContains(vendorTemplateSource, "inline static std::vector<std::string> hxKeepArrayIterator = {};",

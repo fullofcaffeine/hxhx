@@ -2176,6 +2176,8 @@ class CppTargetCore {
 			return "int";
 		if (owner == "Template") {
 			return switch (field) {
+				case "splitter" | "expr_splitter" | "expr_trim" | "expr_int" | "expr_float":
+					"std::shared_ptr<EReg>";
 				case "globals" | "context" | "macros":
 					"std::string";
 				case "hxKeepArrayIterator":
