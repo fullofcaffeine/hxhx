@@ -2536,6 +2536,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			}).join("\n");
 		assertTrue(emptyIMapClassLines.length == 0,
 			"C++ empty parsed IMap classes should not emit an empty struct that conflicts with target-owned IMap declarations");
+		final genericMap = new HxClassDecl("Map", false, [], [], "", ["__hxhx_type_params=K,V"]);
+		final genericMapNames = new StringMap<Bool>();
+		genericMapNames.set("Map", true);
+		final genericMapClasses = new StringMap<HxClassDecl>();
+		genericMapClasses.set("Map", genericMap);
+		final genericMapLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(genericMap, {
+			names: genericMapNames,
+			byName: genericMapClasses
+		}).join("\n");
+		assertContains(genericMapLines, "template<typename K, typename V>\nstruct Map {", "C++ generic Map support should preserve key/value parameters");
+		assertContains(genericMapLines, "std::map<K, V> values;", "C++ generic Map support should own a target map backing store");
+		assertContains(genericMapLines, "void set(K key, V value)", "C++ generic Map support should expose set for Haxe Map callers");
+		assertContains(genericMapLines, "V get(K key)", "C++ generic Map support should expose concrete get values for Haxe Map callers");
+		assertContains(genericMapLines, "bool exists(K key)", "C++ generic Map support should expose exists for Haxe Map callers");
+		assertContains(genericMapLines, "std::shared_ptr<__hxhx_iterator<K>> keys()", "C++ generic Map support should expose keys for Haxe Map iteration");
 		final iMapImplementingClass = new HxClassDecl("StringMap", false, [
 			new HxFunctionDecl("copy", Public, false, [], "StringMap", [SReturn(EThis, HxPos.unknown())], "")
 		], [], "", null, false, ["haxe.Constraints.IMap"]);
@@ -3160,6 +3175,71 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(resultStatsUnwireLines, "(void)dependant;", "C++ ResultStats.unwire should consume dependant");
 		assertTrue(resultStatsUnwireLines.indexOf("addSuccesses") < 0,
 			"C++ ResultStats.unwire should not pass non-static member functions directly as callbacks");
+		final classResultOwner = new HxClassDecl("ClassResult", false, [
+			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("method", "String", NoDefault, false, false)], "Dynamic", [
+				SReturn(ECall(EIdent("__hxhx_stringify"), [ECall(EField(EIdent("fixtures"), "get"), [EIdent("method")])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("exists", Public, false, [new HxFunctionArg("method", "String", NoDefault, false, false)], "Dynamic", [
+				SReturn(ECall(EIdent("__hxhx_stringify"), [ECall(EField(EIdent("fixtures"), "exists"), [EIdent("method")])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("methodNames", Public, false, [
+				new HxFunctionArg("errorsHavePriority", "Bool", Default(EBool(true)), true, false)
+			], "Array<String>", [
+				SVar("names", "", EArrayDecl([]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("names"), "sort"), [ELambda(["a", "b"], EInt(0))]), HxPos.unknown()),
+				SReturn(EIdent("names"), HxPos.unknown())
+			], "")
+		], []);
+		final packageResultOwner = new HxClassDecl("PackageResult", false, [
+			new HxFunctionDecl("existsClass", Public, false, [new HxFunctionArg("name", "String", NoDefault, false, false)], "Dynamic", [
+				SReturn(ECall(EIdent("__hxhx_stringify"), [ECall(EField(EIdent("classes"), "exists"), [EIdent("name")])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("getClass", Public, false, [new HxFunctionArg("name", "String", NoDefault, false, false)], "Dynamic", [
+				SReturn(ECall(EIdent("__hxhx_stringify"), [ECall(EField(EIdent("classes"), "get"), [EIdent("name")])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("classNames", Public, false, [
+				new HxFunctionArg("errorsHavePriority", "Bool", Default(EBool(true)), true, false)
+			], "Array<String>", [
+				SVar("names", "", EArrayDecl([]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("names"), "sort"), [ELambda(["a", "b"], EInt(0))]), HxPos.unknown()),
+				SReturn(EIdent("names"), HxPos.unknown())
+			], "")
+		], []);
+		final utestResultNames = new StringMap<Bool>();
+		for (name in ["ClassResult", "PackageResult", "FixtureResult"])
+			utestResultNames.set(name, true);
+		final utestResultClasses = new StringMap<HxClassDecl>();
+		utestResultClasses.set("ClassResult", classResultOwner);
+		utestResultClasses.set("PackageResult", packageResultOwner);
+		utestResultClasses.set("FixtureResult", new HxClassDecl("FixtureResult", false, [], []));
+		final classResultLines = [
+			for (fn in HxClassDecl.getFunctions(classResultOwner))
+				@:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, classResultOwner, {
+					names: utestResultNames,
+					byName: utestResultClasses
+				}).join("\n")
+		].join("\n");
+		final packageResultLines = [
+			for (fn in HxClassDecl.getFunctions(packageResultOwner))
+				@:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, packageResultOwner, {
+					names: utestResultNames,
+					byName: utestResultClasses
+				}).join("\n")
+		].join("\n");
+		assertContains(classResultLines, "std::shared_ptr<FixtureResult> get(std::string method)",
+			"C++ ClassResult.get should preserve the fixture result return shape");
+		assertContains(classResultLines, "bool exists(std::string method)", "C++ ClassResult.exists should return Bool, not String");
+		assertContains(classResultLines, "std::vector<std::string> methodNames(std::optional<bool> errorsHavePriority = true)",
+			"C++ ClassResult.methodNames should keep string-vector shape");
+		assertContains(packageResultLines, "bool existsClass(std::string name)", "C++ PackageResult.existsClass should return Bool, not String");
+		assertContains(packageResultLines, "std::shared_ptr<ClassResult> getClass(std::string name)",
+			"C++ PackageResult.getClass should preserve the class result return shape");
+		assertContains(packageResultLines, "std::vector<std::string> classNames(std::optional<bool> errorsHavePriority = true)",
+			"C++ PackageResult.classNames should keep string-vector shape");
+		assertTrue((classResultLines + packageResultLines).indexOf(".sort") < 0,
+			"C++ utest result aggregation helpers should not emit unsupported std::vector.sort calls");
+		assertTrue((classResultLines + packageResultLines).indexOf("__hxhx_stringify") < 0,
+			"C++ utest result aggregation helpers should not stringify typed Map get/exists results");
 		final classTypeCarrier = new HxClassDecl("ClassType", false, [], [
 			new HxFieldDecl("fields", Public, false, "Ref<Array<ClassField>>", null),
 			new HxFieldDecl("statics", Public, false, "Ref<Array<ClassField>>", null),

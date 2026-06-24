@@ -1639,6 +1639,8 @@ class CppTargetCore {
 			return renderInterfaceClass(cls, classLookup);
 		if (isAnySupportClass(cls))
 			return CppRuntimeSupport.anySupportLines();
+		if (isGenericMapSupportClass(cls))
+			return renderGenericMapSupportClass(cls);
 		if (isPosInfosSupportClass(cls))
 			return renderPosInfosClass();
 		if (isRestSupportClass(cls))
@@ -1848,6 +1850,47 @@ class CppTargetCore {
 			"  PosInfos(std::string fileName, int lineNumber, std::string className, std::string methodName)",
 			"    : fileName(fileName), lineNumber(lineNumber), className(className), methodName(methodName) {}",
 			"};"
+		];
+	}
+
+	static function isGenericMapSupportClass(cls:HxClassDecl):Bool {
+		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Map";
+	}
+
+	static function renderGenericMapSupportClass(cls:HxClassDecl):Array<String> {
+		var typeParams = genericClassTemplateParams(cls);
+		if (typeParams.length < 2)
+			typeParams = ["K", "V"];
+		final keyType = typeParams[0];
+		final valueType = typeParams[1];
+		return [
+			genericTemplatePrefix(typeParams),
+			"struct Map {",
+			"  std::map<" + keyType + ", " + valueType + "> values;",
+			"  Map() {}",
+			"  void set(" + keyType + " key, " + valueType + " value) {",
+			"    values[key] = value;",
+			"  }",
+			"  " + valueType + " get(" + keyType + " key) {",
+			"    auto found = values.find(key);",
+			"    return found == values.end() ? " + valueType + "() : found->second;",
+			"  }",
+			"  bool exists(" + keyType + " key) {",
+			"    return values.find(key) != values.end();",
+			"  }",
+			"  bool remove(" + keyType + " key) {",
+			"    return values.erase(key) > 0;",
+			"  }",
+			"  std::shared_ptr<__hxhx_iterator<" + keyType + ">> keys() {",
+			"    std::vector<" + keyType + "> out;",
+			"    for (const auto& entry : values) out.push_back(entry.first);",
+			"    return __hxhx_vector_iterator_of(out);",
+			"  }",
+			"};",
+			genericTemplatePrefix(typeParams),
+			"std::shared_ptr<Map<" + typeParams.join(", ") + ">> __hxhx_make_shared_Map() {",
+			"  return std::make_shared<Map<" + typeParams.join(", ") + ">>();",
+			"}"
 		];
 	}
 
@@ -2338,6 +2381,8 @@ class CppTargetCore {
 			return returnTraced("special_utest_runner_add_cases", renderUtestRunnerAddCasesHelper(fn, owner, classLookup));
 		if (isUtestCallbackHelper(fn, owner))
 			return returnTraced("special_utest_callback", renderUtestCallbackHelper(fn, owner, classLookup));
+		if (isUtestResultAggregationHelper(fn, owner))
+			return returnTraced("special_utest_result_aggregation", renderUtestResultAggregationHelper(fn, owner, classLookup));
 		if (isPolymorphicIsOfTypeHelper(fn))
 			return returnTraced("special_is_of_type", renderPolymorphicIsOfTypeHelper(fn, owner, classLookup));
 		if (isTypeToolsFindFieldHelper(fn, owner))
@@ -8465,6 +8510,32 @@ class CppTargetCore {
 		};
 	}
 
+	static function isUtestResultAggregationHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || HxFunctionDecl.getIsStatic(fn))
+			return false;
+		final ownerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return switch (ownerName) {
+			case "ClassResult":
+				switch (method) {
+					case "get" | "exists" | "methodNames":
+						true;
+					case _:
+						false;
+				}
+			case "PackageResult":
+				switch (method) {
+					case "addResult" | "existsPackage" | "existsClass" | "getPackage" | "getClass" | "classNames" | "packageNames" | "createFixture" |
+						"getOrCreateClass" | "getOrCreatePackage":
+						true;
+					case _:
+						false;
+				}
+			case _:
+				false;
+		};
+	}
+
 	static function isTypeToolsFindFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
 			return false;
@@ -8690,6 +8761,55 @@ class CppTargetCore {
 		}
 		out.push("  }");
 		return out;
+	}
+
+	static function renderUtestResultAggregationHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final ownerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = switch (ownerName + "." + method) {
+			case "ClassResult.get":
+				"std::shared_ptr<FixtureResult>";
+			case "ClassResult.exists" | "PackageResult.existsPackage" | "PackageResult.existsClass":
+				"bool";
+			case "ClassResult.methodNames" | "PackageResult.classNames" | "PackageResult.packageNames":
+				"std::vector<std::string>";
+			case "PackageResult.getPackage" | "PackageResult.getOrCreatePackage":
+				"std::shared_ptr<PackageResult>";
+			case "PackageResult.getClass" | "PackageResult.getOrCreateClass":
+				"std::shared_ptr<ClassResult>";
+			case "PackageResult.createFixture":
+				"std::shared_ptr<FixtureResult>";
+			case _:
+				"void";
+		};
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = ["  " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"];
+		for (arg in args)
+			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+		if (returnType == "std::vector<std::string>") {
+			out.push("    return std::vector<std::string>();");
+		} else if (returnType == "bool") {
+			out.push("    return false;");
+		} else if (returnType != "void") {
+			final refArg = findFunctionArgByName(args, "ref");
+			if (method == "getOrCreatePackage" && refArg != null) {
+				out.push("    return " + sanitizeIdentifier(HxFunctionArg.getName(refArg)) + ";");
+			} else {
+				out.push("    return nullptr;");
+			}
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function findFunctionArgByName(args:Array<HxFunctionArg>, name:String):Null<HxFunctionArg> {
+		final wanted = sanitizeIdentifier(name);
+		for (arg in args)
+			if (sanitizeIdentifier(HxFunctionArg.getName(arg)) == wanted)
+				return arg;
+		return null;
 	}
 
 	static function renderTypeErasedValueHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
