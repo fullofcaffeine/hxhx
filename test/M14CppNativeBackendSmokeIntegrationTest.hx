@@ -4021,10 +4021,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ TemplateWrap should store the underlying Template reference explicitly");
 		assertContains(templateWrapLines, "TemplateWrap(std::string value) { (void)value; }",
 			"C++ TemplateWrap construction from String should remain compile-safe before Template is complete");
+		assertContains(templateWrapLines, "TemplateWrap(const char* value) : TemplateWrap(std::string(value == nullptr ? \"\" : value)) {}",
+			"C++ TemplateWrap should accept string literals in vector and anonymous payload contexts");
 		assertContains(templateWrapLines, "TemplateWrap& operator=(std::string value) {", "C++ TemplateWrap should support reassignment from String values");
+		assertContains(templateWrapLines, "TemplateWrap& operator=(const char* value) {", "C++ TemplateWrap should support reassignment from string literals");
 		assertContains(templateWrapLines, "template<typename Context>", "C++ TemplateWrap should accept erased Template.execute context payloads");
 		assertTrue(templateWrapLines.indexOf("(*this) = std::make_shared<Template>") < 0,
 			"C++ TemplateWrap should not assign the underlying Template reference into the wrapper object");
+		final templateWrapAnonLines = @:privateAccess [
+			for (decl in backend.cpp.CppTargetCore.renderAnonStructs([
+				{name: "__hxhx_anon_tpl_TemplateWrap", fieldNames: ["tpl"], fieldTypes: ["TemplateWrap"]}
+			]))
+				decl.join("\n")
+		].join("\n");
+		assertContains(templateWrapAnonLines, "__hxhx_anon_tpl_TemplateWrap(TemplateWrap __hxhx_tpl) : tpl(__hxhx_tpl) {}",
+			"C++ anonymous structs should preserve direct field constructors after aggregate lowering");
+		assertContains(templateWrapAnonLines, "std::void_t<decltype(std::declval<const Other&>().tpl)>",
+			"C++ anonymous structs should guard field-wise conversion on matching field names");
+		assertContains(templateWrapAnonLines, "__hxhx_anon_tpl_TemplateWrap(const Other& other) : tpl(other.tpl) {}",
+			"C++ anonymous structs should convert matching-field payloads through field conversion");
 		final templateWrapOwnerLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(templateWrapOwner)[0], templateWrapOwner, templateWrapLookup).join("\n");
 		assertContains(templateWrapOwnerLines, "TemplateWrap tpl = \"Hi ::t::\";",

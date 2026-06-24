@@ -1132,6 +1132,28 @@ class CppTargetCore {
 			final lines = ["struct " + struct.name + " {"];
 			for (i in 0...struct.fieldNames.length)
 				lines.push("  " + struct.fieldTypes[i] + " " + sanitizeIdentifier(struct.fieldNames[i]) + ";");
+			if (struct.fieldNames.length > 0) {
+				lines.push("  " + struct.name + "() = default;");
+				final ctorArgs = new Array<String>();
+				final ctorInits = new Array<String>();
+				final fieldChecks = new Array<String>();
+				final otherInits = new Array<String>();
+				for (i in 0...struct.fieldNames.length) {
+					final fieldName = sanitizeIdentifier(struct.fieldNames[i]);
+					final argName = "__hxhx_" + fieldName;
+					ctorArgs.push(struct.fieldTypes[i] + " " + argName);
+					ctorInits.push(fieldName + "(" + argName + ")");
+					fieldChecks.push("decltype(std::declval<const Other&>()." + fieldName + ")");
+					otherInits.push(fieldName + "(other." + fieldName + ")");
+				}
+				lines.push("  " + struct.name + "(" + ctorArgs.join(", ") + ") : " + ctorInits.join(", ") + " {}");
+				lines.push("  template<typename Other, typename = std::enable_if_t<!std::is_same_v<std::decay_t<Other>, "
+					+ struct.name
+					+ ">>, typename = std::void_t<"
+					+ fieldChecks.join(", ")
+					+ ">>");
+				lines.push("  " + struct.name + "(const Other& other) : " + otherInits.join(", ") + " {}");
+			}
 			lines.push("};");
 			out.push(lines);
 		}
@@ -1957,10 +1979,18 @@ class CppTargetCore {
 			"  std::shared_ptr<Template> __value = nullptr;",
 			"  " + className + "() {}",
 			"  " + className + "(std::string value) { (void)value; }",
+			"  "
+			+ className
+			+ "(const char* value) : "
+			+ className
+			+ "(std::string(value == nullptr ? \"\" : value)) {}",
 			"  " + className + "(std::shared_ptr<Template> value) : __value(value) {}",
 			"  " + className + "& operator=(std::string value) {",
 			"    (void)value;",
 			"    return *this;",
+			"  }",
+			"  " + className + "& operator=(const char* value) {",
+			"    return (*this = std::string(value == nullptr ? \"\" : value));",
 			"  }",
 			"  " + className + "& operator=(std::shared_ptr<Template> value) {",
 			"    __value = value;",
