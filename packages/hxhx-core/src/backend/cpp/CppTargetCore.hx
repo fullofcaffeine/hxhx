@@ -2382,6 +2382,8 @@ class CppTargetCore {
 			return returnTraced("special_assert_same_as", renderAssertPolymorphicSameAsHelper(fn, owner, classLookup));
 		if (isLambdaHasHelper(fn, owner))
 			return returnTraced("special_lambda_has", renderLambdaHasHelper());
+		if (isHelperMacrosShimHelper(fn, owner))
+			return returnTraced("special_helper_macros", renderHelperMacrosShimHelper(fn, owner, classLookup));
 		if (isMacroCompilerApiShimHelper(fn, owner))
 			return returnTraced("special_macro_compiler_api", renderMacroCompilerApiShimHelper(fn, owner, classLookup));
 		if (isUtestRunnerAddCasesHelper(fn, owner))
@@ -2543,6 +2545,49 @@ class CppTargetCore {
 		if (!HxFunctionDecl.getIsStatic(fn))
 			return false;
 		return macroCompilerApiShimName(sanitizeIdentifier(HxFunctionDecl.getName(fn))) != null;
+	}
+
+	static function isHelperMacrosShimHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "HelperMacros")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "getCompilationDate" | "typeString" | "typedAs" | "isNullable" | "typeError" | "typeErrorText" | "getMeta" | "getErrorMessage" |
+				"parseAndPrint" | "pipeMarkupLiteral" | "pipeMarkupLiteralUnprocessed":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function renderHelperMacrosShimHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = helperMacrosShimReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = ["  static "
+			+ returnType
+			+ " "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(args, scope)
+			+ ") {"];
+		for (arg in args)
+			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+		if (returnType != "void")
+			out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		out.push("  }");
+		return out;
+	}
+
+	static function helperMacrosShimReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "typeString" | "typedAs" | "getMeta" | "pipeMarkupLiteral" | "pipeMarkupLiteralUnprocessed":
+				"std::string";
+			case _:
+				cppFunctionReturnType(fn, owner, classLookup);
+		};
 	}
 
 	static function renderMacroCompilerApiShimHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {

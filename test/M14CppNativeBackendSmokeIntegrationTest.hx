@@ -2111,6 +2111,48 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("HelperMacros"), "typeError"),
 				[EUnsupported("for_expr:for (key => value in new MyNotIterator()) { }")])) == "true",
 			"C++ HelperMacros.typeError for-expression probes should fold to true");
+		final helperMacrosOwner = new HxClassDecl("HelperMacros", false, [
+			new HxFunctionDecl("typeString", Public, true, [new HxFunctionArg("e", "Dynamic", NoDefault, false, false)], "String", [
+				SVar("typed", "", ECall(EIdent("typeExpr"), [EIdent("e")]), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("TypeTools"), "toString"), [EField(EIdent("typed"), "t")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("typedAs", Public, true, [
+				new HxFunctionArg("actual", "Expr", NoDefault, false, false),
+				new HxFunctionArg("expected", "Expr", NoDefault, false, false)
+			], "String", [
+				SVar("tExpected", "", ECall(EIdent("typeof"), [EIdent("expected")]), HxPos.unknown()),
+				SReturn(ECall(EIdent("parse"), [EString("eq"), ECall(EIdent("currentPos"), [])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("isNullable", Public, true, [new HxFunctionArg("expr", "Expr", NoDefault, false, false)], "Expr", [
+				SVar("t", "", ECall(EIdent("typeof"), [EIdent("expr")]), HxPos.unknown()),
+				SReturn(ECall(EIdent("isNullable"), [EIdent("t")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("pipeMarkupLiteral", Public, true, [new HxFunctionArg("e", "Expr", NoDefault, false, false)], "String", [
+				SReturn(ECall(EIdent("formatString"), [EString("s"), EField(EIdent("e"), "pos")]), HxPos.unknown())
+			], "")
+		], []);
+		final helperMacrosNames = new StringMap<Bool>();
+		for (name in ["HelperMacros", "Expr", "TypeTools"])
+			helperMacrosNames.set(name, true);
+		final helperMacrosClasses = new StringMap<HxClassDecl>();
+		helperMacrosClasses.set("HelperMacros", helperMacrosOwner);
+		final helperMacrosLines = [
+			for (fn in HxClassDecl.getFunctions(helperMacrosOwner))
+				@:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, helperMacrosOwner, {
+					names: helperMacrosNames,
+					byName: helperMacrosClasses
+				}).join("\n")
+		].join("\n");
+		assertContains(helperMacrosLines, "static std::string typeString(std::string e)",
+			"C++ HelperMacros.typeString should preserve its callable string helper shape");
+		assertContains(helperMacrosLines, "static std::shared_ptr<Expr> isNullable(std::shared_ptr<Expr> expr)",
+			"C++ HelperMacros.isNullable should preserve the typed helper signature");
+		assertContains(helperMacrosLines, "return nullptr;", "C++ HelperMacros pointer-shaped shims should return neutral references");
+		assertTrue(helperMacrosLines.indexOf("typeExpr(") < 0, "C++ HelperMacros shims should not emit missing typeExpr calls");
+		assertTrue(helperMacrosLines.indexOf("typeof(") < 0, "C++ HelperMacros shims should not emit missing typeof calls");
+		assertTrue(helperMacrosLines.indexOf("parse(") < 0, "C++ HelperMacros shims should not emit missing parse calls");
+		assertTrue(helperMacrosLines.indexOf("currentPos(") < 0, "C++ HelperMacros shims should not emit missing currentPos calls");
+		assertTrue(helperMacrosLines.indexOf("formatString(") < 0, "C++ HelperMacros shims should not emit unresolved markup formatting helpers");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EMacroType("X -> Y")) == "std::string(\"X -> Y\")",
 			"C++ macro type quotes should lower to stable printable text in the MVP");
 		final complexTypeCarrier = new HxClassDecl("ComplexType", false, [], [new HxFieldDecl("__hx_is_enum", Public, true, "Bool", EBool(true))]);
