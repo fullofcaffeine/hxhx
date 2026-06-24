@@ -1116,6 +1116,39 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ anonymous collection should preserve structural return hints while using function type-parameter scope");
 	}
 
+	static function assertCppOptionalArrowFunctionsUseCallableShapes():Void {
+		assertTrue(backend.cpp.CppTypeModel.cppFunctionTypeHint("?Int -> Int") == "std::function<int(int)>",
+			"C++ function type hints should strip optional markers from unnamed argument parts");
+		final slot = new HxClassDecl("ArrowSlot", false, [
+			new HxFunctionDecl("run", Public, false, [], "Int", [
+				SExpr(EBinop("=", EIdent("f"), ECall(EIdent("__hxhx_optional_lambda"), [
+					ELambda(["a"], ETernary(EBinop("==", EIdent("a"), ENull), EInt(2), EIdent("a"))),
+					EArrayDecl([EString("a")])
+				])), HxPos.unknown()),
+				SReturn(ECall(EIdent("f"), []), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("f", Public, false, "?Int -> Int", null),
+			new HxFieldDecl("obj", Public, false, "{f:Int->Int}", null)
+		]);
+		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
+		final decl = new HxModuleDecl("", [], main, [main, slot], false, false);
+		final program = new GenIrProgram([typedSyntheticModule("ArrowSlot.hx", decl)], false);
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
+		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup);
+		final names = [for (struct in structs) struct.name].join("\n");
+		assertContains(names, "__hxhx_anon_f_std__function_int_int__", "C++ anonymous collection should preserve structural function-field type hints");
+		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(slot, lookup).join("\n");
+		assertContains(lines, "std::function<int(int)> f = nullptr;",
+			"C++ optional function-typed fields should use the argument value type instead of the optional marker name");
+		assertContains(lines, "f = [&](int a) { return (false ? 2 : a); };",
+			"C++ optional lambda assignments should render typed C++ lambdas instead of unresolved helper calls");
+		assertContains(lines, "__hxhx_anon_f_std__function_int_int__ obj = __hxhx_anon_f_std__function_int_int__{};",
+			"C++ structural function-field carriers should default-initialize as aggregates");
+		assertContains(lines, "f(0)", "C++ calls omitting function-typed optional arguments should pad a default argument");
+		assertTrue(lines.indexOf("__hxhx_optional_lambda") < 0, "C++ optional lambda lowering should not leak the parser helper");
+	}
+
 	static function assertVendorExprToolsReturnTypesWhenAvailable():Void {
 		final exprToolsProgram = vendorExprToolsProgramWhenAvailable();
 		if (exprToolsProgram == null)
@@ -1746,6 +1779,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Error"), "OutsideBounds")) == "std::string(\"OutsideBounds\")",
 			"C++ Error enum-like fields should lower to tag strings instead of invalid dotted values");
 		assertCppAnonCollectUsesLightweightFunctionScope();
+		assertCppOptionalArrowFunctionsUseCallableShapes();
 		final reflectCompareExpr = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "compare"), [EString("a"), EString("b")]));
 		assertContains(reflectCompareExpr, "auto __hxhx_cmp_left = std::string(\"a\");",

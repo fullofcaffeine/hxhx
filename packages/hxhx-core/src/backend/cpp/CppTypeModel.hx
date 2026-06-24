@@ -445,6 +445,7 @@ class CppTypeModel {
 		var start = 0;
 		var angleDepth = 0;
 		var parenDepth = 0;
+		var braceDepth = 0;
 		var i = 0;
 		while (i < typeHint.length) {
 			final c = typeHint.charAt(i);
@@ -456,7 +457,11 @@ class CppTypeModel {
 				parenDepth++;
 			else if (c == ")" && parenDepth > 0)
 				parenDepth--;
-			else if (c == "-" && i + 1 < typeHint.length && typeHint.charAt(i + 1) == ">" && angleDepth == 0 && parenDepth == 0) {
+			else if (c == "{")
+				braceDepth++;
+			else if (c == "}" && braceDepth > 0)
+				braceDepth--;
+			else if (c == "-" && i + 1 < typeHint.length && typeHint.charAt(i + 1) == ">" && angleDepth == 0 && parenDepth == 0 && braceDepth == 0) {
 				parts.push(stripTypeParens(typeHint.substring(start, i)));
 				i += 2;
 				start = i;
@@ -727,6 +732,8 @@ class CppTypeModel {
 				"nullptr";
 			case _ if (isCppOptionalType(typeName)):
 				"std::nullopt";
+			case _ if (StringTools.startsWith(typeName, "__hxhx_anon_")):
+				typeName + "{}";
 			case _ if (isScopedGenericCppType(typeName, scope)):
 				"nullptr";
 			case _:
@@ -751,7 +758,7 @@ class CppTypeModel {
 		final text = stripTypeParens(part);
 		final colon = topLevelColonIndex(text);
 		if (colon <= 0)
-			return text;
+			return StringTools.startsWith(text, "?") ? StringTools.trim(text.substr(1)) : text;
 		var name = StringTools.trim(text.substring(0, colon));
 		if (StringTools.startsWith(name, "?"))
 			name = StringTools.trim(name.substr(1));

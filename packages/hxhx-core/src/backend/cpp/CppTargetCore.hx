@@ -4409,6 +4409,9 @@ class CppTargetCore {
 		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
 		if (isCppFunctionType(expectedType)) {
+			final optionalLambda = optionalLambdaExprForExpectedFunction(expr, expectedType, scope);
+			if (optionalLambda != null)
+				return optionalLambda;
 			final methodValue = methodValueExprForExpectedFunction(expr, expectedType, scope);
 			if (methodValue != null)
 				return methodValue;
@@ -4621,6 +4624,13 @@ class CppTargetCore {
 				flatMapExpr(iterable, mapper, scope);
 			case ECall(EField(ESuper, method), args):
 				superMethodCallExpr(method, args, scope);
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(lambdaArgs, body), EArrayDecl(_)]):
+				lambdaExpr(lambdaArgs, body, scope);
+			case ECall(EIdent("__hxhx_optional_lambda"), [
+				ECall(EIdent("__hxhx_rest_lambda"), [ELambda(lambdaArgs, body), EInt(_)]),
+				EArrayDecl(_)
+			]):
+				lambdaExpr(lambdaArgs, body, scope);
 			case ECall(ELambda(lambdaArgs, body), args):
 				"("
 				+ lambdaExpr(lambdaArgs, body, scope)
@@ -4783,6 +4793,8 @@ class CppTargetCore {
 			case EArrayDecl([]) if (isCppVectorType(localType)):
 				localType + "{}";
 			case _ if (isCppVectorType(localType)):
+				valueExprForExpectedType(init, localType, scope);
+			case _ if (isCppFunctionType(localType)):
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (localType == "std::string"):
 				stringExpr(init, scope);
@@ -5463,17 +5475,78 @@ class CppTargetCore {
 
 	static function renderFunctionTypeCallArgs(functionType:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
 		final argTypes = CppTypeModel.cppFunctionArgTypesFromCppType(functionType);
-		if (argTypes.length == 0 || args == null || args.length == 0)
+		if (argTypes.length == 0)
 			return renderSimpleCallArgs(args, scope);
-		return [
-			for (i in 0...args.length)
-				if (i < argTypes.length) {
-					final actualType = exprCppType(args[i], scope);
-					actualType == "std::any" ? valueExprForExpectedType(args[i], argTypes[i], scope) : renderExpr(args[i], scope);
-				} else {
-					renderExpr(args[i], scope);
+		final rendered = new Array<String>();
+		final callArgs = args == null ? [] : args;
+		var argIndex = 0;
+		var paramIndex = 0;
+		while (argIndex < callArgs.length) {
+			final arg = callArgs[argIndex];
+			if (paramIndex >= argTypes.length) {
+				rendered.push(renderExpr(arg, scope));
+				argIndex++;
+				continue;
+			}
+			if (functionTypeArgMatches(arg, argTypes[paramIndex], scope)) {
+				rendered.push(functionTypeArgExpr(arg, argTypes[paramIndex], scope));
+				argIndex++;
+				paramIndex++;
+				continue;
+			}
+			final later = findLaterMatchingFunctionTypeArg(argTypes, arg, paramIndex + 1, scope);
+			if (later >= 0) {
+				while (paramIndex < later) {
+					rendered.push(cppDefaultValue(argTypes[paramIndex], scope));
+					paramIndex++;
 				}
-		];
+				rendered.push(functionTypeArgExpr(arg, argTypes[paramIndex], scope));
+				argIndex++;
+				paramIndex++;
+				continue;
+			}
+			rendered.push(functionTypeArgExpr(arg, argTypes[paramIndex], scope));
+			argIndex++;
+			paramIndex++;
+		}
+		while (paramIndex < argTypes.length) {
+			rendered.push(cppDefaultValue(argTypes[paramIndex], scope));
+			paramIndex++;
+		}
+		return rendered;
+	}
+
+	static function functionTypeArgExpr(arg:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
+		final actualType = exprCppType(arg, scope);
+		if (actualType == null || actualType.length == 0)
+			return renderExpr(arg, scope);
+		return actualType == expectedType ? renderExpr(arg, scope) : valueExprForExpectedType(arg, expectedType, scope);
+	}
+
+	static function findLaterMatchingFunctionTypeArg(argTypes:Array<String>, arg:HxExpr, startIndex:Int, ?scope:CppRenderScope):Int {
+		for (i in startIndex...argTypes.length)
+			if (functionTypeArgMatches(arg, argTypes[i], scope))
+				return i;
+		return -1;
+	}
+
+	static function functionTypeArgMatches(arg:HxExpr, expectedType:String, ?scope:CppRenderScope):Bool {
+		if (expectedType == null || expectedType.length == 0)
+			return false;
+		final actualType = exprCppType(arg, scope);
+		if (actualType.length > 0)
+			return actualType == expectedType || (actualType == "std::any" && expectedType.length > 0);
+		return switch (expectedType) {
+			case "std::string":
+				isCppStringExpr(arg, scope);
+			case "int":
+				isCppIntExpr(arg, scope);
+			case "double" | "float": isCppDoubleExpr(arg, scope) || isCppIntExpr(arg, scope);
+			case "bool":
+				isCppBoolExpr(arg, scope);
+			case _:
+				false;
+		};
 	}
 
 	static function findLaterMatchingParam(params:Array<HxFunctionArg>, arg:HxExpr, startIndex:Int, ?scope:CppRenderScope):Int {
@@ -5772,6 +5845,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
+			case ECall(EIdent("__hxhx_optional_lambda"), args) if (args.length >= 1):
+				inferExprCppType(args[0], scope);
 			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
 				"std::any";
 			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
@@ -6299,6 +6374,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
+			case ECall(EIdent("__hxhx_optional_lambda"), args) if (args.length >= 1):
+				inferExprCppType(args[0], scope);
 			case ECall(EField(receiver, "callMacroApi"), args) if (isContextStaticReceiver(receiver) && args.length >= 1):
 				"std::any";
 			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
@@ -6952,6 +7029,8 @@ class CppTargetCore {
 		final expectedType = assignmentExpectedCppType(left, scope);
 		if (expectedType == "std::shared_ptr<PosInfos>")
 			return posInfosSharedPtrExpr(right, scope);
+		if (isCppFunctionType(expectedType))
+			return valueExprForExpectedType(right, expectedType, scope);
 		if (isCppVectorType(expectedType)) {
 			switch (right) {
 				case ENull:
@@ -7728,6 +7807,43 @@ class CppTargetCore {
 	static function lambdaExpr(args:Array<String>, body:HxExpr, ?scope:CppRenderScope):String {
 		final params = [for (arg in args) "auto " + sanitizeIdentifier(arg)];
 		return "[&](" + params.join(", ") + ") { return " + renderExpr(body, scope) + "; }";
+	}
+
+	static function optionalLambdaExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(lambdaArgs, body), EArrayDecl(_)]):
+				lambdaExprWithArgTypes(lambdaArgs, body, CppTypeModel.cppFunctionArgTypesFromCppType(expectedType), scope);
+			case ECall(EIdent("__hxhx_optional_lambda"), [
+				ECall(EIdent("__hxhx_rest_lambda"), [ELambda(lambdaArgs, body), EInt(_)]),
+				EArrayDecl(_)
+			]):
+				lambdaExprWithArgTypes(lambdaArgs, body, CppTypeModel.cppFunctionArgTypesFromCppType(expectedType), scope);
+			case _:
+				null;
+		};
+	}
+
+	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope):String {
+		final names = [for (arg in args) sanitizeIdentifier(arg)];
+		final params = [
+			for (i in 0...names.length) {
+				final typeName = i < argTypes.length && argTypes[i].length > 0 ? argTypes[i] : "auto";
+				typeName + " " + names[i];
+			}
+		];
+		if (scope == null)
+			return "[&](" + params.join(", ") + ") { return " + renderExpr(body, scope) + "; }";
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		for (i in 0...names.length) {
+			scope.localNames.set(names[i], names[i]);
+			if (i < argTypes.length && argTypes[i].length > 0)
+				scope.localTypes.set(names[i], argTypes[i]);
+		}
+		final renderedBody = renderExpr(body, scope);
+		scope.localTypes = savedLocalTypes;
+		scope.localNames = savedLocalNames;
+		return "[&](" + params.join(", ") + ") { return " + renderedBody + "; }";
 	}
 
 	static function instanceMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
