@@ -1653,6 +1653,8 @@ class CppTargetCore {
 			return renderPrimitiveBackedAbstractClass(cls, classLookup);
 		if (isStdArrayHelperClass(cls))
 			return renderStdArrayHelperClass(cls, classLookup);
+		if (isCppReportSupportClass(cls))
+			return renderCppReportSupportClass(cls, classLookup);
 		final typeParams = genericClassTemplateParams(cls);
 		final baseType = inheritedCppBaseTypeName(cls, classLookup);
 		final baseTypes = inheritedCppBaseTypes(cls, classLookup);
@@ -8573,10 +8575,82 @@ class CppTargetCore {
 				}
 			case "Report":
 				method == "create";
-			case "ReportTools": method == "hasHeader" || method == "skipResult";
+			case "ReportTools": method == "hasHeader" || method == "skipResult" || method == "hasOutput";
 			case _:
 				false;
 		};
+	}
+
+	static function isCppReportSupportClass(cls:HxClassDecl):Bool {
+		if (cls == null)
+			return false;
+		return switch (sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls)))) {
+			case "Report" | "PrintReport":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function renderCppReportSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		return switch (sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls)))) {
+			case "Report":
+				renderCppReportClass(cls, classLookup);
+			case "PrintReport":
+				renderCppPrintReportClass(cls, classLookup);
+			case _:
+				[];
+		};
+	}
+
+	static function renderCppReportClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final out = [
+			"struct Report {",
+			"  std::shared_ptr<Runner> runner = nullptr;",
+			"  std::string displayHeader = std::string();",
+			"  std::string displaySuccessResults = std::string();",
+			"  Report() {}",
+			"  Report(std::shared_ptr<Runner> runner) : runner(runner) {}"
+		];
+		for (fn in HxClassDecl.getFunctions(cls))
+			if (HxFunctionDecl.getName(fn) != "new")
+				for (line in renderHelperMethod(fn, cls, classLookup))
+					out.push(line);
+		out.push("};");
+		return out;
+	}
+
+	static function renderCppPrintReportClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final out = [
+			"struct PrintReport : public PlainTextReport {",
+			"  PrintReport(std::shared_ptr<Runner> runner) : PlainTextReport(runner, [](std::shared_ptr<PlainTextReport> report) { (void)report; }) {",
+			"    this->newline = \"\\n\";",
+			"    this->indent = \"  \";",
+			"  }"
+		];
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			if (method == "new")
+				continue;
+			switch (method) {
+				case "_handler":
+					out.push("  void _handler(std::shared_ptr<PlainTextReport> report) {");
+					out.push("    (void)report;");
+					out.push("  }");
+				case "_trace" | "_print":
+					final scope = renderScope(cls, classLookup, "void");
+					prepareFunctionScope(scope, fn);
+					out.push("  void " + method + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
+					for (arg in HxFunctionDecl.getArgs(fn))
+						out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+					out.push("  }");
+				case _:
+					for (line in renderHelperMethod(fn, cls, classLookup))
+						out.push(line);
+			}
+		}
+		out.push("};");
+		return out;
 	}
 
 	static function isTypeToolsFindFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
@@ -8902,11 +8976,13 @@ class CppTargetCore {
 				"void";
 			case "Report.create":
 				"std::shared_ptr<IReport<std::string>>";
-			case "ReportTools.hasHeader" | "ReportTools.skipResult":
+			case "ReportTools.hasHeader" | "ReportTools.skipResult" | "ReportTools.hasOutput":
 				"bool";
 			case _:
 				"std::string";
 		};
+		if (ownerName == "ReportTools")
+			return renderCppReportToolsHelper(fn, owner, classLookup, returnType);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
@@ -8929,6 +9005,30 @@ class CppTargetCore {
 		} else if (returnType != "void") {
 			out.push("    return nullptr;");
 		}
+		out.push("  }");
+		return out;
+	}
+
+	static function renderCppReportToolsHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup, returnType:String):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final args = HxFunctionDecl.getArgs(fn);
+		final statsType = args.length > 1 ? cppFunctionArgType(args[1], renderScope(owner, classLookup, returnType)) : "std::shared_ptr<ResultStats>";
+		final out = ["  template<typename TReport>",
+			"  static "
+			+ returnType
+			+ " "
+			+ method
+			+ "(TReport report, "
+			+ statsType
+			+ " stats"
+			+ (method == "skipResult" ? ", bool isOk" : "")
+			+ ") {",
+			"    (void)report;",
+			"    (void)stats;"
+		];
+		if (method == "skipResult")
+			out.push("    (void)isOk;");
+		out.push("    return false;");
 		out.push("  }");
 		return out;
 	}

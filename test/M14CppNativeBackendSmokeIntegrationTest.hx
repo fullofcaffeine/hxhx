@@ -3345,13 +3345,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], "Bool",
 				[SReturn(EUnop("!", EIdent("isOk")), HxPos.unknown())], "", ["__hxhx_fn_type_params=T"])
 		], []);
+		final printReportOwner = new HxClassDecl("PrintReport", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("runner", "Runner", NoDefault, false, false)], "Void",
+				[SExpr(ECall(ESuper, [EIdent("runner"), EIdent("_handler")]), HxPos.unknown())], ""),
+			new HxFunctionDecl("_handler", Public, false, [new HxFunctionArg("report", "PlainTextReport", NoDefault, false, false)], "Void", [
+				SExpr(ECall(EIdent("_trace"), [ECall(EField(EIdent("report"), "getResults"), [])]), HxPos.unknown())
+			],
+				""),
+			new HxFunctionDecl("_trace", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Void",
+				[SExpr(ECall(EIdent("print"), [EIdent("s")]), HxPos.unknown())], "")
+		], [], "PlainTextReport");
 		for (name in ["Lib", "Bytes", "Report", "ReportTools", "PrintReport"])
 			utestResultNames.set(name, true);
 		utestResultClasses.set("Lib", libOwner);
 		utestResultClasses.set("Report", reportOwner);
 		utestResultClasses.set("ReportTools", reportToolsOwner);
 		utestResultClasses.set("Bytes", new HxClassDecl("Bytes", false, [], []));
-		utestResultClasses.set("PrintReport", new HxClassDecl("PrintReport", false, [], []));
+		utestResultClasses.set("PrintReport", printReportOwner);
 		final libLines = [
 			for (fn in HxClassDecl.getFunctions(libOwner))
 				@:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, libOwner, {
@@ -3370,16 +3380,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 					byName: utestResultClasses
 				}).join("\n")
 		].join("\n");
+		final reportClassLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(reportOwner, {
+			names: utestResultNames,
+			byName: utestResultClasses
+		}).join("\n");
+		final printReportClassLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(printReportOwner, {
+			names: utestResultNames,
+			byName: utestResultClasses
+		}).join("\n");
 		assertContains(libLines, "static std::string loadLazy(std::string lib, std::string prim, int nargs)",
 			"C++ Lib.loadLazy should stay callable while hxcpp primitive lookup is unsupported");
 		assertContains(libLines, "static std::shared_ptr<Bytes> bytesReference(std::string s)", "C++ Lib.bytesReference should keep bytes pointer shape");
 		assertTrue(libLines.indexOf("__global__") < 0, "C++ Lib helpers should not emit unsupported __global__ dynamic primitive calls");
 		assertTrue(libLines.indexOf("__unsafeStringReference") < 0, "C++ Lib.bytesReference should not emit unsupported vector string reference calls");
+		assertContains(reportClassLines, "std::string displayHeader", "C++ Report should expose display mode fields used by unit main");
+		assertContains(reportClassLines, "Report(std::shared_ptr<Runner> runner)", "C++ Report should accept direct runner construction");
 		assertContains(reportLines, "static std::shared_ptr<IReport<std::string>> create", "C++ Report.create should preserve report factory return shape");
 		assertContains(reportLines, "return nullptr;", "C++ Report.create should avoid assigning PrintReport through non-inherited IReport");
-		assertContains(reportToolsLines, "static bool hasHeader", "C++ ReportTools.hasHeader should return Bool, not String");
-		assertContains(reportToolsLines, "static bool skipResult", "C++ ReportTools.skipResult should return Bool");
+		assertContains(reportToolsLines, "template<typename TReport>\n  static bool hasHeader(TReport report",
+			"C++ ReportTools.hasHeader should avoid undeclared generic IReport payloads");
+		assertContains(reportToolsLines, "template<typename TReport>\n  static bool skipResult(TReport report",
+			"C++ ReportTools.skipResult should avoid undeclared generic IReport payloads");
+		assertContains(printReportClassLines, "PlainTextReport(runner, [](std::shared_ptr<PlainTextReport> report)",
+			"C++ PrintReport should pass a callable handler rather than an unbound member method");
+		assertTrue(printReportClassLines.indexOf("PlainTextReport(runner, _handler)") < 0,
+			"C++ PrintReport should not emit invalid member-function callback syntax");
 		assertTrue(reportToolsLines.indexOf("displayHeader") < 0, "C++ ReportTools helpers should not read fields through generic IReport");
+		assertTrue(reportToolsLines.indexOf("TDynamic") < 0, "C++ ReportTools helpers should not emit undeclared TDynamic placeholders");
 		final classTypeCarrier = new HxClassDecl("ClassType", false, [], [
 			new HxFieldDecl("fields", Public, false, "Ref<Array<ClassField>>", null),
 			new HxFieldDecl("statics", Public, false, "Ref<Array<ClassField>>", null),
