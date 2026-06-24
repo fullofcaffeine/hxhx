@@ -2419,6 +2419,7 @@ class CppTargetCore {
 			typeParams: typeParams,
 			typeParamCppNames: typeParamCppNames,
 			localTypes: new haxe.ds.StringMap<String>(),
+			localTypeHints: new haxe.ds.StringMap<String>(),
 			localNames: new haxe.ds.StringMap<String>(),
 			localNameCounts: new haxe.ds.StringMap<Int>(),
 			argTypeOverrides: new haxe.ds.StringMap<String>(),
@@ -2434,6 +2435,7 @@ class CppTargetCore {
 		for (arg in args) {
 			final name = sanitizeIdentifier(HxFunctionArg.getName(arg));
 			scope.localTypes.set(name, cppFunctionArgType(arg, scope));
+			recordLocalTypeHint(scope, name, HxFunctionArg.getTypeHint(arg));
 			scope.localNames.set(name, name);
 			scope.localNameCounts.set(name, 1);
 		}
@@ -4119,6 +4121,8 @@ class CppTargetCore {
 		}
 		final hadPrevious = scope.localTypes.exists(name);
 		final previous = hadPrevious ? scope.localTypes.get(name) : "";
+		final hadPreviousHint = scope.localTypeHints.exists(name);
+		final previousHint = hadPreviousHint ? scope.localTypeHints.get(name) : "";
 		final hadPreviousName = scope.localNames.exists(name);
 		final previousName = hadPreviousName ? scope.localNames.get(name) : "";
 		if (typeName != null && typeName.length > 0)
@@ -4129,6 +4133,10 @@ class CppTargetCore {
 			scope.localTypes.set(name, previous);
 		else
 			scope.localTypes.remove(name);
+		if (hadPreviousHint)
+			scope.localTypeHints.set(name, previousHint);
+		else
+			scope.localTypeHints.remove(name);
 		if (hadPreviousName)
 			scope.localNames.set(name, previousName);
 		else
@@ -4318,8 +4326,10 @@ class CppTargetCore {
 				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
 					scope) : renderLocalInitExpr(init, declaredType, localType, scope);
 				final localName = declareLocalName(name, scope);
-				if (scope != null)
+				if (scope != null) {
 					scope.localTypes.set(sanitizeIdentifier(name), localType);
+					recordLocalTypeHint(scope, sanitizeIdentifier(name), typeHint);
+				}
 				[indent + declaredType + " " + localName + " = " + rhs + ";"];
 			case SReturn(expr, _):
 				[indent + returnStmtForExpr(expr, scope)];
@@ -5305,6 +5315,9 @@ class CppTargetCore {
 		final receiverTypeName = staticReceiverClassName(receiver, scope);
 		final receiverCppType = exprCppType(receiver, scope);
 		final renderedArgs = renderFieldCallArgs(receiverCppType, method, args, scope).join(", ");
+		final primitiveAbstractCall = primitiveBackedAbstractMethodCallExpr(receiver, method, args, scope);
+		if (primitiveAbstractCall != null)
+			return primitiveAbstractCall;
 		if (method == "push" && isCppVectorType(receiverCppType))
 			return renderExpr(receiver, scope) + ".push_back(" + renderedArgs + ")";
 		if (isCppVectorType(receiverCppType)) {
@@ -6157,6 +6170,19 @@ class CppTargetCore {
 		return primitiveBackedAbstractGetterExpr(receiver, getter, underlying, scope);
 	}
 
+	static function primitiveBackedAbstractMethodCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (method != "get" || args.length != 0)
+			return null;
+		final cls = primitiveBackedAbstractClassForExpr(receiver, scope);
+		if (cls == null)
+			return null;
+		final getter = classMethodDecl(sanitizeTypePath(HxClassDecl.getName(cls)), "get", false, scope);
+		if (getter == null)
+			return null;
+		final underlying = primitiveAbstractUnderlyingCppType(cls);
+		return underlying == null || underlying.length == 0 ? null : renderExpr(receiver, scope);
+	}
+
 	static function primitiveBackedAbstractGetterExpr(receiver:HxExpr, getter:HxFunctionDecl, underlying:String, ?scope:CppRenderScope):Null<String> {
 		final body = HxFunctionDecl.getBody(getter);
 		if (body.length != 1)
@@ -6199,12 +6225,23 @@ class CppTargetCore {
 		return cls != null && primitiveAbstractUnderlyingCppType(cls) != null ? cls : null;
 	}
 
+	static function recordLocalTypeHint(scope:CppRenderScope, name:String, typeHint:String):Void {
+		if (scope == null || name == null || name.length == 0)
+			return;
+		final hint = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (hint.length > 0)
+			scope.localTypeHints.set(name, hint);
+	}
+
 	static function exprHaxeTypeHint(expr:HxExpr, scope:CppRenderScope):String {
 		return switch (expr) {
 			case ECast(inner, _) | EUntyped(inner):
 				exprHaxeTypeHint(inner, scope);
 			case EThis:
 				HxClassDecl.getName(scope.owner);
+			case EIdent(name):
+				final hint = scope.localTypeHints.get(sanitizeIdentifier(name));
+				hint == null ? "" : hint;
 			case ENew(typePath, _):
 				typePath;
 			case EField(receiver, field):

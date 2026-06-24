@@ -4072,6 +4072,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final nativeArrayLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(nativeArrayExtern, stdVectorLookup).join("\n");
 		assertTrue(nativeArrayLines.length == 0, "C++ cpp.NativeArray is an extern/intrinsic surface and should not emit a fake helper struct");
 		final primitiveAbstract = new HxClassDecl("Int32", false, [
+			new HxFunctionDecl("get", Public, false, [], "Int", [SReturn(EThis, HxPos.unknown())], ""),
 			new HxFunctionDecl("negate", Public, false, [], "Int32", [SReturn(EUnop("~", EThis), HxPos.unknown())], ""),
 			new HxFunctionDecl("ucompare", Public, true, [
 				new HxFunctionArg("a", "Int32", NoDefault, false, false),
@@ -4079,10 +4080,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], "Int",
 				[SReturn(EBinop("-", EIdent("a"), EIdent("b")), HxPos.unknown())], "")
 		], [], "", []);
+		final primitiveOwner = new HxClassDecl("PrimitiveOwner", false, [
+			new HxFunctionDecl("fromValue", Public, true, [new HxFunctionArg("m", "Int32", NoDefault, false, false)], "Int",
+				[SReturn(ECall(EField(EIdent("m"), "get"), []), HxPos.unknown())], "")
+		], []);
 		final primitiveNames = new StringMap<Bool>();
 		primitiveNames.set("Int32", true);
+		primitiveNames.set("PrimitiveOwner", true);
 		final primitiveClasses = new StringMap<HxClassDecl>();
 		primitiveClasses.set("Int32", primitiveAbstract);
+		primitiveClasses.set("PrimitiveOwner", primitiveOwner);
 		final primitiveLookup = {names: primitiveNames, byName: primitiveClasses};
 		final primitiveLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(primitiveAbstract, primitiveLookup).join("\n");
 		assertContains(primitiveLines, "static int ucompare(int a, int b) {",
@@ -4093,6 +4100,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ primitive-backed abstract helpers should not emit instance wrapper methods that require abstract this semantics");
 		assertTrue(primitiveLines.indexOf("std::shared_ptr<Int32>") < 0,
 			"C++ primitive-backed abstracts should not leak shared_ptr wrapper types into helper signatures");
+		final primitiveOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(primitiveOwner)[0], primitiveOwner, primitiveLookup).join("\n");
+		assertContains(primitiveOwnerLines, "static int fromValue(int m) {",
+			"C++ primitive-backed abstract parameters should erase to the underlying primitive type");
+		assertContains(primitiveOwnerLines, "return static_cast<int>(m);",
+			"C++ primitive-backed abstract get() calls should return the already-erased primitive value");
+		assertTrue(primitiveOwnerLines.indexOf("m.get()") < 0, "C++ primitive-backed abstract get() calls should not emit member access on primitive values");
 		final stringPrimitiveAbstract = new HxClassDecl("StringBackedFixture", false, [
 			new HxFunctionDecl("NotIgnored", Public, true, [], "StringBackedFixture", [SReturn(ENew("StringBackedFixture", [ENull]), HxPos.unknown())], ""),
 			new HxFunctionDecl("Ignored", Public, true, [new HxFunctionArg("reason", "String", NoDefault, false, false)], "StringBackedFixture",

@@ -13,6 +13,7 @@ typedef CppRenderScope = {
 	var typeParams:Array<String>;
 	var typeParamCppNames:haxe.ds.StringMap<String>;
 	var localTypes:haxe.ds.StringMap<String>;
+	var localTypeHints:haxe.ds.StringMap<String>;
 	var localNames:haxe.ds.StringMap<String>;
 	var localNameCounts:haxe.ds.StringMap<Int>;
 	var argTypeOverrides:haxe.ds.StringMap<String>;
