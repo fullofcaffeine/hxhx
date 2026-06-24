@@ -6232,6 +6232,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertContains(vendorTemplateSource, "struct Template {", "C++ smoke should emit upstream haxe.Template as a helper");
 			assertContains(vendorTemplateSource, "std::shared_ptr<TemplateExpr> parse(",
 				"C++ smoke should keep Template.parse return typing concrete without recursive inference");
+			assertContains(vendorTemplateSource, "inline static std::string globals = std::string();",
+				"C++ smoke should keep Template.globals as a neutral string field");
+			assertContains(vendorTemplateSource, "inline static std::vector<std::string> hxKeepArrayIterator = {};",
+				"C++ smoke should keep Template.hxKeepArrayIterator as a neutral vector field");
+			assertContains(vendorTemplateSource, "Template(std::string str) {",
+				"C++ smoke should keep Template construction available without compiling parser internals");
+			assertContains(vendorTemplateSource, "(void)str;", "C++ smoke should neutralize Template constructor internals while preserving the signature");
+			assertContains(vendorTemplateSource, "std::function<std::string()> parseExpr(std::string data) {",
+				"C++ smoke should keep Template.parseExpr callable shape concrete");
+			assertTrue(vendorTemplateSource.indexOf("std::to_string(__hxhx_anon") < 0,
+				"C++ smoke should not stringify anonymous Template.globals initializers");
+			assertTrue(vendorTemplateSource.indexOf("std::vector<int>{}.iterator()") < 0,
+				"C++ smoke should not emit invalid Template iterator placeholder expressions");
+			assertTrue(vendorTemplateSource.indexOf("tokens->first().s") < 0,
+				"C++ smoke should not compile optional Token parser internals into the Template support shim");
 		}
 		final vendorReadOnlyArrayProgram = vendorReadOnlyArrayProgramWhenAvailable();
 		if (vendorReadOnlyArrayProgram != null) {

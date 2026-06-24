@@ -1655,6 +1655,8 @@ class CppTargetCore {
 			return renderStdArrayHelperClass(cls, classLookup);
 		if (isCppReportSupportClass(cls))
 			return renderCppReportSupportClass(cls, classLookup);
+		if (isTemplateSupportClass(cls))
+			return renderTemplateSupportClass(cls, classLookup);
 		final typeParams = genericClassTemplateParams(cls);
 		final baseType = inheritedCppBaseTypeName(cls, classLookup);
 		final baseTypes = inheritedCppBaseTypes(cls, classLookup);
@@ -1838,6 +1840,79 @@ class CppTargetCore {
 		}
 		out.push("};");
 		return out;
+	}
+
+	static function isTemplateSupportClass(cls:HxClassDecl):Bool {
+		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Template";
+	}
+
+	static function renderTemplateSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final scope = renderScope(cls, classLookup, "void");
+		final out = ["struct " + className + " {"];
+		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = HxFieldDecl.getName(field);
+			final typeName = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
+			final rhs = templateFieldInitExpr(fieldName, typeName, HxFieldDecl.getInit(field), scope);
+			final prefix = HxFieldDecl.getIsStatic(field) ? "  inline static " : "  ";
+			out.push(prefix + typeName + " " + sanitizeIdentifier(fieldName) + " = " + rhs + ";");
+		}
+		final ctor = findConstructor(cls);
+		if (ctor == null) {
+			out.push("  " + className + "() {}");
+		} else {
+			prepareFunctionScope(scope, ctor);
+			out.push("  " + className + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(ctor), scope) + ") {");
+			for (line in renderTemplateUnusedArgs(HxFunctionDecl.getArgs(ctor)))
+				out.push(line);
+			out.push("  }");
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getName(fn) == "new")
+				continue;
+			for (line in renderTemplateNeutralMethod(fn, cls, classLookup))
+				out.push(line);
+		}
+		out.push("};");
+		return out;
+	}
+
+	static function templateFieldInitExpr(fieldName:String, typeName:String, init:Null<HxExpr>, scope:CppRenderScope):String {
+		return switch (sanitizeIdentifier(fieldName == null ? "" : fieldName)) {
+			case "globals":
+				"std::string()";
+			case "hxKeepArrayIterator":
+				"{}";
+			case "context" | "macros":
+				"std::string()";
+			case _:
+				init == null ? cppDefaultValue(typeName, scope) : renderLocalInitExpr(init, typeName, typeName, scope);
+		};
+	}
+
+	static function renderTemplateNeutralMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		final out = new Array<String>();
+		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
+		if (methodTypeParams.length > 0)
+			out.push("  " + genericTemplatePrefix(methodTypeParams));
+		out.push("  " + (HxFunctionDecl.getIsStatic(fn) ? "static " : "") + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
+		for (line in renderTemplateUnusedArgs(HxFunctionDecl.getArgs(fn)))
+			out.push(line);
+		if (returnType != "void")
+			out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		out.push("  }");
+		return out;
+	}
+
+	static function renderTemplateUnusedArgs(args:Array<HxFunctionArg>):Array<String> {
+		return [
+			for (arg in args)
+				"    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";"
+		];
 	}
 
 	static function renderPosInfosClass():Array<String> {
@@ -2099,6 +2174,16 @@ class CppTargetCore {
 			return "std::function<void()>";
 		if (isStringIteratorHelper(owner) && (field == "offset" || field == "byteOffset" || field == "charOffset"))
 			return "int";
+		if (owner == "Template") {
+			return switch (field) {
+				case "globals" | "context" | "macros":
+					"std::string";
+				case "hxKeepArrayIterator":
+					"std::vector<std::string>";
+				case _:
+					cppTypeHint(typeHint, scope);
+			}
+		}
 		if (field == "winMetaCharacters" && (owner == "SysTools" || owner == "StringTools"))
 			return "std::vector<int>";
 		if (field == "__hx_enum_ctors" || isEnumMetadataAnonInit(init)) {
