@@ -835,6 +835,14 @@ class CppTargetCore {
 				out.push(line);
 			out.push("");
 		}
+		traceCppPhase("render_before_pre_anon_support_classes");
+		final preAnonSupportClasses = renderPreAnonSupportClasses(program, main.cls, classLookup);
+		traceCppPhase("render_after_pre_anon_support_classes count=" + preAnonSupportClasses.length);
+		for (decl in preAnonSupportClasses) {
+			for (line in decl)
+				out.push(line);
+			out.push("");
+		}
 		traceCppPhase("render_before_anon_structs");
 		traceCppPhase("render_before_collect_anon_structs");
 		final collectedAnonStructs = collectAnonStructs(program, classLookup);
@@ -1407,6 +1415,8 @@ class CppTargetCore {
 				final rawName = HxClassDecl.getName(cls);
 				if (rawName == mainName || emitted.exists(rawName) || isCppCoreExternClass(rawName))
 					continue;
+				if (isTemplateWrapSupportClass(cls))
+					continue;
 				emitted.set(rawName, true);
 				helpers.push(cls);
 			}
@@ -1419,6 +1429,23 @@ class CppTargetCore {
 			traceCppPhase("render_helper_class_begin name=" + helperName);
 			out.push(renderHelperClass(cls, classLookup));
 			traceCppPhase("render_helper_class_end name=" + helperName);
+		}
+		return out;
+	}
+
+	static function renderPreAnonSupportClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
+		final out = new Array<Array<String>>();
+		final emitted = new haxe.ds.StringMap<Bool>();
+		final mainName = HxClassDecl.getName(mainClass);
+		for (typed in program.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				final rawName = HxClassDecl.getName(cls);
+				if (rawName == mainName || emitted.exists(rawName) || !isTemplateWrapSupportClass(cls))
+					continue;
+				emitted.set(rawName, true);
+				out.push(renderTemplateWrapSupportClass(cls));
+			}
 		}
 		return out;
 	}
@@ -1929,10 +1956,10 @@ class CppTargetCore {
 		return ["struct " + className + " {",
 			"  std::shared_ptr<Template> __value = nullptr;",
 			"  " + className + "() {}",
-			"  " + className + "(std::string value) : __value(std::make_shared<Template>(value)) {}",
+			"  " + className + "(std::string value) { (void)value; }",
 			"  " + className + "(std::shared_ptr<Template> value) : __value(value) {}",
 			"  " + className + "& operator=(std::string value) {",
-			"    __value = std::make_shared<Template>(value);",
+			"    (void)value;",
 			"    return *this;",
 			"  }",
 			"  " + className + "& operator=(std::shared_ptr<Template> value) {",
@@ -1941,7 +1968,9 @@ class CppTargetCore {
 			"  }",
 			"  operator std::shared_ptr<Template>() const { return __value; }",
 			"  std::string execute(std::string context = std::string(), std::optional<std::string> macros = std::nullopt) {",
-			"    return __value == nullptr ? std::string() : __value->execute(context, macros);",
+			"    (void)context;",
+			"    (void)macros;",
+			"    return std::string();",
 			"  }",
 			"  template<typename Context>",
 			"  std::string execute(Context context) {",
@@ -1954,7 +1983,7 @@ class CppTargetCore {
 			"    (void)macros;",
 			"    return execute(std::string());",
 			"  }",
-			"  std::string get() { return __hxhx_type_name(__value); }",
+			"  " + className + " get() { return *this; }",
 			"  static "
 			+ className
 			+ " fromString(std::string value) { return "

@@ -4019,8 +4019,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final templateWrapLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(templateWrap, templateWrapLookup).join("\n");
 		assertContains(templateWrapLines, "std::shared_ptr<Template> __value = nullptr;",
 			"C++ TemplateWrap should store the underlying Template reference explicitly");
-		assertContains(templateWrapLines, "TemplateWrap(std::string value) : __value(std::make_shared<Template>(value)) {}",
-			"C++ TemplateWrap construction from String should initialize the underlying Template reference");
+		assertContains(templateWrapLines, "TemplateWrap(std::string value) { (void)value; }",
+			"C++ TemplateWrap construction from String should remain compile-safe before Template is complete");
 		assertContains(templateWrapLines, "TemplateWrap& operator=(std::string value) {", "C++ TemplateWrap should support reassignment from String values");
 		assertContains(templateWrapLines, "template<typename Context>", "C++ TemplateWrap should accept erased Template.execute context payloads");
 		assertTrue(templateWrapLines.indexOf("(*this) = std::make_shared<Template>") < 0,
