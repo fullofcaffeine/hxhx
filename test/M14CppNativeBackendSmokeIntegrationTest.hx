@@ -4095,6 +4095,69 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ locals typed as TemplateWrap should use the value wrapper instead of std::shared_ptr<TemplateWrap>");
 		assertContains(templateWrapOwnerLines, "return __hxhx_stringify(tpl.execute(\"ok\"));",
 			"C++ TemplateWrap locals should call execute through value access");
+		final point3Class = new HxClassDecl("MyPoint3", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("x", "Float", NoDefault, false, false),
+				new HxFunctionArg("y", "Float", NoDefault, false, false),
+				new HxFunctionArg("z", "Float", NoDefault, false, false)
+			], "Void", [
+				SExpr(EBinop("=", EField(EThis, "x"), EIdent("x")), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EThis, "y"), EIdent("y")), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EThis, "z"), EIdent("z")), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("x", Public, false, "Float", null),
+			new HxFieldDecl("y", Public, false, "Float", null),
+			new HxFieldDecl("z", Public, false, "Float", null)
+		]);
+		final vectorAbstract = new HxClassDecl("MyVector", false, [
+			new HxFunctionDecl("add", Public, true, [
+				new HxFunctionArg("lhs", "MyVector", NoDefault, false, false),
+				new HxFunctionArg("rhs", "MyVector", NoDefault, false, false)
+			], "MyVector", [
+				SReturn(ENew("MyPoint3", [
+					EBinop("+", EField(EIdent("lhs"), "x"), EField(EIdent("rhs"), "x")),
+					EBinop("+", EField(EIdent("lhs"), "y"), EField(EIdent("rhs"), "y")),
+					EBinop("+", EField(EIdent("lhs"), "z"), EField(EIdent("rhs"), "z"))
+				]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("scalarAssign", Public, true, [
+				new HxFunctionArg("lhs", "MyVector", NoDefault, false, false),
+				new HxFunctionArg("rhs", "Float", NoDefault, false, false)
+			], "MyVector", [
+				SExpr(EBinop("*=", EField(EIdent("lhs"), "x"), EIdent("rhs")), HxPos.unknown()),
+				SExpr(EBinop("*=", EField(EIdent("lhs"), "y"), EIdent("rhs")), HxPos.unknown()),
+				SExpr(EBinop("*=", EField(EIdent("lhs"), "z"), EIdent("rhs")), HxPos.unknown()),
+				SReturn(EIdent("lhs"), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("get", Public, false, [], "MyPoint3", [SReturn(EThis, HxPos.unknown())], "")
+		], [
+			new HxFieldDecl("x", Public, false, "Float", null),
+			new HxFieldDecl("y", Public, false, "Float", null),
+			new HxFieldDecl("z", Public, false, "Float", null)
+		], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=MyPoint3"]);
+		final vectorNames = new StringMap<Bool>();
+		for (name in ["MyPoint3", "MyVector"])
+			vectorNames.set(name, true);
+		final vectorClasses = new StringMap<HxClassDecl>();
+		vectorClasses.set("MyPoint3", point3Class);
+		vectorClasses.set("MyVector", vectorAbstract);
+		final vectorLookup = {names: vectorNames, byName: vectorClasses};
+		final vectorLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(vectorAbstract, vectorLookup).join("\n");
+		assertContains(vectorLines, "static std::shared_ptr<MyPoint3> add(std::shared_ptr<MyVector> lhs, std::shared_ptr<MyVector> rhs) {",
+			"C++ class-backed abstract static returns should use the underlying class pointer");
+		assertContains(vectorLines, "return std::make_shared<MyPoint3>(((lhs->x) + (rhs->x)), ((lhs->y) + (rhs->y)), ((lhs->z) + (rhs->z)));",
+			"C++ class-backed abstract returns should accept newly constructed underlying values");
+		assertContains(vectorLines, "static std::shared_ptr<MyPoint3> scalarAssign(std::shared_ptr<MyVector> lhs, double rhs) {",
+			"C++ class-backed abstract mutation helpers should return the underlying class pointer");
+		assertContains(vectorLines, "return std::make_shared<MyPoint3>(lhs->x, lhs->y, lhs->z);",
+			"C++ class-backed abstract locals should convert to the underlying class through constructor fields");
+		assertContains(vectorLines, "std::shared_ptr<MyPoint3> get() {", "C++ class-backed abstract get helpers should preserve underlying returns");
+		assertContains(vectorLines, "return std::make_shared<MyPoint3>(this->x, this->y, this->z);",
+			"C++ class-backed abstract self should convert to the underlying class through constructor fields");
+		assertTrue(vectorLines.indexOf("static std::shared_ptr<MyVector> add") < 0,
+			"C++ class-backed abstract operators should not require shared_ptr<MyPoint3> to shared_ptr<MyVector> conversion");
+		assertTrue(vectorLines.indexOf("return (*this);") < 0, "C++ class-backed abstract self returns should not emit value-to-shared_ptr conversions");
 		final stdVector = new HxClassDecl("Vector", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("length", "Int", NoDefault, false, false)], "Void", [], "")
 		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=VectorData<T>"]);

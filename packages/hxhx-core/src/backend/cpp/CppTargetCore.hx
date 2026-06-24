@@ -4714,6 +4714,9 @@ class CppTargetCore {
 		final macroApiCall = macroApiCallExprForExpected(expr, expectedType, scope);
 		if (macroApiCall != null)
 			return macroApiCall;
+		final abstractUnderlying = abstractUnderlyingValueExprForExpectedType(expr, expectedType, scope);
+		if (abstractUnderlying != null)
+			return abstractUnderlying;
 		final typedEnum = enumCtorExprForExpectedType(expr, expectedType, scope);
 		if (typedEnum != null)
 			return typedEnum;
@@ -4774,6 +4777,50 @@ class CppTargetCore {
 			case _:
 		}
 		return renderExpr(expr, scope);
+	}
+
+	static function abstractUnderlyingValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || expectedType == null || expectedType.length == 0)
+			return null;
+		final expectedClass = classNameFromCppType(expectedType);
+		if (expectedClass == null || expectedClass.length == 0)
+			return null;
+		final sourceClass = switch (expr) {
+			case EThis:
+				scope.owner == null ? "" : sanitizeTypePath(HxClassDecl.getName(scope.owner));
+			case EIdent(_):
+				final className = classNameFromCppExprType(exprCppType(expr, scope), scope);
+				className == null ? "" : sanitizeTypePath(typeBaseName(className));
+			case _:
+				"";
+		}
+		if (sourceClass.length == 0)
+			return null;
+		final sourceDecl = scope.classByName.get(sourceClass);
+		if (!classAbstractUnderlyingMatches(sourceDecl, expectedClass, scope))
+			return null;
+		final ctorArgs = classConstructorArgNames(expectedClass, scope);
+		if (ctorArgs.length == 0)
+			return null;
+		final receiver = switch (expr) {
+			case EThis:
+				"this";
+			case EIdent(name):
+				sanitizeIdentifier(name);
+			case _:
+				"";
+		}
+		final access = switch (expr) {
+			case EThis:
+				"->";
+			case EIdent(_):
+				isCppReferenceType(exprCppType(expr, scope)) ? "->" : ".";
+			case _:
+				"";
+		}
+		if (receiver.length == 0 || access.length == 0)
+			return null;
+		return "std::make_shared<" + expectedClass + ">(" + [for (arg in ctorArgs) receiver + access + arg].join(", ") + ")";
 	}
 
 	static function conditionExpr(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -9850,6 +9897,9 @@ class CppTargetCore {
 			return "std::any";
 		if (raw.length > 0) {
 			applyFunctionTypeParams(returnScope, fn);
+			final abstractReturn = abstractUnderlyingReturnCppType(raw, owner, returnScope, returnLookup);
+			if (abstractReturn.length > 0)
+				return abstractReturn;
 			return cppReturnTypeHint(raw, returnScope, returnLookup);
 		}
 		if (functionReturnsLambda(fn))
@@ -9869,6 +9919,49 @@ class CppTargetCore {
 		}
 		inferredSignatureStack.remove(key);
 		return functionHasValueReturn(fn) ? cppReturnTypeHint(raw, returnScope, {names: classNamesFromByName(classByName), byName: classByName}) : "void";
+	}
+
+	static function abstractUnderlyingReturnCppType(rawReturnHint:String, owner:HxClassDecl, scope:CppRenderScope, classLookup:CppClassLookup):String {
+		if (owner == null || rawReturnHint == null || rawReturnHint.length == 0)
+			return "";
+		final ownerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		final returnName = sanitizeTypePath(typeBaseName(rawReturnHint));
+		if (ownerName.length == 0 || ownerName != returnName || genericTypeHintArgs(rawReturnHint).length > 0)
+			return "";
+		final underlying = abstractUnderlyingTypeHint(owner);
+		if (underlying == null || genericTypeHintArgs(underlying).length > 0)
+			return "";
+		final underlyingClass = sanitizeTypePath(typeBaseName(underlying));
+		if (!classAbstractUnderlyingMatches(owner, underlyingClass, scope))
+			return "";
+		return cppReturnTypeHint(underlying, scope, classLookup);
+	}
+
+	static function classAbstractUnderlyingMatches(cls:HxClassDecl, expectedClass:String, scope:CppRenderScope):Bool {
+		if (cls == null || expectedClass == null || expectedClass.length == 0)
+			return false;
+		final underlying = abstractUnderlyingTypeHint(cls);
+		if (underlying == null || genericTypeHintArgs(underlying).length > 0)
+			return false;
+		final underlyingClass = sanitizeTypePath(typeBaseName(underlying));
+		if (underlyingClass != sanitizeTypePath(typeBaseName(expectedClass)))
+			return false;
+		return scope != null && scope.classByName.exists(underlyingClass);
+	}
+
+	static function classConstructorArgNames(className:String, scope:CppRenderScope):Array<String> {
+		if (scope == null || className == null || className.length == 0)
+			return [];
+		final cls = scope.classByName.get(sanitizeTypePath(typeBaseName(className)));
+		if (cls == null)
+			return [];
+		final ctor = findConstructor(cls);
+		if (ctor == null)
+			return [];
+		return [
+			for (arg in HxFunctionDecl.getArgs(ctor))
+				sanitizeIdentifier(HxFunctionArg.getName(arg))
+		];
 	}
 
 	static function inferredFunctionArgCppTypes(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>):Array<String> {
