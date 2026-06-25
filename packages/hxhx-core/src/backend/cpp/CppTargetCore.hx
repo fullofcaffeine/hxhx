@@ -7566,6 +7566,8 @@ class CppTargetCore {
 				}
 			case ECall(ELambda(lambdaArgs, body), args):
 				lambdaCallReturnCppType(lambdaArgs, body, args, scope);
+			case EBinop("=", left, _):
+				assignmentExpectedCppType(left, scope);
 			case EBinop(op, left, right) if (primitiveStringAbstractBinaryOpCppType(op, left, right, scope).length > 0):
 				primitiveStringAbstractBinaryOpCppType(op, left, right, scope);
 			case EBinop(op, left, right) if (classBackedAbstractBinaryOpCppType(op, left, right, scope).length > 0):
@@ -8339,6 +8341,8 @@ class CppTargetCore {
 				}
 			case ECall(ELambda(lambdaArgs, body), args):
 				lambdaCallReturnCppType(lambdaArgs, body, args, scope);
+			case EBinop("=", left, _):
+				assignmentExpectedCppType(left, scope);
 			case EBinop(op, left, right) if (primitiveStringAbstractBinaryOpCppType(op, left, right, scope).length > 0):
 				primitiveStringAbstractBinaryOpCppType(op, left, right, scope);
 			case EBinop(op, left, right) if (classBackedAbstractBinaryOpCppType(op, left, right, scope).length > 0):
@@ -9045,6 +9049,8 @@ class CppTargetCore {
 
 	static function propertySetterAssignmentExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
 		return switch (left) {
+			case EField(EThis, field) if (scopeOwnerIsHxhxAbstract(scope) && hasInstanceField(scope.owner, field)):
+				null;
 			case EField(receiver, field):
 				final receiverType = exprCppType(receiver, scope);
 				final setter = "set_" + sanitizeIdentifier(field);

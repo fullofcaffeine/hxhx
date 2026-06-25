@@ -4858,6 +4858,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 					HxPos.unknown())
 			],
 				""),
+			new HxFunctionDecl("set_x", Public, false, [new HxFunctionArg("x", "Float", NoDefault, false, false)], "",
+				[SReturn(EBinop("=", EField(EThis, "x"), EIdent("x")), HxPos.unknown())], ""),
+			new HxFunctionDecl("set_y", Public, false, [new HxFunctionArg("y", "Float", NoDefault, false, false)], "",
+				[SReturn(EBinop("=", EField(EThis, "y"), EIdent("y")), HxPos.unknown())], ""),
+			new HxFunctionDecl("set_z", Public, false, [new HxFunctionArg("z", "Float", NoDefault, false, false)], "",
+				[SReturn(EBinop("=", EField(EThis, "z"), EIdent("z")), HxPos.unknown())], ""),
 			new HxFunctionDecl("get", Public, false, [], "MyPoint3", [SReturn(EThis, HxPos.unknown())], ""),
 			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("(point)"), HxPos.unknown())], "")
 		], [
@@ -4884,6 +4890,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(vectorLines, "std::shared_ptr<MyPoint3> get() {", "C++ class-backed abstract get helpers should preserve underlying returns");
 		assertContains(vectorLines, "return std::make_shared<MyPoint3>(this->x, this->y, this->z);",
 			"C++ class-backed abstract self should convert to the underlying class through constructor fields");
+		assertContains(vectorLines, "double set_x(double x) {", "C++ class-backed abstract setters should infer assignment return types");
+		assertContains(vectorLines, "return this->x = x;", "C++ class-backed abstract setters should assign owned fields directly");
+		assertTrue(vectorLines.indexOf("std::to_string((*this).set_x(x))") < 0,
+			"C++ class-backed abstract setters should not stringify recursive setter calls");
+		assertTrue(vectorLines.indexOf("return (*this).set_x(x);") < 0, "C++ class-backed abstract setters should not recursively call themselves");
 		assertTrue(vectorLines.indexOf("static std::shared_ptr<MyVector> add") < 0,
 			"C++ class-backed abstract operators should not require shared_ptr<MyPoint3> to shared_ptr<MyVector> conversion");
 		assertTrue(vectorLines.indexOf("return (*this);") < 0, "C++ class-backed abstract self returns should not emit value-to-shared_ptr conversions");
