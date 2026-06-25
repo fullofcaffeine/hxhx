@@ -20,4 +20,5 @@ typedef CppRenderScope = {
 	var localTypeOverrides:haxe.ds.StringMap<String>;
 	var anonStructs:haxe.ds.StringMap<CppScopeAnonStruct>;
 	var returnType:String;
+	var returnOnlyTypeParamAuto:Bool;
 }

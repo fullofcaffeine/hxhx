@@ -4184,6 +4184,38 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unhinted property setter override args should inherit assignment target types from super fields");
 		assertTrue(superPropChildLines.indexOf("int set_prop(std::string v)") < 0,
 			"C++ unhinted property setter override args should not fall back to std::string when assigned to an Int super field");
+		final genericMergeOwner = new HxClassDecl("GenericMergeOwner", false, [
+			new HxFunctionDecl("merge", Public, true, [
+				new HxFunctionArg("a", "A", NoDefault, false, false),
+				new HxFunctionArg("b", "B", NoDefault, false, false)
+			], "C", [
+				SReturn(ECast(EAnon(["foo", "bar"], [EField(EIdent("a"), "foo"), EField(EIdent("b"), "bar")]), ""), HxPos.unknown())
+			], "", ["__hxhx_fn_type_params=A,B,C"]),
+			new HxFunctionDecl("testMergedConstraints", Public, false, [], "Void", [
+				SVar("a", "", ECall(EIdent("merge"), [EAnon(["foo"], [EInt(5)]), EAnon(["bar"], [EString("bar")])]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("HelperMacros"), "typeError"), [EField(EIdent("a"), "oh")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("notMerge", Public, true, [], "C", [SReturn(ENull, HxPos.unknown())], "", ["__hxhx_fn_type_params=C"])
+		]);
+		final genericMergeNames = new StringMap<Bool>();
+		genericMergeNames.set("GenericMergeOwner", true);
+		final genericMergeClasses = new StringMap<HxClassDecl>();
+		genericMergeClasses.set("GenericMergeOwner", genericMergeOwner);
+		final genericMergeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(genericMergeOwner,
+			{names: genericMergeNames, byName: genericMergeClasses})
+			.join("\n");
+		assertContains(genericMergeLines, "template<typename A, typename B>\n  static auto merge(A a, B b) {",
+			"C++ generic anonymous merge returns should use auto instead of an uninferable return-only template parameter");
+		assertContains(genericMergeLines, "std::decay_t<decltype((a.foo))> foo; std::decay_t<decltype((b.bar))> bar;",
+			"C++ generic anonymous merge returns should derive local result field types from generic field expressions");
+		assertTrue(genericMergeLines.indexOf("template<typename A, typename B, typename C>\n  static C merge") < 0,
+			"C++ generic anonymous merge returns should not expose return-only template parameters at call sites");
+		assertContains(genericMergeLines, "static std::nullptr_t notMerge() {",
+			"C++ no-arg generic null-return helpers should use a concrete nullptr type instead of an uninferable template return parameter");
+		assertContains(genericMergeLines, "return nullptr;", "C++ nullptr-shaped generic helpers should return nullptr instead of casting through int");
+		assertTrue(genericMergeLines.indexOf("a.oh") < 0, "C++ HelperMacros.typeError field probes should not force invalid field access to compile");
+		assertTrue(genericMergeLines.indexOf("template<typename C>\n  static C notMerge") < 0,
+			"C++ no-arg generic return helpers should not emit an uninferable C++ template");
 		final covBase = new HxClassDecl("CovBase", false, [
 			new HxFunctionDecl("covariant", Public, false, [], "CovBase", [SReturn(ENew("CovBase", []), HxPos.unknown())], "")
 		], []);

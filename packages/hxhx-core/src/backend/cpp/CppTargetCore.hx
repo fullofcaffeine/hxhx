@@ -2591,7 +2591,8 @@ class CppTargetCore {
 			argTypeOverrides: new haxe.ds.StringMap<String>(),
 			localTypeOverrides: new haxe.ds.StringMap<String>(),
 			anonStructs: new haxe.ds.StringMap<CppAnonStruct>(),
-			returnType: returnType
+			returnType: returnType,
+			returnOnlyTypeParamAuto: false
 		};
 	}
 
@@ -2626,6 +2627,8 @@ class CppTargetCore {
 	static function prepareFunctionScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
 		if (scope == null || fn == null)
 			return;
+		scope.returnOnlyTypeParamAuto = functionReturnTypeParamShouldUseAuto(HxFunctionDecl.getReturnTypeHint(fn), fn)
+			&& !functionReturnsOnlyNull(fn);
 		applyFunctionTypeParams(scope, fn);
 		final key = functionSignatureKey(scope.owner, fn);
 		final cached = functionScopePrepCache.get(key);
@@ -3457,6 +3460,47 @@ class CppTargetCore {
 			}
 		}
 		return out;
+	}
+
+	static function functionReturnTypeParamShouldUseAuto(rawReturn:String, fn:HxFunctionDecl):Bool {
+		final param = genericTypeParamName(rawReturn);
+		if (param.length == 0)
+			return false;
+		var declared = false;
+		for (candidate in genericFunctionTypeParams(fn))
+			if (sanitizeIdentifier(candidate) == sanitizeIdentifier(param))
+				declared = true;
+		if (!declared)
+			return false;
+		for (arg in HxFunctionDecl.getArgs(fn))
+			if (typeHintMentionsGenericParam(HxFunctionArg.getTypeHint(arg), param))
+				return false;
+		return true;
+	}
+
+	static function typeHintMentionsGenericParam(typeHint:String, param:String):Bool {
+		final cleanParam = sanitizeIdentifier(param);
+		if (cleanParam.length == 0)
+			return false;
+		final direct = genericTypeParamName(typeHint);
+		if (direct.length > 0)
+			return sanitizeIdentifier(direct) == cleanParam;
+		if (isFunctionTypeHint(typeHint)) {
+			for (part in splitTopLevelFunctionType(typeHint))
+				if (typeHintMentionsGenericParam(part, param))
+					return true;
+			return false;
+		}
+		if (isStructuralTypeHint(typeHint)) {
+			for (field in CppTypeModel.structuralTypeHintFields(typeHint))
+				if (typeHintMentionsGenericParam(field.typeHint, param))
+					return true;
+			return false;
+		}
+		for (arg in genericTypeHintArgs(typeHint))
+			if (typeHintMentionsGenericParam(arg, param))
+				return true;
+		return false;
 	}
 
 	static function cppTypeParamName(param:String, ?scope:CppRenderScope):String {
@@ -4523,6 +4567,32 @@ class CppTargetCore {
 		};
 	}
 
+	static function helperMacrosTypeErrorFieldProbeExpr(callee:HxExpr, args:Array<HxExpr>):Null<String> {
+		if (args == null || args.length != 1)
+			return null;
+		final method = switch (callee) {
+			case EField(EIdent("HelperMacros"), name):
+				name;
+			case EField(EField(EIdent("unit"), "HelperMacros"), name):
+				name;
+			case _:
+				return null;
+		};
+		return switch (args[0]) {
+			case EField(_, _) | EArrayAccess(_, _):
+				switch (method) {
+					case "typeError":
+						"true";
+					case "typeErrorText":
+						"std::string()";
+					case _:
+						null;
+				}
+			case _:
+				null;
+		};
+	}
+
 	static function collectSameOwnerDeclaredArgTypeOverrides(methodName:String, args:Array<HxExpr>, scope:CppRenderScope,
 			candidates:haxe.ds.StringMap<Bool>):Void {
 		final fn = currentOwnerMethod(methodName, scope);
@@ -5079,7 +5149,10 @@ class CppTargetCore {
 			case "std::string":
 				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
 			case "auto":
-				"return " + renderExpr(expr, scope) + ";";
+				final autoAnon = autoReturnAnonExpr(expr, scope);
+				"return " + (autoAnon == null ? renderExpr(expr, scope) : autoAnon) + ";";
+			case "std::nullptr_t":
+				"return nullptr;";
 			case CppMacroExpr.CPP_TYPE:
 				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isCppOptionalType(returnType)):
@@ -5124,6 +5197,56 @@ class CppTargetCore {
 	static function returnVoidStmt(?scope:CppRenderScope):String {
 		final returnType = scope == null ? "int" : scope.returnType;
 		return returnType == "void" ? "return;" : "return " + cppDefaultValue(returnType, scope) + ";";
+	}
+
+	static function autoReturnAnonExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || !scope.returnOnlyTypeParamAuto)
+			return null;
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner):
+				autoReturnAnonExpr(inner, scope);
+			case EAnon(fieldNames, fieldValues):
+				if (!anonNeedsLocalAutoReturn(fieldValues, scope)) null; else localAutoAnonExpr(fieldNames, fieldValues, scope);
+			case _:
+				null;
+		};
+	}
+
+	static function anonNeedsLocalAutoReturn(fieldValues:Array<HxExpr>, ?scope:CppRenderScope):Bool {
+		if (scope == null)
+			return false;
+		for (value in fieldValues) {
+			final typeName = exprCppType(value, scope);
+			if (typeName.length == 0 || isScopeTypeParam(typeName, scope) || isBareCppTypeParamName(typeName))
+				return true;
+			switch (value) {
+				case EField(receiver, _) if (isScopeTypeParam(exprCppType(receiver, scope), scope)
+					|| isBareCppTypeParamName(exprCppType(receiver, scope))):
+					return true;
+				case ECast(inner, _) | EUntyped(inner):
+					if (anonNeedsLocalAutoReturn([inner], scope))
+						return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function localAutoAnonExpr(fieldNames:Array<String>, fieldValues:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
+		final fields = new Array<String>();
+		final values = new Array<String>();
+		for (i in 0...count) {
+			final name = sanitizeIdentifier(fieldNames[i]);
+			final value = renderExpr(fieldValues[i], scope);
+			fields.push("std::decay_t<decltype(" + value + ")> " + name + ";");
+			values.push(value);
+		}
+		return "([&]() { struct __hxhx_auto_anon { "
+			+ fields.join(" ")
+			+ " }; return __hxhx_auto_anon{"
+			+ values.join(", ")
+			+ "}; })()";
 	}
 
 	static function optionalReturnExpr(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -5504,6 +5627,8 @@ class CppTargetCore {
 			case ECall(EField(EField(EIdent("unit"), "HelperMacros"), "typeError"), [EUnsupported(raw)])
 				if (raw != null && StringTools.startsWith(raw, "for_expr:")):
 				"true";
+			case ECall(callee, args) if (helperMacrosTypeErrorFieldProbeExpr(callee, args) != null):
+				helperMacrosTypeErrorFieldProbeExpr(callee, args);
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				renderExpr(args[2], scope);
 			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
@@ -11314,6 +11439,8 @@ class CppTargetCore {
 			return "std::any";
 		if (raw.length > 0) {
 			applyFunctionTypeParams(returnScope, fn);
+			if (functionReturnTypeParamShouldUseAuto(raw, fn))
+				return functionReturnsOnlyNull(fn) ? "std::nullptr_t" : "auto";
 			final abstractReturn = abstractUnderlyingReturnCppType(raw, owner, returnScope, returnLookup);
 			if (abstractReturn.length > 0)
 				return abstractReturn;
@@ -11525,6 +11652,53 @@ class CppTargetCore {
 			if (stmtHasValueReturn(stmt))
 				return true;
 		return false;
+	}
+
+	static function functionReturnsOnlyNull(fn:HxFunctionDecl):Bool {
+		var found = false;
+		for (stmt in HxFunctionDecl.getBody(fn)) {
+			final isNull = stmtReturnsOnlyNull(stmt);
+			if (isNull == null)
+				return false;
+			if (isNull)
+				found = true;
+		}
+		return found;
+	}
+
+	static function stmtReturnsOnlyNull(stmt:HxStmt):Null<Bool> {
+		return switch (stmt) {
+			case SReturn(ENull, _):
+				true;
+			case SBlock(stmts, _):
+				stmtsReturnOnlyNull(stmts);
+			case SIf(_, thenBranch, elseBranch, _): final thenNull = stmtReturnsOnlyNull(thenBranch); final elseNull = elseBranch == null ? false : stmtReturnsOnlyNull(elseBranch); thenNull == true && elseNull == true ? true : null;
+			case STry(tryBody, catches, _):
+				final tryNull = stmtReturnsOnlyNull(tryBody);
+				if (tryNull != true) null; else {
+					var ok = true;
+					for (c in catches)
+						if (stmtReturnsOnlyNull(c.body) != true)
+							ok = false;
+					ok ? true : null;
+				}
+			case SReturnVoid(_):
+				null;
+			case _:
+				false;
+		};
+	}
+
+	static function stmtsReturnOnlyNull(stmts:Array<HxStmt>):Null<Bool> {
+		var found = false;
+		for (stmt in stmts) {
+			final isNull = stmtReturnsOnlyNull(stmt);
+			if (isNull == null)
+				return null;
+			if (isNull)
+				found = true;
+		}
+		return found;
 	}
 
 	static function stmtHasValueReturn(stmt:HxStmt):Bool {
