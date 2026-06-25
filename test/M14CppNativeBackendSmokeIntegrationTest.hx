@@ -4154,6 +4154,37 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ string-returning super method calls should flow directly instead of std::to_string(std::string)");
 		assertTrue(superStringLines.indexOf("std::to_string(BaseString::toString())") < 0,
 			"C++ string-returning super method calls should not be wrapped in std::to_string");
+		final covBase = new HxClassDecl("CovBase", false, [
+			new HxFunctionDecl("covariant", Public, false, [], "CovBase", [SReturn(ENew("CovBase", []), HxPos.unknown())], "")
+		], []);
+		final covChild = new HxClassDecl("CovChild", false, [
+			new HxFunctionDecl("covariant", Public, false, [], "CovLeaf", [SReturn(ENew("CovLeaf", []), HxPos.unknown())], "")
+		], [], "CovBase");
+		final covLeaf = new HxClassDecl("CovLeaf", false, [], [], "CovBase");
+		final covInterface = new HxClassDecl("CovInterface", false, [new HxFunctionDecl("covariant", Public, false, [], "CovBase", [], "")], [], "", null,
+			true);
+		final covImpl = new HxClassDecl("CovImpl", false, [
+			new HxFunctionDecl("covariant", Public, false, [], "CovLeaf", [SReturn(ENew("CovLeaf", []), HxPos.unknown())], "")
+		], [], "", null, false, ["CovInterface"]);
+		final covNames = new StringMap<Bool>();
+		for (name in ["CovBase", "CovChild", "CovLeaf", "CovInterface", "CovImpl"])
+			covNames.set(name, true);
+		final covClasses = new StringMap<HxClassDecl>();
+		covClasses.set("CovBase", covBase);
+		covClasses.set("CovChild", covChild);
+		covClasses.set("CovLeaf", covLeaf);
+		covClasses.set("CovInterface", covInterface);
+		covClasses.set("CovImpl", covImpl);
+		final covLookup = {names: covNames, byName: covClasses};
+		final covChildLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(covChild, covLookup).join("\n");
+		assertContains(covChildLines, "std::shared_ptr<CovBase> covariant() {",
+			"C++ override signatures should use the inherited shared_ptr return type for compatibility");
+		assertContains(covChildLines, "return std::make_shared<CovLeaf>();", "C++ covariant override bodies should still return the concrete child allocation");
+		final covImplLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(covImpl, covLookup).join("\n");
+		assertContains(covImplLines, "std::shared_ptr<CovBase> covariant() {",
+			"C++ interface implementation signatures should use the interface shared_ptr return type for compatibility");
+		assertContains(covImplLines, "return std::make_shared<CovLeaf>();",
+			"C++ covariant interface implementation bodies should still return the concrete child allocation");
 		final selfStringOwner = new HxClassDecl("SelfStringOwner", false, [], []);
 		final selfStringNames = new StringMap<Bool>();
 		selfStringNames.set("SelfStringOwner", true);

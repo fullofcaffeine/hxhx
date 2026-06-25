@@ -1145,7 +1145,7 @@ class CppTargetCore {
 	}
 
 	static function renderStaticFunction(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final returnType = cppMethodSignatureReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
 		final out = new Array<String>();
@@ -2032,7 +2032,7 @@ class CppTargetCore {
 	}
 
 	static function renderTemplateNeutralMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final returnType = cppMethodSignatureReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
 		final out = new Array<String>();
@@ -2776,7 +2776,7 @@ class CppTargetCore {
 			return returnTraced("special_type_erased_value", renderTypeErasedValueHelper(fn, owner, classLookup));
 		if (isPrimitiveStringRepeatHelper(fn, owner))
 			return returnTraced("special_primitive_string_repeat", renderPrimitiveStringRepeatHelper(fn, owner, classLookup));
-		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final returnType = cppMethodSignatureReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
 		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "after_prepare");
@@ -11037,6 +11037,51 @@ class CppTargetCore {
 
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
 		return inferredFunctionReturnCppType(fn, owner, classLookup.byName);
+	}
+
+	static function cppMethodSignatureReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		final ownReturn = cppFunctionReturnType(fn, owner, classLookup);
+		if (fn == null || owner == null || HxFunctionDecl.getIsStatic(fn))
+			return ownReturn;
+		final inherited = inheritedMethodSignatureReturnType(fn, owner, classLookup);
+		return shouldUseInheritedMethodSignatureReturn(ownReturn, inherited) ? inherited : ownReturn;
+	}
+
+	static function shouldUseInheritedMethodSignatureReturn(ownReturn:String, inheritedReturn:String):Bool {
+		return isCppReferenceType(ownReturn) && isCppReferenceType(inheritedReturn);
+	}
+
+	static function inheritedMethodSignatureReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final baseReturn = inheritedBaseMethodSignatureReturnType(fn, owner, classLookup);
+		if (baseReturn.length > 0)
+			return baseReturn;
+		for (ifaceName in implementedInterfaceNames(owner, classLookup)) {
+			final iface = classLookup.byName.get(ifaceName);
+			if (iface == null)
+				continue;
+			if (genericClassTypeParams(iface).length > 0)
+				continue;
+			final ifaceFn = classMethodDeclIn(iface, method, false);
+			if (ifaceFn != null)
+				return cppFunctionReturnType(ifaceFn, iface, classLookup);
+		}
+		return "";
+	}
+
+	static function inheritedBaseMethodSignatureReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		final baseName = baseTypeName(owner);
+		if (baseName == null || baseName.length == 0)
+			return "";
+		final base = classLookup.byName.get(baseName);
+		if (base == null)
+			return "";
+		if (genericClassTypeParams(base).length > 0)
+			return "";
+		final baseFn = classMethodDeclIn(base, HxFunctionDecl.getName(fn), false);
+		if (baseFn != null)
+			return cppFunctionReturnType(baseFn, base, classLookup);
+		return inheritedBaseMethodSignatureReturnType(fn, base, classLookup);
 	}
 
 	static function inferredFunctionReturnCppType(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>):String {
