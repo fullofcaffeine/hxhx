@@ -3111,6 +3111,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(heteroTypeStringLines, "value = _t2;", "C++ erased Dynamic parameters should accept Enum meta-value reassignment");
 		assertTrue(heteroTypeStringLines.indexOf("static std::string typeToStringHetero(std::string value)") < 0,
 			"C++ heterogeneously reassigned Dynamic parameters should not remain std::string");
+		final dceUsedClass = new HxClassDecl("UsedReferenced2", false, [], []);
+		final dceStaticInit = new HxFieldDecl("c", Public, true, "Array<Dynamic>", EArrayDecl([ENull, EField(EIdent("unit"), "UsedReferenced2")]));
+		final dceClassRefOwner = new HxClassDecl("DCEClass", false, [], [dceStaticInit]);
+		final dceClassRefNames = new StringMap<Bool>();
+		for (name in ["DCEClass", "UsedReferenced2"])
+			dceClassRefNames.set(name, true);
+		final dceClassRefClasses = new StringMap<HxClassDecl>();
+		dceClassRefClasses.set("DCEClass", dceClassRefOwner);
+		dceClassRefClasses.set("UsedReferenced2", dceUsedClass);
+		final dceClassRefLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(dceClassRefOwner,
+			{names: dceClassRefNames, byName: dceClassRefClasses})
+			.join("\n");
+		assertContains(dceClassRefLines, "std::vector<std::string>{std::string(), std::string(\"unit.UsedReferenced2\")}",
+			"C++ package-qualified class references in string-shaped static initializers should emit class path strings");
+		assertTrue(dceClassRefLines.indexOf("std::to_string((unit.UsedReferenced2))") < 0,
+			"C++ package-qualified class references should not lower as invalid field reads in static initializers");
 		final metaObject = new HxClassDecl("MetaObject", false, [], [
 			new HxFieldDecl("fields", Public, false, "Dynamic<Dynamic<Null<Array<String>>>>", null),
 			new HxFieldDecl("statics", Public, false, "Dynamic<Dynamic<Null<Array<String>>>>", null),

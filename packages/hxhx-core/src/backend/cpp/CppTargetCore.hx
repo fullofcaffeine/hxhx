@@ -8661,6 +8661,18 @@ class CppTargetCore {
 		return renderExpr(expr, scope);
 	}
 
+	static function classReferencePathText(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		final typePath = typePathText(expr);
+		if (typePath == null || typePath.length == 0)
+			return null;
+		final baseName = sanitizeTypePath(typeBaseName(typePath));
+		if (baseName.length == 0 || !startsWithUppercaseTypeName(baseName))
+			return null;
+		if (exprNameHasLocalStorage(typePath, scope) || exprNameHasLocalStorage(baseName, scope))
+			return null;
+		return scopeHasClass(scope, baseName) ? typePath : null;
+	}
+
 	static function isTypePathText(value:String):Bool {
 		if (value == null || value.length == 0)
 			return false;
@@ -8931,6 +8943,9 @@ class CppTargetCore {
 			return classBackedAbstractString;
 		if (classNameFromCppExprType(exprCppType(expr, scope), scope) != null)
 			return "__hxhx_type_name(" + renderExpr(expr, scope) + ")";
+		final classReferencePath = classReferencePathText(expr, scope);
+		if (classReferencePath != null)
+			return "std::string(" + quoteString(classReferencePath) + ")";
 		return switch (expr) {
 			case EString(value):
 				"std::string(" + quoteString(value) + ")";
