@@ -212,18 +212,17 @@ class ParserStageScanHelpers {
 		var extendsPath = "";
 		var mode = "";
 		var genericDepth = 0;
-		var parts = new Array<String>();
+		var path = "";
 		final implementsPaths = new Array<String>();
 		final typeParams = scanTypeParameterNames(source, start);
 		function flushPath():Void {
-			if (parts.length == 0 || mode.length == 0)
+			if (path.length == 0 || mode.length == 0)
 				return;
-			final path = parts.join(".");
 			if (mode == "extends")
 				extendsPath = path;
 			else if (mode == "implements")
 				implementsPaths.push(path);
-			parts = [];
+			path = "";
 		}
 
 		var tok = scanNextToken(source, typeParams.nextPos);
@@ -232,27 +231,35 @@ class ParserStageScanHelpers {
 				if (genericDepth == 0 && (tok.text == "extends" || tok.text == "implements")) {
 					flushPath();
 					mode = tok.text;
-				} else if (mode.length > 0 && genericDepth == 0) {
-					parts.push(tok.text);
+				} else if (mode.length > 0) {
+					path += tok.text;
 				}
 			} else if (mode.length > 0) {
 				switch (tok.text) {
 					case ".":
+						path += ".";
 					case "<":
+						path += "<";
 						genericDepth += 1;
 					case ">":
-						if (genericDepth > 0)
+						if (genericDepth > 0) {
+							path += ">";
 							genericDepth -= 1;
+						}
 					case ",":
 						if (genericDepth == 0) {
 							flushPath();
 							if (mode == "extends")
 								mode = "";
+						} else {
+							path += ",";
 						}
 					case _:
 						if (genericDepth == 0) {
 							flushPath();
 							mode = "";
+						} else {
+							path += tok.text;
 						}
 				}
 			}

@@ -6064,6 +6064,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(genericRawSubLines, "std::shared_ptr<GenericRawSub<T>> __hxhx_make_shared_GenericRawSub() {",
 			"C++ generic classes with implicit constructors should still emit zero-arg factories");
 		assertContains(genericRawSubLines, "(copied->value) = this->value;", "C++ generic subclasses should qualify inherited dependent-base field reads");
+		final parsedGenericExtendsModule = new HxParser("class GenericKeepSub<T> {} class ChildOfGenericKeepSub extends GenericKeepSub<String> {}")
+			.parseModule("ChildOfGenericKeepSub");
+		final parsedGenericExtendsNames = new StringMap<Bool>();
+		final parsedGenericExtendsClasses = new StringMap<HxClassDecl>();
+		var parsedGenericChild:HxClassDecl = null;
+		for (cls in HxModuleDecl.getClasses(parsedGenericExtendsModule)) {
+			final name = HxClassDecl.getName(cls);
+			parsedGenericExtendsNames.set(name, true);
+			parsedGenericExtendsClasses.set(name, cls);
+			if (name == "ChildOfGenericKeepSub")
+				parsedGenericChild = cls;
+		}
+		assertTrue(HxClassDecl.getExtendsPath(parsedGenericChild) == "GenericKeepSub<String>",
+			"C++ parsed generic extends paths should preserve concrete type arguments");
+		final parsedGenericChildLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedGenericChild, {names: parsedGenericExtendsNames, byName: parsedGenericExtendsClasses})
+				.join("\n");
+		assertContains(parsedGenericChildLines, "struct ChildOfGenericKeepSub : public GenericKeepSub<std::string> {",
+			"C++ parsed generic subclasses should render concrete base template arguments");
 		final parsedListSortModule = new HxParser("class ListSortLike { public static function sort<T:{prev:T, next:T}>(list:T, cmp:T->T->Int):T { var p:T = list; var q:T = p; q = q.next; q.prev = p; return list; } }")
 			.parseModule("ListSortLike");
 		final parsedListSortOwner = HxModuleDecl.getMainClass(parsedListSortModule);

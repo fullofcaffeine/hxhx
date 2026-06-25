@@ -1135,6 +1135,43 @@ class HxParser {
 		return parts.join(".");
 	}
 
+	function readHeaderTypePath():String {
+		final out = new StringBuf();
+		out.add(readDottedPath());
+		if (!isOtherChar("<"))
+			return out.toString();
+		var depth = 0;
+		while (!cur.kind.match(TEof)) {
+			switch (cur.kind) {
+				case TIdent(name):
+					out.add(name);
+					bump();
+				case TDot:
+					out.add(".");
+					bump();
+				case TComma:
+					out.add(",");
+					bump();
+				case TKeyword(k):
+					out.add(keywordText(k));
+					bump();
+				case TOther(c) if (c == "<".code):
+					out.add("<");
+					bump();
+					depth += 1;
+				case TOther(c) if (c == ">".code):
+					out.add(">");
+					bump();
+					depth -= 1;
+					if (depth <= 0)
+						return out.toString();
+				case _:
+					bump();
+			}
+		}
+		return out.toString();
+	}
+
 	function skipHeaderTypeParameters():Void {
 		if (!isOtherChar("<"))
 			return;
@@ -4917,15 +4954,13 @@ class HxParser {
 						switch (cur.kind) {
 							case TIdent(name) if (name == "extends"):
 								bump();
-								extendsPath = readDottedPath();
-								skipHeaderTypeParameters();
+								extendsPath = readHeaderTypePath();
 								readingImplements = false;
 							case TIdent(name) if (name == "implements"):
 								bump();
 								readingImplements = true;
 							case TIdent(_) if (readingImplements):
-								implementsPaths.push(readDottedPath());
-								skipHeaderTypeParameters();
+								implementsPaths.push(readHeaderTypePath());
 								if (cur.kind.match(TComma)) {
 									bump();
 									readingImplements = true;
