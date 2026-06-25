@@ -4287,6 +4287,39 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unhinted property setter override args should inherit assignment target types from super fields");
 		assertTrue(superPropChildLines.indexOf("int set_prop(std::string v)") < 0,
 			"C++ unhinted property setter override args should not fall back to std::string when assigned to an Int super field");
+		final propertyInterface = new HxClassDecl("PropertyInterface", false, [], [
+			new HxFieldDecl("x", Public, false, "String", null, [], null, null, false, "null", "set")
+		], "", [], true);
+		final propertyChild = new HxClassDecl("PropertyChild", false, [
+			new HxFunctionDecl("set_x", Public, false, [new HxFunctionArg("v", "String", NoDefault, false, false)], "String",
+				[SReturn(EIdent("v"), HxPos.unknown())], "")
+		], [], "", [], false, ["PropertyInterface"]);
+		final propertyWriteOwner = new HxClassDecl("PropertyWriteOwner", false, [
+			new HxFunctionDecl("test", Public, false, [], "Void", [
+				SVar("l", "PropertyInterface", ENew("PropertyChild", []), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EIdent("l"), "x"), EString("bar")), HxPos.unknown())
+			], "")
+		], []);
+		final propertyNames = new StringMap<Bool>();
+		for (name in ["PropertyInterface", "PropertyChild", "PropertyWriteOwner"])
+			propertyNames.set(name, true);
+		final propertyClasses = new StringMap<HxClassDecl>();
+		propertyClasses.set("PropertyInterface", propertyInterface);
+		propertyClasses.set("PropertyChild", propertyChild);
+		propertyClasses.set("PropertyWriteOwner", propertyWriteOwner);
+		final propertyWriteLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(propertyWriteOwner, {
+			names: propertyNames,
+			byName: propertyClasses
+		}).join("\n");
+		assertContains(propertyWriteLines, "l->set_x(\"bar\");", "C++ assignments through interface-typed property fields should lower to setter calls");
+		assertTrue(propertyWriteLines.indexOf("l->x") < 0,
+			"C++ assignments through interface-typed property fields must not write missing interface fields directly");
+		final propertyInterfaceLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(propertyInterface, {
+			names: propertyNames,
+			byName: propertyClasses
+		}).join("\n");
+		assertContains(propertyInterfaceLines, "virtual std::string set_x(std::string value) { return value; }",
+			"C++ interfaces with property setters should expose setter calls for interface-typed receivers");
 		final genericMergeOwner = new HxClassDecl("GenericMergeOwner", false, [
 			new HxFunctionDecl("merge", Public, true, [
 				new HxFunctionArg("a", "A", NoDefault, false, false),

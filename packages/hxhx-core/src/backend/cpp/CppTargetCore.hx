@@ -1850,6 +1850,16 @@ class CppTargetCore {
 			out.push("  virtual " + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
 				+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") = 0;");
 		}
+		for (field in HxClassDecl.getFields(cls)) {
+			if (HxFieldDecl.getIsStatic(field))
+				continue;
+			final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+			final fieldType = cppTypeHint(HxFieldDecl.getTypeHint(field), scope, classLookup);
+			if (HxFieldDecl.getPropertyGet(field) == "get")
+				out.push("  virtual " + fieldType + " get_" + fieldName + "() { return " + cppDefaultValue(fieldType, scope) + "; }");
+			if (HxFieldDecl.getPropertySet(field) == "set")
+				out.push("  virtual " + fieldType + " set_" + fieldName + "(" + fieldType + " value) { return value; }");
+		}
 		out.push("};");
 		return out;
 	}
@@ -5798,7 +5808,7 @@ class CppTargetCore {
 				+ stringExpr(right, scope)
 				+ ")";
 			case EBinop("=", left, right):
-				assignmentLhsExpr(left, scope) + " = " + assignmentRhsExpr(left, right, scope);
+				assignmentExpr(left, right, scope);
 			case EBinop("==", left, ENull) if (exprHasOptionalType(left, scope)):
 				"(!" + optionalStorageExpr(left, scope) + ".has_value())";
 			case EBinop("==", ENull, right) if (exprHasOptionalType(right, scope)):
@@ -8940,6 +8950,30 @@ class CppTargetCore {
 		return renderExpr(right, scope);
 	}
 
+	static function assignmentExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
+		final setter = propertySetterAssignmentExpr(left, right, scope);
+		return setter != null ? setter : assignmentLhsExpr(left, scope) + " = " + assignmentRhsExpr(left, right, scope);
+	}
+
+	static function propertySetterAssignmentExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (left) {
+			case EField(receiver, field):
+				final receiverType = exprCppType(receiver, scope);
+				final setter = "set_" + sanitizeIdentifier(field);
+				final className = instanceMethodReceiverClassName(receiverType, scope);
+				if (className == null
+					|| !classHasInstanceMethod(className, setter,
+						scope)) null; else renderExpr(receiver, scope)
+					+ fieldAccessOp(receiver, scope)
+					+ setter
+					+ "("
+					+ renderFieldCallArgs(receiverType, setter, [right], scope).join(", ")
+					+ ")";
+			case _:
+				null;
+		};
+	}
+
 	static function abstractThisAnonAssignmentLines(fieldNames:Array<String>, fieldValues:Array<HxExpr>, indent:String,
 			?scope:CppRenderScope):Null<Array<String>> {
 		if (scope == null || scope.owner == null || !scopeOwnerIsHxhxAbstract(scope))
@@ -10214,6 +10248,16 @@ class CppTargetCore {
 		for (fn in HxClassDecl.getFunctions(cls))
 			if (HxFunctionDecl.getName(fn) == methodName && !HxFunctionDecl.getIsStatic(fn))
 				return true;
+		final cleanMethod = sanitizeIdentifier(methodName);
+		for (field in HxClassDecl.getFields(cls)) {
+			if (HxFieldDecl.getIsStatic(field))
+				continue;
+			final cleanField = sanitizeIdentifier(HxFieldDecl.getName(field));
+			if (cleanMethod == "get_" + cleanField && HxFieldDecl.getPropertyGet(field) == "get")
+				return true;
+			if (cleanMethod == "set_" + cleanField && HxFieldDecl.getPropertySet(field) == "set")
+				return true;
+		}
 		return false;
 	}
 
