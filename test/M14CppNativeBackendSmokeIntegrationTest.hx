@@ -4220,6 +4220,60 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(concatLines, "return (std::to_string((1 + 2)) + std::string(y));",
 			"C++ numeric-plus-string concatenation should stringify the numeric side");
 		assertTrue(concatLines.indexOf("return ((1 + 2) + y);") < 0, "C++ numeric-plus-string concatenation should not emit raw arithmetic plus string");
+		final stringMethodOwner = new HxClassDecl("StringMethodOwner", false, [], []);
+		final stringMethodNames = new StringMap<Bool>();
+		stringMethodNames.set("StringMethodOwner", true);
+		final stringMethodClasses = new StringMap<HxClassDecl>();
+		stringMethodClasses.set("StringMethodOwner", stringMethodOwner);
+		final stringMethodLookup = {names: stringMethodNames, byName: stringMethodClasses};
+		final stringMethod = new HxFunctionDecl("caseLike", Public, true, [], "String", [
+			SReturn(EBinop("+", ECall(EField(EString("foo"), "toUpperCase"), []), ECall(EField(EString("BAR"), "toLowerCase"), [])), HxPos.unknown())
+		], "");
+		final stringMethodLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(stringMethod, stringMethodOwner, stringMethodLookup).join("\n");
+		assertContains(stringMethodLines, "return (__hxhx_to_upper_case(std::string(\"foo\")) + __hxhx_to_lower_case(std::string(\"BAR\")));",
+			"C++ string case methods should lower to target-owned runtime helpers instead of std::string members");
+		assertTrue(stringMethodLines.indexOf(".toUpperCase()") < 0, "C++ string upper-case calls should not emit nonexistent std::string members");
+		assertTrue(stringMethodLines.indexOf(".toLowerCase()") < 0, "C++ string lower-case calls should not emit nonexistent std::string members");
+		final stringUsingBase = new HxClassDecl("StringUsingBase", false, [
+			new HxFunctionDecl("pupFunc", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "String",
+				[SReturn(ECall(EField(EIdent("s"), "toUpperCase"), []), HxPos.unknown())], "")
+		], []);
+		final stringUsingLater = new HxClassDecl("StringUsingLater", false, [
+			new HxFunctionDecl("siblingFunc", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "String",
+				[SReturn(ECall(EField(EIdent("s"), "toLowerCase"), []), HxPos.unknown())], "")
+		], []);
+		final stringUsingChild = new HxClassDecl("StringUsingChild", false, [
+			new HxFunctionDecl("callLike", Public, true, [], "String", [SReturn(ECall(EField(EString("foo"), "pupFunc"), []), HxPos.unknown())], "")
+		], [], "StringUsingBase");
+		final stringUsingUnrelated = new HxClassDecl("StringUsingUnrelated", false, [
+			new HxFunctionDecl("callLike", Public, true, [], "String", [SReturn(ECall(EField(EString("FOO"), "siblingFunc"), []), HxPos.unknown())], "")
+		], []);
+		final stringUsingNames = new StringMap<Bool>();
+		for (name in [
+			"StringUsingBase",
+			"StringUsingChild",
+			"StringUsingLater",
+			"StringUsingUnrelated"
+		])
+			stringUsingNames.set(name, true);
+		final stringUsingClasses = new StringMap<HxClassDecl>();
+		stringUsingClasses.set("StringUsingBase", stringUsingBase);
+		stringUsingClasses.set("StringUsingChild", stringUsingChild);
+		stringUsingClasses.set("StringUsingLater", stringUsingLater);
+		stringUsingClasses.set("StringUsingUnrelated", stringUsingUnrelated);
+		final stringUsingLookup = {names: stringUsingNames, byName: stringUsingClasses};
+		final stringUsingLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(stringUsingChild)[0], stringUsingChild, stringUsingLookup).join("\n");
+		assertContains(stringUsingLines, "return StringUsingBase::pupFunc(std::string(\"foo\"));",
+			"C++ string using-style calls should dispatch to static extension methods on the owner/base chain");
+		assertTrue(stringUsingLines.indexOf(".pupFunc()") < 0, "C++ string using-style calls should not emit nonexistent std::string members");
+		final stringUsingUnrelatedLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(stringUsingUnrelated)[0], stringUsingUnrelated, stringUsingLookup)
+				.join("\n");
+		assertContains(stringUsingUnrelatedLines, "return StringUsingLater::siblingFunc(std::string(\"FOO\"));",
+			"C++ string using-style fallback should dispatch to available static String extension helpers outside the owner/base chain");
+		assertTrue(stringUsingUnrelatedLines.indexOf(".siblingFunc()") < 0, "C++ string using-style fallback should not emit nonexistent std::string members");
 		final selfStringOwner = new HxClassDecl("SelfStringOwner", false, [], []);
 		final selfStringNames = new StringMap<Bool>();
 		selfStringNames.set("SelfStringOwner", true);

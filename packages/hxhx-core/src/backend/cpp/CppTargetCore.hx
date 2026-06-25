@@ -433,6 +433,18 @@ class CppTargetCore {
 		out.push("  return std::string(1, source[static_cast<std::size_t>(index)]);");
 		out.push("}");
 		out.push("");
+		out.push("static std::string __hxhx_to_upper_case(const std::string& source) {");
+		out.push("  std::string out = source;");
+		out.push("  std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_to_lower_case(const std::string& source) {");
+		out.push("  std::string out = source;");
+		out.push("  std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
 		out.push("static std::optional<int> __hxhx_string_code_at(const std::string& source, int index) {");
 		out.push("  if (index < 0 || index >= static_cast<int>(source.size())) return std::nullopt;");
 		out.push("  return static_cast<int>(static_cast<unsigned char>(source[static_cast<std::size_t>(index)]));");
@@ -6134,6 +6146,10 @@ class CppTargetCore {
 					stringCodeAtExpr(receiver, args[0], scope);
 				case "charAt" if (args.length == 1):
 					"__hxhx_char_at(" + target + ", " + renderExpr(args[0], scope) + ")";
+				case "toUpperCase" if (args.length == 0):
+					"__hxhx_to_upper_case(" + target + ")";
+				case "toLowerCase" if (args.length == 0):
+					"__hxhx_to_lower_case(" + target + ")";
 				case "substring" if (args.length == 1 || args.length == 2):
 					"__hxhx_substring("
 					+ target
@@ -6143,7 +6159,8 @@ class CppTargetCore {
 					+ (args.length == 2 ? renderExpr(args[1], scope) : "static_cast<int>(" + target + ".size())")
 					+ ")";
 				case _:
-					target + "." + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+					final extension = staticStringExtensionCallExpr(method, target, args, scope);
+					extension != null ? extension : target + "." + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
 			};
 		}
 		if (method == "join" && isCppVectorType(exprCppType(receiver, scope)) && args.length == 1)
@@ -6197,6 +6214,64 @@ class CppTargetCore {
 				+ ")";
 		}
 		return renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+	}
+
+	static function staticStringExtensionCallExpr(method:String, target:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		final ownerName = staticStringExtensionOwner(method, scope);
+		if (ownerName == null || ownerName.length == 0)
+			return null;
+		final renderedArgs = [target];
+		for (arg in args)
+			renderedArgs.push(renderExpr(arg, scope));
+		return ownerName + "::" + sanitizeIdentifier(method) + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function staticStringExtensionOwner(method:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || scope.owner == null)
+			return null;
+		var className = sanitizeTypePath(HxClassDecl.getName(scope.owner));
+		while (className != null && className.length > 0) {
+			final cls = scope.classByName.get(className);
+			if (cls == null)
+				return null;
+			final fn = classMethodDeclIn(cls, method, true);
+			if (isStaticStringExtensionMethod(fn, cls, scope))
+				return className;
+			final baseName = baseTypeName(cls);
+			if (baseName == null || baseName == className)
+				break;
+			className = baseName;
+		}
+		return globalStaticStringExtensionOwner(method, scope);
+	}
+
+	static function globalStaticStringExtensionOwner(method:String, scope:CppRenderScope):Null<String> {
+		final names = new Array<String>();
+		for (name in scope.classByName.keys())
+			names.push(name);
+		names.sort((a, b) -> Reflect.compare(a, b));
+		var found:Null<String> = null;
+		for (name in names) {
+			final cls = scope.classByName.get(name);
+			if (cls == null)
+				continue;
+			final fn = classMethodDeclIn(cls, method, true);
+			if (isStaticStringExtensionMethod(fn, cls, scope))
+				found = name;
+		}
+		return found;
+	}
+
+	static function isStaticStringExtensionMethod(fn:HxFunctionDecl, owner:HxClassDecl, scope:CppRenderScope):Bool {
+		if (fn == null)
+			return false;
+		final params = HxFunctionDecl.getArgs(fn);
+		if (params.length == 0)
+			return false;
+		final methodScope = renderScope(owner, {names: scope.classNames, byName: scope.classByName}, HxFunctionDecl.getReturnTypeHint(fn));
+		prepareFunctionScope(methodScope, fn);
+		return cppFunctionArgType(params[0], methodScope) == "std::string"
+			&& cppFunctionReturnType(fn, owner, {names: scope.classNames, byName: scope.classByName}) == "std::string";
 	}
 
 	static function renderFieldCallArgs(receiverCppType:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
@@ -7111,7 +7186,7 @@ class CppTargetCore {
 				final baseType = scope.owner == null ? null : baseTypeName(scope.owner);
 				baseType == null ? "" : classMethodCppReturnType(baseType, method, false, scope);
 			case ECall(EField(receiver, method), _) if (isCppStringExpr(receiver, scope)):
-				stringMethodReturnCppType(method);
+				stringReceiverMethodReturnCppType(method, scope);
 			case ECall(EField(receiver, "iterator"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "map"), _) if (isCppVectorType(exprCppType(receiver, scope))):
@@ -7852,7 +7927,7 @@ class CppTargetCore {
 			case ECall(EField(EIdent("StringTools"), method), _) if (isStringToolsTrimMethod(method)):
 				"std::string";
 			case ECall(EField(receiver, method), _) if (isCppStringExpr(receiver, scope)):
-				stringMethodReturnCppType(method);
+				stringReceiverMethodReturnCppType(method, scope);
 			case ECall(EField(receiver, "iterator"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "map"), _) if (isCppVectorType(exprCppType(receiver, scope))):
@@ -7947,11 +8022,18 @@ class CppTargetCore {
 				"int";
 			case "charCodeAt" | "cca":
 				"int";
-			case "charAt" | "substring" | "substr" | "replace":
+			case "charAt" | "substring" | "substr" | "replace" | "toUpperCase" | "toLowerCase":
 				"std::string";
 			case _:
 				"";
 		};
+	}
+
+	static function stringReceiverMethodReturnCppType(method:String, ?scope:CppRenderScope):String {
+		final nativeReturn = stringMethodReturnCppType(method);
+		if (nativeReturn.length > 0)
+			return nativeReturn;
+		return staticStringExtensionOwner(method, scope) == null ? "" : "std::string";
 	}
 
 	static function iteratorCppTypeForVector(vectorType:String):String {
