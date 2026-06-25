@@ -4185,6 +4185,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ interface implementation signatures should use the interface shared_ptr return type for compatibility");
 		assertContains(covImplLines, "return std::make_shared<CovLeaf>();",
 			"C++ covariant interface implementation bodies should still return the concrete child allocation");
+		final inlineCastBase = new HxClassDecl("InlineCastBase", false, [
+			new HxFunctionDecl("self", Public, false, [], "InlineCastBase", [SReturn(EThis, HxPos.unknown())], "")
+		], []);
+		final inlineCastChild = new HxClassDecl("InlineCastChild", false, [
+			new HxFunctionDecl("test", Public, false, [], "InlineCastChild", [SReturn(ECast(ECall(EIdent("self"), []), null), HxPos.unknown())], "")
+		], [], "InlineCastBase");
+		final inlineCastNames = new StringMap<Bool>();
+		for (name in ["InlineCastBase", "InlineCastChild"])
+			inlineCastNames.set(name, true);
+		final inlineCastClasses = new StringMap<HxClassDecl>();
+		inlineCastClasses.set("InlineCastBase", inlineCastBase);
+		inlineCastClasses.set("InlineCastChild", inlineCastChild);
+		final inlineCastLookup = {names: inlineCastNames, byName: inlineCastClasses};
+		final inlineCastBaseLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(inlineCastBase, inlineCastLookup).join("\n");
+		final inlineCastChildLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(inlineCastChild, inlineCastLookup).join("\n");
+		assertContains(inlineCastBaseLines, "return __hxhx_borrowed_shared<InlineCastBase>(this);",
+			"C++ self-returning reference methods should return a borrowed receiver handle instead of the object value");
+		assertTrue(inlineCastBaseLines.indexOf("return (*this);") < 0, "C++ self-returning reference methods should not emit value-to-shared_ptr conversions");
+		assertContains(inlineCastChildLines, "std::shared_ptr<InlineCastChild> test() {",
+			"C++ explicit self-return casts should keep the child return signature");
+		assertContains(inlineCastChildLines, "return std::static_pointer_cast<InlineCastChild>(self());",
+			"C++ explicit self-return casts should lower base shared_ptr results to the expected child shared_ptr");
+		assertTrue(inlineCastChildLines.indexOf("return self();") < 0, "C++ explicit self-return casts should not erase the cast in a narrower return context");
 		final dynamicFunctionOwner = new HxClassDecl("DynamicFunctionOwner", false, [
 			new HxFunctionDecl("foo", Public, true, [new HxFunctionArg("value", "Float", NoDefault, false, false)], "Float",
 				[SReturn(EIdent("value"), HxPos.unknown())], ""),

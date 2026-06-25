@@ -5157,6 +5157,15 @@ class CppTargetCore {
 				if (isCppReferenceType(expectedType))
 					return "nullptr";
 				return cppDefaultValue(expectedType, scope);
+			case EThis if (isCppReferenceType(expectedType)):
+				final expectedClass = classNameFromCppType(expectedType);
+				if (expectedClass != null && currentOwnerIsOrExtends(expectedClass, scope))
+					return CppRuntimeSupport.borrowedSharedPtrExpr(expectedClass, "this");
+			case ECast(inner, _):
+				final referenceCast = explicitReferenceCastExprForExpectedType(inner, expectedType, scope);
+				if (referenceCast != null)
+					return referenceCast;
+				return valueExprForExpectedType(inner, expectedType, scope);
 			case ETernary(cond, thenExpr, elseExpr):
 				return "(" + renderExpr(cond, scope) + " ? " + valueExprForExpectedType(thenExpr, expectedType, scope) + " : "
 					+ valueExprForExpectedType(elseExpr, expectedType, scope) + ")";
@@ -5217,6 +5226,48 @@ class CppTargetCore {
 			case _:
 		}
 		return renderExpr(expr, scope);
+	}
+
+	static function explicitReferenceCastExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || !isCppReferenceType(expectedType))
+			return null;
+		final actualType = exprCppType(expr, scope);
+		if (!isCppReferenceType(actualType) || actualType == expectedType)
+			return null;
+		final expectedClass = classNameFromCppType(expectedType);
+		final actualClass = classNameFromCppExprType(actualType, scope);
+		if (expectedClass == null || actualClass == null)
+			return null;
+		final expectedName = sanitizeTypePath(typeBaseName(expectedClass));
+		final actualName = sanitizeTypePath(typeBaseName(actualClass));
+		if (expectedName.length == 0 || actualName.length == 0 || expectedName == actualName)
+			return null;
+		if (!classesShareInheritanceChain(expectedName, actualName, scope))
+			return null;
+		return "std::static_pointer_cast<" + expectedClass + ">(" + renderExpr(expr, scope) + ")";
+	}
+
+	static function classesShareInheritanceChain(a:String, b:String, scope:CppRenderScope):Bool {
+		return classExtendsClass(a, b, scope) || classExtendsClass(b, a, scope);
+	}
+
+	static function classExtendsClass(childName:String, baseName:String, scope:CppRenderScope):Bool {
+		var current = sanitizeTypePath(typeBaseName(childName == null ? "" : childName));
+		final target = sanitizeTypePath(typeBaseName(baseName == null ? "" : baseName));
+		if (current.length == 0 || target.length == 0)
+			return false;
+		final seen = new haxe.ds.StringMap<Bool>();
+		while (current.length > 0 && !seen.exists(current)) {
+			if (current == target)
+				return true;
+			seen.set(current, true);
+			final cls = scope.classByName.get(current);
+			if (cls == null)
+				return false;
+			final next = baseTypeName(cls);
+			current = next == null ? "" : sanitizeTypePath(typeBaseName(next));
+		}
+		return false;
 	}
 
 	static function dynamicIdentityCallExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -7686,8 +7737,10 @@ class CppTargetCore {
 
 	static function currentOwnerMethodCppReturnType(methodName:String, scope:CppRenderScope):String {
 		final fn = currentOwnerMethod(methodName, scope);
-		if (fn == null)
-			return "";
+		if (fn == null) {
+			final baseName = scope == null || scope.owner == null ? null : baseTypeName(scope.owner);
+			return baseName == null ? "" : classMethodCppReturnType(baseName, methodName, false, scope);
+		}
 		return inferredFunctionReturnCppType(fn, scope.owner, scope.classByName);
 	}
 
