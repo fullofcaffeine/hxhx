@@ -4975,6 +4975,11 @@ class CppTargetCore {
 					+ valueExprForExpectedType(elseExpr, expectedType, scope) + ")";
 			case ESwitch(scrutinee, patterns, exprs):
 				return switchExpr(scrutinee, patterns, exprs, scope, expectedType);
+			case ECall(ELambda(lambdaArgs, body), args):
+				return "("
+					+ lambdaExprWithArgTypes(lambdaArgs, body, [], scope, expectedType)
+					+ ")("
+					+ [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case _:
 		}
 		if (expectedType == "std::string")

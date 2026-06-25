@@ -440,6 +440,28 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected zero-arg local function declaration to lower to typed SVar lambda");
 		}
 
+		final localBlockSwitchStmts = HxParser.parseFunctionBodyText('function accessText(va:VarAccess, getOrSet:String):String return { switch (va) { case AccNormal | AccCtor: "default"; case AccNo: "null"; case AccResolve: throw "Invalid"; case AccCall: getOrSet; } }\naccessText(AccCall, "get");');
+		assertTrue(localBlockSwitchStmts.length == 2, "expected local block-switch function plus call statement");
+		switch (localBlockSwitchStmts[0]) {
+			case SVar("accessText", "(VarAccess, String)->String", ELambda(["va", "getOrSet"], ESwitch(_, patterns, exprs)), _):
+				assertTrue(patterns.length == 5, "expected block switch local function patterns plus fallback");
+				assertTrue(exprs.length == 5, "expected block switch local function expressions plus fallback");
+			case SVar(_, _, ELambda(_, ETryCatchRaw(raw)), _):
+				fail("block switch local function body should not stay opaque: " + raw);
+			case _:
+				fail("expected local block-switch function to lower to typed switch lambda");
+		}
+
+		final typedLocalFunctionBlockStmts = HxParser.parseFunctionBodyText('return { function helper():String return "ok"; var value = helper(); value; }');
+		assertTrue(typedLocalFunctionBlockStmts.length == 1, "expected typed local function return block");
+		switch (typedLocalFunctionBlockStmts[0]) {
+			case SReturn(ETryCatchRaw(raw), _):
+				fail("typed local function block expression should not stay opaque: " + raw);
+			case SReturn(ECall(ELambda(_, _), _), _):
+			case other:
+				fail("expected typed local function block expression to lower through lambda continuations, got " + Type.enumConstructor(other));
+		}
+
 		final localRestFunctionStmts = HxParser.parseFunctionBodyText("function pick(first:Int, second:Int, ...rest:Int) { return rest[2]; } eq(123, pick(1, 2, 0, 0, 123, 0));");
 		assertTrue(localRestFunctionStmts.length == 2, "expected local rest function plus call statement");
 		switch (localRestFunctionStmts[0]) {

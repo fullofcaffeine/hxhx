@@ -2416,7 +2416,8 @@ class HxParser {
 			return false;
 		for (stmt in stmts) {
 			switch (stmt) {
-				case SVar(_, typeHint, _, _) if (StringTools.trim(typeHint == null ? "" : typeHint).length > 0):
+				case SVar(_, typeHint, init, _) if (StringTools.trim(typeHint == null ? "" : typeHint).length > 0
+					&& !isLocalFunctionInitExpr(init)):
 					// Compile-time type-error probes rely on the raw local type annotation. The
 					// expression-only block lowering intentionally drops type hints, so keep typed
 					// local blocks opaque instead of erasing the evidence.
@@ -2430,6 +2431,19 @@ class HxParser {
 			}
 		}
 		return false;
+	}
+
+	function isLocalFunctionInitExpr(expr:Null<HxExpr>):Bool {
+		return switch (expr) {
+			case ELambda(_, _):
+				true;
+			case ECall(EIdent("__hxhx_optional_lambda"), [inner, EArrayDecl(_)]):
+				isLocalFunctionInitExpr(inner);
+			case ECall(EIdent("__hxhx_rest_lambda"), [ELambda(_, _), EInt(_)]):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	function parseAnonExpr():HxExpr {

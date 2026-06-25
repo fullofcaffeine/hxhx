@@ -1110,6 +1110,44 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ raw switch expressions returned from Dynamic helpers should erase before function-scope inference recurses");
 	}
 
+	static function assertTypedLocalFunctionBlockExprRendersStructurally():Void {
+		final parsed = new HxParser([
+			"class LocalFunctionBlockLike {",
+			"  public static function run():String {",
+			"    return {",
+			"      function accessText(va:VarAccess, getOrSet:String):String return {",
+			"        switch (va) {",
+			"          case AccNormal | AccCtor: \"default\";",
+			"          case AccNo: \"null\";",
+			"          case AccResolve: throw \"Invalid\";",
+			"          case AccCall: getOrSet;",
+			"          case AccInline: \"default\";",
+			"          case AccRequire(_, _): \"default\";",
+			"        }",
+			"      }",
+			"      var access = accessText(AccCall, \"get\");",
+			"      access;",
+			"    }",
+			"  }",
+			"}"
+		].join("\n")).parseModule("LocalFunctionBlockLike");
+		final cls = HxModuleDecl.getMainClass(parsed);
+		final fn = HxClassDecl.getFunctions(cls)[0];
+		final names = new StringMap<Bool>();
+		names.set("LocalFunctionBlockLike", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("LocalFunctionBlockLike", cls);
+		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(fn, cls, {
+			names: names,
+			byName: classes
+		}).join("\n");
+		assertTrue(lines.indexOf("ETryCatchRaw") < 0, "C++ typed local function block expressions should not leak opaque raw blocks");
+		assertContains(lines, "return ([&](auto accessText) -> std::string",
+			"C++ typed local function block expressions should inherit the enclosing String return type");
+		assertContains(lines, "return ([&](auto access) -> std::string { return __hxhx_stringify(access); })(accessText(std::string(\"AccCall\"), \"get\"));",
+			"C++ typed local function block expressions should render following locals structurally");
+	}
+
 	static function anonCollectScopeProgram():GenIrProgram {
 		final capture = new HxFunctionDecl("capture", Public, false, [
 			new HxFunctionArg("arg", "{label:String}", NoDefault, false, false),
@@ -1809,6 +1847,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Error enum-like fields should lower to tag strings instead of invalid dotted values");
 		assertCppAnonCollectUsesLightweightFunctionScope();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
+		assertTypedLocalFunctionBlockExprRendersStructurally();
 		final reflectCompareExpr = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "compare"), [EString("a"), EString("b")]));
 		assertContains(reflectCompareExpr, "auto __hxhx_cmp_left = std::string(\"a\");",
