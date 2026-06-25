@@ -4674,6 +4674,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ fallback IMap method typing should also unwrap optional map.get values when IMap is target-owned");
 		assertTrue(fallbackMapKeyValueIteratorLines.indexOf("__hxhx_anon_value_int__key_std__string") < 0,
 			"C++ target-owned IMap key/value iterator records should not fall back to Int anonymous value fields");
+		final genericStructuralKeyValue = @:privateAccess
+			backend.cpp.CppTargetCore.structuralTypeHintStruct("{key:String, value:T}", null, {names: mapIteratorNames, byName: mapIteratorClasses});
+		assertTrue(genericStructuralKeyValue != null && genericStructuralKeyValue.fieldTypes[1] == "std::string",
+			"C++ global structural anonymous helpers should not emit bare generic type parameters as concrete field types");
+		assertTrue(genericStructuralKeyValue.name.indexOf("_value_T") < 0,
+			"C++ structural anonymous helper names should reflect the concrete fallback field type, not bare T");
 		assertTrue(stringIteratorLines.indexOf("std::string offset = 0;") < 0, "C++ string iterator offset fields should not default through std::string");
 		assertTrue(stringIteratorLines.indexOf("std::to_string(StringTools::unsafeCodeAt") < 0,
 			"C++ string iterator code-point calls should not leak incomplete StringTools static calls");

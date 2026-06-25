@@ -1196,12 +1196,20 @@ class CppTargetCore {
 		for (field in fields) {
 			names.push(field.name);
 			final fieldType = cppTypeHint(field.typeHint, scope, classLookup);
-			types.push(isScopeTypeParam(fieldType, scope) ? "std::string" : fieldType);
+			types.push(isScopeTypeParam(fieldType, scope) || isBareCppTypeParamName(fieldType) ? "std::string" : fieldType);
 		}
 		final struct = {name: anonStructName(names, types), fieldNames: names, fieldTypes: types};
 		if (scope != null)
 			scope.anonStructs.set(struct.name, struct);
 		return struct;
+	}
+
+	static function isBareCppTypeParamName(typeName:String):Bool {
+		final clean = sanitizeTypePath(StringTools.trim(typeName == null ? "" : typeName));
+		if (clean.length != 1)
+			return false;
+		final c = clean.charCodeAt(0);
+		return c >= "A".code && c <= "Z".code;
 	}
 
 	static function cppAnonFieldType(fieldName:String, expr:HxExpr, assertStatusShape:Bool, ?scope:CppRenderScope):String {
