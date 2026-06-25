@@ -1555,10 +1555,14 @@ let scanModuleLocalHelperTypedefs = fun source mainTypeName -> try let __fallbac
                   __assign_122
                 ));
                 let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-                  ignore (if HxArray.length (Obj.obj (HxAnon.get typeParams "params")) = 0 then let __assign_123 = Obj.magic (let __arr_124 = HxArray.create () in __arr_124) in (
+                  ignore (if HxArray.length (Obj.obj (HxAnon.get typeParams "params")) = 0 then let __assign_123 = Obj.magic (let __arr_124 = HxArray.create () in (
+                    ignore (HxArray.push __arr_124 "__hxhx_typedef");
+                    __arr_124
+                  )) in (
                     tempArray := __assign_123;
                     __assign_123
                   ) else let __assign_125 = Obj.magic (let __arr_126 = HxArray.create () in (
+                    ignore (HxArray.push __arr_126 "__hxhx_typedef");
                     ignore (HxArray.push __arr_126 ("__hxhx_type_params=" ^ HxString.toStdString (HxArray.join (Obj.obj (HxAnon.get typeParams "params")) "," (fun x -> x))));
                     __arr_126
                   )) in (

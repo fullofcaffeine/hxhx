@@ -1466,13 +1466,15 @@ class CppTargetCore {
 	static function collectClassLookup(program:GenIrProgram):CppClassLookup {
 		final names = new haxe.ds.StringMap<Bool>();
 		final byName = new haxe.ds.StringMap<HxClassDecl>();
+		final all = new Array<HxClassDecl>();
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
+				all.push(cls);
 				addClassLookupAliases(HxClassDecl.getName(cls), cls, names, byName);
 			}
 		}
-		return {names: names, byName: byName};
+		return {names: names, byName: byName, all: all};
 	}
 
 	static function addClassLookupAliases(rawName:String, cls:HxClassDecl, names:haxe.ds.StringMap<Bool>, byName:haxe.ds.StringMap<HxClassDecl>):Void {
@@ -1901,6 +1903,9 @@ class CppTargetCore {
 	}
 
 	static function renderImplicitConstructors(className:String, baseType:Null<String>, scope:CppRenderScope):Array<String> {
+		final typedefCtor = renderStructuralTypedefImplicitConstructors(className, scope);
+		if (typedefCtor != null)
+			return typedefCtor;
 		final abstractCtor = renderClassBackedAbstractImplicitConstructors(className, scope);
 		if (abstractCtor != null)
 			return abstractCtor;
@@ -1919,6 +1924,54 @@ class CppTargetCore {
 		return [
 			"  " + className + "(" + renderFunctionArgs(args, baseScope) + ") : " + baseType + "(" + argNames.join(", ") + ") {}"
 		];
+	}
+
+	static function renderStructuralTypedefImplicitConstructors(className:String, scope:CppRenderScope):Null<Array<String>> {
+		final cls = structuralTypedefClassForCppType(className, scope);
+		if (cls == null)
+			return null;
+		final fields = [
+			for (field in HxClassDecl.getFields(cls))
+				if (!HxFieldDecl.getIsStatic(field)) field
+		];
+		final out = ["  " + className + "() = default;"];
+		if (fields.length == 0)
+			return out;
+		final ctorArgs = new Array<String>();
+		final ctorInits = new Array<String>();
+		final fieldChecks = new Array<String>();
+		final pointerChecks = new Array<String>();
+		final otherInits = new Array<String>();
+		final pointerInits = new Array<String>();
+		for (field in fields) {
+			final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+			final fieldType = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
+			final argName = "__hxhx_" + fieldName;
+			ctorArgs.push(fieldType + " " + argName);
+			ctorInits.push(fieldName + "(" + argName + ")");
+			fieldChecks.push("decltype(std::declval<const Other&>()." + fieldName + ")");
+			pointerChecks.push("decltype(std::declval<const Other&>()->" + fieldName + ")");
+			otherInits.push(fieldName + "(other." + fieldName + ")");
+			pointerInits.push(fieldName + "(other->" + fieldName + ")");
+		}
+		out.push("  " + className + "(" + ctorArgs.join(", ") + ") : " + ctorInits.join(", ") + " {}");
+		out.push("  "
+			+ className
+			+ "(const __hxhx_anon&) : "
+			+ [for (field in fields) sanitizeIdentifier(HxFieldDecl.getName(field)) + "()"].join(", ") + " {}");
+		out.push("  template<typename Other, typename = std::enable_if_t<!std::is_same_v<std::decay_t<Other>, "
+			+ className
+			+ ">>, typename = std::void_t<"
+			+ fieldChecks.join(", ")
+			+ ">>");
+		out.push("  " + className + "(const Other& other) : " + otherInits.join(", ") + " {}");
+		out.push("  template<typename Other, typename = std::enable_if_t<!std::is_same_v<std::decay_t<Other>, "
+			+ className
+			+ ">>, typename = std::void_t<"
+			+ pointerChecks.join(", ")
+			+ ">, typename = void>");
+		out.push("  " + className + "(const Other& other) : " + pointerInits.join(", ") + " {}");
+		return out;
 	}
 
 	static function renderClassBackedAbstractImplicitConstructors(className:String, scope:CppRenderScope):Null<Array<String>> {
@@ -2582,6 +2635,7 @@ class CppTargetCore {
 			owner: cls,
 			classNames: classLookup.names,
 			classByName: classLookup.byName,
+			allClasses: classLookup.all == null ? [] : classLookup.all,
 			typeParams: typeParams,
 			typeParamCppNames: typeParamCppNames,
 			localTypes: new haxe.ds.StringMap<String>(),
@@ -4639,7 +4693,7 @@ class CppTargetCore {
 		final fn = knownCallDecl(callee, scope);
 		if (fn == null)
 			return null;
-		return inferredFunctionArgCppTypes(fn, ownerForKnownCall(callee, scope), scope.classByName);
+		return inferredFunctionArgCppTypes(fn, ownerForKnownCall(callee, scope), scope.classByName, scope.allClasses);
 	}
 
 	static function knownCallDecl(callee:HxExpr, scope:CppRenderScope):Null<HxFunctionDecl> {
@@ -5178,6 +5232,8 @@ class CppTargetCore {
 				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
 			case _ if (isCppFunctionType(returnType)):
 				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
+			case _ if (structuralTypedefClassForCppType(returnType, scope) != null):
+				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
 			case _ if (isCppAnonStructType(returnType)):
 				"return " + renderExpr(expr, scope) + ";";
 			case _ if (isScopedGenericCppType(returnType, scope)):
@@ -5277,6 +5333,9 @@ class CppTargetCore {
 		final typePathPlaceholder = typePathPlaceholderExprForExpectedType(expr, expectedType, scope);
 		if (typePathPlaceholder != null)
 			return typePathPlaceholder;
+		final structuralTypedefValue = structuralTypedefValueExprForExpectedType(expr, expectedType, scope);
+		if (structuralTypedefValue != null)
+			return structuralTypedefValue;
 		final optionalInner = cppOptionalInnerType(exprCppType(expr, scope));
 		if (optionalInner.length > 0 && optionalInner == expectedType)
 			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
@@ -5893,6 +5952,8 @@ class CppTargetCore {
 			case _ if (isCppVectorType(localType)):
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (isCppFunctionType(localType)):
+				valueExprForExpectedType(init, localType, scope);
+			case _ if (structuralTypedefClassForCppType(localType, scope) != null):
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (localType == "std::string"):
 				stringExpr(init, scope);
@@ -6527,7 +6588,7 @@ class CppTargetCore {
 			return sanitizeIdentifier(name) + "(" + renderEqCallArgs(args, scope).join(", ") + ")";
 		final fn = currentOwnerMethod(name, scope);
 		final renderedArgs = if (fn != null) {
-			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredFunctionArgCppTypes(fn, scope.owner, scope.classByName));
+			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredFunctionArgCppTypes(fn, scope.owner, scope.classByName, scope.allClasses));
 		} else {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
@@ -6781,7 +6842,7 @@ class CppTargetCore {
 		if (fn == null)
 			return renderSimpleCallArgs(args, scope);
 		final owner = scope == null ? null : scope.classByName.get(className);
-		final paramTypes = owner == null ? null : inferredFunctionArgCppTypes(fn, owner, scope.classByName);
+		final paramTypes = owner == null ? null : inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
 		return renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, paramTypes);
 	}
 
@@ -6794,7 +6855,7 @@ class CppTargetCore {
 			return renderSimpleCallArgs(args, scope);
 		final owner = scope == null ? null : scope.classByName.get(className);
 		final paramTypes = owner == null ? null : instantiateGenericClassParamTypes(className, receiverCppType,
-			inferredFunctionArgCppTypes(fn, owner, scope.classByName), scope);
+			inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses), scope);
 		return renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, paramTypes);
 	}
 
@@ -7078,6 +7139,8 @@ class CppTargetCore {
 			return posInfosSharedPtrExpr(arg, scope);
 		if (valueType == "std::shared_ptr<EnumValue>" && exprCppType(arg, scope) == "std::any")
 			return "__hxhx_enum_value_ptr(" + renderExpr(arg, scope) + ")";
+		if (structuralTypedefClassForCppType(valueType, scope) != null && exprCppType(arg, scope) != valueType)
+			return valueExprForExpectedType(arg, valueType, scope);
 		if (valueType == "std::string") {
 			final actualType = exprCppType(arg, scope);
 			if (actualType == "std::string")
@@ -8802,6 +8865,32 @@ class CppTargetCore {
 		};
 	}
 
+	static function structuralTypedefValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		final cls = structuralTypedefClassForCppType(expectedType, scope);
+		if (cls == null)
+			return null;
+		return switch (expr) {
+			case ENull:
+				expectedType + "()";
+			case EAnon(fieldNames, fieldValues):
+				final args = new Array<String>();
+				for (field in HxClassDecl.getFields(cls)) {
+					if (HxFieldDecl.getIsStatic(field))
+						continue;
+					final index = fieldNames.indexOf(HxFieldDecl.getName(field));
+					final fieldType = knownStdlibFieldCppType(sanitizeTypePath(HxClassDecl.getName(cls)), HxFieldDecl.getName(field),
+						HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
+					args.push(index >= 0
+						&& index < fieldValues.length ? valueExprForExpectedType(fieldValues[index], fieldType, scope) : cppDefaultValue(fieldType, scope));
+				}
+				expectedType + "(" + args.join(", ") + ")";
+			case _:
+				final actualType = exprCppType(expr, scope);
+				if (actualType == expectedType) null; else if (isCppReferenceType(actualType)) expectedType + "(*" + renderExpr(expr,
+					scope) + ")"; else expectedType + "(" + renderExpr(expr, scope) + ")";
+		};
+	}
+
 	static function pointerCarrierType(expectedType:String, baseName:String):Null<String> {
 		final carrier = classNameFromCppType(expectedType);
 		if (carrier == null || carrier.length == 0)
@@ -10427,6 +10516,16 @@ class CppTargetCore {
 		return false;
 	}
 
+	static function structuralTypedefClassForCppType(typeName:String, ?scope:CppRenderScope):Null<HxClassDecl> {
+		if (scope == null || typeName == null || typeName.length == 0)
+			return null;
+		final cls = CppTypeModel.structuralTypedefValueClassForTypeHint(typeName, scope,
+			{names: scope.classNames, byName: scope.classByName, all: scope.allClasses});
+		if (cls == null || HxClassDecl.getFields(cls).length == 0)
+			return null;
+		return cls;
+	}
+
 	static function arrayBackedAbstractValueCppType(cls:HxClassDecl, classLookup:CppClassLookup):String {
 		return CppTypeModel.arrayBackedAbstractValueCppType(cls, classLookup);
 	}
@@ -11632,17 +11731,18 @@ class CppTargetCore {
 		];
 	}
 
-	static function inferredFunctionArgCppTypes(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>):Array<String> {
+	static function inferredFunctionArgCppTypes(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>,
+			?allClasses:Array<HxClassDecl>):Array<String> {
 		final rawReturn = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
-		final returnScope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, "auto");
+		final lookup = {names: classNamesFromByName(classByName), byName: classByName, all: allClasses == null ? [] : allClasses};
+		final returnScope = renderScope(owner, lookup, "auto");
 		applyFunctionTypeParams(returnScope, fn);
-		final returnType = rawReturn.length > 0 ? cppReturnTypeHint(rawReturn, returnScope,
-			{names: classNamesFromByName(classByName), byName: classByName}) : "auto";
+		final returnType = rawReturn.length > 0 ? cppReturnTypeHint(rawReturn, returnScope, lookup) : "auto";
 		final key = functionSignatureKey(owner, fn);
 		if (inferredSignatureStack.exists(key))
 			return [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgBaseType(arg, null)];
 		inferredSignatureStack.set(key, true);
-		final scope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, returnType);
+		final scope = renderScope(owner, lookup, returnType);
 		prepareFunctionScope(scope, fn);
 		final types = [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgType(arg, scope)];
 		inferredSignatureStack.remove(key);

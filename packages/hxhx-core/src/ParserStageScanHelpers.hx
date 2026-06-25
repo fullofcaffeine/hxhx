@@ -566,7 +566,7 @@ class ParserStageScanHelpers {
 
 			final scanned = scanTypedefShape(source, i);
 			i = scanned.nextPos;
-			final metadata = typeParams.params.length == 0 ? [] : ["__hxhx_type_params=" + typeParams.params.join(",")];
+			final metadata = typeParams.params.length == 0 ? ["__hxhx_typedef"] : ["__hxhx_typedef", "__hxhx_type_params=" + typeParams.params.join(",")];
 			out.push(new HxClassDecl(typeName, false, [], scanned.fields, "", metadata));
 		}
 

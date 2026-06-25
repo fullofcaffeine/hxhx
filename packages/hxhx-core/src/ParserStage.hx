@@ -208,6 +208,11 @@ class ParserStage {
 						if (scannedName != null && scannedName.length > 0 && !scannedClassStaticsByName.exists(scannedName))
 							scannedClassStaticsByName.set(scannedName, scanned);
 					}
+					for (scanned in scanHelperTypedefs(source, null)) {
+						final scannedName = scanned == null ? null : HxClassDecl.getName(scanned);
+						if (scannedName != null && scannedName.length > 0)
+							scannedClassStaticsByName.set(scannedName, scanned);
+					}
 
 					function patchClassStaticFlagsFromScan(cls:HxClassDecl):HxClassDecl {
 						if (cls == null)
@@ -833,11 +838,16 @@ class ParserStage {
 			&& (abstractDecls == null || abstractDecls.length == 0))
 			return parsed;
 
-		final abstractByName:Map<String, HxClassDecl> = new Map();
+		final scannedOverlayByName:Map<String, HxClassDecl> = new Map();
 		for (c in abstractDecls) {
 			final nm = c == null ? null : HxClassDecl.getName(c);
-			if (nm != null && nm.length > 0 && !abstractByName.exists(nm))
-				abstractByName.set(nm, c);
+			if (nm != null && nm.length > 0 && !scannedOverlayByName.exists(nm))
+				scannedOverlayByName.set(nm, c);
+		}
+		for (c in typedefDecls) {
+			final nm = c == null ? null : HxClassDecl.getName(c);
+			if (nm != null && nm.length > 0)
+				scannedOverlayByName.set(nm, c);
 		}
 
 		function hasMetadata(values:Array<String>, marker:String):Bool {
@@ -903,20 +913,24 @@ class ParserStage {
 		}
 
 		var changed = false;
-		function overlayScannedAbstract(cls:HxClassDecl):HxClassDecl {
+		function overlayScannedDecl(cls:HxClassDecl):HxClassDecl {
 			if (cls == null)
 				return cls;
-			final scanned = abstractByName.get(HxClassDecl.getName(cls));
+			final scanned = scannedOverlayByName.get(HxClassDecl.getName(cls));
 			if (scanned == null)
 				return cls;
 
 			final scannedFns = scannedFnsByName(scanned);
 			final patchedFns = new Array<HxFunctionDecl>();
+			final existingFns:Map<String, Bool> = new Map();
 			var overlayChanged = false;
 			for (fn in HxClassDecl.getFunctions(cls)) {
 				final scannedFn = scannedFns.get(HxFunctionDecl.getName(fn));
 				if (scannedFn == null) {
 					patchedFns.push(fn);
+					final name = HxFunctionDecl.getName(fn);
+					if (name != null && name.length > 0)
+						existingFns.set(name, true);
 					continue;
 				}
 				final isStatic = HxFunctionDecl.getIsStatic(scannedFn);
@@ -930,14 +944,29 @@ class ParserStage {
 				patchedFns.push(new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), isStatic, HxFunctionDecl.getArgs(fn),
 					returnType, HxFunctionDecl.getBody(fn), HxFunctionDecl.getReturnStringLiteral(fn), metadata, HxFunctionDecl.getPos(fn),
 					HxFunctionDecl.getEndPos(fn), HxFunctionDecl.getBodyText(fn)));
+				final name = HxFunctionDecl.getName(fn);
+				if (name != null && name.length > 0)
+					existingFns.set(name, true);
+			}
+			for (fn in HxClassDecl.getFunctions(scanned)) {
+				final name = HxFunctionDecl.getName(fn);
+				if (name != null && name.length > 0 && !existingFns.exists(name)) {
+					patchedFns.push(fn);
+					existingFns.set(name, true);
+					overlayChanged = true;
+				}
 			}
 
 			final scannedFields = scannedFieldsByName(scanned);
 			final patchedFields = new Array<HxFieldDecl>();
+			final existingFields:Map<String, Bool> = new Map();
 			for (field in HxClassDecl.getFields(cls)) {
 				final scannedField = scannedFields.get(HxFieldDecl.getName(field));
 				if (scannedField == null) {
 					patchedFields.push(field);
+					final name = HxFieldDecl.getName(field);
+					if (name != null && name.length > 0)
+						existingFields.set(name, true);
 					continue;
 				}
 				final isStatic = HxFieldDecl.getIsStatic(scannedField);
@@ -950,6 +979,17 @@ class ParserStage {
 				patchedFields.push(new HxFieldDecl(HxFieldDecl.getName(field), HxFieldDecl.getVisibility(field), isStatic, typeHint,
 					HxFieldDecl.getInit(field), metadata, HxFieldDecl.getPos(field), HxFieldDecl.getEndPos(field), HxFieldDecl.getIsFinal(field),
 					HxFieldDecl.getPropertyGet(field), HxFieldDecl.getPropertySet(field), HxFieldDecl.getInitText(field)));
+				final name = HxFieldDecl.getName(field);
+				if (name != null && name.length > 0)
+					existingFields.set(name, true);
+			}
+			for (field in HxClassDecl.getFields(scanned)) {
+				final name = HxFieldDecl.getName(field);
+				if (name != null && name.length > 0 && !existingFields.exists(name)) {
+					patchedFields.push(field);
+					existingFields.set(name, true);
+					overlayChanged = true;
+				}
 			}
 
 			final metadata = mergeMetadata(HxClassDecl.getMetadata(cls), HxClassDecl.getMetadata(scanned));
@@ -962,7 +1002,7 @@ class ParserStage {
 		}
 
 		var main = HxModuleDecl.getMainClass(parsed);
-		main = overlayScannedAbstract(main);
+		main = overlayScannedDecl(main);
 		var mainName = main == null ? "" : HxClassDecl.getName(main);
 		if (expectedMainClass != null && expectedMainClass.length > 0) {
 			for (c in enumDecls) {
@@ -979,7 +1019,7 @@ class ParserStage {
 		final classes = new Array<HxClassDecl>();
 		final seen:Map<String, Bool> = new Map();
 		function pushUnique(c:HxClassDecl):Void {
-			c = overlayScannedAbstract(c);
+			c = overlayScannedDecl(c);
 			if (c == null)
 				return;
 			final nm = HxClassDecl.getName(c);
@@ -1576,7 +1616,7 @@ class ParserStage {
 
 			final scanned = scanTypedefShape(source, i);
 			i = scanned.nextPos;
-			final metadata = typeParams.params.length == 0 ? [] : ["__hxhx_type_params=" + typeParams.params.join(",")];
+			final metadata = typeParams.params.length == 0 ? ["__hxhx_typedef"] : ["__hxhx_typedef", "__hxhx_type_params=" + typeParams.params.join(",")];
 			out.push(new HxClassDecl(typeName, false, [], scanned.fields, "", metadata));
 		}
 

@@ -3127,6 +3127,74 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ package-qualified class references in string-shaped static initializers should emit class path strings");
 		assertTrue(dceClassRefLines.indexOf("std::to_string((unit.UsedReferenced2))") < 0,
 			"C++ package-qualified class references should not lower as invalid field reads in static initializers");
+		final structuralTypedefParsed = ParserStage.parse([
+			"package unit;",
+			"private typedef Foo = {",
+			"  var bar(get, null):Bar;",
+			"}",
+			"private typedef Bar = {",
+			"  var data:Int;",
+			"}",
+			"class Main { static function main() {} }"
+		].join("\n"), "unit/Main.hx").getDecl();
+		var parsedFoo:Null<HxClassDecl> = null;
+		for (cls in HxModuleDecl.getClasses(structuralTypedefParsed))
+			if (HxClassDecl.getName(cls) == "Foo")
+				parsedFoo = cls;
+		assertTrue(parsedFoo != null, "parser should retain property-shaped structural typedef helpers");
+		assertTrue(HxClassDecl.getMetadata(parsedFoo).indexOf("__hxhx_typedef") >= 0,
+			"parser should mark property-shaped structural typedef helpers with typedef metadata");
+		assertTrue(HxClassDecl.getFields(parsedFoo).length == 1, "parser should retain property-shaped typedef fields");
+		assertTrue(HxFieldDecl.getTypeHint(HxClassDecl.getFields(parsedFoo)[0]) == "Bar",
+			"parser should scan typedef property field type hints after accessor metadata");
+		final structuralBar = new HxClassDecl("Bar", false, [], [new HxFieldDecl("data", Public, false, "Int", null)], "", ["__hxhx_typedef"]);
+		final structuralFoo = new HxClassDecl("Foo", false, [], [new HxFieldDecl("bar", Public, false, "Bar", null)]);
+		final unrelatedFoo = new HxClassDecl("Foo", false, [new HxFunctionDecl("notLocal", Public, false, [], "Void", [], "")], []);
+		final structuralAdrian = new HxClassDecl("AdrianV", false, [
+			new HxFunctionDecl("get_bar", Public, false, [], "Bar", [SReturn(EIdent("bar"), HxPos.unknown())], ""),
+			new HxFunctionDecl("testFoo", Public, true, [new HxFunctionArg("foo", "Foo", NoDefault, false, false)], "Int",
+				[SReturn(EField(EField(EIdent("foo"), "bar"), "data"), HxPos.unknown())], "")
+		], [new HxFieldDecl("bar", Public, false, "Bar", EAnon(["data"], [EInt(100)]))]);
+		final structuralCallOwner = new HxClassDecl("StructuralCallOwner", false, [
+			new HxFunctionDecl("call", Public, true, [], "Void", [
+				SVar("me", "", ENew("AdrianV", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("AdrianV"), "testFoo"), [EIdent("me")]), HxPos.unknown())
+			], "")
+		], []);
+		final structuralNames = new StringMap<Bool>();
+		for (name in ["Bar", "Foo", "AdrianV", "StructuralCallOwner"])
+			structuralNames.set(name, true);
+		final structuralClasses = new StringMap<HxClassDecl>();
+		structuralClasses.set("Bar", structuralBar);
+		structuralClasses.set("Foo", unrelatedFoo);
+		structuralClasses.set("AdrianV", structuralAdrian);
+		structuralClasses.set("StructuralCallOwner", structuralCallOwner);
+		final structuralLookup = {
+			names: structuralNames,
+			byName: structuralClasses,
+			all: [
+				unrelatedFoo,
+				structuralBar,
+				structuralFoo,
+				structuralAdrian,
+				structuralCallOwner
+			]
+		};
+		final structuralBarLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(structuralBar, structuralLookup).join("\n");
+		final structuralFooLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(structuralFoo, structuralLookup).join("\n");
+		final structuralAdrianLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(structuralAdrian, structuralLookup).join("\n");
+		final structuralCallLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(structuralCallOwner, structuralLookup).join("\n");
+		assertContains(structuralBarLines, "Bar(int __hxhx_data) : data(__hxhx_data) {}",
+			"C++ structural typedef helpers should expose value constructors for anonymous payloads");
+		assertContains(structuralFooLines, "Foo(Bar __hxhx_bar) : bar(__hxhx_bar) {}", "C++ structural typedef helpers should use value-typed fields");
+		assertContains(structuralAdrianLines, "Bar bar = Bar(100);", "C++ structural typedef fields should initialize from matching anonymous records");
+		assertContains(structuralAdrianLines, "static int testFoo(Foo foo) {",
+			"C++ structural typedef parameters should use value types instead of shared_ptr references");
+		assertContains(structuralAdrianLines, "return static_cast<int>(((foo.bar).data));",
+			"C++ nested structural typedef fields should read through value field access");
+		assertContains(structuralCallLines, "AdrianV::testFoo(Foo(*me));",
+			"C++ structural typedef call sites should convert matching class references through value constructors");
+		assertTrue(structuralAdrianLines.indexOf("std::shared_ptr<Bar> bar") < 0, "C++ structural typedef fields should not be rendered as class references");
 		final metaObject = new HxClassDecl("MetaObject", false, [], [
 			new HxFieldDecl("fields", Public, false, "Dynamic<Dynamic<Null<Array<String>>>>", null),
 			new HxFieldDecl("statics", Public, false, "Dynamic<Dynamic<Null<Array<String>>>>", null),

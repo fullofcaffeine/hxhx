@@ -229,10 +229,189 @@ class CppTypeModel {
 				cppFunctionTypeHint(hint, scope, classLookup);
 			case _ if (erasedClassLikeTypeName(hint) != null):
 				"std::shared_ptr<" + erasedClassLikeTypeName(hint) + ">";
+			case _ if (structuralTypedefTypeNameForTypeHint(hint, scope, classLookup) != null):
+				structuralTypedefTypeNameForTypeHint(hint, scope, classLookup);
 			case _ if (isClassLikeTypeHint(hint)):
 				"std::shared_ptr<" + cppClassLikeTypeName(hint, scope, classLookup) + ">";
 			case _:
 				"std::string";
+		};
+	}
+
+	public static function structuralTypedefTypeNameForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
+		final cls = structuralTypedefValueClassForTypeHint(typeHint, scope, classLookup);
+		if (cls == null)
+			return null;
+		return cppClassLikeTypeName(typeHint, scope, classLookup);
+	}
+
+	public static function structuralTypedefValueClassForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
+		final cls = classForTypeHint(typeHint, scope, classLookup);
+		if (cls == null)
+			return null;
+		return isStructuralValueTypedefClass(cls, scope, classLookup, [])
+			|| isUnmarkedSingleFieldStructuralValueClass(cls, scope, classLookup, []) ? cls : null;
+	}
+
+	static function markedStructuralTypedefClassForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
+		final cls = classForTypeHint(typeHint, scope, classLookup);
+		if (cls == null || HxClassDecl.getFields(cls).length == 0 || !hasStructuralTypedefMetadata(cls))
+			return null;
+		return cls;
+	}
+
+	static function classForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
+		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final generic = raw.indexOf("<");
+		final full = sanitizeTypePath(generic >= 0 ? raw.substr(0, generic) : raw);
+		final base = sanitizeTypePath(typeBaseName(typeHint));
+		final owner = scope == null ? null : scope.owner;
+		if (owner != null) {
+			final ownerFull = sanitizeTypePath(HxClassDecl.getName(owner));
+			final ownerBase = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+			if (full == ownerFull || full == ownerBase || base == ownerFull || base == ownerBase)
+				return owner;
+		}
+		if (raw.indexOf(".") >= 0) {
+			final qualified = lookupClassByName(full, scope, classLookup);
+			if (qualified != null)
+				return qualified;
+		} else {
+			for (name in moduleLocalTypeHintLookupCandidates(raw, base, scope)) {
+				final local = lookupClassByName(name, scope, classLookup);
+				if (local != null)
+					return local;
+			}
+			final nearest = nearestClassForBaseName(base, scope, classLookup);
+			if (nearest != null)
+				return nearest;
+		}
+		final fallback = lookupClassByName(base, scope, classLookup);
+		if (fallback != null)
+			return fallback;
+		return null;
+	}
+
+	static function lookupClassByName(name:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
+		if (name == null || name.length == 0)
+			return null;
+		if (scope != null && scope.classByName.exists(name))
+			return scope.classByName.get(name);
+		if (classLookup != null && classLookup.byName.exists(name))
+			return classLookup.byName.get(name);
+		return null;
+	}
+
+	static function moduleLocalTypeHintLookupCandidates(raw:String, base:String, ?scope:CppRenderScope):Array<String> {
+		final out = new Array<String>();
+		function add(name:String):Void {
+			if (name != null && name.length > 0 && out.indexOf(name) < 0)
+				out.push(name);
+		}
+		if (scope != null && scope.owner != null && raw.indexOf(".") < 0 && base.length > 0) {
+			final ownerName = HxClassDecl.getName(scope.owner);
+			final dot = ownerName == null ? -1 : ownerName.lastIndexOf(".");
+			if (dot > 0)
+				add(sanitizeTypePath(ownerName.substr(0, dot + 1) + base));
+		}
+		return out;
+	}
+
+	static function nearestClassForBaseName(base:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
+		if (base == null || base.length == 0 || scope == null || scope.owner == null)
+			return null;
+		final all = classLookup != null && classLookup.all != null ? classLookup.all : scope.allClasses;
+		if (all == null || all.length == 0)
+			return null;
+		var ownerIndex = -1;
+		for (i in 0...all.length)
+			if (all[i] == scope.owner) {
+				ownerIndex = i;
+				break;
+			}
+		if (ownerIndex < 0)
+			return null;
+		var best:Null<HxClassDecl> = null;
+		var bestDistance = 0x3fffffff;
+		for (i in 0...all.length) {
+			final cls = all[i];
+			if (cls == scope.owner || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != base)
+				continue;
+			final distance = i > ownerIndex ? i - ownerIndex : ownerIndex - i;
+			if (distance < bestDistance) {
+				best = cls;
+				bestDistance = distance;
+			}
+		}
+		return best;
+	}
+
+	static function hasStructuralTypedefMetadata(cls:HxClassDecl):Bool {
+		if (cls == null)
+			return false;
+		for (meta in HxClassDecl.getMetadata(cls))
+			if (StringTools.trim(meta) == "__hxhx_typedef")
+				return true;
+		return false;
+	}
+
+	static function isStructuralValueTypedefClass(cls:HxClassDecl, ?scope:CppRenderScope, ?classLookup:CppClassLookup, seen:Array<String>):Bool {
+		if (cls == null || !hasStructuralTypedefMetadata(cls))
+			return false;
+		final name = sanitizeTypePath(HxClassDecl.getName(cls));
+		if (seen.indexOf(name) >= 0)
+			return false;
+		final nextSeen = seen.copy();
+		nextSeen.push(name);
+		var fieldCount = 0;
+		for (field in HxClassDecl.getFields(cls)) {
+			if (HxFieldDecl.getIsStatic(field))
+				continue;
+			fieldCount++;
+			if (!isStructuralValueTypedefFieldTypeSafe(HxFieldDecl.getTypeHint(field), scope, classLookup, nextSeen))
+				return false;
+		}
+		return fieldCount > 0;
+	}
+
+	static function isUnmarkedSingleFieldStructuralValueClass(cls:HxClassDecl, ?scope:CppRenderScope, ?classLookup:CppClassLookup, seen:Array<String>):Bool {
+		if (cls == null || hasStructuralTypedefMetadata(cls) || HxClassDecl.getIsInterface(cls))
+			return false;
+		if (HxClassDecl.getFunctions(cls).length > 0
+			|| HxClassDecl.getExtendsPath(cls).length > 0
+			|| HxClassDecl.getImplementsPaths(cls).length > 0)
+			return false;
+		final fields = [
+			for (field in HxClassDecl.getFields(cls))
+				if (!HxFieldDecl.getIsStatic(field)) field
+		];
+		if (fields.length != 1)
+			return false;
+		final fieldCls = markedStructuralTypedefClassForTypeHint(HxFieldDecl.getTypeHint(fields[0]), scope, classLookup);
+		return fieldCls != null && isStructuralValueTypedefClass(fieldCls, scope, classLookup, seen);
+	}
+
+	static function isStructuralValueTypedefFieldTypeSafe(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup, seen:Array<String>):Bool {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (hint.length == 0)
+			return false;
+		final nullArg = nullTypeHintArg(hint);
+		if (nullArg != null)
+			return isStructuralValueTypedefFieldTypeSafe(nullArg, scope, classLookup, seen);
+		if (primitiveTypeHintCppType(hint) != null)
+			return true;
+		return switch (hint) {
+			case "Dynamic" | "Any" | "StdTypes.Null" | "Null":
+				true;
+			case _ if (isBytesDataTypeName(hint)):
+				true;
+			case _ if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint) || isIteratorTypeHint(hint)):
+				isStructuralValueTypedefFieldTypeSafe(genericTypeHintArg(hint), scope, classLookup, seen);
+			case _ if (isStructuralTypeHint(hint)): final fields = structuralTypeHintFields(hint); fields.length > 0 && fields.filter(field ->
+					!isStructuralValueTypedefFieldTypeSafe(field.typeHint, scope, classLookup, seen))
+					.length == 0;
+			case _: final cls = markedStructuralTypedefClassForTypeHint(hint, scope,
+					classLookup); cls != null && isStructuralValueTypedefClass(cls, scope, classLookup, seen);
 		};
 	}
 
