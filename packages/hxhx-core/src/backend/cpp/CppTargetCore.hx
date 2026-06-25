@@ -4993,6 +4993,11 @@ class CppTargetCore {
 		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
 		if (isCppFunctionType(expectedType)) {
+			switch (expr) {
+				case ELambda(lambdaArgs, body):
+					return lambdaExprForExpectedFunction(lambdaArgs, body, expectedType, scope);
+				case _:
+			}
 			final optionalLambda = optionalLambdaExprForExpectedFunction(expr, expectedType, scope);
 			if (optionalLambda != null)
 				return optionalLambda;
@@ -6126,7 +6131,7 @@ class CppTargetCore {
 	}
 
 	static function isEqStringArgExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
-		return isStringLike(expr) || exprCppType(expr, scope) == "std::string";
+		return isStringLike(expr) || exprCppType(expr, scope) == "std::string" || primitiveBackedAbstractToStringExpr(expr, scope) != null;
 	}
 
 	static function isCppVectorLengthExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
@@ -7061,6 +7066,34 @@ class CppTargetCore {
 				self + " += " + renderExpr(rhs, scope);
 			case [SExpr(EBinop("-=", EThis, rhs), _)]:
 				self + " -= " + renderExpr(rhs, scope);
+			case _:
+				null;
+		};
+	}
+
+	static function primitiveBackedAbstractToStringExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		final cls = primitiveBackedAbstractClassForExpr(expr, scope);
+		if (cls == null)
+			return null;
+		final fn = classMethodDeclIn(cls, "toString", false);
+		if (fn == null || inferredFunctionReturnCppType(fn, cls, scope.classByName) != "std::string")
+			return null;
+		return primitiveBackedAbstractToStringBodyExpr(expr, fn, scope);
+	}
+
+	static function primitiveBackedAbstractToStringBodyExpr(receiver:HxExpr, fn:HxFunctionDecl, ?scope:CppRenderScope):Null<String> {
+		final self = renderExpr(receiver, scope);
+		return switch (HxFunctionDecl.getBody(fn)) {
+			case [SReturn(EThis, _)]:
+				"__hxhx_stringify(" + self + ")";
+			case [SReturn(ECall(EField(EIdent("Std"), "string"), [EThis]), _)]:
+				"__hxhx_stringify(" + self + ")";
+			case [SReturn(EBinop("+", EThis, rhs), _)]:
+				"(__hxhx_stringify(" + self + ") + " + stringExpr(rhs, scope) + ")";
+			case [SReturn(EBinop("+", lhs, EThis), _)]:
+				"(" + stringExpr(lhs, scope) + " + __hxhx_stringify(" + self + "))";
 			case _:
 				null;
 		};
@@ -8326,6 +8359,9 @@ class CppTargetCore {
 		final enumCtor = enumMetadataCtorStringExpr(expr, scope);
 		if (enumCtor != null)
 			return enumCtor;
+		final primitiveAbstractString = primitiveBackedAbstractToStringExpr(expr, scope);
+		if (primitiveAbstractString != null)
+			return primitiveAbstractString;
 		if (classNameFromCppExprType(exprCppType(expr, scope), scope) != null)
 			return "__hxhx_type_name(" + renderExpr(expr, scope) + ")";
 		return switch (expr) {
@@ -9054,18 +9090,23 @@ class CppTargetCore {
 	static function optionalLambdaExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
 		return switch (expr) {
 			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(lambdaArgs, body), EArrayDecl(_)]):
-				lambdaExprWithArgTypes(lambdaArgs, body, CppTypeModel.cppFunctionArgTypesFromCppType(expectedType), scope);
+				lambdaExprForExpectedFunction(lambdaArgs, body, expectedType, scope);
 			case ECall(EIdent("__hxhx_optional_lambda"), [
 				ECall(EIdent("__hxhx_rest_lambda"), [ELambda(lambdaArgs, body), EInt(_)]),
 				EArrayDecl(_)
 			]):
-				lambdaExprWithArgTypes(lambdaArgs, body, CppTypeModel.cppFunctionArgTypesFromCppType(expectedType), scope);
+				lambdaExprForExpectedFunction(lambdaArgs, body, expectedType, scope);
 			case _:
 				null;
 		};
 	}
 
-	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope):String {
+	static function lambdaExprForExpectedFunction(args:Array<String>, body:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
+		return lambdaExprWithArgTypes(args, body, CppTypeModel.cppFunctionArgTypesFromCppType(expectedType), scope,
+			cppFunctionReturnTypeFromCppType(expectedType));
+	}
+
+	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope, ?expectedReturnType:String):String {
 		final names = [for (arg in args) sanitizeIdentifier(arg)];
 		final params = [
 			for (i in 0...names.length) {
@@ -9073,8 +9114,17 @@ class CppTargetCore {
 				typeName + " " + names[i];
 			}
 		];
+		final returnType = StringTools.trim(expectedReturnType == null ? "" : expectedReturnType);
+		final explicitReturn = returnType.length > 0 && returnType != "auto";
+		final suffix = explicitReturn ? " -> " + returnType : "";
 		if (scope == null)
-			return "[&](" + params.join(", ") + ") { return " + renderExpr(body, scope) + "; }";
+			return returnType == "void" ? "[&](" + params.join(", ") + ")" + suffix + " { " + renderExpr(body, scope) + "; }" : "[&]("
+				+ params.join(", ")
+				+ ")"
+				+ suffix
+				+ " { return "
+				+ (explicitReturn ? valueExprForExpectedType(body, returnType, scope) : renderExpr(body, scope))
+				+ "; }";
 		final savedLocalTypes = copyStringMap(scope.localTypes);
 		final savedLocalNames = copyStringMap(scope.localNames);
 		for (i in 0...names.length) {
@@ -9082,10 +9132,13 @@ class CppTargetCore {
 			if (i < argTypes.length && argTypes[i].length > 0)
 				scope.localTypes.set(names[i], argTypes[i]);
 		}
-		final renderedBody = renderExpr(body, scope);
+		final renderedBody = returnType == "void" ? renderExpr(body,
+			scope) : explicitReturn ? valueExprForExpectedType(body, returnType, scope) : renderExpr(body, scope);
 		scope.localTypes = savedLocalTypes;
 		scope.localNames = savedLocalNames;
-		return "[&](" + params.join(", ") + ") { return " + renderedBody + "; }";
+		if (returnType == "void")
+			return "[&](" + params.join(", ") + ")" + suffix + " { " + renderedBody + "; }";
+		return "[&](" + params.join(", ") + ")" + suffix + " { return " + renderedBody + "; }";
 	}
 
 	static function instanceMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {

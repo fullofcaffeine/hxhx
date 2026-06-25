@@ -1817,6 +1817,8 @@ class HxParser {
 			bump();
 			returnType = readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
 				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+			if (StringTools.trim(returnType).length > 0)
+				hasFunctionTypeHint = true;
 		}
 
 		final bodyExpr = if (cur.kind.match(TLBrace)) {
@@ -1872,11 +1874,7 @@ class HxParser {
 		final restAware:HxExpr = restIndex < 0 ? lambda : HxExpr.ECall(HxExpr.EIdent("__hxhx_rest_lambda"), [lambda, HxExpr.EInt(restIndex)]);
 		final init:HxExpr = optionalArgs.length == 0 ? restAware : HxExpr.ECall(HxExpr.EIdent("__hxhx_optional_lambda"),
 			[restAware, HxExpr.EArrayDecl([for (arg in optionalArgs) HxExpr.EString(arg)])]);
-		final functionTypeHint = !hasFunctionTypeHint
-			|| argTypeHints.length == 0 ? "" : "("
-				+ argTypeHints.join(", ")
-				+ ")->"
-				+ (returnType.length == 0 ? "Dynamic" : returnType);
+		final functionTypeHint = !hasFunctionTypeHint ? "" : "(" + argTypeHints.join(", ") + ")->" + (returnType.length == 0 ? "Dynamic" : returnType);
 		return SVar(name, functionTypeHint, init, pos);
 	}
 

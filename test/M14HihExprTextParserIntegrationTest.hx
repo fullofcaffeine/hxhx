@@ -419,13 +419,25 @@ class M14HihExprTextParserIntegrationTest {
 		final localFunctionStmts = HxParser.parseFunctionBodyText("function helper(v:Int):String { return Std.string(v); } eq(helper(3), \"3\");");
 		assertTrue(localFunctionStmts.length == 2, "expected local function plus call statement");
 		switch (localFunctionStmts[0]) {
-			case SVar(name, _, ELambda(args, _), _):
+			case SVar(name, typeHint, ELambda(args, _), _):
 				assertTrue(name == "helper", "expected local function to lower to helper binding");
+				assertTrue(typeHint == "(Int)->String", "expected typed local function to preserve its backend function type hint");
 				assertTrue(args.length == 1 && args[0] == "v", "expected local function arg to be preserved");
 			case SExpr(EUnsupported(raw), _):
 				fail("local function declaration parsed as unsupported: " + raw);
 			case _:
 				fail("expected local function declaration to lower to SVar lambda");
+		}
+
+		final zeroArgLocalFunctionStmts = HxParser.parseFunctionBodyText('function returnText():String { return "ok"; } eq(returnText(), "ok");');
+		assertTrue(zeroArgLocalFunctionStmts.length == 2, "expected zero-arg local function plus call statement");
+		switch (zeroArgLocalFunctionStmts[0]) {
+			case SVar(name, typeHint, ELambda(args, _), _):
+				assertTrue(name == "returnText", "expected zero-arg local function name");
+				assertTrue(typeHint == "()->String", "expected zero-arg local function return type to be preserved");
+				assertTrue(args.length == 0, "expected zero-arg local function args");
+			case _:
+				fail("expected zero-arg local function declaration to lower to typed SVar lambda");
 		}
 
 		final localRestFunctionStmts = HxParser.parseFunctionBodyText("function pick(first:Int, second:Int, ...rest:Int) { return rest[2]; } eq(123, pick(1, 2, 0, 0, 123, 0));");

@@ -1164,7 +1164,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(slot, lookup).join("\n");
 		assertContains(lines, "std::function<int(int)> f = nullptr;",
 			"C++ optional function-typed fields should use the argument value type instead of the optional marker name");
-		assertContains(lines, "f = [&](int a) { return (false ? 2 : a); };",
+		assertContains(lines, "f = [&](int a) -> int { return (false ? 2 : a); };",
 			"C++ optional lambda assignments should render typed C++ lambdas instead of unresolved helper calls");
 		assertContains(lines, "__hxhx_anon_f_std__function_int_int__ obj = __hxhx_anon_f_std__function_int_int__{};",
 			"C++ structural function-field carriers should default-initialize as aggregates");
@@ -4566,6 +4566,45 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ primitive-backed abstract call arguments should preserve @:from constructor side effects before erased calls");
 		assertContains(counterCheckLines, "eq(MyAbstractCounter::counter, 1);",
 			"C++ primitive-backed abstract static fields should remain addressable after erasure");
+		final meterAbstract = new HxClassDecl("Meter", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("f", "Float", NoDefault, false, false)], "Void",
+				[SExpr(EBinop("=", EThis, EIdent("f")), HxPos.unknown())], ""),
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EBinop("+", EThis, EString("m")), HxPos.unknown())], "")
+		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=Float"]);
+		final meterOwner = new HxClassDecl("MeterOwner", false, [
+			new HxFunctionDecl("returnAbstractCast", Public, true, [], "String", [SReturn(ENew("Meter", [EFloat(12.2)]), HxPos.unknown())], ""),
+			new HxFunctionDecl("compare", Public, true, [], "Void", [
+				SVar("returnAbstractCast", "()->String", ELambda([], ENew("Meter", [EFloat(12.2)])), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [ECall(EIdent("returnAbstractCast"), []), EString("12.2m")]), HxPos.unknown()),
+				SVar("switchMe", "(Bool)->String",
+					ELambda(["b"], ESwitch(EIdent("b"), [PBool(true), PWildcard], [ENew("Meter", [EFloat(12.2)]), ENew("Meter", [EFloat(2.4)])])),
+					HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [ECall(EIdent("switchMe"), [EBool(true)]), EString("12.2m")]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [ECall(EIdent("switchMe"), [EBool(false)]), EString("2.4m")]), HxPos.unknown()),
+				SVar("m", "Meter", EFloat(12.5), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EString("12.5m"), EIdent("m")]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EString("Distance: 12.5m"), EBinop("+", EString("Distance: "), EIdent("m"))]), HxPos.unknown())
+			], "")
+		]);
+		primitiveNames.set("Meter", true);
+		primitiveNames.set("MeterOwner", true);
+		primitiveClasses.set("Meter", meterAbstract);
+		primitiveClasses.set("MeterOwner", meterOwner);
+		final meterReturnLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(meterOwner)[0], meterOwner, primitiveLookup).join("\n");
+		assertContains(meterReturnLines, "return (__hxhx_stringify(12.2) + std::string(\"m\"));",
+			"C++ primitive-backed abstracts with toString should coerce erased constructors when returning String");
+		final meterCompareLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(meterOwner)[1], meterOwner, primitiveLookup).join("\n");
+		assertContains(meterCompareLines, "eq(std::string(\"12.5m\"), (__hxhx_stringify(m) + std::string(\"m\")));",
+			"C++ primitive-backed abstracts with toString should coerce erased locals for string equality");
+		assertContains(meterCompareLines, "eq(std::string(\"Distance: 12.5m\"), (std::string(\"Distance: \") + (__hxhx_stringify(m) + std::string(\"m\"))));",
+			"C++ primitive-backed abstracts with toString should coerce erased locals in string concatenation");
+		assertContains(meterCompareLines,
+			"std::function<std::string()> returnAbstractCast = [&]() -> std::string { return (__hxhx_stringify(12.2) + std::string(\"m\")); };",
+			"C++ typed zero-arg local functions should coerce primitive-backed abstract constructors through String returns");
+		assertContains(meterCompareLines, "std::function<std::string(bool)> switchMe = [&](bool b) -> std::string { return ([&]() -> std::string",
+			"C++ typed local function switch bodies should inherit the declared String return type");
 		final primitiveNoMetadataOwner = new HxClassDecl("PrimitiveNoMetadataOwner", false, [
 			new HxFunctionDecl("read", Public, true, [], "Int", [
 				SVar("a", "", EInt(33), HxPos.unknown()),
