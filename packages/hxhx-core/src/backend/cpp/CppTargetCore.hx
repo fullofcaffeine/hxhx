@@ -2977,7 +2977,8 @@ class CppTargetCore {
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
-		if (sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "typedAs" && args.length == 2) {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		if (method == "typedAs" && args.length == 2) {
 			return [
 				"  template<typename TActual, typename TExpected>",
 				"  static std::string typedAs(const TActual& actual, const TExpected& expected) {",
@@ -2987,13 +2988,19 @@ class CppTargetCore {
 				"  }"
 			];
 		}
-		final out = ["  static "
-			+ returnType
-			+ " "
-			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
-			+ "("
-			+ renderFunctionArgs(args, scope)
-			+ ") {"];
+		if ((method == "typeError" || method == "typeErrorText") && args.length == 1) {
+			final argName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+			return [
+				"  template<typename TValue>",
+				"  static " + returnType + " " + method + "(const TValue& " + argName + ") {",
+				"    (void)" + argName + ";",
+				"    return " + helperMacrosShimDefaultValue(returnType, scope) + ";",
+				"  }"
+			];
+		}
+		final out = [
+			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"
+		];
 		for (arg in args)
 			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
 		if (returnType != "void")

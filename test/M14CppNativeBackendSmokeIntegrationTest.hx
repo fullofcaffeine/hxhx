@@ -2234,7 +2234,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("isNullable", Public, true, [new HxFunctionArg("expr", "Expr", NoDefault, false, false)], "Expr", [
 				SVar("t", "", ECall(EIdent("typeof"), [EIdent("expr")]), HxPos.unknown()),
 				SReturn(ECall(EIdent("isNullable"), [EIdent("t")]), HxPos.unknown())
-			], ""),
+			],
+				""),
+			new HxFunctionDecl("typeError", Public, true, [new HxFunctionArg("e", "Expr", NoDefault, false, false)], "__hxhx_anon_pos_int__expr_std__string",
+				[SReturn(EAnon([], []), HxPos.unknown())], ""),
+			new HxFunctionDecl("typeErrorText", Public, true, [new HxFunctionArg("e", "Expr", NoDefault, false, false)],
+				"__hxhx_anon_pos_int__expr_std__string", [SReturn(EAnon([], []), HxPos.unknown())], ""),
 			new HxFunctionDecl("pipeMarkupLiteral", Public, true, [new HxFunctionArg("e", "Expr", NoDefault, false, false)], "String", [
 				SReturn(ECall(EIdent("formatString"), [EString("s"), EField(EIdent("e"), "pos")]), HxPos.unknown())
 			], "")
@@ -2255,6 +2260,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ HelperMacros.typeString should preserve its callable string helper shape");
 		assertContains(helperMacrosLines, "static std::shared_ptr<Expr> isNullable(std::shared_ptr<Expr> expr)",
 			"C++ HelperMacros.isNullable should preserve the typed helper signature");
+		assertContains(helperMacrosLines, "template<typename TValue>\n  static std::string typeError(const TValue& e)",
+			"C++ HelperMacros.typeError shim should accept runtime values without requiring macro Expr pointers");
+		assertContains(helperMacrosLines, "template<typename TValue>\n  static std::string typeErrorText(const TValue& e)",
+			"C++ HelperMacros.typeErrorText shim should accept runtime values without requiring macro Expr pointers");
 		assertContains(helperMacrosLines, "return nullptr;", "C++ HelperMacros pointer-shaped shims should return neutral references");
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.helperMacrosShimDefaultValue("__hxhx_anon_pos_int__expr_std__string", null) == "__hxhx_anon_pos_int__expr_std__string{}",
