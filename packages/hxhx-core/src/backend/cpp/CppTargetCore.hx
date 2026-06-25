@@ -2977,6 +2977,16 @@ class CppTargetCore {
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
+		if (sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "typedAs" && args.length == 2) {
+			return [
+				"  template<typename TActual, typename TExpected>",
+				"  static std::string typedAs(const TActual& actual, const TExpected& expected) {",
+				"    (void)actual;",
+				"    (void)expected;",
+				"    return std::string();",
+				"  }"
+			];
+		}
 		final out = ["  static "
 			+ returnType
 			+ " "
@@ -3668,8 +3678,9 @@ class CppTargetCore {
 		for (arg in args) {
 			final name = sanitizeIdentifier(HxFunctionArg.getName(arg));
 			final rawType = cppFunctionArgBaseType(arg, scope);
+			final explicitType = StringTools.trim(HxFunctionArg.getTypeHint(arg) == null ? "" : HxFunctionArg.getTypeHint(arg));
 			scope.localTypes.set(name, rawType);
-			if (rawType == "std::string")
+			if (rawType == "std::string" || explicitType.length == 0)
 				candidates.set(name, true);
 		}
 		if (!candidates.iterator().hasNext()) {
@@ -4240,8 +4251,14 @@ class CppTargetCore {
 				if (init != null)
 					collectAssignedArgTypeOverridesFromExpr(init, scope, candidates);
 				final localType = cppLocalTypeHint(typeHint, init, scope);
-				if (localType.length > 0)
+				if (localType.length > 0) {
+					switch (init) {
+						case EIdent(argName) if (candidates.exists(sanitizeIdentifier(argName))):
+							setAssignedArgTypeOverride(scope, sanitizeIdentifier(argName), localType);
+						case _:
+					}
 					scope.localTypes.set(sanitizeIdentifier(name), localType);
+				}
 			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
 				collectAssignedArgTypeOverridesFromExpr(expr, scope, candidates);
 			case SReturnVoid(_) | SBreak(_) | SContinue(_):
@@ -4457,6 +4474,8 @@ class CppTargetCore {
 	}
 
 	static function collectForwardedCallArgTypeOverrides(callee:HxExpr, args:Array<HxExpr>, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+		if (isHelperMacrosTypedAsCallee(callee))
+			return;
 		final params = knownCallParams(callee, scope);
 		if (params == null || params.length == 0 || args == null || args.length == 0)
 			return;
@@ -4484,6 +4503,17 @@ class CppTargetCore {
 			paramIndex++;
 			argIndex++;
 		}
+	}
+
+	static function isHelperMacrosTypedAsCallee(callee:HxExpr):Bool {
+		return switch (callee) {
+			case EField(EIdent("HelperMacros"), "typedAs"):
+				true;
+			case EField(EField(EIdent("unit"), "HelperMacros"), "typedAs"):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function collectSameOwnerDeclaredArgTypeOverrides(methodName:String, args:Array<HxExpr>, scope:CppRenderScope,

@@ -4274,6 +4274,48 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stringUsingUnrelatedLines, "return StringUsingLater::siblingFunc(std::string(\"FOO\"));",
 			"C++ string using-style fallback should dispatch to available static String extension helpers outside the owner/base chain");
 		assertTrue(stringUsingUnrelatedLines.indexOf(".siblingFunc()") < 0, "C++ string using-style fallback should not emit nonexistent std::string members");
+		final constrainedValue = new HxClassDecl("ConstrainedValue", false, [
+			new HxFunctionDecl("toUpperCase", Public, false, [], "ConstrainedValue", [SReturn(ENew("ConstrainedValue", []), HxPos.unknown())], ""),
+			new HxFunctionDecl("getString", Public, false, [], "String", [SReturn(EString("ok"), HxPos.unknown())], "")
+		], []);
+		final constrainedHelperMacros = new HxClassDecl("HelperMacros", false, [
+			new HxFunctionDecl("typedAs", Public, true, [
+				new HxFunctionArg("actual", "Expr", NoDefault, false, false),
+				new HxFunctionArg("expected", "Expr", NoDefault, false, false)
+			], "String", [SReturn(EString(""), HxPos.unknown())], "")
+		], []);
+		final constrainedOwner = new HxClassDecl("ConstrainedOwner", false, [
+			new HxFunctionDecl("infer", Public, true, [new HxFunctionArg("arg", "", NoDefault, false, false)], "String", [
+				SVar("s1", "ConstrainedValue", ECall(EField(EIdent("arg"), "toUpperCase"), []), HxPos.unknown()),
+				SVar("s", "ConstrainedValue", EIdent("arg"), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("HelperMacros"), "typedAs"), [EIdent("arg"), ENull]), HxPos.unknown()),
+				SReturn(EBinop("+", ECall(EField(EIdent("s"), "getString"), []), ECall(EField(EIdent("s1"), "getString"), [])), HxPos.unknown())
+			], "")
+		], []);
+		final constrainedNames = new StringMap<Bool>();
+		for (name in ["ConstrainedOwner", "ConstrainedValue", "HelperMacros", "Expr"])
+			constrainedNames.set(name, true);
+		final constrainedClasses = new StringMap<HxClassDecl>();
+		constrainedClasses.set("ConstrainedOwner", constrainedOwner);
+		constrainedClasses.set("ConstrainedValue", constrainedValue);
+		constrainedClasses.set("HelperMacros", constrainedHelperMacros);
+		constrainedClasses.set("Expr", new HxClassDecl("Expr", false, [], []));
+		final constrainedLookup = {names: constrainedNames, byName: constrainedClasses};
+		final constrainedInferLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(constrainedOwner)[0], constrainedOwner, constrainedLookup).join("\n");
+		assertContains(constrainedInferLines, "static std::string infer(std::shared_ptr<ConstrainedValue> arg)",
+			"C++ unhinted constrained arguments should be narrowed from concrete local declarations");
+		assertContains(constrainedInferLines, "std::shared_ptr<ConstrainedValue> s1 = arg->toUpperCase();",
+			"C++ narrowed constrained arguments should use class receiver dispatch instead of std::any member calls");
+		assertContains(constrainedInferLines, "HelperMacros::typedAs(arg, nullptr);",
+			"C++ narrowed constrained arguments should pass through typedAs-style helper calls without std::any");
+		assertTrue(constrainedInferLines.indexOf("std::any arg") < 0, "C++ constrained argument inference should not leave the argument erased");
+		assertTrue(constrainedInferLines.indexOf("arg.toUpperCase()") < 0,
+			"C++ constrained receiver inference should not emit member access on erased arguments");
+		final constrainedHelperLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(constrainedHelperMacros, constrainedLookup).join("\n");
+		assertContains(constrainedHelperLines, "template<typename TActual, typename TExpected>\n  static std::string typedAs",
+			"C++ HelperMacros.typedAs shim should accept runtime values without requiring macro Expr pointers");
 		final selfStringOwner = new HxClassDecl("SelfStringOwner", false, [], []);
 		final selfStringNames = new StringMap<Bool>();
 		selfStringNames.set("SelfStringOwner", true);
