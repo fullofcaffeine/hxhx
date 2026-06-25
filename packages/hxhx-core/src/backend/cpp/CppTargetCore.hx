@@ -2345,6 +2345,16 @@ class CppTargetCore {
 	static function renderPrimitiveBackedAbstractClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		final out = ["struct " + className + " {"];
+		final scope = renderScope(cls, classLookup, "void");
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				continue;
+			final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+			final typeName = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
+			final init = HxFieldDecl.getInit(field);
+			final rhs = init == null ? cppDefaultValue(typeName, scope) : renderLocalInitExpr(init, typeName, typeName, scope);
+			out.push("  inline static " + typeName + " " + fieldName + " = " + rhs + ";");
+		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
 				continue;
@@ -5552,14 +5562,50 @@ class CppTargetCore {
 		final valueType = primitiveBackedAbstractCppTypeForTypeHint(typePath, scope);
 		if (valueType == null || args.length > 1)
 			return null;
-		if (args.length == 0)
-			return cppDefaultValue(valueType, scope);
-		return switch (args[0]) {
+		final value = if (args.length == 0) cppDefaultValue(valueType, scope); else switch (args[0]) {
 			case ENull:
 				cppDefaultValue(valueType, scope);
 			case _:
 				valueExprForExpectedType(args[0], valueType, scope);
 		};
+		return primitiveBackedAbstractCtorSideEffectExpr(typePath, args, value, scope);
+	}
+
+	static function primitiveBackedAbstractCtorSideEffectExpr(typePath:String, args:Array<HxExpr>, value:String, ?scope:CppRenderScope):String {
+		final sideEffects = primitiveBackedAbstractCtorSideEffects(typePath, args, scope);
+		if (sideEffects.length == 0)
+			return value;
+		return "(" + sideEffects.concat([value]).join(", ") + ")";
+	}
+
+	static function primitiveBackedAbstractCtorSideEffects(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		if (scope == null)
+			return [];
+		final className = sanitizeTypePath(typeBaseName(typePath == null ? "" : typePath));
+		final cls = scope.classByName.exists(className) ? scope.classByName.get(className) : lookupClassForTypeHint(typePath, scope);
+		final ctor = findConstructor(cls);
+		if (ctor == null)
+			return [];
+		final out = new Array<String>();
+		for (stmt in HxFunctionDecl.getBody(ctor)) {
+			switch (stmt) {
+				case SExpr(EBinop("=", EThis, _), _):
+				case SExpr(EUnop("post++", EIdent(field)), _) if (isStaticFieldName(cls, field)):
+					out.push(className + "::" + sanitizeIdentifier(field) + "++");
+				case _:
+			}
+		}
+		return out;
+	}
+
+	static function isStaticFieldName(cls:HxClassDecl, fieldName:String):Bool {
+		if (cls == null)
+			return false;
+		final wanted = sanitizeIdentifier(fieldName);
+		for (field in HxClassDecl.getFields(cls))
+			if (HxFieldDecl.getIsStatic(field) && sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
+				return true;
+		return false;
 	}
 
 	static function templateArgsFromExpectedClassType(className:String, expectedCppType:String):Array<String> {
@@ -6511,6 +6557,9 @@ class CppTargetCore {
 	static function callArgExprForParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope, ?expectedParamType:String):String {
 		final paramType = expectedParamType != null && expectedParamType.length > 0 ? expectedParamType : cppFunctionArgType(param, scope);
 		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
+		final abstractArg = primitiveBackedAbstractCallArgExpr(arg, param, valueType, scope);
+		if (abstractArg != null)
+			return abstractArg;
 		switch (arg) {
 			case ENull:
 				return valueExprForExpectedType(arg, valueType, scope);
@@ -6554,6 +6603,18 @@ class CppTargetCore {
 			}
 		}
 		return renderExpr(arg, scope);
+	}
+
+	static function primitiveBackedAbstractCallArgExpr(arg:HxExpr, param:HxFunctionArg, valueType:String, ?scope:CppRenderScope):Null<String> {
+		if (param == null || scope == null)
+			return null;
+		final hint = HxFunctionArg.getTypeHint(param);
+		final underlying = primitiveBackedAbstractCppTypeForTypeHint(hint, scope);
+		if (underlying == null || underlying != valueType)
+			return null;
+		final rendered = valueExprForExpectedType(arg, valueType, scope);
+		final converted = primitiveBackedAbstractCtorSideEffectExpr(hint, [arg], rendered, scope);
+		return converted == rendered ? null : converted;
 	}
 
 	static function isScalarStringCoercibleCppType(typeName:String):Bool {
@@ -6854,12 +6915,15 @@ class CppTargetCore {
 				final optionalInner = cppOptionalInnerType(exprCppType(receiver, scope));
 				optionalInner.length > 0 ? optionalInner : "";
 			case ECall(EField(receiver, method), _):
-				final staticOwner = staticReceiverClassName(receiver, scope);
-				if (staticOwner != null) {
-					classMethodCppReturnType(staticOwner, method, true, scope);
-				} else {
-					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
-					ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
+				final primitiveAbstractReturn = primitiveBackedAbstractMethodReturnCppType(receiver, method, scope);
+				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
+					final staticOwner = staticReceiverClassName(receiver, scope);
+					if (staticOwner != null) {
+						classMethodCppReturnType(staticOwner, method, true, scope);
+					} else {
+						final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+						ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
+					}
 				}
 			case ECall(ELambda(lambdaArgs, body), args):
 				lambdaCallReturnCppType(lambdaArgs, body, args, scope);
@@ -6929,6 +6993,16 @@ class CppTargetCore {
 		return primitiveBackedAbstractMethodBodyExpr(receiver, fn, scope);
 	}
 
+	static function primitiveBackedAbstractMethodReturnCppType(receiver:HxExpr, method:String, ?scope:CppRenderScope):String {
+		var cls = primitiveBackedAbstractClassForExpr(receiver, scope);
+		if (cls == null)
+			cls = primitiveBackedAbstractClassForReceiverMethod(receiver, method, scope);
+		if (cls == null)
+			return "";
+		final fn = classMethodDeclIn(cls, method, false);
+		return fn == null ? "" : inferredFunctionReturnCppType(fn, cls, scope.classByName);
+	}
+
 	static function primitiveBackedAbstractClassForReceiverMethod(receiver:HxExpr, method:String, ?scope:CppRenderScope):Null<HxClassDecl> {
 		if (scope == null)
 			return null;
@@ -6971,6 +7045,14 @@ class CppTargetCore {
 				self;
 			case [SReturn(ECast(EThis, _), _)]:
 				self;
+			case [SReturn(EBinop(op, EThis, rhs), _)] if (isPrimitiveAbstractInlineBinaryOp(op)):
+				"("
+				+ self
+				+ " "
+				+ op
+				+ " "
+				+ renderExpr(rhs, scope)
+				+ ")";
 			case [SExpr(EUnop("post++", EThis), _)]:
 				"(" + self + "++)";
 			case [SExpr(EUnop("post--", EThis), _)]:
@@ -6981,6 +7063,15 @@ class CppTargetCore {
 				self + " -= " + renderExpr(rhs, scope);
 			case _:
 				null;
+		};
+	}
+
+	static function isPrimitiveAbstractInlineBinaryOp(op:String):Bool {
+		return switch (op) {
+			case "+" | "-" | "*" | "/" | "%":
+				true;
+			case _:
+				false;
 		};
 	}
 
@@ -7490,12 +7581,15 @@ class CppTargetCore {
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case ECall(EField(receiver, method), _):
-				final staticOwner = staticReceiverClassName(receiver, scope);
-				if (staticOwner != null) {
-					classMethodCppReturnType(staticOwner, method, true, scope);
-				} else {
-					final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
-					ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
+				final primitiveAbstractReturn = primitiveBackedAbstractMethodReturnCppType(receiver, method, scope);
+				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
+					final staticOwner = staticReceiverClassName(receiver, scope);
+					if (staticOwner != null) {
+						classMethodCppReturnType(staticOwner, method, true, scope);
+					} else {
+						final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+						ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
+					}
 				}
 			case ECall(ELambda(lambdaArgs, body), args):
 				lambdaCallReturnCppType(lambdaArgs, body, args, scope);

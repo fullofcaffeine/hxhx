@@ -4524,6 +4524,48 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(primitiveMutateLines, "(a++);", "C++ primitive-backed abstract local mutation helpers should lower against the erased primitive local");
 		assertTrue(primitiveMutateLines.indexOf("a.incr()") < 0,
 			"C++ primitive-backed abstract local mutation helpers should not emit member calls on primitive values");
+		final counterAbstract = new HxClassDecl("MyAbstractCounter", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Void", [
+				SExpr(EBinop("=", EThis, EIdent("v")), HxPos.unknown()),
+				SExpr(EUnop("post++", EIdent("counter")), HxPos.unknown())
+			],
+				""),
+			new HxFunctionDecl("fromInt", Public, true, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "MyAbstractCounter",
+				[SReturn(ENew("MyAbstractCounter", [EIdent("v")]), HxPos.unknown())], ""),
+			new HxFunctionDecl("getValue", Public, false, [], "Int", [SReturn(EBinop("+", EThis, EInt(1)), HxPos.unknown())], "")
+		],
+			[new HxFieldDecl("counter", Public, true, "Int", EInt(0))], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=Int"]);
+		final counterOwner = new HxClassDecl("CounterOwner", false, [
+			new HxFunctionDecl("getAbstractValue", Public, true, [new HxFunctionArg("a", "MyAbstractCounter", NoDefault, false, false)], "Int",
+				[SReturn(ECall(EField(EIdent("a"), "getValue"), []), HxPos.unknown())], ""),
+			new HxFunctionDecl("check", Public, true, [], "Void", [
+				SExpr(ECall(EIdent("eq"), [ECall(EIdent("getAbstractValue"), [EInt(1)]), EInt(2)]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EField(EIdent("MyAbstractCounter"), "counter"), EInt(1)]), HxPos.unknown())
+			], "")
+		]);
+		primitiveNames.set("MyAbstractCounter", true);
+		primitiveNames.set("CounterOwner", true);
+		primitiveClasses.set("MyAbstractCounter", counterAbstract);
+		primitiveClasses.set("CounterOwner", counterOwner);
+		final counterLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(counterAbstract, primitiveLookup).join("\n");
+		assertContains(counterLines, "inline static int counter = 0;",
+			"C++ primitive-backed abstracts should preserve static fields used by erased constructor side effects");
+		assertContains(counterLines, "return static_cast<int>((MyAbstractCounter::counter++, v));",
+			"C++ primitive-backed abstract @:from helpers should preserve erased constructor side effects");
+		final counterValueLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(counterOwner)[0], counterOwner, primitiveLookup).join("\n");
+		assertContains(counterValueLines, "static int getAbstractValue(int a) {",
+			"C++ primitive-backed abstract instance helper return types should infer from erased primitive method calls");
+		assertContains(counterValueLines, "return static_cast<int>((a + 1));",
+			"C++ primitive-backed abstract instance helpers should lower simple inline this expressions against erased primitive args");
+		assertTrue(counterValueLines.indexOf("a.getValue()") < 0,
+			"C++ primitive-backed abstract instance helpers should not emit member calls on erased primitive args");
+		final counterCheckLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(counterOwner)[1], counterOwner, primitiveLookup).join("\n");
+		assertContains(counterCheckLines, "eq(getAbstractValue((MyAbstractCounter::counter++, 1)), 2);",
+			"C++ primitive-backed abstract call arguments should preserve @:from constructor side effects before erased calls");
+		assertContains(counterCheckLines, "eq(MyAbstractCounter::counter, 1);",
+			"C++ primitive-backed abstract static fields should remain addressable after erasure");
 		final primitiveNoMetadataOwner = new HxClassDecl("PrimitiveNoMetadataOwner", false, [
 			new HxFunctionDecl("read", Public, true, [], "Int", [
 				SVar("a", "", EInt(33), HxPos.unknown()),
