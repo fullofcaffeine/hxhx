@@ -555,6 +555,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function zeroCode():Int {",
 			"    return \"0\".code;",
 			"  }",
+			"  public static function literalSplit():Array<String> {",
+			"    return \"abc\".split(\"\");",
+			"  }",
+			"  public static function fromCharCodeM():String {",
+			"    return String.fromCharCode(77);",
+			"  }",
+			"  public static function maybeCodeAt(s:String, pos:Int):Null<Int> {",
+			"    return s.charCodeAt(pos);",
+			"  }",
 			"}",
 			"class CppInputReadLineLike {",
 			"  public static function fromBuffer():String {",
@@ -4144,6 +4153,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ optional Array null comparisons should use empty optional values");
 		assertContains(optionalArrayLines, "__hxhx_vector_remove(a, 2);", "C++ optional Array remove should lower through the vector helper");
 		assertContains(optionalArrayLines, "__hxhx_vector_splice(a, 1, 1);", "C++ optional Array splice should lower through the vector helper");
+		final stringBasetypeOwner = new HxClassDecl("StringBasetypeOwner", false, [
+			new HxFunctionDecl("check", Public, false, [], "Void", [
+				SExpr(ECall(EIdent("eq"), [ECall(EField(EIdent("String"), "fromCharCode"), [EInt(77)]), EString("M")]), HxPos.unknown()),
+				SVar("abc", "", ECall(EField(EString("abc"), "split"), [EString("")]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("abc"), EInt(0)), EString("a")]), HxPos.unknown()),
+				SVar("str", "String", EString("abc"), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("str"), EInt(0)), EInt(97)]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("str"), EUnop("-", EInt(1))), ENull]), HxPos.unknown())
+			], "")
+		], []);
+		final stringBasetypeLookup = {names: new StringMap<Bool>(), byName: new StringMap<HxClassDecl>()};
+		stringBasetypeLookup.names.set("StringBasetypeOwner", true);
+		stringBasetypeLookup.byName.set("StringBasetypeOwner", stringBasetypeOwner);
+		final stringBasetypeLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(stringBasetypeOwner)[0], stringBasetypeOwner, stringBasetypeLookup)
+				.join("\n");
+		assertContains(stringBasetypeLines, "eq(std::string(1, static_cast<char>(77)), std::string(\"M\"));",
+			"C++ string eq should compare String.fromCharCode and literals as std::string values");
+		assertContains(stringBasetypeLines, "auto abc = __hxhx_split(std::string(\"abc\"), std::string(\"\"));",
+			"C++ string literal split should not emit a method call on a C string literal");
+		assertContains(stringBasetypeLines, "eq(std::string((abc[0])), std::string(\"a\"));",
+			"C++ string vector item eq should compare against std::string literals");
+		assertContains(stringBasetypeLines, "eq(__hxhx_string_code_at(str, 0), std::optional<int>(97));",
+			"C++ string index eq should compare nullable code points consistently");
+		assertContains(stringBasetypeLines, "eq(__hxhx_string_code_at(str, (-1)), std::optional<int>{});",
+			"C++ string out-of-range index eq should compare against empty optional");
 		final point3Class = new HxClassDecl("MyPoint3", false, [
 			new HxFunctionDecl("new", Public, false, [
 				new HxFunctionArg("x", "Float", NoDefault, false, false),
@@ -6046,7 +6081,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "return __hxhx_replace(std::string(s), std::string(\"na\"), std::string(\"X\"));",
 			"C++ smoke should lower StringTools.replace to target support helpers");
 		assertContains(source,
-			"return __hxhx_replace(__hxhx_replace(__hxhx_replace(std::string(s), std::string(\"\\\\\"), std::string(\"\\\\\\\\\")), std::string(\"\\n\"), std::string(\"\\\\n\")), std::string(\"\\t\"), std::string(\"\\\\t\"));",
+			"return __hxhx_replace(__hxhx_replace(__hxhx_replace(s, std::string(\"\\\\\"), std::string(\"\\\\\\\\\")), std::string(\"\\n\"), std::string(\"\\\\n\")), std::string(\"\\t\"), std::string(\"\\\\t\"));",
 			"C++ smoke should lower chained String.replace calls to target support helpers");
 		assertContains(source, "static std::string __hxhx_replace(", "C++ smoke should include target support for StringTools.replace");
 		assertTrue(source.indexOf("StringTools::replace(std::string(s)") < 0,
@@ -6054,8 +6089,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(source.indexOf(".replace(std::string(\"\\\\\"), std::string(\"\\\\\\\\\"))") < 0,
 			"C++ smoke should not emit C++ std::string replace overload calls for Haxe String.replace");
 		assertContains(source, "__hxhx_last_index_of(s, std::string(start), 0)", "C++ smoke should lower String.lastIndexOf to target support helpers");
-		assertContains(source, "auto c = static_cast<int>(static_cast<unsigned char>(s[pos]));",
-			"C++ smoke should lower String.charCodeAt to direct code-point reads");
+		assertContains(source, "auto c = __hxhx_string_code_at(s, pos);", "C++ smoke should lower String.charCodeAt to nullable target support");
 		assertContains(source, "return s.substr(1, 2);", "C++ smoke should preserve std::string substr results without stringifying");
 		assertContains(source, "return __hxhx_substring(s, 1, 3);", "C++ smoke should lower Haxe substring to target support helpers");
 		assertContains(source, "return ltrim(rtrim(s));", "C++ smoke should preserve same-class string-returning static calls");
@@ -6070,6 +6104,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "__hxhx_char_at(hexChars, (n & 15)) + s", "C++ smoke should lower String.charAt to target support helpers");
 		assertContains(source, "return static_cast<int>(static_cast<int>(static_cast<unsigned char>(\"0\"[0])));",
 			"C++ smoke should lower String literal .code to a code-point read");
+		assertContains(source, "return __hxhx_split(std::string(\"abc\"), std::string(\"\"));",
+			"C++ smoke should lower String.split on literals through target support helpers");
+		assertContains(source, "return std::string(1, static_cast<char>(77));",
+			"C++ smoke should lower String.fromCharCode to a target-owned string expression");
+		assertContains(source, "return __hxhx_string_code_at(s, pos);", "C++ smoke should lower String.charCodeAt to nullable target support");
 		assertTrue(source.indexOf(".split(") < 0, "C++ smoke should not emit nonexistent std::string split calls");
 		assertTrue(source.indexOf(".lastIndexOf(") < 0, "C++ smoke should not emit nonexistent std::string lastIndexOf calls");
 		assertTrue(source.indexOf(".charCodeAt(") < 0, "C++ smoke should not emit nonexistent std::string charCodeAt calls");
@@ -6077,7 +6116,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(source.indexOf("std::to_string(s.substr") < 0, "C++ smoke should not stringify std::string substr results");
 		assertContains(source, "static std::string fromBuffer() {", "C++ smoke should keep Input.readLine-like helpers returning strings");
 		assertContains(source, "std::string s = std::string();", "C++ smoke should infer no-init locals assigned from String expressions as std::string");
-		assertContains(source, "static_cast<int>(static_cast<unsigned char>(s[((s.size()) - 1)]))",
+		assertContains(source, "__hxhx_string_code_at(s, ((s.size()) - 1))",
 			"C++ smoke should lower string operations on no-init locals after assignment inference");
 		assertContains(source, "s = s.substr(0, (-1));", "C++ smoke should preserve String.substr reassignment on no-init locals");
 		assertTrue(source.indexOf("auto s = 0;") < 0, "C++ smoke should not default no-init String locals to integer auto");

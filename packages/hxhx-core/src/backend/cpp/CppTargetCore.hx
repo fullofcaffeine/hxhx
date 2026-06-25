@@ -420,6 +420,11 @@ class CppTargetCore {
 		out.push("  return std::string(1, source[static_cast<std::size_t>(index)]);");
 		out.push("}");
 		out.push("");
+		out.push("static std::optional<int> __hxhx_string_code_at(const std::string& source, int index) {");
+		out.push("  if (index < 0 || index >= static_cast<int>(source.size())) return std::nullopt;");
+		out.push("  return static_cast<int>(static_cast<unsigned char>(source[static_cast<std::size_t>(index)]));");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_substring(const std::string& source, int start, int end) {");
 		out.push("  int len = static_cast<int>(source.size());");
 		out.push("  if (start < 0) start = 0;");
@@ -4888,6 +4893,8 @@ class CppTargetCore {
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("Math"), method), args):
 				mathCallExpr(method, args, scope);
+			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
+				"std::string(1, static_cast<char>(" + renderExpr(args[0], scope) + "))";
 			case ECall(EField(receiver, method), args) if (isInt64StaticReceiver(receiver)):
 				int64StaticCallExpr(method, args, scope);
 			case ECall(EField(EField(EIdent("haxe"), "SysTools"), "quoteUnixArg"), args) if (args.length == 1):
@@ -4982,6 +4989,12 @@ class CppTargetCore {
 			case EArrayAccess(array, index) if (isCppOptionalVectorType(exprCppType(array, scope))):
 				"__hxhx_vector_get("
 				+ renderExpr(array, scope)
+				+ ", "
+				+ renderExpr(index, scope)
+				+ ")";
+			case EArrayAccess(array, index) if (isCppStringExpr(array, scope)):
+				"__hxhx_string_code_at("
+				+ stringReceiverExpr(array, scope)
 				+ ", "
 				+ renderExpr(index, scope)
 				+ ")";
@@ -5131,6 +5144,15 @@ class CppTargetCore {
 				+ renderExpr(left, scope)
 				+ ", "
 				+ renderExpr(right, scope)
+				+ ")";
+			case EBinop(op, left, right) if (isArithmeticBinaryOp(op)
+				&& (isCppOptionalIntExpr(left, scope) || isCppOptionalIntExpr(right, scope))):
+				"("
+				+ numericOperandExpr(left, scope)
+				+ " "
+				+ op
+				+ " "
+				+ numericOperandExpr(right, scope)
 				+ ")";
 			case EBinop(op, left, right) if (isSimpleBinaryOp(op)):
 				"("
@@ -5576,42 +5598,43 @@ class CppTargetCore {
 			};
 			return lowered != null ? lowered : target + "." + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
 		}
-		if (exprCppType(receiver, scope) == "std::string") {
+		if (isCppStringExpr(receiver, scope)) {
+			final target = stringReceiverExpr(receiver, scope);
 			return switch (method) {
 				case "raw_ptr" if (args.length == 0):
-					"std::make_shared<RawConstPointer<void>>(" + renderExpr(receiver, scope) + ".c_str())";
+					"std::make_shared<RawConstPointer<void>>(" + target + ".c_str())";
 				case "replace" if (args.length == 2):
 					"__hxhx_replace("
-					+ stringExpr(receiver, scope)
+					+ target
 					+ ", "
 					+ stringExpr(args[0], scope)
 					+ ", "
 					+ stringExpr(args[1], scope)
 					+ ")";
 				case "split" if (args.length == 1):
-					"__hxhx_split(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
+					"__hxhx_split(" + target + ", " + stringExpr(args[0], scope) + ")";
 				case "lastIndexOf" if (args.length == 1 || args.length == 2):
 					"__hxhx_last_index_of("
-					+ renderExpr(receiver, scope)
+					+ target
 					+ ", "
 					+ stringExpr(args[0], scope)
 					+ ", "
-					+ (args.length == 2 ? renderExpr(args[1], scope) : "static_cast<int>(" + renderExpr(receiver, scope) + ".size())")
+					+ (args.length == 2 ? renderExpr(args[1], scope) : "static_cast<int>(" + target + ".size())")
 					+ ")";
 				case "charCodeAt" | "cca" if (args.length == 1):
-					stringCodeAtExpr(receiver, args[0], scope);
+					"__hxhx_string_code_at(" + target + ", " + renderExpr(args[0], scope) + ")";
 				case "charAt" if (args.length == 1):
-					"__hxhx_char_at(" + renderExpr(receiver, scope) + ", " + renderExpr(args[0], scope) + ")";
+					"__hxhx_char_at(" + target + ", " + renderExpr(args[0], scope) + ")";
 				case "substring" if (args.length == 1 || args.length == 2):
 					"__hxhx_substring("
-					+ renderExpr(receiver, scope)
+					+ target
 					+ ", "
 					+ renderExpr(args[0], scope)
 					+ ", "
-					+ (args.length == 2 ? renderExpr(args[1], scope) : "static_cast<int>(" + renderExpr(receiver, scope) + ".size())")
+					+ (args.length == 2 ? renderExpr(args[1], scope) : "static_cast<int>(" + target + ".size())")
 					+ ")";
 				case _:
-					renderExpr(receiver, scope) + "." + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+					target + "." + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
 			};
 		}
 		if (method == "join" && isCppVectorType(exprCppType(receiver, scope)) && args.length == 1)
@@ -5729,6 +5752,8 @@ class CppTargetCore {
 				"std::optional<" + otherOptionalInner + ">{}";
 			case _ if (isCppVectorLengthExpr(arg, scope)):
 				"static_cast<int>(" + renderExpr(arg, scope) + ")";
+			case _ if (isCppStringExpr(arg, scope) || argType == "std::string" || otherType == "std::string"):
+				stringExpr(arg, scope);
 			case _:
 				if (otherOptionalInner.length > 0 && argType == otherOptionalInner) "std::optional<"
 					+ otherOptionalInner
@@ -6317,6 +6342,8 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(EIdent("Type"), method), args):
 				typeIntrinsicReturnCppType(method, args);
+			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
+				"std::string";
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				"std::string";
 			case ECall(EField(receiver, "parseInt"), args) if (isStdStaticReceiver(receiver) && args.length == 1):
@@ -6342,7 +6369,7 @@ class CppTargetCore {
 			case ECall(EField(ESuper, method), _):
 				final baseType = scope.owner == null ? null : baseTypeName(scope.owner);
 				baseType == null ? "" : classMethodCppReturnType(baseType, method, false, scope);
-			case ECall(EField(receiver, method), _) if (exprCppType(receiver, scope) == "std::string"):
+			case ECall(EField(receiver, method), _) if (isCppStringExpr(receiver, scope)):
 				stringMethodReturnCppType(method);
 			case ECall(EField(receiver, "iterator"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
@@ -6687,6 +6714,11 @@ class CppTargetCore {
 		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "StringTools";
 	}
 
+	static function isStringStaticReceiver(receiver:HxExpr):Bool {
+		final typePath = staticReceiverTypePath(receiver);
+		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "String";
+	}
+
 	static function isReflectStaticReceiver(receiver:HxExpr):Bool {
 		final typePath = staticReceiverTypePath(receiver);
 		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "Reflect";
@@ -6828,6 +6860,8 @@ class CppTargetCore {
 				exprCppType(expr, scope);
 			case ECall(EField(EIdent("Type"), method), args):
 				typeIntrinsicReturnCppType(method, args);
+			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
+				"std::string";
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				"std::string";
 			case ECall(EField(receiver, "parseInt"), args) if (isStdStaticReceiver(receiver) && args.length == 1):
@@ -6886,7 +6920,7 @@ class CppTargetCore {
 				globalIntrinsicReturnCppType(method);
 			case ECall(EField(EIdent("StringTools"), method), _) if (isStringToolsTrimMethod(method)):
 				"std::string";
-			case ECall(EField(receiver, method), _) if (exprCppType(receiver, scope) == "std::string"):
+			case ECall(EField(receiver, method), _) if (isCppStringExpr(receiver, scope)):
 				stringMethodReturnCppType(method);
 			case ECall(EField(receiver, "iterator"), _) if (isCppVectorType(exprCppType(receiver, scope))):
 				iteratorCppTypeForVector(exprCppType(receiver, scope));
@@ -6932,6 +6966,8 @@ class CppTargetCore {
 				"std::vector<" + arrayElementType(elements, scope) + ">";
 			case EArrayComprehension(name, iterable, _, yieldExpr):
 				"std::vector<" + arrayComprehensionElementType(name, iterable, yieldExpr, scope) + ">";
+			case EArrayAccess(array, _) if (isCppStringExpr(array, scope)):
+				"std::optional<int>";
 			case EArrayAccess(array, _):
 				cppVectorElementType(exprCppType(array, scope));
 			case EAnon(fieldNames, fieldValues):
@@ -6967,8 +7003,10 @@ class CppTargetCore {
 		return switch (method) {
 			case "split":
 				"std::vector<std::string>";
-			case "lastIndexOf" | "charCodeAt" | "cca":
+			case "lastIndexOf":
 				"int";
+			case "charCodeAt" | "cca":
+				"std::optional<int>";
 			case "charAt" | "substring" | "substr" | "replace":
 				"std::string";
 			case _:
@@ -7720,6 +7758,10 @@ class CppTargetCore {
 		};
 	}
 
+	static function stringReceiverExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return isStringLike(expr) ? stringExpr(expr, scope) : renderExpr(expr, scope);
+	}
+
 	/**
 		Lower the `haxe.macro.Context.load(name, arity)(...)` shape used by
 		upstream macro helpers to a typed C++ support call.
@@ -8290,6 +8332,14 @@ class CppTargetCore {
 				true;
 			case _: exprCppType(expr, scope) == "int" || inferExprCppType(expr, scope) == "int";
 		};
+	}
+
+	static function isCppOptionalIntExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return cppOptionalInnerType(exprCppType(expr, scope)) == "int" || cppOptionalInnerType(inferExprCppType(expr, scope)) == "int";
+	}
+
+	static function numericOperandExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return isCppOptionalIntExpr(expr, scope) ? renderExpr(expr, scope) + ".value_or(0)" : renderExpr(expr, scope);
 	}
 
 	static function isCppBoolExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
