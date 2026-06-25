@@ -6036,6 +6036,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source,
 			"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{__hxhx_stringify(val), (idx++)};\n  }",
 			"C++ smoke should lower generic key/value iterator structural returns through C++ auto");
+		assertTrue(source.indexOf("__hxhx_anon_key_int_value_T") < 0,
+			"C++ smoke should not emit global structural anonymous helpers with bare generic value fields");
+		assertTrue(source.indexOf("__hxhx_anon_key_std__string_value_T") < 0,
+			"C++ smoke should not emit global structural anonymous helpers with bare generic value fields after key fallback");
 		assertContains(source, "template<typename T>\nstruct GenericListKeyValueIterator {",
 			"C++ smoke should preserve helper class type parameters declared in parsed class headers");
 		assertContains(source, "return __hxhx_anon_value_std__string_key_int_{std::string((array[current])), (current++)};",

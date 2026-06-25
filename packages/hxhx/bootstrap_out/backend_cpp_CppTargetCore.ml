@@ -6085,7 +6085,7 @@ let rec structuralTypeHintStruct = fun typeHint scope classLookup -> try let __f
         __new_151
       ));
       ignore (HxArray.push names (Obj.obj (HxAnon.get field "name")));
-      let fieldType = (cppTypeHint (Obj.obj (HxAnon.get field "typeHint") : string) scope classLookup : string) in let tempString = ref ("" : string) in (
+      let fieldType = (structuralFieldCppType (Obj.obj (HxAnon.get field "typeHint") : string) scope classLookup : string) in let tempString = ref ("" : string) in (
         ignore (if isScopeTypeParam (fieldType : string) scope || isBareCppTypeParamName (fieldType : string) then let __assign_152 = ("std::string" : string) in (
           tempString := __assign_152;
           __assign_152
@@ -6216,6 +6216,29 @@ and cppFunctionTypeHint = fun typeHint scope classLookup -> try let __fallback_r
   )
 ) in Obj.magic __fallback_result_8053 with
   | HxRuntime.Hx_return __ret_8052 -> Obj.obj __ret_8052
+and structuralFieldCppType = fun typeHint scope classLookup -> try let __fallback_result_8072 = let tempString = ref ("" : string) in (
+  ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_8067 = ("" : string) in (
+    tempString := __assign_8067;
+    __assign_8067
+  ) else let __assign_8068 = (typeHint : string) in (
+    tempString := __assign_8068;
+    __assign_8068
+  ));
+  let raw = (removeTypeHintWhitespace (StringTools.trim (!tempString : string) : string) : string) in (
+    ignore (if HxString.length (genericTypeParamName (raw : string)) > 0 then raise (HxRuntime.Hx_return (Obj.repr ("std::string" : string))) else ());
+    let fieldType = (cppTypeHint (raw : string) scope classLookup : string) in let tempResult = ref ("" : string) in (
+      ignore (if isScopeTypeParam (fieldType : string) scope || isBareCppTypeParamName (fieldType : string) then let __assign_8069 = ("std::string" : string) in (
+        tempResult := __assign_8069;
+        __assign_8069
+      ) else let __assign_8070 = (fieldType : string) in (
+        tempResult := __assign_8070;
+        __assign_8070
+      ));
+      !tempResult
+    )
+  )
+) in Obj.magic __fallback_result_8072 with
+  | HxRuntime.Hx_return __ret_8071 -> Obj.obj __ret_8071
 
 let inheritedCppBaseTypeName = fun cls classLookup -> try let __fallback_result_535 = let extendsPath = (HxClassDecl.getExtendsPath (Obj.magic cls) : string) in (
   ignore (if extendsPath == Obj.magic (HxRuntime.hx_null) || HxString.length extendsPath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());

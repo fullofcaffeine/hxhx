@@ -1195,7 +1195,7 @@ class CppTargetCore {
 		final types = new Array<String>();
 		for (field in fields) {
 			names.push(field.name);
-			final fieldType = cppTypeHint(field.typeHint, scope, classLookup);
+			final fieldType = structuralFieldCppType(field.typeHint, scope, classLookup);
 			types.push(isScopeTypeParam(fieldType, scope) || isBareCppTypeParamName(fieldType) ? "std::string" : fieldType);
 		}
 		final struct = {name: anonStructName(names, types), fieldNames: names, fieldTypes: types};
@@ -10478,5 +10478,13 @@ class CppTargetCore {
 			out.push(line);
 		out.push("  }");
 		return out;
+	}
+
+	static function structuralFieldCppType(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (genericTypeParamName(raw).length > 0)
+			return "std::string";
+		final fieldType = cppTypeHint(raw, scope, classLookup);
+		return isScopeTypeParam(fieldType, scope) || isBareCppTypeParamName(fieldType) ? "std::string" : fieldType;
 	}
 }
