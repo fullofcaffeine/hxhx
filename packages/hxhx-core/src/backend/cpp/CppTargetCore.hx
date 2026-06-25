@@ -5504,7 +5504,7 @@ class CppTargetCore {
 				fieldCallExpr(receiver, method, args, scope);
 			case ECall(callee, args):
 				"(" + renderExpr(callee, scope) + ")(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
-			case EBinop("+", left, right) if (isStringLike(left) || isStringLike(right)):
+			case EBinop("+", left, right) if (isCppStringExpr(left, scope) || isCppStringExpr(right, scope)):
 				"("
 				+ stringExpr(left, scope)
 				+ " + "

@@ -16037,7 +16037,7 @@ and renderExpr = fun expr scope -> let tempResult = ref ("" : string) in (
         tempResult := __assign_2943;
         __assign_2943
       ) else HxType.hx_throw_typed_rtti (Obj.repr ("C++ source backend MVP unsupported expression: " ^ HxString.toStdString (exprKind (Obj.magic expr)))) ["Dynamic"; "String"]
-      | "+" -> let left = Obj.magic _g1 in let right = Obj.magic _g2 in if isStringLike (Obj.magic left) || isStringLike (Obj.magic right) then let __assign_2944 = (((("(" ^ HxString.toStdString (stringExpr (Obj.magic left) scope)) ^ " + ") ^ HxString.toStdString (stringExpr (Obj.magic right) scope)) ^ ")" : string) in (
+      | "+" -> let left = Obj.magic _g1 in let right = Obj.magic _g2 in if isCppStringExpr (Obj.magic left) scope || isCppStringExpr (Obj.magic right) scope then let __assign_2944 = (((("(" ^ HxString.toStdString (stringExpr (Obj.magic left) scope)) ^ " + ") ^ HxString.toStdString (stringExpr (Obj.magic right) scope)) ^ ")" : string) in (
         tempResult := __assign_2944;
         __assign_2944
       ) else let op = (_g : string) in let left2 = Obj.magic _g1 in let right2 = Obj.magic _g2 in if primitiveStringAbstractBinaryOpExpr (op : string) (Obj.magic left2) (Obj.magic right2) scope != Obj.magic (HxRuntime.hx_null) then let __assign_2945 = (primitiveStringAbstractBinaryOpExpr (op : string) (Obj.magic left2) (Obj.magic right2) scope : string) in (

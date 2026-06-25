@@ -4206,6 +4206,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ expected function locals should preserve Dynamic identity-call function values");
 		assertTrue(dynamicFunctionLines.indexOf("make(foo)") < 0,
 			"C++ Dynamic identity-call function values should not flow through string-shaped Dynamic calls");
+		final concatOwner = new HxClassDecl("ConcatOwner", false, [], []);
+		final concatNames = new StringMap<Bool>();
+		concatNames.set("ConcatOwner", true);
+		final concatClasses = new StringMap<HxClassDecl>();
+		concatClasses.set("ConcatOwner", concatOwner);
+		final concatLookup = {names: concatNames, byName: concatClasses};
+		final concatMethod = new HxFunctionDecl("concatLike", Public, false, [], "String", [
+			SVar("y", "String", EString("tail"), HxPos.unknown()),
+			SReturn(EBinop("+", EBinop("+", EInt(1), EInt(2)), EIdent("y")), HxPos.unknown())
+		], "");
+		final concatLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(concatMethod, concatOwner, concatLookup).join("\n");
+		assertContains(concatLines, "return (std::to_string((1 + 2)) + std::string(y));",
+			"C++ numeric-plus-string concatenation should stringify the numeric side");
+		assertTrue(concatLines.indexOf("return ((1 + 2) + y);") < 0, "C++ numeric-plus-string concatenation should not emit raw arithmetic plus string");
 		final selfStringOwner = new HxClassDecl("SelfStringOwner", false, [], []);
 		final selfStringNames = new StringMap<Bool>();
 		selfStringNames.set("SelfStringOwner", true);
