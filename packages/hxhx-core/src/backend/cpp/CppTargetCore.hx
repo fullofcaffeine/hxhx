@@ -5333,6 +5333,9 @@ class CppTargetCore {
 		final typePathPlaceholder = typePathPlaceholderExprForExpectedType(expr, expectedType, scope);
 		if (typePathPlaceholder != null)
 			return typePathPlaceholder;
+		final posInfosValue = posInfosValueExprForExpectedType(expr, expectedType, scope);
+		if (posInfosValue != null)
+			return posInfosValue;
 		final structuralTypedefValue = structuralTypedefValueExprForExpectedType(expr, expectedType, scope);
 		if (structuralTypedefValue != null)
 			return structuralTypedefValue;
@@ -8891,6 +8894,17 @@ class CppTargetCore {
 		};
 	}
 
+	static function posInfosValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (expectedType != "PosInfos")
+			return null;
+		return switch (expr) {
+			case EAnon(fieldNames, fieldValues) if (isPosInfosAnon(fieldNames, fieldValues)):
+				"PosInfos(" + posInfosCtorArgs(fieldNames, fieldValues, scope).join(", ") + ")";
+			case _:
+				null;
+		};
+	}
+
 	static function pointerCarrierType(expectedType:String, baseName:String):Null<String> {
 		final carrier = classNameFromCppType(expectedType);
 		if (carrier == null || carrier.length == 0)
@@ -8914,6 +8928,8 @@ class CppTargetCore {
 			}
 		}
 		if (isCppReferenceType(expectedType))
+			return valueExprForExpectedType(right, expectedType, scope);
+		if (structuralTypedefClassForCppType(expectedType, scope) != null)
 			return valueExprForExpectedType(right, expectedType, scope);
 		return renderExpr(right, scope);
 	}

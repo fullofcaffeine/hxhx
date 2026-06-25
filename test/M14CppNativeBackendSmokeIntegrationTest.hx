@@ -3203,6 +3203,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(structuralDefaultLines, "Foo foo = Foo();",
 			"C++ value-shaped structural typedef fields without initializers should default-construct instead of using integer zero");
 		assertTrue(structuralDefaultLines.indexOf("Foo foo = 0;") < 0, "C++ value-shaped structural typedef fields should not use int defaults");
+		final structuralAssignOwner = new HxClassDecl("StructuralAssignOwner", false, [
+			new HxFunctionDecl("assign", Public, false, [], "Void", [
+				SExpr(EBinop("=", EIdent("foo"), EAnon(["bar"], [EAnon(["data"], [EInt(42)])])), HxPos.unknown())
+			], "")
+		], [new HxFieldDecl("foo", Public, false, "Foo", null)]);
+		structuralNames.set("StructuralAssignOwner", true);
+		structuralClasses.set("StructuralAssignOwner", structuralAssignOwner);
+		structuralLookup.all.push(structuralAssignOwner);
+		final structuralAssignLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(structuralAssignOwner, structuralLookup).join("\n");
+		assertContains(structuralAssignLines, "foo = Foo(Bar(42));",
+			"C++ assignments into value-shaped structural typedef fields should convert matching anonymous records through value constructors");
 		final metaObject = new HxClassDecl("MetaObject", false, [], [
 			new HxFieldDecl("fields", Public, false, "Dynamic<Dynamic<Null<Array<String>>>>", null),
 			new HxFieldDecl("statics", Public, false, "Dynamic<Dynamic<Null<Array<String>>>>", null),
@@ -5783,6 +5794,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		posClasses.set("PosException", posException);
 		posClasses.set("Log", logLike);
 		final posLookup = {names: posNames, byName: posClasses};
+		final posValueScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(posException, posLookup, "void");
+		final posValueExpr = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(EAnon(["fileName", "lineNumber", "className", "methodName"],
+			[EString("(unknown)"), EInt(0), EString("(unknown)"), EString("(unknown)")]),
+			"PosInfos", posValueScope);
+		assertContains(posValueExpr, "PosInfos(std::string(\"(unknown)\"), 0, std::string(\"(unknown)\"), std::string(\"(unknown)\"))",
+			"C++ PosInfos value assignments should use the four-field support constructor");
+		assertTrue(posValueExpr.indexOf(", {})") < 0, "C++ PosInfos value assignments should not pass customParams to the four-field constructor");
 		final posInfosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(posInfos, posLookup).join("\n");
 		final parsedPosInfosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(new HxClassDecl("PosInfos", false, [], [
 			new HxFieldDecl("fileName", Public, false, "String", null),
