@@ -259,6 +259,18 @@ class CppTargetCore {
 		out.push("  return std::make_shared<__hxhx_vector_iterator<T>>(values);");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::vector<T> __hxhx_iterator_to_vector(std::shared_ptr<__hxhx_iterator<T>> iterator) {");
+		out.push("  std::vector<T> out;");
+		out.push("  while (iterator && iterator->hasNext()) out.push_back(iterator->next());");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T, typename F>");
+		out.push("static void __hxhx_vector_sort(std::vector<T>& values, F compare) {");
+		out.push("  std::sort(values.begin(), values.end(), [&](const auto& left, const auto& right) { return compare(left, right) < 0; });");
+		out.push("}");
+		out.push("");
 		for (line in CppMacroExpr.runtimePreludeLines())
 			out.push(line);
 		out.push("static std::string __hxhx_stringify(const __HxMacroExpr& value) {");
@@ -3504,13 +3516,13 @@ class CppTargetCore {
 		if (scope == null || fn == null)
 			return;
 		final savedLocalTypes = copyStringMap(scope.localTypes);
-		final candidates = new haxe.ds.StringMap<Bool>();
+		final candidates = new haxe.ds.StringMap<String>();
 		for (stmt in HxFunctionDecl.getBody(fn))
 			collectStringMapLocalTypeOverridesFromStmt(stmt, scope, candidates);
 		scope.localTypes = savedLocalTypes;
 	}
 
-	static function collectStringMapLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+	static function collectStringMapLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<String>):Void {
 		switch (stmt) {
 			case SBlock(stmts, _):
 				for (s in stmts)
@@ -3547,9 +3559,10 @@ class CppTargetCore {
 				if (init != null)
 					collectStringMapLocalTypeOverridesFromExpr(init, scope, candidates);
 				final local = sanitizeIdentifier(name);
-				if (StringTools.trim(typeHint == null ? "" : typeHint).length == 0 && isStringMapNewExpr(init)) {
-					candidates.set(local, true);
-					scope.localTypes.set(local, "std::shared_ptr<StringMap<std::string>>");
+				final mapClass = mapClassNameFromNewExpr(init);
+				if (StringTools.trim(typeHint == null ? "" : typeHint).length == 0 && mapClass.length > 0) {
+					candidates.set(local, mapClass);
+					scope.localTypes.set(local, defaultMapLocalType(mapClass));
 				} else {
 					final localType = cppLocalTypeHint(typeHint, init, scope);
 					if (localType.length > 0)
@@ -3561,13 +3574,13 @@ class CppTargetCore {
 		}
 	}
 
-	static function collectStringMapLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+	static function collectStringMapLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<String>):Void {
 		switch (expr) {
 			case ECall(EField(EIdent(name), "set"), [_, value]) if (candidates.exists(sanitizeIdentifier(name))):
 				collectStringMapLocalTypeOverridesFromExpr(value, scope, candidates);
 				final valueType = stringMapValueTypeFromExpr(value, scope);
 				if (valueType.length > 0)
-					setStringMapLocalTypeOverride(scope, sanitizeIdentifier(name), valueType);
+					setStringMapLocalTypeOverride(scope, sanitizeIdentifier(name), candidates.get(sanitizeIdentifier(name)), valueType);
 			case EBinop(_, left, right):
 				collectStringMapLocalTypeOverridesFromExpr(left, scope, candidates);
 				collectStringMapLocalTypeOverridesFromExpr(right, scope, candidates);
@@ -3607,13 +3620,27 @@ class CppTargetCore {
 		}
 	}
 
-	static function isStringMapNewExpr(expr:Null<HxExpr>):Bool {
+	static function mapClassNameFromNewExpr(expr:Null<HxExpr>):String {
 		return switch (expr) {
 			case ENew(typePath, _):
-				sanitizeTypePath(typeBaseName(typePath)) == "StringMap";
+				final className = sanitizeTypePath(typeBaseName(typePath));
+				isInferredMapClassName(className) ? className : "";
+			case _:
+				"";
+		}
+	}
+
+	static function isInferredMapClassName(className:String):Bool {
+		return switch (sanitizeTypePath(typeBaseName(className == null ? "" : className))) {
+			case "StringMap" | "IntMap":
+				true;
 			case _:
 				false;
-		}
+		};
+	}
+
+	static function defaultMapLocalType(mapClass:String):String {
+		return "std::shared_ptr<" + sanitizeTypePath(typeBaseName(mapClass)) + "<std::string>>";
 	}
 
 	static function stringMapValueTypeFromExpr(expr:HxExpr, scope:CppRenderScope):String {
@@ -3624,8 +3651,11 @@ class CppTargetCore {
 		return inferred.length > 0 ? inferred : "std::string";
 	}
 
-	static function setStringMapLocalTypeOverride(scope:CppRenderScope, local:String, valueType:String):Void {
-		final typeName = "std::shared_ptr<StringMap<" + valueType + ">>";
+	static function setStringMapLocalTypeOverride(scope:CppRenderScope, local:String, mapClass:String, valueType:String):Void {
+		final cleanClass = sanitizeTypePath(typeBaseName(mapClass == null ? "" : mapClass));
+		if (cleanClass.length == 0)
+			return;
+		final typeName = "std::shared_ptr<" + cleanClass + "<" + valueType + ">>";
 		final existing = scope.localTypeOverrides.get(local);
 		if (existing != null && existing.length > 0 && existing != typeName)
 			return;
@@ -4750,6 +4780,12 @@ class CppTargetCore {
 		if (optionalInner.length > 0 && optionalInner == expectedType)
 			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
 		switch (expr) {
+			case ENull:
+				if (isCppOptionalType(expectedType))
+					return "std::nullopt";
+				if (isCppReferenceType(expectedType))
+					return "nullptr";
+				return cppDefaultValue(expectedType, scope);
 			case ETernary(cond, thenExpr, elseExpr):
 				return "(" + renderExpr(cond, scope) + " ? " + valueExprForExpectedType(thenExpr, expectedType, scope) + " : "
 					+ valueExprForExpectedType(elseExpr, expectedType, scope) + ")";
@@ -4901,6 +4937,8 @@ class CppTargetCore {
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("Type"), "typeof"), args) if (args.length == 1):
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
+			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
+				lambdaArrayExpr(args[0], scope);
 			case ECall(EField(EIdent("Math"), method), args):
 				mathCallExpr(method, args, scope);
 			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
@@ -4990,6 +5028,8 @@ class CppTargetCore {
 				"(" + renderExpr(receiver, scope) + "->length)";
 			case EField(EIdent("Math"), field):
 				mathFieldExpr(field);
+			case EField(receiver, "compare") if (isReflectStaticReceiver(receiver)):
+				reflectCompareFunctionExpr();
 			case EField(EIdent("Error"), field):
 				"std::string(" + quoteString(field) + ")";
 			case EField(receiver, field) if (staticFieldExpr(receiver, field, scope) != null):
@@ -5565,6 +5605,8 @@ class CppTargetCore {
 					+ ", "
 					+ stringExpr(args[0], scope)
 					+ ")";
+				case "sort" if (args.length == 1):
+					"__hxhx_vector_sort(" + target + ", " + renderExpr(args[0], scope) + ")";
 				case "map" if (args.length == 1):
 					"__hxhx_vector_map_string(" + target + ", " + vectorMapMapperExpr(args[0], scope) + ")";
 				case "iterator" if (args.length == 0):
@@ -5885,9 +5927,98 @@ class CppTargetCore {
 			+ "; return __hxhx_compare(__hxhx_cmp_left, __hxhx_cmp_right); })()";
 	}
 
+	static function reflectCompareFunctionExpr():String {
+		return "[](auto left, auto right) { return __hxhx_compare(left, right); }";
+	}
+
 	static function reflectCompareArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		final typeName = inferExprCppType(expr, scope);
 		return typeName == "std::string" || isStringLike(expr) ? stringExpr(expr, scope) : renderExpr(expr, scope);
+	}
+
+	static function lambdaArrayExpr(iterable:HxExpr, ?scope:CppRenderScope):String {
+		final structuralIterator = lambdaArrayStructuralIteratorExpr(iterable, scope);
+		if (structuralIterator != null)
+			return "__hxhx_iterator_to_vector(" + structuralIterator + ")";
+		final typeName = exprCppType(iterable, scope);
+		if (cppIteratorElementType(typeName).length > 0)
+			return "__hxhx_iterator_to_vector(" + renderExpr(iterable, scope) + ")";
+		final mapValue = mapValueCppType(typeName);
+		if (mapValue.length > 0)
+			return "__hxhx_iterator_to_vector(" + renderExpr(iterable, scope) + "->iterator())";
+		return "Lambda::array(" + renderExpr(iterable, scope) + ")";
+	}
+
+	static function lambdaArrayStructuralIteratorExpr(iterable:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (iterable) {
+			case EAnon(fieldNames, fieldValues):
+				for (i in 0...fieldNames.length) {
+					if (sanitizeIdentifier(fieldNames[i]) != "iterator")
+						continue;
+					return iteratorProviderCallExpr(fieldValues[i], scope);
+				}
+				null;
+			case _:
+				null;
+		};
+	}
+
+	static function iteratorProviderCallExpr(provider:HxExpr, ?scope:CppRenderScope):String {
+		return switch (provider) {
+			case EField(receiver, method):
+				renderExpr(receiver, scope)
+				+ fieldAccessOp(receiver, scope)
+				+ sanitizeIdentifier(method)
+				+ "()";
+			case ELambda(args, body) if (args.length == 0):
+				"(" + lambdaExpr(args, body, scope) + ")()";
+			case _:
+				renderExpr(provider, scope);
+		};
+	}
+
+	static function lambdaArrayResultCppType(iterable:HxExpr, ?scope:CppRenderScope):String {
+		final structuralIterator = lambdaArrayStructuralIteratorProvider(iterable);
+		if (structuralIterator != null) {
+			final element = iteratorProviderElementType(structuralIterator, scope);
+			return element.length > 0 ? "std::vector<" + element + ">" : "";
+		}
+		final typeName = exprCppType(iterable, scope);
+		final iteratorElement = cppIteratorElementType(typeName);
+		if (iteratorElement.length > 0)
+			return "std::vector<" + iteratorElement + ">";
+		final mapValue = mapValueCppType(typeName);
+		if (mapValue.length > 0)
+			return "std::vector<" + mapValue + ">";
+		return isCppVectorType(typeName) ? typeName : "";
+	}
+
+	static function lambdaArrayStructuralIteratorProvider(iterable:HxExpr):Null<HxExpr> {
+		return switch (iterable) {
+			case EAnon(fieldNames, fieldValues):
+				for (i in 0...fieldNames.length)
+					if (sanitizeIdentifier(fieldNames[i]) == "iterator")
+						return fieldValues[i];
+				null;
+			case _:
+				null;
+		};
+	}
+
+	static function iteratorProviderElementType(provider:HxExpr, ?scope:CppRenderScope):String {
+		return switch (provider) {
+			case EField(receiver, method):
+				final receiverType = exprCppType(receiver, scope);
+				final methodReturn = mapIteratorMethodReturnType(receiverType, method);
+				if (methodReturn.length > 0) cppIteratorElementType(methodReturn); else {
+					final ownerType = instanceMethodReceiverClassName(receiverType, scope);
+					ownerType == null ? "" : cppIteratorElementType(classMethodCppReturnType(ownerType, method, false, scope));
+				}
+			case ECall(EField(receiver, method), args) if (args.length == 0):
+				cppIteratorElementType(exprCppType(ECall(EField(receiver, method), args), scope));
+			case _:
+				cppIteratorElementType(exprCppType(provider, scope));
+		};
 	}
 
 	static function renderSimpleCallArgs(args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
@@ -5949,8 +6080,40 @@ class CppTargetCore {
 	}
 
 	static function stringMapValueCppType(receiverCppType:String):String {
-		final args = templateArgsFromExpectedClassType("StringMap", receiverCppType);
-		return args.length == 1 ? args[0] : "";
+		return mapValueCppType(receiverCppType);
+	}
+
+	static function mapValueCppType(receiverCppType:String):String {
+		final stringArgs = templateArgsFromExpectedClassType("StringMap", receiverCppType);
+		if (stringArgs.length == 1)
+			return stringArgs[0];
+		final intArgs = templateArgsFromExpectedClassType("IntMap", receiverCppType);
+		if (intArgs.length == 1)
+			return intArgs[0];
+		final mapArgs = templateArgsFromExpectedClassType("Map", receiverCppType);
+		return mapArgs.length == 2 ? mapArgs[1] : "";
+	}
+
+	static function mapKeyCppType(receiverCppType:String):String {
+		if (templateArgsFromExpectedClassType("StringMap", receiverCppType).length == 1)
+			return "std::string";
+		if (templateArgsFromExpectedClassType("IntMap", receiverCppType).length == 1)
+			return "int";
+		final mapArgs = templateArgsFromExpectedClassType("Map", receiverCppType);
+		return mapArgs.length == 2 ? mapArgs[0] : "";
+	}
+
+	static function mapIteratorMethodReturnType(receiverCppType:String, method:String):String {
+		final cleanMethod = sanitizeIdentifier(method == null ? "" : method);
+		if (cleanMethod == "keys") {
+			final keyType = mapKeyCppType(receiverCppType);
+			return keyType.length > 0 ? "std::shared_ptr<__hxhx_iterator<" + keyType + ">>" : "";
+		}
+		if (cleanMethod == "iterator") {
+			final valueType = mapValueCppType(receiverCppType);
+			return valueType.length > 0 ? "std::shared_ptr<__hxhx_iterator<" + valueType + ">>" : "";
+		}
+		return "";
 	}
 
 	static function substituteCppTypeParams(typeName:String, typeParams:Array<String>, typeArgs:Array<String>):String {
@@ -6142,6 +6305,11 @@ class CppTargetCore {
 	static function callArgExprForParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope, ?expectedParamType:String):String {
 		final paramType = expectedParamType != null && expectedParamType.length > 0 ? expectedParamType : cppFunctionArgType(param, scope);
 		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
+		switch (arg) {
+			case ENull:
+				return valueExprForExpectedType(arg, valueType, scope);
+			case _:
+		}
 		final expectedClass = classNameFromCppType(valueType);
 		if (expectedClass != null) {
 			switch (arg) {
@@ -6419,9 +6587,15 @@ class CppTargetCore {
 			case ECall(EField(receiver, "hasField"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"bool";
-			case ECall(EField(receiver, "get"), args) if (args.length == 1
-				&& stringMapValueCppType(exprCppType(receiver, scope)).length > 0):
-				"std::optional<" + stringMapValueCppType(exprCppType(receiver, scope)) + ">";
+			case ECall(EField(receiver, "get"), args) if (args.length == 1 && mapValueCppType(exprCppType(receiver, scope)).length > 0):
+				"std::optional<" + mapValueCppType(exprCppType(receiver, scope)) + ">";
+			case ECall(EField(receiver, "keys"), args) if (args.length == 0 && mapKeyCppType(exprCppType(receiver, scope)).length > 0):
+				"std::shared_ptr<__hxhx_iterator<" + mapKeyCppType(exprCppType(receiver, scope)) + ">>";
+			case ECall(EField(receiver, "iterator"), args) if (args.length == 0
+				&& mapValueCppType(exprCppType(receiver, scope)).length > 0):
+				"std::shared_ptr<__hxhx_iterator<" + mapValueCppType(exprCppType(receiver, scope)) + ">>";
+			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
+				lambdaArrayResultCppType(args[0], scope);
 			case ECall(EField(EIdent("Type"), method), args):
 				typeIntrinsicReturnCppType(method, args);
 			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
@@ -6808,6 +6982,11 @@ class CppTargetCore {
 		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "Reflect";
 	}
 
+	static function isLambdaStaticReceiver(receiver:HxExpr):Bool {
+		final typePath = staticReceiverTypePath(receiver);
+		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "Lambda";
+	}
+
 	static function isStdStaticReceiver(receiver:HxExpr):Bool {
 		final typePath = staticReceiverTypePath(receiver);
 		return typePath != null && sanitizeTypePath(typeBaseName(typePath)) == "Std";
@@ -6988,9 +7167,15 @@ class CppTargetCore {
 			case ECall(EField(receiver, "hasField"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"bool";
-			case ECall(EField(receiver, "get"), args) if (args.length == 1
-				&& stringMapValueCppType(exprCppType(receiver, scope)).length > 0):
-				"std::optional<" + stringMapValueCppType(exprCppType(receiver, scope)) + ">";
+			case ECall(EField(receiver, "get"), args) if (args.length == 1 && mapValueCppType(exprCppType(receiver, scope)).length > 0):
+				"std::optional<" + mapValueCppType(exprCppType(receiver, scope)) + ">";
+			case ECall(EField(receiver, "keys"), args) if (args.length == 0 && mapKeyCppType(exprCppType(receiver, scope)).length > 0):
+				"std::shared_ptr<__hxhx_iterator<" + mapKeyCppType(exprCppType(receiver, scope)) + ">>";
+			case ECall(EField(receiver, "iterator"), args) if (args.length == 0
+				&& mapValueCppType(exprCppType(receiver, scope)).length > 0):
+				"std::shared_ptr<__hxhx_iterator<" + mapValueCppType(exprCppType(receiver, scope)) + ">>";
+			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
+				lambdaArrayResultCppType(args[0], scope);
 			case ECall(EField(receiver, "isEnumValue"), _) if (isReflectStaticReceiver(receiver)):
 				"bool";
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):

@@ -2693,7 +2693,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				new HxFunctionArg("v", "T", NoDefault, false, false)
 			],
 				"Void", [], ""),
-			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("k", "String", NoDefault, false, false)], "Null<T>", [], "")
+			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("k", "String", NoDefault, false, false)], "Null<T>", [], ""),
+			new HxFunctionDecl("keys", Public, false, [], "Iterator<String>", [], ""),
+			new HxFunctionDecl("iterator", Public, false, [], "Iterator<T>", [], "")
+		], [], "", ["__hxhx_type_params=T"]);
+		final intMapGeneric = new HxClassDecl("IntMap", false, [
+			new HxFunctionDecl("set", Public, false, [
+				new HxFunctionArg("k", "Int", NoDefault, false, false),
+				new HxFunctionArg("v", "T", NoDefault, false, false)
+			],
+				"Void", [], ""),
+			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("k", "Int", NoDefault, false, false)], "Null<T>", [], ""),
+			new HxFunctionDecl("keys", Public, false, [], "Iterator<Int>", [], ""),
+			new HxFunctionDecl("iterator", Public, false, [], "Iterator<T>", [], "")
 		], [], "", ["__hxhx_type_params=T"]);
 		final stringMapAbstract = new HxClassDecl("MyHash", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [SExpr(EBinop("=", EThis, ENew("StringMap", [])), HxPos.unknown())], "")
@@ -2718,13 +2730,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SExpr(ECall(EField(EIdent("h"), "set"), [EString("x"), EInt(-1)]), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [ECall(EField(EIdent("h"), "get"), [EString("x")]), EInt(-1)]), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [ECall(EField(EIdent("h"), "get"), [EString("missing")]), ENull]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("nullSet", Public, true, [], "Void", [
+				SVar("h", "", ENew("StringMap", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("h"), "set"), [EString("x"), EInt(-1)]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("h"), "set"), [EString("x"), ENull]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("intMapGateShapes", Public, true, [], "Void", [
+				SVar("h", "", ENew("IntMap", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("h"), "set"), [EInt(0), EInt(-1)]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("h"), "set"), [EInt(-4815), EInt(8546)]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [ECall(EField(EIdent("h"), "get"), [EInt(456)]), ENull]), HxPos.unknown()),
+				SVar("values", "", ECall(EField(EIdent("Lambda"), "array"), [EIdent("h")]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("values"), "sort"), [EField(EIdent("Reflect"), "compare")]), HxPos.unknown()),
+				SVar("keys", "", ECall(EField(EIdent("Lambda"), "array"), [ECall(EField(EIdent("h"), "keys"), [])]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("keys"), "sort"), [EField(EIdent("Reflect"), "compare")]), HxPos.unknown()),
+				SVar("keysFromStruct", "", ECall(EField(EIdent("Lambda"), "array"), [EAnon(["iterator"], [EField(EIdent("h"), "keys")])]), HxPos.unknown())
 			], "")
 		], []);
 		final stringMapNames = new StringMap<Bool>();
-		for (name in ["StringMap", "MyHash", "StringMapOwner"])
+		for (name in ["StringMap", "IntMap", "MyHash", "StringMapOwner", "Lambda", "Reflect"])
 			stringMapNames.set(name, true);
 		final stringMapClasses = new StringMap<HxClassDecl>();
 		stringMapClasses.set("StringMap", stringMapGeneric);
+		stringMapClasses.set("IntMap", intMapGeneric);
 		stringMapClasses.set("MyHash", stringMapAbstract);
 		stringMapClasses.set("StringMapOwner", stringMapOwner);
 		final stringMapLookup = {names: stringMapNames, byName: stringMapClasses};
@@ -2745,8 +2774,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ StringMap<Int>.get comparisons should wrap numeric expected values as optionals");
 		assertContains(stringMapOwnerLines, "eq(h->get(\"missing\"), std::optional<int>{});",
 			"C++ StringMap<Int>.get null comparisons should compare against empty optionals");
+		assertContains(stringMapOwnerLines, "h->set(\"x\", 0);", "C++ StringMap<Int>.set(null) should pass the value-type default, not nullptr");
+		assertContains(stringMapOwnerLines, "auto h = __hxhx_make_shared_IntMap<int>();",
+			"C++ unhinted IntMap locals should infer Int values from set calls before rendering the factory");
+		assertContains(stringMapOwnerLines, "eq(h->get(456), std::optional<int>{});",
+			"C++ IntMap<Int>.get null comparisons should compare against empty optionals");
+		assertContains(stringMapOwnerLines, "auto values = __hxhx_iterator_to_vector(h->iterator());",
+			"C++ Lambda.array(map) should lower through the map value iterator");
+		assertContains(stringMapOwnerLines, "auto keys = __hxhx_iterator_to_vector(h->keys());",
+			"C++ Lambda.array(map.keys()) should lower through the key iterator");
+		assertContains(stringMapOwnerLines, "auto keysFromStruct = __hxhx_iterator_to_vector(h->keys());",
+			"C++ Lambda.array({ iterator: map.keys }) should lower without materializing a broken structural iterator object");
+		assertContains(stringMapOwnerLines, "__hxhx_vector_sort(values, [](auto left, auto right) { return __hxhx_compare(left, right); });",
+			"C++ vector sort with Reflect.compare should lower to a callable comparator");
 		assertTrue(stringMapOwnerLines.indexOf("std::to_string((-1))") < 0,
 			"C++ StringMap<Int>.get comparisons should not coerce numeric expected values to strings");
+		assertTrue(stringMapOwnerLines.indexOf("__hxhx_make_shared_IntMap();") < 0, "C++ inferred IntMap locals should not emit undeducible factories");
+		assertTrue(stringMapOwnerLines.indexOf("__hxhx_anon_iterator_int_") < 0,
+			"C++ structural iterator Lambda.array should not emit an anonymous object with an erased iterator field");
 		assertTrue(stringMapOwnerLines.indexOf("__hxhx_make_shared_StringMap();") < 0, "C++ inferred StringMap locals should not emit undeducible factories");
 		final iMapImplementingClass = new HxClassDecl("StringMap", false, [
 			new HxFunctionDecl("copy", Public, false, [], "StringMap", [SReturn(EThis, HxPos.unknown())], "")
