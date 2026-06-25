@@ -4449,6 +4449,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(nativeArrayLines.length == 0, "C++ cpp.NativeArray is an extern/intrinsic surface and should not emit a fake helper struct");
 		final primitiveAbstract = new HxClassDecl("Int32", false, [
 			new HxFunctionDecl("get", Public, false, [], "Int", [SReturn(EThis, HxPos.unknown())], ""),
+			new HxFunctionDecl("toInt", Public, false, [], "Int", [SReturn(EThis, HxPos.unknown())], ""),
+			new HxFunctionDecl("incr", Public, false, [], "Void", [SExpr(EUnop("post++", EThis), HxPos.unknown())], ""),
 			new HxFunctionDecl("negate", Public, false, [], "Int32", [SReturn(EUnop("~", EThis), HxPos.unknown())], ""),
 			new HxFunctionDecl("ucompare", Public, true, [
 				new HxFunctionArg("a", "Int32", NoDefault, false, false),
@@ -4483,6 +4485,49 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(primitiveOwnerLines, "return static_cast<int>(m);",
 			"C++ primitive-backed abstract get() calls should return the already-erased primitive value");
 		assertTrue(primitiveOwnerLines.indexOf("m.get()") < 0, "C++ primitive-backed abstract get() calls should not emit member access on primitive values");
+		final primitiveCaller = new HxClassDecl("PrimitiveCaller", false, [
+			new HxFunctionDecl("read", Public, true, [], "Int", [
+				SVar("a", "", EInt(33), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("a"), "toInt"), []), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("mutate", Public, true, [], "Void", [
+				SVar("a", "", EInt(33), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("a"), "incr"), []), HxPos.unknown())
+			], "")
+		]);
+		primitiveNames.set("PrimitiveCaller", true);
+		primitiveClasses.set("PrimitiveCaller", primitiveCaller);
+		final primitiveReadLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(primitiveCaller)[0], primitiveCaller, primitiveLookup).join("\n");
+		assertContains(primitiveReadLines, "return static_cast<int>(a);",
+			"C++ primitive-backed abstract locals should lower read helpers against the erased primitive local");
+		assertTrue(primitiveReadLines.indexOf("a.toInt()") < 0,
+			"C++ primitive-backed abstract local read helpers should not emit member calls on primitive values");
+		final primitiveMutateLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(primitiveCaller)[1], primitiveCaller, primitiveLookup).join("\n");
+		assertContains(primitiveMutateLines, "(a++);", "C++ primitive-backed abstract local mutation helpers should lower against the erased primitive local");
+		assertTrue(primitiveMutateLines.indexOf("a.incr()") < 0,
+			"C++ primitive-backed abstract local mutation helpers should not emit member calls on primitive values");
+		final primitiveNoMetadataOwner = new HxClassDecl("PrimitiveNoMetadataOwner", false, [
+			new HxFunctionDecl("read", Public, true, [], "Int", [
+				SVar("a", "", EInt(33), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("a"), "toInt"), []), HxPos.unknown())
+			], "")
+		]);
+		final primitiveNoMetadataNames = new StringMap<Bool>();
+		primitiveNoMetadataNames.set("PrimitiveNoMetadataOwner", true);
+		final primitiveNoMetadataClasses = new StringMap<HxClassDecl>();
+		primitiveNoMetadataClasses.set("PrimitiveNoMetadataOwner", primitiveNoMetadataOwner);
+		final primitiveNoMetadataLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(primitiveNoMetadataOwner)[0],
+			primitiveNoMetadataOwner, {
+				names: primitiveNoMetadataNames,
+				byName: primitiveNoMetadataClasses
+			})
+			.join("\n");
+		assertContains(primitiveNoMetadataLines, "return static_cast<int>(a);",
+			"C++ int-like abstract helper fallbacks should lower erased primitive locals without abstract metadata");
+		assertTrue(primitiveNoMetadataLines.indexOf("a.toInt()") < 0,
+			"C++ int-like abstract helper fallbacks should not emit member calls on primitive values");
 		final stringPrimitiveAbstract = new HxClassDecl("StringBackedFixture", false, [
 			new HxFunctionDecl("NotIgnored", Public, true, [], "StringBackedFixture", [SReturn(ENew("StringBackedFixture", [ENull]), HxPos.unknown())], ""),
 			new HxFunctionDecl("Ignored", Public, true, [new HxFunctionArg("reason", "String", NoDefault, false, false)], "StringBackedFixture",
@@ -4505,6 +4550,52 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ primitive-backed abstract constructors should not emit fake shared_ptr wrapper allocations");
 		assertTrue(stringPrimitiveLines.indexOf("std::to_string(std::make_shared<StringBackedFixture>") < 0,
 			"C++ string-backed abstract constructors should not be numerically stringified");
+		final stdForType = new HxClassDecl("Std", false, [
+			new HxFunctionDecl("isOfType", Public, true, [
+				new HxFunctionArg("value", "Dynamic", NoDefault, false, false),
+				new HxFunctionArg("type", "Dynamic", NoDefault, false, false)
+			], "Bool", [SReturn(EBool(true), HxPos.unknown())], "")
+		]);
+		final templateForType = new HxClassDecl("Template", false, []);
+		final typePathOwner = new HxClassDecl("TypePathOwner", false, [
+			new HxFunctionDecl("check", Public, true, [new HxFunctionArg("tpl", "Template", NoDefault, false, false)], "Bool", [
+				SReturn(ECall(EField(EIdent("Std"), "isOfType"), [EIdent("tpl"), EField(EIdent("haxe"), "Template")]), HxPos.unknown())
+			], "")
+		]);
+		final typePathNames = new StringMap<Bool>();
+		final typePathClasses = new StringMap<HxClassDecl>();
+		for (cls in [stdForType, templateForType, typePathOwner]) {
+			final name = HxClassDecl.getName(cls);
+			typePathNames.set(name, true);
+			typePathClasses.set(name, cls);
+		}
+		final typePathLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(typePathOwner)[0], typePathOwner, {
+			names: typePathNames,
+			byName: typePathClasses
+		}).join("\n");
+		assertContains(typePathLines, "Std::isOfType(tpl, std::string(\"haxe.Template\"))",
+			"C++ Std.isOfType type-path arguments should lower to runtime string descriptors");
+		assertTrue(typePathLines.indexOf("(haxe.Template)") < 0, "C++ Std.isOfType type-path arguments should not emit unresolved C++ field chains");
+		final sequenceOwner = new HxClassDecl("SequenceOwner", false, [
+			new HxFunctionDecl("eq", Public, true, [
+				new HxFunctionArg("expected", "Int", NoDefault, false, false),
+				new HxFunctionArg("actual", "Int", NoDefault, false, false)
+			], "Void", [], ""),
+			new HxFunctionDecl("from", Public, true, [], "Void", [
+				SExpr(ECall(ELambda(["__hxhx_lambda_seq_0"], ENull), [ECall(EIdent("eq"), [EInt(1), EInt(1)])]), HxPos.unknown())
+			], "")
+		]);
+		final sequenceNames = new StringMap<Bool>();
+		sequenceNames.set("SequenceOwner", true);
+		final sequenceClasses = new StringMap<HxClassDecl>();
+		sequenceClasses.set("SequenceOwner", sequenceOwner);
+		final sequenceLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(sequenceOwner)[1], sequenceOwner, {
+			names: sequenceNames,
+			byName: sequenceClasses
+		}).join("\n");
+		assertContains(sequenceLines, "([&]() { eq(1, 1); return nullptr; })();",
+			"C++ void sequence lambdas should lower to statement IIFEs instead of passing void as an auto argument");
+		assertTrue(sequenceLines.indexOf("auto __hxhx_lambda_seq_0") < 0, "C++ void sequence lambdas should not emit a parameter for a void expression");
 		final ignoredFixture = new HxClassDecl("IgnoredFixture", false, [
 			new HxFunctionDecl("NotIgnored", Public, true, [], "IgnoredFixture", [SReturn(ENew("IgnoredFixture", [ENull]), HxPos.unknown())], ""),
 			new HxFunctionDecl("get_isIgnored", Public, false, [], "Bool", [SReturn(EBinop("!=", EThis, ENull), HxPos.unknown())], ""),

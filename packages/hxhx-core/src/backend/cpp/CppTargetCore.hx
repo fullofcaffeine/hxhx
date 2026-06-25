@@ -5215,6 +5215,8 @@ class CppTargetCore {
 				EArrayDecl(_)
 			]):
 				lambdaExpr(lambdaArgs, body, scope);
+			case ECall(ELambda(lambdaArgs, body), args) if (voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope) != null):
+				voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope);
 			case ECall(ELambda(lambdaArgs, body), args):
 				"("
 				+ lambdaExpr(lambdaArgs, body, scope)
@@ -5722,6 +5724,8 @@ class CppTargetCore {
 		final primitiveAbstractCall = primitiveBackedAbstractMethodCallExpr(receiver, method, args, scope);
 		if (primitiveAbstractCall != null)
 			return primitiveAbstractCall;
+		if (isStdStaticReceiver(receiver) && method == "isOfType" && args.length == 2)
+			return "Std::isOfType(" + renderExpr(args[0], scope) + ", " + typeDescriptorArgExpr(args[1], scope) + ")";
 		if (method == "push" && isCppVectorType(receiverCppType))
 			return renderExpr(receiver, scope) + ".push_back(" + renderedArgs + ")";
 		if (isCppVectorType(receiverCppType)) {
@@ -6833,16 +6837,77 @@ class CppTargetCore {
 	}
 
 	static function primitiveBackedAbstractMethodCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
-		if (method != "get" || args.length != 0)
+		if (args.length != 0)
 			return null;
-		final cls = primitiveBackedAbstractClassForExpr(receiver, scope);
+		var cls = primitiveBackedAbstractClassForExpr(receiver, scope);
 		if (cls == null)
-			return null;
-		final getter = classMethodDecl(sanitizeTypePath(HxClassDecl.getName(cls)), "get", false, scope);
-		if (getter == null)
+			cls = primitiveBackedAbstractClassForReceiverMethod(receiver, method, scope);
+		if (cls == null) {
+			final intLike = primitiveIntLikeAbstractMethodCallExpr(receiver, method, scope);
+			return intLike;
+		}
+		final fn = classMethodDecl(sanitizeTypePath(HxClassDecl.getName(cls)), method, false, scope);
+		if (fn == null)
 			return null;
 		final underlying = primitiveAbstractUnderlyingCppType(cls);
-		return underlying == null || underlying.length == 0 ? null : renderExpr(receiver, scope);
+		if (underlying == null || underlying.length == 0)
+			return null;
+		return primitiveBackedAbstractMethodBodyExpr(receiver, fn, scope);
+	}
+
+	static function primitiveBackedAbstractClassForReceiverMethod(receiver:HxExpr, method:String, ?scope:CppRenderScope):Null<HxClassDecl> {
+		if (scope == null)
+			return null;
+		final receiverType = exprCppType(receiver, scope);
+		if (receiverType.length == 0)
+			return null;
+		var found:Null<HxClassDecl> = null;
+		for (className in scope.classByName.keys()) {
+			final cls = scope.classByName.get(className);
+			final underlying = primitiveAbstractUnderlyingCppType(cls);
+			if (underlying == null || underlying != receiverType)
+				continue;
+			if (classMethodDeclIn(cls, method, false) == null)
+				continue;
+			if (found != null)
+				return null;
+			found = cls;
+		}
+		return found;
+	}
+
+	static function primitiveIntLikeAbstractMethodCallExpr(receiver:HxExpr, method:String, ?scope:CppRenderScope):Null<String> {
+		if (exprCppType(receiver, scope) != "int")
+			return null;
+		final self = renderExpr(receiver, scope);
+		return switch (method) {
+			case "toInt":
+				self;
+			case "incr":
+				"(" + self + "++)";
+			case _:
+				null;
+		};
+	}
+
+	static function primitiveBackedAbstractMethodBodyExpr(receiver:HxExpr, fn:HxFunctionDecl, ?scope:CppRenderScope):Null<String> {
+		final self = renderExpr(receiver, scope);
+		return switch (HxFunctionDecl.getBody(fn)) {
+			case [SReturn(EThis, _)]:
+				self;
+			case [SReturn(ECast(EThis, _), _)]:
+				self;
+			case [SExpr(EUnop("post++", EThis), _)]:
+				"(" + self + "++)";
+			case [SExpr(EUnop("post--", EThis), _)]:
+				"(" + self + "--)";
+			case [SExpr(EBinop("+=", EThis, rhs), _)]:
+				self + " += " + renderExpr(rhs, scope);
+			case [SExpr(EBinop("-=", EThis, rhs), _)]:
+				self + " -= " + renderExpr(rhs, scope);
+			case _:
+				null;
+		};
 	}
 
 	static function primitiveBackedAbstractGetterExpr(receiver:HxExpr, getter:HxFunctionDecl, underlying:String, ?scope:CppRenderScope):Null<String> {
@@ -7818,6 +7883,19 @@ class CppTargetCore {
 		};
 	}
 
+	static function typeDescriptorArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final typePath = typePathText(expr);
+		if (typePath != null && typePath.length > 0) {
+			final baseName = sanitizeTypePath(typeBaseName(typePath));
+			if (baseName.length > 0
+				&& startsWithUppercaseTypeName(baseName)
+				&& !exprNameHasLocalStorage(typePath, scope)
+				&& !exprNameHasLocalStorage(baseName, scope))
+				return "std::string(" + quoteString(typePath) + ")";
+		}
+		return renderExpr(expr, scope);
+	}
+
 	static function isTypePathText(value:String):Bool {
 		if (value == null || value.length == 0)
 			return false;
@@ -8785,6 +8863,24 @@ class CppTargetCore {
 	static function lambdaExpr(args:Array<String>, body:HxExpr, ?scope:CppRenderScope):String {
 		final params = [for (arg in args) "auto " + sanitizeIdentifier(arg)];
 		return "[&](" + params.join(", ") + ") { return " + renderExpr(body, scope) + "; }";
+	}
+
+	static function voidSequenceLambdaCallExpr(lambdaArgs:Array<String>, body:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (args.length == 0 || lambdaArgs.length != args.length)
+			return null;
+		for (argName in lambdaArgs)
+			if (!StringTools.startsWith(sanitizeIdentifier(argName), "__hxhx_lambda_seq_"))
+				return null;
+		return switch (body) {
+			case ENull:
+				final statements = new Array<String>();
+				for (arg in args) {
+					statements.push(renderExpr(arg, scope) + ";");
+				}
+				"([&]() { " + statements.join(" ") + " return nullptr; })()";
+			case _:
+				null;
+		};
 	}
 
 	static function optionalLambdaExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
