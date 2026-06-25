@@ -4993,11 +4993,7 @@ class CppTargetCore {
 				+ renderExpr(index, scope)
 				+ ")";
 			case EArrayAccess(array, index) if (isCppStringExpr(array, scope)):
-				"__hxhx_string_code_at("
-				+ stringReceiverExpr(array, scope)
-				+ ", "
-				+ renderExpr(index, scope)
-				+ ")";
+				stringCodeAtExpr(array, index, scope);
 			case EArrayAccess(array, index) if (exprHasReferenceType(array, scope)):
 				"((*"
 				+ renderExpr(array, scope)
@@ -5622,7 +5618,7 @@ class CppTargetCore {
 					+ (args.length == 2 ? renderExpr(args[1], scope) : "static_cast<int>(" + target + ".size())")
 					+ ")";
 				case "charCodeAt" | "cca" if (args.length == 1):
-					"__hxhx_string_code_at(" + target + ", " + renderExpr(args[0], scope) + ")";
+					stringCodeAtExpr(receiver, args[0], scope);
 				case "charAt" if (args.length == 1):
 					"__hxhx_char_at(" + target + ", " + renderExpr(args[0], scope) + ")";
 				case "substring" if (args.length == 1 || args.length == 2):
@@ -5736,6 +5732,22 @@ class CppTargetCore {
 
 	static function renderEqCallArgs(args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
 		final out = new Array<String>();
+		final firstOptionalStringCode = stringCodeAccessOptionalExpr(args[0], scope);
+		final secondOptionalStringCode = stringCodeAccessOptionalExpr(args[1], scope);
+		if (firstOptionalStringCode != null && isNullExpr(args[1])) {
+			out.push(firstOptionalStringCode);
+			out.push("std::optional<int>{}");
+			for (i in 2...args.length)
+				out.push(renderExpr(args[i], scope));
+			return out;
+		}
+		if (secondOptionalStringCode != null && isNullExpr(args[0])) {
+			out.push("std::optional<int>{}");
+			out.push(secondOptionalStringCode);
+			for (i in 2...args.length)
+				out.push(renderExpr(args[i], scope));
+			return out;
+		}
 		final firstType = inferExprCppType(args[0], scope);
 		final secondType = inferExprCppType(args[1], scope);
 		out.push(eqComparableArgExpr(args[0], firstType, secondType, scope));
@@ -5752,7 +5764,7 @@ class CppTargetCore {
 				"std::optional<" + otherOptionalInner + ">{}";
 			case _ if (isCppVectorLengthExpr(arg, scope)):
 				"static_cast<int>(" + renderExpr(arg, scope) + ")";
-			case _ if (isCppStringExpr(arg, scope) || argType == "std::string" || otherType == "std::string"):
+			case _ if (isEqStringArgExpr(arg, scope)):
 				stringExpr(arg, scope);
 			case _:
 				if (otherOptionalInner.length > 0 && argType == otherOptionalInner) "std::optional<"
@@ -5761,6 +5773,40 @@ class CppTargetCore {
 					+ renderExpr(arg, scope)
 					+ ")"; else renderExpr(arg, scope);
 		};
+	}
+
+	static function stringCodeAccessOptionalExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case EArrayAccess(array, index) if (isCppStringExpr(array, scope)):
+				"__hxhx_string_code_at("
+				+ stringReceiverExpr(array, scope)
+				+ ", "
+				+ renderExpr(index, scope)
+				+ ")";
+			case ECall(EField(receiver, method), args) if ((method == "charCodeAt" || method == "cca")
+				&& args.length == 1
+				&& isCppStringExpr(receiver, scope)):
+				"__hxhx_string_code_at("
+				+ stringReceiverExpr(receiver, scope)
+				+ ", "
+				+ renderExpr(args[0], scope)
+				+ ")";
+			case _:
+				null;
+		};
+	}
+
+	static function isNullExpr(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ENull:
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function isEqStringArgExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return isStringLike(expr) || exprCppType(expr, scope) == "std::string";
 	}
 
 	static function isCppVectorLengthExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
@@ -6216,7 +6262,7 @@ class CppTargetCore {
 	}
 
 	static function stringCodeAtExpr(s:HxExpr, index:HxExpr, ?scope:CppRenderScope):String {
-		return "static_cast<int>(static_cast<unsigned char>(" + renderExpr(s, scope) + "[" + renderExpr(index, scope) + "]))";
+		return "static_cast<int>(static_cast<unsigned char>(" + stringReceiverExpr(s, scope) + "[" + renderExpr(index, scope) + "]))";
 	}
 
 	static function flatMapExpr(iterable:HxExpr, mapper:HxExpr, ?scope:CppRenderScope):String {
@@ -6398,6 +6444,8 @@ class CppTargetCore {
 				}
 			case ECall(ELambda(lambdaArgs, body), args):
 				lambdaCallReturnCppType(lambdaArgs, body, args, scope);
+			case EArrayAccess(array, _) if (isCppStringExpr(array, scope)):
+				"int";
 			case EArrayAccess(array, _):
 				cppVectorElementType(exprCppType(array, scope));
 			case EField(receiver, "expr") if (exprCppType(receiver, scope) == CppMacroExpr.CPP_TYPE):
@@ -6967,7 +7015,7 @@ class CppTargetCore {
 			case EArrayComprehension(name, iterable, _, yieldExpr):
 				"std::vector<" + arrayComprehensionElementType(name, iterable, yieldExpr, scope) + ">";
 			case EArrayAccess(array, _) if (isCppStringExpr(array, scope)):
-				"std::optional<int>";
+				"int";
 			case EArrayAccess(array, _):
 				cppVectorElementType(exprCppType(array, scope));
 			case EAnon(fieldNames, fieldValues):
@@ -7006,7 +7054,7 @@ class CppTargetCore {
 			case "lastIndexOf":
 				"int";
 			case "charCodeAt" | "cca":
-				"std::optional<int>";
+				"int";
 			case "charAt" | "substring" | "substr" | "replace":
 				"std::string";
 			case _:
