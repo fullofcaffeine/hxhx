@@ -5801,6 +5801,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(posValueExpr, "PosInfos(std::string(\"(unknown)\"), 0, std::string(\"(unknown)\"), std::string(\"(unknown)\"))",
 			"C++ PosInfos value assignments should use the four-field support constructor");
 		assertTrue(posValueExpr.indexOf(", {})") < 0, "C++ PosInfos value assignments should not pass customParams to the four-field constructor");
+		posValueScope.localTypes.set("pos", "std::optional<PosInfos>");
+		final posFileNameString = @:privateAccess backend.cpp.CppTargetCore.stringExpr(EField(EIdent("pos"), "fileName"), posValueScope);
+		assertContains(posFileNameString, "pos.value().fileName", "C++ string contexts should preserve PosInfos string fields from optional values");
+		assertTrue(posFileNameString.indexOf("std::to_string") < 0,
+			"C++ string contexts should not wrap PosInfos string fields from optional values in std::to_string");
 		final posInfosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(posInfos, posLookup).join("\n");
 		final parsedPosInfosLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(new HxClassDecl("PosInfos", false, [], [
 			new HxFieldDecl("fileName", Public, false, "String", null),

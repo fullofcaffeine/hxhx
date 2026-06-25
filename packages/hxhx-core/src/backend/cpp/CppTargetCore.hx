@@ -7519,12 +7519,18 @@ class CppTargetCore {
 						classFieldCppType(staticOwner, field, scope);
 					else {
 						final receiverType = exprCppType(receiver, scope);
-						final anonFieldType = anonStructFieldCppType(receiverType, field, scope);
+						final fieldReceiverType = cppOptionalInnerType(receiverType).length > 0 ? cppOptionalInnerType(receiverType) : receiverType;
+						final anonFieldType = anonStructFieldCppType(fieldReceiverType, field, scope);
 						if (anonFieldType.length > 0)
 							anonFieldType;
 						else {
-							final ownerType = classNameFromCppExprType(receiverType, scope);
-							ownerType == null ? "" : receiverClassFieldCppType(ownerType, receiverType, field, scope);
+							final directFieldType = classFieldCppType(fieldReceiverType, field, scope);
+							if (directFieldType.length > 0)
+								directFieldType;
+							else {
+								final ownerType = classNameFromCppExprType(fieldReceiverType, scope);
+								ownerType == null ? "" : receiverClassFieldCppType(ownerType, fieldReceiverType, field, scope);
+							}
 						}
 					}
 				}
