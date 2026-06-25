@@ -719,6 +719,18 @@ class CppTargetCore {
 		out.push("  return out.str();");
 		out.push("}");
 		out.push("");
+		out.push("template<typename K, typename V>");
+		out.push("static std::string __hxhx_map_literal_to_string(const std::vector<std::pair<K, V>>& values) {");
+		out.push("  std::ostringstream out;");
+		out.push("  out << \"[\";");
+		out.push("  for (std::size_t i = 0; i < values.size(); ++i) {");
+		out.push("    if (i > 0) out << \", \";");
+		out.push("    out << __hxhx_stringify(values[i].first) << \" => \" << __hxhx_stringify(values[i].second);");
+		out.push("  }");
+		out.push("  out << \"]\";");
+		out.push("  return out.str();");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T, typename F>");
 		out.push("static std::vector<std::string> __hxhx_vector_map_string(const std::vector<T>& values, F f) {");
 		out.push("  std::vector<std::string> out;");
@@ -3515,9 +3527,15 @@ class CppTargetCore {
 	static function inferStringMapLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
 		if (scope == null || fn == null)
 			return;
+		inferStringMapLocalTypeOverridesFromStmts(scope, HxFunctionDecl.getBody(fn));
+	}
+
+	static function inferStringMapLocalTypeOverridesFromStmts(scope:CppRenderScope, stmts:Array<HxStmt>):Void {
+		if (scope == null || stmts == null)
+			return;
 		final savedLocalTypes = copyStringMap(scope.localTypes);
 		final candidates = new haxe.ds.StringMap<String>();
-		for (stmt in HxFunctionDecl.getBody(fn))
+		for (stmt in stmts)
 			collectStringMapLocalTypeOverridesFromStmt(stmt, scope, candidates);
 		scope.localTypes = savedLocalTypes;
 	}
@@ -3657,10 +3675,25 @@ class CppTargetCore {
 			return;
 		final typeName = "std::shared_ptr<" + cleanClass + "<" + valueType + ">>";
 		final existing = scope.localTypeOverrides.get(local);
-		if (existing != null && existing.length > 0 && existing != typeName)
-			return;
+		if (existing != null && existing.length > 0 && existing != typeName) {
+			final currentLocalType = scope.localTypes.get(local);
+			if (mapClassNameFromCppMapType(existing) == cleanClass || mapClassNameFromCppMapType(currentLocalType) != cleanClass)
+				return;
+		}
 		scope.localTypeOverrides.set(local, typeName);
 		scope.localTypes.set(local, typeName);
+	}
+
+	static function mapClassNameFromCppMapType(typeName:String):String {
+		if (typeName == null)
+			return "";
+		final prefix = "std::shared_ptr<";
+		if (!StringTools.startsWith(typeName, prefix) || !StringTools.endsWith(typeName, ">"))
+			return "";
+		final inner = typeName.substr(prefix.length, typeName.length - prefix.length - 1);
+		final genericStart = inner.indexOf("<");
+		final className = genericStart >= 0 ? inner.substr(0, genericStart) : inner;
+		return isInferredMapClassName(className) ? sanitizeTypePath(typeBaseName(className)) : "";
 	}
 
 	static function collectDynamicLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
@@ -4328,9 +4361,11 @@ class CppTargetCore {
 			return;
 		}
 		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalTypeOverrides = copyStringMap(scope.localTypeOverrides);
 		final savedLocalNames = copyStringMap(scope.localNames);
 		fn();
 		scope.localTypes = savedLocalTypes;
+		scope.localTypeOverrides = savedLocalTypeOverrides;
 		scope.localNames = savedLocalNames;
 	}
 
@@ -4391,6 +4426,7 @@ class CppTargetCore {
 	}
 
 	static function renderStmts(stmts:Array<HxStmt>, indent:String, ?scope:CppRenderScope):Array<String> {
+		inferStringMapLocalTypeOverridesFromStmts(scope, stmts);
 		final out = new Array<String>();
 		for (stmt in stmts) {
 			for (line in renderStmt(stmt, indent, scope))
@@ -5098,6 +5134,8 @@ class CppTargetCore {
 				sanitizeIdentifier(name) + ".value()(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EIdent(name), args):
 				directCallExpr(name, args, scope);
+			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
+				mapLiteralToStringExpr(elements, scope);
 			case ECall(EField(receiver, method), args):
 				fieldCallExpr(receiver, method, args, scope);
 			case ECall(callee, args):
@@ -5832,6 +5870,8 @@ class CppTargetCore {
 				"static_cast<int>(" + renderExpr(arg, scope) + ")";
 			case _ if (otherType == "double" && isCppIntExpr(arg, scope)):
 				"static_cast<double>(" + renderExpr(arg, scope) + ")";
+			case _ if (argType == "std::any" && otherType.length > 0 && otherType != "std::any"):
+				valueExprForExpectedType(arg, otherType, scope);
 			case _ if (isEqStringArgExpr(arg, scope)):
 				stringExpr(arg, scope);
 			case _:
@@ -8887,6 +8927,47 @@ class CppTargetCore {
 	static function arrayExpr(elements:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final typeName = arrayElementType(elements, scope);
 		return arrayExprWithElementType(elements, typeName, scope);
+	}
+
+	static function mapLiteralToStringExpr(elements:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final typeName = mapLiteralPairCppType(elements, scope);
+		return "__hxhx_map_literal_to_string(" + arrayExprWithElementType(elements, typeName, scope) + ")";
+	}
+
+	static function isMapLiteralElements(elements:Array<HxExpr>):Bool {
+		if (elements == null || elements.length == 0)
+			return false;
+		for (element in elements) {
+			switch (element) {
+				case EBinop("=>", _, _):
+				case _:
+					return false;
+			}
+		}
+		return true;
+	}
+
+	static function mapLiteralPairCppType(elements:Array<HxExpr>, ?scope:CppRenderScope):String {
+		return switch (elements[0]) {
+			case EBinop("=>", key, value):
+				"std::pair<"
+				+ mapLiteralOperandCppType(key, scope)
+				+ ", "
+				+ mapLiteralOperandCppType(value, scope)
+				+ ">";
+			case _:
+				"std::pair<std::string, std::string>";
+		};
+	}
+
+	static function mapLiteralOperandCppType(expr:HxExpr, ?scope:CppRenderScope):String {
+		final explicit = exprCppType(expr, scope);
+		if (explicit.length > 0)
+			return explicit;
+		final inferred = inferExprCppType(expr, scope);
+		if (inferred.length > 0)
+			return inferred;
+		return isStringLike(expr) ? "std::string" : "std::any";
 	}
 
 	static function arrayExprWithElementType(elements:Array<HxExpr>, typeName:String, ?scope:CppRenderScope):String {

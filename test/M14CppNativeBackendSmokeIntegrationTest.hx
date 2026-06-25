@@ -1786,6 +1786,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"nested calls should lower by invoking the rendered callee expression");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("=>", EString("key"), EInt(42))) == "std::make_pair(\"key\", 42)",
 			"arrow expressions should lower to C++ pairs");
+		final mapLiteralToStringExpr = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EArrayDecl([EBinop("=>", EInt(1), EInt(1))]), "toString"), []));
+		assertContains(mapLiteralToStringExpr, "__hxhx_map_literal_to_string(std::vector<std::pair<int, int>>{std::make_pair(1, 1)})",
+			"C++ map literal toString should lower through pair-aware runtime support");
+		assertTrue(mapLiteralToStringExpr.indexOf("std::vector<int>{std::make_pair") < 0,
+			"C++ map literal toString should not treat arrow pairs as integer array elements");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Math"), "NaN")) == "std::numeric_limits<double>::quiet_NaN()",
 			"C++ Math.NaN should lower as a target intrinsic instead of a generated helper field");
 		assertTrue(@:privateAccess ParserStage.sourceStructuralTypeHintIsMoreSpecific("String", "{ ms:Float, seconds:Int }"),
@@ -1828,6 +1834,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Reflect.isFunction should accept erased Reflect.field results through target-owned support");
 		assertTrue(reflectIsFunctionExpr.indexOf("Reflect::isFunction") < 0,
 			"C++ Reflect.isFunction should not require the generated string-only helper for erased field values");
+		final reflectFieldEqExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("eq"), [
+			ECall(EField(EIdent("Reflect"), "field"), [EIdent("l"), EString("new")]),
+			EString("test")
+		]));
+		assertContains(reflectFieldEqExpr, "eq(__hxhx_stringify(__hxhx_reflect_field(l, std::string(\"new\"))), std::string(\"test\"))",
+			"C++ eq should coerce erased Reflect.field results to the concrete comparison type");
 		assertRawSwitchDynamicReturnType();
 		final fixtureDecl = new HxClassDecl("TestFixture", false, [], [
 			new HxFieldDecl("target", Public, false, "String", null),
@@ -2746,6 +2758,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SVar("keys", "", ECall(EField(EIdent("Lambda"), "array"), [ECall(EField(EIdent("h"), "keys"), [])]), HxPos.unknown()),
 				SExpr(ECall(EField(EIdent("keys"), "sort"), [EField(EIdent("Reflect"), "compare")]), HxPos.unknown()),
 				SVar("keysFromStruct", "", ECall(EField(EIdent("Lambda"), "array"), [EAnon(["iterator"], [EField(EIdent("h"), "keys")])]), HxPos.unknown())
+			],
+				""),
+			new HxFunctionDecl("unserialize", Public, true, [], "Dynamic", [SReturn(EString("x"), HxPos.unknown())], ""),
+			new HxFunctionDecl("readDigits", Public, true, [], "Int", [SReturn(EInt(1), HxPos.unknown())], ""),
+			new HxFunctionDecl("branchMapFactories", Public, true, [new HxFunctionArg("c", "Int", NoDefault, false, false)], "Void", [
+				SSwitch(EIdent("c"), [PInt(98), PInt(113)], [
+					SBlock([
+						SVar("h", "", ENew("StringMap", []), HxPos.unknown()),
+						SExpr(ECall(EField(EIdent("h"), "set"), [EString("x"), ECall(EIdent("unserialize"), [])]), HxPos.unknown())
+					], HxPos.unknown()),
+					SBlock([
+						SVar("h", "", ENew("IntMap", []), HxPos.unknown()),
+						SVar("i", "Int", ECall(EIdent("readDigits"), []), HxPos.unknown()),
+						SExpr(ECall(EField(EIdent("h"), "set"), [EIdent("i"), ECall(EIdent("unserialize"), [])]), HxPos.unknown())
+					], HxPos.unknown())
+				], HxPos.unknown())
 			], "")
 		], []);
 		final stringMapNames = new StringMap<Bool>();
@@ -2777,6 +2805,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stringMapOwnerLines, "h->set(\"x\", 0);", "C++ StringMap<Int>.set(null) should pass the value-type default, not nullptr");
 		assertContains(stringMapOwnerLines, "auto h = __hxhx_make_shared_IntMap<int>();",
 			"C++ unhinted IntMap locals should infer Int values from set calls before rendering the factory");
+		assertContains(stringMapOwnerLines, "auto h = __hxhx_make_shared_IntMap<std::string>();",
+			"C++ branch-local unhinted IntMap locals should infer values independently from StringMap branches");
+		assertContains(stringMapOwnerLines, "h->set(i, unserialize());", "C++ branch-local IntMap.set should preserve integer keys after scoped map inference");
 		assertContains(stringMapOwnerLines, "eq(h->get(456), std::optional<int>{});",
 			"C++ IntMap<Int>.get null comparisons should compare against empty optionals");
 		assertContains(stringMapOwnerLines, "auto values = __hxhx_iterator_to_vector(h->iterator());",
