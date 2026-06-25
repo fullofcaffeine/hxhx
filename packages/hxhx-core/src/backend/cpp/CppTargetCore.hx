@@ -1224,11 +1224,13 @@ class CppTargetCore {
 		final optionalInner = cppOptionalInnerType(scoped);
 		if (optionalInner.length > 0)
 			return optionalInner;
-		if (isScopeTypeParam(scoped, scope))
+		if (isScopeTypeParam(scoped, scope) || isBareCppTypeParamName(scoped))
 			return "std::string";
 		if (scoped.length > 0)
 			return scoped;
 		final inferred = inferExprCppType(expr, scope);
+		if (isBareCppTypeParamName(inferred))
+			return "std::string";
 		if (inferred.length > 0)
 			return inferred;
 		return switch (expr) {

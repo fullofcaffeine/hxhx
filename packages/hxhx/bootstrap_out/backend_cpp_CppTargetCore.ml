@@ -6892,9 +6892,10 @@ and cppAnonFieldType = fun fieldName expr assertStatusShape scope -> try let __f
     ignore (if HxString.equals cleanField "__hx_params" then raise (HxRuntime.Hx_return (Obj.repr ("std::vector<std::string>" : string))) else ());
     let scoped = (exprCppType (Obj.magic expr) scope : string) in let optionalInner = (cppOptionalInnerType (scoped : string) : string) in (
       ignore (if HxString.length optionalInner > 0 then raise (HxRuntime.Hx_return (Obj.repr (optionalInner : string))) else ());
-      ignore (if isScopeTypeParam (scoped : string) scope then raise (HxRuntime.Hx_return (Obj.repr ("std::string" : string))) else ());
+      ignore (if isScopeTypeParam (scoped : string) scope || isBareCppTypeParamName (scoped : string) then raise (HxRuntime.Hx_return (Obj.repr ("std::string" : string))) else ());
       ignore (if HxString.length scoped > 0 then raise (HxRuntime.Hx_return (Obj.repr (scoped : string))) else ());
       let inferred = (inferExprCppType (Obj.magic expr) scope : string) in (
+        ignore (if isBareCppTypeParamName (inferred : string) then raise (HxRuntime.Hx_return (Obj.repr ("std::string" : string))) else ());
         ignore (if HxString.length inferred > 0 then raise (HxRuntime.Hx_return (Obj.repr (inferred : string))) else ());
         let tempResult = ref ("" : string) in (
           ignore (match expr with
