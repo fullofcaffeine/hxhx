@@ -4969,7 +4969,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], ""),
 			new HxFunctionDecl("compare", Public, false, [new HxFunctionArg("other", "Bytes", NoDefault, false, false)], "Int", [
 				SReturn(ECall(EField(EIdent("b"), "memcmp"), [EField(EIdent("other"), "b")]), HxPos.unknown())
-			], ""),
+			],
+				""),
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString(""), HxPos.unknown())], ""),
 			new HxFunctionDecl("alloc", Public, true, [new HxFunctionArg("length", "Int", NoDefault, false, false)], "Bytes", [
 				SVar("a", "BytesData", ENew("BytesData", []), HxPos.unknown()),
 				SExpr(ECall(EField(EField(EIdent("cpp"), "NativeArray"), "setSize"), [EIdent("a"), EIdent("length")]), HxPos.unknown()),
@@ -5034,6 +5036,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final bytesBufferLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(bytesBufferGetBytes, bytesBufferOwner, bytesLookup).join("\n");
 		assertContains(bytesBufferLines, "b = {};", "C++ BytesBuffer-style BytesData nulling should reset vector storage instead of assigning nullptr");
 		assertTrue(bytesBufferLines.indexOf("b = nullptr") < 0, "C++ BytesData locals are vector-backed and should not receive nullptr assignments");
+		final input = new HxClassDecl("Input", false, [
+			new HxFunctionDecl("readAll", Public, false, [], "Bytes", [SReturn(ECall(EField(EIdent("Bytes"), "alloc"), [EInt(0)]), HxPos.unknown())], "")
+		], []);
+		final bytesInput = new HxClassDecl("BytesInput", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")], [], "Input");
+		bytesNames.set("Input", true);
+		bytesNames.set("BytesInput", true);
+		bytesClasses.set("Input", input);
+		bytesClasses.set("BytesInput", bytesInput);
+		final bytesInputCheck = new HxFunctionDecl("checkBytesInput", Public, false, [], "Void", [
+			SVar("input", "BytesInput", ENew("BytesInput", []), HxPos.unknown()),
+			SExpr(ECall(EIdent("eq"), [
+				ECall(EField(ECall(EField(EIdent("input"), "readAll"), []), "toString"), []),
+				EString("")
+			]), HxPos.unknown())
+		], "");
+		final bytesInputOwner = new HxClassDecl("BytesInputOwner", false, [bytesInputCheck], []);
+		final bytesInputLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(bytesInputCheck, bytesInputOwner, bytesLookup).join("\n");
+		assertContains(bytesInputLines, "eq(input->readAll()->toString(), std::string(\"\"));",
+			"C++ inherited reference-returning method calls should chain through -> on the returned shared_ptr");
+		assertTrue(bytesInputLines.indexOf("readAll().toString") < 0,
+			"C++ inherited reference-returning method calls should not use dot access on shared_ptr results");
+		final bytesFastGetMethod = new HxFunctionDecl("fastGetLike", Public, false, [new HxFunctionArg("bd", "BytesData", NoDefault, false, false)], "Int",
+			[SReturn(ECall(EIdent("fget"), [EIdent("bd"), EInt(1)]), HxPos.unknown())], "");
+		final bytesFastGetOwner = new HxClassDecl("BytesFastGetOwner", false, [bytesFastGetMethod], []);
+		final bytesFastGetLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(bytesFastGetMethod, bytesFastGetOwner, bytesLookup).join("\n");
+		assertContains(bytesFastGetLines, "return static_cast<int>((bd[1]));", "C++ imported Bytes.fastGet aliases should lower to byte-vector indexing");
+		assertTrue(bytesFastGetLines.indexOf("fget(") < 0, "C++ imported Bytes.fastGet aliases should not leak as undeclared calls");
 		final stringIterator = new HxClassDecl("StringIterator", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "s"), EIdent("s")), HxPos.unknown())], ""),

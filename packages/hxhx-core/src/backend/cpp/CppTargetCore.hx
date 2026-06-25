@@ -6199,6 +6199,9 @@ class CppTargetCore {
 	}
 
 	static function directCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final bytesFastGet = bytesFastGetExpr(name, args, scope);
+		if (bytesFastGet != null)
+			return bytesFastGet;
 		if (sanitizeIdentifier(name) == "eq" && args.length >= 2)
 			return sanitizeIdentifier(name) + "(" + renderEqCallArgs(args, scope).join(", ") + ")";
 		final fn = currentOwnerMethod(name, scope);
@@ -6208,6 +6211,12 @@ class CppTargetCore {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
 		return sanitizeIdentifier(name) + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function bytesFastGetExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (sanitizeIdentifier(name) != "fget" || args.length != 2 || !isCppBytesDataVectorType(exprCppType(args[0], scope)))
+			return null;
+		return "(" + renderExpr(args[0], scope) + "[" + renderExpr(args[1], scope) + "])";
 	}
 
 	static function renderEqCallArgs(args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
@@ -7047,6 +7056,8 @@ class CppTargetCore {
 				"std::optional<int>";
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
 				"std::any";
+			case ECall(EIdent(name), args) if (bytesFastGetExpr(name, args, scope) != null):
+				"int";
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
@@ -7471,6 +7482,9 @@ class CppTargetCore {
 			return preludeReturn;
 		final fn = classMethodDecl(className, methodName, wantStatic, scope);
 		if (fn == null) {
+			final inherited = inheritedClassMethodCppReturnType(className, methodName, wantStatic, scope);
+			if (inherited.length > 0)
+				return inherited;
 			final fallback = missingInterfaceMethodReturnCppType(className, methodName);
 			return fallback.length > 0 ? fallback : "";
 		}
@@ -7485,6 +7499,18 @@ class CppTargetCore {
 		if (owner != null && isUtestResultAggregationHelper(fn, owner))
 			return utestResultAggregationReturnType(ownerName, method);
 		return owner == null ? cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope) : inferredFunctionReturnCppType(fn, owner, scope.classByName);
+	}
+
+	static function inheritedClassMethodCppReturnType(className:String, methodName:String, wantStatic:Bool, scope:CppRenderScope):String {
+		if (wantStatic || scope == null || className == null || className.length == 0)
+			return "";
+		final cls = scope.classByName.get(sanitizeTypePath(typeBaseName(className)));
+		if (cls == null)
+			return "";
+		final baseName = baseTypeName(cls);
+		if (baseName == null || baseName.length == 0 || baseName == className)
+			return "";
+		return classMethodCppReturnType(baseName, methodName, false, scope);
 	}
 
 	static function missingInterfaceMethodReturnCppType(className:String, methodName:String):String {
@@ -7780,6 +7806,8 @@ class CppTargetCore {
 				inferExprCppType(args[0], scope);
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
 				"std::any";
+			case ECall(EIdent(name), args) if (bytesFastGetExpr(name, args, scope) != null):
+				"int";
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
