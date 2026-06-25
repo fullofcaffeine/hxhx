@@ -2697,8 +2697,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(genericMapLines, "std::map<K, V> values;", "C++ generic Map support should own a target map backing store");
 		assertContains(genericMapLines, "void set(K key, V value)", "C++ generic Map support should expose set for Haxe Map callers");
 		assertContains(genericMapLines, "V get(K key)", "C++ generic Map support should expose concrete get values for Haxe Map callers");
+		assertContains(genericMapLines, "V& operator[](K key)", "C++ generic Map support should expose mutable index access for generated Map writes");
 		assertContains(genericMapLines, "bool exists(K key)", "C++ generic Map support should expose exists for Haxe Map callers");
 		assertContains(genericMapLines, "std::shared_ptr<__hxhx_iterator<K>> keys()", "C++ generic Map support should expose keys for Haxe Map iteration");
+		assertContains(genericMapLines, "std::string toString()", "C++ generic Map support should expose toString for empty map assertions");
 		final stringMapGeneric = new HxClassDecl("StringMap", false, [
 			new HxFunctionDecl("set", Public, false, [
 				new HxFunctionArg("k", "String", NoDefault, false, false),
@@ -2758,6 +2760,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SVar("keys", "", ECall(EField(EIdent("Lambda"), "array"), [ECall(EField(EIdent("h"), "keys"), [])]), HxPos.unknown()),
 				SExpr(ECall(EField(EIdent("keys"), "sort"), [EField(EIdent("Reflect"), "compare")]), HxPos.unknown()),
 				SVar("keysFromStruct", "", ECall(EField(EIdent("Lambda"), "array"), [EAnon(["iterator"], [EField(EIdent("h"), "keys")])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("intMapScopedVectors", Public, true, [], "Void", [
+				SBlock([
+					SVar("h", "", ENew("IntMap", []), HxPos.unknown()),
+					SExpr(ECall(EField(EIdent("h"), "set"), [EInt(0), EInt(-1)]), HxPos.unknown())
+				], HxPos.unknown()),
+				SBlock([
+					SVar("h", "", ENew("IntMap", []), HxPos.unknown()),
+					SExpr(ECall(EField(EIdent("h"), "set"), [EInt(1), EArrayDecl([EString("a"), EString("b")])]), HxPos.unknown())
+				], HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("genericMapGateShapes", Public, true, [], "Void", [
+				SVar("i", "", ENew("Map", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("i"), "set"), [EInt(1), EInt(0)]), HxPos.unknown()),
+				SVar("s", "", ENew("Map", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("s"), "set"), [EString("k"), EString("v")]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [ECall(EField(ENew("Map", []), "toString"), []), EString("[]")]), HxPos.unknown())
+			],
+				""),
+			new HxFunctionDecl("vectorJoinInts", Public, true, [new HxFunctionArg("k", "Array<Int>", NoDefault, false, false)], "String",
+				[SReturn(ECall(EField(EIdent("k"), "join"), [EString("#")]), HxPos.unknown())], ""),
+			new HxFunctionDecl("mapLiteralStringCode", Public, true, [], "Int", [
+				SVar("objMapString", "", ECall(EField(EArrayDecl([EBinop("=>", EInt(1), EString("ok"))]), "toString"), []), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("objMapString"), "charCodeAt"), [EInt(0)]), HxPos.unknown())
 			],
 				""),
 			new HxFunctionDecl("unserialize", Public, true, [], "Dynamic", [SReturn(EString("x"), HxPos.unknown())], ""),
@@ -2777,11 +2803,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], "")
 		], []);
 		final stringMapNames = new StringMap<Bool>();
-		for (name in ["StringMap", "IntMap", "MyHash", "StringMapOwner", "Lambda", "Reflect"])
+		for (name in ["StringMap", "IntMap", "Map", "MyHash", "StringMapOwner", "Lambda", "Reflect"])
 			stringMapNames.set(name, true);
 		final stringMapClasses = new StringMap<HxClassDecl>();
 		stringMapClasses.set("StringMap", stringMapGeneric);
 		stringMapClasses.set("IntMap", intMapGeneric);
+		stringMapClasses.set("Map", genericMap);
 		stringMapClasses.set("MyHash", stringMapAbstract);
 		stringMapClasses.set("StringMapOwner", stringMapOwner);
 		final stringMapLookup = {names: stringMapNames, byName: stringMapClasses};
@@ -2807,6 +2834,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unhinted IntMap locals should infer Int values from set calls before rendering the factory");
 		assertContains(stringMapOwnerLines, "auto h = __hxhx_make_shared_IntMap<std::string>();",
 			"C++ branch-local unhinted IntMap locals should infer values independently from StringMap branches");
+		assertContains(stringMapOwnerLines, "auto h = __hxhx_make_shared_IntMap<std::vector<std::string>>();",
+			"C++ redeclared unhinted IntMap locals should infer fresh value types from the current block");
+		assertContains(stringMapOwnerLines, "h->set(1, std::vector<std::string>{std::string(\"a\"), std::string(\"b\")});",
+			"C++ redeclared IntMap vector values should not inherit earlier IntMap<Int> inference");
+		assertContains(stringMapOwnerLines, "auto i = __hxhx_make_shared_Map<int, int>();",
+			"C++ unhinted generic Map locals should infer key and value type arguments from set calls");
+		assertContains(stringMapOwnerLines, "auto s = __hxhx_make_shared_Map<std::string, std::string>();",
+			"C++ unhinted generic Map string locals should infer string key/value type arguments");
+		assertContains(stringMapOwnerLines, "eq(__hxhx_make_shared_Map<int, int>()->toString(), std::string(\"[]\"));",
+			"C++ expression-only generic Map construction should use default factory type arguments");
+		assertContains(stringMapOwnerLines, "return __hxhx_join(k, std::string(\"#\"));",
+			"C++ vector join should lower through generic runtime support for non-string vectors");
+		assertContains(stringMapOwnerLines, "auto objMapString = __hxhx_map_literal_to_string(",
+			"C++ map literal toString locals should keep a string type for later string methods");
+		assertContains(stringMapOwnerLines, "return static_cast<int>(static_cast<int>(static_cast<unsigned char>(objMapString[0])));",
+			"C++ map literal toString results should lower subsequent charCodeAt as a string operation");
 		assertContains(stringMapOwnerLines, "h->set(i, unserialize());", "C++ branch-local IntMap.set should preserve integer keys after scoped map inference");
 		assertContains(stringMapOwnerLines, "eq(h->get(456), std::optional<int>{});",
 			"C++ IntMap<Int>.get null comparisons should compare against empty optionals");
@@ -2821,6 +2864,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(stringMapOwnerLines.indexOf("std::to_string((-1))") < 0,
 			"C++ StringMap<Int>.get comparisons should not coerce numeric expected values to strings");
 		assertTrue(stringMapOwnerLines.indexOf("__hxhx_make_shared_IntMap();") < 0, "C++ inferred IntMap locals should not emit undeducible factories");
+		assertTrue(stringMapOwnerLines.indexOf("__hxhx_make_shared_Map();") < 0, "C++ inferred generic Map locals should not emit undeducible factories");
 		assertTrue(stringMapOwnerLines.indexOf("__hxhx_anon_iterator_int_") < 0,
 			"C++ structural iterator Lambda.array should not emit an anonymous object with an erased iterator field");
 		assertTrue(stringMapOwnerLines.indexOf("__hxhx_make_shared_StringMap();") < 0, "C++ inferred StringMap locals should not emit undeducible factories");
@@ -3527,7 +3571,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			],
 				""),
 			new HxFunctionDecl("createFixture", Public, false, [new HxFunctionArg("result", "TestResult", NoDefault, false, false)], "FixtureResult",
-				[SReturn(ENew("FixtureResult", []), HxPos.unknown())], "")
+				[SReturn(ENew("FixtureResult", []), HxPos.unknown())], ""),
+			new HxFunctionDecl("getOrCreatePackage", Public, false, [
+				new HxFunctionArg("ref", "PackageResult", NoDefault, false, false),
+				new HxFunctionArg("pack", "String", NoDefault, false, false),
+				new HxFunctionArg("flat", "Bool", NoDefault, false, false)
+			], "PackageResult", [
+				SIf(EIdent("flat"), SBlock([
+					SIf(ECall(EField(EIdent("ref"), "existsPackage"), [EIdent("pack")]),
+						SReturn(ECall(EField(EIdent("ref"), "getPackage"), [EIdent("pack")]), HxPos.unknown()), null, HxPos.unknown())
+				], HxPos.unknown()), null, HxPos.unknown()),
+				SReturn(EIdent("ref"), HxPos.unknown())
+			], "")
 		], []);
 		final plainTextReportOwner = new HxClassDecl("PlainTextReport", false, [
 			new HxFunctionDecl("start", Public, false, [new HxFunctionArg("e", "Dynamic", NoDefault, false, false)], "Void",
@@ -3576,6 +3631,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ ResultAggregator.progress should accept anonymous progress payload callbacks");
 		assertContains(resultAggregatorLines, "std::shared_ptr<ClassResult> getOrCreateClass",
 			"C++ ResultAggregator.getOrCreateClass should keep class result pointer shape");
+		assertContains(resultAggregatorLines, "return ref->getPackage(pack);",
+			"C++ ResultAggregator.getOrCreatePackage should not unwrap already-direct PackageResult pointers as optionals");
+		assertTrue(resultAggregatorLines.indexOf("getPackage(pack).value_or") < 0,
+			"C++ ResultAggregator.getOrCreatePackage should keep PackageResult direct pointer return shape");
 		assertContains(resultAggregatorLines, "std::shared_ptr<FixtureResult> createFixture",
 			"C++ ResultAggregator.createFixture should keep fixture result pointer shape");
 		assertContains(plainTextReportLines, "template<typename TStart>\n  void start(TStart e)",

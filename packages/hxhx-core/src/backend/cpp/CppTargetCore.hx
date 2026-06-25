@@ -300,7 +300,8 @@ class CppTargetCore {
 		out.push("  return -1;");
 		out.push("}");
 		out.push("");
-		out.push("static std::string __hxhx_join(const std::vector<std::string>& values, const std::string& separator) {");
+		out.push("template<typename T>");
+		out.push("static std::string __hxhx_join(const std::vector<T>& values, const std::string& separator) {");
 		out.push("  std::ostringstream out;");
 		out.push("  for (std::size_t i = 0; i < values.size(); ++i) {");
 		out.push("    if (i > 0) out << separator;");
@@ -2101,6 +2102,12 @@ class CppTargetCore {
 			"    auto found = values.find(key);",
 			"    return found == values.end() ? " + valueType + "() : found->second;",
 			"  }",
+			"  " + valueType + "& operator[](" + keyType + " key) {",
+			"    return values[key];",
+			"  }",
+			"  const " + valueType + "& operator[](" + keyType + " key) const {",
+			"    return values.at(key);",
+			"  }",
 			"  bool exists(" + keyType + " key) {",
 			"    return values.find(key) != values.end();",
 			"  }",
@@ -2111,6 +2118,11 @@ class CppTargetCore {
 			"    std::vector<" + keyType + "> out;",
 			"    for (const auto& entry : values) out.push_back(entry.first);",
 			"    return __hxhx_vector_iterator_of(out);",
+			"  }",
+			"  std::string toString() {",
+			"    std::vector<std::pair<" + keyType + ", " + valueType + ">> out;",
+			"    for (const auto& entry : values) out.push_back(std::make_pair(entry.first, entry.second));",
+			"    return __hxhx_map_literal_to_string(out);",
 			"  }",
 			"};",
 			genericTemplatePrefix(typeParams),
@@ -3534,17 +3546,23 @@ class CppTargetCore {
 		if (scope == null || stmts == null)
 			return;
 		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
 		final candidates = new haxe.ds.StringMap<String>();
 		for (stmt in stmts)
 			collectStringMapLocalTypeOverridesFromStmt(stmt, scope, candidates);
 		scope.localTypes = savedLocalTypes;
+		scope.localNames = savedLocalNames;
+		scope.localNameCounts = savedLocalNameCounts;
 	}
 
 	static function collectStringMapLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<String>):Void {
 		switch (stmt) {
 			case SBlock(stmts, _):
-				for (s in stmts)
-					collectStringMapLocalTypeOverridesFromStmt(s, scope, candidates);
+				withStringMapInferenceScope(scope, candidates, () -> {
+					for (s in stmts)
+						collectStringMapLocalTypeOverridesFromStmt(s, scope, candidates);
+				});
 			case SIf(cond, thenBranch, elseBranch, _):
 				collectStringMapLocalTypeOverridesFromExpr(cond, scope, candidates);
 				collectStringMapLocalTypeOverridesFromStmt(thenBranch, scope, candidates);
@@ -3576,7 +3594,7 @@ class CppTargetCore {
 			case SVar(name, typeHint, init, _):
 				if (init != null)
 					collectStringMapLocalTypeOverridesFromExpr(init, scope, candidates);
-				final local = sanitizeIdentifier(name);
+				final local = declareLocalName(name, scope);
 				final mapClass = mapClassNameFromNewExpr(init);
 				if (StringTools.trim(typeHint == null ? "" : typeHint).length == 0 && mapClass.length > 0) {
 					candidates.set(local, mapClass);
@@ -3594,11 +3612,14 @@ class CppTargetCore {
 
 	static function collectStringMapLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<String>):Void {
 		switch (expr) {
-			case ECall(EField(EIdent(name), "set"), [_, value]) if (candidates.exists(sanitizeIdentifier(name))):
+			case ECall(EField(EIdent(name), "set"), [key, value]) if (candidates.exists(localCppName(name, scope))):
+				collectStringMapLocalTypeOverridesFromExpr(key, scope, candidates);
 				collectStringMapLocalTypeOverridesFromExpr(value, scope, candidates);
+				final local = localCppName(name, scope);
+				final keyType = mapKeyTypeFromExpr(key, scope);
 				final valueType = stringMapValueTypeFromExpr(value, scope);
 				if (valueType.length > 0)
-					setStringMapLocalTypeOverride(scope, sanitizeIdentifier(name), candidates.get(sanitizeIdentifier(name)), valueType);
+					setStringMapLocalTypeOverride(scope, local, candidates.get(local), keyType, valueType);
 			case EBinop(_, left, right):
 				collectStringMapLocalTypeOverridesFromExpr(left, scope, candidates);
 				collectStringMapLocalTypeOverridesFromExpr(right, scope, candidates);
@@ -3638,6 +3659,28 @@ class CppTargetCore {
 		}
 	}
 
+	static function withStringMapInferenceScope(scope:CppRenderScope, candidates:haxe.ds.StringMap<String>, fn:Void->Void):Void {
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalTypeOverrides = copyStringMap(scope.localTypeOverrides);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
+		final savedCandidates = copyStringMap(candidates);
+		fn();
+		scope.localTypes = savedLocalTypes;
+		scope.localTypeOverrides = savedLocalTypeOverrides;
+		scope.localNames = savedLocalNames;
+		scope.localNameCounts = savedLocalNameCounts;
+		restoreStringMap(candidates, savedCandidates);
+	}
+
+	static function restoreStringMap(target:haxe.ds.StringMap<String>, saved:haxe.ds.StringMap<String>):Void {
+		final stale = [for (key in target.keys()) if (!saved.exists(key)) key];
+		for (key in stale)
+			target.remove(key);
+		for (key in saved.keys())
+			target.set(key, saved.get(key));
+	}
+
 	static function mapClassNameFromNewExpr(expr:Null<HxExpr>):String {
 		return switch (expr) {
 			case ENew(typePath, _):
@@ -3652,13 +3695,31 @@ class CppTargetCore {
 		return switch (sanitizeTypePath(typeBaseName(className == null ? "" : className))) {
 			case "StringMap" | "IntMap":
 				true;
+			case "Map":
+				true;
 			case _:
 				false;
 		};
 	}
 
 	static function defaultMapLocalType(mapClass:String):String {
-		return "std::shared_ptr<" + sanitizeTypePath(typeBaseName(mapClass)) + "<std::string>>";
+		final cleanClass = sanitizeTypePath(typeBaseName(mapClass));
+		return switch (cleanClass) {
+			case "Map":
+				"std::shared_ptr<Map<std::string, std::string>>";
+			case _:
+				"std::shared_ptr<" + cleanClass + "<std::string>>";
+		};
+	}
+
+	static function mapKeyTypeFromExpr(expr:HxExpr, scope:CppRenderScope):String {
+		final explicit = exprCppType(expr, scope);
+		if (explicit.length > 0)
+			return explicit;
+		final inferred = inferExprCppType(expr, scope);
+		if (inferred.length > 0)
+			return inferred;
+		return isStringLike(expr) ? "std::string" : "int";
 	}
 
 	static function stringMapValueTypeFromExpr(expr:HxExpr, scope:CppRenderScope):String {
@@ -3669,19 +3730,35 @@ class CppTargetCore {
 		return inferred.length > 0 ? inferred : "std::string";
 	}
 
-	static function setStringMapLocalTypeOverride(scope:CppRenderScope, local:String, mapClass:String, valueType:String):Void {
+	static function setStringMapLocalTypeOverride(scope:CppRenderScope, local:String, mapClass:String, keyType:String, valueType:String):Void {
 		final cleanClass = sanitizeTypePath(typeBaseName(mapClass == null ? "" : mapClass));
 		if (cleanClass.length == 0)
 			return;
-		final typeName = "std::shared_ptr<" + cleanClass + "<" + valueType + ">>";
+		final typeName = mapLocalType(cleanClass, keyType, valueType);
 		final existing = scope.localTypeOverrides.get(local);
 		if (existing != null && existing.length > 0 && existing != typeName) {
 			final currentLocalType = scope.localTypes.get(local);
-			if (mapClassNameFromCppMapType(existing) == cleanClass || mapClassNameFromCppMapType(currentLocalType) != cleanClass)
+			final currentIsFreshDefault = currentLocalType == defaultMapLocalType(cleanClass);
+			if ((mapClassNameFromCppMapType(existing) == cleanClass && !currentIsFreshDefault)
+				|| mapClassNameFromCppMapType(currentLocalType) != cleanClass)
 				return;
 		}
 		scope.localTypeOverrides.set(local, typeName);
 		scope.localTypes.set(local, typeName);
+	}
+
+	static function mapLocalType(mapClass:String, keyType:String, valueType:String):String {
+		final cleanClass = sanitizeTypePath(typeBaseName(mapClass == null ? "" : mapClass));
+		return switch (cleanClass) {
+			case "Map":
+				"std::shared_ptr<Map<"
+				+ (keyType == null || keyType.length == 0 ? "std::string" : keyType)
+				+ ", "
+				+ valueType
+				+ ">>";
+			case _:
+				"std::shared_ptr<" + cleanClass + "<" + valueType + ">>";
+		};
 	}
 
 	static function mapClassNameFromCppMapType(typeName:String):String {
@@ -4540,14 +4617,27 @@ class CppTargetCore {
 			case SThrow(expr, _):
 				[indent + "throw std::runtime_error(" + stringExpr(expr, scope) + ");"];
 			case SVar(name, typeHint, init, _):
-				final localType = cppLocalDeclaredType(name, typeHint, init, scope);
+				final sourceLocal = sanitizeIdentifier(name);
+				final hadPreviousName = scope != null && scope.localNames.exists(sourceLocal);
+				final previousName = hadPreviousName ? scope.localNames.get(sourceLocal) : "";
+				final localName = declareLocalName(name, scope);
+				final localType = cppLocalDeclaredType(name, typeHint, init, scope, localName);
 				final hasExplicitType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
 				final declaredType = (hasExplicitType || init == null) && localType.length > 0 ? localType : "auto";
+				if (scope != null) {
+					if (hadPreviousName)
+						scope.localNames.set(sourceLocal, previousName);
+					else
+						scope.localNames.remove(sourceLocal);
+				}
 				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
 					scope) : renderLocalInitExpr(init, declaredType, localType, scope);
-				final localName = declareLocalName(name, scope);
+				if (scope != null)
+					scope.localNames.set(sourceLocal, localName);
 				if (scope != null) {
 					scope.localTypes.set(sanitizeIdentifier(name), localType);
+					if (localName != sanitizeIdentifier(name))
+						scope.localTypes.set(localName, localType);
 					recordLocalTypeHint(scope, sanitizeIdentifier(name), typeHint);
 				}
 				[indent + declaredType + " " + localName + " = " + rhs + ";"];
@@ -5359,6 +5449,8 @@ class CppTargetCore {
 			var templateArgs = expectedTemplateArgs.length > 0 ? expectedTemplateArgs : scopedTemplateArgsForClass(className, scope);
 			if (templateArgs.length == 0 && args.length == 0)
 				templateArgs = templateArgsFromExpectedClassType(className, scope == null ? "" : scope.returnType);
+			if (templateArgs.length == 0 && args.length == 0 && className == "Map")
+				templateArgs = ["int", "int"];
 			return "__hxhx_make_shared_"
 				+ className
 				+ (templateArgs.length > 0 ? "<" + templateArgs.join(", ") + ">" : "")
@@ -5637,12 +5729,8 @@ class CppTargetCore {
 			final lowered = switch (method) {
 				case "pop" if (args.length == 0):
 					"__hxhx_vector_pop(" + target + ")";
-				case "join" if (args.length == 1 && receiverCppType == "std::vector<std::string>"):
-					"__hxhx_join("
-					+ target
-					+ ", "
-					+ stringExpr(args[0], scope)
-					+ ")";
+				case "join" if (args.length == 1):
+					"__hxhx_join(" + target + ", " + stringExpr(args[0], scope) + ")";
 				case "sort" if (args.length == 1):
 					"__hxhx_vector_sort(" + target + ", " + renderExpr(args[0], scope) + ")";
 				case "map" if (args.length == 1):
@@ -6576,7 +6664,8 @@ class CppTargetCore {
 			return "";
 		return switch (expr) {
 			case EIdent(name):
-				final local = scope.localTypes.get(sanitizeIdentifier(name));
+				final cppLocal = localCppName(name, scope);
+				final local = scope.localTypes.exists(cppLocal) ? scope.localTypes.get(cppLocal) : scope.localTypes.get(sanitizeIdentifier(name));
 				if (local != null && local.length > 0) {
 					local;
 				} else {
@@ -6611,6 +6700,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "isFunction"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
 				"bool";
+			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
+				"std::string";
 			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
 			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
@@ -6933,6 +7024,8 @@ class CppTargetCore {
 			|| (ownerName == "Bytes" && method == "fill"))
 			return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
 		final owner = scope == null ? null : scope.classByName.get(ownerName);
+		if (owner != null && isUtestResultAggregationHelper(fn, owner))
+			return utestResultAggregationReturnType(ownerName, method);
 		return owner == null ? cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope) : inferredFunctionReturnCppType(fn, owner, scope.classByName);
 	}
 
@@ -7122,12 +7215,13 @@ class CppTargetCore {
 		return init == null ? "" : inferExprCppType(init, scope);
 	}
 
-	static function cppLocalDeclaredType(name:String, typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
+	static function cppLocalDeclaredType(name:String, typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope, ?declaredLocalName:String):String {
 		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
 		if (explicit.length > 0 && !isDynamicLikeTypeHint(explicit))
 			return cppLocalTypeHint(typeHint, init, scope);
 		final local = sanitizeIdentifier(name);
-		final overrideType = scope == null ? null : scope.localTypeOverrides.get(local);
+		final overrideType = if (scope == null) null; else if (declaredLocalName != null
+			&& scope.localTypeOverrides.exists(declaredLocalName)) scope.localTypeOverrides.get(declaredLocalName); else scope.localTypeOverrides.get(local);
 		return overrideType != null && overrideType.length > 0 ? overrideType : cppLocalTypeHint(typeHint, init, scope);
 	}
 
@@ -7191,6 +7285,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "isFunction"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
 				"bool";
+			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
+				"std::string";
 			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
 			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
@@ -9609,6 +9705,14 @@ class CppTargetCore {
 		return out;
 	}
 
+	static function copyIntMap(values:haxe.ds.StringMap<Int>):haxe.ds.StringMap<Int> {
+		final out = new haxe.ds.StringMap<Int>();
+		if (values != null)
+			for (key in values.keys())
+				out.set(key, values.get(key));
+		return out;
+	}
+
 	static function setAssignedArgTypeOverride(scope:CppRenderScope, local:String, typeName:String):Void {
 		if (scope == null || local == null || local.length == 0 || typeName == null || typeName.length == 0)
 			return;
@@ -10017,26 +10121,7 @@ class CppTargetCore {
 	static function renderUtestResultAggregationHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final ownerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
-		final returnType = switch (ownerName + "." + method) {
-			case "ClassResult.get":
-				"std::shared_ptr<FixtureResult>";
-			case "ClassResult.exists" | "PackageResult.existsPackage" | "PackageResult.existsClass":
-				"bool";
-			case "ClassResult.methodNames" | "PackageResult.classNames" | "PackageResult.packageNames":
-				"std::vector<std::string>";
-			case "PackageResult.getPackage" | "PackageResult.getOrCreatePackage":
-				"std::shared_ptr<PackageResult>";
-			case "PackageResult.getClass" | "PackageResult.getOrCreateClass" | "ResultAggregator.getOrCreateClass":
-				"std::shared_ptr<ClassResult>";
-			case "PackageResult.createFixture" | "ResultAggregator.createFixture":
-				"std::shared_ptr<FixtureResult>";
-			case "PlainTextReport.getResults":
-				"std::string";
-			case "PlainTextReport.hasHeader" | "PlainTextReport.skipResult":
-				"bool";
-			case _:
-				"void";
-		};
+		final returnType = utestResultAggregationReturnType(ownerName, method);
 		final templateArg = utestResultAggregationTemplateArg(ownerName, method, HxFunctionDecl.getArgs(fn));
 		if (templateArg != null)
 			return renderUtestTemplatedNeutralHelper(fn, owner, classLookup, returnType, templateArg);
@@ -10062,6 +10147,29 @@ class CppTargetCore {
 		}
 		out.push("  }");
 		return out;
+	}
+
+	static function utestResultAggregationReturnType(ownerName:String, method:String):String {
+		return switch (sanitizeTypePath(typeBaseName(ownerName == null ? "" : ownerName)) + "." + sanitizeIdentifier(method == null ? "" : method)) {
+			case "ClassResult.get":
+				"std::shared_ptr<FixtureResult>";
+			case "ClassResult.exists" | "PackageResult.existsPackage" | "PackageResult.existsClass":
+				"bool";
+			case "ClassResult.methodNames" | "PackageResult.classNames" | "PackageResult.packageNames":
+				"std::vector<std::string>";
+			case "PackageResult.getPackage" | "PackageResult.getOrCreatePackage":
+				"std::shared_ptr<PackageResult>";
+			case "PackageResult.getClass" | "PackageResult.getOrCreateClass" | "ResultAggregator.getOrCreateClass":
+				"std::shared_ptr<ClassResult>";
+			case "PackageResult.createFixture" | "ResultAggregator.createFixture":
+				"std::shared_ptr<FixtureResult>";
+			case "PlainTextReport.getResults":
+				"std::string";
+			case "PlainTextReport.hasHeader" | "PlainTextReport.skipResult":
+				"bool";
+			case _:
+				"void";
+		};
 	}
 
 	static function utestResultAggregationTemplateArg(ownerName:String, method:String, args:Array<HxFunctionArg>):Null<String> {
