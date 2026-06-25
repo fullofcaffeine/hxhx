@@ -2800,6 +2800,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 						SExpr(ECall(EField(EIdent("h"), "set"), [EIdent("i"), ECall(EIdent("unserialize"), [])]), HxPos.unknown())
 					], HxPos.unknown())
 				], HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("hashFromArrays", Public, true, [], "Void", [
+				SVar("hash1", "MyHash<String>", EArrayDecl([EString("k1"), EString("v1"), EString("k2"), EString("v2")]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [ECall(EField(EIdent("hash1"), "get"), [EString("k1")]), EString("v1")]), HxPos.unknown()),
+				SVar("hash2", "MyHash<Int>", EArrayDecl([EInt(1), EInt(2), EInt(3), EInt(4)]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [ECall(EField(EIdent("hash2"), "get"), [EString("_s1")]), EInt(2)]), HxPos.unknown())
 			], "")
 		], []);
 		final stringMapNames = new StringMap<Bool>();
@@ -2813,10 +2819,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		stringMapClasses.set("StringMapOwner", stringMapOwner);
 		final stringMapLookup = {names: stringMapNames, byName: stringMapClasses};
 		final stringMapAbstractLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringMapAbstract, stringMapLookup).join("\n");
-		assertContains(stringMapAbstractLines, "(*this) = __hxhx_make_shared_StringMap<V>();",
-			"C++ generic abstract constructors should provide StringMap factory type arguments from their underlying type");
-		assertTrue(stringMapAbstractLines.indexOf("__hxhx_make_shared_StringMap();") < 0,
-			"C++ generic abstract constructors should not rely on impossible StringMap factory deduction");
+		assertContains(stringMapAbstractLines, "std::shared_ptr<StringMap<V>> __value = __hxhx_make_shared_StringMap<V>();",
+			"C++ generic StringMap-backed abstracts should store their underlying map support");
+		assertContains(stringMapAbstractLines, "V get(std::string k) {",
+			"C++ generic StringMap-backed abstracts should return the abstract value type from get");
+		assertContains(stringMapAbstractLines, "static std::shared_ptr<MyHash<K>> fromArray(std::vector<K> arr) {",
+			"C++ generic StringMap-backed abstracts should construct from array literals");
+		assertTrue(stringMapAbstractLines.indexOf("(*this) = __hxhx_make_shared_StringMap") < 0,
+			"C++ generic StringMap-backed abstract constructors should not assign shared_ptr storage into the wrapper value");
 		final stringMapOwnerLines = @:privateAccess [
 			for (fn in HxClassDecl.getFunctions(stringMapOwner))
 				backend.cpp.CppTargetCore.renderHelperMethod(fn, stringMapOwner, stringMapLookup).join("\n")
@@ -2834,6 +2844,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unhinted IntMap locals should infer Int values from set calls before rendering the factory");
 		assertContains(stringMapOwnerLines, "auto h = __hxhx_make_shared_IntMap<std::string>();",
 			"C++ branch-local unhinted IntMap locals should infer values independently from StringMap branches");
+		assertContains(stringMapOwnerLines,
+			"std::shared_ptr<MyHash<std::string>> hash1 = MyHash<std::string>::fromArray(std::vector<std::string>{std::string(\"k1\"), std::string(\"v1\"), std::string(\"k2\"), std::string(\"v2\")});",
+			"C++ MyHash<String> locals should construct from string array literals through the abstract wrapper");
+		assertContains(stringMapOwnerLines, "std::shared_ptr<MyHash<int>> hash2 = MyHash<int>::fromArray(std::vector<int>{1, 2, 3, 4});",
+			"C++ MyHash<Int> locals should construct from int array literals through the abstract wrapper");
+		assertContains(stringMapOwnerLines, "eq(hash2->get(\"_s1\"), 2);", "C++ MyHash<Int>.get should return Int values for eq comparisons");
 		assertContains(stringMapOwnerLines, "auto h = __hxhx_make_shared_IntMap<std::vector<std::string>>();",
 			"C++ redeclared unhinted IntMap locals should infer fresh value types from the current block");
 		assertContains(stringMapOwnerLines, "h->set(1, std::vector<std::string>{std::string(\"a\"), std::string(\"b\")});",

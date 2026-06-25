@@ -1738,6 +1738,8 @@ class CppTargetCore {
 			return renderStdVectorSupportClass(cls, classLookup);
 		if (isTemplateWrapSupportClass(cls))
 			return renderTemplateWrapSupportClass(cls);
+		if (isStringMapBackedAbstractClass(cls))
+			return renderStringMapBackedAbstractClass(cls);
 		if (isArrayBackedAbstractClass(cls))
 			return renderArrayBackedAbstractClass(cls, classLookup);
 		if (isPrimitiveBackedAbstractClass(cls))
@@ -2011,6 +2013,49 @@ class CppTargetCore {
 			return false;
 		final underlying = abstractUnderlyingTypeHint(cls);
 		return sanitizeTypePath(typeBaseName(underlying == null ? "" : underlying)) == "Template";
+	}
+
+	static function isStringMapBackedAbstractClass(cls:HxClassDecl):Bool {
+		if (cls == null)
+			return false;
+		final underlying = abstractUnderlyingTypeHint(cls);
+		return sanitizeTypePath(typeBaseName(underlying == null ? "" : underlying)) == "StringMap";
+	}
+
+	static function renderStringMapBackedAbstractClass(cls:HxClassDecl):Array<String> {
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final typeParams = genericClassTemplateParams(cls);
+		final valueType = typeParams.length > 0 ? sanitizeIdentifier(typeParams[0]) : "std::string";
+		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
+		out.push("struct " + className + " {");
+		out.push("  std::shared_ptr<StringMap<" + valueType + ">> __value = __hxhx_make_shared_StringMap<" + valueType + ">();");
+		out.push("  " + className + "() {}");
+		out.push("  void set(std::string k, " + valueType + " v) {");
+		out.push("    __value->set(k, v);");
+		out.push("  }");
+		out.push("  " + valueType + " get(std::string k) {");
+		out.push("    return __value->get(k).value_or(" + valueType + "{});");
+		out.push("  }");
+		out.push("  std::string toString() {");
+		out.push("    return __value->toString();");
+		out.push("  }");
+		out.push("  template<typename K>");
+		out.push("  static std::shared_ptr<" + className + "<K>> fromArray(std::vector<K> arr) {");
+		out.push("    auto out = std::make_shared<" + className + "<K>>();");
+		out.push("    for (int i = 0; i < static_cast<int>(arr.size()); ++i) {");
+		out.push("      out->set(std::string(\"_s\") + std::to_string(i), arr[i]);");
+		out.push("    }");
+		out.push("    return out;");
+		out.push("  }");
+		out.push("  static std::shared_ptr<" + className + "<std::string>> fromStringArray(std::vector<std::string> arr) {");
+		out.push("    auto out = std::make_shared<" + className + "<std::string>>();");
+		out.push("    for (int i = 0; i + 1 < static_cast<int>(arr.size()); i += 2) {");
+		out.push("      out->set(arr[i], arr[i + 1]);");
+		out.push("    }");
+		out.push("    return out;");
+		out.push("  }");
+		out.push("};");
+		return out;
 	}
 
 	static function renderTemplateWrapSupportClass(cls:HxClassDecl):Array<String> {
@@ -4893,6 +4938,9 @@ class CppTargetCore {
 		final abstractUnderlying = abstractUnderlyingValueExprForExpectedType(expr, expectedType, scope);
 		if (abstractUnderlying != null)
 			return abstractUnderlying;
+		final stringMapAbstract = stringMapBackedAbstractValueExprForExpectedType(expr, expectedType, scope);
+		if (stringMapAbstract != null)
+			return stringMapAbstract;
 		final typedEnum = enumCtorExprForExpectedType(expr, expectedType, scope);
 		if (typedEnum != null)
 			return typedEnum;
@@ -4959,6 +5007,32 @@ class CppTargetCore {
 			case _:
 		}
 		return renderExpr(expr, scope);
+	}
+
+	static function stringMapBackedAbstractValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		final className = classNameFromCppType(expectedType);
+		if (className == null || className.length == 0)
+			return null;
+		final baseName = sanitizeTypePath(typeBaseName(className));
+		final cls = scope.classByName.get(baseName);
+		if (!isStringMapBackedAbstractClass(cls))
+			return null;
+		final templateArgs = templateArgsFromExpectedClassType(baseName, expectedType);
+		if (templateArgs.length != 1)
+			return null;
+		return switch (expr) {
+			case EArrayDecl(elements):
+				baseName
+				+ "<"
+				+ templateArgs[0]
+				+ ">::fromArray("
+				+ arrayExprWithElementType(elements, templateArgs[0], scope)
+				+ ")";
+			case _:
+				null;
+		};
 	}
 
 	static function abstractUnderlyingValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
