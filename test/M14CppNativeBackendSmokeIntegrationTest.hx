@@ -3255,6 +3255,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ optional scalar args should use std::optional instead of invalid int/nullptr pairs");
 		assertContains(optionalLenLines, "if (!len.has_value()) {", "C++ optional scalar null checks should test optional presence");
 		assertContains(optionalLenLines, "useLen(len.value());", "C++ optional scalar value uses should unwrap after null checks");
+		final optionalNumericMethod = new HxFunctionDecl("optionalNumericLike", Public, false, [new HxFunctionArg("len", "Int", NoDefault, true, false)],
+			"Void", [
+				SExpr(ECall(EIdent("useLen"), [EBinop("+", EIdent("len"), EInt(1))]), HxPos.unknown())
+			], "");
+		final optionalNumericLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(optionalNumericMethod, optionalOwner, optionalLookup)
+			.join("\n");
+		assertContains(optionalNumericLines, "useLen((len.value() + 1));",
+			"C++ optional scalar arithmetic should not append value_or to an already-unwrapped optional arg");
+		assertTrue(optionalNumericLines.indexOf("len.value().value_or(0)") < 0, "C++ optional scalar arithmetic should avoid invalid value().value_or chains");
 		final importExprClass = new HxClassDecl("ImportExpr", false, [], []);
 		final typePathClass = new HxClassDecl("TypePath", false, [], []);
 		final typeDefinitionClass = new HxClassDecl("TypeDefinition", false, [], []);
@@ -4316,6 +4325,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ anonymous structs should guard field-wise conversion on matching field names");
 		assertContains(templateWrapAnonLines, "__hxhx_anon_tpl_TemplateWrap(const Other& other) : tpl(other.tpl) {}",
 			"C++ anonymous structs should convert matching-field payloads through field conversion");
+		assertContains(templateWrapAnonLines, "__hxhx_anon_tpl_TemplateWrap(const __hxhx_anon&) : tpl() {}",
+			"C++ anonymous structs should accept empty anonymous payloads by default-initializing missing fields");
 		final templateWrapOwnerLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(templateWrapOwner)[0], templateWrapOwner, templateWrapLookup).join("\n");
 		assertContains(templateWrapOwnerLines, "TemplateWrap tpl = \"Hi ::t::\";",
@@ -4451,7 +4462,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SExpr(EBinop("*=", EField(EIdent("lhs"), "z"), EIdent("rhs")), HxPos.unknown()),
 				SReturn(EIdent("lhs"), HxPos.unknown())
 			], ""),
-			new HxFunctionDecl("get", Public, false, [], "MyPoint3", [SReturn(EThis, HxPos.unknown())], "")
+			new HxFunctionDecl("scalar", Public, true, [
+				new HxFunctionArg("lhs", "MyVector", NoDefault, false, false),
+				new HxFunctionArg("rhs", "Float", NoDefault, false, false)
+			], "MyVector", [
+				SReturn(ENew("MyPoint3",
+					[
+						EBinop("*", EField(EIdent("lhs"), "x"), EIdent("rhs")),
+						EBinop("*", EField(EIdent("lhs"), "y"), EIdent("rhs")),
+						EBinop("*", EField(EIdent("lhs"), "z"), EIdent("rhs"))
+					]),
+					HxPos.unknown())
+			],
+				""),
+			new HxFunctionDecl("get", Public, false, [], "MyPoint3", [SReturn(EThis, HxPos.unknown())], ""),
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("(point)"), HxPos.unknown())], "")
 		], [
 			new HxFieldDecl("x", Public, false, "Float", null),
 			new HxFieldDecl("y", Public, false, "Float", null),
@@ -4479,6 +4504,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(vectorLines.indexOf("static std::shared_ptr<MyVector> add") < 0,
 			"C++ class-backed abstract operators should not require shared_ptr<MyPoint3> to shared_ptr<MyVector> conversion");
 		assertTrue(vectorLines.indexOf("return (*this);") < 0, "C++ class-backed abstract self returns should not emit value-to-shared_ptr conversions");
+		assertContains(vectorLines, "MyVector(double x, double y, double z) : x(x), y(y), z(z) {}",
+			"C++ class-backed abstracts should accept underlying constructor fields for wrapper conversions");
+		final vectorOwner = new HxClassDecl("VectorOwner", false, [
+			new HxFunctionDecl("check", Public, true, [], "Void", [
+				SVar("v1", "MyVector", ENew("MyPoint3", [EFloat(1), EFloat(1), EFloat(1)]), HxPos.unknown()),
+				SVar("v2", "MyVector", ENew("MyPoint3", [EFloat(1), EFloat(2), EFloat(3)]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EString("(2,3,4)"), EBinop("+", EIdent("v1"), EIdent("v2"))]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EString("(2,4,6)"), EBinop("*", EIdent("v2"), EFloat(2))]), HxPos.unknown()),
+				SExpr(EBinop("*=", EIdent("v1"), EFloat(2)), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EString("(2,2,2)"), EIdent("v1")]), HxPos.unknown())
+			], "")
+		]);
+		vectorNames.set("VectorOwner", true);
+		vectorClasses.set("VectorOwner", vectorOwner);
+		final vectorOwnerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(vectorOwner)[0], vectorOwner,
+			vectorLookup)
+			.join("\n");
+		assertContains(vectorOwnerLines, "std::shared_ptr<MyVector> v1 = std::make_shared<MyVector>(1, 1, 1);",
+			"C++ class-backed abstract locals should construct wrappers from underlying constructor calls");
+		assertContains(vectorOwnerLines, "eq(std::string(\"(2,3,4)\"), ([&]() { auto __hxhx_MyVector_underlying = MyVector::add(v1, v2);",
+			"C++ class-backed abstract add operators should dispatch through generated helpers and wrap results");
+		assertContains(vectorOwnerLines, "eq(std::string(\"(2,4,6)\"), ([&]() { auto __hxhx_MyVector_underlying = MyVector::scalar(v2, 2);",
+			"C++ class-backed abstract scalar operators should dispatch through generated helpers and wrap results");
+		assertContains(vectorOwnerLines, "([&]() { MyVector::scalarAssign(v1, 2); return v1; })();",
+			"C++ class-backed abstract compound assignment operators should preserve mutation helper side effects");
+		assertContains(vectorOwnerLines, "eq(std::string(\"(2,2,2)\"), v1->toString());",
+			"C++ class-backed abstract values should coerce through toString for string equality");
 		final stdVector = new HxClassDecl("Vector", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("length", "Int", NoDefault, false, false)], "Void", [], "")
 		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=VectorData<T>"]);
@@ -4620,6 +4672,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 					HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [ECall(EIdent("switchMe"), [EBool(true)]), EString("12.2m")]), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [ECall(EIdent("switchMe"), [EBool(false)]), EString("2.4m")]), HxPos.unknown()),
+				SVar("switchMeFromCalls", "(String)->String", ELambda(["b"], ESwitch(EIdent("b"), [PBool(true), PWildcard], [EString("yes"), EString("no")])),
+					HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [ECall(EIdent("switchMeFromCalls"), [EBool(true)]), EString("yes")]), HxPos.unknown()),
 				SVar("m", "Meter", EFloat(12.5), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [EString("12.5m"), EIdent("m")]), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [EString("Distance: 12.5m"), EBinop("+", EString("Distance: "), EIdent("m"))]), HxPos.unknown())
@@ -4644,6 +4699,47 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ typed zero-arg local functions should coerce primitive-backed abstract constructors through String returns");
 		assertContains(meterCompareLines, "std::function<std::string(bool)> switchMe = [&](bool b) -> std::string { return ([&]() -> std::string",
 			"C++ typed local function switch bodies should inherit the declared String return type");
+		assertContains(meterCompareLines, "std::function<std::string(bool)> switchMeFromCalls = [&](bool b) -> std::string",
+			"C++ local lambda call sites should refine stale string argument function signatures to concrete bool args");
+		final myIntAbstract = new HxClassDecl("MyInt", false, [
+			new HxFunctionDecl("repeat", Public, true, [
+				new HxFunctionArg("lhs", "MyInt", NoDefault, false, false),
+				new HxFunctionArg("rhs", "String", NoDefault, false, false)
+			], "String", [], ""),
+			new HxFunctionDecl("cut", Public, true, [
+				new HxFunctionArg("lhs", "String", NoDefault, false, false),
+				new HxFunctionArg("rhs", "MyInt", NoDefault, false, false)
+			], "String", [
+				SReturn(ECall(EField(EIdent("lhs"), "substr"), [EInt(0), EIdent("rhs")]), HxPos.unknown())
+			], "")
+		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=Int"]);
+		final myIntOwner = new HxClassDecl("MyIntOwner", false, [
+			new HxFunctionDecl("check", Public, true, [], "Void", [
+				SVar("r", "MyInt", EInt(5), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EString("aaaaa"), EBinop("*", EIdent("r"), EString("a"))]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EString("aaaaa"), EBinop("*", EString("a"), EIdent("r"))]), HxPos.unknown()),
+				SVar("v", "MyInt", EInt(5), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EString("abcde"), EBinop("/", EString("abcdefghijk"), EIdent("v"))]), HxPos.unknown())
+			], "")
+		]);
+		final myIntNames = new StringMap<Bool>();
+		for (name in ["MyInt", "MyIntOwner"])
+			myIntNames.set(name, true);
+		final myIntClasses = new StringMap<HxClassDecl>();
+		myIntClasses.set("MyInt", myIntAbstract);
+		myIntClasses.set("MyIntOwner", myIntOwner);
+		final myIntLookup = {names: myIntNames, byName: myIntClasses};
+		final myIntLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(myIntAbstract, myIntLookup).join("\n");
+		assertContains(myIntLines, "for (int i = 0; i < lhs; ++i) out += rhs;",
+			"C++ primitive Int abstract repeat helpers should emit target-owned string repetition");
+		final myIntOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(myIntOwner)[0], myIntOwner, myIntLookup).join("\n");
+		assertContains(myIntOwnerLines, "eq(std::string(\"aaaaa\"), MyInt::repeat(r, std::string(\"a\")));",
+			"C++ MyInt * String should dispatch through the primitive abstract repeat helper");
+		assertContains(myIntOwnerLines, "eq(std::string(\"aaaaa\"), MyInt::repeat(r, std::string(\"a\")));",
+			"C++ commuted String * MyInt should dispatch through the primitive abstract repeat helper");
+		assertContains(myIntOwnerLines, "eq(std::string(\"abcde\"), MyInt::cut(std::string(\"abcdefghijk\"), v));",
+			"C++ String / MyInt should dispatch through the primitive abstract cut helper");
 		final primitiveNoMetadataOwner = new HxClassDecl("PrimitiveNoMetadataOwner", false, [
 			new HxFunctionDecl("read", Public, true, [], "Int", [
 				SVar("a", "", EInt(33), HxPos.unknown()),
