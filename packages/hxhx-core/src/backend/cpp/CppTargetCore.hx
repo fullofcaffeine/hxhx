@@ -1223,7 +1223,7 @@ class CppTargetCore {
 		final scoped = exprCppType(expr, scope);
 		final optionalInner = cppOptionalInnerType(scoped);
 		if (optionalInner.length > 0)
-			return optionalInner;
+			return isScopeTypeParam(optionalInner, scope) || isBareCppTypeParamName(optionalInner) ? "std::string" : optionalInner;
 		if (isScopeTypeParam(scoped, scope) || isBareCppTypeParamName(scoped))
 			return "std::string";
 		if (scoped.length > 0)
