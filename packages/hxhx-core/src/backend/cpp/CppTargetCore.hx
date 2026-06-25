@@ -4448,6 +4448,11 @@ class CppTargetCore {
 				[indent + "std::cout << " + stringExpr(args[0], scope) + " << std::endl;"];
 			case SExpr(ECall(ESuper, _), _):
 				[indent + "/* base constructor call omitted */"];
+			case SExpr(EBinop("=", EThis, EAnon(fieldNames, fieldValues)), _):
+				final abstractAnonAssignment = abstractThisAnonAssignmentLines(fieldNames, fieldValues, indent, scope);
+				abstractAnonAssignment == null ? [
+					indent + renderExpr(EBinop("=", EThis, EAnon(fieldNames, fieldValues)), scope) + ";"
+				] : abstractAnonAssignment;
 			case SExpr(expr, _):
 				final macroApiCall = macroApiCallExprForExpected(expr, "void", scope);
 				[indent + (macroApiCall == null ? renderExpr(expr, scope) : macroApiCall) + ";"];
@@ -7461,6 +7466,25 @@ class CppTargetCore {
 		return renderExpr(right, scope);
 	}
 
+	static function abstractThisAnonAssignmentLines(fieldNames:Array<String>, fieldValues:Array<HxExpr>, indent:String,
+			?scope:CppRenderScope):Null<Array<String>> {
+		if (scope == null || scope.owner == null || !scopeOwnerIsHxhxAbstract(scope))
+			return null;
+		final count = fieldNames.length < fieldValues.length ? fieldNames.length : fieldValues.length;
+		for (i in 0...count)
+			if (!hasInstanceField(scope.owner, fieldNames[i]))
+				return null;
+		final out = new Array<String>();
+		for (i in 0...count) {
+			final fieldName = sanitizeIdentifier(fieldNames[i]);
+			final expectedType = constructorFieldCppType(scope, fieldName);
+			final rhs = expectedType == null
+				|| expectedType.length == 0 ? renderExpr(fieldValues[i], scope) : valueExprForExpectedType(fieldValues[i], expectedType, scope);
+			out.push(indent + "this->" + fieldName + " = " + rhs + ";");
+		}
+		return out;
+	}
+
 	static function assignmentExpectedCppType(left:HxExpr, ?scope:CppRenderScope):String {
 		final fieldType = assignmentExpectedFieldCppType(left, scope);
 		if (fieldType != null && fieldType.length > 0)
@@ -8916,6 +8940,15 @@ class CppTargetCore {
 
 	static function abstractUnderlyingTypeHint(cls:HxClassDecl):Null<String> {
 		return CppTypeModel.abstractUnderlyingTypeHint(cls);
+	}
+
+	static function scopeOwnerIsHxhxAbstract(scope:CppRenderScope):Bool {
+		if (scope == null || scope.owner == null)
+			return false;
+		for (meta in HxClassDecl.getMetadata(scope.owner))
+			if (StringTools.trim(meta) == "__hxhx_abstract")
+				return true;
+		return false;
 	}
 
 	static function hasInstanceField(cls:HxClassDecl, name:String):Bool {

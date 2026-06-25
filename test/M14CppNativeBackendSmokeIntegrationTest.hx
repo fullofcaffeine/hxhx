@@ -4095,6 +4095,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ locals typed as TemplateWrap should use the value wrapper instead of std::shared_ptr<TemplateWrap>");
 		assertContains(templateWrapOwnerLines, "return __hxhx_stringify(tpl.execute(\"ok\"));",
 			"C++ TemplateWrap locals should call execute through value access");
+		final abstractSetter = new HxClassDecl("MyAbstractSetter", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [SExpr(EBinop("=", EThis, EAnon([], [])), HxPos.unknown())], "")
+		], [new HxFieldDecl("value", Public, false, "String", null)], "",
+			["__hxhx_abstract"]);
+		final abstractSetterWithValue = new HxClassDecl("MyAbstractSetterWithValue", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [SExpr(EBinop("=", EThis, EAnon(["value"], [EString("foo")])), HxPos.unknown())], "")
+		], [new HxFieldDecl("value", Public, false, "String", null)], "",
+			["__hxhx_abstract"]);
+		final abstractSetterNames = new StringMap<Bool>();
+		for (name in ["MyAbstractSetter", "MyAbstractSetterWithValue"])
+			abstractSetterNames.set(name, true);
+		final abstractSetterClasses = new StringMap<HxClassDecl>();
+		abstractSetterClasses.set("MyAbstractSetter", abstractSetter);
+		abstractSetterClasses.set("MyAbstractSetterWithValue", abstractSetterWithValue);
+		final abstractSetterLookup = {names: abstractSetterNames, byName: abstractSetterClasses};
+		final abstractSetterLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(abstractSetter, abstractSetterLookup).join("\n");
+		assertTrue(abstractSetterLines.indexOf("(*this) = __hxhx_anon") < 0,
+			"C++ abstract constructors should not assign anonymous payload structs directly to this");
+		final abstractSetterWithValueLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(abstractSetterWithValue, abstractSetterLookup).join("\n");
+		assertContains(abstractSetterWithValueLines, "this->value = std::string(\"foo\");",
+			"C++ abstract constructor anonymous payloads should assign matching backing fields");
+		assertTrue(abstractSetterWithValueLines.indexOf("(*this) = __hxhx_anon") < 0,
+			"C++ abstract constructor field payloads should not require an anonymous assignment operator");
 		final point3Class = new HxClassDecl("MyPoint3", false, [
 			new HxFunctionDecl("new", Public, false, [
 				new HxFunctionArg("x", "Float", NoDefault, false, false),
