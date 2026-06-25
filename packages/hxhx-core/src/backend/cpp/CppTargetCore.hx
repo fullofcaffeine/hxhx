@@ -5464,6 +5464,20 @@ class CppTargetCore {
 		};
 	}
 
+	static function mathReturnCppType(method:String):String {
+		return switch (method) {
+			case "round":
+				"int";
+			case "isFinite" | "isNaN":
+				"bool";
+			case "abs" | "min" | "max" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "exp" | "log" | "sqrt" | "floor" | "ceil" | "atan2" | "pow" |
+				"random" | "ffloor" | "fceil" | "fround":
+				"double";
+			case _:
+				"";
+		};
+	}
+
 	static function numericExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return exprCppType(expr, scope) == "std::any" ? "__hxhx_any_double(" + renderExpr(expr, scope) + ")" : renderExpr(expr, scope);
 	}
@@ -5764,6 +5778,8 @@ class CppTargetCore {
 				"std::optional<" + otherOptionalInner + ">{}";
 			case _ if (isCppVectorLengthExpr(arg, scope)):
 				"static_cast<int>(" + renderExpr(arg, scope) + ")";
+			case _ if (otherType == "double" && isCppIntExpr(arg, scope)):
+				"static_cast<double>(" + renderExpr(arg, scope) + ")";
 			case _ if (isEqStringArgExpr(arg, scope)):
 				stringExpr(arg, scope);
 			case _:
@@ -5920,6 +5936,11 @@ class CppTargetCore {
 		if (typeParams.length == 0 || typeArgs.length == 0)
 			return fieldType;
 		return substituteCppTypeParams(fieldType, typeParams, typeArgs);
+	}
+
+	static function stringMapValueCppType(receiverCppType:String):String {
+		final args = templateArgsFromExpectedClassType("StringMap", receiverCppType);
+		return args.length == 1 ? args[0] : "";
 	}
 
 	static function substituteCppTypeParams(typeName:String, typeParams:Array<String>, typeArgs:Array<String>):String {
@@ -6364,6 +6385,8 @@ class CppTargetCore {
 				int64DivModStruct().name;
 			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
 				"int";
+			case ECall(EField(EIdent("Math"), method), _):
+				mathReturnCppType(method);
 			case ECall(EField(receiver, "field"), args) if (isReflectStaticReceiver(receiver) && args.length == 2):
 				"std::any";
 			case ECall(EField(receiver, "callMethod"), args) if (isReflectStaticReceiver(receiver) && args.length == 3):
@@ -6386,6 +6409,9 @@ class CppTargetCore {
 			case ECall(EField(receiver, "hasField"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"bool";
+			case ECall(EField(receiver, "get"), args) if (args.length == 1
+				&& stringMapValueCppType(exprCppType(receiver, scope)).length > 0):
+				"std::optional<" + stringMapValueCppType(exprCppType(receiver, scope)) + ">";
 			case ECall(EField(EIdent("Type"), method), args):
 				typeIntrinsicReturnCppType(method, args);
 			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
@@ -6926,6 +6952,8 @@ class CppTargetCore {
 				int64DivModStruct().name;
 			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
 				"int";
+			case ECall(EField(EIdent("Math"), method), _):
+				mathReturnCppType(method);
 			case ECall(EField(receiver, "compare"), _) if (isReflectStaticReceiver(receiver)):
 				"int";
 			case ECall(EField(receiver, "field"), args) if (isReflectStaticReceiver(receiver) && args.length == 2):
@@ -6950,6 +6978,9 @@ class CppTargetCore {
 			case ECall(EField(receiver, "hasField"), args)
 				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
 				"bool";
+			case ECall(EField(receiver, "get"), args) if (args.length == 1
+				&& stringMapValueCppType(exprCppType(receiver, scope)).length > 0):
+				"std::optional<" + stringMapValueCppType(exprCppType(receiver, scope)) + ">";
 			case ECall(EField(receiver, "isEnumValue"), _) if (isReflectStaticReceiver(receiver)):
 				"bool";
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
@@ -7747,6 +7778,8 @@ class CppTargetCore {
 				stringExpr(args[2], scope);
 			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
 				"__hxhx_throw_as<std::string>(" + renderExpr(args[0], scope) + ")";
+			case EArrayDecl(_):
+				"__hxhx_stringify(" + renderExpr(expr, scope) + ")";
 			case ETernary(cond, thenExpr, elseExpr) if (inferExprCppType(expr, scope) == "std::string"):
 				"("
 				+ conditionExpr(cond, scope)

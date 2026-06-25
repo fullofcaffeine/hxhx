@@ -2702,7 +2702,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("checkIntGet", Public, true, [], "Void", [
 				SVar("h", "", ENew("StringMap", []), HxPos.unknown()),
 				SExpr(ECall(EField(EIdent("h"), "set"), [EString("x"), EInt(-1)]), HxPos.unknown()),
-				SExpr(ECall(EIdent("eq"), [ECall(EField(EIdent("h"), "get"), [EString("x")]), EInt(-1)]), HxPos.unknown())
+				SExpr(ECall(EIdent("eq"), [ECall(EField(EIdent("h"), "get"), [EString("x")]), EInt(-1)]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [ECall(EField(EIdent("h"), "get"), [EString("missing")]), ENull]), HxPos.unknown())
 			], "")
 		], []);
 		final stringMapNames = new StringMap<Bool>();
@@ -2726,8 +2727,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unhinted StringMap locals should infer Int values from set calls before rendering the factory");
 		assertContains(stringMapOwnerLines, "auto h = __hxhx_make_shared_StringMap<std::string>();",
 			"C++ unhinted StringMap locals should infer String values from vector element set calls before rendering the factory");
-		assertContains(stringMapOwnerLines, "eq(h->get(\"x\"), -1);",
-			"C++ StringMap<Int>.get comparisons should keep numeric values instead of stringifying the expected Int");
+		assertContains(stringMapOwnerLines, "eq(h->get(\"x\"), std::optional<int>(-1));",
+			"C++ StringMap<Int>.get comparisons should wrap numeric expected values as optionals");
+		assertContains(stringMapOwnerLines, "eq(h->get(\"missing\"), std::optional<int>{});",
+			"C++ StringMap<Int>.get null comparisons should compare against empty optionals");
 		assertTrue(stringMapOwnerLines.indexOf("std::to_string((-1))") < 0,
 			"C++ StringMap<Int>.get comparisons should not coerce numeric expected values to strings");
 		assertTrue(stringMapOwnerLines.indexOf("__hxhx_make_shared_StringMap();") < 0, "C++ inferred StringMap locals should not emit undeducible factories");
@@ -4171,7 +4174,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("abc"), EInt(0)), EString("a")]), HxPos.unknown()),
 				SVar("str", "String", EString("abc"), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("str"), EInt(0)), EInt(97)]), HxPos.unknown()),
-				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("str"), EUnop("-", EInt(1))), ENull]), HxPos.unknown())
+				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("str"), EUnop("-", EInt(1))), ENull]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [
+					ECall(EField(EIdent("Std"), "string"), [EArrayDecl([EIdent("str")])]),
+					EBinop("+", EBinop("+", EString("["), EIdent("str")), EString("]"))
+				]), HxPos.unknown())
 			], "")
 		], []);
 		final stringBasetypeLookup = {names: new StringMap<Bool>(), byName: new StringMap<HxClassDecl>()};
@@ -4190,6 +4197,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ string index eq should compare concrete code points in non-null contexts");
 		assertContains(stringBasetypeLines, "eq(__hxhx_string_code_at(str, (-1)), std::optional<int>{});",
 			"C++ string out-of-range index eq should compare against empty optional");
+		assertContains(stringBasetypeLines,
+			"eq(__hxhx_stringify(std::vector<std::string>{std::string(str)}), ((std::string(\"[\") + std::string(str)) + std::string(\"]\")));",
+			"C++ vector literal stringification should use target stringify support instead of std::to_string(std::vector<...>)");
+		final mathBasetypeOwner = new HxClassDecl("MathBasetypeOwner", false, [
+			new HxFunctionDecl("check", Public, false, [], "Void", [
+				SExpr(ECall(EIdent("eq"), [ECall(EField(EIdent("Math"), "floor"), [EFloat(1.7)]), EInt(1)]), HxPos.unknown())
+			], "")
+		], []);
+		final mathBasetypeLookup = {names: new StringMap<Bool>(), byName: new StringMap<HxClassDecl>()};
+		mathBasetypeLookup.names.set("MathBasetypeOwner", true);
+		mathBasetypeLookup.byName.set("MathBasetypeOwner", mathBasetypeOwner);
+		final mathBasetypeLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(mathBasetypeOwner)[0], mathBasetypeOwner, mathBasetypeLookup).join("\n");
+		assertContains(mathBasetypeLines, "eq(std::floor(1.7), static_cast<double>(1));",
+			"C++ numeric eq should normalize Int expected values when comparing against double expressions");
 		final point3Class = new HxClassDecl("MyPoint3", false, [
 			new HxFunctionDecl("new", Public, false, [
 				new HxFunctionArg("x", "Float", NoDefault, false, false),
