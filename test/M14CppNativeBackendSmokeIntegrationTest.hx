@@ -4163,6 +4163,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ string-returning super method calls should flow directly instead of std::to_string(std::string)");
 		assertTrue(superStringLines.indexOf("std::to_string(BaseString::toString())") < 0,
 			"C++ string-returning super method calls should not be wrapped in std::to_string");
+		final superPropBase = new HxClassDecl("SuperPropBase", false, [
+			new HxFunctionDecl("set_prop", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Int",
+				[SReturn(EIdent("v"), HxPos.unknown())], "")
+		], [new HxFieldDecl("prop", Public, false, "Int", null)]);
+		final superPropChild = new HxClassDecl("SuperPropChild", false, [
+			new HxFunctionDecl("set_prop", Public, false, [new HxFunctionArg("v", "", NoDefault, false, false)], "Int", [
+				SReturn(EBinop("+", EBinop("=", EField(ESuper, "prop"), EIdent("v")), EInt(1)), HxPos.unknown())
+			], "")
+		], [], "SuperPropBase");
+		final superPropNames = new StringMap<Bool>();
+		for (name in ["SuperPropBase", "SuperPropChild"])
+			superPropNames.set(name, true);
+		final superPropClasses = new StringMap<HxClassDecl>();
+		superPropClasses.set("SuperPropBase", superPropBase);
+		superPropClasses.set("SuperPropChild", superPropChild);
+		final superPropLookup = {names: superPropNames, byName: superPropClasses};
+		final superPropChildLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(superPropChild, superPropLookup).join("\n");
+		assertContains(superPropChildLines, "int set_prop(int v) {",
+			"C++ unhinted property setter override args should inherit assignment target types from super fields");
+		assertTrue(superPropChildLines.indexOf("int set_prop(std::string v)") < 0,
+			"C++ unhinted property setter override args should not fall back to std::string when assigned to an Int super field");
 		final covBase = new HxClassDecl("CovBase", false, [
 			new HxFunctionDecl("covariant", Public, false, [], "CovBase", [SReturn(ENew("CovBase", []), HxPos.unknown())], "")
 		], []);

@@ -7317,6 +7317,9 @@ class CppTargetCore {
 				CppMacroExpr.CPP_TYPE;
 			case EField(EIdent("Error"), _):
 				"std::string";
+			case EField(ESuper, field):
+				final baseType = scope.owner == null ? null : baseTypeName(scope.owner);
+				baseType == null ? "" : classFieldCppType(baseType, field, scope);
 			case EField(receiver, field):
 				final abstractPropertyType = primitiveBackedAbstractPropertyCppType(receiver, field, scope);
 				if (abstractPropertyType.length > 0) abstractPropertyType; else {
