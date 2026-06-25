@@ -2869,8 +2869,41 @@ class CppTargetCore {
 		for (line in renderTracedHelperFunctionBody(ownerName, methodName, HxFunctionDecl.getBody(fn), "    ", scope))
 			out.push(line);
 		out.push("  }");
+		for (line in renderDceReflectionHelperStringOverload(fn, scope, returnType))
+			out.push(line);
 		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "end");
 		return out;
+	}
+
+	static function renderDceReflectionHelperStringOverload(fn:HxFunctionDecl, scope:CppRenderScope, returnType:String):Array<String> {
+		final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		if ((methodName != "hf" && methodName != "nhf") || HxFunctionDecl.getIsStatic(fn) || returnType != "void")
+			return [];
+		final args = HxFunctionDecl.getArgs(fn);
+		if (args.length < 2 || args.length > 3)
+			return [];
+		if (cppFunctionArgType(args[0], scope) != "std::shared_ptr<Class>" || cppFunctionArgType(args[1], scope) != "std::string")
+			return [];
+		final arg0Name = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final arg1Name = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
+		final overloadArgs = ["std::string " + arg0Name, "std::string " + arg1Name];
+		final forwardedArgs = ["Type::resolveClass(" + arg0Name + ")", arg1Name];
+		if (args.length == 3) {
+			final arg2Type = cppFunctionArgType(args[2], scope);
+			if (arg2Type != "std::optional<PosInfos>" && arg2Type != "std::shared_ptr<PosInfos>")
+				return [];
+			final arg2Name = sanitizeIdentifier(HxFunctionArg.getName(args[2]));
+			overloadArgs.push(arg2Type + " " + arg2Name + cppFunctionArgDefaultSuffix(args[2], arg2Type));
+			forwardedArgs.push(arg2Name);
+		}
+		return ["  void " + methodName + "(" + overloadArgs.join(", ") + ") {",
+			"    "
+			+ methodName
+			+ "("
+			+ forwardedArgs.join(", ")
+			+ ");",
+			"  }"
+		];
 	}
 
 	static function isPrimitiveStringRepeatHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
@@ -4678,7 +4711,7 @@ class CppTargetCore {
 	static function knownCallParams(callee:HxExpr, scope:CppRenderScope):Null<Array<HxFunctionArg>> {
 		return switch (callee) {
 			case EIdent(name):
-				final fn = currentOwnerMethod(name, scope);
+				final fn = currentOrInheritedOwnerMethod(name, scope);
 				fn == null ? null : HxFunctionDecl.getArgs(fn);
 			case EField(receiver, method):
 				final staticOwner = staticReceiverClassName(receiver, scope);
@@ -4709,7 +4742,7 @@ class CppTargetCore {
 	static function knownCallDecl(callee:HxExpr, scope:CppRenderScope):Null<HxFunctionDecl> {
 		return switch (callee) {
 			case EIdent(name):
-				currentOwnerMethod(name, scope);
+				currentOrInheritedOwnerMethod(name, scope);
 			case EField(receiver, method):
 				final staticOwner = staticReceiverClassName(receiver, scope);
 				if (staticOwner != null) classMethodDecl(staticOwner, method, true, scope); else {
@@ -4723,6 +4756,9 @@ class CppTargetCore {
 
 	static function ownerForKnownCall(callee:HxExpr, scope:CppRenderScope):HxClassDecl {
 		return switch (callee) {
+			case EIdent(name):
+				final owner = currentOrInheritedOwnerMethodOwner(name, scope);
+				owner == null ? (scope == null ? null : scope.owner) : owner;
 			case EField(receiver, _):
 				final staticOwner = staticReceiverClassName(receiver, scope);
 				if (staticOwner != null && scope != null && scope.classByName.exists(staticOwner)) scope.classByName.get(staticOwner); else {
@@ -5784,6 +5820,8 @@ class CppTargetCore {
 				EArrayDecl(_)
 			]):
 				lambdaExpr(lambdaArgs, body, scope);
+			case ECall(EIdent(name), args) if (dceReflectionHelperCallExpr(name, args, scope) != null):
+				dceReflectionHelperCallExpr(name, args, scope);
 			case ECall(ELambda(lambdaArgs, body), args) if (voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope) != null):
 				voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope);
 			case ECall(ELambda(lambdaArgs, body), args):
@@ -6599,13 +6637,27 @@ class CppTargetCore {
 			return bytesFastGet;
 		if (sanitizeIdentifier(name) == "eq" && args.length >= 2)
 			return sanitizeIdentifier(name) + "(" + renderEqCallArgs(args, scope).join(", ") + ")";
-		final fn = currentOwnerMethod(name, scope);
-		final renderedArgs = if (fn != null) {
-			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredFunctionArgCppTypes(fn, scope.owner, scope.classByName, scope.allClasses));
+		final owner = currentOrInheritedOwnerMethodOwner(name, scope);
+		final fn = owner == null ? null : ownerMethodDeclIn(owner, name);
+		final renderedArgs = if (fn != null && owner != null) {
+			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses));
 		} else {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
 		return sanitizeIdentifier(name) + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function dceReflectionHelperCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		final helper = sanitizeIdentifier(name);
+		if ((helper != "hf" && helper != "nhf") || args == null || args.length < 2)
+			return null;
+		final classArg = classReferenceArgExprForExpectedType(args[0], "std::shared_ptr<Class>", scope);
+		if (classArg == null)
+			return null;
+		final rendered = [classArg, stringExpr(args[1], scope)];
+		for (i in 2...args.length)
+			rendered.push(renderExpr(args[i], scope));
+		return helper + "(" + rendered.join(", ") + ")";
 	}
 
 	static function bytesFastGetExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
@@ -7130,6 +7182,11 @@ class CppTargetCore {
 	}
 
 	static function callArgExprForParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope, ?expectedParamType:String):String {
+		final declaredParamType = cppFunctionArgType(param, scope);
+		final declaredValueType = cppOptionalInnerType(declaredParamType).length > 0 ? cppOptionalInnerType(declaredParamType) : declaredParamType;
+		final declaredClassReferenceArg = classReferenceArgExprForExpectedType(arg, declaredValueType, scope);
+		if (declaredClassReferenceArg != null)
+			return declaredClassReferenceArg;
 		final paramType = expectedParamType != null && expectedParamType.length > 0 ? expectedParamType : cppFunctionArgType(param, scope);
 		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
 		final abstractArg = primitiveBackedAbstractCallArgExpr(arg, param, valueType, scope);
@@ -7150,6 +7207,9 @@ class CppTargetCore {
 		}
 		if (valueType == "std::shared_ptr<PosInfos>")
 			return posInfosSharedPtrExpr(arg, scope);
+		final classReferenceArg = classReferenceArgExprForExpectedType(arg, valueType, scope);
+		if (classReferenceArg != null)
+			return classReferenceArg;
 		if (valueType == "std::shared_ptr<EnumValue>" && exprCppType(arg, scope) == "std::any")
 			return "__hxhx_enum_value_ptr(" + renderExpr(arg, scope) + ")";
 		if (structuralTypedefClassForCppType(valueType, scope) != null && exprCppType(arg, scope) != valueType)
@@ -7953,12 +8013,9 @@ class CppTargetCore {
 	}
 
 	static function currentOwnerMethodCppReturnType(methodName:String, scope:CppRenderScope):String {
-		final fn = currentOwnerMethod(methodName, scope);
-		if (fn == null) {
-			final baseName = scope == null || scope.owner == null ? null : baseTypeName(scope.owner);
-			return baseName == null ? "" : classMethodCppReturnType(baseName, methodName, false, scope);
-		}
-		return inferredFunctionReturnCppType(fn, scope.owner, scope.classByName);
+		final owner = currentOrInheritedOwnerMethodOwner(methodName, scope);
+		final fn = owner == null ? null : ownerMethodDeclIn(owner, methodName);
+		return fn == null ? "" : inferredFunctionReturnCppType(fn, owner, scope.classByName);
 	}
 
 	static function currentOwnerMethod(methodName:String, scope:CppRenderScope):Null<HxFunctionDecl> {
@@ -7972,6 +8029,29 @@ class CppTargetCore {
 		if (cls == null)
 			return null;
 		return ownerMethodDeclIn(cls, methodName);
+	}
+
+	static function currentOrInheritedOwnerMethod(methodName:String, scope:CppRenderScope):Null<HxFunctionDecl> {
+		final owner = currentOrInheritedOwnerMethodOwner(methodName, scope);
+		return owner == null ? null : ownerMethodDeclIn(owner, methodName);
+	}
+
+	static function currentOrInheritedOwnerMethodOwner(methodName:String, scope:CppRenderScope):Null<HxClassDecl> {
+		if (scope == null || scope.owner == null)
+			return null;
+		var current = sanitizeTypePath(HxClassDecl.getName(scope.owner));
+		final seen = new haxe.ds.StringMap<Bool>();
+		while (current.length > 0 && !seen.exists(current)) {
+			seen.set(current, true);
+			final cls = scope.classByName.exists(current) ? scope.classByName.get(current) : (current == sanitizeTypePath(HxClassDecl.getName(scope.owner)) ? scope.owner : null);
+			if (cls == null)
+				return null;
+			if (ownerMethodDeclIn(cls, methodName) != null)
+				return cls;
+			final next = baseTypeName(cls);
+			current = next == null ? "" : sanitizeTypePath(typeBaseName(next));
+		}
+		return null;
 	}
 
 	static function callableOrSameOwnerReturnCppType(name:String, ?scope:CppRenderScope):String {
@@ -8882,6 +8962,14 @@ class CppTargetCore {
 			case _:
 				null;
 		};
+	}
+
+	static function classReferenceArgExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		final expectedClass = classNameFromCppType(expectedType);
+		if (expectedClass == null || sanitizeTypePath(typeBaseName(expectedClass)) != "Class")
+			return null;
+		final classReferencePath = classReferencePathText(expr, scope);
+		return classReferencePath == null ? null : "Type::resolveClass(" + quoteString(classReferencePath) + ")";
 	}
 
 	static function structuralTypedefValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {

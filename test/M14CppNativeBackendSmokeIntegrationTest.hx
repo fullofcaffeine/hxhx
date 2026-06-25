@@ -6216,6 +6216,48 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ parsed method-generic facades should stay normal classes when the generic only belongs to a static method");
 		assertContains(parsedClassParamLines, "static bool isOfType(std::string v, std::shared_ptr<Class> t)",
 			"C++ parsed Class<T> method params should preserve the Class meta-value parameter");
+		final classReflectionTarget = new HxClassDecl("ThrownWithToString", false, [], []);
+		final classReflectionTest = new HxFunctionDecl("testThrow", Public, false, [], "Void", [
+			SExpr(ECall(EIdent("hf"), [EIdent("ThrownWithToString"), EString("toString")]), HxPos.unknown())
+		], "");
+		final classReflectionBase = new HxClassDecl("ClassReflectionBase", false, [
+			new HxFunctionDecl("hf", Public, false, [
+				new HxFunctionArg("c", "Class<Dynamic>", NoDefault, false, false),
+				new HxFunctionArg("n", "String", NoDefault, false, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Void", [], "")
+		], []);
+		final classReflectionOwner = new HxClassDecl("ClassReflectionOwner", false, [classReflectionTest], [], "ClassReflectionBase");
+		final classReflectionNames = new StringMap<Bool>();
+		for (name in ["ClassReflectionBase", "ClassReflectionOwner", "ThrownWithToString", "PosInfos"])
+			classReflectionNames.set(name, true);
+		final classReflectionClasses = new StringMap<HxClassDecl>();
+		classReflectionClasses.set("ClassReflectionBase", classReflectionBase);
+		classReflectionClasses.set("ClassReflectionOwner", classReflectionOwner);
+		classReflectionClasses.set("ThrownWithToString", classReflectionTarget);
+		classReflectionClasses.set("PosInfos", new HxClassDecl("PosInfos", false, [], []));
+		final classReflectionLookup = {names: classReflectionNames, byName: classReflectionClasses};
+		final classReflectionBaseLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(classReflectionBase, classReflectionLookup).join("\n");
+		assertContains(classReflectionBaseLines, "void hf(std::string c, std::string n, std::shared_ptr<PosInfos> pos = nullptr)",
+			"C++ DCE reflection helpers should expose a string overload for degraded class literals");
+		assertContains(classReflectionBaseLines, "hf(Type::resolveClass(c), n, pos);",
+			"C++ DCE reflection string overloads should forward through Type.resolveClass");
+		final classReflectionLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(classReflectionTest, classReflectionOwner, classReflectionLookup).join("\n");
+		assertContains(classReflectionLines, "hf(Type::resolveClass(\"ThrownWithToString\"), std::string(\"toString\"));",
+			"C++ Class-valued reflection helper calls should preserve class literals as Class meta-values");
+		assertTrue(classReflectionLines.indexOf("hf(std::string(\"ThrownWithToString\")") < 0,
+			"C++ Class-valued reflection helper calls must not pass class literals as strings");
+		final classReflectionScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(classReflectionOwner, classReflectionLookup, "void");
+		final degradedClassArg = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(EIdent("ThrownWithToString"),
+			HxFunctionDecl.getArgs(HxClassDecl.getFunctions(classReflectionBase)[0])[0], classReflectionScope, "std::string");
+		assertTrue(degradedClassArg == "Type::resolveClass(\"ThrownWithToString\")",
+			"C++ Class-valued reflection args should prefer declared Class params over degraded inferred string params");
+		final dceReflectionCall = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("hf"), [EIdent("ThrownWithToString"), EString("toString")]), classReflectionScope);
+		assertTrue(dceReflectionCall == "hf(Type::resolveClass(\"ThrownWithToString\"), std::string(\"toString\"))",
+			"C++ DCE reflection helper calls should preserve class literals even when inherited helper metadata is unavailable");
 		final dynamicIsOfTypeOwner = new HxClassDecl("DynamicIsOfTypeOwner", false, [
 			new HxFunctionDecl("isOfType", Public, true, [
 				new HxFunctionArg("v", "Dynamic", NoDefault, false, false),
