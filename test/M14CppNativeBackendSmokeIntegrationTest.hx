@@ -3195,6 +3195,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(structuralCallLines, "AdrianV::testFoo(Foo(*me));",
 			"C++ structural typedef call sites should convert matching class references through value constructors");
 		assertTrue(structuralAdrianLines.indexOf("std::shared_ptr<Bar> bar") < 0, "C++ structural typedef fields should not be rendered as class references");
+		final structuralDefaultHolder = new HxClassDecl("StructuralDefaultHolder", false, [], [new HxFieldDecl("foo", Public, false, "Foo", null)]);
+		structuralNames.set("StructuralDefaultHolder", true);
+		structuralClasses.set("StructuralDefaultHolder", structuralDefaultHolder);
+		structuralLookup.all.push(structuralDefaultHolder);
+		final structuralDefaultLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(structuralDefaultHolder, structuralLookup).join("\n");
+		assertContains(structuralDefaultLines, "Foo foo = Foo();",
+			"C++ value-shaped structural typedef fields without initializers should default-construct instead of using integer zero");
+		assertTrue(structuralDefaultLines.indexOf("Foo foo = 0;") < 0, "C++ value-shaped structural typedef fields should not use int defaults");
 		final metaObject = new HxClassDecl("MetaObject", false, [], [
 			new HxFieldDecl("fields", Public, false, "Dynamic<Dynamic<Null<Array<String>>>>", null),
 			new HxFieldDecl("statics", Public, false, "Dynamic<Dynamic<Null<Array<String>>>>", null),

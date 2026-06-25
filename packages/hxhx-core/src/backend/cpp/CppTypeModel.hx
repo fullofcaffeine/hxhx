@@ -926,6 +926,8 @@ class CppTypeModel {
 				"std::nullopt";
 			case _ if (StringTools.startsWith(typeName, "__hxhx_anon_")):
 				typeName + "{}";
+			case _ if (scopeHasClass(scope, typeName)):
+				typeName + "()";
 			case _ if (isScopedGenericCppType(typeName, scope)):
 				"nullptr";
 			case _:
