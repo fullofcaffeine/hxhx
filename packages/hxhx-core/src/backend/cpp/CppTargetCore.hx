@@ -4979,6 +4979,12 @@ class CppTargetCore {
 				staticFieldExpr(receiver, field, scope);
 			case EField(receiver, "length"):
 				"(" + renderExpr(receiver, scope) + ".size())";
+			case EArrayAccess(array, index) if (isCppOptionalVectorType(exprCppType(array, scope))):
+				"__hxhx_vector_get("
+				+ renderExpr(array, scope)
+				+ ", "
+				+ renderExpr(index, scope)
+				+ ")";
 			case EArrayAccess(array, index) if (exprHasReferenceType(array, scope)):
 				"((*"
 				+ renderExpr(array, scope)
@@ -5523,6 +5529,16 @@ class CppTargetCore {
 					"__hxhx_vector_iterator_of(" + target + ")";
 				case "copy" if (args.length == 0):
 					target;
+				case "remove" if (args.length == 1):
+					"__hxhx_vector_remove(" + target + ", " + renderExpr(args[0], scope) + ")";
+				case "splice" if (args.length == 2):
+					"__hxhx_vector_splice("
+					+ target
+					+ ", "
+					+ renderExpr(args[0], scope)
+					+ ", "
+					+ renderExpr(args[1], scope)
+					+ ")";
 				case "blit" if (args.length == 4 && isCppBytesDataVectorType(receiverCppType)):
 					"__hxhx_bytes_blit("
 					+ target
@@ -5684,6 +5700,8 @@ class CppTargetCore {
 	}
 
 	static function directCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (sanitizeIdentifier(name) == "eq" && args.length >= 2)
+			return sanitizeIdentifier(name) + "(" + renderEqCallArgs(args, scope).join(", ") + ")";
 		final fn = currentOwnerMethod(name, scope);
 		final renderedArgs = if (fn != null) {
 			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredFunctionArgCppTypes(fn, scope.owner, scope.classByName));
@@ -5691,6 +5709,44 @@ class CppTargetCore {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
 		return sanitizeIdentifier(name) + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function renderEqCallArgs(args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		final out = new Array<String>();
+		final firstType = inferExprCppType(args[0], scope);
+		final secondType = inferExprCppType(args[1], scope);
+		out.push(eqComparableArgExpr(args[0], firstType, secondType, scope));
+		out.push(eqComparableArgExpr(args[1], secondType, firstType, scope));
+		for (i in 2...args.length)
+			out.push(renderExpr(args[i], scope));
+		return out;
+	}
+
+	static function eqComparableArgExpr(arg:HxExpr, argType:String, otherType:String, ?scope:CppRenderScope):String {
+		final otherOptionalInner = cppOptionalInnerType(otherType);
+		return switch (arg) {
+			case ENull if (otherOptionalInner.length > 0):
+				"std::optional<" + otherOptionalInner + ">{}";
+			case _ if (isCppVectorLengthExpr(arg, scope)):
+				"static_cast<int>(" + renderExpr(arg, scope) + ")";
+			case _:
+				if (otherOptionalInner.length > 0 && argType == otherOptionalInner) "std::optional<"
+					+ otherOptionalInner
+					+ ">("
+					+ renderExpr(arg, scope)
+					+ ")"; else renderExpr(arg, scope);
+		};
+	}
+
+	static function isCppVectorLengthExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return switch (expr) {
+			case EField(receiver, "length"):
+				isCppVectorType(exprCppType(receiver, scope));
+			case ECall(EField(receiver, "size"), []) | ECall(EField(receiver, "length"), []):
+				isCppVectorType(exprCppType(receiver, scope));
+			case _:
+				false;
+		};
 	}
 
 	static function vectorMapMapperExpr(mapper:HxExpr, ?scope:CppRenderScope):String {
@@ -6061,6 +6117,10 @@ class CppTargetCore {
 		return typeName != null
 			&& StringTools.startsWith(typeName, prefix)
 			&& StringTools.endsWith(typeName, ">") ? typeName.substr(prefix.length, typeName.length - prefix.length - 1) : "";
+	}
+
+	static function isCppOptionalVectorType(typeName:String):Bool {
+		return isCppVectorType(typeName) && cppOptionalInnerType(cppVectorElementType(typeName)).length > 0;
 	}
 
 	static function globalIntrinsicCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {

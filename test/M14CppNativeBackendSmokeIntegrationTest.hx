@@ -4119,6 +4119,31 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ abstract constructor anonymous payloads should assign matching backing fields");
 		assertTrue(abstractSetterWithValueLines.indexOf("(*this) = __hxhx_anon") < 0,
 			"C++ abstract constructor field payloads should not require an anonymous assignment operator");
+		final optionalArrayOwner = new HxClassDecl("OptionalArrayOwner", false, [
+			new HxFunctionDecl("check", Public, false, [], "Void", [
+				SVar("a", "Array<Null<Int>>", EArrayDecl([EInt(1), EInt(2), EInt(3)]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EField(EIdent("a"), "length"), EInt(3)]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("a"), EInt(0)), EInt(1)]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("a"), EInt(3)), ENull]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("a"), "remove"), [EInt(2)]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("a"), "splice"), [EInt(1), EInt(1)]), HxPos.unknown())
+			], "")
+		], []);
+		final optionalArrayLookup = {names: new StringMap<Bool>(), byName: new StringMap<HxClassDecl>()};
+		optionalArrayLookup.names.set("OptionalArrayOwner", true);
+		optionalArrayLookup.byName.set("OptionalArrayOwner", optionalArrayOwner);
+		final optionalArrayLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(optionalArrayOwner)[0], optionalArrayOwner, optionalArrayLookup).join("\n");
+		assertContains(optionalArrayLines, "std::vector<std::optional<int>> a = std::vector<std::optional<int>>{1, 2, 3};",
+			"C++ optional Array<Int> locals should keep nullable element storage");
+		assertContains(optionalArrayLines, "eq(static_cast<int>((a.size())), 3);",
+			"C++ optional Array length comparisons should avoid size_t/Int template mismatches");
+		assertContains(optionalArrayLines, "eq(__hxhx_vector_get(a, 0), std::optional<int>(1));",
+			"C++ optional Array item comparisons should compare optional values consistently");
+		assertContains(optionalArrayLines, "eq(__hxhx_vector_get(a, 3), std::optional<int>{});",
+			"C++ optional Array null comparisons should use empty optional values");
+		assertContains(optionalArrayLines, "__hxhx_vector_remove(a, 2);", "C++ optional Array remove should lower through the vector helper");
+		assertContains(optionalArrayLines, "__hxhx_vector_splice(a, 1, 1);", "C++ optional Array splice should lower through the vector helper");
 		final point3Class = new HxClassDecl("MyPoint3", false, [
 			new HxFunctionDecl("new", Public, false, [
 				new HxFunctionArg("x", "Float", NoDefault, false, false),
