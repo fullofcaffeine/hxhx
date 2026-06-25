@@ -5143,6 +5143,9 @@ class CppTargetCore {
 		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
 		if (isCppFunctionType(expectedType)) {
+			final identityValue = dynamicIdentityCallExprForExpectedFunction(expr, expectedType, scope);
+			if (identityValue != null)
+				return identityValue;
 			switch (expr) {
 				case ELambda(lambdaArgs, body):
 					return lambdaExprForExpectedFunction(lambdaArgs, body, expectedType, scope);
@@ -5172,6 +5175,36 @@ class CppTargetCore {
 			case _:
 		}
 		return renderExpr(expr, scope);
+	}
+
+	static function dynamicIdentityCallExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || !isCppFunctionType(expectedType))
+			return null;
+		return switch (expr) {
+			case ECall(EIdent(name), [arg]):
+				final fn = currentOwnerMethod(name, scope);
+				if (isDynamicIdentityFunction(fn)) valueExprForExpectedType(arg, expectedType, scope); else null;
+			case _:
+				null;
+		};
+	}
+
+	static function isDynamicIdentityFunction(fn:HxFunctionDecl):Bool {
+		if (fn == null)
+			return false;
+		final args = HxFunctionDecl.getArgs(fn);
+		if (args.length != 1 || !isDynamicLikeTypeHint(HxFunctionArg.getTypeHint(args[0])))
+			return false;
+		final returnHint = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
+		if (returnHint.length > 0 && !isDynamicLikeTypeHint(returnHint))
+			return false;
+		final argName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		return switch (HxFunctionDecl.getBody(fn)) {
+			case [SReturn(EIdent(name), _)]:
+				sanitizeIdentifier(name) == argName;
+			case _:
+				false;
+		};
 	}
 
 	static function stringMapBackedAbstractValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {

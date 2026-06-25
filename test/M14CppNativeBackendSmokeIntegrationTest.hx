@@ -4185,6 +4185,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ interface implementation signatures should use the interface shared_ptr return type for compatibility");
 		assertContains(covImplLines, "return std::make_shared<CovLeaf>();",
 			"C++ covariant interface implementation bodies should still return the concrete child allocation");
+		final dynamicFunctionOwner = new HxClassDecl("DynamicFunctionOwner", false, [
+			new HxFunctionDecl("foo", Public, true, [new HxFunctionArg("value", "Float", NoDefault, false, false)], "Float",
+				[SReturn(EIdent("value"), HxPos.unknown())], ""),
+			new HxFunctionDecl("make", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "",
+				[SReturn(EIdent("value"), HxPos.unknown())], "")
+		], []);
+		final dynamicFunctionNames = new StringMap<Bool>();
+		dynamicFunctionNames.set("DynamicFunctionOwner", true);
+		final dynamicFunctionClasses = new StringMap<HxClassDecl>();
+		dynamicFunctionClasses.set("DynamicFunctionOwner", dynamicFunctionOwner);
+		final dynamicFunctionLookup = {names: dynamicFunctionNames, byName: dynamicFunctionClasses};
+		final dynamicFunctionMethod = new HxFunctionDecl("castFunctionLike", Public, false, [], "Float", [
+			SVar("fn", "Int -> Float", ECall(EIdent("make"), [EIdent("foo")]), HxPos.unknown()),
+			SReturn(ECall(EIdent("fn"), [EInt(123)]), HxPos.unknown())
+		], "");
+		final dynamicFunctionLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(dynamicFunctionMethod, dynamicFunctionOwner, dynamicFunctionLookup).join("\n");
+		assertContains(dynamicFunctionLines, "std::function<double(int)> fn = std::function<double(int)>",
+			"C++ expected function locals should preserve Dynamic identity-call function values");
+		assertTrue(dynamicFunctionLines.indexOf("make(foo)") < 0,
+			"C++ Dynamic identity-call function values should not flow through string-shaped Dynamic calls");
 		final selfStringOwner = new HxClassDecl("SelfStringOwner", false, [], []);
 		final selfStringNames = new StringMap<Bool>();
 		selfStringNames.set("SelfStringOwner", true);
