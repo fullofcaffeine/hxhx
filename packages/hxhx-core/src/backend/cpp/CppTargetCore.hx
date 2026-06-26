@@ -956,7 +956,9 @@ class CppTargetCore {
 		out.push("  (void)argc;");
 		out.push("  (void)argv;");
 		traceCppPhase("render_before_main_body");
-		for (line in renderStmts(HxFunctionDecl.getBody(main.fn), "  ", renderScope(main.cls, classLookup, "int")))
+		final mainScope = renderScope(main.cls, classLookup, "int");
+		prepareFunctionScope(mainScope, main.fn);
+		for (line in renderStmts(HxFunctionDecl.getBody(main.fn), "  ", mainScope))
 			out.push(line);
 		traceCppPhase("render_after_main_body");
 		out.push("  return 0;");
@@ -2754,6 +2756,7 @@ class CppTargetCore {
 			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 			inferStringMapLocalTypeOverrides(scope, fn);
 			inferDynamicLocalTypeOverrides(scope, fn);
+			inferHelperTypedAsLocalTypeOverrides(scope, fn);
 			inferReturnLocalTypeOverrides(scope, fn);
 		} catch (e:haxe.Exception) {
 			functionScopePrepStack.remove(key);
@@ -4414,6 +4417,138 @@ class CppTargetCore {
 		scope.localTypes.set(local, typeName);
 	}
 
+	static function inferHelperTypedAsLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null)
+			return;
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		for (stmt in HxFunctionDecl.getBody(fn))
+			collectHelperTypedAsLocalTypeOverridesFromStmt(stmt, scope);
+		scope.localTypes = savedLocalTypes;
+	}
+
+	static function collectHelperTypedAsLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectHelperTypedAsLocalTypeOverridesFromStmt(s, scope);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(cond, scope);
+				collectHelperTypedAsLocalTypeOverridesFromStmt(thenBranch, scope);
+				if (elseBranch != null)
+					collectHelperTypedAsLocalTypeOverridesFromStmt(elseBranch, scope);
+			case SForIn(name, iterable, body, _):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					collectHelperTypedAsLocalTypeOverridesFromStmt(body, scope);
+				});
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), "int", () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), iterableElementType(iterable, scope), () -> {
+						collectHelperTypedAsLocalTypeOverridesFromStmt(body, scope);
+					});
+				});
+			case SWhile(cond, body, _):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(cond, scope);
+				collectHelperTypedAsLocalTypeOverridesFromStmt(body, scope);
+			case SDoWhile(body, cond, _):
+				collectHelperTypedAsLocalTypeOverridesFromStmt(body, scope);
+				collectHelperTypedAsLocalTypeOverridesFromExpr(cond, scope);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(scrutinee, scope);
+				for (body in bodies)
+					collectHelperTypedAsLocalTypeOverridesFromStmt(body, scope);
+			case STry(tryBody, catches, _):
+				collectHelperTypedAsLocalTypeOverridesFromStmt(tryBody, scope);
+				for (c in catches)
+					collectHelperTypedAsLocalTypeOverridesFromStmt(c.body, scope);
+			case SVar(name, typeHint, init, _):
+				if (init != null)
+					collectHelperTypedAsLocalTypeOverridesFromExpr(init, scope);
+				final local = sanitizeIdentifier(name);
+				final localType = inferredLocalTypeForArgInference(typeHint, init, scope);
+				if (isUsefulHelperTypedAsOverrideType(localType))
+					scope.localTypes.set(local, localType);
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(expr, scope);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function collectHelperTypedAsLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope):Void {
+		switch (expr) {
+			case ECall(callee, [EIdent(name), expected]) if (isHelperMacrosTypedAsCallee(callee)):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(expected, scope);
+				final expectedType = helperTypedAsExpectedCppType(expected, scope);
+				if (isUsefulHelperTypedAsOverrideType(expectedType))
+					setHelperTypedAsLocalTypeOverride(scope, sanitizeIdentifier(name), expectedType);
+			case ECall(callee, args):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(callee, scope);
+				for (arg in args)
+					collectHelperTypedAsLocalTypeOverridesFromExpr(arg, scope);
+			case EBinop(_, left, right):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(left, scope);
+				collectHelperTypedAsLocalTypeOverridesFromExpr(right, scope);
+			case EArrayAccess(array, index):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(array, scope);
+				collectHelperTypedAsLocalTypeOverridesFromExpr(index, scope);
+			case EField(receiver, _):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(receiver, scope);
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectHelperTypedAsLocalTypeOverridesFromExpr(element, scope);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					if (guardExpr != null)
+						collectHelperTypedAsLocalTypeOverridesFromExpr(guardExpr, scope);
+					collectHelperTypedAsLocalTypeOverridesFromExpr(yieldExpr, scope);
+				});
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(inner, scope);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(cond, scope);
+				collectHelperTypedAsLocalTypeOverridesFromExpr(thenExpr, scope);
+				collectHelperTypedAsLocalTypeOverridesFromExpr(elseExpr, scope);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectHelperTypedAsLocalTypeOverridesFromExpr(value, scope);
+			case ESwitch(scrutinee, _, exprs):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(scrutinee, scope);
+				for (value in exprs)
+					collectHelperTypedAsLocalTypeOverridesFromExpr(value, scope);
+			case ELambda(_, body):
+				collectHelperTypedAsLocalTypeOverridesFromExpr(body, scope);
+			case ENew(_, args):
+				for (arg in args)
+					collectHelperTypedAsLocalTypeOverridesFromExpr(arg, scope);
+			case _:
+		}
+	}
+
+	static function helperTypedAsExpectedCppType(expr:HxExpr, scope:CppRenderScope):String {
+		final explicit = exprCppType(expr, scope);
+		if (explicit.length > 0)
+			return explicit;
+		return inferExprCppType(expr, scope);
+	}
+
+	static function setHelperTypedAsLocalTypeOverride(scope:CppRenderScope, local:String, typeName:String):Void {
+		if (scope == null || local == null || local.length == 0 || !isUsefulHelperTypedAsOverrideType(typeName))
+			return;
+		final existing = scope.localTypeOverrides.get(local);
+		if (existing != null && existing.length > 0 && existing != typeName && existing != "std::any")
+			return;
+		scope.localTypeOverrides.set(local, typeName);
+		scope.localTypes.set(local, typeName);
+	}
+
+	static function isUsefulHelperTypedAsOverrideType(typeName:String):Bool {
+		if (typeName == null || typeName.length == 0)
+			return false;
+		return typeName != "void" && typeName != "auto" && typeName != "std::any" && !isBareCppTypeParamName(typeName);
+	}
+
 	static function inferReturnLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
 		if (scope == null || fn == null || !isUsefulReturnLocalOverrideType(scope.returnType))
 			return;
@@ -5462,6 +5597,8 @@ class CppTargetCore {
 					case _:
 						"return " + renderExpr(expr, scope) + ";";
 				}
+			case _ if (isScopeTypeParam(returnType, scope) || isBareCppTypeParamName(returnType)):
+				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
 			case _ if (isScopedGenericCppType(returnType, scope)):
 				switch (expr) {
 					case ENull:
@@ -5594,6 +5731,10 @@ class CppTargetCore {
 					+ lambdaExprWithArgTypes(lambdaArgs, body, [], scope, expectedType)
 					+ ")("
 					+ [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+			case ECall(EIdent(name), args):
+				final typedCall = directCallExprForExpectedType(name, args, expectedType, scope);
+				if (typedCall != null)
+					return typedCall;
 			case _:
 		}
 		if (expectedType == "std::string")
@@ -6194,6 +6335,8 @@ class CppTargetCore {
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (isCppFunctionType(localType)):
 				valueExprForExpectedType(init, localType, scope);
+			case _ if (isScalarExpectedLocalType(localType)):
+				valueExprForExpectedType(init, localType, scope);
 			case _ if (structuralTypedefClassForCppType(localType, scope) != null):
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (localType == "std::string"):
@@ -6205,6 +6348,10 @@ class CppTargetCore {
 			case _:
 				renderExpr(init, scope);
 		};
+	}
+
+	static function isScalarExpectedLocalType(typeName:String):Bool {
+		return typeName == "int" || typeName == "double" || typeName == "float" || typeName == "bool" || typeName == "long long" || typeName == "unsigned int";
 	}
 
 	static function nativeArrayCreateExpr(length:HxExpr, ?scope:CppRenderScope, ?preferredType:String):String {
@@ -6838,7 +6985,124 @@ class CppTargetCore {
 		} else {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
-		return sanitizeIdentifier(name) + "(" + renderedArgs.join(", ") + ")";
+		final explicitTypes = sameOwnerGenericCallTypeArgs(fn, owner, args, "", scope);
+		return sanitizeIdentifier(name) + explicitTypes + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function directCallExprForExpectedType(name:String, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		final owner = currentOrInheritedOwnerMethodOwner(name, scope);
+		final fn = owner == null ? null : ownerMethodDeclIn(owner, name);
+		if (fn == null || owner == null || scope == null)
+			return null;
+		final explicitTypes = sameOwnerGenericCallTypeArgs(fn, owner, args, expectedType, scope);
+		if (explicitTypes.length == 0)
+			return null;
+		final renderedArgs = renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope,
+			inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses));
+		return sanitizeIdentifier(name) + explicitTypes + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function sameOwnerGenericCallTypeArgs(fn:HxFunctionDecl, owner:HxClassDecl, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):String {
+		if (fn == null || owner == null || scope == null)
+			return "";
+		final callScope = renderScope(owner, {names: scope.classNames, byName: scope.classByName, all: scope.allClasses}, "auto");
+		applyFunctionTypeParams(callScope, fn);
+		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), callScope, {names: scope.classNames, byName: scope.classByName});
+		final emitted = emittedFunctionTypeParams(fn, returnType, callScope);
+		if (emitted.length == 0)
+			return "";
+		final mapped = new haxe.ds.StringMap<String>();
+		unifyGenericCallTypeHints(HxFunctionDecl.getReturnTypeHint(fn), expectedType, emitted, mapped, scope);
+		final params = HxFunctionDecl.getArgs(fn);
+		final count = params.length < args.length ? params.length : args.length;
+		for (i in 0...count)
+			unifyGenericCallTypeHints(HxFunctionArg.getTypeHint(params[i]), rawTypeHintForExpr(args[i], scope), emitted, mapped, scope);
+		final out = new Array<String>();
+		for (param in emitted) {
+			final clean = sanitizeIdentifier(param);
+			final value = mapped.get(clean);
+			if (value == null || value.length == 0)
+				return "";
+			out.push(value);
+		}
+		return "<" + out.join(", ") + ">";
+	}
+
+	static function unifyGenericCallTypeHints(patternHint:String, actualHint:String, emitted:Array<String>, mapped:haxe.ds.StringMap<String>,
+			?scope:CppRenderScope):Void {
+		final pattern = removeTypeHintWhitespace(StringTools.trim(patternHint == null ? "" : patternHint));
+		final actual = removeTypeHintWhitespace(StringTools.trim(actualHint == null ? "" : actualHint));
+		if (pattern.length == 0 || actual.length == 0)
+			return;
+		final param = genericTypeParamName(pattern);
+		if (param.length > 0 && emitted.indexOf(cppTypeParamName(param, scope)) >= 0) {
+			final clean = cppTypeParamName(param, scope);
+			final value = explicitCallTypeArg(actual, scope);
+			if (value.length > 0 && (!mapped.exists(clean) || mapped.get(clean) == value))
+				mapped.set(clean, value);
+			return;
+		}
+		final patternArgs = genericTypeHintArgs(pattern);
+		final actualArgs = genericTypeHintArgs(actual);
+		if (patternArgs.length == 0 || patternArgs.length != actualArgs.length)
+			return;
+		if (sanitizeTypePath(typeBaseName(pattern)) != sanitizeTypePath(typeBaseName(actual)))
+			return;
+		for (i in 0...patternArgs.length)
+			unifyGenericCallTypeHints(patternArgs[i], actualArgs[i], emitted, mapped, scope);
+	}
+
+	static function explicitCallTypeArg(typeHint:String, ?scope:CppRenderScope):String {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (hint.length == 0)
+			return "";
+		final param = genericTypeParamName(hint);
+		if (param.length > 0) {
+			final cppParam = cppTypeParamName(param, scope);
+			if (cppTypeParamAvailableInScope(cppParam, scope))
+				return cppParam;
+			return isScopeTypeParam(scope == null ? "" : scope.returnType, scope) ? scope.returnType : cppParam;
+		}
+		if (isScopeTypeParam(hint, scope) || isBareCppTypeParamName(hint))
+			return hint;
+		if (isConcreteCppTypeArg(hint))
+			return hint;
+		return cppTypeHint(hint, scope);
+	}
+
+	static function isConcreteCppTypeArg(typeName:String):Bool {
+		if (typeName == null || typeName.length == 0)
+			return false;
+		return isScalarExpectedLocalType(typeName)
+			|| typeName == "std::string"
+			|| typeName == CppMacroExpr.CPP_TYPE
+			|| StringTools.startsWith(typeName, "std::");
+	}
+
+	static function cppTypeParamAvailableInScope(cppParam:String, ?scope:CppRenderScope):Bool {
+		if (scope == null || cppParam == null || cppParam.length == 0)
+			return false;
+		if (cppTypeTextMentionsParam(scope.returnType, cppParam))
+			return true;
+		for (typeName in scope.localTypes)
+			if (cppTypeTextMentionsParam(typeName, cppParam))
+				return true;
+		return false;
+	}
+
+	static function rawTypeHintForExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		if (scope == null)
+			return "";
+		return switch (expr) {
+			case EIdent(name):
+				final local = localCppName(name, scope);
+				final hinted = scope.localTypeHints.exists(local) ? scope.localTypeHints.get(local) : scope.localTypeHints.get(sanitizeIdentifier(name));
+				hinted == null ? "" : hinted;
+			case ECast(inner, _) | EUntyped(inner):
+				rawTypeHintForExpr(inner, scope);
+			case _:
+				"";
+		};
 	}
 
 	static function dceReflectionHelperCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
@@ -7365,7 +7629,7 @@ class CppTargetCore {
 	}
 
 	static function callArgMatchesParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope):Bool {
-		final argType = exprCppType(arg, scope);
+		final argType = callArgMatchCppType(arg, scope);
 		if (argType == null || argType.length == 0)
 			return false;
 		final paramType = cppFunctionArgType(param, scope);
@@ -7373,6 +7637,13 @@ class CppTargetCore {
 			return true;
 		final inner = cppOptionalInnerType(paramType);
 		return inner.length > 0 && argType == inner;
+	}
+
+	static function callArgMatchCppType(arg:HxExpr, ?scope:CppRenderScope):String {
+		final explicit = exprCppType(arg, scope);
+		if (explicit.length > 0)
+			return explicit;
+		return inferExprCppType(arg, scope);
 	}
 
 	static function callArgExprForParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope, ?expectedParamType:String):String {
@@ -8508,6 +8779,8 @@ class CppTargetCore {
 				inferExprCppType(args[2], scope);
 			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
 				inferExprCppType(args[0], scope);
+			case ECall(EEnumValue(_), args) if (args != null && args.length > 0):
+				CppMacroExpr.CPP_TYPE;
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
 				"std::any";
 			case ECall(EIdent(name), args) if (bytesFastGetExpr(name, args, scope) != null):
@@ -9113,13 +9386,28 @@ class CppTargetCore {
 		final tag = "std::string(" + quoteString(name) + ")";
 		if (args == null || args.length == 0)
 			return tag;
-		final parts = ["([&]() {"];
-		for (i in 0...args.length)
-			parts.push(" auto __hxhx_enum_arg_" + i + " = " + renderExpr(args[i], scope) + ";");
-		for (i in 0...args.length)
-			parts.push(" (void)__hxhx_enum_arg_" + i + ";");
-		parts.push(" return " + tag + "; })()");
-		return parts.join("");
+		return "__hxhx_macro_enum("
+			+ quoteString(name)
+			+ ", std::vector<__HxMacroExpr>{"
+			+ [for (arg in args) enumPayloadExpr(arg, scope)].join(", ") + "})";
+	}
+
+	static function enumPayloadExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case EEnumValue(name):
+				"__hxhx_macro_enum(" + quoteString(name) + ")";
+			case ECall(EEnumValue(name), args):
+				if (args == null || args.length == 0) "__hxhx_macro_enum(" + quoteString(name) + ")"; else "__hxhx_macro_enum("
+					+ quoteString(name)
+					+ ", std::vector<__HxMacroExpr>{"
+					+ [for (arg in args) enumPayloadExpr(arg, scope)].join(", ") + "})";
+			case EString(value):
+				"__hxhx_macro_string(" + quoteString(value) + ")";
+			case EMacroExpr(inner, wrappers):
+				CppMacroExpr.macroExpr(inner, wrappers);
+			case _:
+				"__hxhx_macro_value(" + renderExpr(expr, scope) + ")";
+		};
 	}
 
 	static function enumCtorExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -9738,7 +10026,7 @@ class CppTargetCore {
 			case PInt(value):
 				switchValue + " == " + Std.string(value);
 			case PEnumValue(name):
-				switchValue + " == std::string(" + quoteString(name) + ")";
+				"__hxhx_enum_eq(" + switchValue + ", " + quoteString(name) + ")";
 			case PCapture(_, inner):
 				switchPatternCond(inner, switchValue);
 			case PUnsupportedGuard(_):
@@ -10645,7 +10933,7 @@ class CppTargetCore {
 		return switch (expr) {
 			case EString(_) | EEnumValue(_) | EMacroType(_):
 				true;
-			case ECall(EEnumValue(_), _):
+			case ECall(EEnumValue(_), args) if (args == null || args.length == 0):
 				true;
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
 				true;
@@ -11012,10 +11300,24 @@ class CppTargetCore {
 			if (scopeHasClass(scope, base)) {
 				if (genericClassTypeParamsForName(base, scope).length > 0)
 					return "std::shared_ptr<" + cppClassTemplateTypeName(hint, scope, classLookup) + ">";
+				if (isEnumCarrierClassName(base, scope))
+					return CppMacroExpr.CPP_TYPE;
 				return "std::shared_ptr<" + base + ">";
 			}
 		}
 		return CppTypeModel.cppTypeHint(hint, scope, classLookup);
+	}
+
+	static function isEnumCarrierClassName(className:String, ?scope:CppRenderScope):Bool {
+		if (scope == null || className == null || className.length == 0)
+			return false;
+		final cls = scope.classByName.get(sanitizeTypePath(typeBaseName(className)));
+		if (cls == null)
+			return false;
+		for (field in HxClassDecl.getFields(cls))
+			if (HxFieldDecl.getIsStatic(field) && sanitizeIdentifier(HxFieldDecl.getName(field)) == "__hx_is_enum")
+				return true;
+		return false;
 	}
 
 	static function dynamicGenericWildcardCppTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {

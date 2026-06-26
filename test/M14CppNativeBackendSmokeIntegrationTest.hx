@@ -1538,6 +1538,65 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function gadtEnumCarrierProgram():GenIrProgram {
+		final src = [
+			"enum Constant<T> {",
+			"  CString(s:String):Constant<String>;",
+			"  CInt(s:String):Constant<Int>;",
+			"  CFloat(s:String):Constant<Float>;",
+			"}",
+			"enum Binop<S, T> {",
+			"  OpAdd:Binop<Float, Float>;",
+			"  OpEq:Binop<S, Bool>;",
+			"}",
+			"enum Expr<T> {",
+			"  EConst(c:Constant<T>):Expr<T>;",
+			"  EBinop<C>(op:Binop<C, T>, e1:Expr<C>, e2:Expr<C>):Expr<T>;",
+			"}",
+			"class HelperMacros {",
+			"  public static function typedAs<TActual, TExpected>(actual:TActual, expected:TExpected):String {",
+			"    return \"\";",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function evalConst<T>(c:Constant<T>):T {",
+			"    return switch c {",
+			"      case CInt(s): Std.parseInt(s);",
+			"      case CFloat(s): Std.parseFloat(s);",
+			"      case CString(s): s;",
+			"    }",
+			"  }",
+			"  static function evalBinop<T, C>(op:Binop<C, T>, e1:Expr<C>, e2:Expr<C>):T {",
+			"    return switch op {",
+			"      case OpAdd: eval(e1) + eval(e2);",
+			"      case OpEq: eval(e1) == eval(e2);",
+			"    }",
+			"  }",
+			"  static function eval<T>(e:Expr<T>):T {",
+			"    return switch e {",
+			"      case EConst(c): evalConst(c);",
+			"      case EBinop(op, e1, e2): evalBinop(op, e1, e2);",
+			"    }",
+			"  }",
+			"  static function main() {",
+			"    var ti = 1.22;",
+			"    var tb = false;",
+			"    var e1 = EConst(CFloat(\"12\"));",
+			"    var e2 = EConst(CFloat(\"8\"));",
+			"    var eadd = EBinop(OpAdd, e1, e2);",
+			"    var s = eval(eadd);",
+			"    HelperMacros.typedAs(s, ti);",
+			"    var eeq = EBinop(OpEq, e1, e2);",
+			"    var s2 = eval(eeq);",
+			"    HelperMacros.typedAs(s2, tb);",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "GadtEnumCarrier.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function contextLoadCallableProgram():GenIrProgram {
 		final src = [
 			"class Message {",
@@ -1821,8 +1880,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"single-token assignment recovery fragments should render as neutral C++ zero");
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EEnumValue("Ignore"),
-				[EString("reason")])) == "([&]() { auto __hxhx_enum_arg_0 = \"reason\"; (void)__hxhx_enum_arg_0; return std::string(\"Ignore\"); })()",
-			"payload enum constructor calls should lower to their enum tag string for the C++ MVP");
+				[EString("reason")])) == "__hxhx_macro_enum(\"Ignore\", std::vector<__HxMacroExpr>{__hxhx_macro_string(\"reason\")})",
+			"payload enum constructor calls should lower to the C++ macro carrier");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ECall(ECall(EIdent("f6_a"), []), []), [])) == "((f6_a())())()",
 			"nested calls should lower by invoking the rendered callee expression");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("=>", EString("key"), EInt(42))) == "std::make_pair(\"key\", 42)",
@@ -3056,6 +3115,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(testEqLines, "template<typename TExpected, typename TValue>", "C++ utest Test.eq should accept mixed expected/value types");
 		assertContains(testEqLines, "Assert::same(v, v2, std::nullopt, std::nullopt, std::nullopt, PosInfos(pos.value()));",
 			"C++ utest Test.eq should delegate to the polymorphic assertion helper");
+		final assertSame = new HxFunctionDecl("same", Public, true, [
+			new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("actual", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("recursive", "Bool", NoDefault, true, false),
+			new HxFunctionArg("msg", "String", NoDefault, true, false)
+		], "Bool", [SReturn(EBool(true), HxPos.unknown())], "");
+		final assertCall = new HxFunctionDecl("callSame", Public, true, [
+			new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("actual", "Dynamic", NoDefault, false, false)
+		], "Void", [
+			SExpr(ECall(EField(EIdent("Assert"), "same"), [EIdent("expected"), EIdent("actual"), EString("message")]), HxPos.unknown())
+		], "");
+		final assertSameOwner = new HxClassDecl("Assert", false, [assertSame], []);
+		final assertCallOwner = new HxClassDecl("AssertCallOwner", false, [assertCall], []);
+		final assertSameNames = new StringMap<Bool>();
+		for (name in ["Assert", "AssertCallOwner"])
+			assertSameNames.set(name, true);
+		final assertSameClasses = new StringMap<HxClassDecl>();
+		assertSameClasses.set("Assert", assertSameOwner);
+		assertSameClasses.set("AssertCallOwner", assertCallOwner);
+		final assertSameCallLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(assertCall, assertCallOwner, {
+			names: assertSameNames,
+			byName: assertSameClasses
+		}).join("\n");
+		assertContains(assertSameCallLines, "Assert::same(expected, actual, std::nullopt, \"message\");",
+			"C++ optional argument rendering should skip optional Bool when a later optional String argument is supplied");
 		final assertStringSequenceLike = new HxFunctionDecl("stringSequenceLike", Public, true,
 			[new HxFunctionArg("value", "String", NoDefault, false, false)], "Bool", [
 				SIf(EBool(false), SReturn(EBool(false), HxPos.unknown()), null, HxPos.unknown()),
@@ -3073,10 +3158,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertWarnScope.localTypes.set("msg", "std::string");
 		final assertWarnAdd:HxExpr = ECall(EField(EIdent("results"), "add"), [ECall(EEnumValue("Warning"), [EIdent("msg")])]);
 		final assertWarnAddString = @:privateAccess backend.cpp.CppTargetCore.stringExpr(assertWarnAdd, assertWarnScope);
-		assertContains(assertWarnAddString, "__hxhx_stringify(results->add(([&]() {",
+		assertContains(assertWarnAddString, "__hxhx_stringify(results->add(__hxhx_macro_enum(\"Warning\"",
 			"C++ unknown string-context calls should use target-owned stringify instead of assuming numeric std::to_string");
-		assertContains(assertWarnAddString, "return std::string(\"Warning\");",
-			"C++ enum-tag arguments inside erased string-context calls should preserve their string payload");
+		assertContains(assertWarnAddString, "__hxhx_macro_value(msg)",
+			"C++ enum-tag arguments inside erased string-context calls should preserve their payload");
 		assertTrue(assertWarnAddString.indexOf("std::to_string(results->add") < 0,
 			"C++ Assert.warn-like results.add calls should not become std::to_string(std::string)");
 		final typedEnumArg = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(ECall(EEnumValue("Warning"), [EIdent("msg")]),
@@ -7282,8 +7367,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "if ((!false)) {", "C++ smoke should emit logical-not expression");
 		assertContains(source, "auto mode = std::string(\"Macro\");", "C++ smoke should lower enum value tags as strings");
 		assertContains(source, "(mode == std::string(\"Macro\"))", "C++ smoke should compare enum value tags as strings");
-		assertContains(source, "auto ignored = ([&]() { auto __hxhx_enum_arg_0 = \"reason\"; (void)__hxhx_enum_arg_0; return std::string(\"Ignore\"); })();",
-			"C++ smoke should lower enum constructor calls as tag strings while evaluating payloads");
+		assertContains(source, "auto ignored = __hxhx_macro_enum(\"Ignore\", std::vector<__HxMacroExpr>{__hxhx_macro_string(\"reason\")});",
+			"C++ smoke should lower enum constructor payloads to the macro carrier");
 		assertContains(source, "auto id = [&](auto x) { return (x + 1); };", "C++ smoke should lower expression lambdas");
 		assertContains(source, "id(6)", "C++ smoke should call local lambda values");
 		final parsedERegMapModule = new HxParser("class EReg { public function new(pattern:String, options:String) {} public function matchedLeft():String return \"\"; public function map(s:String, f:EReg->String):String return f(this); } class ERegMapLike { public static function main():String { var r = new EReg(\"a\", \"g\"); var f = function(x) return x.matchedLeft(); return r.map(\"a\", f); } }")
@@ -7517,6 +7602,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(enumCtorCarrierSource.indexOf("static std::string TFor(std::shared_ptr<TVar> v") < 0,
 			"C++ enum constructor payload types should not resolve TVar through TypedExprDef::TVar");
 
+		final gadtEnumDir = Path.join([root, "gadt-enum-carrier-source-only"]);
+		final gadtEnumEmit = BackendRegistry.createForTarget("cpp-native").emit(gadtEnumCarrierProgram(), context(gadtEnumDir, true, true));
+		final gadtEnumSource = File.getContent(gadtEnumEmit.entryPath);
+		assertContains(gadtEnumSource, "static T evalConst(__HxMacroExpr c)",
+			"C++ generic enum carriers should erase Constant<T> parameters to the macro carrier");
+		assertContains(gadtEnumSource, "static T evalBinop(__HxMacroExpr op, __HxMacroExpr e1, __HxMacroExpr e2)",
+			"C++ generic enum carriers should erase Binop<C,T>/Expr<C> parameters to the macro carrier");
+		assertContains(gadtEnumSource, "static T eval(__HxMacroExpr e)", "C++ generic enum carriers should erase Expr<T> parameters to the macro carrier");
+		assertContains(gadtEnumSource, "__hxhx_macro_enum(\"EConst\", std::vector<__HxMacroExpr>{__hxhx_macro_enum(\"CFloat\"",
+			"C++ GADT enum constructor payloads should preserve nested enum shape");
+		assertContains(gadtEnumSource, "__hxhx_enum_eq(__hxhx_switch, \"OpAdd\")", "C++ GADT enum switches should compare macro enum carriers by constructor");
+		assertContains(gadtEnumSource, "return evalConst<T>(c);", "C++ GADT enum returns should pass explicit template arguments for expected return types");
+		assertContains(gadtEnumSource, "return evalBinop<T>(op, e1, e2);",
+			"C++ GADT enum returns should pass explicit template arguments when erased parameters cannot infer them");
+		assertContains(gadtEnumSource, "eval<T>(e1)", "C++ GADT enum binary branches should avoid naming erased generic parameters in nested eval calls");
+		assertContains(gadtEnumSource, "auto s = eval<double>(eadd);",
+			"C++ GADT eval locals should infer explicit template arguments from following typedAs probes");
+		assertContains(gadtEnumSource, "auto s2 = eval<bool>(eeq);", "C++ GADT eval locals should infer bool template arguments from following typedAs probes");
+
 		final contextLoadCallableDir = Path.join([root, "context-load-callable-source-only"]);
 		final contextLoadCallableEmit = BackendRegistry.createForTarget("cpp-native")
 			.emit(contextLoadCallableProgram(), context(contextLoadCallableDir, true, true));
@@ -7728,7 +7832,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\ntrue\n3\n4\nfalse\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\ntrue\n3\n4\nfalse\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore(reason)\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}
