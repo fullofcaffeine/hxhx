@@ -4814,10 +4814,12 @@ class CppTargetCore {
 		};
 	}
 
-	static function helperMacrosTypeErrorFieldProbeExpr(callee:HxExpr, args:Array<HxExpr>):Null<String> {
+	static function helperMacrosTypeErrorProbeExpr(callee:HxExpr, args:Array<HxExpr>):Null<String> {
 		if (args == null || args.length != 1)
 			return null;
 		final method = switch (callee) {
+			case EIdent(name) if (name == "typeError" || name == "typeErrorText"):
+				name;
 			case EField(EIdent("HelperMacros"), name):
 				name;
 			case EField(EField(EIdent("unit"), "HelperMacros"), name):
@@ -4825,16 +4827,11 @@ class CppTargetCore {
 			case _:
 				return null;
 		};
+		if (method != "typeError" && method != "typeErrorText")
+			return null;
 		return switch (args[0]) {
-			case EField(_, _) | EArrayAccess(_, _):
-				switch (method) {
-					case "typeError":
-						"true";
-					case "typeErrorText":
-						"std::string()";
-					case _:
-						null;
-				}
+			case EField(_, _) | EArrayAccess(_, _) | EBinop("=", _, ECall(_, _)) | EBinop("=", _, EIdent(_)) | EBinop("=", _, ENew(_, _)):
+				method == "typeError" ? "true" : "std::string()";
 			case _:
 				null;
 		};
@@ -5926,8 +5923,8 @@ class CppTargetCore {
 			case ECall(EField(EField(EIdent("unit"), "HelperMacros"), "typeError"), [EUnsupported(raw)])
 				if (raw != null && StringTools.startsWith(raw, "for_expr:")):
 				"true";
-			case ECall(callee, args) if (helperMacrosTypeErrorFieldProbeExpr(callee, args) != null):
-				helperMacrosTypeErrorFieldProbeExpr(callee, args);
+			case ECall(callee, args) if (helperMacrosTypeErrorProbeExpr(callee, args) != null):
+				helperMacrosTypeErrorProbeExpr(callee, args);
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				renderExpr(args[2], scope);
 			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):

@@ -2262,6 +2262,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("HelperMacros"), "typeError"),
 				[EUnsupported("for_expr:for (key => value in new MyNotIterator()) { }")])) == "true",
 			"C++ HelperMacros.typeError for-expression probes should fold to true");
+		final varianceProbeArg = EBinop("=", EIdent("finalField"), ECall(EIdent("FinalField"), [EIdent("publicField")]));
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("typeError"), [varianceProbeArg])) == "true",
+			"C++ unqualified typeError assignment probes should fold to true without emitting invalid runtime assignments");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("HelperMacros"), "typeError"), [varianceProbeArg])) == "true",
+			"C++ HelperMacros.typeError assignment probes should fold to true without emitting invalid runtime assignments");
 		final helperMacrosOwner = new HxClassDecl("HelperMacros", false, [
 			new HxFunctionDecl("typeString", Public, true, [new HxFunctionArg("e", "Dynamic", NoDefault, false, false)], "String", [
 				SVar("typed", "", ECall(EIdent("typeExpr"), [EIdent("e")]), HxPos.unknown()),
