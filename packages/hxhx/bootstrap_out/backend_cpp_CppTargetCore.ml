@@ -9323,6 +9323,10 @@ and collectDynamicLocalTypeOverridesFromStmt = fun stmt scope candidates -> igno
             ignore (setDynamicLocalTypeOverride scope (local : string) (inferredCallableType : string));
             raise (HxRuntime.Hx_return (Obj.repr ()))
           )) else ());
+          ignore (if isLocalCallableInit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) && HxString.length localType = 0 then ignore ((
+            ignore (HxMap.set_string candidates local true);
+            raise (HxRuntime.Hx_return (Obj.repr ()))
+          )) else ());
           let unhintedNoInit = isUnhintedNoInitLocal (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in let unhintedEmptyArray = isUnhintedEmptyArray (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in let unhintedNull = isUnhintedNullLocal (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in if isDynamicLikeTypeHint (typeHint : string) || unhintedNoInit || unhintedEmptyArray || unhintedNull then ignore ((
             ignore (HxMap.set_string candidates local true);
             let tempString = ref ("" : string) in (

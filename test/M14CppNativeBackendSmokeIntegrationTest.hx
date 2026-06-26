@@ -7201,6 +7201,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower enum constructor calls as tag strings while evaluating payloads");
 		assertContains(source, "auto id = [&](auto x) { return (x + 1); };", "C++ smoke should lower expression lambdas");
 		assertContains(source, "id(6)", "C++ smoke should call local lambda values");
+		final parsedERegMapModule = new HxParser("class EReg { public function new(pattern:String, options:String) {} public function matchedLeft():String return \"\"; public function map(s:String, f:EReg->String):String return f(this); } class ERegMapLike { public static function main():String { var r = new EReg(\"a\", \"g\"); var f = function(x) return x.matchedLeft(); return r.map(\"a\", f); } }")
+			.parseModule("ERegMapLike");
+		final parsedERegMapNames = new StringMap<Bool>();
+		final parsedERegMapClasses = new StringMap<HxClassDecl>();
+		for (cls in HxModuleDecl.getClasses(parsedERegMapModule)) {
+			parsedERegMapNames.set(HxClassDecl.getName(cls), true);
+			parsedERegMapClasses.set(HxClassDecl.getName(cls), cls);
+		}
+		final parsedERegMapLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedERegMapClasses.get("ERegMapLike"), {names: parsedERegMapNames, byName: parsedERegMapClasses})
+				.join("\n");
+		assertContains(parsedERegMapLines, "auto f = [&](std::shared_ptr<EReg> x) -> std::string { return x->matchedLeft(); };",
+			"C++ callable locals passed to typed instance methods should adopt the expected pointer function type");
 		assertContains(source, "auto macroQuote = __hxhx_macro_expr(", "C++ smoke should lower macro quotes to structural macro objects");
 		assertContains(source, "__hxhx_macro_enum(\"EParenthesis\"", "C++ smoke should preserve macro quote wrappers structurally");
 		assertContains(source, "auto macroType = std::string(\"X -> Y\");", "C++ smoke should lower macro type quotes to stable text");

@@ -4143,6 +4143,10 @@ class CppTargetCore {
 					setDynamicLocalTypeOverride(scope, local, inferredCallableType);
 					return;
 				}
+				if (isLocalCallableInit(init) && localType.length == 0) {
+					candidates.set(local, true);
+					return;
+				}
 				final unhintedNoInit = isUnhintedNoInitLocal(typeHint, init);
 				final unhintedEmptyArray = isUnhintedEmptyArray(typeHint, init);
 				final unhintedNull = isUnhintedNullLocal(typeHint, init);
