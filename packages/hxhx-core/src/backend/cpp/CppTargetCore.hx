@@ -763,6 +763,29 @@ class CppTargetCore {
 		out.push("  return out;");
 		out.push("}");
 		out.push("");
+		out.push("struct __hxhx_dynamic_value {");
+		out.push("  std::string text;");
+		out.push("  __hxhx_dynamic_value(std::string text = std::string()) : text(text) {}");
+		out.push("  operator std::string() const { return text; }");
+		out.push("};");
+		out.push("");
+		out.push("static std::string __hxhx_stringify(const __hxhx_dynamic_value& value) {");
+		out.push("  return value.text;");
+		out.push("}");
+		out.push("");
+		out.push("struct __hxhx_exception_value {");
+		out.push("  std::string message;");
+		out.push("  __hxhx_dynamic_value value;");
+		out.push("  std::vector<std::string> stack;");
+		out.push("  __hxhx_exception_value(std::string message = std::string()) : message(message), value(message), stack() {}");
+		out.push("  operator std::string() const { return message; }");
+		out.push("  std::string toString() const { return message; }");
+		out.push("};");
+		out.push("");
+		out.push("static std::string __hxhx_stringify(const __hxhx_exception_value& value) {");
+		out.push("  return value.message;");
+		out.push("}");
+		out.push("");
 		out.push("struct __hxhx_throw_bottom {");
 		out.push("  template<typename T>");
 		out.push("  operator T() const { throw std::runtime_error(\"unreachable throw expression\"); }");
@@ -2603,6 +2626,8 @@ class CppTargetCore {
 			return "void";
 		if (owner == "EReg" && method == "matchedPos")
 			return cppTypeHint("{pos:Int,len:Int}", scope, classLookup);
+		if (owner == "Exception" && (method == "caught" || method == "thrown"))
+			return "std::shared_ptr<Exception>";
 		return StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 	}
 
@@ -2823,6 +2848,8 @@ class CppTargetCore {
 			return returnTraced("special_assert_same", renderAssertPolymorphicSameHelper(fn, owner, classLookup));
 		if (isAssertPolymorphicSameAsHelper(fn, owner))
 			return returnTraced("special_assert_same_as", renderAssertPolymorphicSameAsHelper(fn, owner, classLookup));
+		if (isUtestEqHelper(fn, owner))
+			return returnTraced("special_utest_eq", renderUtestEqHelper(fn));
 		if (isLambdaHasHelper(fn, owner))
 			return returnTraced("special_lambda_has", renderLambdaHasHelper());
 		if (isHelperMacrosShimHelper(fn, owner))
@@ -2831,6 +2858,8 @@ class CppTargetCore {
 			return returnTraced("special_macro_string_tools", renderMacroStringToolsShimHelper(fn, owner, classLookup));
 		if (isMacroCompilerApiShimHelper(fn, owner))
 			return returnTraced("special_macro_compiler_api", renderMacroCompilerApiShimHelper(fn, owner, classLookup));
+		if (isExceptionCaughtThrownHelper(fn, owner))
+			return returnTraced("special_exception_caught_thrown", renderExceptionCaughtThrownHelper(fn, owner, classLookup));
 		if (isUtestRunnerAddCasesHelper(fn, owner))
 			return returnTraced("special_utest_runner_add_cases", renderUtestRunnerAddCasesHelper(fn, owner, classLookup));
 		if (isUtestCallbackHelper(fn, owner))
@@ -3259,6 +3288,30 @@ class CppTargetCore {
 		return cppFunctionReturnType(fn, owner, classLookup);
 	}
 
+	static function isExceptionCaughtThrownHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Exception")
+			return false;
+		if (!HxFunctionDecl.getIsStatic(fn))
+			return false;
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return method == "caught" || method == "thrown";
+	}
+
+	static function renderExceptionCaughtThrownHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final scope = renderScope(owner, classLookup, "std::shared_ptr<Exception>");
+		prepareFunctionScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final valueName = args.length > 0 ? sanitizeIdentifier(HxFunctionArg.getName(args[0])) : "value";
+		return ["  static std::shared_ptr<Exception> "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(args, scope)
+			+ ") {",
+			"    return std::make_shared<Exception>(" + valueName + ");",
+			"  }"
+		];
+	}
+
 	static function isAssertPolymorphicStringifyHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Assert")
 			return false;
@@ -3404,6 +3457,38 @@ class CppTargetCore {
 			"  }"
 		];
 		return out;
+	}
+
+	static function isUtestEqHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Test")
+			return false;
+		if (HxFunctionDecl.getIsStatic(fn) || sanitizeIdentifier(HxFunctionDecl.getName(fn)) != "eq")
+			return false;
+		return HxFunctionDecl.getArgs(fn).length >= 2;
+	}
+
+	static function renderUtestEqHelper(fn:HxFunctionDecl):Array<String> {
+		final args = HxFunctionDecl.getArgs(fn);
+		final expectedName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final valueName = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
+		final posName = args.length > 2 ? sanitizeIdentifier(HxFunctionArg.getName(args[2])) : "pos";
+		return ["  template<typename TExpected, typename TValue>",
+			"  void eq(const TExpected& "
+			+ expectedName
+			+ ", const TValue& "
+			+ valueName
+			+ ", std::optional<PosInfos> "
+			+ posName
+			+ " = std::nullopt) {",
+			"    Assert::same("
+			+ expectedName
+			+ ", "
+			+ valueName
+			+ ", std::nullopt, std::nullopt, std::nullopt, PosInfos("
+			+ posName
+			+ ".value()));",
+			"  }"
+		];
 	}
 
 	static function findConstructor(cls:HxClassDecl):Null<HxFunctionDecl> {
@@ -5242,20 +5327,29 @@ class CppTargetCore {
 		final out = [indent + "try {"];
 		for (line in renderStmtBlockContent(tryBody, indent + "  ", scope))
 			out.push(line);
-		out.push(indent + "} catch (...) {");
 		if (catches == null || catches.length == 0) {
+			out.push(indent + "} catch (...) {");
 			out.push(indent + "  throw;");
 		} else {
 			final catchName = sanitizeIdentifier(catches[0].name);
 			if (catchName.length > 0 && catchName != "_") {
-				out.push(indent + "  std::string " + catchName + " = std::string();");
-				withScopedLocal(scope, catchName, "std::string", () -> {
+				function emitCatchBody(binding:String):Void {
+					out.push(indent + "  __hxhx_exception_value " + catchName + " = " + binding + ";");
+					withScopedLocal(scope, catchName, "__hxhx_exception_value", () -> {
+						for (line in renderStmtBlockContent(catches[0].body, indent + "  ", scope))
+							out.push(line);
+					});
+				}
+				out.push(indent + "} catch (const std::exception& __hxhx_caught) {");
+				emitCatchBody("__hxhx_exception_value(std::string(__hxhx_caught.what()))");
+				out.push(indent + "} catch (...) {");
+				emitCatchBody("__hxhx_exception_value()");
+			} else {
+				out.push(indent + "} catch (...) {");
+				withScopedLocal(scope, catchName, "__hxhx_exception_value", () -> {
 					for (line in renderStmtBlockContent(catches[0].body, indent + "  ", scope))
 						out.push(line);
 				});
-			} else {
-				for (line in renderStmtBlockContent(catches[0].body, indent + "  ", scope))
-					out.push(line);
 			}
 		}
 		out.push(indent + "}");
@@ -5456,6 +5550,8 @@ class CppTargetCore {
 		}
 		if (expectedType == "std::string")
 			return stringExpr(expr, scope);
+		if (expectedType == "std::any" && exprCppType(expr, scope) != "std::any")
+			return "std::any(" + renderExpr(expr, scope) + ")";
 		if (exprCppType(expr, scope) == "std::any") {
 			switch (expectedType) {
 				case "double" | "float":
@@ -5690,6 +5786,12 @@ class CppTargetCore {
 				"__hxhx_macro_expr_field(" + renderExpr(receiver, scope) + ")";
 			case EField(receiver, "code") if (inferExprCppType(receiver, scope) == "std::string"):
 				stringCodeAtExpr(receiver, EInt(0), scope);
+			case EField(receiver, "value") if (isCppExceptionValueType(exprCppType(receiver, scope))):
+				"(" + renderExpr(receiver, scope) + ".value)";
+			case EField(receiver, "message") if (isCppExceptionValueType(exprCppType(receiver, scope))):
+				"(" + renderExpr(receiver, scope) + ".message)";
+			case EField(receiver, "stack") if (isCppExceptionValueType(exprCppType(receiver, scope))):
+				"(" + renderExpr(receiver, scope) + ".stack)";
 			case EField(receiver, "low") if (exprCppType(receiver, scope) == "long long"):
 				"static_cast<int>(static_cast<unsigned long long>(" + renderExpr(receiver, scope) + ") & 0xFFFFFFFFULL)";
 			case EField(receiver, "high") if (exprCppType(receiver, scope) == "long long"):
@@ -7435,6 +7537,14 @@ class CppTargetCore {
 		return exprHasReferenceType(receiver, scope) ? "->" : ".";
 	}
 
+	static function isCppExceptionValueType(typeName:String):Bool {
+		return typeName == "__hxhx_exception_value";
+	}
+
+	static function isCppDynamicValueType(typeName:String):Bool {
+		return typeName == "__hxhx_dynamic_value";
+	}
+
 	static function exprHasReferenceType(expr:HxExpr, ?scope:CppRenderScope):Bool {
 		return isCppReferenceType(exprCppType(expr, scope));
 	}
@@ -7595,6 +7705,12 @@ class CppTargetCore {
 			case ECall(EField(receiver, "value"), args) if (args.length == 0):
 				final optionalInner = cppOptionalInnerType(exprCppType(receiver, scope));
 				optionalInner.length > 0 ? optionalInner : "";
+			case EField(receiver, "value") if (isCppExceptionValueType(exprCppType(receiver, scope))):
+				"__hxhx_dynamic_value";
+			case EField(receiver, "message") if (isCppExceptionValueType(exprCppType(receiver, scope))):
+				"std::string";
+			case EField(receiver, "stack") if (isCppExceptionValueType(exprCppType(receiver, scope))):
+				"std::vector<std::string>";
 			case ECall(EField(receiver, method), _):
 				final primitiveAbstractReturn = primitiveBackedAbstractMethodReturnCppType(receiver, method, scope);
 				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
@@ -8368,6 +8484,12 @@ class CppTargetCore {
 				cppIteratorElementType(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "hasNext"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
 				"bool";
+			case EField(receiver, "value") if (isCppExceptionValueType(exprCppType(receiver, scope))):
+				"__hxhx_dynamic_value";
+			case EField(receiver, "message") if (isCppExceptionValueType(exprCppType(receiver, scope))):
+				"std::string";
+			case EField(receiver, "stack") if (isCppExceptionValueType(exprCppType(receiver, scope))):
+				"std::vector<std::string>";
 			case ECall(EField(_, "flatten"), [ECall(EField(_, "map"), [_, mapper])]):
 				cppFunctionReturnTypeFromCppType(exprCppType(mapper, scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
@@ -9256,6 +9378,8 @@ class CppTargetCore {
 				stringExpr(args[2], scope);
 			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
 				"__hxhx_throw_as<std::string>(" + renderExpr(args[0], scope) + ")";
+			case _ if (isCppExceptionValueType(exprCppType(expr, scope)) || isCppDynamicValueType(exprCppType(expr, scope))):
+				"__hxhx_stringify(" + renderExpr(expr, scope) + ")";
 			case EArrayDecl(_):
 				"__hxhx_stringify(" + renderExpr(expr, scope) + ")";
 			case ETernary(cond, thenExpr, elseExpr) if (inferExprCppType(expr, scope) == "std::string"):
@@ -9307,9 +9431,11 @@ class CppTargetCore {
 				final typeName = exprCppType(expr, scope);
 				if (typeName == CppMacroExpr.CPP_TYPE) "__hxhx_macro_to_string("
 					+ local
-					+ ")"; else if (typeName == "std::string") "std::string(" + local + ")"; else if (typeName == "bool") "std::string(" + local
-					+ " ? \"true\" : \"false\")"; else if (typeName == "int" || typeName == "double" || typeName == "float" || typeName == "long long")
-					"std::to_string("
+					+ ")"; else if (typeName == "std::string") "std::string(" + local + ")"; else if (isCppExceptionValueType(typeName)
+					|| isCppDynamicValueType(typeName)) "__hxhx_stringify("
+					+ local
+					+ ")"; else if (typeName == "bool") "std::string(" + local + " ? \"true\" : \"false\")"; else if (typeName == "int"
+					|| typeName == "double" || typeName == "float" || typeName == "long long") "std::to_string("
 					+ local
 					+ ")"; else "__hxhx_stringify(" + local + ")";
 			case ENull:
@@ -11741,6 +11867,12 @@ class CppTargetCore {
 		if (ownerName == "Bytes" && sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "fill")
 			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
 				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+		if (ownerName == "Exception") {
+			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
+				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+			if (knownReturn.length > 0)
+				return knownReturn;
+		}
 		if (isStringIteratorHelper(ownerName))
 			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
 				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});

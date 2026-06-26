@@ -2985,9 +2985,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final assertRaisesLookup = {names: assertRaisesNames, byName: assertRaisesClasses};
 		final assertRaisesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(assertRaisesLike, assertRaisesOwner, assertRaisesLookup)
 			.join("\n");
-		assertContains(assertRaisesLines, "std::string ex = std::string();",
-			"C++ catch blocks should bind the Haxe catch variable before rendering catch-body references");
+		assertContains(assertRaisesLines, "catch (const std::exception& __hxhx_caught) {",
+			"C++ catch blocks should preserve std::exception messages for Haxe catch variables");
+		assertContains(assertRaisesLines, "  __hxhx_exception_value ex = __hxhx_exception_value(std::string(__hxhx_caught.what()));",
+			"C++ catch blocks should bind Haxe catch variables as target-owned exception values");
+		assertContains(assertRaisesLines, "std::string msg = (std::string(\"caught:\") + __hxhx_stringify(ex));",
+			"C++ catch variables should stringify through target-owned exception values");
 		assertContains(assertRaisesLines, "return use(ex, msg);", "C++ catch-body calls should keep using the declared catch variable name");
+		final testEq = new HxFunctionDecl("eq", Public, false, [
+			new HxFunctionArg("v", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("v2", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("pos", "Null<PosInfos>", NoDefault, true, false)
+		], "Void", [
+			SExpr(ECall(EField(EIdent("Assert"), "equals"), [EIdent("v"), EIdent("v2"), ENull, EIdent("pos")]), HxPos.unknown())
+		], "");
+		final testEqOwner = new HxClassDecl("Test", false, [testEq], []);
+		final testEqNames = new StringMap<Bool>();
+		testEqNames.set("Test", true);
+		final testEqClasses = new StringMap<HxClassDecl>();
+		testEqClasses.set("Test", testEqOwner);
+		final testEqLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(testEq, testEqOwner, {
+			names: testEqNames,
+			byName: testEqClasses
+		}).join("\n");
+		assertContains(testEqLines, "template<typename TExpected, typename TValue>", "C++ utest Test.eq should accept mixed expected/value types");
+		assertContains(testEqLines, "Assert::same(v, v2, std::nullopt, std::nullopt, std::nullopt, PosInfos(pos.value()));",
+			"C++ utest Test.eq should delegate to the polymorphic assertion helper");
 		final assertStringSequenceLike = new HxFunctionDecl("stringSequenceLike", Public, true,
 			[new HxFunctionArg("value", "String", NoDefault, false, false)], "Bool", [
 				SIf(EBool(false), SReturn(EBool(false), HxPos.unknown()), null, HxPos.unknown()),
