@@ -535,6 +535,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function startsWith(s:String, start:String):Bool {",
 			"    return s.length >= start.length && s.lastIndexOf(start, 0) == 0;",
 			"  }",
+			"  public static function endsWithInstance(s:String, suffix:String):Bool {",
+			"    return s.endsWith(suffix);",
+			"  }",
 			"  public static function isSpace(s:String, pos:Int):Bool {",
 			"    var c = s.charCodeAt(pos);",
 			"    return c == 32;",
@@ -2273,6 +2276,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(helperMacrosLines.indexOf("parse(") < 0, "C++ HelperMacros shims should not emit missing parse calls");
 		assertTrue(helperMacrosLines.indexOf("currentPos(") < 0, "C++ HelperMacros shims should not emit missing currentPos calls");
 		assertTrue(helperMacrosLines.indexOf("formatString(") < 0, "C++ HelperMacros shims should not emit unresolved markup formatting helpers");
+		final helperMacrosScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(helperMacrosOwner, {
+			names: helperMacrosNames,
+			byName: helperMacrosClasses
+		}, "void");
+		final helperMacrosEndsWithExpr = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(ECall(EField(EIdent("HelperMacros"), "typeString"), [ENull]), "endsWith"),
+				[EString("DefaultTPClass_y<String>")]),
+				helperMacrosScope);
+		assertTrue(helperMacrosEndsWithExpr == "__hxhx_ends_with(HelperMacros::typeString(std::string()), std::string(\"DefaultTPClass_y<String>\"))",
+			"C++ HelperMacros.typeString String receivers should lower endsWith through target support helpers");
 		final macroStringToolsOwner = new HxClassDecl("MacroStringTools", false, [
 			new HxFunctionDecl("isFormatExpr", Public, true, [new HxFunctionArg("e", "ExprOf<String>", NoDefault, false, false)], "Bool",
 				[SReturn(EField(EIdent("e"), "expr"), HxPos.unknown())], ""),
@@ -7102,6 +7115,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(source.indexOf(".replace(std::string(\"\\\\\"), std::string(\"\\\\\\\\\"))") < 0,
 			"C++ smoke should not emit C++ std::string replace overload calls for Haxe String.replace");
 		assertContains(source, "__hxhx_last_index_of(s, std::string(start), 0)", "C++ smoke should lower String.lastIndexOf to target support helpers");
+		assertContains(source, "return __hxhx_ends_with(s, std::string(suffix));", "C++ smoke should lower String.endsWith to target support helpers");
 		assertContains(source, "auto c = static_cast<int>(static_cast<unsigned char>(s[pos]));",
 			"C++ smoke should lower String.charCodeAt to concrete target code points in non-null contexts");
 		assertContains(source, "return s.substr(1, 2);", "C++ smoke should preserve std::string substr results without stringifying");
@@ -7126,6 +7140,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower String.charCodeAt to concrete target code points in non-null contexts");
 		assertTrue(source.indexOf(".split(") < 0, "C++ smoke should not emit nonexistent std::string split calls");
 		assertTrue(source.indexOf(".lastIndexOf(") < 0, "C++ smoke should not emit nonexistent std::string lastIndexOf calls");
+		assertTrue(source.indexOf(".endsWith(") < 0, "C++ smoke should not emit nonexistent std::string endsWith calls");
 		assertTrue(source.indexOf(".charCodeAt(") < 0, "C++ smoke should not emit nonexistent std::string charCodeAt calls");
 		assertTrue(source.indexOf(".substring(") < 0, "C++ smoke should not emit nonexistent std::string substring calls");
 		assertTrue(source.indexOf("std::to_string(s.substr") < 0, "C++ smoke should not stringify std::string substr results");

@@ -328,6 +328,10 @@ class CppTargetCore {
 		out.push("  }");
 		out.push("}");
 		out.push("");
+		out.push("static bool __hxhx_ends_with(const std::string& source, const std::string& suffix) {");
+		out.push("  return suffix.size() <= source.size() && source.compare(source.size() - suffix.size(), suffix.size(), suffix) == 0;");
+		out.push("}");
+		out.push("");
 		out.push("static int __hxhx_last_index_of(const std::string& source, const std::string& needle, int start) {");
 		out.push("  if (start < 0) return -1;");
 		out.push("  std::size_t pos = source.rfind(needle, static_cast<std::size_t>(start));");
@@ -4668,6 +4672,25 @@ class CppTargetCore {
 		};
 	}
 
+	static function isHelperMacrosStringShimReceiver(receiver:HxExpr, method:String):Bool {
+		final isHelperMacros = switch (receiver) {
+			case EIdent("HelperMacros"):
+				true;
+			case EField(EIdent("unit"), "HelperMacros"):
+				true;
+			case _:
+				false;
+		};
+		if (!isHelperMacros)
+			return false;
+		return switch (sanitizeIdentifier(method)) {
+			case "typeString" | "typedAs" | "getMeta" | "pipeMarkupLiteral" | "pipeMarkupLiteralUnprocessed":
+				true;
+			case _:
+				false;
+		};
+	}
+
 	static function helperMacrosTypeErrorFieldProbeExpr(callee:HxExpr, args:Array<HxExpr>):Null<String> {
 		if (args == null || args.length != 1)
 			return null;
@@ -6463,6 +6486,8 @@ class CppTargetCore {
 					+ ")";
 				case "split" if (args.length == 1):
 					"__hxhx_split(" + target + ", " + stringExpr(args[0], scope) + ")";
+				case "endsWith" if (args.length == 1):
+					"__hxhx_ends_with(" + target + ", " + stringExpr(args[0], scope) + ")";
 				case "lastIndexOf" if (args.length == 1 || args.length == 2):
 					"__hxhx_last_index_of("
 					+ target
@@ -7521,6 +7546,8 @@ class CppTargetCore {
 				"int";
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
+			case ECall(EField(receiver, method), _) if (isHelperMacrosStringShimReceiver(receiver, method)):
+				"std::string";
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
 				"std::string";
 			case ECall(EField(EField(EIdent("haxe"), "SysTools"), method), _) if (method == "quoteUnixArg" || method == "quoteWinArg"):
@@ -8304,6 +8331,8 @@ class CppTargetCore {
 				"int";
 			case ECall(EIdent(name), _):
 				callableOrSameOwnerReturnCppType(name, scope);
+			case ECall(EField(receiver, method), _) if (isHelperMacrosStringShimReceiver(receiver, method)):
+				"std::string";
 			case ECall(EField(_, method), _) if (method == "__URLEncode" || method == "__URLDecode"):
 				"std::string";
 			case ECall(EField(EField(EIdent("haxe"), "SysTools"), method), _) if (method == "quoteUnixArg" || method == "quoteWinArg"):
