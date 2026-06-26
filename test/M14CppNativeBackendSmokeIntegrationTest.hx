@@ -1833,6 +1833,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ map literal toString should lower through pair-aware runtime support");
 		assertTrue(mapLiteralToStringExpr.indexOf("std::vector<int>{std::make_pair") < 0,
 			"C++ map literal toString should not treat arrow pairs as integer array elements");
+		final pairArrayExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EArrayDecl([EBinop("=>", EString("label"),
+			EArrayDecl([EString("stack")]))]));
+		assertContains(pairArrayExpr, "std::vector<std::pair<std::string, std::vector<std::string>>>",
+			"C++ arrow array literals should infer pair element types");
+		assertTrue(pairArrayExpr.indexOf("std::vector<int>{std::make_pair") < 0, "C++ arrow array literals should not fall back to integer vectors");
+		final pairKvScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("PairKvScope", false, [], []), {
+			names: new StringMap<Bool>(),
+			byName: new StringMap<HxClassDecl>()
+		}, "void");
+		pairKvScope.localTypes.set("data", "std::vector<std::pair<std::string, std::vector<std::string>>>");
+		final pairKvLines = @:privateAccess backend.cpp.CppTargetCore.renderForKeyValueStmt("label", "stacks", EIdent("data"),
+			SExpr(ECall(EIdent("use"), [EIdent("label"), EIdent("stacks")]), HxPos.unknown()), "  ", pairKvScope)
+			.join("\n");
+		assertContains(pairKvLines, "auto __hxhx_kv_pair_label = data[__hxhx_kv_label];",
+			"C++ key/value loops over pair arrays should read the pair element once");
+		assertContains(pairKvLines, "auto label = __hxhx_kv_pair_label.first;", "C++ key/value loops over pair arrays should bind the pair key");
+		assertContains(pairKvLines, "auto stacks = __hxhx_kv_pair_label.second;", "C++ key/value loops over pair arrays should bind the pair value");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Math"), "NaN")) == "std::numeric_limits<double>::quiet_NaN()",
 			"C++ Math.NaN should lower as a target intrinsic instead of a generated helper field");
 		assertTrue(@:privateAccess ParserStage.sourceStructuralTypeHintIsMoreSpecific("String", "{ ms:Float, seconds:Int }"),

@@ -5281,13 +5281,32 @@ class CppTargetCore {
 		final valueLocal = sanitizeIdentifier(valueName);
 		final indexLocal = "__hxhx_kv_" + keyLocal;
 		final source = renderExpr(iterable, scope);
+		final elementType = iterableElementType(iterable, scope);
+		final pairArgs = cppPairTypeArgs(elementType);
 		final out = [
 			indent + "for (std::size_t " + indexLocal + " = 0; " + indexLocal + " < " + source + ".size(); ++" + indexLocal + ") {"
 		];
-		out.push(indent + "  auto " + keyLocal + " = static_cast<int>(" + indexLocal + ");");
-		out.push(indent + "  auto " + valueLocal + " = " + source + "[" + indexLocal + "];");
-		for (line in renderStmtBlockContent(body, indent + "  ", scope))
-			out.push(line);
+		if (pairArgs.length == 2) {
+			final pairLocal = "__hxhx_kv_pair_" + keyLocal;
+			out.push(indent + "  auto " + pairLocal + " = " + source + "[" + indexLocal + "];");
+			out.push(indent + "  auto " + keyLocal + " = " + pairLocal + ".first;");
+			out.push(indent + "  auto " + valueLocal + " = " + pairLocal + ".second;");
+			withScopedLocal(scope, keyLocal, pairArgs[0], () -> {
+				withScopedLocal(scope, valueLocal, pairArgs[1], () -> {
+					for (line in renderStmtBlockContent(body, indent + "  ", scope))
+						out.push(line);
+				});
+			});
+		} else {
+			out.push(indent + "  auto " + keyLocal + " = static_cast<int>(" + indexLocal + ");");
+			out.push(indent + "  auto " + valueLocal + " = " + source + "[" + indexLocal + "];");
+			withScopedLocal(scope, keyLocal, "int", () -> {
+				withScopedLocal(scope, valueLocal, elementType, () -> {
+					for (line in renderStmtBlockContent(body, indent + "  ", scope))
+						out.push(line);
+				});
+			});
+		}
 		out.push(indent + "}");
 		return out;
 	}
@@ -10495,6 +10514,8 @@ class CppTargetCore {
 	}
 
 	static function arrayElementType(elements:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (isMapLiteralElements(elements))
+			return mapLiteralPairCppType(elements, scope);
 		for (element in elements) {
 			final inferred = inferExprCppType(element, scope);
 			if (inferred.length > 0)
@@ -10516,6 +10537,19 @@ class CppTargetCore {
 				case _: // keep scanning
 			}
 		return "int";
+	}
+
+	static function isCppPairType(typeName:String):Bool {
+		final clean = StringTools.trim(typeName == null ? "" : typeName);
+		return StringTools.startsWith(clean, "std::pair<") && StringTools.endsWith(clean, ">");
+	}
+
+	static function cppPairTypeArgs(typeName:String):Array<String> {
+		final clean = StringTools.trim(typeName == null ? "" : typeName);
+		if (!isCppPairType(clean))
+			return [];
+		final inner = clean.substr("std::pair<".length, clean.length - "std::pair<".length - 1);
+		return splitTopLevelComma(inner).map(arg -> StringTools.trim(arg)).filter(arg -> arg.length > 0);
 	}
 
 	static function iterableElementType(iterable:HxExpr, ?scope:CppRenderScope):String {
