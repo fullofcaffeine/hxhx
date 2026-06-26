@@ -6116,6 +6116,37 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic helper construction should use the deducing factory for function values");
 		assertTrue(genericBoxOwnerLines.indexOf("std::make_shared<GenericBox>(") < 0,
 			"C++ generic helper construction should not instantiate the erased non-template class shape");
+		final genericPayload = new HxClassDecl("GenericPayload", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("id", "Int", NoDefault, false, false)], "Void", [], "")
+		], [new HxFieldDecl("id", Public, false, "Int", null)]);
+		final genericRoot = new HxClassDecl("GenericRoot", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")],
+			[new HxFieldDecl("root", Public, false, "T", null)], "", ["__hxhx_type_params=T"]);
+		final genericAssoc = new HxClassDecl("GenericAssoc", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")], [], "",
+			["__hxhx_type_params=K,V"]);
+		final genericFactoryOwner = new HxClassDecl("GenericFactoryOwner", false, [
+			new HxFunctionDecl("infer", Public, true, [], "Void", [
+				SVar("n", "", ENew("GenericRoot", []), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EIdent("n"), "root"), ENew("GenericPayload", [EInt(1)])), HxPos.unknown()),
+				SVar("grid", "", ENew("GenericAssoc", []), HxPos.unknown()),
+				SExpr(EBinop("=", EArrayAccess(EIdent("grid"), ENew("GenericPayload", [EInt(2)])), EString("value")), HxPos.unknown())
+			], "")
+		], []);
+		for (name in ["GenericPayload", "GenericRoot", "GenericAssoc", "GenericFactoryOwner"])
+			genericBoxNames.set(name, true);
+		genericBoxClasses.set("GenericPayload", genericPayload);
+		genericBoxClasses.set("GenericRoot", genericRoot);
+		genericBoxClasses.set("GenericAssoc", genericAssoc);
+		genericBoxClasses.set("GenericFactoryOwner", genericFactoryOwner);
+		final genericFactoryOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(genericFactoryOwner)[0], genericFactoryOwner, genericBoxLookup).join("\n");
+		assertContains(genericFactoryOwnerLines, "auto n = __hxhx_make_shared_GenericRoot<std::shared_ptr<GenericPayload>>();",
+			"C++ unhinted zero-arg generic factories should infer type args from later generic field assignments");
+		assertContains(genericFactoryOwnerLines, "auto grid = __hxhx_make_shared_GenericAssoc<std::shared_ptr<GenericPayload>, std::string>();",
+			"C++ unhinted zero-arg generic factories should infer key/value args from later array assignments");
+		assertTrue(genericFactoryOwnerLines.indexOf("__hxhx_make_shared_GenericRoot();") < 0,
+			"C++ generic field-assigned factories should not emit undeducible zero-arg calls");
+		assertTrue(genericFactoryOwnerLines.indexOf("__hxhx_make_shared_GenericAssoc();") < 0,
+			"C++ generic array-assigned factories should not emit undeducible zero-arg calls");
 		final templateSurfaceKind = new HxClassDecl("TemplateSurfaceKind", false, [], [
 			new HxFieldDecl("Alpha", Public, true, "String", EString("alpha")),
 			new HxFieldDecl("Beta", Public, true, "String", EString("beta"))

@@ -2755,6 +2755,7 @@ class CppTargetCore {
 			inferCallableArgTypeOverrides(scope, fn);
 			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 			inferStringMapLocalTypeOverrides(scope, fn);
+			inferGenericFactoryLocalTypeOverrides(scope, fn);
 			inferDynamicLocalTypeOverrides(scope, fn);
 			inferHelperTypedAsLocalTypeOverrides(scope, fn);
 			inferReturnLocalTypeOverrides(scope, fn);
@@ -4218,6 +4219,243 @@ class CppTargetCore {
 		final genericStart = inner.indexOf("<");
 		final className = genericStart >= 0 ? inner.substr(0, genericStart) : inner;
 		return isInferredMapClassName(className) ? sanitizeTypePath(typeBaseName(className)) : "";
+	}
+
+	static function inferGenericFactoryLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null)
+			return;
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
+		final candidates = new haxe.ds.StringMap<String>();
+		final mapped = new haxe.ds.StringMap<haxe.ds.StringMap<String>>();
+		for (stmt in HxFunctionDecl.getBody(fn))
+			collectGenericFactoryLocalTypeOverridesFromStmt(stmt, scope, candidates, mapped);
+		scope.localTypes = savedLocalTypes;
+		scope.localNames = savedLocalNames;
+		scope.localNameCounts = savedLocalNameCounts;
+	}
+
+	static function collectGenericFactoryLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<String>,
+			mapped:haxe.ds.StringMap<haxe.ds.StringMap<String>>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				withGenericFactoryInferenceScope(scope, candidates, mapped, () -> {
+					for (s in stmts)
+						collectGenericFactoryLocalTypeOverridesFromStmt(s, scope, candidates, mapped);
+				});
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectGenericFactoryLocalTypeOverridesFromExpr(cond, scope, candidates, mapped);
+				collectGenericFactoryLocalTypeOverridesFromStmt(thenBranch, scope, candidates, mapped);
+				if (elseBranch != null)
+					collectGenericFactoryLocalTypeOverridesFromStmt(elseBranch, scope, candidates, mapped);
+			case SForIn(name, iterable, body, _):
+				collectGenericFactoryLocalTypeOverridesFromExpr(iterable, scope, candidates, mapped);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					collectGenericFactoryLocalTypeOverridesFromStmt(body, scope, candidates, mapped);
+				});
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				collectGenericFactoryLocalTypeOverridesFromExpr(iterable, scope, candidates, mapped);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), "int", () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), iterableElementType(iterable, scope), () -> {
+						collectGenericFactoryLocalTypeOverridesFromStmt(body, scope, candidates, mapped);
+					});
+				});
+			case SWhile(cond, body, _) | SDoWhile(body, cond, _):
+				collectGenericFactoryLocalTypeOverridesFromExpr(cond, scope, candidates, mapped);
+				collectGenericFactoryLocalTypeOverridesFromStmt(body, scope, candidates, mapped);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectGenericFactoryLocalTypeOverridesFromExpr(scrutinee, scope, candidates, mapped);
+				for (body in bodies)
+					collectGenericFactoryLocalTypeOverridesFromStmt(body, scope, candidates, mapped);
+			case STry(tryBody, catches, _):
+				collectGenericFactoryLocalTypeOverridesFromStmt(tryBody, scope, candidates, mapped);
+				for (c in catches)
+					collectGenericFactoryLocalTypeOverridesFromStmt(c.body, scope, candidates, mapped);
+			case SVar(name, typeHint, init, _):
+				if (init != null)
+					collectGenericFactoryLocalTypeOverridesFromExpr(init, scope, candidates, mapped);
+				final local = declareLocalName(name, scope);
+				final className = genericFactoryClassNameFromNewExpr(typeHint, init, scope);
+				if (className.length > 0) {
+					candidates.set(local, className);
+					mapped.set(local, new haxe.ds.StringMap<String>());
+				} else {
+					final localType = cppLocalTypeHint(typeHint, init, scope);
+					if (localType.length > 0)
+						scope.localTypes.set(local, localType);
+				}
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectGenericFactoryLocalTypeOverridesFromExpr(expr, scope, candidates, mapped);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function collectGenericFactoryLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<String>,
+			mapped:haxe.ds.StringMap<haxe.ds.StringMap<String>>):Void {
+		switch (expr) {
+			case EBinop("=", EField(EIdent(name), field), rhs) if (candidates.exists(localCppName(name, scope))):
+				collectGenericFactoryLocalTypeOverridesFromExpr(rhs, scope, candidates, mapped);
+				applyGenericFactoryFieldAssignment(scope, localCppName(name, scope), field, rhs, candidates, mapped);
+			case EBinop("=", EArrayAccess(EIdent(name), key), value) if (candidates.exists(localCppName(name, scope))):
+				collectGenericFactoryLocalTypeOverridesFromExpr(key, scope, candidates, mapped);
+				collectGenericFactoryLocalTypeOverridesFromExpr(value, scope, candidates, mapped);
+				applyGenericFactoryArrayAssignment(scope, localCppName(name, scope), key, value, candidates, mapped);
+			case EBinop(_, left, right):
+				collectGenericFactoryLocalTypeOverridesFromExpr(left, scope, candidates, mapped);
+				collectGenericFactoryLocalTypeOverridesFromExpr(right, scope, candidates, mapped);
+			case ECall(callee, args):
+				collectGenericFactoryLocalTypeOverridesFromExpr(callee, scope, candidates, mapped);
+				for (arg in args)
+					collectGenericFactoryLocalTypeOverridesFromExpr(arg, scope, candidates, mapped);
+			case EArrayAccess(array, index):
+				collectGenericFactoryLocalTypeOverridesFromExpr(array, scope, candidates, mapped);
+				collectGenericFactoryLocalTypeOverridesFromExpr(index, scope, candidates, mapped);
+			case EField(receiver, _):
+				collectGenericFactoryLocalTypeOverridesFromExpr(receiver, scope, candidates, mapped);
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectGenericFactoryLocalTypeOverridesFromExpr(element, scope, candidates, mapped);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				collectGenericFactoryLocalTypeOverridesFromExpr(iterable, scope, candidates, mapped);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					if (guardExpr != null)
+						collectGenericFactoryLocalTypeOverridesFromExpr(guardExpr, scope, candidates, mapped);
+					collectGenericFactoryLocalTypeOverridesFromExpr(yieldExpr, scope, candidates, mapped);
+				});
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				collectGenericFactoryLocalTypeOverridesFromExpr(inner, scope, candidates, mapped);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectGenericFactoryLocalTypeOverridesFromExpr(cond, scope, candidates, mapped);
+				collectGenericFactoryLocalTypeOverridesFromExpr(thenExpr, scope, candidates, mapped);
+				collectGenericFactoryLocalTypeOverridesFromExpr(elseExpr, scope, candidates, mapped);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectGenericFactoryLocalTypeOverridesFromExpr(value, scope, candidates, mapped);
+			case ESwitch(scrutinee, _, exprs):
+				collectGenericFactoryLocalTypeOverridesFromExpr(scrutinee, scope, candidates, mapped);
+				for (value in exprs)
+					collectGenericFactoryLocalTypeOverridesFromExpr(value, scope, candidates, mapped);
+			case ELambda(_, body):
+				collectGenericFactoryLocalTypeOverridesFromExpr(body, scope, candidates, mapped);
+			case ENew(_, args):
+				for (arg in args)
+					collectGenericFactoryLocalTypeOverridesFromExpr(arg, scope, candidates, mapped);
+			case _:
+		}
+	}
+
+	static function genericFactoryClassNameFromNewExpr(typeHint:String, init:Null<HxExpr>, scope:CppRenderScope):String {
+		if (StringTools.trim(typeHint == null ? "" : typeHint).length > 0)
+			return "";
+		return switch (init) {
+			case ENew(typePath, args) if (args.length == 0):
+				final className = sanitizeTypePath(typeBaseName(typePath));
+				genericClassTypeParamsForName(className, scope).length > 0 ? className : "";
+			case _:
+				"";
+		};
+	}
+
+	static function applyGenericFactoryFieldAssignment(scope:CppRenderScope, local:String, field:String, rhs:HxExpr, candidates:haxe.ds.StringMap<String>,
+			mapped:haxe.ds.StringMap<haxe.ds.StringMap<String>>):Void {
+		final className = candidates.get(local);
+		final cls = scope == null ? null : scope.classByName.get(className);
+		if (cls == null)
+			return;
+		final wanted = sanitizeIdentifier(field);
+		for (decl in HxClassDecl.getFields(cls)) {
+			if (HxFieldDecl.getIsStatic(decl) || sanitizeIdentifier(HxFieldDecl.getName(decl)) != wanted)
+				continue;
+			unifyGenericFactoryTypeHint(HxFieldDecl.getTypeHint(decl), genericFactoryActualCppType(rhs, scope), genericClassTemplateParams(cls),
+				mapped.get(local), scope);
+			setGenericFactoryLocalTypeOverride(scope, local, className, genericClassTemplateParams(cls), mapped.get(local));
+			return;
+		}
+	}
+
+	static function applyGenericFactoryArrayAssignment(scope:CppRenderScope, local:String, key:HxExpr, value:HxExpr, candidates:haxe.ds.StringMap<String>,
+			mapped:haxe.ds.StringMap<haxe.ds.StringMap<String>>):Void {
+		final className = candidates.get(local);
+		final params = genericClassTypeParamsForName(className, scope);
+		if (params.length < 2)
+			return;
+		final localMapped = mapped.get(local);
+		setGenericFactoryMappedType(localMapped, params[0], genericFactoryActualCppType(key, scope));
+		setGenericFactoryMappedType(localMapped, params[1], genericFactoryActualCppType(value, scope));
+		setGenericFactoryLocalTypeOverride(scope, local, className, params, localMapped);
+	}
+
+	static function unifyGenericFactoryTypeHint(patternHint:String, actualType:String, params:Array<String>, mapped:haxe.ds.StringMap<String>,
+			?scope:CppRenderScope):Void {
+		final pattern = removeTypeHintWhitespace(StringTools.trim(patternHint == null ? "" : patternHint));
+		if (pattern.length == 0 || actualType == null || actualType.length == 0)
+			return;
+		final param = genericTypeParamName(pattern);
+		if (param.length > 0 && params.indexOf(cppTypeParamName(param, scope)) >= 0) {
+			setGenericFactoryMappedType(mapped, cppTypeParamName(param, scope), actualType);
+			return;
+		}
+		final patternArgs = genericTypeHintArgs(pattern);
+		if (patternArgs.length == 0)
+			return;
+		final actualArgs = templateArgsFromExpectedClassType(sanitizeTypePath(typeBaseName(pattern)), actualType);
+		if (actualArgs.length != patternArgs.length)
+			return;
+		for (i in 0...patternArgs.length)
+			unifyGenericFactoryTypeHint(patternArgs[i], actualArgs[i], params, mapped, scope);
+	}
+
+	static function setGenericFactoryMappedType(mapped:haxe.ds.StringMap<String>, param:String, typeName:String):Void {
+		if (mapped == null || param == null || param.length == 0 || typeName == null || typeName.length == 0)
+			return;
+		final clean = sanitizeIdentifier(param);
+		final existing = mapped.get(clean);
+		if (existing == null || existing.length == 0 || existing == typeName)
+			mapped.set(clean, typeName);
+	}
+
+	static function genericFactoryActualCppType(expr:HxExpr, scope:CppRenderScope):String {
+		final explicit = exprCppType(expr, scope);
+		if (explicit.length > 0)
+			return explicit;
+		return inferExprCppType(expr, scope);
+	}
+
+	static function setGenericFactoryLocalTypeOverride(scope:CppRenderScope, local:String, className:String, params:Array<String>,
+			mapped:haxe.ds.StringMap<String>):Void {
+		if (scope == null || local == null || local.length == 0 || className == null || className.length == 0 || params.length == 0)
+			return;
+		final args = new Array<String>();
+		for (param in params) {
+			final value = mapped == null ? null : mapped.get(sanitizeIdentifier(param));
+			if (value == null || value.length == 0)
+				return;
+			args.push(value);
+		}
+		final typeName = "std::shared_ptr<" + className + "<" + args.join(", ") + ">>";
+		final existing = scope.localTypeOverrides.get(local);
+		if (existing != null && existing.length > 0 && existing != typeName)
+			return;
+		scope.localTypeOverrides.set(local, typeName);
+		scope.localTypes.set(local, typeName);
+	}
+
+	static function withGenericFactoryInferenceScope(scope:CppRenderScope, candidates:haxe.ds.StringMap<String>,
+			mapped:haxe.ds.StringMap<haxe.ds.StringMap<String>>, fn:Void->Void):Void {
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalTypeOverrides = copyStringMap(scope.localTypeOverrides);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
+		final savedCandidates = copyStringMap(candidates);
+		final savedMapped = copyNestedStringMap(mapped);
+		fn();
+		scope.localTypes = savedLocalTypes;
+		scope.localTypeOverrides = savedLocalTypeOverrides;
+		scope.localNames = savedLocalNames;
+		scope.localNameCounts = savedLocalNameCounts;
+		restoreStringMap(candidates, savedCandidates);
+		restoreNestedStringMap(mapped, savedMapped);
 	}
 
 	static function collectDynamicLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
@@ -11401,6 +11639,22 @@ class CppTargetCore {
 			for (key in values.keys())
 				out.set(key, values.get(key));
 		return out;
+	}
+
+	static function copyNestedStringMap(values:haxe.ds.StringMap<haxe.ds.StringMap<String>>):haxe.ds.StringMap<haxe.ds.StringMap<String>> {
+		final out = new haxe.ds.StringMap<haxe.ds.StringMap<String>>();
+		if (values != null)
+			for (key in values.keys())
+				out.set(key, copyStringMap(values.get(key)));
+		return out;
+	}
+
+	static function restoreNestedStringMap(target:haxe.ds.StringMap<haxe.ds.StringMap<String>>, saved:haxe.ds.StringMap<haxe.ds.StringMap<String>>):Void {
+		final stale = [for (key in target.keys()) if (!saved.exists(key)) key];
+		for (key in stale)
+			target.remove(key);
+		for (key in saved.keys())
+			target.set(key, copyStringMap(saved.get(key)));
 	}
 
 	static function copyBoolMap(values:haxe.ds.StringMap<Bool>):haxe.ds.StringMap<Bool> {
