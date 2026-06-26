@@ -2022,8 +2022,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new Exception("");}catch(e:Exception){e.stack;}'));
 		assertContains(exceptionStackTry, "throw std::runtime_error(std::string(\"\"));",
 			"Exception stack try/catch raw should preserve the thrown message shape");
-		assertContains(exceptionStackTry, "return std::vector<std::string>{};",
-			"Exception stack try/catch raw should lower to an empty C++ stack vector for the MVP");
+		assertContains(exceptionStackTry, "return CallStack();", "Exception stack try/catch raw should lower to a C++ CallStack value");
 		final valueExceptionStackTry = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new ValueException("");}catch(e:Exception){e.stack;}'));
 		assertContains(valueExceptionStackTry, "throw std::runtime_error(std::string(\"\"));",
@@ -2043,6 +2042,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final genericThrowStackTry = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw value;}catch(e:Exception){e.stack;}'));
 		assertContains(genericThrowStackTry, "throw std::runtime_error(std::string(\"\"));",
 			"Exception stack try/catch raw should support non-constructor throw probes");
+		final stdDowncastExceptionValue = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Std"), "downcast"),
+			[EIdent("e"), EString("Exception")]), (() -> {
+				final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("StdDowncastScope", false, [], []), {
+					names: new StringMap<Bool>(),
+					byName: new StringMap<HxClassDecl>()
+				}, "std::string");
+				scope.localTypes.set("e", "__hxhx_exception_value");
+				scope;
+			})());
+		assertContains(stdDowncastExceptionValue, "__hxhx_stringify(e)", "C++ Std.downcast should compile for target-owned catch values");
+		final stackItemDataFn = new HxFunctionDecl("stackItemData", Public, false, [new HxFunctionArg("item", "StackItem", NoDefault, false, false)],
+			"ItemData", [], "");
+		final stackItemDataOwner = new HxClassDecl("TestExceptions", false, [stackItemDataFn], []);
+		final stackItemDataNames = new StringMap<Bool>();
+		stackItemDataNames.set("TestExceptions", true);
+		stackItemDataNames.set("ItemData", true);
+		final stackItemDataClasses = new StringMap<HxClassDecl>();
+		stackItemDataClasses.set("TestExceptions", stackItemDataOwner);
+		stackItemDataClasses.set("ItemData", new HxClassDecl("ItemData", false, [], []));
+		final stackItemDataLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(stackItemDataFn, stackItemDataOwner, {
+			names: stackItemDataNames,
+			byName: stackItemDataClasses
+		}).join("\n");
+		assertContains(stackItemDataLines, "return nullptr;", "C++ TestExceptions.stackItemData should use a compile-safe default shape");
 		final catchValueTry = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('try{throw new Exception("boom");}catch(e){e;}'));
 		assertContains(catchValueTry, "catch (const std::exception& e) { return std::string(e.what()); }",
@@ -6618,6 +6641,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::cout << (std::string(\"cpp-native:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit println");
 		assertContains(source, "std::cout << (std::string(\"trace:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit trace");
 		assertContains(source, "static std::string __hxhx_stringify(bool value)", "C++ smoke should include target-owned stringify support");
+		assertContains(source, "struct __hxhx_exception_pos_infos", "C++ smoke should include target-owned exception position support");
+		assertContains(source, "std::string argument;", "C++ smoke should include target-owned exception argument support");
 		assertContains(source, "static std::shared_ptr<T> __hxhx_borrowed_shared(T* value)",
 			"C++ smoke should include target-owned borrowed receiver handle support");
 		assertContains(source, "__hxhx_args(argc, argv)", "C++ smoke should emit Sys.args helper call");

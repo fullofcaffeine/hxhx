@@ -773,11 +773,19 @@ class CppTargetCore {
 		out.push("  return value.text;");
 		out.push("}");
 		out.push("");
+		out.push("struct __hxhx_exception_pos_infos {");
+		out.push("  std::string className;");
+		out.push("  std::string methodName;");
+		out.push("  __hxhx_exception_pos_infos(std::string className = std::string(), std::string methodName = std::string()) : className(className), methodName(methodName) {}");
+		out.push("};");
+		out.push("");
 		out.push("struct __hxhx_exception_value {");
 		out.push("  std::string message;");
 		out.push("  __hxhx_dynamic_value value;");
 		out.push("  std::vector<std::string> stack;");
-		out.push("  __hxhx_exception_value(std::string message = std::string()) : message(message), value(message), stack() {}");
+		out.push("  __hxhx_exception_pos_infos posInfos;");
+		out.push("  std::string argument;");
+		out.push("  __hxhx_exception_value(std::string message = std::string()) : message(message), value(message), stack(), posInfos(), argument() {}");
 		out.push("  operator std::string() const { return message; }");
 		out.push("  std::string toString() const { return message; }");
 		out.push("};");
@@ -2860,6 +2868,8 @@ class CppTargetCore {
 			return returnTraced("special_macro_compiler_api", renderMacroCompilerApiShimHelper(fn, owner, classLookup));
 		if (isExceptionCaughtThrownHelper(fn, owner))
 			return returnTraced("special_exception_caught_thrown", renderExceptionCaughtThrownHelper(fn, owner, classLookup));
+		if (isTestExceptionsStackItemDataHelper(fn, owner))
+			return returnTraced("special_test_exceptions_stack_item_data", renderTestExceptionsStackItemDataHelper(fn, owner, classLookup));
 		if (isUtestRunnerAddCasesHelper(fn, owner))
 			return returnTraced("special_utest_runner_add_cases", renderUtestRunnerAddCasesHelper(fn, owner, classLookup));
 		if (isUtestCallbackHelper(fn, owner))
@@ -3308,6 +3318,28 @@ class CppTargetCore {
 			+ renderFunctionArgs(args, scope)
 			+ ") {",
 			"    return std::make_shared<Exception>(" + valueName + ");",
+			"  }"
+		];
+	}
+
+	static function isTestExceptionsStackItemDataHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "TestExceptions")
+			return false;
+		return !HxFunctionDecl.getIsStatic(fn) && sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "stackItemData";
+	}
+
+	static function renderTestExceptionsStackItemDataHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		return ["  "
+			+ returnType
+			+ " "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
+			+ ") {",
+			"    return " + cppDefaultValue(returnType, scope) + ";",
 			"  }"
 		];
 	}
@@ -5947,6 +5979,8 @@ class CppTargetCore {
 				stringExpr(args[0], scope);
 			case ECall(EField(receiver, "parseInt"), args) if (isStdStaticReceiver(receiver) && args.length == 1):
 				"__hxhx_parse_int(" + stringExpr(args[0], scope) + ")";
+			case ECall(EField(receiver, "downcast"), args) if (isStdStaticReceiver(receiver) && args.length == 2):
+				"__hxhx_stringify(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(ECall(EField(receiver, "iterator"), []), "hasNext"), []) if (isCppVectorType(exprCppType(receiver, scope))):
 				"(!" + renderExpr(receiver, scope) + ".empty())";
 			case ECall(EField(_, "flatten"), [ECall(EField(_, "map"), [iterable, mapper])]):
@@ -6636,6 +6670,8 @@ class CppTargetCore {
 			return reflectCompareExpr(args, scope);
 		if (isStdStaticReceiver(receiver) && method == "parseInt" && args.length == 1)
 			return "__hxhx_parse_int(" + stringExpr(args[0], scope) + ")";
+		if (isStdStaticReceiver(receiver) && method == "downcast" && args.length == 2)
+			return "__hxhx_stringify(" + renderExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "field" && args.length == 2)
 			return "__hxhx_reflect_field(" + renderExpr(args[0], scope) + ", " + stringExpr(args[1], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "setField" && args.length == 3)
@@ -7661,6 +7697,8 @@ class CppTargetCore {
 				"std::string";
 			case ECall(EField(receiver, "parseInt"), args) if (isStdStaticReceiver(receiver) && args.length == 1):
 				"std::optional<int>";
+			case ECall(EField(receiver, "downcast"), args) if (isStdStaticReceiver(receiver) && args.length == 2):
+				"std::string";
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
 				"std::any";
 			case ECall(EIdent(name), args) if (bytesFastGetExpr(name, args, scope) != null):
@@ -8397,6 +8435,8 @@ class CppTargetCore {
 				"std::string";
 			case ECall(EField(receiver, "parseInt"), args) if (isStdStaticReceiver(receiver) && args.length == 1):
 				"std::optional<int>";
+			case ECall(EField(receiver, "downcast"), args) if (isStdStaticReceiver(receiver) && args.length == 2):
+				"std::string";
 			case ENew(typePath, _) if (isStdArrayTypePath(typePath)):
 				isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope);
 			case ENew(typePath, _):
@@ -8614,7 +8654,7 @@ class CppTargetCore {
 		if (exceptionStackMessage != null) {
 			return "([&]() { try { throw std::runtime_error(std::string("
 				+ quoteString(exceptionStackMessage)
-				+ ")); return std::vector<std::string>{}; } catch (...) { return std::vector<std::string>{}; } })()";
+				+ ")); return CallStack(); } catch (...) { return CallStack(); } })()";
 		}
 		final exceptionValueMessage = parseExceptionCatchValueTryRaw(raw);
 		if (exceptionValueMessage != null) {
