@@ -1119,6 +1119,10 @@ class CppTargetCore {
 					final scope = renderScope(cls, classLookup, "auto");
 					prepareAnonCollectFunctionScope(scope, fn);
 					addTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope);
+					final knownReturn = knownStdlibMethodReturnCppType(className, HxFunctionDecl.getName(fn), HxFunctionDecl.getReturnTypeHint(fn), scope,
+						classLookup);
+					if (isCppAnonStructType(knownReturn) && scope.anonStructs.exists(knownReturn))
+						addStruct(scope.anonStructs.get(knownReturn));
 					for (arg in HxFunctionDecl.getArgs(fn))
 						addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
 					for (stmt in HxFunctionDecl.getBody(fn))
@@ -2597,6 +2601,8 @@ class CppTargetCore {
 		}
 		if (owner == "Bytes" && method == "fill")
 			return "void";
+		if (owner == "EReg" && method == "matchedPos")
+			return cppTypeHint("{pos:Int,len:Int}", scope, classLookup);
 		return StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 	}
 
@@ -5308,7 +5314,12 @@ class CppTargetCore {
 			case _ if (structuralTypedefClassForCppType(returnType, scope) != null):
 				"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
 			case _ if (isCppAnonStructType(returnType)):
-				"return " + renderExpr(expr, scope) + ";";
+				switch (expr) {
+					case ENull:
+						"return " + cppDefaultValue(returnType, scope) + ";";
+					case _:
+						"return " + renderExpr(expr, scope) + ";";
+				}
 			case _ if (isScopedGenericCppType(returnType, scope)):
 				switch (expr) {
 					case ENull:
@@ -11733,6 +11744,12 @@ class CppTargetCore {
 		if (isStringIteratorHelper(ownerName))
 			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
 				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+		if (ownerName == "EReg") {
+			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
+				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+			if (knownReturn.length > 0)
+				return knownReturn;
+		}
 		if (isDynamicLikeTypeHint(raw) && functionReturnsEnumMetadataCtor(fn))
 			return "std::string";
 		final returnLookup = {names: classNamesFromByName(classByName), byName: classByName};

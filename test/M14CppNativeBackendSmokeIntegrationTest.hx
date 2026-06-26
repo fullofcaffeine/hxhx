@@ -7229,6 +7229,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				.join("\n");
 		assertContains(parsedERegMapLines, "auto f = [&](std::shared_ptr<EReg> x) -> std::string { return x->matchedLeft(); };",
 			"C++ callable locals passed to typed instance methods should adopt the expected pointer function type");
+		final parsedERegMatchedPosModule = new HxParser("class EReg { public function new(pattern:String, options:String) {} public function matchedPos():{pos:Int, len:Int} return null; } class ERegMatchedPosLike { public static function main():Int { var r = new EReg(\"a\", \"g\"); return r.matchedPos().pos + r.matchedPos().len; } }")
+			.parseModule("ERegMatchedPosLike");
+		final parsedERegMatchedPosNames = new StringMap<Bool>();
+		final parsedERegMatchedPosClasses = new StringMap<HxClassDecl>();
+		for (cls in HxModuleDecl.getClasses(parsedERegMatchedPosModule)) {
+			parsedERegMatchedPosNames.set(HxClassDecl.getName(cls), true);
+			parsedERegMatchedPosClasses.set(HxClassDecl.getName(cls), cls);
+		}
+		final parsedERegMatchedPosLookup = {names: parsedERegMatchedPosNames, byName: parsedERegMatchedPosClasses};
+		final parsedERegMatchedPosStruct = @:privateAccess
+			backend.cpp.CppTargetCore.renderAnonStructs(@:privateAccess
+				backend.cpp.CppTargetCore.collectAnonStructs(new GenIrProgram([typedSyntheticModule("ERegMatchedPosLike.hx", parsedERegMatchedPosModule)],
+					false),
+					parsedERegMatchedPosLookup)).join("\n");
+		final parsedERegMatchedPosERegLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedERegMatchedPosClasses.get("EReg"), parsedERegMatchedPosLookup).join("\n");
+		final parsedERegMatchedPosMainLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedERegMatchedPosClasses.get("ERegMatchedPosLike"), parsedERegMatchedPosLookup).join("\n");
+		assertContains(parsedERegMatchedPosStruct, "struct __hxhx_anon_pos_int__len_int_ {",
+			"C++ parsed EReg.matchedPos support should collect the structural pos/len return type");
+		assertContains(parsedERegMatchedPosERegLines, "__hxhx_anon_pos_int__len_int_ matchedPos() {",
+			"C++ parsed EReg.matchedPos should expose a concrete structural return type");
+		assertContains(parsedERegMatchedPosERegLines, "return __hxhx_anon_pos_int__len_int_{};",
+			"C++ parsed EReg.matchedPos null fallback should return a structural default instead of nullptr");
+		assertContains(parsedERegMatchedPosMainLines, "return static_cast<int>(((r->matchedPos().pos) + (r->matchedPos().len)));",
+			"C++ parsed EReg.matchedPos field reads should compile against the structural return value");
 		assertContains(source, "auto macroQuote = __hxhx_macro_expr(", "C++ smoke should lower macro quotes to structural macro objects");
 		assertContains(source, "__hxhx_macro_enum(\"EParenthesis\"", "C++ smoke should preserve macro quote wrappers structurally");
 		assertContains(source, "auto macroType = std::string(\"X -> Y\");", "C++ smoke should lower macro type quotes to stable text");
