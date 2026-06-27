@@ -6478,6 +6478,8 @@ class CppTargetCore {
 				renderExpr(args[2], scope);
 			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
 				"__hxhx_throw(" + renderExpr(args[0], scope) + ")";
+			case ECall(EIdent("__hxhx_for_in"), [iterable, bodyExpr, continuation]):
+				forInExpr(iterable, bodyExpr, continuation, scope);
 			case ECall(EEnumValue(name), args):
 				enumCtorExpr(name, args, scope);
 			case ECall(ECall(loadCallee, loadArgs), callArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
@@ -10593,6 +10595,8 @@ class CppTargetCore {
 	}
 
 	static function switchBranchExpr(expr:HxExpr, typeName:String, ?scope:CppRenderScope):String {
+		if (typeName == "std::nullptr_t")
+			return "([&]() { " + renderExpr(expr, scope) + "; return nullptr; })()";
 		return typeName == "std::string" ? stringExpr(expr, scope) : valueExprForExpectedType(expr, typeName, scope);
 	}
 
@@ -10638,6 +10642,8 @@ class CppTargetCore {
 				"0.0";
 			case "bool":
 				"false";
+			case "std::nullptr_t":
+				"nullptr";
 			case _:
 				cppDefaultValue(typeName, scope);
 		};
@@ -11048,6 +11054,79 @@ class CppTargetCore {
 		return "[&](" + params.join(", ") + ") { return " + renderExpr(body, scope) + "; }";
 	}
 
+	static function forInExpr(iterable:HxExpr, bodyExpr:HxExpr, continuation:HxExpr, ?scope:CppRenderScope):String {
+		return switch (bodyExpr) {
+			case ELambda(args, body) if (args.length == 1):
+				final local = sanitizeIdentifier(args[0]);
+				final iteratorElementType = iteratorProtocolElementType(iterable, scope);
+				final loopElementType = iteratorElementType.length > 0 ? iteratorElementType : iterableElementType(iterable, scope);
+				final out = ["([&]() -> " + forInExprResultType(continuation, scope) + " {"];
+				if (iteratorElementType.length > 0) {
+					final iteratorLocal = "__hxhx_iter_" + local;
+					final access = isCppReferenceType(exprCppType(iterable, scope)) ? "->" : ".";
+					out.push("  auto " + iteratorLocal + " = " + renderExpr(iterable, scope) + ";");
+					out.push("  while (" + iteratorLocal + access + "hasNext()) {");
+					out.push("    auto " + local + " = " + iteratorLocal + access + "next();");
+				} else
+					switch (iterable) {
+						case ERange(start, end):
+							out.push("  for (int " + local + " = " + renderExpr(start, scope) + "; " + local + " < " + renderExpr(end, scope) + "; " + local
+								+ "++) {");
+						case _:
+							out.push("  for (auto " + local + " : " + renderExpr(iterable, scope) + ") {");
+					}
+				withScopedLocal(scope, local, loopElementType, () -> {
+					for (line in exprAsStatementLines(body, "    ", scope))
+						out.push(line);
+				});
+				out.push("  }");
+				for (line in forInContinuationLines(continuation, "  ", scope))
+					out.push(line);
+				out.push("})()");
+				out.join("\n");
+			case _:
+				directCallExpr("__hxhx_for_in", [iterable, bodyExpr, continuation], scope);
+		};
+	}
+
+	static function forInExprResultType(continuation:HxExpr, ?scope:CppRenderScope):String {
+		return switch (continuation) {
+			case ENull:
+				"std::nullptr_t";
+			case _ if (exprReturnsVoid(continuation, scope)):
+				"std::nullptr_t";
+			case _:
+				final explicit = exprCppType(continuation, scope);
+				if (explicit.length > 0 && explicit != "void") explicit; else {
+					final inferred = inferExprCppType(continuation, scope);
+					inferred.length > 0
+					&& inferred != "void" ? inferred : "auto";
+				}
+		};
+	}
+
+	static function forInContinuationLines(continuation:HxExpr, indent:String, ?scope:CppRenderScope):Array<String> {
+		return switch (continuation) {
+			case ENull:
+				[indent + "return nullptr;"];
+			case _ if (exprReturnsVoid(continuation, scope)):
+				exprAsStatementLines(continuation, indent, scope).concat([indent + "return nullptr;"]);
+			case _:
+				[indent + "return " + renderExpr(continuation, scope) + ";"];
+		};
+	}
+
+	static function exprAsStatementLines(expr:HxExpr, indent:String, ?scope:CppRenderScope):Array<String> {
+		return switch (expr) {
+			case ECall(EIdent("__hxhx_for_in"), [iterable, bodyExpr, continuation]):
+				[indent + forInExpr(iterable, bodyExpr, continuation, scope) + ";"];
+			case ESwitch(scrutinee, patterns, exprs):
+				[indent + switchExpr(scrutinee, patterns, exprs, scope, "std::nullptr_t") + ";"];
+			case _:
+				[indent + renderExpr(expr, scope) + ";"];
+		};
+	}
+
 	static function voidSequenceLambdaCallExpr(lambdaArgs:Array<String>, body:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
 		if (args.length == 0 || lambdaArgs.length != args.length)
 			return null;
@@ -11074,7 +11153,12 @@ class CppTargetCore {
 			return true;
 		if (inferExprCppType(expr, scope) == "void")
 			return true;
-		return knownVoidSequenceCall(expr);
+		return switch (expr) {
+			case ECall(ELambda(_, body), _):
+				exprReturnsVoid(body, scope);
+			case _:
+				knownVoidSequenceCall(expr);
+		};
 	}
 
 	static function knownVoidSequenceCall(expr:HxExpr):Bool {

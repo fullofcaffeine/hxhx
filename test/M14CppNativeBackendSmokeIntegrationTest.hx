@@ -1814,7 +1814,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"      }",
 			"    };",
 			"    d.onError = function(e) {};",
-			"    d.onBytes = function(echoData) { echoData.size(); echoData.get(0); };",
+			"    d.onBytes = function(echoData) {",
+			"      var total = 0;",
+			"      for (i in 0...echoData.size()) {",
+			"        total += echoData.get(i);",
+			"      }",
+			"      noAssert();",
+			"    };",
 			"    var emptyOnData:String->Void = function(data) {};",
 			"    Reflect.compareMethods(onData, emptyOnData);",
 			"    d.setPostData(srcStr);",
@@ -5500,6 +5506,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("fromKnownVoidHelpers", Public, true, [], "Void", [
 				SExpr(ECall(ELambda(["__hxhx_lambda_seq_0"], ENull), [ECall(EIdent("assert"), [EString("ready")])]), HxPos.unknown()),
 				SExpr(ECall(ELambda(["__hxhx_lambda_seq_1"], ENull), [ECall(EIdent("unspec"), [ELambda([], ENull)])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("fromForInSwitchStatement", Public, true, [], "Void", [
+				SExpr(ECall(EIdent("__hxhx_for_in"), [
+					ERange(EInt(0), EInt(2)),
+					ELambda(["i"], ESwitch(EIdent("i"), [PInt(0), PWildcard], [ECall(EIdent("assert"), [EString("bad")]), EInt(0)])),
+					ECall(EIdent("noAssert"), [])
+				]), HxPos.unknown())
 			], "")
 		]);
 		final sequenceNames = new StringMap<Bool>();
@@ -5533,6 +5546,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ sequence lambdas should lower unknown unspec helper calls without passing void through auto parameters");
 		assertTrue(knownVoidSequenceLines.indexOf("auto __hxhx_lambda_seq_") < 0,
 			"C++ known void helper sequence lambdas should not pass void expressions as auto parameters");
+		final forInSwitchLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(sequenceOwner)[5], sequenceOwner, {
+			names: sequenceNames,
+			byName: sequenceClasses
+		}).join("\n");
+		assertContains(forInSwitchLines, "([&]() -> std::nullptr_t {", "C++ expression-position for-in markers should lower to statement IIFEs");
+		assertContains(forInSwitchLines, "for (int i = 0; i < 2; i++) {", "C++ expression-position for-in lowering should emit the loop directly");
+		assertContains(forInSwitchLines, "([&]() -> std::nullptr_t {",
+			"C++ statement-context switches inside expression for-in bodies should discard branch values");
+		assertTrue(forInSwitchLines.indexOf("__hxhx_for_in") < 0, "C++ expression-position for-in markers should not leak into generated source");
+		assertTrue(forInSwitchLines.indexOf("return 0;") < 0, "C++ statement-context switch branches should not return unused int values");
 		final ignoredFixture = new HxClassDecl("IgnoredFixture", false, [
 			new HxFunctionDecl("NotIgnored", Public, true, [], "IgnoredFixture", [SReturn(ENew("IgnoredFixture", [ENull]), HxPos.unknown())], ""),
 			new HxFunctionDecl("get_isIgnored", Public, false, [], "Bool", [SReturn(EBinop("!=", EThis, ENull), HxPos.unknown())], ""),
@@ -7940,6 +7963,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(mainLoopSource, "(d->onError) = [&](std::string e)", "C++ generated code should assign Http.onError callbacks");
 		assertContains(mainLoopSource, "(d->onBytes) = [&](__hxhx_http_bytes echoData)",
 			"C++ generated code should assign Http.onBytes callbacks with the target-owned bytes payload");
+		assertContains(mainLoopSource, "for (int i = 0; i < echoData.size(); i++) {",
+			"C++ expression-position for-in markers should lower to loops inside Http.onBytes callbacks");
+		assertContains(mainLoopSource, "(total += echoData.get(i));", "C++ expression-position for-in lowering should preserve callback loop bodies");
+		assertTrue(mainLoopSource.indexOf("__hxhx_for_in") < 0, "C++ Http callback loops should not leak internal for-in markers");
 		assertContains(mainLoopSource, "__hxhx_reflect_compare_methods([&](auto data) { return onData(data); }, emptyOnData)",
 			"C++ Reflect.compareMethods should lower same-owner method values before entering target-owned support");
 		assertTrue(mainLoopSource.indexOf("Reflect::compareMethods") < 0, "C++ Reflect.compareMethods should not emit an undeclared static helper call");
