@@ -669,6 +669,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    var projected = pair.modulus.low + n.high;",
 			"    return a.isNeg() || projected == 0;",
 			"  }",
+			"  public static function localReceivers():String {",
+			"    var a = Int64.make(1, 2);",
+			"    var b = Int64.make(3, 4);",
+			"    var c = a.add(b);",
+			"    var projected = (-c).low + a.high;",
+			"    a.compare(b);",
+			"    return c.toStr() + projected;",
+			"  }",
 			"}",
 			"class StringIteratorUnicode {",
 			"  var offset = 0;",
@@ -7561,12 +7569,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower Int64.low projection through divMod aggregate fields");
 		assertContains(source, "static_cast<int>((static_cast<unsigned long long>(n.value()) >> 32) & 0xFFFFFFFFULL)",
 			"C++ smoke should lower Int64.high projection through nullable Int64 storage");
+		assertContains(source, "auto c = (a + b);", "C++ smoke should preserve primitive Int64 type tracking through unannotated local Int64 arithmetic");
+		assertContains(source, "static_cast<unsigned long long>((-c))",
+			"C++ smoke should lower Int64.low projection through unannotated local Int64 receivers");
+		assertContains(source, "static_cast<unsigned long long>(a) >> 32",
+			"C++ smoke should lower Int64.high projection through unannotated local Int64 receivers");
 		assertContains(source, "(a < 0)", "C++ smoke should lower Int64.isNeg instance calls on primitive values");
 		assertTrue(source.indexOf("struct Int64Helper") < source.indexOf("struct CppInt64StaticUseLike"),
 			"C++ smoke should order Int64Helper before helper classes that call Int64.parseString/fromFloat");
 		assertTrue(source.indexOf("Int64::ofInt") < 0, "C++ smoke should not emit incomplete Int64 static helper calls");
 		assertTrue(source.indexOf(".divMod(") < 0, "C++ smoke should not emit raw Int64.divMod member calls on primitive values");
 		assertTrue(source.indexOf(".isNeg()") < 0, "C++ smoke should not emit raw Int64.isNeg member calls on primitive values");
+		assertTrue(source.indexOf("a.compare(b)") < 0, "C++ smoke should not emit raw Int64.compare member calls on local primitive values");
+		assertTrue(source.indexOf("(-c).low") < 0, "C++ smoke should not emit raw Int64.low projection on local primitive values");
+		assertTrue(source.indexOf("a.high") < 0, "C++ smoke should not emit raw Int64.high projection on local primitive values");
 		assertTrue(source.indexOf(".toInt()") < 0, "C++ smoke should not emit raw Int64.toInt member calls on primitive values");
 		assertTrue(source.indexOf(".toStr()") < 0, "C++ smoke should not emit raw Int64.toStr member calls on primitive values");
 		assertContains(source, "auto __hxhx_iter_code = std::make_shared<StringIteratorUnicode>(s);",

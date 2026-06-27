@@ -8562,10 +8562,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "unsafeGet"), args) if (args.length == 2 && isCppNativeArrayReceiver(receiver)):
 				cppVectorElementType(exprCppType(args[0], scope));
-			case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
-				int64DivModStruct().name;
-			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
-				"int";
+			case ECall(EField(receiver, method), args) if (int64StaticOrHelperCallReturnCppType(receiver, method, args.length).length > 0):
+				int64StaticOrHelperCallReturnCppType(receiver, method, args.length);
 			case ECall(EField(receiver, method), args) if (int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope).length > 0):
 				int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope);
 			case ECall(EIdent("__hxhx_int_literal"), [_, EString(_)]):
@@ -9296,6 +9294,17 @@ class CppTargetCore {
 		};
 	}
 
+	static function isInt64HelperReceiver(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EIdent("Int64Helper"):
+				true;
+			case EField(EIdent("haxe"), "Int64Helper"):
+				true;
+			case _:
+				false;
+		};
+	}
+
 	static function scopeHasClass(?scope:CppRenderScope, className:String):Bool {
 		return scope != null && className != null && scope.classNames.exists(className);
 	}
@@ -9367,10 +9376,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
 				nativeArrayVectorType(scope);
-			case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
-				int64DivModStruct().name;
-			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
-				"int";
+			case ECall(EField(receiver, method), args) if (int64StaticOrHelperCallReturnCppType(receiver, method, args.length).length > 0):
+				int64StaticOrHelperCallReturnCppType(receiver, method, args.length);
 			case ECall(EField(receiver, method), args) if (int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope).length > 0):
 				int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope);
 			case ECall(EIdent("__hxhx_int_literal"), [_, EString(_)]):
@@ -11060,6 +11067,21 @@ class CppTargetCore {
 		return int64StaticCallReturnCppType(normalizeInt64Method(method), argCount);
 	}
 
+	static function int64StaticOrHelperCallReturnCppType(receiver:HxExpr, method:String, argCount:Int):String {
+		final clean = normalizeInt64Method(method);
+		if (isInt64StaticReceiver(receiver))
+			return int64StaticCallReturnCppType(clean, argCount);
+		if (isInt64HelperReceiver(receiver)) {
+			return switch (clean) {
+				case "parseString" | "fromFloat" if (argCount == 1):
+					"long long";
+				case _:
+					"";
+			};
+		}
+		return "";
+	}
+
 	static function int64StaticCallReturnCppType(method:String, argCount:Int):String {
 		return switch (method) {
 			case "ofInt" | "parseString" | "fromFloat" | "neg" if (argCount == 1):
@@ -11097,10 +11119,8 @@ class CppTargetCore {
 							case _:
 								false;
 						}
-					case EField(receiver, method) if (isInt64StaticReceiver(receiver)):
-						int64StaticCallReturnCppType(normalizeInt64Method(method), args.length) == "long long";
-					case EField(receiver, method):
-						int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope) == "long long";
+					case EField(receiver, method): int64StaticOrHelperCallReturnCppType(receiver, method,
+							args.length) == "long long" || int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope) == "long long";
 					case EIdent(name): int64ImportedStaticCallReturnCppType(name,
 							args.length) == "long long" && currentOrInheritedOwnerMethodOwner(name, scope) == null;
 					case _:
