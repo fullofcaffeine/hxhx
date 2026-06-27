@@ -12562,7 +12562,7 @@ and valueExprForExpectedType = fun expr expectedType scope -> try let __fallback
                 let anonStructValue = (anonStructValueExprForExpectedType (Obj.magic expr) (expectedType : string) scope : string) in (
                   ignore (if anonStructValue != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (anonStructValue : string))) else ());
                   let optionalInner = (cppOptionalInnerType (exprCppType (Obj.magic expr) scope : string) : string) in (
-                    ignore (if HxString.length optionalInner > 0 && HxString.equals optionalInner expectedType then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (renderExpr (Obj.magic expr) scope) ^ ".value_or(") ^ HxString.toStdString (cppDefaultValue (expectedType : string) scope)) ^ ")" : string))) else ());
+                    ignore (if HxString.length optionalInner > 0 && HxString.equals optionalInner expectedType then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (optionalStorageExpr (Obj.magic expr) scope) ^ ".value_or(") ^ HxString.toStdString (cppDefaultValue (expectedType : string) scope)) ^ ")" : string))) else ());
                     ignore (match expr with
                       | HxExpr.ENull -> ignore ((
                         ignore (if isCppOptionalType (expectedType : string) then raise (HxRuntime.Hx_return (Obj.repr ("std::nullopt" : string))) else ());

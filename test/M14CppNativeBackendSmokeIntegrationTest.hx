@@ -833,8 +833,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"}",
 			"class JsonPrinterLike {",
 			"  var replacer:String->String->String;",
-			"  public function new(replacer:String->String->String) {",
+			"  var indent:String;",
+			"  public function new(replacer:String->String->String, space:String) {",
 			"    this.replacer = replacer;",
+			"    this.indent = space;",
+			"  }",
+			"  public static function print(o:String, ?replacer:String->String->String, ?space:String):String {",
+			"    var printer = new JsonPrinterLike(replacer, space);",
+			"    printer.write(\"\", o);",
+			"    return printer.indent;",
 			"  }",
 			"  function add(s:String):Void {}",
 			"  function quote(s:String):Void {}",
@@ -6876,6 +6883,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should not assign std::optional<int> directly to int locals");
 		assertContains(source, "std::function<std::string(std::string, std::string)> replacer = nullptr;",
 			"C++ smoke should preserve JsonPrinter-shaped replacer callback signatures");
+		assertContains(source, "std::make_shared<JsonPrinterLike>(replacer.value_or(nullptr), space.value())",
+			"C++ smoke should pass optional JsonPrinter function args through optional storage defaults");
+		assertTrue(source.indexOf("replacer.value().value_or(nullptr)") < 0, "C++ smoke should not call value_or on an unwrapped optional function value");
 		assertContains(source, "void write(std::string k, std::any v)", "C++ smoke should keep reassigned JsonPrinter Dynamic parameters erased");
 		assertContains(source, "v = valueLike();", "C++ smoke should keep JsonPrinter Dynamic parameter reassignment erased");
 		assertContains(source, "v = replacer(k, __hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic when calling string-shaped function values");

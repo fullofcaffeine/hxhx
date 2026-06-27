@@ -6082,7 +6082,7 @@ class CppTargetCore {
 			return anonStructValue;
 		final optionalInner = cppOptionalInnerType(exprCppType(expr, scope));
 		if (optionalInner.length > 0 && optionalInner == expectedType)
-			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
+			return optionalStorageExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
 		switch (expr) {
 			case ENull:
 				if (isCppOptionalType(expectedType))
