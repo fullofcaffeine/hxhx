@@ -2786,6 +2786,20 @@ class CppTargetCore {
 		return "";
 	}
 
+	static function cppPreludeMethodParamTypes(className:String, methodName:String):Array<String> {
+		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
+		if (owner == "Timer" && method == "delay")
+			return ["std::function<void()>", "double"];
+		if (owner == "MainLoop" && method == "add")
+			return ["std::function<void()>", "int"];
+		if (owner == "EntryPoint" && (method == "runInMainThread" || method == "addThread"))
+			return ["std::function<void()>"];
+		if (owner == "Http" && method == "setPostData")
+			return ["std::string"];
+		return [];
+	}
+
 	static function isStringIteratorHelper(className:String):Bool {
 		return className == "StringIterator"
 			|| className == "StringIteratorUnicode"
@@ -6115,6 +6129,9 @@ class CppTargetCore {
 			case ESwitch(scrutinee, patterns, exprs):
 				return switchExpr(scrutinee, patterns, exprs, scope, expectedType);
 			case ECall(ELambda(lambdaArgs, body), args):
+				final sequenceCall = voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope);
+				if (sequenceCall != null)
+					return sequenceCall;
 				return "("
 					+ lambdaExprWithArgTypes(lambdaArgs, body, [], scope, expectedType)
 					+ ")("
@@ -6154,6 +6171,9 @@ class CppTargetCore {
 			final optionalLambda = optionalLambdaExprForExpectedFunction(expr, expectedType, scope);
 			if (optionalLambda != null)
 				return optionalLambda;
+			final boundMethodValue = boundMethodValueExprForExpectedFunction(expr, expectedType, scope);
+			if (boundMethodValue != null)
+				return boundMethodValue;
 			final methodValue = methodValueExprForExpectedFunction(expr, expectedType, scope);
 			if (methodValue != null)
 				return methodValue;
@@ -7214,6 +7234,11 @@ class CppTargetCore {
 	static function fieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final receiverTypeName = staticReceiverClassName(receiver, scope);
 		final receiverCppType = exprCppType(receiver, scope);
+		if (sanitizeIdentifier(method) == "bind") {
+			final boundMethod = boundMethodValueExpr(ECall(EField(receiver, method), args), scope);
+			if (boundMethod != null)
+				return boundMethod;
+		}
 		final renderedArgs = renderFieldCallArgs(receiverCppType, method, args, scope).join(", ");
 		final primitiveAbstractCall = primitiveBackedAbstractMethodCallExpr(receiver, method, args, scope);
 		if (primitiveAbstractCall != null)
@@ -7334,6 +7359,8 @@ class CppTargetCore {
 			return "__hxhx_join(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "compare")
 			return reflectCompareExpr(args, scope);
+		if (isReflectStaticReceiver(receiver) && method == "compareMethods" && args.length == 2)
+			return reflectCompareMethodsExpr(args, scope);
 		if (isStdStaticReceiver(receiver) && method == "parseInt" && args.length == 1)
 			return "__hxhx_parse_int(" + stringExpr(args[0], scope) + ")";
 		if (isStdStaticReceiver(receiver) && method == "downcast" && args.length == 2)
@@ -7769,6 +7796,48 @@ class CppTargetCore {
 		return "[](auto left, auto right) { return __hxhx_compare(left, right); }";
 	}
 
+	static function reflectCompareMethodsExpr(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		return "__hxhx_reflect_compare_methods("
+			+ reflectCompareMethodArgExpr(args[0], scope)
+			+ ", "
+			+ reflectCompareMethodArgExpr(args[1], scope)
+			+ ")";
+	}
+
+	static function reflectCompareMethodArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final sameOwner = sameOwnerMethodValueExpr(expr, scope);
+		if (sameOwner != null)
+			return sameOwner;
+		final instance = instanceMethodValueExpr(expr, scope);
+		return instance == null ? renderExpr(expr, scope) : instance;
+	}
+
+	static function sameOwnerMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		return switch (expr) {
+			case EIdent(name):
+				final fn = currentOwnerMethod(name, scope);
+				if (fn == null) null; else {final names = [
+					for (arg in HxFunctionDecl.getArgs(fn))
+						sanitizeIdentifier(HxFunctionArg.getName(arg))
+				];
+					final params = [for (paramName in names) "auto " + paramName];
+					final target = HxFunctionDecl.getIsStatic(fn) ? "" : "this->";
+					"[&]("
+					+ params.join(", ")
+					+ ") { return "
+					+ target
+					+ sanitizeIdentifier(name)
+					+ "("
+					+ names.join(", ")
+					+ "); }";
+				}
+			case _:
+				null;
+		};
+	}
+
 	static function reflectCompareArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		final typeName = inferExprCppType(expr, scope);
 		return typeName == "std::string" || isStringLike(expr) ? stringExpr(expr, scope) : renderExpr(expr, scope);
@@ -7864,12 +7933,24 @@ class CppTargetCore {
 	}
 
 	static function renderClassMethodCallArgs(className:String, methodName:String, wantStatic:Bool, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		final preludeParamTypes = cppPreludeMethodParamTypes(className, methodName);
+		if (preludeParamTypes.length > 0)
+			return renderKnownCppParamCallArgs(preludeParamTypes, args, scope);
 		final fn = classMethodDecl(className, methodName, wantStatic, scope);
 		if (fn == null)
 			return renderSimpleCallArgs(args, scope);
 		final owner = scope == null ? null : scope.classByName.get(className);
 		final paramTypes = owner == null ? null : inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
 		return renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, paramTypes);
+	}
+
+	static function renderKnownCppParamCallArgs(paramTypes:Array<String>, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		final out = new Array<String>();
+		for (i in 0...args.length) {
+			final expected = i < paramTypes.length ? paramTypes[i] : "";
+			out.push(expected.length > 0 ? valueExprForExpectedType(args[i], expected, scope) : renderExpr(args[i], scope));
+		}
+		return out;
 	}
 
 	static function renderInstanceMethodCallArgs(receiverCppType:String, methodName:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
@@ -10973,15 +11054,46 @@ class CppTargetCore {
 		for (argName in lambdaArgs)
 			if (!StringTools.startsWith(sanitizeIdentifier(argName), "__hxhx_lambda_seq_"))
 				return null;
+		for (arg in args)
+			if (!exprReturnsVoid(arg, scope))
+				return null;
+		final statements = new Array<String>();
+		for (arg in args)
+			statements.push(renderExpr(arg, scope) + ";");
 		return switch (body) {
 			case ENull:
-				final statements = new Array<String>();
-				for (arg in args) {
-					statements.push(renderExpr(arg, scope) + ";");
-				}
 				"([&]() { " + statements.join(" ") + " return nullptr; })()";
 			case _:
-				null;
+				"([&]() { " + statements.join(" ") + " return " + renderExpr(body, scope) + "; })()";
+		};
+	}
+
+	static function exprReturnsVoid(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		final explicit = exprCppType(expr, scope);
+		if (explicit == "void")
+			return true;
+		if (inferExprCppType(expr, scope) == "void")
+			return true;
+		return knownVoidSequenceCall(expr);
+	}
+
+	static function knownVoidSequenceCall(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ECall(EIdent(name), _):
+				knownVoidSequenceCallName(name);
+			case ECall(EField(_, method), _):
+				knownVoidSequenceCallName(method);
+			case _:
+				false;
+		};
+	}
+
+	static function knownVoidSequenceCallName(name:String):Bool {
+		return switch (sanitizeIdentifier(name == null ? "" : name)) {
+			case "eq" | "feq" | "aeq" | "t" | "f" | "assert" | "exc" | "unspec" | "allow" | "noAssert" | "hf" | "nhf" | "hsf" | "nhsf":
+				true;
+			case _:
+				false;
 		};
 	}
 
@@ -10997,6 +11109,10 @@ class CppTargetCore {
 			case _:
 				null;
 		};
+	}
+
+	static function boundMethodValueExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		return boundMethodValueExprWithExpectedType(expr, expectedType, scope);
 	}
 
 	static function lambdaExprForExpectedFunction(args:Array<String>, body:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
@@ -11085,7 +11201,7 @@ class CppTargetCore {
 		return switch (expr) {
 			case EIdent(name):
 				final fn = currentOwnerMethod(name, scope);
-				if (fn == null) null; else typedMethodValueLambda("this->", sanitizeIdentifier(name), fn, expectedType);
+				if (fn == null) null; else typedMethodValueLambda(HxFunctionDecl.getIsStatic(fn) ? "" : "this->", sanitizeIdentifier(name), fn, expectedType);
 			case EField(receiver, method):
 				final ownerType = instanceMethodReceiverClassName(exprCppType(receiver, scope), scope);
 				if (ownerType == null || ownerType.length == 0) null; else {
@@ -11105,6 +11221,83 @@ class CppTargetCore {
 			case _:
 				null;
 		};
+	}
+
+	static function boundMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return boundMethodValueExprWithExpectedType(expr, "", scope);
+	}
+
+	static function boundMethodValueExprWithExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		return switch (expr) {
+			case ECall(EField(receiver, "bind"), boundArgs):
+				final binding = methodBindingInfo(receiver, scope);
+				if (binding == null) null; else renderBoundMethodValueLambda(binding.targetPrefix, binding.methodName, binding.fn, boundArgs, expectedType,
+					scope);
+			case _:
+				null;
+		};
+	}
+
+	static function methodBindingInfo(receiver:HxExpr, scope:CppRenderScope):Null<{targetPrefix:String, methodName:String, fn:HxFunctionDecl}> {
+		return switch (receiver) {
+			case EIdent(name):
+				final fn = currentOwnerMethod(name, scope);
+				if (fn == null) null; else {
+					targetPrefix: HxFunctionDecl.getIsStatic(fn) ? "" : "this->",
+					methodName: sanitizeIdentifier(name),
+					fn: fn
+				};
+			case EField(target, method):
+				final ownerType = instanceMethodReceiverClassName(exprCppType(target, scope), scope);
+				if (ownerType == null || ownerType.length == 0) null; else {
+					final fn = classMethodDecl(ownerType, method, false, scope);
+					if (fn == null)
+						null;
+					else {
+						final targetPrefix = switch (target) {
+							case EThis:
+								"this->";
+							case _:
+								renderExpr(target, scope) + fieldAccessOp(target, scope);
+						}
+						{
+							targetPrefix: targetPrefix,
+							methodName: sanitizeIdentifier(method),
+							fn: fn
+						};
+					}
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function renderBoundMethodValueLambda(targetPrefix:String, methodName:String, fn:HxFunctionDecl, boundArgs:Array<HxExpr>, expectedType:String,
+			?scope:CppRenderScope):String {
+		final fnArgs = HxFunctionDecl.getArgs(fn);
+		final boundCount = boundArgs == null ? 0 : boundArgs.length;
+		final expectedArgs = isCppFunctionType(expectedType) ? CppTypeModel.cppFunctionArgTypesFromCppType(expectedType) : [];
+		final names = new Array<String>();
+		final params = new Array<String>();
+		for (i in boundCount...fnArgs.length) {
+			final name = sanitizeIdentifier(HxFunctionArg.getName(fnArgs[i]));
+			names.push(name);
+			final paramIndex = i - boundCount;
+			final typeName = paramIndex < expectedArgs.length && expectedArgs[paramIndex].length > 0 ? expectedArgs[paramIndex] : "auto";
+			params.push(typeName + " " + name);
+		}
+		final callArgs = new Array<String>();
+		for (i in 0...boundCount)
+			callArgs.push(renderExpr(boundArgs[i], scope));
+		for (name in names)
+			callArgs.push(name);
+		final returnType = isCppFunctionType(expectedType) ? cppFunctionReturnTypeFromCppType(expectedType) : "";
+		final call = targetPrefix + methodName + "(" + callArgs.join(", ") + ")";
+		final body = returnType == "void" ? call + ";" : "return " + call + ";";
+		final lambda = "[&](" + params.join(", ") + ") { " + body + " }";
+		return isCppFunctionType(expectedType) ? expectedType + "(" + lambda + ")" : lambda;
 	}
 
 	static function typedMethodValueLambda(targetPrefix:String, methodName:String, fn:HxFunctionDecl, expectedType:String):String {

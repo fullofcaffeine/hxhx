@@ -449,6 +449,11 @@ class CppRuntimeSupport {
 			"template<typename R, typename... Args>",
 			"static bool __hxhx_reflect_is_function(const std::function<R(Args...)>&) {",
 			"  return true;",
+			"}",
+			"",
+			"template<typename A, typename B>",
+			"static bool __hxhx_reflect_compare_methods(const A&, const B&) {",
+			"  return false;",
 			"}"
 		];
 	}

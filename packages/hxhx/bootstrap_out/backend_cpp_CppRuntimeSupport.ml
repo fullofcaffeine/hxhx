@@ -482,6 +482,11 @@ let rttiMetaLines = fun () -> let __arr_30 = HxArray.create () in (
   ignore (HxArray.push __arr_30 "static bool __hxhx_reflect_is_function(const std::function<R(Args...)>&) {");
   ignore (HxArray.push __arr_30 "  return true;");
   ignore (HxArray.push __arr_30 "}");
+  ignore (HxArray.push __arr_30 "");
+  ignore (HxArray.push __arr_30 "template<typename A, typename B>");
+  ignore (HxArray.push __arr_30 "static bool __hxhx_reflect_compare_methods(const A&, const B&) {");
+  ignore (HxArray.push __arr_30 "  return false;");
+  ignore (HxArray.push __arr_30 "}");
   __arr_30
 )
 

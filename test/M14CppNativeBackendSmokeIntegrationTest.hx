@@ -1791,16 +1791,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 			"class Main {",
+			"  static function setTimedOutState():Void {}",
+			"  static function checkBranches(pos:Int):Void {}",
+			"  static function assert(message:String):Void {}",
+			"  static function noAssert():Void {}",
+			"  static function onData(data:String):Void {}",
 			"  static function main() {",
 			"    EntryPoint.runInMainThread(() -> {});",
 			"    var timer = Timer.delay(() -> {}, 5);",
+			"    Timer.delay(setTimedOutState, 10);",
+			"    Timer.delay(checkBranches.bind(1), 10);",
 			"    timer.stop();",
 			"    var srcStr = \"hello\";",
 			"    var payload:Dynamic = {};",
 			"    var d = new Http(\"http://localhost\");",
-			"    d.onData = function(echoStr) {};",
+			"    d.onData = function(echoStr) {",
+			"      if (echoStr != srcStr) {",
+			"        assert(\"bad data\");",
+			"        noAssert();",
+			"      } else {",
+			"        noAssert();",
+			"      }",
+			"    };",
 			"    d.onError = function(e) {};",
 			"    d.onBytes = function(echoData) { echoData.size(); echoData.get(0); };",
+			"    var emptyOnData:String->Void = function(data) {};",
+			"    Reflect.compareMethods(onData, emptyOnData);",
 			"    d.setPostData(srcStr);",
 			"    d.setPostBytes(payload);",
 			"    d.request();",
@@ -5471,21 +5487,52 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				new HxFunctionArg("expected", "Int", NoDefault, false, false),
 				new HxFunctionArg("actual", "Int", NoDefault, false, false)
 			], "Void", [], ""),
+			new HxFunctionDecl("done", Public, true, [], "Void", [], ""),
 			new HxFunctionDecl("from", Public, true, [], "Void", [
 				SExpr(ECall(ELambda(["__hxhx_lambda_seq_0"], ENull), [ECall(EIdent("eq"), [EInt(1), EInt(1)])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("fromNested", Public, true, [], "Void", [
+				SExpr(ECall(ELambda(["__hxhx_lambda_seq_1"],
+					ECall(ELambda(["__hxhx_lambda_seq_0"], ECall(EIdent("done"), [])), [ECall(EIdent("eq"), [EInt(2), EInt(2)])])),
+					[ECall(EIdent("eq"), [EInt(1), EInt(1)])]),
+					HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("fromKnownVoidHelpers", Public, true, [], "Void", [
+				SExpr(ECall(ELambda(["__hxhx_lambda_seq_0"], ENull), [ECall(EIdent("assert"), [EString("ready")])]), HxPos.unknown()),
+				SExpr(ECall(ELambda(["__hxhx_lambda_seq_1"], ENull), [ECall(EIdent("unspec"), [ELambda([], ENull)])]), HxPos.unknown())
 			], "")
 		]);
 		final sequenceNames = new StringMap<Bool>();
 		sequenceNames.set("SequenceOwner", true);
 		final sequenceClasses = new StringMap<HxClassDecl>();
 		sequenceClasses.set("SequenceOwner", sequenceOwner);
-		final sequenceLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(sequenceOwner)[1], sequenceOwner, {
+		final sequenceLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(sequenceOwner)[2], sequenceOwner, {
 			names: sequenceNames,
 			byName: sequenceClasses
 		}).join("\n");
 		assertContains(sequenceLines, "([&]() { eq(1, 1); return nullptr; })();",
 			"C++ void sequence lambdas should lower to statement IIFEs instead of passing void as an auto argument");
 		assertTrue(sequenceLines.indexOf("auto __hxhx_lambda_seq_0") < 0, "C++ void sequence lambdas should not emit a parameter for a void expression");
+		final nestedSequenceLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(sequenceOwner)[3], sequenceOwner, {
+			names: sequenceNames,
+			byName: sequenceClasses
+		}).join("\n");
+		assertContains(nestedSequenceLines, "([&]() { eq(1, 1); return ([&]() { eq(2, 2); return done(); })(); })();",
+			"C++ nested void sequence lambdas should sequence void arguments before rendering the continuation body");
+		assertTrue(nestedSequenceLines.indexOf("auto __hxhx_lambda_seq_") < 0,
+			"C++ nested void sequence lambdas should not pass void expressions as auto parameters");
+		final knownVoidSequenceLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(sequenceOwner)[4], sequenceOwner,
+			{
+				names: sequenceNames,
+				byName: sequenceClasses
+			})
+			.join("\n");
+		assertContains(knownVoidSequenceLines, "([&]() { assert(\"ready\"); return nullptr; })();",
+			"C++ sequence lambdas should treat known void helper calls as statements when type inference cannot prove the helper return");
+		assertContains(knownVoidSequenceLines, "([&]() { unspec([&]() { return nullptr; }); return nullptr; })();",
+			"C++ sequence lambdas should lower unknown unspec helper calls without passing void through auto parameters");
+		assertTrue(knownVoidSequenceLines.indexOf("auto __hxhx_lambda_seq_") < 0,
+			"C++ known void helper sequence lambdas should not pass void expressions as auto parameters");
 		final ignoredFixture = new HxClassDecl("IgnoredFixture", false, [
 			new HxFunctionDecl("NotIgnored", Public, true, [], "IgnoredFixture", [SReturn(ENew("IgnoredFixture", [ENull]), HxPos.unknown())], ""),
 			new HxFunctionDecl("get_isIgnored", Public, false, [], "Bool", [SReturn(EBinop("!=", EThis, ENull), HxPos.unknown())], ""),
@@ -7877,19 +7924,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(mainLoopSource, "std::shared_ptr<MainEvent> next = nullptr;", "C++ MainEvent.next should retain the linked-list reference type");
 		assertContains(mainLoopSource, "static T __hxhx_shift(std::vector<T>& values)",
 			"C++ function queues should have a target-owned shift helper for Array.shift lowering");
-		assertContains(mainLoopSource, "EntryPoint::runInMainThread([&]() {", "C++ generated code should call the target-owned EntryPoint support class");
-		assertContains(mainLoopSource, "auto timer = Timer::delay([&]() {", "C++ generated code should call the target-owned Timer.delay support");
+		assertContains(mainLoopSource, "EntryPoint::runInMainThread([&]() -> void {",
+			"C++ generated code should call the target-owned EntryPoint support class");
+		assertContains(mainLoopSource, "auto timer = Timer::delay([&]() -> void {", "C++ generated code should call the target-owned Timer.delay support");
+		assertContains(mainLoopSource, "Timer::delay(std::function<void()>([&]() { setTimedOutState(); }), 10);",
+			"C++ Timer.delay should bind same-owner method values as typed callbacks");
+		assertContains(mainLoopSource, "Timer::delay(std::function<void()>([&]() { checkBranches(1); }), 10);",
+			"C++ bound same-owner methods should lower to typed callbacks before entering Timer.delay");
 		assertContains(mainLoopSource, "timer->stop();", "C++ generated code should call Timer.stop through the support pointer");
 		assertContains(mainLoopSource, "auto d = std::make_shared<Http>(\"http://localhost\");",
 			"C++ generated code should construct the target-owned Http support class");
 		assertContains(mainLoopSource, "(d->onData) = [&](std::string echoStr)", "C++ generated code should assign Http.onData callbacks");
+		assertContains(mainLoopSource, "assert(\"bad data\"); return ([&]() { noAssert(); return nullptr; })();",
+			"C++ nested void sequence lambdas in callbacks should lower void arguments to statements before the continuation body");
 		assertContains(mainLoopSource, "(d->onError) = [&](std::string e)", "C++ generated code should assign Http.onError callbacks");
 		assertContains(mainLoopSource, "(d->onBytes) = [&](__hxhx_http_bytes echoData)",
 			"C++ generated code should assign Http.onBytes callbacks with the target-owned bytes payload");
+		assertContains(mainLoopSource, "__hxhx_reflect_compare_methods([&](auto data) { return onData(data); }, emptyOnData)",
+			"C++ Reflect.compareMethods should lower same-owner method values before entering target-owned support");
+		assertTrue(mainLoopSource.indexOf("Reflect::compareMethods") < 0, "C++ Reflect.compareMethods should not emit an undeclared static helper call");
 		assertContains(mainLoopSource, "d->setPostData(srcStr);", "C++ generated code should call Http.setPostData");
 		assertContains(mainLoopSource, "d->setPostBytes(__hxhx_stringify(payload));", "C++ generated code should call Http.setPostBytes");
 		assertContains(mainLoopSource, "d->request();", "C++ generated code should call Http.request");
-		assertContains(mainLoopSource, "MainLoop::add([&]() {", "C++ generated code should call the target-owned MainLoop support class");
+		assertContains(mainLoopSource, "MainLoop::add([&]() -> void {", "C++ generated code should call the target-owned MainLoop support class");
 		assertContains(mainLoopSource, "event->delay(0);", "C++ generated code should call MainEvent support methods through shared_ptr");
 		assertTrue(mainLoopSource.indexOf("ArrayVoid") < 0, "C++ event queue support should not leak ArrayVoid into generated source");
 		assertTrue(mainLoopSource.indexOf("inline static bool pending =") < 0, "C++ event queue support should not infer pending as bool");
