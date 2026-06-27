@@ -6915,6 +6915,15 @@ class CppTargetCore {
 		if (structural != null)
 			return structural;
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final primitive = primitiveTypeHintCppType(hint);
+		if (primitive != null)
+			return primitive;
+		final basePrimitive = primitiveTypeHintCppType(sanitizeTypePath(typeBaseName(hint)));
+		if (basePrimitive != null)
+			return basePrimitive;
+		final primitiveAbstract = primitiveBackedAbstractCppTypeForTypeHint(hint, scope);
+		if (primitiveAbstract != null)
+			return primitiveAbstract;
 		final args = genericTypeHintArgs(hint);
 		if (args.length > 0) {
 			final base = sanitizeTypePath(typeBaseName(hint));

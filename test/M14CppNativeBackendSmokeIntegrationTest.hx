@@ -3016,14 +3016,37 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], "")
 		], []);
 		final stringMapNames = new StringMap<Bool>();
-		for (name in ["StringMap", "IntMap", "Map", "MyHash", "StringMapOwner", "Lambda", "Reflect"])
+		for (name in [
+			"StringMap",
+			"IntMap",
+			"Map",
+			"MyHash",
+			"StringMapOwner",
+			"ParsedExplicitMapCtorOwner",
+			"Lambda",
+			"Reflect"
+		])
 			stringMapNames.set(name, true);
+		final parsedExplicitMapCtorModule = new HxParser([
+			"class ParsedExplicitMapCtorOwner {",
+			"  public static function stringMap():Void {",
+			"    var d:StringMap<Int> = new StringMap<Int>();",
+			"    d.set(\"x\", -1);",
+			"  }",
+			"  public static function intMap():Void {",
+			"    var d = new IntMap<Int>();",
+			"    d.set(0, -1);",
+			"  }",
+			"}"
+		].join("\n")).parseModule("ParsedExplicitMapCtorOwner");
+		final parsedExplicitMapCtorOwner = HxModuleDecl.getMainClass(parsedExplicitMapCtorModule);
 		final stringMapClasses = new StringMap<HxClassDecl>();
 		stringMapClasses.set("StringMap", stringMapGeneric);
 		stringMapClasses.set("IntMap", intMapGeneric);
 		stringMapClasses.set("Map", genericMap);
 		stringMapClasses.set("MyHash", stringMapAbstract);
 		stringMapClasses.set("StringMapOwner", stringMapOwner);
+		stringMapClasses.set("ParsedExplicitMapCtorOwner", parsedExplicitMapCtorOwner);
 		final stringMapLookup = {names: stringMapNames, byName: stringMapClasses};
 		final stringMapAbstractLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringMapAbstract, stringMapLookup).join("\n");
 		assertContains(stringMapAbstractLines, "std::shared_ptr<StringMap<V>> __value = __hxhx_make_shared_StringMap<V>();",
@@ -3091,6 +3114,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(stringMapOwnerLines.indexOf("__hxhx_anon_iterator_int_") < 0,
 			"C++ structural iterator Lambda.array should not emit an anonymous object with an erased iterator field");
 		assertTrue(stringMapOwnerLines.indexOf("__hxhx_make_shared_StringMap();") < 0, "C++ inferred StringMap locals should not emit undeducible factories");
+		final parsedExplicitMapCtorLines = @:privateAccess [
+			for (fn in HxClassDecl.getFunctions(parsedExplicitMapCtorOwner))
+				backend.cpp.CppTargetCore.renderHelperMethod(fn, parsedExplicitMapCtorOwner, stringMapLookup).join("\n")
+		].join("\n");
+		assertContains(parsedExplicitMapCtorLines, "std::shared_ptr<StringMap<int>> d = __hxhx_make_shared_StringMap<int>();",
+			"C++ parsed explicit StringMap<Int> constructors should render primitive template args");
+		assertContains(parsedExplicitMapCtorLines, "auto d = __hxhx_make_shared_IntMap<int>();",
+			"C++ parsed explicit IntMap<Int> constructors should render primitive template args");
+		assertTrue(parsedExplicitMapCtorLines.indexOf("Int<int>") < 0,
+			"C++ parsed explicit map constructors should not leak parsed primitive wrapper hints into C++ templates");
 		final iMapImplementingClass = new HxClassDecl("StringMap", false, [
 			new HxFunctionDecl("copy", Public, false, [], "StringMap", [SReturn(EThis, HxPos.unknown())], "")
 		], [], "", null, false, ["haxe.Constraints.IMap"]);

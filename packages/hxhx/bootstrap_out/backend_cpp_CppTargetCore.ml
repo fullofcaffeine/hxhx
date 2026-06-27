@@ -19566,18 +19566,27 @@ and constructorTemplateArgCppType = fun typeHint scope -> try let __fallback_res
       tempString := __assign_3792;
       __assign_3792
     ));
-    let hint = (removeTypeHintWhitespace (StringTools.trim (!tempString : string) : string) : string) in let args = Obj.magic (genericTypeHintArgs (hint : string)) in (
-      ignore (if HxArray.length args > 0 then ignore (let base = (sanitizeTypePath (typeBaseName (hint : string) : string) : string) in let _g = Obj.magic (let __arr_3793 = HxArray.create () in __arr_3793) in let _g1 = ref 0 in (
-        ignore (while !_g1 < HxArray.length args do ignore (let arg = (HxArray.get (Obj.magic args) (!_g1) : string) in (
-          ignore (let __old_3794 = !_g1 in let __new_3795 = HxInt.add __old_3794 1 in (
-            ignore (_g1 := __new_3795);
-            __new_3795
-          ));
-          HxArray.push _g (constructorTemplateArgCppType (arg : string) scope)
-        )) done);
-        let tempArray = Obj.magic _g in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString base ^ "<") ^ HxString.toStdString (HxArray.join tempArray ", " (fun x -> x))) ^ ">")))
-      )) else ());
-      cppTypeHint (hint : string) scope (Obj.magic (HxRuntime.hx_null))
+    let hint = (removeTypeHintWhitespace (StringTools.trim (!tempString : string) : string) : string) in let primitive = (primitiveTypeHintCppType (hint : string) : string) in (
+      ignore (if primitive != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (primitive : string))) else ());
+      let basePrimitive = (primitiveTypeHintCppType (sanitizeTypePath (typeBaseName (hint : string) : string) : string) : string) in (
+        ignore (if basePrimitive != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (basePrimitive : string))) else ());
+        let primitiveAbstract = (primitiveBackedAbstractCppTypeForTypeHint (hint : string) scope (Obj.magic (HxRuntime.hx_null)) : string) in (
+          ignore (if primitiveAbstract != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (primitiveAbstract : string))) else ());
+          let args = Obj.magic (genericTypeHintArgs (hint : string)) in (
+            ignore (if HxArray.length args > 0 then ignore (let base = (sanitizeTypePath (typeBaseName (hint : string) : string) : string) in let _g = Obj.magic (let __arr_3793 = HxArray.create () in __arr_3793) in let _g1 = ref 0 in (
+              ignore (while !_g1 < HxArray.length args do ignore (let arg = (HxArray.get (Obj.magic args) (!_g1) : string) in (
+                ignore (let __old_3794 = !_g1 in let __new_3795 = HxInt.add __old_3794 1 in (
+                  ignore (_g1 := __new_3795);
+                  __new_3795
+                ));
+                HxArray.push _g (constructorTemplateArgCppType (arg : string) scope)
+              )) done);
+              let tempArray = Obj.magic _g in raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString base ^ "<") ^ HxString.toStdString (HxArray.join tempArray ", " (fun x -> x))) ^ ">")))
+            )) else ());
+            cppTypeHint (hint : string) scope (Obj.magic (HxRuntime.hx_null))
+          )
+        )
+      )
     )
   )
 ) in Obj.magic __fallback_result_3797 with
