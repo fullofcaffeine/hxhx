@@ -11,6 +11,7 @@ typedef CppRenderScope = {
 	var classNames:haxe.ds.StringMap<Bool>;
 	var classByName:haxe.ds.StringMap<HxClassDecl>;
 	var allClasses:Array<HxClassDecl>;
+	@:optional var classLookup:CppClassLookup;
 	var typeParams:Array<String>;
 	var typeParamCppNames:haxe.ds.StringMap<String>;
 	var localTypes:haxe.ds.StringMap<String>;

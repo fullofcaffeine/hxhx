@@ -1401,9 +1401,10 @@ class CppTargetCore {
 		final out = new Array<Array<String>>();
 		final emitted = new haxe.ds.StringMap<Bool>();
 		final mainName = HxClassDecl.getName(mainClass);
+		final mainRenderedName = renderedClassName(mainClass, classLookup);
 		function emitType(rawName:String, ?typeParams:Array<String>):Void {
 			final name = sanitizeTypePath(rawName);
-			if (name == sanitizeTypePath(mainName) || emitted.exists(name))
+			if (name == sanitizeTypePath(mainName) || name == mainRenderedName || emitted.exists(name))
 				return;
 			if (name == "IMap")
 				emitType("KeyValueIterator");
@@ -1425,9 +1426,10 @@ class CppTargetCore {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
-				if (rawName == mainName || emitted.exists(rawName) || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName))
+				final renderedName = renderedClassName(cls, classLookup);
+				if (rawName == mainName || renderedName == mainRenderedName || emitted.exists(renderedName) || isCppCoreExternClass(rawName))
 					continue;
-				emitType(rawName, forwardDeclarationTypeParams(cls));
+				emitType(renderedName, forwardDeclarationTypeParams(cls));
 			}
 		}
 		for (typed in program.getTypedModules()) {
@@ -1541,14 +1543,33 @@ class CppTargetCore {
 		final names = new haxe.ds.StringMap<Bool>();
 		final byName = new haxe.ds.StringMap<HxClassDecl>();
 		final all = new Array<HxClassDecl>();
+		final shortNameCounts = new haxe.ds.StringMap<Int>();
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
-				all.push(cls);
-				addClassLookupAliases(HxClassDecl.getName(cls), cls, names, byName);
+				final shortName = sanitizeTypePath(HxClassDecl.getName(cls));
+				shortNameCounts.set(shortName, shortNameCounts.exists(shortName) ? shortNameCounts.get(shortName) + 1 : 1);
 			}
 		}
-		return {names: names, byName: byName, all: all};
+		final renderedNames = new Array<{cls:HxClassDecl, name:String}>();
+		for (typed in program.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			final moduleName = expectedModuleNameFromFile(typed.getParsed().getFilePath());
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				all.push(cls);
+				final rendered = renderedClassNameForModule(HxClassDecl.getName(cls), moduleName, shortNameCounts);
+				renderedNames.push({cls: cls, name: rendered});
+				addClassLookupAliases(HxClassDecl.getName(cls), cls, names, byName);
+				if (rendered != sanitizeTypePath(HxClassDecl.getName(cls)))
+					addClassLookupAliases(rendered, cls, names, byName);
+			}
+		}
+		return {
+			names: names,
+			byName: byName,
+			all: all,
+			renderedNames: renderedNames
+		};
 	}
 
 	static function addClassLookupAliases(rawName:String, cls:HxClassDecl, names:haxe.ds.StringMap<Bool>, byName:haxe.ds.StringMap<HxClassDecl>):Void {
@@ -1563,6 +1584,40 @@ class CppTargetCore {
 		}
 	}
 
+	static function expectedModuleNameFromFile(filePath:Null<String>):String {
+		if (filePath == null || filePath.length == 0)
+			return "";
+		final name = Path.withoutExtension(Path.withoutDirectory(filePath));
+		return name == null ? "" : name;
+	}
+
+	static function renderedClassNameForModule(rawName:String, moduleName:String, shortNameCounts:haxe.ds.StringMap<Int>):String {
+		final baseName = sanitizeTypePath(rawName);
+		final count = shortNameCounts.exists(baseName) ? shortNameCounts.get(baseName) : 0;
+		final module = sanitizeTypePath(moduleName == null ? "" : moduleName);
+		if (count > 1 && module.length > 0 && module != "Unknown" && module != baseName)
+			return sanitizeTypePath(module + "." + baseName);
+		return baseName;
+	}
+
+	static function renderedClassName(cls:HxClassDecl, ?classLookup:CppClassLookup):String {
+		if (cls == null)
+			return "";
+		if (classLookup != null && classLookup.renderedNames != null)
+			for (entry in classLookup.renderedNames)
+				if (entry.cls == cls)
+					return entry.name;
+		return sanitizeTypePath(HxClassDecl.getName(cls));
+	}
+
+	static function lookupForScope(?scope:CppRenderScope, ?classLookup:CppClassLookup):CppClassLookup {
+		if (classLookup != null)
+			return classLookup;
+		if (scope != null && scope.classLookup != null)
+			return scope.classLookup;
+		return scope == null ? null : {names: scope.classNames, byName: scope.classByName, all: scope.allClasses};
+	}
+
 	static function renderHelperClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
 		final out = new Array<Array<String>>();
 		final emitted = new haxe.ds.StringMap<Bool>();
@@ -1572,11 +1627,12 @@ class CppTargetCore {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
-				if (rawName == mainName || emitted.exists(rawName) || isCppCoreExternClass(rawName))
+				final helperName = renderedClassName(cls, classLookup);
+				if (rawName == mainName || emitted.exists(helperName) || isCppCoreExternClass(rawName))
 					continue;
 				if (isTemplateWrapSupportClass(cls))
 					continue;
-				emitted.set(rawName, true);
+				emitted.set(helperName, true);
 				helpers.push(cls);
 			}
 		}
@@ -1584,7 +1640,7 @@ class CppTargetCore {
 		final orderedHelpers = orderHelperClasses(helpers, classLookup);
 		traceCppPhase("render_helper_classes_after_order count=" + orderedHelpers.length);
 		for (cls in orderedHelpers) {
-			final helperName = sanitizeTypePath(HxClassDecl.getName(cls));
+			final helperName = renderedClassName(cls, classLookup);
 			traceCppPhase("render_helper_class_begin name=" + helperName);
 			out.push(renderHelperClass(cls, classLookup));
 			traceCppPhase("render_helper_class_end name=" + helperName);
@@ -1600,9 +1656,10 @@ class CppTargetCore {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
-				if (rawName == mainName || emitted.exists(rawName) || !isTemplateWrapSupportClass(cls))
+				final helperName = renderedClassName(cls, classLookup);
+				if (rawName == mainName || emitted.exists(helperName) || !isTemplateWrapSupportClass(cls))
 					continue;
-				emitted.set(rawName, true);
+				emitted.set(helperName, true);
 				out.push(renderTemplateWrapSupportClass(cls));
 			}
 		}
@@ -1612,11 +1669,11 @@ class CppTargetCore {
 	static function orderHelperClasses(classes:Array<HxClassDecl>, classLookup:CppClassLookup):Array<HxClassDecl> {
 		final byName = new haxe.ds.StringMap<HxClassDecl>();
 		for (cls in classes)
-			byName.set(sanitizeTypePath(HxClassDecl.getName(cls)), cls);
+			byName.set(renderedClassName(cls, classLookup), cls);
 		final ordered = new Array<HxClassDecl>();
 		final state = new haxe.ds.StringMap<Int>();
 		function visit(cls:HxClassDecl):Void {
-			final name = sanitizeTypePath(HxClassDecl.getName(cls));
+			final name = renderedClassName(cls, classLookup);
 			final current = state.get(name);
 			if (current == 2)
 				return;
@@ -1639,7 +1696,7 @@ class CppTargetCore {
 	static function helperClassDependencies(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final deps = new Array<String>();
 		final seen = new haxe.ds.StringMap<Bool>();
-		final self = sanitizeTypePath(HxClassDecl.getName(cls));
+		final self = renderedClassName(cls, classLookup);
 		final typeParams = genericClassTypeParams(cls);
 		function add(name:String):Void {
 			if (name == null || name == self || !classLookup.names.exists(name) || seen.exists(name))
@@ -1816,7 +1873,14 @@ class CppTargetCore {
 		}
 		for (arg in genericTypeHintArgs(hint))
 			addTypeHintDependencies(arg, add, scope);
-		add(sanitizeTypePath(typeBaseName(hint)));
+		final base = sanitizeTypePath(typeBaseName(hint));
+		add(base);
+		final compact = removeTypeHintWhitespace(hint);
+		final open = compact.indexOf("<");
+		final path = open < 0 ? compact : compact.substr(0, open);
+		final qualified = sanitizeTypePath(path);
+		if (path.indexOf(".") >= 0 && qualified != base)
+			add(qualified);
 	}
 
 	static function renderHelperClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -1824,7 +1888,7 @@ class CppTargetCore {
 			return [];
 		if (isBytesDataTypeName(HxClassDecl.getName(cls)))
 			return [];
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final className = renderedClassName(cls, classLookup);
 		if (HxClassDecl.getFields(cls).length == 0
 			&& HxClassDecl.getFunctions(cls).length == 0
 			&& renderMissingInterfaceDeclaration(className) != null)
@@ -1917,13 +1981,14 @@ class CppTargetCore {
 	}
 
 	static function renderInterfaceClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final className = renderedClassName(cls, classLookup);
 		if (HxClassDecl.getFunctions(cls).length == 0 && renderMissingInterfaceDeclaration(className) != null)
 			return [];
 		final typeParams = genericClassTemplateParams(cls);
 		final scope = renderScope(cls, classLookup, "void");
 		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
-		out.push("struct " + className + " {");
+		final baseTypes = inheritedCppBaseTypes(cls, classLookup);
+		out.push("struct " + className + (baseTypes.length == 0 ? "" : " : " + baseTypes.join(", ")) + " {");
 		out.push("  virtual ~" + className + "() = default;");
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getIsStatic(fn))
@@ -1975,7 +2040,7 @@ class CppTargetCore {
 	}
 
 	static function renderGenericClassFactoryDeclaration(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final className = renderedClassName(cls, classLookup);
 		final typeParams = genericClassTemplateParams(cls);
 		final ctor = findConstructor(cls);
 		if (typeParams.length == 0)
@@ -2820,6 +2885,7 @@ class CppTargetCore {
 			classNames: classLookup.names,
 			classByName: classLookup.byName,
 			allClasses: classLookup.all == null ? [] : classLookup.all,
+			classLookup: classLookup,
 			typeParams: typeParams,
 			typeParamCppNames: typeParamCppNames,
 			localTypes: new haxe.ds.StringMap<String>(),
@@ -2910,7 +2976,14 @@ class CppTargetCore {
 		final extendsPath = HxClassDecl.getExtendsPath(cls);
 		if (extendsPath == null || extendsPath.length == 0)
 			return null;
-		return cppClassTemplateTypeName(extendsPath, renderScope(cls, classLookup, "void"), classLookup);
+		final scope = renderScope(cls, classLookup, "void");
+		final baseCls = lookupClassForTypeHint(extendsPath, scope, classLookup);
+		if (baseCls != null && genericTypeHintArgs(extendsPath).length == 0) {
+			final rendered = renderedClassName(baseCls, classLookup);
+			if (rendered != sanitizeTypePath(HxClassDecl.getName(baseCls)))
+				return rendered;
+		}
+		return cppClassTemplateTypeName(extendsPath, scope, classLookup);
 	}
 
 	static function inheritedCppBaseTypes(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -2925,7 +2998,7 @@ class CppTargetCore {
 	}
 
 	static function shouldInheritCppInterface(name:String):Bool {
-		return switch (sanitizeTypePath(typeBaseName(name == null ? "" : name))) {
+		return switch (sanitizeTypePath(typeBaseName(typeHintPathPart(name == null ? "" : name)))) {
 			case "IMap" | "IReport":
 				false;
 			case _:
@@ -2936,8 +3009,10 @@ class CppTargetCore {
 	static function implementedInterfaceNames(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final out = new Array<String>();
 		final seen = new haxe.ds.StringMap<Bool>();
+		final scope = renderScope(cls, classLookup, "void");
 		function add(name:String):Void {
-			final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
+			final ifaceCls = lookupClassForTypeHint(name, scope, classLookup);
+			final clean = ifaceCls == null ? genericClassLikeTypeName(name, scope, classLookup) : cppClassTemplateTypeName(name, scope, classLookup);
 			if (clean.length == 0 || seen.exists(clean))
 				return;
 			seen.set(clean, true);
@@ -2952,13 +3027,22 @@ class CppTargetCore {
 
 	static function cppClassTemplateTypeName(typeHint:String, scope:CppRenderScope, classLookup:CppClassLookup):String {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
-		final base = sanitizeTypePath(typeBaseName(hint));
+		final lookup = lookupForScope(scope, classLookup);
+		final cls = lookupClassForTypeHint(hint, scope, lookup);
+		final base = cls == null ? sanitizeTypePath(typeBaseName(hint)) : renderedClassName(cls, lookup);
 		final args = genericTypeHintArgs(hint);
 		if (args.length == 0) {
 			final scoped = scopedRawGenericClassTypeName(hint, scope);
 			return scoped == null ? base : scoped;
 		}
-		return base + "<" + [for (arg in args) cppTypeHint(arg, scope, classLookup)].join(", ") + ">";
+		return base + "<" + [for (arg in args) cppTypeHint(arg, scope, lookup)].join(", ") + ">";
+	}
+
+	static function genericClassLikeTypeName(typeHint:String, scope:CppRenderScope, classLookup:CppClassLookup):String {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final base = sanitizeTypePath(typeBaseName(hint));
+		final args = genericTypeHintArgs(hint);
+		return args.length == 0 ? base : base + "<" + [for (arg in args) cppTypeHint(arg, scope, classLookup)].join(", ") + ">";
 	}
 
 	static function syntheticStructuralInterfaceNames(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -6797,7 +6881,9 @@ class CppTargetCore {
 	}
 
 	static function cppNewExprType(typePath:String, ?scope:CppRenderScope):String {
-		final className = sanitizeTypePath(typeBaseName(typePath));
+		final lookup = lookupForScope(scope);
+		final cls = lookupClassForTypeHint(typePath, scope, lookup);
+		final className = cls == null ? sanitizeTypePath(typeBaseName(typePath)) : renderedClassName(cls, lookup);
 		final templateArgs = constructorTemplateArgsFromTypePath(typePath, scope);
 		if (templateArgs.length > 0 && scopeHasClass(scope, className) && genericClassTypeParamsForName(className, scope).length > 0)
 			return "std::shared_ptr<" + className + "<" + templateArgs.join(", ") + ">>";
@@ -6805,7 +6891,9 @@ class CppTargetCore {
 	}
 
 	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?expectedCppType:String):String {
-		final className = sanitizeTypePath(typeBaseName(typePath));
+		final lookup = lookupForScope(scope);
+		final cls = lookupClassForTypeHint(typePath, scope, lookup);
+		final className = cls == null ? sanitizeTypePath(typeBaseName(typePath)) : renderedClassName(cls, lookup);
 		if (isBytesDataTypeName(typePath)) {
 			if (args.length > 0)
 				throw "C++ source backend MVP unsupported BytesData constructor arity: " + args.length;
@@ -7083,12 +7171,13 @@ class CppTargetCore {
 	static function currentOwnerIsOrExtends(expectedClass:String, ?scope:CppRenderScope):Bool {
 		if (scope == null || scope.owner == null || expectedClass == null || expectedClass.length == 0)
 			return false;
-		var className = sanitizeTypePath(HxClassDecl.getName(scope.owner));
+		final lookup = lookupForScope(scope);
+		var className = renderedClassName(scope.owner, lookup);
 		while (className != null && className.length > 0) {
 			if (className == expectedClass)
 				return true;
 			final cls = scope.classByName.get(className);
-			final base = cls == null ? null : baseTypeName(cls);
+			final base = cls == null ? null : inheritedCppBaseTypeName(cls, lookup);
 			className = base == null ? "" : sanitizeTypePath(base);
 		}
 		return false;
@@ -8770,7 +8859,7 @@ class CppTargetCore {
 		if (cls == null)
 			return "";
 		final fn = classMethodDeclIn(cls, method, false);
-		return fn == null ? "" : inferredFunctionReturnCppType(fn, cls, scope.classByName);
+		return fn == null ? "" : inferredFunctionReturnCppType(fn, cls, scope.classByName, lookupForScope(scope));
 	}
 
 	static function primitiveBackedAbstractClassForReceiverMethod(receiver:HxExpr, method:String, ?scope:CppRenderScope):Null<HxClassDecl> {
@@ -8843,7 +8932,7 @@ class CppTargetCore {
 		if (cls == null)
 			return null;
 		final fn = classMethodDeclIn(cls, "toString", false);
-		if (fn == null || inferredFunctionReturnCppType(fn, cls, scope.classByName) != "std::string")
+		if (fn == null || inferredFunctionReturnCppType(fn, cls, scope.classByName, lookupForScope(scope)) != "std::string")
 			return null;
 		return primitiveBackedAbstractToStringBodyExpr(expr, fn, scope);
 	}
@@ -8870,7 +8959,7 @@ class CppTargetCore {
 			return null;
 		final className = sanitizeTypePath(HxClassDecl.getName(cls));
 		final fn = classMethodDecl(className, "toString", false, scope);
-		if (fn == null || inferredFunctionReturnCppType(fn, cls, scope.classByName) != "std::string")
+		if (fn == null || inferredFunctionReturnCppType(fn, cls, scope.classByName, lookupForScope(scope)) != "std::string")
 			return null;
 		return renderExpr(expr, scope) + "->toString()";
 	}
@@ -9082,7 +9171,8 @@ class CppTargetCore {
 		final owner = scope == null ? null : scope.classByName.get(ownerName);
 		if (owner != null && isUtestResultAggregationHelper(fn, owner))
 			return utestResultAggregationReturnType(ownerName, method);
-		return owner == null ? cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope) : inferredFunctionReturnCppType(fn, owner, scope.classByName);
+		return owner == null ? cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn),
+			scope) : inferredFunctionReturnCppType(fn, owner, scope.classByName, lookupForScope(scope));
 	}
 
 	static function inheritedClassMethodCppReturnType(className:String, methodName:String, wantStatic:Bool, scope:CppRenderScope):String {
@@ -9133,7 +9223,7 @@ class CppTargetCore {
 	static function currentOwnerMethodCppReturnType(methodName:String, scope:CppRenderScope):String {
 		final owner = currentOrInheritedOwnerMethodOwner(methodName, scope);
 		final fn = owner == null ? null : ownerMethodDeclIn(owner, methodName);
-		return fn == null ? "" : inferredFunctionReturnCppType(fn, owner, scope.classByName);
+		return fn == null ? "" : inferredFunctionReturnCppType(fn, owner, scope.classByName, lookupForScope(scope));
 	}
 
 	static function currentOwnerMethod(methodName:String, scope:CppRenderScope):Null<HxFunctionDecl> {
@@ -12347,9 +12437,16 @@ class CppTargetCore {
 			return "std::vector<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">";
 		if (isFunctionTypeHint(hint))
 			return cppFunctionTypeHint(hint, scope, classLookup);
+		if (isCppPointerTypeHint(hint))
+			return CppTypeModel.cppTypeHint(hint, scope, classLookup);
 		final args = genericTypeHintArgs(hint);
 		if (args.length > 0) {
-			final base = sanitizeTypePath(typeBaseName(hint));
+			final cls = lookupClassForTypeHint(hint, scope, classLookup);
+			final rendered = cls == null ? "" : renderedClassName(cls, lookupForScope(scope, classLookup));
+			final hintBase = sanitizeTypePath(typeBaseName(hint));
+			final base = cls != null
+				&& rendered.length > 0
+				&& CppTypeModel.structuralTypedefValueClassForTypeHint(hint, scope, lookupForScope(scope, classLookup)) == null ? rendered : hintBase;
 			if (scopeHasClass(scope, base)) {
 				if (genericClassTypeParamsForName(base, scope).length > 0)
 					return "std::shared_ptr<" + cppClassTemplateTypeName(hint, scope, classLookup) + ">";
@@ -12357,6 +12454,13 @@ class CppTargetCore {
 					return CppMacroExpr.CPP_TYPE;
 				return "std::shared_ptr<" + base + ">";
 			}
+		}
+		final cls = lookupClassForTypeHint(hint, scope, classLookup);
+		if (cls != null) {
+			final rendered = renderedClassName(cls, lookupForScope(scope, classLookup));
+			if (rendered != sanitizeTypePath(typeBaseName(hint))
+				&& CppTypeModel.structuralTypedefValueClassForTypeHint(hint, scope, lookupForScope(scope, classLookup)) == null)
+				return "std::shared_ptr<" + rendered + ">";
 		}
 		return CppTypeModel.cppTypeHint(hint, scope, classLookup);
 	}
@@ -12415,6 +12519,15 @@ class CppTargetCore {
 		if (scopedGenericClass != null)
 			return "std::shared_ptr<" + scopedGenericClass + ">";
 		return cppTypeHint(raw, scope, classLookup);
+	}
+
+	static function isCppPointerTypeHint(typeHint:String):Bool {
+		return switch (sanitizeTypePath(typeBaseName(typeHint == null ? "" : typeHint))) {
+			case "RawConstPointer" | "ConstPointer" | "RawPointer" | "Pointer":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function scopedRawGenericClassTypeName(typeHint:String, ?scope:CppRenderScope):Null<String> {
@@ -13255,7 +13368,7 @@ class CppTargetCore {
 	}
 
 	static function cppFunctionReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
-		return inferredFunctionReturnCppType(fn, owner, classLookup.byName);
+		return inferredFunctionReturnCppType(fn, owner, classLookup.byName, classLookup);
 	}
 
 	static function cppMethodSignatureReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
@@ -13303,7 +13416,8 @@ class CppTargetCore {
 		return inheritedBaseMethodSignatureReturnType(fn, base, classLookup);
 	}
 
-	static function inferredFunctionReturnCppType(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>):String {
+	static function inferredFunctionReturnCppType(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>,
+			?classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
 		final ownerName = owner == null ? "" : sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
 		if (ownerName == "Bytes" && sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "fill")
@@ -13326,7 +13440,7 @@ class CppTargetCore {
 		}
 		if (isDynamicLikeTypeHint(raw) && functionReturnsEnumMetadataCtor(fn))
 			return "std::string";
-		final returnLookup = {names: classNamesFromByName(classByName), byName: classByName};
+		final returnLookup = classLookup == null ? {names: classNamesFromByName(classByName), byName: classByName} : classLookup;
 		final returnScope = renderScope(owner, returnLookup, "auto");
 		if (raw.length == 0) {
 			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, returnScope, returnLookup);
@@ -13350,7 +13464,7 @@ class CppTargetCore {
 		if (inferredSignatureStack.exists(key))
 			return "";
 		inferredSignatureStack.set(key, true);
-		final scope = renderScope(owner, {names: classNamesFromByName(classByName), byName: classByName}, "auto");
+		final scope = renderScope(owner, returnLookup, "auto");
 		prepareFunctionScope(scope, fn);
 		for (stmt in HxFunctionDecl.getBody(fn)) {
 			final inferred = inferReturnTypeFromStmt(stmt, scope);
@@ -13360,7 +13474,7 @@ class CppTargetCore {
 			}
 		}
 		inferredSignatureStack.remove(key);
-		return functionHasValueReturn(fn) ? cppReturnTypeHint(raw, returnScope, {names: classNamesFromByName(classByName), byName: classByName}) : "void";
+		return functionHasValueReturn(fn) ? cppReturnTypeHint(raw, returnScope, returnLookup) : "void";
 	}
 
 	static function abstractUnderlyingReturnCppType(rawReturnHint:String, owner:HxClassDecl, scope:CppRenderScope, classLookup:CppClassLookup):String {
@@ -13726,6 +13840,12 @@ class CppTargetCore {
 
 	static function typeBaseName(typeHint:String):String {
 		return CppTypeModel.typeBaseName(typeHint);
+	}
+
+	static function typeHintPathPart(typeHint:String):String {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final open = hint.indexOf("<");
+		return open < 0 ? hint : hint.substr(0, open);
 	}
 
 	static function isClassLikeTypeHint(typeHint:String):Bool {

@@ -67,6 +67,48 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return new TypedModule(new ParsedModule("", decl, filePath), env);
 	}
 
+	static function cppModuleLocalInterfaceCollisionProgram():GenIrProgram {
+		final supportMain = new HxClassDecl("SupportOne", false, [], []);
+		final supportPoint = new HxClassDecl("Point", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")],
+			[new HxFieldDecl("hash", Public, false, "Int", EInt(0))]);
+		final supportDecl = new HxModuleDecl("unit", [], supportMain, [supportMain, supportPoint], false, false);
+		final foo = new HxClassDecl("Foo", false, [new HxFunctionDecl("foo", Public, false, [], "String", [], "")], [], "", [], true);
+		final ix = new HxClassDecl("IX", false, [new HxFunctionDecl("getX", Public, false, [], "Float", [], "")], [], "", [], true);
+		final iy = new HxClassDecl("IY", false, [new HxFunctionDecl("getY", Public, false, [], "Float", [], "")], [], "Foo", [], true);
+		final point = new HxClassDecl("Point", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("getX", Public, false, [], "Float", [SReturn(EFloat(1.3), HxPos.unknown())], ""),
+			new HxFunctionDecl("getY", Public, false, [], "Float", [SReturn(EInt(5), HxPos.unknown())], ""),
+			new HxFunctionDecl("foo", Public, false, [], "String", [SReturn(EString("bar"), HxPos.unknown())], "")
+		], [], "", [], false, ["IX", "IY"]);
+		final i1 = new HxClassDecl("I1", false, [new HxFunctionDecl("foo", Public, false, [], "Void", [], "")], [], "", [], true);
+		final i2 = new HxClassDecl("I2", false, [new HxFunctionDecl("bar", Public, false, [], "Void", [], "")], [], "I1", [], true);
+		final c = new HxClassDecl("C", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("foo", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("bar", Public, false, [], "Void", [], "")
+		], [], "", [], false, ["I2"]);
+		final testInterface = new HxClassDecl("TestInterface", false, [
+			new HxFunctionDecl("test", Public, false, [], "Void", [
+				SVar("p", "", ENew("Point", []), HxPos.unknown()),
+				SVar("px", "IX", EIdent("p"), HxPos.unknown()),
+				SVar("py", "IY", EIdent("p"), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("py"), "foo"), []), HxPos.unknown()),
+				SVar("c", "", ENew("C", []), HxPos.unknown()),
+				SVar("i2", "I2", EIdent("c"), HxPos.unknown()),
+				SVar("i1", "I1", EIdent("c"), HxPos.unknown())
+			], "")
+		], []);
+		final testDecl = new HxModuleDecl("unit", [], testInterface, [testInterface, foo, ix, iy, point, i1, i2, c], false, false);
+		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
+		final mainDecl = new HxModuleDecl("unit", [], main, [main], false, false);
+		return new MacroExpandedProgram([
+			typedSyntheticModule("unit/SupportOne.hx", supportDecl),
+			typedSyntheticModule("unit/TestInterface.hx", testDecl),
+			typedSyntheticModule("unit/Main.hx", mainDecl)
+		], false, []);
+	}
+
 	static function assertNativeProtocolStructuralArgTypeSplitting():Void {
 		final structural = "{ms:Float,seconds:Int,minutes:Int,hours:Int,days:Int}";
 		final encoded = [
@@ -6961,6 +7003,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(hasArtifactKind(sourceOnly.artifacts, "entry_cpp_source"), "missing entry_cpp_source artifact");
 		assertTrue(!sourceOnly.builtExecutable, "no-compilation C++ smoke should not build executable");
 		final source = File.getContent(sourceOnly.entryPath);
+		final moduleLocalDir = Path.join([root, "module-local-interface-collision-source-only"]);
+		final moduleLocalEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(cppModuleLocalInterfaceCollisionProgram(), context(moduleLocalDir, true, true));
+		final moduleLocalSource = File.getContent(moduleLocalEmit.entryPath);
+		assertContains(moduleLocalSource, "struct SupportOne_Point", "C++ module-local helper collisions should render with their owning module name");
+		assertContains(moduleLocalSource, "struct TestInterface_Point : public IX, public IY",
+			"C++ colliding module-local classes should keep native interface bases after name mangling");
+		assertContains(moduleLocalSource, "struct IY : public Foo", "C++ interfaces should inherit parent interface/class surfaces");
+		assertContains(moduleLocalSource, "struct I2 : public I1", "C++ interface inheritance should preserve transitive assignment surfaces");
+		assertContains(moduleLocalSource, "auto p = std::make_shared<TestInterface_Point>();",
+			"C++ constructors inside a module should resolve to the module-local helper class");
+		assertContains(moduleLocalSource, "std::shared_ptr<IX> px = p;", "C++ class-to-interface shared_ptr assignment should be a native upcast");
+		assertContains(moduleLocalSource, "std::shared_ptr<I1> i1 = c;", "C++ class-to-parent-interface shared_ptr assignment should be a native upcast");
+		assertTrue(moduleLocalSource.indexOf("std::make_shared<Point>()") < 0,
+			"C++ module-local helper constructors should not fall back to ambiguous short helper names");
 		assertContains(source, "int main(int argc, char** argv)", "C++ smoke should emit main");
 		assertContains(source, "#include <cstdint>", "C++ smoke should include fixed-width integer types for bit reinterpret helpers");
 		assertContains(source, "static double __hxhx_reinterpret_le_int32_as_float32(int value)",
