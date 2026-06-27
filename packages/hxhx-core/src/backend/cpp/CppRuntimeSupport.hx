@@ -204,6 +204,17 @@ class CppRuntimeSupport {
 			"  } catch (...) {",
 			"    return std::nullopt;",
 			"  }",
+			"}",
+			"",
+			"static long long __hxhx_int_literal(const std::string& raw, const std::string& suffix) {",
+			"  int base = (raw.size() >= 2 && raw[0] == '0' && (raw[1] == 'x' || raw[1] == 'X')) ? 16 : 10;",
+			"  if (base == 16 || suffix == \"u32\" || suffix == \"u64\") return static_cast<long long>(std::stoull(raw, nullptr, base));",
+			"  return static_cast<long long>(std::stoll(raw, nullptr, base));",
+			"}",
+			"",
+			"static int __hxhx_int64_to_int(long long value) {",
+			"  if (value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max()) throw std::runtime_error(\"Overflow\");",
+			"  return static_cast<int>(value);",
 			"}"
 		];
 	}

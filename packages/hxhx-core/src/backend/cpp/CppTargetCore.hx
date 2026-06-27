@@ -6389,9 +6389,9 @@ class CppTargetCore {
 				"(" + renderExpr(receiver, scope) + ".message)";
 			case EField(receiver, "stack") if (isCppExceptionValueType(exprCppType(receiver, scope))):
 				"(" + renderExpr(receiver, scope) + ".stack)";
-			case EField(receiver, "low") if (exprCppType(receiver, scope) == "long long"):
+			case EField(receiver, "low") if (isCppInt64Expr(receiver, scope)):
 				"static_cast<int>(static_cast<unsigned long long>(" + renderExpr(receiver, scope) + ") & 0xFFFFFFFFULL)";
-			case EField(receiver, "high") if (exprCppType(receiver, scope) == "long long"):
+			case EField(receiver, "high") if (isCppInt64Expr(receiver, scope)):
 				"static_cast<int>((static_cast<unsigned long long>(" + renderExpr(receiver, scope) + ") >> 32) & 0xFFFFFFFFULL)";
 			case ENew(typePath, args):
 				newExpr(typePath, args, scope);
@@ -6411,6 +6411,14 @@ class CppTargetCore {
 				"std::string(1, static_cast<char>(" + renderExpr(args[0], scope) + "))";
 			case ECall(EField(receiver, method), args) if (isInt64StaticReceiver(receiver)):
 				int64StaticCallExpr(method, args, scope);
+			case ECall(EField(receiver, method), args) if (int64InstanceOrExtensionCallExpr(receiver, method, args, scope) != null):
+				int64InstanceOrExtensionCallExpr(receiver, method, args, scope);
+			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]):
+				"__hxhx_int_literal("
+				+ quoteString(raw)
+				+ ", "
+				+ quoteString(suffix)
+				+ ")";
 			case ECall(EField(EField(EIdent("haxe"), "SysTools"), "quoteUnixArg"), args) if (args.length == 1):
 				"__hxhx_quote_unix_arg(" + stringExpr(args[0], scope) + ")";
 			case ECall(EField(EField(EIdent("haxe"), "SysTools"), "quoteWinArg"), args) if (args.length == 2):
@@ -7512,6 +7520,9 @@ class CppTargetCore {
 			return sanitizeIdentifier(name) + "(" + renderEqCallArgs(args, scope).join(", ") + ")";
 		final owner = currentOrInheritedOwnerMethodOwner(name, scope);
 		final fn = owner == null ? null : ownerMethodDeclIn(owner, name);
+		final int64Imported = owner == null ? int64ImportedStaticCallExpr(name, args, scope) : null;
+		if (int64Imported != null)
+			return int64Imported;
 		final renderedArgs = if (fn != null && owner != null) {
 			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses));
 		} else {
@@ -8555,6 +8566,14 @@ class CppTargetCore {
 				int64DivModStruct().name;
 			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
 				"int";
+			case ECall(EField(receiver, method), args) if (int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope).length > 0):
+				int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope);
+			case ECall(EIdent("__hxhx_int_literal"), [_, EString(_)]):
+				"long long";
+			case ECall(EIdent(name), args)
+				if (int64ImportedStaticCallReturnCppType(name, args.length).length > 0
+					&& currentOrInheritedOwnerMethodOwner(name, scope) == null):
+				int64ImportedStaticCallReturnCppType(name, args.length);
 			case ECall(EField(EIdent("Math"), method), _):
 				mathReturnCppType(method);
 			case ECall(EField(receiver, "field"), args) if (isReflectStaticReceiver(receiver) && args.length == 2):
@@ -8644,6 +8663,8 @@ class CppTargetCore {
 			case ECall(EField(receiver, "value"), args) if (args.length == 0):
 				final optionalInner = cppOptionalInnerType(exprCppType(receiver, scope));
 				optionalInner.length > 0 ? optionalInner : "";
+			case EAnon(fieldNames, fieldValues):
+				anonStruct(fieldNames, fieldValues, scope).name;
 			case EField(receiver, "value") if (isCppExceptionValueType(exprCppType(receiver, scope))):
 				"__hxhx_dynamic_value";
 			case EField(receiver, "message") if (isCppExceptionValueType(exprCppType(receiver, scope))):
@@ -9350,6 +9371,14 @@ class CppTargetCore {
 				int64DivModStruct().name;
 			case ECall(EField(receiver, method), _) if (isInt64StaticReceiver(receiver) && int64StaticCallReturnsInt(method)):
 				"int";
+			case ECall(EField(receiver, method), args) if (int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope).length > 0):
+				int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope);
+			case ECall(EIdent("__hxhx_int_literal"), [_, EString(_)]):
+				"long long";
+			case ECall(EIdent(name), args)
+				if (int64ImportedStaticCallReturnCppType(name, args.length).length > 0
+					&& currentOrInheritedOwnerMethodOwner(name, scope) == null):
+				int64ImportedStaticCallReturnCppType(name, args.length);
 			case ECall(EField(EIdent("Math"), method), _):
 				mathReturnCppType(method);
 			case ECall(EField(receiver, "compare"), _) if (isReflectStaticReceiver(receiver)):
@@ -9492,6 +9521,9 @@ class CppTargetCore {
 				"double";
 			case EBinop("+", left, right) if (isCppStringExpr(left, scope) || isCppStringExpr(right, scope)):
 				"std::string";
+			case EBinop(op, left, right) if (isIntegerArithmeticBinaryOp(op)
+				&& (isCppInt64Expr(left, scope) || isCppInt64Expr(right, scope))):
+				"long long";
 			case EBinop(op, _, _) if (isIntegerArithmeticBinaryOp(op)):
 				"int";
 			case EBinop("+", left, right) if (isCppIntExpr(left, scope) || isCppIntExpr(right, scope)):
@@ -10868,7 +10900,7 @@ class CppTargetCore {
 	}
 
 	static function int64StaticCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
-		return switch (method) {
+		return switch (normalizeInt64Method(method)) {
 			case "ofInt" if (args.length == 1):
 				"static_cast<long long>(" + renderExpr(args[0], scope) + ")";
 			case "make" if (args.length == 2):
@@ -10924,12 +10956,178 @@ class CppTargetCore {
 		};
 	}
 
+	static function int64ImportedStaticCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		final clean = normalizeInt64Method(method);
+		if (int64StaticCallReturnCppType(clean, args.length).length == 0)
+			return null;
+		return int64StaticCallExpr(clean, args, scope);
+	}
+
+	static function int64InstanceOrExtensionCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		final clean = normalizeInt64Method(method);
+		if (clean == "ofInt" && args.length == 0 && isCppIntExpr(receiver, scope))
+			return "static_cast<long long>(" + renderExpr(receiver, scope) + ")";
+		if (!isCppInt64Expr(receiver, scope))
+			return null;
+		final self = renderExpr(receiver, scope);
+		return switch (clean) {
+			case "toInt" if (args.length == 0):
+				"__hxhx_int64_to_int(" + self + ")";
+			case "toStr" if (args.length == 0):
+				"std::to_string(" + self + ")";
+			case "compare" if (args.length == 1):
+				int64CompareExpr(receiver, args[0], false, scope);
+			case "ucompare" if (args.length == 1):
+				int64CompareExpr(receiver, args[0], true, scope);
+			case "eq" if (args.length == 1):
+				"(" + self + " == " + renderExpr(args[0], scope) + ")";
+			case "neq" if (args.length == 1):
+				"(" + self + " != " + renderExpr(args[0], scope) + ")";
+			case "add" if (args.length == 1):
+				"(" + self + " + " + renderExpr(args[0], scope) + ")";
+			case "sub" if (args.length == 1):
+				"(" + self + " - " + renderExpr(args[0], scope) + ")";
+			case "mul" if (args.length == 1):
+				"(" + self + " * " + renderExpr(args[0], scope) + ")";
+			case "div" if (args.length == 1):
+				"(" + self + " / " + renderExpr(args[0], scope) + ")";
+			case "mod" if (args.length == 1):
+				"(" + self + " % " + renderExpr(args[0], scope) + ")";
+			case "divMod" if (args.length == 1):
+				int64DivModExpr(receiver, args[0], scope);
+			case "shl" if (args.length == 1):
+				"(" + self + " << " + renderExpr(args[0], scope) + ")";
+			case "shr" if (args.length == 1):
+				"(" + self + " >> " + renderExpr(args[0], scope) + ")";
+			case "ushr" if (args.length == 1):
+				"(static_cast<unsigned long long>(" + self + ") >> " + renderExpr(args[0], scope) + ")";
+			case "and" if (args.length == 1):
+				"(" + self + " & " + renderExpr(args[0], scope) + ")";
+			case "or" if (args.length == 1):
+				"(" + self + " | " + renderExpr(args[0], scope) + ")";
+			case "xor" if (args.length == 1):
+				"(" + self + " ^ " + renderExpr(args[0], scope) + ")";
+			case "neg" if (args.length == 0):
+				"(-" + self + ")";
+			case "isZero" if (args.length == 0):
+				"(" + self + " == 0)";
+			case "isNeg" if (args.length == 0):
+				"(" + self + " < 0)";
+			case _:
+				null;
+		};
+	}
+
+	static function int64InstanceOrExtensionCallReturnCppType(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final clean = normalizeInt64Method(method);
+		if (clean == "ofInt" && args.length == 0 && isCppIntExpr(receiver, scope))
+			return "long long";
+		if (!isCppInt64Expr(receiver, scope))
+			return "";
+		return switch (clean) {
+			case "toInt" if (args.length == 0):
+				"int";
+			case "toStr" if (args.length == 0):
+				"std::string";
+			case "compare" | "ucompare" if (args.length == 1):
+				"int";
+			case "eq" | "neq" if (args.length == 1):
+				"bool";
+			case "add" | "sub" | "mul" | "div" | "mod" | "shl" | "shr" | "ushr" | "and" | "or" | "xor" if (args.length == 1):
+				"long long";
+			case "divMod" if (args.length == 1):
+				int64DivModStruct().name;
+			case "neg" if (args.length == 0):
+				"long long";
+			case "isZero" | "isNeg" if (args.length == 0):
+				"bool";
+			case _:
+				"";
+		};
+	}
+
 	static function int64StaticCallNeedsHelper(method:String):Bool {
-		return method == "parseString" || method == "fromFloat";
+		final clean = normalizeInt64Method(method);
+		return clean == "parseString" || clean == "fromFloat";
 	}
 
 	static function int64StaticCallReturnsInt(method:String):Bool {
-		return method == "compare" || method == "ucompare";
+		final clean = normalizeInt64Method(method);
+		return clean == "compare" || clean == "ucompare";
+	}
+
+	static function int64ImportedStaticCallReturnCppType(method:String, argCount:Int):String {
+		return int64StaticCallReturnCppType(normalizeInt64Method(method), argCount);
+	}
+
+	static function int64StaticCallReturnCppType(method:String, argCount:Int):String {
+		return switch (method) {
+			case "ofInt" | "parseString" | "fromFloat" | "neg" if (argCount == 1):
+				"long long";
+			case "make" | "add" | "sub" | "mul" | "div" | "mod" | "and" | "or" | "xor" | "shl" | "shr" | "ushr" if (argCount == 2):
+				"long long";
+			case "divMod" if (argCount == 2):
+				int64DivModStruct().name;
+			case "toStr" if (argCount == 1):
+				"std::string";
+			case "isNeg" if (argCount == 1):
+				"bool";
+			case "compare" | "ucompare" if (argCount == 2):
+				"int";
+			case _:
+				"";
+		};
+	}
+
+	static function isCppInt64Expr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		if (exprCppType(expr, scope) == "long long")
+			return true;
+		if (cppOptionalInnerType(exprCppType(expr, scope)) == "long long")
+			return true;
+		return switch (expr) {
+			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
+				isCppInt64Expr(args[2], scope);
+			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
+				isCppInt64Expr(args[0], scope);
+			case ECall(callee, args):
+				switch (callee) {
+					case EIdent("__hxhx_int_literal"):
+						switch (args) {
+							case [_, EString(suffix)]: suffix == "i64" || suffix == "u64";
+							case _:
+								false;
+						}
+					case EField(receiver, method) if (isInt64StaticReceiver(receiver)):
+						int64StaticCallReturnCppType(normalizeInt64Method(method), args.length) == "long long";
+					case EField(receiver, method):
+						int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope) == "long long";
+					case EIdent(name): int64ImportedStaticCallReturnCppType(name,
+							args.length) == "long long" && currentOrInheritedOwnerMethodOwner(name, scope) == null;
+					case _:
+						false;
+				}
+			case EUnop("-", inner) | EUnop("neg", inner) | EUnop("post++", inner) | EUnop("post--", inner) | ECast(inner, _) | EUntyped(inner):
+				isCppInt64Expr(inner, scope);
+			case EField(_, field) if (field == "quotient" || field == "modulus"):
+				true;
+			case EBinop(op, left, right) if (isIntegerArithmeticBinaryOp(op)): isCppInt64Expr(left, scope) || isCppInt64Expr(right, scope);
+			case ETernary(_, thenExpr, elseExpr): isCppInt64Expr(thenExpr, scope) && isCppInt64Expr(elseExpr, scope);
+			case _:
+				false;
+		};
+	}
+
+	static function normalizeInt64Method(method:String):String {
+		return switch (sanitizeIdentifier(method)) {
+			case "and_":
+				"and";
+			case "or_":
+				"or";
+			case "xor_":
+				"xor";
+			case other:
+				other;
+		};
 	}
 
 	static function int64DivModStruct():CppAnonStruct {

@@ -240,6 +240,17 @@ let stdIntrinsicLines = fun () -> let __arr_27 = HxArray.create () in (
   ignore (HxArray.push __arr_27 "    return std::nullopt;");
   ignore (HxArray.push __arr_27 "  }");
   ignore (HxArray.push __arr_27 "}");
+  ignore (HxArray.push __arr_27 "");
+  ignore (HxArray.push __arr_27 "static long long __hxhx_int_literal(const std::string& raw, const std::string& suffix) {");
+  ignore (HxArray.push __arr_27 "  int base = (raw.size() >= 2 && raw[0] == '0' && (raw[1] == 'x' || raw[1] == 'X')) ? 16 : 10;");
+  ignore (HxArray.push __arr_27 "  if (base == 16 || suffix == \"u32\" || suffix == \"u64\") return static_cast<long long>(std::stoull(raw, nullptr, base));");
+  ignore (HxArray.push __arr_27 "  return static_cast<long long>(std::stoll(raw, nullptr, base));");
+  ignore (HxArray.push __arr_27 "}");
+  ignore (HxArray.push __arr_27 "");
+  ignore (HxArray.push __arr_27 "static int __hxhx_int64_to_int(long long value) {");
+  ignore (HxArray.push __arr_27 "  if (value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max()) throw std::runtime_error(\"Overflow\");");
+  ignore (HxArray.push __arr_27 "  return static_cast<int>(value);");
+  ignore (HxArray.push __arr_27 "}");
   __arr_27
 )
 

@@ -655,6 +655,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function compareUnsigned(a:Int64, b:Int64):Int {",
 			"    return Int64.ucompare(a, b);",
 			"  }",
+			"  public static function literalAndInstance(a:Int64, b:Int64):String {",
+			"    var x:Int64 = 0x7FFFFFFFFFFFFFFFi64;",
+			"    var projected = x.low + x.high;",
+			"    a.toInt();",
+			"    a.compare(b);",
+			"    a.ucompare(b);",
+			"    return a.add(b).toStr();",
+			"  }",
+			"  public static function instanceStructAndProjection(a:Int64, b:Int64):Bool {",
+			"    var pair = a.divMod(b);",
+			"    var n:Null<Int64> = pair.modulus;",
+			"    var projected = pair.modulus.low + n.high;",
+			"    return a.isNeg() || projected == 0;",
+			"  }",
 			"}",
 			"class StringIteratorUnicode {",
 			"  var offset = 0;",
@@ -7533,9 +7547,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source,
 			"return static_cast<int>(((static_cast<unsigned long long>(a) < static_cast<unsigned long long>(b)) ? -1 : ((static_cast<unsigned long long>(a) > static_cast<unsigned long long>(b)) ? 1 : 0)));",
 			"C++ smoke should lower Int64.ucompare to primitive unsigned ordering");
+		assertContains(source, "long long x = __hxhx_int_literal(\"0x7FFFFFFFFFFFFFFF\", \"i64\");",
+			"C++ smoke should lower suffixed Int64 literals through target-owned literal support");
+		assertContains(source, "__hxhx_int64_to_int(a);", "C++ smoke should lower Int64.toInt instance calls to target-owned overflow support");
+		assertContains(source, "((a < b) ? -1 : ((a > b) ? 1 : 0));", "C++ smoke should lower Int64.compare instance calls to primitive signed ordering");
+		assertContains(source,
+			"((static_cast<unsigned long long>(a) < static_cast<unsigned long long>(b)) ? -1 : ((static_cast<unsigned long long>(a) > static_cast<unsigned long long>(b)) ? 1 : 0));",
+			"C++ smoke should lower Int64.ucompare instance calls to primitive unsigned ordering");
+		assertContains(source, "return std::to_string((a + b));", "C++ smoke should lower Int64 add/toStr instance chains without raw member calls");
+		assertContains(source, "auto pair = __hxhx_anon_quotient_long_long_modulus_long_long{(a / b), (a % b)};",
+			"C++ smoke should lower Int64.divMod instance calls to the target-owned quotient/modulus aggregate");
+		assertContains(source, "static_cast<int>(static_cast<unsigned long long>((pair.modulus)) & 0xFFFFFFFFULL)",
+			"C++ smoke should lower Int64.low projection through divMod aggregate fields");
+		assertContains(source, "static_cast<int>((static_cast<unsigned long long>(n.value()) >> 32) & 0xFFFFFFFFULL)",
+			"C++ smoke should lower Int64.high projection through nullable Int64 storage");
+		assertContains(source, "(a < 0)", "C++ smoke should lower Int64.isNeg instance calls on primitive values");
 		assertTrue(source.indexOf("struct Int64Helper") < source.indexOf("struct CppInt64StaticUseLike"),
 			"C++ smoke should order Int64Helper before helper classes that call Int64.parseString/fromFloat");
 		assertTrue(source.indexOf("Int64::ofInt") < 0, "C++ smoke should not emit incomplete Int64 static helper calls");
+		assertTrue(source.indexOf(".divMod(") < 0, "C++ smoke should not emit raw Int64.divMod member calls on primitive values");
+		assertTrue(source.indexOf(".isNeg()") < 0, "C++ smoke should not emit raw Int64.isNeg member calls on primitive values");
+		assertTrue(source.indexOf(".toInt()") < 0, "C++ smoke should not emit raw Int64.toInt member calls on primitive values");
+		assertTrue(source.indexOf(".toStr()") < 0, "C++ smoke should not emit raw Int64.toStr member calls on primitive values");
 		assertContains(source, "auto __hxhx_iter_code = std::make_shared<StringIteratorUnicode>(s);",
 			"C++ smoke should bind Haxe iterator protocol objects before looping");
 		assertContains(source, "static std::shared_ptr<StringIteratorUnicode> unicodeIterator(std::string s)",
