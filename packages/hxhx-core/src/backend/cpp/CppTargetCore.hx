@@ -748,6 +748,22 @@ class CppTargetCore {
 		out.push("  return out.str();");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T, typename U, typename = void>");
+		out.push("struct __hxhx_has_equals_method : std::false_type {};");
+		out.push("");
+		out.push("template<typename T, typename U>");
+		out.push("struct __hxhx_has_equals_method<T, U, std::void_t<decltype(std::declval<T>()->equals(std::declval<U>()))>> : std::true_type {};");
+		out.push("");
+		out.push("template<typename T, typename U>");
+		out.push("static bool __hxhx_key_eq(const T& left, const U& right) {");
+		out.push("  if constexpr (__hxhx_has_equals_method<T, U>::value) {");
+		out.push("    if (left == nullptr || right == nullptr) return left == right;");
+		out.push("    return left->equals(right);");
+		out.push("  } else {");
+		out.push("    return left == right;");
+		out.push("  }");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T, typename F>");
 		out.push("static std::vector<std::string> __hxhx_vector_map_string(const std::vector<T>& values, F f) {");
 		out.push("  std::vector<std::string> out;");
@@ -1802,6 +1818,8 @@ class CppTargetCore {
 			return renderStdVectorSupportClass(cls, classLookup);
 		if (isTemplateWrapSupportClass(cls))
 			return renderTemplateWrapSupportClass(cls);
+		if (isHashMapBackedAbstractClass(cls))
+			return renderHashMapBackedAbstractClass(cls);
 		if (isStringMapBackedAbstractClass(cls))
 			return renderStringMapBackedAbstractClass(cls);
 		if (isArrayBackedAbstractClass(cls))
@@ -2184,6 +2202,68 @@ class CppTargetCore {
 			return false;
 		final underlying = abstractUnderlyingTypeHint(cls);
 		return sanitizeTypePath(typeBaseName(underlying == null ? "" : underlying)) == "StringMap";
+	}
+
+	static function isHashMapBackedAbstractClass(cls:HxClassDecl):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "HashMap")
+			return false;
+		final underlying = abstractUnderlyingTypeHint(cls);
+		return sanitizeTypePath(typeBaseName(underlying == null ? "" : underlying)) == "HashMapData";
+	}
+
+	static function renderHashMapBackedAbstractClass(cls:HxClassDecl):Array<String> {
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final typeParams = genericClassTemplateParams(cls);
+		final keyType = typeParams.length > 0 ? sanitizeIdentifier(typeParams[0]) : "std::string";
+		final valueType = typeParams.length > 1 ? sanitizeIdentifier(typeParams[1]) : "std::string";
+		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
+		out.push("struct " + className + " {");
+		out.push("  std::vector<std::pair<" + keyType + ", " + valueType + ">> values;");
+		out.push("  " + className + "() {}");
+		out.push("  int hashCode() { return 0; }");
+		out.push("  void set(" + keyType + " key, " + valueType + " value) {");
+		out.push("    (*this)[key] = value;");
+		out.push("  }");
+		out.push("  " + valueType + " get(" + keyType + " key) {");
+		out.push("    for (auto& entry : values) if (__hxhx_key_eq(entry.first, key)) return entry.second;");
+		out.push("    return " + valueType + "{};");
+		out.push("  }");
+		out.push("  " + valueType + "& operator[](" + keyType + " key) {");
+		out.push("    for (auto& entry : values) if (__hxhx_key_eq(entry.first, key)) return entry.second;");
+		out.push("    values.push_back(std::make_pair(key, " + valueType + "{}));");
+		out.push("    return values.back().second;");
+		out.push("  }");
+		out.push("  const " + valueType + "& operator[](" + keyType + " key) const {");
+		out.push("    for (const auto& entry : values) if (__hxhx_key_eq(entry.first, key)) return entry.second;");
+		out.push("    static const " + valueType + " empty = " + valueType + "{};");
+		out.push("    return empty;");
+		out.push("  }");
+		out.push("  bool exists(" + keyType + " key) {");
+		out.push("    for (const auto& entry : values) if (__hxhx_key_eq(entry.first, key)) return true;");
+		out.push("    return false;");
+		out.push("  }");
+		out.push("  bool remove(" + keyType + " key) {");
+		out.push("    for (auto it = values.begin(); it != values.end(); ++it) if (__hxhx_key_eq(it->first, key)) { values.erase(it); return true; }");
+		out.push("    return false;");
+		out.push("  }");
+		out.push("  std::shared_ptr<__hxhx_iterator<" + keyType + ">> keys() {");
+		out.push("    std::vector<" + keyType + "> out;");
+		out.push("    for (const auto& entry : values) out.push_back(entry.first);");
+		out.push("    return __hxhx_vector_iterator_of(out);");
+		out.push("  }");
+		out.push("  std::shared_ptr<__hxhx_iterator<" + valueType + ">> iterator() {");
+		out.push("    std::vector<" + valueType + "> out;");
+		out.push("    for (const auto& entry : values) out.push_back(entry.second);");
+		out.push("    return __hxhx_vector_iterator_of(out);");
+		out.push("  }");
+		out.push("  std::string toString() { return __hxhx_map_literal_to_string(values); }");
+		out.push("  void clear() { values.clear(); }");
+		out.push("};");
+		out.push(genericTemplatePrefix(typeParams));
+		out.push("std::shared_ptr<" + className + "<" + typeParams.join(", ") + ">> __hxhx_make_shared_" + className + "() {");
+		out.push("  return std::make_shared<" + className + "<" + typeParams.join(", ") + ">>();");
+		out.push("}");
+		return out;
 	}
 
 	static function renderStringMapBackedAbstractClass(cls:HxClassDecl):Array<String> {
@@ -4023,8 +4103,9 @@ class CppTargetCore {
 				});
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				collectStringMapLocalTypeOverridesFromExpr(iterable, scope, candidates);
-				withScopedLocal(scope, sanitizeIdentifier(keyName), "int", () -> {
-					withScopedLocal(scope, sanitizeIdentifier(valueName), iterableElementType(iterable, scope), () -> {
+				final loopTypes = keyValueLoopTypes(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
 						collectStringMapLocalTypeOverridesFromStmt(body, scope, candidates);
 					});
 				});
@@ -4256,8 +4337,9 @@ class CppTargetCore {
 				});
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				collectGenericFactoryLocalTypeOverridesFromExpr(iterable, scope, candidates, mapped);
-				withScopedLocal(scope, sanitizeIdentifier(keyName), "int", () -> {
-					withScopedLocal(scope, sanitizeIdentifier(valueName), iterableElementType(iterable, scope), () -> {
+				final loopTypes = keyValueLoopTypes(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
 						collectGenericFactoryLocalTypeOverridesFromStmt(body, scope, candidates, mapped);
 					});
 				});
@@ -4475,8 +4557,9 @@ class CppTargetCore {
 				});
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				collectDynamicLocalTypeOverridesFromExpr(iterable, scope, candidates);
-				withScopedLocal(scope, sanitizeIdentifier(keyName), "int", () -> {
-					withScopedLocal(scope, sanitizeIdentifier(valueName), iterableElementType(iterable, scope), () -> {
+				final loopTypes = keyValueLoopTypes(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
 						collectDynamicLocalTypeOverridesFromStmt(body, scope, candidates);
 					});
 				});
@@ -4681,8 +4764,9 @@ class CppTargetCore {
 				});
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				collectHelperTypedAsLocalTypeOverridesFromExpr(iterable, scope);
-				withScopedLocal(scope, sanitizeIdentifier(keyName), "int", () -> {
-					withScopedLocal(scope, sanitizeIdentifier(valueName), iterableElementType(iterable, scope), () -> {
+				final loopTypes = keyValueLoopTypes(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
 						collectHelperTypedAsLocalTypeOverridesFromStmt(body, scope);
 					});
 				});
@@ -4880,8 +4964,9 @@ class CppTargetCore {
 				});
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				collectAssignedArgTypeOverridesFromExpr(iterable, scope, candidates);
-				withScopedLocal(scope, sanitizeIdentifier(keyName), "int", () -> {
-					withScopedLocal(scope, sanitizeIdentifier(valueName), iterableElementType(iterable, scope), () -> {
+				final loopTypes = keyValueLoopTypes(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
 						collectAssignedArgTypeOverridesFromStmt(body, scope, candidates);
 					});
 				});
@@ -5005,8 +5090,9 @@ class CppTargetCore {
 				});
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				collectCallableArgTypeOverridesFromExpr(iterable, scope, candidates, "");
-				withScopedLocal(scope, sanitizeIdentifier(keyName), "int", () -> {
-					withScopedLocal(scope, sanitizeIdentifier(valueName), iterableElementType(iterable, scope), () -> {
+				final loopTypes = keyValueLoopTypes(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
 						collectCallableArgTypeOverridesFromStmt(body, scope, candidates, expectedType);
 					});
 				});
@@ -5651,6 +5737,32 @@ class CppTargetCore {
 		final valueLocal = sanitizeIdentifier(valueName);
 		final indexLocal = "__hxhx_kv_" + keyLocal;
 		final source = renderExpr(iterable, scope);
+		final iterableType = exprCppType(iterable, scope);
+		final mapKeyType = mapKeyCppType(iterableType);
+		final mapValueType = mapValueCppType(iterableType);
+		if (mapKeyType.length > 0 && mapValueType.length > 0) {
+			final mapLocal = "__hxhx_kv_map_" + keyLocal;
+			final keysLocal = "__hxhx_kv_keys_" + keyLocal;
+			final access = isCppReferenceType(iterableType) ? "->" : ".";
+			final out = [indent + "auto " + mapLocal + " = " + source + ";",
+				indent + "auto " + keysLocal + " = " + mapLocal + access + "keys();",
+				indent + "while (" + keysLocal + "->hasNext()) {",
+				indent + "  auto " + keyLocal + " = " + keysLocal + "->next();",
+				indent
+				+ "  auto "
+				+ valueLocal
+				+ " = "
+				+ mapValueLookupExpr(mapLocal, keyLocal, iterableType, mapValueType)
+				+ ";"];
+			withScopedLocal(scope, keyLocal, mapKeyType, () -> {
+				withScopedLocal(scope, valueLocal, mapValueType, () -> {
+					for (line in renderStmtBlockContent(body, indent + "  ", scope))
+						out.push(line);
+				});
+			});
+			out.push(indent + "}");
+			return out;
+		}
 		final elementType = iterableElementType(iterable, scope);
 		final pairArgs = cppPairTypeArgs(elementType);
 		final out = [
@@ -7663,6 +7775,9 @@ class CppTargetCore {
 		final intArgs = templateArgsFromExpectedClassType("IntMap", receiverCppType);
 		if (intArgs.length == 1)
 			return intArgs[0];
+		final hashArgs = templateArgsFromExpectedClassType("HashMap", receiverCppType);
+		if (hashArgs.length == 2)
+			return hashArgs[1];
 		final mapArgs = templateArgsFromExpectedClassType("Map", receiverCppType);
 		return mapArgs.length == 2 ? mapArgs[1] : "";
 	}
@@ -7672,8 +7787,31 @@ class CppTargetCore {
 			return "std::string";
 		if (templateArgsFromExpectedClassType("IntMap", receiverCppType).length == 1)
 			return "int";
+		final hashArgs = templateArgsFromExpectedClassType("HashMap", receiverCppType);
+		if (hashArgs.length == 2)
+			return hashArgs[0];
 		final mapArgs = templateArgsFromExpectedClassType("Map", receiverCppType);
 		return mapArgs.length == 2 ? mapArgs[0] : "";
+	}
+
+	static function mapValueLookupExpr(mapLocal:String, keyLocal:String, receiverCppType:String, valueType:String):String {
+		final access = isCppReferenceType(receiverCppType) ? "->" : ".";
+		final getExpr = mapLocal + access + "get(" + keyLocal + ")";
+		if (templateArgsFromExpectedClassType("StringMap", receiverCppType).length == 1
+			|| templateArgsFromExpectedClassType("IntMap", receiverCppType).length == 1)
+			return getExpr + ".value_or(" + valueType + "{})";
+		return getExpr;
+	}
+
+	static function keyValueLoopTypes(iterable:HxExpr, ?scope:CppRenderScope):Array<String> {
+		final iterableType = exprCppType(iterable, scope);
+		final mapKey = mapKeyCppType(iterableType);
+		final mapValue = mapValueCppType(iterableType);
+		if (mapKey.length > 0 && mapValue.length > 0)
+			return [mapKey, mapValue];
+		final elementType = iterableElementType(iterable, scope);
+		final pairArgs = cppPairTypeArgs(elementType);
+		return pairArgs.length == 2 ? pairArgs : ["int", elementType];
 	}
 
 	static function mapIteratorMethodReturnType(receiverCppType:String, method:String):String {
@@ -7942,6 +8080,8 @@ class CppTargetCore {
 				case _:
 			}
 		}
+		if (isCppReferenceType(valueType))
+			return valueExprForExpectedType(arg, valueType, scope);
 		return renderExpr(arg, scope);
 	}
 
@@ -10148,7 +10288,7 @@ class CppTargetCore {
 		returns before the surrounding method return type can help.
 	**/
 	static function switchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>, ?scope:CppRenderScope, ?expectedType:String):String {
-		final typeName = switchExprExpectedResultType(exprs, expectedType);
+		final typeName = switchExprExpectedResultType(exprs, expectedType, scope);
 		final switchValue = "__hxhx_switch";
 		final scrutineeExpr = isStringLike(scrutinee) ? stringExpr(scrutinee, scope) : renderExpr(scrutinee, scope);
 		final out = [
@@ -10203,14 +10343,14 @@ class CppTargetCore {
 		return typeName == "std::string" ? stringExpr(expr, scope) : valueExprForExpectedType(expr, typeName, scope);
 	}
 
-	static function switchExprExpectedResultType(exprs:Array<HxExpr>, ?expectedType:String):String {
+	static function switchExprExpectedResultType(exprs:Array<HxExpr>, ?expectedType:String, ?scope:CppRenderScope):String {
 		final typeName = StringTools.trim(expectedType == null ? "" : expectedType);
 		if (typeName.length > 0 && typeName != "auto")
 			return typeName;
-		return switchExprResultType(exprs);
+		return switchExprResultType(exprs, scope);
 	}
 
-	static function switchExprResultType(exprs:Array<HxExpr>):String {
+	static function switchExprResultType(exprs:Array<HxExpr>, ?scope:CppRenderScope):String {
 		for (expr in exprs)
 			if (isStringLike(expr))
 				return "std::string";
@@ -10224,6 +10364,14 @@ class CppTargetCore {
 			switch (expr) {
 				case EBool(_):
 					return "bool";
+				case _:
+			}
+		for (expr in exprs)
+			switch (expr) {
+				case ENew(typePath, _):
+					final typeName = cppTypeHint(typePath, scope);
+					if (typeName.length > 0)
+						return typeName;
 				case _:
 			}
 		return "int";

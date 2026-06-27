@@ -7684,6 +7684,45 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ enum-pattern binders returned directly from an expected reference switch should use the expected branch type");
 		assertTrue(switchExpectedRefSource.indexOf("  return 0;\n})()") < 0,
 			"C++ switch expression fallback in an expected reference context should not return int zero");
+		final hashMapLoopClasses = new StringMap<HxClassDecl>();
+		final hashMapLoopNames = new StringMap<Bool>();
+		final hashMapPoint = new HxClassDecl("Point", false, [
+			new HxFunctionDecl("equals", Public, false, [new HxFunctionArg("point", "Point", NoDefault, false, false)], "Bool", [], "")
+		], []);
+		final hashMapOwner = new HxClassDecl("HashMapLoopOwner", false, [], []);
+		for (cls in [hashMapPoint, hashMapOwner]) {
+			hashMapLoopClasses.set(HxClassDecl.getName(cls), cls);
+			hashMapLoopNames.set(HxClassDecl.getName(cls), true);
+		}
+		final hashMapLoopScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(hashMapOwner, {
+			names: hashMapLoopNames,
+			byName: hashMapLoopClasses
+		}, "void");
+		hashMapLoopScope.localTypes.set("grid", "std::shared_ptr<HashMap<std::shared_ptr<Point>, std::string>>");
+		final hashMapLoopSource = @:privateAccess backend.cpp.CppTargetCore.renderForKeyValueStmt("p", "s", EIdent("grid"), SBlock([
+			SExpr(ECall(EField(EIdent("p"), "equals"), [
+				ESwitch(EIdent("s"), [PString("a"), PWildcard], [ENew("Point", [EInt(0), EInt(0)]), ENull])
+			]), HxPos.unknown())
+		], HxPos.unknown()), "", hashMapLoopScope).join("\n");
+		assertContains(hashMapLoopSource, "auto __hxhx_kv_keys_p = __hxhx_kv_map_p->keys();",
+			"C++ HashMap key/value loops should iterate map keys instead of indexing the shared_ptr map as a vector");
+		assertContains(hashMapLoopSource, "auto s = __hxhx_kv_map_p->get(p);", "C++ HashMap key/value loops should recover values through the typed map key");
+		assertContains(hashMapLoopSource, "p->equals(([&]() -> std::shared_ptr<Point> {",
+			"C++ switch expressions passed to Point.equals should inherit the expected Point reference argument type");
+		assertTrue(hashMapLoopSource.indexOf("static_cast<int>(__hxhx_kv_p)") < 0,
+			"C++ HashMap key/value loops should not synthesize integer keys for typed map iteration");
+		final pointSwitchSource = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ESwitch(EIdent("s"), [PString("a"), PWildcard],
+			[ENew("Point", [EInt(0), EInt(0)]), ENull]), hashMapLoopScope);
+		assertContains(pointSwitchSource, "([&]() -> std::shared_ptr<Point> {",
+			"C++ switch expressions should infer reference result types from constructor branches when no expected type is available");
+		final hashMapAbstract = new HxClassDecl("HashMap", false, [], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=HashMapData<K,V>"]);
+		final hashMapAbstractLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(hashMapAbstract, {
+			names: hashMapLoopNames,
+			byName: hashMapLoopClasses
+		}).join("\n");
+		assertContains(hashMapAbstractLines, "std::vector<std::pair<K, V>> values;", "C++ HashMap abstract support should emit a target-owned backing store");
+		assertContains(hashMapAbstractLines, "V& operator[](K key)",
+			"C++ HashMap abstract support should expose mutable index access used by generated map writes");
 
 		final macroAbstractShapeDir = Path.join([root, "macro-abstract-operator-shape-source-only"]);
 		final macroAbstractShapeEmit = BackendRegistry.createForTarget("cpp-native")
