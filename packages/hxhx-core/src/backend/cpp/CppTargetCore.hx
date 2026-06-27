@@ -2657,6 +2657,10 @@ class CppTargetCore {
 			return "bool";
 		if (owner == "MainEvent" && field == "f")
 			return "std::function<void()>";
+		if (owner == "Http" && (field == "onData" || field == "onError"))
+			return "std::function<void(std::string)>";
+		if (owner == "Http" && field == "onBytes")
+			return "std::function<void(__hxhx_http_bytes)>";
 		if (isStringIteratorHelper(owner) && (field == "offset" || field == "byteOffset" || field == "charOffset"))
 			return "int";
 		if (owner == "Template") {
@@ -2751,6 +2755,12 @@ class CppTargetCore {
 		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
 		if (owner == "Timer" && method == "stamp")
 			return "double";
+		if (owner == "Timer" && method == "delay")
+			return "std::shared_ptr<Timer>";
+		if (owner == "Timer" && method == "stop")
+			return "void";
+		if (owner == "Http" && (method == "setPostData" || method == "setPostBytes" || method == "request"))
+			return "void";
 		if (owner == "Lock" && (method == "acquire" || method == "release"))
 			return "void";
 		if (owner == "Lock" && method == "wait")
@@ -9133,7 +9143,7 @@ class CppTargetCore {
 
 	static function isCppCoreExternClass(name:String):Bool {
 		final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
-		return clean == "Math" || clean == "NativeArray" || clean == "EnumValue" || clean == "Pointer" || clean == "ConstPointer"
+		return clean == "Math" || clean == "NativeArray" || clean == "EnumValue" || clean == "Http" || clean == "Pointer" || clean == "ConstPointer"
 			|| clean == "RawConstPointer" || clean == "Reference" || clean == "Star" || clean == "AutoCast" || clean == "ArrayBase"
 			|| isCppPreludeStaticClass(clean) || isBytesDataTypeName(clean) || isCppPrimitiveIntrinsicClass(clean);
 	}

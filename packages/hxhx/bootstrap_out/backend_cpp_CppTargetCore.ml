@@ -5543,6 +5543,9 @@ let cppPreludeMethodReturnType = fun className methodName -> try let __fallback_
     ));
     let hx_method = (sanitizeIdentifier (!tempString1 : string) : string) in (
       ignore (if HxString.equals owner "Timer" && HxString.equals hx_method "stamp" then raise (HxRuntime.Hx_return (Obj.repr ("double" : string))) else ());
+      ignore (if HxString.equals owner "Timer" && HxString.equals hx_method "delay" then raise (HxRuntime.Hx_return (Obj.repr ("std::shared_ptr<Timer>" : string))) else ());
+      ignore (if HxString.equals owner "Timer" && HxString.equals hx_method "stop" then raise (HxRuntime.Hx_return (Obj.repr ("void" : string))) else ());
+      ignore (if HxString.equals owner "Http" && (HxString.equals hx_method "setPostData" || HxString.equals hx_method "setPostBytes" || HxString.equals hx_method "request") then raise (HxRuntime.Hx_return (Obj.repr ("void" : string))) else ());
       ignore (if HxString.equals owner "Lock" && (HxString.equals hx_method "acquire" || HxString.equals hx_method "release") then raise (HxRuntime.Hx_return (Obj.repr ("void" : string))) else ());
       ignore (if HxString.equals owner "Lock" && HxString.equals hx_method "wait" then raise (HxRuntime.Hx_return (Obj.repr ("bool" : string))) else ());
       ignore (if HxString.equals owner "Mutex" && (HxString.equals hx_method "acquire" || HxString.equals hx_method "release") then raise (HxRuntime.Hx_return (Obj.repr ("void" : string))) else ());
@@ -6337,7 +6340,7 @@ let isCppCoreExternClass = fun name -> let tempString = ref ("" : string) in (
     tempString := __assign_7361;
     __assign_7361
   ));
-  let clean = (sanitizeTypePath (typeBaseName (!tempString : string) : string) : string) in HxString.equals clean "Math" || HxString.equals clean "NativeArray" || HxString.equals clean "EnumValue" || HxString.equals clean "Pointer" || HxString.equals clean "ConstPointer" || HxString.equals clean "RawConstPointer" || HxString.equals clean "Reference" || HxString.equals clean "Star" || HxString.equals clean "AutoCast" || HxString.equals clean "ArrayBase" || isCppPreludeStaticClass (clean : string) || isBytesDataTypeName (clean : string) || isCppPrimitiveIntrinsicClass (clean : string)
+  let clean = (sanitizeTypePath (typeBaseName (!tempString : string) : string) : string) in HxString.equals clean "Math" || HxString.equals clean "NativeArray" || HxString.equals clean "EnumValue" || HxString.equals clean "Http" || HxString.equals clean "Pointer" || HxString.equals clean "ConstPointer" || HxString.equals clean "RawConstPointer" || HxString.equals clean "Reference" || HxString.equals clean "Star" || HxString.equals clean "AutoCast" || HxString.equals clean "ArrayBase" || isCppPreludeStaticClass (clean : string) || isBytesDataTypeName (clean : string) || isCppPrimitiveIntrinsicClass (clean : string)
 )
 
 let shouldForwardDeclareMissingType = fun name classLookup -> try let __fallback_result_271 = let tempString = ref ("" : string) in (
@@ -9388,6 +9391,8 @@ and knownStdlibFieldCppType = fun className fieldName typeHint init scope -> try
       ignore (if HxString.equals owner "MainEvent" && HxString.equals field "priority" then raise (HxRuntime.Hx_return (Obj.repr ("int" : string))) else ());
       ignore (if HxString.equals owner "MainEvent" && HxString.equals field "isMain" then raise (HxRuntime.Hx_return (Obj.repr ("bool" : string))) else ());
       ignore (if HxString.equals owner "MainEvent" && HxString.equals field "f" then raise (HxRuntime.Hx_return (Obj.repr ("std::function<void()>" : string))) else ());
+      ignore (if HxString.equals owner "Http" && (HxString.equals field "onData" || HxString.equals field "onError") then raise (HxRuntime.Hx_return (Obj.repr ("std::function<void(std::string)>" : string))) else ());
+      ignore (if HxString.equals owner "Http" && HxString.equals field "onBytes" then raise (HxRuntime.Hx_return (Obj.repr ("std::function<void(__hxhx_http_bytes)>" : string))) else ());
       ignore (if isStringIteratorHelper (owner : string) && (HxString.equals field "offset" || HxString.equals field "byteOffset" || HxString.equals field "charOffset") then raise (HxRuntime.Hx_return (Obj.repr ("int" : string))) else ());
       ignore (if HxString.equals owner "Template" then ignore (let tempResult = ref ("" : string) in (
         ignore (match field with

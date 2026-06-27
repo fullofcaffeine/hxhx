@@ -1720,6 +1720,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"}",
 			"class Timer {",
 			"  public static function stamp():Float return 0.0;",
+			"  public static function delay(f:Void->Void, ms:Int):Timer return new Timer();",
+			"  public function new() {}",
+			"  public function stop():Void {}",
+			"}",
+			"class Http {",
+			"  public var onData:Dynamic;",
+			"  public var onError:Dynamic;",
+			"  public var onBytes:Dynamic;",
+			"  public function new(url:String) {}",
+			"  public function setPostData(value:String):Void {}",
+			"  public function setPostBytes(value:Dynamic):Void {}",
+			"  public function request():Void {}",
 			"}",
 			"class MainEvent {",
 			"  public var f:Void->Void;",
@@ -1781,6 +1793,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"class Main {",
 			"  static function main() {",
 			"    EntryPoint.runInMainThread(() -> {});",
+			"    var timer = Timer.delay(() -> {}, 5);",
+			"    timer.stop();",
+			"    var srcStr = \"hello\";",
+			"    var payload:Dynamic = {};",
+			"    var d = new Http(\"http://localhost\");",
+			"    d.onData = function(echoStr) {};",
+			"    d.onError = function(e) {};",
+			"    d.onBytes = function(echoData) { echoData.size(); echoData.get(0); };",
+			"    d.setPostData(srcStr);",
+			"    d.setPostBytes(payload);",
+			"    d.request();",
 			"    var event = MainLoop.add(() -> {}, 1);",
 			"    event.delay(0.0);",
 			"    event.stop();",
@@ -7828,6 +7851,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final mainLoopSource = File.getContent(mainLoopEmit.entryPath);
 		assertContains(mainLoopSource, "#include <chrono>", "C++ Timer.stamp support should include chrono");
 		assertContains(mainLoopSource, "struct Timer {", "C++ Timer should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "static std::shared_ptr<Timer> delay(std::function<void()> f, double ms)",
+			"C++ Timer support should expose Timer.delay for async timeout helpers");
+		assertContains(mainLoopSource, "void stop() {}", "C++ Timer support should expose Timer.stop for async cleanup");
+		assertContains(mainLoopSource, "struct Http {", "C++ Http should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "std::function<void(std::string)> onData = nullptr;", "C++ Http support should expose the string data callback field");
+		assertContains(mainLoopSource, "std::function<void(std::string)> onError = nullptr;", "C++ Http support should expose the error callback field");
+		assertContains(mainLoopSource, "std::function<void(__hxhx_http_bytes)> onBytes = nullptr;",
+			"C++ Http support should expose a bytes callback payload with size/get");
+		assertContains(mainLoopSource, "void setPostData(std::string value)", "C++ Http support should expose setPostData");
+		assertContains(mainLoopSource, "void setPostBytes(T value)", "C++ Http support should expose setPostBytes");
+		assertContains(mainLoopSource, "void request() {}", "C++ Http support should expose request");
 		assertContains(mainLoopSource, "struct Lock {", "C++ Lock should be provided by target-owned runtime support");
 		assertContains(mainLoopSource, "struct Mutex {", "C++ Mutex should be provided by target-owned runtime support");
 		assertContains(mainLoopSource, "struct MainEvent {", "C++ MainEvent should be provided by target-owned runtime support");
@@ -7844,6 +7878,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(mainLoopSource, "static T __hxhx_shift(std::vector<T>& values)",
 			"C++ function queues should have a target-owned shift helper for Array.shift lowering");
 		assertContains(mainLoopSource, "EntryPoint::runInMainThread([&]() {", "C++ generated code should call the target-owned EntryPoint support class");
+		assertContains(mainLoopSource, "auto timer = Timer::delay([&]() {", "C++ generated code should call the target-owned Timer.delay support");
+		assertContains(mainLoopSource, "timer->stop();", "C++ generated code should call Timer.stop through the support pointer");
+		assertContains(mainLoopSource, "auto d = std::make_shared<Http>(\"http://localhost\");",
+			"C++ generated code should construct the target-owned Http support class");
+		assertContains(mainLoopSource, "(d->onData) = [&](std::string echoStr)", "C++ generated code should assign Http.onData callbacks");
+		assertContains(mainLoopSource, "(d->onError) = [&](std::string e)", "C++ generated code should assign Http.onError callbacks");
+		assertContains(mainLoopSource, "(d->onBytes) = [&](__hxhx_http_bytes echoData)",
+			"C++ generated code should assign Http.onBytes callbacks with the target-owned bytes payload");
+		assertContains(mainLoopSource, "d->setPostData(srcStr);", "C++ generated code should call Http.setPostData");
+		assertContains(mainLoopSource, "d->setPostBytes(__hxhx_stringify(payload));", "C++ generated code should call Http.setPostBytes");
+		assertContains(mainLoopSource, "d->request();", "C++ generated code should call Http.request");
 		assertContains(mainLoopSource, "MainLoop::add([&]() {", "C++ generated code should call the target-owned MainLoop support class");
 		assertContains(mainLoopSource, "event->delay(0);", "C++ generated code should call MainEvent support methods through shared_ptr");
 		assertTrue(mainLoopSource.indexOf("ArrayVoid") < 0, "C++ event queue support should not leak ArrayVoid into generated source");
