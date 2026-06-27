@@ -1490,42 +1490,11 @@ class HxParser {
 					parsePrimaryExpr();
 				} else if (k == KNew) {
 					bump();
-					final typePath = readConstructorTypePath();
-					// Optional constructor type arguments: `new Foo<Bar,Baz>(...)`.
-					//
-					// Without consuming `<...>` here, the expression parser treats `<`/`>` as
-					// binary operators and drifts into nonsense AST like:
-					//   (new Foo) < ("Bar") > (...)
-					//
-					// Stage3 only needs the allocated runtime shape, so we intentionally drop
-					// generic constructor type arguments in this bootstrap parser.
+					var typePath = readConstructorTypePath();
 					if (isOtherChar("<")) {
-						var angleDepth = 0;
-						var previousWasMinus = false;
-						while (true) {
-							switch (cur.kind) {
-								case TOther(c) if (c == "<".code):
-									angleDepth += 1;
-									previousWasMinus = false;
-									bump();
-								case TOther(c) if (c == "-".code):
-									previousWasMinus = true;
-									bump();
-								case TOther(c) if (c == ">".code && previousWasMinus):
-									previousWasMinus = false;
-									bump();
-								case TOther(c) if (c == ">".code):
-									angleDepth -= 1;
-									previousWasMinus = false;
-									bump();
-									if (angleDepth <= 0) break;
-								case TEof:
-									break;
-								case _:
-									previousWasMinus = false;
-									bump();
-							}
-						}
+						final typeArgs = readTypeHintText(() -> cur.kind.match(TLParen) || cur.kind.match(TEof));
+						if (typeArgs.length > 0)
+							typePath += typeArgs;
 					}
 					// `new Foo(...)` always takes parens; keep parsing permissive in case upstream-ish code
 					// contains partially-supported constructs.

@@ -2866,6 +2866,41 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(genericMapLines, "bool exists(K key)", "C++ generic Map support should expose exists for Haxe Map callers");
 		assertContains(genericMapLines, "std::shared_ptr<__hxhx_iterator<K>> keys()", "C++ generic Map support should expose keys for Haxe Map iteration");
 		assertContains(genericMapLines, "std::string toString()", "C++ generic Map support should expose toString for empty map assertions");
+		final randomClass = new HxClassDecl("MyRandomClass", false, [], []);
+		final myAnon = new HxClassDecl("MyAnon", false, [], [
+			new HxFieldDecl("a", Public, false, "Int", null),
+			new HxFieldDecl("b", Public, false, "Null<MyRandomClass>", null)
+		], "", ["__hxhx_typedef"]);
+		final myGeneric = new HxClassDecl("MyGeneric", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("t", "T", NoDefault, false, false)], "Void",
+				[SExpr(EBinop("=", EField(EThis, "t"), EIdent("t")), HxPos.unknown())], "")
+		], [new HxFieldDecl("t", Public, false, "T", null)], "", ["__hxhx_type_params=T"]);
+		final genericAnonOwner = new HxClassDecl("GenericAnonOwner", false, [
+			new HxFunctionDecl("check", Public, true, [], "Void", [
+				SVar("a", "", ENew("MyGeneric<MyAnon>", [EAnon(["a"], [EInt(1)])]), HxPos.unknown()),
+				SVar("b", "", EField(EField(EIdent("a"), "t"), "b"), HxPos.unknown())
+			], "")
+		], []);
+		final genericAnonNames = new StringMap<Bool>();
+		for (name in ["MyRandomClass", "MyAnon", "MyGeneric", "GenericAnonOwner"])
+			genericAnonNames.set(name, true);
+		final genericAnonClasses = new StringMap<HxClassDecl>();
+		genericAnonClasses.set("MyRandomClass", randomClass);
+		genericAnonClasses.set("MyAnon", myAnon);
+		genericAnonClasses.set("MyGeneric", myGeneric);
+		genericAnonClasses.set("GenericAnonOwner", genericAnonOwner);
+		final genericAnonLookup = {
+			names: genericAnonNames,
+			byName: genericAnonClasses,
+			all: [randomClass, myAnon, myGeneric, genericAnonOwner]
+		};
+		final genericAnonLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(genericAnonOwner, genericAnonLookup).join("\n");
+		assertContains(genericAnonLines, "__hxhx_make_shared_MyGeneric<__hxhx_anon_a_int_",
+			"C++ explicit generic construction should preserve structural typedef field shape in template arguments");
+		assertContains(genericAnonLines, "(1, nullptr)",
+			"C++ structural typedef constructor arguments should default omitted nullable fields instead of narrowing to observed literal fields");
+		assertContains(genericAnonLines, "auto b = ((a->t).b);", "C++ generic structural typedef locals should retain fields read after construction");
 		final stringMapGeneric = new HxClassDecl("StringMap", false, [
 			new HxFunctionDecl("set", Public, false, [
 				new HxFunctionArg("k", "String", NoDefault, false, false),

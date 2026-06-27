@@ -27,11 +27,11 @@ class M14HihNewGenericCtorIntegrationTest {
 		return null;
 	}
 
-	static function assertGenericNew(init:Null<HxExpr>, varName:String):Void {
+	static function assertGenericNew(init:Null<HxExpr>, varName:String, expectedTypePath:String):Void {
 		switch (init) {
 			case ENew(typePath, args):
-				if (typePath != "MyGeneric")
-					fail(varName + ": expected constructor type path MyGeneric, got " + typePath);
+				if (typePath != expectedTypePath)
+					fail(varName + ": expected constructor type path " + expectedTypePath + ", got " + typePath);
 				if (args == null || args.length != 1)
 					fail(varName + ": expected one constructor arg");
 			case _:
@@ -50,8 +50,8 @@ class M14HihNewGenericCtorIntegrationTest {
 
 		final initA = findVarInit(body, "a");
 		final initB = findVarInit(body, "b");
-		assertGenericNew(initA, "a");
-		assertGenericNew(initB, "b");
+		assertGenericNew(initA, "a", "MyGeneric<MyAnon>");
+		assertGenericNew(initB, "b", "MyGeneric<String>");
 
 		switch (initA) {
 			case ENew(_, args):

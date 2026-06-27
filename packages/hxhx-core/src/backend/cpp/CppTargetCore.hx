@@ -1023,12 +1023,21 @@ class CppTargetCore {
 				out.push(struct);
 			}
 		}
-		function addTypeHint(typeHint:String, ?scope:CppRenderScope):Void {
+		function addTypeHint(typeHint:String, ?scope:CppRenderScope, allowMarkedTypedefAnon:Bool = false):Void {
 			final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 			if (hint.length == 0)
 				return;
-			if (hint.indexOf("{") < 0)
+			final genericArgs = genericTypeHintArgs(hint);
+			if (genericArgs.length > 0) {
+				for (arg in genericArgs)
+					addTypeHint(arg, scope, allowMarkedTypedefAnon);
 				return;
+			}
+			if (hint.indexOf("{") < 0) {
+				if (allowMarkedTypedefAnon)
+					addStruct(structuralTypedefAnonStructForTypeHint(hint, scope));
+				return;
+			}
 			traceAnonTypeHint(hint);
 			if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint) || CppTypeModel.isIteratorTypeHint(hint)) {
 				addTypeHint(genericTypeHintArg(hint), scope);
@@ -1046,8 +1055,6 @@ class CppTargetCore {
 				addStruct(structuralTypeHintStruct(hint, scope, classLookup));
 				return;
 			}
-			for (arg in genericTypeHintArgs(hint))
-				addTypeHint(arg, scope);
 		}
 		function addExpr(expr:HxExpr, ?scope:CppRenderScope):Void {
 			switch (expr) {
@@ -1078,7 +1085,8 @@ class CppTargetCore {
 					addExpr(cond, scope);
 					addExpr(thenExpr, scope);
 					addExpr(elseExpr, scope);
-				case ENew(_, args):
+				case ENew(typePath, args):
+					addTypeHint(typePath, scope, true);
 					for (arg in args)
 						addExpr(arg, scope);
 				case ECast(inner, _) | EUntyped(inner):
@@ -1441,10 +1449,19 @@ class CppTargetCore {
 				for (fn in HxClassDecl.getFunctions(cls)) {
 					final fnScope = renderScope(cls, classLookup, "void");
 					applyFunctionTypeParams(fnScope, fn);
-					addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), addMissing, fnScope);
+					final fnTypeParams = typeParams.concat(genericFunctionTypeParams(fn));
+					function addFnMissing(name:String):Void {
+						final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
+						for (param in fnTypeParams)
+							if (clean == sanitizeTypePath(param))
+								return;
+						if (shouldForwardDeclareMissingType(clean, classLookup))
+							emitType(clean);
+					}
+					addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), addFnMissing, fnScope);
 					for (arg in HxFunctionDecl.getArgs(fn))
-						addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), addMissing, fnScope);
-					addStmtClassDependencies(HxFunctionDecl.getBody(fn), addMissing, fnScope);
+						addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), addFnMissing, fnScope);
+					addStmtClassDependencies(HxFunctionDecl.getBody(fn), addFnMissing, fnScope);
 				}
 			}
 		}
@@ -1641,10 +1658,18 @@ class CppTargetCore {
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			final fnScope = renderScope(cls, classLookup, "void");
 			applyFunctionTypeParams(fnScope, fn);
-			addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), add, fnScope);
+			final fnTypeParams = genericClassTypeParams(cls).concat(genericFunctionTypeParams(fn));
+			function addFn(name:String):Void {
+				final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
+				for (param in fnTypeParams)
+					if (clean == sanitizeTypePath(param))
+						return;
+				add(clean);
+			}
+			addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), addFn, fnScope);
 			for (arg in HxFunctionDecl.getArgs(fn))
-				addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), add, fnScope);
-			addStmtClassDependencies(HxFunctionDecl.getBody(fn), add, fnScope);
+				addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), addFn, fnScope);
+			addStmtClassDependencies(HxFunctionDecl.getBody(fn), addFn, fnScope);
 		}
 		return deps;
 	}
@@ -6052,6 +6077,9 @@ class CppTargetCore {
 		final structuralTypedefValue = structuralTypedefValueExprForExpectedType(expr, expectedType, scope);
 		if (structuralTypedefValue != null)
 			return structuralTypedefValue;
+		final anonStructValue = anonStructValueExprForExpectedType(expr, expectedType, scope);
+		if (anonStructValue != null)
+			return anonStructValue;
 		final optionalInner = cppOptionalInnerType(exprCppType(expr, scope));
 		if (optionalInner.length > 0 && optionalInner == expectedType)
 			return renderExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
@@ -6728,6 +6756,14 @@ class CppTargetCore {
 		return nativeArrayUnsafeGetExpr(array, index, scope) + " = " + renderExpr(value, scope);
 	}
 
+	static function cppNewExprType(typePath:String, ?scope:CppRenderScope):String {
+		final className = sanitizeTypePath(typeBaseName(typePath));
+		final templateArgs = constructorTemplateArgsFromTypePath(typePath, scope);
+		if (templateArgs.length > 0 && scopeHasClass(scope, className) && genericClassTypeParamsForName(className, scope).length > 0)
+			return "std::shared_ptr<" + className + "<" + templateArgs.join(", ") + ">>";
+		return cppTypeHint(typePath, scope);
+	}
+
 	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?expectedCppType:String):String {
 		final className = sanitizeTypePath(typeBaseName(typePath));
 		if (isBytesDataTypeName(typePath)) {
@@ -6744,13 +6780,14 @@ class CppTargetCore {
 			return className + "(" + renderConstructorArgs(className, args, scope).join(", ") + ")";
 		if (scopeHasClass(scope, className) && isStdVectorHelperClass(scope.classByName.get(className)))
 			return className + "(" + renderConstructorArgs(className, args, scope).join(", ") + ")";
-		final renderedArgs = renderConstructorArgs(className, args, scope).join(", ");
 		final expectedClass = classNameFromCppType(expectedCppType);
+		final explicitTemplateArgs = constructorTemplateArgsFromTypePath(typePath, scope);
+		final expectedTemplateArgs = explicitTemplateArgs.length > 0 ? explicitTemplateArgs : templateArgsFromExpectedClassType(className, expectedCppType);
+		final renderedArgs = renderConstructorArgs(className, args, scope, expectedTemplateArgs).join(", ");
 		if (expectedClass != null
 			&& scopeHasClass(scope, expectedClass)
 			&& classAbstractUnderlyingMatches(scope.classByName.get(expectedClass), className, scope))
 			return "std::make_shared<" + expectedClass + ">(" + renderedArgs + ")";
-		final expectedTemplateArgs = templateArgsFromExpectedClassType(className, expectedCppType);
 		if (scopeHasClass(scope, className)
 			&& (genericClassTypeParamsForName(className, scope).length > 0 || expectedTemplateArgs.length > 0)) {
 			var templateArgs = expectedTemplateArgs.length > 0 ? expectedTemplateArgs : scopedTemplateArgsForClass(className, scope);
@@ -6863,8 +6900,90 @@ class CppTargetCore {
 		return args;
 	}
 
-	static function renderConstructorArgs(className:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
-		final expectedTypes = constructorArgCppTypes(className, scope);
+	static function constructorTemplateArgsFromTypePath(typePath:String, ?scope:CppRenderScope):Array<String> {
+		final args = genericTypeHintArgs(typePath);
+		if (args.length == 0)
+			return [];
+		return [
+			for (arg in args)
+				constructorTemplateArgCppType(arg, scope)
+		].filter(arg -> arg.length > 0);
+	}
+
+	static function constructorTemplateArgCppType(typeHint:String, ?scope:CppRenderScope):String {
+		final structural = structuralTypedefAnonStructTypeNameForTypeHint(typeHint, scope);
+		if (structural != null)
+			return structural;
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final args = genericTypeHintArgs(hint);
+		if (args.length > 0) {
+			final base = sanitizeTypePath(typeBaseName(hint));
+			return base + "<" + [for (arg in args) constructorTemplateArgCppType(arg, scope)].join(", ") + ">";
+		}
+		return cppTypeHint(hint, scope);
+	}
+
+	static function structuralTypedefAnonStructTypeNameForTypeHint(typeHint:String, ?scope:CppRenderScope):Null<String> {
+		final struct = structuralTypedefAnonStructForTypeHint(typeHint, scope);
+		return struct == null ? null : struct.name;
+	}
+
+	static function structuralTypedefAnonStructForTypeHint(typeHint:String, ?scope:CppRenderScope):Null<CppAnonStruct> {
+		if (scope == null)
+			return null;
+		final lookup = {names: scope.classNames, byName: scope.classByName, all: scope.allClasses};
+		var cls = CppTypeModel.structuralTypedefValueClassForTypeHint(typeHint, scope, lookup);
+		if (cls == null) {
+			final candidate = lookupClassForTypeHint(typeHint, scope, lookup);
+			if (candidate != null && hasMarkedStructuralTypedefFields(candidate))
+				cls = candidate;
+		}
+		if (cls == null)
+			return null;
+		final names = new Array<String>();
+		final types = new Array<String>();
+		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		for (field in HxClassDecl.getFields(cls)) {
+			if (HxFieldDecl.getIsStatic(field))
+				continue;
+			names.push(HxFieldDecl.getName(field));
+			final fieldType = knownStdlibFieldCppType(className, HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
+			types.push(isScopeTypeParam(fieldType, scope) || isBareCppTypeParamName(fieldType) ? "std::string" : fieldType);
+		}
+		if (names.length == 0)
+			return null;
+		final struct = {name: anonStructName(names, types), fieldNames: names, fieldTypes: types};
+		scope.anonStructs.set(struct.name, struct);
+		return struct;
+	}
+
+	static function hasMarkedStructuralTypedefFields(cls:HxClassDecl):Bool {
+		if (cls == null)
+			return false;
+		var marked = false;
+		for (meta in HxClassDecl.getMetadata(cls))
+			if (StringTools.trim(meta) == "__hxhx_typedef") {
+				marked = true;
+				break;
+			}
+		if (!marked)
+			return false;
+		for (field in HxClassDecl.getFields(cls))
+			if (!HxFieldDecl.getIsStatic(field))
+				return true;
+		return false;
+	}
+
+	static function renderConstructorArgs(className:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?templateArgs:Array<String>):Array<String> {
+		var expectedTypes = constructorArgCppTypes(className, scope);
+		if (templateArgs != null && templateArgs.length > 0) {
+			final typeParams = genericClassTypeParamsForName(className, scope);
+			if (typeParams.length > 0)
+				expectedTypes = [
+					for (typeName in expectedTypes)
+						substituteCppTypeParams(typeName, typeParams, templateArgs)
+				];
+		}
 		return [
 			for (i in 0...args.length)
 				constructorArgExpr(args[i], i < expectedTypes.length ? expectedTypes[i] : "", scope)
@@ -6886,6 +7005,8 @@ class CppTargetCore {
 	}
 
 	static function constructorArgExpr(arg:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
+		if (isConcreteConstructorExpectedType(expectedType, scope))
+			return valueExprForExpectedType(arg, expectedType, scope);
 		final expectedClass = classNameFromCppType(expectedType);
 		if (expectedClass != null) {
 			switch (arg) {
@@ -6895,6 +7016,19 @@ class CppTargetCore {
 			}
 		}
 		return renderExpr(arg, scope);
+	}
+
+	static function isConcreteConstructorExpectedType(expectedType:String, ?scope:CppRenderScope):Bool {
+		if (expectedType == null || expectedType.length == 0 || expectedType == "void" || expectedType == "auto")
+			return false;
+		if (isScopeTypeParam(expectedType, scope) || isBareCppTypeParamName(expectedType))
+			return false;
+		return isCppReferenceType(expectedType)
+			|| isCppOptionalType(expectedType)
+			|| isCppVectorType(expectedType)
+			|| isCppFunctionType(expectedType)
+			|| structuralTypedefClassForCppType(expectedType, scope) != null
+			|| (scope != null && scope.anonStructs.exists(expectedType));
 	}
 
 	static function currentOwnerIsOrExtends(expectedClass:String, ?scope:CppRenderScope):Bool {
@@ -8308,7 +8442,7 @@ class CppTargetCore {
 			case EThis:
 				sanitizeTypePath(HxClassDecl.getName(scope.owner));
 			case ENew(typePath, _):
-				cppTypeHint(typePath, scope);
+				cppNewExprType(typePath, scope);
 			case ECall(EField(EIdent("NativeArray"), "create"), _):
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
@@ -9105,7 +9239,7 @@ class CppTargetCore {
 			case ENew(typePath, _) if (isStdArrayTypePath(typePath)):
 				isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope);
 			case ENew(typePath, _):
-				cppTypeHint(typePath, scope);
+				cppNewExprType(typePath, scope);
 			case ECall(EField(EIdent("NativeArray"), "create"), _):
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
@@ -9887,6 +10021,25 @@ class CppTargetCore {
 				final actualType = exprCppType(expr, scope);
 				if (actualType == expectedType) null; else if (isCppReferenceType(actualType)) expectedType + "(*" + renderExpr(expr,
 					scope) + ")"; else expectedType + "(" + renderExpr(expr, scope) + ")";
+		};
+	}
+
+	static function anonStructValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || expectedType == null || !scope.anonStructs.exists(expectedType))
+			return null;
+		final struct = scope.anonStructs.get(expectedType);
+		return switch (expr) {
+			case EAnon(fieldNames, fieldValues):
+				final args = new Array<String>();
+				for (i in 0...struct.fieldNames.length) {
+					final fieldType = i < struct.fieldTypes.length ? struct.fieldTypes[i] : "";
+					final index = fieldNames.indexOf(struct.fieldNames[i]);
+					args.push(index >= 0
+						&& index < fieldValues.length ? valueExprForExpectedType(fieldValues[index], fieldType, scope) : cppDefaultValue(fieldType, scope));
+				}
+				expectedType + "(" + args.join(", ") + ")";
+			case _:
+				null;
 		};
 	}
 
