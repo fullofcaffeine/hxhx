@@ -50,6 +50,7 @@ You may say `Full 1.0` publicly only when all of the following are true:
 The current strict public-claim baseline is:
 
 - `docs/00-project/FULL_1_0_CONTRACT.md`
+- `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
 - `docs/00-project/PARITY_MAP_FULL_1_0.md`
 - `docs/02-user-guide/compat/full-1.0-scope.json`
 - relevant upstream Haxe 4.3.7 suite results produced by the Full1 gate stack

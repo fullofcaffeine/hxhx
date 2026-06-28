@@ -11,6 +11,10 @@ Public-claim checklist:
 
 - `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 
+Full1 release go/no-go decision:
+
+- `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
+
 Machine-readable scope source of truth:
 
 - `docs/02-user-guide/compat/full-1.0-scope.json`
@@ -87,6 +91,14 @@ Full1 suite flake handling has its own explicit sub-contract:
 That sub-contract defines `FULL1_FLAKE_POLICY:PASS`, bounded retries, and the
 expiry-based quarantine allowlist required before the Full1 RC gate may emit
 `FULL1_RELEASE_GO:PASS`.
+
+Full1 release go/no-go has its own explicit decision page:
+
+- `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
+
+That page defines the public `Full 1.0` go/no-go boundary, the RC summary JSON
+artifact, and the no-go conditions for missing, stale, skipped, or ambiguous
+release evidence. It does not redefine `Scoped 1.0`.
 
 ## Non-goals policy
 

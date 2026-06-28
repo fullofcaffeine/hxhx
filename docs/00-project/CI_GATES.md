@@ -19,6 +19,8 @@ For lane/profile context, use the canonical beginner truth table:
   `docs/00-project/FULL_1_0_CONTRACT.md`
 - Public `Scoped 1.0` vs `Full 1.0` claim checklist:
   `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
+- Full1 release go/no-go decision page:
+  `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
 
 ## Gate purpose by lane (quick map)
 
@@ -243,7 +245,8 @@ Full1 release go/no-go marker:
 
 - `FULL1_RELEASE_GO:PASS` (`.github/workflows/gate-full1-rc.yml`;
   evaluator: `scripts/ci/full1-rc-gate.js`; scope source:
-  `docs/02-user-guide/compat/full-1.0-scope.json`)
+  `docs/02-user-guide/compat/full-1.0-scope.json`; decision page:
+  `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`)
 
 Gate Full1 also requires green reusable jobs from:
 

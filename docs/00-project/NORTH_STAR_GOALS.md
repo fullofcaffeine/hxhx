@@ -61,7 +61,9 @@ Current planning owners:
 - native iteration latency measurement contract:
   `docs/00-project/NATIVE_ITERATION_LATENCY_CONTRACT.md`
 - strict upstream target gates: `haxe.ocaml-f1cl.3`, `haxe.ocaml-f1cl.3.1`, `haxe.ocaml-blsl`, `haxe.ocaml-sssk`
-- release enforcement: `haxe.ocaml-f1cl.6`, `haxe.ocaml-f1cl.7`
+- Full 1.0 release go/no-go: `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
+  (`haxe.ocaml-f1cl.6`)
+- release enforcement: `haxe.ocaml-f1cl.7`
 
 Iteration-speed note:
 
