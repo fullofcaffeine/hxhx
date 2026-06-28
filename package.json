@@ -117,6 +117,7 @@
     "test:m14:stage3-concat-string-iterator-field": "haxe test/m14_stage3_concat_string_iterator_field_integration_test.hxml",
     "test:m14:stage3-enum-extractor-binding": "haxe test/m14_stage3_enum_extractor_binding_integration_test.hxml",
     "test:m14:stage3-lambda-array-shim": "haxe test/m14_stage3_lambda_array_shim_integration_test.hxml",
+    "test:m14:stage3-unique-return-exception": "haxe test/m14_stage3_unique_return_exception_integration_test.hxml",
     "test:m14:stage3-macro-printer-return-type": "haxe test/m14_stage3_macro_printer_return_type_integration_test.hxml",
     "test:m14:stage3-or-pattern-binding": "haxe test/m14_stage3_or_pattern_binding_integration_test.hxml",
     "test:m14:stage3-reflect-compare-methods": "haxe test/m14_stage3_reflect_compare_methods_shim_integration_test.hxml",

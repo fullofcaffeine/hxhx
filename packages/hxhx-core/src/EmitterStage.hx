@@ -7499,6 +7499,14 @@ class EmitterStage {
 
 					var sawMain = false;
 					final exceptions = new Array<String>();
+					final returnExceptionNameCounts:Map<String, Int> = new Map();
+
+					function uniqueReturnExceptionName(nameRaw:String):String {
+						final base = "HxReturn_" + escapeOcamlIdentPart(nameRaw);
+						final count = returnExceptionNameCounts.exists(base) ? returnExceptionNameCounts.get(base) : 0;
+						returnExceptionNameCounts.set(base, count + 1);
+						return count == 0 ? base : base + "_" + Std.string(count);
+					}
 
 					// OCaml limitation (mutual recursion + polymorphism):
 					// `let rec ... and ...` groups do not generalize polymorphic values the same way as
@@ -7658,7 +7666,7 @@ class EmitterStage {
 							} else if (!moduleEmitBodies) {
 								returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(), arityByName, tyByIdent, staticImportByIdent,
 									HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
-							} else {final exc = "HxReturn_" + escapeOcamlIdentPart(nameRaw);
+							} else {final exc = uniqueReturnExceptionName(nameRaw);
 								exceptions.push("exception " + exc + " of Obj.t");
 								final stmts = HxFunctionDecl.getBody(parsedFn);
 								"((" //
