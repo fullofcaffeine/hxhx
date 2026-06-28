@@ -33,6 +33,9 @@ class M14Stage3LambdaArrayShimIntegrationTest {
 			'    var b = Lambda.array(a);',
 			'    return b;',
 			'  }',
+			'  static function copyGeneric<A>():Array<A> {',
+			'    return new Array<A>();',
+			'  }',
 			'}',
 		].join("\n");
 		File.saveContent(sourcePath, src);
@@ -50,6 +53,12 @@ class M14Stage3LambdaArrayShimIntegrationTest {
 			assertTrue(ocaml.indexOf('HxBootArray.to_list (Obj.magic it)') >= 0, 'Stage3 Lambda.list shim must accept array-backed bootstrap values.');
 			assertTrue(ocaml.indexOf('Stdlib.List.fold_left') >= 0, 'Stage3 Lambda.fold shim must share the array-backed list conversion path.');
 			assertTrue(ocaml.indexOf('Seq.t') < 0, 'Stage3 Lambda shim regression: array values were treated as Seq.t.');
+
+			final mainMl = haxe.io.Path.join([outDir, 'Main.ml']);
+			assertTrue(FileSystem.exists(mainMl), 'Expected Main.ml in emitted output.');
+			final mainOcaml = File.getContent(mainMl);
+			assertTrue(mainOcaml.indexOf('let rec copyGeneric () : _ = HxBootArray.create ()') >= 0,
+				'Stage3 generic new Array<A>() should lower to bootstrap array creation.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

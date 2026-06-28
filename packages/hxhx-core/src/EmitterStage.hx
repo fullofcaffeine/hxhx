@@ -1553,7 +1553,7 @@ class EmitterStage {
 	static function exprToOcamlNewStage3(typePath:String, args:Array<HxExpr>, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):String {
-		if (typePath == "Array" && args.length == 0) {
+		if (isStage3StdArrayCtorTypePath(typePath) && args.length == 0) {
 			return "HxBootArray.create ()";
 		}
 		if ((typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && (args.length == 2 || args.length == 3)) {
@@ -1599,6 +1599,13 @@ class EmitterStage {
 			+ (initStmts.length == 0 ? "" : (initStmts.join("; ") + "; "))
 			+ ctorCall
 			+ "; __hx_obj)";
+	}
+
+	static function isStage3StdArrayCtorTypePath(typePath:String):Bool {
+		final raw = typePath == null ? "" : StringTools.trim(typePath);
+		final genericStart = raw.indexOf("<");
+		final base = genericStart < 0 ? raw : StringTools.trim(raw.substr(0, genericStart));
+		return base == "Array" || base == "StdTypes.Array";
 	}
 
 	static function stage3StmtTyLookup(name:String):String {
@@ -3992,20 +3999,18 @@ class EmitterStage {
 					// - `returnExprToOcaml` collapses *any* poisoned subtree to `(Obj.magic 0)`.
 					// - If we add an allocation special-case in `exprToOcaml`, it must also be
 					//   whitelisted here or the special-case will never run.
-					switch (typePath) {
-						case "Array":
+					switch (isStage3StdArrayCtorTypePath(typePath)) {
+						case true:
 							// `new Array()` is used heavily by upstream orchestration code.
 							args.length == 0 ? false : true;
-						case "sys.io.Process" | "sys.io.Process.Process":
+						case false:
 							// Allow process spawning so RunCi can execute subcommands.
-							if (args.length != 2) {
+							if ((typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && args.length == 2) {
+								hasBringupPoison(args[0])
+								|| hasBringupPoison(args[1]);
+							} else if ((typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && args.length != 2) {
 								true;
-							} else {
-								hasBringupPoison(args[0]) || hasBringupPoison(args[1])
-								;
-							}
-						case _:
-							if (currentInstanceFieldsFor(typePath) == null) {
+							} else if (currentInstanceFieldsFor(typePath) == null) {
 								true;
 							} else {
 								var poisoned = false;

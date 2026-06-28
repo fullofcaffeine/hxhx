@@ -1269,7 +1269,7 @@ class JsExprEmitter {
 
 	static function emitNew(typePath:String, args:Array<HxExpr>, scope:JsEmitScope):String {
 		final argsJs = args.map(a -> emitCallArg(a, scope)).join(", ");
-		switch (typePath) {
+		switch (standardCtorTypePath(typePath)) {
 			case "Array":
 				if (args.length == 0)
 					return "[]";
@@ -1302,6 +1302,18 @@ class JsExprEmitter {
 
 		unsupported("ENew", typePath);
 		return "";
+	}
+
+	static function standardCtorTypePath(typePath:String):String {
+		final raw = typePath == null ? "" : StringTools.trim(typePath);
+		final genericStart = raw.indexOf("<");
+		final base = genericStart < 0 ? raw : StringTools.trim(raw.substr(0, genericStart));
+		return switch (base) {
+			case "Array" | "StdTypes.Array":
+				"Array";
+			case _:
+				raw;
+		}
 	}
 
 	static function typeTestName(expr:HxExpr):Null<String> {

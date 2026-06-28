@@ -20,6 +20,9 @@ class M14JsExprEmitterNewArrayIntegrationTest {
 		final emptyArray = HxParser.parseExprText("new Array<Int>()");
 		assertEquals(JsExprEmitter.emit(emptyArray, exprScope), "[]", "new Array() lowers to []");
 
+		final genericArray = HxParser.parseExprText("new Array<A>()");
+		assertEquals(JsExprEmitter.emit(genericArray, exprScope), "[]", "new Array<A>() lowers to []");
+
 		final sizedArray = HxParser.parseExprText("new Array<Int>(3)");
 		assertEquals(JsExprEmitter.emit(sizedArray, exprScope), "new Array(3)", "new Array(size) lowers to constructor call");
 
