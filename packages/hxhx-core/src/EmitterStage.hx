@@ -1550,11 +1550,14 @@ class EmitterStage {
 		emits the same OCaml snippets as the former inline switch branch.
 	**/
 	static function exprToOcamlIdentStage3(name:String, hasCurrentInstanceMethod:Bool, hasCurrentInstanceField:Bool, hasThisBinding:Bool, hasTyIdent:Bool,
-			isMutableLocalRef:Bool, hasArity:Bool, staticImportModule:String):String {
+			hasShadowingLocalValueIdent:Bool, isMutableLocalRef:Bool, hasArity:Bool, staticImportModule:String):String {
+		if (hasShadowingLocalValueIdent || isMutableLocalRef) {
+			return ocamlReadValueIdent(name);
+		}
 		if (hasCurrentInstanceMethod && hasThisBinding) {
 			return ocamlValueIdent(name) + " (this_)";
 		}
-		if (hasTyIdent || isMutableLocalRef) {
+		if (hasTyIdent) {
 			return ocamlReadValueIdent(name);
 		}
 		if (hasCurrentInstanceField && hasThisBinding) {
@@ -2287,6 +2290,11 @@ class EmitterStage {
 				return "print_endline ("
 					+ exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 					+ ")";
+			case ECall(EField(EField(EIdent("haxe"), "Log"), "trace"), [arg]) | ECall(EField(EIdent("Haxe_Log"), "trace"), [arg]) |
+				ECall(EField(EIdent("Log"), "trace"), [arg]):
+				return "Haxe_Log.trace ("
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ") ((Obj.magic HxRuntime.hx_null))";
 			case ECall(EField(EIdent("Sys"), "println"), [arg]):
 				return "print_endline ("
 					+ exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
@@ -2564,8 +2572,8 @@ class EmitterStage {
 			case EString(v): escapeOcamlString(v);
 			case EIdent(name):
 				exprToOcamlIdentStage3(name, hasCurrentInstanceMethod(name), hasCurrentInstanceField(name), stage3HasThisBinding(tyByIdentRaw),
-					stage3HasTyIdent(name, tyByIdentRaw), isMutableLocalRefIdent(name), stage3HasArity(name, arityByIdentRaw),
-					staticImportModuleForStage3(name, staticImportByIdentRaw));
+					stage3HasTyIdent(name, tyByIdentRaw), stage3HasStmtValueIdent(name) || stage3HasLocalValueIdent(name), isMutableLocalRefIdent(name),
+					stage3HasArity(name, arityByIdentRaw), staticImportModuleForStage3(name, staticImportByIdentRaw));
 			case EThis:
 				// Stage 3 full-body bring-up: instance methods bind an explicit `this` parameter.
 				// If we are outside that context, conservatively collapse to poison.

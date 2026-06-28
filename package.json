@@ -123,6 +123,7 @@
     "test:m14:stage3-stringtools-hex-int64-field": "haxe test/m14_stage3_stringtools_hex_int64_field_integration_test.hxml",
     "test:m14:stage3-unique-return-exception": "haxe test/m14_stage3_unique_return_exception_integration_test.hxml",
     "test:m14:stage3-macro-printer-return-type": "haxe test/m14_stage3_macro_printer_return_type_integration_test.hxml",
+    "test:m14:stage3-warning-clean-shadow-trace": "haxe test/m14_stage3_warning_clean_shadow_trace_integration_test.hxml",
     "test:m14:stage3-or-pattern-binding": "haxe test/m14_stage3_or_pattern_binding_integration_test.hxml",
     "test:m14:stage3-reflect-compare-methods": "haxe test/m14_stage3_reflect_compare_methods_shim_integration_test.hxml",
     "test:m14:stage3-switch-case-if-else": "haxe test/m14_stage3_switch_case_if_else_integration_test.hxml",
