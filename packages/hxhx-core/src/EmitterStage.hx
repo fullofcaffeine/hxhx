@@ -45,6 +45,9 @@ private typedef EmitterCallSig = {
 
 	/** Whether this lowered call expects a synthetic receiver parameter. */
 	final needsReceiver:Bool;
+
+	/** Parameter type hints after lowering, aligned with emitted OCaml arguments. */
+	final paramTypeHints:Array<String>;
 }
 
 private class _PortableMetalizationScope {
@@ -592,13 +595,35 @@ class EmitterStage {
 			fixedCount += 1;
 			requiredCount += 1;
 		}
+		final paramTypeHints = callSigParamTypeHints(fnArgs, fixedCount, hasRest, needsReceiver);
 		return {
 			expected: fixedCount + (hasRest ? 1 : 0),
 			required: requiredCount,
 			fixed: fixedCount,
 			hasRest: hasRest,
-			needsReceiver: needsReceiver
+			needsReceiver: needsReceiver,
+			paramTypeHints: paramTypeHints
 		};
+	}
+
+	static function callSigParamTypeHints(fnArgs:Array<HxFunctionArg>, loweredFixedCount:Int, hasRest:Bool, needsReceiver:Bool):Array<String> {
+		final out = new Array<String>();
+		if (needsReceiver)
+			out.push("Dynamic");
+		final argCount = fnArgs == null ? 0 : fnArgs.length;
+		final sourceFixedCount = hasRest ? argCount - 1 : argCount;
+		for (i in 0...sourceFixedCount)
+			out.push(StringTools.trim(HxFunctionArg.getTypeHint(fnArgs[i])));
+		if (hasRest)
+			out.push("Array");
+		while (out.length < loweredFixedCount + (hasRest ? 1 : 0))
+			out.push("");
+		return out;
+	}
+
+	static function stage3IsFloatParamHint(hint:String):Bool {
+		final compact = StringTools.replace(StringTools.trim(hint == null ? "" : hint), " ", "");
+		return compact == "Float" || compact == "StdTypes.Float";
 	}
 
 	static function resolveQualifiedModuleCallSig(currentFilePath:String, parts:Array<String>, field:String, loweredField:String):Null<EmitterCallSig> {
@@ -1984,18 +2009,21 @@ class EmitterStage {
 	}
 
 	static function exprToOcamlAsFloatValueStage3(expr:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
-			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>):String {
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):String {
 		return switch (expr) {
 			case EInt(v):
 				"float_of_int " + Std.string(v);
 			case EUnop("-", inner):
-				"(-.(" + exprToOcamlAsFloatValueStage3(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
+				"(-.(" + exprToOcamlAsFloatValueStage3(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee) + "))";
 			case EIdent(name) if (stage3TyForIdent(name, tyByIdent) == "Int"):
 				"float_of_int " + ocamlReadValueIdent(name);
 			case _ if (stage3IsInfNanFieldExpr(expr)):
-				"(Obj.magic (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ") : float)";
+				"(Obj.magic (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee) + ") : float)";
 			case _:
-				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 		}
 	}
 
@@ -2093,6 +2121,15 @@ class EmitterStage {
 			return "(Obj.magic 0)";
 		if (stage3RootCallArgs(e, "Timer", "stamp", 0) != null)
 			return "(Unix.gettimeofday ())";
+		switch (e) {
+			case ECall(EField(EIdent("DateTools"), field), [arg]) if (field == "seconds" || field == "minutes" || field == "hours" || field == "days"):
+				return "DateTools."
+					+ ocamlValueIdent(field)
+					+ " ("
+					+ exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+			case _:
+		}
 		return null;
 	}
 
@@ -3243,6 +3280,19 @@ class EmitterStage {
 							return "(Obj.magic 0)";
 					}
 
+					function renderCallArgWithSig(arg:HxExpr, argIndex:Int):String {
+						final hint = (sig == null || sig.paramTypeHints == null || argIndex < 0 || argIndex >= sig.paramTypeHints.length) ? "" : sig.paramTypeHints[argIndex];
+						return switch (arg) {
+							case ENull:
+								exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+							case _ if (stage3IsFloatParamHint(hint)):
+								exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+									callSigByCallee);
+							case _:
+								exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+						}
+					}
+
 					// Rest-args lowering (Stage3 bring-up)
 					//
 					// Haxe: `function f(a:Int, ...rest:String)` has a single rest parameter which can be
@@ -3264,10 +3314,8 @@ class EmitterStage {
 								.join("; ") + "]");
 
 						final argCodes = new Array<String>();
-						for (a in fixedArgs) {
-							argCodes.push("("
-								+ exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-								+ ")");
+						for (argIndex in 0...fixedArgs.length) {
+							argCodes.push("(" + renderCallArgWithSig(fixedArgs[argIndex], argIndex) + ")");
 						}
 						argCodes.push("(" + restCode + ")");
 
@@ -3380,10 +3428,7 @@ class EmitterStage {
 
 						final renderedArgs = new Array<String>();
 						for (argIndex in 0...fullArgs.length) {
-							final renderedArg = "("
-								+ exprToOcaml(fullArgs[argIndex], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-									callSigByCallee)
-								+ ")";
+							final renderedArg = "(" + renderCallArgWithSig(fullArgs[argIndex], argIndex) + ")";
 							renderedArgs.push(renderedArg);
 						}
 						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1;
@@ -6765,7 +6810,8 @@ class EmitterStage {
 				required: requiredCount,
 				fixed: fixedCount,
 				hasRest: hasRest,
-				needsReceiver: needsReceiver
+				needsReceiver: needsReceiver,
+				paramTypeHints: callSigParamTypeHints(fnArgs, fixedCount, hasRest, needsReceiver)
 			};
 			final key0 = modName + "." + ocamlValueIdent(fnNameRaw);
 			globalCallSigByCallee.set(key0, sig0);
@@ -7200,7 +7246,8 @@ class EmitterStage {
 							required: requiredCount,
 							fixed: fixedCount,
 							hasRest: hasRest,
-							needsReceiver: needsReceiver
+							needsReceiver: needsReceiver,
+							paramTypeHints: callSigParamTypeHints(fnArgs, fixedCount, hasRest, needsReceiver)
 						});
 					}
 
