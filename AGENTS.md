@@ -40,6 +40,10 @@ Agent policy:
 - If implementation/debugging gets stuck for too long without a credible local next step, escalate to Oracle explicitly instead of grinding indefinitely.
   - Use Oracle to unblock strategy, seam selection, or closure criteria.
   - Do not use Oracle as a substitute for implementation, tests, or CI evidence once the next step is clear.
+- Document modules and classes by default.
+  - Add or update module/class documentation when creating or substantially changing one, unless the file's existing convention clearly does not support doc comments.
+  - Add function/method documentation once behavior, invariants, side effects, target semantics, or call contracts exceed what a reader can reasonably infer from the name and type.
+  - Keep documentation behavior-level and maintenance-oriented; describe what callers can rely on, not a line-by-line narration of the implementation.
 - If a compiler/runtime issue starts feeling circular, fragile, architecture-heavy, or likely to invite another local patch without fixing the model, stop grinding before implementation.
   - The plain rule: if the agent is running in circles, the fix boundary is unclear, or the next patch feels like a band-aid, pause and propose an external GPT 5.5 Pro design review instead of stacking more local guesses.
   - This should be rare. Upstream Haxe 4.3.7 remains the primary behavior oracle, and local tests/CI remain the proof. GPT 5.5 Pro is only for finding a safe way forward when the seam/model is unclear.
@@ -78,6 +82,7 @@ Agent policy:
     - a small template file,
     - or direct intrinsic lowering when the construct is compile-time syntax rather than runtime API.
   - Do not add fake generated classes to `SourceTargetCommon` just to satisfy one gate failure when the correct model is extern/intrinsic behavior.
+  - Prefer target-native module-level functions when they are the real API shape; avoid inventing unnecessary shell classes with public static wrappers just to make the emitter convenient.
   - If a short inline helper is unavoidable during Full1 burn-down, keep it tiny, document why in the bead, add focused coverage, and file/link a follow-up architecture bead before expanding it.
   - When an inline `out.push` block starts looking like a real library/runtime implementation, stop and extract or redesign before continuing.
 - Avoid mega-file gravity.
@@ -291,6 +296,7 @@ For Haxe-to-target compiler, target-runtime, extern, plugin, and framework layer
   - Do not treat target-shaped Haxe as an anti-pattern by default; the anti-pattern is exposing target shape accidentally because the compiler/runtime layer is incomplete or expedient.
 - Prefer canonical Haxe-facing APIs that use Haxe's strengths when designing new public surfaces:
   - concrete types instead of untyped strings,
+  - module-level functions when the operation is naturally module-scoped,
   - macros or generated refs instead of fragile manual names,
   - properties and abstracts when they clarify intent,
   - completion-friendly declarations,

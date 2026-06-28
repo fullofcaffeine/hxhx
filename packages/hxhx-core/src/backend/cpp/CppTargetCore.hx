@@ -1875,6 +1875,13 @@ class CppTargetCore {
 			addTypeHintDependencies(arg, add, scope);
 		final base = sanitizeTypePath(typeBaseName(hint));
 		add(base);
+		final lookup = lookupForScope(scope);
+		final cls = lookupClassForTypeHint(hint, scope, lookup);
+		if (cls != null) {
+			final rendered = renderedClassName(cls, lookup);
+			if (rendered.length > 0 && rendered != base)
+				add(rendered);
+		}
 		final compact = removeTypeHintWhitespace(hint);
 		final open = compact.indexOf("<");
 		final path = open < 0 ? compact : compact.substr(0, open);
@@ -7068,7 +7075,7 @@ class CppTargetCore {
 	static function structuralTypedefAnonStructForTypeHint(typeHint:String, ?scope:CppRenderScope):Null<CppAnonStruct> {
 		if (scope == null)
 			return null;
-		final lookup = {names: scope.classNames, byName: scope.classByName, all: scope.allClasses};
+		final lookup = lookupForScope(scope);
 		var cls = CppTypeModel.structuralTypedefValueClassForTypeHint(typeHint, scope, lookup);
 		if (cls == null) {
 			final candidate = lookupClassForTypeHint(typeHint, scope, lookup);
@@ -7079,7 +7086,7 @@ class CppTargetCore {
 			return null;
 		final names = new Array<String>();
 		final types = new Array<String>();
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final className = renderedClassName(cls, lookup);
 		for (field in HxClassDecl.getFields(cls)) {
 			if (HxFieldDecl.getIsStatic(field))
 				continue;
@@ -12428,6 +12435,12 @@ class CppTargetCore {
 			if (struct != null)
 				return struct.name;
 		}
+		final structuralTypedef = renderedStructuralTypedefTypeName(hint, scope, classLookup);
+		if (structuralTypedef != null)
+			return structuralTypedef;
+		final renderedCpp = renderedCppContainerTypeName(hint, scope, classLookup);
+		if (renderedCpp != null)
+			return renderedCpp;
 		final scopedGenericClass = scopedRawGenericClassTypeName(hint, scope);
 		if (scopedGenericClass != null)
 			return "std::shared_ptr<" + scopedGenericClass + ">";
@@ -12463,6 +12476,46 @@ class CppTargetCore {
 				return "std::shared_ptr<" + rendered + ">";
 		}
 		return CppTypeModel.cppTypeHint(hint, scope, classLookup);
+	}
+
+	static function renderedStructuralTypedefTypeName(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
+		final lookup = lookupForScope(scope, classLookup);
+		final cls = CppTypeModel.structuralTypedefValueClassForTypeHint(typeHint, scope, lookup);
+		if (cls == null)
+			return null;
+		return cppClassTemplateTypeName(typeHint, scope, lookup);
+	}
+
+	static function renderedCppContainerTypeName(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		for (prefix in ["std::shared_ptr", "std::vector", "std::optional"]) {
+			final inner = templateInnerForPrefix(hint, prefix);
+			if (inner != null)
+				return prefix + "<" + renderedCppTypeInner(inner, scope, classLookup) + ">";
+		}
+		return null;
+	}
+
+	static function renderedCppTypeInner(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final container = renderedCppContainerTypeName(hint, scope, classLookup);
+		if (container != null)
+			return container;
+		final args = genericTypeHintArgs(hint);
+		final lookup = lookupForScope(scope, classLookup);
+		final cls = lookupClassForTypeHint(hint, scope, lookup);
+		if (cls == null)
+			return hint;
+		if (args.length > 0)
+			return cppClassTemplateTypeName(hint, scope, lookup);
+		return renderedClassName(cls, lookup);
+	}
+
+	static function templateInnerForPrefix(typeHint:String, prefix:String):Null<String> {
+		final open = prefix.length;
+		if (!StringTools.startsWith(typeHint, prefix + "<") || !StringTools.endsWith(typeHint, ">"))
+			return null;
+		return typeHint.substr(open + 1, typeHint.length - open - 2);
 	}
 
 	static function isEnumCarrierClassName(className:String, ?scope:CppRenderScope):Bool {

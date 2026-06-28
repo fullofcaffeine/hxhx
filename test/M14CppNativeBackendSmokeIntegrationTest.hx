@@ -4983,6 +4983,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		abstractClasses.set("NativeTraceProvider", nativeTraceProvider);
 		abstractClasses.set("LocalCallStack", localCallStack);
 		final abstractLookup = {names: abstractNames, byName: abstractClasses};
+		final signatureInformation = new HxClassDecl("SignatureInformation", false, [], [new HxFieldDecl("documentation", Public, false, "String", null)], "",
+			["__hxhx_typedef"]);
+		abstractNames.set("CallStack_StackItem", true);
+		abstractNames.set("SignatureInformation", true);
+		abstractNames.set("Display_SignatureInformation", true);
+		abstractClasses.set("CallStack_StackItem", stackItem);
+		abstractClasses.set("SignatureInformation", signatureInformation);
+		abstractClasses.set("Display_SignatureInformation", signatureInformation);
+		final renderedLookup = {
+			names: abstractNames,
+			byName: abstractClasses,
+			all: [stackItem, nativeTraceProvider, localCallStack, signatureInformation],
+			renderedNames: [
+				{cls: stackItem, name: "CallStack_StackItem"},
+				{cls: signatureInformation, name: "Display_SignatureInformation"}
+			]
+		};
+		final renderedScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(localCallStack, renderedLookup, "void");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.cppTypeHint("std::vector<std::shared_ptr<StackItem>>",
+				renderedScope) == "std::vector<std::shared_ptr<CallStack_StackItem>>",
+			"C++ already-shaped vector/shared_ptr type hints should still pass through rendered class aliases");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("SignatureInformation", renderedScope) == "Display_SignatureInformation",
+			"C++ structural typedef value hints should render through class aliases instead of raw short names");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("Array<SignatureInformation>",
+			renderedScope) == "std::vector<Display_SignatureInformation>",
+			"C++ arrays of structural typedef values should use rendered element names");
 		final abstractLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(localCallStack, abstractLookup).join("\n");
 		assertContains(abstractLines, "std::vector<std::shared_ptr<StackItem>> __values;",
 			"C++ array-backed abstract wrappers should store the underlying vector");
