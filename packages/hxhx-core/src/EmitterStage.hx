@@ -1419,6 +1419,13 @@ class EmitterStage {
 				+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 				+ ")";
 		}
+		if ((field == "high" || field == "low") && stage3IsInt64Expr(obj, tyByIdent)) {
+			return "((Obj.magic (HxAnon.get (Obj.repr ("
+				+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+				+ ")) "
+				+ escapeOcamlString(field)
+				+ ")) : int)";
+		}
 
 		final staticField = tryExprToOcamlStage3StaticField(obj, field, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 		return staticField != null ? staticField : ("(Obj.magic (HxAnon.get (Obj.repr ("
@@ -1761,6 +1768,8 @@ class EmitterStage {
 					tyByIdent); t == "Int" || (isMutableLocalRefIdent(name) && (t == "" || t == "Dynamic" || t == "Unknown"));
 			case EField(_inner, "length"):
 				true;
+			case EField(inner, "high" | "low"):
+				stage3IsInt64Expr(inner, tyByIdent);
 			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"): stage3IsIntExpr(a,
 					tyByIdent) && stage3IsIntExpr(b, tyByIdent);
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsIntExpr(thenExpr, tyByIdent) && stage3IsIntExpr(elseExpr, tyByIdent);
@@ -2199,14 +2208,13 @@ class EmitterStage {
 			case ECall(EField(EIdent("StringTools"), "hex"), [n]):
 				return "StringTools.hex ("
 					+ exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-					+ ") (Obj.repr 0)";
+					+ ") (0)";
 			case ECall(EField(EIdent("StringTools"), "hex"), [n, digits]):
 				final digitsOcaml = switch (digits) {
 					case ENull:
-						"Obj.magic HxRuntime.hx_null";
+						"0";
 					case _:
-						"Obj.repr (" + exprToOcaml(digits, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-							callSigByCallee) + ")";
+						exprToOcaml(digits, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				};
 				return "StringTools.hex ("
 					+ exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
