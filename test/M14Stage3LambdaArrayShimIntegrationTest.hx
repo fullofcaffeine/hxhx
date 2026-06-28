@@ -36,6 +36,9 @@ class M14Stage3LambdaArrayShimIntegrationTest {
 			'  static function copyGeneric<A>():Array<A> {',
 			'    return new Array<A>();',
 			'  }',
+			'  static function nullableArray(flag:Bool, single:String):Null<Array<String>> {',
+			'    return flag ? null : [single];',
+			'  }',
 			'}',
 		].join("\n");
 		File.saveContent(sourcePath, src);
@@ -59,6 +62,8 @@ class M14Stage3LambdaArrayShimIntegrationTest {
 			final mainOcaml = File.getContent(mainMl);
 			assertTrue(mainOcaml.indexOf('let rec copyGeneric () : _ = HxBootArray.create ()') >= 0,
 				'Stage3 generic new Array<A>() should lower to bootstrap array creation.');
+			assertTrue(mainOcaml.indexOf('then ((Obj.magic ((Obj.magic HxRuntime.hx_null)))) else ((Obj.magic (HxBootArray.of_list [(Obj.magic (single))])))') >= 0,
+				'Stage3 nullable array ternary returns should cast branches to Obj.t before OCaml infers the conditional.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

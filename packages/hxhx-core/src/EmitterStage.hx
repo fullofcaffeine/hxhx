@@ -426,6 +426,18 @@ class EmitterStage {
 		return fallback;
 	}
 
+	static function stage3ReturnTypeNeedsObjBranches(t:TyType):Bool {
+		if (t == null)
+			return false;
+		final normalized = StringTools.replace(t.toString(), " ", "");
+		return normalized == "Dynamic"
+			|| normalized == "Std.Any"
+			|| normalized == "Any"
+			|| normalized == "Null"
+			|| StringTools.startsWith(normalized, "Null<")
+			|| StringTools.startsWith(normalized, "Dynamic<");
+	}
+
 	static function lowerFirst(name:String):String {
 		if (name == null || name.length == 0)
 			return "_";
@@ -4163,6 +4175,24 @@ class EmitterStage {
 		// Collapse to the bootstrap escape hatch instead.
 		if (hasBringupPoison(expr))
 			return "(Obj.magic 0)";
+
+		// Dynamic/nullable return expressions often lower to OCaml values with unrelated
+		// branch shapes. Cast ternary branches before OCaml infers the conditional type.
+		if (expectedReturnType != null && stage3ReturnTypeNeedsObjBranches(expectedReturnType)) {
+			switch (expr) {
+				case ETernary(cond, thenExpr, elseExpr):
+					final condCode = exprToOcaml(cond, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath,
+						moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+					function objBranch(e:HxExpr):String {
+						return "(Obj.magic ("
+							+ exprToOcaml(e, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+								callSigByCalleeRaw)
+							+ "))";
+					}
+					return "(if (" + condCode + ") then (" + objBranch(thenExpr) + ") else (" + objBranch(elseExpr) + "))";
+				case _:
+			}
+		}
 
 		// Stage 3 bring-up: numeric coercions based on the declared return type.
 		//
