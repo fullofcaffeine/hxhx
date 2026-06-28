@@ -1251,6 +1251,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ anonymous collection should preserve structural return hints while using function type-parameter scope");
 	}
 
+	static function assertCppAnonCollectSkipsCompileTimeMacroBodies():Void {
+		final macroApi = new HxClassDecl("Context", false, [
+			new HxFunctionDecl("currentPos", Public, true, [], "{file:String,line:Int}",
+				[SReturn(EAnon(["bodyOnly"], [EString("compile-time")]), HxPos.unknown())], "")
+		], []);
+		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
+		final macroDecl = new HxModuleDecl("haxe.macro", [], macroApi, [macroApi], false, false);
+		final mainDecl = new HxModuleDecl("", [], main, [main], false, false);
+		final program = new GenIrProgram([
+			typedSyntheticModule("Context.hx", macroDecl),
+			typedSyntheticModule("Main.hx", mainDecl)
+		], false);
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
+		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup);
+		final names = [for (struct in structs) struct.name].join("\n");
+		assertContains(names, "__hxhx_anon_file_std__string_line_int", "C++ anonymous collection should preserve compile-time macro API signatures");
+		assertTrue(names.indexOf("bodyOnly") < 0, "C++ anonymous collection should not scan compile-time macro API bodies into runtime structs");
+	}
+
 	static function assertCppOptionalArrowFunctionsUseCallableShapes():Void {
 		assertTrue(backend.cpp.CppTypeModel.cppFunctionTypeHint("?Int -> Int") == "std::function<int(int)>",
 			"C++ function type hints should strip optional markers from unnamed argument parts");
@@ -2064,6 +2083,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("Error"), "OutsideBounds")) == "std::string(\"OutsideBounds\")",
 			"C++ Error enum-like fields should lower to tag strings instead of invalid dotted values");
 		assertCppAnonCollectUsesLightweightFunctionScope();
+		assertCppAnonCollectSkipsCompileTimeMacroBodies();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertTypedLocalFunctionBlockExprRendersStructurally();
 		final reflectCompareExpr = @:privateAccess

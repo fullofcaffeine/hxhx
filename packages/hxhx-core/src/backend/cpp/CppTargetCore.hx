@@ -116,8 +116,25 @@ class CppTargetCore {
 			Sys.println("cpp_target_phase=" + label);
 	}
 
+	static function traceCppDeepEnabled():Bool {
+		final raw = Sys.getEnv("HXHX_TRACE_STAGE3_CPP_DEEP");
+		if (raw == null)
+			return false;
+		return switch (StringTools.trim(raw).toLowerCase()) {
+			case "1" | "true" | "yes" | "on":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function traceCppDeepPhase(label:String):Void {
+		if (traceCppDeepEnabled())
+			Sys.println("cpp_target_phase=" + label);
+	}
+
 	static function traceCppMemberPhase(className:String, kind:String, memberName:String, stage:String):Void {
-		if (!traceCppEnabled())
+		if (!traceCppDeepEnabled())
 			return;
 		traceCppPhase(kind + " class=" + className + " member=" + sanitizeIdentifier(memberName) + " stage=" + stage);
 	}
@@ -1007,14 +1024,14 @@ class CppTargetCore {
 		var typeHintTraceSuppressed = false;
 		traceCppPhase("anon_collect_enter typed_modules=" + program.getTypedModules().length);
 		function traceAnonTypeHint(hint:String):Void {
-			if (!traceCppEnabled())
+			if (!traceCppDeepEnabled())
 				return;
 			if (typeHintTraceCount < 1000) {
 				typeHintTraceCount++;
-				traceCppPhase("anon_collect_type_hint hint=" + traceCppSnippet(hint));
+				traceCppDeepPhase("anon_collect_type_hint hint=" + traceCppSnippet(hint));
 			} else if (!typeHintTraceSuppressed) {
 				typeHintTraceSuppressed = true;
-				traceCppPhase("anon_collect_type_hint_suppressed limit=1000");
+				traceCppDeepPhase("anon_collect_type_hint_suppressed limit=1000");
 			}
 		}
 		function addStruct(struct:CppAnonStruct):Void {
@@ -1027,11 +1044,13 @@ class CppTargetCore {
 			final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 			if (hint.length == 0)
 				return;
-			final genericArgs = genericTypeHintArgs(hint);
-			if (genericArgs.length > 0) {
-				for (arg in genericArgs)
-					addTypeHint(arg, scope, allowMarkedTypedefAnon);
-				return;
+			if (hint.indexOf("<") >= 0) {
+				final genericArgs = genericTypeHintArgs(hint);
+				if (genericArgs.length > 0) {
+					for (arg in genericArgs)
+						addTypeHint(arg, scope, allowMarkedTypedefAnon);
+					return;
+				}
 			}
 			if (hint.indexOf("{") < 0) {
 				if (allowMarkedTypedefAnon)
@@ -1107,6 +1126,33 @@ class CppTargetCore {
 				case _:
 			}
 		}
+		function anonCollectLocalTypeHint(typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
+			if (scope == null)
+				return "";
+			final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
+			if (explicit.length > 0)
+				return cppLocalTypeHint(explicit, init, scope);
+			if (init == null)
+				return "";
+			return switch (init) {
+				case EAnon(fieldNames, fieldValues):
+					anonStruct(fieldNames, fieldValues, scope).name;
+				case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
+					int64DivModStruct().name;
+				case ENew(typePath, _):
+					final structural = structuralTypedefAnonStructTypeNameForTypeHint(typePath, scope);
+					structural == null ? cppTypeHint(typePath, scope) : structural;
+				case _:
+					"";
+			};
+		}
+		function shouldWalkFunctionBody(packagePath:String, cls:HxClassDecl, fn:HxFunctionDecl):Bool {
+			if (hasFunctionMetadata(fn, "macro"))
+				return false;
+			if (isCompileTimeMacroApiClass(packagePath, cls))
+				return false;
+			return true;
+		}
 		function addStmt(stmt:HxStmt, ?scope:CppRenderScope):Void {
 			switch (stmt) {
 				case SBlock(stmts, _):
@@ -1116,8 +1162,9 @@ class CppTargetCore {
 					addTypeHint(typeHint, scope);
 					if (init != null)
 						addExpr(init, scope);
-					if (scope != null)
-						scope.localTypes.set(sanitizeIdentifier(name), cppLocalTypeHint(typeHint, init, scope));
+					final localType = anonCollectLocalTypeHint(typeHint, init, scope);
+					if (localType.length > 0)
+						scope.localTypes.set(sanitizeIdentifier(name), localType);
 				case SIf(cond, thenBranch, elseBranch, _):
 					addExpr(cond, scope);
 					addStmt(thenBranch, scope);
@@ -1151,28 +1198,39 @@ class CppTargetCore {
 			}
 		}
 		final collectedClasses = new haxe.ds.StringMap<Bool>();
+		var collectedClassCount = 0;
+		var collectedFunctionCount = 0;
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
+			final packagePath = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
 				if (collectedClasses.exists(rawName))
 					continue;
 				collectedClasses.set(rawName, true);
 				final className = sanitizeTypePath(HxClassDecl.getName(cls));
-				traceCppPhase("anon_collect_class_begin name=" + className);
+				collectedClassCount++;
+				if (collectedClassCount % 25 == 0)
+					traceCppPhase("anon_collect_progress classes=" + collectedClassCount + " functions=" + collectedFunctionCount + " class=" + className
+						+ " structs=" + out.length);
+				traceCppDeepPhase("anon_collect_class_begin name=" + className);
 				final fieldScope = renderScope(cls, classLookup, "void");
 				for (field in HxClassDecl.getFields(cls)) {
 					final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
-					traceCppPhase("anon_collect_field_begin class=" + className + " name=" + fieldName);
+					traceCppDeepPhase("anon_collect_field_begin class=" + className + " name=" + fieldName);
 					addTypeHint(HxFieldDecl.getTypeHint(field), fieldScope);
 					final init = HxFieldDecl.getInit(field);
 					if (init != null)
 						addExpr(init, fieldScope);
-					traceCppPhase("anon_collect_field_end class=" + className + " name=" + fieldName);
+					traceCppDeepPhase("anon_collect_field_end class=" + className + " name=" + fieldName);
 				}
 				for (fn in HxClassDecl.getFunctions(cls)) {
 					final fnName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
-					traceCppPhase("anon_collect_fn_begin class=" + className + " name=" + fnName);
+					collectedFunctionCount++;
+					if (collectedFunctionCount % 250 == 0)
+						traceCppPhase("anon_collect_progress classes=" + collectedClassCount + " functions=" + collectedFunctionCount + " class="
+							+ className + " fn=" + fnName + " structs=" + out.length);
+					traceCppDeepPhase("anon_collect_fn_begin class=" + className + " name=" + fnName);
 					final scope = renderScope(cls, classLookup, "auto");
 					prepareAnonCollectFunctionScope(scope, fn);
 					addTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope);
@@ -1182,11 +1240,12 @@ class CppTargetCore {
 						addStruct(scope.anonStructs.get(knownReturn));
 					for (arg in HxFunctionDecl.getArgs(fn))
 						addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
-					for (stmt in HxFunctionDecl.getBody(fn))
-						addStmt(stmt, scope);
-					traceCppPhase("anon_collect_fn_end class=" + className + " name=" + fnName);
+					if (shouldWalkFunctionBody(packagePath, cls, fn))
+						for (stmt in HxFunctionDecl.getBody(fn))
+							addStmt(stmt, scope);
+					traceCppDeepPhase("anon_collect_fn_end class=" + className + " name=" + fnName);
 				}
-				traceCppPhase("anon_collect_class_end name=" + className);
+				traceCppDeepPhase("anon_collect_class_end name=" + className);
 			}
 		}
 		traceCppPhase("anon_collect_done count=" + out.length);
@@ -1544,6 +1603,7 @@ class CppTargetCore {
 		final byName = new haxe.ds.StringMap<HxClassDecl>();
 		final all = new Array<HxClassDecl>();
 		final shortNameCounts = new haxe.ds.StringMap<Int>();
+		final packageByRenderedName = new haxe.ds.StringMap<String>();
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
@@ -1555,10 +1615,12 @@ class CppTargetCore {
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			final moduleName = expectedModuleNameFromFile(typed.getParsed().getFilePath());
+			final packagePath = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				all.push(cls);
 				final rendered = renderedClassNameForModule(HxClassDecl.getName(cls), moduleName, shortNameCounts);
 				renderedNames.push({cls: cls, name: rendered});
+				packageByRenderedName.set(rendered, packagePath == null ? "" : packagePath);
 				addClassLookupAliases(HxClassDecl.getName(cls), cls, names, byName);
 				if (rendered != sanitizeTypePath(HxClassDecl.getName(cls)))
 					addClassLookupAliases(rendered, cls, names, byName);
@@ -1568,7 +1630,8 @@ class CppTargetCore {
 			names: names,
 			byName: byName,
 			all: all,
-			renderedNames: renderedNames
+			renderedNames: renderedNames,
+			packageByRenderedName: packageByRenderedName
 		};
 	}
 
@@ -1608,6 +1671,17 @@ class CppTargetCore {
 				if (entry.cls == cls)
 					return entry.name;
 		return sanitizeTypePath(HxClassDecl.getName(cls));
+	}
+
+	static function packagePathForRenderedClass(cls:HxClassDecl, ?classLookup:CppClassLookup):String {
+		if (cls == null || classLookup == null || classLookup.packageByRenderedName == null)
+			return "";
+		final packagePath = classLookup.packageByRenderedName.get(renderedClassName(cls, classLookup));
+		return packagePath == null ? "" : packagePath;
+	}
+
+	static function isCompileTimeMacroApiClass(packagePath:String, cls:HxClassDecl):Bool {
+		return packagePath == "haxe.macro";
 	}
 
 	static function lookupForScope(?scope:CppRenderScope, ?classLookup:CppClassLookup):CppClassLookup {
@@ -3311,8 +3385,14 @@ class CppTargetCore {
 			return false;
 		if (HxFunctionDecl.getIsStatic(fn) || sanitizeIdentifier(HxFunctionDecl.getName(fn)) != "addCases")
 			return false;
+		return hasFunctionMetadata(fn, "macro");
+	}
+
+	static function hasFunctionMetadata(fn:HxFunctionDecl, marker:String):Bool {
+		if (fn == null || marker == null)
+			return false;
 		for (meta in HxFunctionDecl.getMetadata(fn))
-			if (StringTools.trim(meta) == "macro")
+			if (StringTools.trim(meta) == marker)
 				return true;
 		return false;
 	}
