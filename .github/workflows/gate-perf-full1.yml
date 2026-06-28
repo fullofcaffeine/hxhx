@@ -1,6 +1,7 @@
 name: Gate Perf Full1 / HXHX vs Haxe
 
 on:
+  workflow_call:
   workflow_dispatch:
   schedule:
     # Weekly Full1 performance parity evidence.
@@ -9,7 +10,7 @@ on:
     types: [published]
 
 concurrency:
-  group: gate-perf-full1-${{ github.ref }}
+  group: gate-perf-full1-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:

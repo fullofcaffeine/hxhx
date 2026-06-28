@@ -107,9 +107,10 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Full1 / Suite Runners Strict` | `.github/workflows/full1-suite-runners.yml` | Full1 strict suite runners for `misc`, `server`, `threads`, `optimization`, `display` with per-suite log, summary, and phase-timing artifacts. Inproc suites (`misc`, `threads`, `display`) do not download or export a macro host; current external-host suites (`server`, `optimization`) consume the shared macro-host artifact until inproc parity catches up. | **Nightly/scheduled** | weekly schedule, manual |
 | `Full1 / Source-Build Probe` | `.github/workflows/full1-source-probe.yml` | Non-blocking diagnostic lane: force source build (`HXHX_FORCE_STAGE0=1`) and run narrowed strict suites (`server`, `optimization`) to detect bootstrap-lagged fixes without destabilizing the primary matrix. Summary JSON stays compact; child processes are hard-timeboxed and full logs are separate artifacts. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
 | `Full1 / Bootstrap-Source Reconciliation` | `.github/workflows/full1-bootstrap-source-reconcile.yml` | Diagnostic evidence lane that runs `server` + `optimization` in both bootstrap-built and source-built lanes on the same commit, then classifies each blocker as bootstrap lag vs source-build instability vs real parity bug. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
-| `Gate Perf Full1 / HXHX vs Haxe` | `.github/workflows/gate-perf-full1.yml` | Release-blocking Full1 performance parity lane. Uploads raw KPI evidence, phase timings, and evaluated Full1 perf summary, then emits `FULL1_PERF_PARITY:PASS` only through the evaluator after the policy passes. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
+| `Gate Perf Full1 / HXHX vs Haxe` | `.github/workflows/gate-perf-full1.yml` | Release-blocking Full1 performance parity lane. Uploads raw KPI evidence, phase timings, and evaluated Full1 perf summary, then emits `FULL1_PERF_PARITY:PASS` only through the evaluator after the policy passes. | **Nightly/scheduled + Release + Reusable** | weekly schedule, `release`, manual, `workflow_call` |
 | `Full1 / Plugin Parity` | `.github/workflows/full1-plugin-parity.yml` | Runs the three required `reflaxe.ocaml` plugin proof rows, uploads per-proof artifacts with phase timings, and emits `FULL1_PLUGIN_PARITY:PASS` only when all proof rows pass. | **Nightly/scheduled + Release + Reusable** | weekly schedule, `release`, manual, `workflow_call` |
-| `Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity` | `.github/workflows/gate-full1.yml` | Full1 aggregate gate that composes strict suite runners, strict extended Gate3, reusable macro runtime parity, reusable native eval, and reusable plugin parity. It emits `FULL1_SUITE_MATRIX:PASS` for strict matrix success, `FULL1_MACRO_EVAL_PARITY:PASS` for macro+eval closure, and `FULL1_PLUGIN_PARITY:PASS` for plugin closure. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
+| `Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity` | `.github/workflows/gate-full1.yml` | Full1 aggregate gate that composes strict suite runners, strict extended Gate3, reusable macro runtime parity, reusable native eval, and reusable plugin parity. It emits `FULL1_SUITE_MATRIX:PASS` for strict matrix success, `FULL1_MACRO_EVAL_PARITY:PASS` for macro+eval closure, and `FULL1_PLUGIN_PARITY:PASS` for plugin closure. | **Nightly/scheduled + Release + Reusable** | weekly schedule, `release`, manual, `workflow_call` |
+| `Gate Full1 RC / Release Go-No-Go` | `.github/workflows/gate-full1-rc.yml` | Full1 public-claim release gate that composes Gate Full1, Gate Perf Full1, and local contract guards through `scripts/ci/full1-rc-gate.js`. It uploads RC summary JSON and emits `FULL1_RELEASE_GO:PASS` only when every required Full1 scope marker is present. | **Release + Manual** | `release`, manual |
 | `Gate M7 / Replacement Bundle` | `.github/workflows/gate-m7.yml` | Strict replacement-readiness lane (scheduled/manual + release-event verification). | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Stdlib Portable / Full` | `.github/workflows/stdlib-portable-full.yml` | Full portable stdlib conformance lane. | **Nightly/scheduled** | weekly schedule, manual |
 | `Smoke / Stage0 Source Build` | `.github/workflows/stage0-source-smoke.yml` | Source-only stage0 smoke path integrity check. | **Nightly/scheduled** | daily schedule, manual |
@@ -222,6 +223,11 @@ Full1 plugin parity marker:
 
 - `FULL1_PLUGIN_PARITY:PASS` (`.github/workflows/full1-plugin-parity.yml` and `.github/workflows/gate-full1.yml`)
 
+Full1 flake policy marker:
+
+- `FULL1_FLAKE_POLICY:PASS` (planned by `haxe.ocaml-f1cl.3.4`; RC release
+  gate will not emit `FULL1_RELEASE_GO:PASS` until this marker is supplied)
+
 Full1 performance policy marker:
 
 - `FULL1_PERF_POLICY:PASS` (`scripts/ci/full1-perf-policy-check.js`)
@@ -231,6 +237,12 @@ Full1 measured performance parity marker:
 - `FULL1_PERF_PARITY:PASS` (`.github/workflows/gate-perf-full1.yml`;
   evaluator: `scripts/ci/full1-perf-evaluator.js`; policy source:
   `docs/00-project/FULL1_PERF_PARITY_POLICY.md`)
+
+Full1 release go/no-go marker:
+
+- `FULL1_RELEASE_GO:PASS` (`.github/workflows/gate-full1-rc.yml`;
+  evaluator: `scripts/ci/full1-rc-gate.js`; scope source:
+  `docs/02-user-guide/compat/full-1.0-scope.json`)
 
 Gate Full1 also requires green reusable jobs from:
 

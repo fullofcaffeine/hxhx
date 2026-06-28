@@ -10,8 +10,10 @@
     "plugin-matrix-strict",
     "m7-strict-replacement",
     "full1-gate3-extended-strict",
+    "full1-parity-map-contract",
     "full-perf-policy",
-    "full-perf-parity"
+    "full-perf-parity",
+    "full-release-rc"
   ],
   "entries": [
     {
@@ -125,6 +127,19 @@
       "profile": "scheduled",
       "marker": "FULL1_GATE3_EXTENDED_TARGETS:PASS",
       "workflow": ".github/workflows/gate3-full1-extended.yml",
+      "enforcement": "required_now"
+    },
+    {
+      "id": "F1-PM-08A",
+      "suite": "full1-parity-map-contract",
+      "lane": "full",
+      "targets": [
+        "release",
+        "planning"
+      ],
+      "profile": "contract",
+      "marker": "FULL1_PARITY_MAP:PASS",
+      "workflow": "scripts/ci/full1-parity-map-check.js",
       "enforcement": "required_now"
     },
     {
@@ -250,6 +265,19 @@
       "enforcement": "planned"
     },
     {
+      "id": "F1-PM-11E",
+      "suite": "full1-flake-policy",
+      "lane": "full",
+      "targets": [
+        "release",
+        "ci"
+      ],
+      "profile": "contract",
+      "marker": "FULL1_FLAKE_POLICY:PASS",
+      "workflow": "planned flake-policy guard from haxe.ocaml-f1cl.3.4",
+      "enforcement": "planned"
+    },
+    {
       "id": "F1-PM-12",
       "suite": "full-perf-policy",
       "lane": "full",
@@ -283,7 +311,7 @@
       "profile": "release",
       "marker": "FULL1_RELEASE_GO:PASS",
       "workflow": ".github/workflows/gate-full1-rc.yml",
-      "enforcement": "planned"
+      "enforcement": "required_now"
     },
     {
       "id": "F1-PM-14",

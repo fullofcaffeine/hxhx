@@ -40,11 +40,12 @@ You may say `Full 1.0` publicly only when all of the following are true:
 3. `FULL1_EVAL_NATIVE:PASS`
 4. `FULL1_MACRO_EVAL_PARITY:PASS`
 5. `FULL1_PLUGIN_PARITY:PASS`
-6. `FULL1_PERF_PARITY:PASS`
-7. `FULL1_RELEASE_GO:PASS`
-8. The Full1 RC workflow is the actual release source of truth.
-9. The release workflow blocks `>=1.0.0` claims without that RC result.
-10. Relevant upstream Haxe 4.3.7 suites are treated as the primary proof of equivalence; local focused regressions are only supporting evidence.
+6. `FULL1_FLAKE_POLICY:PASS`
+7. `FULL1_PERF_PARITY:PASS`
+8. `FULL1_RELEASE_GO:PASS`
+9. `.github/workflows/gate-full1-rc.yml` is the actual Full1 release source of truth.
+10. The release workflow blocks `>=1.0.0` claims without that RC result.
+11. Relevant upstream Haxe 4.3.7 suites are treated as the primary proof of equivalence; local focused regressions are only supporting evidence.
 
 The current strict public-claim baseline is:
 

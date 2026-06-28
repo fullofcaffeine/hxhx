@@ -1,6 +1,7 @@
 name: Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity
 
 on:
+  workflow_call:
   workflow_dispatch:
   schedule:
     # Weekly Full1 strict matrix aggregation.
@@ -9,7 +10,7 @@ on:
     types: [published]
 
 concurrency:
-  group: gate-full1-${{ github.ref }}
+  group: gate-full1-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
