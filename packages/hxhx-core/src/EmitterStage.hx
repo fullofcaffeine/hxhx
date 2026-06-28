@@ -3338,6 +3338,9 @@ class EmitterStage {
 						//
 						// - In instance contexts, forward `this`.
 						// - Outside instance contexts (for static/qualified call-shapes), use a sentinel.
+						if (!forceImplicitThis && sig != null && sig.needsReceiver && fullArgs.length + 1 == sig.expected && c.indexOf(" (this_)") == -1) {
+							fullArgs.insert(0, stage3HasThisBinding(tyByIdentRaw) ? EThis : ENull);
+						}
 						if (sig != null && sig.needsReceiver && fullArgs.length < sig.required) {
 							fullArgs.insert(0, stage3HasThisBinding(tyByIdentRaw) ? EThis : ENull);
 						}
