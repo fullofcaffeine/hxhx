@@ -7914,11 +7914,74 @@ class CppTargetCore {
 	}
 
 	static function reflectCompareMethodArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final identity = reflectCompareMethodIdentityExpr(expr, scope);
+		if (identity != null)
+			return identity;
 		final sameOwner = sameOwnerMethodValueExpr(expr, scope);
 		if (sameOwner != null)
 			return sameOwner;
 		final instance = instanceMethodValueExpr(expr, scope);
 		return instance == null ? renderExpr(expr, scope) : instance;
+	}
+
+	/**
+		Lower method-value operands to comparable target tokens only for
+		`Reflect.compareMethods`. General method values still render as callables.
+	**/
+	static function reflectCompareMethodIdentityExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		return switch (expr) {
+			case EIdent(name):
+				final fn = currentOwnerMethod(name, scope);
+				if (fn == null) null; else {
+					final ownerType = scope.owner == null ? "" : sanitizeTypePath(HxClassDecl.getName(scope.owner));
+					if (ownerType.length == 0)
+						null;
+					else
+						cppMethodIdentityExpr(HxFunctionDecl.getIsStatic(fn) ? "nullptr" : "this", ownerType, name);
+				}
+			case EField(receiver, method):
+				final ownerType = switch (receiver) {
+					case EThis:
+						scope.owner == null ? null : sanitizeTypePath(HxClassDecl.getName(scope.owner));
+					case _:
+						classNameFromCppExprType(exprCppType(receiver, scope), scope);
+				}
+				if (ownerType == null || ownerType.length == 0) null; else {
+					final fn = classMethodDecl(ownerType, method, false, scope);
+					final target = reflectCompareMethodTargetExpr(receiver, scope);
+					if (fn == null || target == null)
+						null;
+					else
+						cppMethodIdentityExpr(target, ownerType, method);
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function reflectCompareMethodTargetExpr(receiver:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (receiver) {
+			case EThis:
+				"this";
+			case EIdent(_):
+				final rendered = renderExpr(receiver, scope);
+				isCppReferenceType(exprCppType(receiver, scope)) ? rendered + ".get()" : "&" + rendered;
+			case EField(_, _):
+				final rendered = renderExpr(receiver, scope);
+				isCppReferenceType(exprCppType(receiver, scope)) ? rendered + ".get()" : null;
+			case _:
+				null;
+		};
+	}
+
+	static function cppMethodIdentityExpr(target:String, ownerType:String, method:String):String {
+		return "__hxhx_method_identity("
+			+ target
+			+ ", std::string("
+			+ quoteString(sanitizeTypePath(ownerType) + "::" + sanitizeIdentifier(method))
+			+ "))";
 	}
 
 	static function sameOwnerMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {

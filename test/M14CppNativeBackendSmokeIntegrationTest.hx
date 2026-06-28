@@ -1902,6 +1902,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function reflectCompareMethodsRuntimeProgram():GenIrProgram {
+		final src = [
+			"class CompareOwner {",
+			"  public function new() {}",
+			"  public function add(value:Int):Int return value + 1;",
+			"}",
+			"class Main {",
+			"  static function stat(value:Int):Int return value;",
+			"  static function main() {",
+			"    var left = new CompareOwner();",
+			"    var right = new CompareOwner();",
+			"    Sys.println(Std.string(Reflect.compareMethods(stat, stat)));",
+			"    Sys.println(Std.string(Reflect.compareMethods(left.add, left.add)));",
+			"    Sys.println(Std.string(Reflect.compareMethods(left.add, right.add)));",
+			"    Sys.println(Std.string(Reflect.compareMethods(left.add, null)));",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "ReflectCompareMethodsRuntime.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function vendorReadOnlyArrayProgramWhenAvailable():Null<GenIrProgram> {
 		final readOnlyArrayPath = "vendor/haxe/std/haxe/ds/ReadOnlyArray.hx";
 		if (!FileSystem.exists(readOnlyArrayPath))
@@ -8110,8 +8133,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ expression-position for-in markers should lower to loops inside Http.onBytes callbacks");
 		assertContains(mainLoopSource, "(total += echoData.get(i));", "C++ expression-position for-in lowering should preserve callback loop bodies");
 		assertTrue(mainLoopSource.indexOf("__hxhx_for_in") < 0, "C++ Http callback loops should not leak internal for-in markers");
-		assertContains(mainLoopSource, "__hxhx_reflect_compare_methods([&](auto data) { return onData(data); }, emptyOnData)",
-			"C++ Reflect.compareMethods should lower same-owner method values before entering target-owned support");
+		assertContains(mainLoopSource, "__hxhx_reflect_compare_methods(__hxhx_method_identity(nullptr, std::string(\"Main::onData\")), emptyOnData)",
+			"C++ Reflect.compareMethods should lower same-owner method values to target-owned identity tokens");
 		assertTrue(mainLoopSource.indexOf("Reflect::compareMethods") < 0, "C++ Reflect.compareMethods should not emit an undeclared static helper call");
 		assertContains(mainLoopSource, "d->setPostData(srcStr);", "C++ generated code should call Http.setPostData");
 		assertContains(mainLoopSource, "d->setPostBytes(__hxhx_stringify(payload));", "C++ generated code should call Http.setPostBytes");
@@ -8120,6 +8143,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(mainLoopSource, "event->delay(0);", "C++ generated code should call MainEvent support methods through shared_ptr");
 		assertTrue(mainLoopSource.indexOf("ArrayVoid") < 0, "C++ event queue support should not leak ArrayVoid into generated source");
 		assertTrue(mainLoopSource.indexOf("inline static bool pending =") < 0, "C++ event queue support should not infer pending as bool");
+
+		final reflectCompareDir = Path.join([root, "reflect-compare-methods-source-only"]);
+		final reflectCompareEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(reflectCompareMethodsRuntimeProgram(), context(reflectCompareDir, true, true));
+		final reflectCompareSource = File.getContent(reflectCompareEmit.entryPath);
+		assertContains(reflectCompareSource, "struct __hxhx_method_identity {", "C++ Reflect.compareMethods should own a comparable method token");
+		assertContains(reflectCompareSource,
+			"__hxhx_reflect_compare_methods(__hxhx_method_identity(nullptr, std::string(\"Main::stat\")), __hxhx_method_identity(nullptr, std::string(\"Main::stat\")))",
+			"C++ Reflect.compareMethods should identify equal static method values");
+		assertContains(reflectCompareSource,
+			"__hxhx_reflect_compare_methods(__hxhx_method_identity(left.get(), std::string(\"CompareOwner::add\")), __hxhx_method_identity(left.get(), std::string(\"CompareOwner::add\")))",
+			"C++ Reflect.compareMethods should identify equal instance method values on the same receiver");
+		assertContains(reflectCompareSource,
+			"__hxhx_reflect_compare_methods(__hxhx_method_identity(left.get(), std::string(\"CompareOwner::add\")), __hxhx_method_identity(right.get(), std::string(\"CompareOwner::add\")))",
+			"C++ Reflect.compareMethods should preserve receiver identity for unequal method values");
+		assertContains(reflectCompareSource,
+			"__hxhx_reflect_compare_methods(__hxhx_method_identity(left.get(), std::string(\"CompareOwner::add\")), nullptr)",
+			"C++ Reflect.compareMethods should keep null comparisons false through target-owned support");
 
 		final mathExternDir = Path.join([root, "math-extern-source-only"]);
 		final mathExternEmit = BackendRegistry.createForTarget("cpp-native").emit(mathExternProgram(), context(mathExternDir, true, true));
@@ -8246,6 +8287,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		}
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
+			final reflectCompareBuildDir = Path.join([root, "reflect-compare-methods-build"]);
+			final reflectCompareBuilt = BackendRegistry.createForTarget("cpp-native")
+				.emit(reflectCompareMethodsRuntimeProgram(), context(reflectCompareBuildDir, true, false));
+			assertTrue(reflectCompareBuilt.builtExecutable, "C++ Reflect.compareMethods runtime smoke should build executable");
+			final reflectCompareRun = commandOutput(reflectCompareBuilt.entryPath, []);
+			assertTrue(reflectCompareRun.code == 0, "C++ Reflect.compareMethods runtime smoke failed: " + reflectCompareRun.stderr);
+			assertTrue(reflectCompareRun.stdout == "true\ntrue\nfalse\nfalse\n", "unexpected C++ Reflect.compareMethods stdout: " + reflectCompareRun.stdout);
+
 			final buildDir = Path.join([root, "build"]);
 			final built = BackendRegistry.createForTarget("cpp-native").emit(program(), context(buildDir, true, false));
 			assertTrue(hasArtifactKind(built.artifacts, "entry_cpp_exe"), "missing entry_cpp_exe artifact");
