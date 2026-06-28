@@ -6354,6 +6354,28 @@ class EmitterStage {
 		return true;
 	}
 
+	/**
+		Stage3 keeps std modules on stub bodies during full emit, but these DateTools
+		duration helpers are pure arithmetic and are evaluated by upstream unit statics.
+	**/
+	static function stage3DateToolsDurationBody(moduleName:String, nameRaw:String, argName:String):Null<String> {
+		if (moduleName != "DateTools" || argName == null || argName.length == 0)
+			return null;
+		final arg = ocamlValueIdent(argName);
+		return switch (nameRaw) {
+			case "seconds":
+				"((" + arg + ") *. (1000.))";
+			case "minutes":
+				"(((" + arg + ") *. (60.)) *. (1000.))";
+			case "hours":
+				"((((" + arg + ") *. (60.)) *. (60.)) *. (1000.))";
+			case "days":
+				"(((((" + arg + ") *. (24.)) *. (60.)) *. (60.)) *. (1000.))";
+			case _:
+				null;
+		}
+	}
+
 	static function patchStage3StringToolsShimForStage3(outAbs:String):Null<String> {
 		final shimName = "StringTools";
 		final shimFile = shimName + ".ml";
@@ -7124,7 +7146,8 @@ class EmitterStage {
 						} else {
 							args.map(a -> ocamlValueIdent(HxFunctionArg.getName(a))).join(" ");
 						};
-						out.push("let " + ocamlValueIdent(nameRaw) + " " + ocamlArgs + " = (Obj.magic 0)");
+						final durationBody = args.length == 1 ? stage3DateToolsDurationBody(moduleName, nameRaw, HxFunctionArg.getName(args[0])) : null;
+						out.push("let " + ocamlValueIdent(nameRaw) + " " + ocamlArgs + " = " + (durationBody == null ? "(Obj.magic 0)" : durationBody));
 						out.push("");
 					}
 					EmitterStageDebug.traceStage3Phase("emit_stub_after_functions:" + moduleName);
@@ -7709,6 +7732,7 @@ class EmitterStage {
 							final useStage3ReadConnectDisplayStdinBody = mainModuleName == "Hxhx_Stage3Compiler"
 								&& nameRaw == "readConnectDisplayStdin";
 							final useStage3RunWaitStdioBody = mainModuleName == "Hxhx_Stage3Compiler" && nameRaw == "runWaitStdio";
+							final durationBody = args.length == 1 ? stage3DateToolsDurationBody(mainModuleName, nameRaw, args[0].getName()) : null;
 							var body = if (useStage3ModuleTypeNameBody) {
 								moduleTypeNameForStage3OcamlBody();
 							} else if (useStage3HxhxMainJsRouteBody) {
@@ -7719,6 +7743,8 @@ class EmitterStage {
 								hxhxStage3ReadConnectDisplayStdinStage3OcamlBody();
 							} else if (useStage3RunWaitStdioBody) {
 								hxhxStage3RunWaitStdioStage3OcamlBody();
+							} else if (durationBody != null) {
+								durationBody;
 							} else if (parsedFn == null) {
 								"()";
 							} else if (!moduleEmitBodies) {

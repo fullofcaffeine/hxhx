@@ -117,6 +117,7 @@
     "test:m14:stage3-concat-string-iterator-field": "haxe test/m14_stage3_concat_string_iterator_field_integration_test.hxml",
     "test:m14:stage3-enum-extractor-binding": "haxe test/m14_stage3_enum_extractor_binding_integration_test.hxml",
     "test:m14:stage3-float-call-arg": "haxe test/m14_stage3_float_call_arg_integration_test.hxml",
+    "test:m14:stage3-datetools-duration-stub": "haxe test/m14_stage3_datetools_duration_stub_integration_test.hxml",
     "test:m14:stage3-lambda-array-shim": "haxe test/m14_stage3_lambda_array_shim_integration_test.hxml",
     "test:m14:stage3-same-class-instance-forward": "haxe test/m14_stage3_same_class_instance_forward_integration_test.hxml",
     "test:m14:stage3-stringtools-hex-int64-field": "haxe test/m14_stage3_stringtools_hex_int64_field_integration_test.hxml",
