@@ -6758,10 +6758,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classReflectionLookup = {names: classReflectionNames, byName: classReflectionClasses};
 		final classReflectionBaseLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperClass(classReflectionBase, classReflectionLookup).join("\n");
+		assertContains(classReflectionBaseLines, "void hf(std::shared_ptr<Class> c, std::string n, std::shared_ptr<PosInfos> pos = nullptr)",
+			"C++ DCE reflection helpers should keep the Class-valued helper signature as the primary boundary");
 		assertContains(classReflectionBaseLines, "void hf(std::string c, std::string n, std::shared_ptr<PosInfos> pos = nullptr)",
-			"C++ DCE reflection helpers should expose a string overload for degraded class literals");
+			"C++ DCE reflection helpers should keep a narrow documented fallback for degraded class-name carriers");
 		assertContains(classReflectionBaseLines, "hf(Type::resolveClass(c), n, pos);",
-			"C++ DCE reflection string overloads should forward through Type.resolveClass");
+			"C++ DCE reflection fallback overloads should recover Class meta-values through Type.resolveClass");
 		final classReflectionLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(classReflectionTest, classReflectionOwner, classReflectionLookup).join("\n");
 		assertContains(classReflectionLines, "hf(Type::resolveClass(\"ThrownWithToString\"), std::string(\"toString\"));",

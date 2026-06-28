@@ -3148,6 +3148,16 @@ class CppTargetCore {
 		return out;
 	}
 
+	/**
+		Emit the narrow fallback overload for DCE reflection helpers.
+
+		The primary C++ seam is call-site lowering: class literals passed to
+		`hf`/`nhf` Class parameters render as `Type::resolveClass("Path")`.
+		Some inherited DCE helper surfaces can still reach generated C++ through
+		string-shaped carriers after helper metadata is unavailable. Keep that
+		recovery at the helper boundary, resolve the string back to a Class
+		meta-value once, and do not generalize this to arbitrary reflection calls.
+	**/
 	static function renderDceReflectionHelperStringOverload(fn:HxFunctionDecl, scope:CppRenderScope, returnType:String):Array<String> {
 		final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		if ((methodName != "hf" && methodName != "nhf") || HxFunctionDecl.getIsStatic(fn) || returnType != "void")
