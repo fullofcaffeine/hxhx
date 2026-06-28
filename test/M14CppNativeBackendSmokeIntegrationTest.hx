@@ -6244,6 +6244,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				""),
 			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EField(EIdent("posInfos"), "className"), HxPos.unknown())], "")
 		], [new HxFieldDecl("posInfos", Public, false, "PosInfos", null)]);
+		final notImplementedException = new HxClassDecl("NotImplementedException", false, [
+			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)], "Void",
+				[SExpr(ECall(ESuper, [EIdent("pos")]), HxPos.unknown())], "")
+		], [], "PosException");
 		final logFormatOutputLike = new HxFunctionDecl("formatOutput", Public, true, [
 			new HxFunctionArg("str", "String", NoDefault, false, false),
 			new HxFunctionArg("infos", "PosInfos", NoDefault, false, false)
@@ -6256,11 +6260,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], "");
 		final logLike = new HxClassDecl("Log", false, [logFormatOutputLike], []);
 		final posNames = new StringMap<Bool>();
-		for (name in ["PosInfos", "PosException", "Log"])
+		for (name in ["PosInfos", "PosException", "NotImplementedException", "Log"])
 			posNames.set(name, true);
 		final posClasses = new StringMap<HxClassDecl>();
 		posClasses.set("PosInfos", posInfos);
 		posClasses.set("PosException", posException);
+		posClasses.set("NotImplementedException", notImplementedException);
 		posClasses.set("Log", logLike);
 		final posLookup = {names: posNames, byName: posClasses};
 		final posValueScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(posException, posLookup, "void");
@@ -6283,6 +6288,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFieldDecl("methodName", Public, false, "String", null)
 		]), posLookup).join("\n");
 		final posExceptionLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(posException, posLookup).join("\n");
+		final notImplementedExceptionLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(notImplementedException, posLookup).join("\n");
 		final logFormatOutputLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(logFormatOutputLike, logLike, posLookup).join("\n");
 		assertContains(posInfosLines, "std::string fileName = std::string();", "C++ PosInfos typedef placeholders should render the stdlib position fields");
 		assertContains(posInfosLines, "std::vector<std::string> customParams = {};",
@@ -6295,6 +6301,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ assignments from matching position literals should wrap into PosInfos shared pointers");
 		assertContains(posExceptionLines, "posInfos = pos;", "C++ PosInfos reference assignments should pass existing pointers through");
 		assertContains(posExceptionLines, "return (posInfos->className);", "C++ PosInfos string fields should not be wrapped with std::to_string");
+		assertContains(notImplementedExceptionLines, "NotImplementedException(std::shared_ptr<PosInfos> pos = nullptr) : PosException(pos) {",
+			"C++ optional PosInfos constructor forwarding should keep the nullable reference instead of forcing value extraction");
+		assertTrue(notImplementedExceptionLines.indexOf("PosException(pos.value())") < 0,
+			"C++ optional PosInfos constructor forwarding should not unwrap missing position values");
 		assertContains(logFormatOutputLines, "for (auto v : (infos->customParams)) {",
 			"C++ Log.formatOutput-like helpers should iterate PosInfos.customParams");
 		assertContains(logFormatOutputLines, "return ((std::string(pstr) + std::string(\": \")) + std::string(str));",
