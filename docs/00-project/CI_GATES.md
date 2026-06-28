@@ -61,6 +61,10 @@ For Full 1.0 claims, use the strict Full contract and markers in:
 - `docs/00-project/FULL_1_0_CONTRACT.md`
 - `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 
+The semantic-release publication path blocks candidate versions `>=1.0.0`
+through `scripts/release/full1-release-enforcement.js` unless
+`FULL1_RELEASE_GO:PASS` and a valid Full1 RC summary JSON are supplied.
+
 For strict `Full 1.0` / `Haxe 4.3.7-equivalent` claims, the primary proof is the relevant upstream Haxe 4.3.7 suite matrix running under `hxhx`.
 Repo-local focused regressions and bridge tests are supporting evidence for diagnosis and closure work; they do not replace upstream-suite proof.
 
@@ -247,6 +251,11 @@ Full1 release go/no-go marker:
   evaluator: `scripts/ci/full1-rc-gate.js`; scope source:
   `docs/02-user-guide/compat/full-1.0-scope.json`; decision page:
   `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`)
+
+Full1 semantic-release enforcement marker:
+
+- `FULL1_RELEASE_ENFORCEMENT:PASS` (`scripts/release/full1-release-enforcement.js`;
+  fixture coverage: `scripts/release/full1-release-enforcement-fixture-test.js`)
 
 Gate Full1 also requires green reusable jobs from:
 

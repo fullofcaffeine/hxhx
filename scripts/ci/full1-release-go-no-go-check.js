@@ -12,6 +12,8 @@ const ciGatesPath = 'docs/00-project/CI_GATES.md'
 const scopeManifestPath = 'docs/02-user-guide/compat/full-1.0-scope.json'
 const rcWorkflowPath = '.github/workflows/gate-full1-rc.yml'
 const rcEvaluatorPath = 'scripts/ci/full1-rc-gate.js'
+const releaseEnforcementPath = 'scripts/release/full1-release-enforcement.js'
+const packageJsonPath = 'package.json'
 const releaseMarker = 'FULL1_RELEASE_GO:PASS'
 
 const requiredDocSnippets = [
@@ -28,7 +30,7 @@ const requiredDocSnippets = [
   'requiredMarkers',
   releaseMarker,
   'No-go decision',
-  'haxe.ocaml-f1cl.7'
+  releaseEnforcementPath
 ]
 
 function fail(message) {
@@ -67,6 +69,8 @@ function main() {
   const scope = readJson(scopeManifestPath)
   const rcWorkflow = readUtf8(rcWorkflowPath)
   const rcEvaluator = readUtf8(rcEvaluatorPath)
+  const releaseEnforcement = readUtf8(releaseEnforcementPath)
+  const packageJson = readUtf8(packageJsonPath)
 
   for (const snippet of requiredDocSnippets) {
     requireIncludes(docPath, doc, snippet)
@@ -100,6 +104,13 @@ function main() {
   requireIncludes(rcEvaluatorPath, rcEvaluator, 'missingMarkers')
   requireIncludes(rcEvaluatorPath, rcEvaluator, releaseMarker)
   requireIncludes(rcEvaluatorPath, rcEvaluator, 'full1-rc-summary.v1')
+
+  requireIncludes(releaseEnforcementPath, releaseEnforcement, releaseMarker)
+  requireIncludes(releaseEnforcementPath, releaseEnforcement, 'FULL1_RELEASE_GO_MARKER')
+  requireIncludes(releaseEnforcementPath, releaseEnforcement, 'FULL1_RC_SUMMARY_JSON')
+  requireIncludes(releaseEnforcementPath, releaseEnforcement, 'FULL1_RELEASE_ENFORCEMENT:PASS')
+  requireIncludes(packageJsonPath, packageJson, 'verifyReleaseCmd')
+  requireIncludes(packageJsonPath, packageJson, releaseEnforcementPath)
 
   if (process.exitCode) return
   console.log('[ci:guards] OK: Full1 release go/no-go contract is valid')

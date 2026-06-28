@@ -44,7 +44,7 @@ You may say `Full 1.0` publicly only when all of the following are true:
 7. `FULL1_PERF_PARITY:PASS`
 8. `FULL1_RELEASE_GO:PASS`
 9. `.github/workflows/gate-full1-rc.yml` is the actual Full1 release source of truth.
-10. The release workflow blocks `>=1.0.0` claims without that RC result.
+10. Semantic-release blocks `>=1.0.0` claims through `scripts/release/full1-release-enforcement.js` unless that RC result and summary JSON are supplied.
 11. Relevant upstream Haxe 4.3.7 suites are treated as the primary proof of equivalence; local focused regressions are only supporting evidence.
 
 The current strict public-claim baseline is:

@@ -14,6 +14,9 @@ This repo uses **semantic-release** to publish GitHub Releases and maintain `CHA
 - CI runs on push/PR.
 - After CI succeeds on `master`/`main`, the Release workflow runs `semantic-release`.
 - `semantic-release` decides the next semver version from commit history and then:
+  - runs `scripts/release/full1-release-enforcement.js` in `verifyReleaseCmd`,
+    which allows `0.x` releases but blocks any candidate `>=1.0.0` unless the
+    Full1 RC marker and summary JSON are supplied,
   - updates `CHANGELOG.md`,
   - syncs versions across `package.json`, `package-lock.json`, `haxelib.json`, and `haxe_libraries/reflaxe.ocaml.hxml`,
   - creates a release commit (`chore(release): x.y.z [skip ci]`),
@@ -28,6 +31,23 @@ Use Conventional Commits so semantic-release can determine the correct semver bu
 - `feat!: ...` / `fix!: ...` → major (breaking change)
 
 If you use non-conventional commit messages, semantic-release will not publish a new release.
+
+## Full 1.0 enforcement
+
+Do not publish an unlabeled `1.0` claim. Use:
+
+- `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
+- `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
+
+Candidate versions `>=1.0.0` require:
+
+```bash
+FULL1_RELEASE_GO_MARKER=FULL1_RELEASE_GO:PASS
+FULL1_RC_SUMMARY_JSON=<path-to-full1-rc.summary.json>
+```
+
+The summary JSON must be the Full1 RC artifact produced by
+`.github/workflows/gate-full1-rc.yml`.
 
 ## Publishing to Haxelib (manual for now)
 

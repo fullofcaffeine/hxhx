@@ -35,7 +35,16 @@ npm run guard:bootstrap-plugin-kinds
 npm run guard:no-upstream-fixture-literals
 ```
 
-For any `1.0.0` release candidate/tag, both guards above must be green.
+For any `Scoped 1.0` release candidate/tag, both guards above must be green.
+For any `Full 1.0` or `>=1.0.0` candidate, also use:
+
+- `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
+- `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
+
+The semantic-release publication path blocks candidate versions `>=1.0.0`
+through `scripts/release/full1-release-enforcement.js` unless
+`FULL1_RELEASE_GO_MARKER=FULL1_RELEASE_GO:PASS` and
+`FULL1_RC_SUMMARY_JSON=<path-to-full1-rc.summary.json>` are supplied.
 
 ## 3) Strict replacement-readiness markers (M7)
 

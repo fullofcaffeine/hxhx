@@ -49,9 +49,14 @@ Treat the release candidate as a no-go for `Full 1.0` if any of these are true:
 
 ## Relationship to release enforcement
 
-This page defines the go/no-go decision model. Release enforcement wiring is
-tracked separately by `haxe.ocaml-f1cl.7`, which must forbid a public `Full 1.0`
-claim or `>=1.0.0` release path without the RC result.
+This page defines the go/no-go decision model. The semantic-release publication
+path enforces it through `scripts/release/full1-release-enforcement.js`, wired
+as `verifyReleaseCmd` in `package.json`.
 
-Until that enforcement bead is complete, this document and the RC workflow are
-the auditable decision contract, not a complete publication lock.
+For any candidate version `>=1.0.0`, publication requires:
+
+- `FULL1_RELEASE_GO_MARKER=FULL1_RELEASE_GO:PASS`
+- `FULL1_RC_SUMMARY_JSON=<path-to-full1-rc.summary.json>`
+
+The summary JSON must use schema `full1-rc-summary.v1`, report
+`FULL1_RELEASE_GO:PASS`, and have an empty `missingMarkers` list.

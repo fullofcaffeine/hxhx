@@ -63,7 +63,8 @@ Current planning owners:
 - strict upstream target gates: `haxe.ocaml-f1cl.3`, `haxe.ocaml-f1cl.3.1`, `haxe.ocaml-blsl`, `haxe.ocaml-sssk`
 - Full 1.0 release go/no-go: `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
   (`haxe.ocaml-f1cl.6`)
-- release enforcement: `haxe.ocaml-f1cl.7`
+- release enforcement: `scripts/release/full1-release-enforcement.js`
+  (`haxe.ocaml-f1cl.7`)
 
 Iteration-speed note:
 

@@ -17,6 +17,8 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NODE_VERSION: "20"
+  FULL1_RELEASE_GO_MARKER: ""
+  FULL1_RC_SUMMARY_JSON: ""
 
 jobs:
   release:
@@ -58,7 +60,8 @@ jobs:
           set -euo pipefail
           echo "M7_RELEASE_POLICY=SEPARATE_GATE"
           echo "M7 strict is not a blocking precondition for automated 0.x semantic publish."
-          echo "1.0 release sign-off requires Gate M7 strict markers (M7_STRICT_STAGE0:PASS and M7_REPLACEMENT_READY:PASS)."
+          echo "Scoped 1.0 release sign-off requires Gate M7 strict markers (M7_STRICT_STAGE0:PASS and M7_REPLACEMENT_READY:PASS)."
+          echo "Full 1.0 / >=1.0.0 release paths are blocked by semantic-release verifyReleaseCmd unless FULL1_RELEASE_GO:PASS and a valid Full1 RC summary JSON are supplied."
 
       - name: Release
         env:
