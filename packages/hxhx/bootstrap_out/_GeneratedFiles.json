@@ -117,6 +117,7 @@
 		"backend_cpp_CppRuntimeSupport.ml",
 		"backend_cpp_CppNativeBackend.ml",
 		"backend_cpp_CppMacroExpr.ml",
+		"backend_cpp_CppLocalTypeInference.ml",
 		"backend_TargetCoreBackend.ml",
 		"backend_OcamlProfile.ml",
 		"backend_ITargetCore.ml",
@@ -188,7 +189,7 @@
 		"CSharpNoEmitDiagnostics.ml",
 		"Any.ml"
 	],
-	"id": 1,
+	"id": 2,
 	"wasCached": false,
 	"version": 1
 }
