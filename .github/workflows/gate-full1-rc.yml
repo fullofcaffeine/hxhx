@@ -94,6 +94,7 @@ jobs:
           run_guard "FULL1_PARITY_MAP:PASS" node scripts/ci/full1-parity-map-check.js
           run_guard "FULL1_MACRO_EVAL_CONTRACT:PASS" node scripts/ci/full1-macro-eval-contract-check.js
           run_guard "FULL1_PLUGIN_PARITY_CONTRACT:PASS" node scripts/ci/full1-plugin-parity-contract-check.js
+          run_guard "FULL1_FLAKE_POLICY:PASS" node scripts/ci/full1-flake-policy-check.js
           run_guard "FULL1_PERF_POLICY:PASS" node scripts/ci/full1-perf-policy-check.js
 
           node scripts/ci/full1-rc-gate.js \

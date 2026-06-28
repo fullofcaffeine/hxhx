@@ -225,8 +225,9 @@ Full1 plugin parity marker:
 
 Full1 flake policy marker:
 
-- `FULL1_FLAKE_POLICY:PASS` (planned by `haxe.ocaml-f1cl.3.4`; RC release
-  gate will not emit `FULL1_RELEASE_GO:PASS` until this marker is supplied)
+- `FULL1_FLAKE_POLICY:PASS` (`scripts/ci/full1-flake-policy-check.js`;
+  policy source: `docs/00-project/FULL1_FLAKE_POLICY.md`; allowlist source:
+  `docs/00-project/FULL1_FLAKE_ALLOWLIST.json`)
 
 Full1 performance policy marker:
 

@@ -11,6 +11,7 @@
     "m7-strict-replacement",
     "full1-gate3-extended-strict",
     "full1-parity-map-contract",
+    "full1-flake-policy",
     "full-perf-policy",
     "full-perf-parity",
     "full-release-rc"
@@ -274,8 +275,8 @@
       ],
       "profile": "contract",
       "marker": "FULL1_FLAKE_POLICY:PASS",
-      "workflow": "planned flake-policy guard from haxe.ocaml-f1cl.3.4",
-      "enforcement": "planned"
+      "workflow": "scripts/ci/full1-flake-policy-check.js",
+      "enforcement": "required_now"
     },
     {
       "id": "F1-PM-12",

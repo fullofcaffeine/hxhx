@@ -1,0 +1,5 @@
+{
+  "schema": "full1-flake-allowlist.v1",
+  "policy": "docs/00-project/FULL1_FLAKE_POLICY.md",
+  "quarantines": []
+}

@@ -80,6 +80,14 @@ That sub-contract distinguishes the contract-definition marker
 (`PLUGIN_MATRIX_STRICT:PASS`) does not replace the Full 1.0
 `reflaxe.ocaml` plugin proof matrix.
 
+Full1 suite flake handling has its own explicit sub-contract:
+
+- `docs/00-project/FULL1_FLAKE_POLICY.md`
+
+That sub-contract defines `FULL1_FLAKE_POLICY:PASS`, bounded retries, and the
+expiry-based quarantine allowlist required before the Full1 RC gate may emit
+`FULL1_RELEASE_GO:PASS`.
+
 ## Non-goals policy
 
 Anything not explicitly declared in the scope manifest is out-of-scope for the claim.
