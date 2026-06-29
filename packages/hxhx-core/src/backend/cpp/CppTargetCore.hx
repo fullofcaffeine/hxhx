@@ -63,6 +63,7 @@ class CppTargetCore {
 	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
 	static var functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 	static var functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
+	static var functionReturnTypesCache = new haxe.ds.StringMap<String>();
 	static var traceCppDeepEnabledCache = -1;
 	static var traceCppTimingsEnabledCache = -1;
 
@@ -193,6 +194,7 @@ class CppTargetCore {
 	static function renderProgram(program:GenIrProgram, main:{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}):String {
 		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 		functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
+		functionReturnTypesCache = new haxe.ds.StringMap<String>();
 		final className = sanitizeIdentifier(HxClassDecl.getName(main.cls));
 		final typedModules = program.getTypedModules();
 		traceCppPhase("render_enter main=" + className + " typed_modules=" + typedModules.length);
@@ -14112,46 +14114,54 @@ class CppTargetCore {
 			?classLookup:CppClassLookup):String {
 		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
 		final ownerName = owner == null ? "" : sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		final returnLookup = classLookup == null ? {names: classNamesFromByName(classByName), byName: classByName} : classLookup;
+		final cacheKey = functionDeclCacheKey(owner, fn, returnLookup);
+		final cached = functionReturnTypesCache.get(cacheKey);
+		if (cached != null)
+			return cached;
+		function cacheReturn(typeName:String):String {
+			functionReturnTypesCache.set(cacheKey, typeName);
+			return typeName;
+		}
 		if (ownerName == "Bytes" && sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "fill")
-			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
-				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+			return cacheReturn(knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
+				{names: new haxe.ds.StringMap<Bool>(), byName: classByName}));
 		if (ownerName == "Exception") {
 			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
 				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
 			if (knownReturn.length > 0)
-				return knownReturn;
+				return cacheReturn(knownReturn);
 		}
 		if (isStringIteratorHelper(ownerName))
-			return knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
-				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
+			return cacheReturn(knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
+				{names: new haxe.ds.StringMap<Bool>(), byName: classByName}));
 		if (ownerName == "EReg") {
 			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, null,
 				{names: new haxe.ds.StringMap<Bool>(), byName: classByName});
 			if (knownReturn.length > 0)
-				return knownReturn;
+				return cacheReturn(knownReturn);
 		}
 		if (isDynamicLikeTypeHint(raw) && functionReturnsEnumMetadataCtor(fn))
-			return "std::string";
-		final returnLookup = classLookup == null ? {names: classNamesFromByName(classByName), byName: classByName} : classLookup;
+			return cacheReturn("std::string");
 		final returnScope = renderScope(owner, returnLookup, "auto");
 		if (raw.length == 0) {
 			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, returnScope, returnLookup);
 			if (knownReturn.length > 0)
-				return knownReturn;
+				return cacheReturn(knownReturn);
 		}
 		if (raw.length > 0 && isDynamicLikeTypeHint(raw) && functionReturnsErasedDynamicValue(fn, returnScope))
-			return "std::any";
+			return cacheReturn("std::any");
 		if (raw.length > 0) {
 			applyFunctionTypeParams(returnScope, fn);
 			if (functionReturnTypeParamShouldUseAuto(raw, fn))
-				return functionReturnsOnlyNull(fn) ? "std::nullptr_t" : "auto";
+				return cacheReturn(functionReturnsOnlyNull(fn) ? "std::nullptr_t" : "auto");
 			final abstractReturn = abstractUnderlyingReturnCppType(raw, owner, returnScope, returnLookup);
 			if (abstractReturn.length > 0)
-				return abstractReturn;
-			return cppReturnTypeHint(raw, returnScope, returnLookup);
+				return cacheReturn(abstractReturn);
+			return cacheReturn(cppReturnTypeHint(raw, returnScope, returnLookup));
 		}
 		if (functionReturnsLambda(fn))
-			return "auto";
+			return cacheReturn("auto");
 		final key = functionSignatureKey(owner, fn, returnLookup);
 		if (inferredSignatureStack.exists(key))
 			return "";
@@ -14162,11 +14172,11 @@ class CppTargetCore {
 			final inferred = inferReturnTypeFromStmt(stmt, scope);
 			if (inferred.length > 0) {
 				inferredSignatureStack.remove(key);
-				return inferred;
+				return cacheReturn(inferred);
 			}
 		}
 		inferredSignatureStack.remove(key);
-		return functionHasValueReturn(fn) ? cppReturnTypeHint(raw, returnScope, returnLookup) : "void";
+		return cacheReturn(functionHasValueReturn(fn) ? cppReturnTypeHint(raw, returnScope, returnLookup) : "void");
 	}
 
 	static function abstractUnderlyingReturnCppType(rawReturnHint:String, owner:HxClassDecl, scope:CppRenderScope, classLookup:CppClassLookup):String {
@@ -14345,6 +14355,10 @@ class CppTargetCore {
 	}
 
 	static function functionArgTypesCacheKey(owner:HxClassDecl, fn:HxFunctionDecl, ?classLookup:CppClassLookup):String {
+		return functionDeclCacheKey(owner, fn, classLookup);
+	}
+
+	static function functionDeclCacheKey(owner:HxClassDecl, fn:HxFunctionDecl, ?classLookup:CppClassLookup):String {
 		final args = HxFunctionDecl.getArgs(fn);
 		final argParts = [
 			for (arg in args)
