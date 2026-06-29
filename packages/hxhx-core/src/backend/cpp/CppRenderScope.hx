@@ -23,4 +23,7 @@ typedef CppRenderScope = {
 	var anonStructs:haxe.ds.StringMap<CppScopeAnonStruct>;
 	var returnType:String;
 	var returnOnlyTypeParamAuto:Bool;
+	@:optional var traceOwnerName:String;
+	@:optional var traceMethodName:String;
+	@:optional var traceStmtIndex:Int;
 }

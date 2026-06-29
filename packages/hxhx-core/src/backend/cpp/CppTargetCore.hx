@@ -166,6 +166,21 @@ class CppTargetCore {
 		return filter == owner + "." + method || filter == ownerName + "." + methodName || filter == method;
 	}
 
+	static function traceCppScopeStmtTimingEnabled(?scope:CppRenderScope):Bool {
+		return scope != null
+			&& scope.traceOwnerName != null
+			&& scope.traceMethodName != null
+			&& traceCppMethodStmtTimingsEnabled(scope.traceOwnerName, scope.traceMethodName);
+	}
+
+	static function traceCppScopeStmtTimingPhase(scope:CppRenderScope, label:String):Void {
+		if (!traceCppScopeStmtTimingEnabled(scope))
+			return;
+		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
+		traceCppTimingPhase("render_helper_expr_timing owner=" + scope.traceOwnerName + " name=" + sanitizeIdentifier(scope.traceMethodName) + " index="
+			+ Std.string(index) + " " + label);
+	}
+
 	static function traceCppMemberPhase(className:String, kind:String, memberName:String, stage:String):Void {
 		if (!traceCppDeepEnabled())
 			return;
@@ -3653,6 +3668,58 @@ class CppTargetCore {
 		return [];
 	}
 
+	static function knownStdlibMethodParamCppTypes(className:String, methodName:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Array<String> {
+		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
+		final bytesType = cppTypeHint("Bytes", scope, classLookup);
+		return switch (owner) {
+			case "Bytes":
+				switch (method) {
+					case "alloc":
+						["int"];
+					case "ofString" | "ofHex":
+						["std::string"];
+					case "ofData":
+						["std::vector<int>"];
+					case "fastGet":
+						["std::vector<int>", "int"];
+					case _:
+						[];
+				}
+			case "Base64":
+				switch (method) {
+					case "encode" | "urlEncode":
+						[bytesType, "bool"];
+					case "decode" | "urlDecode":
+						["std::string", "bool"];
+					case _:
+						[];
+				}
+			case "BaseCode":
+				switch (method) {
+					case "encodeBytes" | "decodeBytes":
+						[bytesType];
+					case "encodeString" | "decodeString":
+						["std::string"];
+					case "encode" | "decode":
+						["std::string", "std::string"];
+					case _:
+						[];
+				}
+			case "Md5":
+				switch (method) {
+					case "encode":
+						["std::string"];
+					case "make":
+						[bytesType];
+					case _:
+						[];
+				}
+			case _:
+				[];
+		}
+	}
+
 	static function isStringIteratorHelper(className:String):Bool {
 		return className == "StringIterator"
 			|| className == "StringIteratorUnicode"
@@ -6749,15 +6816,24 @@ class CppTargetCore {
 	}
 
 	static function renderTimedHelperFunctionBody(ownerName:String, methodName:String, stmts:Array<HxStmt>, indent:String, scope:CppRenderScope):Array<String> {
+		final priorTraceOwner = scope.traceOwnerName;
+		final priorTraceMethod = scope.traceMethodName;
+		final priorTraceStmtIndex = scope.traceStmtIndex;
+		scope.traceOwnerName = ownerName;
+		scope.traceMethodName = methodName;
 		final returnType = scope == null ? "int" : scope.returnType;
 		if (returnType != "void" && stmts.length == 1) {
 			switch (stmts[0]) {
 				case SExpr(expr, _):
+					scope.traceStmtIndex = 0;
 					final startTime = Sys.time();
 					final out = [indent + returnStmtForExpr(expr, scope)];
 					final elapsed = Sys.time() - startTime;
 					traceCppTimingPhase("render_helper_stmt_timing owner=" + ownerName + " name=" + sanitizeIdentifier(methodName)
 						+ " index=0 kind=SExprReturn seconds=" + Std.string(elapsed) + " lines=" + out.length);
+					scope.traceOwnerName = priorTraceOwner;
+					scope.traceMethodName = priorTraceMethod;
+					scope.traceStmtIndex = priorTraceStmtIndex;
 					return out;
 				case _:
 			}
@@ -6768,12 +6844,16 @@ class CppTargetCore {
 			final kind = stmtKind(stmt);
 			final startTime = Sys.time();
 			final before = out.length;
+			scope.traceStmtIndex = i;
 			for (line in renderStmt(stmt, indent, scope))
 				out.push(line);
 			final elapsed = Sys.time() - startTime;
 			traceCppTimingPhase("render_helper_stmt_timing owner=" + ownerName + " name=" + sanitizeIdentifier(methodName) + " index=" + i + " kind=" + kind
 				+ " seconds=" + Std.string(elapsed) + " lines=" + (out.length - before));
 		}
+		scope.traceOwnerName = priorTraceOwner;
+		scope.traceMethodName = priorTraceMethod;
+		scope.traceStmtIndex = priorTraceStmtIndex;
 		return out;
 	}
 
@@ -8856,10 +8936,35 @@ class CppTargetCore {
 				out.push(renderExpr(args[i], scope));
 			return out;
 		}
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final firstTypeStart = timingEnabled ? Sys.time() : 0.;
 		final firstType = inferExprCppType(args[0], scope);
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"phase=eq_infer_first seconds="
+				+ Std.string(Sys.time() - firstTypeStart)
+				+ " kind="
+				+ exprKind(args[0])
+				+ " type="
+				+ firstType);
+		final secondTypeStart = timingEnabled ? Sys.time() : 0.;
 		final secondType = inferExprCppType(args[1], scope);
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"phase=eq_infer_second seconds="
+				+ Std.string(Sys.time() - secondTypeStart)
+				+ " kind="
+				+ exprKind(args[1])
+				+ " type="
+				+ secondType);
+		final firstRenderStart = timingEnabled ? Sys.time() : 0.;
 		out.push(eqComparableArgExpr(args[0], firstType, secondType, scope));
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope, "phase=eq_render_first seconds=" + Std.string(Sys.time() - firstRenderStart) + " kind=" + exprKind(args[0]));
+		final secondRenderStart = timingEnabled ? Sys.time() : 0.;
 		out.push(eqComparableArgExpr(args[1], secondType, firstType, scope));
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope, "phase=eq_render_second seconds=" + Std.string(Sys.time() - secondRenderStart) + " kind=" + exprKind(args[1]));
 		for (i in 2...args.length)
 			out.push(renderExpr(args[i], scope));
 		return out;
@@ -9194,6 +9299,9 @@ class CppTargetCore {
 		final preludeParamTypes = cppPreludeMethodParamTypes(className, methodName);
 		if (preludeParamTypes.length > 0)
 			return renderKnownCppParamCallArgs(preludeParamTypes, args, scope);
+		final supportParamTypes = knownStdlibMethodParamCppTypes(className, methodName, scope, lookupForScope(scope));
+		if (supportParamTypes.length > 0)
+			return renderKnownCppParamCallArgs(supportParamTypes, args, scope);
 		final fn = classMethodDecl(className, methodName, wantStatic, scope);
 		if (fn == null)
 			return renderSimpleCallArgs(args, scope);
@@ -9215,6 +9323,9 @@ class CppTargetCore {
 		final className = instanceMethodReceiverClassName(receiverCppType, scope);
 		if (className == null)
 			return renderSimpleCallArgs(args, scope);
+		final supportParamTypes = knownStdlibMethodParamCppTypes(className, methodName, scope, lookupForScope(scope));
+		if (supportParamTypes.length > 0)
+			return renderKnownCppParamCallArgs(supportParamTypes, args, scope);
 		final fn = classMethodDecl(className, methodName, false, scope);
 		if (fn == null)
 			return renderSimpleCallArgs(args, scope);
