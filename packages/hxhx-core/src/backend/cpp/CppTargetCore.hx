@@ -62,8 +62,7 @@ class CppTargetCore {
 	static final erasedDynamicReturnStack = new haxe.ds.StringMap<Bool>();
 	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
 	static var functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
-	static var traceCppEnabledCache:Null<Bool> = null;
-	static var traceCppDeepEnabledCache:Null<Bool> = null;
+	static var traceCppDeepEnabledCache = -1;
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		traceCppPhase("emit_before_main_module");
@@ -114,9 +113,7 @@ class CppTargetCore {
 	}
 
 	static function traceCppEnabled():Bool {
-		if (traceCppEnabledCache == null)
-			traceCppEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_DRIVER");
-		return traceCppEnabledCache == true;
+		return envFlagEnabled("HXHX_TRACE_STAGE3_DRIVER");
 	}
 
 	static function traceCppPhase(label:String):Void {
@@ -125,9 +122,9 @@ class CppTargetCore {
 	}
 
 	static function traceCppDeepEnabled():Bool {
-		if (traceCppDeepEnabledCache == null)
-			traceCppDeepEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_DEEP");
-		return traceCppDeepEnabledCache == true;
+		if (traceCppDeepEnabledCache < 0)
+			traceCppDeepEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_DEEP") ? 1 : 0;
+		return traceCppDeepEnabledCache == 1;
 	}
 
 	static function traceCppDeepPhase(label:String):Void {
