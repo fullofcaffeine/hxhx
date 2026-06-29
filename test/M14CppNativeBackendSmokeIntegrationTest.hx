@@ -2736,6 +2736,52 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(assertSameLines, "__hxhx_same_as(expected, value", "C++ Assert.same should compare templated values without narrowing to strings");
 		assertTrue(assertSameLines.indexOf("same(std::string expected, std::string value") < 0,
 			"C++ Assert.same should not reject array/bool values through a string-only signature");
+		final utestAssertSupport = new HxClassDecl("Assert", false, [
+			assertQStringify,
+			assertSame,
+			assertSameAs,
+			new HxFunctionDecl("isOfType", Public, true, [
+				new HxFunctionArg("value", "Dynamic", NoDefault, false, false),
+				new HxFunctionArg("type", "Dynamic", NoDefault, false, false),
+				new HxFunctionArg("msg", "String", NoDefault, true, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Bool", [
+				SReturn(ECall(EField(EIdent("Misc"), "isOfType"), [EIdent("value"), EIdent("type")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("createAsync", Public, true, [
+				new HxFunctionArg("f", "Void -> Void", NoDefault, true, false),
+				new HxFunctionArg("timeout", "Int", NoDefault, true, false)
+			],
+				"", [SReturn(ELambda([], ENull), HxPos.unknown())], ""),
+			new HxFunctionDecl("typeToString", Private, true, [new HxFunctionArg("t", "Dynamic", NoDefault, false, false)], "",
+				[SReturn(ECall(EField(EIdent("Std"), "string"), [EIdent("t")]), HxPos.unknown())], "")
+		], [new HxFieldDecl("results", Public, true, "List<Assertation>", null)]);
+		final utestAssertNames = new StringMap<Bool>();
+		for (name in ["Assert", "Assertation", "List", "PosInfos", "Misc"])
+			utestAssertNames.set(name, true);
+		final utestAssertClasses = new StringMap<HxClassDecl>();
+		utestAssertClasses.set("Assert", utestAssertSupport);
+		utestAssertClasses.set("Assertation", new HxClassDecl("Assertation", false, [], []));
+		utestAssertClasses.set("List", new HxClassDecl("List", false, [], []));
+		utestAssertClasses.set("PosInfos", new HxClassDecl("PosInfos", false, [], []));
+		utestAssertClasses.set("Misc", new HxClassDecl("Misc", false, [], []));
+		final utestAssertPackages = new StringMap<String>();
+		utestAssertPackages.set("Assert", "utest");
+		final utestAssertLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(utestAssertSupport, {
+			names: utestAssertNames,
+			byName: utestAssertClasses,
+			packageByRenderedName: utestAssertPackages
+		}).join("\n");
+		assertContains(utestAssertLines, "template<typename T>\n  static std::string q(const T& v)", "C++ utest Assert support should keep q polymorphic");
+		assertContains(utestAssertLines,
+			"template<typename TExpected, typename TValue, typename TStatus>\n  static bool sameAs(const TExpected& expected, const TValue& value, TStatus& status, double approx)",
+			"C++ utest Assert support should keep sameAs polymorphic");
+		assertContains(utestAssertLines, "static bool isOfType(", "C++ utest Assert support should keep assertion method signatures");
+		assertContains(utestAssertLines, "return false;", "C++ utest Assert support should neutralize nonessential assertion helper bodies");
+		assertTrue(utestAssertLines.indexOf("Misc::isOfType") < 0, "C++ utest Assert support should not render expensive diagnostic helper bodies");
+		assertTrue(utestAssertLines.indexOf("typeToString") < 0, "C++ utest Assert support should omit private diagnostic helpers");
+		assertContains(utestAssertLines, "static auto createAsync(", "C++ utest Assert support should preserve async callable stubs");
+		assertContains(utestAssertLines, "return []() {};", "C++ utest Assert async support should remain callable without body rendering");
 		final assertSameStatusScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "bool");
 		assertSameStatusScope.localTypes.set("recursive", "std::optional<bool>");
 		assertSameStatusScope.localTypes.set("expected", "std::string");

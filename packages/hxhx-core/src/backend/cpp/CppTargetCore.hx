@@ -2173,6 +2173,10 @@ class CppTargetCore {
 			return renderStdArrayHelperClass(cls, classLookup);
 		if (isCppReportSupportClass(cls))
 			return renderCppReportSupportClass(cls, classLookup);
+		if (isUtestAssertSupportClass(cls, classLookup))
+			return renderUtestAssertSupportClass(cls, classLookup);
+		if (isUnitTestBaseSupportClass(cls))
+			return renderUnitTestBaseSupportClass(cls, classLookup);
 		if (isTemplateSupportClass(cls))
 			return renderTemplateSupportClass(cls, classLookup);
 		final typeParams = genericClassTemplateParams(cls);
@@ -2494,6 +2498,279 @@ class CppTargetCore {
 		}
 		out.push("};");
 		return out;
+	}
+
+	static function isUtestAssertSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "Assert")
+			return false;
+		return packagePathForRenderedClass(cls, classLookup) == "utest" || hasUtestAssertSupportShape(cls);
+	}
+
+	static function hasUtestAssertSupportShape(cls:HxClassDecl):Bool {
+		var hasResultsField = false;
+		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+			final fieldHint = removeTypeHintWhitespace(HxFieldDecl.getTypeHint(field));
+			if (HxFieldDecl.getIsStatic(field) && fieldName == "results" && fieldHint.indexOf("List<") >= 0 && fieldHint.indexOf("Assertation") >= 0) {
+				hasResultsField = true;
+				break;
+			}
+		}
+		if (!hasResultsField)
+			return false;
+		final required = new haxe.ds.StringMap<Bool>();
+		for (name in ["q", "same", "sameAs", "createAsync"])
+			required.set(name, false);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			if (required.exists(method))
+				required.set(method, true);
+		}
+		for (name in ["q", "same", "sameAs", "createAsync"])
+			if (!required.get(name))
+				return false;
+		return true;
+	}
+
+	static function renderUtestAssertSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = renderedClassName(cls, classLookup);
+		traceCppPhase("render_utest_assert_support name=" + className);
+		final scope = renderScope(cls, classLookup, "void");
+		final out = ["struct " + className + " {"];
+		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = HxFieldDecl.getName(field);
+			final typeName = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
+			final rhs = HxFieldDecl.getInit(field) == null ? cppDefaultValue(typeName,
+				scope) : renderLocalInitExpr(HxFieldDecl.getInit(field), typeName, typeName, scope);
+			out.push((HxFieldDecl.getIsStatic(field) ? "  inline static " : "  ")
+				+ typeName
+				+ " "
+				+ sanitizeIdentifier(fieldName)
+				+ " = "
+				+ rhs
+				+ ";");
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			if (method == "new")
+				continue;
+			final isPolymorphicAssertHelper = isAssertPolymorphicStringifyHelper(fn, cls)
+				|| isAssertPolymorphicSameHelper(fn, cls)
+				|| isAssertPolymorphicSameAsHelper(fn, cls);
+			if (isPolymorphicAssertHelper) {
+				for (line in renderHelperMethod(fn, cls, classLookup))
+					out.push(line);
+				continue;
+			}
+			if (HxFunctionDecl.getVisibility(fn) != Public)
+				continue;
+			if (method == "createAsync" || method == "createEvent") {
+				for (line in renderUtestAssertCallableStub(fn, cls, classLookup))
+					out.push(line);
+				continue;
+			}
+			for (line in renderUtestAssertNeutralMethod(fn, cls, classLookup))
+				out.push(line);
+		}
+		out.push("};");
+		return out;
+	}
+
+	static function isUnitTestBaseSupportClass(cls:HxClassDecl):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "Test")
+			return false;
+		final required = new haxe.ds.StringMap<Bool>();
+		for (name in [
+			"eq",
+			"feq",
+			"aeq",
+			"t",
+			"f",
+			"assert",
+			"exc",
+			"unspec",
+			"allow",
+			"noAssert",
+			"hf",
+			"nhf",
+			"hsf",
+			"nhsf"
+		])
+			required.set(name, false);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			if (required.exists(method))
+				required.set(method, true);
+		}
+		for (name in [
+			"eq",
+			"feq",
+			"aeq",
+			"t",
+			"f",
+			"assert",
+			"exc",
+			"unspec",
+			"allow",
+			"noAssert",
+			"hf",
+			"nhf",
+			"hsf",
+			"nhsf"
+		])
+			if (!required.get(name))
+				return false;
+		return true;
+	}
+
+	static function renderUnitTestBaseSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = renderedClassName(cls, classLookup);
+		traceCppPhase("render_unit_test_base_support name=" + className);
+		final baseTypes = inheritedCppBaseTypes(cls, classLookup);
+		final out = [
+			"struct " + className + (baseTypes.length == 0 ? "" : " : " + baseTypes.join(", ")) + " {"
+		];
+		out.push("  " + className + "() {}");
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			if (method == "new")
+				continue;
+			switch (method) {
+				case "eq":
+					for (line in renderHelperMethod(fn, cls, classLookup))
+						out.push(line);
+				case "t" | "f":
+					for (line in renderUnitTestValueAssertMethod(fn))
+						out.push(line);
+				case "allow":
+					for (line in renderUnitTestAllowMethod(fn))
+						out.push(line);
+				case "exc" | "unspec":
+					for (line in renderUnitTestFunctionMethod(fn))
+						out.push(line);
+				case _:
+					final lines = renderUtestAssertNeutralMethod(fn, cls, classLookup);
+					for (line in lines)
+						out.push(line);
+					final returnType = supportMethodSignatureReturnType(fn, cls, classLookup);
+					final scope = renderScope(cls, classLookup, returnType);
+					prepareFunctionSignatureScope(scope, fn);
+					for (line in renderDceReflectionHelperStringOverload(fn, scope, returnType))
+						out.push(line);
+			}
+		}
+		out.push("};");
+		return out;
+	}
+
+	static function renderUnitTestValueAssertMethod(fn:HxFunctionDecl):Array<String> {
+		final args = HxFunctionDecl.getArgs(fn);
+		final valueName = args.length > 0 ? sanitizeIdentifier(HxFunctionArg.getName(args[0])) : "v";
+		final posName = args.length > 1 ? sanitizeIdentifier(HxFunctionArg.getName(args[1])) : "pos";
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return ["  template<typename TValue>",
+			"  void "
+			+ method
+			+ "(const TValue& "
+			+ valueName
+			+ ", std::optional<PosInfos> "
+			+ posName
+			+ " = std::nullopt) {",
+			"    (void)" + valueName + ";",
+			"    (void)" + posName + ";",
+			"  }"
+		];
+	}
+
+	static function renderUnitTestAllowMethod(fn:HxFunctionDecl):Array<String> {
+		final args = HxFunctionDecl.getArgs(fn);
+		final valueName = args.length > 0 ? sanitizeIdentifier(HxFunctionArg.getName(args[0])) : "v";
+		final valuesName = args.length > 1 ? sanitizeIdentifier(HxFunctionArg.getName(args[1])) : "values";
+		final posName = args.length > 2 ? sanitizeIdentifier(HxFunctionArg.getName(args[2])) : "pos";
+		return ["  template<typename TValue>",
+			"  void allow(const TValue& "
+			+ valueName
+			+ ", std::vector<TValue> "
+			+ valuesName
+			+ ", std::optional<PosInfos> "
+			+ posName
+			+ " = std::nullopt) {",
+			"    (void)" + valueName + ";",
+			"    (void)" + valuesName + ";",
+			"    (void)" + posName + ";",
+			"  }"
+		];
+	}
+
+	static function renderUnitTestFunctionMethod(fn:HxFunctionDecl):Array<String> {
+		final args = HxFunctionDecl.getArgs(fn);
+		final functionName = args.length > 0 ? sanitizeIdentifier(HxFunctionArg.getName(args[0])) : "f";
+		final posName = args.length > 1 ? sanitizeIdentifier(HxFunctionArg.getName(args[1])) : "pos";
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return ["  void "
+			+ method
+			+ "(std::function<void()> "
+			+ functionName
+			+ ", std::optional<PosInfos> "
+			+ posName
+			+ " = std::nullopt) {",
+			"    (void)" + functionName + ";",
+			"    (void)" + posName + ";",
+			"  }"
+		];
+	}
+
+	static function renderUtestAssertNeutralMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = supportMethodSignatureReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		applyFunctionTypeParams(scope, fn);
+		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+		final out = new Array<String>();
+		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
+		if (methodTypeParams.length > 0)
+			out.push("  " + genericTemplatePrefix(methodTypeParams));
+		out.push("  " + (HxFunctionDecl.getIsStatic(fn) ? "static " : "") + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
+		for (line in renderTemplateUnusedArgs(HxFunctionDecl.getArgs(fn)))
+			out.push(line);
+		if (returnType != "void")
+			out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		out.push("  }");
+		return out;
+	}
+
+	static function renderUtestAssertCallableStub(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = "auto";
+		final scope = renderScope(owner, classLookup, returnType);
+		applyFunctionTypeParams(scope, fn);
+		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+		final out = new Array<String>();
+		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		if (methodTypeParams.length > 0)
+			out.push("  " + genericTemplatePrefix(methodTypeParams));
+		out.push("  static " + returnType + " " + method + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
+		for (line in renderTemplateUnusedArgs(HxFunctionDecl.getArgs(fn)))
+			out.push(line);
+		if (method == "createEvent") {
+			out.push("    return [](auto e) { (void)e; };");
+		} else {
+			out.push("    return []() {};");
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function supportMethodSignatureReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		final raw = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
+		if (raw.length == 0)
+			return "void";
+		final scope = renderScope(owner, classLookup, "auto");
+		applyFunctionTypeParams(scope, fn);
+		if (functionReturnTypeParamShouldUseAuto(raw, fn))
+			return functionReturnsOnlyNull(fn) ? "std::nullptr_t" : "auto";
+		final abstractReturn = abstractUnderlyingReturnCppType(raw, owner, scope, classLookup);
+		return abstractReturn.length > 0 ? abstractReturn : cppReturnTypeHint(raw, scope, classLookup);
 	}
 
 	static function templateFieldInitExpr(fieldName:String, typeName:String, init:Null<HxExpr>, scope:CppRenderScope):String {
@@ -3219,6 +3496,13 @@ class CppTargetCore {
 		functionScopePrepStack.remove(key);
 	}
 
+	static function prepareFunctionSignatureScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null)
+			return;
+		applyFunctionTypeParams(scope, fn);
+		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+	}
+
 	static function baseTypeName(cls:HxClassDecl):Null<String> {
 		final extendsPath = HxClassDecl.getExtendsPath(cls);
 		if (extendsPath == null || extendsPath.length == 0)
@@ -3865,7 +4149,7 @@ class CppTargetCore {
 		final expectedName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
 		final valueName = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
 		final scope = renderScope(owner, classLookup, "bool");
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		scope.localTypes.set(expectedName, "TExpected");
 		scope.localTypes.set(valueName, "TValue");
 		final renderedArgs = ["const TExpected& " + expectedName, "const TValue& " + valueName];
@@ -3928,7 +4212,7 @@ class CppTargetCore {
 		final valueName = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
 		final statusName = sanitizeIdentifier(HxFunctionArg.getName(args[2]));
 		final scope = renderScope(owner, classLookup, "bool");
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		scope.localTypes.set(expectedName, "TExpected");
 		scope.localTypes.set(valueName, "TValue");
 		final hasApprox = args.length >= 4;
