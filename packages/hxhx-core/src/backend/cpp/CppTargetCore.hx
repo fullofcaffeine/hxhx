@@ -10108,19 +10108,6 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
 				"std::any";
-			case ECall(EField(receiver, "getProperty"), args)
-				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
-				"std::any";
-			case ECall(EField(receiver, "hasField"), args)
-				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
-				"bool";
-			case ECall(EField(receiver, "get"), args) if (args.length == 1 && mapValueCppType(exprCppType(receiver, scope)).length > 0):
-				"std::optional<" + mapValueCppType(exprCppType(receiver, scope)) + ">";
-			case ECall(EField(receiver, "keys"), args) if (args.length == 0 && mapKeyCppType(exprCppType(receiver, scope)).length > 0):
-				"std::shared_ptr<__hxhx_iterator<" + mapKeyCppType(exprCppType(receiver, scope)) + ">>";
-			case ECall(EField(receiver, "iterator"), args) if (args.length == 0
-				&& mapValueCppType(exprCppType(receiver, scope)).length > 0):
-				"std::shared_ptr<__hxhx_iterator<" + mapValueCppType(exprCppType(receiver, scope)) + ">>";
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayResultCppType(args[0], scope);
 			case ECall(EField(EIdent("Type"), method), args):
@@ -10160,20 +10147,6 @@ class CppTargetCore {
 				baseType == null ? "" : classMethodCppReturnType(baseType, method, false, scope);
 			case ECall(EField(receiver, method), _) if (isCppStringExpr(receiver, scope)):
 				stringReceiverMethodReturnCppType(method, scope);
-			case ECall(EField(receiver, "iterator"), _) if (isCppVectorType(exprCppType(receiver, scope))):
-				iteratorCppTypeForVector(exprCppType(receiver, scope));
-			case ECall(EField(receiver, "map"), _) if (isCppVectorType(exprCppType(receiver, scope))):
-				"std::vector<std::string>";
-			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
-				"std::string";
-			case ECall(EField(receiver, "copy"), _) if (isCppVectorType(exprCppType(receiver, scope))):
-				exprCppType(receiver, scope);
-			case ECall(EField(receiver, "pop"), _) if (isCppVectorType(exprCppType(receiver, scope))):
-				cppVectorElementType(exprCppType(receiver, scope));
-			case ECall(EField(receiver, "next"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
-				cppIteratorElementType(exprCppType(receiver, scope));
-			case ECall(EField(receiver, "hasNext"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
-				"bool";
 			case ECall(EField(receiver, "value"), args) if (args.length == 0):
 				final optionalInner = cppOptionalInnerType(exprCppType(receiver, scope));
 				optionalInner.length > 0 ? optionalInner : "";
@@ -10185,8 +10158,9 @@ class CppTargetCore {
 				"std::string";
 			case EField(receiver, "stack") if (isCppExceptionValueType(exprCppType(receiver, scope))):
 				"std::vector<std::string>";
-			case ECall(EField(receiver, method), _):
-				final primitiveAbstractReturn = primitiveBackedAbstractMethodReturnCppType(receiver, method, scope);
+			case ECall(EField(receiver, method), args):
+				final knownReturn = knownFieldCallReturnCppType(receiver, method, args, scope);
+				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppType(receiver, method, scope);
 				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
 					final staticOwner = staticReceiverClassName(receiver, scope);
 					if (staticOwner != null) {
@@ -10925,19 +10899,6 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EIdent("callMacroApi"), args) if (scopeOwnerIsContext(scope) && args.length >= 1):
 				"std::any";
-			case ECall(EField(receiver, "getProperty"), args)
-				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
-				"std::any";
-			case ECall(EField(receiver, "hasField"), args)
-				if (isReflectStaticReceiver(receiver) && args.length == 2 && exprCppType(args[0], scope) == "std::any"):
-				"bool";
-			case ECall(EField(receiver, "get"), args) if (args.length == 1 && mapValueCppType(exprCppType(receiver, scope)).length > 0):
-				"std::optional<" + mapValueCppType(exprCppType(receiver, scope)) + ">";
-			case ECall(EField(receiver, "keys"), args) if (args.length == 0 && mapKeyCppType(exprCppType(receiver, scope)).length > 0):
-				"std::shared_ptr<__hxhx_iterator<" + mapKeyCppType(exprCppType(receiver, scope)) + ">>";
-			case ECall(EField(receiver, "iterator"), args) if (args.length == 0
-				&& mapValueCppType(exprCppType(receiver, scope)).length > 0):
-				"std::shared_ptr<__hxhx_iterator<" + mapValueCppType(exprCppType(receiver, scope)) + ">>";
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayResultCppType(args[0], scope);
 			case ECall(EField(receiver, "isEnumValue"), _) if (isReflectStaticReceiver(receiver)):
@@ -10966,20 +10927,6 @@ class CppTargetCore {
 				"std::string";
 			case ECall(EField(receiver, method), _) if (isCppStringExpr(receiver, scope)):
 				stringReceiverMethodReturnCppType(method, scope);
-			case ECall(EField(receiver, "iterator"), _) if (isCppVectorType(exprCppType(receiver, scope))):
-				iteratorCppTypeForVector(exprCppType(receiver, scope));
-			case ECall(EField(receiver, "map"), _) if (isCppVectorType(exprCppType(receiver, scope))):
-				"std::vector<std::string>";
-			case ECall(EField(receiver, "join"), _) if (isCppVectorType(exprCppType(receiver, scope))):
-				"std::string";
-			case ECall(EField(receiver, "copy"), _) if (isCppVectorType(exprCppType(receiver, scope))):
-				exprCppType(receiver, scope);
-			case ECall(EField(receiver, "pop"), _) if (isCppVectorType(exprCppType(receiver, scope))):
-				cppVectorElementType(exprCppType(receiver, scope));
-			case ECall(EField(receiver, "next"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
-				cppIteratorElementType(exprCppType(receiver, scope));
-			case ECall(EField(receiver, "hasNext"), _) if (cppIteratorElementType(exprCppType(receiver, scope)).length > 0):
-				"bool";
 			case EField(receiver, "value") if (isCppExceptionValueType(exprCppType(receiver, scope))):
 				"__hxhx_dynamic_value";
 			case EField(receiver, "message") if (isCppExceptionValueType(exprCppType(receiver, scope))):
@@ -10990,8 +10937,9 @@ class CppTargetCore {
 				cppFunctionReturnTypeFromCppType(exprCppType(mapper, scope));
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
-			case ECall(EField(receiver, method), _):
-				final primitiveAbstractReturn = primitiveBackedAbstractMethodReturnCppType(receiver, method, scope);
+			case ECall(EField(receiver, method), args):
+				final knownReturn = knownFieldCallReturnCppType(receiver, method, args, scope);
+				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppType(receiver, method, scope);
 				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
 					final staticOwner = staticReceiverClassName(receiver, scope);
 					if (staticOwner != null) {
@@ -11088,6 +11036,56 @@ class CppTargetCore {
 	static function iteratorCppTypeForVector(vectorType:String):String {
 		final elementType = cppVectorElementType(vectorType);
 		return "std::shared_ptr<__hxhx_iterator<" + (elementType.length == 0 ? "std::string" : elementType) + ">>";
+	}
+
+	static function knownFieldCallReturnCppType(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final arity = args == null ? 0 : args.length;
+		if (isReflectStaticReceiver(receiver)) {
+			switch (method) {
+				case "getProperty" if (arity == 2):
+					return exprCppType(args[0], scope) == "std::any" ? "std::any" : "";
+				case "hasField" if (arity == 2):
+					return exprCppType(args[0], scope) == "std::any" ? "bool" : "";
+				case _:
+			}
+		}
+		return switch (method) {
+			case "get" if (arity == 1):
+				final receiverType = exprCppType(receiver, scope);
+				final valueType = mapValueCppType(receiverType);
+				valueType.length > 0 ? "std::optional<" + valueType + ">" : "";
+			case "keys" if (arity == 0):
+				final receiverType = exprCppType(receiver, scope);
+				final keyType = mapKeyCppType(receiverType);
+				keyType.length > 0 ? "std::shared_ptr<__hxhx_iterator<" + keyType + ">>" : "";
+			case "iterator" if (arity == 0):
+				final receiverType = exprCppType(receiver, scope);
+				final mapValueType = mapValueCppType(receiverType);
+				if (mapValueType.length > 0) "std::shared_ptr<__hxhx_iterator<"
+					+ mapValueType
+					+ ">>"; else if (isCppVectorType(receiverType)) iteratorCppTypeForVector(receiverType); else "";
+			case "map" | "join" | "copy" | "pop":
+				final receiverType = exprCppType(receiver, scope);
+				if (!isCppVectorType(receiverType)) ""; else switch (method) {
+					case "map":
+						"std::vector<std::string>";
+					case "join":
+						"std::string";
+					case "copy":
+						receiverType;
+					case "pop":
+						cppVectorElementType(receiverType);
+					case _:
+						"";
+				}
+			case "next":
+				final iteratorElement = cppIteratorElementType(exprCppType(receiver, scope));
+				iteratorElement.length > 0 ? iteratorElement : "";
+			case "hasNext":
+				cppIteratorElementType(exprCppType(receiver, scope)).length > 0 ? "bool" : "";
+			case _:
+				"";
+		};
 	}
 
 	static function renderUnsupportedNumericLiteral(raw:String):Null<String> {
