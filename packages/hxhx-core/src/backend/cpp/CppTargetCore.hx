@@ -8290,14 +8290,19 @@ class CppTargetCore {
 			if (boundMethod != null)
 				return boundMethod;
 		}
-		final renderedArgs = renderFieldCallArgs(receiverCppType, method, args, scope).join(", ");
+		var renderedArgsCache:Null<String> = null;
+		function renderedArgs():String {
+			if (renderedArgsCache == null)
+				renderedArgsCache = renderFieldCallArgs(receiverCppType, method, args, scope).join(", ");
+			return renderedArgsCache;
+		}
 		final primitiveAbstractCall = primitiveBackedAbstractMethodCallExpr(receiver, method, args, scope);
 		if (primitiveAbstractCall != null)
 			return primitiveAbstractCall;
 		if (isStdStaticReceiver(receiver) && method == "isOfType" && args.length == 2)
 			return "Std::isOfType(" + renderExpr(args[0], scope) + ", " + typeDescriptorArgExpr(args[1], scope) + ")";
 		if (method == "push" && isCppVectorType(receiverCppType))
-			return renderExpr(receiver, scope) + ".push_back(" + renderedArgs + ")";
+			return renderExpr(receiver, scope) + ".push_back(" + renderedArgs() + ")";
 		if (isCppVectorType(receiverCppType)) {
 			final target = renderExpr(receiver, scope);
 			final lowered = switch (method) {
@@ -8358,7 +8363,7 @@ class CppTargetCore {
 				case _:
 					null;
 			};
-			return lowered != null ? lowered : target + "." + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+			return lowered != null ? lowered : target + "." + sanitizeIdentifier(method) + "(" + renderedArgs() + ")";
 		}
 		if (isCppStringExpr(receiver, scope)) {
 			final target = stringReceiverExpr(receiver, scope);
@@ -8403,7 +8408,7 @@ class CppTargetCore {
 					+ ")";
 				case _:
 					final extension = staticStringExtensionCallExpr(method, target, args, scope);
-					extension != null ? extension : target + "." + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+					extension != null ? extension : target + "." + sanitizeIdentifier(method) + "(" + renderedArgs() + ")";
 			};
 		}
 		if (method == "join" && isCppVectorType(exprCppType(receiver, scope)) && args.length == 1)
@@ -8452,7 +8457,7 @@ class CppTargetCore {
 			return "std::make_shared<ConstPointer<void>>(" + renderExpr(args[0], scope) + ")";
 		if (receiverTypeName != null) {
 			if (method == "create")
-				return "std::make_shared<" + receiverTypeName + ">(" + renderedArgs + ")";
+				return "std::make_shared<" + receiverTypeName + ">(" + renderedArgs() + ")";
 			return receiverTypeName
 				+ "::"
 				+ sanitizeIdentifier(method)
@@ -8460,7 +8465,7 @@ class CppTargetCore {
 				+ renderClassMethodCallArgs(receiverTypeName, method, true, args, scope).join(", ")
 				+ ")";
 		}
-		return renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
+		return renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(method) + "(" + renderedArgs() + ")";
 	}
 
 	static function staticStringExtensionCallExpr(method:String, target:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
