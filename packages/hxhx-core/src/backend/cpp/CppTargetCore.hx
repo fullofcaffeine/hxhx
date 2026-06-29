@@ -522,6 +522,113 @@ class CppTargetCore {
 		out.push("  return out;");
 		out.push("}");
 		out.push("");
+		out.push("static std::uint32_t __hxhx_md5_rotate_left(std::uint32_t value, std::uint32_t shift) {");
+		out.push("  return (value << shift) | (value >> (32 - shift));");
+		out.push("}");
+		out.push("");
+		out.push("static std::vector<int> __hxhx_md5_digest_bytes(const std::vector<int>& input) {");
+		out.push("  static const std::uint32_t shifts[64] = {");
+		out.push("    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,");
+		out.push("    5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,");
+		out.push("    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,");
+		out.push("    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21");
+		out.push("  };");
+		out.push("  static const std::uint32_t constants[64] = {");
+		out.push("    0xd76aa478U, 0xe8c7b756U, 0x242070dbU, 0xc1bdceeeU, 0xf57c0fafU, 0x4787c62aU, 0xa8304613U, 0xfd469501U,");
+		out.push("    0x698098d8U, 0x8b44f7afU, 0xffff5bb1U, 0x895cd7beU, 0x6b901122U, 0xfd987193U, 0xa679438eU, 0x49b40821U,");
+		out.push("    0xf61e2562U, 0xc040b340U, 0x265e5a51U, 0xe9b6c7aaU, 0xd62f105dU, 0x02441453U, 0xd8a1e681U, 0xe7d3fbc8U,");
+		out.push("    0x21e1cde6U, 0xc33707d6U, 0xf4d50d87U, 0x455a14edU, 0xa9e3e905U, 0xfcefa3f8U, 0x676f02d9U, 0x8d2a4c8aU,");
+		out.push("    0xfffa3942U, 0x8771f681U, 0x6d9d6122U, 0xfde5380cU, 0xa4beea44U, 0x4bdecfa9U, 0xf6bb4b60U, 0xbebfbc70U,");
+		out.push("    0x289b7ec6U, 0xeaa127faU, 0xd4ef3085U, 0x04881d05U, 0xd9d4d039U, 0xe6db99e5U, 0x1fa27cf8U, 0xc4ac5665U,");
+		out.push("    0xf4292244U, 0x432aff97U, 0xab9423a7U, 0xfc93a039U, 0x655b59c3U, 0x8f0ccc92U, 0xffeff47dU, 0x85845dd1U,");
+		out.push("    0x6fa87e4fU, 0xfe2ce6e0U, 0xa3014314U, 0x4e0811a1U, 0xf7537e82U, 0xbd3af235U, 0x2ad7d2bbU, 0xeb86d391U");
+		out.push("  };");
+		out.push("  std::vector<unsigned char> message;");
+		out.push("  message.reserve(input.size() + 72);");
+		out.push("  for (int value : input) message.push_back(static_cast<unsigned char>(value & 0xFF));");
+		out.push("  std::uint64_t bitLength = static_cast<std::uint64_t>(message.size()) * 8ULL;");
+		out.push("  message.push_back(0x80);");
+		out.push("  while ((message.size() % 64) != 56) message.push_back(0);");
+		out.push("  for (int i = 0; i < 8; ++i) message.push_back(static_cast<unsigned char>((bitLength >> (8 * i)) & 0xFF));");
+		out.push("  std::uint32_t a0 = 0x67452301U;");
+		out.push("  std::uint32_t b0 = 0xefcdab89U;");
+		out.push("  std::uint32_t c0 = 0x98badcfeU;");
+		out.push("  std::uint32_t d0 = 0x10325476U;");
+		out.push("  for (std::size_t offset = 0; offset < message.size(); offset += 64) {");
+		out.push("    std::uint32_t words[16];");
+		out.push("    for (int i = 0; i < 16; ++i) {");
+		out.push("      std::size_t p = offset + static_cast<std::size_t>(i * 4);");
+		out.push("      words[i] = static_cast<std::uint32_t>(message[p])");
+		out.push("        | (static_cast<std::uint32_t>(message[p + 1]) << 8)");
+		out.push("        | (static_cast<std::uint32_t>(message[p + 2]) << 16)");
+		out.push("        | (static_cast<std::uint32_t>(message[p + 3]) << 24);");
+		out.push("    }");
+		out.push("    std::uint32_t a = a0;");
+		out.push("    std::uint32_t b = b0;");
+		out.push("    std::uint32_t c = c0;");
+		out.push("    std::uint32_t d = d0;");
+		out.push("    for (std::uint32_t i = 0; i < 64; ++i) {");
+		out.push("      std::uint32_t f = 0;");
+		out.push("      std::uint32_t g = 0;");
+		out.push("      if (i < 16) {");
+		out.push("        f = (b & c) | ((~b) & d);");
+		out.push("        g = i;");
+		out.push("      } else if (i < 32) {");
+		out.push("        f = (d & b) | ((~d) & c);");
+		out.push("        g = (5 * i + 1) % 16;");
+		out.push("      } else if (i < 48) {");
+		out.push("        f = b ^ c ^ d;");
+		out.push("        g = (3 * i + 5) % 16;");
+		out.push("      } else {");
+		out.push("        f = c ^ (b | (~d));");
+		out.push("        g = (7 * i) % 16;");
+		out.push("      }");
+		out.push("      std::uint32_t next = d;");
+		out.push("      d = c;");
+		out.push("      c = b;");
+		out.push("      b = b + __hxhx_md5_rotate_left(a + f + constants[i] + words[g], shifts[i]);");
+		out.push("      a = next;");
+		out.push("    }");
+		out.push("    a0 += a;");
+		out.push("    b0 += b;");
+		out.push("    c0 += c;");
+		out.push("    d0 += d;");
+		out.push("  }");
+		out.push("  std::vector<int> out;");
+		out.push("  out.reserve(16);");
+		out.push("  std::uint32_t digest[4] = {a0, b0, c0, d0};");
+		out.push("  for (std::uint32_t word : digest) {");
+		out.push("    out.push_back(static_cast<int>(word & 0xFF));");
+		out.push("    out.push_back(static_cast<int>((word >> 8) & 0xFF));");
+		out.push("    out.push_back(static_cast<int>((word >> 16) & 0xFF));");
+		out.push("    out.push_back(static_cast<int>((word >> 24) & 0xFF));");
+		out.push("  }");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
+		out.push("static std::vector<int> __hxhx_md5_digest_string(const std::string& source) {");
+		out.push("  std::vector<int> bytes;");
+		out.push("  bytes.reserve(source.size());");
+		out.push("  for (unsigned char c : source) bytes.push_back(static_cast<int>(c));");
+		out.push("  return __hxhx_md5_digest_bytes(bytes);");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_md5_hex(const std::vector<int>& digest) {");
+		out.push("  static const char* hex = \"0123456789abcdef\";");
+		out.push("  std::string out;");
+		out.push("  out.reserve(digest.size() * 2);");
+		out.push("  for (int value : digest) {");
+		out.push("    unsigned char byte = static_cast<unsigned char>(value & 0xFF);");
+		out.push("    out.push_back(hex[(byte >> 4) & 0x0F]);");
+		out.push("    out.push_back(hex[byte & 0x0F]);");
+		out.push("  }");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_md5_hex_string(const std::string& source) {");
+		out.push("  return __hxhx_md5_hex(__hxhx_md5_digest_string(source));");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_char_at(const std::string& source, int index) {");
 		out.push("  if (index < 0 || index >= static_cast<int>(source.size())) return std::string();");
 		out.push("  return std::string(1, source[static_cast<std::size_t>(index)]);");
@@ -3439,6 +3546,20 @@ class CppTargetCore {
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
 		}
+		if (owner == "Md5") {
+			return switch (method) {
+				case "encode" | "hex":
+					"std::string";
+				case "make":
+					cppTypeHint("Bytes", scope, classLookup);
+				case "bytes2blks" | "str2blks" | "doEncode":
+					"std::vector<int>";
+				case "bitOR" | "bitXOR" | "bitAND" | "addme" | "rol" | "cmn" | "ff" | "gg" | "hh" | "ii":
+					"int";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "EReg" && method == "matchedPos")
 			return cppTypeHint("{pos:Int,len:Int}", scope, classLookup);
 		if (owner == "Exception" && (method == "caught" || method == "thrown"))
@@ -3721,6 +3842,8 @@ class CppTargetCore {
 			return returnTraced("special_string_tools", renderStringToolsSupportHelper(fn, owner, classLookup));
 		if (isBase64SupportHelper(fn, owner))
 			return returnTraced("special_base64", renderBase64SupportHelper(fn, owner, classLookup));
+		if (isMd5SupportHelper(fn, owner))
+			return returnTraced("special_md5", renderMd5SupportHelper(fn, owner, classLookup));
 		if (isHelperMacrosShimHelper(fn, owner))
 			return returnTraced("special_helper_macros", renderHelperMacrosShimHelper(fn, owner, classLookup));
 		if (isMacroStringToolsShimHelper(fn, owner))
@@ -3985,6 +4108,20 @@ class CppTargetCore {
 		};
 	}
 
+	static function isMd5SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null)
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Md5")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "encode" | "make" | "bitOR" | "bitXOR" | "bitAND" | "addme" | "hex" | "bytes2blks" | "str2blks" | "rol" | "cmn" | "ff" | "gg" | "hh" | "ii" |
+				"doEncode":
+				true;
+			case _:
+				false;
+		};
+	}
+
 	static function renderSysToolsSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
@@ -4054,6 +4191,54 @@ class CppTargetCore {
 				"std::string";
 			case "decode" | "urlDecode":
 				cppTypeHint("Bytes", renderScope(owner, classLookup, "auto"), classLookup);
+			case _:
+				supportMethodSignatureReturnType(fn, owner, classLookup);
+		};
+	}
+
+	static function renderMd5SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = md5SupportReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = ["  "
+			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
+			+ returnType
+			+ " "
+			+ method
+			+ "("
+			+ renderFunctionArgs(args, scope)
+			+ ") {"];
+		inline function nameAt(index:Int, fallback:String):String {
+			return args.length > index ? sanitizeIdentifier(HxFunctionArg.getName(args[index])) : fallback;
+		}
+		switch (method) {
+			case "encode":
+				out.push("    return __hxhx_md5_hex_string(" + nameAt(0, "s") + ");");
+			case "make":
+				out.push("    auto __hxhx_data = __hxhx_md5_digest_bytes(" + nameAt(0, "b") + "->b);");
+				out.push("    return std::make_shared<Bytes>(static_cast<int>(__hxhx_data.size()), __hxhx_data);");
+			case _:
+				for (arg in args)
+					out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+				if (returnType != "void")
+					out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function md5SupportReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "encode" | "hex":
+				"std::string";
+			case "make":
+				cppTypeHint("Bytes", renderScope(owner, classLookup, "auto"), classLookup);
+			case "bytes2blks" | "str2blks" | "doEncode":
+				"std::vector<int>";
+			case "bitOR" | "bitXOR" | "bitAND" | "addme" | "rol" | "cmn" | "ff" | "gg" | "hh" | "ii":
+				"int";
 			case _:
 				supportMethodSignatureReturnType(fn, owner, classLookup);
 		};

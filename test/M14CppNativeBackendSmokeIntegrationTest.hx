@@ -6048,6 +6048,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(base64UrlDecodeLines,
 			"auto __hxhx_data = __hxhx_base64_decode_bytes(str, complement, std::string(\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_\"));",
 			"C++ Base64.urlDecode support helper should use the URL-safe alphabet");
+		final md5Encode = new HxFunctionDecl("encode", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "String", [], "");
+		final md5Make = new HxFunctionDecl("make", Public, true, [new HxFunctionArg("b", "Bytes", NoDefault, false, false)], "Bytes", [], "");
+		final md5DoEncode = new HxFunctionDecl("doEncode", Private, false, [new HxFunctionArg("x", "Array<Int>", NoDefault, false, false)], "Array<Int>", [],
+			"");
+		final md5Owner = new HxClassDecl("Md5", false, [md5Encode, md5Make, md5DoEncode], []);
+		bytesNames.set("Md5", true);
+		bytesClasses.set("Md5", md5Owner);
+		final md5EncodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(md5Encode, md5Owner, bytesLookup).join("\n");
+		final md5MakeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(md5Make, md5Owner, bytesLookup).join("\n");
+		final md5DoEncodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(md5DoEncode, md5Owner, bytesLookup).join("\n");
+		assertContains(md5EncodeLines, "static std::string encode(std::string s) {",
+			"C++ Md5.encode support helper should keep the public String digest surface");
+		assertContains(md5EncodeLines, "return __hxhx_md5_hex_string(s);",
+			"C++ Md5.encode support helper should use compact target runtime support instead of rendering the stdlib algorithm body");
+		assertContains(md5MakeLines, "static std::shared_ptr<Bytes> make(std::shared_ptr<Bytes> b) {",
+			"C++ Md5.make support helper should return vector-backed Bytes");
+		assertContains(md5MakeLines, "auto __hxhx_data = __hxhx_md5_digest_bytes(b->b);", "C++ Md5.make support helper should hash Bytes storage directly");
+		assertContains(md5MakeLines, "return std::make_shared<Bytes>(static_cast<int>(__hxhx_data.size()), __hxhx_data);",
+			"C++ Md5.make support helper should rebuild haxe.io.Bytes from digest storage");
+		assertContains(md5DoEncodeLines, "std::vector<int> doEncode(std::vector<int> x) {",
+			"C++ Md5 private implementation helpers should retain a compilable signature");
+		assertContains(md5DoEncodeLines, "(void)x;", "C++ Md5 private implementation helpers should be compact stubs once public API calls use target support");
 		final stringIterator = new HxClassDecl("StringIterator", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "s"), EIdent("s")), HxPos.unknown())], ""),
