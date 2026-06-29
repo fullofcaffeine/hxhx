@@ -62,6 +62,8 @@ class CppTargetCore {
 	static final erasedDynamicReturnStack = new haxe.ds.StringMap<Bool>();
 	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
 	static var functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
+	static var traceCppEnabledCache:Null<Bool> = null;
+	static var traceCppDeepEnabledCache:Null<Bool> = null;
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		traceCppPhase("emit_before_main_module");
@@ -99,8 +101,8 @@ class CppTargetCore {
 		return new EmitResult(sourcePath, [new EmitArtifact("entry_cpp_source", sourcePath)], false);
 	}
 
-	static function traceCppEnabled():Bool {
-		final raw = Sys.getEnv("HXHX_TRACE_STAGE3_DRIVER");
+	static function envFlagEnabled(name:String):Bool {
+		final raw = Sys.getEnv(name);
 		if (raw == null)
 			return false;
 		return switch (StringTools.trim(raw).toLowerCase()) {
@@ -109,6 +111,12 @@ class CppTargetCore {
 			case _:
 				false;
 		};
+	}
+
+	static function traceCppEnabled():Bool {
+		if (traceCppEnabledCache == null)
+			traceCppEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_DRIVER");
+		return traceCppEnabledCache == true;
 	}
 
 	static function traceCppPhase(label:String):Void {
@@ -117,15 +125,9 @@ class CppTargetCore {
 	}
 
 	static function traceCppDeepEnabled():Bool {
-		final raw = Sys.getEnv("HXHX_TRACE_STAGE3_CPP_DEEP");
-		if (raw == null)
-			return false;
-		return switch (StringTools.trim(raw).toLowerCase()) {
-			case "1" | "true" | "yes" | "on":
-				true;
-			case _:
-				false;
-		};
+		if (traceCppDeepEnabledCache == null)
+			traceCppDeepEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_DEEP");
+		return traceCppDeepEnabledCache == true;
 	}
 
 	static function traceCppDeepPhase(label:String):Void {
@@ -3097,7 +3099,7 @@ class CppTargetCore {
 		scope.returnOnlyTypeParamAuto = functionReturnTypeParamShouldUseAuto(HxFunctionDecl.getReturnTypeHint(fn), fn)
 			&& !functionReturnsOnlyNull(fn);
 		applyFunctionTypeParams(scope, fn);
-		final key = functionSignatureKey(scope.owner, fn);
+		final key = functionSignatureKeyForScope(scope, fn);
 		final cached = functionScopePrepCache.get(key);
 		if (cached != null) {
 			applyFunctionScopePrep(scope, cached);
@@ -13342,7 +13344,7 @@ class CppTargetCore {
 	static function functionReturnsErasedDynamicValue(fn:HxFunctionDecl, ?scope:CppRenderScope):Bool {
 		if (fn == null)
 			return false;
-		final key = functionSignatureKey(scope == null ? null : scope.owner, fn);
+		final key = functionSignatureKeyForScope(scope, fn);
 		if (erasedDynamicReturnStack.exists(key))
 			return false;
 		erasedDynamicReturnStack.set(key, true);
@@ -13557,7 +13559,7 @@ class CppTargetCore {
 		}
 		if (functionReturnsLambda(fn))
 			return "auto";
-		final key = functionSignatureKey(owner, fn);
+		final key = functionSignatureKey(owner, fn, returnLookup);
 		if (inferredSignatureStack.exists(key))
 			return "";
 		inferredSignatureStack.set(key, true);
@@ -13733,7 +13735,7 @@ class CppTargetCore {
 		final returnScope = renderScope(owner, lookup, "auto");
 		applyFunctionTypeParams(returnScope, fn);
 		final returnType = rawReturn.length > 0 ? cppReturnTypeHint(rawReturn, returnScope, lookup) : "auto";
-		final key = functionSignatureKey(owner, fn);
+		final key = functionSignatureKey(owner, fn, lookup);
 		if (inferredSignatureStack.exists(key))
 			return [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgBaseType(arg, null)];
 		inferredSignatureStack.set(key, true);
@@ -13744,8 +13746,12 @@ class CppTargetCore {
 		return types;
 	}
 
-	static function functionSignatureKey(owner:HxClassDecl, fn:HxFunctionDecl):String {
-		final ownerName = owner == null ? "" : sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+	static function functionSignatureKeyForScope(scope:CppRenderScope, fn:HxFunctionDecl):String {
+		return scope == null ? functionSignatureKey(null, fn) : functionSignatureKey(scope.owner, fn, scope.classLookup);
+	}
+
+	static function functionSignatureKey(owner:HxClassDecl, fn:HxFunctionDecl, ?classLookup:CppClassLookup):String {
+		final ownerName = owner == null ? "" : renderedClassName(owner, classLookup);
 		return ownerName + "." + sanitizeIdentifier(HxFunctionDecl.getName(fn));
 	}
 
