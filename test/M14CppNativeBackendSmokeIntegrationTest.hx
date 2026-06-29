@@ -6943,6 +6943,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("quoteUnixArg", Public, true, [new HxFunctionArg("argument", "String", NoDefault, false, false)], "String", [
 				SReturn(EBinop("+", EString("'"), ECall(EField(EIdent("StringTools"), "replace"), [EIdent("argument"), EString("'"), EString("'\"'\"'")])),
 					HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("quoteWinArg", Public, true, [
+				new HxFunctionArg("argument", "String", NoDefault, false, false),
+				new HxFunctionArg("escapeMetaCharacters", "Bool", NoDefault, false, false)
+			], "String", [
+				SReturn(ECall(EField(EIdent("StringTools"), "replace"), [EIdent("argument"), EString("\""), EString("\\\"")]), HxPos.unknown())
 			], "")
 		], [
 			new HxFieldDecl("winMetaCharacters", Public, true, "ReadOnlyArray<Int>", EArrayDecl([EInt(32)]))
@@ -7006,8 +7012,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ SysTools.winMetaCharacters should erase ReadOnlyArray<Int> to vector<int> for native field initialization");
 		assertContains(sysToolsLines, "return (__hxhx_index_of(winMetaCharacters, c, 0) >= 0);",
 			"C++ indexOf on winMetaCharacters should pass the integer needle directly");
-		assertContains(sysToolsLines, "__hxhx_replace(std::string(argument),",
-			"C++ SysTools helpers should lower StringTools.replace through target support instead of requiring StringTools definition order");
+		assertContains(sysToolsLines, "return __hxhx_quote_unix_arg(argument);",
+			"C++ SysTools.quoteUnixArg helper should use compact target support instead of rendering the stdlib body");
+		assertContains(sysToolsLines, "return __hxhx_quote_win_arg(argument, escapeMetaCharacters);",
+			"C++ SysTools.quoteWinArg helper should use compact target support instead of rendering the stdlib body");
 		assertTrue(sysToolsLines.indexOf("StringTools::replace(argument") < 0,
 			"C++ SysTools helpers should not depend on a fully declared StringTools helper for replace");
 		assertContains(stringToolsLines, "inline static std::vector<int> winMetaCharacters = SysTools::winMetaCharacters;",

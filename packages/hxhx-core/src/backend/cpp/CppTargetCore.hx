@@ -2248,8 +2248,17 @@ class CppTargetCore {
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == "new")
 				continue;
-			for (line in renderHelperMethod(fn, cls, classLookup))
+			final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			final timingEnabled = traceCppTimingsEnabled();
+			final startTime = timingEnabled ? Sys.time() : 0.0;
+			final methodLines = renderHelperMethod(fn, cls, classLookup);
+			for (line in methodLines)
 				out.push(line);
+			if (timingEnabled) {
+				final elapsed = Sys.time() - startTime;
+				traceCppTimingPhase("render_helper_method_timing owner=" + className + " name=" + methodName + " seconds=" + Std.string(elapsed) + " lines="
+					+ methodLines.length);
+			}
 		}
 		out.push("};");
 		for (line in renderGenericClassFactory(className, typeParams, ctor, scope))
@@ -3634,6 +3643,8 @@ class CppTargetCore {
 			return returnTraced("special_utest_eq", renderUtestEqHelper(fn));
 		if (isLambdaHasHelper(fn, owner))
 			return returnTraced("special_lambda_has", renderLambdaHasHelper());
+		if (isSysToolsSupportHelper(fn, owner))
+			return returnTraced("special_sys_tools", renderSysToolsSupportHelper(fn, owner, classLookup));
 		if (isStringToolsSupportHelper(fn, owner))
 			return returnTraced("special_string_tools", renderStringToolsSupportHelper(fn, owner, classLookup));
 		if (isHelperMacrosShimHelper(fn, owner))
@@ -3872,6 +3883,46 @@ class CppTargetCore {
 			case _:
 				false;
 		};
+	}
+
+	static function isSysToolsSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "SysTools")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "quoteUnixArg" | "quoteWinArg":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function renderSysToolsSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		inline function nameAt(index:Int, fallback:String):String {
+			return args.length > index ? sanitizeIdentifier(HxFunctionArg.getName(args[index])) : fallback;
+		}
+		final argument = nameAt(0, "argument");
+		final escapeMetaCharacters = nameAt(1, "escapeMetaCharacters");
+		final out = [
+			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"
+		];
+		switch (method) {
+			case "quoteUnixArg":
+				out.push("    return __hxhx_quote_unix_arg(" + argument + ");");
+			case "quoteWinArg":
+				out.push("    return __hxhx_quote_win_arg(" + argument + ", " + escapeMetaCharacters + ");");
+			case _:
+				if (returnType != "void")
+					out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
 	}
 
 	static function renderStringToolsSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
