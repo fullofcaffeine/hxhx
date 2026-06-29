@@ -2477,6 +2477,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"direct Type.getEnumName calls should lower through the C++ type-name helper");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "typeof"), [EIdent("t")])) == "__hxhx_type_name(t)",
 			"direct Type.typeof calls should lower to a printable C++ MVP type name");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "resolveClass"),
+				[EIdent("name")])) == "Type::resolveClass(__hxhx_stringify(name))",
+			"direct Type.resolveClass calls should lower through the C++ type support helper");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "resolveEnum"), [EIdent("name")])) == "Type::resolveEnum(__hxhx_stringify(name))",
+			"direct Type.resolveEnum calls should lower through the C++ type support helper");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"), [EIdent("left"), EIdent("right")])) == "Type::enumEq(left, right)",
+			"direct Type.enumEq calls should lower through the C++ type support helper");
+		final typeIntrinsicScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("TypeIntrinsicOwner", false), {
+			names: new StringMap<Bool>(),
+			byName: new StringMap<HxClassDecl>()
+		}, "Void");
+		final stdIsOfTypeCall = ECall(EField(EIdent("Std"), "isOfType"), [EIdent("value"), EIdent("cls")]);
+		final typeResolveClassCall = ECall(EField(EIdent("Type"), "resolveClass"), [EString("unit.MyClass")]);
+		final typeResolveEnumCall = ECall(EField(EIdent("Type"), "resolveEnum"), [EString("unit.MyEnum")]);
+		final typeEnumEqCall = ECall(EField(EIdent("Type"), "enumEq"), [EIdent("left"), EIdent("right")]);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.exprCppType(stdIsOfTypeCall, typeIntrinsicScope) == "bool",
+			"C++ Std.isOfType return typing should stay bool for reflection-heavy helper inference");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferExprCppType(typeResolveClassCall, typeIntrinsicScope) == "std::shared_ptr<Class>",
+			"C++ Type.resolveClass return typing should expose Class meta-values without body inference");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferExprCppType(typeResolveEnumCall, typeIntrinsicScope) == "std::shared_ptr<Enum>",
+			"C++ Type.resolveEnum return typing should expose Enum meta-values without body inference");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.exprCppType(typeEnumEqCall, typeIntrinsicScope) == "bool",
+			"C++ Type.enumEq return typing should stay bool for Type.typeof assertion helpers");
 		assertThrowsContains(() -> @:privateAccess backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw("try{unsupported();}catch(e:Dynamic){}")),
 			"ETryCatchRaw(try{unsupported();}catch(e:Dynamic){})",
 			"unsupported raw try/catch diagnostics should include a compact raw payload for remote gate triage");

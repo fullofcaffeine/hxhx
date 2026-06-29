@@ -7801,6 +7801,16 @@ class CppTargetCore {
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("Type"), "typeof"), args) if (args.length == 1):
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
+			case ECall(EField(EIdent("Type"), "resolveClass"), args) if (args.length == 1):
+				"Type::resolveClass(" + stringExpr(args[0], scope) + ")";
+			case ECall(EField(EIdent("Type"), "resolveEnum"), args) if (args.length == 1):
+				"Type::resolveEnum(" + stringExpr(args[0], scope) + ")";
+			case ECall(EField(EIdent("Type"), "enumEq"), args) if (args.length == 2):
+				"Type::enumEq("
+				+ renderExpr(args[0], scope)
+				+ ", "
+				+ renderExpr(args[1], scope)
+				+ ")";
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayExpr(args[0], scope);
 			case ECall(EField(EIdent("Math"), method), args):
@@ -10120,6 +10130,8 @@ class CppTargetCore {
 				"std::optional<int>";
 			case ECall(EField(receiver, "downcast"), args) if (isStdStaticReceiver(receiver) && args.length == 2):
 				"std::string";
+			case ECall(EField(receiver, "isOfType"), args) if (isStdStaticReceiver(receiver) && args.length == 2):
+				"bool";
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
 				"std::any";
 			case ECall(EIdent(name), args) if (bytesFastGetExpr(name, args, scope) != null):
@@ -10859,6 +10871,8 @@ class CppTargetCore {
 				"std::optional<int>";
 			case ECall(EField(receiver, "downcast"), args) if (isStdStaticReceiver(receiver) && args.length == 2):
 				"std::string";
+			case ECall(EField(receiver, "isOfType"), args) if (isStdStaticReceiver(receiver) && args.length == 2):
+				"bool";
 			case ENew(typePath, _) if (isStdArrayTypePath(typePath)):
 				isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope);
 			case ENew(typePath, _):
@@ -14014,10 +14028,16 @@ class CppTargetCore {
 		return switch (method) {
 			case "getClass" | "getSuperClass" if (args.length == 1):
 				"std::shared_ptr<Class>";
+			case "resolveClass" if (args.length == 1):
+				"std::shared_ptr<Class>";
 			case "getEnum" if (args.length == 1):
+				"std::shared_ptr<Enum>";
+			case "resolveEnum" if (args.length == 1):
 				"std::shared_ptr<Enum>";
 			case "createEnum" | "createEnumIndex" if (args.length == 2 || args.length == 3):
 				"std::shared_ptr<EnumValue>";
+			case "enumEq" if (args.length == 2):
+				"bool";
 			case "getClassName" | "getEnumName" | "typeof" if (args.length == 1):
 				"std::string";
 			case "getClassFields" | "getInstanceFields" | "getEnumConstructs" if (args.length == 1):
