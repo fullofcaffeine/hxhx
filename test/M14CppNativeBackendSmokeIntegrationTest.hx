@@ -1202,6 +1202,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		throw "vendor JsonParser fixture should expose doParse";
 	}
 
+	static function assertKnownXmlCppSignatures():Void {
+		final getFn = new HxFunctionDecl("get", Public, false, [new HxFunctionArg("att", "", NoDefault, false, false)], "",
+			[SReturn(EString(""), HxPos.unknown())], "");
+		final setNameFn = new HxFunctionDecl("set_nodeName", Public, false, [new HxFunctionArg("v", "", NoDefault, false, false)], "",
+			[SReturn(EIdent("v"), HxPos.unknown())], "");
+		final removeChildFn = new HxFunctionDecl("removeChild", Public, false, [new HxFunctionArg("x", "", NoDefault, false, false)], "",
+			[SReturn(EBool(true), HxPos.unknown())], "");
+		final owner = new HxClassDecl("Xml", false, [getFn, setNameFn, removeChildFn], []);
+		final names = new StringMap<Bool>();
+		names.set("Xml", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("Xml", owner);
+		final lookup = {names: names, byName: classes};
+		final getLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(getFn, owner, lookup).join("\n");
+		final setNameLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(setNameFn, owner, lookup).join("\n");
+		final removeChildLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(removeChildFn, owner, lookup).join("\n");
+		assertContains(getLines, "std::string get(std::string att)",
+			"C++ Xml.get should use declared stdlib String signatures even when source args are loose");
+		assertContains(setNameLines, "std::string set_nodeName(std::string v)",
+			"C++ Xml.set_nodeName should use declared stdlib String signatures even when source args are loose");
+		assertContains(removeChildLines, "bool removeChild(std::shared_ptr<Xml> x)",
+			"C++ Xml.removeChild should use declared stdlib Xml argument signatures even when source args are loose");
+	}
+
 	static function assertRawSwitchDynamicReturnType():Void {
 		final getValueLike = new HxFunctionDecl("getValueLike", Public, true, [new HxFunctionArg("e", "Dynamic", NoDefault, false, false)], "Dynamic", [
 			SReturn(ESwitchRaw("switch (e) { case object: {}; case array: []; case _: getValueLike(e); }"), HxPos.unknown())
@@ -8481,6 +8505,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				"C++ smoke should keep BalancedTree.setLoop return typing concrete without recursive inference");
 		}
 		assertVendorJsonParserReturnTypesWhenAvailable();
+		assertKnownXmlCppSignatures();
 		assertVendorExprToolsReturnTypesWhenAvailable();
 		assertVendorTemplateReturnTypesWhenAvailable();
 		final vendorTemplateProgram = vendorTemplateProgramWhenAvailable();

@@ -3621,6 +3621,25 @@ class CppTargetCore {
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
 		}
+		if (owner == "Xml") {
+			return switch (method) {
+				case "parse" | "createElement" | "createPCData" | "createCData" | "createComment" | "createDocType" | "createProcessingInstruction" |
+					"createDocument" | "firstChild" | "firstElement":
+					cppTypeHint("Xml", scope, classLookup);
+				case "get_nodeName" | "set_nodeName" | "get_nodeValue" | "set_nodeValue" | "get" | "toString":
+					"std::string";
+				case "set" | "remove" | "addChild" | "insertChild" | "ensureElementType":
+					"void";
+				case "exists" | "removeChild":
+					"bool";
+				case "attributes":
+					cppTypeHint("Iterator<String>", scope, classLookup);
+				case "iterator" | "elements" | "elementsNamed":
+					cppTypeHint("Iterator<Xml>", scope, classLookup);
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "Md5") {
 			return switch (method) {
 				case "encode" | "hex":
@@ -3695,8 +3714,6 @@ class CppTargetCore {
 	static function knownStdlibMethodParamCppTypes(className:String, methodName:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Array<String> {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
-		final bytesType = cppTypeHint("Bytes", scope, classLookup);
-		final jsonPrinterReplacerType = "std::function<std::any(std::any, std::any)>";
 		return switch (owner) {
 			case "Bytes":
 				switch (method) {
@@ -3712,6 +3729,7 @@ class CppTargetCore {
 						[];
 				}
 			case "Base64":
+				final bytesType = cppTypeHint("Bytes", scope, classLookup);
 				switch (method) {
 					case "encode" | "urlEncode":
 						[bytesType, "bool"];
@@ -3721,6 +3739,7 @@ class CppTargetCore {
 						[];
 				}
 			case "BaseCode":
+				final bytesType = cppTypeHint("Bytes", scope, classLookup);
 				switch (method) {
 					case "encodeBytes" | "decodeBytes":
 						[bytesType];
@@ -3741,6 +3760,7 @@ class CppTargetCore {
 						[];
 				}
 			case "JsonPrinter":
+				final jsonPrinterReplacerType = "std::function<std::any(std::any, std::any)>";
 				switch (method) {
 					case "print":
 						["std::any", jsonPrinterReplacerType, "std::optional<std::string>"];
@@ -3757,7 +3777,23 @@ class CppTargetCore {
 					case _:
 						[];
 				}
+			case "Xml":
+				final xmlType = cppTypeHint("Xml", scope, classLookup);
+				switch (method) {
+					case "parse" | "createElement" | "createPCData" | "createCData" | "createComment" | "createDocType" | "createProcessingInstruction" |
+						"set_nodeName" | "set_nodeValue" | "get" | "remove" | "exists" | "elementsNamed":
+						["std::string"];
+					case "set":
+						["std::string", "std::string"];
+					case "addChild" | "removeChild":
+						[xmlType];
+					case "insertChild":
+						[xmlType, "int"];
+					case _:
+						[];
+				}
 			case "Md5":
+				final bytesType = cppTypeHint("Bytes", scope, classLookup);
 				switch (method) {
 					case "encode":
 						["std::string"];
@@ -3780,6 +3816,25 @@ class CppTargetCore {
 				["std::function<std::any(std::any, std::any)>", "std::string"];
 			case _:
 				[];
+		}
+	}
+
+	static function applyKnownStdlibFunctionArgOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || scope.owner == null || fn == null)
+			return;
+		final ownerName = HxClassDecl.getName(scope.owner);
+		final methodName = HxFunctionDecl.getName(fn);
+		final knownTypes = sanitizeIdentifier(methodName) == "new" ? knownStdlibConstructorParamCppTypes(ownerName) : knownStdlibMethodParamCppTypes(ownerName,
+			methodName, scope, scope.classLookup);
+		if (knownTypes.length == 0)
+			return;
+		final args = HxFunctionDecl.getArgs(fn);
+		for (i in 0...args.length) {
+			if (i >= knownTypes.length)
+				break;
+			final typeName = knownTypes[i];
+			if (typeName != null && typeName.length > 0)
+				scope.argTypeOverrides.set(sanitizeIdentifier(HxFunctionArg.getName(args[i])), typeName);
 		}
 	}
 
@@ -3888,6 +3943,7 @@ class CppTargetCore {
 		}
 		functionScopePrepStack.set(key, true);
 		try {
+			runPrepPhase("known_arg_types", () -> applyKnownStdlibFunctionArgOverrides(scope, fn));
 			runPrepPhase("infer_callable_args", () -> {
 				if (!knownStdlibMethodUsesDeclaredCallableArgs(scope, fn))
 					inferCallableArgTypeOverrides(scope, fn);
@@ -3927,6 +3983,16 @@ class CppTargetCore {
 			case "JsonPrinter":
 				switch (method) {
 					case "print" | "new" | "newl" | "write" | "addChar" | "add" | "classString" | "objString" | "fieldsString" | "quote" | "quoteUtf8":
+						true;
+					case _:
+						false;
+				}
+			case "Xml":
+				switch (method) {
+					case "parse" | "get_nodeName" | "set_nodeName" | "get_nodeValue" | "set_nodeValue" | "createElement" | "createPCData" | "createCData" |
+						"createComment" | "createDocType" | "createProcessingInstruction" | "createDocument" | "get" | "set" | "remove" | "exists" |
+						"attributes" | "iterator" | "elements" | "elementsNamed" | "firstChild" | "firstElement" | "addChild" | "removeChild" |
+						"insertChild" | "toString" | "ensureElementType":
 						true;
 					case _:
 						false;
