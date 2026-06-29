@@ -66,6 +66,7 @@ class CppTargetCore {
 	static var functionReturnTypesCache = new haxe.ds.StringMap<String>();
 	static var traceCppDeepEnabledCache = -1;
 	static var traceCppTimingsEnabledCache = -1;
+	static var traceCppTimingMethodFilterCache:Null<String> = null;
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		traceCppPhase("emit_before_main_module");
@@ -146,6 +147,25 @@ class CppTargetCore {
 			Sys.println("cpp_target_phase=" + label);
 	}
 
+	static function traceCppTimingMethodFilter():String {
+		if (traceCppTimingMethodFilterCache == null) {
+			final raw = Sys.getEnv("HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER");
+			traceCppTimingMethodFilterCache = raw == null ? "" : StringTools.trim(raw);
+		}
+		return traceCppTimingMethodFilterCache;
+	}
+
+	static function traceCppMethodStmtTimingsEnabled(ownerName:String, methodName:String):Bool {
+		if (!traceCppTimingsEnabled())
+			return false;
+		final filter = traceCppTimingMethodFilter();
+		if (filter.length == 0)
+			return false;
+		final owner = sanitizeTypePath(typeBaseName(ownerName == null ? "" : ownerName));
+		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
+		return filter == owner + "." + method || filter == ownerName + "." + methodName || filter == method;
+	}
+
 	static function traceCppMemberPhase(className:String, kind:String, memberName:String, stage:String):Void {
 		if (!traceCppDeepEnabled())
 			return;
@@ -195,6 +215,7 @@ class CppTargetCore {
 		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 		functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
 		functionReturnTypesCache = new haxe.ds.StringMap<String>();
+		traceCppTimingMethodFilterCache = null;
 		final className = sanitizeIdentifier(HxClassDecl.getName(main.cls));
 		final typedModules = program.getTypedModules();
 		traceCppPhase("render_enter main=" + className + " typed_modules=" + typedModules.length);
@@ -3899,8 +3920,10 @@ class CppTargetCore {
 		out.push("  " + (HxFunctionDecl.getIsStatic(fn) ? "static " : "") + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
 			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
 		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "after_signature");
-		final body = traceCppDeepEnabled() ? renderTracedHelperFunctionBody(ownerName, methodName, HxFunctionDecl.getBody(fn), "    ",
-			scope) : renderHelperFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope);
+		final body = if (traceCppMethodStmtTimingsEnabled(ownerName,
+			methodName)) renderTimedHelperFunctionBody(ownerName, methodName, HxFunctionDecl.getBody(fn), "    ",
+				scope); else if (traceCppDeepEnabled()) renderTracedHelperFunctionBody(ownerName, methodName, HxFunctionDecl.getBody(fn), "    ",
+			scope); else renderHelperFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope);
 		for (line in body)
 			out.push(line);
 		out.push("  }");
@@ -6606,6 +6629,35 @@ class CppTargetCore {
 		return out;
 	}
 
+	static function renderTimedHelperFunctionBody(ownerName:String, methodName:String, stmts:Array<HxStmt>, indent:String, scope:CppRenderScope):Array<String> {
+		final returnType = scope == null ? "int" : scope.returnType;
+		if (returnType != "void" && stmts.length == 1) {
+			switch (stmts[0]) {
+				case SExpr(expr, _):
+					final startTime = Sys.time();
+					final out = [indent + returnStmtForExpr(expr, scope)];
+					final elapsed = Sys.time() - startTime;
+					traceCppTimingPhase("render_helper_stmt_timing owner=" + ownerName + " name=" + sanitizeIdentifier(methodName)
+						+ " index=0 kind=SExprReturn seconds=" + Std.string(elapsed) + " lines=" + out.length);
+					return out;
+				case _:
+			}
+		}
+		final out = new Array<String>();
+		for (i in 0...stmts.length) {
+			final stmt = stmts[i];
+			final kind = stmtKind(stmt);
+			final startTime = Sys.time();
+			final before = out.length;
+			for (line in renderStmt(stmt, indent, scope))
+				out.push(line);
+			final elapsed = Sys.time() - startTime;
+			traceCppTimingPhase("render_helper_stmt_timing owner=" + ownerName + " name=" + sanitizeIdentifier(methodName) + " index=" + i + " kind=" + kind
+				+ " seconds=" + Std.string(elapsed) + " lines=" + (out.length - before));
+		}
+		return out;
+	}
+
 	static function renderStmt(stmt:HxStmt, indent:String, ?scope:CppRenderScope):Array<String> {
 		return switch (stmt) {
 			case SBlock(stmts, _):
@@ -8692,11 +8744,11 @@ class CppTargetCore {
 				cppDefaultValue(otherType, scope);
 			case _ if (isCppVectorLengthExpr(arg, scope)):
 				"static_cast<int>(" + renderExpr(arg, scope) + ")";
-			case _ if (otherType == "double" && isCppIntExpr(arg, scope)):
+			case _ if (otherType == "double" && (argType == "int" || isIntLiteralExpr(arg))):
 				"static_cast<double>(" + renderExpr(arg, scope) + ")";
 			case _ if (argType == "std::any" && otherType.length > 0 && otherType != "std::any"):
 				valueExprForExpectedType(arg, otherType, scope);
-			case _ if (isEqStringArgExpr(arg, scope)):
+			case _ if (isEqStringArgExpr(arg, argType, scope)):
 				stringExpr(arg, scope);
 			case _:
 				if (otherOptionalInner.length > 0 && argType == otherOptionalInner) "std::optional<"
@@ -8737,11 +8789,20 @@ class CppTargetCore {
 		};
 	}
 
-	static function isEqStringArgExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+	static function isEqStringArgExpr(expr:HxExpr, argType:String, ?scope:CppRenderScope):Bool {
 		return isStringLike(expr)
-			|| exprCppType(expr, scope) == "std::string"
+			|| argType == "std::string"
 			|| primitiveBackedAbstractToStringExpr(expr, scope) != null
 			|| classBackedAbstractToStringExpr(expr, scope) != null;
+	}
+
+	static function isIntLiteralExpr(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EInt(_):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function isCppVectorLengthExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
