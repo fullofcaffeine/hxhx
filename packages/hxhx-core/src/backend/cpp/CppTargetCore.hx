@@ -3597,6 +3597,20 @@ class CppTargetCore {
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
 		}
+		if (owner == "JsonParser") {
+			return switch (method) {
+				case "parse" | "doParse" | "parseRec" | "parseNumber":
+					"std::any";
+				case "parseString":
+					"std::string";
+				case "nextChar":
+					"int";
+				case "invalidChar" | "invalidNumber":
+					"void";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "JsonPrinter") {
 			return switch (method) {
 				case "print":
@@ -3717,6 +3731,15 @@ class CppTargetCore {
 					case _:
 						[];
 				}
+			case "JsonParser":
+				switch (method) {
+					case "parse":
+						["std::string"];
+					case "parseNumber" | "invalidNumber":
+						["int"];
+					case _:
+						[];
+				}
 			case "JsonPrinter":
 				switch (method) {
 					case "print":
@@ -3751,6 +3774,8 @@ class CppTargetCore {
 	static function knownStdlibConstructorParamCppTypes(className:String):Array<String> {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		return switch (owner) {
+			case "JsonParser":
+				["std::string"];
 			case "JsonPrinter":
 				["std::function<std::any(std::any, std::any)>", "std::string"];
 			case _:
@@ -3892,6 +3917,13 @@ class CppTargetCore {
 		final owner = sanitizeTypePath(typeBaseName(HxClassDecl.getName(scope.owner)));
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		return switch (owner) {
+			case "JsonParser":
+				switch (method) {
+					case "parse" | "new" | "doParse" | "parseRec" | "parseString" | "parseNumber" | "nextChar" | "invalidChar" | "invalidNumber":
+						true;
+					case _:
+						false;
+				}
 			case "JsonPrinter":
 				switch (method) {
 					case "print" | "new" | "newl" | "write" | "addChar" | "add" | "classString" | "objString" | "fieldsString" | "quote" | "quoteUtf8":
