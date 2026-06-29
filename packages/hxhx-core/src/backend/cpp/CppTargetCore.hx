@@ -3597,6 +3597,16 @@ class CppTargetCore {
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
 		}
+		if (owner == "JsonPrinter") {
+			return switch (method) {
+				case "print":
+					"std::string";
+				case "newl" | "write" | "addChar" | "add" | "classString" | "objString" | "fieldsString" | "quote" | "quoteUtf8":
+					"void";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "Md5") {
 			return switch (method) {
 				case "encode" | "hex":
@@ -3672,6 +3682,7 @@ class CppTargetCore {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
 		final bytesType = cppTypeHint("Bytes", scope, classLookup);
+		final jsonPrinterReplacerType = "std::function<std::any(std::any, std::any)>";
 		return switch (owner) {
 			case "Bytes":
 				switch (method) {
@@ -3706,6 +3717,23 @@ class CppTargetCore {
 					case _:
 						[];
 				}
+			case "JsonPrinter":
+				switch (method) {
+					case "print":
+						["std::any", jsonPrinterReplacerType, "std::optional<std::string>"];
+					case "write":
+						["std::any", "std::any"];
+					case "addChar":
+						["int"];
+					case "add" | "quote" | "quoteUtf8":
+						["std::string"];
+					case "classString" | "objString":
+						["std::any"];
+					case "fieldsString":
+						["std::any", "std::vector<std::string>"];
+					case _:
+						[];
+				}
 			case "Md5":
 				switch (method) {
 					case "encode":
@@ -3715,6 +3743,16 @@ class CppTargetCore {
 					case _:
 						[];
 				}
+			case _:
+				[];
+		}
+	}
+
+	static function knownStdlibConstructorParamCppTypes(className:String):Array<String> {
+		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		return switch (owner) {
+			case "JsonPrinter":
+				["std::function<std::any(std::any, std::any)>", "std::string"];
 			case _:
 				[];
 		}
@@ -3825,7 +3863,10 @@ class CppTargetCore {
 		}
 		functionScopePrepStack.set(key, true);
 		try {
-			runPrepPhase("infer_callable_args", () -> inferCallableArgTypeOverrides(scope, fn));
+			runPrepPhase("infer_callable_args", () -> {
+				if (!knownStdlibMethodUsesDeclaredCallableArgs(scope, fn))
+					inferCallableArgTypeOverrides(scope, fn);
+			});
 			runPrepPhase("register_args", () -> registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn)));
 			runPrepPhase("infer_string_map_locals", () -> inferStringMapLocalTypeOverrides(scope, fn));
 			runPrepPhase("infer_generic_factory_locals", () -> inferGenericFactoryLocalTypeOverrides(scope, fn));
@@ -3843,6 +3884,24 @@ class CppTargetCore {
 		functionScopePrepStack.remove(key);
 		if (prepTimingEnabled)
 			tracePrepPhase("total_cache_miss", Sys.time() - prepStartTime);
+	}
+
+	static function knownStdlibMethodUsesDeclaredCallableArgs(scope:CppRenderScope, fn:HxFunctionDecl):Bool {
+		if (scope == null || scope.owner == null || fn == null)
+			return false;
+		final owner = sanitizeTypePath(typeBaseName(HxClassDecl.getName(scope.owner)));
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return switch (owner) {
+			case "JsonPrinter":
+				switch (method) {
+					case "print" | "new" | "newl" | "write" | "addChar" | "add" | "classString" | "objString" | "fieldsString" | "quote" | "quoteUtf8":
+						true;
+					case _:
+						false;
+				}
+			case _:
+				false;
+		}
 	}
 
 	static function prepareFunctionSignatureScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
@@ -8285,6 +8344,9 @@ class CppTargetCore {
 	}
 
 	static function constructorArgCppTypes(className:String, ?scope:CppRenderScope):Array<String> {
+		final known = knownStdlibConstructorParamCppTypes(className);
+		if (known.length > 0)
+			return known;
 		if (scope == null || className == null || className.length == 0)
 			return [];
 		final cls = scope.classByName.get(className);
