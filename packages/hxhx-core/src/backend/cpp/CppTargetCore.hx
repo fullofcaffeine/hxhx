@@ -485,6 +485,9 @@ class CppTargetCore {
 		out.push("  for (unsigned char c : source) out.push_back(static_cast<int>(c));");
 		out.push("}");
 		out.push("");
+		for (line in CppRuntimeSupport.baseCodeLines())
+			out.push(line);
+		out.push("");
 		out.push("static std::string __hxhx_base64_encode_bytes(const std::vector<int>& bytes, bool complement, const std::string& alphabet) {");
 		out.push("  std::string out;");
 		out.push("  int buf = 0;");
@@ -3557,6 +3560,18 @@ class CppTargetCore {
 		}
 		if (owner == "Bytes" && method == "fill")
 			return "void";
+		if (owner == "BaseCode") {
+			return switch (method) {
+				case "encodeBytes" | "decodeBytes":
+					cppTypeHint("Bytes", scope, classLookup);
+				case "encodeString" | "decodeString" | "encode" | "decode":
+					"std::string";
+				case "initTable":
+					"void";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "Base64") {
 			return switch (method) {
 				case "encode" | "urlEncode":
@@ -3861,6 +3876,8 @@ class CppTargetCore {
 			return returnTraced("special_sys_tools", renderSysToolsSupportHelper(fn, owner, classLookup));
 		if (isStringToolsSupportHelper(fn, owner))
 			return returnTraced("special_string_tools", renderStringToolsSupportHelper(fn, owner, classLookup));
+		if (isBaseCodeSupportHelper(fn, owner))
+			return returnTraced("special_basecode", renderBaseCodeSupportHelper(fn, owner, classLookup));
 		if (isBase64SupportHelper(fn, owner))
 			return returnTraced("special_base64", renderBase64SupportHelper(fn, owner, classLookup));
 		if (isMd5SupportHelper(fn, owner))
@@ -4131,6 +4148,19 @@ class CppTargetCore {
 		};
 	}
 
+	static function isBaseCodeSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null)
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "BaseCode")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "encodeBytes" | "decodeBytes" | "encodeString" | "decodeString" | "encode" | "decode" | "initTable":
+				true;
+			case _:
+				false;
+		};
+	}
+
 	static function isMd5SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		if (fn == null || owner == null)
 			return false;
@@ -4170,6 +4200,68 @@ class CppTargetCore {
 		}
 		out.push("  }");
 		return out;
+	}
+
+	static function renderBaseCodeSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = baseCodeSupportReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = ["  "
+			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
+			+ returnType
+			+ " "
+			+ method
+			+ "("
+			+ renderFunctionArgs(args, scope)
+			+ ") {"];
+		inline function nameAt(index:Int, fallback:String):String {
+			return args.length > index ? sanitizeIdentifier(HxFunctionArg.getName(args[index])) : fallback;
+		}
+		inline function bytesReturn(dataExpr:String):Void {
+			out.push("    auto __hxhx_data = " + dataExpr + ";");
+			out.push("    return std::make_shared<Bytes>(static_cast<int>(__hxhx_data.size()), __hxhx_data);");
+		}
+		switch (method) {
+			case "encodeBytes":
+				bytesReturn("__hxhx_basecode_encode_bytes(" + nameAt(0, "b") + "->b, base->b, nbits)");
+			case "decodeBytes":
+				bytesReturn("__hxhx_basecode_decode_bytes(" + nameAt(0, "b") + "->b, base->b, nbits)");
+			case "encodeString":
+				out.push("    return __hxhx_basecode_encode_string(" + nameAt(0, "s") + ", base->b, nbits);");
+			case "decodeString":
+				out.push("    return __hxhx_basecode_decode_string(" + nameAt(0, "s") + ", base->b, nbits);");
+			case "encode" | "decode":
+				final value = nameAt(0, "s");
+				final alphabet = nameAt(1, "base");
+				out.push("    std::vector<int> __hxhx_alphabet;");
+				out.push("    __hxhx_bytes_of_string(__hxhx_alphabet, " + alphabet + ");");
+				out.push("    const int __hxhx_nbits = __hxhx_basecode_nbits(__hxhx_alphabet);");
+				out.push("    return __hxhx_basecode_" + method + "_string(" + value + ", __hxhx_alphabet, __hxhx_nbits);");
+			case "initTable":
+				out.push("    tbl = __hxhx_basecode_table(base->b);");
+			case _:
+				for (arg in args)
+					out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+				if (returnType != "void")
+					out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function baseCodeSupportReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "encodeBytes" | "decodeBytes":
+				cppTypeHint("Bytes", renderScope(owner, classLookup, "auto"), classLookup);
+			case "encodeString" | "decodeString" | "encode" | "decode":
+				"std::string";
+			case "initTable":
+				"void";
+			case _:
+				supportMethodSignatureReturnType(fn, owner, classLookup);
+		};
 	}
 
 	static function renderBase64SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {

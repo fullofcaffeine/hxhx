@@ -6005,6 +6005,56 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final bytesFastGetLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(bytesFastGetMethod, bytesFastGetOwner, bytesLookup).join("\n");
 		assertContains(bytesFastGetLines, "return static_cast<int>((bd[1]));", "C++ imported Bytes.fastGet aliases should lower to byte-vector indexing");
 		assertTrue(bytesFastGetLines.indexOf("fget(") < 0, "C++ imported Bytes.fastGet aliases should not leak as undeclared calls");
+		final baseCodeEncodeBytes = new HxFunctionDecl("encodeBytes", Public, false, [new HxFunctionArg("b", "Bytes", NoDefault, false, false)], "Bytes", [],
+			"");
+		final baseCodeDecodeBytes = new HxFunctionDecl("decodeBytes", Public, false, [new HxFunctionArg("b", "Bytes", NoDefault, false, false)], "Bytes", [],
+			"");
+		final baseCodeEncodeString = new HxFunctionDecl("encodeString", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "String",
+			[], "");
+		final baseCodeDecodeString = new HxFunctionDecl("decodeString", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "String",
+			[], "");
+		final baseCodeStaticEncode = new HxFunctionDecl("encode", Public, true, [
+			new HxFunctionArg("s", "String", NoDefault, false, false),
+			new HxFunctionArg("base", "String", NoDefault, false, false)
+		], "String", [], "");
+		final baseCodeInitTable = new HxFunctionDecl("initTable", Private, false, [], "Void", [], "");
+		final baseCodeOwner = new HxClassDecl("BaseCode", false, [
+			baseCodeEncodeBytes,
+			baseCodeDecodeBytes,
+			baseCodeEncodeString,
+			baseCodeDecodeString,
+			baseCodeStaticEncode,
+			baseCodeInitTable
+		], []);
+		bytesNames.set("BaseCode", true);
+		bytesClasses.set("BaseCode", baseCodeOwner);
+		final baseCodeEncodeBytesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(baseCodeEncodeBytes, baseCodeOwner, bytesLookup)
+			.join("\n");
+		final baseCodeDecodeBytesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(baseCodeDecodeBytes, baseCodeOwner, bytesLookup)
+			.join("\n");
+		final baseCodeEncodeStringLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(baseCodeEncodeString, baseCodeOwner, bytesLookup)
+			.join("\n");
+		final baseCodeStaticEncodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(baseCodeStaticEncode, baseCodeOwner, bytesLookup)
+			.join("\n");
+		final baseCodeInitTableLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(baseCodeInitTable, baseCodeOwner, bytesLookup).join("\n");
+		assertContains(baseCodeEncodeBytesLines, "std::shared_ptr<Bytes> encodeBytes(std::shared_ptr<Bytes> b) {",
+			"C++ BaseCode.encodeBytes support helper should keep the public Bytes surface");
+		assertContains(baseCodeEncodeBytesLines, "auto __hxhx_data = __hxhx_basecode_encode_bytes(b->b, base->b, nbits);",
+			"C++ BaseCode.encodeBytes support helper should use compact target runtime support");
+		assertContains(baseCodeEncodeBytesLines, "return std::make_shared<Bytes>(static_cast<int>(__hxhx_data.size()), __hxhx_data);",
+			"C++ BaseCode.encodeBytes support helper should rebuild haxe.io.Bytes from encoded storage");
+		assertContains(baseCodeDecodeBytesLines, "auto __hxhx_data = __hxhx_basecode_decode_bytes(b->b, base->b, nbits);",
+			"C++ BaseCode.decodeBytes support helper should use compact target runtime support");
+		assertContains(baseCodeEncodeStringLines, "return __hxhx_basecode_encode_string(s, base->b, nbits);",
+			"C++ BaseCode.encodeString support helper should avoid rendering the stdlib algorithm body");
+		assertContains(baseCodeStaticEncodeLines, "__hxhx_bytes_of_string(__hxhx_alphabet, base);",
+			"C++ BaseCode static encode support helper should convert the alphabet string once");
+		assertContains(baseCodeStaticEncodeLines, "const int __hxhx_nbits = __hxhx_basecode_nbits(__hxhx_alphabet);",
+			"C++ BaseCode static encode support helper should validate power-of-two alphabet length");
+		assertContains(baseCodeStaticEncodeLines, "return __hxhx_basecode_encode_string(s, __hxhx_alphabet, __hxhx_nbits);",
+			"C++ BaseCode static encode support helper should use target-owned generic BaseCode support");
+		assertContains(baseCodeInitTableLines, "tbl = __hxhx_basecode_table(base->b);",
+			"C++ BaseCode.initTable support helper should keep the cache field populated for callers that touch it");
 		final base64Encode = new HxFunctionDecl("encode", Public, true, [
 			new HxFunctionArg("bytes", "Bytes", NoDefault, false, false),
 			new HxFunctionArg("complement", "Bool", Default(EBool(true)), false, false)
