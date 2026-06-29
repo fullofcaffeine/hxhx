@@ -62,6 +62,7 @@ class CppTargetCore {
 	static final erasedDynamicReturnStack = new haxe.ds.StringMap<Bool>();
 	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
 	static var functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
+	static var functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
 	static var traceCppDeepEnabledCache = -1;
 	static var traceCppTimingsEnabledCache = -1;
 
@@ -191,6 +192,7 @@ class CppTargetCore {
 
 	static function renderProgram(program:GenIrProgram, main:{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}):String {
 		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
+		functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
 		final className = sanitizeIdentifier(HxClassDecl.getName(main.cls));
 		final typedModules = program.getTypedModules();
 		traceCppPhase("render_enter main=" + className + " typed_modules=" + typedModules.length);
@@ -14322,6 +14324,10 @@ class CppTargetCore {
 			?allClasses:Array<HxClassDecl>):Array<String> {
 		final rawReturn = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
 		final lookup = {names: classNamesFromByName(classByName), byName: classByName, all: allClasses == null ? [] : allClasses};
+		final cacheKey = functionArgTypesCacheKey(owner, fn, lookup);
+		final cached = functionArgTypesCache.get(cacheKey);
+		if (cached != null)
+			return cached.copy();
 		final returnScope = renderScope(owner, lookup, "auto");
 		applyFunctionTypeParams(returnScope, fn);
 		final returnType = rawReturn.length > 0 ? cppReturnTypeHint(rawReturn, returnScope, lookup) : "auto";
@@ -14333,7 +14339,22 @@ class CppTargetCore {
 		prepareFunctionScope(scope, fn);
 		final types = [for (arg in HxFunctionDecl.getArgs(fn)) cppFunctionArgType(arg, scope)];
 		inferredSignatureStack.remove(key);
+		functionArgTypesCache.set(cacheKey, types.copy());
 		return types;
+	}
+
+	static function functionArgTypesCacheKey(owner:HxClassDecl, fn:HxFunctionDecl, ?classLookup:CppClassLookup):String {
+		final args = HxFunctionDecl.getArgs(fn);
+		final argParts = [
+			for (arg in args)
+				sanitizeIdentifier(HxFunctionArg.getName(arg)) + ":" +
+				removeTypeHintWhitespace(StringTools.trim(HxFunctionArg.getTypeHint(arg) == null ? "" : HxFunctionArg.getTypeHint(arg)))
+		];
+		return functionSignatureKey(owner, fn, classLookup)
+			+ "("
+			+ argParts.join(",")
+			+ ")->"
+			+ removeTypeHintWhitespace(StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn)));
 	}
 
 	static function functionSignatureKeyForScope(scope:CppRenderScope, fn:HxFunctionDecl):String {
