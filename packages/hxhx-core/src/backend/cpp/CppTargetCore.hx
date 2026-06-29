@@ -953,9 +953,12 @@ class CppTargetCore {
 				out.push(line);
 			out.push("");
 		}
+		traceCppPhase("render_before_collect_reachable_helper_classes");
+		final reachableHelperClasses = collectReachableHelperClasses(program, main.cls, classLookup);
+		traceCppPhase("render_after_collect_reachable_helper_classes count=" + reachableHelperClasses.length);
 		traceCppPhase("render_before_anon_structs");
 		traceCppPhase("render_before_collect_anon_structs");
-		final collectedAnonStructs = collectAnonStructs(program, classLookup);
+		final collectedAnonStructs = collectAnonStructs(program, classLookup, [main.cls].concat(reachableHelperClasses));
 		traceCppPhase("render_after_collect_anon_structs count=" + collectedAnonStructs.length);
 		traceCppPhase("render_before_render_anon_structs");
 		final anonStructs = renderAnonStructs(collectedAnonStructs);
@@ -970,7 +973,7 @@ class CppTargetCore {
 			out.push("");
 		}
 		traceCppPhase("render_before_helper_classes");
-		final helperClasses = renderHelperClasses(program, main.cls, classLookup);
+		final helperClasses = renderHelperClasses(program, main.cls, classLookup, reachableHelperClasses);
 		traceCppPhase("render_after_helper_classes count=" + helperClasses.length);
 		for (decl in helperClasses) {
 			for (line in decl)
@@ -1017,12 +1020,15 @@ class CppTargetCore {
 		- Infers only the tiny type subset the Cpp MVP already knows how to print;
 		  unsupported dynamic behavior should remain a later explicit seam.
 	**/
-	static function collectAnonStructs(program:GenIrProgram, classLookup:CppClassLookup):Array<CppAnonStruct> {
+	static function collectAnonStructs(program:GenIrProgram, classLookup:CppClassLookup, ?classesToScan:Array<HxClassDecl>):Array<CppAnonStruct> {
 		final out = new Array<CppAnonStruct>();
 		final seen = new haxe.ds.StringMap<Bool>();
 		var typeHintTraceCount = 0;
 		var typeHintTraceSuppressed = false;
-		traceCppPhase("anon_collect_enter typed_modules=" + program.getTypedModules().length);
+		traceCppPhase("anon_collect_enter typed_modules="
+			+ program.getTypedModules().length
+			+ " scan_classes="
+			+ (classesToScan == null ? "all" : Std.string(classesToScan.length)));
 		function traceAnonTypeHint(hint:String):Void {
 			if (!traceCppDeepEnabled())
 				return;
@@ -1200,52 +1206,58 @@ class CppTargetCore {
 		final collectedClasses = new haxe.ds.StringMap<Bool>();
 		var collectedClassCount = 0;
 		var collectedFunctionCount = 0;
-		for (typed in program.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
-			final packagePath = HxModuleDecl.getPackagePath(decl);
-			for (cls in HxModuleDecl.getClasses(decl)) {
-				final rawName = HxClassDecl.getName(cls);
-				if (collectedClasses.exists(rawName))
-					continue;
-				collectedClasses.set(rawName, true);
-				final className = sanitizeTypePath(HxClassDecl.getName(cls));
-				collectedClassCount++;
-				if (collectedClassCount % 25 == 0)
+		function collectClass(cls:HxClassDecl, packagePath:String):Void {
+			final className = renderedClassName(cls, classLookup);
+			if (collectedClasses.exists(className))
+				return;
+			collectedClasses.set(className, true);
+			collectedClassCount++;
+			if (collectedClassCount % 25 == 0)
+				traceCppPhase("anon_collect_progress classes=" + collectedClassCount + " functions=" + collectedFunctionCount + " class=" + className
+					+ " structs=" + out.length);
+			traceCppDeepPhase("anon_collect_class_begin name=" + className);
+			final fieldScope = renderScope(cls, classLookup, "void");
+			for (field in HxClassDecl.getFields(cls)) {
+				final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+				traceCppDeepPhase("anon_collect_field_begin class=" + className + " name=" + fieldName);
+				addTypeHint(HxFieldDecl.getTypeHint(field), fieldScope);
+				final init = HxFieldDecl.getInit(field);
+				if (init != null)
+					addExpr(init, fieldScope);
+				traceCppDeepPhase("anon_collect_field_end class=" + className + " name=" + fieldName);
+			}
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				final fnName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+				collectedFunctionCount++;
+				if (collectedFunctionCount % 250 == 0)
 					traceCppPhase("anon_collect_progress classes=" + collectedClassCount + " functions=" + collectedFunctionCount + " class=" + className
-						+ " structs=" + out.length);
-				traceCppDeepPhase("anon_collect_class_begin name=" + className);
-				final fieldScope = renderScope(cls, classLookup, "void");
-				for (field in HxClassDecl.getFields(cls)) {
-					final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
-					traceCppDeepPhase("anon_collect_field_begin class=" + className + " name=" + fieldName);
-					addTypeHint(HxFieldDecl.getTypeHint(field), fieldScope);
-					final init = HxFieldDecl.getInit(field);
-					if (init != null)
-						addExpr(init, fieldScope);
-					traceCppDeepPhase("anon_collect_field_end class=" + className + " name=" + fieldName);
-				}
-				for (fn in HxClassDecl.getFunctions(cls)) {
-					final fnName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
-					collectedFunctionCount++;
-					if (collectedFunctionCount % 250 == 0)
-						traceCppPhase("anon_collect_progress classes=" + collectedClassCount + " functions=" + collectedFunctionCount + " class="
-							+ className + " fn=" + fnName + " structs=" + out.length);
-					traceCppDeepPhase("anon_collect_fn_begin class=" + className + " name=" + fnName);
-					final scope = renderScope(cls, classLookup, "auto");
-					prepareAnonCollectFunctionScope(scope, fn);
-					addTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope);
-					final knownReturn = knownStdlibMethodReturnCppType(className, HxFunctionDecl.getName(fn), HxFunctionDecl.getReturnTypeHint(fn), scope,
-						classLookup);
-					if (isCppAnonStructType(knownReturn) && scope.anonStructs.exists(knownReturn))
-						addStruct(scope.anonStructs.get(knownReturn));
-					for (arg in HxFunctionDecl.getArgs(fn))
-						addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
-					if (shouldWalkFunctionBody(packagePath, cls, fn))
-						for (stmt in HxFunctionDecl.getBody(fn))
-							addStmt(stmt, scope);
-					traceCppDeepPhase("anon_collect_fn_end class=" + className + " name=" + fnName);
-				}
-				traceCppDeepPhase("anon_collect_class_end name=" + className);
+						+ " fn=" + fnName + " structs=" + out.length);
+				traceCppDeepPhase("anon_collect_fn_begin class=" + className + " name=" + fnName);
+				final scope = renderScope(cls, classLookup, "auto");
+				prepareAnonCollectFunctionScope(scope, fn);
+				addTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope);
+				final knownReturn = knownStdlibMethodReturnCppType(className, HxFunctionDecl.getName(fn), HxFunctionDecl.getReturnTypeHint(fn), scope,
+					classLookup);
+				if (isCppAnonStructType(knownReturn) && scope.anonStructs.exists(knownReturn))
+					addStruct(scope.anonStructs.get(knownReturn));
+				for (arg in HxFunctionDecl.getArgs(fn))
+					addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
+				if (shouldWalkFunctionBody(packagePath, cls, fn))
+					for (stmt in HxFunctionDecl.getBody(fn))
+						addStmt(stmt, scope);
+				traceCppDeepPhase("anon_collect_fn_end class=" + className + " name=" + fnName);
+			}
+			traceCppDeepPhase("anon_collect_class_end name=" + className);
+		}
+		if (classesToScan != null) {
+			for (cls in classesToScan)
+				collectClass(cls, packagePathForRenderedClass(cls, classLookup));
+		} else {
+			for (typed in program.getTypedModules()) {
+				final decl = typed.getParsed().getDecl();
+				final packagePath = HxModuleDecl.getPackagePath(decl);
+				for (cls in HxModuleDecl.getClasses(decl))
+					collectClass(cls, packagePath);
 			}
 		}
 		traceCppPhase("anon_collect_done count=" + out.length);
@@ -1692,9 +1704,10 @@ class CppTargetCore {
 		return scope == null ? null : {names: scope.classNames, byName: scope.classByName, all: scope.allClasses};
 	}
 
-	static function renderHelperClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
+	static function renderHelperClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup,
+			?reachableHelpers:Array<HxClassDecl>):Array<Array<String>> {
 		final out = new Array<Array<String>>();
-		final helpers = collectReachableHelperClasses(program, mainClass, classLookup);
+		final helpers = reachableHelpers == null ? collectReachableHelperClasses(program, mainClass, classLookup) : reachableHelpers;
 		traceCppPhase("render_helper_classes_before_order count=" + helpers.length);
 		final orderedHelpers = orderHelperClasses(helpers, classLookup);
 		traceCppPhase("render_helper_classes_after_order count=" + orderedHelpers.length);
