@@ -63,6 +63,7 @@ class CppTargetCore {
 	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
 	static var functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 	static var traceCppDeepEnabledCache = -1;
+	static var traceCppTimingsEnabledCache = -1;
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		traceCppPhase("emit_before_main_module");
@@ -129,6 +130,17 @@ class CppTargetCore {
 
 	static function traceCppDeepPhase(label:String):Void {
 		if (traceCppDeepEnabled())
+			Sys.println("cpp_target_phase=" + label);
+	}
+
+	static function traceCppTimingsEnabled():Bool {
+		if (traceCppTimingsEnabledCache < 0)
+			traceCppTimingsEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_TIMINGS") ? 1 : 0;
+		return traceCppTimingsEnabledCache == 1;
+	}
+
+	static function traceCppTimingPhase(label:String):Void {
+		if (traceCppTimingsEnabled())
 			Sys.println("cpp_target_phase=" + label);
 	}
 
@@ -1804,9 +1816,16 @@ class CppTargetCore {
 		traceCppPhase("render_helper_classes_after_order count=" + orderedHelpers.length);
 		for (cls in orderedHelpers) {
 			final helperName = renderedClassName(cls, classLookup);
+			final timingEnabled = traceCppTimingsEnabled();
+			final startTime = timingEnabled ? Sys.time() : 0.0;
 			traceCppPhase("render_helper_class_begin name=" + helperName);
-			out.push(renderHelperClass(cls, classLookup));
+			final rendered = renderHelperClass(cls, classLookup);
+			out.push(rendered);
 			traceCppPhase("render_helper_class_end name=" + helperName);
+			if (timingEnabled) {
+				final elapsed = Sys.time() - startTime;
+				traceCppTimingPhase("render_helper_class_timing name=" + helperName + " seconds=" + Std.string(elapsed) + " lines=" + rendered.length);
+			}
 		}
 		return out;
 	}
