@@ -3615,6 +3615,8 @@ class CppTargetCore {
 			return returnTraced("special_utest_eq", renderUtestEqHelper(fn));
 		if (isLambdaHasHelper(fn, owner))
 			return returnTraced("special_lambda_has", renderLambdaHasHelper());
+		if (isStringToolsSupportHelper(fn, owner))
+			return returnTraced("special_string_tools", renderStringToolsSupportHelper(fn, owner, classLookup));
 		if (isHelperMacrosShimHelper(fn, owner))
 			return returnTraced("special_helper_macros", renderHelperMacrosShimHelper(fn, owner, classLookup));
 		if (isMacroStringToolsShimHelper(fn, owner))
@@ -3837,6 +3839,133 @@ class CppTargetCore {
 			"    return false;",
 			"  }"
 		];
+	}
+
+	static function isStringToolsSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "StringTools")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "urlEncode" | "urlDecode" | "htmlEscape" | "htmlUnescape" | "contains" | "startsWith" | "endsWith" | "isSpace" | "ltrim" | "rtrim" | "trim" |
+				"lpad" | "rpad" | "replace" | "hex" | "fastCodeAt" | "unsafeCodeAt" | "isEof" | "quoteUnixArg" | "quoteWinArg":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function renderStringToolsSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = stringToolsSupportReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = [
+			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"
+		];
+		inline function nameAt(index:Int, fallback:String):String {
+			return args.length > index ? sanitizeIdentifier(HxFunctionArg.getName(args[index])) : fallback;
+		}
+		final s = nameAt(0, "s");
+		final a1 = nameAt(1, "value");
+		final a2 = nameAt(2, "replacement");
+		switch (method) {
+			case "urlEncode":
+				out.push("    return __hxhx_url_encode(" + s + ");");
+			case "urlDecode":
+				out.push("    return __hxhx_url_decode(" + s + ");");
+			case "htmlEscape":
+				out.push("    const bool __hxhx_quotes = " + a1 + ".has_value() && " + a1 + ".value();");
+				out.push("    std::string out;");
+				out.push("    for (unsigned char c : " + s + ") {");
+				out.push("      switch (c) {");
+				out.push("        case '&': out += \"&amp;\"; break;");
+				out.push("        case '<': out += \"&lt;\"; break;");
+				out.push("        case '>': out += \"&gt;\"; break;");
+				out.push("        case '\\\"': if (__hxhx_quotes) out += \"&quot;\"; else out.push_back(static_cast<char>(c)); break;");
+				out.push("        case '\\'': if (__hxhx_quotes) out += \"&#039;\"; else out.push_back(static_cast<char>(c)); break;");
+				out.push("        default: out.push_back(static_cast<char>(c)); break;");
+				out.push("      }");
+				out.push("    }");
+				out.push("    return out;");
+			case "htmlUnescape":
+				out.push("    std::string out = " + s + ";");
+				out.push("    out = __hxhx_replace(out, \"&gt;\", \">\");");
+				out.push("    out = __hxhx_replace(out, \"&lt;\", \"<\");");
+				out.push("    out = __hxhx_replace(out, \"&quot;\", \"\\\"\");");
+				out.push("    out = __hxhx_replace(out, \"&#039;\", \"'\");");
+				out.push("    out = __hxhx_replace(out, \"&amp;\", \"&\");");
+				out.push("    return out;");
+			case "contains":
+				out.push("    return " + s + ".find(" + a1 + ") != std::string::npos;");
+			case "startsWith":
+				out.push("    return " + s + ".rfind(" + a1 + ", 0) == 0;");
+			case "endsWith":
+				out.push("    return __hxhx_ends_with(" + s + ", " + a1 + ");");
+			case "isSpace":
+				out.push("    if (" + s + ".empty() || " + a1 + " < 0 || static_cast<size_t>(" + a1 + ") >= " + s + ".size()) return false;");
+				out.push("    unsigned char c = static_cast<unsigned char>(" + s + "[static_cast<size_t>(" + a1 + ")]);");
+				out.push("    return (c > 8 && c < 14) || c == 32;");
+			case "ltrim":
+				out.push("    return __hxhx_ltrim(" + s + ");");
+			case "rtrim":
+				out.push("    return __hxhx_rtrim(" + s + ");");
+			case "trim":
+				out.push("    return __hxhx_trim(" + s + ");");
+			case "lpad":
+				out.push("    if (" + a1 + ".empty()) return " + s + ";");
+				out.push("    std::string out;");
+				out.push("    const int remaining = " + a2 + " - static_cast<int>(" + s + ".size());");
+				out.push("    while (static_cast<int>(out.size()) < remaining) out += " + a1 + ";");
+				out.push("    out += " + s + ";");
+				out.push("    return out;");
+			case "rpad":
+				out.push("    if (" + a1 + ".empty()) return " + s + ";");
+				out.push("    std::string out = " + s + ";");
+				out.push("    while (static_cast<int>(out.size()) < " + a2 + ") out += " + a1 + ";");
+				out.push("    return out;");
+			case "replace":
+				out.push("    return __hxhx_replace(" + s + ", " + a1 + ", " + a2 + ");");
+			case "hex":
+				out.push("    unsigned int value = static_cast<unsigned int>(" + s + ");");
+				out.push("    std::stringstream ss;");
+				out.push("    ss << std::uppercase << std::hex << value;");
+				out.push("    std::string out = ss.str();");
+				out.push("    if ("
+					+ a1
+					+ ".has_value()) while (out.size() < static_cast<size_t>("
+					+ a1
+					+ ".value())) out = std::string(\"0\") + out;");
+				out.push("    return out;");
+			case "fastCodeAt" | "unsafeCodeAt":
+				out.push("    if (" + a1 + " < 0 || static_cast<size_t>(" + a1 + ") >= " + s + ".size()) return 0;");
+				out.push("    return static_cast<unsigned char>(" + s + "[static_cast<size_t>(" + a1 + ")]);");
+			case "isEof":
+				out.push("    return " + s + " == 0;");
+			case "quoteUnixArg":
+				out.push("    return __hxhx_quote_unix_arg(" + s + ");");
+			case "quoteWinArg":
+				out.push("    return __hxhx_quote_win_arg(" + s + ", " + a1 + ");");
+			case _:
+				if (returnType != "void")
+					out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function stringToolsSupportReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return switch (method) {
+			case "contains" | "startsWith" | "endsWith" | "isSpace" | "isEof":
+				"bool";
+			case "fastCodeAt" | "unsafeCodeAt":
+				"int";
+			case _:
+				final hinted = supportMethodSignatureReturnType(fn, owner, classLookup);
+				hinted == "void" ? "std::string" : hinted;
+		};
 	}
 
 	static function isUtestRunnerAddCasesHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {

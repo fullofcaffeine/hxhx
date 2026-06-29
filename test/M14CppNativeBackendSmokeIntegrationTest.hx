@@ -6947,7 +6947,43 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], [
 			new HxFieldDecl("winMetaCharacters", Public, true, "ReadOnlyArray<Int>", EArrayDecl([EInt(32)]))
 		]);
-		final stringToolsOwner = new HxClassDecl("StringTools", false, [], [
+		final stringToolsOwner = new HxClassDecl("StringTools", false, [
+			new HxFunctionDecl("replace", Public, true, [
+				new HxFunctionArg("s", "String", NoDefault, false, false),
+				new HxFunctionArg("sub", "String", NoDefault, false, false),
+				new HxFunctionArg("by", "String", NoDefault, false, false)
+			], "String", [
+				SReturn(ECall(EField(ECall(EField(EIdent("s"), "split"), [EIdent("sub")]), "join"), [EIdent("by")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("trim", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "String", [
+				SReturn(ECall(EIdent("ltrim"), [ECall(EIdent("rtrim"), [EIdent("s")])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("htmlEscape", Public, true, [
+				new HxFunctionArg("s", "String", NoDefault, false, false),
+				new HxFunctionArg("quotes", "Bool", NoDefault, true, false)
+			],
+				"String", [SReturn(EIdent("s"), HxPos.unknown())], ""),
+			new HxFunctionDecl("htmlUnescape", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "String",
+				[SReturn(EIdent("s"), HxPos.unknown())], ""),
+			new HxFunctionDecl("lpad", Public, true, [
+				new HxFunctionArg("s", "String", NoDefault, false, false),
+				new HxFunctionArg("c", "String", NoDefault, false, false),
+				new HxFunctionArg("l", "Int", NoDefault, false, false)
+			], "String", [SReturn(EIdent("s"), HxPos.unknown())], ""),
+			new HxFunctionDecl("rpad", Public, true, [
+				new HxFunctionArg("s", "String", NoDefault, false, false),
+				new HxFunctionArg("c", "String", NoDefault, false, false),
+				new HxFunctionArg("l", "Int", NoDefault, false, false)
+			], "String", [SReturn(EIdent("s"), HxPos.unknown())], ""),
+			new HxFunctionDecl("startsWith", Public, true, [
+				new HxFunctionArg("s", "String", NoDefault, false, false),
+				new HxFunctionArg("start", "String", NoDefault, false, false)
+			], "Bool", [SReturn(EBool(true), HxPos.unknown())], ""),
+			new HxFunctionDecl("hex", Public, true, [
+				new HxFunctionArg("n", "Int", NoDefault, false, false),
+				new HxFunctionArg("digits", "Int", NoDefault, true, false)
+			], "", [SReturn(EString("0"), HxPos.unknown())], "")
+		], [
 			new HxFieldDecl("winMetaCharacters", Public, true, "Array<Int>", EField(EField(EIdent("haxe"), "SysTools"), "winMetaCharacters"))
 		]);
 		final timerOwner = new HxClassDecl("Timer", false, [
@@ -6976,6 +7012,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ SysTools helpers should not depend on a fully declared StringTools helper for replace");
 		assertContains(stringToolsLines, "inline static std::vector<int> winMetaCharacters = SysTools::winMetaCharacters;",
 			"C++ StringTools.winMetaCharacters should consume the SysTools vector<int> field directly");
+		assertContains(stringToolsLines, "return __hxhx_replace(s, sub, by);", "C++ StringTools.replace helper should use target prelude support");
+		assertContains(stringToolsLines, "return __hxhx_trim(s);", "C++ StringTools.trim helper should use target prelude support");
+		assertContains(stringToolsLines, "const bool __hxhx_quotes = quotes.has_value() && quotes.value();",
+			"C++ StringTools.htmlEscape helper should preserve optional quotes handling without rendering the stdlib body");
+		assertContains(stringToolsLines, "out = __hxhx_replace(out, \"&amp;\", \"&\");",
+			"C++ StringTools.htmlUnescape helper should use compact replacement support");
+		assertContains(stringToolsLines, "while (static_cast<int>(out.size()) < remaining) out += c;",
+			"C++ StringTools.lpad helper should use compact target string support");
+		assertContains(stringToolsLines, "while (static_cast<int>(out.size()) < l) out += c;",
+			"C++ StringTools.rpad helper should use compact target string support");
+		assertContains(stringToolsLines, "return s.rfind(start, 0) == 0;", "C++ StringTools.startsWith helper should use target string support");
+		assertContains(stringToolsLines, "ss << std::uppercase << std::hex << value;", "C++ StringTools.hex helper should use a compact target body");
 		final qualifiedStdScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(sysToolsOwner,
 			{names: qualifiedStdNames, byName: qualifiedStdClasses}, "void");
 		assertTrue(@:privateAccess
