@@ -1158,6 +1158,85 @@ class CppTargetCore {
 				return false;
 			return true;
 		}
+		function typeHintMayContributeAnonStruct(typeHint:String):Bool {
+			final hint = StringTools.trim(typeHint == null ? "" : typeHint);
+			return hint.indexOf("{") >= 0;
+		}
+		var exprMayContributeAnonStruct:HxExpr->Null<CppRenderScope>->Bool = null;
+		var exprsMayContributeAnonStruct:Array<HxExpr>->Null<CppRenderScope>->Bool = null;
+		var stmtMayContributeAnonStruct:HxStmt->Null<CppRenderScope>->Bool = null;
+		var stmtsMayContributeAnonStruct:Array<HxStmt>->Null<CppRenderScope>->Bool = null;
+		exprMayContributeAnonStruct = function(expr:HxExpr, scope:Null<CppRenderScope>):Bool {
+			return switch (expr) {
+				case EAnon(_, _):
+					true;
+				case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
+					true;
+				case ENew(typePath, args): structuralTypedefAnonStructTypeNameForTypeHint(typePath,
+						scope) != null || typeHintMayContributeAnonStruct(typePath) || exprsMayContributeAnonStruct(args, scope);
+				case EField(receiver, _):
+					exprMayContributeAnonStruct(receiver, scope);
+				case ECall(callee, args): exprMayContributeAnonStruct(callee, scope) || exprsMayContributeAnonStruct(args, scope);
+				case EArrayDecl(values):
+					exprsMayContributeAnonStruct(values, scope);
+				case EArrayAccess(array, index): exprMayContributeAnonStruct(array, scope) || exprMayContributeAnonStruct(index, scope);
+				case EBinop(_, left, right): exprMayContributeAnonStruct(left, scope) || exprMayContributeAnonStruct(right, scope);
+				case EUnop(_, inner):
+					exprMayContributeAnonStruct(inner, scope);
+				case ETernary(cond, thenExpr, elseExpr): exprMayContributeAnonStruct(cond,
+						scope) || exprMayContributeAnonStruct(thenExpr, scope) || exprMayContributeAnonStruct(elseExpr, scope);
+				case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+					exprMayContributeAnonStruct(inner, scope);
+				case ESwitch(scrutinee, _, exprs): exprMayContributeAnonStruct(scrutinee, scope) || exprsMayContributeAnonStruct(exprs, scope);
+				case EArrayComprehension(_, iterable, guardExpr, yieldExpr): exprMayContributeAnonStruct(iterable,
+						scope) || (guardExpr != null
+						&& exprMayContributeAnonStruct(guardExpr, scope)) || exprMayContributeAnonStruct(yieldExpr, scope);
+				case ELambda(_, body):
+					exprMayContributeAnonStruct(body, scope);
+				case _:
+					false;
+			}
+		}
+		exprsMayContributeAnonStruct = function(exprs:Array<HxExpr>, scope:Null<CppRenderScope>):Bool {
+			for (expr in exprs)
+				if (exprMayContributeAnonStruct(expr, scope))
+					return true;
+			return false;
+		}
+		stmtMayContributeAnonStruct = function(stmt:HxStmt, scope:Null<CppRenderScope>):Bool {
+			return switch (stmt) {
+				case SBlock(stmts, _):
+					stmtsMayContributeAnonStruct(stmts, scope);
+				case SVar(_, typeHint, init, _): typeHintMayContributeAnonStruct(typeHint) || (init != null
+						&& exprMayContributeAnonStruct(init, scope));
+				case SIf(cond, thenBranch, elseBranch, _): exprMayContributeAnonStruct(cond,
+						scope) || stmtMayContributeAnonStruct(thenBranch, scope) || (elseBranch != null
+						&& stmtMayContributeAnonStruct(elseBranch, scope));
+				case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+					exprMayContributeAnonStruct(expr, scope);
+				case SForIn(_, iterable, body, _) | SForKeyValue(_, _, iterable, body, _): exprMayContributeAnonStruct(iterable,
+						scope) || stmtMayContributeAnonStruct(body, scope);
+				case SWhile(cond, body, _): exprMayContributeAnonStruct(cond, scope) || stmtMayContributeAnonStruct(body, scope);
+				case SDoWhile(body, cond, _): stmtMayContributeAnonStruct(body, scope) || exprMayContributeAnonStruct(cond, scope);
+				case SSwitch(scrutinee, _, bodies, _): exprMayContributeAnonStruct(scrutinee, scope) || stmtsMayContributeAnonStruct(bodies, scope);
+				case STry(tryBody, catches, _):
+					if (stmtMayContributeAnonStruct(tryBody, scope)) true; else {
+						var found = false;
+						for (c in catches)
+							if (typeHintMayContributeAnonStruct(c.typeHint) || stmtMayContributeAnonStruct(c.body, scope))
+								found = true;
+						found;
+					}
+				case SReturnVoid(_) | SBreak(_) | SContinue(_):
+					false;
+			}
+		}
+		stmtsMayContributeAnonStruct = function(stmts:Array<HxStmt>, scope:Null<CppRenderScope>):Bool {
+			for (stmt in stmts)
+				if (stmtMayContributeAnonStruct(stmt, scope))
+					return true;
+			return false;
+		}
 		function addStmt(stmt:HxStmt, ?scope:CppRenderScope):Void {
 			switch (stmt) {
 				case SBlock(stmts, _):
@@ -1205,6 +1284,8 @@ class CppTargetCore {
 		final collectedClasses = new haxe.ds.StringMap<Bool>();
 		var collectedClassCount = 0;
 		var collectedFunctionCount = 0;
+		var walkedFunctionBodyCount = 0;
+		var skippedFunctionBodyCount = 0;
 		function collectClass(cls:HxClassDecl, packagePath:String):Void {
 			final className = renderedClassName(cls, classLookup);
 			if (collectedClasses.exists(className))
@@ -1241,9 +1322,15 @@ class CppTargetCore {
 					addStruct(scope.anonStructs.get(knownReturn));
 				for (arg in HxFunctionDecl.getArgs(fn))
 					addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
-				if (shouldWalkFunctionBody(packagePath, cls, fn))
-					for (stmt in HxFunctionDecl.getBody(fn))
-						addStmt(stmt, scope);
+				if (shouldWalkFunctionBody(packagePath, cls, fn)) {
+					if (stmtsMayContributeAnonStruct(HxFunctionDecl.getBody(fn), scope)) {
+						walkedFunctionBodyCount++;
+						for (stmt in HxFunctionDecl.getBody(fn))
+							addStmt(stmt, scope);
+					} else {
+						skippedFunctionBodyCount++;
+					}
+				}
 				traceCppDeepPhase("anon_collect_fn_end class=" + className + " name=" + fnName);
 			}
 			traceCppDeepPhase("anon_collect_class_end name=" + className);
@@ -1259,7 +1346,12 @@ class CppTargetCore {
 					collectClass(cls, packagePath);
 			}
 		}
-		traceCppPhase("anon_collect_done count=" + out.length);
+		traceCppPhase("anon_collect_done count="
+			+ out.length
+			+ " walked_bodies="
+			+ walkedFunctionBodyCount
+			+ " skipped_bodies="
+			+ skippedFunctionBodyCount);
 		return out;
 	}
 
