@@ -13168,7 +13168,7 @@ and valueExprForExpectedType = fun expr expectedType scope -> try let __fallback
                 ignore (if structuralTypedefValue != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (structuralTypedefValue : string))) else ());
                 let anonStructValue = (anonStructValueExprForExpectedType (Obj.magic expr) (expectedType : string) scope : string) in (
                   ignore (if anonStructValue != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (anonStructValue : string))) else ());
-                  let optionalInner = (cppOptionalInnerType (exprCppType (Obj.magic expr) scope : string) : string) in (
+                  let actualType = (exprCppType (Obj.magic expr) scope : string) in let optionalInner = (cppOptionalInnerType (actualType : string) : string) in (
                     ignore (if HxString.length optionalInner > 0 && HxString.equals optionalInner expectedType then raise (HxRuntime.Hx_return (Obj.repr (((HxString.toStdString (optionalStorageExpr (Obj.magic expr) scope) ^ ".value_or(") ^ HxString.toStdString (cppDefaultValue (expectedType : string) scope)) ^ ")" : string))) else ());
                     ignore (match expr with
                       | HxExpr.ENull -> ignore ((
@@ -13210,15 +13210,15 @@ and valueExprForExpectedType = fun expr expectedType scope -> try let __fallback
                       ))
                       | _ -> ignore ());
                     ignore (if HxString.equals expectedType "std::string" then raise (HxRuntime.Hx_return (Obj.repr (stringExpr (Obj.magic expr) scope : string))) else ());
-                    ignore (if HxString.equals expectedType "std::any" && not (HxString.equals (exprCppType (Obj.magic expr) scope) "std::any") then raise (HxRuntime.Hx_return (Obj.repr (("std::any(" ^ HxString.toStdString (renderExpr (Obj.magic expr) scope)) ^ ")" : string))) else ());
-                    ignore (if HxString.equals (exprCppType (Obj.magic expr) scope) "std::any" then ignore ((
+                    ignore (if HxString.equals expectedType "std::any" && not (HxString.equals actualType "std::any") then raise (HxRuntime.Hx_return (Obj.repr (("std::any(" ^ HxString.toStdString (renderExpr (Obj.magic expr) scope)) ^ ")" : string))) else ());
+                    ignore (if HxString.equals actualType "std::any" then ignore ((
                       ignore (match expectedType with
                         | "double" | "float" -> raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_any_double(" ^ HxString.toStdString (renderExpr (Obj.magic expr) scope)) ^ ")" : string)))
                         | "int" -> raise (HxRuntime.Hx_return (Obj.repr (("static_cast<int>(__hxhx_any_double(" ^ HxString.toStdString (renderExpr (Obj.magic expr) scope)) ^ "))" : string)))
                         | _ -> ignore ());
                       if isCppReferenceType (expectedType : string) then raise (HxRuntime.Hx_return (Obj.repr (((("std::any_cast<" ^ HxString.toStdString expectedType) ^ ">(") ^ HxString.toStdString (renderExpr (Obj.magic expr) scope)) ^ ")" : string))) else ()
                     )) else ());
-                    ignore (if HxString.equals expectedType "std::vector<std::string>" && HxString.equals (exprCppType (Obj.magic expr) scope) "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_string_vector_any(" ^ HxString.toStdString (renderExpr (Obj.magic expr) scope)) ^ ")" : string))) else ());
+                    ignore (if HxString.equals expectedType "std::vector<std::string>" && HxString.equals actualType "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_string_vector_any(" ^ HxString.toStdString (renderExpr (Obj.magic expr) scope)) ^ ")" : string))) else ());
                     ignore (if isCppFunctionType (expectedType : string) then ignore (let identityValue = (dynamicIdentityCallExprForExpectedFunction (Obj.magic expr) (expectedType : string) scope : string) in (
                       ignore (if identityValue != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (identityValue : string))) else ());
                       ignore (if (match expr with
@@ -22866,49 +22866,51 @@ and callArgExprForParam = fun arg param scope expectedParamType -> try let __fal
             ignore (if HxString.equals (!tempMaybeString1) "std::shared_ptr<PosInfos>" then raise (HxRuntime.Hx_return (Obj.repr (posInfosSharedPtrExpr (Obj.magic arg) scope : string))) else ());
             let classReferenceArg = (classReferenceArgExprForExpectedType (Obj.magic arg) (!tempMaybeString1 : string) scope : string) in (
               ignore (if classReferenceArg != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (classReferenceArg : string))) else ());
-              ignore (if HxString.equals (!tempMaybeString1) "std::shared_ptr<EnumValue>" && HxString.equals (exprCppType (Obj.magic arg) scope) "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_enum_value_ptr(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ ")" : string))) else ());
-              ignore (if structuralTypedefClassForCppType (!tempMaybeString1 : string) scope != Obj.magic (HxRuntime.hx_null) && not (HxString.equals (exprCppType (Obj.magic arg) scope) (!tempMaybeString1)) then raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic arg) (!tempMaybeString1 : string) scope : string))) else ());
-              ignore (if HxString.equals (!tempMaybeString1) "std::string" then ignore (let actualType = (exprCppType (Obj.magic arg) scope : string) in (
-                ignore (if HxString.equals actualType "std::string" then raise (HxRuntime.Hx_return (Obj.repr (renderExpr (Obj.magic arg) scope : string))) else ());
-                if HxString.equals actualType "std::any" || isScalarStringCoercibleCppType (actualType : string) || isCppAnonStructType (actualType : string) || argHasErasedArgTypeOverride (Obj.magic arg) scope then raise (HxRuntime.Hx_return (Obj.repr (stringExpr (Obj.magic arg) scope : string))) else ()
-              )) else ());
-              ignore (if (HxString.equals (!tempMaybeString1) "double" || HxString.equals (!tempMaybeString1) "float") && HxString.equals (exprCppType (Obj.magic arg) scope) "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_any_double(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ ")" : string))) else ());
-              ignore (if HxString.equals (!tempMaybeString1) "int" && HxString.equals (exprCppType (Obj.magic arg) scope) "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("static_cast<int>(__hxhx_any_double(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ "))" : string))) else ());
-              ignore (if HxString.equals (!tempMaybeString1) "std::vector<std::string>" && HxString.equals (exprCppType (Obj.magic arg) scope) "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_string_vector_any(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ ")" : string))) else ());
-              ignore (if isCppVectorType (!tempMaybeString1 : string) then ignore (if (match arg with
-                | HxExpr.ENull -> 0
-                | HxExpr.EBool _ -> 1
-                | HxExpr.EString _ -> 2
-                | HxExpr.EInt _ -> 3
-                | HxExpr.EFloat _ -> 4
-                | HxExpr.EEnumValue _ -> 5
-                | HxExpr.EThis -> 6
-                | HxExpr.ESuper -> 7
-                | HxExpr.EIdent _ -> 8
-                | HxExpr.EField (_, _) -> 9
-                | HxExpr.ECall (_, _) -> 10
-                | HxExpr.EMacroExpr (_, _) -> 11
-                | HxExpr.EMacroType _ -> 12
-                | HxExpr.ELambda (_, _) -> 13
-                | HxExpr.ETryCatchRaw _ -> 14
-                | HxExpr.ESwitchRaw _ -> 15
-                | HxExpr.ESwitch (_, _, _) -> 16
-                | HxExpr.ENew (_, _) -> 17
-                | HxExpr.EUnop (_, _) -> 18
-                | HxExpr.EBinop (_, _, _) -> 19
-                | HxExpr.ETernary (_, _, _) -> 20
-                | HxExpr.EAnon (_, _) -> 21
-                | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-                | HxExpr.EArrayDecl _ -> 23
-                | HxExpr.EArrayAccess (_, _) -> 24
-                | HxExpr.ERange (_, _) -> 25
-                | HxExpr.ECast (_, _) -> 26
-                | HxExpr.EUntyped _ -> 27
-                | HxExpr.EUnsupported _ -> 28) = 23 then ignore (let _g = Obj.magic (match arg with
-                | HxExpr.EArrayDecl __enum_param_4832 -> __enum_param_4832
-                | _ -> failwith "Unexpected enum parameter") in if HxArray.length _g = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.toStdString (!tempMaybeString1) ^ "{}" : string))) else raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic arg) (!tempMaybeString1 : string) scope : string)))) else ignore ()) else ());
-              ignore (if isCppReferenceType (!tempMaybeString1 : string) then raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic arg) (!tempMaybeString1 : string) scope : string))) else ());
-              renderExpr (Obj.magic arg) scope
+              let actualType = (exprCppType (Obj.magic arg) scope : string) in (
+                ignore (if HxString.equals (!tempMaybeString1) "std::shared_ptr<EnumValue>" && HxString.equals actualType "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_enum_value_ptr(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ ")" : string))) else ());
+                ignore (if structuralTypedefClassForCppType (!tempMaybeString1 : string) scope != Obj.magic (HxRuntime.hx_null) && not (HxString.equals actualType (!tempMaybeString1)) then raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic arg) (!tempMaybeString1 : string) scope : string))) else ());
+                ignore (if HxString.equals (!tempMaybeString1) "std::string" then ignore ((
+                  ignore (if HxString.equals actualType "std::string" then raise (HxRuntime.Hx_return (Obj.repr (renderExpr (Obj.magic arg) scope : string))) else ());
+                  if HxString.equals actualType "std::any" || isScalarStringCoercibleCppType (actualType : string) || isCppAnonStructType (actualType : string) || argHasErasedArgTypeOverride (Obj.magic arg) scope then raise (HxRuntime.Hx_return (Obj.repr (stringExpr (Obj.magic arg) scope : string))) else ()
+                )) else ());
+                ignore (if (HxString.equals (!tempMaybeString1) "double" || HxString.equals (!tempMaybeString1) "float") && HxString.equals actualType "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_any_double(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ ")" : string))) else ());
+                ignore (if HxString.equals (!tempMaybeString1) "int" && HxString.equals actualType "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("static_cast<int>(__hxhx_any_double(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ "))" : string))) else ());
+                ignore (if HxString.equals (!tempMaybeString1) "std::vector<std::string>" && HxString.equals actualType "std::any" then raise (HxRuntime.Hx_return (Obj.repr (("__hxhx_string_vector_any(" ^ HxString.toStdString (renderExpr (Obj.magic arg) scope)) ^ ")" : string))) else ());
+                ignore (if isCppVectorType (!tempMaybeString1 : string) then ignore (if (match arg with
+                  | HxExpr.ENull -> 0
+                  | HxExpr.EBool _ -> 1
+                  | HxExpr.EString _ -> 2
+                  | HxExpr.EInt _ -> 3
+                  | HxExpr.EFloat _ -> 4
+                  | HxExpr.EEnumValue _ -> 5
+                  | HxExpr.EThis -> 6
+                  | HxExpr.ESuper -> 7
+                  | HxExpr.EIdent _ -> 8
+                  | HxExpr.EField (_, _) -> 9
+                  | HxExpr.ECall (_, _) -> 10
+                  | HxExpr.EMacroExpr (_, _) -> 11
+                  | HxExpr.EMacroType _ -> 12
+                  | HxExpr.ELambda (_, _) -> 13
+                  | HxExpr.ETryCatchRaw _ -> 14
+                  | HxExpr.ESwitchRaw _ -> 15
+                  | HxExpr.ESwitch (_, _, _) -> 16
+                  | HxExpr.ENew (_, _) -> 17
+                  | HxExpr.EUnop (_, _) -> 18
+                  | HxExpr.EBinop (_, _, _) -> 19
+                  | HxExpr.ETernary (_, _, _) -> 20
+                  | HxExpr.EAnon (_, _) -> 21
+                  | HxExpr.EArrayComprehension (_, _, _, _) -> 22
+                  | HxExpr.EArrayDecl _ -> 23
+                  | HxExpr.EArrayAccess (_, _) -> 24
+                  | HxExpr.ERange (_, _) -> 25
+                  | HxExpr.ECast (_, _) -> 26
+                  | HxExpr.EUntyped _ -> 27
+                  | HxExpr.EUnsupported _ -> 28) = 23 then ignore (let _g = Obj.magic (match arg with
+                  | HxExpr.EArrayDecl __enum_param_4832 -> __enum_param_4832
+                  | _ -> failwith "Unexpected enum parameter") in if HxArray.length _g = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.toStdString (!tempMaybeString1) ^ "{}" : string))) else raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic arg) (!tempMaybeString1 : string) scope : string)))) else ignore ()) else ());
+                ignore (if isCppReferenceType (!tempMaybeString1 : string) then raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic arg) (!tempMaybeString1 : string) scope : string))) else ());
+                renderExpr (Obj.magic arg) scope
+              )
             )
           )
         )

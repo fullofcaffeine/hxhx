@@ -6770,7 +6770,8 @@ class CppTargetCore {
 		final anonStructValue = anonStructValueExprForExpectedType(expr, expectedType, scope);
 		if (anonStructValue != null)
 			return anonStructValue;
-		final optionalInner = cppOptionalInnerType(exprCppType(expr, scope));
+		final actualType = exprCppType(expr, scope);
+		final optionalInner = cppOptionalInnerType(actualType);
 		if (optionalInner.length > 0 && optionalInner == expectedType)
 			return optionalStorageExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
 		switch (expr) {
@@ -6810,9 +6811,9 @@ class CppTargetCore {
 		}
 		if (expectedType == "std::string")
 			return stringExpr(expr, scope);
-		if (expectedType == "std::any" && exprCppType(expr, scope) != "std::any")
+		if (expectedType == "std::any" && actualType != "std::any")
 			return "std::any(" + renderExpr(expr, scope) + ")";
-		if (exprCppType(expr, scope) == "std::any") {
+		if (actualType == "std::any") {
 			switch (expectedType) {
 				case "double" | "float":
 					return "__hxhx_any_double(" + renderExpr(expr, scope) + ")";
@@ -6823,7 +6824,7 @@ class CppTargetCore {
 			if (isCppReferenceType(expectedType))
 				return "std::any_cast<" + expectedType + ">(" + renderExpr(expr, scope) + ")";
 		}
-		if (expectedType == "std::vector<std::string>" && exprCppType(expr, scope) == "std::any")
+		if (expectedType == "std::vector<std::string>" && actualType == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
 		if (isCppFunctionType(expectedType)) {
 			final identityValue = dynamicIdentityCallExprForExpectedFunction(expr, expectedType, scope);
@@ -9032,12 +9033,12 @@ class CppTargetCore {
 		final classReferenceArg = classReferenceArgExprForExpectedType(arg, valueType, scope);
 		if (classReferenceArg != null)
 			return classReferenceArg;
-		if (valueType == "std::shared_ptr<EnumValue>" && exprCppType(arg, scope) == "std::any")
+		final actualType = exprCppType(arg, scope);
+		if (valueType == "std::shared_ptr<EnumValue>" && actualType == "std::any")
 			return "__hxhx_enum_value_ptr(" + renderExpr(arg, scope) + ")";
-		if (structuralTypedefClassForCppType(valueType, scope) != null && exprCppType(arg, scope) != valueType)
+		if (structuralTypedefClassForCppType(valueType, scope) != null && actualType != valueType)
 			return valueExprForExpectedType(arg, valueType, scope);
 		if (valueType == "std::string") {
-			final actualType = exprCppType(arg, scope);
 			if (actualType == "std::string")
 				return renderExpr(arg, scope);
 			if (actualType == "std::any"
@@ -9046,11 +9047,11 @@ class CppTargetCore {
 				|| argHasErasedArgTypeOverride(arg, scope))
 				return stringExpr(arg, scope);
 		}
-		if ((valueType == "double" || valueType == "float") && exprCppType(arg, scope) == "std::any")
+		if ((valueType == "double" || valueType == "float") && actualType == "std::any")
 			return "__hxhx_any_double(" + renderExpr(arg, scope) + ")";
-		if (valueType == "int" && exprCppType(arg, scope) == "std::any")
+		if (valueType == "int" && actualType == "std::any")
 			return "static_cast<int>(__hxhx_any_double(" + renderExpr(arg, scope) + "))";
-		if (valueType == "std::vector<std::string>" && exprCppType(arg, scope) == "std::any")
+		if (valueType == "std::vector<std::string>" && actualType == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(arg, scope) + ")";
 		if (isCppVectorType(valueType)) {
 			switch (arg) {
