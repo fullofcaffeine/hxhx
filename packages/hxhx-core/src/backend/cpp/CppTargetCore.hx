@@ -9239,7 +9239,7 @@ class CppTargetCore {
 			}
 			final param = params[paramIndex];
 			final arg = args[argIndex];
-			if (callArgMatchesParam(arg, param, scope) || !callParamCanBeSkipped(param)) {
+			if (!callParamCanBeSkipped(param) || callArgMatchesParam(arg, param, scope)) {
 				out.push(callArgExprForParam(arg, param, scope, paramTypes == null ? "" : paramTypes[paramIndex]));
 				paramIndex++;
 				argIndex++;

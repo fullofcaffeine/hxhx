@@ -22722,7 +22722,7 @@ and renderFunctionCallArgs = fun params args scope paramTypes -> try let __fallb
         raise (HxRuntime.Hx_continue)
       )) else ());
       let param = Obj.magic (HxArray.get (Obj.magic params) (!paramIndex)) in let arg = Obj.magic (HxArray.get (Obj.magic args) (!argIndex)) in (
-        ignore (if callArgMatchesParam (Obj.magic arg) (Obj.magic param) scope || not (callParamCanBeSkipped (Obj.magic param)) then ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+        ignore (if not (callParamCanBeSkipped (Obj.magic param)) || callArgMatchesParam (Obj.magic arg) (Obj.magic param) scope then ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
           ignore (if paramTypes == Obj.magic (HxRuntime.hx_null) then let __assign_4822 = Obj.magic ("" : string) in (
             tempMaybeString := __assign_4822;
             __assign_4822
