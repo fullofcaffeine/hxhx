@@ -1694,22 +1694,7 @@ class CppTargetCore {
 
 	static function renderHelperClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
 		final out = new Array<Array<String>>();
-		final emitted = new haxe.ds.StringMap<Bool>();
-		final helpers = new Array<HxClassDecl>();
-		final mainName = HxClassDecl.getName(mainClass);
-		for (typed in program.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
-			for (cls in HxModuleDecl.getClasses(decl)) {
-				final rawName = HxClassDecl.getName(cls);
-				final helperName = renderedClassName(cls, classLookup);
-				if (rawName == mainName || emitted.exists(helperName) || isCppCoreExternClass(rawName))
-					continue;
-				if (isTemplateWrapSupportClass(cls))
-					continue;
-				emitted.set(helperName, true);
-				helpers.push(cls);
-			}
-		}
+		final helpers = collectReachableHelperClasses(program, mainClass, classLookup);
 		traceCppPhase("render_helper_classes_before_order count=" + helpers.length);
 		final orderedHelpers = orderHelperClasses(helpers, classLookup);
 		traceCppPhase("render_helper_classes_after_order count=" + orderedHelpers.length);
@@ -1720,6 +1705,86 @@ class CppTargetCore {
 			traceCppPhase("render_helper_class_end name=" + helperName);
 		}
 		return out;
+	}
+
+	static function collectReachableHelperClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<HxClassDecl> {
+		final candidates = new Array<HxClassDecl>();
+		final candidateByName = new haxe.ds.StringMap<HxClassDecl>();
+		final emitted = new haxe.ds.StringMap<Bool>();
+		final mainName = HxClassDecl.getName(mainClass);
+		for (typed in program.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				final rawName = HxClassDecl.getName(cls);
+				final helperName = renderedClassName(cls, classLookup);
+				if (cls == mainClass || rawName == mainName || emitted.exists(helperName) || isCppCoreExternClass(rawName))
+					continue;
+				if (isTemplateWrapSupportClass(cls))
+					continue;
+				emitted.set(helperName, true);
+				candidates.push(cls);
+				candidateByName.set(helperName, cls);
+			}
+		}
+		if (!mainClassHasReachabilityRoots(mainClass) && program.getTypedModules().length <= 3) {
+			traceCppPhase("render_helper_classes_reachable candidates="
+				+ candidates.length
+				+ " reachable="
+				+ candidates.length
+				+ " mode=small_empty_main");
+			return candidates;
+		}
+
+		final reachable = new haxe.ds.StringMap<Bool>();
+		final ordered = new Array<HxClassDecl>();
+		var markClass:HxClassDecl->Void = null;
+		var markName:String->Void = null;
+		markClass = function(cls:HxClassDecl):Void {
+			if (cls == null)
+				return;
+			final helperName = renderedClassName(cls, classLookup);
+			if (!candidateByName.exists(helperName) || reachable.exists(helperName))
+				return;
+			reachable.set(helperName, true);
+			ordered.push(cls);
+			for (dep in helperClassDependencies(cls, classLookup))
+				markName(dep);
+		};
+		markName = function(name:String):Void {
+			final clean = sanitizeTypePath(typeBaseName(name == null ? "" : name));
+			if (clean.length == 0)
+				return;
+			final direct = candidateByName.get(clean);
+			if (direct != null) {
+				markClass(direct);
+				return;
+			}
+			final cls = classLookup.byName.get(clean);
+			if (cls != null)
+				markClass(cls);
+		};
+
+		for (typed in program.getTypedModules()) {
+			final classes = HxModuleDecl.getClasses(typed.getParsed().getDecl());
+			var containsMain = false;
+			for (cls in classes)
+				if (cls == mainClass)
+					containsMain = true;
+			if (containsMain)
+				for (cls in classes)
+					markClass(cls);
+		}
+		for (dep in helperClassDependencies(mainClass, classLookup))
+			markName(dep);
+		traceCppPhase("render_helper_classes_reachable candidates=" + candidates.length + " reachable=" + ordered.length);
+		return ordered;
+	}
+
+	static function mainClassHasReachabilityRoots(mainClass:HxClassDecl):Bool {
+		for (fn in HxClassDecl.getFunctions(mainClass))
+			if (HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "main" && HxFunctionDecl.getBody(fn).length > 0)
+				return true;
+		return false;
 	}
 
 	static function renderPreAnonSupportClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
@@ -1784,8 +1849,12 @@ class CppTargetCore {
 		add(baseTypeName(cls));
 		for (iface in implementedInterfaceNames(cls, classLookup))
 			add(iface);
-		for (field in HxClassDecl.getFields(cls))
+		for (field in HxClassDecl.getFields(cls)) {
 			addTypeHintDependencies(HxFieldDecl.getTypeHint(field), add);
+			final init = HxFieldDecl.getInit(field);
+			if (init != null)
+				addExprClassDependencies(init, add);
+		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			final fnScope = renderScope(cls, classLookup, "void");
 			applyFunctionTypeParams(fnScope, fn);

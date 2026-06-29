@@ -100,13 +100,45 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], "")
 		], []);
 		final testDecl = new HxModuleDecl("unit", [], testInterface, [testInterface, foo, ix, iy, point, i1, i2, c], false, false);
-		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
+		final main = new HxClassDecl("Main", true, [
+			new HxFunctionDecl("main", Public, true, [], "Void", [SExpr(ECall(EField(ENew("TestInterface", []), "test"), []), HxPos.unknown())], "")
+		], []);
 		final mainDecl = new HxModuleDecl("unit", [], main, [main], false, false);
 		return new MacroExpandedProgram([
 			typedSyntheticModule("unit/SupportOne.hx", supportDecl),
 			typedSyntheticModule("unit/TestInterface.hx", testDecl),
 			typedSyntheticModule("unit/Main.hx", mainDecl)
 		], false, []);
+	}
+
+	static function cppHelperReachabilityProgram():GenIrProgram {
+		final main = new HxClassDecl("Main", true, [
+			new HxFunctionDecl("main", Public, true, [], "Void", [
+				SVar("used", "", ENew("Used", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("used"), "label"), []), HxPos.unknown())
+			], "")
+		], []);
+		final used = new HxClassDecl("Used", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("label", Public, false, [], "String", [
+				SVar("dep", "", ENew("Dep", []), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("dep"), "label"), []), HxPos.unknown())
+			], "")
+		], []);
+		final dep = new HxClassDecl("Dep", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("label", Public, false, [], "String", [SReturn(EString("dep"), HxPos.unknown())], "")
+		], []);
+		final unused = new HxClassDecl("Unused", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("label", Public, false, [], "String", [SReturn(EString("unused"), HxPos.unknown())], "")
+		], []);
+		return new GenIrProgram([
+			typedSyntheticModule("Main.hx", new HxModuleDecl("", [], main, [main], false, false)),
+			typedSyntheticModule("Used.hx", new HxModuleDecl("", [], used, [used], false, false)),
+			typedSyntheticModule("Dep.hx", new HxModuleDecl("", [], dep, [dep], false, false)),
+			typedSyntheticModule("Unused.hx", new HxModuleDecl("", [], unused, [unused], false, false))
+		], false);
 	}
 
 	static function assertNativeProtocolStructuralArgTypeSplitting():Void {
@@ -1459,7 +1491,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 
 	static function macroCompilerNullSurfaceProgram():GenIrProgram {
 		final pos = HxPos.unknown();
-		final mainClass = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")]);
+		final mainClass = new HxClassDecl("Main", true, [
+			new HxFunctionDecl("main", Public, true, [], "Void", [SExpr(ECall(EField(EIdent("Compiler"), "getDisplayPos"), []), pos)], "")
+		]);
 		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
 		final nullClass = new HxClassDecl("Null", false, []);
 		final positionClass = new HxClassDecl("Position", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")]);
@@ -7100,6 +7134,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(moduleLocalSource, "std::shared_ptr<I1> i1 = c;", "C++ class-to-parent-interface shared_ptr assignment should be a native upcast");
 		assertTrue(moduleLocalSource.indexOf("std::make_shared<Point>()") < 0,
 			"C++ module-local helper constructors should not fall back to ambiguous short helper names");
+		final helperReachabilityDir = Path.join([root, "helper-reachability-source-only"]);
+		final helperReachabilityEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(cppHelperReachabilityProgram(), context(helperReachabilityDir, true, true));
+		final helperReachabilitySource = File.getContent(helperReachabilityEmit.entryPath);
+		assertContains(helperReachabilitySource, "struct Used {", "C++ helper reachability should keep helpers referenced by main");
+		assertContains(helperReachabilitySource, "struct Dep {", "C++ helper reachability should keep body-only dependencies");
+		assertTrue(helperReachabilitySource.indexOf("struct Dep {") < helperReachabilitySource.indexOf("struct Used {"),
+			"C++ helper reachability should order body-only dependencies before their users");
+		assertTrue(helperReachabilitySource.indexOf("struct Unused {") < 0,
+			"C++ helper reachability should skip full helper definitions for unreachable modules");
 		assertContains(source, "int main(int argc, char** argv)", "C++ smoke should emit main");
 		assertContains(source, "#include <cstdint>", "C++ smoke should include fixed-width integer types for bit reinterpret helpers");
 		assertContains(source, "static double __hxhx_reinterpret_le_int32_as_float32(int value)",
