@@ -8748,6 +8748,8 @@ class CppTargetCore {
 				"static_cast<double>(" + renderExpr(arg, scope) + ")";
 			case _ if (argType == "std::any" && otherType.length > 0 && otherType != "std::any"):
 				valueExprForExpectedType(arg, otherType, scope);
+			case ECall(_, _) if (argType == "std::string"):
+				renderExpr(arg, scope);
 			case _ if (isEqStringArgExpr(arg, argType, scope)):
 				stringExpr(arg, scope);
 			case _:
