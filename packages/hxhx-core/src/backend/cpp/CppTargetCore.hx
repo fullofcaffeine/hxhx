@@ -7178,8 +7178,14 @@ class CppTargetCore {
 					return typedCall;
 			case _:
 		}
-		if (expectedType == "std::string")
+		if (expectedType == "std::string") {
+			switch (expr) {
+				case ECall(_, _) if (actualType == "std::string" && macroApiCallExprForExpected(expr, expectedType, scope) == null):
+					return renderExpr(expr, scope);
+				case _:
+			}
 			return stringExpr(expr, scope);
+		}
 		if (expectedType == "std::any" && actualType != "std::any")
 			return "std::any(" + renderExpr(expr, scope) + ")";
 		if (actualType == "std::any") {
