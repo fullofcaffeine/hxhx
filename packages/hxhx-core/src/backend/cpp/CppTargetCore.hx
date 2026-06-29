@@ -464,6 +464,64 @@ class CppTargetCore {
 		out.push("  for (unsigned char c : source) out.push_back(static_cast<int>(c));");
 		out.push("}");
 		out.push("");
+		out.push("static std::string __hxhx_base64_encode_bytes(const std::vector<int>& bytes, bool complement, const std::string& alphabet) {");
+		out.push("  std::string out;");
+		out.push("  int buf = 0;");
+		out.push("  int curbits = 0;");
+		out.push("  const int nbits = 6;");
+		out.push("  const int mask = (1 << nbits) - 1;");
+		out.push("  const int size = static_cast<int>((bytes.size() * 8) / nbits);");
+		out.push("  int pin = 0;");
+		out.push("  int pout = 0;");
+		out.push("  out.reserve(static_cast<std::size_t>(size + 3));");
+		out.push("  while (pout < size) {");
+		out.push("    while (curbits < nbits) {");
+		out.push("      curbits += 8;");
+		out.push("      buf <<= 8;");
+		out.push("      buf |= bytes[static_cast<std::size_t>(pin++)] & 0xFF;");
+		out.push("    }");
+		out.push("    curbits -= nbits;");
+		out.push("    out.push_back(alphabet[static_cast<std::size_t>((buf >> curbits) & mask)]);");
+		out.push("    ++pout;");
+		out.push("  }");
+		out.push("  if (curbits > 0) out.push_back(alphabet[static_cast<std::size_t>((buf << (nbits - curbits)) & mask)]);");
+		out.push("  if (complement) {");
+		out.push("    switch (bytes.size() % 3) {");
+		out.push("      case 1: out += \"==\"; break;");
+		out.push("      case 2: out += \"=\"; break;");
+		out.push("      default: break;");
+		out.push("    }");
+		out.push("  }");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
+		out.push("static std::vector<int> __hxhx_base64_decode_bytes(const std::string& input, bool complement, const std::string& alphabet) {");
+		out.push("  std::string source = input;");
+		out.push("  if (complement) while (!source.empty() && source[source.size() - 1] == '=') source.resize(source.size() - 1);");
+		out.push("  std::vector<int> table(256, -1);");
+		out.push("  for (std::size_t i = 0; i < alphabet.size(); ++i) table[static_cast<unsigned char>(alphabet[i])] = static_cast<int>(i);");
+		out.push("  const int nbits = 6;");
+		out.push("  const int size = static_cast<int>((source.size() * nbits) >> 3);");
+		out.push("  std::vector<int> out(static_cast<std::size_t>(size));");
+		out.push("  int buf = 0;");
+		out.push("  int curbits = 0;");
+		out.push("  int pin = 0;");
+		out.push("  int pout = 0;");
+		out.push("  while (pout < size) {");
+		out.push("    while (curbits < 8) {");
+		out.push("      if (pin >= static_cast<int>(source.size())) throw std::runtime_error(\"BaseCode : invalid encoded char\");");
+		out.push("      curbits += nbits;");
+		out.push("      buf <<= nbits;");
+		out.push("      int value = table[static_cast<unsigned char>(source[static_cast<std::size_t>(pin++)])];");
+		out.push("      if (value == -1) throw std::runtime_error(\"BaseCode : invalid encoded char\");");
+		out.push("      buf |= value;");
+		out.push("    }");
+		out.push("    curbits -= 8;");
+		out.push("    out[static_cast<std::size_t>(pout++)] = (buf >> curbits) & 0xFF;");
+		out.push("  }");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_char_at(const std::string& source, int index) {");
 		out.push("  if (index < 0 || index >= static_cast<int>(source.size())) return std::string();");
 		out.push("  return std::string(1, source[static_cast<std::size_t>(index)]);");
@@ -3371,6 +3429,16 @@ class CppTargetCore {
 		}
 		if (owner == "Bytes" && method == "fill")
 			return "void";
+		if (owner == "Base64") {
+			return switch (method) {
+				case "encode" | "urlEncode":
+					"std::string";
+				case "decode" | "urlDecode":
+					cppTypeHint("Bytes", scope, classLookup);
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "EReg" && method == "matchedPos")
 			return cppTypeHint("{pos:Int,len:Int}", scope, classLookup);
 		if (owner == "Exception" && (method == "caught" || method == "thrown"))
@@ -3651,6 +3719,8 @@ class CppTargetCore {
 			return returnTraced("special_sys_tools", renderSysToolsSupportHelper(fn, owner, classLookup));
 		if (isStringToolsSupportHelper(fn, owner))
 			return returnTraced("special_string_tools", renderStringToolsSupportHelper(fn, owner, classLookup));
+		if (isBase64SupportHelper(fn, owner))
+			return returnTraced("special_base64", renderBase64SupportHelper(fn, owner, classLookup));
 		if (isHelperMacrosShimHelper(fn, owner))
 			return returnTraced("special_helper_macros", renderHelperMacrosShimHelper(fn, owner, classLookup));
 		if (isMacroStringToolsShimHelper(fn, owner))
@@ -3902,6 +3972,19 @@ class CppTargetCore {
 		};
 	}
 
+	static function isBase64SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Base64")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "encode" | "decode" | "urlEncode" | "urlDecode":
+				true;
+			case _:
+				false;
+		};
+	}
+
 	static function renderSysToolsSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
@@ -3927,6 +4010,53 @@ class CppTargetCore {
 		}
 		out.push("  }");
 		return out;
+	}
+
+	static function renderBase64SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = base64SupportReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = [
+			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"
+		];
+		inline function nameAt(index:Int, fallback:String):String {
+			return args.length > index ? sanitizeIdentifier(HxFunctionArg.getName(args[index])) : fallback;
+		}
+		final value = nameAt(0, method == "encode" || method == "urlEncode" ? "bytes" : "str");
+		final complement = nameAt(1, "complement");
+		final alphabet = method == "urlEncode"
+			|| method == "urlDecode" ? "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+		switch (method) {
+			case "encode" | "urlEncode":
+				out.push("    return __hxhx_base64_encode_bytes(" + value + "->b, " + complement + ", std::string(\"" + alphabet + "\"));");
+			case "decode" | "urlDecode":
+				out.push("    auto __hxhx_data = __hxhx_base64_decode_bytes("
+					+ value
+					+ ", "
+					+ complement
+					+ ", std::string(\""
+					+ alphabet
+					+ "\"));");
+				out.push("    return std::make_shared<Bytes>(static_cast<int>(__hxhx_data.size()), __hxhx_data);");
+			case _:
+				if (returnType != "void")
+					out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function base64SupportReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "encode" | "urlEncode":
+				"std::string";
+			case "decode" | "urlDecode":
+				cppTypeHint("Bytes", renderScope(owner, classLookup, "auto"), classLookup);
+			case _:
+				supportMethodSignatureReturnType(fn, owner, classLookup);
+		};
 	}
 
 	static function renderStringToolsSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {

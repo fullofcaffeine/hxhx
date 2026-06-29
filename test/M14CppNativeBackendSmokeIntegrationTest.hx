@@ -6005,6 +6005,49 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final bytesFastGetLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(bytesFastGetMethod, bytesFastGetOwner, bytesLookup).join("\n");
 		assertContains(bytesFastGetLines, "return static_cast<int>((bd[1]));", "C++ imported Bytes.fastGet aliases should lower to byte-vector indexing");
 		assertTrue(bytesFastGetLines.indexOf("fget(") < 0, "C++ imported Bytes.fastGet aliases should not leak as undeclared calls");
+		final base64Encode = new HxFunctionDecl("encode", Public, true, [
+			new HxFunctionArg("bytes", "Bytes", NoDefault, false, false),
+			new HxFunctionArg("complement", "Bool", Default(EBool(true)), false, false)
+		], "String", [], "");
+		final base64Decode = new HxFunctionDecl("decode", Public, true, [
+			new HxFunctionArg("str", "String", NoDefault, false, false),
+			new HxFunctionArg("complement", "Bool", Default(EBool(true)), false, false)
+		], "Bytes", [], "");
+		final base64UrlEncode = new HxFunctionDecl("urlEncode", Public, true, [
+			new HxFunctionArg("bytes", "Bytes", NoDefault, false, false),
+			new HxFunctionArg("complement", "Bool", Default(EBool(false)), false, false)
+		], "String", [], "");
+		final base64UrlDecode = new HxFunctionDecl("urlDecode", Public, true, [
+			new HxFunctionArg("str", "String", NoDefault, false, false),
+			new HxFunctionArg("complement", "Bool", Default(EBool(false)), false, false)
+		], "Bytes", [], "");
+		final base64Owner = new HxClassDecl("Base64", false, [base64Encode, base64Decode, base64UrlEncode, base64UrlDecode], []);
+		bytesNames.set("Base64", true);
+		bytesClasses.set("Base64", base64Owner);
+		final base64EncodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(base64Encode, base64Owner, bytesLookup).join("\n");
+		final base64DecodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(base64Decode, base64Owner, bytesLookup).join("\n");
+		final base64UrlEncodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(base64UrlEncode, base64Owner, bytesLookup).join("\n");
+		final base64UrlDecodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(base64UrlDecode, base64Owner, bytesLookup).join("\n");
+		assertContains(base64EncodeLines, "static std::string encode(std::shared_ptr<Bytes> bytes, bool complement = true) {",
+			"C++ Base64.encode support helper should keep the upstream padded default");
+		assertContains(base64EncodeLines,
+			"return __hxhx_base64_encode_bytes(bytes->b, complement, std::string(\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/\"));",
+			"C++ Base64.encode support helper should use compact target runtime support instead of rendering BaseCode");
+		assertContains(base64DecodeLines, "static std::shared_ptr<Bytes> decode(std::string str, bool complement = true) {",
+			"C++ Base64.decode support helper should return vector-backed Bytes");
+		assertContains(base64DecodeLines,
+			"auto __hxhx_data = __hxhx_base64_decode_bytes(str, complement, std::string(\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/\"));",
+			"C++ Base64.decode support helper should use the standard base64 alphabet");
+		assertContains(base64DecodeLines, "return std::make_shared<Bytes>(static_cast<int>(__hxhx_data.size()), __hxhx_data);",
+			"C++ Base64.decode support helper should rebuild haxe.io.Bytes from decoded storage");
+		assertContains(base64UrlEncodeLines, "static std::string urlEncode(std::shared_ptr<Bytes> bytes, bool complement = false) {",
+			"C++ Base64.urlEncode support helper should keep the upstream unpadded default");
+		assertContains(base64UrlEncodeLines,
+			"return __hxhx_base64_encode_bytes(bytes->b, complement, std::string(\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_\"));",
+			"C++ Base64.urlEncode support helper should use the URL-safe alphabet");
+		assertContains(base64UrlDecodeLines,
+			"auto __hxhx_data = __hxhx_base64_decode_bytes(str, complement, std::string(\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_\"));",
+			"C++ Base64.urlDecode support helper should use the URL-safe alphabet");
 		final stringIterator = new HxClassDecl("StringIterator", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "s"), EIdent("s")), HxPos.unknown())], ""),
