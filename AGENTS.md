@@ -85,6 +85,9 @@ Agent policy:
   - Prefer target-native module-level functions when they are the real API shape; avoid inventing unnecessary shell classes with public static wrappers just to make the emitter convenient.
   - If a short inline helper is unavoidable during Full1 burn-down, keep it tiny, document why in the bead, add focused coverage, and file/link a follow-up architecture bead before expanding it.
   - When an inline `out.push` block starts looking like a real library/runtime implementation, stop and extract or redesign before continuing.
+- Document modules and classes by default. Also document functions once their behavior, invariants, side effects, or control flow exceed a reasonable skim-readable complexity threshold.
+  - Keep documentation behavior-level and useful to future maintainers; do not narrate obvious assignments or restate names.
+  - When complexity grows past the documentation threshold during a change, add or update the module/class/function docs in the same slice.
 - Avoid mega-file gravity.
   - Before adding substantial logic to a file that is already large or mixed-purpose, check whether the change belongs in a target-specific module, shared helper module, source template, runtime support file, parser helper, or technical doc instead.
   - Treat common backend files as dispatch/shared-semantics seams, not dumping grounds for target-specific lowering, runtime libraries, test harness shims, and parser workarounds.

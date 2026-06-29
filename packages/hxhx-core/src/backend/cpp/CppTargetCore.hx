@@ -3719,29 +3719,52 @@ class CppTargetCore {
 	static function prepareFunctionScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
 		if (scope == null || fn == null)
 			return;
-		scope.returnOnlyTypeParamAuto = functionReturnTypeParamShouldUseAuto(HxFunctionDecl.getReturnTypeHint(fn), fn)
-			&& !functionReturnsOnlyNull(fn);
-		applyFunctionTypeParams(scope, fn);
+		final prepOwnerName = scope.owner == null ? "" : HxClassDecl.getName(scope.owner);
+		final prepMethodName = HxFunctionDecl.getName(fn);
+		final prepTimingEnabled = traceCppMethodStmtTimingsEnabled(prepOwnerName, prepMethodName);
+		final prepStartTime = prepTimingEnabled ? Sys.time() : 0.0;
+		function tracePrepPhase(phase:String, elapsed:Float):Void {
+			traceCppTimingPhase("render_helper_method_prepare_timing owner=" + sanitizeTypePath(typeBaseName(prepOwnerName)) + " name="
+				+ sanitizeIdentifier(prepMethodName) + " phase=" + phase + " seconds=" + Std.string(elapsed));
+		}
+		function runPrepPhase(phase:String, body:Void->Void):Void {
+			if (!prepTimingEnabled) {
+				body();
+				return;
+			}
+			final startTime = Sys.time();
+			body();
+			tracePrepPhase(phase, Sys.time() - startTime);
+		}
+		runPrepPhase("return_auto", () -> {
+			scope.returnOnlyTypeParamAuto = functionReturnTypeParamShouldUseAuto(HxFunctionDecl.getReturnTypeHint(fn), fn)
+				&& !functionReturnsOnlyNull(fn);
+		});
+		runPrepPhase("type_params", () -> applyFunctionTypeParams(scope, fn));
 		final key = functionSignatureKeyForScope(scope, fn);
 		final cached = functionScopePrepCache.get(key);
 		if (cached != null) {
-			applyFunctionScopePrep(scope, cached);
-			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+			runPrepPhase("cache_apply", () -> applyFunctionScopePrep(scope, cached));
+			runPrepPhase("register_args", () -> registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn)));
+			if (prepTimingEnabled)
+				tracePrepPhase("total_cache_hit", Sys.time() - prepStartTime);
 			return;
 		}
 		if (functionScopePrepStack.exists(key)) {
-			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+			runPrepPhase("register_args", () -> registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn)));
+			if (prepTimingEnabled)
+				tracePrepPhase("total_recursive", Sys.time() - prepStartTime);
 			return;
 		}
 		functionScopePrepStack.set(key, true);
 		try {
-			inferCallableArgTypeOverrides(scope, fn);
-			registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
-			inferStringMapLocalTypeOverrides(scope, fn);
-			inferGenericFactoryLocalTypeOverrides(scope, fn);
-			inferDynamicLocalTypeOverrides(scope, fn);
-			inferHelperTypedAsLocalTypeOverrides(scope, fn);
-			inferReturnLocalTypeOverrides(scope, fn);
+			runPrepPhase("infer_callable_args", () -> inferCallableArgTypeOverrides(scope, fn));
+			runPrepPhase("register_args", () -> registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn)));
+			runPrepPhase("infer_string_map_locals", () -> inferStringMapLocalTypeOverrides(scope, fn));
+			runPrepPhase("infer_generic_factory_locals", () -> inferGenericFactoryLocalTypeOverrides(scope, fn));
+			runPrepPhase("infer_dynamic_locals", () -> inferDynamicLocalTypeOverrides(scope, fn));
+			runPrepPhase("infer_helper_typed_as_locals", () -> inferHelperTypedAsLocalTypeOverrides(scope, fn));
+			runPrepPhase("infer_return_locals", () -> inferReturnLocalTypeOverrides(scope, fn));
 		} catch (e:haxe.Exception) {
 			functionScopePrepStack.remove(key);
 			throw e;
@@ -3749,8 +3772,10 @@ class CppTargetCore {
 			functionScopePrepStack.remove(key);
 			throw e;
 		}
-		functionScopePrepCache.set(key, snapshotFunctionScopePrep(scope));
+		runPrepPhase("cache_store", () -> functionScopePrepCache.set(key, snapshotFunctionScopePrep(scope)));
 		functionScopePrepStack.remove(key);
+		if (prepTimingEnabled)
+			tracePrepPhase("total_cache_miss", Sys.time() - prepStartTime);
 	}
 
 	static function prepareFunctionSignatureScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
@@ -5750,6 +5775,8 @@ class CppTargetCore {
 	}
 
 	static function collectDynamicLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
+		if (!boolMapHasEntries(candidates))
+			return;
 		switch (expr) {
 			case EBinop("=", EIdent(name), rhs) if (candidates.exists(sanitizeIdentifier(name))):
 				collectDynamicLocalTypeOverridesFromExpr(rhs, scope, candidates);
@@ -13766,6 +13793,10 @@ class CppTargetCore {
 			for (key in values.keys())
 				out.set(key, values.get(key));
 		return out;
+	}
+
+	static function boolMapHasEntries(values:haxe.ds.StringMap<Bool>):Bool {
+		return values != null && values.iterator().hasNext();
 	}
 
 	static function copyIntMap(values:haxe.ds.StringMap<Int>):haxe.ds.StringMap<Int> {
