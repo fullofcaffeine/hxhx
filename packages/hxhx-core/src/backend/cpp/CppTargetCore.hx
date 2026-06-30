@@ -10579,14 +10579,21 @@ class CppTargetCore {
 			case EField(receiver, "stack") if (isCppExceptionValueType(exprCppType(receiver, scope))):
 				"std::vector<std::string>";
 			case ECall(EField(receiver, method), args):
+				var receiverType:Null<String> = null;
+				function fieldReceiverCppType():String {
+					if (receiverType == null)
+						receiverType = exprCppType(receiver, scope);
+					return receiverType;
+				}
 				final knownReturn = knownFieldCallReturnCppType(receiver, method, args, scope);
-				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppType(receiver, method, scope);
+				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver,
+					method, fieldReceiverCppType, scope);
 				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
 					final staticOwner = staticReceiverClassName(receiver, scope);
 					if (staticOwner != null) {
 						classMethodCppReturnType(staticOwner, method, true, scope);
 					} else {
-						final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
+						final ownerType = classNameFromCppExprType(fieldReceiverCppType(), scope);
 						ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
 					}
 				}
@@ -10674,9 +10681,14 @@ class CppTargetCore {
 	}
 
 	static function primitiveBackedAbstractMethodReturnCppType(receiver:HxExpr, method:String, ?scope:CppRenderScope):String {
+		return primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver, method, function() return exprCppType(receiver, scope), scope);
+	}
+
+	static function primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver:HxExpr, method:String, receiverType:Void->String,
+			?scope:CppRenderScope):String {
 		var cls = primitiveBackedAbstractClassForExpr(receiver, scope);
 		if (cls == null)
-			cls = primitiveBackedAbstractClassForReceiverMethod(receiver, method, scope);
+			cls = primitiveBackedAbstractClassForReceiverCppType(receiverType(), method, scope);
 		if (cls == null)
 			return "";
 		final fn = classMethodDeclIn(cls, method, false);
@@ -10687,6 +10699,12 @@ class CppTargetCore {
 		if (scope == null)
 			return null;
 		final receiverType = exprCppType(receiver, scope);
+		return primitiveBackedAbstractClassForReceiverCppType(receiverType, method, scope);
+	}
+
+	static function primitiveBackedAbstractClassForReceiverCppType(receiverType:String, method:String, ?scope:CppRenderScope):Null<HxClassDecl> {
+		if (scope == null)
+			return null;
 		if (receiverType.length == 0)
 			return null;
 		var found:Null<HxClassDecl> = null;
@@ -11361,6 +11379,12 @@ class CppTargetCore {
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case ECall(EField(receiver, method), args):
+				var receiverType:Null<String> = null;
+				function fieldReceiverCppType():String {
+					if (receiverType == null)
+						receiverType = exprCppType(receiver, scope);
+					return receiverType;
+				}
 				final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 				function traceFieldInferPhase(phase:String, start:Float, typeName:String):String {
 					if (timingEnabled)
@@ -11381,7 +11405,8 @@ class CppTargetCore {
 				final knownReturn = knownFieldCallReturnCppType(receiver, method, args, scope);
 				traceFieldInferPhase("known", knownStart, knownReturn);
 				final primitiveStart = timingEnabled ? Sys.time() : 0.0;
-				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppType(receiver, method, scope);
+				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver,
+					method, fieldReceiverCppType, scope);
 				traceFieldInferPhase("primitive", primitiveStart, primitiveAbstractReturn);
 				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
 					final staticStart = timingEnabled ? Sys.time() : 0.0;
@@ -11392,10 +11417,10 @@ class CppTargetCore {
 						traceFieldInferPhase("static_return", returnStart, classMethodCppReturnType(staticOwner, method, true, scope));
 					} else {
 						final receiverTypeStart = timingEnabled ? Sys.time() : 0.0;
-						final receiverType = exprCppType(receiver, scope);
-						traceFieldInferPhase("receiver_type", receiverTypeStart, receiverType);
+						final resolvedReceiverType = fieldReceiverCppType();
+						traceFieldInferPhase("receiver_type", receiverTypeStart, resolvedReceiverType);
 						final ownerStart = timingEnabled ? Sys.time() : 0.0;
-						final ownerType = classNameFromCppExprType(receiverType, scope);
+						final ownerType = classNameFromCppExprType(resolvedReceiverType, scope);
 						traceFieldInferPhase("owner_type", ownerStart, ownerType == null ? "" : ownerType);
 						final returnStart = timingEnabled ? Sys.time() : 0.0;
 						ownerType == null ? "" : traceFieldInferPhase("instance_return", returnStart,
