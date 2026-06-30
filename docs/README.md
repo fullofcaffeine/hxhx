@@ -46,6 +46,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 
 - Stage model and backend layering: `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
 - C++ native target boundary: `docs/02-user-guide/HXHX_CPP_NATIVE_TARGET_BOUNDARY.md`
+- C++ render/type-flow extraction plan:
+  `docs/00-project/CPP_RENDER_TYPE_FLOW_PLAN.md`
 - C++ helper rendering policy: `docs/00-project/CPP_HELPER_RENDERING_POLICY.md`
 - C++ target runtime/helper policy: `docs/00-project/CPP_TARGET_RUNTIME_POLICY.md`
 - C++ compact primitive oracle freeze:

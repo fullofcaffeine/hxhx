@@ -25949,7 +25949,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6154
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString10 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString10 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6155 = (knownReturn : string) in (
                   tempString10 := __assign_6155;
                   __assign_6155
@@ -25998,7 +25998,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6168
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString11 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString11 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6169 = (knownReturn : string) in (
                   tempString11 := __assign_6169;
                   __assign_6169
@@ -26047,7 +26047,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6182
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString12 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString12 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6183 = (knownReturn : string) in (
                   tempString12 := __assign_6183;
                   __assign_6183
@@ -26100,7 +26100,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6197
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString13 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString13 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6198 = (knownReturn : string) in (
                   tempString13 := __assign_6198;
                   __assign_6198
@@ -26149,7 +26149,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6211
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString14 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString14 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6212 = (knownReturn : string) in (
                   tempString14 := __assign_6212;
                   __assign_6212
@@ -26198,7 +26198,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6225
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString15 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString15 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6226 = (knownReturn : string) in (
                   tempString15 := __assign_6226;
                   __assign_6226
@@ -26247,7 +26247,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6239
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString16 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString16 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6240 = (knownReturn : string) in (
                   tempString16 := __assign_6240;
                   __assign_6240
@@ -26296,7 +26296,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6253
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString17 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString17 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6254 = (knownReturn : string) in (
                   tempString17 := __assign_6254;
                   __assign_6254
@@ -26345,7 +26345,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6267
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString18 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString18 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6268 = (knownReturn : string) in (
                   tempString18 := __assign_6268;
                   __assign_6268
@@ -26394,7 +26394,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6281
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString19 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString19 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6282 = (knownReturn : string) in (
                   tempString19 := __assign_6282;
                   __assign_6282
@@ -26443,7 +26443,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6295
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString20 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString20 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6296 = (knownReturn : string) in (
                   tempString20 := __assign_6296;
                   __assign_6296
@@ -26495,7 +26495,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6310
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString21 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString21 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6311 = (knownReturn : string) in (
                   tempString21 := __assign_6311;
                   __assign_6311
@@ -26541,7 +26541,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6140
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in let tempString22 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString22 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6141 = (knownReturn : string) in (
                   tempString22 := __assign_6141;
                   __assign_6141
@@ -26591,7 +26591,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6337
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString23 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString23 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6338 = (knownReturn : string) in (
                   tempString23 := __assign_6338;
                   __assign_6338
@@ -26640,7 +26640,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6351
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString24 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString24 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6352 = (knownReturn : string) in (
                   tempString24 := __assign_6352;
                   __assign_6352
@@ -26689,7 +26689,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6365
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString25 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString25 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6366 = (knownReturn : string) in (
                   tempString25 := __assign_6366;
                   __assign_6366
@@ -26741,7 +26741,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6380
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString26 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString26 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6381 = (knownReturn : string) in (
                   tempString26 := __assign_6381;
                   __assign_6381
@@ -26790,7 +26790,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6394
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString27 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString27 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6395 = (knownReturn : string) in (
                   tempString27 := __assign_6395;
                   __assign_6395
@@ -26839,7 +26839,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6408
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString28 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString28 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6409 = (knownReturn : string) in (
                   tempString28 := __assign_6409;
                   __assign_6409
@@ -26888,7 +26888,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6422
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString29 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString29 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6423 = (knownReturn : string) in (
                   tempString29 := __assign_6423;
                   __assign_6423
@@ -26937,7 +26937,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6436
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString30 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString30 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6437 = (knownReturn : string) in (
                   tempString30 := __assign_6437;
                   __assign_6437
@@ -26986,7 +26986,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6450
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString31 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString31 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6451 = (knownReturn : string) in (
                   tempString31 := __assign_6451;
                   __assign_6451
@@ -27035,7 +27035,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6464
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString32 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString32 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6465 = (knownReturn : string) in (
                   tempString32 := __assign_6465;
                   __assign_6465
@@ -27084,7 +27084,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6478
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString33 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString33 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6479 = (knownReturn : string) in (
                   tempString33 := __assign_6479;
                   __assign_6479
@@ -27133,7 +27133,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6492
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args4) scope : string) in let tempString34 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString34 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6493 = (knownReturn : string) in (
                   tempString34 := __assign_6493;
                   __assign_6493
@@ -27182,7 +27182,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6506
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString35 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString35 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6507 = (knownReturn : string) in (
                   tempString35 := __assign_6507;
                   __assign_6507
@@ -27234,7 +27234,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6521
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString36 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString36 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6522 = (knownReturn : string) in (
                   tempString36 := __assign_6522;
                   __assign_6522
@@ -27280,7 +27280,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6323
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in let tempString37 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString37 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6324 = (knownReturn : string) in (
                   tempString37 := __assign_6324;
                   __assign_6324
@@ -27336,7 +27336,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6552
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString38 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString38 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6553 = (knownReturn : string) in (
                   tempString38 := __assign_6553;
                   __assign_6553
@@ -27391,7 +27391,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6568
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString39 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString39 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6569 = (knownReturn : string) in (
                   tempString39 := __assign_6569;
                   __assign_6569
@@ -27446,7 +27446,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6584
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString40 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString40 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6585 = (knownReturn : string) in (
                   tempString40 := __assign_6585;
                   __assign_6585
@@ -27504,7 +27504,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6601
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args3) scope : string) in let tempString41 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString41 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6602 = (knownReturn : string) in (
                   tempString41 := __assign_6602;
                   __assign_6602
@@ -27559,7 +27559,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6617
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString42 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString42 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6618 = (knownReturn : string) in (
                   tempString42 := __assign_6618;
                   __assign_6618
@@ -27614,7 +27614,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6633
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString43 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString43 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6634 = (knownReturn : string) in (
                   tempString43 := __assign_6634;
                   __assign_6634
@@ -27669,7 +27669,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6649
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString44 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString44 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6650 = (knownReturn : string) in (
                   tempString44 := __assign_6650;
                   __assign_6650
@@ -27724,7 +27724,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6665
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString45 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString45 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6666 = (knownReturn : string) in (
                   tempString45 := __assign_6666;
                   __assign_6666
@@ -27779,7 +27779,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6681
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString46 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString46 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6682 = (knownReturn : string) in (
                   tempString46 := __assign_6682;
                   __assign_6682
@@ -27834,7 +27834,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6697
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString47 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString47 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6698 = (knownReturn : string) in (
                   tempString47 := __assign_6698;
                   __assign_6698
@@ -27889,7 +27889,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6713
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args3) scope : string) in let tempString48 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString48 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6714 = (knownReturn : string) in (
                   tempString48 := __assign_6714;
                   __assign_6714
@@ -27944,7 +27944,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6729
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString49 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString49 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6730 = (knownReturn : string) in (
                   tempString49 := __assign_6730;
                   __assign_6730
@@ -28002,7 +28002,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6746
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) scope : string) in let tempString50 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method8 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString50 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6747 = (knownReturn : string) in (
                   tempString50 := __assign_6747;
                   __assign_6747
@@ -28054,7 +28054,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6536
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method8 : string) (Obj.magic args3) scope : string) in let tempString51 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method8 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString51 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6537 = (knownReturn : string) in (
                   tempString51 := __assign_6537;
                   __assign_6537
@@ -28546,7 +28546,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_5943
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString52 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString52 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_5944 = (knownReturn : string) in (
                   tempString52 := __assign_5944;
                   __assign_5944
@@ -28595,7 +28595,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_5957
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString53 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString53 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_5958 = (knownReturn : string) in (
                   tempString53 := __assign_5958;
                   __assign_5958
@@ -28644,7 +28644,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_5971
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString54 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString54 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_5972 = (knownReturn : string) in (
                   tempString54 := __assign_5972;
                   __assign_5972
@@ -28696,7 +28696,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_5986
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString55 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString55 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_5987 = (knownReturn : string) in (
                   tempString55 := __assign_5987;
                   __assign_5987
@@ -28745,7 +28745,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6000
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString56 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString56 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6001 = (knownReturn : string) in (
                   tempString56 := __assign_6001;
                   __assign_6001
@@ -28794,7 +28794,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6014
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString57 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString57 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6015 = (knownReturn : string) in (
                   tempString57 := __assign_6015;
                   __assign_6015
@@ -28843,7 +28843,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6028
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString58 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString58 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6029 = (knownReturn : string) in (
                   tempString58 := __assign_6029;
                   __assign_6029
@@ -28892,7 +28892,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6042
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString59 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString59 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6043 = (knownReturn : string) in (
                   tempString59 := __assign_6043;
                   __assign_6043
@@ -28941,7 +28941,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6056
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString60 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString60 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6057 = (knownReturn : string) in (
                   tempString60 := __assign_6057;
                   __assign_6057
@@ -28990,7 +28990,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6070
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString61 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString61 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6071 = (knownReturn : string) in (
                   tempString61 := __assign_6071;
                   __assign_6071
@@ -29039,7 +29039,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6084
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString62 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString62 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6085 = (knownReturn : string) in (
                   tempString62 := __assign_6085;
                   __assign_6085
@@ -29088,7 +29088,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6098
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString63 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString63 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6099 = (knownReturn : string) in (
                   tempString63 := __assign_6099;
                   __assign_6099
@@ -29140,7 +29140,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_6113
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString64 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString64 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_6114 = (knownReturn : string) in (
                   tempString64 := __assign_6114;
                   __assign_6114
@@ -29186,7 +29186,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                   __assign_5929
                 )) else ());
                 !receiverType
-              ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in let tempString65 = ref ("" : string) in (
+              ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString65 = ref ("" : string) in (
                 ignore (if HxString.length knownReturn > 0 then let __assign_5930 = (knownReturn : string) in (
                   tempString65 := __assign_5930;
                   __assign_5930
@@ -29270,7 +29270,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6940
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString66 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString66 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6941 = (knownReturn : string) in (
                 tempString66 := __assign_6941;
                 __assign_6941
@@ -29300,7 +29300,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6948
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString67 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString67 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6949 = (knownReturn : string) in (
                 tempString67 := __assign_6949;
                 __assign_6949
@@ -29330,7 +29330,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6956
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString68 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString68 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6957 = (knownReturn : string) in (
                 tempString68 := __assign_6957;
                 __assign_6957
@@ -29360,7 +29360,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6964
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString69 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString69 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6965 = (knownReturn : string) in (
                 tempString69 := __assign_6965;
                 __assign_6965
@@ -29443,7 +29443,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6980
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString70 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString70 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6981 = (knownReturn : string) in (
                 tempString70 := __assign_6981;
                 __assign_6981
@@ -29473,7 +29473,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6988
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString71 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString71 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6989 = (knownReturn : string) in (
                 tempString71 := __assign_6989;
                 __assign_6989
@@ -29503,7 +29503,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6996
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString72 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString72 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6997 = (knownReturn : string) in (
                 tempString72 := __assign_6997;
                 __assign_6997
@@ -29533,7 +29533,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7004
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString73 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString73 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7005 = (knownReturn : string) in (
                 tempString73 := __assign_7005;
                 __assign_7005
@@ -29616,7 +29616,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7020
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString74 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString74 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7021 = (knownReturn : string) in (
                 tempString74 := __assign_7021;
                 __assign_7021
@@ -29646,7 +29646,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7028
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString75 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString75 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7029 = (knownReturn : string) in (
                 tempString75 := __assign_7029;
                 __assign_7029
@@ -29676,7 +29676,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7036
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString76 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString76 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7037 = (knownReturn : string) in (
                 tempString76 := __assign_7037;
                 __assign_7037
@@ -29706,7 +29706,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7044
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString77 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString77 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7045 = (knownReturn : string) in (
                 tempString77 := __assign_7045;
                 __assign_7045
@@ -29789,7 +29789,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7060
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) scope : string) in let tempString78 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString78 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7061 = (knownReturn : string) in (
                 tempString78 := __assign_7061;
                 __assign_7061
@@ -29819,7 +29819,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7068
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString79 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString79 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7069 = (knownReturn : string) in (
                 tempString79 := __assign_7069;
                 __assign_7069
@@ -29849,7 +29849,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7076
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString80 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString80 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7077 = (knownReturn : string) in (
                 tempString80 := __assign_7077;
                 __assign_7077
@@ -29879,7 +29879,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7084
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString81 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString81 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7085 = (knownReturn : string) in (
                 tempString81 := __assign_7085;
                 __assign_7085
@@ -29962,7 +29962,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7100
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString82 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString82 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7101 = (knownReturn : string) in (
                 tempString82 := __assign_7101;
                 __assign_7101
@@ -29992,7 +29992,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7108
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString83 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString83 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7109 = (knownReturn : string) in (
                 tempString83 := __assign_7109;
                 __assign_7109
@@ -30022,7 +30022,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7116
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString84 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString84 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7117 = (knownReturn : string) in (
                 tempString84 := __assign_7117;
                 __assign_7117
@@ -30052,7 +30052,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7124
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString85 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString85 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7125 = (knownReturn : string) in (
                 tempString85 := __assign_7125;
                 __assign_7125
@@ -30135,7 +30135,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7140
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString86 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString86 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7141 = (knownReturn : string) in (
                 tempString86 := __assign_7141;
                 __assign_7141
@@ -30165,7 +30165,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7148
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString87 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString87 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7149 = (knownReturn : string) in (
                 tempString87 := __assign_7149;
                 __assign_7149
@@ -30195,7 +30195,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7156
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString88 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString88 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7157 = (knownReturn : string) in (
                 tempString88 := __assign_7157;
                 __assign_7157
@@ -30225,7 +30225,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7164
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString89 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString89 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7165 = (knownReturn : string) in (
                 tempString89 := __assign_7165;
                 __assign_7165
@@ -30308,7 +30308,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7180
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString90 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString90 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7181 = (knownReturn : string) in (
                 tempString90 := __assign_7181;
                 __assign_7181
@@ -30338,7 +30338,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7188
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString91 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString91 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7189 = (knownReturn : string) in (
                 tempString91 := __assign_7189;
                 __assign_7189
@@ -30368,7 +30368,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7196
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString92 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString92 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7197 = (knownReturn : string) in (
                 tempString92 := __assign_7197;
                 __assign_7197
@@ -30398,7 +30398,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7204
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString93 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString93 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7205 = (knownReturn : string) in (
                 tempString93 := __assign_7205;
                 __assign_7205
@@ -30481,7 +30481,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7220
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString94 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString94 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7221 = (knownReturn : string) in (
                 tempString94 := __assign_7221;
                 __assign_7221
@@ -30511,7 +30511,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7228
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString95 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString95 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7229 = (knownReturn : string) in (
                 tempString95 := __assign_7229;
                 __assign_7229
@@ -30541,7 +30541,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7236
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString96 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString96 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7237 = (knownReturn : string) in (
                 tempString96 := __assign_7237;
                 __assign_7237
@@ -30571,7 +30571,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7244
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString97 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString97 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7245 = (knownReturn : string) in (
                 tempString97 := __assign_7245;
                 __assign_7245
@@ -30654,7 +30654,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7260
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString98 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString98 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7261 = (knownReturn : string) in (
                 tempString98 := __assign_7261;
                 __assign_7261
@@ -30684,7 +30684,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7268
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString99 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString99 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7269 = (knownReturn : string) in (
                 tempString99 := __assign_7269;
                 __assign_7269
@@ -30714,7 +30714,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7276
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString100 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString100 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7277 = (knownReturn : string) in (
                 tempString100 := __assign_7277;
                 __assign_7277
@@ -30744,7 +30744,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7284
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString101 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString101 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7285 = (knownReturn : string) in (
                 tempString101 := __assign_7285;
                 __assign_7285
@@ -30827,7 +30827,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7300
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString102 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString102 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7301 = (knownReturn : string) in (
                 tempString102 := __assign_7301;
                 __assign_7301
@@ -30857,7 +30857,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7308
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString103 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString103 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7309 = (knownReturn : string) in (
                 tempString103 := __assign_7309;
                 __assign_7309
@@ -30887,7 +30887,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7316
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString104 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString104 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7317 = (knownReturn : string) in (
                 tempString104 := __assign_7317;
                 __assign_7317
@@ -30917,7 +30917,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7324
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString105 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString105 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7325 = (knownReturn : string) in (
                 tempString105 := __assign_7325;
                 __assign_7325
@@ -31000,7 +31000,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7340
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) scope : string) in let tempString106 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString106 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7341 = (knownReturn : string) in (
                 tempString106 := __assign_7341;
                 __assign_7341
@@ -31033,7 +31033,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7349
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString107 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString107 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7350 = (knownReturn : string) in (
                 tempString107 := __assign_7350;
                 __assign_7350
@@ -31066,7 +31066,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7358
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString108 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString108 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7359 = (knownReturn : string) in (
                 tempString108 := __assign_7359;
                 __assign_7359
@@ -31099,7 +31099,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7367
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString109 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString109 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7368 = (knownReturn : string) in (
                 tempString109 := __assign_7368;
                 __assign_7368
@@ -31182,7 +31182,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7383
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString110 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString110 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7384 = (knownReturn : string) in (
                 tempString110 := __assign_7384;
                 __assign_7384
@@ -31212,7 +31212,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7391
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString111 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString111 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7392 = (knownReturn : string) in (
                 tempString111 := __assign_7392;
                 __assign_7392
@@ -31242,7 +31242,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7399
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString112 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString112 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7400 = (knownReturn : string) in (
                 tempString112 := __assign_7400;
                 __assign_7400
@@ -31272,7 +31272,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7407
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString113 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString113 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7408 = (knownReturn : string) in (
                 tempString113 := __assign_7408;
                 __assign_7408
@@ -31358,7 +31358,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7424
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in let tempString114 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString114 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7425 = (knownReturn : string) in (
                 tempString114 := __assign_7425;
                 __assign_7425
@@ -31394,7 +31394,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7434
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString115 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString115 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7435 = (knownReturn : string) in (
                 tempString115 := __assign_7435;
                 __assign_7435
@@ -31430,7 +31430,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7444
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString116 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString116 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7445 = (knownReturn : string) in (
                 tempString116 := __assign_7445;
                 __assign_7445
@@ -31466,7 +31466,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7454
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString117 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString117 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7455 = (knownReturn : string) in (
                 tempString117 := __assign_7455;
                 __assign_7455
@@ -31546,7 +31546,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6900
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in let tempString118 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString118 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6901 = (knownReturn : string) in (
                 tempString118 := __assign_6901;
                 __assign_6901
@@ -31576,7 +31576,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6908
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in let tempString119 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString119 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6909 = (knownReturn : string) in (
                 tempString119 := __assign_6909;
                 __assign_6909
@@ -31606,7 +31606,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6916
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in let tempString120 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString120 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6917 = (knownReturn : string) in (
                 tempString120 := __assign_6917;
                 __assign_6917
@@ -31636,7 +31636,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_6924
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in let tempString121 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString121 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_6925 = (knownReturn : string) in (
                 tempString121 := __assign_6925;
                 __assign_6925
@@ -31686,7 +31686,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7481
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString122 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString122 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7482 = (knownReturn : string) in (
                 tempString122 := __assign_7482;
                 __assign_7482
@@ -31735,7 +31735,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7495
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString123 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString123 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7496 = (knownReturn : string) in (
                 tempString123 := __assign_7496;
                 __assign_7496
@@ -31784,7 +31784,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7509
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString124 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString124 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7510 = (knownReturn : string) in (
                 tempString124 := __assign_7510;
                 __assign_7510
@@ -31833,7 +31833,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7523
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString125 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString125 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7524 = (knownReturn : string) in (
                 tempString125 := __assign_7524;
                 __assign_7524
@@ -31882,7 +31882,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7537
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString126 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString126 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7538 = (knownReturn : string) in (
                 tempString126 := __assign_7538;
                 __assign_7538
@@ -31931,7 +31931,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7551
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString127 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString127 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7552 = (knownReturn : string) in (
                 tempString127 := __assign_7552;
                 __assign_7552
@@ -31980,7 +31980,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7565
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString128 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString128 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7566 = (knownReturn : string) in (
                 tempString128 := __assign_7566;
                 __assign_7566
@@ -32029,7 +32029,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7579
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString129 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString129 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7580 = (knownReturn : string) in (
                 tempString129 := __assign_7580;
                 __assign_7580
@@ -32078,7 +32078,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7593
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString130 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString130 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7594 = (knownReturn : string) in (
                 tempString130 := __assign_7594;
                 __assign_7594
@@ -32127,7 +32127,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7607
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString131 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString131 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7608 = (knownReturn : string) in (
                 tempString131 := __assign_7608;
                 __assign_7608
@@ -32176,7 +32176,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7621
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString132 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString132 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7622 = (knownReturn : string) in (
                 tempString132 := __assign_7622;
                 __assign_7622
@@ -32225,7 +32225,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7635
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args4) scope : string) in let tempString133 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString133 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7636 = (knownReturn : string) in (
                 tempString133 := __assign_7636;
                 __assign_7636
@@ -32274,7 +32274,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7649
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString134 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString134 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7650 = (knownReturn : string) in (
                 tempString134 := __assign_7650;
                 __assign_7650
@@ -32326,7 +32326,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7664
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString135 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString135 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7665 = (knownReturn : string) in (
                 tempString135 := __assign_7665;
                 __assign_7665
@@ -32372,7 +32372,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_7467
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in let tempString136 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString136 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_7468 = (knownReturn : string) in (
                 tempString136 := __assign_7468;
                 __assign_7468
@@ -32422,7 +32422,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5609
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString137 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString137 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5610 = (knownReturn : string) in (
                 tempString137 := __assign_5610;
                 __assign_5610
@@ -32471,7 +32471,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5623
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString138 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString138 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5624 = (knownReturn : string) in (
                 tempString138 := __assign_5624;
                 __assign_5624
@@ -32520,7 +32520,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5637
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString139 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString139 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5638 = (knownReturn : string) in (
                 tempString139 := __assign_5638;
                 __assign_5638
@@ -32569,7 +32569,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5651
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString140 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString140 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5652 = (knownReturn : string) in (
                 tempString140 := __assign_5652;
                 __assign_5652
@@ -32618,7 +32618,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5665
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString141 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString141 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5666 = (knownReturn : string) in (
                 tempString141 := __assign_5666;
                 __assign_5666
@@ -32667,7 +32667,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5679
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString142 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString142 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5680 = (knownReturn : string) in (
                 tempString142 := __assign_5680;
                 __assign_5680
@@ -32716,7 +32716,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5693
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString143 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString143 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5694 = (knownReturn : string) in (
                 tempString143 := __assign_5694;
                 __assign_5694
@@ -32765,7 +32765,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5707
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString144 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString144 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5708 = (knownReturn : string) in (
                 tempString144 := __assign_5708;
                 __assign_5708
@@ -32814,7 +32814,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5721
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString145 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString145 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5722 = (knownReturn : string) in (
                 tempString145 := __assign_5722;
                 __assign_5722
@@ -32863,7 +32863,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5735
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString146 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString146 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5736 = (knownReturn : string) in (
                 tempString146 := __assign_5736;
                 __assign_5736
@@ -32912,7 +32912,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5749
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in let tempString147 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString147 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5750 = (knownReturn : string) in (
                 tempString147 := __assign_5750;
                 __assign_5750
@@ -32961,7 +32961,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5763
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString148 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString148 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5764 = (knownReturn : string) in (
                 tempString148 := __assign_5764;
                 __assign_5764
@@ -33013,7 +33013,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5778
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in let tempString149 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in let tempString149 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5779 = (knownReturn : string) in (
                 tempString149 := __assign_5779;
                 __assign_5779
@@ -33059,7 +33059,7 @@ and exprCppType = fun expr scope -> try let __fallback_result_7690 = (
                 __assign_5595
               )) else ());
               !receiverType
-            ) in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in let tempString150 = ref ("" : string) in (
+            ) in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in let tempString150 = ref ("" : string) in (
               ignore (if HxString.length knownReturn > 0 then let __assign_5596 = (knownReturn : string) in (
                 tempString150 := __assign_5596;
                 __assign_5596
@@ -34769,7 +34769,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber := __assign_9209;
                 __assign_9209
               ));
-              let knownStart = !tempNumber in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber1 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9210 = HxSys.time () in (
@@ -34913,7 +34913,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber7 := __assign_9241;
                 __assign_9241
               ));
-              let knownStart = !tempNumber7 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber7 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber8 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9242 = HxSys.time () in (
@@ -35057,7 +35057,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber14 := __assign_9273;
                 __assign_9273
               ));
-              let knownStart = !tempNumber14 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber14 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber15 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9274 = HxSys.time () in (
@@ -35201,7 +35201,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber21 := __assign_9305;
                 __assign_9305
               ));
-              let knownStart = !tempNumber21 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber21 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber22 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9306 = HxSys.time () in (
@@ -35349,7 +35349,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber28 := __assign_9338;
                 __assign_9338
               ));
-              let knownStart = !tempNumber28 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber28 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber29 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9339 = HxSys.time () in (
@@ -35493,7 +35493,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber35 := __assign_9370;
                 __assign_9370
               ));
-              let knownStart = !tempNumber35 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber35 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber36 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9371 = HxSys.time () in (
@@ -35708,7 +35708,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                   tempNumber42 := __assign_9406;
                   __assign_9406
                 ));
-                let knownStart = !tempNumber42 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+                let knownStart = !tempNumber42 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                   ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                   let tempNumber43 = ref (0. : float) in (
                     ignore (if timingEnabled then let __assign_9407 = HxSys.time () in (
@@ -35830,7 +35830,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                   tempNumber49 := __assign_9431;
                   __assign_9431
                 ));
-                let knownStart = !tempNumber49 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+                let knownStart = !tempNumber49 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                   ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                   let tempNumber50 = ref (0. : float) in (
                     ignore (if timingEnabled then let __assign_9432 = HxSys.time () in (
@@ -35953,7 +35953,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber56 := __assign_9456;
                 __assign_9456
               ));
-              let knownStart = !tempNumber56 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber56 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber57 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9457 = HxSys.time () in (
@@ -36075,7 +36075,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber63 := __assign_9481;
                 __assign_9481
               ));
-              let knownStart = !tempNumber63 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber63 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber64 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9482 = HxSys.time () in (
@@ -36197,7 +36197,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber70 := __assign_9506;
                 __assign_9506
               ));
-              let knownStart = !tempNumber70 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber70 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber71 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9507 = HxSys.time () in (
@@ -36341,7 +36341,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber77 := __assign_9538;
                 __assign_9538
               ));
-              let knownStart = !tempNumber77 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber77 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber78 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9539 = HxSys.time () in (
@@ -36485,7 +36485,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber84 := __assign_9570;
                 __assign_9570
               ));
-              let knownStart = !tempNumber84 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber84 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber85 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9571 = HxSys.time () in (
@@ -36629,7 +36629,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber91 := __assign_9602;
                 __assign_9602
               ));
-              let knownStart = !tempNumber91 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber91 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber92 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9603 = HxSys.time () in (
@@ -36773,7 +36773,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber98 := __assign_9634;
                 __assign_9634
               ));
-              let knownStart = !tempNumber98 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber98 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber99 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9635 = HxSys.time () in (
@@ -36917,7 +36917,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber105 := __assign_9666;
                 __assign_9666
               ));
-              let knownStart = !tempNumber105 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber105 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber106 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9667 = HxSys.time () in (
@@ -37058,7 +37058,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber112 := __assign_9177;
                 __assign_9177
               ));
-              let knownStart = !tempNumber112 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber112 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber113 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9178 = HxSys.time () in (
@@ -37203,7 +37203,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber119 := __assign_9729;
                 __assign_9729
               ));
-              let knownStart = !tempNumber119 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber119 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber120 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9730 = HxSys.time () in (
@@ -37347,7 +37347,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber126 := __assign_9761;
                 __assign_9761
               ));
-              let knownStart = !tempNumber126 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber126 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber127 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9762 = HxSys.time () in (
@@ -37491,7 +37491,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber133 := __assign_9793;
                 __assign_9793
               ));
-              let knownStart = !tempNumber133 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber133 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber134 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9794 = HxSys.time () in (
@@ -37635,7 +37635,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber140 := __assign_9825;
                 __assign_9825
               ));
-              let knownStart = !tempNumber140 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber140 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber141 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9826 = HxSys.time () in (
@@ -37782,7 +37782,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber147 := __assign_9858;
                 __assign_9858
               ));
-              let knownStart = !tempNumber147 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber147 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber148 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9859 = HxSys.time () in (
@@ -37926,7 +37926,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber154 := __assign_9890;
                 __assign_9890
               ));
-              let knownStart = !tempNumber154 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber154 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber155 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9891 = HxSys.time () in (
@@ -38070,7 +38070,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber161 := __assign_9922;
                 __assign_9922
               ));
-              let knownStart = !tempNumber161 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber161 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber162 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9923 = HxSys.time () in (
@@ -38285,7 +38285,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                   tempNumber168 := __assign_9958;
                   __assign_9958
                 ));
-                let knownStart = !tempNumber168 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+                let knownStart = !tempNumber168 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                   ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                   let tempNumber169 = ref (0. : float) in (
                     ignore (if timingEnabled then let __assign_9959 = HxSys.time () in (
@@ -38407,7 +38407,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                   tempNumber175 := __assign_9983;
                   __assign_9983
                 ));
-                let knownStart = !tempNumber175 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+                let knownStart = !tempNumber175 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                   ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                   let tempNumber176 = ref (0. : float) in (
                     ignore (if timingEnabled then let __assign_9984 = HxSys.time () in (
@@ -38530,7 +38530,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber182 := __assign_10008;
                 __assign_10008
               ));
-              let knownStart = !tempNumber182 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber182 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber183 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10009 = HxSys.time () in (
@@ -38652,7 +38652,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber189 := __assign_10033;
                 __assign_10033
               ));
-              let knownStart = !tempNumber189 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber189 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber190 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10034 = HxSys.time () in (
@@ -38774,7 +38774,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber196 := __assign_10058;
                 __assign_10058
               ));
-              let knownStart = !tempNumber196 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber196 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber197 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10059 = HxSys.time () in (
@@ -38918,7 +38918,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber203 := __assign_10090;
                 __assign_10090
               ));
-              let knownStart = !tempNumber203 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber203 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber204 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10091 = HxSys.time () in (
@@ -39062,7 +39062,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber210 := __assign_10122;
                 __assign_10122
               ));
-              let knownStart = !tempNumber210 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber210 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber211 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10123 = HxSys.time () in (
@@ -39206,7 +39206,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber217 := __assign_10154;
                 __assign_10154
               ));
-              let knownStart = !tempNumber217 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber217 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber218 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10155 = HxSys.time () in (
@@ -39350,7 +39350,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber224 := __assign_10186;
                 __assign_10186
               ));
-              let knownStart = !tempNumber224 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber224 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber225 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10187 = HxSys.time () in (
@@ -39494,7 +39494,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber231 := __assign_10218;
                 __assign_10218
               ));
-              let knownStart = !tempNumber231 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber231 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber232 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10219 = HxSys.time () in (
@@ -39638,7 +39638,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber238 := __assign_10250;
                 __assign_10250
               ));
-              let knownStart = !tempNumber238 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber238 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber239 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10251 = HxSys.time () in (
@@ -39779,7 +39779,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber245 := __assign_9697;
                 __assign_9697
               ));
-              let knownStart = !tempNumber245 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber245 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber246 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9698 = HxSys.time () in (
@@ -39927,7 +39927,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber252 := __assign_10315;
                 __assign_10315
               ));
-              let knownStart = !tempNumber252 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber252 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber253 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10316 = HxSys.time () in (
@@ -40074,7 +40074,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber259 := __assign_10348;
                 __assign_10348
               ));
-              let knownStart = !tempNumber259 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber259 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber260 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10349 = HxSys.time () in (
@@ -40221,7 +40221,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber266 := __assign_10381;
                 __assign_10381
               ));
-              let knownStart = !tempNumber266 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber266 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber267 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10382 = HxSys.time () in (
@@ -40368,7 +40368,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber273 := __assign_10414;
                 __assign_10414
               ));
-              let knownStart = !tempNumber273 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber273 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber274 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10415 = HxSys.time () in (
@@ -40518,7 +40518,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber280 := __assign_10448;
                 __assign_10448
               ));
-              let knownStart = !tempNumber280 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber280 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber281 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10449 = HxSys.time () in (
@@ -40665,7 +40665,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber287 := __assign_10481;
                 __assign_10481
               ));
-              let knownStart = !tempNumber287 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber287 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber288 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10482 = HxSys.time () in (
@@ -40812,7 +40812,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber294 := __assign_10514;
                 __assign_10514
               ));
-              let knownStart = !tempNumber294 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber294 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber295 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10515 = HxSys.time () in (
@@ -41030,7 +41030,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                   tempNumber301 := __assign_10551;
                   __assign_10551
                 ));
-                let knownStart = !tempNumber301 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+                let knownStart = !tempNumber301 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                   ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                   let tempNumber302 = ref (0. : float) in (
                     ignore (if timingEnabled then let __assign_10552 = HxSys.time () in (
@@ -41152,7 +41152,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                   tempNumber308 := __assign_10576;
                   __assign_10576
                 ));
-                let knownStart = !tempNumber308 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+                let knownStart = !tempNumber308 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                   ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                   let tempNumber309 = ref (0. : float) in (
                     ignore (if timingEnabled then let __assign_10577 = HxSys.time () in (
@@ -41275,7 +41275,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber315 := __assign_10601;
                 __assign_10601
               ));
-              let knownStart = !tempNumber315 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber315 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber316 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10602 = HxSys.time () in (
@@ -41397,7 +41397,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber322 := __assign_10626;
                 __assign_10626
               ));
-              let knownStart = !tempNumber322 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber322 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber323 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10627 = HxSys.time () in (
@@ -41519,7 +41519,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber329 := __assign_10651;
                 __assign_10651
               ));
-              let knownStart = !tempNumber329 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber329 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber330 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10652 = HxSys.time () in (
@@ -41666,7 +41666,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber336 := __assign_10684;
                 __assign_10684
               ));
-              let knownStart = !tempNumber336 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber336 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber337 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10685 = HxSys.time () in (
@@ -41813,7 +41813,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber343 := __assign_10717;
                 __assign_10717
               ));
-              let knownStart = !tempNumber343 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber343 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber344 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10718 = HxSys.time () in (
@@ -41960,7 +41960,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber350 := __assign_10750;
                 __assign_10750
               ));
-              let knownStart = !tempNumber350 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber350 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber351 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10751 = HxSys.time () in (
@@ -42107,7 +42107,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber357 := __assign_10783;
                 __assign_10783
               ));
-              let knownStart = !tempNumber357 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber357 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber358 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10784 = HxSys.time () in (
@@ -42254,7 +42254,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber364 := __assign_10816;
                 __assign_10816
               ));
-              let knownStart = !tempNumber364 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber364 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber365 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10817 = HxSys.time () in (
@@ -42398,7 +42398,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber371 := __assign_10282;
                 __assign_10282
               ));
-              let knownStart = !tempNumber371 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber371 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber372 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_10283 = HxSys.time () in (
@@ -42850,7 +42850,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber378 := __assign_8631;
                 __assign_8631
               ));
-              let knownStart = !tempNumber378 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber378 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber379 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8632 = HxSys.time () in (
@@ -42994,7 +42994,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber385 := __assign_8663;
                 __assign_8663
               ));
-              let knownStart = !tempNumber385 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber385 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber386 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8664 = HxSys.time () in (
@@ -43138,7 +43138,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber392 := __assign_8695;
                 __assign_8695
               ));
-              let knownStart = !tempNumber392 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber392 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber393 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8696 = HxSys.time () in (
@@ -43282,7 +43282,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber399 := __assign_8727;
                 __assign_8727
               ));
-              let knownStart = !tempNumber399 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber399 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber400 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8728 = HxSys.time () in (
@@ -43429,7 +43429,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber406 := __assign_8760;
                 __assign_8760
               ));
-              let knownStart = !tempNumber406 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber406 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber407 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8761 = HxSys.time () in (
@@ -43573,7 +43573,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber413 := __assign_8792;
                 __assign_8792
               ));
-              let knownStart = !tempNumber413 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber413 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber414 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8793 = HxSys.time () in (
@@ -43717,7 +43717,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber420 := __assign_8824;
                 __assign_8824
               ));
-              let knownStart = !tempNumber420 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber420 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber421 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8825 = HxSys.time () in (
@@ -43932,7 +43932,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                   tempNumber427 := __assign_8860;
                   __assign_8860
                 ));
-                let knownStart = !tempNumber427 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+                let knownStart = !tempNumber427 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                   ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                   let tempNumber428 = ref (0. : float) in (
                     ignore (if timingEnabled then let __assign_8861 = HxSys.time () in (
@@ -44054,7 +44054,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                   tempNumber434 := __assign_8885;
                   __assign_8885
                 ));
-                let knownStart = !tempNumber434 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+                let knownStart = !tempNumber434 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                   ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                   let tempNumber435 = ref (0. : float) in (
                     ignore (if timingEnabled then let __assign_8886 = HxSys.time () in (
@@ -44177,7 +44177,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber441 := __assign_8910;
                 __assign_8910
               ));
-              let knownStart = !tempNumber441 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber441 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber442 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8911 = HxSys.time () in (
@@ -44299,7 +44299,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber448 := __assign_8935;
                 __assign_8935
               ));
-              let knownStart = !tempNumber448 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber448 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber449 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8936 = HxSys.time () in (
@@ -44421,7 +44421,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber455 := __assign_8960;
                 __assign_8960
               ));
-              let knownStart = !tempNumber455 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber455 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber456 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8961 = HxSys.time () in (
@@ -44565,7 +44565,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber462 := __assign_8992;
                 __assign_8992
               ));
-              let knownStart = !tempNumber462 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber462 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber463 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8993 = HxSys.time () in (
@@ -44709,7 +44709,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber469 := __assign_9024;
                 __assign_9024
               ));
-              let knownStart = !tempNumber469 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber469 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber470 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9025 = HxSys.time () in (
@@ -44853,7 +44853,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber476 := __assign_9056;
                 __assign_9056
               ));
-              let knownStart = !tempNumber476 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber476 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber477 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9057 = HxSys.time () in (
@@ -44997,7 +44997,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber483 := __assign_9088;
                 __assign_9088
               ));
-              let knownStart = !tempNumber483 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber483 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber484 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9089 = HxSys.time () in (
@@ -45141,7 +45141,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber490 := __assign_9120;
                 __assign_9120
               ));
-              let knownStart = !tempNumber490 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+              let knownStart = !tempNumber490 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber491 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_9121 = HxSys.time () in (
@@ -45282,7 +45282,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber497 := __assign_8599;
                 __assign_8599
               ));
-              let knownStart = !tempNumber497 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber497 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber498 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8600 = HxSys.time () in (
@@ -45461,7 +45461,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber504 := __assign_11058;
               __assign_11058
             ));
-            let knownStart = !tempNumber504 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber504 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber505 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11059 = HxSys.time () in (
@@ -45586,7 +45586,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber511 := __assign_11084;
               __assign_11084
             ));
-            let knownStart = !tempNumber511 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber511 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber512 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11085 = HxSys.time () in (
@@ -45711,7 +45711,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber518 := __assign_11110;
               __assign_11110
             ));
-            let knownStart = !tempNumber518 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber518 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber519 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11111 = HxSys.time () in (
@@ -45836,7 +45836,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber525 := __assign_11136;
               __assign_11136
             ));
-            let knownStart = !tempNumber525 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber525 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber526 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11137 = HxSys.time () in (
@@ -46014,7 +46014,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber532 := __assign_11170;
               __assign_11170
             ));
-            let knownStart = !tempNumber532 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber532 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber533 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11171 = HxSys.time () in (
@@ -46139,7 +46139,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber539 := __assign_11196;
               __assign_11196
             ));
-            let knownStart = !tempNumber539 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber539 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber540 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11197 = HxSys.time () in (
@@ -46264,7 +46264,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber546 := __assign_11222;
               __assign_11222
             ));
-            let knownStart = !tempNumber546 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber546 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber547 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11223 = HxSys.time () in (
@@ -46389,7 +46389,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber553 := __assign_11248;
               __assign_11248
             ));
-            let knownStart = !tempNumber553 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber553 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber554 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11249 = HxSys.time () in (
@@ -46567,7 +46567,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber560 := __assign_11282;
               __assign_11282
             ));
-            let knownStart = !tempNumber560 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber560 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber561 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11283 = HxSys.time () in (
@@ -46692,7 +46692,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber567 := __assign_11308;
               __assign_11308
             ));
-            let knownStart = !tempNumber567 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber567 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber568 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11309 = HxSys.time () in (
@@ -46817,7 +46817,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber574 := __assign_11334;
               __assign_11334
             ));
-            let knownStart = !tempNumber574 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber574 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber575 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11335 = HxSys.time () in (
@@ -46942,7 +46942,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber581 := __assign_11360;
               __assign_11360
             ));
-            let knownStart = !tempNumber581 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber581 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber582 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11361 = HxSys.time () in (
@@ -47120,7 +47120,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber588 := __assign_11394;
               __assign_11394
             ));
-            let knownStart = !tempNumber588 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber588 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber589 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11395 = HxSys.time () in (
@@ -47245,7 +47245,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber595 := __assign_11420;
               __assign_11420
             ));
-            let knownStart = !tempNumber595 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber595 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber596 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11421 = HxSys.time () in (
@@ -47370,7 +47370,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber602 := __assign_11446;
               __assign_11446
             ));
-            let knownStart = !tempNumber602 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber602 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber603 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11447 = HxSys.time () in (
@@ -47495,7 +47495,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber609 := __assign_11472;
               __assign_11472
             ));
-            let knownStart = !tempNumber609 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber609 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber610 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11473 = HxSys.time () in (
@@ -47673,7 +47673,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber616 := __assign_11506;
               __assign_11506
             ));
-            let knownStart = !tempNumber616 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber616 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber617 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11507 = HxSys.time () in (
@@ -47798,7 +47798,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber623 := __assign_11532;
               __assign_11532
             ));
-            let knownStart = !tempNumber623 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber623 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber624 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11533 = HxSys.time () in (
@@ -47923,7 +47923,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber630 := __assign_11558;
               __assign_11558
             ));
-            let knownStart = !tempNumber630 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber630 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber631 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11559 = HxSys.time () in (
@@ -48048,7 +48048,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber637 := __assign_11584;
               __assign_11584
             ));
-            let knownStart = !tempNumber637 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber637 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber638 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11585 = HxSys.time () in (
@@ -48226,7 +48226,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber644 := __assign_11618;
               __assign_11618
             ));
-            let knownStart = !tempNumber644 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber644 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber645 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11619 = HxSys.time () in (
@@ -48351,7 +48351,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber651 := __assign_11644;
               __assign_11644
             ));
-            let knownStart = !tempNumber651 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber651 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber652 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11645 = HxSys.time () in (
@@ -48476,7 +48476,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber658 := __assign_11670;
               __assign_11670
             ));
-            let knownStart = !tempNumber658 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber658 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber659 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11671 = HxSys.time () in (
@@ -48601,7 +48601,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber665 := __assign_11696;
               __assign_11696
             ));
-            let knownStart = !tempNumber665 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber665 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber666 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11697 = HxSys.time () in (
@@ -48779,7 +48779,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber672 := __assign_11730;
               __assign_11730
             ));
-            let knownStart = !tempNumber672 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber672 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber673 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11731 = HxSys.time () in (
@@ -48904,7 +48904,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber679 := __assign_11756;
               __assign_11756
             ));
-            let knownStart = !tempNumber679 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber679 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber680 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11757 = HxSys.time () in (
@@ -49029,7 +49029,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber686 := __assign_11782;
               __assign_11782
             ));
-            let knownStart = !tempNumber686 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber686 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber687 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11783 = HxSys.time () in (
@@ -49154,7 +49154,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber693 := __assign_11808;
               __assign_11808
             ));
-            let knownStart = !tempNumber693 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber693 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber694 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11809 = HxSys.time () in (
@@ -49403,7 +49403,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber700 := __assign_11846;
                 __assign_11846
               ));
-              let knownStart = !tempNumber700 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber700 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber701 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_11847 = HxSys.time () in (
@@ -49525,7 +49525,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber707 := __assign_11871;
                 __assign_11871
               ));
-              let knownStart = !tempNumber707 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber707 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber708 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_11872 = HxSys.time () in (
@@ -49648,7 +49648,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber714 := __assign_11896;
               __assign_11896
             ));
-            let knownStart = !tempNumber714 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber714 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber715 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11897 = HxSys.time () in (
@@ -49770,7 +49770,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber721 := __assign_11921;
               __assign_11921
             ));
-            let knownStart = !tempNumber721 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber721 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber722 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11922 = HxSys.time () in (
@@ -49892,7 +49892,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber728 := __assign_11946;
               __assign_11946
             ));
-            let knownStart = !tempNumber728 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber728 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber729 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11947 = HxSys.time () in (
@@ -50091,7 +50091,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber735 := __assign_11977;
                 __assign_11977
               ));
-              let knownStart = !tempNumber735 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber735 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber736 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_11978 = HxSys.time () in (
@@ -50213,7 +50213,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber742 := __assign_12002;
                 __assign_12002
               ));
-              let knownStart = !tempNumber742 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber742 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber743 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_12003 = HxSys.time () in (
@@ -50336,7 +50336,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber749 := __assign_12027;
               __assign_12027
             ));
-            let knownStart = !tempNumber749 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber749 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber750 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12028 = HxSys.time () in (
@@ -50458,7 +50458,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber756 := __assign_12052;
               __assign_12052
             ));
-            let knownStart = !tempNumber756 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber756 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber757 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12053 = HxSys.time () in (
@@ -50580,7 +50580,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber763 := __assign_12077;
               __assign_12077
             ));
-            let knownStart = !tempNumber763 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber763 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber764 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12078 = HxSys.time () in (
@@ -50779,7 +50779,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber770 := __assign_12108;
                 __assign_12108
               ));
-              let knownStart = !tempNumber770 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber770 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber771 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_12109 = HxSys.time () in (
@@ -50901,7 +50901,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber777 := __assign_12133;
                 __assign_12133
               ));
-              let knownStart = !tempNumber777 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber777 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber778 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_12134 = HxSys.time () in (
@@ -51024,7 +51024,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber784 := __assign_12158;
               __assign_12158
             ));
-            let knownStart = !tempNumber784 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber784 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber785 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12159 = HxSys.time () in (
@@ -51146,7 +51146,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber791 := __assign_12183;
               __assign_12183
             ));
-            let knownStart = !tempNumber791 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber791 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber792 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12184 = HxSys.time () in (
@@ -51268,7 +51268,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber798 := __assign_12208;
               __assign_12208
             ));
-            let knownStart = !tempNumber798 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber798 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber799 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12209 = HxSys.time () in (
@@ -51467,7 +51467,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber805 := __assign_12239;
                 __assign_12239
               ));
-              let knownStart = !tempNumber805 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber805 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber806 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_12240 = HxSys.time () in (
@@ -51589,7 +51589,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber812 := __assign_12264;
                 __assign_12264
               ));
-              let knownStart = !tempNumber812 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber812 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber813 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_12265 = HxSys.time () in (
@@ -51712,7 +51712,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber819 := __assign_12289;
               __assign_12289
             ));
-            let knownStart = !tempNumber819 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber819 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber820 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12290 = HxSys.time () in (
@@ -51834,7 +51834,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber826 := __assign_12314;
               __assign_12314
             ));
-            let knownStart = !tempNumber826 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber826 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber827 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12315 = HxSys.time () in (
@@ -51956,7 +51956,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber833 := __assign_12339;
               __assign_12339
             ));
-            let knownStart = !tempNumber833 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber833 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber834 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12340 = HxSys.time () in (
@@ -52134,7 +52134,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber840 := __assign_12373;
               __assign_12373
             ));
-            let knownStart = !tempNumber840 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber840 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber841 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12374 = HxSys.time () in (
@@ -52259,7 +52259,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber847 := __assign_12399;
               __assign_12399
             ));
-            let knownStart = !tempNumber847 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber847 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber848 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12400 = HxSys.time () in (
@@ -52384,7 +52384,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber854 := __assign_12425;
               __assign_12425
             ));
-            let knownStart = !tempNumber854 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber854 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber855 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12426 = HxSys.time () in (
@@ -52509,7 +52509,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber861 := __assign_12451;
               __assign_12451
             ));
-            let knownStart = !tempNumber861 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber861 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber862 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12452 = HxSys.time () in (
@@ -52687,7 +52687,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber868 := __assign_12485;
               __assign_12485
             ));
-            let knownStart = !tempNumber868 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber868 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber869 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12486 = HxSys.time () in (
@@ -52812,7 +52812,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber875 := __assign_12511;
               __assign_12511
             ));
-            let knownStart = !tempNumber875 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber875 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber876 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12512 = HxSys.time () in (
@@ -52937,7 +52937,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber882 := __assign_12537;
               __assign_12537
             ));
-            let knownStart = !tempNumber882 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber882 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber883 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12538 = HxSys.time () in (
@@ -53062,7 +53062,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber889 := __assign_12563;
               __assign_12563
             ));
-            let knownStart = !tempNumber889 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber889 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber890 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12564 = HxSys.time () in (
@@ -53240,7 +53240,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber896 := __assign_12597;
               __assign_12597
             ));
-            let knownStart = !tempNumber896 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber896 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber897 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12598 = HxSys.time () in (
@@ -53365,7 +53365,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber903 := __assign_12623;
               __assign_12623
             ));
-            let knownStart = !tempNumber903 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber903 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber904 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12624 = HxSys.time () in (
@@ -53490,7 +53490,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber910 := __assign_12649;
               __assign_12649
             ));
-            let knownStart = !tempNumber910 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber910 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber911 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12650 = HxSys.time () in (
@@ -53615,7 +53615,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber917 := __assign_12675;
               __assign_12675
             ));
-            let knownStart = !tempNumber917 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber917 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber918 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12676 = HxSys.time () in (
@@ -53793,7 +53793,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber924 := __assign_12709;
               __assign_12709
             ));
-            let knownStart = !tempNumber924 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber924 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber925 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12710 = HxSys.time () in (
@@ -53918,7 +53918,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber931 := __assign_12735;
               __assign_12735
             ));
-            let knownStart = !tempNumber931 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber931 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber932 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12736 = HxSys.time () in (
@@ -54043,7 +54043,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber938 := __assign_12761;
               __assign_12761
             ));
-            let knownStart = !tempNumber938 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber938 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber939 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12762 = HxSys.time () in (
@@ -54168,7 +54168,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber945 := __assign_12787;
               __assign_12787
             ));
-            let knownStart = !tempNumber945 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber945 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber946 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12788 = HxSys.time () in (
@@ -54346,7 +54346,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber952 := __assign_12821;
               __assign_12821
             ));
-            let knownStart = !tempNumber952 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber952 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method7 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber953 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12822 = HxSys.time () in (
@@ -54471,7 +54471,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber959 := __assign_12847;
               __assign_12847
             ));
-            let knownStart = !tempNumber959 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber959 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber960 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12848 = HxSys.time () in (
@@ -54596,7 +54596,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber966 := __assign_12873;
               __assign_12873
             ));
-            let knownStart = !tempNumber966 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber966 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber967 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12874 = HxSys.time () in (
@@ -54721,7 +54721,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber973 := __assign_12899;
               __assign_12899
             ));
-            let knownStart = !tempNumber973 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber973 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber974 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12900 = HxSys.time () in (
@@ -54896,7 +54896,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber980 := __assign_10946;
               __assign_10946
             ));
-            let knownStart = !tempNumber980 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber980 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method7 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber981 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_10947 = HxSys.time () in (
@@ -55021,7 +55021,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber987 := __assign_10972;
               __assign_10972
             ));
-            let knownStart = !tempNumber987 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber987 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber988 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_10973 = HxSys.time () in (
@@ -55146,7 +55146,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber994 := __assign_10998;
               __assign_10998
             ));
-            let knownStart = !tempNumber994 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber994 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber995 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_10999 = HxSys.time () in (
@@ -55271,7 +55271,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1001 := __assign_11024;
               __assign_11024
             ));
-            let knownStart = !tempNumber1001 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1001 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1002 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_11025 = HxSys.time () in (
@@ -55416,7 +55416,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1008 := __assign_12962;
               __assign_12962
             ));
-            let knownStart = !tempNumber1008 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1008 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1009 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12963 = HxSys.time () in (
@@ -55560,7 +55560,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1015 := __assign_12994;
               __assign_12994
             ));
-            let knownStart = !tempNumber1015 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1015 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1016 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12995 = HxSys.time () in (
@@ -55704,7 +55704,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1022 := __assign_13026;
               __assign_13026
             ));
-            let knownStart = !tempNumber1022 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1022 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1023 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13027 = HxSys.time () in (
@@ -55848,7 +55848,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1029 := __assign_13058;
               __assign_13058
             ));
-            let knownStart = !tempNumber1029 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1029 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1030 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13059 = HxSys.time () in (
@@ -55992,7 +55992,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1036 := __assign_13090;
               __assign_13090
             ));
-            let knownStart = !tempNumber1036 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1036 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1037 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13091 = HxSys.time () in (
@@ -56136,7 +56136,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1043 := __assign_13122;
               __assign_13122
             ));
-            let knownStart = !tempNumber1043 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1043 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1044 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13123 = HxSys.time () in (
@@ -56280,7 +56280,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1050 := __assign_13154;
               __assign_13154
             ));
-            let knownStart = !tempNumber1050 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1050 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1051 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13155 = HxSys.time () in (
@@ -56495,7 +56495,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber1057 := __assign_13190;
                 __assign_13190
               ));
-              let knownStart = !tempNumber1057 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber1057 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber1058 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_13191 = HxSys.time () in (
@@ -56617,7 +56617,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber1064 := __assign_13215;
                 __assign_13215
               ));
-              let knownStart = !tempNumber1064 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber1064 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber1065 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_13216 = HxSys.time () in (
@@ -56740,7 +56740,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1071 := __assign_13240;
               __assign_13240
             ));
-            let knownStart = !tempNumber1071 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1071 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1072 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13241 = HxSys.time () in (
@@ -56862,7 +56862,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1078 := __assign_13265;
               __assign_13265
             ));
-            let knownStart = !tempNumber1078 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1078 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1079 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13266 = HxSys.time () in (
@@ -56984,7 +56984,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1085 := __assign_13290;
               __assign_13290
             ));
-            let knownStart = !tempNumber1085 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1085 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1086 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13291 = HxSys.time () in (
@@ -57128,7 +57128,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1092 := __assign_13322;
               __assign_13322
             ));
-            let knownStart = !tempNumber1092 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1092 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1093 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13323 = HxSys.time () in (
@@ -57272,7 +57272,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1099 := __assign_13354;
               __assign_13354
             ));
-            let knownStart = !tempNumber1099 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1099 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1100 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13355 = HxSys.time () in (
@@ -57416,7 +57416,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1106 := __assign_13386;
               __assign_13386
             ));
-            let knownStart = !tempNumber1106 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1106 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1107 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13387 = HxSys.time () in (
@@ -57560,7 +57560,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1113 := __assign_13418;
               __assign_13418
             ));
-            let knownStart = !tempNumber1113 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1113 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1114 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13419 = HxSys.time () in (
@@ -57704,7 +57704,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1120 := __assign_13450;
               __assign_13450
             ));
-            let knownStart = !tempNumber1120 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1120 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1121 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13451 = HxSys.time () in (
@@ -57848,7 +57848,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1127 := __assign_13482;
               __assign_13482
             ));
-            let knownStart = !tempNumber1127 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1127 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1128 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_13483 = HxSys.time () in (
@@ -57989,7 +57989,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1134 := __assign_12930;
               __assign_12930
             ));
-            let knownStart = !tempNumber1134 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1134 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1135 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_12931 = HxSys.time () in (
@@ -58134,7 +58134,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1141 := __assign_8080;
               __assign_8080
             ));
-            let knownStart = !tempNumber1141 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1141 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1142 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8081 = HxSys.time () in (
@@ -58278,7 +58278,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1148 := __assign_8112;
               __assign_8112
             ));
-            let knownStart = !tempNumber1148 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1148 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1149 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8113 = HxSys.time () in (
@@ -58422,7 +58422,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1155 := __assign_8144;
               __assign_8144
             ));
-            let knownStart = !tempNumber1155 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1155 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1156 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8145 = HxSys.time () in (
@@ -58566,7 +58566,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1162 := __assign_8176;
               __assign_8176
             ));
-            let knownStart = !tempNumber1162 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1162 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1163 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8177 = HxSys.time () in (
@@ -58710,7 +58710,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1169 := __assign_8208;
               __assign_8208
             ));
-            let knownStart = !tempNumber1169 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1169 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1170 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8209 = HxSys.time () in (
@@ -58854,7 +58854,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1176 := __assign_8240;
               __assign_8240
             ));
-            let knownStart = !tempNumber1176 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1176 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1177 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8241 = HxSys.time () in (
@@ -58998,7 +58998,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1183 := __assign_8272;
               __assign_8272
             ));
-            let knownStart = !tempNumber1183 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1183 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1184 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8273 = HxSys.time () in (
@@ -59213,7 +59213,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber1190 := __assign_8308;
                 __assign_8308
               ));
-              let knownStart = !tempNumber1190 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber1190 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber1191 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8309 = HxSys.time () in (
@@ -59335,7 +59335,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
                 tempNumber1197 := __assign_8333;
                 __assign_8333
               ));
-              let knownStart = !tempNumber1197 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+              let knownStart = !tempNumber1197 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
                 ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
                 let tempNumber1198 = ref (0. : float) in (
                   ignore (if timingEnabled then let __assign_8334 = HxSys.time () in (
@@ -59458,7 +59458,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1204 := __assign_8358;
               __assign_8358
             ));
-            let knownStart = !tempNumber1204 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1204 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1205 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8359 = HxSys.time () in (
@@ -59580,7 +59580,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1211 := __assign_8383;
               __assign_8383
             ));
-            let knownStart = !tempNumber1211 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1211 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1212 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8384 = HxSys.time () in (
@@ -59702,7 +59702,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1218 := __assign_8408;
               __assign_8408
             ));
-            let knownStart = !tempNumber1218 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1218 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1219 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8409 = HxSys.time () in (
@@ -59846,7 +59846,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1225 := __assign_8440;
               __assign_8440
             ));
-            let knownStart = !tempNumber1225 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1225 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1226 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8441 = HxSys.time () in (
@@ -59990,7 +59990,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1232 := __assign_8472;
               __assign_8472
             ));
-            let knownStart = !tempNumber1232 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1232 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1233 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8473 = HxSys.time () in (
@@ -60134,7 +60134,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1239 := __assign_8504;
               __assign_8504
             ));
-            let knownStart = !tempNumber1239 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1239 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1240 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8505 = HxSys.time () in (
@@ -60278,7 +60278,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1246 := __assign_8536;
               __assign_8536
             ));
-            let knownStart = !tempNumber1246 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1246 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1247 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8537 = HxSys.time () in (
@@ -60422,7 +60422,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1253 := __assign_8568;
               __assign_8568
             ));
-            let knownStart = !tempNumber1253 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) scope : string) in (
+            let knownStart = !tempNumber1253 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver6) (method6 : string) (Obj.magic args4) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1254 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8569 = HxSys.time () in (
@@ -60563,7 +60563,7 @@ and inferExprCppType = fun expr scope -> let tempResult = ref ("" : string) in (
               tempNumber1260 := __assign_8048;
               __assign_8048
             ));
-            let knownStart = !tempNumber1260 in let knownReturn = (knownFieldCallReturnCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) scope : string) in (
+            let knownStart = !tempNumber1260 in let knownReturn = (knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver5) (method6 : string) (Obj.magic args3) fieldReceiverCppType scope : string) in (
               ignore (traceFieldInferPhase ("known" : string) knownStart (knownReturn : string));
               let tempNumber1261 = ref (0. : float) in (
                 ignore (if timingEnabled then let __assign_8049 = HxSys.time () in (
@@ -60859,7 +60859,7 @@ and stringReceiverMethodReturnCppType = fun hx_method scope -> try let __fallbac
   )
 ) in Obj.magic __fallback_result_13553 with
   | HxRuntime.Hx_return __ret_13552 -> Obj.obj __ret_13552
-and knownFieldCallReturnCppType = fun receiver hx_method args scope -> try let __fallback_result_13584 = let tempNumber = ref (0 : int) in (
+and knownFieldCallReturnCppTypeWithReceiverCppType = fun receiver hx_method args receiverCppType scope -> try let __fallback_result_13584 = let tempNumber = ref (0 : int) in (
   ignore (if args == Obj.magic (HxRuntime.hx_null) then let __assign_13556 = 0 in (
     tempNumber := __assign_13556;
     __assign_13556
@@ -60892,7 +60892,7 @@ and knownFieldCallReturnCppType = fun receiver hx_method args scope -> try let _
       | _ -> ignore ()) else ());
     let tempResult2 = ref ("" : string) in (
       ignore (match hx_method with
-        | "get" -> if arity = 1 then let receiverType = (exprCppType (Obj.magic receiver) scope : string) in let valueType = (mapValueCppType (receiverType : string) : string) in if HxString.length valueType > 0 then let __assign_13563 = (("std::optional<" ^ HxString.toStdString valueType) ^ ">" : string) in (
+        | "get" -> if arity = 1 then let receiverType = (receiverCppType () : string) in let valueType = (mapValueCppType (receiverType : string) : string) in if HxString.length valueType > 0 then let __assign_13563 = (("std::optional<" ^ HxString.toStdString valueType) ^ ">" : string) in (
           tempResult2 := __assign_13563;
           __assign_13563
         ) else let __assign_13564 = ("" : string) in (
@@ -60902,14 +60902,14 @@ and knownFieldCallReturnCppType = fun receiver hx_method args scope -> try let _
           tempResult2 := __assign_13565;
           __assign_13565
         )
-        | "hasNext" -> if HxString.length (cppIteratorElementType (exprCppType (Obj.magic receiver) scope : string)) > 0 then let __assign_13566 = ("bool" : string) in (
+        | "hasNext" -> if HxString.length (cppIteratorElementType (receiverCppType () : string)) > 0 then let __assign_13566 = ("bool" : string) in (
           tempResult2 := __assign_13566;
           __assign_13566
         ) else let __assign_13567 = ("" : string) in (
           tempResult2 := __assign_13567;
           __assign_13567
         )
-        | "iterator" -> if arity = 0 then let receiverType = (exprCppType (Obj.magic receiver) scope : string) in let mapValueType = (mapValueCppType (receiverType : string) : string) in if HxString.length mapValueType > 0 then let __assign_13568 = (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString mapValueType) ^ ">>" : string) in (
+        | "iterator" -> if arity = 0 then let receiverType = (receiverCppType () : string) in let mapValueType = (mapValueCppType (receiverType : string) : string) in if HxString.length mapValueType > 0 then let __assign_13568 = (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString mapValueType) ^ ">>" : string) in (
           tempResult2 := __assign_13568;
           __assign_13568
         ) else if isCppVectorType (receiverType : string) then let __assign_13569 = (iteratorCppTypeForVector (receiverType : string) : string) in (
@@ -60922,7 +60922,7 @@ and knownFieldCallReturnCppType = fun receiver hx_method args scope -> try let _
           tempResult2 := __assign_13571;
           __assign_13571
         )
-        | "keys" -> if arity = 0 then let receiverType = (exprCppType (Obj.magic receiver) scope : string) in let keyType = (mapKeyCppType (receiverType : string) : string) in if HxString.length keyType > 0 then let __assign_13572 = (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString keyType) ^ ">>" : string) in (
+        | "keys" -> if arity = 0 then let receiverType = (receiverCppType () : string) in let keyType = (mapKeyCppType (receiverType : string) : string) in if HxString.length keyType > 0 then let __assign_13572 = (("std::shared_ptr<__hxhx_iterator<" ^ HxString.toStdString keyType) ^ ">>" : string) in (
           tempResult2 := __assign_13572;
           __assign_13572
         ) else let __assign_13573 = ("" : string) in (
@@ -60932,14 +60932,14 @@ and knownFieldCallReturnCppType = fun receiver hx_method args scope -> try let _
           tempResult2 := __assign_13574;
           __assign_13574
         )
-        | "next" -> let iteratorElement = (cppIteratorElementType (exprCppType (Obj.magic receiver) scope : string) : string) in if HxString.length iteratorElement > 0 then let __assign_13575 = (iteratorElement : string) in (
+        | "next" -> let iteratorElement = (cppIteratorElementType (receiverCppType () : string) : string) in if HxString.length iteratorElement > 0 then let __assign_13575 = (iteratorElement : string) in (
           tempResult2 := __assign_13575;
           __assign_13575
         ) else let __assign_13576 = ("" : string) in (
           tempResult2 := __assign_13576;
           __assign_13576
         )
-        | "copy" | "join" | "map" | "pop" -> (let receiverType = (exprCppType (Obj.magic receiver) scope : string) in if not (isCppVectorType (receiverType : string)) then let __assign_13577 = ("" : string) in (
+        | "copy" | "join" | "map" | "pop" -> (let receiverType = (receiverCppType () : string) in if not (isCppVectorType (receiverType : string)) then let __assign_13577 = ("" : string) in (
           tempResult2 := __assign_13577;
           __assign_13577
         ) else match hx_method with
@@ -70230,6 +70230,8 @@ let cppLocalDeclaredType = fun name typeHint init scope declaredLocalName -> try
   )
 ) in Obj.magic __fallback_result_7947 with
   | HxRuntime.Hx_return __ret_7946 -> Obj.obj __ret_7946
+
+let knownFieldCallReturnCppType = fun receiver hx_method args scope -> knownFieldCallReturnCppTypeWithReceiverCppType (Obj.magic receiver) (hx_method : string) (Obj.magic args) (fun () -> exprCppType (Obj.magic receiver) scope) scope
 
 let abstractThisAnonAssignmentLines = fun fieldNames fieldValues indent scope -> try let __fallback_result_13832 = (
   ignore (if scope == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get scope "owner") == Obj.magic (HxRuntime.hx_null) || not (scopeOwnerIsHxhxAbstract scope) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());

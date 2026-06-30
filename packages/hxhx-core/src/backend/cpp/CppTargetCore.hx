@@ -10785,7 +10785,7 @@ class CppTargetCore {
 						receiverType = exprCppType(receiver, scope);
 					return receiverType;
 				}
-				final knownReturn = knownFieldCallReturnCppType(receiver, method, args, scope);
+				final knownReturn = knownFieldCallReturnCppTypeWithReceiverCppType(receiver, method, args, fieldReceiverCppType, scope);
 				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver,
 					method, fieldReceiverCppType, scope);
 				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
@@ -11617,7 +11617,7 @@ class CppTargetCore {
 					return typeName;
 				}
 				final knownStart = timingEnabled ? Sys.time() : 0.0;
-				final knownReturn = knownFieldCallReturnCppType(receiver, method, args, scope);
+				final knownReturn = knownFieldCallReturnCppTypeWithReceiverCppType(receiver, method, args, fieldReceiverCppType, scope);
 				traceFieldInferPhase("known", knownStart, knownReturn);
 				final primitiveStart = timingEnabled ? Sys.time() : 0.0;
 				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver,
@@ -11732,6 +11732,11 @@ class CppTargetCore {
 	}
 
 	static function knownFieldCallReturnCppType(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		return knownFieldCallReturnCppTypeWithReceiverCppType(receiver, method, args, function() return exprCppType(receiver, scope), scope);
+	}
+
+	static function knownFieldCallReturnCppTypeWithReceiverCppType(receiver:HxExpr, method:String, args:Array<HxExpr>, receiverCppType:Void->String,
+			?scope:CppRenderScope):String {
 		final arity = args == null ? 0 : args.length;
 		if (isReflectStaticReceiver(receiver)) {
 			switch (method) {
@@ -11744,21 +11749,21 @@ class CppTargetCore {
 		}
 		return switch (method) {
 			case "get" if (arity == 1):
-				final receiverType = exprCppType(receiver, scope);
+				final receiverType = receiverCppType();
 				final valueType = mapValueCppType(receiverType);
 				valueType.length > 0 ? "std::optional<" + valueType + ">" : "";
 			case "keys" if (arity == 0):
-				final receiverType = exprCppType(receiver, scope);
+				final receiverType = receiverCppType();
 				final keyType = mapKeyCppType(receiverType);
 				keyType.length > 0 ? "std::shared_ptr<__hxhx_iterator<" + keyType + ">>" : "";
 			case "iterator" if (arity == 0):
-				final receiverType = exprCppType(receiver, scope);
+				final receiverType = receiverCppType();
 				final mapValueType = mapValueCppType(receiverType);
 				if (mapValueType.length > 0) "std::shared_ptr<__hxhx_iterator<"
 					+ mapValueType
 					+ ">>"; else if (isCppVectorType(receiverType)) iteratorCppTypeForVector(receiverType); else "";
 			case "map" | "join" | "copy" | "pop":
-				final receiverType = exprCppType(receiver, scope);
+				final receiverType = receiverCppType();
 				if (!isCppVectorType(receiverType)) ""; else switch (method) {
 					case "map":
 						"std::vector<std::string>";
@@ -11772,10 +11777,10 @@ class CppTargetCore {
 						"";
 				}
 			case "next":
-				final iteratorElement = cppIteratorElementType(exprCppType(receiver, scope));
+				final iteratorElement = cppIteratorElementType(receiverCppType());
 				iteratorElement.length > 0 ? iteratorElement : "";
 			case "hasNext":
-				cppIteratorElementType(exprCppType(receiver, scope)).length > 0 ? "bool" : "";
+				cppIteratorElementType(receiverCppType()).length > 0 ? "bool" : "";
 			case _:
 				"";
 		};
