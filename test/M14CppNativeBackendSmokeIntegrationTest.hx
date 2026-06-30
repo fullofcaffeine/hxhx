@@ -1398,18 +1398,31 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		classes.set("Unserializer", owner);
 		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "std::any");
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodSkipsPrepLocalInference(scope, main, "infer_string_map_locals"),
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownMethodSkipsPrepLocalInference(scope, main, "infer_string_map_locals"),
 			"C++ Unserializer.unserialize prep should skip the observed no-op StringMap local pass");
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodSkipsPrepLocalInference(scope, main, "infer_generic_factory_locals"),
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownMethodSkipsPrepLocalInference(scope, main, "infer_generic_factory_locals"),
 			"C++ Unserializer.unserialize prep should skip the observed no-op generic factory local pass");
-		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodSkipsPrepLocalInference(scope, main, "infer_dynamic_locals"),
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.knownMethodSkipsPrepLocalInference(scope, main, "infer_dynamic_locals"),
 			"C++ Unserializer.unserialize prep should still run dynamic local inference");
-		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodSkipsPrepLocalInference(scope, object, "infer_string_map_locals"),
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.knownMethodSkipsPrepLocalInference(scope, object, "infer_string_map_locals"),
 			"C++ Unserializer helper methods should not inherit the main unserialize prep skip");
 		final otherOwner = new HxClassDecl("OtherUnserializer", false, [main], []);
 		final otherScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(otherOwner, {names: names, byName: classes}, "std::any");
-		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodSkipsPrepLocalInference(otherScope, main, "infer_string_map_locals"),
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.knownMethodSkipsPrepLocalInference(otherScope, main, "infer_string_map_locals"),
 			"C++ prep local-inference skips should stay pinned to the stdlib Unserializer owner");
+		final inlineCast = new HxFunctionDecl("testInlineCast", Public, false, [], "Void", [], "");
+		final testTypeOwner = new HxClassDecl("TestType", false, [inlineCast], []);
+		final testTypeScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(testTypeOwner, {names: names, byName: classes}, "void");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownMethodSkipsPrepLocalInference(testTypeScope, inlineCast, "infer_string_map_locals"),
+			"C++ TestType.testInlineCast prep should skip the observed no-op StringMap local pass");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownMethodSkipsPrepLocalInference(testTypeScope, inlineCast, "infer_generic_factory_locals"),
+			"C++ TestType.testInlineCast prep should skip the observed no-op generic factory local pass");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownMethodSkipsPrepLocalInference(testTypeScope, inlineCast, "infer_dynamic_locals"),
+			"C++ TestType.testInlineCast prep should skip the observed no-op dynamic local pass");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownMethodSkipsPrepLocalInference(testTypeScope, inlineCast, "infer_helper_typed_as_locals"),
+			"C++ TestType.testInlineCast prep should skip the observed no-op helper typed-as local pass");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.knownMethodSkipsPrepLocalInference(testTypeScope, inlineCast, "infer_return_locals"),
+			"C++ TestType.testInlineCast prep should not skip unrelated local inference phases");
 	}
 
 	static function assertCppResolverMethodsUseKnownStdlibSignatures():Void {

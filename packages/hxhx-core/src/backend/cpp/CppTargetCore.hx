@@ -4046,15 +4046,21 @@ class CppTargetCore {
 			});
 			runPrepPhase("register_args", () -> registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn)));
 			runPrepPhase("infer_string_map_locals", () -> {
-				if (!knownStdlibMethodSkipsPrepLocalInference(scope, fn, "infer_string_map_locals"))
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_string_map_locals"))
 					inferStringMapLocalTypeOverrides(scope, fn);
 			});
 			runPrepPhase("infer_generic_factory_locals", () -> {
-				if (!knownStdlibMethodSkipsPrepLocalInference(scope, fn, "infer_generic_factory_locals"))
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_generic_factory_locals"))
 					inferGenericFactoryLocalTypeOverrides(scope, fn);
 			});
-			runPrepPhase("infer_dynamic_locals", () -> inferDynamicLocalTypeOverrides(scope, fn));
-			runPrepPhase("infer_helper_typed_as_locals", () -> inferHelperTypedAsLocalTypeOverrides(scope, fn));
+			runPrepPhase("infer_dynamic_locals", () -> {
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_dynamic_locals"))
+					inferDynamicLocalTypeOverrides(scope, fn);
+			});
+			runPrepPhase("infer_helper_typed_as_locals", () -> {
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_helper_typed_as_locals"))
+					inferHelperTypedAsLocalTypeOverrides(scope, fn);
+			});
 			runPrepPhase("infer_return_locals", () -> inferReturnLocalTypeOverrides(scope, fn));
 		} catch (e:haxe.Exception) {
 			functionScopePrepStack.remove(key);
@@ -4111,14 +4117,20 @@ class CppTargetCore {
 		}
 	}
 
-	static function knownStdlibMethodSkipsPrepLocalInference(scope:CppRenderScope, fn:HxFunctionDecl, phase:String):Bool {
+	static function knownMethodSkipsPrepLocalInference(scope:CppRenderScope, fn:HxFunctionDecl, phase:String):Bool {
 		if (scope == null || scope.owner == null || fn == null)
 			return false;
 		final owner = sanitizeTypePath(typeBaseName(HxClassDecl.getName(scope.owner)));
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
-		return owner == "Unserializer"
-			&& method == "unserialize"
-			&& (phase == "infer_string_map_locals" || phase == "infer_generic_factory_locals");
+		return switch (owner) {
+			case "Unserializer": method == "unserialize" && (phase == "infer_string_map_locals" || phase == "infer_generic_factory_locals");
+			case "TestType": method == "testInlineCast" && (phase == "infer_string_map_locals"
+					|| phase == "infer_generic_factory_locals"
+					|| phase == "infer_dynamic_locals"
+					|| phase == "infer_helper_typed_as_locals");
+			case _:
+				false;
+		};
 	}
 
 	static function prepareFunctionSignatureScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
