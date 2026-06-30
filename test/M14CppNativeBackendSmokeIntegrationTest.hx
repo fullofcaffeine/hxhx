@@ -1326,6 +1326,39 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(names.indexOf("bodyOnly") < 0, "C++ anonymous collection should not scan compile-time macro API bodies into runtime structs");
 	}
 
+	static function assertCppHelperRenderClassification():Void {
+		final program = cppHelperReachabilityProgram();
+		var mainClass:HxClassDecl = null;
+		for (typed in program.getTypedModules())
+			for (cls in HxModuleDecl.getClasses(typed.getParsed().getDecl()))
+				if (HxClassDecl.getName(cls) == "Main")
+					mainClass = cls;
+		assertTrue(mainClass != null, "C++ helper classification fixture should have a Main class");
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
+		final reachable = @:privateAccess backend.cpp.CppTargetCore.collectReachableHelperClasses(program, mainClass, lookup);
+		final reachableNames = [for (cls in reachable) HxClassDecl.getName(cls)].join("\n");
+		assertContains(reachableNames, "Used", "C++ helper classification should include the directly used helper");
+		assertContains(reachableNames, "Dep", "C++ helper classification should include the body-only dependency helper");
+		assertTrue(reachableNames.indexOf("Unused") < 0, "C++ helper classification should not count unreachable helpers");
+		final counts = @:privateAccess backend.cpp.CppTargetCore.helperRenderKindCounts(reachable, lookup);
+		assertTrue(counts.fullBody == 2, "C++ helper classification should count reachable source-body helpers, got " + counts.fullBody);
+		assertTrue(counts.declarationOnly == 0, "C++ helper classification should not count declaration-only helpers in the source-body fixture");
+		assertTrue(counts.runtimeModule == 0, "C++ helper classification should not count runtime modules in the source-body fixture");
+		assertTrue(counts.unsupportedDiagnostic == 0, "C++ helper classification should not count unsupported diagnostics in the source-body fixture");
+
+		final iface = new HxClassDecl("InterfaceOnly", false, [new HxFunctionDecl("label", Public, false, [], "String", [], "")], [], "", [], true);
+		final any = new HxClassDecl("Any", false, [], []);
+		final missingIMap = new HxClassDecl("IMap", false, [], []);
+		assertTrue(Std.string(@:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(iface, lookup)) == "DeclarationOnly",
+			"C++ helper classification should identify interface/signature-only helpers");
+		assertTrue(Std.string(@:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(any, lookup)) == "RuntimeModule",
+			"C++ helper classification should identify target-owned runtime module helpers");
+		assertTrue(Std.string(@:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(missingIMap, lookup)) == "DeclarationOnly",
+			"C++ helper classification should identify missing declaration surfaces as declaration-only");
+		assertTrue(Std.string(@:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(null, lookup)) == "UnsupportedDiagnostic",
+			"C++ helper classification should reserve a visible unsupported-diagnostic bucket");
+	}
+
 	static function assertCppOptionalArrowFunctionsUseCallableShapes():Void {
 		assertTrue(backend.cpp.CppTypeModel.cppFunctionTypeHint("?Int -> Int") == "std::function<int(int)>",
 			"C++ function type hints should strip optional markers from unnamed argument parts");
@@ -2239,6 +2272,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Error enum-like fields should lower to tag strings instead of invalid dotted values");
 		assertCppAnonCollectUsesLightweightFunctionScope();
 		assertCppAnonCollectSkipsCompileTimeMacroBodies();
+		assertCppHelperRenderClassification();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertCppFunctionScopePrepCachesArgRegistration();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();

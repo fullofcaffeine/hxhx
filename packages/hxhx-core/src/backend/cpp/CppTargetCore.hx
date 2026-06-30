@@ -38,6 +38,29 @@ typedef CppFunctionScopePrep = {
 }
 
 /**
+	Coarse render policy bucket for reachable Cpp helper classes.
+
+	FullBody keeps rendering parsed helper fields/method bodies. DeclarationOnly
+	emits no body or only an interface/signature surface. RuntimeModule means the
+	target owns a compact support/template body instead of rendering the parsed
+	helper implementation. UnsupportedDiagnostic is reserved for future explicit
+	"do not fake this as parity" helpers.
+**/
+enum CppHelperRenderKind {
+	FullBody;
+	DeclarationOnly;
+	RuntimeModule;
+	UnsupportedDiagnostic;
+}
+
+typedef CppHelperRenderKindCounts = {
+	var fullBody:Int;
+	var declarationOnly:Int;
+	var runtimeModule:Int;
+	var unsupportedDiagnostic:Int;
+}
+
+/**
 	Small native C++ source-emission target core.
 
 	Why
@@ -2033,6 +2056,7 @@ class CppTargetCore {
 		traceCppPhase("render_helper_classes_before_order count=" + helpers.length);
 		final orderedHelpers = orderHelperClasses(helpers, classLookup);
 		traceCppPhase("render_helper_classes_after_order count=" + orderedHelpers.length);
+		traceHelperRenderKindCounts("render_helper_classes_classification", orderedHelpers, classLookup);
 		for (cls in orderedHelpers) {
 			final helperName = renderedClassName(cls, classLookup);
 			final timingEnabled = traceCppTimingsEnabled();
@@ -2047,6 +2071,72 @@ class CppTargetCore {
 			}
 		}
 		return out;
+	}
+
+	static function traceHelperRenderKindCounts(label:String, helpers:Array<HxClassDecl>, classLookup:CppClassLookup):Void {
+		if (!traceCppEnabled())
+			return;
+		final counts = helperRenderKindCounts(helpers, classLookup);
+		traceCppPhase(label + " total=" + helpers.length + " full_body=" + counts.fullBody + " declaration_only=" + counts.declarationOnly
+			+ " runtime_module=" + counts.runtimeModule + " unsupported_diagnostic=" + counts.unsupportedDiagnostic);
+	}
+
+	static function helperRenderKindCounts(helpers:Array<HxClassDecl>, classLookup:CppClassLookup):CppHelperRenderKindCounts {
+		final counts:CppHelperRenderKindCounts = {
+			fullBody: 0,
+			declarationOnly: 0,
+			runtimeModule: 0,
+			unsupportedDiagnostic: 0
+		};
+		for (cls in helpers)
+			switch (helperClassRenderKind(cls, classLookup)) {
+				case FullBody:
+					counts.fullBody++;
+				case DeclarationOnly:
+					counts.declarationOnly++;
+				case RuntimeModule:
+					counts.runtimeModule++;
+				case UnsupportedDiagnostic:
+					counts.unsupportedDiagnostic++;
+			}
+		return counts;
+	}
+
+	static function helperClassRenderKind(cls:HxClassDecl, classLookup:CppClassLookup):CppHelperRenderKind {
+		if (cls == null)
+			return UnsupportedDiagnostic;
+		final rawName = HxClassDecl.getName(cls);
+		if (isCppCoreExternClass(rawName) || isBytesDataTypeName(rawName))
+			return DeclarationOnly;
+		final className = renderedClassName(cls, classLookup);
+		if (HxClassDecl.getFields(cls).length == 0
+			&& HxClassDecl.getFunctions(cls).length == 0
+			&& renderMissingInterfaceDeclaration(className) != null)
+			return DeclarationOnly;
+		if (HxClassDecl.getIsInterface(cls))
+			return DeclarationOnly;
+		if (helperClassUsesTargetRuntimeModule(cls, classLookup, className))
+			return RuntimeModule;
+		return FullBody;
+	}
+
+	static function helperClassUsesTargetRuntimeModule(cls:HxClassDecl, classLookup:CppClassLookup, className:String):Bool {
+		return isAnySupportClass(cls)
+			|| isGenericMapSupportClass(cls)
+			|| isPosInfosSupportClass(cls)
+			|| isRestSupportClass(cls)
+			|| isStdVectorHelperClass(cls)
+			|| isStdVectorHelperName(className)
+			|| isTemplateWrapSupportClass(cls)
+			|| isHashMapBackedAbstractClass(cls)
+			|| isStringMapBackedAbstractClass(cls)
+			|| isArrayBackedAbstractClass(cls)
+			|| isPrimitiveBackedAbstractClass(cls)
+			|| isStdArrayHelperClass(cls)
+			|| isCppReportSupportClass(cls)
+			|| isUtestAssertSupportClass(cls, classLookup)
+			|| isUnitTestBaseSupportClass(cls)
+			|| isTemplateSupportClass(cls);
 	}
 
 	static function collectReachableHelperClasses(program:GenIrProgram, mainClass:HxClassDecl, classLookup:CppClassLookup):Array<HxClassDecl> {

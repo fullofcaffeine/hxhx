@@ -222,3 +222,4 @@
 {"id":"int-44376d05","kind":"field_change","created_at":"2026-06-29T00:39:20.904252Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-cpp-helper-render-pruning","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
 {"id":"int-49e39280","kind":"field_change","created_at":"2026-06-30T17:23:25.455203Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-bxhc","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
 {"id":"int-4e8dea8d","kind":"field_change","created_at":"2026-06-30T18:26:42.036953Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-bxhc","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"GPT 5.5 Pro review summarized, follow-up beads filed, and North Star checkpoint added"}}
+{"id":"int-a1d6ed91","kind":"field_change","created_at":"2026-06-30T19:07:35.371419Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-bhzg","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
