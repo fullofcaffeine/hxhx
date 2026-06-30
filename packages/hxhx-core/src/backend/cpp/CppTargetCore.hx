@@ -93,6 +93,7 @@ class CppTargetCore {
 	static var functionReturnTypesCache = new haxe.ds.StringMap<String>();
 	static var traceCppDeepEnabledCache = -1;
 	static var traceCppTimingsEnabledCache = -1;
+	static var traceCppHelperClassificationDetailsEnabledCache = -1;
 	static var traceCppTimingMethodFilterCache:Null<String> = null;
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
@@ -171,6 +172,17 @@ class CppTargetCore {
 
 	static function traceCppTimingPhase(label:String):Void {
 		if (traceCppTimingsEnabled())
+			Sys.println("cpp_target_phase=" + label);
+	}
+
+	static function traceCppHelperClassificationDetailsEnabled():Bool {
+		if (traceCppHelperClassificationDetailsEnabledCache < 0)
+			traceCppHelperClassificationDetailsEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_HELPER_CLASSIFICATION_DETAILS") ? 1 : 0;
+		return traceCppHelperClassificationDetailsEnabledCache == 1;
+	}
+
+	static function traceCppHelperClassificationDetailPhase(label:String):Void {
+		if (traceCppHelperClassificationDetailsEnabled())
 			Sys.println("cpp_target_phase=" + label);
 	}
 
@@ -2057,6 +2069,7 @@ class CppTargetCore {
 		final orderedHelpers = orderHelperClasses(helpers, classLookup);
 		traceCppPhase("render_helper_classes_after_order count=" + orderedHelpers.length);
 		traceHelperRenderKindCounts("render_helper_classes_classification", orderedHelpers, classLookup);
+		traceHelperRenderKindDetails("render_helper_classes_classification", orderedHelpers, classLookup);
 		for (cls in orderedHelpers) {
 			final helperName = renderedClassName(cls, classLookup);
 			final timingEnabled = traceCppTimingsEnabled();
@@ -2081,6 +2094,16 @@ class CppTargetCore {
 			+ " runtime_module=" + counts.runtimeModule + " unsupported_diagnostic=" + counts.unsupportedDiagnostic);
 	}
 
+	static function traceHelperRenderKindDetails(label:String, helpers:Array<HxClassDecl>, classLookup:CppClassLookup):Void {
+		if (!traceCppHelperClassificationDetailsEnabled())
+			return;
+		var index = 0;
+		for (cls in helpers) {
+			traceCppHelperClassificationDetailPhase(helperRenderKindDetailLine(label, index, cls, classLookup));
+			index++;
+		}
+	}
+
 	static function helperRenderKindCounts(helpers:Array<HxClassDecl>, classLookup:CppClassLookup):CppHelperRenderKindCounts {
 		var fullBody = 0;
 		var declarationOnly = 0;
@@ -2102,6 +2125,34 @@ class CppTargetCore {
 			declarationOnly: declarationOnly,
 			runtimeModule: runtimeModule,
 			unsupportedDiagnostic: unsupportedDiagnostic
+		};
+	}
+
+	static function helperRenderKindDetailLine(label:String, index:Int, cls:HxClassDecl, classLookup:CppClassLookup):String {
+		final kind = helperClassRenderKind(cls, classLookup);
+		if (cls == null)
+			return label + "_detail index=" + index + " kind=" + helperRenderKindLabel(kind) + " name=<null>";
+		final renderedName = renderedClassName(cls, classLookup);
+		final rawName = HxClassDecl.getName(cls);
+		final packagePath = packagePathForRenderedClass(cls, classLookup);
+		var line = label + "_detail index=" + index + " kind=" + helperRenderKindLabel(kind) + " name=" + renderedName;
+		if (rawName != renderedName)
+			line += " raw=" + rawName;
+		if (packagePath.length > 0)
+			line += " package=" + packagePath;
+		return line;
+	}
+
+	static function helperRenderKindLabel(kind:CppHelperRenderKind):String {
+		return switch (kind) {
+			case FullBody:
+				"full_body";
+			case DeclarationOnly:
+				"declaration_only";
+			case RuntimeModule:
+				"runtime_module";
+			case UnsupportedDiagnostic:
+				"unsupported_diagnostic";
 		};
 	}
 

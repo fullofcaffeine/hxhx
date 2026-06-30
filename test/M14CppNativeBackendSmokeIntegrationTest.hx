@@ -1349,14 +1349,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final iface = new HxClassDecl("InterfaceOnly", false, [new HxFunctionDecl("label", Public, false, [], "String", [], "")], [], "", [], true);
 		final any = new HxClassDecl("Any", false, [], []);
 		final missingIMap = new HxClassDecl("IMap", false, [], []);
-		assertTrue(Std.string(@:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(iface, lookup)) == "DeclarationOnly",
-			"C++ helper classification should identify interface/signature-only helpers");
-		assertTrue(Std.string(@:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(any, lookup)) == "RuntimeModule",
-			"C++ helper classification should identify target-owned runtime module helpers");
-		assertTrue(Std.string(@:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(missingIMap, lookup)) == "DeclarationOnly",
+		final ifaceKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(iface, lookup);
+		final anyKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(any, lookup);
+		final missingIMapKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(missingIMap, lookup);
+		final nullKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(null, lookup);
+		assertTrue(Std.string(ifaceKind) == "DeclarationOnly", "C++ helper classification should identify interface/signature-only helpers");
+		assertTrue(Std.string(anyKind) == "RuntimeModule", "C++ helper classification should identify target-owned runtime module helpers");
+		assertTrue(Std.string(missingIMapKind) == "DeclarationOnly",
 			"C++ helper classification should identify missing declaration surfaces as declaration-only");
-		assertTrue(Std.string(@:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(null, lookup)) == "UnsupportedDiagnostic",
-			"C++ helper classification should reserve a visible unsupported-diagnostic bucket");
+		assertTrue(Std.string(nullKind) == "UnsupportedDiagnostic", "C++ helper classification should reserve a visible unsupported-diagnostic bucket");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(ifaceKind) == "declaration_only",
+			"C++ helper classification detail labels should use trace-stable bucket names");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(anyKind) == "runtime_module",
+			"C++ helper classification detail labels should expose target-owned runtime module helpers");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(nullKind) == "unsupported_diagnostic",
+			"C++ helper classification detail labels should expose unsupported diagnostics");
+		final detail = @:privateAccess backend.cpp.CppTargetCore.helperRenderKindDetailLine("fixture", 3, iface, lookup);
+		assertContains(detail, "fixture_detail index=3 kind=declaration_only name=InterfaceOnly",
+			"C++ helper classification details should identify the bucket and rendered helper name");
+		final nullDetail = @:privateAccess backend.cpp.CppTargetCore.helperRenderKindDetailLine("fixture", 4, null, lookup);
+		assertContains(nullDetail, "fixture_detail index=4 kind=unsupported_diagnostic name=<null>",
+			"C++ helper classification details should keep unsupported null entries visible");
 	}
 
 	static function assertCppOptionalArrowFunctionsUseCallableShapes():Void {

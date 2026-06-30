@@ -34,6 +34,14 @@ trace channel:
 cpp_target_phase=render_helper_classes_classification total=<n> full_body=<n> declaration_only=<n> runtime_module=<n> unsupported_diagnostic=<n>
 ```
 
+For architecture/debug runs that need the actual inventory, enable
+`HXHX_TRACE_STAGE3_CPP_HELPER_CLASSIFICATION_DETAILS=1`. It emits one opt-in
+line per ordered helper:
+
+```text
+cpp_target_phase=render_helper_classes_classification_detail index=<n> kind=<bucket> name=<rendered-helper> [raw=<source-name>] [package=<package>]
+```
+
 Use the same strict Cpp Gate3 command and timeout when comparing counts across
 slices. Timing/frontier changes are meaningful only when paired with helper
 counts, generated size, and the failure mode.
