@@ -11361,15 +11361,45 @@ class CppTargetCore {
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case ECall(EField(receiver, method), args):
+				final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+				function traceFieldInferPhase(phase:String, start:Float, typeName:String):String {
+					if (timingEnabled)
+						traceCppScopeStmtTimingPhase(scope,
+							"phase=field_infer_"
+							+ phase
+							+ " seconds="
+							+ Std.string(Sys.time() - start)
+							+ " method="
+							+ sanitizeIdentifier(method)
+							+ " receiver="
+							+ exprKind(receiver)
+							+ " type="
+							+ traceCppSnippet(typeName));
+					return typeName;
+				}
+				final knownStart = timingEnabled ? Sys.time() : 0.0;
 				final knownReturn = knownFieldCallReturnCppType(receiver, method, args, scope);
+				traceFieldInferPhase("known", knownStart, knownReturn);
+				final primitiveStart = timingEnabled ? Sys.time() : 0.0;
 				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppType(receiver, method, scope);
+				traceFieldInferPhase("primitive", primitiveStart, primitiveAbstractReturn);
 				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
+					final staticStart = timingEnabled ? Sys.time() : 0.0;
 					final staticOwner = staticReceiverClassName(receiver, scope);
+					traceFieldInferPhase("static_owner", staticStart, staticOwner == null ? "" : staticOwner);
 					if (staticOwner != null) {
-						classMethodCppReturnType(staticOwner, method, true, scope);
+						final returnStart = timingEnabled ? Sys.time() : 0.0;
+						traceFieldInferPhase("static_return", returnStart, classMethodCppReturnType(staticOwner, method, true, scope));
 					} else {
-						final ownerType = classNameFromCppExprType(exprCppType(receiver, scope), scope);
-						ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
+						final receiverTypeStart = timingEnabled ? Sys.time() : 0.0;
+						final receiverType = exprCppType(receiver, scope);
+						traceFieldInferPhase("receiver_type", receiverTypeStart, receiverType);
+						final ownerStart = timingEnabled ? Sys.time() : 0.0;
+						final ownerType = classNameFromCppExprType(receiverType, scope);
+						traceFieldInferPhase("owner_type", ownerStart, ownerType == null ? "" : ownerType);
+						final returnStart = timingEnabled ? Sys.time() : 0.0;
+						ownerType == null ? "" : traceFieldInferPhase("instance_return", returnStart,
+							classMethodCppReturnType(ownerType, method, false, scope));
 					}
 				}
 			case ECall(ELambda(lambdaArgs, body), args):
