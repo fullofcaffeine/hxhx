@@ -693,6 +693,7 @@ class CppRuntimeSupport {
 
 	public static function rttiMetaLines():Array<String> {
 		return [
+			"// hxhx-cpp-bounded-bringup: erased metadata support is smoke-only; see docs/00-project/CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md.",
 			"template<typename TResult, typename T>",
 			"static TResult __hxhx_meta_get_as(const T&) {",
 			"  return TResult{};",
@@ -713,15 +714,18 @@ class CppRuntimeSupport {
 			"",
 			"template<typename TObject>",
 			"static std::any __hxhx_reflect_field(const TObject&, const std::string&) {",
+			"  // hxhx-cpp-bounded-bringup: erased Reflect.field returns an empty carrier until oracle-backed support or diagnostics exist.",
 			"  return std::any();",
 			"}",
 			"",
 			"template<typename TObject, typename TValue>",
 			"static void __hxhx_reflect_set_field(TObject&, const std::string&, const TValue&) {",
+			"  // hxhx-cpp-bounded-bringup: compile-safe Serializer object shape only; this does not mutate erased objects.",
 			"}",
 			"",
 			"template<typename TObject, typename TFunc, typename TArgs>",
 			"static std::any __hxhx_reflect_call_method(const TObject&, const TFunc&, const TArgs&) {",
+			"  // hxhx-cpp-bounded-bringup: erased Reflect.callMethod is not runtime parity support.",
 			"  return std::any();",
 			"}",
 			"",
@@ -794,6 +798,7 @@ class CppRuntimeSupport {
 
 	public static function enumValueDynamicLines():Array<String> {
 		return [
+			"// hxhx-cpp-bounded-bringup: erased enum/array/numeric extraction is partial; see docs/00-project/CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md.",
 			"static bool __hxhx_is_enum_value(const std::shared_ptr<EnumValue>& value) {",
 			"  return value != nullptr;",
 			"}",

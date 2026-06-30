@@ -734,6 +734,7 @@ let sysEventLoopLines = fun () -> let __arr_46 = HxArray.create () in (
 )
 
 let rttiMetaLines = fun () -> let __arr_47 = HxArray.create () in (
+  ignore (HxArray.push __arr_47 "// hxhx-cpp-bounded-bringup: erased metadata support is smoke-only; see docs/00-project/CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md.");
   ignore (HxArray.push __arr_47 "template<typename TResult, typename T>");
   ignore (HxArray.push __arr_47 "static TResult __hxhx_meta_get_as(const T&) {");
   ignore (HxArray.push __arr_47 "  return TResult{};");
@@ -754,15 +755,18 @@ let rttiMetaLines = fun () -> let __arr_47 = HxArray.create () in (
   ignore (HxArray.push __arr_47 "");
   ignore (HxArray.push __arr_47 "template<typename TObject>");
   ignore (HxArray.push __arr_47 "static std::any __hxhx_reflect_field(const TObject&, const std::string&) {");
+  ignore (HxArray.push __arr_47 "  // hxhx-cpp-bounded-bringup: erased Reflect.field returns an empty carrier until oracle-backed support or diagnostics exist.");
   ignore (HxArray.push __arr_47 "  return std::any();");
   ignore (HxArray.push __arr_47 "}");
   ignore (HxArray.push __arr_47 "");
   ignore (HxArray.push __arr_47 "template<typename TObject, typename TValue>");
   ignore (HxArray.push __arr_47 "static void __hxhx_reflect_set_field(TObject&, const std::string&, const TValue&) {");
+  ignore (HxArray.push __arr_47 "  // hxhx-cpp-bounded-bringup: compile-safe Serializer object shape only; this does not mutate erased objects.");
   ignore (HxArray.push __arr_47 "}");
   ignore (HxArray.push __arr_47 "");
   ignore (HxArray.push __arr_47 "template<typename TObject, typename TFunc, typename TArgs>");
   ignore (HxArray.push __arr_47 "static std::any __hxhx_reflect_call_method(const TObject&, const TFunc&, const TArgs&) {");
+  ignore (HxArray.push __arr_47 "  // hxhx-cpp-bounded-bringup: erased Reflect.callMethod is not runtime parity support.");
   ignore (HxArray.push __arr_47 "  return std::any();");
   ignore (HxArray.push __arr_47 "}");
   ignore (HxArray.push __arr_47 "");
@@ -832,6 +836,7 @@ let anyIsTypeLines = fun () -> let __arr_49 = HxArray.create () in (
 )
 
 let enumValueDynamicLines = fun () -> let __arr_50 = HxArray.create () in (
+  ignore (HxArray.push __arr_50 "// hxhx-cpp-bounded-bringup: erased enum/array/numeric extraction is partial; see docs/00-project/CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md.");
   ignore (HxArray.push __arr_50 "static bool __hxhx_is_enum_value(const std::shared_ptr<EnumValue>& value) {");
   ignore (HxArray.push __arr_50 "  return value != nullptr;");
   ignore (HxArray.push __arr_50 "}");

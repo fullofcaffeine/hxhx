@@ -7748,6 +7748,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::cout << (std::string(\"cpp-native:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit println");
 		assertContains(source, "std::cout << (std::string(\"trace:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit trace");
 		assertContains(source, "static std::string __hxhx_stringify(bool value)", "C++ smoke should include target-owned stringify support");
+		assertContains(source, "hxhx-cpp-bounded-bringup: erased metadata support is smoke-only",
+			"C++ smoke should label erased metadata helpers as bounded bring-up support");
+		assertContains(source, "hxhx-cpp-bounded-bringup: compile-safe Serializer object shape only",
+			"C++ smoke should label erased Reflect.setField as Serializer compile-shape support, not parity");
+		assertContains(source, "hxhx-cpp-bounded-bringup: erased enum/array/numeric extraction is partial",
+			"C++ smoke should label erased Dynamic extraction helpers as partial bring-up support");
 		assertContains(source, "struct __hxhx_exception_pos_infos", "C++ smoke should include target-owned exception position support");
 		assertContains(source, "std::string argument;", "C++ smoke should include target-owned exception argument support");
 		assertContains(source, "static std::shared_ptr<T> __hxhx_borrowed_shared(T* value)",

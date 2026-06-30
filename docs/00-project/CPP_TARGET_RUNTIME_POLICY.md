@@ -65,7 +65,7 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 | `baseCodeLines` | `bounded_bringup_support` | Compact BaseCode support. Needs invalid input, empty input, byte, and non-ASCII oracle coverage before parity. |
 | `vectorSupportLines` | `bounded_bringup_support` | Vector/array helpers use target defaults for some invalid access/empty cases. Not broad Array parity. |
 | `sysEventLoopLines` | `bounded_bringup_support`, not parity | Timer/Http/Lock/Mutex/MainLoop are simplified/no-op in several places. They unblock compile/smoke surfaces only. |
-| `rttiMetaLines` | `bounded_bringup_support`, `review_required` | Metadata and Reflect helpers mostly return empty/default values or no-op mutation. This is false-parity risk. |
+| `rttiMetaLines` | `bounded_bringup_support`, `review_required` | Metadata and Reflect helpers mostly return empty/default values or no-op mutation. This is false-parity risk; see [`CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md`](CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md). |
 | `enumValueTypeLines` | `bounded_bringup_support` | Lightweight enum carrier. Needs enum behavior matrix before parity. |
 | `anyIsTypeLines` | `bounded_bringup_support`, `review_required` | Partial `Std.isOfType`/Dynamic-style checks for a small set of C++ carriers. |
 | `enumValueDynamicLines` | `bounded_bringup_support`, `review_required` | Dynamic enum helpers and `std::any` conversions return defaults for unsupported values; Float conversion catches parse errors and returns `0.0`. |
@@ -88,7 +88,9 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 ## Required Follow-Ups
 
 - Convert unsafe Reflect/Dynamic/default-return scaffolding into explicit
-  `unsupported_diagnostic` behavior or oracle-backed support.
+  `unsupported_diagnostic` behavior or oracle-backed support. The current
+  inventory lives in
+  [`CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md`](CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md).
 - Put Serializer/Unserializer expansion behind
   [`SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md`](SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md).
 - Put Float/NaN/Infinity/Math/JSON/binary serialization and comparison changes
