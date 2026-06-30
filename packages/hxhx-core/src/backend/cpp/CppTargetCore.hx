@@ -10687,8 +10687,12 @@ class CppTargetCore {
 	static function primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver:HxExpr, method:String, receiverType:Void->String,
 			?scope:CppRenderScope):String {
 		var cls = primitiveBackedAbstractClassForExpr(receiver, scope);
-		if (cls == null)
-			cls = primitiveBackedAbstractClassForReceiverCppType(receiverType(), method, scope);
+		if (cls == null) {
+			final cppType = receiverType();
+			if (isCppReferenceType(cppType))
+				return "";
+			cls = primitiveBackedAbstractClassForReceiverCppType(cppType, method, scope);
+		}
 		if (cls == null)
 			return "";
 		final fn = classMethodDeclIn(cls, method, false);

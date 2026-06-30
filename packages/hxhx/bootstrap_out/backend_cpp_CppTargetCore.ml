@@ -33010,9 +33010,12 @@ and primitiveBackedAbstractMethodCallExpr = fun receiver hx_method args scope ->
 ) in Obj.magic __fallback_result_7660 with
   | HxRuntime.Hx_return __ret_7659 -> Obj.obj __ret_7659
 and primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType = fun receiver hx_method receiverType scope -> try let __fallback_result_7665 = let cls = ref (Obj.magic (primitiveBackedAbstractClassForExpr (Obj.magic receiver) scope)) in (
-  ignore (if !cls == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_7661 = Obj.magic (Obj.magic (primitiveBackedAbstractClassForReceiverCppType (receiverType () : string) (hx_method : string) scope)) in (
-    cls := __assign_7661;
-    __assign_7661
+  ignore (if !cls == Obj.magic (HxRuntime.hx_null) then ignore (let cppType = (receiverType () : string) in (
+    ignore (if isCppReferenceType (cppType : string) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+    let __assign_7661 = Obj.magic (Obj.magic (primitiveBackedAbstractClassForReceiverCppType (cppType : string) (hx_method : string) scope)) in (
+      cls := __assign_7661;
+      __assign_7661
+    )
   )) else ());
   ignore (if !cls == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   let fn = Obj.magic (classMethodDeclIn (Obj.magic (!cls)) (hx_method : string) false) in let tempResult = ref ("" : string) in (
