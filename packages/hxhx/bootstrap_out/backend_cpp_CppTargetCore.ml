@@ -47478,7 +47478,7 @@ let prepareFunctionSignatureScope = fun scope fn -> ignore (try (
   | HxRuntime.Hx_return __ret_1045 -> Obj.obj __ret_1045)
 
 let renderRttiMetaHelper = fun fn owner classLookup -> let returnType = (cppFunctionReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let target = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic args) 0)) : string) : string) in let tempString = ref ("" : string) in (
     ignore (let _g = (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in match _g with
       | "getFields" -> let __assign_1117 = (((("__hxhx_meta_section_as<" ^ HxString.toStdString returnType) ^ ">(") ^ HxString.toStdString target) ^ ", std::string(\"fields\"))" : string) in (
@@ -48088,7 +48088,7 @@ let renderInterfaceClass = fun cls classLookup -> try let __fallback_result_574 
             HxAnon.set scope "returnType" (Obj.repr __assign_570);
             __assign_570
           ));
-          ignore (prepareFunctionScope scope (Obj.magic fn));
+          ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
           HxArray.push (!tempArray) (((((("  virtual " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") = 0;")
         )
       )) with
@@ -48480,7 +48480,7 @@ let renderUtestAssertCallableStub = fun fn owner classLookup -> let returnType =
 )
 
 let renderPrimitiveStringRepeatHelper = fun fn owner classLookup -> let returnType = (cppFunctionReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let __arr_1109 = HxArray.create () in (
     ignore (HxArray.push __arr_1109 (((((("  static " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic args) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
     ignore (HxArray.push __arr_1109 "    std::string out;");
@@ -48919,7 +48919,7 @@ let renderStringToolsSupportHelper = fun fn owner classLookup -> let hx_method =
 )
 
 let renderUtestRunnerAddCasesHelper = fun fn owner classLookup -> let returnType = (cppFunctionReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let __arr_1240 = HxArray.create () in (
     ignore (HxArray.push __arr_1240 (((((("  " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
     ignore (HxArray.push __arr_1240 ("    " ^ HxString.toStdString (returnVoidStmt scope)));
@@ -48929,7 +48929,7 @@ let renderUtestRunnerAddCasesHelper = fun fn owner classLookup -> let returnType
 )
 
 let renderHelperMacrosShimHelper = fun fn owner classLookup -> try let __fallback_result_1253 = let returnType = (helperMacrosShimReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let hx_method = (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in (
     ignore (if HxString.equals hx_method "typedAs" && HxArray.length args = 2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_1247 = HxArray.create () in (
       ignore (HxArray.push __arr_1247 "  template<typename TActual, typename TExpected>");
@@ -48968,7 +48968,7 @@ let renderHelperMacrosShimHelper = fun fn owner classLookup -> try let __fallbac
   | HxRuntime.Hx_return __ret_1252 -> Obj.obj __ret_1252
 
 let renderMacroStringToolsShimHelper = fun fn owner classLookup -> let returnType = (cppFunctionReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let out = Obj.magic (let __arr_1262 = HxArray.create () in (
     ignore (HxArray.push __arr_1262 (((((("  static " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic args) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
     __arr_1262
@@ -49023,7 +49023,7 @@ let renderMacroCompilerApiShimHelper = fun fn owner classLookup -> let hx_method
 )
 
 let renderExceptionCaughtThrownHelper = fun fn owner classLookup -> let scope = renderScope (Obj.magic owner) classLookup ("std::shared_ptr<Exception>" : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let tempString = ref ("" : string) in (
     ignore (if HxArray.length args > 0 then let __assign_1304 = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic args) 0)) : string) : string) in (
       tempString := __assign_1304;
@@ -49042,7 +49042,7 @@ let renderExceptionCaughtThrownHelper = fun fn owner classLookup -> let scope = 
 )
 
 let renderTestExceptionsStackItemDataHelper = fun fn owner classLookup -> let returnType = (cppFunctionReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let __arr_1312 = HxArray.create () in (
     ignore (HxArray.push __arr_1312 (((((("  " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
     ignore (HxArray.push __arr_1312 (("    return " ^ HxString.toStdString (cppDefaultValue (returnType : string) scope)) ^ ";"));
@@ -51119,7 +51119,7 @@ let renderTimedHelperFunctionBody = fun ownerName methodName stmts indent scope 
   | HxRuntime.Hx_return __ret_2035 -> Obj.obj __ret_2035
 
 let renderPrinterNeutralStringHelper = fun fn owner classLookup -> let scope = renderScope (Obj.magic owner) classLookup ("std::string" : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let out = Obj.magic (let __arr_11223 = HxArray.create () in (
     ignore (HxArray.push __arr_11223 (((("  std::string " ^ HxString.toStdString (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
     __arr_11223
@@ -51150,7 +51150,7 @@ let renderPrinterFieldDelimiterHelper = fun fn owner classLookup -> renderPrinte
 let renderPrinterExprPositionsHelper = fun fn owner classLookup -> renderPrinterNeutralStringHelper (Obj.magic fn) (Obj.magic owner) classLookup
 
 let renderPrinterNeutralVoidHelper = fun fn owner classLookup -> let scope = renderScope (Obj.magic owner) classLookup ("void" : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let out = Obj.magic (let __arr_11226 = HxArray.create () in (
     ignore (HxArray.push __arr_11226 (((("  void " ^ HxString.toStdString (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
     __arr_11226
@@ -51179,7 +51179,7 @@ let renderPrinterVarObjectExprHelper = fun fn owner classLookup -> let tempResul
 )
 
 let renderTypeToolsFindFieldHelper = fun fn owner classLookup -> let returnType = (cppFunctionReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let out = Obj.magic (let __arr_11229 = HxArray.create () in (
     ignore (HxArray.push __arr_11229 (((((("  static " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string))) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
     __arr_11229
@@ -51198,7 +51198,7 @@ let renderTypeToolsFindFieldHelper = fun fn owner classLookup -> let returnType 
 )
 
 let renderTypeToolsTraversalHelper = fun fn owner classLookup -> let returnType = (cppFunctionReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let hx_method = (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in let firstArg = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic args) 0)) : string) : string) in let secondArg = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic args) 1)) : string) : string) in let out = Obj.magic (let __arr_11232 = HxArray.create () in (
     ignore (HxArray.push __arr_11232 (((((("  static " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString hx_method) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic args) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
     ignore (HxArray.push __arr_11232 (("    (void)" ^ HxString.toStdString secondArg) ^ ";"));
@@ -51222,7 +51222,7 @@ let renderExprToolsHelper = fun fn owner classLookup -> let hx_method = (sanitiz
     __assign_11234
   ));
   let scope = renderScope (Obj.magic owner) classLookup (!tempString : string) in (
-    ignore (prepareFunctionScope scope (Obj.magic fn));
+    ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
     let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let out = Obj.magic (let __arr_11235 = HxArray.create () in (
       ignore (HxArray.push __arr_11235 (((((("  static " ^ HxString.toStdString (!tempString)) ^ " ") ^ HxString.toStdString hx_method) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic args) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
       __arr_11235
@@ -51242,7 +51242,7 @@ let renderExprToolsHelper = fun fn owner classLookup -> let hx_method = (sanitiz
 )
 
 let renderUtestCallbackHelper = fun fn owner classLookup -> let returnType = (cppFunctionReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let hx_method = (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in let out = Obj.magic (let __arr_11238 = HxArray.create () in (
     ignore (HxArray.push __arr_11238 (((((("  " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString hx_method) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic args) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
     __arr_11238
@@ -51261,7 +51261,7 @@ let renderUtestCallbackHelper = fun fn owner classLookup -> let returnType = (cp
 )
 
 let renderUtestTemplatedNeutralHelper = fun fn owner classLookup returnType templateArg -> let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let argName = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) 0)) : string) : string) in let hx_method = (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in let out = Obj.magic (let __arr_11264 = HxArray.create () in (
     ignore (HxArray.push __arr_11264 (("  template<typename " ^ HxString.toStdString templateArg) ^ ">"));
     ignore (HxArray.push __arr_11264 (((((((("  " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString hx_method) ^ "(") ^ HxString.toStdString templateArg) ^ " ") ^ HxString.toStdString argName) ^ ") {"));
@@ -51277,7 +51277,7 @@ let renderUtestTemplatedNeutralHelper = fun fn owner classLookup returnType temp
 let renderUtestResultAggregationHelper = fun fn owner classLookup -> try let __fallback_result_11245 = let ownerName = (sanitizeTypePath (typeBaseName (HxClassDecl.getName (Obj.magic owner) : string) : string) : string) in let hx_method = (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in let returnType = (utestResultAggregationReturnType (ownerName : string) (hx_method : string) : string) in let templateArg = (utestResultAggregationTemplateArg (ownerName : string) (hx_method : string) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) : string) in (
   ignore (if templateArg != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderUtestTemplatedNeutralHelper (Obj.magic fn) (Obj.magic owner) classLookup (returnType : string) (templateArg : string))))) else ());
   let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-    ignore (prepareFunctionScope scope (Obj.magic fn));
+    ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
     let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let out = Obj.magic (let __arr_11241 = HxArray.create () in (
       ignore (HxArray.push __arr_11241 (((((("  " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString hx_method) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic args) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
       __arr_11241
@@ -51356,7 +51356,7 @@ let renderCppLibReportHelper = fun fn owner classLookup -> try let __fallback_re
     ));
   ignore (if HxString.equals ownerName "ReportTools" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (renderCppReportToolsHelper (Obj.magic fn) (Obj.magic owner) classLookup (!tempString : string))))) else ());
   let scope = renderScope (Obj.magic owner) classLookup (!tempString : string) in (
-    ignore (prepareFunctionScope scope (Obj.magic fn));
+    ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
     let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let tempString1 = ref ("" : string) in (
       ignore (if HxFunctionDecl.getIsStatic (Obj.magic fn) then let __assign_11271 = ("static " : string) in (
         tempString1 := __assign_11271;
@@ -51489,7 +51489,7 @@ let renderMainStaticFunctions = fun cls classLookup -> let out = Obj.magic (HxAr
 )
 
 let renderTemplateNeutralMethod = fun fn owner classLookup -> let returnType = (cppMethodSignatureReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
-  ignore (prepareFunctionScope scope (Obj.magic fn));
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let out = Obj.magic (HxArray.create ()) in let methodTypeParams = Obj.magic (emittedFunctionTypeParams (Obj.magic fn) (returnType : string) scope) in (
     ignore (if HxArray.length methodTypeParams > 0 then ignore (HxArray.push out ("  " ^ HxString.toStdString (genericTemplatePrefix (Obj.magic methodTypeParams)))) else ());
     let tempString = ref ("" : string) in (
@@ -52035,7 +52035,7 @@ let renderCppPrintReportClass = fun cls classLookup -> let out = Obj.magic (let 
           HxArray.push out "  }"
         ))
         | "_print" | "_trace" -> ignore (let scope = renderScope (Obj.magic cls) classLookup ("void" : string) in (
-          ignore (prepareFunctionScope scope (Obj.magic fn));
+          ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
           ignore (HxArray.push out (((("  void " ^ HxString.toStdString hx_method) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
           ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in while !_g2 < HxArray.length _g3 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
             ignore (let __old_11194 = !_g2 in let __new_11195 = HxInt.add __old_11194 1 in (

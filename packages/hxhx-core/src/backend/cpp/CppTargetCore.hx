@@ -2500,7 +2500,7 @@ class CppTargetCore {
 				continue;
 			final returnType = cppFunctionReturnType(fn, cls, classLookup);
 			scope.returnType = returnType;
-			prepareFunctionScope(scope, fn);
+			prepareFunctionSignatureScope(scope, fn);
 			out.push("  virtual " + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
 				+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") = 0;");
 		}
@@ -3036,7 +3036,7 @@ class CppTargetCore {
 	static function renderTemplateNeutralMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppMethodSignatureReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final out = new Array<String>();
 		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
 		if (methodTypeParams.length > 0)
@@ -4333,7 +4333,7 @@ class CppTargetCore {
 	static function renderPrimitiveStringRepeatHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		return ["  static "
 			+ returnType
@@ -4381,7 +4381,7 @@ class CppTargetCore {
 	static function renderRttiMetaHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		final target = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
 		final call = switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
@@ -4918,7 +4918,7 @@ class CppTargetCore {
 	static function renderUtestRunnerAddCasesHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		return ["  "
 			+ returnType
 			+ " "
@@ -4956,7 +4956,7 @@ class CppTargetCore {
 	static function renderHelperMacrosShimHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = helperMacrosShimReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		if (method == "typedAs" && args.length == 2) {
@@ -5021,7 +5021,7 @@ class CppTargetCore {
 	static function renderMacroStringToolsShimHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		final out = ["  static "
 			+ returnType
@@ -5141,7 +5141,7 @@ class CppTargetCore {
 
 	static function renderExceptionCaughtThrownHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final scope = renderScope(owner, classLookup, "std::shared_ptr<Exception>");
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		final valueName = args.length > 0 ? sanitizeIdentifier(HxFunctionArg.getName(args[0])) : "value";
 		return ["  static std::shared_ptr<Exception> "
@@ -5185,7 +5185,7 @@ class CppTargetCore {
 	static function renderTestExceptionsStackItemDataHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		return ["  "
 			+ returnType
 			+ " "
@@ -14459,7 +14459,7 @@ class CppTargetCore {
 					out.push("  }");
 				case "_trace" | "_print":
 					final scope = renderScope(cls, classLookup, "void");
-					prepareFunctionScope(scope, fn);
+					prepareFunctionSignatureScope(scope, fn);
 					out.push("  void " + method + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
 					for (arg in HxFunctionDecl.getArgs(fn))
 						out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
@@ -14593,7 +14593,7 @@ class CppTargetCore {
 
 	static function renderPrinterNeutralStringHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final scope = renderScope(owner, classLookup, "std::string");
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final out = ["  std::string "
 			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
 			+ "("
@@ -14608,7 +14608,7 @@ class CppTargetCore {
 
 	static function renderPrinterNeutralVoidHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final scope = renderScope(owner, classLookup, "void");
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final out = ["  void "
 			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
 			+ "("
@@ -14623,7 +14623,7 @@ class CppTargetCore {
 	static function renderTypeToolsFindFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final out = ["  static "
 			+ returnType
 			+ " "
@@ -14642,7 +14642,7 @@ class CppTargetCore {
 	static function renderTypeToolsTraversalHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		final firstArg = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
@@ -14666,7 +14666,7 @@ class CppTargetCore {
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		final returnType = method == "getValue" ? "std::any" : cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		final out = [
 			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"
@@ -14685,7 +14685,7 @@ class CppTargetCore {
 	static function renderUtestCallbackHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		final out = ["  " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"];
@@ -14708,7 +14708,7 @@ class CppTargetCore {
 		if (templateArg != null)
 			return renderUtestTemplatedNeutralHelper(fn, owner, classLookup, returnType, templateArg);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		final out = ["  " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"];
 		for (arg in args)
@@ -14770,7 +14770,7 @@ class CppTargetCore {
 	static function renderUtestTemplatedNeutralHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup, returnType:String,
 			templateArg:String):Array<String> {
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final argName = sanitizeIdentifier(HxFunctionArg.getName(HxFunctionDecl.getArgs(fn)[0]));
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		final out = [
@@ -14808,7 +14808,7 @@ class CppTargetCore {
 		if (ownerName == "ReportTools")
 			return renderCppReportToolsHelper(fn, owner, classLookup, returnType);
 		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionScope(scope, fn);
+		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		final out = ["  "
 			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
