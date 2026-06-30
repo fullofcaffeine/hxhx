@@ -89,8 +89,8 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 
 - Convert unsafe Reflect/Dynamic/default-return scaffolding into explicit
   `unsupported_diagnostic` behavior or oracle-backed support.
-- Put Serializer/Unserializer expansion behind its behavior spec and oracle
-  matrix.
+- Put Serializer/Unserializer expansion behind
+  [`SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md`](SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md).
 - Put Float/NaN/Infinity/Math/JSON/binary serialization and comparison changes
   behind the Float review gate.
 - Freeze compact primitive helpers with black-box oracle edge cases before they
