@@ -511,6 +511,9 @@ class CppTargetCore {
 		for (line in CppRuntimeSupport.baseCodeLines())
 			out.push(line);
 		out.push("");
+		for (line in CppRuntimeSupport.sha1Lines())
+			out.push(line);
+		out.push("");
 		out.push("static std::string __hxhx_base64_encode_bytes(const std::vector<int>& bytes, bool complement, const std::string& alphabet) {");
 		out.push("  std::string out;");
 		out.push("  int buf = 0;");
@@ -4196,6 +4199,8 @@ class CppTargetCore {
 			return returnTraced("special_resource", renderResourceSupportHelper(fn, owner, classLookup));
 		if (isMd5SupportHelper(fn, owner))
 			return returnTraced("special_md5", renderMd5SupportHelper(fn, owner, classLookup));
+		if (isSha1SupportHelper(fn, owner))
+			return returnTraced("special_sha1", renderSha1SupportHelper(fn, owner, classLookup));
 		if (isHelperMacrosShimHelper(fn, owner))
 			return returnTraced("special_helper_macros", renderHelperMacrosShimHelper(fn, owner, classLookup));
 		if (isMacroStringToolsShimHelper(fn, owner))
@@ -4502,6 +4507,19 @@ class CppTargetCore {
 		};
 	}
 
+	static function isSha1SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null)
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Sha1")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "encode" | "make" | "doEncode" | "str2blks" | "bytes2blks" | "rol" | "ft" | "kt" | "hex":
+				true;
+			case _:
+				false;
+		};
+	}
+
 	static function renderSysToolsSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
@@ -4711,6 +4729,54 @@ class CppTargetCore {
 			case "bytes2blks" | "str2blks" | "doEncode":
 				"std::vector<int>";
 			case "bitOR" | "bitXOR" | "bitAND" | "addme" | "rol" | "cmn" | "ff" | "gg" | "hh" | "ii":
+				"int";
+			case _:
+				supportMethodSignatureReturnType(fn, owner, classLookup);
+		};
+	}
+
+	static function renderSha1SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = sha1SupportReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = ["  "
+			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
+			+ returnType
+			+ " "
+			+ method
+			+ "("
+			+ renderFunctionArgs(args, scope)
+			+ ") {"];
+		inline function nameAt(index:Int, fallback:String):String {
+			return args.length > index ? sanitizeIdentifier(HxFunctionArg.getName(args[index])) : fallback;
+		}
+		switch (method) {
+			case "encode":
+				out.push("    return __hxhx_sha1_hex_string(" + nameAt(0, "s") + ");");
+			case "make":
+				out.push("    auto __hxhx_data = __hxhx_sha1_digest_bytes(" + nameAt(0, "b") + "->b);");
+				out.push("    return std::make_shared<Bytes>(static_cast<int>(__hxhx_data.size()), __hxhx_data);");
+			case _:
+				for (arg in args)
+					out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+				if (returnType != "void")
+					out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function sha1SupportReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "encode" | "hex":
+				"std::string";
+			case "make":
+				cppTypeHint("Bytes", renderScope(owner, classLookup, "auto"), classLookup);
+			case "bytes2blks" | "str2blks" | "doEncode":
+				"std::vector<int>";
+			case "rol" | "ft" | "kt":
 				"int";
 			case _:
 				supportMethodSignatureReturnType(fn, owner, classLookup);

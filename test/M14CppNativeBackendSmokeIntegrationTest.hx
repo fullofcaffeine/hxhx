@@ -6228,6 +6228,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(md5DoEncodeLines, "std::vector<int> doEncode(std::vector<int> x) {",
 			"C++ Md5 private implementation helpers should retain a compilable signature");
 		assertContains(md5DoEncodeLines, "(void)x;", "C++ Md5 private implementation helpers should be compact stubs once public API calls use target support");
+		final sha1Encode = new HxFunctionDecl("encode", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "String", [], "");
+		final sha1Make = new HxFunctionDecl("make", Public, true, [new HxFunctionArg("b", "Bytes", NoDefault, false, false)], "Bytes", [], "");
+		final sha1DoEncode = new HxFunctionDecl("doEncode", Private, false, [new HxFunctionArg("x", "Array<Int>", NoDefault, false, false)], "Array<Int>", [],
+			"");
+		final sha1Owner = new HxClassDecl("Sha1", false, [sha1Encode, sha1Make, sha1DoEncode], []);
+		bytesNames.set("Sha1", true);
+		bytesClasses.set("Sha1", sha1Owner);
+		final sha1EncodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(sha1Encode, sha1Owner, bytesLookup).join("\n");
+		final sha1MakeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(sha1Make, sha1Owner, bytesLookup).join("\n");
+		final sha1DoEncodeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(sha1DoEncode, sha1Owner, bytesLookup).join("\n");
+		assertContains(sha1EncodeLines, "static std::string encode(std::string s) {",
+			"C++ Sha1.encode support helper should keep the public String digest surface");
+		assertContains(sha1EncodeLines, "return __hxhx_sha1_hex_string(s);",
+			"C++ Sha1.encode support helper should use compact target runtime support instead of rendering the stdlib algorithm body");
+		assertContains(sha1MakeLines, "static std::shared_ptr<Bytes> make(std::shared_ptr<Bytes> b) {",
+			"C++ Sha1.make support helper should return vector-backed Bytes");
+		assertContains(sha1MakeLines, "auto __hxhx_data = __hxhx_sha1_digest_bytes(b->b);", "C++ Sha1.make support helper should hash Bytes storage directly");
+		assertContains(sha1MakeLines, "return std::make_shared<Bytes>(static_cast<int>(__hxhx_data.size()), __hxhx_data);",
+			"C++ Sha1.make support helper should rebuild haxe.io.Bytes from digest storage");
+		assertContains(sha1DoEncodeLines, "std::vector<int> doEncode(std::vector<int> x) {",
+			"C++ Sha1 private implementation helpers should retain a compilable signature");
+		assertContains(sha1DoEncodeLines, "(void)x;",
+			"C++ Sha1 private implementation helpers should be compact stubs once public API calls use target support");
 		final stringIterator = new HxClassDecl("StringIterator", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EField(EThis, "s"), EIdent("s")), HxPos.unknown())], ""),
@@ -7492,6 +7515,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "{\"binary-resource\", std::vector<int>{0, 65}}",
 			"C++ smoke should embed binary resource bytes in the generated resource table");
 		assertContains(source, "{\"ctrl-\\001A\", std::vector<int>{90}}", "C++ smoke should use fixed-width resource name escapes");
+		assertContains(source, "static std::vector<int> __hxhx_sha1_digest_bytes(const std::vector<int>& input)",
+			"C++ smoke should include target-owned Sha1 digest support");
 		assertContains(source, "__hxhx_args(argc, argv)", "C++ smoke should emit Sys.args helper call");
 		assertContains(source, "__hxhx_index_of(\"abc\", std::string(\"b\"), 0)", "C++ smoke should emit string indexOf helper call");
 		assertContains(source, "__hxhx_index_of(args, std::string(\"needle\"), 0)", "C++ smoke should emit vector indexOf helper call");
