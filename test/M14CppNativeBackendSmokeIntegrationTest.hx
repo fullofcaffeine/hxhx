@@ -1359,6 +1359,36 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(lines.indexOf("__hxhx_optional_lambda") < 0, "C++ optional lambda lowering should not leak the parser helper");
 	}
 
+	static function assertCppFunctionScopePrepCachesArgRegistration():Void {
+		final owner = new HxClassDecl("PrepCacheOwner", false, [], []);
+		final names = new StringMap<Bool>();
+		names.set("PrepCacheOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("PrepCacheOwner", owner);
+		final lookup = {names: names, byName: classes};
+		final fn = new HxFunctionDecl("run", Public, true, [
+			new HxFunctionArg("len", "Int", NoDefault, true, false),
+			new HxFunctionArg("label", "String", NoDefault, false, false)
+		], "Void", [], "");
+		final firstScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "void");
+		@:privateAccess backend.cpp.CppTargetCore.prepareFunctionScope(firstScope, fn);
+		final key = @:privateAccess backend.cpp.CppTargetCore.functionSignatureKeyForScope(firstScope, fn);
+		final cached = @:privateAccess backend.cpp.CppTargetCore.functionScopePrepCache.get(key);
+		assertTrue(cached != null, "C++ function-scope prep should cache prepared function argument state");
+		assertTrue(cached.argLocalTypes.get("len") == "std::optional<int>", "C++ function-scope prep cache should retain optional scalar argument C++ types");
+		assertTrue(cached.argLocalTypeHints.get("label") == "String", "C++ function-scope prep cache should retain argument type hints");
+		assertTrue(cached.argLocalNames.get("label") == "label", "C++ function-scope prep cache should retain declared argument local names");
+		assertTrue(cached.argLocalNameCounts.get("len") == 1, "C++ function-scope prep cache should retain argument local name counts");
+		firstScope.localTypes.set("scratch", "std::string");
+		final snapshot = @:privateAccess backend.cpp.CppTargetCore.snapshotFunctionScopePrep(firstScope, HxFunctionDecl.getArgs(fn));
+		final replayScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "void");
+		@:privateAccess backend.cpp.CppTargetCore.applyCachedFunctionArgRegistration(replayScope, snapshot);
+		assertTrue(replayScope.localTypes.get("len") == "std::optional<int>",
+			"C++ cached function-scope prep replay should restore optional scalar argument types");
+		assertTrue(replayScope.localTypeHints.get("label") == "String", "C++ cached function-scope prep replay should restore argument type hints");
+		assertTrue(!replayScope.localTypes.exists("scratch"), "C++ cached function-scope prep should not replay non-argument locals");
+	}
+
 	static function assertVendorExprToolsReturnTypesWhenAvailable():Void {
 		final exprToolsProgram = vendorExprToolsProgramWhenAvailable();
 		if (exprToolsProgram == null)
@@ -2143,6 +2173,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppAnonCollectUsesLightweightFunctionScope();
 		assertCppAnonCollectSkipsCompileTimeMacroBodies();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
+		assertCppFunctionScopePrepCachesArgRegistration();
 		assertTypedLocalFunctionBlockExprRendersStructurally();
 		final reflectCompareExpr = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "compare"), [EString("a"), EString("b")]));

@@ -31,6 +31,10 @@ typedef CppConstructorFieldInitializer = {
 typedef CppFunctionScopePrep = {
 	var argTypeOverrides:haxe.ds.StringMap<String>;
 	var localTypeOverrides:haxe.ds.StringMap<String>;
+	var argLocalTypes:haxe.ds.StringMap<String>;
+	var argLocalTypeHints:haxe.ds.StringMap<String>;
+	var argLocalNames:haxe.ds.StringMap<String>;
+	var argLocalNameCounts:haxe.ds.StringMap<Int>;
 }
 
 /**
@@ -3894,10 +3898,44 @@ class CppTargetCore {
 			scope.localTypeOverrides.set(name, prep.localTypeOverrides.get(name));
 	}
 
-	static function snapshotFunctionScopePrep(scope:CppRenderScope):CppFunctionScopePrep {
+	static function applyCachedFunctionArgRegistration(scope:CppRenderScope, prep:CppFunctionScopePrep):Void {
+		if (scope == null || prep == null)
+			return;
+		for (name in prep.argLocalTypes.keys())
+			scope.localTypes.set(name, prep.argLocalTypes.get(name));
+		for (name in prep.argLocalTypeHints.keys())
+			scope.localTypeHints.set(name, prep.argLocalTypeHints.get(name));
+		for (name in prep.argLocalNames.keys())
+			scope.localNames.set(name, prep.argLocalNames.get(name));
+		for (name in prep.argLocalNameCounts.keys())
+			scope.localNameCounts.set(name, prep.argLocalNameCounts.get(name));
+	}
+
+	static function snapshotFunctionScopePrep(scope:CppRenderScope, args:Array<HxFunctionArg>):CppFunctionScopePrep {
+		final argLocalTypes = new haxe.ds.StringMap<String>();
+		final argLocalTypeHints = new haxe.ds.StringMap<String>();
+		final argLocalNames = new haxe.ds.StringMap<String>();
+		final argLocalNameCounts = new haxe.ds.StringMap<Int>();
+		if (scope != null && args != null) {
+			for (arg in args) {
+				final name = sanitizeIdentifier(HxFunctionArg.getName(arg));
+				if (scope.localTypes.exists(name))
+					argLocalTypes.set(name, scope.localTypes.get(name));
+				if (scope.localTypeHints.exists(name))
+					argLocalTypeHints.set(name, scope.localTypeHints.get(name));
+				if (scope.localNames.exists(name))
+					argLocalNames.set(name, scope.localNames.get(name));
+				if (scope.localNameCounts.exists(name))
+					argLocalNameCounts.set(name, scope.localNameCounts.get(name));
+			}
+		}
 		return {
 			argTypeOverrides: copyStringMap(scope.argTypeOverrides),
-			localTypeOverrides: copyStringMap(scope.localTypeOverrides)
+			localTypeOverrides: copyStringMap(scope.localTypeOverrides),
+			argLocalTypes: argLocalTypes,
+			argLocalTypeHints: argLocalTypeHints,
+			argLocalNames: argLocalNames,
+			argLocalNameCounts: argLocalNameCounts
 		};
 	}
 
@@ -3930,7 +3968,7 @@ class CppTargetCore {
 		final cached = functionScopePrepCache.get(key);
 		if (cached != null) {
 			runPrepPhase("cache_apply", () -> applyFunctionScopePrep(scope, cached));
-			runPrepPhase("register_args", () -> registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn)));
+			runPrepPhase("register_args", () -> applyCachedFunctionArgRegistration(scope, cached));
 			if (prepTimingEnabled)
 				tracePrepPhase("total_cache_hit", Sys.time() - prepStartTime);
 			return;
@@ -3961,7 +3999,7 @@ class CppTargetCore {
 			functionScopePrepStack.remove(key);
 			throw e;
 		}
-		runPrepPhase("cache_store", () -> functionScopePrepCache.set(key, snapshotFunctionScopePrep(scope)));
+		runPrepPhase("cache_store", () -> functionScopePrepCache.set(key, snapshotFunctionScopePrep(scope, HxFunctionDecl.getArgs(fn))));
 		functionScopePrepStack.remove(key);
 		if (prepTimingEnabled)
 			tracePrepPhase("total_cache_miss", Sys.time() - prepStartTime);
