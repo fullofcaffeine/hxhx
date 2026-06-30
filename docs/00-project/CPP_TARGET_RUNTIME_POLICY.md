@@ -59,7 +59,7 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 | `missingDeclarationLines` | `declaration_only_support` plus partial bring-up | `IMap` is signature-only; `StringMap` includes a small implementation; `Date.toString` currently returns an empty string and is not parity. |
 | `missingMethodReturnType` | `declaration_only_support` | Signature helper only. It must not imply behavior exists. |
 | `anySupportLines` | `bounded_bringup_support`, `review_required` before expansion | `Any.__promote` returns `T{}` for unsupported conversions. That is smoke scaffolding, not Dynamic parity. |
-| `fpReinterpretLines` | `review_required` | Binary float support touches NaN, Infinity, signed zero, and platform representation. Use the Float review gate before expansion. |
+| `fpReinterpretLines` | `review_required` | Binary float support touches NaN, Infinity, signed zero, and platform representation. Use [`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md) before expansion. |
 | `dateIntrinsicLines` | `bounded_bringup_support` | UTC construction helper. Date/timezone behavior needs oracle coverage before parity. |
 | `stdIntrinsicLines` | `bounded_bringup_support` | `parseInt`, integer literal, and Int64 narrowing helpers. Numeric parsing changes must use oracle evidence. |
 | `baseCodeLines` | `bounded_bringup_support` | Compact BaseCode support. Needs invalid input, empty input, byte, and non-ASCII oracle coverage before parity. |
@@ -69,7 +69,7 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 | `enumValueTypeLines` | `bounded_bringup_support` | Lightweight enum carrier. Needs enum behavior matrix before parity. |
 | `anyIsTypeLines` | `bounded_bringup_support`, `review_required` | Partial `Std.isOfType`/Dynamic-style checks for a small set of C++ carriers. |
 | `enumValueDynamicLines` | `bounded_bringup_support`, `review_required` | Dynamic enum helpers and `std::any` conversions return defaults for unsupported values; Float conversion catches parse errors and returns `0.0`. |
-| `compareLines` | `review_required` | Comparison touches Dynamic, enums, strings, numbers, NaN, and signed zero. Use the Float/compare review gate before expansion. |
+| `compareLines` | `review_required` | Comparison touches Dynamic, enums, strings, numbers, NaN, and signed zero. Use [`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md) before expansion. |
 
 ## CppTargetCore Runtime Helper Audit
 
@@ -80,7 +80,7 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 | `renderRttiMetaHelper` and `rttiMetaLines` callers | `bounded_bringup_support`, `review_required` | Empty/default metadata results must not count as strict Reflect/RTTI parity. |
 | `renderDceReflectionHelperStringOverload` | `bounded_bringup_support` | Narrow string overload support for current DCE/reflection helper shapes. Expansion needs behavior cases. |
 | `dceReflectionHelperCallExpr`, `Reflect.field`, `Reflect.callMethod`, `Reflect.isFunction` | `bounded_bringup_support`, `review_required` | Reflect field/call/mutation is partial and may return `std::any()` or `false`. Unsafe as parity evidence. |
-| `Reflect.compare` / `Reflect.compareMethods` lowering | `review_required` | Must use the Float/compare review gate before expansion. |
+| `Reflect.compare` / `Reflect.compareMethods` lowering | `review_required` | Must use [`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md) before expansion. |
 | Serializer/Unserializer object and enum helper lowering | `review_required` | Broad serialization behavior needs the Serializer/Unserializer spec and oracle matrix before more implementation. |
 | Sys/event-loop and Http helper lowering | `bounded_bringup_support`, not parity | Simplified/no-op behavior is smoke support only. |
 | Raw try/catch and dynamic fallback lowering | `bounded_bringup_support` | Catch-all fallbacks that return defaults are scaffolding unless explicitly oracle-backed. |
@@ -92,7 +92,7 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 - Put Serializer/Unserializer expansion behind
   [`SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md`](SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md).
 - Put Float/NaN/Infinity/Math/JSON/binary serialization and comparison changes
-  behind the Float review gate.
+  behind [`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md).
 - Freeze compact primitive helpers with black-box oracle edge cases before they
   are treated as parity support.
 - Keep declaration-only support separate from runtime behavior in code, tests,

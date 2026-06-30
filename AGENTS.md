@@ -59,6 +59,7 @@ Agent policy:
     - changes that would churn many generated bootstrap snapshots, target snapshots, or app examples,
     - or cases where a local patch would likely hide the bug instead of fixing the model.
   - For NaN/Infinity/Math-style issues, escalate before implementation because semantics can affect `Math`, `Float`, comparisons, parsing, JSON, binary float encoding, OCaml output/runtime behavior, source-native target behavior, and upstream Haxe 4.3.7 runtime conformance.
+    Use `docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md` to identify trigger surfaces, oracle cases, and local validation before changing behavior.
   - The escalation proposal should include a concrete prompt, the whole-repo review request, the relevant beads, observed failing gates, local evidence, upstream oracle expectations, constraints about MIT/provenance, and a request for architecture guidance rather than code transcription.
   - Ask GPT 5.5 Pro for a way forward: the desired output is a seam recommendation, tradeoff analysis, invariants, and validation plan, not pasted implementation code.
   - If adapting this rule from another project, translate examples to this repo before committing them. Avoid irrelevant project-specific terms; use `hxhx`, `reflaxe.ocaml`, upstream Haxe 4.3.7 parity, source-native targets, native plugin boundaries, and bootstrap snapshot risk as the frame.

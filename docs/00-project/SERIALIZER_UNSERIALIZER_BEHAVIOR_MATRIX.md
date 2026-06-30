@@ -108,7 +108,8 @@ The next implementation beads should be narrow:
 - an oracle runner and seed case set generated from this matrix;
 - a Reflect/Dynamic prerequisite for anonymous object and class-field mutation;
 - an enum carrier/resolver prerequisite before enum round trips;
-- a Float/NaN/Infinity prerequisite before numeric serializer tokens;
+- [`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md) before
+  numeric serializer tokens;
 - a Bytes/base64 prerequisite before bytes serializer tokens.
 
 Do not add a monolithic Cpp Serializer runtime in one slice. Land one behavior

@@ -50,6 +50,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - C++ target runtime/helper policy: `docs/00-project/CPP_TARGET_RUNTIME_POLICY.md`
 - Serializer/Unserializer behavior matrix:
   `docs/00-project/SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md`
+- Float/NaN/Infinity numeric review gate:
+  `docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md`
 - Source-native runtime packaging strategy: `docs/02-user-guide/SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md`
 - `.cross.hx` vs `_std` beginner guide: `docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`
 - Reflaxe family cross-override audit: `docs/00-project/REFLAXE_FAMILY_CROSS_OVERRIDE_AUDIT.md`
