@@ -66,6 +66,19 @@ Current planning owners:
 - release enforcement: `scripts/release/full1-release-enforcement.js`
   (`haxe.ocaml-f1cl.7`)
 
+Cpp Gate3 execution checkpoint:
+
+- Strict Cpp Gate3 remains the active source/native target blocker.
+- Bounded, non-semantic Cpp render/cache/inference optimizations may
+  continue when they have focused smoke evidence and strict timing validation.
+- New broad stdlib/runtime semantics must not be added directly to the Cpp
+  emitter path or unclassified runtime support without a helper
+  reachability/body-rendering policy, runtime-helper invariants, and
+  behavior-oracle evidence where applicable.
+- Internal Cpp frontier movement does not change README/North Star
+  production-readiness bars until strict gates and public usability evidence
+  change.
+
 Iteration-speed note:
 
 - Today, small compiler fixes can still pay heavy validation costs: stage0-based bootstrap regeneration, dune verification of large generated snapshots, repo-wide format checks, and aggregated guard scripts.
