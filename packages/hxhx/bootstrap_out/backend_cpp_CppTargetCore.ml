@@ -42364,6 +42364,18 @@ and stringExpr = fun expr scope -> try let __fallback_result_10240 = let macroAp
   ignore (if macroApiCall != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (macroApiCall : string))) else ());
   let enumCtor = (enumMetadataCtorStringExpr (Obj.magic expr) scope : string) in (
     ignore (if enumCtor != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (enumCtor : string))) else ());
+    ignore (match expr with
+      | HxExpr.EField (_p0, _p1) -> ignore ((
+        ignore _p0;
+        ignore _p1;
+        if HxString.equals (exprCppType (Obj.magic expr) scope) "std::string" then raise (HxRuntime.Hx_return (Obj.repr (renderExpr (Obj.magic expr) scope : string))) else ()
+      ))
+      | HxExpr.ECall (_p0, _p1) -> ignore ((
+        ignore _p0;
+        ignore _p1;
+        if HxString.equals (exprCppType (Obj.magic expr) scope) "std::string" then raise (HxRuntime.Hx_return (Obj.repr (renderExpr (Obj.magic expr) scope : string))) else ()
+      ))
+      | _ -> ignore ());
     let primitiveAbstractString = (primitiveBackedAbstractToStringExpr (Obj.magic expr) scope : string) in (
       ignore (if primitiveAbstractString != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (primitiveAbstractString : string))) else ());
       let classBackedAbstractString = (classBackedAbstractToStringExpr (Obj.magic expr) scope : string) in (

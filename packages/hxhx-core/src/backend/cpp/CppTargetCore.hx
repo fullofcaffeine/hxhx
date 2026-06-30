@@ -12231,6 +12231,12 @@ class CppTargetCore {
 		final enumCtor = enumMetadataCtorStringExpr(expr, scope);
 		if (enumCtor != null)
 			return enumCtor;
+		switch (expr) {
+			case ECall(_, _) | EField(_, _):
+				if (exprCppType(expr, scope) == "std::string")
+					return renderExpr(expr, scope);
+			case _:
+		}
 		final primitiveAbstractString = primitiveBackedAbstractToStringExpr(expr, scope);
 		if (primitiveAbstractString != null)
 			return primitiveAbstractString;
