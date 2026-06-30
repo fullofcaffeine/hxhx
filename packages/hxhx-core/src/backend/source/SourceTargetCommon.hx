@@ -6685,7 +6685,7 @@ class SourceTargetCommon {
 				"new " + safeType + "(" + [for (arg in args) renderExpr(Java, arg)].join(", ") + ")";
 			case Cs:
 				final rendered = [for (arg in args) renderExpr(Cs, arg)].join(", ");
-				if (typePath == "Array" || typePath == "Array<T>") "new " + csArrayRuntimeType() + "(new object[] { " + rendered + " })"; else
+				if (csArrayConstructorTypePath(typePath)) "new " + csArrayRuntimeType() + "(new object[] { " + rendered + " })"; else
 					if (csNativeArrayTypePath(typePath)
 					&& args.length == 1) "new object[System.Convert.ToInt32("
 					+ renderExpr(Cs, args[0])
@@ -6711,6 +6711,14 @@ class SourceTargetCommon {
 	static function luaArrayConstructorTypePath(typePath:String):Bool {
 		final compact = removeTypeHintWhitespace(typePath == null ? "" : typePath);
 		return compact == "Array" || StringTools.startsWith(compact, "Array<");
+	}
+
+	static function csArrayConstructorTypePath(typePath:String):Bool {
+		final compact = removeTypeHintWhitespace(typePath == null ? "" : typePath);
+		return compact == "Array"
+			|| StringTools.startsWith(compact, "Array<")
+			|| compact == "StdTypes.Array"
+			|| StringTools.startsWith(compact, "StdTypes.Array<");
 	}
 
 	static function csNativeArrayTypePath(typePath:String):Bool {

@@ -8492,6 +8492,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(mainContent, "HelperApi.accept(value);", "C# entry helper methods should preserve their source body");
 			assertContains(mainContent, "accept(new global::hxhx.__HxArray(new object[] {  }));",
 				"C# empty Array constructors should lower to the runtime array wrapper");
+			assertNotContains(mainContent, "new Array_String_()", "C# generic Array constructors should not fall back to sanitized fake class names");
 			assertContains(mainContent, "accept(new haxe.Serializer());", "C# entry main should keep haxe.Serializer construction callable");
 			assertContains(serializerContent, "namespace haxe", "C# haxe.Serializer support should use the haxe namespace");
 			assertContains(serializerContent, "public class Serializer", "C# haxe.Serializer support should declare the Serializer class");
