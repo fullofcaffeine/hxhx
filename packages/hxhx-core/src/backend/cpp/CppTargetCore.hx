@@ -3981,7 +3981,9 @@ class CppTargetCore {
 		function tracePrepCounts(phase:String):Void {
 			traceCppTimingPhase("render_helper_method_prepare_counts owner=" + sanitizeTypePath(typeBaseName(prepOwnerName)) + " name="
 				+ sanitizeIdentifier(prepMethodName) + " phase=" + phase + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides))
-				+ " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes)));
+				+ " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes))
+				+ " arg_override_values=" + summarizeStringMap(scope.argTypeOverrides) + " local_override_values="
+				+ summarizeStringMap(scope.localTypeOverrides));
 		}
 		function runPrepPhase(phase:String, body:Void->Void):Void {
 			if (!prepTimingEnabled) {
@@ -14379,6 +14381,20 @@ class CppTargetCore {
 		for (_ in values.keys())
 			count++;
 		return count;
+	}
+
+	static function summarizeStringMap<T>(values:haxe.ds.StringMap<T>, limit:Int = 8):String {
+		if (values == null)
+			return "";
+		final entries = new Array<String>();
+		for (key in values.keys())
+			entries.push(key + ":" + Std.string(values.get(key)));
+		entries.sort((left, right) -> left < right ? -1 : (left > right ? 1 : 0));
+		if (entries.length <= limit)
+			return entries.join(",");
+		final kept = entries.slice(0, limit);
+		kept.push("...+" + Std.string(entries.length - limit));
+		return kept.join(",");
 	}
 
 	static function copyIntMap(values:haxe.ds.StringMap<Int>):haxe.ds.StringMap<Int> {
