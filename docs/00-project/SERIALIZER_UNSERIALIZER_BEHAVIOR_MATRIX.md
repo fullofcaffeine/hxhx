@@ -22,6 +22,24 @@ Use upstream Haxe `4.3.7` as a black-box behavior oracle:
 Local smoke tests and generated-C++ shape assertions are supporting evidence
 only. They do not prove Serializer/Unserializer parity.
 
+The current seed oracle runner is:
+
+```bash
+npm run test:serializer-oracle-seed
+```
+
+It executes repo-owned cases under
+`test/oracle/serializer_unserializer_seed/src/Main.hx`, compares them to
+`test/oracle/serializer_unserializer_seed/expected.stdout`, and writes a local
+report to `.tmp/serializer-unserializer-oracle-seed/report.json`.
+
+The finite Float seed is oracle output only; Cpp implementation work for Float,
+NaN, Infinity, signed zero, JSON, or binary numeric behavior must cite
+[`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md). The anonymous
+object and class seeds depend on `haxe_ocaml-1uw3` before Cpp implementation,
+because Reflect/Dynamic field mutation and default-return behavior are still
+classified as unsafe without diagnostics or oracle-backed support.
+
 ## Current Support Classification
 
 | Surface | Current classification | Notes |

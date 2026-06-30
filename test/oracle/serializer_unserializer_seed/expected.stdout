@@ -1,0 +1,30 @@
+ser-null-bool-01:null|serialized|n
+ser-null-bool-01:null|decoded|true
+ser-null-bool-01:true|serialized|t
+ser-null-bool-01:true|decoded|true
+ser-null-bool-01:false|serialized|f
+ser-null-bool-01:false|decoded|false
+ser-int-01:positive|serialized|i7
+ser-int-01:positive|decoded|7
+ser-int-01:negative|serialized|i-3
+ser-int-01:negative|decoded|-3
+ser-float-01:finite|serialized|d3.5
+ser-float-01:finite|decoded|3.5
+ser-string-01:unicode|serialized|y17:hxhx%20%C3%A9%5Cn
+ser-string-01:unicode|decoded|8:hxhx é\n
+ser-array-01:mixed|serialized|ai1ny1:xh
+ser-array-01:mixed|decoded|3:true:x
+ser-anon-01:fields|serialized|oy4:namey4:hxhxy5:counti3y7:enabledtg
+ser-anon-01:fields|decoded|hxhx:3:true
+ser-class-01:box|serialized|cy3:Boxy5:counti5y5:labely4:fiveg
+ser-class-01:box|decoded|true:five:5
+ser-enum-01:zero|serialized|wy8:SeedEnumy1:A:0
+ser-enum-01:zero|decoded|A:0
+ser-enum-01:args|serialized|wy8:SeedEnumy4:With:2i9y4:nine
+ser-enum-01:args|decoded|With:9,nine
+ser-bytes-01:ascii|serialized|s4:QUJD
+ser-bytes-01:ascii|decoded|3:ABC
+ser-error-01:invalid-token|input|!
+ser-error-01:invalid-token|error|Invalid char ! at position 0
+ser-error-01:truncated-object|input|o
+ser-error-01:truncated-object|error|Invalid object
