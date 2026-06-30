@@ -57,6 +57,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - C++ sys/event-loop smoke audit:
   `docs/00-project/CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md`
 - Mega-file gravity watch: `docs/00-project/MEGA_FILE_GRAVITY_WATCH.md`
+- Source-native target-family extraction plan:
+  `docs/00-project/SOURCE_NATIVE_TARGET_FAMILY_EXTRACTION_PLAN.md`
 - Serializer/Unserializer behavior matrix:
   `docs/00-project/SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md`
 - Float/NaN/Infinity numeric review gate:
