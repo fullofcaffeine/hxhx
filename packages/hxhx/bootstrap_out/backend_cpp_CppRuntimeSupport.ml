@@ -603,6 +603,7 @@ let sysEventLoopLines = fun () -> let __arr_46 = HxArray.create () in (
   ignore (HxArray.push __arr_46 "  return value;");
   ignore (HxArray.push __arr_46 "}");
   ignore (HxArray.push __arr_46 "");
+  ignore (HxArray.push __arr_46 "// hxhx-cpp-smoke-only: Timer.delay ignores callbacks and Timer.stop is a no-op; see docs/00-project/CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md.");
   ignore (HxArray.push __arr_46 "struct Timer {");
   ignore (HxArray.push __arr_46 "  static double stamp() {");
   ignore (HxArray.push __arr_46 "    using clock = std::chrono::steady_clock;");
@@ -623,6 +624,7 @@ let sysEventLoopLines = fun () -> let __arr_46 = HxArray.create () in (
   ignore (HxArray.push __arr_46 "  int get(int index) const { return index < 0 || static_cast<std::size_t>(index) >= values.size() ? 0 : values[static_cast<std::size_t>(index)]; }");
   ignore (HxArray.push __arr_46 "};");
   ignore (HxArray.push __arr_46 "");
+  ignore (HxArray.push __arr_46 "// hxhx-cpp-smoke-only: Http exposes callback/request shape only and performs no transport; see docs/00-project/CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md.");
   ignore (HxArray.push __arr_46 "struct Http {");
   ignore (HxArray.push __arr_46 "  std::function<void(std::string)> onData = nullptr;");
   ignore (HxArray.push __arr_46 "  std::function<void(std::string)> onError = nullptr;");
@@ -634,6 +636,7 @@ let sysEventLoopLines = fun () -> let __arr_46 = HxArray.create () in (
   ignore (HxArray.push __arr_46 "  void request() {}");
   ignore (HxArray.push __arr_46 "};");
   ignore (HxArray.push __arr_46 "");
+  ignore (HxArray.push __arr_46 "// hxhx-cpp-smoke-only: Lock/Mutex are non-blocking compile-shape shims; wait/tryAcquire always succeed.");
   ignore (HxArray.push __arr_46 "struct Lock {");
   ignore (HxArray.push __arr_46 "  void acquire() {}");
   ignore (HxArray.push __arr_46 "  bool wait(std::optional<double> = std::nullopt) { return true; }");
@@ -648,6 +651,7 @@ let sysEventLoopLines = fun () -> let __arr_46 = HxArray.create () in (
   ignore (HxArray.push __arr_46 "");
   ignore (HxArray.push __arr_46 "struct MainLoop;");
   ignore (HxArray.push __arr_46 "");
+  ignore (HxArray.push __arr_46 "// hxhx-cpp-smoke-only: MainLoop/MainEvent use a single synchronous pending list, not full event-loop scheduling.");
   ignore (HxArray.push __arr_46 "struct MainEvent {");
   ignore (HxArray.push __arr_46 "  std::function<void()> f;");
   ignore (HxArray.push __arr_46 "  std::shared_ptr<MainEvent> prev = nullptr;");
@@ -696,6 +700,7 @@ let sysEventLoopLines = fun () -> let __arr_46 = HxArray.create () in (
   ignore (HxArray.push __arr_46 "  next = nullptr;");
   ignore (HxArray.push __arr_46 "}");
   ignore (HxArray.push __arr_46 "");
+  ignore (HxArray.push __arr_46 "// hxhx-cpp-smoke-only: EntryPoint drains queued callbacks synchronously; thread handling is not parity support.");
   ignore (HxArray.push __arr_46 "struct EntryPoint {");
   ignore (HxArray.push __arr_46 "  inline static std::shared_ptr<Lock> sleepLock = std::make_shared<Lock>();");
   ignore (HxArray.push __arr_46 "  inline static std::shared_ptr<Mutex> mutex = std::make_shared<Mutex>();");

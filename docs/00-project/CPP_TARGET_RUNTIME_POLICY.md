@@ -64,7 +64,7 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 | `stdIntrinsicLines` | `bounded_bringup_support` | `parseInt`, integer literal, and Int64 narrowing helpers. Numeric parsing changes must use oracle evidence. |
 | `baseCodeLines` | `bounded_bringup_support` | Compact BaseCode support. Needs invalid input, empty input, byte, and non-ASCII oracle coverage before parity. |
 | `vectorSupportLines` | `bounded_bringup_support` | Vector/array helpers use target defaults for some invalid access/empty cases. Not broad Array parity. |
-| `sysEventLoopLines` | `bounded_bringup_support`, not parity | Timer/Http/Lock/Mutex/MainLoop are simplified/no-op in several places. They unblock compile/smoke surfaces only. |
+| `sysEventLoopLines` | `bounded_bringup_support`, not parity | Timer/Http/Lock/Mutex/MainLoop are simplified/no-op in several places. They unblock compile/smoke surfaces only; see [`CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md`](CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md). |
 | `rttiMetaLines` | `bounded_bringup_support`, `review_required` | Metadata and Reflect helpers mostly return empty/default values or no-op mutation. This is false-parity risk; see [`CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md`](CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md). |
 | `enumValueTypeLines` | `bounded_bringup_support` | Lightweight enum carrier. Needs enum behavior matrix before parity. |
 | `anyIsTypeLines` | `bounded_bringup_support`, `review_required` | Partial `Std.isOfType`/Dynamic-style checks for a small set of C++ carriers. |
@@ -82,7 +82,7 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 | `dceReflectionHelperCallExpr`, `Reflect.field`, `Reflect.callMethod`, `Reflect.isFunction` | `bounded_bringup_support`, `review_required` | Reflect field/call/mutation is partial and may return `std::any()` or `false`. Unsafe as parity evidence. |
 | `Reflect.compare` / `Reflect.compareMethods` lowering | `review_required` | Must use [`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md) before expansion. |
 | Serializer/Unserializer object and enum helper lowering | `review_required` | Broad serialization behavior needs the Serializer/Unserializer spec and oracle matrix before more implementation. |
-| Sys/event-loop and Http helper lowering | `bounded_bringup_support`, not parity | Simplified/no-op behavior is smoke support only. |
+| Sys/event-loop and Http helper lowering | `bounded_bringup_support`, not parity | Simplified/no-op behavior is smoke support only; see [`CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md`](CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md). |
 | Raw try/catch and dynamic fallback lowering | `bounded_bringup_support` | Catch-all fallbacks that return defaults are scaffolding unless explicitly oracle-backed. |
 
 ## Required Follow-Ups

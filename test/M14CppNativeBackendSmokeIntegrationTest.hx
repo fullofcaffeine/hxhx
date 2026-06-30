@@ -8762,10 +8762,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final mainLoopEmit = BackendRegistry.createForTarget("cpp-native").emit(mainLoopRuntimeProgram(), context(mainLoopDir, true, true));
 		final mainLoopSource = File.getContent(mainLoopEmit.entryPath);
 		assertContains(mainLoopSource, "#include <chrono>", "C++ Timer.stamp support should include chrono");
+		assertContains(mainLoopSource, "hxhx-cpp-smoke-only: Timer.delay ignores callbacks and Timer.stop is a no-op",
+			"C++ Timer support should be visibly classified as smoke-only");
 		assertContains(mainLoopSource, "struct Timer {", "C++ Timer should be provided by target-owned runtime support");
 		assertContains(mainLoopSource, "static std::shared_ptr<Timer> delay(std::function<void()> f, double ms)",
 			"C++ Timer support should expose Timer.delay for async timeout helpers");
 		assertContains(mainLoopSource, "void stop() {}", "C++ Timer support should expose Timer.stop for async cleanup");
+		assertContains(mainLoopSource, "hxhx-cpp-smoke-only: Http exposes callback/request shape only and performs no transport",
+			"C++ Http support should be visibly classified as smoke-only");
 		assertContains(mainLoopSource, "struct Http {", "C++ Http should be provided by target-owned runtime support");
 		assertContains(mainLoopSource, "std::function<void(std::string)> onData = nullptr;", "C++ Http support should expose the string data callback field");
 		assertContains(mainLoopSource, "std::function<void(std::string)> onError = nullptr;", "C++ Http support should expose the error callback field");
@@ -8774,10 +8778,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(mainLoopSource, "void setPostData(std::string value)", "C++ Http support should expose setPostData");
 		assertContains(mainLoopSource, "void setPostBytes(T value)", "C++ Http support should expose setPostBytes");
 		assertContains(mainLoopSource, "void request() {}", "C++ Http support should expose request");
+		assertContains(mainLoopSource, "hxhx-cpp-smoke-only: Lock/Mutex are non-blocking compile-shape shims",
+			"C++ Lock/Mutex support should be visibly classified as smoke-only");
 		assertContains(mainLoopSource, "struct Lock {", "C++ Lock should be provided by target-owned runtime support");
 		assertContains(mainLoopSource, "struct Mutex {", "C++ Mutex should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "hxhx-cpp-smoke-only: MainLoop/MainEvent use a single synchronous pending list",
+			"C++ MainLoop/MainEvent support should be visibly classified as smoke-only");
 		assertContains(mainLoopSource, "struct MainEvent {", "C++ MainEvent should be provided by target-owned runtime support");
 		assertContains(mainLoopSource, "struct MainLoop {", "C++ MainLoop should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "hxhx-cpp-smoke-only: EntryPoint drains queued callbacks synchronously",
+			"C++ EntryPoint support should be visibly classified as smoke-only");
 		assertContains(mainLoopSource, "struct EntryPoint {", "C++ EntryPoint should be provided by target-owned runtime support");
 		assertTrue(mainLoopSource.indexOf("struct Timer {") < mainLoopSource.indexOf("EntryPoint::runInMainThread"),
 			"C++ target-owned Timer support should appear before generated calls use it");

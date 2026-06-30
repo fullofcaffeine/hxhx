@@ -52,6 +52,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
   `docs/00-project/CPP_COMPACT_PRIMITIVE_ORACLE_FREEZE.md`
 - C++ Reflect/Dynamic support audit:
   `docs/00-project/CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md`
+- C++ sys/event-loop smoke audit:
+  `docs/00-project/CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md`
 - Mega-file gravity watch: `docs/00-project/MEGA_FILE_GRAVITY_WATCH.md`
 - Serializer/Unserializer behavior matrix:
   `docs/00-project/SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md`

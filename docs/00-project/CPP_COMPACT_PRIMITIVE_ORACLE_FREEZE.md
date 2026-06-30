@@ -70,7 +70,8 @@ they have separate owning checkpoints:
   [`SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md`](SERIALIZER_UNSERIALIZER_BEHAVIOR_MATRIX.md).
 - Float/NaN/Infinity/JSON/binary numeric behavior:
   [`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md).
-- Sys/event-loop and Http smoke scaffolding: `haxe_ocaml-zo90`.
+- Sys/event-loop and Http smoke scaffolding:
+  [`CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md`](CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md).
 
 ## Oracle Matrix
 
