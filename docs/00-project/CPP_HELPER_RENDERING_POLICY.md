@@ -56,6 +56,11 @@ target-owned, provenance-safe, deterministic, and behavior-scoped. Broad
 runtime/stdlib semantics also need the Cpp runtime-helper invariant policy and
 upstream Haxe 4.3.7 oracle evidence where applicable.
 
+Reachability and ordering should scan parsed field initializers and method
+bodies only for `full_body` helpers. `declaration_only` and `runtime_module`
+helpers keep signature/type dependencies, but their parsed bodies must not pull
+body-only helpers into the render set.
+
 Sensitive surfaces require separate behavior review before implementation:
 Serializer/Unserializer, Float/NaN/Infinity/Math, JSON, binary float encoding,
 Reflect/Dynamic, comparisons, and default/no-op runtime support.

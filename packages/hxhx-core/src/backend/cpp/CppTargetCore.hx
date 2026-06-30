@@ -2323,6 +2323,7 @@ class CppTargetCore {
 		final seen = new haxe.ds.StringMap<Bool>();
 		final self = renderedClassName(cls, classLookup);
 		final typeParams = genericClassTypeParams(cls);
+		final includeRenderedBodies = helperClassRenderKind(cls, classLookup) == FullBody;
 		function add(name:String):Void {
 			if (name == null || name == self || !classLookup.names.exists(name) || seen.exists(name))
 				return;
@@ -2338,7 +2339,7 @@ class CppTargetCore {
 		for (field in HxClassDecl.getFields(cls)) {
 			addTypeHintDependencies(HxFieldDecl.getTypeHint(field), add);
 			final init = HxFieldDecl.getInit(field);
-			if (init != null)
+			if (includeRenderedBodies && init != null)
 				addExprClassDependencies(init, add);
 		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
@@ -2355,17 +2356,19 @@ class CppTargetCore {
 			addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), addFn, fnScope);
 			for (arg in HxFunctionDecl.getArgs(fn))
 				addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), addFn, fnScope);
-			addStmtClassDependencies(HxFunctionDecl.getBody(fn), addFn, fnScope);
+			if (includeRenderedBodies)
+				addStmtClassDependencies(HxFunctionDecl.getBody(fn), addFn, fnScope);
 		}
 		return deps;
 	}
 
 	/**
-		Collect helper classes that inline C++ method bodies need fully defined.
+		Collect helper classes that rendered inline C++ method bodies need fully defined.
 
 		Forward declarations are enough for fields like `std::shared_ptr<T>`, but not
 		for inline method bodies that instantiate `T` or call through a `T` reference.
-		Those body-only dependencies must therefore participate in helper ordering.
+		Those body-only dependencies must participate in helper ordering only for
+		helpers whose parsed bodies are actually rendered.
 	**/
 	static function addStmtClassDependencies(stmts:Array<HxStmt>, add:String->Void, ?scope:CppRenderScope):Void {
 		for (stmt in stmts)

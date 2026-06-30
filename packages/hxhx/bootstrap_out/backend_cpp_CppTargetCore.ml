@@ -9810,7 +9810,7 @@ let implementedInterfaceNames = fun cls classLookup -> let out = Obj.magic (HxAr
   out
 )
 
-let helperClassDependencies = fun cls classLookup -> let deps = Obj.magic (HxArray.create ()) in let seen = Obj.magic (HxMap.create_string ()) in let self = (renderedClassName (Obj.magic cls) classLookup : string) in let typeParams = Obj.magic (genericClassTypeParams (Obj.magic cls)) in let add = fun name -> ignore (try (
+let helperClassDependencies = fun cls classLookup -> let deps = Obj.magic (HxArray.create ()) in let seen = Obj.magic (HxMap.create_string ()) in let self = (renderedClassName (Obj.magic cls) classLookup : string) in let typeParams = Obj.magic (genericClassTypeParams (Obj.magic cls)) in let includeRenderedBodies = helperClassRenderKind (Obj.magic cls) classLookup = FullBody in let add = fun name -> ignore (try (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.equals name self || not (HxMap.exists_string (Obj.obj (HxAnon.get classLookup "names")) name) || HxMap.exists_string seen name then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   ignore (let _g = ref 0 in while !_g < HxArray.length typeParams do ignore (let param = (HxArray.get (Obj.magic typeParams) (!_g) : string) in (
     ignore (let __old_509 = !_g in let __new_510 = HxInt.add __old_509 1 in (
@@ -9837,7 +9837,7 @@ let helperClassDependencies = fun cls classLookup -> let deps = Obj.magic (HxArr
       __new_515
     ));
     ignore (addTypeHintDependencies (HxFieldDecl.getTypeHint (Obj.magic field) : string) add (Obj.magic (HxRuntime.hx_null)));
-    let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in if init != Obj.magic (HxRuntime.hx_null) then ignore (addExprClassDependencies (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) add) else ()
+    let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in if includeRenderedBodies && init != Obj.magic (HxRuntime.hx_null) then ignore (addExprClassDependencies (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) add) else ()
   )) done);
   ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
     ignore (let __old_516 = !_g in let __new_517 = HxInt.add __old_516 1 in (
@@ -9874,7 +9874,7 @@ let helperClassDependencies = fun cls classLookup -> let deps = Obj.magic (HxArr
           ));
           addTypeHintDependencies (HxFunctionArg.getTypeHint (Obj.magic arg) : string) addFn fnScope
         )) done);
-        addStmtClassDependencies (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) addFn fnScope
+        if includeRenderedBodies then ignore (addStmtClassDependencies (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) addFn fnScope) else ()
       )
     )
   )) done);

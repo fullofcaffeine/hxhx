@@ -141,6 +141,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], false);
 	}
 
+	static function cppRuntimeModuleBodyDependencyProgram():GenIrProgram {
+		final main = new HxClassDecl("Main", true, [
+			new HxFunctionDecl("main", Public, true, [], "Void", [SVar("value", "Any", ENew("Any", []), HxPos.unknown())], "")
+		], []);
+		final any = new HxClassDecl("Any", false, [
+			new HxFunctionDecl("touch", Public, false, [], "Void", [
+				SVar("heavy", "", ENew("RuntimeOnlyHeavy", []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("heavy"), "touch"), []), HxPos.unknown())
+			], "")
+		], []);
+		final heavy = new HxClassDecl("RuntimeOnlyHeavy", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("touch", Public, false, [], "Void", [], "")
+		], []);
+		return new GenIrProgram([
+			typedSyntheticModule("Main.hx", new HxModuleDecl("", [], main, [main], false, false)),
+			typedSyntheticModule("Any.hx", new HxModuleDecl("", [], any, [any], false, false)),
+			typedSyntheticModule("RuntimeOnlyHeavy.hx", new HxModuleDecl("", [], heavy, [heavy], false, false))
+		], false);
+	}
+
 	static function assertNativeProtocolStructuralArgTypeSplitting():Void {
 		final structural = "{ms:Float,seconds:Int,minutes:Int,hours:Int,days:Int}";
 		final encoded = [
@@ -1370,6 +1391,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final nullDetail = @:privateAccess backend.cpp.CppTargetCore.helperRenderKindDetailLine("fixture", 4, null, lookup);
 		assertContains(nullDetail, "fixture_detail index=4 kind=unsupported_diagnostic name=<null>",
 			"C++ helper classification details should keep unsupported null entries visible");
+
+		final runtimeProgram = cppRuntimeModuleBodyDependencyProgram();
+		var runtimeMainClass:HxClassDecl = null;
+		for (typed in runtimeProgram.getTypedModules())
+			for (cls in HxModuleDecl.getClasses(typed.getParsed().getDecl()))
+				if (HxClassDecl.getName(cls) == "Main")
+					runtimeMainClass = cls;
+		assertTrue(runtimeMainClass != null, "C++ runtime-module dependency fixture should have a Main class");
+		final runtimeLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(runtimeProgram);
+		final runtimeReachable = @:privateAccess backend.cpp.CppTargetCore.collectReachableHelperClasses(runtimeProgram, runtimeMainClass, runtimeLookup);
+		final runtimeNames = [for (cls in runtimeReachable) HxClassDecl.getName(cls)].join("\n");
+		assertContains(runtimeNames, "Any", "C++ runtime-module helpers should remain reachable through main body dependencies");
+		assertTrue(runtimeNames.indexOf("RuntimeOnlyHeavy") < 0,
+			"C++ runtime-module helper parsed bodies should not force full-body reachability for body-only dependencies");
+		final runtimeCounts = @:privateAccess backend.cpp.CppTargetCore.helperRenderKindCounts(runtimeReachable, runtimeLookup);
+		assertTrue(runtimeCounts.runtimeModule == 1, "C++ runtime-module fixture should count only Any as target-owned support");
+		assertTrue(runtimeCounts.fullBody == 0, "C++ runtime-module fixture should not promote body-only dependencies to full-body helpers");
 	}
 
 	static function assertCppOptionalArrowFunctionsUseCallableShapes():Void {
