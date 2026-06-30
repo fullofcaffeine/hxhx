@@ -4394,6 +4394,8 @@ let renderTemplateWrapSupportClass = fun cls -> let className = (sanitizeTypePat
 
 let isUnserializerObjectHelper = fun fn owner -> HxString.equals (sanitizeTypePath (HxClassDecl.getName (Obj.magic owner) : string)) "Unserializer" && not (HxFunctionDecl.getIsStatic (Obj.magic fn)) && HxString.equals (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string)) "unserializeObject" && HxArray.length (HxFunctionDecl.getArgs (Obj.magic fn)) = 1
 
+let isUnserializerEnumHelper = fun fn owner -> HxString.equals (sanitizeTypePath (HxClassDecl.getName (Obj.magic owner) : string)) "Unserializer" && not (HxFunctionDecl.getIsStatic (Obj.magic fn)) && HxString.equals (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string)) "unserializeEnum" && HxArray.length (HxFunctionDecl.getArgs (Obj.magic fn)) = 2
+
 let isUsefulHelperTypedAsOverrideType = fun typeName -> try let __fallback_result_1724 = (
   ignore (if typeName == Obj.magic (HxRuntime.hx_null) || HxString.length typeName = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   not (HxString.equals typeName "void") && not (HxString.equals typeName "auto") && not (HxString.equals typeName "std::any") && not (isBareCppTypeParamName (typeName : string))
@@ -48683,6 +48685,22 @@ let renderUnserializerObjectHelper = fun fn owner classLookup -> let hx_method =
   )
 )
 
+let renderUnserializerEnumHelper = fun fn owner classLookup -> let hx_method = (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in let returnType = (supportMethodSignatureReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
+  ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
+  let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let enumArg = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic args) 0)) : string) : string) in let tagArg = (sanitizeIdentifier (HxFunctionArg.getName (Obj.magic (HxArray.get (Obj.magic args) 1)) : string) : string) in let out = Obj.magic (HxArray.create ()) in let methodTypeParams = Obj.magic (emittedFunctionTypeParams (Obj.magic fn) (returnType : string) scope) in (
+    ignore (if HxArray.length methodTypeParams > 0 then ignore (HxArray.push out ("  " ^ HxString.toStdString (genericTemplatePrefix (Obj.magic methodTypeParams)))) else ());
+    ignore (HxArray.push out (((((("  " ^ HxString.toStdString returnType) ^ " ") ^ HxString.toStdString hx_method) ^ "(") ^ HxString.toStdString (renderFunctionArgs (Obj.magic args) scope (Obj.magic (HxRuntime.hx_null)))) ^ ") {"));
+    ignore (HxArray.push out "    if (get(pos++) != static_cast<int>(':')) throw std::runtime_error(std::string(\"Invalid enum format\"));");
+    ignore (HxArray.push out "    int nargs = readDigits();");
+    ignore (HxArray.push out (((("    if (nargs == 0) return Type::createEnum(" ^ HxString.toStdString enumArg) ^ ", ") ^ HxString.toStdString tagArg) ^ ");"));
+    ignore (HxArray.push out "    std::vector<std::string> args;");
+    ignore (HxArray.push out "    while (nargs-- > 0) args.push_back(__hxhx_stringify(unserialize()));");
+    ignore (HxArray.push out (((("    return Type::createEnum(" ^ HxString.toStdString enumArg) ^ ", ") ^ HxString.toStdString tagArg) ^ ", args);"));
+    ignore (HxArray.push out "  }");
+    out
+  )
+)
+
 let renderBase64SupportHelper = fun fn owner classLookup -> let hx_method = (sanitizeIdentifier (HxFunctionDecl.getName (Obj.magic fn) : string) : string) in let returnType = (base64SupportReturnType (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = renderScope (Obj.magic owner) classLookup (returnType : string) in (
   ignore (prepareFunctionSignatureScope scope (Obj.magic fn));
   let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let out = Obj.magic (let __arr_1185 = HxArray.create () in (
@@ -51633,6 +51651,7 @@ let renderHelperMethod = fun fn owner classLookup -> try let __fallback_result_1
   ignore (if isBase64SupportHelper (Obj.magic fn) (Obj.magic owner) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (returnTraced ("special_base64" : string) (Obj.magic (renderBase64SupportHelper (Obj.magic fn) (Obj.magic owner) classLookup)))))) else ());
   ignore (if isResourceSupportHelper (Obj.magic fn) (Obj.magic owner) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (returnTraced ("special_resource" : string) (Obj.magic (renderResourceSupportHelper (Obj.magic fn) (Obj.magic owner) classLookup)))))) else ());
   ignore (if isUnserializerObjectHelper (Obj.magic fn) (Obj.magic owner) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (returnTraced ("special_unserializer_object" : string) (Obj.magic (renderUnserializerObjectHelper (Obj.magic fn) (Obj.magic owner) classLookup)))))) else ());
+  ignore (if isUnserializerEnumHelper (Obj.magic fn) (Obj.magic owner) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (returnTraced ("special_unserializer_enum" : string) (Obj.magic (renderUnserializerEnumHelper (Obj.magic fn) (Obj.magic owner) classLookup)))))) else ());
   ignore (if isMd5SupportHelper (Obj.magic fn) (Obj.magic owner) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (returnTraced ("special_md5" : string) (Obj.magic (renderMd5SupportHelper (Obj.magic fn) (Obj.magic owner) classLookup)))))) else ());
   ignore (if isSha1SupportHelper (Obj.magic fn) (Obj.magic owner) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (returnTraced ("special_sha1" : string) (Obj.magic (renderSha1SupportHelper (Obj.magic fn) (Obj.magic owner) classLookup)))))) else ());
   ignore (if isHelperMacrosShimHelper (Obj.magic fn) (Obj.magic owner) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (returnTraced ("special_helper_macros" : string) (Obj.magic (renderHelperMacrosShimHelper (Obj.magic fn) (Obj.magic owner) classLookup)))))) else ());

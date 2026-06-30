@@ -6196,6 +6196,38 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Unserializer.unserializeObject helper should keep recursive value parsing erased");
 		assertContains(unserializerObjectLines, "__hxhx_reflect_set_field(o, __hxhx_stringify(k), v);",
 			"C++ Unserializer.unserializeObject helper should use target-owned reflection support for object fields");
+		final unserializerEnum = new HxFunctionDecl("unserializeEnum", Private, false, [
+			new HxFunctionArg("edecl", "Enum<T>", NoDefault, false, false),
+			new HxFunctionArg("tag", "String", NoDefault, false, false)
+		], "T", [
+			SIf(EBinop("!=", ECall(EIdent("get"), [EUnop("post++", EIdent("pos"))]), EString(":")), SThrow(EString("Invalid enum format"), HxPos.unknown()),
+				null, HxPos.unknown()),
+			SVar("nargs", "", ECall(EIdent("readDigits"), []), HxPos.unknown()),
+			SIf(EBinop("==", EIdent("nargs"), EInt(0)),
+				SReturn(ECall(EField(EIdent("Type"), "createEnum"), [EIdent("edecl"), EIdent("tag")]), HxPos.unknown()), null, HxPos.unknown()),
+			SVar("args", "", EArrayDecl([]), HxPos.unknown()),
+			SWhile(EBinop(">", EUnop("post--", EIdent("nargs")), EInt(0)),
+				SExpr(ECall(EField(EIdent("args"), "push"), [ECall(EIdent("unserialize"), [])]), HxPos.unknown()), HxPos.unknown()),
+			SReturn(ECall(EField(EIdent("Type"), "createEnum"), [EIdent("edecl"), EIdent("tag"), EIdent("args")]), HxPos.unknown())
+		], "", ["__hxhx_fn_type_params=T"]);
+		final unserializerEnumOwner = new HxClassDecl("Unserializer", false, [unserializerEnum], [
+			new HxFieldDecl("pos", Public, false, "Int", null),
+			new HxFieldDecl("length", Public, false, "Int", null)
+		]);
+		final unserializerEnumLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(unserializerEnum, unserializerEnumOwner, bytesLookup)
+			.join("\n");
+		assertContains(unserializerEnumLines, "unserializeEnum(", "C++ Unserializer.unserializeEnum helper should keep its helper surface");
+		assertContains(unserializerEnumLines, "if (get(pos++) != static_cast<int>(':')) throw std::runtime_error(std::string(\"Invalid enum format\"));",
+			"C++ Unserializer.unserializeEnum helper should preserve enum format validation");
+		assertContains(unserializerEnumLines, "int nargs = readDigits();", "C++ Unserializer.unserializeEnum helper should read constructor argument count");
+		assertContains(unserializerEnumLines, "if (nargs == 0) return Type::createEnum(edecl, tag);",
+			"C++ Unserializer.unserializeEnum helper should preserve the zero-argument enum path");
+		assertContains(unserializerEnumLines, "std::vector<std::string> args;",
+			"C++ Unserializer.unserializeEnum helper should use the current C++ enum carrier payload shape");
+		assertContains(unserializerEnumLines, "while (nargs-- > 0) args.push_back(__hxhx_stringify(unserialize()));",
+			"C++ Unserializer.unserializeEnum helper should recursively parse enum arguments");
+		assertContains(unserializerEnumLines, "return Type::createEnum(edecl, tag, args);",
+			"C++ Unserializer.unserializeEnum helper should preserve enum construction with parsed args");
 		final base64Encode = new HxFunctionDecl("encode", Public, true, [
 			new HxFunctionArg("bytes", "Bytes", NoDefault, false, false),
 			new HxFunctionArg("complement", "Bool", Default(EBool(true)), false, false)

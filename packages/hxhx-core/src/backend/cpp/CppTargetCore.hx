@@ -4199,6 +4199,8 @@ class CppTargetCore {
 			return returnTraced("special_resource", renderResourceSupportHelper(fn, owner, classLookup));
 		if (isUnserializerObjectHelper(fn, owner))
 			return returnTraced("special_unserializer_object", renderUnserializerObjectHelper(fn, owner, classLookup));
+		if (isUnserializerEnumHelper(fn, owner))
+			return returnTraced("special_unserializer_enum", renderUnserializerEnumHelper(fn, owner, classLookup));
 		if (isMd5SupportHelper(fn, owner))
 			return returnTraced("special_md5", renderMd5SupportHelper(fn, owner, classLookup));
 		if (isSha1SupportHelper(fn, owner))
@@ -4651,6 +4653,13 @@ class CppTargetCore {
 			&& HxFunctionDecl.getArgs(fn).length == 1;
 	}
 
+	static function isUnserializerEnumHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		return sanitizeTypePath(HxClassDecl.getName(owner)) == "Unserializer"
+			&& !HxFunctionDecl.getIsStatic(fn)
+			&& sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "unserializeEnum"
+			&& HxFunctionDecl.getArgs(fn).length == 2;
+	}
+
 	static function renderUnserializerObjectHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		final returnType = supportMethodSignatureReturnType(fn, owner, classLookup);
@@ -4671,6 +4680,29 @@ class CppTargetCore {
 			"    pos++;",
 			"  }"
 		];
+	}
+
+	static function renderUnserializerEnumHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = supportMethodSignatureReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final enumArg = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final tagArg = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
+		final out = new Array<String>();
+		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
+		if (methodTypeParams.length > 0)
+			out.push("  " + genericTemplatePrefix(methodTypeParams));
+		out.push("  " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {");
+		out.push("    if (get(pos++) != static_cast<int>(':')) throw std::runtime_error(std::string(\"Invalid enum format\"));");
+		out.push("    int nargs = readDigits();");
+		out.push("    if (nargs == 0) return Type::createEnum(" + enumArg + ", " + tagArg + ");");
+		out.push("    std::vector<std::string> args;");
+		out.push("    while (nargs-- > 0) args.push_back(__hxhx_stringify(unserialize()));");
+		out.push("    return Type::createEnum(" + enumArg + ", " + tagArg + ", args);");
+		out.push("  }");
+		return out;
 	}
 
 	static function renderBase64SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
