@@ -7409,11 +7409,21 @@ class CppTargetCore {
 			case SThrow(expr, _):
 				[indent + "throw std::runtime_error(" + stringExpr(expr, scope) + ");"];
 			case SVar(name, typeHint, init, _):
+				final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 				final sourceLocal = sanitizeIdentifier(name);
 				final hadPreviousName = scope != null && scope.localNames.exists(sourceLocal);
 				final previousName = hadPreviousName ? scope.localNames.get(sourceLocal) : "";
 				final localName = declareLocalName(name, scope);
+				final localTypeStart = timingEnabled ? Sys.time() : 0.0;
 				final localType = cppLocalDeclaredType(name, typeHint, init, scope, localName);
+				if (timingEnabled)
+					traceCppScopeStmtTimingPhase(scope,
+						"svar_phase=local_type local="
+						+ localName
+						+ " seconds="
+						+ Std.string(Sys.time() - localTypeStart)
+						+ " cpp_type="
+						+ traceCppSnippet(localType));
 				final hasExplicitType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
 				final declaredType = (hasExplicitType || init == null) && localType.length > 0 ? localType : "auto";
 				if (scope != null) {
@@ -7422,8 +7432,19 @@ class CppTargetCore {
 					else
 						scope.localNames.remove(sourceLocal);
 				}
+				final rhsStart = timingEnabled ? Sys.time() : 0.0;
 				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
 					scope) : renderLocalInitExpr(init, declaredType, localType, scope);
+				if (timingEnabled)
+					traceCppScopeStmtTimingPhase(scope,
+						"svar_phase=rhs local="
+						+ localName
+						+ " seconds="
+						+ Std.string(Sys.time() - rhsStart)
+						+ " declared_type="
+						+ traceCppSnippet(declaredType)
+						+ " rhs="
+						+ traceCppSnippet(rhs));
 				if (scope != null)
 					scope.localNames.set(sourceLocal, localName);
 				if (scope != null) {
@@ -8501,6 +8522,7 @@ class CppTargetCore {
 		final macroApiCall = macroApiCallExprForExpected(init, localType, scope);
 		if (macroApiCall != null)
 			return macroApiCall;
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 		return switch (init) {
 			case ENull if (isCppOptionalType(declaredType)):
 				"std::nullopt";
@@ -8523,7 +8545,25 @@ class CppTargetCore {
 			case _ if (structuralTypedefClassForCppType(localType, scope) != null):
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (localType == "std::string"):
-				stringExpr(init, scope);
+				final startTime = timingEnabled ? Sys.time() : 0.0;
+				final directStringCall = declaredType == "auto" && switch (init) {
+					case ECall(_, _) | EField(_, _):
+						true;
+					case _:
+						false;
+				};
+				final out = directStringCall ? renderExpr(init, scope) : stringExpr(init, scope);
+				if (timingEnabled)
+					traceCppScopeStmtTimingPhase(scope,
+						"local_init_phase="
+						+ (directStringCall ? "string_direct_expr" : "string_expr")
+						+ " seconds="
+						+ Std.string(Sys.time() - startTime)
+						+ " expr="
+						+ exprKind(init)
+						+ " out="
+						+ traceCppSnippet(out));
+				out;
 			case _ if (isCppReferenceType(localType)):
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (cppOptionalInnerType(exprCppType(init, scope)) == localType):
