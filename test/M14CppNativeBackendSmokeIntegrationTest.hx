@@ -1412,6 +1412,37 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ prep local-inference skips should stay pinned to the stdlib Unserializer owner");
 	}
 
+	static function assertCppResolverMethodsUseKnownStdlibSignatures():Void {
+		final nameArg = new HxFunctionArg("name", "String", NoDefault, false, false);
+		final resolveClass = new HxFunctionDecl("resolveClass", Public, false, [nameArg], "Class<Dynamic>", [], "");
+		final resolveEnum = new HxFunctionDecl("resolveEnum", Public, false, [nameArg], "Enum<Dynamic>", [], "");
+		final owner = new HxClassDecl("DefaultResolver", false, [resolveClass, resolveEnum], []);
+		final names = new StringMap<Bool>();
+		names.set("DefaultResolver", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("DefaultResolver", owner);
+		final lookup = {names: names, byName: classes};
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "std::any");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodParamCppTypes("DefaultResolver", "resolveClass", scope, lookup)
+			.join(",") == "std::string",
+			"C++ DefaultResolver.resolveClass should use the declared String argument type");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodParamCppTypes("TypeResolver", "resolveEnum", scope, lookup)
+			.join(",") == "std::string",
+			"C++ TypeResolver.resolveEnum should use the declared String argument type");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodUsesDeclaredCallableArgs(scope, resolveClass),
+			"C++ DefaultResolver.resolveClass should skip callable-arg inference");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.knownStdlibMethodReturnCppType("DefaultResolver", "resolveClass", "Class<Dynamic>", scope,
+				lookup) == "std::shared_ptr<Class>",
+			"C++ DefaultResolver.resolveClass should expose Class meta-values without body inference");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.knownStdlibMethodReturnCppType("TypeResolver", "resolveEnum", "Enum<Dynamic>", scope, lookup) == "std::shared_ptr<Enum>",
+			"C++ TypeResolver.resolveEnum should expose Enum meta-values without body inference");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.classMethodCppReturnType("DefaultResolver", "resolveEnum", false,
+			scope) == "std::shared_ptr<Enum>",
+			"C++ resolver instance method return lookup should use known stdlib signatures");
+	}
+
 	static function assertVendorExprToolsReturnTypesWhenAvailable():Void {
 		final exprToolsProgram = vendorExprToolsProgramWhenAvailable();
 		if (exprToolsProgram == null)
@@ -2198,6 +2229,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertCppFunctionScopePrepCachesArgRegistration();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
+		assertCppResolverMethodsUseKnownStdlibSignatures();
 		assertTypedLocalFunctionBlockExprRendersStructurally();
 		final reflectCompareExpr = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "compare"), [EString("a"), EString("b")]));

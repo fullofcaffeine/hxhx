@@ -3586,6 +3586,16 @@ class CppTargetCore {
 		}
 		if (owner == "Bytes" && method == "fill")
 			return "void";
+		if (isTypeResolverHelper(owner)) {
+			return switch (method) {
+				case "resolveClass":
+					"std::shared_ptr<Class>";
+				case "resolveEnum":
+					"std::shared_ptr<Enum>";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "BaseCode") {
 			return switch (method) {
 				case "encodeBytes" | "decodeBytes":
@@ -3834,6 +3844,13 @@ class CppTargetCore {
 					case _:
 						[];
 				}
+			case "TypeResolver" | "DefaultResolver":
+				switch (method) {
+					case "resolveClass" | "resolveEnum":
+						["std::string"];
+					case _:
+						[];
+				}
 			case _:
 				[];
 		}
@@ -3875,6 +3892,11 @@ class CppTargetCore {
 			|| className == "StringIteratorUnicode"
 			|| className == "StringKeyValueIterator"
 			|| className == "StringKeyValueIteratorUnicode";
+	}
+
+	static function isTypeResolverHelper(className:String):Bool {
+		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		return owner == "TypeResolver" || owner == "DefaultResolver";
 	}
 
 	static function renderScope(cls:HxClassDecl, classLookup:CppClassLookup, returnType:String):CppRenderScope {
@@ -4073,6 +4095,13 @@ class CppTargetCore {
 						"createComment" | "createDocType" | "createProcessingInstruction" | "createDocument" | "get" | "set" | "remove" | "exists" |
 						"attributes" | "iterator" | "elements" | "elementsNamed" | "firstChild" | "firstElement" | "addChild" | "removeChild" |
 						"insertChild" | "toString" | "ensureElementType":
+						true;
+					case _:
+						false;
+				}
+			case "TypeResolver" | "DefaultResolver":
+				switch (method) {
+					case "resolveClass" | "resolveEnum":
 						true;
 					case _:
 						false;
@@ -10895,6 +10924,7 @@ class CppTargetCore {
 		if (isStringIteratorHelper(ownerName)
 			|| ownerName == "BalancedTree"
 			|| ownerName == "Template"
+			|| isTypeResolverHelper(ownerName)
 			|| (ownerName == "Bytes" && method == "fill"))
 			return knownStdlibMethodReturnCppType(className, methodName, HxFunctionDecl.getReturnTypeHint(fn), scope);
 		final owner = scope == null ? null : scope.classByName.get(ownerName);
