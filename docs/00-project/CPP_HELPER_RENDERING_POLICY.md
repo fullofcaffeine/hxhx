@@ -53,8 +53,9 @@ program needs a type/signature boundary and not inline body semantics.
 
 A helper may move from `full_body` to `runtime_module` only when the support is
 target-owned, provenance-safe, deterministic, and behavior-scoped. Broad
-runtime/stdlib semantics also need the Cpp runtime-helper invariant policy and
-upstream Haxe 4.3.7 oracle evidence where applicable.
+runtime/stdlib semantics also need
+[`CPP_TARGET_RUNTIME_POLICY.md`](CPP_TARGET_RUNTIME_POLICY.md) and upstream Haxe
+4.3.7 oracle evidence where applicable.
 
 Reachability and ordering should scan parsed field initializers and method
 bodies only for `full_body` helpers. `declaration_only` and `runtime_module`

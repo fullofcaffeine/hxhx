@@ -46,6 +46,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 
 - Stage model and backend layering: `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
 - C++ native target boundary: `docs/02-user-guide/HXHX_CPP_NATIVE_TARGET_BOUNDARY.md`
+- C++ helper rendering policy: `docs/00-project/CPP_HELPER_RENDERING_POLICY.md`
+- C++ target runtime/helper policy: `docs/00-project/CPP_TARGET_RUNTIME_POLICY.md`
 - Source-native runtime packaging strategy: `docs/02-user-guide/SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md`
 - `.cross.hx` vs `_std` beginner guide: `docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`
 - Reflaxe family cross-override audit: `docs/00-project/REFLAXE_FAMILY_CROSS_OVERRIDE_AUDIT.md`
