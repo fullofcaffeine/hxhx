@@ -6163,6 +6163,39 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(resourceGetBytesLines, "return std::make_shared<Bytes>(static_cast<int>(__hxhx_data->size()), *__hxhx_data);",
 			"C++ Resource.getBytes support helper should rebuild haxe.io.Bytes from embedded storage");
 		assertContains(resourceInitLines, "return;", "C++ Resource.__init__ support helper should be a no-op over the generated table");
+		final unserializerObject = new HxFunctionDecl("unserializeObject", Private, false, [new HxFunctionArg("o", "{}", NoDefault, false, false)], "Void", [
+			SWhile(EBool(true), SBlock([
+				SIf(EBinop(">=", EIdent("pos"), EIdent("length")), SThrow(EString("Invalid object"), HxPos.unknown()), null, HxPos.unknown()),
+				SIf(EBinop("==", ECall(EIdent("get"), [EIdent("pos")]), EString("g")), SBreak(HxPos.unknown()), null, HxPos.unknown()),
+				SVar("k", "Dynamic", ECall(EIdent("unserialize"), []), HxPos.unknown()),
+				SIf(EUnop("!", ECall(EField(EIdent("Std"), "isOfType"), [EIdent("k"), EIdent("String")])),
+					SThrow(EString("Invalid object key"), HxPos.unknown()), null, HxPos.unknown()),
+				SVar("v", "", ECall(EIdent("unserialize"), []), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("Reflect"), "setField"), [EIdent("o"), EIdent("k"), EIdent("v")]), HxPos.unknown())
+			], HxPos.unknown()), HxPos.unknown()),
+			SExpr(EUnop("post++", EIdent("pos")), HxPos.unknown())
+		], "");
+		final unserializerOwner = new HxClassDecl("Unserializer", false, [unserializerObject], [
+			new HxFieldDecl("pos", Public, false, "Int", null),
+			new HxFieldDecl("length", Public, false, "Int", null)
+		]);
+		final unserializerObjectLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(unserializerObject, unserializerOwner, bytesLookup)
+			.join("\n");
+		assertContains(unserializerObjectLines, "void unserializeObject(", "C++ Unserializer.unserializeObject helper should keep its Void surface");
+		assertContains(unserializerObjectLines, "while (true) {", "C++ Unserializer.unserializeObject helper should keep the parser loop");
+		assertContains(unserializerObjectLines, "if (pos >= length) throw std::runtime_error(std::string(\"Invalid object\"));",
+			"C++ Unserializer.unserializeObject helper should preserve invalid object bounds checks");
+		assertContains(unserializerObjectLines, "if (get(pos) == static_cast<int>('g')) break;",
+			"C++ Unserializer.unserializeObject helper should preserve the object terminator check");
+		assertContains(unserializerObjectLines, "std::any k = unserialize();",
+			"C++ Unserializer.unserializeObject helper should keep recursive key parsing erased");
+		assertContains(unserializerObjectLines,
+			"if (!__hxhx_is_type(k, std::string(\"String\"))) throw std::runtime_error(std::string(\"Invalid object key\"));",
+			"C++ Unserializer.unserializeObject helper should preserve string-key validation");
+		assertContains(unserializerObjectLines, "std::any v = unserialize();",
+			"C++ Unserializer.unserializeObject helper should keep recursive value parsing erased");
+		assertContains(unserializerObjectLines, "__hxhx_reflect_set_field(o, __hxhx_stringify(k), v);",
+			"C++ Unserializer.unserializeObject helper should use target-owned reflection support for object fields");
 		final base64Encode = new HxFunctionDecl("encode", Public, true, [
 			new HxFunctionArg("bytes", "Bytes", NoDefault, false, false),
 			new HxFunctionArg("complement", "Bool", Default(EBool(true)), false, false)

@@ -4197,6 +4197,8 @@ class CppTargetCore {
 			return returnTraced("special_base64", renderBase64SupportHelper(fn, owner, classLookup));
 		if (isResourceSupportHelper(fn, owner))
 			return returnTraced("special_resource", renderResourceSupportHelper(fn, owner, classLookup));
+		if (isUnserializerObjectHelper(fn, owner))
+			return returnTraced("special_unserializer_object", renderUnserializerObjectHelper(fn, owner, classLookup));
 		if (isMd5SupportHelper(fn, owner))
 			return returnTraced("special_md5", renderMd5SupportHelper(fn, owner, classLookup));
 		if (isSha1SupportHelper(fn, owner))
@@ -4640,6 +4642,35 @@ class CppTargetCore {
 		}
 		out.push("  }");
 		return out;
+	}
+
+	static function isUnserializerObjectHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		return sanitizeTypePath(HxClassDecl.getName(owner)) == "Unserializer"
+			&& !HxFunctionDecl.getIsStatic(fn)
+			&& sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "unserializeObject"
+			&& HxFunctionDecl.getArgs(fn).length == 1;
+	}
+
+	static function renderUnserializerObjectHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = supportMethodSignatureReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final objectArg = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		return [
+			"  " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {",
+			"    while (true) {",
+			"      if (pos >= length) throw std::runtime_error(std::string(\"Invalid object\"));",
+			"      if (get(pos) == static_cast<int>('g')) break;",
+			"      std::any k = unserialize();",
+			"      if (!__hxhx_is_type(k, std::string(\"String\"))) throw std::runtime_error(std::string(\"Invalid object key\"));",
+			"      std::any v = unserialize();",
+			"      __hxhx_reflect_set_field(" + objectArg + ", __hxhx_stringify(k), v);",
+			"    }",
+			"    pos++;",
+			"  }"
+		];
 	}
 
 	static function renderBase64SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
