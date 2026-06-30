@@ -106,6 +106,7 @@ Current planning owners:
 
 - Full 1.0 parity and release contract: `haxe.ocaml-f1cl`
 - modular customization and variation architecture: `haxe.ocaml-vary`
+- mega-file gravity watch: `docs/00-project/MEGA_FILE_GRAVITY_WATCH.md`
 
 ## Goal 4: Pluggable compiler customization
 

@@ -1,0 +1,84 @@
+# Mega-File Gravity Watch
+
+This note owns `haxe_ocaml-zn07`. It is a lightweight review trigger for
+compiler/backend hotspots that are already large or mixed-purpose. It is not a
+freeze on urgent Full 1.0 fixes, and it is not a demand for a giant rewrite.
+
+README and North Star progress bars stay unchanged by default. This policy
+protects the hackable-compiler goal; it does not by itself change production
+readiness.
+
+## Current Hotspots
+
+Measured on June 30, 2026:
+
+| File | Lines | Risk |
+| --- | ---: | --- |
+| `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,142 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 16,173 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
+| `packages/hxhx-core/src/HxParser.hx` | 5,022 | Parser behavior is central and easy to destabilize with local workarounds. |
+| `packages/hxhx-core/src/ParserStage.hx` | 4,450 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
+| `packages/hxhx/src/hxhx/Stage3Compiler.hx` | 996 | Keep orchestration-only; do not let it become a target/runtime implementation surface. |
+
+## Thresholds
+
+Use these as review triggers, not hard CI limits:
+
+- `red`: files over 10,000 lines, or files already owning multiple independent
+  target/runtime responsibilities.
+- `orange`: files over 5,000 lines, or files where a new change adds a second
+  major responsibility to an existing module.
+- `yellow`: files over 2,500 lines that are beginning to mix orchestration,
+  target lowering, runtime helpers, parser workarounds, or test-only shims.
+
+For `red` files, new substantial logic needs an extraction decision in the bead
+before implementation. "Substantial" means any new behavior surface, target
+runtime helper family, parser/typer workaround, caching subsystem, or more than a
+small local repair.
+
+## Bounded Fix Rule
+
+A bounded Full 1.0 fix may still touch a mega-file when all of these are true:
+
+- the failing gate or regression has a narrow local cause;
+- the change does not add a new runtime/stdlib semantic family to the file;
+- focused tests or oracle evidence cover the changed behavior;
+- the bead records why the mega-file touch was acceptable;
+- an extraction follow-up exists, or the bead records why none is needed.
+
+If an inline `out.push` block starts looking like a runtime library, move it to
+a target runtime module, template, extern/core declaration, intrinsic lowering,
+or technical doc before expanding it.
+
+## Review Triggers
+
+Pause for an extraction note or follow-up bead when a change would:
+
+- add another target family to `SourceTargetCommon.hx`;
+- add broad Cpp runtime/stdlib behavior directly to `CppTargetCore.hx`;
+- add render-time type inference, reachability, or cache machinery to
+  `CppTargetCore.hx` without using an existing bounded seam;
+- add bootstrap/stage orchestration and target behavior to the same module;
+- add parser workaround logic to `HxParser.hx` or `ParserStage.hx` for one
+  backend-specific failure;
+- grow a `red` file by more than a small local repair without reducing a
+  comparable amount of responsibility elsewhere.
+
+## Existing Follow-Ups
+
+- `haxe_ocaml-36ec`: Cpp render/type-flow cache extraction.
+- `haxe_ocaml-crsq`: Cpp imported stdlib static calls and helper reachability.
+- `haxe_ocaml-ejja`: Cpp compact primitive helper oracle freeze.
+- `haxe_ocaml-zo90`: Cpp sys/event-loop smoke scaffolding audit.
+- `haxe_ocaml-cy8e`: SourceTargetCommon target-family extraction plan.
+
+Source/native target-family extraction should be filed before adding more broad
+target-specific runtime/API support to `SourceTargetCommon.hx`.
+
+## Upstream Reference Boundary
+
+Upstream Haxe is useful as an ownership reference point: target generators are
+owned by target-specific generator modules with shared support around them. Use
+that idea at the architecture level only. Do not copy, translate, or mirror
+upstream compiler implementation code.
