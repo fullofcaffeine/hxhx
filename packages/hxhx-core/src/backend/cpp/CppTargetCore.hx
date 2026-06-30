@@ -2082,24 +2082,27 @@ class CppTargetCore {
 	}
 
 	static function helperRenderKindCounts(helpers:Array<HxClassDecl>, classLookup:CppClassLookup):CppHelperRenderKindCounts {
-		final counts:CppHelperRenderKindCounts = {
-			fullBody: 0,
-			declarationOnly: 0,
-			runtimeModule: 0,
-			unsupportedDiagnostic: 0
-		};
+		var fullBody = 0;
+		var declarationOnly = 0;
+		var runtimeModule = 0;
+		var unsupportedDiagnostic = 0;
 		for (cls in helpers)
 			switch (helperClassRenderKind(cls, classLookup)) {
 				case FullBody:
-					counts.fullBody++;
+					fullBody = fullBody + 1;
 				case DeclarationOnly:
-					counts.declarationOnly++;
+					declarationOnly = declarationOnly + 1;
 				case RuntimeModule:
-					counts.runtimeModule++;
+					runtimeModule = runtimeModule + 1;
 				case UnsupportedDiagnostic:
-					counts.unsupportedDiagnostic++;
+					unsupportedDiagnostic = unsupportedDiagnostic + 1;
 			}
-		return counts;
+		return {
+			fullBody: fullBody,
+			declarationOnly: declarationOnly,
+			runtimeModule: runtimeModule,
+			unsupportedDiagnostic: unsupportedDiagnostic
+		};
 	}
 
 	static function helperClassRenderKind(cls:HxClassDecl, classLookup:CppClassLookup):CppHelperRenderKind {
