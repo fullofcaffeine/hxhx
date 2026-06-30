@@ -9137,8 +9137,10 @@ class CppTargetCore {
 			};
 			return lowered != null ? lowered : target + "." + sanitizeIdentifier(method) + "(" + renderedArgs() + ")";
 		}
-		if (isCppStringExpr(receiver, scope)) {
-			final target = stringReceiverExpr(receiver, scope);
+		if (isStringLike(receiver)
+			|| receiverCppType == "std::string"
+			|| (receiverCppType.length == 0 && inferExprCppType(receiver, scope) == "std::string")) {
+			final target = isStringLike(receiver) ? stringExpr(receiver, scope) : renderExpr(receiver, scope);
 			return switch (method) {
 				case "raw_ptr" if (args.length == 0):
 					"std::make_shared<RawConstPointer<void>>(" + target + ".c_str())";
@@ -9183,7 +9185,7 @@ class CppTargetCore {
 					extension != null ? extension : target + "." + sanitizeIdentifier(method) + "(" + renderedArgs() + ")";
 			};
 		}
-		if (method == "join" && isCppVectorType(exprCppType(receiver, scope)) && args.length == 1)
+		if (method == "join" && isCppVectorType(receiverCppType) && args.length == 1)
 			return "__hxhx_join(" + renderExpr(receiver, scope) + ", " + stringExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "compare")
 			return reflectCompareExpr(args, scope);
@@ -9237,7 +9239,12 @@ class CppTargetCore {
 				+ renderClassMethodCallArgs(receiverTypeName, method, true, args, scope).join(", ")
 				+ ")";
 		}
-		return renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(method) + "(" + renderedArgs() + ")";
+		return renderExpr(receiver, scope)
+			+ fieldAccessOpForCppType(receiverCppType)
+			+ sanitizeIdentifier(method)
+			+ "("
+			+ renderedArgs()
+			+ ")";
 	}
 
 	static function staticStringExtensionCallExpr(method:String, target:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
@@ -10405,7 +10412,11 @@ class CppTargetCore {
 	}
 
 	static function fieldAccessOp(receiver:HxExpr, ?scope:CppRenderScope):String {
-		return exprHasReferenceType(receiver, scope) ? "->" : ".";
+		return fieldAccessOpForCppType(exprCppType(receiver, scope));
+	}
+
+	static function fieldAccessOpForCppType(typeName:String):String {
+		return isCppReferenceType(typeName) ? "->" : ".";
 	}
 
 	static function isCppExceptionValueType(typeName:String):Bool {
