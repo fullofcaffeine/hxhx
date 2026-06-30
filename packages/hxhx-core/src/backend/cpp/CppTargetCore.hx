@@ -7531,6 +7531,7 @@ class CppTargetCore {
 		final switchValue = "__hxhx_switch_stmt";
 		final scrutineeExpr = isStringLike(scrutinee) ? stringExpr(scrutinee, scope) : renderExpr(scrutinee, scope);
 		final out = [indent + "{", indent + "  auto " + switchValue + " = " + scrutineeExpr + ";"];
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 		var defaultBody:Null<HxStmt> = null;
 		var defaultPattern:Null<HxSwitchPattern> = null;
 		var emitted = 0;
@@ -7544,28 +7545,57 @@ class CppTargetCore {
 				}
 				continue;
 			}
+			final branchStart = timingEnabled ? Sys.time() : 0.;
+			final condStart = timingEnabled ? Sys.time() : 0.;
 			final cond = switchPatternCond(pattern, switchValue);
+			final condElapsed = timingEnabled ? Sys.time() - condStart : 0.;
 			if (switchPatternShouldSkipKnownFalseBranch(pattern, cond))
 				continue;
 			out.push(indent + "  " + (emitted == 0 ? "if" : "else if") + " (" + cond + ") {");
+			final bindingStart = timingEnabled ? Sys.time() : 0.;
 			for (line in switchPatternBindingLines(pattern, switchValue, indent + "    "))
 				out.push(line);
+			final bindingElapsed = timingEnabled ? Sys.time() - bindingStart : 0.;
+			final bodyStart = timingEnabled ? Sys.time() : 0.;
+			final before = out.length;
 			withLocalScope(scope, () -> {
 				for (line in renderStmtBlockContent(bodies[i], indent + "    ", scope))
 					out.push(line);
 			});
+			final bodyElapsed = timingEnabled ? Sys.time() - bodyStart : 0.;
 			out.push(indent + "  }");
+			if (timingEnabled) {
+				final elapsed = Sys.time() - branchStart;
+				traceCppTimingPhase("render_helper_switch_branch_timing owner=" + scope.traceOwnerName + " name="
+					+ sanitizeIdentifier(scope.traceMethodName) + " stmt_index=" + Std.string(scope.traceStmtIndex) + " branch_index=" + Std.string(i)
+					+ " pattern=" + switchPatternKind(pattern) + " seconds=" + Std.string(elapsed) + " cond_seconds=" + Std.string(condElapsed)
+					+ " binding_seconds=" + Std.string(bindingElapsed) + " body_seconds=" + Std.string(bodyElapsed) + " body_lines="
+					+ Std.string(out.length - before));
+			}
 			emitted++;
 		}
 		if (defaultBody != null) {
+			final branchStart = timingEnabled ? Sys.time() : 0.;
 			out.push(indent + "  " + (emitted == 0 ? "{" : "else {"));
+			final bindingStart = timingEnabled ? Sys.time() : 0.;
 			for (line in switchPatternBindingLines(defaultPattern, switchValue, indent + "    "))
 				out.push(line);
+			final bindingElapsed = timingEnabled ? Sys.time() - bindingStart : 0.;
+			final bodyStart = timingEnabled ? Sys.time() : 0.;
+			final before = out.length;
 			withLocalScope(scope, () -> {
 				for (line in renderStmtBlockContent(defaultBody, indent + "    ", scope))
 					out.push(line);
 			});
+			final bodyElapsed = timingEnabled ? Sys.time() - bodyStart : 0.;
 			out.push(indent + "  }");
+			if (timingEnabled) {
+				final elapsed = Sys.time() - branchStart;
+				traceCppTimingPhase("render_helper_switch_branch_timing owner=" + scope.traceOwnerName + " name="
+					+ sanitizeIdentifier(scope.traceMethodName) + " stmt_index=" + Std.string(scope.traceStmtIndex) + " branch_index=default pattern="
+					+ switchPatternKind(defaultPattern) + " seconds=" + Std.string(elapsed) + " cond_seconds=0 binding_seconds=" + Std.string(bindingElapsed)
+					+ " body_seconds=" + Std.string(bodyElapsed) + " body_lines=" + Std.string(out.length - before));
+			}
 		}
 		out.push(indent + "}");
 		return out;
@@ -12509,6 +12539,30 @@ class CppTargetCore {
 				true;
 			case _:
 				false;
+		};
+	}
+
+	static function switchPatternKind(pattern:HxSwitchPattern):String {
+		return switch (pattern) {
+			case PNull: "PNull";
+			case PWildcard: "PWildcard";
+			case PBool(_): "PBool";
+			case PString(_): "PString";
+			case PInt(_): "PInt";
+			case PEnumValue(_): "PEnumValue";
+			case PEnumExtract(_, _): "PEnumExtract";
+			case PObject(_, _): "PObject";
+			case PCapture(_, _): "PCapture";
+			case PArray(_): "PArray";
+			case PExtractor(_, _): "PExtractor";
+			case PLengthGuard(_, _, _): "PLengthGuard";
+			case PStartsWithGuard(_, _, _): "PStartsWithGuard";
+			case PIntEqualsGuard(_, _, _): "PIntEqualsGuard";
+			case PIntCompareGuard(_, _, _, _): "PIntCompareGuard";
+			case PParsedIntSwitchGuard(_, _, _, _): "PParsedIntSwitchGuard";
+			case PUnsupportedGuard(_): "PUnsupportedGuard";
+			case PBind(_): "PBind";
+			case POr(_): "POr";
 		};
 	}
 
