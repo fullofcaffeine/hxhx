@@ -2103,11 +2103,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
-	static function context(outDir:String, buildExecutable:Bool, noCompilation:Bool):BackendContext {
+	static function context(outDir:String, buildExecutable:Bool, noCompilation:Bool, ?resources:Array<backend.BackendResource>):BackendContext {
 		final defines = new StringMap<String>();
 		if (noCompilation)
 			defines.set("no-compilation", "1");
-		return new BackendContext(outDir, null, "Main", true, buildExecutable, defines);
+		return new BackendContext(outDir, null, "Main", true, buildExecutable, defines, resources);
 	}
 
 	static function hasArtifactKind(artifacts:Array<backend.EmitArtifact>, kind:String):Bool {
@@ -6136,6 +6136,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ BaseCode static encode support helper should use target-owned generic BaseCode support");
 		assertContains(baseCodeInitTableLines, "tbl = __hxhx_basecode_table(base->b);",
 			"C++ BaseCode.initTable support helper should keep the cache field populated for callers that touch it");
+		final resourceListNames = new HxFunctionDecl("listNames", Public, true, [], "Array<String>", [], "");
+		final resourceGetString = new HxFunctionDecl("getString", Public, true, [new HxFunctionArg("name", "String", NoDefault, false, false)], "String", [],
+			"");
+		final resourceGetBytes = new HxFunctionDecl("getBytes", Public, true, [new HxFunctionArg("name", "String", NoDefault, false, false)], "Bytes", [], "");
+		final resourceInit = new HxFunctionDecl("__init__", Private, true, [], "Void", [], "");
+		final resourceOwner = new HxClassDecl("Resource", false, [resourceListNames, resourceGetString, resourceGetBytes, resourceInit], []);
+		bytesNames.set("Resource", true);
+		bytesClasses.set("Resource", resourceOwner);
+		final resourceListNamesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(resourceListNames, resourceOwner, bytesLookup).join("\n");
+		final resourceGetStringLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(resourceGetString, resourceOwner, bytesLookup).join("\n");
+		final resourceGetBytesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(resourceGetBytes, resourceOwner, bytesLookup).join("\n");
+		final resourceInitLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(resourceInit, resourceOwner, bytesLookup).join("\n");
+		assertContains(resourceListNamesLines, "static std::vector<std::string> listNames() {",
+			"C++ Resource.listNames support helper should keep the public array surface");
+		assertContains(resourceListNamesLines, "return __hxhx_resource_names();",
+			"C++ Resource.listNames support helper should use the generated resource table");
+		assertContains(resourceGetStringLines, "static std::string getString(std::string name) {",
+			"C++ Resource.getString support helper should use string-shaped resource names");
+		assertContains(resourceGetStringLines, "return __hxhx_resource_string(name).value_or(std::string());",
+			"C++ Resource.getString support helper should avoid rendering the generic base64 body");
+		assertContains(resourceGetBytesLines, "auto __hxhx_data = __hxhx_resource_bytes(name);",
+			"C++ Resource.getBytes support helper should read embedded bytes from the generated resource table");
+		assertContains(resourceGetBytesLines, "if (!__hxhx_data.has_value()) return nullptr;",
+			"C++ Resource.getBytes support helper should preserve missing-resource nullability");
+		assertContains(resourceGetBytesLines, "return std::make_shared<Bytes>(static_cast<int>(__hxhx_data->size()), *__hxhx_data);",
+			"C++ Resource.getBytes support helper should rebuild haxe.io.Bytes from embedded storage");
+		assertContains(resourceInitLines, "return;", "C++ Resource.__init__ support helper should be a no-op over the generated table");
 		final base64Encode = new HxFunctionDecl("encode", Public, true, [
 			new HxFunctionArg("bytes", "Bytes", NoDefault, false, false),
 			new HxFunctionArg("complement", "Bool", Default(EBool(true)), false, false)
@@ -7411,8 +7438,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(root);
 		File.saveContent(Path.join([root, "platforms.json"]), "{\"min\":4}");
 
+		final smokeResources = [
+			{name: "text-resource", data: haxe.io.Bytes.ofString("hello")},
+			{name: "binary-resource", data: haxe.io.Bytes.ofString("\x00A")},
+			{name: "ctrl-" + String.fromCharCode(1) + "A", data: haxe.io.Bytes.ofString("Z")}
+		];
 		final sourceOnlyDir = Path.join([root, "source-only"]);
-		final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program(), context(sourceOnlyDir, true, true));
+		final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program(), context(sourceOnlyDir, true, true, smokeResources));
 		assertTrue(sourceOnly.entryPath == Path.join([sourceOnlyDir, "src", "Main.cpp"]), "unexpected C++ source entry path: " + sourceOnly.entryPath);
 		assertTrue(hasArtifactKind(sourceOnly.artifacts, "entry_cpp_source"), "missing entry_cpp_source artifact");
 		assertTrue(!sourceOnly.builtExecutable, "no-compilation C++ smoke should not build executable");
@@ -7454,6 +7486,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::string argument;", "C++ smoke should include target-owned exception argument support");
 		assertContains(source, "static std::shared_ptr<T> __hxhx_borrowed_shared(T* value)",
 			"C++ smoke should include target-owned borrowed receiver handle support");
+		assertContains(source, "struct __hxhx_resource_entry {", "C++ smoke should include target-owned resource table support");
+		assertContains(source, "{\"text-resource\", std::vector<int>{104, 101, 108, 108, 111}}",
+			"C++ smoke should embed string resource bytes in the generated resource table");
+		assertContains(source, "{\"binary-resource\", std::vector<int>{0, 65}}",
+			"C++ smoke should embed binary resource bytes in the generated resource table");
+		assertContains(source, "{\"ctrl-\\001A\", std::vector<int>{90}}", "C++ smoke should use fixed-width resource name escapes");
 		assertContains(source, "__hxhx_args(argc, argv)", "C++ smoke should emit Sys.args helper call");
 		assertContains(source, "__hxhx_index_of(\"abc\", std::string(\"b\"), 0)", "C++ smoke should emit string indexOf helper call");
 		assertContains(source, "__hxhx_index_of(args, std::string(\"needle\"), 0)", "C++ smoke should emit vector indexOf helper call");

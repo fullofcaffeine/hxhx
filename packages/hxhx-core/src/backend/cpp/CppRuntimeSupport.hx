@@ -15,6 +15,51 @@ package backend.cpp;
 	  declaration order remains explicit at the call site.
 **/
 class CppRuntimeSupport {
+	static function quoteCppString(value:String):String {
+		if (value == null)
+			return "\"\"";
+		final out = new StringBuf();
+		out.add("\"");
+		for (i in 0...value.length) {
+			final code = StringTools.fastCodeAt(value, i);
+			switch (code) {
+				case 34:
+					out.add("\\\"");
+				case 92:
+					out.add("\\\\");
+				case 10:
+					out.add("\\n");
+				case 13:
+					out.add("\\r");
+				case 9:
+					out.add("\\t");
+				case _:
+					if (code < 32 || code == 127) {
+						out.add("\\");
+						final hundreds = Std.int(code / 64);
+						final tens = Std.int((code % 64) / 8);
+						final ones = code % 8;
+						out.add(Std.string(hundreds));
+						out.add(Std.string(tens));
+						out.add(Std.string(ones));
+					} else {
+						out.addChar(code);
+					}
+			}
+		}
+		out.add("\"");
+		return out.toString();
+	}
+
+	static function byteVectorLiteral(data:haxe.io.Bytes):String {
+		if (data == null || data.length == 0)
+			return "std::vector<int>{}";
+		final values = new Array<String>();
+		for (i in 0...data.length)
+			values.push(Std.string(data.get(i)));
+		return "std::vector<int>{" + values.join(", ") + "}";
+	}
+
 	public static function borrowedSharedPtrLines():Array<String> {
 		return [
 			"template<typename T>",
@@ -22,6 +67,55 @@ class CppRuntimeSupport {
 			"  return std::shared_ptr<T>(value, [](T*) {});",
 			"}"
 		];
+	}
+
+	public static function resourceLines(resources:Array<backend.BackendResource>):Array<String> {
+		final entries = new Array<String>();
+		if (resources != null) {
+			for (resource in resources) {
+				if (resource == null)
+					continue;
+				entries.push("    {" + quoteCppString(resource.name) + ", " + byteVectorLiteral(resource.data) + "}");
+			}
+		}
+		final lines = [
+			"struct __hxhx_resource_entry {",
+			"  std::string name;",
+			"  std::vector<int> data;",
+			"};",
+			"",
+			"static const std::vector<__hxhx_resource_entry>& __hxhx_resources() {",
+			"  static const std::vector<__hxhx_resource_entry> entries = {"
+		];
+		for (i in 0...entries.length)
+			lines.push(entries[i] + (i == entries.length - 1 ? "" : ","));
+		lines.push("  };");
+		lines.push("  return entries;");
+		lines.push("}");
+		lines.push("");
+		lines.push("static std::vector<std::string> __hxhx_resource_names() {");
+		lines.push("  std::vector<std::string> out;");
+		lines.push("  for (const auto& entry : __hxhx_resources()) out.push_back(entry.name);");
+		lines.push("  return out;");
+		lines.push("}");
+		lines.push("");
+		lines.push("static std::optional<std::string> __hxhx_resource_string(const std::string& name) {");
+		lines.push("  for (const auto& entry : __hxhx_resources()) {");
+		lines.push("    if (entry.name == name) {");
+		lines.push("      std::string out;");
+		lines.push("      out.reserve(entry.data.size());");
+		lines.push("      for (int b : entry.data) out.push_back(static_cast<char>(b & 0xFF));");
+		lines.push("      return out;");
+		lines.push("    }");
+		lines.push("  }");
+		lines.push("  return std::nullopt;");
+		lines.push("}");
+		lines.push("");
+		lines.push("static std::optional<std::vector<int>> __hxhx_resource_bytes(const std::string& name) {");
+		lines.push("  for (const auto& entry : __hxhx_resources()) if (entry.name == name) return entry.data;");
+		lines.push("  return std::nullopt;");
+		lines.push("}");
+		return lines;
 	}
 
 	public static function borrowedSharedPtrExpr(typeName:String, valueExpr:String):String {

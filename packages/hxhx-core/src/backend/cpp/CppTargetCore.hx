@@ -81,7 +81,7 @@ class CppTargetCore {
 		final sourcePath = context.outputFileHint != null
 			&& context.outputFileHint.length > 0 ? context.outputFileHint : Path.join([sourceDir, className + ".cpp"]);
 		traceCppPhase("emit_before_render_program");
-		final source = renderProgram(program, main);
+		final source = renderProgram(program, main, context.resources);
 		traceCppPhase("emit_after_render_program");
 		ensureParentDirectory(sourcePath);
 		traceCppPhase("emit_before_save_content path=" + sourcePath);
@@ -230,7 +230,8 @@ class CppTargetCore {
 		return found;
 	}
 
-	static function renderProgram(program:GenIrProgram, main:{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}):String {
+	static function renderProgram(program:GenIrProgram, main:{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl},
+			resources:Array<backend.BackendResource>):String {
 		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 		functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
 		functionReturnTypesCache = new haxe.ds.StringMap<String>();
@@ -503,6 +504,9 @@ class CppTargetCore {
 		out.push("  out.reserve(source.size());");
 		out.push("  for (unsigned char c : source) out.push_back(static_cast<int>(c));");
 		out.push("}");
+		out.push("");
+		for (line in CppRuntimeSupport.resourceLines(resources))
+			out.push(line);
 		out.push("");
 		for (line in CppRuntimeSupport.baseCodeLines())
 			out.push(line);
@@ -3601,6 +3605,20 @@ class CppTargetCore {
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
 		}
+		if (owner == "Resource") {
+			return switch (method) {
+				case "listNames":
+					cppTypeHint("Array<String>", scope, classLookup);
+				case "getString":
+					"std::string";
+				case "getBytes":
+					cppTypeHint("Bytes", scope, classLookup);
+				case "__init__":
+					"void";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "JsonParser") {
 			return switch (method) {
 				case "parse" | "doParse" | "parseRec" | "parseNumber":
@@ -3751,6 +3769,13 @@ class CppTargetCore {
 						["std::string"];
 					case "encode" | "decode":
 						["std::string", "std::string"];
+					case _:
+						[];
+				}
+			case "Resource":
+				switch (method) {
+					case "getString" | "getBytes":
+						["std::string"];
 					case _:
 						[];
 				}
@@ -4167,6 +4192,8 @@ class CppTargetCore {
 			return returnTraced("special_basecode", renderBaseCodeSupportHelper(fn, owner, classLookup));
 		if (isBase64SupportHelper(fn, owner))
 			return returnTraced("special_base64", renderBase64SupportHelper(fn, owner, classLookup));
+		if (isResourceSupportHelper(fn, owner))
+			return returnTraced("special_resource", renderResourceSupportHelper(fn, owner, classLookup));
 		if (isMd5SupportHelper(fn, owner))
 			return returnTraced("special_md5", renderMd5SupportHelper(fn, owner, classLookup));
 		if (isHelperMacrosShimHelper(fn, owner))
@@ -4448,6 +4475,19 @@ class CppTargetCore {
 		};
 	}
 
+	static function isResourceSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Resource")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "listNames" | "getString" | "getBytes" | "__init__":
+				true;
+			case _:
+				false;
+		};
+	}
+
 	static function isMd5SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		if (fn == null || owner == null)
 			return false;
@@ -4549,6 +4589,37 @@ class CppTargetCore {
 			case _:
 				supportMethodSignatureReturnType(fn, owner, classLookup);
 		};
+	}
+
+	static function renderResourceSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = supportMethodSignatureReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final out = [
+			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {"
+		];
+		inline function nameAt(index:Int, fallback:String):String {
+			return args.length > index ? sanitizeIdentifier(HxFunctionArg.getName(args[index])) : fallback;
+		}
+		switch (method) {
+			case "listNames":
+				out.push("    return __hxhx_resource_names();");
+			case "getString":
+				out.push("    return __hxhx_resource_string(" + nameAt(0, "name") + ").value_or(std::string());");
+			case "getBytes":
+				out.push("    auto __hxhx_data = __hxhx_resource_bytes(" + nameAt(0, "name") + ");");
+				out.push("    if (!__hxhx_data.has_value()) return nullptr;");
+				out.push("    return std::make_shared<Bytes>(static_cast<int>(__hxhx_data->size()), *__hxhx_data);");
+			case "__init__":
+				out.push("    return;");
+			case _:
+				if (returnType != "void")
+					out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
 	}
 
 	static function renderBase64SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
