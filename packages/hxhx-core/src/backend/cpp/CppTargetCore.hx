@@ -540,6 +540,18 @@ class CppTargetCore {
 		out.push("  for (unsigned char c : source) out.push_back(static_cast<int>(c));");
 		out.push("}");
 		out.push("");
+		out.push("static std::string __hxhx_bytes_to_hex(const std::vector<int>& bytes) {");
+		out.push("  static const char* hex = \"0123456789abcdef\";");
+		out.push("  std::string out;");
+		out.push("  out.reserve(bytes.size() * 2);");
+		out.push("  for (int value : bytes) {");
+		out.push("    const unsigned char byte = static_cast<unsigned char>(value & 0xFF);");
+		out.push("    out.push_back(hex[(byte >> 4) & 0x0F]);");
+		out.push("    out.push_back(hex[byte & 0x0F]);");
+		out.push("  }");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
 		for (line in CppRuntimeSupport.resourceLines(resources))
 			out.push(line);
 		out.push("");
@@ -3731,8 +3743,15 @@ class CppTargetCore {
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
 		}
-		if (owner == "Bytes" && method == "fill")
-			return "void";
+		if (owner == "Bytes")
+			return switch (method) {
+				case "fill":
+					"void";
+				case "toHex":
+					"std::string";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			};
 		if (isTypeResolverHelper(owner)) {
 			return switch (method) {
 				case "resolveClass":
@@ -4409,6 +4428,8 @@ class CppTargetCore {
 			return returnTraced("special_base64", renderBase64SupportHelper(fn, owner, classLookup));
 		if (isResourceSupportHelper(fn, owner))
 			return returnTraced("special_resource", renderResourceSupportHelper(fn, owner, classLookup));
+		if (isBytesSupportHelper(fn, owner))
+			return returnTraced("special_bytes", renderBytesSupportHelper(fn, owner, classLookup));
 		if (isUnserializerObjectHelper(fn, owner))
 			return returnTraced("special_unserializer_object", renderUnserializerObjectHelper(fn, owner, classLookup));
 		if (isUnserializerEnumHelper(fn, owner))
@@ -4711,6 +4732,14 @@ class CppTargetCore {
 		};
 	}
 
+	static function isBytesSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null)
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Bytes")
+			return false;
+		return sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "toHex";
+	}
+
 	static function isMd5SupportHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		if (fn == null || owner == null)
 			return false;
@@ -4850,6 +4879,30 @@ class CppTargetCore {
 				out.push("    return std::make_shared<Bytes>(static_cast<int>(__hxhx_data->size()), *__hxhx_data);");
 			case "__init__":
 				out.push("    return;");
+			case _:
+				if (returnType != "void")
+					out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
+		out.push("  }");
+		return out;
+	}
+
+	static function renderBytesSupportHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = supportMethodSignatureReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final out = ["  "
+			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
+			+ returnType
+			+ " "
+			+ method
+			+ "("
+			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope)
+			+ ") {"];
+		switch (method) {
+			case "toHex":
+				out.push("    return __hxhx_bytes_to_hex(b);");
 			case _:
 				if (returnType != "void")
 					out.push("    return " + cppDefaultValue(returnType, scope) + ";");
@@ -11268,7 +11321,18 @@ class CppTargetCore {
 		if (typePath == null)
 			return null;
 		final clean = sanitizeTypePath(typeBaseName(typePath));
-		return scopeHasClass(scope, clean) && (!isCppCoreExternClass(clean) || isCppPreludeStaticClass(clean)) ? clean : null;
+		if (scopeHasClass(scope, clean) && (!isCppCoreExternClass(clean) || isCppPreludeStaticClass(clean)))
+			return clean;
+		return isKnownCppStaticSupportReceiver(clean) ? clean : null;
+	}
+
+	static function isKnownCppStaticSupportReceiver(className:String):Bool {
+		return switch (sanitizeTypePath(typeBaseName(className == null ? "" : className))) {
+			case "Bytes" | "Md5":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function isStringToolsStaticReceiver(receiver:HxExpr):Bool {

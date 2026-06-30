@@ -2183,6 +2183,50 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function importedMd5BytesRuntimeProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		final mainSource = [
+			"import haxe.crypto.Md5;",
+			"import haxe.io.Bytes;",
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(Md5.encode(\"abc\"));",
+			"    Sys.println(Md5.make(Bytes.ofString(\"abc\")).toHex());",
+			"  }",
+			"}"
+		].join("\n");
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final bytesData = new HxClassDecl("BytesData", false, [], []);
+		final bytes = new HxClassDecl("Bytes", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("length", "Int", NoDefault, false, false),
+				new HxFunctionArg("b", "BytesData", NoDefault, false, false)
+			], "Void", [
+				SExpr(EBinop("=", EField(EThis, "length"), EIdent("length")), pos),
+				SExpr(EBinop("=", EField(EThis, "b"), EIdent("b")), pos)
+			], ""),
+			new HxFunctionDecl("ofString", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Bytes", [
+				SVar("a", "BytesData", ENew("BytesData", []), pos),
+				SExpr(ECall(EField(EIdent("__global__"), "__hxcpp_bytes_of_string"), [EIdent("a"), EIdent("s")]), pos),
+				SReturn(ENew("Bytes", [EField(EIdent("a"), "length"), EIdent("a")]), pos)
+			], ""),
+			new HxFunctionDecl("toHex", Public, false, [], "String", [SReturn(EString(""), pos)], "")
+		], [
+			new HxFieldDecl("length", Public, false, "Int", null),
+			new HxFieldDecl("b", Public, false, "BytesData", null)
+		]);
+		final md5 = new HxClassDecl("Md5", false, [
+			new HxFunctionDecl("encode", Public, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "String", [SReturn(EString(""), pos)], ""),
+			new HxFunctionDecl("make", Public, true, [new HxFunctionArg("b", "Bytes", NoDefault, false, false)], "Bytes",
+				[SReturn(ECall(EField(EIdent("Bytes"), "ofString"), [EString("")]), pos)], "")
+		], []);
+		return MacroStage.expandProgram([
+			typedMain,
+			typedSyntheticModule("std/haxe/io/Bytes.hx", new HxModuleDecl("haxe.io", [], bytes, [bytesData, bytes], false, false)),
+			typedSyntheticModule("std/haxe/crypto/Md5.hx", new HxModuleDecl("haxe.crypto", [], md5, [md5], false, false))
+		], []);
+	}
+
 	static function vendorReadOnlyArrayProgramWhenAvailable():Null<GenIrProgram> {
 		final readOnlyArrayPath = "vendor/haxe/std/haxe/ds/ReadOnlyArray.hx";
 		if (!FileSystem.exists(readOnlyArrayPath))
@@ -6158,7 +6202,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SVar("a", "BytesData", ENew("BytesData", []), HxPos.unknown()),
 				SExpr(ECall(EField(EIdent("__global__"), "__hxcpp_bytes_of_string"), [EIdent("a"), EIdent("s")]), HxPos.unknown()),
 				SReturn(ENew("Bytes", [EField(EIdent("a"), "length"), EIdent("a")]), HxPos.unknown())
-			], "")
+			], ""),
+			new HxFunctionDecl("toHex", Public, false, [], "String", [SReturn(EString(""), HxPos.unknown())], "")
 		], [
 			new HxFieldDecl("length", Public, false, "Int", null),
 			new HxFieldDecl("b", Public, false, "BytesData", null)
@@ -6195,6 +6240,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Encoding.UTF8 comparisons must not be intercepted by generic class-value comparison lowering");
 		assertContains(bytesLines, "__hxhx_string_of_bytes(b, result, pos, len);", "C++ Bytes.getString should lower through target string byte helpers");
 		assertContains(bytesLines, "__hxhx_bytes_of_string(a, s);", "C++ Bytes.ofString should lower through target byte string helpers");
+		assertContains(bytesLines, "std::string toHex() {", "C++ Bytes.toHex should keep its public String surface");
+		assertContains(bytesLines, "return __hxhx_bytes_to_hex(b);", "C++ Bytes.toHex should lower through target byte hex support");
 		assertContains(bytesLines, "__hxhx_bytes_blit(b, pos, (src->b), srcpos, len);", "C++ BytesData.blit should lower through target runtime support");
 		assertContains(bytesLines, "return std::make_shared<Bytes>(len, __hxhx_bytes_slice(b, pos, (pos + len)));",
 			"C++ BytesData.slice should lower through target runtime support");
@@ -7740,6 +7787,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper reachability should order body-only dependencies before their users");
 		assertTrue(helperReachabilitySource.indexOf("struct Unused {") < 0,
 			"C++ helper reachability should skip full helper definitions for unreachable modules");
+		final importedMd5BytesDir = Path.join([root, "imported-md5-bytes-source-only"]);
+		final importedMd5BytesEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(importedMd5BytesRuntimeProgram(), context(importedMd5BytesDir, true, true));
+		final importedMd5BytesSource = File.getContent(importedMd5BytesEmit.entryPath);
+		assertContains(importedMd5BytesSource, "struct Bytes {", "C++ imported Bytes calls should retain the helper class definition");
+		assertContains(importedMd5BytesSource, "struct Md5 {", "C++ imported Md5 calls should retain the helper class definition");
+		assertContains(importedMd5BytesSource, "Md5::encode(std::string(\"abc\"))", "C++ imported Md5.encode should lower to a scope call");
+		assertContains(importedMd5BytesSource, "Bytes::ofString(std::string(\"abc\"))", "C++ imported Bytes.ofString should lower to a scope call");
+		assertContains(importedMd5BytesSource, "return __hxhx_bytes_to_hex(b);", "C++ imported Md5.make(...).toHex should render the target byte hex helper");
+		assertTrue(importedMd5BytesSource.indexOf("Md5.encode") < 0, "C++ imported Md5 calls must not retain dotted Haxe syntax");
+		assertTrue(importedMd5BytesSource.indexOf("Bytes.ofString") < 0, "C++ imported Bytes calls must not retain dotted Haxe syntax");
 		assertContains(source, "int main(int argc, char** argv)", "C++ smoke should emit main");
 		assertContains(source, "#include <cstdint>", "C++ smoke should include fixed-width integer types for bit reinterpret helpers");
 		assertContains(source, "static double __hxhx_reinterpret_le_int32_as_float32(int value)",
@@ -8981,6 +9039,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			final reflectCompareRun = commandOutput(reflectCompareBuilt.entryPath, []);
 			assertTrue(reflectCompareRun.code == 0, "C++ Reflect.compareMethods runtime smoke failed: " + reflectCompareRun.stderr);
 			assertTrue(reflectCompareRun.stdout == "true\ntrue\nfalse\nfalse\n", "unexpected C++ Reflect.compareMethods stdout: " + reflectCompareRun.stdout);
+
+			final md5BytesBuildDir = Path.join([root, "imported-md5-bytes-build"]);
+			final md5BytesBuilt = BackendRegistry.createForTarget("cpp-native").emit(importedMd5BytesRuntimeProgram(), context(md5BytesBuildDir, true, false));
+			assertTrue(md5BytesBuilt.builtExecutable, "C++ imported Md5/Bytes runtime smoke should build executable");
+			final md5BytesRun = commandOutput(md5BytesBuilt.entryPath, []);
+			assertTrue(md5BytesRun.code == 0, "C++ imported Md5/Bytes runtime smoke failed: " + md5BytesRun.stderr);
+			assertTrue(md5BytesRun.stdout == "900150983cd24fb0d6963f7d28e17f72\n900150983cd24fb0d6963f7d28e17f72\n",
+				"unexpected C++ imported Md5/Bytes stdout: " + md5BytesRun.stdout);
 
 			final buildDir = Path.join([root, "build"]);
 			final built = BackendRegistry.createForTarget("cpp-native").emit(program(), context(buildDir, true, false));
