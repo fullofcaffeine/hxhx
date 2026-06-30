@@ -9068,7 +9068,7 @@ class CppTargetCore {
 				renderedArgsCache = renderFieldCallArgs(receiverCppType, method, args, scope).join(", ");
 			return renderedArgsCache;
 		}
-		final primitiveAbstractCall = primitiveBackedAbstractMethodCallExpr(receiver, method, args, scope);
+		final primitiveAbstractCall = isCppReferenceType(receiverCppType) ? null : primitiveBackedAbstractMethodCallExpr(receiver, method, args, scope);
 		if (primitiveAbstractCall != null)
 			return primitiveAbstractCall;
 		if (isStdStaticReceiver(receiver) && method == "isOfType" && args.length == 2)
