@@ -4209,6 +4209,8 @@ class CppTargetCore {
 			return returnTraced("special_macro_compiler_api", renderMacroCompilerApiShimHelper(fn, owner, classLookup));
 		if (isExceptionCaughtThrownHelper(fn, owner))
 			return returnTraced("special_exception_caught_thrown", renderExceptionCaughtThrownHelper(fn, owner, classLookup));
+		if (isPosExceptionToStringHelper(fn, owner))
+			return returnTraced("special_pos_exception_to_string", renderPosExceptionToStringHelper(fn, owner, classLookup));
 		if (isTestExceptionsStackItemDataHelper(fn, owner))
 			return returnTraced("special_test_exceptions_stack_item_data", renderTestExceptionsStackItemDataHelper(fn, owner, classLookup));
 		if (isUtestRunnerAddCasesHelper(fn, owner))
@@ -5148,6 +5150,28 @@ class CppTargetCore {
 			+ renderFunctionArgs(args, scope)
 			+ ") {",
 			"    return std::make_shared<Exception>(" + valueName + ");",
+			"  }"
+		];
+	}
+
+	static function isPosExceptionToStringHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "PosException")
+			return false;
+		if (sanitizeTypePath(typeBaseName(HxClassDecl.getExtendsPath(owner))) != "Exception")
+			return false;
+		return sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "toString" && HxFunctionDecl.getArgs(fn).length == 0;
+	}
+
+	static function renderPosExceptionToStringHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		return [
+			"  " + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "() {",
+			"    if (posInfos == nullptr) return Exception::toString();",
+			"    return Exception::toString() + std::string(\" in \") + posInfos->className + std::string(\".\") + posInfos->methodName + std::string(\" at \") + posInfos->fileName + std::string(\":\") + std::to_string(posInfos->lineNumber);",
 			"  }"
 		];
 	}

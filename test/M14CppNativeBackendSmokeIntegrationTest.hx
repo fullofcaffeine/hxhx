@@ -6670,6 +6670,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ assignments from matching position literals should wrap into PosInfos shared pointers");
 		assertContains(posExceptionLines, "posInfos = pos;", "C++ PosInfos reference assignments should pass existing pointers through");
 		assertContains(posExceptionLines, "return (posInfos->className);", "C++ PosInfos string fields should not be wrapped with std::to_string");
+		final exceptionLike = new HxClassDecl("Exception", false, [
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("message"), HxPos.unknown())], "")
+		], []);
+		final stdPosExceptionToString = new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("unrendered"), HxPos.unknown())], "");
+		final stdPosException = new HxClassDecl("PosException", false, [stdPosExceptionToString],
+			[new HxFieldDecl("posInfos", Public, false, "PosInfos", null)], "Exception");
+		final stdPosNames = new StringMap<Bool>();
+		for (name in ["Exception", "PosInfos", "PosException"])
+			stdPosNames.set(name, true);
+		final stdPosClasses = new StringMap<HxClassDecl>();
+		stdPosClasses.set("Exception", exceptionLike);
+		stdPosClasses.set("PosInfos", posInfos);
+		stdPosClasses.set("PosException", stdPosException);
+		final stdPosLookup = {names: stdPosNames, byName: stdPosClasses};
+		final stdPosExceptionToStringLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(stdPosExceptionToString, stdPosException, stdPosLookup).join("\n");
+		assertContains(stdPosExceptionToStringLines, "std::string toString() {",
+			"C++ stdlib PosException.toString helper should keep the declared String signature");
+		assertContains(stdPosExceptionToStringLines, "if (posInfos == nullptr) return Exception::toString();",
+			"C++ stdlib PosException.toString helper should preserve the null-position fallback");
+		assertContains(stdPosExceptionToStringLines, "Exception::toString() + std::string(\" in \") + posInfos->className",
+			"C++ stdlib PosException.toString helper should compactly render the stdlib position message");
+		assertContains(stdPosExceptionToStringLines, "std::to_string(posInfos->lineNumber)",
+			"C++ stdlib PosException.toString helper should stringify the line number");
 		assertContains(notImplementedExceptionLines, "NotImplementedException(std::shared_ptr<PosInfos> pos = nullptr) : PosException(pos) {",
 			"C++ optional PosInfos constructor forwarding should keep the nullable reference instead of forcing value extraction");
 		assertTrue(notImplementedExceptionLines.indexOf("PosException(pos.value())") < 0,
