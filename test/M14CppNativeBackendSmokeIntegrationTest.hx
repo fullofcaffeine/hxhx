@@ -1389,6 +1389,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(!replayScope.localTypes.exists("scratch"), "C++ cached function-scope prep should not replay non-argument locals");
 	}
 
+	static function assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference():Void {
+		final main = new HxFunctionDecl("unserialize", Public, false, [], "Dynamic", [], "");
+		final object = new HxFunctionDecl("unserializeObject", Private, false, [], "Void", [], "");
+		final owner = new HxClassDecl("Unserializer", false, [main, object], []);
+		final names = new StringMap<Bool>();
+		names.set("Unserializer", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("Unserializer", owner);
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "std::any");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodSkipsPrepLocalInference(scope, main, "infer_string_map_locals"),
+			"C++ Unserializer.unserialize prep should skip the observed no-op StringMap local pass");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodSkipsPrepLocalInference(scope, main, "infer_generic_factory_locals"),
+			"C++ Unserializer.unserialize prep should skip the observed no-op generic factory local pass");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodSkipsPrepLocalInference(scope, main, "infer_dynamic_locals"),
+			"C++ Unserializer.unserialize prep should still run dynamic local inference");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodSkipsPrepLocalInference(scope, object, "infer_string_map_locals"),
+			"C++ Unserializer helper methods should not inherit the main unserialize prep skip");
+		final otherOwner = new HxClassDecl("OtherUnserializer", false, [main], []);
+		final otherScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(otherOwner, {names: names, byName: classes}, "std::any");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodSkipsPrepLocalInference(otherScope, main, "infer_string_map_locals"),
+			"C++ prep local-inference skips should stay pinned to the stdlib Unserializer owner");
+	}
+
 	static function assertVendorExprToolsReturnTypesWhenAvailable():Void {
 		final exprToolsProgram = vendorExprToolsProgramWhenAvailable();
 		if (exprToolsProgram == null)
@@ -2174,6 +2197,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppAnonCollectSkipsCompileTimeMacroBodies();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertCppFunctionScopePrepCachesArgRegistration();
+		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertTypedLocalFunctionBlockExprRendersStructurally();
 		final reflectCompareExpr = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "compare"), [EString("a"), EString("b")]));

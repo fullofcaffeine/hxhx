@@ -3978,6 +3978,11 @@ class CppTargetCore {
 			traceCppTimingPhase("render_helper_method_prepare_timing owner=" + sanitizeTypePath(typeBaseName(prepOwnerName)) + " name="
 				+ sanitizeIdentifier(prepMethodName) + " phase=" + phase + " seconds=" + Std.string(elapsed));
 		}
+		function tracePrepCounts(phase:String):Void {
+			traceCppTimingPhase("render_helper_method_prepare_counts owner=" + sanitizeTypePath(typeBaseName(prepOwnerName)) + " name="
+				+ sanitizeIdentifier(prepMethodName) + " phase=" + phase + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides))
+				+ " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes)));
+		}
 		function runPrepPhase(phase:String, body:Void->Void):Void {
 			if (!prepTimingEnabled) {
 				body();
@@ -3986,6 +3991,7 @@ class CppTargetCore {
 			final startTime = Sys.time();
 			body();
 			tracePrepPhase(phase, Sys.time() - startTime);
+			tracePrepCounts(phase);
 		}
 		runPrepPhase("return_auto", () -> {
 			scope.returnOnlyTypeParamAuto = functionReturnTypeParamShouldUseAuto(HxFunctionDecl.getReturnTypeHint(fn), fn)
@@ -4015,8 +4021,14 @@ class CppTargetCore {
 					inferCallableArgTypeOverrides(scope, fn);
 			});
 			runPrepPhase("register_args", () -> registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn)));
-			runPrepPhase("infer_string_map_locals", () -> inferStringMapLocalTypeOverrides(scope, fn));
-			runPrepPhase("infer_generic_factory_locals", () -> inferGenericFactoryLocalTypeOverrides(scope, fn));
+			runPrepPhase("infer_string_map_locals", () -> {
+				if (!knownStdlibMethodSkipsPrepLocalInference(scope, fn, "infer_string_map_locals"))
+					inferStringMapLocalTypeOverrides(scope, fn);
+			});
+			runPrepPhase("infer_generic_factory_locals", () -> {
+				if (!knownStdlibMethodSkipsPrepLocalInference(scope, fn, "infer_generic_factory_locals"))
+					inferGenericFactoryLocalTypeOverrides(scope, fn);
+			});
 			runPrepPhase("infer_dynamic_locals", () -> inferDynamicLocalTypeOverrides(scope, fn));
 			runPrepPhase("infer_helper_typed_as_locals", () -> inferHelperTypedAsLocalTypeOverrides(scope, fn));
 			runPrepPhase("infer_return_locals", () -> inferReturnLocalTypeOverrides(scope, fn));
@@ -4066,6 +4078,16 @@ class CppTargetCore {
 			case _:
 				false;
 		}
+	}
+
+	static function knownStdlibMethodSkipsPrepLocalInference(scope:CppRenderScope, fn:HxFunctionDecl, phase:String):Bool {
+		if (scope == null || scope.owner == null || fn == null)
+			return false;
+		final owner = sanitizeTypePath(typeBaseName(HxClassDecl.getName(scope.owner)));
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return owner == "Unserializer"
+			&& method == "unserialize"
+			&& (phase == "infer_string_map_locals" || phase == "infer_generic_factory_locals");
 	}
 
 	static function prepareFunctionSignatureScope(scope:CppRenderScope, fn:HxFunctionDecl):Void {
@@ -14348,6 +14370,15 @@ class CppTargetCore {
 
 	static function boolMapHasEntries(values:haxe.ds.StringMap<Bool>):Bool {
 		return values != null && values.iterator().hasNext();
+	}
+
+	static function countStringMap<T>(values:haxe.ds.StringMap<T>):Int {
+		if (values == null)
+			return 0;
+		var count = 0;
+		for (_ in values.keys())
+			count++;
+		return count;
 	}
 
 	static function copyIntMap(values:haxe.ds.StringMap<Int>):haxe.ds.StringMap<Int> {
