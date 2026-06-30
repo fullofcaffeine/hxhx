@@ -48,6 +48,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - C++ native target boundary: `docs/02-user-guide/HXHX_CPP_NATIVE_TARGET_BOUNDARY.md`
 - C++ helper rendering policy: `docs/00-project/CPP_HELPER_RENDERING_POLICY.md`
 - C++ target runtime/helper policy: `docs/00-project/CPP_TARGET_RUNTIME_POLICY.md`
+- C++ compact primitive oracle freeze:
+  `docs/00-project/CPP_COMPACT_PRIMITIVE_ORACLE_FREEZE.md`
 - C++ Reflect/Dynamic support audit:
   `docs/00-project/CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md`
 - Mega-file gravity watch: `docs/00-project/MEGA_FILE_GRAVITY_WATCH.md`

@@ -96,7 +96,8 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 - Put Float/NaN/Infinity/Math/JSON/binary serialization and comparison changes
   behind [`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md).
 - Freeze compact primitive helpers with black-box oracle edge cases before they
-  are treated as parity support.
+  are treated as parity support. The current inventory and runner plan live in
+  [`CPP_COMPACT_PRIMITIVE_ORACLE_FREEZE.md`](CPP_COMPACT_PRIMITIVE_ORACLE_FREEZE.md).
 - Keep declaration-only support separate from runtime behavior in code, tests,
   bead notes, and README/North Star status.
 
