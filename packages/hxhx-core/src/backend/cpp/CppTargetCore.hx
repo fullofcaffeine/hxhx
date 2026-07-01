@@ -221,12 +221,29 @@ class CppTargetCore {
 			+ Std.string(index) + " " + label);
 	}
 
+	static function traceCppTypeToken(typeName:String):String {
+		return StringTools.replace(traceCppSnippet(typeName), " ", "_");
+	}
+
+	static function traceCallArgRenderPhase(scope:CppRenderScope, arg:HxExpr, param:Null<HxFunctionArg>, phase:String, elapsed:Float,
+			declaredType:String = "", expectedType:String = "", valueType:String = "", actualType:String = "", detail:String = ""):Void {
+		if (!traceCppScopeStmtTimingEnabled(scope))
+			return;
+		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
+		final paramName = param == null ? "" : sanitizeIdentifier(HxFunctionArg.getName(param));
+		traceCppTimingPhase("render_helper_call_arg_render_phase_timing owner=" + scope.traceOwnerName + " name="
+			+ sanitizeIdentifier(scope.traceMethodName) + " index=" + Std.string(index) + " kind=" + exprKind(arg) + " phase=" + phase + " seconds="
+			+ Std.string(elapsed) + " param=" + paramName + " declared_type=" + traceCppTypeToken(declaredType) + " expected_type="
+			+ traceCppTypeToken(expectedType) + " value_type=" + traceCppTypeToken(valueType) + " actual_type=" + traceCppTypeToken(actualType)
+			+ (detail.length == 0 ? "" : " " + detail));
+	}
+
 	static function traceCallableArgExprPhase(scope:CppRenderScope, expr:HxExpr, phase:String, elapsed:Float, candidates:haxe.ds.StringMap<Bool>,
 			expectedType:String):Void {
 		if (!traceCppScopeStmtTimingEnabled(scope))
 			return;
 		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
-		final expected = StringTools.replace(traceCppSnippet(expectedType), " ", "_");
+		final expected = traceCppTypeToken(expectedType);
 		traceCppTimingPhase("render_helper_callable_arg_expr_phase_timing owner=" + scope.traceOwnerName + " name="
 			+ sanitizeIdentifier(scope.traceMethodName) + " index=" + Std.string(index) + " kind=" + exprKind(expr) + " phase=" + phase + " seconds="
 			+ Std.string(elapsed) + " expected_type=" + expected + " candidates=" + Std.string(countStringMap(candidates)) + " arg_overrides="
@@ -10576,37 +10593,116 @@ class CppTargetCore {
 	}
 
 	static function renderFunctionCallArgs(params:Array<HxFunctionArg>, args:Array<HxExpr>, ?scope:CppRenderScope, ?paramTypes:Array<String>):Array<String> {
-		if (params == null || params.length == 0 || args == null || args.length == 0)
-			return renderSimpleCallArgs(args, scope);
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		if (params == null || params.length == 0 || args == null || args.length == 0) {
+			final simpleStart = timingEnabled ? Sys.time() : 0.0;
+			final simple = renderSimpleCallArgs(args, scope);
+			if (timingEnabled && args != null && args.length > 0)
+				traceCallArgRenderPhase(scope, args[0], null, "simple_args", Sys.time()
+					- simpleStart, "", "", "", "",
+					"args="
+					+ Std.string(args.length)
+					+ " rendered="
+					+ Std.string(simple.length));
+			return simple;
+		}
 		final out = new Array<String>();
 		var paramIndex = 0;
 		var argIndex = 0;
 		while (argIndex < args.length) {
 			if (paramIndex >= params.length) {
-				out.push(renderExpr(args[argIndex], scope));
+				final extraStart = timingEnabled ? Sys.time() : 0.0;
+				final extra = renderExpr(args[argIndex], scope);
+				if (timingEnabled)
+					traceCallArgRenderPhase(scope, args[argIndex], null, "extra_arg_render", Sys.time() - extraStart, "", "", "", "",
+						"arg_index=" + Std.string(argIndex));
+				out.push(extra);
 				argIndex++;
 				continue;
 			}
 			final param = params[paramIndex];
 			final arg = args[argIndex];
-			if (!callParamCanBeSkipped(param) || callArgMatchesParam(arg, param, scope)) {
-				out.push(callArgExprForParam(arg, param, scope, paramTypes == null ? "" : paramTypes[paramIndex]));
+			final matchStart = timingEnabled ? Sys.time() : 0.0;
+			final canSkip = callParamCanBeSkipped(param);
+			final matchesParam = !canSkip || callArgMatchesParam(arg, param, scope);
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "param_match", Sys.time()
+					- matchStart, "", paramTypes == null ? "" : paramTypes[paramIndex], "",
+					"",
+					"can_skip="
+					+ Std.string(canSkip)
+					+ " matches="
+					+ Std.string(matchesParam)
+					+ " arg_index="
+					+ Std.string(argIndex)
+					+ " param_index="
+					+ Std.string(paramIndex));
+			if (matchesParam) {
+				final renderStart = timingEnabled ? Sys.time() : 0.0;
+				final rendered = callArgExprForParam(arg, param, scope, paramTypes == null ? "" : paramTypes[paramIndex]);
+				if (timingEnabled)
+					traceCallArgRenderPhase(scope, arg, param, "param_arg_render", Sys.time()
+						- renderStart, "",
+						paramTypes == null ? "" : paramTypes[paramIndex], "", "",
+						"arg_index="
+						+ Std.string(argIndex)
+						+ " param_index="
+						+ Std.string(paramIndex));
+				out.push(rendered);
 				paramIndex++;
 				argIndex++;
 				continue;
 			}
+			final laterStart = timingEnabled ? Sys.time() : 0.0;
 			final later = findLaterMatchingParam(params, arg, paramIndex + 1, scope);
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "later_match", Sys.time()
+					- laterStart, "", paramTypes == null ? "" : paramTypes[paramIndex], "",
+					"", "later="
+					+ Std.string(later)
+					+ " arg_index="
+					+ Std.string(argIndex)
+					+ " param_index="
+					+ Std.string(paramIndex));
 			if (later < 0) {
-				out.push(callArgExprForParam(arg, param, scope, paramTypes == null ? "" : paramTypes[paramIndex]));
+				final renderStart = timingEnabled ? Sys.time() : 0.0;
+				final rendered = callArgExprForParam(arg, param, scope, paramTypes == null ? "" : paramTypes[paramIndex]);
+				if (timingEnabled)
+					traceCallArgRenderPhase(scope, arg, param, "fallback_arg_render", Sys.time()
+						- renderStart, "",
+						paramTypes == null ? "" : paramTypes[paramIndex], "", "",
+						"arg_index="
+						+ Std.string(argIndex)
+						+ " param_index="
+						+ Std.string(paramIndex));
+				out.push(rendered);
 				paramIndex++;
 				argIndex++;
 				continue;
 			}
 			while (paramIndex < later) {
-				out.push(callDefaultArgExpr(params[paramIndex], scope));
+				final defaultStart = timingEnabled ? Sys.time() : 0.0;
+				final defaultArg = callDefaultArgExpr(params[paramIndex], scope);
+				if (timingEnabled)
+					traceCallArgRenderPhase(scope, arg, params[paramIndex], "default_arg_render", Sys.time()
+						- defaultStart, "", "", "", "",
+						"arg_index="
+						+ Std.string(argIndex)
+						+ " param_index="
+						+ Std.string(paramIndex));
+				out.push(defaultArg);
 				paramIndex++;
 			}
-			out.push(callArgExprForParam(arg, params[paramIndex], scope, paramTypes == null ? "" : paramTypes[paramIndex]));
+			final renderStart = timingEnabled ? Sys.time() : 0.0;
+			final rendered = callArgExprForParam(arg, params[paramIndex], scope, paramTypes == null ? "" : paramTypes[paramIndex]);
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, params[paramIndex], "later_arg_render", Sys.time()
+					- renderStart, "",
+					paramTypes == null ? "" : paramTypes[paramIndex], "", "", "arg_index="
+					+ Std.string(argIndex)
+					+ " param_index="
+					+ Std.string(paramIndex));
+			out.push(rendered);
 			paramIndex++;
 			argIndex++;
 		}
@@ -10733,66 +10829,161 @@ class CppTargetCore {
 	}
 
 	static function callArgExprForParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope, ?expectedParamType:String):String {
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final declaredTypeStart = timingEnabled ? Sys.time() : 0.0;
 		final declaredParamType = cppFunctionArgType(param, scope);
 		final declaredValueType = cppOptionalInnerType(declaredParamType).length > 0 ? cppOptionalInnerType(declaredParamType) : declaredParamType;
+		if (timingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "declared_type", Sys.time() - declaredTypeStart, declaredParamType, expectedParamType,
+				declaredValueType);
+		final declaredClassRefStart = timingEnabled ? Sys.time() : 0.0;
 		final declaredClassReferenceArg = classReferenceArgExprForExpectedType(arg, declaredValueType, scope);
+		if (timingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "declared_class_ref", Sys.time() - declaredClassRefStart, declaredParamType, expectedParamType,
+				declaredValueType, "", "hit=" + Std.string(declaredClassReferenceArg != null));
 		if (declaredClassReferenceArg != null)
 			return declaredClassReferenceArg;
+		final expectedTypeStart = timingEnabled ? Sys.time() : 0.0;
 		final paramType = expectedParamType != null && expectedParamType.length > 0 ? expectedParamType : cppFunctionArgType(param, scope);
 		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
+		if (timingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "expected_type", Sys.time() - expectedTypeStart, declaredParamType, paramType, valueType);
+		final abstractStart = timingEnabled ? Sys.time() : 0.0;
 		final abstractArg = primitiveBackedAbstractCallArgExpr(arg, param, valueType, scope);
+		if (timingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "primitive_abstract", Sys.time() - abstractStart, declaredParamType, paramType, valueType, "",
+				"hit=" + Std.string(abstractArg != null));
 		if (abstractArg != null)
 			return abstractArg;
 		switch (arg) {
 			case ENull:
-				return valueExprForExpectedType(arg, valueType, scope);
+				final nullStart = timingEnabled ? Sys.time() : 0.0;
+				final rendered = valueExprForExpectedType(arg, valueType, scope);
+				if (timingEnabled)
+					traceCallArgRenderPhase(scope, arg, param, "null_expected_render", Sys.time() - nullStart, declaredParamType, paramType, valueType);
+				return rendered;
 			case _:
 		}
+		final expectedClassStart = timingEnabled ? Sys.time() : 0.0;
 		final expectedClass = classNameFromCppType(valueType);
+		if (timingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "expected_class", Sys.time() - expectedClassStart, declaredParamType, paramType, valueType, "",
+				"class=" + (expectedClass == null ? "" : sanitizeTypePath(expectedClass)));
 		if (expectedClass != null) {
 			switch (arg) {
 				case EThis if (currentOwnerIsOrExtends(expectedClass, scope)):
-					return CppRuntimeSupport.borrowedSharedPtrExpr(expectedClass, "this");
+					final rendered = CppRuntimeSupport.borrowedSharedPtrExpr(expectedClass, "this");
+					if (timingEnabled)
+						traceCallArgRenderPhase(scope, arg, param, "this_shared_ptr", 0.0, declaredParamType, paramType, valueType);
+					return rendered;
 				case _:
 			}
 		}
-		if (valueType == "std::shared_ptr<PosInfos>")
-			return posInfosSharedPtrExpr(arg, scope);
+		if (valueType == "std::shared_ptr<PosInfos>") {
+			final posStart = timingEnabled ? Sys.time() : 0.0;
+			final rendered = posInfosSharedPtrExpr(arg, scope);
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "pos_infos_render", Sys.time() - posStart, declaredParamType, paramType, valueType);
+			return rendered;
+		}
+		final classRefStart = timingEnabled ? Sys.time() : 0.0;
 		final classReferenceArg = classReferenceArgExprForExpectedType(arg, valueType, scope);
+		if (timingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "class_ref", Sys.time() - classRefStart, declaredParamType, paramType, valueType, "",
+				"hit=" + Std.string(classReferenceArg != null));
 		if (classReferenceArg != null)
 			return classReferenceArg;
+		final actualTypeStart = timingEnabled ? Sys.time() : 0.0;
 		final actualType = exprCppType(arg, scope);
-		if (valueType == "std::shared_ptr<EnumValue>" && actualType == "std::any")
-			return "__hxhx_enum_value_ptr(" + renderExpr(arg, scope) + ")";
-		if (structuralTypedefClassForCppType(valueType, scope) != null && actualType != valueType)
-			return valueExprForExpectedType(arg, valueType, scope);
+		if (timingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "actual_type", Sys.time() - actualTypeStart, declaredParamType, paramType, valueType, actualType);
+		if (valueType == "std::shared_ptr<EnumValue>" && actualType == "std::any") {
+			final enumStart = timingEnabled ? Sys.time() : 0.0;
+			final rendered = "__hxhx_enum_value_ptr(" + renderExpr(arg, scope) + ")";
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "enum_any_render", Sys.time() - enumStart, declaredParamType, paramType, valueType, actualType);
+			return rendered;
+		}
+		if (structuralTypedefClassForCppType(valueType, scope) != null && actualType != valueType) {
+			final structuralStart = timingEnabled ? Sys.time() : 0.0;
+			final rendered = valueExprForExpectedType(arg, valueType, scope);
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "structural_expected_render", Sys.time() - structuralStart, declaredParamType, paramType,
+					valueType, actualType);
+			return rendered;
+		}
 		if (valueType == "std::string") {
-			if (actualType == "std::string")
-				return renderExpr(arg, scope);
+			if (actualType == "std::string") {
+				final stringStart = timingEnabled ? Sys.time() : 0.0;
+				final rendered = renderExpr(arg, scope);
+				if (timingEnabled)
+					traceCallArgRenderPhase(scope, arg, param, "string_render", Sys.time() - stringStart, declaredParamType, paramType, valueType, actualType);
+				return rendered;
+			}
 			if (actualType == "std::any"
 				|| isScalarStringCoercibleCppType(actualType)
 				|| isCppAnonStructType(actualType)
-				|| argHasErasedArgTypeOverride(arg, scope))
-				return stringExpr(arg, scope);
+				|| argHasErasedArgTypeOverride(arg, scope)) {
+				final stringStart = timingEnabled ? Sys.time() : 0.0;
+				final rendered = stringExpr(arg, scope);
+				if (timingEnabled)
+					traceCallArgRenderPhase(scope, arg, param, "string_coerce_render", Sys.time() - stringStart, declaredParamType, paramType, valueType,
+						actualType);
+				return rendered;
+			}
 		}
-		if ((valueType == "double" || valueType == "float") && actualType == "std::any")
-			return "__hxhx_any_double(" + renderExpr(arg, scope) + ")";
-		if (valueType == "int" && actualType == "std::any")
-			return "static_cast<int>(__hxhx_any_double(" + renderExpr(arg, scope) + "))";
-		if (valueType == "std::vector<std::string>" && actualType == "std::any")
-			return "__hxhx_string_vector_any(" + renderExpr(arg, scope) + ")";
+		if ((valueType == "double" || valueType == "float") && actualType == "std::any") {
+			final anyStart = timingEnabled ? Sys.time() : 0.0;
+			final rendered = "__hxhx_any_double(" + renderExpr(arg, scope) + ")";
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "double_any_render", Sys.time() - anyStart, declaredParamType, paramType, valueType, actualType);
+			return rendered;
+		}
+		if (valueType == "int" && actualType == "std::any") {
+			final anyStart = timingEnabled ? Sys.time() : 0.0;
+			final rendered = "static_cast<int>(__hxhx_any_double(" + renderExpr(arg, scope) + "))";
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "int_any_render", Sys.time() - anyStart, declaredParamType, paramType, valueType, actualType);
+			return rendered;
+		}
+		if (valueType == "std::vector<std::string>" && actualType == "std::any") {
+			final anyStart = timingEnabled ? Sys.time() : 0.0;
+			final rendered = "__hxhx_string_vector_any(" + renderExpr(arg, scope) + ")";
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "string_vector_any_render", Sys.time() - anyStart, declaredParamType, paramType, valueType,
+					actualType);
+			return rendered;
+		}
 		if (isCppVectorType(valueType)) {
 			switch (arg) {
 				case EArrayDecl([]):
-					return valueType + "{}";
+					final rendered = valueType + "{}";
+					if (timingEnabled)
+						traceCallArgRenderPhase(scope, arg, param, "empty_vector_literal", 0.0, declaredParamType, paramType, valueType, actualType);
+					return rendered;
 				case EArrayDecl(_):
-					return valueExprForExpectedType(arg, valueType, scope);
+					final vectorStart = timingEnabled ? Sys.time() : 0.0;
+					final rendered = valueExprForExpectedType(arg, valueType, scope);
+					if (timingEnabled)
+						traceCallArgRenderPhase(scope, arg, param, "vector_expected_render", Sys.time() - vectorStart, declaredParamType, paramType,
+							valueType, actualType);
+					return rendered;
 				case _:
 			}
 		}
-		if (isCppReferenceType(valueType))
-			return valueExprForExpectedType(arg, valueType, scope);
-		return renderExpr(arg, scope);
+		if (isCppReferenceType(valueType)) {
+			final refStart = timingEnabled ? Sys.time() : 0.0;
+			final rendered = valueExprForExpectedType(arg, valueType, scope);
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "reference_expected_render", Sys.time() - refStart, declaredParamType, paramType, valueType,
+					actualType);
+			return rendered;
+		}
+		final finalRenderStart = timingEnabled ? Sys.time() : 0.0;
+		final rendered = renderExpr(arg, scope);
+		if (timingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "final_render", Sys.time() - finalRenderStart, declaredParamType, paramType, valueType, actualType);
+		return rendered;
 	}
 
 	static function primitiveBackedAbstractCallArgExpr(arg:HxExpr, param:HxFunctionArg, valueType:String, ?scope:CppRenderScope):Null<String> {
