@@ -8170,7 +8170,29 @@ class CppTargetCore {
 	static function renderStmtBlockContent(stmt:HxStmt, indent:String, ?scope:CppRenderScope):Array<String> {
 		return switch (stmt) {
 			case SBlock(stmts, _):
-				renderStmts(stmts, indent, scope);
+				if (!traceCppScopeStmtTimingEnabled(scope)) {
+					renderStmts(stmts, indent, scope);
+				} else {
+					inferStringMapLocalTypeOverridesFromStmts(scope, stmts);
+					final out = new Array<String>();
+					for (i in 0...stmts.length) {
+						final child = stmts[i];
+						final childStart = Sys.time();
+						final before = out.length;
+						for (line in renderStmt(child, indent, scope))
+							out.push(line);
+						traceCppScopeStmtTimingPhase(scope,
+							"block_stmt_index="
+							+ Std.string(i)
+							+ " block_stmt_kind="
+							+ stmtKind(child)
+							+ " seconds="
+							+ Std.string(Sys.time() - childStart)
+							+ " lines="
+							+ Std.string(out.length - before));
+					}
+					out;
+				}
 			case _:
 				renderStmt(stmt, indent, scope);
 		};
