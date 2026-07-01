@@ -7260,10 +7260,33 @@ class CppTargetCore {
 			traceForwardedCallPhase(scope, callee, "known_params", Sys.time() - paramsStartTime, candidates, args, params);
 		if (params == null || params.length == 0 || args == null || args.length == 0)
 			return;
-		final paramTypesStartTime = timingEnabled ? Sys.time() : 0.0;
-		final paramTypes = knownCallParamCppTypes(callee, scope);
-		if (timingEnabled)
-			traceForwardedCallPhase(scope, callee, "known_param_types", Sys.time() - paramTypesStartTime, candidates, args, params);
+		var paramTypes:Null<Array<String>> = null;
+		var paramTypesLoaded = false;
+		function forwardedArgNeedsOverride(arg:HxExpr):Bool {
+			return switch (arg) {
+				case EIdent(name):
+					candidates.exists(sanitizeIdentifier(name));
+				case _:
+					false;
+			};
+		}
+		function inferredParamTypeAt(paramIndex:Int, argIndex:Int, param:HxFunctionArg, arg:HxExpr):String {
+			if (!forwardedArgNeedsOverride(arg)) {
+				if (timingEnabled)
+					traceForwardedCallPhase(scope, callee, "known_param_types_skipped", 0.0, candidates, args, params, paramIndex, argIndex,
+						HxFunctionArg.getName(param), exprKind(arg), "arg_candidate=false");
+				return "";
+			}
+			if (!paramTypesLoaded) {
+				final paramTypesStartTime = timingEnabled ? Sys.time() : 0.0;
+				paramTypes = knownCallParamCppTypes(callee, scope);
+				paramTypesLoaded = true;
+				if (timingEnabled)
+					traceForwardedCallPhase(scope, callee, "known_param_types", Sys.time() - paramTypesStartTime, candidates, args, params, paramIndex,
+						argIndex, HxFunctionArg.getName(param), exprKind(arg), "arg_candidate=true");
+			}
+			return paramTypes == null || paramIndex >= paramTypes.length ? "" : paramTypes[paramIndex];
+		}
 		var paramIndex = 0;
 		var argIndex = 0;
 		while (argIndex < args.length && paramIndex < params.length) {
@@ -7283,7 +7306,7 @@ class CppTargetCore {
 					+ Std.string(canSkip));
 			if (matches || !canSkip) {
 				final applyStartTime = timingEnabled ? Sys.time() : 0.0;
-				applyForwardedArgTypeOverride(arg, param, paramTypes == null ? "" : paramTypes[paramIndex], scope, candidates);
+				applyForwardedArgTypeOverride(arg, param, inferredParamTypeAt(paramIndex, argIndex, param, arg), scope, candidates);
 				if (timingEnabled)
 					traceForwardedCallPhase(scope, callee, "apply_direct", Sys.time() - applyStartTime, candidates, args, params, paramIndex, argIndex,
 						HxFunctionArg.getName(param), exprKind(arg));
@@ -7298,7 +7321,7 @@ class CppTargetCore {
 					HxFunctionArg.getName(param), exprKind(arg), "later=" + Std.string(later));
 			if (later < 0) {
 				final applyFallbackStartTime = timingEnabled ? Sys.time() : 0.0;
-				applyForwardedArgTypeOverride(arg, param, paramTypes == null ? "" : paramTypes[paramIndex], scope, candidates);
+				applyForwardedArgTypeOverride(arg, param, inferredParamTypeAt(paramIndex, argIndex, param, arg), scope, candidates);
 				if (timingEnabled)
 					traceForwardedCallPhase(scope, callee, "apply_fallback", Sys.time() - applyFallbackStartTime, candidates, args, params, paramIndex,
 						argIndex, HxFunctionArg.getName(param), exprKind(arg));
@@ -7308,7 +7331,7 @@ class CppTargetCore {
 			}
 			paramIndex = later;
 			final applyLaterStartTime = timingEnabled ? Sys.time() : 0.0;
-			applyForwardedArgTypeOverride(arg, params[paramIndex], paramTypes == null ? "" : paramTypes[paramIndex], scope, candidates);
+			applyForwardedArgTypeOverride(arg, params[paramIndex], inferredParamTypeAt(paramIndex, argIndex, params[paramIndex], arg), scope, candidates);
 			if (timingEnabled)
 				traceForwardedCallPhase(scope, callee, "apply_later", Sys.time() - applyLaterStartTime, candidates, args, params, paramIndex, argIndex,
 					HxFunctionArg.getName(params[paramIndex]), exprKind(arg));
