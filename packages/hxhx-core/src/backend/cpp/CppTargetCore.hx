@@ -6153,6 +6153,13 @@ class CppTargetCore {
 				+ " candidates=" + Std.string(countStringMap(candidates)) + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides))
 				+ " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes)));
 		}
+		function traceCallableArgStmtPhase(index:Int, stmt:HxStmt, phase:String, elapsed:Float):Void {
+			traceCppTimingPhase("render_helper_callable_arg_stmt_phase_timing owner=" + sanitizeTypePath(typeBaseName(ownerName)) + " name="
+				+ sanitizeIdentifier(methodName) + " index=" + Std.string(index) + " kind=" + stmtKind(stmt) + " phase=" + phase + " seconds="
+				+ Std.string(elapsed) + " candidates=" + Std.string(countStringMap(candidates)) + " arg_overrides="
+				+ Std.string(countStringMap(scope.argTypeOverrides)) + " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides))
+				+ " local_types=" + Std.string(countStringMap(scope.localTypes)));
+		}
 		function runCallableArgPhase(phase:String, body:Void->Void):Void {
 			if (!timingEnabled) {
 				body();
@@ -6188,7 +6195,23 @@ class CppTargetCore {
 					collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
 				} else {
 					final stmtStartTime = Sys.time();
-					collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
+					switch (stmt) {
+						case SForIn(name, iterable, body, _):
+							final iterableStartTime = Sys.time();
+							collectCallableArgTypeOverridesFromExpr(iterable, scope, candidates, "");
+							traceCallableArgStmtPhase(stmtIndex, stmt, "for_iterable", Sys.time() - iterableStartTime);
+							var loopType = "";
+							final elementTypeStartTime = Sys.time();
+							loopType = iterableElementType(iterable, scope);
+							traceCallableArgStmtPhase(stmtIndex, stmt, "for_element_type", Sys.time() - elementTypeStartTime);
+							final bodyStartTime = Sys.time();
+							withScopedLocal(scope, sanitizeIdentifier(name), loopType, () -> {
+								collectCallableArgTypeOverridesFromStmt(body, scope, candidates, scope.returnType);
+							});
+							traceCallableArgStmtPhase(stmtIndex, stmt, "for_body", Sys.time() - bodyStartTime);
+						case _:
+							collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
+					}
 					traceCallableArgStmt(stmtIndex, stmt, Sys.time() - stmtStartTime);
 				}
 				stmtIndex++;
