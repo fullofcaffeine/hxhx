@@ -91,6 +91,7 @@ class CppTargetCore {
 	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
 	static var functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 	static var functionArgDeclaredTypeCache = new haxe.ds.StringMap<String>();
+	static var fieldCppTypeCache = new haxe.ds.StringMap<String>();
 	static var functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
 	static var functionReturnTypesCache = new haxe.ds.StringMap<String>();
 	static var traceCppDeepEnabledCache = -1;
@@ -316,6 +317,7 @@ class CppTargetCore {
 			resources:Array<backend.BackendResource>):String {
 		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 		functionArgDeclaredTypeCache = new haxe.ds.StringMap<String>();
+		fieldCppTypeCache = new haxe.ds.StringMap<String>();
 		functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
 		functionReturnTypesCache = new haxe.ds.StringMap<String>();
 		erasedDynamicReturnCache = new haxe.ds.StringMap<Bool>();
@@ -3690,34 +3692,46 @@ class CppTargetCore {
 	static function knownStdlibFieldCppType(className:String, fieldName:String, typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
+		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
+		final cacheKey = explicit.length > 0 ? fieldCppTypeCacheKey(className, field, explicit, scope) : "";
+		if (cacheKey.length > 0) {
+			final cached = fieldCppTypeCache.get(cacheKey);
+			if (cached != null)
+				return cached;
+		}
+		function cacheFieldType(typeName:String):String {
+			if (cacheKey.length > 0)
+				fieldCppTypeCache.set(cacheKey, typeName);
+			return typeName;
+		}
 		if (owner == "EntryPoint" && field == "pending")
-			return "std::vector<std::function<void()>>";
+			return cacheFieldType("std::vector<std::function<void()>>");
 		if (owner == "EntryPoint" && field == "sleepLock")
-			return "std::shared_ptr<Lock>";
+			return cacheFieldType("std::shared_ptr<Lock>");
 		if (owner == "EntryPoint" && field == "mutex")
-			return "std::shared_ptr<Mutex>";
+			return cacheFieldType("std::shared_ptr<Mutex>");
 		if (owner == "EntryPoint" && field == "threadCount")
-			return "int";
+			return cacheFieldType("int");
 		if (owner == "MainLoop" && field == "pending")
-			return "std::shared_ptr<MainEvent>";
+			return cacheFieldType("std::shared_ptr<MainEvent>");
 		if (owner == "MainEvent" && (field == "prev" || field == "next"))
-			return "std::shared_ptr<MainEvent>";
+			return cacheFieldType("std::shared_ptr<MainEvent>");
 		if (owner == "MainEvent" && field == "nextRun")
-			return "double";
+			return cacheFieldType("double");
 		if (owner == "MainEvent" && field == "priority")
-			return "int";
+			return cacheFieldType("int");
 		if (owner == "MainEvent" && field == "isMain")
-			return "bool";
+			return cacheFieldType("bool");
 		if (owner == "MainEvent" && field == "f")
-			return "std::function<void()>";
+			return cacheFieldType("std::function<void()>");
 		if (owner == "Http" && (field == "onData" || field == "onError"))
-			return "std::function<void(std::string)>";
+			return cacheFieldType("std::function<void(std::string)>");
 		if (owner == "Http" && field == "onBytes")
-			return "std::function<void(__hxhx_http_bytes)>";
+			return cacheFieldType("std::function<void(__hxhx_http_bytes)>");
 		if (isStringIteratorHelper(owner) && (field == "offset" || field == "byteOffset" || field == "charOffset"))
-			return "int";
+			return cacheFieldType("int");
 		if (owner == "Template") {
-			return switch (field) {
+			return cacheFieldType(switch (field) {
 				case "splitter" | "expr_splitter" | "expr_trim" | "expr_int" | "expr_float":
 					"std::shared_ptr<EReg>";
 				case "globals" | "context" | "macros":
@@ -3726,20 +3740,29 @@ class CppTargetCore {
 					"std::vector<std::string>";
 				case _:
 					cppTypeHint(typeHint, scope);
-			}
+			});
 		}
 		if (field == "winMetaCharacters" && (owner == "SysTools" || owner == "StringTools"))
-			return "std::vector<int>";
+			return cacheFieldType("std::vector<int>");
 		if (field == "__hx_enum_ctors" || isEnumMetadataAnonInit(init)) {
 			final inferred = init == null ? "" : inferExprCppType(init, scope);
 			if (inferred.length > 0)
 				return inferred;
 		}
-		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
 		if (explicit.length > 0)
-			return cppTypeHint(explicit, scope);
+			return cacheFieldType(cppTypeHint(explicit, scope));
 		final inferred = init == null ? "" : inferExprCppType(init, scope);
 		return inferred.length > 0 ? inferred : cppTypeHint(typeHint, scope);
+	}
+
+	static function fieldCppTypeCacheKey(className:String, field:String, explicit:String, ?scope:CppRenderScope):String {
+		return sanitizeTypePath(className == null ? "" : className)
+			+ "."
+			+ sanitizeIdentifier(field == null ? "" : field)
+			+ "|hint="
+			+ removeTypeHintWhitespace(explicit)
+			+ "|type_params="
+			+ stringMapStableKey(scope == null ? null : scope.typeParamCppNames);
 	}
 
 	static function isEnumMetadataAnonInit(init:Null<HxExpr>):Bool {

@@ -1496,6 +1496,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ arg declared-type cache should not overwrite a prior scope-shape entry");
 	}
 
+	static function assertCppFieldTypeCacheUsesScopeShape():Void {
+		final owner = new HxClassDecl("FieldTypeCacheOwner", false, [], [], "", ["__hxhx_type_params=T"]);
+		final names = new StringMap<Bool>();
+		names.set("FieldTypeCacheOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("FieldTypeCacheOwner", owner);
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache = new StringMap<String>();
+		scope.typeParamCppNames.set("T", "std::string");
+		final first = @:privateAccess backend.cpp.CppTargetCore.knownStdlibFieldCppType("FieldTypeCacheOwner", "slot", "T", null, scope);
+		assertTrue(first == "std::string", "C++ field type cache should use the active type-parameter mapping");
+		final firstKey = @:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCacheKey("FieldTypeCacheOwner", "slot", "T", scope);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache.get(firstKey) == "std::string",
+			"C++ field type cache should store explicit-hint lookups");
+		scope.typeParamCppNames.set("T", "int");
+		final second = @:privateAccess backend.cpp.CppTargetCore.knownStdlibFieldCppType("FieldTypeCacheOwner", "slot", "T", null, scope);
+		assertTrue(second == "int", "C++ field type cache should separate changed type-parameter mappings");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache.get(firstKey) == "std::string",
+			"C++ field type cache should not overwrite a prior scope-shape entry");
+	}
+
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {
 		final dynamicFn = new HxFunctionDecl("dynamicValue", Public, false, [], "Dynamic", [SReturn(EArrayDecl([EInt(1)]), HxPos.unknown())], "");
 		final owner = new HxClassDecl("DynamicReturnOwner", false, [dynamicFn], []);
@@ -2515,6 +2536,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertCppFunctionScopePrepCachesArgRegistration();
 		assertCppFunctionArgDeclaredTypeCacheUsesScopeShape();
+		assertCppFieldTypeCacheUsesScopeShape();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();
