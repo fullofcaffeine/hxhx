@@ -1473,6 +1473,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(!replayScope.localTypes.exists("scratch"), "C++ cached function-scope prep should not replay non-argument locals");
 	}
 
+	static function assertCppFunctionArgDeclaredTypeCacheUsesScopeShape():Void {
+		final owner = new HxClassDecl("ArgTypeCacheOwner", false, [], [], "", ["__hxhx_type_params=T"]);
+		final names = new StringMap<Bool>();
+		names.set("ArgTypeCacheOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("ArgTypeCacheOwner", owner);
+		final lookup = {names: names, byName: classes};
+		final genericArg = new HxFunctionArg("value", "T", NoDefault, false, false);
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "void");
+		@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache = new StringMap<String>();
+		scope.typeParamCppNames.set("T", "std::string");
+		final first = @:privateAccess backend.cpp.CppTargetCore.cppFunctionArgType(genericArg, scope);
+		assertTrue(first == "std::string", "C++ arg declared-type cache should use the active type-parameter mapping");
+		final firstKey = @:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCacheKey(genericArg, scope, "value", "T", null);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache.get(firstKey) == "std::string",
+			"C++ arg declared-type cache should store explicit-hint lookups");
+		scope.typeParamCppNames.set("T", "int");
+		final second = @:privateAccess backend.cpp.CppTargetCore.cppFunctionArgType(genericArg, scope);
+		assertTrue(second == "int", "C++ arg declared-type cache should separate changed type-parameter mappings");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache.get(firstKey) == "std::string",
+			"C++ arg declared-type cache should not overwrite a prior scope-shape entry");
+	}
+
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {
 		final dynamicFn = new HxFunctionDecl("dynamicValue", Public, false, [], "Dynamic", [SReturn(EArrayDecl([EInt(1)]), HxPos.unknown())], "");
 		final owner = new HxClassDecl("DynamicReturnOwner", false, [dynamicFn], []);
@@ -2491,6 +2514,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppHelperRenderClassification();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertCppFunctionScopePrepCachesArgRegistration();
+		assertCppFunctionArgDeclaredTypeCacheUsesScopeShape();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();

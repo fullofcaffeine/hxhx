@@ -90,6 +90,7 @@ class CppTargetCore {
 	static var erasedDynamicReturnCache = new haxe.ds.StringMap<Bool>();
 	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
 	static var functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
+	static var functionArgDeclaredTypeCache = new haxe.ds.StringMap<String>();
 	static var functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
 	static var functionReturnTypesCache = new haxe.ds.StringMap<String>();
 	static var traceCppDeepEnabledCache = -1;
@@ -314,6 +315,7 @@ class CppTargetCore {
 	static function renderProgram(program:GenIrProgram, main:{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl},
 			resources:Array<backend.BackendResource>):String {
 		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
+		functionArgDeclaredTypeCache = new haxe.ds.StringMap<String>();
 		functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
 		functionReturnTypesCache = new haxe.ds.StringMap<String>();
 		erasedDynamicReturnCache = new haxe.ds.StringMap<Bool>();
@@ -6159,21 +6161,57 @@ class CppTargetCore {
 	static function cppFunctionArgType(arg:HxFunctionArg, ?scope:CppRenderScope):String {
 		final argName = sanitizeIdentifier(HxFunctionArg.getName(arg));
 		final overrideType = scope == null ? null : scope.argTypeOverrides.get(argName);
-		final typeName = overrideType != null && overrideType.length > 0 ? overrideType : cppFunctionArgBaseType(arg, scope);
-		if (HxFunctionArg.getIsOptional(arg) && !HxFunctionArg.getIsRest(arg) && !isCppReferenceType(typeName) && !isCppOptionalType(typeName))
-			return "std::optional<" + typeName + ">";
-		return typeName;
+		final rawTypeHint = HxFunctionArg.getTypeHint(arg);
+		final explicit = StringTools.trim(rawTypeHint == null ? "" : rawTypeHint);
+		final canCache = explicit.length > 0 || (overrideType != null && overrideType.length > 0);
+		final cacheKey = canCache ? functionArgDeclaredTypeCacheKey(arg, scope, argName, explicit, overrideType) : "";
+		if (cacheKey.length > 0) {
+			final cached = functionArgDeclaredTypeCache.get(cacheKey);
+			if (cached != null)
+				return cached;
+		}
+		final typeName = overrideType != null
+			&& overrideType.length > 0 ? overrideType : cppFunctionArgBaseTypeFromExplicit(arg, scope, explicit);
+		final rendered = HxFunctionArg.getIsOptional(arg)
+			&& !HxFunctionArg.getIsRest(arg)
+			&& !isCppReferenceType(typeName)
+			&& !isCppOptionalType(typeName) ? "std::optional<" + typeName + ">" : typeName;
+		if (cacheKey.length > 0)
+			functionArgDeclaredTypeCache.set(cacheKey, rendered);
+		return rendered;
 	}
 
 	static function cppFunctionArgBaseType(arg:HxFunctionArg, ?scope:CppRenderScope):String {
 		final rawTypeHint = HxFunctionArg.getTypeHint(arg);
 		final explicit = StringTools.trim(rawTypeHint == null ? "" : rawTypeHint);
+		return cppFunctionArgBaseTypeFromExplicit(arg, scope, explicit);
+	}
+
+	static function cppFunctionArgBaseTypeFromExplicit(arg:HxFunctionArg, ?scope:CppRenderScope, explicit:String = ""):String {
 		final inferred = explicit.length > 0 ? "" : cppFunctionArgDefaultType(arg, scope);
 		if (explicit.length > 0) {
 			final wildcard = dynamicGenericWildcardCppTypeHint(explicit, scope);
 			return wildcard.length > 0 ? wildcard : cppTypeHint(explicit, scope);
 		}
 		return inferred.length > 0 ? inferred : cppTypeHint("", scope);
+	}
+
+	static function functionArgDeclaredTypeCacheKey(arg:HxFunctionArg, ?scope:CppRenderScope, argName:String = "", explicit:String = "",
+			?overrideType:String):String {
+		final ownerName = scope == null || scope.owner == null ? "" : renderedClassName(scope.owner, scope.classLookup);
+		return ownerName
+			+ "|arg="
+			+ argName
+			+ "|hint="
+			+ removeTypeHintWhitespace(explicit)
+			+ "|override="
+			+ (overrideType == null ? "" : overrideType)
+			+ "|optional="
+			+ (HxFunctionArg.getIsOptional(arg) ? "1" : "0")
+			+ "|rest="
+			+ (HxFunctionArg.getIsRest(arg) ? "1" : "0")
+			+ "|type_params="
+			+ stringMapStableKey(scope == null ? null : scope.typeParamCppNames);
 	}
 
 	static function inferCallableArgTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
@@ -15423,6 +15461,16 @@ class CppTargetCore {
 		final kept = entries.slice(0, limit);
 		kept.push("...+" + Std.string(entries.length - limit));
 		return kept.join(",");
+	}
+
+	static function stringMapStableKey(values:haxe.ds.StringMap<String>):String {
+		if (values == null)
+			return "";
+		final entries = new Array<String>();
+		for (key in values.keys())
+			entries.push(key + ":" + values.get(key));
+		entries.sort((left, right) -> left < right ? -1 : (left > right ? 1 : 0));
+		return entries.join(",");
 	}
 
 	static function summarizeBoolValueMap(values:haxe.ds.StringMap<Bool>, limit:Int = 8):String {
