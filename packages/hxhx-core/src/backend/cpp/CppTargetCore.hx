@@ -6147,6 +6147,12 @@ class CppTargetCore {
 				+ " candidate_values=" + summarizeStringMap(candidates) + " arg_override_values=" + summarizeStringMap(scope.argTypeOverrides)
 				+ " local_override_values=" + summarizeStringMap(scope.localTypeOverrides));
 		}
+		function traceCallableArgStmt(index:Int, stmt:HxStmt, elapsed:Float):Void {
+			traceCppTimingPhase("render_helper_callable_arg_stmt_timing owner=" + sanitizeTypePath(typeBaseName(ownerName)) + " name="
+				+ sanitizeIdentifier(methodName) + " index=" + Std.string(index) + " kind=" + stmtKind(stmt) + " seconds=" + Std.string(elapsed)
+				+ " candidates=" + Std.string(countStringMap(candidates)) + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides))
+				+ " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes)));
+		}
 		function runCallableArgPhase(phase:String, body:Void->Void):Void {
 			if (!timingEnabled) {
 				body();
@@ -6176,8 +6182,17 @@ class CppTargetCore {
 				collectAssignedArgTypeOverridesFromStmt(stmt, scope, candidates);
 		});
 		runCallableArgPhase("callable_args", () -> {
-			for (stmt in HxFunctionDecl.getBody(fn))
-				collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
+			var stmtIndex = 0;
+			for (stmt in HxFunctionDecl.getBody(fn)) {
+				if (!timingEnabled) {
+					collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
+				} else {
+					final stmtStartTime = Sys.time();
+					collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
+					traceCallableArgStmt(stmtIndex, stmt, Sys.time() - stmtStartTime);
+				}
+				stmtIndex++;
+			}
 		});
 		runCallableArgPhase("reset", () -> scope.localTypes = new haxe.ds.StringMap<String>());
 	}
