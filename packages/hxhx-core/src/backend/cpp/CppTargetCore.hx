@@ -7864,46 +7864,118 @@ class CppTargetCore {
 		Full Haxe iterator-protocol lowering is intentionally not claimed here.
 	**/
 	static function renderForInStmt(name:String, iterable:HxExpr, body:HxStmt, indent:String, ?scope:CppRenderScope):Array<String> {
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 		final local = sanitizeIdentifier(name);
+		final iteratorTypeStart = timingEnabled ? Sys.time() : 0.0;
 		final iteratorElementType = iteratorProtocolElementType(iterable, scope);
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"forin_phase=iterator_protocol seconds="
+				+ Std.string(Sys.time() - iteratorTypeStart)
+				+ " local="
+				+ local
+				+ " iterable="
+				+ exprKind(iterable)
+				+ " element_type="
+				+ traceCppSnippet(iteratorElementType));
 		final out = if (iteratorElementType.length > 0) {
 			final iteratorLocal = "__hxhx_iter_" + local;
-			final access = isCppReferenceType(exprCppType(iterable, scope)) ? "->" : ".";
-				[indent + "auto " + iteratorLocal + " = " + renderExpr(iterable, scope) + ";",
-					indent
-					+ "while ("
-					+ iteratorLocal
-					+ access
-					+ "hasNext()) {",
-					indent
-					+ "  auto "
-					+ local
-					+ " = "
-					+ iteratorLocal
-					+ access
-					+ "next();"];
+			final accessTypeStart = timingEnabled ? Sys.time() : 0.0;
+			final iterableType = exprCppType(iterable, scope);
+			if (timingEnabled)
+				traceCppScopeStmtTimingPhase(scope,
+					"forin_phase=iterator_access_type seconds="
+					+ Std.string(Sys.time() - accessTypeStart)
+					+ " iterable="
+					+ exprKind(iterable)
+					+ " cpp_type="
+					+ traceCppSnippet(iterableType));
+			final access = isCppReferenceType(iterableType) ? "->" : ".";
+			final renderIterableStart = timingEnabled ? Sys.time() : 0.0;
+			final renderedIterable = renderExpr(iterable, scope);
+			if (timingEnabled)
+				traceCppScopeStmtTimingPhase(scope,
+					"forin_phase=iterator_render_iterable seconds="
+					+ Std.string(Sys.time() - renderIterableStart)
+					+ " iterable="
+					+ exprKind(iterable)
+					+ " rendered="
+					+ traceCppSnippet(renderedIterable));
+			[indent + "auto " + iteratorLocal + " = " + renderedIterable + ";",
+				indent
+				+ "while ("
+				+ iteratorLocal
+				+ access
+				+ "hasNext()) {",
+				indent
+				+ "  auto "
+				+ local
+				+ " = "
+				+ iteratorLocal
+				+ access
+				+ "next();"];
 		} else switch (iterable) {
 			case ERange(start, end):
-				[indent
-					+ "for (int "
-					+ local
-					+ " = "
-					+ renderExpr(start, scope)
-					+ "; "
-					+ local
-					+ " < "
-					+ renderExpr(end, scope)
-					+ "; "
-					+ local
-					+ "++) {"];
+				final startRenderStart = timingEnabled ? Sys.time() : 0.0;
+				final renderedStart = renderExpr(start, scope);
+				if (timingEnabled)
+					traceCppScopeStmtTimingPhase(scope,
+						"forin_phase=range_start seconds="
+						+ Std.string(Sys.time() - startRenderStart)
+						+ " expr="
+						+ exprKind(start)
+						+ " rendered="
+						+ traceCppSnippet(renderedStart));
+				final endRenderStart = timingEnabled ? Sys.time() : 0.0;
+				final renderedEnd = renderExpr(end, scope);
+				if (timingEnabled)
+					traceCppScopeStmtTimingPhase(scope,
+						"forin_phase=range_end seconds="
+						+ Std.string(Sys.time() - endRenderStart)
+						+ " expr="
+						+ exprKind(end)
+						+ " rendered="
+						+ traceCppSnippet(renderedEnd));
+				[
+					indent + "for (int " + local + " = " + renderedStart + "; " + local + " < " + renderedEnd + "; " + local + "++) {"
+				];
 			case _:
-				[indent + "for (auto " + local + " : " + renderExpr(iterable, scope) + ") {"];
+				final renderIterableStart = timingEnabled ? Sys.time() : 0.0;
+				final renderedIterable = renderExpr(iterable, scope);
+				if (timingEnabled)
+					traceCppScopeStmtTimingPhase(scope,
+						"forin_phase=range_for_iterable seconds="
+						+ Std.string(Sys.time() - renderIterableStart)
+						+ " iterable="
+						+ exprKind(iterable)
+						+ " rendered="
+						+ traceCppSnippet(renderedIterable));
+				[indent + "for (auto " + local + " : " + renderedIterable + ") {"];
 		}
+		final loopElementStart = timingEnabled ? Sys.time() : 0.0;
 		final loopElementType = iteratorElementType.length > 0 ? iteratorElementType : iterableElementType(iterable, scope);
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"forin_phase=loop_element_type seconds="
+				+ Std.string(Sys.time() - loopElementStart)
+				+ " local="
+				+ local
+				+ " element_type="
+				+ traceCppSnippet(loopElementType));
+		final bodyStart = timingEnabled ? Sys.time() : 0.0;
+		final bodyLineStart = out.length;
 		withScopedLocal(scope, local, loopElementType, () -> {
 			for (line in renderStmtBlockContent(body, indent + "  ", scope))
 				out.push(line);
 		});
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"forin_phase=body seconds="
+				+ Std.string(Sys.time() - bodyStart)
+				+ " local="
+				+ local
+				+ " lines="
+				+ Std.string(out.length - bodyLineStart));
 		out.push(indent + "}");
 		return out;
 	}
