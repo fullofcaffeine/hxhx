@@ -6743,7 +6743,7 @@ class SourceTargetCommon {
 	}
 
 	static function phpRuntimeMapType(typePath:String):Bool {
-		return switch (typePath) {
+		return switch (phpRuntimeMapBaseType(typePath)) {
 			case "Map" | "StringMap" | "haxe.ds.StringMap" | "IntMap" | "haxe.ds.IntMap" | "ObjectMap" | "haxe.ds.ObjectMap" | "HashMap" | "haxe.ds.HashMap":
 				true;
 			case _:
@@ -6753,7 +6753,7 @@ class SourceTargetCommon {
 
 	static function phpRuntimeMapConstructorExpr(typePath:String, rendered:String):String {
 		final args = rendered.length == 0 ? "null" : rendered;
-		return switch (typePath) {
+		return switch (phpRuntimeMapBaseType(typePath)) {
 			case "StringMap" | "haxe.ds.StringMap":
 				"new Map(" + args + ", \"haxe.ds.StringMap\")";
 			case "IntMap" | "haxe.ds.IntMap":
@@ -6767,15 +6767,20 @@ class SourceTargetCommon {
 		};
 	}
 
+	static function phpRuntimeMapBaseType(typePath:String):String {
+		return stripGenericTypeParams(removeTypeHintWhitespace(typePath == null ? "" : typePath));
+	}
+
 	static function phpRuntimeMapTagForTypeHint(typeHint:String):String {
 		final compact = removeTypeHintWhitespace(typeHint);
-		if (compact == "StringMap" || compact == "haxe.ds.StringMap")
+		final base = phpRuntimeMapBaseType(compact);
+		if (base == "StringMap" || base == "haxe.ds.StringMap")
 			return "haxe.ds.StringMap";
-		if (compact == "IntMap" || compact == "haxe.ds.IntMap")
+		if (base == "IntMap" || base == "haxe.ds.IntMap")
 			return "haxe.ds.IntMap";
-		if (compact == "ObjectMap" || compact == "haxe.ds.ObjectMap")
+		if (base == "ObjectMap" || base == "haxe.ds.ObjectMap")
 			return "haxe.ds.ObjectMap";
-		if (compact == "HashMap" || compact == "haxe.ds.HashMap")
+		if (base == "HashMap" || base == "haxe.ds.HashMap")
 			return "haxe.ds.HashMap";
 		if (!StringTools.startsWith(compact, "Map<") || !StringTools.endsWith(compact, ">"))
 			return "";

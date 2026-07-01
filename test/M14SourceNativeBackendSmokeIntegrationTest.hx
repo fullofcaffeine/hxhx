@@ -9724,6 +9724,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "$m = new Map();", "PHP Map construction should lower to the runtime shim");
 		assertContains(content, "$sm = new Map(null, \"haxe.ds.StringMap\");", "PHP haxe.ds.StringMap construction should lower to a tagged runtime shim");
+		assertNotContains(content, "new haxe.ds.StringMap()", "PHP generic haxe.ds.StringMap constructors should not fall through to raw class construction");
 		assertContains(content, "$m->set(\"a\", 1);", "PHP Map.set should lower as an instance method call");
 		assertContains(content, "$sm->set(\"b\", 2);", "PHP haxe.ds.StringMap.set should use the runtime shim");
 		assertContains(content, "__hxhx_add_string($m->exists(\"a\"))", "PHP Map.exists should be usable in expressions");
