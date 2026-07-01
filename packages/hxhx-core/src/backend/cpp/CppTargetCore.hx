@@ -4219,8 +4219,8 @@ class CppTargetCore {
 			traceCppTimingPhase("render_helper_method_prepare_counts owner=" + sanitizeTypePath(typeBaseName(prepOwnerName)) + " name="
 				+ sanitizeIdentifier(prepMethodName) + " phase=" + phase + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides))
 				+ " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes))
-				+ " arg_override_values=" + summarizeStringMap(scope.argTypeOverrides) + " local_override_values="
-				+ summarizeStringMap(scope.localTypeOverrides));
+				+ " arg_override_values=" + summarizeStringValueMap(scope.argTypeOverrides) + " local_override_values="
+				+ summarizeStringValueMap(scope.localTypeOverrides));
 		}
 		function runPrepPhase(phase:String, body:Void->Void):Void {
 			if (!prepTimingEnabled) {
@@ -6189,8 +6189,8 @@ class CppTargetCore {
 				+ sanitizeIdentifier(methodName) + " phase=" + phase + " seconds=" + Std.string(elapsed) + " candidates="
 				+ Std.string(countStringMap(candidates)) + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides)) + " local_overrides="
 				+ Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes))
-				+ " candidate_values=" + summarizeStringMap(candidates) + " arg_override_values=" + summarizeStringMap(scope.argTypeOverrides)
-				+ " local_override_values=" + summarizeStringMap(scope.localTypeOverrides));
+				+ " candidate_values=" + summarizeBoolValueMap(candidates) + " arg_override_values=" + summarizeStringValueMap(scope.argTypeOverrides)
+				+ " local_override_values=" + summarizeStringValueMap(scope.localTypeOverrides));
 		}
 		function traceCallableArgStmt(index:Int, stmt:HxStmt, elapsed:Float):Void {
 			traceCppTimingPhase("render_helper_callable_arg_stmt_timing owner=" + sanitizeTypePath(typeBaseName(ownerName)) + " name="
@@ -7158,6 +7158,8 @@ class CppTargetCore {
 	}
 
 	static function collectCallableArgTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>, expectedType:String):Void {
+		if (!exprReferencesCallableArgCandidate(expr, candidates))
+			return;
 		switch (expr) {
 			case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
 				final overrideType = callableExpectedArgOverrideType(expectedType, scope);
@@ -7426,6 +7428,57 @@ class CppTargetCore {
 				case _:
 			}
 		}
+	}
+
+	static function exprReferencesCallableArgCandidate(expr:HxExpr, candidates:haxe.ds.StringMap<Bool>):Bool {
+		if (expr == null || !boolMapHasEntries(candidates))
+			return false;
+		return switch (expr) {
+			case EIdent(name):
+				candidates.exists(sanitizeIdentifier(name));
+			case EField(receiver, _):
+				exprReferencesCallableArgCandidate(receiver, candidates);
+			case ECall(callee, args): exprReferencesCallableArgCandidate(callee, candidates) || exprListReferencesCallableArgCandidate(args, candidates);
+			case EMacroExpr(inner, _) | EUnop(_, inner) | ECast(inner, _) | EUntyped(inner):
+				exprReferencesCallableArgCandidate(inner, candidates);
+			case ELambda(args, body): stringListReferencesCallableArgCandidate(args, candidates) || exprReferencesCallableArgCandidate(body, candidates);
+			case ESwitch(scrutinee, _, exprs): exprReferencesCallableArgCandidate(scrutinee,
+					candidates) || exprListReferencesCallableArgCandidate(exprs, candidates);
+			case ENew(_, args) | EArrayDecl(args):
+				exprListReferencesCallableArgCandidate(args, candidates);
+			case EBinop(_, left, right): exprReferencesCallableArgCandidate(left, candidates) || exprReferencesCallableArgCandidate(right, candidates);
+			case ETernary(cond, thenExpr, elseExpr): exprReferencesCallableArgCandidate(cond,
+					candidates) || exprReferencesCallableArgCandidate(thenExpr, candidates) || exprReferencesCallableArgCandidate(elseExpr, candidates);
+			case EAnon(_, fieldValues):
+				exprListReferencesCallableArgCandidate(fieldValues, candidates);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				candidates.exists(sanitizeIdentifier(name))
+				|| exprReferencesCallableArgCandidate(iterable, candidates)
+				|| (guardExpr != null && exprReferencesCallableArgCandidate(guardExpr, candidates))
+				|| exprReferencesCallableArgCandidate(yieldExpr, candidates);
+			case EArrayAccess(array, index) | ERange(array, index): exprReferencesCallableArgCandidate(array,
+					candidates) || exprReferencesCallableArgCandidate(index, candidates);
+			case _:
+				false;
+		};
+	}
+
+	static function exprListReferencesCallableArgCandidate(exprs:Array<HxExpr>, candidates:haxe.ds.StringMap<Bool>):Bool {
+		if (exprs == null)
+			return false;
+		for (expr in exprs)
+			if (exprReferencesCallableArgCandidate(expr, candidates))
+				return true;
+		return false;
+	}
+
+	static function stringListReferencesCallableArgCandidate(names:Array<String>, candidates:haxe.ds.StringMap<Bool>):Bool {
+		if (names == null)
+			return false;
+		for (name in names)
+			if (candidates.exists(sanitizeIdentifier(name)))
+				return true;
+		return false;
 	}
 
 	static function knownCallParams(callee:HxExpr, scope:CppRenderScope):Null<Array<HxFunctionArg>> {
@@ -15358,12 +15411,26 @@ class CppTargetCore {
 		return count;
 	}
 
-	static function summarizeStringMap<T>(values:haxe.ds.StringMap<T>, limit:Int = 8):String {
+	static function summarizeStringValueMap(values:haxe.ds.StringMap<String>, limit:Int = 8):String {
 		if (values == null)
 			return "";
 		final entries = new Array<String>();
 		for (key in values.keys())
-			entries.push(key + ":" + Std.string(values.get(key)));
+			entries.push(key + ":" + values.get(key));
+		entries.sort((left, right) -> left < right ? -1 : (left > right ? 1 : 0));
+		if (entries.length <= limit)
+			return entries.join(",");
+		final kept = entries.slice(0, limit);
+		kept.push("...+" + Std.string(entries.length - limit));
+		return kept.join(",");
+	}
+
+	static function summarizeBoolValueMap(values:haxe.ds.StringMap<Bool>, limit:Int = 8):String {
+		if (values == null)
+			return "";
+		final entries = new Array<String>();
+		for (key in values.keys())
+			entries.push(key + ":" + (values.get(key) ? "true" : "false"));
 		entries.sort((left, right) -> left < right ? -1 : (left > right ? 1 : 0));
 		if (entries.length <= limit)
 			return entries.join(",");
