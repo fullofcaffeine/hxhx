@@ -2160,6 +2160,50 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function lockMutexRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Lock {",
+			"  public function new() {}",
+			"  public function acquire():Void {}",
+			"  public function wait(?timeout:Float):Bool return true;",
+			"  public function release():Void {}",
+			"}",
+			"class Mutex {",
+			"  public function new() {}",
+			"  public function acquire():Void {}",
+			"  public function tryAcquire():Bool return true;",
+			"  public function release():Void {}",
+			"}",
+			"class Main {",
+			"  static function printBool(label:String, value:Bool):Void {",
+			"    Sys.println(label + \"=\" + Std.string(value));",
+			"  }",
+			"  static function main():Void {",
+			"    var lock = new Lock();",
+			"    printBool(\"lock.initial_zero\", lock.wait(0.0));",
+			"    lock.release();",
+			"    printBool(\"lock.after_release\", lock.wait(0.0));",
+			"    printBool(\"lock.second_zero\", lock.wait(0.0));",
+			"    lock.release();",
+			"    lock.release();",
+			"    printBool(\"lock.count_one\", lock.wait(0.0));",
+			"    printBool(\"lock.count_two\", lock.wait(0.0));",
+			"    printBool(\"lock.count_empty\", lock.wait(0.0));",
+			"    var mutex = new Mutex();",
+			"    printBool(\"mutex.try_first\", mutex.tryAcquire());",
+			"    printBool(\"mutex.try_recursive\", mutex.tryAcquire());",
+			"    mutex.release();",
+			"    mutex.release();",
+			"    printBool(\"mutex.try_after_release\", mutex.tryAcquire());",
+			"    mutex.release();",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "LockMutexRuntime.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function reflectCompareMethodsRuntimeProgram():GenIrProgram {
 		final src = [
 			"class CompareOwner {",
@@ -8820,6 +8864,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final mainLoopEmit = BackendRegistry.createForTarget("cpp-native").emit(mainLoopRuntimeProgram(), context(mainLoopDir, true, true));
 		final mainLoopSource = File.getContent(mainLoopEmit.entryPath);
 		assertContains(mainLoopSource, "#include <chrono>", "C++ Timer.stamp support should include chrono");
+		assertContains(mainLoopSource, "#include <condition_variable>", "C++ Lock wait/release support should include condition_variable");
+		assertContains(mainLoopSource, "#include <mutex>", "C++ Lock/Mutex support should include mutex");
 		assertContains(mainLoopSource, "hxhx-cpp-smoke-only: Timer.delay ignores callbacks and Timer.stop is a no-op",
 			"C++ Timer support should be visibly classified as smoke-only");
 		assertContains(mainLoopSource, "struct Timer {", "C++ Timer should be provided by target-owned runtime support");
@@ -8836,10 +8882,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(mainLoopSource, "void setPostData(std::string value)", "C++ Http support should expose setPostData");
 		assertContains(mainLoopSource, "void setPostBytes(T value)", "C++ Http support should expose setPostBytes");
 		assertContains(mainLoopSource, "void request() {}", "C++ Http support should expose request");
-		assertContains(mainLoopSource, "hxhx-cpp-smoke-only: Lock/Mutex are non-blocking compile-shape shims",
-			"C++ Lock/Mutex support should be visibly classified as smoke-only");
+		assertContains(mainLoopSource, "hxhx-cpp-bounded-bringup: Lock supports release counts/timeouts; Mutex supports recursive owner locking",
+			"C++ Lock/Mutex support should be visibly classified as bounded bring-up support");
 		assertContains(mainLoopSource, "struct Lock {", "C++ Lock should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "std::condition_variable condition;", "C++ Lock should own condition-variable state");
+		assertContains(mainLoopSource, "int releases = 0;", "C++ Lock should track release counts");
+		assertContains(mainLoopSource, "condition.wait_for(lock, std::chrono::duration<double>(timeout.value()), ready);",
+			"C++ Lock.wait should honor timeout instead of always succeeding");
 		assertContains(mainLoopSource, "struct Mutex {", "C++ Mutex should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "std::recursive_mutex mutex;", "C++ Mutex should support owner-thread recursive locking");
+		assertContains(mainLoopSource, "bool tryAcquire() { return mutex.try_lock(); }", "C++ Mutex.tryAcquire should use target mutex state");
+		assertTrue(mainLoopSource.indexOf("bool wait(std::optional<double> = std::nullopt) { return true; }") < 0,
+			"C++ Lock.wait must not silently claim every wait succeeds");
+		assertTrue(mainLoopSource.indexOf("bool tryAcquire() { return true; }") < 0, "C++ Mutex.tryAcquire must not silently claim every try-acquire succeeds");
 		assertContains(mainLoopSource, "hxhx-cpp-smoke-only: MainLoop/MainEvent use a single synchronous pending list",
 			"C++ MainLoop/MainEvent support should be visibly classified as smoke-only");
 		assertContains(mainLoopSource, "struct MainEvent {", "C++ MainEvent should be provided by target-owned runtime support");
@@ -9047,6 +9102,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(md5BytesRun.code == 0, "C++ imported Md5/Bytes runtime smoke failed: " + md5BytesRun.stderr);
 			assertTrue(md5BytesRun.stdout == "900150983cd24fb0d6963f7d28e17f72\n900150983cd24fb0d6963f7d28e17f72\n",
 				"unexpected C++ imported Md5/Bytes stdout: " + md5BytesRun.stdout);
+
+			final lockMutexBuildDir = Path.join([root, "lock-mutex-runtime-build"]);
+			final lockMutexBuilt = BackendRegistry.createForTarget("cpp-native").emit(lockMutexRuntimeProgram(), context(lockMutexBuildDir, true, false));
+			assertTrue(lockMutexBuilt.builtExecutable, "C++ Lock/Mutex runtime smoke should build executable");
+			final lockMutexRun = commandOutput(lockMutexBuilt.entryPath, []);
+			assertTrue(lockMutexRun.code == 0, "C++ Lock/Mutex runtime smoke failed: " + lockMutexRun.stderr);
+			assertTrue(lockMutexRun.stdout == "lock.initial_zero=false\nlock.after_release=true\nlock.second_zero=false\nlock.count_one=true\nlock.count_two=true\nlock.count_empty=false\nmutex.try_first=true\nmutex.try_recursive=true\nmutex.try_after_release=true\n",
+				"unexpected C++ Lock/Mutex stdout: "
+				+ lockMutexRun.stdout);
 
 			final buildDir = Path.join([root, "build"]);
 			final built = BackendRegistry.createForTarget("cpp-native").emit(program(), context(buildDir, true, false));

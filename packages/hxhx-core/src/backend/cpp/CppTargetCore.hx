@@ -281,6 +281,7 @@ class CppTargetCore {
 		out.push("#include <any>");
 		out.push("#include <chrono>");
 		out.push("#include <cmath>");
+		out.push("#include <condition_variable>");
 		out.push("#include <cstddef>");
 		out.push("#include <cstdint>");
 		out.push("#include <cstdlib>");
@@ -291,6 +292,7 @@ class CppTargetCore {
 		out.push("#include <limits>");
 		out.push("#include <map>");
 		out.push("#include <memory>");
+		out.push("#include <mutex>");
 		out.push("#include <optional>");
 		out.push("#include <sstream>");
 		out.push("#include <stdexcept>");

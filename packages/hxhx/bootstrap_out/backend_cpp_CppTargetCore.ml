@@ -72717,6 +72717,7 @@ let renderProgram = fun program main resources -> (
       ignore (HxArray.push out "#include <any>");
       ignore (HxArray.push out "#include <chrono>");
       ignore (HxArray.push out "#include <cmath>");
+      ignore (HxArray.push out "#include <condition_variable>");
       ignore (HxArray.push out "#include <cstddef>");
       ignore (HxArray.push out "#include <cstdint>");
       ignore (HxArray.push out "#include <cstdlib>");
@@ -72727,6 +72728,7 @@ let renderProgram = fun program main resources -> (
       ignore (HxArray.push out "#include <limits>");
       ignore (HxArray.push out "#include <map>");
       ignore (HxArray.push out "#include <memory>");
+      ignore (HxArray.push out "#include <mutex>");
       ignore (HxArray.push out "#include <optional>");
       ignore (HxArray.push out "#include <sstream>");
       ignore (HxArray.push out "#include <stdexcept>");
