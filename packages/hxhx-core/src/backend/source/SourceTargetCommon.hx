@@ -5759,7 +5759,8 @@ class SourceTargetCommon {
 			return null;
 		return switch (args[0]) {
 			case ENew(typePath, _):
-				if (typePath == "Map" || typePath == "TypedefToStringMap") "TInst(haxe.ds.StringMap,[TInst(String,[])])"; else null;
+				final baseTypePath = stripGenericTypeParams(removeTypeHintWhitespace(typePath == null ? "" : typePath));
+				if (baseTypePath == "Map" || baseTypePath == "TypedefToStringMap") "TInst(haxe.ds.StringMap,[TInst(String,[])])"; else null;
 			case ETryCatchRaw(raw):
 				final normalized = normalizeProbeText(raw);
 				if (once
