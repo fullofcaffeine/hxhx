@@ -603,8 +603,9 @@ let sysEventLoopLines = fun () -> let __arr_46 = HxArray.create () in (
   ignore (HxArray.push __arr_46 "  return value;");
   ignore (HxArray.push __arr_46 "}");
   ignore (HxArray.push __arr_46 "");
-  ignore (HxArray.push __arr_46 "// hxhx-cpp-smoke-only: Timer.delay ignores callbacks and Timer.stop is a no-op; see docs/00-project/CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md.");
+  ignore (HxArray.push __arr_46 "// hxhx-cpp-unsupported: Timer.delay has no Cpp event-loop scheduler yet; see docs/00-project/CPP_SYS_EVENT_LOOP_SMOKE_AUDIT.md.");
   ignore (HxArray.push __arr_46 "struct Timer {");
+  ignore (HxArray.push __arr_46 "  bool stopped = false;");
   ignore (HxArray.push __arr_46 "  static double stamp() {");
   ignore (HxArray.push __arr_46 "    using clock = std::chrono::steady_clock;");
   ignore (HxArray.push __arr_46 "    static const auto start = clock::now();");
@@ -613,9 +614,9 @@ let sysEventLoopLines = fun () -> let __arr_46 = HxArray.create () in (
   ignore (HxArray.push __arr_46 "  static std::shared_ptr<Timer> delay(std::function<void()> f, double ms) {");
   ignore (HxArray.push __arr_46 "    (void)f;");
   ignore (HxArray.push __arr_46 "    (void)ms;");
-  ignore (HxArray.push __arr_46 "    return std::make_shared<Timer>();");
+  ignore (HxArray.push __arr_46 "    throw std::runtime_error(\"hxhx cpp Timer.delay scheduling unsupported\");");
   ignore (HxArray.push __arr_46 "  }");
-  ignore (HxArray.push __arr_46 "  void stop() {}");
+  ignore (HxArray.push __arr_46 "  void stop() { stopped = true; }");
   ignore (HxArray.push __arr_46 "};");
   ignore (HxArray.push __arr_46 "");
   ignore (HxArray.push __arr_46 "struct __hxhx_http_bytes {");

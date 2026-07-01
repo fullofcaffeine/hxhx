@@ -2232,6 +2232,35 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function timerUnsupportedRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Timer {",
+			"  public static function stamp():Float return 0.0;",
+			"  public static function delay(f:Void->Void, ms:Int):Timer return new Timer();",
+			"  public function new() {}",
+			"  public function stop():Void {}",
+			"}",
+			"class Main {",
+			"  static function main():Void {",
+			"    var observed = \"none\";",
+			"    try {",
+			"      Timer.delay(() -> observed = \"timer.ran\", 1);",
+			"      observed = \"timer.no_error\";",
+			"    } catch (e:Dynamic) {",
+			"      observed = \"timer.delay=unsupported\";",
+			"    }",
+			"    Sys.println(observed);",
+			"    var timer = new Timer();",
+			"    timer.stop();",
+			"    Sys.println(\"timer.stop=ok\");",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "TimerUnsupportedRuntime.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function reflectCompareMethodsRuntimeProgram():GenIrProgram {
 		final src = [
 			"class CompareOwner {",
@@ -8894,12 +8923,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(mainLoopSource, "#include <chrono>", "C++ Timer.stamp support should include chrono");
 		assertContains(mainLoopSource, "#include <condition_variable>", "C++ Lock wait/release support should include condition_variable");
 		assertContains(mainLoopSource, "#include <mutex>", "C++ Lock/Mutex support should include mutex");
-		assertContains(mainLoopSource, "hxhx-cpp-smoke-only: Timer.delay ignores callbacks and Timer.stop is a no-op",
-			"C++ Timer support should be visibly classified as smoke-only");
+		assertContains(mainLoopSource, "hxhx-cpp-unsupported: Timer.delay has no Cpp event-loop scheduler yet",
+			"C++ Timer.delay support should be visibly classified as unsupported");
 		assertContains(mainLoopSource, "struct Timer {", "C++ Timer should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "bool stopped = false;", "C++ Timer.stop should at least record local stopped state");
 		assertContains(mainLoopSource, "static std::shared_ptr<Timer> delay(std::function<void()> f, double ms)",
 			"C++ Timer support should expose Timer.delay for async timeout helpers");
-		assertContains(mainLoopSource, "void stop() {}", "C++ Timer support should expose Timer.stop for async cleanup");
+		assertContains(mainLoopSource, "throw std::runtime_error(\"hxhx cpp Timer.delay scheduling unsupported\");",
+			"C++ Timer.delay should throw an explicit unsupported scheduling diagnostic instead of swallowing callbacks");
+		assertContains(mainLoopSource, "void stop() { stopped = true; }", "C++ Timer support should expose Timer.stop for async cleanup shape");
+		assertTrue(mainLoopSource.indexOf("return std::make_shared<Timer>();") < 0, "C++ Timer.delay must not silently return an unscheduled timer");
 		assertContains(mainLoopSource, "hxhx-cpp-bounded-bringup: Http preserves callback/request shape and reports unsupported transport through onError",
 			"C++ Http support should be visibly classified as bounded bring-up support");
 		assertContains(mainLoopSource, "struct Http {", "C++ Http should be provided by target-owned runtime support");
@@ -9157,6 +9190,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(httpUnsupportedRun.code == 0, "C++ Http unsupported runtime smoke failed: " + httpUnsupportedRun.stderr);
 			assertTrue(httpUnsupportedRun.stdout == "http.error=hxhx cpp Http transport unsupported: http://localhost\n",
 				"unexpected C++ Http unsupported stdout: " + httpUnsupportedRun.stdout);
+
+			final timerUnsupportedBuildDir = Path.join([root, "timer-unsupported-runtime-build"]);
+			final timerUnsupportedBuilt = BackendRegistry.createForTarget("cpp-native")
+				.emit(timerUnsupportedRuntimeProgram(), context(timerUnsupportedBuildDir, true, false));
+			assertTrue(timerUnsupportedBuilt.builtExecutable, "C++ Timer unsupported runtime smoke should build executable");
+			final timerUnsupportedRun = commandOutput(timerUnsupportedBuilt.entryPath, []);
+			assertTrue(timerUnsupportedRun.code == 0, "C++ Timer unsupported runtime smoke failed: " + timerUnsupportedRun.stderr);
+			assertTrue(timerUnsupportedRun.stdout == "timer.delay=unsupported\ntimer.stop=ok\n",
+				"unexpected C++ Timer unsupported stdout: " + timerUnsupportedRun.stdout);
 
 			final buildDir = Path.join([root, "build"]);
 			final built = BackendRegistry.createForTarget("cpp-native").emit(program(), context(buildDir, true, false));

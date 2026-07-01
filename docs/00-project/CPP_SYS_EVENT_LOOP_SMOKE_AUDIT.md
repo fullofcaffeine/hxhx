@@ -15,11 +15,11 @@ The Cpp sys/event-loop helpers remain `bounded_bringup_support`, not parity
 support. They keep current Cpp smoke/strict-gate compile shapes moving, but many
 methods are no-op, synchronous, or single-queue approximations.
 
-Generated C++ carries visible `hxhx-cpp-smoke-only` or
-`hxhx-cpp-bounded-bringup` markers beside these support blocks, and
-`test/M14CppNativeBackendSmokeIntegrationTest.hx` asserts the markers survive
-generation. Those assertions are guardrails against accidental parity wording;
-they are not runtime parity evidence.
+Generated C++ carries visible `hxhx-cpp-smoke-only`,
+`hxhx-cpp-bounded-bringup`, or `hxhx-cpp-unsupported` markers beside these
+support blocks, and `test/M14CppNativeBackendSmokeIntegrationTest.hx` asserts
+the markers survive generation. Those assertions are guardrails against
+accidental parity wording; they are not runtime parity evidence.
 
 ## Inventory
 
@@ -27,8 +27,8 @@ they are not runtime parity evidence.
 | --- | --- | --- | --- |
 | `__hxhx_shift` | `bounded_bringup_support` | Removes the first item from a non-empty generated function queue used by `EntryPoint.processEvents`. | Oracle cases for `Array.shift`-style empty behavior are out of scope here; do not reuse this as general Array parity. |
 | `Timer.stamp` | `bounded_bringup_support` | Monotonic seconds since generated-process startup via `std::chrono::steady_clock`. | Oracle cases for target-stable stamp origin, monotonicity, precision, and wall-clock assumptions. |
-| `Timer.delay` | `bounded_bringup_support`, smoke-only | Accepts callback and delay arguments, ignores both, returns a `Timer` object. | Real scheduling behavior, delayed callback execution, cancellation, and exception propagation cases. |
-| `Timer.stop` | `bounded_bringup_support`, smoke-only | No-op cleanup shape for current async timeout helpers. | Oracle-backed cancellation semantics tied to real `Timer.delay` support. |
+| `Timer.delay` | `unsupported_diagnostic` | Throws `hxhx cpp Timer.delay scheduling unsupported` instead of silently swallowing callbacks. | Real scheduling behavior, delayed callback execution, cancellation, and exception propagation cases. |
+| `Timer.stop` | `bounded_bringup_support`, smoke-only | Records a local stopped flag only; no scheduled callback is owned because `Timer.delay` remains unsupported. | Oracle-backed cancellation semantics tied to real `Timer.delay` support. |
 | `Http` constructor and callback fields | `bounded_bringup_support` | Stores URL plus callback field types for generated assignment shape. | Behavior for URL parsing, status/error callbacks, bytes/data callback interaction, redirects, and platform transport. |
 | `Http.setPostData`, `setPostBytes` | `bounded_bringup_support` | Tracks which payload mode was selected but does not preserve/send payload bytes. | Payload, method, header, and callback oracle cases before transport support. |
 | `Http.request` | `unsupported_diagnostic` | Performs no transport; calls `onError("hxhx cpp Http transport unsupported: <url>")` when available, otherwise throws. | Real request execution must be a separate transport bead with oracle cases. |
@@ -106,12 +106,31 @@ an explicit unsupported diagnostic. It does not add sockets, TLS, redirects,
 status callbacks, response bytes, headers, or payload transmission. README and
 North Star progress bars stay unchanged.
 
+## Timer/MainLoop/EntryPoint Checkpoint
+
+`haxe_ocaml-vqrj` selected these upstream Haxe `4.3.7` API/oracle cases before
+changing Cpp support:
+
+| Case | Upstream Haxe 4.3.7 observation | Cpp classification after this slice |
+| --- | --- | --- |
+| `Timer.stamp()` differences | Intended for elapsed-time differences; absolute origin is target-dependent | `pass` for monotonic process-local stamp only |
+| `Timer.delay(f, ms)` | Intended one-shot callback after the requested delay on event-capable targets | `unsupported_diagnostic`; Cpp throws instead of silently swallowing `f` |
+| `Timer.stop()` after a scheduled delay | Cancels future invocations for the scheduled timer | `known_divergence`; no scheduled callback exists until real Cpp scheduling is implemented |
+| `MainLoop.add`, `hasEvents`, `tick`, `MainEvent.delay/stop/wakeup` | Event queue timing, ordering, cancellation, and wakeup behavior are target event-loop semantics | `known_divergence`; current Cpp support remains a synchronous single-list smoke scaffold |
+| `EntryPoint.runInMainThread`, `addThread`, `processEvents` | Main-thread handoff, thread lifecycle, blocking, and event-loop interaction | `known_divergence`; current Cpp support remains synchronous smoke scaffolding |
+
+The implemented slice is deliberately diagnostic-only for timer scheduling. It
+does not add detached native threads, scheduler queues, blocking process loops,
+priority ordering, repeated timers, or real Haxe `Thread`/event-loop parity.
+README and North Star progress bars stay unchanged.
+
 ## Validation
 
 Local coverage for the current bounded support is intentionally shape-focused:
 
-- generated C++ contains `hxhx-cpp-smoke-only` markers for Timer, Http,
-  Lock/Mutex, MainLoop/MainEvent, and EntryPoint support;
+- generated C++ contains `hxhx-cpp-smoke-only`, `hxhx-cpp-bounded-bringup`, or
+  `hxhx-cpp-unsupported` markers for Timer, Http, Lock/Mutex,
+  MainLoop/MainEvent, and EntryPoint support;
 - `test/M14CppNativeBackendSmokeIntegrationTest.hx` asserts those markers and the
   existing generated-call shapes;
 - broad behavior work remains blocked until oracle cases and implementation
