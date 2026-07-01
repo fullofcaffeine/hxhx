@@ -2204,6 +2204,34 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function httpUnsupportedRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Http {",
+			"  public var onData:Dynamic;",
+			"  public var onError:Dynamic;",
+			"  public var onBytes:Dynamic;",
+			"  public function new(url:String) {}",
+			"  public function setPostData(value:String):Void {}",
+			"  public function setPostBytes(value:Dynamic):Void {}",
+			"  public function request(?post:Bool):Void {}",
+			"}",
+			"class Main {",
+			"  static function main():Void {",
+			"    var http = new Http(\"http://localhost\");",
+			"    var observed = \"none\";",
+			"    http.onData = function(data) observed = \"http.data=\" + data;",
+			"    http.onError = function(error) observed = \"http.error=\" + error;",
+			"    http.setPostData(\"payload\");",
+			"    http.request(false);",
+			"    Sys.println(observed);",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "HttpUnsupportedRuntime.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function reflectCompareMethodsRuntimeProgram():GenIrProgram {
 		final src = [
 			"class CompareOwner {",
@@ -8872,16 +8900,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(mainLoopSource, "static std::shared_ptr<Timer> delay(std::function<void()> f, double ms)",
 			"C++ Timer support should expose Timer.delay for async timeout helpers");
 		assertContains(mainLoopSource, "void stop() {}", "C++ Timer support should expose Timer.stop for async cleanup");
-		assertContains(mainLoopSource, "hxhx-cpp-smoke-only: Http exposes callback/request shape only and performs no transport",
-			"C++ Http support should be visibly classified as smoke-only");
+		assertContains(mainLoopSource, "hxhx-cpp-bounded-bringup: Http preserves callback/request shape and reports unsupported transport through onError",
+			"C++ Http support should be visibly classified as bounded bring-up support");
 		assertContains(mainLoopSource, "struct Http {", "C++ Http should be provided by target-owned runtime support");
+		assertContains(mainLoopSource, "std::string url;", "C++ Http support should retain the request URL for diagnostics");
+		assertContains(mainLoopSource, "bool hasPostData = false;", "C++ Http support should track post-data mode");
+		assertContains(mainLoopSource, "bool hasPostBytes = false;", "C++ Http support should track post-bytes mode");
 		assertContains(mainLoopSource, "std::function<void(std::string)> onData = nullptr;", "C++ Http support should expose the string data callback field");
 		assertContains(mainLoopSource, "std::function<void(std::string)> onError = nullptr;", "C++ Http support should expose the error callback field");
 		assertContains(mainLoopSource, "std::function<void(__hxhx_http_bytes)> onBytes = nullptr;",
 			"C++ Http support should expose a bytes callback payload with size/get");
-		assertContains(mainLoopSource, "void setPostData(std::string value)", "C++ Http support should expose setPostData");
+		assertContains(mainLoopSource, "void setPostData(std::string value) { (void)value; hasPostData = true; hasPostBytes = false; }",
+			"C++ Http.setPostData should record payload mode without pretending to send data");
 		assertContains(mainLoopSource, "void setPostBytes(T value)", "C++ Http support should expose setPostBytes");
-		assertContains(mainLoopSource, "void request() {}", "C++ Http support should expose request");
+		assertContains(mainLoopSource, "void request(std::optional<bool> post = std::nullopt)",
+			"C++ Http.request should accept the optional post argument shape");
+		assertContains(mainLoopSource, "std::string message = std::string(\"hxhx cpp Http transport unsupported\");",
+			"C++ Http.request should use an explicit unsupported transport diagnostic");
+		assertContains(mainLoopSource, "if (onError) {", "C++ Http.request should prefer the Haxe onError callback for unsupported transport");
+		assertTrue(mainLoopSource.indexOf("void request() {}") < 0, "C++ Http.request must not silently no-op");
 		assertContains(mainLoopSource, "hxhx-cpp-bounded-bringup: Lock supports release counts/timeouts; Mutex supports recursive owner locking",
 			"C++ Lock/Mutex support should be visibly classified as bounded bring-up support");
 		assertContains(mainLoopSource, "struct Lock {", "C++ Lock should be provided by target-owned runtime support");
@@ -9111,6 +9148,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(lockMutexRun.stdout == "lock.initial_zero=false\nlock.after_release=true\nlock.second_zero=false\nlock.count_one=true\nlock.count_two=true\nlock.count_empty=false\nmutex.try_first=true\nmutex.try_recursive=true\nmutex.try_after_release=true\n",
 				"unexpected C++ Lock/Mutex stdout: "
 				+ lockMutexRun.stdout);
+
+			final httpUnsupportedBuildDir = Path.join([root, "http-unsupported-runtime-build"]);
+			final httpUnsupportedBuilt = BackendRegistry.createForTarget("cpp-native")
+				.emit(httpUnsupportedRuntimeProgram(), context(httpUnsupportedBuildDir, true, false));
+			assertTrue(httpUnsupportedBuilt.builtExecutable, "C++ Http unsupported runtime smoke should build executable");
+			final httpUnsupportedRun = commandOutput(httpUnsupportedBuilt.entryPath, []);
+			assertTrue(httpUnsupportedRun.code == 0, "C++ Http unsupported runtime smoke failed: " + httpUnsupportedRun.stderr);
+			assertTrue(httpUnsupportedRun.stdout == "http.error=hxhx cpp Http transport unsupported: http://localhost\n",
+				"unexpected C++ Http unsupported stdout: " + httpUnsupportedRun.stdout);
 
 			final buildDir = Path.join([root, "build"]);
 			final built = BackendRegistry.createForTarget("cpp-native").emit(program(), context(buildDir, true, false));

@@ -29,8 +29,9 @@ they are not runtime parity evidence.
 | `Timer.stamp` | `bounded_bringup_support` | Monotonic seconds since generated-process startup via `std::chrono::steady_clock`. | Oracle cases for target-stable stamp origin, monotonicity, precision, and wall-clock assumptions. |
 | `Timer.delay` | `bounded_bringup_support`, smoke-only | Accepts callback and delay arguments, ignores both, returns a `Timer` object. | Real scheduling behavior, delayed callback execution, cancellation, and exception propagation cases. |
 | `Timer.stop` | `bounded_bringup_support`, smoke-only | No-op cleanup shape for current async timeout helpers. | Oracle-backed cancellation semantics tied to real `Timer.delay` support. |
-| `Http` constructor and callback fields | `bounded_bringup_support`, smoke-only | Stores callback field types for generated assignment shape; ignores URL. | Behavior for URL parsing, invalid URLs, status/error callbacks, bytes/data callback interaction, redirects, and platform transport. |
-| `Http.setPostData`, `setPostBytes`, `request` | `bounded_bringup_support`, smoke-only | Methods accept generated calls but ignore payloads and never perform transport. | Real request execution or explicit unsupported diagnostics; payload, method, header, error, and callback oracle cases. |
+| `Http` constructor and callback fields | `bounded_bringup_support` | Stores URL plus callback field types for generated assignment shape. | Behavior for URL parsing, status/error callbacks, bytes/data callback interaction, redirects, and platform transport. |
+| `Http.setPostData`, `setPostBytes` | `bounded_bringup_support` | Tracks which payload mode was selected but does not preserve/send payload bytes. | Payload, method, header, and callback oracle cases before transport support. |
+| `Http.request` | `unsupported_diagnostic` | Performs no transport; calls `onError("hxhx cpp Http transport unsupported: <url>")` when available, otherwise throws. | Real request execution must be a separate transport bead with oracle cases. |
 | `__hxhx_http_bytes` | `bounded_bringup_support`, smoke-only | Callback payload carrier with `size` and `get`; out-of-range `get` returns `0`. | Byte payload oracle cases and unsupported diagnostics for missing/invalid bytes. |
 | `Lock.acquire` | `declaration_only_support`, smoke-only | Legacy compile-shape method; not part of the upstream `sys.thread.Lock` public API. | Remove from generated dependencies when the surrounding event-loop scaffold no longer needs it. |
 | `Lock.wait`, `Lock.release` | `bounded_bringup_support` | Counting release semantics with optional timeout using target-owned `std::condition_variable` support. | Cross-thread wakeups through generated `sys.thread.Thread`/event-loop support before target-thread parity claims. |
@@ -86,6 +87,24 @@ The implemented slice is deliberately limited to primitive Lock release counts,
 Lock timeouts, and Mutex owner-thread recursion. It does not add generated Cpp
 thread creation, scheduler behavior, or Full 1.0 target-thread parity evidence.
 README and North Star progress bars stay unchanged.
+
+## Http Checkpoint
+
+`haxe_ocaml-am6x` selected these upstream Haxe `4.3.7` oracle cases and public
+API observations before changing Cpp support:
+
+| Case | Upstream Haxe 4.3.7 observation | Cpp classification after this slice |
+| --- | --- | --- |
+| Constructing `new haxe.Http(url)` | Stores URL; no request starts until `request()` is called | `pass` for stored diagnostic URL only |
+| `setPostData()` and `setPostBytes()` | Select one request payload mode and overwrite the previous payload | `known_divergence` because Cpp records only the selected mode, not payload bytes |
+| Invalid URL such as `"://"` | `onError("Invalid URL")` | `unsupported_diagnostic`; Cpp reports unsupported transport through `onError` instead of pretending URL validation exists |
+| Inaccessible host | `onError(...)` with target-dependent connection/resolve text | `unsupported_diagnostic`; Cpp reports unsupported transport through `onError` |
+| Successful `onData`, `onBytes`, status, headers, redirects, and real POST behavior | Target transport invokes success/status callbacks | `known_divergence`; no Cpp transport is implemented |
+
+The implemented slice intentionally changes `request()` from a silent no-op to
+an explicit unsupported diagnostic. It does not add sockets, TLS, redirects,
+status callbacks, response bytes, headers, or payload transmission. README and
+North Star progress bars stay unchanged.
 
 ## Validation
 
