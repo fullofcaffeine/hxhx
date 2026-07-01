@@ -6716,7 +6716,7 @@ class SourceTargetCommon {
 				final rendered = [for (arg in args) phpCallArgExpr(arg)].join(", ");
 				final genericSample = phpGenericConstructorSample(typePath);
 				if (genericSample != null) "__hxhx_construct_like(" + genericSample + (rendered.length == 0 ? "" : ", " + rendered) + ")"; else
-					if (typePath == "Array"
+					if (phpArrayConstructorTypePath(typePath)
 					|| phpNativeArrayTypePath(typePath)) "[]"; else if (typePath == "Exception" || typePath == "haxe.Exception") "new ValueException("
 					+ rendered
 					+ ")"; else if (phpRuntimeMapType(typePath)) phpRuntimeMapConstructorExpr(typePath,
@@ -6736,6 +6736,14 @@ class SourceTargetCommon {
 	}
 
 	static function csArrayConstructorTypePath(typePath:String):Bool {
+		final compact = removeTypeHintWhitespace(typePath == null ? "" : typePath);
+		return compact == "Array"
+			|| StringTools.startsWith(compact, "Array<")
+			|| compact == "StdTypes.Array"
+			|| StringTools.startsWith(compact, "StdTypes.Array<");
+	}
+
+	static function phpArrayConstructorTypePath(typePath:String):Bool {
 		final compact = removeTypeHintWhitespace(typePath == null ? "" : typePath);
 		return compact == "Array"
 			|| StringTools.startsWith(compact, "Array<")

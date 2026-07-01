@@ -12157,6 +12157,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpStaticMethodArrayMutationProgram(), new BackendContext(staticBodyTmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final staticBodyContent = File.getContent(Path.join([staticBodyTmpRoot, "index.php"]));
 		assertContains(staticBodyContent, "$a = new Class2146();", "PHP static helper method bodies should retain local construction");
+		assertContains(staticBodyContent, "$this->array = [];", "PHP generic Array constructors should lower to native array values");
+		assertNotContains(staticBodyContent, "new Array_()", "PHP generic Array constructors should not fall through to fake Array_ classes");
 		assertContains(staticBodyContent, "__hxhx_array_push($a->array, $b)", "PHP static helper method bodies should retain instance array pushes");
 		assertContains(staticBodyContent, "return Lambda::has($c->array, $b);", "PHP static helper method bodies should retain Lambda.has returns");
 		if (commandExists("php")) {
