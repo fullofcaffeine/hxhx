@@ -24101,46 +24101,49 @@ and directCallExprForExpectedType = fun name args expectedType scope -> try let 
   | HxRuntime.Hx_return __ret_5134 -> Obj.obj __ret_5134
 and sameOwnerGenericCallTypeArgs = fun fn owner args expectedType scope -> try let __fallback_result_5145 = (
   ignore (if fn == Obj.magic (HxRuntime.hx_null) || owner == Obj.magic (HxRuntime.hx_null) || scope == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  let callScope = renderScope (Obj.magic owner) (let __anon_5136 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_5136 "names" (Obj.repr (Obj.obj (HxAnon.get scope "classNames"))));
-    ignore (HxAnon.set __anon_5136 "byName" (Obj.repr (Obj.obj (HxAnon.get scope "classByName"))));
-    ignore (HxAnon.set __anon_5136 "all" (Obj.repr (Obj.obj (HxAnon.get scope "allClasses"))));
-    __anon_5136
-  )) ("auto" : string) in (
-    ignore (applyFunctionTypeParams callScope (Obj.magic fn));
-    let returnType = (cppReturnTypeHint (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) callScope (let __anon_5137 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_5137 "names" (Obj.repr (Obj.obj (HxAnon.get scope "classNames"))));
-      ignore (HxAnon.set __anon_5137 "byName" (Obj.repr (Obj.obj (HxAnon.get scope "classByName"))));
-      __anon_5137
-    )) : string) in let emitted = Obj.magic (emittedFunctionTypeParams (Obj.magic fn) (returnType : string) callScope) in (
-      ignore (if HxArray.length emitted = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-      let mapped = Obj.magic (HxMap.create_string ()) in (
-        ignore (unifyGenericCallTypeHints (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (expectedType : string) (Obj.magic emitted) (Obj.magic mapped) scope);
-        let params = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let tempNumber = ref (0 : int) in (
-          ignore (if HxArray.length params < HxArray.length args then let __assign_5138 = HxArray.length params in (
-            tempNumber := __assign_5138;
-            __assign_5138
-          ) else let __assign_5139 = HxArray.length args in (
-            tempNumber := __assign_5139;
-            __assign_5139
-          ));
-          let count = !tempNumber in (
-            ignore (let _g = ref 0 in let _g1 = count in while !_g < _g1 do ignore (let i = let __old_5140 = !_g in let __new_5141 = HxInt.add __old_5140 1 in (
-              ignore (_g := __new_5141);
-              __old_5140
-            ) in unifyGenericCallTypeHints (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic params) i)) : string) (rawTypeHintForExpr (Obj.magic (HxArray.get (Obj.magic args) i)) scope : string) (Obj.magic emitted) (Obj.magic mapped) scope) done);
-            let out = Obj.magic (HxArray.create ()) in (
-              ignore (let _g = ref 0 in while !_g < HxArray.length emitted do ignore (let param = (HxArray.get (Obj.magic emitted) (!_g) : string) in (
-                ignore (let __old_5142 = !_g in let __new_5143 = HxInt.add __old_5142 1 in (
-                  ignore (_g := __new_5143);
-                  __new_5143
-                ));
-                let clean = (sanitizeIdentifier (param : string) : string) in let value = (HxMap.get_string mapped clean : string) in (
-                  ignore (if value == Obj.magic (HxRuntime.hx_null) || HxString.length value = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-                  HxArray.push out value
-                )
-              )) done);
-              ("<" ^ HxString.toStdString (HxArray.join out ", " (fun x -> x))) ^ ">"
+  let typeParams = Obj.magic (genericFunctionTypeParams (Obj.magic fn)) in (
+    ignore (if HxArray.length typeParams = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+    let callScope = renderScope (Obj.magic owner) (let __anon_5136 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_5136 "names" (Obj.repr (Obj.obj (HxAnon.get scope "classNames"))));
+      ignore (HxAnon.set __anon_5136 "byName" (Obj.repr (Obj.obj (HxAnon.get scope "classByName"))));
+      ignore (HxAnon.set __anon_5136 "all" (Obj.repr (Obj.obj (HxAnon.get scope "allClasses"))));
+      __anon_5136
+    )) ("auto" : string) in (
+      ignore (applyFunctionTypeParams callScope (Obj.magic fn));
+      let returnType = (cppReturnTypeHint (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) callScope (let __anon_5137 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_5137 "names" (Obj.repr (Obj.obj (HxAnon.get scope "classNames"))));
+        ignore (HxAnon.set __anon_5137 "byName" (Obj.repr (Obj.obj (HxAnon.get scope "classByName"))));
+        __anon_5137
+      )) : string) in let emitted = Obj.magic (emittedFunctionTypeParams (Obj.magic fn) (returnType : string) callScope) in (
+        ignore (if HxArray.length emitted = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+        let mapped = Obj.magic (HxMap.create_string ()) in (
+          ignore (unifyGenericCallTypeHints (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (expectedType : string) (Obj.magic emitted) (Obj.magic mapped) scope);
+          let params = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in let tempNumber = ref (0 : int) in (
+            ignore (if HxArray.length params < HxArray.length args then let __assign_5138 = HxArray.length params in (
+              tempNumber := __assign_5138;
+              __assign_5138
+            ) else let __assign_5139 = HxArray.length args in (
+              tempNumber := __assign_5139;
+              __assign_5139
+            ));
+            let count = !tempNumber in (
+              ignore (let _g = ref 0 in let _g1 = count in while !_g < _g1 do ignore (let i = let __old_5140 = !_g in let __new_5141 = HxInt.add __old_5140 1 in (
+                ignore (_g := __new_5141);
+                __old_5140
+              ) in unifyGenericCallTypeHints (HxFunctionArg.getTypeHint (Obj.magic (HxArray.get (Obj.magic params) i)) : string) (rawTypeHintForExpr (Obj.magic (HxArray.get (Obj.magic args) i)) scope : string) (Obj.magic emitted) (Obj.magic mapped) scope) done);
+              let out = Obj.magic (HxArray.create ()) in (
+                ignore (let _g = ref 0 in while !_g < HxArray.length emitted do ignore (let param = (HxArray.get (Obj.magic emitted) (!_g) : string) in (
+                  ignore (let __old_5142 = !_g in let __new_5143 = HxInt.add __old_5142 1 in (
+                    ignore (_g := __new_5143);
+                    __new_5143
+                  ));
+                  let clean = (sanitizeIdentifier (param : string) : string) in let value = (HxMap.get_string mapped clean : string) in (
+                    ignore (if value == Obj.magic (HxRuntime.hx_null) || HxString.length value = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+                    HxArray.push out value
+                  )
+                )) done);
+                ("<" ^ HxString.toStdString (HxArray.join out ", " (fun x -> x))) ^ ">"
+              )
             )
           )
         )

@@ -1517,6 +1517,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ field type cache should not overwrite a prior scope-shape entry");
 	}
 
+	static function assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions():Void {
+		final owner = new HxClassDecl("GenericCallTypeOwner", false, [], []);
+		final names = new StringMap<Bool>();
+		names.set("GenericCallTypeOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("GenericCallTypeOwner", owner);
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		final nonGeneric = new HxFunctionDecl("deq", Public, false, [
+			new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("actual", "Dynamic", NoDefault, false, false)
+		], "Void", [], "");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.sameOwnerGenericCallTypeArgs(nonGeneric, owner, [EInt(1), EInt(1)], "", scope) == "",
+			"C++ non-generic same-owner calls should not attempt explicit type arguments");
+		final generic = new HxFunctionDecl("identity", Public, false, [new HxFunctionArg("value", "T", NoDefault, false, false)], "T", [], "",
+			["__hxhx_fn_type_params=T"]);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.sameOwnerGenericCallTypeArgs(generic, owner, [EString("x")], "String", scope) == "<std::string>",
+			"C++ generic same-owner calls should still infer explicit type arguments");
+	}
+
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {
 		final dynamicFn = new HxFunctionDecl("dynamicValue", Public, false, [], "Dynamic", [SReturn(EArrayDecl([EInt(1)]), HxPos.unknown())], "");
 		final owner = new HxClassDecl("DynamicReturnOwner", false, [dynamicFn], []);
@@ -2537,6 +2556,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppFunctionScopePrepCachesArgRegistration();
 		assertCppFunctionArgDeclaredTypeCacheUsesScopeShape();
 		assertCppFieldTypeCacheUsesScopeShape();
+		assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();

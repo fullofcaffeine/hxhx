@@ -10060,6 +10060,9 @@ class CppTargetCore {
 	static function sameOwnerGenericCallTypeArgs(fn:HxFunctionDecl, owner:HxClassDecl, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):String {
 		if (fn == null || owner == null || scope == null)
 			return "";
+		final typeParams = genericFunctionTypeParams(fn);
+		if (typeParams.length == 0)
+			return "";
 		final callScope = renderScope(owner, {names: scope.classNames, byName: scope.classByName, all: scope.allClasses}, "auto");
 		applyFunctionTypeParams(callScope, fn);
 		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), callScope, {names: scope.classNames, byName: scope.classByName});
