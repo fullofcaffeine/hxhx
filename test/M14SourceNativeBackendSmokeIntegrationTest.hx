@@ -9990,6 +9990,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"PHP source backend should emit GenericStack from the repo-owned runtime template");
 		assertContains(content, "class GenericStack", "PHP source backend should emit haxe.ds.GenericStack runtime support");
 		assertContains(content, "$stack = new haxe\\ds\\GenericStack();", "PHP haxe.ds.GenericStack construction should target the namespace shim");
+		assertContains(content, "$stack->pop()", "PHP GenericStack.pop should call the runtime object method");
+		assertNotContains(content, "__hxhx_array_pop($stack)", "PHP GenericStack.pop should not lower through Array.pop helpers");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP GenericStack support should execute, stderr:\n" + run.stderr);

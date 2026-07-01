@@ -2946,6 +2946,8 @@ class SourceTargetCommon {
 	}
 
 	static function phpArrayFieldCall(receiver:HxExpr, field:String, args:Array<HxExpr>):Null<String> {
+		if (phpGenericStackReceiver(receiver))
+			return null;
 		if (field == "toArray" && args.length == 0 && phpArrayBackedReceiver(receiver))
 			return renderExpr(Php, receiver);
 		if (field == "toString" && args.length == 0 && phpArrayBackedReceiver(receiver))
@@ -2983,6 +2985,26 @@ class SourceTargetCommon {
 			case _:
 				null;
 		};
+	}
+
+	static function phpGenericStackReceiver(receiver:HxExpr):Bool {
+		return switch (receiver) {
+			case EIdent(name):
+				phpGenericStackTypeHint(phpLocalTypeHint(name));
+			case ENew(typePath, _):
+				phpGenericStackTypeHint(typePath);
+			case ECast(_, castHint):
+				phpGenericStackTypeHint(castHint);
+			case EMacroExpr(inner, _) | EUntyped(inner):
+				phpGenericStackReceiver(inner);
+			case _:
+				false;
+		};
+	}
+
+	static function phpGenericStackTypeHint(typeHint:String):Bool {
+		final base = stripGenericTypeParams(removeTypeHintWhitespace(typeHint == null ? "" : typeHint));
+		return base == "GenericStack" || base == "haxe.ds.GenericStack";
 	}
 
 	static function phpArrayBackedSequenceValue(receiver:HxExpr, value:HxExpr):String {
