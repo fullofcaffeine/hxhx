@@ -234,6 +234,21 @@ class CppTargetCore {
 			+ " local_types=" + Std.string(countStringMap(scope.localTypes)));
 	}
 
+	static function traceForwardedCallPhase(scope:CppRenderScope, callee:HxExpr, phase:String, elapsed:Float, candidates:haxe.ds.StringMap<Bool>,
+			args:Array<HxExpr>, params:Null<Array<HxFunctionArg>>, paramIndex:Int = -1, argIndex:Int = -1, paramName:String = "", argKind:String = "",
+			detail:String = ""):Void {
+		if (!traceCppScopeStmtTimingEnabled(scope))
+			return;
+		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
+		traceCppTimingPhase("render_helper_forwarded_call_phase_timing owner=" + scope.traceOwnerName + " name=" + sanitizeIdentifier(scope.traceMethodName)
+			+ " index=" + Std.string(index) + " callee=" + exprKind(callee) + " phase=" + phase + " seconds=" + Std.string(elapsed) + " args="
+			+ Std.string(args == null ? 0 : args.length) + " params=" + Std.string(params == null ? 0 : params.length) + " param_index="
+			+ Std.string(paramIndex) + " arg_index=" + Std.string(argIndex) + " param=" + sanitizeIdentifier(paramName) + " arg_kind=" + argKind
+			+ " candidates=" + Std.string(countStringMap(candidates)) + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides))
+			+ " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes))
+			+ (detail.length == 0 ? "" : " " + detail));
+	}
+
 	static function traceCppMemberPhase(className:String, kind:String, memberName:String, stage:String):Void {
 		if (!traceCppDeepEnabled())
 			return;
@@ -7238,30 +7253,65 @@ class CppTargetCore {
 	static function collectForwardedCallArgTypeOverrides(callee:HxExpr, args:Array<HxExpr>, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
 		if (isHelperMacrosTypedAsCallee(callee))
 			return;
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final paramsStartTime = timingEnabled ? Sys.time() : 0.0;
 		final params = knownCallParams(callee, scope);
+		if (timingEnabled)
+			traceForwardedCallPhase(scope, callee, "known_params", Sys.time() - paramsStartTime, candidates, args, params);
 		if (params == null || params.length == 0 || args == null || args.length == 0)
 			return;
+		final paramTypesStartTime = timingEnabled ? Sys.time() : 0.0;
 		final paramTypes = knownCallParamCppTypes(callee, scope);
+		if (timingEnabled)
+			traceForwardedCallPhase(scope, callee, "known_param_types", Sys.time() - paramTypesStartTime, candidates, args, params);
 		var paramIndex = 0;
 		var argIndex = 0;
 		while (argIndex < args.length && paramIndex < params.length) {
 			final param = params[paramIndex];
 			final arg = args[argIndex];
-			if (callArgMatchesParam(arg, param, scope) || !callParamCanBeSkipped(param)) {
+			final matchStartTime = timingEnabled ? Sys.time() : 0.0;
+			final matches = callArgMatchesParam(arg, param, scope);
+			var canSkip = false;
+			if (!matches)
+				canSkip = callParamCanBeSkipped(param);
+			if (timingEnabled)
+				traceForwardedCallPhase(scope, callee, "loop_match", Sys.time()
+					- matchStartTime, candidates, args, params, paramIndex, argIndex,
+					HxFunctionArg.getName(param), exprKind(arg), "match="
+					+ Std.string(matches)
+					+ " skippable="
+					+ Std.string(canSkip));
+			if (matches || !canSkip) {
+				final applyStartTime = timingEnabled ? Sys.time() : 0.0;
 				applyForwardedArgTypeOverride(arg, param, paramTypes == null ? "" : paramTypes[paramIndex], scope, candidates);
+				if (timingEnabled)
+					traceForwardedCallPhase(scope, callee, "apply_direct", Sys.time() - applyStartTime, candidates, args, params, paramIndex, argIndex,
+						HxFunctionArg.getName(param), exprKind(arg));
 				paramIndex++;
 				argIndex++;
 				continue;
 			}
+			final laterStartTime = timingEnabled ? Sys.time() : 0.0;
 			final later = findLaterMatchingParam(params, arg, paramIndex + 1, scope);
+			if (timingEnabled)
+				traceForwardedCallPhase(scope, callee, "find_later", Sys.time() - laterStartTime, candidates, args, params, paramIndex, argIndex,
+					HxFunctionArg.getName(param), exprKind(arg), "later=" + Std.string(later));
 			if (later < 0) {
+				final applyFallbackStartTime = timingEnabled ? Sys.time() : 0.0;
 				applyForwardedArgTypeOverride(arg, param, paramTypes == null ? "" : paramTypes[paramIndex], scope, candidates);
+				if (timingEnabled)
+					traceForwardedCallPhase(scope, callee, "apply_fallback", Sys.time() - applyFallbackStartTime, candidates, args, params, paramIndex,
+						argIndex, HxFunctionArg.getName(param), exprKind(arg));
 				paramIndex++;
 				argIndex++;
 				continue;
 			}
 			paramIndex = later;
+			final applyLaterStartTime = timingEnabled ? Sys.time() : 0.0;
 			applyForwardedArgTypeOverride(arg, params[paramIndex], paramTypes == null ? "" : paramTypes[paramIndex], scope, candidates);
+			if (timingEnabled)
+				traceForwardedCallPhase(scope, callee, "apply_later", Sys.time() - applyLaterStartTime, candidates, args, params, paramIndex, argIndex,
+					HxFunctionArg.getName(params[paramIndex]), exprKind(arg));
 			paramIndex++;
 			argIndex++;
 		}
