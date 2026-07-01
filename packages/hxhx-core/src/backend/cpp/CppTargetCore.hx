@@ -221,6 +221,19 @@ class CppTargetCore {
 			+ Std.string(index) + " " + label);
 	}
 
+	static function traceCallableArgExprPhase(scope:CppRenderScope, expr:HxExpr, phase:String, elapsed:Float, candidates:haxe.ds.StringMap<Bool>,
+			expectedType:String):Void {
+		if (!traceCppScopeStmtTimingEnabled(scope))
+			return;
+		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
+		final expected = StringTools.replace(traceCppSnippet(expectedType), " ", "_");
+		traceCppTimingPhase("render_helper_callable_arg_expr_phase_timing owner=" + scope.traceOwnerName + " name="
+			+ sanitizeIdentifier(scope.traceMethodName) + " index=" + Std.string(index) + " kind=" + exprKind(expr) + " phase=" + phase + " seconds="
+			+ Std.string(elapsed) + " expected_type=" + expected + " candidates=" + Std.string(countStringMap(candidates)) + " arg_overrides="
+			+ Std.string(countStringMap(scope.argTypeOverrides)) + " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides))
+			+ " local_types=" + Std.string(countStringMap(scope.localTypes)));
+	}
+
 	static function traceCppMemberPhase(className:String, kind:String, memberName:String, stage:String):Void {
 		if (!traceCppDeepEnabled())
 			return;
@@ -6190,32 +6203,51 @@ class CppTargetCore {
 		});
 		runCallableArgPhase("callable_args", () -> {
 			var stmtIndex = 0;
-			for (stmt in HxFunctionDecl.getBody(fn)) {
-				if (!timingEnabled) {
-					collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
-				} else {
-					final stmtStartTime = Sys.time();
-					switch (stmt) {
-						case SForIn(name, iterable, body, _):
-							final iterableStartTime = Sys.time();
-							collectCallableArgTypeOverridesFromExpr(iterable, scope, candidates, "");
-							traceCallableArgStmtPhase(stmtIndex, stmt, "for_iterable", Sys.time() - iterableStartTime);
-							var loopType = "";
-							final elementTypeStartTime = Sys.time();
-							loopType = iterableElementType(iterable, scope);
-							traceCallableArgStmtPhase(stmtIndex, stmt, "for_element_type", Sys.time() - elementTypeStartTime);
-							final bodyStartTime = Sys.time();
-							withScopedLocal(scope, sanitizeIdentifier(name), loopType, () -> {
-								collectCallableArgTypeOverridesFromStmt(body, scope, candidates, scope.returnType);
-							});
-							traceCallableArgStmtPhase(stmtIndex, stmt, "for_body", Sys.time() - bodyStartTime);
-						case _:
-							collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
-					}
-					traceCallableArgStmt(stmtIndex, stmt, Sys.time() - stmtStartTime);
-				}
-				stmtIndex++;
+			final priorTraceOwner = scope.traceOwnerName;
+			final priorTraceMethod = scope.traceMethodName;
+			final priorTraceStmtIndex = scope.traceStmtIndex;
+			function restoreCallableArgTrace():Void {
+				scope.traceOwnerName = priorTraceOwner;
+				scope.traceMethodName = priorTraceMethod;
+				scope.traceStmtIndex = priorTraceStmtIndex;
 			}
+			if (timingEnabled) {
+				scope.traceOwnerName = sanitizeTypePath(typeBaseName(ownerName));
+				scope.traceMethodName = sanitizeIdentifier(methodName);
+			}
+			try {
+				for (stmt in HxFunctionDecl.getBody(fn)) {
+					if (!timingEnabled) {
+						collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
+					} else {
+						scope.traceStmtIndex = stmtIndex;
+						final stmtStartTime = Sys.time();
+						switch (stmt) {
+							case SForIn(name, iterable, body, _):
+								final iterableStartTime = Sys.time();
+								collectCallableArgTypeOverridesFromExpr(iterable, scope, candidates, "");
+								traceCallableArgStmtPhase(stmtIndex, stmt, "for_iterable", Sys.time() - iterableStartTime);
+								var loopType = "";
+								final elementTypeStartTime = Sys.time();
+								loopType = iterableElementType(iterable, scope);
+								traceCallableArgStmtPhase(stmtIndex, stmt, "for_element_type", Sys.time() - elementTypeStartTime);
+								final bodyStartTime = Sys.time();
+								withScopedLocal(scope, sanitizeIdentifier(name), loopType, () -> {
+									collectCallableArgTypeOverridesFromStmt(body, scope, candidates, scope.returnType);
+								});
+								traceCallableArgStmtPhase(stmtIndex, stmt, "for_body", Sys.time() - bodyStartTime);
+							case _:
+								collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
+						}
+						traceCallableArgStmt(stmtIndex, stmt, Sys.time() - stmtStartTime);
+					}
+					stmtIndex++;
+				}
+			} catch (e:haxe.Exception) {
+				restoreCallableArgTrace();
+				throw e;
+			}
+			restoreCallableArgTrace();
 		});
 		runCallableArgPhase("reset", () -> scope.localTypes = new haxe.ds.StringMap<String>());
 	}
@@ -7100,21 +7132,36 @@ class CppTargetCore {
 				if (overrideType.length > 0)
 					setAssignedArgTypeOverride(scope, sanitizeIdentifier(name), overrideType);
 			case ECall(EIdent(name), args) if (candidates.exists(sanitizeIdentifier(name))):
+				final argTypesStartTime = Sys.time();
 				final argTypes = [for (arg in args) callableArgExprType(arg, scope)].filter(t -> t.length > 0);
+				traceCallableArgExprPhase(scope, expr, "candidate_arg_types", Sys.time() - argTypesStartTime, candidates, expectedType);
 				if (argTypes.length == args.length) {
 					final returnType = expectedType != null && expectedType.length > 0 ? expectedType : "std::string";
 					scope.argTypeOverrides.set(sanitizeIdentifier(name), "std::function<" + returnType + "(" + argTypes.join(", ") + ")>");
 				}
+				final argWalkStartTime = Sys.time();
 				for (arg in args)
 					collectCallableArgTypeOverridesFromExpr(arg, scope, candidates, "");
+				traceCallableArgExprPhase(scope, expr, "candidate_arg_walk", Sys.time() - argWalkStartTime, candidates, expectedType);
 			case ECall(callee, args):
+				final forwardedStartTime = Sys.time();
 				collectForwardedCallArgTypeOverrides(callee, args, scope, candidates);
+				traceCallableArgExprPhase(scope, expr, "forwarded", Sys.time() - forwardedStartTime, candidates, expectedType);
+				final calleeWalkStartTime = Sys.time();
 				collectCallableArgTypeOverridesFromExpr(callee, scope, candidates, "");
-				final functionArgTypes = CppTypeModel.cppFunctionArgTypesFromCppType(exprCppType(callee, scope));
+				traceCallableArgExprPhase(scope, expr, "callee_walk", Sys.time() - calleeWalkStartTime, candidates, expectedType);
+				final calleeTypeStartTime = Sys.time();
+				final calleeType = exprCppType(callee, scope);
+				traceCallableArgExprPhase(scope, expr, "callee_type", Sys.time() - calleeTypeStartTime, candidates, expectedType);
+				final functionArgTypesStartTime = Sys.time();
+				final functionArgTypes = CppTypeModel.cppFunctionArgTypesFromCppType(calleeType);
+				traceCallableArgExprPhase(scope, expr, "function_arg_types", Sys.time() - functionArgTypesStartTime, candidates, expectedType);
+				final argsWalkStartTime = Sys.time();
 				for (i in 0...args.length) {
 					final argExpected = i < functionArgTypes.length ? functionArgTypes[i] : "";
 					collectCallableArgTypeOverridesFromExpr(args[i], scope, candidates, argExpected);
 				}
+				traceCallableArgExprPhase(scope, expr, "args_walk", Sys.time() - argsWalkStartTime, candidates, expectedType);
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				collectCallableArgTypeOverridesFromExpr(iterable, scope, candidates, "");
 				final elementExpected = isCppVectorType(expectedType) ? cppVectorElementType(expectedType) : "";
