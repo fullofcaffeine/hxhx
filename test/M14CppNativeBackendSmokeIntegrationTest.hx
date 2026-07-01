@@ -1473,6 +1473,26 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(!replayScope.localTypes.exists("scratch"), "C++ cached function-scope prep should not replay non-argument locals");
 	}
 
+	static function assertCppErasedDynamicReturnDetectionIsCached():Void {
+		final dynamicFn = new HxFunctionDecl("dynamicValue", Public, false, [], "Dynamic", [SReturn(EArrayDecl([EInt(1)]), HxPos.unknown())], "");
+		final owner = new HxClassDecl("DynamicReturnOwner", false, [dynamicFn], []);
+		final names = new StringMap<Bool>();
+		names.set("DynamicReturnOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("DynamicReturnOwner", owner);
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "std::any");
+		@:privateAccess backend.cpp.CppTargetCore.erasedDynamicReturnCache = new StringMap<Bool>();
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.sameOwnerCallReturnsErasedDynamicValue("dynamicValue", scope),
+			"C++ same-owner Dynamic return detection should recognize erased Dynamic values");
+		final key = @:privateAccess backend.cpp.CppTargetCore.functionSignatureKeyForScope(scope, dynamicFn);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.erasedDynamicReturnCache.exists(key),
+			"C++ erased-Dynamic return detection should cache completed scans");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.erasedDynamicReturnCache.get(key),
+			"C++ erased-Dynamic return cache should preserve positive scan results");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.sameOwnerCallReturnsErasedDynamicValue("dynamicValue", scope),
+			"C++ erased-Dynamic return cache should replay repeated same-owner checks");
+	}
+
 	static function assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference():Void {
 		final main = new HxFunctionDecl("unserialize", Public, false, [], "Dynamic", [], "");
 		final object = new HxFunctionDecl("unserializeObject", Private, false, [], "Void", [], "");
@@ -2471,6 +2491,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppHelperRenderClassification();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertCppFunctionScopePrepCachesArgRegistration();
+		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();
 		assertTypedLocalFunctionBlockExprRendersStructurally();

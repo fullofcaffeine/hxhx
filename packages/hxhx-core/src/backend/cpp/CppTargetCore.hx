@@ -87,6 +87,7 @@ typedef CppHelperRenderKindCounts = {
 class CppTargetCore {
 	static final inferredSignatureStack = new haxe.ds.StringMap<Bool>();
 	static final erasedDynamicReturnStack = new haxe.ds.StringMap<Bool>();
+	static var erasedDynamicReturnCache = new haxe.ds.StringMap<Bool>();
 	static final functionScopePrepStack = new haxe.ds.StringMap<Bool>();
 	static var functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 	static var functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
@@ -270,6 +271,7 @@ class CppTargetCore {
 		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
 		functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
 		functionReturnTypesCache = new haxe.ds.StringMap<String>();
+		erasedDynamicReturnCache = new haxe.ds.StringMap<Bool>();
 		traceCppTimingMethodFilterCache = null;
 		final className = sanitizeIdentifier(HxClassDecl.getName(main.cls));
 		final typedModules = program.getTypedModules();
@@ -15480,18 +15482,22 @@ class CppTargetCore {
 		if (fn == null)
 			return false;
 		final key = functionSignatureKeyForScope(scope, fn);
+		if (erasedDynamicReturnCache.exists(key))
+			return erasedDynamicReturnCache.get(key);
 		if (erasedDynamicReturnStack.exists(key))
 			return false;
 		erasedDynamicReturnStack.set(key, true);
+		var found = false;
 		final erasedLocals = new haxe.ds.StringMap<Bool>();
 		for (stmt in HxFunctionDecl.getBody(fn)) {
 			if (stmtReturnsErasedDynamicValue(stmt, scope, erasedLocals)) {
-				erasedDynamicReturnStack.remove(key);
-				return true;
+				found = true;
+				break;
 			}
 		}
 		erasedDynamicReturnStack.remove(key);
-		return false;
+		erasedDynamicReturnCache.set(key, found);
+		return found;
 	}
 
 	static function stmtReturnsErasedDynamicValue(stmt:HxStmt, ?scope:CppRenderScope, ?erasedLocals:haxe.ds.StringMap<Bool>):Bool {
