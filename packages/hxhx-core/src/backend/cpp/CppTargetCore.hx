@@ -6136,24 +6136,50 @@ class CppTargetCore {
 			return;
 		final args = HxFunctionDecl.getArgs(fn);
 		final candidates = new haxe.ds.StringMap<Bool>();
-		for (arg in args) {
-			final name = sanitizeIdentifier(HxFunctionArg.getName(arg));
-			final rawType = cppFunctionArgBaseType(arg, scope);
-			final explicitType = StringTools.trim(HxFunctionArg.getTypeHint(arg) == null ? "" : HxFunctionArg.getTypeHint(arg));
-			scope.localTypes.set(name, rawType);
-			if (rawType == "std::string" || explicitType.length == 0)
-				candidates.set(name, true);
+		final ownerName = scope.owner == null ? "" : HxClassDecl.getName(scope.owner);
+		final methodName = HxFunctionDecl.getName(fn);
+		final timingEnabled = traceCppMethodStmtTimingsEnabled(ownerName, methodName);
+		function traceCallableArgPhase(phase:String, elapsed:Float):Void {
+			traceCppTimingPhase("render_helper_callable_arg_infer_timing owner=" + sanitizeTypePath(typeBaseName(ownerName)) + " name="
+				+ sanitizeIdentifier(methodName) + " phase=" + phase + " seconds=" + Std.string(elapsed) + " candidates="
+				+ Std.string(countStringMap(candidates)) + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides)) + " local_overrides="
+				+ Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes))
+				+ " candidate_values=" + summarizeStringMap(candidates) + " arg_override_values=" + summarizeStringMap(scope.argTypeOverrides)
+				+ " local_override_values=" + summarizeStringMap(scope.localTypeOverrides));
 		}
+		function runCallableArgPhase(phase:String, body:Void->Void):Void {
+			if (!timingEnabled) {
+				body();
+				return;
+			}
+			final startTime = Sys.time();
+			body();
+			traceCallableArgPhase(phase, Sys.time() - startTime);
+		}
+		runCallableArgPhase("candidate_setup", () -> {
+			for (arg in args) {
+				final name = sanitizeIdentifier(HxFunctionArg.getName(arg));
+				final rawType = cppFunctionArgBaseType(arg, scope);
+				final explicitType = StringTools.trim(HxFunctionArg.getTypeHint(arg) == null ? "" : HxFunctionArg.getTypeHint(arg));
+				scope.localTypes.set(name, rawType);
+				if (rawType == "std::string" || explicitType.length == 0)
+					candidates.set(name, true);
+			}
+		});
 		if (!candidates.iterator().hasNext()) {
-			scope.localTypes = new haxe.ds.StringMap<String>();
+			runCallableArgPhase("reset_no_candidates", () -> scope.localTypes = new haxe.ds.StringMap<String>());
 			return;
 		}
-		collectForwardedConstructorArgTypeOverrides(HxFunctionDecl.getBody(fn), scope, candidates);
-		for (stmt in HxFunctionDecl.getBody(fn))
-			collectAssignedArgTypeOverridesFromStmt(stmt, scope, candidates);
-		for (stmt in HxFunctionDecl.getBody(fn))
-			collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
-		scope.localTypes = new haxe.ds.StringMap<String>();
+		runCallableArgPhase("forwarded_constructor", () -> collectForwardedConstructorArgTypeOverrides(HxFunctionDecl.getBody(fn), scope, candidates));
+		runCallableArgPhase("assigned_args", () -> {
+			for (stmt in HxFunctionDecl.getBody(fn))
+				collectAssignedArgTypeOverridesFromStmt(stmt, scope, candidates);
+		});
+		runCallableArgPhase("callable_args", () -> {
+			for (stmt in HxFunctionDecl.getBody(fn))
+				collectCallableArgTypeOverridesFromStmt(stmt, scope, candidates, scope.returnType);
+		});
+		runCallableArgPhase("reset", () -> scope.localTypes = new haxe.ds.StringMap<String>());
 	}
 
 	static function inferDynamicLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
