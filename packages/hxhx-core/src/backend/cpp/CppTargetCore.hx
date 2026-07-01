@@ -9820,23 +9820,74 @@ class CppTargetCore {
 	}
 
 	static function directCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final cleanName = sanitizeIdentifier(name);
+		final bytesFastGetStart = timingEnabled ? Sys.time() : 0.0;
 		final bytesFastGet = bytesFastGetExpr(name, args, scope);
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"direct_call_phase=bytes_fast_get call="
+				+ cleanName
+				+ " seconds="
+				+ Std.string(Sys.time() - bytesFastGetStart)
+				+ " hit="
+				+ Std.string(bytesFastGet != null));
 		if (bytesFastGet != null)
 			return bytesFastGet;
-		if (sanitizeIdentifier(name) == "eq" && args.length >= 2)
-			return sanitizeIdentifier(name) + "(" + renderEqCallArgs(args, scope).join(", ") + ")";
+		if (cleanName == "eq" && args.length >= 2)
+			return cleanName + "(" + renderEqCallArgs(args, scope).join(", ") + ")";
+		final ownerLookupStart = timingEnabled ? Sys.time() : 0.0;
 		final owner = currentOrInheritedOwnerMethodOwner(name, scope);
 		final fn = owner == null ? null : ownerMethodDeclIn(owner, name);
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"direct_call_phase=owner_lookup call="
+				+ cleanName
+				+ " seconds="
+				+ Std.string(Sys.time() - ownerLookupStart)
+				+ " owner="
+				+ (owner == null ? "" : sanitizeTypePath(HxClassDecl.getName(owner)))
+				+ " has_fn="
+				+ Std.string(fn != null));
+		final int64Start = timingEnabled ? Sys.time() : 0.0;
 		final int64Imported = owner == null ? int64ImportedStaticCallExpr(name, args, scope) : null;
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"direct_call_phase=int64_imported call="
+				+ cleanName
+				+ " seconds="
+				+ Std.string(Sys.time() - int64Start)
+				+ " hit="
+				+ Std.string(int64Imported != null));
 		if (int64Imported != null)
 			return int64Imported;
+		final renderArgsStart = timingEnabled ? Sys.time() : 0.0;
 		final renderedArgs = if (fn != null && owner != null) {
 			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses));
 		} else {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"direct_call_phase=render_args call="
+				+ cleanName
+				+ " seconds="
+				+ Std.string(Sys.time() - renderArgsStart)
+				+ " args="
+				+ Std.string(args.length)
+				+ " rendered="
+				+ Std.string(renderedArgs.length));
+		final explicitTypesStart = timingEnabled ? Sys.time() : 0.0;
 		final explicitTypes = sameOwnerGenericCallTypeArgs(fn, owner, args, "", scope);
-		return sanitizeIdentifier(name) + explicitTypes + "(" + renderedArgs.join(", ") + ")";
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"direct_call_phase=explicit_types call="
+				+ cleanName
+				+ " seconds="
+				+ Std.string(Sys.time() - explicitTypesStart)
+				+ " emitted="
+				+ Std.string(explicitTypes.length > 0));
+		return cleanName + explicitTypes + "(" + renderedArgs.join(", ") + ")";
 	}
 
 	static function directCallExprForExpectedType(name:String, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):Null<String> {
