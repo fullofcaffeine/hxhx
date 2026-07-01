@@ -8246,17 +8246,9 @@ class SourceTargetCommon {
 	}
 
 	static function phpInstanceMethodMapForType(typeHint:String):Null<haxe.ds.StringMap<Bool>> {
-		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
-		if (raw.length == 0 || phpRenderInstanceMethodsByType == null)
+		if (phpRenderInstanceMethodsByType == null)
 			return null;
-		final candidates = [raw, sanitizePhpTypePath(raw)];
-		final dot = raw.lastIndexOf(".");
-		if (dot >= 0)
-			candidates.push(raw.substr(dot + 1));
-		final slash = raw.lastIndexOf("\\");
-		if (slash >= 0)
-			candidates.push(raw.substr(slash + 1));
-		for (candidate in candidates) {
+		for (candidate in phpInstanceMemberLookupCandidates(typeHint)) {
 			if (phpRenderInstanceMethodsByType.exists(candidate))
 				return phpRenderInstanceMethodsByType.get(candidate);
 		}
@@ -8264,17 +8256,9 @@ class SourceTargetCommon {
 	}
 
 	static function phpInstanceMethodArgsMapForType(typeHint:String):Null<haxe.ds.StringMap<Array<HxFunctionArg>>> {
-		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
-		if (raw.length == 0 || phpRenderInstanceMethodArgsByType == null)
+		if (phpRenderInstanceMethodArgsByType == null)
 			return null;
-		final candidates = [raw, sanitizePhpTypePath(raw)];
-		final dot = raw.lastIndexOf(".");
-		if (dot >= 0)
-			candidates.push(raw.substr(dot + 1));
-		final slash = raw.lastIndexOf("\\");
-		if (slash >= 0)
-			candidates.push(raw.substr(slash + 1));
-		for (candidate in candidates) {
+		for (candidate in phpInstanceMemberLookupCandidates(typeHint)) {
 			if (phpRenderInstanceMethodArgsByType.exists(candidate))
 				return phpRenderInstanceMethodArgsByType.get(candidate);
 		}
@@ -8411,7 +8395,7 @@ class SourceTargetCommon {
 	static function phpInstanceFieldMapForType(typeHint:String):Null<haxe.ds.StringMap<Bool>> {
 		if (phpRenderInstanceFieldsByType == null)
 			return null;
-		for (candidate in phpInstanceFieldLookupCandidates(typeHint)) {
+		for (candidate in phpInstanceMemberLookupCandidates(typeHint)) {
 			if (phpRenderInstanceFieldsByType.exists(candidate))
 				return phpRenderInstanceFieldsByType.get(candidate);
 		}
@@ -8431,14 +8415,14 @@ class SourceTargetCommon {
 	static function phpInstanceFieldTypeHintMapForType(typeHint:String):Null<haxe.ds.StringMap<String>> {
 		if (phpRenderInstanceFieldTypeHintsByType == null)
 			return null;
-		for (candidate in phpInstanceFieldLookupCandidates(typeHint)) {
+		for (candidate in phpInstanceMemberLookupCandidates(typeHint)) {
 			if (phpRenderInstanceFieldTypeHintsByType.exists(candidate))
 				return phpRenderInstanceFieldTypeHintsByType.get(candidate);
 		}
 		return null;
 	}
 
-	static function phpInstanceFieldLookupCandidates(typeHint:String):Array<String> {
+	static function phpInstanceMemberLookupCandidates(typeHint:String):Array<String> {
 		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
 		final candidates = new Array<String>();
 		function add(candidate:String):Void {
