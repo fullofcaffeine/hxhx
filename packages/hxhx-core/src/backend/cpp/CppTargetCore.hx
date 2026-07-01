@@ -9879,11 +9879,34 @@ class CppTargetCore {
 		if (int64Imported != null)
 			return int64Imported;
 		final renderArgsStart = timingEnabled ? Sys.time() : 0.0;
+		final inferArgTypesStart = timingEnabled ? Sys.time() : 0.0;
+		final inferredArgTypes = if (fn != null && owner != null) inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses); else null;
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"direct_call_phase=inferred_arg_types call="
+				+ cleanName
+				+ " seconds="
+				+ Std.string(Sys.time() - inferArgTypesStart)
+				+ " has_fn="
+				+ Std.string(fn != null && owner != null)
+				+ " count="
+				+ Std.string(inferredArgTypes == null ? 0 : inferredArgTypes.length));
+		final renderFunctionArgsStart = timingEnabled ? Sys.time() : 0.0;
 		final renderedArgs = if (fn != null && owner != null) {
-			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses));
+			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredArgTypes);
 		} else {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"direct_call_phase=render_function_call_args call="
+				+ cleanName
+				+ " seconds="
+				+ Std.string(Sys.time() - renderFunctionArgsStart)
+				+ " args="
+				+ Std.string(args.length)
+				+ " rendered="
+				+ Std.string(renderedArgs.length));
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope,
 				"direct_call_phase=render_args call="
