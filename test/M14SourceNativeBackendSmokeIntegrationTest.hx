@@ -14069,6 +14069,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_construct_like($seed, \"tail\")",
 			"PHP constructible generic constructor should lower through runtime sample construction");
 		assertContains(content, "new MyGeneric(function($i)", "PHP constructor parser should preserve arguments after function-type constructor parameters");
+		assertContains(content, "__hxhx_call_field($fnBox, \"t\", 2)",
+			"PHP function-typed generic instance fields should be invoked through the callable field helper");
+		assertNotContains(content, "$fnBox->t(2)", "PHP function-typed generic instance fields should not render as method calls");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP constructible generic support should execute, stderr:\n" + run.stderr);

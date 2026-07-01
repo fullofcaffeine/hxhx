@@ -8409,17 +8409,9 @@ class SourceTargetCommon {
 	}
 
 	static function phpInstanceFieldMapForType(typeHint:String):Null<haxe.ds.StringMap<Bool>> {
-		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
-		if (raw.length == 0 || phpRenderInstanceFieldsByType == null)
+		if (phpRenderInstanceFieldsByType == null)
 			return null;
-		final candidates = [raw, sanitizePhpTypePath(raw)];
-		final dot = raw.lastIndexOf(".");
-		if (dot >= 0)
-			candidates.push(raw.substr(dot + 1));
-		final slash = raw.lastIndexOf("\\");
-		if (slash >= 0)
-			candidates.push(raw.substr(slash + 1));
-		for (candidate in candidates) {
+		for (candidate in phpInstanceFieldLookupCandidates(typeHint)) {
 			if (phpRenderInstanceFieldsByType.exists(candidate))
 				return phpRenderInstanceFieldsByType.get(candidate);
 		}
@@ -8437,21 +8429,39 @@ class SourceTargetCommon {
 	}
 
 	static function phpInstanceFieldTypeHintMapForType(typeHint:String):Null<haxe.ds.StringMap<String>> {
-		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
-		if (raw.length == 0 || phpRenderInstanceFieldTypeHintsByType == null)
+		if (phpRenderInstanceFieldTypeHintsByType == null)
 			return null;
-		final candidates = [raw, sanitizePhpTypePath(raw)];
-		final dot = raw.lastIndexOf(".");
-		if (dot >= 0)
-			candidates.push(raw.substr(dot + 1));
-		final slash = raw.lastIndexOf("\\");
-		if (slash >= 0)
-			candidates.push(raw.substr(slash + 1));
-		for (candidate in candidates) {
+		for (candidate in phpInstanceFieldLookupCandidates(typeHint)) {
 			if (phpRenderInstanceFieldTypeHintsByType.exists(candidate))
 				return phpRenderInstanceFieldTypeHintsByType.get(candidate);
 		}
 		return null;
+	}
+
+	static function phpInstanceFieldLookupCandidates(typeHint:String):Array<String> {
+		final raw = StringTools.trim(typeHint == null ? "" : typeHint);
+		final candidates = new Array<String>();
+		function add(candidate:String):Void {
+			if (candidate != null && candidate.length > 0 && candidates.indexOf(candidate) < 0)
+				candidates.push(candidate);
+		}
+		function addPathCandidates(path:String):Void {
+			add(path);
+			add(sanitizePhpTypePath(path));
+			final dot = path.lastIndexOf(".");
+			if (dot >= 0)
+				add(path.substr(dot + 1));
+			final slash = path.lastIndexOf("\\");
+			if (slash >= 0)
+				add(path.substr(slash + 1));
+		}
+		if (raw.length == 0)
+			return candidates;
+		addPathCandidates(raw);
+		final base = stripGenericTypeParams(removeTypeHintWhitespace(raw));
+		if (base != raw)
+			addPathCandidates(base);
+		return candidates;
 	}
 
 	static function phpDynamicMethodMapForType(typeHint:String):Null<haxe.ds.StringMap<Bool>> {
