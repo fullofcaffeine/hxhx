@@ -9155,6 +9155,8 @@ class CppTargetCore {
 				+ renderExpr(right, scope)
 				+
 				"; __hxhx_ushr_assign_target = static_cast<unsigned int>(__hxhx_ushr_assign_target) >> __hxhx_ushr_assign_count; return __hxhx_ushr_assign_target; })()";
+			case EBinop("%=", left, right) if (isCppDoubleExpr(left, scope)):
+				floatRemainderAssignExpr(left, right, scope);
 			case EBinop(op, left, right) if (isSimpleCompoundAssignmentOp(op)):
 				renderExpr(left, scope)
 				+ " "
@@ -11617,6 +11619,9 @@ class CppTargetCore {
 	static function primitiveBackedAbstractMethodCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
 		if (args.length != 0)
 			return null;
+		final intLikeFloat = method == "toFloat" ? primitiveIntLikeAbstractMethodCallExpr(receiver, method, scope) : null;
+		if (intLikeFloat != null)
+			return intLikeFloat;
 		var cls = primitiveBackedAbstractClassForExpr(receiver, scope);
 		if (cls == null)
 			cls = primitiveBackedAbstractClassForReceiverMethod(receiver, method, scope);
@@ -11644,6 +11649,8 @@ class CppTargetCore {
 			final cppType = receiverType();
 			if (isCppReferenceType(cppType))
 				return "";
+			if (method == "toFloat" && isCppIntLikeType(cppType))
+				return "double";
 			cls = primitiveBackedAbstractClassForReceiverCppType(cppType, method, scope);
 		}
 		if (cls == null)
@@ -11680,17 +11687,23 @@ class CppTargetCore {
 	}
 
 	static function primitiveIntLikeAbstractMethodCallExpr(receiver:HxExpr, method:String, ?scope:CppRenderScope):Null<String> {
-		if (exprCppType(receiver, scope) != "int")
+		if (!isCppIntLikeType(exprCppType(receiver, scope)))
 			return null;
 		final self = renderExpr(receiver, scope);
 		return switch (method) {
 			case "toInt":
 				self;
+			case "toFloat":
+				"static_cast<double>(" + self + ")";
 			case "incr":
 				"(" + self + "++)";
 			case _:
 				null;
 		};
+	}
+
+	static function isCppIntLikeType(typeName:String):Bool {
+		return typeName == "int" || typeName == "unsigned int";
 	}
 
 	static function primitiveBackedAbstractMethodBodyExpr(receiver:HxExpr, fn:HxFunctionDecl, ?scope:CppRenderScope):Null<String> {
@@ -12223,11 +12236,14 @@ class CppTargetCore {
 		final local = sanitizeIdentifier(name);
 		final overrideType = if (scope == null) null; else if (declaredLocalName != null
 			&& scope.localTypeOverrides.exists(declaredLocalName)) scope.localTypeOverrides.get(declaredLocalName); else scope.localTypeOverrides.get(local);
+		final hinted = cppLocalTypeHint(typeHint, init, scope);
+		if (overrideType != null && overrideType.length > 0 && explicit.length == 0 && init != null && hinted.length > 0 && hinted != "auto"
+			&& isScalarExpectedLocalType(hinted) && hinted != overrideType)
+			return hinted;
 		if (explicit.length > 0 && !isDynamicLikeTypeHint(explicit)) {
-			final hinted = cppLocalTypeHint(typeHint, init, scope);
 			return overrideType != null && isCppFunctionType(hinted) && isCppFunctionType(overrideType) ? overrideType : hinted;
 		}
-		return overrideType != null && overrideType.length > 0 ? overrideType : cppLocalTypeHint(typeHint, init, scope);
+		return overrideType != null && overrideType.length > 0 ? overrideType : hinted;
 	}
 
 	static function isUnhintedNoInitLocal(typeHint:String, init:Null<HxExpr>):Bool {
@@ -14210,6 +14226,14 @@ class CppTargetCore {
 	**/
 	static function unsignedRightShiftExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
 		return "(static_cast<unsigned int>(" + renderExpr(left, scope) + ") >> " + renderExpr(right, scope) + ")";
+	}
+
+	static function floatRemainderAssignExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
+		return "([&]() { auto& __hxhx_mod_assign_target = "
+			+ assignmentLhsExpr(left, scope)
+			+ "; __hxhx_mod_assign_target = std::fmod(__hxhx_mod_assign_target, "
+			+ renderExpr(right, scope)
+			+ "); return __hxhx_mod_assign_target; })()";
 	}
 
 	static function isCppDoubleExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {

@@ -724,6 +724,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    var curr = rest % 2;",
 			"    return Int64.ofInt(0);",
 			"  }",
+			"  public static function floatModAssign(f:Float):Float {",
+			"    var x = f;",
+			"    x %= 2;",
+			"    return x;",
+			"  }",
+			"  public static function floatModAssignInCall(f:Float):Bool {",
+			"    var x = f;",
+			"    return Math.isNaN(x %= 0.0);",
+			"  }",
+			"  public static function floatLiteralModAssign():Bool {",
+			"    var x = 101.5;",
+			"    x %= 100;",
+			"    return Math.isNaN(x %= 0.0);",
+			"  }",
+			"  public static function floatShadowedModAssign():Float {",
+			"    var x = 101.5;",
+			"    x %= 100;",
+			"    var first = x;",
+			"    var x:Dynamic = [-101.5];",
+			"    x[0] %= 100;",
+			"    return first + x[0];",
+			"  }",
+			"  public static function floatArrayModAssign(values:Array<Float>):Float {",
+			"    values[0] %= 100;",
+			"    return values[0];",
+			"  }",
 			"}",
 			"class Int64Helper {",
 			"  public static function parseString(s:String):Int64 {",
@@ -6307,6 +6333,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("mutate", Public, true, [], "Void", [
 				SVar("a", "", EInt(33), HxPos.unknown()),
 				SExpr(ECall(EField(EIdent("a"), "incr"), []), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("readFloat", Public, true, [], "Float", [
+				SVar("a", "", EInt(33), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("a"), "toFloat"), []), HxPos.unknown())
 			], "")
 		]);
 		primitiveNames.set("PrimitiveCaller", true);
@@ -6322,6 +6352,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(primitiveMutateLines, "(a++);", "C++ primitive-backed abstract local mutation helpers should lower against the erased primitive local");
 		assertTrue(primitiveMutateLines.indexOf("a.incr()") < 0,
 			"C++ primitive-backed abstract local mutation helpers should not emit member calls on primitive values");
+		final primitiveFloatLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(primitiveCaller)[2], primitiveCaller, primitiveLookup).join("\n");
+		assertContains(primitiveFloatLines, "return static_cast<double>(a);",
+			"C++ primitive-backed abstract local Float helpers should cast erased primitive locals");
+		assertTrue(primitiveFloatLines.indexOf("a.toFloat()") < 0,
+			"C++ primitive-backed abstract local Float helpers should not emit member calls on primitive values");
 		final counterAbstract = new HxClassDecl("MyAbstractCounter", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Void", [
 				SExpr(EBinop("=", EThis, EIdent("v")), HxPos.unknown()),
@@ -8964,6 +9000,26 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower Int64 add/mul helper calls as primitive value operations");
 		assertContains(source, "auto noFractions = (f - std::fmod(f, 1));", "C++ smoke should lower Float modulo through std::fmod");
 		assertContains(source, "auto curr = std::fmod(rest, 2);", "C++ smoke should remember double arithmetic locals for later Float modulo");
+		assertContains(source, "__hxhx_mod_assign_target = std::fmod(__hxhx_mod_assign_target, 2); return __hxhx_mod_assign_target; })();",
+			"C++ smoke should lower Float compound remainder assignment through std::fmod");
+		assertContains(source,
+			"return std::isnan(([&]() { auto& __hxhx_mod_assign_target = x; __hxhx_mod_assign_target = std::fmod(__hxhx_mod_assign_target, 0); return __hxhx_mod_assign_target; })());",
+			"C++ smoke should keep Float compound remainder expression values usable inside Math.isNaN");
+		assertContains(source, "auto x = 101.5;", "C++ smoke should keep unhinted Float literal locals on auto declarations while tracking their C++ type");
+		assertContains(source,
+			"auto& __hxhx_mod_assign_target = x; __hxhx_mod_assign_target = std::fmod(__hxhx_mod_assign_target, 100); return __hxhx_mod_assign_target;",
+			"C++ smoke should lower Float literal local compound remainder assignment through std::fmod");
+		assertContains(source,
+			"return std::isnan(([&]() { auto& __hxhx_mod_assign_target = x; __hxhx_mod_assign_target = std::fmod(__hxhx_mod_assign_target, 0); return __hxhx_mod_assign_target; })());",
+			"C++ smoke should preserve Float literal local compound remainder expression values");
+		assertContains(source, "static double floatShadowedModAssign() {", "C++ smoke should include the shadowed Float local compound remainder fixture");
+		assertContains(source,
+			"auto& __hxhx_mod_assign_target = x; __hxhx_mod_assign_target = std::fmod(__hxhx_mod_assign_target, 100); return __hxhx_mod_assign_target;",
+			"C++ smoke should keep Float compound remainder assignment after later same-name shadowing");
+		assertTrue(source.indexOf("x %= 100;") < 0, "C++ smoke should not emit raw %= for Float locals shadowed later in the function");
+		assertContains(source,
+			"auto& __hxhx_mod_assign_target = (values[0]); __hxhx_mod_assign_target = std::fmod(__hxhx_mod_assign_target, 100); return __hxhx_mod_assign_target;",
+			"C++ smoke should lower Array<Float> element compound remainder assignment through std::fmod");
 		assertContains(source, "if ((current < 0)) {", "C++ smoke should lower Int64.isNeg as a primitive comparison");
 		assertContains(source, "auto s = __hxhx_trim(std::string(sParam));", "C++ smoke should infer StringTools.trim string-return locals");
 		assertContains(source, "__hxhx_char_at(s, 0)", "C++ smoke should lower string locals initialized from same-owner calls");
