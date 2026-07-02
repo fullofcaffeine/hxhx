@@ -17045,6 +17045,9 @@ class CppTargetCore {
 	static function abstractUnderlyingReturnCppType(rawReturnHint:String, owner:HxClassDecl, scope:CppRenderScope, classLookup:CppClassLookup):String {
 		if (owner == null || rawReturnHint == null || rawReturnHint.length == 0)
 			return "";
+		final arrayBackedGenericReturn = arrayBackedAbstractGenericReturnCppType(rawReturnHint, owner, classLookup);
+		if (arrayBackedGenericReturn.length > 0)
+			return arrayBackedGenericReturn;
 		final ownerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
 		final returnName = sanitizeTypePath(typeBaseName(rawReturnHint));
 		if (ownerName.length == 0 || ownerName != returnName || genericTypeHintArgs(rawReturnHint).length > 0)
@@ -17056,6 +17059,35 @@ class CppTargetCore {
 		if (!classAbstractUnderlyingMatches(owner, underlyingClass, scope))
 			return "";
 		return cppReturnTypeHint(underlying, scope, classLookup);
+	}
+
+	/**
+		Erase generic return surfaces inside non-template array-backed abstract wrappers.
+
+		`haxe.ds.ReadOnlyArray<T>` is emitted as a concrete support wrapper today, so
+		method signatures cannot mention the class-level `T` even when the Haxe
+		abstract method returns `Array<T>`.
+	**/
+	static function arrayBackedAbstractGenericReturnCppType(rawReturnHint:String, owner:HxClassDecl, classLookup:CppClassLookup):String {
+		if (!isArrayBackedAbstractClass(owner))
+			return "";
+		final ownerParams = genericClassTemplateParams(owner);
+		if (ownerParams.length == 0)
+			return "";
+		final raw = removeTypeHintWhitespace(StringTools.trim(rawReturnHint == null ? "" : rawReturnHint));
+		var mentionsOwnerParam = false;
+		for (param in ownerParams) {
+			if (typeHintMentionsGenericParam(raw, param)) {
+				mentionsOwnerParam = true;
+				break;
+			}
+		}
+		if (!mentionsOwnerParam)
+			return "";
+		if (isArrayLikeTypeHint(raw))
+			return arrayBackedAbstractValueCppType(owner, classLookup);
+		final ownerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+		return sanitizeTypePath(typeBaseName(raw)) == ownerName ? ownerName : "";
 	}
 
 	static function classAbstractUnderlyingMatches(cls:HxClassDecl, expectedClass:String, scope:CppRenderScope):Bool {

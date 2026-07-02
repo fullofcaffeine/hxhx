@@ -6113,6 +6113,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ array-backed abstract self length should read the underlying vector size");
 		assertTrue(abstractLines.indexOf("std::shared_ptr<LocalCallStack> eStack") < 0,
 			"C++ array-backed abstract locals should not be emitted as shared_ptr values");
+		final readOnlyArray = new HxClassDecl("ReadOnlyArray", false, [
+			new HxFunctionDecl("concat", Public, false, [new HxFunctionArg("a", "ReadOnlyArray<T>", NoDefault, false, false)], "Array<T>",
+				[SReturn(EField(EThis, "__values"), HxPos.unknown())], "")
+		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=Array<T>"]);
+		final readOnlyArrayNames = new StringMap<Bool>();
+		readOnlyArrayNames.set("ReadOnlyArray", true);
+		final readOnlyArrayClasses = new StringMap<HxClassDecl>();
+		readOnlyArrayClasses.set("ReadOnlyArray", readOnlyArray);
+		final readOnlyArrayLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(readOnlyArray, {
+			names: readOnlyArrayNames,
+			byName: readOnlyArrayClasses
+		}).join("\n");
+		assertContains(readOnlyArrayLines, "std::vector<std::string> concat(ReadOnlyArray a) {",
+			"C++ generic array-backed abstract support methods should erase Array<T> returns to the concrete wrapper storage type");
+		assertTrue(readOnlyArrayLines.indexOf("std::vector<T> concat") < 0,
+			"C++ generic array-backed abstract support methods should not leak undeclared C++ type parameters");
 		final abstractFieldOwner = new HxClassDecl("AbstractFieldOwner", false, [], [new HxFieldDecl("stack", Public, false, "LocalCallStack", null)]);
 		abstractNames.set("AbstractFieldOwner", true);
 		abstractClasses.set("AbstractFieldOwner", abstractFieldOwner);
