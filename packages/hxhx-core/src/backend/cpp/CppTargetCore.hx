@@ -2426,6 +2426,11 @@ class CppTargetCore {
 			if (includeRenderedBodies)
 				addStmtClassDependencies(HxFunctionDecl.getBody(fn), addFn, fnScope);
 		}
+		if (isUnitTestBaseSupportClass(cls)) {
+			// renderUnitTestBaseSupportClass emits target-owned calls through these helpers.
+			add("Assert");
+			add("Type");
+		}
 		return deps;
 	}
 

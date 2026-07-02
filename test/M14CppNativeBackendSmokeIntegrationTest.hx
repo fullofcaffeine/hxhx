@@ -1438,6 +1438,47 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final runtimeCounts = @:privateAccess backend.cpp.CppTargetCore.helperRenderKindCounts(runtimeReachable, runtimeLookup);
 		assertTrue(runtimeCounts.runtimeModule == 1, "C++ runtime-module fixture should count only Any as target-owned support");
 		assertTrue(runtimeCounts.fullBody == 0, "C++ runtime-module fixture should not promote body-only dependencies to full-body helpers");
+
+		final unitTestFunctions = [
+			for (name in [
+				"eq",
+				"feq",
+				"aeq",
+				"t",
+				"f",
+				"assert",
+				"exc",
+				"unspec",
+				"allow",
+				"noAssert",
+				"hf",
+				"nhf",
+				"hsf",
+				"nhsf"
+			])
+				new HxFunctionDecl(name, Public, false, [], "Void", [], "")
+		];
+		final unitTestSupport = new HxClassDecl("Test", false, unitTestFunctions, []);
+		final assertSupport = new HxClassDecl("Assert", false, [], []);
+		final typeSupport = new HxClassDecl("Type", false, [], []);
+		final unitTestNames = new StringMap<Bool>();
+		for (name in ["Test", "Assert", "Type"])
+			unitTestNames.set(name, true);
+		final unitTestClasses = new StringMap<HxClassDecl>();
+		unitTestClasses.set("Test", unitTestSupport);
+		unitTestClasses.set("Assert", assertSupport);
+		unitTestClasses.set("Type", typeSupport);
+		final unitTestLookup = {names: unitTestNames, byName: unitTestClasses};
+		final unitTestDeps = @:privateAccess backend.cpp.CppTargetCore.helperClassDependencies(unitTestSupport, unitTestLookup).join("\n");
+		assertContains(unitTestDeps, "Assert", "C++ unit-test base support should order Assert before Test.eq calls Assert::same");
+		assertContains(unitTestDeps, "Type", "C++ unit-test base support should order Type before hf/nhf Type::resolveClass overloads");
+		final unitTestOrder = @:privateAccess
+			backend.cpp.CppTargetCore.orderHelperClasses([unitTestSupport, assertSupport, typeSupport], unitTestLookup);
+		final unitTestOrderNames = [for (cls in unitTestOrder) HxClassDecl.getName(cls)];
+		assertTrue(unitTestOrderNames.indexOf("Assert") >= 0 && unitTestOrderNames.indexOf("Assert") < unitTestOrderNames.indexOf("Test"),
+			"C++ helper ordering should render Assert before target-owned Test support");
+		assertTrue(unitTestOrderNames.indexOf("Type") >= 0 && unitTestOrderNames.indexOf("Type") < unitTestOrderNames.indexOf("Test"),
+			"C++ helper ordering should render Type before target-owned Test support");
 	}
 
 	static function assertCppOptionalArrowFunctionsUseCallableShapes():Void {

@@ -10176,6 +10176,10 @@ let helperClassDependencies = fun cls classLookup -> let deps = Obj.magic (HxArr
       )
     )
   )) done);
+  ignore (if isUnitTestBaseSupportClass (Obj.magic cls) then ignore ((
+    ignore (add ("Assert" : string));
+    add ("Type" : string)
+  )) else ());
   deps
 )
 
