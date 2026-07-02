@@ -1399,6 +1399,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(names.indexOf("bodyOnly") < 0, "C++ anonymous collection should not scan compile-time macro API bodies into runtime structs");
 	}
 
+	static function assertCppAnonCollectDeclaresSkippedShimReturnStructs():Void {
+		final helperMacros = new HxClassDecl("HelperMacros", false, [
+			new HxFunctionDecl("typeError", Public, true, [new HxFunctionArg("e", "Expr", NoDefault, false, false)], "",
+				[SReturn(EAnon(["pos", "expr"], [EInt(1), EString("true")]), HxPos.unknown())], "", ["macro"])
+		], []);
+		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
+		final helperDecl = new HxModuleDecl("unit", [], helperMacros, [helperMacros], false, false);
+		final mainDecl = new HxModuleDecl("", [], main, [main], false, false);
+		final program = new GenIrProgram([
+			typedSyntheticModule("unit/HelperMacros.hx", helperDecl),
+			typedSyntheticModule("Main.hx", mainDecl)
+		], false);
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
+		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup);
+		final lines = @:privateAccess backend.cpp.CppTargetCore.renderAnonStructs(structs).join("\n");
+		assertContains(lines, "struct __hxhx_anon_pos_int__expr_std__string {",
+			"C++ skipped HelperMacros shims should still declare concrete anonymous return carriers");
+	}
+
 	static function assertCppHelperRenderClassification():Void {
 		final program = cppHelperReachabilityProgram();
 		var mainClass:HxClassDecl = null;
@@ -2746,6 +2765,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Error enum-like fields should lower to tag strings instead of invalid dotted values");
 		assertCppAnonCollectUsesLightweightFunctionScope();
 		assertCppAnonCollectSkipsCompileTimeMacroBodies();
+		assertCppAnonCollectDeclaresSkippedShimReturnStructs();
 		assertCppHelperRenderClassification();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertCppFunctionScopePrepCachesArgRegistration();

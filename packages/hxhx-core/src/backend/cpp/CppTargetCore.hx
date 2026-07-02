@@ -1612,6 +1612,50 @@ class CppTargetCore {
 				case SReturnVoid(_) | SBreak(_) | SContinue(_):
 			}
 		}
+		function addSkippedShimReturnStruct(fn:HxFunctionDecl, cls:HxClassDecl, scope:CppRenderScope):Void {
+			if (!isHelperMacrosShimHelper(fn, cls))
+				return;
+			final returnType = helperMacrosShimReturnType(fn, cls, classLookup);
+			if (!isCppAnonStructType(returnType))
+				return;
+			function addReturnExpr(expr:HxExpr):Void {
+				switch (expr) {
+					case EAnon(fieldNames, fieldValues):
+						final struct = anonStruct(fieldNames, fieldValues, scope);
+						if (struct.name == returnType)
+							addStruct(struct);
+					case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+						addReturnExpr(inner);
+					case ETernary(_, thenExpr, elseExpr):
+						addReturnExpr(thenExpr);
+						addReturnExpr(elseExpr);
+					case _:
+				}
+			}
+			function addReturnStmt(stmt:HxStmt):Void {
+				switch (stmt) {
+					case SBlock(stmts, _):
+						for (s in stmts)
+							addReturnStmt(s);
+					case SReturn(expr, _):
+						addReturnExpr(expr);
+					case SIf(_, thenBranch, elseBranch, _):
+						addReturnStmt(thenBranch);
+						if (elseBranch != null)
+							addReturnStmt(elseBranch);
+					case SSwitch(_, _, bodies, _):
+						for (body in bodies)
+							addReturnStmt(body);
+					case STry(tryBody, catches, _):
+						addReturnStmt(tryBody);
+						for (c in catches)
+							addReturnStmt(c.body);
+					case _:
+				}
+			}
+			for (stmt in HxFunctionDecl.getBody(fn))
+				addReturnStmt(stmt);
+		}
 		final collectedClasses = new haxe.ds.StringMap<Bool>();
 		var collectedClassCount = 0;
 		var collectedFunctionCount = 0;
@@ -1653,7 +1697,10 @@ class CppTargetCore {
 					addStruct(scope.anonStructs.get(knownReturn));
 				for (arg in HxFunctionDecl.getArgs(fn))
 					addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
-				if (shouldWalkFunctionBody(packagePath, cls, fn)) {
+				final shouldWalkBody = shouldWalkFunctionBody(packagePath, cls, fn);
+				if (!shouldWalkBody)
+					addSkippedShimReturnStruct(fn, cls, scope);
+				if (shouldWalkBody) {
 					if (stmtsMayContributeAnonStruct(HxFunctionDecl.getBody(fn), scope)) {
 						walkedFunctionBodyCount++;
 						for (stmt in HxFunctionDecl.getBody(fn))
