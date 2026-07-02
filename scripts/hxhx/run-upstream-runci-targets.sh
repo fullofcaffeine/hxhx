@@ -359,6 +359,7 @@ fi
 
 STAGE0_NEKOTOOLS="${NEKOTOOLS_BIN:-}"
 STAGE0_NEKO="${NEKO_BIN:-}"
+STAGE0_NEKOC="${NEKOC_BIN:-}"
 LUA_BIN="${LUA_BIN:-}"
 
 if [ -z "$STAGE0_NEKOTOOLS" ]; then
@@ -379,6 +380,15 @@ if [ -z "$STAGE0_NEKO" ]; then
     STAGE0_NEKO="$(command -v neko)"
   fi
 fi
+if [ -z "$STAGE0_NEKOC" ]; then
+  if [ -x "$HOME/haxe/neko/nekoc" ]; then
+    STAGE0_NEKOC="$HOME/haxe/neko/nekoc"
+  elif [ -x "$HOME/haxe/neko/versions/$UPSTREAM_REF/nekoc" ]; then
+    STAGE0_NEKOC="$HOME/haxe/neko/versions/$UPSTREAM_REF/nekoc"
+  elif command -v nekoc >/dev/null 2>&1; then
+    STAGE0_NEKOC="$(command -v nekoc)"
+  fi
+fi
 
 if [ -z "$LUA_BIN" ]; then
   LUA_BIN="$(resolve_lua_bin || true)"
@@ -393,6 +403,12 @@ fi
 if [ -z "$STAGE0_NEKO" ] || [ ! -x "$STAGE0_NEKO" ]; then
   echo "Skipping upstream Gate 3: neko not found (some suites invoke it directly)." >&2
   echo "Install Neko (or set NEKO_BIN=/path/to/neko)." >&2
+  exit 0
+fi
+
+if [ -z "$STAGE0_NEKOC" ] || [ ! -x "$STAGE0_NEKOC" ]; then
+  echo "Skipping upstream Gate 3: nekoc not found (hxhx Neko backend uses it to compile .n bytecode)." >&2
+  echo "Install the Neko compiler (or set NEKOC_BIN=/path/to/nekoc)." >&2
   exit 0
 fi
 
@@ -446,6 +462,24 @@ resolve_system_nekotools_bin() {
   candidates+=("/usr/bin/nekotools")
   candidates+=("/usr/local/bin/nekotools")
   candidates+=("/opt/homebrew/bin/nekotools")
+
+  for candidate in "${candidates[@]}"; do
+    if [ -x "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+resolve_system_nekoc_bin() {
+  local candidate=""
+  local -a candidates=()
+
+  candidates+=("/usr/bin/nekoc")
+  candidates+=("/usr/local/bin/nekoc")
+  candidates+=("/opt/homebrew/bin/nekoc")
 
   for candidate in "${candidates[@]}"; do
     if [ -x "$candidate" ]; then
@@ -513,10 +547,12 @@ else
   else
     system_neko="$(resolve_system_neko_bin || true)"
     system_nekotools="$(resolve_system_nekotools_bin || true)"
+    system_nekoc="$(resolve_system_nekoc_bin || true)"
     system_nekopath_dir="$(resolve_system_nekopath_dir || true)"
-    if [ -n "$system_neko" ] && [ -x "$system_neko" ] && [ -n "$system_nekotools" ] && [ -x "$system_nekotools" ] && [ -n "$system_nekopath_dir" ]; then
+    if [ -n "$system_neko" ] && [ -x "$system_neko" ] && [ -n "$system_nekotools" ] && [ -x "$system_nekotools" ] && [ -n "$system_nekoc" ] && [ -x "$system_nekoc" ] && [ -n "$system_nekopath_dir" ]; then
       STAGE0_NEKO="$system_neko"
       STAGE0_NEKOTOOLS="$system_nekotools"
+      STAGE0_NEKOC="$system_nekoc"
       NEKOPATH_DIR="$system_nekopath_dir"
     else
       NEKOPATH_DIR="$(resolve_nekopath_dir || true)"
@@ -525,7 +561,7 @@ else
 fi
 
 if [ -n "$NEKOPATH_DIR" ]; then
-  echo "Using Neko binaries: neko=${STAGE0_NEKO} nekotools=${STAGE0_NEKOTOOLS}" >&2
+  echo "Using Neko binaries: neko=${STAGE0_NEKO} nekotools=${STAGE0_NEKOTOOLS} nekoc=${STAGE0_NEKOC}" >&2
   echo "Using NEKOPATH directory: ${NEKOPATH_DIR}" >&2
 else
   echo "Warning: Could not resolve NEKOPATH directory containing std.ndll; preserving system defaults." >&2
@@ -874,6 +910,31 @@ fi
 exec "${STAGE0_NEKO}" "\$@"
 EOF
 chmod +x "$WRAP_DIR/neko"
+
+cat >"$WRAP_DIR/nekoc" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${NEKO_WRAPPER_EXPORT_NEKOPATH}" = "1" ] && [ -n "${NEKOPATH_DIR}" ]; then
+  if [ -n "\${NEKOPATH:-}" ]; then
+    export NEKOPATH="\${NEKOPATH}:${NEKOPATH_DIR}"
+  else
+    export NEKOPATH="${NEKOPATH_DIR}"
+  fi
+  export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
+  export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
+  export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
+else
+  unset NEKOPATH
+  unset LD_LIBRARY_PATH
+  unset DYLD_LIBRARY_PATH
+  unset DYLD_FALLBACK_LIBRARY_PATH
+fi
+if [ -n "${STAGE0_STD_PATH}" ]; then
+  export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+fi
+exec "${STAGE0_NEKOC}" "\$@"
+EOF
+chmod +x "$WRAP_DIR/nekoc"
 
 cat >"$WRAP_DIR/lua" <<EOF
 #!/usr/bin/env bash
