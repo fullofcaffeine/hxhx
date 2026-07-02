@@ -3986,6 +3986,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(iMapImplementingLines, "struct StringMap {", "C++ IMap implementors should still render as helpers");
 		assertTrue(iMapImplementingLines.indexOf(": public IMap") < 0,
 			"C++ IMap is a target-owned generic surface and should not be forced into one nominal C++ base");
+		final packagedIMapInterface = new HxClassDecl("IMap", false, [], [], "", [], true);
+		final packagedIMapImplementingClass = new HxClassDecl("StringMap", false, [
+			new HxFunctionDecl("copy", Public, false, [], "StringMap", [SReturn(EThis, HxPos.unknown())], "")
+		], [], "", null, false, ["haxe.Constraints.IMap"]);
+		final packagedIMapImplementingNames = new StringMap<Bool>();
+		packagedIMapImplementingNames.set("StringMap", true);
+		packagedIMapImplementingNames.set("IMap", true);
+		packagedIMapImplementingNames.set("haxe_Constraints_IMap", true);
+		final packagedIMapImplementingClasses = new StringMap<HxClassDecl>();
+		packagedIMapImplementingClasses.set("StringMap", packagedIMapImplementingClass);
+		packagedIMapImplementingClasses.set("IMap", packagedIMapInterface);
+		packagedIMapImplementingClasses.set("haxe_Constraints_IMap", packagedIMapInterface);
+		final packagedIMapPackages = new StringMap<String>();
+		packagedIMapPackages.set("haxe_Constraints_IMap", "haxe");
+		final packagedIMapImplementingLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(packagedIMapImplementingClass, {
+			names: packagedIMapImplementingNames,
+			byName: packagedIMapImplementingClasses,
+			renderedNames: [{cls: packagedIMapInterface, name: "haxe_Constraints_IMap"}],
+			packageByRenderedName: packagedIMapPackages
+		}).join("\n");
+		assertContains(packagedIMapImplementingLines, "struct StringMap {",
+			"C++ packaged IMap implementors should still render without target-owned base inheritance");
+		assertTrue(packagedIMapImplementingLines.indexOf("Constraints_IMap") < 0,
+			"C++ packaged IMap is still target-owned and should not force an undefined generated base");
 		final assertRaisesUse = new HxFunctionDecl("use", Public, true, [
 			new HxFunctionArg("ex", "Dynamic", NoDefault, false, false),
 			new HxFunctionArg("msg", "String", NoDefault, false, false)

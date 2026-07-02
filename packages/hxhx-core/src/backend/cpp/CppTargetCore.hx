@@ -4434,19 +4434,42 @@ class CppTargetCore {
 		final baseType = inheritedCppBaseTypeName(cls, classLookup);
 		if (baseType != null && baseType.length > 0)
 			bases.push("public " + baseType);
-		for (iface in implementedInterfaceNames(cls, classLookup))
-			if (shouldInheritCppInterface(iface))
-				bases.push("public " + iface);
+		final scope = renderScope(cls, classLookup, "void");
+		final seen = new haxe.ds.StringMap<Bool>();
+		function addBase(iface:String, ifaceCls:Null<HxClassDecl>):Void {
+			if (iface.length == 0 || seen.exists(iface) || !shouldInheritCppInterface(iface, ifaceCls, classLookup))
+				return;
+			seen.set(iface, true);
+			bases.push("public " + iface);
+		}
+		for (path in HxClassDecl.getImplementsPaths(cls)) {
+			final ifaceCls = lookupClassForTypeHint(path, scope, classLookup);
+			final iface = ifaceCls == null ? genericClassLikeTypeName(path, scope, classLookup) : cppClassTemplateTypeName(path, scope, classLookup);
+			addBase(iface, ifaceCls);
+		}
+		for (iface in syntheticStructuralInterfaceNames(cls, classLookup))
+			addBase(iface, lookupClassForTypeHint(iface, scope, classLookup));
 		return bases;
 	}
 
-	static function shouldInheritCppInterface(name:String):Bool {
-		return switch (sanitizeTypePath(typeBaseName(typeHintPathPart(name == null ? "" : name)))) {
-			case "IMap" | "IReport":
-				false;
-			case _:
-				true;
-		};
+	static function shouldInheritCppInterface(name:String, ?ifaceCls:HxClassDecl, ?classLookup:CppClassLookup):Bool {
+		if (isTargetOwnedCppInterface(name, ifaceCls, classLookup))
+			return false;
+		return true;
+	}
+
+	static function isTargetOwnedCppInterface(name:String, ?ifaceCls:HxClassDecl, ?classLookup:CppClassLookup):Bool {
+		final path = sanitizeTypePath(typeHintPathPart(name == null ? "" : name));
+		final base = sanitizeTypePath(typeBaseName(typeHintPathPart(name == null ? "" : name)));
+		if (base == "IReport" || base == "IMap" || path == "Constraints_IMap" || path == "haxe_Constraints_IMap")
+			return true;
+		if (ifaceCls == null)
+			return false;
+		final rendered = renderedClassName(ifaceCls, classLookup);
+		final rawName = sanitizeTypePath(HxClassDecl.getName(ifaceCls));
+		final rawBase = sanitizeTypePath(typeBaseName(HxClassDecl.getName(ifaceCls)));
+		return rendered == "haxe_Constraints_IMap" || rendered == "Constraints_IMap" || rawName == "haxe_Constraints_IMap" || rawName == "Constraints_IMap"
+			|| rawBase == "IMap";
 	}
 
 	static function implementedInterfaceNames(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
