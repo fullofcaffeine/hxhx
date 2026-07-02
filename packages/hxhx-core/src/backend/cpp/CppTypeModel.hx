@@ -186,7 +186,29 @@ class CppTypeModel {
 			|| StringTools.startsWith(hint, "Null<")
 			|| isFunctionTypeHint(hint))
 			return null;
-		return classForTypeHint(hint, scope, classLookup);
+		final generic = hint.indexOf("<");
+		final full = sanitizeTypePath(generic >= 0 ? hint.substr(0, generic) : hint);
+		final base = sanitizeTypePath(typeBaseName(hint));
+		final owner = scope == null ? null : scope.owner;
+		if (owner != null) {
+			final ownerFull = sanitizeTypePath(HxClassDecl.getName(owner));
+			final ownerBase = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+			if (full == ownerFull || full == ownerBase || base == ownerFull || base == ownerBase)
+				return owner;
+		}
+		if (hint.indexOf(".") >= 0) {
+			final qualified = lookupClassByName(full, scope, classLookup);
+			if (qualified != null)
+				return qualified;
+		} else {
+			for (name in moduleLocalTypeHintLookupCandidates(hint, base, scope)) {
+				final local = lookupClassByName(name, scope, classLookup);
+				if (local != null)
+					return local;
+			}
+		}
+		final fallback = lookupClassByName(base, scope, classLookup);
+		return fallback == null ? null : fallback;
 	}
 
 	public static function isArrayLikeTypeHint(typeHint:String):Bool {
