@@ -6515,9 +6515,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final counterOwner = new HxClassDecl("CounterOwner", false, [
 			new HxFunctionDecl("getAbstractValue", Public, true, [new HxFunctionArg("a", "MyAbstractCounter", NoDefault, false, false)], "Int",
 				[SReturn(ECall(EField(EIdent("a"), "getValue"), []), HxPos.unknown())], ""),
+			new HxFunctionDecl("getNullableAbstractValue", Public, true, [new HxFunctionArg("a", "Null<MyAbstractCounter>", Default(ENull), true, false)],
+				"Int", [SReturn(EInt(0), HxPos.unknown())], ""),
 			new HxFunctionDecl("check", Public, true, [], "Void", [
 				SExpr(ECall(EIdent("eq"), [ECall(EIdent("getAbstractValue"), [EInt(1)]), EInt(2)]), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [EField(EIdent("MyAbstractCounter"), "counter"), EInt(1)]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("checkNullable", Public, true, [], "Void", [
+				SExpr(ECall(EIdent("eq"), [ECall(EIdent("getNullableAbstractValue"), [EInt(1)]), EInt(0)]), HxPos.unknown())
 			], "")
 		]);
 		primitiveNames.set("MyAbstractCounter", true);
@@ -6538,11 +6543,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(counterValueLines.indexOf("a.getValue()") < 0,
 			"C++ primitive-backed abstract instance helpers should not emit member calls on erased primitive args");
 		final counterCheckLines = @:privateAccess
-			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(counterOwner)[1], counterOwner, primitiveLookup).join("\n");
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(counterOwner)[2], counterOwner, primitiveLookup).join("\n");
 		assertContains(counterCheckLines, "eq(getAbstractValue((MyAbstractCounter::counter++, 1)), 2);",
 			"C++ primitive-backed abstract call arguments should preserve @:from constructor side effects before erased calls");
 		assertContains(counterCheckLines, "eq(MyAbstractCounter::counter, 1);",
 			"C++ primitive-backed abstract static fields should remain addressable after erasure");
+		final counterNullableCheckLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(counterOwner)[3], counterOwner, primitiveLookup).join("\n");
+		assertContains(counterNullableCheckLines, "eq(getNullableAbstractValue((MyAbstractCounter::counter++, 1)), 0);",
+			"C++ nullable primitive-backed abstract call arguments should still preserve @:from constructor side effects");
 		final renderedCounterNames = new StringMap<Bool>();
 		for (name in [
 			"MyAbstractCounter",
@@ -6570,7 +6579,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(!new EReg("(^|[^A-Za-z0-9_])MyAbstractCounter::counter", "").match(renderedCounterLines),
 			"C++ module-local primitive-backed abstract @:from helpers should not leak raw short helper names");
 		final renderedCounterCheckLines = @:privateAccess
-			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(counterOwner)[1], counterOwner, renderedCounterLookup).join("\n");
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(counterOwner)[2], counterOwner, renderedCounterLookup).join("\n");
 		assertContains(renderedCounterCheckLines, "eq(getAbstractValue((MyAbstract_MyAbstractCounter::counter++, 1)), 2);",
 			"C++ module-local primitive-backed abstract call arguments should qualify constructor side effects with rendered helper names");
 		assertContains(renderedCounterCheckLines, "eq(MyAbstract_MyAbstractCounter::counter, 1);",

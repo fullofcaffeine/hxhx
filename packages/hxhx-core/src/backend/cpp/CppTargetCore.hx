@@ -11444,12 +11444,28 @@ class CppTargetCore {
 	static function primitiveBackedAbstractCallArgExpr(arg:HxExpr, param:HxFunctionArg, valueType:String, ?scope:CppRenderScope):Null<String> {
 		if (param == null || scope == null)
 			return null;
-		final hint = HxFunctionArg.getTypeHint(param);
-		final underlying = primitiveBackedAbstractCppTypeForTypeHint(hint, scope);
+		final rawHint = HxFunctionArg.getTypeHint(param);
+		final hint = removeTypeHintWhitespace(StringTools.trim(rawHint == null ? "" : rawHint));
+		final nullableInner = CppTypeModel.nullTypeHintArg(hint);
+		final abstractHint = nullableInner == null ? hint : nullableInner;
+		final underlying = primitiveBackedAbstractCppTypeForTypeHint(abstractHint, scope);
 		if (underlying == null || underlying != valueType)
 			return null;
+		if (nullableInner != null) {
+			return switch (arg) {
+				case ENull:
+					null;
+				case _:
+					final rendered = valueExprForExpectedType(arg, valueType, scope);
+					final abstractClass = lookupClassForTypeHint(abstractHint, scope);
+					if (abstractClass == null || abstractUnderlyingTypeHint(abstractClass) == null) rendered; else {
+						final converted = primitiveBackedAbstractCtorSideEffectExpr(abstractHint, [arg], rendered, scope);
+						converted == rendered ? rendered : converted;
+					}
+			};
+		}
 		final rendered = valueExprForExpectedType(arg, valueType, scope);
-		final converted = primitiveBackedAbstractCtorSideEffectExpr(hint, [arg], rendered, scope);
+		final converted = primitiveBackedAbstractCtorSideEffectExpr(abstractHint, [arg], rendered, scope);
 		return converted == rendered ? null : converted;
 	}
 
