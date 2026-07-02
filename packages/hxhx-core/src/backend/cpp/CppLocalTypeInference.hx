@@ -12,6 +12,10 @@ typedef CppLocalTypeInferenceApi = {
 	var exprCppType:(HxExpr, CppRenderScope) -> String;
 	var inferExprCppType:(HxExpr, CppRenderScope) -> String;
 	var isStringLike:HxExpr->Bool;
+	var dynamicLocalAssignedType:(HxExpr, CppRenderScope) -> String;
+	var anonStructName:(Array<String>, Array<HxExpr>, CppRenderScope) -> String;
+	var inferredLambdaCppFunctionType:(Array<String>, HxExpr, Array<String>, CppRenderScope) -> String;
+	var closureCallableArgType:(HxExpr, CppRenderScope) -> String;
 	var localCppName:(String, CppRenderScope) -> String;
 	var declareLocalName:(String, CppRenderScope) -> String;
 	var cppLocalTypeHint:(String, Null<HxExpr>, CppRenderScope) -> String;
@@ -46,6 +50,401 @@ class CppLocalTypeInference {
 		if (scope == null || stmts == null)
 			return;
 		new CppLocalTypeInference(api).inferStringMapLocalTypeOverridesFromStmtsImpl(scope, stmts);
+	}
+
+	public static function inferClosureVectorLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl, api:CppLocalTypeInferenceApi):Void {
+		if (scope == null || fn == null)
+			return;
+		new CppLocalTypeInference(api).inferClosureVectorLocalTypeOverridesImpl(scope, HxFunctionDecl.getBody(fn));
+	}
+
+	public static function closureVectorTypeForLambdaArg(local:String, body:HxExpr, scope:CppRenderScope, api:CppLocalTypeInferenceApi):String {
+		if (scope == null || local == null || local.length == 0)
+			return "";
+		return new CppLocalTypeInference(api).closureVectorTypeForLambdaArgImpl(local, body, scope);
+	}
+
+	function inferClosureVectorLocalTypeOverridesImpl(scope:CppRenderScope, stmts:Array<HxStmt>):Void {
+		final candidates = new StringMap<Bool>();
+		for (stmt in stmts)
+			collectClosureVectorLocalCandidatesFromStmt(stmt, candidates);
+		if (!boolMapHasEntries(candidates))
+			return;
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
+		final savedLocalTypeOverrides = copyStringMap(scope.localTypeOverrides);
+		function restoreScope():Void {
+			scope.localTypes = copyStringMap(savedLocalTypes);
+			scope.localNames = copyStringMap(savedLocalNames);
+			scope.localNameCounts = copyIntMap(savedLocalNameCounts);
+			scope.localTypeOverrides = copyStringMap(savedLocalTypeOverrides);
+		}
+		final pushedValues = new StringMap<Array<HxExpr>>();
+		final callArgTypes = new StringMap<Array<Array<String>>>();
+		final inferredVectors = new StringMap<String>();
+		for (stmt in stmts)
+			collectClosureVectorEvidenceFromStmt(stmt, scope, candidates, pushedValues, callArgTypes);
+		restoreScope();
+		final pushedTypes = new StringMap<Array<String>>();
+		for (stmt in stmts)
+			collectClosureVectorPushedTypesFromStmt(stmt, scope, candidates, callArgTypes, pushedTypes);
+		for (local in pushedTypes.keys()) {
+			final elementType = firstNonEmptyType(pushedTypes.get(local));
+			if (elementType.length > 0)
+				inferredVectors.set(local, "std::vector<" + elementType + ">");
+		}
+		restoreScope();
+		for (local in inferredVectors.keys()) {
+			final inferred = inferredVectors.get(local);
+			final existing = scope.localTypeOverrides.get(local);
+			if (existing == null || existing.length == 0 || existing == inferred)
+				scope.localTypeOverrides.set(local, inferred);
+		}
+	}
+
+	function collectClosureVectorLocalCandidatesFromStmt(stmt:HxStmt, candidates:StringMap<Bool>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectClosureVectorLocalCandidatesFromStmt(s, candidates);
+			case SIf(_, thenBranch, elseBranch, _):
+				collectClosureVectorLocalCandidatesFromStmt(thenBranch, candidates);
+				if (elseBranch != null)
+					collectClosureVectorLocalCandidatesFromStmt(elseBranch, candidates);
+			case SForIn(_, _, body, _) | SWhile(_, body, _) | SDoWhile(body, _, _):
+				collectClosureVectorLocalCandidatesFromStmt(body, candidates);
+			case SForKeyValue(_, _, _, body, _):
+				collectClosureVectorLocalCandidatesFromStmt(body, candidates);
+			case SSwitch(_, _, bodies, _):
+				for (body in bodies)
+					collectClosureVectorLocalCandidatesFromStmt(body, candidates);
+			case STry(tryBody, catches, _):
+				collectClosureVectorLocalCandidatesFromStmt(tryBody, candidates);
+				for (c in catches)
+					collectClosureVectorLocalCandidatesFromStmt(c.body, candidates);
+			case SVar(name, typeHint, init, _) if (isUnhintedEmptyArray(typeHint, init)):
+				candidates.set(sanitizeIdentifier(name), true);
+			case SExpr(EBinop("=", EIdent(name), init), _) if (isEmptyArrayExpr(init)):
+				candidates.set(sanitizeIdentifier(name), true);
+			case SVar(_, _, _, _) | SExpr(_, _) | SReturn(_, _) | SThrow(_, _) | SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	function collectClosureVectorEvidenceFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:StringMap<Bool>, pushedValues:StringMap<Array<HxExpr>>,
+			callArgTypes:StringMap<Array<Array<String>>>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectClosureVectorEvidenceFromStmt(s, scope, candidates, pushedValues, callArgTypes);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectClosureVectorEvidenceFromExpr(cond, scope, candidates, pushedValues, callArgTypes);
+				collectClosureVectorEvidenceFromStmt(thenBranch, scope, candidates, pushedValues, callArgTypes);
+				if (elseBranch != null)
+					collectClosureVectorEvidenceFromStmt(elseBranch, scope, candidates, pushedValues, callArgTypes);
+			case SForIn(name, iterable, body, _):
+				collectClosureVectorEvidenceFromExpr(iterable, scope, candidates, pushedValues, callArgTypes);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					collectClosureVectorEvidenceFromStmt(body, scope, candidates, pushedValues, callArgTypes);
+				});
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				collectClosureVectorEvidenceFromExpr(iterable, scope, candidates, pushedValues, callArgTypes);
+				final loopTypes = keyValueLoopTypes(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
+						collectClosureVectorEvidenceFromStmt(body, scope, candidates, pushedValues, callArgTypes);
+					});
+				});
+			case SWhile(cond, body, _):
+				collectClosureVectorEvidenceFromExpr(cond, scope, candidates, pushedValues, callArgTypes);
+				collectClosureVectorEvidenceFromStmt(body, scope, candidates, pushedValues, callArgTypes);
+			case SDoWhile(body, cond, _):
+				collectClosureVectorEvidenceFromStmt(body, scope, candidates, pushedValues, callArgTypes);
+				collectClosureVectorEvidenceFromExpr(cond, scope, candidates, pushedValues, callArgTypes);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectClosureVectorEvidenceFromExpr(scrutinee, scope, candidates, pushedValues, callArgTypes);
+				for (body in bodies)
+					collectClosureVectorEvidenceFromStmt(body, scope, candidates, pushedValues, callArgTypes);
+			case STry(tryBody, catches, _):
+				collectClosureVectorEvidenceFromStmt(tryBody, scope, candidates, pushedValues, callArgTypes);
+				for (c in catches)
+					collectClosureVectorEvidenceFromStmt(c.body, scope, candidates, pushedValues, callArgTypes);
+			case SVar(name, typeHint, init, _):
+				if (init != null)
+					collectClosureVectorEvidenceFromExpr(init, scope, candidates, pushedValues, callArgTypes);
+				final local = sanitizeIdentifier(name);
+				if (!candidates.exists(local) || !isUnhintedEmptyArray(typeHint, init)) {
+					final localType = cppLocalTypeHint(typeHint, init, scope);
+					if (localType.length > 0)
+						scope.localTypes.set(local, localType);
+				}
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectClosureVectorEvidenceFromExpr(expr, scope, candidates, pushedValues, callArgTypes);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	function collectClosureVectorEvidenceFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:StringMap<Bool>, pushedValues:StringMap<Array<HxExpr>>,
+			callArgTypes:StringMap<Array<Array<String>>>):Void {
+		switch (expr) {
+			case ECall(EField(EIdent(name), "push"), [value]) if (candidates.exists(sanitizeIdentifier(name))):
+				final local = sanitizeIdentifier(name);
+				if (!pushedValues.exists(local))
+					pushedValues.set(local, []);
+				pushedValues.get(local).push(value);
+				collectClosureVectorEvidenceFromExpr(value, scope, candidates, pushedValues, callArgTypes);
+			case ECall(EArrayAccess(EIdent(name), index), args) if (candidates.exists(sanitizeIdentifier(name))):
+				final local = sanitizeIdentifier(name);
+				if (!callArgTypes.exists(local))
+					callArgTypes.set(local, []);
+				callArgTypes.get(local).push([for (arg in args) closureCallableArgType(arg, scope)]);
+				collectClosureVectorEvidenceFromExpr(index, scope, candidates, pushedValues, callArgTypes);
+				for (arg in args)
+					collectClosureVectorEvidenceFromExpr(arg, scope, candidates, pushedValues, callArgTypes);
+			case EBinop(_, left, right):
+				collectClosureVectorEvidenceFromExpr(left, scope, candidates, pushedValues, callArgTypes);
+				collectClosureVectorEvidenceFromExpr(right, scope, candidates, pushedValues, callArgTypes);
+			case ECall(callee, args):
+				collectClosureVectorEvidenceFromExpr(callee, scope, candidates, pushedValues, callArgTypes);
+				for (arg in args)
+					collectClosureVectorEvidenceFromExpr(arg, scope, candidates, pushedValues, callArgTypes);
+			case EArrayAccess(array, index):
+				collectClosureVectorEvidenceFromExpr(array, scope, candidates, pushedValues, callArgTypes);
+				collectClosureVectorEvidenceFromExpr(index, scope, candidates, pushedValues, callArgTypes);
+			case EField(receiver, _):
+				collectClosureVectorEvidenceFromExpr(receiver, scope, candidates, pushedValues, callArgTypes);
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectClosureVectorEvidenceFromExpr(element, scope, candidates, pushedValues, callArgTypes);
+			case EArrayComprehension(name, iterable, filter, body):
+				collectClosureVectorEvidenceFromExpr(iterable, scope, candidates, pushedValues, callArgTypes);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					if (filter != null)
+						collectClosureVectorEvidenceFromExpr(filter, scope, candidates, pushedValues, callArgTypes);
+					collectClosureVectorEvidenceFromExpr(body, scope, candidates, pushedValues, callArgTypes);
+				});
+			case ERange(start, end):
+				collectClosureVectorEvidenceFromExpr(start, scope, candidates, pushedValues, callArgTypes);
+				collectClosureVectorEvidenceFromExpr(end, scope, candidates, pushedValues, callArgTypes);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectClosureVectorEvidenceFromExpr(value, scope, candidates, pushedValues, callArgTypes);
+			case ESwitch(scrutinee, _, exprs):
+				collectClosureVectorEvidenceFromExpr(scrutinee, scope, candidates, pushedValues, callArgTypes);
+				for (value in exprs)
+					collectClosureVectorEvidenceFromExpr(value, scope, candidates, pushedValues, callArgTypes);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectClosureVectorEvidenceFromExpr(cond, scope, candidates, pushedValues, callArgTypes);
+				collectClosureVectorEvidenceFromExpr(thenExpr, scope, candidates, pushedValues, callArgTypes);
+				collectClosureVectorEvidenceFromExpr(elseExpr, scope, candidates, pushedValues, callArgTypes);
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, inner) | ELambda(_, inner):
+				collectClosureVectorEvidenceFromExpr(inner, scope, candidates, pushedValues, callArgTypes);
+			case ENew(_, args):
+				for (arg in args)
+					collectClosureVectorEvidenceFromExpr(arg, scope, candidates, pushedValues, callArgTypes);
+			case _:
+		}
+	}
+
+	function collectClosureVectorPushedTypesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:StringMap<Bool>,
+			callArgTypes:StringMap<Array<Array<String>>>, pushedTypes:StringMap<Array<String>>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectClosureVectorPushedTypesFromStmt(s, scope, candidates, callArgTypes, pushedTypes);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectClosureVectorPushedTypesFromExpr(cond, scope, candidates, callArgTypes, pushedTypes);
+				collectClosureVectorPushedTypesFromStmt(thenBranch, scope, candidates, callArgTypes, pushedTypes);
+				if (elseBranch != null)
+					collectClosureVectorPushedTypesFromStmt(elseBranch, scope, candidates, callArgTypes, pushedTypes);
+			case SForIn(name, iterable, body, _):
+				collectClosureVectorPushedTypesFromExpr(iterable, scope, candidates, callArgTypes, pushedTypes);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					collectClosureVectorPushedTypesFromStmt(body, scope, candidates, callArgTypes, pushedTypes);
+				});
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				collectClosureVectorPushedTypesFromExpr(iterable, scope, candidates, callArgTypes, pushedTypes);
+				final loopTypes = keyValueLoopTypes(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
+						collectClosureVectorPushedTypesFromStmt(body, scope, candidates, callArgTypes, pushedTypes);
+					});
+				});
+			case SWhile(cond, body, _):
+				collectClosureVectorPushedTypesFromExpr(cond, scope, candidates, callArgTypes, pushedTypes);
+				collectClosureVectorPushedTypesFromStmt(body, scope, candidates, callArgTypes, pushedTypes);
+			case SDoWhile(body, cond, _):
+				collectClosureVectorPushedTypesFromStmt(body, scope, candidates, callArgTypes, pushedTypes);
+				collectClosureVectorPushedTypesFromExpr(cond, scope, candidates, callArgTypes, pushedTypes);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectClosureVectorPushedTypesFromExpr(scrutinee, scope, candidates, callArgTypes, pushedTypes);
+				for (body in bodies)
+					collectClosureVectorPushedTypesFromStmt(body, scope, candidates, callArgTypes, pushedTypes);
+			case STry(tryBody, catches, _):
+				collectClosureVectorPushedTypesFromStmt(tryBody, scope, candidates, callArgTypes, pushedTypes);
+				for (c in catches)
+					collectClosureVectorPushedTypesFromStmt(c.body, scope, candidates, callArgTypes, pushedTypes);
+			case SVar(name, typeHint, init, _):
+				if (init != null)
+					collectClosureVectorPushedTypesFromExpr(init, scope, candidates, callArgTypes, pushedTypes);
+				final local = sanitizeIdentifier(name);
+				if (!candidates.exists(local) || !isUnhintedEmptyArray(typeHint, init)) {
+					final localType = cppLocalTypeHint(typeHint, init, scope);
+					if (localType.length > 0)
+						scope.localTypes.set(local, localType);
+				}
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectClosureVectorPushedTypesFromExpr(expr, scope, candidates, callArgTypes, pushedTypes);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	function collectClosureVectorPushedTypesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:StringMap<Bool>,
+			callArgTypes:StringMap<Array<Array<String>>>, pushedTypes:StringMap<Array<String>>):Void {
+		switch (expr) {
+			case ECall(EField(EIdent(name), "push"), [value]) if (candidates.exists(sanitizeIdentifier(name))):
+				final local = sanitizeIdentifier(name);
+				if (!pushedTypes.exists(local))
+					pushedTypes.set(local, []);
+				pushedTypes.get(local).push(closureVectorPushedValueType(value, callArgTypes.exists(local) ? callArgTypes.get(local) : [], scope));
+				collectClosureVectorPushedTypesFromExpr(value, scope, candidates, callArgTypes, pushedTypes);
+			case EBinop(_, left, right):
+				collectClosureVectorPushedTypesFromExpr(left, scope, candidates, callArgTypes, pushedTypes);
+				collectClosureVectorPushedTypesFromExpr(right, scope, candidates, callArgTypes, pushedTypes);
+			case ECall(callee, args):
+				collectClosureVectorPushedTypesFromExpr(callee, scope, candidates, callArgTypes, pushedTypes);
+				for (arg in args)
+					collectClosureVectorPushedTypesFromExpr(arg, scope, candidates, callArgTypes, pushedTypes);
+			case EArrayAccess(array, index):
+				collectClosureVectorPushedTypesFromExpr(array, scope, candidates, callArgTypes, pushedTypes);
+				collectClosureVectorPushedTypesFromExpr(index, scope, candidates, callArgTypes, pushedTypes);
+			case EField(receiver, _):
+				collectClosureVectorPushedTypesFromExpr(receiver, scope, candidates, callArgTypes, pushedTypes);
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectClosureVectorPushedTypesFromExpr(element, scope, candidates, callArgTypes, pushedTypes);
+			case EArrayComprehension(name, iterable, filter, body):
+				collectClosureVectorPushedTypesFromExpr(iterable, scope, candidates, callArgTypes, pushedTypes);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					if (filter != null)
+						collectClosureVectorPushedTypesFromExpr(filter, scope, candidates, callArgTypes, pushedTypes);
+					collectClosureVectorPushedTypesFromExpr(body, scope, candidates, callArgTypes, pushedTypes);
+				});
+			case ERange(start, end):
+				collectClosureVectorPushedTypesFromExpr(start, scope, candidates, callArgTypes, pushedTypes);
+				collectClosureVectorPushedTypesFromExpr(end, scope, candidates, callArgTypes, pushedTypes);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectClosureVectorPushedTypesFromExpr(value, scope, candidates, callArgTypes, pushedTypes);
+			case ESwitch(scrutinee, _, exprs):
+				collectClosureVectorPushedTypesFromExpr(scrutinee, scope, candidates, callArgTypes, pushedTypes);
+				for (value in exprs)
+					collectClosureVectorPushedTypesFromExpr(value, scope, candidates, callArgTypes, pushedTypes);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectClosureVectorPushedTypesFromExpr(cond, scope, candidates, callArgTypes, pushedTypes);
+				collectClosureVectorPushedTypesFromExpr(thenExpr, scope, candidates, callArgTypes, pushedTypes);
+				collectClosureVectorPushedTypesFromExpr(elseExpr, scope, candidates, callArgTypes, pushedTypes);
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, inner) | ELambda(_, inner):
+				collectClosureVectorPushedTypesFromExpr(inner, scope, candidates, callArgTypes, pushedTypes);
+			case ENew(_, args):
+				for (arg in args)
+					collectClosureVectorPushedTypesFromExpr(arg, scope, candidates, callArgTypes, pushedTypes);
+			case _:
+		}
+	}
+
+	function closureVectorPushedValueType(value:HxExpr, callShapes:Array<Array<String>>, scope:CppRenderScope):String {
+		return switch (value) {
+			case ELambda(args, body):
+				inferredLambdaCppFunctionType(args, body, closureVectorCallArgTypes(callShapes, args.length), scope);
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(_)]):
+				inferredLambdaCppFunctionType(args, body, closureVectorCallArgTypes(callShapes, args.length), scope);
+			case EAnon(fieldNames, fieldValues):
+				anonStructName(fieldNames, fieldValues, scope);
+			case _:
+				dynamicLocalAssignedType(value, scope);
+		}
+	}
+
+	function closureVectorTypeForLambdaArgImpl(local:String, body:HxExpr, scope:CppRenderScope):String {
+		final candidates = new StringMap<Bool>();
+		candidates.set(local, true);
+		final pushedValues = new StringMap<Array<HxExpr>>();
+		final callArgTypes = new StringMap<Array<Array<String>>>();
+		collectClosureVectorEvidenceFromExpr(body, scope, candidates, pushedValues, callArgTypes);
+		if (!pushedValues.exists(local))
+			return "";
+		final elementType = closureVectorElementType(pushedValues.get(local), callArgTypes.exists(local) ? callArgTypes.get(local) : [], scope);
+		return elementType.length == 0 ? "" : "std::vector<" + elementType + ">";
+	}
+
+	function closureVectorElementType(values:Array<HxExpr>, callShapes:Array<Array<String>>, scope:CppRenderScope):String {
+		if (values == null)
+			return "";
+		for (value in values) {
+			final typeName = switch (value) {
+				case ELambda(args, body):
+					inferredLambdaCppFunctionType(args, body, closureVectorCallArgTypes(callShapes, args.length), scope);
+				case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(_)]):
+					inferredLambdaCppFunctionType(args, body, closureVectorCallArgTypes(callShapes, args.length), scope);
+				case EAnon(fieldNames, fieldValues):
+					anonStructName(fieldNames, fieldValues, scope);
+				case _:
+					dynamicLocalAssignedType(value, scope);
+			}
+			if (typeName.length > 0)
+				return typeName;
+		}
+		return "";
+	}
+
+	function closureVectorCallArgTypes(callShapes:Array<Array<String>>, arity:Int):Array<String> {
+		if (arity == 0)
+			return [];
+		if (callShapes == null)
+			return [];
+		for (shape in callShapes) {
+			if (shape.length != arity)
+				continue;
+			var complete = true;
+			for (typeName in shape)
+				if (typeName == null || typeName.length == 0)
+					complete = false;
+			if (complete)
+				return shape;
+		}
+		return [];
+	}
+
+	function firstNonEmptyType(values:Array<String>):String {
+		if (values == null)
+			return "";
+		for (value in values)
+			if (value != null && value.length > 0)
+				return value;
+		return "";
+	}
+
+	function isUnhintedEmptyArray(typeHint:String, init:Null<HxExpr>):Bool {
+		if (StringTools.trim(typeHint == null ? "" : typeHint).length > 0)
+			return false;
+		return isEmptyArrayExpr(init);
+	}
+
+	function isEmptyArrayExpr(init:Null<HxExpr>):Bool {
+		return switch (init) {
+			case EArrayDecl(values):
+				values.length == 0;
+			case ENew(typePath, args): args.length == 0 && CppTypeModel.isStdArrayTypePath(typePath);
+			case _:
+				false;
+		};
+	}
+
+	function boolMapHasEntries(values:StringMap<Bool>):Bool {
+		for (_ in values.keys())
+			return true;
+		return false;
 	}
 
 	function inferStringMapLocalTypeOverridesFromStmtsImpl(scope:CppRenderScope, stmts:Array<HxStmt>):Void {
@@ -301,6 +700,22 @@ class CppLocalTypeInference {
 
 	inline function isStringLike(expr:HxExpr):Bool {
 		return api.isStringLike(expr);
+	}
+
+	inline function dynamicLocalAssignedType(expr:HxExpr, scope:CppRenderScope):String {
+		return api.dynamicLocalAssignedType(expr, scope);
+	}
+
+	inline function anonStructName(fieldNames:Array<String>, fieldValues:Array<HxExpr>, scope:CppRenderScope):String {
+		return api.anonStructName(fieldNames, fieldValues, scope);
+	}
+
+	inline function inferredLambdaCppFunctionType(args:Array<String>, body:HxExpr, argTypes:Array<String>, scope:CppRenderScope):String {
+		return api.inferredLambdaCppFunctionType(args, body, argTypes, scope);
+	}
+
+	inline function closureCallableArgType(expr:HxExpr, scope:CppRenderScope):String {
+		return api.closureCallableArgType(expr, scope);
 	}
 
 	inline function localCppName(name:String, scope:CppRenderScope):String {

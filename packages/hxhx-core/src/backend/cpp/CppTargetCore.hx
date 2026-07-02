@@ -1587,12 +1587,15 @@ class CppTargetCore {
 						addStmt(elseBranch, scope);
 				case SExpr(expr, _) | SReturn(expr, _):
 					addExpr(expr, scope);
-				case SForIn(_, iterable, body, _):
+				case SForIn(name, iterable, body, _):
 					addExpr(iterable, scope);
-					addStmt(body, scope);
-				case SForKeyValue(_, _, iterable, body, _):
+					withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> addStmt(body, scope));
+				case SForKeyValue(keyName, valueName, iterable, body, _):
 					addExpr(iterable, scope);
-					addStmt(body, scope);
+					final loopTypes = keyValueLoopTypes(iterable, scope);
+					withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+						withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> addStmt(body, scope));
+					});
 				case SWhile(cond, body, _):
 					addExpr(cond, scope);
 					addStmt(body, scope);
@@ -1740,7 +1743,9 @@ class CppTargetCore {
 		Full `prepareFunctionScope` performs render-time type-flow inference over
 		the entire function body. `collectAnonStructs` already walks each body for
 		anonymous literals and type hints, so running the full render prep here
-		duplicates expensive expression traversal. The collection scope also uses
+		duplicates expensive expression traversal. Keep only the local shape pass
+		needed for closure-vector anonymous elements so collection and rendering
+		agree on callable anonymous field structs. The collection scope also uses
 		a neutral return type so it does not trigger `cppFunctionReturnType`
 		inference before doing that walk.
 	**/
@@ -1749,6 +1754,8 @@ class CppTargetCore {
 			return;
 		applyFunctionTypeParams(scope, fn);
 		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
+		if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_closure_vector_locals"))
+			CppLocalTypeInference.inferClosureVectorLocalTypeOverrides(scope, fn, localTypeInferenceApi());
 	}
 
 	static function renderMainStaticFunctions(cls:HxClassDecl, classLookup:CppClassLookup):Array<Array<String>> {
@@ -1871,6 +1878,9 @@ class CppTargetCore {
 			return "bool";
 		if (cleanField == "__hx_params")
 			return "std::vector<std::string>";
+		final callable = inferredCallableValueType(expr, scope);
+		if (callable.length > 0)
+			return callable;
 		final scoped = exprCppType(expr, scope);
 		final optionalInner = cppOptionalInnerType(scoped);
 		if (optionalInner.length > 0)
@@ -4380,6 +4390,10 @@ class CppTargetCore {
 				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_generic_factory_locals"))
 					inferGenericFactoryLocalTypeOverrides(scope, fn);
 			});
+			runPrepPhase("infer_closure_vector_locals", () -> {
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_closure_vector_locals"))
+					CppLocalTypeInference.inferClosureVectorLocalTypeOverrides(scope, fn, localTypeInferenceApi());
+			});
 			runPrepPhase("infer_dynamic_locals", () -> {
 				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_dynamic_locals"))
 					inferDynamicLocalTypeOverrides(scope, fn);
@@ -6481,6 +6495,51 @@ class CppTargetCore {
 		runCallableArgPhase("reset", () -> scope.localTypes = new haxe.ds.StringMap<String>());
 	}
 
+	static function closureCallableArgType(expr:HxExpr, scope:CppRenderScope):String {
+		final callable = callableArgExprType(expr, scope);
+		if (callable.length > 0)
+			return callable;
+		final inferred = inferExprCppType(expr, scope);
+		return inferred.length > 0 ? inferred : exprCppType(expr, scope);
+	}
+
+	static function closureVectorTypeForLambdaArg(local:String, body:HxExpr, scope:CppRenderScope):String {
+		return CppLocalTypeInference.closureVectorTypeForLambdaArg(local, body, scope, localTypeInferenceApi());
+	}
+
+	static function inferredLambdaCppFunctionType(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope):String {
+		final lambdaArgs = args == null ? [] : args;
+		final expectedArgTypes = argTypes == null ? [] : argTypes;
+		if (lambdaArgs.length != expectedArgTypes.length)
+			return "";
+		if (scope == null) {
+			final returnType = lambdaArgs.length == 0 ? inferExprCppType(body, scope) : "";
+			return returnType.length == 0 ? "" : "std::function<" + returnType + "(" + expectedArgTypes.join(", ") + ")>";
+		}
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		for (i in 0...lambdaArgs.length) {
+			final name = sanitizeIdentifier(lambdaArgs[i]);
+			scope.localNames.set(name, name);
+			scope.localTypes.set(name, expectedArgTypes[i]);
+		}
+		final returnType = inferExprCppType(body, scope);
+		scope.localTypes = savedLocalTypes;
+		scope.localNames = savedLocalNames;
+		return returnType.length == 0 ? "" : "std::function<" + returnType + "(" + expectedArgTypes.join(", ") + ")>";
+	}
+
+	static function inferredCallableValueType(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case ELambda(args, body):
+				inferredLambdaCppFunctionType(args, body, [], scope);
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(_)]):
+				inferredLambdaCppFunctionType(args, body, [], scope);
+			case _:
+				"";
+		};
+	}
+
 	static function inferDynamicLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
 		if (scope == null || fn == null)
 			return;
@@ -6510,6 +6569,10 @@ class CppTargetCore {
 			exprCppType: exprCppType,
 			inferExprCppType: inferExprCppType,
 			isStringLike: function(expr) return isStringLike(expr),
+			dynamicLocalAssignedType: dynamicLocalAssignedType,
+			anonStructName: function(fieldNames, fieldValues, scope) return anonStruct(fieldNames, fieldValues, scope).name,
+			inferredLambdaCppFunctionType: inferredLambdaCppFunctionType,
+			closureCallableArgType: closureCallableArgType,
 			localCppName: localCppName,
 			declareLocalName: declareLocalName,
 			cppLocalTypeHint: cppLocalTypeHint,
@@ -6923,6 +6986,9 @@ class CppTargetCore {
 	}
 
 	static function dynamicLocalAssignedType(expr:HxExpr, scope:CppRenderScope):String {
+		final callable = inferredCallableValueType(expr, scope);
+		if (callable.length > 0)
+			return callable;
 		final explicit = exprCppType(expr, scope);
 		final inferred = explicit.length > 0 ? explicit : inferExprCppType(expr, scope);
 		return inferred.length > 0 ? inferred : "";
@@ -9112,10 +9178,7 @@ class CppTargetCore {
 			case ECall(ELambda(lambdaArgs, body), args) if (voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope) != null):
 				voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope);
 			case ECall(ELambda(lambdaArgs, body), args):
-				"("
-				+ lambdaExpr(lambdaArgs, body, scope)
-				+ ")("
-				+ [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+				immediateLambdaCallExpr(lambdaArgs, body, args, scope);
 			case ECall(EIdent(name), args) if (exprHasOptionalType(EIdent(name), scope)):
 				sanitizeIdentifier(name) + ".value()(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
 			case ECall(EIdent(name), args):
@@ -11524,6 +11587,10 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				"std::string";
+			case ECall(EIdent(name), args)
+				if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while" || name == "__hxhx_try")
+					&& args.length >= 3):
+				inferExprCppType(args[2], scope);
 			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
 			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
@@ -12371,6 +12438,10 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				"std::string";
+			case ECall(EIdent(name), args)
+				if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while" || name == "__hxhx_try")
+					&& args.length >= 3):
+				inferExprCppType(args[2], scope);
 			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
 			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
@@ -14503,7 +14574,7 @@ class CppTargetCore {
 
 	static function knownVoidSequenceCallName(name:String):Bool {
 		return switch (sanitizeIdentifier(name == null ? "" : name)) {
-			case "eq" | "feq" | "aeq" | "t" | "f" | "assert" | "exc" | "unspec" | "allow" | "noAssert" | "hf" | "nhf" | "hsf" | "nhsf":
+			case "eq" | "feq" | "aeq" | "t" | "f" | "assert" | "exc" | "unspec" | "allow" | "noAssert" | "hf" | "nhf" | "hsf" | "nhsf" | "push":
 				true;
 			case _:
 				false;
@@ -14966,6 +15037,9 @@ class CppTargetCore {
 		if (isMapLiteralElements(elements))
 			return mapLiteralPairCppType(elements, scope);
 		for (element in elements) {
+			final callable = inferredCallableValueType(element, scope);
+			if (callable.length > 0)
+				return callable;
 			final inferred = inferExprCppType(element, scope);
 			if (inferred.length > 0)
 				return inferred;
@@ -15306,6 +15380,7 @@ class CppTargetCore {
 	static function lambdaCallReturnCppType(lambdaArgs:Array<String>, body:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		if (lambdaArgs == null || lambdaArgs.length == 0)
 			return inferExprCppType(body, scope);
+		final refinedArgTypes = immediateLambdaRefinedArgTypes(lambdaArgs, body, args, scope);
 		var result = "";
 		function visit(index:Int):Void {
 			if (index >= lambdaArgs.length || index >= args.length) {
@@ -15313,13 +15388,57 @@ class CppTargetCore {
 				return;
 			}
 			final local = sanitizeIdentifier(lambdaArgs[index]);
-			var typeName = exprCppType(args[index], scope);
+			var typeName = index < refinedArgTypes.length ? refinedArgTypes[index] : "";
+			if (typeName.length == 0)
+				typeName = exprCppType(args[index], scope);
 			if (typeName.length == 0)
 				typeName = inferExprCppType(args[index], scope);
 			withScopedLocal(scope, local, typeName, () -> visit(index + 1));
 		}
 		visit(0);
 		return result;
+	}
+
+	static function immediateLambdaCallExpr(lambdaArgs:Array<String>, body:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final refinedArgTypes = immediateLambdaRefinedArgTypes(lambdaArgs, body, args, scope);
+		final lambda = refinedArgTypes.length == 0 ? lambdaExpr(lambdaArgs, body, scope) : lambdaExprWithArgTypes(lambdaArgs, body, refinedArgTypes, scope);
+		final renderedArgs = [
+			for (i in 0...args.length) {
+				final expected = i < refinedArgTypes.length ? refinedArgTypes[i] : "";
+				expected.length > 0 ? valueExprForExpectedType(args[i], expected, scope) : renderExpr(args[i], scope);
+			}
+		];
+		return "(" + lambda + ")(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function immediateLambdaRefinedArgTypes(lambdaArgs:Array<String>, body:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		if (scope == null || lambdaArgs == null || args == null || lambdaArgs.length == 0)
+			return [];
+		final count = lambdaArgs.length < args.length ? lambdaArgs.length : args.length;
+		final out = new Array<String>();
+		var refined = false;
+		for (i in 0...count) {
+			var typeName = exprCppType(args[i], scope);
+			if (typeName.length == 0)
+				typeName = inferExprCppType(args[i], scope);
+			switch (args[i]) {
+				case EArrayDecl([]):
+					final vectorType = closureVectorTypeForLambdaArg(sanitizeIdentifier(lambdaArgs[i]), body, scope);
+					if (vectorType.length > 0) {
+						typeName = vectorType;
+						refined = true;
+					}
+				case ENew(typePath, ctorArgs) if (ctorArgs.length == 0 && isStdArrayTypePath(typePath)):
+					final vectorType = closureVectorTypeForLambdaArg(sanitizeIdentifier(lambdaArgs[i]), body, scope);
+					if (vectorType.length > 0) {
+						typeName = vectorType;
+						refined = true;
+					}
+				case _:
+			}
+			out.push(typeName);
+		}
+		return refined ? out : [];
 	}
 
 	static function isPosInfosAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>):Bool {

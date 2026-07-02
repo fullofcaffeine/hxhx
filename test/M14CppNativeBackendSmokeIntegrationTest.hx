@@ -7373,6 +7373,130 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ erased callable recovery should let mapi comprehensions use the callback return type");
 		assertTrue(erasedMapiLines.indexOf("std::string f") < 0,
 			"C++ helper rendering should not keep erased String callback parameters as std::string when the body calls them");
+		final tmpPushExpr = ECall(EField(EIdent("tmp"), "push"), [ELambda([], EBinop("+", EIdent("i"), EIdent("j")))]);
+		final tmpFillExpr = ECall(EIdent("__hxhx_for_in"), [
+			ERange(EInt(0), EInt(2)),
+			ELambda(["j"], ECall(ELambda(["__hxhx_lambda_seq_0"], ENull), [tmpPushExpr])),
+			ECall(ELambda(["sum"], ECall(EIdent("__hxhx_for_in"), [
+				ERange(EInt(0), EInt(2)),
+				ELambda(["j"],
+					ECall(ELambda(["__hxhx_lambda_seq_1"], ENull), [EBinop("+=", EIdent("sum"), ECall(EArrayAccess(EIdent("tmp"), EIdent("j")), []))])),
+				EIdent("sum")
+			])), [EInt(0)])
+		]);
+		final nestedClosureBody = ECall(ELambda(["tmp"], tmpFillExpr), [ENew("Array", [])]);
+		final closureVectorOwner = new HxClassDecl("ClosureVectorOwner", false, [
+			new HxFunctionDecl("zeroArg", Public, false, [], "Int", [
+				SVar("funs", "", EArrayDecl([]), HxPos.unknown()),
+				SForIn("i", ERange(EInt(0), EInt(2)), SBlock([
+					SExpr(ECall(EField(EIdent("funs"), "push"), [ELambda([], EIdent("i"))]), HxPos.unknown())
+				],
+					HxPos.unknown()),
+					HxPos.unknown()),
+				SReturn(ECall(EArrayAccess(EIdent("funs"), EInt(0)), []), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("oneArg", Public, false, [], "Int", [
+				SVar("funs", "", EArrayDecl([]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("funs"), "push"), [ELambda(["k"], EIdent("k"))]), HxPos.unknown()),
+				SReturn(ECall(EArrayAccess(EIdent("funs"), EInt(0)), [EInt(55)]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("anonCalls", Public, false, [], "Int", [
+				SVar("accesses", "", EArrayDecl([]), HxPos.unknown()),
+				SExpr(ECall(EField(EIdent("accesses"), "push"), [EAnon(["inc", "dec"], [ELambda([], EInt(1)), ELambda([], EInt(0))])]), HxPos.unknown()),
+				SVar("a", "", EArrayAccess(EIdent("accesses"), EInt(0)), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("a"), "inc"), []), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("tmpArg", Public, false, [], "Void", [
+				SExpr(ECall(ELambda(["tmp"], ECall(EField(EIdent("tmp"), "push"), [ELambda([], EInt(7))])), [EArrayDecl([])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("zeroArgCtor", Public, false, [], "Int", [
+				SVar("funs", "", ENew("Array", []), HxPos.unknown()),
+				SExpr(EBinop("=", EIdent("funs"), ENew("Array", [])), HxPos.unknown()),
+				SForIn("i", ERange(EInt(0), EInt(2)), SBlock([
+					SExpr(ECall(EField(EIdent("funs"), "push"), [ELambda([], EIdent("i"))]), HxPos.unknown())
+				],
+					HxPos.unknown()),
+					HxPos.unknown()),
+				SReturn(ECall(EArrayAccess(EIdent("funs"), EInt(0)), []), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("tmpArgCtor", Public, false, [], "Void", [
+				SExpr(ECall(ELambda(["tmp"], ECall(EField(EIdent("tmp"), "push"), [ELambda([], EInt(7))])), [ENew("Array", [])]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("subCaptureCtor", Public, false, [], "Int", [
+				SVar("funs", "", ENew("Array", []), HxPos.unknown()),
+				SForIn("i", ERange(EInt(0), EInt(2)), SBlock([
+					SExpr(ECall(EField(EIdent("funs"), "push"), [ELambda([], nestedClosureBody)]), HxPos.unknown())
+				], HxPos.unknown()), HxPos.unknown()),
+				SReturn(ECall(EArrayAccess(EIdent("funs"), EInt(0)), []), HxPos.unknown())
+			], "")
+		], []);
+		final closureVectorNames = new StringMap<Bool>();
+		closureVectorNames.set("ClosureVectorOwner", true);
+		final closureVectorClasses = new StringMap<HxClassDecl>();
+		closureVectorClasses.set("ClosureVectorOwner", closureVectorOwner);
+		final closureVectorLookup = {
+			names: closureVectorNames,
+			byName: closureVectorClasses
+		};
+		final closureVectorFns = HxClassDecl.getFunctions(closureVectorOwner);
+		final zeroArgClosureVectorLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(closureVectorFns[0], closureVectorOwner, closureVectorLookup).join("\n");
+		final oneArgClosureVectorLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(closureVectorFns[1], closureVectorOwner, closureVectorLookup).join("\n");
+		final anonClosureVectorLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(closureVectorFns[2], closureVectorOwner, closureVectorLookup).join("\n");
+		final tmpArgClosureVectorLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(closureVectorFns[3], closureVectorOwner, closureVectorLookup).join("\n");
+		final zeroArgCtorClosureVectorLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(closureVectorFns[4], closureVectorOwner, closureVectorLookup).join("\n");
+		final tmpArgCtorClosureVectorLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(closureVectorFns[5], closureVectorOwner, closureVectorLookup).join("\n");
+		final subCaptureClosureVectorLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(closureVectorFns[6], closureVectorOwner, closureVectorLookup).join("\n");
+		assertContains(zeroArgClosureVectorLines, "std::vector<std::function<int()>>{};",
+			"C++ unhinted closure arrays should infer zero-arg callable vector element types from pushed lambdas");
+		assertContains(zeroArgClosureVectorLines, ".push_back([&]() { return i; });",
+			"C++ closure-vector inference should keep loop binders in scope when typing pushed lambdas");
+		assertContains(zeroArgClosureVectorLines, "[0]))());", "C++ closure-vector elements should remain callable when read back through array access");
+		assertTrue(zeroArgClosureVectorLines.indexOf("std::vector<std::string>") < 0, "C++ unhinted closure arrays should not fall back to string vectors");
+		assertContains(oneArgClosureVectorLines, "std::vector<std::function<int(int)>>{};",
+			"C++ closure arrays should infer callable argument types from later element calls");
+		assertContains(oneArgClosureVectorLines, "[0]))(55));", "C++ one-arg closure-vector elements should render as callable values");
+		assertContains(anonClosureVectorLines, "__hxhx_anon_inc_std__function_int____dec_std__function_int__",
+			"C++ anonymous objects pushed into closure arrays should preserve callable field types");
+		assertContains(anonClosureVectorLines, "return static_cast<int>(a.inc());", "C++ anonymous callable fields should remain callable after indexing");
+		assertTrue(anonClosureVectorLines.indexOf("int inc;") < 0, "C++ anonymous callable fields should not be declared as Int fields");
+		assertContains(tmpArgClosureVectorLines, "std::vector<std::function<int()>> tmp",
+			"C++ immediate lambda empty-array arguments should infer closure-vector shapes from tmp.push");
+		assertContains(tmpArgClosureVectorLines, "std::vector<std::function<int()>>{}",
+			"C++ immediate lambda empty-array call arguments should render with the inferred closure-vector type");
+		assertContains(zeroArgCtorClosureVectorLines, "std::vector<std::function<int()>>{};",
+			"C++ unhinted new Array closure vectors should infer zero-arg callable vector element types");
+		assertContains(zeroArgCtorClosureVectorLines, "funs = std::vector<std::function<int()>>{};",
+			"C++ new Array assignments should preserve inferred closure-vector local type overrides");
+		assertTrue(zeroArgCtorClosureVectorLines.indexOf("std::vector<std::string>") < 0,
+			"C++ new Array closure vectors should not fall back to string vectors");
+		assertContains(tmpArgCtorClosureVectorLines, "std::vector<std::function<int()>> tmp",
+			"C++ immediate lambda new Array arguments should infer closure-vector shapes from tmp.push");
+		assertContains(subCaptureClosureVectorLines, "auto funs = std::vector<std::function<int()>>{};",
+			"C++ nested closure-array returns should infer the outer new Array as a callable vector");
+		assertContains(subCaptureClosureVectorLines, "std::vector<std::function<int()>> tmp",
+			"C++ nested closure-array returns should refine inner immediate lambda new Array arguments");
+		assertTrue(subCaptureClosureVectorLines.indexOf("std::vector<std::string>") < 0, "C++ nested closure arrays should not fall back to string vectors");
+		assertTrue(subCaptureClosureVectorLines.indexOf("auto __hxhx_lambda_seq_0) { return nullptr; })(tmp.push_back") < 0,
+			"C++ void sequence lowering should not pass tmp.push through an auto lambda parameter");
+		final closureVectorMain = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
+		final closureVectorProgram = new GenIrProgram([
+			typedSyntheticModule("ClosureVectorOwner.hx", new HxModuleDecl("", [], closureVectorMain, [closureVectorMain, closureVectorOwner], false, false))
+		], false);
+		final closureVectorProgramLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(closureVectorProgram);
+		final closureVectorStructLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderAnonStructs(backend.cpp.CppTargetCore.collectAnonStructs(closureVectorProgram, closureVectorProgramLookup))
+				.join("\n");
+		assertContains(closureVectorStructLines, "struct __hxhx_anon_inc_std__function_int____dec_std__function_int___ {",
+			"C++ anonymous struct collection should declare callable-field carrier shapes used by closure arrays");
+		assertContains(closureVectorStructLines, "std::function<int()> inc;",
+			"C++ anonymous struct collection should preserve callable inc field declarations");
 		final ctorBase = new HxClassDecl("CtorBase", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("message", "String", NoDefault, false, false)], "Void", [], "")
 		], []);
