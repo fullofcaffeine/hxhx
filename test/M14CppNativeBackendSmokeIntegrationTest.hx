@@ -1479,6 +1479,35 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper ordering should render Assert before target-owned Test support");
 		assertTrue(unitTestOrderNames.indexOf("Type") >= 0 && unitTestOrderNames.indexOf("Type") < unitTestOrderNames.indexOf("Test"),
 			"C++ helper ordering should render Type before target-owned Test support");
+		final renderedDepHelper = new HxClassDecl("Helper", false, [], []);
+		final renderedDepConsumer = new HxClassDecl("Consumer", false, [
+			new HxFunctionDecl("make", Public, false, [], "Void", [SVar("helper", "", ENew("Helper", []), HxPos.unknown())], "")
+		], []);
+		final renderedDepNames = new StringMap<Bool>();
+		for (name in ["Helper", "Consumer", "Module_Helper", "Module_Consumer"])
+			renderedDepNames.set(name, true);
+		final renderedDepClasses = new StringMap<HxClassDecl>();
+		renderedDepClasses.set("Helper", renderedDepHelper);
+		renderedDepClasses.set("Consumer", renderedDepConsumer);
+		renderedDepClasses.set("Module_Helper", renderedDepHelper);
+		renderedDepClasses.set("Module_Consumer", renderedDepConsumer);
+		final renderedDepLookup = {
+			names: renderedDepNames,
+			byName: renderedDepClasses,
+			renderedNames: [
+				{cls: renderedDepHelper, name: "Module_Helper"},
+				{cls: renderedDepConsumer, name: "Module_Consumer"}
+			]
+		};
+		final renderedDepOrder = @:privateAccess
+			backend.cpp.CppTargetCore.orderHelperClasses([renderedDepConsumer, renderedDepHelper], renderedDepLookup);
+		final renderedDepOrderNames = @:privateAccess [
+			for (cls in renderedDepOrder)
+				backend.cpp.CppTargetCore.renderedClassName(cls, renderedDepLookup)
+		];
+		assertTrue(renderedDepOrderNames.indexOf("Module_Helper") >= 0
+			&& renderedDepOrderNames.indexOf("Module_Helper") < renderedDepOrderNames.indexOf("Module_Consumer"),
+			"C++ helper ordering should resolve raw body dependencies through rendered lookup aliases");
 	}
 
 	static function assertCppOptionalArrowFunctionsUseCallableShapes():Void {
@@ -3680,6 +3709,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final hashMapParams = @:privateAccess backend.cpp.CppTargetCore.genericClassTemplateParams(hashMapAbstract);
 		assertTrue(hashMapParams.length == 2 && hashMapParams[0] == "K" && hashMapParams[1] == "V",
 			"C++ generic abstract helpers such as HashMap should infer template parameters from their abstract underlying type");
+		final renderedHashMapNames = new StringMap<Bool>();
+		for (name in ["HashMap", "Module_HashMap"])
+			renderedHashMapNames.set(name, true);
+		final renderedHashMapClasses = new StringMap<HxClassDecl>();
+		renderedHashMapClasses.set("HashMap", hashMapAbstract);
+		renderedHashMapClasses.set("Module_HashMap", hashMapAbstract);
+		final renderedHashMapLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(hashMapAbstract, {
+			names: renderedHashMapNames,
+			byName: renderedHashMapClasses,
+			renderedNames: [{cls: hashMapAbstract, name: "Module_HashMap"}]
+		}).join("\n");
+		assertContains(renderedHashMapLines, "struct Module_HashMap {", "C++ rendered HashMap support should emit the module-local helper name");
+		assertContains(renderedHashMapLines, "std::shared_ptr<Module_HashMap<K, V>> __hxhx_make_shared_Module_HashMap()",
+			"C++ rendered HashMap factories should use the module-local helper name");
 		final packagedIMapNames = new StringMap<Bool>();
 		final packagedIMapClasses = new StringMap<HxClassDecl>();
 		final packagedIMap = new HxClassDecl("haxe.Constraints.IMap", false, [], [], "", null, true);
@@ -3903,6 +3946,49 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic StringMap-backed abstracts should construct from array literals");
 		assertTrue(stringMapAbstractLines.indexOf("(*this) = __hxhx_make_shared_StringMap") < 0,
 			"C++ generic StringMap-backed abstract constructors should not assign shared_ptr storage into the wrapper value");
+		final renderedStringMapNames = new StringMap<Bool>();
+		for (name in [
+			"StringMap",
+			"MyHash",
+			"StringMapOwner",
+			"MyAbstract_MyHash",
+			"MyAbstract_StringMapOwner"
+		])
+			renderedStringMapNames.set(name, true);
+		final renderedStringMapClasses = new StringMap<HxClassDecl>();
+		renderedStringMapClasses.set("StringMap", stringMapGeneric);
+		renderedStringMapClasses.set("MyHash", stringMapAbstract);
+		renderedStringMapClasses.set("StringMapOwner", stringMapOwner);
+		renderedStringMapClasses.set("MyAbstract_MyHash", stringMapAbstract);
+		renderedStringMapClasses.set("MyAbstract_StringMapOwner", stringMapOwner);
+		final renderedStringMapLookup = {
+			names: renderedStringMapNames,
+			byName: renderedStringMapClasses,
+			renderedNames: [
+				{cls: stringMapAbstract, name: "MyAbstract_MyHash"},
+				{cls: stringMapOwner, name: "MyAbstract_StringMapOwner"}
+			]
+		};
+		final renderedStringMapAbstractLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(stringMapAbstract, renderedStringMapLookup).join("\n");
+		assertContains(renderedStringMapAbstractLines, "template<typename V>\nstruct MyAbstract_MyHash {",
+			"C++ module-local StringMap-backed abstract support should render under the owner-qualified helper name");
+		assertContains(renderedStringMapAbstractLines, "static std::shared_ptr<MyAbstract_MyHash<K>> fromArray(std::vector<K> arr) {",
+			"C++ module-local StringMap-backed abstract factories should use the rendered helper name");
+		assertTrue(renderedStringMapAbstractLines.indexOf("struct MyHash") < 0,
+			"C++ module-local StringMap-backed support should not emit a raw helper name when a rendered name exists");
+		final hashFromArrays = [
+			for (fn in HxClassDecl.getFunctions(stringMapOwner))
+				if (HxFunctionDecl.getName(fn) == "hashFromArrays") fn
+		][0];
+		final renderedStringMapOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(hashFromArrays, stringMapOwner, renderedStringMapLookup).join("\n");
+		assertContains(renderedStringMapOwnerLines,
+			"std::shared_ptr<MyAbstract_MyHash<std::string>> hash1 = MyAbstract_MyHash<std::string>::fromArray(std::vector<std::string>{std::string(\"k1\"), std::string(\"v1\"), std::string(\"k2\"), std::string(\"v2\")});",
+			"C++ module-local MyHash<String> locals should construct through rendered abstract support");
+		assertContains(renderedStringMapOwnerLines,
+			"std::shared_ptr<MyAbstract_MyHash<int>> hash2 = MyAbstract_MyHash<int>::fromArray(std::vector<int>{1, 2, 3, 4});",
+			"C++ module-local MyHash<Int> locals should construct through rendered abstract support");
 		final stringMapOwnerLines = @:privateAccess [
 			for (fn in HxClassDecl.getFunctions(stringMapOwner))
 				backend.cpp.CppTargetCore.renderHelperMethod(fn, stringMapOwner, stringMapLookup).join("\n")

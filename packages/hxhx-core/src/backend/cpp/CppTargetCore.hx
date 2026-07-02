@@ -2362,6 +2362,18 @@ class CppTargetCore {
 		final byName = new haxe.ds.StringMap<HxClassDecl>();
 		for (cls in classes)
 			byName.set(renderedClassName(cls, classLookup), cls);
+		function classForDependency(dep:String):Null<HxClassDecl> {
+			final clean = sanitizeTypePath(typeBaseName(dep == null ? "" : dep));
+			if (clean.length == 0)
+				return null;
+			final direct = byName.get(clean);
+			if (direct != null)
+				return direct;
+			final aliased = classLookup.byName.get(clean);
+			if (aliased == null)
+				return null;
+			return byName.get(renderedClassName(aliased, classLookup));
+		}
 		final ordered = new Array<HxClassDecl>();
 		final state = new haxe.ds.StringMap<Int>();
 		function visit(cls:HxClassDecl):Void {
@@ -2373,7 +2385,7 @@ class CppTargetCore {
 				return;
 			state.set(name, 1);
 			for (dep in helperClassDependencies(cls, classLookup)) {
-				final depCls = byName.get(dep);
+				final depCls = classForDependency(dep);
 				if (depCls != null)
 					visit(depCls);
 			}
@@ -2621,9 +2633,9 @@ class CppTargetCore {
 		if (isTemplateWrapSupportClass(cls))
 			return renderTemplateWrapSupportClass(cls, classLookup);
 		if (isHashMapBackedAbstractClass(cls))
-			return renderHashMapBackedAbstractClass(cls);
+			return renderHashMapBackedAbstractClass(cls, classLookup);
 		if (isStringMapBackedAbstractClass(cls))
-			return renderStringMapBackedAbstractClass(cls);
+			return renderStringMapBackedAbstractClass(cls, classLookup);
 		if (isArrayBackedAbstractClass(cls))
 			return renderArrayBackedAbstractClass(cls, classLookup);
 		if (isPrimitiveBackedAbstractClass(cls))
@@ -3300,8 +3312,8 @@ class CppTargetCore {
 		return sanitizeTypePath(typeBaseName(underlying == null ? "" : underlying)) == "HashMapData";
 	}
 
-	static function renderHashMapBackedAbstractClass(cls:HxClassDecl):Array<String> {
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+	static function renderHashMapBackedAbstractClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = renderedClassName(cls, classLookup);
 		final typeParams = genericClassTemplateParams(cls);
 		final keyType = typeParams.length > 0 ? sanitizeIdentifier(typeParams[0]) : "std::string";
 		final valueType = typeParams.length > 1 ? sanitizeIdentifier(typeParams[1]) : "std::string";
@@ -3355,8 +3367,8 @@ class CppTargetCore {
 		return out;
 	}
 
-	static function renderStringMapBackedAbstractClass(cls:HxClassDecl):Array<String> {
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+	static function renderStringMapBackedAbstractClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = renderedClassName(cls, classLookup);
 		final typeParams = genericClassTemplateParams(cls);
 		final valueType = typeParams.length > 0 ? sanitizeIdentifier(typeParams[0]) : "std::string";
 		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
