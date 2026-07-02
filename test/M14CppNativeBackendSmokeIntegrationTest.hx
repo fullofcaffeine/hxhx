@@ -1553,6 +1553,43 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(renderedDepOrderNames.indexOf("Module_Helper") >= 0
 			&& renderedDepOrderNames.indexOf("Module_Helper") < renderedDepOrderNames.indexOf("Module_Consumer"),
 			"C++ helper ordering should resolve raw body dependencies through rendered lookup aliases");
+
+		final exceptionSupport = new HxClassDecl("Exception", false, [new HxFunctionDecl("get_stack", Public, false, [], "Dynamic", [], "")],
+			[new HxFieldDecl("stack", Public, false, "Dynamic", null)]);
+		final callStackSupport = new HxClassDecl("CallStack", false, [], []);
+		final exceptionStackNames = new StringMap<Bool>();
+		for (name in ["Exception", "CallStack"])
+			exceptionStackNames.set(name, true);
+		final exceptionStackClasses = new StringMap<HxClassDecl>();
+		exceptionStackClasses.set("Exception", exceptionSupport);
+		exceptionStackClasses.set("CallStack", callStackSupport);
+		final exceptionStackLookup = {names: exceptionStackNames, byName: exceptionStackClasses};
+		final exceptionDeps = @:privateAccess backend.cpp.CppTargetCore.helperClassDependencies(exceptionSupport, exceptionStackLookup).join("\n");
+		assertContains(exceptionDeps, "CallStack", "C++ Exception support should depend on CallStack because generated Exception stores CallStack by value");
+		final exceptionStackOrder = @:privateAccess
+			backend.cpp.CppTargetCore.orderHelperClasses([exceptionSupport, callStackSupport], exceptionStackLookup);
+		final exceptionStackOrderNames = @:privateAccess [
+			for (cls in exceptionStackOrder)
+				backend.cpp.CppTargetCore.renderedClassName(cls, exceptionStackLookup)
+		];
+		assertTrue(exceptionStackOrderNames.indexOf("CallStack") >= 0
+			&& exceptionStackOrderNames.indexOf("CallStack") < exceptionStackOrderNames.indexOf("Exception"),
+			"C++ helper ordering should render CallStack before Exception because Exception stores CallStack by value");
+		final cyclicCallStackSupport = new HxClassDecl("CallStack", false, [], [new HxFieldDecl("source", Public, false, "Exception", null)], "",
+			["__hxhx_abstract", "__hxhx_abstract_underlying=Array<StackItem>"]);
+		final cyclicStackClasses = new StringMap<HxClassDecl>();
+		cyclicStackClasses.set("Exception", exceptionSupport);
+		cyclicStackClasses.set("CallStack", cyclicCallStackSupport);
+		final cyclicStackLookup = {names: exceptionStackNames, byName: cyclicStackClasses};
+		final cyclicStackOrder = @:privateAccess
+			backend.cpp.CppTargetCore.orderHelperClasses([cyclicCallStackSupport, exceptionSupport], cyclicStackLookup);
+		final cyclicStackOrderNames = @:privateAccess [
+			for (cls in cyclicStackOrder)
+				backend.cpp.CppTargetCore.renderedClassName(cls, cyclicStackLookup)
+		];
+		assertTrue(cyclicStackOrderNames.indexOf("CallStack") >= 0
+			&& cyclicStackOrderNames.indexOf("CallStack") < cyclicStackOrderNames.indexOf("Exception"),
+			"C++ helper ordering should keep CallStack before Exception even when parsed dependency traversal sees a cycle");
 	}
 
 	static function assertCppOptionalArrowFunctionsUseCallableShapes():Void {

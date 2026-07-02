@@ -2456,7 +2456,26 @@ class CppTargetCore {
 		}
 		for (cls in classes)
 			visit(cls);
+		// C++ needs by-value support structs before their consumers even if
+		// parsed stdlib declarations create an ordering cycle.
+		moveHelperBefore(ordered, classLookup, "CallStack", "Exception");
 		return ordered;
+	}
+
+	static function moveHelperBefore(classes:Array<HxClassDecl>, classLookup:CppClassLookup, beforeName:String, afterName:String):Void {
+		var beforeIndex = -1;
+		var afterIndex = -1;
+		for (i in 0...classes.length) {
+			final name = renderedClassName(classes[i], classLookup);
+			if (name == beforeName)
+				beforeIndex = i;
+			if (name == afterName)
+				afterIndex = i;
+		}
+		if (beforeIndex < 0 || afterIndex < 0 || beforeIndex < afterIndex)
+			return;
+		final moved = classes.splice(beforeIndex, 1)[0];
+		classes.insert(afterIndex, moved);
 	}
 
 	static function helperClassDependencies(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -2504,6 +2523,10 @@ class CppTargetCore {
 			// renderUnitTestBaseSupportClass emits target-owned calls through these helpers.
 			add("Assert");
 			add("Type");
+		}
+		if (renderedClassName(cls, classLookup) == "Exception") {
+			// Exception stores and returns CallStack by value in generated support.
+			add("CallStack");
 		}
 		return deps;
 	}
