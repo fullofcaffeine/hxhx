@@ -310,6 +310,9 @@ class CppTypeModel {
 		}
 		if (scope != null && scope.owner != null && raw.indexOf(".") < 0 && base.length > 0) {
 			final ownerName = HxClassDecl.getName(scope.owner);
+			final ownerBase = sanitizeTypePath(typeBaseName(ownerName == null ? "" : ownerName));
+			if (ownerBase.length > 0 && ownerBase != base)
+				add(sanitizeTypePath(ownerBase + "." + base));
 			final dot = ownerName == null ? -1 : ownerName.lastIndexOf(".");
 			if (dot > 0)
 				add(sanitizeTypePath(ownerName.substr(0, dot + 1) + base));

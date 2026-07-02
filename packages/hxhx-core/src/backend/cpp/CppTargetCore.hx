@@ -15176,7 +15176,15 @@ class CppTargetCore {
 	}
 
 	static function arrayBackedAbstractValueCppType(cls:HxClassDecl, classLookup:CppClassLookup):String {
-		return CppTypeModel.arrayBackedAbstractValueCppType(cls, classLookup);
+		if (genericClassTemplateParams(cls).length > 0)
+			return CppTypeModel.arrayBackedAbstractValueCppType(cls, classLookup);
+		final underlying = removeTypeHintWhitespace(abstractUnderlyingTypeHint(cls));
+		final scope = renderScope(cls, classLookup, "auto");
+		if (StringTools.startsWith(underlying, "Array<") && StringTools.endsWith(underlying, ">"))
+			return cppTypeHint(underlying, scope, classLookup);
+		if (StringTools.startsWith(underlying, "VectorData<") && StringTools.endsWith(underlying, ">"))
+			return "std::vector<" + cppTypeHint(genericTypeHintArg(underlying), scope, classLookup) + ">";
+		return "std::vector<std::string>";
 	}
 
 	static function primitiveAbstractUnderlyingCppType(cls:HxClassDecl):Null<String> {

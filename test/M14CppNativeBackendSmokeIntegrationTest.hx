@@ -5600,6 +5600,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("Array<SignatureInformation>",
 			renderedScope) == "std::vector<Display_SignatureInformation>",
 			"C++ arrays of structural typedef values should use rendered element names");
+		final renderedAbstractLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(localCallStack, renderedLookup).join("\n");
+		assertContains(renderedAbstractLines, "std::vector<std::shared_ptr<CallStack_StackItem>> __values;",
+			"C++ array-backed abstract wrappers should qualify module-local element aliases in their storage type");
+		assertContains(renderedAbstractLines, "LocalCallStack(std::vector<std::shared_ptr<CallStack_StackItem>> values) : __values(values) {}",
+			"C++ array-backed abstract wrapper constructors should use the same qualified module-local element aliases");
+		assertTrue(renderedAbstractLines.indexOf("std::shared_ptr<StackItem>") < 0,
+			"C++ array-backed abstract wrappers should not leak bare module-local aliases when rendered aliases exist");
 		final abstractLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(localCallStack, abstractLookup).join("\n");
 		assertContains(abstractLines, "std::vector<std::shared_ptr<StackItem>> __values;",
 			"C++ array-backed abstract wrappers should store the underlying vector");
