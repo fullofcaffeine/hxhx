@@ -2228,6 +2228,8 @@ class CppTargetCore {
 		if (isCppCoreExternClass(rawName) || isBytesDataTypeName(rawName))
 			return DeclarationOnly;
 		final className = renderedClassName(cls, classLookup);
+		if (isNativeStackTraceSupportClass(cls))
+			return DeclarationOnly;
 		if (HxClassDecl.getFields(cls).length == 0
 			&& HxClassDecl.getFunctions(cls).length == 0
 			&& renderMissingInterfaceDeclaration(className) != null)
@@ -2591,6 +2593,8 @@ class CppTargetCore {
 		if (isCppCoreExternClass(HxClassDecl.getName(cls)))
 			return [];
 		if (isBytesDataTypeName(HxClassDecl.getName(cls)))
+			return [];
+		if (isNativeStackTraceSupportClass(cls))
 			return [];
 		final className = renderedClassName(cls, classLookup);
 		if (HxClassDecl.getFields(cls).length == 0
@@ -12061,6 +12065,10 @@ class CppTargetCore {
 
 	static function isAnySupportClass(cls:HxClassDecl):Bool {
 		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Any";
+	}
+
+	static function isNativeStackTraceSupportClass(cls:HxClassDecl):Bool {
+		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "NativeStackTrace";
 	}
 
 	static function isCppPreludeStaticClass(name:String):Bool {

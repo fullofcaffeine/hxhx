@@ -1113,6 +1113,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedParser], []);
 	}
 
+	static function nativeStackTraceDeclarationProgram():GenIrProgram {
+		final callStackSource = [
+			"class CallStack {",
+			"  public static function callStack():Array<StackItem> {",
+			"    return NativeStackTrace.toHaxe(NativeStackTrace.callStack());",
+			"  }",
+			"}",
+			"enum StackItem {",
+			"  Module(m:String);",
+			"}"
+		].join("\n");
+		final nativeStackTraceSource = [
+			"extern class NativeStackTrace {",
+			"  static public function saveStack(exception:Dynamic):Void;",
+			"  static public function callStack():Dynamic;",
+			"  static public function exceptionStack():Dynamic;",
+			"  static public function toHaxe(nativeStackTrace:Dynamic, skip:Int = 0):Array<CallStack.StackItem>;",
+			"}"
+		].join("\n");
+		final mainSource = "class Main { static function main() {} }";
+		final typedCallStack = TyperStage.typeModule(ParserStage.parse(callStackSource, "CallStack.hx"));
+		final typedNativeStackTrace = TyperStage.typeModule(ParserStage.parse(nativeStackTraceSource, "NativeStackTrace.hx"));
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		return MacroStage.expandProgram([typedCallStack, typedNativeStackTrace, typedMain], []);
+	}
+
 	static function stdlibSupportDuplicationProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -1370,14 +1396,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final iface = new HxClassDecl("InterfaceOnly", false, [new HxFunctionDecl("label", Public, false, [], "String", [], "")], [], "", [], true);
 		final any = new HxClassDecl("Any", false, [], []);
 		final missingIMap = new HxClassDecl("IMap", false, [], []);
+		final nativeStackTrace = new HxClassDecl("NativeStackTrace", false, [new HxFunctionDecl("callStack", Public, true, [], "Dynamic", [], "")], []);
 		final ifaceKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(iface, lookup);
 		final anyKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(any, lookup);
 		final missingIMapKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(missingIMap, lookup);
+		final nativeStackTraceKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(nativeStackTrace, lookup);
 		final nullKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(null, lookup);
 		assertTrue(Std.string(ifaceKind) == "DeclarationOnly", "C++ helper classification should identify interface/signature-only helpers");
 		assertTrue(Std.string(anyKind) == "RuntimeModule", "C++ helper classification should identify target-owned runtime module helpers");
 		assertTrue(Std.string(missingIMapKind) == "DeclarationOnly",
 			"C++ helper classification should identify missing declaration surfaces as declaration-only");
+		assertTrue(Std.string(nativeStackTraceKind) == "DeclarationOnly",
+			"C++ helper classification should keep NativeStackTrace as declaration-only target extern support");
 		assertTrue(Std.string(nullKind) == "UnsupportedDiagnostic", "C++ helper classification should reserve a visible unsupported-diagnostic bucket");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(ifaceKind) == "declaration_only",
 			"C++ helper classification detail labels should use trace-stable bucket names");
@@ -3529,6 +3559,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ target-owned IMap fallback declarations should not collapse map get values to String");
 		assertContains(missingIMapLines, "virtual std::shared_ptr<IMap<K, V>> copy() = 0;",
 			"C++ target-owned IMap fallback copy declarations should keep the generic map surface");
+		final nativeStackTraceLines = @:privateAccess backend.cpp.CppTargetCore.renderMissingInterfaceDeclaration("NativeStackTrace").join("\n");
+		assertContains(nativeStackTraceLines, "struct NativeStackTrace {",
+			"C++ target-owned NativeStackTrace declarations should expose a concrete signature surface");
+		assertContains(nativeStackTraceLines, "static std::any callStack();",
+			"C++ target-owned NativeStackTrace declarations should expose callStack without adding a body");
+		assertContains(nativeStackTraceLines, "static std::vector<std::shared_ptr<CallStack_StackItem>> toHaxe(std::any nativeStackTrace, int skip = 0);",
+			"C++ target-owned NativeStackTrace declarations should preserve CallStack.StackItem element typing");
 		final hashMapAbstract = new HxClassDecl("HashMap", false, [], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=HashMapData<K,V>"]);
 		final hashMapParams = @:privateAccess backend.cpp.CppTargetCore.genericClassTemplateParams(hashMapAbstract);
 		assertTrue(hashMapParams.length == 2 && hashMapParams[0] == "K" && hashMapParams[1] == "V",
@@ -7957,6 +7994,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(hasArtifactKind(sourceOnly.artifacts, "entry_cpp_source"), "missing entry_cpp_source artifact");
 		assertTrue(!sourceOnly.builtExecutable, "no-compilation C++ smoke should not build executable");
 		final source = File.getContent(sourceOnly.entryPath);
+		final nativeStackTraceDir = Path.join([root, "native-stack-trace-declaration-source-only"]);
+		final nativeStackTraceEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(nativeStackTraceDeclarationProgram(), context(nativeStackTraceDir, true, true));
+		final nativeStackTraceSource = File.getContent(nativeStackTraceEmit.entryPath);
+		final nativeStackTraceDeclIndex = nativeStackTraceSource.indexOf("struct NativeStackTrace {");
+		final callStackDeclIndex = nativeStackTraceSource.indexOf("struct CallStack {");
+		assertTrue(nativeStackTraceDeclIndex >= 0, "C++ NativeStackTrace externs should emit declaration surfaces, not bare forwards");
+		assertTrue(callStackDeclIndex > nativeStackTraceDeclIndex,
+			"C++ NativeStackTrace declarations should appear before CallStack inline bodies that call them");
+		assertContains(nativeStackTraceSource, "static std::vector<std::shared_ptr<CallStack_StackItem>> toHaxe(std::any nativeStackTrace, int skip = 0);",
+			"C++ NativeStackTrace declarations should expose CallStack.StackItem return typing before CallStack uses it");
+		assertContains(nativeStackTraceSource, "return NativeStackTrace::toHaxe(NativeStackTrace::callStack());",
+			"C++ CallStack bodies should call the target-owned NativeStackTrace declaration surface");
+		assertTrue(nativeStackTraceSource.indexOf("struct NativeStackTrace;\n") < 0,
+			"C++ NativeStackTrace should not be emitted only as a bare forward declaration");
 		final moduleLocalDir = Path.join([root, "module-local-interface-collision-source-only"]);
 		final moduleLocalEmit = BackendRegistry.createForTarget("cpp-native")
 			.emit(cppModuleLocalInterfaceCollisionProgram(), context(moduleLocalDir, true, true));

@@ -270,6 +270,16 @@ class CppRuntimeSupport {
 				];
 			case "Date":
 				["struct Date {", "  std::string toString() { return std::string(); }", "};"];
+			case "NativeStackTrace":
+				[
+					"struct CallStack_StackItem;",
+					"struct NativeStackTrace {",
+					"  static void saveStack(std::any exception);",
+					"  static std::any callStack();",
+					"  static std::any exceptionStack();",
+					"  static std::vector<std::shared_ptr<CallStack_StackItem>> toHaxe(std::any nativeStackTrace, int skip = 0);",
+					"};"
+				];
 			case _:
 				null;
 		}
