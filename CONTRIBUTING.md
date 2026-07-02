@@ -37,6 +37,13 @@ The repo pre-commit hook enforces staged local-path checks, staged secret scanni
 - Local `scripts/ci/gitleaks-history-check.sh` and CI share the same config (`.gitleaks.toml`).
 - Keep `README.md` updated in the same PR when workflows or required tools change.
 
+## Documentation expectations
+
+- Treat docs as part of the change. Update `README.md`, getting-started docs, or the relevant technical doc when behavior, workflows, flags, required tools, or production-readiness claims change.
+- Write for capable beginners who are new to this repo: define terms, prefer concrete commands and expected outcomes, and link to deeper docs instead of relying on internal shorthand.
+- Be precise about limits. Do not oversimplify away prerequisites, unsupported cases, evidence gaps, or current production-readiness status.
+- Avoid Dunning-Kruger-style confidence: simplified docs must not make complex, incomplete, or risky areas sound solved.
+
 ## Upstream stdlib policy (required)
 
 - Follow `docs/00-project/STD_LIB_POLICY.md` for upstream sync boundaries.

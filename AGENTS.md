@@ -572,6 +572,17 @@ Use hxdoc (`/** ... */`) proactively.
 - If a type, function, abstract, macro, extern override, or metadata pattern is even slightly non-obvious, surprising, or easy to misuse, document it with **Why / What / How** HaxeDoc where it is declared.
 - In practice, bias toward documenting earlier rather than later, especially for abstracts, compiler helpers, runtime bindings, lowering hooks, and `std/` compatibility shims.
 
+## Documentation Quality
+
+Documentation is a first-class part of the implementation, not cleanup after the fact.
+
+- Write for a capable beginner who is new to this repo: lead with the practical workflow, define terms at first use, and link to the glossary or deeper docs instead of assuming contributor context.
+- Distill hard concepts without faking certainty. Do not hide prerequisites, unsupported cases, production-readiness limits, or evidence gaps just to make the text feel simpler.
+- Avoid Dunning-Kruger-style docs: do not make complex, incomplete, or risky areas sound solved merely because the explanation has been simplified.
+- Avoid unexplained shorthand, internal bead names, gate labels, and architecture jargon in user-facing docs. When a precise technical term is necessary, explain the user-visible meaning before the internal label.
+- Keep `README.md`, getting-started docs, technical docs, and bead notes aligned with behavior changes. If a change does not need docs, record the reason explicitly in the bead/checkpoint note.
+- Prefer concrete commands, expected outputs, status tables, and small examples over vague claims. A beginner should leave knowing what works, what does not, and which command proves it.
+
 ## README Maintenance
 
 Keep `README.md` up to date as milestones land.
