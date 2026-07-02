@@ -3765,8 +3765,27 @@ class CppTargetCore {
 			+ sanitizeIdentifier(field == null ? "" : field)
 			+ "|hint="
 			+ removeTypeHintWhitespace(explicit)
+			+ "|hint_shape="
+			+ typeHintScopeShapeCacheKey(explicit, scope)
 			+ "|type_params="
 			+ stringMapStableKey(scope == null ? null : scope.typeParamCppNames);
+	}
+
+	static function typeHintScopeShapeCacheKey(typeHint:String, ?scope:CppRenderScope):String {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (hint.length == 0 || scope == null)
+			return "";
+		final lookup = lookupForScope(scope);
+		final cls = CppTypeModel.lookupClassForTypeHint(hint, scope, lookup);
+		if (cls == null)
+			return "";
+		final fields = [
+			for (field in HxClassDecl.getFields(cls))
+				(HxFieldDecl.getIsStatic(field) ? "static:" : "field:")
+				+ sanitizeIdentifier(HxFieldDecl.getName(field))
+				+ ":"
+				+ removeTypeHintWhitespace(HxFieldDecl.getTypeHint(field))];
+		return renderedClassName(cls, lookup) + "|meta=" + HxClassDecl.getMetadata(cls).join(",") + "|fields=" + fields.join(",");
 	}
 
 	static function isEnumMetadataAnonInit(init:Null<HxExpr>):Bool {
@@ -5574,12 +5593,36 @@ class CppTargetCore {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionSignatureScope(scope, fn);
-		return [
-			"  " + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "() {",
-			"    if (posInfos == nullptr) return Exception::toString();",
-			"    return Exception::toString() + std::string(\" in \") + posInfos->className + std::string(\".\") + posInfos->methodName + std::string(\" at \") + posInfos->fileName + std::string(\":\") + std::to_string(posInfos->lineNumber);",
-			"  }"
+		final posInfosType = currentOwnerFieldCppType("posInfos", scope);
+		final posInfosAccess = switch (posInfosType) {
+			case "std::shared_ptr<PosInfos>":
+				"posInfos->";
+			case "std::optional<PosInfos>":
+				"posInfos.value().";
+			case _:
+				"posInfos.";
+		};
+		final out = [
+			"  " + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "() {"
 		];
+		switch (posInfosType) {
+			case "std::shared_ptr<PosInfos>":
+				out.push("    if (posInfos == nullptr) return Exception::toString();");
+			case "std::optional<PosInfos>":
+				out.push("    if (!posInfos.has_value()) return Exception::toString();");
+			case _:
+		}
+		out.push("    return Exception::toString() + std::string(\" in \") + "
+			+ posInfosAccess
+			+ "className + std::string(\".\") + "
+			+ posInfosAccess
+			+ "methodName + std::string(\" at \") + "
+			+ posInfosAccess
+			+ "fileName + std::string(\":\") + std::to_string("
+			+ posInfosAccess
+			+ "lineNumber);");
+		out.push("  }");
+		return out;
 	}
 
 	static function isTestExceptionsStackItemDataHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
@@ -6231,6 +6274,8 @@ class CppTargetCore {
 			+ argName
 			+ "|hint="
 			+ removeTypeHintWhitespace(explicit)
+			+ "|hint_shape="
+			+ typeHintScopeShapeCacheKey(explicit, scope)
 			+ "|override="
 			+ (overrideType == null ? "" : overrideType)
 			+ "|optional="

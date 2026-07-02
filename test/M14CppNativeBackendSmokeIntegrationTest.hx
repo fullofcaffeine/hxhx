@@ -1524,6 +1524,38 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(second == "int", "C++ arg declared-type cache should separate changed type-parameter mappings");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache.get(firstKey) == "std::string",
 			"C++ arg declared-type cache should not overwrite a prior scope-shape entry");
+		@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache = new StringMap<String>();
+		final pointerPosInfos = new HxClassDecl("PosInfos", false, [], []);
+		final valuePosInfos = new HxClassDecl("PosInfos", false, [], [
+			new HxFieldDecl("fileName", Public, false, "String", null),
+			new HxFieldDecl("lineNumber", Public, false, "Int", null)
+		], "", ["__hxhx_typedef"]);
+		final pointerArgClasses = new StringMap<HxClassDecl>();
+		pointerArgClasses.set("ArgTypeCacheOwner", owner);
+		pointerArgClasses.set("PosInfos", pointerPosInfos);
+		final valueArgClasses = new StringMap<HxClassDecl>();
+		valueArgClasses.set("ArgTypeCacheOwner", owner);
+		valueArgClasses.set("PosInfos", valuePosInfos);
+		final pointerArgScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {
+			names: names,
+			byName: pointerArgClasses
+		}, "void");
+		final valueArgScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {
+			names: names,
+			byName: valueArgClasses
+		}, "void");
+		final posArg = new HxFunctionArg("pos", "PosInfos", NoDefault, false, false);
+		final pointerArgType = @:privateAccess backend.cpp.CppTargetCore.cppFunctionArgType(posArg, pointerArgScope);
+		assertTrue(pointerArgType == "std::shared_ptr<PosInfos>", "C++ arg declared-type cache should render class-shaped PosInfos as references");
+		final pointerArgKey = @:privateAccess
+			backend.cpp.CppTargetCore.functionArgDeclaredTypeCacheKey(posArg, pointerArgScope, "pos", "PosInfos", null);
+		final valueArgType = @:privateAccess backend.cpp.CppTargetCore.cppFunctionArgType(posArg, valueArgScope);
+		assertTrue(valueArgType == "PosInfos", "C++ arg declared-type cache should render typedef-shaped PosInfos as values");
+		final valueArgKey = @:privateAccess
+			backend.cpp.CppTargetCore.functionArgDeclaredTypeCacheKey(posArg, valueArgScope, "pos", "PosInfos", null);
+		assertTrue(pointerArgKey != valueArgKey, "C++ arg declared-type cache keys should include resolved class shape");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.functionArgDeclaredTypeCache.get(pointerArgKey) == "std::shared_ptr<PosInfos>",
+			"C++ arg declared-type cache should preserve the pointer-shaped entry");
 	}
 
 	static function assertCppFieldTypeCacheUsesScopeShape():Void {
@@ -1545,6 +1577,43 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(second == "int", "C++ field type cache should separate changed type-parameter mappings");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache.get(firstKey) == "std::string",
 			"C++ field type cache should not overwrite a prior scope-shape entry");
+		@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache = new StringMap<String>();
+		final posException = new HxClassDecl("PosException", false, [], []);
+		final pointerPosInfos = new HxClassDecl("PosInfos", false, [], []);
+		final valuePosInfos = new HxClassDecl("PosInfos", false, [], [
+			new HxFieldDecl("fileName", Public, false, "String", null),
+			new HxFieldDecl("lineNumber", Public, false, "Int", null)
+		], "", ["__hxhx_typedef"]);
+		final pointerFieldClasses = new StringMap<HxClassDecl>();
+		pointerFieldClasses.set("PosException", posException);
+		pointerFieldClasses.set("PosInfos", pointerPosInfos);
+		final valueFieldClasses = new StringMap<HxClassDecl>();
+		valueFieldClasses.set("PosException", posException);
+		valueFieldClasses.set("PosInfos", valuePosInfos);
+		final posNames = new StringMap<Bool>();
+		posNames.set("PosException", true);
+		posNames.set("PosInfos", true);
+		final pointerFieldScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(posException, {
+			names: posNames,
+			byName: pointerFieldClasses
+		}, "void");
+		final valueFieldScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(posException, {
+			names: posNames,
+			byName: valueFieldClasses
+		}, "void");
+		final pointerFieldType = @:privateAccess
+			backend.cpp.CppTargetCore.knownStdlibFieldCppType("PosException", "posInfos", "PosInfos", null, pointerFieldScope);
+		assertTrue(pointerFieldType == "std::shared_ptr<PosInfos>", "C++ field type cache should render class-shaped PosInfos as references");
+		final pointerFieldKey = @:privateAccess
+			backend.cpp.CppTargetCore.fieldCppTypeCacheKey("PosException", "posInfos", "PosInfos", pointerFieldScope);
+		final valueFieldType = @:privateAccess
+			backend.cpp.CppTargetCore.knownStdlibFieldCppType("PosException", "posInfos", "PosInfos", null, valueFieldScope);
+		assertTrue(valueFieldType == "PosInfos", "C++ field type cache should render typedef-shaped PosInfos as values");
+		final valueFieldKey = @:privateAccess
+			backend.cpp.CppTargetCore.fieldCppTypeCacheKey("PosException", "posInfos", "PosInfos", valueFieldScope);
+		assertTrue(pointerFieldKey != valueFieldKey, "C++ field type cache keys should include resolved class shape");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache.get(pointerFieldKey) == "std::shared_ptr<PosInfos>",
+			"C++ field type cache should preserve the pointer-shaped entry");
 	}
 
 	static function assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions():Void {
@@ -7187,11 +7256,37 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(stdPosExceptionToStringLines, "std::string toString() {",
 			"C++ stdlib PosException.toString helper should keep the declared String signature");
 		assertContains(stdPosExceptionToStringLines, "if (posInfos == nullptr) return Exception::toString();",
-			"C++ stdlib PosException.toString helper should preserve the null-position fallback");
+			"C++ stdlib PosException.toString helper should preserve the null-position fallback for pointer-shaped fields");
 		assertContains(stdPosExceptionToStringLines, "Exception::toString() + std::string(\" in \") + posInfos->className",
-			"C++ stdlib PosException.toString helper should compactly render the stdlib position message");
+			"C++ stdlib PosException.toString helper should compactly render pointer-shaped position fields");
 		assertContains(stdPosExceptionToStringLines, "std::to_string(posInfos->lineNumber)",
-			"C++ stdlib PosException.toString helper should stringify the line number");
+			"C++ stdlib PosException.toString helper should stringify the pointer-shaped line number");
+		final stdValuePosInfos = new HxClassDecl("PosInfos", false, [], [
+			new HxFieldDecl("fileName", Public, false, "String", null),
+			new HxFieldDecl("lineNumber", Public, false, "Int", null),
+			new HxFieldDecl("className", Public, false, "String", null),
+			new HxFieldDecl("methodName", Public, false, "String", null)
+		], "", ["__hxhx_typedef"]);
+		final stdValuePosException = new HxClassDecl("PosException", false, [stdPosExceptionToString],
+			[new HxFieldDecl("posInfos", Public, false, "PosInfos", null)], "Exception");
+		final stdValuePosNames = new StringMap<Bool>();
+		for (name in ["Exception", "PosInfos", "PosException"])
+			stdValuePosNames.set(name, true);
+		final stdValuePosClasses = new StringMap<HxClassDecl>();
+		stdValuePosClasses.set("Exception", exceptionLike);
+		stdValuePosClasses.set("PosInfos", stdValuePosInfos);
+		stdValuePosClasses.set("PosException", stdValuePosException);
+		final stdValuePosLookup = {names: stdValuePosNames, byName: stdValuePosClasses};
+		final stdValuePosExceptionToStringLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(stdPosExceptionToString, stdValuePosException, stdValuePosLookup).join("\n");
+		assertTrue(stdValuePosExceptionToStringLines.indexOf("posInfos == nullptr") < 0,
+			"C++ stdlib PosException.toString helper should not null-check value-shaped PosInfos fields");
+		assertContains(stdValuePosExceptionToStringLines, "Exception::toString() + std::string(\" in \") + posInfos.className",
+			"C++ stdlib PosException.toString helper should compactly render value-shaped position fields");
+		assertContains(stdValuePosExceptionToStringLines, "std::to_string(posInfos.lineNumber)",
+			"C++ stdlib PosException.toString helper should stringify the value-shaped line number");
+		assertTrue(stdValuePosExceptionToStringLines.indexOf("posInfos->") < 0,
+			"C++ stdlib PosException.toString helper should not use pointer access for value-shaped PosInfos fields");
 		assertContains(notImplementedExceptionLines, "NotImplementedException(std::shared_ptr<PosInfos> pos = nullptr) : PosException(pos) {",
 			"C++ optional PosInfos constructor forwarding should keep the nullable reference instead of forcing value extraction");
 		assertTrue(notImplementedExceptionLines.indexOf("PosException(pos.value())") < 0,
