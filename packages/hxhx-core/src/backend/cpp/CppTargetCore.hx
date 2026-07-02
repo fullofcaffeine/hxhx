@@ -2592,6 +2592,7 @@ class CppTargetCore {
 				for (arg in args)
 					addExprClassDependencies(arg, add);
 			case EField(receiver, _):
+				addStaticReceiverClassDependency(receiver, add);
 				addExprClassDependencies(receiver, add);
 			case ECall(EField(receiver, method), args):
 				if (isInt64StaticReceiver(receiver) && int64StaticCallNeedsHelper(method))
@@ -12370,16 +12371,44 @@ class CppTargetCore {
 		if (typePath == null)
 			return null;
 		final lookup = lookupForScope(scope);
+		final clean = sanitizeTypePath(typeBaseName(typePath));
+		if (isCppPreludeStaticReceiverTypePath(typePath, clean, lookup))
+			return clean;
 		final cls = lookupClassForTypeHint(typePath, scope, lookup);
 		if (cls != null) {
 			final rendered = renderedClassName(cls, lookup);
 			if (scopeHasClass(scope, rendered) && (!isCppCoreExternClass(rendered) || isCppPreludeStaticClass(rendered)))
 				return rendered;
 		}
-		final clean = sanitizeTypePath(typeBaseName(typePath));
 		if (scopeHasClass(scope, clean) && (!isCppCoreExternClass(clean) || isCppPreludeStaticClass(clean)))
 			return clean;
 		return isKnownCppStaticSupportReceiver(clean) ? clean : null;
+	}
+
+	static function isCppPreludeStaticReceiverTypePath(typePath:String, clean:String, classLookup:CppClassLookup):Bool {
+		// Imported std/prelude support such as haxe.Timer should keep using the target-owned helper even
+		// when another module owns the same short class name.
+		if (!isCppPreludeStaticClass(clean) || !classLookupHasPackageClass(classLookup, "haxe", clean))
+			return false;
+		final normalized = sanitizeTypePath(typePath);
+		if (normalized == sanitizeTypePath("haxe." + clean))
+			return true;
+		if (normalized == clean && !classLookupHasPackageClass(classLookup, "", clean))
+			return true;
+		return false;
+	}
+
+	static function classLookupHasPackageClass(classLookup:CppClassLookup, packagePath:String, baseName:String):Bool {
+		if (classLookup == null || classLookup.all == null)
+			return false;
+		final expectedPackage = packagePath == null ? "" : packagePath;
+		final expectedBase = sanitizeTypePath(typeBaseName(baseName == null ? "" : baseName));
+		for (cls in classLookup.all) {
+			if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == expectedBase
+				&& packagePathForRenderedClass(cls, classLookup) == expectedPackage)
+				return true;
+		}
+		return false;
 	}
 
 	static function isKnownCppStaticSupportReceiver(className:String):Bool {

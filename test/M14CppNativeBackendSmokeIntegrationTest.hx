@@ -1524,6 +1524,34 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper ordering should render Assert before target-owned Test support");
 		assertTrue(unitTestOrderNames.indexOf("Type") >= 0 && unitTestOrderNames.indexOf("Type") < unitTestOrderNames.indexOf("Test"),
 			"C++ helper ordering should render Type before target-owned Test support");
+		final testHandlerSupport = new HxClassDecl("TestHandler", false, [
+			new HxFunctionDecl("bindHandler", Public, false, [], "Void", [
+				SExpr(EBinop("=", EField(EIdent("Assert"), "results"), EIdent("results")), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EIdent("Assert"), "createAsync"), EField(EThis, "addAsync")), HxPos.unknown())
+			], "")
+		], []);
+		final assertHookSupport = new HxClassDecl("Assert", false, [], [
+			new HxFieldDecl("results", Public, true, "Dynamic", null),
+			new HxFieldDecl("createAsync", Public, true, "Dynamic", null)
+		]);
+		final testHandlerHookNames = new StringMap<Bool>();
+		for (name in ["TestHandler", "Assert"])
+			testHandlerHookNames.set(name, true);
+		final testHandlerHookClasses = new StringMap<HxClassDecl>();
+		testHandlerHookClasses.set("TestHandler", testHandlerSupport);
+		testHandlerHookClasses.set("Assert", assertHookSupport);
+		final testHandlerHookLookup = {names: testHandlerHookNames, byName: testHandlerHookClasses};
+		final testHandlerDeps = @:privateAccess backend.cpp.CppTargetCore.helperClassDependencies(testHandlerSupport, testHandlerHookLookup).join("\n");
+		assertContains(testHandlerDeps, "Assert", "C++ helper dependencies should include static field receivers like Assert.results");
+		final testHandlerOrder = @:privateAccess
+			backend.cpp.CppTargetCore.orderHelperClasses([testHandlerSupport, assertHookSupport], testHandlerHookLookup);
+		final testHandlerOrderNames = @:privateAccess [
+			for (cls in testHandlerOrder)
+				backend.cpp.CppTargetCore.renderedClassName(cls, testHandlerHookLookup)
+		];
+		assertTrue(testHandlerOrderNames.indexOf("Assert") >= 0
+			&& testHandlerOrderNames.indexOf("Assert") < testHandlerOrderNames.indexOf("TestHandler"),
+			"C++ helper ordering should render Assert before TestHandler static hook assignments");
 		final renderedDepHelper = new HxClassDecl("Helper", false, [], []);
 		final renderedDepConsumer = new HxClassDecl("Consumer", false, [
 			new HxFunctionDecl("make", Public, false, [], "Void", [SVar("helper", "", ENew("Helper", []), HxPos.unknown())], "")
@@ -8555,6 +8583,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EField(EIdent("haxe"), "Timer"), "stamp"), []),
 			qualifiedStdScope) == "Timer::stamp()",
 			"C++ qualified stdlib static calls should lower to the generated helper type");
+		final protocolModule = new HxClassDecl("Protocol", false, [], []);
+		final protocolTimer = new HxClassDecl("Timer", false, [
+			new HxFunctionDecl("stamp", Public, true, [], "Float", [SReturn(EFloat(1.0), HxPos.unknown())], "")
+		], []);
+		final haxeTimer = new HxClassDecl("Timer", false, [
+			new HxFunctionDecl("stamp", Public, true, [], "Float", [SReturn(EFloat(0.0), HxPos.unknown())], "")
+		], []);
+		final timerConsumer = new HxClassDecl("TimerConsumer", false, [], []);
+		final timerCollisionProgram = new GenIrProgram([
+			typedSyntheticModule("haxe/display/Protocol.hx",
+				new HxModuleDecl("haxe.display", [], protocolModule, [protocolModule, protocolTimer], false, false)),
+			typedSyntheticModule("haxe/Timer.hx", new HxModuleDecl("haxe", [], haxeTimer, [haxeTimer], false, false)),
+			typedSyntheticModule("utest/TimerConsumer.hx", new HxModuleDecl("utest", ["haxe.Timer"], timerConsumer, [timerConsumer], false, false))
+		], false);
+		final timerCollisionLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(timerCollisionProgram);
+		final timerCollisionScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(timerConsumer, timerCollisionLookup, "void");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Timer"), "stamp"), []), timerCollisionScope) == "Timer::stamp()",
+			"C++ imported haxe.Timer calls should not bind to another module's Timer class");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EField(EIdent("haxe"), "Timer"), "stamp"), []),
+			timerCollisionScope) == "Timer::stamp()",
+			"C++ qualified haxe.Timer calls should use the target-owned Timer support even when another Timer class exists");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.shouldForwardDeclareMissingType("EventArg", staticFieldLookup),
 			"C++ forward declarations should include referenced non-core type hints even when the class is not emitted as a helper");
 		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.shouldForwardDeclareMissingType("String", staticFieldLookup),
