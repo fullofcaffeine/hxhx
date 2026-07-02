@@ -4708,6 +4708,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(typePathCaptureLines.indexOf("return pack;") < 0, "C++ TypePath-returning continuation lambdas should not emit unbound pack references");
 		assertContains(typePathCaptureLines, "return nullptr;",
 			"C++ TypePath-returning unsupported continuation shapes should lower to a neutral TypePath reference");
+		final packagedTypePathClass = new HxClassDecl("Expr.TypePath", false, [], []);
+		final baseTypeWithPackClass = new HxClassDecl("BaseTypeWithPack", false, [], [
+			new HxFieldDecl("pack", Public, false, "Array<String>", null),
+			new HxFieldDecl("module", Public, false, "String", null)
+		]);
+		typeToolsNames.set("Expr_TypePath", true);
+		typeToolsNames.set("BaseTypeWithPack", true);
+		typeToolsClasses.set("Expr_TypePath", packagedTypePathClass);
+		typeToolsClasses.set("TypePath", packagedTypePathClass);
+		typeToolsClasses.set("BaseTypeWithPack", baseTypeWithPackClass);
+		final packagedTypePathCaptureMethod = new HxFunctionDecl("toPackagedTypePathLike", Public, true,
+			[new HxFunctionArg("baseType", "BaseTypeWithPack", NoDefault, false, false)], "Expr.TypePath", [
+				SReturn(ECall(ELambda(["module"], EIdent("pack")), [EField(EIdent("baseType"), "module")]), HxPos.unknown())
+			], "");
+		final packagedTypePathCaptureLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(packagedTypePathCaptureMethod, typeToolsOwner, {
+			names: typeToolsNames,
+			byName: typeToolsClasses
+		}).join("\n");
+		assertTrue(packagedTypePathCaptureLines.indexOf("return pack;") < 0,
+			"C++ package-rendered TypePath continuation lambdas should not emit field names as bare values");
+		assertContains(packagedTypePathCaptureLines, "return nullptr;",
+			"C++ package-rendered TypePath unsupported continuation shapes should lower to a neutral TypePath reference");
 		final typeStringSwitchOwner = new HxClassDecl("TypeTools", false, [], []);
 		final typeStringSwitchClass = new HxClassDecl("Type", false, [], []);
 		final typeStringSwitchNames = new StringMap<Bool>();

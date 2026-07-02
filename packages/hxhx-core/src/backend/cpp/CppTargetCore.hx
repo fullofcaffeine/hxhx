@@ -11401,7 +11401,10 @@ class CppTargetCore {
 
 	static function isCppTypePathReferenceType(typeName:String):Bool {
 		final className = classNameFromCppType(typeName);
-		return className != null && sanitizeTypePath(typeBaseName(className)) == "TypePath";
+		if (className == null)
+			return false;
+		final clean = sanitizeTypePath(typeBaseName(className));
+		return clean == "TypePath" || StringTools.endsWith(clean, "_TypePath");
 	}
 
 	static function exprHasOptionalType(expr:HxExpr, ?scope:CppRenderScope):Bool {
