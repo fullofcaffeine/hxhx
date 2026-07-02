@@ -7385,6 +7385,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			])), [EInt(0)])
 		]);
 		final nestedClosureBody = ECall(ELambda(["tmp"], tmpFillExpr), [ENew("Array", [])]);
+		final accessIncBody = ECall(ELambda(["__hxhx_lambda_seq_1"], ECall(ELambda(["__hxhx_lambda_seq_0"], EIdent("j")), [EUnop("post++", EIdent("j"))])),
+			[EBinop("+=", EIdent("sum"), EIdent("j"))]);
+		final accessDecBody = ECall(ELambda(["__hxhx_lambda_seq_1"], ECall(ELambda(["__hxhx_lambda_seq_0"], EIdent("j")), [EUnop("post--", EIdent("j"))])),
+			[EBinop("-=", EIdent("sum"), EIdent("j"))]);
 		final closureVectorOwner = new HxClassDecl("ClosureVectorOwner", false, [
 			new HxFunctionDecl("zeroArg", Public, false, [], "Int", [
 				SVar("funs", "", EArrayDecl([]), HxPos.unknown()),
@@ -7402,7 +7406,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], ""),
 			new HxFunctionDecl("anonCalls", Public, false, [], "Int", [
 				SVar("accesses", "", EArrayDecl([]), HxPos.unknown()),
-				SExpr(ECall(EField(EIdent("accesses"), "push"), [EAnon(["inc", "dec"], [ELambda([], EInt(1)), ELambda([], EInt(0))])]), HxPos.unknown()),
+				SVar("sum", "", EInt(0), HxPos.unknown()),
+				SForIn("i", ERange(EInt(0), EInt(2)), SBlock([
+					SVar("j", "", EIdent("i"), HxPos.unknown()),
+					SExpr(ECall(EField(EIdent("accesses"), "push"), [EAnon(["inc", "dec"], [ELambda([], accessIncBody), ELambda([], accessDecBody)])]),
+						HxPos.unknown())
+				],
+					HxPos.unknown()),
+					HxPos.unknown()),
 				SVar("a", "", EArrayAccess(EIdent("accesses"), EInt(0)), HxPos.unknown()),
 				SReturn(ECall(EField(EIdent("a"), "inc"), []), HxPos.unknown())
 			], ""),

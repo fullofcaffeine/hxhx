@@ -1577,9 +1577,12 @@ class CppTargetCore {
 					addTypeHint(typeHint, scope);
 					if (init != null)
 						addExpr(init, scope);
-					final localType = anonCollectLocalTypeHint(typeHint, init, scope);
+					final local = sanitizeIdentifier(name);
+					var localType = anonCollectLocalTypeHint(typeHint, init, scope);
+					if (localType.length == 0)
+						localType = cppLocalDeclaredType(name, typeHint, init, scope, local);
 					if (localType.length > 0)
-						scope.localTypes.set(sanitizeIdentifier(name), localType);
+						scope.localTypes.set(local, localType);
 				case SIf(cond, thenBranch, elseBranch, _):
 					addExpr(cond, scope);
 					addStmt(thenBranch, scope);
@@ -1745,7 +1748,9 @@ class CppTargetCore {
 		anonymous literals and type hints, so running the full render prep here
 		duplicates expensive expression traversal. Keep only the local shape pass
 		needed for closure-vector anonymous elements so collection and rendering
-		agree on callable anonymous field structs. The collection scope also uses
+		agree on callable anonymous field structs. The collection walk records
+		simple local types as it goes so nested anonymous literals can infer
+		callable field returns from nearby locals. The collection scope also uses
 		a neutral return type so it does not trigger `cppFunctionReturnType`
 		inference before doing that walk.
 	**/
