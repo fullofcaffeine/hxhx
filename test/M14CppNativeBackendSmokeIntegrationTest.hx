@@ -4307,42 +4307,47 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ enum carrier static metadata fields should render as carrier values");
 		assertTrue(myEnumLines.indexOf("inline static std::string A") < 0, "C++ enum carrier static metadata fields should not render as string metadata");
 		final xmlType = new HxClassDecl("XmlType", false, [], [
-			new HxFieldDecl("__hx_is_enum", Public, true, "Bool", EBool(true)),
-			new HxFieldDecl("Element", Public, true, "Dynamic",
-				EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString("XmlType"), EString("Element"), EInt(0), EArrayDecl([])]))
-		]);
+			new HxFieldDecl("Element", Public, true, "Dynamic", EInt(0)),
+			new HxFieldDecl("Document", Public, true, "Dynamic", EInt(6))
+		], "", ["__hxhx_abstract"]);
 		final xml = new HxClassDecl("Xml", false, [
 			new HxFunctionDecl("isElement", Public, false, [], "Bool", [
 				SReturn(EBinop("!=", EIdent("nodeType"), EEnumValue("Element")), HxPos.unknown())
-			], "")
+			], ""),
+			new HxFunctionDecl("createElement", Public, true, [], "Xml", [SReturn(ENew("Xml", [EField(EIdent("XmlType"), "Element")]), HxPos.unknown())], "")
 		], [
 			new HxFieldDecl("Element", Public, true, "Dynamic", EField(EIdent("XmlType"), "Element")),
+			new HxFieldDecl("Document", Public, true, "Dynamic", EField(EIdent("XmlType"), "Document")),
 			new HxFieldDecl("nodeType", Public, false, "XmlType", null)
 		]);
-		final xmlNames = new StringMap<Bool>();
-		for (name in ["XmlType", "Xml_XmlType", "Xml"])
-			xmlNames.set(name, true);
-		final xmlClasses = new StringMap<HxClassDecl>();
-		xmlClasses.set("XmlType", xmlType);
-		xmlClasses.set("Xml_XmlType", xmlType);
-		xmlClasses.set("Xml", xml);
-		final xmlLookup = {
-			names: xmlNames,
-			byName: xmlClasses,
-			renderedNames: [{cls: xmlType, name: "Xml_XmlType"}]
-		};
+		final otherMain = new HxClassDecl("Other", false, [], []);
+		final otherXmlType = new HxClassDecl("XmlType", false, [], [new HxFieldDecl("Element", Public, true, "Dynamic", EString("other"))], "",
+			["__hxhx_abstract"]);
+		final xmlProgram = new MacroExpandedProgram([
+			typedSyntheticModule("Xml.hx", new HxModuleDecl("", [], xml, [xml, xmlType], false, false)),
+			typedSyntheticModule("Other.hx", new HxModuleDecl("", [], otherMain, [otherMain, otherXmlType], false, false))
+		], false, []);
+		final xmlLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(xmlProgram);
+		final xmlScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(xml, xmlLookup, "void");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("XmlType", xmlScope, xmlLookup) == "int",
+			"C++ module-local enum abstracts should resolve through the owner module before raw duplicate short-name aliases");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.staticReceiverClassName(EIdent("XmlType"), xmlScope) == "Xml_XmlType",
+			"C++ static receivers should resolve module-local enum abstract short names to the rendered owner-qualified helper");
 		final xmlTypeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(xmlType, xmlLookup).join("\n");
 		assertContains(xmlTypeLines, "struct Xml_XmlType {", "C++ module-local enum carriers should render under the module-qualified name");
-		assertContains(xmlTypeLines, "inline static std::shared_ptr<Xml_XmlType> Element = std::make_shared<Xml_XmlType>();",
-			"C++ module-local enum carrier statics should use the rendered carrier name");
+		assertContains(xmlTypeLines, "inline static int Element = 0;", "C++ module-local enum abstract statics should preserve literal backing values");
 		final xmlLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(xml, xmlLookup).join("\n");
-		assertContains(xmlLines, "inline static std::shared_ptr<Xml_XmlType> Element = std::make_shared<Xml_XmlType>();",
-			"C++ module-local enum aliases should infer the rendered enum carrier type");
-		assertTrue(xmlLines.indexOf("XmlType::Element") < 0, "C++ module-local enum aliases should not leak the raw short enum helper name");
-		assertContains(xmlLines, "nodeType != std::make_shared<Xml_XmlType>()",
-			"C++ module-local enum carrier comparisons should compare against carrier values, not strings");
+		assertContains(xmlLines, "inline static int Element = Xml_XmlType::Element;",
+			"C++ module-local enum abstract aliases should infer the rendered backing type");
+		assertTrue(!new EReg("(^|[^A-Za-z0-9_])XmlType::Element", "").match(xmlLines),
+			"C++ module-local enum aliases should not leak the raw short enum helper name");
+		assertContains(xmlLines, "nodeType != Xml::Element",
+			"C++ module-local enum abstract comparisons should compare against static backing values, not strings");
 		assertTrue(xmlLines.indexOf("nodeType != std::string(\"Element\")") < 0,
 			"C++ module-local enum carrier comparisons should not compare carrier references to strings");
+		assertContains(xmlLines, "std::make_shared<Xml>(Xml_XmlType::Element)",
+			"C++ module-local enum abstract constructor arguments should use rendered static backing values");
+		assertTrue(xmlLines.indexOf("std::make_shared<XmlType>") < 0, "C++ module-local enum abstract constructors should not use raw helper names");
 		assertWarnScope.localTypes.set("typedResults", "std::shared_ptr<List<std::shared_ptr<Assertation>>>");
 		final typedAssertWarnAdd:HxExpr = ECall(EField(EIdent("typedResults"), "add"), [ECall(EEnumValue("Warning"), [EIdent("msg")])]);
 		final typedAssertWarnAddExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedAssertWarnAdd, assertWarnScope);

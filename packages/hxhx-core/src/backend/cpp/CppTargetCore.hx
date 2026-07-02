@@ -3750,7 +3750,7 @@ class CppTargetCore {
 	}
 
 	static function renderPrimitiveBackedAbstractClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final className = renderedClassName(cls, classLookup);
 		final out = ["struct " + className + " {"];
 		final scope = renderScope(cls, classLookup, "void");
 		for (field in HxClassDecl.getFields(cls)) {
@@ -3829,6 +3829,9 @@ class CppTargetCore {
 			return cacheFieldType("std::vector<int>");
 		if (isOpaqueStringMapExpr(init))
 			return cacheFieldType("std::map<std::string, std::string>");
+		final primitiveOwnerType = primitiveBackedAbstractOwnerCppType(owner, scope);
+		if (primitiveOwnerType.length > 0 && (explicit.length == 0 || isDynamicLikeTypeHint(explicit)))
+			return cacheFieldType(primitiveOwnerType);
 		if (field != "__hx_enum_ctors" && isEnumMetadataAnonInit(init) && isEnumCarrierClassName(owner, scope))
 			return cacheFieldType("std::shared_ptr<" + owner + ">");
 		if (field == "__hx_enum_ctors" || isEnumMetadataAnonInit(init)) {
@@ -3837,11 +3840,49 @@ class CppTargetCore {
 				return inferred;
 		}
 		final inferredInitType = init == null ? "" : inferExprCppType(init, scope);
+		if (inferredInitType.length > 0 && isDynamicLikeTypeHint(explicit) && isPrimitiveBackedAbstractStaticFieldInit(init, scope))
+			return cacheFieldType(inferredInitType);
 		if (isCppEnumCarrierReferenceType(inferredInitType, scope))
 			return cacheFieldType(inferredInitType);
 		if (explicit.length > 0)
 			return cacheFieldType(cppTypeHint(explicit, scope));
 		return inferredInitType.length > 0 ? inferredInitType : cppTypeHint(typeHint, scope);
+	}
+
+	static function primitiveBackedAbstractOwnerCppType(className:String, ?scope:CppRenderScope):String {
+		final cls = classDeclForCppName(className, scope);
+		if (cls == null)
+			return "";
+		final underlying = primitiveAbstractUnderlyingCppType(cls);
+		return underlying == null ? "" : underlying;
+	}
+
+	static function classDeclForCppName(className:String, ?scope:CppRenderScope):Null<HxClassDecl> {
+		if (scope == null || className == null || className.length == 0)
+			return null;
+		final clean = sanitizeTypePath(typeBaseName(className));
+		if (scope.classByName.exists(className))
+			return scope.classByName.get(className);
+		if (scope.classByName.exists(clean))
+			return scope.classByName.get(clean);
+		return lookupClassForTypeHint(clean, scope, lookupForScope(scope));
+	}
+
+	static function isPrimitiveBackedAbstractStaticFieldInit(init:Null<HxExpr>, ?scope:CppRenderScope):Bool {
+		if (scope == null || init == null)
+			return false;
+		return switch (init) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				isPrimitiveBackedAbstractStaticFieldInit(inner, scope);
+			case EField(receiver, field):
+				final owner = staticReceiverClassName(receiver, scope);
+				owner != null
+				&& primitiveBackedAbstractOwnerCppType(owner, scope).length > 0
+				&& classHasStaticField(owner, field, scope)
+				&& classFieldCppType(owner, field, scope).length > 0;
+			case _:
+				false;
+		};
 	}
 
 	static function fieldCppTypeCacheKey(className:String, field:String, explicit:String, ?scope:CppRenderScope):String {
@@ -8705,6 +8746,9 @@ class CppTargetCore {
 		final staticEnum = staticEnumFieldExprForExpectedType(expr, expectedType, scope);
 		if (staticEnum != null)
 			return staticEnum;
+		final staticField = staticFieldExprForExpectedType(expr, expectedType, scope);
+		if (staticField != null)
+			return staticField;
 		final typedPointer = pointerCtorExprForExpectedType(expr, expectedType, scope);
 		if (typedPointer != null)
 			return typedPointer;
@@ -9245,6 +9289,10 @@ class CppTargetCore {
 				"true";
 			case EBinop("!=", ENull, right) if (exprHasNonNullableValueType(right, scope)):
 				"true";
+			case EBinop("==", left, right) if (staticFieldComparisonExpr("==", left, right, scope) != null):
+				staticFieldComparisonExpr("==", left, right, scope);
+			case EBinop("!=", left, right) if (staticFieldComparisonExpr("!=", left, right, scope) != null):
+				staticFieldComparisonExpr("!=", left, right, scope);
 			case EBinop("==", left, right) if (enumCarrierComparisonExpr("==", left, right, scope) != null):
 				enumCarrierComparisonExpr("==", left, right, scope);
 			case EBinop("!=", left, right) if (enumCarrierComparisonExpr("!=", left, right, scope) != null):
@@ -12001,7 +12049,7 @@ class CppTargetCore {
 		final hint = exprHaxeTypeHint(expr, scope);
 		if (hint.length == 0 || primitiveBackedAbstractCppTypeForTypeHint(hint, scope) == null)
 			return null;
-		final cls = scope.classByName.get(sanitizeTypePath(typeBaseName(hint)));
+		final cls = lookupClassForTypeHint(hint, scope, lookupForScope(scope));
 		return cls != null && primitiveAbstractUnderlyingCppType(cls) != null ? cls : null;
 	}
 
@@ -12048,6 +12096,19 @@ class CppTargetCore {
 			if (sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
 				return HxFieldDecl.getTypeHint(field);
 		return "";
+	}
+
+	static function classHasStaticField(className:String, fieldName:String, scope:CppRenderScope):Bool {
+		if (scope == null || className == null || className.length == 0)
+			return false;
+		final cls = classDeclForCppName(className, scope);
+		if (cls == null)
+			return false;
+		final wanted = sanitizeIdentifier(fieldName);
+		for (field in HxClassDecl.getFields(cls))
+			if (HxFieldDecl.getIsStatic(field) && sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
+				return true;
+		return false;
 	}
 
 	static function currentOwnerFieldCppType(name:String, scope:CppRenderScope):String {
@@ -12337,7 +12398,7 @@ class CppTargetCore {
 
 	static function staticFieldExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
 		final owner = staticReceiverClassName(receiver, scope);
-		if (owner == null || classFieldCppType(owner, field, scope).length == 0)
+		if (owner == null || !classHasStaticField(owner, field, scope) || classFieldCppType(owner, field, scope).length == 0)
 			return null;
 		return owner + "::" + sanitizeIdentifier(field);
 	}
@@ -13313,6 +13374,49 @@ class CppTargetCore {
 			case _:
 				null;
 		}
+	}
+
+	static function staticFieldExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || expectedType == null || expectedType.length == 0)
+			return null;
+		if (isCppEnumCarrierReferenceType(expectedType, scope))
+			return null;
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				staticFieldExprForExpectedType(inner, expectedType, scope);
+			case EIdent(field) if (!exprNameHasLocalStorage(field, scope)):
+				currentOwnerStaticFieldExpr(field, expectedType, scope);
+			case EEnumValue(field):
+				currentOwnerStaticFieldExpr(field, expectedType, scope);
+			case EField(receiver, field):
+				final owner = staticReceiverClassName(receiver, scope);
+				if (owner == null
+					|| !classHasStaticField(owner, field, scope)
+					|| classFieldCppType(owner, field, scope) != expectedType) null; else owner + "::" + sanitizeIdentifier(field);
+			case _:
+				null;
+		};
+	}
+
+	static function currentOwnerStaticFieldExpr(field:String, expectedType:String, scope:CppRenderScope):Null<String> {
+		if (scope == null || scope.owner == null)
+			return null;
+		final owner = renderedClassName(scope.owner, lookupForScope(scope));
+		if (owner.length == 0 || !classHasStaticField(owner, field, scope) || classFieldCppType(owner, field, scope) != expectedType)
+			return null;
+		return owner + "::" + sanitizeIdentifier(field);
+	}
+
+	static function staticFieldComparisonExpr(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || (op != "==" && op != "!="))
+			return null;
+		final leftType = exprCppType(left, scope);
+		final rightValue = staticFieldExprForExpectedType(right, leftType, scope);
+		if (rightValue != null)
+			return "(" + renderExpr(left, scope) + " " + op + " " + rightValue + ")";
+		final rightType = exprCppType(right, scope);
+		final leftValue = staticFieldExprForExpectedType(left, rightType, scope);
+		return leftValue == null ? null : "(" + leftValue + " " + op + " " + renderExpr(right, scope) + ")";
 	}
 
 	static function enumCarrierComparisonExpr(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {

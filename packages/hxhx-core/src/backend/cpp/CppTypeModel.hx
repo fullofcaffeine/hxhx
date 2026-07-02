@@ -77,7 +77,58 @@ class CppTypeModel {
 		if (cls == null)
 			return null;
 		final metadataType = primitiveTypeHintCppType(removeTypeHintWhitespace(abstractUnderlyingTypeHint(cls)));
-		return metadataType != null ? metadataType : knownPrimitiveBackedAbstractCppType(HxClassDecl.getName(cls));
+		if (metadataType != null)
+			return metadataType;
+		final known = knownPrimitiveBackedAbstractCppType(HxClassDecl.getName(cls));
+		return known != null ? known : inferredLiteralAbstractUnderlyingCppType(cls);
+	}
+
+	static function inferredLiteralAbstractUnderlyingCppType(cls:HxClassDecl):Null<String> {
+		if (!isHxhxAbstractClass(cls))
+			return null;
+		var found:Null<String> = null;
+		var count = 0;
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				continue;
+			final name = HxFieldDecl.getName(field);
+			if (name != null && StringTools.startsWith(name, "__"))
+				continue;
+			final literalType = primitiveLiteralExprCppType(HxFieldDecl.getInit(field));
+			if (literalType == null)
+				return null;
+			if (found != null && found != literalType)
+				return null;
+			found = literalType;
+			count++;
+		}
+		return count == 0 ? null : found;
+	}
+
+	static function isHxhxAbstractClass(cls:HxClassDecl):Bool {
+		if (cls == null)
+			return false;
+		for (meta in HxClassDecl.getMetadata(cls))
+			if (StringTools.trim(meta) == "__hxhx_abstract")
+				return true;
+		return false;
+	}
+
+	static function primitiveLiteralExprCppType(expr:Null<HxExpr>):Null<String> {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				primitiveLiteralExprCppType(inner);
+			case EInt(_):
+				"int";
+			case EFloat(_):
+				"double";
+			case EBool(_):
+				"bool";
+			case EString(_):
+				"std::string";
+			case _:
+				null;
+		};
 	}
 
 	public static function primitiveTypeHintCppType(typeHint:String):Null<String> {
@@ -135,13 +186,7 @@ class CppTypeModel {
 			|| StringTools.startsWith(hint, "Null<")
 			|| isFunctionTypeHint(hint))
 			return null;
-		final name = sanitizeTypePath(typeBaseName(hint));
-		if (scope != null) {
-			final scoped = scope.classByName.get(name);
-			if (scoped != null)
-				return scoped;
-		}
-		return classLookup == null ? null : classLookup.byName.get(name);
+		return classForTypeHint(hint, scope, classLookup);
 	}
 
 	public static function isArrayLikeTypeHint(typeHint:String):Bool {
