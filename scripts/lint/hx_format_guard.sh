@@ -4,55 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
-if ! command -v haxelib >/dev/null 2>&1; then
-	echo "[guard:hx-format] ERROR: haxelib is required." >&2
-	exit 1
-fi
-
-if ! haxelib run formatter --help >/dev/null 2>&1; then
-	echo "[guard:hx-format] ERROR: formatter haxelib is not installed." >&2
-	echo "[guard:hx-format] Install it with: haxelib install formatter" >&2
-	exit 1
-fi
-
-echo "[guard:hx-format] Checking Haxe formatting..."
-hx_list_file="$(mktemp)"
-git ls-files "*.hx" | awk '
-	$0 ~ /(^|\/)deps\// { next }
-	$0 ~ /(^|\/)out\// { next }
-	$0 ~ /(^|\/)bootstrap_work\// { next }
-	$0 ~ /(^|\/)bootstrap_verify\// { next }
-	{ print }
-' >"$hx_list_file"
-
-if [ ! -s "$hx_list_file" ]; then
-	rm -f "$hx_list_file"
-	echo "[guard:hx-format] ERROR: no tracked .hx files found." >&2
-	exit 1
-fi
-
-fmt_args=()
-while IFS= read -r hx_file; do
-	fmt_args+=(-s "$hx_file")
-done <"$hx_list_file"
-rm -f "$hx_list_file"
-haxelib run formatter "${fmt_args[@]}" --check
-
-SENTINEL_FILE="packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx"
-if [ -f "$SENTINEL_FILE" ]; then
-	tmp_dir="$(mktemp -d)"
-	tmp_file="$tmp_dir/$(basename "$SENTINEL_FILE")"
-	cp "$SENTINEL_FILE" "$tmp_file"
-	haxelib run formatter -s "$tmp_file" >/dev/null
-	hash_first="$(shasum "$tmp_file" | awk '{print $1}')"
-	haxelib run formatter -s "$tmp_file" >/dev/null
-	hash_second="$(shasum "$tmp_file" | awk '{print $1}')"
-	rm -rf "$tmp_dir"
-
-	if [ "$hash_first" != "$hash_second" ]; then
-		echo "[guard:hx-format] ERROR: formatter output is nondeterministic for $SENTINEL_FILE" >&2
-		exit 1
-	fi
-fi
-
-echo "[guard:hx-format] OK: Haxe formatting is clean."
+# Stable npm/CI entrypoint for Haxe formatting. The Node helper still delegates
+# to haxelib formatter; it only parallelizes line-balanced --check chunks.
+# HX_FORMAT_JOBS controls chunk count; default "auto" caps at four jobs.
+exec node scripts/lint/hx-format-guard.js
