@@ -9614,8 +9614,10 @@ class CppTargetCore {
 	static function primitiveBackedAbstractCtorSideEffects(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
 		if (scope == null)
 			return [];
-		final className = sanitizeTypePath(typeBaseName(typePath == null ? "" : typePath));
-		final cls = scope.classByName.exists(className) ? scope.classByName.get(className) : lookupClassForTypeHint(typePath, scope);
+		final rawClassName = sanitizeTypePath(typeBaseName(typePath == null ? "" : typePath));
+		final lookup = lookupForScope(scope);
+		final cls = lookupClassForTypeHint(typePath, scope, lookup);
+		final className = cls == null ? rawClassName : renderedClassName(cls, lookup);
 		final ctor = findConstructor(cls);
 		if (ctor == null)
 			return [];
@@ -17024,15 +17026,15 @@ class CppTargetCore {
 		final rightCls = primitiveBackedAbstractClassForExpr(right, scope);
 		if (op == "*") {
 			if (leftCls != null && primitiveStringAbstractStaticMethod(leftCls, "repeat", scope) != null && isCppStringExpr(right, scope))
-				return primitiveStringAbstractCall(leftCls, "repeat", [renderExpr(left, scope), stringExpr(right, scope)]);
+				return primitiveStringAbstractCall(leftCls, "repeat", [renderExpr(left, scope), stringExpr(right, scope)], scope);
 			if (rightCls != null && primitiveStringAbstractStaticMethod(rightCls, "repeat", scope) != null && isCppStringExpr(left, scope))
-				return primitiveStringAbstractCall(rightCls, "repeat", [renderExpr(right, scope), stringExpr(left, scope)]);
+				return primitiveStringAbstractCall(rightCls, "repeat", [renderExpr(right, scope), stringExpr(left, scope)], scope);
 		}
 		if (op == "/"
 			&& rightCls != null
 			&& primitiveStringAbstractStaticMethod(rightCls, "cut", scope) != null
 			&& isCppStringExpr(left, scope))
-			return primitiveStringAbstractCall(rightCls, "cut", [stringExpr(left, scope), renderExpr(right, scope)]);
+			return primitiveStringAbstractCall(rightCls, "cut", [stringExpr(left, scope), renderExpr(right, scope)], scope);
 		return null;
 	}
 
@@ -17045,8 +17047,8 @@ class CppTargetCore {
 		return fn;
 	}
 
-	static function primitiveStringAbstractCall(cls:HxClassDecl, method:String, args:Array<String>):String {
-		return sanitizeTypePath(HxClassDecl.getName(cls)) + "::" + method + "(" + args.join(", ") + ")";
+	static function primitiveStringAbstractCall(cls:HxClassDecl, method:String, args:Array<String>, ?scope:CppRenderScope):String {
+		return renderedClassName(cls, lookupForScope(scope)) + "::" + method + "(" + args.join(", ") + ")";
 	}
 
 	static function classBackedAbstractClassForExpr(expr:HxExpr, ?scope:CppRenderScope):Null<HxClassDecl> {

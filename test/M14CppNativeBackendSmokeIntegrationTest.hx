@@ -6543,6 +6543,40 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ primitive-backed abstract call arguments should preserve @:from constructor side effects before erased calls");
 		assertContains(counterCheckLines, "eq(MyAbstractCounter::counter, 1);",
 			"C++ primitive-backed abstract static fields should remain addressable after erasure");
+		final renderedCounterNames = new StringMap<Bool>();
+		for (name in [
+			"MyAbstractCounter",
+			"CounterOwner",
+			"MyAbstract_MyAbstractCounter",
+			"MyAbstract_CounterOwner"
+		])
+			renderedCounterNames.set(name, true);
+		final renderedCounterClasses = new StringMap<HxClassDecl>();
+		renderedCounterClasses.set("MyAbstractCounter", counterAbstract);
+		renderedCounterClasses.set("CounterOwner", counterOwner);
+		renderedCounterClasses.set("MyAbstract_MyAbstractCounter", counterAbstract);
+		renderedCounterClasses.set("MyAbstract_CounterOwner", counterOwner);
+		final renderedCounterLookup = {
+			names: renderedCounterNames,
+			byName: renderedCounterClasses,
+			renderedNames: [
+				{cls: counterAbstract, name: "MyAbstract_MyAbstractCounter"},
+				{cls: counterOwner, name: "MyAbstract_CounterOwner"}
+			]
+		};
+		final renderedCounterLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(counterAbstract, renderedCounterLookup).join("\n");
+		assertContains(renderedCounterLines, "return static_cast<int>((MyAbstract_MyAbstractCounter::counter++, v));",
+			"C++ module-local primitive-backed abstract @:from helpers should qualify constructor side effects with the rendered helper name");
+		assertTrue(!new EReg("(^|[^A-Za-z0-9_])MyAbstractCounter::counter", "").match(renderedCounterLines),
+			"C++ module-local primitive-backed abstract @:from helpers should not leak raw short helper names");
+		final renderedCounterCheckLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(counterOwner)[1], counterOwner, renderedCounterLookup).join("\n");
+		assertContains(renderedCounterCheckLines, "eq(getAbstractValue((MyAbstract_MyAbstractCounter::counter++, 1)), 2);",
+			"C++ module-local primitive-backed abstract call arguments should qualify constructor side effects with rendered helper names");
+		assertContains(renderedCounterCheckLines, "eq(MyAbstract_MyAbstractCounter::counter, 1);",
+			"C++ module-local primitive-backed abstract static field reads should use rendered helper names");
+		assertTrue(!new EReg("(^|[^A-Za-z0-9_])MyAbstractCounter::counter", "").match(renderedCounterCheckLines),
+			"C++ module-local primitive-backed abstract static field reads should not leak raw short helper names");
 		final meterAbstract = new HxClassDecl("Meter", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("f", "Float", NoDefault, false, false)], "Void",
 				[SExpr(EBinop("=", EThis, EIdent("f")), HxPos.unknown())], ""),
@@ -6626,6 +6660,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ commuted String * MyInt should dispatch through the primitive abstract repeat helper");
 		assertContains(myIntOwnerLines, "eq(std::string(\"abcde\"), MyInt::cut(std::string(\"abcdefghijk\"), v));",
 			"C++ String / MyInt should dispatch through the primitive abstract cut helper");
+		final renderedMyIntNames = new StringMap<Bool>();
+		for (name in ["MyInt", "MyIntOwner", "MyAbstract_MyInt", "MyAbstract_MyIntOwner"])
+			renderedMyIntNames.set(name, true);
+		final renderedMyIntClasses = new StringMap<HxClassDecl>();
+		renderedMyIntClasses.set("MyInt", myIntAbstract);
+		renderedMyIntClasses.set("MyIntOwner", myIntOwner);
+		renderedMyIntClasses.set("MyAbstract_MyInt", myIntAbstract);
+		renderedMyIntClasses.set("MyAbstract_MyIntOwner", myIntOwner);
+		final renderedMyIntLookup = {
+			names: renderedMyIntNames,
+			byName: renderedMyIntClasses,
+			renderedNames: [
+				{cls: myIntAbstract, name: "MyAbstract_MyInt"},
+				{cls: myIntOwner, name: "MyAbstract_MyIntOwner"}
+			]
+		};
+		final renderedMyIntOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(myIntOwner)[0], myIntOwner, renderedMyIntLookup).join("\n");
+		assertContains(renderedMyIntOwnerLines, "eq(std::string(\"aaaaa\"), MyAbstract_MyInt::repeat(r, std::string(\"a\")));",
+			"C++ module-local MyInt * String should dispatch through the rendered primitive abstract helper");
+		assertContains(renderedMyIntOwnerLines, "eq(std::string(\"abcde\"), MyAbstract_MyInt::cut(std::string(\"abcdefghijk\"), v));",
+			"C++ module-local String / MyInt should dispatch through the rendered primitive abstract helper");
+		assertTrue(!new EReg("(^|[^A-Za-z0-9_])MyInt::", "").match(renderedMyIntOwnerLines),
+			"C++ module-local primitive string abstract operators should not leak raw short helper names");
 		final primitiveNoMetadataOwner = new HxClassDecl("PrimitiveNoMetadataOwner", false, [
 			new HxFunctionDecl("read", Public, true, [], "Int", [
 				SVar("a", "", EInt(33), HxPos.unknown()),
