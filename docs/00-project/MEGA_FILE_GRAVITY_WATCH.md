@@ -1,21 +1,25 @@
 # Mega-File Gravity Watch
 
-This note owns `haxe_ocaml-zn07`. It is a lightweight review trigger for
-compiler/backend hotspots that are already large or mixed-purpose. It is not a
-freeze on urgent Full 1.0 fixes, and it is not a demand for a giant rewrite.
+This note owns `haxe_ocaml-zn07`; `haxe_ocaml-8b0o` keeps the watch wired into
+CI. It is a lightweight review trigger for compiler/backend hotspots that are
+already large or mixed-purpose. It is not a freeze on urgent Full 1.0 fixes, and
+it is not a demand for a giant rewrite.
 
 README and North Star progress bars stay unchanged by default. This policy
 protects the hackable-compiler goal; it does not by itself change production
 readiness.
 
+MEGA_FILE_GRAVITY_WATCH:PASS
+
 ## Current Hotspots
 
-Measured on June 30, 2026:
+Measured on July 2, 2026. The guard allows small drift but asks for this table
+to be refreshed when a watched file moves by more than 250 lines.
 
 | File | Lines | Risk |
 | --- | ---: | --- |
-| `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,142 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 16,173 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 17,058 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,022 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,450 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -67,6 +71,7 @@ Pause for an extraction note or follow-up bead when a change would:
 
 ## Existing Follow-Ups
 
+- `haxe_ocaml-8b0o`: mega-file gravity watch wiring/guard.
 - `haxe_ocaml-36ec`: Cpp render/type-flow cache extraction.
 - `haxe_ocaml-crsq`: Cpp imported stdlib static calls and helper reachability.
 - `haxe_ocaml-ejja`: Cpp compact primitive helper oracle freeze.
@@ -82,3 +87,16 @@ Upstream Haxe is useful as an ownership reference point: target generators are
 owned by target-specific generator modules with shared support around them. Use
 that idea at the architecture level only. Do not copy, translate, or mirror
 upstream compiler implementation code.
+
+## Guard
+
+Run:
+
+```bash
+npm run guard:mega-file-gravity-watch
+```
+
+The guard checks that this policy remains linked from the project docs, that
+the threshold language and follow-up owners are present, and that watched file
+line counts have not drifted by more than 250 lines from the table above. It is
+a review prompt, not a hard file-size budget.
