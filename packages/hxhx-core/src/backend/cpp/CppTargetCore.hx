@@ -8607,6 +8607,9 @@ class CppTargetCore {
 		final typedEnum = enumCtorExprForExpectedType(expr, expectedType, scope);
 		if (typedEnum != null)
 			return typedEnum;
+		final staticEnum = staticEnumFieldExprForExpectedType(expr, expectedType, scope);
+		if (staticEnum != null)
+			return staticEnum;
 		final typedPointer = pointerCtorExprForExpectedType(expr, expectedType, scope);
 		if (typedPointer != null)
 			return typedPointer;
@@ -13125,6 +13128,40 @@ class CppTargetCore {
 			parts.push(" (void)__hxhx_enum_arg_" + i + ";");
 		parts.push(" return std::make_shared<" + carrierType + ">(); })()");
 		return parts.join("");
+	}
+
+	static function staticEnumFieldExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				staticEnumFieldExprForExpectedType(inner, expectedType, scope);
+			case EField(receiver, field):
+				final owner = staticReceiverClassName(receiver, scope);
+				final carrierType = classNameFromCppExprType(expectedType, scope);
+				if (owner == null
+					|| carrierType == null
+					|| owner != carrierType
+					|| !isEnumCarrierClassName(owner, scope)
+					|| !classHasStaticEnumMetadataField(owner, field, scope)) null; else enumCtorValueForExpectedType(field, [], expectedType, scope);
+			case _:
+				null;
+		}
+	}
+
+	static function classHasStaticEnumMetadataField(className:String, fieldName:String, scope:CppRenderScope):Bool {
+		if (scope == null || className == null || fieldName == null)
+			return false;
+		final cls = scope.classByName.exists(className) ? scope.classByName.get(className) : scope.classByName.get(sanitizeTypePath(typeBaseName(className)));
+		if (cls == null)
+			return false;
+		final wanted = sanitizeIdentifier(fieldName);
+		for (field in HxClassDecl.getFields(cls))
+			if (HxFieldDecl.getIsStatic(field)
+				&& sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted
+				&& isEnumMetadataAnonInit(HxFieldDecl.getInit(field)))
+				return true;
+		return false;
 	}
 
 	static function enumValuePtrExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {

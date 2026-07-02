@@ -4247,6 +4247,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ typed enum-constructor arguments should construct the expected enum carrier instead of a tag string");
 		assertTrue(typedEnumArg.indexOf("return std::string(\"Warning\")") < 0,
 			"C++ typed enum-constructor arguments should not leak tag strings into shared_ptr enum carriers");
+		final myEnum = new HxClassDecl("MyEnum", false, [
+			new HxFunctionDecl("D", Public, true, [new HxFunctionArg("e", "MyEnum", NoDefault, false, false)], "String",
+				[SReturn(EString("D"), HxPos.unknown())], "")
+		], [
+			new HxFieldDecl("__hx_is_enum", Public, true, "Bool", EBool(true)),
+			new HxFieldDecl("A", Public, true, "Dynamic",
+				EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString("MyEnum"), EString("A"), EInt(0), EArrayDecl([])]))
+		]);
+		final myEnumNames = new StringMap<Bool>();
+		myEnumNames.set("MyEnum", true);
+		final myEnumClasses = new StringMap<HxClassDecl>();
+		myEnumClasses.set("MyEnum", myEnum);
+		final myEnumScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(myEnum, {names: myEnumNames, byName: myEnumClasses}, "void");
+		final staticEnumArg = @:privateAccess
+			backend.cpp.CppTargetCore.valueExprForExpectedType(EField(EIdent("MyEnum"), "A"), "std::shared_ptr<MyEnum>", myEnumScope);
+		assertContains(staticEnumArg, "std::make_shared<MyEnum>()",
+			"C++ static enum metadata fields should become enum value carriers when a carrier argument is expected");
+		assertTrue(staticEnumArg.indexOf("MyEnum::A") < 0, "C++ static enum metadata fields should not pass metadata aggregates into carrier arguments");
+		final staticEnumCall = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("MyEnum"), "D"), [EField(EIdent("MyEnum"), "A")]), myEnumScope);
+		assertContains(staticEnumCall, "MyEnum::D(std::make_shared<MyEnum>())",
+			"C++ static enum constructor calls should render static enum fields with callee argument types");
 		assertWarnScope.localTypes.set("typedResults", "std::shared_ptr<List<std::shared_ptr<Assertation>>>");
 		final typedAssertWarnAdd:HxExpr = ECall(EField(EIdent("typedResults"), "add"), [ECall(EEnumValue("Warning"), [EIdent("msg")])]);
 		final typedAssertWarnAddExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedAssertWarnAdd, assertWarnScope);
