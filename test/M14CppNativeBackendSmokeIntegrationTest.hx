@@ -5861,6 +5861,41 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ locals typed as TemplateWrap should use the value wrapper instead of std::shared_ptr<TemplateWrap>");
 		assertContains(templateWrapOwnerLines, "return __hxhx_stringify(tpl.execute(\"ok\"));",
 			"C++ TemplateWrap locals should call execute through value access");
+		final renderedTemplateWrapNames = new StringMap<Bool>();
+		for (name in [
+			"Template",
+			"TemplateWrap",
+			"TemplateWrapOwner",
+			"MyAbstract_TemplateWrap",
+			"MyAbstract_TemplateWrapOwner"
+		])
+			renderedTemplateWrapNames.set(name, true);
+		final renderedTemplateWrapClasses = new StringMap<HxClassDecl>();
+		renderedTemplateWrapClasses.set("Template", templateStub);
+		renderedTemplateWrapClasses.set("TemplateWrap", templateWrap);
+		renderedTemplateWrapClasses.set("TemplateWrapOwner", templateWrapOwner);
+		renderedTemplateWrapClasses.set("MyAbstract_TemplateWrap", templateWrap);
+		renderedTemplateWrapClasses.set("MyAbstract_TemplateWrapOwner", templateWrapOwner);
+		final renderedTemplateWrapLookup = {
+			names: renderedTemplateWrapNames,
+			byName: renderedTemplateWrapClasses,
+			renderedNames: [
+				{cls: templateWrap, name: "MyAbstract_TemplateWrap"},
+				{cls: templateWrapOwner, name: "MyAbstract_TemplateWrapOwner"}
+			]
+		};
+		final renderedTemplateWrapLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(templateWrap, renderedTemplateWrapLookup).join("\n");
+		assertContains(renderedTemplateWrapLines, "struct MyAbstract_TemplateWrap {",
+			"C++ module-local TemplateWrap support should render under the owner-qualified helper name");
+		assertContains(renderedTemplateWrapLines, "MyAbstract_TemplateWrap(std::string value) { (void)value; }",
+			"C++ module-local TemplateWrap constructors should use the rendered helper name");
+		final renderedTemplateWrapOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(templateWrapOwner)[0], templateWrapOwner, renderedTemplateWrapLookup)
+				.join("\n");
+		assertContains(renderedTemplateWrapOwnerLines, "MyAbstract_TemplateWrap tpl = \"Hi ::t::\";",
+			"C++ module-local TemplateWrap locals should use the rendered value wrapper");
+		assertTrue(renderedTemplateWrapOwnerLines.indexOf("std::shared_ptr<MyAbstract_TemplateWrap> tpl") < 0,
+			"C++ module-local TemplateWrap locals should not become incomplete shared_ptr wrappers");
 		final abstractSetter = new HxClassDecl("MyAbstractSetter", false, [
 			new HxFunctionDecl("new", Public, false, [], "Void", [SExpr(EBinop("=", EThis, EAnon([], [])), HxPos.unknown())], "")
 		], [new HxFieldDecl("value", Public, false, "String", null)], "",
@@ -6070,6 +6105,53 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ class-backed abstract compound assignment operators should preserve mutation helper side effects");
 		assertContains(vectorOwnerLines, "eq(std::string(\"(2,2,2)\"), v1->toString());",
 			"C++ class-backed abstract values should coerce through toString for string equality");
+		final renderedVectorNames = new StringMap<Bool>();
+		for (name in [
+			"MyPoint3",
+			"MyVector",
+			"VectorOwner",
+			"MyAbstract_MyPoint3",
+			"MyAbstract_MyVector",
+			"MyAbstract_VectorOwner"
+		])
+			renderedVectorNames.set(name, true);
+		final renderedVectorClasses = new StringMap<HxClassDecl>();
+		renderedVectorClasses.set("MyPoint3", point3Class);
+		renderedVectorClasses.set("MyVector", vectorAbstract);
+		renderedVectorClasses.set("VectorOwner", vectorOwner);
+		renderedVectorClasses.set("MyAbstract_MyPoint3", point3Class);
+		renderedVectorClasses.set("MyAbstract_MyVector", vectorAbstract);
+		renderedVectorClasses.set("MyAbstract_VectorOwner", vectorOwner);
+		final renderedVectorLookup = {
+			names: renderedVectorNames,
+			byName: renderedVectorClasses,
+			renderedNames: [
+				{cls: point3Class, name: "MyAbstract_MyPoint3"},
+				{cls: vectorAbstract, name: "MyAbstract_MyVector"},
+				{cls: vectorOwner, name: "MyAbstract_VectorOwner"}
+			]
+		};
+		final renderedVectorLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(vectorAbstract, renderedVectorLookup).join("\n");
+		assertContains(renderedVectorLines,
+			"static std::shared_ptr<MyAbstract_MyPoint3> scalarAssign(std::shared_ptr<MyAbstract_MyVector> lhs, double rhs) {",
+			"C++ module-local class-backed abstract mutation helpers should use rendered return and arg types");
+		assertContains(renderedVectorLines, "return std::make_shared<MyAbstract_MyPoint3>(lhs->x, lhs->y, lhs->z);",
+			"C++ module-local class-backed abstract returns should convert the wrapper back to the rendered underlying class");
+		assertContains(renderedVectorLines, "std::shared_ptr<MyAbstract_MyPoint3> get() {",
+			"C++ module-local class-backed abstract get helpers should preserve rendered underlying returns");
+		assertContains(renderedVectorLines, "return std::make_shared<MyAbstract_MyPoint3>(this->x, this->y, this->z);",
+			"C++ module-local class-backed abstract self returns should convert to the rendered underlying class");
+		assertTrue(renderedVectorLines.indexOf("return lhs;") < 0,
+			"C++ module-local class-backed abstract returns should not leak wrapper shared_ptr values into underlying returns");
+		assertTrue(renderedVectorLines.indexOf("return (*this);") < 0,
+			"C++ module-local class-backed abstract self returns should not emit value-to-shared_ptr conversions");
+		final renderedVectorOwnerLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(vectorOwner)[0], vectorOwner, renderedVectorLookup).join("\n");
+		assertContains(renderedVectorOwnerLines, "std::shared_ptr<MyAbstract_MyVector> v1 = std::make_shared<MyAbstract_MyVector>(1, 1, 1);",
+			"C++ module-local class-backed abstract locals should use rendered wrapper names");
+		assertContains(renderedVectorOwnerLines,
+			"eq(std::string(\"(2,3,4)\"), ([&]() { auto __hxhx_MyAbstract_MyVector_underlying = MyAbstract_MyVector::add(v1, v2);",
+			"C++ module-local class-backed abstract operators should dispatch through rendered helpers");
 		final stdVector = new HxClassDecl("Vector", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("length", "Int", NoDefault, false, false)], "Void", [], "")
 		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=VectorData<T>"]);

@@ -2352,7 +2352,7 @@ class CppTargetCore {
 				if (rawName == mainName || emitted.exists(helperName) || !isTemplateWrapSupportClass(cls))
 					continue;
 				emitted.set(helperName, true);
-				out.push(renderTemplateWrapSupportClass(cls));
+				out.push(renderTemplateWrapSupportClass(cls, classLookup));
 			}
 		}
 		return out;
@@ -2619,7 +2619,7 @@ class CppTargetCore {
 		if (isStdVectorHelperClass(cls) || isStdVectorHelperName(className))
 			return renderStdVectorSupportClass(cls, classLookup);
 		if (isTemplateWrapSupportClass(cls))
-			return renderTemplateWrapSupportClass(cls);
+			return renderTemplateWrapSupportClass(cls, classLookup);
 		if (isHashMapBackedAbstractClass(cls))
 			return renderHashMapBackedAbstractClass(cls);
 		if (isStringMapBackedAbstractClass(cls))
@@ -3391,8 +3391,8 @@ class CppTargetCore {
 		return out;
 	}
 
-	static function renderTemplateWrapSupportClass(cls:HxClassDecl):Array<String> {
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+	static function renderTemplateWrapSupportClass(cls:HxClassDecl, ?classLookup:CppClassLookup):Array<String> {
+		final className = renderedClassName(cls, classLookup);
 		return ["struct " + className + " {",
 			"  std::shared_ptr<Template> __value = nullptr;",
 			"  " + className + "() {}",
@@ -15288,6 +15288,12 @@ class CppTargetCore {
 		return CppTypeModel.arrayBackedAbstractNameForTypeHint(typeHint, scope, classLookup);
 	}
 
+	static function templateWrapAbstractNameForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
+		final lookup = lookupForScope(scope, classLookup);
+		final cls = lookupClassForTypeHint(typeHint, scope, lookup);
+		return isTemplateWrapSupportClass(cls) ? renderedClassName(cls, lookup) : null;
+	}
+
 	static function lookupClassForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
 		return CppTypeModel.lookupClassForTypeHint(typeHint, scope, classLookup);
 	}
@@ -15327,6 +15333,9 @@ class CppTargetCore {
 		final abstractName = arrayBackedAbstractNameForTypeHint(hint, scope, classLookup);
 		if (abstractName != null)
 			return abstractName;
+		final templateWrapName = templateWrapAbstractNameForTypeHint(hint, scope, classLookup);
+		if (templateWrapName != null)
+			return templateWrapName;
 		if (scope != null && scope.owner != null && isGenericTypeParamHint(hint, scope.owner))
 			return cppTypeParamName(genericTypeParamName(hint), scope);
 		if (isStructuralTypeHint(hint)) {
@@ -16521,9 +16530,22 @@ class CppTargetCore {
 		if (underlying == null || genericTypeHintArgs(underlying).length > 0)
 			return false;
 		final underlyingClass = sanitizeTypePath(typeBaseName(underlying));
-		if (underlyingClass != sanitizeTypePath(typeBaseName(expectedClass)))
+		final renderedUnderlyingClass = abstractUnderlyingRenderedClassName(cls, scope);
+		final expected = sanitizeTypePath(typeBaseName(expectedClass));
+		if (underlyingClass != expected && renderedUnderlyingClass != expected)
 			return false;
-		return scope != null && scope.classByName.exists(underlyingClass);
+		return scope != null && (scopeHasClass(scope, underlyingClass) || scopeHasClass(scope, renderedUnderlyingClass));
+	}
+
+	static function abstractUnderlyingRenderedClassName(cls:HxClassDecl, scope:CppRenderScope):String {
+		if (cls == null)
+			return "";
+		final underlying = abstractUnderlyingTypeHint(cls);
+		if (underlying == null || genericTypeHintArgs(underlying).length > 0)
+			return "";
+		final lookup = lookupForScope(scope);
+		final underlyingCls = lookupClassForTypeHint(underlying, scope, lookup);
+		return underlyingCls == null ? sanitizeTypePath(typeBaseName(underlying)) : renderedClassName(underlyingCls, lookup);
 	}
 
 	static function primitiveStringAbstractBinaryOpCppType(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
@@ -16577,11 +16599,12 @@ class CppTargetCore {
 		final underlying = abstractUnderlyingTypeHint(cls);
 		if (underlying == null || genericTypeHintArgs(underlying).length > 0)
 			return null;
-		return scope.classByName.exists(sanitizeTypePath(typeBaseName(underlying))) ? cls : null;
+		final underlyingClass = abstractUnderlyingRenderedClassName(cls, scope);
+		return scopeHasClass(scope, underlyingClass) ? cls : null;
 	}
 
 	static function classBackedAbstractBinaryOpMethod(op:String, left:HxExpr, right:HxExpr, cls:HxClassDecl, scope:CppRenderScope):String {
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final className = renderedClassName(cls, lookupForScope(scope));
 		return switch (op) {
 			case "+" if (classMethodDecl(className, "add", true, scope) != null):
 				"add";
@@ -16599,14 +16622,14 @@ class CppTargetCore {
 		if (cls == null || scope == null)
 			return "";
 		final method = classBackedAbstractBinaryOpMethod(op, left, right, cls, scope);
-		return method.length == 0 ? "" : "std::shared_ptr<" + sanitizeTypePath(HxClassDecl.getName(cls)) + ">";
+		return method.length == 0 ? "" : "std::shared_ptr<" + renderedClassName(cls, lookupForScope(scope)) + ">";
 	}
 
 	static function classBackedAbstractBinaryOpExpr(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
 		final cls = classBackedAbstractClassForExpr(left, scope);
 		if (cls == null || scope == null)
 			return null;
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
+		final className = renderedClassName(cls, lookupForScope(scope));
 		final method = classBackedAbstractBinaryOpMethod(op, left, right, cls, scope);
 		if (method.length == 0)
 			return null;
@@ -16617,11 +16640,11 @@ class CppTargetCore {
 	}
 
 	static function classBackedAbstractWrapUnderlyingExpr(cls:HxClassDecl, valueExpr:String, scope:CppRenderScope):String {
-		final className = sanitizeTypePath(HxClassDecl.getName(cls));
-		final underlying = abstractUnderlyingTypeHint(cls);
-		if (underlying == null)
+		final className = renderedClassName(cls, lookupForScope(scope));
+		final underlyingClass = abstractUnderlyingRenderedClassName(cls, scope);
+		if (underlyingClass.length == 0)
 			return valueExpr;
-		final argNames = classConstructorArgNames(sanitizeTypePath(typeBaseName(underlying)), scope);
+		final argNames = classConstructorArgNames(underlyingClass, scope);
 		if (argNames.length == 0)
 			return valueExpr;
 		final tmp = "__hxhx_" + className + "_underlying";
