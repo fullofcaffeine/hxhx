@@ -3083,6 +3083,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"remote Cpp gate opaque StringMap escape-table block should lower to a target-owned C++ string map");
 		assertContains(opaqueStringMapBlock, 'h["quot"] = "\\"";', "opaque StringMap escape-table block should preserve escaped quote values");
 		assertContains(opaqueStringMapBlock, "return h;", "opaque StringMap escape-table block should return the constructed map");
+		assertContains(opaqueStringMapBlock, "([]() {", "opaque StringMap static-initializer blocks should not require a capture-default lambda");
+		final escapeMapInit = ETryCatchRaw('opaque_block_expr:{var h = new haxe.ds.StringMap(); h.set("lt","<"); h.set("gt",">"); h.set("amp","&"); h.set("quot","\\""); h.set("apos","\'"); h;}');
+		final escapeMapOwner = new HxClassDecl("EscapeMapOwner", false, [], [new HxFieldDecl("escapes", Public, true, "Dynamic", escapeMapInit)]);
+		final escapeMapNames = new StringMap<Bool>();
+		escapeMapNames.set("EscapeMapOwner", true);
+		final escapeMapClasses = new StringMap<HxClassDecl>();
+		escapeMapClasses.set("EscapeMapOwner", escapeMapOwner);
+		final escapeMapLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(escapeMapOwner, {names: escapeMapNames, byName: escapeMapClasses}).join("\n");
+		assertContains(escapeMapLines, "inline static std::map<std::string, std::string> escapes = ([]() {",
+			"C++ static Dynamic fields initialized from opaque StringMap blocks should keep the map type");
+		assertTrue(escapeMapLines.indexOf("std::to_string(([]()") < 0,
+			"C++ static opaque StringMap initializers should not be stringified through std::to_string");
 		final enumMetaOwner = new HxClassDecl("EnumMetaOwner", false, [], [
 			new HxFieldDecl("__hx_enum_ctors", Public, true, "Dynamic", EArrayDecl([EString("U1"), EString("U2")])),
 			new HxFieldDecl("U2", Public, true, "Dynamic",
@@ -4253,22 +4266,83 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], [
 			new HxFieldDecl("__hx_is_enum", Public, true, "Bool", EBool(true)),
 			new HxFieldDecl("A", Public, true, "Dynamic",
-				EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString("MyEnum"), EString("A"), EInt(0), EArrayDecl([])]))
+				EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString("MyEnum"), EString("A"), EInt(0), EArrayDecl([])])),
+			new HxFieldDecl("B", Public, true, "Dynamic",
+				EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString("MyEnum"), EString("B"), EInt(1), EArrayDecl([])]))
 		]);
 		final myEnumNames = new StringMap<Bool>();
 		myEnumNames.set("MyEnum", true);
 		final myEnumClasses = new StringMap<HxClassDecl>();
 		myEnumClasses.set("MyEnum", myEnum);
 		final myEnumScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(myEnum, {names: myEnumNames, byName: myEnumClasses}, "void");
+		final myEnumInit = HxFieldDecl.getInit(HxClassDecl.getFields(myEnum)[1]);
+		final myEnumFieldInit = @:privateAccess
+			backend.cpp.CppTargetCore.renderFieldInitExpr(myEnumInit, "std::shared_ptr<MyEnum>", myEnumScope);
+		assertContains(myEnumFieldInit, "std::make_shared<MyEnum>()",
+			"C++ enum metadata field initializers should coerce at the field boundary before raw anon metadata leaks into C++");
+		assertTrue(myEnumFieldInit.indexOf("__hxhx_anon___hx_enum") < 0,
+			"C++ enum metadata field initializers should not emit raw metadata aggregates for carrier fields");
 		final staticEnumArg = @:privateAccess
 			backend.cpp.CppTargetCore.valueExprForExpectedType(EField(EIdent("MyEnum"), "A"), "std::shared_ptr<MyEnum>", myEnumScope);
 		assertContains(staticEnumArg, "std::make_shared<MyEnum>()",
 			"C++ static enum metadata fields should become enum value carriers when a carrier argument is expected");
 		assertTrue(staticEnumArg.indexOf("MyEnum::A") < 0, "C++ static enum metadata fields should not pass metadata aggregates into carrier arguments");
+		final bareEnumArg = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(EIdent("A"), "std::shared_ptr<MyEnum>", myEnumScope);
+		assertContains(bareEnumArg, "std::make_shared<MyEnum>()",
+			"C++ bare enum constructor identifiers should become enum carrier values when a carrier value is expected");
+		assertTrue(bareEnumArg.indexOf("std::string(\"A\")") < 0,
+			"C++ bare enum constructor identifiers should not fall through to string enum rendering for carrier values");
 		final staticEnumCall = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("MyEnum"), "D"), [EField(EIdent("MyEnum"), "A")]), myEnumScope);
 		assertContains(staticEnumCall, "MyEnum::D(std::make_shared<MyEnum>())",
 			"C++ static enum constructor calls should render static enum fields with callee argument types");
+		myEnumScope.localTypes.set("value", "std::shared_ptr<MyEnum>");
+		final bareEnumComparison = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("==", EIdent("value"), EIdent("B")), myEnumScope);
+		assertContains(bareEnumComparison, "value == std::make_shared<MyEnum>()",
+			"C++ enum carrier comparisons should coerce bare enum constructor identifiers to carrier values");
+		assertTrue(bareEnumComparison.indexOf("std::string(\"B\")") < 0,
+			"C++ enum carrier comparisons should not compare bare enum constructor identifiers as strings");
+		final myEnumLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(myEnum, {names: myEnumNames, byName: myEnumClasses}).join("\n");
+		assertContains(myEnumLines, "inline static std::shared_ptr<MyEnum> A = std::make_shared<MyEnum>();",
+			"C++ enum carrier static metadata fields should render as carrier values");
+		assertTrue(myEnumLines.indexOf("inline static std::string A") < 0, "C++ enum carrier static metadata fields should not render as string metadata");
+		final xmlType = new HxClassDecl("XmlType", false, [], [
+			new HxFieldDecl("__hx_is_enum", Public, true, "Bool", EBool(true)),
+			new HxFieldDecl("Element", Public, true, "Dynamic",
+				EAnon(["__hx_enum", "__hx_ctor", "__hx_index", "__hx_params"], [EString("XmlType"), EString("Element"), EInt(0), EArrayDecl([])]))
+		]);
+		final xml = new HxClassDecl("Xml", false, [
+			new HxFunctionDecl("isElement", Public, false, [], "Bool", [
+				SReturn(EBinop("!=", EIdent("nodeType"), EEnumValue("Element")), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("Element", Public, true, "Dynamic", EField(EIdent("XmlType"), "Element")),
+			new HxFieldDecl("nodeType", Public, false, "XmlType", null)
+		]);
+		final xmlNames = new StringMap<Bool>();
+		for (name in ["XmlType", "Xml_XmlType", "Xml"])
+			xmlNames.set(name, true);
+		final xmlClasses = new StringMap<HxClassDecl>();
+		xmlClasses.set("XmlType", xmlType);
+		xmlClasses.set("Xml_XmlType", xmlType);
+		xmlClasses.set("Xml", xml);
+		final xmlLookup = {
+			names: xmlNames,
+			byName: xmlClasses,
+			renderedNames: [{cls: xmlType, name: "Xml_XmlType"}]
+		};
+		final xmlTypeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(xmlType, xmlLookup).join("\n");
+		assertContains(xmlTypeLines, "struct Xml_XmlType {", "C++ module-local enum carriers should render under the module-qualified name");
+		assertContains(xmlTypeLines, "inline static std::shared_ptr<Xml_XmlType> Element = std::make_shared<Xml_XmlType>();",
+			"C++ module-local enum carrier statics should use the rendered carrier name");
+		final xmlLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(xml, xmlLookup).join("\n");
+		assertContains(xmlLines, "inline static std::shared_ptr<Xml_XmlType> Element = std::make_shared<Xml_XmlType>();",
+			"C++ module-local enum aliases should infer the rendered enum carrier type");
+		assertTrue(xmlLines.indexOf("XmlType::Element") < 0, "C++ module-local enum aliases should not leak the raw short enum helper name");
+		assertContains(xmlLines, "nodeType != std::make_shared<Xml_XmlType>()",
+			"C++ module-local enum carrier comparisons should compare against carrier values, not strings");
+		assertTrue(xmlLines.indexOf("nodeType != std::string(\"Element\")") < 0,
+			"C++ module-local enum carrier comparisons should not compare carrier references to strings");
 		assertWarnScope.localTypes.set("typedResults", "std::shared_ptr<List<std::shared_ptr<Assertation>>>");
 		final typedAssertWarnAdd:HxExpr = ECall(EField(EIdent("typedResults"), "add"), [ECall(EEnumValue("Warning"), [EIdent("msg")])]);
 		final typedAssertWarnAddExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedAssertWarnAdd, assertWarnScope);

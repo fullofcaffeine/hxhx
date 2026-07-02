@@ -2724,7 +2724,7 @@ class CppTargetCore {
 			final init = HxFieldDecl.getInit(field);
 			final typeName = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), init, scope);
 			if (HxFieldDecl.getIsStatic(field)) {
-				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderLocalInitExpr(init, typeName, typeName, scope);
+				final rhs = renderFieldInitExpr(init, typeName, scope);
 				out.push("  inline static " + typeName + " " + sanitizeIdentifier(fieldName) + " = " + rhs + ";");
 				traceCppMemberPhase(className, "render_helper_field", fieldName, "end");
 				continue;
@@ -2733,7 +2733,7 @@ class CppTargetCore {
 			if (init == null && genericField) {
 				out.push("  " + typeName + " " + sanitizeIdentifier(fieldName) + ";");
 			} else {
-				final rhs = init == null ? cppDefaultValue(typeName, scope) : renderLocalInitExpr(init, typeName, typeName, scope);
+				final rhs = renderFieldInitExpr(init, typeName, scope);
 				out.push("  " + typeName + " " + sanitizeIdentifier(fieldName) + " = " + rhs + ";");
 			}
 			traceCppMemberPhase(className, "render_helper_field", fieldName, "end");
@@ -3083,7 +3083,7 @@ class CppTargetCore {
 			final fieldName = HxFieldDecl.getName(field);
 			final typeName = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
 			final rhs = HxFieldDecl.getInit(field) == null ? cppDefaultValue(typeName,
-				scope) : renderLocalInitExpr(HxFieldDecl.getInit(field), typeName, typeName, scope);
+				scope) : renderFieldInitExpr(HxFieldDecl.getInit(field), typeName, scope);
 			out.push((HxFieldDecl.getIsStatic(field) ? "  inline static " : "  ")
 				+ typeName
 				+ " "
@@ -3324,7 +3324,7 @@ class CppTargetCore {
 			case "context" | "macros":
 				"std::string()";
 			case _:
-				init == null ? cppDefaultValue(typeName, scope) : renderLocalInitExpr(init, typeName, typeName, scope);
+				renderFieldInitExpr(init, typeName, scope);
 		};
 	}
 
@@ -3759,7 +3759,7 @@ class CppTargetCore {
 			final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
 			final typeName = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
 			final init = HxFieldDecl.getInit(field);
-			final rhs = init == null ? cppDefaultValue(typeName, scope) : renderLocalInitExpr(init, typeName, typeName, scope);
+			final rhs = renderFieldInitExpr(init, typeName, scope);
 			out.push("  inline static " + typeName + " " + fieldName + " = " + rhs + ";");
 		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
@@ -3827,15 +3827,21 @@ class CppTargetCore {
 		}
 		if (field == "winMetaCharacters" && (owner == "SysTools" || owner == "StringTools"))
 			return cacheFieldType("std::vector<int>");
+		if (isOpaqueStringMapExpr(init))
+			return cacheFieldType("std::map<std::string, std::string>");
+		if (field != "__hx_enum_ctors" && isEnumMetadataAnonInit(init) && isEnumCarrierClassName(owner, scope))
+			return cacheFieldType("std::shared_ptr<" + owner + ">");
 		if (field == "__hx_enum_ctors" || isEnumMetadataAnonInit(init)) {
 			final inferred = init == null ? "" : inferExprCppType(init, scope);
 			if (inferred.length > 0)
 				return inferred;
 		}
+		final inferredInitType = init == null ? "" : inferExprCppType(init, scope);
+		if (isCppEnumCarrierReferenceType(inferredInitType, scope))
+			return cacheFieldType(inferredInitType);
 		if (explicit.length > 0)
 			return cacheFieldType(cppTypeHint(explicit, scope));
-		final inferred = init == null ? "" : inferExprCppType(init, scope);
-		return inferred.length > 0 ? inferred : cppTypeHint(typeHint, scope);
+		return inferredInitType.length > 0 ? inferredInitType : cppTypeHint(typeHint, scope);
 	}
 
 	static function fieldCppTypeCacheKey(className:String, field:String, explicit:String, ?scope:CppRenderScope):String {
@@ -3870,13 +3876,31 @@ class CppTargetCore {
 	static function isEnumMetadataAnonInit(init:Null<HxExpr>):Bool {
 		return switch (init) {
 			case EAnon(fieldNames, _):
-				fieldNames.length >= 4
-				&& fieldNames[0] == "__hx_enum"
-				&& fieldNames[1] == "__hx_ctor"
-				&& fieldNames[2] == "__hx_index"
-				&& fieldNames[3] == "__hx_params";
+				isEnumMetadataFieldNames(fieldNames);
 			case _:
 				false;
+		};
+	}
+
+	static function isEnumMetadataFieldNames(fieldNames:Array<String>):Bool {
+		return fieldNames.length >= 4 && fieldNames[0] == "__hx_enum" && fieldNames[1] == "__hx_ctor" && fieldNames[2] == "__hx_index"
+			&& fieldNames[3] == "__hx_params";
+	}
+
+	static function enumMetadataCtorName(init:HxExpr):String {
+		return switch (init) {
+			case EAnon(fieldNames, fieldValues) if (isEnumMetadataFieldNames(fieldNames)):
+				final index = fieldNames.indexOf("__hx_ctor");
+				if (index < 0 || index >= fieldValues.length) {
+					"";
+				} else switch (fieldValues[index]) {
+					case EString(name):
+						name;
+					case _:
+						"";
+				}
+			case _:
+				"";
 		};
 	}
 
@@ -8777,6 +8801,9 @@ class CppTargetCore {
 			if (methodValue != null)
 				return methodValue;
 		}
+		final enumMetadataValue = enumMetadataAnonValueExprForExpectedType(expr, expectedType, scope);
+		if (enumMetadataValue != null)
+			return enumMetadataValue;
 		if (isCppEnumCarrierReferenceType(expectedType, scope) && isStringLike(expr))
 			return cppDefaultValue(expectedType, scope);
 		if (isCppVectorType(expectedType)) {
@@ -9218,6 +9245,10 @@ class CppTargetCore {
 				"true";
 			case EBinop("!=", ENull, right) if (exprHasNonNullableValueType(right, scope)):
 				"true";
+			case EBinop("==", left, right) if (enumCarrierComparisonExpr("==", left, right, scope) != null):
+				enumCarrierComparisonExpr("==", left, right, scope);
+			case EBinop("!=", left, right) if (enumCarrierComparisonExpr("!=", left, right, scope) != null):
+				enumCarrierComparisonExpr("!=", left, right, scope);
 			case EBinop("==", left, right) if (encodingEnumComparisonExpr("==", left, right, scope) != null):
 				encodingEnumComparisonExpr("==", left, right, scope);
 			case EBinop("!=", left, right) if (encodingEnumComparisonExpr("!=", left, right, scope) != null):
@@ -9337,6 +9368,31 @@ class CppTargetCore {
 				recovery;
 			case _:
 				throw "C++ source backend MVP unsupported expression: " + exprKind(expr);
+		};
+	}
+
+	static function renderFieldInitExpr(init:Null<HxExpr>, typeName:String, ?scope:CppRenderScope):String {
+		if (init == null)
+			return cppDefaultValue(typeName, scope);
+		final enumMetadata = enumMetadataFieldInitExpr(init, typeName, scope);
+		return enumMetadata != null ? enumMetadata : renderLocalInitExpr(init, typeName, typeName, scope);
+	}
+
+	static function enumMetadataFieldInitExpr(init:HxExpr, typeName:String, ?scope:CppRenderScope):Null<String> {
+		return switch (init) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				enumMetadataFieldInitExpr(inner, typeName, scope);
+			case EAnon(fieldNames, _) if (isEnumMetadataFieldNames(fieldNames)):
+				final prefix = "std::shared_ptr<";
+				if (!StringTools.startsWith(typeName, prefix) || !StringTools.endsWith(typeName, ">")) {
+					null;
+				} else {
+					final carrier = typeName.substr(prefix.length, typeName.length - prefix.length - 1);
+					final cleanCarrier = StringTools.startsWith(carrier, "::") ? carrier.substr(2) : carrier;
+					cleanCarrier.length == 0 ? null : "std::make_shared<" + cleanCarrier + ">()";
+				}
+			case _:
+				null;
 		};
 	}
 
@@ -12211,6 +12267,13 @@ class CppTargetCore {
 		final typePath = staticReceiverTypePath(receiver);
 		if (typePath == null)
 			return null;
+		final lookup = lookupForScope(scope);
+		final cls = lookupClassForTypeHint(typePath, scope, lookup);
+		if (cls != null) {
+			final rendered = renderedClassName(cls, lookup);
+			if (scopeHasClass(scope, rendered) && (!isCppCoreExternClass(rendered) || isCppPreludeStaticClass(rendered)))
+				return rendered;
+		}
 		final clean = sanitizeTypePath(typeBaseName(typePath));
 		if (scopeHasClass(scope, clean) && (!isCppCoreExternClass(clean) || isCppPreludeStaticClass(clean)))
 			return clean;
@@ -12971,7 +13034,16 @@ class CppTargetCore {
 		}
 		if (statements.length == 0)
 			return null;
-		return "([&]() { std::map<std::string, std::string> " + local + "; " + statements.join(" ") + " return " + local + "; })()";
+		return "([]() { std::map<std::string, std::string> " + local + "; " + statements.join(" ") + " return " + local + "; })()";
+	}
+
+	static function isOpaqueStringMapExpr(expr:Null<HxExpr>):Bool {
+		return switch (expr) {
+			case ETryCatchRaw(raw) | EUnsupported(raw):
+				renderOpaqueStringMapRaw(raw) != null;
+			case _:
+				false;
+		};
 	}
 
 	static function renderOpaqueTypedLocalRefRaw(raw:String):Null<String> {
@@ -13206,12 +13278,30 @@ class CppTargetCore {
 		return parts.join("");
 	}
 
+	static function enumMetadataAnonValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (!isCppEnumCarrierReferenceType(expectedType, scope))
+			return null;
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				enumMetadataAnonValueExprForExpectedType(inner, expectedType, scope);
+			case EAnon(_, _) if (isEnumMetadataAnonInit(expr)):
+				enumCtorValueForExpectedType(enumMetadataCtorName(expr), [], expectedType, scope);
+			case _:
+				null;
+		};
+	}
+
 	static function staticEnumFieldExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
 		if (scope == null)
 			return null;
 		return switch (expr) {
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				staticEnumFieldExprForExpectedType(inner, expectedType, scope);
+			case EIdent(field) if (!exprNameHasLocalStorage(field, scope)):
+				final carrierType = classNameFromCppExprType(expectedType, scope);
+				if (carrierType == null
+					|| !isEnumCarrierClassName(carrierType, scope)
+					|| !classHasStaticEnumMetadataField(carrierType, field, scope)) null; else enumCtorValueForExpectedType(field, [], expectedType, scope);
 			case EField(receiver, field):
 				final owner = staticReceiverClassName(receiver, scope);
 				final carrierType = classNameFromCppExprType(expectedType, scope);
@@ -13223,6 +13313,28 @@ class CppTargetCore {
 			case _:
 				null;
 		}
+	}
+
+	static function enumCarrierComparisonExpr(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || (op != "==" && op != "!="))
+			return null;
+		final rightValue = enumCarrierComparisonValueExpr(exprCppType(left, scope), right, scope);
+		if (rightValue != null)
+			return "(" + renderExpr(left, scope) + " " + op + " " + rightValue + ")";
+		final leftValue = enumCarrierComparisonValueExpr(exprCppType(right, scope), left, scope);
+		return leftValue == null ? null : "(" + leftValue + " " + op + " " + renderExpr(right, scope) + ")";
+	}
+
+	static function enumCarrierComparisonValueExpr(expectedType:String, expr:HxExpr, scope:CppRenderScope):Null<String> {
+		if (!isCppEnumCarrierReferenceType(expectedType, scope))
+			return null;
+		final staticValue = staticEnumFieldExprForExpectedType(expr, expectedType, scope);
+		if (staticValue != null)
+			return staticValue;
+		final ctorValue = enumCtorExprForExpectedType(expr, expectedType, scope);
+		if (ctorValue != null)
+			return ctorValue;
+		return isStringLike(expr) ? valueExprForExpectedType(expr, expectedType, scope) : null;
 	}
 
 	static function classHasStaticEnumMetadataField(className:String, fieldName:String, scope:CppRenderScope):Bool {
@@ -13478,7 +13590,9 @@ class CppTargetCore {
 	}
 
 	static function exprNameHasLocalStorage(name:String, ?scope:CppRenderScope):Bool {
-		return scope != null && name != null && scope.localTypes.exists(sanitizeIdentifier(name));
+		return scope != null
+			&& name != null
+			&& (scope.localTypes.exists(sanitizeIdentifier(name)) || scope.localNames.exists(sanitizeIdentifier(name)));
 	}
 
 	static function startsWithUppercaseTypeName(typePath:String):Bool {
