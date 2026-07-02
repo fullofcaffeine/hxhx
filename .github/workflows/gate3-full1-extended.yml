@@ -38,6 +38,9 @@ env:
   # Keep the inner matrix timeout below the job timeout so timeout failures
   # are recorded as failed phases/artifacts instead of GitHub job cancellation.
   FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC: "13200"
+  # Target-level parallelism keeps the Full1 target phase bounded while avoiding
+  # unbounded toolchain/build contention on the shared runner.
+  FULL1_GATE3_EXTENDED_TARGET_JOBS: "3"
 
 jobs:
   full1_gate3_extended:
@@ -408,28 +411,33 @@ jobs:
           }
           trap record_phase_exit EXIT
           log_path="$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR/gate3-full1-extended.log"
+          live_log_path="$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR/gate3-full1-extended.live.log"
           summary_path="$FULL1_GATE3_EXTENDED_ARTIFACTS_DIR/gate3-full1-extended.summary.json"
           echo "HXHX_GATE3_TARGETS=${HXHX_GATE3_TARGETS}"
           echo "HXHX_GATE3_ALLOW_SKIP=${HXHX_GATE3_ALLOW_SKIP}"
           echo "HXHX_GATE3_MACRO_MODE=${HXHX_GATE3_MACRO_MODE}"
           echo "HXHX_FORBID_STAGE0=${HXHX_FORBID_STAGE0}"
           echo "FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC=${FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC}"
+          echo "FULL1_GATE3_EXTENDED_TARGET_JOBS=${FULL1_GATE3_EXTENDED_TARGET_JOBS}"
           set +e
           timeout --foreground "${FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC}s" \
-            npm run test:upstream:runci-targets 2>&1 | tee "$log_path"
+            node scripts/ci/run-gate3-targets-parallel.js \
+              --targets "${HXHX_GATE3_TARGETS}" \
+              --artifacts-dir "${FULL1_GATE3_EXTENDED_ARTIFACTS_DIR}" \
+              --jobs "${FULL1_GATE3_EXTENDED_TARGET_JOBS}" \
+              --marker "FULL1_GATE3_EXTENDED_TARGETS:PASS" \
+            2>&1 | tee "$live_log_path"
           run_status="${PIPESTATUS[0]}"
           set -e
+          if [ ! -f "$log_path" ]; then
+            cp "$live_log_path" "$log_path"
+          fi
 
-          set +e
-          node scripts/ci/gate3-target-summary.js \
-            --log "$log_path" \
-            --targets "${HXHX_GATE3_TARGETS}" \
-            --json-out "$summary_path" \
-            --require-no-skip \
-            --require-all-targets \
-            --marker "FULL1_GATE3_EXTENDED_TARGETS:PASS"
-          summary_status="$?"
-          set -e
+          summary_status=0
+          if [ ! -f "$summary_path" ]; then
+            echo "Strict extended Gate3 summary was not written: ${summary_path}" >&2
+            summary_status=1
+          fi
 
           if [ "$run_status" -ne 0 ]; then
             echo "Strict extended Gate3 command failed with exit code ${run_status}." >&2
@@ -464,9 +472,12 @@ jobs:
           name: full1-gate3-extended-${{ github.run_id }}
           path: |
             .artifacts/full1/gate3-full1-extended.log
+            .artifacts/full1/gate3-full1-extended.live.log
             .artifacts/full1/gate3-full1-extended.summary.json
             .artifacts/full1/gate3-full1-extended.timings.jsonl
             .artifacts/full1/gate3-full1-extended.timings.summary.json
             .artifacts/full1/gate3-full1-extended.timings.md
             .artifacts/full1/gate3-target-artifacts/**
+            .artifacts/full1/gate3-target-logs/**
+            .artifacts/full1/gate3-target-summaries/**
           if-no-files-found: warn

@@ -41,6 +41,8 @@ if [ -z "$TARGETS_RAW" ]; then
   echo "    Optional per-target timeout: HXHX_GATE3_TARGET_TIMEOUT_SEC=0 (disabled by default)." >&2
   echo "    Set HXHX_GATE3_RETRY_COUNT=0 to disable retries." >&2
   echo "    Set HXHX_GATE3_KEEP_WORKTREE_ON_FAILURE=1 to retain the temporary upstream worktree for debugging failed generated output." >&2
+  echo "    Set HXHX_BIN=/path/to/hxhx to reuse a prebuilt stage1 binary." >&2
+  echo "    Set HXHX_GATE3_USE_PROVIDED_UPSTREAM_WORKTREE=1 when HAXE_UPSTREAM_DIR already points at an isolated target worktree." >&2
   echo "    On macOS, Js server async timeouts are relaxed by default (HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000)." >&2
   echo "    Set HXHX_GATE3_FORCE_JS_SERVER=1 to run without timeout patches (debug mode)." >&2
   echo "    Python runs default to no-install mode (HXHX_GATE3_PYTHON_ALLOW_INSTALL=0); require both python3 and pypy3." >&2
@@ -530,7 +532,19 @@ else
 fi
 
 # We want the upstream tests to match our compatibility target (default: 4.3.7).
-if command -v git >/dev/null 2>&1 && git -C "$UPSTREAM_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+if [ "${HXHX_GATE3_USE_PROVIDED_UPSTREAM_WORKTREE:-0}" = "1" ]; then
+  if ! command -v git >/dev/null 2>&1 || ! git -C "$UPSTREAM_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "Skipping upstream Gate 3: provided HAXE_UPSTREAM_DIR is not a git checkout: $UPSTREAM_DIR" >&2
+    exit 0
+  fi
+  upstream_target_commit="$(git -C "$UPSTREAM_DIR" rev-parse "$UPSTREAM_REF^{commit}")"
+  upstream_current_commit="$(git -C "$UPSTREAM_DIR" rev-parse HEAD)"
+  if [ "$upstream_current_commit" != "$upstream_target_commit" ]; then
+    echo "Provided upstream worktree must be checked out at ${UPSTREAM_REF}: $UPSTREAM_DIR" >&2
+    echo "current=${upstream_current_commit} expected=${upstream_target_commit}" >&2
+    exit 1
+  fi
+elif command -v git >/dev/null 2>&1 && git -C "$UPSTREAM_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   UPSTREAM_WORKTREE_DIR="$(mktemp -d)"
   if git -C "$UPSTREAM_DIR_ORIG" rev-parse --verify --quiet "$UPSTREAM_REF^{commit}" >/dev/null 2>&1; then
     git -C "$UPSTREAM_DIR_ORIG" worktree add --detach "$UPSTREAM_WORKTREE_DIR" "$UPSTREAM_REF" >/dev/null
@@ -709,11 +723,23 @@ preflight_target() {
   esac
 }
 
-# Build stage1 compiler (hxhx).
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
-if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
-  echo "Failed to build stage1 hxhx binary." >&2
-  exit 1
+# Build stage1 compiler (hxhx), unless a caller already supplied an isolated
+# binary artifact. The Full1 target orchestrator uses this to fan out targets
+# without rebuilding the same bootstrap binary in every child process.
+if [ -n "${HXHX_BIN:-}" ]; then
+  if [[ "$HXHX_BIN" != /* ]]; then
+    HXHX_BIN="$ROOT/$HXHX_BIN"
+  fi
+  if [ ! -f "$HXHX_BIN" ]; then
+    echo "Provided HXHX_BIN does not exist: $HXHX_BIN" >&2
+    exit 1
+  fi
+else
+  HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+  if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+    echo "Failed to build stage1 hxhx binary." >&2
+    exit 1
+  fi
 fi
 validate_current_source_hxhx_bin_if_requested
 

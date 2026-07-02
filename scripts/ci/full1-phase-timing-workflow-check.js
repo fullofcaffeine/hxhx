@@ -99,10 +99,12 @@ for (const needle of [
 for (const needle of [
   'FULL1_GATE3_EXTENDED_TIMINGS_JSONL',
   'FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC',
+  'FULL1_GATE3_EXTENDED_TARGET_JOBS',
   'gate3-full1-extended.timings.jsonl',
   'install_host_toolchains',
   'strict_extended_gate3_matrix',
   'timeout --foreground "${FULL1_GATE3_EXTENDED_MATRIX_TIMEOUT_SEC}s"',
+  'node scripts/ci/run-gate3-targets-parallel.js',
   'Summarize Full1 Gate3 extended timings',
 ]) {
   requireIncludes(gate3WorkflowPath, gate3Workflow, needle)
