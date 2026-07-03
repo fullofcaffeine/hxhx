@@ -125,11 +125,35 @@ hours-long serial gate.
 
 Fast routine validation for bounded render-only changes:
 
+- `npm run test:m14:cpp-numeric-casts-render-bench`
 - `npm run test:m14:cpp-native-backend-smoke`
 - `npm run guard:cpp-render-type-flow-plan`
 
-These prove the targeted Cpp render behavior and keep the architecture contract
-wired without compiling the whole upstream strict workload.
+The numeric-casts render bench is the fastest check for the
+`TestNumericCasts`-style `deq(expected, actual)` direct-call shape. It builds a
+small repo-owned AST, renders one synthetic C++ helper method, asserts that
+`deq` wrappers became direct `eq(...)` calls, and prints measured render
+latency:
+
+```bash
+npm run test:m14:cpp-numeric-casts-render-bench
+HXHX_CPP_NUMERIC_CASTS_RENDER_BENCH_CASES=1440 npm run test:m14:cpp-numeric-casts-render-bench
+```
+
+The optional environment knobs are:
+
+- `HXHX_CPP_NUMERIC_CASTS_RENDER_BENCH_CASES` controls how many synthetic
+  `deq(...)` call sites are rendered.
+- `HXHX_CPP_NUMERIC_CASTS_RENDER_BENCH_HELPERS` controls how many same-owner
+  numeric helper functions exist for method lookup pressure.
+- `HXHX_CPP_NUMERIC_CASTS_RENDER_BENCH_REPS` controls how many repeated render
+  passes are measured.
+
+This bench intentionally avoids a hard wall-clock threshold because developer
+machines and CI runners vary. Treat its `best_seconds` and `total_seconds`
+output as comparable evidence when changing the renderer, and use the smoke
+test plus guard to prove the targeted Cpp render behavior and architecture
+contract stay wired without compiling the whole upstream strict workload.
 
 Slow diagnostic validation for hotspot claims:
 
