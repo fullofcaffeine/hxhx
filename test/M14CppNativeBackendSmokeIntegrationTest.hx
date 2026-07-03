@@ -1465,7 +1465,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(Std.string(missingIMapKind) == "DeclarationOnly",
 			"C++ helper classification should identify missing declaration surfaces as declaration-only");
 		assertTrue(Std.string(nativeStackTraceKind) == "DeclarationOnly",
-			"C++ helper classification should keep NativeStackTrace as declaration-only target extern support");
+			"C++ helper classification should keep NativeStackTrace in the target-owned extern support bucket");
 		assertTrue(Std.string(nullKind) == "UnsupportedDiagnostic", "C++ helper classification should reserve a visible unsupported-diagnostic bucket");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(ifaceKind) == "declaration_only",
 			"C++ helper classification detail labels should use trace-stable bucket names");
@@ -3896,9 +3896,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final nativeStackTraceLines = @:privateAccess backend.cpp.CppTargetCore.renderMissingInterfaceDeclaration("NativeStackTrace").join("\n");
 		assertContains(nativeStackTraceLines, "struct NativeStackTrace {",
 			"C++ target-owned NativeStackTrace declarations should expose a concrete signature surface");
-		assertContains(nativeStackTraceLines, "static std::any callStack();",
-			"C++ target-owned NativeStackTrace declarations should expose callStack without adding a body");
-		assertContains(nativeStackTraceLines, "static std::vector<std::shared_ptr<CallStack_StackItem>> toHaxe(std::any nativeStackTrace, int skip = 0);",
+		assertContains(nativeStackTraceLines, "static void saveStack(std::any exception) { (void)exception; }",
+			"C++ target-owned NativeStackTrace support should expose a link-safe saveStack body");
+		assertContains(nativeStackTraceLines, "static std::any callStack() { return std::any(); }",
+			"C++ target-owned NativeStackTrace support should expose a neutral link-safe callStack body");
+		assertContains(nativeStackTraceLines, "static std::vector<std::shared_ptr<CallStack_StackItem>> toHaxe(std::any nativeStackTrace, int skip = 0) {",
 			"C++ target-owned NativeStackTrace declarations should preserve CallStack.StackItem element typing");
 		final hashMapAbstract = new HxClassDecl("HashMap", false, [], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=HashMapData<K,V>"]);
 		final hashMapParams = @:privateAccess backend.cpp.CppTargetCore.genericClassTemplateParams(hashMapAbstract);
@@ -9009,8 +9011,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(nativeStackTraceDeclIndex >= 0, "C++ NativeStackTrace externs should emit declaration surfaces, not bare forwards");
 		assertTrue(callStackDeclIndex > nativeStackTraceDeclIndex,
 			"C++ NativeStackTrace declarations should appear before CallStack inline bodies that call them");
-		assertContains(nativeStackTraceSource, "static std::vector<std::shared_ptr<CallStack_StackItem>> toHaxe(std::any nativeStackTrace, int skip = 0);",
-			"C++ NativeStackTrace declarations should expose CallStack.StackItem return typing before CallStack uses it");
+		assertContains(nativeStackTraceSource, "static std::vector<std::shared_ptr<CallStack_StackItem>> toHaxe(std::any nativeStackTrace, int skip = 0) {",
+			"C++ NativeStackTrace support should expose CallStack.StackItem return typing before CallStack uses it");
+		assertContains(nativeStackTraceSource, "return {};",
+			"C++ NativeStackTrace support should use a neutral stack result until real stack capture is implemented");
 		assertContains(nativeStackTraceSource, "return NativeStackTrace::toHaxe(NativeStackTrace::callStack());",
 			"C++ CallStack bodies should call the target-owned NativeStackTrace declaration surface");
 		assertTrue(nativeStackTraceSource.indexOf("struct NativeStackTrace;\n") < 0,

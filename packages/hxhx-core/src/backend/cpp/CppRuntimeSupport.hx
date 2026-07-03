@@ -271,13 +271,21 @@ class CppRuntimeSupport {
 			case "Date":
 				["struct Date {", "  std::string toString() { return std::string(); }", "};"];
 			case "NativeStackTrace":
+				// `haxe.NativeStackTrace` is a stdlib extern on C++ targets. These
+				// neutral inline bodies keep stack-query call sites link-safe during
+				// Full1 bring-up; real stack capture belongs in a later target-runtime
+				// support seam rather than in the main emitter.
 				[
 					"struct CallStack_StackItem;",
 					"struct NativeStackTrace {",
-					"  static void saveStack(std::any exception);",
-					"  static std::any callStack();",
-					"  static std::any exceptionStack();",
-					"  static std::vector<std::shared_ptr<CallStack_StackItem>> toHaxe(std::any nativeStackTrace, int skip = 0);",
+					"  static void saveStack(std::any exception) { (void)exception; }",
+					"  static std::any callStack() { return std::any(); }",
+					"  static std::any exceptionStack() { return std::any(); }",
+					"  static std::vector<std::shared_ptr<CallStack_StackItem>> toHaxe(std::any nativeStackTrace, int skip = 0) {",
+					"    (void)nativeStackTrace;",
+					"    (void)skip;",
+					"    return {};",
+					"  }",
 					"};"
 				];
 			case _:
