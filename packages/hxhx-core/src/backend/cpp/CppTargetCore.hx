@@ -9968,10 +9968,14 @@ class CppTargetCore {
 	static function currentOwnerIsOrExtends(expectedClass:String, ?scope:CppRenderScope):Bool {
 		if (scope == null || scope.owner == null || expectedClass == null || expectedClass.length == 0)
 			return false;
+		// `expectedClass` may include C++ template arguments, for example
+		// `TestHandler<T>`. Match ownership on the class identity while keeping the
+		// full templated type available to the caller for the rendered shared pointer.
+		final expectedBase = sanitizeTypePath(typeBaseName(expectedClass));
 		final lookup = lookupForScope(scope);
 		var className = renderedClassName(scope.owner, lookup);
 		while (className != null && className.length > 0) {
-			if (className == expectedClass)
+			if (className == expectedClass || className == expectedBase)
 				return true;
 			final cls = scope.classByName.get(className);
 			final base = cls == null ? null : inheritedCppBaseTypeName(cls, lookup);

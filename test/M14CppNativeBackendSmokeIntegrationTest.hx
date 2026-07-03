@@ -9161,6 +9161,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    onComplete = new Dispatcher();",
 			"    onPrecheck = new Dispatcher();",
 			"  }",
+			"  public function dispatchSelf():Void {",
+			"    onPrecheck.dispatch(this);",
+			"  }",
 			"}",
 			"class TestResult {",
 			"  public function new() {}",
@@ -9304,6 +9307,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic class constructors should not use the ambient T directly for Dispatcher<TestHandler<T>> fields");
 		assertTrue(parsedTestHandlerLines.indexOf("onComplete = __hxhx_make_shared_Dispatcher<T>();") < 0,
 			"C++ nested generic field constructors should not collapse Dispatcher<TestHandler<T>> to Dispatcher<T>");
+		assertContains(parsedTestHandlerLines, "onPrecheck->dispatch(__hxhx_borrowed_shared<TestHandler<T>>(this));",
+			"C++ generic owner dispatch(this) should pass a borrowed shared pointer with the owner template args");
+		assertTrue(parsedTestHandlerLines.indexOf("onPrecheck->dispatch((*this));") < 0,
+			"C++ generic owner dispatch(this) should not pass the raw object value to reference payload handlers");
 		assertContains(parsedDispatcherLines, "std::vector<std::function<void(T)>> handlers",
 			"C++ generic function-vector fields should preserve the function element type");
 		assertContains(parsedDispatcherLines, "handlers = std::vector<std::function<void(T)>>{};",
