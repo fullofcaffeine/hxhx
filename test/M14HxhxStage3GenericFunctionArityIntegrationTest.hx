@@ -195,6 +195,50 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("__init__|private|1||Void untyped||||", "untyped {}", -1,
 			"class Math { static function __init__():Void untyped {} }");
 		assertEqString(HxFunctionDecl.getReturnTypeHint(fn), "Void", "native decode should not merge trailing untyped into the return type");
+		final sourceFallback = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("getBytes|public|0||||||", "untyped { return null; }", -1,
+			"class BytesBuffer { public function getBytes():Bytes untyped { return null; } }");
+		assertEqString(HxFunctionDecl.getReturnTypeHint(sourceFallback), "Bytes",
+			"native decode source return recovery should strip the trailing untyped modifier");
+		final compactPayload = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("getBytes|public|0||Bytesuntyped||||", "untyped { return null; }",
+			-1, "class BytesBuffer { public function getBytes():Bytes untyped { return null; } }");
+		assertEqString(HxFunctionDecl.getReturnTypeHint(compactPayload), "Bytes",
+			"native decode should prefer source return recovery when the payload compacted a trailing untyped modifier");
+		final suffixPayload = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("getBytes|public|0||Bytesuntyped||||", "{ return null; }", -1,
+			"class BytesuntypedOwner { public function getBytes():Bytesuntyped { return null; } }");
+		assertEqString(HxFunctionDecl.getReturnTypeHint(suffixPayload), "Bytesuntyped",
+			"native decode should preserve payload/source return type names that only end with untyped");
+	}
+
+	static function assertParserStripsUntypedReturnModifier():Void {
+		final decl = ParserStage.parse("class BytesBuffer { public function getBytes():Bytes untyped { return null; } }", "BytesBuffer.hx").getDecl();
+		final bytesBuffer = findClass(decl, "BytesBuffer");
+		final getBytes = findFunction(bytesBuffer, "getBytes");
+		assertEqString(HxFunctionDecl.getReturnTypeHint(getBytes), "Bytes", "ParserStage should not merge trailing untyped into the return type");
+		final suffixDecl = ParserStage.parse("class BytesuntypedOwner { public function getBytes():Bytesuntyped { return null; } }", "BytesuntypedOwner.hx")
+			.getDecl();
+		final suffixOwner = findClass(suffixDecl, "BytesuntypedOwner");
+		final suffixGetBytes = findFunction(suffixOwner, "getBytes");
+		assertEqString(HxFunctionDecl.getReturnTypeHint(suffixGetBytes), "Bytesuntyped",
+			"ParserStage should preserve return type names that only end with untyped");
+	}
+
+	static function assertScannedHelpersStripUntypedReturnModifier():Void {
+		final source = [
+			"class Main {}",
+			"class BytesBuffer {",
+			"  public function getBytes():Bytes",
+			"    untyped { return null; }",
+			"}",
+			"class BytesuntypedOwner { public function getBytes():Bytesuntyped { return null; } }"
+		].join("\n");
+		final helpers = ParserStageScanHelpers.scanModuleLocalHelperClasses(source, "Main");
+		final bytesBuffer = findScannedClass(helpers, "BytesBuffer");
+		final getBytes = findFunction(bytesBuffer, "getBytes");
+		assertEqString(HxFunctionDecl.getReturnTypeHint(getBytes), "Bytes", "scanned helpers should not merge trailing untyped into the return type");
+		final suffixOwner = findScannedClass(helpers, "BytesuntypedOwner");
+		final suffixGetBytes = findFunction(suffixOwner, "getBytes");
+		assertEqString(HxFunctionDecl.getReturnTypeHint(suffixGetBytes), "Bytesuntyped",
+			"scanned helpers should preserve return type names that only end with untyped");
 	}
 
 	static function assertNativeDecodeRecoversSourceFunctionHintFromStringFallback():Void {
@@ -218,6 +262,8 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertBootstrapNativeParserAllowsKeywordPathSegments();
 		assertBootstrapNativeParserEscapesStringTokenText();
 		assertNativeDecodeStripsUntypedReturnModifier();
+		assertParserStripsUntypedReturnModifier();
+		assertScannedHelpersStripUntypedReturnModifier();
 		assertNativeDecodeRecoversSourceFunctionHintFromStringFallback();
 		assertScannedGenericNamedFunctionArg();
 

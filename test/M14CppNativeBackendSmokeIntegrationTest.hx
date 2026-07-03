@@ -7121,6 +7121,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final bytesBufferLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(bytesBufferGetBytes, bytesBufferOwner, bytesLookup).join("\n");
 		assertContains(bytesBufferLines, "b = {};", "C++ BytesBuffer-style BytesData nulling should reset vector storage instead of assigning nullptr");
 		assertTrue(bytesBufferLines.indexOf("b = nullptr") < 0, "C++ BytesData locals are vector-backed and should not receive nullptr assignments");
+		final bytesBufferSource = "class BytesBuffer { public function getBytes():Bytes untyped { return null; } }";
+		final decodedBytesBufferGetBytes = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("getBytes|public|0||||||", "untyped { return null; }",
+			-1, bytesBufferSource);
+		final bytesBufferUntypedGetBytes = new HxFunctionDecl("getBytes", Public, false, [], HxFunctionDecl.getReturnTypeHint(decodedBytesBufferGetBytes), [
+			SVar("b", "BytesData", ENew("BytesData", []), HxPos.unknown()),
+			SReturn(ENew("Bytes", [EInt(0), EIdent("b")]), HxPos.unknown())
+		], "");
+		final bytesBufferUntypedLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(bytesBufferUntypedGetBytes, bytesBufferOwner, bytesLookup).join("\n");
+		assertContains(bytesBufferUntypedLines, "std::shared_ptr<Bytes> getBytes() {",
+			"C++ BytesBuffer.getBytes should keep the Bytes return when the source signature uses a trailing untyped modifier");
+		assertTrue(bytesBufferUntypedLines.indexOf("Bytesuntyped") < 0,
+			"C++ BytesBuffer.getBytes should not leak the source untyped modifier into the generated type name");
 		final input = new HxClassDecl("Input", false, [
 			new HxFunctionDecl("readAll", Public, false, [], "Bytes", [SReturn(ECall(EField(EIdent("Bytes"), "alloc"), [EInt(0)]), HxPos.unknown())], "")
 		], []);

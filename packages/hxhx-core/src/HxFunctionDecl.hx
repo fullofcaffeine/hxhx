@@ -35,13 +35,20 @@ class HxFunctionDecl {
 		this.visibility = visibility;
 		this.isStatic = isStatic;
 		this.args = args;
-		this.returnTypeHint = returnTypeHint;
+		this.returnTypeHint = normalizeReturnTypeHint(returnTypeHint);
 		this.body = body;
 		this.returnStringLiteral = returnStringLiteral;
 		this.metadata = metadata == null ? [] : metadata;
 		this.pos = pos == null ? HxPos.unknown() : pos;
 		this.endPos = endPos == null ? this.pos : endPos;
 		this.bodyText = bodyText == null ? "" : bodyText;
+	}
+
+	static function normalizeReturnTypeHint(typeHint:String):String {
+		final text = StringTools.trim(typeHint == null ? "" : typeHint);
+		// Encoded/native summaries may carry `:Void untyped`; the trailing
+		// `untyped` is a function-body modifier, not part of the return type.
+		return ~/[\r\n\t ]+untyped$/.replace(text, "");
 	}
 
 	public function getFirstReturnExpr():HxExpr {

@@ -3601,7 +3601,7 @@ class ParserStage {
 			final hints = parseSourceSignatureArgs(source.substr(open + 1, close - open - 1));
 			if (!sourceArgHintsMatchNames(hints, argNames))
 				return "";
-			return readSourceReturnHint(source, close + 1);
+			return normalizeMethodReturnTypeHint(readSourceReturnHint(source, close + 1));
 		}
 		final anchoredIndex = methodBodyStart > 0 ? source.lastIndexOf(needle, methodBodyStart) : -1;
 		final anchoredHint = hintAt(anchoredIndex);
@@ -3850,6 +3850,11 @@ class ParserStage {
 		if (isFunctionTypeHintText(source) && isErasedFunctionTypeHintText(native))
 			return true;
 		if (isStructuralTypeHintText(source) && isErasedStructuralFallbackTypeHint(native))
+			return true;
+		// Native protocol emitters can compact `:Bytes untyped` into
+		// `Bytesuntyped`. When source recovery sees `Bytes`, prefer it because
+		// `untyped` is the body modifier, not the callable return contract.
+		if (native == source + "untyped")
 			return true;
 		final sourceIsNull = StringTools.startsWith(source, "Null<") || StringTools.startsWith(source, "StdTypes.Null<");
 		if ((native == "Null" || native == "StdTypes.Null") && sourceIsNull)

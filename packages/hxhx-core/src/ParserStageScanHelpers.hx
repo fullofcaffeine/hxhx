@@ -1434,7 +1434,7 @@ class ParserStageScanHelpers {
 			return {text: parts.join(""), nextPos: j};
 		}
 
-		function scanTypeHintUntil(startPos:Int, stopAtComma:Bool):{hint:String, nextPos:Int} {
+		function scanTypeHintUntil(startPos:Int, stopAtComma:Bool, stopAtUntypedBodyModifier:Bool = false):{hint:String, nextPos:Int} {
 			final parts = new Array<String>();
 			var j = startPos;
 			var parenDepth = 0;
@@ -1450,6 +1450,11 @@ class ParserStageScanHelpers {
 					return {hint: parts.join(""), nextPos: j};
 				if (atTop && tok.isIdent && expressionBodyKeywordStartsWithoutReturn(tok.text))
 					return {hint: parts.join(""), nextPos: j};
+				// Source-native helper scans keep type hints as token text. A return
+				// signature may put `untyped` on the line before the body; that token
+				// belongs to the body modifier, not to the return type.
+				if (atTop && stopAtUntypedBodyModifier && tok.isIdent && tok.text == "untyped")
+					return {hint: parts.join(""), nextPos: tok.nextPos};
 				final startsStructuralType = atTop && tok.text == "{" && parts.length == 0;
 				if (atTop
 					&& (tok.text == ")"
@@ -1874,7 +1879,7 @@ class ParserStageScanHelpers {
 					var returnType = "";
 					final returnTok = scanNextToken(source, i);
 					if (returnTok.text == ":") {
-						final scannedReturn = scanTypeHintUntil(returnTok.nextPos, false);
+						final scannedReturn = scanTypeHintUntil(returnTok.nextPos, false, true);
 						returnType = scannedReturn.hint;
 						i = scannedReturn.nextPos;
 					}

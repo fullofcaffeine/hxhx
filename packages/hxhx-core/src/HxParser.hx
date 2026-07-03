@@ -1446,6 +1446,15 @@ class HxParser {
 		return parts.join("");
 	}
 
+	function readFunctionReturnTypeHint(stop:() -> Bool):String {
+		// In signatures like `function f():Bytes untyped { ... }`, `untyped`
+		// modifies the function body. Keep it out of the raw return type while
+		// still consuming it before the body parser looks for `{` or `return`.
+		final hint = readTypeHintText(() -> stop() || cur.kind.match(TKeyword(KUntyped)));
+		acceptKeyword(KUntyped);
+		return hint;
+	}
+
 	function parsePrimaryExpr():HxExpr {
 		return switch (cur.kind) {
 			case TLParen:
@@ -1702,7 +1711,7 @@ class HxParser {
 
 		if (cur.kind.match(TColon)) {
 			bump();
-			readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
+			readFunctionReturnTypeHint(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
 				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
 		}
 
@@ -1821,7 +1830,7 @@ class HxParser {
 		var returnType = "";
 		if (cur.kind.match(TColon)) {
 			bump();
-			returnType = readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
+			returnType = readFunctionReturnTypeHint(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
 				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
 			if (StringTools.trim(returnType).length > 0)
 				hasFunctionTypeHint = true;
@@ -4561,7 +4570,7 @@ class HxParser {
 		var returnType = "";
 		if (cur.kind.match(TColon)) {
 			bump();
-			returnType = readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TSemicolon) || cur.kind.match(TEof)
+			returnType = readFunctionReturnTypeHint(() -> cur.kind.match(TLBrace) || cur.kind.match(TSemicolon) || cur.kind.match(TEof)
 				|| cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow)));
 		}
 
