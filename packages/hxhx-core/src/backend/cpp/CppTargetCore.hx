@@ -7078,10 +7078,14 @@ class CppTargetCore {
 				if (isDynamicLikeTypeHint(typeHint) || unhintedNoInit || unhintedEmptyArray || unhintedNull) {
 					candidates.set(local, true);
 					final inferred = init == null || unhintedEmptyArray ? "" : dynamicLocalAssignedType(init, scope);
-					if (inferred.length > 0)
+					if (inferred.length > 0) {
 						setDynamicLocalTypeOverride(scope, local, inferred);
-					else if (!unhintedNoInit)
+					} else if (!unhintedNoInit && !unhintedNull) {
+						// `var x = null` stays open because a later assignment can
+						// reveal the nullable carrier. This fallback is only for
+						// non-null Dynamic-like locals with no better inferred type.
 						scope.localTypes.set(local, "std::string");
+					}
 				} else {
 					if (localType.length > 0)
 						scope.localTypes.set(local, localType);
@@ -8321,7 +8325,12 @@ class CppTargetCore {
 						+ " cpp_type="
 						+ traceCppSnippet(localType));
 				final hasExplicitType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
-				final declaredType = (hasExplicitType || init == null) && localType.length > 0 ? localType : "auto";
+				// C++ would infer `std::nullptr_t` for `auto x = nullptr`, so a
+				// Haxe local that starts as null but is later refined to a nullable
+				// carrier must spell out the carrier type at declaration time.
+				final inferredNullableInit = isUnhintedNullLocal(typeHint, init) && isNullableCppLocalType(localType);
+				final declaredType = (hasExplicitType || init == null || inferredNullableInit)
+					&& localType.length > 0 ? localType : "auto";
 				if (scope != null) {
 					if (hadPreviousName)
 						scope.localNames.set(sourceLocal, previousName);
@@ -9608,6 +9617,10 @@ class CppTargetCore {
 
 	static function isScalarExpectedLocalType(typeName:String):Bool {
 		return typeName == "int" || typeName == "double" || typeName == "float" || typeName == "bool" || typeName == "long long" || typeName == "unsigned int";
+	}
+
+	static function isNullableCppLocalType(typeName:String):Bool {
+		return isCppReferenceType(typeName) || isCppOptionalType(typeName) || isCppDynamicValueType(typeName);
 	}
 
 	static function nativeArrayCreateExpr(length:HxExpr, ?scope:CppRenderScope, ?preferredType:String):String {

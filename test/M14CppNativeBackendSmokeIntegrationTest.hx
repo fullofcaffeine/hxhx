@@ -9389,7 +9389,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			SReturn(ECall(EField(EIdent("Reflect"), "isFunction"), [ECall(EField(EIdent("Reflect"), "field"), [EIdent("test"), EIdent("name")])]),
 				HxPos.unknown())
 		], "");
-		final runnerFixtureCarrier = new HxClassDecl("Runner", false, [runnerAddCase, runnerAddCaseOld, runnerAddFixture, runnerIsMethod], []);
+		final runnerRunNext = new HxFunctionDecl("runNext", Public, false, [], "Void", [
+			SVar("currentCase", "", ENull, HxPos.unknown()),
+			SVar("fixture", "", EArrayAccess(EIdent("fixtures"), EUnop("post++", EIdent("pos"))), HxPos.unknown()),
+			SIf(EBinop("!=", EIdent("currentCase"), EField(EIdent("fixture"), "target")), SBlock([
+				SExpr(EBinop("=", EIdent("currentCase"), EField(EIdent("fixture"), "target")), HxPos.unknown())
+			], HxPos.unknown()), null, HxPos.unknown())
+		], "");
+		final runnerFixtureCarrier = new HxClassDecl("Runner", false, [runnerAddCase, runnerAddCaseOld, runnerAddFixture, runnerIsMethod, runnerRunNext], [
+			new HxFieldDecl("fixtures", Public, false, "Array<TestFixture>", EArrayDecl([])),
+			new HxFieldDecl("pos", Public, false, "Int", EInt(0))
+		]);
 		final runnerFixtureNames = new StringMap<Bool>();
 		final runnerFixtureClasses = new StringMap<HxClassDecl>();
 		for (cls in [testClass, testCaseClass, eRegClass, testFixtureClass, runnerFixtureCarrier]) {
@@ -9413,8 +9423,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Reflect.isObject should lower through target-owned support for object carriers");
 		assertContains(runnerFixtureLines, "addFixture(std::make_shared<TestFixture>(test, \"testNumeric\",",
 			"C++ utest Runner.addCaseOld should build TestFixture with the object carrier");
+		assertContains(runnerFixtureLines, "std::shared_ptr<Test> currentCase = nullptr;",
+			"C++ utest Runner.runNext should not infer std::nullptr_t for the current test carrier");
+		assertContains(runnerFixtureLines, "currentCase = (fixture->target);",
+			"C++ utest Runner.runNext should assign TestFixture.target into the current test carrier");
 		assertTrue(runnerFixtureLines.indexOf("void addCase(std::string test") < 0,
 			"C++ utest Runner.addCase should not fall back to string-shaped Dynamic carriers");
+		assertTrue(runnerFixtureLines.indexOf("auto currentCase = nullptr") < 0,
+			"C++ utest Runner.runNext should spell out the nullable carrier instead of relying on auto");
 		assertTrue(testFixtureLines.indexOf("std::string target") < 0, "C++ utest TestFixture.target should not be string-shaped");
 		final runnerAddCases = new HxClassDecl("Runner", false, [
 			new HxFunctionDecl("addCases", Public, false, [
