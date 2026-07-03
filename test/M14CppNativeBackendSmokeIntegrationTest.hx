@@ -973,6 +973,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function parseAsString(s:String):String {",
 			"    return JsonParserLike.parse(s);",
 			"  }",
+			"  public static function stringifyMaybe(?replacer:String->String->String, ?space:String):String {",
+			"    return JsonPrinterLike.print(\"v\", replacer, space);",
+			"  }",
 			"}",
 			"class JsonPrinterLike {",
 			"  var replacer:String->String->String;",
@@ -1026,6 +1029,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"        inferredString(v);",
 			"        quote(v);",
 			"    }",
+			"  }",
+			"}",
+			"class JsonPrinter {",
+			"  public static function print(o:Dynamic, ?replacer:String->String->String, ?space:String):String {",
+			"    return \"\";",
+			"  }",
+			"}",
+			"class JsonForwardKnownStdlibLike {",
+			"  public static function stringify(value:String, ?replacer:String->String->String, ?space:String):String {",
+			"    return JsonPrinter.print(value, replacer, space);",
 			"  }",
 			"}",
 			"class NativeStackTraceLike {",
@@ -8956,6 +8969,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "std::make_shared<JsonPrinterLike>(replacer.value_or(nullptr), space.value())",
 			"C++ smoke should pass optional JsonPrinter function args through optional storage defaults");
 		assertTrue(source.indexOf("replacer.value().value_or(nullptr)") < 0, "C++ smoke should not call value_or on an unwrapped optional function value");
+		assertContains(source, "return JsonPrinterLike::print(\"v\", replacer, space);",
+			"C++ smoke should forward optional JsonPrinter replacer/space storage without unwrapping");
+		assertTrue(source.indexOf("JsonPrinterLike::print(\"v\", replacer.value(), space.value())") < 0,
+			"C++ smoke should not unwrap optional JsonPrinter replacer/space when callee expects optionals");
+		assertContains(source, "return JsonPrinter::print(std::any(value), replacer, space);",
+			"C++ smoke should forward upstream Json.stringify optional replacer/space storage without unwrapping");
+		assertTrue(source.indexOf("JsonPrinter::print(std::any(value), replacer.value(), space.value())") < 0,
+			"C++ smoke should not unwrap upstream Json.stringify optionals before forwarding to JsonPrinter.print");
 		assertContains(source, "void write(std::string k, std::any v)", "C++ smoke should keep reassigned JsonPrinter Dynamic parameters erased");
 		assertContains(source, "v = valueLike();", "C++ smoke should keep JsonPrinter Dynamic parameter reassignment erased");
 		assertContains(source, "v = replacer(k, __hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic when calling string-shaped function values");

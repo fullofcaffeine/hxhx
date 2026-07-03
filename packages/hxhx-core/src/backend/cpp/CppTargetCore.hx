@@ -4233,10 +4233,14 @@ class CppTargetCore {
 						[];
 				}
 			case "JsonPrinter":
-				final jsonPrinterReplacerType = "std::function<std::any(std::any, std::any)>";
+				final jsonPrinterReplacerType = "std::function<std::string(std::string, std::string)>";
 				switch (method) {
 					case "print":
-						["std::any", jsonPrinterReplacerType, "std::optional<std::string>"];
+						[
+							"std::any",
+							"std::optional<" + jsonPrinterReplacerType + ">",
+							"std::optional<std::string>"
+						];
 					case "write":
 						["std::any", "std::any"];
 					case "addChar":
@@ -4293,7 +4297,7 @@ class CppTargetCore {
 			case "JsonParser":
 				["std::string"];
 			case "JsonPrinter":
-				["std::function<std::any(std::any, std::any)>", "std::string"];
+				["std::function<std::string(std::string, std::string)>", "std::string"];
 			case _:
 				[];
 		}
@@ -8790,6 +8794,8 @@ class CppTargetCore {
 			return anonStructValue;
 		final actualType = exprCppType(expr, scope);
 		final optionalInner = cppOptionalInnerType(actualType);
+		if (isCppOptionalType(expectedType) && actualType == expectedType)
+			return optionalStorageExpr(expr, scope);
 		if (optionalInner.length > 0 && optionalInner == expectedType)
 			return optionalStorageExpr(expr, scope) + ".value_or(" + cppDefaultValue(expectedType, scope) + ")";
 		switch (expr) {
@@ -11376,6 +11382,8 @@ class CppTargetCore {
 		final actualType = exprCppType(arg, scope);
 		if (timingEnabled)
 			traceCallArgRenderPhase(scope, arg, param, "actual_type", Sys.time() - actualTypeStart, declaredParamType, paramType, valueType, actualType);
+		if (isCppOptionalType(paramType) && actualType == paramType)
+			return optionalStorageExpr(arg, scope);
 		if (valueType == "std::shared_ptr<EnumValue>" && actualType == "std::any") {
 			final enumStart = timingEnabled ? Sys.time() : 0.0;
 			final rendered = "__hxhx_enum_value_ptr(" + renderExpr(arg, scope) + ")";
