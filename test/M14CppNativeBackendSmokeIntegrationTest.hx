@@ -9328,6 +9328,94 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(parsedRunnerGenericLines, "return __hxhx_reflect_is_function(__hxhx_reflect_field(test, std::string(name)));",
 			"C++ bool-returning Reflect.isFunction probes should return bool directly");
 		assertTrue(parsedRunnerGenericLines.indexOf("std::string isMethod(") < 0, "C++ try/catch bool helper inference should not stringify boolean returns");
+		final testClass = new HxClassDecl("Test", false, [new HxFunctionDecl("new", Public, false, [], "", [], "")], []);
+		final testCaseClass = new HxClassDecl("TestNumericCasts", false, [new HxFunctionDecl("new", Public, false, [], "", [], "")], [], "Test");
+		final eRegClass = new HxClassDecl("EReg", false, [], []);
+		final testFixtureCtor = new HxFunctionDecl("new", Public, false, [
+			new HxFunctionArg("target", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("method", "String", NoDefault, false, false),
+			new HxFunctionArg("setup", "String", NoDefault, true, false),
+			new HxFunctionArg("teardown", "String", NoDefault, true, false),
+			new HxFunctionArg("setupAsync", "String", NoDefault, true, false),
+			new HxFunctionArg("teardownAsync", "String", NoDefault, true, false)
+		], "", [
+			SExpr(EBinop("=", EField(EThis, "target"), EIdent("target")), HxPos.unknown()),
+			SExpr(EBinop("=", EField(EThis, "method"), EIdent("method")), HxPos.unknown())
+		], "");
+		final testFixtureClass = new HxClassDecl("TestFixture", false, [testFixtureCtor], [
+			new HxFieldDecl("target", Public, false, "Dynamic", null),
+			new HxFieldDecl("method", Public, false, "String", null)
+		]);
+		final runnerCaseArgs = [
+			new HxFunctionArg("test", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("setup", "String", Default(EString("setup")), true, false),
+			new HxFunctionArg("teardown", "String", Default(EString("teardown")), true, false),
+			new HxFunctionArg("prefix", "String", Default(EString("test")), true, false),
+			new HxFunctionArg("pattern", "EReg", Default(ENull), true, false),
+			new HxFunctionArg("setupAsync", "String", Default(EString("setupAsync")), true, false),
+			new HxFunctionArg("teardownAsync", "String", Default(EString("teardownAsync")), true, false)
+		];
+		final runnerAddCase = new HxFunctionDecl("addCase", Public, false, runnerCaseArgs, "Void", [
+			SExpr(ECall(EIdent("addCaseOld"), [
+				EIdent("test"),
+				EIdent("setup"),
+				EIdent("teardown"),
+				EIdent("prefix"),
+				EIdent("pattern"),
+				EIdent("setupAsync"),
+				EIdent("teardownAsync")
+			]), HxPos.unknown())
+		], "");
+		final runnerAddCaseOld = new HxFunctionDecl("addCaseOld", Public, false, runnerCaseArgs, "Void", [
+			SExpr(ECall(EField(EIdent("Reflect"), "isObject"), [EIdent("test")]), HxPos.unknown()),
+			SExpr(ECall(EIdent("isMethod"), [EIdent("test"), EString("setup")]), HxPos.unknown()),
+			SExpr(ECall(EIdent("addFixture"), [
+				ENew("TestFixture", [
+					EIdent("test"),
+					EString("testNumeric"),
+					EIdent("setup"),
+					EIdent("teardown"),
+					EIdent("setupAsync"),
+					EIdent("teardownAsync")
+				])
+			]), HxPos.unknown())
+		], "");
+		final runnerAddFixture = new HxFunctionDecl("addFixture", Public, false, [new HxFunctionArg("fixture", "TestFixture", NoDefault, false, false)],
+			"Void", [], "");
+		final runnerIsMethod = new HxFunctionDecl("isMethod", Public, false, [
+			new HxFunctionArg("test", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("name", "String", NoDefault, false, false)
+		], "Bool", [
+			SReturn(ECall(EField(EIdent("Reflect"), "isFunction"), [ECall(EField(EIdent("Reflect"), "field"), [EIdent("test"), EIdent("name")])]),
+				HxPos.unknown())
+		], "");
+		final runnerFixtureCarrier = new HxClassDecl("Runner", false, [runnerAddCase, runnerAddCaseOld, runnerAddFixture, runnerIsMethod], []);
+		final runnerFixtureNames = new StringMap<Bool>();
+		final runnerFixtureClasses = new StringMap<HxClassDecl>();
+		for (cls in [testClass, testCaseClass, eRegClass, testFixtureClass, runnerFixtureCarrier]) {
+			runnerFixtureNames.set(HxClassDecl.getName(cls), true);
+			runnerFixtureClasses.set(HxClassDecl.getName(cls), cls);
+		}
+		final runnerFixtureLookup = {names: runnerFixtureNames, byName: runnerFixtureClasses};
+		final runnerFixtureLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(runnerFixtureCarrier, runnerFixtureLookup).join("\n");
+		final testFixtureLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(testFixtureClass, runnerFixtureLookup).join("\n");
+		assertContains(testFixtureLines, "std::shared_ptr<Test> target = nullptr;",
+			"C++ utest TestFixture.target should keep the test object carrier instead of collapsing Dynamic to string");
+		assertContains(testFixtureLines, "TestFixture(std::shared_ptr<Test> target, std::string method",
+			"C++ utest TestFixture constructor should accept the test object carrier");
+		assertContains(runnerFixtureLines, "void addCase(std::shared_ptr<Test> test, std::optional<std::string> setup = \"setup\"",
+			"C++ utest Runner.addCase should accept concrete Test instances through the Test base carrier");
+		assertContains(runnerFixtureLines, "void addCaseOld(std::shared_ptr<Test> test, std::optional<std::string> setup = \"setup\"",
+			"C++ utest Runner.addCaseOld should keep the same fixture carrier as addCase");
+		assertContains(runnerFixtureLines, "bool isMethod(std::shared_ptr<Test> test, std::string name)",
+			"C++ utest Runner.isMethod should probe methods on the test object carrier");
+		assertContains(runnerFixtureLines, "__hxhx_reflect_is_object(test);",
+			"C++ Reflect.isObject should lower through target-owned support for object carriers");
+		assertContains(runnerFixtureLines, "addFixture(std::make_shared<TestFixture>(test, \"testNumeric\",",
+			"C++ utest Runner.addCaseOld should build TestFixture with the object carrier");
+		assertTrue(runnerFixtureLines.indexOf("void addCase(std::string test") < 0,
+			"C++ utest Runner.addCase should not fall back to string-shaped Dynamic carriers");
+		assertTrue(testFixtureLines.indexOf("std::string target") < 0, "C++ utest TestFixture.target should not be string-shaped");
 		final runnerAddCases = new HxClassDecl("Runner", false, [
 			new HxFunctionDecl("addCases", Public, false, [
 				new HxFunctionArg("eThis", "haxe.macro.Expr", NoDefault, false, false),

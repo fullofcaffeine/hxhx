@@ -3885,6 +3885,9 @@ class CppTargetCore {
 					cppTypeHint(typeHint, scope);
 			});
 		}
+		final utestTargetType = utestTestObjectCppType(scope);
+		if (owner == "TestFixture" && field == "target" && utestTargetType.length > 0)
+			return cacheFieldType(utestTargetType);
 		if (field == "winMetaCharacters" && (owner == "SysTools" || owner == "StringTools"))
 			return cacheFieldType("std::vector<int>");
 		if (isOpaqueStringMapExpr(init))
@@ -4322,18 +4325,29 @@ class CppTargetCore {
 					case _:
 						[];
 				}
+			case "Runner":
+				final utestTargetType = utestTestObjectCppType(scope, classLookup);
+				if (utestTargetType.length == 0) []; else switch (method) {
+					case "addCase" | "addCaseOld" | "isMethod":
+						[utestTargetType];
+					case _:
+						[];
+				}
 			case _:
 				[];
 		}
 	}
 
-	static function knownStdlibConstructorParamCppTypes(className:String):Array<String> {
+	static function knownStdlibConstructorParamCppTypes(className:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Array<String> {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		return switch (owner) {
 			case "JsonParser":
 				["std::string"];
 			case "JsonPrinter":
 				["std::function<std::string(std::string, std::string)>", "std::string"];
+			case "TestFixture":
+				final utestTargetType = utestTestObjectCppType(scope, classLookup);
+				utestTargetType.length == 0 ? [] : [utestTargetType];
 			case _:
 				[];
 		}
@@ -4344,8 +4358,8 @@ class CppTargetCore {
 			return;
 		final ownerName = HxClassDecl.getName(scope.owner);
 		final methodName = HxFunctionDecl.getName(fn);
-		final knownTypes = sanitizeIdentifier(methodName) == "new" ? knownStdlibConstructorParamCppTypes(ownerName) : knownStdlibMethodParamCppTypes(ownerName,
-			methodName, scope, scope.classLookup);
+		final knownTypes = sanitizeIdentifier(methodName) == "new" ? knownStdlibConstructorParamCppTypes(ownerName, scope,
+			scope.classLookup) : knownStdlibMethodParamCppTypes(ownerName, methodName, scope, scope.classLookup);
 		if (knownTypes.length == 0)
 			return;
 		final args = HxFunctionDecl.getArgs(fn);
@@ -4584,6 +4598,13 @@ class CppTargetCore {
 				switch (method) {
 					case "resolveClass" | "resolveEnum":
 						true;
+					case _:
+						false;
+				}
+			case "Runner":
+				switch (method) {
+					case "addCase" | "addCaseOld" | "isMethod":
+						utestTestObjectCppType(scope).length > 0;
 					case _:
 						false;
 				}
@@ -5564,6 +5585,26 @@ class CppTargetCore {
 		if (HxFunctionDecl.getIsStatic(fn) || sanitizeIdentifier(HxFunctionDecl.getName(fn)) != "addCases")
 			return false;
 		return hasFunctionMetadata(fn, "macro");
+	}
+
+	static function utestTestObjectCppType(?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final lookup = lookupForScope(scope, classLookup);
+		if (!lookupHasClass(scope, lookup, "Test"))
+			return "";
+		return cppTypeHint("Test", scope, lookup);
+	}
+
+	static function lookupHasClass(?scope:CppRenderScope, ?classLookup:CppClassLookup, className:String):Bool {
+		final clean = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		if (clean.length == 0)
+			return false;
+		if (scopeHasClass(scope, clean))
+			return true;
+		if (classLookup == null)
+			return false;
+		if (classLookup.names != null && classLookup.names.exists(clean))
+			return true;
+		return classLookup.byName != null && (classLookup.byName.exists(clean) || classLookup.byName.exists(className));
 	}
 
 	static function hasFunctionMetadata(fn:HxFunctionDecl, marker:String):Bool {
@@ -9843,7 +9884,7 @@ class CppTargetCore {
 	}
 
 	static function constructorArgCppTypes(className:String, ?scope:CppRenderScope):Array<String> {
-		final known = knownStdlibConstructorParamCppTypes(className);
+		final known = knownStdlibConstructorParamCppTypes(className, scope, lookupForScope(scope));
 		if (known.length > 0)
 			return known;
 		if (scope == null || className == null || className.length == 0)
@@ -10209,6 +10250,8 @@ class CppTargetCore {
 				+ ")";
 		if (isReflectStaticReceiver(receiver) && method == "isFunction" && args.length == 1)
 			return "__hxhx_reflect_is_function(" + renderExpr(args[0], scope) + ")";
+		if (isReflectStaticReceiver(receiver) && method == "isObject" && args.length == 1)
+			return "__hxhx_reflect_is_object(" + renderExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver)
 			&& method == "hasField"
 			&& args.length == 2
@@ -11805,6 +11848,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "isFunction"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
 				"bool";
+			case ECall(EField(receiver, "isObject"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
+				"bool";
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				"std::string";
 			case ECall(EIdent(name), args)
@@ -12703,6 +12748,8 @@ class CppTargetCore {
 			case ECall(EField(receiver, "callMethod"), args) if (isReflectStaticReceiver(receiver) && args.length == 3):
 				"std::any";
 			case ECall(EField(receiver, "isFunction"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
+				"bool";
+			case ECall(EField(receiver, "isObject"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
 				"bool";
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				"std::string";
