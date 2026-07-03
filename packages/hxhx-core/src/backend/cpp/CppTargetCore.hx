@@ -8492,7 +8492,7 @@ class CppTargetCore {
 				final macroApiCall = macroApiCallExprForExpected(expr, "void", scope);
 				[indent + (macroApiCall == null ? renderExpr(expr, scope) : macroApiCall) + ";"];
 			case SThrow(expr, _):
-				[indent + "throw std::runtime_error(" + stringExpr(expr, scope) + ");"];
+				[indent + "throw std::runtime_error(" + thrownValueStringExpr(expr, scope) + ");"];
 			case SVar(name, typeHint, init, _):
 				final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 				final sourceLocal = sanitizeIdentifier(name);
@@ -14287,6 +14287,50 @@ class CppTargetCore {
 			case _:
 				renderExpr(expr, scope);
 		};
+	}
+
+	/**
+		Render the value passed to Haxe `throw` as a C++ exception message.
+
+		The C++ backend currently represents caught exceptions as string-backed
+		`std::runtime_error` values. For `throw new SomeException(message)`, using
+		the normal class-to-string fallback would ask for the object's type name and
+		can collapse useful failures such as `NotImplementedException("...")` into
+		`Dynamic`. In thrown position, the constructor's first argument is the
+		behavior callers rely on: the message that should reach the runtime error.
+	**/
+	static function thrownValueStringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final exceptionMessage = exceptionConstructionMessageStringExpr(expr, scope);
+		return exceptionMessage == null ? stringExpr(expr, scope) : exceptionMessage;
+	}
+
+	static function exceptionConstructionMessageStringExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case ENew(typePath, args) if (isExceptionLikeTypePath(typePath, scope)):
+				args.length == 0 ? defaultExceptionMessageStringExpr(typePath) : stringExpr(args[0], scope);
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				exceptionConstructionMessageStringExpr(inner, scope);
+			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
+				exceptionConstructionMessageStringExpr(args[2], scope);
+			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
+				exceptionConstructionMessageStringExpr(args[0], scope);
+			case _:
+				null;
+		};
+	}
+
+	static function isExceptionLikeTypePath(typePath:String, ?scope:CppRenderScope):Bool {
+		final clean = sanitizeTypePath(typeBaseName(typePath == null ? "" : typePath));
+		if (clean == "Exception" || clean == "ValueException" || clean == "PosException" || clean == "NotImplementedException")
+			return true;
+		if (scope != null && (classExtendsClass(clean, "Exception", scope) || classExtendsClass(clean, "PosException", scope)))
+			return true;
+		return StringTools.endsWith(clean, "Exception");
+	}
+
+	static function defaultExceptionMessageStringExpr(typePath:String):String {
+		return
+			sanitizeTypePath(typeBaseName(typePath == null ? "" : typePath)) == "NotImplementedException" ? "std::string(\"Not implemented\")" : "std::string()";
 	}
 
 	static function stringExpr(expr:HxExpr, ?scope:CppRenderScope):String {

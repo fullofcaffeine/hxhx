@@ -8263,6 +8263,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ optional PosInfos constructor forwarding should not unwrap missing position values");
 		assertTrue(notImplementedExceptionLines.indexOf("previous.value()") < 0,
 			"C++ optional Exception constructor forwarding should not unwrap missing previous values");
+		final unsupportedRegexThrow = new HxFunctionDecl("unsupportedRegex", Public, false, [], "Void", [
+			SThrow(ENew("NotImplementedException", [EString("Regular expressions are not implemented for this platform")]), HxPos.unknown())
+		], "");
+		final unsupportedRegexOwner = new HxClassDecl("UnsupportedRegexOwner", false, [unsupportedRegexThrow], []);
+		final unsupportedRegexThrowLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(unsupportedRegexThrow, unsupportedRegexOwner, posLookup).join("\n");
+		assertContains(unsupportedRegexThrowLines, "throw std::runtime_error(std::string(\"Regular expressions are not implemented for this platform\"));",
+			"C++ throw new NotImplementedException(message) should preserve the thrown message instead of the class type name");
+		assertTrue(unsupportedRegexThrowLines.indexOf("__hxhx_type_name(std::make_shared<NotImplementedException>") < 0,
+			"C++ exception constructor throws should not collapse to the generic Dynamic type-name fallback");
 		final packagedException = new HxClassDecl("haxe.Exception", false, [
 			new HxFunctionDecl("new", Public, false, [
 				new HxFunctionArg("message", "String", NoDefault, false, false),
