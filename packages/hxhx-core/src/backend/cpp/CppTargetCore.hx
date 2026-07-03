@@ -345,6 +345,7 @@ class CppTargetCore {
 		out.push("#include <memory>");
 		out.push("#include <mutex>");
 		out.push("#include <optional>");
+		out.push("#include <regex>");
 		out.push("#include <sstream>");
 		out.push("#include <stdexcept>");
 		out.push("#include <string>");
@@ -1989,6 +1990,10 @@ class CppTargetCore {
 			if (name == "IMap")
 				emitType("KeyValueIterator");
 			emitted.set(name, true);
+			if (isERegTypeName(name) && classLookup.byName.get("EReg") == null) {
+				out.push(CppRuntimeSupport.eRegSupportLines(true));
+				return;
+			}
 			final missingInterface = shouldRenderMissingDeclarationBody(name, classLookup) ? renderMissingInterfaceDeclaration(name) : null;
 			if (missingInterface != null)
 				out.push(missingInterface);
@@ -2397,6 +2402,7 @@ class CppTargetCore {
 			|| isStdListSupportClass(cls, classLookup)
 			|| isGenericMapSupportClass(cls)
 			|| isPosInfosSupportClass(cls)
+			|| isERegSupportClass(cls)
 			|| isRestSupportClass(cls)
 			|| isStdVectorHelperClass(cls)
 			|| isStdVectorHelperName(className)
@@ -2806,6 +2812,8 @@ class CppTargetCore {
 			return renderGenericMapSupportClass(cls);
 		if (isPosInfosSupportClass(cls))
 			return renderPosInfosClass();
+		if (isERegSupportClass(cls))
+			return CppRuntimeSupport.eRegSupportLines();
 		if (isRestSupportClass(cls))
 			return renderRestSupportClass(cls);
 		if (isStdVectorHelperClass(cls) || isStdVectorHelperName(className))
@@ -3127,6 +3135,14 @@ class CppTargetCore {
 
 	static function isTemplateSupportClass(cls:HxClassDecl):Bool {
 		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Template";
+	}
+
+	static function isERegSupportClass(cls:HxClassDecl):Bool {
+		return cls != null && isERegTypeName(HxClassDecl.getName(cls));
+	}
+
+	static function isERegTypeName(name:String):Bool {
+		return sanitizeTypePath(typeBaseName(name == null ? "" : name)) == "EReg";
 	}
 
 	static function renderTemplateSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -9868,6 +9884,8 @@ class CppTargetCore {
 		final primitiveAbstract = primitiveBackedAbstractNewExpr(typePath, args, scope);
 		if (primitiveAbstract != null)
 			return primitiveAbstract;
+		if (isERegTypeName(typePath))
+			return "std::make_shared<EReg>(" + renderConstructorArgs("EReg", args, scope).join(", ") + ")";
 		if (isStdArrayTypePath(typePath))
 			return stdArrayConstructionExpr(typePath, args, scope, expectedCppType);
 		if (scopeHasClass(scope, className) && isTemplateWrapSupportClass(scope.classByName.get(className)))

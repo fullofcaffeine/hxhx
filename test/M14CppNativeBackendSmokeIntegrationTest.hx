@@ -235,6 +235,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(args.length));",
 			"    Sys.println(args[0]);",
 			"    Sys.println(Std.string(args.indexOf(\"needle\")));",
+			"    var re = new EReg(\"a([0-9]+)\", \"\");",
+			"    Sys.println(Std.string(re.match(\"ba12z\")));",
+			"    Sys.println(re.matched(0));",
+			"    Sys.println(re.matched(1));",
+			"    Sys.println(re.matchedLeft());",
+			"    Sys.println(re.matchedRight());",
+			"    Sys.println(Std.string(re.matchedPos().pos) + \":\" + Std.string(re.matchedPos().len));",
+			"    var subRe = new EReg(\"[0-9]+\", \"\");",
+			"    Sys.println(Std.string(subRe.matchSub(\"xx12yy\", 2, 2)));",
+			"    Sys.println(Std.string(subRe.matchedPos().pos) + \":\" + Std.string(subRe.matchedPos().len));",
 			"    var words = [\"alpha\", \"beta\"];",
 			"    Sys.println(Std.string(words.length));",
 			"    Sys.println(words[1]);",
@@ -9240,8 +9250,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(importedMd5BytesSource.indexOf("Bytes.ofString") < 0, "C++ imported Bytes calls must not retain dotted Haxe syntax");
 		assertContains(source, "int main(int argc, char** argv)", "C++ smoke should emit main");
 		assertContains(source, "#include <cstdint>", "C++ smoke should include fixed-width integer types for bit reinterpret helpers");
+		assertContains(source, "#include <regex>", "C++ smoke should include std::regex for target-owned EReg support");
 		assertContains(source, "static double __hxhx_reinterpret_le_int32_as_float32(int value)",
 			"C++ smoke should include target-owned hxcpp FP reinterpret support");
+		assertContains(source, "struct EReg {", "C++ smoke should emit target-owned EReg support");
+		assertContains(source, "std::regex regex;", "C++ EReg support should store the compiled regex");
+		assertContains(source, "hasLastMatch = std::regex_search(begin, end, lastMatch, regex);",
+			"C++ EReg.matchSub should keep match state from std::regex_search");
+		assertTrue(source.indexOf("Regular expressions are not implemented for this platform") < 0,
+			"C++ EReg support should not throw an unsupported constructor diagnostic");
 		assertContains(source, "auto suffix = std::string(\"smoke\");", "C++ smoke should emit string local vars as std::string");
 		assertContains(source, "std::cout << (std::string(\"cpp-native:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit println");
 		assertContains(source, "std::cout << (std::string(\"trace:\") + std::string(suffix)) << std::endl;", "C++ smoke should emit trace");
@@ -10076,6 +10093,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final parsedERegMapLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperClass(parsedERegMapClasses.get("ERegMapLike"), {names: parsedERegMapNames, byName: parsedERegMapClasses})
 				.join("\n");
+		final parsedERegSupportLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedERegMapClasses.get("EReg"), {names: parsedERegMapNames, byName: parsedERegMapClasses})
+				.join("\n");
+		assertContains(parsedERegSupportLines,
+			"explicit EReg(std::string r, std::string opt) : pattern(r), options(opt), regex(r, __hxhx_ereg_flags(opt)) {}",
+			"C++ parsed EReg support should compile regex patterns during construction");
+		assertContains(parsedERegSupportLines, "return __hxhx_anon_pos_int__len_int_{absoluteMatchStart(), static_cast<int>(lastMatch.length(0))};",
+			"C++ parsed EReg.matchedPos support should report the stored match position and length");
+		assertTrue(parsedERegSupportLines.indexOf("NotImplementedException") < 0, "C++ parsed EReg support should not emit constructor stubs that throw");
 		assertContains(parsedERegMapLines, "auto f = [&](std::shared_ptr<EReg> x) -> std::string { return x->matchedLeft(); };",
 			"C++ callable locals passed to typed instance methods should adopt the expected pointer function type");
 		final parsedERegMatchedPosModule = new HxParser("class EReg { public function new(pattern:String, options:String) {} public function matchedPos():{pos:Int, len:Int} return null; } class ERegMatchedPosLike { public static function main():Int { var r = new EReg(\"a\", \"g\"); return r.matchedPos().pos + r.matchedPos().len; } }")
@@ -10710,7 +10736,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\n2\nbeta\n0\ntrue\n3\n4\nfalse\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore(reason)\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\ntrue\na12\n12\nb\nz\n1:3\ntrue\n2:2\n2\nbeta\n0\ntrue\n3\n4\nfalse\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore(reason)\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}
