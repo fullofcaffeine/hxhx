@@ -1004,6 +1004,13 @@ class CppTargetCore {
 		out.push("  return value == nullptr ? std::string(\"Null\") : value->getName();");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::string __hxhx_type_name(const std::shared_ptr<T>& value) {");
+		out.push("  if (value == nullptr) return std::string(\"Null\");");
+		out.push("  if constexpr (__hxhx_has_class_metadata<T>::value) return T::__hx_class_name;");
+		out.push("  return std::string(\"Dynamic\");");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_type_name(const std::any& value) {");
 		out.push("  if (!value.has_value()) return std::string(\"Null\");");
 		out.push("  const std::type_info& type = value.type();");
@@ -2402,6 +2409,7 @@ class CppTargetCore {
 			|| isStdListSupportClass(cls, classLookup)
 			|| isGenericMapSupportClass(cls)
 			|| isPosInfosSupportClass(cls)
+			|| isClassMetaSupportClass(cls)
 			|| isERegSupportClass(cls)
 			|| isRestSupportClass(cls)
 			|| isStdVectorHelperClass(cls)
@@ -2812,6 +2820,8 @@ class CppTargetCore {
 			return renderGenericMapSupportClass(cls);
 		if (isPosInfosSupportClass(cls))
 			return renderPosInfosClass();
+		if (isClassMetaSupportClass(cls))
+			return CppRuntimeSupport.classMetaSupportLines();
 		if (isERegSupportClass(cls))
 			return CppRuntimeSupport.eRegSupportLines();
 		if (isRestSupportClass(cls))
@@ -2843,6 +2853,8 @@ class CppTargetCore {
 		final baseTypes = inheritedCppBaseTypes(cls, classLookup);
 		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
 		out.push("struct " + className + (baseTypes.length == 0 ? "" : " : " + baseTypes.join(", ")) + " {");
+		for (line in classMetadataLines(cls, className))
+			out.push(line);
 		final scope = renderScope(cls, classLookup, "void");
 		for (field in HxClassDecl.getFields(cls)) {
 			final fieldName = HxFieldDecl.getName(field);
@@ -3009,6 +3021,42 @@ class CppTargetCore {
 		return [
 			"  " + className + "(" + renderFunctionArgs(args, baseScope) + ") : " + baseType + "(" + argNames.join(", ") + ") {}"
 		];
+	}
+
+	/**
+		Attach bounded reflection metadata to generated classes.
+
+		Type.getClass reads these static fields when given a shared_ptr<T>.
+		They are deliberately limited to the class display name and instance
+		field/method names needed by current utest discovery paths.
+	**/
+	static function classMetadataLines(cls:HxClassDecl, className:String):Array<String> {
+		return [
+			"  inline static std::string __hx_class_name = std::string(" + quoteString(className) + ");",
+			"  inline static std::vector<std::string> __hx_instance_fields = " + cppStringVectorLiteral(classMetadataInstanceFields(cls)) + ";"
+		];
+	}
+
+	static function classMetadataInstanceFields(cls:HxClassDecl):Array<String> {
+		final out = new Array<String>();
+		function add(name:String):Void {
+			if (name == null || name.length == 0 || out.indexOf(name) >= 0)
+				return;
+			out.push(name);
+		}
+		for (field in HxClassDecl.getFields(cls))
+			if (!HxFieldDecl.getIsStatic(field))
+				add(HxFieldDecl.getName(field));
+		for (fn in HxClassDecl.getFunctions(cls))
+			if (!HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) != "new")
+				add(HxFunctionDecl.getName(fn));
+		return out;
+	}
+
+	static function cppStringVectorLiteral(values:Array<String>):String {
+		if (values == null || values.length == 0)
+			return "std::vector<std::string>{}";
+		return "std::vector<std::string>{" + [for (value in values) "std::string(" + quoteString(value) + ")"].join(", ") + "}";
 	}
 
 	static function renderStructuralTypedefImplicitConstructors(className:String, scope:CppRenderScope):Null<Array<String>> {
@@ -5018,6 +5066,8 @@ class CppTargetCore {
 			return returnTraced("special_typetools_find_field", renderTypeToolsFindFieldHelper(fn, owner, classLookup));
 		if (isTypeToolsTraversalHelper(fn, owner))
 			return returnTraced("special_typetools_traversal", renderTypeToolsTraversalHelper(fn, owner, classLookup));
+		if (isTypeMetadataHelper(fn, owner))
+			return returnTraced("special_type_metadata", renderTypeMetadataHelper(fn, owner, classLookup));
 		if (isExprToolsHelper(fn, owner))
 			return returnTraced("special_exprtools", renderExprToolsHelper(fn, owner, classLookup));
 		if (isPrinterComplexTypeHelper(fn, owner))
@@ -16412,6 +16462,10 @@ class CppTargetCore {
 		return cls != null && sanitizeTypePath(HxClassDecl.getName(cls)) == "PosInfos";
 	}
 
+	static function isClassMetaSupportClass(cls:HxClassDecl):Bool {
+		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Class";
+	}
+
 	static function posInfosFieldCppType(className:String, fieldName:String):String {
 		if (sanitizeTypePath(className) != "PosInfos")
 			return "";
@@ -16920,13 +16974,28 @@ class CppTargetCore {
 		scope.localTypes.set(local, selected);
 	}
 
+	static function isTypeClass(owner:HxClassDecl):Bool {
+		return owner != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) == "Type";
+	}
+
 	static function isTypeErasedValueHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
 			return false;
-		if (sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Type")
+		if (!isTypeClass(owner))
 			return false;
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		return (method == "getClass" || method == "getEnum") && HxFunctionDecl.getArgs(fn).length == 1;
+	}
+
+	static function isTypeMetadataHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || !HxFunctionDecl.getIsStatic(fn) || !isTypeClass(owner))
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "getInstanceFields" | "getClassFields" | "getClassName" | "getSuperClass" | "resolveClass":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function isTypeToolsTraversalHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
@@ -17484,6 +17553,7 @@ class CppTargetCore {
 	static function renderTypeErasedValueHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final returnType = cppFunctionReturnType(fn, owner, classLookup);
 		final argName = sanitizeIdentifier(HxFunctionArg.getName(HxFunctionDecl.getArgs(fn)[0]));
+		final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		final scope = renderScope(owner, classLookup, returnType);
 		scope.localTypes.set(argName, "TValue");
 		scope.localNames.set(argName, argName);
@@ -17496,8 +17566,57 @@ class CppTargetCore {
 			+ "(const TValue& "
 			+ argName
 			+ ") {"];
-		for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
-			out.push(line);
+		switch (methodName) {
+			case "getClass":
+				out.push("    using __hxhx_class_type = typename __hxhx_reflected_class_type<std::decay_t<TValue>>::type;");
+				out.push("    if constexpr (__hxhx_is_shared_ptr<std::decay_t<TValue>>::value) {");
+				out.push("      if (" + argName + " == nullptr) return nullptr;");
+				out.push("    }");
+				out.push("    if constexpr (__hxhx_has_class_metadata<__hxhx_class_type>::value) {");
+				out.push("      return std::make_shared<Class>(__hxhx_class_type::__hx_class_name, __hxhx_class_type::__hx_instance_fields);");
+				out.push("    }");
+				out.push("    return std::make_shared<Class>(__hxhx_type_name(" + argName + "), std::vector<std::string>{});");
+			case "getEnum":
+				out.push("    return nullptr;");
+			case _:
+				for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
+					out.push(line);
+		}
+		out.push("  }");
+		return out;
+	}
+
+	/**
+		Render target-owned Type helpers that operate on the bounded Class carrier.
+
+		The parsed stdlib declarations can have empty bodies in this backend; for
+		these helpers an empty non-void C++ body traps at runtime, so we return
+		the metadata shape this target actually supports.
+	**/
+	static function renderTypeMetadataHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final returnType = cppFunctionReturnType(fn, owner, classLookup);
+		final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final firstArg = args.length == 0 ? "" : sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final out = [
+			"  static " + returnType + " " + methodName + "(" + renderFunctionArgs(args, scope) + ") {"
+		];
+		switch (methodName) {
+			case "getInstanceFields":
+				out.push("    return " + firstArg + " == nullptr ? std::vector<std::string>{} : " + firstArg + "->instanceFields;");
+			case "getClassFields":
+				out.push("    return " + firstArg + " == nullptr ? std::vector<std::string>{} : " + firstArg + "->classFields;");
+			case "getClassName":
+				out.push("    return " + firstArg + " == nullptr ? std::string() : " + firstArg + "->name;");
+			case "getSuperClass":
+				out.push("    return nullptr;");
+			case "resolveClass":
+				out.push("    return std::make_shared<Class>(" + firstArg + ", std::vector<std::string>{});");
+			case _:
+				out.push("    return " + cppDefaultValue(returnType, scope) + ";");
+		}
 		out.push("  }");
 		return out;
 	}

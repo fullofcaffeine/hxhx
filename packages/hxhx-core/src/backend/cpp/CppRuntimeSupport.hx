@@ -840,6 +840,24 @@ class CppRuntimeSupport {
 	public static function rttiMetaLines():Array<String> {
 		return [
 			"// hxhx-cpp-bounded-bringup: erased metadata support is smoke-only; see docs/00-project/CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md.",
+			"template<typename T, typename = void>",
+			"struct __hxhx_has_class_metadata : std::false_type {};",
+			"",
+			"template<typename T>",
+			"struct __hxhx_has_class_metadata<T, std::void_t<decltype(T::__hx_class_name), decltype(T::__hx_instance_fields)>> : std::true_type {};",
+			"",
+			"template<typename T>",
+			"struct __hxhx_reflected_class_type { using type = std::decay_t<T>; };",
+			"",
+			"template<typename T>",
+			"struct __hxhx_reflected_class_type<std::shared_ptr<T>> { using type = T; };",
+			"",
+			"template<typename T>",
+			"struct __hxhx_is_shared_ptr : std::false_type {};",
+			"",
+			"template<typename T>",
+			"struct __hxhx_is_shared_ptr<std::shared_ptr<T>> : std::true_type {};",
+			"",
 			"template<typename TResult, typename T>",
 			"static TResult __hxhx_meta_get_as(const T&) {",
 			"  return TResult{};",
@@ -858,9 +876,22 @@ class CppRuntimeSupport {
 			"  return false;",
 			"}",
 			"",
+			"struct __hxhx_reflect_function_marker {",
+			"  std::string name;",
+			"  explicit __hxhx_reflect_function_marker(std::string name = std::string()) : name(name) {}",
+			"};",
+			"",
 			"template<typename TObject>",
-			"static std::any __hxhx_reflect_field(const TObject&, const std::string&) {",
-			"  // hxhx-cpp-bounded-bringup: erased Reflect.field returns an empty carrier until oracle-backed support or diagnostics exist.",
+			"static std::any __hxhx_reflect_field(const TObject& object, const std::string& name) {",
+			"  using __hxhx_class_type = typename __hxhx_reflected_class_type<std::decay_t<TObject>>::type;",
+			"  if constexpr (__hxhx_is_shared_ptr<std::decay_t<TObject>>::value) {",
+			"    if (object == nullptr) return std::any();",
+			"  }",
+			"  if constexpr (__hxhx_has_class_metadata<__hxhx_class_type>::value) {",
+			"    if (std::find(__hxhx_class_type::__hx_instance_fields.begin(), __hxhx_class_type::__hx_instance_fields.end(), name) != __hxhx_class_type::__hx_instance_fields.end()) {",
+			"      return std::any(__hxhx_reflect_function_marker(name));",
+			"    }",
+			"  }",
 			"  return std::any();",
 			"}",
 			"",
@@ -878,6 +909,10 @@ class CppRuntimeSupport {
 			"template<typename T>",
 			"static bool __hxhx_reflect_is_function(const T&) {",
 			"  return false;",
+			"}",
+			"",
+			"static bool __hxhx_reflect_is_function(const std::any& value) {",
+			"  return value.has_value() && value.type() == typeid(__hxhx_reflect_function_marker);",
 			"}",
 			"",
 			"template<typename T>",
@@ -918,6 +953,28 @@ class CppRuntimeSupport {
 			"template<typename A, typename B>",
 			"static bool __hxhx_reflect_compare_methods(const A&, const B&) {",
 			"  return false;",
+			"}"
+		];
+	}
+
+	/**
+		Emit the small runtime carrier used by Type.getClass.
+
+		This is intentionally metadata storage only: it gives Type.getClassName
+		and Type.getInstanceFields concrete data without claiming full Haxe
+		reflection or dynamic construction parity.
+	**/
+	public static function classMetaSupportLines():Array<String> {
+		return [
+			"struct Class {",
+			"  std::string name;",
+			"  std::vector<std::string> instanceFields;",
+			"  std::vector<std::string> classFields;",
+			"  explicit Class(std::string name = std::string(), std::vector<std::string> instanceFields = {}, std::vector<std::string> classFields = {}) : name(name), instanceFields(instanceFields), classFields(classFields) {}",
+			"};",
+			"",
+			"static std::string __hxhx_type_name(const std::shared_ptr<Class>& value) {",
+			"  return value == nullptr ? std::string(\"Null\") : value->name;",
 			"}"
 		];
 	}

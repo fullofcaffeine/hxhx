@@ -4664,7 +4664,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(assertCreateEventLines.indexOf("std::to_string([&](auto e)") < 0, "C++ createEvent-like helpers should not stringify returned lambdas");
 		final typeHelper = new HxClassDecl("Type", false, [
 			new HxFunctionDecl("getClass", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "Class<Dynamic>", [], ""),
-			new HxFunctionDecl("getEnum", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "Enum<Dynamic>", [], "")
+			new HxFunctionDecl("getEnum", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)], "Enum<Dynamic>", [], ""),
+			new HxFunctionDecl("getInstanceFields", Public, true, [new HxFunctionArg("c", "Class<Dynamic>", NoDefault, false, false)], "Array<String>", [], ""),
+			new HxFunctionDecl("getClassName", Public, true, [new HxFunctionArg("c", "Class<Dynamic>", NoDefault, false, false)], "String", [], ""),
+			new HxFunctionDecl("resolveClass", Public, true, [new HxFunctionArg("name", "String", NoDefault, false, false)], "Class<Dynamic>", [], "")
 		], []);
 		final classValue = new HxClassDecl("Class", false, [], []);
 		final enumValue = new HxClassDecl("Enum", false, [], []);
@@ -4681,8 +4684,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final typeHelperLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(typeHelper)[0], typeHelper,
 			typeStringLookup)
 			.join("\n");
+		final typeClassLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(classValue, typeStringLookup).join("\n");
+		final typeSupportLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(typeHelper, typeStringLookup).join("\n");
+		assertContains(typeClassLines, "std::string name;",
+			"C++ Class meta-value support should carry the reflected class name instead of rendering an empty trap carrier");
+		assertContains(typeClassLines, "std::vector<std::string> instanceFields;",
+			"C++ Class meta-value support should carry instance fields for Type.getInstanceFields");
+		assertContains(typeClassLines, "static std::string __hxhx_type_name(const std::shared_ptr<Class>& value)",
+			"C++ Class meta-values should stringify to their reflected name");
 		assertContains(typeHelperLines, "template<typename TValue>\n  static std::shared_ptr<Class> getClass(const TValue& value)",
 			"C++ Type.getClass should accept erased values through a template boundary");
+		assertContains(typeSupportLines, "return std::make_shared<Class>(__hxhx_class_type::__hx_class_name, __hxhx_class_type::__hx_instance_fields);",
+			"C++ Type.getClass should return target-owned class metadata for reflected object carriers");
+		assertContains(typeSupportLines, "return c == nullptr ? std::vector<std::string>{} : c->instanceFields;",
+			"C++ Type.getInstanceFields should read the reflected instance-field list from Class metadata");
+		assertContains(typeSupportLines, "return c == nullptr ? std::string() : c->name;",
+			"C++ Type.getClassName helper bodies should not be empty non-void traps");
+		assertContains(typeSupportLines, "return std::make_shared<Class>(name, std::vector<std::string>{});",
+			"C++ Type.resolveClass should return a bounded Class carrier instead of falling through an empty non-void body");
 		final typeStringMethod = new HxFunctionDecl("typeToStringLike", Public, true, [new HxFunctionArg("value", "Dynamic", NoDefault, false, false)],
 			"String", [
 				SVar("cls", "Dynamic", ENull, HxPos.unknown()),
@@ -9395,6 +9414,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should lower Reflect.setField through backend-owned erased reflection support");
 		assertTrue(source.indexOf("Reflect::setField(obj, field, parseRec())") < 0,
 			"C++ smoke should not call the string-only parsed Reflect.setField helper for Dynamic object writes");
+		assertContains(source, "struct __hxhx_reflect_function_marker {",
+			"C++ smoke should include bounded Reflect.field function markers for method-name discovery");
+		assertContains(source, "std::find(__hxhx_class_type::__hx_instance_fields.begin(), __hxhx_class_type::__hx_instance_fields.end(), name)",
+			"C++ Reflect.field should recognize generated class instance metadata before Reflect.isFunction checks");
 		assertContains(source, "auto arr = std::vector<std::any>{};", "C++ smoke should infer Dynamic pushes into empty arrays as std::vector<std::any>");
 		assertContains(source, "arr.push_back(parseRec());", "C++ smoke should keep Dynamic array pushes compile-safe");
 		assertContains(source,
@@ -9657,7 +9680,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ bool-returning Reflect.isFunction probes should return bool directly");
 		assertTrue(parsedRunnerGenericLines.indexOf("std::string isMethod(") < 0, "C++ try/catch bool helper inference should not stringify boolean returns");
 		final testClass = new HxClassDecl("Test", false, [new HxFunctionDecl("new", Public, false, [], "", [], "")], []);
-		final testCaseClass = new HxClassDecl("TestNumericCasts", false, [new HxFunctionDecl("new", Public, false, [], "", [], "")], [], "Test");
+		final testCaseClass = new HxClassDecl("TestNumericCasts", false, [
+			new HxFunctionDecl("new", Public, false, [], "", [], ""),
+			new HxFunctionDecl("testNumeric", Public, false, [], "Void", [], "")
+		], [], "Test");
 		final eRegClass = new HxClassDecl("EReg", false, [], []);
 		final testFixtureCtor = new HxFunctionDecl("new", Public, false, [
 			new HxFunctionArg("target", "Dynamic", NoDefault, false, false),
@@ -9738,6 +9764,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final runnerFixtureLookup = {names: runnerFixtureNames, byName: runnerFixtureClasses};
 		final runnerFixtureLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(runnerFixtureCarrier, runnerFixtureLookup).join("\n");
 		final testFixtureLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(testFixtureClass, runnerFixtureLookup).join("\n");
+		final testCaseLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(testCaseClass, runnerFixtureLookup).join("\n");
+		assertContains(testCaseLines, "inline static std::string __hx_class_name = std::string(\"TestNumericCasts\");",
+			"C++ class metadata should expose the reflected class name for Type.getClass(shared_ptr<T>)");
+		assertContains(testCaseLines, "inline static std::vector<std::string> __hx_instance_fields = std::vector<std::string>{std::string(\"testNumeric\")};",
+			"C++ class metadata should expose instance methods for utest fixture discovery");
 		assertContains(testFixtureLines, "std::shared_ptr<Test> target = nullptr;",
 			"C++ utest TestFixture.target should keep the test object carrier instead of collapsing Dynamic to string");
 		assertContains(testFixtureLines, "TestFixture(std::shared_ptr<Test> target, std::string method",
