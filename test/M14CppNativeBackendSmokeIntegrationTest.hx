@@ -4303,6 +4303,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(testEqLines, "template<typename TExpected, typename TValue>", "C++ utest Test.eq should accept mixed expected/value types");
 		assertContains(testEqLines, "Assert::same(v, v2, std::nullopt, std::nullopt, std::nullopt, PosInfos(pos.value()));",
 			"C++ utest Test.eq should delegate to the polymorphic assertion helper");
+		final prunedUtestTest = new HxClassDecl("Test", false, [], [], "", null, false, ["ITest"]);
+		final prunedUtestTestNames = new StringMap<Bool>();
+		for (name in ["Test", "Assert", "Type"])
+			prunedUtestTestNames.set(name, true);
+		final prunedUtestTestClasses = new StringMap<HxClassDecl>();
+		prunedUtestTestClasses.set("Test", prunedUtestTest);
+		prunedUtestTestClasses.set("Assert", new HxClassDecl("Assert", false, [], []));
+		prunedUtestTestClasses.set("Type", new HxClassDecl("Type", false, [], []));
+		final prunedUtestTestPackages = new StringMap<String>();
+		prunedUtestTestPackages.set("Test", "utest");
+		final prunedUtestTestLookup = {names: prunedUtestTestNames, byName: prunedUtestTestClasses, packageByRenderedName: prunedUtestTestPackages};
+		final prunedUtestTestLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(prunedUtestTest, prunedUtestTestLookup).join("\n");
+		assertContains(prunedUtestTestLines, "void eq(const TExpected& expected, const TValue& value",
+			"C++ package-qualified utest.Test should keep Test.eq support even after DCE prunes the method declaration");
+		assertContains(@:privateAccess backend.cpp.CppTargetCore.helperClassDependencies(prunedUtestTest, prunedUtestTestLookup).join("\n"), "Assert",
+			"C++ package-qualified utest.Test support should keep Assert ordered before default Test.eq support");
 		final assertSame = new HxFunctionDecl("same", Public, true, [
 			new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
 			new HxFunctionArg("actual", "Dynamic", NoDefault, false, false),

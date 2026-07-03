@@ -2318,7 +2318,7 @@ class CppTargetCore {
 			|| isStdArrayHelperClass(cls)
 			|| isCppReportSupportClass(cls)
 			|| isUtestAssertSupportClass(cls, classLookup)
-			|| isUnitTestBaseSupportClass(cls)
+			|| isUnitTestBaseSupportClass(cls, classLookup)
 			|| isTemplateSupportClass(cls);
 	}
 
@@ -2519,7 +2519,7 @@ class CppTargetCore {
 			if (includeRenderedBodies)
 				addStmtClassDependencies(HxFunctionDecl.getBody(fn), addFn, fnScope);
 		}
-		if (isUnitTestBaseSupportClass(cls)) {
+		if (isUnitTestBaseSupportClass(cls, classLookup)) {
 			// renderUnitTestBaseSupportClass emits target-owned calls through these helpers.
 			add("Assert");
 			add("Type");
@@ -2732,7 +2732,7 @@ class CppTargetCore {
 			return renderCppReportSupportClass(cls, classLookup);
 		if (isUtestAssertSupportClass(cls, classLookup))
 			return renderUtestAssertSupportClass(cls, classLookup);
-		if (isUnitTestBaseSupportClass(cls))
+		if (isUnitTestBaseSupportClass(cls, classLookup))
 			return renderUnitTestBaseSupportClass(cls, classLookup);
 		if (isTemplateSupportClass(cls))
 			return renderTemplateSupportClass(cls, classLookup);
@@ -3142,9 +3142,31 @@ class CppTargetCore {
 		return out;
 	}
 
-	static function isUnitTestBaseSupportClass(cls:HxClassDecl):Bool {
+	/**
+		Recognize `utest.Test` even after DCE has removed its assertion methods.
+
+		Subclasses can still call inherited helpers such as `eq`; the generated C++
+		support class must keep that target-owned surface available even when the
+		parsed class declaration is otherwise empty. Package metadata is preferred,
+		but the pruned upstream class can also be identified by `Test` inheriting
+		the `ITest` interface.
+	**/
+	static function isUtestTestSupportShape(cls:HxClassDecl, ?classLookup:CppClassLookup):Bool {
 		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "Test")
 			return false;
+		if (packagePathForRenderedClass(cls, classLookup) == "utest" || baseTypeName(cls) == "ITest")
+			return true;
+		for (iface in HxClassDecl.getImplementsPaths(cls))
+			if (sanitizeTypePath(typeBaseName(iface)) == "ITest")
+				return true;
+		return false;
+	}
+
+	static function isUnitTestBaseSupportClass(cls:HxClassDecl, ?classLookup:CppClassLookup):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "Test")
+			return false;
+		if (isUtestTestSupportShape(cls, classLookup))
+			return true;
 		final required = new haxe.ds.StringMap<Bool>();
 		for (name in [
 			"eq",
@@ -3197,12 +3219,14 @@ class CppTargetCore {
 			"struct " + className + (baseTypes.length == 0 ? "" : " : " + baseTypes.join(", ")) + " {"
 		];
 		out.push("  " + className + "() {}");
+		var hasEq = false;
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 			if (method == "new")
 				continue;
 			switch (method) {
 				case "eq":
+					hasEq = true;
 					for (line in renderHelperMethod(fn, cls, classLookup))
 						out.push(line);
 				case "t" | "f":
@@ -3225,8 +3249,20 @@ class CppTargetCore {
 						out.push(line);
 			}
 		}
+		if (!hasEq && isUtestTestSupportShape(cls, classLookup))
+			for (line in renderDefaultUtestEqHelper())
+				out.push(line);
 		out.push("};");
 		return out;
+	}
+
+	static function renderDefaultUtestEqHelper():Array<String> {
+		return [
+			"  template<typename TExpected, typename TValue>",
+			"  void eq(const TExpected& expected, const TValue& value, std::optional<PosInfos> pos = std::nullopt) {",
+			"    Assert::same(expected, value, std::nullopt, std::nullopt, std::nullopt, PosInfos(pos.value()));",
+			"  }"
+		];
 	}
 
 	static function renderUnitTestValueAssertMethod(fn:HxFunctionDecl):Array<String> {
