@@ -12104,10 +12104,22 @@ class CppTargetCore {
 		return typeName.length > 0 && !isCppOptionalType(typeName) && !isCppReferenceType(typeName);
 	}
 
+	/**
+		Returns the C++ object that stores an optional value, not the unwrapped payload.
+		Callers append operations such as `.has_value()` or `.value_or(...)`, so harmless
+		Haxe wrappers around an identifier must be peeled before normal expression rendering
+		can turn `v` into `v.value()`.
+	**/
 	static function optionalStorageExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
 			case EIdent(name):
 				sanitizeIdentifier(name);
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				optionalStorageExpr(inner, scope);
+			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
+				optionalStorageExpr(args[2], scope);
+			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
+				optionalStorageExpr(args[0], scope);
 			case _:
 				renderExpr(expr, scope);
 		};

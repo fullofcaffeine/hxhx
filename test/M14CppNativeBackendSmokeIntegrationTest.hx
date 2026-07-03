@@ -4990,6 +4990,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(optionalNumericLines, "useLen((len.value() + 1));",
 			"C++ optional scalar arithmetic should not append value_or to an already-unwrapped optional arg");
 		assertTrue(optionalNumericLines.indexOf("len.value().value_or(0)") < 0, "C++ optional scalar arithmetic should avoid invalid value().value_or chains");
+		final optionalCastReturnMethod = new HxFunctionDecl("optionalCastReturnLike", Public, true, [new HxFunctionArg("v", "Int", NoDefault, true, false)],
+			"Int", [SReturn(ECast(EIdent("v"), "Int"), HxPos.unknown())], "");
+		final optionalCastReturnLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(optionalCastReturnMethod, optionalOwner, optionalLookup)
+			.join("\n");
+		assertContains(optionalCastReturnLines, "return static_cast<int>(v.value_or(0));",
+			"C++ optional scalar casts returned as primitives should unwrap storage once with value_or");
+		assertTrue(optionalCastReturnLines.indexOf("v.value().value_or(0)") < 0,
+			"C++ optional scalar casts returned as primitives should avoid invalid value().value_or chains");
 		final importExprClass = new HxClassDecl("ImportExpr", false, [], []);
 		final typePathClass = new HxClassDecl("TypePath", false, [], []);
 		final typeDefinitionClass = new HxClassDecl("TypeDefinition", false, [], []);
