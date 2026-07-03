@@ -9679,13 +9679,15 @@ class CppTargetCore {
 		final explicitTemplateArgs = constructorTemplateArgsFromTypePath(typePath, scope);
 		final expectedTemplateArgs = explicitTemplateArgs.length > 0 ? explicitTemplateArgs : templateArgsFromExpectedClassType(className, expectedCppType);
 		final renderedArgs = renderConstructorArgs(className, args, scope, expectedTemplateArgs).join(", ");
+		// Prefer the declaration resolved from the source type path. Re-looking
+		// up by rendered C++ name can hit a short-name alias from another module.
+		final classTypeParams = cls == null ? genericClassTypeParamsForName(className, scope) : genericClassTemplateParams(cls);
 		if (expectedClass != null
 			&& scopeHasClass(scope, expectedClass)
 			&& classAbstractUnderlyingMatches(scope.classByName.get(expectedClass), className, scope))
 			return "std::make_shared<" + expectedClass + ">(" + renderedArgs + ")";
-		if (scopeHasClass(scope, className)
-			&& (genericClassTypeParamsForName(className, scope).length > 0 || expectedTemplateArgs.length > 0)) {
-			var templateArgs = expectedTemplateArgs.length > 0 ? expectedTemplateArgs : scopedTemplateArgsForClass(className, scope);
+		if (scopeHasClass(scope, className) && (classTypeParams.length > 0 || expectedTemplateArgs.length > 0)) {
+			var templateArgs = expectedTemplateArgs.length > 0 ? expectedTemplateArgs : scopedTemplateArgsForParams(classTypeParams, scope);
 			if (templateArgs.length == 0 && args.length == 0)
 				templateArgs = templateArgsFromExpectedClassType(className, scope == null ? "" : scope.returnType);
 			if (templateArgs.length == 0 && args.length == 0 && className == "Map")
@@ -9701,6 +9703,25 @@ class CppTargetCore {
 			+ "("
 			+ renderedArgs
 			+ ")";
+	}
+
+	static function staticCreateExpr(className:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final renderedArgs = renderClassMethodCallArgs(className, "create", true, args, scope).join(", ");
+		final cls = classDeclForCppName(className, scope);
+		final typeParams = cls == null ? genericClassTypeParamsForName(className, scope) : genericClassTemplateParams(cls);
+		// Haxe stdlib helper types often expose `Class.create(...)` as a constructor-like
+		// static call. For generic C++ helper classes, use the generated factory so the
+		// current owner template arguments, such as `List<T> -> ListNode<T>`, are preserved.
+		if (scopeHasClass(scope, className) && typeParams.length > 0) {
+			final templateArgs = scopedTemplateArgsForParams(typeParams, scope);
+			return "__hxhx_make_shared_"
+				+ className
+				+ (templateArgs.length > 0 ? "<" + templateArgs.join(", ") + ">" : "")
+				+ "("
+				+ renderedArgs
+				+ ")";
+		}
+		return "std::make_shared<" + className + ">(" + renderedArgs + ")";
 	}
 
 	/**
@@ -9782,6 +9803,10 @@ class CppTargetCore {
 
 	static function scopedTemplateArgsForClass(className:String, ?scope:CppRenderScope):Array<String> {
 		final params = genericClassTypeParamsForName(className, scope);
+		return scopedTemplateArgsForParams(params, scope);
+	}
+
+	static function scopedTemplateArgsForParams(params:Array<String>, ?scope:CppRenderScope):Array<String> {
 		if (params.length == 0 || scope == null || scope.typeParams == null || scope.typeParams.length == 0)
 			return [];
 		final scoped = new haxe.ds.StringMap<Bool>();
@@ -10281,7 +10306,7 @@ class CppTargetCore {
 			return "std::make_shared<ConstPointer<void>>(" + renderExpr(args[0], scope) + ")";
 		if (receiverTypeName != null) {
 			if (method == "create")
-				return "std::make_shared<" + receiverTypeName + ">(" + renderedArgs() + ")";
+				return staticCreateExpr(receiverTypeName, args, scope);
 			return receiverTypeName
 				+ "::"
 				+ sanitizeIdentifier(method)

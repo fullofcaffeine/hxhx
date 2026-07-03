@@ -8227,7 +8227,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], "Void", [
 				SExpr(EBinop("=", EField(EThis, "item"), EIdent("item")), HxPos.unknown()),
 				SExpr(EBinop("=", EField(EThis, "next"), EIdent("next")), HxPos.unknown())
-			], "")
+			], ""),
+			new HxFunctionDecl("create", Public, true, [
+				new HxFunctionArg("item", "T", NoDefault, false, false),
+				new HxFunctionArg("next", "SelfGenericNode<T>", NoDefault, false, false)
+			], "SelfGenericNode<T>", [
+				SReturn(ENew("SelfGenericNode", [EIdent("item"), EIdent("next")]), HxPos.unknown())
+			], "", ["__hxhx_fn_type_params=T"])
 		], [
 			new HxFieldDecl("item", Public, false, "T", null),
 			new HxFieldDecl("next", Public, false, "SelfGenericNode<T>", null)
@@ -8241,6 +8247,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("rawFilter", Public, false, [], "SelfGenericList", [
 				SVar("l3", "", ENew("SelfGenericList", []), HxPos.unknown()),
 				SReturn(EIdent("l3"), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("addItem", Public, false, [new HxFunctionArg("item", "T", NoDefault, false, false)], "Void", [
+				SVar("node", "", ECall(EField(EIdent("SelfGenericNode"), "create"), [EIdent("item"), ENull]), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EThis, "h"), EIdent("node")), HxPos.unknown())
 			], "")
 		], [new HxFieldDecl("h", Public, false, "SelfGenericNode<T>", null)]);
 		for (name in ["SelfGenericNode", "SelfGenericList"])
@@ -8261,6 +8271,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ raw generic return hints inside a matching generic scope should preserve owner template parameters");
 		assertContains(selfGenericListLines, "auto l2 = __hxhx_make_shared_SelfGenericList<T>();",
 			"C++ zero-arg construction inside a generic owner should pass explicit template args to the deducing factory");
+		assertContains(selfGenericListLines, "auto node = __hxhx_make_shared_SelfGenericNode<T>(item, nullptr);",
+			"C++ generic containers should pass owner template args when constructing generic node helpers with null links");
+		assertTrue(selfGenericListLines.indexOf("std::make_shared<SelfGenericNode>(item, nullptr)") < 0,
+			"C++ generic node construction should not instantiate the erased non-template class shape");
 		final stringGenericListOwner = new HxClassDecl("StringGenericListOwner", false, [
 			new HxFunctionDecl("make", Public, false, [], "SelfGenericList<String>", [
 				SVar("list", "", ENew("SelfGenericList", []), HxPos.unknown()),

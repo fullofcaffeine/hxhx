@@ -13,16 +13,16 @@ MEGA_FILE_GRAVITY_WATCH:PASS
 
 ## Current Hotspots
 
-Measured on July 2, 2026. The guard allows small drift but asks for this table
+Measured on July 3, 2026. The guard allows small drift but asks for this table
 to be refreshed when a watched file moves by more than 250 lines.
 
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 17,513 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 17,771 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
-| `packages/hxhx-core/src/HxParser.hx` | 5,022 | Parser behavior is central and easy to destabilize with local workarounds. |
-| `packages/hxhx-core/src/ParserStage.hx` | 4,450 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
+| `packages/hxhx-core/src/HxParser.hx` | 5,031 | Parser behavior is central and easy to destabilize with local workarounds. |
+| `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
 | `packages/hxhx/src/hxhx/Stage3Compiler.hx` | 996 | Keep orchestration-only; do not let it become a target/runtime implementation surface. |
 
 ## Thresholds
