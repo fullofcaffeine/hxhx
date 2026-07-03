@@ -4342,8 +4342,9 @@ class CppTargetCore {
 		}
 	}
 
-	static function knownStdlibConstructorParamCppTypes(className:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Array<String> {
-		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+	static function knownStdlibConstructorParamCppTypes(className:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup,
+			?ctor:HxFunctionDecl):Array<String> {
+		final owner = stdlibConstructorOwnerName(className);
 		return switch (owner) {
 			case "JsonParser":
 				["std::string"];
@@ -4352,9 +4353,58 @@ class CppTargetCore {
 			case "TestFixture":
 				final utestTargetType = utestTestObjectCppType(scope, classLookup);
 				utestTargetType.length == 0 ? [] : [utestTargetType];
+			case "PosException" if (hasStdlibPosExceptionConstructorShape(className, scope, classLookup, ctor)):
+				["std::string", "std::shared_ptr<Exception>", "std::shared_ptr<PosInfos>"];
+			case "NotImplementedException" if (hasStdlibPosExceptionConstructorShape(className, scope, classLookup, ctor)):
+				["std::string", "std::shared_ptr<Exception>", "std::shared_ptr<PosInfos>"];
 			case _:
 				[];
 		}
+	}
+
+	static function stdlibConstructorOwnerName(className:String):String {
+		final clean = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		return switch (clean) {
+			case "haxe_exceptions_PosException":
+				"PosException";
+			case "haxe_exceptions_NotImplementedException":
+				"NotImplementedException";
+			case "haxe_Exception":
+				"Exception";
+			case "haxe_PosInfos":
+				"PosInfos";
+			case _:
+				clean;
+		}
+	}
+
+	static function hasStdlibPosExceptionConstructorShape(className:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup,
+			?knownCtor:HxFunctionDecl):Bool {
+		var ctor = knownCtor;
+		if (ctor == null) {
+			var cls = lookupClassForTypeHint(className, scope, classLookup);
+			if (cls == null)
+				cls = lookupClassForTypeHint(stdlibConstructorOwnerName(className), scope, classLookup);
+			ctor = findConstructor(cls);
+		}
+		if (ctor == null)
+			return false;
+		final args = HxFunctionDecl.getArgs(ctor);
+		if (args.length < 3)
+			return false;
+		if (functionArgName(args[0]) == "message" && functionArgName(args[1]) == "previous" && functionArgName(args[2]) == "pos")
+			return true;
+		return functionArgTypeBase(args[0]) == "String"
+			&& functionArgTypeBase(args[1]) == "Exception"
+			&& functionArgTypeBase(args[2]) == "PosInfos";
+	}
+
+	static function functionArgName(arg:HxFunctionArg):String {
+		return sanitizeIdentifier(HxFunctionArg.getName(arg));
+	}
+
+	static function functionArgTypeBase(arg:HxFunctionArg):String {
+		return stdlibConstructorOwnerName(removeTypeHintWhitespace(StringTools.trim(HxFunctionArg.getTypeHint(arg))));
 	}
 
 	static function applyKnownStdlibFunctionArgOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
@@ -4362,8 +4412,8 @@ class CppTargetCore {
 			return;
 		final ownerName = HxClassDecl.getName(scope.owner);
 		final methodName = HxFunctionDecl.getName(fn);
-		final knownTypes = sanitizeIdentifier(methodName) == "new" ? knownStdlibConstructorParamCppTypes(ownerName, scope,
-			scope.classLookup) : knownStdlibMethodParamCppTypes(ownerName, methodName, scope, scope.classLookup);
+		final knownTypes = methodName == "new" ? knownStdlibConstructorParamCppTypes(ownerName, scope, scope.classLookup,
+			fn) : knownStdlibMethodParamCppTypes(ownerName, methodName, scope, scope.classLookup);
 		if (knownTypes.length == 0)
 			return;
 		final args = HxFunctionDecl.getArgs(fn);
@@ -9928,18 +9978,21 @@ class CppTargetCore {
 	}
 
 	static function constructorArgCppTypes(className:String, ?scope:CppRenderScope):Array<String> {
-		final known = knownStdlibConstructorParamCppTypes(className, scope, lookupForScope(scope));
-		if (known.length > 0)
-			return known;
 		if (scope == null || className == null || className.length == 0)
 			return [];
-		final cls = scope.classByName.get(className);
+		final lookup = lookupForScope(scope);
+		var cls = lookupClassForTypeHint(className, scope, lookup);
+		if (cls == null)
+			cls = scope.classByName.get(className);
 		if (cls == null)
 			return [];
 		final ctor = findConstructor(cls);
+		final known = knownStdlibConstructorParamCppTypes(className, scope, lookup, ctor);
+		if (known.length > 0)
+			return known;
 		if (ctor == null)
 			return [];
-		final ctorScope = renderScope(cls, {names: scope.classNames, byName: scope.classByName}, "void");
+		final ctorScope = renderScope(cls, lookup, "void");
 		prepareFunctionScope(ctorScope, ctor);
 		return [for (arg in HxFunctionDecl.getArgs(ctor)) cppFunctionArgType(arg, ctorScope)];
 	}

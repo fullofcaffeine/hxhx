@@ -8046,8 +8046,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(optionalCtorSubLines, "OptionalCtorSub(std::optional<std::string> message = std::nullopt) : OptionalCtorBase(message.value()) {",
 			"C++ constructor scopes should type optional args before rendering super initializer lists");
 		final posInfos = new HxClassDecl("PosInfos", false, [], []);
+		final exceptionLike = new HxClassDecl("Exception", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("message", "String", NoDefault, false, false),
+				new HxFunctionArg("previous", "Exception", NoDefault, true, false)
+			], "Void", [], ""),
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("message"), HxPos.unknown())], "")
+		], []);
 		final posException = new HxClassDecl("PosException", false, [
-			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)], "Void", [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("message", "String", NoDefault, false, false),
+				new HxFunctionArg("previous", "Exception", NoDefault, true, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Void", [
+				SExpr(ECall(ESuper, [EIdent("message"), EIdent("previous")]), HxPos.unknown()),
 				SIf(EBinop("==", EIdent("pos"), ENull),
 					SExpr(EBinop("=", EIdent("posInfos"),
 						EAnon(["fileName", "lineNumber", "className", "methodName"],
@@ -8057,10 +8069,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			],
 				""),
 			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EField(EIdent("posInfos"), "className"), HxPos.unknown())], "")
-		], [new HxFieldDecl("posInfos", Public, false, "PosInfos", null)]);
+		], [new HxFieldDecl("posInfos", Public, false, "PosInfos", null)], "Exception");
 		final notImplementedException = new HxClassDecl("NotImplementedException", false, [
-			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)], "Void",
-				[SExpr(ECall(ESuper, [EIdent("pos")]), HxPos.unknown())], "")
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("message", "String", Default(EString("Not implemented")), true, false),
+				new HxFunctionArg("previous", "Exception", NoDefault, true, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Void", [
+				SExpr(ECall(ESuper, [EIdent("message"), EIdent("previous"), EIdent("pos")]), HxPos.unknown())
+			], "")
 		], [], "PosException");
 		final logFormatOutputLike = new HxFunctionDecl("formatOutput", Public, true, [
 			new HxFunctionArg("str", "String", NoDefault, false, false),
@@ -8074,9 +8091,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], "");
 		final logLike = new HxClassDecl("Log", false, [logFormatOutputLike], []);
 		final posNames = new StringMap<Bool>();
-		for (name in ["PosInfos", "PosException", "NotImplementedException", "Log"])
+		for (name in ["Exception", "PosInfos", "PosException", "NotImplementedException", "Log"])
 			posNames.set(name, true);
 		final posClasses = new StringMap<HxClassDecl>();
+		posClasses.set("Exception", exceptionLike);
 		posClasses.set("PosInfos", posInfos);
 		posClasses.set("PosException", posException);
 		posClasses.set("NotImplementedException", notImplementedException);
@@ -8109,15 +8127,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ PosInfos support should include the stdlib customParams field used by Log.formatOutput");
 		assertContains(parsedPosInfosLines, "PosInfos(std::string fileName, int lineNumber, std::string className, std::string methodName)",
 			"C++ parsed PosInfos helpers should still expose the target-owned position constructor");
-		assertContains(posExceptionLines, "std::shared_ptr<PosInfos> pos = nullptr", "C++ optional PosInfos args should stay nullable references");
+		assertContains(posExceptionLines,
+			"PosException(std::string message, std::shared_ptr<Exception> previous = nullptr, std::shared_ptr<PosInfos> pos = nullptr) : Exception(message, previous) {",
+			"C++ stdlib PosException constructors should keep nullable previous/position references");
 		assertContains(posExceptionLines,
 			"posInfos = std::make_shared<PosInfos>(std::string(\"(unknown)\"), 0, std::string(\"(unknown)\"), std::string(\"(unknown)\"));",
 			"C++ assignments from matching position literals should wrap into PosInfos shared pointers");
 		assertContains(posExceptionLines, "posInfos = pos;", "C++ PosInfos reference assignments should pass existing pointers through");
-		assertContains(posExceptionLines, "return (posInfos->className);", "C++ PosInfos string fields should not be wrapped with std::to_string");
-		final exceptionLike = new HxClassDecl("Exception", false, [
-			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("message"), HxPos.unknown())], "")
-		], []);
+		assertContains(posExceptionLines, "posInfos->className", "C++ PosInfos string fields should use pointer access in string contexts");
+		assertTrue(posExceptionLines.indexOf("std::to_string(posInfos->className)") < 0,
+			"C++ PosInfos string fields should not be wrapped with std::to_string");
 		final stdPosExceptionToString = new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EString("unrendered"), HxPos.unknown())], "");
 		final stdPosException = new HxClassDecl("PosException", false, [stdPosExceptionToString],
 			[new HxFieldDecl("posInfos", Public, false, "PosInfos", null)], "Exception");
@@ -8165,10 +8184,92 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ stdlib PosException.toString helper should stringify the value-shaped line number");
 		assertTrue(stdValuePosExceptionToStringLines.indexOf("posInfos->") < 0,
 			"C++ stdlib PosException.toString helper should not use pointer access for value-shaped PosInfos fields");
-		assertContains(notImplementedExceptionLines, "NotImplementedException(std::shared_ptr<PosInfos> pos = nullptr) : PosException(pos) {",
-			"C++ optional PosInfos constructor forwarding should keep the nullable reference instead of forcing value extraction");
+		assertContains(notImplementedExceptionLines,
+			"NotImplementedException(std::optional<std::string> message = \"Not implemented\", std::shared_ptr<Exception> previous = nullptr, std::shared_ptr<PosInfos> pos = nullptr) : PosException(message.value(), previous, pos) {",
+			"C++ stdlib NotImplementedException forwarding should keep nullable position values as references");
 		assertTrue(notImplementedExceptionLines.indexOf("PosException(pos.value())") < 0,
 			"C++ optional PosInfos constructor forwarding should not unwrap missing position values");
+		assertTrue(notImplementedExceptionLines.indexOf("previous.value()") < 0,
+			"C++ optional Exception constructor forwarding should not unwrap missing previous values");
+		final packagedException = new HxClassDecl("haxe.Exception", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("message", "String", NoDefault, false, false),
+				new HxFunctionArg("previous", "Exception", NoDefault, true, false)
+			], "Void", [], "")
+		], []);
+		final packagedPosInfos = new HxClassDecl("haxe.PosInfos", false, [], []);
+		final packagedPosException = new HxClassDecl("haxe.exceptions.PosException", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("message", "String", NoDefault, false, false),
+				new HxFunctionArg("previous", "Exception", NoDefault, true, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Void",
+				[SExpr(ECall(ESuper, [EIdent("message"), EIdent("previous")]), HxPos.unknown())], "")
+		], [], "Exception");
+		final packagedNotImplementedException = new HxClassDecl("haxe.exceptions.NotImplementedException", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("message", "String", Default(EString("Not implemented")), true, false),
+				new HxFunctionArg("previous", "Exception", NoDefault, true, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Void", [
+				SExpr(ECall(ESuper, [EIdent("message"), EIdent("previous"), EIdent("pos")]), HxPos.unknown())
+			], "")
+		], [], "PosException");
+		final packagedNames = new StringMap<Bool>();
+		for (name in [
+			"Exception",
+			"haxe_Exception",
+			"PosInfos",
+			"haxe_PosInfos",
+			"PosException",
+			"haxe_exceptions_PosException",
+			"NotImplementedException",
+			"haxe_exceptions_NotImplementedException"
+		])
+			packagedNames.set(name, true);
+		final packagedClasses = new StringMap<HxClassDecl>();
+		packagedClasses.set("Exception", packagedException);
+		packagedClasses.set("haxe_Exception", packagedException);
+		packagedClasses.set("PosInfos", packagedPosInfos);
+		packagedClasses.set("haxe_PosInfos", packagedPosInfos);
+		packagedClasses.set("PosException", packagedPosException);
+		packagedClasses.set("haxe_exceptions_PosException", packagedPosException);
+		packagedClasses.set("NotImplementedException", packagedNotImplementedException);
+		packagedClasses.set("haxe_exceptions_NotImplementedException", packagedNotImplementedException);
+		final packagedLookup:backend.cpp.CppClassLookup = {
+			names: packagedNames,
+			byName: packagedClasses,
+			all: [
+				packagedException,
+				packagedPosInfos,
+				packagedPosException,
+				packagedNotImplementedException
+			],
+			renderedNames: [
+				{
+					cls: packagedException,
+					name: "Exception"
+				},
+				{cls: packagedPosInfos, name: "PosInfos"},
+				{cls: packagedPosException, name: "PosException"},
+				{cls: packagedNotImplementedException, name: "NotImplementedException"}
+			]
+		};
+		final packagedPosExceptionLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(packagedPosException, packagedLookup).join("\n");
+		final packagedNotImplementedExceptionLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(packagedNotImplementedException, packagedLookup).join("\n");
+		assertContains(packagedPosExceptionLines,
+			"PosException(std::string message, std::shared_ptr<Exception> previous = nullptr, std::shared_ptr<PosInfos> pos = nullptr)",
+			"C++ packaged stdlib PosException constructors should use nullable references after rendered-name lookup");
+		assertTrue(packagedPosExceptionLines.indexOf("std::optional<PosInfos> pos") < 0,
+			"C++ packaged stdlib PosException constructors should not treat optional positions as value optionals");
+		assertContains(packagedNotImplementedExceptionLines,
+			"NotImplementedException(std::optional<std::string> message = \"Not implemented\", std::shared_ptr<Exception> previous = nullptr, std::shared_ptr<PosInfos> pos = nullptr)",
+			"C++ packaged stdlib NotImplementedException forwarding should preserve nullable position references");
+		assertContains(packagedNotImplementedExceptionLines, "message.value(), previous, pos)",
+			"C++ packaged stdlib NotImplementedException forwarding should pass nullable positions through");
+		assertTrue(packagedNotImplementedExceptionLines.indexOf("pos.value()") < 0,
+			"C++ packaged stdlib NotImplementedException forwarding should not unwrap missing positions");
 		assertContains(logFormatOutputLines, "for (auto v : (infos->customParams)) {",
 			"C++ Log.formatOutput-like helpers should iterate PosInfos.customParams");
 		assertContains(logFormatOutputLines, "return ((std::string(pstr) + std::string(\": \")) + std::string(str));",
