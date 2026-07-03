@@ -1,6 +1,6 @@
 # Native Iteration Latency Contract
 
-Last audited: 2026-06-19
+Last audited: 2026-07-03
 
 This document defines the project-level latency north star for native
 `hxhx + reflaxe.ocaml` work. It is a measurement contract, not a claim that the
@@ -10,6 +10,25 @@ The user-facing goal is simple: common compiler and target-development loops
 should get materially faster as `hxhx` and Reflaxe target promotion become
 stage0-free and native by default, while strict Haxe `4.3.7` oracle gates remain
 available for release proof.
+
+The deeper product goal is Haxe-authored compiler performance: compiler and
+backend logic should be pleasant to write in Haxe, then promotable through
+`reflaxe.ocaml` into OCaml-backed native plugin, builtin, or bootstrap artifacts
+whose runtime profile is in the same class as direct OCaml compiler code.
+`hxhx` itself is Haxe-authored, not Reflaxe-authored; the relevant bet is that
+`reflaxe.ocaml` can compile and bootstrap those Haxe sources into practical
+native artifacts. In other words, `hxhx` may be created with Reflaxe as a
+native compilation route, but the compiler core should stay ordinary Haxe
+unless a separate architecture bead deliberately changes that boundary. Over
+time, `hxhx`/Reflaxe-specific optimization should make
+those promoted artifacts candidates for better-than-straightforward
+hand-written performance when the compiler pipeline can specialize generated
+code safely.
+
+The accepted Oracle boundary for this distinction lives in
+`docs/00-project/ORACLE_CHECKPOINT_REFLAXE_HXHX_FRAMEWORK_BOUNDARY_2026_07_03.md`.
+It treats Reflaxe as a native artifact and backend/plugin seam for `hxhx`, not
+as the default owner of compiler-core semantics.
 
 ## Why Current Loops Are Slow
 
@@ -92,8 +111,8 @@ performance claim must use measured medians from the relevant runner class.
     },
     {
       "id": "native-reflaxe-artifact-loop",
-      "purpose": "Build a Reflaxe compiler/target as an OCaml-backed plugin or builtin artifact and run a focused smoke.",
-      "target": "Native artifact iteration should beat the current delegated/stage0 promotion path for common target-development loops before it is recommended as the default path.",
+      "purpose": "Build Haxe-authored compiler/backend code, such as a Reflaxe target or hxhx bootstrap artifact, as an OCaml-backed plugin or builtin artifact and run a focused smoke.",
+      "target": "Native artifact iteration should beat the current delegated/stage0 promotion path for common compiler and target-development loops before it is recommended as the default path; where a direct OCaml compiler baseline exists, promoted Haxe-authored artifacts should be compared against that baseline and target the same performance class or better.",
       "evidence": [
         "scripts/hxhx/bench-native-reflaxe.sh",
         "docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md"
@@ -125,6 +144,8 @@ Expected improvement from native `hxhx + reflaxe.ocaml`:
   plugin or builtin artifacts,
 - faster focused target-development loops once target cores can be reused across
   plugin and builtin packaging,
+- promoted compiler artifacts that can compete with direct OCaml compiler
+  implementations on steady-state compiler workloads,
 - less artifact churn from repeated bootstrap regeneration.
 
 Expected to remain intentionally heavier:
@@ -145,4 +166,3 @@ loops, bootstrap regeneration, or Full1 throughput:
   changes,
 - update the README `Goals status` table only if production usability changes,
 - otherwise record "README Goals progress bars unchanged" in the checkpoint.
-

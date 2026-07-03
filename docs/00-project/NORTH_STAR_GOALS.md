@@ -152,11 +152,54 @@ Reflaxe should stay the fast prototyping layer for compiler targets. Once a targ
 - an `hxhx` builtin target path,
 - eventually a reusable target core that can be packaged in more than one host shape without rewriting the backend.
 
+The product bet is Haxe-first compiler authoring with native deployment. A
+target author should be able to write compiler/backend logic in Haxe, keep the
+tooling approachable to Haxe developers, and promote that logic through
+`reflaxe.ocaml` into an OCaml-backed native artifact instead of rewriting the
+compiler by hand in OCaml. `hxhx` follows the same Haxe-first principle: it is
+not authored in Reflaxe, but its Haxe sources should be able to leverage
+`reflaxe.ocaml` for native compilation and bootstrap loops. The shorthand is
+"create `hxhx` with Reflaxe," not "author `hxhx` in Reflaxe": Reflaxe-specific
+APIs belong naturally at target/backend/plugin seams unless an explicit
+architecture decision moves them into compiler-core code.
+
+There are three distinct levels of Reflaxe usage for `hxhx`:
+
+- compile the ordinary Haxe-authored `hxhx` sources through `reflaxe.ocaml`
+  into native artifacts; this is a desired bootstrap/native-compilation route,
+- host or implement `hxhx` target backends/plugins with Reflaxe-style APIs;
+  this is a natural extension point when it preserves the baseline Haxe
+  contract,
+- build the compiler core itself around the Reflaxe framework; this is possible
+  as research, but not the default architecture because Reflaxe normally assumes
+  a compiler has already parsed, typed, and exposed the Haxe AST.
+
+The 2026-07-03 Oracle checkpoint accepted this boundary. Treat deeper
+Reflaxe-shaped compiler-core work as quarantined research until a dedicated
+architecture bead proves typed-AST ownership, macro/plugin lifecycle, bootstrap,
+parity, and performance risks are controlled:
+`docs/00-project/ORACLE_CHECKPOINT_REFLAXE_HXHX_FRAMEWORK_BOUNDARY_2026_07_03.md`.
+
+The performance bar is intentionally ambitious:
+
+- promoted Haxe-authored compiler artifacts should beat the delegated/stage0
+  prototype loop for normal compiler and target-development work,
+- where a direct OCaml implementation is a meaningful comparison, promoted
+  artifacts should aim for the same performance class or better,
+- `hxhx` and Reflaxe optimization work should be allowed to make generated
+  compiler artifacts faster than a straightforward hand-written implementation
+  when specialization or whole-pipeline knowledge makes that possible,
+- and any "native is fast" recommendation must be backed by measured artifact
+  build, load, compile, and focused-smoke timings rather than assumed from the
+  packaging mode.
+
 Current planning owners:
 
 - promotion matrix: `haxe.ocaml-rpmx`
 - Full 1.0 plugin parity inside `hxhx`: `haxe.ocaml-f1cl.8`
 - native plugin hardening: `haxe.ocaml-anoy`
+- native Reflaxe artifact-loop latency:
+  `docs/00-project/NATIVE_ITERATION_LATENCY_CONTRACT.md`
 
 ## Operating Rule
 

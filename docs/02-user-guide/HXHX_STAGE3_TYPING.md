@@ -32,8 +32,16 @@ Stage 3 is “done enough” when:
 - **Display server parity** (`--display`) is later (Gate 2+ work).
 - Full upstream type system parity (abstracts, overload resolution corner cases, complex generic constraints) is not required
   immediately, but the architecture must leave room for it.
+- Reflaxe framework ownership of parser, resolver, typer, module graph,
+  diagnostics, or typed-AST semantics is not part of the baseline Stage3
+  architecture.
 
 This means: Stage3 does not *own* macro execution logic; it does not mean native-mode runs can never route macro work through Stage4.
+
+The accepted Oracle boundary is: Stage3 produces the compiler-owned parsed,
+resolved, and typed representation; Reflaxe-style targets may consume a
+backend-facing projection after that boundary, but they do not own Stage3
+semantics.
 
 ## Source of truth: upstream Haxe’s typer
 

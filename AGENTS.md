@@ -339,10 +339,23 @@ Keep these aligned with beads whenever scope changes. The current long-term goal
 - stable `hxhx` as a Haxe `4.3.7`-equivalent or better MIT compiler, including performance,
 - native `hxhx + reflaxe.ocaml` loops that improve practical developer and CI iteration latency, not only final compiler throughput,
 - native Reflaxe compiler/plugin/builtin artifact loops that make target development faster than the current stage0/delegated bootstrap path, with measured evidence rather than assumptions,
+- Haxe-authored compiler/backend code, including Reflaxe targets and `hxhx` itself where applicable, that can promote to OCaml-backed native artifacts and compete with direct OCaml compiler implementations on steady-state performance,
 - a hackable Haxe-in-Haxe compiler that makes Haxe itself easier for Haxe developers to read, modify, test, and fork,
 - pluggable compiler customization that can be enabled/disabled without corrupting the baseline Haxe contract,
 - practical Haxe-family compiler variations/forks implemented in Haxe when a plugin is not enough,
 - Reflaxe-to-native promotion so prototype targets can become upstream-Haxe plugins/host adapters, `hxhx` plugins, or builtin `hxhx` targets.
+
+For Reflaxe-to-native promotion, preserve the product bet explicitly:
+developers should be able to write compiler/target logic in Haxe, promote it to native plugin or builtin forms,
+and aim for the same performance class as a hand-written OCaml compiler implementation, or better when `hxhx`/Reflaxe specialization can safely optimize the generated artifact.
+Do not describe `hxhx` as authored in Reflaxe; it is authored in Haxe and can use `reflaxe.ocaml` as one native compilation/bootstrap route for those Haxe sources.
+Using Reflaxe to create native `hxhx` artifacts is in scope; making the `hxhx` compiler core depend on Reflaxe-specific target/plugin APIs is not the default architecture and needs an explicit design bead.
+Treat "use Reflaxe for hxhx" as three separate questions:
+1) compile the ordinary Haxe-authored `hxhx` sources through `reflaxe.ocaml` into native artifacts; this is in-scope and strategically important,
+2) implement or host `hxhx` target backends/plugins with Reflaxe-style APIs; this is in-scope where it preserves the baseline Haxe contract,
+3) build the compiler core itself around the Reflaxe framework; this is research-only until a dedicated architecture bead addresses bootstrap circularity, typed-AST ownership, macro/plugin lifecycle, and parity risk.
+The 2026-07-03 Oracle checkpoint accepted this boundary; keep Reflaxe imports out of parser/resolver/typer/core diagnostic ownership files unless an explicit architecture bead authorizes a quarantined experiment.
+Do not treat "native" as automatically fast; record artifact build/load/compile/focused-smoke timings and compare against delegated/stage0 and direct-native baselines where meaningful.
 
 If a task changes any of these goals, their production-readiness status, or their owning bead plan, update the
 north-star doc and README table in the same slice or record explicitly why no docs change is required.

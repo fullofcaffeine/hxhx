@@ -30,6 +30,12 @@ This forces an explicit boundary between:
 - the **macro runtime** (execution + `Context` / `Compiler` APIs)
 - the **plugin loader** (how we load user macro code and connect it to the compiler)
 
+Reflaxe target initialization belongs on the macro/plugin/backend activation
+side of this boundary. It must not make Reflaxe the owner of core parse,
+resolve, type, module graph, diagnostic, or compiler phase semantics. The
+accepted Oracle boundary is recorded in
+`docs/00-project/ORACLE_CHECKPOINT_REFLAXE_HXHX_FRAMEWORK_BOUNDARY_2026_07_03.md`.
+
 ## Runtime seams and portability policy (99% Haxe goal)
 
 We want the **vast majority** of the compiler to be written in Haxe, for two reasons:

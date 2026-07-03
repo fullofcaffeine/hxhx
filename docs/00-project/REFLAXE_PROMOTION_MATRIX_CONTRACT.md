@@ -1,6 +1,6 @@
 # Reflaxe Promotion Matrix Contract
 
-Last audited: 2026-03-13
+Last audited: 2026-07-03
 
 This page is the canonical contract for building Reflaxe compilers to native OCaml through `reflaxe.ocaml`.
 
@@ -14,6 +14,22 @@ It is deliberately separate from:
 ## Goal
 
 The promotion matrix exists to prove which host/runtime paths are officially supported when a Reflaxe compiler is built through `reflaxe.ocaml`.
+
+The goal is not only packaging viability. The long-term bar is that compiler or
+backend logic authored in Haxe can be promoted through `reflaxe.ocaml` into a
+native artifact that is competitive with direct OCaml compiler code, while
+preserving the Haxe-first authoring workflow that makes Reflaxe targets easy to
+prototype and maintain. For `hxhx`, this means the Haxe-authored compiler can
+use `reflaxe.ocaml` for native compilation/bootstrap artifacts; it does not mean
+`hxhx` itself is authored in Reflaxe. Reflaxe-specific target/plugin APIs should
+remain a seam, not a hidden dependency of the compiler core, unless a future
+architecture bead deliberately changes that boundary.
+
+The accepted Oracle checkpoint for this boundary is
+`docs/00-project/ORACLE_CHECKPOINT_REFLAXE_HXHX_FRAMEWORK_BOUNDARY_2026_07_03.md`.
+Promotion evidence should therefore stay focused on native plugin/builtin
+artifacts, target-core reuse, activation parity, and native artifact latency;
+it should not imply Reflaxe owns `hxhx` compiler-core semantics.
 
 The supported paths are:
 
@@ -113,6 +129,7 @@ The comparison must cover:
 - startup cost
 - steady-state compile throughput
 - native build/runtime cost where relevant
+- comparison against a direct OCaml/native baseline where one is meaningful
 - debugging ergonomics
 - deployment complexity
 - host coupling

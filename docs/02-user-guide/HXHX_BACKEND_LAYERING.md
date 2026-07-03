@@ -191,6 +191,29 @@ When migrating an existing reflaxe backend to native plugin ABI wrappers, follow
 
 This keeps “promotion” as a packaging/load choice and avoids backend rewrites.
 
+### Reflaxe / hxhx core boundary
+
+The accepted Oracle boundary is that Reflaxe-style APIs belong at the
+`ITargetCore` / `IBackend` / plugin-provider seam, not inside the `hxhx`
+compiler core.
+
+Allowed:
+
+- compile ordinary Haxe-authored `hxhx` sources through `reflaxe.ocaml` into
+  native artifacts,
+- wrap target cores with `ReflaxeTargetAdapter`,
+- expose the same target core through builtin and plugin/provider activation,
+- use Reflaxe-style APIs for target/backend/plugin authoring once `hxhx` has
+  parsed, resolved, typed, and built the backend-facing program.
+
+Not allowed without a dedicated architecture bead:
+
+- parser, resolver, typer, diagnostics, module graph, or macro lifecycle code
+  importing Reflaxe framework APIs,
+- target activation changing baseline name lookup, typing, diagnostics, or
+  macro expansion semantics,
+- plugin/builtin packaging choices creating separate semantic implementations.
+
 Promotion pilot proof point:
 - `test/M14PromotionPluginBuiltinEquivalenceIntegrationTest.hx` runs `js-native` in both modes
   (builtin wrapper + provider wrapper) and asserts byte-identical artifacts, equivalent runtime
