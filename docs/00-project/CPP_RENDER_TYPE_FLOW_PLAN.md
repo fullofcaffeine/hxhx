@@ -120,14 +120,28 @@ before/after runs, capturing:
 
 ## Validation
 
-Minimum validation for the first non-semantic extraction:
+Use two validation tiers so Cpp timing work does not accidentally turn into an
+hours-long serial gate.
+
+Fast routine validation for bounded render-only changes:
 
 - `npm run test:m14:cpp-native-backend-smoke`
 - `npm run guard:cpp-render-type-flow-plan`
+
+These prove the targeted Cpp render behavior and keep the architecture contract
+wired without compiling the whole upstream strict workload.
+
+Slow diagnostic validation for hotspot claims:
+
 - strict Cpp timing probe with `HXHX_TRACE_STAGE3_CPP_TIMINGS=1` and a stable
-  method filter when the current strict logs identify a type-flow hotspot
-- README/North Star progress bars recorded as unchanged unless strict gate and
-  public usability evidence changes
+  method filter when the current strict logs identify a type-flow hotspot;
+- compare the same command and timeout before/after;
+- if the probe times out before reaching render timing, record the timeout,
+  elapsed/user CPU, and last trace phase in the bead instead of rerunning the
+  same expensive command blindly.
+
+README/North Star progress bars recorded as unchanged unless strict gate and
+public usability evidence changes.
 
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or

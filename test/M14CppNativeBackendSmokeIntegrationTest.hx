@@ -1881,6 +1881,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final macroRendered = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("deq", [EInt(0), ECall(EEnumValue("Actual"), [EInt(0)])], scope);
 		assertContains(macroRendered, "deq(std::to_string(0), __hxhx_macro_to_string(__hxhx_macro_enum(\"Actual\"",
 			"C++ calls to string-shaped Dynamic helpers should stringify macro carriers through macro string support");
+		final eq = new HxFunctionDecl("eq", Public, false, [
+			new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("actual", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("p", "PosInfos", NoDefault, true, false)
+		], "Void", [], "");
+		final forwardingDeq = new HxFunctionDecl("deq", Public, false, [
+			new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("actual", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("p", "PosInfos", NoDefault, true, false)
+		], "Void", [
+			SExpr(ECall(EIdent("eq"), [EIdent("expected"), EIdent("actual"), EIdent("p")]), HxPos.unknown())
+		], "");
+		final actual = new HxFunctionDecl("actual", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Int",
+			[SReturn(EIdent("v"), HxPos.unknown())], "");
+		final forwardingOwner = new HxClassDecl("EqForwardingOwner", false, [eq, forwardingDeq, actual], []);
+		final forwardingNames = new StringMap<Bool>();
+		forwardingNames.set("EqForwardingOwner", true);
+		final forwardingClasses = new StringMap<HxClassDecl>();
+		forwardingClasses.set("EqForwardingOwner", forwardingOwner);
+		final forwardingScope = @:privateAccess
+			backend.cpp.CppTargetCore.renderScope(forwardingOwner, {names: forwardingNames, byName: forwardingClasses}, "void");
+		final forwardingRendered = @:privateAccess
+			backend.cpp.CppTargetCore.directCallExpr("deq", [EInt(0), ECall(EIdent("actual"), [EInt(0)])], forwardingScope);
+		assertTrue(forwardingRendered == "eq(0, actual(0))",
+			"C++ eq-forwarding helpers should render through the existing eq fast path instead of stringifying Dynamic wrapper arguments");
+		assertTrue(forwardingRendered.indexOf("std::to_string") < 0, "C++ eq-forwarding helpers should avoid the slow string-shaped Dynamic helper path");
 	}
 
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {

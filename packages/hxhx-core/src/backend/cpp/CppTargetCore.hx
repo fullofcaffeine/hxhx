@@ -10519,6 +10519,9 @@ class CppTargetCore {
 				+ Std.string(int64Imported != null));
 		if (int64Imported != null)
 			return int64Imported;
+		final eqForwarding = eqForwardingHelperCallExpr(fn, args, scope);
+		if (eqForwarding != null)
+			return eqForwarding;
 		final renderArgsStart = timingEnabled ? Sys.time() : 0.0;
 		final inferArgTypesStart = timingEnabled ? Sys.time() : 0.0;
 		final inferredArgTypes = if (fn != null && owner != null) inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses); else null;
@@ -10572,6 +10575,69 @@ class CppTargetCore {
 				+ " emitted="
 				+ Std.string(explicitTypes.length > 0));
 		return cleanName + explicitTypes + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	/**
+		Lower tiny local helpers that only forward their arguments to `eq`.
+
+		Generated upstream numeric fixtures use a `deq(expected, actual, ?pos)`
+		wrapper around `eq`. Rendering that wrapper as a normal Dynamic helper
+		forces each call through the expensive string-shaped argument path. When
+		the helper body is exactly an argument-for-argument `eq(...)` call, calling
+		`eq` directly preserves evaluation order and lets the existing `eq` fast
+		path handle comparison-specific coercions.
+	**/
+	static function eqForwardingHelperCallExpr(fn:HxFunctionDecl, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (!isEqForwardingHelper(fn) || args == null || args.length < 2)
+			return null;
+		return "eq(" + renderEqCallArgs(args, scope).join(", ") + ")";
+	}
+
+	/**
+		Recognize helpers whose entire behavior is "call `eq` with my own
+		parameters". This intentionally rejects computed arguments and reordered
+		arguments so the optimization stays a render shortcut, not a semantic
+		rewrite of arbitrary test helpers.
+	**/
+	static function isEqForwardingHelper(fn:HxFunctionDecl):Bool {
+		if (fn == null)
+			return false;
+		final returnHint = sanitizeTypePath(typeBaseName(HxFunctionDecl.getReturnTypeHint(fn)));
+		if (returnHint.length > 0 && returnHint != "Void")
+			return false;
+		final params = HxFunctionDecl.getArgs(fn);
+		if (params.length < 2)
+			return false;
+		final forwarded = eqForwardingBodyArgs(fn);
+		if (forwarded == null || forwarded.length < 2 || forwarded.length > params.length)
+			return false;
+		for (i in 0...forwarded.length) {
+			switch (forwarded[i]) {
+				case EIdent(name):
+					if (sanitizeIdentifier(name) != sanitizeIdentifier(HxFunctionArg.getName(params[i])))
+						return false;
+				case _:
+					return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+		Return the forwarded `eq(...)` arguments for a one-statement helper body.
+		The caller validates that each argument is the matching function
+		parameter before lowering the helper call to a direct `eq` call.
+	**/
+	static function eqForwardingBodyArgs(fn:HxFunctionDecl):Null<Array<HxExpr>> {
+		final body = HxFunctionDecl.getBody(fn);
+		if (body == null || body.length != 1)
+			return null;
+		return switch (body[0]) {
+			case SExpr(ECall(EIdent("eq"), args), _) | SReturn(ECall(EIdent("eq"), args), _):
+				args;
+			case _:
+				null;
+		};
 	}
 
 	/**
