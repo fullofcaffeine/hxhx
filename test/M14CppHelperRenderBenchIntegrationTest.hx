@@ -1,3 +1,4 @@
+import backend.GenIrProgram;
 import haxe.ds.StringMap;
 
 typedef HelperRenderBenchResult = {
@@ -211,6 +212,35 @@ class M14CppHelperRenderBenchIntegrationTest {
 		return {lookup: {names: names, byName: classes}, classes: classes};
 	}
 
+	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
+		final mainClass = HxModuleDecl.getMainClass(decl);
+		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getImports(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
+		return new TypedModule(new ParsedModule("", decl, filePath), env);
+	}
+
+	static function assertCompileTimeMacroApiBodiesStayDeclarationOnly():Void {
+		final bodyOnly = new HxClassDecl("BodyOnly", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")], []);
+		final context = new HxClassDecl("Context", false, [
+			new HxFunctionDecl("currentPos", Public, true, [], "{file:String,line:Int}", [
+				SVar("bodyOnly", "BodyOnly", ENew("BodyOnly", []), HxPos.unknown()),
+				SReturn(EAnon(["file", "line"], [EString("macro"), EInt(1)]), HxPos.unknown())
+			], "")
+		], []);
+		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
+		final program = new GenIrProgram([
+			typedSyntheticModule("std/haxe/macro/Context.hx", new HxModuleDecl("haxe.macro", [], context, [context, bodyOnly], false, false)),
+			typedSyntheticModule("Main.hx", new HxModuleDecl("", [], main, [main], false, false))
+		], false);
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
+		final kind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(context, lookup);
+		final kindLabel = @:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(kind);
+		assertTrue(kindLabel == "declaration_only", "compile-time macro API helpers should not render runtime C++ bodies");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderHelperClass(context, lookup).length == 0,
+			"compile-time macro API helpers should rely on forward declarations instead of full helper bodies");
+		final deps = @:privateAccess backend.cpp.CppTargetCore.helperClassDependencies(context, lookup).join(",");
+		assertTrue(deps.indexOf("BodyOnly") < 0, "compile-time macro API helper body dependencies should not enter runtime C++ reachability");
+	}
+
 	static function resetRendererCaches():Void {
 		// Match the cache boundary used by CppTargetCore.renderProgram so each
 		// repetition measures a cold render pass, while classes within one pass
@@ -267,6 +297,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 
 	static function main():Void {
 		assertCallableArgOverridePolicy();
+		assertCompileTimeMacroApiBodiesStayDeclarationOnly();
 		final extraMethods = envInt("HXHX_CPP_HELPER_RENDER_BENCH_EXTRA_METHODS", DEFAULT_EXTRA_METHODS);
 		final reps = envInt("HXHX_CPP_HELPER_RENDER_BENCH_REPS", DEFAULT_REPS);
 		var best:HelperRenderBenchResult = null;

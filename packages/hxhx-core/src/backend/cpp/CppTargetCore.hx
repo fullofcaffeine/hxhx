@@ -1514,13 +1514,6 @@ class CppTargetCore {
 					"";
 			};
 		}
-		function shouldWalkFunctionBody(packagePath:String, cls:HxClassDecl, fn:HxFunctionDecl):Bool {
-			if (hasFunctionMetadata(fn, "macro"))
-				return false;
-			if (isCompileTimeMacroApiClass(packagePath, cls))
-				return false;
-			return true;
-		}
 		function typeHintMayContributeAnonStruct(typeHint:String):Bool {
 			final hint = StringTools.trim(typeHint == null ? "" : typeHint);
 			return hint.indexOf("{") >= 0;
@@ -1735,7 +1728,7 @@ class CppTargetCore {
 					addStruct(scope.anonStructs.get(knownReturn));
 				for (arg in HxFunctionDecl.getArgs(fn))
 					addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
-				final shouldWalkBody = shouldWalkFunctionBody(packagePath, cls, fn);
+				final shouldWalkBody = functionBodyContributesRuntimeCpp(packagePath, cls, fn);
 				if (!shouldWalkBody)
 					addSkippedShimReturnStruct(fn, cls, scope);
 				if (shouldWalkBody) {
@@ -2021,6 +2014,7 @@ class CppTargetCore {
 		}
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
+			final packagePath = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final typeParams = genericClassTypeParams(cls);
 				function addMissing(name:String):Void {
@@ -2050,7 +2044,8 @@ class CppTargetCore {
 					addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), addFnMissing, fnScope);
 					for (arg in HxFunctionDecl.getArgs(fn))
 						addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), addFnMissing, fnScope);
-					addStmtClassDependencies(HxFunctionDecl.getBody(fn), addFnMissing, fnScope);
+					if (functionBodyContributesRuntimeCpp(packagePath, cls, fn))
+						addStmtClassDependencies(HxFunctionDecl.getBody(fn), addFnMissing, fnScope);
 				}
 			}
 		}
@@ -2212,6 +2207,43 @@ class CppTargetCore {
 		return packagePath == "haxe.macro";
 	}
 
+	static function compileTimeMacroApiClassNeedsRuntimeShims(packagePath:String, cls:HxClassDecl):Bool {
+		return isCompileTimeMacroApiClass(packagePath, cls) && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Compiler";
+	}
+
+	/**
+		Return whether the helper class itself should emit a C++ runtime surface.
+
+		Most `haxe.macro` classes are compile-time only for target output. Keep
+		`haxe.macro.Compiler` because this target already owns small macro API
+		shims for calls such as `Compiler.getDefine(...)`; dropping that class
+		would remove those shim methods, not just skip parsed upstream bodies.
+	**/
+	static function classContributesRuntimeCpp(packagePath:String, cls:HxClassDecl):Bool {
+		if (compileTimeMacroApiClassNeedsRuntimeShims(packagePath, cls))
+			return true;
+		if (isCompileTimeMacroApiClass(packagePath, cls))
+			return false;
+		return true;
+	}
+
+	/**
+		Return whether a parsed helper body belongs in generated C++.
+
+		Compile-time macro APIs and `macro` functions can still contribute type
+		signatures and anonymous return shapes, but their implementation bodies run
+		during compilation. Treating those bodies as runtime C++ drags macro-only
+		helpers into strict target output and spends time rendering code the
+		executable should not need.
+	**/
+	static function functionBodyContributesRuntimeCpp(packagePath:String, cls:HxClassDecl, fn:Null<HxFunctionDecl>):Bool {
+		if (hasFunctionMetadata(fn, "macro"))
+			return false;
+		if (isCompileTimeMacroApiClass(packagePath, cls))
+			return false;
+		return classContributesRuntimeCpp(packagePath, cls);
+	}
+
 	static function lookupForScope(?scope:CppRenderScope, ?classLookup:CppClassLookup):CppClassLookup {
 		if (classLookup != null)
 			return classLookup;
@@ -2323,6 +2355,8 @@ class CppTargetCore {
 			return DeclarationOnly;
 		final className = renderedClassName(cls, classLookup);
 		if (isNativeStackTraceSupportClass(cls))
+			return DeclarationOnly;
+		if (!classContributesRuntimeCpp(packagePathForRenderedClass(cls, classLookup), cls))
 			return DeclarationOnly;
 		if (HxClassDecl.getFields(cls).length == 0
 			&& HxClassDecl.getFunctions(cls).length == 0
@@ -2732,6 +2766,8 @@ class CppTargetCore {
 		if (isNativeStackTraceSupportClass(cls))
 			return [];
 		final className = renderedClassName(cls, classLookup);
+		if (!classContributesRuntimeCpp(packagePathForRenderedClass(cls, classLookup), cls))
+			return [];
 		if (HxClassDecl.getFields(cls).length == 0
 			&& HxClassDecl.getFunctions(cls).length == 0
 			&& renderMissingInterfaceDeclaration(className) != null)
