@@ -4612,7 +4612,7 @@ class CppTargetCore {
 		try {
 			runPrepPhase("known_arg_types", () -> applyKnownStdlibFunctionArgOverrides(scope, fn));
 			runPrepPhase("infer_callable_args", () -> {
-				if (!knownStdlibMethodUsesDeclaredCallableArgs(scope, fn))
+				if (!knownStdlibMethodUsesDeclaredCallableArgs(scope, fn) && functionMayNeedCallableArgTypeOverrides(fn))
 					inferCallableArgTypeOverrides(scope, fn);
 			});
 			runPrepPhase("register_args", () -> registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn)));
@@ -4648,6 +4648,43 @@ class CppTargetCore {
 		functionScopePrepStack.remove(key);
 		if (prepTimingEnabled)
 			tracePrepPhase("total_cache_miss", Sys.time() - prepStartTime);
+	}
+
+	/**
+		Return whether forwarded-argument inference can change a function signature.
+
+		This pass exists for untyped and `Dynamic` parameters whose initial C++
+		shape is only a placeholder. Explicit concrete parameters usually carry
+		their final signature type and should not pay for a body walk just because
+		their C++ type happens to be `std::string`.
+
+		One compatibility exception remains: some legacy helper surfaces spell an
+		erased callable as `String`. When that parameter is actually called like a
+		function, keep the full inference pass so the generated signature can
+		recover `std::function<...>` from usage.
+	**/
+	static function functionMayNeedCallableArgTypeOverrides(fn:HxFunctionDecl):Bool {
+		if (fn == null)
+			return false;
+		for (arg in HxFunctionDecl.getArgs(fn)) {
+			final name = sanitizeIdentifier(HxFunctionArg.getName(arg));
+			final explicit = StringTools.trim(HxFunctionArg.getTypeHint(arg) == null ? "" : HxFunctionArg.getTypeHint(arg));
+			if (functionArgMayNeedCallableArgTypeOverride(explicit, name, HxFunctionDecl.getBody(fn)))
+				return true;
+		}
+		return false;
+	}
+
+	static function functionArgMayNeedCallableArgTypeOverride(explicit:String, argName:String, body:Array<HxStmt>):Bool {
+		final hint = StringTools.trim(explicit == null ? "" : explicit);
+		return hint.length == 0
+			|| isDynamicLikeTypeHint(hint)
+			|| (isStringTypeHint(hint) && CppLocalCallScanner.stmtListCallsLocal(body, argName, sanitizeIdentifier));
+	}
+
+	static function isStringTypeHint(typeHint:String):Bool {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		return sanitizeTypePath(typeBaseName(hint)) == "String";
 	}
 
 	static function knownStdlibMethodUsesDeclaredCallableArgs(scope:CppRenderScope, fn:HxFunctionDecl):Bool {
@@ -6692,7 +6729,7 @@ class CppTargetCore {
 				final rawType = cppFunctionArgBaseType(arg, scope);
 				final explicitType = StringTools.trim(HxFunctionArg.getTypeHint(arg) == null ? "" : HxFunctionArg.getTypeHint(arg));
 				scope.localTypes.set(name, rawType);
-				if (rawType == "std::string" || explicitType.length == 0)
+				if (functionArgMayNeedCallableArgTypeOverride(explicitType, name, HxFunctionDecl.getBody(fn)))
 					candidates.set(name, true);
 			}
 		});

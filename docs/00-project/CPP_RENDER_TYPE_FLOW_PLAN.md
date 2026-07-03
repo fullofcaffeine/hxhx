@@ -125,9 +125,29 @@ hours-long serial gate.
 
 Fast routine validation for bounded render-only changes:
 
+- `npm run test:m14:cpp-helper-render-bench`
 - `npm run test:m14:cpp-numeric-casts-render-bench`
 - `npm run test:m14:cpp-native-backend-smoke`
 - `npm run guard:cpp-render-type-flow-plan`
+
+The helper-render bench is the fastest check for the shared helper frontier
+that can block strict Cpp diagnostics before generated C++ exists. It parses a
+small repo-owned utest-like fixture with `List`, `Dispatcher`, `TestHandler`,
+`TestResult`, and a runner carrier, renders those helper classes directly, and
+prints per-class latency:
+
+```bash
+npm run test:m14:cpp-helper-render-bench
+HXHX_CPP_HELPER_RENDER_BENCH_EXTRA_METHODS=64 npm run test:m14:cpp-helper-render-bench
+```
+
+The optional environment knobs are:
+
+- `HXHX_CPP_HELPER_RENDER_BENCH_EXTRA_METHODS` scales repeated
+  `TestHandler`-style methods when a renderer change needs more pressure than
+  the default fixture.
+- `HXHX_CPP_HELPER_RENDER_BENCH_REPS` controls how many cold helper-render
+  passes are measured.
 
 The numeric-casts render bench is the fastest check for the
 `TestNumericCasts`-style `deq(expected, actual)` direct-call shape. It builds a
