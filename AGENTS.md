@@ -112,6 +112,17 @@ Agent policy:
   - If backgrounding is unavoidable, record the exact command, PID, log path, and expected completion artifact before moving on.
   - Do not rely on loose `ps` reconstruction alone for multi-minute workflows when a resumable session is available.
 
+## Verification Efficiency
+
+Verification should prove the next engineering claim without wasting hours on avoidable serialization.
+
+- Start with the narrowest relevant gate for the changed behavior, then broaden only after that seam is green.
+- Parallelize independent checks when they do not mutate the same artifacts, hide failure output, or conflict with the single attached-session rule for long-running gates.
+- Do not accept unexpectedly slow verification as normal. Identify whether the cost comes from rebuilds, serial jobs, stale artifacts, oversized guard bundles, network/toolchain setup, or a real hang, then record the finding in the bead/checkpoint note.
+- For touched Haxe files, run `haxelib run formatter --source <file> ...` before broad guards.
+- For the repo formatting guard, use `npm run guard:hx-format`. It delegates to the official `haxelib run formatter --check` and only parallelizes deterministic file chunks; do not replace it with ad hoc formatting rules.
+- When a gate cannot be parallelized safely, say why in the work log so the next maintainer knows the serialization is intentional.
+
 ## Example Coverage Policy
 
 - Treat public examples as compatibility contracts, not disposable demos.

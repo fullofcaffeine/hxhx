@@ -49,6 +49,33 @@ Use the full profile when you need full compiler-shaped coverage:
 npm run test:acceptance:full
 ```
 
+## Formatting Haxe code
+
+Use the official Haxe formatter through `haxelib`.
+
+For files you just changed:
+
+```bash
+haxelib run formatter --source packages/path/SomeFile.hx
+```
+
+For the repo-wide formatting guard:
+
+```bash
+npm run guard:hx-format
+```
+
+`npm run guard:hx-format` runs `scripts/lint/hx_format_guard.sh`. That shell
+script is only the stable npm/CI entrypoint: it moves to the repo root and calls
+`scripts/lint/hx-format-guard.js`.
+
+The Node helper does not define its own style rules. It still delegates to
+`haxelib run formatter --check`; it just splits tracked `.hx` files into
+deterministic, line-balanced chunks and checks those chunks in parallel because
+Haxe Formatter does not provide a built-in jobs flag. The default `auto` mode caps
+at four jobs. Use `HX_FORMAT_JOBS=1 npm run guard:hx-format` when you want serial
+debug output, or set `HX_FORMAT_JOBS=<n>` to choose a specific chunk count.
+
 ## Portable semantic-diff seed lane
 
 Run the first shared family semantic-diff slice (repo-authored fixtures only):
