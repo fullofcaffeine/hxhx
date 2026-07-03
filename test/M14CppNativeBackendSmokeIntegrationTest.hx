@@ -4539,6 +4539,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ void sequencing should resolve methods on templated receiver base classes");
 		assertTrue(templatedBindSequenceExpr.indexOf("[&](auto __hxhx_lambda_seq_1)") < 0,
 			"C++ void sequencing should not pass templated-receiver void calls through auto lambda parameters");
+		final tryCatchSentinelExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("__hxhx_try"), [
+			ELambda([], ENull),
+			EArrayDecl([
+				EArrayDecl([
+					EString("e"),
+					EString("Dynamic"),
+					ELambda(["e"], ECall(EField(EIdent("typedResults"), "add"), [ECall(EEnumValue("Warning"), [EIdent("e")])]))
+				])
+			]),
+			ENull
+		]), assertWarnScope);
+		assertContains(tryCatchSentinelExpr, "try {", "C++ try/catch sentinels should lower to statement-level try blocks inside an IIFE");
+		assertContains(tryCatchSentinelExpr, "catch (const std::exception& __hxhx_caught) {",
+			"C++ try/catch sentinels should preserve std::exception messages for catch variables");
+		assertContains(tryCatchSentinelExpr, "__hxhx_exception_value e = __hxhx_exception_value(std::string(__hxhx_caught.what()));",
+			"C++ try/catch sentinel catch bodies should bind the Haxe catch variable as a target exception value");
+		assertContains(tryCatchSentinelExpr, "typedResults->add(",
+			"C++ try/catch sentinel catch bodies should render the catch lambda body as executable statements");
+		assertTrue(tryCatchSentinelExpr.indexOf("__hxhx_try(") < 0, "C++ try/catch sentinels should not leak an undeclared helper call");
+		assertTrue(tryCatchSentinelExpr.indexOf("std::to_string([&]") < 0,
+			"C++ try/catch sentinel catch lambdas should not be coerced through string-vector metadata");
 		final lambdaStringContext = @:privateAccess backend.cpp.CppTargetCore.stringExpr(ECall(ELambda(["t"],
 			ETernary(EBinop("==", EIdent("t"), EInt(0)), EString("7"), ECall(EField(EIdent("Std"), "string"), [EIdent("t")]))), [EInt(1)]),
 			assertWarnScope);

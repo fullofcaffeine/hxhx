@@ -9286,6 +9286,8 @@ class CppTargetCore {
 				renderExpr(args[2], scope);
 			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
 				"__hxhx_throw(" + renderExpr(args[0], scope) + ")";
+			case ECall(EIdent("__hxhx_try"), args) if (args.length >= 2):
+				tryExpr(args, scope);
 			case ECall(EIdent("__hxhx_for_in"), [iterable, bodyExpr, continuation]):
 				forInExpr(iterable, bodyExpr, continuation, scope);
 			case ECall(EEnumValue(name), args):
@@ -11900,9 +11902,10 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				"std::string";
-			case ECall(EIdent(name), args)
-				if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while" || name == "__hxhx_try")
-					&& args.length >= 3):
+			case ECall(EIdent("__hxhx_try"), args) if (args.length >= 2):
+				tryExprResultTypeFromArgs(args, scope);
+			case ECall(EIdent(name), args) if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while")
+				&& args.length >= 3):
 				inferExprCppType(args[2], scope);
 			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
@@ -12829,9 +12832,10 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				"std::string";
-			case ECall(EIdent(name), args)
-				if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while" || name == "__hxhx_try")
-					&& args.length >= 3):
+			case ECall(EIdent("__hxhx_try"), args) if (args.length >= 2):
+				tryExprResultTypeFromArgs(args, scope);
+			case ECall(EIdent(name), args) if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while")
+				&& args.length >= 3):
 				inferExprCppType(args[2], scope);
 			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
@@ -14980,6 +14984,163 @@ class CppTargetCore {
 			case _:
 				directCallExpr("__hxhx_for_in", [iterable, bodyExpr, continuation], scope);
 		};
+	}
+
+	/**
+		Render the private `__hxhx_try` sentinel produced by
+		`HxParser.lambdaBodyExprFromStmts` for local-function bodies.
+
+		Haxe permits `try/catch` where C++ only permits statements, so the C++
+		backend wraps the lowered expression in an immediately-invoked lambda.
+		This matches `renderTryStmt`'s current MVP contract: catch-all behavior,
+		first catch branch only, and a target-owned `__hxhx_exception_value` when
+		the catch variable is named. It is not full Haxe typed-catch parity yet.
+	**/
+	static function tryExpr(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final tryBody = args.length > 0 ? tryExprBody(args[0]) : null;
+		if (tryBody == null)
+			throw "C++ source backend MVP unsupported expression: ECall(__hxhx_try)";
+		final catches = args.length > 1 ? tryCatchEntries(args[1]) : [];
+		final resultType = tryExprResultTypeFromArgs(args, scope);
+		final out = ["([&]() -> " + resultType + " {", "  try {"];
+		for (line in tryExprReturnLines(tryBody, resultType, "    ", scope))
+			out.push(line);
+		if (catches.length == 0) {
+			out.push("  } catch (...) {");
+			out.push("    throw;");
+		} else {
+			final firstCatch = catches[0];
+			function emitCatchBody(binding:String):Void {
+				final catchName = sanitizeIdentifier(firstCatch.name);
+				if (catchName.length > 0 && catchName != "_") {
+					out.push("    __hxhx_exception_value " + catchName + " = " + binding + ";");
+					withScopedLocal(scope, catchName, "__hxhx_exception_value", () -> {
+						for (line in tryExprReturnLines(firstCatch.body, resultType, "    ", scope))
+							out.push(line);
+					});
+				} else {
+					for (line in tryExprReturnLines(firstCatch.body, resultType, "    ", scope))
+						out.push(line);
+				}
+			}
+			out.push("  } catch (const std::exception& __hxhx_caught) {");
+			emitCatchBody("__hxhx_exception_value(std::string(__hxhx_caught.what()))");
+			out.push("  } catch (...) {");
+			emitCatchBody("__hxhx_exception_value()");
+		}
+		out.push("  }");
+		out.push("})()");
+		return out.join("\n");
+	}
+
+	static function tryExprBody(expr:HxExpr):Null<HxExpr> {
+		return switch (expr) {
+			case ELambda(args, body) if (args.length == 0):
+				body;
+			case _:
+				null;
+		};
+	}
+
+	static function tryCatchEntries(expr:HxExpr):Array<{name:String, typeHint:String, body:HxExpr}> {
+		return switch (expr) {
+			case EArrayDecl(entries):
+				final out = new Array<{name:String, typeHint:String, body:HxExpr}>();
+				for (entry in entries) {
+					final parsed = tryCatchEntry(entry);
+					if (parsed != null)
+						out.push(parsed);
+				}
+				out;
+			case _:
+				[];
+		};
+	}
+
+	static function tryCatchEntry(expr:HxExpr):Null<{name:String, typeHint:String, body:HxExpr}> {
+		return switch (expr) {
+			case EArrayDecl([EString(name), EString(typeHint), ELambda(lambdaArgs, body)]) if (lambdaArgs.length == 1):
+				{name: lambdaArgs[0].length > 0 ? lambdaArgs[0] : name, typeHint: typeHint, body: body};
+			case _:
+				null;
+		};
+	}
+
+	static function tryExprResultTypeFromArgs(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final branches = new Array<HxExpr>();
+		if (args != null && args.length > 0) {
+			final tryBody = tryExprBody(args[0]);
+			if (tryBody != null)
+				branches.push(tryBody);
+		}
+		if (args != null && args.length > 1)
+			for (entry in tryCatchEntries(args[1]))
+				branches.push(entry.body);
+		final continuation = args != null && args.length > 2 ? args[2] : null;
+		return tryExprResultType(branches, continuation, scope);
+	}
+
+	static function tryExprResultType(branches:Array<HxExpr>, continuation:Null<HxExpr>, ?scope:CppRenderScope):String {
+		var selected = "";
+		for (expr in branches) {
+			final typeName = tryBranchResultType(expr, scope);
+			if (typeName.length == 0 || typeName == "void" || typeName == "std::nullptr_t")
+				continue;
+			if (selected.length == 0) {
+				selected = typeName;
+			} else if (selected != typeName) {
+				return selected == "std::string" || typeName == "std::string" ? "std::string" : selected;
+			}
+		}
+		if (selected.length > 0)
+			return selected;
+		if (continuation != null) {
+			final continuationType = tryBranchResultType(continuation, scope);
+			if (continuationType.length > 0 && continuationType != "void")
+				return continuationType;
+		}
+		return "std::nullptr_t";
+	}
+
+	static function tryBranchResultType(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case ENull:
+				"std::nullptr_t";
+			case _ if (exprReturnsVoid(expr, scope)):
+				"std::nullptr_t";
+			case _ if (isStringLike(expr)):
+				"std::string";
+			case _:
+				final explicit = exprCppType(expr, scope);
+				if (explicit.length > 0 && explicit != "void") explicit; else {
+					final inferred = inferExprCppType(expr, scope);
+					inferred.length > 0
+					&& inferred != "void" ? inferred : "";
+				}
+		};
+	}
+
+	static function tryExprReturnLines(expr:HxExpr, resultType:String, indent:String, ?scope:CppRenderScope):Array<String> {
+		final typeName = resultType == null || resultType.length == 0 ? "std::nullptr_t" : resultType;
+		if (typeName == "std::nullptr_t") {
+			final out = switch (expr) {
+				case ENull:
+					[];
+				case _:
+					exprAsStatementLines(expr, indent, scope);
+			}
+			out.push(indent + "return nullptr;");
+			return out;
+		}
+		if (exprReturnsVoid(expr, scope)) {
+			final out = exprAsStatementLines(expr, indent, scope);
+			out.push(indent + "return " + cppDefaultValue(typeName, scope) + ";");
+			return out;
+		}
+		return [indent
+			+ "return "
+			+ (typeName == "std::string" ? stringExpr(expr, scope) : valueExprForExpectedType(expr, typeName, scope))
+			+ ";"];
 	}
 
 	static function forInExprResultType(continuation:HxExpr, ?scope:CppRenderScope):String {
