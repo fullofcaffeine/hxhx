@@ -4,6 +4,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 META_PATH="${HXHX_CURRENT_SOURCE_META:-$ROOT/packages/hxhx/out/hxhx-current-source.env}"
 
+# This script intentionally rebuilds hxhx from the current checkout and records
+# provenance metadata for later validation. For a faster local loop that reuses
+# the previous build when HEAD/status still match, use:
+#   bash scripts/hxhx/current-source-hxhx-bin.sh
+
 tracked_status() {
   git -C "$ROOT" status --porcelain --untracked-files=no
 }

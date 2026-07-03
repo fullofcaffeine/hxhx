@@ -56,7 +56,8 @@ Use the official Haxe formatter through `haxelib`.
 For files you just changed:
 
 ```bash
-haxelib run formatter --source packages/path/SomeFile.hx
+npm run format:hx:changed
+npm run guard:hx-format:changed
 ```
 
 For the repo-wide formatting guard:
@@ -75,6 +76,10 @@ deterministic, line-balanced chunks and checks those chunks in parallel because
 Haxe Formatter does not provide a built-in jobs flag. The default `auto` mode caps
 at four jobs. Use `HX_FORMAT_JOBS=1 npm run guard:hx-format` when you want serial
 debug output, or set `HX_FORMAT_JOBS=<n>` to choose a specific chunk count.
+
+For the fast-vs-full validation map, current-source `hxhx` build reuse, and
+timeout helper policy, see:
+`docs/01-getting-started/FAST_LOCAL_VALIDATION.md`
 
 ## Portable semantic-diff seed lane
 
