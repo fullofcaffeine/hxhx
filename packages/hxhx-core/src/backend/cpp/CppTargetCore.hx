@@ -14161,6 +14161,14 @@ class CppTargetCore {
 
 	static function assignmentRhsExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
 		final expectedType = assignmentExpectedCppType(left, scope);
+		if (isCppOptionalType(exprCppType(left, scope))) {
+			return switch (right) {
+				case ENull:
+					"std::nullopt";
+				case _:
+					valueExprForExpectedType(right, expectedType, scope);
+			}
+		}
 		if (expectedType == "std::shared_ptr<PosInfos>")
 			return posInfosSharedPtrExpr(right, scope);
 		if (isCppFunctionType(expectedType))

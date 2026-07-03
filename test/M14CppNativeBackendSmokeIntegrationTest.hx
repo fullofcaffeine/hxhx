@@ -9696,7 +9696,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], "");
 		final runnerAddCaseOld = new HxFunctionDecl("addCaseOld", Public, false, runnerCaseArgs, "Void", [
 			SExpr(ECall(EField(EIdent("Reflect"), "isObject"), [EIdent("test")]), HxPos.unknown()),
-			SExpr(ECall(EIdent("isMethod"), [EIdent("test"), EString("setup")]), HxPos.unknown()),
+			SIf(EUnop("!", ECall(EIdent("isMethod"), [EIdent("test"), EIdent("setup")])), SExpr(EBinop("=", EIdent("setup"), ENull), HxPos.unknown()), null,
+				HxPos.unknown()),
 			SExpr(ECall(EIdent("addFixture"), [
 				ENew("TestFixture", [
 					EIdent("test"),
@@ -9749,8 +9750,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ utest Runner.isMethod should probe methods on the test object carrier");
 		assertContains(runnerFixtureLines, "__hxhx_reflect_is_object(test);",
 			"C++ Reflect.isObject should lower through target-owned support for object carriers");
+		assertContains(runnerFixtureLines, "setup = std::nullopt;",
+			"C++ optional String assignments should lower null to std::nullopt instead of assigning nullptr into std::optional<std::string>");
 		assertContains(runnerFixtureLines, "addFixture(std::make_shared<TestFixture>(test, \"testNumeric\",",
 			"C++ utest Runner.addCaseOld should build TestFixture with the object carrier");
+		assertTrue(runnerFixtureLines.indexOf("setup = nullptr") < 0, "C++ optional String assignments should not route null through std::string(nullptr)");
 		assertContains(runnerFixtureLines, "std::shared_ptr<Test> currentCase = nullptr;",
 			"C++ utest Runner.runNext should not infer std::nullptr_t for the current test carrier");
 		assertContains(runnerFixtureLines, "currentCase = (fixture->target);",
