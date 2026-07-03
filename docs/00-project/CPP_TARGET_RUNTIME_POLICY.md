@@ -59,6 +59,7 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 | `missingDeclarationLines` | `declaration_only_support` plus partial bring-up | `IMap` is signature-only; `StringMap` includes a small implementation; `Date.toString` currently returns an empty string and is not parity. |
 | `missingMethodReturnType` | `declaration_only_support` | Signature helper only. It must not imply behavior exists. |
 | `anySupportLines` | `bounded_bringup_support`, `review_required` before expansion | `Any.__promote` returns `T{}` for unsupported conversions. That is smoke scaffolding, not Dynamic parity. |
+| `listSupportLines` | `bounded_bringup_support` | Package/source-gated stdlib `List<T>` / `haxe.ds.List<T>` support used to reduce strict Cpp helper-render pressure. It preserves common List API shape and existing iterator helper return types, but broader collection parity still needs oracle coverage. |
 | `fpReinterpretLines` | `review_required` | Binary float support touches NaN, Infinity, signed zero, and platform representation. Use [`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md) before expansion. |
 | `dateIntrinsicLines` | `bounded_bringup_support` | UTC construction helper. Date/timezone behavior needs oracle coverage before parity. |
 | `stdIntrinsicLines` | `bounded_bringup_support` | `parseInt`, integer literal, and Int64 narrowing helpers. Numeric parsing changes must use oracle evidence. |

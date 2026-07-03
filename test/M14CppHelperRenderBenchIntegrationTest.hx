@@ -35,6 +35,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 			throw message + " (missing `" + needle + "`)";
 	}
 
+	static function assertNotContains(haystack:String, needle:String, message:String):Void {
+		if (haystack.indexOf(needle) >= 0)
+			throw message + " (unexpected `" + needle + "`)";
+	}
+
 	static function countOccurrences(haystack:String, needle:String):Int {
 		var count = 0;
 		var offset = 0;
@@ -218,6 +223,42 @@ class M14CppHelperRenderBenchIntegrationTest {
 		return new TypedModule(new ParsedModule("", decl, filePath), env);
 	}
 
+	static function renderStdListWhenAvailable():Null<HelperRenderBenchResult> {
+		final path = "vendor/haxe/std/haxe/ds/List.hx";
+		if (!sys.FileSystem.exists(path))
+			return null;
+		final source = sys.io.File.getContent(path);
+		final decl = new HxParser(source).parseModule("List");
+		final modules = [typedSyntheticModule(path, decl)];
+		final topLevelAliasPath = "vendor/haxe/std/List.hx";
+		if (sys.FileSystem.exists(topLevelAliasPath)) {
+			final aliasDecl = new HxParser(sys.io.File.getContent(topLevelAliasPath)).parseModule("List");
+			modules.push(typedSyntheticModule(topLevelAliasPath, aliasDecl));
+		}
+		var listClass:HxClassDecl = null;
+		for (cls in HxModuleDecl.getClasses(decl))
+			if (HxClassDecl.getName(cls) == "List")
+				listClass = cls;
+		assertTrue(listClass != null, "vendored haxe.ds.List source should contain List");
+		final program = new GenIrProgram(modules, false);
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.packagePathForRenderedClass(listClass, lookup) == "haxe.ds",
+			"haxe.ds.List package identity should survive the top-level List typedef alias");
+		final kind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(listClass, lookup);
+		final kindLabel = @:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(kind);
+		assertTrue(kindLabel == "runtime_module", "haxe.ds.List should render through target-owned runtime support");
+		resetRendererCaches();
+		final start = Sys.time();
+		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(listClass, lookup);
+		final elapsed = Sys.time() - start;
+		return {
+			elapsed: elapsed,
+			rendered: lines.join("\n"),
+			lines: lines.length,
+			classTimings: ["haxe.ds.List:" + elapsed]
+		};
+	}
+
 	static function assertCompileTimeMacroApiBodiesStayDeclarationOnly():Void {
 		final bodyOnly = new HxClassDecl("BodyOnly", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")], []);
 		final context = new HxClassDecl("Context", false, [
@@ -313,8 +354,27 @@ class M14CppHelperRenderBenchIntegrationTest {
 		assertContains(best.rendered, "static std::shared_ptr<TestResult> ofHandler",
 			"helper-render bench should keep the TestResult generic-Dynamic helper surface");
 		assertTrue(countOccurrences(best.rendered, "extra") >= extraMethods, "helper-render bench should include the scaled TestHandler methods");
+		final stdList = renderStdListWhenAvailable();
+		if (stdList != null) {
+			assertContains(stdList.rendered, "struct List {", "haxe.ds.List runtime support should keep the public List helper");
+			assertContains(stdList.rendered, "std::vector<T> __values;", "haxe.ds.List runtime support should use target-owned storage");
+			assertContains(stdList.rendered, "std::shared_ptr<List<T>> __hxhx_make_shared_List()",
+				"haxe.ds.List runtime support should keep the generic factory used by new List()");
+			assertNotContains(stdList.rendered, "ListNode::create", "haxe.ds.List runtime support should not render the parsed stdlib add/push body");
+		}
 
-		Sys.println("CPP_HELPER_RENDER_BENCH:PASS extra_methods=" + extraMethods + " reps=" + reps + " best_seconds=" + best.elapsed + " total_seconds="
-			+ total + " lines=" + best.lines + " class_seconds=" + best.classTimings.join(","));
+		Sys.println("CPP_HELPER_RENDER_BENCH:PASS extra_methods="
+			+ extraMethods
+			+ " reps="
+			+ reps
+			+ " best_seconds="
+			+ best.elapsed
+			+ " total_seconds="
+			+ total
+			+ " lines="
+			+ best.lines
+			+ " class_seconds="
+			+ best.classTimings.join(",")
+			+ (stdList == null ? "" : " std_list_seconds=" + stdList.elapsed + " std_list_lines=" + stdList.lines));
 	}
 }

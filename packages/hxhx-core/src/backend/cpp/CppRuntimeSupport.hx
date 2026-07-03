@@ -349,6 +349,94 @@ class CppRuntimeSupport {
 		];
 	}
 
+	/**
+		Target-owned runtime surface for stdlib `List<T>` / `haxe.ds.List<T>`.
+
+		The upstream Haxe stdlib implementation is behaviorally a linked list, but
+		rendering its parsed body costs several seconds in strict C++ gates because
+		every method is lowered as ordinary helper source. This block keeps the
+		public List API shape stable for generated C++ while moving the maintenance
+		boundary into runtime support:
+
+		- `length` is kept as the public field callers already read.
+		- `add`/`push`/`remove` preserve list order and length side effects.
+		- `iterator` and `keyValueIterator` keep the existing generated return
+		  types by building the `ListNode<T>` chain expected by the parsed iterator
+		  helper classes.
+
+		This is not copied from upstream stdlib code. It is a small C++ support
+		implementation written against the documented List behavior.
+	**/
+	public static function listSupportLines():Array<String> {
+		return [
+			"template<typename T>",
+			"struct List {",
+			"  std::vector<T> __values;",
+			"  int length = 0;",
+			"  List() = default;",
+			"  void __sync_length() { length = static_cast<int>(__values.size()); }",
+			"  void add(T item) { __values.push_back(item); __sync_length(); }",
+			"  void push(T item) { __values.insert(__values.begin(), item); __sync_length(); }",
+			"  std::optional<T> first() const { return __values.empty() ? std::nullopt : std::optional<T>(__values.front()); }",
+			"  std::optional<T> last() const { return __values.empty() ? std::nullopt : std::optional<T>(__values.back()); }",
+			"  std::optional<T> pop() {",
+			"    if (__values.empty()) return std::nullopt;",
+			"    T value = __values.front();",
+			"    __values.erase(__values.begin());",
+			"    __sync_length();",
+			"    return value;",
+			"  }",
+			"  bool isEmpty() const { return __values.empty(); }",
+			"  void clear() { __values.clear(); __sync_length(); }",
+			"  template<typename U>",
+			"  bool remove(const U& value) {",
+			"    for (auto it = __values.begin(); it != __values.end(); ++it) {",
+			"      if (__hxhx_key_eq(*it, value)) {",
+			"        __values.erase(it);",
+			"        __sync_length();",
+			"        return true;",
+			"      }",
+			"    }",
+			"    return false;",
+			"  }",
+			"  std::shared_ptr<ListNode<T>> __node_chain() const {",
+			"    std::shared_ptr<ListNode<T>> head = nullptr;",
+			"    for (auto it = __values.rbegin(); it != __values.rend(); ++it) head = std::make_shared<ListNode<T>>(*it, head);",
+			"    return head;",
+			"  }",
+			"  std::shared_ptr<ListIterator<T>> iterator() { return std::make_shared<ListIterator<T>>(__node_chain()); }",
+			"  std::shared_ptr<ListKeyValueIterator<T>> keyValueIterator() { return std::make_shared<ListKeyValueIterator<T>>(__node_chain()); }",
+			"  std::string toString() const { return std::string(\"{\") + join(std::string(\", \")) + std::string(\"}\"); }",
+			"  std::string join(std::string sep) const {",
+			"    std::ostringstream out;",
+			"    for (std::size_t i = 0; i < __values.size(); ++i) {",
+			"      if (i > 0) out << sep;",
+			"      out << __hxhx_stringify(__values[i]);",
+			"    }",
+			"    return out.str();",
+			"  }",
+			"  template<typename F>",
+			"  std::shared_ptr<List<T>> filter(F f) const {",
+			"    auto out = std::make_shared<List<T>>();",
+			"    for (const auto& value : __values) if (f(value)) out->add(value);",
+			"    return out;",
+			"  }",
+			"  template<typename F>",
+			"  auto map(F f) const {",
+			"    using X = decltype(f(std::declval<T>()));",
+			"    auto out = std::make_shared<List<X>>();",
+			"    for (const auto& value : __values) out->add(f(value));",
+			"    return out;",
+			"  }",
+			"};",
+			"",
+			"template<typename T>",
+			"std::shared_ptr<List<T>> __hxhx_make_shared_List() {",
+			"  return std::make_shared<List<T>>();",
+			"}"
+		];
+	}
+
 	public static function fpReinterpretLines():Array<String> {
 		return [
 			"static double __hxhx_reinterpret_le_int32_as_float32(int value) {",

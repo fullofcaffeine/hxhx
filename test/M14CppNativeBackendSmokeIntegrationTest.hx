@@ -1123,11 +1123,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final listPath = "vendor/haxe/std/haxe/ds/List.hx";
 		if (!FileSystem.exists(listPath))
 			return null;
+		final topLevelAliasPath = "vendor/haxe/std/List.hx";
 		final listSource = File.getContent(listPath);
 		final mainSource = "class Main { static function main() {} }";
 		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
 		final typedList = TyperStage.typeModule(ParserStage.parse(listSource, listPath));
-		return MacroStage.expandProgram([typedMain, typedList], []);
+		final modules = [typedMain, typedList];
+		if (FileSystem.exists(topLevelAliasPath)) {
+			final typedTopLevelAlias = TyperStage.typeModule(ParserStage.parse(File.getContent(topLevelAliasPath), topLevelAliasPath));
+			modules.push(typedTopLevelAlias);
+		}
+		return MacroStage.expandProgram(modules, []);
 	}
 
 	static function vendorBalancedTreeProgramWhenAvailable():Null<GenIrProgram> {
@@ -10518,6 +10524,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			final vendorListDir = Path.join([root, "vendor-list-source-only"]);
 			final vendorListEmit = BackendRegistry.createForTarget("cpp-native").emit(vendorListProgram, context(vendorListDir, true, true));
 			final vendorListSource = File.getContent(vendorListEmit.entryPath);
+			assertContains(vendorListSource, "std::vector<T> __values;",
+				"C++ smoke should emit haxe.ds.List through target-owned runtime support instead of parsed helper bodies");
+			assertContains(vendorListSource, "std::shared_ptr<List<T>> __hxhx_make_shared_List()",
+				"C++ std List runtime support should keep the generic factory used by new List()");
 			assertContains(vendorListSource,
 				"auto next() {\n    auto val = (head->item);\n    head = (head->next);\n    return __hxhx_anon_value_std__string_key_int_{__hxhx_stringify(val), (idx++)};\n  }",
 				"C++ smoke should preserve upstream ListKeyValueIterator.next key/value return body");

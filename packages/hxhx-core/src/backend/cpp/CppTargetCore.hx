@@ -2127,6 +2127,7 @@ class CppTargetCore {
 		final all = new Array<HxClassDecl>();
 		final shortNameCounts = new haxe.ds.StringMap<Int>();
 		final packageByRenderedName = new haxe.ds.StringMap<String>();
+		final classInfos = new Array<{cls:HxClassDecl, packagePath:String, sourcePath:String}>();
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
 			for (cls in HxModuleDecl.getClasses(decl)) {
@@ -2139,10 +2140,16 @@ class CppTargetCore {
 			final decl = typed.getParsed().getDecl();
 			final moduleName = expectedModuleNameFromFile(typed.getParsed().getFilePath());
 			final packagePath = HxModuleDecl.getPackagePath(decl);
+			final sourcePath = typed.getParsed().getFilePath();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				all.push(cls);
 				final rendered = renderedClassNameForModule(HxClassDecl.getName(cls), moduleName, shortNameCounts);
 				renderedNames.push({cls: cls, name: rendered});
+				classInfos.push({
+					cls: cls,
+					packagePath: packagePath == null ? "" : packagePath,
+					sourcePath: sourcePath == null ? "" : sourcePath
+				});
 				packageByRenderedName.set(rendered, packagePath == null ? "" : packagePath);
 				addClassLookupAliases(HxClassDecl.getName(cls), cls, names, byName);
 				if (rendered != sanitizeTypePath(HxClassDecl.getName(cls)))
@@ -2154,6 +2161,7 @@ class CppTargetCore {
 			byName: byName,
 			all: all,
 			renderedNames: renderedNames,
+			classInfos: classInfos,
 			packageByRenderedName: packageByRenderedName
 		};
 	}
@@ -2197,10 +2205,25 @@ class CppTargetCore {
 	}
 
 	static function packagePathForRenderedClass(cls:HxClassDecl, ?classLookup:CppClassLookup):String {
-		if (cls == null || classLookup == null || classLookup.packageByRenderedName == null)
+		if (cls == null || classLookup == null)
+			return "";
+		if (classLookup.classInfos != null)
+			for (entry in classLookup.classInfos)
+				if (entry.cls == cls)
+					return entry.packagePath == null ? "" : entry.packagePath;
+		if (classLookup.packageByRenderedName == null)
 			return "";
 		final packagePath = classLookup.packageByRenderedName.get(renderedClassName(cls, classLookup));
 		return packagePath == null ? "" : packagePath;
+	}
+
+	static function sourcePathForRenderedClass(cls:HxClassDecl, ?classLookup:CppClassLookup):String {
+		if (cls == null || classLookup == null || classLookup.classInfos == null)
+			return "";
+		for (entry in classLookup.classInfos)
+			if (entry.cls == cls)
+				return entry.sourcePath == null ? "" : entry.sourcePath;
+		return "";
 	}
 
 	static function isCompileTimeMacroApiClass(packagePath:String, cls:HxClassDecl):Bool {
@@ -2371,6 +2394,7 @@ class CppTargetCore {
 
 	static function helperClassUsesTargetRuntimeModule(cls:HxClassDecl, classLookup:CppClassLookup, className:String):Bool {
 		return isAnySupportClass(cls)
+			|| isStdListSupportClass(cls, classLookup)
 			|| isGenericMapSupportClass(cls)
 			|| isPosInfosSupportClass(cls)
 			|| isRestSupportClass(cls)
@@ -2776,6 +2800,8 @@ class CppTargetCore {
 			return renderInterfaceClass(cls, classLookup);
 		if (isAnySupportClass(cls))
 			return CppRuntimeSupport.anySupportLines();
+		if (isStdListSupportClass(cls, classLookup))
+			return CppRuntimeSupport.listSupportLines();
 		if (isGenericMapSupportClass(cls))
 			return renderGenericMapSupportClass(cls);
 		if (isPosInfosSupportClass(cls))
@@ -12883,6 +12909,35 @@ class CppTargetCore {
 
 	static function isAnySupportClass(cls:HxClassDecl):Bool {
 		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Any";
+	}
+
+	/**
+		Recognize the real stdlib List helpers, not arbitrary user classes named
+		`List`.
+
+		The C++ target owns this class as runtime support because rendering the
+		parsed stdlib body is one of the remaining strict-gate hot spots. Keeping
+		the package/source check here prevents the optimization from changing local
+		test fixtures or user-defined List-like classes. The source-path fallback is
+		only for the top-level `std/List.hx` alias shape; normal `haxe.ds.List`
+		should be recognized by package identity.
+	**/
+	static function isStdListSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "List")
+			return false;
+		final packagePath = packagePathForRenderedClass(cls, classLookup);
+		if (packagePath == "haxe.ds")
+			return true;
+		return packagePath == "" && isTopLevelStdListSourcePath(sourcePathForRenderedClass(cls, classLookup));
+	}
+
+	static function isTopLevelStdListSourcePath(path:String):Bool {
+		if (path == null || path.length == 0)
+			return false;
+		final normalized = StringTools.replace(path, "\\", "/");
+		if (normalized == "vendor/haxe/std/List.hx" || StringTools.endsWith(normalized, "/vendor/haxe/std/List.hx"))
+			return true;
+		return StringTools.endsWith(normalized, "/haxe/std/List.hx");
 	}
 
 	static function isNativeStackTraceSupportClass(cls:HxClassDecl):Bool {

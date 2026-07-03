@@ -134,7 +134,13 @@ The helper-render bench is the fastest check for the shared helper frontier
 that can block strict Cpp diagnostics before generated C++ exists. It parses a
 small repo-owned utest-like fixture with `List`, `Dispatcher`, `TestHandler`,
 `TestResult`, and a runner carrier, renders those helper classes directly, and
-prints per-class latency:
+prints per-class latency. When `vendor/haxe` is present, the same bench also
+renders the real vendored `haxe.ds.List` helper with the top-level `List` alias
+loaded and reports `std_list_seconds`. That extra probe exists because the
+strict Cpp logs identified the parsed stdlib List body as a render-time hot
+spot. The production C++ path now treats stdlib `List` / `haxe.ds.List` as
+target-owned runtime support, while arbitrary local classes named `List` still
+use the ordinary helper renderer.
 
 ```bash
 npm run test:m14:cpp-helper-render-bench

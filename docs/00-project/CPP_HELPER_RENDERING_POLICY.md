@@ -57,6 +57,11 @@ runtime/stdlib semantics also need
 [`CPP_TARGET_RUNTIME_POLICY.md`](CPP_TARGET_RUNTIME_POLICY.md) and upstream Haxe
 4.3.7 oracle evidence where applicable.
 
+Current bounded examples include stdlib `List` / `haxe.ds.List`, which is
+package/source-gated to the real stdlib class and emitted from target-owned C++
+runtime support to avoid re-rendering the parsed List body in strict-gate
+diagnostics. This does not generalize to user-defined classes named `List`.
+
 Reachability and ordering should scan parsed field initializers and method
 bodies only for `full_body` helpers. `declaration_only` and `runtime_module`
 helpers keep signature/type dependencies, but their parsed bodies must not pull
