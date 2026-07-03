@@ -1828,6 +1828,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic same-owner calls should still infer explicit type arguments");
 	}
 
+	static function assertCppStringParamCallsCoerceScalarLiterals():Void {
+		final deq = new HxFunctionDecl("deq", Public, false, [
+			new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("actual", "Dynamic", NoDefault, false, false)
+		], "Void", [], "");
+		final owner = new HxClassDecl("ScalarStringParamOwner", false, [deq], []);
+		final names = new StringMap<Bool>();
+		names.set("ScalarStringParamOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("ScalarStringParamOwner", owner);
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		final rendered = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("deq", [EInt(0), EFloat(1.5)], scope);
+		assertTrue(rendered == "deq(std::to_string(0), std::to_string(1.5))",
+			"C++ calls to string-shaped Dynamic helpers should stringify scalar literals before passing them to std::string parameters");
+		final macroRendered = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("deq", [EInt(0), ECall(EEnumValue("Actual"), [EInt(0)])], scope);
+		assertContains(macroRendered, "deq(std::to_string(0), __hxhx_macro_to_string(__hxhx_macro_enum(\"Actual\"",
+			"C++ calls to string-shaped Dynamic helpers should stringify macro carriers through macro string support");
+	}
+
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {
 		final dynamicFn = new HxFunctionDecl("dynamicValue", Public, false, [], "Dynamic", [SReturn(EArrayDecl([EInt(1)]), HxPos.unknown())], "");
 		final owner = new HxClassDecl("DynamicReturnOwner", false, [dynamicFn], []);
@@ -2850,6 +2869,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppFunctionArgDeclaredTypeCacheUsesScopeShape();
 		assertCppFieldTypeCacheUsesScopeShape();
 		assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions();
+		assertCppStringParamCallsCoerceScalarLiterals();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();

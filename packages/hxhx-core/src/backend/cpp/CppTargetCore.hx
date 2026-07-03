@@ -10352,7 +10352,10 @@ class CppTargetCore {
 				+ Std.string(inferredArgTypes == null ? 0 : inferredArgTypes.length));
 		final renderFunctionArgsStart = timingEnabled ? Sys.time() : 0.0;
 		final renderedArgs = if (fn != null && owner != null) {
-			renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredArgTypes);
+			if (isStringComparisonHelperCall(cleanName, inferredArgTypes, args))
+				renderStringComparisonHelperCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredArgTypes);
+			else
+				renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredArgTypes);
 		} else {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
@@ -10387,6 +10390,28 @@ class CppTargetCore {
 				+ " emitted="
 				+ Std.string(explicitTypes.length > 0));
 		return cleanName + explicitTypes + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	/**
+		String-shaped comparison helpers are emitted with concrete `std::string`
+		parameters even when their Haxe signature is `Dynamic`. Only those helpers
+		should force string-context lowering for scalar and macro-carrier arguments;
+		general Dynamic string parameters still use the normal call-argument path.
+	**/
+	static function isStringComparisonHelperCall(cleanName:String, inferredArgTypes:Null<Array<String>>, args:Array<HxExpr>):Bool {
+		if (cleanName != "deq" || inferredArgTypes == null || args == null || args.length < 2 || inferredArgTypes.length < 2)
+			return false;
+		return inferredArgTypes[0] == "std::string" && inferredArgTypes[1] == "std::string";
+	}
+
+	static function renderStringComparisonHelperCallArgs(params:Array<HxFunctionArg>, args:Array<HxExpr>, ?scope:CppRenderScope,
+			?paramTypes:Array<String>):Array<String> {
+		final rendered = renderFunctionCallArgs(params, args, scope, paramTypes);
+		if (args.length > 0)
+			rendered[0] = stringExpr(args[0], scope);
+		if (args.length > 1)
+			rendered[1] = stringExpr(args[1], scope);
+		return rendered;
 	}
 
 	static function directCallExprForExpectedType(name:String, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -13803,8 +13828,12 @@ class CppTargetCore {
 			return enumCtor;
 		switch (expr) {
 			case ECall(_, _) | EField(_, _):
-				if (exprCppType(expr, scope) == "std::string")
+				final explicitType = exprCppType(expr, scope);
+				if (explicitType == "std::string")
 					return renderExpr(expr, scope);
+				final typeName = explicitType.length > 0 ? explicitType : inferExprCppType(expr, scope);
+				if (typeName == CppMacroExpr.CPP_TYPE)
+					return "__hxhx_macro_to_string(" + renderExpr(expr, scope) + ")";
 			case _:
 		}
 		final primitiveAbstractString = primitiveBackedAbstractToStringExpr(expr, scope);
