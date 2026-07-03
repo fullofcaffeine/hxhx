@@ -1565,6 +1565,42 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(testHandlerOrderNames.indexOf("Assert") >= 0
 			&& testHandlerOrderNames.indexOf("Assert") < testHandlerOrderNames.indexOf("TestHandler"),
 			"C++ helper ordering should render Assert before TestHandler static hook assignments");
+		final utestAssertHookSupport = new HxClassDecl("Assert", false, [
+			new HxFunctionDecl("q", Public, true, [new HxFunctionArg("v", "Dynamic", NoDefault, false, false)], "String", [], ""),
+			new HxFunctionDecl("same", Public, true, [
+				new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
+				new HxFunctionArg("value", "Dynamic", NoDefault, false, false)
+			], "Bool", [], ""),
+			new HxFunctionDecl("sameAs", Public, true, [
+				new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
+				new HxFunctionArg("value", "Dynamic", NoDefault, false, false)
+			], "Bool", [], ""),
+			new HxFunctionDecl("createAsync", Public, true, [
+				new HxFunctionArg("f", "Void -> Void", NoDefault, true, false),
+				new HxFunctionArg("timeout", "Int", NoDefault, true, false)
+			], "Void -> Void", [], "", ["dynamic"]),
+			new HxFunctionDecl("createEvent", Public, true, [
+				new HxFunctionArg("f", "EventArg -> Void", NoDefault, false, false),
+				new HxFunctionArg("timeout", "Int", NoDefault, true, false)
+			],
+				"EventArg -> Void", [], "", ["dynamic", "__hxhx_fn_type_params=EventArg"])
+		], [new HxFieldDecl("results", Public, true, "List<Assertation>", null)]);
+		final utestAssertHookNames = new StringMap<Bool>();
+		utestAssertHookNames.set("Assert", true);
+		final utestAssertHookClasses = new StringMap<HxClassDecl>();
+		utestAssertHookClasses.set("Assert", utestAssertHookSupport);
+		final utestAssertHookLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(utestAssertHookSupport, {
+			names: utestAssertHookNames,
+			byName: utestAssertHookClasses
+		}).join("\n");
+		assertContains(utestAssertHookLines,
+			"inline static std::function<std::function<void()>(std::optional<std::function<void()>>, std::optional<int>)> createAsync",
+			"C++ utest Assert.createAsync should be assignable static callback storage");
+		assertContains(utestAssertHookLines,
+			"inline static std::function<std::function<void(std::any)>(std::function<void(std::any)>, std::optional<int>)> createEvent",
+			"C++ utest Assert.createEvent should be assignable static callback storage");
+		assertTrue(utestAssertHookLines.indexOf("static auto createAsync(") < 0,
+			"C++ utest dynamic static hooks should not render as non-assignable static methods");
 		final renderedDepHelper = new HxClassDecl("Helper", false, [], []);
 		final renderedDepConsumer = new HxClassDecl("Consumer", false, [
 			new HxFunctionDecl("make", Public, false, [], "Void", [SVar("helper", "", ENew("Helper", []), HxPos.unknown())], "")
@@ -3573,7 +3609,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(utestAssertLines, "return false;", "C++ utest Assert support should neutralize nonessential assertion helper bodies");
 		assertTrue(utestAssertLines.indexOf("Misc::isOfType") < 0, "C++ utest Assert support should not render expensive diagnostic helper bodies");
 		assertTrue(utestAssertLines.indexOf("typeToString") < 0, "C++ utest Assert support should omit private diagnostic helpers");
-		assertContains(utestAssertLines, "static auto createAsync(", "C++ utest Assert support should preserve async callable stubs");
+		assertContains(utestAssertLines,
+			"inline static std::function<std::function<void()>(std::optional<std::function<void()>>, std::optional<int>)> createAsync",
+			"C++ utest Assert support should expose createAsync as assignable callback storage");
 		assertContains(utestAssertLines, "return []() {};", "C++ utest Assert async support should remain callable without body rendering");
 		final assertSameStatusScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(assertOwner, assertLookup, "bool");
 		assertSameStatusScope.localTypes.set("recursive", "std::optional<bool>");
@@ -9154,15 +9192,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"}",
 			"class TestHandler<T> {",
 			"  public var fixture:T;",
+			"  public var asyncStack:List<String>;",
 			"  public var onComplete:Dispatcher<TestHandler<T>>;",
 			"  public var onPrecheck:Dispatcher<TestHandler<T>>;",
 			"  public function new(fixture:T) {",
 			"    this.fixture = fixture;",
+			"    asyncStack = new List();",
 			"    onComplete = new Dispatcher();",
 			"    onPrecheck = new Dispatcher();",
 			"  }",
 			"  public function dispatchSelf():Void {",
 			"    onPrecheck.dispatch(this);",
+			"  }",
+			"  public function removeSelf(f:String):Void {",
+			"    var handler = this;",
+			"    handler.asyncStack.remove(f);",
 			"  }",
 			"}",
 			"class TestResult {",
@@ -9311,6 +9355,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic owner dispatch(this) should pass a borrowed shared pointer with the owner template args");
 		assertTrue(parsedTestHandlerLines.indexOf("onPrecheck->dispatch((*this));") < 0,
 			"C++ generic owner dispatch(this) should not pass the raw object value to reference payload handlers");
+		assertContains(parsedTestHandlerLines, "auto handler = __hxhx_borrowed_shared<TestHandler<T>>(this);",
+			"C++ unhinted var handler = this should keep reference identity for generic owner locals");
+		assertContains(parsedTestHandlerLines, "(handler->asyncStack)->remove(f);",
+			"C++ fields read from a captured self reference should use pointer access for List methods");
+		assertTrue(parsedTestHandlerLines.indexOf("auto handler = (*this);") < 0, "C++ unhinted var handler = this should not copy the owner object");
+		assertTrue(parsedTestHandlerLines.indexOf("(handler.asyncStack).remove") < 0,
+			"C++ captured self fields should not use dot access on shared_ptr-backed List fields");
 		assertContains(parsedDispatcherLines, "std::vector<std::function<void(T)>> handlers",
 			"C++ generic function-vector fields should preserve the function element type");
 		assertContains(parsedDispatcherLines, "handlers = std::vector<std::function<void(T)>>{};",

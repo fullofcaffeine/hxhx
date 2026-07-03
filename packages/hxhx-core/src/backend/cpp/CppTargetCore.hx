@@ -3131,7 +3131,7 @@ class CppTargetCore {
 			if (HxFunctionDecl.getVisibility(fn) != Public)
 				continue;
 			if (method == "createAsync" || method == "createEvent") {
-				for (line in renderUtestAssertCallableStub(fn, cls, classLookup))
+				for (line in renderUtestAssertCallableHookField(method))
 					out.push(line);
 				continue;
 			}
@@ -3341,26 +3341,30 @@ class CppTargetCore {
 		return out;
 	}
 
-	static function renderUtestAssertCallableStub(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final returnType = "auto";
-		final scope = renderScope(owner, classLookup, returnType);
-		applyFunctionTypeParams(scope, fn);
-		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
-		final out = new Array<String>();
-		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
-		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
-		if (methodTypeParams.length > 0)
-			out.push("  " + genericTemplatePrefix(methodTypeParams));
-		out.push("  static " + returnType + " " + method + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
-		for (line in renderTemplateUnusedArgs(HxFunctionDecl.getArgs(fn)))
-			out.push(line);
-		if (method == "createEvent") {
-			out.push("    return [](auto e) { (void)e; };");
-		} else {
-			out.push("    return []() {};");
-		}
-		out.push("  }");
-		return out;
+	static function renderUtestAssertCallableHookField(method:String):Array<String> {
+		// utest rebinds these `dynamic static function` hooks while a TestHandler is
+		// active. C++ methods are not assignable, so represent the hooks as static
+		// callback storage and keep the neutral default behavior as the initializer.
+		return switch (method) {
+			case "createEvent":
+				[
+					"  inline static std::function<std::function<void(std::any)>(std::function<void(std::any)>, std::optional<int>)> createEvent = " +
+					"[](std::function<void(std::any)> f, std::optional<int> timeout) -> std::function<void(std::any)> {",
+					"    (void)f;",
+					"    (void)timeout;",
+					"    return [](std::any e) { (void)e; };",
+					"  };"
+				];
+			case _:
+				[
+					"  inline static std::function<std::function<void()>(std::optional<std::function<void()>>, std::optional<int>)> createAsync = " +
+					"[](std::optional<std::function<void()>> f, std::optional<int> timeout) -> std::function<void()> {",
+					"    (void)f;",
+					"    (void)timeout;",
+					"    return []() {};",
+					"  };"
+				];
+		};
 	}
 
 	static function supportMethodSignatureReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
@@ -12711,6 +12715,9 @@ class CppTargetCore {
 		final local = sanitizeIdentifier(name);
 		final overrideType = if (scope == null) null; else if (declaredLocalName != null
 			&& scope.localTypeOverrides.exists(declaredLocalName)) scope.localTypeOverrides.get(declaredLocalName); else scope.localTypeOverrides.get(local);
+		final selfReferenceType = unhintedThisLocalReferenceCppType(typeHint, init, scope);
+		if (selfReferenceType.length > 0)
+			return selfReferenceType;
 		final hinted = cppLocalTypeHint(typeHint, init, scope);
 		if (overrideType != null && overrideType.length > 0 && explicit.length == 0 && init != null && hinted.length > 0 && hinted != "auto"
 			&& isScalarExpectedLocalType(hinted) && hinted != overrideType)
@@ -12719,6 +12726,31 @@ class CppTargetCore {
 			return overrideType != null && isCppFunctionType(hinted) && isCppFunctionType(overrideType) ? overrideType : hinted;
 		}
 		return overrideType != null && overrideType.length > 0 ? overrideType : hinted;
+	}
+
+	static function unhintedThisLocalReferenceCppType(typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
+		if (scope == null || scope.owner == null || StringTools.trim(typeHint == null ? "" : typeHint).length > 0)
+			return "";
+		switch (init) {
+			case EThis:
+				// In Haxe, `var handler = this` keeps object identity. Rendering
+				// `auto handler = (*this)` would copy the C++ object and make fields
+				// such as List<T> look like value fields instead of shared pointers.
+				return currentOwnerReferenceCppType(scope);
+			case _:
+				return "";
+		}
+	}
+
+	static function currentOwnerReferenceCppType(?scope:CppRenderScope):String {
+		if (scope == null || scope.owner == null)
+			return "";
+		final className = renderedClassName(scope.owner, lookupForScope(scope));
+		if (className.length == 0)
+			return "";
+		final typeParams = genericClassTemplateParams(scope.owner);
+		final templateArgs = scopedTemplateArgsForParams(typeParams, scope);
+		return "std::shared_ptr<" + className + (templateArgs.length > 0 ? "<" + templateArgs.join(", ") + ">" : "") + ">";
 	}
 
 	static function isUnhintedNoInitLocal(typeHint:String, init:Null<HxExpr>):Bool {
