@@ -2784,6 +2784,38 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], []);
 	}
 
+	static function optionalDynamicStringRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function dynBox(v:Null<Int>):Null<Int> {",
+			"    var x:Dynamic = v;",
+			"    return x;",
+			"  }",
+			"  static function dynAny(v:Null<Int>):Dynamic {",
+			"    var x:Dynamic = v;",
+			"    return x;",
+			"  }",
+			"  static function dynInt(v:Null<Int>):Int {",
+			"    var x:Dynamic = v;",
+			"    return x;",
+			"  }",
+			"  static function main() {",
+			"    Sys.println(Std.string(dynBox(0)));",
+			"    Sys.println(Std.string(dynBox(null)));",
+			"    Sys.println(Std.string(Std.parseInt(\"12\")));",
+			"    Sys.println(Std.string(Std.parseInt(\"x\")));",
+			"    Sys.println(Std.string(dynAny(Std.parseInt(\"12\"))));",
+			"    Sys.println(Std.string(dynAny(Std.parseInt(\"x\"))));",
+			"    Sys.println(Std.string(dynInt(Std.parseInt(\"12\"))));",
+			"    Sys.println(Std.string(dynInt(Std.parseInt(\"x\"))));",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "OptionalDynamicStringRuntime.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function vendorReadOnlyArrayProgramWhenAvailable():Null<GenIrProgram> {
 		final readOnlyArrayPath = "vendor/haxe/std/haxe/ds/ReadOnlyArray.hx";
 		if (!FileSystem.exists(readOnlyArrayPath))
@@ -10607,6 +10639,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(md5BytesRun.code == 0, "C++ imported Md5/Bytes runtime smoke failed: " + md5BytesRun.stderr);
 			assertTrue(md5BytesRun.stdout == "900150983cd24fb0d6963f7d28e17f72\n900150983cd24fb0d6963f7d28e17f72\n",
 				"unexpected C++ imported Md5/Bytes stdout: " + md5BytesRun.stdout);
+
+			final optionalDynamicStringBuildDir = Path.join([root, "optional-dynamic-string-runtime-build"]);
+			final optionalDynamicStringBuilt = BackendRegistry.createForTarget("cpp-native")
+				.emit(optionalDynamicStringRuntimeProgram(), context(optionalDynamicStringBuildDir, true, false));
+			assertTrue(optionalDynamicStringBuilt.builtExecutable, "C++ optional Dynamic string runtime smoke should build executable");
+			final optionalDynamicStringRun = commandOutput(optionalDynamicStringBuilt.entryPath, []);
+			assertTrue(optionalDynamicStringRun.code == 0, "C++ optional Dynamic string runtime smoke failed: " + optionalDynamicStringRun.stderr);
+			assertTrue(optionalDynamicStringRun.stdout == "0\n0\n12\nnull\n12\nnull\n12\n0\n",
+				"unexpected C++ optional Dynamic string stdout: " + optionalDynamicStringRun.stdout);
 
 			final lockMutexBuildDir = Path.join([root, "lock-mutex-runtime-build"]);
 			final lockMutexBuilt = BackendRegistry.createForTarget("cpp-native").emit(lockMutexRuntimeProgram(), context(lockMutexBuildDir, true, false));

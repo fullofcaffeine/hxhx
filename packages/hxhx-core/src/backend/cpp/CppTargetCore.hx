@@ -1035,6 +1035,9 @@ class CppTargetCore {
 		out.push("  return value == nullptr ? std::string(\"null\") : value->getName();");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::string __hxhx_stringify(const std::optional<T>& value);");
+		out.push("");
 		out.push("static std::string __hxhx_stringify(const std::any& value) {");
 		out.push("  if (!value.has_value()) return std::string();");
 		out.push("  const std::type_info& type = value.type();");
@@ -1045,6 +1048,13 @@ class CppTargetCore {
 		out.push("  if (type == typeid(double)) return std::to_string(std::any_cast<double>(value));");
 		out.push("  if (type == typeid(float)) return std::to_string(std::any_cast<float>(value));");
 		out.push("  if (type == typeid(std::shared_ptr<EnumValue>)) return __hxhx_stringify(std::any_cast<std::shared_ptr<EnumValue>>(value));");
+		out.push("  if (type == typeid(std::optional<int>)) return __hxhx_stringify(std::any_cast<std::optional<int>>(value));");
+		out.push("  if (type == typeid(std::optional<long long>)) return __hxhx_stringify(std::any_cast<std::optional<long long>>(value));");
+		out.push("  if (type == typeid(std::optional<unsigned int>)) return __hxhx_stringify(std::any_cast<std::optional<unsigned int>>(value));");
+		out.push("  if (type == typeid(std::optional<double>)) return __hxhx_stringify(std::any_cast<std::optional<double>>(value));");
+		out.push("  if (type == typeid(std::optional<float>)) return __hxhx_stringify(std::any_cast<std::optional<float>>(value));");
+		out.push("  if (type == typeid(std::optional<bool>)) return __hxhx_stringify(std::any_cast<std::optional<bool>>(value));");
+		out.push("  if (type == typeid(std::optional<std::string>)) return __hxhx_stringify(std::any_cast<std::optional<std::string>>(value));");
 		out.push("  return __hxhx_type_name(value);");
 		out.push("}");
 		out.push("");
@@ -1066,6 +1076,11 @@ class CppTargetCore {
 		out.push("  } else {");
 		out.push("    return __hxhx_type_name(value);");
 		out.push("  }");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::string __hxhx_stringify(const std::optional<T>& value) {");
+		out.push("  return value.has_value() ? __hxhx_stringify(value.value()) : std::string(\"null\");");
 		out.push("}");
 		out.push("");
 		for (line in CppRuntimeSupport.compareLines())
@@ -1209,6 +1224,23 @@ class CppTargetCore {
 		out.push("  } else {");
 		out.push("    return __hxhx_stringify(expected) == __hxhx_stringify(value);");
 		out.push("  }");
+		out.push("}");
+		out.push("");
+		out.push("template<typename A, typename B>");
+		out.push("static bool __hxhx_same_as(const std::optional<A>& expected, const std::optional<B>& value, double approx) {");
+		out.push("  if (expected.has_value() != value.has_value()) return false;");
+		out.push("  if (!expected.has_value()) return true;");
+		out.push("  return __hxhx_same_as(expected.value(), value.value(), approx);");
+		out.push("}");
+		out.push("");
+		out.push("template<typename A, typename B>");
+		out.push("static bool __hxhx_same_as(const std::optional<A>& expected, const B& value, double approx) {");
+		out.push("  return expected.has_value() && __hxhx_same_as(expected.value(), value, approx);");
+		out.push("}");
+		out.push("");
+		out.push("template<typename A, typename B>");
+		out.push("static bool __hxhx_same_as(const A& expected, const std::optional<B>& value, double approx) {");
+		out.push("  return value.has_value() && __hxhx_same_as(expected, value.value(), approx);");
 		out.push("}");
 		out.push("");
 		out.push("template<typename A, typename B>");
@@ -8789,13 +8821,13 @@ class CppTargetCore {
 			case _ if (isCppOptionalType(returnType)):
 				"return " + optionalReturnExpr(expr, scope) + ";";
 			case "bool":
-				"return " + renderExpr(expr, scope) + ";";
+				"return " + primitiveReturnExpr(expr, returnType, scope) + ";";
 			case "double":
-				"return " + renderExpr(expr, scope) + ";";
+				"return " + primitiveReturnExpr(expr, returnType, scope) + ";";
 			case "std::any":
 				"return " + renderExpr(expr, scope) + ";";
 			case "long long" | "unsigned int":
-				"return " + renderExpr(expr, scope) + ";";
+				"return " + primitiveReturnExpr(expr, returnType, scope) + ";";
 			case _ if (isCppVectorType(returnType)):
 				switch (expr) {
 					case ENull:
@@ -8828,7 +8860,7 @@ class CppTargetCore {
 						"return " + renderExpr(expr, scope) + ";";
 				}
 			case "int":
-				"return static_cast<int>(" + renderExpr(expr, scope) + ");";
+				"return static_cast<int>(" + primitiveReturnExpr(expr, returnType, scope) + ");";
 			case _:
 				"return static_cast<int>(" + renderExpr(expr, scope) + ");";
 		};
@@ -8893,9 +8925,19 @@ class CppTargetCore {
 		return switch (expr) {
 			case ENull:
 				"std::nullopt";
+			case _ if (scope != null && exprCppType(expr, scope) == scope.returnType):
+				optionalStorageExpr(expr, scope);
 			case _:
 				renderExpr(expr, scope);
 		};
+	}
+
+	static function primitiveReturnExpr(expr:HxExpr, returnType:String, ?scope:CppRenderScope):String {
+		final actualType = exprCppType(expr, scope);
+		final optionalInner = cppOptionalInnerType(actualType);
+		if ((optionalInner.length > 0 && optionalInner == returnType) || actualType == "std::any")
+			return valueExprForExpectedType(expr, returnType, scope);
+		return renderExpr(expr, scope);
 	}
 
 	static function valueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
@@ -9640,6 +9682,8 @@ class CppTargetCore {
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (isScalarExpectedLocalType(localType)):
 				valueExprForExpectedType(init, localType, scope);
+			case _ if (isCppOptionalType(localType) && exprCppType(init, scope) == localType):
+				optionalStorageExpr(init, scope);
 			case _ if (structuralTypedefClassForCppType(localType, scope) != null):
 				valueExprForExpectedType(init, localType, scope);
 			case _ if (localType == "std::string"):
