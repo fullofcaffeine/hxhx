@@ -10097,6 +10097,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "static bool empty(std::vector<std::string> it) {", "C++ smoke should lower Array<String> arguments to vector values");
 		assertContains(source, "return (!(!it.empty()));", "C++ smoke should lower iterator().hasNext() on vectors through empty()");
 		assertTrue(source.indexOf("std::shared_ptr<Iterable>") < 0, "C++ smoke should not emit a fake unresolved Iterable runtime class in helper signatures");
+		final parsedFallthroughModule = new HxParser("class FallthroughReturnLike { public function new() {} public function run():FallthroughReturnLike { var x = 1; x++; } public function choose(flag:Bool):String { if (flag) return \"ok\"; } public function always():String { return \"ok\"; } }")
+			.parseModule("FallthroughReturnLike");
+		final parsedFallthroughNames = new StringMap<Bool>();
+		final parsedFallthroughClasses = new StringMap<HxClassDecl>();
+		for (cls in HxModuleDecl.getClasses(parsedFallthroughModule)) {
+			parsedFallthroughNames.set(HxClassDecl.getName(cls), true);
+			parsedFallthroughClasses.set(HxClassDecl.getName(cls), cls);
+		}
+		final parsedFallthroughLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedFallthroughClasses.get("FallthroughReturnLike"), {
+				names: parsedFallthroughNames,
+				byName: parsedFallthroughClasses
+			}).join("\n");
+		assertContains(parsedFallthroughLines, "std::shared_ptr<FallthroughReturnLike> run()",
+			"C++ non-void helper fall-through fixture should keep the declared reference return shape");
+		assertContains(parsedFallthroughLines, "    return nullptr;",
+			"C++ non-void helper bodies with no explicit return should end with a neutral reference return");
+		assertContains(parsedFallthroughLines, "std::string choose(bool flag)",
+			"C++ partial-return helper fixture should keep the declared String return shape");
+		assertContains(parsedFallthroughLines, "    return std::string();",
+			"C++ non-void helper bodies with partial return coverage should get a neutral fall-through return");
+		assertTrue(parsedFallthroughLines.indexOf("std::string always() {\n    return std::string(\"ok\");\n    return std::string();") < 0,
+			"C++ helpers whose body already closes with a value return should not get an extra fall-through return");
 		assertContains(source, "(native[0]) = 7;", "C++ smoke should emit NativeArray indexed assignment");
 		assertContains(source, "(native.size())", "C++ smoke should emit NativeArray length read");
 		assertContains(source, "for (int i = 0; i < 3; i++) {", "C++ smoke should emit range for-in statement");

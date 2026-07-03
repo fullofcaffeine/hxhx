@@ -8406,7 +8406,7 @@ class CppTargetCore {
 				case _:
 			}
 		}
-		return renderStmts(stmts, indent, scope);
+		return appendFunctionFallthroughReturn(renderStmts(stmts, indent, scope), stmts, indent, scope);
 	}
 
 	static function renderHelperFunctionBody(stmts:Array<HxStmt>, indent:String, ?scope:CppRenderScope):Array<String> {
@@ -8422,7 +8422,7 @@ class CppTargetCore {
 		for (stmt in stmts)
 			for (line in renderStmt(stmt, indent, scope))
 				out.push(line);
-		return out;
+		return appendFunctionFallthroughReturn(out, stmts, indent, scope);
 	}
 
 	static function renderTracedHelperFunctionBody(ownerName:String, methodName:String, stmts:Array<HxStmt>, indent:String,
@@ -8447,7 +8447,7 @@ class CppTargetCore {
 				out.push(line);
 			traceCppMemberPhase(ownerName, "render_helper_method_stmt", methodName, "index=" + i + " kind=" + kind + " end");
 		}
-		return out;
+		return appendFunctionFallthroughReturn(out, stmts, indent, scope);
 	}
 
 	static function renderTimedHelperFunctionBody(ownerName:String, methodName:String, stmts:Array<HxStmt>, indent:String, scope:CppRenderScope):Array<String> {
@@ -8486,10 +8486,33 @@ class CppTargetCore {
 			traceCppTimingPhase("render_helper_stmt_timing owner=" + ownerName + " name=" + sanitizeIdentifier(methodName) + " index=" + i + " kind=" + kind
 				+ " seconds=" + Std.string(elapsed) + " lines=" + (out.length - before));
 		}
+		appendFunctionFallthroughReturn(out, stmts, indent, scope);
 		scope.traceOwnerName = priorTraceOwner;
 		scope.traceMethodName = priorTraceMethod;
 		scope.traceStmtIndex = priorTraceStmtIndex;
 		return out;
+	}
+
+	/**
+		Add the C++ return required when a non-void Haxe helper body can fall
+		through its final statement.
+
+		Parsed stdlib/helper bodies can be intentionally partial during C++ Full1
+		burn-down. This fallback keeps those bodies from trapping or warning while
+		preserving explicit `return value`, `return`, and `throw` control flow.
+	**/
+	static function appendFunctionFallthroughReturn(out:Array<String>, stmts:Array<HxStmt>, indent:String, ?scope:CppRenderScope):Array<String> {
+		final returnType = scope == null ? "int" : scope.returnType;
+		if (returnType != "void" && stmtsCanFallThrough(stmts))
+			out.push(indent + functionFallthroughReturnStmt(scope));
+		return out;
+	}
+
+	static function functionFallthroughReturnStmt(?scope:CppRenderScope):String {
+		final returnType = scope == null ? "int" : scope.returnType;
+		if (returnType == "std::nullptr_t")
+			return "return nullptr;";
+		return "return " + cppDefaultValue(returnType, scope) + ";";
 	}
 
 	static function renderStmt(stmt:HxStmt, indent:String, ?scope:CppRenderScope):Array<String> {
@@ -18172,6 +18195,46 @@ class CppTargetCore {
 			for (name in classByName.keys())
 				names.set(name, true);
 		return names;
+	}
+
+	/**
+		Report whether execution can reach the end of a statement list.
+
+		The analysis is intentionally conservative: loops and switches are treated
+		as able to continue after the statement unless every obvious branch closes
+		with `return` or `throw`. A false positive only emits an unreachable neutral
+		return; a false negative could reintroduce C++ non-void fall-through traps.
+	**/
+	static function stmtsCanFallThrough(stmts:Array<HxStmt>):Bool {
+		if (stmts == null || stmts.length == 0)
+			return true;
+		var canContinue = true;
+		for (stmt in stmts) {
+			if (!canContinue)
+				return false;
+			canContinue = stmtCanFallThrough(stmt);
+		}
+		return canContinue;
+	}
+
+	static function stmtCanFallThrough(stmt:HxStmt):Bool {
+		return switch (stmt) {
+			case SReturn(_, _) | SReturnVoid(_) | SThrow(_, _) | SBreak(_) | SContinue(_):
+				false;
+			case SBlock(stmts, _):
+				stmtsCanFallThrough(stmts);
+			case SIf(_, thenBranch, elseBranch, _): elseBranch == null || stmtCanFallThrough(thenBranch) || stmtCanFallThrough(elseBranch);
+			case STry(tryBody, catches, _):
+				if (stmtCanFallThrough(tryBody)) true; else {
+					var canContinue = false;
+					for (c in catches)
+						if (stmtCanFallThrough(c.body))
+							canContinue = true;
+					canContinue;
+				}
+			case _:
+				true;
+		};
 	}
 
 	static function functionHasValueReturn(fn:HxFunctionDecl):Bool {
