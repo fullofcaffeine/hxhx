@@ -4508,6 +4508,37 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ List<Assertation>.add should receive an Assertation carrier, not a string tag");
 		assertTrue(typedAssertWarnAddExpr.indexOf("return std::string(\"Warning\")") < 0,
 			"C++ typed List enum arguments should not preserve the erased string-tag lowering");
+		final typedAssertWarnSequenceExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ELambda(["__hxhx_lambda_seq_0"], ENull),
+			[typedAssertWarnAdd]), assertWarnScope);
+		assertContains(typedAssertWarnSequenceExpr, "([&]() { typedResults->add(",
+			"C++ void sequencing should render List.add as a statement before returning null");
+		assertContains(typedAssertWarnSequenceExpr, "return nullptr; })()", "C++ void sequencing should keep the surrounding expression null-compatible");
+		assertTrue(typedAssertWarnSequenceExpr.indexOf("[&](auto __hxhx_lambda_seq_0)") < 0,
+			"C++ void sequencing should not pass a void List.add result through an auto lambda parameter");
+		assertWarnScope.localTypes.set("callbackStack", "std::shared_ptr<List<std::string>>");
+		assertWarnScope.localTypes.set("callback", "std::function<void()>");
+		final callbackRemoveExpr = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("callbackStack"), "remove"), [EIdent("callback")]), assertWarnScope);
+		assertContains(callbackRemoveExpr, "callbackStack->remove(__hxhx_stringify(callback))",
+			"C++ List<String>.remove should coerce callback tokens through the list element type");
+		assertTrue(callbackRemoveExpr.indexOf("callbackStack->remove(callback)") < 0,
+			"C++ List<String>.remove should not pass std::function callback values directly");
+		final templatedHandlerOwner = new HxClassDecl("TestHandler", false, [new HxFunctionDecl("bindHandler", Public, false, [], "", [], "")], []);
+		final templatedHandlerNames = new StringMap<Bool>();
+		templatedHandlerNames.set("TestHandler", true);
+		final templatedHandlerClasses = new StringMap<HxClassDecl>();
+		templatedHandlerClasses.set("TestHandler", templatedHandlerOwner);
+		final templatedHandlerScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(templatedHandlerOwner, {
+			names: templatedHandlerNames,
+			byName: templatedHandlerClasses
+		}, "Dynamic");
+		templatedHandlerScope.localTypes.set("handler", "std::shared_ptr<TestHandler<std::string>>");
+		final templatedBindSequenceExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ELambda(["__hxhx_lambda_seq_1"], ENull),
+			[ECall(EField(EIdent("handler"), "bindHandler"), [])]), templatedHandlerScope);
+		assertContains(templatedBindSequenceExpr, "([&]() { handler->bindHandler(); return nullptr; })()",
+			"C++ void sequencing should resolve methods on templated receiver base classes");
+		assertTrue(templatedBindSequenceExpr.indexOf("[&](auto __hxhx_lambda_seq_1)") < 0,
+			"C++ void sequencing should not pass templated-receiver void calls through auto lambda parameters");
 		final lambdaStringContext = @:privateAccess backend.cpp.CppTargetCore.stringExpr(ECall(ELambda(["t"],
 			ETernary(EBinop("==", EIdent("t"), EInt(0)), EString("7"), ECall(EField(EIdent("Std"), "string"), [EIdent("t")]))), [EInt(1)]),
 			assertWarnScope);
@@ -9357,8 +9388,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic owner dispatch(this) should not pass the raw object value to reference payload handlers");
 		assertContains(parsedTestHandlerLines, "auto handler = __hxhx_borrowed_shared<TestHandler<T>>(this);",
 			"C++ unhinted var handler = this should keep reference identity for generic owner locals");
-		assertContains(parsedTestHandlerLines, "(handler->asyncStack)->remove(f);",
-			"C++ fields read from a captured self reference should use pointer access for List methods");
+		assertContains(parsedTestHandlerLines, "(handler->asyncStack)->remove(std::string(f));",
+			"C++ fields read from a captured self reference should use pointer access and List<String> argument typing");
 		assertTrue(parsedTestHandlerLines.indexOf("auto handler = (*this);") < 0, "C++ unhinted var handler = this should not copy the owner object");
 		assertTrue(parsedTestHandlerLines.indexOf("(handler.asyncStack).remove") < 0,
 			"C++ captured self fields should not use dot access on shared_ptr-backed List fields");

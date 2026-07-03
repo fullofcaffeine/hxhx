@@ -10390,7 +10390,9 @@ class CppTargetCore {
 
 	static function renderFieldCallArgs(receiverCppType:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
 		final listElementType = listElementCppType(receiverCppType);
-		if (sanitizeIdentifier(method) == "add" && args.length == 1 && listElementType.length > 0)
+		if ((sanitizeIdentifier(method) == "add" || sanitizeIdentifier(method) == "remove")
+			&& args.length == 1
+			&& listElementType.length > 0)
 			return [valueExprForExpectedType(args[0], listElementType, scope)];
 		final dispatcherElementType = dispatcherElementCppType(receiverCppType);
 		if (sanitizeIdentifier(method) == "add" && args.length == 1 && dispatcherElementType.length > 0)
@@ -13034,6 +13036,10 @@ class CppTargetCore {
 			}
 		}
 		return switch (method) {
+			case "add" if (arity == 1):
+				listElementCppType(receiverCppType()).length > 0 ? "void" : "";
+			case "remove" if (arity == 1):
+				listElementCppType(receiverCppType()).length > 0 ? "bool" : "";
 			case "get" if (arity == 1):
 				final receiverType = receiverCppType();
 				final valueType = mapValueCppType(receiverType);
@@ -15043,9 +15049,32 @@ class CppTargetCore {
 		return switch (expr) {
 			case ECall(ELambda(_, body), _):
 				exprReturnsVoid(body, scope);
+			case ECall(EField(receiver, method), args): fieldCallHasVoidReturnHint(receiver, method, args, scope) || knownVoidSequenceCall(expr);
 			case _:
 				knownVoidSequenceCall(expr);
 		};
+	}
+
+	static function fieldCallHasVoidReturnHint(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Bool {
+		if (scope == null)
+			return false;
+		// Sequence lambdas use dummy parameters only to force evaluation order.
+		// If the argument is a void call, C++ needs it rendered as a statement
+		// instead of being passed through an `auto` lambda parameter.
+		final receiverType = exprCppType(receiver, scope);
+		if (sanitizeIdentifier(method) == "add" && args.length == 1 && listElementCppType(receiverType).length > 0)
+			return true;
+		final ownerType = classNameFromCppExprType(receiverType, scope);
+		if (ownerType == null)
+			return false;
+		final owner = scope.classByName.get(sanitizeTypePath(typeBaseName(ownerType)));
+		if (owner == null)
+			return false;
+		final fn = classMethodDeclIn(owner, method, false);
+		if (fn == null)
+			return false;
+		return cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), scope) == "void"
+			|| inferredFunctionReturnCppType(fn, owner, scope.classByName, lookupForScope(scope)) == "void";
 	}
 
 	static function knownVoidSequenceCall(expr:HxExpr):Bool {
