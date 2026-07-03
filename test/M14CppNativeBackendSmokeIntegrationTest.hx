@@ -6562,6 +6562,35 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(primitiveOwnerLines, "return static_cast<int>(m);",
 			"C++ primitive-backed abstract get() calls should return the already-erased primitive value");
 		assertTrue(primitiveOwnerLines.indexOf("m.get()") < 0, "C++ primitive-backed abstract get() calls should not emit member access on primitive values");
+		final numericAliasOwner = new HxClassDecl("NumericAliasOwner", false, [
+			new HxFunctionDecl("int8ToInt16", Public, true, [new HxFunctionArg("v", "Int8", NoDefault, false, false)], "Int16",
+				[SReturn(ECast(EIdent("v"), "Int16"), HxPos.unknown())], ""),
+			new HxFunctionDecl("int8ToInt64", Public, true, [new HxFunctionArg("v", "Int8", NoDefault, false, false)], "Int64",
+				[SReturn(ECast(EIdent("v"), "Int64"), HxPos.unknown())], ""),
+			new HxFunctionDecl("int8ToBoxedInt16", Public, true, [new HxFunctionArg("v", "Int8", NoDefault, false, false)], "Null<Int16>",
+				[SReturn(ECast(EIdent("v"), "Null<Int16>"), HxPos.unknown())], ""),
+			new HxFunctionDecl("float32ToFloat64", Public, true, [new HxFunctionArg("v", "Float32", NoDefault, false, false)], "Float64",
+				[SReturn(ECast(EIdent("v"), "Float64"), HxPos.unknown())], ""),
+			new HxFunctionDecl("float64ToInt8", Public, true, [new HxFunctionArg("v", "Float64", NoDefault, false, false)], "Int8",
+				[SReturn(ECast(EIdent("v"), "Int8"), HxPos.unknown())], "")
+		]);
+		primitiveNames.set("NumericAliasOwner", true);
+		primitiveClasses.set("NumericAliasOwner", numericAliasOwner);
+		final numericAliasLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(numericAliasOwner, primitiveLookup).join("\n");
+		assertContains(numericAliasLines, "static int int8ToInt16(int v) {", "C++ StdTypes Int8/Int16 aliases should erase to primitive int signatures");
+		assertContains(numericAliasLines, "static long long int8ToInt64(int v) {",
+			"C++ StdTypes Int8/Int64 aliases should erase to primitive integer signatures");
+		assertContains(numericAliasLines, "static std::optional<int> int8ToBoxedInt16(int v) {",
+			"C++ nullable StdTypes Int aliases should erase to optional primitive storage");
+		assertContains(numericAliasLines, "static double float32ToFloat64(double v) {",
+			"C++ StdTypes Float32/Float64 aliases should erase to primitive double signatures for the MVP backend");
+		assertContains(numericAliasLines, "static int float64ToInt8(double v) {",
+			"C++ StdTypes Float aliases should cast to primitive Int aliases without shared_ptr wrappers");
+		assertTrue(numericAliasLines.indexOf("std::shared_ptr<Int8>") < 0,
+			"C++ StdTypes numeric aliases should not leak Int8 shared_ptr wrappers into helper signatures");
+		assertTrue(numericAliasLines.indexOf("std::shared_ptr<Float32>") < 0,
+			"C++ StdTypes numeric aliases should not leak Float32 shared_ptr wrappers into helper signatures");
 		final primitiveCaller = new HxClassDecl("PrimitiveCaller", false, [
 			new HxFunctionDecl("read", Public, true, [], "Int", [
 				SVar("a", "", EInt(33), HxPos.unknown()),

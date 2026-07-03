@@ -148,10 +148,15 @@ class CppTypeModel {
 
 	public static function knownPrimitiveBackedAbstractCppType(typeHint:String):Null<String> {
 		return switch (sanitizeTypePath(typeBaseName(removeTypeHintWhitespace(typeHint)))) {
-			case "Int32":
+			// Haxe C++ StdTypes numeric aliases are core abstracts over Int/Float.
+			// This mapping only erases their C++ storage shape; width/overflow
+			// semantics remain owned by focused runtime/lowering work.
+			case "Int8" | "Int16" | "Int32":
 				"int";
 			case "Int64":
 				"long long";
+			case "Float32" | "Float64":
+				"double";
 			case "UInt":
 				"unsigned int";
 			case _:
