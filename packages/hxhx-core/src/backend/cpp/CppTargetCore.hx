@@ -5911,16 +5911,17 @@ class CppTargetCore {
 		}
 		final value = nameAt(0, method == "encode" || method == "urlEncode" ? "bytes" : "str");
 		final complement = nameAt(1, "complement");
+		final complementValue = base64ComplementValueExpr(args, scope, complement, method == "encode" || method == "decode");
 		final alphabet = method == "urlEncode"
 			|| method == "urlDecode" ? "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 		switch (method) {
 			case "encode" | "urlEncode":
-				out.push("    return __hxhx_base64_encode_bytes(" + value + "->b, " + complement + ", std::string(\"" + alphabet + "\"));");
+				out.push("    return __hxhx_base64_encode_bytes(" + value + "->b, " + complementValue + ", std::string(\"" + alphabet + "\"));");
 			case "decode" | "urlDecode":
 				out.push("    auto __hxhx_data = __hxhx_base64_decode_bytes("
 					+ value
 					+ ", "
-					+ complement
+					+ complementValue
 					+ ", std::string(\""
 					+ alphabet
 					+ "\"));");
@@ -5931,6 +5932,14 @@ class CppTargetCore {
 		}
 		out.push("  }");
 		return out;
+	}
+
+	static function base64ComplementValueExpr(args:Array<HxFunctionArg>, scope:CppRenderScope, name:String, defaultValue:Bool):String {
+		final defaultLiteral = defaultValue ? "true" : "false";
+		if (args.length <= 1)
+			return defaultLiteral;
+		final argType = cppFunctionArgType(args[1], scope);
+		return cppOptionalInnerType(argType) == "bool" ? name + ".value_or(" + defaultLiteral + ")" : name;
 	}
 
 	static function base64SupportReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
