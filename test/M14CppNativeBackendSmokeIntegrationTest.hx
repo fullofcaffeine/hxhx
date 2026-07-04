@@ -2113,6 +2113,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(forwardingRendered.indexOf("std::to_string") < 0, "C++ eq-forwarding helpers should avoid the slow string-shaped Dynamic helper path");
 	}
 
+	static function assertCppUnhintedArithmeticParamsStayNumeric():Void {
+		final add = new HxFunctionDecl("add", Public, false, [
+			new HxFunctionArg("x", "", NoDefault, false, false),
+			new HxFunctionArg("y", "", NoDefault, false, false)
+		], "", [
+			SReturn(EBinop("+", EBinop("+", EIdent("v"), EIdent("x")), EIdent("y")), HxPos.unknown())
+		], "");
+		final owner = new HxClassDecl("ErasedArithmeticOwner", false, [add], [new HxFieldDecl("v", Public, false, "Int", EInt(0))]);
+		final names = new StringMap<Bool>();
+		names.set("ErasedArithmeticOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("ErasedArithmeticOwner", owner);
+		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(add, owner, {names: names, byName: classes}).join("\n");
+		assertContains(lines, "int add(int x, int y)",
+			"C++ unhinted arithmetic helpers should infer both erased params as numeric after walking an additive chain");
+		assertContains(lines, "return static_cast<int>(((v + x) + y));",
+			"C++ unhinted arithmetic helper returns should stay numeric instead of string-concatenating the first addend");
+		assertTrue(lines.indexOf("std::string y") < 0, "C++ additive-chain inference should not leave the trailing erased param string-shaped");
+		assertTrue(lines.indexOf("std::to_string((v + x))") < 0, "C++ additive-chain inference should not stringify the numeric prefix");
+	}
+
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {
 		final dynamicFn = new HxFunctionDecl("dynamicValue", Public, false, [], "Dynamic", [SReturn(EArrayDecl([EInt(1)]), HxPos.unknown())], "");
 		final owner = new HxClassDecl("DynamicReturnOwner", false, [dynamicFn], []);
@@ -3168,6 +3189,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppFieldTypeCacheUsesScopeShape();
 		assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions();
 		assertCppStringParamCallsCoerceScalarLiterals();
+		assertCppUnhintedArithmeticParamsStayNumeric();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();

@@ -8177,7 +8177,31 @@ class CppTargetCore {
 
 	static function numericExpectedTypeFromPeer(peer:HxExpr, scope:CppRenderScope):String {
 		final peerType = callableArgExprType(peer, scope);
-		return peerType == "int" || peerType == "double" ? peerType : "";
+		if (peerType == "int" || peerType == "double")
+			return peerType;
+		return arithmeticContextExpectedType(peer, scope);
+	}
+
+	static function arithmeticContextExpectedType(expr:HxExpr, scope:CppRenderScope):String {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				arithmeticContextExpectedType(inner, scope);
+			case EInt(_):
+				"int";
+			case EFloat(_):
+				"double";
+			case EBinop("+", _, _) if (isStringLike(expr)):
+				"";
+			case EBinop(op, left, right) if (isArithmeticBinaryOp(op)):
+				final leftType = arithmeticContextExpectedType(left, scope);
+				final rightType = arithmeticContextExpectedType(right, scope);
+				if (leftType == "double" || rightType == "double") "double"; else if (leftType == "int" || rightType == "int") "int"; else "";
+			case ETernary(_, thenExpr, elseExpr): final thenType = arithmeticContextExpectedType(thenExpr,
+					scope); final elseType = arithmeticContextExpectedType(elseExpr, scope); thenType.length > 0 && thenType == elseType ? thenType : "";
+			case _:
+				final typeName = exprCppType(expr, scope);
+				if (typeName == "int" || typeName == "double") typeName; else "";
+		}
 	}
 
 	static function collectForwardedCallArgTypeOverrides(callee:HxExpr, args:Array<HxExpr>, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
