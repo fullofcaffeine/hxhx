@@ -24,7 +24,7 @@ bd show <issue-id>
 
 # Update issue status
 bd update <issue-id> --status in_progress
-bd update <issue-id> --status done
+bd close <issue-id>
 
 # Refresh tracked issue data before committing/pushing
 bd export -o .beads/issues.jsonl
