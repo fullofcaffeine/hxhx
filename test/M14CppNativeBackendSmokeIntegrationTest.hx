@@ -2371,6 +2371,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(typed.indexOf("Reflect::makeVarArgs") < 0, "typed C++ Reflect.makeVarArgs should stay on the target-owned wrapper path");
 	}
 
+	static function assertCppErasedDynamicPlusUsesAnyHelper():Void {
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("DynamicPlusOwner", false, [], []), {
+			names: new StringMap<Bool>(),
+			byName: new StringMap<HxClassDecl>()
+		}, "std::string");
+		scope.localTypes.set("args", "std::vector<std::any>");
+		final expr = EBinop("+", EArrayAccess(EIdent("args"), EInt(0)), EArrayAccess(EIdent("args"), EInt(1)));
+		final rendered = @:privateAccess backend.cpp.CppTargetCore.renderExpr(expr, scope);
+		assertContains(rendered, "__hxhx_any_add((args[0]), (args[1]))", "C++ erased Dynamic plus should lower through the target-owned std::any helper");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.exprCppType(expr,
+			scope) == "std::any", "C++ explicit type lookup should keep erased Dynamic plus as std::any");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferExprCppType(expr, scope) == "std::any",
+			"C++ expression inference should keep erased Dynamic plus as std::any");
+		final stringValue = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(expr, "std::string", scope);
+		assertContains(stringValue, "__hxhx_stringify(__hxhx_any_add((args[0]), (args[1])))",
+			"C++ string-shaped Dynamic plus returns should stringify the helper result explicitly");
+	}
+
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {
 		final dynamicFn = new HxFunctionDecl("dynamicValue", Public, false, [], "Dynamic", [SReturn(EArrayDecl([EInt(1)]), HxPos.unknown())], "");
 		final owner = new HxClassDecl("DynamicReturnOwner", false, [dynamicFn], []);
@@ -3278,6 +3296,35 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function dynamicPlusRuntimeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function pack(args:Array<Dynamic>):String {",
+			"    return args[0] + args[1];",
+			"  }",
+			"  static function main() {",
+			"    Sys.println(pack([1, 2]));",
+			"    Sys.println(pack([\"a\", 2]));",
+			"    Sys.println(pack([\"a\", null]));",
+			"    Sys.println(pack([null, \"b\"]));",
+			"    try {",
+			"      Sys.println(pack([null, 2]));",
+			"    } catch (e:Dynamic) {",
+			"      Sys.println(\"null-left-error\");",
+			"    }",
+			"    try {",
+			"      Sys.println(pack([2, null]));",
+			"    } catch (e:Dynamic) {",
+			"      Sys.println(\"null-right-error\");",
+			"    }",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "DynamicPlusRuntime.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function cppJsonCarrierRuntimeProgram():GenIrProgram {
 		final pos = HxPos.unknown();
 		final mainSource = [
@@ -3493,6 +3540,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppNullStructuralFieldsUseNullableStorage();
 		assertCppDynamicFunctionsUseAssignableStorage();
 		assertCppReflectMakeVarArgsUsesCallableWrapper();
+		assertCppErasedDynamicPlusUsesAnyHelper();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();
@@ -11387,6 +11435,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(optionalDynamicStringRun.code == 0, "C++ optional Dynamic string runtime smoke failed: " + optionalDynamicStringRun.stderr);
 			assertTrue(optionalDynamicStringRun.stdout == "0\n0\n12\nnull\n12\nnull\n12\n0\n",
 				"unexpected C++ optional Dynamic string stdout: " + optionalDynamicStringRun.stdout);
+
+			final dynamicPlusBuildDir = Path.join([root, "dynamic-plus-runtime-build"]);
+			final dynamicPlusBuilt = BackendRegistry.createForTarget("cpp-native")
+				.emit(dynamicPlusRuntimeProgram(), context(dynamicPlusBuildDir, true, false));
+			assertTrue(dynamicPlusBuilt.builtExecutable, "C++ Dynamic plus runtime smoke should build executable");
+			final dynamicPlusRun = commandOutput(dynamicPlusBuilt.entryPath, []);
+			assertTrue(dynamicPlusRun.code == 0, "C++ Dynamic plus runtime smoke failed: " + dynamicPlusRun.stderr);
+			assertTrue(dynamicPlusRun.stdout == "3\na2\nanull\nnullb\nnull-left-error\nnull-right-error\n",
+				"unexpected C++ Dynamic plus stdout: " + dynamicPlusRun.stdout);
 
 			final cppJsonCarrierBuildDir = Path.join([root, "cpp-json-carrier-runtime-build"]);
 			final cppJsonCarrierBuilt = BackendRegistry.createForTarget("cpp-native")

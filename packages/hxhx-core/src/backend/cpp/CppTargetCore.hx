@@ -10759,6 +10759,8 @@ class CppTargetCore {
 				fieldCallExpr(receiver, method, args, scope);
 			case ECall(callee, args):
 				"(" + renderExpr(callee, scope) + ")(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+			case EBinop("+", left, right) if (anyAddExpr(left, right, scope) != null):
+				anyAddExpr(left, right, scope);
 			case EBinop("+", left, right) if (isCppStringExpr(left, scope) || isCppStringExpr(right, scope)):
 				"("
 				+ stringExpr(left, scope)
@@ -11485,6 +11487,27 @@ class CppTargetCore {
 
 	static function numericExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return exprCppType(expr, scope) == "std::any" ? "__hxhx_any_double(" + renderExpr(expr, scope) + ")" : renderExpr(expr, scope);
+	}
+
+	/**
+		Lower Haxe `+` when either operand is erased `Dynamic` storage.
+
+		This keeps the runtime decision at a Cpp-owned Dynamic helper instead of
+		letting `std::any` fall into the native C++ `+` operator. The helper is only
+		for plus/add-or-concat semantics; JSON and Reflect keep their own carriers.
+	**/
+	static function anyAddExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (!isCppAnyExpr(left, scope) && !isCppAnyExpr(right, scope))
+			return null;
+		return "__hxhx_any_add(" + anyValueExpr(left, scope) + ", " + anyValueExpr(right, scope) + ")";
+	}
+
+	static function isCppAnyExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return exprCppType(expr, scope) == "std::any";
+	}
+
+	static function anyValueExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return isCppAnyExpr(expr, scope) ? renderExpr(expr, scope) : valueExprForExpectedType(expr, "std::any", scope);
 	}
 
 	static function mathFieldExpr(field:String):String {
@@ -13762,6 +13785,8 @@ class CppTargetCore {
 				primitiveStringAbstractBinaryOpCppType(op, left, right, scope);
 			case EBinop(op, left, right) if (classBackedAbstractBinaryOpCppType(op, left, right, scope).length > 0):
 				classBackedAbstractBinaryOpCppType(op, left, right, scope);
+			case EBinop("+", left, right) if (isCppAnyExpr(left, scope) || isCppAnyExpr(right, scope)):
+				"std::any";
 			case EArrayAccess(array, _) if (isCppStringExpr(array, scope)):
 				"int";
 			case EArrayAccess(array, _):
@@ -14748,6 +14773,8 @@ class CppTargetCore {
 				primitiveStringAbstractBinaryOpCppType(op, left, right, scope);
 			case EBinop(op, left, right) if (classBackedAbstractBinaryOpCppType(op, left, right, scope).length > 0):
 				classBackedAbstractBinaryOpCppType(op, left, right, scope);
+			case EBinop("+", left, right) if (isCppAnyExpr(left, scope) || isCppAnyExpr(right, scope)):
+				"std::any";
 			case EString(_) | EEnumValue(_) | EMacroType(_):
 				"std::string";
 			case EField(EIdent("Error"), _):
@@ -16172,6 +16199,8 @@ class CppTargetCore {
 			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
 				"__hxhx_throw_as<std::string>(" + renderExpr(args[0], scope) + ")";
 			case _ if (isCppExceptionValueType(exprCppType(expr, scope)) || isCppDynamicValueType(exprCppType(expr, scope))):
+				"__hxhx_stringify(" + renderExpr(expr, scope) + ")";
+			case _ if (exprCppType(expr, scope) == "std::any"):
 				"__hxhx_stringify(" + renderExpr(expr, scope) + ")";
 			case EArrayDecl(_):
 				"__hxhx_stringify(" + renderExpr(expr, scope) + ")";
