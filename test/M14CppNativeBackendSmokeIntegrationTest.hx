@@ -2245,15 +2245,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			SReturn(EBinop("*", EBinop("+", EBinop("+", EIdent("v"), EIdent("x")), EIdent("y")), EInt(2)), pos)
 		], "");
 		final sub = new HxClassDecl("DynSub", false, [overrideAdd], [], "DynBase");
+		final caller = new HxClassDecl("DynCaller", false, [
+			new HxFunctionDecl("run", Public, false, [], "Int", [
+				SVar("inst", "", ENew("DynSub", [EInt(100)]), pos),
+				SExpr(EBinop("=", EField(EIdent("inst"), "add"), ELambda(["x", "y"], EBinop("+", EIdent("x"), EIdent("y")))), pos),
+				SReturn(ECall(EField(EIdent("inst"), "add"), [EInt(1), EInt(2)]), pos)
+			], "")
+		], []);
 		final names = new StringMap<Bool>();
 		final classes = new StringMap<HxClassDecl>();
-		for (cls in [base, sub]) {
+		for (cls in [base, sub, caller]) {
 			names.set(HxClassDecl.getName(cls), true);
 			classes.set(HxClassDecl.getName(cls), cls);
 		}
 		final lookup = {names: names, byName: classes};
 		final baseLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(base, lookup).join("\n");
 		final subLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(sub, lookup).join("\n");
+		final callerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(caller, lookup).join("\n");
 		assertContains(baseLines, "std::function<int(int, int)> add = [this](int x, int y) -> int {",
 			"C++ dynamic instance functions should be assignable callable storage");
 		assertContains(baseLines, "inline static std::function<int(int, int)> staticDynamic = [](int x, int y) -> int {",
@@ -2263,6 +2271,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(subLines, "DynSub(int v) : DynBase(v) {", "C++ inherited dynamic overrides should preserve the forwarding constructor");
 		assertContains(subLines, "add = [this](int x, int y) -> int {", "C++ inherited dynamic overrides should initialize the inherited callable slot");
 		assertTrue(subLines.indexOf("int add(int x, int y)") < 0, "C++ inherited dynamic overrides should not render a shadowing method");
+		assertContains(callerLines, "inst->add = [&](int x, int y) -> int {",
+			"C++ dynamic function slot reassignment should target the assignable storage field");
+		assertTrue(callerLines.indexOf("} = [&]") < 0,
+			"C++ dynamic function slot reassignment should not render method-value lambdas on the assignment left side");
 	}
 
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {

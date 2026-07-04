@@ -15315,6 +15315,9 @@ class CppTargetCore {
 	}
 
 	static function assignmentExpectedCppType(left:HxExpr, ?scope:CppRenderScope):String {
+		final dynamicSlot = assignmentDynamicFunctionSlotCppType(left, scope);
+		if (dynamicSlot.length > 0)
+			return dynamicSlot;
 		final fieldType = assignmentExpectedFieldCppType(left, scope);
 		if (fieldType != null && fieldType.length > 0)
 			return fieldType;
@@ -15357,20 +15360,81 @@ class CppTargetCore {
 			case EIdent(name) if (exprHasOptionalType(left, scope)):
 				sanitizeIdentifier(name);
 			case EField(receiver, field):
-				final known = staticFieldExpr(receiver, field, scope);
-				if (known != null) known; else {
-					final typePath = staticReceiverTypePath(receiver);
-					if (typePath != null
-						&& typePath.length > 0
-						&& !exprNameHasLocalStorage(typePath, scope)
-						&& startsWithUppercaseTypeName(typePath))
-						sanitizeTypePath(typeBaseName(typePath)) + "::" + sanitizeIdentifier(field);
-					else
-						renderExpr(left, scope);
+				final dynamicSlot = dynamicFunctionSlotAccessExpr(receiver, field, scope);
+				if (dynamicSlot != null) dynamicSlot; else {
+					final known = staticFieldExpr(receiver, field, scope);
+					if (known != null)
+						known;
+					else {
+						final typePath = staticReceiverTypePath(receiver);
+						if (typePath != null
+							&& typePath.length > 0
+							&& !exprNameHasLocalStorage(typePath, scope)
+							&& startsWithUppercaseTypeName(typePath))
+							sanitizeTypePath(typeBaseName(typePath)) + "::" + sanitizeIdentifier(field);
+						else
+							renderExpr(left, scope);
+					}
 				}
 			case _:
 				renderExpr(left, scope);
 		}
+	}
+
+	static function assignmentDynamicFunctionSlotCppType(left:HxExpr, ?scope:CppRenderScope):String {
+		return switch (left) {
+			case EField(receiver, field):
+				final info = dynamicFunctionSlotInfo(receiver, field, scope);
+				if (info == null) ""; else {
+					final prepared = dynamicFunctionPreparedScope(info.fn, info.owner, lookupForScope(scope));
+					dynamicFunctionCppType(info.fn, prepared.scope);
+				}
+			case _:
+				"";
+		}
+	}
+
+	/**
+		Returns the physical C++ field expression for assignable Haxe `dynamic`
+		function slots. Those slots render as `std::function` storage, so assignment
+		must target `obj->field` instead of the ordinary method-value lambda.
+	**/
+	static function dynamicFunctionSlotAccessExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
+		final info = dynamicFunctionSlotInfo(receiver, field, scope);
+		if (info == null)
+			return null;
+		return switch (receiver) {
+			case EThis:
+				"this->" + sanitizeIdentifier(field);
+			case _:
+				renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + sanitizeIdentifier(field);
+		};
+	}
+
+	static function dynamicFunctionSlotInfo(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<{owner:HxClassDecl, fn:HxFunctionDecl}> {
+		if (scope == null)
+			return null;
+		final className = instanceMethodReceiverClassName(exprCppType(receiver, scope), scope);
+		if (className == null || className.length == 0)
+			return null;
+		final lookup = lookupForScope(scope);
+		var current = sanitizeTypePath(typeBaseName(className));
+		final seen = new haxe.ds.StringMap<Bool>();
+		while (current.length > 0 && !seen.exists(current)) {
+			seen.set(current, true);
+			final cls = scope.classByName.get(current);
+			if (cls == null)
+				return null;
+			final fn = classMethodDeclIn(cls, field, false);
+			if (fn != null) {
+				if (hasFunctionMetadata(fn, "dynamic") || inheritedDynamicFunctionSlot(fn, cls, lookup))
+					return {owner: cls, fn: fn};
+				return null;
+			}
+			final next = baseTypeName(cls);
+			current = next == null ? "" : sanitizeTypePath(typeBaseName(next));
+		}
+		return null;
 	}
 
 	static function exprNameHasLocalStorage(name:String, ?scope:CppRenderScope):Bool {
