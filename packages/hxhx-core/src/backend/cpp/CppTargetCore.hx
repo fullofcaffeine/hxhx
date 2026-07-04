@@ -1933,6 +1933,9 @@ class CppTargetCore {
 			return "bool";
 		if (cleanField == "__hx_params")
 			return "std::vector<std::string>";
+		final methodCallable = methodValueCppFunctionType(expr, scope);
+		if (methodCallable.length > 0)
+			return methodCallable;
 		final callable = inferredCallableValueType(expr, scope);
 		if (callable.length > 0)
 			return callable;
@@ -1974,6 +1977,60 @@ class CppTargetCore {
 			case _:
 				"int";
 		};
+	}
+
+	static function methodValueCppFunctionType(expr:HxExpr, ?scope:CppRenderScope):String {
+		if (scope == null)
+			return "";
+		return switch (expr) {
+			case EField(EIdent("Math"), method):
+				mathFunctionValueCppType(method);
+			case EField(receiver, _):
+				final fn = knownCallDecl(expr, scope);
+				final owner = fn == null ? null : ownerForKnownCall(expr, scope);
+				if (fn == null || owner == null) ""; else {
+					final returnType = cppFunctionReturnType(fn, owner, lookupForScope(scope));
+					final argTypes = inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
+					final staticOwner = staticReceiverClassName(receiver, scope);
+					final typedArgs = staticOwner == null ? instantiateGenericClassParamTypes(sanitizeTypePath(HxClassDecl.getName(owner)),
+						exprCppType(receiver, scope), argTypes, scope) : argTypes;
+					cppFunctionValueType(returnType, typedArgs);
+				}
+			case _:
+				"";
+		};
+	}
+
+	static function mathFunctionValueCppType(method:String):String {
+		return switch (method) {
+			case "abs" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "exp" | "log" | "sqrt" | "floor" | "ceil" | "ffloor" | "fceil" | "fround":
+				cppFunctionValueType("double", ["double"]);
+			case "min" | "max" | "atan2" | "pow":
+				cppFunctionValueType("double", ["double", "double"]);
+			case "round":
+				cppFunctionValueType("int", ["double"]);
+			case "random":
+				cppFunctionValueType("double", []);
+			case "isFinite" | "isNaN":
+				cppFunctionValueType("bool", ["double"]);
+			case _:
+				"";
+		};
+	}
+
+	static function cppFunctionValueType(returnType:String, argTypes:Array<String>):String {
+		final ret = StringTools.trim(returnType == null ? "" : returnType);
+		if (ret.length == 0 || ret == "auto")
+			return "";
+		final args = new Array<String>();
+		final sourceArgs = argTypes == null ? [] : argTypes;
+		for (arg in sourceArgs) {
+			final typeName = StringTools.trim(arg == null ? "" : arg);
+			if (typeName.length == 0 || typeName == "auto")
+				return "";
+			args.push(typeName);
+		}
+		return "std::function<" + ret + "(" + args.join(", ") + ")>";
 	}
 
 	static function isScopeTypeParam(typeName:String, ?scope:CppRenderScope):Bool {

@@ -1896,14 +1896,34 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SReturn(ECall(EField(EIdent("o"), "f"), []), HxPos.unknown())
 			], "")
 		], []);
+		final methodCarrier = new HxClassDecl("MethodCarrier", false, [
+			new HxFunctionDecl("add", Public, false, [
+				new HxFunctionArg("x", "Int", NoDefault, false, false),
+				new HxFunctionArg("y", "Int", NoDefault, false, false)
+			], "Int",
+				[SReturn(EBinop("+", EIdent("x"), EIdent("y")), HxPos.unknown())], ""),
+			new HxFunctionDecl("run", Public, false, [], "Int", [
+				SVar("o", "", EAnon(["add"], [EField(EThis, "add")]), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("o"), "add"), [EInt(1), EInt(2)]), HxPos.unknown())
+			], "")
+		], []);
+		final mathCarrier = new HxClassDecl("MathCarrier", false, [
+			new HxFunctionDecl("run", Public, false, [], "Float", [
+				SVar("o", "", EAnon(["cos"], [EField(EIdent("Math"), "cos")]), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("o"), "cos"), [EFloat(0)]), HxPos.unknown())
+			], "")
+		], []);
 		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
-		final decl = new HxModuleDecl("", [], main, [main, slot, localCarrier], false, false);
+		final decl = new HxModuleDecl("", [], main, [main, slot, localCarrier, methodCarrier, mathCarrier], false, false);
 		final program = new GenIrProgram([typedSyntheticModule("ArrowSlot.hx", decl)], false);
 		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
 		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup);
 		final names = [for (struct in structs) struct.name].join("\n");
 		assertContains(names, "__hxhx_anon_f_std__function_int_int__", "C++ anonymous collection should preserve structural function-field type hints");
 		assertContains(names, "__hxhx_anon_f_std__function_int___", "C++ anonymous collection should preserve local zero-arg function field carriers");
+		assertContains(names, "__hxhx_anon_add_std__function_int_int__int__",
+			"C++ anonymous collection should preserve instance method-value function field carriers");
+		assertContains(names, "__hxhx_anon_cos_std__function_double_double__", "C++ anonymous collection should preserve Math function-value field carriers");
 		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(slot, lookup).join("\n");
 		assertContains(lines, "std::function<int(int)> f = nullptr;",
 			"C++ optional function-typed fields should use the argument value type instead of the optional marker name");
