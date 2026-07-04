@@ -296,7 +296,8 @@ class CppTypeModel {
 			case _ if (isIteratorTypeHint(hint)):
 				"std::shared_ptr<__hxhx_iterator<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">>";
 			case _ if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint)):
-				"std::vector<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">";
+				final arg = genericTypeHintArg(hint);
+				"std::vector<" + (isDynamicOrAnyTypeHint(arg) ? "std::any" : cppTypeHint(arg, scope, classLookup)) + ">";
 			case _ if (isFunctionTypeHint(hint)):
 				cppFunctionTypeHint(hint, scope, classLookup);
 			case _ if (erasedClassLikeTypeName(hint) != null):
@@ -500,6 +501,11 @@ class CppTypeModel {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		final base = sanitizeTypePath(typeBaseName(hint));
 		return (base == "Dynamic" || base == "Any") && genericTypeHintArgs(hint).length > 0;
+	}
+
+	static function isDynamicOrAnyTypeHint(typeHint:String):Bool {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		return hint == "Dynamic" || hint == "Any" || isGenericDynamicLikeTypeHint(hint);
 	}
 
 	static function erasedClassLikeTypeName(typeHint:String):Null<String> {

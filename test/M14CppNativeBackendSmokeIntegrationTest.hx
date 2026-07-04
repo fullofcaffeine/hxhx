@@ -3278,6 +3278,68 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function cppJsonCarrierRuntimeProgram():GenIrProgram {
+		final pos = HxPos.unknown();
+		final mainSource = [
+			"class Main {",
+			"  static function main() {",
+			"    var structural = haxe.Json.stringify({x: -4500, y: 1.456, a: [\"hello\", \"wor'\\\"\\n\\t\\rd\"]});",
+			"    Sys.println(structural);",
+			"    Sys.println(haxe.Json.stringify(haxe.Json.parse(structural)));",
+			"    Sys.println(haxe.Json.stringify({test: {nested: null}}));",
+			"    var mix:Array<Dynamic> = [1, 2, 3, \"str\"];",
+			"    Sys.println(haxe.Json.stringify({array: mix}));",
+			"    var unicode:String = haxe.Json.parse(\"\\\"\\\\u00E9\\\"\");",
+			"    Sys.println(Std.string(unicode.length));",
+			"    Sys.println(Std.string(unicode.charCodeAt(0)));",
+			"    Sys.println(haxe.Json.stringify(0.15461));",
+			"    Sys.println(haxe.Json.stringify(-485.15461));",
+			"    Sys.println(haxe.Json.stringify(1e10));",
+			"    Sys.println(haxe.Json.stringify(-1e-10));",
+			"    Sys.println(haxe.Json.stringify(-0.0));",
+			"    Sys.println(haxe.Json.stringify(Math.POSITIVE_INFINITY));",
+			"    Sys.println(haxe.Json.stringify(Math.NEGATIVE_INFINITY));",
+			"    Sys.println(haxe.Json.stringify(Math.NaN));",
+			"    Sys.println(haxe.format.JsonPrinter.print(function() {}));",
+			"    Sys.println(haxe.format.JsonPrinter.print({a: function() {}, b: 1}));",
+			"    try {",
+			"      haxe.format.JsonParser.parse(\"{\\\"\\\"\\\"a\\\": 1}\");",
+			"      Sys.println(\"invalid-missed\");",
+			"    } catch (e:Dynamic) {",
+			"      Sys.println(Std.string(e));",
+			"    }",
+			"  }",
+			"}"
+		].join("\n");
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final replacerType = "String->String->String";
+		final json = new HxClassDecl("Json", false, [
+			new HxFunctionDecl("stringify", Public, true, [
+				new HxFunctionArg("value", "Dynamic", NoDefault, false, false),
+				new HxFunctionArg("replacer", replacerType, NoDefault, true, false),
+				new HxFunctionArg("space", "String", NoDefault, true, false)
+			],
+				"String", [SReturn(EString(""), pos)], ""),
+			new HxFunctionDecl("parse", Public, true, [new HxFunctionArg("text", "String", NoDefault, false, false)], "Dynamic", [SReturn(ENull, pos)], "")
+		], []);
+		final jsonPrinter = new HxClassDecl("JsonPrinter", false, [
+			new HxFunctionDecl("print", Public, true, [
+				new HxFunctionArg("value", "Dynamic", NoDefault, false, false),
+				new HxFunctionArg("replacer", replacerType, NoDefault, true, false),
+				new HxFunctionArg("space", "String", NoDefault, true, false)
+			], "String", [SReturn(EString(""), pos)], "")
+		], []);
+		final jsonParser = new HxClassDecl("JsonParser", false, [
+			new HxFunctionDecl("parse", Public, true, [new HxFunctionArg("text", "String", NoDefault, false, false)], "Dynamic", [SReturn(ENull, pos)], "")
+		], []);
+		return MacroStage.expandProgram([
+			typedMain,
+			typedSyntheticModule("std/haxe/Json.hx", new HxModuleDecl("haxe", [], json, [json], false, false)),
+			typedSyntheticModule("std/haxe/format/JsonPrinter.hx", new HxModuleDecl("haxe.format", [], jsonPrinter, [jsonPrinter], false, false)),
+			typedSyntheticModule("std/haxe/format/JsonParser.hx", new HxModuleDecl("haxe.format", [], jsonParser, [jsonParser], false, false))
+		], []);
+	}
+
 	static function vendorReadOnlyArrayProgramWhenAvailable():Null<GenIrProgram> {
 		final readOnlyArrayPath = "vendor/haxe/std/haxe/ds/ReadOnlyArray.hx";
 		if (!FileSystem.exists(readOnlyArrayPath))
@@ -3553,7 +3615,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		shadowScope.localTypeOverrides.set("v", "std::shared_ptr<EnumValue>");
 		final shadowLines = @:privateAccess backend.cpp.CppTargetCore.renderStmt(SVar("v", "Array<Dynamic>", EIdent("v"), HxPos.unknown()), "  ", shadowScope)
 			.join("\n");
-		assertContains(shadowLines, "std::vector<std::string> v_2 = __hxhx_string_vector_any(v);",
+		assertContains(shadowLines, "std::vector<std::any> v_2 = __hxhx_any_vector_any(v);",
 			"C++ shadowing typed locals should render initializers against the previous binding and keep explicit Array<Dynamic> type hints");
 		assertTrue(shadowLines.indexOf("std::shared_ptr<EnumValue> v_2 = v_2") < 0,
 			"C++ explicit typed locals must not inherit stale Dynamic/enum overrides or self-initialize when shadowing a parameter");
@@ -5284,8 +5346,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final dceClassRefLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(dceClassRefOwner,
 			{names: dceClassRefNames, byName: dceClassRefClasses})
 			.join("\n");
-		assertContains(dceClassRefLines, "std::vector<std::string>{std::string(), std::string(\"unit.UsedReferenced2\")}",
-			"C++ package-qualified class references in string-shaped static initializers should emit class path strings");
+		assertContains(dceClassRefLines, "std::vector<std::any>{std::any(), std::any(std::string(\"unit.UsedReferenced2\"))}",
+			"C++ package-qualified class references in Dynamic array static initializers should emit class path string carriers");
 		assertTrue(dceClassRefLines.indexOf("std::to_string((unit.UsedReferenced2))") < 0,
 			"C++ package-qualified class references should not lower as invalid field reads in static initializers");
 		final structuralTypedefParsed = ParserStage.parse([
@@ -9924,10 +9986,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should forward optional JsonPrinter replacer/space storage without unwrapping");
 		assertTrue(source.indexOf("JsonPrinterLike::print(\"v\", replacer.value(), space.value())") < 0,
 			"C++ smoke should not unwrap optional JsonPrinter replacer/space when callee expects optionals");
-		assertContains(source, "return JsonPrinter::print(std::any(value), replacer, space);",
-			"C++ smoke should forward upstream Json.stringify optional replacer/space storage without unwrapping");
+		assertContains(source, "struct __hxhx_json_value {", "C++ smoke should emit the JSON-specific carrier seam");
+		assertContains(source, "__hxhx_json_stringify(__hxhx_json_from(value))", "C++ smoke should route Json.stringify-shaped helpers through the JSON seam");
+		assertTrue(source.indexOf("return JsonPrinter::print(std::any(value), replacer, space);") < 0,
+			"C++ smoke should not route Json.stringify-shaped helpers through JsonPrinter string conversion");
 		assertTrue(source.indexOf("JsonPrinter::print(std::any(value), replacer.value(), space.value())") < 0,
-			"C++ smoke should not unwrap upstream Json.stringify optionals before forwarding to JsonPrinter.print");
+			"C++ smoke should not unwrap upstream Json.stringify optionals before checking unsupported JSON options");
 		assertContains(source, "void write(std::string k, std::any v)", "C++ smoke should keep reassigned JsonPrinter Dynamic parameters erased");
 		assertContains(source, "v = valueLike();", "C++ smoke should keep JsonPrinter Dynamic parameter reassignment erased");
 		assertContains(source, "v = replacer(k, __hxhx_stringify(v));", "C++ smoke should stringify erased Dynamic when calling string-shaped function values");
@@ -10220,10 +10284,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			names: parsedRunnerGenericNames,
 			byName: parsedRunnerGenericClasses
 		}).join("\n");
-		assertContains(parsedArrayDynamicLines, "createInstance(std::vector<std::string> args)",
-			"C++ Array<Dynamic> function args should keep target-owned vector lowering");
-		assertContains(parsedArrayDynamicLines, "compareArgs(std::vector<std::string> a1, std::vector<std::string> a2)",
+		assertContains(parsedArrayDynamicLines, "createInstance(std::vector<std::any> args)",
+			"C++ Array<Dynamic> function args should keep erased target-owned vector lowering");
+		assertContains(parsedArrayDynamicLines, "compareArgs(std::vector<std::any> a1, std::vector<std::any> a2)",
 			"C++ Array<Dynamic> instance args should not render shared_ptr<Array<TDynamic>>");
+		assertContains(parsedArrayDynamicLines, "return __hxhx_stringify((args[0]));",
+			"C++ Array<Dynamic> element returns in string-shaped helpers should stringify erased elements explicitly");
 		assertContains(parsedArrayDynamicLines, "(a1[0])", "C++ Array<Dynamic> indexing should lower to vector indexing, not Array helper pointer indexing");
 		assertTrue(parsedArrayDynamicLines.indexOf("std::shared_ptr<Array<TDynamic>>") < 0,
 			"C++ Array<Dynamic> args should not use generic Dynamic wildcard helper classes");
@@ -11321,6 +11387,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(optionalDynamicStringRun.code == 0, "C++ optional Dynamic string runtime smoke failed: " + optionalDynamicStringRun.stderr);
 			assertTrue(optionalDynamicStringRun.stdout == "0\n0\n12\nnull\n12\nnull\n12\n0\n",
 				"unexpected C++ optional Dynamic string stdout: " + optionalDynamicStringRun.stdout);
+
+			final cppJsonCarrierBuildDir = Path.join([root, "cpp-json-carrier-runtime-build"]);
+			final cppJsonCarrierBuilt = BackendRegistry.createForTarget("cpp-native")
+				.emit(cppJsonCarrierRuntimeProgram(), context(cppJsonCarrierBuildDir, true, false));
+			assertTrue(cppJsonCarrierBuilt.builtExecutable, "C++ JSON carrier runtime smoke should build executable");
+			final cppJsonCarrierRun = commandOutput(cppJsonCarrierBuilt.entryPath, []);
+			assertTrue(cppJsonCarrierRun.code == 0, "C++ JSON carrier runtime smoke failed: " + cppJsonCarrierRun.stderr);
+			assertTrue(cppJsonCarrierRun.stdout == "{\"a\":[\"hello\",\"wor'\\\"\\n\\t\\rd\"],\"x\":-4500,\"y\":1.456}\n"
+				+ "{\"a\":[\"hello\",\"wor'\\\"\\n\\t\\rd\"],\"x\":-4500,\"y\":1.456}\n"
+				+ "{\"test\":{\"nested\":null}}\n"
+				+ "{\"array\":[1,2,3,\"str\"]}\n"
+				+ "1\n"
+				+ "233\n"
+				+ "0.15461\n"
+				+ "-485.15461\n"
+				+ "10000000000\n"
+				+ "-1e-10\n"
+				+ "-0\n"
+				+ "null\n"
+				+ "null\n"
+				+ "null\n"
+				+ "\"<fun>\"\n"
+				+ "{\"b\":1}\n"
+				+ "Invalid char 34 at position 3\n",
+				"unexpected C++ JSON carrier stdout: "
+				+ cppJsonCarrierRun.stdout);
 
 			final lockMutexBuildDir = Path.join([root, "lock-mutex-runtime-build"]);
 			final lockMutexBuilt = BackendRegistry.createForTarget("cpp-native").emit(lockMutexRuntimeProgram(), context(lockMutexBuildDir, true, false));

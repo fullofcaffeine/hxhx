@@ -351,8 +351,10 @@ class CppTargetCore {
 		out.push("#include <cstring>");
 		out.push("#include <fstream>");
 		out.push("#include <functional>");
+		out.push("#include <iomanip>");
 		out.push("#include <iostream>");
 		out.push("#include <limits>");
+		out.push("#include <locale>");
 		out.push("#include <map>");
 		out.push("#include <memory>");
 		out.push("#include <mutex>");
@@ -1104,6 +1106,9 @@ class CppTargetCore {
 		out.push("}");
 		out.push("");
 		for (line in CppRuntimeSupport.compareLines())
+			out.push(line);
+		out.push("");
+		for (line in CppRuntimeSupport.jsonSupportLines())
 			out.push(line);
 		out.push("");
 		out.push("template<typename T>");
@@ -1873,6 +1878,15 @@ class CppTargetCore {
 				lines.push("  " + struct.name + "(const Other& other) : " + otherInits.join(", ") + " {}");
 			}
 			lines.push("};");
+			lines.push("");
+			lines.push("static __hxhx_json_value __hxhx_json_from(const " + struct.name + "& value) {");
+			lines.push("  std::vector<std::pair<std::string, __hxhx_json_value>> fields;");
+			for (i in 0...struct.fieldNames.length) {
+				final fieldName = sanitizeIdentifier(struct.fieldNames[i]);
+				lines.push("  fields.push_back({std::string(\"" + fieldName + "\"), __hxhx_json_from(value." + fieldName + ")});");
+			}
+			lines.push("  return __hxhx_json_value::object(std::move(fields));");
+			lines.push("}");
 			out.push(lines);
 		}
 		return out;
@@ -1963,6 +1977,8 @@ class CppTargetCore {
 				"double";
 			case EBool(_):
 				"bool";
+			case ENull:
+				"std::nullptr_t";
 			case ETernary(_, thenExpr, elseExpr) if (isCppBoolExpr(thenExpr, scope) && isCppBoolExpr(elseExpr, scope)):
 				"bool";
 			case EUnop("post++", _) | EUnop("post--", _):
@@ -4424,6 +4440,16 @@ class CppTargetCore {
 					cppTypeHint("Bytes", scope, classLookup);
 				case "__init__":
 					"void";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
+		if (owner == "Json") {
+			return switch (method) {
+				case "parse":
+					"std::any";
+				case "stringify":
+					"std::string";
 				case _:
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
@@ -7382,8 +7408,12 @@ class CppTargetCore {
 
 	static function inferredCallableValueType(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
+			case ELambda(args, body) if (args.length == 0):
+				zeroArgLambdaCppFunctionType(body, scope);
 			case ELambda(args, body):
 				inferredLambdaCppFunctionType(args, body, [], scope);
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(_)]) if (args.length == 0):
+				zeroArgLambdaCppFunctionType(body, scope);
 			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(_)]):
 				inferredLambdaCppFunctionType(args, body, [], scope);
 			case ECall(EField(receiver, "makeVarArgs"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
@@ -7391,6 +7421,11 @@ class CppTargetCore {
 			case _:
 				"";
 		};
+	}
+
+	static function zeroArgLambdaCppFunctionType(body:HxExpr, ?scope:CppRenderScope):String {
+		final inferred = inferredLambdaCppFunctionType([], body, [], scope);
+		return inferred.length > 0 && inferred.indexOf("std::nullptr_t") < 0 ? inferred : "std::function<void()>";
 	}
 
 	static function inferredStaticFieldCallableType(owner:String, field:String, explicit:String, init:Null<HxExpr>, scope:CppRenderScope):String {
@@ -10212,6 +10247,9 @@ class CppTargetCore {
 			case _:
 		}
 		if (expectedType == "std::string") {
+			final jsonParsedString = jsonParseValueExprForExpectedType(expr, expectedType, scope);
+			if (jsonParsedString != null)
+				return jsonParsedString;
 			switch (expr) {
 				case ECall(_, _) if (actualType == "std::string" && macroApiCallExprForExpected(expr, expectedType, scope) == null):
 					return renderExpr(expr, scope);
@@ -10220,7 +10258,7 @@ class CppTargetCore {
 			return stringExpr(expr, scope);
 		}
 		if (expectedType == "std::any" && actualType != "std::any")
-			return "std::any(" + renderExpr(expr, scope) + ")";
+			return "std::any(" + (classReferencePathText(expr, scope) != null ? stringExpr(expr, scope) : renderExpr(expr, scope)) + ")";
 		if (actualType == "std::any") {
 			switch (expectedType) {
 				case "double" | "float":
@@ -10234,6 +10272,8 @@ class CppTargetCore {
 		}
 		if (expectedType == "std::vector<std::string>" && actualType == "std::any")
 			return "__hxhx_string_vector_any(" + renderExpr(expr, scope) + ")";
+		if (expectedType == "std::vector<std::any>" && actualType == "std::any")
+			return "__hxhx_any_vector_any(" + renderExpr(expr, scope) + ")";
 		if (isCppFunctionType(expectedType)) {
 			final identityValue = dynamicIdentityCallExprForExpectedFunction(expr, expectedType, scope);
 			if (identityValue != null)
@@ -10279,6 +10319,34 @@ class CppTargetCore {
 			case _:
 		}
 		return renderExpr(expr, scope);
+	}
+
+	static function jsonParseValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case ECall(EField(receiver, "parse"), args) if (args.length == 1 && isJsonParseStaticReceiver(receiver)):
+				switch (expectedType) {
+					case "std::string":
+						"__hxhx_json_any_string(__hxhx_json_parse(" + stringExpr(args[0], scope) + "))";
+					case "std::any":
+						"__hxhx_json_parse(" + stringExpr(args[0], scope) + ")";
+					case _:
+						null;
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function isJsonParseStaticReceiver(receiver:HxExpr):Bool {
+		final path = staticReceiverTypePath(receiver);
+		if (path == null)
+			return false;
+		return switch (sanitizeTypePath(typeBaseName(path))) {
+			case "Json" | "JsonParser":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function explicitReferenceCastExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -10612,6 +10680,12 @@ class CppTargetCore {
 				staticEnumMethodValueExpr(receiver, field, scope);
 			case EField(receiver, field) if (staticFieldExpr(receiver, field, scope) != null):
 				staticFieldExpr(receiver, field, scope);
+			case EField(receiver, field) if (exprCppType(receiver, scope) == "std::any"):
+				"__hxhx_json_any_field("
+				+ renderExpr(receiver, scope)
+				+ ", std::string(\""
+				+ sanitizeIdentifier(field)
+				+ "\"))";
 			case EField(receiver, "length"):
 				"(" + renderExpr(receiver, scope) + ".size())";
 			case EArrayAccess(array, index) if (isCppOptionalVectorType(exprCppType(array, scope))):
@@ -11665,6 +11739,9 @@ class CppTargetCore {
 		if (isCppConstPointerStaticReceiver(receiver) && method == "fromPointer" && args.length == 1)
 			return "std::make_shared<ConstPointer<void>>(" + renderExpr(args[0], scope) + ")";
 		if (receiverTypeName != null) {
+			final jsonIntrinsic = jsonStaticCallExpr(receiverTypeName, method, args, scope);
+			if (jsonIntrinsic != null)
+				return jsonIntrinsic;
 			final xmlIntrinsic = xmlInlineCycleIntrinsicCallExpr(receiverTypeName, method, args, scope);
 			if (xmlIntrinsic != null)
 				return xmlIntrinsic;
@@ -11686,6 +11763,126 @@ class CppTargetCore {
 			+ "("
 			+ renderedArgs()
 			+ ")";
+	}
+
+	static function jsonStaticCallExpr(receiverTypeName:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		final owner = sanitizeTypePath(typeBaseName(receiverTypeName == null ? "" : receiverTypeName));
+		return switch (owner) {
+			case "Json":
+				switch (method) {
+					case "stringify" if (args.length >= 1):
+						jsonStringifyCallExpr(args, scope);
+					case "parse" if (args.length == 1):
+						"__hxhx_json_parse(" + stringExpr(args[0], scope) + ")";
+					case _:
+						null;
+				}
+			case "JsonPrinter":
+				switch (method) {
+					case "print" if (args.length >= 1):
+						jsonStringifyCallExpr(args, scope);
+					case _:
+						null;
+				}
+			case "JsonParser":
+				switch (method) {
+					case "parse" if (args.length == 1):
+						"__hxhx_json_parse(" + stringExpr(args[0], scope) + ")";
+					case _:
+						null;
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function jsonStringifyCallExpr(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final base = "__hxhx_json_stringify(__hxhx_json_from(" + jsonValueArgExpr(args[0], scope) + "))";
+		final optionChecks = jsonStringifyOptionChecks(args, scope);
+		if (optionChecks.length == 0)
+			return base;
+		final out = ["([&]() -> std::string {"];
+		for (check in optionChecks)
+			out.push("  " + check);
+		out.push("  return " + base + ";");
+		out.push("})()");
+		return out.join(" ");
+	}
+
+	static function jsonValueArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case EUnop("-", EFloat(value)) if (value == 0):
+				"-0.0";
+			case _:
+				renderExpr(expr, scope);
+		};
+	}
+
+	static function jsonStringifyOptionChecks(args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		final checks = new Array<String>();
+		if (args == null || args.length <= 1)
+			return checks;
+		if (args.length > 1)
+			addJsonStringifyOptionCheck(checks, args[1], "replacer", scope);
+		if (args.length > 2)
+			addJsonStringifyOptionCheck(checks, args[2], "space", scope);
+		return checks;
+	}
+
+	static function addJsonStringifyOptionCheck(checks:Array<String>, arg:HxExpr, name:String, ?scope:CppRenderScope):Void {
+		if (exprIsNullLiteral(arg))
+			return;
+		final optionalReceiver = optionalValueCallReceiver(arg, scope);
+		if (optionalReceiver != null) {
+			final local = "__hxhx_json_" + name;
+			checks.push("auto "
+				+ local
+				+ " = "
+				+ optionalStorageExpr(optionalReceiver, scope)
+				+ "; if ("
+				+ local
+				+ ".has_value()) return __hxhx_json_unsupported_string(\"Json.stringify "
+				+ name
+				+ " is not implemented in hxhx C++ JSON seam\");");
+			return;
+		}
+		final typeName = exprCppType(arg, scope);
+		if (isCppOptionalType(typeName)) {
+			final local = "__hxhx_json_" + name;
+			checks.push("auto "
+				+ local
+				+ " = "
+				+ optionalStorageExpr(arg, scope)
+				+ "; if ("
+				+ local
+				+ ".has_value()) return __hxhx_json_unsupported_string(\"Json.stringify "
+				+ name
+				+ " is not implemented in hxhx C++ JSON seam\");");
+			return;
+		}
+		checks.push("return __hxhx_json_unsupported_string(\"Json.stringify " + name + " is not implemented in hxhx C++ JSON seam\");");
+	}
+
+	static function optionalValueCallReceiver(expr:HxExpr, ?scope:CppRenderScope):Null<HxExpr> {
+		return switch (expr) {
+			case ECall(EField(receiver, "value"), []):
+				receiver;
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				optionalValueCallReceiver(inner, scope);
+			case _:
+				null;
+		};
+	}
+
+	static function exprIsNullLiteral(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ENull:
+				true;
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				exprIsNullLiteral(inner);
+			case _:
+				false;
+		};
 	}
 
 	static function xmlInlineCycleIntrinsicCallExpr(receiverTypeName:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
@@ -13584,17 +13781,21 @@ class CppTargetCore {
 						classFieldCppType(staticOwner, field, scope);
 					else {
 						final receiverType = exprCppType(receiver, scope);
-						final fieldReceiverType = cppOptionalInnerType(receiverType).length > 0 ? cppOptionalInnerType(receiverType) : receiverType;
-						final anonFieldType = anonStructFieldCppType(fieldReceiverType, field, scope);
-						if (anonFieldType.length > 0)
-							anonFieldType;
+						if (receiverType == "std::any")
+							"std::any";
 						else {
-							final directFieldType = classFieldCppType(fieldReceiverType, field, scope);
-							if (directFieldType.length > 0)
-								directFieldType;
+							final fieldReceiverType = cppOptionalInnerType(receiverType).length > 0 ? cppOptionalInnerType(receiverType) : receiverType;
+							final anonFieldType = anonStructFieldCppType(fieldReceiverType, field, scope);
+							if (anonFieldType.length > 0)
+								anonFieldType;
 							else {
-								final ownerType = classNameFromCppExprType(fieldReceiverType, scope);
-								ownerType == null ? "" : receiverClassFieldCppType(ownerType, fieldReceiverType, field, scope);
+								final directFieldType = classFieldCppType(fieldReceiverType, field, scope);
+								if (directFieldType.length > 0)
+									directFieldType;
+								else {
+									final ownerType = classNameFromCppExprType(fieldReceiverType, scope);
+									ownerType == null ? "" : receiverClassFieldCppType(ownerType, fieldReceiverType, field, scope);
+								}
 							}
 						}
 					}
@@ -15916,6 +16117,9 @@ class CppTargetCore {
 		final macroApiCall = macroApiCallExprForExpected(expr, "std::string", scope);
 		if (macroApiCall != null)
 			return macroApiCall;
+		final jsonParsedString = jsonParseValueExprForExpectedType(expr, "std::string", scope);
+		if (jsonParsedString != null)
+			return jsonParsedString;
 		final enumCtor = enumMetadataCtorStringExpr(expr, scope);
 		if (enumCtor != null)
 			return enumCtor;
@@ -15997,6 +16201,8 @@ class CppTargetCore {
 				"std::to_string(" + renderExpr(expr, scope) + ")";
 			case EField(_, _) if (exprCppType(expr, scope) == "std::string"):
 				renderExpr(expr, scope);
+			case EArrayAccess(_, _) if (exprCppType(expr, scope) == "std::any"):
+				"__hxhx_stringify(" + renderExpr(expr, scope) + ")";
 			case EArrayAccess(_, _):
 				"std::string(" + renderExpr(expr, scope) + ")";
 			case EBinop("+", left, right) if (isCppStringExpr(left, scope) || isCppStringExpr(right, scope)):
@@ -17719,7 +17925,8 @@ class CppTargetCore {
 	static function arrayExprWithElementType(elements:Array<HxExpr>, typeName:String, ?scope:CppRenderScope):String {
 		final values = [
 			for (element in elements)
-				typeName == "std::string" ? stringExpr(element, scope) : renderExpr(element, scope)
+				if (typeName == "std::string") stringExpr(element,
+					scope); else if (typeName == "std::any") valueExprForExpectedType(element, typeName, scope); else renderExpr(element, scope)
 		];
 		return "std::vector<" + typeName + ">{" + values.join(", ") + "}";
 	}
@@ -18391,8 +18598,10 @@ class CppTargetCore {
 			return "std::shared_ptr<" + scopedGenericClass + ">";
 		if (CppTypeModel.isIteratorTypeHint(hint))
 			return "std::shared_ptr<__hxhx_iterator<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">>";
-		if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint))
-			return "std::vector<" + cppTypeHint(genericTypeHintArg(hint), scope, classLookup) + ">";
+		if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint)) {
+			final arg = genericTypeHintArg(hint);
+			return "std::vector<" + (isDynamicLikeTypeHint(arg) ? "std::any" : cppTypeHint(arg, scope, classLookup)) + ">";
+		}
 		if (isFunctionTypeHint(hint))
 			return cppFunctionTypeHint(hint, scope, classLookup);
 		if (isCppPointerTypeHint(hint))
