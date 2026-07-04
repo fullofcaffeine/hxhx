@@ -2134,6 +2134,51 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(lines.indexOf("std::to_string((v + x))") < 0, "C++ additive-chain inference should not stringify the numeric prefix");
 	}
 
+	static function assertCppDynamicFunctionsUseAssignableStorage():Void {
+		final pos = HxPos.unknown();
+		final ctor = new HxFunctionDecl("new", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Void",
+			[SExpr(EBinop("=", EField(EThis, "v"), EIdent("v")), pos)], "");
+		final add = new HxFunctionDecl("add", Public, false, [
+			new HxFunctionArg("x", "", NoDefault, false, false),
+			new HxFunctionArg("y", "", NoDefault, false, false)
+		], "",
+			[SReturn(EBinop("+", EBinop("+", EIdent("v"), EIdent("x")), EIdent("y")), pos)], "", ["dynamic"]);
+		final staticDynamic = new HxFunctionDecl("staticDynamic", Public, true, [
+			new HxFunctionArg("x", "", NoDefault, false, false),
+			new HxFunctionArg("y", "", NoDefault, false, false)
+		], "",
+			[SReturn(EBinop("+", EBinop("+", EIdent("Z"), EIdent("x")), EIdent("y")), pos)], "", ["dynamic"]);
+		final base = new HxClassDecl("DynBase", false, [ctor, add, staticDynamic], [
+			new HxFieldDecl("v", Public, false, "Int", EInt(0)),
+			new HxFieldDecl("Z", Public, true, "Int", EInt(10))
+		]);
+		final overrideAdd = new HxFunctionDecl("add", Public, false, [
+			new HxFunctionArg("x", "", NoDefault, false, false),
+			new HxFunctionArg("y", "", NoDefault, false, false)
+		], "", [
+			SReturn(EBinop("*", EBinop("+", EBinop("+", EIdent("v"), EIdent("x")), EIdent("y")), EInt(2)), pos)
+		], "");
+		final sub = new HxClassDecl("DynSub", false, [overrideAdd], [], "DynBase");
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		for (cls in [base, sub]) {
+			names.set(HxClassDecl.getName(cls), true);
+			classes.set(HxClassDecl.getName(cls), cls);
+		}
+		final lookup = {names: names, byName: classes};
+		final baseLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(base, lookup).join("\n");
+		final subLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(sub, lookup).join("\n");
+		assertContains(baseLines, "std::function<int(int, int)> add = [this](int x, int y) -> int {",
+			"C++ dynamic instance functions should be assignable callable storage");
+		assertContains(baseLines, "inline static std::function<int(int, int)> staticDynamic = [](int x, int y) -> int {",
+			"C++ dynamic static functions should be assignable callable storage");
+		assertTrue(baseLines.indexOf("int add(int x, int y)") < 0, "C++ dynamic instance functions should not render as non-assignable methods");
+		assertTrue(baseLines.indexOf("static int staticDynamic") < 0, "C++ dynamic static functions should not render as non-assignable methods");
+		assertContains(subLines, "DynSub(int v) : DynBase(v) {", "C++ inherited dynamic overrides should preserve the forwarding constructor");
+		assertContains(subLines, "add = [this](int x, int y) -> int {", "C++ inherited dynamic overrides should initialize the inherited callable slot");
+		assertTrue(subLines.indexOf("int add(int x, int y)") < 0, "C++ inherited dynamic overrides should not render a shadowing method");
+	}
+
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {
 		final dynamicFn = new HxFunctionDecl("dynamicValue", Public, false, [], "Dynamic", [SReturn(EArrayDecl([EInt(1)]), HxPos.unknown())], "");
 		final owner = new HxClassDecl("DynamicReturnOwner", false, [dynamicFn], []);
@@ -3190,6 +3235,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions();
 		assertCppStringParamCallsCoerceScalarLiterals();
 		assertCppUnhintedArithmeticParamsStayNumeric();
+		assertCppDynamicFunctionsUseAssignableStorage();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();

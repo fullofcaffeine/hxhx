@@ -2889,6 +2889,11 @@ class CppTargetCore {
 			}
 			traceCppMemberPhase(className, "render_helper_field", fieldName, "end");
 		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (shouldRenderOwnDynamicFunctionStorage(fn, cls, classLookup))
+				for (line in renderDynamicFunctionStorageField(fn, cls, classLookup))
+					out.push(line);
+		}
 		final ctor = findConstructor(cls);
 		if (ctor == null) {
 			for (line in renderImplicitConstructors(className, baseType, scope))
@@ -2905,6 +2910,8 @@ class CppTargetCore {
 				+ constructorInitializerList(ctor, scope)
 				+ " {");
 			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "after_signature");
+			for (line in renderInheritedDynamicFunctionSlotAssignments(cls, classLookup, scope, "    "))
+				out.push(line);
 			for (line in renderStmts(constructorBodyWithoutInitializerStmts(ctor, scope), "    ", scope))
 				out.push(line);
 			out.push("  }");
@@ -2912,6 +2919,9 @@ class CppTargetCore {
 		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == "new")
+				continue;
+			if (shouldRenderOwnDynamicFunctionStorage(fn, cls, classLookup)
+				|| shouldAssignInheritedDynamicFunctionSlot(fn, cls, classLookup))
 				continue;
 			final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 			final timingEnabled = traceCppTimingsEnabled();
@@ -3019,21 +3029,27 @@ class CppTargetCore {
 		final abstractCtor = renderClassBackedAbstractImplicitConstructors(className, scope);
 		if (abstractCtor != null)
 			return abstractCtor;
+		final dynamicAssignments = renderInheritedDynamicFunctionSlotAssignments(scope == null ? null : scope.owner, lookupForScope(scope), scope, "    ");
 		if (baseType == null)
-			return ["  " + className + "() {}"];
+			return renderImplicitConstructorLines("  " + className + "()", dynamicAssignments);
 		final baseCls = scope == null ? null : scope.classByName.get(baseType);
 		if (baseCls == null)
-			return ["  " + className + "() : " + baseType + "() {}"];
+			return renderImplicitConstructorLines("  " + className + "() : " + baseType + "()", dynamicAssignments);
 		final baseCtor = findConstructor(baseCls);
 		if (baseCtor == null)
-			return ["  " + className + "() : " + baseType + "() {}"];
+			return renderImplicitConstructorLines("  " + className + "() : " + baseType + "()", dynamicAssignments);
 		final baseScope = renderScope(baseCls, {names: scope.classNames, byName: scope.classByName}, "void");
 		prepareFunctionScope(baseScope, baseCtor);
 		final args = HxFunctionDecl.getArgs(baseCtor);
 		final argNames = [for (arg in args) sanitizeIdentifier(HxFunctionArg.getName(arg))];
-		return [
-			"  " + className + "(" + renderFunctionArgs(args, baseScope) + ") : " + baseType + "(" + argNames.join(", ") + ") {}"
-		];
+		final signature = "  " + className + "(" + renderFunctionArgs(args, baseScope) + ") : " + baseType + "(" + argNames.join(", ") + ")";
+		return renderImplicitConstructorLines(signature, dynamicAssignments);
+	}
+
+	static function renderImplicitConstructorLines(signature:String, bodyLines:Array<String>):Array<String> {
+		if (bodyLines.length == 0)
+			return [signature + " {}"];
+		return [signature + " {"].concat(bodyLines).concat(["  }"]);
 	}
 
 	/**
@@ -5326,6 +5342,96 @@ class CppTargetCore {
 		for (line in renderDceReflectionHelperStringOverload(fn, scope, returnType))
 			out.push(line);
 		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "end");
+		return out;
+	}
+
+	/**
+		Returns true when this declaration owns an assignable Haxe `dynamic`
+		function slot.
+
+		Instance overrides of an inherited dynamic method reuse the inherited slot
+		instead of declaring another C++ member with the same name, so base-typed
+		reads and calls still observe the override assignment.
+	**/
+	static function shouldRenderOwnDynamicFunctionStorage(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (fn == null || HxFunctionDecl.getName(fn) == "new" || !hasFunctionMetadata(fn, "dynamic"))
+			return false;
+		if (HxFunctionDecl.getIsStatic(fn))
+			return true;
+		return !inheritedDynamicFunctionSlot(fn, owner, classLookup);
+	}
+
+	static function shouldAssignInheritedDynamicFunctionSlot(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Bool {
+		return fn != null
+			&& !HxFunctionDecl.getIsStatic(fn)
+			&& HxFunctionDecl.getName(fn) != "new"
+			&& inheritedDynamicFunctionSlot(fn, owner, classLookup);
+	}
+
+	static function inheritedDynamicFunctionSlot(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (fn == null || owner == null || classLookup == null || HxFunctionDecl.getIsStatic(fn))
+			return false;
+		final method = HxFunctionDecl.getName(fn);
+		var baseName = baseTypeName(owner);
+		while (baseName != null && baseName.length > 0) {
+			final base = classLookup.byName == null ? null : classLookup.byName.get(baseName);
+			if (base == null)
+				return false;
+			final baseFn = classMethodDeclIn(base, method, false);
+			if (baseFn != null && (hasFunctionMetadata(baseFn, "dynamic") || inheritedDynamicFunctionSlot(baseFn, base, classLookup)))
+				return true;
+			baseName = baseTypeName(base);
+		}
+		return false;
+	}
+
+	static function renderInheritedDynamicFunctionSlotAssignments(cls:HxClassDecl, classLookup:CppClassLookup, scope:CppRenderScope,
+			indent:String):Array<String> {
+		if (cls == null)
+			return [];
+		final out = new Array<String>();
+		for (fn in HxClassDecl.getFunctions(cls))
+			if (shouldAssignInheritedDynamicFunctionSlot(fn, cls, classLookup))
+				for (line in renderDynamicFunctionSlotAssignment(fn, cls, classLookup, indent))
+					out.push(line);
+		return out;
+	}
+
+	static function renderDynamicFunctionStorageField(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final prepared = dynamicFunctionPreparedScope(fn, owner, classLookup);
+		final fieldPrefix = "  " + (HxFunctionDecl.getIsStatic(fn) ? "inline static " : "") + dynamicFunctionCppType(fn, prepared.scope) + " "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn)) + " = ";
+		final capture = HxFunctionDecl.getIsStatic(fn) ? "[]" : "[this]";
+		return renderDynamicFunctionLambdaAssignment(fn, prepared.scope, fieldPrefix, capture, "  ");
+	}
+
+	static function renderDynamicFunctionSlotAssignment(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup, indent:String):Array<String> {
+		final prepared = dynamicFunctionPreparedScope(fn, owner, classLookup);
+		return renderDynamicFunctionLambdaAssignment(fn, prepared.scope, indent + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + " = ", "[this]", indent);
+	}
+
+	static function dynamicFunctionPreparedScope(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):{scope:CppRenderScope, returnType:String} {
+		final returnType = cppMethodSignatureReturnType(fn, owner, classLookup);
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionScope(scope, fn);
+		return {scope: scope, returnType: returnType};
+	}
+
+	static function dynamicFunctionCppType(fn:HxFunctionDecl, scope:CppRenderScope):String {
+		final argTypes = [
+			for (arg in HxFunctionDecl.getArgs(fn))
+				cppFunctionArgType(arg, scope)
+		];
+		return "std::function<" + scope.returnType + "(" + argTypes.join(", ") + ")>";
+	}
+
+	static function renderDynamicFunctionLambdaAssignment(fn:HxFunctionDecl, scope:CppRenderScope, lhs:String, capture:String, indent:String):Array<String> {
+		final out = [
+			lhs + capture + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope, false) + ") -> " + scope.returnType + " {"
+		];
+		for (line in renderHelperFunctionBody(HxFunctionDecl.getBody(fn), indent + "  ", scope))
+			out.push(line);
+		out.push(indent + "};");
 		return out;
 	}
 
