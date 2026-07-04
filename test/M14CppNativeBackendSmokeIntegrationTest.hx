@@ -9244,6 +9244,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ helper classes should emit static fields instead of dropping them from the struct");
 		assertContains(staticFieldLines, "store = v;", "C++ static methods should type unqualified same-owner static field access");
 		assertContains(staticFieldLines, "StaticFieldOwner::store = \"class\";", "C++ static field access through the owner type should use scope resolution");
+		final staticShadowOwner = new HxClassDecl("StaticShadowOwner", false, [
+			new HxFunctionDecl("pick", Public, false, [], "String", [
+				SVar("unit", "", EIdent("unit"), HxPos.unknown()),
+				SReturn(EIdent("unit"), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("unit", Public, true, "String", EString("testing package conflict"))
+		]);
+		staticFieldNames.set("StaticShadowOwner", true);
+		staticFieldClasses.set("StaticShadowOwner", staticShadowOwner);
+		final staticShadowLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(staticShadowOwner, staticFieldLookup).join("\n");
+		assertContains(staticShadowLines, "auto unit = std::string(StaticShadowOwner::unit);",
+			"C++ local declarations that shadow same-owner static fields should qualify the initializer field read");
+		assertTrue(staticShadowLines.indexOf("auto unit = std::string(unit);") < 0,
+			"C++ shadowing static-field initializers should not self-initialize the new local");
 		final staticHookOwner = new HxClassDecl("StaticHookOwner", false, [
 			new HxFunctionDecl("bind", Public, false, [new HxFunctionArg("hook", "Void->Void", NoDefault, false, false)], "Void", [
 				SExpr(EBinop("=", EField(EIdent("Assert"), "createAsync"), EIdent("hook")), HxPos.unknown())

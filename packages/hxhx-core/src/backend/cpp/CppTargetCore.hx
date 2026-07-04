@@ -9174,7 +9174,8 @@ class CppTargetCore {
 						scope.localNames.remove(sourceLocal);
 				}
 				final rhsStart = timingEnabled ? Sys.time() : 0.0;
-				final rhs = init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
+				final fieldShadowRhs = shadowedCurrentOwnerFieldInitExpr(name, init, declaredType, localType, hadPreviousName, scope);
+				final rhs = fieldShadowRhs != null ? fieldShadowRhs : init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
 					scope) : renderLocalInitExpr(init, declaredType, localType, scope);
 				if (timingEnabled)
 					traceCppScopeStmtTimingPhase(scope,
@@ -9206,6 +9207,41 @@ class CppTargetCore {
 			case _:
 				throw "C++ source backend MVP unsupported statement: " + stmtKind(stmt);
 		};
+	}
+
+	/**
+		Qualify `var x = x` when the initializer should read a current-owner field.
+
+		C++ puts the new local name in scope for its own initializer, so a bare
+		`auto x = x` self-initializes even when Haxe resolved the RHS to a field.
+		Previous locals/arguments keep their normal shadowing behavior.
+	**/
+	static function shadowedCurrentOwnerFieldInitExpr(local:String, init:Null<HxExpr>, declaredType:String, localType:String, hadPreviousName:Bool,
+			?scope:CppRenderScope):Null<String> {
+		if (hadPreviousName || init == null)
+			return null;
+		return switch (init) {
+			case EIdent(name) if (sanitizeIdentifier(name) == sanitizeIdentifier(local)):
+				final field = currentOwnerFieldReferenceExpr(local, scope);
+				if (field == null) null; else {
+					final expected = declaredType == "auto" ? localType : declaredType;
+					expected == "std::string" ? "std::string(" + field + ")" : field;
+				}
+			case _:
+				null;
+		}
+	}
+
+	static function currentOwnerFieldReferenceExpr(name:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || scope.owner == null)
+			return null;
+		final wanted = sanitizeIdentifier(name);
+		for (field in HxClassDecl.getFields(scope.owner)) {
+			if (sanitizeIdentifier(HxFieldDecl.getName(field)) != wanted)
+				continue;
+			return HxFieldDecl.getIsStatic(field) ? renderedClassName(scope.owner, lookupForScope(scope)) + "::" + wanted : "this->" + wanted;
+		}
+		return null;
 	}
 
 	/**
