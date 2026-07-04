@@ -7382,6 +7382,8 @@ class CppTargetCore {
 				inferredLambdaCppFunctionType(args, body, [], scope);
 			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(_)]):
 				inferredLambdaCppFunctionType(args, body, [], scope);
+			case ECall(EField(receiver, "makeVarArgs"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
+				reflectMakeVarArgsReturnCppType(args, scope);
 			case _:
 				"";
 		};
@@ -8029,6 +8031,8 @@ class CppTargetCore {
 			case ELambda(_, _):
 				true;
 			case ECall(EIdent("__hxhx_optional_lambda"), _):
+				true;
+			case ECall(EField(receiver, "makeVarArgs"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
 				true;
 			case _:
 				false;
@@ -9884,6 +9888,9 @@ class CppTargetCore {
 			final boundFunction = boundFunctionValueExprForExpectedFunction(expr, expectedType, scope);
 			if (boundFunction != null)
 				return boundFunction;
+			final varArgsFunction = reflectMakeVarArgsExprForExpectedFunction(expr, expectedType, scope);
+			if (varArgsFunction != null)
+				return varArgsFunction;
 			switch (expr) {
 				case ELambda(lambdaArgs, body):
 					return lambdaExprForExpectedFunction(lambdaArgs, body, expectedType, scope);
@@ -11258,6 +11265,12 @@ class CppTargetCore {
 			return reflectCompareExpr(args, scope);
 		if (isReflectStaticReceiver(receiver) && method == "compareMethods" && args.length == 2)
 			return reflectCompareMethodsExpr(args, scope);
+		if (isReflectStaticReceiver(receiver) && method == "makeVarArgs" && args.length == 1) {
+			final expectedType = reflectMakeVarArgsReturnCppType(args, scope);
+			final rendered = reflectMakeVarArgsExpr(args[0], expectedType, scope);
+			if (rendered != null)
+				return rendered;
+		}
 		if (isStdStaticReceiver(receiver) && method == "parseInt" && args.length == 1)
 			return "__hxhx_parse_int(" + stringExpr(args[0], scope) + ")";
 		if (isStdStaticReceiver(receiver) && method == "downcast" && args.length == 2)
@@ -14023,6 +14036,8 @@ class CppTargetCore {
 				mathReturnCppType(method);
 			case ECall(EField(receiver, "compare"), _) if (isReflectStaticReceiver(receiver)):
 				"int";
+			case ECall(EField(receiver, "makeVarArgs"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
+				reflectMakeVarArgsReturnCppType(args, scope);
 			case ECall(EField(receiver, "field"), args) if (isReflectStaticReceiver(receiver) && args.length == 2):
 				"std::any";
 			case ECall(EField(receiver, "callMethod"), args) if (isReflectStaticReceiver(receiver) && args.length == 3):
@@ -16927,6 +16942,72 @@ class CppTargetCore {
 
 	static function boundMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
 		return boundMethodValueExprWithExpectedType(expr, "", scope);
+	}
+
+	/**
+		Lower `Reflect.makeVarArgs(f)` only after the C++ callable signature is known.
+
+		Haxe exposes this as a variadic Dynamic function, but the current C++ target
+		uses fixed-arity `std::function` values. Local-call inference refines the
+		expected type from later calls such as `g(1, 2)`, then this wrapper packs the
+		fixed arguments into the callback's single vector parameter.
+	**/
+	static function reflectMakeVarArgsExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case ECall(EField(receiver, "makeVarArgs"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
+				reflectMakeVarArgsExpr(args[0], expectedType, scope);
+			case _:
+				null;
+		};
+	}
+
+	static function reflectMakeVarArgsReturnCppType(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (args == null || args.length != 1)
+			return "";
+		final callbackType = exprCppType(args[0], scope);
+		final returnType = cppFunctionReturnTypeFromCppType(callbackType);
+		return returnType.length == 0 ? "" : "std::function<" + returnType + "()>";
+	}
+
+	static function reflectMakeVarArgsExpr(callback:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (!isCppFunctionType(expectedType))
+			return null;
+		final callbackType = exprCppType(callback, scope);
+		final callbackArgs = CppTypeModel.cppFunctionArgTypesFromCppType(callbackType);
+		if (callbackArgs.length != 1 || !isCppVectorType(callbackArgs[0]))
+			return null;
+		final returnType = cppFunctionReturnTypeFromCppType(expectedType);
+		if (returnType.length == 0)
+			return null;
+		final expectedArgs = CppTypeModel.cppFunctionArgTypesFromCppType(expectedType);
+		final names = new Array<String>();
+		final params = new Array<String>();
+		for (i in 0...expectedArgs.length) {
+			final name = "__hxhx_varargs_arg_" + i;
+			names.push(name);
+			final typeName = expectedArgs[i].length > 0 ? expectedArgs[i] : "auto";
+			params.push(typeName + " " + name);
+		}
+		final vectorType = callbackArgs[0];
+		final elementType = cppVectorElementType(vectorType);
+		final packedArgs = [for (name in names) reflectMakeVarArgsPackedArgExpr(name, elementType)];
+		final packed = vectorType + "{" + packedArgs.join(", ") + "}";
+		final call = renderExpr(callback, scope) + "(" + packed + ")";
+		final body = returnType == "void" ? call + ";" : "return " + call + ";";
+		return expectedType + "([&](" + params.join(", ") + ") -> " + returnType + " { " + body + " })";
+	}
+
+	static function reflectMakeVarArgsPackedArgExpr(name:String, elementType:String):String {
+		return switch (elementType) {
+			case "std::any":
+				"std::any(" + name + ")";
+			case "__hxhx_dynamic_value":
+				"__hxhx_dynamic_value(__hxhx_stringify(" + name + "))";
+			case "std::string" | "":
+				"__hxhx_stringify(" + name + ")";
+			case _:
+				name;
+		};
 	}
 
 	static function boundFunctionValueExpr(receiver:HxExpr, boundArgs:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):Null<String> {

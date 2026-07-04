@@ -2284,6 +2284,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ prefix bind on dynamic function slots should lower to a callable partial-application lambda");
 	}
 
+	static function assertCppReflectMakeVarArgsUsesCallableWrapper():Void {
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("ReflectMakeVarArgsOwner", false, [], []), {
+			names: new StringMap<Bool>(),
+			byName: new StringMap<HxClassDecl>()
+		}, "void");
+		scope.localTypes.set("f", "std::function<std::string(std::vector<std::string>)>");
+		final expr = ECall(EField(EIdent("Reflect"), "makeVarArgs"), [EIdent("f")]);
+		final direct = @:privateAccess backend.cpp.CppTargetCore.renderExpr(expr, scope);
+		assertTrue(direct.indexOf("Reflect::makeVarArgs") < 0, "C++ Reflect.makeVarArgs should not call the generated string stub");
+		assertContains(direct, "std::function<std::string()>([&]() -> std::string { return f(std::vector<std::string>{}); })",
+			"C++ Reflect.makeVarArgs should produce a callable even before arity refinement");
+		final typed = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(expr, "std::function<std::string(int, int)>", scope);
+		assertContains(typed,
+			"std::function<std::string(int, int)>([&](int __hxhx_varargs_arg_0, int __hxhx_varargs_arg_1) -> std::string { return f(std::vector<std::string>{__hxhx_stringify(__hxhx_varargs_arg_0), __hxhx_stringify(__hxhx_varargs_arg_1)}); })",
+			"C++ Reflect.makeVarArgs should pack refined fixed-arity arguments into the callback array");
+		assertTrue(typed.indexOf("Reflect::makeVarArgs") < 0, "typed C++ Reflect.makeVarArgs should stay on the target-owned wrapper path");
+	}
+
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {
 		final dynamicFn = new HxFunctionDecl("dynamicValue", Public, false, [], "Dynamic", [SReturn(EArrayDecl([EInt(1)]), HxPos.unknown())], "");
 		final owner = new HxClassDecl("DynamicReturnOwner", false, [dynamicFn], []);
@@ -3343,6 +3361,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppStaticCallableFieldsInferFunctionStorage();
 		assertCppNullStructuralFieldsUseNullableStorage();
 		assertCppDynamicFunctionsUseAssignableStorage();
+		assertCppReflectMakeVarArgsUsesCallableWrapper();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();
