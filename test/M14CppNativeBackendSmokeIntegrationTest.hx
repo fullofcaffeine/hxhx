@@ -1168,6 +1168,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedParser], []);
 	}
 
+	static function vendorXmlParserProgramWhenAvailable():Null<GenIrProgram> {
+		final parserPath = "vendor/haxe/std/haxe/xml/Parser.hx";
+		if (!FileSystem.exists(parserPath))
+			return null;
+		final parserSource = File.getContent(parserPath);
+		final mainSource = "class Main { static function main() {} }";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedParser = TyperStage.typeModule(ParserStage.parse(parserSource, parserPath));
+		return MacroStage.expandProgram([typedMain, typedParser], []);
+	}
+
 	static function nativeStackTraceDeclarationProgram():GenIrProgram {
 		final callStackSource = [
 			"class CallStack {",
@@ -1304,6 +1315,43 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		throw "vendor JsonParser fixture should expose doParse";
 	}
 
+	static function assertVendorXmlParserEscapesShapeWhenAvailable():Void {
+		final parserProgram = vendorXmlParserProgramWhenAvailable();
+		if (parserProgram == null)
+			return;
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		var xmlParser:Null<HxClassDecl> = null;
+		for (typed in parserProgram.getTypedModules()) {
+			final decl = typed.getParsed().getDecl();
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases(HxClassDecl.getName(cls), cls, names, classes);
+				if (HxClassDecl.getName(cls) == "Parser")
+					xmlParser = cls;
+			}
+		}
+		assertTrue(xmlParser != null, "vendor Xml Parser fixture should expose Parser class");
+		final lookup = {names: names, byName: classes};
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(xmlParser, lookup, "void");
+		for (field in HxClassDecl.getFields(xmlParser)) {
+			if (HxFieldDecl.getName(field) != "escapes")
+				continue;
+			final typeName = @:privateAccess
+				backend.cpp.CppTargetCore.knownStdlibFieldCppType(HxClassDecl.getName(xmlParser), HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field),
+					HxFieldDecl.getInit(field), scope);
+			final initExpr = @:privateAccess backend.cpp.CppTargetCore.renderFieldInitExpr(HxFieldDecl.getInit(field), typeName, scope);
+			final fieldLine = "inline static " + typeName + " escapes = " + initExpr + ";";
+			assertContains(fieldLine, "inline static std::shared_ptr<StringMap<std::string>> escapes = ([]() {",
+				"C++ haxe.xml.Parser.escapes should keep the target StringMap reference type");
+			assertContains(fieldLine, "h->set(std::string(\"lt\"), std::string(\"<\"));",
+				"C++ haxe.xml.Parser.escapes should lower parser-produced StringMap mutations");
+			assertTrue(fieldLine.indexOf("inline static std::string escapes") < 0, "C++ haxe.xml.Parser.escapes should not collapse to a string static");
+			assertTrue(fieldLine.indexOf("std::to_string(([&]") < 0, "C++ haxe.xml.Parser.escapes should not stringify the lowered StringMap initializer");
+			return;
+		}
+		throw "vendor Xml Parser fixture should expose escapes field";
+	}
+
 	static function assertKnownXmlCppSignatures():Void {
 		final getFn = new HxFunctionDecl("get", Public, false, [new HxFunctionArg("att", "", NoDefault, false, false)], "",
 			[SReturn(EString(""), HxPos.unknown())], "");
@@ -1326,6 +1374,88 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Xml.set_nodeName should use declared stdlib String signatures even when source args are loose");
 		assertContains(removeChildLines, "bool removeChild(std::shared_ptr<Xml> x)",
 			"C++ Xml.removeChild should use declared stdlib Xml argument signatures even when source args are loose");
+	}
+
+	static function assertXmlCppCompileFrontierShapes():Void {
+		final parser = new HxClassDecl("Parser", false, [
+			new HxFunctionDecl("parse", Public, true, [new HxFunctionArg("str", "String", NoDefault, false, false)], "Xml", [], "")
+		], []);
+		final printer = new HxClassDecl("Printer", false, [
+			new HxFunctionDecl("print", Public, true, [new HxFunctionArg("xml", "Xml", NoDefault, false, false)], "String", [], "")
+		], []);
+		final parseFn = new HxFunctionDecl("parse", Public, true, [new HxFunctionArg("str", "String", NoDefault, false, false)], "Xml", [
+			SReturn(ECall(EField(EField(EField(EIdent("haxe"), "xml"), "Parser"), "parse"), [EIdent("str")]), HxPos.unknown())
+		], "");
+		final toStringFn = new HxFunctionDecl("toString", Public, false, [], "String", [
+			SReturn(ECall(EField(EField(EField(EIdent("haxe"), "xml"), "Printer"), "print"), [EThis]), HxPos.unknown())
+		], "");
+		final insertChildFn = new HxFunctionDecl("insertChild", Public, false, [
+			new HxFunctionArg("x", "Xml", NoDefault, false, false),
+			new HxFunctionArg("pos", "Int", NoDefault, false, false)
+		], "Void", [
+			SExpr(ECall(EField(EIdent("children"), "insert"), [EIdent("pos"), EIdent("x")]), HxPos.unknown())
+		], "");
+		final codeAtFn = new HxFunctionDecl("codeAt", Public, true, [
+			new HxFunctionArg("xml", "String", NoDefault, false, false),
+			new HxFunctionArg("i", "Int", NoDefault, false, false)
+		], "Int", [
+			SReturn(ECall(EField(EIdent("xml"), "fastCodeAt"), [EIdent("i")]), HxPos.unknown())
+		], "");
+		final xml = new HxClassDecl("Xml", false, [parseFn, toStringFn, insertChildFn, codeAtFn], [
+			new HxFieldDecl("Document", Public, true, "Dynamic", EInt(6)),
+			new HxFieldDecl("children", Public, false, "Array<Xml>", EArrayDecl([]))
+		]);
+		final names = new StringMap<Bool>();
+		for (name in ["Xml", "Parser", "Printer"])
+			names.set(name, true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("Xml", xml);
+		classes.set("Parser", parser);
+		classes.set("Printer", printer);
+		final lookup = {names: names, byName: classes};
+		final parseLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(parseFn, xml, lookup).join("\n");
+		assertContains(parseLines, "return std::make_shared<Xml>(Xml::Document);",
+			"C++ Xml.parse should use a compile-safe target XML intrinsic while Parser is emitted later");
+		assertTrue(parseLines.indexOf("Parser::parse") < 0, "C++ Xml.parse should not call a static method on the later Parser struct inline");
+		final toStringLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(toStringFn, xml, lookup).join("\n");
+		assertContains(toStringLines, "return std::string();",
+			"C++ Xml.toString should use a compile-safe target XML intrinsic while Printer is emitted later");
+		assertTrue(toStringLines.indexOf("Printer::print") < 0, "C++ Xml.toString should not call a static method on the later Printer struct inline");
+		final insertChildLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(insertChildFn, xml, lookup).join("\n");
+		assertContains(insertChildLines, "children.insert(children.begin() + pos, x);",
+			"C++ Xml.insertChild should lower Array.insert to vector iterator-position insert");
+		assertTrue(insertChildLines.indexOf("children.insert(pos, x)") < 0, "C++ vector insert should not pass an integer where an iterator is required");
+		final codeAtLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(codeAtFn, xml, lookup).join("\n");
+		assertContains(codeAtLines, "static_cast<unsigned char>(xml[i])",
+			"C++ String.fastCodeAt extension calls should lower through the string code-at intrinsic");
+		assertTrue(codeAtLines.indexOf("xml.fastCodeAt") < 0, "C++ String.fastCodeAt extension calls should not emit a std::string member call");
+		final testBase = new HxClassDecl("Test", false, [
+			new HxFunctionDecl("exc", Public, false, [
+				new HxFunctionArg("f", "", NoDefault, false, false),
+				new HxFunctionArg("pos", "", NoDefault, true, false)
+			], "Void", [], "")
+		], []);
+		final checkExcFn = new HxFunctionDecl("checkExc", Public, false, [
+			new HxFunctionArg("x", "Xml", NoDefault, false, false),
+			new HxFunctionArg("pos", "", NoDefault, true, false)
+		], "Void", [
+			SExpr(ECall(EIdent("exc"), [ELambda([], EField(EIdent("x"), "nodeName")), EIdent("pos")]), HxPos.unknown())
+		], "");
+		final testXml = new HxClassDecl("TestXML", false, [checkExcFn], [], "Test");
+		names.set("Test", true);
+		names.set("TestXML", true);
+		names.set("PosInfos", true);
+		classes.set("Test", testBase);
+		classes.set("TestXML", testXml);
+		classes.set("PosInfos", new HxClassDecl("PosInfos", false, [], []));
+		final checkExcLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(checkExcFn, testXml, lookup).join("\n");
+		assertContains(checkExcLines, "void checkExc(std::shared_ptr<Xml> x, std::optional<PosInfos> pos = std::nullopt)",
+			"C++ wrappers that forward optional positions into Test.exc should infer optional PosInfos");
+		assertContains(checkExcLines, "exc([&]() { return (x->nodeName); }, pos);",
+			"C++ wrappers that forward optional positions into Test.exc should pass the optional value through");
+		assertTrue(checkExcLines.indexOf("std::optional<std::string> pos") < 0,
+			"C++ wrappers that forward optional positions into Test.exc should not keep string optional placeholders");
+		assertTrue(checkExcLines.indexOf("pos.value()") < 0, "C++ wrappers that forward optional positions into Test.exc should not unwrap positions");
 	}
 
 	static function assertRawSwitchDynamicReturnType():Void {
@@ -1814,7 +1944,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		scope.typeParamCppNames.set("T", "std::string");
 		final first = @:privateAccess backend.cpp.CppTargetCore.knownStdlibFieldCppType("FieldTypeCacheOwner", "slot", "T", null, scope);
 		assertTrue(first == "std::string", "C++ field type cache should use the active type-parameter mapping");
-		final firstKey = @:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCacheKey("FieldTypeCacheOwner", "slot", "T", scope);
+		final firstKey = @:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCacheKey("FieldTypeCacheOwner", "slot", "T", null, scope);
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache.get(firstKey) == "std::string",
 			"C++ field type cache should store explicit-hint lookups");
 		scope.typeParamCppNames.set("T", "int");
@@ -1850,12 +1980,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.knownStdlibFieldCppType("PosException", "posInfos", "PosInfos", null, pointerFieldScope);
 		assertTrue(pointerFieldType == "std::shared_ptr<PosInfos>", "C++ field type cache should render class-shaped PosInfos as references");
 		final pointerFieldKey = @:privateAccess
-			backend.cpp.CppTargetCore.fieldCppTypeCacheKey("PosException", "posInfos", "PosInfos", pointerFieldScope);
+			backend.cpp.CppTargetCore.fieldCppTypeCacheKey("PosException", "posInfos", "PosInfos", null, pointerFieldScope);
 		final valueFieldType = @:privateAccess
 			backend.cpp.CppTargetCore.knownStdlibFieldCppType("PosException", "posInfos", "PosInfos", null, valueFieldScope);
 		assertTrue(valueFieldType == "PosInfos", "C++ field type cache should render typedef-shaped PosInfos as values");
 		final valueFieldKey = @:privateAccess
-			backend.cpp.CppTargetCore.fieldCppTypeCacheKey("PosException", "posInfos", "PosInfos", valueFieldScope);
+			backend.cpp.CppTargetCore.fieldCppTypeCacheKey("PosException", "posInfos", "PosInfos", null, valueFieldScope);
 		assertTrue(pointerFieldKey != valueFieldKey, "C++ field type cache keys should include resolved class shape");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.fieldCppTypeCache.get(pointerFieldKey) == "std::shared_ptr<PosInfos>",
 			"C++ field type cache should preserve the pointer-shaped entry");
@@ -3287,11 +3417,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"remote Cpp gate opaque enum-switch probe should tolerate hidden line-ending/suffix delimiters");
 		final opaqueStringMapBlock = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('opaque_block_expr:{var h = new haxe.ds.StringMap(); h.set("lt","<"); h.set("gt",">"); h.set("amp","&"); h.set("quot","\\""); h.set("apos","\'"); h;}'));
-		assertContains(opaqueStringMapBlock, "std::map<std::string, std::string> h;",
+		assertContains(opaqueStringMapBlock, "auto h = __hxhx_make_shared_StringMap<std::string>();",
 			"remote Cpp gate opaque StringMap escape-table block should lower to a target-owned C++ string map");
-		assertContains(opaqueStringMapBlock, 'h["quot"] = "\\"";', "opaque StringMap escape-table block should preserve escaped quote values");
+		assertContains(opaqueStringMapBlock, "h->set(std::string(\"quot\"), std::string(\"\\\"\"));",
+			"opaque StringMap escape-table block should preserve escaped quote values");
 		assertContains(opaqueStringMapBlock, "return h;", "opaque StringMap escape-table block should return the constructed map");
 		assertContains(opaqueStringMapBlock, "([]() {", "opaque StringMap static-initializer blocks should not require a capture-default lambda");
+		final opaqueStringMapBlockWithHiddenSuffix = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw('opaque_block_expr:{var h = new haxe.ds.StringMap(); h.set("lt","<"); h;}/** trailing doc */'));
+		assertContains(opaqueStringMapBlockWithHiddenSuffix, "h->set(std::string(\"lt\"), std::string(\"<\"));",
+			"opaque StringMap escape-table blocks should tolerate adjacent parser trivia after the opaque block");
 		final escapeMapInit = ETryCatchRaw('opaque_block_expr:{var h = new haxe.ds.StringMap(); h.set("lt","<"); h.set("gt",">"); h.set("amp","&"); h.set("quot","\\""); h.set("apos","\'"); h;}');
 		final escapeMapOwner = new HxClassDecl("EscapeMapOwner", false, [], [new HxFieldDecl("escapes", Public, true, "Dynamic", escapeMapInit)]);
 		final escapeMapNames = new StringMap<Bool>();
@@ -3300,10 +3435,49 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		escapeMapClasses.set("EscapeMapOwner", escapeMapOwner);
 		final escapeMapLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperClass(escapeMapOwner, {names: escapeMapNames, byName: escapeMapClasses}).join("\n");
-		assertContains(escapeMapLines, "inline static std::map<std::string, std::string> escapes = ([]() {",
-			"C++ static Dynamic fields initialized from opaque StringMap blocks should keep the map type");
+		assertContains(escapeMapLines, "inline static std::shared_ptr<StringMap<std::string>> escapes = ([]() {",
+			"C++ static Dynamic fields initialized from opaque StringMap blocks should keep the target map reference type");
 		assertTrue(escapeMapLines.indexOf("std::to_string(([]()") < 0,
 			"C++ static opaque StringMap initializers should not be stringified through std::to_string");
+		final structuredEscapeEntries = [
+			{key: "lt", value: "<"},
+			{key: "gt", value: ">"},
+			{key: "amp", value: "&"},
+			{key: "quot", value: "\""},
+			{key: "apos", value: "'"}
+		];
+		var structuredEscapeMapBody:HxExpr = EIdent("h");
+		var structuredEscapeIndex = 0;
+		var structuredEscapeReverse = structuredEscapeEntries.length - 1;
+		while (structuredEscapeReverse >= 0) {
+			final entry = structuredEscapeEntries[structuredEscapeReverse];
+			structuredEscapeMapBody = ECall(ELambda(["__hxhx_lambda_seq_" + structuredEscapeIndex], structuredEscapeMapBody),
+				[ECall(EField(EIdent("h"), "set"), [EString(entry.key), EString(entry.value)])]);
+			structuredEscapeIndex++;
+			structuredEscapeReverse--;
+		}
+		final structuredEscapeMapInit = ECall(ELambda(["__hxhx_lambda_seq_" + structuredEscapeIndex], structuredEscapeMapBody),
+			[EBinop("=", EIdent("varh"), ECall(EIdent("__hxhx_make_shared_StringMap"), []))]);
+		final structuredEscapeMapOwner = new HxClassDecl("StructuredEscapeMapOwner", false, [],
+			[new HxFieldDecl("escapes", Public, true, "Dynamic", structuredEscapeMapInit)]);
+		final structuredEscapeMapNames = new StringMap<Bool>();
+		structuredEscapeMapNames.set("StructuredEscapeMapOwner", true);
+		final structuredEscapeMapClasses = new StringMap<HxClassDecl>();
+		structuredEscapeMapClasses.set("StructuredEscapeMapOwner", structuredEscapeMapOwner);
+		final structuredEscapeMapLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(structuredEscapeMapOwner, {names: structuredEscapeMapNames, byName: structuredEscapeMapClasses})
+				.join("\n");
+		assertContains(structuredEscapeMapLines, "inline static std::shared_ptr<StringMap<std::string>> escapes = ([]() {",
+			"C++ static fields initialized from parsed StringMap block expressions should keep the target map reference type");
+		assertContains(structuredEscapeMapLines, "auto h = __hxhx_make_shared_StringMap<std::string>();",
+			"C++ parsed StringMap initializers should use the target-owned StringMap factory");
+		assertContains(structuredEscapeMapLines, "h->set(std::string(\"lt\"), std::string(\"<\"));",
+			"C++ parsed StringMap initializers should preserve string entries as map mutations");
+		assertContains(structuredEscapeMapLines, "return h;", "C++ parsed StringMap initializers should return the constructed map reference");
+		assertTrue(structuredEscapeMapLines.indexOf("std::to_string") < 0,
+			"C++ parsed StringMap initializers should not be stringified through std::to_string");
+		assertTrue(structuredEscapeMapLines.indexOf("[&](") < 0, "C++ parsed StringMap static initializers should not require a capture-default lambda");
+		assertTrue(structuredEscapeMapLines.indexOf("varh") < 0, "C++ parsed StringMap initializers should not emit parser artifact locals");
 		final enumMetaOwner = new HxClassDecl("EnumMetaOwner", false, [], [
 			new HxFieldDecl("__hx_enum_ctors", Public, true, "Dynamic", EArrayDecl([EString("U1"), EString("U2")])),
 			new HxFieldDecl("U2", Public, true, "Dynamic",
@@ -8180,6 +8354,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SExpr(ECall(ESuper, [EIdent("message"), EIdent("previous"), EIdent("pos")]), HxPos.unknown())
 			], "")
 		], [], "PosException");
+		final argumentException = new HxClassDecl("ArgumentException", false, [
+			new HxFunctionDecl("new", Public, false, [
+				new HxFunctionArg("argument", "String", NoDefault, false, false),
+				new HxFunctionArg("message", "String", NoDefault, true, false),
+				new HxFunctionArg("previous", "Exception", NoDefault, true, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Void", [
+				SExpr(ECall(ESuper, [EIdent("message"), EIdent("previous"), EIdent("pos")]), HxPos.unknown()),
+				SExpr(EBinop("=", EField(EThis, "argument"), EIdent("argument")), HxPos.unknown())
+			], "")
+		], [new HxFieldDecl("argument", Public, false, "String", null)], "PosException");
 		final logFormatOutputLike = new HxFunctionDecl("formatOutput", Public, true, [
 			new HxFunctionArg("str", "String", NoDefault, false, false),
 			new HxFunctionArg("infos", "PosInfos", NoDefault, false, false)
@@ -8192,13 +8377,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], "");
 		final logLike = new HxClassDecl("Log", false, [logFormatOutputLike], []);
 		final posNames = new StringMap<Bool>();
-		for (name in ["Exception", "PosInfos", "PosException", "NotImplementedException", "Log"])
+		for (name in [
+			"Exception",
+			"PosInfos",
+			"PosException",
+			"NotImplementedException",
+			"ArgumentException",
+			"Log"
+		])
 			posNames.set(name, true);
 		final posClasses = new StringMap<HxClassDecl>();
 		posClasses.set("Exception", exceptionLike);
 		posClasses.set("PosInfos", posInfos);
 		posClasses.set("PosException", posException);
 		posClasses.set("NotImplementedException", notImplementedException);
+		posClasses.set("ArgumentException", argumentException);
 		posClasses.set("Log", logLike);
 		final posLookup = {names: posNames, byName: posClasses};
 		final posValueScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(posException, posLookup, "void");
@@ -8222,6 +8415,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		]), posLookup).join("\n");
 		final posExceptionLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(posException, posLookup).join("\n");
 		final notImplementedExceptionLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(notImplementedException, posLookup).join("\n");
+		final argumentExceptionLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(argumentException, posLookup).join("\n");
 		final logFormatOutputLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(logFormatOutputLike, logLike, posLookup).join("\n");
 		assertContains(posInfosLines, "std::string fileName = std::string();", "C++ PosInfos typedef placeholders should render the stdlib position fields");
 		assertContains(posInfosLines, "std::vector<std::string> customParams = {};",
@@ -8292,6 +8486,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ optional PosInfos constructor forwarding should not unwrap missing position values");
 		assertTrue(notImplementedExceptionLines.indexOf("previous.value()") < 0,
 			"C++ optional Exception constructor forwarding should not unwrap missing previous values");
+		assertContains(argumentExceptionLines,
+			"ArgumentException(std::string argument, std::optional<std::string> message = std::nullopt, std::shared_ptr<Exception> previous = nullptr, std::shared_ptr<PosInfos> pos = nullptr) : PosException(message.value(), previous, pos), argument(argument) {",
+			"C++ PosException subclasses should keep nullable position values as references");
+		assertTrue(argumentExceptionLines.indexOf("std::optional<PosInfos> pos") < 0,
+			"C++ PosException subclasses should not expose nullable positions as value optionals");
+		assertTrue(argumentExceptionLines.indexOf("pos.value()") < 0, "C++ PosException subclasses should not unwrap nullable positions");
 		final unsupportedRegexThrow = new HxFunctionDecl("unsupportedRegex", Public, false, [], "Void", [
 			SThrow(ENew("NotImplementedException", [EString("Regular expressions are not implemented for this platform")]), HxPos.unknown())
 		], "");
@@ -10646,7 +10846,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				"C++ smoke should keep BalancedTree.setLoop return typing concrete without recursive inference");
 		}
 		assertVendorJsonParserReturnTypesWhenAvailable();
+		assertVendorXmlParserEscapesShapeWhenAvailable();
 		assertKnownXmlCppSignatures();
+		assertXmlCppCompileFrontierShapes();
 		assertVendorExprToolsReturnTypesWhenAvailable();
 		assertVendorTemplateReturnTypesWhenAvailable();
 		final vendorTemplateProgram = vendorTemplateProgramWhenAvailable();

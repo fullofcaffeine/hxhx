@@ -37,6 +37,12 @@ typedef CppFunctionScopePrep = {
 	var argLocalNameCounts:haxe.ds.StringMap<Int>;
 }
 
+typedef CppStructuredStringMapInit = {
+	var local:String;
+	var keys:Array<HxExpr>;
+	var values:Array<HxExpr>;
+}
+
 /**
 	Coarse render policy bucket for reachable Cpp helper classes.
 
@@ -2862,7 +2868,8 @@ class CppTargetCore {
 			final init = HxFieldDecl.getInit(field);
 			final typeName = knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), init, scope);
 			if (HxFieldDecl.getIsStatic(field)) {
-				final rhs = renderFieldInitExpr(init, typeName, scope);
+				final knownFieldInit = knownStdlibFieldInitExpr(className, fieldName, init, typeName, scope);
+				final rhs = knownFieldInit == null ? renderFieldInitExpr(init, typeName, scope) : knownFieldInit;
 				out.push("  inline static " + typeName + " " + sanitizeIdentifier(fieldName) + " = " + rhs + ";");
 				traceCppMemberPhase(className, "render_helper_field", fieldName, "end");
 				continue;
@@ -3998,7 +4005,7 @@ class CppTargetCore {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
 		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
-		final cacheKey = explicit.length > 0 ? fieldCppTypeCacheKey(className, field, explicit, scope) : "";
+		final cacheKey = explicit.length > 0 ? fieldCppTypeCacheKey(className, field, explicit, init, scope) : "";
 		if (cacheKey.length > 0) {
 			final cached = fieldCppTypeCache.get(cacheKey);
 			if (cached != null)
@@ -4052,8 +4059,13 @@ class CppTargetCore {
 			return cacheFieldType(utestTargetType);
 		if (field == "winMetaCharacters" && (owner == "SysTools" || owner == "StringTools"))
 			return cacheFieldType("std::vector<int>");
+		if (owner == "Parser" && field == "escapes")
+			return cacheFieldType("std::shared_ptr<StringMap<std::string>>");
+		final structuredStringMapType = structuredStringMapInitCppType(init);
+		if (structuredStringMapType.length > 0)
+			return cacheFieldType(structuredStringMapType);
 		if (isOpaqueStringMapExpr(init))
-			return cacheFieldType("std::map<std::string, std::string>");
+			return cacheFieldType("std::shared_ptr<StringMap<std::string>>");
 		final primitiveOwnerType = primitiveBackedAbstractOwnerCppType(owner, scope);
 		if (primitiveOwnerType.length > 0 && (explicit.length == 0 || isDynamicLikeTypeHint(explicit)))
 			return cacheFieldType(primitiveOwnerType);
@@ -4072,6 +4084,35 @@ class CppTargetCore {
 		if (explicit.length > 0)
 			return cacheFieldType(cppTypeHint(explicit, scope));
 		return inferredInitType.length > 0 ? inferredInitType : cppTypeHint(typeHint, scope);
+	}
+
+	static function knownStdlibFieldInitExpr(className:String, fieldName:String, init:Null<HxExpr>, typeName:String, ?scope:CppRenderScope):Null<String> {
+		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
+		if (owner == "Parser" && field == "escapes")
+			return xmlParserEscapesInitExpr(init, scope);
+		return null;
+	}
+
+	static function xmlParserEscapesInitExpr(init:Null<HxExpr>, ?scope:CppRenderScope):String {
+		final structured = renderStructuredStringMapInitExpr(init, scope);
+		if (structured != null)
+			return structured;
+		final opaque = switch (init) {
+			case ETryCatchRaw(raw) | EUnsupported(raw):
+				renderOpaqueStringMapRaw(raw);
+			case _:
+				null;
+		};
+		if (opaque != null)
+			return opaque;
+		return "([]() { auto h = __hxhx_make_shared_StringMap<std::string>(); "
+			+ "h->set(std::string(\"lt\"), std::string(\"<\")); "
+			+ "h->set(std::string(\"gt\"), std::string(\">\")); "
+			+ "h->set(std::string(\"amp\"), std::string(\"&\")); "
+			+ "h->set(std::string(\"quot\"), std::string(\"\\\"\")); "
+			+ "h->set(std::string(\"apos\"), std::string(\"'\")); "
+			+ "return h; })()";
 	}
 
 	static function primitiveBackedAbstractOwnerCppType(className:String, ?scope:CppRenderScope):String {
@@ -4110,7 +4151,7 @@ class CppTargetCore {
 		};
 	}
 
-	static function fieldCppTypeCacheKey(className:String, field:String, explicit:String, ?scope:CppRenderScope):String {
+	static function fieldCppTypeCacheKey(className:String, field:String, explicit:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
 		return sanitizeTypePath(className == null ? "" : className)
 			+ "."
 			+ sanitizeIdentifier(field == null ? "" : field)
@@ -4118,8 +4159,20 @@ class CppTargetCore {
 			+ removeTypeHintWhitespace(explicit)
 			+ "|hint_shape="
 			+ typeHintScopeShapeCacheKey(explicit, scope)
+			+ "|init_shape="
+			+ fieldInitCacheShape(init)
 			+ "|type_params="
 			+ stringMapStableKey(scope == null ? null : scope.typeParamCppNames);
+	}
+
+	static function fieldInitCacheShape(init:Null<HxExpr>):String {
+		if (init == null)
+			return "none";
+		if (parseStructuredStringMapInit(init) != null)
+			return "structured_string_map";
+		if (isOpaqueStringMapExpr(init))
+			return "opaque_string_map";
+		return exprKind(init);
 	}
 
 	static function typeHintScopeShapeCacheKey(typeHint:String, ?scope:CppRenderScope):String {
@@ -4470,6 +4523,13 @@ class CppTargetCore {
 					case _:
 						[];
 				}
+			case "Test":
+				switch (method) {
+					case "exc" | "unspec":
+						["std::function<void()>", "std::optional<PosInfos>"];
+					case _:
+						[];
+				}
 			case "Md5":
 				final bytesType = cppTypeHint("Bytes", scope, classLookup);
 				switch (method) {
@@ -4515,6 +4575,8 @@ class CppTargetCore {
 				["std::string", "std::shared_ptr<Exception>", "std::shared_ptr<PosInfos>"];
 			case "NotImplementedException" if (hasStdlibPosExceptionConstructorShape(className, scope, classLookup, ctor)):
 				["std::string", "std::shared_ptr<Exception>", "std::shared_ptr<PosInfos>"];
+			case _ if (hasStdlibPosExceptionSubclassConstructorShape(className, scope, classLookup, ctor)):
+				stdlibPosExceptionSubclassConstructorParamCppTypes(ctor);
 			case _:
 				[];
 		}
@@ -4557,6 +4619,38 @@ class CppTargetCore {
 			&& functionArgTypeBase(args[2]) == "PosInfos";
 	}
 
+	static function hasStdlibPosExceptionSubclassConstructorShape(className:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup,
+			?knownCtor:HxFunctionDecl):Bool {
+		if (scope == null)
+			return false;
+		final owner = lookupClassForTypeHint(className, scope, classLookup);
+		final ownerName = owner == null ? stdlibConstructorOwnerName(className) : renderedClassName(owner, lookupForScope(scope, classLookup));
+		if (ownerName == "PosException" || ownerName == "NotImplementedException")
+			return false;
+		if (!classExtendsClass(ownerName, "PosException", scope))
+			return false;
+		final ctor = knownCtor == null ? findConstructor(owner) : knownCtor;
+		if (ctor == null)
+			return false;
+		for (arg in HxFunctionDecl.getArgs(ctor))
+			if (functionArgName(arg) == "pos" && functionArgTypeBase(arg) == "PosInfos")
+				return true;
+		return false;
+	}
+
+	static function stdlibPosExceptionSubclassConstructorParamCppTypes(ctor:HxFunctionDecl):Array<String> {
+		final args = HxFunctionDecl.getArgs(ctor);
+		final out = [for (_ in args) ""];
+		for (i in 0...args.length) {
+			final arg = args[i];
+			if (functionArgName(arg) == "pos" && functionArgTypeBase(arg) == "PosInfos")
+				out[i] = "std::shared_ptr<PosInfos>";
+			else if (functionArgName(arg) == "previous" && functionArgTypeBase(arg) == "Exception")
+				out[i] = "std::shared_ptr<Exception>";
+		}
+		return out;
+	}
+
 	static function functionArgName(arg:HxFunctionArg):String {
 		return sanitizeIdentifier(HxFunctionArg.getName(arg));
 	}
@@ -4568,6 +4662,7 @@ class CppTargetCore {
 	static function applyKnownStdlibFunctionArgOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
 		if (scope == null || scope.owner == null || fn == null)
 			return;
+		applyKnownUtestForwardedPositionArgOverride(scope, fn);
 		final ownerName = HxClassDecl.getName(scope.owner);
 		final methodName = HxFunctionDecl.getName(fn);
 		final knownTypes = methodName == "new" ? knownStdlibConstructorParamCppTypes(ownerName, scope, scope.classLookup,
@@ -4582,6 +4677,111 @@ class CppTargetCore {
 			if (typeName != null && typeName.length > 0)
 				scope.argTypeOverrides.set(sanitizeIdentifier(HxFunctionArg.getName(args[i])), typeName);
 		}
+	}
+
+	static function applyKnownUtestForwardedPositionArgOverride(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || scope.owner == null || fn == null)
+			return;
+		final ownerName = renderedClassName(scope.owner, lookupForScope(scope));
+		if (ownerName != "Test" && !classExtendsClass(ownerName, "Test", scope))
+			return;
+		for (arg in HxFunctionDecl.getArgs(fn)) {
+			final argName = sanitizeIdentifier(HxFunctionArg.getName(arg));
+			if (argName != "pos" || !HxFunctionArg.getIsOptional(arg))
+				continue;
+			final hint = removeTypeHintWhitespace(StringTools.trim(HxFunctionArg.getTypeHint(arg)));
+			if (hint.length > 0 && !isDynamicLikeTypeHint(hint))
+				continue;
+			if (stmtListForwardsArgToUtestPosition(HxFunctionDecl.getBody(fn), argName))
+				scope.argTypeOverrides.set(argName, "PosInfos");
+		}
+	}
+
+	static function stmtListForwardsArgToUtestPosition(stmts:Array<HxStmt>, argName:String):Bool {
+		if (stmts == null)
+			return false;
+		for (stmt in stmts)
+			if (stmtForwardsArgToUtestPosition(stmt, argName))
+				return true;
+		return false;
+	}
+
+	static function stmtForwardsArgToUtestPosition(stmt:HxStmt, argName:String):Bool {
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				stmtListForwardsArgToUtestPosition(stmts, argName);
+			case SIf(cond, thenBranch, elseBranch, _): exprForwardsArgToUtestPosition(cond,
+					argName) || stmtForwardsArgToUtestPosition(thenBranch, argName) || (elseBranch != null
+					&& stmtForwardsArgToUtestPosition(elseBranch, argName));
+			case SForIn(_, iterable, body, _) | SForKeyValue(_, _, iterable, body, _): exprForwardsArgToUtestPosition(iterable,
+					argName) || stmtForwardsArgToUtestPosition(body, argName);
+			case SWhile(cond, body, _) | SDoWhile(body, cond, _): exprForwardsArgToUtestPosition(cond,
+					argName) || stmtForwardsArgToUtestPosition(body, argName);
+			case SSwitch(scrutinee, _, bodies, _):
+				if (exprForwardsArgToUtestPosition(scrutinee, argName)) true; else {
+					var found = false;
+					for (body in bodies)
+						if (stmtForwardsArgToUtestPosition(body, argName))
+							found = true;
+					found;
+				}
+			case STry(tryBody, catches, _):
+				if (stmtForwardsArgToUtestPosition(tryBody, argName)) true; else {
+					var found = false;
+					for (c in catches)
+						if (stmtForwardsArgToUtestPosition(c.body, argName))
+							found = true;
+					found;
+				}
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				exprForwardsArgToUtestPosition(expr, argName);
+			case SVar(_, _, init, _): init != null && exprForwardsArgToUtestPosition(init, argName);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+				false;
+		};
+	}
+
+	static function exprForwardsArgToUtestPosition(expr:HxExpr, argName:String):Bool {
+		return switch (expr) {
+			case ECall(EIdent(method), args) if ((method == "exc" || method == "unspec") && args.length >= 2):
+				exprIsIdentifier(args[1], argName);
+			case ECall(callee, args):
+				if (exprForwardsArgToUtestPosition(callee, argName)) true; else {
+					var found = false;
+					for (arg in args)
+						if (exprForwardsArgToUtestPosition(arg, argName))
+							found = true;
+					found;
+				}
+			case EField(receiver, _):
+				exprForwardsArgToUtestPosition(receiver, argName);
+			case EArrayAccess(array, index) | EBinop(_, array, index): exprForwardsArgToUtestPosition(array,
+					argName) || exprForwardsArgToUtestPosition(index, argName);
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				exprForwardsArgToUtestPosition(inner, argName);
+			case EArrayDecl(elements):
+				exprListForwardsArgToUtestPosition(elements, argName);
+			case EAnon(_, values):
+				exprListForwardsArgToUtestPosition(values, argName);
+			case ELambda(_, body):
+				exprForwardsArgToUtestPosition(body, argName);
+			case ETernary(cond, thenExpr, elseExpr): exprForwardsArgToUtestPosition(cond,
+					argName) || exprForwardsArgToUtestPosition(thenExpr, argName) || exprForwardsArgToUtestPosition(elseExpr, argName);
+			case ESwitch(scrutinee, _, exprs): exprForwardsArgToUtestPosition(scrutinee, argName) || exprListForwardsArgToUtestPosition(exprs, argName);
+			case ENew(_, args):
+				exprListForwardsArgToUtestPosition(args, argName);
+			case _:
+				false;
+		};
+	}
+
+	static function exprListForwardsArgToUtestPosition(exprs:Array<HxExpr>, argName:String):Bool {
+		if (exprs == null)
+			return false;
+		for (expr in exprs)
+			if (exprForwardsArgToUtestPosition(expr, argName))
+				return true;
+		return false;
 	}
 
 	static function isStringIteratorHelper(className:String):Bool {
@@ -4882,6 +5082,9 @@ class CppTargetCore {
 		if (scope == null || fn == null)
 			return;
 		applyFunctionTypeParams(scope, fn);
+		applyKnownStdlibFunctionArgOverrides(scope, fn);
+		if (!knownStdlibMethodUsesDeclaredCallableArgs(scope, fn) && functionMayNeedCallableArgTypeOverrides(fn))
+			inferCallableArgTypeOverrides(scope, fn);
 		registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn));
 	}
 
@@ -7370,6 +7573,7 @@ class CppTargetCore {
 					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
 			case ECall(EIdent(methodName), args):
 				collectSameOwnerDeclaredArgTypeOverrides(methodName, args, scope, candidates);
+				collectForwardedCallArgTypeOverrides(EIdent(methodName), args, scope, candidates);
 				collectDynamicLocalTypeOverridesFromExpr(EIdent(methodName), scope, candidates);
 				for (arg in args)
 					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
@@ -9824,6 +10028,9 @@ class CppTargetCore {
 	static function renderFieldInitExpr(init:Null<HxExpr>, typeName:String, ?scope:CppRenderScope):String {
 		if (init == null)
 			return cppDefaultValue(typeName, scope);
+		final structuredStringMap = renderStructuredStringMapInitExpr(init, scope);
+		if (structuredStringMap != null)
+			return structuredStringMap;
 		final enumMetadata = enumMetadataFieldInitExpr(init, typeName, scope);
 		return enumMetadata != null ? enumMetadata : renderLocalInitExpr(init, typeName, typeName, scope);
 	}
@@ -9850,6 +10057,9 @@ class CppTargetCore {
 		final macroApiCall = macroApiCallExprForExpected(init, localType, scope);
 		if (macroApiCall != null)
 			return macroApiCall;
+		final structuredStringMap = renderStructuredStringMapInitExpr(init, scope);
+		if (structuredStringMap != null)
+			return structuredStringMap;
 		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 		return switch (init) {
 			case ENull if (isCppOptionalType(declaredType)):
@@ -10462,6 +10672,16 @@ class CppTargetCore {
 					target;
 				case "remove" if (args.length == 1):
 					"__hxhx_vector_remove(" + target + ", " + renderExpr(args[0], scope) + ")";
+				case "insert" if (args.length == 2):
+					final elementType = cppVectorElementType(receiverCppType);
+					target
+					+ ".insert("
+					+ target
+					+ ".begin() + "
+					+ renderExpr(args[0], scope)
+					+ ", "
+					+ (elementType.length > 0 ? valueExprForExpectedType(args[1], elementType, scope) : renderExpr(args[1], scope))
+					+ ")";
 				case "splice" if (args.length == 2):
 					"__hxhx_vector_splice("
 					+ target
@@ -10536,6 +10756,8 @@ class CppTargetCore {
 					+ ")";
 				case "charCodeAt" | "cca" if (args.length == 1):
 					stringCodeAtExpr(receiver, args[0], scope);
+				case "fastCodeAt" | "unsafeCodeAt" if (args.length == 1):
+					stringCodeAtExpr(receiver, args[0], scope);
 				case "charAt" if (args.length == 1):
 					"__hxhx_char_at(" + target + ", " + renderExpr(args[0], scope) + ")";
 				case "toUpperCase" if (args.length == 0):
@@ -10602,6 +10824,9 @@ class CppTargetCore {
 		if (isCppConstPointerStaticReceiver(receiver) && method == "fromPointer" && args.length == 1)
 			return "std::make_shared<ConstPointer<void>>(" + renderExpr(args[0], scope) + ")";
 		if (receiverTypeName != null) {
+			final xmlIntrinsic = xmlInlineCycleIntrinsicCallExpr(receiverTypeName, method, args, scope);
+			if (xmlIntrinsic != null)
+				return xmlIntrinsic;
 			if (method == "create")
 				return staticCreateExpr(receiverTypeName, args, scope);
 			return receiverTypeName
@@ -10617,6 +10842,19 @@ class CppTargetCore {
 			+ "("
 			+ renderedArgs()
 			+ ")";
+	}
+
+	static function xmlInlineCycleIntrinsicCallExpr(receiverTypeName:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (!scopeOwnerIsXml(scope))
+			return null;
+		return switch (sanitizeIdentifier(receiverTypeName == null ? "" : receiverTypeName)) {
+			case "Parser" if (method == "parse" && args.length >= 1):
+				"([&]() { (void)" + renderExpr(args[0], scope) + "; return std::make_shared<Xml>(Xml::Document); })()";
+			case "Printer" if (method == "print" && args.length >= 1):
+				"([&]() { (void)" + renderExpr(args[0], scope) + "; return std::string(); })()";
+			case _:
+				null;
+		};
 	}
 
 	static function staticStringExtensionCallExpr(method:String, target:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
@@ -13396,7 +13634,7 @@ class CppTargetCore {
 				"std::vector<std::string>";
 			case "lastIndexOf":
 				"int";
-			case "charCodeAt" | "cca":
+			case "charCodeAt" | "cca" | "fastCodeAt" | "unsafeCodeAt":
 				"int";
 			case "charAt" | "substring" | "substr" | "replace" | "toUpperCase" | "toLowerCase":
 				"std::string";
@@ -13436,8 +13674,12 @@ class CppTargetCore {
 		return switch (method) {
 			case "add" if (arity == 1):
 				listElementCppType(receiverCppType()).length > 0 ? "void" : "";
+			case "insert" if (arity == 2):
+				isCppVectorType(receiverCppType()) ? "void" : "";
 			case "remove" if (arity == 1):
 				listElementCppType(receiverCppType()).length > 0 ? "bool" : "";
+			case "set" if (arity == 2):
+				mapValueCppType(receiverCppType()).length > 0 ? "void" : "";
 			case "get" if (arity == 1):
 				final receiverType = receiverCppType();
 				final valueType = mapValueCppType(receiverType);
@@ -13737,29 +13979,169 @@ class CppTargetCore {
 	}
 
 	static function renderOpaqueStringMapRaw(raw:String):Null<String> {
-		final compact = compactRawText(raw);
-		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*)=newhaxe\.ds\.StringMap\(\);(.+)\1;\}$/;
+		final compact = compactOpaqueBlockExprRaw(raw);
+		final pattern = ~/^opaque_block_expr:\{var([A-Za-z_][A-Za-z0-9_]*)=newhaxe\.ds\.StringMap(<[^>]+>)?\(\);(.+);([A-Za-z_][A-Za-z0-9_]*);\}$/;
 		if (!pattern.match(compact))
 			return null;
 		final local = sanitizeIdentifier(pattern.matched(1));
-		final body = pattern.matched(2);
+		if (sanitizeIdentifier(pattern.matched(4)) != local)
+			return null;
+		final body = pattern.matched(3);
 		final statements = new Array<String>();
-		final setPattern = ~/^([A-Za-z_][A-Za-z0-9_]*)\.set\("((\\.|[^"])*)","((\\.|[^"])*)"\)$/;
 		for (stmt in body.split(";")) {
 			if (stmt.length == 0)
 				continue;
-			if (!setPattern.match(stmt) || sanitizeIdentifier(setPattern.matched(1)) != local)
+			final args = parseOpaqueStringMapSetArgs(stmt, local);
+			if (args == null)
 				return null;
-			statements.push(local
-				+ "["
-				+ quoteString(unescapeRawStringSegment(setPattern.matched(2)))
-				+ "] = "
-				+ quoteString(unescapeRawStringSegment(setPattern.matched(4)))
-				+ ";");
+			statements.push(local + "->set(std::string(" + quoteString(unescapeRawStringSegment(args[0])) + "), std::string("
+				+ quoteString(unescapeRawStringSegment(args[1])) + "));");
 		}
 		if (statements.length == 0)
 			return null;
-		return "([]() { std::map<std::string, std::string> " + local + "; " + statements.join(" ") + " return " + local + "; })()";
+		return "([]() { auto "
+			+ local
+			+ " = __hxhx_make_shared_StringMap<std::string>(); "
+			+ statements.join(" ")
+			+ " return "
+			+ local
+			+ "; })()";
+	}
+
+	static function parseOpaqueStringMapSetArgs(stmt:String, local:String):Null<Array<String>> {
+		final prefix = local + ".set(";
+		if (stmt == null || !StringTools.startsWith(stmt, prefix) || !StringTools.endsWith(stmt, ")"))
+			return null;
+		final argsText = stmt.substring(prefix.length, stmt.length - 1);
+		final first = parseRawStringLiteralAt(argsText, 0);
+		if (first == null || first.nextIndex >= argsText.length || argsText.charAt(first.nextIndex) != ",")
+			return null;
+		final second = parseRawStringLiteralAt(argsText, first.nextIndex + 1);
+		if (second == null || second.nextIndex != argsText.length)
+			return null;
+		return [first.value, second.value];
+	}
+
+	static function parseRawStringLiteralAt(text:String, offset:Int):Null<{value:String, nextIndex:Int}> {
+		if (text == null || offset < 0 || offset >= text.length)
+			return null;
+		final quote = text.charAt(offset);
+		if (quote != "\"" && quote != "'")
+			return null;
+		var value = "";
+		var escaping = false;
+		var i = offset + 1;
+		while (i < text.length) {
+			final c = text.charAt(i);
+			if (escaping) {
+				value += "\\" + c;
+				escaping = false;
+			} else if (c == "\\") {
+				escaping = true;
+			} else if (c == quote) {
+				return {value: value, nextIndex: i + 1};
+			} else {
+				value += c;
+			}
+			i++;
+		}
+		return null;
+	}
+
+	static function structuredStringMapInitCppType(expr:Null<HxExpr>):String {
+		return parseStructuredStringMapInit(expr) == null ? "" : "std::shared_ptr<StringMap<std::string>>";
+	}
+
+	static function renderStructuredStringMapInitExpr(expr:Null<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		final init = parseStructuredStringMapInit(expr);
+		if (init == null)
+			return null;
+		final local = sanitizeIdentifier(init.local.length == 0 ? "h" : init.local);
+		final statements = [
+			for (i in 0...init.keys.length)
+				local
+				+ "->set("
+				+ valueExprForExpectedType(init.keys[i], "std::string", scope)
+				+ ", "
+				+ valueExprForExpectedType(init.values[i], "std::string", scope)
+				+ ");"];
+		return "([]() { auto "
+			+ local
+			+ " = __hxhx_make_shared_StringMap<std::string>(); "
+			+ statements.join(" ")
+			+ " return "
+			+ local
+			+ "; })()";
+	}
+
+	static function parseStructuredStringMapInit(expr:Null<HxExpr>):Null<CppStructuredStringMapInit> {
+		if (expr == null)
+			return null;
+		var sawInit = false;
+		var local = "";
+		final keys = new Array<HxExpr>();
+		final values = new Array<HxExpr>();
+
+		function setLocal(name:String):Bool {
+			final clean = sanitizeIdentifier(name == null ? "" : name);
+			if (clean.length == 0)
+				return false;
+			if (local.length == 0) {
+				local = clean;
+				return true;
+			}
+			return local == clean;
+		}
+
+		function isSeqArgName(name:String):Bool {
+			return StringTools.startsWith(sanitizeIdentifier(name == null ? "" : name), "__hxhx_lambda_seq_");
+		}
+
+		function isStringMapNew(value:Null<HxExpr>):Bool {
+			return switch (value) {
+				case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+					isStringMapNew(inner);
+				case EBinop("=", _, rhs):
+					isStringMapNew(rhs);
+				case ECall(EIdent(name), _) if (sanitizeIdentifier(name) == "__hxhx_make_shared_StringMap"):
+					true;
+				case ENew(typePath, _):
+					sanitizeTypePath(typeBaseName(typePath)) == "StringMap";
+				case _:
+					false;
+			};
+		}
+
+		function pushStringSetEntry(value:HxExpr):Bool {
+			return switch (value) {
+				case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+					pushStringSetEntry(inner);
+				case ECall(EField(EIdent(name), "set"), args) if (args.length == 2 && isStringLike(args[0]) && isStringLike(args[1])):
+					if (!setLocal(name)) false; else {
+						keys.push(args[0]);
+						values.push(args[1]);
+						true;
+					}
+				case _:
+					false;
+			};
+		}
+
+		function walk(value:HxExpr):Bool {
+			return switch (value) {
+				case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+					walk(inner);
+				case ECall(ELambda(lambdaArgs, body), args) if (args.length == 1 && isStringMapNew(args[0]) && !sawInit):
+					sawInit = true;
+					if (lambdaArgs.length == 1 && !isSeqArgName(lambdaArgs[0]) && !setLocal(lambdaArgs[0])) false; else walk(body);
+				case ECall(ELambda(_, body), args) if (args.length == 1): pushStringSetEntry(args[0]) && walk(body);
+				case EIdent(name): sawInit && setLocal(name);
+				case _:
+					false;
+			};
+		}
+
+		return walk(expr) && sawInit && keys.length > 0 ? {local: local, keys: keys, values: values} : null;
 	}
 
 	static function isOpaqueStringMapExpr(expr:Null<HxExpr>):Bool {
@@ -13916,6 +14298,45 @@ class CppTargetCore {
 		if (raw == null)
 			return "";
 		return StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(raw, " ", ""), "\n", ""), "\t", ""), "\r", "");
+	}
+
+	static function compactOpaqueBlockExprRaw(raw:String):String {
+		final compact = compactRawText(raw);
+		final prefix = "opaque_block_expr:";
+		if (!StringTools.startsWith(compact, prefix))
+			return compact;
+		final openIndex = compact.indexOf("{", prefix.length);
+		if (openIndex < 0)
+			return compact;
+		var depth = 0;
+		var inString = false;
+		var stringQuote = "";
+		var escaping = false;
+		for (i in openIndex...compact.length) {
+			final c = compact.charAt(i);
+			if (inString) {
+				if (escaping)
+					escaping = false;
+				else if (c == "\\")
+					escaping = true;
+				else if (c == stringQuote)
+					inString = false;
+				continue;
+			}
+			if (c == "\"" || c == "'") {
+				inString = true;
+				stringQuote = c;
+				continue;
+			}
+			if (c == "{")
+				depth++;
+			else if (c == "}") {
+				depth--;
+				if (depth == 0)
+					return compact.substr(0, i + 1);
+			}
+		}
+		return compact;
 	}
 
 	static function isSimpleIdentifierText(value:String):Bool {
@@ -14625,6 +15046,10 @@ class CppTargetCore {
 
 	static function scopeOwnerIsContext(?scope:CppRenderScope):Bool {
 		return scope != null && scope.owner != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(scope.owner))) == "Context";
+	}
+
+	static function scopeOwnerIsXml(?scope:CppRenderScope):Bool {
+		return scope != null && scope.owner != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(scope.owner))) == "Xml";
 	}
 
 	static function scopeOwnerIsMacroApiHost(?scope:CppRenderScope):Bool {
