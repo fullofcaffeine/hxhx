@@ -11,7 +11,7 @@ BUILD="$ROOT/scripts/hxhx/build-current-source-hxhx.sh"
 #
 # Use this when a diagnostic can reuse the previous current-source build. It
 # checks the provenance metadata written by build-current-source-hxhx.sh and only
-# rebuilds when the tracked git HEAD/status changed or the artifact is missing.
+# rebuilds when the tracked git HEAD/content changed or the artifact is missing.
 # Use build-current-source-hxhx.sh directly when you intentionally want a fresh
 # rebuild regardless of cache state.
 

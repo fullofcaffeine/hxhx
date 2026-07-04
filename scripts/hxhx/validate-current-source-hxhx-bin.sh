@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="${HXHX_CURRENT_SOURCE_ROOT:-$SCRIPT_ROOT}"
 requested_bin="${1:-${HXHX_BIN:-}}"
 meta_path="${HXHX_CURRENT_SOURCE_META:-$ROOT/packages/hxhx/out/hxhx-current-source.env}"
 allow_stale="${HXHX_CURRENT_SOURCE_ALLOW_STALE:-0}"
@@ -13,6 +14,10 @@ fail() {
 
 tracked_status() {
   git -C "$ROOT" status --porcelain --untracked-files=no
+}
+
+tracked_tree() {
+  git -C "$ROOT" diff --no-ext-diff --binary HEAD -- .
 }
 
 status_sha256() {
@@ -41,10 +46,15 @@ fi
 current_head="$(git -C "$ROOT" rev-parse HEAD)"
 current_status="$(tracked_status)"
 current_status_sha256="$(printf '%s' "$current_status" | status_sha256)"
+current_tree_sha256="$(tracked_tree | status_sha256)"
 
 stale_reason=""
 if [ "${HXHX_BIN_SOURCE_HEAD:-}" != "$current_head" ]; then
   stale_reason="git head changed: built=${HXHX_BIN_SOURCE_HEAD:-missing} current=$current_head"
+elif [ -z "${HXHX_BIN_SOURCE_TREE_SHA256:-}" ]; then
+  stale_reason="missing tracked worktree content hash in provenance metadata"
+elif [ "${HXHX_BIN_SOURCE_TREE_SHA256:-}" != "$current_tree_sha256" ]; then
+  stale_reason="tracked worktree content changed since build"
 elif [ "${HXHX_BIN_SOURCE_STATUS_SHA256:-}" != "$current_status_sha256" ]; then
   stale_reason="tracked worktree status changed since build"
 fi

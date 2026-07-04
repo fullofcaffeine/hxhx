@@ -58,7 +58,8 @@ This validates the existing `packages/hxhx/out/hxhx-current-source.env` metadata
 and reuses the previous current-source binary when both are true:
 
 - `HEAD` is unchanged since the build.
-- The tracked worktree status hash is unchanged since the build.
+- The tracked worktree content hash is unchanged since the build, even if the
+  same files were already dirty.
 
 Fresh rebuild path:
 
@@ -69,7 +70,7 @@ npm run hxhx:build-current-source
 Use the fresh rebuild path when you intentionally need to rebuild even if a
 valid current-source binary already exists.
 
-For diagnosis-only reuse after a harmless tracked-status change:
+For diagnosis-only reuse after a harmless tracked-content change:
 
 ```bash
 HXHX_CURRENT_SOURCE_ALLOW_STALE=1 npm run hxhx:current-source-bin

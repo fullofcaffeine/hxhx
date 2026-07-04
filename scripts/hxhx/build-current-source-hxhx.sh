@@ -13,6 +13,10 @@ tracked_status() {
   git -C "$ROOT" status --porcelain --untracked-files=no
 }
 
+tracked_tree() {
+  git -C "$ROOT" diff --no-ext-diff --binary HEAD -- .
+}
+
 status_sha256() {
   shasum -a 256 | awk '{print $1}'
 }
@@ -23,6 +27,7 @@ source_head="$(git -C "$ROOT" rev-parse HEAD)"
 source_branch="$(git -C "$ROOT" branch --show-current 2>/dev/null || true)"
 source_status="$(tracked_status)"
 source_status_sha256="$(printf '%s' "$source_status" | status_sha256)"
+source_tree_sha256="$(tracked_tree | status_sha256)"
 source_dirty=0
 if [ -n "$source_status" ]; then
   source_dirty=1
@@ -47,6 +52,7 @@ HXHX_BIN_SOURCE_HEAD=$source_head
 HXHX_BIN_SOURCE_BRANCH=$source_branch
 HXHX_BIN_SOURCE_DIRTY=$source_dirty
 HXHX_BIN_SOURCE_STATUS_SHA256=$source_status_sha256
+HXHX_BIN_SOURCE_TREE_SHA256=$source_tree_sha256
 HXHX_BIN_BUILT_AT_EPOCH=$build_end_epoch
 HXHX_BIN_BUILD_SECONDS=$((build_end_epoch - build_start_epoch))
 META
