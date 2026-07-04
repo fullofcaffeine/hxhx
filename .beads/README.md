@@ -36,7 +36,7 @@ Issues in Beads are:
 - **Git-native**: Stored in `.beads/issues.jsonl` and synced like code
 - **AI-friendly**: CLI-first design works perfectly with AI coding agents
 - **Branch-aware**: Issues can follow your branch workflow
-- **Always in sync**: Auto-syncs with your commits
+- **Tracked explicitly**: Refresh `.beads/issues.jsonl` before committing and pushing
 
 ## Why Beads?
 
@@ -51,7 +51,7 @@ Issues in Beads are:
 - Fast, lightweight, and stays out of your way
 
 🔧 **Git Integration**
-- Automatic sync with git commits
+- Tracked JSONL issue data in git commits
 - Branch-aware issue tracking
 - Intelligent JSONL merge resolution
 
