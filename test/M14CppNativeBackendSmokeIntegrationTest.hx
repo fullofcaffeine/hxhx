@@ -2152,6 +2152,27 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(lines.indexOf("add = [&](int x, int y)") < 0, "C++ static callable field initializers should not use block-scope captures");
 	}
 
+	static function assertCppNullStructuralFieldsUseNullableStorage():Void {
+		final pos = HxPos.unknown();
+		final nf2 = new HxFieldDecl("nf2", Public, true, "{s:String}", ENull);
+		final check = new HxFunctionDecl("check", Public, true, [], "Void", [
+			SExpr(ECall(EIdent("eq"), [EString("NPE"), ETryCatchRaw('try{nf2.s;}catch(e:Any){"NPE";}')]), pos)
+		], "");
+		final owner = new HxClassDecl("StructuralNullOwner", false, [check], [nf2]);
+		final names = new StringMap<Bool>();
+		names.set("StructuralNullOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("StructuralNullOwner", owner);
+		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(owner, {names: names, byName: classes}).join("\n");
+		assertContains(lines, "inline static std::shared_ptr<__hxhx_anon_s_std__string> nf2 = nullptr;",
+			"C++ null structural fields should use nullable storage instead of assigning nullptr to a value aggregate");
+		assertContains(lines, "if (!nf2) throw std::runtime_error(std::string(\"Null field access\")); return nf2->s;",
+			"C++ field-read try/catch probes should null-check nullable structural receivers before pointer field access");
+		assertTrue(lines.indexOf("inline static __hxhx_anon_s_std__string nf2 = nullptr;") < 0,
+			"C++ null structural fields should not render invalid value-aggregate nullptr initializers");
+		assertTrue(lines.indexOf("return nf2.s;") < 0, "C++ nullable structural field reads should not use value access");
+	}
+
 	static function assertCppDynamicFunctionsUseAssignableStorage():Void {
 		final pos = HxPos.unknown();
 		final ctor = new HxFunctionDecl("new", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Void",
@@ -3254,6 +3275,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppStringParamCallsCoerceScalarLiterals();
 		assertCppUnhintedArithmeticParamsStayNumeric();
 		assertCppStaticCallableFieldsInferFunctionStorage();
+		assertCppNullStructuralFieldsUseNullableStorage();
 		assertCppDynamicFunctionsUseAssignableStorage();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();

@@ -4088,6 +4088,9 @@ class CppTargetCore {
 			return cacheFieldType(structuredStringMapType);
 		if (isOpaqueStringMapExpr(init))
 			return cacheFieldType("std::shared_ptr<StringMap<std::string>>");
+		final structuralNullType = structuralNullFieldCppType(explicit, init, scope);
+		if (structuralNullType.length > 0)
+			return cacheFieldType(structuralNullType);
 		final primitiveOwnerType = primitiveBackedAbstractOwnerCppType(owner, scope);
 		if (primitiveOwnerType.length > 0 && (explicit.length == 0 || isDynamicLikeTypeHint(explicit)))
 			return cacheFieldType(primitiveOwnerType);
@@ -4109,6 +4112,27 @@ class CppTargetCore {
 		if (explicit.length > 0)
 			return cacheFieldType(cppTypeHint(explicit, scope));
 		return inferredInitType.length > 0 ? inferredInitType : cppTypeHint(typeHint, scope);
+	}
+
+	/**
+		Represent explicitly null structural fields with nullable C++ storage.
+
+		Anonymous structural values normally render as value aggregates for simple
+		field access, but Haxe object fields can be null. A literal `= null`
+		therefore needs pointer storage so null-field probes can model the throw.
+	**/
+	static function structuralNullFieldCppType(typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
+		if (init == null || !isNullExpr(init))
+			return "";
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final nullArg = CppTypeModel.nullTypeHintArg(hint);
+		final structuralHint = nullArg == null ? hint : nullArg;
+		if (isStructuralTypeHint(structuralHint)) {
+			final struct = structuralTypeHintStruct(structuralHint, scope, lookupForScope(scope));
+			return struct == null ? "" : "std::shared_ptr<" + struct.name + ">";
+		}
+		final structural = structuralTypedefAnonStructTypeNameForTypeHint(structuralHint, scope);
+		return structural == null ? "" : "std::shared_ptr<" + structural + ">";
 	}
 
 	static function knownStdlibFieldInitExpr(className:String, fieldName:String, init:Null<HxExpr>, typeName:String, ?scope:CppRenderScope):Null<String> {
@@ -10341,7 +10365,7 @@ class CppTargetCore {
 			case EUntyped(inner):
 				renderExpr(inner, scope);
 			case ETryCatchRaw(raw):
-				renderTryCatchRaw(raw);
+				renderTryCatchRaw(raw, scope);
 			case EUnsupported(raw):
 				final recovery = renderUnsupportedRecoveryLiteral(raw);
 				if (recovery == null)
@@ -14172,7 +14196,7 @@ class CppTargetCore {
 		return raw;
 	}
 
-	static function renderTryCatchRaw(raw:String):String {
+	static function renderTryCatchRaw(raw:String, ?scope:CppRenderScope):String {
 		final exceptionStackMessage = parseExceptionStackTryRaw(raw);
 		if (exceptionStackMessage != null) {
 			return "([&]() { try { throw std::runtime_error(std::string("
@@ -14198,8 +14222,7 @@ class CppTargetCore {
 		}
 		final fieldReadCatch = parseFieldReadCatchStringRaw(raw);
 		if (fieldReadCatch != null) {
-			return "([&]() { try { return " + fieldReadCatch.receiver + "." + fieldReadCatch.field + "; } catch (...) { return std::string("
-				+ quoteString(fieldReadCatch.fallback) + "); } })()";
+			return fieldReadCatchStringExpr(fieldReadCatch, scope);
 		}
 		final stringProbe = parseTryStringProbeRaw(raw);
 		if (stringProbe != null) {
@@ -14259,6 +14282,20 @@ class CppTargetCore {
 		if (opaqueTypedLocalInit != null)
 			return opaqueTypedLocalInit;
 		throw "C++ source backend MVP unsupported expression: ETryCatchRaw(" + summarizeRaw(raw) + ")";
+	}
+
+	/**
+		Lower opaque `try receiver.field catch "fallback"` probes with the same
+		value-vs-reference access choice as normal `EField` rendering.
+	**/
+	static function fieldReadCatchStringExpr(fieldReadCatch:CppFieldReadCatchString, ?scope:CppRenderScope):String {
+		final receiverExpr = HxExpr.EIdent(fieldReadCatch.receiver);
+		final receiver = renderExpr(receiverExpr, scope);
+		final receiverType = exprCppType(receiverExpr, scope);
+		final access = fieldAccessOpForCppType(receiverType);
+		final nullGuard = isCppReferenceType(receiverType) ? "if (!" + receiver + ") throw std::runtime_error(std::string(\"Null field access\")); " : "";
+		return "([&]() { try { " + nullGuard + "return " + receiver + access + fieldReadCatch.field + "; } catch (...) { return std::string("
+			+ quoteString(fieldReadCatch.fallback) + "); } })()";
 	}
 
 	static function parseExceptionStackTryRaw(raw:String):Null<String> {
