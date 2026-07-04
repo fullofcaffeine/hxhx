@@ -76,6 +76,20 @@ local report to `.tmp/cpp-testjson-dynamic-numeric-oracle-seed/report.json`.
 The runner is upstream-oracle evidence only; it does not unblock Cpp
 implementation before the external review response is accepted.
 
+Target-stability probe on 2026-07-04:
+
+- Neko output matched the `--interp` seed for finite numeric formatting, signed
+  zero, non-finite JSON `null`, `JsonPrinter` function behavior, and the invalid
+  JSON error.
+- Neko differed from `--interp` for Unicode string length/code units after
+  parsing `"\\u00E9"`: `--interp` reports length `1` and code `233`, while Neko
+  reports length `2` and byte codes `195,169`.
+- JS did not run the seed as written because `Sys.println` requires a system
+  target. Use a deliberately target-neutral emitter before treating JS as
+  target-stability evidence.
+- `hxcpp` was not available in the local haxelib list, so upstream Cpp target
+  behavior was not checked locally.
+
 Observed output:
 
 ```text
