@@ -129,6 +129,8 @@ Current planning owner:
 - modular compiler customization and dialect architecture: `haxe.ocaml-vary`
 - architecture note:
   `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
+- Haxe-family variation workflow:
+  `docs/00-project/HXHX_HAXE_FAMILY_VARIATION_WORKFLOW.md`
 
 ## Goal 5: Haxe-family compiler variations
 
@@ -148,6 +150,8 @@ Current planning owner:
 - modular compiler customization and dialect architecture: `haxe.ocaml-vary`
 - architecture note:
   `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
+- Haxe-family variation workflow:
+  `docs/00-project/HXHX_HAXE_FAMILY_VARIATION_WORKFLOW.md`
 
 ## Goal 6: Reflaxe-to-native promotion
 

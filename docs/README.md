@@ -67,6 +67,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
   `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_HXHX_FRAMEWORK_BOUNDARY_2026_07_03.md`
 - `hxhx` customization and Haxe-family variation architecture:
   `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
+- Haxe-family variation workflow:
+  `docs/00-project/HXHX_HAXE_FAMILY_VARIATION_WORKFLOW.md`
 - Pending Oracle checkpoint for C++ `TestJson` dynamic/numeric frontier:
   `docs/00-project/ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md`
 - Source-native runtime packaging strategy: `docs/02-user-guide/SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md`

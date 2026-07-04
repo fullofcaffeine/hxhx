@@ -283,7 +283,8 @@ The first variation workflow should remain documentation-first:
    separation.
 4. Link to the baseline Full 1.0 and provenance policies.
 
-That workflow is tracked by `haxe.ocaml-vary.6`.
+That workflow is tracked by `haxe.ocaml-vary.6` and documented in
+[`HXHX_HAXE_FAMILY_VARIATION_WORKFLOW.md`](HXHX_HAXE_FAMILY_VARIATION_WORKFLOW.md).
 
 ## CI And Policy Tripwires
 

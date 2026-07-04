@@ -139,6 +139,7 @@ of the public quickstart:
   - `docs/01-getting-started/HXHX_1_0_ROADMAP.md`
   - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
   - `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md`
+  - Planning only: `docs/00-project/HXHX_HAXE_FAMILY_VARIATION_WORKFLOW.md`
 - **`reflaxe.ocaml` with mainstream Haxe**
   - `packages/reflaxe.ocaml/README.md`
   - `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
