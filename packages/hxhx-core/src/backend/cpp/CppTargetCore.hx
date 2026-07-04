@@ -10358,8 +10358,26 @@ class CppTargetCore {
 		final structuredStringMap = renderStructuredStringMapInitExpr(init, scope);
 		if (structuredStringMap != null)
 			return structuredStringMap;
+		final functionInit = fieldFunctionInitExpr(init, typeName, scope);
+		if (functionInit != null)
+			return functionInit;
 		final enumMetadata = enumMetadataFieldInitExpr(init, typeName, scope);
 		return enumMetadata != null ? enumMetadata : renderLocalInitExpr(init, typeName, typeName, scope);
+	}
+
+	static function fieldFunctionInitExpr(init:HxExpr, typeName:String, ?scope:CppRenderScope):Null<String> {
+		if (!isCppFunctionType(typeName))
+			return null;
+		return switch (init) {
+			case ELambda(args, body):
+				lambdaExprWithArgTypes(args, body, CppTypeModel.cppFunctionArgTypesFromCppType(typeName), scope, cppFunctionReturnTypeFromCppType(typeName),
+					"[]");
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(_)]):
+				lambdaExprWithArgTypes(args, body, CppTypeModel.cppFunctionArgTypesFromCppType(typeName), scope, cppFunctionReturnTypeFromCppType(typeName),
+					"[]");
+			case _:
+				null;
+		};
 	}
 
 	static function enumMetadataFieldInitExpr(init:HxExpr, typeName:String, ?scope:CppRenderScope):Null<String> {
@@ -16571,7 +16589,8 @@ class CppTargetCore {
 			cppFunctionReturnTypeFromCppType(expectedType));
 	}
 
-	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope, ?expectedReturnType:String):String {
+	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope, ?expectedReturnType:String,
+			?capture:String):String {
 		final names = [for (arg in args) sanitizeIdentifier(arg)];
 		final params = [
 			for (i in 0...names.length) {
@@ -16582,8 +16601,10 @@ class CppTargetCore {
 		final returnType = StringTools.trim(expectedReturnType == null ? "" : expectedReturnType);
 		final explicitReturn = returnType.length > 0 && returnType != "auto";
 		final suffix = explicitReturn ? " -> " + returnType : "";
+		final lambdaCapture = capture == null || capture.length == 0 ? "[&]" : capture;
 		if (scope == null)
-			return returnType == "void" ? "[&](" + params.join(", ") + ")" + suffix + " { " + renderExpr(body, scope) + "; }" : "[&]("
+			return returnType == "void" ? lambdaCapture + "(" + params.join(", ") + ")" + suffix + " { " + renderExpr(body, scope) + "; }" : lambdaCapture
+				+ "("
 				+ params.join(", ")
 				+ ")"
 				+ suffix
@@ -16602,8 +16623,8 @@ class CppTargetCore {
 		scope.localTypes = savedLocalTypes;
 		scope.localNames = savedLocalNames;
 		if (returnType == "void")
-			return "[&](" + params.join(", ") + ")" + suffix + " { " + renderedBody + "; }";
-		return "[&](" + params.join(", ") + ")" + suffix + " { return " + renderedBody + "; }";
+			return lambdaCapture + "(" + params.join(", ") + ")" + suffix + " { " + renderedBody + "; }";
+		return lambdaCapture + "(" + params.join(", ") + ")" + suffix + " { return " + renderedBody + "; }";
 	}
 
 	static function instanceMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {

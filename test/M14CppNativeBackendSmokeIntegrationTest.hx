@@ -2144,11 +2144,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		classes.set("StaticCallableOwner", owner);
 		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(owner, {names: names, byName: classes}).join("\n");
-		assertContains(lines, "inline static std::function<int(int, int)> add = [&](int x, int y) -> int {",
+		assertContains(lines, "inline static std::function<int(int, int)> add = [](int x, int y) -> int {",
 			"C++ static callable fields should infer std::function storage from same-owner call sites");
 		assertContains(lines, "return (x + y);", "C++ static callable field lambdas should use the inferred numeric argument and return types");
 		assertTrue(lines.indexOf("inline static std::string add") < 0, "C++ static callable fields should not fall back to string storage");
 		assertTrue(lines.indexOf("std::to_string([&]") < 0, "C++ static callable fields should not stringify lambda initializers");
+		assertTrue(lines.indexOf("add = [&](int x, int y)") < 0, "C++ static callable field initializers should not use block-scope captures");
 	}
 
 	static function assertCppDynamicFunctionsUseAssignableStorage():Void {

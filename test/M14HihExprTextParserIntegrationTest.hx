@@ -91,6 +91,14 @@ class M14HihExprTextParserIntegrationTest {
 		}
 		assertTrue(@:privateAccess ParserStage.initHasMergedReturnIdentifier(ELambda(["x", "y"], EBinop("+", EIdent("returnx"), EIdent("y")))),
 			"native/scanned merge should recognize compacted return identifiers in field lambdas");
+		final compactedNativeFunctionLiteral = @:privateAccess ParserStageNativeDecode.parseReturnExprText("function(x,y)returnx+y");
+		switch (compactedNativeFunctionLiteral) {
+			case ELambda(["x", "y"], EBinop("+", EIdent("x"), EIdent("y"))):
+			case ELambda(_, EBinop(_, EIdent(bad), _)) if (bad == "returnx"):
+				fail("native compacted field lambda payload should split return from the first body identifier");
+			case _:
+				fail("expected compacted native field lambda payload to parse as lambda addition");
+		}
 
 		// Native parser payloads can compact escaped quote strings to `"""`.
 		// This should still parse as a normal string literal (`"`).

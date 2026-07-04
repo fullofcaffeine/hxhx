@@ -1240,9 +1240,37 @@ class ParserStageNativeDecode {
 		return norm;
 	}
 
+	static function parseReturnExprIdentPart(c:Int):Bool {
+		final isUpper = c >= "A".code && c <= "Z".code;
+		final isLower = c >= "a".code && c <= "z".code;
+		final isDigit = c >= "0".code && c <= "9".code;
+		return isUpper || isLower || isDigit || c == "_".code;
+	}
+
+	static function normalizeCompactedFunctionReturnExpr(text:String):String {
+		if (text == null || !StringTools.startsWith(text, "function") || text.indexOf("return") < 0)
+			return text;
+		final out = new StringBuf();
+		var i = 0;
+		while (i < text.length) {
+			final startsReturn = i + "return".length < text.length && text.substr(i, "return".length) == "return";
+			final prevIsIdent = i > 0 && parseReturnExprIdentPart(text.charCodeAt(i - 1));
+			final nextIsIdent = startsReturn && parseReturnExprIdentPart(text.charCodeAt(i + "return".length));
+			if (startsReturn && !prevIsIdent && nextIsIdent) {
+				out.add("return ");
+				i += "return".length;
+			} else {
+				out.addChar(text.charCodeAt(i));
+				i++;
+			}
+		}
+		return out.toString();
+	}
+
 	static function parseReturnExprText(raw:String):HxExpr {
 		var exprText = StringTools.trim(raw);
 		exprText = stripNewTypeParams(exprText);
+		exprText = normalizeCompactedFunctionReturnExpr(exprText);
 		if (exprText.length == 0)
 			return EUnsupported("<empty-return-expr>");
 		if (looksLikeSwitchCaseFragment(exprText))
