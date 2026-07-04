@@ -2245,16 +2245,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			SReturn(EBinop("*", EBinop("+", EBinop("+", EIdent("v"), EIdent("x")), EIdent("y")), EInt(2)), pos)
 		], "");
 		final sub = new HxClassDecl("DynSub", false, [overrideAdd], [], "DynBase");
+		final otherCtor = new HxFunctionDecl("new", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Void",
+			[SExpr(ECall(ESuper, [EIdent("v")]), pos)], "");
+		final other = new HxClassDecl("DynOther", false, [otherCtor], [], "DynBase");
 		final caller = new HxClassDecl("DynCaller", false, [
 			new HxFunctionDecl("run", Public, false, [], "Int", [
 				SVar("inst", "", ENew("DynSub", [EInt(100)]), pos),
 				SExpr(EBinop("=", EField(EIdent("inst"), "add"), ELambda(["x", "y"], EBinop("+", EIdent("x"), EIdent("y")))), pos),
-				SReturn(ECall(EField(EIdent("inst"), "add"), [EInt(1), EInt(2)]), pos)
+				SVar("other", "", ENew("DynOther", [EInt(100)]), pos),
+				SVar("bound", "", ECall(EField(EField(EIdent("other"), "add"), "bind"), [EInt(1)]), pos),
+				SReturn(ECall(EIdent("bound"), [EInt(2)]), pos)
 			], "")
 		], []);
 		final names = new StringMap<Bool>();
 		final classes = new StringMap<HxClassDecl>();
-		for (cls in [base, sub, caller]) {
+		for (cls in [base, sub, other, caller]) {
 			names.set(HxClassDecl.getName(cls), true);
 			classes.set(HxClassDecl.getName(cls), cls);
 		}
@@ -2275,6 +2280,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ dynamic function slot reassignment should target the assignable storage field");
 		assertTrue(callerLines.indexOf("} = [&]") < 0,
 			"C++ dynamic function slot reassignment should not render method-value lambdas on the assignment left side");
+		assertContains(callerLines, "auto bound = [&](int __hxhx_bind_arg_0) { return (other->add)(1, __hxhx_bind_arg_0); };",
+			"C++ prefix bind on dynamic function slots should lower to a callable partial-application lambda");
 	}
 
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {

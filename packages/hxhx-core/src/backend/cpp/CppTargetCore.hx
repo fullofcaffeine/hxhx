@@ -9881,6 +9881,9 @@ class CppTargetCore {
 			final identityValue = dynamicIdentityCallExprForExpectedFunction(expr, expectedType, scope);
 			if (identityValue != null)
 				return identityValue;
+			final boundFunction = boundFunctionValueExprForExpectedFunction(expr, expectedType, scope);
+			if (boundFunction != null)
+				return boundFunction;
 			switch (expr) {
 				case ELambda(lambdaArgs, body):
 					return lambdaExprForExpectedFunction(lambdaArgs, body, expectedType, scope);
@@ -11107,6 +11110,9 @@ class CppTargetCore {
 		final receiverTypeName = staticReceiverClassName(receiver, scope);
 		final receiverCppType = exprCppType(receiver, scope);
 		if (sanitizeIdentifier(method) == "bind") {
+			final boundFunction = boundFunctionValueExpr(receiver, args, "", scope);
+			if (boundFunction != null)
+				return boundFunction;
 			final boundMethod = boundMethodValueExpr(ECall(EField(receiver, method), args), scope);
 			if (boundMethod != null)
 				return boundMethod;
@@ -16799,6 +16805,15 @@ class CppTargetCore {
 		return boundMethodValueExprWithExpectedType(expr, expectedType, scope);
 	}
 
+	static function boundFunctionValueExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case ECall(EField(receiver, "bind"), boundArgs):
+				boundFunctionValueExpr(receiver, boundArgs, expectedType, scope);
+			case _:
+				null;
+		};
+	}
+
 	static function lambdaExprForExpectedFunction(args:Array<String>, body:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
 		return lambdaExprWithArgTypes(args, body, CppTypeModel.cppFunctionArgTypesFromCppType(expectedType), scope,
 			cppFunctionReturnTypeFromCppType(expectedType));
@@ -16912,6 +16927,78 @@ class CppTargetCore {
 
 	static function boundMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
 		return boundMethodValueExprWithExpectedType(expr, "", scope);
+	}
+
+	static function boundFunctionValueExpr(receiver:HxExpr, boundArgs:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		final receiverType = boundFunctionReceiverCppType(receiver, scope);
+		if (!isCppFunctionType(receiverType))
+			return null;
+		for (arg in boundArgs)
+			if (isBindPlaceholderExpr(arg))
+				return null;
+		final originalArgs = CppTypeModel.cppFunctionArgTypesFromCppType(receiverType);
+		final boundCount = boundArgs == null ? 0 : boundArgs.length;
+		if (boundCount > originalArgs.length)
+			return null;
+		final expectedArgs = isCppFunctionType(expectedType) ? CppTypeModel.cppFunctionArgTypesFromCppType(expectedType) : [];
+		final names = new Array<String>();
+		final params = new Array<String>();
+		for (i in boundCount...originalArgs.length) {
+			final paramIndex = i - boundCount;
+			final name = "__hxhx_bind_arg_" + paramIndex;
+			names.push(name);
+			final typeName = paramIndex < expectedArgs.length
+				&& expectedArgs[paramIndex].length > 0 ? expectedArgs[paramIndex] : originalArgs[i];
+			params.push((typeName.length > 0 ? typeName : "auto") + " " + name);
+		}
+		final callArgs = new Array<String>();
+		for (i in 0...boundCount)
+			callArgs.push(renderExpr(boundArgs[i], scope));
+		for (name in names)
+			callArgs.push(name);
+		final target = boundFunctionReceiverExpr(receiver, scope);
+		final returnType = isCppFunctionType(expectedType) ? cppFunctionReturnTypeFromCppType(expectedType) : cppFunctionReturnTypeFromCppType(receiverType);
+		final call = "(" + target + ")(" + callArgs.join(", ") + ")";
+		final body = returnType == "void" ? call + ";" : "return " + call + ";";
+		final lambda = "[&](" + params.join(", ") + ") { " + body + " }";
+		return isCppFunctionType(expectedType) ? expectedType + "(" + lambda + ")" : lambda;
+	}
+
+	static function boundFunctionReceiverCppType(receiver:HxExpr, scope:CppRenderScope):String {
+		final directType = exprCppType(receiver, scope);
+		if (isCppFunctionType(directType))
+			return directType;
+		return switch (receiver) {
+			case EField(target, field):
+				final info = dynamicFunctionSlotInfo(target, field, scope);
+				if (info == null) ""; else {
+					final prepared = dynamicFunctionPreparedScope(info.fn, info.owner, lookupForScope(scope));
+					dynamicFunctionCppType(info.fn, prepared.scope);
+				}
+			case _:
+				"";
+		}
+	}
+
+	static function boundFunctionReceiverExpr(receiver:HxExpr, scope:CppRenderScope):String {
+		return switch (receiver) {
+			case EField(target, field):
+				final slot = dynamicFunctionSlotAccessExpr(target, field, scope);
+				slot == null ? renderExpr(receiver, scope) : slot;
+			case _:
+				renderExpr(receiver, scope);
+		}
+	}
+
+	static function isBindPlaceholderExpr(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EIdent("_"):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function boundMethodValueExprWithExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
