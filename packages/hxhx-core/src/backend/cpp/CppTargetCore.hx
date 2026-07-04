@@ -1626,6 +1626,11 @@ class CppTargetCore {
 					var localType = anonCollectLocalTypeHint(typeHint, init, scope);
 					if (localType.length == 0)
 						localType = cppLocalDeclaredType(name, typeHint, init, scope, local);
+					if (localType.length == 0 && isLocalCallableInit(init)) {
+						final callableType = inferredCallableValueType(init, scope);
+						if (callableType.length > 0)
+							localType = callableType;
+					}
 					if (localType.length > 0)
 						scope.localTypes.set(local, localType);
 				case SIf(cond, thenBranch, elseBranch, _):

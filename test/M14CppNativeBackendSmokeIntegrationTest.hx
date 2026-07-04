@@ -1888,13 +1888,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFieldDecl("f", Public, false, "?Int -> Int", null),
 			new HxFieldDecl("obj", Public, false, "{f:Int->Int}", null)
 		]);
+		final localCarrier = new HxClassDecl("LocalCarrier", false, [
+			new HxFunctionDecl("run", Public, false, [], "Int", [
+				SVar("x", "", EInt(4), HxPos.unknown()),
+				SVar("f", "", ELambda([], EIdent("x")), HxPos.unknown()),
+				SVar("o", "", EAnon(["f"], [EIdent("f")]), HxPos.unknown()),
+				SReturn(ECall(EField(EIdent("o"), "f"), []), HxPos.unknown())
+			], "")
+		], []);
 		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
-		final decl = new HxModuleDecl("", [], main, [main, slot], false, false);
+		final decl = new HxModuleDecl("", [], main, [main, slot, localCarrier], false, false);
 		final program = new GenIrProgram([typedSyntheticModule("ArrowSlot.hx", decl)], false);
 		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
 		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup);
 		final names = [for (struct in structs) struct.name].join("\n");
 		assertContains(names, "__hxhx_anon_f_std__function_int_int__", "C++ anonymous collection should preserve structural function-field type hints");
+		assertContains(names, "__hxhx_anon_f_std__function_int___", "C++ anonymous collection should preserve local zero-arg function field carriers");
 		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(slot, lookup).join("\n");
 		assertContains(lines, "std::function<int(int)> f = nullptr;",
 			"C++ optional function-typed fields should use the argument value type instead of the optional marker name");
