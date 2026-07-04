@@ -106,6 +106,8 @@ Current planning owners:
 
 - Full 1.0 parity and release contract: `haxe.ocaml-f1cl`
 - modular customization and variation architecture: `haxe.ocaml-vary`
+- customization and variation architecture note:
+  `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
 - mega-file gravity watch: `docs/00-project/MEGA_FILE_GRAVITY_WATCH.md`
 
 ## Goal 4: Pluggable compiler customization
@@ -125,6 +127,8 @@ Candidate mechanisms include compiler plugins, native target plugins, macro/runt
 Current planning owner:
 
 - modular compiler customization and dialect architecture: `haxe.ocaml-vary`
+- architecture note:
+  `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
 
 ## Goal 5: Haxe-family compiler variations
 
@@ -142,6 +146,8 @@ This is related to plugin extensibility, but not identical: plugins should cover
 Current planning owner:
 
 - modular compiler customization and dialect architecture: `haxe.ocaml-vary`
+- architecture note:
+  `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
 
 ## Goal 6: Reflaxe-to-native promotion
 
