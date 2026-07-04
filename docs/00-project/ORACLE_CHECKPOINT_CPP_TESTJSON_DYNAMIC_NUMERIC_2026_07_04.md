@@ -63,6 +63,19 @@ Initial black-box oracle run used the local upstream Haxe `4.3.7` binary with
 `--interp` and a small repo-owned temporary program. This is preliminary
 behavior evidence for the review, not a complete parity suite.
 
+The repo-owned seed runner for this frontier is:
+
+```bash
+npm run test:cpp-testjson-oracle-seed
+```
+
+It executes cases under
+`test/oracle/cpp_testjson_dynamic_numeric_seed/src/Main.hx`, compares stdout to
+`test/oracle/cpp_testjson_dynamic_numeric_seed/expected.stdout`, and writes a
+local report to `.tmp/cpp-testjson-dynamic-numeric-oracle-seed/report.json`.
+The runner is upstream-oracle evidence only; it does not unblock Cpp
+implementation before the external review response is accepted.
+
 Observed output:
 
 ```text

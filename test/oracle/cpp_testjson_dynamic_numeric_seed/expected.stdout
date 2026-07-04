@@ -1,0 +1,36 @@
+json-struct-01|json|{"a":["hello","wor'\"\n\t\rd"],"x":-4500,"y":1.456}
+json-struct-01|summary|-4500:1.456:2:hello:119,111,114,39,34,10,9,13,100
+json-id-optional-pos-01:true|pos|true
+json-id-optional-pos-01:true|round|TBool:true
+json-id-optional-pos-01:null|pos|true
+json-id-optional-pos-01:null|round|null
+json-id-optional-pos-01:finite|pos|true
+json-id-optional-pos-01:finite|round|TFloat:0.15461
+json-id-optional-pos-01:exponent|pos|true
+json-id-optional-pos-01:exponent|round|TFloat:-1e-10
+json-id-optional-pos-01:string-escapes|pos|true
+json-id-optional-pos-01:string-escapes|round|string:104,101,10,13,9,92,92,108,108,111
+json-deep-struct-01:field|json|{"field":4}
+json-deep-struct-01:field|round|{"field":4}
+json-deep-struct-01:nested-null|json|{"test":{"nested":null}}
+json-deep-struct-01:nested-null|round|{"test":{"nested":null}}
+json-deep-struct-01:mixed-array|json|{"array":[1,2,3,"str"]}
+json-deep-struct-01:mixed-array|round|{"array":[1,2,3,"str"]}
+json-unicode-01|length|1
+json-unicode-01|codes|233
+json-finite-format-01:small|json|0.15461
+json-finite-format-01:negative|json|-485.15461
+json-finite-format-01:large|json|10000000000
+json-finite-format-01:exponent|json|-1e-10
+json-signed-zero-01:positive|json|0
+json-signed-zero-01:negative|json|-0
+json-nonfinite-01:posinf|json|null
+json-nonfinite-01:neginf|json|null
+json-nonfinite-01:nan|json|null
+json-nonfinite-01:posinf|printer|null
+json-nonfinite-01:neginf|printer|null
+json-nonfinite-01:nan|printer|null
+json-printer-function-01:function|printer|"<fun>"
+json-printer-function-01:object-field|printer|{"b":1}
+json-invalid-01:triple-quote-key|input|{"""a": 1}
+json-invalid-01:triple-quote-key|error|Invalid char 34 at position 3
