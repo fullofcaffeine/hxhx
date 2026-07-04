@@ -84,9 +84,14 @@ Target-stability probe on 2026-07-04:
 - Neko differed from `--interp` for Unicode string length/code units after
   parsing `"\\u00E9"`: `--interp` reports length `1` and code `233`, while Neko
   reports length `2` and byte codes `195,169`.
-- JS did not run the seed as written because `Sys.println` requires a system
-  target. Use a deliberately target-neutral emitter before treating JS as
-  target-stability evidence.
+- JS now runs through a target-neutral fixture emitter. It matched `--interp`
+  for Unicode length/code units, finite numeric formatting except signed
+  negative zero, non-finite JSON `null`, `JsonPrinter` function behavior, and
+  structural summary semantics.
+- JS differed from `--interp` for the first structural object field order,
+  signed negative zero (`0` instead of `-0`), and invalid JSON error wording
+  (`SyntaxError: Expected ':' after property name in JSON at position 3` instead
+  of `Invalid char 34 at position 3`).
 - `hxcpp` was not available in the local haxelib list, so upstream Cpp target
   behavior was not checked locally.
 

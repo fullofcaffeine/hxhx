@@ -6,7 +6,12 @@
 **/
 class Main {
 	static function emit(id:String, field:String, value:String):Void {
-		Sys.println(id + "|" + field + "|" + value);
+		final line = id + "|" + field + "|" + value;
+		#if js
+		js.Syntax.code("console.log({0})", line);
+		#else
+		Sys.println(line);
+		#end
 	}
 
 	static function codeUnits(value:String):String {
