@@ -1377,9 +1377,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	}
 
 	static function assertXmlCppCompileFrontierShapes():Void {
-		final parser = new HxClassDecl("Parser", false, [
-			new HxFunctionDecl("parse", Public, true, [new HxFunctionArg("str", "String", NoDefault, false, false)], "Xml", [], "")
-		], []);
+		final parser = new HxClassDecl("Parser", false, [], [new HxFieldDecl("escapes", Public, true, "Dynamic", ENull)]);
 		final printer = new HxClassDecl("Printer", false, [
 			new HxFunctionDecl("print", Public, true, [new HxFunctionArg("xml", "Xml", NoDefault, false, false)], "String", [], "")
 		], []);
@@ -1401,17 +1399,49 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], "Int", [
 			SReturn(ECall(EField(EIdent("xml"), "fastCodeAt"), [EIdent("i")]), HxPos.unknown())
 		], "");
-		final xml = new HxClassDecl("Xml", false, [parseFn, toStringFn, insertChildFn, codeAtFn], [
+		final lambdaArrayFn = new HxFunctionDecl("lambdaArray", Public, true, [new HxFunctionArg("x", "Xml", NoDefault, false, false)], "Array<Xml>", [
+			SReturn(ECall(EField(EIdent("Lambda"), "array"), [EIdent("x")]), HxPos.unknown())
+		], "");
+		final lambdaCountFn = new HxFunctionDecl("lambdaCountNamed", Public, true, [new HxFunctionArg("x", "Xml", NoDefault, false, false)], "Int", [
+			SReturn(ECall(EField(EIdent("Lambda"), "count"), [
+				EAnon(["iterator"], [ECall(EField(EField(EIdent("x"), "elementsNamed"), "bind"), [EString("em")])])
+			]), HxPos.unknown())
+		], "");
+		final forInFn = new HxFunctionDecl("walk", Public, true, [new HxFunctionArg("x", "Xml", NoDefault, false, false)], "Void", [
+			SForIn("child", EIdent("x"), SBlock([SExpr(ECall(EField(EIdent("child"), "firstChild"), []), HxPos.unknown())], HxPos.unknown()), HxPos.unknown())
+		], "");
+		final directParserFn = new HxFunctionDecl("directParser", Public, true, [], "String", [
+			SReturn(EField(ECall(EField(ECall(EField(EIdent("Parser"), "parse"), [EString("<a/>"), EBool(false)]), "firstChild"), []), "nodeName"),
+				HxPos.unknown())
+		], "");
+		final inlineLambdaFn = new HxFunctionDecl("inlineLambda", Public, true, [], "String", [
+			SReturn(ECall(ELambda(["xml"], EField(ECall(EField(EIdent("xml"), "firstElement"), []), "nodeName")),
+				[ECall(EField(EIdent("Xml"), "parse"), [EString("<root/>")])]),
+				HxPos.unknown())
+		], "");
+		final xml = new HxClassDecl("Xml", false, [
+			parseFn,
+			toStringFn,
+			insertChildFn,
+			codeAtFn,
+			lambdaArrayFn,
+			lambdaCountFn,
+			forInFn,
+			inlineLambdaFn
+		], [
 			new HxFieldDecl("Document", Public, true, "Dynamic", EInt(6)),
 			new HxFieldDecl("children", Public, false, "Array<Xml>", EArrayDecl([]))
 		]);
+		final parserUse = new HxClassDecl("XmlParserUse", false, [directParserFn], []);
 		final names = new StringMap<Bool>();
-		for (name in ["Xml", "Parser", "Printer"])
+		for (name in ["Xml", "Parser", "Printer", "Lambda", "XmlParserUse"])
 			names.set(name, true);
 		final classes = new StringMap<HxClassDecl>();
 		classes.set("Xml", xml);
 		classes.set("Parser", parser);
 		classes.set("Printer", printer);
+		classes.set("Lambda", new HxClassDecl("Lambda", false, [], []));
+		classes.set("XmlParserUse", parserUse);
 		final lookup = {names: names, byName: classes};
 		final parseLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(parseFn, xml, lookup).join("\n");
 		assertContains(parseLines, "return std::make_shared<Xml>(Xml::Document);",
@@ -1429,6 +1459,34 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(codeAtLines, "static_cast<unsigned char>(xml[i])",
 			"C++ String.fastCodeAt extension calls should lower through the string code-at intrinsic");
 		assertTrue(codeAtLines.indexOf("xml.fastCodeAt") < 0, "C++ String.fastCodeAt extension calls should not emit a std::string member call");
+		final lambdaArrayLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(lambdaArrayFn, xml, lookup).join("\n");
+		assertContains(lambdaArrayLines, "return __hxhx_iterator_to_vector(x->iterator());",
+			"C++ Lambda.array(Xml) should lower through the target-owned Xml iterator");
+		assertTrue(lambdaArrayLines.indexOf("Lambda::array(x)") < 0, "C++ Lambda.array(Xml) should not pass a shared_ptr<Xml> to vector-only helpers");
+		final lambdaCountLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(lambdaCountFn, xml, lookup).join("\n");
+		assertContains(lambdaCountLines, "auto __hxhx_iter = x->elementsNamed(\"em\");",
+			"C++ Lambda.count({ iterator: x.elementsNamed.bind(name) }) should call the bound iterator provider");
+		assertContains(lambdaCountLines, "while (__hxhx_iter->hasNext())", "C++ Lambda.count over structural Xml iterators should use the iterator protocol");
+		assertTrue(lambdaCountLines.indexOf("__hxhx_anon_iterator_int_") < 0,
+			"C++ Lambda.count over structural Xml iterators should not materialize erased anonymous iterator structs");
+		assertTrue(lambdaCountLines.indexOf("Lambda::count") < 0, "C++ Lambda.count over structural Xml iterators should not fall back to vector-only helpers");
+		final forInLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(forInFn, xml, lookup).join("\n");
+		assertContains(forInLines, "auto __hxhx_iter_child = x->iterator();", "C++ for-in over Xml should acquire the target-owned Xml iterator");
+		assertContains(forInLines, "while (__hxhx_iter_child->hasNext())", "C++ for-in over Xml should use iterator protocol hasNext");
+		assertContains(forInLines, "auto child = __hxhx_iter_child->next();", "C++ for-in over Xml should use iterator protocol next");
+		assertContains(forInLines, "child->firstChild();", "C++ for-in over Xml should type loop locals as Xml references");
+		assertTrue(forInLines.indexOf("for (auto child : x)") < 0, "C++ for-in over Xml should not use range-for on shared_ptr<Xml>");
+		final directParserLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(directParserFn, parserUse, lookup).join("\n");
+		assertContains(directParserLines, "Xml::parse(std::string(\"<a/>\"))",
+			"C++ haxe.xml.Parser.parse should lower through the target-owned Xml parse route");
+		assertContains(directParserLines, "->firstChild()->nodeName",
+			"C++ haxe.xml.Parser.parse return typing should make chained Xml calls use pointer access");
+		assertTrue(directParserLines.indexOf("Parser::parse") < 0, "C++ haxe.xml.Parser.parse should not require a missing Parser::parse helper");
+		final inlineLambdaLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(inlineLambdaFn, xml, lookup).join("\n");
+		assertContains(inlineLambdaLines, "([&](std::shared_ptr<Xml> xml)", "C++ immediate lambdas should preserve known Xml reference argument types");
+		assertContains(inlineLambdaLines, "xml->firstElement()->nodeName",
+			"C++ immediate lambdas with Xml arguments should render pointer field/method access");
+		assertTrue(inlineLambdaLines.indexOf("xml.firstElement") < 0, "C++ immediate lambdas should not lose Xml reference typing inside the body");
 		final testBase = new HxClassDecl("Test", false, [
 			new HxFunctionDecl("exc", Public, false, [
 				new HxFunctionArg("f", "", NoDefault, false, false),

@@ -43,6 +43,12 @@ typedef CppStructuredStringMapInit = {
 	var values:Array<HxExpr>;
 }
 
+typedef CppIteratorAccess = {
+	var expr:String;
+	var cppType:String;
+	var elementType:String;
+}
+
 /**
 	Coarse render policy bucket for reachable Cpp helper classes.
 
@@ -4337,6 +4343,14 @@ class CppTargetCore {
 					"std::string";
 				case "newl" | "write" | "addChar" | "add" | "classString" | "objString" | "fieldsString" | "quote" | "quoteUtf8":
 					"void";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
+		if (owner == "Parser" && isXmlParserSupportClass(className, scope, classLookup)) {
+			return switch (method) {
+				case "parse":
+					cppTypeHint("Xml", scope, classLookup);
 				case _:
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
@@ -8862,7 +8876,8 @@ class CppTargetCore {
 		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 		final local = sanitizeIdentifier(name);
 		final iteratorTypeStart = timingEnabled ? Sys.time() : 0.0;
-		final iteratorElementType = iteratorProtocolElementType(iterable, scope);
+		final iteratorAccess = iteratorAccessForIterable(iterable, scope);
+		final iteratorElementType = iteratorAccess == null ? "" : iteratorAccess.elementType;
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope,
 				"forin_phase=iterator_protocol seconds="
@@ -8875,28 +8890,15 @@ class CppTargetCore {
 				+ traceCppSnippet(iteratorElementType));
 		final out = if (iteratorElementType.length > 0) {
 			final iteratorLocal = "__hxhx_iter_" + local;
-			final accessTypeStart = timingEnabled ? Sys.time() : 0.0;
-			final iterableType = exprCppType(iterable, scope);
+			final access = isCppReferenceType(iteratorAccess.cppType) ? "->" : ".";
 			if (timingEnabled)
 				traceCppScopeStmtTimingPhase(scope,
-					"forin_phase=iterator_access_type seconds="
-					+ Std.string(Sys.time() - accessTypeStart)
-					+ " iterable="
-					+ exprKind(iterable)
-					+ " cpp_type="
-					+ traceCppSnippet(iterableType));
-			final access = isCppReferenceType(iterableType) ? "->" : ".";
-			final renderIterableStart = timingEnabled ? Sys.time() : 0.0;
-			final renderedIterable = renderExpr(iterable, scope);
-			if (timingEnabled)
-				traceCppScopeStmtTimingPhase(scope,
-					"forin_phase=iterator_render_iterable seconds="
-					+ Std.string(Sys.time() - renderIterableStart)
+					"forin_phase=iterator_render_iterable seconds=0"
 					+ " iterable="
 					+ exprKind(iterable)
 					+ " rendered="
-					+ traceCppSnippet(renderedIterable));
-			[indent + "auto " + iteratorLocal + " = " + renderedIterable + ";",
+					+ traceCppSnippet(iteratorAccess.expr));
+			[indent + "auto " + iteratorLocal + " = " + iteratorAccess.expr + ";",
 				indent
 				+ "while ("
 				+ iteratorLocal
@@ -9397,10 +9399,13 @@ class CppTargetCore {
 				final sequenceCall = voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope);
 				if (sequenceCall != null)
 					return sequenceCall;
-				return "("
-					+ lambdaExprWithArgTypes(lambdaArgs, body, [], scope, expectedType)
-					+ ")("
-					+ [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+				final refinedArgTypes = immediateLambdaRefinedArgTypes(lambdaArgs, body, args, scope);
+				return "(" + lambdaExprWithArgTypes(lambdaArgs, body, refinedArgTypes, scope, expectedType) + ")(" + [
+					for (i in 0...args.length) {
+						final expected = i < refinedArgTypes.length ? refinedArgTypes[i] : "";
+						expected.length > 0 ? valueExprForExpectedType(args[i], expected, scope) : renderExpr(args[i], scope);
+					}
+				].join(", ") + ")";
 			case ECall(EIdent(name), args):
 				final typedCall = directCallExprForExpectedType(name, args, expectedType, scope);
 				if (typedCall != null)
@@ -9689,6 +9694,8 @@ class CppTargetCore {
 				+ ")";
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayExpr(args[0], scope);
+			case ECall(EField(receiver, "count"), args) if (isLambdaStaticReceiver(receiver) && args.length >= 1):
+				lambdaCountExpr(args[0], args.length > 1 ? args[1] : null, scope);
 			case ECall(EField(EIdent("Math"), method), args):
 				mathCallExpr(method, args, scope);
 			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
@@ -10827,6 +10834,9 @@ class CppTargetCore {
 			final xmlIntrinsic = xmlInlineCycleIntrinsicCallExpr(receiverTypeName, method, args, scope);
 			if (xmlIntrinsic != null)
 				return xmlIntrinsic;
+			final xmlParserIntrinsic = xmlParserStaticCallExpr(receiverTypeName, method, args, scope);
+			if (xmlParserIntrinsic != null)
+				return xmlParserIntrinsic;
 			if (method == "create")
 				return staticCreateExpr(receiverTypeName, args, scope);
 			return receiverTypeName
@@ -10855,6 +10865,32 @@ class CppTargetCore {
 			case _:
 				null;
 		};
+	}
+
+	static function xmlParserStaticCallExpr(receiverTypeName:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (method != "parse"
+			|| args == null
+			|| args.length == 0
+			|| !isXmlParserSupportClass(receiverTypeName, scope, lookupForScope(scope)))
+			return null;
+		final parsed = "Xml::parse(" + stringExpr(args[0], scope) + ")";
+		if (args.length == 1)
+			return parsed;
+		return "([&]() { (void)" + renderExpr(args[1], scope) + "; return " + parsed + "; })()";
+	}
+
+	static function isXmlParserSupportClass(className:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Bool {
+		final clean = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		if (clean != "Parser")
+			return false;
+		final lookup = lookupForScope(scope, classLookup);
+		final cls = lookup == null || lookup.byName == null ? null : lookup.byName.get(clean);
+		if (cls == null)
+			return false;
+		for (field in HxClassDecl.getFields(cls))
+			if (HxFieldDecl.getIsStatic(field) && sanitizeIdentifier(HxFieldDecl.getName(field)) == "escapes")
+				return true;
+		return false;
 	}
 
 	static function staticStringExtensionCallExpr(method:String, target:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
@@ -11561,25 +11597,73 @@ class CppTargetCore {
 	}
 
 	static function lambdaArrayExpr(iterable:HxExpr, ?scope:CppRenderScope):String {
-		final structuralIterator = lambdaArrayStructuralIteratorExpr(iterable, scope);
-		if (structuralIterator != null)
-			return "__hxhx_iterator_to_vector(" + structuralIterator + ")";
-		final typeName = exprCppType(iterable, scope);
-		if (cppIteratorElementType(typeName).length > 0)
-			return "__hxhx_iterator_to_vector(" + renderExpr(iterable, scope) + ")";
-		final mapValue = mapValueCppType(typeName);
-		if (mapValue.length > 0)
-			return "__hxhx_iterator_to_vector(" + renderExpr(iterable, scope) + "->iterator())";
+		final iteratorAccess = iteratorAccessForLambdaIterable(iterable, scope);
+		if (iteratorAccess != null)
+			return "__hxhx_iterator_to_vector(" + iteratorAccess.expr + ")";
 		return "Lambda::array(" + renderExpr(iterable, scope) + ")";
 	}
 
-	static function lambdaArrayStructuralIteratorExpr(iterable:HxExpr, ?scope:CppRenderScope):Null<String> {
+	static function lambdaCountExpr(iterable:HxExpr, pred:Null<HxExpr>, ?scope:CppRenderScope):String {
+		final iteratorAccess = iteratorAccessForLambdaIterable(iterable, scope);
+		if (iteratorAccess == null)
+			return "Lambda::count(" + renderExpr(iterable, scope) + (pred == null ? "" : ", " + renderExpr(pred, scope)) + ")";
+		final predicate = pred == null ? null : renderExpr(pred, scope);
+		final access = isCppReferenceType(iteratorAccess.cppType) ? "->" : ".";
+		final item = "__hxhx_count_item";
+		return "([&]() { int __hxhx_count = 0; auto __hxhx_iter = "
+			+ iteratorAccess.expr
+			+ "; while (__hxhx_iter"
+			+ access
+			+ "hasNext()) { auto "
+			+ item
+			+ " = __hxhx_iter"
+			+ access
+			+ "next(); "
+			+ (predicate == null ? "++__hxhx_count;" : "if (" + predicate + "(" + item + ")) ++__hxhx_count;")
+			+ " } return __hxhx_count; })()";
+	}
+
+	static function iteratorAccessForLambdaIterable(iterable:HxExpr, ?scope:CppRenderScope):Null<CppIteratorAccess> {
+		final structuralIterator = lambdaArrayStructuralIteratorExpr(iterable, scope);
+		if (structuralIterator != null)
+			return structuralIterator;
+		final iteratorAccess = iteratorAccessForIterable(iterable, scope);
+		if (iteratorAccess != null)
+			return iteratorAccess;
+		final typeName = exprCppType(iterable, scope);
+		final mapValue = mapValueCppType(typeName);
+		if (mapValue.length > 0)
+			return {
+				expr: renderExpr(iterable, scope) + "->iterator()",
+				cppType: "std::shared_ptr<__hxhx_iterator<" + mapValue + ">>",
+				elementType: mapValue
+			};
+		if (isCppVectorType(typeName)) {
+			final elementType = cppVectorElementType(typeName);
+			return {
+				expr: "__hxhx_vector_iterator_of(" + renderExpr(iterable, scope) + ")",
+				cppType: iteratorCppTypeForVector(typeName),
+				elementType: elementType.length > 0 ? elementType : "std::string"
+			};
+		}
+		return null;
+	}
+
+	static function lambdaArrayStructuralIteratorExpr(iterable:HxExpr, ?scope:CppRenderScope):Null<CppIteratorAccess> {
 		return switch (iterable) {
 			case EAnon(fieldNames, fieldValues):
 				for (i in 0...fieldNames.length) {
 					if (sanitizeIdentifier(fieldNames[i]) != "iterator")
 						continue;
-					return iteratorProviderCallExpr(fieldValues[i], scope);
+					final provider = fieldValues[i];
+					final elementType = iteratorProviderElementType(provider, scope);
+					if (elementType.length == 0)
+						return null;
+					return {
+						expr: iteratorProviderCallExpr(provider, scope),
+						cppType: elementType.length > 0 ? "std::shared_ptr<__hxhx_iterator<" + elementType + ">>" : "",
+						elementType: elementType
+					};
 				}
 				null;
 			case _:
@@ -11589,6 +11673,8 @@ class CppTargetCore {
 
 	static function iteratorProviderCallExpr(provider:HxExpr, ?scope:CppRenderScope):String {
 		return switch (provider) {
+			case ECall(EField(EField(receiver, method), "bind"), boundArgs):
+				renderExpr(ECall(EField(receiver, method), boundArgs), scope);
 			case EField(receiver, method):
 				renderExpr(receiver, scope)
 				+ fieldAccessOp(receiver, scope)
@@ -11611,6 +11697,9 @@ class CppTargetCore {
 		final iteratorElement = cppIteratorElementType(typeName);
 		if (iteratorElement.length > 0)
 			return "std::vector<" + iteratorElement + ">";
+		final iterableIteratorElement = iteratorElementTypeForIterable(iterable, scope);
+		if (iterableIteratorElement.length > 0)
+			return "std::vector<" + iterableIteratorElement + ">";
 		final mapValue = mapValueCppType(typeName);
 		if (mapValue.length > 0)
 			return "std::vector<" + mapValue + ">";
@@ -11631,6 +11720,8 @@ class CppTargetCore {
 
 	static function iteratorProviderElementType(provider:HxExpr, ?scope:CppRenderScope):String {
 		return switch (provider) {
+			case ECall(EField(EField(receiver, method), "bind"), boundArgs):
+				cppIteratorElementType(exprCppType(ECall(EField(receiver, method), boundArgs), scope));
 			case EField(receiver, method):
 				final receiverType = exprCppType(receiver, scope);
 				final methodReturn = mapIteratorMethodReturnType(receiverType, method);
@@ -12522,6 +12613,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayResultCppType(args[0], scope);
+			case ECall(EField(receiver, "count"), args) if (isLambdaStaticReceiver(receiver) && args.length >= 1):
+				"int";
 			case ECall(EField(EIdent("Type"), method), args):
 				typeIntrinsicReturnCppType(method, args);
 			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
@@ -13014,6 +13107,11 @@ class CppTargetCore {
 		final preludeReturn = cppPreludeMethodReturnType(className, methodName);
 		if (preludeReturn.length > 0)
 			return preludeReturn;
+		final ownerName = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
+		final knownReturn = knownStdlibMethodReturnCppType(className, methodName, "", scope);
+		if (knownReturn.length > 0 && (ownerName == "Xml" || isXmlParserSupportClass(className, scope, lookupForScope(scope))))
+			return knownReturn;
 		final fn = classMethodDecl(className, methodName, wantStatic, scope);
 		if (fn == null) {
 			final inherited = inheritedClassMethodCppReturnType(className, methodName, wantStatic, scope);
@@ -13022,8 +13120,6 @@ class CppTargetCore {
 			final fallback = missingInterfaceMethodReturnCppType(className, methodName);
 			return fallback.length > 0 ? fallback : "";
 		}
-		final ownerName = sanitizeTypePath(typeBaseName(className == null ? "" : className));
-		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
 		if (isStringIteratorHelper(ownerName)
 			|| ownerName == "BalancedTree"
 			|| ownerName == "Template"
@@ -13481,6 +13577,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayResultCppType(args[0], scope);
+			case ECall(EField(receiver, "count"), args) if (isLambdaStaticReceiver(receiver) && args.length >= 1):
+				"int";
 			case ECall(EField(receiver, "isEnumValue"), _) if (isReflectStaticReceiver(receiver)):
 				"bool";
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
@@ -15826,13 +15924,14 @@ class CppTargetCore {
 		return switch (bodyExpr) {
 			case ELambda(args, body) if (args.length == 1):
 				final local = sanitizeIdentifier(args[0]);
-				final iteratorElementType = iteratorProtocolElementType(iterable, scope);
+				final iteratorAccess = iteratorAccessForIterable(iterable, scope);
+				final iteratorElementType = iteratorAccess == null ? "" : iteratorAccess.elementType;
 				final loopElementType = iteratorElementType.length > 0 ? iteratorElementType : iterableElementType(iterable, scope);
 				final out = ["([&]() -> " + forInExprResultType(continuation, scope) + " {"];
 				if (iteratorElementType.length > 0) {
 					final iteratorLocal = "__hxhx_iter_" + local;
-					final access = isCppReferenceType(exprCppType(iterable, scope)) ? "->" : ".";
-					out.push("  auto " + iteratorLocal + " = " + renderExpr(iterable, scope) + ";");
+					final access = isCppReferenceType(iteratorAccess.cppType) ? "->" : ".";
+					out.push("  auto " + iteratorLocal + " = " + iteratorAccess.expr + ";");
 					out.push("  while (" + iteratorLocal + access + "hasNext()) {");
 					out.push("    auto " + local + " = " + iteratorLocal + access + "next();");
 				} else
@@ -16636,12 +16735,43 @@ class CppTargetCore {
 	}
 
 	static function iteratorProtocolElementType(iterable:HxExpr, ?scope:CppRenderScope):String {
-		final iteratorElement = cppIteratorElementType(exprCppType(iterable, scope));
+		return iteratorElementTypeForIterable(iterable, scope);
+	}
+
+	static function iteratorAccessForIterable(iterable:HxExpr, ?scope:CppRenderScope):Null<CppIteratorAccess> {
+		final typeName = exprCppType(iterable, scope);
+		final iteratorElement = cppIteratorElementType(typeName);
+		if (iteratorElement.length > 0)
+			return {expr: renderExpr(iterable, scope), cppType: typeName, elementType: iteratorElement};
+		final className = classNameFromCppExprType(typeName, scope);
+		if (className == null)
+			return null;
+		final iteratorType = classMethodCppReturnType(className, "iterator", false, scope);
+		final iteratorMethodElement = cppIteratorElementType(iteratorType);
+		if (iteratorMethodElement.length > 0)
+			return {
+				expr: renderExpr(iterable, scope) + fieldAccessOpForCppType(typeName) + "iterator()",
+				cppType: iteratorType,
+				elementType: iteratorMethodElement
+			};
+		if (!classHasInstanceMethod(className, "hasNext", scope) || !classHasInstanceMethod(className, "next", scope))
+			return null;
+		final nextType = classMethodCppReturnType(className, "next", false, scope);
+		return {expr: renderExpr(iterable, scope), cppType: typeName, elementType: nextType.length > 0 && nextType != "auto" ? nextType : "auto"};
+	}
+
+	static function iteratorElementTypeForIterable(iterable:HxExpr, ?scope:CppRenderScope):String {
+		final typeName = exprCppType(iterable, scope);
+		final iteratorElement = cppIteratorElementType(typeName);
 		if (iteratorElement.length > 0)
 			return iteratorElement;
-		final className = classNameFromCppExprType(exprCppType(iterable, scope), scope);
+		final className = classNameFromCppExprType(typeName, scope);
 		if (className == null)
 			return "";
+		final iteratorType = classMethodCppReturnType(className, "iterator", false, scope);
+		final iteratorMethodElement = cppIteratorElementType(iteratorType);
+		if (iteratorMethodElement.length > 0)
+			return iteratorMethodElement;
 		if (!classHasInstanceMethod(className, "hasNext", scope) || !classHasInstanceMethod(className, "next", scope))
 			return "";
 		final nextType = classMethodCppReturnType(className, "next", false, scope);
@@ -16973,6 +17103,8 @@ class CppTargetCore {
 			var typeName = exprCppType(args[i], scope);
 			if (typeName.length == 0)
 				typeName = inferExprCppType(args[i], scope);
+			if (isCppReferenceType(typeName))
+				refined = true;
 			switch (args[i]) {
 				case EArrayDecl([]):
 					final vectorType = closureVectorTypeForLambdaArg(sanitizeIdentifier(lambdaArgs[i]), body, scope);
