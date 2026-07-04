@@ -1897,12 +1897,15 @@ class HxParser {
 		var hint = StringTools.trim(typeHint == null ? "" : typeHint);
 		while (StringTools.startsWith(hint, "?"))
 			hint = StringTools.trim(hint.substr(1));
+		final compact = StringTools.replace(hint, " ", "");
 		return hint == "Ref"
 			|| hint == "php.Ref"
 			|| hint == "\\php\\Ref"
 			|| StringTools.startsWith(hint, "Ref<")
 			|| StringTools.startsWith(hint, "php.Ref<")
-			|| StringTools.startsWith(hint, "\\php\\Ref<");
+			|| StringTools.startsWith(hint, "\\php\\Ref<")
+			|| compact == "PosInfos"
+			|| compact == "haxe.PosInfos";
 	}
 
 	function lambdaBodyExprFromStmts(stmts:Array<HxStmt>):HxExpr {

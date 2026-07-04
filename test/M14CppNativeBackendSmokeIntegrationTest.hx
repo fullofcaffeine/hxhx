@@ -1989,6 +1989,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unhinted optional lambda locals should infer nullable parameter types from all direct call shapes");
 		assertContains(optionalLocalLines, "opt5_2(1, std::nullopt)", "C++ omitted optional lambda arguments should render as std::nullopt");
 		assertContains(optionalLocalLines, "opt5_2(1, std::nullopt)", "C++ null optional lambda arguments should render as std::nullopt");
+		final parsedPosInfosLocal = TyperStage.typeModule(ParserStage.parse([
+			"class LocalPosInfos {",
+			"  static function run():String {",
+			"    function id(v:String, ?pos:haxe.PosInfos) return pos == null ? \"missing\" : v;",
+			"    return id(\"ok\");",
+			"  }",
+			"}"
+		].join("\n"), "LocalPosInfos.hx"));
+		final parsedPosInfosProgram = new GenIrProgram([parsedPosInfosLocal], false);
+		final parsedPosInfosLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(parsedPosInfosProgram);
+		final parsedPosInfosOwner = HxModuleDecl.getMainClass(parsedPosInfosLocal.getParsed().getDecl());
+		final parsedPosInfosLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedPosInfosOwner, parsedPosInfosLookup).join("\n");
+		assertContains(parsedPosInfosLines, "std::function<std::string(std::string, std::shared_ptr<PosInfos>)> id",
+			"C++ parsed local functions should preserve optional haxe.PosInfos callable argument hints");
+		assertContains(parsedPosInfosLines,
+			"id(\"ok\", std::make_shared<PosInfos>(std::string(\"(unknown)\"), 0, std::string(\"(unknown)\"), std::string(\"(unknown)\")))",
+			"C++ omitted local ?pos:haxe.PosInfos calls should inject a bounded non-null call-site PosInfos value");
+		assertTrue(parsedPosInfosLines.indexOf("id(std::string(\"ok\"), nullptr)") < 0,
+			"C++ omitted local ?pos:haxe.PosInfos calls should not inject plain null");
+		assertTrue(parsedPosInfosLines.indexOf("id(\"ok\", nullptr)") < 0, "C++ omitted local ?pos:haxe.PosInfos calls should not inject plain null");
+		assertTrue(parsedPosInfosLines.indexOf("id(std::string(\"ok\"), std::nullopt)") < 0,
+			"C++ omitted local ?pos:haxe.PosInfos calls should not inject std::nullopt");
+		assertTrue(parsedPosInfosLines.indexOf("id(\"ok\", std::nullopt)") < 0, "C++ omitted local ?pos:haxe.PosInfos calls should not inject std::nullopt");
 		final duplicateLocalArrayLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(duplicateLocalArrays, lookup).join("\n");
 		assertContains(duplicateLocalArrayLines, "auto arr = std::vector<int>{3};",
 			"C++ dynamic local type overrides should not leak from later same-name locals into earlier numeric arrays");

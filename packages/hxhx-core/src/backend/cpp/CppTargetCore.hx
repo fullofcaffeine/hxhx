@@ -8410,7 +8410,11 @@ class CppTargetCore {
 		final returnType = cppFunctionReturnTypeFromCppType(current);
 		if (returnType.length == 0)
 			return;
-		final refined = "std::function<" + returnType + "(" + argTypes.join(", ") + ")>";
+		final currentArgTypes = CppTypeModel.cppFunctionArgTypesFromCppType(current);
+		// Call evidence can refine provided arguments, but omitted trailing
+		// parameters still belong to the declared callable shape.
+		final refinedArgTypes = currentArgTypes.length > argTypes.length ? argTypes.concat(currentArgTypes.slice(argTypes.length)) : argTypes;
+		final refined = "std::function<" + returnType + "(" + refinedArgTypes.join(", ") + ")>";
 		setDynamicLocalTypeOverride(scope, local, refined);
 		scope.localTypes.set(local, refined);
 	}
@@ -12889,7 +12893,7 @@ class CppTargetCore {
 			final later = findLaterMatchingFunctionTypeArg(argTypes, arg, paramIndex + 1, scope);
 			if (later >= 0) {
 				while (paramIndex < later) {
-					rendered.push(cppDefaultValue(argTypes[paramIndex], scope));
+					rendered.push(callSiteDefaultArgExprForCppType(argTypes[paramIndex], scope));
 					paramIndex++;
 				}
 				rendered.push(functionTypeArgExpr(arg, argTypes[paramIndex], scope));
@@ -12902,7 +12906,7 @@ class CppTargetCore {
 			paramIndex++;
 		}
 		while (paramIndex < argTypes.length) {
-			rendered.push(cppDefaultValue(argTypes[paramIndex], scope));
+			rendered.push(callSiteDefaultArgExprForCppType(argTypes[paramIndex], scope));
 			paramIndex++;
 		}
 		return rendered;
@@ -13202,8 +13206,40 @@ class CppTargetCore {
 				final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
 				valueType == "std::string" ? stringExpr(expr, scope) : callArgExprForParam(expr, param, scope);
 			case NoDefault:
-				cppDefaultValue(paramType, scope);
+				HxFunctionArg.getIsOptional(param) ? callSiteDefaultArgExprForCppType(paramType, scope) : cppDefaultValue(paramType, scope);
 		};
+	}
+
+	static function callSiteDefaultArgExprForCppType(typeName:String, ?scope:CppRenderScope):String {
+		final posInfos = callSitePosInfosDefaultArgExpr(typeName, scope);
+		return posInfos == null ? cppDefaultValue(typeName, scope) : posInfos;
+	}
+
+	static function callSitePosInfosDefaultArgExpr(typeName:String, ?scope:CppRenderScope):Null<String> {
+		final value = callSitePosInfosValueExpr(scope);
+		return switch (typeName) {
+			case "PosInfos":
+				value;
+			case "std::optional<PosInfos>":
+				"std::optional<PosInfos>(" + value + ")";
+			case "std::shared_ptr<PosInfos>":
+				"std::make_shared<PosInfos>(" + callSitePosInfosCtorArgs(scope).join(", ") + ")";
+			case _:
+				null;
+		};
+	}
+
+	static function callSitePosInfosValueExpr(?scope:CppRenderScope):String {
+		return "PosInfos(" + callSitePosInfosCtorArgs(scope).join(", ") + ")";
+	}
+
+	static function callSitePosInfosCtorArgs(?scope:CppRenderScope):Array<String> {
+		return [
+			"std::string(\"(unknown)\")",
+			"0",
+			"std::string(\"(unknown)\")",
+			"std::string(\"(unknown)\")"
+		];
 	}
 
 	static function cppOptionalInnerType(typeName:String):String {
