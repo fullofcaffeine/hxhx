@@ -1938,6 +1938,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SReturn(EInt(0), HxPos.unknown())
 			], "")
 		], []);
+		final duplicateLocalArrays = new HxClassDecl("DuplicateLocalArrays", false, [
+			new HxFunctionDecl("run", Public, false, [], "Int", [
+				SVar("x", "", EInt(0), HxPos.unknown()),
+				SVar("arr", "", EArrayDecl([EInt(3)]), HxPos.unknown()),
+				SVar("x", "", EInt(0), HxPos.unknown()),
+				SVar("arr", "", EArrayDecl([EAnon(["v"], [EInt(3)])]), HxPos.unknown()),
+				SVar("x", "", EInt(0), HxPos.unknown()),
+				SVar("arr", "Dynamic", EArrayDecl([EAnon(["v"], [EInt(3)])]), HxPos.unknown()),
+				SReturn(EInt(0), HxPos.unknown())
+			], "")
+		], []);
 		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
 		final decl = new HxModuleDecl("", [], main, [
 			main,
@@ -1946,7 +1957,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			methodCarrier,
 			mathCarrier,
 			nullableCallableLocal,
-			optionalLambdaLocal
+			optionalLambdaLocal,
+			duplicateLocalArrays
 		], false, false);
 		final program = new GenIrProgram([typedSyntheticModule("ArrowSlot.hx", decl)], false);
 		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
@@ -1977,6 +1989,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unhinted optional lambda locals should infer nullable parameter types from all direct call shapes");
 		assertContains(optionalLocalLines, "opt5_2(1, std::nullopt)", "C++ omitted optional lambda arguments should render as std::nullopt");
 		assertContains(optionalLocalLines, "opt5_2(1, std::nullopt)", "C++ null optional lambda arguments should render as std::nullopt");
+		final duplicateLocalArrayLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(duplicateLocalArrays, lookup).join("\n");
+		assertContains(duplicateLocalArrayLines, "auto arr = std::vector<int>{3};",
+			"C++ dynamic local type overrides should not leak from later same-name locals into earlier numeric arrays");
+		assertContains(duplicateLocalArrayLines, "auto arr_2 = std::vector<__hxhx_anon_v_int_>{__hxhx_anon_v_int_{3}};",
+			"C++ renamed same-name anonymous arrays should keep their own element type");
+		assertContains(duplicateLocalArrayLines, "std::vector<__hxhx_anon_v_int_> arr_3 = std::vector<__hxhx_anon_v_int_>{__hxhx_anon_v_int_{3}};",
+			"C++ Dynamic same-name arrays should receive the override on the renamed local only");
 	}
 
 	static function assertCppFunctionScopePrepCachesArgRegistration():Void {

@@ -7575,10 +7575,14 @@ class CppTargetCore {
 		if (scope == null || fn == null)
 			return;
 		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
 		final candidates = new haxe.ds.StringMap<Bool>();
 		for (stmt in HxFunctionDecl.getBody(fn))
 			collectDynamicLocalTypeOverridesFromStmt(stmt, scope, candidates);
 		scope.localTypes = savedLocalTypes;
+		scope.localNames = savedLocalNames;
+		scope.localNameCounts = savedLocalNameCounts;
 	}
 
 	static function inferOptionalLambdaLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
@@ -8241,7 +8245,7 @@ class CppTargetCore {
 			case SVar(name, typeHint, init, _):
 				if (init != null)
 					collectDynamicLocalTypeOverridesFromExpr(init, scope, candidates);
-				final local = sanitizeIdentifier(name);
+				final local = declareLocalName(name, scope);
 				final localType = cppLocalTypeHint(typeHint, init, scope);
 				if (isLocalCallableInit(init) && isCppFunctionType(localType)) {
 					candidates.set(local, true);
@@ -8287,21 +8291,21 @@ class CppTargetCore {
 		if (!boolMapHasEntries(candidates))
 			return;
 		switch (expr) {
-			case EBinop("=", EIdent(name), rhs) if (candidates.exists(sanitizeIdentifier(name))):
+			case EBinop("=", EIdent(name), rhs) if (candidateLocalName(name, scope, candidates).length > 0):
 				collectDynamicLocalTypeOverridesFromExpr(rhs, scope, candidates);
 				final inferred = dynamicLocalAssignedType(rhs, scope);
 				if (inferred.length > 0)
-					setDynamicLocalTypeOverride(scope, sanitizeIdentifier(name), inferred);
-			case ECall(EField(EIdent(name), "push"), [value]) if (candidates.exists(sanitizeIdentifier(name))):
+					setDynamicLocalTypeOverride(scope, candidateLocalName(name, scope, candidates), inferred);
+			case ECall(EField(EIdent(name), "push"), [value]) if (candidateLocalName(name, scope, candidates).length > 0):
 				collectDynamicLocalTypeOverridesFromExpr(value, scope, candidates);
 				final inferred = dynamicLocalAssignedType(value, scope);
 				if (inferred.length > 0)
-					setDynamicLocalTypeOverride(scope, sanitizeIdentifier(name), "std::vector<" + inferred + ">");
+					setDynamicLocalTypeOverride(scope, candidateLocalName(name, scope, candidates), "std::vector<" + inferred + ">");
 			case EBinop(_, left, right):
 				collectDynamicLocalTypeOverridesFromExpr(left, scope, candidates);
 				collectDynamicLocalTypeOverridesFromExpr(right, scope, candidates);
-			case ECall(EIdent(name), args) if (candidates.exists(sanitizeIdentifier(name))):
-				refineLocalCallableTypeFromCall(scope, sanitizeIdentifier(name), args);
+			case ECall(EIdent(name), args) if (candidateLocalName(name, scope, candidates).length > 0):
+				refineLocalCallableTypeFromCall(scope, candidateLocalName(name, scope, candidates), args);
 				for (arg in args)
 					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
 			case ECall(EIdent(methodName), args):
@@ -8359,6 +8363,16 @@ class CppTargetCore {
 		final explicit = exprCppType(expr, scope);
 		final inferred = explicit.length > 0 ? explicit : inferExprCppType(expr, scope);
 		return inferred.length > 0 ? inferred : "";
+	}
+
+	static function candidateLocalName(name:String, ?scope:CppRenderScope, ?candidates:haxe.ds.StringMap<Bool>):String {
+		if (candidates == null)
+			return "";
+		final local = localCppName(name, scope);
+		if (candidates.exists(local))
+			return local;
+		final clean = sanitizeIdentifier(name);
+		return candidates.exists(clean) ? clean : "";
 	}
 
 	static function isLocalCallableInit(init:Null<HxExpr>):Bool {
