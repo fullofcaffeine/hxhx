@@ -65,6 +65,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
   `docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md`
 - Oracle checkpoint for Reflaxe framework vs `hxhx` core boundary:
   `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_HXHX_FRAMEWORK_BOUNDARY_2026_07_03.md`
+- Pending Oracle checkpoint for C++ `TestJson` dynamic/numeric frontier:
+  `docs/00-project/ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md`
 - Source-native runtime packaging strategy: `docs/02-user-guide/SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md`
 - `.cross.hx` vs `_std` beginner guide: `docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`
 - Reflaxe family cross-override audit: `docs/00-project/REFLAXE_FAMILY_CROSS_OVERRIDE_AUDIT.md`
