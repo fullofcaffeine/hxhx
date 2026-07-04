@@ -10245,6 +10245,8 @@ class CppTargetCore {
 				reflectCompareFunctionExpr();
 			case EField(EIdent("Error"), field):
 				"std::string(" + quoteString(field) + ")";
+			case EField(receiver, field) if (staticEnumMethodValueExpr(receiver, field, scope) != null):
+				staticEnumMethodValueExpr(receiver, field, scope);
 			case EField(receiver, field) if (staticFieldExpr(receiver, field, scope) != null):
 				staticFieldExpr(receiver, field, scope);
 			case EField(receiver, "length"):
@@ -11448,6 +11450,11 @@ class CppTargetCore {
 	static function directCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 		final cleanName = sanitizeIdentifier(name);
+		if (scope != null && scope.localNames.exists(cleanName)) {
+			final target = localCppName(name, scope);
+			final renderedArgs = renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
+			return target + "(" + renderedArgs.join(", ") + ")";
+		}
 		final bytesFastGetStart = timingEnabled ? Sys.time() : 0.0;
 		final bytesFastGet = bytesFastGetExpr(name, args, scope);
 		if (timingEnabled)
@@ -15030,6 +15037,15 @@ class CppTargetCore {
 			case _:
 				null;
 		}
+	}
+
+	static function staticEnumMethodValueExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		final owner = staticReceiverClassName(receiver, scope);
+		if (owner == null || !isEnumCarrierClassName(owner, scope) || classMethodDecl(owner, field, true, scope) == null)
+			return null;
+		return owner + "::" + sanitizeIdentifier(field);
 	}
 
 	static function staticFieldExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {

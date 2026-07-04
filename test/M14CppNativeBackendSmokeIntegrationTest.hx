@@ -4859,6 +4859,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(typedEnumArg.indexOf("return std::string(\"Warning\")") < 0,
 			"C++ typed enum-constructor arguments should not leak tag strings into shared_ptr enum carriers");
 		final myEnum = new HxClassDecl("MyEnum", false, [
+			new HxFunctionDecl("C", Public, true, [
+				new HxFunctionArg("a", "Int", NoDefault, false, false),
+				new HxFunctionArg("b", "String", NoDefault, false, false)
+			],
+				"String", [SReturn(EString("C"), HxPos.unknown())], ""),
 			new HxFunctionDecl("D", Public, true, [new HxFunctionArg("e", "MyEnum", NoDefault, false, false)], "String",
 				[SReturn(EString("D"), HxPos.unknown())], "")
 		], [
@@ -4890,6 +4895,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ bare enum constructor identifiers should become enum carrier values when a carrier value is expected");
 		assertTrue(bareEnumArg.indexOf("std::string(\"A\")") < 0,
 			"C++ bare enum constructor identifiers should not fall through to string enum rendering for carrier values");
+		final staticEnumCtorValue = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("MyEnum"), "C"), myEnumScope);
+		assertTrue(staticEnumCtorValue == "MyEnum::C", "C++ enum constructor values should render as callable static methods");
+		final enumCtorCaller = new HxClassDecl("EnumCtorCaller", false, [
+			new HxFunctionDecl("run", Public, false, [], "String", [
+				SVar("c", "", EString("old"), HxPos.unknown()),
+				SVar("c", "", EField(EIdent("MyEnum"), "C"), HxPos.unknown()),
+				SReturn(ECall(EIdent("c"), [EInt(1), EString("hello")]), HxPos.unknown())
+			], "")
+		], []);
+		myEnumNames.set("EnumCtorCaller", true);
+		myEnumClasses.set("EnumCtorCaller", enumCtorCaller);
+		final enumCtorCallerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(enumCtorCaller, {
+			names: myEnumNames,
+			byName: myEnumClasses
+		}).join("\n");
+		assertContains(enumCtorCallerLines, "auto c_2 = MyEnum::C;", "C++ shadowed enum constructor values should keep the callable initializer");
+		assertContains(enumCtorCallerLines, "return __hxhx_stringify(c_2(1, \"hello\"));",
+			"C++ direct calls to shadowed callable locals should use the active C++ local name");
 		final staticEnumCall = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("MyEnum"), "D"), [EField(EIdent("MyEnum"), "A")]), myEnumScope);
 		assertContains(staticEnumCall, "MyEnum::D(std::make_shared<MyEnum>())",
