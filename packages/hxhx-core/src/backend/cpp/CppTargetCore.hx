@@ -5073,6 +5073,10 @@ class CppTargetCore {
 				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_closure_vector_locals"))
 					CppLocalTypeInference.inferClosureVectorLocalTypeOverrides(scope, fn, localTypeInferenceApi());
 			});
+			runPrepPhase("infer_optional_lambda_locals", () -> {
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_optional_lambda_locals"))
+					inferOptionalLambdaLocalTypeOverrides(scope, fn);
+			});
 			runPrepPhase("infer_dynamic_locals", () -> {
 				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_dynamic_locals"))
 					inferDynamicLocalTypeOverrides(scope, fn);
@@ -7575,6 +7579,337 @@ class CppTargetCore {
 		for (stmt in HxFunctionDecl.getBody(fn))
 			collectDynamicLocalTypeOverridesFromStmt(stmt, scope, candidates);
 		scope.localTypes = savedLocalTypes;
+	}
+
+	static function inferOptionalLambdaLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null)
+			return;
+		final candidates = new haxe.ds.StringMap<{args:Array<String>, body:HxExpr, optionalNames:haxe.ds.StringMap<Bool>}>();
+		final callShapes = new haxe.ds.StringMap<Array<Array<HxExpr>>>();
+		for (stmt in HxFunctionDecl.getBody(fn))
+			collectOptionalLambdaLocalCandidatesFromStmt(stmt, scope, candidates);
+		if (countStringMap(candidates) == 0)
+			return;
+		for (stmt in HxFunctionDecl.getBody(fn))
+			collectOptionalLambdaLocalCallsFromStmt(stmt, callShapes);
+		for (local in candidates.keys()) {
+			final info = candidates.get(local);
+			final argTypes = optionalLambdaLocalArgTypes(info.args, info.body, info.optionalNames, callShapes.get(local), scope);
+			if (argTypes.length != info.args.length)
+				continue;
+			final typeName = inferredLambdaCppFunctionType(info.args, info.body, argTypes, scope);
+			if (typeName.length > 0)
+				setDynamicLocalTypeOverride(scope, local, typeName);
+		}
+	}
+
+	static function collectOptionalLambdaLocalCandidatesFromStmt(stmt:HxStmt, scope:CppRenderScope,
+			candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr, optionalNames:haxe.ds.StringMap<Bool>}>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectOptionalLambdaLocalCandidatesFromStmt(s, scope, candidates);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectOptionalLambdaLocalCandidatesFromExpr(cond, scope, candidates);
+				collectOptionalLambdaLocalCandidatesFromStmt(thenBranch, scope, candidates);
+				if (elseBranch != null)
+					collectOptionalLambdaLocalCandidatesFromStmt(elseBranch, scope, candidates);
+			case SForIn(name, iterable, body, _):
+				collectOptionalLambdaLocalCandidatesFromExpr(iterable, scope, candidates);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					collectOptionalLambdaLocalCandidatesFromStmt(body, scope, candidates);
+				});
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				collectOptionalLambdaLocalCandidatesFromExpr(iterable, scope, candidates);
+				final loopTypes = keyValueLoopTypes(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
+						collectOptionalLambdaLocalCandidatesFromStmt(body, scope, candidates);
+					});
+				});
+			case SWhile(cond, body, _) | SDoWhile(body, cond, _):
+				collectOptionalLambdaLocalCandidatesFromExpr(cond, scope, candidates);
+				collectOptionalLambdaLocalCandidatesFromStmt(body, scope, candidates);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectOptionalLambdaLocalCandidatesFromExpr(scrutinee, scope, candidates);
+				for (body in bodies)
+					collectOptionalLambdaLocalCandidatesFromStmt(body, scope, candidates);
+			case STry(tryBody, catches, _):
+				collectOptionalLambdaLocalCandidatesFromStmt(tryBody, scope, candidates);
+				for (c in catches)
+					collectOptionalLambdaLocalCandidatesFromStmt(c.body, scope, candidates);
+			case SVar(name, typeHint, init, _) if (StringTools.trim(typeHint == null ? "" : typeHint).length == 0):
+				final info = optionalLambdaLocalInfo(init);
+				if (info != null)
+					candidates.set(sanitizeIdentifier(name), info);
+			case SVar(_, _, init, _) if (init != null):
+				collectOptionalLambdaLocalCandidatesFromExpr(init, scope, candidates);
+			case SVar(_, _, _, _):
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectOptionalLambdaLocalCandidatesFromExpr(expr, scope, candidates);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function collectOptionalLambdaLocalCandidatesFromExpr(expr:HxExpr, scope:CppRenderScope,
+			candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr, optionalNames:haxe.ds.StringMap<Bool>}>):Void {
+		switch (expr) {
+			case ECall(callee, args):
+				collectOptionalLambdaLocalCandidatesFromExpr(callee, scope, candidates);
+				for (arg in args)
+					collectOptionalLambdaLocalCandidatesFromExpr(arg, scope, candidates);
+			case EArrayAccess(array, index):
+				collectOptionalLambdaLocalCandidatesFromExpr(array, scope, candidates);
+				collectOptionalLambdaLocalCandidatesFromExpr(index, scope, candidates);
+			case EField(receiver, _):
+				collectOptionalLambdaLocalCandidatesFromExpr(receiver, scope, candidates);
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectOptionalLambdaLocalCandidatesFromExpr(element, scope, candidates);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				collectOptionalLambdaLocalCandidatesFromExpr(iterable, scope, candidates);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					if (guardExpr != null)
+						collectOptionalLambdaLocalCandidatesFromExpr(guardExpr, scope, candidates);
+					collectOptionalLambdaLocalCandidatesFromExpr(yieldExpr, scope, candidates);
+				});
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				collectOptionalLambdaLocalCandidatesFromExpr(inner, scope, candidates);
+			case EBinop(_, left, right):
+				collectOptionalLambdaLocalCandidatesFromExpr(left, scope, candidates);
+				collectOptionalLambdaLocalCandidatesFromExpr(right, scope, candidates);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectOptionalLambdaLocalCandidatesFromExpr(cond, scope, candidates);
+				collectOptionalLambdaLocalCandidatesFromExpr(thenExpr, scope, candidates);
+				collectOptionalLambdaLocalCandidatesFromExpr(elseExpr, scope, candidates);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectOptionalLambdaLocalCandidatesFromExpr(value, scope, candidates);
+			case ESwitch(scrutinee, _, exprs):
+				collectOptionalLambdaLocalCandidatesFromExpr(scrutinee, scope, candidates);
+				for (value in exprs)
+					collectOptionalLambdaLocalCandidatesFromExpr(value, scope, candidates);
+			case ELambda(_, body):
+				collectOptionalLambdaLocalCandidatesFromExpr(body, scope, candidates);
+			case ENew(_, args):
+				for (arg in args)
+					collectOptionalLambdaLocalCandidatesFromExpr(arg, scope, candidates);
+			case _:
+		}
+	}
+
+	static function collectOptionalLambdaLocalCallsFromStmt(stmt:HxStmt, callShapes:haxe.ds.StringMap<Array<Array<HxExpr>>>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectOptionalLambdaLocalCallsFromStmt(s, callShapes);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectOptionalLambdaLocalCallsFromExpr(cond, callShapes);
+				collectOptionalLambdaLocalCallsFromStmt(thenBranch, callShapes);
+				if (elseBranch != null)
+					collectOptionalLambdaLocalCallsFromStmt(elseBranch, callShapes);
+			case SForIn(_, iterable, body, _) | SForKeyValue(_, _, iterable, body, _):
+				collectOptionalLambdaLocalCallsFromExpr(iterable, callShapes);
+				collectOptionalLambdaLocalCallsFromStmt(body, callShapes);
+			case SWhile(cond, body, _) | SDoWhile(body, cond, _):
+				collectOptionalLambdaLocalCallsFromExpr(cond, callShapes);
+				collectOptionalLambdaLocalCallsFromStmt(body, callShapes);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectOptionalLambdaLocalCallsFromExpr(scrutinee, callShapes);
+				for (body in bodies)
+					collectOptionalLambdaLocalCallsFromStmt(body, callShapes);
+			case STry(tryBody, catches, _):
+				collectOptionalLambdaLocalCallsFromStmt(tryBody, callShapes);
+				for (c in catches)
+					collectOptionalLambdaLocalCallsFromStmt(c.body, callShapes);
+			case SVar(_, _, init, _) if (init != null):
+				collectOptionalLambdaLocalCallsFromExpr(init, callShapes);
+			case SVar(_, _, _, _):
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectOptionalLambdaLocalCallsFromExpr(expr, callShapes);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function collectOptionalLambdaLocalCallsFromExpr(expr:HxExpr, callShapes:haxe.ds.StringMap<Array<Array<HxExpr>>>):Void {
+		switch (expr) {
+			case ECall(EIdent(name), args):
+				final local = sanitizeIdentifier(name);
+				if (!callShapes.exists(local))
+					callShapes.set(local, []);
+				callShapes.get(local).push(args == null ? [] : args);
+				for (arg in args)
+					collectOptionalLambdaLocalCallsFromExpr(arg, callShapes);
+			case ECall(callee, args):
+				collectOptionalLambdaLocalCallsFromExpr(callee, callShapes);
+				for (arg in args)
+					collectOptionalLambdaLocalCallsFromExpr(arg, callShapes);
+			case EArrayAccess(array, index):
+				collectOptionalLambdaLocalCallsFromExpr(array, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(index, callShapes);
+			case EField(receiver, _):
+				collectOptionalLambdaLocalCallsFromExpr(receiver, callShapes);
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectOptionalLambdaLocalCallsFromExpr(element, callShapes);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
+				collectOptionalLambdaLocalCallsFromExpr(iterable, callShapes);
+				if (guardExpr != null)
+					collectOptionalLambdaLocalCallsFromExpr(guardExpr, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(yieldExpr, callShapes);
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				collectOptionalLambdaLocalCallsFromExpr(inner, callShapes);
+			case EBinop(_, left, right):
+				collectOptionalLambdaLocalCallsFromExpr(left, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(right, callShapes);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectOptionalLambdaLocalCallsFromExpr(cond, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(thenExpr, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(elseExpr, callShapes);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectOptionalLambdaLocalCallsFromExpr(value, callShapes);
+			case ESwitch(scrutinee, _, exprs):
+				collectOptionalLambdaLocalCallsFromExpr(scrutinee, callShapes);
+				for (value in exprs)
+					collectOptionalLambdaLocalCallsFromExpr(value, callShapes);
+			case ELambda(_, body):
+				collectOptionalLambdaLocalCallsFromExpr(body, callShapes);
+			case ENew(_, args):
+				for (arg in args)
+					collectOptionalLambdaLocalCallsFromExpr(arg, callShapes);
+			case _:
+		}
+	}
+
+	static function optionalLambdaLocalInfo(init:Null<HxExpr>):Null<{args:Array<String>, body:HxExpr, optionalNames:haxe.ds.StringMap<Bool>}> {
+		return switch (init) {
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(optionalExprs)]):
+				{args: args, body: body, optionalNames: optionalLambdaNameSet(optionalExprs)};
+			case _:
+				null;
+		};
+	}
+
+	static function optionalLambdaNameSet(exprs:Array<HxExpr>):haxe.ds.StringMap<Bool> {
+		final names = new haxe.ds.StringMap<Bool>();
+		for (expr in exprs)
+			switch (expr) {
+				case EString(name):
+					names.set(sanitizeIdentifier(name), true);
+				case _:
+			}
+		return names;
+	}
+
+	static function optionalLambdaLocalArgTypes(args:Array<String>, body:HxExpr, optionalNames:haxe.ds.StringMap<Bool>, calls:Array<Array<HxExpr>>,
+			scope:CppRenderScope):Array<String> {
+		final lambdaArgs = args == null ? [] : args;
+		final inferred = [for (_ in lambdaArgs) ""];
+		final callList = calls == null ? [] : calls;
+		for (callArgs in callList) {
+			final limit = callArgs.length < lambdaArgs.length ? callArgs.length : lambdaArgs.length;
+			for (i in 0...limit) {
+				final typeName = callableArgExprType(callArgs[i], scope);
+				if (typeName.length > 0 && !optionalLambdaSetArgType(inferred, i, typeName))
+					return [];
+			}
+		}
+		for (i in 0...lambdaArgs.length) {
+			final name = sanitizeIdentifier(lambdaArgs[i]);
+			final isOptional = optionalNames.exists(name);
+			if (inferred[i].length == 0 && isOptional)
+				inferred[i] = optionalLambdaDefaultValueType(name, body, scope);
+			if (inferred[i].length == 0)
+				return [];
+			if (isOptional && !isCppOptionalType(inferred[i]) && !isCppReferenceType(inferred[i]))
+				inferred[i] = "std::optional<" + inferred[i] + ">";
+		}
+		return inferred;
+	}
+
+	static function optionalLambdaSetArgType(types:Array<String>, index:Int, typeName:String):Bool {
+		final existing = types[index];
+		if (existing.length == 0 || existing == typeName) {
+			types[index] = typeName;
+			return true;
+		}
+		final existingInner = cppOptionalInnerType(existing);
+		if (existingInner.length > 0 && existingInner == typeName)
+			return true;
+		final typeInner = cppOptionalInnerType(typeName);
+		if (typeInner.length > 0 && typeInner == existing) {
+			types[index] = typeName;
+			return true;
+		}
+		return false;
+	}
+
+	static function optionalLambdaDefaultValueType(name:String, body:HxExpr, scope:CppRenderScope):String {
+		return switch (body) {
+			case ETernary(EBinop("==", EIdent(arg), ENull), thenExpr, EIdent(elseArg))
+				if (sanitizeIdentifier(arg) == name && sanitizeIdentifier(elseArg) == name):
+				inferExprCppType(thenExpr, scope);
+			case ETernary(EBinop("==", ENull, EIdent(arg)), thenExpr, EIdent(elseArg))
+				if (sanitizeIdentifier(arg) == name && sanitizeIdentifier(elseArg) == name):
+				inferExprCppType(thenExpr, scope);
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				optionalLambdaDefaultValueType(name, inner, scope);
+			case EBinop(_, left, right):
+				final leftType = optionalLambdaDefaultValueType(name, left, scope);
+				leftType.length > 0 ? leftType : optionalLambdaDefaultValueType(name, right, scope);
+			case ETernary(cond, thenExpr, elseExpr):
+				final condType = optionalLambdaDefaultValueType(name, cond, scope);
+				if (condType.length > 0) condType; else {
+					final thenType = optionalLambdaDefaultValueType(name, thenExpr, scope);
+					thenType.length > 0 ? thenType : optionalLambdaDefaultValueType(name, elseExpr, scope);
+				}
+			case ECall(callee, args):
+				final calleeType = optionalLambdaDefaultValueType(name, callee, scope);
+				if (calleeType.length > 0) calleeType; else {
+					var found = "";
+					for (arg in args)
+						if (found.length == 0)
+							found = optionalLambdaDefaultValueType(name, arg, scope);
+					found;
+				}
+			case EArrayAccess(array, index):
+				final arrayType = optionalLambdaDefaultValueType(name, array, scope);
+				arrayType.length > 0 ? arrayType : optionalLambdaDefaultValueType(name, index, scope);
+			case EField(receiver, _):
+				optionalLambdaDefaultValueType(name, receiver, scope);
+			case EArrayDecl(elements):
+				var found = "";
+				for (element in elements)
+					if (found.length == 0)
+						found = optionalLambdaDefaultValueType(name, element, scope);
+				found;
+			case EAnon(_, fieldValues):
+				var found = "";
+				for (value in fieldValues)
+					if (found.length == 0)
+						found = optionalLambdaDefaultValueType(name, value, scope);
+				found;
+			case ESwitch(scrutinee, _, exprs):
+				final scrutineeType = optionalLambdaDefaultValueType(name, scrutinee, scope);
+				if (scrutineeType.length > 0) scrutineeType; else {
+					var found = "";
+					for (expr in exprs)
+						if (found.length == 0)
+							found = optionalLambdaDefaultValueType(name, expr, scope);
+					found;
+				}
+			case ELambda(_, _):
+				"";
+			case ENew(_, args):
+				var found = "";
+				for (arg in args)
+					if (found.length == 0)
+						found = optionalLambdaDefaultValueType(name, arg, scope);
+				found;
+			case _:
+				"";
+		};
 	}
 
 	static function inferStringMapLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
@@ -12563,6 +12898,8 @@ class CppTargetCore {
 		final actualType = exprCppType(arg, scope);
 		if (isCppFunctionType(expectedType))
 			return actualType == expectedType ? renderExpr(arg, scope) : valueExprForExpectedType(arg, expectedType, scope);
+		if (isCppOptionalType(expectedType))
+			return actualType == expectedType ? optionalStorageExpr(arg, scope) : valueExprForExpectedType(arg, expectedType, scope);
 		if (actualType == null || actualType.length == 0)
 			return renderExpr(arg, scope);
 		return actualType == expectedType ? renderExpr(arg, scope) : valueExprForExpectedType(arg, expectedType, scope);
@@ -19667,13 +20004,7 @@ class CppTargetCore {
 	}
 
 	static function cppFunctionTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
-		final parts = splitTopLevelFunctionType(typeHint);
-		if (parts.length <= 1)
-			return "std::function<std::string()>";
-		final returnType = cppTypeHint(parts[parts.length - 1], scope, classLookup);
-		final argParts = CppTypeModel.functionArgTypeParts(parts.slice(0, parts.length - 1));
-		final args = [for (arg in argParts) cppTypeHint(functionTypePartHint(arg), scope, classLookup)].filter(t -> t != "void");
-		return "std::function<" + returnType + "(" + args.join(", ") + ")>";
+		return CppTypeModel.cppFunctionTypeHint(typeHint, scope, classLookup);
 	}
 
 	static function cppFunctionReturnTypeFromCppType(typeName:String):String {

@@ -638,8 +638,10 @@ class CppTypeModel {
 			return "std::function<std::string()>";
 		final returnType = cppTypeHint(parts[parts.length - 1], scope, classLookup);
 		final args = [
-			for (arg in functionArgTypeParts(parts.slice(0, parts.length - 1)))
-				cppTypeHint(functionArgTypePartType(arg), scope, classLookup)
+			for (arg in functionArgTypeParts(parts.slice(0, parts.length - 1))) {
+				final typePart = functionArgTypePartType(arg);
+				functionArgTypePartIsOptional(arg) ? cppNullableTypeHint(typePart, scope, classLookup) : cppTypeHint(typePart, scope, classLookup);
+			}
 		].filter(t -> t != "void");
 		return "std::function<" + returnType + "(" + args.join(", ") + ")>";
 	}
@@ -1032,6 +1034,14 @@ class CppTypeModel {
 		if (StringTools.startsWith(name, "?"))
 			name = StringTools.trim(name.substr(1));
 		return isIdentifierText(name) ? StringTools.trim(text.substr(colon + 1)) : text;
+	}
+
+	public static function functionArgTypePartIsOptional(part:String):Bool {
+		final text = stripTypeParens(part);
+		final colon = topLevelColonIndex(text);
+		if (colon <= 0)
+			return StringTools.startsWith(text, "?");
+		return StringTools.startsWith(StringTools.trim(text.substring(0, colon)), "?");
 	}
 
 	public static function isIdentifierText(text:String):Bool {

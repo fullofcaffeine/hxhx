@@ -1874,8 +1874,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	}
 
 	static function assertCppOptionalArrowFunctionsUseCallableShapes():Void {
-		assertTrue(backend.cpp.CppTypeModel.cppFunctionTypeHint("?Int -> Int") == "std::function<int(int)>",
-			"C++ function type hints should strip optional markers from unnamed argument parts");
+		assertTrue(backend.cpp.CppTypeModel.cppFunctionTypeHint("?Int -> Int") == "std::function<int(std::optional<int>)>",
+			"C++ function type hints should preserve optional markers as nullable function-value arguments");
 		final slot = new HxClassDecl("ArrowSlot", false, [
 			new HxFunctionDecl("run", Public, false, [], "Int", [
 				SExpr(EBinop("=", EIdent("f"), ECall(EIdent("__hxhx_optional_lambda"), [
@@ -1924,8 +1924,30 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SReturn(ECall(EIdent("foo"), []), HxPos.unknown())
 			], "")
 		], []);
+		final optionalLambdaLocal = new HxClassDecl("OptionalLambdaLocal", false, [
+			new HxFunctionDecl("run", Public, false, [], "Int", [
+				SVar("opt5", "", ECall(EIdent("__hxhx_optional_lambda"),
+					[
+						ELambda(["a", "b"], EBinop("+", EIdent("a"), ETernary(EBinop("==", EIdent("b"), ENull), EInt(2), EIdent("b")))),
+						EArrayDecl([EString("b")])
+					]),
+					HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EInt(3), ECall(EIdent("opt5"), [EInt(1)])]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EInt(3), ECall(EIdent("opt5"), [EInt(1), EInt(2)])]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EInt(3), ECall(EIdent("opt5"), [EInt(1), ENull])]), HxPos.unknown()),
+				SReturn(EInt(0), HxPos.unknown())
+			], "")
+		], []);
 		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
-		final decl = new HxModuleDecl("", [], main, [main, slot, localCarrier, methodCarrier, mathCarrier, nullableCallableLocal], false, false);
+		final decl = new HxModuleDecl("", [], main, [
+			main,
+			slot,
+			localCarrier,
+			methodCarrier,
+			mathCarrier,
+			nullableCallableLocal,
+			optionalLambdaLocal
+		], false, false);
 		final program = new GenIrProgram([typedSyntheticModule("ArrowSlot.hx", decl)], false);
 		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
 		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup);
@@ -1936,13 +1958,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ anonymous collection should preserve instance method-value function field carriers");
 		assertContains(names, "__hxhx_anon_cos_std__function_double_double__", "C++ anonymous collection should preserve Math function-value field carriers");
 		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(slot, lookup).join("\n");
-		assertContains(lines, "std::function<int(int)> f = nullptr;",
-			"C++ optional function-typed fields should use the argument value type instead of the optional marker name");
-		assertContains(lines, "f = [&](int a) -> int { return (false ? 2 : a); };",
-			"C++ optional lambda assignments should render typed C++ lambdas instead of unresolved helper calls");
+		assertContains(lines, "std::function<int(std::optional<int>)> f = nullptr;", "C++ optional function-typed fields should use nullable argument storage");
+		assertContains(lines, "f = [&](std::optional<int> a) -> int {",
+			"C++ optional lambda assignments should render typed nullable C++ lambdas instead of unresolved helper calls");
 		assertContains(lines, "__hxhx_anon_f_std__function_int_int__ obj = __hxhx_anon_f_std__function_int_int__{};",
 			"C++ structural function-field carriers should default-initialize as aggregates");
-		assertContains(lines, "f(0)", "C++ calls omitting function-typed optional arguments should pad a default argument");
+		assertContains(lines, "f(std::nullopt)", "C++ calls omitting function-typed optional arguments should pad a nullable default argument");
 		assertTrue(lines.indexOf("__hxhx_optional_lambda") < 0, "C++ optional lambda lowering should not leak the parser helper");
 		final nullableCallableLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(nullableCallableLocal, lookup).join("\n");
 		assertContains(nullableCallableLines, "std::function<int()> foo = nullptr;",
@@ -1951,6 +1972,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ null-initialized callable locals should accept later closure assignments");
 		assertContains(nullableCallableLines, "return static_cast<int>(foo());",
 			"C++ null-initialized callable locals should remain callable after refinement");
+		final optionalLocalLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(optionalLambdaLocal, lookup).join("\n");
+		assertContains(optionalLocalLines, "auto opt5_2 = [&](int a, std::optional<int> b) -> int",
+			"C++ unhinted optional lambda locals should infer nullable parameter types from all direct call shapes");
+		assertContains(optionalLocalLines, "opt5_2(1, std::nullopt)", "C++ omitted optional lambda arguments should render as std::nullopt");
+		assertContains(optionalLocalLines, "opt5_2(1, std::nullopt)", "C++ null optional lambda arguments should render as std::nullopt");
 	}
 
 	static function assertCppFunctionScopePrepCachesArgRegistration():Void {
