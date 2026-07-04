@@ -369,3 +369,4 @@
 {"id":"int-30241813","kind":"field_change","created_at":"2026-07-04T02:38:51.611306Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-testmisc-callable","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
 {"id":"int-30ac25f9","kind":"field_change","created_at":"2026-07-04T12:24:58.493578Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-testmisc-callable","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
 {"id":"int-5e880643","kind":"field_change","created_at":"2026-07-04T12:30:12.202197Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-0rfy","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
+{"id":"int-d89cd14f","kind":"field_change","created_at":"2026-07-04T12:39:55.513897Z","actor":"Marcelo Serpa","issue_id":"haxe_ocaml-0rfy","extra":{"field":"status","new_value":"blocked","old_value":"in_progress"}}
