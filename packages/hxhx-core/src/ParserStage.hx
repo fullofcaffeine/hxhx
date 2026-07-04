@@ -61,6 +61,49 @@ class ParserStage {
 		return native.length == 0 || native == "String" || native == "StdTypes.String" || native == "Dynamic" || native == "Any";
 	}
 
+	static function initListHasMergedReturnIdentifier(exprs:Array<HxExpr>):Bool {
+		if (exprs == null)
+			return false;
+		for (expr in exprs) {
+			if (initHasMergedReturnIdentifier(expr))
+				return true;
+		}
+		return false;
+	}
+
+	static function initHasMergedReturnIdentifier(expr:Null<HxExpr>):Bool {
+		if (expr == null)
+			return false;
+		return switch (expr) {
+			case EIdent(name): final text = name == null ? "" : name; text.length > "return".length && StringTools.startsWith(text, "return");
+			case EField(obj, _):
+				initHasMergedReturnIdentifier(obj);
+			case ECall(callee, args): initHasMergedReturnIdentifier(callee) || initListHasMergedReturnIdentifier(args);
+			case EMacroExpr(inner, _):
+				initHasMergedReturnIdentifier(inner);
+			case ELambda(_, body):
+				initHasMergedReturnIdentifier(body);
+			case ESwitch(scrutinee, _, exprs): initHasMergedReturnIdentifier(scrutinee) || initListHasMergedReturnIdentifier(exprs);
+			case ENew(_, args):
+				initListHasMergedReturnIdentifier(args);
+			case EUnop(_, inner):
+				initHasMergedReturnIdentifier(inner);
+			case EBinop(_, left, right): initHasMergedReturnIdentifier(left) || initHasMergedReturnIdentifier(right);
+			case ETernary(cond, thenExpr, elseExpr): initHasMergedReturnIdentifier(cond) || initHasMergedReturnIdentifier(thenExpr) || initHasMergedReturnIdentifier(elseExpr);
+			case EAnon(_, fieldValues):
+				initListHasMergedReturnIdentifier(fieldValues);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr): initHasMergedReturnIdentifier(iterable) || initHasMergedReturnIdentifier(guardExpr) || initHasMergedReturnIdentifier(yieldExpr);
+			case EArrayDecl(values):
+				initListHasMergedReturnIdentifier(values);
+			case EArrayAccess(array, index): initHasMergedReturnIdentifier(array) || initHasMergedReturnIdentifier(index);
+			case ERange(start, end): initHasMergedReturnIdentifier(start) || initHasMergedReturnIdentifier(end);
+			case ECast(inner, _) | EUntyped(inner):
+				initHasMergedReturnIdentifier(inner);
+			case _:
+				false;
+		}
+	}
+
 	static function scanToplevelFunctions(source:String, expectedMainClass:Null<String>):Array<HxFunctionDecl> {
 		final out = new Array<HxFunctionDecl>();
 		if (source == null || source.length == 0 || expectedMainClass == null || expectedMainClass.length == 0)
@@ -535,7 +578,8 @@ class ParserStage {
 								case _:
 									false;
 							}
-							final useScannedInit = scannedInit != null && nativeInitUnsupported;
+							final nativeInitCompactedReturn = scannedInit != null && initHasMergedReturnIdentifier(nativeInit);
+							final useScannedInit = scannedInit != null && (nativeInitUnsupported || nativeInitCompactedReturn);
 							final init = useScannedInit ? scannedInit : nativeInit;
 							final scannedInitText = scannedField == null ? "" : HxFieldDecl.getInitText(scannedField);
 							final initText = useScannedInit

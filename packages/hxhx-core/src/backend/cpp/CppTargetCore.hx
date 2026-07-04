@@ -4098,6 +4098,9 @@ class CppTargetCore {
 			if (inferred.length > 0)
 				return inferred;
 		}
+		final inferredStaticCallable = inferredStaticFieldCallableType(owner, field, explicit, init, scope);
+		if (inferredStaticCallable.length > 0)
+			return cacheFieldType(inferredStaticCallable);
 		final inferredInitType = init == null ? "" : inferExprCppType(init, scope);
 		if (inferredInitType.length > 0 && isDynamicLikeTypeHint(explicit) && isPrimitiveBackedAbstractStaticFieldInit(init, scope))
 			return cacheFieldType(inferredInitType);
@@ -7296,6 +7299,184 @@ class CppTargetCore {
 			case _:
 				"";
 		};
+	}
+
+	static function inferredStaticFieldCallableType(owner:String, field:String, explicit:String, init:Null<HxExpr>, scope:CppRenderScope):String {
+		if (scope == null || scope.owner == null || init == null)
+			return "";
+		if (explicit != null && explicit.length > 0 && !isDynamicLikeTypeHint(explicit))
+			return "";
+		final ownerName = sanitizeTypePath(typeBaseName(owner == null ? "" : owner));
+		final scopeOwnerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(scope.owner)));
+		if (ownerName.length == 0 || ownerName != scopeOwnerName)
+			return "";
+		return switch (init) {
+			case ELambda(args, body):
+				inferredStaticLambdaFieldCallableType(ownerName, field, args, body, scope);
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(_)]):
+				inferredStaticLambdaFieldCallableType(ownerName, field, args, body, scope);
+			case _:
+				"";
+		}
+	}
+
+	static function inferredStaticLambdaFieldCallableType(owner:String, field:String, args:Array<String>, body:HxExpr, scope:CppRenderScope):String {
+		if (args == null || args.length == 0)
+			return "";
+		final argTypes = staticFieldCallableArgTypesFromOwnerUses(owner, field, args.length, scope);
+		if (argTypes.length != args.length)
+			return "";
+		return inferredLambdaCppFunctionType(args, body, argTypes, scope);
+	}
+
+	static function staticFieldCallableArgTypesFromOwnerUses(owner:String, field:String, arity:Int, scope:CppRenderScope):Array<String> {
+		if (scope == null || scope.owner == null || arity <= 0)
+			return [];
+		final matches = new Array<Array<String>>();
+		for (fn in HxClassDecl.getFunctions(scope.owner)) {
+			for (stmt in HxFunctionDecl.getBody(fn))
+				collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, stmt, scope, matches);
+		}
+		var inferred:Null<Array<String>> = null;
+		for (types in matches) {
+			if (types.length != arity)
+				return [];
+			if (inferred == null) {
+				inferred = types;
+			} else if (!sameStringArray(inferred, types)) {
+				return [];
+			}
+		}
+		return inferred == null ? [] : inferred;
+	}
+
+	static function collectStaticFieldCallableArgTypesFromStmt(owner:String, field:String, arity:Int, stmt:HxStmt, scope:CppRenderScope,
+			matches:Array<Array<String>>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, s, scope, matches);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, cond, scope, matches);
+				collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, thenBranch, scope, matches);
+				if (elseBranch != null)
+					collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, elseBranch, scope, matches);
+			case SForIn(name, iterable, body, _):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, iterable, scope, matches);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, body, scope, matches);
+				});
+			case SForKeyValue(keyName, valueName, iterable, body, _):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, iterable, scope, matches);
+				final loopTypes = keyValueLoopTypes(iterable, scope);
+				withScopedLocal(scope, sanitizeIdentifier(keyName), loopTypes[0], () -> {
+					withScopedLocal(scope, sanitizeIdentifier(valueName), loopTypes[1], () -> {
+						collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, body, scope, matches);
+					});
+				});
+			case SWhile(cond, body, _):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, cond, scope, matches);
+				collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, body, scope, matches);
+			case SDoWhile(body, cond, _):
+				collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, body, scope, matches);
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, cond, scope, matches);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, scrutinee, scope, matches);
+				for (body in bodies)
+					collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, body, scope, matches);
+			case STry(tryBody, catches, _):
+				collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, tryBody, scope, matches);
+				for (c in catches)
+					collectStaticFieldCallableArgTypesFromStmt(owner, field, arity, c.body, scope, matches);
+			case SVar(_, _, init, _):
+				if (init != null)
+					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, init, scope, matches);
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, expr, scope, matches);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function collectStaticFieldCallableArgTypesFromExpr(owner:String, field:String, arity:Int, expr:HxExpr, scope:CppRenderScope,
+			matches:Array<Array<String>>):Void {
+		switch (expr) {
+			case ECall(EIdent(name), args) if (sanitizeIdentifier(name) == field):
+				addStaticFieldCallableArgTypes(args, arity, scope, matches);
+				for (arg in args)
+					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, arg, scope, matches);
+			case ECall(EField(EIdent(receiver), name), args) if (sanitizeIdentifier(name) == field
+				&& sanitizeTypePath(typeBaseName(receiver)) == owner):
+				addStaticFieldCallableArgTypes(args, arity, scope, matches);
+				for (arg in args)
+					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, arg, scope, matches);
+			case ECall(callee, args):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, callee, scope, matches);
+				for (arg in args)
+					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, arg, scope, matches);
+			case EArrayAccess(array, index):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, array, scope, matches);
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, index, scope, matches);
+			case EField(receiver, _):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, receiver, scope, matches);
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, element, scope, matches);
+			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, iterable, scope, matches);
+				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
+					if (guardExpr != null)
+						collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, guardExpr, scope, matches);
+					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, yieldExpr, scope, matches);
+				});
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, inner, scope, matches);
+			case EBinop(_, left, right):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, left, scope, matches);
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, right, scope, matches);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, cond, scope, matches);
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, thenExpr, scope, matches);
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, elseExpr, scope, matches);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, value, scope, matches);
+			case ESwitch(scrutinee, _, exprs):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, scrutinee, scope, matches);
+				for (value in exprs)
+					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, value, scope, matches);
+			case ELambda(_, body):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, body, scope, matches);
+			case ENew(_, args):
+				for (arg in args)
+					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, arg, scope, matches);
+			case ERange(start, end):
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, start, scope, matches);
+				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, end, scope, matches);
+			case _:
+		}
+	}
+
+	static function addStaticFieldCallableArgTypes(args:Array<HxExpr>, arity:Int, scope:CppRenderScope, matches:Array<Array<String>>):Void {
+		if (args == null || args.length != arity)
+			return;
+		final argTypes = new Array<String>();
+		for (arg in args) {
+			final typeName = callableArgExprType(arg, scope);
+			if (typeName.length == 0)
+				return;
+			argTypes.push(typeName);
+		}
+		matches.push(argTypes);
+	}
+
+	static function sameStringArray(left:Array<String>, right:Array<String>):Bool {
+		if (left == null || right == null || left.length != right.length)
+			return false;
+		for (i in 0...left.length) {
+			if (left[i] != right[i])
+				return false;
+		}
+		return true;
 	}
 
 	static function inferDynamicLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {

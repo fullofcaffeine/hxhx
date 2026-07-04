@@ -2134,6 +2134,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(lines.indexOf("std::to_string((v + x))") < 0, "C++ additive-chain inference should not stringify the numeric prefix");
 	}
 
+	static function assertCppStaticCallableFieldsInferFunctionStorage():Void {
+		final pos = HxPos.unknown();
+		final addField = new HxFieldDecl("add", Public, true, "", ELambda(["x", "y"], EBinop("+", EIdent("x"), EIdent("y"))));
+		final use = new HxFunctionDecl("use", Public, true, [], "Int", [SReturn(ECall(EIdent("add"), [EInt(1), EInt(2)]), pos)], "");
+		final owner = new HxClassDecl("StaticCallableOwner", false, [use], [addField]);
+		final names = new StringMap<Bool>();
+		names.set("StaticCallableOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("StaticCallableOwner", owner);
+		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(owner, {names: names, byName: classes}).join("\n");
+		assertContains(lines, "inline static std::function<int(int, int)> add = [&](int x, int y) -> int {",
+			"C++ static callable fields should infer std::function storage from same-owner call sites");
+		assertContains(lines, "return (x + y);", "C++ static callable field lambdas should use the inferred numeric argument and return types");
+		assertTrue(lines.indexOf("inline static std::string add") < 0, "C++ static callable fields should not fall back to string storage");
+		assertTrue(lines.indexOf("std::to_string([&]") < 0, "C++ static callable fields should not stringify lambda initializers");
+	}
+
 	static function assertCppDynamicFunctionsUseAssignableStorage():Void {
 		final pos = HxPos.unknown();
 		final ctor = new HxFunctionDecl("new", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Void",
@@ -3235,6 +3252,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions();
 		assertCppStringParamCallsCoerceScalarLiterals();
 		assertCppUnhintedArithmeticParamsStayNumeric();
+		assertCppStaticCallableFieldsInferFunctionStorage();
 		assertCppDynamicFunctionsUseAssignableStorage();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();

@@ -79,6 +79,19 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected anonymous function statement to parse as lambda expression");
 		}
 
+		final spacedFunctionLiteral = HxParser.parseExprText("function (x, y) return x + y");
+		switch (spacedFunctionLiteral) {
+			case ELambda(["x", "y"], EBinop("+", EIdent("x"), EIdent("y"))):
+			case ELambda(_, EBinop(_, EIdent(bad), _)) if (bad == "returnx"):
+				fail("spaced function literal should not merge return with first body identifier");
+			case EUnsupported(raw):
+				fail("spaced function literal parsed as unsupported: " + raw);
+			case _:
+				fail("expected spaced function literal expression to parse as lambda addition");
+		}
+		assertTrue(@:privateAccess ParserStage.initHasMergedReturnIdentifier(ELambda(["x", "y"], EBinop("+", EIdent("returnx"), EIdent("y")))),
+			"native/scanned merge should recognize compacted return identifiers in field lambdas");
+
 		// Native parser payloads can compact escaped quote strings to `"""`.
 		// This should still parse as a normal string literal (`"`).
 		final denseArrayRaw = '[" ".code,"(".code,")".code,"%".code,"!".code,"^".code,""".code,"<".code,">".code,"&".code,"|".code,"\\n".code,"\\r".code,",".code,";".code]';
