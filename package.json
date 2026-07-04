@@ -216,6 +216,7 @@
     "test:workloads": "bash scripts/test-workloads.sh",
     "test:workloads:full": "WORKLOAD_PROFILE=full bash scripts/test-workloads.sh",
     "test:hxhx-targets": "bash scripts/test-hxhx-targets.sh",
+    "test:hxhx:stage3-customization-toggle": "bash scripts/hxhx/test-stage3-customization-toggle.sh",
     "test:acceptance": "bash scripts/test-acceptance.sh",
     "test:acceptance:full": "WORKLOAD_PROFILE=full bash scripts/test-acceptance.sh",
     "test:upstream:unit-macro": "bash scripts/hxhx/run-upstream-unit-macro.sh",

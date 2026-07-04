@@ -91,6 +91,7 @@ class Main {
 		Sys.println("  --hxhx-list-targets                  list supported hxhx lane selectors");
 		Sys.println("  --hxhx-strict-cli                    reject hxhx-only flags");
 		Sys.println("  --hxhx-stage3 ...                    run native Stage3 driver directly");
+		Sys.println("  --hxhx-customization <id>            enable explicit Stage3 customization");
 		Sys.println("  --hxhx-no-emit                       typecheck only in Stage3 lane");
 		Sys.println("  --hxhx-no-run                        emit/build without execution");
 		Sys.println("  --hxhx-parse <File.hx>               parse a file via native parser seam");

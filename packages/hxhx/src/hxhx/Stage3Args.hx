@@ -39,6 +39,7 @@ class Stage3Args {
 		var emitFullBodies = false;
 		var noEmit = false;
 		var noRun = false;
+		final customizations = new Array<String>();
 		final rest = new Array<String>();
 
 		var i = 0;
@@ -59,6 +60,11 @@ class Stage3Args {
 					if (i + 1 >= args.length)
 						throw "missing value after --hxhx-macro-runtime";
 					macroRuntimeMode = args[i + 1];
+					i += 2;
+				case "--hxhx-customization":
+					if (i + 1 >= args.length)
+						throw "missing value after --hxhx-customization";
+					customizations.push(args[i + 1]);
 					i += 2;
 				case "--hxhx-type-only":
 					typeOnly = true;
@@ -86,6 +92,7 @@ class Stage3Args {
 			emitFullBodies: emitFullBodies,
 			noEmit: noEmit,
 			noRun: noRun,
+			customizations: customizations,
 			rest: rest
 		};
 	}

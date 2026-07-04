@@ -255,8 +255,16 @@ contract.
 
 ## Minimal Proof Plan
 
-The first proof should avoid parser/typer semantics. A safe candidate is a
-small policy or diagnostic customization:
+The first proof avoids parser/typer semantics. It uses an explicit Stage3 flag:
+
+```bash
+--hxhx-customization report-typed-summary
+```
+
+`report-typed-summary` is diagnostic-only. It consumes counters Stage3 already
+computed in `--hxhx-type-only` or `--hxhx-no-emit` mode and prints a deterministic
+report. It must not mutate parsed modules, typed modules, macro state, backend
+registrations, or compiler configuration.
 
 1. Compile a fixture with customization disabled and record the baseline output.
 2. Compile the same fixture with a named customization enabled.

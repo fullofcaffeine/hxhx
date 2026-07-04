@@ -269,6 +269,11 @@ class Stage3Compiler {
 		var emitFullBodies = g.emitFullBodies;
 		var noEmit = g.noEmit;
 		var noRun = g.noRun;
+		final customizations = try {
+			Stage3CustomizationSupport.normalize(g.customizations);
+		} catch (e:String) {
+			return error(e);
+		}
 		final rest = g.rest;
 		MacroRuntimeMode.emitMarker(macroRuntimeMode);
 		final targetOutputHintRaw = findTargetOutputFileHint(rest, backendId);
@@ -725,6 +730,8 @@ class Stage3Compiler {
 			Sys.println("parsed_methods_total=" + parsedMethodsTotal);
 			Sys.println("unsupported_exprs_total=" + unsupportedExprsTotal);
 			Sys.println("unsupported_files=" + unsupportedFilesCount);
+			Stage3CustomizationSupport.emitTypedSummaryReport(customizations, "type_only", backendId, typedCount, headerOnlyCount, unsupportedExprsTotal,
+				unsupportedFilesCount);
 			Sys.println("stage3=type_only_ok");
 			return 0;
 		}
@@ -847,6 +854,8 @@ class Stage3Compiler {
 			Sys.println("header_only_modules=" + headerOnlyCount);
 			Sys.println("unsupported_exprs_total=" + unsupportedExprsTotal);
 			Sys.println("unsupported_files=" + unsupportedFilesCount);
+			Stage3CustomizationSupport.emitTypedSummaryReport(customizations, "no_emit", backendId, typedModules.length, headerOnlyCount,
+				unsupportedExprsTotal, unsupportedFilesCount);
 			Sys.println("stage3=no_emit_ok");
 			return 0;
 		}
@@ -963,6 +972,10 @@ class Stage3Compiler {
 			if (global.macroRuntimeMode != null && global.macroRuntimeMode.length > 0) {
 				unitArgs.push("--hxhx-macro-runtime");
 				unitArgs.push(global.macroRuntimeMode);
+			}
+			for (customization in global.customizations) {
+				unitArgs.push("--hxhx-customization");
+				unitArgs.push(customization);
 			}
 			if (global.typeOnly)
 				unitArgs.push("--hxhx-type-only");
