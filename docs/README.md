@@ -69,7 +69,7 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
   `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
 - Haxe-family variation workflow:
   `docs/00-project/HXHX_HAXE_FAMILY_VARIATION_WORKFLOW.md`
-- Pending Oracle checkpoint for C++ `TestJson` dynamic/numeric frontier:
+- Accepted Oracle checkpoint for C++ `TestJson` dynamic/numeric frontier:
   `docs/00-project/ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md`
 - Source-native runtime packaging strategy: `docs/02-user-guide/SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md`
 - `.cross.hx` vs `_std` beginner guide: `docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`

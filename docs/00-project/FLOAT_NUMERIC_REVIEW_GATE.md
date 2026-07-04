@@ -18,6 +18,14 @@ that will prove the change.
 If the behavior is broad, unclear, or cross-target, stop before implementation
 and use the `thinking:xhigh` second-pass review path described in `AGENTS.md`.
 
+Accepted checkpoint: the 2026-07-04 Cpp `TestJson` review
+[`ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md`](ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md)
+allows only a bounded JSON-surface numeric slice under `haxe_ocaml-ghy0.1`.
+Positive Infinity, negative Infinity, and `NaN` may become JSON `null` there,
+and the signed-zero / finite-formatting cases are scoped to the selected JSON
+oracle. That acceptance does not expand `Std.string(Float)`, Math, comparison,
+Serializer/Unserializer, binary Float, or generic `Dynamic` behavior.
+
 ## Trigger Surfaces
 
 Use this gate when a change touches these files, helpers, or search tokens:

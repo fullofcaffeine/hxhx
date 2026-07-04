@@ -69,7 +69,12 @@ body-only helpers into the render set.
 
 Sensitive surfaces require separate behavior review before implementation:
 Serializer/Unserializer, Float/NaN/Infinity/Math, JSON, binary float encoding,
-Reflect/Dynamic, comparisons, and default/no-op runtime support.
+Reflect/Dynamic, comparisons, and default/no-op runtime support. For the
+accepted 2026-07-04 Cpp `TestJson` checkpoint
+[`ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md`](ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md),
+JSON support must enter through a behavior-scoped JSON runtime/helper seam, not
+through broad `__hxhx_stringify`, generic `std::any`, or fake generated helper
+classes.
 
 If a helper cannot be rendered faithfully yet, prefer an explicit unsupported
 diagnostic over fake generated classes or silent default returns.

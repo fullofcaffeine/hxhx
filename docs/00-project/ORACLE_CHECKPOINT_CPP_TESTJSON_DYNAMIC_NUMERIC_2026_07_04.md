@@ -1,16 +1,21 @@
 # Oracle Checkpoint: Cpp TestJson Dynamic Numeric Frontier
 
 Last prepared: 2026-07-04
-Status: pending external Oracle/GPT 5.5 Pro review; implementation blocked
+Status: external Oracle/GPT 5.5 Pro review accepted; implementation split
 
 Related bead:
 
 - `haxe_ocaml-0rfy` - Cpp strict: review TestJson JSON dynamic/numeric frontier
+- `haxe_ocaml-ghy0` - Cpp TestJson frontier: split JSON seam and PosInfos
+  implementation
+- `haxe_ocaml-ghy0.1` - Cpp JSON carrier seam for TestJson frontier
+- `haxe_ocaml-ghy0.2` - Cpp optional callable defaults and PosInfos injection
 
 ## Purpose
 
-Record the review request for the current strict Cpp `TestJson` frontier before
-changing JSON, `Dynamic`, or Float special-value behavior.
+Record the review request and accepted response for the current strict Cpp
+`TestJson` frontier before changing JSON, `Dynamic`, or Float special-value
+behavior.
 
 This checkpoint is required because the first C++ diagnostics mix several
 guarded surfaces:
@@ -22,8 +27,218 @@ guarded surfaces:
 - local function calls with omitted `?pos:haxe.PosInfos`;
 - JSON printing of positive Infinity, negative Infinity, and `NaN`.
 
-The review output should be a seam recommendation, invariants, and validation
-plan. It must not provide implementation code for direct transcription.
+The review output is a seam recommendation, invariants, and validation plan. It
+is not implementation code for direct transcription.
+
+## Review Disposition
+
+The external Oracle response accepted the local hypothesis with one correction:
+the frontier must split into two independent implementation beads, and the
+`?pos:haxe.PosInfos` bead must model call-site `PosInfos` injection rather than
+ordinary optional-argument defaulting alone.
+
+Accepted seams:
+
+1. Add a Cpp-owned JSON carrier/runtime seam for `haxe.Json.stringify`,
+   `haxe.format.JsonPrinter.print`, and scoped `haxe.format.JsonParser.parse`.
+2. Add local callable optional/default argument support separately, including
+   call-site injection for omitted `?pos:haxe.PosInfos`.
+
+Rejected shortcut:
+
+- Do not make the current C++ errors disappear by adding broad anonymous-struct,
+  vector/map, or `std::any` overloads to `__hxhx_stringify`.
+
+That shortcut would conflate separate semantics: `Std.string`, JSON encoding,
+`Dynamic` erasure, structural records, non-finite float behavior, and unsupported
+runtime values.
+
+README/North Star progress bars remain unchanged from this checkpoint alone.
+The review accepts an implementation plan; it does not prove Cpp strict parity,
+Haxe JSON parity, broad `Dynamic`, `Reflect`, Float, or hxcpp compatibility.
+
+## Accepted JSON Seam
+
+JSON behavior is owned by a JSON-specific Cpp runtime seam, preferably extracted
+out of `CppTargetCore.hx` into Cpp-owned runtime/helper support as the behavior
+grows.
+
+`haxe.Json.stringify` and `haxe.format.JsonPrinter.print` should lower into the
+same behavior-scoped JSON path. They must not route arbitrary structural values
+through:
+
+- `std::to_string`;
+- `__hxhx_stringify`;
+- broad `Std.string` helpers;
+- fallback `std::any` type-name rendering.
+
+The JSON seam owns:
+
+- conversion from supported Haxe values into a Cpp JSON carrier;
+- recursive JSON printing;
+- scoped JSON parse results;
+- null representation;
+- `JsonPrinter` function behavior;
+- object field traversal;
+- array traversal;
+- numeric JSON formatting.
+
+Use `std::any` only as a box around known supported JSON carrier shapes, not as a
+universal replacement for Haxe `Dynamic`.
+
+A safe first-slice carrier distinguishes:
+
+- JSON null;
+- bool;
+- int;
+- float;
+- string;
+- array/list of JSON values;
+- object with named JSON values;
+- generated anonymous-record adapters;
+- function marker or callable predicate where `JsonPrinter` needs function
+  behavior;
+- unsupported value.
+
+Unsupported values must not silently become `null`, `0`, `false`, `""`, `{}`,
+`[]`, or type-name strings. Unsupported should be outside the accepted slice or
+produce an explicit unsupported diagnostic.
+
+## Accepted JSON Behavior Scope
+
+For the observed `TestJson` frontier, `haxe.Json.stringify` support is limited
+to:
+
+- structural anonymous objects;
+- nested anonymous objects;
+- arrays;
+- mixed dynamic arrays where every element is in the accepted JSON carrier set;
+- strings with JSON escaping;
+- ints;
+- finite floats in the accepted numeric scope;
+- bool;
+- null;
+- positive Infinity, negative Infinity, and `NaN` as JSON `null`.
+
+Replacer and pretty-printing remain out of scope unless separate cases are
+accepted. A non-null replacer or non-empty space must not silently behave
+approximately.
+
+`haxe.format.JsonPrinter.print` uses the same JSON printer, with scoped support
+for:
+
+- top-level function value prints as JSON string `"<fun>"`;
+- object fields whose values are functions are skipped;
+- supported non-function fields print normally;
+- non-finite floats print as `null`.
+
+`haxe.format.JsonParser.parse` should return a JSON carrier/object
+representation, not a raw string and not an arbitrary `std::any` blob whose
+meaning depends on broad `Dynamic` fallback.
+
+For this slice, parser support is limited to objects, arrays, strings,
+ints/floats in the accepted numeric scope, bool, null, and enough field/array
+access to support the seed summaries and `deepId` round trips.
+
+Invalid JSON error wording may match `--interp` for this seed, but it must not
+be presented as a cross-target stability contract because JS already differs.
+
+Generated anonymous C++ structs should participate in JSON through
+JSON-context adapters/descriptors, not through generic stream operators or
+string helpers.
+
+Arrays adapt recursively into JSON values. Do not convert arrays to strings and
+then print those strings as JSON.
+
+Function behavior is scoped to JSON printing only. It does not complete general
+`Reflect.isFunction`, `Dynamic`, or callable erasure support.
+
+JSON null needs a real carrier state. Do not use empty `std::any` as both JSON
+null and unsupported/missing value unless a separate tag distinguishes them.
+
+## Numeric Scope
+
+For this slice, JSON printing matches the observed upstream behavior:
+
+- positive Infinity prints as `null`;
+- negative Infinity prints as `null`;
+- `NaN` prints as `null`.
+
+This applies to both `haxe.Json.stringify` and
+`haxe.format.JsonPrinter.print`, and remains scoped to JSON.
+
+Do not use `std::to_string` for JSON floats. It produces fixed trailing zeros
+and does not match the seed behavior.
+
+The first finite float scope is bounded to the accepted seed and adjacent
+`TestJson` cases:
+
+- `0.15461`;
+- `-485.15461`;
+- `1.456`;
+- `10000000000`;
+- `-1e-10`;
+- signed `0.0`;
+- signed `-0.0`.
+
+For Cpp JSON, use `--interp` as the selected oracle for negative zero, while
+recording JS negative-zero divergence as target-specific. Do not claim hxcpp
+parity because hxcpp was unavailable locally.
+
+The `-1e-10` case should remain compact lowercase exponent form for the accepted
+seed, without turning that into broad float exponent-formatting parity.
+
+## PosInfos And Optional Callable Scope
+
+The omitted `?pos:haxe.PosInfos` failure is independent of JSON.
+
+Ordinary optional local-function arguments need a valid default/null
+representation at the call boundary.
+
+Omitted `?pos:haxe.PosInfos` arguments should receive a call-site `PosInfos`
+value, not plain null. A bounded first slice may provide a non-null Cpp
+`PosInfos` value sufficient for the current test. Exact file name, line number,
+class name, and method name parity should remain bounded until oracle-backed by
+field-specific tests.
+
+The Cpp backend should make local lambdas or local callable wrappers callable
+with the Haxe call shape, either by injecting omitted arguments at call sites,
+emitting wrappers that supply defaults, or preserving enough function type
+information for the call renderer to append missing optional arguments.
+
+For `?pos:haxe.PosInfos`, call-site injection is the accepted semantic model.
+
+## Invariants
+
+- JSON behavior is owned by the JSON seam.
+- `std::any` support in this slice is not general Haxe `Dynamic` support.
+- Unsupported is not null, except for actual Haxe/JSON null and JSON
+  non-finite float behavior.
+- Anonymous structural records enter JSON only through JSON-context
+  adapters/descriptors.
+- Numeric behavior is surface-specific to JSON printing/parser round trips.
+- Object field order is not a broad stable Haxe contract; Cpp may choose
+  deterministic field emission for source stability, but validation should
+  prefer parse summaries or explicitly Cpp-local canonical ordering.
+- Function printing/skipping is JSON-printer behavior only.
+- `JsonParser.parse` returns a structured value carrier, not a string.
+- This frontier does not justify production-readiness claims or README/North
+  Star movement.
+- Upstream Haxe remains behavior evidence only; do not copy, translate, or
+  mechanically rewrite upstream compiler or stdlib implementation code.
+
+## Accepted Implementation Split
+
+Proceed with two separate implementation beads:
+
+1. Cpp JSON carrier/runtime seam for `Json.stringify`, `JsonPrinter.print`, and
+   scoped `JsonParser.parse` support.
+2. Cpp optional local callable defaults and `?pos:haxe.PosInfos` call-site
+   injection.
+
+Do not bundle `PosInfos` with JSON behavior. Do not implement broad
+`__hxhx_stringify` overloads for anonymous structs. Do not treat `std::any` as a
+universal `Dynamic` model.
 
 ## Current Evidence
 
@@ -74,7 +289,8 @@ It executes cases under
 `test/oracle/cpp_testjson_dynamic_numeric_seed/expected.stdout`, and writes a
 local report to `.tmp/cpp-testjson-dynamic-numeric-oracle-seed/report.json`.
 The runner is upstream-oracle evidence only; it does not unblock Cpp
-implementation before the external review response is accepted.
+implementation outside the accepted review seams and does not prove Cpp parity by
+itself.
 
 Target-stability probe on 2026-07-04:
 
@@ -121,15 +337,14 @@ printer.fun="<fun>"
 printer.skipfun={"b":1}
 ```
 
-Review should decide whether `--interp` is sufficient for the implementation
-scope or whether selected targets also need oracle runs before behavior changes.
-Object field order should not be treated as a stable contract unless a selected
-oracle target proves it stable.
+The accepted review uses `--interp` as the primary oracle for this bounded Cpp
+slice, while retaining Neko and JS output as target-stability evidence. Object
+field order should not be treated as a stable contract unless a selected oracle
+target proves it stable.
 
-## Local Hypothesis For Review
+## Accepted Local Hypothesis
 
-The current frontier should probably be split into two implementation seams
-after review:
+The current frontier is split into two implementation seams:
 
 1. JSON value representation and printing. `haxe.Json.stringify` and
    `haxe.format.JsonPrinter.print` should share a behavior-scoped Cpp JSON
@@ -144,7 +359,7 @@ anonymous structs and treating that as JSON support. That would make structural
 values compile, but it risks conflating Haxe `Std.string` behavior, JSON
 encoding, `Dynamic` erasure, and special Float handling.
 
-## Review Prompt
+## Original Review Prompt
 
 Please review the whole repository architecture and the current strict Cpp
 `TestJson` frontier.
@@ -189,26 +404,22 @@ Please answer with:
    tests, strict Cpp source/direct-compile evidence, and README/North Star
    status review.
 
-## Implementation Freeze
+## Post-Review Guardrails
 
-Do not implement Cpp JSON, Float special-value, or broad `Dynamic`
-stringification changes from this checkpoint until an external review response
-is recorded and accepted in the bead or in this document.
+Implementation may proceed only through the accepted split:
 
-Allowed before review:
+- `haxe_ocaml-ghy0.1` owns the bounded Cpp JSON carrier/runtime seam.
+- `haxe_ocaml-ghy0.2` owns Cpp optional callable defaults and call-site
+  `?pos:haxe.PosInfos` injection.
 
-- collect behavior-level evidence;
-- add or refine this checkpoint/prompt;
-- prepare repo-owned oracle case descriptions;
-- record current strict logs and review blockers.
+Still blocked outside those seams:
 
-Blocked before review:
-
-- new `Json.stringify`/`JsonPrinter` runtime semantics;
-- new special Float formatting or JSON behavior;
 - broad `__hxhx_stringify` overload expansion for structural values;
+- treating `std::any` as a universal `Dynamic` runtime model;
+- new special Float formatting or numeric behavior outside JSON;
 - new erased `Dynamic` defaults that silently turn unsupported values into
   strings, nulls, zeroes, empty objects, or empty arrays;
+- bundling `PosInfos` call-shape behavior with JSON carrier behavior;
 - any README/North Star progress-bar movement from this internal frontier.
 
 ## Post-Review Validation Sketch

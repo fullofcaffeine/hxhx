@@ -11,6 +11,13 @@ The current Cpp Reflect/Dynamic helpers remain `bounded_bringup_support` for
 the specific M14/strict-Gate3 compile-shape paths that depend on them. They are
 not Haxe 4.3.7 parity evidence.
 
+The accepted 2026-07-04 Cpp `TestJson` review
+[`ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md`](ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md)
+does not promote these erased helpers. Its JSON carrier may use `std::any` only
+as a box around known JSON carrier states; unsupported erased values must stay
+explicit and must not become generic `Dynamic`, `Reflect`, or stringification
+parity.
+
 This slice does not turn the broad erased helpers into throwing diagnostics
 because current Cpp burn-down still needs them to keep Serializer,
 Unserializer, metadata, and DCE-reflection helper rendering compile-safe while
