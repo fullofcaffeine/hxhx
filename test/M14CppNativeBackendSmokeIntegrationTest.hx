@@ -1913,8 +1913,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SReturn(ECall(EField(EIdent("o"), "cos"), [EFloat(0)]), HxPos.unknown())
 			], "")
 		], []);
+		final nullableCallableLocal = new HxClassDecl("NullableCallableLocal", false, [
+			new HxFunctionDecl("run", Public, false, [], "Int", [
+				SVar("foo", "", ENull, HxPos.unknown()),
+				SVar("flag", "", EBool(true), HxPos.unknown()),
+				SIf(EIdent("flag"), SBlock([
+					SVar("x", "", EInt(1), HxPos.unknown()),
+					SExpr(EBinop("=", EIdent("foo"), ELambda([], EIdent("x"))), HxPos.unknown())
+				], HxPos.unknown()), null, HxPos.unknown()),
+				SReturn(ECall(EIdent("foo"), []), HxPos.unknown())
+			], "")
+		], []);
 		final main = new HxClassDecl("Main", true, [new HxFunctionDecl("main", Public, true, [], "Void", [], "")], []);
-		final decl = new HxModuleDecl("", [], main, [main, slot, localCarrier, methodCarrier, mathCarrier], false, false);
+		final decl = new HxModuleDecl("", [], main, [main, slot, localCarrier, methodCarrier, mathCarrier, nullableCallableLocal], false, false);
 		final program = new GenIrProgram([typedSyntheticModule("ArrowSlot.hx", decl)], false);
 		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
 		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup);
@@ -1933,6 +1944,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ structural function-field carriers should default-initialize as aggregates");
 		assertContains(lines, "f(0)", "C++ calls omitting function-typed optional arguments should pad a default argument");
 		assertTrue(lines.indexOf("__hxhx_optional_lambda") < 0, "C++ optional lambda lowering should not leak the parser helper");
+		final nullableCallableLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(nullableCallableLocal, lookup).join("\n");
+		assertContains(nullableCallableLines, "std::function<int()> foo = nullptr;",
+			"C++ null-initialized callable locals should spell out std::function storage instead of deducing std::nullptr_t");
+		assertContains(nullableCallableLines, "foo = [&]() -> int { return x; };",
+			"C++ null-initialized callable locals should accept later closure assignments");
+		assertContains(nullableCallableLines, "return static_cast<int>(foo());",
+			"C++ null-initialized callable locals should remain callable after refinement");
 	}
 
 	static function assertCppFunctionScopePrepCachesArgRegistration():Void {

@@ -10587,7 +10587,7 @@ class CppTargetCore {
 	}
 
 	static function isNullableCppLocalType(typeName:String):Bool {
-		return isCppReferenceType(typeName) || isCppOptionalType(typeName) || isCppDynamicValueType(typeName);
+		return isCppReferenceType(typeName) || isCppOptionalType(typeName) || isCppDynamicValueType(typeName) || isCppFunctionType(typeName);
 	}
 
 	static function nativeArrayCreateExpr(length:HxExpr, ?scope:CppRenderScope, ?preferredType:String):String {
