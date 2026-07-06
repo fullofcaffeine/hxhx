@@ -8448,10 +8448,20 @@ class CppTargetCore {
 		final currentArgTypes = CppTypeModel.cppFunctionArgTypesFromCppType(current);
 		// Call evidence can refine provided arguments, but omitted trailing
 		// parameters still belong to the declared callable shape.
-		final refinedArgTypes = currentArgTypes.length > argTypes.length ? argTypes.concat(currentArgTypes.slice(argTypes.length)) : argTypes;
+		final providedArgTypes = [
+			for (i in 0...argTypes.length)
+				refinedLocalCallableArgType(i < currentArgTypes.length ? currentArgTypes[i] : "", argTypes[i])
+		];
+		final refinedArgTypes = currentArgTypes.length > providedArgTypes.length ? providedArgTypes.concat(currentArgTypes.slice(providedArgTypes.length)) : providedArgTypes;
 		final refined = "std::function<" + returnType + "(" + refinedArgTypes.join(", ") + ")>";
 		setDynamicLocalTypeOverride(scope, local, refined);
 		scope.localTypes.set(local, refined);
+	}
+
+	static function refinedLocalCallableArgType(currentType:String, callType:String):String {
+		if (currentType == "std::any" || cppOptionalInnerType(currentType) == "std::any")
+			return currentType;
+		return callType;
 	}
 
 	static function setDynamicLocalTypeOverride(scope:CppRenderScope, local:String, typeName:String):Void {
@@ -13138,6 +13148,8 @@ class CppTargetCore {
 			return actualType == expectedType ? renderExpr(arg, scope) : valueExprForExpectedType(arg, expectedType, scope);
 		if (isCppOptionalType(expectedType))
 			return actualType == expectedType ? optionalStorageExpr(arg, scope) : valueExprForExpectedType(arg, expectedType, scope);
+		if (expectedType == "std::any")
+			return actualType == expectedType ? renderExpr(arg, scope) : valueExprForExpectedType(arg, expectedType, scope);
 		if (actualType == null || actualType.length == 0)
 			return renderExpr(arg, scope);
 		return actualType == expectedType ? renderExpr(arg, scope) : valueExprForExpectedType(arg, expectedType, scope);
@@ -14537,9 +14549,97 @@ class CppTargetCore {
 
 	static function cppLocalTypeHint(typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
 		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
-		if (explicit.length > 0)
+		if (explicit.length > 0) {
+			final localCallable = cppLocalCallableTypeHint(explicit, init, scope);
+			if (localCallable.length > 0)
+				return localCallable;
 			return cppTypeHint(explicit, scope);
+		}
 		return init == null ? "" : inferExprCppType(init, scope);
+	}
+
+	/**
+		Render parser-lowered local function hints without widening explicit
+		`Dynamic` parameters back into the older string-shaped placeholder.
+
+		This is intentionally local-callable-only: ordinary `Dynamic` parameters and
+		fields still use their existing compatibility path unless another reviewed
+		seam moves them to erased storage.
+	**/
+	static function cppLocalCallableTypeHint(typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
+		if (!isLocalCallableInit(init) || !isFunctionTypeHint(typeHint))
+			return "";
+		final parts = splitTopLevelFunctionType(typeHint);
+		if (parts.length <= 1)
+			return "";
+		final returnType = cppLocalCallableReturnTypeHint(parts[parts.length - 1], init, scope);
+		final args = [
+			for (arg in CppTypeModel.functionArgTypeParts(parts.slice(0, parts.length - 1)))
+				cppLocalCallableArgTypeHint(arg, scope)
+		].filter(t -> t != "void");
+		return "std::function<" + returnType + "(" + args.join(", ") + ")>";
+	}
+
+	static function cppLocalCallableArgTypeHint(part:String, ?scope:CppRenderScope):String {
+		final typePart = CppTypeModel.functionArgTypePartType(part);
+		if (isDynamicLikeTypeHint(typePart))
+			return "std::any";
+		return CppTypeModel.functionArgTypePartIsOptional(part) ? cppNullableTypeHint(typePart, scope) : cppTypeHint(typePart, scope);
+	}
+
+	static function cppLocalCallableReturnTypeHint(typeHint:String, init:HxExpr, ?scope:CppRenderScope):String {
+		final hint = StringTools.trim(typeHint == null ? "" : typeHint);
+		if (isDynamicLikeTypeHint(hint) && localCallableBodyReturnsVoid(init, scope))
+			return "void";
+		return cppReturnTypeHint(hint, scope);
+	}
+
+	static function localCallableBodyReturnsVoid(init:HxExpr, ?scope:CppRenderScope):Bool {
+		final body = localCallableLambdaBody(init);
+		return body != null && localCallableBodyExprReturnsVoid(body, scope);
+	}
+
+	static function localCallableLambdaBody(init:HxExpr):Null<HxExpr> {
+		return switch (init) {
+			case ELambda(_, body):
+				body;
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(_, body), EArrayDecl(_)]):
+				body;
+			case ECall(EIdent("__hxhx_optional_lambda"), [ECall(EIdent("__hxhx_rest_lambda"), [ELambda(_, body), EInt(_)]), EArrayDecl(_)]):
+				body;
+			case ECall(EIdent("__hxhx_rest_lambda"), [ELambda(_, body), EInt(_)]):
+				body;
+			case _:
+				null;
+		};
+	}
+
+	static function localCallableBodyExprReturnsVoid(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		if (exprReturnsVoid(expr, scope))
+			return true;
+		return switch (expr) {
+			case ECall(ELambda(lambdaArgs, continuation), args) if (isVoidSequenceLambdaShape(lambdaArgs, args, scope)):
+				switch (continuation) {
+					case ENull:
+						true;
+					case _:
+						localCallableBodyExprReturnsVoid(continuation, scope);
+				}
+			case _:
+				false;
+		};
+	}
+
+	static function isVoidSequenceLambdaShape(lambdaArgs:Array<String>, args:Array<HxExpr>, ?scope:CppRenderScope):Bool {
+		if (lambdaArgs == null || args == null || lambdaArgs.length == 0 || lambdaArgs.length != args.length)
+			return false;
+		for (name in lambdaArgs)
+			if (!StringTools.startsWith(sanitizeIdentifier(name), "__hxhx_lambda_seq_"))
+				return false;
+		for (arg in args)
+			if (!localCallableBodyExprReturnsVoid(arg, scope))
+				return false;
+		return true;
 	}
 
 	static function cppLocalDeclaredType(name:String, typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope, ?declaredLocalName:String):String {

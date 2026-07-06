@@ -2013,6 +2013,39 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(parsedPosInfosLines.indexOf("id(std::string(\"ok\"), std::nullopt)") < 0,
 			"C++ omitted local ?pos:haxe.PosInfos calls should not inject std::nullopt");
 		assertTrue(parsedPosInfosLines.indexOf("id(\"ok\", std::nullopt)") < 0, "C++ omitted local ?pos:haxe.PosInfos calls should not inject std::nullopt");
+		final parsedDynamicLocal = TyperStage.typeModule(ParserStage.parse([
+			"class LocalDynamicCallable {",
+			"  static function eq(a:Dynamic, b:Dynamic, ?pos:haxe.PosInfos):Void {}",
+			"  static function run():Void {",
+			"    function id(v:Dynamic, ?pos:haxe.PosInfos) {",
+			"      eq(v, v, pos);",
+			"    }",
+			"    id(true);",
+			"    id(null);",
+			"    id(0.15461);",
+			"    id(\"s\");",
+			"  }",
+			"}"
+		].join("\n"), "LocalDynamicCallable.hx"));
+		final parsedDynamicProgram = new GenIrProgram([parsedDynamicLocal], false);
+		final parsedDynamicLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(parsedDynamicProgram);
+		final parsedDynamicOwner = HxModuleDecl.getMainClass(parsedDynamicLocal.getParsed().getDecl());
+		final parsedDynamicLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedDynamicOwner, parsedDynamicLookup).join("\n");
+		assertContains(parsedDynamicLines, "std::function<void(std::any, std::shared_ptr<PosInfos>)> id",
+			"C++ parsed local functions should keep explicit Dynamic callable params erased across mixed call sites");
+		assertContains(parsedDynamicLines, "id(std::any(true), std::make_shared<PosInfos>",
+			"C++ Dynamic local callable bool calls should box through std::any and inject ?pos call-site data");
+		assertContains(parsedDynamicLines, "id(std::any(), std::make_shared<PosInfos>",
+			"C++ Dynamic local callable null calls should box as an erased null value instead of narrowing to bool");
+		assertContains(parsedDynamicLines, "id(std::any(0.15461), std::make_shared<PosInfos>",
+			"C++ Dynamic local callable float calls should box through std::any instead of truncating to bool");
+		assertContains(parsedDynamicLines, "id(std::any(\"s\"), std::make_shared<PosInfos>",
+			"C++ Dynamic local callable string calls should box through std::any");
+		assertTrue(parsedDynamicLines.indexOf("std::function<std::string(bool") < 0,
+			"C++ Dynamic local callable inference should not narrow the signature to the first bool call");
+		assertTrue(parsedDynamicLines.indexOf("__hxhx_stringify(eq(") < 0, "C++ void local callable bodies should not stringify void calls");
+		assertTrue(parsedDynamicLines.indexOf("id(nullptr") < 0, "C++ Dynamic local callable null calls should not pass nullptr to a narrowed bool arg");
 		final duplicateLocalArrayLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(duplicateLocalArrays, lookup).join("\n");
 		assertContains(duplicateLocalArrayLines, "auto arr = std::vector<int>{3};",
 			"C++ dynamic local type overrides should not leak from later same-name locals into earlier numeric arrays");
