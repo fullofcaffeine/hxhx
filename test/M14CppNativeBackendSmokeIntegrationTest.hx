@@ -602,6 +602,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public static function filterInferred(it:Iterable<String>, f:String->Bool) {",
 			"    return [for (x in it) if (f(x)) x];",
 			"  }",
+			"  public static function filterReceiver(items:Array<String>):Array<String> {",
+			"    return items.filter(function(item) return item != \"skip\");",
+			"  }",
 			"  public function printItem(item:String):String {",
 			"    return item;",
 			"  }",
@@ -10718,7 +10721,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ smoke should infer vector returns from filtered comprehensions");
 		assertContains(source, "static std::vector<std::string> filterInferred(std::vector<std::string> it, std::function<bool(std::string)> f) {",
 			"C++ smoke should infer omitted return types from filtered comprehensions with scoped loop binders");
+		assertContains(source, "static std::vector<std::string> filterReceiver(std::vector<std::string> items) {",
+			"C++ smoke should keep Array.filter receiver helpers vector-backed");
+		assertContains(source, "return __hxhx_vector_filter(items, [&](auto item) { return (item != \"skip\"); });",
+			"C++ smoke should lower Array.filter receiver calls to target vector support");
 		assertTrue(source.indexOf("static std::vector<int> filterInferred") < 0, "C++ smoke should not infer filtered string comprehensions as vector<int>");
+		assertTrue(source.indexOf(".filter(") < 0, "C++ smoke should not emit nonexistent std::vector filter calls");
 		assertTrue(source.indexOf("return std::to_string(([&]() {\n  std::vector<std::string> __hxhx_comp_out;") < 0,
 			"C++ smoke should not stringify filtered array comprehensions");
 		assertContains(source, "static int count(std::vector<std::string> it, std::optional<std::function<bool(std::string)>> pred = std::nullopt) {",

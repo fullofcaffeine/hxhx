@@ -11665,6 +11665,8 @@ class CppTargetCore {
 					"__hxhx_vector_sort(" + target + ", " + renderExpr(args[0], scope) + ")";
 				case "map" if (args.length == 1):
 					"__hxhx_vector_map_string(" + target + ", " + vectorMapMapperExpr(args[0], scope) + ")";
+				case "filter" if (args.length == 1):
+					"__hxhx_vector_filter(" + target + ", " + renderExpr(args[0], scope) + ")";
 				case "iterator" if (args.length == 0):
 					"__hxhx_vector_iterator_of(" + target + ")";
 				case "copy" if (args.length == 0):
@@ -15056,11 +15058,13 @@ class CppTargetCore {
 				if (mapValueType.length > 0) "std::shared_ptr<__hxhx_iterator<"
 					+ mapValueType
 					+ ">>"; else if (isCppVectorType(receiverType)) iteratorCppTypeForVector(receiverType); else "";
-			case "map" | "join" | "copy" | "pop":
+			case "map" | "filter" | "join" | "copy" | "pop":
 				final receiverType = receiverCppType();
 				if (!isCppVectorType(receiverType)) ""; else switch (method) {
 					case "map":
 						"std::vector<std::string>";
+					case "filter":
+						receiverType;
 					case "join":
 						"std::string";
 					case "copy":
