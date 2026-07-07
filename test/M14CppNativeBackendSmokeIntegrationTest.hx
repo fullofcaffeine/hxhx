@@ -2420,6 +2420,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final stringValue = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(expr, "std::string", scope);
 		assertContains(stringValue, "__hxhx_stringify(__hxhx_any_add((args[0]), (args[1])))",
 			"C++ string-shaped Dynamic plus returns should stringify the helper result explicitly");
+		final sequenced = ECall(ELambda(["__hxhx_lambda_seq_0"], expr), [ECall(EIdent("eq"), [EInt(2), EInt(2)])]);
+		final sequencedString = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(sequenced, "std::string", scope);
+		assertContains(sequencedString, "return __hxhx_stringify(__hxhx_any_add((args[0]), (args[1])));",
+			"C++ sequenced block/IIFE returns should preserve the enclosing string return expectation");
+		assertTrue(sequencedString.indexOf("return __hxhx_any_add((args[0]), (args[1]));") < 0,
+			"C++ sequenced block/IIFE returns should not leak erased std::any into string-returning callables");
 	}
 
 	static function assertCppErasedDynamicEqualityUsesAnyHelper():Void {

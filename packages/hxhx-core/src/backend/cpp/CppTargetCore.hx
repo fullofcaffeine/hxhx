@@ -10284,7 +10284,7 @@ class CppTargetCore {
 			case ESwitch(scrutinee, patterns, exprs):
 				return switchExpr(scrutinee, patterns, exprs, scope, expectedType);
 			case ECall(ELambda(lambdaArgs, body), args):
-				final sequenceCall = voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope);
+				final sequenceCall = voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope, expectedType);
 				if (sequenceCall != null)
 					return sequenceCall;
 				final refinedArgTypes = immediateLambdaRefinedArgTypes(lambdaArgs, body, args, scope);
@@ -17509,7 +17509,8 @@ class CppTargetCore {
 		};
 	}
 
-	static function voidSequenceLambdaCallExpr(lambdaArgs:Array<String>, body:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+	static function voidSequenceLambdaCallExpr(lambdaArgs:Array<String>, body:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope,
+			?expectedType:String):Null<String> {
 		if (args.length == 0 || lambdaArgs.length != args.length)
 			return null;
 		for (argName in lambdaArgs)
@@ -17525,7 +17526,10 @@ class CppTargetCore {
 			case ENull:
 				"([&]() { " + statements.join(" ") + " return nullptr; })()";
 			case _:
-				"([&]() { " + statements.join(" ") + " return " + renderExpr(body, scope) + "; })()";
+				final resultType = StringTools.trim(expectedType == null ? "" : expectedType);
+				final result = resultType.length > 0
+					&& resultType != "auto" ? valueExprForExpectedType(body, resultType, scope) : renderExpr(body, scope);
+				"([&]() { " + statements.join(" ") + " return " + result + "; })()";
 		};
 	}
 
