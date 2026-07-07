@@ -3417,6 +3417,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    var left = new CompareOwner();",
 			"    var right = new CompareOwner();",
 			"    Sys.println(Std.string(Reflect.compareMethods(stat, stat)));",
+			"    Sys.println(Std.string(Reflect.compareMethods(String.fromCharCode, String.fromCharCode)));",
 			"    Sys.println(Std.string(Reflect.compareMethods(left.add, left.add)));",
 			"    Sys.println(Std.string(Reflect.compareMethods(left.add, right.add)));",
 			"    Sys.println(Std.string(Reflect.compareMethods(left.add, null)));",
@@ -11646,6 +11647,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"__hxhx_reflect_compare_methods(__hxhx_method_identity(nullptr, std::string(\"Main::stat\")), __hxhx_method_identity(nullptr, std::string(\"Main::stat\")))",
 			"C++ Reflect.compareMethods should identify equal static method values");
 		assertContains(reflectCompareSource,
+			"__hxhx_reflect_compare_methods(__hxhx_method_identity(nullptr, std::string(\"String::fromCharCode\")), __hxhx_method_identity(nullptr, std::string(\"String::fromCharCode\")))",
+			"C++ Reflect.compareMethods should lower static intrinsic method values to comparable identity tokens");
+		assertTrue(reflectCompareSource.indexOf("(String.fromCharCode)") < 0, "C++ Reflect.compareMethods should not emit raw dotted static method values");
+		assertContains(reflectCompareSource,
 			"__hxhx_reflect_compare_methods(__hxhx_method_identity(left.get(), std::string(\"CompareOwner::add\")), __hxhx_method_identity(left.get(), std::string(\"CompareOwner::add\")))",
 			"C++ Reflect.compareMethods should identify equal instance method values on the same receiver");
 		assertContains(reflectCompareSource,
@@ -11793,7 +11798,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(reflectCompareBuilt.builtExecutable, "C++ Reflect.compareMethods runtime smoke should build executable");
 			final reflectCompareRun = commandOutput(reflectCompareBuilt.entryPath, []);
 			assertTrue(reflectCompareRun.code == 0, "C++ Reflect.compareMethods runtime smoke failed: " + reflectCompareRun.stderr);
-			assertTrue(reflectCompareRun.stdout == "true\ntrue\nfalse\nfalse\n", "unexpected C++ Reflect.compareMethods stdout: " + reflectCompareRun.stdout);
+			assertTrue(reflectCompareRun.stdout == "true\ntrue\ntrue\nfalse\nfalse\n",
+				"unexpected C++ Reflect.compareMethods stdout: " + reflectCompareRun.stdout);
 
 			final md5BytesBuildDir = Path.join([root, "imported-md5-bytes-build"]);
 			final md5BytesBuilt = BackendRegistry.createForTarget("cpp-native").emit(importedMd5BytesRuntimeProgram(), context(md5BytesBuildDir, true, false));

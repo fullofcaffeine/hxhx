@@ -12734,23 +12734,37 @@ class CppTargetCore {
 						cppMethodIdentityExpr(HxFunctionDecl.getIsStatic(fn) ? "nullptr" : "this", ownerType, name);
 				}
 			case EField(receiver, method):
-				final ownerType = switch (receiver) {
-					case EThis:
-						scope.owner == null ? null : sanitizeTypePath(HxClassDecl.getName(scope.owner));
-					case _:
-						classNameFromCppExprType(exprCppType(receiver, scope), scope);
-				}
-				if (ownerType == null || ownerType.length == 0) null; else {
-					final fn = classMethodDecl(ownerType, method, false, scope);
-					final target = reflectCompareMethodTargetExpr(receiver, scope);
-					if (fn == null || target == null)
+				final staticOwner = reflectCompareStaticMethodOwner(receiver, method, scope);
+				if (staticOwner != null) cppMethodIdentityExpr("nullptr", staticOwner, method); else {
+					final ownerType = switch (receiver) {
+						case EThis:
+							scope.owner == null ? null : sanitizeTypePath(HxClassDecl.getName(scope.owner));
+						case _:
+							classNameFromCppExprType(exprCppType(receiver, scope), scope);
+					}
+					if (ownerType == null || ownerType.length == 0)
 						null;
-					else
-						cppMethodIdentityExpr(target, ownerType, method);
+					else {
+						final fn = classMethodDecl(ownerType, method, false, scope);
+						final target = reflectCompareMethodTargetExpr(receiver, scope);
+						if (fn == null || target == null)
+							null;
+						else
+							cppMethodIdentityExpr(target, ownerType, method);
+					}
 				}
 			case _:
 				null;
 		};
+	}
+
+	static function reflectCompareStaticMethodOwner(receiver:HxExpr, method:String, ?scope:CppRenderScope):Null<String> {
+		if (scope != null) {
+			final owner = staticReceiverClassName(receiver, scope);
+			if (owner != null && owner.length > 0 && classMethodDecl(owner, method, true, scope) != null)
+				return owner;
+		}
+		return isStringStaticReceiver(receiver) && sanitizeIdentifier(method) == "fromCharCode" ? "String" : null;
 	}
 
 	static function reflectCompareMethodTargetExpr(receiver:HxExpr, ?scope:CppRenderScope):Null<String> {
