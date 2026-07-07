@@ -10994,14 +10994,8 @@ class CppTargetCore {
 				staticEnumTagValueExpr(receiver, field, scope);
 			case EField(receiver, field) if (typedPropertyGetReadExpr(receiver, field, scope) != null):
 				typedPropertyGetReadExpr(receiver, field, scope);
-			case EField(receiver, field) if (optionalAnyFieldExpr(receiver, field, scope) != null):
-				optionalAnyFieldExpr(receiver, field, scope);
-			case EField(receiver, field) if (exprCppType(receiver, scope) == "std::any"):
-				"__hxhx_json_any_field("
-				+ renderExpr(receiver, scope)
-				+ ", std::string(\""
-				+ sanitizeIdentifier(field)
-				+ "\"))";
+			case EField(receiver, field) if (jsonAnyFieldReadExpr(receiver, field, scope) != null):
+				jsonAnyFieldReadExpr(receiver, field, scope);
 			case EField(receiver, "length"):
 				"(" + renderExpr(receiver, scope) + ".size())";
 			case EArrayAccess(array, index) if (isCppOptionalVectorType(exprCppType(array, scope))):
@@ -16736,17 +16730,39 @@ class CppTargetCore {
 	}
 
 	/**
-		Field reads on optional erased ObjectMap payloads should stay on the erased
-		field-access seam instead of falling through to invalid `.value().field`.
+		Field reads on erased JSON/object carriers should stay on the JSON seam.
+
+		This is intentionally narrower than generic Dynamic field support: it covers
+		std::any values already flowing through the target-owned JSON/meta carrier,
+		including optional erased ObjectMap payloads, and leaves unsupported erased
+		values explicit inside the JSON runtime.
 	**/
+	static function jsonAnyFieldReadExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
+		final receiverType = exprCppType(receiver, scope);
+		final target = if (receiverType == "std::any") {
+			renderExpr(receiver, scope);
+		} else if (cppOptionalInnerType(receiverType) == "std::any") {
+			optionalStorageExpr(receiver, scope) + ".value()";
+		} else {
+			return null;
+		}
+		return "__hxhx_json_any_field(" + target + ", std::string(\"" + sanitizeIdentifier(field) + "\"))";
+	}
+
+	static function jsonAnyFieldStringExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case EField(receiver, field):
+				final fieldRead = jsonAnyFieldReadExpr(receiver, field, scope);
+				fieldRead == null ? null : "__hxhx_json_any_string(" + fieldRead + ")";
+			case _:
+				null;
+		};
+	}
+
 	static function optionalAnyFieldExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
 		if (cppOptionalInnerType(exprCppType(receiver, scope)) != "std::any")
 			return null;
-		return "__hxhx_json_any_field("
-			+ optionalStorageExpr(receiver, scope)
-			+ ".value(), std::string(\""
-			+ sanitizeIdentifier(field)
-			+ "\"))";
+		return jsonAnyFieldReadExpr(receiver, field, scope);
 	}
 
 	static function staticFieldExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -17212,6 +17228,9 @@ class CppTargetCore {
 		final jsonParsedString = jsonParseValueExprForExpectedType(expr, "std::string", scope);
 		if (jsonParsedString != null)
 			return jsonParsedString;
+		final jsonAnyFieldString = jsonAnyFieldStringExpr(expr, scope);
+		if (jsonAnyFieldString != null)
+			return jsonAnyFieldString;
 		final enumCtor = enumMetadataCtorStringExpr(expr, scope);
 		if (enumCtor != null)
 			return enumCtor;

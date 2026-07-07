@@ -8728,6 +8728,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final optionalAnyCompare = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("==", EField(EIdent("v"), "i"), EInt(8)), identityScope);
 		assertContains(optionalAnyCompare, "__hxhx_any_eq(__hxhx_json_any_field(v.value(), std::string(\"i\")), std::any(8))",
 			"C++ optional erased ObjectMap payload field comparisons should use std::any comparison helpers");
+		identityScope.localNames.set("m", "m");
+		identityScope.localTypes.set("m", "std::any");
+		final nestedJsonField = EField(EField(EIdent("m"), "B"), "b");
+		final nestedJsonFieldString = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Std"), "string"), [nestedJsonField]), identityScope);
+		assertContains(nestedJsonFieldString,
+			"__hxhx_json_any_string(__hxhx_json_any_field(__hxhx_json_any_field(m, std::string(\"B\")), std::string(\"b\")))",
+			"C++ Std.string on nested JSON-carrier fields should route through the JSON string seam");
+		assertTrue(nestedJsonFieldString.indexOf("std::to_string") < 0,
+			"C++ Std.string on nested JSON-carrier fields should not call numeric std::to_string(std::any)");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.exprCppType(nestedJsonField, identityScope) == "std::any",
+			"C++ nested JSON-carrier fields should keep std::any type evidence");
 		identityScope.localNames.set("h", "h_3");
 		identityScope.localTypes.set("h", "std::shared_ptr<StringMap<int>>");
 		identityScope.localTypes.set("h_3", "std::shared_ptr<ObjectMap<std::any, std::any>>");
