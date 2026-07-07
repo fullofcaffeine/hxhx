@@ -5426,6 +5426,8 @@ class CppTargetCore {
 			return returnTraced("special_typetools_find_field", renderTypeToolsFindFieldHelper(fn, owner, classLookup));
 		if (isTypeToolsTraversalHelper(fn, owner))
 			return returnTraced("special_typetools_traversal", renderTypeToolsTraversalHelper(fn, owner, classLookup));
+		if (isTypeFactoryHelper(fn, owner))
+			return returnTraced("special_type_factory", renderTypeFactoryHelper(fn, owner, classLookup));
 		if (isTypeMetadataHelper(fn, owner))
 			return returnTraced("special_type_metadata", renderTypeMetadataHelper(fn, owner, classLookup));
 		if (isExprToolsHelper(fn, owner))
@@ -6885,7 +6887,7 @@ class CppTargetCore {
 		return params;
 	}
 
-	static function genericFunctionTypeParams(fn:HxFunctionDecl):Array<String> {
+	static function declaredGenericFunctionTypeParams(fn:HxFunctionDecl):Array<String> {
 		final params = new Array<String>();
 		final seen = new haxe.ds.StringMap<Bool>();
 		function add(raw:String):Void {
@@ -6901,6 +6903,21 @@ class CppTargetCore {
 				continue;
 			for (param in meta.substr(prefix.length).split(","))
 				add(param);
+		}
+		return params;
+	}
+
+	static function genericFunctionTypeParams(fn:HxFunctionDecl):Array<String> {
+		final params = declaredGenericFunctionTypeParams(fn);
+		final seen = new haxe.ds.StringMap<Bool>();
+		for (param in params)
+			seen.set(param, true);
+		function add(raw:String):Void {
+			final clean = sanitizeIdentifier(StringTools.trim(raw == null ? "" : raw));
+			if (clean.length > 0 && !seen.exists(clean)) {
+				seen.set(clean, true);
+				params.push(clean);
+			}
 		}
 		for (arg in HxFunctionDecl.getArgs(fn))
 			collectDynamicGenericWildcardParamsFromHint(HxFunctionArg.getTypeHint(arg), add);
@@ -10302,6 +10319,10 @@ class CppTargetCore {
 						expected.length > 0 ? valueExprForExpectedType(args[i], expected, scope) : renderExpr(args[i], scope);
 					}
 				].join(", ") + ")";
+			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver) && method == "createInstance" && args.length == 2):
+				return typeFactoryCallExpr(method, args, scope, expectedType);
+			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver) && method == "createEmptyInstance" && args.length == 1):
+				return typeFactoryCallExpr(method, args, scope, expectedType);
 			case ECall(EIdent(name), args):
 				final typedCall = directCallExprForExpectedType(name, args, expectedType, scope);
 				if (typedCall != null)
@@ -10409,6 +10430,11 @@ class CppTargetCore {
 			case _:
 				false;
 		};
+	}
+
+	static function isTypeStaticReceiver(receiver:HxExpr):Bool {
+		final path = staticReceiverTypePath(receiver);
+		return path != null && sanitizeTypePath(typeBaseName(path)) == "Type";
 	}
 
 	static function explicitReferenceCastExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -10611,17 +10637,21 @@ class CppTargetCore {
 				newExpr(typePath, args, scope);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
-			case ECall(EField(EIdent("Type"), "getClassName"), args) if (args.length == 1):
+			case ECall(EField(receiver, "getClassName"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
-			case ECall(EField(EIdent("Type"), "getEnumName"), args) if (args.length == 1):
+			case ECall(EField(receiver, "getEnumName"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
-			case ECall(EField(EIdent("Type"), "typeof"), args) if (args.length == 1):
+			case ECall(EField(receiver, "typeof"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
-			case ECall(EField(EIdent("Type"), "resolveClass"), args) if (args.length == 1):
+			case ECall(EField(receiver, "resolveClass"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"Type::resolveClass(" + stringExpr(args[0], scope) + ")";
-			case ECall(EField(EIdent("Type"), "resolveEnum"), args) if (args.length == 1):
+			case ECall(EField(receiver, "resolveEnum"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"Type::resolveEnum(" + stringExpr(args[0], scope) + ")";
-			case ECall(EField(EIdent("Type"), "enumEq"), args) if (args.length == 2):
+			case ECall(EField(receiver, "createInstance"), args) if (isTypeStaticReceiver(receiver) && args.length == 2):
+				typeFactoryCallExpr("createInstance", args, scope);
+			case ECall(EField(receiver, "createEmptyInstance"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
+				typeFactoryCallExpr("createEmptyInstance", args, scope);
+			case ECall(EField(receiver, "enumEq"), args) if (isTypeStaticReceiver(receiver) && args.length == 2):
 				typeEnumEqExpr(args[0], args[1], scope);
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayExpr(args[0], scope);
@@ -13832,8 +13862,8 @@ class CppTargetCore {
 				lambdaArrayResultCppType(args[0], scope);
 			case ECall(EField(receiver, "count"), args) if (isLambdaStaticReceiver(receiver) && args.length >= 1):
 				"int";
-			case ECall(EField(EIdent("Type"), method), args):
-				typeIntrinsicReturnCppType(method, args);
+			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver)):
+				typeIntrinsicReturnCppType(method, args, scope);
 			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
 				"std::string";
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
@@ -14827,8 +14857,8 @@ class CppTargetCore {
 		return switch (expr) {
 			case EIdent(_):
 				exprCppType(expr, scope);
-			case ECall(EField(EIdent("Type"), method), args):
-				typeIntrinsicReturnCppType(method, args);
+			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver)):
+				typeIntrinsicReturnCppType(method, args, scope);
 			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
 				"std::string";
 			case ECall(EField(EIdent("Std"), "string"), args) if (args.length == 1):
@@ -15686,6 +15716,15 @@ class CppTargetCore {
 		};
 	}
 
+	static function classReferencePathCandidateText(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EEnumValue(name):
+				name;
+			case _:
+				typePathText(expr);
+		};
+	}
+
 	static function typeDescriptorArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		final typePath = typePathText(expr);
 		if (typePath != null && typePath.length > 0) {
@@ -15700,7 +15739,7 @@ class CppTargetCore {
 	}
 
 	static function classReferencePathText(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
-		final typePath = typePathText(expr);
+		final typePath = classReferencePathCandidateText(expr);
 		if (typePath == null || typePath.length == 0)
 			return null;
 		final baseName = sanitizeTypePath(typeBaseName(typePath));
@@ -19027,7 +19066,7 @@ class CppTargetCore {
 		return templateArgs.length == 0 ? null : className + "<" + templateArgs.join(", ") + ">";
 	}
 
-	static function typeIntrinsicReturnCppType(method:String, args:Array<HxExpr>):String {
+	static function typeIntrinsicReturnCppType(method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		return switch (method) {
 			case "getClass" | "getSuperClass" if (args.length == 1):
 				"std::shared_ptr<Class>";
@@ -19039,6 +19078,10 @@ class CppTargetCore {
 				"std::shared_ptr<Enum>";
 			case "createEnum" | "createEnumIndex" if (args.length == 2 || args.length == 3):
 				"std::shared_ptr<EnumValue>";
+			case "createInstance" if (args.length == 2):
+				typeFactoryReturnCppType(args, scope);
+			case "createEmptyInstance" if (args.length == 1):
+				typeFactoryReturnCppType(args, scope);
 			case "enumEq" if (args.length == 2):
 				"bool";
 			case "getClassName" | "getEnumName" | "typeof" if (args.length == 1):
@@ -19048,6 +19091,28 @@ class CppTargetCore {
 			case _:
 				"";
 		};
+	}
+
+	static function typeFactoryCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?expectedType:String):String {
+		final inferred = typeFactoryReturnCppType(args, scope);
+		final templateType = inferred.length > 0 ? inferred : expectedType == null ? "" : expectedType;
+		final renderedArgs = new Array<String>();
+		if (args.length > 0) {
+			final classArg = classReferenceArgExprForExpectedType(args[0], "std::shared_ptr<Class>", scope);
+			renderedArgs.push(classArg == null ? valueExprForExpectedType(args[0], "std::shared_ptr<Class>", scope) : classArg);
+		}
+		if (args.length > 1)
+			renderedArgs.push(valueExprForExpectedType(args[1], "std::vector<std::any>", scope));
+		return "Type::" + method + (templateType.length > 0 ? "<" + templateType + ">" : "") + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function typeFactoryReturnCppType(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (args == null || args.length == 0)
+			return "";
+		final classReference = classReferencePathText(args[0], scope);
+		if (classReference == null || classReference.length == 0)
+			return "";
+		return cppTypeHint(classReference, scope);
 	}
 
 	static function typeEnumEqExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
@@ -19212,6 +19277,21 @@ class CppTargetCore {
 			return false;
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		return (method == "getClass" || method == "getEnum") && HxFunctionDecl.getArgs(fn).length == 1;
+	}
+
+	static function isTypeFactoryHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
+			return false;
+		if (!isTypeClass(owner))
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "createInstance":
+				HxFunctionDecl.getArgs(fn).length == 2;
+			case "createEmptyInstance":
+				HxFunctionDecl.getArgs(fn).length == 1;
+			case _:
+				false;
+		};
 	}
 
 	static function isTypeMetadataHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
@@ -19809,6 +19889,32 @@ class CppTargetCore {
 				for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
 					out.push(line);
 		}
+		out.push("  }");
+		return out;
+	}
+
+	/**
+		Render bounded Type factory helpers with a C++-valid default for any
+		explicit template instantiation. Real reflective construction remains a
+		separate runtime semantics task; this helper only owns compile shape.
+	**/
+	static function renderTypeFactoryHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final scope = renderScope(owner, classLookup, "auto");
+		applyFunctionTypeParams(scope, fn);
+		final rawReturn = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
+		final returnType = rawReturn.length == 0 ? "void" : cppReturnTypeHint(rawReturn, scope, classLookup);
+		scope.returnType = returnType;
+		prepareFunctionSignatureScope(scope, fn);
+		final out = new Array<String>();
+		final declaredTypeParams = declaredGenericFunctionTypeParams(fn);
+		final methodTypeParams = declaredTypeParams.length > 0 ? declaredTypeParams : emittedFunctionTypeParams(fn, returnType, scope);
+		if (methodTypeParams.length > 0)
+			out.push("  " + genericTemplatePrefix(methodTypeParams));
+		out.push("  static " + returnType + " " + methodName + "(" + renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
+		for (arg in HxFunctionDecl.getArgs(fn))
+			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
+		out.push("    return " + returnType + "{};");
 		out.push("  }");
 		return out;
 	}

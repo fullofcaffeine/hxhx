@@ -1204,6 +1204,31 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedType, typedOther], []);
 	}
 
+	static function typeCreateInstanceProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    TypeCreateUser.run();",
+			"  }",
+			"}",
+			"class MyClass {",
+			"  public var intValue:Int = 55;",
+			"  public function new(v:Int) {}",
+			"  public function get():Int return 33;",
+			"}",
+			"class TypeCreateUser {",
+			"  public static function run():Bool {",
+			"    var i = Type.createInstance(MyClass, [33]);",
+			"    var e = Type.createEmptyInstance(MyClass);",
+			"    return i.get() == 33 && i.intValue == 55 && e == null;",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function vendorListProgramWhenAvailable():Null<GenIrProgram> {
 		final listPath = "vendor/haxe/std/haxe/ds/List.hx";
 		if (!FileSystem.exists(listPath))
@@ -11263,6 +11288,60 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ ValueType enum constructor values should not use the unrendered source carrier name");
 		assertTrue(valueTypeCarrierSource.indexOf("((haxe.ds).StringMap)") < 0,
 			"C++ ValueType enum constructor payloads should not render qualified class constants as nested field access");
+
+		final typeCreateDir = Path.join([root, "type-create-instance-source-only"]);
+		final typeCreateEmit = BackendRegistry.createForTarget("cpp-native").emit(typeCreateInstanceProgram(), context(typeCreateDir, true, true));
+		final typeCreateSource = File.getContent(typeCreateEmit.entryPath);
+		final typeCreateHelper = new HxFunctionDecl("createInstance", Public, true, [
+			new HxFunctionArg("cl", "Class<Dynamic>", NoDefault, false, false),
+			new HxFunctionArg("args", "Array<Dynamic>", NoDefault, false, false)
+		], "T", [], "", ["__hxhx_fn_type_params=T"]);
+		final typeEmptyHelper = new HxFunctionDecl("createEmptyInstance", Public, true, [new HxFunctionArg("cl", "Class<Dynamic>", NoDefault, false, false)],
+			"T", [], "", ["__hxhx_fn_type_params=T"]);
+		final typeFactoryOwner = new HxClassDecl("Type", false, [typeCreateHelper, typeEmptyHelper], []);
+		final typeFactoryLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(typeFactoryOwner, {
+			names: new StringMap<Bool>(),
+			byName: new StringMap<HxClassDecl>()
+		}).join("\n");
+		final typeCreateNames = new StringMap<Bool>();
+		typeCreateNames.set("MyClass", true);
+		typeCreateNames.set("Type", true);
+		final typeCreateByName = new StringMap<HxClassDecl>();
+		typeCreateByName.set("MyClass", new HxClassDecl("MyClass", false, [], []));
+		typeCreateByName.set("Type", typeFactoryOwner);
+		final typeCreateScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("TypeCreateUser", false, [], []), {
+			names: typeCreateNames,
+			byName: typeCreateByName
+		}, "auto");
+		final directTypeCreateCall = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "createInstance"),
+			[EIdent("MyClass"), EArrayDecl([EInt(33)])]), typeCreateScope);
+		assertContains(directTypeCreateCall, "Type::createInstance<std::shared_ptr<MyClass>>(Type::resolveClass(\"MyClass\")",
+			"C++ Type.createInstance intrinsic should preserve class-reference return shape before source parsing");
+		final parsedTypeCreateCall = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "createInstance"),
+			[EEnumValue("MyClass"), EArrayDecl([EInt(33)])]), typeCreateScope);
+		assertContains(parsedTypeCreateCall, "Type::createInstance<std::shared_ptr<MyClass>>(Type::resolveClass(\"MyClass\")",
+			"C++ Type.createInstance intrinsic should recover class-reference shape from parser enum-like class tokens");
+		assertContains(typeFactoryLines, "template<typename T>\n  static T createInstance(std::shared_ptr<Class> cl, std::vector<std::any> args)",
+			"C++ Type.createInstance helper should be a C++ method template");
+		assertContains(typeFactoryLines, "template<typename T>\n  static T createEmptyInstance(std::shared_ptr<Class> cl)",
+			"C++ Type.createEmptyInstance helper should be a C++ method template");
+		assertContains(typeFactoryLines, "static T createInstance(std::shared_ptr<Class> cl, std::vector<std::any> args)",
+			"C++ Type.createInstance helper should preserve its templated factory surface");
+		assertContains(typeFactoryLines, "static T createEmptyInstance(std::shared_ptr<Class> cl)",
+			"C++ Type.createEmptyInstance helper should preserve its templated factory surface");
+		assertContains(typeFactoryLines, "return T{};",
+			"C++ Type factory helpers should use C++ value initialization instead of nullptr for arbitrary template returns");
+		assertContains(typeCreateSource, "auto i = Type::createInstance<std::shared_ptr<MyClass>>(",
+			"C++ Type.createInstance class constants should provide an explicit return-carrier template argument");
+		assertContains(typeCreateSource, "auto e = Type::createEmptyInstance<std::shared_ptr<MyClass>>(",
+			"C++ Type.createEmptyInstance class constants should provide an explicit return-carrier template argument");
+		assertContains(typeCreateSource, "i->get()", "C++ locals inferred from Type.createInstance class constants should keep pointer-shaped method access");
+		assertContains(typeCreateSource, "(i->intValue)",
+			"C++ locals inferred from Type.createInstance class constants should keep pointer-shaped field access");
+		assertTrue(typeCreateSource.indexOf("Type::createInstance(Type::resolveClass(") < 0,
+			"C++ Type.createInstance class-constant calls should not omit the explicit return template argument");
+		assertTrue(typeFactoryLines.indexOf("static T createInstance(std::shared_ptr<Class> cl, std::vector<std::any> args) {\n    (void)cl;\n    (void)args;\n    return nullptr;") < 0,
+			"C++ Type factory helper stubs should not instantiate nullptr returns for non-pointer template types");
 
 		final enumCarrierDir = Path.join([root, "enum-carrier-name-collision-source-only"]);
 		final enumCarrierEmit = BackendRegistry.createForTarget("cpp-native").emit(enumCarrierNameCollisionProgram(), context(enumCarrierDir, true, true));
