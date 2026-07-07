@@ -8607,8 +8607,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionArg("f", "String", NoDefault, false, false)
 		], "Dynamic",
 			[SReturn(EArrayAccess(EIdent("o"), EIdent("f")), HxPos.unknown())], "");
+		final serializerRun = new HxFunctionDecl("run", Public, true, [new HxFunctionArg("v", "Dynamic", NoDefault, false, false)], "String", [
+			SVar("s", "", ENew("Serializer", []), HxPos.unknown()),
+			SExpr(ECall(EField(EIdent("s"), "serialize"), [EIdent("v")]), HxPos.unknown()),
+			SReturn(ECall(EField(EIdent("s"), "toString"), []), HxPos.unknown())
+		], "");
 		final serializerGetFieldLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(serializerGetField, new HxClassDecl("Serializer", false, [serializerGetField], []), serializerLookup)
+				.join("\n");
+		final serializerRunLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(serializerRun, new HxClassDecl("Serializer", false, [serializerRun], []), serializerLookup)
 				.join("\n");
 		final serializerScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(serializerOwner, serializerLookup, "void");
 		serializerScope.localNames.set("v", "v");
@@ -8631,6 +8639,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Serializer.__getField should render through the bounded compile-safe helper");
 		assertContains(serializerGetFieldLines, "o[static_cast<std::size_t>(index)]", "C++ Serializer.__getField should not index strings with string keys");
 		assertTrue(serializerGetFieldLines.indexOf("o[f]") < 0, "C++ Serializer.__getField should not emit invalid std::string operator[] usage");
+		assertContains(serializerRunLines, "template<typename T>", "C++ Serializer.run should keep Dynamic values accepted at the helper boundary");
+		assertContains(serializerRunLines, "static std::string run(T v) {", "C++ Serializer.run should not force callers through a String-only signature");
+		assertTrue(serializerRunLines.indexOf("run(std::string v)") < 0, "C++ Serializer.run should accept Bytes and other serializable values");
 		assertContains(serializerBoolTernary, "__hxhx_any_bool(v)", "C++ Serializer Dynamic bool branches should unwrap std::any through a named helper");
 		assertTrue(serializerAnyLength == "static_cast<int>(__hxhx_any_vector_any(v).size())",
 			"C++ Serializer Dynamic array length should lower through the bounded std::any vector helper");
@@ -8676,6 +8687,36 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ zero-arg generic constructor locals should render erased template args");
 		assertTrue(identityScope.localTypes.get("om") == "std::shared_ptr<ObjectMap<std::any, std::any>>",
 			"C++ zero-arg generic constructor locals should record erased template args in local types");
+		identityScope.localNames.set("a", "a");
+		identityScope.localTypes.set("a", "std::vector<std::any>");
+		final dynamicLambdaListLocal = @:privateAccess
+			backend.cpp.CppTargetCore.renderStmt(SVar("l", "", ECall(EField(EIdent("Lambda"), "list"), [EIdent("a")]), HxPos.unknown()), "  ", identityScope)
+				.join("\n");
+		assertContains(dynamicLambdaListLocal, "__hxhx_make_shared_List<std::any>()",
+			"C++ Lambda.list(Array<Dynamic>) should build a List<std::any> from the iterable element type");
+		assertContains(dynamicLambdaListLocal, "__hxhx_vector_iterator_of(a)",
+			"C++ Lambda.list(Array<Dynamic>) should lower through the target-owned vector iterator");
+		assertTrue(identityScope.localTypes.get("l") == "std::shared_ptr<List<std::any>>",
+			"C++ Lambda.list(Array<Dynamic>) locals should keep List<Dynamic> type evidence");
+		final dynamicLambdaListIdentity = @:privateAccess
+			backend.cpp.CppTargetCore.renderStmt(SVar("l2", "", ECall(EIdent("id"), [EIdent("l")]), HxPos.unknown()), "  ", identityScope).join("\n");
+		assertContains(dynamicLambdaListIdentity, "id<std::shared_ptr<List<std::any>>>(l)",
+			"C++ generic calls should keep Lambda.list(Array<Dynamic>) as List<std::any>");
+		assertTrue(dynamicLambdaListIdentity.indexOf("TestNullCoalescing_A") < 0,
+			"C++ Lambda.list(Array<Dynamic>) should not inherit unrelated monomorphic List helper element types");
+		final dynamicLambdaListIterator = @:privateAccess
+			backend.cpp.CppTargetCore.renderStmt(SVar("it", "", ECall(EField(EIdent("l"), "iterator"), []), HxPos.unknown()), "  ", identityScope).join("\n");
+		assertContains(dynamicLambdaListIterator, "auto it = l->iterator();",
+			"C++ List<Dynamic>.iterator locals should render through the pointer-backed List receiver");
+		assertTrue(identityScope.localTypes.get("it") == "std::shared_ptr<ListIterator<std::any>>",
+			"C++ List<Dynamic>.iterator locals should keep pointer-backed iterator type evidence");
+		final dynamicLambdaListIteratorNext = @:privateAccess
+			backend.cpp.CppTargetCore.renderStmt(SVar("x", "", ECall(EField(EIdent("it"), "next"), []), HxPos.unknown()), "  ", identityScope).join("\n");
+		assertContains(dynamicLambdaListIteratorNext, "auto x = it->next();", "C++ List<Dynamic> iterator next calls should use pointer member access");
+		assertTrue(identityScope.localTypes.get("x") == "std::any", "C++ List<Dynamic> iterator next locals should infer the iterator element type");
+		final dynamicLambdaListIteratorHasNext = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("it"), "hasNext"), []), identityScope);
+		assertTrue(dynamicLambdaListIteratorHasNext == "it->hasNext()", "C++ List<Dynamic> iterator hasNext calls should use pointer member access");
 		identityScope.localNames.set("v", "v");
 		identityScope.localTypes.set("v", "std::optional<std::any>");
 		final optionalAnyField = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("v"), "i"), identityScope);

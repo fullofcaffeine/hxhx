@@ -938,10 +938,16 @@ class CppTypeModel {
 	}
 
 	public static function cppIteratorElementType(typeName:String):String {
-		final prefix = "std::shared_ptr<__hxhx_iterator<";
-		if (typeName == null || !StringTools.startsWith(typeName, prefix) || !StringTools.endsWith(typeName, ">>"))
+		if (typeName == null || !StringTools.endsWith(typeName, ">>"))
 			return "";
-		return typeName.substr(prefix.length, typeName.length - prefix.length - 2);
+		for (prefix in [
+			"std::shared_ptr<__hxhx_iterator<",
+			"std::shared_ptr<ListIterator<",
+			"std::shared_ptr<RestIterator<"
+		])
+			if (StringTools.startsWith(typeName, prefix))
+				return typeName.substr(prefix.length, typeName.length - prefix.length - 2);
+		return "";
 	}
 
 	public static function isCppArrayBackedAbstractType(typeName:String, ?scope:CppRenderScope):Bool {

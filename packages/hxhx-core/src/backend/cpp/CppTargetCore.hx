@@ -5498,6 +5498,8 @@ class CppTargetCore {
 			return returnTraced("special_resource", renderResourceSupportHelper(fn, owner, classLookup));
 		if (isBytesSupportHelper(fn, owner))
 			return returnTraced("special_bytes", renderBytesSupportHelper(fn, owner, classLookup));
+		if (isSerializerRunHelper(fn, owner))
+			return returnTraced("special_serializer_run", renderSerializerRunHelper(fn, owner, classLookup));
 		if (isSerializerGetFieldHelper(fn, owner))
 			return returnTraced("special_serializer_get_field", renderSerializerGetFieldHelper(fn, owner, classLookup));
 		if (isUnserializerInitCodesHelper(fn, owner))
@@ -6091,6 +6093,13 @@ class CppTargetCore {
 			&& HxFunctionDecl.getArgs(fn).length == 2;
 	}
 
+	static function isSerializerRunHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		return sanitizeTypePath(HxClassDecl.getName(owner)) == "Serializer"
+			&& HxFunctionDecl.getIsStatic(fn)
+			&& sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "run"
+			&& HxFunctionDecl.getArgs(fn).length == 1;
+	}
+
 	static function isUnserializerInitCodesHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		return sanitizeTypePath(HxClassDecl.getName(owner)) == "Unserializer"
 			&& HxFunctionDecl.getIsStatic(fn)
@@ -6140,6 +6149,24 @@ class CppTargetCore {
 			"    int index = f.empty() ? 0 : static_cast<int>(static_cast<unsigned char>(f[0]));",
 			"    if (index < 0 || index >= static_cast<int>(o.size())) return std::string();",
 			"    return std::string(1, o[static_cast<std::size_t>(index)]);",
+			"  }"
+		];
+	}
+
+	/**
+		Keep Serializer.run at the Dynamic serialization seam.
+
+		The strict C++ frontier calls `Serializer.run` with `Bytes`; forcing the
+		helper through a string-only signature rejects valid serializable values.
+	**/
+	static function renderSerializerRunHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return [
+			"  template<typename T>",
+			"  static std::string " + method + "(T v) {",
+			"    auto s = std::make_shared<Serializer>();",
+			"    s->serialize(v);",
+			"    return s->toString();",
 			"  }"
 		];
 	}
@@ -10846,6 +10873,8 @@ class CppTargetCore {
 				typeEnumEqExpr(args[0], args[1], scope);
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayExpr(args[0], scope);
+			case ECall(EField(receiver, "list"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
+				lambdaListExpr(args[0], scope);
 			case ECall(EField(receiver, "count"), args) if (isLambdaStaticReceiver(receiver) && args.length >= 1):
 				lambdaCountExpr(args[0], args.length > 1 ? args[1] : null, scope);
 			case ECall(EField(EIdent("Math"), method), args):
@@ -13348,6 +13377,19 @@ class CppTargetCore {
 		return "Lambda::array(" + renderExpr(iterable, scope) + ")";
 	}
 
+	static function lambdaListExpr(iterable:HxExpr, ?scope:CppRenderScope):String {
+		final resultType = lambdaListResultCppType(iterable, scope);
+		final elementType = listElementCppType(resultType);
+		if (elementType.length == 0)
+			return "Lambda::list(" + renderExpr(iterable, scope) + ")";
+		final iteratorAccess = iteratorAccessForLambdaIterable(iterable, scope);
+		if (iteratorAccess == null)
+			return "Lambda::list(" + renderExpr(iterable, scope) + ")";
+		final access = isCppReferenceType(iteratorAccess.cppType) ? "->" : ".";
+		return "([&]() { auto __hxhx_list = __hxhx_make_shared_List<" + elementType + ">(); auto __hxhx_iter = " + iteratorAccess.expr
+			+ "; while (__hxhx_iter" + access + "hasNext()) __hxhx_list->add(__hxhx_iter" + access + "next()); return __hxhx_list; })()";
+	}
+
 	static function lambdaCountExpr(iterable:HxExpr, pred:Null<HxExpr>, ?scope:CppRenderScope):String {
 		final iteratorAccess = iteratorAccessForLambdaIterable(iterable, scope);
 		if (iteratorAccess == null)
@@ -13449,6 +13491,12 @@ class CppTargetCore {
 		if (mapValue.length > 0)
 			return "std::vector<" + mapValue + ">";
 		return isCppVectorType(typeName) ? typeName : "";
+	}
+
+	static function lambdaListResultCppType(iterable:HxExpr, ?scope:CppRenderScope):String {
+		final arrayType = lambdaArrayResultCppType(iterable, scope);
+		final elementType = cppVectorElementType(arrayType);
+		return elementType.length == 0 ? "" : "std::shared_ptr<List<" + elementType + ">>";
 	}
 
 	static function lambdaArrayStructuralIteratorProvider(iterable:HxExpr):Null<HxExpr> {
@@ -14419,6 +14467,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayResultCppType(args[0], scope);
+			case ECall(EField(receiver, "list"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
+				lambdaListResultCppType(args[0], scope);
 			case ECall(EField(receiver, "count"), args) if (isLambdaStaticReceiver(receiver) && args.length >= 1):
 				"int";
 			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver)):
@@ -15573,6 +15623,8 @@ class CppTargetCore {
 				"std::any";
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayResultCppType(args[0], scope);
+			case ECall(EField(receiver, "list"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
+				lambdaListResultCppType(args[0], scope);
 			case ECall(EField(receiver, "count"), args) if (isLambdaStaticReceiver(receiver) && args.length >= 1):
 				"int";
 			case ECall(EField(receiver, "isEnumValue"), _) if (isReflectStaticReceiver(receiver)):
@@ -15792,6 +15844,9 @@ class CppTargetCore {
 				keyType.length > 0 ? "std::shared_ptr<__hxhx_iterator<" + keyType + ">>" : "";
 			case "iterator" if (arity == 0):
 				final receiverType = receiverCppType();
+				final listElementType = listElementCppType(receiverType);
+				if (listElementType.length > 0)
+					return "std::shared_ptr<ListIterator<" + listElementType + ">>";
 				final mapValueType = mapValueCppType(receiverType);
 				if (mapValueType.length > 0) "std::shared_ptr<__hxhx_iterator<"
 					+ mapValueType
