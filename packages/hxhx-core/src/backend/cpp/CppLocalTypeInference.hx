@@ -70,7 +70,8 @@ class CppLocalTypeInference {
 
 		The C++ backend still has legacy string-shaped Dynamic helper surfaces. This
 		analysis only identifies arguments whose bodies require erased carriers, such
-		as equality, switch scrutinees, or `Std.isOfType` values.
+		as equality, switch scrutinees, `Std.isOfType` values, or `Type.typeof`
+		probes.
 	**/
 	public static function erasedDynamicArgUsageNames(args:Array<HxFunctionArg>, body:Array<HxStmt>, candidates:StringMap<Bool>,
 			api:CppLocalTypeInferenceApi):StringMap<Bool> {
@@ -139,6 +140,10 @@ class CppLocalTypeInference {
 				for (value in exprs)
 					collectErasedDynamicArgUsageNamesFromExpr(value, dynamicArgs, used);
 			case ECall(EField(EIdent("Std"), method), args) if ((method == "isOfType" || method == "is") && args.length > 0):
+				markErasedDynamicArgIdent(args[0], dynamicArgs, used);
+				for (arg in args)
+					collectErasedDynamicArgUsageNamesFromExpr(arg, dynamicArgs, used);
+			case ECall(EField(EIdent("Type"), "typeof"), args) if (args.length > 0):
 				markErasedDynamicArgIdent(args[0], dynamicArgs, used);
 				for (arg in args)
 					collectErasedDynamicArgUsageNamesFromExpr(arg, dynamicArgs, used);

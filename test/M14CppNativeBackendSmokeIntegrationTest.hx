@@ -1190,7 +1190,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"}",
 			"class TypeValueUser {",
 			"  public static function typeValue(v:Dynamic, rt:Type.ValueType):Bool {",
-			"    return true;",
+			"    return Type.enumEq(Type.typeof(v), rt);",
 			"  }",
 			"  public static function run():Bool {",
 			"    return typeValue(0, Type.ValueType.TInt) && typeValue(new haxe.ds.StringMap(), Type.ValueType.TClass(haxe.ds.StringMap));",
@@ -10233,6 +10233,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ erased generic StringMap constructors should supply a concrete Dynamic-like factory argument when C++ cannot infer one");
 		assertContains(reflectLikeShapeSource, "std::string(\"haxe.ds.StringMap\")",
 			"C++ enum constructor payloads should project qualified class constants to stable class-path strings");
+		assertContains(reflectLikeShapeSource, "typeValue(std::any v, std::shared_ptr<ValueType> rt",
+			"C++ Dynamic parameters used through Type.typeof should keep erased value-compatible storage");
+		assertTrue(reflectLikeShapeSource.indexOf("typeValue(std::string v") < 0,
+			"C++ Dynamic parameters used through Type.typeof should not narrow to the legacy string placeholder");
 		assertTrue(reflectLikeShapeSource.indexOf("__hxhx_make_shared_List(),") < 0,
 			"C++ erased generic List constructor calls should not leave template arguments uninferable");
 		assertTrue(reflectLikeShapeSource.indexOf("__hxhx_make_shared_StringMap(),") < 0,
@@ -11240,6 +11244,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final valueTypeCarrierSource = File.getContent(valueTypeCarrierEmit.entryPath);
 		assertContains(valueTypeCarrierSource, "struct Type_ValueType {", "C++ module-qualified ValueType carriers should use the rendered class name");
 		assertContains(valueTypeCarrierSource, "std::shared_ptr<Type_ValueType> rt", "C++ ValueType function parameters should use the rendered carrier name");
+		assertContains(valueTypeCarrierSource, "typeValue(std::any v, std::shared_ptr<Type_ValueType> rt",
+			"C++ module-qualified Type.ValueType helpers should keep Type.typeof Dynamic parameters erased");
+		assertTrue(valueTypeCarrierSource.indexOf("typeValue(std::string v, std::shared_ptr<Type_ValueType> rt") < 0,
+			"C++ module-qualified Type.ValueType helpers should not narrow Type.typeof Dynamic parameters to strings");
 		assertContains(valueTypeCarrierSource, "std::make_shared<Type_ValueType>()",
 			"C++ ValueType enum constructor values should use the rendered carrier name");
 		assertTrue(valueTypeCarrierSource.indexOf("std::make_shared<ValueType>") < 0,
