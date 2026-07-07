@@ -8481,13 +8481,59 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], HxPos.unknown()), HxPos.unknown()),
 			SExpr(EUnop("post++", EIdent("pos")), HxPos.unknown())
 		], "");
-		final unserializerOwner = new HxClassDecl("Unserializer", false, [unserializerObject], [
+		final unserializerInitCodes = new HxFunctionDecl("initCodes", Private, true, [], "", [], "");
+		final unserializerFastLength = new HxFunctionDecl("fastLength", Private, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Int", [],
+			"");
+		final typeResolverResolveClass = new HxFunctionDecl("resolveClass", Public, false, [new HxFunctionArg("name", "String", NoDefault, false, false)],
+			"Class<Dynamic>", [], "");
+		final unserializerOwner = new HxClassDecl("Unserializer", false, [unserializerInitCodes, unserializerFastLength, unserializerObject], [
+			new HxFieldDecl("BASE64", Private, true, "String", EString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789%:")),
+			new HxFieldDecl("CODES", Private, true, "", ENull),
+			new HxFieldDecl("resolver", Public, false, "TypeResolver", null),
+			new HxFieldDecl("buf", Public, false, "String", null),
 			new HxFieldDecl("pos", Public, false, "Int", null),
 			new HxFieldDecl("length", Public, false, "Int", null)
 		]);
+		bytesNames.set("Unserializer", true);
+		bytesNames.set("Class", true);
+		bytesNames.set("Type", true);
+		bytesNames.set("TypeResolver", true);
+		bytesClasses.set("Unserializer", unserializerOwner);
+		bytesClasses.set("Class", new HxClassDecl("Class", false, [], []));
+		bytesClasses.set("Type", new HxClassDecl("Type", false, [], []));
+		bytesClasses.set("TypeResolver", new HxClassDecl("TypeResolver", false, [typeResolverResolveClass], []));
+		final unserializerInitCodesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(unserializerInitCodes, unserializerOwner, bytesLookup)
+			.join("\n");
+		final unserializerClassLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(unserializerOwner, bytesLookup).join("\n");
 		final unserializerObjectLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(unserializerObject, unserializerOwner, bytesLookup)
 			.join("\n");
-		assertContains(unserializerObjectLines, "void unserializeObject(", "C++ Unserializer.unserializeObject helper should keep its Void surface");
+		final unserializerScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(unserializerOwner, bytesLookup, "void");
+		unserializerScope.localNames.set("cl", "cl");
+		unserializerScope.localTypes.set("cl", "std::shared_ptr<Class>");
+		unserializerScope.localNames.set("o", "o");
+		unserializerScope.localTypes.set("o", "std::any");
+		final runtimeCreateEmptyInstance = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "createEmptyInstance"), [EIdent("cl")]), unserializerScope);
+		final runtimeCreateEmptyInstanceUnknown = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "createEmptyInstance"),
+			[EIdent("cl")]), @:privateAccess
+			backend.cpp.CppTargetCore.renderScope(unserializerOwner, bytesLookup, "void"));
+		final fastLengthCall = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EField(EThis, "buf"), "fastLength"), []), unserializerScope);
+		final dynamicHxUnserializeCall = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("o"), "hxUnserialize"), [EThis]), unserializerScope);
+		final unserializerCustomScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(unserializerOwner, bytesLookup, "void");
+		final unserializerCustomObjectLines = @:privateAccess backend.cpp.CppTargetCore.renderStmt(SBlock([
+			SVar("cl", "", ECall(EField(EIdent("resolver"), "resolveClass"), [EString("unit.MyClass")]), HxPos.unknown()),
+			SVar("o", "Dynamic", ECall(EField(EIdent("Type"), "createEmptyInstance"), [EIdent("cl")]), HxPos.unknown()),
+			SExpr(ECall(EField(EIdent("o"), "hxUnserialize"), [EThis]), HxPos.unknown())
+		], HxPos.unknown()), "  ", unserializerCustomScope).join("\n");
+		assertContains(unserializerInitCodesLines, "static std::vector<int> initCodes() {", "C++ Unserializer.initCodes should expose an integer decode table");
+		assertContains(unserializerInitCodesLines, "std::vector<int> codes(256, -1);",
+			"C++ Unserializer.initCodes should allocate byte-indexed integer storage");
+		assertContains(unserializerClassLines, "inline static std::vector<int> CODES = initCodes();",
+			"C++ Unserializer.CODES should be initialized as a concrete integer table");
+		assertContains(unserializerObjectLines, "void unserializeObject(std::any o)",
+			"C++ Unserializer.unserializeObject helper should keep an erased object carrier");
 		assertContains(unserializerObjectLines, "while (true) {", "C++ Unserializer.unserializeObject helper should keep the parser loop");
 		assertContains(unserializerObjectLines, "if (pos >= length) throw std::runtime_error(std::string(\"Invalid object\"));",
 			"C++ Unserializer.unserializeObject helper should preserve invalid object bounds checks");
@@ -8502,6 +8548,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Unserializer.unserializeObject helper should keep recursive value parsing erased");
 		assertContains(unserializerObjectLines, "__hxhx_reflect_set_field(o, __hxhx_stringify(k), v);",
 			"C++ Unserializer.unserializeObject helper should use target-owned reflection support for object fields");
+		assertTrue(runtimeCreateEmptyInstance == "Type::createEmptyInstance<std::any>(cl)",
+			"C++ Unserializer runtime Class<Dynamic> construction should use the erased factory carrier explicitly");
+		assertTrue(runtimeCreateEmptyInstanceUnknown == "Type::createEmptyInstance<std::any>(cl)",
+			"C++ unknown runtime Class construction should still use the erased factory carrier explicitly");
+		assertTrue(fastLengthCall == "Unserializer::fastLength(this->buf)",
+			"C++ Unserializer string extension calls should lower through the static helper, not std::string methods");
+		assertTrue(dynamicHxUnserializeCall == "__hxhx_dynamic_hx_unserialize(o, (*this))",
+			"C++ custom Unserializer dynamic dispatch should use an explicit unsupported helper seam");
+		assertTrue(unserializerObjectLines.indexOf("__hxhx_stringify(o)") < 0,
+			"C++ Unserializer.unserializeObject should not force object carriers through stringification");
+		assertContains(unserializerCustomObjectLines, "std::any o = Type::createEmptyInstance<std::any>(cl);",
+			"C++ custom Unserializer Dynamic locals should keep runtime Class construction erased");
+		assertContains(unserializerCustomObjectLines, "__hxhx_dynamic_hx_unserialize(o, (*this));",
+			"C++ custom Unserializer Dynamic locals should dispatch through the explicit unsupported seam");
+		assertTrue(unserializerCustomObjectLines.indexOf("std::string o = __hxhx_stringify") < 0,
+			"C++ custom Unserializer Dynamic locals should not be forced through stringification");
+		assertTrue(unserializerCustomObjectLines.indexOf("o.hxUnserialize") < 0,
+			"C++ custom Unserializer Dynamic locals should not emit direct std::string method calls");
 		final unserializerEnum = new HxFunctionDecl("unserializeEnum", Private, false, [
 			new HxFunctionArg("edecl", "Enum<T>", NoDefault, false, false),
 			new HxFunctionArg("tag", "String", NoDefault, false, false)

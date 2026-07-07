@@ -4192,6 +4192,8 @@ class CppTargetCore {
 			return cacheFieldType("std::vector<int>");
 		if (owner == "Parser" && field == "escapes")
 			return cacheFieldType("std::shared_ptr<StringMap<std::string>>");
+		if (owner == "Unserializer" && field == "CODES")
+			return cacheFieldType("std::vector<int>");
 		final structuredStringMapType = structuredStringMapInitCppType(init);
 		if (structuredStringMapType.length > 0)
 			return cacheFieldType(structuredStringMapType);
@@ -4249,6 +4251,8 @@ class CppTargetCore {
 		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
 		if (owner == "Parser" && field == "escapes")
 			return xmlParserEscapesInitExpr(init, scope);
+		if (owner == "Unserializer" && field == "CODES")
+			return "initCodes()";
 		return null;
 	}
 
@@ -4509,6 +4513,20 @@ class CppTargetCore {
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			}
 		}
+		if (owner == "Unserializer") {
+			return switch (method) {
+				case "initCodes":
+					"std::vector<int>";
+				case "run" | "unserialize":
+					"std::any";
+				case "fastLength" | "fastCharCodeAt" | "get" | "readDigits":
+					"int";
+				case "fastCharAt" | "fastSubstr":
+					"std::string";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			}
+		}
 		if (owner == "Parser" && isXmlParserSupportClass(className, scope, classLookup)) {
 			return switch (method) {
 				case "parse":
@@ -4681,6 +4699,19 @@ class CppTargetCore {
 						["std::any"];
 					case "fieldsString":
 						["std::any", "std::vector<std::string>"];
+					case _:
+						[];
+				}
+			case "Unserializer":
+				switch (method) {
+					case "unserializeObject":
+						["std::any"];
+					case "fastLength":
+						["std::string"];
+					case "fastCharCodeAt" | "fastCharAt":
+						["std::string", "int"];
+					case "fastSubstr":
+						["std::string", "int", "int"];
 					case _:
 						[];
 				}
@@ -5438,6 +5469,8 @@ class CppTargetCore {
 			return returnTraced("special_resource", renderResourceSupportHelper(fn, owner, classLookup));
 		if (isBytesSupportHelper(fn, owner))
 			return returnTraced("special_bytes", renderBytesSupportHelper(fn, owner, classLookup));
+		if (isUnserializerInitCodesHelper(fn, owner))
+			return returnTraced("special_unserializer_init_codes", renderUnserializerInitCodesHelper(fn, owner, classLookup));
 		if (isUnserializerObjectHelper(fn, owner))
 			return returnTraced("special_unserializer_object", renderUnserializerObjectHelper(fn, owner, classLookup));
 		if (isUnserializerEnumHelper(fn, owner))
@@ -6020,11 +6053,41 @@ class CppTargetCore {
 			&& HxFunctionDecl.getArgs(fn).length == 1;
 	}
 
+	static function isUnserializerInitCodesHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		return sanitizeTypePath(HxClassDecl.getName(owner)) == "Unserializer"
+			&& HxFunctionDecl.getIsStatic(fn)
+			&& sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "initCodes"
+			&& HxFunctionDecl.getArgs(fn).length == 0;
+	}
+
 	static function isUnserializerEnumHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		return sanitizeTypePath(HxClassDecl.getName(owner)) == "Unserializer"
 			&& !HxFunctionDecl.getIsStatic(fn)
 			&& sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "unserializeEnum"
 			&& HxFunctionDecl.getArgs(fn).length == 2;
+	}
+
+	/**
+		Render Unserializer's base64 decode table as integer storage.
+
+		The parsed stdlib helper builds a Haxe array indexed by character code; the
+		C++ strict lane needs that as a byte-indexed integer carrier, not as a string
+		or broad Dynamic fallback.
+	**/
+	static function renderUnserializerInitCodesHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = "std::vector<int>";
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		return [
+			"  static " + returnType + " " + method + "() {",
+			"    std::vector<int> codes(256, -1);",
+			"    for (int i = 0; i < static_cast<int>(BASE64.size()); ++i) {",
+			"      codes[static_cast<int>(static_cast<unsigned char>(BASE64[i]))] = i;",
+			"    }",
+			"    return codes;",
+			"  }"
+		];
 	}
 
 	static function renderUnserializerObjectHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -11790,6 +11853,8 @@ class CppTargetCore {
 			return "Std::isOfType(" + renderExpr(args[0], scope) + ", " + typeDescriptorArgExpr(args[1], scope) + ")";
 		if (method == "push" && isCppVectorType(receiverCppType))
 			return renderExpr(receiver, scope) + ".push_back(" + renderedArgs() + ")";
+		if (receiverCppType == "std::any" && method == "hxUnserialize" && args.length == 1)
+			return "__hxhx_dynamic_hx_unserialize(" + renderExpr(receiver, scope) + ", " + renderExpr(args[0], scope) + ")";
 		if (isCppVectorType(receiverCppType)) {
 			final target = renderExpr(receiver, scope);
 			final lowered = switch (method) {
@@ -12216,8 +12281,22 @@ class CppTargetCore {
 			return false;
 		final methodScope = renderScope(owner, {names: scope.classNames, byName: scope.classByName}, HxFunctionDecl.getReturnTypeHint(fn));
 		prepareFunctionScope(methodScope, fn);
-		return cppFunctionArgType(params[0], methodScope) == "std::string"
-			&& cppFunctionReturnType(fn, owner, {names: scope.classNames, byName: scope.classByName}) == "std::string";
+		if (cppFunctionArgType(params[0], methodScope) != "std::string")
+			return false;
+		if (isUnserializerStringExtensionMethod(fn, owner))
+			return true;
+		return cppFunctionReturnType(fn, owner, {names: scope.classNames, byName: scope.classByName}) == "std::string";
+	}
+
+	static function isUnserializerStringExtensionMethod(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Unserializer")
+			return false;
+		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
+			case "fastLength" | "fastCharCodeAt" | "fastCharAt" | "fastSubstr":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function renderFieldCallArgs(receiverCppType:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
@@ -15120,6 +15199,9 @@ class CppTargetCore {
 		final selfReferenceType = unhintedThisLocalReferenceCppType(typeHint, init, scope);
 		if (selfReferenceType.length > 0)
 			return selfReferenceType;
+		final runtimeClassFactoryType = dynamicRuntimeClassFactoryLocalCppType(explicit, init, scope);
+		if (runtimeClassFactoryType.length > 0)
+			return runtimeClassFactoryType;
 		final hinted = cppLocalTypeHint(typeHint, init, scope);
 		if (overrideType != null && overrideType.length > 0 && explicit.length == 0 && init != null && hinted.length > 0 && hinted != "auto"
 			&& isScalarExpectedLocalType(hinted) && hinted != overrideType)
@@ -15128,6 +15210,27 @@ class CppTargetCore {
 			return overrideType != null && isCppFunctionType(hinted) && isCppFunctionType(overrideType) ? overrideType : hinted;
 		}
 		return overrideType != null && overrideType.length > 0 ? overrideType : hinted;
+	}
+
+	/**
+		Keep Dynamic locals initialized by runtime Type.create* factories erased.
+
+		This preserves Class-literal precision elsewhere while avoiding the older
+		string-shaped Dynamic placeholder for values whose concrete class is only
+		known through a runtime Class carrier.
+	**/
+	static function dynamicRuntimeClassFactoryLocalCppType(explicit:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
+		if (!isDynamicLikeTypeHint(explicit) || init == null)
+			return "";
+		return switch (init) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				dynamicRuntimeClassFactoryLocalCppType(explicit, inner, scope);
+			case ECall(EField(receiver, method), args)
+				if (isTypeStaticReceiver(receiver) && (method == "createInstance" || method == "createEmptyInstance") && args.length >= 1):
+				typeFactoryReturnCppType(args, scope) == "std::any" ? "std::any" : "";
+			case _:
+				"";
+		};
 	}
 
 	static function unhintedThisLocalReferenceCppType(typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
@@ -15422,7 +15525,8 @@ class CppTargetCore {
 		final nativeReturn = stringMethodReturnCppType(method);
 		if (nativeReturn.length > 0)
 			return nativeReturn;
-		return staticStringExtensionOwner(method, scope) == null ? "" : "std::string";
+		final extensionOwner = staticStringExtensionOwner(method, scope);
+		return extensionOwner == null ? "" : classMethodCppReturnType(extensionOwner, method, true, scope);
 	}
 
 	static function iteratorCppTypeForVector(vectorType:String):String {
@@ -19442,7 +19546,9 @@ class CppTargetCore {
 
 	static function typeFactoryCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?expectedType:String):String {
 		final inferred = typeFactoryReturnCppType(args, scope);
-		final templateType = inferred.length > 0 ? inferred : expectedType == null ? "" : expectedType;
+		final expected = expectedType == null || expectedType == "void" || expectedType == "auto" ? "" : expectedType;
+		final templateType = inferred.length > 0
+			&& (inferred != "std::any" || expected.length == 0 || expected == "std::any") ? inferred : expected;
 		final renderedArgs = new Array<String>();
 		if (args.length > 0) {
 			final classArg = classReferenceArgExprForExpectedType(args[0], "std::shared_ptr<Class>", scope);
@@ -19457,9 +19563,47 @@ class CppTargetCore {
 		if (args == null || args.length == 0)
 			return "";
 		final classReference = classReferencePathText(args[0], scope);
-		if (classReference == null || classReference.length == 0)
-			return "";
-		return cppTypeHint(classReference, scope);
+		if (classReference != null && classReference.length > 0)
+			return cppTypeHint(classReference, scope);
+		if (isRuntimeClassMetaExpr(args[0], scope))
+			return "std::any";
+		final classArgType = exprCppType(args[0], scope);
+		final classArgName = classNameFromCppExprType(classArgType, scope);
+		if (sanitizeTypePath(typeBaseName(classArgName == null ? "" : classArgName)) == "Class")
+			return "std::any";
+		return "std::any";
+	}
+
+	/**
+		Recognize runtime Class meta-values that cannot name a concrete C++ class.
+
+		Class literals still get precise pointer carriers. Values from TypeResolver
+		or otherwise untyped factory paths are erased to std::any so Type.create*
+		keeps an explicit template argument without pretending to know the runtime
+		class.
+	**/
+	static function isRuntimeClassMetaExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				isRuntimeClassMetaExpr(inner, scope);
+			case ECall(EField(receiver, "resolveClass"), args) if (args.length == 1): isTypeStaticReceiver(receiver) || isTypeResolverMetaReceiver(receiver,
+					scope);
+			case ECall(EField(receiver, "getClass"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
+				true;
+			case _:
+				isRuntimeClassMetaCppType(exprCppType(expr, scope));
+		};
+	}
+
+	static function isTypeResolverMetaReceiver(receiver:HxExpr, ?scope:CppRenderScope):Bool {
+		final receiverType = exprCppType(receiver, scope);
+		final owner = classNameFromCppExprType(receiverType, scope);
+		return owner != null && isTypeResolverHelper(owner);
+	}
+
+	static function isRuntimeClassMetaCppType(typeName:String):Bool {
+		final owner = classNameFromCppExprType(StringTools.trim(typeName == null ? "" : typeName), null);
+		return sanitizeTypePath(typeBaseName(owner == null ? typeName : owner)) == "Class";
 	}
 
 	/**
