@@ -12,6 +12,7 @@ typedef CppLocalTypeInferenceApi = {
 	var exprCppType:(HxExpr, CppRenderScope) -> String;
 	var inferExprCppType:(HxExpr, CppRenderScope) -> String;
 	var isStringLike:HxExpr->Bool;
+	var isDynamicLikeTypeHint:String->Bool;
 	var dynamicLocalAssignedType:(HxExpr, CppRenderScope) -> String;
 	var anonStructName:(Array<String>, Array<HxExpr>, CppRenderScope) -> String;
 	var inferredLambdaCppFunctionType:(Array<String>, HxExpr, Array<String>, CppRenderScope) -> String;
@@ -62,6 +63,131 @@ class CppLocalTypeInference {
 		if (scope == null || local == null || local.length == 0)
 			return "";
 		return new CppLocalTypeInference(api).closureVectorTypeForLambdaArgImpl(local, body, scope);
+	}
+
+	/**
+		Return declared `Dynamic` arguments used through erased-value operations.
+
+		The C++ backend still has legacy string-shaped Dynamic helper surfaces. This
+		analysis only identifies arguments whose bodies require erased carriers, such
+		as equality, switch scrutinees, or `Std.isOfType` values.
+	**/
+	public static function erasedDynamicArgUsageNames(args:Array<HxFunctionArg>, body:Array<HxStmt>, candidates:StringMap<Bool>,
+			api:CppLocalTypeInferenceApi):StringMap<Bool> {
+		return new CppLocalTypeInference(api).erasedDynamicArgUsageNamesImpl(args, body, candidates);
+	}
+
+	function erasedDynamicArgUsageNamesImpl(args:Array<HxFunctionArg>, body:Array<HxStmt>, candidates:StringMap<Bool>):StringMap<Bool> {
+		final dynamicArgs = new StringMap<Bool>();
+		if (args != null)
+			for (arg in args) {
+				final name = api.sanitizeIdentifier(HxFunctionArg.getName(arg));
+				if (candidates.exists(name) && api.isDynamicLikeTypeHint(HxFunctionArg.getTypeHint(arg)))
+					dynamicArgs.set(name, true);
+			}
+		final used = new StringMap<Bool>();
+		if (!boolMapHasEntries(dynamicArgs) || body == null)
+			return used;
+		for (stmt in body)
+			collectErasedDynamicArgUsageNamesFromStmt(stmt, dynamicArgs, used);
+		return used;
+	}
+
+	function collectErasedDynamicArgUsageNamesFromStmt(stmt:HxStmt, dynamicArgs:StringMap<Bool>, used:StringMap<Bool>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectErasedDynamicArgUsageNamesFromStmt(s, dynamicArgs, used);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectErasedDynamicArgUsageNamesFromExpr(cond, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromStmt(thenBranch, dynamicArgs, used);
+				if (elseBranch != null)
+					collectErasedDynamicArgUsageNamesFromStmt(elseBranch, dynamicArgs, used);
+			case SForIn(_, iterable, body, _) | SForKeyValue(_, _, iterable, body, _):
+				collectErasedDynamicArgUsageNamesFromExpr(iterable, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromStmt(body, dynamicArgs, used);
+			case SWhile(cond, body, _) | SDoWhile(body, cond, _):
+				collectErasedDynamicArgUsageNamesFromExpr(cond, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromStmt(body, dynamicArgs, used);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectErasedDynamicArgUsageNamesFromExpr(scrutinee, dynamicArgs, used);
+				for (body in bodies)
+					collectErasedDynamicArgUsageNamesFromStmt(body, dynamicArgs, used);
+			case STry(tryBody, catches, _):
+				collectErasedDynamicArgUsageNamesFromStmt(tryBody, dynamicArgs, used);
+				for (c in catches)
+					collectErasedDynamicArgUsageNamesFromStmt(c.body, dynamicArgs, used);
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectErasedDynamicArgUsageNamesFromExpr(expr, dynamicArgs, used);
+			case SVar(_, _, init, _):
+				if (init != null)
+					collectErasedDynamicArgUsageNamesFromExpr(init, dynamicArgs, used);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	function collectErasedDynamicArgUsageNamesFromExpr(expr:HxExpr, dynamicArgs:StringMap<Bool>, used:StringMap<Bool>):Void {
+		switch (expr) {
+			case EBinop(op, left, right) if (op == "==" || op == "!="):
+				markErasedDynamicArgIdent(left, dynamicArgs, used);
+				markErasedDynamicArgIdent(right, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromExpr(left, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromExpr(right, dynamicArgs, used);
+			case ESwitch(scrutinee, _, exprs):
+				markErasedDynamicArgIdent(scrutinee, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromExpr(scrutinee, dynamicArgs, used);
+				for (value in exprs)
+					collectErasedDynamicArgUsageNamesFromExpr(value, dynamicArgs, used);
+			case ECall(EField(EIdent("Std"), method), args) if ((method == "isOfType" || method == "is") && args.length > 0):
+				markErasedDynamicArgIdent(args[0], dynamicArgs, used);
+				for (arg in args)
+					collectErasedDynamicArgUsageNamesFromExpr(arg, dynamicArgs, used);
+			case EBinop(_, left, right):
+				collectErasedDynamicArgUsageNamesFromExpr(left, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromExpr(right, dynamicArgs, used);
+			case ECall(callee, args):
+				collectErasedDynamicArgUsageNamesFromExpr(callee, dynamicArgs, used);
+				for (arg in args)
+					collectErasedDynamicArgUsageNamesFromExpr(arg, dynamicArgs, used);
+			case EArrayAccess(array, index):
+				collectErasedDynamicArgUsageNamesFromExpr(array, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromExpr(index, dynamicArgs, used);
+			case EField(receiver, _):
+				collectErasedDynamicArgUsageNamesFromExpr(receiver, dynamicArgs, used);
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectErasedDynamicArgUsageNamesFromExpr(element, dynamicArgs, used);
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
+				collectErasedDynamicArgUsageNamesFromExpr(iterable, dynamicArgs, used);
+				if (guardExpr != null)
+					collectErasedDynamicArgUsageNamesFromExpr(guardExpr, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromExpr(yieldExpr, dynamicArgs, used);
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				collectErasedDynamicArgUsageNamesFromExpr(inner, dynamicArgs, used);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectErasedDynamicArgUsageNamesFromExpr(cond, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromExpr(thenExpr, dynamicArgs, used);
+				collectErasedDynamicArgUsageNamesFromExpr(elseExpr, dynamicArgs, used);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectErasedDynamicArgUsageNamesFromExpr(value, dynamicArgs, used);
+			case ELambda(_, body):
+				collectErasedDynamicArgUsageNamesFromExpr(body, dynamicArgs, used);
+			case ENew(_, args):
+				for (arg in args)
+					collectErasedDynamicArgUsageNamesFromExpr(arg, dynamicArgs, used);
+			case _:
+		}
+	}
+
+	function markErasedDynamicArgIdent(expr:HxExpr, dynamicArgs:StringMap<Bool>, used:StringMap<Bool>):Void {
+		switch (expr) {
+			case EIdent(name):
+				final local = api.sanitizeIdentifier(name);
+				if (dynamicArgs.exists(local))
+					used.set(local, true);
+			case _:
+		}
 	}
 
 	function inferClosureVectorLocalTypeOverridesImpl(scope:CppRenderScope, stmts:Array<HxStmt>):Void {

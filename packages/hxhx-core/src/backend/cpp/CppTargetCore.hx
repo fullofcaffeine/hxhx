@@ -7208,9 +7208,10 @@ class CppTargetCore {
 
 	static function cppFunctionArgType(arg:HxFunctionArg, ?scope:CppRenderScope):String {
 		final argName = sanitizeIdentifier(HxFunctionArg.getName(arg));
-		final overrideType = scope == null ? null : scope.argTypeOverrides.get(argName);
+		final rawOverrideType = scope == null ? null : scope.argTypeOverrides.get(argName);
 		final rawTypeHint = HxFunctionArg.getTypeHint(arg);
 		final explicit = StringTools.trim(rawTypeHint == null ? "" : rawTypeHint);
+		final overrideType = effectiveCppFunctionArgOverrideType(scope, argName, explicit, rawOverrideType);
 		final canCache = explicit.length > 0 || (overrideType != null && overrideType.length > 0);
 		final cacheKey = canCache ? functionArgDeclaredTypeCacheKey(arg, scope, argName, explicit, overrideType) : "";
 		if (cacheKey.length > 0) {
@@ -7227,6 +7228,27 @@ class CppTargetCore {
 		if (cacheKey.length > 0)
 			functionArgDeclaredTypeCache.set(cacheKey, rendered);
 		return rendered;
+	}
+
+	static function effectiveCppFunctionArgOverrideType(?scope:CppRenderScope, argName:String, explicit:String, ?overrideType:String):Null<String> {
+		if (overrideType == null || overrideType.length == 0)
+			return overrideType;
+		if (shouldPreserveExplicitDynamicArgErasure(scope, argName, explicit, overrideType))
+			return "std::any";
+		return overrideType;
+	}
+
+	static function shouldPreserveExplicitDynamicArgErasure(?scope:CppRenderScope, argName:String, explicit:String, typeName:String):Bool {
+		if (typeName == null || typeName.length == 0 || isCppFunctionType(typeName))
+			return false;
+		final hint = explicit != null
+			&& StringTools.trim(explicit)
+				.length > 0 ? explicit : (scope != null && scope.localTypeHints.exists(argName) ? scope.localTypeHints.get(argName) : "");
+		if (scope != null && scope.argTypeOverrides.exists(argName) && scope.argTypeOverrides.get(argName) == "std::any")
+			return true;
+		if (scope != null && scope.localTypes.exists(argName) && scope.localTypes.get(argName) == "std::any")
+			return true;
+		return isDynamicLikeTypeHint(hint) && typeName == "std::string";
 	}
 
 	static function cppFunctionArgBaseType(arg:HxFunctionArg, ?scope:CppRenderScope):String {
@@ -7308,6 +7330,7 @@ class CppTargetCore {
 				final rawType = cppFunctionArgBaseType(arg, scope);
 				final explicitType = StringTools.trim(HxFunctionArg.getTypeHint(arg) == null ? "" : HxFunctionArg.getTypeHint(arg));
 				scope.localTypes.set(name, rawType);
+				recordLocalTypeHint(scope, name, explicitType);
 				if (functionArgMayNeedCallableArgTypeOverride(explicitType, name, HxFunctionDecl.getBody(fn)))
 					candidates.set(name, true);
 			}
@@ -7316,6 +7339,7 @@ class CppTargetCore {
 			runCallableArgPhase("reset_no_candidates", () -> scope.localTypes = new haxe.ds.StringMap<String>());
 			return;
 		}
+		runCallableArgPhase("erased_dynamic_args", () -> collectErasedDynamicArgUsageOverrides(args, HxFunctionDecl.getBody(fn), scope, candidates));
 		runCallableArgPhase("forwarded_constructor", () -> collectForwardedConstructorArgTypeOverrides(HxFunctionDecl.getBody(fn), scope, candidates));
 		runCallableArgPhase("assigned_args", () -> {
 			for (stmt in HxFunctionDecl.getBody(fn))
@@ -7370,6 +7394,24 @@ class CppTargetCore {
 			restoreCallableArgTrace();
 		});
 		runCallableArgPhase("reset", () -> scope.localTypes = new haxe.ds.StringMap<String>());
+	}
+
+	/**
+		Promote declared `Dynamic` arguments to erased C++ storage only when the body
+		uses them through Dynamic-sensitive operations.
+
+		Bare `Dynamic` still has legacy string-shaped helper surfaces in this backend.
+		This pass keeps those helpers intact while preventing equality, switch, and
+		`Std.isOfType`-style code from compiling as raw `std::string` parameters when
+		the source contract expects mixed erased values.
+	**/
+	static function collectErasedDynamicArgUsageOverrides(args:Array<HxFunctionArg>, body:Array<HxStmt>, scope:CppRenderScope,
+			candidates:haxe.ds.StringMap<Bool>):Void {
+		final used = CppLocalTypeInference.erasedDynamicArgUsageNames(args, body, candidates, localTypeInferenceApi());
+		for (name in used.keys()) {
+			scope.argTypeOverrides.set(name, "std::any");
+			scope.localTypes.set(name, "std::any");
+		}
 	}
 
 	static function closureCallableArgType(expr:HxExpr, scope:CppRenderScope):String {
@@ -7970,6 +8012,7 @@ class CppTargetCore {
 			exprCppType: exprCppType,
 			inferExprCppType: inferExprCppType,
 			isStringLike: function(expr) return isStringLike(expr),
+			isDynamicLikeTypeHint: isDynamicLikeTypeHint,
 			dynamicLocalAssignedType: dynamicLocalAssignedType,
 			anonStructName: function(fieldNames, fieldValues, scope) return anonStruct(fieldNames, fieldValues, scope).name,
 			inferredLambdaCppFunctionType: inferredLambdaCppFunctionType,
@@ -9892,6 +9935,7 @@ class CppTargetCore {
 	static function renderSwitchStmt(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, indent:String,
 			?scope:CppRenderScope):Array<String> {
 		final switchValue = "__hxhx_switch_stmt";
+		final switchValueType = exprCppType(scrutinee, scope);
 		final scrutineeExpr = isStringLike(scrutinee) ? stringExpr(scrutinee, scope) : renderExpr(scrutinee, scope);
 		final out = [indent + "{", indent + "  auto " + switchValue + " = " + scrutineeExpr + ";"];
 		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
@@ -9910,7 +9954,7 @@ class CppTargetCore {
 			}
 			final branchStart = timingEnabled ? Sys.time() : 0.;
 			final condStart = timingEnabled ? Sys.time() : 0.;
-			final cond = switchPatternCond(pattern, switchValue);
+			final cond = switchPatternCond(pattern, switchValue, switchValueType);
 			final condElapsed = timingEnabled ? Sys.time() - condStart : 0.;
 			if (switchPatternShouldSkipKnownFalseBranch(pattern, cond))
 				continue;
@@ -10795,6 +10839,10 @@ class CppTargetCore {
 				"true";
 			case EBinop("!=", ENull, right) if (exprHasNonNullableValueType(right, scope)):
 				"true";
+			case EBinop("==", left, right) if (anyEqualsExpr("==", left, right, scope) != null):
+				anyEqualsExpr("==", left, right, scope);
+			case EBinop("!=", left, right) if (anyEqualsExpr("!=", left, right, scope) != null):
+				anyEqualsExpr("!=", left, right, scope);
 			case EBinop("==", left, right) if (staticFieldComparisonExpr("==", left, right, scope) != null):
 				staticFieldComparisonExpr("==", left, right, scope);
 			case EBinop("!=", left, right) if (staticFieldComparisonExpr("!=", left, right, scope) != null):
@@ -11510,6 +11558,15 @@ class CppTargetCore {
 		if (!isCppAnyExpr(left, scope) && !isCppAnyExpr(right, scope))
 			return null;
 		return "__hxhx_any_add(" + anyValueExpr(left, scope) + ", " + anyValueExpr(right, scope) + ")";
+	}
+
+	static function anyEqualsExpr(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (op != "==" && op != "!=")
+			return null;
+		if (!isCppAnyExpr(left, scope) && !isCppAnyExpr(right, scope))
+			return null;
+		final eq = "__hxhx_any_eq(" + anyValueExpr(left, scope) + ", " + anyValueExpr(right, scope) + ")";
+		return op == "!=" ? "(!" + eq + ")" : eq;
 	}
 
 	static function isCppAnyExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
@@ -16496,6 +16553,7 @@ class CppTargetCore {
 	static function switchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>, ?scope:CppRenderScope, ?expectedType:String):String {
 		final typeName = switchExprExpectedResultType(exprs, expectedType, scope);
 		final switchValue = "__hxhx_switch";
+		final switchValueType = exprCppType(scrutinee, scope);
 		final scrutineeExpr = isStringLike(scrutinee) ? stringExpr(scrutinee, scope) : renderExpr(scrutinee, scope);
 		final out = [
 			"([&]() -> " + typeName + " {",
@@ -16514,7 +16572,7 @@ class CppTargetCore {
 				}
 				continue;
 			}
-			final cond = switchPatternCond(pattern, switchValue);
+			final cond = switchPatternCond(pattern, switchValue, switchValueType);
 			if (switchPatternShouldSkipKnownFalseBranch(pattern, cond))
 				continue;
 			out.push("  " + (emitted == 0 ? "if" : "else if") + " (" + cond + ") {");
@@ -16633,22 +16691,22 @@ class CppTargetCore {
 		};
 	}
 
-	static function switchPatternCond(pattern:HxSwitchPattern, switchValue:String):String {
+	static function switchPatternCond(pattern:HxSwitchPattern, switchValue:String, switchValueType:String = ""):String {
 		return switch (pattern) {
 			case PNull:
-				switchValue + " == nullptr";
+				switchPatternEqCond(switchValue, switchValueType, "nullptr");
 			case PWildcard | PBind(_):
 				"true";
 			case PBool(value):
-				switchValue + " == " + (value ? "true" : "false");
+				switchPatternEqCond(switchValue, switchValueType, value ? "true" : "false");
 			case PString(value):
-				switchValue + " == std::string(" + quoteString(value) + ")";
+				switchPatternEqCond(switchValue, switchValueType, "std::string(" + quoteString(value) + ")");
 			case PInt(value):
-				switchValue + " == " + Std.string(value);
+				switchPatternEqCond(switchValue, switchValueType, Std.string(value));
 			case PEnumValue(name):
 				"__hxhx_enum_eq(" + switchValue + ", " + quoteString(name) + ")";
 			case PCapture(_, inner):
-				switchPatternCond(inner, switchValue);
+				switchPatternCond(inner, switchValue, switchValueType);
 			case PUnsupportedGuard(_):
 				"false";
 			case POr(patterns):
@@ -16657,7 +16715,7 @@ class CppTargetCore {
 				} else {
 					"(" + [
 						for (p in patterns)
-							"(" + switchPatternCond(p, switchValue) + ")"
+							"(" + switchPatternCond(p, switchValue, switchValueType) + ")"
 					].join(" || ") + ")";
 				}
 			case PEnumExtract(name, args):
@@ -16670,12 +16728,16 @@ class CppTargetCore {
 		};
 	}
 
+	static function switchPatternEqCond(switchValue:String, switchValueType:String, rightExpr:String):String {
+		return switchValueType == "std::any" ? "__hxhx_any_eq(" + switchValue + ", " + rightExpr + ")" : switchValue + " == " + rightExpr;
+	}
+
 	static function switchEnumExtractPatternCond(name:String, args:Array<HxSwitchPattern>, switchValue:String):String {
 		final parts = ["__hxhx_macro_ctor(" + switchValue + ", " + quoteString(name) + ")"];
 		if (args != null) {
 			for (i in 0...args.length) {
 				final argValue = "__hxhx_macro_param(" + switchValue + ", " + Std.string(i) + ")";
-				parts.push("(" + switchPatternCond(args[i], argValue) + ")");
+				parts.push("(" + switchPatternCond(args[i], argValue, "std::any") + ")");
 			}
 		}
 		return "(" + parts.join(" && ") + ")";
@@ -16710,7 +16772,7 @@ class CppTargetCore {
 			final fieldValue = switchObjectPatternFieldValue(fieldNames[i], switchValue);
 			if (fieldValue == null)
 				return "false";
-			parts.push("(" + switchPatternCond(fieldPatterns[i], fieldValue) + ")");
+			parts.push("(" + switchPatternCond(fieldPatterns[i], fieldValue, "std::any") + ")");
 		}
 		return parts.length == 0 ? "true" : "(" + parts.join(" && ") + ")";
 	}
@@ -18997,6 +19059,11 @@ class CppTargetCore {
 	static function setAssignedArgTypeOverride(scope:CppRenderScope, local:String, typeName:String):Void {
 		if (scope == null || local == null || local.length == 0 || typeName == null || typeName.length == 0)
 			return;
+		if (shouldPreserveExplicitDynamicArgErasure(scope, local, "", typeName)) {
+			scope.argTypeOverrides.set(local, "std::any");
+			scope.localTypes.set(local, "std::any");
+			return;
+		}
 		final existing = scope.argTypeOverrides.get(local);
 		final selected = existing != null && existing.length > 0 && existing != typeName ? "std::any" : typeName;
 		scope.argTypeOverrides.set(local, selected);

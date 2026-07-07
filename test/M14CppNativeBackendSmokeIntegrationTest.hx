@@ -2422,6 +2422,49 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ string-shaped Dynamic plus returns should stringify the helper result explicitly");
 	}
 
+	static function assertCppErasedDynamicEqualityUsesAnyHelper():Void {
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("DynamicEqualsOwner", false, [], []), {
+			names: new StringMap<Bool>(),
+			byName: new StringMap<HxClassDecl>()
+		}, "bool");
+		scope.localTypes.set("b", "std::any");
+		scope.localTypes.set("t", "std::any");
+		final boolEq = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("==", EIdent("b"), EBool(true)), scope);
+		assertContains(boolEq, "__hxhx_any_eq(b, std::any(true))", "C++ erased Dynamic bool equality should lower through std::any equality support");
+		final stringNe = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("!=", EIdent("t"), EString("MyEnum")), scope);
+		assertContains(stringNe, "(!__hxhx_any_eq(t, std::any(\"MyEnum\")))",
+			"C++ erased Dynamic string inequality should lower through std::any equality support");
+		final switchRendered = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ESwitch(EIdent("b"), [PBool(true), PWildcard],
+			[EString("yes"), EString("no")]), scope);
+		assertContains(switchRendered, "__hxhx_any_eq(__hxhx_switch, true)",
+			"C++ switch patterns over erased Dynamic values should not emit raw std::any comparisons");
+		assertTrue(switchRendered.indexOf("__hxhx_switch == true") < 0, "C++ Dynamic switch bool patterns should avoid raw operator==");
+
+		final parsedDynamicArg = TyperStage.typeModule(ParserStage.parse([
+			"class DynamicArgPreserve {",
+			"  static function isTrue(v:Dynamic, t1:Dynamic, ?t2:Dynamic):Bool {",
+			"    return v == 1 || t1 == \"Int\" || t1 == t2;",
+			"  }",
+			"  static function run():Void {",
+			"    isTrue(1, \"Int\", \"Float\");",
+			"    isTrue(1.2, \"Float\");",
+			"    isTrue(\"x\", \"String\");",
+			"  }",
+			"}"
+		].join("\n"), "DynamicArgPreserve.hx"));
+		final parsedProgram = new GenIrProgram([parsedDynamicArg], false);
+		final parsedLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(parsedProgram);
+		final parsedOwner = HxModuleDecl.getMainClass(parsedDynamicArg.getParsed().getDecl());
+		final parsedLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(parsedOwner, parsedLookup).join("\n");
+		assertContains(parsedLines, "static bool isTrue(std::any v, std::any t1, std::optional<std::any> t2 = std::nullopt)",
+			"C++ explicit Dynamic helper args should preserve erased std::any signatures across mixed call sites");
+		assertContains(parsedLines, "__hxhx_any_eq(v, std::any(1))", "C++ explicit Dynamic helper bodies should compare erased ints through std::any equality");
+		assertContains(parsedLines, "__hxhx_any_eq(t1, std::any(\"Int\"))",
+			"C++ explicit Dynamic helper bodies should compare erased strings through std::any equality");
+		assertTrue(parsedLines.indexOf("static bool isTrue(std::string") < 0, "C++ explicit Dynamic helper args should not narrow to string-shaped signatures");
+		assertTrue(parsedLines.indexOf("v == 1") < 0, "C++ explicit Dynamic helper bodies should not emit raw std::any equality");
+	}
+
 	static function assertCppErasedDynamicReturnDetectionIsCached():Void {
 		final dynamicFn = new HxFunctionDecl("dynamicValue", Public, false, [], "Dynamic", [SReturn(EArrayDecl([EInt(1)]), HxPos.unknown())], "");
 		final owner = new HxClassDecl("DynamicReturnOwner", false, [dynamicFn], []);
@@ -3335,11 +3378,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  static function pack(args:Array<Dynamic>):String {",
 			"    return args[0] + args[1];",
 			"  }",
+			"  static function same(a:Dynamic, b:Dynamic):String {",
+			"    return Std.string(a == b);",
+			"  }",
 			"  static function main() {",
 			"    Sys.println(pack([1, 2]));",
 			"    Sys.println(pack([\"a\", 2]));",
 			"    Sys.println(pack([\"a\", null]));",
 			"    Sys.println(pack([null, \"b\"]));",
+			"    Sys.println(same(true, true));",
+			"    Sys.println(same(true, false));",
+			"    Sys.println(same(\"x\", \"x\"));",
+			"    Sys.println(same(1, 1.0));",
+			"    Sys.println(same(null, null));",
+			"    Sys.println(same(null, 0));",
 			"    try {",
 			"      Sys.println(pack([null, 2]));",
 			"    } catch (e:Dynamic) {",
@@ -3574,6 +3626,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppDynamicFunctionsUseAssignableStorage();
 		assertCppReflectMakeVarArgsUsesCallableWrapper();
 		assertCppErasedDynamicPlusUsesAnyHelper();
+		assertCppErasedDynamicEqualityUsesAnyHelper();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();
@@ -11475,7 +11528,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(dynamicPlusBuilt.builtExecutable, "C++ Dynamic plus runtime smoke should build executable");
 			final dynamicPlusRun = commandOutput(dynamicPlusBuilt.entryPath, []);
 			assertTrue(dynamicPlusRun.code == 0, "C++ Dynamic plus runtime smoke failed: " + dynamicPlusRun.stderr);
-			assertTrue(dynamicPlusRun.stdout == "3\na2\nanull\nnullb\nnull-left-error\nnull-right-error\n",
+			assertTrue(dynamicPlusRun.stdout == "3\na2\nanull\nnullb\ntrue\nfalse\ntrue\ntrue\ntrue\nfalse\nnull-left-error\nnull-right-error\n",
 				"unexpected C++ Dynamic plus stdout: " + dynamicPlusRun.stdout);
 
 			final cppJsonCarrierBuildDir = Path.join([root, "cpp-json-carrier-runtime-build"]);
