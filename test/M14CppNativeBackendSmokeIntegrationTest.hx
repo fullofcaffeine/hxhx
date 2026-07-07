@@ -5404,7 +5404,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], "");
 		final assertStringSequenceLikeLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(assertStringSequenceLike, assertOwner, assertLookup).join("\n");
-		assertContains(assertStringSequenceLikeLines, "if (false) {", "C++ if statements should not emit `if false {`");
+		assertTrue(assertStringSequenceLikeLines.indexOf("if (false) {") < 0,
+			"C++ statically false if statements without else should be omitted instead of forcing dead code to type-check");
 		assertContains(assertStringSequenceLikeLines, "if (__hxhx_is_type(value, \"String\")) {",
 			"C++ if statements should parenthesize raw helper-call conditions");
 		assertTrue(assertStringSequenceLikeLines.indexOf("if false {") < 0, "C++ if statements must use valid C-style condition syntax");
@@ -8566,6 +8567,91 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ custom Unserializer Dynamic locals should not be forced through stringification");
 		assertTrue(unserializerCustomObjectLines.indexOf("o.hxUnserialize") < 0,
 			"C++ custom Unserializer Dynamic locals should not emit direct std::string method calls");
+		final serializerOwner = new HxClassDecl("Serializer", false, [], [
+			new HxFieldDecl("BASE64", Private, true, "String", EString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789%:")),
+			new HxFieldDecl("BASE64_CODES", Private, true, "Dynamic", ENull)
+		]);
+		final serializerClasses = new StringMap<HxClassDecl>();
+		for (name in bytesClasses.keys())
+			serializerClasses.set(name, bytesClasses.get(name));
+		final serializerNames = new StringMap<Bool>();
+		for (name in bytesNames.keys())
+			serializerNames.set(name, true);
+		for (name in ["Serializer", "List", "ObjectMap", "EnumBase"])
+			serializerNames.set(name, true);
+		serializerClasses.set("Serializer", serializerOwner);
+		final serializerLookup = {names: serializerNames, byName: serializerClasses};
+		final serializerClassLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(serializerOwner, serializerLookup).join("\n");
+		final serializerScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(serializerOwner, serializerLookup, "void");
+		serializerScope.localNames.set("v", "v");
+		serializerScope.localTypes.set("v", "std::any");
+		serializerScope.localNames.set("i", "i");
+		serializerScope.localTypes.set("i", "int");
+		serializerScope.localNames.set("b64", "b64");
+		serializerScope.localTypes.set("b64", "std::string");
+		final serializerBoolTernary = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ETernary(EIdent("v"), EString("t"), EString("f")), serializerScope);
+		final serializerAnyLength = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("v"), "__length"), []), serializerScope);
+		final serializerAnyIndex = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EArrayAccess(EIdent("v"), EIdent("i")), serializerScope);
+		final serializerHxSerialize = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("v"), "hxSerialize"), [EThis]), serializerScope);
+		final deadBase64Init = @:privateAccess backend.cpp.CppTargetCore.renderStmt(SIf(EBinop("==", EIdent("b64"), ENull),
+			SExpr(ECall(EIdent("Vector"), [EField(EIdent("BASE64"), "length")]), HxPos.unknown()), null, HxPos.unknown()),
+			"  ", serializerScope)
+			.join("\n");
+		assertContains(serializerClassLines, "inline static std::string BASE64_CODES = BASE64;",
+			"C++ Serializer.BASE64_CODES should be a concrete base64 character table, not a nullable Dynamic");
+		assertContains(serializerBoolTernary, "__hxhx_any_bool(v)", "C++ Serializer Dynamic bool branches should unwrap std::any through a named helper");
+		assertTrue(serializerAnyLength == "static_cast<int>(__hxhx_any_vector_any(v).size())",
+			"C++ Serializer Dynamic array length should lower through the bounded std::any vector helper");
+		assertTrue(serializerAnyIndex == "(__hxhx_any_vector_any(v)[i])",
+			"C++ Serializer Dynamic array indexing should lower through the bounded std::any vector helper");
+		assertTrue(serializerHxSerialize == "__hxhx_dynamic_hx_serialize(v, (*this))",
+			"C++ custom Serializer dynamic dispatch should use an explicit unsupported seam");
+		assertTrue(deadBase64Init.length == 0, "C++ statically false Serializer base64 init branch should not emit invalid Vector code");
+		final listLoopScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(serializerOwner, serializerLookup, "void");
+		listLoopScope.localNames.set("v_4", "v_4");
+		listLoopScope.localTypes.set("v_4", "std::shared_ptr<List<std::string>>");
+		final serializerListLoop = @:privateAccess backend.cpp.CppTargetCore.renderStmt(SForIn("i", EIdent("v_4"),
+			SExpr(ECall(EIdent("serialize"), [EIdent("i")]), HxPos.unknown()), HxPos.unknown()), "  ", listLoopScope)
+			.join("\n");
+		final mapLoopScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(serializerOwner, serializerLookup, "void");
+		mapLoopScope.localNames.set("v_7", "v_7");
+		mapLoopScope.localTypes.set("v_7", "std::shared_ptr<ObjectMap<std::string, std::string>>");
+		final serializerObjectMapLoop = @:privateAccess backend.cpp.CppTargetCore.renderStmt(SForIn("k", ECall(EField(EIdent("v_7"), "keys"), []),
+			SExpr(ECall(EIdent("serialize"), [EIdent("k")]), HxPos.unknown()), HxPos.unknown()), "  ",
+			mapLoopScope)
+			.join("\n");
+		assertContains(serializerListLoop, "auto __hxhx_iter_i = v_4->iterator();", "C++ Serializer List iteration should call the Haxe iterator protocol");
+		assertContains(serializerListLoop, "while (__hxhx_iter_i->hasNext()) {",
+			"C++ Serializer List iteration should not use C++ range-for over shared_ptr<List>");
+		assertTrue(serializerListLoop.indexOf("for (auto i : v_4)") < 0, "C++ Serializer List iteration should not emit range-for over shared_ptr<List>");
+		assertContains(serializerObjectMapLoop, "auto __hxhx_iter_k = v_7->keys();",
+			"C++ Serializer ObjectMap key iteration should keep keys() as an iterator");
+		assertContains(serializerObjectMapLoop, "while (__hxhx_iter_k->hasNext()) {",
+			"C++ Serializer ObjectMap key iteration should not range-for over an iterator pointer");
+		assertTrue(serializerObjectMapLoop.indexOf("for (auto k : v_7->keys())") < 0,
+			"C++ Serializer ObjectMap key iteration should not emit range-for over keys()");
+		final enumBase = new HxClassDecl("EnumBase", false, [
+			new HxFunctionDecl("_hx_getIndex", Public, false, [], "Int", [SReturn(EInt(0), HxPos.unknown())], ""),
+			new HxFunctionDecl("_hx_getTag", Public, false, [], "String", [SReturn(EString("Tag"), HxPos.unknown())], ""),
+			new HxFunctionDecl("_hx_getParamCount", Public, false, [], "Int", [SReturn(EField(ECall(EIdent("__EnumParams"), []), "length"), HxPos.unknown())],
+				""),
+			new HxFunctionDecl("_hx_getParamI", Public, false, [new HxFunctionArg("inIndex", "Int", NoDefault, false, false)], "String", [
+				SReturn(ECall(EField(EIdent("Std"), "string"), [EArrayAccess(ECall(EIdent("__EnumParams"), []), EIdent("inIndex"))]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("_hx_getParameters", Public, false, [], "Array<Dynamic>", [
+				SReturn(ETernary(EBool(false), EArrayDecl([]), EArrayDecl([EString("x")])), HxPos.unknown())
+			], "")
+		], []);
+		serializerClasses.set("EnumBase", enumBase);
+		final enumBaseLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(enumBase, serializerLookup).join("\n");
+		assertContains(enumBaseLines, "return ((false) ? std::vector<std::any>{} : std::vector<std::any>{std::any(\"x\")});",
+			"C++ vector-returning enum helpers should render ternary branches with the expected vector element type");
+		assertContains(enumBaseLines, "int getIndex() { return _hx_getIndex(); }", "C++ EnumBase should expose public Serializer-compatible getIndex alias");
+		assertContains(enumBaseLines, "std::string getTag() { return _hx_getTag(); }", "C++ EnumBase should expose public Serializer-compatible getTag alias");
+		assertContains(enumBaseLines, "int getParamCount() { return _hx_getParamCount(); }",
+			"C++ EnumBase should expose public Serializer-compatible getParamCount alias");
+		assertContains(enumBaseLines, "std::string getParamI(int inIndex) { return _hx_getParamI(inIndex); }",
+			"C++ EnumBase should expose public Serializer-compatible getParamI alias");
 		final unserializerEnum = new HxFunctionDecl("unserializeEnum", Private, false, [
 			new HxFunctionArg("edecl", "Enum<T>", NoDefault, false, false),
 			new HxFunctionArg("tag", "String", NoDefault, false, false)

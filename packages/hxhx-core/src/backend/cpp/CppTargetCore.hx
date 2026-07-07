@@ -3005,6 +3005,8 @@ class CppTargetCore {
 				for (line in renderDynamicFunctionStorageField(fn, cls, classLookup))
 					out.push(line);
 		}
+		for (line in renderEnumBasePublicAliases(className, cls))
+			out.push(line);
 		final ctor = findConstructor(cls);
 		if (ctor == null) {
 			for (line in renderImplicitConstructors(className, baseType, scope))
@@ -3031,6 +3033,29 @@ class CppTargetCore {
 		out.push("};");
 		for (line in renderGenericClassFactory(className, typeParams, ctor, scope))
 			out.push(line);
+		return out;
+	}
+
+	static function renderEnumBasePublicAliases(className:String, cls:HxClassDecl):Array<String> {
+		if (sanitizeTypePath(typeBaseName(className)) != "EnumBase")
+			return [];
+		function hasMethod(name:String):Bool {
+			for (fn in HxClassDecl.getFunctions(cls))
+				if (sanitizeIdentifier(HxFunctionDecl.getName(fn)) == name)
+					return true;
+			return false;
+		}
+		final out = new Array<String>();
+		if (hasMethod("_hx_getIndex") && !hasMethod("getIndex"))
+			out.push("  int getIndex() { return _hx_getIndex(); }");
+		if (hasMethod("_hx_getTag") && !hasMethod("getTag"))
+			out.push("  std::string getTag() { return _hx_getTag(); }");
+		if (hasMethod("_hx_getParamCount") && !hasMethod("getParamCount"))
+			out.push("  int getParamCount() { return _hx_getParamCount(); }");
+		if (hasMethod("_hx_getParamI") && !hasMethod("getParamI"))
+			out.push("  std::string getParamI(int inIndex) { return _hx_getParamI(inIndex); }");
+		if (hasMethod("_hx_getParameters") && !hasMethod("getParameters"))
+			out.push("  std::vector<std::any> getParameters() { return _hx_getParameters(); }");
 		return out;
 	}
 
@@ -4194,6 +4219,8 @@ class CppTargetCore {
 			return cacheFieldType("std::shared_ptr<StringMap<std::string>>");
 		if (owner == "Unserializer" && field == "CODES")
 			return cacheFieldType("std::vector<int>");
+		if (owner == "Serializer" && field == "BASE64_CODES")
+			return cacheFieldType("std::string");
 		final structuredStringMapType = structuredStringMapInitCppType(init);
 		if (structuredStringMapType.length > 0)
 			return cacheFieldType(structuredStringMapType);
@@ -4253,6 +4280,8 @@ class CppTargetCore {
 			return xmlParserEscapesInitExpr(init, scope);
 		if (owner == "Unserializer" && field == "CODES")
 			return "initCodes()";
+		if (owner == "Serializer" && field == "BASE64_CODES")
+			return "BASE64";
 		return null;
 	}
 
@@ -9725,6 +9754,8 @@ class CppTargetCore {
 				});
 				out.push(indent + "}");
 				out;
+			case SIf(cond, _, null, _) if (conditionKnownFalse(cond, scope)):
+				[];
 			case SIf(cond, thenBranch, elseBranch, _):
 				final out = [indent + "if " + cStyleConditionExpr(cond, scope) + " {"];
 				withLocalScope(scope, () -> {
@@ -10246,7 +10277,7 @@ class CppTargetCore {
 					case ENull:
 						"return " + cppDefaultValue(returnType, scope) + ";";
 					case _:
-						"return " + renderExpr(expr, scope) + ";";
+						"return " + valueExprForExpectedType(expr, returnType, scope) + ";";
 				}
 			case _ if (isCppArrayBackedAbstractType(returnType, scope)):
 				"return " + renderExpr(expr, scope) + ";";
@@ -10410,7 +10441,7 @@ class CppTargetCore {
 					return referenceCast;
 				return valueExprForExpectedType(inner, expectedType, scope);
 			case ETernary(cond, thenExpr, elseExpr):
-				return "(" + renderExpr(cond, scope) + " ? " + valueExprForExpectedType(thenExpr, expectedType, scope) + " : "
+				return "(" + conditionExpr(cond, scope) + " ? " + valueExprForExpectedType(thenExpr, expectedType, scope) + " : "
 					+ valueExprForExpectedType(elseExpr, expectedType, scope) + ")";
 			case ESwitch(scrutinee, patterns, exprs):
 				return switchExpr(scrutinee, patterns, exprs, scope, expectedType);
@@ -10459,6 +10490,8 @@ class CppTargetCore {
 					return "__hxhx_any_double(" + renderExpr(expr, scope) + ")";
 				case "int":
 					return "static_cast<int>(__hxhx_any_double(" + renderExpr(expr, scope) + "))";
+				case "bool":
+					return "__hxhx_any_bool(" + renderExpr(expr, scope) + ")";
 				case _:
 			}
 			if (isCppReferenceType(expectedType))
@@ -10691,11 +10724,28 @@ class CppTargetCore {
 	}
 
 	static function conditionExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		if (exprCppType(expr, scope) == "std::any")
+			return "__hxhx_any_bool(" + renderExpr(expr, scope) + ")";
 		return switch (expr) {
 			case EBinop(_, _, _):
 				renderExpr(expr, scope);
 			case _:
 				"(" + renderExpr(expr, scope) + ")";
+		};
+	}
+
+	static function conditionKnownFalse(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return switch (expr) {
+			case EBool(false):
+				true;
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				conditionKnownFalse(inner, scope);
+			case EBinop("==", left, ENull) if (exprHasNonNullableValueType(left, scope)):
+				true;
+			case EBinop("==", ENull, right) if (exprHasNonNullableValueType(right, scope)):
+				true;
+			case _:
+				false;
 		};
 	}
 
@@ -10904,6 +10954,12 @@ class CppTargetCore {
 				+ ")";
 			case EArrayAccess(array, index) if (isCppStringExpr(array, scope)):
 				stringCodeAtExpr(array, index, scope);
+			case EArrayAccess(array, index) if (exprCppType(array, scope) == "std::any"):
+				"(__hxhx_any_vector_any("
+				+ renderExpr(array, scope)
+				+ ")["
+				+ renderExpr(index, scope)
+				+ "])";
 			case EArrayAccess(array, index) if (exprHasReferenceType(array, scope)):
 				"((*"
 				+ renderExpr(array, scope)
@@ -11855,6 +11911,10 @@ class CppTargetCore {
 			return renderExpr(receiver, scope) + ".push_back(" + renderedArgs() + ")";
 		if (receiverCppType == "std::any" && method == "hxUnserialize" && args.length == 1)
 			return "__hxhx_dynamic_hx_unserialize(" + renderExpr(receiver, scope) + ", " + renderExpr(args[0], scope) + ")";
+		if (receiverCppType == "std::any" && method == "hxSerialize" && args.length == 1)
+			return "__hxhx_dynamic_hx_serialize(" + renderExpr(receiver, scope) + ", " + renderExpr(args[0], scope) + ")";
+		if (receiverCppType == "std::any" && method == "__length" && args.length == 0)
+			return "static_cast<int>(__hxhx_any_vector_any(" + renderExpr(receiver, scope) + ").size())";
 		if (isCppVectorType(receiverCppType)) {
 			final target = renderExpr(receiver, scope);
 			final lowered = switch (method) {
@@ -13429,6 +13489,9 @@ class CppTargetCore {
 		final intArgs = templateArgsFromExpectedClassType("IntMap", receiverCppType);
 		if (intArgs.length == 1)
 			return intArgs[0];
+		final objectArgs = templateArgsFromExpectedClassType("ObjectMap", receiverCppType);
+		if (objectArgs.length == 2)
+			return objectArgs[1];
 		final hashArgs = templateArgsFromExpectedClassType("HashMap", receiverCppType);
 		if (hashArgs.length == 2)
 			return hashArgs[1];
@@ -13441,6 +13504,9 @@ class CppTargetCore {
 			return "std::string";
 		if (templateArgsFromExpectedClassType("IntMap", receiverCppType).length == 1)
 			return "int";
+		final objectArgs = templateArgsFromExpectedClassType("ObjectMap", receiverCppType);
+		if (objectArgs.length == 2)
+			return objectArgs[0];
 		final hashArgs = templateArgsFromExpectedClassType("HashMap", receiverCppType);
 		if (hashArgs.length == 2)
 			return hashArgs[0];
@@ -14350,6 +14416,8 @@ class CppTargetCore {
 				"std::any";
 			case EArrayAccess(array, _) if (isCppStringExpr(array, scope)):
 				"int";
+			case EArrayAccess(array, _) if (exprCppType(array, scope) == "std::any"):
+				"std::any";
 			case EArrayAccess(array, _):
 				cppVectorElementType(exprCppType(array, scope));
 			case EField(receiver, "expr") if (exprCppType(receiver, scope) == CppMacroExpr.CPP_TYPE):
@@ -18831,6 +18899,13 @@ class CppTargetCore {
 		final iteratorElement = cppIteratorElementType(typeName);
 		if (iteratorElement.length > 0)
 			return {expr: renderExpr(iterable, scope), cppType: typeName, elementType: iteratorElement};
+		final listElement = listElementCppType(typeName);
+		if (listElement.length > 0)
+			return {
+				expr: renderExpr(iterable, scope) + "->iterator()",
+				cppType: "std::shared_ptr<__hxhx_iterator<" + listElement + ">>",
+				elementType: listElement
+			};
 		final className = classNameFromCppExprType(typeName, scope);
 		if (className == null)
 			return null;
@@ -18853,6 +18928,9 @@ class CppTargetCore {
 		final iteratorElement = cppIteratorElementType(typeName);
 		if (iteratorElement.length > 0)
 			return iteratorElement;
+		final listElement = listElementCppType(typeName);
+		if (listElement.length > 0)
+			return listElement;
 		final className = classNameFromCppExprType(typeName, scope);
 		if (className == null)
 			return "";
