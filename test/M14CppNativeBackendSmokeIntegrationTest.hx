@@ -3479,6 +3479,44 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function typeResolverCompatibilityProgram():GenIrProgram {
+		final src = [
+			"typedef TypeResolver = {};",
+			"class DefaultResolver {",
+			"  public function new() {}",
+			"  public function resolveClass(name:String):Class<Dynamic> return null;",
+			"  public function resolveEnum(name:String):Enum<Dynamic> return null;",
+			"}",
+			"class NullResolver {",
+			"  public static var instance:NullResolver = new NullResolver();",
+			"  public function new() {}",
+			"  public function resolveClass(name:String):Class<Dynamic> return null;",
+			"  public function resolveEnum(name:String):Enum<Dynamic> return null;",
+			"}",
+			"class ResolverOwner {",
+			"  static var DEFAULT_RESOLVER:TypeResolver = new DefaultResolver();",
+			"  var resolver:TypeResolver;",
+			"  public function new() {",
+			"    setResolver(null);",
+			"    setResolver(DEFAULT_RESOLVER);",
+			"  }",
+			"  public function setResolver(r:TypeResolver):Void {",
+			"    if (r == null) resolver = NullResolver.instance; else resolver = r;",
+			"  }",
+			"  public function getResolver():TypeResolver return resolver;",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var owner = new ResolverOwner();",
+			"    Sys.println(Std.string(owner.getResolver().resolveClass(\"Main\") == null));",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "TypeResolverCompatibility.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function importedMd5BytesRuntimeProgram():GenIrProgram {
 		final pos = HxPos.unknown();
 		final mainSource = [
@@ -11725,6 +11763,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(reflectPropertySource.indexOf("Reflect::setProperty(") < 0,
 			"C++ typed Reflect.setProperty should not emit the incompatible generated Reflect helper call shape");
 
+		final typeResolverDir = Path.join([root, "type-resolver-source-only"]);
+		final typeResolverEmit = BackendRegistry.createForTarget("cpp-native").emit(typeResolverCompatibilityProgram(), context(typeResolverDir, true, true));
+		final typeResolverSource = File.getContent(typeResolverEmit.entryPath);
+		assertContains(typeResolverSource, "struct TypeResolver {", "C++ TypeResolver typedef should emit a nominal interface carrier");
+		assertContains(typeResolverSource, "virtual std::shared_ptr<Class> resolveClass(std::string name) = 0;",
+			"C++ TypeResolver carrier should expose resolveClass for shared_ptr<TypeResolver> calls");
+		assertContains(typeResolverSource, "virtual std::shared_ptr<Enum> resolveEnum(std::string name) = 0;",
+			"C++ TypeResolver carrier should expose resolveEnum for shared_ptr<TypeResolver> calls");
+		assertContains(typeResolverSource, "struct DefaultResolver : public TypeResolver",
+			"C++ DefaultResolver should be assignment-compatible with shared_ptr<TypeResolver>");
+		assertContains(typeResolverSource, "struct NullResolver : public TypeResolver",
+			"C++ NullResolver should be assignment-compatible with shared_ptr<TypeResolver>");
+		assertContains(typeResolverSource, "inline static std::shared_ptr<TypeResolver> DEFAULT_RESOLVER = std::make_shared<DefaultResolver>();",
+			"C++ TypeResolver static fields should allow DefaultResolver initialization");
+		assertContains(typeResolverSource, "resolver = NullResolver::instance;", "C++ TypeResolver fields should allow NullResolver singleton assignment");
+
 		final mathExternDir = Path.join([root, "math-extern-source-only"]);
 		final mathExternEmit = BackendRegistry.createForTarget("cpp-native").emit(mathExternProgram(), context(mathExternDir, true, true));
 		final mathExternSource = File.getContent(mathExternEmit.entryPath);
@@ -11874,6 +11928,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(reflectPropertyRun.code == 0, "C++ typed Reflect property runtime smoke failed: " + reflectPropertyRun.stderr);
 			assertTrue(reflectPropertyRun.stdout == "5\n5\n10\n10\n20\n11\n11\n6\n10\n20\n16\n",
 				"unexpected C++ typed Reflect property stdout: " + reflectPropertyRun.stdout);
+
+			final typeResolverBuildDir = Path.join([root, "type-resolver-build"]);
+			final typeResolverBuilt = BackendRegistry.createForTarget("cpp-native")
+				.emit(typeResolverCompatibilityProgram(), context(typeResolverBuildDir, true, false));
+			assertTrue(typeResolverBuilt.builtExecutable, "C++ TypeResolver compatibility smoke should build executable");
 
 			final md5BytesBuildDir = Path.join([root, "imported-md5-bytes-build"]);
 			final md5BytesBuilt = BackendRegistry.createForTarget("cpp-native").emit(importedMd5BytesRuntimeProgram(), context(md5BytesBuildDir, true, false));

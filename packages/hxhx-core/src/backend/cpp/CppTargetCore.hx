@@ -2913,6 +2913,8 @@ class CppTargetCore {
 			&& HxClassDecl.getFunctions(cls).length == 0
 			&& renderMissingInterfaceDeclaration(className) != null)
 			return [];
+		if (isTypeResolverInterfaceClass(cls, classLookup))
+			return renderTypeResolverInterfaceClass(className);
 		if (HxClassDecl.getIsInterface(cls))
 			return renderInterfaceClass(cls, classLookup);
 		if (isAnySupportClass(cls))
@@ -3063,6 +3065,22 @@ class CppTargetCore {
 		}
 		out.push("};");
 		return out;
+	}
+
+	/**
+		Render the stdlib `haxe.Unserializer.TypeResolver` structural typedef as
+		a C++ interface. The upstream surface is structural, but the generated C++
+		uses `std::shared_ptr<TypeResolver>` and therefore needs a nominal base for
+		the known resolver implementations.
+	**/
+	static function renderTypeResolverInterfaceClass(className:String):Array<String> {
+		return [
+			"struct " + className + " {",
+			"  virtual ~" + className + "() = default;",
+			"  virtual std::shared_ptr<Class> resolveClass(std::string name) = 0;",
+			"  virtual std::shared_ptr<Enum> resolveEnum(std::string name) = 0;",
+			"};"
+		];
 	}
 
 	static function renderGenericClassFactory(className:String, typeParams:Array<String>, ctor:Null<HxFunctionDecl>, scope:CppRenderScope):Array<String> {
@@ -4951,7 +4969,7 @@ class CppTargetCore {
 
 	static function isTypeResolverHelper(className:String):Bool {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
-		return owner == "TypeResolver" || owner == "DefaultResolver";
+		return owner == "TypeResolver" || owner == "DefaultResolver" || owner == "NullResolver";
 	}
 
 	static function renderScope(cls:HxClassDecl, classLookup:CppClassLookup, returnType:String):CppRenderScope {
@@ -5289,6 +5307,8 @@ class CppTargetCore {
 			final iface = ifaceCls == null ? genericClassLikeTypeName(path, scope, classLookup) : cppClassTemplateTypeName(path, scope, classLookup);
 			addBase(iface, ifaceCls);
 		}
+		for (iface in syntheticTypeResolverInterfaceNames(cls, classLookup))
+			addBase(iface, lookupClassForTypeHint(iface, scope, classLookup));
 		for (iface in syntheticStructuralInterfaceNames(cls, classLookup))
 			addBase(iface, lookupClassForTypeHint(iface, scope, classLookup));
 		return bases;
@@ -5328,9 +5348,30 @@ class CppTargetCore {
 		}
 		for (path in HxClassDecl.getImplementsPaths(cls))
 			add(path);
+		for (name in syntheticTypeResolverInterfaceNames(cls, classLookup))
+			add(name);
 		for (name in syntheticStructuralInterfaceNames(cls, classLookup))
 			add(name);
 		return out;
+	}
+
+	static function syntheticTypeResolverInterfaceNames(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		if (!isTypeResolverImplementorClass(cls, classLookup))
+			return [];
+		return classLookup != null && classLookup.names.exists("TypeResolver") ? ["TypeResolver"] : [];
+	}
+
+	static function isTypeResolverInterfaceClass(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		return cls != null && renderedClassName(cls, classLookup) == "TypeResolver";
+	}
+
+	static function isTypeResolverImplementorClass(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (cls == null)
+			return false;
+		final className = sanitizeTypePath(typeBaseName(renderedClassName(cls, classLookup)));
+		if (className != "DefaultResolver" && className != "NullResolver")
+			return false;
+		return classMethodDeclIn(cls, "resolveClass", false) != null && classMethodDeclIn(cls, "resolveEnum", false) != null;
 	}
 
 	static function cppClassTemplateTypeName(typeHint:String, scope:CppRenderScope, classLookup:CppClassLookup):String {
