@@ -10323,6 +10323,11 @@ class CppTargetCore {
 				return typeFactoryCallExpr(method, args, scope, expectedType);
 			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver) && method == "createEmptyInstance" && args.length == 1):
 				return typeFactoryCallExpr(method, args, scope, expectedType);
+			case ECall(EField(receiver, method), args)
+				if (isTypeStaticReceiver(receiver)
+					&& (method == "createEnum" || method == "createEnumIndex")
+					&& (args.length == 2 || args.length == 3)):
+				return typeEnumFactoryCallExpr(method, args, scope, expectedType);
 			case ECall(EIdent(name), args):
 				final typedCall = directCallExprForExpectedType(name, args, expectedType, scope);
 				if (typedCall != null)
@@ -10651,6 +10656,11 @@ class CppTargetCore {
 				typeFactoryCallExpr("createInstance", args, scope);
 			case ECall(EField(receiver, "createEmptyInstance"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				typeFactoryCallExpr("createEmptyInstance", args, scope);
+			case ECall(EField(receiver, method), args)
+				if (isTypeStaticReceiver(receiver)
+					&& (method == "createEnum" || method == "createEnumIndex")
+					&& (args.length == 2 || args.length == 3)):
+				typeEnumFactoryCallExpr(method, args, scope);
 			case ECall(EField(receiver, "enumEq"), args) if (isTypeStaticReceiver(receiver) && args.length == 2):
 				typeEnumEqExpr(args[0], args[1], scope);
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
@@ -19077,7 +19087,8 @@ class CppTargetCore {
 			case "resolveEnum" if (args.length == 1):
 				"std::shared_ptr<Enum>";
 			case "createEnum" | "createEnumIndex" if (args.length == 2 || args.length == 3):
-				"std::shared_ptr<EnumValue>";
+				final concrete = typeEnumFactoryReturnCppType(args, scope);
+				concrete.length > 0 ? concrete : "std::shared_ptr<EnumValue>";
 			case "createInstance" if (args.length == 2):
 				typeFactoryReturnCppType(args, scope);
 			case "createEmptyInstance" if (args.length == 1):
@@ -19113,6 +19124,71 @@ class CppTargetCore {
 		if (classReference == null || classReference.length == 0)
 			return "";
 		return cppTypeHint(classReference, scope);
+	}
+
+	/**
+		Renders Type.createEnum/createEnumIndex through the enum factory seam.
+
+		The first argument may be a parser-shaped enum class token, while constructor
+		names can be wrapped in target escape helpers such as `__unprotect__`. Both
+		are Haxe Type API call-shape details, so they are handled here instead of by
+		generic stringification or a broad global escape helper.
+	**/
+	static function typeEnumFactoryCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?expectedType:String):String {
+		final inferred = typeEnumFactoryReturnCppType(args, scope);
+		final expected = expectedType == null || expectedType == "void" || expectedType == "auto" ? "" : expectedType;
+		final templateType = inferred.length > 0 ? inferred : expected;
+		final renderedArgs = new Array<String>();
+		if (args.length > 0) {
+			final enumArg = enumReferenceArgExprForExpectedType(args[0], "std::shared_ptr<Enum>", scope);
+			renderedArgs.push(enumArg == null ? valueExprForExpectedType(args[0], "std::shared_ptr<Enum>", scope) : enumArg);
+		}
+		if (args.length > 1) {
+			renderedArgs.push(method == "createEnumIndex" ? valueExprForExpectedType(args[1], "int", scope) : typeEnumConstructorNameArgExpr(args[1], scope));
+		}
+		if (args.length > 2)
+			renderedArgs.push(valueExprForExpectedType(args[2], "std::vector<std::any>", scope));
+		return "Type::" + method + (templateType.length > 0 ? "<" + templateType + ">" : "") + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function typeEnumFactoryReturnCppType(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (args == null || args.length == 0)
+			return "";
+		final enumReference = enumReferencePathText(args[0], scope);
+		return enumReference == null || enumReference.length == 0 ? "" : cppTypeHint(enumReference, scope);
+	}
+
+	static function enumReferencePathText(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		final typePath = classReferencePathCandidateText(expr);
+		if (typePath == null || typePath.length == 0)
+			return null;
+		final baseName = sanitizeTypePath(typeBaseName(typePath));
+		if (baseName.length == 0 || !startsWithUppercaseTypeName(baseName))
+			return null;
+		if (exprNameHasLocalStorage(typePath, scope) || exprNameHasLocalStorage(baseName, scope))
+			return null;
+		return isEnumCarrierClassName(baseName, scope) ? typePath : null;
+	}
+
+	static function enumReferenceArgExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		final expectedClass = classNameFromCppType(expectedType);
+		if (expectedClass == null || sanitizeTypePath(typeBaseName(expectedClass)) != "Enum")
+			return null;
+		final enumReferencePath = enumReferencePathText(expr, scope);
+		return enumReferencePath == null ? null : "Type::resolveEnum(" + quoteString(enumReferencePath) + ")";
+	}
+
+	static function typeEnumConstructorNameArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				typeEnumConstructorNameArgExpr(inner, scope);
+			case ECall(EIdent("__unprotect__"), args) if (args.length == 1):
+				typeEnumConstructorNameArgExpr(args[0], scope);
+			case EString(value):
+				"std::string(" + quoteString(value) + ")";
+			case _:
+				valueExprForExpectedType(expr, "std::string", scope);
+		};
 	}
 
 	static function typeEnumEqExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {

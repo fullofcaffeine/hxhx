@@ -1229,6 +1229,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function typeCreateEnumProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    TypeCreateEnumUser.run();",
+			"  }",
+			"}",
+			"enum MyEnum {",
+			"  A;",
+			"  C(i:Int, s:String);",
+			"}",
+			"class TypeCreateEnumUser {",
+			"  public static function __unprotect__(s:String):String return untyped __unprotect__(s);",
+			"  public static function run():Bool {",
+			"    var a:MyEnum = Type.createEnum(MyEnum, __unprotect__(\"A\"));",
+			"    var c:MyEnum = Type.createEnum(MyEnum, __unprotect__(\"C\"), [55, \"hello\"]);",
+			"    var i:MyEnum = Type.createEnumIndex(MyEnum, 0);",
+			"    return a != null && c != null && i != null;",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function vendorListProgramWhenAvailable():Null<GenIrProgram> {
 		final listPath = "vendor/haxe/std/haxe/ds/List.hx";
 		if (!FileSystem.exists(listPath))
@@ -11342,6 +11368,46 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Type.createInstance class-constant calls should not omit the explicit return template argument");
 		assertTrue(typeFactoryLines.indexOf("static T createInstance(std::shared_ptr<Class> cl, std::vector<std::any> args) {\n    (void)cl;\n    (void)args;\n    return nullptr;") < 0,
 			"C++ Type factory helper stubs should not instantiate nullptr returns for non-pointer template types");
+
+		final typeCreateEnumDir = Path.join([root, "type-create-enum-source-only"]);
+		final typeCreateEnumEmit = BackendRegistry.createForTarget("cpp-native").emit(typeCreateEnumProgram(), context(typeCreateEnumDir, true, true));
+		final typeCreateEnumSource = File.getContent(typeCreateEnumEmit.entryPath);
+		final typeEnumNames = new StringMap<Bool>();
+		typeEnumNames.set("MyEnum", true);
+		typeEnumNames.set("Type", true);
+		final typeEnumByName = new StringMap<HxClassDecl>();
+		typeEnumByName.set("MyEnum", new HxClassDecl("MyEnum", false, [], [new HxFieldDecl("__hx_is_enum", Public, true, "Bool", EBool(true))]));
+		typeEnumByName.set("Type", typeFactoryOwner);
+		final typeEnumScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("TypeCreateEnumUser", false, [], []), {
+			names: typeEnumNames,
+			byName: typeEnumByName
+		}, "auto");
+		final directTypeEnumCall = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "createEnum"),
+			[EIdent("MyEnum"), ECall(EIdent("__unprotect__"), [EString("A")])]), typeEnumScope);
+		assertContains(directTypeEnumCall, "Type::createEnum<std::shared_ptr<MyEnum>>(Type::resolveEnum(\"MyEnum\"), std::string(\"A\"))",
+			"C++ Type.createEnum should infer enum return carriers and unwrap constructor-name escape calls before source parsing");
+		final parsedTypeEnumCall = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "createEnum"), [
+			EEnumValue("MyEnum"),
+			ECall(EIdent("__unprotect__"), [EString("C")]),
+			EArrayDecl([EInt(55), EString("hello")])
+		]), typeEnumScope);
+		assertContains(parsedTypeEnumCall,
+			"Type::createEnum<std::shared_ptr<MyEnum>>(Type::resolveEnum(\"MyEnum\"), std::string(\"C\"), std::vector<std::any>{std::any(55), std::any(\"hello\")})",
+			"C++ Type.createEnum should recover enum class constants from parser enum-like tokens");
+		final directTypeEnumIndexCall = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "createEnumIndex"),
+			[EEnumValue("MyEnum"), EInt(0)]), typeEnumScope);
+		assertContains(directTypeEnumIndexCall, "Type::createEnumIndex<std::shared_ptr<MyEnum>>(Type::resolveEnum(\"MyEnum\"), 0)",
+			"C++ Type.createEnumIndex should share the enum carrier template inference seam");
+		assertContains(typeCreateEnumSource, "Type::createEnum<std::shared_ptr<MyEnum>>(Type::resolveEnum(\"MyEnum\"), std::string(\"A\"))",
+			"C++ Type.createEnum source lowering should pass enum class constants through Type.resolveEnum");
+		assertContains(typeCreateEnumSource, "Type::createEnum<std::shared_ptr<MyEnum>>(Type::resolveEnum(\"MyEnum\"), std::string(\"C\"),",
+			"C++ Type.createEnum source lowering should keep constructor-argument calls explicitly templated");
+		assertContains(typeCreateEnumSource, "Type::createEnumIndex<std::shared_ptr<MyEnum>>(Type::resolveEnum(\"MyEnum\"), 0)",
+			"C++ Type.createEnumIndex source lowering should keep enum carrier templates explicit");
+		assertTrue(typeCreateEnumSource.indexOf("Type::createEnum(Type::resolveEnum(") < 0,
+			"C++ Type.createEnum class-constant calls should not omit the explicit return template argument");
+		assertTrue(typeCreateEnumSource.indexOf("Type::createEnum<std::shared_ptr<MyEnum>>(Type::resolveEnum(\"MyEnum\"), __unprotect__") < 0,
+			"C++ Type.createEnum constructor-name arguments should not leak raw __unprotect__ calls");
 
 		final enumCarrierDir = Path.join([root, "enum-carrier-name-collision-source-only"]);
 		final enumCarrierEmit = BackendRegistry.createForTarget("cpp-native").emit(enumCarrierNameCollisionProgram(), context(enumCarrierDir, true, true));
