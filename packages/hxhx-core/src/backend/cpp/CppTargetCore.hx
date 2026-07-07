@@ -13750,6 +13750,8 @@ class CppTargetCore {
 				mathReturnCppType(method);
 			case ECall(EField(receiver, "field"), args) if (isReflectStaticReceiver(receiver) && args.length == 2):
 				"std::any";
+			case ECall(EField(receiver, "parse"), args) if (args.length == 1 && isJsonParseStaticReceiver(receiver)):
+				"std::any";
 			case ECall(EField(receiver, "callMethod"), args) if (isReflectStaticReceiver(receiver) && args.length == 3):
 				"std::any";
 			case ECall(EField(receiver, "isFunction"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
@@ -14809,6 +14811,8 @@ class CppTargetCore {
 			case ECall(EField(receiver, "makeVarArgs"), args) if (isReflectStaticReceiver(receiver) && args.length == 1):
 				reflectMakeVarArgsReturnCppType(args, scope);
 			case ECall(EField(receiver, "field"), args) if (isReflectStaticReceiver(receiver) && args.length == 2):
+				"std::any";
+			case ECall(EField(receiver, "parse"), args) if (args.length == 1 && isJsonParseStaticReceiver(receiver)):
 				"std::any";
 			case ECall(EField(receiver, "callMethod"), args) if (isReflectStaticReceiver(receiver) && args.length == 3):
 				"std::any";

@@ -3424,6 +3424,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    var structural = haxe.Json.stringify({x: -4500, y: 1.456, a: [\"hello\", \"wor'\\\"\\n\\t\\rd\"]});",
 			"    Sys.println(structural);",
 			"    Sys.println(haxe.Json.stringify(haxe.Json.parse(structural)));",
+			"    var parsed = haxe.Json.parse(structural);",
+			"    Sys.println(haxe.Json.stringify(parsed.x));",
+			"    Sys.println(haxe.Json.stringify(parsed.y));",
+			"    var parsedExtra = haxe.Json.parse(\"{\\\"s\\\":\\\"ok\\\",\\\"n\\\":null}\");",
+			"    Sys.println(haxe.Json.stringify(parsedExtra.s));",
+			"    Sys.println(haxe.Json.stringify(parsedExtra.n));",
 			"    Sys.println(haxe.Json.stringify({test: {nested: null}}));",
 			"    var mix:Array<Dynamic> = [1, 2, 3, \"str\"];",
 			"    Sys.println(haxe.Json.stringify({array: mix}));",
@@ -11545,6 +11551,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(cppJsonCarrierRun.code == 0, "C++ JSON carrier runtime smoke failed: " + cppJsonCarrierRun.stderr);
 			assertTrue(cppJsonCarrierRun.stdout == "{\"a\":[\"hello\",\"wor'\\\"\\n\\t\\rd\"],\"x\":-4500,\"y\":1.456}\n"
 				+ "{\"a\":[\"hello\",\"wor'\\\"\\n\\t\\rd\"],\"x\":-4500,\"y\":1.456}\n"
+				+ "-4500\n"
+				+ "1.456\n"
+				+ "\"ok\"\n"
+				+ "null\n"
 				+ "{\"test\":{\"nested\":null}}\n"
 				+ "{\"array\":[1,2,3,\"str\"]}\n"
 				+ "1\n"
