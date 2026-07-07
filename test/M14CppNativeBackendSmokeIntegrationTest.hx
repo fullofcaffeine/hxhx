@@ -3429,6 +3429,56 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function reflectTypedPropertyRuntimeProgram():GenIrProgram {
+		final src = [
+			"interface HasProp {",
+			"  public var x(get, set):Int;",
+			"}",
+			"class WithProp implements HasProp {",
+			"  public var x(get, set):Int;",
+			"  var _x:Int;",
+			"  public static var STAT_X(default, set):Int = 0;",
+			"  public function new() { _x = 5; }",
+			"  function get_x():Int return _x;",
+			"  function set_x(v:Int):Int { _x = v; return v; }",
+			"  static function set_STAT_X(v:Int):Int { STAT_X = v * 2; return v; }",
+			"}",
+			"class ChildProp extends WithProp {",
+			"  public var y(default, set):Int;",
+			"  public function new() { super(); y = 10; }",
+			"  override function get_x():Int return _x + 1;",
+			"  function set_y(v:Int):Int { y = v; return v; }",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var c = new WithProp();",
+			"    Sys.println(Std.string(c.x));",
+			"    Sys.println(Std.string(Reflect.getProperty(c, \"x\")));",
+			"    Reflect.setProperty(c, \"x\", 10);",
+			"    Sys.println(Std.string(c.x));",
+			"    Sys.println(Std.string(Reflect.getProperty(c, \"x\")));",
+			"    c.x *= 2;",
+			"    Sys.println(Std.string(c.x));",
+			"    var iface:HasProp = c;",
+			"    Reflect.setProperty(iface, \"x\", 11);",
+			"    Sys.println(Std.string(iface.x));",
+			"    Sys.println(Std.string(Reflect.getProperty(iface, \"x\")));",
+			"    var child = new ChildProp();",
+			"    Sys.println(Std.string(Reflect.getProperty(child, \"x\")));",
+			"    Reflect.setProperty(child, \"x\", 9);",
+			"    Sys.println(Std.string(Reflect.getProperty(child, \"x\")));",
+			"    Reflect.setProperty(child, \"y\", 20);",
+			"    Sys.println(Std.string(Reflect.getProperty(child, \"y\")));",
+			"    Reflect.setProperty(WithProp, \"STAT_X\", 8);",
+			"    Sys.println(Std.string(Reflect.getProperty(WithProp, \"STAT_X\")));",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "ReflectTypedPropertyRuntime.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function importedMd5BytesRuntimeProgram():GenIrProgram {
 		final pos = HxPos.unknown();
 		final mainSource = [
@@ -11660,6 +11710,21 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"__hxhx_reflect_compare_methods(__hxhx_method_identity(left.get(), std::string(\"CompareOwner::add\")), nullptr)",
 			"C++ Reflect.compareMethods should keep null comparisons false through target-owned support");
 
+		final reflectPropertyDir = Path.join([root, "reflect-typed-property-source-only"]);
+		final reflectPropertyEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(reflectTypedPropertyRuntimeProgram(), context(reflectPropertyDir, true, true));
+		final reflectPropertySource = File.getContent(reflectPropertyEmit.entryPath);
+		assertContains(reflectPropertySource, "->get_x()", "C++ Reflect.getProperty should call known instance property getters");
+		assertContains(reflectPropertySource, "->set_x(10)", "C++ Reflect.setProperty should call known instance property setters");
+		assertContains(reflectPropertySource, "->set_y(20)", "C++ Reflect.setProperty should call known default/set property setters");
+		assertContains(reflectPropertySource, "WithProp::set_STAT_X(8)", "C++ Reflect.setProperty should call known static property setters");
+		assertTrue(reflectPropertySource.indexOf("iface->x") < 0,
+			"C++ typed interface property reads should use generated virtual accessors instead of nonexistent fields");
+		assertTrue(reflectPropertySource.indexOf("Reflect::getProperty(") < 0,
+			"C++ typed Reflect.getProperty should not emit the incompatible generated Reflect helper call shape");
+		assertTrue(reflectPropertySource.indexOf("Reflect::setProperty(") < 0,
+			"C++ typed Reflect.setProperty should not emit the incompatible generated Reflect helper call shape");
+
 		final mathExternDir = Path.join([root, "math-extern-source-only"]);
 		final mathExternEmit = BackendRegistry.createForTarget("cpp-native").emit(mathExternProgram(), context(mathExternDir, true, true));
 		final mathExternSource = File.getContent(mathExternEmit.entryPath);
@@ -11800,6 +11865,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(reflectCompareRun.code == 0, "C++ Reflect.compareMethods runtime smoke failed: " + reflectCompareRun.stderr);
 			assertTrue(reflectCompareRun.stdout == "true\ntrue\ntrue\nfalse\nfalse\n",
 				"unexpected C++ Reflect.compareMethods stdout: " + reflectCompareRun.stdout);
+
+			final reflectPropertyBuildDir = Path.join([root, "reflect-typed-property-build"]);
+			final reflectPropertyBuilt = BackendRegistry.createForTarget("cpp-native")
+				.emit(reflectTypedPropertyRuntimeProgram(), context(reflectPropertyBuildDir, true, false));
+			assertTrue(reflectPropertyBuilt.builtExecutable, "C++ typed Reflect property runtime smoke should build executable");
+			final reflectPropertyRun = commandOutput(reflectPropertyBuilt.entryPath, []);
+			assertTrue(reflectPropertyRun.code == 0, "C++ typed Reflect property runtime smoke failed: " + reflectPropertyRun.stderr);
+			assertTrue(reflectPropertyRun.stdout == "5\n5\n10\n10\n20\n11\n11\n6\n10\n20\n16\n",
+				"unexpected C++ typed Reflect property stdout: " + reflectPropertyRun.stdout);
 
 			final md5BytesBuildDir = Path.join([root, "imported-md5-bytes-build"]);
 			final md5BytesBuilt = BackendRegistry.createForTarget("cpp-native").emit(importedMd5BytesRuntimeProgram(), context(md5BytesBuildDir, true, false));

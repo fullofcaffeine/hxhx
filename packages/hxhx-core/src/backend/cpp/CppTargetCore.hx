@@ -49,6 +49,11 @@ typedef CppIteratorAccess = {
 	var elementType:String;
 }
 
+typedef CppReflectPropertyInfo = {
+	var owner:String;
+	var field:HxFieldDecl;
+}
+
 /**
 	Coarse render policy bucket for reachable Cpp helper classes.
 
@@ -10778,6 +10783,8 @@ class CppTargetCore {
 				staticEnumMethodValueExpr(receiver, field, scope);
 			case EField(receiver, field) if (staticFieldExpr(receiver, field, scope) != null):
 				staticFieldExpr(receiver, field, scope);
+			case EField(receiver, field) if (typedPropertyGetReadExpr(receiver, field, scope) != null):
+				typedPropertyGetReadExpr(receiver, field, scope);
 			case EField(receiver, field) if (exprCppType(receiver, scope) == "std::any"):
 				"__hxhx_json_any_field("
 				+ renderExpr(receiver, scope)
@@ -10952,6 +10959,8 @@ class CppTargetCore {
 				"; __hxhx_ushr_assign_target = static_cast<unsigned int>(__hxhx_ushr_assign_target) >> __hxhx_ushr_assign_count; return __hxhx_ushr_assign_target; })()";
 			case EBinop("%=", left, right) if (isCppDoubleExpr(left, scope)):
 				floatRemainderAssignExpr(left, right, scope);
+			case EBinop(op, left, right) if (propertyCompoundAssignmentExpr(op, left, right, scope) != null):
+				propertyCompoundAssignmentExpr(op, left, right, scope);
 			case EBinop(op, left, right) if (isSimpleCompoundAssignmentOp(op)):
 				renderExpr(left, scope)
 				+ " "
@@ -11879,6 +11888,16 @@ class CppTargetCore {
 			return "__hxhx_stringify(" + renderExpr(args[0], scope) + ")";
 		if (isReflectStaticReceiver(receiver) && method == "field" && args.length == 2)
 			return "__hxhx_reflect_field(" + renderExpr(args[0], scope) + ", " + stringExpr(args[1], scope) + ")";
+		if (isReflectStaticReceiver(receiver) && method == "getProperty" && args.length == 2) {
+			final typedProperty = reflectTypedGetPropertyExpr(args[0], args[1], scope);
+			if (typedProperty != null)
+				return typedProperty;
+		}
+		if (isReflectStaticReceiver(receiver) && method == "setProperty" && args.length == 3) {
+			final typedProperty = reflectTypedSetPropertyExpr(args[0], args[1], args[2], scope);
+			if (typedProperty != null)
+				return typedProperty;
+		}
 		if (isReflectStaticReceiver(receiver) && method == "setField" && args.length == 3)
 			return "__hxhx_reflect_set_field("
 				+ renderExpr(args[0], scope)
@@ -12788,6 +12807,236 @@ class CppTargetCore {
 			+ ", std::string("
 			+ quoteString(sanitizeTypePath(ownerType) + "::" + sanitizeIdentifier(method))
 			+ "))";
+	}
+
+	/**
+		Lower the known typed `Reflect.getProperty/setProperty` frontier through
+		declared C++ fields and Haxe property accessors. This intentionally does
+		not model erased `Dynamic` property lookup or arbitrary runtime values.
+	**/
+	static function reflectTypedGetPropertyExpr(target:HxExpr, fieldExpr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		final staticInfo = reflectTypedPropertyInfo(target, fieldExpr, true, scope);
+		if (staticInfo != null)
+			return reflectStaticPropertyGetExpr(staticInfo, scope);
+		final instanceInfo = reflectTypedPropertyInfo(target, fieldExpr, false, scope);
+		if (instanceInfo == null)
+			return null;
+		final fieldName = sanitizeIdentifier(HxFieldDecl.getName(instanceInfo.field));
+		final getter = "get_" + fieldName;
+		if ((HxFieldDecl.getPropertyGet(instanceInfo.field) == "get" || reflectPropertyOwnerIsInterface(instanceInfo, scope))
+			&& classHasInstanceMethodIncludingBases(instanceInfo.owner, getter, scope))
+			return renderExpr(target, scope) + fieldAccessOp(target, scope) + getter + "()";
+		return renderExpr(target, scope) + fieldAccessOp(target, scope) + fieldName;
+	}
+
+	static function reflectTypedSetPropertyExpr(target:HxExpr, fieldExpr:HxExpr, value:HxExpr, ?scope:CppRenderScope):Null<String> {
+		final staticInfo = reflectTypedPropertyInfo(target, fieldExpr, true, scope);
+		if (staticInfo != null)
+			return reflectStaticPropertySetExpr(staticInfo, value, scope);
+		final instanceInfo = reflectTypedPropertyInfo(target, fieldExpr, false, scope);
+		if (instanceInfo == null)
+			return null;
+		final fieldName = sanitizeIdentifier(HxFieldDecl.getName(instanceInfo.field));
+		final setter = "set_" + fieldName;
+		final valueExpr = reflectPropertyValueExpr(value, instanceInfo, scope);
+		if ((HxFieldDecl.getPropertySet(instanceInfo.field) == "set" || reflectPropertyOwnerIsInterface(instanceInfo, scope))
+			&& classHasInstanceMethodIncludingBases(instanceInfo.owner, setter, scope))
+			return renderExpr(target, scope) + fieldAccessOp(target, scope) + setter + "(" + valueExpr + ")";
+		return "(" + renderExpr(target, scope) + fieldAccessOp(target, scope) + fieldName + " = " + valueExpr + ")";
+	}
+
+	static function typedPropertyGetReadExpr(target:HxExpr, fieldName:String, ?scope:CppRenderScope):Null<String> {
+		final info = reflectTypedPropertyInfo(target, EString(fieldName), false, scope);
+		if (info == null)
+			return null;
+		final cleanField = sanitizeIdentifier(HxFieldDecl.getName(info.field));
+		final getter = "get_" + cleanField;
+		if ((HxFieldDecl.getPropertyGet(info.field) == "get" || reflectPropertyOwnerIsInterface(info, scope))
+			&& classHasInstanceMethodIncludingBases(info.owner, getter, scope))
+			return renderExpr(target, scope) + fieldAccessOp(target, scope) + getter + "()";
+		return null;
+	}
+
+	static function propertyCompoundAssignmentExpr(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (!isSimpleCompoundAssignmentOp(op))
+			return null;
+		return switch (left) {
+			case EField(target, fieldName) if (simplePropertyAssignmentReceiver(target)):
+				final info = reflectTypedPropertyInfo(target, EString(fieldName), false, scope);
+				if (info == null) {
+					null;
+				} else {
+					final cleanField = sanitizeIdentifier(HxFieldDecl.getName(info.field));
+					final setter = "set_" + cleanField;
+					final current = typedPropertyGetReadExpr(target, fieldName, scope);
+					if (current == null || !classHasInstanceMethodIncludingBases(info.owner, setter, scope)) {
+						null;
+					} else {
+						propertyCompoundAssignmentWithAccessorsExpr(op, target, right, info, current, scope);
+					}
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function propertyCompoundAssignmentWithAccessorsExpr(op:String, target:HxExpr, right:HxExpr, info:CppReflectPropertyInfo, current:String,
+			?scope:CppRenderScope):String {
+		final fieldName = sanitizeIdentifier(HxFieldDecl.getName(info.field));
+		final setter = "set_" + fieldName;
+		final baseOp = op.substr(0, op.length - 1);
+		final expected = reflectPropertyFieldCppType(info, scope);
+		final rhs = expected.length == 0 ? renderExpr(right, scope) : valueExprForExpectedType(right, expected, scope);
+		return renderExpr(target, scope) + fieldAccessOp(target, scope) + setter + "((" + current + " " + baseOp + " " + rhs + "))";
+	}
+
+	static function simplePropertyAssignmentReceiver(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EThis | EIdent(_):
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function reflectStaticPropertyGetExpr(info:CppReflectPropertyInfo, ?scope:CppRenderScope):String {
+		final fieldName = sanitizeIdentifier(HxFieldDecl.getName(info.field));
+		final getter = "get_" + fieldName;
+		if (HxFieldDecl.getPropertyGet(info.field) == "get" && classMethodDecl(info.owner, getter, true, scope) != null)
+			return info.owner + "::" + getter + "()";
+		return info.owner + "::" + fieldName;
+	}
+
+	static function reflectStaticPropertySetExpr(info:CppReflectPropertyInfo, value:HxExpr, ?scope:CppRenderScope):String {
+		final fieldName = sanitizeIdentifier(HxFieldDecl.getName(info.field));
+		final setter = "set_" + fieldName;
+		final valueExpr = reflectPropertyValueExpr(value, info, scope);
+		if (HxFieldDecl.getPropertySet(info.field) == "set" && classMethodDecl(info.owner, setter, true, scope) != null)
+			return info.owner + "::" + setter + "(" + valueExpr + ")";
+		return "(" + info.owner + "::" + fieldName + " = " + valueExpr + ")";
+	}
+
+	static function reflectTypedPropertyInfo(target:HxExpr, fieldExpr:HxExpr, wantStatic:Bool, ?scope:CppRenderScope):Null<CppReflectPropertyInfo> {
+		if (scope == null)
+			return null;
+		final fieldName = stringLiteralValue(fieldExpr);
+		if (fieldName == null || fieldName.length == 0)
+			return null;
+		if (wantStatic) {
+			final classReferencePath = classReferencePathText(target, scope);
+			if (classReferencePath == null)
+				return null;
+			final owner = staticReceiverClassName(target, scope);
+			final resolvedOwner = owner == null ? classReferenceOwnerCppName(classReferencePath, scope) : owner;
+			return resolvedOwner == null ? null : classStaticFieldInfo(resolvedOwner, fieldName, scope);
+		}
+		if (exprCppType(target, scope) == "std::any")
+			return null;
+		final className = instanceMethodReceiverClassName(exprCppType(target, scope), scope);
+		return className == null ? null : classInstanceFieldInfo(className, fieldName, scope);
+	}
+
+	static function classReferenceOwnerCppName(typePath:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || typePath == null || typePath.length == 0)
+			return null;
+		final lookup = lookupForScope(scope);
+		final cls = lookupClassForTypeHint(typePath, scope, lookup);
+		if (cls != null)
+			return renderedClassName(cls, lookup);
+		final clean = sanitizeTypePath(typeBaseName(typePath));
+		return scopeHasClass(scope, clean) ? clean : null;
+	}
+
+	static function reflectPropertyOwnerIsInterface(info:CppReflectPropertyInfo, ?scope:CppRenderScope):Bool {
+		if (info == null || scope == null)
+			return false;
+		final cls = classDeclForCppName(info.owner, scope);
+		return cls != null && HxClassDecl.getIsInterface(cls);
+	}
+
+	static function reflectTypedPropertyCppType(target:HxExpr, fieldExpr:HxExpr, ?scope:CppRenderScope):String {
+		final staticInfo = reflectTypedPropertyInfo(target, fieldExpr, true, scope);
+		if (staticInfo != null)
+			return reflectPropertyFieldCppType(staticInfo, scope);
+		final instanceInfo = reflectTypedPropertyInfo(target, fieldExpr, false, scope);
+		return instanceInfo == null ? "" : reflectPropertyFieldCppType(instanceInfo, scope);
+	}
+
+	static function reflectPropertyValueExpr(value:HxExpr, info:CppReflectPropertyInfo, ?scope:CppRenderScope):String {
+		final expected = reflectPropertyFieldCppType(info, scope);
+		return expected.length == 0 ? renderExpr(value, scope) : valueExprForExpectedType(value, expected, scope);
+	}
+
+	static function reflectPropertyFieldCppType(info:CppReflectPropertyInfo, ?scope:CppRenderScope):String {
+		if (info == null || info.field == null)
+			return "";
+		return knownStdlibFieldCppType(info.owner, HxFieldDecl.getName(info.field), HxFieldDecl.getTypeHint(info.field), HxFieldDecl.getInit(info.field),
+			scope);
+	}
+
+	static function classStaticFieldInfo(className:String, fieldName:String, ?scope:CppRenderScope):Null<CppReflectPropertyInfo> {
+		final cls = classDeclForCppName(className, scope);
+		if (cls == null)
+			return null;
+		final wanted = sanitizeIdentifier(fieldName);
+		for (field in HxClassDecl.getFields(cls))
+			if (HxFieldDecl.getIsStatic(field) && sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
+				return {owner: renderedClassName(cls, lookupForScope(scope)), field: field};
+		return null;
+	}
+
+	static function classInstanceFieldInfo(className:String, fieldName:String, ?scope:CppRenderScope):Null<CppReflectPropertyInfo> {
+		if (scope == null || className == null || className.length == 0)
+			return null;
+		final wanted = sanitizeIdentifier(fieldName);
+		var current = sanitizeTypePath(typeBaseName(className));
+		final seen = new haxe.ds.StringMap<Bool>();
+		while (current.length > 0 && !seen.exists(current)) {
+			seen.set(current, true);
+			final cls = classDeclForCppName(current, scope);
+			if (cls == null)
+				return null;
+			for (field in HxClassDecl.getFields(cls))
+				if (!HxFieldDecl.getIsStatic(field) && sanitizeIdentifier(HxFieldDecl.getName(field)) == wanted)
+					return {owner: renderedClassName(cls, lookupForScope(scope)), field: field};
+			final next = baseTypeName(cls);
+			current = next == null ? "" : sanitizeTypePath(typeBaseName(next));
+		}
+		return null;
+	}
+
+	static function classHasInstanceMethodIncludingBases(className:String, methodName:String, ?scope:CppRenderScope):Bool {
+		if (scope == null || className == null || className.length == 0)
+			return false;
+		var current = sanitizeTypePath(typeBaseName(className));
+		final seen = new haxe.ds.StringMap<Bool>();
+		while (current.length > 0 && !seen.exists(current)) {
+			seen.set(current, true);
+			final cls = classDeclForCppName(current, scope);
+			if (cls == null)
+				return false;
+			if (classMethodDeclIn(cls, methodName, false) != null)
+				return true;
+			if (interfaceGeneratedPropertyAccessorExists(cls, methodName))
+				return true;
+			final next = baseTypeName(cls);
+			current = next == null ? "" : sanitizeTypePath(typeBaseName(next));
+		}
+		return false;
+	}
+
+	static function interfaceGeneratedPropertyAccessorExists(cls:HxClassDecl, methodName:String):Bool {
+		if (cls == null || !HxClassDecl.getIsInterface(cls))
+			return false;
+		final method = sanitizeIdentifier(methodName);
+		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+			if (HxFieldDecl.getPropertyGet(field) == "get" && method == "get_" + fieldName)
+				return true;
+			if (HxFieldDecl.getPropertySet(field) == "set" && method == "set_" + fieldName)
+				return true;
+		}
+		return false;
 	}
 
 	static function sameOwnerMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
@@ -15134,7 +15383,10 @@ class CppTargetCore {
 		if (isReflectStaticReceiver(receiver)) {
 			switch (method) {
 				case "getProperty" if (arity == 2):
-					return exprCppType(args[0], scope) == "std::any" ? "std::any" : "";
+					final typedProperty = reflectTypedPropertyCppType(args[0], args[1], scope);
+					return typedProperty.length > 0 ? typedProperty : (exprCppType(args[0], scope) == "std::any" ? "std::any" : "");
+				case "setProperty" if (arity == 3):
+					return reflectTypedPropertyCppType(args[0], args[1], scope).length > 0 ? "void" : "";
 				case "hasField" if (arity == 2):
 					return exprCppType(args[0], scope) == "std::any" ? "bool" : "";
 				case _:
@@ -15735,6 +15987,19 @@ class CppTargetCore {
 				prefix == null ? field : prefix + "." + field;
 			case EUnsupported(raw) if (isTypePathText(raw)):
 				raw;
+			case _:
+				null;
+		};
+	}
+
+	static function stringLiteralValue(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case EString(value):
+				value;
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				stringLiteralValue(inner);
+			case ECall(EIdent("__unprotect__"), [inner]):
+				stringLiteralValue(inner);
 			case _:
 				null;
 		};
