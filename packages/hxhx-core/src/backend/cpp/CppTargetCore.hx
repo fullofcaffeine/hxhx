@@ -11145,6 +11145,9 @@ class CppTargetCore {
 		final explicitTemplateArgs = constructorTemplateArgsFromTypePath(typePath, scope);
 		final expectedTemplateArgs = explicitTemplateArgs.length > 0 ? explicitTemplateArgs : templateArgsFromExpectedClassType(className, expectedCppType);
 		final renderedArgs = renderConstructorArgs(className, args, scope, expectedTemplateArgs).join(", ");
+		final targetOwnedFactory = targetOwnedGenericConstructorFactoryExpr(className, args, expectedTemplateArgs, renderedArgs);
+		if (targetOwnedFactory != null)
+			return targetOwnedFactory;
 		// Prefer the declaration resolved from the source type path. Re-looking
 		// up by rendered C++ name can hit a short-name alias from another module.
 		final classTypeParams = cls == null ? genericClassTypeParamsForName(className, scope) : genericClassTemplateParams(cls);
@@ -11158,6 +11161,8 @@ class CppTargetCore {
 				templateArgs = templateArgsFromExpectedClassType(className, scope == null ? "" : scope.returnType);
 			if (templateArgs.length == 0 && args.length == 0 && className == "Map")
 				templateArgs = ["int", "int"];
+			if (templateArgs.length == 0 && args.length == 0)
+				templateArgs = erasedGenericConstructorTemplateArgs(classTypeParams);
 			return "__hxhx_make_shared_"
 				+ className
 				+ (templateArgs.length > 0 ? "<" + templateArgs.join(", ") + ">" : "")
@@ -11169,6 +11174,40 @@ class CppTargetCore {
 			+ "("
 			+ renderedArgs
 			+ ")";
+	}
+
+	/**
+		Supply a bounded erased carrier type for zero-argument generic constructors.
+
+		Calls such as `new List()` in a Dynamic/Reflect-like position have no
+		constructor arguments, explicit source type parameters, or expected return
+		type from which C++ can infer `T`. Use `std::any` as the compile-shape
+		carrier only at that erased constructor seam.
+	**/
+	static function erasedGenericConstructorTemplateArgs(typeParams:Array<String>):Array<String> {
+		if (typeParams == null || typeParams.length == 0)
+			return [];
+		return [for (_ in typeParams) "std::any"];
+	}
+
+	static function targetOwnedGenericConstructorFactoryExpr(className:String, args:Array<HxExpr>, expectedTemplateArgs:Array<String>,
+			renderedArgs:String):Null<String> {
+		if (args == null || args.length != 0)
+			return null;
+		final typeParams = targetOwnedGenericConstructorTypeParams(className);
+		if (typeParams.length == 0)
+			return null;
+		final templateArgs = expectedTemplateArgs.length > 0 ? expectedTemplateArgs : erasedGenericConstructorTemplateArgs(typeParams);
+		return "__hxhx_make_shared_" + className + "<" + templateArgs.join(", ") + ">" + "(" + renderedArgs + ")";
+	}
+
+	static function targetOwnedGenericConstructorTypeParams(className:String):Array<String> {
+		return switch (sanitizeTypePath(typeBaseName(className == null ? "" : className))) {
+			case "List" | "StringMap":
+				["T"];
+			case _:
+				[];
+		};
 	}
 
 	static function staticCreateExpr(className:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -13367,7 +13406,15 @@ class CppTargetCore {
 					valueType, actualType);
 			return rendered;
 		}
+		if (valueType == "std::any") {
+			final classReferencePath = classReferencePathText(arg, scope);
+			if (classReferencePath != null)
+				return "std::any(std::string(" + quoteString(classReferencePath) + "))";
+		}
 		if (valueType == "std::string") {
+			final classReferencePath = classReferencePathText(arg, scope);
+			if (classReferencePath != null)
+				return "std::string(" + quoteString(classReferencePath) + ")";
 			if (actualType == "std::string") {
 				final stringStart = timingEnabled ? Sys.time() : 0.0;
 				final rendered = renderExpr(arg, scope);
@@ -15657,7 +15704,16 @@ class CppTargetCore {
 			return null;
 		if (exprNameHasLocalStorage(typePath, scope) || exprNameHasLocalStorage(baseName, scope))
 			return null;
-		return scopeHasClass(scope, baseName) ? typePath : null;
+		return scopeHasClass(scope, baseName) || isTargetOwnedClassReferenceName(baseName) ? typePath : null;
+	}
+
+	static function isTargetOwnedClassReferenceName(baseName:String):Bool {
+		return switch (sanitizeTypePath(typeBaseName(baseName == null ? "" : baseName))) {
+			case "Date" | "List" | "StringMap":
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function isTypePathText(value:String):Bool {
@@ -15787,20 +15843,38 @@ class CppTargetCore {
 	}
 
 	static function enumCtorValueForExpectedType(name:String, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):Null<String> {
-		final carrierType = classNameFromCppExprType(expectedType, scope);
-		if (carrierType == null || carrierType.length == 0)
+		final rawCarrierType = classNameFromCppExprType(expectedType, scope);
+		if (rawCarrierType == null || rawCarrierType.length == 0)
 			return null;
+		final carrierType = renderedCarrierClassName(rawCarrierType, scope);
 		if (carrierType == "EnumValue")
 			return enumValuePtrExpr(name, args, scope);
 		if (args == null || args.length == 0)
 			return "std::make_shared<" + carrierType + ">()";
 		final parts = ["([&]() {"];
 		for (i in 0...args.length)
-			parts.push(" auto __hxhx_enum_arg_" + i + " = " + renderExpr(args[i], scope) + ";");
+			parts.push(" auto __hxhx_enum_arg_" + i + " = " + enumCtorPayloadValueExpr(args[i], scope) + ";");
 		for (i in 0...args.length)
 			parts.push(" (void)__hxhx_enum_arg_" + i + ";");
 		parts.push(" return std::make_shared<" + carrierType + ">(); })()");
 		return parts.join("");
+	}
+
+	static function renderedCarrierClassName(className:String, ?scope:CppRenderScope):String {
+		if (className == null || className.length == 0 || className.indexOf("<") >= 0)
+			return className;
+		final cls = classDeclForCppName(className, scope);
+		return cls == null ? className : renderedClassName(cls, lookupForScope(scope));
+	}
+
+	static function enumCtorPayloadValueExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				enumCtorPayloadValueExpr(inner, scope);
+			case _:
+				final classReferencePath = classReferencePathText(expr, scope);
+				classReferencePath == null ? renderExpr(expr, scope) : "std::string(" + quoteString(classReferencePath) + ")";
+		};
 	}
 
 	static function enumMetadataAnonValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {

@@ -266,7 +266,12 @@ class CppRuntimeSupport {
 					"    return std::make_shared<__hxhx_stringmap_key_iterator>(std::move(out));",
 					"  }",
 					"  std::string toString() { return std::string(\"[object StringMap]\"); }",
-					"};"
+					"};",
+					"",
+					"template<typename V>",
+					"std::shared_ptr<StringMap<V>> __hxhx_make_shared_StringMap() {",
+					"  return std::make_shared<StringMap<V>>();",
+					"}"
 				];
 			case "Date":
 				["struct Date {", "  std::string toString() { return std::string(); }", "};"];

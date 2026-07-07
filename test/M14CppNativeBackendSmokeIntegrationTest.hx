@@ -1141,6 +1141,69 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function reflectLikeShapeProgram():GenIrProgram {
+		final src = [
+			"class Main {",
+			"  static function main() {}",
+			"}",
+			"class ReflectLike {",
+			"  public static function isTrue(v:Dynamic, t:Dynamic):Bool {",
+			"    return Std.isOfType(v, t);",
+			"  }",
+			"  public static function typeValue(v:Dynamic, rt:ValueType):Bool {",
+			"    return Type.enumEq(Type.typeof(v), rt);",
+			"  }",
+			"  public static function erasedList():Bool {",
+			"    return isTrue(new List(), List);",
+			"  }",
+			"  public static function erasedStringMap():Bool {",
+			"    return isTrue(new haxe.ds.StringMap(), haxe.ds.StringMap);",
+			"  }",
+			"  public static function typeOfInt():Bool {",
+			"    return typeValue(0, TInt);",
+			"  }",
+			"  public static function typeOfList():Bool {",
+			"    return typeValue(new List(), TClass(List));",
+			"  }",
+			"  public static function typeOfStringMap():Bool {",
+			"    return typeValue(new haxe.ds.StringMap(), TClass(haxe.ds.StringMap));",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
+	static function typeValueCarrierCollisionProgram():GenIrProgram {
+		final mainSource = [
+			"class Main {",
+			"  static function main() {",
+			"    TypeValueUser.run();",
+			"  }",
+			"}"
+		].join("\n");
+		final typeSource = [
+			"enum ValueType {",
+			"  TInt;",
+			"  TClass(c:Class<Dynamic>);",
+			"}",
+			"class TypeValueUser {",
+			"  public static function typeValue(v:Dynamic, rt:Type.ValueType):Bool {",
+			"    return true;",
+			"  }",
+			"  public static function run():Bool {",
+			"    return typeValue(0, Type.ValueType.TInt) && typeValue(new haxe.ds.StringMap(), Type.ValueType.TClass(haxe.ds.StringMap));",
+			"  }",
+			"}"
+		].join("\n");
+		final otherSource = ["enum ValueType {", "  TOther;", "}"].join("\n");
+		final typedMain = TyperStage.typeModule(ParserStage.parse(mainSource, "Main.hx"));
+		final typedType = TyperStage.typeModule(ParserStage.parse(typeSource, "Type.hx"));
+		final typedOther = TyperStage.typeModule(ParserStage.parse(otherSource, "Other.hx"));
+		return MacroStage.expandProgram([typedMain, typedType, typedOther], []);
+	}
+
 	static function vendorListProgramWhenAvailable():Null<GenIrProgram> {
 		final listPath = "vendor/haxe/std/haxe/ds/List.hx";
 		if (!FileSystem.exists(listPath))
@@ -9993,6 +10056,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(hasArtifactKind(sourceOnly.artifacts, "entry_cpp_source"), "missing entry_cpp_source artifact");
 		assertTrue(!sourceOnly.builtExecutable, "no-compilation C++ smoke should not build executable");
 		final source = File.getContent(sourceOnly.entryPath);
+		final reflectLikeShapeDir = Path.join([root, "reflect-like-shape-source-only"]);
+		final reflectLikeShapeEmit = BackendRegistry.createForTarget("cpp-native").emit(reflectLikeShapeProgram(), context(reflectLikeShapeDir, true, true));
+		final reflectLikeShapeSource = File.getContent(reflectLikeShapeEmit.entryPath);
 		final nativeStackTraceDir = Path.join([root, "native-stack-trace-declaration-source-only"]);
 		final nativeStackTraceEmit = BackendRegistry.createForTarget("cpp-native")
 			.emit(nativeStackTraceDeclarationProgram(), context(nativeStackTraceDir, true, true));
@@ -10159,6 +10225,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "if (c == std::string(\"StringMap\"))",
 			"C++ smoke should lower JsonPrinter class-path comparisons to class-name values, not C++ field access");
 		assertTrue(source.indexOf("((haxe.ds).StringMap)") < 0, "C++ smoke should not render haxe.ds.StringMap class constants as nested field access");
+		assertTrue(reflectLikeShapeSource.indexOf("((haxe.ds).StringMap)") < 0,
+			"C++ Reflect-like source should not render haxe.ds.StringMap class constants as nested field access");
+		assertContains(reflectLikeShapeSource, "__hxhx_make_shared_List<std::any>()",
+			"C++ erased generic List constructors should supply a concrete Dynamic-like factory argument when C++ cannot infer one");
+		assertContains(reflectLikeShapeSource, "__hxhx_make_shared_StringMap<std::any>()",
+			"C++ erased generic StringMap constructors should supply a concrete Dynamic-like factory argument when C++ cannot infer one");
+		assertContains(reflectLikeShapeSource, "std::string(\"haxe.ds.StringMap\")",
+			"C++ enum constructor payloads should project qualified class constants to stable class-path strings");
+		assertTrue(reflectLikeShapeSource.indexOf("__hxhx_make_shared_List(),") < 0,
+			"C++ erased generic List constructor calls should not leave template arguments uninferable");
+		assertTrue(reflectLikeShapeSource.indexOf("__hxhx_make_shared_StringMap(),") < 0,
+			"C++ erased generic StringMap constructor calls should not leave template arguments uninferable");
 		assertContains(source, "template<typename V>\nstruct StringMap {",
 			"C++ smoke should emit target-owned StringMap support when upstream-shaped code references haxe.ds.StringMap locally");
 		assertContains(source, "struct Date {", "C++ smoke should emit target-owned Date support for JsonPrinter Date branches");
@@ -11155,6 +11233,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ stale macro Compiler.getDisplayPos should still route through macro API plumbing");
 		assertTrue(staleDisplayPosLines.indexOf("std::shared_ptr<Null>") < 0,
 			"C++ stale macro Compiler.getDisplayPos should not emit fake Null runtime references");
+
+		final valueTypeCarrierDir = Path.join([root, "value-type-carrier-collision-source-only"]);
+		final valueTypeCarrierEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(typeValueCarrierCollisionProgram(), context(valueTypeCarrierDir, true, true));
+		final valueTypeCarrierSource = File.getContent(valueTypeCarrierEmit.entryPath);
+		assertContains(valueTypeCarrierSource, "struct Type_ValueType {", "C++ module-qualified ValueType carriers should use the rendered class name");
+		assertContains(valueTypeCarrierSource, "std::shared_ptr<Type_ValueType> rt", "C++ ValueType function parameters should use the rendered carrier name");
+		assertContains(valueTypeCarrierSource, "std::make_shared<Type_ValueType>()",
+			"C++ ValueType enum constructor values should use the rendered carrier name");
+		assertTrue(valueTypeCarrierSource.indexOf("std::make_shared<ValueType>") < 0,
+			"C++ ValueType enum constructor values should not use the unrendered source carrier name");
+		assertTrue(valueTypeCarrierSource.indexOf("((haxe.ds).StringMap)") < 0,
+			"C++ ValueType enum constructor payloads should not render qualified class constants as nested field access");
 
 		final enumCarrierDir = Path.join([root, "enum-carrier-name-collision-source-only"]);
 		final enumCarrierEmit = BackendRegistry.createForTarget("cpp-native").emit(enumCarrierNameCollisionProgram(), context(enumCarrierDir, true, true));
