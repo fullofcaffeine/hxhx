@@ -10961,8 +10961,12 @@ class CppTargetCore {
 				staticEnumMethodValueExpr(receiver, field, scope);
 			case EField(receiver, field) if (staticFieldExpr(receiver, field, scope) != null):
 				staticFieldExpr(receiver, field, scope);
+			case EField(receiver, field) if (staticEnumTagValueExpr(receiver, field, scope) != null):
+				staticEnumTagValueExpr(receiver, field, scope);
 			case EField(receiver, field) if (typedPropertyGetReadExpr(receiver, field, scope) != null):
 				typedPropertyGetReadExpr(receiver, field, scope);
+			case EField(receiver, field) if (optionalAnyFieldExpr(receiver, field, scope) != null):
+				optionalAnyFieldExpr(receiver, field, scope);
 			case EField(receiver, field) if (exprCppType(receiver, scope) == "std::any"):
 				"__hxhx_json_any_field("
 				+ renderExpr(receiver, scope)
@@ -14512,25 +14516,30 @@ class CppTargetCore {
 			case EField(receiver, field):
 				final abstractPropertyType = primitiveBackedAbstractPropertyCppType(receiver, field, scope);
 				if (abstractPropertyType.length > 0) abstractPropertyType; else {
-					final staticOwner = staticReceiverClassName(receiver, scope);
-					if (staticOwner != null)
-						classFieldCppType(staticOwner, field, scope);
-					else {
-						final receiverType = exprCppType(receiver, scope);
-						if (receiverType == "std::any")
-							"std::any";
-						else {
-							final fieldReceiverType = cppOptionalInnerType(receiverType).length > 0 ? cppOptionalInnerType(receiverType) : receiverType;
-							final anonFieldType = anonStructFieldCppType(fieldReceiverType, field, scope);
-							if (anonFieldType.length > 0)
-								anonFieldType;
+					final staticTag = staticEnumTagValueExpr(receiver, field, scope);
+					if (staticTag != null) {
+						"std::string";
+					} else {
+						final staticOwner = staticReceiverClassName(receiver, scope);
+						if (staticOwner != null) {
+							classFieldCppType(staticOwner, field, scope);
+						} else {
+							final receiverType = exprCppType(receiver, scope);
+							if (receiverType == "std::any" || cppOptionalInnerType(receiverType) == "std::any")
+								"std::any";
 							else {
-								final directFieldType = classFieldCppType(fieldReceiverType, field, scope);
-								if (directFieldType.length > 0)
-									directFieldType;
+								final fieldReceiverType = cppOptionalInnerType(receiverType).length > 0 ? cppOptionalInnerType(receiverType) : receiverType;
+								final anonFieldType = anonStructFieldCppType(fieldReceiverType, field, scope);
+								if (anonFieldType.length > 0)
+									anonFieldType;
 								else {
-									final ownerType = classNameFromCppExprType(fieldReceiverType, scope);
-									ownerType == null ? "" : receiverClassFieldCppType(ownerType, fieldReceiverType, field, scope);
+									final directFieldType = classFieldCppType(fieldReceiverType, field, scope);
+									if (directFieldType.length > 0)
+										directFieldType;
+									else {
+										final ownerType = classNameFromCppExprType(fieldReceiverType, scope);
+										ownerType == null ? "" : receiverClassFieldCppType(ownerType, fieldReceiverType, field, scope);
+									}
 								}
 							}
 						}
@@ -16630,6 +16639,59 @@ class CppTargetCore {
 		if (owner == null || !isEnumCarrierClassName(owner, scope) || classMethodDecl(owner, field, true, scope) == null)
 			return null;
 		return owner + "::" + sanitizeIdentifier(field);
+	}
+
+	/**
+		Render unmatched static enum constructor fields as tag strings.
+
+		Real emitted enum static fields and payload constructor methods keep their
+		normal C++ member forms. This fallback covers the current simple-enum strict
+		frontier where a zero-payload enum only reaches C++ as a known enum-like type
+		name with no concrete member emitted for its constructors.
+	**/
+	static function staticEnumTagValueExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		final owner = staticReceiverClassName(receiver, scope);
+		final clean = sanitizeIdentifier(field);
+		if (owner == null) {
+			final typePath = staticReceiverTypePath(receiver);
+			final unresolvedOwner = typePath == null ? "" : sanitizeTypePath(typeBaseName(typePath));
+			return looksLikeSimpleEnumTagName(unresolvedOwner, clean) ? "std::string(" + quoteString(clean) + ")" : null;
+		}
+		if (!isEnumCarrierClassName(owner, scope) && !looksLikeSimpleEnumTagName(owner, clean))
+			return null;
+		if (classMethodDecl(owner, clean, true, scope) != null || classHasStaticField(owner, clean, scope))
+			return null;
+		return "std::string(" + quoteString(clean) + ")";
+	}
+
+	static function looksLikeSimpleEnumTagName(owner:String, field:String):Bool {
+		if (owner == null || field == null || field.length == 0)
+			return false;
+		final cleanOwner = sanitizeTypePath(typeBaseName(owner));
+		return StringTools.endsWith(cleanOwner, "Enum") && startsWithUppercase(field);
+	}
+
+	static function startsWithUppercase(value:String):Bool {
+		if (value == null || value.length == 0)
+			return false;
+		final c = value.charAt(0);
+		return c >= "A" && c <= "Z";
+	}
+
+	/**
+		Field reads on optional erased ObjectMap payloads should stay on the erased
+		field-access seam instead of falling through to invalid `.value().field`.
+	**/
+	static function optionalAnyFieldExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
+		if (cppOptionalInnerType(exprCppType(receiver, scope)) != "std::any")
+			return null;
+		return "__hxhx_json_any_field("
+			+ optionalStorageExpr(receiver, scope)
+			+ ".value(), std::string(\""
+			+ sanitizeIdentifier(field)
+			+ "\"))";
 	}
 
 	static function staticFieldExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {

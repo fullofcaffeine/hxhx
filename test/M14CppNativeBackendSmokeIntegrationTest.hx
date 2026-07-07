@@ -5469,6 +5469,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ static enum constructor calls should become enum carrier values when a carrier value is expected");
 		final staticEnumCtorValue = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("MyEnum"), "C"), myEnumScope);
 		assertTrue(staticEnumCtorValue == "MyEnum::C", "C++ enum constructor values should render as callable static methods");
+		final simpleEnumScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(myEnum, {names: myEnumNames, byName: myEnumClasses}, "void");
+		final simpleEnumTag = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("SimpleEnum"), "SE_A"), simpleEnumScope);
+		assertTrue(simpleEnumTag == "std::string(\"SE_A\")", "C++ simple enum static fields without emitted members should render as constructor tag strings");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.exprCppType(EField(EIdent("SimpleEnum"), "SE_A"), simpleEnumScope) == "std::string",
+			"C++ simple enum static tag values should infer as strings");
+		final simpleEnumIdentity = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("id"), [EField(EIdent("SimpleEnum"), "SE_A")]), simpleEnumScope);
+		assertContains(simpleEnumIdentity, "id(std::string(\"SE_A\"))", "C++ simple enum values passed to generic calls should not render invalid dot syntax");
+		assertTrue(simpleEnumIdentity.indexOf("SimpleEnum.SE_A") < 0, "C++ simple enum values should not render C++ dot syntax");
 		final enumCtorCaller = new HxClassDecl("EnumCtorCaller", false, [
 			new HxFunctionDecl("run", Public, false, [], "String", [
 				SVar("c", "", EString("old"), HxPos.unknown()),
@@ -8667,6 +8676,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ zero-arg generic constructor locals should render erased template args");
 		assertTrue(identityScope.localTypes.get("om") == "std::shared_ptr<ObjectMap<std::any, std::any>>",
 			"C++ zero-arg generic constructor locals should record erased template args in local types");
+		identityScope.localNames.set("v", "v");
+		identityScope.localTypes.set("v", "std::optional<std::any>");
+		final optionalAnyField = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("v"), "i"), identityScope);
+		assertContains(optionalAnyField, "__hxhx_json_any_field(v.value(), std::string(\"i\"))",
+			"C++ optional erased ObjectMap payload fields should use the erased field seam");
+		assertTrue(optionalAnyField.indexOf("v.value().i") < 0, "C++ optional erased ObjectMap payload fields should not fall through to direct member access");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.exprCppType(EField(EIdent("v"), "i"), identityScope) == "std::any",
+			"C++ optional erased ObjectMap payload fields should keep std::any type evidence");
+		final optionalAnyCompare = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("==", EField(EIdent("v"), "i"), EInt(8)), identityScope);
+		assertContains(optionalAnyCompare, "__hxhx_any_eq(__hxhx_json_any_field(v.value(), std::string(\"i\")), std::any(8))",
+			"C++ optional erased ObjectMap payload field comparisons should use std::any comparison helpers");
 		identityScope.localNames.set("h", "h_3");
 		identityScope.localTypes.set("h", "std::shared_ptr<StringMap<int>>");
 		identityScope.localTypes.set("h_3", "std::shared_ptr<ObjectMap<std::any, std::any>>");
