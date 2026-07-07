@@ -1041,6 +1041,14 @@ class CppTargetCore {
 		out.push("  return std::string(\"Array\");");
 		out.push("}");
 		out.push("");
+		out.push("// hxhx-cpp-bounded-bringup: ValueType carriers are not fully semantic yet; keep Type.typeof comparisons behind a named seam.");
+		out.push("template<typename TValueType>");
+		out.push("static bool __hxhx_value_type_eq(const std::string& actualTypeName, const std::shared_ptr<TValueType>& expected) {");
+		out.push("  (void)actualTypeName;");
+		out.push("  (void)expected;");
+		out.push("  return false;");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_stringify(const std::string& value) {");
 		out.push("  return value;");
 		out.push("}");
@@ -10614,11 +10622,7 @@ class CppTargetCore {
 			case ECall(EField(EIdent("Type"), "resolveEnum"), args) if (args.length == 1):
 				"Type::resolveEnum(" + stringExpr(args[0], scope) + ")";
 			case ECall(EField(EIdent("Type"), "enumEq"), args) if (args.length == 2):
-				"Type::enumEq("
-				+ renderExpr(args[0], scope)
-				+ ", "
-				+ renderExpr(args[1], scope)
-				+ ")";
+				typeEnumEqExpr(args[0], args[1], scope);
 			case ECall(EField(receiver, "array"), args) if (isLambdaStaticReceiver(receiver) && args.length == 1):
 				lambdaArrayExpr(args[0], scope);
 			case ECall(EField(receiver, "count"), args) if (isLambdaStaticReceiver(receiver) && args.length >= 1):
@@ -19043,6 +19047,47 @@ class CppTargetCore {
 				"std::vector<std::string>";
 			case _:
 				"";
+		};
+	}
+
+	static function typeEnumEqExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
+		final valueTypeEq = typeValueTypeEnumEqExpr(left, right, scope);
+		if (valueTypeEq != null)
+			return valueTypeEq;
+		return "Type::enumEq(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
+	}
+
+	static function typeValueTypeEnumEqExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (isTypeNameStringExpr(left, scope) && isValueTypeCarrierExpr(right, scope))
+			return "__hxhx_value_type_eq(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
+		if (isTypeNameStringExpr(right, scope) && isValueTypeCarrierExpr(left, scope))
+			return "__hxhx_value_type_eq(" + renderExpr(right, scope) + ", " + renderExpr(left, scope) + ")";
+		return null;
+	}
+
+	static function isTypeNameStringExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		final explicit = exprCppType(expr, scope);
+		if (explicit == "std::string")
+			return true;
+		return inferExprCppType(expr, scope) == "std::string";
+	}
+
+	static function isValueTypeCarrierExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		final explicit = exprCppType(expr, scope);
+		if (isValueTypeCarrierCppType(explicit, scope))
+			return true;
+		return isValueTypeCarrierCppType(inferExprCppType(expr, scope), scope);
+	}
+
+	static function isValueTypeCarrierCppType(typeName:String, ?scope:CppRenderScope):Bool {
+		final className = classNameFromCppExprType(typeName, scope);
+		if (className == null)
+			return false;
+		return switch (sanitizeTypePath(typeBaseName(className))) {
+			case "ValueType" | "Type_ValueType":
+				true;
+			case _:
+				false;
 		};
 	}
 

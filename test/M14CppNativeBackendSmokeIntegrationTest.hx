@@ -4126,6 +4126,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final typeResolveClassCall = ECall(EField(EIdent("Type"), "resolveClass"), [EString("unit.MyClass")]);
 		final typeResolveEnumCall = ECall(EField(EIdent("Type"), "resolveEnum"), [EString("unit.MyEnum")]);
 		final typeEnumEqCall = ECall(EField(EIdent("Type"), "enumEq"), [EIdent("left"), EIdent("right")]);
+		final typeValueTypeEnumEqCall = ECall(EField(EIdent("Type"), "enumEq"), [EIdent("vt"), EIdent("rt")]);
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.exprCppType(stdIsOfTypeCall, typeIntrinsicScope) == "bool",
 			"C++ Std.isOfType return typing should stay bool for reflection-heavy helper inference");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferExprCppType(typeResolveClassCall, typeIntrinsicScope) == "std::shared_ptr<Class>",
@@ -4134,6 +4135,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Type.resolveEnum return typing should expose Enum meta-values without body inference");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.exprCppType(typeEnumEqCall, typeIntrinsicScope) == "bool",
 			"C++ Type.enumEq return typing should stay bool for Type.typeof assertion helpers");
+		typeIntrinsicScope.localTypes.set("vt", "std::string");
+		typeIntrinsicScope.localTypes.set("rt", "std::shared_ptr<Type_ValueType>");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(typeValueTypeEnumEqCall, typeIntrinsicScope) == "__hxhx_value_type_eq(vt, rt)",
+			"C++ Type.enumEq should use the bounded ValueType comparison seam for Type.typeof name carriers");
 		assertThrowsContains(() -> @:privateAccess backend.cpp.CppTargetCore.renderExpr(ETryCatchRaw("try{unsupported();}catch(e:Dynamic){}")),
 			"ETryCatchRaw(try{unsupported();}catch(e:Dynamic){})",
 			"unsupported raw try/catch diagnostics should include a compact raw payload for remote gate triage");
@@ -11250,6 +11255,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ module-qualified Type.ValueType helpers should not narrow Type.typeof Dynamic parameters to strings");
 		assertContains(valueTypeCarrierSource, "std::make_shared<Type_ValueType>()",
 			"C++ ValueType enum constructor values should use the rendered carrier name");
+		assertContains(valueTypeCarrierSource, "__hxhx_value_type_eq(__hxhx_type_name(v), rt)",
+			"C++ Type.typeof ValueType comparisons should cross the bounded comparison seam");
+		assertTrue(valueTypeCarrierSource.indexOf("Type::enumEq(__hxhx_type_name(v), rt)") < 0,
+			"C++ Type.typeof ValueType comparisons should not call the single-type enumEq template with mixed carrier shapes");
 		assertTrue(valueTypeCarrierSource.indexOf("std::make_shared<ValueType>") < 0,
 			"C++ ValueType enum constructor values should not use the unrendered source carrier name");
 		assertTrue(valueTypeCarrierSource.indexOf("((haxe.ds).StringMap)") < 0,
