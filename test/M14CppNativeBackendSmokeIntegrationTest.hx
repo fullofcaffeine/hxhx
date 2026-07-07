@@ -555,6 +555,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    cpp.NativeArray.unsafeSet(result, 0, cpp.NativeArray.unsafeGet(seed, 0));",
 			"    return result;",
 			"  }",
+			"  public function resolve(seed:Array<String>):Array<String> {",
+			"    return cpp.NativeArray.resolveVirtualArray(seed);",
+			"  }",
 			"}",
 			"class CppReservedNames {",
 			"  public static function and(a:Int, b:Int):Int {",
@@ -2660,8 +2663,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final owner = new HxClassDecl("DefaultResolver", false, [resolveClass, resolveEnum], []);
 		final names = new StringMap<Bool>();
 		names.set("DefaultResolver", true);
+		names.set("TypeResolver", true);
 		final classes = new StringMap<HxClassDecl>();
 		classes.set("DefaultResolver", owner);
+		classes.set("TypeResolver", new HxClassDecl("TypeResolver", false, [], []));
 		final lookup = {names: names, byName: classes};
 		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "std::any");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodParamCppTypes("DefaultResolver", "resolveClass", scope, lookup)
@@ -2670,6 +2675,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodParamCppTypes("TypeResolver", "resolveEnum", scope, lookup)
 			.join(",") == "std::string",
 			"C++ TypeResolver.resolveEnum should use the declared String argument type");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodParamCppTypes("NullResolver", "resolveClass", scope, lookup)
+			.join(",") == "std::string",
+			"C++ NullResolver.resolveClass should use the declared String argument type");
+		scope.localTypes.set("resolver", "std::shared_ptr<TypeResolver>");
+		scope.localTypes.set("name", "std::any");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("resolver"), "resolveClass"), [EIdent("name")]),
+				scope) == "resolver->resolveClass(__hxhx_stringify(name))",
+			"C++ TypeResolver calls should coerce erased names through the declared String argument type");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodUsesDeclaredCallableArgs(scope, resolveClass),
 			"C++ DefaultResolver.resolveClass should skip callable-arg inference");
 		assertTrue(@:privateAccess
@@ -8508,18 +8522,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		]);
 		final unserializerEnumLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(unserializerEnum, unserializerEnumOwner, bytesLookup)
 			.join("\n");
-		assertContains(unserializerEnumLines, "unserializeEnum(", "C++ Unserializer.unserializeEnum helper should keep its helper surface");
+		assertContains(unserializerEnumLines, "std::shared_ptr<EnumValue> unserializeEnum(",
+			"C++ Unserializer.unserializeEnum helper should use the dynamic enum-value carrier");
 		assertContains(unserializerEnumLines, "if (get(pos++) != static_cast<int>(':')) throw std::runtime_error(std::string(\"Invalid enum format\"));",
 			"C++ Unserializer.unserializeEnum helper should preserve enum format validation");
 		assertContains(unserializerEnumLines, "int nargs = readDigits();", "C++ Unserializer.unserializeEnum helper should read constructor argument count");
-		assertContains(unserializerEnumLines, "if (nargs == 0) return Type::createEnum(edecl, tag);",
-			"C++ Unserializer.unserializeEnum helper should preserve the zero-argument enum path");
-		assertContains(unserializerEnumLines, "std::vector<std::string> args;",
-			"C++ Unserializer.unserializeEnum helper should use the current C++ enum carrier payload shape");
-		assertContains(unserializerEnumLines, "while (nargs-- > 0) args.push_back(__hxhx_stringify(unserialize()));",
-			"C++ Unserializer.unserializeEnum helper should recursively parse enum arguments");
-		assertContains(unserializerEnumLines, "return Type::createEnum(edecl, tag, args);",
-			"C++ Unserializer.unserializeEnum helper should preserve enum construction with parsed args");
+		assertContains(unserializerEnumLines, "if (nargs == 0) return Type::createEnum<std::shared_ptr<EnumValue>>(edecl, tag);",
+			"C++ Unserializer.unserializeEnum helper should keep zero-argument enum construction explicitly templated");
+		assertContains(unserializerEnumLines, "std::vector<std::any> args;",
+			"C++ Unserializer.unserializeEnum helper should keep parsed enum parameters erased");
+		assertContains(unserializerEnumLines, "while (nargs-- > 0) args.push_back(unserialize());",
+			"C++ Unserializer.unserializeEnum helper should recursively parse enum arguments without stringifying them");
+		assertContains(unserializerEnumLines, "return Type::createEnum<std::shared_ptr<EnumValue>>(edecl, tag, args);",
+			"C++ Unserializer.unserializeEnum helper should keep enum construction with parsed args explicitly templated");
+		assertTrue(unserializerEnumLines.indexOf("Type::createEnum(edecl") < 0,
+			"C++ Unserializer.unserializeEnum helper should not rely on template inference for dynamic enum carriers");
+		assertTrue(unserializerEnumLines.indexOf("std::vector<std::string> args") < 0,
+			"C++ Unserializer.unserializeEnum helper should not collapse enum parameters through strings");
 		final base64Encode = new HxFunctionDecl("encode", Public, true, [
 			new HxFunctionArg("bytes", "Bytes", NoDefault, false, false),
 			new HxFunctionArg("complement", "Bool", Default(EBool(true)), true, false)
@@ -10911,9 +10930,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "auto seed = std::vector<std::string>{std::string(\"seed\")};",
 			"C++ smoke should keep string array element type for NativeArray unsafe access coverage");
 		assertContains(source, "(result[0]) = (seed[0]);", "C++ smoke should lower qualified cpp.NativeArray unsafeSet/unsafeGet intrinsics");
+		assertContains(source, "return seed;", "C++ smoke should lower qualified cpp.NativeArray.resolveVirtualArray as a vector passthrough");
 		assertTrue(source.indexOf("(cpp.NativeArray).create") < 0, "C++ smoke should not leak qualified cpp.NativeArray.create syntax");
 		assertTrue(source.indexOf("(cpp.NativeArray).unsafeSet") < 0, "C++ smoke should not leak qualified cpp.NativeArray.unsafeSet syntax");
 		assertTrue(source.indexOf("(cpp.NativeArray).unsafeGet") < 0, "C++ smoke should not leak qualified cpp.NativeArray.unsafeGet syntax");
+		assertTrue(source.indexOf("(cpp.NativeArray).resolveVirtualArray") < 0,
+			"C++ smoke should not leak qualified cpp.NativeArray.resolveVirtualArray syntax");
 		assertTrue(source.indexOf("auto result = std::vector<int>(length);") < 0,
 			"C++ smoke should not infer Array<String> NativeArray.create locals as vector<int>");
 		assertContains(source, "static int and_(int a, int b) {", "C++ smoke should sanitize alternative-token method names");

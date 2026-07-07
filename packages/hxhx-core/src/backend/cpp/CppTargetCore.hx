@@ -4716,7 +4716,7 @@ class CppTargetCore {
 					case _:
 						[];
 				}
-			case "TypeResolver" | "DefaultResolver":
+			case "TypeResolver" | "DefaultResolver" | "NullResolver":
 				switch (method) {
 					case "resolveClass" | "resolveEnum":
 						["std::string"];
@@ -5223,7 +5223,7 @@ class CppTargetCore {
 					case _:
 						false;
 				}
-			case "TypeResolver" | "DefaultResolver":
+			case "TypeResolver" | "DefaultResolver" | "NullResolver":
 				switch (method) {
 					case "resolveClass" | "resolveEnum":
 						true;
@@ -6051,23 +6051,20 @@ class CppTargetCore {
 
 	static function renderUnserializerEnumHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
-		final returnType = supportMethodSignatureReturnType(fn, owner, classLookup);
-		final scope = renderScope(owner, classLookup, returnType);
+		final enumValueType = "std::shared_ptr<EnumValue>";
+		final scope = renderScope(owner, classLookup, enumValueType);
 		prepareFunctionSignatureScope(scope, fn);
 		final args = HxFunctionDecl.getArgs(fn);
 		final enumArg = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
 		final tagArg = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
 		final out = new Array<String>();
-		final methodTypeParams = emittedFunctionTypeParams(fn, returnType, scope);
-		if (methodTypeParams.length > 0)
-			out.push("  " + genericTemplatePrefix(methodTypeParams));
-		out.push("  " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {");
+		out.push("  " + enumValueType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {");
 		out.push("    if (get(pos++) != static_cast<int>(':')) throw std::runtime_error(std::string(\"Invalid enum format\"));");
 		out.push("    int nargs = readDigits();");
-		out.push("    if (nargs == 0) return Type::createEnum(" + enumArg + ", " + tagArg + ");");
-		out.push("    std::vector<std::string> args;");
-		out.push("    while (nargs-- > 0) args.push_back(__hxhx_stringify(unserialize()));");
-		out.push("    return Type::createEnum(" + enumArg + ", " + tagArg + ", args);");
+		out.push("    if (nargs == 0) return Type::createEnum<" + enumValueType + ">(" + enumArg + ", " + tagArg + ");");
+		out.push("    std::vector<std::any> args;");
+		out.push("    while (nargs-- > 0) args.push_back(unserialize());");
+		out.push("    return Type::createEnum<" + enumValueType + ">(" + enumArg + ", " + tagArg + ", args);");
 		out.push("  }");
 		return out;
 	}
@@ -10756,6 +10753,8 @@ class CppTargetCore {
 				nativeArrayCreateExpr(args[0], scope);
 			case ECall(EField(receiver, "create"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
 				nativeArrayCreateExpr(args[0], scope);
+			case ECall(EField(receiver, "resolveVirtualArray"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
+				nativeArrayResolveVirtualArrayExpr(args[0], scope);
 			case ECall(EField(receiver, "setSize"), args) if (args.length == 2 && isCppNativeArrayReceiver(receiver)):
 				nativeArraySetSizeExpr(args[0], args[1], scope);
 			case ECall(EField(receiver, "unsafeGet"), args) if (args.length == 2 && isCppNativeArrayReceiver(receiver)):
@@ -11183,6 +11182,10 @@ class CppTargetCore {
 
 	static function nativeArrayCreateExpr(length:HxExpr, ?scope:CppRenderScope, ?preferredType:String):String {
 		return nativeArrayVectorType(scope, preferredType) + "(" + renderExpr(length, scope) + ")";
+	}
+
+	static function nativeArrayResolveVirtualArrayExpr(array:HxExpr, ?scope:CppRenderScope):String {
+		return renderExpr(array, scope);
 	}
 
 	static function nativeArraySetSizeExpr(array:HxExpr, length:HxExpr, ?scope:CppRenderScope):String {
@@ -12229,9 +12232,18 @@ class CppTargetCore {
 				valueExprForExpectedType(args[0], "std::function<void(" + dispatcherElementType + ")>", scope)
 			];
 		final instanceArgs = renderInstanceMethodCallArgs(receiverCppType, method, args, scope);
-		if (instanceArgs.length == args.length && hasKnownInstanceMethod(receiverCppType, method, scope))
+		if (instanceArgs.length == args.length
+			&& (hasKnownInstanceMethod(receiverCppType, method, scope)
+				|| hasKnownStdlibInstanceMethodParams(receiverCppType, method, scope)))
 			return instanceArgs;
 		return renderSimpleCallArgs(args, scope);
+	}
+
+	static function hasKnownStdlibInstanceMethodParams(receiverCppType:String, methodName:String, ?scope:CppRenderScope):Bool {
+		final className = instanceMethodReceiverClassName(receiverCppType, scope);
+		return className != null
+			&& isTypeResolverHelper(className)
+			&& knownStdlibMethodParamCppTypes(className, methodName, scope, lookupForScope(scope)).length > 0;
 	}
 
 	static function hasKnownInstanceMethod(receiverCppType:String, methodName:String, ?scope:CppRenderScope):Bool {
@@ -14131,6 +14143,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
 				nativeArrayVectorType(scope);
+			case ECall(EField(receiver, "resolveVirtualArray"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
+				exprCppType(args[0], scope);
 			case ECall(EField(receiver, "unsafeGet"), args) if (args.length == 2 && isCppNativeArrayReceiver(receiver)):
 				cppVectorElementType(exprCppType(args[0], scope));
 			case ECall(EField(receiver, method), args) if (int64StaticOrHelperCallReturnCppType(receiver, method, args.length).length > 0):
@@ -15191,6 +15205,8 @@ class CppTargetCore {
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
 				nativeArrayVectorType(scope);
+			case ECall(EField(receiver, "resolveVirtualArray"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):
+				inferExprCppType(args[0], scope);
 			case ECall(EField(receiver, method), args) if (int64StaticOrHelperCallReturnCppType(receiver, method, args.length).length > 0):
 				int64StaticOrHelperCallReturnCppType(receiver, method, args.length);
 			case ECall(EField(receiver, method), args) if (int64InstanceOrExtensionCallReturnCppType(receiver, method, args, scope).length > 0):
