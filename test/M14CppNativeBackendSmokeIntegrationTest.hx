@@ -567,6 +567,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    return a * b;",
 			"  }",
 			"}",
+			"class StaticInitOrder {",
+			"  public static function wrap(s:String):String {",
+			"    return s;",
+			"  }",
+			"  public static function wrap2(a:String, b:String):String {",
+			"    return wrap(a) + \".\" + wrap(b);",
+			"  }",
+			"  public static var values:Array<String> = [wrap(\"a\"), wrap2(\"b\", \"c\")];",
+			"}",
 			"class LambdaLike {",
 			"  public function new() {}",
 			"  public static function array(it:Iterable<String>):Array<String> {",
@@ -10686,6 +10695,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(source.indexOf("static int and(int a, int b)") < 0, "C++ smoke should not emit unsanitized and method names");
 		assertTrue(source.indexOf("static int or(int a, int b)") < 0, "C++ smoke should not emit unsanitized or method names");
 		assertTrue(source.indexOf("static int xor(int a, int b)") < 0, "C++ smoke should not emit unsanitized xor method names");
+		final staticInitOrderStruct = source.indexOf("struct StaticInitOrder");
+		final staticInitOrderWrap = source.indexOf("static std::string wrap(std::string s)", staticInitOrderStruct);
+		final staticInitOrderWrap2 = source.indexOf("static std::string wrap2(std::string a, std::string b)", staticInitOrderStruct);
+		final staticInitOrderValues = source.indexOf("inline static std::vector<std::string> values", staticInitOrderStruct);
+		assertTrue(staticInitOrderStruct >= 0, "C++ smoke should render static-init-order fixture");
+		assertTrue(staticInitOrderWrap > staticInitOrderStruct, "C++ smoke should render same-class static helper methods");
+		assertTrue(staticInitOrderWrap2 > staticInitOrderWrap, "C++ smoke should preserve helper method order before static field initializers");
+		assertTrue(staticInitOrderValues > staticInitOrderWrap2, "C++ smoke should render static field initializers after same-class static helpers they call");
 		assertContains(source, "static std::vector<std::string> array(std::vector<std::string> it) {",
 			"C++ smoke should lower Iterable<String> arguments to vector values");
 		assertContains(source, "static std::vector<std::string> arrayFromNew(std::vector<std::string> it) {",

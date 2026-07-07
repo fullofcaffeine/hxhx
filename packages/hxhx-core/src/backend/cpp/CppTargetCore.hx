@@ -2946,6 +2946,24 @@ class CppTargetCore {
 		for (line in classMetadataLines(cls, className))
 			out.push(line);
 		final scope = renderScope(cls, classLookup, "void");
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (HxFunctionDecl.getName(fn) == "new")
+				continue;
+			if (shouldRenderOwnDynamicFunctionStorage(fn, cls, classLookup)
+				|| shouldAssignInheritedDynamicFunctionSlot(fn, cls, classLookup))
+				continue;
+			final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			final timingEnabled = traceCppTimingsEnabled();
+			final startTime = timingEnabled ? Sys.time() : 0.0;
+			final methodLines = renderHelperMethod(fn, cls, classLookup);
+			for (line in methodLines)
+				out.push(line);
+			if (timingEnabled) {
+				final elapsed = Sys.time() - startTime;
+				traceCppTimingPhase("render_helper_method_timing owner=" + className + " name=" + methodName + " seconds=" + Std.string(elapsed) + " lines="
+					+ methodLines.length);
+			}
+		}
 		for (field in HxClassDecl.getFields(cls)) {
 			final fieldName = HxFieldDecl.getName(field);
 			traceCppMemberPhase(className, "render_helper_field", fieldName, "begin");
@@ -2994,24 +3012,6 @@ class CppTargetCore {
 				out.push(line);
 			out.push("  }");
 			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "end");
-		}
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			if (HxFunctionDecl.getName(fn) == "new")
-				continue;
-			if (shouldRenderOwnDynamicFunctionStorage(fn, cls, classLookup)
-				|| shouldAssignInheritedDynamicFunctionSlot(fn, cls, classLookup))
-				continue;
-			final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
-			final timingEnabled = traceCppTimingsEnabled();
-			final startTime = timingEnabled ? Sys.time() : 0.0;
-			final methodLines = renderHelperMethod(fn, cls, classLookup);
-			for (line in methodLines)
-				out.push(line);
-			if (timingEnabled) {
-				final elapsed = Sys.time() - startTime;
-				traceCppTimingPhase("render_helper_method_timing owner=" + className + " name=" + methodName + " seconds=" + Std.string(elapsed) + " lines="
-					+ methodLines.length);
-			}
 		}
 		out.push("};");
 		for (line in renderGenericClassFactory(className, typeParams, ctor, scope))
