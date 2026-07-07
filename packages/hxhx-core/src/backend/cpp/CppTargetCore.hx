@@ -5498,6 +5498,8 @@ class CppTargetCore {
 			return returnTraced("special_resource", renderResourceSupportHelper(fn, owner, classLookup));
 		if (isBytesSupportHelper(fn, owner))
 			return returnTraced("special_bytes", renderBytesSupportHelper(fn, owner, classLookup));
+		if (isSerializerGetFieldHelper(fn, owner))
+			return returnTraced("special_serializer_get_field", renderSerializerGetFieldHelper(fn, owner, classLookup));
 		if (isUnserializerInitCodesHelper(fn, owner))
 			return returnTraced("special_unserializer_init_codes", renderUnserializerInitCodesHelper(fn, owner, classLookup));
 		if (isUnserializerObjectHelper(fn, owner))
@@ -6082,6 +6084,13 @@ class CppTargetCore {
 			&& HxFunctionDecl.getArgs(fn).length == 1;
 	}
 
+	static function isSerializerGetFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		return sanitizeTypePath(HxClassDecl.getName(owner)) == "Serializer"
+			&& !HxFunctionDecl.getIsStatic(fn)
+			&& sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "__getField"
+			&& HxFunctionDecl.getArgs(fn).length == 2;
+	}
+
 	static function isUnserializerInitCodesHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		return sanitizeTypePath(HxClassDecl.getName(owner)) == "Unserializer"
 			&& HxFunctionDecl.getIsStatic(fn)
@@ -6115,6 +6124,22 @@ class CppTargetCore {
 			"      codes[static_cast<int>(static_cast<unsigned char>(BASE64[i]))] = i;",
 			"    }",
 			"    return codes;",
+			"  }"
+		];
+	}
+
+	/**
+		Render Serializer's Dynamic field helper without emitting invalid string
+		indexing. This is a compile-shape compatibility helper for the current C++
+		strict lane; it is not broad Reflect.field or Dynamic object support.
+	**/
+	static function renderSerializerGetFieldHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return [
+			"  std::string " + method + "(std::string o, std::string f) {",
+			"    int index = f.empty() ? 0 : static_cast<int>(static_cast<unsigned char>(f[0]));",
+			"    if (index < 0 || index >= static_cast<int>(o.size())) return std::string();",
+			"    return std::string(1, o[static_cast<std::size_t>(index)]);",
 			"  }"
 		];
 	}
@@ -10529,7 +10554,7 @@ class CppTargetCore {
 		final enumMetadataValue = enumMetadataAnonValueExprForExpectedType(expr, expectedType, scope);
 		if (enumMetadataValue != null)
 			return enumMetadataValue;
-		if (isCppEnumCarrierReferenceType(expectedType, scope) && isStringLike(expr))
+		if (isCppEnumCarrierReferenceType(expectedType, scope) && isCppStringExpr(expr, scope))
 			return cppDefaultValue(expectedType, scope);
 		if (isCppVectorType(expectedType)) {
 			switch (expr) {
@@ -11327,13 +11352,19 @@ class CppTargetCore {
 		return nativeArrayUnsafeGetExpr(array, index, scope) + " = " + renderExpr(value, scope);
 	}
 
-	static function cppNewExprType(typePath:String, ?scope:CppRenderScope):String {
+	static function cppNewExprType(typePath:String, ?scope:CppRenderScope, ?args:Array<HxExpr>):String {
 		final lookup = lookupForScope(scope);
 		final cls = lookupClassForTypeHint(typePath, scope, lookup);
 		final className = cls == null ? sanitizeTypePath(typeBaseName(typePath)) : renderedClassName(cls, lookup);
 		final templateArgs = constructorTemplateArgsFromTypePath(typePath, scope);
-		if (templateArgs.length > 0 && scopeHasClass(scope, className) && genericClassTypeParamsForName(className, scope).length > 0)
-			return "std::shared_ptr<" + className + "<" + templateArgs.join(", ") + ">>";
+		final classTypeParams = cls == null ? genericClassTypeParamsForName(className, scope) : genericClassTemplateParams(cls);
+		final hasConstructorArgs = args != null && args.length > 0;
+		if (scopeHasClass(scope, className) && classTypeParams.length > 0 && (templateArgs.length > 0 || !hasConstructorArgs)) {
+			// Keep inferred local types aligned with `newExpr`, which cannot emit a
+			// bare C++ template name for zero-argument erased generic constructors.
+			final args = templateArgs.length > 0 ? templateArgs : erasedGenericConstructorTemplateArgs(classTypeParams);
+			return "std::shared_ptr<" + className + "<" + args.join(", ") + ">>";
+		}
 		return cppTypeHint(typePath, scope);
 	}
 
@@ -12621,8 +12652,11 @@ class CppTargetCore {
 		unifyGenericCallTypeHints(HxFunctionDecl.getReturnTypeHint(fn), expectedType, emitted, mapped, scope);
 		final params = HxFunctionDecl.getArgs(fn);
 		final count = params.length < args.length ? params.length : args.length;
-		for (i in 0...count)
-			unifyGenericCallTypeHints(HxFunctionArg.getTypeHint(params[i]), rawTypeHintForExpr(args[i], scope), emitted, mapped, scope);
+		for (i in 0...count) {
+			final rawHint = rawTypeHintForExpr(args[i], scope);
+			final actualHint = genericCallActualTypeHint(args[i], rawHint, scope);
+			unifyGenericCallTypeHints(HxFunctionArg.getTypeHint(params[i]), actualHint, emitted, mapped, scope);
+		}
 		final out = new Array<String>();
 		for (param in emitted) {
 			final clean = sanitizeIdentifier(param);
@@ -12632,6 +12666,24 @@ class CppTargetCore {
 			out.push(value);
 		}
 		return "<" + out.join(", ") + ">";
+	}
+
+	/**
+		Choose the type evidence used to fill explicit same-owner generic calls.
+
+		Active C++ local types are fresher than parser source-name hints after local
+		shadowing, and generated structural carriers are already valid C++ type names.
+		When the active type is an erased macro/Dynamic carrier, the raw Haxe hint is
+		still the only useful generic-shape evidence.
+	**/
+	static function genericCallActualTypeHint(arg:HxExpr, rawHint:String, ?scope:CppRenderScope):String {
+		final actual = callArgMatchCppType(arg, scope);
+		final raw = rawHint == null ? "" : rawHint;
+		if (raw.length > 0 && (actual == CppMacroExpr.CPP_TYPE || actual == "std::any"))
+			return raw;
+		if (actual.length > 0 && actual != "auto")
+			return actual;
+		return raw;
 	}
 
 	static function unifyGenericCallTypeHints(patternHint:String, actualHint:String, emitted:Array<String>, mapped:haxe.ds.StringMap<String>,
@@ -12671,9 +12723,25 @@ class CppTargetCore {
 		}
 		if (isScopeTypeParam(hint, scope) || isBareCppTypeParamName(hint))
 			return hint;
+		if (isGeneratedAnonStructCppType(hint, scope))
+			return hint;
 		if (isConcreteCppTypeArg(hint))
 			return hint;
 		return cppTypeHint(hint, scope);
+	}
+
+	/**
+		Generated anonymous-record carriers may appear directly as C++ template args.
+
+		Running them back through `cppTypeHint` treats the generated name as a Haxe
+		type path and collapses it to a fallback string-shaped type.
+	**/
+	static function isGeneratedAnonStructCppType(typeName:String, ?scope:CppRenderScope):Bool {
+		if (typeName == null || typeName.length == 0)
+			return false;
+		if (scope != null && scope.anonStructs.exists(typeName))
+			return true;
+		return StringTools.startsWith(typeName, "__hxhx_anon_");
 	}
 
 	static function isConcreteCppTypeArg(typeName:String):Bool {
@@ -12702,7 +12770,14 @@ class CppTargetCore {
 		return switch (expr) {
 			case EIdent(name):
 				final local = localCppName(name, scope);
-				final hinted = scope.localTypeHints.exists(local) ? scope.localTypeHints.get(local) : scope.localTypeHints.get(sanitizeIdentifier(name));
+				final source = sanitizeIdentifier(name);
+				final hinted = if (scope.localTypeHints.exists(local)) {
+					scope.localTypeHints.get(local);
+				} else if (local != source) {
+					"";
+				} else {
+					scope.localTypeHints.get(source);
+				}
 				hinted == null ? "" : hinted;
 			case ECast(inner, _) | EUntyped(inner):
 				rawTypeHintForExpr(inner, scope);
@@ -14267,7 +14342,14 @@ class CppTargetCore {
 		return switch (expr) {
 			case EIdent(name):
 				final cppLocal = localCppName(name, scope);
-				final local = scope.localTypes.exists(cppLocal) ? scope.localTypes.get(cppLocal) : scope.localTypes.get(sanitizeIdentifier(name));
+				final sourceLocal = sanitizeIdentifier(name);
+				final local = if (scope.localTypes.exists(cppLocal)) {
+					scope.localTypes.get(cppLocal);
+				} else if (cppLocal != sourceLocal) {
+					"";
+				} else {
+					scope.localTypes.get(sourceLocal);
+				}
 				if (local != null && local.length > 0) {
 					local;
 				} else {
@@ -14282,8 +14364,8 @@ class CppTargetCore {
 				exprCppType(args[0], scope);
 			case EThis:
 				sanitizeTypePath(HxClassDecl.getName(scope.owner));
-			case ENew(typePath, _):
-				cppNewExprType(typePath, scope);
+			case ENew(typePath, args):
+				cppNewExprType(typePath, scope, args);
 			case ECall(EField(EIdent("NativeArray"), "create"), _):
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
@@ -14958,6 +15040,46 @@ class CppTargetCore {
 		return currentOwnerMethodCppReturnType(name, scope);
 	}
 
+	/**
+		Infer concrete return types for simple generic identity-style owner calls.
+
+		Parser output for `function id<T>(v:T):T` gives the C++ signature enough
+		information to compile, but unhinted locals initialized from `id(value)`
+		also need the concrete argument type recorded in the local type table.
+	**/
+	static function currentOwnerGenericCallReturnCppType(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (scope == null)
+			return "";
+		final owner = currentOrInheritedOwnerMethodOwner(name, scope);
+		final fn = owner == null ? null : ownerMethodDeclIn(owner, name);
+		return genericFunctionCallReturnCppType(fn, args, scope);
+	}
+
+	static function genericFunctionCallReturnCppType(fn:HxFunctionDecl, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (fn == null || args == null)
+			return "";
+		final returnParam = genericTypeParamName(HxFunctionDecl.getReturnTypeHint(fn));
+		if (returnParam.length == 0)
+			return "";
+		var declared = false;
+		for (param in genericFunctionTypeParams(fn))
+			if (sanitizeIdentifier(param) == sanitizeIdentifier(returnParam))
+				declared = true;
+		if (!declared)
+			return "";
+		final params = HxFunctionDecl.getArgs(fn);
+		final count = params.length < args.length ? params.length : args.length;
+		for (i in 0...count) {
+			final argParam = genericTypeParamName(HxFunctionArg.getTypeHint(params[i]));
+			if (sanitizeIdentifier(argParam) != sanitizeIdentifier(returnParam))
+				continue;
+			final actualType = callArgMatchCppType(args[i], scope);
+			if (actualType.length > 0 && actualType != "auto")
+				return actualType;
+		}
+		return "";
+	}
+
 	static function staticReceiverClassName(receiver:HxExpr, ?scope:CppRenderScope):Null<String> {
 		final typePath = staticReceiverTypePath(receiver);
 		if (typePath == null)
@@ -15262,8 +15384,6 @@ class CppTargetCore {
 	static function cppLocalDeclaredType(name:String, typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope, ?declaredLocalName:String):String {
 		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
 		final local = sanitizeIdentifier(name);
-		final overrideType = if (scope == null) null; else if (declaredLocalName != null
-			&& scope.localTypeOverrides.exists(declaredLocalName)) scope.localTypeOverrides.get(declaredLocalName); else scope.localTypeOverrides.get(local);
 		final selfReferenceType = unhintedThisLocalReferenceCppType(typeHint, init, scope);
 		if (selfReferenceType.length > 0)
 			return selfReferenceType;
@@ -15271,6 +15391,7 @@ class CppTargetCore {
 		if (runtimeClassFactoryType.length > 0)
 			return runtimeClassFactoryType;
 		final hinted = cppLocalTypeHint(typeHint, init, scope);
+		final overrideType = localTypeOverrideForDeclaredLocal(scope, local, declaredLocalName, hinted);
 		if (overrideType != null && overrideType.length > 0 && explicit.length == 0 && init != null && hinted.length > 0 && hinted != "auto"
 			&& isScalarExpectedLocalType(hinted) && hinted != overrideType)
 			return hinted;
@@ -15278,6 +15399,26 @@ class CppTargetCore {
 			return overrideType != null && isCppFunctionType(hinted) && isCppFunctionType(overrideType) ? overrideType : hinted;
 		}
 		return overrideType != null && overrideType.length > 0 ? overrideType : hinted;
+	}
+
+	/**
+		Choose the prepared local type override for a declaration.
+
+		Some prepasses still store source-name overrides because they run before the
+		C++ declaration renderer assigns shadow names. Those overrides are useful for
+		optional local callables, but a shadowed declaration with a concrete initializer
+		type must not inherit a stale override from an earlier same-name local.
+	**/
+	static function localTypeOverrideForDeclaredLocal(scope:CppRenderScope, local:String, declaredLocalName:Null<String>, hinted:String):Null<String> {
+		if (scope == null)
+			return null;
+		if (declaredLocalName != null && scope.localTypeOverrides.exists(declaredLocalName))
+			return scope.localTypeOverrides.get(declaredLocalName);
+		final sourceOverride = scope.localTypeOverrides.get(local);
+		if (declaredLocalName != null && declaredLocalName != local && sourceOverride != null && hinted != null && hinted.length > 0 && hinted != "auto"
+			&& sourceOverride != hinted)
+			return null;
+		return sourceOverride;
 	}
 
 	/**
@@ -15370,8 +15511,8 @@ class CppTargetCore {
 				"bool";
 			case ENew(typePath, _) if (isStdArrayTypePath(typePath)):
 				isArrayLikeTypeHint(typePath) ? cppTypeHint(typePath, scope) : stdArrayDefaultVectorType(scope);
-			case ENew(typePath, _):
-				cppNewExprType(typePath, scope);
+			case ENew(typePath, args):
+				cppNewExprType(typePath, scope, args);
 			case ECall(EField(EIdent("NativeArray"), "create"), _):
 				nativeArrayVectorType(scope);
 			case ECall(EField(receiver, "create"), _) if (isCppNativeArrayReceiver(receiver)):
@@ -15435,6 +15576,8 @@ class CppTargetCore {
 				CppMacroExpr.CPP_TYPE;
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
 				"std::any";
+			case ECall(EIdent(name), args) if (currentOwnerGenericCallReturnCppType(name, args, scope).length > 0):
+				currentOwnerGenericCallReturnCppType(name, args, scope);
 			case ECall(EIdent(name), args) if (bytesFastGetExpr(name, args, scope) != null):
 				"int";
 			case ECall(EIdent(name), _):
@@ -16398,6 +16541,11 @@ class CppTargetCore {
 				enumCtorValueForExpectedType(name, [], expectedType, scope);
 			case ECall(EEnumValue(name), args):
 				enumCtorValueForExpectedType(name, args, expectedType, scope);
+			case ECall(EField(receiver, name), args):
+				final owner = staticReceiverClassName(receiver, scope);
+				if (owner == null
+					|| !isEnumCarrierClassName(owner, scope)
+					|| classMethodDecl(owner, name, true, scope) == null) null; else enumCtorValueForExpectedType(name, args, expectedType, scope);
 			case _:
 				null;
 		};

@@ -5463,6 +5463,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ bare enum constructor identifiers should become enum carrier values when a carrier value is expected");
 		assertTrue(bareEnumArg.indexOf("std::string(\"A\")") < 0,
 			"C++ bare enum constructor identifiers should not fall through to string enum rendering for carrier values");
+		final staticEnumCtorArg = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(ECall(EField(EIdent("MyEnum"), "C"),
+			[EInt(0), EString("hello")]), "std::shared_ptr<MyEnum>", myEnumScope);
+		assertContains(staticEnumCtorArg, "return std::make_shared<MyEnum>();",
+			"C++ static enum constructor calls should become enum carrier values when a carrier value is expected");
 		final staticEnumCtorValue = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("MyEnum"), "C"), myEnumScope);
 		assertTrue(staticEnumCtorValue == "MyEnum::C", "C++ enum constructor values should render as callable static methods");
 		final enumCtorCaller = new HxClassDecl("EnumCtorCaller", false, [
@@ -5485,6 +5489,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("MyEnum"), "D"), [EField(EIdent("MyEnum"), "A")]), myEnumScope);
 		assertContains(staticEnumCall, "MyEnum::D(std::make_shared<MyEnum>())",
 			"C++ static enum constructor calls should render static enum fields with callee argument types");
+		myEnumScope.localTypes.set("c", "std::string");
+		final nestedStaticEnumCall = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("MyEnum"), "D"), [ECall(EField(EIdent("MyEnum"), "D"), [EIdent("c")])]), myEnumScope);
+		assertContains(nestedStaticEnumCall, "return std::make_shared<MyEnum>();",
+			"C++ nested static enum constructor calls should coerce tag-shaped values through the expected enum carrier");
+		assertTrue(nestedStaticEnumCall.indexOf("MyEnum::D(c)") < 0,
+			"C++ nested static enum constructor calls should not pass tag-shaped locals as enum carrier arguments");
 		myEnumScope.localTypes.set("value", "std::shared_ptr<MyEnum>");
 		final bareEnumComparison = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("==", EIdent("value"), EIdent("B")), myEnumScope);
 		assertContains(bareEnumComparison, "value == std::make_shared<MyEnum>()",
@@ -8582,6 +8593,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		serializerClasses.set("Serializer", serializerOwner);
 		final serializerLookup = {names: serializerNames, byName: serializerClasses};
 		final serializerClassLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(serializerOwner, serializerLookup).join("\n");
+		final serializerGetField = new HxFunctionDecl("__getField", Private, false, [
+			new HxFunctionArg("o", "Dynamic", NoDefault, false, false),
+			new HxFunctionArg("f", "String", NoDefault, false, false)
+		], "Dynamic",
+			[SReturn(EArrayAccess(EIdent("o"), EIdent("f")), HxPos.unknown())], "");
+		final serializerGetFieldLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(serializerGetField, new HxClassDecl("Serializer", false, [serializerGetField], []), serializerLookup)
+				.join("\n");
 		final serializerScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(serializerOwner, serializerLookup, "void");
 		serializerScope.localNames.set("v", "v");
 		serializerScope.localTypes.set("v", "std::any");
@@ -8599,6 +8618,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			.join("\n");
 		assertContains(serializerClassLines, "inline static std::string BASE64_CODES = BASE64;",
 			"C++ Serializer.BASE64_CODES should be a concrete base64 character table, not a nullable Dynamic");
+		assertContains(serializerGetFieldLines, "std::string __getField(std::string o, std::string f) {",
+			"C++ Serializer.__getField should render through the bounded compile-safe helper");
+		assertContains(serializerGetFieldLines, "o[static_cast<std::size_t>(index)]", "C++ Serializer.__getField should not index strings with string keys");
+		assertTrue(serializerGetFieldLines.indexOf("o[f]") < 0, "C++ Serializer.__getField should not emit invalid std::string operator[] usage");
 		assertContains(serializerBoolTernary, "__hxhx_any_bool(v)", "C++ Serializer Dynamic bool branches should unwrap std::any through a named helper");
 		assertTrue(serializerAnyLength == "static_cast<int>(__hxhx_any_vector_any(v).size())",
 			"C++ Serializer Dynamic array length should lower through the bounded std::any vector helper");
@@ -8607,6 +8630,62 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(serializerHxSerialize == "__hxhx_dynamic_hx_serialize(v, (*this))",
 			"C++ custom Serializer dynamic dispatch should use an explicit unsupported seam");
 		assertTrue(deadBase64Init.length == 0, "C++ statically false Serializer base64 init branch should not emit invalid Vector code");
+		final identityFn = new HxFunctionDecl("id", Public, false, [new HxFunctionArg("v", "T", NoDefault, false, false)], "T",
+			[SReturn(EIdent("v"), HxPos.unknown())], "", ["__hxhx_fn_type_params=T"]);
+		final identityOwner = new HxClassDecl("IdentityOwner", false, [identityFn], []);
+		final identityNames = new StringMap<Bool>();
+		identityNames.set("IdentityOwner", true);
+		final identityClasses = new StringMap<HxClassDecl>();
+		identityClasses.set("IdentityOwner", identityOwner);
+		identityNames.set("ObjectMap", true);
+		identityClasses.set("ObjectMap", new HxClassDecl("ObjectMap", false, [], [], "", ["__hxhx_type_params=K,V"]));
+		final identityScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(identityOwner, {
+			names: identityNames,
+			byName: identityClasses
+		}, "void");
+		identityScope.localNames.set("d", "d");
+		identityScope.localTypes.set("d", "std::shared_ptr<Date>");
+		final identityCall = ECall(EIdent("id"), [EIdent("d")]);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferExprCppType(identityCall, identityScope) == "std::shared_ptr<Date>",
+			"C++ generic identity-style local calls should infer the concrete argument type");
+		@:privateAccess backend.cpp.CppTargetCore.renderStmt(SVar("d2", "", identityCall, HxPos.unknown()), "  ", identityScope);
+		assertTrue(identityScope.localTypes.get("d2") == "std::shared_ptr<Date>",
+			"C++ unhinted locals initialized from generic identity calls should retain pointer-backed result types");
+		final anonIdentityLocal = @:privateAccess backend.cpp.CppTargetCore.renderStmt(SVar("o", "",
+			EAnon(["x", "y", "z"], [EString("a"), EFloat(-1.56), EString("hello")]), HxPos.unknown()), "  ", identityScope)
+			.join("\n");
+		final anonIdentityCallLocal = @:privateAccess
+			backend.cpp.CppTargetCore.renderStmt(SVar("o2", "", ECall(EIdent("id"), [EIdent("o")]), HxPos.unknown()), "  ", identityScope).join("\n");
+		assertContains(anonIdentityLocal, "auto o = __hxhx_anon_x_std__string_y_double__z_std__string",
+			"C++ anonymous-record locals should render with their generated carrier type");
+		assertContains(anonIdentityCallLocal, "auto o2 = id<__hxhx_anon_x_std__string_y_double__z_std__string>(o);",
+			"C++ generic calls should use generated anonymous-record carriers as template arguments");
+		assertTrue(anonIdentityCallLocal.indexOf("id<std::string>(o)") < 0, "C++ generic calls should not collapse anonymous-record carriers to std::string");
+		final erasedObjectMapLocal = @:privateAccess
+			backend.cpp.CppTargetCore.renderStmt(SVar("om", "", ENew("ObjectMap", []), HxPos.unknown()), "  ", identityScope).join("\n");
+		assertContains(erasedObjectMapLocal, "auto om = __hxhx_make_shared_ObjectMap<std::any, std::any>();",
+			"C++ zero-arg generic constructor locals should render erased template args");
+		assertTrue(identityScope.localTypes.get("om") == "std::shared_ptr<ObjectMap<std::any, std::any>>",
+			"C++ zero-arg generic constructor locals should record erased template args in local types");
+		identityScope.localNames.set("h", "h_3");
+		identityScope.localTypes.set("h", "std::shared_ptr<StringMap<int>>");
+		identityScope.localTypes.set("h_3", "std::shared_ptr<ObjectMap<std::any, std::any>>");
+		identityScope.localTypeHints.set("h", "haxe.ds.StringMap<Int>");
+		final shadowedIdentityCall = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("id"), [EIdent("h")]), identityScope);
+		assertContains(shadowedIdentityCall, "id<std::shared_ptr<ObjectMap<std::any,std::any>>>(h_3)",
+			"C++ generic calls should use the active shadowed local type for explicit template arguments");
+		assertTrue(shadowedIdentityCall.indexOf("StringMap<int>") < 0,
+			"C++ generic calls should not reuse stale source-name hints after a local is redeclared");
+		identityScope.localNames.set("h2", "h2");
+		identityScope.localTypes.set("h2", "std::shared_ptr<StringMap<int>>");
+		identityScope.localTypeOverrides.set("h2", "std::shared_ptr<StringMap<int>>");
+		final shadowedIdentityLocal = @:privateAccess
+			backend.cpp.CppTargetCore.renderStmt(SVar("h2", "", ECall(EIdent("id"), [EIdent("h")]), HxPos.unknown()), "  ", identityScope).join("\n");
+		assertContains(shadowedIdentityLocal, "auto h2_2 = id<std::shared_ptr<ObjectMap<std::any,std::any>>>(h_3);",
+			"C++ shadowed generic locals should ignore stale source-name local type overrides");
+		assertTrue(identityScope.localTypes.get("h2_2") == "std::shared_ptr<ObjectMap<std::any, std::any>>",
+			"C++ shadowed generic locals should record the fresh active local type");
+		assertTrue(shadowedIdentityLocal.indexOf("StringMap<int>") < 0, "C++ shadowed generic locals should not render stale source-name local type overrides");
 		final listLoopScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(serializerOwner, serializerLookup, "void");
 		listLoopScope.localNames.set("v_4", "v_4");
 		listLoopScope.localTypes.set("v_4", "std::shared_ptr<List<std::string>>");
