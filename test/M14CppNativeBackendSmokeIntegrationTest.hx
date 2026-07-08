@@ -4308,6 +4308,82 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"), [EIdent("left"), EIdent("right")])) == "Type::enumEq(left, right)",
 			"direct Type.enumEq calls should lower through the C++ type support helper");
+		final classRefNames = new StringMap<Bool>();
+		classRefNames.set("MyClass", true);
+		classRefNames.set("Type", true);
+		final classRefClasses = new StringMap<HxClassDecl>();
+		classRefClasses.set("MyClass", new HxClassDecl("MyClass", false, [], []));
+		final classRefScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("ClassRefOwner", false, [], []), {
+			names: classRefNames,
+			byName: classRefClasses
+		}, "void");
+		classRefScope.localTypes.set("name", "std::string");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "getClassName"), [EField(EIdent("unit"), "MyClass")]),
+				classRefScope) == "std::string(\"unit.MyClass\")",
+			"C++ Type.getClassName should render class literals as their Haxe path instead of a raw dotted expression");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("unit"), "MyClass"),
+			classRefScope) == "Type::resolveClass(\"unit.MyClass\")",
+			"C++ free class literals should become Class meta-values instead of invalid dotted syntax");
+		final classRefEq = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("eq"), [
+			ECall(EField(EIdent("Type"), "resolveClass"), [EIdent("name")]),
+			EField(EIdent("unit"), "MyClass")
+		]), classRefScope);
+		assertContains(classRefEq, "eq(Type::resolveClass(", "C++ eq comparisons against class literals should keep the Type.resolveClass left-hand side");
+		assertContains(classRefEq, "Type::resolveClass(\"unit.MyClass\")",
+			"C++ eq comparisons against class literals should use Class meta-values, not raw Haxe paths");
+		assertTrue(classRefEq.indexOf("(unit.MyClass)") < 0, "C++ eq comparisons against class literals should not render raw dotted syntax");
+		final baseSuperProp = new HxClassDecl("BaseSuperProp", false, [
+			new HxFunctionDecl("get_prop", Public, false, [], "Int", [SReturn(EInt(1), HxPos.unknown())], ""),
+			new HxFunctionDecl("set_prop", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Int",
+				[SReturn(EIdent("v"), HxPos.unknown())], ""),
+			new HxFunctionDecl("get_fProp", Public, false, [], "Int->String", [SReturn(ELambda(["i"], EString("test")), HxPos.unknown())], "")
+		], [
+			new HxFieldDecl("prop", Public, false, "Int", null, null, null, null, false, "get", "set"),
+			new HxFieldDecl("fProp", Public, false, "Int->String", null, null, null, null, false, "get", "null")
+		]);
+		final childSuperProp = new HxClassDecl("ChildSuperProp", false, [], [], "BaseSuperProp");
+		final superNames = new StringMap<Bool>();
+		superNames.set("BaseSuperProp", true);
+		superNames.set("ChildSuperProp", true);
+		superNames.set("MyClass_BaseSuperProp", true);
+		superNames.set("MyClass_ChildSuperProp", true);
+		final superClasses = new StringMap<HxClassDecl>();
+		superClasses.set("BaseSuperProp", baseSuperProp);
+		superClasses.set("ChildSuperProp", childSuperProp);
+		superClasses.set("MyClass_BaseSuperProp", baseSuperProp);
+		superClasses.set("MyClass_ChildSuperProp", childSuperProp);
+		final superRenderedNames = [
+			{cls: baseSuperProp, name: "MyClass_BaseSuperProp"},
+			{cls: childSuperProp, name: "MyClass_ChildSuperProp"}
+		];
+		final superClassInfos = [
+			{cls: baseSuperProp, packagePath: "unit", sourcePath: "unit/MyClass.hx"},
+			{cls: childSuperProp, packagePath: "unit", sourcePath: "unit/MyClass.hx"}
+		];
+		final superPackageNames = new StringMap<String>();
+		superPackageNames.set("MyClass_BaseSuperProp", "unit");
+		superPackageNames.set("MyClass_ChildSuperProp", "unit");
+		final superScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(childSuperProp, {
+			names: superNames,
+			byName: superClasses,
+			all: [baseSuperProp, childSuperProp],
+			renderedNames: superRenderedNames,
+			classInfos: superClassInfos,
+			packageByRenderedName: superPackageNames
+		}, "std::string");
+		superScope.localTypes.set("v", "int");
+		final superPropertyCall = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(ESuper, "fProp"), [EInt(0)]), superScope);
+		assertTrue(superPropertyCall == "MyClass_BaseSuperProp::get_fProp()(0)",
+			"C++ super property function calls should use the rendered base getter before invoking the returned function");
+		assertTrue(superPropertyCall.indexOf("BaseSuperProp::fProp") < 0,
+			"C++ super property function calls should not render the raw source owner or property slot as a static call");
+		final superPropertySet = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(EBinop("=", EField(ESuper, "prop"), EIdent("v")), superScope);
+		assertTrue(superPropertySet == "MyClass_BaseSuperProp::set_prop(v)",
+			"C++ super property writes should use the rendered base setter instead of assigning to a getter call");
+		assertTrue(superPropertySet.indexOf("get_prop() =") < 0, "C++ super property writes should not assign to getter call results");
 		final typeIntrinsicScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("TypeIntrinsicOwner", false), {
 			names: new StringMap<Bool>(),
 			byName: new StringMap<HxClassDecl>()
@@ -5569,6 +5645,29 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ enum carrier comparisons should coerce bare enum constructor identifiers to carrier values");
 		assertTrue(bareEnumComparison.indexOf("std::string(\"B\")") < 0,
 			"C++ enum carrier comparisons should not compare bare enum constructor identifiers as strings");
+		final typeEnumEqBare = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"), [EIdent("A"), ENull]), myEnumScope);
+		assertContains(typeEnumEqBare, "Type::enumEq<std::shared_ptr<MyEnum>>(std::make_shared<MyEnum>(), nullptr)",
+			"C++ Type.enumEq should render imported zero-arg enum constructors through the enum carrier seam");
+		assertTrue(typeEnumEqBare.indexOf("Type::enumEq(A, nullptr)") < 0,
+			"C++ Type.enumEq should not leak bare imported enum constructors into generated C++");
+		final typeEnumEqPayload = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"),
+			[ECall(EIdent("D"), [EIdent("A")]), ECall(EIdent("D"), [EIdent("B")])]), myEnumScope);
+		assertContains(typeEnumEqPayload, "Type::enumEq<std::shared_ptr<MyEnum>>(",
+			"C++ Type.enumEq should infer the enum carrier for imported payload constructors");
+		assertContains(typeEnumEqPayload, "return std::make_shared<MyEnum>();",
+			"C++ Type.enumEq payload constructors should be coerced to enum carrier values");
+		assertTrue(typeEnumEqPayload.indexOf("D(A)") < 0 && typeEnumEqPayload.indexOf("D(B)") < 0,
+			"C++ Type.enumEq should not render imported payload constructors as raw bare calls");
+		myEnumScope.localTypes.set("c_2", "std::function<std::string(int, std::string)>");
+		final typeEnumEqCallableAlias = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"), [
+			ECall(EField(EIdent("MyEnum"), "C"), [EInt(1), EString("hello")]),
+			ECall(EIdent("c_2"), [EInt(1), EString("hello")])
+		]), myEnumScope);
+		assertTrue(typeEnumEqCallableAlias.indexOf("Type::enumEq<std::shared_ptr<MyEnum>>") < 0,
+			"C++ Type.enumEq should not force enum-carrier specialization when only one non-null side is an enum constructor");
+		assertContains(typeEnumEqCallableAlias, "Type::enumEq(MyEnum::C(1, \"hello\"), c_2(1, \"hello\"))",
+			"C++ Type.enumEq should preserve callable enum-constructor aliases through the generic comparison path");
 		final myEnumLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(myEnum, {names: myEnumNames, byName: myEnumClasses}).join("\n");
 		assertContains(myEnumLines, "inline static std::shared_ptr<MyEnum> A = std::make_shared<MyEnum>();",
 			"C++ enum carrier static metadata fields should render as carrier values");

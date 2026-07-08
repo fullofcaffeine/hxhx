@@ -11047,9 +11047,9 @@ class CppTargetCore {
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
 			case ECall(EField(receiver, "getClassName"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
-				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
+				typeNameCallExpr(args[0], scope);
 			case ECall(EField(receiver, "getEnumName"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
-				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
+				typeNameCallExpr(args[0], scope);
 			case ECall(EField(receiver, "typeof"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(receiver, "resolveClass"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
@@ -11192,6 +11192,10 @@ class CppTargetCore {
 				staticFieldExpr(receiver, field, scope);
 			case EField(receiver, field) if (staticEnumTagValueExpr(receiver, field, scope) != null):
 				staticEnumTagValueExpr(receiver, field, scope);
+			case EField(_, _) if (classReferenceValueExpr(expr, scope) != null):
+				classReferenceValueExpr(expr, scope);
+			case EField(ESuper, field) if (superPropertyGetExpr(field, scope) != null):
+				superPropertyGetExpr(field, scope);
 			case EField(receiver, field) if (typedPropertyGetReadExpr(receiver, field, scope) != null):
 				typedPropertyGetReadExpr(receiver, field, scope);
 			case EField(receiver, field) if (jsonAnyFieldReadExpr(receiver, field, scope) != null):
@@ -16812,6 +16816,12 @@ class CppTargetCore {
 				enumCtorValueForExpectedType(name, [], expectedType, scope);
 			case ECall(EEnumValue(name), args):
 				enumCtorValueForExpectedType(name, args, expectedType, scope);
+			case ECall(EIdent(name), args) if (!exprNameHasLocalStorage(name, scope)):
+				final carrierType = classNameFromCppExprType(expectedType, scope);
+				final owner = carrierType == null ? null : sanitizeTypePath(typeBaseName(carrierType));
+				if (owner == null
+					|| !isEnumCarrierClassName(owner, scope)
+					|| classMethodDecl(owner, name, true, scope) == null) null; else enumCtorValueForExpectedType(name, args, expectedType, scope);
 			case ECall(EField(receiver, name), args):
 				final owner = staticReceiverClassName(receiver, scope);
 				if (owner == null
@@ -16851,6 +16861,10 @@ class CppTargetCore {
 		return switch (expr) {
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				enumCtorPayloadValueExpr(inner, scope);
+			case EIdent(name) if (importedEnumConstructorExpr(name, [], scope) != null):
+				importedEnumConstructorExpr(name, [], scope);
+			case ECall(EIdent(name), args) if (importedEnumConstructorExpr(name, args, scope) != null):
+				importedEnumConstructorExpr(name, args, scope);
 			case _:
 				final classReferencePath = classReferencePathText(expr, scope);
 				classReferencePath == null ? renderExpr(expr, scope) : "std::string(" + quoteString(classReferencePath) + ")";
@@ -16892,6 +16906,49 @@ class CppTargetCore {
 			case _:
 				null;
 		}
+	}
+
+	static function importedEnumConstructorExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		final owner = importedEnumConstructorOwner(name, args != null && args.length > 0, scope);
+		if (owner == null)
+			return null;
+		final clean = sanitizeIdentifier(name);
+		if (args == null || args.length == 0)
+			return owner + "::" + clean;
+		return owner + "::" + clean + "(" + renderClassMethodCallArgs(owner, clean, true, args, scope).join(", ") + ")";
+	}
+
+	static function importedEnumConstructorOwner(name:String, wantsPayloadCtor:Bool, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || name == null || name.length == 0 || exprNameHasLocalStorage(name, scope))
+			return null;
+		final clean = sanitizeIdentifier(name);
+		final lookup = lookupForScope(scope);
+		final seen = new haxe.ds.StringMap<Bool>();
+		function checkClass(cls:HxClassDecl):Null<String> {
+			if (cls == null)
+				return null;
+			final owner = renderedClassName(cls, lookup);
+			if (owner.length == 0 || seen.exists(owner))
+				return null;
+			seen.set(owner, true);
+			if (!isEnumCarrierClassName(owner, scope))
+				return null;
+			if (wantsPayloadCtor)
+				return classMethodDecl(owner, clean, true, scope) == null ? null : owner;
+			return (classHasStaticField(owner, clean, scope) || classHasStaticEnumMetadataField(owner, clean, scope)) ? owner : null;
+		}
+		if (scope.allClasses != null)
+			for (cls in scope.allClasses) {
+				final owner = checkClass(cls);
+				if (owner != null)
+					return owner;
+			}
+		for (className in scope.classByName.keys()) {
+			final owner = checkClass(scope.classByName.get(className));
+			if (owner != null)
+				return owner;
+		}
+		return null;
 	}
 
 	static function staticEnumMethodValueExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
@@ -17106,6 +17163,21 @@ class CppTargetCore {
 		return classReferencePath == null ? null : "Type::resolveClass(" + quoteString(classReferencePath) + ")";
 	}
 
+	static function classReferenceValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		final classReferencePath = classReferencePathText(expr, scope);
+		return classReferencePath == null ? null : "Type::resolveClass(" + quoteString(classReferencePath) + ")";
+	}
+
+	static function typeNameCallExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final classReferencePath = classReferencePathText(expr, scope);
+		if (classReferencePath != null)
+			return "std::string(" + quoteString(classReferencePath) + ")";
+		final enumReferencePath = enumReferencePathText(expr, scope);
+		if (enumReferencePath != null)
+			return "std::string(" + quoteString(enumReferencePath) + ")";
+		return "__hxhx_type_name(" + renderExpr(expr, scope) + ")";
+	}
+
 	static function structuralTypedefValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
 		final cls = structuralTypedefClassForCppType(expectedType, scope);
 		if (cls == null)
@@ -17206,6 +17278,8 @@ class CppTargetCore {
 
 	static function propertySetterAssignmentExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
 		return switch (left) {
+			case EField(ESuper, field):
+				superPropertySetterAssignmentExpr(field, right, scope);
 			case EField(EThis, field) if (scopeOwnerIsHxhxAbstract(scope) && hasInstanceField(scope.owner, field)):
 				null;
 			case EField(receiver, field):
@@ -18398,11 +18472,72 @@ class CppTargetCore {
 	}
 
 	static function superMethodCallExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
-		final owner = scope == null ? null : scope.owner;
-		final baseType = owner == null ? null : baseTypeName(owner);
+		final propertyCall = superPropertyFunctionCallExpr(method, args, scope);
+		if (propertyCall != null)
+			return propertyCall;
+		final baseType = superBaseCppTypeName(scope);
 		if (baseType == null)
 			throw "C++ source backend MVP unsupported expression: ESuper";
 		return baseType + "::" + sanitizeIdentifier(method) + "(" + [for (arg in args) renderExpr(arg, scope)].join(", ") + ")";
+	}
+
+	static function superPropertyFunctionCallExpr(field:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		final getter = superPropertyGetterCallExpr(field, scope);
+		if (getter == null)
+			return null;
+		final baseType = superBaseCppTypeName(scope);
+		final info = baseType == null ? null : classInstanceFieldInfo(baseType, field, scope);
+		final fieldType = reflectPropertyFieldCppType(info, scope);
+		final renderedArgs = isCppFunctionType(fieldType) ? renderFunctionTypeCallArgs(fieldType, args, scope) : [for (arg in args) renderExpr(arg, scope)];
+		return getter + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function superPropertyGetExpr(field:String, ?scope:CppRenderScope):Null<String> {
+		return superPropertyGetterCallExpr(field, scope);
+	}
+
+	/**
+		Handles `super.prop = value` through the declared base setter. The generic
+		property-assignment path cannot see `super` as a normal receiver type.
+	**/
+	static function superPropertySetterAssignmentExpr(field:String, value:HxExpr, ?scope:CppRenderScope):Null<String> {
+		final baseType = superBaseCppTypeName(scope);
+		if (baseType == null)
+			return null;
+		final info = classInstanceFieldInfo(baseType, field, scope);
+		if (info == null)
+			return null;
+		final cleanField = sanitizeIdentifier(HxFieldDecl.getName(info.field));
+		final setter = "set_" + cleanField;
+		if ((HxFieldDecl.getPropertySet(info.field) == "set" || reflectPropertyOwnerIsInterface(info, scope))
+			&& classHasInstanceMethodIncludingBases(info.owner, setter, scope))
+			return info.owner + "::" + setter + "(" + reflectPropertyValueExpr(value, info, scope) + ")";
+		return null;
+	}
+
+	static function superPropertyGetterCallExpr(field:String, ?scope:CppRenderScope):Null<String> {
+		final baseType = superBaseCppTypeName(scope);
+		if (baseType == null)
+			return null;
+		final info = classInstanceFieldInfo(baseType, field, scope);
+		if (info == null)
+			return null;
+		final cleanField = sanitizeIdentifier(HxFieldDecl.getName(info.field));
+		final getter = "get_" + cleanField;
+		if ((HxFieldDecl.getPropertyGet(info.field) == "get" || reflectPropertyOwnerIsInterface(info, scope))
+			&& classHasInstanceMethodIncludingBases(info.owner, getter, scope))
+			return info.owner + "::" + getter + "()";
+		return null;
+	}
+
+	static function superBaseCppTypeName(?scope:CppRenderScope):Null<String> {
+		final owner = scope == null ? null : scope.owner;
+		if (owner == null)
+			return null;
+		final rendered = inheritedCppBaseTypeName(owner, lookupForScope(scope));
+		if (rendered != null && rendered.length > 0)
+			return rendered;
+		return baseTypeName(owner);
 	}
 
 	static function superExpr(?scope:CppRenderScope):String {
@@ -20253,7 +20388,71 @@ class CppTargetCore {
 		final valueTypeEq = typeValueTypeEnumEqExpr(left, right, scope);
 		if (valueTypeEq != null)
 			return valueTypeEq;
+		final carrierType = typeEnumEqCarrierCppType(left, right, scope);
+		if (carrierType.length > 0)
+			return "Type::enumEq<" + carrierType + ">(" + valueExprForExpectedType(left, carrierType, scope) + ", "
+				+ valueExprForExpectedType(right, carrierType, scope) + ")";
 		return "Type::enumEq(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
+	}
+
+	/**
+		Specializes `Type.enumEq` only when both non-null sides prove the same enum
+		carrier, or when the opposite side is actual null. This keeps imported enum
+		constructors from stealing local callable aliases with the same name.
+	**/
+	static function typeEnumEqCarrierCppType(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
+		final leftType = typeEnumEqArgCarrierCppType(left, scope);
+		final rightType = typeEnumEqArgCarrierCppType(right, scope);
+		if (leftType.length > 0 && rightType.length > 0)
+			return leftType == rightType ? leftType : "";
+		if (leftType.length > 0 && typeEnumEqNullArg(right))
+			return leftType;
+		if (rightType.length > 0 && typeEnumEqNullArg(left))
+			return rightType;
+		return "";
+	}
+
+	static function typeEnumEqArgCarrierCppType(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				typeEnumEqArgCarrierCppType(inner, scope);
+			case EIdent(name):
+				final owner = importedEnumConstructorOwner(name, false, scope);
+				owner == null ? "" : "std::shared_ptr<" + owner + ">";
+			case ECall(EIdent(name), args):
+				final owner = importedEnumConstructorOwner(name, args != null && args.length > 0, scope);
+				owner == null ? "" : "std::shared_ptr<" + owner + ">";
+			case EField(receiver, field):
+				typeEnumEqQualifiedCarrierCppType(receiver, field, false, scope);
+			case ECall(EField(receiver, field), _):
+				typeEnumEqQualifiedCarrierCppType(receiver, field, true, scope);
+			case _:
+				"";
+		};
+	}
+
+	static function typeEnumEqNullArg(expr:HxExpr):Bool {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				typeEnumEqNullArg(inner);
+			case ENull:
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function typeEnumEqQualifiedCarrierCppType(receiver:HxExpr, field:String, payloadCtor:Bool, ?scope:CppRenderScope):String {
+		final owner = staticReceiverClassName(receiver, scope);
+		if (owner == null || !isEnumCarrierClassName(owner, scope))
+			return "";
+		if (payloadCtor)
+			return classMethodDecl(owner, field, true, scope) == null ? "" : "std::shared_ptr<" + owner + ">";
+		if (classHasStaticField(owner, field, scope)
+			|| classHasStaticEnumMetadataField(owner, field, scope)
+			|| classMethodDecl(owner, field, true, scope) != null)
+			return "std::shared_ptr<" + owner + ">";
+		return "";
 	}
 
 	static function typeValueTypeEnumEqExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
