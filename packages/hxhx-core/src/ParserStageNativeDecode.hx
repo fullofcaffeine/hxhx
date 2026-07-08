@@ -1042,6 +1042,11 @@ class ParserStageNativeDecode {
 
 				args.push(new HxFunctionArg(rawName, ty, defaultValue, isOptional, isRest, defaultValueText));
 			}
+		} else if (sourceHints.length > 0) {
+			for (sourceHint in sourceHints) {
+				final defaultValue = defaultValueFromText(sourceHint.defaultText);
+				args.push(new HxFunctionArg(sourceHint.name, sourceHint.typeHint, defaultValue, sourceHint.isOptional, false, sourceHint.defaultText));
+			}
 		}
 
 		var returnTypeHint = normalizeMethodReturnTypeHint(parts[4]);

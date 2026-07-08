@@ -1690,6 +1690,10 @@ class ParserStage {
 			switch (tok.text) {
 				case "<":
 					depth += 1;
+				case "-":
+					final next = scanNextToken(source, i);
+					if (next.text == ">")
+						i = next.nextPos;
 				case ">":
 					depth -= 1;
 					if (depth <= 0)
@@ -4079,6 +4083,11 @@ class ParserStage {
 				}
 
 				args.push(new HxFunctionArg(rawName, ty, defaultValue, isOptional, isRest, defaultValueText));
+			}
+		} else if (sourceHints.length > 0) {
+			for (sourceHint in sourceHints) {
+				final defaultValue = defaultValueFromText(sourceHint.defaultText);
+				args.push(new HxFunctionArg(sourceHint.name, sourceHint.typeHint, defaultValue, sourceHint.isOptional, false, sourceHint.defaultText));
 			}
 		}
 

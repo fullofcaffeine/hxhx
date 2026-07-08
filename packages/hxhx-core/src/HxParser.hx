@@ -1272,6 +1272,9 @@ class HxParser {
 				case TOther(c) if (c == "<".code):
 					depth++;
 					bump();
+				case TOther(c) if (c == "-".code && peekKind().match(TOther(">".code))):
+					bump();
+					bump();
 				case TOther(c) if (c == ">".code):
 					depth--;
 					bump();
@@ -1301,6 +1304,9 @@ class HxParser {
 					fail("Unterminated angle bracket group");
 				case TOther(c) if (c == "<".code):
 					depth++;
+					bump();
+				case TOther(c) if (c == "-".code && peekKind().match(TOther(">".code))):
+					bump();
 					bump();
 				case TOther(c) if (c == ">".code):
 					depth--;

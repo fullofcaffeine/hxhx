@@ -13504,7 +13504,7 @@ class CppTargetCore {
 
 	static function dceReflectionHelperCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
 		final helper = sanitizeIdentifier(name);
-		if ((helper != "hf" && helper != "nhf") || args == null || args.length < 2)
+		if ((helper != "hf" && helper != "nhf" && helper != "hsf" && helper != "nhsf") || args == null || args.length < 2)
 			return null;
 		final classArg = classReferenceArgExprForExpectedType(args[0], "std::shared_ptr<Class>", scope);
 		if (classArg == null)

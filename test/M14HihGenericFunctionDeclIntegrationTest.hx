@@ -44,6 +44,13 @@ class M14HihGenericFunctionDeclIntegrationTest {
 		assertEqString(HxFunctionArg.getTypeHint(arg), typeHint, HxFunctionDecl.getName(fn) + ": arg type " + index);
 	}
 
+	static function assertMetadataContains(fn:HxFunctionDecl, value:String, label:String):Void {
+		for (meta in HxFunctionDecl.getMetadata(fn))
+			if (meta == value)
+				return;
+		fail(label + ": missing metadata " + value + ", got " + Std.string(HxFunctionDecl.getMetadata(fn)));
+	}
+
 	static function main() {
 		final src = '@:generic class GenericMethods<T> {\n'
 			+ '  public function new() {}\n'
@@ -83,5 +90,19 @@ class M14HihGenericFunctionDeclIntegrationTest {
 		assertArg(compare, 0, "left", "Map<K,V>");
 		assertArg(compare, 1, "right", "Map<K,V>");
 		assertArg(compare, 2, "pos", "haxe.PosInfos");
+
+		final constrainedSrc = 'class GenericReflection {\n'
+			+ '  @:generic static function gf3 < A:haxe.Constraints.Constructible<String -> Void>, B:Array<A> > (a:A, b:B) {\n'
+			+ '    var clone = new A("foo");\n'
+			+ '    b.push(clone);\n'
+			+ '    return b;\n'
+			+ '  }\n'
+			+ '}\n';
+		final constrainedDecl = new HxParser(constrainedSrc).parseModule("GenericReflection");
+		final gf3 = findFunction(findClass(constrainedDecl, "GenericReflection"), "gf3");
+		assertEqInt(HxFunctionDecl.getArgs(gf3).length, 2, "constrained gf3 arg count");
+		assertArg(gf3, 0, "a", "A");
+		assertArg(gf3, 1, "b", "B");
+		assertMetadataContains(gf3, "__hxhx_fn_type_params=A,B", "constrained gf3 type params");
 	}
 }

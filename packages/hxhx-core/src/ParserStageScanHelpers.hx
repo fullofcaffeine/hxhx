@@ -596,6 +596,10 @@ class ParserStageScanHelpers {
 			switch (tok.text) {
 				case "<":
 					depth += 1;
+				case "-":
+					final next = scanNextToken(source, i);
+					if (next.text == ">")
+						i = next.nextPos;
 				case ">":
 					depth -= 1;
 					if (depth <= 0)

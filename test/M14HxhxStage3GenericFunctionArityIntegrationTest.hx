@@ -256,6 +256,27 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 			"native decode should recover source callback hints when the native protocol uses String as an erased fallback");
 	}
 
+	static function assertNativeDecodeRecoversConstrainedGenericArgsFromSource():Void {
+		final source = [
+			"class GenericReflection {",
+			"  @:generic static function gf3 < A:haxe.Constraints.Constructible<String -> Void>, B:Array<A> > (a:A, b:B) {",
+			"    var clone = new A(\"foo\");",
+			"    b.push(clone);",
+			"    return b;",
+			"  }",
+			"}"
+		].join("\n");
+		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("gf3|private|1||||||",
+			"var clone = new A(\"foo\");\nb.push(clone);\nreturn b;", source.indexOf("var clone"), source);
+		assertEqInt(HxFunctionDecl.getArgs(fn).length, 2, "native decode constrained gf3 arg count");
+		assertEqString(HxFunctionArg.getName(HxFunctionDecl.getArgs(fn)[0]), "a", "native decode constrained gf3 arg 0 name");
+		assertEqString(HxFunctionArg.getTypeHint(HxFunctionDecl.getArgs(fn)[0]), "A", "native decode constrained gf3 arg 0 type");
+		assertEqString(HxFunctionArg.getName(HxFunctionDecl.getArgs(fn)[1]), "b", "native decode constrained gf3 arg 1 name");
+		assertEqString(HxFunctionArg.getTypeHint(HxFunctionDecl.getArgs(fn)[1]), "B", "native decode constrained gf3 arg 1 type");
+		assertTrue(HxFunctionDecl.getMetadata(fn).indexOf("__hxhx_fn_type_params=A,B") >= 0,
+			"native decode constrained gf3 type params should come from the source signature");
+	}
+
 	static function main() {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
 		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
@@ -265,6 +286,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertParserStripsUntypedReturnModifier();
 		assertScannedHelpersStripUntypedReturnModifier();
 		assertNativeDecodeRecoversSourceFunctionHintFromStringFallback();
+		assertNativeDecodeRecoversConstrainedGenericArgsFromSource();
 		assertScannedGenericNamedFunctionArg();
 
 		final src = '@:generic class GenericMethods<T> {\n'

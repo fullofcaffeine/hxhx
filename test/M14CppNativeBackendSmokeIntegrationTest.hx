@@ -2443,6 +2443,37 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ multi-character function type params should not resolve to same-named nominal classes");
 	}
 
+	static function assertCppConstrainedGf3KeepsGenericSignatureAndArgs():Void {
+		final source = [
+			"class GenericReflection {",
+			"  public function testGenericFunction() {",
+			"    var a = gf3(\"foo\", [\"bar\", \"baz\"]);",
+			"  }",
+			"  @:generic static function gf3 < A:haxe.Constraints.Constructible<String -> Void>, B:Array<A> > (a:A, b:B) {",
+			"    var clone = new A(\"foo\");",
+			"    b.push(clone);",
+			"    return b;",
+			"  }",
+			"}"
+		].join("\n");
+		final module = new HxParser(source).parseModule("GenericReflection");
+		final owner = HxModuleDecl.getMainClass(module);
+		final names = new StringMap<Bool>();
+		names.set("GenericReflection", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("GenericReflection", owner);
+		final lookup = {names: names, byName: classes};
+		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(owner, lookup).join("\n");
+		assertContains(lines, "template<typename A, typename B>\n  static B gf3(A a, B b) {",
+			"C++ constrained gf3 helpers should keep parsed function type params and value args");
+		assertContains(lines,
+			"auto a = gf3<std::string, std::vector<std::string>>(\"foo\", std::vector<std::string>{std::string(\"bar\"), std::string(\"baz\")});",
+			"C++ constrained gf3 calls should pass source arguments and explicit type args");
+		assertContains(lines, "return b;", "C++ constrained gf3 helpers should return the generic carrier instead of stringifying an unbound name");
+		assertTrue(lines.indexOf("static std::string gf3()") < 0, "C++ constrained gf3 helpers should not collapse to a zero-arg string helper");
+		assertTrue(lines.indexOf("b.push(clone);") >= 0, "C++ constrained gf3 body should still reference the value parameter b");
+	}
+
 	static function assertCppStringParamCallsCoerceScalarLiterals():Void {
 		final deq = new HxFunctionDecl("deq", Public, false, [
 			new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
@@ -3999,6 +4030,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppFieldTypeCacheUsesScopeShape();
 		assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions();
 		assertCppFunctionTypeParamsWinOverSameNamedClasses();
+		assertCppConstrainedGf3KeepsGenericSignatureAndArgs();
 		assertCppStringParamCallsCoerceScalarLiterals();
 		assertCppUnhintedArithmeticParamsStayNumeric();
 		assertCppStaticCallableFieldsInferFunctionStorage();
@@ -10564,10 +10596,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ parsed Class<T> method params should preserve the Class meta-value parameter");
 		final classReflectionTarget = new HxClassDecl("ThrownWithToString", false, [], []);
 		final classReflectionTest = new HxFunctionDecl("testThrow", Public, false, [], "Void", [
-			SExpr(ECall(EIdent("hf"), [EIdent("ThrownWithToString"), EString("toString")]), HxPos.unknown())
+			SExpr(ECall(EIdent("hf"), [EIdent("ThrownWithToString"), EString("toString")]), HxPos.unknown()),
+			SExpr(ECall(EIdent("hsf"), [EIdent("ThrownWithToString"), EString("staticField")]), HxPos.unknown())
 		], "");
 		final classReflectionBase = new HxClassDecl("ClassReflectionBase", false, [
 			new HxFunctionDecl("hf", Public, false, [
+				new HxFunctionArg("c", "Class<Dynamic>", NoDefault, false, false),
+				new HxFunctionArg("n", "String", NoDefault, false, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Void", [], ""),
+			new HxFunctionDecl("hsf", Public, false, [
 				new HxFunctionArg("c", "Class<Dynamic>", NoDefault, false, false),
 				new HxFunctionArg("n", "String", NoDefault, false, false),
 				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
@@ -10587,6 +10625,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderHelperClass(classReflectionBase, classReflectionLookup).join("\n");
 		assertContains(classReflectionBaseLines, "void hf(std::shared_ptr<Class> c, std::string n, std::shared_ptr<PosInfos> pos = nullptr)",
 			"C++ DCE reflection helpers should keep the Class-valued helper signature as the primary boundary");
+		assertContains(classReflectionBaseLines, "void hsf(std::shared_ptr<Class> c, std::string n, std::shared_ptr<PosInfos> pos = nullptr)",
+			"C++ static-field reflection helpers should keep the Class-valued helper signature as the primary boundary");
 		assertContains(classReflectionBaseLines, "void hf(std::string c, std::string n, std::shared_ptr<PosInfos> pos = nullptr)",
 			"C++ DCE reflection helpers should keep a narrow documented fallback for degraded class-name carriers");
 		assertContains(classReflectionBaseLines, "hf(Type::resolveClass(c), n, pos);",
@@ -10595,8 +10635,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderHelperMethod(classReflectionTest, classReflectionOwner, classReflectionLookup).join("\n");
 		assertContains(classReflectionLines, "hf(Type::resolveClass(\"ThrownWithToString\"), std::string(\"toString\"));",
 			"C++ Class-valued reflection helper calls should preserve class literals as Class meta-values");
+		assertContains(classReflectionLines, "hsf(Type::resolveClass(\"ThrownWithToString\"), std::string(\"staticField\"));",
+			"C++ Class-valued static-field reflection helper calls should preserve class literals as Class meta-values");
 		assertTrue(classReflectionLines.indexOf("hf(std::string(\"ThrownWithToString\")") < 0,
 			"C++ Class-valued reflection helper calls must not pass class literals as strings");
+		assertTrue(classReflectionLines.indexOf("hsf(std::string(\"ThrownWithToString\")") < 0,
+			"C++ Class-valued static-field reflection helper calls must not pass class literals as strings");
 		final classReflectionScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(classReflectionOwner, classReflectionLookup, "void");
 		final degradedClassArg = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(EIdent("ThrownWithToString"),
 			HxFunctionDecl.getArgs(HxClassDecl.getFunctions(classReflectionBase)[0])[0], classReflectionScope, "std::string");
@@ -10606,6 +10650,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("hf"), [EIdent("ThrownWithToString"), EString("toString")]), classReflectionScope);
 		assertTrue(dceReflectionCall == "hf(Type::resolveClass(\"ThrownWithToString\"), std::string(\"toString\"))",
 			"C++ DCE reflection helper calls should preserve class literals even when inherited helper metadata is unavailable");
+		final staticDceReflectionCall = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("hsf"), [EIdent("ThrownWithToString"), EString("staticField")]), classReflectionScope);
+		assertTrue(staticDceReflectionCall == "hsf(Type::resolveClass(\"ThrownWithToString\"), std::string(\"staticField\"))",
+			"C++ static-field reflection helper calls should preserve class literals even when inherited helper metadata is unavailable");
 		final dynamicIsOfTypeOwner = new HxClassDecl("DynamicIsOfTypeOwner", false, [
 			new HxFunctionDecl("isOfType", Public, true, [
 				new HxFunctionArg("v", "Dynamic", NoDefault, false, false),
