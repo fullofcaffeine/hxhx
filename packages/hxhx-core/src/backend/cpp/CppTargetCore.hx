@@ -5212,6 +5212,10 @@ class CppTargetCore {
 				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_optional_lambda_locals"))
 					inferOptionalLambdaLocalTypeOverrides(scope, fn);
 			});
+			runPrepPhase("infer_bind_callable_locals", () -> {
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_bind_callable_locals"))
+					inferBindCallableLocalTypeOverrides(scope, fn);
+			});
 			runPrepPhase("infer_dynamic_locals", () -> {
 				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_dynamic_locals"))
 					inferDynamicLocalTypeOverrides(scope, fn);
@@ -7894,14 +7898,27 @@ class CppTargetCore {
 	static function inferOptionalLambdaLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
 		if (scope == null || fn == null)
 			return;
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
 		final candidates = new haxe.ds.StringMap<{args:Array<String>, body:HxExpr, optionalNames:haxe.ds.StringMap<Bool>}>();
 		final callShapes = new haxe.ds.StringMap<Array<Array<HxExpr>>>();
 		for (stmt in HxFunctionDecl.getBody(fn))
 			collectOptionalLambdaLocalCandidatesFromStmt(stmt, scope, candidates);
-		if (countStringMap(candidates) == 0)
+		scope.localTypes = copyStringMap(savedLocalTypes);
+		scope.localNames = copyStringMap(savedLocalNames);
+		scope.localNameCounts = copyIntMap(savedLocalNameCounts);
+		if (countStringMap(candidates) == 0) {
+			scope.localTypes = savedLocalTypes;
+			scope.localNames = savedLocalNames;
+			scope.localNameCounts = savedLocalNameCounts;
 			return;
+		}
 		for (stmt in HxFunctionDecl.getBody(fn))
-			collectOptionalLambdaLocalCallsFromStmt(stmt, callShapes);
+			collectOptionalLambdaLocalCallsFromStmt(stmt, scope, callShapes);
+		scope.localTypes = savedLocalTypes;
+		scope.localNames = savedLocalNames;
+		scope.localNameCounts = savedLocalNameCounts;
 		for (local in candidates.keys()) {
 			final info = candidates.get(local);
 			final argTypes = optionalLambdaLocalArgTypes(info.args, info.body, info.optionalNames, callShapes.get(local), scope);
@@ -7948,13 +7965,18 @@ class CppTargetCore {
 				collectOptionalLambdaLocalCandidatesFromStmt(tryBody, scope, candidates);
 				for (c in catches)
 					collectOptionalLambdaLocalCandidatesFromStmt(c.body, scope, candidates);
-			case SVar(name, typeHint, init, _) if (StringTools.trim(typeHint == null ? "" : typeHint).length == 0):
+			case SVar(name, typeHint, init, _):
+				if (init != null)
+					collectOptionalLambdaLocalCandidatesFromExpr(init, scope, candidates);
+				final local = declareLocalName(name, scope);
+				final typeName = cppLocalTypeHint(typeHint, init, scope);
+				if (typeName.length > 0)
+					scope.localTypes.set(local, typeName);
+				if (StringTools.trim(typeHint == null ? "" : typeHint).length > 0)
+					return;
 				final info = optionalLambdaLocalInfo(init);
 				if (info != null)
-					candidates.set(sanitizeIdentifier(name), info);
-			case SVar(_, _, init, _) if (init != null):
-				collectOptionalLambdaLocalCandidatesFromExpr(init, scope, candidates);
-			case SVar(_, _, _, _):
+					candidates.set(local, info);
 			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
 				collectOptionalLambdaLocalCandidatesFromExpr(expr, scope, candidates);
 			case SReturnVoid(_) | SBreak(_) | SContinue(_):
@@ -8008,88 +8030,121 @@ class CppTargetCore {
 		}
 	}
 
-	static function collectOptionalLambdaLocalCallsFromStmt(stmt:HxStmt, callShapes:haxe.ds.StringMap<Array<Array<HxExpr>>>):Void {
+	static function collectOptionalLambdaLocalCallsFromStmt(stmt:HxStmt, scope:CppRenderScope, callShapes:haxe.ds.StringMap<Array<Array<HxExpr>>>):Void {
 		switch (stmt) {
 			case SBlock(stmts, _):
 				for (s in stmts)
-					collectOptionalLambdaLocalCallsFromStmt(s, callShapes);
+					collectOptionalLambdaLocalCallsFromStmt(s, scope, callShapes);
 			case SIf(cond, thenBranch, elseBranch, _):
-				collectOptionalLambdaLocalCallsFromExpr(cond, callShapes);
-				collectOptionalLambdaLocalCallsFromStmt(thenBranch, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(cond, scope, callShapes);
+				collectOptionalLambdaLocalCallsFromStmt(thenBranch, scope, callShapes);
 				if (elseBranch != null)
-					collectOptionalLambdaLocalCallsFromStmt(elseBranch, callShapes);
+					collectOptionalLambdaLocalCallsFromStmt(elseBranch, scope, callShapes);
 			case SForIn(_, iterable, body, _) | SForKeyValue(_, _, iterable, body, _):
-				collectOptionalLambdaLocalCallsFromExpr(iterable, callShapes);
-				collectOptionalLambdaLocalCallsFromStmt(body, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(iterable, scope, callShapes);
+				collectOptionalLambdaLocalCallsFromStmt(body, scope, callShapes);
 			case SWhile(cond, body, _) | SDoWhile(body, cond, _):
-				collectOptionalLambdaLocalCallsFromExpr(cond, callShapes);
-				collectOptionalLambdaLocalCallsFromStmt(body, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(cond, scope, callShapes);
+				collectOptionalLambdaLocalCallsFromStmt(body, scope, callShapes);
 			case SSwitch(scrutinee, _, bodies, _):
-				collectOptionalLambdaLocalCallsFromExpr(scrutinee, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(scrutinee, scope, callShapes);
 				for (body in bodies)
-					collectOptionalLambdaLocalCallsFromStmt(body, callShapes);
+					collectOptionalLambdaLocalCallsFromStmt(body, scope, callShapes);
 			case STry(tryBody, catches, _):
-				collectOptionalLambdaLocalCallsFromStmt(tryBody, callShapes);
+				collectOptionalLambdaLocalCallsFromStmt(tryBody, scope, callShapes);
 				for (c in catches)
-					collectOptionalLambdaLocalCallsFromStmt(c.body, callShapes);
-			case SVar(_, _, init, _) if (init != null):
-				collectOptionalLambdaLocalCallsFromExpr(init, callShapes);
-			case SVar(_, _, _, _):
+					collectOptionalLambdaLocalCallsFromStmt(c.body, scope, callShapes);
+			case SVar(name, typeHint, init, _) if (init != null):
+				collectOptionalLambdaLocalCallsFromExpr(init, scope, callShapes);
+				final local = declareLocalName(name, scope);
+				final typeName = cppLocalTypeHint(typeHint, init, scope);
+				if (typeName.length > 0)
+					scope.localTypes.set(local, typeName);
+			case SVar(name, typeHint, _, _):
+				final local = declareLocalName(name, scope);
+				final typeName = cppLocalTypeHint(typeHint, null, scope);
+				if (typeName.length > 0)
+					scope.localTypes.set(local, typeName);
 			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
-				collectOptionalLambdaLocalCallsFromExpr(expr, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(expr, scope, callShapes);
 			case SReturnVoid(_) | SBreak(_) | SContinue(_):
 		}
 	}
 
-	static function collectOptionalLambdaLocalCallsFromExpr(expr:HxExpr, callShapes:haxe.ds.StringMap<Array<Array<HxExpr>>>):Void {
+	static function collectOptionalLambdaLocalCallsFromExpr(expr:HxExpr, scope:CppRenderScope, callShapes:haxe.ds.StringMap<Array<Array<HxExpr>>>):Void {
 		switch (expr) {
 			case ECall(EIdent(name), args):
-				final local = sanitizeIdentifier(name);
+				final local = localCppName(name, scope);
 				if (!callShapes.exists(local))
 					callShapes.set(local, []);
 				callShapes.get(local).push(args == null ? [] : args);
 				for (arg in args)
-					collectOptionalLambdaLocalCallsFromExpr(arg, callShapes);
+					collectOptionalLambdaLocalCallsFromExpr(arg, scope, callShapes);
 			case ECall(callee, args):
-				collectOptionalLambdaLocalCallsFromExpr(callee, callShapes);
+				final recordedImmediateBind = recordOptionalLambdaBindCallShape(callee, args, scope, callShapes);
+				final recordedBindValue = !recordedImmediateBind && recordOptionalLambdaBindCallShape(expr, [], scope, callShapes);
+				if (!recordedImmediateBind && !recordedBindValue)
+					collectOptionalLambdaLocalCallsFromExpr(callee, scope, callShapes);
 				for (arg in args)
-					collectOptionalLambdaLocalCallsFromExpr(arg, callShapes);
+					collectOptionalLambdaLocalCallsFromExpr(arg, scope, callShapes);
 			case EArrayAccess(array, index):
-				collectOptionalLambdaLocalCallsFromExpr(array, callShapes);
-				collectOptionalLambdaLocalCallsFromExpr(index, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(array, scope, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(index, scope, callShapes);
 			case EField(receiver, _):
-				collectOptionalLambdaLocalCallsFromExpr(receiver, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(receiver, scope, callShapes);
 			case EArrayDecl(elements):
 				for (element in elements)
-					collectOptionalLambdaLocalCallsFromExpr(element, callShapes);
+					collectOptionalLambdaLocalCallsFromExpr(element, scope, callShapes);
 			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
-				collectOptionalLambdaLocalCallsFromExpr(iterable, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(iterable, scope, callShapes);
 				if (guardExpr != null)
-					collectOptionalLambdaLocalCallsFromExpr(guardExpr, callShapes);
-				collectOptionalLambdaLocalCallsFromExpr(yieldExpr, callShapes);
+					collectOptionalLambdaLocalCallsFromExpr(guardExpr, scope, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(yieldExpr, scope, callShapes);
 			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
-				collectOptionalLambdaLocalCallsFromExpr(inner, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(inner, scope, callShapes);
 			case EBinop(_, left, right):
-				collectOptionalLambdaLocalCallsFromExpr(left, callShapes);
-				collectOptionalLambdaLocalCallsFromExpr(right, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(left, scope, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(right, scope, callShapes);
 			case ETernary(cond, thenExpr, elseExpr):
-				collectOptionalLambdaLocalCallsFromExpr(cond, callShapes);
-				collectOptionalLambdaLocalCallsFromExpr(thenExpr, callShapes);
-				collectOptionalLambdaLocalCallsFromExpr(elseExpr, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(cond, scope, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(thenExpr, scope, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(elseExpr, scope, callShapes);
 			case EAnon(_, fieldValues):
 				for (value in fieldValues)
-					collectOptionalLambdaLocalCallsFromExpr(value, callShapes);
+					collectOptionalLambdaLocalCallsFromExpr(value, scope, callShapes);
 			case ESwitch(scrutinee, _, exprs):
-				collectOptionalLambdaLocalCallsFromExpr(scrutinee, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(scrutinee, scope, callShapes);
 				for (value in exprs)
-					collectOptionalLambdaLocalCallsFromExpr(value, callShapes);
+					collectOptionalLambdaLocalCallsFromExpr(value, scope, callShapes);
 			case ELambda(_, body):
-				collectOptionalLambdaLocalCallsFromExpr(body, callShapes);
+				collectOptionalLambdaLocalCallsFromExpr(body, scope, callShapes);
 			case ENew(_, args):
 				for (arg in args)
-					collectOptionalLambdaLocalCallsFromExpr(arg, callShapes);
+					collectOptionalLambdaLocalCallsFromExpr(arg, scope, callShapes);
 			case _:
 		}
+	}
+
+	static function recordOptionalLambdaBindCallShape(expr:HxExpr, callArgs:Array<HxExpr>, scope:CppRenderScope,
+			callShapes:haxe.ds.StringMap<Array<Array<HxExpr>>>):Bool {
+		final chain = boundFunctionBindChain(expr);
+		if (chain == null)
+			return false;
+		final local = switch (chain.receiver) {
+			case EIdent(name):
+				localCppName(name, scope);
+			case _:
+				"";
+		}
+		if (local.length == 0)
+			return false;
+		final provided = boundFunctionUntypedProvidedArgs(chain.binds, callArgs);
+		if (provided == null)
+			return false;
+		if (!callShapes.exists(local))
+			callShapes.set(local, []);
+		callShapes.get(local).push(provided);
+		return true;
 	}
 
 	static function optionalLambdaLocalInfo(init:Null<HxExpr>):Null<{args:Array<String>, body:HxExpr, optionalNames:haxe.ds.StringMap<Bool>}> {
@@ -8128,14 +8183,26 @@ class CppTargetCore {
 		for (i in 0...lambdaArgs.length) {
 			final name = sanitizeIdentifier(lambdaArgs[i]);
 			final isOptional = optionalNames.exists(name);
-			if (inferred[i].length == 0 && isOptional)
+			if (inferred[i].length == 0 && isOptional) {
 				inferred[i] = optionalLambdaDefaultValueType(name, body, scope);
+				if (inferred[i].length == 0)
+					inferred[i] = optionalLambdaFallbackArgType(name);
+			}
 			if (inferred[i].length == 0)
 				return [];
 			if (isOptional && !isCppOptionalType(inferred[i]) && !isCppReferenceType(inferred[i]))
 				inferred[i] = "std::optional<" + inferred[i] + ">";
 		}
 		return inferred;
+	}
+
+	static function optionalLambdaFallbackArgType(name:String):String {
+		return switch (sanitizeIdentifier(name == null ? "" : name)) {
+			case "p" | "pos":
+				"std::optional<PosInfos>";
+			case _:
+				"";
+		};
 	}
 
 	static function optionalLambdaSetArgType(types:Array<String>, index:Int, typeName:String):Bool {
@@ -8703,6 +8770,296 @@ class CppTargetCore {
 			case _:
 				"";
 		};
+	}
+
+	/**
+		Infer unhinted local function storage from immediate `bind` call evidence.
+
+		The parser currently keeps anonymous function expressions as lightweight
+		`ELambda(args, body)` values and discards their argument type hints. Direct
+		local calls can refine those locals elsewhere; this pass does the equivalent
+		for `func.bind(...)(...)` so C++ never has to emit a raw `.bind` call on a
+		lambda just to discover the callable shape.
+	**/
+	static function inferBindCallableLocalTypeOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || fn == null)
+			return;
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		final savedLocalNameCounts = copyIntMap(scope.localNameCounts);
+		final candidates = new haxe.ds.StringMap<{args:Array<String>, body:HxExpr}>();
+		for (stmt in HxFunctionDecl.getBody(fn))
+			collectBindCallableCandidatesFromStmt(stmt, scope, candidates);
+		scope.localTypes = copyStringMap(savedLocalTypes);
+		scope.localNames = copyStringMap(savedLocalNames);
+		scope.localNameCounts = copyIntMap(savedLocalNameCounts);
+		if (!candidates.keys().hasNext()) {
+			scope.localTypes = savedLocalTypes;
+			scope.localNames = savedLocalNames;
+			scope.localNameCounts = savedLocalNameCounts;
+			return;
+		}
+		final evidence = new haxe.ds.StringMap<{argTypes:Array<String>, returnType:String}>();
+		for (stmt in HxFunctionDecl.getBody(fn))
+			collectBindCallableEvidenceFromStmt(stmt, scope, candidates, evidence, "");
+		scope.localTypes = savedLocalTypes;
+		scope.localNames = savedLocalNames;
+		scope.localNameCounts = savedLocalNameCounts;
+		for (local in evidence.keys()) {
+			final candidate = candidates.get(local);
+			final seen = evidence.get(local);
+			if (candidate == null || seen == null || seen.argTypes.length != candidate.args.length)
+				continue;
+			var complete = true;
+			for (typeName in seen.argTypes)
+				if (typeName == null || typeName.length == 0)
+					complete = false;
+			if (!complete)
+				continue;
+			final returnType = bindCallableReturnType(candidate.args, candidate.body, seen.argTypes, seen.returnType, scope);
+			if (returnType.length == 0)
+				continue;
+			final typeName = "std::function<" + returnType + "(" + seen.argTypes.join(", ") + ")>";
+			scope.localTypeOverrides.set(local, typeName);
+			scope.localTypes.set(local, typeName);
+		}
+	}
+
+	static function collectBindCallableCandidatesFromStmt(stmt:HxStmt, scope:CppRenderScope,
+			candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr}>):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectBindCallableCandidatesFromStmt(s, scope, candidates);
+			case SVar(name, typeHint, init, _):
+				final local = declareLocalName(name, scope);
+				final typeName = cppLocalTypeHint(typeHint, init, scope);
+				if (typeName.length > 0)
+					scope.localTypes.set(local, typeName);
+				if (StringTools.trim(typeHint == null ? "" : typeHint).length > 0)
+					return;
+				final lambda = localCallableLambdaShape(init);
+				if (lambda != null && lambda.args.length > 0)
+					candidates.set(local, lambda);
+			case SIf(_, thenBranch, elseBranch, _):
+				collectBindCallableCandidatesFromStmt(thenBranch, scope, candidates);
+				if (elseBranch != null)
+					collectBindCallableCandidatesFromStmt(elseBranch, scope, candidates);
+			case SForIn(_, _, body, _) | SForKeyValue(_, _, _, body, _) | SWhile(_, body, _) | SDoWhile(body, _, _):
+				collectBindCallableCandidatesFromStmt(body, scope, candidates);
+			case SSwitch(_, _, bodies, _):
+				for (body in bodies)
+					collectBindCallableCandidatesFromStmt(body, scope, candidates);
+			case STry(tryBody, catches, _):
+				collectBindCallableCandidatesFromStmt(tryBody, scope, candidates);
+				for (c in catches)
+					collectBindCallableCandidatesFromStmt(c.body, scope, candidates);
+			case SExpr(_, _) | SReturn(_, _) | SThrow(_, _) | SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function collectBindCallableEvidenceFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr}>,
+			evidence:haxe.ds.StringMap<{argTypes:Array<String>, returnType:String}>, expectedType:String):Void {
+		switch (stmt) {
+			case SBlock(stmts, _):
+				for (s in stmts)
+					collectBindCallableEvidenceFromStmt(s, scope, candidates, evidence, expectedType);
+			case SIf(cond, thenBranch, elseBranch, _):
+				collectBindCallableEvidenceFromExpr(cond, scope, candidates, evidence, "bool");
+				collectBindCallableEvidenceFromStmt(thenBranch, scope, candidates, evidence, expectedType);
+				if (elseBranch != null)
+					collectBindCallableEvidenceFromStmt(elseBranch, scope, candidates, evidence, expectedType);
+			case SForIn(_, iterable, body, _) | SForKeyValue(_, _, iterable, body, _):
+				collectBindCallableEvidenceFromExpr(iterable, scope, candidates, evidence, "");
+				collectBindCallableEvidenceFromStmt(body, scope, candidates, evidence, expectedType);
+			case SWhile(cond, body, _) | SDoWhile(body, cond, _):
+				collectBindCallableEvidenceFromExpr(cond, scope, candidates, evidence, "bool");
+				collectBindCallableEvidenceFromStmt(body, scope, candidates, evidence, expectedType);
+			case SSwitch(scrutinee, _, bodies, _):
+				collectBindCallableEvidenceFromExpr(scrutinee, scope, candidates, evidence, "");
+				for (body in bodies)
+					collectBindCallableEvidenceFromStmt(body, scope, candidates, evidence, expectedType);
+			case STry(tryBody, catches, _):
+				collectBindCallableEvidenceFromStmt(tryBody, scope, candidates, evidence, expectedType);
+				for (c in catches)
+					collectBindCallableEvidenceFromStmt(c.body, scope, candidates, evidence, expectedType);
+			case SVar(name, typeHint, init, _):
+				final typeName = cppLocalTypeHint(typeHint, init, scope);
+				if (init != null)
+					collectBindCallableEvidenceFromExpr(init, scope, candidates, evidence, typeName);
+				final local = declareLocalName(name, scope);
+				if (typeName.length > 0)
+					scope.localTypes.set(local, typeName);
+			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
+				collectBindCallableEvidenceFromExpr(expr, scope, candidates, evidence, expectedType);
+			case SReturnVoid(_) | SBreak(_) | SContinue(_):
+		}
+	}
+
+	static function collectBindCallableEvidenceFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr}>,
+			evidence:haxe.ds.StringMap<{argTypes:Array<String>, returnType:String}>, expectedType:String):Void {
+		switch (expr) {
+			case ECall(EIdent("eq"), args) if (args.length >= 2):
+				collectBindCallableEvidenceFromExpr(args[0], scope, candidates, evidence, "");
+				final peerExpected = callableArgExprType(args[0], scope);
+				collectBindCallableEvidenceFromExpr(args[1], scope, candidates, evidence, peerExpected);
+				for (i in 2...args.length)
+					collectBindCallableEvidenceFromExpr(args[i], scope, candidates, evidence, "");
+			case ECall(callee, args):
+				final recordedImmediateBind = recordBindCallableEvidence(callee, args, expectedType, scope, candidates, evidence);
+				final recordedBindValue = !recordedImmediateBind
+					&& recordBindCallableEvidence(expr, [], expectedType, scope, candidates, evidence);
+				if (!recordedImmediateBind && !recordedBindValue)
+					collectBindCallableEvidenceFromExpr(callee, scope, candidates, evidence, "");
+				for (arg in args)
+					collectBindCallableEvidenceFromExpr(arg, scope, candidates, evidence, "");
+			case EBinop(_, left, right):
+				collectBindCallableEvidenceFromExpr(left, scope, candidates, evidence, "");
+				collectBindCallableEvidenceFromExpr(right, scope, candidates, evidence, "");
+			case EArrayAccess(array, index):
+				collectBindCallableEvidenceFromExpr(array, scope, candidates, evidence, "");
+				collectBindCallableEvidenceFromExpr(index, scope, candidates, evidence, "int");
+			case EField(receiver, _):
+				collectBindCallableEvidenceFromExpr(receiver, scope, candidates, evidence, "");
+			case EArrayDecl(elements):
+				for (element in elements)
+					collectBindCallableEvidenceFromExpr(element, scope, candidates, evidence, "");
+			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
+				collectBindCallableEvidenceFromExpr(iterable, scope, candidates, evidence, "");
+				if (guardExpr != null)
+					collectBindCallableEvidenceFromExpr(guardExpr, scope, candidates, evidence, "bool");
+				collectBindCallableEvidenceFromExpr(yieldExpr, scope, candidates, evidence, "");
+			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				collectBindCallableEvidenceFromExpr(inner, scope, candidates, evidence, expectedType);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectBindCallableEvidenceFromExpr(cond, scope, candidates, evidence, "bool");
+				collectBindCallableEvidenceFromExpr(thenExpr, scope, candidates, evidence, expectedType);
+				collectBindCallableEvidenceFromExpr(elseExpr, scope, candidates, evidence, expectedType);
+			case EAnon(_, fieldValues):
+				for (value in fieldValues)
+					collectBindCallableEvidenceFromExpr(value, scope, candidates, evidence, "");
+			case ESwitch(scrutinee, _, exprs):
+				collectBindCallableEvidenceFromExpr(scrutinee, scope, candidates, evidence, "");
+				for (value in exprs)
+					collectBindCallableEvidenceFromExpr(value, scope, candidates, evidence, expectedType);
+			case ELambda(_, body):
+				collectBindCallableEvidenceFromExpr(body, scope, candidates, evidence, "");
+			case ENew(_, args):
+				for (arg in args)
+					collectBindCallableEvidenceFromExpr(arg, scope, candidates, evidence, "");
+			case _:
+		}
+	}
+
+	static function recordBindCallableEvidence(callee:HxExpr, callArgs:Array<HxExpr>, expectedType:String, scope:CppRenderScope,
+			candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr}>, evidence:haxe.ds.StringMap<{argTypes:Array<String>, returnType:String}>):Bool {
+		final chain = boundFunctionBindChain(callee);
+		if (chain == null)
+			return false;
+		final local = switch (chain.receiver) {
+			case EIdent(name): localCppName(name, scope);
+			case _:
+				"";
+		}
+		final candidate = local.length == 0 ? null : candidates.get(local);
+		if (candidate == null)
+			return false;
+		final providedArgs = boundFunctionUntypedProvidedArgs(chain.binds, callArgs);
+		if (providedArgs == null || providedArgs.length > candidate.args.length)
+			return false;
+		final argTypes = new Array<String>();
+		for (i in 0...candidate.args.length) {
+			if (i < providedArgs.length) {
+				argTypes.push(callableArgExprType(providedArgs[i], scope));
+				continue;
+			}
+			final defaultType = bindCallableOmittedArgType(candidate.args[i], candidate.body, scope);
+			if (defaultType.length == 0)
+				return false;
+			argTypes.push(defaultType);
+		}
+		for (typeName in argTypes)
+			if (typeName == null || typeName.length == 0)
+				return false;
+		final returnType = bindCallableExpectedReturnType(expectedType, scope);
+		recordBindCallableTypeEvidence(local, argTypes, returnType, evidence);
+		return true;
+	}
+
+	static function bindCallableExpectedReturnType(expectedType:String, ?scope:CppRenderScope):String {
+		if (isCppFunctionType(expectedType)) {
+			final returnType = cppFunctionReturnTypeFromCppType(expectedType);
+			return returnType == null ? "" : returnType;
+		}
+		return callableExpectedArgOverrideType(expectedType, scope);
+	}
+
+	static function bindCallableOmittedArgType(argName:String, body:HxExpr, scope:CppRenderScope):String {
+		var typeName = optionalLambdaDefaultValueType(sanitizeIdentifier(argName), body, scope);
+		if (typeName.length == 0)
+			typeName = optionalLambdaFallbackArgType(argName);
+		if (typeName.length == 0)
+			return "";
+		return isCppOptionalType(typeName) || isCppReferenceType(typeName) ? typeName : "std::optional<" + typeName + ">";
+	}
+
+	static function recordBindCallableTypeEvidence(local:String, argTypes:Array<String>, returnType:String,
+			evidence:haxe.ds.StringMap<{argTypes:Array<String>, returnType:String}>):Void {
+		final existing = evidence.get(local);
+		if (existing == null) {
+			evidence.set(local, {argTypes: argTypes, returnType: returnType == null ? "" : returnType});
+			return;
+		}
+		if (existing.argTypes.length != argTypes.length)
+			return;
+		for (i in 0...argTypes.length) {
+			final current = existing.argTypes[i];
+			final next = refinedBindCallableArgType(current, argTypes[i]);
+			if (next.length > 0)
+				existing.argTypes[i] = next;
+		}
+		if ((existing.returnType == null || existing.returnType.length == 0) && returnType != null && returnType.length > 0)
+			existing.returnType = returnType;
+	}
+
+	static function refinedBindCallableArgType(currentType:String, callType:String):String {
+		if (currentType == "std::any" || cppOptionalInnerType(currentType) == "std::any")
+			return currentType;
+		if (currentType != null && currentType.length > 0 && callType != null && callType.length > 0 && currentType != callType) {
+			if (currentType == "bool" && callType != "bool")
+				return callType;
+			if (currentType != "bool" && callType == "bool")
+				return currentType;
+			if (currentType == "double" && callType == "int")
+				return currentType;
+			if (currentType == "int" && callType == "double")
+				return "double";
+			return currentType;
+		}
+		return callType;
+	}
+
+	static function bindCallableReturnType(args:Array<String>, body:HxExpr, argTypes:Array<String>, fallback:String, scope:CppRenderScope):String {
+		final inferred = inferredLambdaReturnCppType(args, body, argTypes, scope);
+		if (inferred.length > 0 && inferred != "std::nullptr_t")
+			return inferred;
+		return fallback == null ? "" : fallback;
+	}
+
+	static function inferredLambdaReturnCppType(args:Array<String>, body:HxExpr, argTypes:Array<String>, scope:CppRenderScope):String {
+		if (scope == null || args == null || body == null || argTypes == null || args.length != argTypes.length)
+			return "";
+		final savedLocalTypes = copyStringMap(scope.localTypes);
+		final savedLocalNames = copyStringMap(scope.localNames);
+		for (i in 0...args.length) {
+			final name = sanitizeIdentifier(args[i]);
+			scope.localTypes.set(name, argTypes[i]);
+			scope.localNames.set(name, name);
+		}
+		final out = inferExprCppType(body, scope);
+		scope.localTypes = savedLocalTypes;
+		scope.localNames = savedLocalNames;
+		return out;
 	}
 
 	static function refineLocalCallableTypeFromCall(scope:CppRenderScope, local:String, args:Array<HxExpr>):Void {
@@ -9811,9 +10168,10 @@ class CppTargetCore {
 		final local = sanitizeIdentifier(name);
 		if (scope == null)
 			return local;
-		if (!scope.localTypes.exists(local) && !scope.localNames.exists(local)) {
+		if (!scope.localNames.exists(local)) {
 			scope.localNames.set(local, local);
-			scope.localNameCounts.set(local, 1);
+			if (!scope.localNameCounts.exists(local))
+				scope.localNameCounts.set(local, 1);
 			return local;
 		}
 		final next = scope.localNameCounts.exists(local) ? scope.localNameCounts.get(local) + 1 : 2;
@@ -10065,7 +10423,8 @@ class CppTargetCore {
 				// Haxe local that starts as null but is later refined to a nullable
 				// carrier must spell out the carrier type at declaration time.
 				final inferredNullableInit = isUnhintedNullLocal(typeHint, init) && isNullableCppLocalType(localType);
-				final declaredType = (hasExplicitType || init == null || inferredNullableInit)
+				final inferredCallableInit = shouldDeclareInferredCallableLocal(init, localType);
+				final declaredType = (hasExplicitType || init == null || inferredNullableInit || inferredCallableInit)
 					&& localType.length > 0 ? localType : "auto";
 				if (scope != null) {
 					if (hadPreviousName)
@@ -11185,6 +11544,8 @@ class CppTargetCore {
 				forInExpr(iterable, bodyExpr, continuation, scope);
 			case ECall(EEnumValue(name), args):
 				enumCtorExpr(name, args, scope);
+			case ECall(callee, args) if (boundFunctionCallExpr(callee, args, scope) != null):
+				boundFunctionCallExpr(callee, args, scope);
 			case ECall(ECall(loadCallee, loadArgs), callArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				macroApiLoadCallExpr("std::any", loadArgs, callArgs, scope);
 			case ECall(loadCallee, loadArgs) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
@@ -14675,6 +15036,8 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				"std::string";
+			case ECall(EField(_, "bind"), _) if (boundFunctionCppType(expr, scope).length > 0):
+				boundFunctionCppType(expr, scope);
 			case ECall(EIdent("__hxhx_try"), args) if (args.length >= 2):
 				tryExprResultTypeFromArgs(args, scope);
 			case ECall(EIdent(name), args) if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while")
@@ -15644,6 +16007,24 @@ class CppTargetCore {
 		};
 	}
 
+	static function localCallableLambdaShape(init:Null<HxExpr>):Null<{args:Array<String>, body:HxExpr}> {
+		return switch (init) {
+			case ELambda(args, body):
+				{args: args, body: body};
+			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(_)]):
+				{args: args, body: body};
+			case ECall(EIdent("__hxhx_optional_lambda"), [
+				ECall(EIdent("__hxhx_rest_lambda"), [ELambda(args, body), EInt(_)]),
+				EArrayDecl(_)
+			]):
+				{args: args, body: body};
+			case ECall(EIdent("__hxhx_rest_lambda"), [ELambda(args, body), EInt(_)]):
+				{args: args, body: body};
+			case _:
+				null;
+		};
+	}
+
 	static function localCallableBodyExprReturnsVoid(expr:HxExpr, ?scope:CppRenderScope):Bool {
 		if (exprReturnsVoid(expr, scope))
 			return true;
@@ -15682,7 +16063,7 @@ class CppTargetCore {
 		if (runtimeClassFactoryType.length > 0)
 			return runtimeClassFactoryType;
 		final hinted = cppLocalTypeHint(typeHint, init, scope);
-		final overrideType = localTypeOverrideForDeclaredLocal(scope, local, declaredLocalName, hinted);
+		final overrideType = localTypeOverrideForDeclaredLocal(scope, local, declaredLocalName, hinted, init);
 		if (overrideType != null && overrideType.length > 0 && explicit.length == 0 && init != null && hinted.length > 0 && hinted != "auto"
 			&& isScalarExpectedLocalType(hinted) && hinted != overrideType)
 			return hinted;
@@ -15690,6 +16071,12 @@ class CppTargetCore {
 			return overrideType != null && isCppFunctionType(hinted) && isCppFunctionType(overrideType) ? overrideType : hinted;
 		}
 		return overrideType != null && overrideType.length > 0 ? overrideType : hinted;
+	}
+
+	static function shouldDeclareInferredCallableLocal(init:Null<HxExpr>, localType:String):Bool {
+		if (!isCppFunctionType(localType))
+			return false;
+		return isLocalCallableInit(init) || boundFunctionBindChain(init) != null;
 	}
 
 	/**
@@ -15700,12 +16087,15 @@ class CppTargetCore {
 		optional local callables, but a shadowed declaration with a concrete initializer
 		type must not inherit a stale override from an earlier same-name local.
 	**/
-	static function localTypeOverrideForDeclaredLocal(scope:CppRenderScope, local:String, declaredLocalName:Null<String>, hinted:String):Null<String> {
+	static function localTypeOverrideForDeclaredLocal(scope:CppRenderScope, local:String, declaredLocalName:Null<String>, hinted:String,
+			init:Null<HxExpr>):Null<String> {
 		if (scope == null)
 			return null;
 		if (declaredLocalName != null && scope.localTypeOverrides.exists(declaredLocalName))
 			return scope.localTypeOverrides.get(declaredLocalName);
 		final sourceOverride = scope.localTypeOverrides.get(local);
+		if (declaredLocalName != null && declaredLocalName != local && sourceOverride != null && isLocalCallableInit(init))
+			return null;
 		if (declaredLocalName != null && declaredLocalName != local && sourceOverride != null && hinted != null && hinted.length > 0 && hinted != "auto"
 			&& sourceOverride != hinted)
 			return null;
@@ -15838,6 +16228,8 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				"std::string";
+			case ECall(EField(_, "bind"), _) if (boundFunctionCppType(expr, scope).length > 0):
+				boundFunctionCppType(expr, scope);
 			case ECall(EIdent("__hxhx_try"), args) if (args.length >= 2):
 				tryExprResultTypeFromArgs(args, scope);
 			case ECall(EIdent(name), args) if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while")
@@ -16006,7 +16398,11 @@ class CppTargetCore {
 			case ETernary(_, thenExpr, elseExpr):
 				final thenType = inferExprCppType(thenExpr, scope);
 				final elseType = inferExprCppType(elseExpr, scope);
-				if (thenType.length > 0 && thenType == elseType) thenType; else "";
+				final thenInner = cppOptionalInnerType(thenType);
+				final elseInner = cppOptionalInnerType(elseType);
+				if (thenType.length > 0 && thenType == elseType) thenType; else if (thenInner.length > 0 && thenInner == elseType) elseType; else
+					if (elseInner.length > 0
+					&& elseInner == thenType) thenType; else "";
 			case ECast(inner, _) | EUntyped(inner):
 				inferExprCppType(inner, scope);
 			case _:
@@ -18911,12 +19307,8 @@ class CppTargetCore {
 	}
 
 	static function boundFunctionValueExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
-		return switch (expr) {
-			case ECall(EField(receiver, "bind"), boundArgs):
-				boundFunctionValueExpr(receiver, boundArgs, expectedType, scope);
-			case _:
-				null;
-		};
+		final chain = boundFunctionBindChain(expr);
+		return chain == null ? null : boundFunctionValueExprFromChain(chain.receiver, chain.binds, expectedType, scope);
 	}
 
 	static function lambdaExprForExpectedFunction(args:Array<String>, body:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
@@ -19101,40 +19493,237 @@ class CppTargetCore {
 	}
 
 	static function boundFunctionValueExpr(receiver:HxExpr, boundArgs:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		final binds = new Array<Array<HxExpr>>();
+		binds.push(boundArgs == null ? [] : boundArgs);
+		return boundFunctionValueExprFromChain(receiver, binds, expectedType, scope);
+	}
+
+	static function boundFunctionCallExpr(callee:HxExpr, callArgs:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		final chain = boundFunctionBindChain(callee);
+		if (chain == null)
+			return null;
+		final receiverType = boundFunctionReceiverCppType(chain.receiver, scope);
+		if (!isCppFunctionType(receiverType))
+			return null;
+		final originalArgs = CppTypeModel.cppFunctionArgTypesFromCppType(receiverType);
+		final slots = boundFunctionSlots(originalArgs.length, chain.binds);
+		if (slots == null)
+			return null;
+		final renderedArgs = new Array<String>();
+		var callIndex = 0;
+		for (i in 0...originalArgs.length) {
+			final fixed = slots[i];
+			if (fixed != null) {
+				renderedArgs.push(boundFunctionArgValueExpr(fixed, originalArgs[i], scope));
+				continue;
+			}
+			if (callArgs != null && callIndex < callArgs.length) {
+				renderedArgs.push(boundFunctionArgValueExpr(callArgs[callIndex++], originalArgs[i], scope));
+			} else if (cppTypeAllowsOmittedCallArg(originalArgs[i], scope)) {
+				renderedArgs.push(callSiteDefaultArgExprForCppType(originalArgs[i], scope));
+			} else {
+				return null;
+			}
+		}
+		if (callArgs != null && callIndex != callArgs.length)
+			return null;
+		final target = boundFunctionReceiverExpr(chain.receiver, scope);
+		return "(" + target + ")(" + renderedArgs.join(", ") + ")";
+	}
+
+	static function boundFunctionValueExprFromChain(receiver:HxExpr, binds:Array<Array<HxExpr>>, expectedType:String, ?scope:CppRenderScope):Null<String> {
 		if (scope == null)
 			return null;
 		final receiverType = boundFunctionReceiverCppType(receiver, scope);
 		if (!isCppFunctionType(receiverType))
 			return null;
-		for (arg in boundArgs)
-			if (isBindPlaceholderExpr(arg))
-				return null;
 		final originalArgs = CppTypeModel.cppFunctionArgTypesFromCppType(receiverType);
-		final boundCount = boundArgs == null ? 0 : boundArgs.length;
-		if (boundCount > originalArgs.length)
+		final slots = boundFunctionSlots(originalArgs.length, binds);
+		if (slots == null)
 			return null;
-		final expectedArgs = isCppFunctionType(expectedType) ? CppTypeModel.cppFunctionArgTypesFromCppType(expectedType) : [];
+		final hasExpectedFunctionType = isCppFunctionType(expectedType);
+		final expectedArgs = hasExpectedFunctionType ? CppTypeModel.cppFunctionArgTypesFromCppType(expectedType) : [];
 		final names = new Array<String>();
 		final params = new Array<String>();
-		for (i in boundCount...originalArgs.length) {
-			final paramIndex = i - boundCount;
+		final callArgs = new Array<String>();
+		var paramIndex = 0;
+		for (i in 0...originalArgs.length) {
+			final fixed = slots[i];
+			if (fixed != null) {
+				callArgs.push(boundFunctionArgValueExpr(fixed, originalArgs[i], scope));
+				continue;
+			}
+			if (hasExpectedFunctionType && paramIndex >= expectedArgs.length) {
+				if (!cppTypeAllowsOmittedCallArg(originalArgs[i], scope))
+					return null;
+				callArgs.push(callSiteDefaultArgExprForCppType(originalArgs[i], scope));
+				continue;
+			}
 			final name = "__hxhx_bind_arg_" + paramIndex;
 			names.push(name);
 			final typeName = paramIndex < expectedArgs.length
 				&& expectedArgs[paramIndex].length > 0 ? expectedArgs[paramIndex] : originalArgs[i];
 			params.push((typeName.length > 0 ? typeName : "auto") + " " + name);
-		}
-		final callArgs = new Array<String>();
-		for (i in 0...boundCount)
-			callArgs.push(renderExpr(boundArgs[i], scope));
-		for (name in names)
 			callArgs.push(name);
+			paramIndex++;
+		}
+		if (hasExpectedFunctionType && paramIndex != expectedArgs.length)
+			return null;
 		final target = boundFunctionReceiverExpr(receiver, scope);
-		final returnType = isCppFunctionType(expectedType) ? cppFunctionReturnTypeFromCppType(expectedType) : cppFunctionReturnTypeFromCppType(receiverType);
+		final returnType = hasExpectedFunctionType ? cppFunctionReturnTypeFromCppType(expectedType) : cppFunctionReturnTypeFromCppType(receiverType);
 		final call = "(" + target + ")(" + callArgs.join(", ") + ")";
 		final body = returnType == "void" ? call + ";" : "return " + call + ";";
 		final lambda = "[&](" + params.join(", ") + ") { " + body + " }";
-		return isCppFunctionType(expectedType) ? expectedType + "(" + lambda + ")" : lambda;
+		return hasExpectedFunctionType ? expectedType + "(" + lambda + ")" : lambda;
+	}
+
+	static function boundFunctionCppType(expr:HxExpr, scope:CppRenderScope):String {
+		final chain = boundFunctionBindChain(expr);
+		if (chain == null)
+			return "";
+		final receiverType = boundFunctionReceiverCppType(chain.receiver, scope);
+		if (!isCppFunctionType(receiverType))
+			return "";
+		final originalArgs = CppTypeModel.cppFunctionArgTypesFromCppType(receiverType);
+		final slots = boundFunctionSlots(originalArgs.length, chain.binds);
+		if (slots == null)
+			return "";
+		final returnType = cppFunctionReturnTypeFromCppType(receiverType);
+		if (returnType.length == 0)
+			return "";
+		final openArgs = new Array<String>();
+		for (i in 0...originalArgs.length)
+			if (slots[i] == null)
+				openArgs.push(originalArgs[i]);
+		return "std::function<" + returnType + "(" + openArgs.join(", ") + ")>";
+	}
+
+	static function boundFunctionBindChain(expr:HxExpr):Null<{receiver:HxExpr, binds:Array<Array<HxExpr>>}> {
+		return switch (expr) {
+			case ECall(EField(receiver, "bind"), boundArgs):
+				final prior = boundFunctionBindChain(receiver);
+				if (prior != null) {
+					prior.binds.push(boundArgs == null ? [] : boundArgs);
+					prior;
+				} else {
+					final binds = new Array<Array<HxExpr>>();
+					binds.push(boundArgs == null ? [] : boundArgs);
+					{receiver: receiver, binds: binds};
+				}
+			case _:
+				null;
+		}
+	}
+
+	static function boundFunctionSlots(argCount:Int, binds:Array<Array<HxExpr>>):Null<Array<Null<HxExpr>>> {
+		final slots:Array<Null<HxExpr>> = [for (i in 0...argCount) null];
+		if (binds == null)
+			return slots;
+		for (boundArgs in binds) {
+			var slotIndex = 0;
+			if (boundArgs == null)
+				continue;
+			for (arg in boundArgs) {
+				while (slotIndex < slots.length && slots[slotIndex] != null)
+					slotIndex++;
+				if (slotIndex >= slots.length)
+					return null;
+				if (!isBindPlaceholderExpr(arg))
+					slots[slotIndex] = arg;
+				slotIndex++;
+			}
+		}
+		return slots;
+	}
+
+	static function boundFunctionUntypedFinalArgs(binds:Array<Array<HxExpr>>, callArgs:Array<HxExpr>):Null<Array<HxExpr>> {
+		final slots:Array<Null<HxExpr>> = [];
+		if (binds != null) {
+			for (boundArgs in binds) {
+				var slotIndex = 0;
+				if (boundArgs == null)
+					continue;
+				for (arg in boundArgs) {
+					while (slotIndex < slots.length && slots[slotIndex] != null)
+						slotIndex++;
+					if (slotIndex >= slots.length)
+						slots.push(null);
+					if (!isBindPlaceholderExpr(arg))
+						slots[slotIndex] = arg;
+					slotIndex++;
+				}
+			}
+		}
+		var callIndex = 0;
+		for (i in 0...slots.length) {
+			if (slots[i] != null)
+				continue;
+			if (callArgs == null || callIndex >= callArgs.length)
+				return null;
+			slots[i] = callArgs[callIndex++];
+		}
+		while (callArgs != null && callIndex < callArgs.length)
+			slots.push(callArgs[callIndex++]);
+		final out = new Array<HxExpr>();
+		for (slot in slots) {
+			if (slot == null)
+				return null;
+			out.push(slot);
+		}
+		return out;
+	}
+
+	static function boundFunctionUntypedProvidedArgs(binds:Array<Array<HxExpr>>, callArgs:Array<HxExpr>):Null<Array<HxExpr>> {
+		final slots:Array<Null<HxExpr>> = [];
+		if (binds != null) {
+			for (boundArgs in binds) {
+				var slotIndex = 0;
+				if (boundArgs == null)
+					continue;
+				for (arg in boundArgs) {
+					while (slotIndex < slots.length && slots[slotIndex] != null)
+						slotIndex++;
+					if (slotIndex >= slots.length)
+						slots.push(null);
+					if (!isBindPlaceholderExpr(arg))
+						slots[slotIndex] = arg;
+					slotIndex++;
+				}
+			}
+		}
+		var callIndex = 0;
+		for (i in 0...slots.length) {
+			if (slots[i] != null)
+				continue;
+			if (callArgs != null && callIndex < callArgs.length)
+				slots[i] = callArgs[callIndex++];
+		}
+		while (callArgs != null && callIndex < callArgs.length)
+			slots.push(callArgs[callIndex++]);
+		var lastProvided = -1;
+		for (i in 0...slots.length)
+			if (slots[i] != null)
+				lastProvided = i;
+		if (lastProvided < 0)
+			return [];
+		final out = new Array<HxExpr>();
+		for (i in 0...lastProvided + 1) {
+			if (slots[i] == null)
+				return null;
+			out.push(slots[i]);
+		}
+		return out;
+	}
+
+	static function boundFunctionArgValueExpr(arg:HxExpr, expectedType:String, scope:CppRenderScope):String {
+		final typeName = StringTools.trim(expectedType == null ? "" : expectedType);
+		return typeName.length > 0 && typeName != "auto" ? valueExprForExpectedType(arg, typeName, scope) : renderExpr(arg, scope);
+	}
+
+	static function cppTypeAllowsOmittedCallArg(typeName:String, ?scope:CppRenderScope):Bool {
+		return isCppOptionalType(typeName) || callSitePosInfosDefaultArgExpr(typeName, scope) != null;
 	}
 
 	static function boundFunctionReceiverCppType(receiver:HxExpr, scope:CppRenderScope):String {

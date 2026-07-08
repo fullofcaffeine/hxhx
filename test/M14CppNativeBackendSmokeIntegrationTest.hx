@@ -2064,6 +2064,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SExpr(ECall(EIdent("eq"), [EInt(3), ECall(EIdent("opt5"), [EInt(1)])]), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [EInt(3), ECall(EIdent("opt5"), [EInt(1), EInt(2)])]), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [EInt(3), ECall(EIdent("opt5"), [EInt(1), ENull])]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [EInt(3), ECall(ECall(EField(EIdent("opt5"), "bind"), [EInt(1)]), [])]), HxPos.unknown()),
 				SReturn(EInt(0), HxPos.unknown())
 			], "")
 		], []);
@@ -2114,10 +2115,41 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(nullableCallableLines, "return static_cast<int>(foo());",
 			"C++ null-initialized callable locals should remain callable after refinement");
 		final optionalLocalLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(optionalLambdaLocal, lookup).join("\n");
-		assertContains(optionalLocalLines, "auto opt5_2 = [&](int a, std::optional<int> b) -> int",
+		assertContains(optionalLocalLines, "std::function<int(int, std::optional<int>)> opt5 = [&](int a, std::optional<int> b) -> int",
 			"C++ unhinted optional lambda locals should infer nullable parameter types from all direct call shapes");
-		assertContains(optionalLocalLines, "opt5_2(1, std::nullopt)", "C++ omitted optional lambda arguments should render as std::nullopt");
-		assertContains(optionalLocalLines, "opt5_2(1, std::nullopt)", "C++ null optional lambda arguments should render as std::nullopt");
+		assertContains(optionalLocalLines, "opt5(1, std::nullopt)", "C++ omitted optional lambda arguments should render as std::nullopt");
+		assertContains(optionalLocalLines, "opt5(1, std::nullopt)", "C++ null optional lambda arguments should render as std::nullopt");
+		assertContains(optionalLocalLines, "(opt5)(1, std::nullopt)", "C++ optional local bind calls should reuse optional call-site default rendering");
+		final parsedBindShadowLocal = TyperStage.typeModule(ParserStage.parse([
+			"class LocalBindShadow {",
+			"  static function run():Void {",
+			"    var foo = function(x:Int, ?pos:haxe.PosInfos):String { return \"foo\" + x; };",
+			"    var f:Void -> String = foo.bind(0);",
+			"    f();",
+			"    var foo = function(count = 2):Int { return count; };",
+			"    var middle = foo.bind(_);",
+			"    middle();",
+			"    var foo = function(bar:Null<Int> = 2):Int { return bar; };",
+			"    var l = foo.bind(_);",
+			"    l();",
+			"  }",
+			"}"
+		].join("\n"), "LocalBindShadow.hx"));
+		final parsedBindShadowProgram = new GenIrProgram([parsedBindShadowLocal], false);
+		final parsedBindShadowLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(parsedBindShadowProgram);
+		final parsedBindShadowOwner = HxModuleDecl.getMainClass(parsedBindShadowLocal.getParsed().getDecl());
+		final parsedBindShadowLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperClass(parsedBindShadowOwner, parsedBindShadowLookup).join("\n");
+		assertContains(parsedBindShadowLines, "std::function<std::string(int, std::optional<PosInfos>)> foo",
+			"C++ bind inference should keep the first shadowed local callable attached to its own optional PosInfos shape");
+		assertContains(parsedBindShadowLines, "std::function<std::string()> f = std::function<std::string()>([&]()",
+			"C++ bind values assigned to zero-arg function types should not expose omitted optional slots as lambda parameters");
+		assertContains(parsedBindShadowLines, "std::function<int(std::optional<int>)> foo_2",
+			"C++ bind inference should give a same-name untyped default callable its own suffixed local type");
+		assertContains(parsedBindShadowLines, "std::function<int(std::optional<int>)> foo_3",
+			"C++ bind inference should give a later same-name callable its own suffixed local type");
+		assertTrue(parsedBindShadowLines.indexOf("std::function<std::string(std::optional<int>)> foo_2") < 0,
+			"C++ bind inference should not let later same-name optional-default evidence rewrite an earlier callable");
 		final parsedPosInfosLocal = TyperStage.typeModule(ParserStage.parse([
 			"class LocalPosInfos {",
 			"  static function run():String {",
@@ -2546,8 +2578,49 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ dynamic function slot reassignment should target the assignable storage field");
 		assertTrue(callerLines.indexOf("} = [&]") < 0,
 			"C++ dynamic function slot reassignment should not render method-value lambdas on the assignment left side");
-		assertContains(callerLines, "auto bound = [&](int __hxhx_bind_arg_0) { return (other->add)(1, __hxhx_bind_arg_0); };",
+		assertContains(callerLines,
+			"std::function<int(int)> bound = std::function<int(int)>([&](int __hxhx_bind_arg_0) { return (other->add)(1, __hxhx_bind_arg_0); });",
 			"C++ prefix bind on dynamic function slots should lower to a callable partial-application lambda");
+	}
+
+	static function assertCppLocalFunctionBindUsesPlaceholderCallShape():Void {
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("BindOwner", false, [], []), {
+			names: new StringMap<Bool>(),
+			byName: new StringMap<HxClassDecl>()
+		}, "void");
+		scope.localTypes.set("func", "std::function<int(int, std::string, double)>");
+		scope.localTypes.set("optfunc", "std::function<int(int, int, std::optional<int>)>");
+
+		final omitted = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ECall(EField(EIdent("func"), "bind"), []),
+			[EInt(1), EString("2"), EInt(3)]), scope);
+		assertTrue(omitted == "(func)(1, std::string(\"2\"), 3)", "C++ zero-arg function bind should lower immediate calls to the original callable shape");
+
+		final fixedPrefix = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ECall(EField(EIdent("func"), "bind"), [EInt(2), EString("3")]),
+			[EInt(4)]), scope);
+		assertTrue(fixedPrefix == "(func)(2, std::string(\"3\"), 4)", "C++ prefix function bind should splice fixed arguments before remaining call arguments");
+
+		final placeholder = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ECall(EField(EIdent("func"), "bind"),
+			[EIdent("_"), EString("2"), EIdent("_")]), [EInt(1), EInt(3)]), scope);
+		assertTrue(placeholder == "(func)(1, std::string(\"2\"), 3)",
+			"C++ placeholder function bind should fill placeholder slots from immediate call arguments");
+		assertTrue(placeholder.indexOf("_") < 0, "C++ placeholder function bind should not emit raw placeholder identifiers");
+
+		final chained = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ECall(EField(ECall(EField(EIdent("func"), "bind"), [EInt(1), EIdent("_")]),
+			"bind"), [EString("2")]), [EInt(3)]), scope);
+		assertTrue(chained == "(func)(1, std::string(\"2\"), 3)", "C++ chained function bind should apply later bind arguments to the remaining open slots");
+
+		final omittedOptional = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ECall(EField(EIdent("optfunc"), "bind"), [EInt(1)]), [EInt(3)]),
+			scope);
+		assertTrue(omittedOptional == "(optfunc)(1, 3, std::nullopt)",
+			"C++ bind calls should pad omitted optional function arguments with the function-call default value");
+
+		final boundValue = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("func"), "bind"),
+			[EIdent("_"), EString("2"), EIdent("_")]), scope);
+		assertContains(boundValue, "[&](int __hxhx_bind_arg_0, double __hxhx_bind_arg_1)",
+			"C++ placeholder function bind values should render a callable lambda over the remaining slots");
+		assertContains(boundValue, "return (func)(__hxhx_bind_arg_0, std::string(\"2\"), __hxhx_bind_arg_1);",
+			"C++ placeholder function bind values should call the original function in original argument order");
+		assertTrue(boundValue.indexOf(".bind") < 0, "C++ function bind values should not emit raw .bind calls on lambdas");
 	}
 
 	static function assertCppReflectMakeVarArgsUsesCallableWrapper():Void {
@@ -3901,6 +3974,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppStaticCallableFieldsInferFunctionStorage();
 		assertCppNullStructuralFieldsUseNullableStorage();
 		assertCppDynamicFunctionsUseAssignableStorage();
+		assertCppLocalFunctionBindUsesPlaceholderCallShape();
 		assertCppReflectMakeVarArgsUsesCallableWrapper();
 		assertCppErasedDynamicPlusUsesAnyHelper();
 		assertCppErasedDynamicEqualityUsesAnyHelper();
@@ -11824,7 +11898,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(parsedERegSupportLines, "return __hxhx_anon_pos_int__len_int_{absoluteMatchStart(), static_cast<int>(lastMatch.length(0))};",
 			"C++ parsed EReg.matchedPos support should report the stored match position and length");
 		assertTrue(parsedERegSupportLines.indexOf("NotImplementedException") < 0, "C++ parsed EReg support should not emit constructor stubs that throw");
-		assertContains(parsedERegMapLines, "auto f = [&](std::shared_ptr<EReg> x) -> std::string { return x->matchedLeft(); };",
+		assertContains(parsedERegMapLines,
+			"std::function<std::string(std::shared_ptr<EReg>)> f = [&](std::shared_ptr<EReg> x) -> std::string { return x->matchedLeft(); };",
 			"C++ callable locals passed to typed instance methods should adopt the expected pointer function type");
 		final parsedERegMatchedPosModule = new HxParser("class EReg { public function new(pattern:String, options:String) {} public function matchedPos():{pos:Int, len:Int} return null; } class ERegMatchedPosLike { public static function main():Int { var r = new EReg(\"a\", \"g\"); return r.matchedPos().pos + r.matchedPos().len; } }")
 			.parseModule("ERegMatchedPosLike");
