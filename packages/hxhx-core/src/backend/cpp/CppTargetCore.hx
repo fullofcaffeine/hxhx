@@ -2776,26 +2776,26 @@ class CppTargetCore {
 			case SVar(_, typeHint, init, _):
 				addTypeHintDependencies(typeHint, add, scope);
 				if (init != null)
-					addExprClassDependencies(init, add);
+					addExprClassDependencies(init, add, scope);
 			case SIf(cond, thenBranch, elseBranch, _):
-				addExprClassDependencies(cond, add);
+				addExprClassDependencies(cond, add, scope);
 				addOneStmtClassDependencies(thenBranch, add, scope);
 				if (elseBranch != null)
 					addOneStmtClassDependencies(elseBranch, add, scope);
 			case SForIn(_, iterable, body, _):
-				addExprClassDependencies(iterable, add);
+				addExprClassDependencies(iterable, add, scope);
 				addOneStmtClassDependencies(body, add, scope);
 			case SForKeyValue(_, _, iterable, body, _):
-				addExprClassDependencies(iterable, add);
+				addExprClassDependencies(iterable, add, scope);
 				addOneStmtClassDependencies(body, add, scope);
 			case SWhile(cond, body, _):
-				addExprClassDependencies(cond, add);
+				addExprClassDependencies(cond, add, scope);
 				addOneStmtClassDependencies(body, add, scope);
 			case SDoWhile(body, cond, _):
 				addOneStmtClassDependencies(body, add, scope);
-				addExprClassDependencies(cond, add);
+				addExprClassDependencies(cond, add, scope);
 			case SSwitch(scrutinee, _, bodies, _):
-				addExprClassDependencies(scrutinee, add);
+				addExprClassDependencies(scrutinee, add, scope);
 				for (body in bodies)
 					addOneStmtClassDependencies(body, add, scope);
 			case STry(tryBody, catches, _):
@@ -2805,67 +2805,75 @@ class CppTargetCore {
 					addOneStmtClassDependencies(c.body, add, scope);
 				}
 			case SExpr(expr, _) | SReturn(expr, _) | SThrow(expr, _):
-				addExprClassDependencies(expr, add);
+				addExprClassDependencies(expr, add, scope);
 			case SReturnVoid(_) | SBreak(_) | SContinue(_):
 		}
 	}
 
-	static function addExprClassDependencies(expr:HxExpr, add:String->Void):Void {
+	static function addExprClassDependencies(expr:HxExpr, add:String->Void, ?scope:CppRenderScope):Void {
 		switch (expr) {
 			case ENew(typePath, args):
 				addTypeHintDependencies(typePath, add);
 				for (arg in args)
-					addExprClassDependencies(arg, add);
+					addExprClassDependencies(arg, add, scope);
 			case EField(receiver, _):
 				addStaticReceiverClassDependency(receiver, add);
-				addExprClassDependencies(receiver, add);
+				addExprClassDependencies(receiver, add, scope);
 			case ECall(EField(receiver, method), args):
 				if (isInt64StaticReceiver(receiver) && int64StaticCallNeedsHelper(method))
 					add("Int64Helper");
+				if (isTypeStaticReceiver(receiver) && (method == "createInstance" || method == "createEmptyInstance") && args.length >= 1)
+					addClassReferenceDependency(args[0], add, scope);
 				if (!isStringToolsIntrinsicCall(receiver, method))
 					addStaticReceiverClassDependency(receiver, add);
-				addExprClassDependencies(receiver, add);
+				addExprClassDependencies(receiver, add, scope);
 				for (arg in args)
-					addExprClassDependencies(arg, add);
+					addExprClassDependencies(arg, add, scope);
 			case ECall(callee, args):
-				addExprClassDependencies(callee, add);
+				addExprClassDependencies(callee, add, scope);
 				for (arg in args)
-					addExprClassDependencies(arg, add);
+					addExprClassDependencies(arg, add, scope);
 			case EArrayDecl(values):
 				for (value in values)
-					addExprClassDependencies(value, add);
+					addExprClassDependencies(value, add, scope);
 			case EArrayAccess(array, index):
-				addExprClassDependencies(array, add);
-				addExprClassDependencies(index, add);
+				addExprClassDependencies(array, add, scope);
+				addExprClassDependencies(index, add, scope);
 			case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
-				addExprClassDependencies(iterable, add);
+				addExprClassDependencies(iterable, add, scope);
 				if (guardExpr != null)
-					addExprClassDependencies(guardExpr, add);
-				addExprClassDependencies(yieldExpr, add);
+					addExprClassDependencies(guardExpr, add, scope);
+				addExprClassDependencies(yieldExpr, add, scope);
 			case ERange(start, end):
-				addExprClassDependencies(start, add);
-				addExprClassDependencies(end, add);
+				addExprClassDependencies(start, add, scope);
+				addExprClassDependencies(end, add, scope);
 			case EBinop(_, left, right):
-				addExprClassDependencies(left, add);
-				addExprClassDependencies(right, add);
+				addExprClassDependencies(left, add, scope);
+				addExprClassDependencies(right, add, scope);
 			case EUnop(_, inner) | ELambda(_, inner) | EMacroExpr(inner, _) | EUntyped(inner):
-				addExprClassDependencies(inner, add);
+				addExprClassDependencies(inner, add, scope);
 			case ETernary(cond, thenExpr, elseExpr):
-				addExprClassDependencies(cond, add);
-				addExprClassDependencies(thenExpr, add);
-				addExprClassDependencies(elseExpr, add);
+				addExprClassDependencies(cond, add, scope);
+				addExprClassDependencies(thenExpr, add, scope);
+				addExprClassDependencies(elseExpr, add, scope);
 			case EAnon(_, fieldValues):
 				for (value in fieldValues)
-					addExprClassDependencies(value, add);
+					addExprClassDependencies(value, add, scope);
 			case ESwitch(scrutinee, _, exprs):
-				addExprClassDependencies(scrutinee, add);
+				addExprClassDependencies(scrutinee, add, scope);
 				for (caseExpr in exprs)
-					addExprClassDependencies(caseExpr, add);
+					addExprClassDependencies(caseExpr, add, scope);
 			case ECast(inner, typeHint):
-				addExprClassDependencies(inner, add);
+				addExprClassDependencies(inner, add, scope);
 				addTypeHintDependencies(typeHint, add);
 			case _:
 		}
+	}
+
+	static function addClassReferenceDependency(expr:HxExpr, add:String->Void, ?scope:CppRenderScope):Void {
+		final path = classReferencePathText(expr, scope);
+		if (path != null && path.length > 0)
+			add(sanitizeTypePath(typeBaseName(path)));
 	}
 
 	static function addStaticReceiverClassDependency(receiver:HxExpr, add:String->Void):Void {
@@ -11547,6 +11555,8 @@ class CppTargetCore {
 				"__hxhx_throw(" + renderExpr(args[0], scope) + ")";
 			case ECall(EIdent("__hxhx_try"), args) if (args.length >= 2):
 				tryExpr(args, scope);
+			case ECall(EIdent("__hxhx_while"), [condExpr, bodyExpr, continuation]):
+				whileExpr(condExpr, bodyExpr, continuation, scope);
 			case ECall(EIdent("__hxhx_for_in"), [iterable, bodyExpr, continuation]):
 				forInExpr(iterable, bodyExpr, continuation, scope);
 			case ECall(EEnumValue(name), args):
@@ -15047,8 +15057,9 @@ class CppTargetCore {
 				boundFunctionCppType(expr, scope);
 			case ECall(EIdent("__hxhx_try"), args) if (args.length >= 2):
 				tryExprResultTypeFromArgs(args, scope);
-			case ECall(EIdent(name), args) if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while")
-				&& args.length >= 3):
+			case ECall(EIdent("__hxhx_while"), args) if (args.length >= 3):
+				whileExprResultTypeFromArgs(args, scope);
+			case ECall(EIdent(name), args) if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value") && args.length >= 3):
 				inferExprCppType(args[2], scope);
 			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
@@ -16239,8 +16250,9 @@ class CppTargetCore {
 				boundFunctionCppType(expr, scope);
 			case ECall(EIdent("__hxhx_try"), args) if (args.length >= 2):
 				tryExprResultTypeFromArgs(args, scope);
-			case ECall(EIdent(name), args) if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value" || name == "__hxhx_while")
-				&& args.length >= 3):
+			case ECall(EIdent("__hxhx_while"), args) if (args.length >= 3):
+				whileExprResultTypeFromArgs(args, scope);
+			case ECall(EIdent(name), args) if ((name == "__hxhx_for_in" || name == "__hxhx_for_key_value") && args.length >= 3):
 				inferExprCppType(args[2], scope);
 			case ECall(ECall(loadCallee, loadArgs), _) if (isMacroApiLoadCallee(loadCallee) && loadArgs.length == 2):
 				"std::any";
@@ -19020,6 +19032,77 @@ class CppTargetCore {
 	}
 
 	/**
+		Render the private `__hxhx_while` sentinel produced by local-function
+		statement-to-expression lowering.
+
+		Loop bodies that represent an early `return value` become immediate C++
+		returns from the wrapper lambda. Loop bodies that only perform side effects
+		remain statements, then the continuation runs after the loop.
+	**/
+	static function whileExpr(condExpr:HxExpr, bodyExpr:HxExpr, continuation:HxExpr, ?scope:CppRenderScope):String {
+		final condBody = zeroArgLambdaBodyExpr(condExpr);
+		final loopBody = zeroArgLambdaBodyExpr(bodyExpr);
+		if (condBody == null || loopBody == null)
+			return directCallExpr("__hxhx_while", [condExpr, bodyExpr, continuation], scope);
+		final resultType = whileExprResultType(loopBody, continuation, scope);
+		final out = ["([&]() -> " + resultType + " {"];
+		out.push("  while " + cStyleConditionExpr(condBody, scope) + " {");
+		for (line in whileExprBodyLines(loopBody, resultType, "    ", scope))
+			out.push(line);
+		out.push("  }");
+		for (line in whileExprContinuationLines(continuation, resultType, "  ", scope))
+			out.push(line);
+		out.push("})()");
+		return out.join("\n");
+	}
+
+	static function zeroArgLambdaBodyExpr(expr:HxExpr):Null<HxExpr> {
+		return switch (expr) {
+			case ELambda(args, body) if (args.length == 0):
+				body;
+			case _:
+				null;
+		};
+	}
+
+	static function whileExprResultTypeFromArgs(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (args == null || args.length < 3)
+			return "std::nullptr_t";
+		final loopBody = zeroArgLambdaBodyExpr(args[1]);
+		return whileExprResultType(loopBody, args[2], scope);
+	}
+
+	static function whileExprResultType(loopBody:Null<HxExpr>, continuation:HxExpr, ?scope:CppRenderScope):String {
+		final branches = new Array<HxExpr>();
+		if (loopBody != null)
+			branches.push(loopBody);
+		return tryExprResultType(branches, continuation, scope);
+	}
+
+	static function whileExprBodyLines(loopBody:HxExpr, resultType:String, indent:String, ?scope:CppRenderScope):Array<String> {
+		final branchType = tryBranchResultType(loopBody, scope);
+		if (branchType.length == 0 || branchType == "void" || branchType == "std::nullptr_t" || resultType == "std::nullptr_t")
+			return exprAsStatementLines(loopBody, indent, scope);
+		return [indent + "return " + valueExprForExpectedType(loopBody, resultType, scope) + ";"];
+	}
+
+	static function whileExprContinuationLines(continuation:HxExpr, resultType:String, indent:String, ?scope:CppRenderScope):Array<String> {
+		final typeName = resultType == null || resultType.length == 0 ? "std::nullptr_t" : resultType;
+		if (typeName == "std::nullptr_t")
+			return forInContinuationLines(continuation, indent, scope);
+		return switch (continuation) {
+			case ENull:
+				[indent + "return " + cppDefaultValue(typeName, scope) + ";"];
+			case _ if (exprReturnsVoid(continuation, scope)):
+				exprAsStatementLines(continuation, indent, scope).concat([indent + "return " + cppDefaultValue(typeName, scope) + ";"]);
+			case _:
+				[
+					indent + "return " + valueExprForExpectedType(continuation, typeName, scope) + ";"
+				];
+		};
+	}
+
+	/**
 		Render the private `__hxhx_try` sentinel produced by
 		`HxParser.lambdaBodyExprFromStmts` for local-function bodies.
 
@@ -19205,6 +19288,8 @@ class CppTargetCore {
 
 	static function exprAsStatementLines(expr:HxExpr, indent:String, ?scope:CppRenderScope):Array<String> {
 		return switch (expr) {
+			case ECall(EIdent("__hxhx_while"), [condExpr, bodyExpr, continuation]):
+				[indent + whileExpr(condExpr, bodyExpr, continuation, scope) + ";"];
 			case ECall(EIdent("__hxhx_for_in"), [iterable, bodyExpr, continuation]):
 				[indent + forInExpr(iterable, bodyExpr, continuation, scope) + ";"];
 			case ESwitch(scrutinee, patterns, exprs):

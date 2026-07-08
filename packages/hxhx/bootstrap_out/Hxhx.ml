@@ -21,6 +21,7 @@ module Stage3Args = Hxhx_Stage3Args
 module Stage3BackendPluginSupport = Hxhx_Stage3BackendPluginSupport
 module Stage3BuildMacroSupport = Hxhx_Stage3BuildMacroSupport
 module Stage3Compiler = Hxhx_Stage3Compiler
+module Stage3CustomizationSupport = Hxhx_Stage3CustomizationSupport
 module Stage3DiagnosticsSupport = Hxhx_Stage3DiagnosticsSupport
 module Stage3EmitSupport = Hxhx_Stage3EmitSupport
 module Stage3HookSupport = Hxhx_Stage3HookSupport

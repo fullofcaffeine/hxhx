@@ -44,6 +44,7 @@ let printHxhxHelp = fun () -> ignore ((
   ignore (print_endline "  --hxhx-list-targets                  list supported hxhx lane selectors");
   ignore (print_endline "  --hxhx-strict-cli                    reject hxhx-only flags");
   ignore (print_endline "  --hxhx-stage3 ...                    run native Stage3 driver directly");
+  ignore (print_endline "  --hxhx-customization <id>            enable explicit Stage3 customization");
   ignore (print_endline "  --hxhx-no-emit                       typecheck only in Stage3 lane");
   ignore (print_endline "  --hxhx-no-run                        emit/build without execution");
   ignore (print_endline "  --hxhx-parse <File.hx>               parse a file via native parser seam");

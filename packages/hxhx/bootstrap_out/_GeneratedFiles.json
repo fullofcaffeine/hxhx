@@ -31,6 +31,7 @@
 		"hxhx_Stage3HookSupport.ml",
 		"hxhx_Stage3EmitSupport.ml",
 		"hxhx_Stage3DiagnosticsSupport.ml",
+		"hxhx_Stage3CustomizationSupport.ml",
 		"hxhx_Stage3Compiler.ml",
 		"hxhx_Stage3BuildMacroSupport.ml",
 		"hxhx_Stage3BackendPluginSupport.ml",
@@ -118,6 +119,7 @@
 		"backend_cpp_CppNativeBackend.ml",
 		"backend_cpp_CppMacroExpr.ml",
 		"backend_cpp_CppLocalTypeInference.ml",
+		"backend_cpp_CppLocalCallScanner.ml",
 		"backend_TargetCoreBackend.ml",
 		"backend_OcamlProfile.ml",
 		"backend_ITargetCore.ml",
@@ -189,7 +191,7 @@
 		"CSharpNoEmitDiagnostics.ml",
 		"Any.ml"
 	],
-	"id": 14,
+	"id": 2,
 	"wasCached": false,
 	"version": 1
 }

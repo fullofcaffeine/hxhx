@@ -3492,16 +3492,21 @@ class EmitterStage {
 							}
 						} else if (renderedArgs.length == 0) {
 							var appendUnit = true;
-							switch (callee) {
-								case EIdent(name) if (stage3HasArity(name, arityByIdentRaw)):
-									if (hasCurrentInstanceMethod(name)
-										&& stage3HasThisBinding(tyByIdentRaw)
-										&& stage3ArityFor(name, arityByIdentRaw) <= 1) {
-										appendUnit = false;
-									}
-								case EField(EThis, name) if (stage3HasArity(name, arityByIdentRaw)):
-									if (stage3ArityFor(name, arityByIdentRaw) <= 1) appendUnit = false;
-								case _:
+							if (receiverPreApplied) {
+								// `callee (this_)` is already a complete zero-argument instance call.
+								appendUnit = false;
+							} else {
+								switch (callee) {
+									case EIdent(name) if (stage3HasArity(name, arityByIdentRaw)):
+										if (hasCurrentInstanceMethod(name)
+											&& stage3HasThisBinding(tyByIdentRaw)
+											&& stage3ArityFor(name, arityByIdentRaw) <= 1) {
+											appendUnit = false;
+										}
+									case EField(EThis, name) if (stage3HasArity(name, arityByIdentRaw)):
+										if (stage3ArityFor(name, arityByIdentRaw) <= 1) appendUnit = false;
+									case _:
+								}
 							}
 							final renderedCall = appendUnit ? (c + " ()") : c;
 								(sig == null

@@ -6,92 +6,6 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable visibility : HxVisibility.hxvisibility; mutable isStatic : bool; mutable args : HxFunctionArg.t HxArray.t; mutable returnTypeHint : string; mutable body : HxStmt.hxstmt HxArray.t; mutable returnStringLiteral : string; mutable metadata : string HxArray.t; mutable pos : HxPos.t; mutable endPos : HxPos.t; mutable bodyText : string }
 
-let create = fun name2 visibility2 isStatic2 args2 returnTypeHint2 body2 returnStringLiteral2 metadata2 pos2 endPos2 bodyText2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = ""; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = ""; body = Obj.magic (HxRuntime.hx_null); returnStringLiteral = ""; metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); bodyText = "" } : t) in (
-  ignore (ignore ((
-    ignore (let __assign_1 = (name2 : string) in (
-      (Obj.magic self : t).name <- __assign_1;
-      __assign_1
-    ));
-    ignore (let __assign_2 = Obj.magic visibility2 in (
-      (Obj.magic self : t).visibility <- __assign_2;
-      __assign_2
-    ));
-    ignore (let __assign_3 = isStatic2 in (
-      (Obj.magic self : t).isStatic <- __assign_3;
-      __assign_3
-    ));
-    ignore (let __assign_4 = Obj.magic args2 in (
-      (Obj.magic self : t).args <- __assign_4;
-      __assign_4
-    ));
-    ignore (let __assign_5 = (returnTypeHint2 : string) in (
-      (Obj.magic self : t).returnTypeHint <- __assign_5;
-      __assign_5
-    ));
-    ignore (let __assign_6 = Obj.magic body2 in (
-      (Obj.magic self : t).body <- __assign_6;
-      __assign_6
-    ));
-    ignore (let __assign_7 = (returnStringLiteral2 : string) in (
-      (Obj.magic self : t).returnStringLiteral <- __assign_7;
-      __assign_7
-    ));
-    let tempRight = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = Obj.magic (let __arr_9 = HxArray.create () in __arr_9) in (
-        tempRight := __assign_8;
-        __assign_8
-      ) else let __assign_10 = Obj.magic metadata2 in (
-        tempRight := __assign_10;
-        __assign_10
-      ));
-      ignore (let __assign_11 = Obj.magic (!tempRight) in (
-        (Obj.magic self : t).metadata <- __assign_11;
-        __assign_11
-      ));
-      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
-        ignore (if pos2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (HxPos.unknown ()) in (
-          tempRight1 := __assign_12;
-          __assign_12
-        ) else let __assign_13 = Obj.magic pos2 in (
-          tempRight1 := __assign_13;
-          __assign_13
-        ));
-        ignore (let __assign_14 = Obj.magic (!tempRight1) in (
-          (Obj.magic self : t).pos <- __assign_14;
-          __assign_14
-        ));
-        let tempRight2 = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
-          ignore (if endPos2 == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic ((Obj.magic self : t).pos) in (
-            tempRight2 := __assign_15;
-            __assign_15
-          ) else let __assign_16 = Obj.magic endPos2 in (
-            tempRight2 := __assign_16;
-            __assign_16
-          ));
-          ignore (let __assign_17 = Obj.magic (!tempRight2) in (
-            (Obj.magic self : t).endPos <- __assign_17;
-            __assign_17
-          ));
-          let tempRight3 = ref ("" : string) in (
-            ignore (if bodyText2 == Obj.magic (HxRuntime.hx_null) then let __assign_18 = ("" : string) in (
-              tempRight3 := __assign_18;
-              __assign_18
-            ) else let __assign_19 = (bodyText2 : string) in (
-              tempRight3 := __assign_19;
-              __assign_19
-            ));
-            let __assign_20 = (!tempRight3 : string) in (
-              (Obj.magic self : t).bodyText <- __assign_20;
-              __assign_20
-            )
-          )
-        )
-      )
-    )
-  )));
-  self
-)
-
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = ""; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = ""; body = Obj.magic (HxRuntime.hx_null); returnStringLiteral = ""; metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); bodyText = "" } : t)
 
 let getFirstReturnExpr = fun self () -> (
@@ -199,6 +113,103 @@ let getFirstReturnExpr = fun self () -> (
       !tempResult
     )
   )
+)
+
+let normalizeReturnTypeHint = fun typeHint -> let tempString = ref ("" : string) in (
+  ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then let __assign_36 = ("" : string) in (
+    tempString := __assign_36;
+    __assign_36
+  ) else let __assign_37 = (typeHint : string) in (
+    tempString := __assign_37;
+    __assign_37
+  ));
+  let text = (StringTools.trim (!tempString : string) : string) in EReg.replace (Obj.magic (EReg.create ("[\r\n\t ]+untyped$" : string) ("" : string))) (text : string) ("" : string)
+)
+
+let create = fun name2 visibility2 isStatic2 args2 returnTypeHint2 body2 returnStringLiteral2 metadata2 pos2 endPos2 bodyText2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = ""; visibility = Obj.magic (HxRuntime.hx_null); isStatic = false; args = Obj.magic (HxRuntime.hx_null); returnTypeHint = ""; body = Obj.magic (HxRuntime.hx_null); returnStringLiteral = ""; metadata = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null); endPos = Obj.magic (HxRuntime.hx_null); bodyText = "" } : t) in (
+  ignore (ignore ((
+    ignore (let __assign_1 = (name2 : string) in (
+      (Obj.magic self : t).name <- __assign_1;
+      __assign_1
+    ));
+    ignore (let __assign_2 = Obj.magic visibility2 in (
+      (Obj.magic self : t).visibility <- __assign_2;
+      __assign_2
+    ));
+    ignore (let __assign_3 = isStatic2 in (
+      (Obj.magic self : t).isStatic <- __assign_3;
+      __assign_3
+    ));
+    ignore (let __assign_4 = Obj.magic args2 in (
+      (Obj.magic self : t).args <- __assign_4;
+      __assign_4
+    ));
+    ignore (let __assign_5 = (normalizeReturnTypeHint (returnTypeHint2 : string) : string) in (
+      (Obj.magic self : t).returnTypeHint <- __assign_5;
+      __assign_5
+    ));
+    ignore (let __assign_6 = Obj.magic body2 in (
+      (Obj.magic self : t).body <- __assign_6;
+      __assign_6
+    ));
+    ignore (let __assign_7 = (returnStringLiteral2 : string) in (
+      (Obj.magic self : t).returnStringLiteral <- __assign_7;
+      __assign_7
+    ));
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+      ignore (if metadata2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = Obj.magic (let __arr_9 = HxArray.create () in __arr_9) in (
+        tempRight := __assign_8;
+        __assign_8
+      ) else let __assign_10 = Obj.magic metadata2 in (
+        tempRight := __assign_10;
+        __assign_10
+      ));
+      ignore (let __assign_11 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).metadata <- __assign_11;
+        __assign_11
+      ));
+      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
+        ignore (if pos2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (HxPos.unknown ()) in (
+          tempRight1 := __assign_12;
+          __assign_12
+        ) else let __assign_13 = Obj.magic pos2 in (
+          tempRight1 := __assign_13;
+          __assign_13
+        ));
+        ignore (let __assign_14 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).pos <- __assign_14;
+          __assign_14
+        ));
+        let tempRight2 = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
+          ignore (if endPos2 == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic ((Obj.magic self : t).pos) in (
+            tempRight2 := __assign_15;
+            __assign_15
+          ) else let __assign_16 = Obj.magic endPos2 in (
+            tempRight2 := __assign_16;
+            __assign_16
+          ));
+          ignore (let __assign_17 = Obj.magic (!tempRight2) in (
+            (Obj.magic self : t).endPos <- __assign_17;
+            __assign_17
+          ));
+          let tempRight3 = ref ("" : string) in (
+            ignore (if bodyText2 == Obj.magic (HxRuntime.hx_null) then let __assign_18 = ("" : string) in (
+              tempRight3 := __assign_18;
+              __assign_18
+            ) else let __assign_19 = (bodyText2 : string) in (
+              tempRight3 := __assign_19;
+              __assign_19
+            ));
+            let __assign_20 = (!tempRight3 : string) in (
+              (Obj.magic self : t).bodyText <- __assign_20;
+              __assign_20
+            )
+          )
+        )
+      )
+    )
+  )));
+  self
 )
 
 let getName = fun fn -> (Obj.magic fn : t).name

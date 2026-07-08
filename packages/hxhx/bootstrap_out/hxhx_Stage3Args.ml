@@ -28,7 +28,7 @@ let hasFlag = fun args flag -> try let __fallback_result_4 = (
 ) in Obj.magic __fallback_result_4 with
   | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3
 
-let parseGlobalStage3Flags = fun args -> let outDir = ref ("" : string) in let backendId = ref ("ocaml-stage3" : string) in let macroRuntimeMode = ref (Obj.magic (HxRuntime.hx_null) : string) in let typeOnly = ref false in let emitFullBodies = ref false in let noEmit = ref false in let noRun = ref false in let rest = Obj.magic (HxArray.create ()) in let i = ref 0 in (
+let parseGlobalStage3Flags = fun args -> let outDir = ref ("" : string) in let backendId = ref ("ocaml-stage3" : string) in let macroRuntimeMode = ref (Obj.magic (HxRuntime.hx_null) : string) in let typeOnly = ref false in let emitFullBodies = ref false in let noEmit = ref false in let noRun = ref false in let customizations = Obj.magic (HxArray.create ()) in let rest = Obj.magic (HxArray.create ()) in let i = ref 0 in (
   ignore (while !i < HxArray.length args do ignore (let a = (HxArray.get (Obj.magic args) (!i) : string) in match a with
     | "--hxhx-backend" -> ignore ((
       ignore (if HxInt.add (!i) 1 >= HxArray.length args then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing value after --hxhx-backend") ["Dynamic"; "String"]) else ());
@@ -36,6 +36,11 @@ let parseGlobalStage3Flags = fun args -> let outDir = ref ("" : string) in let b
         backendId := __assign_5;
         __assign_5
       ));
+      i := HxInt.add (!i) 2
+    ))
+    | "--hxhx-customization" -> ignore ((
+      ignore (if HxInt.add (!i) 1 >= HxArray.length args then ignore (HxType.hx_throw_typed_rtti (Obj.repr "missing value after --hxhx-customization") ["Dynamic"; "String"]) else ());
+      ignore (HxArray.push customizations (HxArray.get (Obj.magic args) (HxInt.add (!i) 1)));
       i := HxInt.add (!i) 2
     ))
     | "--hxhx-emit-full-bodies" -> ignore ((
@@ -94,6 +99,7 @@ let parseGlobalStage3Flags = fun args -> let outDir = ref ("" : string) in let b
     ignore (HxAnon.set __anon_12 "emitFullBodies" (HxRuntime.box_bool (!emitFullBodies)));
     ignore (HxAnon.set __anon_12 "noEmit" (HxRuntime.box_bool (!noEmit)));
     ignore (HxAnon.set __anon_12 "noRun" (HxRuntime.box_bool (!noRun)));
+    ignore (HxAnon.set __anon_12 "customizations" (Obj.repr customizations));
     ignore (HxAnon.set __anon_12 "rest" (Obj.repr rest));
     __anon_12
   )

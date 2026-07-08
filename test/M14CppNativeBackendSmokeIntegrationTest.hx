@@ -1219,11 +1219,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  public function new(v:Int) {}",
 			"  public function get():Int return 33;",
 			"}",
+			"class InitWithoutCtor {",
+			"  public var i:Int = 2;",
+			"}",
 			"class TypeCreateUser {",
 			"  public static function run():Bool {",
 			"    var i = Type.createInstance(MyClass, [33]);",
 			"    var e = Type.createEmptyInstance(MyClass);",
-			"    return i.get() == 33 && i.intValue == 55 && e == null;",
+			"    var c = Type.createInstance(InitWithoutCtor, []);",
+			"    return i.get() == 33 && i.intValue == 55 && e == null && c.i == 2;",
 			"  }",
 			"}"
 		].join("\n");
@@ -1695,6 +1699,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ typed local function block expressions should inherit the enclosing String return type");
 		assertContains(lines, "return ([&](auto access) -> std::string { return __hxhx_stringify(access); })(accessText(std::string(\"AccCall\"), \"get\"));",
 			"C++ typed local function block expressions should render following locals structurally");
+	}
+
+	static function assertCppLambdaWhileReturnFlow():Void {
+		final tmpRoot = Path.normalize(".tmp/m14_cpp_native_backend_lambda_while_return_" + Std.string(Date.now().getTime()));
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		final src = [
+			"class Main {",
+			"  static function main() {",
+			"    var l = function() {",
+			"      while (true)",
+			"        return \"foo\";",
+			"    };",
+			"    Sys.println(l());",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		final program = MacroStage.expandProgram([typed], []);
+		final emitted = BackendRegistry.createForTarget("cpp-native").emit(program, context(tmpRoot, true, true));
+		final content = File.getContent(emitted.entryPath);
+		assertContains(content, "while (true)", "C++ should lower expression-level while return-flow into a real while loop");
+		assertContains(content, "return std::string(\"foo\");", "C++ expression-level while should return loop-body return values");
+		assertTrue(content.indexOf("__hxhx_while") < 0, "C++ should not emit the internal while expression sentinel as a runtime callable");
+		deleteRecursive(tmpRoot);
 	}
 
 	static function anonCollectScopeProgram():GenIrProgram {
@@ -3982,6 +4012,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppResolverMethodsUseKnownStdlibSignatures();
 		assertTypedLocalFunctionBlockExprRendersStructurally();
+		assertCppLambdaWhileReturnFlow();
 		final reflectCompareExpr = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Reflect"), "compare"), [EString("a"), EString("b")]));
 		assertContains(reflectCompareExpr, "auto __hxhx_cmp_left = std::string(\"a\");",
@@ -12179,9 +12210,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Type.createInstance class constants should provide an explicit return-carrier template argument");
 		assertContains(typeCreateSource, "auto e = Type::createEmptyInstance<std::shared_ptr<MyClass>>(",
 			"C++ Type.createEmptyInstance class constants should provide an explicit return-carrier template argument");
+		assertContains(typeCreateSource, "struct InitWithoutCtor {\n  inline static std::string __hx_class_name",
+			"C++ Type.createInstance class literals should keep field-only classes reachable as full helper bodies");
+		assertTrue(typeCreateSource.indexOf("struct InitWithoutCtor {\n") < typeCreateSource.indexOf("struct TypeCreateUser {"),
+			"C++ Type.createInstance class-literal dependencies should render before consumers that dereference their fields");
+		assertContains(typeCreateSource, "auto c = Type::createInstance<std::shared_ptr<InitWithoutCtor>>(",
+			"C++ Type.createInstance field-only class constants should keep explicit return-carrier template arguments");
 		assertContains(typeCreateSource, "i->get()", "C++ locals inferred from Type.createInstance class constants should keep pointer-shaped method access");
 		assertContains(typeCreateSource, "(i->intValue)",
 			"C++ locals inferred from Type.createInstance class constants should keep pointer-shaped field access");
+		assertContains(typeCreateSource, "(c->i)",
+			"C++ locals inferred from Type.createInstance field-only class constants should keep pointer-shaped field access");
 		assertTrue(typeCreateSource.indexOf("Type::createInstance(Type::resolveClass(") < 0,
 			"C++ Type.createInstance class-constant calls should not omit the explicit return template argument");
 		assertTrue(typeFactoryLines.indexOf("static T createInstance(std::shared_ptr<Class> cl, std::vector<std::any> args) {\n    (void)cl;\n    (void)args;\n    return nullptr;") < 0,

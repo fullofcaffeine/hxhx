@@ -33,6 +33,10 @@ class M14Stage3SameClassInstanceForwardIntegrationTest {
 			'    addCaseOld(test, setup, teardown, prefix, pattern, setupAsync, teardownAsync);',
 			'  }',
 			'  function addCaseOld(test:Dynamic, setup = "setup", teardown = "teardown", prefix = "test", ?pattern:Dynamic, setupAsync = "setupAsync", teardownAsync = "teardownAsync") {}',
+			'  function touch() {',
+			'    mark();',
+			'  }',
+			'  function mark() {}',
 			'}',
 		].join("\n");
 		File.saveContent(sourcePath, src);
@@ -50,6 +54,8 @@ class M14Stage3SameClassInstanceForwardIntegrationTest {
 			assertTrue(ocaml.indexOf('addCaseOld (this_) (test) (setup) (teardown) (prefix) (pattern) (setupAsync) (teardownAsync)') >= 0,
 				'Expected same-class instance method forwarding to include this_ before forwarded arguments.');
 			assertTrue(ocaml.indexOf('addCaseOld (test) (setup)') < 0, 'Expected forwarded instance call not to omit the receiver.');
+			assertTrue(ocaml.indexOf('mark (this_)') >= 0, 'Expected zero-argument same-class instance method call to include this_.');
+			assertTrue(ocaml.indexOf('mark (this_) ()') < 0, 'Expected zero-argument same-class instance method call not to append unit.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}
