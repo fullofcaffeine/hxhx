@@ -9762,11 +9762,18 @@ class CppTargetCore {
 		};
 		if (method != "typeError" && method != "typeErrorText")
 			return null;
-		return switch (args[0]) {
-			case EField(_, _) | EArrayAccess(_, _) | EBinop("=", _, ECall(_, _)) | EBinop("=", _, EIdent(_)) | EBinop("=", _, ENew(_, _)):
-				method == "typeError" ? "true" : "std::string()";
+		return helperMacrosTypeErrorProbeArg(args[0]) ? (method == "typeError" ? "true" : "std::string()") : null;
+	}
+
+	static function helperMacrosTypeErrorProbeArg(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EField(_, _) | EArrayAccess(_, _) | ECall(_, _) | EBinop(_, _, _) | EUnop(_, _) | EAnon(_, _) | EArrayDecl(_) |
+				EArrayComprehension(_, _, _, _) | ERange(_, _) | ESwitch(_, _, _) | ESwitchRaw(_) | ETryCatchRaw(_) | EUnsupported(_):
+				true;
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				helperMacrosTypeErrorProbeArg(inner);
 			case _:
-				null;
+				false;
 		};
 	}
 

@@ -4571,6 +4571,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unqualified typeError assignment probes should fold to true without emitting invalid runtime assignments");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("HelperMacros"), "typeError"), [varianceProbeArg])) == "true",
 			"C++ HelperMacros.typeError assignment probes should fold to true without emitting invalid runtime assignments");
+		final anonAssignmentProbeArg = EBinop("=", EIdent("item"), EAnon(["v"], [EFloat(1.2)]));
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("typeError"), [anonAssignmentProbeArg])) == "true",
+			"C++ typeError anonymous-assignment probes should fold before anonymous record rendering");
+		final anonBlockProbeArg = ECall(ELambda([], EAnon(["v", "v"], [EInt(0), EInt(2)])), []);
+		final anonBlockProbe = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("HelperMacros"), "typeError"), [anonBlockProbeArg]));
+		assertTrue(anonBlockProbe == "true", "C++ typeError block probes should fold before duplicate anonymous-field structs render");
+		assertTrue(anonBlockProbe.indexOf("__hxhx_opaque_block") < 0, "C++ folded typeError block probes should not render anonymous block carriers");
+		final anonCallProbeArg = ECall(EIdent("accepts"), [EString("shape"), EAnon(["x", "y"], [EFloat(1.2), EInt(2)])]);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("typeError"), [anonCallProbeArg])) == "true",
+			"C++ typeError call probes should fold before anonymous argument values render");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("HelperMacros"), "typeErrorText"),
+			[anonCallProbeArg])) == "std::string()",
+			"C++ typeErrorText call probes should fold to a neutral diagnostic string without rendering arguments");
 		final helperMacrosOwner = new HxClassDecl("HelperMacros", false, [
 			new HxFunctionDecl("typeString", Public, true, [new HxFunctionArg("e", "Dynamic", NoDefault, false, false)], "String", [
 				SVar("typed", "", ECall(EIdent("typeExpr"), [EIdent("e")]), HxPos.unknown()),

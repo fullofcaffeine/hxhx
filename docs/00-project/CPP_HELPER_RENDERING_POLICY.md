@@ -70,6 +70,14 @@ and then emit a neutral helper call rather than evaluating `actual` or
 functions: only helpers with macro-time probe behavior and focused evidence may
 use this treatment.
 
+`HelperMacros.typeError(expr)` and `HelperMacros.typeErrorText(expr)` are also
+macro-time assertion probes when their argument is a non-literal expression
+being tested for a type error. Cpp may fold those probes to neutral values
+before rendering the argument, so invalid anonymous records, duplicate fields,
+and invalid call shapes do not become runtime C++ expressions. This must remain
+scoped to the helper probe seam and must not become a generic anonymous-record,
+Dynamic, or stringification fallback.
+
 Reachability and ordering should scan parsed field initializers and method
 bodies only for `full_body` helpers. `declaration_only` and `runtime_module`
 helpers keep signature/type dependencies, but their parsed bodies must not pull
