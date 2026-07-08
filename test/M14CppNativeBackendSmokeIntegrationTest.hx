@@ -4879,6 +4879,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(metadataType == "std::string", "C++ expression metadata should infer from the wrapped expression, got: " + metadataType);
 		assertTrue(metadataExpr.indexOf("__hxhx_expr_meta") < 0 && metadataStringExpr.indexOf("__hxhx_expr_meta") < 0,
 			"C++ expression metadata should not leak as a runtime helper call");
+		final helperMetaScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("HelperMetaScope", false, [], []), {
+			names: new StringMap<Bool>(),
+			byName: new StringMap<HxClassDecl>()
+		}, "void");
+		final helperMetaArg = ECall(EIdent("__hxhx_expr_meta"), [EString("bar"), EString("\"1\", \"foo\""), EIdent("wrapped")]);
+		final importedHelperMeta = ECall(EIdent("getMeta"), [helperMetaArg]);
+		final importedHelperMetaExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(importedHelperMeta, helperMetaScope);
+		final importedHelperMetaType = @:privateAccess backend.cpp.CppTargetCore.exprCppType(importedHelperMeta, helperMetaScope);
+		assertContains(importedHelperMetaExpr, "{std::string(\"bar\"), std::vector<std::string>{std::string(\"1\"), std::string(\"foo\")}}",
+			"C++ imported HelperMacros.getMeta should fold expression metadata into a fixed metadata carrier");
+		assertTrue(importedHelperMetaExpr.indexOf("getMeta") < 0 && importedHelperMetaExpr.indexOf("wrapped") < 0,
+			"C++ imported HelperMacros.getMeta should not emit the macro helper call or wrapped expression");
+		assertTrue(helperMetaScope.anonStructs.exists(importedHelperMetaType),
+			"C++ HelperMacros.getMeta carrier should be registered for anonymous struct emission");
+		final noArgHelperMeta = ECall(EField(EIdent("HelperMacros"), "getMeta"),
+			[ECall(EIdent("__hxhx_expr_meta"), [EString("foo"), EString(""), EIdent("a")])]);
+		final noArgHelperMetaName = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(noArgHelperMeta, "name"), helperMetaScope);
+		assertContains(noArgHelperMetaName, "std::vector<std::string>{}",
+			"C++ HelperMacros.getMeta metadata carriers should keep empty metadata args string-vector typed");
+		assertContains(noArgHelperMetaName, ".name)", "C++ HelperMacros.getMeta metadata carriers should support field access on the folded carrier");
+		assertTrue(noArgHelperMetaName.indexOf("getMeta") < 0 && noArgHelperMetaName.indexOf("(a") < 0,
+			"C++ qualified HelperMacros.getMeta should not render the wrapped identifier");
 		final iMapInterface = new HxClassDecl("IMap", false, [
 			new HxFunctionDecl("get", Public, false, [new HxFunctionArg("k", "K", NoDefault, false, false)], "Null<V>", [], ""),
 			new HxFunctionDecl("keys", Public, false, [], "Iterator<K>", [], ""),

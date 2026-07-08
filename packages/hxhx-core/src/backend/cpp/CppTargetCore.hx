@@ -1489,6 +1489,8 @@ class CppTargetCore {
 					addStruct(anonStruct(fieldNames, fieldValues, scope));
 				case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
 					addStruct(int64DivModStruct());
+				case ECall(callee, args) if (helperMacrosGetMetaAnonStruct(callee, args, scope) != null):
+					addStruct(helperMacrosGetMetaAnonStruct(callee, args, scope));
 				case EField(receiver, _):
 					addExpr(receiver, scope);
 				case ECall(callee, args):
@@ -1545,6 +1547,8 @@ class CppTargetCore {
 					anonStruct(fieldNames, fieldValues, scope).name;
 				case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
 					int64DivModStruct().name;
+				case ECall(callee, args) if (helperMacrosGetMetaAnonStruct(callee, args, scope) != null):
+					helperMacrosGetMetaAnonStruct(callee, args, scope).name;
 				case ENew(typePath, _):
 					final structural = structuralTypedefAnonStructTypeNameForTypeHint(typePath, scope);
 					structural == null ? cppTypeHint(typePath, scope) : structural;
@@ -1565,6 +1569,8 @@ class CppTargetCore {
 				case EAnon(_, _):
 					true;
 				case ECall(EField(receiver, "divMod"), _) if (isInt64StaticReceiver(receiver)):
+					true;
+				case ECall(callee, args) if (helperMacrosGetMetaPayload(callee, args) != null):
 					true;
 				case ENew(typePath, args): structuralTypedefAnonStructTypeNameForTypeHint(typePath,
 						scope) != null || typeHintMayContributeAnonStruct(typePath) || exprsMayContributeAnonStruct(args, scope);
@@ -9386,6 +9392,80 @@ class CppTargetCore {
 		};
 	}
 
+	static function helperMacrosGetMetaPayload(callee:HxExpr, args:Array<HxExpr>):Null<Array<String>> {
+		if (!isHelperMacrosGetMetaCallee(callee) || args == null || args.length != 1)
+			return null;
+		return switch (args[0]) {
+			case ECall(EIdent("__hxhx_expr_meta"), [EString(name), EString(rawArgs), _]):
+				[name, rawArgs];
+			case _:
+				null;
+		};
+	}
+
+	static function isHelperMacrosGetMetaCallee(callee:HxExpr):Bool {
+		return switch (callee) {
+			case EIdent("getMeta"):
+				true;
+			case EField(EIdent("HelperMacros"), "getMeta"):
+				true;
+			case EField(EField(EIdent("unit"), "HelperMacros"), "getMeta"):
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function helperMacrosGetMetaAnonStruct(callee:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):Null<CppAnonStruct> {
+		final payload = helperMacrosGetMetaPayload(callee, args);
+		if (payload == null)
+			return null;
+		final struct = {
+			name: anonStructName(["name", "args"], ["std::string", "std::vector<std::string>"]),
+			fieldNames: ["name", "args"],
+			fieldTypes: ["std::string", "std::vector<std::string>"]
+		};
+		if (scope != null)
+			scope.anonStructs.set(struct.name, struct);
+		return struct;
+	}
+
+	static function helperMacrosGetMetaExpr(callee:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		final payload = helperMacrosGetMetaPayload(callee, args);
+		if (payload == null)
+			return null;
+		final struct = helperMacrosGetMetaAnonStruct(callee, args, scope);
+		return struct.name
+			+ "{"
+			+ stringExpr(EString(payload[0]), scope)
+			+ ", "
+			+ arrayExprWithElementType(helperMetadataArgExprs(payload[1]), "std::string", scope)
+			+ "}";
+	}
+
+	static function helperMacrosGetMetaReturnType(callee:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final struct = helperMacrosGetMetaAnonStruct(callee, args, scope);
+		return struct == null ? "" : struct.name;
+	}
+
+	static function helperMetadataArgExprs(rawArgs:String):Array<HxExpr> {
+		final out = new Array<HxExpr>();
+		final raw = StringTools.trim(rawArgs == null ? "" : rawArgs);
+		if (raw.length == 0)
+			return out;
+		for (part in splitTopLevelComma(raw)) {
+			final trimmed = StringTools.trim(part);
+			if (trimmed.length == 0)
+				continue;
+			try {
+				out.push(HxParser.parseExprText(trimmed));
+			} catch (_:HxParseError) {
+				out.push(EString(trimmed));
+			}
+		}
+		return out;
+	}
+
 	static function collectSameOwnerDeclaredArgTypeOverrides(methodName:String, args:Array<HxExpr>, scope:CppRenderScope,
 			candidates:haxe.ds.StringMap<Bool>):Void {
 		final fn = currentOwnerMethod(methodName, scope);
@@ -10956,6 +11036,8 @@ class CppTargetCore {
 				"true";
 			case ECall(callee, args) if (helperMacrosTypeErrorProbeExpr(callee, args) != null):
 				helperMacrosTypeErrorProbeExpr(callee, args);
+			case ECall(callee, args) if (helperMacrosGetMetaExpr(callee, args, scope) != null):
+				helperMacrosGetMetaExpr(callee, args, scope);
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				renderExpr(args[2], scope);
 			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
@@ -14477,6 +14559,8 @@ class CppTargetCore {
 				"std::string";
 			case ECall(EField(receiver, "isOfType"), args) if (isStdStaticReceiver(receiver) && args.length == 2):
 				"bool";
+			case ECall(callee, args) if (helperMacrosGetMetaReturnType(callee, args, scope).length > 0):
+				helperMacrosGetMetaReturnType(callee, args, scope);
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
 				"std::any";
 			case ECall(EIdent(name), args) if (bytesFastGetExpr(name, args, scope) != null):
@@ -15627,6 +15711,8 @@ class CppTargetCore {
 				inferExprCppType(args[2], scope);
 			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
 				inferExprCppType(args[0], scope);
+			case ECall(callee, args) if (helperMacrosGetMetaReturnType(callee, args, scope).length > 0):
+				helperMacrosGetMetaReturnType(callee, args, scope);
 			case ECall(EEnumValue(_), args) if (args != null && args.length > 0):
 				CppMacroExpr.CPP_TYPE;
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
