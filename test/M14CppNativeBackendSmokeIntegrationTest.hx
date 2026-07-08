@@ -7064,18 +7064,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final covLeaf = new HxClassDecl("CovLeaf", false, [], [], "CovBase");
 		final covInterface = new HxClassDecl("CovInterface", false, [new HxFunctionDecl("covariant", Public, false, [], "CovBase", [], "")], [], "", null,
 			true);
+		final covInterface2 = new HxClassDecl("CovInterface2", false, [new HxFunctionDecl("covariant", Public, false, [], "CovLeaf", [], "")], [],
+			"CovInterface", null, true);
 		final covImpl = new HxClassDecl("CovImpl", false, [
 			new HxFunctionDecl("covariant", Public, false, [], "CovLeaf", [SReturn(ENew("CovLeaf", []), HxPos.unknown())], "")
 		], [], "", null, false, ["CovInterface"]);
+		final covDeepImpl = new HxClassDecl("CovDeepImpl", false, [
+			new HxFunctionDecl("covariant", Public, false, [], "CovLeaf", [SReturn(ENew("CovLeaf", []), HxPos.unknown())], "")
+		], [], "", null, false, ["CovInterface2"]);
 		final covNames = new StringMap<Bool>();
-		for (name in ["CovBase", "CovChild", "CovLeaf", "CovInterface", "CovImpl"])
+		for (name in [
+			"CovBase",
+			"CovChild",
+			"CovLeaf",
+			"CovInterface",
+			"CovInterface2",
+			"CovImpl",
+			"CovDeepImpl"
+		])
 			covNames.set(name, true);
 		final covClasses = new StringMap<HxClassDecl>();
 		covClasses.set("CovBase", covBase);
 		covClasses.set("CovChild", covChild);
 		covClasses.set("CovLeaf", covLeaf);
 		covClasses.set("CovInterface", covInterface);
+		covClasses.set("CovInterface2", covInterface2);
 		covClasses.set("CovImpl", covImpl);
+		covClasses.set("CovDeepImpl", covDeepImpl);
 		final covLookup = {names: covNames, byName: covClasses};
 		final covChildLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(covChild, covLookup).join("\n");
 		assertContains(covChildLines, "std::shared_ptr<CovBase> covariant() {",
@@ -7086,6 +7101,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ interface implementation signatures should use the interface shared_ptr return type for compatibility");
 		assertContains(covImplLines, "return std::make_shared<CovLeaf>();",
 			"C++ covariant interface implementation bodies should still return the concrete child allocation");
+		final covInterface2Lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(covInterface2, covLookup).join("\n");
+		assertContains(covInterface2Lines, "struct CovInterface2 : public CovInterface {",
+			"C++ covariant interface inheritance should preserve the inherited nominal interface");
+		assertContains(covInterface2Lines, "virtual std::shared_ptr<CovBase> covariant() = 0;",
+			"C++ interface overrides should use the inherited shared_ptr return type for compatibility");
+		assertTrue(covInterface2Lines.indexOf("virtual std::shared_ptr<CovLeaf> covariant() = 0;") < 0,
+			"C++ interface overrides must not emit a narrower shared_ptr return type that C++ cannot override");
+		final covDeepImplLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(covDeepImpl, covLookup).join("\n");
+		assertContains(covDeepImplLines, "struct CovDeepImpl : public CovInterface2 {",
+			"C++ implementations of covariant child interfaces should keep the interface base");
+		assertContains(covDeepImplLines, "std::shared_ptr<CovBase> covariant() {",
+			"C++ implementations of covariant child interfaces should use the normalized inherited interface signature");
+		assertTrue(covDeepImplLines.indexOf("std::shared_ptr<CovLeaf> covariant() {") < 0,
+			"C++ implementations of covariant child interfaces must not emit a narrower shared_ptr return type");
 		final inlineCastBase = new HxClassDecl("InlineCastBase", false, [
 			new HxFunctionDecl("self", Public, false, [], "InlineCastBase", [SReturn(EThis, HxPos.unknown())], "")
 		], []);

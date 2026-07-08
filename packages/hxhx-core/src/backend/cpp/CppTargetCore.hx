@@ -3078,7 +3078,7 @@ class CppTargetCore {
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getIsStatic(fn))
 				continue;
-			final returnType = cppFunctionReturnType(fn, cls, classLookup);
+			final returnType = cppMethodSignatureReturnType(fn, cls, classLookup);
 			scope.returnType = returnType;
 			prepareFunctionSignatureScope(scope, fn);
 			out.push("  virtual " + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
@@ -21138,6 +21138,12 @@ class CppTargetCore {
 		return inferredFunctionReturnCppType(fn, owner, classLookup.byName, classLookup);
 	}
 
+	/**
+		Return the C++ method signature return type for Haxe class/interface
+		methods. C++ `std::shared_ptr<T>` return types are not covariant, so a
+		Haxe override with a narrower reference return keeps the inherited C++
+		signature and leaves the concrete allocation in the method body.
+	**/
 	static function cppMethodSignatureReturnType(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):String {
 		final ownReturn = cppFunctionReturnType(fn, owner, classLookup);
 		if (fn == null || owner == null || HxFunctionDecl.getIsStatic(fn))
@@ -21163,7 +21169,7 @@ class CppTargetCore {
 				continue;
 			final ifaceFn = classMethodDeclIn(iface, method, false);
 			if (ifaceFn != null)
-				return cppFunctionReturnType(ifaceFn, iface, classLookup);
+				return cppMethodSignatureReturnType(ifaceFn, iface, classLookup);
 		}
 		return "";
 	}
