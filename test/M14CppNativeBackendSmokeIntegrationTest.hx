@@ -1642,7 +1642,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final checkExcLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(checkExcFn, testXml, lookup).join("\n");
 		assertContains(checkExcLines, "void checkExc(std::shared_ptr<Xml> x, std::optional<PosInfos> pos = std::nullopt)",
 			"C++ wrappers that forward optional positions into Test.exc should infer optional PosInfos");
-		assertContains(checkExcLines, "exc([&]() { return (x->nodeName); }, pos);",
+		assertContains(checkExcLines, "exc([&]() -> void { (x->nodeName); }, pos);",
 			"C++ wrappers that forward optional positions into Test.exc should pass the optional value through");
 		assertTrue(checkExcLines.indexOf("std::optional<std::string> pos") < 0,
 			"C++ wrappers that forward optional positions into Test.exc should not keep string optional placeholders");
@@ -7335,6 +7335,38 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		}).join("\n");
 		assertContains(propertyInterfaceLines, "virtual std::string set_x(std::string value) { return value; }",
 			"C++ interfaces with property setters should expose setter calls for interface-typed receivers");
+		final propertySetterCallbackBase = new HxClassDecl("Test", false, [
+			new HxFunctionDecl("exc", Public, false, [new HxFunctionArg("f", "", NoDefault, false, false)], "Void",
+				[SExpr(ECall(EIdent("f"), []), HxPos.unknown())], "")
+		], []);
+		final propertySetterCallbackOwner = new HxClassDecl("PropertySetterCallbackOwner", false, [
+			new HxFunctionDecl("set_count", Public, false, [new HxFunctionArg("_", "", NoDefault, false, false)], "",
+				[SThrow(EString("setter was called"), HxPos.unknown())], ""),
+			new HxFunctionDecl("test", Public, false, [], "Void", [
+				SVar("target", "PropertySetterCallbackOwner", ENew("PropertySetterCallbackOwner", []), HxPos.unknown()),
+				SExpr(ECall(EIdent("exc"), [ELambda([], ECall(EField(EIdent("target"), "set_count"), [EInt(4)]))]), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("count", Public, false, "Int", EInt(3), [], null, null, false, "default", "set")
+		], "Test");
+		final propertySetterCallbackNames = new StringMap<Bool>();
+		propertySetterCallbackNames.set("Test", true);
+		propertySetterCallbackNames.set("PropertySetterCallbackOwner", true);
+		final propertySetterCallbackClasses = new StringMap<HxClassDecl>();
+		propertySetterCallbackClasses.set("Test", propertySetterCallbackBase);
+		propertySetterCallbackClasses.set("PropertySetterCallbackOwner", propertySetterCallbackOwner);
+		final propertySetterCallbackLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(propertySetterCallbackOwner, {
+			names: propertySetterCallbackNames,
+			byName: propertySetterCallbackClasses
+		}).join("\n");
+		assertContains(propertySetterCallbackLines, "int set_count(int _) {",
+			"C++ unhinted property setters should use their backing field type for the generated signature");
+		assertTrue(propertySetterCallbackLines.indexOf("std::string set_count(std::string _)") < 0,
+			"C++ unhinted property setters should not fall back to string-shaped signatures when the field is Int");
+		assertContains(propertySetterCallbackLines, "exc([&]() -> void { target->set_count(4); });",
+			"C++ Void callback arguments should render value-returning property setter calls as statements");
+		assertTrue(propertySetterCallbackLines.indexOf("return target->set_count(4);") < 0,
+			"C++ Void callback arguments must not return the setter value from the generated lambda");
 		final genericMergeOwner = new HxClassDecl("GenericMergeOwner", false, [
 			new HxFunctionDecl("merge", Public, true, [
 				new HxFunctionArg("a", "A", NoDefault, false, false),

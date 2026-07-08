@@ -4822,6 +4822,26 @@ class CppTargetCore {
 		}
 	}
 
+	static function knownDirectCallSupportParamCppTypes(owner:HxClassDecl, methodName:String, ?scope:CppRenderScope):Array<String> {
+		final lookup = lookupForScope(scope);
+		if (owner != null) {
+			final rendered = renderedClassName(owner, lookup);
+			final byRendered = knownStdlibMethodParamCppTypes(rendered, methodName, scope, lookup);
+			if (byRendered.length > 0)
+				return byRendered;
+			final bySourceName = knownStdlibMethodParamCppTypes(HxClassDecl.getName(owner), methodName, scope, lookup);
+			if (bySourceName.length > 0)
+				return bySourceName;
+		}
+		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
+		if (scope != null && scope.owner != null && (method == "exc" || method == "unspec")) {
+			final currentName = renderedClassName(scope.owner, lookup);
+			if (currentName == "Test" || classExtendsClass(currentName, "Test", scope))
+				return knownStdlibMethodParamCppTypes("Test", method, scope, lookup);
+		}
+		return [];
+	}
+
 	static function knownStdlibConstructorParamCppTypes(className:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup,
 			?ctor:HxFunctionDecl):Array<String> {
 		final owner = stdlibConstructorOwnerName(className);
@@ -5199,6 +5219,7 @@ class CppTargetCore {
 		functionScopePrepStack.set(key, true);
 		try {
 			runPrepPhase("known_arg_types", () -> applyKnownStdlibFunctionArgOverrides(scope, fn));
+			runPrepPhase("property_setter_arg", () -> applyPropertySetterArgTypeOverride(scope, fn));
 			runPrepPhase("infer_callable_args", () -> {
 				if (!knownStdlibMethodUsesDeclaredCallableArgs(scope, fn) && functionMayNeedCallableArgTypeOverrides(fn))
 					inferCallableArgTypeOverrides(scope, fn);
@@ -5244,6 +5265,52 @@ class CppTargetCore {
 		functionScopePrepStack.remove(key);
 		if (prepTimingEnabled)
 			tracePrepPhase("total_cache_miss", Sys.time() - prepStartTime);
+	}
+
+	/**
+		Haxe property setters have the storage field's value type even when the
+		parsed helper argument is untyped and the body only throws.
+	**/
+	static function applyPropertySetterArgTypeOverride(scope:CppRenderScope, fn:HxFunctionDecl):Void {
+		if (scope == null || scope.owner == null || fn == null)
+			return;
+		final args = HxFunctionDecl.getArgs(fn);
+		if (args == null || args.length != 1)
+			return;
+		final explicit = StringTools.trim(HxFunctionArg.getTypeHint(args[0]) == null ? "" : HxFunctionArg.getTypeHint(args[0]));
+		if (explicit.length > 0 && !isDynamicLikeTypeHint(explicit))
+			return;
+		final typeName = propertySetterFieldCppType(fn, scope.owner, scope, lookupForScope(scope));
+		if (typeName.length == 0)
+			return;
+		final argName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		scope.argTypeOverrides.set(argName, typeName);
+		scope.localTypes.set(argName, typeName);
+	}
+
+	static function propertySetterFieldCppType(fn:HxFunctionDecl, owner:HxClassDecl, scope:CppRenderScope, classLookup:CppClassLookup):String {
+		final field = propertySetterBackingField(fn, owner);
+		if (field == null)
+			return "";
+		return knownStdlibFieldCppType(renderedClassName(owner, classLookup), HxFieldDecl.getName(field), HxFieldDecl.getTypeHint(field),
+			HxFieldDecl.getInit(field), scope);
+	}
+
+	static function propertySetterBackingField(fn:HxFunctionDecl, owner:HxClassDecl):Null<HxFieldDecl> {
+		if (fn == null || owner == null)
+			return null;
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		if (!StringTools.startsWith(method, "set_"))
+			return null;
+		for (field in HxClassDecl.getFields(owner)) {
+			if (HxFieldDecl.getIsStatic(field) != HxFunctionDecl.getIsStatic(fn))
+				continue;
+			if (HxFieldDecl.getPropertySet(field) != "set")
+				continue;
+			if (method == "set_" + sanitizeIdentifier(HxFieldDecl.getName(field)))
+				return field;
+		}
+		return null;
 	}
 
 	/**
@@ -13120,8 +13187,19 @@ class CppTargetCore {
 		if (eqForwarding != null)
 			return eqForwarding;
 		final renderArgsStart = timingEnabled ? Sys.time() : 0.0;
+		final supportParamTypesStart = timingEnabled ? Sys.time() : 0.0;
+		final supportParamTypes = knownDirectCallSupportParamCppTypes(owner, name, scope);
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"direct_call_phase=support_param_types call="
+				+ cleanName
+				+ " seconds="
+				+ Std.string(Sys.time() - supportParamTypesStart)
+				+ " count="
+				+ Std.string(supportParamTypes.length));
 		final inferArgTypesStart = timingEnabled ? Sys.time() : 0.0;
-		final inferredArgTypes = if (fn != null && owner != null) inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses); else null;
+		final inferredArgTypes = if (supportParamTypes.length > 0) supportParamTypes; else if (fn != null && owner != null) inferredFunctionArgCppTypes(fn,
+			owner, scope.classByName, scope.allClasses); else null;
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope,
 				"direct_call_phase=inferred_arg_types call="
@@ -13133,7 +13211,9 @@ class CppTargetCore {
 				+ " count="
 				+ Std.string(inferredArgTypes == null ? 0 : inferredArgTypes.length));
 		final renderFunctionArgsStart = timingEnabled ? Sys.time() : 0.0;
-		final renderedArgs = if (fn != null && owner != null) {
+		final renderedArgs = if (supportParamTypes.length > 0) {
+			renderKnownCppParamCallArgs(supportParamTypes, args, scope);
+		} else if (fn != null && owner != null) {
 			if (isStringComparisonHelperCall(cleanName, inferredArgTypes, args))
 				renderStringComparisonHelperCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredArgTypes);
 			else
@@ -14626,6 +14706,14 @@ class CppTargetCore {
 			traceCallArgRenderPhase(scope, arg, param, "actual_type", Sys.time() - actualTypeStart, declaredParamType, paramType, valueType, actualType);
 		if (isCppOptionalType(paramType) && actualType == paramType)
 			return optionalStorageExpr(arg, scope);
+		if (isCppFunctionType(valueType)) {
+			final functionStart = timingEnabled ? Sys.time() : 0.0;
+			final rendered = actualType == valueType ? renderExpr(arg, scope) : valueExprForExpectedType(arg, valueType, scope);
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "function_expected_render", Sys.time() - functionStart, declaredParamType, paramType, valueType,
+					actualType);
+			return rendered;
+		}
 		if (valueType == "std::shared_ptr<EnumValue>" && actualType == "std::any") {
 			final enumStart = timingEnabled ? Sys.time() : 0.0;
 			final rendered = "__hxhx_enum_value_ptr(" + renderExpr(arg, scope) + ")";
@@ -22267,6 +22355,11 @@ class CppTargetCore {
 			final knownReturn = knownStdlibMethodReturnCppType(ownerName, HxFunctionDecl.getName(fn), raw, returnScope, returnLookup);
 			if (knownReturn.length > 0)
 				return cacheReturn(knownReturn);
+		}
+		if (raw.length == 0 || isDynamicLikeTypeHint(raw)) {
+			final setterReturn = propertySetterFieldCppType(fn, owner, returnScope, returnLookup);
+			if (setterReturn.length > 0)
+				return cacheReturn(setterReturn);
 		}
 		if (raw.length > 0 && isDynamicLikeTypeHint(raw) && functionReturnsErasedDynamicValue(fn, returnScope))
 			return cacheReturn("std::any");
