@@ -452,6 +452,11 @@ class CppTargetCore {
 		out.push("  std::sort(values.begin(), values.end(), [&](const auto& left, const auto& right) { return compare(left, right) < 0; });");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T>");
+		out.push("static bool __hxhx_vector_contains(const std::vector<T>& values, const T& needle) {");
+		out.push("  return std::find(values.begin(), values.end(), needle) != values.end();");
+		out.push("}");
+		out.push("");
 		for (line in CppMacroExpr.runtimePreludeLines())
 			out.push(line);
 		out.push("static std::string __hxhx_stringify(const __HxMacroExpr& value) {");
@@ -9347,6 +9352,8 @@ class CppTargetCore {
 
 	static function isHelperMacrosTypedAsCallee(callee:HxExpr):Bool {
 		return switch (callee) {
+			case EIdent("typedAs"):
+				true;
 			case EField(EIdent("HelperMacros"), "typedAs"):
 				true;
 			case EField(EField(EIdent("unit"), "HelperMacros"), "typedAs"):
@@ -9354,6 +9361,14 @@ class CppTargetCore {
 			case _:
 				false;
 		};
+	}
+
+	static function helperMacrosTypedAsExpr(callee:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (args == null || args.length != 2 || !isHelperMacrosTypedAsCallee(callee))
+			return null;
+		// Upstream unit `typedAs` is a macro-time type probe. Its arguments must
+		// inform local type inference, but they are not runtime values to execute.
+		return "HelperMacros::typedAs(std::string(), std::string())";
 	}
 
 	static function isHelperMacrosStringShimReceiver(receiver:HxExpr, method:String):Bool {
@@ -11056,6 +11071,8 @@ class CppTargetCore {
 				"Type::resolveClass(" + stringExpr(args[0], scope) + ")";
 			case ECall(EField(receiver, "resolveEnum"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"Type::resolveEnum(" + stringExpr(args[0], scope) + ")";
+			case ECall(EField(receiver, "allEnums"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
+				"Type::allEnums<std::string>(" + valueExprForExpectedType(args[0], "std::shared_ptr<Enum>", scope) + ")";
 			case ECall(EField(receiver, "createInstance"), args) if (isTypeStaticReceiver(receiver) && args.length == 2):
 				typeFactoryCallExpr("createInstance", args, scope);
 			case ECall(EField(receiver, "createEmptyInstance"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
@@ -11150,6 +11167,8 @@ class CppTargetCore {
 			case ECall(EField(EField(EIdent("unit"), "HelperMacros"), "typeError"), [EUnsupported(raw)])
 				if (raw != null && StringTools.startsWith(raw, "for_expr:")):
 				"true";
+			case ECall(callee, args) if (helperMacrosTypedAsExpr(callee, args, scope) != null):
+				helperMacrosTypedAsExpr(callee, args, scope);
 			case ECall(callee, args) if (helperMacrosTypeErrorProbeExpr(callee, args) != null):
 				helperMacrosTypeErrorProbeExpr(callee, args);
 			case ECall(callee, args) if (helperMacrosGetMetaExpr(callee, args, scope) != null):
@@ -12184,6 +12203,12 @@ class CppTargetCore {
 					"__hxhx_vector_pop(" + target + ")";
 				case "join" if (args.length == 1):
 					"__hxhx_join(" + target + ", " + stringExpr(args[0], scope) + ")";
+				case "contains" if (args.length == 1):
+					"__hxhx_vector_contains("
+					+ target
+					+ ", "
+					+ valueExprForExpectedType(args[0], cppVectorElementType(receiverCppType), scope)
+					+ ")";
 				case "sort" if (args.length == 1):
 					"__hxhx_vector_sort(" + target + ", " + renderExpr(args[0], scope) + ")";
 				case "map" if (args.length == 1):
@@ -16062,7 +16087,7 @@ class CppTargetCore {
 				if (mapValueType.length > 0) "std::shared_ptr<__hxhx_iterator<"
 					+ mapValueType
 					+ ">>"; else if (isCppVectorType(receiverType)) iteratorCppTypeForVector(receiverType); else "";
-			case "map" | "filter" | "join" | "copy" | "pop":
+			case "map" | "filter" | "join" | "contains" | "copy" | "pop":
 				final receiverType = receiverCppType();
 				if (!isCppVectorType(receiverType)) ""; else switch (method) {
 					case "map":
@@ -16071,6 +16096,8 @@ class CppTargetCore {
 						receiverType;
 					case "join":
 						"std::string";
+					case "contains":
+						"bool";
 					case "copy":
 						receiverType;
 					case "pop":
@@ -17217,7 +17244,7 @@ class CppTargetCore {
 					args.push(index >= 0
 						&& index < fieldValues.length ? valueExprForExpectedType(fieldValues[index], fieldType, scope) : cppDefaultValue(fieldType, scope));
 				}
-				expectedType + "(" + args.join(", ") + ")";
+				expectedType + "{" + args.join(", ") + "}";
 			case _:
 				null;
 		};
@@ -19396,7 +19423,7 @@ class CppTargetCore {
 		final values = [
 			for (element in elements)
 				if (typeName == "std::string") stringExpr(element,
-					scope); else if (typeName == "std::any") valueExprForExpectedType(element, typeName, scope); else renderExpr(element, scope)
+					scope); else if (typeName.length > 0) valueExprForExpectedType(element, typeName, scope); else renderExpr(element, scope)
 		];
 		return "std::vector<" + typeName + ">{" + values.join(", ") + "}";
 	}
@@ -20250,7 +20277,7 @@ class CppTargetCore {
 				"bool";
 			case "getClassName" | "getEnumName" | "typeof" if (args.length == 1):
 				"std::string";
-			case "getClassFields" | "getInstanceFields" | "getEnumConstructs" if (args.length == 1):
+			case "getClassFields" | "getInstanceFields" | "getEnumConstructs" | "allEnums" if (args.length == 1):
 				"std::vector<std::string>";
 			case _:
 				"";

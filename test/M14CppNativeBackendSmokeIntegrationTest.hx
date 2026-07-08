@@ -4308,6 +4308,32 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"), [EIdent("left"), EIdent("right")])) == "Type::enumEq(left, right)",
 			"direct Type.enumEq calls should lower through the C++ type support helper");
+		final typeVectorNames = new StringMap<Bool>();
+		for (name in ["Type", "Enum", "TypeVectorOwner"])
+			typeVectorNames.set(name, true);
+		final typeVectorClasses = new StringMap<HxClassDecl>();
+		typeVectorClasses.set("Type", new HxClassDecl("Type", false, [], []));
+		typeVectorClasses.set("Enum", new HxClassDecl("Enum", false, [], []));
+		final typeVectorScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(new HxClassDecl("TypeVectorOwner", false), {
+			names: typeVectorNames,
+			byName: typeVectorClasses
+		}, "Void");
+		typeVectorScope.localTypes.set("old", "std::string");
+		final typeVectorContains = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(ECall(EField(EIdent("Type"), "getEnumConstructs"),
+			[ECall(EField(EIdent("Type"), "resolveEnum"), [EString("unit.MyEnum")])]), "contains"),
+			[EIdent("old")]),
+			typeVectorScope);
+		assertContains(typeVectorContains,
+			"__hxhx_vector_contains(Type::getEnumConstructs(Type::resolveEnum(std::string(\"unit.MyEnum\"))), std::string(old))",
+			"C++ Type field-list vectors should lower contains through the bounded vector helper");
+		assertTrue(typeVectorContains.indexOf(".contains(") < 0, "C++ Type field-list vectors should not emit std::vector.contains");
+		final typeAllEnumsJoin = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(ECall(EField(EIdent("Type"), "allEnums"),
+			[ECall(EField(EIdent("Type"), "resolveEnum"), [EString("unit.MyEnum")])]), "join"),
+			[EString("#")]),
+			typeVectorScope);
+		assertContains(typeAllEnumsJoin, "__hxhx_join(Type::allEnums<std::string>(Type::resolveEnum(std::string(\"unit.MyEnum\"))), std::string(\"#\"))",
+			"C++ Type.allEnums runtime Enum meta-values should render with an explicit string-vector template before join");
+		assertTrue(typeAllEnumsJoin.indexOf("Type::allEnums(Type::") < 0, "C++ Type.allEnums should not rely on impossible C++ template inference");
 		final classRefNames = new StringMap<Bool>();
 		classRefNames.set("MyClass", true);
 		classRefNames.set("Type", true);
@@ -4535,6 +4561,39 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				helperMacrosScope);
 		assertTrue(helperMacrosEndsWithExpr == "__hxhx_ends_with(HelperMacros::typeString(std::string()), std::string(\"DefaultTPClass_y<String>\"))",
 			"C++ HelperMacros.typeString String receivers should lower endsWith through target support helpers");
+		final typedAsNames = new StringMap<Bool>();
+		for (name in ["TypedAsOwner", "Base", "Child1", "Child2", "HelperMacros"])
+			typedAsNames.set(name, true);
+		final typedAsClasses = new StringMap<HxClassDecl>();
+		typedAsClasses.set("TypedAsOwner", new HxClassDecl("TypedAsOwner", false, [], []));
+		typedAsClasses.set("Base", new HxClassDecl("Base", false, [], []));
+		typedAsClasses.set("Child1", new HxClassDecl("Child1", false, [], []));
+		typedAsClasses.set("Child2", new HxClassDecl("Child2", false, [], []));
+		typedAsClasses.set("HelperMacros", helperMacrosOwner);
+		final typedAsScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(typedAsClasses.get("TypedAsOwner"), {
+			names: typedAsNames,
+			byName: typedAsClasses
+		}, "void");
+		typedAsScope.localTypes.set("tbase", "std::vector<std::shared_ptr<Base>>");
+		typedAsScope.localTypes.set("tnullbool", "std::vector<std::optional<bool>>");
+		final importedTypedAsArray = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("typedAs"),
+			[EArrayDecl([ENew("Child1", []), ENew("Child2", [])]), EIdent("tbase")]), typedAsScope);
+		assertTrue(importedTypedAsArray == "HelperMacros::typedAs(std::string(), std::string())",
+			"C++ imported HelperMacros.typedAs should stay a macro-time type probe instead of evaluating runtime arguments");
+		assertTrue(importedTypedAsArray.indexOf("std::vector<std::shared_ptr<Child1>>") < 0,
+			"C++ imported HelperMacros.typedAs should not force mixed probe arrays to compile as first-element vectors");
+		final typedAsArrayValue = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(EArrayDecl([ENew("Child1", []), ENew("Child2", [])]),
+			"std::vector<std::shared_ptr<Base>>", typedAsScope);
+		assertContains(typedAsArrayValue, "std::vector<std::shared_ptr<Base>>{std::make_shared<Child1>(), std::make_shared<Child2>()}",
+			"C++ expected vector rendering should widen mixed subclass arrays without broad Dynamic fallbacks");
+		final importedTypedAsNullableArray = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("typedAs"),
+			[EArrayDecl([ENull, EBool(false)]), EIdent("tnullbool")]), typedAsScope);
+		assertTrue(importedTypedAsNullableArray == "HelperMacros::typedAs(std::string(), std::string())",
+			"C++ imported HelperMacros.typedAs should not evaluate nullable probe arrays at runtime");
+		final typedAsNullableArrayValue = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(EArrayDecl([ENull, EBool(false)]),
+			"std::vector<std::optional<bool>>", typedAsScope);
+		assertContains(typedAsNullableArrayValue, "std::vector<std::optional<bool>>{std::nullopt, false}",
+			"C++ expected vector rendering should preserve null as optional storage inside expected array element types");
 		final macroStringToolsOwner = new HxClassDecl("MacroStringTools", false, [
 			new HxFunctionDecl("isFormatExpr", Public, true, [new HxFunctionArg("e", "ExprOf<String>", NoDefault, false, false)], "Bool",
 				[SReturn(EField(EIdent("e"), "expr"), HxPos.unknown())], ""),
@@ -5136,8 +5195,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderHelperClass(genericAnonOwner, genericAnonLookup).join("\n");
 		assertContains(genericAnonLines, "__hxhx_make_shared_MyGeneric<__hxhx_anon_a_int_",
 			"C++ explicit generic construction should preserve structural typedef field shape in template arguments");
-		assertContains(genericAnonLines, "(1, nullptr)",
-			"C++ structural typedef constructor arguments should default omitted nullable fields instead of narrowing to observed literal fields");
+		assertContains(genericAnonLines, "{1, nullptr}",
+			"C++ structural typedef carrier initialization should default omitted nullable fields instead of narrowing to observed literal fields");
 		assertContains(genericAnonLines, "auto b = ((a->t).b);", "C++ generic structural typedef locals should retain fields read after construction");
 		final stringMapGeneric = new HxClassDecl("StringMap", false, [
 			new HxFunctionDecl("set", Public, false, [
@@ -7440,8 +7499,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unhinted constrained arguments should be narrowed from concrete local declarations");
 		assertContains(constrainedInferLines, "std::shared_ptr<ConstrainedValue> s1 = arg->toUpperCase();",
 			"C++ narrowed constrained arguments should use class receiver dispatch instead of std::any member calls");
-		assertContains(constrainedInferLines, "HelperMacros::typedAs(arg, nullptr);",
-			"C++ narrowed constrained arguments should pass through typedAs-style helper calls without std::any");
+		assertContains(constrainedInferLines, "HelperMacros::typedAs(std::string(), std::string());",
+			"C++ narrowed constrained arguments should pass through macro-time typedAs probes without std::any");
 		assertTrue(constrainedInferLines.indexOf("std::any arg") < 0, "C++ constrained argument inference should not leave the argument erased");
 		assertTrue(constrainedInferLines.indexOf("arg.toUpperCase()") < 0,
 			"C++ constrained receiver inference should not emit member access on erased arguments");

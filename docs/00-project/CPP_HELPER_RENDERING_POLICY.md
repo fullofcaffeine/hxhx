@@ -62,6 +62,14 @@ package/source-gated to the real stdlib class and emitted from target-owned C++
 runtime support to avoid re-rendering the parsed List body in strict-gate
 diagnostics. This does not generalize to user-defined classes named `List`.
 
+Macro-time assertion helpers must not accidentally become runtime semantics.
+For example, upstream unit `HelperMacros.typedAs(actual, expected)` is a
+macro-time type probe; Cpp lowering may use it for local type-inference evidence
+and then emit a neutral helper call rather than evaluating `actual` or
+`expected` as runtime C++ values. Do not generalize this to ordinary helper
+functions: only helpers with macro-time probe behavior and focused evidence may
+use this treatment.
+
 Reachability and ordering should scan parsed field initializers and method
 bodies only for `full_body` helpers. `declaration_only` and `runtime_module`
 helpers keep signature/type dependencies, but their parsed bodies must not pull
