@@ -6942,6 +6942,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ string-returning super method calls should flow directly instead of std::to_string(std::string)");
 		assertTrue(superStringLines.indexOf("std::to_string(BaseString::toString())") < 0,
 			"C++ string-returning super method calls should not be wrapped in std::to_string");
+		final renderedBase = new HxClassDecl("Base", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")], []);
+		final renderedChild = new HxClassDecl("Child", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [SExpr(ECall(ESuper, []), HxPos.unknown())], "")
+		], [], "Base");
+		final renderedCtorNames = new StringMap<Bool>();
+		for (name in ["Base", "Child", "Module_Base", "Module_Child"])
+			renderedCtorNames.set(name, true);
+		final renderedCtorClasses = new StringMap<HxClassDecl>();
+		renderedCtorClasses.set("Base", renderedBase);
+		renderedCtorClasses.set("Child", renderedChild);
+		renderedCtorClasses.set("Module_Base", renderedBase);
+		renderedCtorClasses.set("Module_Child", renderedChild);
+		final renderedCtorLookup = {
+			names: renderedCtorNames,
+			byName: renderedCtorClasses,
+			renderedNames: [
+				{cls: renderedBase, name: "Module_Base"},
+				{cls: renderedChild, name: "Module_Child"}
+			]
+		};
+		final renderedChildLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(renderedChild, renderedCtorLookup).join("\n");
+		assertContains(renderedChildLines, "struct Module_Child : public Module_Base {",
+			"C++ rendered-name inheritance should use the resolved base class in declarations");
+		assertContains(renderedChildLines, "Module_Child() : Module_Base() {",
+			"C++ explicit super constructor initializers should use the rendered base class name");
+		assertTrue(renderedChildLines.indexOf(" : Base()") < 0,
+			"C++ explicit super constructor initializers must not fall back to short Haxe base names when classes are rendered with module prefixes");
 		final superPropBase = new HxClassDecl("SuperPropBase", false, [
 			new HxFunctionDecl("set_prop", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Int",
 				[SReturn(EIdent("v"), HxPos.unknown())], "")

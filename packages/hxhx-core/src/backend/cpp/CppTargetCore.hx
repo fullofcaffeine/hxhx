@@ -7293,10 +7293,7 @@ class CppTargetCore {
 
 	static function constructorInitializerList(ctor:HxFunctionDecl, scope:CppRenderScope):String {
 		final parts = new Array<String>();
-		final baseType = scope == null || scope.owner == null ? null : inheritedCppBaseTypeName(scope.owner, {
-			names: scope.classNames,
-			byName: scope.classByName
-		});
+		final baseType = scope == null || scope.owner == null ? null : inheritedCppBaseTypeName(scope.owner, lookupForScope(scope));
 		if (baseType != null)
 			switch (constructorSuperCallArgs(HxFunctionDecl.getBody(ctor))) {
 				case null:
