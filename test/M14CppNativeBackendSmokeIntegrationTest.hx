@@ -2346,6 +2346,41 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic same-owner calls should still infer explicit type arguments");
 	}
 
+	static function assertCppFunctionTypeParamsWinOverSameNamedClasses():Void {
+		final staticSingle = new HxFunctionDecl("staticSingle", Public, true, [new HxFunctionArg("a", "A", NoDefault, false, false)], "A",
+			[SReturn(EIdent("a"), HxPos.unknown())], "", ["__hxhx_fn_type_params=A"]);
+		final memberAnon = new HxFunctionDecl("memberAnon", Public, false, [new HxFunctionArg("v", "A", NoDefault, false, false)], "", [
+			SReturn(EBinop("+", EField(EIdent("v"), "x"), EField(EIdent("v"), "y")), HxPos.unknown())
+		], "", ["__hxhx_fn_type_params=A"]);
+		final eventIdentity = new HxFunctionDecl("eventIdentity", Public, false, [new HxFunctionArg("value", "EventArg", NoDefault, false, false)],
+			"EventArg", [SReturn(EIdent("value"), HxPos.unknown())], "", ["__hxhx_fn_type_params=EventArg"]);
+		final owner = new HxClassDecl("ParamConstraintCollisionOwner", false, [staticSingle, memberAnon, eventIdentity], []);
+		final classA = new HxClassDecl("A", false, [], []);
+		final eventArgClass = new HxClassDecl("EventArg", false, [], []);
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		for (cls in [owner, classA, eventArgClass]) {
+			names.set(HxClassDecl.getName(cls), true);
+			classes.set(HxClassDecl.getName(cls), cls);
+		}
+		final lookup = {names: names, byName: classes};
+		final staticSingleLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(staticSingle, owner, lookup).join("\n");
+		assertContains(staticSingleLines, "template<typename A>\n  static A staticSingle(A a) {",
+			"C++ function type params should render as templates even when a same-named class is visible");
+		assertTrue(staticSingleLines.indexOf("std::shared_ptr<A>") < 0, "C++ function type params should not resolve to same-named nominal classes");
+		final memberAnonLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(memberAnon, owner, lookup).join("\n");
+		assertContains(memberAnonLines, "template<typename A>\n  std::string memberAnon(A v) {",
+			"C++ structural-constrained function type params should stay templated instead of nominalizing to a class");
+		assertContains(memberAnonLines, "return std::to_string(((v.x) + (v.y)));",
+			"C++ structural-constrained type params should use value field access on template arguments");
+		assertTrue(memberAnonLines.indexOf("v->x") < 0, "C++ structural-constrained type params should not be rendered as shared_ptr fields");
+		final eventIdentityLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(eventIdentity, owner, lookup).join("\n");
+		assertContains(eventIdentityLines, "template<typename EventArg>\n  EventArg eventIdentity(EventArg value) {",
+			"C++ multi-character function type params should also outrank same-named classes");
+		assertTrue(eventIdentityLines.indexOf("std::shared_ptr<EventArg>") < 0,
+			"C++ multi-character function type params should not resolve to same-named nominal classes");
+	}
+
 	static function assertCppStringParamCallsCoerceScalarLiterals():Void {
 		final deq = new HxFunctionDecl("deq", Public, false, [
 			new HxFunctionArg("expected", "Dynamic", NoDefault, false, false),
@@ -3860,6 +3895,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppFunctionArgDeclaredTypeCacheUsesScopeShape();
 		assertCppFieldTypeCacheUsesScopeShape();
 		assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions();
+		assertCppFunctionTypeParamsWinOverSameNamedClasses();
 		assertCppStringParamCallsCoerceScalarLiterals();
 		assertCppUnhintedArithmeticParamsStayNumeric();
 		assertCppStaticCallableFieldsInferFunctionStorage();

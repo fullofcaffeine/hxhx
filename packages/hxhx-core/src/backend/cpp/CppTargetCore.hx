@@ -2079,8 +2079,15 @@ class CppTargetCore {
 	}
 
 	static function scopedGenericTypeParamName(typeHint:String, ?scope:CppRenderScope):String {
-		final param = genericTypeParamName(typeHint);
-		return param.length > 0 && isScopeTypeParam(param, scope) ? param : "";
+		final clean = sanitizeTypePath(removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint)));
+		if (clean.length == 0 || scope == null || scope.typeParams == null)
+			return "";
+		for (param in scope.typeParams) {
+			final raw = sanitizeTypePath(StringTools.trim(param == null ? "" : param));
+			if (raw == clean)
+				return cppTypeParamName(raw, scope);
+		}
+		return "";
 	}
 
 	static function isAssertStatusStringField(fieldName:String):Bool {
@@ -19830,6 +19837,9 @@ class CppTargetCore {
 		final templateWrapName = templateWrapAbstractNameForTypeHint(hint, scope, classLookup);
 		if (templateWrapName != null)
 			return templateWrapName;
+		final scopedTypeParam = scopedGenericTypeParamName(hint, scope);
+		if (scopedTypeParam.length > 0)
+			return scopedTypeParam;
 		if (scope != null && scope.owner != null && isGenericTypeParamHint(hint, scope.owner))
 			return cppTypeParamName(genericTypeParamName(hint), scope);
 		if (isStructuralTypeHint(hint)) {
