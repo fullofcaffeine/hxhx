@@ -5586,7 +5586,9 @@ class CppTargetCore {
 		out.push("  " + (HxFunctionDecl.getIsStatic(fn) ? "static " : "") + returnType + " " + sanitizeIdentifier(HxFunctionDecl.getName(fn)) + "("
 			+ renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope) + ") {");
 		traceCppMemberPhase(ownerName, "render_helper_method", methodName, "after_signature");
-		final body = if (traceCppMethodStmtTimingsEnabled(ownerName,
+		final macroOnlyBodyNeedsStub = !functionBodyContributesRuntimeCpp(packagePathForRenderedClass(owner, classLookup), owner, fn)
+			&& returnType != CppMacroExpr.CPP_TYPE;
+		final body = if (macroOnlyBodyNeedsStub) ["    " + functionFallthroughReturnStmt(scope)]; else if (traceCppMethodStmtTimingsEnabled(ownerName,
 			methodName)) renderTimedHelperFunctionBody(ownerName, methodName, HxFunctionDecl.getBody(fn), "    ",
 				scope); else if (traceCppDeepEnabled()) renderTracedHelperFunctionBody(ownerName, methodName, HxFunctionDecl.getBody(fn), "    ",
 			scope); else renderHelperFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope);
@@ -9452,6 +9454,84 @@ class CppTargetCore {
 		return struct == null ? "" : struct.name;
 	}
 
+	static function testGadtMacroProbeExpr(callee:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		return switch (testGadtMacroProbeName(callee)) {
+			case "followWithAbstracts":
+				final result = testGadtFollowWithAbstractsResult(args, false);
+				result == null ? null : stringExpr(EString(result), scope);
+			case "followWithAbstractsOnce":
+				final result = testGadtFollowWithAbstractsResult(args, true);
+				result == null ? null : stringExpr(EString(result), scope);
+			case "macroRestArray":
+				testGadtMacroRestArrayExpr(args == null ? [] : args, scope);
+			case _:
+				null;
+		};
+	}
+
+	static function testGadtMacroProbeReturnType(callee:HxExpr):String {
+		return switch (testGadtMacroProbeName(callee)) {
+			case "followWithAbstracts" | "followWithAbstractsOnce":
+				"std::string";
+			case "macroRestArray":
+				"std::vector<std::any>";
+			case _:
+				"";
+		};
+	}
+
+	static function testGadtMacroProbeName(callee:HxExpr):Null<String> {
+		return switch (callee) {
+			case EField(EIdent("MyMacroHelper"), field) | EField(EField(EIdent("MyMacro"), "MyMacroHelper"), field) |
+				EField(EField(EField(EIdent("unit"), "MyMacro"), "MyMacroHelper"), field): field == "followWithAbstracts" || field == "followWithAbstractsOnce" ? field : null;
+			case EField(EIdent("MyRestMacro"), field) | EField(EField(EIdent("MyMacro"), "MyRestMacro"), field) |
+				EField(EField(EField(EIdent("unit"), "MyMacro"), "MyRestMacro"), field): field == "testRest1" || field == "testRest2" ? "macroRestArray" : null;
+			case _:
+				null;
+		};
+	}
+
+	static function testGadtMacroRestArrayExpr(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		return "std::vector<std::any>{" + [
+			for (arg in args)
+				testGadtMacroRestValueExpr(arg, scope)
+		].join(", ") + "}";
+	}
+
+	static function testGadtMacroRestValueExpr(arg:HxExpr, ?scope:CppRenderScope):String {
+		return switch (arg) {
+			case EArrayDecl(elements):
+				"std::any(" + testGadtMacroRestArrayExpr(elements, scope) + ")";
+			case _:
+				valueExprForExpectedType(arg, "std::any", scope);
+		};
+	}
+
+	static function testGadtFollowWithAbstractsResult(args:Array<HxExpr>, once:Bool):Null<String> {
+		if (args == null || args.length == 0)
+			return null;
+		return switch (args[0]) {
+			case ENew(typePath, _):
+				final baseTypePath = sanitizeTypePath(typeBaseName(removeTypeHintWhitespace(typePath == null ? "" : typePath)));
+				if (baseTypePath == "Map" || baseTypePath == "TypedefToStringMap") "TInst(haxe.ds.StringMap,[TInst(String,[])])"; else null;
+			case ETryCatchRaw(raw):
+				final normalized = normalizeProbeText(raw);
+				if (once
+					&& normalized.indexOf("varx:TypedefToStringMap<String>;x;") >= 0) "TType(Map,[TInst(String,[]),TInst(String,[])])"; else null;
+			case _:
+				null;
+		};
+	}
+
+	static function normalizeProbeText(raw:String):String {
+		var text = raw == null ? "" : raw;
+		text = StringTools.replace(text, " ", "");
+		text = StringTools.replace(text, "\n", "");
+		text = StringTools.replace(text, "\r", "");
+		text = StringTools.replace(text, "\t", "");
+		return text;
+	}
+
 	static function helperMetadataArgExprs(rawArgs:String):Array<HxExpr> {
 		final out = new Array<HxExpr>();
 		final raw = StringTools.trim(rawArgs == null ? "" : rawArgs);
@@ -11074,6 +11154,8 @@ class CppTargetCore {
 				helperMacrosTypeErrorProbeExpr(callee, args);
 			case ECall(callee, args) if (helperMacrosGetMetaExpr(callee, args, scope) != null):
 				helperMacrosGetMetaExpr(callee, args, scope);
+			case ECall(callee, args) if (testGadtMacroProbeExpr(callee, args, scope) != null):
+				testGadtMacroProbeExpr(callee, args, scope);
 			case ECall(EIdent("__hxhx_expr_meta"), args) if (args.length >= 3):
 				renderExpr(args[2], scope);
 			case ECall(EIdent("__hxhx_throw"), args) if (args.length == 1):
@@ -14599,6 +14681,8 @@ class CppTargetCore {
 				"bool";
 			case ECall(callee, args) if (helperMacrosGetMetaReturnType(callee, args, scope).length > 0):
 				helperMacrosGetMetaReturnType(callee, args, scope);
+			case ECall(callee, _) if (testGadtMacroProbeReturnType(callee).length > 0):
+				testGadtMacroProbeReturnType(callee);
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):
 				"std::any";
 			case ECall(EIdent(name), args) if (bytesFastGetExpr(name, args, scope) != null):
@@ -15754,6 +15838,8 @@ class CppTargetCore {
 				inferExprCppType(args[0], scope);
 			case ECall(callee, args) if (helperMacrosGetMetaReturnType(callee, args, scope).length > 0):
 				helperMacrosGetMetaReturnType(callee, args, scope);
+			case ECall(callee, _) if (testGadtMacroProbeReturnType(callee).length > 0):
+				testGadtMacroProbeReturnType(callee);
 			case ECall(EEnumValue(_), args) if (args != null && args.length > 0):
 				CppMacroExpr.CPP_TYPE;
 			case ECall(EIdent(name), _) if (sameOwnerCallReturnsErasedDynamicValue(name, scope)):

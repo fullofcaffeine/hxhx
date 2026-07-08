@@ -12019,6 +12019,56 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(gadtEnumSource, "auto s = eval<double>(eadd);",
 			"C++ GADT eval locals should infer explicit template arguments from following typedAs probes");
 		assertContains(gadtEnumSource, "auto s2 = eval<bool>(eeq);", "C++ GADT eval locals should infer bool template arguments from following typedAs probes");
+		final renderedExprCarrier = new HxClassDecl("Expr", false, [], [new HxFieldDecl("__hx_is_enum", Public, true, "Bool", EBool(true))], "",
+			["__hxhx_type_params=T"]);
+		final macroQuoteFn = new HxFunctionDecl("quote", Public, true, [new HxFunctionArg("e", "Expr", NoDefault, false, false)], "Expr",
+			[SReturn(EMacroExpr(EString("ok"), []), HxPos.unknown())], "", ["macro"]);
+		final macroQuoteOwner = new HxClassDecl("MyMacroHelper", false, [macroQuoteFn], []);
+		final renderedExprNames = new StringMap<Bool>();
+		renderedExprNames.set("Expr", true);
+		renderedExprNames.set("MyMacroHelper", true);
+		renderedExprNames.set("MyMacro", true);
+		renderedExprNames.set("MyRestMacro", true);
+		renderedExprNames.set("TestGADT_Expr", true);
+		final renderedExprClasses = new StringMap<HxClassDecl>();
+		renderedExprClasses.set("Expr", renderedExprCarrier);
+		renderedExprClasses.set("MyMacroHelper", macroQuoteOwner);
+		renderedExprClasses.set("MyMacro", new HxClassDecl("MyMacro", false, [], []));
+		renderedExprClasses.set("MyRestMacro", new HxClassDecl("MyRestMacro", false, [], []));
+		renderedExprClasses.set("TestGADT_Expr", renderedExprCarrier);
+		final renderedExprLookup = {
+			names: renderedExprNames,
+			byName: renderedExprClasses,
+			all: [macroQuoteOwner, renderedExprCarrier],
+			renderedNames: [
+				{cls: macroQuoteOwner, name: "MyMacroHelper"},
+				{cls: renderedExprCarrier, name: "TestGADT_Expr"}
+			]
+		};
+		final renderedExprLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(macroQuoteFn, macroQuoteOwner, renderedExprLookup).join("\n");
+		assertContains(renderedExprLines, "static std::shared_ptr<TestGADT_Expr> quote(std::shared_ptr<TestGADT_Expr> e)",
+			"C++ macro helper declarations may keep the current nominal macro enum carrier signature");
+		assertContains(renderedExprLines, "return nullptr;", "C++ macro-only helper bodies should render neutral runtime stubs");
+		assertTrue(renderedExprLines.indexOf("__hxhx_macro_expr(") < 0,
+			"C++ macro-only helper bodies should not emit runtime macro-expression carrier construction");
+		final macroProbeScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(macroQuoteOwner, renderedExprLookup, "void");
+		final followRendered = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EField(EIdent("MyMacro"), "MyMacroHelper"),
+			"followWithAbstracts"), [ENew("Map<String,String>", [])]), macroProbeScope);
+		assertContains(followRendered, "TInst(haxe.ds.StringMap,[TInst(String,[])])",
+			"C++ TestGADT followWithAbstracts macro probes should lower to the observed compile-time string");
+		assertTrue(followRendered.indexOf("MyMacroHelper::followWithAbstracts") < 0,
+			"C++ TestGADT followWithAbstracts macro probes should not emit runtime macro helper calls");
+		final onceRendered = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EField(EIdent("MyMacro"), "MyMacroHelper"),
+			"followWithAbstractsOnce"), [ETryCatchRaw("{ var x:TypedefToStringMap<String>; x; }")]),
+			macroProbeScope);
+		assertContains(onceRendered, "TType(Map,[TInst(String,[]),TInst(String,[])])",
+			"C++ TestGADT followWithAbstractsOnce macro probes should lower the raw-block oracle case");
+		final restRendered = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EField(EIdent("MyMacro"), "MyRestMacro"), "testRest1"),
+			[EInt(1), EArrayDecl([EInt(2), EInt(3)])]), macroProbeScope);
+		assertContains(restRendered, "std::vector<std::any>{std::any(1), std::any(std::vector<std::any>{std::any(2), std::any(3)})}",
+			"C++ TestGADT rest macro probes should preserve nested Dynamic array shape");
+		assertTrue(restRendered.indexOf("MyRestMacro::testRest1") < 0, "C++ TestGADT rest macro probes should not emit runtime macro helper calls");
 
 		final contextLoadCallableDir = Path.join([root, "context-load-callable-source-only"]);
 		final contextLoadCallableEmit = BackendRegistry.createForTarget("cpp-native")
