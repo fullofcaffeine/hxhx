@@ -10569,6 +10569,12 @@ class CppTargetCore {
 				if (referenceCast != null)
 					return referenceCast;
 				return valueExprForExpectedType(inner, expectedType, scope);
+			case ECall(ECast(callee, _), args):
+				final callExpr:HxExpr = ECall(callee, args);
+				final referenceCast = explicitReferenceCastExprForExpectedType(callExpr, expectedType, scope);
+				if (referenceCast != null)
+					return referenceCast;
+				return valueExprForExpectedType(callExpr, expectedType, scope);
 			case ETernary(cond, thenExpr, elseExpr):
 				return "(" + conditionExpr(cond, scope) + " ? " + valueExprForExpectedType(thenExpr, expectedType, scope) + " : "
 					+ valueExprForExpectedType(elseExpr, expectedType, scope) + ")";
@@ -10734,22 +10740,48 @@ class CppTargetCore {
 	}
 
 	static function classExtendsClass(childName:String, baseName:String, scope:CppRenderScope):Bool {
-		var current = sanitizeTypePath(typeBaseName(childName == null ? "" : childName));
-		final target = sanitizeTypePath(typeBaseName(baseName == null ? "" : baseName));
-		if (current.length == 0 || target.length == 0)
+		if (scope == null)
 			return false;
+		final lookup = lookupForScope(scope);
+		final target = sanitizeTypePath(typeBaseName(baseName == null ? "" : baseName));
+		var currentCls = classDeclForCppOrHintName(childName, scope, lookup);
+		final targetCls = classDeclForCppOrHintName(baseName, scope, lookup);
 		final seen = new haxe.ds.StringMap<Bool>();
-		while (current.length > 0 && !seen.exists(current)) {
-			if (current == target)
-				return true;
-			seen.set(current, true);
-			final cls = scope.classByName.get(current);
-			if (cls == null)
+		while (currentCls != null) {
+			final currentKey = renderedClassName(currentCls, lookup);
+			if (currentKey.length == 0 || seen.exists(currentKey))
 				return false;
-			final next = baseTypeName(cls);
-			current = next == null ? "" : sanitizeTypePath(typeBaseName(next));
+			if ((targetCls != null && currentCls == targetCls) || classDeclMatchesCppOrHintName(currentCls, target, lookup))
+				return true;
+			seen.set(currentKey, true);
+			final next = HxClassDecl.getExtendsPath(currentCls);
+			if (next == null || next.length == 0)
+				return false;
+			currentCls = lookupClassForTypeHint(next, scope, lookup);
 		}
 		return false;
+	}
+
+	static function classDeclForCppOrHintName(name:String, scope:CppRenderScope, classLookup:CppClassLookup):Null<HxClassDecl> {
+		if (scope == null || name == null)
+			return null;
+		final clean = sanitizeTypePath(typeBaseName(name));
+		if (clean.length == 0)
+			return null;
+		if (scope.classByName.exists(clean))
+			return scope.classByName.get(clean);
+		final direct = sanitizeTypePath(name);
+		if (direct != clean && scope.classByName.exists(direct))
+			return scope.classByName.get(direct);
+		return lookupClassForTypeHint(name, scope, classLookup);
+	}
+
+	static function classDeclMatchesCppOrHintName(cls:HxClassDecl, cleanName:String, classLookup:CppClassLookup):Bool {
+		if (cls == null || cleanName == null || cleanName.length == 0)
+			return false;
+		return cleanName == sanitizeTypePath(HxClassDecl.getName(cls))
+			|| cleanName == sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls)))
+			|| cleanName == renderedClassName(cls, classLookup);
 	}
 
 	static function dynamicIdentityCallExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -15149,17 +15181,20 @@ class CppTargetCore {
 	static function currentOrInheritedOwnerMethodOwner(methodName:String, scope:CppRenderScope):Null<HxClassDecl> {
 		if (scope == null || scope.owner == null)
 			return null;
-		var current = sanitizeTypePath(HxClassDecl.getName(scope.owner));
+		final lookup = lookupForScope(scope);
+		var currentCls:Null<HxClassDecl> = scope.owner;
 		final seen = new haxe.ds.StringMap<Bool>();
-		while (current.length > 0 && !seen.exists(current)) {
-			seen.set(current, true);
-			final cls = scope.classByName.exists(current) ? scope.classByName.get(current) : (current == sanitizeTypePath(HxClassDecl.getName(scope.owner)) ? scope.owner : null);
-			if (cls == null)
+		while (currentCls != null) {
+			final key = renderedClassName(currentCls, lookup);
+			if (key.length == 0 || seen.exists(key))
 				return null;
-			if (ownerMethodDeclIn(cls, methodName) != null)
-				return cls;
-			final next = baseTypeName(cls);
-			current = next == null ? "" : sanitizeTypePath(typeBaseName(next));
+			seen.set(key, true);
+			if (ownerMethodDeclIn(currentCls, methodName) != null)
+				return currentCls;
+			final next = HxClassDecl.getExtendsPath(currentCls);
+			if (next == null || next.length == 0)
+				return null;
+			currentCls = lookupClassForTypeHint(next, scope, lookup);
 		}
 		return null;
 	}

@@ -7119,7 +7119,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("self", Public, false, [], "InlineCastBase", [SReturn(EThis, HxPos.unknown())], "")
 		], []);
 		final inlineCastChild = new HxClassDecl("InlineCastChild", false, [
-			new HxFunctionDecl("test", Public, false, [], "InlineCastChild", [SReturn(ECast(ECall(EIdent("self"), []), null), HxPos.unknown())], "")
+			new HxFunctionDecl("test", Public, false, [], "InlineCastChild", [SReturn(ECast(ECall(EIdent("self"), []), null), HxPos.unknown())], ""),
+			new HxFunctionDecl("testParsedCast", Public, false, [], "InlineCastChild", [SReturn(ECall(ECast(EIdent("self"), ""), []), HxPos.unknown())], "")
 		], [], "InlineCastBase");
 		final inlineCastNames = new StringMap<Bool>();
 		for (name in ["InlineCastBase", "InlineCastChild"])
@@ -7138,6 +7139,38 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(inlineCastChildLines, "return std::static_pointer_cast<InlineCastChild>(self());",
 			"C++ explicit self-return casts should lower base shared_ptr results to the expected child shared_ptr");
 		assertTrue(inlineCastChildLines.indexOf("return self();") < 0, "C++ explicit self-return casts should not erase the cast in a narrower return context");
+		assertContains(inlineCastChildLines, "std::shared_ptr<InlineCastChild> testParsedCast() {",
+			"C++ parser-shaped explicit self-return casts should keep the child return signature");
+		assertContains(inlineCastChildLines,
+			"std::shared_ptr<InlineCastChild> testParsedCast() {\n    return std::static_pointer_cast<InlineCastChild>(self());",
+			"C++ parser-shaped explicit self-return casts should lower casted-call expressions to the expected child shared_ptr");
+		final renderedInlineCastNames = new StringMap<Bool>();
+		for (name in [
+			"InlineCastBase",
+			"InlineCastChild",
+			"Module_InlineCastBase",
+			"Module_InlineCastChild"
+		])
+			renderedInlineCastNames.set(name, true);
+		final renderedInlineCastClasses = new StringMap<HxClassDecl>();
+		renderedInlineCastClasses.set("InlineCastBase", inlineCastBase);
+		renderedInlineCastClasses.set("InlineCastChild", inlineCastChild);
+		renderedInlineCastClasses.set("Module_InlineCastBase", inlineCastBase);
+		renderedInlineCastClasses.set("Module_InlineCastChild", inlineCastChild);
+		final renderedInlineCastLookup = {
+			names: renderedInlineCastNames,
+			byName: renderedInlineCastClasses,
+			renderedNames: [
+				{cls: inlineCastBase, name: "Module_InlineCastBase"},
+				{cls: inlineCastChild, name: "Module_InlineCastChild"}
+			]
+		};
+		final renderedInlineCastChildLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(inlineCastChild, renderedInlineCastLookup).join("\n");
+		assertContains(renderedInlineCastChildLines, "std::shared_ptr<Module_InlineCastChild> testParsedCast() {",
+			"C++ rendered-name explicit self-return casts should keep the rendered child return signature");
+		assertContains(renderedInlineCastChildLines,
+			"std::shared_ptr<Module_InlineCastChild> testParsedCast() {\n    return std::static_pointer_cast<Module_InlineCastChild>(self());",
+			"C++ rendered-name explicit self-return casts should resolve inherited base calls through rendered class lookup");
 		final dynamicFunctionOwner = new HxClassDecl("DynamicFunctionOwner", false, [
 			new HxFunctionDecl("foo", Public, true, [new HxFunctionArg("value", "Float", NoDefault, false, false)], "Float",
 				[SReturn(EIdent("value"), HxPos.unknown())], ""),
