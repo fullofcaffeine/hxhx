@@ -7280,21 +7280,33 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		])
 			stringUsingNames.set(name, true);
 		final stringUsingClasses = new StringMap<HxClassDecl>();
-		stringUsingClasses.set("StringUsingBase", stringUsingBase);
-		stringUsingClasses.set("StringUsingChild", stringUsingChild);
-		stringUsingClasses.set("StringUsingLater", stringUsingLater);
-		stringUsingClasses.set("StringUsingUnrelated", stringUsingUnrelated);
-		final stringUsingLookup = {names: stringUsingNames, byName: stringUsingClasses};
+		final stringUsingRenderedNames = new Array<{cls:HxClassDecl, name:String}>();
+		function addStringUsingClass(cls:HxClassDecl, renderedName:String):Void {
+			final rawName = HxClassDecl.getName(cls);
+			stringUsingClasses.set(rawName, cls);
+			stringUsingNames.set(renderedName, true);
+			stringUsingClasses.set(renderedName, cls);
+			stringUsingRenderedNames.push({cls: cls, name: renderedName});
+		}
+		addStringUsingClass(stringUsingBase, "UsingModule_StringUsingBase");
+		addStringUsingClass(stringUsingChild, "UsingModule_StringUsingChild");
+		addStringUsingClass(stringUsingLater, "UsingModule_StringUsingLater");
+		addStringUsingClass(stringUsingUnrelated, "UsingModule_StringUsingUnrelated");
+		final stringUsingLookup = {names: stringUsingNames, byName: stringUsingClasses, renderedNames: stringUsingRenderedNames};
 		final stringUsingLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(stringUsingChild)[0], stringUsingChild, stringUsingLookup).join("\n");
-		assertContains(stringUsingLines, "return StringUsingBase::pupFunc(std::string(\"foo\"));",
-			"C++ string using-style calls should dispatch to static extension methods on the owner/base chain");
+		assertContains(stringUsingLines, "return UsingModule_StringUsingBase::pupFunc(std::string(\"foo\"));",
+			"C++ string using-style calls should dispatch to rendered static extension owners on the owner/base chain");
+		assertTrue(stringUsingLines.indexOf("return StringUsingBase::pupFunc") < 0,
+			"C++ string using-style owner/base calls should not fall back to raw source owner names");
 		assertTrue(stringUsingLines.indexOf(".pupFunc()") < 0, "C++ string using-style calls should not emit nonexistent std::string members");
 		final stringUsingUnrelatedLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(stringUsingUnrelated)[0], stringUsingUnrelated, stringUsingLookup)
 				.join("\n");
-		assertContains(stringUsingUnrelatedLines, "return StringUsingLater::siblingFunc(std::string(\"FOO\"));",
-			"C++ string using-style fallback should dispatch to available static String extension helpers outside the owner/base chain");
+		assertContains(stringUsingUnrelatedLines, "return UsingModule_StringUsingLater::siblingFunc(std::string(\"FOO\"));",
+			"C++ string using-style fallback should dispatch to rendered static String extension helpers outside the owner/base chain");
+		assertTrue(stringUsingUnrelatedLines.indexOf("return StringUsingLater::siblingFunc") < 0,
+			"C++ string using-style fallback should not fall back to raw source owner names");
 		assertTrue(stringUsingUnrelatedLines.indexOf(".siblingFunc()") < 0, "C++ string using-style fallback should not emit nonexistent std::string members");
 		final constrainedValue = new HxClassDecl("ConstrainedValue", false, [
 			new HxFunctionDecl("toUpperCase", Public, false, [], "ConstrainedValue", [SReturn(ENew("ConstrainedValue", []), HxPos.unknown())], ""),

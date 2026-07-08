@@ -12476,6 +12476,7 @@ class CppTargetCore {
 	static function staticStringExtensionOwner(method:String, ?scope:CppRenderScope):Null<String> {
 		if (scope == null || scope.owner == null)
 			return null;
+		final lookup = lookupForScope(scope);
 		var className = sanitizeTypePath(HxClassDecl.getName(scope.owner));
 		while (className != null && className.length > 0) {
 			final cls = scope.classByName.get(className);
@@ -12483,7 +12484,7 @@ class CppTargetCore {
 				return null;
 			final fn = classMethodDeclIn(cls, method, true);
 			if (isStaticStringExtensionMethod(fn, cls, scope))
-				return className;
+				return renderedClassName(cls, lookup);
 			final baseName = baseTypeName(cls);
 			if (baseName == null || baseName == className)
 				break;
@@ -12493,6 +12494,7 @@ class CppTargetCore {
 	}
 
 	static function globalStaticStringExtensionOwner(method:String, scope:CppRenderScope):Null<String> {
+		final lookup = lookupForScope(scope);
 		final names = new Array<String>();
 		for (name in scope.classByName.keys())
 			names.push(name);
@@ -12504,7 +12506,7 @@ class CppTargetCore {
 				continue;
 			final fn = classMethodDeclIn(cls, method, true);
 			if (isStaticStringExtensionMethod(fn, cls, scope))
-				found = name;
+				found = renderedClassName(cls, lookup);
 		}
 		return found;
 	}
