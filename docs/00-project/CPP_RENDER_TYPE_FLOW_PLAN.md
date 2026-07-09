@@ -249,6 +249,34 @@ rendering `TestBasetypes`, `UInt`, numeric suffix/separator helpers, and into
 `StringBuf`, so this remains internal burn-down evidence only. README and North
 Star progress bars stay unchanged.
 
+## 2026-07-09 StringBuf Runtime Support Checkpoint
+
+The post-TemplateWrap strict timing frontier reached stdlib `StringBuf`.
+Filtered timing showed the parsed `StringBuf.get_length` single-return body
+spending about 0.23-0.24s in statement rendering, and the full helper class
+about 1.05s, even though the class is only the standard string accumulator
+surface. That made it a bounded runtime-module candidate rather than evidence
+for a broad expression cache.
+
+The Cpp backend now recognizes real stdlib `StringBuf` by source identity,
+including the active Haxe versioned std root reported by current-source probes
+(`/haxe/versions/.../std/StringBuf.hx`), the repo `vendor/haxe/std/StringBuf.hx`
+path, and Cpp `_std` resolver variants. `CppRuntimeSupport.stringBufSupportLines`
+emits the target-owned C++ surface and the helper-classification detail trace
+now includes `source=...` so future probes can explain source-identity misses.
+
+Focused validation used
+`.artifacts/full1/cpp-strict-current/stringbuf-identity-probe-after-fix.log`:
+the tiny Cpp fixture classified `StringBuf` as `runtime_module` from
+`/Users/fullofcaffeine/haxe/versions/4.3.7/std/StringBuf.hx`, built, ran, and
+printed `ab`. The full direct current-source 360s probe still timed out
+(`probe_exit=124`) in
+`.artifacts/full1/cpp-strict-current/direct-source-only-stringbuf-versioned-runtime-timing-current.log`;
+because render timing is noisy, that run stopped earlier, inside
+`TestBasetypes.testAbstractOperatorOverload`, before reaching `StringBuf`.
+This confirms the bounded classification fix but not a strict gate improvement.
+README and North Star progress bars stay unchanged.
+
 Slow diagnostic validation for hotspot claims:
 
 - strict Cpp timing probe with `HXHX_TRACE_STAGE3_CPP_TIMINGS=1` and a stable

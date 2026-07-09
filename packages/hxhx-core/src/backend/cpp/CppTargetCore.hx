@@ -2617,11 +2617,14 @@ class CppTargetCore {
 		final renderedName = renderedClassName(cls, classLookup);
 		final rawName = HxClassDecl.getName(cls);
 		final packagePath = packagePathForRenderedClass(cls, classLookup);
+		final sourcePath = sourcePathForRenderedClass(cls, classLookup);
 		var line = label + "_detail index=" + index + " kind=" + helperRenderKindLabel(kind) + " name=" + renderedName;
 		if (rawName != renderedName)
 			line += " raw=" + rawName;
 		if (packagePath.length > 0)
 			line += " package=" + packagePath;
+		if (sourcePath.length > 0)
+			line += " source=" + sourcePath;
 		return line;
 	}
 
@@ -2689,6 +2692,7 @@ class CppTargetCore {
 
 	static function helperClassUsesTargetRuntimeModule(cls:HxClassDecl, classLookup:CppClassLookup, className:String):Bool {
 		return isAnySupportClass(cls)
+			|| isStringBufSupportClass(cls, classLookup)
 			|| isStdListSupportClass(cls, classLookup)
 			|| isBytesSupportClass(cls, classLookup)
 			|| isBytesBufferSupportClass(cls, classLookup)
@@ -3231,6 +3235,8 @@ class CppTargetCore {
 			return renderInterfaceClass(cls, classLookup);
 		if (isAnySupportClass(cls))
 			return CppRuntimeSupport.anySupportLines();
+		if (isStringBufSupportClass(cls, classLookup))
+			return CppRuntimeSupport.stringBufSupportLines(className);
 		if (isStdListSupportClass(cls, classLookup))
 			return CppRuntimeSupport.listSupportLines();
 		if (isBytesSupportClass(cls, classLookup))
@@ -16733,6 +16739,45 @@ class CppTargetCore {
 
 	static function isAnySupportClass(cls:HxClassDecl):Bool {
 		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Any";
+	}
+
+	/**
+		Recognize the real stdlib `StringBuf` helper, not arbitrary user classes
+		named `StringBuf`.
+
+		Strict C++ timing shows simple parsed methods such as `get_length` and
+		`add` still spending hundreds of milliseconds in helper rendering. The C++
+		target can own this compact string-accumulator surface directly. The C++
+		strict lane currently resolves the generic std file from the active Haxe
+		version root, while target-specific Cpp resolver paths may use the Cpp
+		`_std` override, so both source identities are accepted and local classes
+		keep their parsed bodies.
+	**/
+	static function isStringBufSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "StringBuf")
+			return false;
+		final packagePath = packagePathForRenderedClass(cls, classLookup);
+		if (packagePath.length > 0)
+			return false;
+		return isStdStringBufSourcePath(sourcePathForRenderedClass(cls, classLookup));
+	}
+
+	static function isStdStringBufSourcePath(path:String):Bool {
+		if (path == null || path.length == 0)
+			return false;
+		final normalized = StringTools.replace(path, "\\", "/");
+		if (normalized == "vendor/haxe/std/StringBuf.hx" || StringTools.endsWith(normalized, "/vendor/haxe/std/StringBuf.hx"))
+			return true;
+		if ((StringTools.startsWith(normalized, "haxe/versions/") || normalized.indexOf("/haxe/versions/") >= 0)
+			&& StringTools.endsWith(normalized, "/std/StringBuf.hx"))
+			return true;
+		if (StringTools.endsWith(normalized, "/share/haxe/std/StringBuf.hx"))
+			return true;
+		if (normalized == "vendor/haxe/std/cpp/_std/StringBuf.hx"
+			|| StringTools.endsWith(normalized, "/vendor/haxe/std/cpp/_std/StringBuf.hx"))
+			return true;
+		return StringTools.endsWith(normalized, "/haxe/std/StringBuf.hx")
+			|| StringTools.endsWith(normalized, "/haxe/std/cpp/_std/StringBuf.hx");
 	}
 
 	/**

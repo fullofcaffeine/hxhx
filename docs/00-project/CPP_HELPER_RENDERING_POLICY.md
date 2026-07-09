@@ -39,7 +39,7 @@ For architecture/debug runs that need the actual inventory, enable
 line per ordered helper:
 
 ```text
-cpp_target_phase=render_helper_classes_classification_detail index=<n> kind=<bucket> name=<rendered-helper> [raw=<source-name>] [package=<package>]
+cpp_target_phase=render_helper_classes_classification_detail index=<n> kind=<bucket> name=<rendered-helper> [raw=<source-name>] [package=<package>] [source=<source-path>]
 ```
 
 Use the same strict Cpp Gate3 command and timeout when comparing counts across
@@ -119,6 +119,19 @@ runtime modules keep the public C++ shapes and move the bodies into
 `CppRuntimeSupport.bytesBufferSupportLines`, with smoke coverage asserting
 vector storage, byte helper calls, UTF8 enum-carrier shape, `Int64` projections,
 buffer reset behavior, and runtime-module classification.
+
+Stdlib `StringBuf` is also target-owned. The 2026-07-09 post-TemplateWrap strict
+probe showed the generic std `StringBuf.get_length` body spending about 0.23s in
+statement rendering and the class about 1.05s before the timeout frontier moved
+on to `CallStack` and exception helpers. The current-source resolver reports
+that class from the active Haxe versioned std root
+(`/haxe/versions/.../std/StringBuf.hx`); the recognizer also accepts the repo
+`vendor/haxe/std/StringBuf.hx` and Cpp `_std` override paths for resolver
+variants. `StringBuf` is a compact string accumulator, so Cpp emits it from
+`CppRuntimeSupport.stringBufSupportLines` instead of rendering parsed `b.length`,
+`b += x`, `addChar`, `addSub`, and `toString` helper bodies. The recognizer is
+still stdlib identity scoped: arbitrary user classes named `StringBuf` must stay
+on the normal parsed-helper path.
 
 `haxe.io.Input` and `haxe.io.Output` base classes also use target-owned runtime
 modules, but with a narrower rule than the byte-storage helpers. Their base

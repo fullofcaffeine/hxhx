@@ -522,6 +522,38 @@ class CppRuntimeSupport {
 	}
 
 	/**
+		Target-owned runtime surface for stdlib `StringBuf`.
+
+		The generic stdlib implementation is intentionally tiny, but rendering it as
+		a parsed helper still spends measurable time in strict C++ gate probes. This
+		support block keeps the public append/length/toString surface while avoiding
+		the generic helper renderer for the real stdlib class.
+	**/
+	public static function stringBufSupportLines(className:String):Array<String> {
+		final name = className == null || className.length == 0 ? "StringBuf" : className;
+		return [
+			"struct " + name + " {",
+			"  std::string b = std::string();",
+			"  int length = 0;",
+			"  " + name + "() { __sync_length(); }",
+			"  void __sync_length() { length = static_cast<int>(b.size()); }",
+			"  int get_length() { __sync_length(); return length; }",
+			"  template<typename T>",
+			"  void add(const T& x) { b += __hxhx_stringify(x); __sync_length(); }",
+			"  void add(std::nullptr_t) { b += std::string(\"null\"); __sync_length(); }",
+			"  void add(const char* x) { b += x == nullptr ? std::string(\"null\") : std::string(x); __sync_length(); }",
+			"  void addChar(int c) { b += std::string(1, static_cast<char>(c)); __sync_length(); }",
+			"  void addSub(std::string s, int pos, std::optional<int> len = std::nullopt) {",
+			"    const auto start = static_cast<std::size_t>(pos);",
+			"    b += len.has_value() ? s.substr(start, static_cast<std::size_t>(len.value())) : s.substr(start);",
+			"    __sync_length();",
+			"  }",
+			"  std::string toString() const { return b; }",
+			"};"
+		];
+	}
+
+	/**
 		Target-owned runtime surface for the base `haxe.io.Input` helper.
 
 		The base stream class is mostly reusable control flow around overridable

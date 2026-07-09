@@ -9097,6 +9097,56 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ BytesBuffer.getBytes should keep the Bytes return when the source signature uses a trailing untyped modifier");
 		assertTrue(bytesBufferUntypedLines.indexOf("Bytesuntyped") < 0,
 			"C++ BytesBuffer.getBytes should not leak the source untyped modifier into the generated type name");
+		final stringBufRuntime = new HxClassDecl("StringBuf", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [SExpr(EBinop("=", EField(EThis, "b"), EString("")), HxPos.unknown())], ""),
+			new HxFunctionDecl("get_length", Public, false, [], "Int", [SReturn(EField(EIdent("b"), "length"), HxPos.unknown())], ""),
+			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("x", "T", NoDefault, false, false)], "Void",
+				[SExpr(EBinop("+=", EIdent("b"), EIdent("x")), HxPos.unknown())], "", ["__hxhx_fn_type_params=T"]),
+			new HxFunctionDecl("addChar", Public, false, [new HxFunctionArg("c", "Int", NoDefault, false, false)], "Void", [
+				SExpr(EBinop("+=", EIdent("b"), ECall(EField(EIdent("String"), "fromCharCode"), [EIdent("c")])), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("addSub", Public, false, [
+				new HxFunctionArg("s", "String", NoDefault, false, false),
+				new HxFunctionArg("pos", "Int", NoDefault, false, false),
+				new HxFunctionArg("len", "Int", NoDefault, true, false)
+			], "Void", [
+				SExpr(EBinop("+=", EIdent("b"), ECall(EField(EIdent("s"), "substr"), [EIdent("pos"), EIdent("len")])), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("toString", Public, false, [], "String", [SReturn(EIdent("b"), HxPos.unknown())], "")
+		], [
+			new HxFieldDecl("b", Public, false, "String", null),
+			new HxFieldDecl("length", Public, false, "Int", null)
+		]);
+		bytesNames.set("StringBuf", true);
+		bytesClasses.set("StringBuf", stringBufRuntime);
+		final stringBufSourcePaths = new haxe.ds.ObjectMap<HxClassDecl, String>();
+		stringBufSourcePaths.set(stringBufRuntime, "/opt/haxe/versions/4.3.7/std/StringBuf.hx");
+		final stringBufLookup:backend.cpp.CppClassLookup = {
+			names: bytesNames,
+			byName: bytesClasses,
+			sourcePathByClass: stringBufSourcePaths
+		};
+		final stringBufKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(stringBufRuntime, stringBufLookup);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(stringBufKind) == "runtime_module",
+			"C++ std StringBuf should render through target-owned runtime support instead of parsed stdlib bodies");
+		final stringBufRuntimeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stringBufRuntime, stringBufLookup).join("\n");
+		assertContains(stringBufRuntimeLines, "struct StringBuf {", "C++ StringBuf support should keep the public helper shape");
+		assertContains(stringBufRuntimeLines, "std::string b = std::string();", "C++ StringBuf should keep string-backed storage");
+		assertContains(stringBufRuntimeLines, "int length = 0;", "C++ StringBuf should keep a cached length field for property reads");
+		assertContains(stringBufRuntimeLines, "void __sync_length() { length = static_cast<int>(b.size()); }",
+			"C++ StringBuf should refresh cached length from target string storage");
+		assertContains(stringBufRuntimeLines, "int get_length() { __sync_length(); return length; }",
+			"C++ StringBuf.get_length should read target string storage directly");
+		assertContains(stringBufRuntimeLines, "void add(const T& x) { b += __hxhx_stringify(x); __sync_length(); }",
+			"C++ StringBuf.add should preserve generic append through target stringification");
+		assertContains(stringBufRuntimeLines, "void add(std::nullptr_t) { b += std::string(\"null\"); __sync_length(); }",
+			"C++ StringBuf.add(null) should append the Haxe null string");
+		assertContains(stringBufRuntimeLines, "void addChar(int c) { b += std::string(1, static_cast<char>(c)); __sync_length(); }",
+			"C++ StringBuf.addChar should append one character");
+		assertContains(stringBufRuntimeLines, "b += len.has_value() ? s.substr(start, static_cast<std::size_t>(len.value())) : s.substr(start);",
+			"C++ StringBuf.addSub should preserve optional length behavior");
+		assertContains(stringBufRuntimeLines, "std::string toString() const { return b; }", "C++ StringBuf.toString should return buffered text");
+		assertTrue(stringBufRuntimeLines.indexOf("return b.length") < 0, "C++ StringBuf should not render the parsed stdlib get_length body");
 		function streamFn(name:String, returnType:String, ?args:Array<HxFunctionArg>):HxFunctionDecl {
 			return new HxFunctionDecl(name, Public, false, args == null ? [] : args, returnType, [], "");
 		}
