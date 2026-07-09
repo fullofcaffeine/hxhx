@@ -321,6 +321,37 @@ This is another internal strict Cpp burn-down checkpoint only. README and North
 Star progress bars stay unchanged because strict Cpp remains red and no public
 production-usability claim changed.
 
+## 2026-07-09 TestExceptions Variance Checkpoint
+
+The next investigation tried to validate whether the later
+`TestExceptions.testWildCardCatch_rethrow` and `testCatchAbstract` timings from
+the empty-map probe were a credible bounded seam. They were not reproducible
+enough to patch.
+
+The post-map probe
+`.artifacts/full1/cpp-strict-current/direct-source-only-testmap-empty-map-fold-timing-current.log`
+reached `TestExceptions` before the 360s timeout and reported
+`testWildCardCatch_rethrow` at about 2.46s and `testCatchAbstract` at about
+1.02s. A same-commit current-source rerun with
+`HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER=TestExceptions.testWildCardCatch_rethrow`
+wrote
+`.artifacts/full1/cpp-strict-current/direct-source-only-testexceptions-rethrow-timing-current.log`,
+but timed out at 360s before reaching `TestExceptions`; the final completed
+render timing was around `Lambda.map`. Its largest completed helper timings
+were broad early/runtime surfaces such as `Assertation` (~2.63s), `Type`
+(~2.57s), `Sys` (~2.00s), `StringMap` (~1.69s), and `TestOps` (~1.51s).
+
+That evidence means the exception-test timings are currently a moving frontier,
+not a stable exception-specific hotspot. Do not widen exception lowering or
+runtime semantics from this log alone. The next Cpp strict burn-down should pick
+a seam only after a repeated filtered run reaches the same class/method
+frontier, or after diagnostics are improved enough to separate render-time
+work from timeout-bound ordering variance.
+
+No code change was made for this checkpoint. README and North Star progress
+bars stay unchanged because strict Cpp remains red and this checkpoint records
+negative evidence, not a production-readiness improvement.
+
 Slow diagnostic validation for hotspot claims:
 
 - strict Cpp timing probe with `HXHX_TRACE_STAGE3_CPP_TIMINGS=1` and a stable
