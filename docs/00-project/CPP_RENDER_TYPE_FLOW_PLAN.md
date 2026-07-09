@@ -603,6 +603,56 @@ This remains an internal strict Cpp performance checkpoint. README and North
 Star progress bars stay unchanged because the strict Cpp gate still times out
 and no user-facing production-readiness claim changed.
 
+## 2026-07-09 Primitive Literal Call-Argument Fast Path
+
+The follow-up bead `haxe_ocaml-x1w63` used the post-prep-guard timing logs to
+choose the next bounded render seam. The comparable
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-test-filter-after-prep-guards.log`
+run reached `TestEReg.test` and showed repeated direct calls where a literal
+argument already matched a declared primitive parameter type. The traced
+sub-phases around these arguments were tiny, but the enclosing
+`param_arg_render` samples for `EString` and `EInt` were repeatedly about
+0.058s to 0.061s. The missing cost sat between the traced phases, inside the
+generic class/enum/reference adaptation probes that are needed for complex
+arguments but not for obvious primitive literals.
+
+The retained seam is deliberately narrow. `callArgExprForParam` now checks
+primitive literals whose C++ type already matches the expected call parameter
+type before it runs the generic class/enum/reference probes. The shortcut
+accepts `String` literals for `std::string`, `Int` literals for `int` and
+numeric promotion to `double`/`float`, `Float` literals for `double`/`float`,
+and `Bool` literals for `bool`. It does not shortcut numeric literals into
+`std::string`, so string-shaped `Dynamic` helpers still stringify scalar values
+through the existing path. It also refuses primitive-backed abstract arguments,
+which preserves abstract constructor/side-effect conversion semantics.
+
+This shortcut is intentionally not wired into `renderKnownCppParamCallArgs`.
+Known stdlib/support calls often emit stable `std::string("...")` wrappers, and
+changing those broadly would create generated-code churn unrelated to the
+profiled `renderFunctionCallArgs` path. A broader known-parameter shortcut can
+be reconsidered only with a focused generated-shape contract.
+
+Validation for this slice included:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+
+A current-source strict Cpp timing probe was attempted with
+`HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER=TestEReg.test` and wrote
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-test-filter-after-primitive-literal-fastpath.log`.
+It timed out at the explicit 480s Cpp cap (`gate3_target_attempt_end ... exit
+124`) before reaching the filtered `TestEReg.test` method, after rebuilding the
+current-source binary and doing Cpp target setup. Because that log is not
+comparable to the pre-change method-filtered log, it is recorded only as a
+non-comparable timeout, not as proof of a `TestEReg` timing delta. The next
+timing claim for this seam should use a warmed, comparable current-source Cpp
+method-filtered run that reaches `TestEReg.test`, or a smaller focused timing
+fixture that directly exercises declared-parameter primitive literal calls.
+
+README and North Star progress bars stay unchanged. This is an internal strict
+Cpp render/type-flow burn-down slice; strict Cpp remains red and no public
+production-readiness claim changed.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

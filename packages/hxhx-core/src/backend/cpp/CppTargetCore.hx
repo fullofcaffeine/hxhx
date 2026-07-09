@@ -15857,6 +15857,20 @@ class CppTargetCore {
 		if (timingEnabled)
 			traceCallArgRenderPhase(scope, arg, param, "declared_type", Sys.time() - declaredTypeStart, declaredParamType, expectedParamType,
 				declaredValueType);
+		final expectedTypeStart = timingEnabled ? Sys.time() : 0.0;
+		final paramType = expectedParamType != null && expectedParamType.length > 0 ? expectedParamType : declaredParamType;
+		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
+		if (timingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "expected_type", Sys.time() - expectedTypeStart, declaredParamType, paramType, valueType);
+		if (!primitiveBackedAbstractCallArgMayNeedConversion(param, valueType, scope)) {
+			final directLiteralStart = timingEnabled ? Sys.time() : 0.0;
+			final directLiteral = directPrimitiveLiteralCallArgExprForExpectedType(arg, valueType, scope);
+			if (timingEnabled)
+				traceCallArgRenderPhase(scope, arg, param, "primitive_literal_direct", Sys.time() - directLiteralStart, declaredParamType, paramType,
+					valueType, "", "hit=" + Std.string(directLiteral != null));
+			if (directLiteral != null)
+				return directLiteral;
+		}
 		final declaredClassRefStart = timingEnabled ? Sys.time() : 0.0;
 		final declaredClassReferenceArg = classReferenceArgExprForExpectedType(arg, declaredValueType, scope);
 		if (timingEnabled)
@@ -15867,11 +15881,6 @@ class CppTargetCore {
 		final declaredEnumReferenceArg = enumReferenceArgExprForExpectedType(arg, declaredValueType, scope);
 		if (declaredEnumReferenceArg != null)
 			return declaredEnumReferenceArg;
-		final expectedTypeStart = timingEnabled ? Sys.time() : 0.0;
-		final paramType = expectedParamType != null && expectedParamType.length > 0 ? expectedParamType : cppFunctionArgType(param, scope);
-		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
-		if (timingEnabled)
-			traceCallArgRenderPhase(scope, arg, param, "expected_type", Sys.time() - expectedTypeStart, declaredParamType, paramType, valueType);
 		final abstractStart = timingEnabled ? Sys.time() : 0.0;
 		final abstractArg = primitiveBackedAbstractCallArgExpr(arg, param, valueType, scope);
 		if (timingEnabled)
@@ -16031,6 +16040,53 @@ class CppTargetCore {
 		if (timingEnabled)
 			traceCallArgRenderPhase(scope, arg, param, "final_render", Sys.time() - finalRenderStart, declaredParamType, paramType, valueType, actualType);
 		return rendered;
+	}
+
+	/**
+		Bypass generic call-argument adaptation for literals whose C++ type already
+		matches the expected parameter type.
+
+		This stays deliberately narrower than `valueExprForExpectedType`: string-shaped
+		Dynamic helpers still stringify numeric literals, and target-specific wrappers
+		such as primitive-backed abstracts get the normal conversion path.
+	**/
+	static function directPrimitiveLiteralCallArgExprForExpectedType(arg:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		final literalType = primitiveLiteralCallArgCppType(arg);
+		if (literalType == null || !expectedTypeAcceptsPrimitiveLiteral(expectedType, literalType))
+			return null;
+		return renderExpr(arg, scope);
+	}
+
+	static function primitiveLiteralCallArgCppType(arg:HxExpr):Null<String> {
+		return switch (arg) {
+			case ECast(inner, _) | EUntyped(inner):
+				primitiveLiteralCallArgCppType(inner);
+			case EString(_):
+				"std::string";
+			case EInt(_):
+				"int";
+			case EFloat(_):
+				"double";
+			case EBool(_):
+				"bool";
+			case _:
+				null;
+		};
+	}
+
+	static function expectedTypeAcceptsPrimitiveLiteral(expectedType:String, literalType:String):Bool {
+		return expectedType == literalType || (literalType == "int" && (expectedType == "double" || expectedType == "float"));
+	}
+
+	static function primitiveBackedAbstractCallArgMayNeedConversion(param:HxFunctionArg, valueType:String, ?scope:CppRenderScope):Bool {
+		if (param == null || scope == null)
+			return false;
+		final rawHint = HxFunctionArg.getTypeHint(param);
+		final hint = removeTypeHintWhitespace(StringTools.trim(rawHint == null ? "" : rawHint));
+		final nullableInner = CppTypeModel.nullTypeHintArg(hint);
+		final abstractHint = nullableInner == null ? hint : nullableInner;
+		final underlying = primitiveBackedAbstractCppTypeForTypeHint(abstractHint, scope);
+		return underlying != null && underlying == valueType;
 	}
 
 	static function primitiveBackedAbstractCallArgExpr(arg:HxExpr, param:HxFunctionArg, valueType:String, ?scope:CppRenderScope):Null<String> {

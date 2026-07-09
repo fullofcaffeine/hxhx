@@ -2695,6 +2695,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		classes.set("ScalarStringParamOwner", owner);
 		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directPrimitiveLiteralCallArgExprForExpectedType(EString("literal"), "std::string",
+			scope) == "\"literal\"",
+			"C++ primitive literal call-arg fast path should render String literals directly for String parameters");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directPrimitiveLiteralCallArgExprForExpectedType(EInt(1), "int", scope) == "1",
+			"C++ primitive literal call-arg fast path should render Int literals directly for Int parameters");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directPrimitiveLiteralCallArgExprForExpectedType(EInt(1), "std::string", scope) == null,
+			"C++ primitive literal call-arg fast path should not bypass numeric stringification for string-shaped Dynamic helpers");
 		final rendered = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("deq", [EInt(0), EFloat(1.5)], scope);
 		assertTrue(rendered == "deq(std::to_string(0), std::to_string(1.5))",
 			"C++ calls to string-shaped Dynamic helpers should stringify scalar literals before passing them to std::string parameters");
