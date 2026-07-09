@@ -16787,6 +16787,8 @@ class CppTargetCore {
 	}
 
 	static function classHasStaticField(className:String, fieldName:String, scope:CppRenderScope):Bool {
+		if (knownCppStaticSupportFieldType(className, fieldName).length > 0)
+			return true;
 		if (scope == null || className == null || className.length == 0)
 			return false;
 		final cls = classDeclForCppName(className, scope);
@@ -16833,6 +16835,9 @@ class CppTargetCore {
 	}
 
 	static function classFieldCppType(className:String, fieldName:String, scope:CppRenderScope):String {
+		final supportFieldType = knownCppStaticSupportFieldType(className, fieldName);
+		if (supportFieldType.length > 0)
+			return supportFieldType;
 		if (scope == null || className == null || className.length == 0)
 			return "";
 		final posInfosFieldType = posInfosFieldCppType(className, fieldName);
@@ -16847,6 +16852,17 @@ class CppTargetCore {
 				return knownStdlibFieldCppType(className, fieldName, HxFieldDecl.getTypeHint(field), HxFieldDecl.getInit(field), scope);
 		}
 		return "";
+	}
+
+	static function knownCppStaticSupportFieldType(className:String, fieldName:String):String {
+		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		final field = sanitizeIdentifier(fieldName == null ? "" : fieldName);
+		return switch (owner) {
+			case "Serializer" if (field == "USE_ENUM_INDEX"):
+				"bool";
+			case _:
+				"";
+		};
 	}
 
 	static function receiverClassFieldCppType(className:String, receiverCppType:String, fieldName:String, scope:CppRenderScope):String {

@@ -485,13 +485,20 @@ uses those static support receivers and no rendered helper definition exists.
 The generated C++ runtime smoke now builds and runs constructor-name `w` token
 round trips for a zero-arg enum and an `Int`/`String` payload enum.
 
+The follow-up `haxe_ocaml-nd2nh` slice extends only that same focused enum
+surface to `Serializer.USE_ENUM_INDEX`: generated C++ now exposes
+`Serializer::USE_ENUM_INDEX`, emits upstream-compatible constructor-index `j`
+tokens, and decodes them through the generated enum metadata registry. The
+runtime smoke covers both zero-arg and `Int`/`String` payload indexed enum
+round trips.
+
 This is not full enum or Serializer parity. Broad erased switch payload
-extraction, enum index serialization, references/caches, custom enum resolvers,
-object/class payloads, arrays/maps, bytes, floats, custom serialization hooks,
-and full `haxe.Serializer` / `haxe.Unserializer` body rendering remain outside
-this slice and still require the behavior matrix plus focused oracle evidence.
-README and North Star progress bars stay unchanged because strict Cpp and
-public production readiness remain red.
+extraction, references/caches, custom enum resolvers, object/class payloads,
+arrays/maps, bytes, floats, custom serialization hooks, and full
+`haxe.Serializer` / `haxe.Unserializer` body rendering remain outside these
+slices and still require the behavior matrix plus focused oracle evidence.
+README and North Star progress bars stay unchanged because strict Cpp and public
+production readiness remain red.
 
 Slow diagnostic validation for hotspot claims:
 

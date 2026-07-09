@@ -39,6 +39,16 @@ class Main {
 		emit(id, "decoded", summarize(decoded));
 	}
 
+	static function roundTripIndexedEnum(id:String, value:Dynamic, summarize:Dynamic->String):Void {
+		final previous = haxe.Serializer.USE_ENUM_INDEX;
+		haxe.Serializer.USE_ENUM_INDEX = true;
+		final serialized = haxe.Serializer.run(value);
+		haxe.Serializer.USE_ENUM_INDEX = previous;
+		emit(id, "serialized", serialized);
+		final decoded:Dynamic = haxe.Unserializer.run(serialized);
+		emit(id, "decoded", summarize(decoded));
+	}
+
 	static function invalid(id:String, input:String):Void {
 		emit(id, "input", input);
 		try {
@@ -79,6 +89,12 @@ class Main {
 			return Type.enumConstructor(v) + ":" + Std.string(Type.enumParameters(v).length);
 		});
 		roundTrip("ser-enum-01:args", SeedEnum.With(9, "nine"), function(v) {
+			return Type.enumConstructor(v) + ":" + Type.enumParameters(v).join(",");
+		});
+		roundTripIndexedEnum("ser-enum-index-01:zero", SeedEnum.A, function(v) {
+			return Type.enumConstructor(v) + ":" + Std.string(Type.enumParameters(v).length);
+		});
+		roundTripIndexedEnum("ser-enum-index-01:args", SeedEnum.With(4, "four"), function(v) {
 			return Type.enumConstructor(v) + ":" + Type.enumParameters(v).join(",");
 		});
 		roundTrip("ser-bytes-01:ascii", haxe.io.Bytes.ofString("ABC"), function(v) {

@@ -3902,6 +3902,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(describe(Unserializer.run(zeroText)));",
 			"    Sys.println(payloadText);",
 			"    Sys.println(describe(Unserializer.run(payloadText)));",
+			"    Serializer.USE_ENUM_INDEX = true;",
+			"    var indexedZeroText = Serializer.run(zero);",
+			"    var indexedPayloadText = Serializer.run(payload);",
+			"    Serializer.USE_ENUM_INDEX = false;",
+			"    Sys.println(indexedZeroText);",
+			"    Sys.println(describe(Unserializer.run(indexedZeroText)));",
+			"    Sys.println(indexedPayloadText);",
+			"    Sys.println(describe(Unserializer.run(indexedPayloadText)));",
 			"  }",
 			"}"
 		].join("\n");
@@ -13388,7 +13396,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(serializerEnumBuilt.builtExecutable, "C++ Serializer enum runtime smoke should build executable");
 			final serializerEnumRun = commandOutput(serializerEnumBuilt.entryPath, []);
 			assertTrue(serializerEnumRun.code == 0, "C++ Serializer enum runtime smoke failed: " + serializerEnumRun.stderr);
-			assertTrue(serializerEnumRun.stdout == "wy14:SerializedSeedy1:A:0\nSerializedSeed:A:\nwy14:SerializedSeedy4:With:2i9y4:nine\nSerializedSeed:With:9,nine\n",
+			assertTrue(serializerEnumRun.stdout == "wy14:SerializedSeedy1:A:0\nSerializedSeed:A:\nwy14:SerializedSeedy4:With:2i9y4:nine\nSerializedSeed:With:9,nine\n"
+				+ "jy14:SerializedSeed:0:0\nSerializedSeed:A:\njy14:SerializedSeed:1:2i9y4:nine\nSerializedSeed:With:9,nine\n",
 				"unexpected C++ Serializer enum stdout: "
 				+ serializerEnumRun.stdout);
 

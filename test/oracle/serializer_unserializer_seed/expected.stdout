@@ -22,6 +22,10 @@ ser-enum-01:zero|serialized|wy8:SeedEnumy1:A:0
 ser-enum-01:zero|decoded|A:0
 ser-enum-01:args|serialized|wy8:SeedEnumy4:With:2i9y4:nine
 ser-enum-01:args|decoded|With:9,nine
+ser-enum-index-01:zero|serialized|jy8:SeedEnum:0:0
+ser-enum-index-01:zero|decoded|A:0
+ser-enum-index-01:args|serialized|jy8:SeedEnum:1:2i4y4:four
+ser-enum-index-01:args|decoded|With:4,four
 ser-bytes-01:ascii|serialized|s4:QUJD
 ser-bytes-01:ascii|decoded|3:ABC
 ser-error-01:invalid-token|input|!
