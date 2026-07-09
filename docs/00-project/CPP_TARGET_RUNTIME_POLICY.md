@@ -93,8 +93,23 @@ This matrix exists because a Cpp strict timing checkpoint found repeated
 constructors as tag-returning methods would preserve today's generated Cpp shape
 for some helpers, but it would also harden the current partial enum model.
 
-The Haxe 4.3.7 oracle probe was repo-authored for this checkpoint and run with
-`haxe --interp` on 2026-07-09. It used:
+The runnable Haxe 4.3.7 oracle seed for this matrix is repo-owned and should be
+kept as the behavior source of truth before changing the Cpp enum carrier model:
+
+```bash
+npm run test:cpp-enum-carrier-oracle-seed
+```
+
+The runner enforces an upstream `haxe` version of `4.3.7`, executes
+`test/oracle/cpp_enum_carrier_seed/src/Main.hx` with `--interp`, diffs against
+`test/oracle/cpp_enum_carrier_seed/expected.stdout`, and writes
+`.tmp/cpp-enum-carrier-oracle-seed/report.json`. On 2026-07-09 it reported:
+
+```text
+CPP_ENUM_CARRIER_ORACLE_SEED:PASS zero=2 payload=2 enumEq=3 switch=1 typeFactory=4 reflection=3 dynamic=2 serializer=4
+```
+
+The seed uses this enum:
 
 ```haxe
 enum Color {
@@ -104,21 +119,14 @@ enum Color {
 }
 ```
 
-The observed oracle behavior was:
-
-```text
-zero-string=Red
-payload-string=Pair(7,x)
-enum-eq-zero=true
-enum-eq-payload-same=true
-enum-eq-payload-different=false
-switch-payload=7:x
-create-enum=Pair(9,y)
-create-index=Red
-all-enums=Red,Green
-dynamic-string=Pair(7,x)
-constructs=Red,Green,Pair
-```
+The expected stdout pins zero-argument and payload `Std.string`, constructor
+summary via `Type.enumConstructor` / `Type.enumIndex` /
+`Type.enumParameters`, `Type.enumEq`, switch payload binders,
+`Type.createEnum`, `Type.createEnumIndex`, `Type.allEnums`,
+`Type.getEnumConstructs`, `Type.getEnumName`, Dynamic stringification, and
+Serializer/Unserializer round-trip prerequisites. The current Cpp backend is
+not expected to pass all of those behaviors yet; the seed defines the target
+contract for follow-up implementation seams.
 
 | Surface | Haxe 4.3.7 expectation | Current Cpp state | Decision |
 | --- | --- | --- | --- |

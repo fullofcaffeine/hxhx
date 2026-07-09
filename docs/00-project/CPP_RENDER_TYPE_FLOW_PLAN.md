@@ -429,10 +429,16 @@ evidence is not enough because upstream Haxe 4.3.7 observes enum payloads
 through `Std.string`, `Type.enumEq`, switch binders, `Type.createEnum`,
 Dynamic/`EnumValue`, and Serializer/Unserializer flows.
 
-No code change was made for this checkpoint. README and North Star progress
-bars stay unchanged because strict Cpp remains red, public production readiness
-did not change, and the only new implementation path is the payload-preserving
-enum carrier follow-up `haxe_ocaml-puquq`.
+That behavior contract is now backed by the checked-in
+`npm run test:cpp-enum-carrier-oracle-seed` runner. The seed is still oracle
+evidence, not Cpp support: the next Cpp implementation must either preserve the
+seeded payload behavior or explicitly classify any remaining gap as
+`unsupported_diagnostic` / `known_divergence` while the carrier seam is split.
+
+No Cpp implementation change was made for this checkpoint. README and North
+Star progress bars stay unchanged because strict Cpp remains red, public
+production readiness did not change, and the only new implementation path is
+the payload-preserving enum carrier follow-up `haxe_ocaml-puquq`.
 
 Slow diagnostic validation for hotspot claims:
 
