@@ -725,6 +725,54 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp still
 times out, and this internal type-flow improvement does not change public
 production readiness.
 
+## 2026-07-09 Omitted Bytes Encoding Parameter Guard
+
+Follow-up bead `haxe_ocaml-tc2nu` isolated the remaining
+`Bytes.ofString(String, ?Encoding)` call cost to signature preparation rather
+than return-type inference. `renderClassMethodCallArgs` asked
+`knownStdlibMethodParamCppTypes` for the complete signature on every call, so a
+one-argument call still classified the unused optional `Encoding` type before
+rendering its supplied `String`. The focused helper fixture now checks this
+arity decision directly: one-argument calls receive only the known
+`std::string` parameter shape, while explicit two-argument calls and
+declaration/default lookups retain the complete two-parameter signature.
+
+The retained change is intentionally specific to `Bytes.ofString`. Call-site
+arity is passed into the known stdlib parameter lookup, and only the omitted
+`Encoding` position is skipped. The existing `std::string` argument adaptation
+still runs, the emitted `Bytes::ofString(std::string(...))` expression is
+unchanged, and no arbitrary type-hint cache or broad exact-match argument
+shortcut was added. Other known stdlib calls and declaration rendering keep
+their existing paths.
+
+The identical ten-call `bytes_reference_calls` helper fixture reported about
+0.0968s immediately before the change and about 0.0739s and 0.0786s in two
+post-change samples. The fresh current-source strict probe wrote
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testbytes-test-filter-after-omitted-encoding-guard.log`.
+It completed the filtered method before the expected explicit 480s Cpp
+timeout. Against the immediately preceding comparable log, the five traced
+`Bytes.ofString` RHS samples changed from about 0.327s, 0.340s, 0.332s,
+0.582s, and 0.335s to about 0.190s, 0.181s, 0.189s, 0.314s, and 0.181s.
+`TestBytes.test` changed from about 10.81s to 9.27s, and the whole `TestBytes`
+class from about 16.14s to 13.77s. The timeout boundary moved beyond
+`TestEReg` into `TestXML`, but that moving frontier is diagnostic context, not
+the claim for this slice; the comparable filtered method and RHS phases are
+the evidence.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+times out, and this internal parameter-preparation improvement does not change
+public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

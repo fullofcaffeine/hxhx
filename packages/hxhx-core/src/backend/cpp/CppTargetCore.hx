@@ -5607,7 +5607,16 @@ class CppTargetCore {
 		return [];
 	}
 
-	static function knownStdlibMethodParamCppTypes(className:String, methodName:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Array<String> {
+	/**
+		Return the target parameter types for known stdlib methods.
+
+		Declaration lookups omit `providedArgCount` and receive the complete
+		signature. Call sites may provide their arity so unused optional positions
+		that require type classification can be excluded without changing the
+		types or adaptation of supplied arguments.
+	**/
+	static function knownStdlibMethodParamCppTypes(className:String, methodName:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup,
+			providedArgCount:Int = -1):Array<String> {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
 		return switch (owner) {
@@ -5616,7 +5625,7 @@ class CppTargetCore {
 					case "alloc":
 						["int"];
 					case "ofString":
-						["std::string", cppTypeHint("Encoding", scope, classLookup)];
+						providedArgCount == 1 ? ["std::string"] : ["std::string", cppTypeHint("Encoding", scope, classLookup)];
 					case "ofHex":
 						["std::string"];
 					case "ofData":
@@ -15455,7 +15464,7 @@ class CppTargetCore {
 		final preludeParamTypes = cppPreludeMethodParamTypes(className, methodName);
 		if (preludeParamTypes.length > 0)
 			return renderKnownCppParamCallArgs(preludeParamTypes, args, scope);
-		final supportParamTypes = knownStdlibMethodParamCppTypes(className, methodName, scope, lookupForScope(scope));
+		final supportParamTypes = knownStdlibMethodParamCppTypes(className, methodName, scope, lookupForScope(scope), args.length);
 		if (supportParamTypes.length > 0)
 			return renderKnownCppParamCallArgs(supportParamTypes, args, scope);
 		final fn = classMethodDecl(className, methodName, wantStatic, scope);

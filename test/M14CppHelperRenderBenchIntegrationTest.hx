@@ -379,9 +379,17 @@ class M14CppHelperRenderBenchIntegrationTest {
 			names.set(name, true);
 			classes.set(name, cls);
 		}
-		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		final lookup = {names: names, byName: classes};
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "void");
 		scope.localTypes.set("s1", "std::string");
 		scope.localTypes.set("s2", "std::string");
+		final omittedEncodingParams = @:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodParamCppTypes("Bytes", "ofString", scope, lookup, 1);
+		final explicitEncodingParams = @:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodParamCppTypes("Bytes", "ofString", scope, lookup, 2);
+		final declarationParams = @:privateAccess backend.cpp.CppTargetCore.knownStdlibMethodParamCppTypes("Bytes", "ofString", scope, lookup);
+		assertTrue(omittedEncodingParams.length == 1 && omittedEncodingParams[0] == "std::string",
+			"Bytes.ofString calls without Encoding should resolve only the supplied String parameter");
+		assertTrue(explicitEncodingParams.length == 2 && declarationParams.join(",") == explicitEncodingParams.join(","),
+			"Bytes.ofString declarations and explicit Encoding calls should keep the complete parameter shape");
 		final expression = ECall(EField(ECall(EField(ECall(EField(EIdent("Bytes"), "ofString"), [EIdent("s1")]), "sub"), [EInt(0), EInt(1)]), "compare"),
 			[ECall(EField(EIdent("Bytes"), "ofString"), [EIdent("s2")])]);
 		resetRendererCaches();
