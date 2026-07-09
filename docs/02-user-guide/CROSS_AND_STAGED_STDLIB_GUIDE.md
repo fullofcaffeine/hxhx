@@ -91,7 +91,7 @@ But the switch that activates the replacement is different:
 | Shape | Activation switch | Scope |
 | --- | --- | --- |
 | `String.cross.hx` | Haxe's platform file resolver chooses the `.cross.hx` file while the compiler platform is `cross`. | Any custom-target build that sees that classpath can be affected. |
-| `_std/String.hx` | A target bootstrap or compiler setup adds the `_std` directory before the default stdlib. | Only builds where that classpath injection happens are affected. |
+| `_std/String.hx` | A target source/test entrypoint supplies the `_std` directory before the default stdlib; a package build can expose the same override as flattened `.cross.hx`. | Only builds where that classpath or package setup happens are affected. |
 
 So the useful mental model is:
 
@@ -107,13 +107,13 @@ For multiple targets, packaging, and bootstrap timing, they are different enough
 Use `_std/*.hx` when you want the normal, readable target-owned stdlib source tree:
 
 - the override is not needed until the target is known
-- the target has a bootstrap/init step that can add `_std`
+- the target's source/test entrypoint can put `_std` on the initial classpath before typing
 - you want the file to be target-private rather than generic-`cross`
 - you want the repo layout to resemble upstream Haxe target stdlibs like `std/js/_std` or `std/python/_std`
 
 Use direct `.cross.hx` when classpath timing or package shape requires it:
 
-- in a staged-bootstrap target, the module must be visible before target bootstrap can add `_std`
+- in a staged-bootstrap target, the module must be visible before the target's `_std` path can be supplied
 - the haxelib package is flattened and the override lives in the initial classpath
 - the target intentionally treats Haxe's `cross` platform as its stdlib selection gate
 - you need a file to be hidden from non-`cross` builds but available without extra classpath injection
@@ -132,7 +132,7 @@ The local reference Reflaxe compilers mostly show the second and third cases, no
 - During development, Reflaxe's `test` command passes each target's `stdPaths` to Haxe up front, before typing the target program.
 - Reflaxe's own package build can turn those source `_std/*.hx` files into package `.cross.hx` files when flattening the haxelib.
 
-So "needed before bootstrap can add `_std`" is a real reason to use direct `.cross.hx`, but it is not the main pattern shown by the reference sample compilers in `haxe.compilerdev.reference`. `reflaxe.ocaml` used to have a small early `src/haxe/` exception set for this reason; this refactor removes that bespoke source shape and follows the generated Reflaxe model where source dev/test tooling supplies `stdPaths` explicitly.
+So "needed before `_std` is on the initial classpath" is a real reason to use direct `.cross.hx`, but it is not the main pattern shown by the generated Reflaxe compiler in `haxe.compilerdev.reference/reflaxe/newproject`. `reflaxe.ocaml` used to have a small early `src/haxe/` exception set for this reason; this refactor removes that bespoke source shape and follows the generated Reflaxe model where source dev/test tooling supplies `stdPaths` explicitly.
 
 ## Reflaxe source layout vs package layout
 
@@ -145,7 +145,7 @@ The Reflaxe framework template in `../haxe.compilerdev.reference/reflaxe/newproj
 - target stdlib overrides in `std/LANG/_std/*.hx`
 - `haxelib.json` with `reflaxe.stdPaths`, for example `["std", "std/LANG/_std"]`
 
-During local development, Reflaxe's own `test` command adds those paths directly. In that mode, the target can work from normal `_std/*.hx` files.
+During local development, Reflaxe's own `test` command adds those paths directly before typing starts. In that mode, the target can work from normal `_std/*.hx` files.
 
 During `haxelib run reflaxe build`, Reflaxe has to produce a package shape that haxelib can distribute. Haxelib libraries have one main `classPath`, so Reflaxe copies the configured `stdPaths` into that classpath. When a copied path ends in `_std`, Reflaxe renames the copied files to `.cross.hx`.
 
@@ -172,8 +172,9 @@ target setup:
 --macro reflaxe.ocaml.CompilerInit.Start()
 ```
 
-That file registers the compiler, but it is not a package builder. It does not
-copy files, flatten directories, or rename `_std/*.hx` files to `.cross.hx`.
+That file registers the compiler, but it is not a package builder and it is not
+the source `_std` visibility mechanism. It does not copy files, flatten
+directories, or rename `_std/*.hx` files to `.cross.hx`.
 
 This matters because the source checkout and the package artifact have different
 ways to make target std overrides visible:
@@ -181,7 +182,7 @@ ways to make target std overrides visible:
 | Shape | How std overrides become visible |
 | --- | --- |
 | Monorepo examples/tests | `haxe_libraries/reflaxe.ocaml.hxml` adds `packages/reflaxe.ocaml/std/ocaml/_std/` directly. |
-| Repo-root `haxelib dev` override | root `extraParams.hxml` adds `packages/reflaxe.ocaml/std/ocaml/_std/` directly for external checkout testing. |
+| Repo-root `haxelib dev` override | root dev package metadata and root `extraParams.hxml` add `packages/reflaxe.ocaml/std/ocaml/_std/` directly for external checkout testing. |
 | Raw `packages/reflaxe.ocaml` source | `extraParams.hxml` registers the target, but raw `_std` files are not flattened by haxelib itself. |
 | Built/released package | Reflaxe build copies `_std/*.hx` into the package classpath as `.cross.hx`; the package `extraParams.hxml` only has to register the target. |
 
@@ -216,7 +217,7 @@ So `.cross.hx` is a real Reflaxe packaging convention, but it is not the only Re
 The more precise rule is:
 
 - direct `.cross.hx` files are good when your initial classpath intentionally contains the override files
-- `_std/*.hx` files are good when your development model can inject a target-private std layer
+- `_std/*.hx` files are good when your source/test model can supply a target-private std layer before typing
 - Reflaxe packaging may convert `_std/*.hx` into `.cross.hx` when flattening the package
 
 ## Why `reflaxe.ocaml` mostly prefers `_std`
@@ -229,10 +230,10 @@ Examples:
 - `packages/reflaxe.ocaml/std/ocaml/_std/Array.hx`
 - `packages/reflaxe.ocaml/std/ocaml/_std/Sys.hx`
 
-That matches the current source-checkout bootstrap model:
+That matches the current source-checkout initial-classpath model:
 
 - `std/` is always added for the haxelib surface,
-- `std/ocaml/_std` is supplied by OCaml target entrypoints such as `-lib reflaxe.ocaml` and package/dev test tooling.
+- `std/ocaml/_std` is supplied by source dev/test entrypoints before typing starts.
 
 So `_std/String.hx` means:
 
@@ -273,7 +274,7 @@ The exception/stack cluster is different:
 
 If one of those resolves to the upstream extern declaration before the OCaml override is available, Haxe can cache the wrong module shape for the rest of the compilation. For Reflaxe custom targets, an extern-only module also means there may be no concrete emitted OCaml module later, which can become a link/runtime failure.
 
-The new rule is: make `std/ocaml/_std` visible before compiler init, not by keeping special source files in `src/haxe/`.
+The new rule is: make `std/ocaml/_std` visible on the initial classpath before typing, not by keeping special source files in `src/haxe/` and not by asking `CompilerInit.Start()` to rescue std overrides later.
 
 So the current OCaml split is:
 
@@ -332,7 +333,7 @@ Yes, when it matches the target's classpath and packaging model.
 
 Direct `.cross.hx` is especially useful when:
 
-- the file must be visible before target bootstrap can inject `_std`
+- the file must be visible even when you cannot guarantee `_std` is present on the initial classpath
 - the package is flattened so override files live on the initial classpath
 - the target intentionally uses Haxe `cross` file selection as its main override gate
 
@@ -424,8 +425,10 @@ Within the current family of repos, the pattern is not uniform.
 - and currently has no early `src/haxe/*.cross.hx` set.
 
 `reflaxe.rust`
-- uses `std/**/*.cross.hx` as the main override model,
-- and currently has no early `src/haxe/*.cross.hx` set.
+- now follows the generated Reflaxe-style source model too: checked-in Rust std overrides live under `std/rust/_std/**/*.hx`,
+- its repo-local `haxe_libraries/reflaxe.rust.hxml` supplies `std/rust/_std` before typing,
+- package builds delegate to Reflaxe build so `_std` sources become packaged `.cross.hx` files,
+- and currently has no checked-in `.cross.hx` files under `src/` or `std/`.
 
 So there is no single family-wide rule like ".cross.hx always means early bootstrap".
 
@@ -439,7 +442,7 @@ The clearest current example is `haxe.Exception`:
 
 - OCaml owns `std/ocaml/_std/haxe/Exception.hx` in source and `src/haxe/Exception.cross.hx` in flattened packages
 - Elixir owns `src/haxe/Exception.cross.hx`
-- Rust owns `std/haxe/Exception.cross.hx`
+- Rust owns `std/rust/_std/haxe/Exception.hx` in source and a packaged `.cross.hx` form after Reflaxe build
 
 Haxe resolves one module for `haxe.Exception`.
 

@@ -31,7 +31,7 @@ Questions audited:
 | `haxe.ocaml` | `std/ocaml/_std/*.hx`; Reflaxe build flattens packages to `.cross.hx` | No source-side early set | Medium | Yes |
 | `haxe.elixir.codex` | many `std/*.cross.hx`, plus `_std`, plus early `src/haxe/*` | Yes | High | Yes |
 | `haxe.go` | many `.cross.hx`, including `_std/*.cross.hx` | No | Low to medium | Yes |
-| `haxe.rust` | many `std/**/*.cross.hx` | No | Low to medium | Yes |
+| `haxe.rust` | `std/rust/_std/*.hx`; Reflaxe build flattens packages to `.cross.hx` | No | Low to medium | Yes |
 
 ## Repo-by-repo findings
 
@@ -40,7 +40,7 @@ Questions audited:
 Current model:
 
 - normal OCaml stdlib ownership lives in `packages/reflaxe.ocaml/std/ocaml/_std/**`
-- bootstrap adds `std/` always and `std/ocaml/_std` only for actual OCaml builds
+- source/dev entrypoints add `std/` and `std/ocaml/_std` before typing for actual OCaml builds
 - the source checkout has no hand-maintained early `src/haxe/*.cross.hx` exception set
 - package builds run Reflaxe's flattening step, so `_std` files become `.cross.hx` in the distributable classpath
 
@@ -96,18 +96,20 @@ Hardening concern:
 
 Current model:
 
-- `std/**/*.cross.hx` is the main override model
-- no early `src/haxe/*.cross.hx` set was found
+- normal Rust stdlib ownership lives in `std/rust/_std/**`
+- repo-local source builds add `std/rust/_std` before typing through `haxe_libraries/reflaxe.rust.hxml`
+- package builds run Reflaxe's flattening step, so `_std` files become `.cross.hx` in the distributable classpath
+- no checked-in `.cross.hx` files were found under `src/` or `std/`
 - bootstrap gates on target-specific Rust detection rather than generic `Cross`
 
 Interpretation:
 
 - activation is narrower than Elixir's current Haxe 4 path
-- but module-name overlaps with siblings still exist
+- but module-name overlaps with siblings still exist after package flattening or if source classpaths overlap
 
 Hardening concern:
 
-- `haxe.Exception` is owned by Rust under `std/`, while Elixir owns an early `src/haxe/Exception.cross.hx` and flattened OCaml packages can generate `src/haxe/Exception.cross.hx`
+- `haxe.Exception` is owned by Rust under `std/rust/_std` in source and can become a packaged `.cross.hx` file, while Elixir owns an early `src/haxe/Exception.cross.hx` and flattened OCaml packages can generate `src/haxe/Exception.cross.hx`
 - if a sibling early/package-flattened file wins resolution first, Rust can lose the real implementation it expected
 
 ## Concrete overlap inventory
@@ -117,14 +119,14 @@ The most important cross-repo module overlaps found in this audit were:
 - `haxe.Exception`
   - OCaml `std/ocaml/_std` in source; `src/` after Reflaxe package flattening
   - Elixir `src/`
-  - Rust `std/`
+  - Rust `std/rust/_std` in source; `src/` after Reflaxe package flattening
 - `haxe.NativeStackTrace`
   - OCaml `std/ocaml/_std` in source; `src/` after Reflaxe package flattening
   - Go `std/`
 - `StringTools`
   - Elixir `std/`
   - Go `std/`
-  - Rust `std/`
+  - Rust `std/rust/_std` in source; `src/` after Reflaxe package flattening
 - `DateTools`
   - Elixir `std/`
   - Go `std/`

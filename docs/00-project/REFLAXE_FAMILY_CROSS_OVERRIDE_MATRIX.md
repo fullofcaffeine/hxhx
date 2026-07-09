@@ -16,7 +16,7 @@ Use the audit when you need the hardening implications.
 | `haxe.ocaml` | OCaml-owned `std/ocaml/_std` layer; package build flattens to `.cross.hx` | Yes, primary | In packaged build output | No source-side early set | narrow OCaml-specific gating | Medium | P2 |
 | `haxe.elixir.codex` | broad `std/*.cross.hx` plus `_std` shims plus early exception | Yes | Yes, broad | Yes | broad on Haxe 4 because raw `Cross` currently counts | High | P1 |
 | `haxe.go` | broad `.cross.hx` including `_std/*.cross.hx` | Yes | Yes, broad | No | narrow target-specific gating | Low to medium | P2 |
-| `haxe.rust` | broad `std/**/*.cross.hx` | Minimal / not dominant | Yes, broad | No | narrow target-specific gating | Low to medium | P2 |
+| `haxe.rust` | Rust-owned `std/rust/_std` layer; package build flattens to `.cross.hx` | Yes, primary | In packaged build output | No source-side early set | narrow target-specific gating | Low to medium | P2 |
 
 ## What the columns mean
 
@@ -36,7 +36,7 @@ Whether the repo relies on Haxe's `cross` platform file-selection model.
 
 ### Early `src/haxe/*` ownership
 
-Whether the repo owns stdlib/core modules from `src/` early enough to affect macro/bootstrap typing before target `_std` injection has completed.
+Whether the repo owns stdlib/core modules from `src/` early enough to affect macro/bootstrap typing before target stdPaths are available.
 
 This is the most dangerous column for sibling collisions.
 
@@ -44,7 +44,7 @@ This is the most dangerous column for sibling collisions.
 
 How aggressively the repo decides:
 
-- "this is my target, inject my stdlib now"
+- "this is my target, make my target stdlib visible now"
 
 Narrow activation is safer.
 Broad activation is more likely to interfere with sibling targets.
@@ -63,7 +63,7 @@ These are the overlap surfaces that matter most right now.
 
 | Module | Repos | Why it matters |
 | --- | --- | --- |
-| `haxe.Exception` | OCaml, Elixir, Rust | source OCaml now uses `_std`; flattened OCaml packages, Elixir early files, and Rust std files can still collide if multiple target packages are active together |
+| `haxe.Exception` | OCaml, Elixir, Rust | source OCaml and source Rust now use target `_std`; flattened OCaml/Rust packages and Elixir early files can still collide if multiple target packages are active together |
 | `haxe.NativeStackTrace` | OCaml, Go | source OCaml now uses `_std`; flattened OCaml packages can still overlap Go's `std/` ownership in mixed activation |
 | `StringTools` | Elixir, Go, Rust | broad std ownership overlap; lower risk than early `src/` collisions but still ambiguous in mixed activation |
 | `DateTools` | Elixir, Go | broad std ownership overlap |
@@ -75,7 +75,7 @@ These are the overlap surfaces that matter most right now.
 | Situation | Prefer `_std` | Prefer `.cross.hx` |
 | --- | --- | --- |
 | Normal target-private stdlib override | Yes | Usually no |
-| Must be visible before target bootstrap injects `_std` | No | Yes |
+| Must be visible when the initial classpath does not include target `_std` | No | Yes |
 | Repo intentionally uses `cross`-mode override selection as the main model | Maybe | Yes |
 | Need a clear target-owned sync/provenance destination | Yes | Maybe |
 | Want generic `cross`-mode selection rather than target-private classpath gating | No | Yes |
