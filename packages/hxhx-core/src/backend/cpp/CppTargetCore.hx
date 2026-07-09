@@ -6050,6 +6050,27 @@ class CppTargetCore {
 		};
 	}
 
+	/**
+		Render the syntactically simple String arguments accepted by `Bytes.ofString`.
+
+		The generic expected-value path must retain macro, Dynamic, and abstract
+		conversion behavior. This shortcut therefore accepts only literals and locals
+		that are either explicitly declared as `String` or have no surviving source
+		type hint, and it preserves the existing `std::string(...)` emitted shape.
+	**/
+	static function directBytesOfStringArgExpr(arg:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (arg) {
+			case EString(value):
+				"std::string(" + quoteString(value) + ")";
+			case EIdent(name) if (scope != null && exprCppType(arg, scope) == "std::string"):
+				final hint = removeTypeHintWhitespace(exprHaxeTypeHint(arg, scope));
+				if (hint.length > 0
+					&& sanitizeTypePath(typeBaseName(hint)) != "String") null; else "std::string(" + localCppName(name, scope) + ")";
+			case _:
+				null;
+		};
+	}
+
 	static function exprForwardsArgToUtestPosition(expr:HxExpr, argName:String):Bool {
 		return switch (expr) {
 			case ECall(EIdent(method), args) if ((method == "exc" || method == "unspec") && args.length >= 2):
@@ -15465,8 +15486,12 @@ class CppTargetCore {
 		if (preludeParamTypes.length > 0)
 			return renderKnownCppParamCallArgs(preludeParamTypes, args, scope);
 		final supportParamTypes = knownStdlibMethodParamCppTypes(className, methodName, scope, lookupForScope(scope), args.length);
-		if (supportParamTypes.length > 0)
-			return renderKnownCppParamCallArgs(supportParamTypes, args, scope);
+		if (supportParamTypes.length > 0) {
+			final directFirstArg = args.length > 0
+				&& sanitizeTypePath(typeBaseName(className == null ? "" : className)) == "Bytes"
+				&& sanitizeIdentifier(methodName == null ? "" : methodName) == "ofString" ? directBytesOfStringArgExpr(args[0], scope) : null;
+			return renderKnownCppParamCallArgs(supportParamTypes, args, scope, directFirstArg);
+		}
 		final fn = classMethodDecl(className, methodName, wantStatic, scope);
 		if (fn == null)
 			return renderSimpleCallArgs(args, scope);
@@ -15475,11 +15500,13 @@ class CppTargetCore {
 		return renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, paramTypes);
 	}
 
-	static function renderKnownCppParamCallArgs(paramTypes:Array<String>, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+	static function renderKnownCppParamCallArgs(paramTypes:Array<String>, args:Array<HxExpr>, ?scope:CppRenderScope, ?directFirstArg:String):Array<String> {
 		final out = new Array<String>();
 		for (i in 0...args.length) {
 			final expected = i < paramTypes.length ? paramTypes[i] : "";
-			out.push(expected.length > 0 ? valueExprForExpectedType(args[i], expected, scope) : renderExpr(args[i], scope));
+			out.push(i == 0
+				&& directFirstArg != null ? directFirstArg : expected.length > 0 ? valueExprForExpectedType(args[i], expected,
+					scope) : renderExpr(args[i], scope));
 		}
 		return out;
 	}

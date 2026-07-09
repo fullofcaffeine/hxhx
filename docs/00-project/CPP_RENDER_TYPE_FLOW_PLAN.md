@@ -773,6 +773,57 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp still
 times out, and this internal parameter-preparation improvement does not change
 public production readiness.
 
+## 2026-07-09 Bytes Plain String Argument Guard
+
+Follow-up bead `haxe_ocaml-rfjcc` split the remaining supplied-String work
+inside the focused helper bench. A preliminary 200-adaptation sample measured
+about 0.0606s through `valueExprForExpectedType` versus about 0.0253s through
+the underlying `stringExpr`, confirming that known `Bytes.ofString` calls were
+still paying generic expected-value probes before their established String
+adaptation. The retained fixture measures literal, explicitly typed local, and
+inferred local cases separately from the surrounding nested Bytes expression.
+
+The retained shortcut remains specific to the first `Bytes.ofString`
+parameter. String literals and locals whose surviving source hint is either
+plain `String` or absent render directly to the same explicit
+`std::string(...)` shape as before. Dynamic-hinted locals, abstract-hinted
+locals, macro/cast wrappers, non-String values, and the optional `Encoding`
+argument remain on generic adaptation. This avoids a broad same-C++-type
+shortcut: primitive-backed abstract `toString` behavior and erased Dynamic
+stringification still retain their existing boundaries.
+
+Two post-change samples of the identical 300-adaptation phase loop reported
+about 0.0572s and 0.0479s through generic expected-value rendering, about
+0.0369s and 0.0271s through `stringExpr`, and about 0.00458s and 0.00348s
+through the guarded direct wrapper path. The actual nested Bytes fixture still
+asserts
+`Bytes::ofString(std::string(s1))->sub(...)->compare(Bytes::ofString(std::string(s2)))`,
+and a literal assertion keeps `Bytes::ofString(std::string("literal"))` stable.
+The private seam assertions also prove that Dynamic- and abstract-hinted String
+locals decline the shortcut.
+
+A current-source strict probe wrote
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testbytes-test-filter-after-direct-string-arg.log`.
+It remained expected-red at the explicit 480s Cpp cap and did not reach the
+filtered `TestBytes.test` method. This run spent about 112s reinstalling hxcpp
+and stopped in `TestExceptions`, so it is recorded as non-comparable setup
+overhead rather than evidence for a strict method delta. A warmed follow-up
+must reach the same filtered method before making that claim.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+times out, and this internal known-call render improvement does not change
+public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

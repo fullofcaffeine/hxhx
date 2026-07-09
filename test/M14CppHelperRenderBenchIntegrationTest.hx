@@ -21,6 +21,16 @@ typedef BytesReferenceCallBenchResult = {
 	var sample:String;
 }
 
+typedef BytesStringArgPhaseBenchResult = {
+	var calls:Int;
+	var valueElapsed:Float;
+	var stringElapsed:Float;
+	var directElapsed:Float;
+	var valueSample:String;
+	var stringSample:String;
+	var directSample:String;
+}
+
 /**
 	Renderer-only latency probe for the C++ helper-class frontier.
 
@@ -39,6 +49,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_REPS = 2;
 	static inline final DEFAULT_PRIMITIVE_ARG_CALLS = 250;
 	static inline final DEFAULT_BYTES_REFERENCE_CALLS = 10;
+	static inline final DEFAULT_BYTES_STRING_ARG_CALLS = 100;
 
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -390,6 +401,8 @@ class M14CppHelperRenderBenchIntegrationTest {
 			"Bytes.ofString calls without Encoding should resolve only the supplied String parameter");
 		assertTrue(explicitEncodingParams.length == 2 && declarationParams.join(",") == explicitEncodingParams.join(","),
 			"Bytes.ofString declarations and explicit Encoding calls should keep the complete parameter shape");
+		final literalCall = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Bytes"), "ofString"), [EString("literal")]), scope);
+		assertTrue(literalCall == "Bytes::ofString(std::string(\"literal\"))", "Bytes.ofString literal calls should keep the explicit std::string wrapper");
 		final expression = ECall(EField(ECall(EField(ECall(EField(EIdent("Bytes"), "ofString"), [EIdent("s1")]), "sub"), [EInt(0), EInt(1)]), "compare"),
 			[ECall(EField(EIdent("Bytes"), "ofString"), [EIdent("s2")])]);
 		resetRendererCaches();
@@ -401,6 +414,55 @@ class M14CppHelperRenderBenchIntegrationTest {
 			elapsed: Sys.time() - start,
 			calls: callCount,
 			sample: sample
+		};
+	}
+
+	static function renderBytesStringArgPhases(callCount:Int):BytesStringArgPhaseBenchResult {
+		final owner = new HxClassDecl("BytesStringArgBenchOwner", false, [], []);
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		names.set("BytesStringArgBenchOwner", true);
+		classes.set("BytesStringArgBenchOwner", owner);
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		scope.localTypes.set("text", "std::string");
+		scope.localTypes.set("inferred", "std::string");
+		scope.localTypeHints.set("text", "String");
+		final args = [EString("literal"), EIdent("text"), EIdent("inferred")];
+		scope.localTypeHints.set("text", "Dynamic");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directBytesOfStringArgExpr(EIdent("text"), scope) == null,
+			"Bytes.ofString should keep Dynamic-shaped String locals on generic adaptation");
+		scope.localTypeHints.set("text", "StringAbstract");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directBytesOfStringArgExpr(EIdent("text"), scope) == null,
+			"Bytes.ofString should keep primitive-backed String abstracts on generic adaptation");
+		scope.localTypeHints.set("text", "String");
+		resetRendererCaches();
+		final valueStart = Sys.time();
+		var valueSample = "";
+		for (_ in 0...callCount)
+			for (arg in args)
+				valueSample = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(arg, "std::string", scope);
+		final valueElapsed = Sys.time() - valueStart;
+		resetRendererCaches();
+		final stringStart = Sys.time();
+		var stringSample = "";
+		for (_ in 0...callCount)
+			for (arg in args)
+				stringSample = @:privateAccess backend.cpp.CppTargetCore.stringExpr(arg, scope);
+		final stringElapsed = Sys.time() - stringStart;
+		resetRendererCaches();
+		final directStart = Sys.time();
+		var directSample = "";
+		for (_ in 0...callCount)
+			for (arg in args)
+				directSample = @:privateAccess backend.cpp.CppTargetCore.directBytesOfStringArgExpr(arg, scope);
+		return {
+			calls: callCount,
+			valueElapsed: valueElapsed,
+			stringElapsed: stringElapsed,
+			directElapsed: Sys.time() - directStart,
+			valueSample: valueSample,
+			stringSample: stringSample,
+			directSample: directSample
 		};
 	}
 
@@ -427,6 +489,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final reps = envInt("HXHX_CPP_HELPER_RENDER_BENCH_REPS", DEFAULT_REPS);
 		final primitiveArgCalls = envInt("HXHX_CPP_PRIMITIVE_ARG_BENCH_CALLS", DEFAULT_PRIMITIVE_ARG_CALLS);
 		final bytesReferenceCalls = envInt("HXHX_CPP_BYTES_REFERENCE_BENCH_CALLS", DEFAULT_BYTES_REFERENCE_CALLS);
+		final bytesStringArgCalls = envInt("HXHX_CPP_BYTES_STRING_ARG_BENCH_CALLS", DEFAULT_BYTES_STRING_ARG_CALLS);
 		var best:HelperRenderBenchResult = null;
 		var total = 0.0;
 		for (_ in 0...reps) {
@@ -454,6 +517,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final bytesReferences = renderBytesReferenceCalls(bytesReferenceCalls);
 		assertTrue(bytesReferences.sample == "Bytes::ofString(std::string(s1))->sub(0, 1)->compare(Bytes::ofString(std::string(s2)))",
 			"Bytes reference bench should keep nested ofString/sub/compare rendering stable");
+		final bytesStringArgs = renderBytesStringArgPhases(bytesStringArgCalls);
+		assertTrue(bytesStringArgs.valueSample == "std::string(inferred)"
+			&& bytesStringArgs.stringSample == bytesStringArgs.valueSample
+			&& bytesStringArgs.directSample == bytesStringArgs.valueSample,
+			"Bytes String argument phases should preserve the existing std::string wrapper for typed locals");
 
 		Sys.println("CPP_HELPER_RENDER_BENCH:PASS extra_methods="
 			+ extraMethods
@@ -475,6 +543,14 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ bytesReferences.calls
 			+ " bytes_reference_seconds="
 			+ bytesReferences.elapsed
+			+ " bytes_string_arg_calls="
+			+ bytesStringArgs.calls
+			+ " bytes_string_value_seconds="
+			+ bytesStringArgs.valueElapsed
+			+ " bytes_string_string_seconds="
+			+ bytesStringArgs.stringElapsed
+			+ " bytes_string_direct_seconds="
+			+ bytesStringArgs.directElapsed
 			+ (stdList == null ? "" : " std_list_seconds=" + stdList.elapsed + " std_list_lines=" + stdList.lines));
 	}
 }
