@@ -1,4 +1,5 @@
 import backend.GenIrProgram;
+import HxExpr;
 import haxe.ds.StringMap;
 
 typedef HelperRenderBenchResult = {
@@ -6,6 +7,12 @@ typedef HelperRenderBenchResult = {
 	var rendered:String;
 	var lines:Int;
 	var classTimings:Array<String>;
+}
+
+typedef PrimitiveCallArgBenchResult = {
+	var elapsed:Float;
+	var calls:Int;
+	var sample:String;
 }
 
 /**
@@ -24,6 +31,7 @@ typedef HelperRenderBenchResult = {
 class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_EXTRA_METHODS = 16;
 	static inline final DEFAULT_REPS = 2;
+	static inline final DEFAULT_PRIMITIVE_ARG_CALLS = 250;
 
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -320,6 +328,32 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
+	static function renderPrimitiveLiteralCallArgs(callCount:Int):PrimitiveCallArgBenchResult {
+		final target = new HxFunctionDecl("target", Public, false, [
+			new HxFunctionArg("s", "String", NoDefault, false, false),
+			new HxFunctionArg("n", "Int", NoDefault, false, false),
+			new HxFunctionArg("b", "Bool", NoDefault, false, false),
+			new HxFunctionArg("f", "Float", NoDefault, false, false)
+		], "Void", [], "");
+		final owner = new HxClassDecl("PrimitiveCallArgBenchOwner", false, [target], []);
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		names.set("PrimitiveCallArgBenchOwner", true);
+		classes.set("PrimitiveCallArgBenchOwner", owner);
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		final args = [EString("literal"), EInt(7), EBool(true), EFloat(1.25)];
+		resetRendererCaches();
+		final start = Sys.time();
+		var sample = "";
+		for (_ in 0...callCount)
+			sample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("target", args, scope);
+		return {
+			elapsed: Sys.time() - start,
+			calls: callCount,
+			sample: sample
+		};
+	}
+
 	static function assertCallableArgOverridePolicy():Void {
 		final stringOnly = new HxFunctionDecl("stringOnly", Public, false, [new HxFunctionArg("event", "String", NoDefault, false, false)], "Void", [], "");
 		final stringCallable = new HxFunctionDecl("stringCallable", Public, false, [new HxFunctionArg("f", "String", NoDefault, false, false)], "String",
@@ -341,6 +375,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		assertCompileTimeMacroApiBodiesStayDeclarationOnly();
 		final extraMethods = envInt("HXHX_CPP_HELPER_RENDER_BENCH_EXTRA_METHODS", DEFAULT_EXTRA_METHODS);
 		final reps = envInt("HXHX_CPP_HELPER_RENDER_BENCH_REPS", DEFAULT_REPS);
+		final primitiveArgCalls = envInt("HXHX_CPP_PRIMITIVE_ARG_BENCH_CALLS", DEFAULT_PRIMITIVE_ARG_CALLS);
 		var best:HelperRenderBenchResult = null;
 		var total = 0.0;
 		for (_ in 0...reps) {
@@ -362,6 +397,9 @@ class M14CppHelperRenderBenchIntegrationTest {
 				"haxe.ds.List runtime support should keep the generic factory used by new List()");
 			assertNotContains(stdList.rendered, "ListNode::create", "haxe.ds.List runtime support should not render the parsed stdlib add/push body");
 		}
+		final primitiveArgs = renderPrimitiveLiteralCallArgs(primitiveArgCalls);
+		assertTrue(primitiveArgs.sample == "target(\"literal\", 7, true, 1.25)",
+			"primitive call-argument bench should keep direct literal call rendering stable");
 
 		Sys.println("CPP_HELPER_RENDER_BENCH:PASS extra_methods="
 			+ extraMethods
@@ -375,6 +413,10 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ best.lines
 			+ " class_seconds="
 			+ best.classTimings.join(",")
+			+ " primitive_arg_calls="
+			+ primitiveArgs.calls
+			+ " primitive_arg_seconds="
+			+ primitiveArgs.elapsed
 			+ (stdList == null ? "" : " std_list_seconds=" + stdList.elapsed + " std_list_lines=" + stdList.lines));
 	}
 }

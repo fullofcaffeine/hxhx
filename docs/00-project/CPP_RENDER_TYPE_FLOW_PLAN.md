@@ -649,6 +649,17 @@ timing claim for this seam should use a warmed, comparable current-source Cpp
 method-filtered run that reaches `TestEReg.test`, or a smaller focused timing
 fixture that directly exercises declared-parameter primitive literal calls.
 
+Follow-up `haxe_ocaml-bp310` added that smaller focused fixture to
+`test/M14CppHelperRenderBenchIntegrationTest.hx`. The helper render bench now
+renders a declared `String`/`Int`/`Bool`/`Float` call repeatedly through
+`directCallExpr`, asserts the stable emitted call
+`target("literal", 7, true, 1.25)`, and prints
+`primitive_arg_calls` / `primitive_arg_seconds` in the PASS line. The default
+local runs use 250 calls; the first two local samples reported about 0.24s to
+0.26s for that loop. This is a cheap regression and measurement fixture for the
+declared-parameter literal seam; it is not a replacement for a warmed strict Cpp
+method-filtered run when making a broader `TestEReg` timing claim.
+
 README and North Star progress bars stay unchanged. This is an internal strict
 Cpp render/type-flow burn-down slice; strict Cpp remains red and no public
 production-readiness claim changed.
