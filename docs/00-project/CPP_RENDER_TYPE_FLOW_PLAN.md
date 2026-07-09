@@ -810,6 +810,24 @@ and stopped in `TestExceptions`, so it is recorded as non-comparable setup
 overhead rather than evidence for a strict method delta. A warmed follow-up
 must reach the same filtered method before making that claim.
 
+Follow-up bead `haxe_ocaml-knwsd` obtained that comparable method evidence by
+using a disposable upstream worktree outside this repository. A bounded seed
+run installed and built the worktree-local hxcpp once; the retained 480s probe
+then reused both utest and hxcpp, avoiding dependency setup inside the timing
+budget. The worktree was removed immediately after the probe. The comparable
+log is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testbytes-test-filter-after-direct-string-arg-warm.log`.
+
+Against the immediately preceding omitted-Encoding log, the five traced
+`Bytes.ofString` RHS samples changed from about 0.190s, 0.181s, 0.189s,
+0.314s, and 0.181s to about 0.133s, 0.128s, 0.124s, 0.191s, and 0.127s.
+`TestBytes.test` changed from about 9.27s to 8.73s, and the whole `TestBytes`
+class from about 13.77s to 12.75s. Both logs classify the same 384 reachable
+helpers (253 full body, 83 declaration only, and 48 runtime module), so the
+filtered method and expression deltas are comparable. The warmed timeout moved
+past `TestXML` into `TestMisc`; as with earlier probes, that last boundary is
+context only and is not the performance claim.
+
 Focused validation for this slice includes:
 
 - `npm run test:m14:cpp-native-backend-smoke`
