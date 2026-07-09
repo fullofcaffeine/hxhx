@@ -80,6 +80,16 @@ For a focused guide, see:
 - [`docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`](../../docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md)
 - [`docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md`](../../docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md)
 
+## Std override layout
+
+During local development, `reflaxe.ocaml` keeps normal target-owned stdlib overrides in `std/_std/*.hx`.
+
+Those files do not need to be renamed to `.cross.hx` before local builds. The monorepo library config adds `std/`, and `CompilerBootstrap` injects `std/_std` only when the OCaml target is selected.
+
+The few `.cross.hx` files under `src/haxe/` are early bootstrap exceptions that must be visible before `_std` injection is available. They cover the exception/stack cluster (`haxe.Exception`, `haxe.NativeStackTrace`, and `haxe.ValueException`) so upstream extern versions are not resolved and cached before the OCaml runtime-backed modules are visible.
+
+For published haxelib packaging, we may still need a flattening step similar to Reflaxe's own `haxelib run reflaxe build`, where `_std` files are copied into the package classpath as `.cross.hx`. See [`docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`](../../docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md).
+
 ## Required define
 
 `reflaxe.ocaml` requires:

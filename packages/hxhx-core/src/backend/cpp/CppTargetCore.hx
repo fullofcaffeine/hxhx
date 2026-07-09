@@ -2260,6 +2260,9 @@ class CppTargetCore {
 		final all = new Array<HxClassDecl>();
 		final shortNameCounts = new haxe.ds.StringMap<Int>();
 		final packageByRenderedName = new haxe.ds.StringMap<String>();
+		final renderedNameByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
+		final packagePathByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
+		final sourcePathByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
 		final classInfos = new Array<{cls:HxClassDecl, packagePath:String, sourcePath:String}>();
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
@@ -2276,6 +2279,7 @@ class CppTargetCore {
 			final sourcePath = typed.getParsed().getFilePath();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				all.push(cls);
+				final shortName = sanitizeTypePath(HxClassDecl.getName(cls));
 				final rendered = renderedClassNameForModule(HxClassDecl.getName(cls), moduleName, shortNameCounts);
 				renderedNames.push({cls: cls, name: rendered});
 				classInfos.push({
@@ -2284,6 +2288,9 @@ class CppTargetCore {
 					sourcePath: sourcePath == null ? "" : sourcePath
 				});
 				packageByRenderedName.set(rendered, packagePath == null ? "" : packagePath);
+				renderedNameByClass.set(cls, rendered);
+				packagePathByClass.set(cls, packagePath == null ? "" : packagePath);
+				sourcePathByClass.set(cls, sourcePath == null ? "" : sourcePath);
 				addClassLookupAliases(HxClassDecl.getName(cls), cls, names, byName);
 				if (rendered != sanitizeTypePath(HxClassDecl.getName(cls)))
 					addClassLookupAliases(rendered, cls, names, byName);
@@ -2295,6 +2302,9 @@ class CppTargetCore {
 			all: all,
 			renderedNames: renderedNames,
 			classInfos: classInfos,
+			renderedNameByClass: renderedNameByClass,
+			packagePathByClass: packagePathByClass,
+			sourcePathByClass: sourcePathByClass,
 			packageByRenderedName: packageByRenderedName
 		};
 	}
@@ -2330,32 +2340,51 @@ class CppTargetCore {
 	static function renderedClassName(cls:HxClassDecl, ?classLookup:CppClassLookup):String {
 		if (cls == null)
 			return "";
+		final shortName = sanitizeTypePath(HxClassDecl.getName(cls));
+		if (classLookup != null && classLookup.renderedNameByClass != null) {
+			final rendered = classLookup.renderedNameByClass.get(cls);
+			if (rendered != null)
+				return rendered;
+		}
 		if (classLookup != null && classLookup.renderedNames != null)
 			for (entry in classLookup.renderedNames)
 				if (entry.cls == cls)
 					return entry.name;
-		return sanitizeTypePath(HxClassDecl.getName(cls));
+		return shortName;
 	}
 
 	static function packagePathForRenderedClass(cls:HxClassDecl, ?classLookup:CppClassLookup):String {
 		if (cls == null || classLookup == null)
 			return "";
+		if (classLookup.packagePathByClass != null) {
+			final packagePath = classLookup.packagePathByClass.get(cls);
+			if (packagePath != null)
+				return packagePath;
+		}
 		if (classLookup.classInfos != null)
 			for (entry in classLookup.classInfos)
 				if (entry.cls == cls)
 					return entry.packagePath == null ? "" : entry.packagePath;
-		if (classLookup.packageByRenderedName == null)
-			return "";
-		final packagePath = classLookup.packageByRenderedName.get(renderedClassName(cls, classLookup));
-		return packagePath == null ? "" : packagePath;
+		if (classLookup.packageByRenderedName != null) {
+			final packagePath = classLookup.packageByRenderedName.get(renderedClassName(cls, classLookup));
+			if (packagePath != null)
+				return packagePath;
+		}
+		return "";
 	}
 
 	static function sourcePathForRenderedClass(cls:HxClassDecl, ?classLookup:CppClassLookup):String {
-		if (cls == null || classLookup == null || classLookup.classInfos == null)
+		if (cls == null || classLookup == null)
 			return "";
-		for (entry in classLookup.classInfos)
-			if (entry.cls == cls)
-				return entry.sourcePath == null ? "" : entry.sourcePath;
+		if (classLookup.sourcePathByClass != null) {
+			final sourcePath = classLookup.sourcePathByClass.get(cls);
+			if (sourcePath != null)
+				return sourcePath;
+		}
+		if (classLookup.classInfos != null)
+			for (entry in classLookup.classInfos)
+				if (entry.cls == cls)
+					return entry.sourcePath == null ? "" : entry.sourcePath;
 		return "";
 	}
 

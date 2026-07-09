@@ -17,5 +17,8 @@ typedef CppClassLookup = {
 	@:optional var all:Array<HxClassDecl>;
 	@:optional var renderedNames:Array<CppRenderedClassName>;
 	@:optional var classInfos:Array<CppClassInfo>;
+	@:optional var renderedNameByClass:haxe.ds.ObjectMap<HxClassDecl, String>;
+	@:optional var packagePathByClass:haxe.ds.ObjectMap<HxClassDecl, String>;
+	@:optional var sourcePathByClass:haxe.ds.ObjectMap<HxClassDecl, String>;
 	@:optional var packageByRenderedName:haxe.ds.StringMap<String>;
 }
