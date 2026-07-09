@@ -2406,6 +2406,14 @@ class CppTargetCore {
 		return shortName;
 	}
 
+	static function renderedSupportClassName(baseName:String, ?classLookup:CppClassLookup):String {
+		final clean = sanitizeTypePath(typeBaseName(baseName == null ? "" : baseName));
+		if (classLookup == null || classLookup.byName == null || clean.length == 0)
+			return clean;
+		final cls = classLookup.byName.get(clean);
+		return cls == null ? clean : renderedClassName(cls, classLookup);
+	}
+
 	static function packagePathForRenderedClass(cls:HxClassDecl, ?classLookup:CppClassLookup):String {
 		if (cls == null || classLookup == null)
 			return "";
@@ -2683,6 +2691,7 @@ class CppTargetCore {
 		return isAnySupportClass(cls)
 			|| isStdListSupportClass(cls, classLookup)
 			|| isBytesSupportClass(cls, classLookup)
+			|| isBytesBufferSupportClass(cls, classLookup)
 			|| isGenericMapSupportClass(cls)
 			|| isPosInfosSupportClass(cls)
 			|| isClassMetaSupportClass(cls)
@@ -3214,6 +3223,8 @@ class CppTargetCore {
 			return CppRuntimeSupport.listSupportLines();
 		if (isBytesSupportClass(cls, classLookup))
 			return CppRuntimeSupport.bytesSupportLines(className);
+		if (isBytesBufferSupportClass(cls, classLookup))
+			return CppRuntimeSupport.bytesBufferSupportLines(className, renderedSupportClassName("Bytes", classLookup));
 		if (isGenericMapSupportClass(cls))
 			return renderGenericMapSupportClass(cls);
 		if (isPosInfosSupportClass(cls))
@@ -4960,6 +4971,17 @@ class CppTargetCore {
 				case _:
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			};
+		if (owner == "BytesBuffer")
+			return switch (method) {
+				case "get_length":
+					"int";
+				case "addByte" | "add" | "addString" | "addInt32" | "addInt64" | "addFloat" | "addDouble" | "addBytes":
+					"void";
+				case "getBytes":
+					cppTypeHint("Bytes", scope, classLookup);
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			};
 		if (isTypeResolverHelper(owner)) {
 			return switch (method) {
 				case "resolveClass":
@@ -5188,6 +5210,23 @@ class CppTargetCore {
 						["int", "int", "int"];
 					case "compare":
 						[cppTypeHint("Bytes", scope, classLookup)];
+					case _:
+						[];
+				}
+			case "BytesBuffer":
+				switch (method) {
+					case "addByte" | "addInt32":
+						["int"];
+					case "addInt64":
+						["long long"];
+					case "addFloat" | "addDouble":
+						["double"];
+					case "add":
+						[cppTypeHint("Bytes", scope, classLookup)];
+					case "addString":
+						["std::string", cppTypeHint("Encoding", scope, classLookup)];
+					case "addBytes":
+						[cppTypeHint("Bytes", scope, classLookup), "int", "int"];
 					case _:
 						[];
 				}
@@ -16700,6 +16739,57 @@ class CppTargetCore {
 				required.set(method, true);
 		}
 		for (name in ["get", "set", "alloc", "ofString", "toHex"])
+			if (!required.get(name))
+				return false;
+		return true;
+	}
+
+	/**
+		Recognize stdlib `haxe.io.BytesBuffer` as target-owned byte-buffer support.
+
+		This is intentionally narrower than `Input`/`Output`: `BytesBuffer` owns only
+		vector-backed byte accumulation and `getBytes`, while the stream helpers keep
+		their parsed override/exception behavior until a separate oracle slice.
+	**/
+	static function isBytesBufferSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "BytesBuffer")
+			return false;
+		if (packagePathForRenderedClass(cls, classLookup) == "haxe.io")
+			return true;
+		if (isHaxeIoBytesBufferSourcePath(sourcePathForRenderedClass(cls, classLookup)))
+			return true;
+		return hasBytesBufferSupportShape(cls);
+	}
+
+	static function isHaxeIoBytesBufferSourcePath(path:String):Bool {
+		if (path == null || path.length == 0)
+			return false;
+		final normalized = StringTools.replace(path, "\\", "/");
+		if (normalized == "vendor/haxe/std/haxe/io/BytesBuffer.hx"
+			|| StringTools.endsWith(normalized, "/vendor/haxe/std/haxe/io/BytesBuffer.hx"))
+			return true;
+		return StringTools.endsWith(normalized, "/haxe/std/haxe/io/BytesBuffer.hx");
+	}
+
+	static function hasBytesBufferSupportShape(cls:HxClassDecl):Bool {
+		var hasBytesData = false;
+		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+			final hint = sanitizeTypePath(typeBaseName(HxFieldDecl.getTypeHint(field)));
+			if (fieldName == "b" && hint == "BytesData")
+				hasBytesData = true;
+		}
+		if (!hasBytesData)
+			return false;
+		final required = new haxe.ds.StringMap<Bool>();
+		for (name in ["get_length", "addByte", "add", "addString", "addBytes", "getBytes"])
+			required.set(name, false);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			if (required.exists(method))
+				required.set(method, true);
+		}
+		for (name in ["get_length", "addByte", "add", "addString", "addBytes", "getBytes"])
 			if (!required.get(name))
 				return false;
 		return true;

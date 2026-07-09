@@ -8974,7 +8974,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFieldDecl("b", Public, false, "BytesData", null)
 		]);
 		final bytesNames = new StringMap<Bool>();
-		for (name in ["BytesData", "Bytes"])
+		for (name in ["BytesData", "Bytes", "BytesBuffer"])
 			bytesNames.set(name, true);
 		final bytesClasses = new StringMap<HxClassDecl>();
 		bytesClasses.set("BytesData", bytesData);
@@ -9024,6 +9024,39 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			SExpr(EBinop("=", EIdent("b"), ENull), HxPos.unknown()),
 			SReturn(ENew("Bytes", [EInt(0), EIdent("b")]), HxPos.unknown())
 		], "");
+		final bytesBufferRuntime = new HxClassDecl("BytesBuffer", false, [
+			new HxFunctionDecl("get_length", Public, false, [], "Int", [], ""),
+			new HxFunctionDecl("addByte", Public, false, [new HxFunctionArg("byte", "Int", NoDefault, false, false)], "Void", [], ""),
+			new HxFunctionDecl("add", Public, false, [new HxFunctionArg("src", "Bytes", NoDefault, false, false)], "Void", [], ""),
+			new HxFunctionDecl("addString", Public, false, [
+				new HxFunctionArg("v", "String", NoDefault, false, false),
+				new HxFunctionArg("encoding", "Encoding", NoDefault, true, false)
+			], "Void", [], ""),
+			new HxFunctionDecl("addBytes", Public, false, [
+				new HxFunctionArg("src", "Bytes", NoDefault, false, false),
+				new HxFunctionArg("pos", "Int", NoDefault, false, false),
+				new HxFunctionArg("len", "Int", NoDefault, false, false)
+			], "Void", [], ""),
+			bytesBufferGetBytes
+		], [new HxFieldDecl("b", Public, false, "BytesData", null)]);
+		bytesClasses.set("BytesBuffer", bytesBufferRuntime);
+		final bytesBufferKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(bytesBufferRuntime, bytesLookup);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(bytesBufferKind) == "runtime_module",
+			"C++ BytesBuffer should render through target-owned byte-buffer support instead of parsed stdlib bodies");
+		final bytesBufferRuntimeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(bytesBufferRuntime, bytesLookup).join("\n");
+		assertContains(bytesBufferRuntimeLines, "struct BytesBuffer {", "C++ BytesBuffer support should keep the public helper shape");
+		assertContains(bytesBufferRuntimeLines, "std::vector<int> b = {};", "C++ BytesBuffer should use vector-backed BytesData storage");
+		assertContains(bytesBufferRuntimeLines, "int length = 0;", "C++ BytesBuffer should keep a cached length field for property reads");
+		assertContains(bytesBufferRuntimeLines, "void addByte(int byte) { b.push_back(byte & 0xFF); __sync_length(); }",
+			"C++ BytesBuffer.addByte should append masked bytes and refresh length");
+		assertContains(bytesBufferRuntimeLines, "b.insert(b.end(), src->b.begin(), src->b.end());", "C++ BytesBuffer.add should append Bytes storage directly");
+		assertContains(bytesBufferRuntimeLines, "add(Bytes::ofString(v, encoding));", "C++ BytesBuffer.addString should reuse Bytes.ofString");
+		assertContains(bytesBufferRuntimeLines, "__hxhx_memory_set_float(b, static_cast<int>(pos), v);",
+			"C++ BytesBuffer.addFloat should use target byte-memory helpers");
+		assertContains(bytesBufferRuntimeLines, "__hxhx_memory_set_double(b, static_cast<int>(pos), v);",
+			"C++ BytesBuffer.addDouble should use target byte-memory helpers");
+		assertContains(bytesBufferRuntimeLines, "std::shared_ptr<Bytes> getBytes() {", "C++ BytesBuffer.getBytes should return Bytes");
+		assertContains(bytesBufferRuntimeLines, "b = {};", "C++ BytesBuffer.getBytes should reset vector storage after producing Bytes");
 		final bytesBufferOwner = new HxClassDecl("BytesBuffer", false, [bytesBufferGetBytes], []);
 		final bytesBufferLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(bytesBufferGetBytes, bytesBufferOwner, bytesLookup).join("\n");
 		assertContains(bytesBufferLines, "b = {};", "C++ BytesBuffer-style BytesData nulling should reset vector storage instead of assigning nullptr");

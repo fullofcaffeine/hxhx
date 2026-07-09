@@ -456,6 +456,72 @@ class CppRuntimeSupport {
 	}
 
 	/**
+		Target-owned runtime surface for `haxe.io.BytesBuffer`.
+
+		`BytesBuffer` is a thin byte-vector accumulator on C++: its storage is the
+		same `BytesData` vector that `Bytes` owns, and its methods are simple byte
+		append/getBytes operations. Keeping it here avoids repeatedly rendering the
+		parsed stdlib body while leaving stream-oriented `Input`/`Output` semantics
+		on the parsed-helper path.
+	**/
+	public static function bytesBufferSupportLines(className:String, bytesClassName:String):Array<String> {
+		final name = className == null || className.length == 0 ? "BytesBuffer" : className;
+		final bytesName = bytesClassName == null || bytesClassName.length == 0 ? "Bytes" : bytesClassName;
+		return [
+			"struct Encoding;",
+			"",
+			"struct " + name + " {",
+			"  std::vector<int> b = {};",
+			"  int length = 0;",
+			"  " + name + "() { __sync_length(); }",
+			"  void __sync_length() { length = static_cast<int>(b.size()); }",
+			"  int get_length() { __sync_length(); return length; }",
+			"  void addByte(int byte) { b.push_back(byte & 0xFF); __sync_length(); }",
+			"  void add(std::shared_ptr<" + bytesName + "> src) {",
+			"    b.insert(b.end(), src->b.begin(), src->b.end());",
+			"    __sync_length();",
+			"  }",
+			"  void addString(std::string v, std::shared_ptr<Encoding> encoding = nullptr) {",
+			"    add(" + bytesName + "::ofString(v, encoding));",
+			"  }",
+			"  void addInt32(int v) {",
+			"    addByte(v & 0xFF);",
+			"    addByte((v >> 8) & 0xFF);",
+			"    addByte((v >> 16) & 0xFF);",
+			"    addByte(static_cast<int>(static_cast<unsigned int>(v) >> 24));",
+			"  }",
+			"  void addInt64(long long v) {",
+			"    addInt32(static_cast<int>(static_cast<unsigned long long>(v) & 0xFFFFFFFFULL));",
+			"    addInt32(static_cast<int>((static_cast<unsigned long long>(v) >> 32) & 0xFFFFFFFFULL));",
+			"  }",
+			"  void addFloat(double v) {",
+			"    std::size_t pos = b.size();",
+			"    b.resize(pos + 4);",
+			"    __hxhx_memory_set_float(b, static_cast<int>(pos), v);",
+			"    __sync_length();",
+			"  }",
+			"  void addDouble(double v) {",
+			"    std::size_t pos = b.size();",
+			"    b.resize(pos + 8);",
+			"    __hxhx_memory_set_double(b, static_cast<int>(pos), v);",
+			"    __sync_length();",
+			"  }",
+			"  void addBytes(std::shared_ptr<" + bytesName + "> src, int pos, int len) {",
+			"    if (pos < 0 || len < 0 || pos + len > src->length) throw std::runtime_error(\"OutsideBounds\");",
+			"    b.insert(b.end(), src->b.begin() + pos, src->b.begin() + pos + len);",
+			"    __sync_length();",
+			"  }",
+			"  std::shared_ptr<" + bytesName + "> getBytes() {",
+			"    auto bytes = std::make_shared<" + bytesName + ">(static_cast<int>(b.size()), b);",
+			"    b = {};",
+			"    __sync_length();",
+			"    return bytes;",
+			"  }",
+			"};"
+		];
+	}
+
+	/**
 		Bounded JSON runtime carrier for the C++ `TestJson` frontier.
 
 		This block deliberately owns JSON semantics separately from `Std.string`,

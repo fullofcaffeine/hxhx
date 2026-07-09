@@ -106,21 +106,25 @@ classification on the per-program class lookup before reusing it in anonymous
 collection; recomputing classification inside the collector can erase the
 intended timing win.
 
-`haxe.io.Bytes` follows this rule as a target-owned runtime module. The C++
-backend already owns `BytesData` as vector storage and already lowers byte
-copying, byte/string conversion, hex output, and float memory access through
-`__hxhx_*` prelude helpers. Rendering the parsed stdlib `Bytes` body therefore
-duplicates target-owned byte lowering and was a strict-probe hotspot. The
-bounded runtime module keeps the public `Bytes` C++ shape and moves the class
-body into `CppRuntimeSupport.bytesSupportLines`, with smoke coverage asserting
-the vector storage, constructor, byte helper calls, UTF8 enum-carrier shape,
-`Int64` projections, and runtime-module classification.
+`haxe.io.Bytes` and `haxe.io.BytesBuffer` follow this rule as target-owned
+runtime modules. The C++ backend already owns `BytesData` as vector storage and
+already lowers byte copying, byte/string conversion, hex output, and float
+memory access through `__hxhx_*` prelude helpers. Rendering the parsed stdlib
+`Bytes` body therefore duplicates target-owned byte lowering and was a
+strict-probe hotspot. `BytesBuffer` is the same byte-storage family: it appends
+to `BytesData`, converts strings through `Bytes.ofString`, writes binary
+numbers through the byte-memory helpers, and returns `Bytes`. The bounded
+runtime modules keep the public C++ shapes and move the bodies into
+`CppRuntimeSupport.bytesSupportLines` and
+`CppRuntimeSupport.bytesBufferSupportLines`, with smoke coverage asserting
+vector storage, byte helper calls, UTF8 enum-carrier shape, `Int64` projections,
+buffer reset behavior, and runtime-module classification.
 
-`Input`, `Output`, and `BytesBuffer` are deliberately not folded into the same
-change. They have wider stream, EOF, blocked I/O, buffering, and exception
-contracts, so they need separate oracle/smoke work before becoming C++ runtime
-modules. Until then, they remain parsed helpers even if their bodies are also
-visible in strict timing logs.
+`Input` and `Output` are deliberately not folded into the same change. They are
+abstract stream override surfaces with EOF, blocked I/O, buffering, and
+exception contracts, so they need separate oracle/smoke work before becoming
+C++ runtime modules. Until then, they remain parsed helpers even if their bodies
+are also visible in strict timing logs.
 
 The 2026-07-09 strict source-only Cpp probe after this rule still timed out, but
 moved the 360s frontier from `ListNode` helper rendering to
