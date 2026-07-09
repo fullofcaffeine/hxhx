@@ -277,6 +277,27 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 			"native decode constrained gf3 type params should come from the source signature");
 	}
 
+	static function assertNativeDecodeDoesNotBorrowArgsFromPrefixNamedFunction():Void {
+		final source = [
+			"class InputLike {",
+			"  public function readByte():Int {",
+			"    return throw new haxe.exceptions.NotImplementedException();",
+			"  }",
+			"  public function readBytes(s:Bytes, pos:Int, len:Int):Int {",
+			"    return readByte();",
+			"  }",
+			"}"
+		].join("\n");
+		final body = "return throw new haxe.exceptions.NotImplementedException();";
+		final bodyStart = source.indexOf("return throw");
+		final nativeDecodeFn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("readByte|public|0||Int||||", body, bodyStart, source);
+		assertEqInt(HxFunctionDecl.getArgs(nativeDecodeFn)
+			.length, 0, "native decode should not recover readBytes args for the prefix-named readByte function");
+		final readBytesFn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("readBytes|public|0|s,pos,len|Int|||s:Bytes,pos:Int,len:Int|",
+			"return readByte();", source.indexOf("return readByte"), source);
+		assertEqInt(HxFunctionDecl.getArgs(readBytesFn).length, 3, "native decode should still recover the readBytes arg list");
+	}
+
 	static function main() {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
 		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
@@ -287,6 +308,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertScannedHelpersStripUntypedReturnModifier();
 		assertNativeDecodeRecoversSourceFunctionHintFromStringFallback();
 		assertNativeDecodeRecoversConstrainedGenericArgsFromSource();
+		assertNativeDecodeDoesNotBorrowArgsFromPrefixNamedFunction();
 		assertScannedGenericNamedFunctionArg();
 
 		final src = '@:generic class GenericMethods<T> {\n'

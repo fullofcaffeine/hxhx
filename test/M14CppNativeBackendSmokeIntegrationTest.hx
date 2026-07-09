@@ -3012,6 +3012,22 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function missingMapProgram():GenIrProgram {
+		final src = [
+			"class UsesMissingMap {",
+			"  public static function environment():Map<String,String> {",
+			"    return null;",
+			"  }",
+			"}",
+			"class Main {",
+			"  static function main() {}",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function mapKeyValueIteratorProgram():GenIrProgram {
 		final src = [
 			"interface IMap<K,V> {",
@@ -12162,6 +12178,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ fallback IMap method typing should unwrap optional get values into key/value iterator records");
 		assertTrue(missingIMapSource.indexOf("struct __hxhx_anon_value_int__key_std__string") < 0,
 			"C++ fallback IMap key/value iterator records should not predeclare optional values as Int");
+
+		final missingMapDir = Path.join([root, "missing-map-source-only"]);
+		final missingMapEmit = BackendRegistry.createForTarget("cpp-native").emit(missingMapProgram(), context(missingMapDir, true, true));
+		final missingMapSource = File.getContent(missingMapEmit.entryPath);
+		assertContains(missingMapSource, "template<typename K, typename V>\nstruct Map;",
+			"C++ missing Map references should preserve the generic forward declaration shape");
+		assertContains(missingMapSource, "static std::shared_ptr<Map<std::string, std::string>> environment()",
+			"C++ missing Map return types should keep key/value template arguments");
+		assertTrue(countOccurrences(missingMapSource, "struct Map;") == 1,
+			"C++ missing Map should not emit an additional bare non-template forward declaration");
 
 		final mapKeyValueDir = Path.join([root, "imap-key-value-iterator-source-only"]);
 		final mapKeyValueEmit = BackendRegistry.createForTarget("cpp-native").emit(mapKeyValueIteratorProgram(), context(mapKeyValueDir, true, true));

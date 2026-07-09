@@ -3600,6 +3600,8 @@ class ParserStage {
 		}> {
 			if (fnIndex < 0)
 				return [];
+			if (!sourceFunctionNameMatches(source, fnIndex, name))
+				return [];
 			final open = source.indexOf("(", fnIndex);
 			if (open < 0)
 				return [];
@@ -3639,6 +3641,8 @@ class ParserStage {
 		final needle = "function " + name;
 		function hintAt(fnIndex:Int):String {
 			if (fnIndex < 0)
+				return "";
+			if (!sourceFunctionNameMatches(source, fnIndex, name))
 				return "";
 			final open = source.indexOf("(", fnIndex);
 			if (open < 0)
@@ -3739,6 +3743,8 @@ class ParserStage {
 		function paramsAt(fnIndex:Int):Array<String> {
 			if (fnIndex < 0)
 				return [];
+			if (!sourceFunctionNameMatches(source, fnIndex, name))
+				return [];
 			final afterName = fnIndex + needle.length;
 			final open = source.indexOf("(", fnIndex);
 			if (open < 0)
@@ -3780,6 +3786,32 @@ class ParserStage {
 				params.push(name);
 		}
 		return params;
+	}
+
+	/**
+		Validate a raw `function <name>` hit before recovering signature details.
+
+		The decoder searches source text because older native protocol payloads can
+		omit rich argument hints. Prefix-related method names such as `readByte` and
+		`readBytes` must not share the same hit.
+	**/
+	static function sourceFunctionNameMatches(source:String, fnIndex:Int, name:String):Bool {
+		if (source == null || name == null || fnIndex < 0)
+			return false;
+		final needle = "function " + name;
+		if (fnIndex + needle.length > source.length || source.substr(fnIndex, needle.length) != needle)
+			return false;
+		if (fnIndex > 0 && sourceIdentifierPart(source.charCodeAt(fnIndex - 1)))
+			return false;
+		final afterName = fnIndex + needle.length;
+		return afterName >= source.length || !sourceIdentifierPart(source.charCodeAt(afterName));
+	}
+
+	static inline function sourceIdentifierPart(c:Int):Bool {
+		return (c >= "A".code && c <= "Z".code)
+			|| (c >= "a".code && c <= "z".code)
+			|| (c >= "0".code && c <= "9".code)
+			|| c == "_".code;
 	}
 
 	static function sourceTypeParamName(text:String):String {

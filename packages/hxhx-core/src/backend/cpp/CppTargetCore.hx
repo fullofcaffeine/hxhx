@@ -2237,7 +2237,7 @@ class CppTargetCore {
 
 	static function missingGenericForwardParams(name:String):Array<String> {
 		return switch (sanitizeTypePath(typeBaseName(name == null ? "" : name))) {
-			case "IMap" | "TreeNode" | "BalancedTree" | "EnumValueMap":
+			case "IMap" | "Map" | "TreeNode" | "BalancedTree" | "EnumValueMap":
 				["K", "V"];
 			case "StringMap":
 				["V"];
