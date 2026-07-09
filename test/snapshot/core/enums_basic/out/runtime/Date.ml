@@ -1,6 +1,6 @@
 (* Minimal Date runtime for reflaxe.ocaml (WIP).
 
-   This module backs the OCaml-target `Date` extern (std/_std/Date.hx).
+   This module backs the OCaml-target `Date` extern (std/ocaml/_std/Date.hx).
 
    Representation:
    - `time_ms` is milliseconds since Unix epoch (Float).

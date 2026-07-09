@@ -21,7 +21,7 @@ Upstream usage is intentionally narrow:
 2. **Stdlib reference/sync (MIT)**
    - Only stdlib content from `vendor/haxe/std/**` is eligible for selective reuse/sync.
    - Checked-in stdlib sync destination is:
-     - `packages/reflaxe.ocaml/std/_std/**`
+     - `packages/reflaxe.ocaml/std/ocaml/_std/**`
 
 Important distinction:
 
@@ -48,12 +48,12 @@ The following upstream paths are never allowed to be vendored or copied into thi
 - For stdlib sync changes, include the upstream source ref in the PR/commit/bead note:
   - upstream tag/commit
   - source path(s) in `vendor/haxe/std/**`
-  - destination path(s) in `packages/reflaxe.ocaml/std/_std/**`
+  - destination path(s) in `packages/reflaxe.ocaml/std/ocaml/_std/**`
 - Do not add copyleft license texts/headers to tracked source files.
 - Keep the required provenance artifacts current:
   - `THIRD_PARTY_NOTICES.md`
   - `docs/00-project/STDLIB_PROVENANCE_LEDGER.json`
-    - Every tracked file under `packages/reflaxe.ocaml/std/_std/**` must have a ledger entry.
+    - Every tracked file under `packages/reflaxe.ocaml/std/ocaml/_std/**` must have a ledger entry.
 
 ## Sync workflow (upstream -> local stdlib overrides)
 
@@ -64,7 +64,7 @@ The following upstream paths are never allowed to be vendored or copied into thi
 2. Inspect upstream stdlib candidate(s) from:
    - `vendor/haxe/std/**`
 3. Reimplement/sync into:
-   - `packages/reflaxe.ocaml/std/_std/**`
+   - `packages/reflaxe.ocaml/std/ocaml/_std/**`
 4. Run guardrails and tests:
    ```bash
    npm run ci:guards

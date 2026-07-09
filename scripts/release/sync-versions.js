@@ -4,7 +4,7 @@
  *
  * Keeps user-facing versions in sync for releases:
  * - package.json (+ package-lock.json)
- * - haxelib.json
+ * - haxelib.json (+ packages/reflaxe.ocaml/haxelib.json)
  * - haxe_libraries/reflaxe.ocaml.hxml (-D reflaxe.ocaml=...)
  * - README version badge (if present)
  *
@@ -82,9 +82,13 @@ function main() {
     json.releasenote = `v${version}: See CHANGELOG.md`
   })
 
+  updateJsonFile('packages/reflaxe.ocaml/haxelib.json', (json) => {
+    json.version = version
+    json.releasenote = `v${version}: See CHANGELOG.md`
+  })
+
   updateHxmlLibraryVersion('haxe_libraries/reflaxe.ocaml.hxml', version)
   updateReadmeBadge(version)
 }
 
 main()
-

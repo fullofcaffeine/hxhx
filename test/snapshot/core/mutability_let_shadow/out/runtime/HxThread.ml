@@ -2,7 +2,7 @@
 
    Scope
    - Provides the minimal backend-native substrate needed by std overrides under
-     `std/_std/sys/thread/*`.
+     `std/ocaml/_std/sys/thread/*`.
    - Keeps payloads as `Obj.t` at API boundaries because Haxe thread/message/TLS
      surfaces are dynamically typed.
 

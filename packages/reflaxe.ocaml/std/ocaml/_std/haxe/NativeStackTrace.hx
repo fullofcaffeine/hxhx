@@ -16,13 +16,17 @@ private typedef NativeTrace = {
 	  provide one.
 	- `haxe.CallStack.*` and `haxe.Exception.stack` are implemented on top of this.
 
-	WHY THIS LIVES UNDER `src/`
-	- We want this override to be visible *early* (before bootstrap macros can
-	  inject `std/` and `std/_std/`).
-	- Like `haxe.elixir`, we use a `.cross.hx` + `#if ocaml_output` gate:
-	  - When compiling to OCaml (`-D ocaml_output=...`), emit the real implementation.
-	  - Otherwise, expose only the upstream `extern` surface so other targets/tools
-		do not accidentally pull in OCaml-only code.
+	WHY THIS LIVES UNDER `std/ocaml/_std`
+	- This is a normal OCaml stdlib override in the Reflaxe-generated source
+	  layout: `std` contains target APIs, and `std/ocaml/_std` contains target
+	  replacements for upstream stdlib modules.
+	- Local source builds receive this directory through explicit dev/test
+	  classpaths, matching Reflaxe's generated-compiler workflow.
+	- Published haxelib packages are flattened by `haxelib run reflaxe build`;
+	  this source file becomes `src/haxe/NativeStackTrace.cross.hx` in that
+	  package.
+	- The internal `#if ocaml_output` keeps the real implementation target-gated
+	  even in flattened packages where `.cross.hx` is visible to custom targets.
 **/
 @:dox(hide)
 @:noCompletion

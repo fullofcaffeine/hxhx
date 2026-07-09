@@ -3,7 +3,7 @@
 This document tracks which parts of the Haxe standard library are:
 
 - supported via **target runtime modules** (`packages/reflaxe.ocaml/std/runtime/*.ml`)
-- supported via **extern overrides** (`packages/reflaxe.ocaml/std/_std/**/*.hx`)
+- supported via **extern overrides** (`packages/reflaxe.ocaml/std/ocaml/_std/**/*.hx`)
 - still missing / intentionally unsupported
 
 The goal is to keep a “portable” surface where users can target OCaml without
@@ -37,7 +37,7 @@ Definition used by this repo:
 
 Parity matrix taxonomy (explicit, machine-comparable):
 
-- `override`: module has a tracked `_std` override in `packages/reflaxe.ocaml/std/_std/**`.
+- `override`: module has a tracked `_std` override in `packages/reflaxe.ocaml/std/ocaml/_std/**`.
 - `runtime_backed`: module behavior is backed by runtime implementation evidence.
 - `lowering_intrinsic`: module behavior is handled directly by backend lowering/intrinsics.
 - `passthrough_verified`: no local override, but behavior is verified with explicit fixture/oracle evidence.
@@ -51,13 +51,13 @@ Evidence source for non-override statuses:
 
 ### Core runtime-backed types
 
-- `Array<T>`: `packages/reflaxe.ocaml/std/_std/Array.hx` + `packages/reflaxe.ocaml/std/runtime/HxArray.ml`
-- `String`: `packages/reflaxe.ocaml/std/_std/String.hx` + `packages/reflaxe.ocaml/std/runtime/HxString.ml`
+- `Array<T>`: `packages/reflaxe.ocaml/std/ocaml/_std/Array.hx` + `packages/reflaxe.ocaml/std/runtime/HxArray.ml`
+- `String`: `packages/reflaxe.ocaml/std/ocaml/_std/String.hx` + `packages/reflaxe.ocaml/std/runtime/HxString.ml`
 - `Bytes`: runtime-backed via `packages/reflaxe.ocaml/std/runtime/HxBytes.ml` (lowered in codegen)
-- `Date`: `packages/reflaxe.ocaml/std/_std/Date.hx` + `packages/reflaxe.ocaml/std/runtime/Date.ml`
-- `Sys`: `packages/reflaxe.ocaml/std/_std/Sys.hx` + `packages/reflaxe.ocaml/std/runtime/HxSys.ml`
-- `haxe.CallStack` / `haxe.NativeStackTrace`: `packages/reflaxe.ocaml/std/_std/haxe/CallStack.hx` + `packages/reflaxe.ocaml/src/haxe/NativeStackTrace.cross.hx` + `packages/reflaxe.ocaml/std/runtime/HxBacktrace.ml`
-- `sys.FileSystem`: `packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx` + `packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml`
+- `Date`: `packages/reflaxe.ocaml/std/ocaml/_std/Date.hx` + `packages/reflaxe.ocaml/std/runtime/Date.ml`
+- `Sys`: `packages/reflaxe.ocaml/std/ocaml/_std/Sys.hx` + `packages/reflaxe.ocaml/std/runtime/HxSys.ml`
+- `haxe.CallStack` / `haxe.NativeStackTrace`: `packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx` + `packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx` + `packages/reflaxe.ocaml/std/runtime/HxBacktrace.ml`
+- `sys.FileSystem`: `packages/reflaxe.ocaml/std/ocaml/_std/sys/FileSystem.hx` + `packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml`
 
 ### Maps (`haxe.ds.*`, `haxe.ds.Map`, `haxe.Constraints.IMap`)
 
@@ -70,9 +70,9 @@ Implemented via:
 ### Atomics (`haxe.atomic.*`) — contract status
 
 - overrides:
-  - `packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicInt.hx`
-  - `packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicBool.hx`
-  - `packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicObject.hx`
+  - `packages/reflaxe.ocaml/std/ocaml/_std/haxe/atomic/AtomicInt.hx`
+  - `packages/reflaxe.ocaml/std/ocaml/_std/haxe/atomic/AtomicBool.hx`
+  - `packages/reflaxe.ocaml/std/ocaml/_std/haxe/atomic/AtomicObject.hx`
 - current portable contract:
   - API parity for load/store/exchange/compareExchange/add/sub/etc.
   - semantics are **emulated single-thread wrappers** (not hardware/thread-level atomicity)
@@ -84,13 +84,13 @@ Implemented via:
 
 ### Regex (`EReg`)
 
-- extern: `packages/reflaxe.ocaml/std/_std/EReg.hx`
+- extern: `packages/reflaxe.ocaml/std/ocaml/_std/EReg.hx`
 - runtime: `packages/reflaxe.ocaml/std/runtime/EReg.ml`
 - notes: `docs/02-user-guide/EREG_STRATEGY.md`
 
 ### Math
 
-- extern: `packages/reflaxe.ocaml/std/_std/Math.hx`
+- extern: `packages/reflaxe.ocaml/std/ocaml/_std/Math.hx`
 - runtime: `packages/reflaxe.ocaml/std/runtime/Math.ml`
 
 ### Xml.parse edge coverage (M16)

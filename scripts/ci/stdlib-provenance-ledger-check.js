@@ -26,7 +26,7 @@ function summarize(paths, limit) {
 function main() {
 	const noticesPath = 'THIRD_PARTY_NOTICES.md'
 	const ledgerPath = 'docs/00-project/STDLIB_PROVENANCE_LEDGER.json'
-	const stdlibRoot = 'packages/reflaxe.ocaml/std/_std/'
+	const stdlibRoot = 'packages/reflaxe.ocaml/std/ocaml/_std/'
 
 	if (!fs.existsSync(noticesPath)) {
 		fail(`missing required third-party notice file: ${noticesPath}`)

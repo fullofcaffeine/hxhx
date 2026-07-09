@@ -9,7 +9,7 @@ The notices below document third-party sources used as compatibility references 
 - **Upstream repository:** `https://github.com/HaxeFoundation/haxe`
 - **Baseline tag:** `4.3.7`
 - **License:** MIT
-- **Local scope:** `packages/reflaxe.ocaml/std/_std/**`
+- **Local scope:** `packages/reflaxe.ocaml/std/ocaml/_std/**`
 - **Details:** `docs/00-project/STDLIB_PROVENANCE_LEDGER.json`
 
 Notes:

@@ -59,7 +59,7 @@ function main() {
 	const repoRoot = path.resolve(__dirname, '..', '..')
 	const baselinePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json')
 	const evidencePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_EVIDENCE_HAXE_4_3_7.json')
-	const stdOverrideRoot = path.join(repoRoot, 'packages', 'reflaxe.ocaml', 'std', '_std')
+	const stdOverrideRoot = path.join(repoRoot, 'packages', 'reflaxe.ocaml', 'std', 'ocaml', '_std')
 	const outputPath = path.join(repoRoot, 'docs', '02-user-guide', 'STDLIB_PORTABLE_PARITY_MATRIX.md')
 
 	if (!fs.existsSync(baselinePath)) {
@@ -155,7 +155,7 @@ function main() {
 		let evidenceText = 'upstream std module, no explicit portable evidence yet'
 		if (overrideModules.has(moduleName)) {
 			status = 'override'
-			const overrideEvidence = [`packages/reflaxe.ocaml/std/_std/${moduleName.split('.').join('/')}.hx`]
+			const overrideEvidence = [`packages/reflaxe.ocaml/std/ocaml/_std/${moduleName.split('.').join('/')}.hx`]
 			if (overrideEvidenceModules.has(moduleName)) {
 				overrideEvidence.push(...overrideEvidenceByModule.get(moduleName))
 			}
@@ -180,7 +180,7 @@ function main() {
 		'Generated from:',
 		`- \`docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json\``,
 		`- \`docs/00-project/STDLIB_PORTABLE_EVIDENCE_HAXE_4_3_7.json\``,
-		`- tracked overrides under \`packages/reflaxe.ocaml/std/_std/\``,
+		`- tracked overrides under \`packages/reflaxe.ocaml/std/ocaml/_std/\``,
 		'',
 		`Summary: \`${modules.length}\` modules total, \`${counts.override}\` overrides, \`${counts.runtime_backed}\` runtime-backed, \`${counts.lowering_intrinsic}\` lowering-intrinsic, \`${counts.passthrough_verified}\` passthrough-verified, \`${counts.passthrough_unverified}\` passthrough-unverified.`,
 		'',

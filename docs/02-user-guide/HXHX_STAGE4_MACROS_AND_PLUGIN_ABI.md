@@ -76,7 +76,7 @@ Today, the OCaml target uses a bootstrap seam:
 
 - Haxe “client” API (`MacroHostClient`) is Haxe code.
 - The transport uses `sys.io.Process` to spawn and communicate with the macro host.
-- On OCaml, `sys.io.Process` is provided by the override in `packages/reflaxe.ocaml/std/_std/sys/io/Process.hx`, backed by
+- On OCaml, `sys.io.Process` is provided by the override in `packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Process.hx`, backed by
   the runtime shim `packages/reflaxe.ocaml/std/runtime/HxProcess.ml`.
 
 This is intentionally a **temporary dependency** for correctness and CI stability while the

@@ -11,7 +11,7 @@ private typedef NativeTrace = {
 	Why
 	- Upstream Haxe routes `haxe.CallStack` through `haxe.NativeStackTrace`.
 	- In `reflaxe.ocaml`, `haxe.NativeStackTrace` is already target-owned and
-	  implemented early under `src/haxe/NativeStackTrace.cross.hx`.
+	  implemented under `std/ocaml/_std/haxe/NativeStackTrace.hx`.
 	- Letting the upstream `haxe.CallStack` source emit directly creates a cycle in
 	  generated OCaml (`CallStack -> NativeStackTrace -> CallStack`) on real
 	  compile/build paths.

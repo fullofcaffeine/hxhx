@@ -28,7 +28,7 @@ Questions audited:
 
 | Repo | Main std override style | Early `src/haxe/*` ownership | Mixed-target same-compile risk | Local-path pre-commit guard |
 | --- | --- | --- | --- | --- |
-| `haxe.ocaml` | `_std/*.hx` plus tiny early `.cross.hx` set | Yes | Medium to high | Yes |
+| `haxe.ocaml` | `std/ocaml/_std/*.hx`; Reflaxe build flattens packages to `.cross.hx` | No source-side early set | Medium | Yes |
 | `haxe.elixir.codex` | many `std/*.cross.hx`, plus `_std`, plus early `src/haxe/*` | Yes | High | Yes |
 | `haxe.go` | many `.cross.hx`, including `_std/*.cross.hx` | No | Low to medium | Yes |
 | `haxe.rust` | many `std/**/*.cross.hx` | No | Low to medium | Yes |
@@ -39,22 +39,20 @@ Questions audited:
 
 Current model:
 
-- normal OCaml stdlib ownership lives in `packages/reflaxe.ocaml/std/_std/**`
-- bootstrap adds `std/` always and `std/_std` only for actual OCaml builds
-- only three `.cross.hx` files exist, all under `src/haxe/`
+- normal OCaml stdlib ownership lives in `packages/reflaxe.ocaml/std/ocaml/_std/**`
+- bootstrap adds `std/` always and `std/ocaml/_std` only for actual OCaml builds
+- the source checkout has no hand-maintained early `src/haxe/*.cross.hx` exception set
+- package builds run Reflaxe's flattening step, so `_std` files become `.cross.hx` in the distributable classpath
 
 Interpretation:
 
 - `_std` is the primary target-owned stdlib layer
-- `.cross.hx` is currently the early-bootstrap exception lane
+- `.cross.hx` is package build output for OCaml, not the source-development override model
 
 Hardening concern:
 
-- `src/haxe/Exception.cross.hx`
-- `src/haxe/NativeStackTrace.cross.hx`
-- `src/haxe/ValueException.cross.hx`
-
-can still shadow sibling target ownership if multiple target libraries are loaded into one `cross` compilation.
+- flattened package files such as `src/haxe/Exception.cross.hx` can still shadow sibling target ownership if multiple target libraries are loaded into one `cross` compilation.
+- source checkouts are less collision-prone than before because the OCaml exception/stack cluster is target-gated through `std/ocaml/_std`.
 
 ### `haxe.elixir.codex`
 
@@ -109,19 +107,19 @@ Interpretation:
 
 Hardening concern:
 
-- `haxe.Exception` is owned by Rust under `std/`, while OCaml and Elixir currently own early `src/haxe/Exception.cross.hx`
-- if a sibling early file wins resolution first, Rust can lose the real implementation it expected
+- `haxe.Exception` is owned by Rust under `std/`, while Elixir owns an early `src/haxe/Exception.cross.hx` and flattened OCaml packages can generate `src/haxe/Exception.cross.hx`
+- if a sibling early/package-flattened file wins resolution first, Rust can lose the real implementation it expected
 
 ## Concrete overlap inventory
 
 The most important cross-repo module overlaps found in this audit were:
 
 - `haxe.Exception`
-  - OCaml `src/`
+  - OCaml `std/ocaml/_std` in source; `src/` after Reflaxe package flattening
   - Elixir `src/`
   - Rust `std/`
 - `haxe.NativeStackTrace`
-  - OCaml `src/`
+  - OCaml `std/ocaml/_std` in source; `src/` after Reflaxe package flattening
   - Go `std/`
 - `StringTools`
   - Elixir `std/`
@@ -136,7 +134,7 @@ The most important cross-repo module overlaps found in this audit were:
 
 Not every overlap is equally dangerous.
 
-The highest-risk overlaps are the ones involving early `src/haxe/*` ownership, because those files can win resolution before a target-private `_std` layer or a narrower bootstrap gate gets a chance to shape the build.
+The highest-risk overlaps are the ones involving early `src/haxe/*` ownership or flattened package `.cross.hx` files, because those files can win resolution before a target-private `_std` layer or a narrower bootstrap gate gets a chance to shape the build.
 
 ## Current default-risk statement
 

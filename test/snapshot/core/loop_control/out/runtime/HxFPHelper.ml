@@ -3,7 +3,7 @@
    This module is intentionally small and uses OCaml's standard library primitives
    to perform IEEE754 "bit-casts" between floats and integers.
 
-   See `std/_std/haxe/io/FPHelper.hx` for the rationale and the public Haxe API. *)
+   See `std/ocaml/_std/haxe/io/FPHelper.hx` for the rationale and the public Haxe API. *)
 
 let floatToI32 (f : float) : int =
   Int32.to_int (Int32.bits_of_float f)

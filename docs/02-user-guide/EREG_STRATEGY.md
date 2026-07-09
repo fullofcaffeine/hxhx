@@ -13,7 +13,7 @@ its own runtime.
 
 We implement `EReg` using OCaml’s `Str` library:
 
-- Extern surface: `packages/reflaxe.ocaml/std/_std/EReg.hx`
+- Extern surface: `packages/reflaxe.ocaml/std/ocaml/_std/EReg.hx`
 - Runtime implementation: `packages/reflaxe.ocaml/std/runtime/EReg.ml`
 
 ### Why `Str`

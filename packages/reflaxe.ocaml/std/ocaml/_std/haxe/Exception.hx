@@ -10,13 +10,16 @@ package haxe;
 	- `haxe.ValueException` extends `haxe.Exception` and expects a real base class
 	  implementation for `super(...)` lowering.
 
-	WHY THIS LIVES UNDER `src/`
-	- Some stdlib modules are needed early during compilation (before bootstrap
-	  macros can inject `std/` and `std/_std/`).
-	- Like `haxe.elixir`, we use a `.cross.hx` + `#if ocaml_output` gate:
-	  - When compiling to OCaml (`-D ocaml_output=...`), emit the real implementation.
-	  - Otherwise, expose only an `extern` surface so other targets/tools don’t
-		pull OCaml-only code (and don’t generate references to OCaml runtime modules).
+	WHY THIS LIVES UNDER `std/ocaml/_std`
+	- This is a normal OCaml stdlib override in the Reflaxe-generated source
+	  layout: `std` contains target APIs, and `std/ocaml/_std` contains target
+	  replacements for upstream stdlib modules.
+	- Local source builds receive this directory through explicit dev/test
+	  classpaths, matching Reflaxe's generated-compiler workflow.
+	- Published haxelib packages are flattened by `haxelib run reflaxe build`;
+	  this source file becomes `src/haxe/Exception.cross.hx` in that package.
+	- The internal `#if ocaml_output` keeps the real implementation target-gated
+	  even in flattened packages where `.cross.hx` is visible to custom targets.
 **/
 @:coreApi
 #if ocaml_output

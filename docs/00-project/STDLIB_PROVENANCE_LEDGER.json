@@ -8,271 +8,289 @@
   },
   "entries": [
     {
-      "path": "packages/reflaxe.ocaml/std/_std/Array.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/Array.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/Array.hx",
       "notes": "OCaml-target override with selective API sync."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/Date.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/Date.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/Date.hx",
       "notes": "Extern surface aligned with upstream Date API."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/EReg.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/EReg.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/EReg.hx",
       "notes": "Extern surface aligned with upstream EReg API."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/Math.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/Math.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/Math.hx",
       "notes": "Extern surface aligned with upstream Math API."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/String.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/String.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/String.hx",
       "notes": "String API surface kept compatible with upstream std."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/StringTools.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/StringTools.hx",
       "notes": "OCaml-target StringTools override: adds urlEncode/urlDecode branches and local quote helpers so serializer parity works without SysTools module cycles."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/StringBuf.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/StringBuf.hx",
       "notes": "Repo-authored non-inline implementation preserving upstream API."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/CallStack.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/haxe/CallStack.hx",
       "notes": "Repo-authored staged override that breaks generated OCaml module cycles by routing stack formatting to target-owned runtime helpers."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/Sys.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/Exception.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/Exception.hx",
+      "notes": "Repo-authored OCaml target implementation for haxe.Exception; source lives in Reflaxe-style std/ocaml/_std and package builds flatten it to haxe/Exception.cross.hx."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/NativeStackTrace.hx",
+      "notes": "Repo-authored OCaml target implementation backed by HxBacktrace runtime helpers; package builds flatten it to haxe/NativeStackTrace.cross.hx."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/ValueException.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/ValueException.hx",
+      "notes": "Repo-authored OCaml target implementation used by typed catch lowering; package builds flatten it to haxe/ValueException.cross.hx."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/Sys.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/Sys.hx",
       "notes": "Extern surface aligned with upstream Sys API."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/Xml.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/Xml.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/Xml.hx",
       "notes": "OCaml-target Xml override. We keep parse/print logic in Xml.hx so generated Xml.ml does not mutually depend on generated haxe_xml_Parser.ml / haxe_xml_Printer.ml (dune rejects that module cycle). Portable fixtures cover creation/printing and parse roundtrip behavior."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicBool.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/atomic/AtomicBool.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/atomic/AtomicBool.hx",
       "notes": "Portable override preserving AtomicBool API on top of local AtomicInt implementation."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicInt.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/atomic/AtomicInt.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/atomic/AtomicInt.hx",
       "notes": "Portable override providing AtomicInt API behavior for OCaml stdlib parity lanes."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicObject.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/atomic/AtomicObject.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/atomic/AtomicObject.hx",
       "notes": "Portable override preserving AtomicObject API behavior for object load/store/exchange operations."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/format/JsonParser.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/format/JsonParser.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/haxe/format/JsonParser.hx",
       "notes": "Repo-authored parser override for OCaml target to avoid EOF/escape handling divergence in generated OCaml runtime while preserving JSON parse contract."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/format/JsonPrinter.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/format/JsonPrinter.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/format/JsonPrinter.hx",
       "notes": "OCaml-target JsonPrinter override with explicit typed branch conversions to avoid dynamic float typing mismatches in generated OCaml."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Bytes.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/Bytes.hx",
       "notes": "Bytes API override mapped to OCaml runtime helpers."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/BytesBuffer.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesBuffer.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/BytesBuffer.hx",
       "notes": "Target override preserving upstream surface."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/BytesData.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesData.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/BytesData.hx",
       "notes": "Type alias override for OCaml runtime representation."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/BytesInput.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesInput.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/BytesInput.hx",
       "notes": "Repo-authored BytesInput override that routes byte reads/copies through Bytes.fastGet + Bytes.set for OCaml-safe portable behavior."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/FPHelper.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/FPHelper.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/FPHelper.hx",
       "notes": "Compatibility surface with OCaml-native runtime implementation."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/Input.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/Input.hx",
       "notes": "Default methods rewritten for OCaml-safe BytesData semantics."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/Output.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/Output.hx",
       "notes": "Default methods rewritten for OCaml-safe BytesData semantics."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/net/Host.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/net/Host.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/net/Host.hx",
       "notes": "Repo-authored concrete Host fallback so OCaml portable fixtures can instantiate sys.net.Host without unresolved extern modules."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/net/Socket.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/net/Socket.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/net/Socket.hx",
       "notes": "Repo-authored concrete Socket fallback for constructor/close surface; non-close operations throw platform-unavailable in OCaml portable lane."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/ssl/Socket.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/ssl/Socket.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/ssl/Socket.hx",
       "notes": "Repo-authored SSL socket scaffold for cross lane: preserves API surface while avoiding eval.vm.NativeSocket dependency."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Condition.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Condition.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/Condition.hx",
       "notes": "Repo-authored Condition implementation wired to HxThread runtime primitives for OCaml target.threaded support."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Deque.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Deque.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/Deque.hx",
       "notes": "Repo-authored Deque implementation wired to HxThread runtime primitives for OCaml target.threaded support."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/ElasticThreadPool.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/ElasticThreadPool.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/ElasticThreadPool.hx",
       "notes": "Repo-authored ElasticThreadPool compatibility implementation for OCaml target.threaded support."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/EventLoop.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/EventLoop.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/EventLoop.hx",
       "notes": "Repo-authored EventLoop compatibility implementation for OCaml target.threaded support."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/FixedThreadPool.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/FixedThreadPool.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/FixedThreadPool.hx",
       "notes": "Repo-authored FixedThreadPool compatibility implementation for OCaml target.threaded support."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/IThreadPool.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/IThreadPool.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/IThreadPool.hx",
       "notes": "Repo-authored thread-pool interface override used by OCaml thread pool implementations."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Lock.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Lock.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/Lock.hx",
       "notes": "Repo-authored Lock implementation wired to HxThread runtime primitives for OCaml target.threaded support."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Mutex.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Mutex.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/Mutex.hx",
       "notes": "Repo-authored Mutex implementation wired to HxThread runtime primitives for OCaml target.threaded support."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/NativeHxThread.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/NativeHxThread.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/Thread.hx",
       "notes": "Repo-authored native bridge extern for OCaml runtime-backed sys.thread primitives."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/NoEventLoopException.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/NoEventLoopException.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/NoEventLoopException.hx",
       "notes": "Repo-authored NoEventLoopException override for OCaml thread event-loop compatibility."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Semaphore.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Semaphore.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/Semaphore.hx",
       "notes": "Repo-authored Semaphore implementation wired to HxThread runtime primitives for OCaml target.threaded support."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Thread.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Thread.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/Thread.hx",
       "notes": "Repo-authored Thread implementation with native message queue + event loop attachment for OCaml target.threaded support."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/ThreadPoolException.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/ThreadPoolException.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/ThreadPoolException.hx",
       "notes": "Repo-authored ThreadPoolException override for OCaml thread-pool compatibility surfaces."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Tls.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Tls.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/sys/thread/Tls.hx",
       "notes": "Repo-authored Tls implementation wired to HxThread runtime primitives for OCaml target.threaded support."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/FileSystem.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/sys/FileSystem.hx",
       "notes": "Extern surface for sys.FileSystem mapped to runtime shims."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/io/File.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/File.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/sys/io/File.hx",
       "notes": "sys.io.File API compatibility wrapper for OCaml runtime."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/io/FileInput.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/FileInput.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/sys/io/FileInput.hx",
       "notes": "FileInput stream override for OCaml runtime handles."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/io/FileOutput.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/FileOutput.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/sys/io/FileOutput.hx",
       "notes": "FileOutput stream override for OCaml runtime handles."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/io/Process.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Process.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/sys/io/Process.hx",
       "notes": "Process API override for Stage4 macro host transport."
     },
     {
-      "path": "packages/reflaxe.ocaml/std/_std/sys/io/Stdio.hx",
+      "path": "packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Stdio.hx",
       "provenanceKind": "repo_authored_override",
       "upstreamOraclePath": "vendor/haxe/std/Sys.hx",
       "notes": "Repo-authored helper surface for stdin/stdout/stderr stream bridging."

@@ -2,13 +2,17 @@
 
 -cp packages/reflaxe.ocaml/src
 -cp packages/reflaxe.ocaml/std
+-cp packages/reflaxe.ocaml/std/ocaml/_std
 
 -lib reflaxe
 
 # Reflaxe target configuration
 -D reflaxe-target=ocaml
 -D reflaxe-output-dir=out_ocaml
+-D ocaml_output=out_ocaml
 -D reflaxe-target-code-injection=ocaml
 
 # Retain untyped metadata through typing phase for extern inlines / __ocaml__
 -D retain-untyped-meta
+
+packages/reflaxe.ocaml/extraParams.hxml

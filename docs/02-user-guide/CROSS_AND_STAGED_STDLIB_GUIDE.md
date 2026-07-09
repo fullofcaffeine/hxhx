@@ -53,7 +53,7 @@ So `.cross.hx` is good when you want:
 
 It is the conventional "shadow stdlib" directory used by Haxe targets.
 
-A file like `std/_std/String.hx` is just a normal `String.hx`, but it lives in a classpath that is inserted ahead of the mainstream stdlib.
+A file like `std/<target>/_std/String.hx` is just a normal `String.hx`, but it lives in a classpath that is inserted ahead of the mainstream stdlib.
 
 So `_std` is good when you want:
 
@@ -132,7 +132,7 @@ The local reference Reflaxe compilers mostly show the second and third cases, no
 - During development, Reflaxe's `test` command passes each target's `stdPaths` to Haxe up front, before typing the target program.
 - Reflaxe's own package build can turn those source `_std/*.hx` files into package `.cross.hx` files when flattening the haxelib.
 
-So "needed before bootstrap can add `_std`" is a real reason to use direct `.cross.hx`, but it is not the main pattern shown by the reference sample compilers in `haxe.compilerdev.reference`. It is the reason for `reflaxe.ocaml`'s small early `src/haxe/` exception set.
+So "needed before bootstrap can add `_std`" is a real reason to use direct `.cross.hx`, but it is not the main pattern shown by the reference sample compilers in `haxe.compilerdev.reference`. `reflaxe.ocaml` used to have a small early `src/haxe/` exception set for this reason; this refactor removes that bespoke source shape and follows the generated Reflaxe model where source dev/test tooling supplies `stdPaths` explicitly.
 
 ## Reflaxe source layout vs package layout
 
@@ -183,14 +183,14 @@ The more precise rule is:
 
 Examples:
 
-- `packages/reflaxe.ocaml/std/_std/String.hx`
-- `packages/reflaxe.ocaml/std/_std/Array.hx`
-- `packages/reflaxe.ocaml/std/_std/Sys.hx`
+- `packages/reflaxe.ocaml/std/ocaml/_std/String.hx`
+- `packages/reflaxe.ocaml/std/ocaml/_std/Array.hx`
+- `packages/reflaxe.ocaml/std/ocaml/_std/Sys.hx`
 
-That matches the current bootstrap model:
+That matches the current source-checkout bootstrap model:
 
 - `std/` is always added for the haxelib surface,
-- `std/_std` is injected only for actual OCaml target builds.
+- `std/ocaml/_std` is supplied by OCaml target entrypoints such as `-lib reflaxe.ocaml` and package/dev test tooling.
 
 So `_std/String.hx` means:
 
@@ -200,30 +200,28 @@ So `_std/String.hx` means:
 
 That is narrower and easier to reason about than a generic `String.cross.hx`.
 
-## Why `reflaxe.ocaml` still uses a few `.cross.hx` files
+## Why source `reflaxe.ocaml` does not keep early `.cross.hx` files
 
-Because `_std` is not available early enough for everything.
+The previous local layout kept three source files under `src/haxe/*.cross.hx`:
 
-`reflaxe.ocaml` currently has a tiny set of early bootstrap-visible files under `src/haxe/`:
+- `haxe.Exception`
+- `haxe.NativeStackTrace`
+- `haxe.ValueException`
 
-- `packages/reflaxe.ocaml/src/haxe/Exception.cross.hx`
-- `packages/reflaxe.ocaml/src/haxe/NativeStackTrace.cross.hx`
-- `packages/reflaxe.ocaml/src/haxe/ValueException.cross.hx`
+That worked, but it was not the shape Reflaxe generates for new compilers. It also made source development look different from the Reflaxe template for a reason that was mostly accidental: `reflaxe.ocaml` was started without `haxelib run reflaxe new`, so the project grew a bespoke package/dev layout.
 
-Those exist for a different reason than `_std/String.hx`.
+The current source layout moves those files into `std/ocaml/_std/haxe/*.hx` with the rest of the OCaml stdlib overrides.
 
-They are needed early, before bootstrap has injected `std/_std`.
-
-The reason is the order of the current `reflaxe.ocaml` bootstrap:
+The source-development visibility problem is handled by the local hxml/tooling instead:
 
 1. `haxe_libraries/reflaxe.ocaml.hxml` puts `packages/reflaxe.ocaml/src/` on the classpath.
 2. It also puts `packages/reflaxe.ocaml/std/` on the classpath.
-3. It does **not** put `packages/reflaxe.ocaml/std/_std/` on the initial classpath.
-4. `CompilerInit.Start()` has to be typed and run before `CompilerBootstrap.InjectClassPaths()` can add `std/_std`.
+3. It also puts `packages/reflaxe.ocaml/std/ocaml/_std/` on the classpath.
+4. `CompilerInit.Start()` then registers the compiler, like a generated Reflaxe compiler init macro.
 
-That creates a small early window where a core module can be requested before the OCaml `_std` layer exists.
+That removes the source-side early `src/haxe/*.cross.hx` exception set and keeps the source checkout close to generated Reflaxe expectations.
 
-For ordinary modules like `String`, `Array`, `Std`, and `Sys`, that is fine: they can wait until the OCaml target is known and `_std` has been injected.
+For ordinary modules like `String`, `Array`, `Std`, and `Sys`, that is fine: the OCaml library configuration makes the whole OCaml `_std` layer visible for `-lib reflaxe.ocaml` source builds, so they do not need a special early source-side `.cross.hx` home.
 
 The exception/stack cluster is different:
 
@@ -233,37 +231,28 @@ The exception/stack cluster is different:
 
 If one of those resolves to the upstream extern declaration before the OCaml override is available, Haxe can cache the wrong module shape for the rest of the compilation. For Reflaxe custom targets, an extern-only module also means there may be no concrete emitted OCaml module later, which can become a link/runtime failure.
 
-Putting these files under `src/haxe/*.cross.hx` makes them visible from the initial target library classpath. The `.cross.hx` suffix keeps them out of non-`cross` built-in targets, and the internal `#if ocaml_output` keeps the real OCaml implementation from leaking into non-OCaml custom-target/tooling contexts.
+The new rule is: make `std/ocaml/_std` visible before compiler init, not by keeping special source files in `src/haxe/`.
 
 So the current OCaml split is:
 
-- normal target-owned stdlib override: `_std/*.hx`
-- early bootstrap-safe exception set: `src/**/*.cross.hx`
+- source target-owned stdlib overrides: `std/ocaml/_std/*.hx`
+- published flattened package overrides: `src/**/*.cross.hx` generated by `haxelib run reflaxe build`
 
-That is why `String` is in `_std`, while `haxe.Exception` is in `src/*.cross.hx`.
+That is why `String`, `haxe.Exception`, `haxe.NativeStackTrace`, and `haxe.ValueException` now all live in `_std` in source.
 
 ## Is the early `.cross.hx` set fundamental?
 
-No. It is mostly a consequence of the current `reflaxe.ocaml` development/bootstrap shape.
+No. This refactor removes it from the source checkout.
 
-Today, `reflaxe.ocaml` has this local setup:
+The distinction now is source layout versus package layout:
 
-- `src/` is on the initial haxelib classpath.
-- `std/` is on the initial haxelib classpath.
-- `std/_std/` is plain `.hx`, so we do **not** put it on the initial classpath for every build.
-- `CompilerBootstrap` injects `std/_std/` later, only after it can tell this is an OCaml target build.
+- source stays readable as `std/ocaml/_std/*.hx`
+- local source builds add `std/ocaml/_std` through dev/test hxml classpaths
+- release packaging runs Reflaxe's own build step, which flattens `_std` files into `.cross.hx`
 
-That makes a tiny early `src/haxe/*.cross.hx` set useful for modules that can be requested before the later injection.
+The flattened package shape still uses `.cross.hx`, but those files are build output, not hand-maintained source files.
 
-If we adopt the fuller Reflaxe packaging convention, the boundary can move:
-
-- source stays readable as `std/_std/*.hx`
-- target-local dev/test tooling can add `std/_std` up front for OCaml-only runs
-- the published haxelib package can flatten those `_std` files into `.cross.hx` files in the package classpath
-
-In that packaged shape, there may be no need for a special early `src/haxe/` exception set, because the packaged `.cross.hx` overrides are already visible from the initial classpath.
-
-That is the likely long-term cleanup direction, but it should be done as a packaging/dev-tooling change, not by simply renaming every source override to `.cross.hx`.
+This keeps the source checkout close to what `haxelib run reflaxe new OCaml ocaml ml direct` would create, while preserving the established `ocaml_output` define and the existing `reflaxe.ocaml` compiler/runtime implementation.
 
 ## What this means during `reflaxe.ocaml` development
 
@@ -273,11 +262,11 @@ The local development path is:
 
 - `haxe_libraries/reflaxe.ocaml.hxml` adds `packages/reflaxe.ocaml/src/`
 - the same hxml adds `packages/reflaxe.ocaml/std/`
-- `CompilerBootstrap.InjectClassPaths()` adds `packages/reflaxe.ocaml/std/_std/` only when the build is actually selecting the OCaml target
+- `haxe_libraries/reflaxe.ocaml.hxml` adds `packages/reflaxe.ocaml/std/ocaml/_std/`, mirroring Reflaxe's dev/test command that supplies `stdPaths` from `haxelib.json`
 
-That is very close to the source-side model used by `reflaxe.CPP`, `reflaxe.GDScript`, and `reflaxe.lua` in the reference checkout: keep `_std/*.hx` readable in the repo, then let the active target path decide when it is visible.
+That is close to the source-side model generated by Reflaxe and used by reference targets such as `reflaxe.CPP`, `reflaxe.GDScript`, and `reflaxe.lua`: keep `_std/*.hx` readable in the repo, then have source tooling supply the configured `stdPaths` while developing the target.
 
-So yes: for local development, `std/_std/*.hx` is the intended shape and no Reflaxe flattening build is needed first.
+So yes: for local development, `std/ocaml/_std/*.hx` is the intended source shape and no Reflaxe flattening build is needed first.
 
 ## Why `String.cross.hx` would be too broad for OCaml
 
@@ -291,7 +280,7 @@ If you key a file only off `cross`, that file is a candidate for any custom-targ
 
 By contrast, `_std/String.hx` in `reflaxe.ocaml` says:
 
-- use this only if the OCaml bootstrap explicitly adds the OCaml shadow stdlib layer
+- use this only when the OCaml target's source tooling or package build explicitly supplies the OCaml shadow stdlib layer
 
 That is why `_std/String.hx` is the better fit here.
 
@@ -309,21 +298,23 @@ That is why `reflaxe_go` can reasonably keep broad `.cross.hx` files directly in
 
 The tradeoff is scope. `.cross.hx` means "visible to Haxe's generic `cross` platform", not "visible only to OCaml". If another custom target is active in the same compilation and the classpaths overlap, Haxe resolves one module by classpath order. It does not merge target versions.
 
-For `reflaxe.ocaml`, that makes direct `.cross.hx` best for the small set of early files that truly need it, not for every ordinary std override during source development.
+For `reflaxe.ocaml`, direct `.cross.hx` is now a package-output shape. Source development uses `_std` and lets the build/package step create `.cross.hx` when a flattened haxelib needs it.
 
 ## A simple decision rule
 
 Choose `_std/Foo.hx` when:
 
 - `Foo` is a normal target-owned stdlib override,
-- you can wait until target bootstrap injects `_std`,
+- target source tooling can supply the configured `_std` path,
 - and the override should only appear for that target.
 
 Choose `src/.../Foo.cross.hx` when:
 
-- `Foo` must be visible before `_std` is injected,
+- `Foo` must be visible even when you cannot rely on target `stdPaths`,
 - or early macro/bootstrap typing will fail without it,
 - and you still want to keep the file gated to `cross` rather than making it a plain always-visible `.hx` file.
+
+`reflaxe.ocaml` no longer uses this shape for its source overrides because monorepo/dev tooling supplies `std/ocaml/_std` explicitly, and release packaging produces the `.cross.hx` form.
 
 Choose `std/Foo.cross.hx` or `_std/Foo.cross.hx` when:
 
@@ -337,25 +328,40 @@ Choose a package-build conversion from `_std/Foo.hx` to `Foo.cross.hx` when:
 
 That conversion should be explicit and tested. It should not be something contributors have to remember manually.
 
-## Packaging follow-up for `reflaxe.ocaml`
+## Packaging for `reflaxe.ocaml`
 
-`reflaxe.ocaml` currently has a good local-development story, but the eventual published haxelib package needs an explicit packaging story.
+`reflaxe.ocaml` now has an explicit Reflaxe-style packaging path.
 
-Before publishing a flattened haxelib, we should decide whether to:
+The source package root is `packages/reflaxe.ocaml/` and contains:
 
-- reuse Reflaxe's `stdPaths` build behavior,
-- implement an equivalent `reflaxe.ocaml` package script,
-- or keep a package shape that preserves conditional bootstrap injection without flattening.
+- `haxelib.json` with `classPath: "src/"`
+- `extraParams.hxml`
+- compiler code in `src/`
+- target APIs and runtime files in `std/`
+- target stdlib overrides in `std/ocaml/_std/`
 
-Whichever path we choose, the packaged artifact should prove these things:
+The release script invokes Reflaxe's build runner, equivalent to:
 
-- `packages/reflaxe.ocaml/std/_std/*.hx` overrides are available for OCaml target builds
-- those overrides do not become plain always-on `.hx` files in the package classpath
-- early `src/haxe/*.cross.hx` files still resolve before bootstrap needs them
-- a simple upstream Haxe compile works from the packaged artifact, not only from `haxelib dev`
-- mixed-target activation either fails clearly or avoids silent classpath-order collisions
+```bash
+haxelib run reflaxe build _Build --deleteOldFolder
+```
 
-The likely near-term answer is to add a package-build step that mirrors Reflaxe's behavior: keep `_std/*.hx` in source, then copy/package those files as `.cross.hx` only for the distributable haxelib shape.
+from a temporary copy of that package root.
+
+That lets Reflaxe do the same flattening it does for generated targets:
+
+- copy `src/` into the build package,
+- copy `std/` into that classpath,
+- skip `std/ocaml/_std` during the broad `std/` copy,
+- copy `std/ocaml/_std` into the classpath as `.cross.hx`,
+- sanitize `haxelib.json` by removing the `reflaxe` build metadata.
+
+The package smoke should prove:
+
+- source `packages/reflaxe.ocaml/std/ocaml/_std/*.hx` overrides become packaged `.cross.hx` files,
+- a simple upstream Haxe compile works from the packaged artifact,
+- OCaml std overrides are available for OCaml target builds,
+- mixed-target activation either fails clearly or avoids silent classpath-order collisions.
 
 ## How sibling targets differ
 
@@ -363,7 +369,7 @@ Within the current family of repos, the pattern is not uniform.
 
 `reflaxe.ocaml`
 - `_std` is the main target-owned stdlib layer.
-- `.cross.hx` is the small early-bootstrap exception set.
+- `.cross.hx` is produced by Reflaxe package flattening, not hand-maintained in source.
 
 `reflaxe.elixir`
 - uses many `std/*.cross.hx` files as normal target-conditional overrides,
@@ -389,7 +395,7 @@ If two target libraries are loaded into the same Haxe `cross` compilation, `.cro
 
 The clearest current example is `haxe.Exception`:
 
-- OCaml owns `src/haxe/Exception.cross.hx`
+- OCaml owns `std/ocaml/_std/haxe/Exception.hx` in source and `src/haxe/Exception.cross.hx` in flattened packages
 - Elixir owns `src/haxe/Exception.cross.hx`
 - Rust owns `std/haxe/Exception.cross.hx`
 
@@ -427,7 +433,7 @@ If we do not harden these ownership boundaries now, future backend/plugin activa
 Current high-level findings:
 
 - All four repos already have staged pre-commit local-path guards that reject machine-local absolute paths.
-- `reflaxe.ocaml` currently uses `.cross.hx` conservatively and mostly correctly for early bootstrap needs.
+- `reflaxe.ocaml` now keeps source overrides under `std/ocaml/_std` and relies on Reflaxe package flattening to produce `.cross.hx` files for published packages.
 - `reflaxe.elixir` has the sharpest current activation risk because its Haxe 4 bootstrap treats generic `Cross` as enough to identify an Elixir build.
 - `reflaxe.go` and `reflaxe.rust` are narrower because their bootstrap activation keys off target-specific defines instead of raw `Cross`.
 - Mixed-target same-compilation hardening is still worth doing across the family even where current default activation is narrow.

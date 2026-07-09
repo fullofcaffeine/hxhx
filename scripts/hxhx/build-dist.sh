@@ -127,7 +127,8 @@ mkdir -p "$lib_dir"
 mkdir -p "$lib_dir/reflaxe.ocaml"
 cp -R "$ROOT/packages/reflaxe.ocaml/src" "$lib_dir/reflaxe.ocaml/src"
 cp -R "$ROOT/packages/reflaxe.ocaml/std" "$lib_dir/reflaxe.ocaml/std"
-cp "$ROOT/haxelib.json" "$lib_dir/reflaxe.ocaml/haxelib.json"
+cp "$ROOT/packages/reflaxe.ocaml/haxelib.json" "$lib_dir/reflaxe.ocaml/haxelib.json"
+cp "$ROOT/packages/reflaxe.ocaml/extraParams.hxml" "$lib_dir/reflaxe.ocaml/extraParams.hxml"
 
 # Bundle reflaxe dependency sources (required for CompilerInit/ReflectCompiler macros).
 if command -v haxelib >/dev/null 2>&1; then

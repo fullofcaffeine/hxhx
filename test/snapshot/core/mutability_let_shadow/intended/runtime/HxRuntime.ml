@@ -1,5 +1,5 @@
 (* Minimal runtime scaffolding for reflaxe.ocaml (WIP).
-   This will grow as std/_std overrides land. *)
+   This will grow as std/ocaml/_std overrides land. *)
 
 (* Haxe `throw` is not restricted to OCaml exception types; it can throw any value.
    We therefore wrap thrown payloads in a dedicated runtime exception that carries:

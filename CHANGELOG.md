@@ -1,3 +1,9 @@
+## Unreleased
+
+### Changed
+
+* **reflaxe.ocaml:** align the source/package layout with Reflaxe-generated compiler conventions. `reflaxe.ocaml` originally grew in this monorepo without starting from `haxelib run reflaxe new`, so std overrides and haxelib packaging drifted into a bespoke shape. Source overrides now live under `packages/reflaxe.ocaml/std/ocaml/_std`, package metadata lives at `packages/reflaxe.ocaml/haxelib.json`, and release packaging runs Reflaxe's own build flattening so distributable packages get `.cross.hx` overrides from `_std` the same way generated Reflaxe compilers do.
+
 ## [0.15.22](https://github.com/fullofcaffeine/hxhx/compare/v0.15.21...v0.15.22) (2026-06-15)
 
 

@@ -14,6 +14,9 @@ package haxe;
 	- Provides a concrete OCaml-target implementation of `haxe.ValueException`
 	  that extends our local `haxe.Exception` implementation.
 	- Preserves the thrown value via `value` and `unwrap()`.
+	- Lives in `std/ocaml/_std` so source checkouts follow Reflaxe's generated
+	  target layout; Reflaxe packaging flattens it to
+	  `src/haxe/ValueException.cross.hx`.
 
 	How
 	- Under `#if ocaml_output`, emit a real class.

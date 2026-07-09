@@ -357,6 +357,8 @@
             "package.json",
             "package-lock.json",
             "haxelib.json",
+            "packages/reflaxe.ocaml/haxelib.json",
+            "packages/reflaxe.ocaml/extraParams.hxml",
             "haxe_libraries/reflaxe.ocaml.hxml",
             "README.md",
             "CHANGELOG.md"

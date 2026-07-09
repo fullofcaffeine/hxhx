@@ -8,6 +8,7 @@
  * - package.json version
  * - package-lock.json version (+ packages[""].version)
  * - haxelib.json version
+ * - packages/reflaxe.ocaml/haxelib.json version/package shape
  * - haxe_libraries/reflaxe.ocaml.hxml (-D reflaxe.ocaml=...)
  * - LICENSE exists and looks like MIT
  */
@@ -101,6 +102,7 @@ function main() {
   const pkg = readJson('package.json')
   const lock = readJson('package-lock.json')
   const haxelib = readJson('haxelib.json')
+  const packageHaxelib = readJson('packages/reflaxe.ocaml/haxelib.json')
   const hxmlVersion = extractHxmlDefine('haxe_libraries/reflaxe.ocaml.hxml', 'reflaxe.ocaml')
 
   const version = pkg.version
@@ -122,6 +124,10 @@ function main() {
     fail(`haxelib.json version (${haxelib.version}) != package.json version (${version})`)
   }
 
+  if (packageHaxelib.version !== version) {
+    fail(`packages/reflaxe.ocaml/haxelib.json version (${packageHaxelib.version}) != package.json version (${version})`)
+  }
+
   if (!hxmlVersion) {
     fail('haxe_libraries/reflaxe.ocaml.hxml is missing -D reflaxe.ocaml=...')
   } else if (hxmlVersion !== version) {
@@ -130,6 +136,16 @@ function main() {
 
   if (haxelib.license !== 'MIT') {
     fail(`haxelib.json license (${haxelib.license}) != MIT`)
+  }
+  if (packageHaxelib.license !== 'MIT') {
+    fail(`packages/reflaxe.ocaml/haxelib.json license (${packageHaxelib.license}) != MIT`)
+  }
+  if (packageHaxelib.classPath !== 'src/') {
+    fail(`packages/reflaxe.ocaml/haxelib.json classPath (${packageHaxelib.classPath}) != src/`)
+  }
+  const stdPaths = packageHaxelib.reflaxe && packageHaxelib.reflaxe.stdPaths
+  if (!Array.isArray(stdPaths) || stdPaths.join('\n') !== 'std\nstd/ocaml/_std') {
+    fail('packages/reflaxe.ocaml/haxelib.json reflaxe.stdPaths must be ["std", "std/ocaml/_std"]')
   }
 
   if (!fs.existsSync('LICENSE')) {

@@ -1,52 +1,45 @@
 # Portable Stdlib Parity Matrix (OCaml, Haxe 4.3.7 baseline)
 
-Related status pages:
-
-- 1.0 milestone summary and stdlib closure status:
-  - `docs/01-getting-started/HXHX_1_0_ROADMAP.md`
-- Strict replacement/stage0-forbidden closure status:
-  - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
-
 Generated from:
 - `docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json`
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_HAXE_4_3_7.json`
-- tracked overrides under `packages/reflaxe.ocaml/std/_std/`
+- tracked overrides under `packages/reflaxe.ocaml/std/ocaml/_std/`
 
-Summary: `204` modules total, `42` overrides, `2` runtime-backed, `5` lowering-intrinsic, `155` passthrough-verified, `0` passthrough-unverified.
+Summary: `204` modules total, `46` overrides, `2` runtime-backed, `5` lowering-intrinsic, `151` passthrough-verified, `0` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
 | `Any` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
-| `Array` | `override` | packages/reflaxe.ocaml/std/_std/Array.hx |
+| `Array` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/Array.hx |
 | `Class` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
-| `Date` | `override` | packages/reflaxe.ocaml/std/_std/Date.hx |
+| `Date` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/Date.hx |
 | `DateTools` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
-| `EReg` | `override` | packages/reflaxe.ocaml/std/_std/EReg.hx |
+| `EReg` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/EReg.hx |
 | `Enum` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `EnumValue` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `IntIterator` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `Lambda` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `List` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `Map` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
-| `Math` | `override` | packages/reflaxe.ocaml/std/_std/Math.hx |
+| `Math` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/Math.hx |
 | `Reflect` | `passthrough_verified` | test/portable/fixtures/reflect_call_method_basic/src/Main.hx; test/portable/fixtures/reflect_dynamic_fields/src/Main.hx |
 | `Std` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `StdTypes` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
-| `String` | `override` | packages/reflaxe.ocaml/std/_std/String.hx |
-| `StringBuf` | `override` | packages/reflaxe.ocaml/std/_std/StringBuf.hx |
-| `StringTools` | `override` | packages/reflaxe.ocaml/std/_std/StringTools.hx |
-| `Sys` | `override` | packages/reflaxe.ocaml/std/_std/Sys.hx |
+| `String` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/String.hx |
+| `StringBuf` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx |
+| `StringTools` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx |
+| `Sys` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/Sys.hx |
 | `Type` | `passthrough_verified` | test/portable/fixtures/type_getclass_basic/src/Main.hx; test/portable/fixtures/type_reflection_basic/src/Main.hx |
 | `UInt` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `UnicodeString` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
-| `Xml` | `override` | packages/reflaxe.ocaml/std/_std/Xml.hx; test/portable/fixtures/xml_basic/src/Main.hx; test/portable/fixtures/xml_parse_basic/src/Main.hx |
-| `haxe.CallStack` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `Xml` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/Xml.hx; test/portable/fixtures/xml_basic/src/Main.hx; test/portable/fixtures/xml_parse_basic/src/Main.hx |
+| `haxe.CallStack` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx |
 | `haxe.Constraints` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.DynamicAccess` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.EntryPoint` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.EnumFlags` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.EnumTools` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
-| `haxe.Exception` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.Exception` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/Exception.hx |
 | `haxe.Http` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.Int32` | `passthrough_verified` | test/portable/fixtures/int32_semantics/src/Main.hx |
 | `haxe.Int64` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
@@ -54,7 +47,7 @@ Summary: `204` modules total, `42` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.Json` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.Log` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.MainLoop` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
-| `haxe.NativeStackTrace` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.NativeStackTrace` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx |
 | `haxe.PosInfos` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
 | `haxe.Resource` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
 | `haxe.Rest` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
@@ -65,10 +58,10 @@ Summary: `204` modules total, `42` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.Ucs2` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
 | `haxe.Unserializer` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
 | `haxe.Utf8` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
-| `haxe.ValueException` | `passthrough_verified` | test/portable/fixtures/haxe_value_exception_basic/src/Main.hx |
-| `haxe.atomic.AtomicBool` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicBool.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
-| `haxe.atomic.AtomicInt` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicInt.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
-| `haxe.atomic.AtomicObject` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicObject.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
+| `haxe.ValueException` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/ValueException.hx |
+| `haxe.atomic.AtomicBool` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/atomic/AtomicBool.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
+| `haxe.atomic.AtomicInt` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/atomic/AtomicInt.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
+| `haxe.atomic.AtomicObject` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/atomic/AtomicObject.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
 | `haxe.crypto.Adler32` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
 | `haxe.crypto.Base64` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
 | `haxe.crypto.BaseCode` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
@@ -107,8 +100,8 @@ Summary: `204` modules total, `42` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.extern.AsVar` | `passthrough_verified` | test/portable/fixtures/haxe_extern_core_basic/src/Main.hx |
 | `haxe.extern.EitherType` | `passthrough_verified` | test/portable/fixtures/haxe_extern_core_basic/src/Main.hx |
 | `haxe.extern.Rest` | `passthrough_verified` | test/portable/fixtures/haxe_extern_core_basic/src/Main.hx |
-| `haxe.format.JsonParser` | `override` | packages/reflaxe.ocaml/std/_std/haxe/format/JsonParser.hx; test/portable/fixtures/haxe_format_json_basic/src/Main.hx |
-| `haxe.format.JsonPrinter` | `override` | packages/reflaxe.ocaml/std/_std/haxe/format/JsonPrinter.hx; test/portable/fixtures/haxe_format_json_basic/src/Main.hx |
+| `haxe.format.JsonParser` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/format/JsonParser.hx; test/portable/fixtures/haxe_format_json_basic/src/Main.hx |
+| `haxe.format.JsonPrinter` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/format/JsonPrinter.hx; test/portable/fixtures/haxe_format_json_basic/src/Main.hx |
 | `haxe.http.HttpBase` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
 | `haxe.http.HttpJs` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
 | `haxe.http.HttpMethod` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
@@ -116,21 +109,21 @@ Summary: `204` modules total, `42` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.http.HttpStatus` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
 | `haxe.io.ArrayBufferView` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.BufferInput` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
-| `haxe.io.Bytes` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx |
-| `haxe.io.BytesBuffer` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/BytesBuffer.hx |
-| `haxe.io.BytesData` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/BytesData.hx |
-| `haxe.io.BytesInput` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/BytesInput.hx |
+| `haxe.io.Bytes` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Bytes.hx |
+| `haxe.io.BytesBuffer` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesBuffer.hx |
+| `haxe.io.BytesData` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesData.hx |
+| `haxe.io.BytesInput` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/BytesInput.hx |
 | `haxe.io.BytesOutput` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.Encoding` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.Eof` | `runtime_backed` | packages/reflaxe.ocaml/std/runtime/HxInput.ml |
 | `haxe.io.Error` | `runtime_backed` | packages/reflaxe.ocaml/std/runtime/HxInput.ml |
-| `haxe.io.FPHelper` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/FPHelper.hx |
+| `haxe.io.FPHelper` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/FPHelper.hx |
 | `haxe.io.Float32Array` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.Float64Array` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
-| `haxe.io.Input` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Input.hx |
+| `haxe.io.Input` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Input.hx |
 | `haxe.io.Int32Array` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.Mime` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
-| `haxe.io.Output` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Output.hx |
+| `haxe.io.Output` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/haxe/io/Output.hx |
 | `haxe.io.Path` | `passthrough_verified` | test/portable/fixtures/path_basic/src/Main.hx |
 | `haxe.io.Scheme` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.StringInput` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
@@ -187,36 +180,36 @@ Summary: `204` modules total, `42` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.zip.Uncompress` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
 | `haxe.zip.Writer` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
 | `sys.FileStat` | `passthrough_verified` | test/portable/fixtures/file_stat_basic/src/Main.hx |
-| `sys.FileSystem` | `override` | packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx |
+| `sys.FileSystem` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/FileSystem.hx |
 | `sys.Http` | `passthrough_verified` | test/portable/fixtures/sys_core_bucket01_basic/src/Main.hx |
 | `sys.db.Connection` | `passthrough_verified` | test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx |
 | `sys.db.Mysql` | `passthrough_verified` | test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx |
 | `sys.db.ResultSet` | `passthrough_verified` | test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx |
 | `sys.db.Sqlite` | `passthrough_verified` | test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx |
-| `sys.io.File` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/File.hx |
-| `sys.io.FileInput` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/FileInput.hx |
-| `sys.io.FileOutput` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/FileOutput.hx |
+| `sys.io.File` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/io/File.hx |
+| `sys.io.FileInput` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/io/FileInput.hx |
+| `sys.io.FileOutput` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/io/FileOutput.hx |
 | `sys.io.FileSeek` | `passthrough_verified` | test/portable/fixtures/sys_file_seek_basic/src/Main.hx |
-| `sys.io.Process` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/Process.hx |
+| `sys.io.Process` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/io/Process.hx |
 | `sys.net.Address` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
-| `sys.net.Host` | `override` | packages/reflaxe.ocaml/std/_std/sys/net/Host.hx |
-| `sys.net.Socket` | `override` | packages/reflaxe.ocaml/std/_std/sys/net/Socket.hx |
+| `sys.net.Host` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/net/Host.hx |
+| `sys.net.Socket` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/net/Socket.hx |
 | `sys.net.UdpSocket` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
 | `sys.ssl.Certificate` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
 | `sys.ssl.Digest` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
 | `sys.ssl.DigestAlgorithm` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
 | `sys.ssl.Key` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
-| `sys.ssl.Socket` | `override` | packages/reflaxe.ocaml/std/_std/sys/ssl/Socket.hx |
-| `sys.thread.Condition` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Condition.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.Deque` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Deque.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.ElasticThreadPool` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/ElasticThreadPool.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.EventLoop` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/EventLoop.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.FixedThreadPool` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/FixedThreadPool.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.IThreadPool` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/IThreadPool.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.Lock` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Lock.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.Mutex` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Mutex.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.NoEventLoopException` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/NoEventLoopException.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.Semaphore` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Semaphore.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.Thread` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Thread.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.ThreadPoolException` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/ThreadPoolException.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
-| `sys.thread.Tls` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Tls.hx; test/portable/fixtures/sys_thread_bucket02_tls/src/Main.hx |
+| `sys.ssl.Socket` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/ssl/Socket.hx |
+| `sys.thread.Condition` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Condition.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Deque` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Deque.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.ElasticThreadPool` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/ElasticThreadPool.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.EventLoop` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/EventLoop.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.FixedThreadPool` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/FixedThreadPool.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.IThreadPool` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/IThreadPool.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Lock` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Lock.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Mutex` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Mutex.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.NoEventLoopException` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/NoEventLoopException.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Semaphore` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Semaphore.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Thread` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Thread.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.ThreadPoolException` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/ThreadPoolException.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Tls` | `override` | packages/reflaxe.ocaml/std/ocaml/_std/sys/thread/Tls.hx; test/portable/fixtures/sys_thread_bucket02_tls/src/Main.hx |

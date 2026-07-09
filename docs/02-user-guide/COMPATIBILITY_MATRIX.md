@@ -71,17 +71,17 @@ Matrix status taxonomy:
 
 | Module / Area | Status | Notes |
 |---|---:|---|
-| `Array<T>` | ✅ | `packages/reflaxe.ocaml/std/_std/Array.hx` + `packages/reflaxe.ocaml/std/runtime/HxArray.ml` |
-| `String` | ✅ | `packages/reflaxe.ocaml/std/_std/String.hx` + `packages/reflaxe.ocaml/std/runtime/HxString.ml` |
+| `Array<T>` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Array.hx` + `packages/reflaxe.ocaml/std/runtime/HxArray.ml` |
+| `String` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/String.hx` + `packages/reflaxe.ocaml/std/runtime/HxString.ml` |
 | `haxe.io.Bytes` | ✅ | Runtime-backed (lowered in codegen) |
-| `Date` | ✅ | `packages/reflaxe.ocaml/std/_std/Date.hx` + `packages/reflaxe.ocaml/std/runtime/Date.ml` |
-| `Sys` | ✅ | `packages/reflaxe.ocaml/std/_std/Sys.hx` + `packages/reflaxe.ocaml/std/runtime/HxSys.ml` |
-| `haxe.CallStack` / `haxe.NativeStackTrace` | ✅ | target-owned stack surface via `packages/reflaxe.ocaml/std/_std/haxe/CallStack.hx` + `packages/reflaxe.ocaml/src/haxe/NativeStackTrace.cross.hx` + `packages/reflaxe.ocaml/std/runtime/HxBacktrace.ml` |
-| `sys.FileSystem` | ✅ | `packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx` + `packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml` |
+| `Date` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Date.hx` + `packages/reflaxe.ocaml/std/runtime/Date.ml` |
+| `Sys` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Sys.hx` + `packages/reflaxe.ocaml/std/runtime/HxSys.ml` |
+| `haxe.CallStack` / `haxe.NativeStackTrace` | ✅ | target-owned stack surface via `packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx` + `packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx` + `packages/reflaxe.ocaml/std/runtime/HxBacktrace.ml` |
+| `sys.FileSystem` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/sys/FileSystem.hx` + `packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml` |
 | `sys.io.File` | ✅ | Runtime subset exercised by fixtures/examples |
 | `haxe.ds.Map` / `haxe.ds.*` | ✅ | Runtime `HxMap.ml` + codegen lowering |
-| `EReg` | ✅ | `packages/reflaxe.ocaml/std/_std/EReg.hx` + `packages/reflaxe.ocaml/std/runtime/EReg.ml` |
-| `Math` | ✅ | `packages/reflaxe.ocaml/std/_std/Math.hx` + `packages/reflaxe.ocaml/std/runtime/Math.ml` |
+| `EReg` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/EReg.hx` + `packages/reflaxe.ocaml/std/runtime/EReg.ml` |
+| `Math` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Math.hx` + `packages/reflaxe.ocaml/std/runtime/Math.ml` |
 
 ## OCaml-native surface (`ocaml.*`)
 

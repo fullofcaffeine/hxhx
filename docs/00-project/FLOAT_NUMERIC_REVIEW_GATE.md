@@ -35,7 +35,7 @@ Use this gate when a change touches these files, helpers, or search tokens:
 | `packages/hxhx-core/src/backend/cpp/CppRuntimeSupport.hx` | `fpReinterpretLines`, `enumValueDynamicLines`, `compareLines`, `std::stod`, default double conversion, `__hxhx_any_double`, `__hxhx_compare` |
 | `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | `__hxhx_stringify`, `std::to_string`, `std::isnan`, `std::isfinite`, `std::numeric_limits`, `Reflect.compare`, Math intrinsic lowering, hxcpp byte-memory/reinterpret lowering |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | source-native Float, Math, JSON, Serializer, or binary encoding behavior |
-| `packages/reflaxe.ocaml/std/_std/Math.hx` | `NaN`, positive/negative Infinity, `isNaN`, `isFinite`, rounding, or target-native Math mappings |
+| `packages/reflaxe.ocaml/std/ocaml/_std/Math.hx` | `NaN`, positive/negative Infinity, `isNaN`, `isFinite`, rounding, or target-native Math mappings |
 | Serializer/Unserializer support | numeric tokens, stringification of Float values, invalid numeric tokens, resolver behavior involving numeric enum args |
 | JSON support | numeric parse/print behavior, `NaN`, Infinity, signed zero, integer-vs-float preservation |
 | Tests and oracle runners | new expected output involving Float special values, binary float bytes, JSON numbers, or Serializer numeric tokens |

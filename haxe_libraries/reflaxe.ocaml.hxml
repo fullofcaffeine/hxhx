@@ -6,15 +6,25 @@
 # Include the compiler source code (paths relative to project root via SCOPE_DIR)
 -cp ${SCOPE_DIR}/packages/reflaxe.ocaml/src/
 
-# Include stdlib definitions (portable + ocaml-native surface)
+# Include stdlib definitions (portable + OCaml-native surface)
 -cp ${SCOPE_DIR}/packages/reflaxe.ocaml/std/
-# Target-specific overrides (std/_std) are injected conditionally by CompilerBootstrap
-# to avoid leaking OCaml-only helpers into non-OCaml compilation contexts.
+
+# Include source-layout target std overrides.
+# This mirrors Reflaxe's dev/test model: stdPaths from haxelib.json are supplied
+# by tooling during source-checkout development. Published packages are flattened
+# by `haxelib run reflaxe build`, so users do not see this path directly.
+-cp ${SCOPE_DIR}/packages/reflaxe.ocaml/std/ocaml/_std/
 
 # Depend on Reflaxe
 -lib reflaxe
 
 # Library version define
 -D reflaxe.ocaml=0.15.22
+
+# Reflaxe target parameters
+-D ocaml
+-D retain-untyped-meta
+
 # Initialize/register the compiler
+--macro nullSafety("reflaxe.ocaml")
 --macro reflaxe.ocaml.CompilerInit.Start()

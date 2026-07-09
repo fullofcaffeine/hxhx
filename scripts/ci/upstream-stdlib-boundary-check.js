@@ -38,7 +38,7 @@ const forbiddenUpstreamVendorRoots = [
 	'vendor/haxe/extra/',
 	'vendor/haxe/.git/',
 ]
-const approvedStdlibSyncTargets = ['packages/reflaxe.ocaml/std/_std/']
+const approvedStdlibSyncTargets = ['packages/reflaxe.ocaml/std/ocaml/_std/']
 
 const tracked = gitTrackedAll()
 const trackedVendor = gitTrackedUnder('vendor/haxe')

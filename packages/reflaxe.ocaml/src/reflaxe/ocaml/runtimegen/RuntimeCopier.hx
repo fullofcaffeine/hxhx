@@ -69,7 +69,7 @@ class RuntimeCopier {
 			final ocamlList = haxe.macro.Context.resolvePath("ocaml/List.hx");
 			final ocamlDir = Path.directory(ocamlList); // .../std/ocaml
 			return Path.directory(ocamlDir); // .../std
-		} catch (_:haxe.Exception) {
+		} catch (_:Dynamic) {
 			return null;
 		}
 		#else
