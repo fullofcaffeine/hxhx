@@ -5349,7 +5349,7 @@ class CppTargetCore {
 				case "set" | "blit" | "fill" | "setDouble" | "setFloat" | "setUInt16" | "setInt32" | "setInt64":
 					"void";
 				case "sub" | "alloc" | "ofString" | "ofData" | "ofHex":
-					cppTypeHint("Bytes", scope, classLookup);
+					knownConcreteClassReferenceCppType("Bytes", scope, classLookup);
 				case "getInt64":
 					"long long";
 				case "getString" | "readString" | "toString" | "toHex":
@@ -5577,6 +5577,22 @@ class CppTargetCore {
 		return "";
 	}
 
+	/**
+		Resolve a known concrete API class directly to its rendered reference type.
+
+		Known stdlib signatures have already established that these positions are
+		class references, so they do not need the generic type-hint classifier's
+		abstract, structural, container, and function probes. Class lookup remains
+		scope-aware so module-local rendered names and package collisions keep their
+		existing emitted identity.
+	**/
+	static function knownConcreteClassReferenceCppType(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final lookup = lookupForScope(scope, classLookup);
+		final cls = lookupClassForTypeHint(typeHint, scope, lookup);
+		final rendered = cls == null ? sanitizeTypePath(typeBaseName(typeHint)) : renderedClassName(cls, lookup);
+		return "std::shared_ptr<" + rendered + ">";
+	}
+
 	static function cppPreludeMethodParamTypes(className:String, methodName:String):Array<String> {
 		final owner = sanitizeTypePath(typeBaseName(className == null ? "" : className));
 		final method = sanitizeIdentifier(methodName == null ? "" : methodName);
@@ -5618,7 +5634,12 @@ class CppTargetCore {
 					case "setDouble" | "setFloat":
 						["int", "double"];
 					case "blit":
-						["int", cppTypeHint("Bytes", scope, classLookup), "int", "int"];
+						[
+							"int",
+							knownConcreteClassReferenceCppType("Bytes", scope, classLookup),
+							"int",
+							"int"
+						];
 					case "sub":
 						["int", "int"];
 					case "getString":
@@ -5626,7 +5647,7 @@ class CppTargetCore {
 					case "fill":
 						["int", "int", "int"];
 					case "compare":
-						[cppTypeHint("Bytes", scope, classLookup)];
+						[knownConcreteClassReferenceCppType("Bytes", scope, classLookup)];
 					case _:
 						[];
 				}

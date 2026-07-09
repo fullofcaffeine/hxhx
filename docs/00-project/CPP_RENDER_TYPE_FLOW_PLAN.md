@@ -664,6 +664,67 @@ README and North Star progress bars stay unchanged. This is an internal strict
 Cpp render/type-flow burn-down slice; strict Cpp remains red and no public
 production-readiness claim changed.
 
+## 2026-07-09 Known Bytes Reference Type Fast Path
+
+The follow-up bead `haxe_ocaml-jhegi` used the comparable `TestBytes.test`
+traces to select the next repeated type-flow seam instead of the moving timeout
+boundary. In both
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testbytes-test-filter-current.log`
+and
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testbytes-test-filter-after-prep-guards.log`,
+known `Bytes` methods repeatedly resolved the same `std::shared_ptr<Bytes>`
+return through the generic type-hint classifier. In the post-prep-guard log,
+the seven `Bytes.ofString` static-return probes totaled about 0.827s, the two
+`Bytes.sub` instance-return probes totaled about 0.241s, and the one
+`Bytes.alloc` static-return probe took about 0.134s. The corresponding totals
+in the earlier current log were about 0.793s, 0.225s, and 0.111s, confirming a
+stable repeated cost rather than a single slow sample.
+
+The retained change is limited to already-known `Bytes` API reference
+positions. `knownConcreteClassReferenceCppType` resolves the selected class and
+its rendered name directly, then returns its `std::shared_ptr<T>` shape. Known
+`Bytes` return positions for `sub`, `alloc`, `ofString`, `ofData`, and `ofHex`,
+plus the `Bytes` parameters of `blit` and `compare`, use that helper. Class
+lookup remains scope-aware, so rendered module-local names and package
+collisions keep their existing identity. Arbitrary type hints, abstracts,
+structural values, containers, functions, and all non-`Bytes` signature
+positions still use the generic classifier.
+
+The helper render bench now includes a nested
+`Bytes.ofString(...).sub(...).compare(Bytes.ofString(...))` fixture and prints
+`bytes_reference_calls` / `bytes_reference_seconds`. An immediate local
+before/after run of the identical ten-call fixture reported about 0.338s on the
+prior generic path and about 0.112s on the retained direct-reference path,
+while asserting the emitted expression remained unchanged.
+
+The fresh current-source strict probe wrote
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testbytes-test-filter-after-known-bytes-reference.log`.
+It remained expected-red at the explicit 480s Cpp cap, but it reached and
+completed the filtered method. The targeted phase totals dropped to about
+0.0036s for seven `Bytes.ofString` static returns, 0.00083s for two `Bytes.sub`
+instance returns, and 0.00048s for `Bytes.alloc`. `TestBytes.test` completed in
+about 10.81s and the class in about 16.14s, versus about 17.69s and 25.69s in
+the latest comparable pre-change method-filtered log. The full-method delta
+also includes the already-landed primitive literal argument shortcut, so the
+focused phase totals and isolated bench are the evidence for this specific
+slice. The timeout boundary stopped at the beginning of `TestEReg`; it is not
+used as a progress claim because setup/helper counts differed from the earlier
+run.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+times out, and this internal type-flow improvement does not change public
+production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

@@ -15,6 +15,12 @@ typedef PrimitiveCallArgBenchResult = {
 	var sample:String;
 }
 
+typedef BytesReferenceCallBenchResult = {
+	var elapsed:Float;
+	var calls:Int;
+	var sample:String;
+}
+
 /**
 	Renderer-only latency probe for the C++ helper-class frontier.
 
@@ -32,6 +38,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_EXTRA_METHODS = 16;
 	static inline final DEFAULT_REPS = 2;
 	static inline final DEFAULT_PRIMITIVE_ARG_CALLS = 250;
+	static inline final DEFAULT_BYTES_REFERENCE_CALLS = 10;
 
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -354,6 +361,41 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
+	static function renderBytesReferenceCalls(callCount:Int):BytesReferenceCallBenchResult {
+		final bytes = new HxClassDecl("Bytes", false, [
+			new HxFunctionDecl("ofString", Public, true, [new HxFunctionArg("value", "String", NoDefault, false, false)], "Bytes", [], ""),
+			new HxFunctionDecl("sub", Public, false, [
+				new HxFunctionArg("position", "Int", NoDefault, false, false),
+				new HxFunctionArg("length", "Int", NoDefault, false, false)
+			], "Bytes",
+				[], ""),
+			new HxFunctionDecl("compare", Public, false, [new HxFunctionArg("other", "Bytes", NoDefault, false, false)], "Int", [], "")
+		], []);
+		final owner = new HxClassDecl("BytesReferenceBenchOwner", false, [], []);
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		for (cls in [bytes, owner]) {
+			final name = HxClassDecl.getName(cls);
+			names.set(name, true);
+			classes.set(name, cls);
+		}
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		scope.localTypes.set("s1", "std::string");
+		scope.localTypes.set("s2", "std::string");
+		final expression = ECall(EField(ECall(EField(ECall(EField(EIdent("Bytes"), "ofString"), [EIdent("s1")]), "sub"), [EInt(0), EInt(1)]), "compare"),
+			[ECall(EField(EIdent("Bytes"), "ofString"), [EIdent("s2")])]);
+		resetRendererCaches();
+		final start = Sys.time();
+		var sample = "";
+		for (_ in 0...callCount)
+			sample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(expression, scope);
+		return {
+			elapsed: Sys.time() - start,
+			calls: callCount,
+			sample: sample
+		};
+	}
+
 	static function assertCallableArgOverridePolicy():Void {
 		final stringOnly = new HxFunctionDecl("stringOnly", Public, false, [new HxFunctionArg("event", "String", NoDefault, false, false)], "Void", [], "");
 		final stringCallable = new HxFunctionDecl("stringCallable", Public, false, [new HxFunctionArg("f", "String", NoDefault, false, false)], "String",
@@ -376,6 +418,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final extraMethods = envInt("HXHX_CPP_HELPER_RENDER_BENCH_EXTRA_METHODS", DEFAULT_EXTRA_METHODS);
 		final reps = envInt("HXHX_CPP_HELPER_RENDER_BENCH_REPS", DEFAULT_REPS);
 		final primitiveArgCalls = envInt("HXHX_CPP_PRIMITIVE_ARG_BENCH_CALLS", DEFAULT_PRIMITIVE_ARG_CALLS);
+		final bytesReferenceCalls = envInt("HXHX_CPP_BYTES_REFERENCE_BENCH_CALLS", DEFAULT_BYTES_REFERENCE_CALLS);
 		var best:HelperRenderBenchResult = null;
 		var total = 0.0;
 		for (_ in 0...reps) {
@@ -400,6 +443,9 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final primitiveArgs = renderPrimitiveLiteralCallArgs(primitiveArgCalls);
 		assertTrue(primitiveArgs.sample == "target(\"literal\", 7, true, 1.25)",
 			"primitive call-argument bench should keep direct literal call rendering stable");
+		final bytesReferences = renderBytesReferenceCalls(bytesReferenceCalls);
+		assertTrue(bytesReferences.sample == "Bytes::ofString(std::string(s1))->sub(0, 1)->compare(Bytes::ofString(std::string(s2)))",
+			"Bytes reference bench should keep nested ofString/sub/compare rendering stable");
 
 		Sys.println("CPP_HELPER_RENDER_BENCH:PASS extra_methods="
 			+ extraMethods
@@ -417,6 +463,10 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ primitiveArgs.calls
 			+ " primitive_arg_seconds="
 			+ primitiveArgs.elapsed
+			+ " bytes_reference_calls="
+			+ bytesReferences.calls
+			+ " bytes_reference_seconds="
+			+ bytesReferences.elapsed
 			+ (stdList == null ? "" : " std_list_seconds=" + stdList.elapsed + " std_list_lines=" + stdList.lines));
 	}
 }
