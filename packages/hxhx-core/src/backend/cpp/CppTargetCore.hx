@@ -18637,7 +18637,7 @@ class CppTargetCore {
 			return null;
 		final carrierType = renderedCarrierClassName(rawCarrierType, scope);
 		if (carrierType == "EnumValue")
-			return enumValuePtrExpr(name, args, scope);
+			return enumValuePtrExpr(name, args, scope, knownIndex);
 		if (isValueTypeCarrierClassName(carrierType, scope))
 			return valueTypeCarrierValueExpr(carrierType, name, args, scope);
 		final index = knownIndex == null ? enumConstructorIndex(carrierType, name, scope) : knownIndex;
@@ -18689,6 +18689,49 @@ class CppTargetCore {
 			index++;
 		}
 		return 0;
+	}
+
+	static function enumConstructorNameByIndex(carrierType:String, ctorIndex:Int, ?scope:CppRenderScope):Null<String> {
+		final cls = classDeclForCppName(carrierType, scope);
+		if (cls == null || ctorIndex < 0)
+			return null;
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field) || sanitizeIdentifier(HxFieldDecl.getName(field)) != "__hx_enum_ctors")
+				continue;
+			switch (HxFieldDecl.getInit(field)) {
+				case EArrayDecl(values) if (ctorIndex < values.length):
+					return switch (values[ctorIndex]) {
+						case EString(name):
+							name;
+						case _:
+							null;
+					};
+				case _:
+			}
+		}
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				continue;
+			final init = HxFieldDecl.getInit(field);
+			if (isEnumMetadataAnonInit(init) && enumMetadataCtorIndex(init) == ctorIndex)
+				return enumMetadataCtorName(init);
+		}
+		var index = 0;
+		for (field in HxClassDecl.getFields(cls)) {
+			if (HxFieldDecl.getIsStatic(field) && isEnumMetadataAnonInit(HxFieldDecl.getInit(field))) {
+				if (index == ctorIndex)
+					return enumMetadataCtorName(HxFieldDecl.getInit(field));
+				index++;
+			}
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
+				continue;
+			if (index == ctorIndex)
+				return HxFunctionDecl.getName(fn);
+			index++;
+		}
+		return null;
 	}
 
 	static function enumCtorPayloadVectorExpr(args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -19061,8 +19104,9 @@ class CppTargetCore {
 		return false;
 	}
 
-	static function enumValuePtrExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
-		return "std::make_shared<EnumValue>(std::string(" + quoteString(name) + "), 0, " + enumCtorPayloadVectorExpr(args, scope) + ")";
+	static function enumValuePtrExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?knownIndex:Null<Int>):String {
+		final index = knownIndex == null ? 0 : knownIndex;
+		return "std::make_shared<EnumValue>(std::string(" + quoteString(name) + "), " + Std.string(index) + ", " + enumCtorPayloadVectorExpr(args, scope) + ")";
 	}
 
 	static function pointerCtorExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -22595,6 +22639,9 @@ class CppTargetCore {
 		final inferred = typeEnumFactoryReturnCppType(args, scope);
 		final expected = expectedType == null || expectedType == "void" || expectedType == "auto" ? "" : expectedType;
 		final templateType = inferred.length > 0 ? inferred : expected;
+		final directValue = typeEnumFactoryDirectValueExpr(method, args, scope, templateType);
+		if (directValue != null)
+			return directValue;
 		final renderedArgs = new Array<String>();
 		if (args.length > 0) {
 			final enumArg = enumReferenceArgExprForExpectedType(args[0], "std::shared_ptr<Enum>", scope);
@@ -22606,6 +22653,86 @@ class CppTargetCore {
 		if (args.length > 2)
 			renderedArgs.push(valueExprForExpectedType(args[2], "std::vector<std::any>", scope));
 		return "Type::" + method + (templateType.length > 0 ? "<" + templateType + ">" : "") + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	/**
+		Fold compiler-known enum factories into the same typed carrier value
+		representation used by ordinary enum constructor coercion.
+
+		This intentionally handles only static enum classes with literal
+		constructor names or indexes and literal payload arrays. Dynamic
+		factories still flow through the bounded runtime `Type::createEnum` path.
+	**/
+	static function typeEnumFactoryDirectValueExpr(method:String, args:Array<HxExpr>, ?scope:CppRenderScope, templateType:String):Null<String> {
+		if (scope == null || args == null || args.length < 2 || templateType == null || templateType.length == 0)
+			return null;
+		if (!isCppEnumCarrierReferenceType(templateType, scope) && classNameFromCppType(templateType) != "EnumValue")
+			return null;
+		final enumReference = enumReferencePathText(args[0], scope);
+		if (enumReference == null)
+			return null;
+		final rawCarrierType = classNameFromCppType(templateType);
+		if (rawCarrierType == null || rawCarrierType.length == 0)
+			return null;
+		final payloadArgs = typeEnumFactoryPayloadArgs(args.length > 2 ? args[2] : null);
+		if (payloadArgs == null)
+			return null;
+		return switch (method) {
+			case "createEnum":
+				final ctorName = typeEnumConstructorNameLiteral(args[1]);
+				if (ctorName == null) {
+					null;
+				} else {
+					enumCtorValueForCarrierType(ctorName, payloadArgs, rawCarrierType, scope);
+				}
+			case "createEnumIndex":
+				final ctorIndex = typeEnumConstructorIndexLiteral(args[1]);
+				if (ctorIndex == null) {
+					null;
+				} else {
+					final ctorName = enumConstructorNameByIndex(rawCarrierType, ctorIndex, scope);
+					ctorName == null ? null : enumCtorValueForCarrierType(ctorName, payloadArgs, rawCarrierType, scope, ctorIndex);
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function typeEnumConstructorNameLiteral(expr:HxExpr):Null<String> {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				typeEnumConstructorNameLiteral(inner);
+			case ECall(EIdent("__unprotect__"), args) if (args.length == 1):
+				typeEnumConstructorNameLiteral(args[0]);
+			case EString(value):
+				value;
+			case _:
+				null;
+		};
+	}
+
+	static function typeEnumConstructorIndexLiteral(expr:HxExpr):Null<Int> {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				typeEnumConstructorIndexLiteral(inner);
+			case EInt(value):
+				value;
+			case _:
+				null;
+		};
+	}
+
+	static function typeEnumFactoryPayloadArgs(expr:Null<HxExpr>):Null<Array<HxExpr>> {
+		if (expr == null)
+			return [];
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				typeEnumFactoryPayloadArgs(inner);
+			case EArrayDecl(values):
+				values == null ? [] : values;
+			case _:
+				null;
+		};
 	}
 
 	static function typeEnumFactoryReturnCppType(args:Array<HxExpr>, ?scope:CppRenderScope):String {

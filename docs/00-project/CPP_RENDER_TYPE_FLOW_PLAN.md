@@ -445,10 +445,17 @@ unreachable-payload switch guard under that representation. The smoke also
 builds and runs a generated C++ enum metadata program, so the helper declaration
 order and runtime metadata access are covered, not only render strings.
 
+The next `haxe_ocaml-puquq` slice extended the same representation to
+compiler-known `Type.createEnum` / `Type.createEnumIndex` calls: static enum
+class arguments plus literal constructor names/indexes and literal payload
+arrays now lower directly to typed metadata carriers. The focused smoke builds
+and runs a generated C++ factory program that prints zero-arg and payload
+factory values and compares the payload factory result through `Type.enumEq`.
+
 This is not full enum parity. Raw generated constructor helpers may still keep
 their current tag-shaped callable form in non-carrier contexts, switch payload
-extraction still needs a behavior-owned seam, `Type.createEnum` /
-`Type.createEnumIndex` / `Type.allEnums` are not proven as typed value
+extraction still needs a behavior-owned seam, dynamic `Type.createEnum` /
+`Type.createEnumIndex` calls and `Type.allEnums` are not proven as typed value
 factories, and Serializer/Unserializer enum support remains blocked on the enum
 carrier plus Reflect/Dynamic prerequisites. README and North Star progress bars
 stay unchanged because strict Cpp remains red and public production readiness
