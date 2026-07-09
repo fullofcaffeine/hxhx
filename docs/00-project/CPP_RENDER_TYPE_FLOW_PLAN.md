@@ -462,13 +462,24 @@ the same registry, and typed `Type.allEnums` constructs zero-argument values
 while skipping payload constructors. The focused C++ factory smoke now covers
 both literal-folded and dynamic factory calls plus typed `allEnums`.
 
+The `haxe_ocaml-a3xh8` slice keeps that generated-carrier shape but adds a
+parallel original-payload channel: generated enum carriers and erased
+`EnumValue` now store `std::vector<std::any>` payloads next to the existing
+string metadata vector. The string vector remains the source for `Std.string`
+and focused switch payload binders; `Type.enumEq` and `Type.enumParameters`
+use the original payload vector so `Box(1)` and `Box("1")` do not collapse to
+the same string-only value. The focused oracle seed records upstream
+`Std.isOfType` expectations, while the C++ runtime smoke verifies the same
+identity boundary through target type-name output because that fixture does
+not emit the full std `Std.isOfType` body. README and North Star progress bars
+stay unchanged: this moves a Cpp bring-up blocker but strict Cpp and public
+production readiness remain red.
+
 This is not full enum parity. Raw generated constructor helpers may still keep
-their current tag-shaped callable form in non-carrier contexts, non-string
-payload identity and erased switch payload extraction still need
-behavior-owned seams, and Serializer/Unserializer enum support remains blocked
-on the enum carrier plus Reflect/Dynamic prerequisites. README and North Star
-progress bars stay unchanged because strict Cpp remains red and public
-production readiness did not change.
+their current tag-shaped callable form in non-carrier contexts, broad erased
+switch payload extraction still needs behavior-owned seams, and
+Serializer/Unserializer enum support remains blocked on the enum carrier plus
+Reflect/Dynamic prerequisites.
 
 Slow diagnostic validation for hotspot claims:
 

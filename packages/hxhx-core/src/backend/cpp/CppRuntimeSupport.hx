@@ -1875,10 +1875,12 @@ class CppRuntimeSupport {
 			"  std::string tag;",
 			"  int index;",
 			"  std::vector<std::string> parameters;",
-			"  explicit EnumValue(std::string tag = std::string(), int index = 0, std::vector<std::string> parameters = {}) : tag(tag), index(index), parameters(parameters) {}",
+			"  std::vector<std::any> payloads;",
+			"  explicit EnumValue(std::string tag = std::string(), int index = 0, std::vector<std::string> parameters = {}, std::vector<std::any> payloads = {}) : tag(tag), index(index), parameters(parameters), payloads(payloads) {}",
 			"  std::string getName() const { return tag; }",
 			"  int getIndex() const { return index; }",
 			"  std::vector<std::string> getParameters() const { return parameters; }",
+			"  std::vector<std::any> getPayloads() const { return payloads; }",
 			"};"
 		];
 	}
@@ -2029,6 +2031,7 @@ class CppRuntimeSupport {
 			"  double leftNumber = 0.0;",
 			"  double rightNumber = 0.0;",
 			"  if (__hxhx_any_numeric_value(left, leftNumber) && __hxhx_any_numeric_value(right, rightNumber)) return leftNumber == rightNumber;",
+			"  if (left.type() == typeid(std::shared_ptr<EnumValue>) && right.type() == typeid(std::shared_ptr<EnumValue>)) return __hxhx_enum_value_eq(std::any_cast<std::shared_ptr<EnumValue>>(left), std::any_cast<std::shared_ptr<EnumValue>>(right));",
 			"  return false;",
 			"}",
 			"",

@@ -1003,7 +1003,7 @@ class CppTargetCore {
 		out.push("struct __hxhx_has_enum_metadata : std::false_type {};");
 		out.push("");
 		out.push("template<typename T>");
-		out.push("struct __hxhx_has_enum_metadata<T, std::void_t<decltype(std::declval<T>().__hxhx_enum_tag), decltype(std::declval<T>().__hxhx_enum_index), decltype(std::declval<T>().__hxhx_enum_params)>> : std::true_type {};");
+		out.push("struct __hxhx_has_enum_metadata<T, std::void_t<decltype(std::declval<T>().__hxhx_enum_tag), decltype(std::declval<T>().__hxhx_enum_index), decltype(std::declval<T>().__hxhx_enum_params), decltype(std::declval<T>().__hxhx_enum_payloads)>> : std::true_type {};");
 		out.push("");
 		out.push("static std::string __hxhx_enum_value_to_string(const std::string& tag, const std::vector<std::string>& params) {");
 		out.push("  if (params.empty()) return tag;");
@@ -1017,21 +1017,38 @@ class CppTargetCore {
 		out.push("  return out.str();");
 		out.push("}");
 		out.push("");
+		out.push("static bool __hxhx_any_eq(const std::any& left, const std::any& right);");
+		out.push("");
+		out.push("static bool __hxhx_any_vector_eq(const std::vector<std::any>& left, const std::vector<std::any>& right) {");
+		out.push("  if (left.size() != right.size()) return false;");
+		out.push("  for (std::size_t i = 0; i < left.size(); ++i) if (!__hxhx_any_eq(left[i], right[i])) return false;");
+		out.push("  return true;");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T>");
 		out.push("static bool __hxhx_enum_value_eq(const std::shared_ptr<T>& left, const std::shared_ptr<T>& right) {");
 		out.push("  if (left == nullptr || right == nullptr) return left == right;");
 		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) {");
-		out.push("    return left->__hxhx_enum_tag == right->__hxhx_enum_tag && left->__hxhx_enum_index == right->__hxhx_enum_index && left->__hxhx_enum_params == right->__hxhx_enum_params;");
+		out.push("    return left->__hxhx_enum_tag == right->__hxhx_enum_tag && left->__hxhx_enum_index == right->__hxhx_enum_index && __hxhx_any_vector_eq(left->__hxhx_enum_payloads, right->__hxhx_enum_payloads);");
 		out.push("  } else {");
 		out.push("    return left == right;");
 		out.push("  }");
+		out.push("}");
+		out.push("");
+		out.push("static bool __hxhx_enum_value_eq(const std::shared_ptr<EnumValue>& left, const std::shared_ptr<EnumValue>& right) {");
+		out.push("  if (left == nullptr || right == nullptr) return left == right;");
+		out.push("  auto leftPayloads = left->getPayloads();");
+		out.push("  auto rightPayloads = right->getPayloads();");
+		out.push("  if (leftPayloads.empty() && !left->getParameters().empty()) for (const auto& param : left->getParameters()) leftPayloads.push_back(std::any(param));");
+		out.push("  if (rightPayloads.empty() && !right->getParameters().empty()) for (const auto& param : right->getParameters()) rightPayloads.push_back(std::any(param));");
+		out.push("  return left->getName() == right->getName() && left->getIndex() == right->getIndex() && __hxhx_any_vector_eq(leftPayloads, rightPayloads);");
 		out.push("}");
 		out.push("");
 		out.push("template<typename T>");
 		out.push("static std::shared_ptr<EnumValue> __hxhx_enum_to_erased(const std::shared_ptr<T>& value) {");
 		out.push("  if (value == nullptr) return nullptr;");
 		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) {");
-		out.push("    return std::make_shared<EnumValue>(value->__hxhx_enum_tag, value->__hxhx_enum_index, value->__hxhx_enum_params);");
+		out.push("    return std::make_shared<EnumValue>(value->__hxhx_enum_tag, value->__hxhx_enum_index, value->__hxhx_enum_params, value->__hxhx_enum_payloads);");
 		out.push("  } else {");
 		out.push("    return nullptr;");
 		out.push("  }");
@@ -1064,19 +1081,37 @@ class CppTargetCore {
 		out.push("}");
 		out.push("");
 		out.push("template<typename T>");
-		out.push("static std::vector<std::string> __hxhx_enum_parameters(const std::shared_ptr<T>& value) {");
+		out.push("static std::vector<std::string> __hxhx_enum_string_parameters(const std::shared_ptr<T>& value) {");
 		out.push("  if (value == nullptr) return {};");
 		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) return value->__hxhx_enum_params;");
 		out.push("  return {};");
 		out.push("}");
 		out.push("");
-		out.push("static std::vector<std::string> __hxhx_enum_parameters(const std::shared_ptr<EnumValue>& value) {");
+		out.push("static std::vector<std::string> __hxhx_enum_string_parameters(const std::shared_ptr<EnumValue>& value) {");
 		out.push("  return value == nullptr ? std::vector<std::string>{} : value->getParameters();");
 		out.push("}");
 		out.push("");
 		out.push("template<typename T>");
+		out.push("static std::vector<std::any> __hxhx_enum_parameters(const std::shared_ptr<T>& value) {");
+		out.push("  if (value == nullptr) return {};");
+		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) return value->__hxhx_enum_payloads;");
+		out.push("  return {};");
+		out.push("}");
+		out.push("");
+		out.push("static std::vector<std::any> __hxhx_enum_parameters(const std::shared_ptr<EnumValue>& value) {");
+		out.push("  if (value == nullptr) return std::vector<std::any>{};");
+		out.push("  auto payloads = value->getPayloads();");
+		out.push("  if (!payloads.empty()) return payloads;");
+		out.push("  std::vector<std::any> out;");
+		out.push("  auto params = value->getParameters();");
+		out.push("  out.reserve(params.size());");
+		out.push("  for (const auto& param : params) out.push_back(std::any(param));");
+		out.push("  return out;");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
 		out.push("static std::string __hxhx_enum_parameter(const std::shared_ptr<T>& value, int index) {");
-		out.push("  auto params = __hxhx_enum_parameters(value);");
+		out.push("  auto params = __hxhx_enum_string_parameters(value);");
 		out.push("  return index < 0 || index >= static_cast<int>(params.size()) ? std::string() : params[static_cast<std::size_t>(index)];");
 		out.push("}");
 		out.push("");
@@ -1216,7 +1251,7 @@ class CppTargetCore {
 		out.push("  return __hxhx_enum_index(__hxhx_enum_value_ptr(value));");
 		out.push("}");
 		out.push("");
-		out.push("static std::vector<std::string> __hxhx_enum_parameters(const std::any& value) {");
+		out.push("static std::vector<std::any> __hxhx_enum_parameters(const std::any& value) {");
 		out.push("  return __hxhx_enum_parameters(__hxhx_enum_value_ptr(value));");
 		out.push("}");
 		out.push("");
@@ -3721,11 +3756,13 @@ class CppTargetCore {
 			"  std::string __hxhx_enum_tag = std::string();",
 			"  int __hxhx_enum_index = 0;",
 			"  std::vector<std::string> __hxhx_enum_params = {};",
+			"  std::vector<std::any> __hxhx_enum_payloads = {};",
 			"  " + className +
-			"(std::string tag, int index = 0, std::vector<std::string> params = {}) : __hxhx_enum_tag(tag), __hxhx_enum_index(index), __hxhx_enum_params(params) {}",
+			"(std::string tag, int index = 0, std::vector<std::string> params = {}, std::vector<std::any> payloads = {}) : __hxhx_enum_tag(tag), __hxhx_enum_index(index), __hxhx_enum_params(params), __hxhx_enum_payloads(payloads) {}",
 			"  std::string getName() const { return __hxhx_enum_tag; }",
 			"  int getIndex() const { return __hxhx_enum_index; }",
-			"  std::vector<std::string> getParameters() const { return __hxhx_enum_params; }"
+			"  std::vector<std::string> getParameters() const { return __hxhx_enum_params; }",
+			"  std::vector<std::any> getPayloads() const { return __hxhx_enum_payloads; }"
 		];
 	}
 
@@ -18731,7 +18768,7 @@ class CppTargetCore {
 			return valueTypeCarrierValueExpr(carrierType, name, args, scope);
 		final index = knownIndex == null ? enumConstructorIndex(carrierType, name, scope) : knownIndex;
 		return "std::make_shared<" + carrierType + ">(std::string(" + quoteString(name) + "), " + Std.string(index) + ", "
-			+ enumCtorPayloadVectorExpr(args, scope) + ")";
+			+ enumCtorPayloadVectorExpr(args, scope) + ", " + enumCtorPayloadAnyVectorExpr(args, scope) + ")";
 	}
 
 	static function enumConstructorIndex(carrierType:String, ctorName:String, ?scope:CppRenderScope):Int {
@@ -18827,6 +18864,38 @@ class CppTargetCore {
 		if (args == null || args.length == 0)
 			return "std::vector<std::string>{}";
 		return "std::vector<std::string>{" + [for (arg in args) enumCtorPayloadStringExpr(arg, scope)].join(", ") + "}";
+	}
+
+	static function enumCtorPayloadAnyVectorExpr(args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (args == null || args.length == 0)
+			return "std::vector<std::any>{}";
+		return "std::vector<std::any>{" + [for (arg in args) enumCtorPayloadAnyExpr(arg, scope)].join(", ") + "}";
+	}
+
+	static function enumCtorPayloadAnyExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				enumCtorPayloadAnyExpr(inner, scope);
+			case EEnumValue(name):
+				"std::any(" + enumValuePtrExpr(name, [], scope) + ")";
+			case ECall(EEnumValue(name), args):
+				"std::any(" + enumValuePtrExpr(name, args, scope) + ")";
+			case EIdent(name) if (importedEnumConstructorOwner(name, false, scope) != null):
+				final owner = importedEnumConstructorOwner(name, false, scope);
+				"std::any(__hxhx_enum_to_erased(" + enumCtorValueForCarrierType(name, [], owner, scope) + "))";
+			case ECall(EIdent(name), args) if (importedEnumConstructorOwner(name, args != null && args.length > 0, scope) != null):
+				final owner = importedEnumConstructorOwner(name, args != null && args.length > 0, scope);
+				"std::any(__hxhx_enum_to_erased(" + enumCtorValueForCarrierType(name, args, owner, scope) + "))";
+			case EField(receiver, field):
+				final owner = staticReceiverClassName(receiver, scope);
+				if (owner != null && isEnumCarrierClassName(owner, scope) && classHasStaticEnumMetadataField(owner, field, scope)) {
+					"std::any(__hxhx_enum_to_erased(" + enumCtorValueForCarrierType(field, [], owner, scope) + "))";
+				} else {
+					valueExprForExpectedType(expr, "std::any", scope);
+				}
+			case _:
+				valueExprForExpectedType(expr, "std::any", scope);
+		};
 	}
 
 	static function enumCtorPayloadStringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -19195,7 +19264,8 @@ class CppTargetCore {
 
 	static function enumValuePtrExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?knownIndex:Null<Int>):String {
 		final index = knownIndex == null ? 0 : knownIndex;
-		return "std::make_shared<EnumValue>(std::string(" + quoteString(name) + "), " + Std.string(index) + ", " + enumCtorPayloadVectorExpr(args, scope) + ")";
+		return "std::make_shared<EnumValue>(std::string(" + quoteString(name) + "), " + Std.string(index) + ", " + enumCtorPayloadVectorExpr(args, scope)
+			+ ", " + enumCtorPayloadAnyVectorExpr(args, scope) + ")";
 	}
 
 	static function pointerCtorExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -22673,7 +22743,7 @@ class CppTargetCore {
 			case "getClassName" | "getEnumName" | "typeof" | "enumConstructor" if (args.length == 1):
 				"std::string";
 			case "enumParameters" if (args.length == 1):
-				"std::vector<std::string>";
+				"std::vector<std::any>";
 			case "allEnums" if (args.length == 1):
 				"std::vector<" + typeAllEnumsElementCppType(args[0], scope) + ">";
 			case "getClassFields" | "getInstanceFields" | "getEnumConstructs" if (args.length == 1):
@@ -23809,10 +23879,10 @@ class CppTargetCore {
 				out.push("    if constexpr (std::is_same_v<T, std::string>) {");
 				out.push("      return __hxhx_enum_value_to_string(constr, __hxhx_params);");
 				out.push("    } else if constexpr (std::is_same_v<T, std::shared_ptr<EnumValue>>) {");
-				out.push("      return std::make_shared<EnumValue>(constr, __hxhx_index, __hxhx_params);");
+				out.push("      return std::make_shared<EnumValue>(constr, __hxhx_index, __hxhx_params, params);");
 				out.push("    } else if constexpr (__hxhx_is_shared_ptr<T>::value) {");
 				out.push("      using __hxhx_carrier = typename T::element_type;");
-				out.push("      return std::make_shared<__hxhx_carrier>(constr, __hxhx_index, __hxhx_params);");
+				out.push("      return std::make_shared<__hxhx_carrier>(constr, __hxhx_index, __hxhx_params, params);");
 				out.push("    } else {");
 				out.push("      return T{};");
 				out.push("    }");
@@ -23825,10 +23895,10 @@ class CppTargetCore {
 				out.push("    if constexpr (std::is_same_v<T, std::string>) {");
 				out.push("      return __hxhx_name;");
 				out.push("    } else if constexpr (std::is_same_v<T, std::shared_ptr<EnumValue>>) {");
-				out.push("      return std::make_shared<EnumValue>(__hxhx_name, __hxhx_index, std::vector<std::string>{});");
+				out.push("      return std::make_shared<EnumValue>(__hxhx_name, __hxhx_index, std::vector<std::string>{}, std::vector<std::any>{});");
 				out.push("    } else if constexpr (__hxhx_is_shared_ptr<T>::value) {");
 				out.push("      using __hxhx_carrier = typename T::element_type;");
-				out.push("      return std::make_shared<__hxhx_carrier>(__hxhx_name, __hxhx_index, std::vector<std::string>{});");
+				out.push("      return std::make_shared<__hxhx_carrier>(__hxhx_name, __hxhx_index, std::vector<std::string>{}, std::vector<std::any>{});");
 				out.push("    } else {");
 				out.push("      return T{};");
 				out.push("    }");

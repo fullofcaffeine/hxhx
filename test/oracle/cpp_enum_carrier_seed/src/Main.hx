@@ -7,6 +7,10 @@ enum Color {
 	Pair(i:Int, s:String);
 }
 
+enum Boxed {
+	Box(v:Dynamic);
+}
+
 /**
 	Repo-owned upstream Haxe oracle cases for Cpp enum carriers.
 
@@ -35,6 +39,10 @@ class Main {
 		emit(id, "serialized", serialized);
 		final decoded:Color = haxe.Unserializer.run(serialized);
 		emit(id, "decoded", summarize(decoded));
+	}
+
+	static function boxedParams(value:Boxed):Array<Dynamic> {
+		return Type.enumParameters(value);
 	}
 
 	static function main():Void {
@@ -72,6 +80,14 @@ class Main {
 		final dynamicValue:Dynamic = pair;
 		emit("enum-dynamic-01", "string", Std.string(dynamicValue));
 		emit("enum-dynamic-01", "summary", summarize(dynamicValue));
+
+		final boxedInt = Box(1);
+		final boxedString = Box("1");
+		final boxedIntParams = boxedParams(boxedInt);
+		emit("enum-payload-identity-01", "eq-int-string", bool(Type.enumEq(boxedInt, boxedString)));
+		emit("enum-payload-identity-01", "param-is-int", bool(Std.isOfType(boxedIntParams[0], Int)));
+		emit("enum-payload-identity-01", "param-is-string", bool(Std.isOfType(boxedIntParams[0], String)));
+		emit("enum-payload-identity-01", "param-string", Std.string(boxedIntParams[0]));
 
 		serializerRoundTrip("enum-serializer-01:zero", red);
 		serializerRoundTrip("enum-serializer-01:payload", Pair(9, "y"));

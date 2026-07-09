@@ -15,6 +15,10 @@ enum-reflect-01|constructs|Red,Green,Pair
 enum-reflect-01|enumName|Color
 enum-dynamic-01|string|Pair(7,x)
 enum-dynamic-01|summary|Pair:2:7,x
+enum-payload-identity-01|eq-int-string|false
+enum-payload-identity-01|param-is-int|true
+enum-payload-identity-01|param-is-string|false
+enum-payload-identity-01|param-string|1
 enum-serializer-01:zero|serialized|wy5:Colory3:Red:0
 enum-serializer-01:zero|decoded|Red:0:
 enum-serializer-01:payload|serialized|wy5:Colory4:Pair:2i9y1:y
