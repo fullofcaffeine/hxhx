@@ -141,6 +141,43 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], false);
 	}
 
+	static function cppClassLiteralReflectionReachabilityProgram(includeTypeModule:Bool = true):GenIrProgram {
+		final main = new HxClassDecl("Main", true, [
+			new HxFunctionDecl("main", Public, true, [], "Void", [
+				SExpr(ECall(EField(ENew("ClassReflectionOwner", []), "testThrow"), []), HxPos.unknown())
+			], "")
+		], []);
+		final base = new HxClassDecl("ClassReflectionBase", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("hsf", Public, false, [
+				new HxFunctionArg("c", "Class<Dynamic>", NoDefault, false, false),
+				new HxFunctionArg("n", "String", NoDefault, false, false)
+			], "Void", [], "")
+		], []);
+		final owner = new HxClassDecl("ClassReflectionOwner", false, [
+			new HxFunctionDecl("new", Public, false, [], "Void", [], ""),
+			new HxFunctionDecl("testThrow", Public, false, [], "Void", [
+				SExpr(ECall(EIdent("hsf"), [EIdent("ThrownWithToString"), EString("staticField")]), HxPos.unknown())
+			], "")
+		], [], "ClassReflectionBase");
+		final target = new HxClassDecl("ThrownWithToString", false, [], []);
+		final type = new HxClassDecl("Type", false, [
+			new HxFunctionDecl("resolveClass", Public, true, [new HxFunctionArg("name", "String", NoDefault, false, false)], "Class<Dynamic>", [], "")
+		], []);
+		final classValue = new HxClassDecl("Class", false, [], []);
+		final modules = [
+			typedSyntheticModule("Main.hx", new HxModuleDecl("", [], main, [main], false, false)),
+			typedSyntheticModule("ClassReflectionBase.hx", new HxModuleDecl("", [], base, [base], false, false)),
+			typedSyntheticModule("ClassReflectionOwner.hx", new HxModuleDecl("", [], owner, [owner], false, false)),
+			typedSyntheticModule("ThrownWithToString.hx", new HxModuleDecl("", [], target, [target], false, false))
+		];
+		if (includeTypeModule) {
+			modules.push(typedSyntheticModule("Type.hx", new HxModuleDecl("", [], type, [type], false, false)));
+			modules.push(typedSyntheticModule("Class.hx", new HxModuleDecl("", [], classValue, [classValue], false, false)));
+		}
+		return new GenIrProgram(modules, false);
+	}
+
 	static function cppRuntimeModuleBodyDependencyProgram():GenIrProgram {
 		final main = new HxClassDecl("Main", true, [
 			new HxFunctionDecl("main", Public, true, [], "Void", [SVar("value", "Any", ENew("Any", []), HxPos.unknown())], "")
@@ -1813,6 +1850,26 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(counts.declarationOnly == 0, "C++ helper classification should not count declaration-only helpers in the source-body fixture");
 		assertTrue(counts.runtimeModule == 0, "C++ helper classification should not count runtime modules in the source-body fixture");
 		assertTrue(counts.unsupportedDiagnostic == 0, "C++ helper classification should not count unsupported diagnostics in the source-body fixture");
+
+		final classReflectionProgram = cppClassLiteralReflectionReachabilityProgram();
+		var classReflectionMainClass:HxClassDecl = null;
+		for (typed in classReflectionProgram.getTypedModules())
+			for (cls in HxModuleDecl.getClasses(typed.getParsed().getDecl()))
+				if (HxClassDecl.getName(cls) == "Main")
+					classReflectionMainClass = cls;
+		assertTrue(classReflectionMainClass != null, "C++ class-literal reflection reachability fixture should have a Main class");
+		final classReflectionLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(classReflectionProgram);
+		final classReflectionReachable = @:privateAccess
+			backend.cpp.CppTargetCore.collectReachableHelperClasses(classReflectionProgram, classReflectionMainClass, classReflectionLookup);
+		final classReflectionReachableNames = [for (cls in classReflectionReachable) HxClassDecl.getName(cls)].join("\n");
+		assertContains(classReflectionReachableNames, "Type",
+			"C++ helper reachability should retain Type when class-literal call lowering injects Type::resolveClass");
+		final classReflectionOrdered = @:privateAccess backend.cpp.CppTargetCore.orderHelperClasses(classReflectionReachable, classReflectionLookup);
+		final classReflectionOrderedNames = [for (cls in classReflectionOrdered) HxClassDecl.getName(cls)];
+		assertTrue(classReflectionOrderedNames.indexOf("Type") >= 0
+			&& classReflectionOrderedNames.indexOf("ClassReflectionOwner") >= 0
+			&& classReflectionOrderedNames.indexOf("Type") < classReflectionOrderedNames.indexOf("ClassReflectionOwner"),
+			"C++ helper ordering should render Type before helpers whose bodies call Type::resolveClass");
 
 		final iface = new HxClassDecl("InterfaceOnly", false, [new HxFunctionDecl("label", Public, false, [], "String", [], "")], [], "", [], true);
 		final any = new HxClassDecl("Any", false, [], []);
@@ -11037,6 +11094,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(hasArtifactKind(sourceOnly.artifacts, "entry_cpp_source"), "missing entry_cpp_source artifact");
 		assertTrue(!sourceOnly.builtExecutable, "no-compilation C++ smoke should not build executable");
 		final source = File.getContent(sourceOnly.entryPath);
+		final missingTypeSupportDir = Path.join([root, "class-literal-missing-type-support-source-only"]);
+		final missingTypeSupportEmit = BackendRegistry.createForTarget("cpp-native")
+			.emit(cppClassLiteralReflectionReachabilityProgram(false), context(missingTypeSupportDir, true, true));
+		final missingTypeSupportSource = File.getContent(missingTypeSupportEmit.entryPath);
+		assertContains(missingTypeSupportSource, "struct Type {",
+			"C++ source-only class-literal lowering should emit fallback Type support when Type was not typed");
+		assertContains(missingTypeSupportSource, "static std::shared_ptr<Class> resolveClass(std::string name)",
+			"C++ fallback Type support should expose resolveClass for injected class-literal carriers");
+		assertContains(missingTypeSupportSource, "hsf(Type::resolveClass(\"ThrownWithToString\"), std::string(\"staticField\"));",
+			"C++ hsf class-literal calls should compile against emitted fallback Type support");
 		final reflectLikeShapeDir = Path.join([root, "reflect-like-shape-source-only"]);
 		final reflectLikeShapeEmit = BackendRegistry.createForTarget("cpp-native").emit(reflectLikeShapeProgram(), context(reflectLikeShapeDir, true, true));
 		final reflectLikeShapeSource = File.getContent(reflectLikeShapeEmit.entryPath);

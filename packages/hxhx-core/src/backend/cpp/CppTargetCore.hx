@@ -1377,6 +1377,14 @@ class CppTargetCore {
 				out.push(line);
 			out.push("");
 		}
+		traceCppPhase("render_before_missing_type_support_classes");
+		final missingTypeSupportClasses = renderMissingTypeSupportClasses(main.cls, classLookup, reachableHelperClasses);
+		traceCppPhase("render_after_missing_type_support_classes count=" + missingTypeSupportClasses.length);
+		for (decl in missingTypeSupportClasses) {
+			for (line in decl)
+				out.push(line);
+			out.push("");
+		}
 		traceCppPhase("render_before_helper_classes");
 		final helperClasses = renderHelperClasses(program, main.cls, classLookup, reachableHelperClasses);
 		traceCppPhase("render_after_helper_classes count=" + helperClasses.length);
@@ -2462,6 +2470,51 @@ class CppTargetCore {
 		return out;
 	}
 
+	static function renderMissingTypeSupportClasses(mainClass:HxClassDecl, classLookup:CppClassLookup,
+			reachableHelpers:Array<HxClassDecl>):Array<Array<String>> {
+		if (classLookup.names.exists("Type") || !classesNeedTypeResolverSupport([mainClass].concat(reachableHelpers), classLookup))
+			return [];
+		final out = new Array<Array<String>>();
+		if (!classLookup.names.exists("Class"))
+			out.push(CppRuntimeSupport.classMetaSupportLines());
+		out.push(CppRuntimeSupport.missingTypeSupportLines());
+		return out;
+	}
+
+	static function classesNeedTypeResolverSupport(classes:Array<HxClassDecl>, classLookup:CppClassLookup):Bool {
+		for (cls in classes)
+			if (classNeedsTypeResolverSupport(cls, classLookup))
+				return true;
+		return false;
+	}
+
+	static function classNeedsTypeResolverSupport(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (cls == null)
+			return false;
+		final packagePath = packagePathForRenderedClass(cls, classLookup);
+		final scope = renderScope(cls, classLookup, "void");
+		var needs = false;
+		function add(name:String):Void {
+			if (sanitizeTypePath(typeBaseName(name == null ? "" : name)) == "Type")
+				needs = true;
+		}
+		for (field in HxClassDecl.getFields(cls)) {
+			final init = HxFieldDecl.getInit(field);
+			if (init != null)
+				addExprClassDependencies(init, add, scope);
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!functionBodyContributesRuntimeCpp(packagePath, cls, fn))
+				continue;
+			final fnScope = renderScope(cls, classLookup, "void");
+			applyFunctionTypeParams(fnScope, fn);
+			addStmtClassDependencies(HxFunctionDecl.getBody(fn), add, fnScope);
+			if (needs)
+				return true;
+		}
+		return needs;
+	}
+
 	static function traceHelperRenderKindCounts(label:String, helpers:Array<HxClassDecl>, classLookup:CppClassLookup):Void {
 		if (!traceCppEnabled())
 			return;
@@ -2845,7 +2898,8 @@ class CppTargetCore {
 				addTypeHintDependencies(typePath, add);
 				for (arg in args)
 					addExprClassDependencies(arg, add, scope);
-			case EField(receiver, _):
+			case EField(receiver, field):
+				addClassReferenceResolverDependency(EField(receiver, field), add, scope);
 				addStaticReceiverClassDependency(receiver, add);
 				addExprClassDependencies(receiver, add, scope);
 			case ECall(EField(receiver, method), args):
@@ -2853,9 +2907,14 @@ class CppTargetCore {
 					add("Int64Helper");
 				if (isTypeStaticReceiver(receiver) && (method == "createInstance" || method == "createEmptyInstance") && args.length >= 1)
 					addClassReferenceDependency(args[0], add, scope);
+				addFieldCallArgClassReferenceDependencies(receiver, method, args, add, scope);
 				if (!isStringToolsIntrinsicCall(receiver, method))
 					addStaticReceiverClassDependency(receiver, add);
 				addExprClassDependencies(receiver, add, scope);
+				for (arg in args)
+					addExprClassDependencies(arg, add, scope);
+			case ECall(EIdent(name), args):
+				addDirectCallArgClassReferenceDependencies(name, args, add, scope);
 				for (arg in args)
 					addExprClassDependencies(arg, add, scope);
 			case ECall(callee, args):
@@ -2899,10 +2958,114 @@ class CppTargetCore {
 		}
 	}
 
+	static function addClassReferenceResolverDependency(expr:HxExpr, add:String->Void, ?scope:CppRenderScope):Void {
+		if (classReferencePathText(expr, scope) != null)
+			addTypeResolverSupportDependencies(add);
+	}
+
 	static function addClassReferenceDependency(expr:HxExpr, add:String->Void, ?scope:CppRenderScope):Void {
 		final path = classReferencePathText(expr, scope);
-		if (path != null && path.length > 0)
+		if (path != null && path.length > 0) {
+			addTypeResolverSupportDependencies(add);
 			add(sanitizeTypePath(typeBaseName(path)));
+		}
+	}
+
+	static function addTypeResolverSupportDependencies(add:String->Void):Void {
+		add("Type");
+		add("Class");
+	}
+
+	static function addDirectCallArgClassReferenceDependencies(name:String, args:Array<HxExpr>, add:String->Void, ?scope:CppRenderScope):Void {
+		if (scope == null || args == null || args.length == 0)
+			return;
+		if (!argsContainClassReference(args, scope))
+			return;
+		if (dceReflectionHelperCallUsesClassResolver(name, args, scope))
+			addTypeResolverSupportDependencies(add);
+		final owner = currentOrInheritedOwnerMethodOwner(name, scope);
+		final supportParamTypes = knownDirectCallSupportParamCppTypes(owner, name, scope);
+		if (supportParamTypes.length > 0) {
+			addKnownParamClassReferenceDependencies(args, supportParamTypes, add, scope);
+			return;
+		}
+		final fn = owner == null ? null : ownerMethodDeclIn(owner, name);
+		if (fn != null)
+			addFunctionParamClassReferenceDependencies(HxFunctionDecl.getArgs(fn), args, null, add, scope);
+	}
+
+	static function addFieldCallArgClassReferenceDependencies(receiver:HxExpr, method:String, args:Array<HxExpr>, add:String->Void,
+			?scope:CppRenderScope):Void {
+		if (scope == null || args == null || args.length == 0)
+			return;
+		if (!argsContainClassReference(args, scope))
+			return;
+		final staticOwner = staticReceiverClassName(receiver, scope);
+		if (staticOwner != null) {
+			final supportParamTypes = knownStdlibMethodParamCppTypes(staticOwner, method, scope, lookupForScope(scope));
+			if (supportParamTypes.length > 0) {
+				addKnownParamClassReferenceDependencies(args, supportParamTypes, add, scope);
+				return;
+			}
+			final fn = classMethodDecl(staticOwner, method, true, scope);
+			if (fn != null) {
+				addFunctionParamClassReferenceDependencies(HxFunctionDecl.getArgs(fn), args, null, add, scope);
+				return;
+			}
+		}
+		final receiverType = exprCppType(receiver, scope);
+		final ownerType = instanceMethodReceiverClassName(receiverType, scope);
+		if (ownerType == null || ownerType.length == 0)
+			return;
+		final supportParamTypes = knownStdlibMethodParamCppTypes(ownerType, method, scope, lookupForScope(scope));
+		if (supportParamTypes.length > 0) {
+			addKnownParamClassReferenceDependencies(args, supportParamTypes, add, scope);
+			return;
+		}
+		final fn = classMethodDecl(ownerType, method, false, scope);
+		if (fn == null)
+			return;
+		final owner = scope.classByName.get(ownerType);
+		final paramTypes = owner == null ? null : instantiateGenericClassParamTypes(ownerType, receiverType,
+			inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses), scope);
+		addFunctionParamClassReferenceDependencies(HxFunctionDecl.getArgs(fn), args, paramTypes, add, scope);
+	}
+
+	static function argsContainClassReference(args:Array<HxExpr>, ?scope:CppRenderScope):Bool {
+		if (args == null)
+			return false;
+		for (arg in args)
+			if (classReferencePathText(arg, scope) != null)
+				return true;
+		return false;
+	}
+
+	static function addKnownParamClassReferenceDependencies(args:Array<HxExpr>, paramTypes:Array<String>, add:String->Void, ?scope:CppRenderScope):Void {
+		final count = args.length < paramTypes.length ? args.length : paramTypes.length;
+		for (i in 0...count) {
+			final valueType = cppOptionalInnerType(paramTypes[i]).length > 0 ? cppOptionalInnerType(paramTypes[i]) : paramTypes[i];
+			if (classReferenceArgExprForExpectedType(args[i], valueType, scope) != null)
+				addTypeResolverSupportDependencies(add);
+		}
+	}
+
+	static function addFunctionParamClassReferenceDependencies(params:Array<HxFunctionArg>, args:Array<HxExpr>, paramTypes:Null<Array<String>>,
+			add:String->Void, ?scope:CppRenderScope):Void {
+		if (params == null || args == null)
+			return;
+		final count = args.length < params.length ? args.length : params.length;
+		for (i in 0...count) {
+			final declaredType = cppFunctionArgType(params[i], scope);
+			final declaredValueType = cppOptionalInnerType(declaredType).length > 0 ? cppOptionalInnerType(declaredType) : declaredType;
+			if (classReferenceArgExprForExpectedType(args[i], declaredValueType, scope) != null) {
+				addTypeResolverSupportDependencies(add);
+				continue;
+			}
+			final paramType = paramTypes != null && i < paramTypes.length && paramTypes[i].length > 0 ? paramTypes[i] : declaredType;
+			final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
+			if (classReferenceArgExprForExpectedType(args[i], valueType, scope) != null)
+				addTypeResolverSupportDependencies(add);
+		}
 	}
 
 	static function addStaticReceiverClassDependency(receiver:HxExpr, add:String->Void):Void {
@@ -13532,16 +13695,22 @@ class CppTargetCore {
 	}
 
 	static function dceReflectionHelperCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (!dceReflectionHelperCallUsesClassResolver(name, args, scope))
+			return null;
 		final helper = sanitizeIdentifier(name);
-		if ((helper != "hf" && helper != "nhf" && helper != "hsf" && helper != "nhsf") || args == null || args.length < 2)
-			return null;
 		final classArg = classReferenceArgExprForExpectedType(args[0], "std::shared_ptr<Class>", scope);
-		if (classArg == null)
-			return null;
 		final rendered = [classArg, stringExpr(args[1], scope)];
 		for (i in 2...args.length)
 			rendered.push(renderExpr(args[i], scope));
 		return helper + "(" + rendered.join(", ") + ")";
+	}
+
+	static function dceReflectionHelperCallUsesClassResolver(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):Bool {
+		final helper = sanitizeIdentifier(name);
+		if ((helper != "hf" && helper != "nhf" && helper != "hsf" && helper != "nhsf") || args == null || args.length < 2)
+			return false;
+		final classArg = classReferenceArgExprForExpectedType(args[0], "std::shared_ptr<Class>", scope);
+		return classArg != null;
 	}
 
 	static function bytesFastGetExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {

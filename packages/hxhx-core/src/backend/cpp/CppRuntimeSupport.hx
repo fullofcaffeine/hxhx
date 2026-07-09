@@ -1343,6 +1343,21 @@ class CppRuntimeSupport {
 		];
 	}
 
+	/**
+		Emit the minimal root `Type` support needed when the backend injects
+		`Type::resolveClass(...)` for class-literal lowering but the Haxe std
+		`Type` module was not otherwise typed into the program.
+	**/
+	public static function missingTypeSupportLines():Array<String> {
+		return [
+			"struct Type {",
+			"  static std::shared_ptr<Class> resolveClass(std::string name) {",
+			"    return std::make_shared<Class>(name, std::vector<std::string>{});",
+			"  }",
+			"};"
+		];
+	}
+
 	public static function enumValueTypeLines():Array<String> {
 		return [
 			"struct EnumValue {",
