@@ -52,7 +52,16 @@ Compile it to OCaml (from the same directory as `Main.hx`):
 haxe -cp . -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=native --no-output
 ```
 
-If you are outside this monorepo, run `haxelib dev reflaxe.ocaml /path/to/hxhx` once before that command.
+Inside this monorepo, `haxe_libraries/reflaxe.ocaml.hxml` makes that command
+resolve this source checkout. Outside this monorepo, prefer the released haxelib
+package. Use `haxelib dev` only when you intentionally want an external project
+to test this unreleased checkout. Point that override at the repo root dev
+package so the source `_std` path is supplied:
+
+```bash
+cd /path/to/my-haxe-app
+haxelib dev reflaxe.ocaml /absolute/path/to/haxe.ocaml
+```
 
 Build/run manually with dune:
 
@@ -64,10 +73,15 @@ dune exec ./out.exe
 
 ## Using with mainstream upstream Haxe
 
-If you want upstream Haxe CLI + `reflaxe.ocaml` (outside `hxhx` workflows), point `haxelib` to this repo checkout:
+If you want upstream Haxe CLI + `reflaxe.ocaml` (outside `hxhx` workflows),
+there are two supported shapes:
 
 ```bash
-haxelib dev reflaxe.ocaml /path/to/hxhx
+# Released package path, once published.
+haxelib install reflaxe.ocaml
+
+# Local checkout override for unreleased testing only.
+haxelib dev reflaxe.ocaml /absolute/path/to/haxe.ocaml
 ```
 
 Then compile as usual:
@@ -88,7 +102,49 @@ Those files do not need to be renamed to `.cross.hx` before local builds. The pa
 
 Published haxelib packages are built with Reflaxe's own flattening step. `haxelib run reflaxe build` copies `std/ocaml/_std/*.hx` into the package classpath as `.cross.hx`, so the distributable package keeps Reflaxe's `.cross.hx` convention without forcing source development to maintain generated package files by hand.
 
+That source/package difference matters for `haxelib dev`: pointing an external
+project at the repo root uses this monorepo's dev `extraParams.hxml`, which adds
+the source `_std` classpath directly. Pointing at raw `packages/reflaxe.ocaml`
+does not perform Reflaxe's flattening step, so those `_std` overrides would not
+become `.cross.hx` first.
+
+That is why `haxelib dev` is a troubleshooting/testing tool here, not the main
+recommendation:
+
+- it mutates local haxelib resolution state outside this repo,
+- it can bypass the package build that creates `.cross.hx` files,
+- and it can hide bugs that only appear in the real flattened package.
+
+The better default is:
+
+- use `haxe_libraries/reflaxe.ocaml.hxml` for monorepo development,
+- use `bash scripts/release/build-haxelib-zip.sh` and test the generated zip for
+  package validation,
+- use the released haxelib package for normal external projects.
+
 This changed because `reflaxe.ocaml` originally grew in this monorepo without being bootstrapped from `reflaxe new`. The current layout is intentionally closer to a generated Reflaxe compiler while preserving the established `ocaml_output` define and runtime behavior. See [`docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`](../../docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md).
+
+## What `extraParams.hxml` does
+
+`extraParams.hxml` is loaded when Haxe resolves `-lib reflaxe.ocaml` through
+haxelib. It supplies the target setup users should not have to type manually:
+
+```hxml
+-D ocaml
+-D retain-untyped-meta
+--macro nullSafety("reflaxe.ocaml")
+--macro reflaxe.ocaml.CompilerInit.Start()
+```
+
+It does not flatten package files. In source checkout mode, `_std` visibility has
+to come from explicit dev wiring:
+
+- monorepo examples/tests use `haxe_libraries/reflaxe.ocaml.hxml`
+- repo-root `haxelib dev` uses the root dev `extraParams.hxml`
+
+In a built package, `_std` visibility comes from Reflaxe build output instead:
+`std/ocaml/_std/*.hx` files are copied into the package classpath as
+`.cross.hx`.
 
 ## Required define
 

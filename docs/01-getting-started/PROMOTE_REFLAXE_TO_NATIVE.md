@@ -45,9 +45,14 @@ npm run ci:guards
 
 This is the simplest path if you want native OCaml output without using `hxhx` plugin loading.
 
-Point `reflaxe.ocaml` at this repo checkout:
+Inside this monorepo, `-lib reflaxe.ocaml` is already resolved by
+`haxe_libraries/reflaxe.ocaml.hxml`. Outside this monorepo, prefer a released
+or locally built package; use `haxelib dev` only when testing this unreleased
+checkout from another project. Point at the repo root dev package so source
+`_std` overrides are visible:
 
 ```bash
+cd /path/to/my-haxe-app
 haxelib dev reflaxe.ocaml /absolute/path/to/haxe.ocaml
 ```
 

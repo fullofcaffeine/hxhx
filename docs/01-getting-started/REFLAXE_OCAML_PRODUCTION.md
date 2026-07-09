@@ -90,21 +90,7 @@ Expected product baseline:
 
 ## Installation modes
 
-### Mode A: local monorepo checkout via `haxelib dev`
-
-This is the canonical developer/operator path when using this repo checkout directly.
-
-```bash
-haxelib dev reflaxe.ocaml /absolute/path/to/haxe.ocaml
-```
-
-Use this mode when:
-
-- you want the freshest repo state,
-- you are validating fixes before release packaging,
-- or you are using the examples/docs in this monorepo.
-
-### Mode B: repo-internal `haxe_libraries` wiring
+### Mode A: repo-internal `haxe_libraries` wiring
 
 Inside this monorepo, tests/examples already resolve `reflaxe.ocaml` through:
 
@@ -114,7 +100,57 @@ Use this mode when:
 
 - you are running repo-local examples,
 - CI/workflows are already rooted in this checkout,
-- and you do not want to re-run `haxelib dev` for every local test loop.
+- or you want the freshest repo state without reinstalling a haxelib on each edit.
+
+This mode supplies the generated-Reflaxe-style source paths directly:
+
+- `packages/reflaxe.ocaml/src/`
+- `packages/reflaxe.ocaml/std/`
+- `packages/reflaxe.ocaml/std/ocaml/_std/`
+
+### Mode B: released or locally built package outside this repo
+
+Outside this monorepo, prefer the flattened package produced by the Reflaxe
+build/release path.
+
+Use this mode when:
+
+- you are using `reflaxe.ocaml` from another project,
+- you want package-shaped behavior rather than source-checkout behavior,
+- or you are validating release packaging.
+
+For unreleased checkout testing only, use a temporary local override:
+
+```bash
+cd /path/to/my-haxe-app
+haxelib dev reflaxe.ocaml /absolute/path/to/haxe.ocaml
+haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output
+```
+
+Do not treat that as the normal monorepo workflow. It is an external-project
+override for validating source changes before a package is built or published.
+Use the repo root for that override because its dev `extraParams.hxml` adds the
+source `_std` classpath. A flattened package build handles this differently by
+turning `_std/*.hx` overrides into package `.cross.hx` files.
+
+Why this mode is intentionally narrow:
+
+- `haxelib dev` is machine-local state and can make another project depend on an
+  unreleased checkout without making that dependency obvious in source control.
+- raw package source does not run Reflaxe's build flattening, so `_std` files do
+  not become `.cross.hx` files automatically.
+- the repo-root override is a dev convenience, not proof that the package zip is
+  correct.
+- release-facing validation should use `bash scripts/release/build-haxelib-zip.sh`
+  and test the generated package shape.
+
+Better defaults:
+
+- monorepo development: use the checked-in `haxe_libraries/reflaxe.ocaml.hxml`
+  wiring
+- external pre-release validation: build the haxelib zip and test that package
+  shape in an isolated haxelib repository
+- production/user installs: consume the released haxelib package
 
 ## Canonical commands
 
@@ -230,12 +266,16 @@ Hard rule:
 
 Cause:
 
-- `haxelib dev reflaxe.ocaml /path/to/haxe.ocaml` was not run,
+- you are outside this repo and have not installed or selected a `reflaxe.ocaml` package,
 - or the repo-local `haxe_libraries` wiring is not available in your current project.
 
 Fix:
 
 ```bash
+# Preferred for released/package-shaped use, once available.
+haxelib install reflaxe.ocaml
+
+# Temporary override for testing this unreleased checkout from another project.
 haxelib dev reflaxe.ocaml /absolute/path/to/haxe.ocaml
 ```
 
@@ -336,7 +376,7 @@ These are separate from `hxhx`-specific markers such as:
 Before calling the upstream-Haxe `reflaxe.ocaml` path production-ready for your use case:
 
 1. Verify `haxe --version` is `4.3.7`.
-2. Verify `haxelib dev reflaxe.ocaml ...` or repo-local library wiring is correct.
+2. Verify repo-local library wiring, a released package install, or an explicit checkout override is correct.
 3. Run the canonical native build command on your project.
 4. Confirm the output shape in `out/` looks normal.
 5. Compare your workload class to the declared validation matrix.

@@ -51,10 +51,25 @@ Start here next:
 
 Use this when you want upstream CLI behavior and OCaml output from `reflaxe.ocaml`.
 
+Inside this repo, `-lib reflaxe.ocaml` is already wired through
+`haxe_libraries/reflaxe.ocaml.hxml`; do not run `haxelib dev` for normal
+monorepo examples/tests.
+
 ```bash
-haxelib dev reflaxe.ocaml /path/to/hxhx
 haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output
 haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=native --no-output
+```
+
+Outside this repo, prefer a built/released `reflaxe.ocaml` package. Use
+`haxelib dev` only when you intentionally want an external project to test this
+unreleased checkout. Point it at the repo root dev package, not
+`packages/reflaxe.ocaml`, because the root dev package adds the source `_std`
+classpath:
+
+```bash
+cd /path/to/my-haxe-app
+haxelib dev reflaxe.ocaml /absolute/path/to/haxe.ocaml
+haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output
 ```
 
 Read:

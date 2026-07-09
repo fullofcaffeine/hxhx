@@ -156,6 +156,48 @@ In simpler terms:
 
 That does not mean the source repo was wrong. It means the package was flattened.
 
+## Where `extraParams.hxml` fits
+
+`extraParams.hxml` is the haxelib hook file for a library.
+
+When a project passes `-lib reflaxe.ocaml`, Haxe resolves the library and reads
+the library's extra parameters as if the user had written those arguments on the
+command line. For `reflaxe.ocaml`, the package-level file provides the common
+target setup:
+
+```hxml
+-D ocaml
+-D retain-untyped-meta
+--macro nullSafety("reflaxe.ocaml")
+--macro reflaxe.ocaml.CompilerInit.Start()
+```
+
+That file registers the compiler, but it is not a package builder. It does not
+copy files, flatten directories, or rename `_std/*.hx` files to `.cross.hx`.
+
+This matters because the source checkout and the package artifact have different
+ways to make target std overrides visible:
+
+| Shape | How std overrides become visible |
+| --- | --- |
+| Monorepo examples/tests | `haxe_libraries/reflaxe.ocaml.hxml` adds `packages/reflaxe.ocaml/std/ocaml/_std/` directly. |
+| Repo-root `haxelib dev` override | root `extraParams.hxml` adds `packages/reflaxe.ocaml/std/ocaml/_std/` directly for external checkout testing. |
+| Raw `packages/reflaxe.ocaml` source | `extraParams.hxml` registers the target, but raw `_std` files are not flattened by haxelib itself. |
+| Built/released package | Reflaxe build copies `_std/*.hx` into the package classpath as `.cross.hx`; the package `extraParams.hxml` only has to register the target. |
+
+So `extraParams.hxml` participates in every haxelib-style `-lib reflaxe.ocaml`
+resolution, not only `haxelib dev`. The risky part is assuming it also performs
+Reflaxe's package flattening. It does not.
+
+That is why `haxelib dev` is a narrow tool for testing an unreleased checkout:
+
+- pointing it at the repo root uses monorepo dev wiring and can hide package
+  build mistakes,
+- pointing it at raw `packages/reflaxe.ocaml` skips the `_std` to `.cross.hx`
+  conversion,
+- and release validation still needs to test the flattened zip produced by
+  `bash scripts/release/build-haxelib-zip.sh`.
+
 ## What the reference Reflaxe targets do
 
 The local reference checkout `../haxe.compilerdev.reference` shows both strategies.

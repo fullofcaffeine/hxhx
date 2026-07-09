@@ -42,15 +42,20 @@ sudo apt-get update
 sudo apt-get install -y ocaml dune ocaml-findlib
 ```
 
-## Option A: use local monorepo checkout (`haxelib dev`)
+## Option A: use repo-local wiring in this monorepo
 
-From your project (or globally), point `reflaxe.ocaml` to this repo:
+Inside this repo, `haxe_libraries/reflaxe.ocaml.hxml` already points to the
+source layout used during development:
 
-```bash
-haxelib dev reflaxe.ocaml /absolute/path/to/haxe.ocaml
-```
+- `packages/reflaxe.ocaml/src/`
+- `packages/reflaxe.ocaml/std/`
+- `packages/reflaxe.ocaml/std/ocaml/_std/`
+- `reflaxe.ocaml.CompilerInit.Start()`
 
-Then compile with:
+That means local examples/tests can use `-lib reflaxe.ocaml` directly. No
+`haxelib dev` step is needed for normal monorepo work.
+
+Compile with:
 
 ```bash
 haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output
@@ -62,21 +67,54 @@ Build emitted OCaml natively:
 haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=native --no-output
 ```
 
-## Option B: use repo-local `haxe_libraries` wiring in this monorepo
+## Option B: use a released or locally built package outside this repo
 
-Inside this repo, `haxe_libraries/reflaxe.ocaml.hxml` already points to:
-
-- `packages/reflaxe.ocaml/src/`
-- `packages/reflaxe.ocaml/std/`
-- `reflaxe.ocaml.CompilerInit.Start()`
-
-So local tests/examples can use:
+Outside this monorepo, prefer the released haxelib package when available:
 
 ```bash
--lib reflaxe.ocaml
+haxelib install reflaxe.ocaml
 ```
 
-without publishing/reinstalling on each change.
+For unreleased checkout testing only, point an external app at this repo root
+explicitly:
+
+```bash
+cd /path/to/my-haxe-app
+haxelib dev reflaxe.ocaml /absolute/path/to/haxe.ocaml
+haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output
+```
+
+That override is useful when `my-haxe-app` needs to validate a local
+`reflaxe.ocaml` fix before a package is built or published. Use the repo root,
+because its dev `extraParams.hxml` supplies `packages/reflaxe.ocaml/std` and
+`packages/reflaxe.ocaml/std/ocaml/_std` directly. Do not point `haxelib dev` at
+`packages/reflaxe.ocaml` unless you first build a flattened package; raw package
+source keeps overrides in `_std`, and haxelib itself will not convert them to
+`.cross.hx`.
+
+Published or locally built packages are different: the Reflaxe package build
+copies `std/ocaml/_std/*.hx` into the package classpath as `.cross.hx`, so the
+package no longer needs the source `_std` classpath.
+
+Why this is not the default recommendation:
+
+- `haxelib dev` changes your local/global haxelib resolution state, so examples
+  can start depending on an unchecked-out path by accident.
+- pointing it at raw `packages/reflaxe.ocaml` skips Reflaxe's flattening step, so
+  `_std` overrides are not converted to `.cross.hx`.
+- pointing it at the repo root uses monorepo-only dev wiring that can hide bugs
+  in the distributable package shape.
+- release validation should exercise the flattened package zip, not only a dev
+  checkout.
+
+Prefer these instead:
+
+- inside this repo: use `-lib reflaxe.ocaml` through
+  `haxe_libraries/reflaxe.ocaml.hxml`
+- for external pre-release validation: build `dist/reflaxe.ocaml-<version>.zip`
+  with `bash scripts/release/build-haxelib-zip.sh`, then install/test that zip
+  in a disposable haxelib repository or CI job
+- for normal users: install the released haxelib package
 
 ## Common required define
 
