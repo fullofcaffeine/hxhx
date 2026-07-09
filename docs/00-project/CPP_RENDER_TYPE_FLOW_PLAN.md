@@ -225,6 +225,30 @@ about 11.51s to about 10.62s. The strict 360s probe still timed out
 (`probe_exit=124`) and stopped around the `UInt` frontier, so this is not a
 strict gate pass or a production-readiness change.
 
+The next repeated hotspot was not another prep pass. Filtered timing showed
+direct `eq(tpl.get().execute(...), "...")`, anonymous-field
+`obj.tpl.get().execute(...)`, and array-element `arr[i].get().execute(...)`
+expressions spending about 0.13-0.15s in first-argument inference and about
+0.32-0.48s in first-argument rendering each time because the generic field-call
+path did not know the generated `TemplateWrap` value-wrapper surface.
+
+`TemplateWrap` is already a target-owned C++ value wrapper. The bounded seam is
+therefore to recognize value-wrapper `get()`, `execute(...)`, and `toString()`
+as generated support methods in Cpp type/render flow rather than adding a broad
+expression cache. Focused smoke coverage asserts that both direct
+`tpl.execute("ok")` and nested `tpl.get().execute("ok")` render as typed
+`std::string` calls without fallback stringification.
+
+Post-change direct current-source timing with the same
+`TestBasetypes.testAbstractCast` filter reduced the repeated `get().execute`
+`eq_infer_first` slices to about 0.002-0.029s and `eq_render_first` slices to
+about 0.002-0.080s. The filtered method dropped from about 10.62s to about
+6.19s, and `TestBasetypes` class render time dropped from about 42.54s to about
+39.16s. The direct 360s probe still timed out (`probe_exit=124`), now after
+rendering `TestBasetypes`, `UInt`, numeric suffix/separator helpers, and into
+`StringBuf`, so this remains internal burn-down evidence only. README and North
+Star progress bars stay unchanged.
+
 Slow diagnostic validation for hotspot claims:
 
 - strict Cpp timing probe with `HXHX_TRACE_STAGE3_CPP_TIMINGS=1` and a stable

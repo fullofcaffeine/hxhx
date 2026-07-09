@@ -13391,6 +13391,9 @@ class CppTargetCore {
 				renderedArgsCache = renderFieldCallArgs(receiverCppType, method, args, scope).join(", ");
 			return renderedArgsCache;
 		}
+		final templateWrapCall = templateWrapValueMethodCallExpr(receiverCppType, receiver, method, args, scope);
+		if (templateWrapCall != null)
+			return templateWrapCall;
 		final primitiveAbstractCall = isCppReferenceType(receiverCppType) ? null : primitiveBackedAbstractMethodCallExpr(receiver, method, args, scope);
 		if (primitiveAbstractCall != null)
 			return primitiveAbstractCall;
@@ -17580,6 +17583,12 @@ class CppTargetCore {
 			}
 		}
 		return switch (method) {
+			case "get" if (arity == 0 && isTemplateWrapValueCppType(receiverCppType(), scope)):
+				receiverCppType();
+			case "execute" if (arity <= 2 && isTemplateWrapValueCppType(receiverCppType(), scope)):
+				"std::string";
+			case "toString" if (arity == 0 && isTemplateWrapValueCppType(receiverCppType(), scope)):
+				"std::string";
 			case "add" if (arity == 1):
 				listElementCppType(receiverCppType()).length > 0 ? "void" : "";
 			case "insert" if (arity == 2):
@@ -21906,6 +21915,47 @@ class CppTargetCore {
 		final lookup = lookupForScope(scope, classLookup);
 		final cls = lookupClassForTypeHint(typeHint, scope, lookup);
 		return isTemplateWrapSupportClass(cls) ? renderedClassName(cls, lookup) : null;
+	}
+
+	static function isTemplateWrapValueCppType(typeName:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Bool {
+		return templateWrapValueClassForCppType(typeName, scope, classLookup) != null;
+	}
+
+	static function templateWrapValueClassForCppType(typeName:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
+		if (scope == null || typeName == null || typeName.length == 0 || isCppReferenceType(typeName))
+			return null;
+		final clean = sanitizeTypePath(typeBaseName(typeName));
+		if (clean.length == 0)
+			return null;
+		final lookup = lookupForScope(scope, classLookup);
+		final direct = classDeclForCppOrHintName(clean, scope, lookup);
+		if (isTemplateWrapSupportClass(direct))
+			return direct;
+		if (lookup != null && lookup.renderedNames != null)
+			for (entry in lookup.renderedNames)
+				if (sanitizeTypePath(entry.name) == clean && isTemplateWrapSupportClass(entry.cls))
+					return entry.cls;
+		return null;
+	}
+
+	static function templateWrapValueMethodCallExpr(receiverCppType:String, receiver:HxExpr, method:String, args:Array<HxExpr>,
+			?scope:CppRenderScope):Null<String> {
+		if (!isTemplateWrapValueCppType(receiverCppType, scope))
+			return null;
+		final cleanMethod = sanitizeIdentifier(method);
+		return switch (cleanMethod) {
+			case "get" if (args.length == 0):
+				renderExpr(receiver, scope) + ".get()";
+			case "execute" if (args.length <= 2):
+				renderExpr(receiver, scope)
+				+ ".execute("
+				+ renderSimpleCallArgs(args, scope).join(", ")
+				+ ")";
+			case "toString" if (args.length == 0):
+				renderExpr(receiver, scope) + ".toString()";
+			case _:
+				null;
+		};
 	}
 
 	static function lookupClassForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {

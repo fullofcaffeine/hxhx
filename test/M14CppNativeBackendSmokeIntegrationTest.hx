@@ -8042,6 +8042,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("use", Public, true, [], "String", [
 				SVar("tpl", "TemplateWrap", EString("Hi ::t::"), HxPos.unknown()),
 				SReturn(ECall(EField(EIdent("tpl"), "execute"), [EString("ok")]), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("useGet", Public, true, [], "String", [
+				SVar("tpl", "TemplateWrap", EString("Hi ::t::"), HxPos.unknown()),
+				SReturn(ECall(EField(ECall(EField(EIdent("tpl"), "get"), []), "execute"), [EString("ok")]), HxPos.unknown())
 			], "")
 		], []);
 		final templateWrapNames = new StringMap<Bool>();
@@ -8084,8 +8088,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(templateWrapOwner)[0], templateWrapOwner, templateWrapLookup).join("\n");
 		assertContains(templateWrapOwnerLines, "TemplateWrap tpl = \"Hi ::t::\";",
 			"C++ locals typed as TemplateWrap should use the value wrapper instead of std::shared_ptr<TemplateWrap>");
-		assertContains(templateWrapOwnerLines, "return __hxhx_stringify(tpl.execute(\"ok\"));",
-			"C++ TemplateWrap locals should call execute through value access");
+		assertContains(templateWrapOwnerLines, "return tpl.execute(\"ok\");", "C++ TemplateWrap locals should call execute as typed String values");
+		final templateWrapOwnerGetLines = @:privateAccess
+			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(templateWrapOwner)[1], templateWrapOwner, templateWrapLookup).join("\n");
+		assertContains(templateWrapOwnerGetLines, "return tpl.get().execute(\"ok\");",
+			"C++ TemplateWrap get().execute() should stay on the generated value-wrapper surface");
+		assertTrue(templateWrapOwnerGetLines.indexOf("__hxhx_stringify(tpl.get().execute") < 0,
+			"C++ TemplateWrap get().execute() should infer a String result without fallback stringification");
 		final renderedTemplateWrapNames = new StringMap<Bool>();
 		for (name in [
 			"Template",
