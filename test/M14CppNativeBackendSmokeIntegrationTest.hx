@@ -3879,6 +3879,37 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function serializerEnumRuntimeProgram():GenIrProgram {
+		final src = [
+			"import haxe.Serializer;",
+			"import haxe.Unserializer;",
+			"enum SerializedSeed {",
+			"  A;",
+			"  With(value:Int, label:String);",
+			"}",
+			"class Main {",
+			"  static function describe(value:Dynamic<Dynamic>):String {",
+			"    var params = Type.enumParameters(value);",
+			"    var args = params.length == 0 ? \"\" : Std.string(params[0]) + (params.length > 1 ? \",\" + Std.string(params[1]) : \"\");",
+			"    return Type.getEnumName(Type.getEnum(value)) + \":\" + Type.enumConstructor(value) + \":\" + args;",
+			"  }",
+			"  static function main() {",
+			"    var zero = SerializedSeed.A;",
+			"    var payload = SerializedSeed.With(9, \"nine\");",
+			"    var zeroText = Serializer.run(zero);",
+			"    var payloadText = Serializer.run(payload);",
+			"    Sys.println(zeroText);",
+			"    Sys.println(describe(Unserializer.run(zeroText)));",
+			"    Sys.println(payloadText);",
+			"    Sys.println(describe(Unserializer.run(payloadText)));",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function typeResolverCompatibilityProgram():GenIrProgram {
 		final src = [
 			"typedef TypeResolver = {};",
@@ -6124,9 +6155,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(typeEnumEqCallableAlias, "Type::enumEq(MyEnum::C(1, \"hello\"), c_2(1, \"hello\"))",
 			"C++ Type.enumEq should preserve callable enum-constructor aliases through the generic comparison path");
 		final myEnumLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(myEnum, {names: myEnumNames, byName: myEnumClasses}).join("\n");
+		assertContains(myEnumLines, "std::string __hxhx_enum_name = std::string(\"MyEnum\");",
+			"C++ enum carriers should expose the runtime enum type name for Type.getEnum and Serializer");
 		assertContains(myEnumLines, "std::string __hxhx_enum_tag = std::string();",
 			"C++ enum carriers should expose target-owned constructor metadata storage");
-		assertContains(myEnumLines, "MyEnum(std::string tag, int index = 0, std::vector<std::string> params = {}, std::vector<std::any> payloads = {})",
+		assertContains(myEnumLines,
+			"MyEnum(std::string tag, int index = 0, std::vector<std::string> params = {}, std::vector<std::any> payloads = {}, std::string enumName = std::string(\"MyEnum\"))",
 			"C++ enum carriers should expose a metadata constructor for generated enum values");
 		assertContains(myEnumLines,
 			"inline static std::shared_ptr<MyEnum> A = std::make_shared<MyEnum>(std::string(\"A\"), 0, std::vector<std::string>{}, std::vector<std::any>{});",
@@ -12592,8 +12626,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ macro Ref<ClassType> return types should preserve generic type arguments");
 		assertContains(macroRefSource, "static std::vector<std::shared_ptr<Ref<std::shared_ptr<ClassType>>>> getLocalUsing()",
 			"C++ Array<Ref<ClassType>> return types should preserve nested generic type arguments");
-		assertContains(macroRefSource, "static std::string TClassDecl(std::shared_ptr<Ref<std::shared_ptr<ClassType>>> c)",
-			"C++ enum constructor payloads should preserve generic Ref<T> type arguments");
+		assertContains(macroRefSource, "static std::shared_ptr<ModuleType> TClassDecl(std::shared_ptr<Ref<std::shared_ptr<ClassType>>> c)",
+			"C++ enum constructor payload carriers should preserve generic Ref<T> type arguments");
+		assertContains(macroRefSource, "std::vector<std::any>{std::any(c)}",
+			"C++ enum constructor payload carriers should preserve original Ref<T> payload values");
+		assertTrue(macroRefSource.indexOf("static std::string TClassDecl") < 0,
+			"C++ enum constructor payload carriers should not collapse to tag-string helpers");
 		assertContains(macroRefSource, "std::shared_ptr<Ref<std::shared_ptr<ClassType>>> final_type = nullptr;",
 			"C++ intersection typedef fields should preserve generic Ref<T> type arguments");
 		assertContains(macroRefSource, "std::shared_ptr<Ref<std::vector<std::shared_ptr<ClassType>>>> fields = nullptr;",
@@ -12850,9 +12888,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			.emit(enumConstructorCarrierCollisionProgram(), context(enumCtorCarrierDir, true, true));
 		final enumCtorCarrierSource = File.getContent(enumCtorCarrierEmit.entryPath);
 		assertContains(enumCtorCarrierSource,
-			"static std::string TFor(std::shared_ptr<::TVar> v, std::shared_ptr<TypedExpr> e1, std::shared_ptr<TypedExpr> e2)",
-			"C++ enum constructor payload types should qualify carrier names that collide with owner constructor members");
-		assertTrue(enumCtorCarrierSource.indexOf("static std::string TFor(std::shared_ptr<TVar> v") < 0,
+			"static std::shared_ptr<TypedExprDef> TFor(std::shared_ptr<::TVar> v, std::shared_ptr<TypedExpr> e1, std::shared_ptr<TypedExpr> e2)",
+			"C++ enum constructor payload carrier types should qualify carrier names that collide with owner constructor members");
+		assertTrue(enumCtorCarrierSource.indexOf("static std::shared_ptr<TypedExprDef> TFor(std::shared_ptr<TVar> v") < 0,
 			"C++ enum constructor payload types should not resolve TVar through TypedExprDef::TVar");
 
 		final gadtEnumDir = Path.join([root, "gadt-enum-carrier-source-only"]);
@@ -13343,6 +13381,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(typeCreateEnumRun.code == 0, "C++ Type.createEnum runtime smoke failed: " + typeCreateEnumRun.stderr);
 			assertTrue(typeCreateEnumRun.stdout == "A\nC(55,hello)\nA\ntrue\nC(66,dyn)\ntrue\nA\n1\nA\nA,C\nMyEnum\n",
 				"unexpected C++ Type.createEnum stdout: " + typeCreateEnumRun.stdout);
+
+			final serializerEnumBuildDir = Path.join([root, "serializer-enum-runtime-build"]);
+			final serializerEnumBuilt = BackendRegistry.createForTarget("cpp-native")
+				.emit(serializerEnumRuntimeProgram(), context(serializerEnumBuildDir, true, false));
+			assertTrue(serializerEnumBuilt.builtExecutable, "C++ Serializer enum runtime smoke should build executable");
+			final serializerEnumRun = commandOutput(serializerEnumBuilt.entryPath, []);
+			assertTrue(serializerEnumRun.code == 0, "C++ Serializer enum runtime smoke failed: " + serializerEnumRun.stderr);
+			assertTrue(serializerEnumRun.stdout == "wy14:SerializedSeedy1:A:0\nSerializedSeed:A:\nwy14:SerializedSeedy4:With:2i9y4:nine\nSerializedSeed:With:9,nine\n",
+				"unexpected C++ Serializer enum stdout: "
+				+ serializerEnumRun.stdout);
 
 			final typeResolverBuildDir = Path.join([root, "type-resolver-build"]);
 			final typeResolverBuilt = BackendRegistry.createForTarget("cpp-native")

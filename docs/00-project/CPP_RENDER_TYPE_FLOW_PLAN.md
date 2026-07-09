@@ -475,11 +475,23 @@ not emit the full std `Std.isOfType` body. README and North Star progress bars
 stay unchanged: this moves a Cpp bring-up blocker but strict Cpp and public
 production readiness remain red.
 
-This is not full enum parity. Raw generated constructor helpers may still keep
-their current tag-shaped callable form in non-carrier contexts, broad erased
-switch payload extraction still needs behavior-owned seams, and
-Serializer/Unserializer enum support remains blocked on the enum carrier plus
-Reflect/Dynamic prerequisites.
+The `haxe_ocaml-73r4j` slice then used those carrier prerequisites for a
+focused Serializer/Unserializer enum round trip. Generated payload constructor
+methods on enum carrier classes now return carrier values instead of bare
+constructor-tag strings, so the original payload vector survives a direct
+constructor call such as `SerializedSeed.With(9, "nine")`. A target-owned
+`Serializer` / `Unserializer` support block is injected only when code actually
+uses those static support receivers and no rendered helper definition exists.
+The generated C++ runtime smoke now builds and runs constructor-name `w` token
+round trips for a zero-arg enum and an `Int`/`String` payload enum.
+
+This is not full enum or Serializer parity. Broad erased switch payload
+extraction, enum index serialization, references/caches, custom enum resolvers,
+object/class payloads, arrays/maps, bytes, floats, custom serialization hooks,
+and full `haxe.Serializer` / `haxe.Unserializer` body rendering remain outside
+this slice and still require the behavior matrix plus focused oracle evidence.
+README and North Star progress bars stay unchanged because strict Cpp and
+public production readiness remain red.
 
 Slow diagnostic validation for hotspot claims:
 

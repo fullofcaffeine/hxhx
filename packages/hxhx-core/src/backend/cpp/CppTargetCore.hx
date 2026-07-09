@@ -1003,7 +1003,7 @@ class CppTargetCore {
 		out.push("struct __hxhx_has_enum_metadata : std::false_type {};");
 		out.push("");
 		out.push("template<typename T>");
-		out.push("struct __hxhx_has_enum_metadata<T, std::void_t<decltype(std::declval<T>().__hxhx_enum_tag), decltype(std::declval<T>().__hxhx_enum_index), decltype(std::declval<T>().__hxhx_enum_params), decltype(std::declval<T>().__hxhx_enum_payloads)>> : std::true_type {};");
+		out.push("struct __hxhx_has_enum_metadata<T, std::void_t<decltype(std::declval<T>().__hxhx_enum_name), decltype(std::declval<T>().__hxhx_enum_tag), decltype(std::declval<T>().__hxhx_enum_index), decltype(std::declval<T>().__hxhx_enum_params), decltype(std::declval<T>().__hxhx_enum_payloads)>> : std::true_type {};");
 		out.push("");
 		out.push("static std::string __hxhx_enum_value_to_string(const std::string& tag, const std::vector<std::string>& params) {");
 		out.push("  if (params.empty()) return tag;");
@@ -1037,6 +1037,7 @@ class CppTargetCore {
 		out.push("");
 		out.push("static bool __hxhx_enum_value_eq(const std::shared_ptr<EnumValue>& left, const std::shared_ptr<EnumValue>& right) {");
 		out.push("  if (left == nullptr || right == nullptr) return left == right;");
+		out.push("  if (!left->getEnumName().empty() && !right->getEnumName().empty() && left->getEnumName() != right->getEnumName()) return false;");
 		out.push("  auto leftPayloads = left->getPayloads();");
 		out.push("  auto rightPayloads = right->getPayloads();");
 		out.push("  if (leftPayloads.empty() && !left->getParameters().empty()) for (const auto& param : left->getParameters()) leftPayloads.push_back(std::any(param));");
@@ -1048,7 +1049,7 @@ class CppTargetCore {
 		out.push("static std::shared_ptr<EnumValue> __hxhx_enum_to_erased(const std::shared_ptr<T>& value) {");
 		out.push("  if (value == nullptr) return nullptr;");
 		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) {");
-		out.push("    return std::make_shared<EnumValue>(value->__hxhx_enum_tag, value->__hxhx_enum_index, value->__hxhx_enum_params, value->__hxhx_enum_payloads);");
+		out.push("    return std::make_shared<EnumValue>(value->__hxhx_enum_tag, value->__hxhx_enum_index, value->__hxhx_enum_params, value->__hxhx_enum_payloads, value->__hxhx_enum_name);");
 		out.push("  } else {");
 		out.push("    return nullptr;");
 		out.push("  }");
@@ -1556,6 +1557,14 @@ class CppTargetCore {
 		final helperClasses = renderHelperClasses(program, main.cls, classLookup, reachableHelperClasses);
 		traceCppPhase("render_after_helper_classes count=" + helperClasses.length);
 		for (decl in helperClasses) {
+			for (line in decl)
+				out.push(line);
+			out.push("");
+		}
+		traceCppPhase("render_before_missing_serializer_support_classes");
+		final missingSerializerSupportClasses = renderMissingSerializerSupportClasses(main.cls, classLookup, reachableHelperClasses);
+		traceCppPhase("render_after_missing_serializer_support_classes count=" + missingSerializerSupportClasses.length);
+		for (decl in missingSerializerSupportClasses) {
 			for (line in decl)
 				out.push(line);
 			out.push("");
@@ -2691,6 +2700,23 @@ class CppTargetCore {
 		out.push("  static std::string getEnumName(std::shared_ptr<Enum> e) {");
 		out.push("    return e == nullptr ? std::string() : e->name;");
 		out.push("  }");
+		out.push("  template<typename TValue>");
+		out.push("  static std::shared_ptr<Enum> getEnum(const TValue& value) {");
+		out.push("    using __hxhx_value_type = std::decay_t<TValue>;");
+		out.push("    if constexpr (std::is_same_v<__hxhx_value_type, std::any>) {");
+		out.push("      auto __hxhx_enum_value = __hxhx_enum_value_ptr(value);");
+		out.push("      return __hxhx_enum_value == nullptr ? nullptr : Type::resolveEnum(__hxhx_enum_value->getEnumName());");
+		out.push("    } else if constexpr (std::is_same_v<__hxhx_value_type, std::shared_ptr<EnumValue>>) {");
+		out.push("      return value == nullptr ? nullptr : Type::resolveEnum(value->getEnumName());");
+		out.push("    } else if constexpr (__hxhx_is_shared_ptr<__hxhx_value_type>::value) {");
+		out.push("      if (value == nullptr) return nullptr;");
+		out.push("      using __hxhx_enum_type = typename __hxhx_value_type::element_type;");
+		out.push("      if constexpr (__hxhx_has_enum_metadata<__hxhx_enum_type>::value) return Type::resolveEnum(value->__hxhx_enum_name);");
+		out.push("      return nullptr;");
+		out.push("    } else {");
+		out.push("      return nullptr;");
+		out.push("    }");
+		out.push("  }");
 		out.push("  static std::vector<std::string> getEnumConstructs(std::shared_ptr<Enum> e) {");
 		out.push("    return e == nullptr ? std::vector<std::string>{} : e->constructorNames();");
 		out.push("  }");
@@ -2702,6 +2728,86 @@ class CppTargetCore {
 			out.push(line);
 		out.push("};");
 		return out;
+	}
+
+	static function renderMissingSerializerSupportClasses(mainClass:HxClassDecl, classLookup:CppClassLookup,
+			reachableHelpers:Array<HxClassDecl>):Array<Array<String>> {
+		if (mainClass == null || classLookup == null)
+			return [];
+		final classes = [mainClass].concat(reachableHelpers == null ? [] : reachableHelpers);
+		function hasReachableHelperDefinition(name:String):Bool {
+			if (reachableHelpers == null)
+				return false;
+			final wanted = sanitizeTypePath(typeBaseName(name));
+			for (cls in reachableHelpers) {
+				if ((sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == wanted
+					|| sanitizeTypePath(typeBaseName(renderedClassName(cls, classLookup))) == wanted)
+					&& helperClassWouldRenderDefinition(cls, classLookup))
+					return true;
+			}
+			return false;
+		}
+		final needsSerializer = classesReferenceStaticSupportName(classes, "Serializer", classLookup)
+			&& !hasReachableHelperDefinition("Serializer");
+		final needsUnserializer = classesReferenceStaticSupportName(classes, "Unserializer", classLookup)
+			&& !hasReachableHelperDefinition("Unserializer");
+		return needsSerializer || needsUnserializer ? [CppRuntimeSupport.serializerEnumSupportLines("Serializer", "Unserializer")] : [];
+	}
+
+	static function helperClassWouldRenderDefinition(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (cls == null)
+			return false;
+		if (isCppCoreExternClass(HxClassDecl.getName(cls)) || isBytesDataTypeName(HxClassDecl.getName(cls)))
+			return false;
+		if (isNativeStackTraceSupportClass(cls))
+			return false;
+		final className = renderedClassName(cls, classLookup);
+		if (!classContributesRuntimeCpp(packagePathForRenderedClass(cls, classLookup), cls))
+			return false;
+		if (HxClassDecl.getFields(cls).length == 0
+			&& HxClassDecl.getFunctions(cls).length == 0
+			&& renderMissingInterfaceDeclaration(className) != null)
+			return false;
+		return true;
+	}
+
+	static function classesReferenceStaticSupportName(classes:Array<HxClassDecl>, name:String, classLookup:CppClassLookup):Bool {
+		final wanted = sanitizeTypePath(typeBaseName(name == null ? "" : name));
+		for (cls in classes) {
+			if (classReferencesStaticSupportName(cls, wanted, classLookup))
+				return true;
+		}
+		return false;
+	}
+
+	static function classReferencesStaticSupportName(cls:HxClassDecl, wanted:String, classLookup:CppClassLookup):Bool {
+		if (cls == null || wanted.length == 0)
+			return false;
+		var found = false;
+		function add(name:String):Void {
+			if (sanitizeTypePath(typeBaseName(name == null ? "" : name)) == wanted)
+				found = true;
+		}
+		final scope = renderScope(cls, classLookup, "auto");
+		for (field in HxClassDecl.getFields(cls)) {
+			addTypeHintDependencies(HxFieldDecl.getTypeHint(field), add, scope);
+			final init = HxFieldDecl.getInit(field);
+			if (init != null)
+				addExprClassDependencies(init, add, scope);
+			if (found)
+				return true;
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final fnScope = renderScope(cls, classLookup, "auto");
+			applyFunctionTypeParams(fnScope, fn);
+			addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), add, fnScope);
+			for (arg in HxFunctionDecl.getArgs(fn))
+				addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), add, fnScope);
+			addStmtClassDependencies(HxFunctionDecl.getBody(fn), add, fnScope);
+			if (found)
+				return true;
+		}
+		return false;
 	}
 
 	static function classesNeedTypeResolverSupport(classes:Array<HxClassDecl>, classLookup:CppClassLookup):Bool {
@@ -3482,7 +3588,7 @@ class CppTargetCore {
 			out.push(line);
 		for (line in valueTypeCarrierStorageLines(cls, className))
 			out.push(line);
-		for (line in enumCarrierStorageLines(cls, className))
+		for (line in enumCarrierStorageLines(cls, className, classLookup))
 			out.push(line);
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == "new")
@@ -3746,19 +3852,25 @@ class CppTargetCore {
 
 		The scanner already records enum constructor name/index/payloads in static
 		metadata. These fields are the C++ value representation used when a typed
-		enum value is expected, while raw constructor methods can keep their current
-		callable tag-returning shape until the broader factory/switch seams land.
+		enum value is expected, including static payload constructor methods that
+		need to preserve original Dynamic payload values for reflection and
+		Serializer/Unserializer round trips.
 	**/
-	static function enumCarrierStorageLines(cls:HxClassDecl, className:String):Array<String> {
+	static function enumCarrierStorageLines(cls:HxClassDecl, className:String, classLookup:CppClassLookup):Array<String> {
 		if (!classDeclIsEnumCarrier(cls))
 			return [];
-		return [
+		final enumName = enumRuntimeNameAliases(cls, classLookup)[0];
+		return ["  std::string __hxhx_enum_name = std::string(" + quoteString(enumName) + ");",
 			"  std::string __hxhx_enum_tag = std::string();",
 			"  int __hxhx_enum_index = 0;",
 			"  std::vector<std::string> __hxhx_enum_params = {};",
 			"  std::vector<std::any> __hxhx_enum_payloads = {};",
-			"  " + className +
-			"(std::string tag, int index = 0, std::vector<std::string> params = {}, std::vector<std::any> payloads = {}) : __hxhx_enum_tag(tag), __hxhx_enum_index(index), __hxhx_enum_params(params), __hxhx_enum_payloads(payloads) {}",
+			"  "
+			+ className
+			+ "(std::string tag, int index = 0, std::vector<std::string> params = {}, std::vector<std::any> payloads = {}, std::string enumName = std::string("
+			+ quoteString(enumName)
+			+ ")) : __hxhx_enum_name(enumName), __hxhx_enum_tag(tag), __hxhx_enum_index(index), __hxhx_enum_params(params), __hxhx_enum_payloads(payloads) {}",
+			"  std::string getEnumName() const { return __hxhx_enum_name; }",
 			"  std::string getName() const { return __hxhx_enum_tag; }",
 			"  int getIndex() const { return __hxhx_enum_index; }",
 			"  std::vector<std::string> getParameters() const { return __hxhx_enum_params; }",
@@ -6490,6 +6602,8 @@ class CppTargetCore {
 			return returnTraced("special_unserializer_object", renderUnserializerObjectHelper(fn, owner, classLookup));
 		if (isUnserializerEnumHelper(fn, owner))
 			return returnTraced("special_unserializer_enum", renderUnserializerEnumHelper(fn, owner, classLookup));
+		if (isEnumCarrierConstructorMethod(fn, owner))
+			return returnTraced("special_enum_carrier_ctor", renderEnumCarrierConstructorMethod(fn, owner, classLookup));
 		if (isMd5SupportHelper(fn, owner))
 			return returnTraced("special_md5", renderMd5SupportHelper(fn, owner, classLookup));
 		if (isSha1SupportHelper(fn, owner))
@@ -7096,6 +7210,35 @@ class CppTargetCore {
 			&& !HxFunctionDecl.getIsStatic(fn)
 			&& sanitizeIdentifier(HxFunctionDecl.getName(fn)) == "unserializeEnum"
 			&& HxFunctionDecl.getArgs(fn).length == 2;
+	}
+
+	static function isEnumCarrierConstructorMethod(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
+		return owner != null && classDeclIsEnumCarrier(owner) && HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) != "new"
+			&& HxFunctionDecl.getArgs(fn).length > 0;
+	}
+
+	/**
+		Render payload enum constructors as carrier factories.
+
+		The parser's temporary enum-constructor body can be a plain tag string, but
+		C++ reflection and serialization need the same payload-preserving carrier
+		used by Type.createEnum and imported constructor coercion.
+	**/
+	static function renderEnumCarrierConstructorMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final className = renderedClassName(owner, classLookup);
+		final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		final returnType = "std::shared_ptr<" + className + ">";
+		final scope = renderScope(owner, classLookup, returnType);
+		prepareFunctionSignatureScope(scope, fn);
+		final args = HxFunctionDecl.getArgs(fn);
+		final argExprs = [for (arg in args) HxExpr.EIdent(sanitizeIdentifier(HxFunctionArg.getName(arg)))];
+		final index = enumConstructorIndex(className, method, scope);
+		final value = enumCtorValueForCarrierType(method, argExprs, className, scope, index);
+		return [
+			"  static " + returnType + " " + method + "(" + renderFunctionArgs(args, scope) + ") {",
+			"    return " + value + ";",
+			"  }"
+		];
 	}
 
 	/**
@@ -12552,6 +12695,8 @@ class CppTargetCore {
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(receiver, "resolveClass"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"Type::resolveClass(" + stringExpr(args[0], scope) + ")";
+			case ECall(EField(receiver, "getEnum"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
+				"Type::getEnum(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(receiver, "resolveEnum"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"Type::resolveEnum(" + stringExpr(args[0], scope) + ")";
 			case ECall(EField(receiver, "getEnumConstructs"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
@@ -16965,7 +17110,7 @@ class CppTargetCore {
 
 	static function isKnownCppStaticSupportReceiver(className:String):Bool {
 		return switch (sanitizeTypePath(typeBaseName(className == null ? "" : className))) {
-			case "Bytes" | "Md5":
+			case "Bytes" | "Md5" | "Serializer" | "Unserializer":
 				true;
 			case _:
 				false;
@@ -23822,7 +23967,22 @@ class CppTargetCore {
 				out.push("    }");
 				out.push("    return std::make_shared<Class>(__hxhx_type_name(" + argName + "), std::vector<std::string>{});");
 			case "getEnum":
-				out.push("    return nullptr;");
+				out.push("    using __hxhx_value_type = std::decay_t<TValue>;");
+				out.push("    if constexpr (std::is_same_v<__hxhx_value_type, std::any>) {");
+				out.push("      auto __hxhx_enum_value = __hxhx_enum_value_ptr(" + argName + ");");
+				out.push("      return __hxhx_enum_value == nullptr ? nullptr : Type::resolveEnum(__hxhx_enum_value->getEnumName());");
+				out.push("    } else if constexpr (std::is_same_v<__hxhx_value_type, std::shared_ptr<EnumValue>>) {");
+				out.push("      return " + argName + " == nullptr ? nullptr : Type::resolveEnum(" + argName + "->getEnumName());");
+				out.push("    } else if constexpr (__hxhx_is_shared_ptr<__hxhx_value_type>::value) {");
+				out.push("      if (" + argName + " == nullptr) return nullptr;");
+				out.push("      using __hxhx_enum_type = typename __hxhx_value_type::element_type;");
+				out.push("      if constexpr (__hxhx_has_enum_metadata<__hxhx_enum_type>::value) return Type::resolveEnum("
+					+ argName
+					+ "->__hxhx_enum_name);");
+				out.push("      return nullptr;");
+				out.push("    } else {");
+				out.push("      return nullptr;");
+				out.push("    }");
 			case _:
 				for (line in renderFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
 					out.push(line);
@@ -23879,7 +24039,7 @@ class CppTargetCore {
 				out.push("    if constexpr (std::is_same_v<T, std::string>) {");
 				out.push("      return __hxhx_enum_value_to_string(constr, __hxhx_params);");
 				out.push("    } else if constexpr (std::is_same_v<T, std::shared_ptr<EnumValue>>) {");
-				out.push("      return std::make_shared<EnumValue>(constr, __hxhx_index, __hxhx_params, params);");
+				out.push("      return std::make_shared<EnumValue>(constr, __hxhx_index, __hxhx_params, params, e->name);");
 				out.push("    } else if constexpr (__hxhx_is_shared_ptr<T>::value) {");
 				out.push("      using __hxhx_carrier = typename T::element_type;");
 				out.push("      return std::make_shared<__hxhx_carrier>(constr, __hxhx_index, __hxhx_params, params);");
@@ -23895,7 +24055,7 @@ class CppTargetCore {
 				out.push("    if constexpr (std::is_same_v<T, std::string>) {");
 				out.push("      return __hxhx_name;");
 				out.push("    } else if constexpr (std::is_same_v<T, std::shared_ptr<EnumValue>>) {");
-				out.push("      return std::make_shared<EnumValue>(__hxhx_name, __hxhx_index, std::vector<std::string>{}, std::vector<std::any>{});");
+				out.push("      return std::make_shared<EnumValue>(__hxhx_name, __hxhx_index, std::vector<std::string>{}, std::vector<std::any>{}, e->name);");
 				out.push("    } else if constexpr (__hxhx_is_shared_ptr<T>::value) {");
 				out.push("      using __hxhx_carrier = typename T::element_type;");
 				out.push("      return std::make_shared<__hxhx_carrier>(__hxhx_name, __hxhx_index, std::vector<std::string>{}, std::vector<std::any>{});");
