@@ -21,4 +21,5 @@ typedef CppClassLookup = {
 	@:optional var packagePathByClass:haxe.ds.ObjectMap<HxClassDecl, String>;
 	@:optional var sourcePathByClass:haxe.ds.ObjectMap<HxClassDecl, String>;
 	@:optional var packageByRenderedName:haxe.ds.StringMap<String>;
+	@:optional var helperRenderKindByClass:haxe.ds.ObjectMap<HxClassDecl, String>;
 }

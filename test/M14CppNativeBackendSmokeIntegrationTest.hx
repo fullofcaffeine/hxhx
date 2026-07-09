@@ -1875,6 +1875,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ skipped HelperMacros shims should still declare concrete anonymous return carriers");
 	}
 
+	static function assertCppAnonCollectSkipsTargetRuntimeModuleBodies():Void {
+		final assertSupport = new HxClassDecl("Assert", false, [
+			new HxFunctionDecl("bodyCarrier", Public, true, [new HxFunctionArg("arg", "{argHint:String}", NoDefault, false, false)], "{returnHint:String}", [
+				SVar("local", "{localHint:String}", EAnon(["localHint"], [EString("body")]), HxPos.unknown()),
+				SReturn(EAnon(["bodyOnly"], [EString("runtime")]), HxPos.unknown())
+			], "")
+		], [
+			new HxFieldDecl("fieldCarrier", Public, true, "{fieldHint:String}", EAnon(["fieldOnly"], [EString("runtime")]))
+		]);
+		final decl = new HxModuleDecl("utest", [], assertSupport, [assertSupport], false, false);
+		final program = new GenIrProgram([typedSyntheticModule("utest/Assert.hx", decl)], false);
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
+		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup, [assertSupport]);
+		final names = [for (struct in structs) struct.name].join("\n");
+		assertContains(names, "fieldHint", "C++ anonymous collection should preserve runtime-module field signatures");
+		assertContains(names, "argHint", "C++ anonymous collection should preserve runtime-module argument signatures");
+		assertContains(names, "returnHint", "C++ anonymous collection should preserve runtime-module return signatures");
+		assertTrue(names.indexOf("fieldOnly") < 0, "C++ anonymous collection should not scan target runtime-module field initializers");
+		assertTrue(names.indexOf("localHint") < 0, "C++ anonymous collection should not scan target runtime-module local body hints");
+		assertTrue(names.indexOf("bodyOnly") < 0, "C++ anonymous collection should not scan target runtime-module anonymous body literals");
+	}
+
 	static function assertCppHelperRenderClassification():Void {
 		final program = cppHelperReachabilityProgram();
 		var mainClass:HxClassDecl = null;
@@ -4140,6 +4162,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppAnonCollectUsesLightweightFunctionScope();
 		assertCppAnonCollectSkipsCompileTimeMacroBodies();
 		assertCppAnonCollectDeclaresSkippedShimReturnStructs();
+		assertCppAnonCollectSkipsTargetRuntimeModuleBodies();
 		assertCppHelperRenderClassification();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertCppFunctionScopePrepCachesArgRegistration();

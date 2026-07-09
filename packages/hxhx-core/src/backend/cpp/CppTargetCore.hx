@@ -1599,6 +1599,20 @@ class CppTargetCore {
 			final hint = StringTools.trim(typeHint == null ? "" : typeHint);
 			return hint.indexOf("{") >= 0;
 		}
+		final structuralCtorContributionCache = new haxe.ds.StringMap<Bool>();
+		function structuralCtorMayContributeAnonStruct(typePath:String, ?scope:CppRenderScope):Bool {
+			final hint = removeTypeHintWhitespace(StringTools.trim(typePath == null ? "" : typePath));
+			if (hint.length == 0)
+				return false;
+			final owner = scope == null || scope.owner == null ? "" : renderedClassName(scope.owner, classLookup);
+			final key = owner + "|" + hint;
+			final cached = structuralCtorContributionCache.get(key);
+			if (cached != null)
+				return cached;
+			final contributes = structuralTypedefAnonStructTypeNameForTypeHint(hint, scope) != null;
+			structuralCtorContributionCache.set(key, contributes);
+			return contributes;
+		}
 		var exprMayContributeAnonStruct:HxExpr->Null<CppRenderScope>->Bool = null;
 		var exprsMayContributeAnonStruct:Array<HxExpr>->Null<CppRenderScope>->Bool = null;
 		var stmtMayContributeAnonStruct:HxStmt->Null<CppRenderScope>->Bool = null;
@@ -1611,8 +1625,8 @@ class CppTargetCore {
 					true;
 				case ECall(callee, args) if (helperMacrosGetMetaPayload(callee, args) != null):
 					true;
-				case ENew(typePath, args): structuralTypedefAnonStructTypeNameForTypeHint(typePath,
-						scope) != null || typeHintMayContributeAnonStruct(typePath) || exprsMayContributeAnonStruct(args, scope);
+				case ENew(typePath, args): structuralCtorMayContributeAnonStruct(typePath,
+						scope) || typeHintMayContributeAnonStruct(typePath) || exprsMayContributeAnonStruct(args, scope);
 				case EField(receiver, _):
 					exprMayContributeAnonStruct(receiver, scope);
 				case ECall(callee, args): exprMayContributeAnonStruct(callee, scope) || exprsMayContributeAnonStruct(args, scope);
@@ -1780,12 +1794,15 @@ class CppTargetCore {
 		var collectedFunctionCount = 0;
 		var walkedFunctionBodyCount = 0;
 		var skippedFunctionBodyCount = 0;
+		var omittedFunctionBodyCount = 0;
+		var skippedFieldInitCount = 0;
 		function collectClass(cls:HxClassDecl, packagePath:String):Void {
 			final className = renderedClassName(cls, classLookup);
 			if (collectedClasses.exists(className))
 				return;
 			collectedClasses.set(className, true);
 			collectedClassCount++;
+			final includeParsedBodies = helperClassRenderKind(cls, classLookup) == FullBody;
 			if (collectedClassCount % 25 == 0)
 				traceCppPhase("anon_collect_progress classes=" + collectedClassCount + " functions=" + collectedFunctionCount + " class=" + className
 					+ " structs=" + out.length);
@@ -1796,8 +1813,10 @@ class CppTargetCore {
 				traceCppDeepPhase("anon_collect_field_begin class=" + className + " name=" + fieldName);
 				addTypeHint(HxFieldDecl.getTypeHint(field), fieldScope);
 				final init = HxFieldDecl.getInit(field);
-				if (init != null)
+				if (includeParsedBodies && init != null)
 					addExpr(init, fieldScope);
+				else if (init != null)
+					skippedFieldInitCount++;
 				traceCppDeepPhase("anon_collect_field_end class=" + className + " name=" + fieldName);
 			}
 			for (fn in HxClassDecl.getFunctions(cls)) {
@@ -1816,7 +1835,7 @@ class CppTargetCore {
 					addStruct(scope.anonStructs.get(knownReturn));
 				for (arg in HxFunctionDecl.getArgs(fn))
 					addTypeHint(HxFunctionArg.getTypeHint(arg), scope);
-				final shouldWalkBody = functionBodyContributesRuntimeCpp(packagePath, cls, fn);
+				final shouldWalkBody = includeParsedBodies && functionBodyContributesRuntimeCpp(packagePath, cls, fn);
 				if (!shouldWalkBody)
 					addSkippedShimReturnStruct(fn, cls, scope);
 				if (shouldWalkBody) {
@@ -1827,6 +1846,8 @@ class CppTargetCore {
 					} else {
 						skippedFunctionBodyCount++;
 					}
+				} else {
+					omittedFunctionBodyCount++;
 				}
 				traceCppDeepPhase("anon_collect_fn_end class=" + className + " name=" + fnName);
 			}
@@ -1843,12 +1864,8 @@ class CppTargetCore {
 					collectClass(cls, packagePath);
 			}
 		}
-		traceCppPhase("anon_collect_done count="
-			+ out.length
-			+ " walked_bodies="
-			+ walkedFunctionBodyCount
-			+ " skipped_bodies="
-			+ skippedFunctionBodyCount);
+		traceCppPhase("anon_collect_done count=" + out.length + " walked_bodies=" + walkedFunctionBodyCount + " skipped_bodies=" + skippedFunctionBodyCount
+			+ " omitted_bodies=" + omittedFunctionBodyCount + " skipped_field_inits=" + skippedFieldInitCount);
 		return out;
 	}
 
@@ -2297,6 +2314,7 @@ class CppTargetCore {
 		final renderedNameByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
 		final packagePathByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
 		final sourcePathByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
+		final helperRenderKindByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
 		final classInfos = new Array<{cls:HxClassDecl, packagePath:String, sourcePath:String}>();
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getParsed().getDecl();
@@ -2339,7 +2357,8 @@ class CppTargetCore {
 			renderedNameByClass: renderedNameByClass,
 			packagePathByClass: packagePathByClass,
 			sourcePathByClass: sourcePathByClass,
-			packageByRenderedName: packageByRenderedName
+			packageByRenderedName: packageByRenderedName,
+			helperRenderKindByClass: helperRenderKindByClass
 		};
 	}
 
@@ -2612,6 +2631,33 @@ class CppTargetCore {
 	}
 
 	static function helperClassRenderKind(cls:HxClassDecl, classLookup:CppClassLookup):CppHelperRenderKind {
+		if (classLookup != null && classLookup.helperRenderKindByClass != null) {
+			final cached = classLookup.helperRenderKindByClass.get(cls);
+			if (cached != null)
+				return helperRenderKindFromCache(cached);
+		}
+		final kind = computeHelperClassRenderKind(cls, classLookup);
+		if (classLookup != null && classLookup.helperRenderKindByClass != null)
+			classLookup.helperRenderKindByClass.set(cls, helperRenderKindLabel(kind));
+		return kind;
+	}
+
+	static function helperRenderKindFromCache(code:String):CppHelperRenderKind {
+		return switch (code) {
+			case "full_body":
+				FullBody;
+			case "declaration_only":
+				DeclarationOnly;
+			case "runtime_module":
+				RuntimeModule;
+			case "unsupported_diagnostic":
+				UnsupportedDiagnostic;
+			case _:
+				UnsupportedDiagnostic;
+		};
+	}
+
+	static function computeHelperClassRenderKind(cls:HxClassDecl, classLookup:CppClassLookup):CppHelperRenderKind {
 		if (cls == null)
 			return UnsupportedDiagnostic;
 		final rawName = HxClassDecl.getName(cls);

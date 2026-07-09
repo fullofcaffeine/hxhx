@@ -94,6 +94,24 @@ bodies only for `full_body` helpers. `declaration_only` and `runtime_module`
 helpers keep signature/type dependencies, but their parsed bodies must not pull
 body-only helpers into the render set.
 
+Anonymous-struct discovery follows the same rule. Structural field, argument,
+and return type hints remain visible for every reachable helper because they are
+part of the signature boundary. Parsed field initializers and method bodies are
+scanned only for `full_body` helpers; target-owned runtime modules and
+declaration-only helpers must not add body-only anonymous carriers or spend
+collection time on bodies that will not be emitted. Cache helper render-kind
+classification on the per-program class lookup before reusing it in anonymous
+collection; recomputing classification inside the collector can erase the
+intended timing win.
+
+The 2026-07-09 strict source-only Cpp probe after this rule still timed out, but
+moved the 360s frontier from `ListNode` helper rendering to
+`TestBasetypes.testMath`. The anonymous collector summary changed from
+`count=92 walked_bodies=102 skipped_bodies=1602` to
+`count=85 walked_bodies=97 skipped_bodies=1290 omitted_bodies=592
+skipped_field_inits=191`, which is useful burn-down evidence but not a green
+gate.
+
 Sensitive surfaces require separate behavior review before implementation:
 Serializer/Unserializer, Float/NaN/Infinity/Math, JSON, binary float encoding,
 Reflect/Dynamic, comparisons, and default/no-op runtime support. For the
