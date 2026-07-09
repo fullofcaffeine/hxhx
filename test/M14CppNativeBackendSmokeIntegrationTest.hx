@@ -1313,6 +1313,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(params[1]));",
 			"    var d:Dynamic = p1;",
 			"    Sys.println(Std.string(d));",
+			"    switch (p1) {",
+			"      case Pair(i, s): Sys.println(Std.string(i) + \":\" + s);",
+			"      case _: Sys.println(\"missing\");",
+			"    }",
 			"  }",
 			"}"
 		].join("\n");
@@ -13288,7 +13292,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(enumCarrierMetadataBuilt.builtExecutable, "C++ enum carrier metadata runtime smoke should build executable");
 			final enumCarrierMetadataRun = commandOutput(enumCarrierMetadataBuilt.entryPath, []);
 			assertTrue(enumCarrierMetadataRun.code == 0, "C++ enum carrier metadata runtime smoke failed: " + enumCarrierMetadataRun.stderr);
-			assertTrue(enumCarrierMetadataRun.stdout == "A\nPair(3,x)\ntrue\nfalse\nPair\n2\n2\n3\nx\nPair(3,x)\n",
+			assertTrue(enumCarrierMetadataRun.stdout == "A\nPair(3,x)\ntrue\nfalse\nPair\n2\n2\n3\nx\nPair(3,x)\n3:x\n",
 				"unexpected C++ enum carrier metadata stdout: " + enumCarrierMetadataRun.stdout);
 
 			final typeCreateEnumBuildDir = Path.join([root, "type-create-enum-runtime-build"]);

@@ -1075,6 +1075,12 @@ class CppTargetCore {
 		out.push("}");
 		out.push("");
 		out.push("template<typename T>");
+		out.push("static std::string __hxhx_enum_parameter(const std::shared_ptr<T>& value, int index) {");
+		out.push("  auto params = __hxhx_enum_parameters(value);");
+		out.push("  return index < 0 || index >= static_cast<int>(params.size()) ? std::string() : params[static_cast<std::size_t>(index)];");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
 		out.push("static std::string __hxhx_type_name(const T&) {");
 		out.push("  return std::string(\"Dynamic\");");
 		out.push("}");
@@ -1212,6 +1218,10 @@ class CppTargetCore {
 		out.push("");
 		out.push("static std::vector<std::string> __hxhx_enum_parameters(const std::any& value) {");
 		out.push("  return __hxhx_enum_parameters(__hxhx_enum_value_ptr(value));");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_enum_parameter(const std::any& value, int index) {");
+		out.push("  return __hxhx_enum_parameter(__hxhx_enum_value_ptr(value), index);");
 		out.push("}");
 		out.push("");
 		out.push("template<typename T, typename = void>");
@@ -11704,13 +11714,13 @@ class CppTargetCore {
 			}
 			final branchStart = timingEnabled ? Sys.time() : 0.;
 			final condStart = timingEnabled ? Sys.time() : 0.;
-			final cond = switchPatternCond(pattern, switchValue, switchValueType);
+			final cond = switchPatternCond(pattern, switchValue, switchValueType, scope);
 			final condElapsed = timingEnabled ? Sys.time() - condStart : 0.;
 			if (switchPatternShouldSkipKnownFalseBranch(pattern, cond))
 				continue;
 			out.push(indent + "  " + (emitted == 0 ? "if" : "else if") + " (" + cond + ") {");
 			final bindingStart = timingEnabled ? Sys.time() : 0.;
-			for (line in switchPatternBindingLines(pattern, switchValue, indent + "    "))
+			for (line in switchPatternBindingLines(pattern, switchValue, indent + "    ", scope, "", null, switchValueType))
 				out.push(line);
 			final bindingElapsed = timingEnabled ? Sys.time() - bindingStart : 0.;
 			final bodyStart = timingEnabled ? Sys.time() : 0.;
@@ -11735,7 +11745,7 @@ class CppTargetCore {
 			final branchStart = timingEnabled ? Sys.time() : 0.;
 			out.push(indent + "  " + (emitted == 0 ? "{" : "else {"));
 			final bindingStart = timingEnabled ? Sys.time() : 0.;
-			for (line in switchPatternBindingLines(defaultPattern, switchValue, indent + "    "))
+			for (line in switchPatternBindingLines(defaultPattern, switchValue, indent + "    ", scope, "", null, switchValueType))
 				out.push(line);
 			final bindingElapsed = timingEnabled ? Sys.time() - bindingStart : 0.;
 			final bodyStart = timingEnabled ? Sys.time() : 0.;
@@ -19777,11 +19787,11 @@ class CppTargetCore {
 				}
 				continue;
 			}
-			final cond = switchPatternCond(pattern, switchValue, switchValueType);
+			final cond = switchPatternCond(pattern, switchValue, switchValueType, scope);
 			if (switchPatternShouldSkipKnownFalseBranch(pattern, cond))
 				continue;
 			out.push("  " + (emitted == 0 ? "if" : "else if") + " (" + cond + ") {");
-			for (line in switchPatternBindingLines(pattern, switchValue, "    ", scope, typeName, exprs[i]))
+			for (line in switchPatternBindingLines(pattern, switchValue, "    ", scope, typeName, exprs[i], switchValueType))
 				out.push(line);
 			out.push("    return " + switchBranchExpr(exprs[i], typeName, scope) + ";");
 			out.push("  }");
@@ -19789,7 +19799,7 @@ class CppTargetCore {
 		}
 		if (defaultExpr != null) {
 			out.push("  " + (emitted == 0 ? "{" : "else {"));
-			for (line in switchPatternBindingLines(defaultPattern, switchValue, "    ", scope, typeName, defaultExpr))
+			for (line in switchPatternBindingLines(defaultPattern, switchValue, "    ", scope, typeName, defaultExpr, switchValueType))
 				out.push(line);
 			out.push("    return " + switchBranchExpr(defaultExpr, typeName, scope) + ";");
 			out.push("  }");
@@ -19896,22 +19906,32 @@ class CppTargetCore {
 		};
 	}
 
-	static function switchPatternCond(pattern:HxSwitchPattern, switchValue:String, switchValueType:String = ""):String {
+	static function switchPatternCond(pattern:HxSwitchPattern, switchValue:String, switchValueType:String = "", ?scope:CppRenderScope):String {
 		return switch (pattern) {
 			case PNull:
 				switchPatternEqCond(switchValue, switchValueType, "nullptr");
 			case PWildcard | PBind(_):
 				"true";
 			case PBool(value):
-				switchPatternEqCond(switchValue, switchValueType, value ? "true" : "false");
+				switchPatternEqCond(switchValue, switchValueType,
+					switchValueType == "std::string" ? "std::string(" + quoteString(value ? "true" : "false") + ")" : value ? "true" : "false");
 			case PString(value):
 				switchPatternEqCond(switchValue, switchValueType, "std::string(" + quoteString(value) + ")");
 			case PInt(value):
-				switchPatternEqCond(switchValue, switchValueType, Std.string(value));
+				switchPatternEqCond(switchValue, switchValueType,
+					switchValueType == "std::string" ? "std::string(" + quoteString(Std.string(value)) + ")" : Std.string(value));
 			case PEnumValue(name):
-				"__hxhx_enum_eq(" + switchValue + ", " + quoteString(name) + ")";
+				isCppEnumCarrierReferenceType(switchValueType, scope) ? "__hxhx_enum_constructor("
+				+ switchValue
+				+ ") == std::string("
+				+ quoteString(name)
+				+ ")" : "__hxhx_enum_eq("
+				+ switchValue
+				+ ", "
+				+ quoteString(name)
+				+ ")";
 			case PCapture(_, inner):
-				switchPatternCond(inner, switchValue, switchValueType);
+				switchPatternCond(inner, switchValue, switchValueType, scope);
 			case PUnsupportedGuard(_):
 				"false";
 			case POr(patterns):
@@ -19920,13 +19940,13 @@ class CppTargetCore {
 				} else {
 					"(" + [
 						for (p in patterns)
-							"(" + switchPatternCond(p, switchValue, switchValueType) + ")"
+							"(" + switchPatternCond(p, switchValue, switchValueType, scope) + ")"
 					].join(" || ") + ")";
 				}
 			case PEnumExtract(name, args):
-				switchEnumExtractPatternCond(name, args, switchValue);
+				switchEnumExtractPatternCond(name, args, switchValue, switchValueType, scope);
 			case PObject(fieldNames, fieldPatterns):
-				switchObjectPatternCond(fieldNames, fieldPatterns, switchValue);
+				switchObjectPatternCond(fieldNames, fieldPatterns, switchValue, scope);
 			case PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _) |
 				PParsedIntSwitchGuard(_, _, _, _):
 				"false";
@@ -19937,12 +19957,22 @@ class CppTargetCore {
 		return switchValueType == "std::any" ? "__hxhx_any_eq(" + switchValue + ", " + rightExpr + ")" : switchValue + " == " + rightExpr;
 	}
 
-	static function switchEnumExtractPatternCond(name:String, args:Array<HxSwitchPattern>, switchValue:String):String {
-		final parts = ["__hxhx_macro_ctor(" + switchValue + ", " + quoteString(name) + ")"];
+	static function switchEnumExtractPatternCond(name:String, args:Array<HxSwitchPattern>, switchValue:String, switchValueType:String,
+			?scope:CppRenderScope):String {
+		final typedEnumCarrier = isCppEnumCarrierReferenceType(switchValueType, scope);
+		final parts = [typedEnumCarrier ? "__hxhx_enum_constructor(" + switchValue + ") == std::string(" + quoteString(name) + ")" : "__hxhx_macro_ctor("
+			+ switchValue
+			+ ", "
+			+ quoteString(name)
+			+ ")"];
 		if (args != null) {
 			for (i in 0...args.length) {
-				final argValue = "__hxhx_macro_param(" + switchValue + ", " + Std.string(i) + ")";
-				parts.push("(" + switchPatternCond(args[i], argValue, "std::any") + ")");
+				final argValue = typedEnumCarrier ? "__hxhx_enum_parameter(" + switchValue + ", " + Std.string(i) + ")" : "__hxhx_macro_param("
+					+ switchValue
+					+ ", "
+					+ Std.string(i)
+					+ ")";
+				parts.push("(" + switchPatternCond(args[i], argValue, typedEnumCarrier ? "std::string" : "std::any", scope) + ")");
 			}
 		}
 		return "(" + parts.join(" && ") + ")";
@@ -19968,7 +19998,7 @@ class CppTargetCore {
 		};
 	}
 
-	static function switchObjectPatternCond(fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>, switchValue:String):String {
+	static function switchObjectPatternCond(fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>, switchValue:String, ?scope:CppRenderScope):String {
 		if (fieldNames == null || fieldPatterns == null)
 			return "false";
 		final parts = new Array<String>();
@@ -19977,7 +20007,7 @@ class CppTargetCore {
 			final fieldValue = switchObjectPatternFieldValue(fieldNames[i], switchValue);
 			if (fieldValue == null)
 				return "false";
-			parts.push("(" + switchPatternCond(fieldPatterns[i], fieldValue, "std::any") + ")");
+			parts.push("(" + switchPatternCond(fieldPatterns[i], fieldValue, "std::any", scope) + ")");
 		}
 		return parts.length == 0 ? "true" : "(" + parts.join(" && ") + ")";
 	}
@@ -20012,7 +20042,7 @@ class CppTargetCore {
 		  values should land as a separate behavior-owned seam.
 	**/
 	static function switchPatternBindingLines(pattern:HxSwitchPattern, switchValue:String, indent:String, ?scope:CppRenderScope, ?expectedType:String,
-			?branchExpr:HxExpr):Array<String> {
+			?branchExpr:HxExpr, switchValueType:String = ""):Array<String> {
 		final out = new Array<String>();
 		function bind(name:String, value:String):Void {
 			if (name != null && name.length > 0 && name != "_") {
@@ -20037,6 +20067,9 @@ class CppTargetCore {
 					if (args != null && switchPatternIsMacroExprCtor(name)) {
 						for (i in 0...args.length)
 							walk(args[i], "__hxhx_macro_param(" + value + ", " + Std.string(i) + ")");
+					} else if (args != null && isCppEnumCarrierReferenceType(switchValueType, scope)) {
+						for (i in 0...args.length)
+							walk(args[i], "__hxhx_enum_parameter(" + value + ", " + Std.string(i) + ")");
 					} else if (args != null) {
 						for (arg in args)
 							walk(arg, value);

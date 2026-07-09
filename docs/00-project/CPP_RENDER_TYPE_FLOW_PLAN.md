@@ -451,10 +451,13 @@ class arguments plus literal constructor names/indexes and literal payload
 arrays now lower directly to typed metadata carriers. The focused smoke builds
 and runs a generated C++ factory program that prints zero-arg and payload
 factory values and compares the payload factory result through `Type.enumEq`.
+The switch slice then taught typed enum-carrier switches to match constructor
+metadata and bind payload names from the stringified metadata parameter vector;
+the generated C++ enum metadata smoke now prints a `Pair(i, s)` branch result.
 
 This is not full enum parity. Raw generated constructor helpers may still keep
-their current tag-shaped callable form in non-carrier contexts, switch payload
-extraction still needs a behavior-owned seam, dynamic `Type.createEnum` /
+their current tag-shaped callable form in non-carrier contexts, non-string and
+erased switch payload extraction still need behavior-owned seams, dynamic `Type.createEnum` /
 `Type.createEnumIndex` calls and `Type.allEnums` are not proven as typed value
 factories, and Serializer/Unserializer enum support remains blocked on the enum
 carrier plus Reflect/Dynamic prerequisites. README and North Star progress bars
