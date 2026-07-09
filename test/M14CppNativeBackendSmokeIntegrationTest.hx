@@ -2464,6 +2464,28 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(!replayScope.localTypes.exists("scratch"), "C++ cached function-scope prep should not replay non-argument locals");
 	}
 
+	static function assertCppPrimitiveTypeHintsStayDirect():Void {
+		final owner = new HxClassDecl("PrimitiveHintOwner", false, [], []);
+		final genericOwner = new HxClassDecl("PrimitiveHintGenericOwner", false, [], [], "", ["__hxhx_type_params=String"]);
+		final names = new StringMap<Bool>();
+		for (name in ["PrimitiveHintOwner", "PrimitiveHintGenericOwner", "String"])
+			names.set(name, true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("PrimitiveHintOwner", owner);
+		classes.set("PrimitiveHintGenericOwner", genericOwner);
+		classes.set("String", new HxClassDecl("String", false, [], [new HxFieldDecl("value", Public, false, "Int", null)], "", ["__hxhx_typedef"]));
+		final lookup = {names: names, byName: classes};
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, lookup, "void");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("String", scope, lookup) == "std::string",
+			"C++ primitive String hints should resolve directly instead of walking class/abstract lookup");
+		assertTrue(@:privateAccess backend.cpp.CppTypeModel.cppTypeHint("Array<String>", scope, lookup) == "std::vector<std::string>",
+			"C++ primitive hints should stay direct inside shared type-model container rendering");
+		final genericScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(genericOwner, lookup, "void");
+		genericScope.typeParamCppNames.set("String", "StringParam");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("String", genericScope, lookup) == "StringParam",
+			"C++ active generic type parameters should still win over the primitive hint fast path");
+	}
+
 	static function assertCppFunctionArgDeclaredTypeCacheUsesScopeShape():Void {
 		final owner = new HxClassDecl("ArgTypeCacheOwner", false, [], [], "", ["__hxhx_type_params=T"]);
 		final names = new StringMap<Bool>();
@@ -4288,6 +4310,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppHelperRenderClassification();
 		assertCppOptionalArrowFunctionsUseCallableShapes();
 		assertCppFunctionScopePrepCachesArgRegistration();
+		assertCppPrimitiveTypeHintsStayDirect();
 		assertCppFunctionArgDeclaredTypeCacheUsesScopeShape();
 		assertCppFieldTypeCacheUsesScopeShape();
 		assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions();

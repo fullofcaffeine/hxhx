@@ -500,6 +500,52 @@ slices and still require the behavior matrix plus focused oracle evidence.
 README and North Star progress bars stay unchanged because strict Cpp and public
 production readiness remain red.
 
+## 2026-07-09 Primitive Type-Hint Fast Path Checkpoint
+
+After the focused enum Serializer slices, the fresh current-source strict Cpp
+probe still timed out, but the completed timing data again showed
+`TestBasetypes` as a dominant repeated render surface. A method-filtered
+`TestBasetypes.testString` run reported the method at about 6.68s and the full
+`TestBasetypes` helper class at about 31.40s. Statement timing showed repeated
+local declarations paying the shared type-hint path even for canonical
+primitive hints such as `String`.
+
+The bounded seam is order-only and non-semantic: `CppTypeModel.cppTypeHint` and
+the `CppTargetCore.cppTypeHint` wrapper now resolve active generic type
+parameters first, then return canonical primitive Haxe hints directly, before
+walking class/abstract lookup tables. `Null<T>`, bare `Null`, stale null
+pointers, abstract-backed wrappers, structural typedefs, rendered aliases,
+containers, functions, and C++ pointer helpers stay on their existing paths.
+Focused smoke coverage pins the direct `String` path and also asserts that an
+active generic type parameter still wins over the primitive fast path.
+
+Post-change validation used a fresh current-source hxhx build and the same
+480s Cpp timing command with
+`HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER=TestBasetypes.testString`. In
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testbasetypes-teststring-filter-after-primitive-typehint.log`,
+`TestBasetypes.testString` dropped to about 5.14s and the full
+`TestBasetypes` helper class dropped to about 23.27s. The probe still timed out
+at the explicit 480s Cpp cap (`probe_exit=1`, target attempt exit 124), but it
+advanced past the previous `TestBytes.test` frontier and stopped after
+`TestEReg.test` / `TestEReg` around 32.25s. Later completed hotspots included
+`TestBytes` around 38.37s, `TestExceptions` around 24.59s, `TestIO` around
+19.95s, and `TestEReg` around 32.25s.
+
+Focused local gates passed:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+
+This is another internal strict Cpp burn-down checkpoint only. README and North
+Star progress bars stay unchanged because strict Cpp remains red and no
+user-facing production-readiness claim changed. A follow-up should investigate
+the later `TestEReg` / `TestBytes` / `TestIO` render frontiers only after a
+fresh comparable log confirms the next stable repeated seam.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

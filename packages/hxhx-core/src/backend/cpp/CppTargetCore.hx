@@ -22696,6 +22696,16 @@ class CppTargetCore {
 			return cppNullableTypeHint(nullArg, scope, classLookup);
 		if (CppTypeModel.isBareNullTypeHint(hint))
 			return "std::any";
+		// Keep this order aligned with CppTypeModel.cppTypeHint: cheap active
+		// type params and canonical primitives should not pay class/abstract scans.
+		final scopedTypeParam = scopedGenericTypeParamName(hint, scope);
+		if (scopedTypeParam.length > 0)
+			return scopedTypeParam;
+		if (scope != null && scope.owner != null && isGenericTypeParamHint(hint, scope.owner))
+			return cppTypeParamName(genericTypeParamName(hint), scope);
+		final primitiveType = primitiveTypeHintCppType(hint);
+		if (primitiveType != null)
+			return primitiveType;
 		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
 		if (primitiveAbstractType != null)
 			return primitiveAbstractType;
@@ -22705,11 +22715,6 @@ class CppTargetCore {
 		final templateWrapName = templateWrapAbstractNameForTypeHint(hint, scope, classLookup);
 		if (templateWrapName != null)
 			return templateWrapName;
-		final scopedTypeParam = scopedGenericTypeParamName(hint, scope);
-		if (scopedTypeParam.length > 0)
-			return scopedTypeParam;
-		if (scope != null && scope.owner != null && isGenericTypeParamHint(hint, scope.owner))
-			return cppTypeParamName(genericTypeParamName(hint), scope);
 		if (isStructuralTypeHint(hint)) {
 			final struct = structuralTypeHintStruct(hint, scope, classLookup);
 			if (struct != null)

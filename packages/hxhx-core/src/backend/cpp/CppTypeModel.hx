@@ -256,6 +256,14 @@ class CppTypeModel {
 		if (isBareNullTypeHint(raw))
 			return "std::any";
 		final hint = raw;
+		// Resolve cheap local facts before walking class/abstract lookup tables.
+		// This keeps repeated primitive local declarations from dominating C++ render timing.
+		final scopedTypeParam = scopedGenericTypeParam(hint, scope);
+		if (scopedTypeParam != null)
+			return scopedTypeParam;
+		final primitiveType = primitiveTypeHintCppType(hint);
+		if (primitiveType != null)
+			return primitiveType;
 		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
 		if (primitiveAbstractType != null)
 			return primitiveAbstractType;
@@ -265,9 +273,6 @@ class CppTypeModel {
 		final templateWrapName = templateWrapAbstractNameForTypeHint(hint, scope, classLookup);
 		if (templateWrapName != null)
 			return templateWrapName;
-		final scopedTypeParam = scopedGenericTypeParam(hint, scope);
-		if (scopedTypeParam != null)
-			return scopedTypeParam;
 		return switch (hint) {
 			case "" | "Void" | "StdTypes.Void":
 				hint.length == 0 ? "std::string" : "void";
