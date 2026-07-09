@@ -8982,6 +8982,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final bytesLookup = {names: bytesNames, byName: bytesClasses};
 		final bytesDataLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(bytesData, bytesLookup).join("\n");
 		assertTrue(bytesDataLines.length == 0, "C++ BytesData should be target-owned byte storage, not a generated fake helper class");
+		final bytesKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(bytes, bytesLookup);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(bytesKind) == "runtime_module",
+			"C++ Bytes should render through target-owned runtime support instead of parsed stdlib bodies");
 		final bytesLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(bytes, bytesLookup).join("\n");
 		assertContains(bytesLines, "std::vector<int> b = {};", "C++ Bytes.b should use vector-backed BytesData storage");
 		assertContains(bytesLines, "Bytes(int length, std::vector<int> b) : length(length), b(b) {",

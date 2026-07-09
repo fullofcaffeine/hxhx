@@ -2682,6 +2682,7 @@ class CppTargetCore {
 	static function helperClassUsesTargetRuntimeModule(cls:HxClassDecl, classLookup:CppClassLookup, className:String):Bool {
 		return isAnySupportClass(cls)
 			|| isStdListSupportClass(cls, classLookup)
+			|| isBytesSupportClass(cls, classLookup)
 			|| isGenericMapSupportClass(cls)
 			|| isPosInfosSupportClass(cls)
 			|| isClassMetaSupportClass(cls)
@@ -3211,6 +3212,8 @@ class CppTargetCore {
 			return CppRuntimeSupport.anySupportLines();
 		if (isStdListSupportClass(cls, classLookup))
 			return CppRuntimeSupport.listSupportLines();
+		if (isBytesSupportClass(cls, classLookup))
+			return CppRuntimeSupport.bytesSupportLines(className);
 		if (isGenericMapSupportClass(cls))
 			return renderGenericMapSupportClass(cls);
 		if (isPosInfosSupportClass(cls))
@@ -4940,10 +4943,20 @@ class CppTargetCore {
 		}
 		if (owner == "Bytes")
 			return switch (method) {
-				case "fill":
+				case "get" | "getUInt16" | "getInt32" | "compare" | "fastGet":
+					"int";
+				case "getDouble" | "getFloat":
+					"double";
+				case "set" | "blit" | "fill" | "setDouble" | "setFloat" | "setUInt16" | "setInt32" | "setInt64":
 					"void";
-				case "toHex":
+				case "sub" | "alloc" | "ofString" | "ofData" | "ofHex":
+					cppTypeHint("Bytes", scope, classLookup);
+				case "getInt64":
+					"long long";
+				case "getString" | "readString" | "toString" | "toHex":
 					"std::string";
+				case "getData":
+					"std::vector<int>";
 				case _:
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			};
@@ -5147,12 +5160,34 @@ class CppTargetCore {
 				switch (method) {
 					case "alloc":
 						["int"];
-					case "ofString" | "ofHex":
+					case "ofString":
+						["std::string", cppTypeHint("Encoding", scope, classLookup)];
+					case "ofHex":
 						["std::string"];
 					case "ofData":
 						["std::vector<int>"];
 					case "fastGet":
 						["std::vector<int>", "int"];
+					case "get" | "getUInt16" | "getInt32" | "getInt64" | "getDouble" | "getFloat":
+						["int"];
+					case "readString":
+						["int", "int"];
+					case "set" | "setUInt16" | "setInt32":
+						["int", "int"];
+					case "setInt64":
+						["int", "long long"];
+					case "setDouble" | "setFloat":
+						["int", "double"];
+					case "blit":
+						["int", cppTypeHint("Bytes", scope, classLookup), "int", "int"];
+					case "sub":
+						["int", "int"];
+					case "getString":
+						["int", "int", cppTypeHint("Encoding", scope, classLookup)];
+					case "fill":
+						["int", "int", "int"];
+					case "compare":
+						[cppTypeHint("Bytes", scope, classLookup)];
 					case _:
 						[];
 				}
@@ -16615,6 +16650,59 @@ class CppTargetCore {
 
 	static function isBytesDataTypeName(name:String):Bool {
 		return sanitizeTypePath(typeBaseName(name == null ? "" : name)) == "BytesData";
+	}
+
+	/**
+		Recognize the stdlib `haxe.io.Bytes` helper as target-owned runtime support.
+
+		Package/source identity is preferred for real stdlib classes. The shape
+		fallback keeps older focused C++ smoke fixtures useful without treating every
+		user class named `Bytes` as stdlib bytes support.
+	**/
+	static function isBytesSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "Bytes")
+			return false;
+		if (packagePathForRenderedClass(cls, classLookup) == "haxe.io")
+			return true;
+		if (isHaxeIoBytesSourcePath(sourcePathForRenderedClass(cls, classLookup)))
+			return true;
+		return hasBytesSupportShape(cls);
+	}
+
+	static function isHaxeIoBytesSourcePath(path:String):Bool {
+		if (path == null || path.length == 0)
+			return false;
+		final normalized = StringTools.replace(path, "\\", "/");
+		if (normalized == "vendor/haxe/std/haxe/io/Bytes.hx" || StringTools.endsWith(normalized, "/vendor/haxe/std/haxe/io/Bytes.hx"))
+			return true;
+		return StringTools.endsWith(normalized, "/haxe/std/haxe/io/Bytes.hx");
+	}
+
+	static function hasBytesSupportShape(cls:HxClassDecl):Bool {
+		var hasLength = false;
+		var hasBytesData = false;
+		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+			final hint = sanitizeTypePath(typeBaseName(HxFieldDecl.getTypeHint(field)));
+			if (fieldName == "length" && hint == "Int")
+				hasLength = true;
+			if (fieldName == "b" && hint == "BytesData")
+				hasBytesData = true;
+		}
+		if (!hasLength || !hasBytesData)
+			return false;
+		final required = new haxe.ds.StringMap<Bool>();
+		for (name in ["get", "set", "alloc", "ofString", "toHex"])
+			required.set(name, false);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			if (required.exists(method))
+				required.set(method, true);
+		}
+		for (name in ["get", "set", "alloc", "ofString", "toHex"])
+			if (!required.get(name))
+				return false;
+		return true;
 	}
 
 	static function isCppPrimitiveIntrinsicClass(name:String):Bool {

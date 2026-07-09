@@ -355,6 +355,107 @@ class CppRuntimeSupport {
 	}
 
 	/**
+		Target-owned runtime surface for `haxe.io.Bytes`.
+
+		The C++ backend already owns `BytesData` as `std::vector<int>` and lowers
+		byte/string/memory operations to `__hxhx_*` helpers in the prelude. Emitting
+		the parsed stdlib `Bytes` body repeats that lowering method-by-method during
+		strict helper probes, so this block keeps the public `Bytes` shape while
+		skipping source-body rendering for the real stdlib helper.
+	**/
+	public static function bytesSupportLines(className:String):Array<String> {
+		final name = className == null || className.length == 0 ? "Bytes" : className;
+		return [
+			"struct Encoding;",
+			"",
+			"struct " + name + " {",
+			"  int length = 0;",
+			"  std::vector<int> b = {};",
+			"  " + name + "() {}",
+			"  " + name + "(int length, std::vector<int> b) : length(length), b(b) {}",
+			"  int get(int pos) { return static_cast<int>((b[pos])); }",
+			"  void set(int pos, int v) { (b[pos]) = v; }",
+			"  void blit(int pos, std::shared_ptr<" + name + "> src, int srcpos, int len) { __hxhx_bytes_blit(b, pos, (src->b), srcpos, len); }",
+			"  void fill(int pos, int len, int value) {",
+			"    __hxhx_bytes_fill(b, pos, len, value); return;",
+			"  }",
+			"  std::shared_ptr<" + name + "> sub(int pos, int len) {",
+			"    return std::make_shared<" + name + ">(len, __hxhx_bytes_slice(b, pos, (pos + len)));",
+			"  }",
+			"  int compare(std::shared_ptr<" + name + "> other) {",
+			"    return static_cast<int>(__hxhx_bytes_memcmp(b, (other->b)));",
+			"  }",
+			"  double getDouble(int pos) { return __hxhx_memory_get_double(b, pos); }",
+			"  double getFloat(int pos) { return __hxhx_memory_get_float(b, pos); }",
+			"  void setDouble(int pos, double v) { __hxhx_memory_set_double(b, pos, v); }",
+			"  void setFloat(int pos, double v) { __hxhx_memory_set_float(b, pos, v); }",
+			"  int getUInt16(int pos) { return (get(pos) & 0xFF) | ((get((pos + 1)) & 0xFF) << 8); }",
+			"  void setUInt16(int pos, int v) { set(pos, v); set((pos + 1), (v >> 8)); }",
+			"  int getInt32(int pos) {",
+			"    std::uint32_t value = static_cast<std::uint32_t>(get(pos) & 0xFF)",
+			"      | (static_cast<std::uint32_t>(get((pos + 1)) & 0xFF) << 8)",
+			"      | (static_cast<std::uint32_t>(get((pos + 2)) & 0xFF) << 16)",
+			"      | (static_cast<std::uint32_t>(get((pos + 3)) & 0xFF) << 24);",
+			"    return static_cast<int>(value);",
+			"  }",
+			"  long long getInt64(int pos) {",
+			"    return (static_cast<long long>(static_cast<std::uint32_t>(getInt32((pos + 4)))) << 32) | static_cast<std::uint32_t>(getInt32(pos));",
+			"  }",
+			"  void setInt32(int pos, int v) {",
+			"    set(pos, v);",
+			"    set((pos + 1), (v >> 8));",
+			"    set((pos + 2), (v >> 16));",
+			"    set((pos + 3), static_cast<int>(static_cast<unsigned int>(v) >> 24));",
+			"  }",
+			"  void setInt64(int pos, long long v) {",
+			"    setInt32(pos, static_cast<int>(static_cast<unsigned long long>(v) & 0xFFFFFFFFULL));",
+			"    setInt32((pos + 4), static_cast<int>((static_cast<unsigned long long>(v) >> 32) & 0xFFFFFFFFULL));",
+			"  }",
+			"  std::string getString(int pos, int len, std::shared_ptr<Encoding> encoding = nullptr) {",
+			"    (encoding == nullptr);",
+			"    std::string result = std::string();",
+			"    __hxhx_string_of_bytes(b, result, pos, len);",
+			"    return result;",
+			"  }",
+			"  std::string readString(int pos, int len) { return getString(pos, len); }",
+			"  std::string toString() { return getString(0, length); }",
+			"  std::string toHex() {",
+			"    return __hxhx_bytes_to_hex(b);",
+			"  }",
+			"  std::vector<int> getData() { return b; }",
+			"  static std::shared_ptr<" + name + "> alloc(int length) {",
+			"    std::vector<int> a = std::vector<int>{};",
+			"    a.resize(length);",
+			"    return std::make_shared<" + name + ">(length, a);",
+			"  }",
+			"  static std::shared_ptr<" + name + "> ofString(std::string s, std::shared_ptr<Encoding> encoding = nullptr) {",
+			"    (void)encoding;",
+			"    std::vector<int> a = std::vector<int>{};",
+			"    __hxhx_bytes_of_string(a, s);",
+			"    return std::make_shared<" + name + ">(static_cast<int>(a.size()), a);",
+			"  }",
+			"  static std::shared_ptr<" + name + "> ofData(std::vector<int> b) {",
+			"    return std::make_shared<" + name + ">(static_cast<int>(b.size()), b);",
+			"  }",
+			"  static std::shared_ptr<" + name + "> ofHex(std::string s) {",
+			"    int len = static_cast<int>(s.size());",
+			"    if ((len & 1) != 0) throw std::runtime_error(std::string(\"Not a hex string (odd number of digits)\"));",
+			"    auto ret = " + name + "::alloc(len >> 1);",
+			"    for (int i = 0; i < ret->length; ++i) {",
+			"      int high = static_cast<int>(static_cast<unsigned char>(s[static_cast<std::size_t>(i * 2)]));",
+			"      int low = static_cast<int>(static_cast<unsigned char>(s[static_cast<std::size_t>(i * 2 + 1)]));",
+			"      high = (high & 0xF) + (((high & 0x40) >> 6) * 9);",
+			"      low = (low & 0xF) + (((low & 0x40) >> 6) * 9);",
+			"      ret->set(i, ((high << 4) | low) & 0xFF);",
+			"    }",
+			"    return ret;",
+			"  }",
+			"  static int fastGet(std::vector<int> b, int pos) { return static_cast<int>((b[pos])); }",
+			"};"
+		];
+	}
+
+	/**
 		Bounded JSON runtime carrier for the C++ `TestJson` frontier.
 
 		This block deliberately owns JSON semantics separately from `Std.string`,
