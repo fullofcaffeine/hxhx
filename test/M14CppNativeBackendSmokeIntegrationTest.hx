@@ -2948,6 +2948,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ TestType.testInlineCast prep should not skip unrelated local inference phases");
 	}
 
+	static function assertCppBindCallableEvidenceGuardStaysConservative():Void {
+		final bindCandidateOnly = new HxFunctionDecl("bindCandidateOnly", Public, false, [], "Void",
+			[SVar("callback", "", ELambda(["value"], EIdent("value")), HxPos.unknown())], "");
+		assertTrue(!backend.cpp.CppPrepLocalInferenceGuard.functionHasBindCallableEvidence(bindCandidateOnly),
+			"C++ bind-callable inference should not run its evidence pass for local lambdas with no bind call");
+		final bindCallable = new HxFunctionDecl("bindCallable", Public, false, [], "Void", [
+			SVar("callback", "", ELambda(["value"], EIdent("value")), HxPos.unknown()),
+			SExpr(ECall(ECall(EField(EIdent("callback"), "bind"), [EInt(1)]), []), HxPos.unknown())
+		], "");
+		assertTrue(backend.cpp.CppPrepLocalInferenceGuard.functionHasBindCallableEvidence(bindCallable),
+			"C++ bind-callable inference should keep its evidence pass when a bind call exists");
+	}
+
 	static function assertCppResolverMethodsUseKnownStdlibSignatures():Void {
 		final nameArg = new HxFunctionArg("name", "String", NoDefault, false, false);
 		final resolveClass = new HxFunctionDecl("resolveClass", Public, false, [nameArg], "Class<Dynamic>", [], "");
@@ -4182,6 +4195,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppErasedDynamicEqualityUsesAnyHelper();
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
+		assertCppBindCallableEvidenceGuardStaysConservative();
 		assertCppResolverMethodsUseKnownStdlibSignatures();
 		assertTypedLocalFunctionBlockExprRendersStructurally();
 		assertCppLambdaWhileReturnFlow();

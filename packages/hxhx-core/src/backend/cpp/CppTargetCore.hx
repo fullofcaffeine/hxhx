@@ -9623,6 +9623,12 @@ class CppTargetCore {
 			scope.localNameCounts = savedLocalNameCounts;
 			return;
 		}
+		if (!CppPrepLocalInferenceGuard.functionHasBindCallableEvidence(fn)) {
+			scope.localTypes = savedLocalTypes;
+			scope.localNames = savedLocalNames;
+			scope.localNameCounts = savedLocalNameCounts;
+			return;
+		}
 		final evidence = new haxe.ds.StringMap<{argTypes:Array<String>, returnType:String}>();
 		for (stmt in HxFunctionDecl.getBody(fn))
 			collectBindCallableEvidenceFromStmt(stmt, scope, candidates, evidence, "");

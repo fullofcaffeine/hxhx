@@ -28,7 +28,9 @@ The Cpp backend currently resolves overlapping facts in several render paths:
 - local preparation in `prepareFunctionScope` owns staged local/arg override
   inference, cache application, and late function signature inference through
   `functionScopePrepCache`, `functionArgTypesCache`, and
-  `functionReturnTypesCache`.
+  `functionReturnTypesCache`. Cheap syntax-only preconditions that are proven
+  safe, such as bind-callable evidence checks, live outside the main emitter so
+  no-op inference guards do not add more traversal logic to `CppTargetCore`.
 - string/value conversion helpers such as `valueExprForExpectedType`,
   `stringExpr`, `isCppStringExpr`, and `eqComparableArgExpr` repeatedly probe
   `exprCppType` and `inferExprCppType` while rendering the same expression.
@@ -71,6 +73,8 @@ small enough to prove behavior unchanged with focused Cpp smoke coverage.
 - call/field plan extraction that preserves existing generated output;
 - cache-key cleanup for existing `functionScopePrepCache`,
   `functionArgTypesCache`, and `functionReturnTypesCache`;
+- syntax guards for prep local-inference phases when the guard is conservative,
+  focused on one proven no-op seam, and covered by direct predicate tests;
 - focused tests that compare generated source or runtime output before and
   after a non-semantic refactor.
 
@@ -180,6 +184,46 @@ machines and CI runners vary. Treat its `best_seconds` and `total_seconds`
 output as comparable evidence when changing the renderer, and use the smoke
 test plus guard to prove the targeted Cpp render behavior and architecture
 contract stay wired without compiling the whole upstream strict workload.
+
+## 2026-07-09 Bind Evidence Guard Checkpoint
+
+After moving `Bytes`, `BytesBuffer`, and base `haxe.io.Input`/`Output` helper
+surfaces to target-owned runtime modules, the strict current-source Cpp probe
+still timed out at 360s. The next dominant completed class was
+`TestBasetypes` at about 42.18s; filtered timing for
+`TestBasetypes.testAbstractCast` showed `prepareFunctionScope` cache-miss work
+at about 4.49s before cached replays dropped to near-zero.
+
+The retained bounded seam is `CppPrepLocalInferenceGuard`, limited to a cheap
+`.bind` evidence scan for `infer_bind_callable_locals`. That phase already
+collects unhinted local-lambda candidates. When candidates exist but the method
+body contains no `.bind` expression, the expensive evidence walk cannot produce
+an override, so the pass now restores local scope state and returns early.
+
+A broader multi-phase prep guard was tried first and rejected: the strict 360s
+probe regressed from reaching past `TestBasetypes` to timing out around
+`TestOps`. That evidence keeps the current slice narrow. Other prep phases,
+including `infer_dynamic_locals`, remain on their existing behavior because the
+`testAbstractCast` timing probe showed dynamic inference produced real local
+overrides.
+
+The syntax-only guard lives outside `CppTargetCore` to avoid adding another
+traversal subsystem to the mega-file. `CppTargetCore` still owns the real
+bind-callable inference and only calls the guard after local lambda candidates
+are known.
+
+Focused coverage lives in
+`test/M14CppNativeBackendSmokeIntegrationTest.hx` and asserts both no-trigger
+skips and positive `.bind` trigger cases. Strict Cpp remains red until the 360s
+probe completes; this checkpoint is render/type-flow burn-down evidence only,
+so README and North Star progress bars stay unchanged.
+
+Post-change filtered timing for `TestBasetypes.testAbstractCast` reduced
+`infer_bind_callable_locals` from about 1.95s to about 0.50s, total prep
+cache-miss time from about 4.49s to about 3.31s, and the filtered method from
+about 11.51s to about 10.62s. The strict 360s probe still timed out
+(`probe_exit=124`) and stopped around the `UInt` frontier, so this is not a
+strict gate pass or a production-readiness change.
 
 Slow diagnostic validation for hotspot claims:
 
