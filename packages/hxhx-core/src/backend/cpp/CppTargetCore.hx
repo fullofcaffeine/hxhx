@@ -6223,11 +6223,13 @@ class CppTargetCore {
 			});
 			runPrepPhase("register_args", () -> registerFunctionArgs(scope, HxFunctionDecl.getArgs(fn)));
 			runPrepPhase("infer_string_map_locals", () -> {
-				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_string_map_locals"))
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_string_map_locals")
+					&& CppPrepLocalInferenceGuard.functionHasStringMapLocalInferenceEvidence(fn))
 					inferStringMapLocalTypeOverrides(scope, fn);
 			});
 			runPrepPhase("infer_generic_factory_locals", () -> {
-				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_generic_factory_locals"))
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_generic_factory_locals")
+					&& CppPrepLocalInferenceGuard.functionHasGenericFactoryLocalInferenceEvidence(fn))
 					inferGenericFactoryLocalTypeOverrides(scope, fn);
 			});
 			runPrepPhase("infer_closure_vector_locals", () -> {
@@ -6235,19 +6237,23 @@ class CppTargetCore {
 					CppLocalTypeInference.inferClosureVectorLocalTypeOverrides(scope, fn, localTypeInferenceApi());
 			});
 			runPrepPhase("infer_optional_lambda_locals", () -> {
-				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_optional_lambda_locals"))
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_optional_lambda_locals")
+					&& CppPrepLocalInferenceGuard.functionHasOptionalLambdaLocalInferenceEvidence(fn))
 					inferOptionalLambdaLocalTypeOverrides(scope, fn);
 			});
 			runPrepPhase("infer_bind_callable_locals", () -> {
-				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_bind_callable_locals"))
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_bind_callable_locals")
+					&& CppPrepLocalInferenceGuard.functionHasBindCallableEvidence(fn))
 					inferBindCallableLocalTypeOverrides(scope, fn);
 			});
 			runPrepPhase("infer_dynamic_locals", () -> {
-				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_dynamic_locals"))
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_dynamic_locals")
+					&& CppPrepLocalInferenceGuard.functionHasDynamicLocalInferenceEvidence(fn, isDynamicLikeTypeHint))
 					inferDynamicLocalTypeOverrides(scope, fn);
 			});
 			runPrepPhase("infer_helper_typed_as_locals", () -> {
-				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_helper_typed_as_locals"))
+				if (!knownMethodSkipsPrepLocalInference(scope, fn, "infer_helper_typed_as_locals")
+					&& CppPrepLocalInferenceGuard.functionHasHelperTypedAsLocalInferenceEvidence(fn))
 					inferHelperTypedAsLocalTypeOverrides(scope, fn);
 			});
 			runPrepPhase("infer_return_locals", () -> inferReturnLocalTypeOverrides(scope, fn));

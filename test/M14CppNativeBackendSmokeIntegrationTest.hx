@@ -3048,6 +3048,52 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ bind-callable inference should keep its evidence pass when a bind call exists");
 	}
 
+	static function cppDynamicTypeHintForPrepGuard(typeHint:String):Bool {
+		return @:privateAccess backend.cpp.CppTargetCore.isDynamicLikeTypeHint(typeHint);
+	}
+
+	static function assertCppPrepLocalInferenceEvidenceGuardsStayConservative():Void {
+		final plain = new HxFunctionDecl("plain", Public, false, [], "Void", [
+			SVar("bytes", "", ECall(EField(EIdent("Bytes"), "ofString"), [EString("abc")]), HxPos.unknown())
+		], "");
+		assertTrue(!backend.cpp.CppPrepLocalInferenceGuard.functionHasStringMapLocalInferenceEvidence(plain),
+			"C++ StringMap local inference should skip methods with no map local declaration");
+		assertTrue(!backend.cpp.CppPrepLocalInferenceGuard.functionHasGenericFactoryLocalInferenceEvidence(plain),
+			"C++ generic factory local inference should skip methods with no zero-arg new local declaration");
+		assertTrue(!backend.cpp.CppPrepLocalInferenceGuard.functionHasOptionalLambdaLocalInferenceEvidence(plain),
+			"C++ optional lambda local inference should skip methods with no optional lambda local declaration");
+		assertTrue(!backend.cpp.CppPrepLocalInferenceGuard.functionHasDynamicLocalInferenceEvidence(plain, cppDynamicTypeHintForPrepGuard),
+			"C++ dynamic local inference should skip methods with no Dynamic-like or open local declaration");
+		assertTrue(!backend.cpp.CppPrepLocalInferenceGuard.functionHasHelperTypedAsLocalInferenceEvidence(plain),
+			"C++ helper typed-as local inference should skip methods with no typedAs call");
+
+		final stringMap = new HxFunctionDecl("stringMap", Public, false, [], "Void", [SVar("map", "", ENew("haxe.ds.StringMap", []), HxPos.unknown())], "");
+		assertTrue(backend.cpp.CppPrepLocalInferenceGuard.functionHasStringMapLocalInferenceEvidence(stringMap),
+			"C++ StringMap local inference should still run for unhinted map local declarations");
+		final genericFactory = new HxFunctionDecl("genericFactory", Public, false, [], "Void", [SVar("box", "", ENew("Box", []), HxPos.unknown())], "");
+		assertTrue(backend.cpp.CppPrepLocalInferenceGuard.functionHasGenericFactoryLocalInferenceEvidence(genericFactory),
+			"C++ generic factory local inference should still run for unhinted zero-arg new local declarations");
+		final optionalLambda = new HxFunctionDecl("optionalLambda", Public, false, [], "Void", [
+			SVar("callback", "", ECall(EIdent("__hxhx_optional_lambda"), [ELambda(["value"], EIdent("value")), EArrayDecl([EString("value")])]),
+				HxPos.unknown())
+		], "");
+		assertTrue(backend.cpp.CppPrepLocalInferenceGuard.functionHasOptionalLambdaLocalInferenceEvidence(optionalLambda),
+			"C++ optional lambda local inference should still run for optional lambda local declarations");
+		final dynamicLocal = new HxFunctionDecl("dynamicLocal", Public, false, [], "Void", [SVar("value", "Dynamic", EString("abc"), HxPos.unknown())], "");
+		assertTrue(backend.cpp.CppPrepLocalInferenceGuard.functionHasDynamicLocalInferenceEvidence(dynamicLocal, cppDynamicTypeHintForPrepGuard),
+			"C++ dynamic local inference should still run for Dynamic-like locals");
+		final explicitCallableLocal = new HxFunctionDecl("explicitCallableLocal", Public, false, [], "Void", [
+			SVar("callback", "(String)->String", ELambda(["value"], EIdent("value")), HxPos.unknown())
+		], "");
+		assertTrue(backend.cpp.CppPrepLocalInferenceGuard.functionHasDynamicLocalInferenceEvidence(explicitCallableLocal, cppDynamicTypeHintForPrepGuard),
+			"C++ dynamic local inference should still run for explicitly typed local callables");
+		final helperTypedAs = new HxFunctionDecl("helperTypedAs", Public, false, [], "Void", [
+			SExpr(ECall(EIdent("typedAs"), [EIdent("value"), EString("String")]), HxPos.unknown())
+		], "");
+		assertTrue(backend.cpp.CppPrepLocalInferenceGuard.functionHasHelperTypedAsLocalInferenceEvidence(helperTypedAs),
+			"C++ helper typed-as local inference should still run when a typedAs call exists");
+	}
+
 	static function assertCppResolverMethodsUseKnownStdlibSignatures():Void {
 		final nameArg = new HxFunctionArg("name", "String", NoDefault, false, false);
 		final resolveClass = new HxFunctionDecl("resolveClass", Public, false, [nameArg], "Class<Dynamic>", [], "");
@@ -4328,6 +4374,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppErasedDynamicReturnDetectionIsCached();
 		assertCppUnserializerMainPrepSkipsOnlyNoOpLocalInference();
 		assertCppBindCallableEvidenceGuardStaysConservative();
+		assertCppPrepLocalInferenceEvidenceGuardsStayConservative();
 		assertCppResolverMethodsUseKnownStdlibSignatures();
 		assertTypedLocalFunctionBlockExprRendersStructurally();
 		assertCppLambdaWhileReturnFlow();

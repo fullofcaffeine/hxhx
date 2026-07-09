@@ -546,6 +546,63 @@ user-facing production-readiness claim changed. A follow-up should investigate
 the later `TestEReg` / `TestBytes` / `TestIO` render frontiers only after a
 fresh comparable log confirms the next stable repeated seam.
 
+## 2026-07-09 Prep Local-Inference Evidence Guard Checkpoint
+
+The follow-up bead `haxe_ocaml-is77c` re-ran comparable current-source Cpp
+timing probes after the primitive type-hint fast path. The last timeout
+boundary moved between runs, but the shared top timings stayed stable:
+`TestBytes.test`, `TestBytes`, `TestEReg`, `TestBasetypes`, `TestExceptions`,
+and `TestIO` repeated as the real frontiers. The method-filtered
+`TestBytes.test` probe showed that several prep local-inference phases were
+walking the full method body and producing no overrides:
+
+- `infer_string_map_locals`: about 1.24s before, 0 overrides.
+- `infer_generic_factory_locals`: about 1.19s before, 0 overrides.
+- `infer_optional_lambda_locals`: about 1.18s before, 0 overrides.
+- `infer_bind_callable_locals`: about 1.19s before, 0 overrides.
+- `infer_dynamic_locals`: about 1.18s before, 0 overrides.
+- `infer_helper_typed_as_locals`: about 1.20s before, 0 overrides.
+
+The retained seam is a syntax-only evidence guard in
+`CppPrepLocalInferenceGuard`, wired before the heavy Cpp prep passes. It avoids
+the pass when the method cannot contain the source form that would let that
+pass produce a final local override: unhinted map locals, unhinted zero-arg
+factory `new` locals, optional-lambda locals, `.bind` call evidence,
+Dynamic-like/open/callable locals, or `HelperMacros.typedAs` calls. The guard is
+intentionally conservative and does not replace the semantic pass. One important
+case is explicitly covered: `infer_dynamic_locals` must still run for explicitly
+typed local callables, because call sites can refine stale callable argument
+types such as `(String)->String` to concrete call-site shapes.
+
+Post-change timing used
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testbytes-test-filter-after-prep-guards.log`.
+The Cpp target still timed out at the explicit 480s cap
+(`probe_exit=1`, target attempt exit 124), but the targeted prep cost collapsed:
+`TestBytes.test` prep cache miss dropped from about 7.19s to about 0.002s.
+`TestBytes.test` dropped from about 23.52s to about 17.69s, and the full
+`TestBytes` helper class dropped from about 37.44s to about 25.69s. The timeout
+frontier moved farther, from `Xml.exists` in the comparable pre-change log to
+`TestXML.testBasic` after the guard. The next Cpp burn-down seam should use the
+remaining shared top timings, especially `TestEReg` and the expression-render
+work still visible inside `TestBytes.test`; do not patch the final timeout
+boundary alone.
+
+Validation for this slice included:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+- current-source strict Cpp timing probe with
+  `HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER=TestBytes.test`
+
+This remains an internal strict Cpp performance checkpoint. README and North
+Star progress bars stay unchanged because the strict Cpp gate still times out
+and no user-facing production-readiness claim changed.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
