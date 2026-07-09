@@ -5079,6 +5079,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		}).join("\n");
 		assertContains(utestAssertLines, "template<typename T>\n  static std::string q(const T& v)", "C++ utest Assert support should keep q polymorphic");
 		assertContains(utestAssertLines,
+			"static bool same(const TExpected& expected, const TValue& value, std::optional<bool> recursive = std::nullopt, std::optional<std::string> msg = std::nullopt, std::optional<double> approx = std::nullopt, std::optional<PosInfos> pos = std::nullopt)",
+			"C++ utest Assert support should render common polymorphic same signatures without full helper signature prep");
+		assertContains(utestAssertLines,
 			"template<typename TExpected, typename TValue, typename TStatus>\n  static bool sameAs(const TExpected& expected, const TValue& value, TStatus& status, double approx)",
 			"C++ utest Assert support should keep sameAs polymorphic");
 		assertContains(utestAssertLines, "static bool isOfType(", "C++ utest Assert support should keep assertion method signatures");

@@ -3756,11 +3756,9 @@ class CppTargetCore {
 			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
 			if (method == "new")
 				continue;
-			final isPolymorphicAssertHelper = isAssertPolymorphicStringifyHelper(fn, cls)
-				|| isAssertPolymorphicSameHelper(fn, cls)
-				|| isAssertPolymorphicSameAsHelper(fn, cls);
-			if (isPolymorphicAssertHelper) {
-				for (line in renderHelperMethod(fn, cls, classLookup))
+			final polymorphicAssertLines = renderUtestAssertPolymorphicMethod(fn, cls, classLookup);
+			if (polymorphicAssertLines != null) {
+				for (line in polymorphicAssertLines)
 					out.push(line);
 				continue;
 			}
@@ -3778,6 +3776,16 @@ class CppTargetCore {
 		}
 		out.push("};");
 		return out;
+	}
+
+	static function renderUtestAssertPolymorphicMethod(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Null<Array<String>> {
+		if (isAssertPolymorphicStringifyHelper(fn, owner))
+			return renderAssertPolymorphicStringifyHelper(fn);
+		if (isAssertPolymorphicSameHelper(fn, owner))
+			return renderAssertPolymorphicSameHelper(fn, owner, classLookup);
+		if (isAssertPolymorphicSameAsHelper(fn, owner))
+			return renderAssertPolymorphicSameAsHelper(fn, owner, classLookup);
+		return null;
 	}
 
 	/**
@@ -7400,6 +7408,9 @@ class CppTargetCore {
 	}
 
 	static function renderAssertPolymorphicSameHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final fast = renderAssertPolymorphicSameFastHelper(fn);
+		if (fast != null)
+			return fast;
 		final args = HxFunctionDecl.getArgs(fn);
 		final expectedName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
 		final valueName = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
@@ -7453,6 +7464,71 @@ class CppTargetCore {
 		return out;
 	}
 
+	static function renderAssertPolymorphicSameFastHelper(fn:HxFunctionDecl):Null<Array<String>> {
+		final args = HxFunctionDecl.getArgs(fn);
+		if (args.length < 2 || args.length > 6)
+			return null;
+		if (!assertFastArgCompatible(args, 2, "Bool")
+			|| !assertFastArgCompatible(args, 3, "String")
+			|| !assertFastArgCompatible(args, 4, "Float")
+			|| !assertFastArgCompatible(args, 5, "PosInfos"))
+			return null;
+		final expectedName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final valueName = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
+		final recursiveName = args.length > 2 ? sanitizeIdentifier(HxFunctionArg.getName(args[2])) : "__hxhx_recursive_opt";
+		final msgName = args.length > 3 ? sanitizeIdentifier(HxFunctionArg.getName(args[3])) : "__hxhx_msg_opt";
+		final approxName = args.length > 4 ? sanitizeIdentifier(HxFunctionArg.getName(args[4])) : "__hxhx_approx_opt";
+		final posName = args.length > 5 ? sanitizeIdentifier(HxFunctionArg.getName(args[5])) : "__hxhx_pos_opt";
+		final renderedArgs = ["const TExpected& " + expectedName, "const TValue& " + valueName];
+		if (args.length > 2)
+			renderedArgs.push("std::optional<bool> " + recursiveName + " = std::nullopt");
+		if (args.length > 3)
+			renderedArgs.push("std::optional<std::string> " + msgName + " = std::nullopt");
+		if (args.length > 4)
+			renderedArgs.push("std::optional<double> " + approxName + " = std::nullopt");
+		if (args.length > 5)
+			renderedArgs.push("std::optional<PosInfos> " + posName + " = std::nullopt");
+		final out = [
+			"  template<typename TExpected, typename TValue>",
+			"  static bool same(" + renderedArgs.join(", ") + ") {"
+		];
+		if (args.length <= 2)
+			out.push("    std::optional<bool> " + recursiveName + " = std::nullopt;");
+		if (args.length <= 3)
+			out.push("    std::optional<std::string> " + msgName + " = std::nullopt;");
+		if (args.length <= 4)
+			out.push("    std::optional<double> " + approxName + " = std::nullopt;");
+		if (args.length <= 5)
+			out.push("    std::optional<PosInfos> " + posName + " = std::nullopt;");
+		out.push("    if (!" + approxName + ".has_value()) " + approxName + " = 1e-05;");
+		out.push("    struct __hxhx_same_status {");
+		out.push("      bool recursive;");
+		out.push("      std::string path;");
+		out.push("      std::string error;");
+		out.push("      std::string expectedValue;");
+		out.push("      std::string actualValue;");
+		out.push("    };");
+		out.push("    auto __hxhx_status = __hxhx_same_status{");
+		out.push("      " + recursiveName + ".has_value() ? " + recursiveName + ".value() : true,");
+		out.push("      std::string(),");
+		out.push("      std::string(),");
+		out.push("      __hxhx_stringify(" + expectedName + "),");
+		out.push("      __hxhx_stringify(" + valueName + ")");
+		out.push("    };");
+		out.push("    if (__hxhx_same_as(" + expectedName + ", " + valueName + ", " + approxName + ".value())) {");
+		out.push("      return pass("
+			+ msgName
+			+ ".has_value() ? "
+			+ msgName
+			+ ".value() : std::string(\"pass expected\"), "
+			+ posName
+			+ ");");
+		out.push("    }");
+		out.push("    return fail((!" + msgName + ".has_value()) ? __hxhx_status.error : " + msgName + ".value(), " + posName + ");");
+		out.push("  }");
+		return out;
+	}
+
 	static function isAssertPolymorphicSameAsHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
 		if (owner == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner))) != "Assert")
 			return false;
@@ -7462,6 +7538,9 @@ class CppTargetCore {
 	}
 
 	static function renderAssertPolymorphicSameAsHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final fast = renderAssertPolymorphicSameAsFastHelper(fn);
+		if (fast != null)
+			return fast;
 		final args = HxFunctionDecl.getArgs(fn);
 		final expectedName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
 		final valueName = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
@@ -7517,6 +7596,70 @@ class CppTargetCore {
 			"  }"
 		];
 		return out;
+	}
+
+	static function renderAssertPolymorphicSameAsFastHelper(fn:HxFunctionDecl):Null<Array<String>> {
+		final args = HxFunctionDecl.getArgs(fn);
+		if (args.length < 3 || args.length > 4)
+			return null;
+		if (args.length == 4 && !assertFastArgCompatible(args, 3, "Float"))
+			return null;
+		final expectedName = sanitizeIdentifier(HxFunctionArg.getName(args[0]));
+		final valueName = sanitizeIdentifier(HxFunctionArg.getName(args[1]));
+		final statusName = sanitizeIdentifier(HxFunctionArg.getName(args[2]));
+		final hasApprox = args.length == 4;
+		final approxName = hasApprox ? sanitizeIdentifier(HxFunctionArg.getName(args[3])) : "__hxhx_approx";
+		final renderedArgs = [
+			"const TExpected& " + expectedName,
+			"const TValue& " + valueName,
+			"TStatus& " + statusName
+		];
+		if (hasApprox)
+			renderedArgs.push("double " + approxName);
+		final statusRef = "__hxhx_status";
+		return ["  template<typename TExpected, typename TValue, typename TStatus>",
+			"  static bool sameAs(" + renderedArgs.join(", ") + ") {",
+			"    auto& "
+			+ statusRef
+			+ " = __hxhx_status_ref("
+			+ statusName
+			+ ");",
+			"    ("
+			+ statusRef
+			+ ".expectedValue) = __hxhx_stringify("
+			+ expectedName
+			+ ");",
+			"    ("
+			+ statusRef
+			+ ".actualValue) = __hxhx_stringify("
+			+ valueName
+			+ ");",
+			"    const double __hxhx_same_as_approx = " + (hasApprox ? approxName : "0.0") + ";",
+			"    if (!__hxhx_same_as("
+			+ expectedName
+			+ ", "
+			+ valueName
+			+ ", __hxhx_same_as_approx)) {",
+			"      ("
+			+ statusRef
+			+ ".error) = std::string(\"expected \") + __hxhx_stringify("
+			+ expectedName
+			+ ") + std::string(\" but it is \") + __hxhx_stringify("
+			+ valueName
+			+ ");",
+			"      return false;",
+			"    }",
+			"    (" + statusRef + ".error) = std::string();",
+			"    return true;",
+			"  }"
+		];
+	}
+
+	static function assertFastArgCompatible(args:Array<HxFunctionArg>, index:Int, expectedHint:String):Bool {
+		if (index >= args.length)
+			return true;
+		final hint = removeTypeHintWhitespace(StringTools.trim(HxFunctionArg.getTypeHint(args[index])));
+		return hint.length == 0 || hint == expectedHint || hint == "haxe." + expectedHint || hint == "StdTypes." + expectedHint;
 	}
 
 	static function isUtestEqHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {

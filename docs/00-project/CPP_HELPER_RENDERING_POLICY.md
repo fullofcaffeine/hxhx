@@ -67,7 +67,9 @@ two narrow ways:
 
 - semantic helpers that Cpp call sites actually need, such as polymorphic
   `q`, `same`, and `sameAs`, must stay on explicit Cpp support paths with focused
-  smoke coverage;
+  smoke coverage. Common upstream signatures should render through direct
+  target-owned helpers rather than generic parsed-body/signature prep; unusual
+  signatures fall back to the normal helper renderer;
 - public non-generic assertion helpers whose bodies are only diagnostic/reporting
   machinery may render direct neutral no-op signatures. This avoids building a
   full render scope for each assertion stub, but it must not be generalized to
