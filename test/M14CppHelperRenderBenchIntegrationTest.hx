@@ -37,6 +37,17 @@ typedef FreshERegReturnBenchResult = {
 	var sample:String;
 }
 
+typedef ERegLambdaPhaseBenchResult = {
+	var calls:Int;
+	var lambdaElapsed:Float;
+	var bodyElapsed:Float;
+	var stringElapsed:Float;
+	var renderElapsed:Float;
+	var inferElapsed:Float;
+	var lambdaSample:String;
+	var bodySample:String;
+}
+
 /**
 	Renderer-only latency probe for the C++ helper-class frontier.
 
@@ -57,6 +68,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_BYTES_REFERENCE_CALLS = 10;
 	static inline final DEFAULT_BYTES_STRING_ARG_CALLS = 100;
 	static inline final DEFAULT_FRESH_EREG_RETURN_CALLS = 10;
+	static inline final DEFAULT_EREG_LAMBDA_CALLS = 10;
 
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -473,7 +485,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
-	static function inferFreshERegReturns(callCount:Int):FreshERegReturnBenchResult {
+	static function eRegBenchScope():backend.cpp.CppRenderScope {
 		final eReg = new HxClassDecl("EReg", false, [
 			new HxFunctionDecl("replace", Public, false, [
 				new HxFunctionArg("s", "String", NoDefault, false, false),
@@ -482,9 +494,13 @@ class M14CppHelperRenderBenchIntegrationTest {
 			new HxFunctionDecl("map", Public, false, [
 				new HxFunctionArg("s", "String", NoDefault, false, false),
 				new HxFunctionArg("f", "EReg->String", NoDefault, false, false)
-			], "String", [], "")
+			],
+				"String", [], ""),
+			new HxFunctionDecl("matched", Public, false, [new HxFunctionArg("n", "Int", NoDefault, false, false)], "String", [], ""),
+			new HxFunctionDecl("matchedLeft", Public, false, [], "String", [], ""),
+			new HxFunctionDecl("matchedRight", Public, false, [], "String", [], "")
 		], []);
-		final owner = new HxClassDecl("FreshERegReturnBenchOwner", false, [], []);
+		final owner = new HxClassDecl("ERegBenchOwner", false, [], []);
 		final names = new StringMap<Bool>();
 		final classes = new StringMap<HxClassDecl>();
 		final all = new Array<HxClassDecl>();
@@ -501,7 +517,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 			classes.set(name, cls);
 			all.push(cls);
 		}
-		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes, all: all}, "void");
+		return @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes, all: all}, "void");
+	}
+
+	static function inferFreshERegReturns(callCount:Int):FreshERegReturnBenchResult {
+		final scope = eRegBenchScope();
 		final fresh = ENew("EReg", [EString("a+"), EString("g")]);
 		final replace = ECall(EField(fresh, "replace"), [EString("aa"), EString("x")]);
 		final map = ECall(EField(fresh, "map"), [EString("aa"), ELambda(["r"], ECall(EField(EIdent("r"), "matchedLeft"), []))]);
@@ -513,6 +533,52 @@ class M14CppHelperRenderBenchIntegrationTest {
 				+ ","
 				+ @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(map, scope);
 		return {calls: callCount, elapsed: Sys.time() - start, sample: sample};
+	}
+
+	static function renderERegLambdaPhases(callCount:Int):ERegLambdaPhaseBenchResult {
+		final scope = eRegBenchScope();
+		final body = EBinop("+",
+			EBinop("+", EBinop("+", EString("["), ECall(EField(EIdent("r"), "matchedLeft"), [])), ECall(EField(EIdent("r"), "matched"), [EInt(0)])),
+			ECall(EField(EIdent("r"), "matchedRight"), []));
+		final expectedType = "std::function<std::string(std::shared_ptr<EReg>)>";
+		resetRendererCaches();
+		final lambdaStart = Sys.time();
+		var lambdaSample = "";
+		for (_ in 0...callCount)
+			lambdaSample = @:privateAccess backend.cpp.CppTargetCore.lambdaExprForExpectedFunction(["r"], body, expectedType, scope);
+		final lambdaElapsed = Sys.time() - lambdaStart;
+		scope.localTypes.set("r", "std::shared_ptr<EReg>");
+		scope.localNames.set("r", "r");
+		resetRendererCaches();
+		final bodyStart = Sys.time();
+		var bodySample = "";
+		for (_ in 0...callCount)
+			bodySample = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(body, "std::string", scope);
+		final bodyElapsed = Sys.time() - bodyStart;
+		resetRendererCaches();
+		final stringStart = Sys.time();
+		for (_ in 0...callCount)
+			@:privateAccess backend.cpp.CppTargetCore.stringExpr(body, scope);
+		final stringElapsed = Sys.time() - stringStart;
+		resetRendererCaches();
+		final renderStart = Sys.time();
+		for (_ in 0...callCount)
+			@:privateAccess backend.cpp.CppTargetCore.renderExpr(body, scope);
+		final renderElapsed = Sys.time() - renderStart;
+		resetRendererCaches();
+		final inferStart = Sys.time();
+		for (_ in 0...callCount)
+			@:privateAccess backend.cpp.CppTargetCore.inferExprCppType(body, scope);
+		return {
+			calls: callCount,
+			lambdaElapsed: lambdaElapsed,
+			bodyElapsed: bodyElapsed,
+			stringElapsed: stringElapsed,
+			renderElapsed: renderElapsed,
+			inferElapsed: Sys.time() - inferStart,
+			lambdaSample: lambdaSample,
+			bodySample: bodySample
+		};
 	}
 
 	static function assertCallableArgOverridePolicy():Void {
@@ -540,6 +606,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final bytesReferenceCalls = envInt("HXHX_CPP_BYTES_REFERENCE_BENCH_CALLS", DEFAULT_BYTES_REFERENCE_CALLS);
 		final bytesStringArgCalls = envInt("HXHX_CPP_BYTES_STRING_ARG_BENCH_CALLS", DEFAULT_BYTES_STRING_ARG_CALLS);
 		final freshERegReturnCalls = envInt("HXHX_CPP_FRESH_EREG_RETURN_BENCH_CALLS", DEFAULT_FRESH_EREG_RETURN_CALLS);
+		final eRegLambdaCalls = envInt("HXHX_CPP_EREG_LAMBDA_BENCH_CALLS", DEFAULT_EREG_LAMBDA_CALLS);
 		var best:HelperRenderBenchResult = null;
 		var total = 0.0;
 		for (_ in 0...reps) {
@@ -574,6 +641,10 @@ class M14CppHelperRenderBenchIntegrationTest {
 			"Bytes String argument phases should preserve the existing std::string wrapper for typed locals");
 		final freshERegReturns = inferFreshERegReturns(freshERegReturnCalls);
 		assertTrue(freshERegReturns.sample == "std::string,std::string", "Fresh EReg replace/map calls should keep their known String return types");
+		final eRegLambdaPhases = renderERegLambdaPhases(eRegLambdaCalls);
+		assertTrue(eRegLambdaPhases.lambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight()); }',
+			"EReg.map callback fixtures should keep their typed callback and concatenation shape");
+		assertContains(eRegLambdaPhases.bodySample, "r->matchedLeft()", "EReg.map callback fixtures should keep nested EReg body calls");
 
 		Sys.println("CPP_HELPER_RENDER_BENCH:PASS extra_methods="
 			+ extraMethods
@@ -607,6 +678,18 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ freshERegReturns.calls
 			+ " fresh_ereg_return_seconds="
 			+ freshERegReturns.elapsed
+			+ " ereg_lambda_calls="
+			+ eRegLambdaPhases.calls
+			+ " ereg_lambda_seconds="
+			+ eRegLambdaPhases.lambdaElapsed
+			+ " ereg_lambda_body_seconds="
+			+ eRegLambdaPhases.bodyElapsed
+			+ " ereg_lambda_string_seconds="
+			+ eRegLambdaPhases.stringElapsed
+			+ " ereg_lambda_render_seconds="
+			+ eRegLambdaPhases.renderElapsed
+			+ " ereg_lambda_infer_seconds="
+			+ eRegLambdaPhases.inferElapsed
 			+ (stdList == null ? "" : " std_list_seconds=" + stdList.elapsed + " std_list_lines=" + stdList.lines));
 	}
 }

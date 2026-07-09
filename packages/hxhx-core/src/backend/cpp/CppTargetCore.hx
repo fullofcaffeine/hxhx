@@ -21439,6 +21439,42 @@ class CppTargetCore {
 			cppFunctionReturnTypeFromCppType(expectedType));
 	}
 
+	/**
+		Render EReg-to-String callback concatenations through the canonical String path.
+
+		The expected function type already fixes the callback result as String, and
+		`stringExpr` recursively preserves literal wrappers, Dynamic coercion, and
+		abstract `toString` behavior. Skipping whole-value probes is limited to `+`
+		bodies with the core EReg callback argument shape.
+	**/
+	static function directERegStringCallbackBodyExpr(body:HxExpr, argTypes:Array<String>, returnType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || returnType != "std::string" || argTypes == null || argTypes.length != 1)
+			return null;
+		final argClass = classNameFromCppType(argTypes[0]);
+		if (argClass == null || !isERegTypeName(argClass))
+			return null;
+		return switch (body) {
+			case EBinop("+", _, _):
+				directERegStringConcatExpr(body, scope);
+			case _:
+				null;
+		};
+	}
+
+	/** Preserve canonical String coercion at EReg callback leaves while bypassing redundant probes on each enclosing concatenation. **/
+	static function directERegStringConcatExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case EBinop("+", left, right):
+				"("
+				+ directERegStringConcatExpr(left, scope)
+				+ " + "
+				+ directERegStringConcatExpr(right, scope)
+				+ ")";
+			case _:
+				stringExpr(expr, scope);
+		};
+	}
+
 	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope, ?expectedReturnType:String,
 			?capture:String):String {
 		final names = [for (arg in args) sanitizeIdentifier(arg)];
@@ -21468,8 +21504,10 @@ class CppTargetCore {
 			if (i < argTypes.length && argTypes[i].length > 0)
 				scope.localTypes.set(names[i], argTypes[i]);
 		}
+		final directERegStringBody = explicitReturn ? directERegStringCallbackBodyExpr(body, argTypes, returnType, scope) : null;
 		final renderedBody = returnType == "void" ? renderExpr(body,
-			scope) : explicitReturn ? valueExprForExpectedType(body, returnType, scope) : renderExpr(body, scope);
+			scope) : directERegStringBody != null ? directERegStringBody : explicitReturn ? valueExprForExpectedType(body, returnType,
+				scope) : renderExpr(body, scope);
 		scope.localTypes = savedLocalTypes;
 		scope.localNames = savedLocalNames;
 		if (returnType == "void")

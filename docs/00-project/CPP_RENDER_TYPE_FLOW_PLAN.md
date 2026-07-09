@@ -891,6 +891,61 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp still
 times out, and this internal fresh-receiver inference improvement does not
 change public production readiness.
 
+## 2026-07-09 EReg String Callback Concatenation Guard
+
+Follow-up bead `haxe_ocaml-rr13n` isolated the next `TestEReg.test` seam from
+the same detailed phase trace. Eight `ELambda` call arguments totaled about
+1.60s in `param_arg_render`, with about 1.59s attributed to
+`function_expected_render`. The primitive-literal and fresh-receiver guards do
+not affect those callback arguments.
+
+The scaled helper fixture now renders a typed
+`std::function<std::string(std::shared_ptr<EReg>)>` callback whose nested
+concatenation reads `matchedLeft`, `matched(0)`, and `matchedRight`. Initial
+ten-call samples measured about 0.319s to 0.344s for the complete expected
+lambda and about 0.313s to 0.321s for generic expected-String rendering of the
+body alone, proving that callback signature construction was not the hotspot.
+Separate samples placed canonical `stringExpr` work around 0.218s to 0.257s,
+plain rendering around 0.150s to 0.155s, and type inference around 0.030s to
+0.032s.
+
+The retained path is limited to one-argument EReg-to-String callbacks whose
+body is a `+` concatenation. It recursively bypasses redundant probes on the
+concatenation nodes while continuing to render every leaf through
+`stringExpr`, preserving literal wrappers, erased Dynamic coercion, abstract
+`toString` behavior, captures, and the expected callback signature. Other
+function types, non-concatenation callback bodies, and non-EReg lambdas retain
+the generic expected-value path.
+
+An intermediate whole-body String shortcut reduced the ten-call callback loop
+to about 0.291s to 0.315s. With the retained recursive concatenation guard, two
+samples reported about 0.0215s and 0.0149s. An exact fixture assertion keeps
+the generated callback unchanged as
+`[&](std::shared_ptr<EReg> r) -> std::string { return ...; }`, including the
+same nested `std::string("[")` and `matched*` expression shape. The full Cpp
+native backend smoke also passed with its existing EReg runtime and callback
+assertions.
+
+No new strict method-level delta is claimed for this slice. As above, a warmed
+method probe requires a serialized external-worktree seed plus the full 480s
+run, while the scaled callback fixture directly proves this isolated seam. A
+follow-up should obtain one warmed post-EReg-guards trace before choosing the
+next `TestEReg` or shared render hotspot.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+times out, and this internal callback-render improvement does not change
+public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
