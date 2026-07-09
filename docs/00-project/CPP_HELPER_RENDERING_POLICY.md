@@ -120,18 +120,32 @@ runtime modules keep the public C++ shapes and move the bodies into
 vector storage, byte helper calls, UTF8 enum-carrier shape, `Int64` projections,
 buffer reset behavior, and runtime-module classification.
 
-`Input` and `Output` are deliberately not folded into the same change. They are
-abstract stream override surfaces with EOF, blocked I/O, buffering, and
-exception contracts, so they need separate oracle/smoke work before becoming
-C++ runtime modules. Until then, they remain parsed helpers even if their bodies
-are also visible in strict timing logs.
+`haxe.io.Input` and `haxe.io.Output` base classes also use target-owned runtime
+modules, but with a narrower rule than the byte-storage helpers. Their base
+methods are reusable stream control flow around overridable `readByte`,
+`readBytes`, `writeByte`, and `writeBytes` hooks, so the C++ support keeps those
+methods virtual and preserves the current backend's string/runtime-error
+exception boundary for `Eof`, `Blocked`, `OutsideBounds`, and `Overflow`.
+Concrete streams such as `BytesInput`, `BytesOutput`, file streams, process
+streams, and socket streams remain parsed helpers so target-specific override
+bodies are still emitted and can dispatch through the virtual base methods.
 
-The 2026-07-09 strict source-only Cpp probe after this rule still timed out, but
-moved the 360s frontier from `ListNode` helper rendering to
-`TestBasetypes.testMath`. The anonymous collector summary changed from
-`count=92 walked_bodies=102 skipped_bodies=1602` to
-`count=85 walked_bodies=97 skipped_bodies=1290 omitted_bodies=592
-skipped_field_inits=191`, which is useful burn-down evidence but not a green
+Do not generalize this into a blanket `haxe.io.*` extraction. New stream-family
+runtime modules need their own behavior review, focused smoke coverage, and
+strict-probe timing evidence because concrete I/O classes may involve host file,
+process, socket, buffering, and close/flush semantics rather than reusable base
+control flow.
+
+The 2026-07-09 strict source-only Cpp probe after the byte-buffer slice still
+timed out in 360s after `TestBasetypes.testIntMap`, with `Input` parsed in
+~17.19s and `Output` parsed in ~7.11s. After the base stream runtime-module
+slice, the same 360s probe still timed out, but `Input` rendered in ~0.0003s,
+`Output` rendered in ~0.0003s, helper classification changed from
+`total=385 full_body=258 declaration_only=83 runtime_module=44` to
+`total=384 full_body=255 declaration_only=83 runtime_module=46`, and the
+timeout frontier advanced to `Date.getDay` after completing `TestBasetypes`,
+`UInt`, numeric suffix/separator helpers, `StringBuf`, `CallStack`, and several
+exception helpers. This is useful burn-down evidence, not a green strict Cpp
 gate.
 
 Sensitive surfaces require separate behavior review before implementation:

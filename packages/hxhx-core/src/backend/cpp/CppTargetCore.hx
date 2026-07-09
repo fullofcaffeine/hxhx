@@ -2692,6 +2692,8 @@ class CppTargetCore {
 			|| isStdListSupportClass(cls, classLookup)
 			|| isBytesSupportClass(cls, classLookup)
 			|| isBytesBufferSupportClass(cls, classLookup)
+			|| isInputSupportClass(cls, classLookup)
+			|| isOutputSupportClass(cls, classLookup)
 			|| isGenericMapSupportClass(cls)
 			|| isPosInfosSupportClass(cls)
 			|| isClassMetaSupportClass(cls)
@@ -2912,6 +2914,16 @@ class CppTargetCore {
 			// renderUnitTestBaseSupportClass emits target-owned calls through these helpers.
 			add("Assert");
 			add("Type");
+		}
+		if (isInputSupportClass(cls, classLookup)) {
+			// The target-owned base Input body calls byte runtime modules directly.
+			add("Bytes");
+			add("BytesBuffer");
+		}
+		if (isOutputSupportClass(cls, classLookup)) {
+			// The target-owned base Output body writes Bytes and drains Input streams.
+			add("Bytes");
+			add("Input");
 		}
 		if (renderedClassName(cls, classLookup) == "Exception") {
 			// Exception stores and returns CallStack by value in generated support.
@@ -3225,6 +3237,12 @@ class CppTargetCore {
 			return CppRuntimeSupport.bytesSupportLines(className);
 		if (isBytesBufferSupportClass(cls, classLookup))
 			return CppRuntimeSupport.bytesBufferSupportLines(className, renderedSupportClassName("Bytes", classLookup));
+		if (isInputSupportClass(cls, classLookup))
+			return CppRuntimeSupport.inputSupportLines(className, renderedSupportClassName("Bytes", classLookup),
+				renderedSupportClassName("BytesBuffer", classLookup));
+		if (isOutputSupportClass(cls, classLookup))
+			return CppRuntimeSupport.outputSupportLines(className, renderedSupportClassName("Bytes", classLookup),
+				renderedSupportClassName("Input", classLookup));
 		if (isGenericMapSupportClass(cls))
 			return renderGenericMapSupportClass(cls);
 		if (isPosInfosSupportClass(cls))
@@ -4982,6 +5000,35 @@ class CppTargetCore {
 				case _:
 					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
 			};
+		if (owner == "Input")
+			return switch (method) {
+				case "readByte" | "readBytes" | "readInt8" | "readInt16" | "readUInt16" | "readInt24" | "readUInt24" | "readInt32":
+					"int";
+				case "readAll" | "read":
+					cppTypeHint("Bytes", scope, classLookup);
+				case "close" | "readFullBytes":
+					"void";
+				case "set_bigEndian":
+					"bool";
+				case "readUntil" | "readLine" | "readString":
+					"std::string";
+				case "readFloat" | "readDouble":
+					"double";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			};
+		if (owner == "Output")
+			return switch (method) {
+				case "writeByte" | "flush" | "close" | "write" | "writeFullBytes" | "writeFloat" | "writeDouble" | "writeInt8" | "writeInt16" |
+					"writeUInt16" | "writeInt24" | "writeUInt24" | "writeInt32" | "prepare" | "writeInput" | "writeString":
+					"void";
+				case "writeBytes":
+					"int";
+				case "set_bigEndian":
+					"bool";
+				case _:
+					StringTools.trim(typeHint == null ? "" : typeHint).length > 0 ? cppReturnTypeHint(typeHint, scope, classLookup) : "";
+			};
 		if (isTypeResolverHelper(owner)) {
 			return switch (method) {
 				case "resolveClass":
@@ -5227,6 +5274,40 @@ class CppTargetCore {
 						["std::string", cppTypeHint("Encoding", scope, classLookup)];
 					case "addBytes":
 						[cppTypeHint("Bytes", scope, classLookup), "int", "int"];
+					case _:
+						[];
+				}
+			case "Input":
+				switch (method) {
+					case "readBytes" | "readFullBytes":
+						[cppTypeHint("Bytes", scope, classLookup), "int", "int"];
+					case "read" | "readUntil":
+						["int"];
+					case "readAll":
+						["std::optional<int>"];
+					case "readString":
+						["int", cppTypeHint("Encoding", scope, classLookup)];
+					case "set_bigEndian":
+						["bool"];
+					case _:
+						[];
+				}
+			case "Output":
+				switch (method) {
+					case "writeByte" | "writeInt8" | "writeInt16" | "writeUInt16" | "writeInt24" | "writeUInt24" | "writeInt32" | "prepare":
+						["int"];
+					case "writeBytes" | "writeFullBytes":
+						[cppTypeHint("Bytes", scope, classLookup), "int", "int"];
+					case "write":
+						[cppTypeHint("Bytes", scope, classLookup)];
+					case "writeFloat" | "writeDouble":
+						["double"];
+					case "writeInput":
+						[cppTypeHint("Input", scope, classLookup), "std::optional<int>"];
+					case "writeString":
+						["std::string", cppTypeHint("Encoding", scope, classLookup)];
+					case "set_bigEndian":
+						["bool"];
 					case _:
 						[];
 				}
@@ -16790,6 +16871,143 @@ class CppTargetCore {
 				required.set(method, true);
 		}
 		for (name in ["get_length", "addByte", "add", "addString", "addBytes", "getBytes"])
+			if (!required.get(name))
+				return false;
+		return true;
+	}
+
+	/**
+		Recognize the stdlib `haxe.io.Input` base stream helper.
+
+		Only the base class uses target-owned support. Concrete input streams stay on
+		the parsed-helper path so their override bodies remain visible and dispatch
+		through the virtual base methods.
+	**/
+	static function isInputSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "Input")
+			return false;
+		if (packagePathForRenderedClass(cls, classLookup) == "haxe.io")
+			return true;
+		if (isHaxeIoInputSourcePath(sourcePathForRenderedClass(cls, classLookup)))
+			return true;
+		return hasInputSupportShape(cls);
+	}
+
+	static function isHaxeIoInputSourcePath(path:String):Bool {
+		if (path == null || path.length == 0)
+			return false;
+		final normalized = StringTools.replace(path, "\\", "/");
+		if (normalized == "vendor/haxe/std/haxe/io/Input.hx" || StringTools.endsWith(normalized, "/vendor/haxe/std/haxe/io/Input.hx"))
+			return true;
+		return StringTools.endsWith(normalized, "/haxe/std/haxe/io/Input.hx");
+	}
+
+	static function hasInputSupportShape(cls:HxClassDecl):Bool {
+		var hasBigEndian = false;
+		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+			final hint = sanitizeTypePath(typeBaseName(HxFieldDecl.getTypeHint(field)));
+			if (fieldName == "bigEndian" && hint == "Bool")
+				hasBigEndian = true;
+		}
+		if (!hasBigEndian)
+			return false;
+		final required = new haxe.ds.StringMap<Bool>();
+		for (name in [
+			"readByte",
+			"readBytes",
+			"close",
+			"set_bigEndian",
+			"readAll",
+			"readFullBytes",
+			"read",
+			"readUntil",
+			"readLine",
+			"readFloat",
+			"readDouble",
+			"readInt8",
+			"readInt16",
+			"readUInt16",
+			"readInt24",
+			"readUInt24",
+			"readInt32",
+			"readString"
+		])
+			required.set(name, false);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			if (required.exists(method))
+				required.set(method, true);
+		}
+		for (name in required.keys())
+			if (!required.get(name))
+				return false;
+		return true;
+	}
+
+	/**
+		Recognize the stdlib `haxe.io.Output` base stream helper.
+
+		The target-owned support keeps `writeByte`/`writeBytes` virtual and does not
+		swallow concrete stream subclasses such as `BytesOutput` or file outputs.
+	**/
+	static function isOutputSupportClass(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		if (cls == null || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != "Output")
+			return false;
+		if (packagePathForRenderedClass(cls, classLookup) == "haxe.io")
+			return true;
+		if (isHaxeIoOutputSourcePath(sourcePathForRenderedClass(cls, classLookup)))
+			return true;
+		return hasOutputSupportShape(cls);
+	}
+
+	static function isHaxeIoOutputSourcePath(path:String):Bool {
+		if (path == null || path.length == 0)
+			return false;
+		final normalized = StringTools.replace(path, "\\", "/");
+		if (normalized == "vendor/haxe/std/haxe/io/Output.hx" || StringTools.endsWith(normalized, "/vendor/haxe/std/haxe/io/Output.hx"))
+			return true;
+		return StringTools.endsWith(normalized, "/haxe/std/haxe/io/Output.hx");
+	}
+
+	static function hasOutputSupportShape(cls:HxClassDecl):Bool {
+		var hasBigEndian = false;
+		for (field in HxClassDecl.getFields(cls)) {
+			final fieldName = sanitizeIdentifier(HxFieldDecl.getName(field));
+			final hint = sanitizeTypePath(typeBaseName(HxFieldDecl.getTypeHint(field)));
+			if (fieldName == "bigEndian" && hint == "Bool")
+				hasBigEndian = true;
+		}
+		if (!hasBigEndian)
+			return false;
+		final required = new haxe.ds.StringMap<Bool>();
+		for (name in [
+			"writeByte",
+			"writeBytes",
+			"flush",
+			"close",
+			"set_bigEndian",
+			"write",
+			"writeFullBytes",
+			"writeFloat",
+			"writeDouble",
+			"writeInt8",
+			"writeInt16",
+			"writeUInt16",
+			"writeInt24",
+			"writeUInt24",
+			"writeInt32",
+			"prepare",
+			"writeInput",
+			"writeString"
+		])
+			required.set(name, false);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final method = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+			if (required.exists(method))
+				required.set(method, true);
+		}
+		for (name in required.keys())
 			if (!required.get(name))
 				return false;
 		return true;

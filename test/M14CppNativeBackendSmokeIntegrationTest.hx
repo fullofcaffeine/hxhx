@@ -9074,6 +9074,107 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ BytesBuffer.getBytes should keep the Bytes return when the source signature uses a trailing untyped modifier");
 		assertTrue(bytesBufferUntypedLines.indexOf("Bytesuntyped") < 0,
 			"C++ BytesBuffer.getBytes should not leak the source untyped modifier into the generated type name");
+		function streamFn(name:String, returnType:String, ?args:Array<HxFunctionArg>):HxFunctionDecl {
+			return new HxFunctionDecl(name, Public, false, args == null ? [] : args, returnType, [], "");
+		}
+		final streamBytesArgs = [
+			new HxFunctionArg("s", "Bytes", NoDefault, false, false),
+			new HxFunctionArg("pos", "Int", NoDefault, false, false),
+			new HxFunctionArg("len", "Int", NoDefault, false, false)
+		];
+		final inputRuntime = new HxClassDecl("Input", false, [
+			streamFn("readByte", "Int"),
+			streamFn("readBytes", "Int", streamBytesArgs),
+			streamFn("close", "Void"),
+			streamFn("set_bigEndian", "Bool", [new HxFunctionArg("b", "Bool", NoDefault, false, false)]),
+			streamFn("readAll", "Bytes", [new HxFunctionArg("bufsize", "Int", NoDefault, true, false)]),
+			streamFn("readFullBytes", "Void", streamBytesArgs),
+			streamFn("read", "Bytes", [new HxFunctionArg("nbytes", "Int", NoDefault, false, false)]),
+			streamFn("readUntil", "String", [new HxFunctionArg("end", "Int", NoDefault, false, false)]),
+			streamFn("readLine", "String"),
+			streamFn("readFloat", "Float"),
+			streamFn("readDouble", "Float"),
+			streamFn("readInt8", "Int"),
+			streamFn("readInt16", "Int"),
+			streamFn("readUInt16", "Int"),
+			streamFn("readInt24", "Int"),
+			streamFn("readUInt24", "Int"),
+			streamFn("readInt32", "Int"),
+			streamFn("readString", "String", [
+				new HxFunctionArg("len", "Int", NoDefault, false, false),
+				new HxFunctionArg("encoding", "Encoding", NoDefault, true, false)
+			])
+		], [new HxFieldDecl("bigEndian", Public, false, "Bool", null)]);
+		final outputRuntime = new HxClassDecl("Output", false, [
+			streamFn("writeByte", "Void", [new HxFunctionArg("c", "Int", NoDefault, false, false)]),
+			streamFn("writeBytes", "Int", streamBytesArgs),
+			streamFn("flush", "Void"),
+			streamFn("close", "Void"),
+			streamFn("set_bigEndian", "Bool", [new HxFunctionArg("b", "Bool", NoDefault, false, false)]),
+			streamFn("write", "Void", [new HxFunctionArg("s", "Bytes", NoDefault, false, false)]),
+			streamFn("writeFullBytes", "Void", streamBytesArgs),
+			streamFn("writeFloat", "Void", [new HxFunctionArg("x", "Float", NoDefault, false, false)]),
+			streamFn("writeDouble", "Void", [new HxFunctionArg("x", "Float", NoDefault, false, false)]),
+			streamFn("writeInt8", "Void", [new HxFunctionArg("x", "Int", NoDefault, false, false)]),
+			streamFn("writeInt16", "Void", [new HxFunctionArg("x", "Int", NoDefault, false, false)]),
+			streamFn("writeUInt16", "Void", [new HxFunctionArg("x", "Int", NoDefault, false, false)]),
+			streamFn("writeInt24", "Void", [new HxFunctionArg("x", "Int", NoDefault, false, false)]),
+			streamFn("writeUInt24", "Void", [new HxFunctionArg("x", "Int", NoDefault, false, false)]),
+			streamFn("writeInt32", "Void", [new HxFunctionArg("x", "Int", NoDefault, false, false)]),
+			streamFn("prepare", "Void", [new HxFunctionArg("nbytes", "Int", NoDefault, false, false)]),
+			streamFn("writeInput", "Void", [
+				new HxFunctionArg("i", "Input", NoDefault, false, false),
+				new HxFunctionArg("bufsize", "Int", NoDefault, true, false)
+			]),
+			streamFn("writeString", "Void", [
+				new HxFunctionArg("s", "String", NoDefault, false, false),
+				new HxFunctionArg("encoding", "Encoding", NoDefault, true, false)
+			])
+		], [new HxFieldDecl("bigEndian", Public, false, "Bool", null)]);
+		for (name in ["Input", "Output"])
+			bytesNames.set(name, true);
+		bytesClasses.set("Input", inputRuntime);
+		bytesClasses.set("Output", outputRuntime);
+		final inputKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(inputRuntime, bytesLookup);
+		final outputKind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(outputRuntime, bytesLookup);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(inputKind) == "runtime_module",
+			"C++ base Input should render through target-owned stream support instead of parsed stdlib bodies");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(outputKind) == "runtime_module",
+			"C++ base Output should render through target-owned stream support instead of parsed stdlib bodies");
+		final inputRuntimeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(inputRuntime, bytesLookup).join("\n");
+		assertContains(inputRuntimeLines, "struct Input {", "C++ Input support should keep the public helper shape");
+		assertContains(inputRuntimeLines, "virtual int readByte() { throw std::runtime_error(std::string(\"Not implemented\")); }",
+			"C++ Input.readByte should remain an overridable unsupported base hook");
+		assertContains(inputRuntimeLines, "virtual int readBytes(std::shared_ptr<Bytes> s, int pos, int len) {",
+			"C++ Input.readBytes should keep the Bytes stream signature");
+		assertContains(inputRuntimeLines, "s->b[pos] = readByte();", "C++ Input.readBytes should write through Bytes storage, not a copied getData vector");
+		assertContains(inputRuntimeLines, "catch (const std::exception& e) { if (std::string(e.what()) != std::string(\"Eof\")) throw; }",
+			"C++ Input support should preserve the stdlib EOF swallowing boundary");
+		assertContains(inputRuntimeLines, "virtual std::shared_ptr<Bytes> readAll(std::optional<int> bufsize = std::nullopt) {",
+			"C++ Input.readAll should keep the optional chunk-size surface");
+		assertContains(inputRuntimeLines, "auto total = std::make_shared<BytesBuffer>();",
+			"C++ Input.readAll/readLine should reuse the target-owned BytesBuffer runtime");
+		assertContains(inputRuntimeLines, "if (len == 0) throw std::runtime_error(std::string(\"Blocked\"));",
+			"C++ Input.readAll/read should preserve Blocked behavior for zero-byte progress");
+		assertContains(inputRuntimeLines, "virtual std::string readLine() {", "C++ Input support should own readLine control flow");
+		assertContains(inputRuntimeLines, "if (s.size() == 0) throw;", "C++ Input.readLine should rethrow EOF for an empty partial line");
+		assertContains(inputRuntimeLines, "virtual double readDouble() {", "C++ Input support should preserve numeric read helpers");
+		final outputRuntimeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(outputRuntime, bytesLookup).join("\n");
+		assertContains(outputRuntimeLines, "struct Output {", "C++ Output support should keep the public helper shape");
+		assertContains(outputRuntimeLines, "virtual void writeByte(int c) { throw std::runtime_error(std::string(\"Not implemented\")); }",
+			"C++ Output.writeByte should remain an overridable unsupported base hook");
+		assertContains(outputRuntimeLines, "virtual int writeBytes(std::shared_ptr<Bytes> s, int pos, int len) {",
+			"C++ Output.writeBytes should keep the Bytes stream signature");
+		assertContains(outputRuntimeLines, "writeByte(s->b[pos]);", "C++ Output.writeBytes should read Bytes storage directly");
+		assertContains(outputRuntimeLines, "virtual void write(std::shared_ptr<Bytes> s) {", "C++ Output.write should keep its base helper surface");
+		assertContains(outputRuntimeLines, "if (k == 0) throw std::runtime_error(std::string(\"Blocked\"));",
+			"C++ Output.write/writeInput should preserve Blocked behavior for zero-byte progress");
+		assertContains(outputRuntimeLines, "virtual void writeFloat(double x) { writeInt32(__float_to_i32(x)); }",
+			"C++ Output.writeFloat should preserve FP bit conversion before byte writes");
+		assertContains(outputRuntimeLines, "virtual void writeInput(std::shared_ptr<Input> i, std::optional<int> bufsize = std::nullopt) {",
+			"C++ Output.writeInput should preserve input-draining and optional buffer size");
+		assertContains(outputRuntimeLines, "virtual void writeString(std::string s, std::shared_ptr<Encoding> encoding = nullptr) {",
+			"C++ Output.writeString should preserve optional Encoding as a target enum carrier");
 		final input = new HxClassDecl("Input", false, [
 			new HxFunctionDecl("readAll", Public, false, [], "Bytes", [SReturn(ECall(EField(EIdent("Bytes"), "alloc"), [EInt(0)]), HxPos.unknown())], "")
 		], []);
