@@ -1244,6 +1244,50 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedType, typedOther], []);
 	}
 
+	static function typeValueRuntimeProgram():GenIrProgram {
+		final src = [
+			"enum ValueType {",
+			"  TNull;",
+			"  TInt;",
+			"  TFloat;",
+			"  TBool;",
+			"  TFunction;",
+			"  TClass(c:Class<Dynamic>);",
+			"  TEnum(e:Enum<Dynamic>);",
+			"  TUnknown;",
+			"}",
+			"class ValueTypeRuntimeClass {",
+			"  public function new() {}",
+			"}",
+			"enum ValueTypeRuntimeEnum {",
+			"  Case;",
+			"}",
+			"class Main {",
+			"  static function check(label:String, value:Bool) {",
+			"    Sys.println(label + \"=\" + Std.string(value));",
+			"  }",
+			"  static function typeNameValue(name:String, rt:ValueType):Bool {",
+			"    return Type.enumEq(name, rt);",
+			"  }",
+			"  static function main() {",
+			"    var f:Void->Void = function() {};",
+			"    check(\"int\", typeNameValue(Type.typeof(1), TInt));",
+			"    check(\"float\", typeNameValue(Type.typeof(1.5), TFloat));",
+			"    check(\"bool\", typeNameValue(Type.typeof(true), TBool));",
+			"    check(\"null\", typeNameValue(Type.typeof(null), TNull));",
+			"    check(\"class\", typeNameValue(Type.typeof(new ValueTypeRuntimeClass()), TClass(ValueTypeRuntimeClass)));",
+			"    check(\"enum\", typeNameValue(Type.typeof(ValueTypeRuntimeEnum.Case), TEnum(ValueTypeRuntimeEnum)));",
+			"    check(\"function\", typeNameValue(Type.typeof(f), TFunction));",
+			"    check(\"unknown\", typeNameValue(Type.typeof({x: 1}), TUnknown));",
+			"    check(\"mismatch\", typeNameValue(Type.typeof(1), TFloat));",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function typeCreateInstanceProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -12326,10 +12370,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ module-qualified Type.ValueType helpers should keep Type.typeof Dynamic parameters erased");
 		assertTrue(valueTypeCarrierSource.indexOf("typeValue(std::string v, std::shared_ptr<Type_ValueType> rt") < 0,
 			"C++ module-qualified Type.ValueType helpers should not narrow Type.typeof Dynamic parameters to strings");
-		assertContains(valueTypeCarrierSource, "std::make_shared<Type_ValueType>()",
-			"C++ ValueType enum constructor values should use the rendered carrier name");
+		assertContains(valueTypeCarrierSource, "__hxhx_value_type_tag",
+			"C++ ValueType enum carriers should preserve the constructor tag for Type.typeof comparisons");
+		assertContains(valueTypeCarrierSource, "std::make_shared<Type_ValueType>(std::string(\"TInt\"), std::string())",
+			"C++ zero-payload ValueType constructors should preserve the rendered carrier name and tag");
+		assertContains(valueTypeCarrierSource, "std::make_shared<Type_ValueType>(std::string(\"TClass\"), std::string(\"StringMap\"))",
+			"C++ ValueType payload constructors should preserve class-reference payloads as runtime type names");
 		assertContains(valueTypeCarrierSource, "__hxhx_value_type_eq(__hxhx_type_name(v), rt)",
 			"C++ Type.typeof ValueType comparisons should cross the bounded comparison seam");
+		assertContains(valueTypeCarrierSource, "if (tag == \"TInt\") return actualTypeName == \"Int\";",
+			"C++ Type.typeof ValueType comparisons should inspect supported ValueType tags");
 		assertTrue(valueTypeCarrierSource.indexOf("Type::enumEq(__hxhx_type_name(v), rt)") < 0,
 			"C++ Type.typeof ValueType comparisons should not call the single-type enumEq template with mixed carrier shapes");
 		assertTrue(valueTypeCarrierSource.indexOf("std::make_shared<ValueType>") < 0,
@@ -12919,6 +12969,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(reflectPropertyRun.code == 0, "C++ typed Reflect property runtime smoke failed: " + reflectPropertyRun.stderr);
 			assertTrue(reflectPropertyRun.stdout == "5\n5\n10\n10\n20\n11\n11\n6\n10\n20\n16\n",
 				"unexpected C++ typed Reflect property stdout: " + reflectPropertyRun.stdout);
+
+			final typeValueBuildDir = Path.join([root, "type-value-runtime-build"]);
+			final typeValueBuilt = BackendRegistry.createForTarget("cpp-native").emit(typeValueRuntimeProgram(), context(typeValueBuildDir, true, false));
+			assertTrue(typeValueBuilt.builtExecutable, "C++ Type.ValueType runtime smoke should build executable");
+			final typeValueRun = commandOutput(typeValueBuilt.entryPath, []);
+			assertTrue(typeValueRun.code == 0, "C++ Type.ValueType runtime smoke failed: " + typeValueRun.stderr);
+			assertTrue(typeValueRun.stdout == "int=true\n" + "float=true\n" + "bool=true\n" + "null=true\n" + "class=true\n" + "enum=true\n"
+				+ "function=true\n" + "unknown=true\n" + "mismatch=false\n",
+				"unexpected C++ Type.ValueType stdout: "
+				+ typeValueRun.stdout);
 
 			final typeResolverBuildDir = Path.join([root, "type-resolver-build"]);
 			final typeResolverBuilt = BackendRegistry.createForTarget("cpp-native")

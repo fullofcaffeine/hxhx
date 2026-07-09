@@ -1012,6 +1012,10 @@ class CppTargetCore {
 		out.push("  return std::string(\"String\");");
 		out.push("}");
 		out.push("");
+		out.push("static std::string __hxhx_type_name(std::nullptr_t) {");
+		out.push("  return std::string(\"Null\");");
+		out.push("}");
+		out.push("");
 		out.push("static std::string __hxhx_type_name(int) {");
 		out.push("  return std::string(\"Int\");");
 		out.push("}");
@@ -1022,6 +1026,11 @@ class CppTargetCore {
 		out.push("");
 		out.push("static std::string __hxhx_type_name(bool) {");
 		out.push("  return std::string(\"Bool\");");
+		out.push("}");
+		out.push("");
+		out.push("template<typename R, typename... Args>");
+		out.push("static std::string __hxhx_type_name(const std::function<R(Args...)>&) {");
+		out.push("  return std::string(\"Function\");");
 		out.push("}");
 		out.push("");
 		out.push("static std::string __hxhx_type_name(const std::shared_ptr<EnumValue>& value) {");
@@ -1051,11 +1060,28 @@ class CppTargetCore {
 		out.push("  return std::string(\"Array\");");
 		out.push("}");
 		out.push("");
-		out.push("// hxhx-cpp-bounded-bringup: ValueType carriers are not fully semantic yet; keep Type.typeof comparisons behind a named seam.");
+		out.push("static bool __hxhx_value_type_payload_matches(const std::string& actualTypeName, const std::string& payload) {");
+		out.push("  if (payload.empty()) return false;");
+		out.push("  if (actualTypeName == payload) return true;");
+		out.push("  const std::size_t dot = payload.find_last_of('.');");
+		out.push("  if (dot != std::string::npos && actualTypeName == payload.substr(dot + 1)) return true;");
+		out.push("  std::string underscored = payload;");
+		out.push("  std::replace(underscored.begin(), underscored.end(), '.', '_');");
+		out.push("  return actualTypeName == underscored;");
+		out.push("}");
+		out.push("");
 		out.push("template<typename TValueType>");
 		out.push("static bool __hxhx_value_type_eq(const std::string& actualTypeName, const std::shared_ptr<TValueType>& expected) {");
-		out.push("  (void)actualTypeName;");
-		out.push("  (void)expected;");
+		out.push("  if (expected == nullptr) return false;");
+		out.push("  const std::string& tag = expected->__hxhx_value_type_tag;");
+		out.push("  const std::string& payload = expected->__hxhx_value_type_payload;");
+		out.push("  if (tag == \"TInt\") return actualTypeName == \"Int\";");
+		out.push("  if (tag == \"TFloat\") return actualTypeName == \"Float\";");
+		out.push("  if (tag == \"TBool\") return actualTypeName == \"Bool\";");
+		out.push("  if (tag == \"TNull\") return actualTypeName == \"Null\";");
+		out.push("  if (tag == \"TFunction\") return actualTypeName == \"Function\";");
+		out.push("  if (tag == \"TUnknown\") return actualTypeName == \"Dynamic\";");
+		out.push("  if (tag == \"TClass\" || tag == \"TEnum\") return __hxhx_value_type_payload_matches(actualTypeName, payload);");
 		out.push("  return false;");
 		out.push("}");
 		out.push("");
@@ -3174,11 +3200,13 @@ class CppTargetCore {
 		final typeParams = genericClassTemplateParams(cls);
 		final baseType = inheritedCppBaseTypeName(cls, classLookup);
 		final baseTypes = inheritedCppBaseTypes(cls, classLookup);
+		final scope = renderScope(cls, classLookup, "void");
 		final out = typeParams.length > 0 ? [genericTemplatePrefix(typeParams)] : [];
 		out.push("struct " + className + (baseTypes.length == 0 ? "" : " : " + baseTypes.join(", ")) + " {");
 		for (line in classMetadataLines(cls, className))
 			out.push(line);
-		final scope = renderScope(cls, classLookup, "void");
+		for (line in valueTypeCarrierStorageLines(cls, className))
+			out.push(line);
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == "new")
 				continue;
@@ -3416,6 +3444,29 @@ class CppTargetCore {
 			"  inline static std::string __hx_class_name = std::string(" + quoteString(className) + ");",
 			"  inline static std::vector<std::string> __hx_instance_fields = " + cppStringVectorLiteral(classMetadataInstanceFields(cls)) + ";"
 		];
+	}
+
+	/**
+		Give generated `ValueType` enum carriers a bounded runtime identity.
+
+		Most generated enum carriers are still pointer identity shells in this C++
+		bring-up path. `Type.enumEq(Type.typeof(value), valueType)` needs just the
+		constructor tag plus the class/enum payload name, so this storage is limited
+		to the std `ValueType` carrier shape instead of changing all enum carriers.
+	**/
+	static function valueTypeCarrierStorageLines(cls:HxClassDecl, className:String):Array<String> {
+		if (!isValueTypeCarrierClassDecl(cls, className))
+			return [];
+		return [
+			"  std::string __hxhx_value_type_tag = std::string();",
+			"  std::string __hxhx_value_type_payload = std::string();",
+			"  " + className + "(std::string tag, std::string payload = std::string()) : __hxhx_value_type_tag(tag), __hxhx_value_type_payload(payload) {}"
+		];
+	}
+
+	static function isValueTypeCarrierClassDecl(cls:HxClassDecl, className:String):Bool {
+		final clean = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		return (clean == "ValueType" || clean == "Type_ValueType") && classDeclIsEnumCarrier(cls);
 	}
 
 	static function classMetadataInstanceFields(cls:HxClassDecl):Array<String> {
@@ -11931,6 +11982,8 @@ class CppTargetCore {
 				directCallExpr(name, args, scope);
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				mapLiteralToStringExpr(elements, scope);
+			case ECall(EField(receiver, method), args) if (qualifiedValueTypeCarrierCtorExpr(receiver, method, args, scope) != null):
+				qualifiedValueTypeCarrierCtorExpr(receiver, method, args, scope);
 			case ECall(EField(receiver, method), args):
 				fieldCallExpr(receiver, method, args, scope);
 			case ECall(callee, args):
@@ -12136,7 +12189,13 @@ class CppTargetCore {
 				} else {
 					final carrier = typeName.substr(prefix.length, typeName.length - prefix.length - 1);
 					final cleanCarrier = StringTools.startsWith(carrier, "::") ? carrier.substr(2) : carrier;
-					cleanCarrier.length == 0 ? null : "std::make_shared<" + cleanCarrier + ">()";
+					if (cleanCarrier.length == 0) {
+						null;
+					} else if (isValueTypeCarrierClassName(cleanCarrier, scope)) {
+						valueTypeCarrierValueExpr(cleanCarrier, enumMetadataCtorName(init), [], scope);
+					} else {
+						"std::make_shared<" + cleanCarrier + ">()";
+					}
 				}
 			case _:
 				null;
@@ -16046,6 +16105,11 @@ class CppTargetCore {
 		final clean = sanitizeTypePath(typeBaseName(typePath));
 		if (isCppPreludeStaticReceiverTypePath(typePath, clean, lookup))
 			return clean;
+		final renderedPath = sanitizeTypePath(typePath);
+		if (typePath.indexOf(".") >= 0
+			&& scopeHasClass(scope, renderedPath)
+			&& (!isCppCoreExternClass(renderedPath) || isCppPreludeStaticClass(renderedPath)))
+			return renderedPath;
 		final cls = lookupClassForTypeHint(typePath, scope, lookup);
 		if (cls != null) {
 			final rendered = renderedClassName(cls, lookup);
@@ -17554,7 +17618,7 @@ class CppTargetCore {
 				final owner = staticReceiverClassName(receiver, scope);
 				if (owner == null
 					|| !isEnumCarrierClassName(owner, scope)
-					|| classMethodDecl(owner, name, true, scope) == null) null; else enumCtorValueForExpectedType(name, args, expectedType, scope);
+					|| classMethodDecl(owner, name, true, scope) == null) null; else enumCtorValueForCarrierType(name, args, owner, scope);
 			case _:
 				null;
 		};
@@ -17562,11 +17626,17 @@ class CppTargetCore {
 
 	static function enumCtorValueForExpectedType(name:String, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):Null<String> {
 		final rawCarrierType = classNameFromCppExprType(expectedType, scope);
+		return enumCtorValueForCarrierType(name, args, rawCarrierType, scope);
+	}
+
+	static function enumCtorValueForCarrierType(name:String, args:Array<HxExpr>, rawCarrierType:String, ?scope:CppRenderScope):Null<String> {
 		if (rawCarrierType == null || rawCarrierType.length == 0)
 			return null;
 		final carrierType = renderedCarrierClassName(rawCarrierType, scope);
 		if (carrierType == "EnumValue")
 			return enumValuePtrExpr(name, args, scope);
+		if (isValueTypeCarrierClassName(carrierType, scope))
+			return valueTypeCarrierValueExpr(carrierType, name, args, scope);
 		if (args == null || args.length == 0)
 			return "std::make_shared<" + carrierType + ">()";
 		final parts = ["([&]() {"];
@@ -17576,6 +17646,62 @@ class CppTargetCore {
 			parts.push(" (void)__hxhx_enum_arg_" + i + ";");
 		parts.push(" return std::make_shared<" + carrierType + ">(); })()");
 		return parts.join("");
+	}
+
+	/**
+		Render the std `ValueType` enum constructors as inspectable carrier values.
+
+		This remains intentionally narrower than general enum payload support. The
+		C++ `Type.typeof` bridge only needs the ValueType constructor name and the
+		class/enum reference payload for `TClass`/`TEnum`.
+	**/
+	static function valueTypeCarrierValueExpr(carrierType:String, name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		return "std::make_shared<"
+			+ carrierType
+			+ ">(std::string("
+			+ quoteString(name)
+			+ "), "
+			+ valueTypeCarrierPayloadExpr(name, args, scope)
+			+ ")";
+	}
+
+	static function valueTypeCarrierPayloadExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		if (args == null || args.length == 0)
+			return "std::string()";
+		return switch (sanitizeIdentifier(name)) {
+			case "TClass":
+				valueTypeReferencePayloadExpr(args[0], true, scope);
+			case "TEnum":
+				valueTypeReferencePayloadExpr(args[0], false, scope);
+			case _:
+				stringExpr(args[0], scope);
+		};
+	}
+
+	static function valueTypeReferencePayloadExpr(expr:HxExpr, classReference:Bool, ?scope:CppRenderScope):String {
+		final path = classReference ? classReferencePathText(expr, scope) : enumReferencePathText(expr, scope);
+		if (path == null)
+			return stringExpr(expr, scope);
+		return "std::string(" + quoteString(valueTypePayloadRuntimeName(path, scope)) + ")";
+	}
+
+	static function valueTypePayloadRuntimeName(typePath:String, ?scope:CppRenderScope):String {
+		final lookup = lookupForScope(scope);
+		final cls = lookupClassForTypeHint(typePath, scope, lookup);
+		if (cls != null)
+			return renderedClassName(cls, lookup);
+		final base = sanitizeTypePath(typeBaseName(typePath == null ? "" : typePath));
+		return base.length > 0 ? base : sanitizeTypePath(typePath);
+	}
+
+	static function isValueTypeCarrierClassName(className:String, ?scope:CppRenderScope):Bool {
+		final clean = sanitizeTypePath(typeBaseName(className == null ? "" : className));
+		if (clean != "ValueType" && clean != "Type_ValueType")
+			return false;
+		return scope == null
+			|| isValueTypeCarrierClassDecl(scope.owner, clean)
+			|| isEnumCarrierClassName(className, scope)
+			|| isEnumCarrierClassName(clean, scope);
 	}
 
 	static function renderedCarrierClassName(className:String, ?scope:CppRenderScope):String {
@@ -17686,6 +17812,23 @@ class CppTargetCore {
 		if (owner == null || !isEnumCarrierClassName(owner, scope) || classMethodDecl(owner, field, true, scope) == null)
 			return null;
 		return owner + "::" + sanitizeIdentifier(field);
+	}
+
+	/**
+		Render qualified `Type.ValueType.TClass(...)`-style calls as carrier values.
+
+		Some call-argument inference paths lose the declared parameter type before
+		`valueExprForExpectedType` can coerce the enum constructor. A qualified
+		ValueType receiver is enough evidence to build the bounded carrier directly,
+		without changing generic enum payload constructors.
+	**/
+	static function qualifiedValueTypeCarrierCtorExpr(receiver:HxExpr, field:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || args == null || args.length == 0)
+			return null;
+		final owner = staticReceiverClassName(receiver, scope);
+		if (owner == null || !isValueTypeCarrierClassName(owner, scope) || classMethodDecl(owner, field, true, scope) == null)
+			return null;
+		return valueTypeCarrierValueExpr(owner, field, args, scope);
 	}
 
 	/**
@@ -21153,6 +21296,12 @@ class CppTargetCore {
 		if (scope == null || className == null || className.length == 0)
 			return false;
 		final cls = scope.classByName.get(sanitizeTypePath(typeBaseName(className)));
+		if (cls == null)
+			return false;
+		return classDeclIsEnumCarrier(cls);
+	}
+
+	static function classDeclIsEnumCarrier(cls:HxClassDecl):Bool {
 		if (cls == null)
 			return false;
 		for (field in HxClassDecl.getFields(cls))
