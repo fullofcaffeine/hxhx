@@ -454,15 +454,21 @@ factory values and compares the payload factory result through `Type.enumEq`.
 The switch slice then taught typed enum-carrier switches to match constructor
 metadata and bind payload names from the stringified metadata parameter vector;
 the generated C++ enum metadata smoke now prints a `Pair(i, s)` branch result.
+A follow-up `haxe_ocaml-8604b` slice added the generated `Enum` metadata
+carrier used by the injected/minimal `Type` support and std `Type` helper
+rendering. Dynamic `Type.createEnum` / `Type.createEnumIndex` calls now build
+typed enum carriers from constructor metadata, `Type.getEnumConstructs` reads
+the same registry, and typed `Type.allEnums` constructs zero-argument values
+while skipping payload constructors. The focused C++ factory smoke now covers
+both literal-folded and dynamic factory calls plus typed `allEnums`.
 
 This is not full enum parity. Raw generated constructor helpers may still keep
-their current tag-shaped callable form in non-carrier contexts, non-string and
-erased switch payload extraction still need behavior-owned seams, dynamic `Type.createEnum` /
-`Type.createEnumIndex` calls and `Type.allEnums` are not proven as typed value
-factories, and Serializer/Unserializer enum support remains blocked on the enum
-carrier plus Reflect/Dynamic prerequisites. README and North Star progress bars
-stay unchanged because strict Cpp remains red and public production readiness
-did not change.
+their current tag-shaped callable form in non-carrier contexts, non-string
+payload identity and erased switch payload extraction still need
+behavior-owned seams, and Serializer/Unserializer enum support remains blocked
+on the enum carrier plus Reflect/Dynamic prerequisites. README and North Star
+progress bars stay unchanged because strict Cpp remains red and public
+production readiness did not change.
 
 Slow diagnostic validation for hotspot claims:
 

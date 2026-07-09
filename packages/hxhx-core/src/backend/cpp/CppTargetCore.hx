@@ -2636,7 +2636,36 @@ class CppTargetCore {
 		final out = new Array<Array<String>>();
 		if (!classLookup.names.exists("Class"))
 			out.push(CppRuntimeSupport.classMetaSupportLines());
-		out.push(CppRuntimeSupport.missingTypeSupportLines());
+		if (!classLookup.names.exists("Enum"))
+			out.push(CppRuntimeSupport.enumMetaSupportLines());
+		out.push(renderMissingTypeSupportLines(classLookup));
+		return out;
+	}
+
+	static function renderMissingTypeSupportLines(classLookup:CppClassLookup):Array<String> {
+		final out = [
+			"struct Type {",
+			"  static std::shared_ptr<Class> resolveClass(std::string name) {",
+			"    return std::make_shared<Class>(name, std::vector<std::string>{});",
+			"  }",
+			"  static std::shared_ptr<Enum> resolveEnum(std::string name) {"
+		];
+		for (line in renderTypeResolveEnumBody("name", classLookup))
+			out.push(line);
+		out.push("  }");
+		out.push("  static std::string getEnumName(std::shared_ptr<Enum> e) {");
+		out.push("    return e == nullptr ? std::string() : e->name;");
+		out.push("  }");
+		out.push("  static std::vector<std::string> getEnumConstructs(std::shared_ptr<Enum> e) {");
+		out.push("    return e == nullptr ? std::vector<std::string>{} : e->constructorNames();");
+		out.push("  }");
+		for (line in renderTypeEnumFactoryMethodLines("createEnum"))
+			out.push(line);
+		for (line in renderTypeEnumFactoryMethodLines("createEnumIndex"))
+			out.push(line);
+		for (line in renderTypeEnumFactoryMethodLines("allEnums"))
+			out.push(line);
+		out.push("};");
 		return out;
 	}
 
@@ -2807,6 +2836,7 @@ class CppTargetCore {
 			|| isGenericMapSupportClass(cls)
 			|| isPosInfosSupportClass(cls)
 			|| isClassMetaSupportClass(cls)
+			|| isEnumMetaSupportClass(cls)
 			|| isERegSupportClass(cls)
 			|| isRestSupportClass(cls)
 			|| isStdVectorHelperClass(cls)
@@ -3111,6 +3141,11 @@ class CppTargetCore {
 					add("Int64Helper");
 				if (isTypeStaticReceiver(receiver) && (method == "createInstance" || method == "createEmptyInstance") && args.length >= 1)
 					addClassReferenceDependency(args[0], add, scope);
+				if (isTypeStaticReceiver(receiver)
+					&& (method == "createEnum" || method == "createEnumIndex" || method == "resolveEnum" || method == "getEnumConstructs"
+						|| method == "getEnumName" || method == "allEnums")
+					&& args.length >= 1)
+					addEnumReferenceDependency(args[0], add, scope);
 				addFieldCallArgClassReferenceDependencies(receiver, method, args, add, scope);
 				if (!isStringToolsIntrinsicCall(receiver, method))
 					addStaticReceiverClassDependency(receiver, add);
@@ -3178,6 +3213,19 @@ class CppTargetCore {
 	static function addTypeResolverSupportDependencies(add:String->Void):Void {
 		add("Type");
 		add("Class");
+	}
+
+	static function addEnumResolverSupportDependencies(add:String->Void):Void {
+		add("Type");
+		add("Enum");
+	}
+
+	static function addEnumReferenceDependency(expr:HxExpr, add:String->Void, ?scope:CppRenderScope):Void {
+		final path = enumReferencePathText(expr, scope);
+		if (path != null && path.length > 0) {
+			addEnumResolverSupportDependencies(add);
+			add(sanitizeTypePath(typeBaseName(path)));
+		}
 	}
 
 	static function addDirectCallArgClassReferenceDependencies(name:String, args:Array<HxExpr>, add:String->Void, ?scope:CppRenderScope):Void {
@@ -3361,6 +3409,8 @@ class CppTargetCore {
 			return renderPosInfosClass();
 		if (isClassMetaSupportClass(cls))
 			return CppRuntimeSupport.classMetaSupportLines();
+		if (isEnumMetaSupportClass(cls))
+			return CppRuntimeSupport.enumMetaSupportLines();
 		if (isERegSupportClass(cls))
 			return CppRuntimeSupport.eRegSupportLines();
 		if (isRestSupportClass(cls))
@@ -5591,6 +5641,19 @@ class CppTargetCore {
 				switch (method) {
 					case "resolveClass" | "resolveEnum":
 						["std::string"];
+					case _:
+						[];
+				}
+			case "Type":
+				switch (method) {
+					case "resolveClass" | "resolveEnum":
+						["std::string"];
+					case "getEnumName" | "getEnumConstructs" | "allEnums":
+						["std::shared_ptr<Enum>"];
+					case "createEnum":
+						["std::shared_ptr<Enum>", "std::string", "std::vector<std::any>"];
+					case "createEnumIndex":
+						["std::shared_ptr<Enum>", "int"];
 					case _:
 						[];
 				}
@@ -11992,6 +12055,9 @@ class CppTargetCore {
 		final stringMapAbstract = stringMapBackedAbstractValueExprForExpectedType(expr, expectedType, scope);
 		if (stringMapAbstract != null)
 			return stringMapAbstract;
+		final earlyEnumReferenceArg = enumReferenceArgExprForExpectedType(expr, expectedType, scope);
+		if (earlyEnumReferenceArg != null)
+			return earlyEnumReferenceArg;
 		final typedEnum = enumCtorExprForExpectedType(expr, expectedType, scope);
 		if (typedEnum != null)
 			return typedEnum;
@@ -12069,12 +12135,17 @@ class CppTargetCore {
 					&& (method == "createEnum" || method == "createEnumIndex")
 					&& (args.length == 2 || args.length == 3)):
 				return typeEnumFactoryCallExpr(method, args, scope, expectedType);
+			case ECall(EField(receiver, "allEnums"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
+				return typeAllEnumsCallExpr(args[0], scope, expectedType);
 			case ECall(EIdent(name), args):
 				final typedCall = directCallExprForExpectedType(name, args, expectedType, scope);
 				if (typedCall != null)
 					return typedCall;
 			case _:
 		}
+		final enumReferenceArg = enumReferenceArgExprForExpectedType(expr, expectedType, scope);
+		if (enumReferenceArg != null)
+			return enumReferenceArg;
 		if (expectedType == "std::string") {
 			final jsonParsedString = jsonParseValueExprForExpectedType(expr, expectedType, scope);
 			if (jsonParsedString != null)
@@ -12446,8 +12517,10 @@ class CppTargetCore {
 				"Type::resolveClass(" + stringExpr(args[0], scope) + ")";
 			case ECall(EField(receiver, "resolveEnum"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"Type::resolveEnum(" + stringExpr(args[0], scope) + ")";
+			case ECall(EField(receiver, "getEnumConstructs"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
+				"Type::getEnumConstructs(" + valueExprForExpectedType(args[0], "std::shared_ptr<Enum>", scope) + ")";
 			case ECall(EField(receiver, "allEnums"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
-				"Type::allEnums<std::string>(" + valueExprForExpectedType(args[0], "std::shared_ptr<Enum>", scope) + ")";
+				typeAllEnumsCallExpr(args[0], scope);
 			case ECall(EField(receiver, "createInstance"), args) if (isTypeStaticReceiver(receiver) && args.length == 2):
 				typeFactoryCallExpr("createInstance", args, scope);
 			case ECall(EField(receiver, "createEmptyInstance"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
@@ -15603,6 +15676,9 @@ class CppTargetCore {
 				declaredValueType, "", "hit=" + Std.string(declaredClassReferenceArg != null));
 		if (declaredClassReferenceArg != null)
 			return declaredClassReferenceArg;
+		final declaredEnumReferenceArg = enumReferenceArgExprForExpectedType(arg, declaredValueType, scope);
+		if (declaredEnumReferenceArg != null)
+			return declaredEnumReferenceArg;
 		final expectedTypeStart = timingEnabled ? Sys.time() : 0.0;
 		final paramType = expectedParamType != null && expectedParamType.length > 0 ? expectedParamType : cppFunctionArgType(param, scope);
 		final valueType = cppOptionalInnerType(paramType).length > 0 ? cppOptionalInnerType(paramType) : paramType;
@@ -15653,6 +15729,9 @@ class CppTargetCore {
 				"hit=" + Std.string(classReferenceArg != null));
 		if (classReferenceArg != null)
 			return classReferenceArg;
+		final enumReferenceArg = enumReferenceArgExprForExpectedType(arg, valueType, scope);
+		if (enumReferenceArg != null)
+			return enumReferenceArg;
 		final actualTypeStart = timingEnabled ? Sys.time() : 0.0;
 		final actualType = exprCppType(arg, scope);
 		if (timingEnabled)
@@ -22132,6 +22211,10 @@ class CppTargetCore {
 		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Class";
 	}
 
+	static function isEnumMetaSupportClass(cls:HxClassDecl):Bool {
+		return cls != null && sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) == "Enum";
+	}
+
 	static function posInfosFieldCppType(className:String, fieldName:String):String {
 		if (sanitizeTypePath(className) != "PosInfos")
 			return "";
@@ -22591,7 +22674,9 @@ class CppTargetCore {
 				"std::string";
 			case "enumParameters" if (args.length == 1):
 				"std::vector<std::string>";
-			case "getClassFields" | "getInstanceFields" | "getEnumConstructs" | "allEnums" if (args.length == 1):
+			case "allEnums" if (args.length == 1):
+				"std::vector<" + typeAllEnumsElementCppType(args[0], scope) + ">";
+			case "getClassFields" | "getInstanceFields" | "getEnumConstructs" if (args.length == 1):
 				"std::vector<std::string>";
 			case _:
 				"";
@@ -22626,6 +22711,23 @@ class CppTargetCore {
 		if (sanitizeTypePath(typeBaseName(classArgName == null ? "" : classArgName)) == "Class")
 			return "std::any";
 		return "std::any";
+	}
+
+	static function typeAllEnumsCallExpr(enumArg:HxExpr, ?scope:CppRenderScope, ?expectedType:String):String {
+		final elementType = typeAllEnumsElementCppType(enumArg, scope, expectedType);
+		final enumReferenceArg = enumReferenceArgExprForExpectedType(enumArg, "std::shared_ptr<Enum>", scope);
+		final renderedArg = enumReferenceArg == null ? valueExprForExpectedType(enumArg, "std::shared_ptr<Enum>", scope) : enumReferenceArg;
+		return "Type::allEnums<" + elementType + ">(" + renderedArg + ")";
+	}
+
+	static function typeAllEnumsElementCppType(enumArg:HxExpr, ?scope:CppRenderScope, ?expectedType:String):String {
+		if (expectedType != null && isCppVectorType(expectedType)) {
+			final elementType = cppVectorElementType(expectedType);
+			if (elementType.length > 0)
+				return elementType;
+		}
+		final enumType = typeEnumFactoryReturnCppType([enumArg], scope);
+		return enumType.length > 0 ? enumType : "std::string";
 	}
 
 	/**
@@ -23049,6 +23151,11 @@ class CppTargetCore {
 				HxFunctionDecl.getArgs(fn).length == 2;
 			case "createEmptyInstance":
 				HxFunctionDecl.getArgs(fn).length == 1;
+			case "createEnum": HxFunctionDecl.getArgs(fn).length == 2 || HxFunctionDecl.getArgs(fn).length == 3;
+			case "createEnumIndex":
+				HxFunctionDecl.getArgs(fn).length == 2;
+			case "allEnums":
+				HxFunctionDecl.getArgs(fn).length == 1;
 			case _:
 				false;
 		};
@@ -23058,7 +23165,8 @@ class CppTargetCore {
 		if (fn == null || !HxFunctionDecl.getIsStatic(fn) || !isTypeClass(owner))
 			return false;
 		return switch (sanitizeIdentifier(HxFunctionDecl.getName(fn))) {
-			case "getInstanceFields" | "getClassFields" | "getClassName" | "getSuperClass" | "resolveClass":
+			case "getInstanceFields" | "getClassFields" | "getClassName" | "getSuperClass" | "resolveClass" | "getEnumName" | "getEnumConstructs" |
+				"resolveEnum":
 				true;
 			case _:
 				false;
@@ -23660,6 +23768,8 @@ class CppTargetCore {
 	**/
 	static function renderTypeFactoryHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
 		final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		if (methodName == "createEnum" || methodName == "createEnumIndex" || methodName == "allEnums")
+			return renderTypeEnumFactoryHelper(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, "auto");
 		applyFunctionTypeParams(scope, fn);
 		final rawReturn = StringTools.trim(HxFunctionDecl.getReturnTypeHint(fn) == null ? "" : HxFunctionDecl.getReturnTypeHint(fn));
@@ -23675,6 +23785,66 @@ class CppTargetCore {
 		for (arg in HxFunctionDecl.getArgs(fn))
 			out.push("    (void)" + sanitizeIdentifier(HxFunctionArg.getName(arg)) + ";");
 		out.push("    return " + returnType + "{};");
+		out.push("  }");
+		return out;
+	}
+
+	static function renderTypeEnumFactoryHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		final methodName = sanitizeIdentifier(HxFunctionDecl.getName(fn));
+		return renderTypeEnumFactoryMethodLines(methodName);
+	}
+
+	static function renderTypeEnumFactoryMethodLines(methodName:String):Array<String> {
+		final out = new Array<String>();
+		out.push("  template<typename T>");
+		switch (methodName) {
+			case "createEnum":
+				out.push("  static T createEnum(std::shared_ptr<Enum> e, std::string constr, std::vector<std::any> params = std::vector<std::any>{}) {");
+				out.push("    if (e == nullptr) return T{};");
+				out.push("    const __hxhx_enum_ctor_meta* __hxhx_ctor = e->findByName(constr);");
+				out.push("    int __hxhx_index = __hxhx_ctor == nullptr ? 0 : __hxhx_ctor->index;");
+				out.push("    std::vector<std::string> __hxhx_params;");
+				out.push("    __hxhx_params.reserve(params.size());");
+				out.push("    for (const auto& __hxhx_param : params) __hxhx_params.push_back(__hxhx_stringify(__hxhx_param));");
+				out.push("    if constexpr (std::is_same_v<T, std::string>) {");
+				out.push("      return __hxhx_enum_value_to_string(constr, __hxhx_params);");
+				out.push("    } else if constexpr (std::is_same_v<T, std::shared_ptr<EnumValue>>) {");
+				out.push("      return std::make_shared<EnumValue>(constr, __hxhx_index, __hxhx_params);");
+				out.push("    } else if constexpr (__hxhx_is_shared_ptr<T>::value) {");
+				out.push("      using __hxhx_carrier = typename T::element_type;");
+				out.push("      return std::make_shared<__hxhx_carrier>(constr, __hxhx_index, __hxhx_params);");
+				out.push("    } else {");
+				out.push("      return T{};");
+				out.push("    }");
+			case "createEnumIndex":
+				out.push("  static T createEnumIndex(std::shared_ptr<Enum> e, int index) {");
+				out.push("    if (e == nullptr) return T{};");
+				out.push("    const __hxhx_enum_ctor_meta* __hxhx_ctor = e->findByIndex(index);");
+				out.push("    std::string __hxhx_name = __hxhx_ctor == nullptr ? std::string() : __hxhx_ctor->name;");
+				out.push("    int __hxhx_index = __hxhx_ctor == nullptr ? index : __hxhx_ctor->index;");
+				out.push("    if constexpr (std::is_same_v<T, std::string>) {");
+				out.push("      return __hxhx_name;");
+				out.push("    } else if constexpr (std::is_same_v<T, std::shared_ptr<EnumValue>>) {");
+				out.push("      return std::make_shared<EnumValue>(__hxhx_name, __hxhx_index, std::vector<std::string>{});");
+				out.push("    } else if constexpr (__hxhx_is_shared_ptr<T>::value) {");
+				out.push("      using __hxhx_carrier = typename T::element_type;");
+				out.push("      return std::make_shared<__hxhx_carrier>(__hxhx_name, __hxhx_index, std::vector<std::string>{});");
+				out.push("    } else {");
+				out.push("      return T{};");
+				out.push("    }");
+			case "allEnums":
+				out.push("  static std::vector<T> allEnums(std::shared_ptr<Enum> e) {");
+				out.push("    std::vector<T> out;");
+				out.push("    if (e == nullptr) return out;");
+				out.push("    for (const auto& __hxhx_ctor : e->constructors) {");
+				out.push("      if (__hxhx_ctor.hasPayload) continue;");
+				out.push("      out.push_back(createEnum<T>(e, __hxhx_ctor.name));");
+				out.push("    }");
+				out.push("    return out;");
+			case _:
+				out.push("  static T " + methodName + "() {");
+				out.push("    return T{};");
+		}
 		out.push("  }");
 		return out;
 	}
@@ -23707,11 +23877,129 @@ class CppTargetCore {
 				out.push("    return nullptr;");
 			case "resolveClass":
 				out.push("    return std::make_shared<Class>(" + firstArg + ", std::vector<std::string>{});");
+			case "getEnumName":
+				out.push("    return " + firstArg + " == nullptr ? std::string() : " + firstArg + "->name;");
+			case "getEnumConstructs":
+				out.push("    return " + firstArg + " == nullptr ? std::vector<std::string>{} : " + firstArg + "->constructorNames();");
+			case "resolveEnum":
+				for (line in renderTypeResolveEnumBody(firstArg, classLookup))
+					out.push(line);
 			case _:
 				out.push("    return " + cppDefaultValue(returnType, scope) + ";");
 		}
 		out.push("  }");
 		return out;
+	}
+
+	static function renderTypeResolveEnumBody(argName:String, classLookup:CppClassLookup):Array<String> {
+		final out = new Array<String>();
+		if (classLookup != null && classLookup.all != null) {
+			for (cls in classLookup.all) {
+				if (!classDeclIsEnumCarrier(cls))
+					continue;
+				final aliases = enumRuntimeNameAliases(cls, classLookup);
+				if (aliases.length == 0)
+					continue;
+				out.push("    if (" + [for (alias in aliases) argName + " == std::string(" + quoteString(alias) + ")"].join(" || ") + ")");
+				out.push("      return " + enumMetaValueExpr(cls, classLookup) + ";");
+			}
+		}
+		out.push("    return std::make_shared<Enum>(" + argName + ", std::vector<__hxhx_enum_ctor_meta>{});");
+		return out;
+	}
+
+	static function enumRuntimeNameAliases(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		if (cls == null)
+			return [];
+		final out = new Array<String>();
+		function add(value:String):Void {
+			if (value != null && value.length > 0 && out.indexOf(value) < 0)
+				out.push(value);
+		}
+		final raw = HxClassDecl.getName(cls);
+		final base = typeBaseName(raw == null ? "" : raw);
+		final packagePath = packagePathForRenderedClass(cls, classLookup);
+		add(packagePath.length > 0 ? packagePath + "." + base : raw);
+		add(raw);
+		add(base);
+		add(renderedClassName(cls, classLookup));
+		return out;
+	}
+
+	static function enumMetaValueExpr(cls:HxClassDecl, classLookup:CppClassLookup):String {
+		final name = enumRuntimeNameAliases(cls, classLookup)[0];
+		final ctors = enumRuntimeConstructorEntries(cls, classLookup);
+		return "std::make_shared<Enum>(std::string("
+			+ quoteString(name)
+			+ "), std::vector<__hxhx_enum_ctor_meta>{"
+			+ [
+				for (ctor in ctors)
+					"__hxhx_enum_ctor_meta(std::string("
+					+ quoteString(ctor.name)
+					+ "), "
+					+ Std.string(ctor.index)
+					+ ", "
+					+ (ctor.hasPayload ? "true" : "false")
+					+ ")"].join(", ") + "})";
+	}
+
+	static function enumRuntimeConstructorEntries(cls:HxClassDecl, classLookup:CppClassLookup):Array<{name:String, index:Int, hasPayload:Bool}> {
+		final names = new Array<String>();
+		function addName(value:String):Void {
+			if (value != null && value.length > 0 && names.indexOf(value) < 0)
+				names.push(value);
+		}
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				continue;
+			final init = HxFieldDecl.getInit(field);
+			if (sanitizeIdentifier(HxFieldDecl.getName(field)) == "__hx_enum_ctors") {
+				switch (init) {
+					case EArrayDecl(values):
+						for (value in values)
+							switch (value) {
+								case EString(name):
+									addName(name);
+								case _:
+							}
+					case _:
+				}
+			} else if (isEnumMetadataAnonInit(init)) {
+				addName(enumMetadataCtorName(init));
+			}
+		}
+		for (fn in HxClassDecl.getFunctions(cls))
+			if (HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) != "new")
+				addName(HxFunctionDecl.getName(fn));
+		final rendered = renderedClassName(cls, classLookup);
+		final scope = renderScope(cls, classLookup, "void");
+		final out = [
+			for (name in names)
+				{
+					name: name,
+					index: enumConstructorIndex(rendered, name, scope),
+					hasPayload: enumConstructorHasPayload(cls, name)
+				}
+		];
+		out.sort((left, right) -> left.index < right.index ? -1 : (left.index > right.index ? 1 : 0));
+		return out;
+	}
+
+	static function enumConstructorHasPayload(cls:HxClassDecl, ctorName:String):Bool {
+		final wanted = sanitizeIdentifier(ctorName);
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				continue;
+			final init = HxFieldDecl.getInit(field);
+			if (isEnumMetadataAnonInit(init) && sanitizeIdentifier(enumMetadataCtorName(init)) == wanted)
+				return enumMetadataCtorParams(init).length > 0;
+		}
+		for (fn in HxClassDecl.getFunctions(cls))
+			if (HxFunctionDecl.getIsStatic(fn)
+				&& sanitizeIdentifier(HxFunctionDecl.getName(fn)) == wanted
+				&& HxFunctionDecl.getArgs(fn).length > 0)
+				return true;
+		return false;
 	}
 
 	static function functionReturnsLambda(fn:HxFunctionDecl):Bool {

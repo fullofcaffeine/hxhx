@@ -1810,6 +1810,48 @@ class CppRuntimeSupport {
 	}
 
 	/**
+		Emit the small runtime carrier used by Type.resolveEnum and enum factories.
+
+		This is metadata storage for the bounded Cpp enum-carrier bring-up: it
+		records constructor names, indexes, and whether a constructor has payload
+		arguments so Type.allEnums can return only zero-argument values.
+	**/
+	public static function enumMetaSupportLines():Array<String> {
+		return [
+			"struct __hxhx_enum_ctor_meta {",
+			"  std::string name;",
+			"  int index;",
+			"  bool hasPayload;",
+			"  explicit __hxhx_enum_ctor_meta(std::string name = std::string(), int index = 0, bool hasPayload = false) : name(name), index(index), hasPayload(hasPayload) {}",
+			"};",
+			"",
+			"struct Enum {",
+			"  std::string name;",
+			"  std::vector<__hxhx_enum_ctor_meta> constructors;",
+			"  explicit Enum(std::string name = std::string(), std::vector<__hxhx_enum_ctor_meta> constructors = {}) : name(name), constructors(constructors) {}",
+			"  std::vector<std::string> constructorNames() const {",
+			"    std::vector<std::string> out;",
+			"    out.reserve(constructors.size());",
+			"    for (const auto& ctor : constructors) out.push_back(ctor.name);",
+			"    return out;",
+			"  }",
+			"  const __hxhx_enum_ctor_meta* findByName(const std::string& value) const {",
+			"    for (const auto& ctor : constructors) if (ctor.name == value) return &ctor;",
+			"    return nullptr;",
+			"  }",
+			"  const __hxhx_enum_ctor_meta* findByIndex(int value) const {",
+			"    for (const auto& ctor : constructors) if (ctor.index == value) return &ctor;",
+			"    return nullptr;",
+			"  }",
+			"};",
+			"",
+			"static std::string __hxhx_type_name(const std::shared_ptr<Enum>& value) {",
+			"  return value == nullptr ? std::string(\"Null\") : value->name;",
+			"}"
+		];
+	}
+
+	/**
 		Emit the minimal root `Type` support needed when the backend injects
 		`Type::resolveClass(...)` for class-literal lowering but the Haxe std
 		`Type` module was not otherwise typed into the program.
@@ -1819,6 +1861,9 @@ class CppRuntimeSupport {
 			"struct Type {",
 			"  static std::shared_ptr<Class> resolveClass(std::string name) {",
 			"    return std::make_shared<Class>(name, std::vector<std::string>{});",
+			"  }",
+			"  static std::shared_ptr<Enum> resolveEnum(std::string name) {",
+			"    return std::make_shared<Enum>(name, std::vector<__hxhx_enum_ctor_meta>{});",
 			"  }",
 			"};"
 		];
