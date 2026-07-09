@@ -4140,6 +4140,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ map literal toString should lower through pair-aware runtime support");
 		assertTrue(mapLiteralToStringExpr.indexOf("std::vector<int>{std::make_pair") < 0,
 			"C++ map literal toString should not treat arrow pairs as integer array elements");
+		final emptyMapToStringExpr = ECall(EField(ENew("Map<Int, Int>", []), "toString"), []);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(emptyMapToStringExpr) == "std::string(\"[]\")",
+			"C++ empty Map construction toString should fold to the empty map string without rendering a temporary helper call");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferExprCppType(emptyMapToStringExpr) == "std::string",
+			"C++ empty Map construction toString should infer a string result");
 		final pairArrayExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EArrayDecl([EBinop("=>", EString("label"),
 			EArrayDecl([EString("stack")]))]));
 		assertContains(pairArrayExpr, "std::vector<std::pair<std::string, std::vector<std::string>>>",
@@ -5738,8 +5743,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unhinted generic Map locals should infer key and value type arguments from set calls");
 		assertContains(stringMapOwnerLines, "auto s = __hxhx_make_shared_Map<std::string, std::string>();",
 			"C++ unhinted generic Map string locals should infer string key/value type arguments");
-		assertContains(stringMapOwnerLines, "eq(__hxhx_make_shared_Map<int, int>()->toString(), std::string(\"[]\"));",
-			"C++ expression-only generic Map construction should use default factory type arguments");
+		assertContains(stringMapOwnerLines, "eq(std::string(\"[]\"), std::string(\"[]\"));",
+			"C++ expression-only empty generic Map.toString should fold without rendering a temporary factory");
+		assertTrue(stringMapOwnerLines.indexOf("__hxhx_make_shared_Map<int, int>()->toString()") < 0,
+			"C++ expression-only empty generic Map.toString should not allocate a temporary helper map");
 		assertContains(stringMapOwnerLines, "return __hxhx_join(k, std::string(\"#\"));",
 			"C++ vector join should lower through generic runtime support for non-string vectors");
 		assertContains(stringMapOwnerLines, "auto objMapString = __hxhx_map_literal_to_string(",

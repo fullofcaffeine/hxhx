@@ -277,6 +277,50 @@ because render timing is noisy, that run stopped earlier, inside
 This confirms the bounded classification fix but not a strict gate improvement.
 README and North Star progress bars stay unchanged.
 
+## 2026-07-09 Empty Map `toString` Checkpoint
+
+The post-StringBuf strict probe showed run-to-run frontier variance, but a
+filtered `TestBasetypes.testMap` run exposed a stable repeated hotspot:
+four immediate empty generic map constructions rendered only to compare
+`new Map<K,V>().toString()` with `"[]"`. In
+`.artifacts/full1/cpp-strict-current/direct-source-only-testbasetypes-testmap-timing-current.log`,
+those four statements consumed about 1.68s, 1.66s, 3.37s, and 3.25s
+respectively, with `eq_infer_first` plus `eq_render_first` dominating each
+case. The full method took about 10.55s and the `TestBasetypes` helper class
+took about 38.39s.
+
+The bounded seam is now an expression intrinsic for the immediate fresh
+construction only: `new Map<K,V>().toString()` with no constructor arguments and
+no `toString` arguments lowers directly to `std::string("[]")` and infers
+`std::string`. This deliberately does not change mutated map behavior, map
+literal behavior, generic map factory rendering for locals, or any broad
+expression-cache policy. The safety argument is local to the syntax: no code can
+mutate the just-constructed empty map between construction and the immediate
+`toString` call.
+
+Focused smoke coverage asserts both the direct render/type inference result and
+the generated helper shape: ordinary inferred generic map locals still render
+through typed `__hxhx_make_shared_Map<...>()` factories, while the expression
+only empty-map `toString` comparison folds without allocating a temporary helper
+map.
+
+Post-change validation used the current-source build and the same 360s strict
+probe with `HXHX_TRACE_STAGE3_CPP_TIMINGS=1` and
+`HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER=TestBasetypes.testMap`. In
+`.artifacts/full1/cpp-strict-current/direct-source-only-testmap-empty-map-fold-timing-current.log`,
+`TestBasetypes.testMap` dropped to about 3.30s and the `TestBasetypes` helper
+class dropped to about 31.17s. `StringBuf` remained a runtime module
+(`render_helper_class_timing name=StringBuf seconds=0.000480...`). The direct
+strict probe still timed out at 360s, after reaching Date/GADT/Exception and
+`TestExceptions` timings (`testWildCardCatch_rethrow` about 2.46s and
+`testCatchAbstract` about 1.02s). That later frontier should be handled by a
+separate exception-render investigation instead of widening this map-specific
+fold.
+
+This is another internal strict Cpp burn-down checkpoint only. README and North
+Star progress bars stay unchanged because strict Cpp remains red and no public
+production-usability claim changed.
+
 Slow diagnostic validation for hotspot claims:
 
 - strict Cpp timing probe with `HXHX_TRACE_STAGE3_CPP_TIMINGS=1` and a stable

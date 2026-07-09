@@ -12500,6 +12500,8 @@ class CppTargetCore {
 				directCallExpr(name, args, scope);
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				mapLiteralToStringExpr(elements, scope);
+			case ECall(EField(receiver, "toString"), args) if (emptyMapNewToStringExpr(receiver, args) != null):
+				emptyMapNewToStringExpr(receiver, args);
 			case ECall(EField(receiver, method), args) if (qualifiedValueTypeCarrierCtorExpr(receiver, method, args, scope) != null):
 				qualifiedValueTypeCarrierCtorExpr(receiver, method, args, scope);
 			case ECall(EField(receiver, method), args):
@@ -15919,6 +15921,8 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				"std::string";
+			case ECall(EField(receiver, "toString"), args) if (emptyMapNewToStringExpr(receiver, args) != null):
+				"std::string";
 			case ECall(EField(_, "bind"), _) if (boundFunctionCppType(expr, scope).length > 0):
 				boundFunctionCppType(expr, scope);
 			case ECall(EIdent("__hxhx_try"), args) if (args.length >= 2):
@@ -17397,6 +17401,8 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(EArrayDecl(elements), "toString"), args) if (args.length == 0 && isMapLiteralElements(elements)):
 				"std::string";
+			case ECall(EField(receiver, "toString"), args) if (emptyMapNewToStringExpr(receiver, args) != null):
+				"std::string";
 			case ECall(EField(_, "bind"), _) if (boundFunctionCppType(expr, scope).length > 0):
 				boundFunctionCppType(expr, scope);
 			case ECall(EIdent("__hxhx_try"), args) if (args.length >= 2):
@@ -17610,6 +17616,30 @@ class CppTargetCore {
 
 	static function knownFieldCallReturnCppType(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		return knownFieldCallReturnCppTypeWithReceiverCppType(receiver, method, args, function() return exprCppType(receiver, scope), scope);
+	}
+
+	/**
+		Fold `new Map<K,V>().toString()` for a fresh empty map.
+
+		The strict C++ unit frontier hits this exact stdlib shape repeatedly while
+		rendering `TestBasetypes.testMap`. It is safe to treat only the immediate
+		empty construction as a string intrinsic because no mutation can occur
+		between construction and `toString`.
+	**/
+	static function emptyMapNewToStringExpr(receiver:HxExpr, args:Array<HxExpr>):Null<String> {
+		if (args == null || args.length != 0)
+			return null;
+		return switch (receiver) {
+			case ENew(typePath, ctorArgs) if ((ctorArgs == null || ctorArgs.length == 0) && isGenericMapTypePath(typePath)):
+				"std::string(\"[]\")";
+			case _:
+				null;
+		};
+	}
+
+	static function isGenericMapTypePath(typePath:String):Bool {
+		final clean = sanitizeTypePath(typeBaseName(typeHintPathPart(typePath == null ? "" : typePath)));
+		return clean == "Map";
 	}
 
 	static function knownFieldCallReturnCppTypeWithReceiverCppType(receiver:HxExpr, method:String, args:Array<HxExpr>, receiverCppType:Void->String,
