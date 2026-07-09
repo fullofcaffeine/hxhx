@@ -419,12 +419,20 @@ Do not add an `Assertation`-specific special case. A general shortcut that
 renders generated enum-constructor methods directly as tag-returning helpers may
 be a valid non-semantic optimization, but it must be decided together with the
 enum carrier behavior contract so it does not freeze today's payload-dropping
-bring-up model. Track that work in `haxe_ocaml-gs7lw`.
+bring-up model. The design decision is tracked in `haxe_ocaml-gs7lw`.
+
+The `haxe_ocaml-gs7lw` design checkpoint added the enum carrier behavior matrix
+to [`CPP_TARGET_RUNTIME_POLICY.md`](CPP_TARGET_RUNTIME_POLICY.md). The decision
+is to avoid both `Assertation`-specific shortcuts and generic payload-constructor
+tag shortcuts until Cpp has a payload-preserving enum carrier seam. Timing-only
+evidence is not enough because upstream Haxe 4.3.7 observes enum payloads
+through `Std.string`, `Type.enumEq`, switch binders, `Type.createEnum`,
+Dynamic/`EnumValue`, and Serializer/Unserializer flows.
 
 No code change was made for this checkpoint. README and North Star progress
 bars stay unchanged because strict Cpp remains red, public production readiness
-did not change, and the only new implementation path is a follow-up enum
-carrier design task.
+did not change, and the only new implementation path is the payload-preserving
+enum carrier follow-up `haxe_ocaml-puquq`.
 
 Slow diagnostic validation for hotspot claims:
 
