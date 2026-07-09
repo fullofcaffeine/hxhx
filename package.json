@@ -151,6 +151,7 @@
     "test:m14:cpp-native-backend-smoke": "haxe test/m14_cpp_native_backend_smoke_integration_test.hxml",
     "test:m14:cpp-helper-render-bench": "haxe test/m14_cpp_helper_render_bench_integration_test.hxml",
     "test:m14:cpp-numeric-casts-render-bench": "haxe test/m14_cpp_numeric_casts_render_bench_integration_test.hxml",
+    "test:m14:cpp-strict-frontier-summary": "node scripts/ci/cpp-strict-frontier-summary-fixture-test.js",
     "test:m14:neko-native-backend-smoke": "haxe test/m14_neko_native_backend_smoke_integration_test.hxml",
     "test:m14:hashlink-native-backend-smoke": "haxe test/m14_hashlink_native_backend_smoke_integration_test.hxml",
     "test:m14:stage3-java-noemit-diagnostics": "haxe test/m14_stage3_java_noemit_diagnostics_integration_test.hxml",

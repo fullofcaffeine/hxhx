@@ -110,6 +110,10 @@ should be promoted from P2 to P1:
   `field_infer_instance_return` measure field-call return inference.
 - `render_helper_expr_timing` lines tie expression phases to the filtered
   method and statement index.
+- `scripts/ci/cpp-strict-frontier-summary.js` compares one or more strict Cpp
+  timing logs and emits `CPP_STRICT_FRONTIER_SUMMARY:PASS` with a classification:
+  `repeated-frontier`, `shared-hotspots-moving-frontier`, `moving-frontier`, or
+  `single-log`.
 
 Future implementation slices should compare the same command and timeout across
 before/after runs, capturing:
@@ -132,6 +136,7 @@ Fast routine validation for bounded render-only changes:
 - `npm run test:m14:cpp-helper-render-bench`
 - `npm run test:m14:cpp-numeric-casts-render-bench`
 - `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-strict-frontier-summary`
 - `npm run guard:cpp-render-type-flow-plan`
 
 The helper-render bench is the fastest check for the shared helper frontier
@@ -354,6 +359,8 @@ negative evidence, not a production-readiness improvement.
 
 Slow diagnostic validation for hotspot claims:
 
+- run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
+  the latest comparable strict Cpp timing logs before choosing a new patch seam;
 - strict Cpp timing probe with `HXHX_TRACE_STAGE3_CPP_TIMINGS=1` and a stable
   method filter when the current strict logs identify a type-flow hotspot;
 - compare the same command and timeout before/after;

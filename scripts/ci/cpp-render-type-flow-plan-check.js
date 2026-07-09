@@ -48,7 +48,10 @@ function main() {
     'render_helper_method_prepare_timing',
     'field_infer_known',
     'field_infer_receiver_type',
+    'cpp-strict-frontier-summary.js',
+    'CPP_STRICT_FRONTIER_SUMMARY',
     'npm run test:m14:cpp-native-backend-smoke',
+    'npm run test:m14:cpp-strict-frontier-summary',
     'README/North Star progress bars recorded as unchanged',
   ]) {
     requireIncludes(planPath, plan, snippet)
@@ -70,6 +73,7 @@ function main() {
 
   requireIncludes(docsReadmePath, docsReadme, 'CPP_RENDER_TYPE_FLOW_PLAN.md')
   requireIncludes(packageJsonPath, packageJson, 'guard:cpp-render-type-flow-plan')
+  requireIncludes(packageJsonPath, packageJson, 'test:m14:cpp-strict-frontier-summary')
 
   if (process.exitCode) return
   console.log('[ci:guards] OK: Cpp render/type-flow plan is wired to timing diagnostics')
