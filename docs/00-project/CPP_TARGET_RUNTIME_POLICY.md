@@ -130,13 +130,13 @@ contract for follow-up implementation seams.
 
 | Surface | Haxe 4.3.7 expectation | Current Cpp state | Decision |
 | --- | --- | --- | --- |
-| Zero-argument enum constructors | Values preserve constructor identity; `Std.string(Red)` is `Red`; `Type.enumEq(Red, Red)` is true. | Parser-scanned zero-arg constructors become enum metadata fields. Cpp can render tag strings or shell carriers depending context. This is compile-shape support, not a complete value model. | Keep bounded support. A shortcut is only eligible after it proves it does not widen or confuse payload behavior. |
-| Payload enum constructors | Constructor payloads are observable through `Std.string`, switch binders, equality, Dynamic, and reflection APIs. | Payload constructors can render as tag-returning static methods in raw helper output, while typed enum contexts coerce calls to `std::make_shared<Enum>()` and discard payloads. | Do not optimize payload constructors as pure tag methods. Payload-preserving carrier support must land first. |
+| Zero-argument enum constructors | Values preserve constructor identity; `Std.string(Red)` is `Red`; `Type.enumEq(Red, Red)` is true. | Parser-scanned zero-arg constructors become enum metadata fields. Typed enum value contexts now create carriers with constructor tag/index metadata, and typed `Std.string` / `Type.enumEq` can read that metadata. Raw helper output may still use tag-shaped methods in non-carrier contexts. | Keep bounded support. A shortcut is only eligible after it proves it does not widen or confuse payload behavior. |
+| Payload enum constructors | Constructor payloads are observable through `Std.string`, switch binders, equality, Dynamic, and reflection APIs. | Typed enum value contexts now preserve payloads as string metadata on `std::shared_ptr<Enum>` carriers and erase those carriers to `EnumValue` for `std::any` arguments. Raw constructor helper methods, non-string payload identity, and full runtime factory/switch parity are still incomplete. | Continue behind `haxe_ocaml-puquq`. Do not optimize payload constructors as pure tag methods. |
 | Switch payload binders | `case Pair(i, s)` binds the actual payload values. | Cpp has compile-safe pattern scaffolding and explicitly binds defaults for some non-macro enum payload cases until real extraction owns semantics. | Not parity. Any switch/payload change needs focused oracle cases and cannot be justified by render timing alone. |
-| `Type.enumEq` | Equality compares constructor identity and payload values; differing payloads are not equal. | Cpp specializes some same-carrier/null cases and otherwise falls back through bounded helpers. Shell carriers cannot represent payload equality. | Expansion is `review_required`; a shortcut must not bypass payload equality requirements. |
+| `Type.enumEq` | Equality compares constructor identity and payload values; differing payloads are not equal. | Same-carrier typed enum cases compare preserved tag/index/payload metadata. Generic erased flows and factory-created values still depend on bounded helpers and are not full parity. | Expansion is `review_required`; a shortcut must not bypass payload equality requirements. |
 | `Type.createEnum` / `Type.createEnumIndex` | Runtime factory calls create real enum values, including payload values for named constructors. | Cpp lowers factory calls for compile shape and has a lightweight `EnumValue` carrier for some erased flows, but typed enum runtime parity is not proven. | Treat as bounded bring-up. Serializer/Unserializer enum support must wait for oracle-backed factories. |
 | `Type.getEnumConstructs` / `Type.allEnums` | Construct names are complete and stable; `allEnums` returns zero-argument enum values. | Cpp has string-vector metadata support for current smoke shapes. It does not prove enum value construction parity. | Keep metadata-only support separate from enum value parity. |
-| Dynamic / `EnumValue` flows | Enum values keep constructor and payload identity when stored as `Dynamic` / `EnumValue`. | `enumValueDynamicLines` can extract `std::shared_ptr<EnumValue>` from `std::any`, but unsupported values default or return null. | Remains `review_required`; update `CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md` when expanding. |
+| Dynamic / `EnumValue` flows | Enum values keep constructor and payload identity when stored as `Dynamic` / `EnumValue`. | Typed enum carriers are converted to `std::shared_ptr<EnumValue>` when passed to `std::any` parameters, and `EnumValue` stringification includes payload metadata. Unsupported `std::any` values still default or return null. | Remains `review_required`; update `CPP_REFLECT_DYNAMIC_SUPPORT_AUDIT.md` when expanding. |
 | Serializer / Unserializer enum flows | Round trips preserve constructor name, constructor index mode, payload order, and payload values. | Current Cpp serializer docs mark enum support as shape-only and dependent on enum carriers plus Reflect/Dynamic behavior. | Blocked on this carrier matrix plus serializer oracle cases. |
 
 Decision for the `Assertation` timing seam:
@@ -146,10 +146,12 @@ Decision for the `Assertation` timing seam:
 - A future zero-arg-only shortcut may be considered only after the helper can
   prove it never applies to payload constructors and generated output/runtime
   behavior remains equivalent for the supported scope.
-- The preferred next implementation seam is a payload-preserving enum carrier
-  design that aligns typed enum values, switch extraction, `Type.enumEq`,
-  `Type.createEnum`, Dynamic/`EnumValue`, and Serializer/Unserializer
-  prerequisites. Track that implementation in `haxe_ocaml-puquq`.
+- The first `haxe_ocaml-puquq` implementation seam is typed enum carrier
+  metadata: generated enum carriers store constructor tag, index, and
+  stringified payloads; typed `Std.string`, same-carrier `Type.enumEq`, and
+  `std::any` erasure can consume that metadata. This is intentionally smaller
+  than parity. Switch payload extraction, runtime factories, complete
+  `EnumValue`/Dynamic behavior, and Serializer/Unserializer remain follow-ups.
 
 ## Required Follow-Ups
 

@@ -999,6 +999,81 @@ class CppTargetCore {
 		out.push("  return type == \"Array\" || type == \"Dynamic\" || type == \"Any\";");
 		out.push("}");
 		out.push("");
+		out.push("template<typename T, typename = void>");
+		out.push("struct __hxhx_has_enum_metadata : std::false_type {};");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("struct __hxhx_has_enum_metadata<T, std::void_t<decltype(std::declval<T>().__hxhx_enum_tag), decltype(std::declval<T>().__hxhx_enum_index), decltype(std::declval<T>().__hxhx_enum_params)>> : std::true_type {};");
+		out.push("");
+		out.push("static std::string __hxhx_enum_value_to_string(const std::string& tag, const std::vector<std::string>& params) {");
+		out.push("  if (params.empty()) return tag;");
+		out.push("  std::ostringstream out;");
+		out.push("  out << tag << \"(\";");
+		out.push("  for (std::size_t i = 0; i < params.size(); ++i) {");
+		out.push("    if (i > 0) out << \",\";");
+		out.push("    out << params[i];");
+		out.push("  }");
+		out.push("  out << \")\";");
+		out.push("  return out.str();");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static bool __hxhx_enum_value_eq(const std::shared_ptr<T>& left, const std::shared_ptr<T>& right) {");
+		out.push("  if (left == nullptr || right == nullptr) return left == right;");
+		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) {");
+		out.push("    return left->__hxhx_enum_tag == right->__hxhx_enum_tag && left->__hxhx_enum_index == right->__hxhx_enum_index && left->__hxhx_enum_params == right->__hxhx_enum_params;");
+		out.push("  } else {");
+		out.push("    return left == right;");
+		out.push("  }");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::shared_ptr<EnumValue> __hxhx_enum_to_erased(const std::shared_ptr<T>& value) {");
+		out.push("  if (value == nullptr) return nullptr;");
+		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) {");
+		out.push("    return std::make_shared<EnumValue>(value->__hxhx_enum_tag, value->__hxhx_enum_index, value->__hxhx_enum_params);");
+		out.push("  } else {");
+		out.push("    return nullptr;");
+		out.push("  }");
+		out.push("}");
+		out.push("");
+		out.push("static std::shared_ptr<EnumValue> __hxhx_enum_to_erased(const std::shared_ptr<EnumValue>& value) {");
+		out.push("  return value;");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::string __hxhx_enum_constructor(const std::shared_ptr<T>& value) {");
+		out.push("  if (value == nullptr) return std::string();");
+		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) return value->__hxhx_enum_tag;");
+		out.push("  return std::string();");
+		out.push("}");
+		out.push("");
+		out.push("static std::string __hxhx_enum_constructor(const std::shared_ptr<EnumValue>& value) {");
+		out.push("  return value == nullptr ? std::string() : value->getName();");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static int __hxhx_enum_index(const std::shared_ptr<T>& value) {");
+		out.push("  if (value == nullptr) return 0;");
+		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) return value->__hxhx_enum_index;");
+		out.push("  return 0;");
+		out.push("}");
+		out.push("");
+		out.push("static int __hxhx_enum_index(const std::shared_ptr<EnumValue>& value) {");
+		out.push("  return value == nullptr ? 0 : value->getIndex();");
+		out.push("}");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::vector<std::string> __hxhx_enum_parameters(const std::shared_ptr<T>& value) {");
+		out.push("  if (value == nullptr) return {};");
+		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) return value->__hxhx_enum_params;");
+		out.push("  return {};");
+		out.push("}");
+		out.push("");
+		out.push("static std::vector<std::string> __hxhx_enum_parameters(const std::shared_ptr<EnumValue>& value) {");
+		out.push("  return value == nullptr ? std::vector<std::string>{} : value->getParameters();");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T>");
 		out.push("static std::string __hxhx_type_name(const T&) {");
 		out.push("  return std::string(\"Dynamic\");");
@@ -1098,7 +1173,7 @@ class CppTargetCore {
 		out.push("}");
 		out.push("");
 		out.push("static std::string __hxhx_stringify(const std::shared_ptr<EnumValue>& value) {");
-		out.push("  return value == nullptr ? std::string(\"null\") : value->getName();");
+		out.push("  return value == nullptr ? std::string(\"null\") : __hxhx_enum_value_to_string(value->getName(), value->getParameters());");
 		out.push("}");
 		out.push("");
 		out.push("template<typename T>");
@@ -1127,11 +1202,32 @@ class CppTargetCore {
 		for (line in CppRuntimeSupport.enumValueDynamicLines())
 			out.push(line);
 		out.push("");
+		out.push("static std::string __hxhx_enum_constructor(const std::any& value) {");
+		out.push("  return __hxhx_enum_constructor(__hxhx_enum_value_ptr(value));");
+		out.push("}");
+		out.push("");
+		out.push("static int __hxhx_enum_index(const std::any& value) {");
+		out.push("  return __hxhx_enum_index(__hxhx_enum_value_ptr(value));");
+		out.push("}");
+		out.push("");
+		out.push("static std::vector<std::string> __hxhx_enum_parameters(const std::any& value) {");
+		out.push("  return __hxhx_enum_parameters(__hxhx_enum_value_ptr(value));");
+		out.push("}");
+		out.push("");
 		out.push("template<typename T, typename = void>");
 		out.push("struct __hxhx_is_streamable : std::false_type {};");
 		out.push("");
 		out.push("template<typename T>");
 		out.push("struct __hxhx_is_streamable<T, std::void_t<decltype(std::declval<std::ostringstream&>() << std::declval<const T&>())>> : std::true_type {};");
+		out.push("");
+		out.push("template<typename T>");
+		out.push("static std::string __hxhx_stringify(const std::shared_ptr<T>& value) {");
+		out.push("  if (value == nullptr) return std::string(\"null\");");
+		out.push("  if constexpr (__hxhx_has_enum_metadata<T>::value) return __hxhx_enum_value_to_string(value->__hxhx_enum_tag, value->__hxhx_enum_params);");
+		out.push("  std::ostringstream out;");
+		out.push("  out << value;");
+		out.push("  return out.str();");
+		out.push("}");
 		out.push("");
 		out.push("template<typename T>");
 		out.push("static std::string __hxhx_stringify(const T& value) {");
@@ -3291,6 +3387,8 @@ class CppTargetCore {
 			out.push(line);
 		for (line in valueTypeCarrierStorageLines(cls, className))
 			out.push(line);
+		for (line in enumCarrierStorageLines(cls, className))
+			out.push(line);
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			if (HxFunctionDecl.getName(fn) == "new")
 				continue;
@@ -3545,6 +3643,29 @@ class CppTargetCore {
 			"  std::string __hxhx_value_type_tag = std::string();",
 			"  std::string __hxhx_value_type_payload = std::string();",
 			"  " + className + "(std::string tag, std::string payload = std::string()) : __hxhx_value_type_tag(tag), __hxhx_value_type_payload(payload) {}"
+		];
+	}
+
+	/**
+		Give generated enum carrier values observable constructor metadata.
+
+		The scanner already records enum constructor name/index/payloads in static
+		metadata. These fields are the C++ value representation used when a typed
+		enum value is expected, while raw constructor methods can keep their current
+		callable tag-returning shape until the broader factory/switch seams land.
+	**/
+	static function enumCarrierStorageLines(cls:HxClassDecl, className:String):Array<String> {
+		if (!classDeclIsEnumCarrier(cls))
+			return [];
+		return [
+			"  std::string __hxhx_enum_tag = std::string();",
+			"  int __hxhx_enum_index = 0;",
+			"  std::vector<std::string> __hxhx_enum_params = {};",
+			"  " + className +
+			"(std::string tag, int index = 0, std::vector<std::string> params = {}) : __hxhx_enum_tag(tag), __hxhx_enum_index(index), __hxhx_enum_params(params) {}",
+			"  std::string getName() const { return __hxhx_enum_tag; }",
+			"  int getIndex() const { return __hxhx_enum_index; }",
+			"  std::vector<std::string> getParameters() const { return __hxhx_enum_params; }"
 		];
 	}
 
@@ -4934,6 +5055,40 @@ class CppTargetCore {
 				}
 			case _:
 				"";
+		};
+	}
+
+	static function enumMetadataCtorIndex(init:HxExpr):Null<Int> {
+		return switch (init) {
+			case EAnon(fieldNames, fieldValues) if (isEnumMetadataFieldNames(fieldNames)):
+				final index = fieldNames.indexOf("__hx_index");
+				if (index < 0 || index >= fieldValues.length) {
+					null;
+				} else switch (fieldValues[index]) {
+					case EInt(value):
+						value;
+					case _:
+						null;
+				}
+			case _:
+				null;
+		};
+	}
+
+	static function enumMetadataCtorParams(init:HxExpr):Array<HxExpr> {
+		return switch (init) {
+			case EAnon(fieldNames, fieldValues) if (isEnumMetadataFieldNames(fieldNames)):
+				final index = fieldNames.indexOf("__hx_params");
+				if (index < 0 || index >= fieldValues.length) {
+					[];
+				} else switch (fieldValues[index]) {
+					case EArrayDecl(values):
+						values == null ? [] : values;
+					case _:
+						[];
+				}
+			case _:
+				[];
 		};
 	}
 
@@ -11921,6 +12076,8 @@ class CppTargetCore {
 			}
 			return stringExpr(expr, scope);
 		}
+		if (expectedType == "std::any" && actualType != "std::any" && isCppEnumCarrierReferenceType(actualType, scope))
+			return "std::any(__hxhx_enum_to_erased(" + renderExpr(expr, scope) + "))";
 		if (expectedType == "std::any" && actualType != "std::any")
 			return "std::any(" + (classReferencePathText(expr, scope) != null ? stringExpr(expr, scope) : renderExpr(expr, scope)) + ")";
 		if (actualType == "std::any") {
@@ -12267,6 +12424,12 @@ class CppTargetCore {
 				typeNameCallExpr(args[0], scope);
 			case ECall(EField(receiver, "getEnumName"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				typeNameCallExpr(args[0], scope);
+			case ECall(EField(receiver, "enumConstructor"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
+				"__hxhx_enum_constructor(" + renderExpr(args[0], scope) + ")";
+			case ECall(EField(receiver, "enumIndex"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
+				"__hxhx_enum_index(" + renderExpr(args[0], scope) + ")";
+			case ECall(EField(receiver, "enumParameters"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
+				"__hxhx_enum_parameters(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(receiver, "typeof"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
 				"__hxhx_type_name(" + renderExpr(args[0], scope) + ")";
 			case ECall(EField(receiver, "resolveClass"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
@@ -12714,7 +12877,7 @@ class CppTargetCore {
 					} else if (isValueTypeCarrierClassName(cleanCarrier, scope)) {
 						valueTypeCarrierValueExpr(cleanCarrier, enumMetadataCtorName(init), [], scope);
 					} else {
-						"std::make_shared<" + cleanCarrier + ">()";
+						enumCtorValueForCarrierType(enumMetadataCtorName(init), enumMetadataCtorParams(init), cleanCarrier, scope, enumMetadataCtorIndex(init));
 					}
 				}
 			case _:
@@ -15510,6 +15673,8 @@ class CppTargetCore {
 			return rendered;
 		}
 		if (valueType == "std::any") {
+			if (isCppEnumCarrierReferenceType(actualType, scope))
+				return "std::any(__hxhx_enum_to_erased(" + renderExpr(arg, scope) + "))";
 			final classReferencePath = classReferencePathText(arg, scope);
 			if (classReferencePath != null)
 				return "std::any(std::string(" + quoteString(classReferencePath) + "))";
@@ -18466,7 +18631,8 @@ class CppTargetCore {
 		return enumCtorValueForCarrierType(name, args, rawCarrierType, scope);
 	}
 
-	static function enumCtorValueForCarrierType(name:String, args:Array<HxExpr>, rawCarrierType:String, ?scope:CppRenderScope):Null<String> {
+	static function enumCtorValueForCarrierType(name:String, args:Array<HxExpr>, rawCarrierType:String, ?scope:CppRenderScope,
+			?knownIndex:Null<Int>):Null<String> {
 		if (rawCarrierType == null || rawCarrierType.length == 0)
 			return null;
 		final carrierType = renderedCarrierClassName(rawCarrierType, scope);
@@ -18474,15 +18640,81 @@ class CppTargetCore {
 			return enumValuePtrExpr(name, args, scope);
 		if (isValueTypeCarrierClassName(carrierType, scope))
 			return valueTypeCarrierValueExpr(carrierType, name, args, scope);
+		final index = knownIndex == null ? enumConstructorIndex(carrierType, name, scope) : knownIndex;
+		return "std::make_shared<" + carrierType + ">(std::string(" + quoteString(name) + "), " + Std.string(index) + ", "
+			+ enumCtorPayloadVectorExpr(args, scope) + ")";
+	}
+
+	static function enumConstructorIndex(carrierType:String, ctorName:String, ?scope:CppRenderScope):Int {
+		final cls = classDeclForCppName(carrierType, scope);
+		if (cls == null)
+			return 0;
+		final wanted = sanitizeIdentifier(ctorName);
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field) || sanitizeIdentifier(HxFieldDecl.getName(field)) != "__hx_enum_ctors")
+				continue;
+			switch (HxFieldDecl.getInit(field)) {
+				case EArrayDecl(values):
+					for (i in 0...values.length)
+						switch (values[i]) {
+							case EString(name) if (sanitizeIdentifier(name) == wanted):
+								return i;
+							case _:
+						}
+				case _:
+			}
+		}
+		for (field in HxClassDecl.getFields(cls)) {
+			if (!HxFieldDecl.getIsStatic(field))
+				continue;
+			final init = HxFieldDecl.getInit(field);
+			if (isEnumMetadataAnonInit(init) && sanitizeIdentifier(enumMetadataCtorName(init)) == wanted) {
+				final metadataIndex = enumMetadataCtorIndex(init);
+				return metadataIndex == null ? 0 : metadataIndex;
+			}
+		}
+		var index = 0;
+		for (field in HxClassDecl.getFields(cls)) {
+			if (HxFieldDecl.getIsStatic(field) && isEnumMetadataAnonInit(HxFieldDecl.getInit(field))) {
+				if (sanitizeIdentifier(enumMetadataCtorName(HxFieldDecl.getInit(field))) == wanted)
+					return index;
+				index++;
+			}
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
+				continue;
+			if (sanitizeIdentifier(HxFunctionDecl.getName(fn)) == wanted)
+				return index;
+			index++;
+		}
+		return 0;
+	}
+
+	static function enumCtorPayloadVectorExpr(args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		if (args == null || args.length == 0)
-			return "std::make_shared<" + carrierType + ">()";
-		final parts = ["([&]() {"];
-		for (i in 0...args.length)
-			parts.push(" auto __hxhx_enum_arg_" + i + " = " + enumCtorPayloadValueExpr(args[i], scope) + ";");
-		for (i in 0...args.length)
-			parts.push(" (void)__hxhx_enum_arg_" + i + ";");
-		parts.push(" return std::make_shared<" + carrierType + ">(); })()");
-		return parts.join("");
+			return "std::vector<std::string>{}";
+		return "std::vector<std::string>{" + [for (arg in args) enumCtorPayloadStringExpr(arg, scope)].join(", ") + "}";
+	}
+
+	static function enumCtorPayloadStringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		return switch (expr) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				enumCtorPayloadStringExpr(inner, scope);
+			case EIdent(name) if (importedEnumConstructorExpr(name, [], scope) != null):
+				"__hxhx_stringify(" + importedEnumConstructorExpr(name, [], scope) + ")";
+			case ECall(EIdent(name), args) if (importedEnumConstructorExpr(name, args, scope) != null):
+				"__hxhx_stringify(" + importedEnumConstructorExpr(name, args, scope) + ")";
+			case EField(receiver, field):
+				final owner = staticReceiverClassName(receiver, scope);
+				if (owner != null && isEnumCarrierClassName(owner, scope) && classHasStaticEnumMetadataField(owner, field, scope)) {
+					"__hxhx_stringify(" + enumCtorValueForCarrierType(field, [], owner, scope) + ")";
+				} else {
+					stringExpr(expr, scope);
+				}
+			case _:
+				stringExpr(expr, scope);
+		};
 	}
 
 	/**
@@ -18569,7 +18801,8 @@ class CppTargetCore {
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				enumMetadataAnonValueExprForExpectedType(inner, expectedType, scope);
 			case EAnon(_, _) if (isEnumMetadataAnonInit(expr)):
-				enumCtorValueForExpectedType(enumMetadataCtorName(expr), [], expectedType, scope);
+				final rawCarrierType = classNameFromCppExprType(expectedType, scope);
+				enumCtorValueForCarrierType(enumMetadataCtorName(expr), enumMetadataCtorParams(expr), rawCarrierType, scope, enumMetadataCtorIndex(expr));
 			case _:
 				null;
 		};
@@ -18791,9 +19024,14 @@ class CppTargetCore {
 			return null;
 		final rightValue = enumCarrierComparisonValueExpr(exprCppType(left, scope), right, scope);
 		if (rightValue != null)
-			return "(" + renderExpr(left, scope) + " " + op + " " + rightValue + ")";
+			return enumCarrierComparisonCallExpr(op, renderExpr(left, scope), rightValue);
 		final leftValue = enumCarrierComparisonValueExpr(exprCppType(right, scope), left, scope);
-		return leftValue == null ? null : "(" + leftValue + " " + op + " " + renderExpr(right, scope) + ")";
+		return leftValue == null ? null : enumCarrierComparisonCallExpr(op, leftValue, renderExpr(right, scope));
+	}
+
+	static function enumCarrierComparisonCallExpr(op:String, left:String, right:String):String {
+		final call = "__hxhx_enum_value_eq(" + left + ", " + right + ")";
+		return op == "!=" ? "(!" + call + ")" : call;
 	}
 
 	static function enumCarrierComparisonValueExpr(expectedType:String, expr:HxExpr, scope:CppRenderScope):Null<String> {
@@ -18824,9 +19062,7 @@ class CppTargetCore {
 	}
 
 	static function enumValuePtrExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
-		final payload = args == null
-			|| args.length == 0 ? "{}" : "std::vector<std::string>{" + [for (arg in args) stringExpr(arg, scope)].join(", ") + "}";
-		return "std::make_shared<EnumValue>(std::string(" + quoteString(name) + "), 0, " + payload + ")";
+		return "std::make_shared<EnumValue>(std::string(" + quoteString(name) + "), 0, " + enumCtorPayloadVectorExpr(args, scope) + ")";
 	}
 
 	static function pointerCtorExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -19245,7 +19481,10 @@ class CppTargetCore {
 		final classBackedAbstractString = classBackedAbstractToStringExpr(expr, scope);
 		if (classBackedAbstractString != null)
 			return classBackedAbstractString;
-		if (classNameFromCppExprType(exprCppType(expr, scope), scope) != null)
+		final explicitExprType = exprCppType(expr, scope);
+		if (isCppEnumCarrierReferenceType(explicitExprType, scope))
+			return "__hxhx_stringify(" + renderExpr(expr, scope) + ")";
+		if (classNameFromCppExprType(explicitExprType, scope) != null)
 			return "__hxhx_type_name(" + renderExpr(expr, scope) + ")";
 		final classReferencePath = classReferencePathText(expr, scope);
 		if (classReferencePath != null)
@@ -22269,8 +22508,12 @@ class CppTargetCore {
 				typeFactoryReturnCppType(args, scope);
 			case "enumEq" if (args.length == 2):
 				"bool";
-			case "getClassName" | "getEnumName" | "typeof" if (args.length == 1):
+			case "enumIndex" if (args.length == 1):
+				"int";
+			case "getClassName" | "getEnumName" | "typeof" | "enumConstructor" if (args.length == 1):
 				"std::string";
+			case "enumParameters" if (args.length == 1):
+				"std::vector<std::string>";
 			case "getClassFields" | "getInstanceFields" | "getEnumConstructs" | "allEnums" if (args.length == 1):
 				"std::vector<std::string>";
 			case _:
@@ -22411,8 +22654,8 @@ class CppTargetCore {
 			return valueTypeEq;
 		final carrierType = typeEnumEqCarrierCppType(left, right, scope);
 		if (carrierType.length > 0)
-			return "Type::enumEq<" + carrierType + ">(" + valueExprForExpectedType(left, carrierType, scope) + ", "
-				+ valueExprForExpectedType(right, carrierType, scope) + ")";
+			return "__hxhx_enum_value_eq(" + valueExprForExpectedType(left, carrierType, scope) + ", " + valueExprForExpectedType(right, carrierType, scope)
+				+ ")";
 		return "Type::enumEq(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
 	}
 
@@ -22434,6 +22677,9 @@ class CppTargetCore {
 	}
 
 	static function typeEnumEqArgCarrierCppType(expr:HxExpr, ?scope:CppRenderScope):String {
+		final explicitType = exprCppType(expr, scope);
+		if (isCppEnumCarrierReferenceType(explicitType, scope))
+			return explicitType;
 		return switch (expr) {
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				typeEnumEqArgCarrierCppType(inner, scope);

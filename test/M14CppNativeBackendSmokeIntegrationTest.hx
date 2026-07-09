@@ -1288,6 +1288,39 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function enumCarrierMetadataRuntimeProgram():GenIrProgram {
+		final src = [
+			"enum Choice {",
+			"  A;",
+			"  B;",
+			"  Pair(i:Int, s:String);",
+			"}",
+			"class Main {",
+			"  static function main() {",
+			"    var a:Choice = A;",
+			"    var p1:Choice = Pair(3, \"x\");",
+			"    var p2:Choice = Pair(3, \"x\");",
+			"    var p3:Choice = Pair(4, \"x\");",
+			"    Sys.println(Std.string(a));",
+			"    Sys.println(Std.string(p1));",
+			"    Sys.println(Std.string(Type.enumEq(p1, p2)));",
+			"    Sys.println(Std.string(Type.enumEq(p1, p3)));",
+			"    Sys.println(Type.enumConstructor(p1));",
+			"    Sys.println(Std.string(Type.enumIndex(p1)));",
+			"    var params = Type.enumParameters(p1);",
+			"    Sys.println(Std.string(params.length));",
+			"    Sys.println(Std.string(params[0]));",
+			"    Sys.println(Std.string(params[1]));",
+			"    var d:Dynamic = p1;",
+			"    Sys.println(Std.string(d));",
+			"  }",
+			"}"
+		].join("\n");
+		final parsed = ParserStage.parse(src, "Main.hx");
+		final typed = TyperStage.typeModule(parsed);
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function typeCreateInstanceProgram():GenIrProgram {
 		final src = [
 			"class Main {",
@@ -5939,8 +5972,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Assert.warn-like results.add calls should not become std::to_string(std::string)");
 		final typedEnumArg = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(ECall(EEnumValue("Warning"), [EIdent("msg")]),
 			"std::shared_ptr<Assertation>", assertWarnScope);
-		assertContains(typedEnumArg, "return std::make_shared<Assertation>();",
-			"C++ typed enum-constructor arguments should construct the expected enum carrier instead of a tag string");
+		assertContains(typedEnumArg, "std::make_shared<Assertation>(std::string(\"Warning\"), 0, std::vector<std::string>{std::string(msg)})",
+			"C++ typed enum-constructor arguments should preserve constructor tag and payload on the expected enum carrier");
 		assertTrue(typedEnumArg.indexOf("return std::string(\"Warning\")") < 0,
 			"C++ typed enum-constructor arguments should not leak tag strings into shared_ptr enum carriers");
 		final myEnum = new HxClassDecl("MyEnum", false, [
@@ -5966,24 +5999,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final myEnumInit = HxFieldDecl.getInit(HxClassDecl.getFields(myEnum)[1]);
 		final myEnumFieldInit = @:privateAccess
 			backend.cpp.CppTargetCore.renderFieldInitExpr(myEnumInit, "std::shared_ptr<MyEnum>", myEnumScope);
-		assertContains(myEnumFieldInit, "std::make_shared<MyEnum>()",
-			"C++ enum metadata field initializers should coerce at the field boundary before raw anon metadata leaks into C++");
+		assertContains(myEnumFieldInit, "std::make_shared<MyEnum>(std::string(\"A\"), 0, std::vector<std::string>{})",
+			"C++ enum metadata field initializers should preserve tag/index payload metadata before raw anon metadata leaks into C++");
 		assertTrue(myEnumFieldInit.indexOf("__hxhx_anon___hx_enum") < 0,
 			"C++ enum metadata field initializers should not emit raw metadata aggregates for carrier fields");
 		final staticEnumArg = @:privateAccess
 			backend.cpp.CppTargetCore.valueExprForExpectedType(EField(EIdent("MyEnum"), "A"), "std::shared_ptr<MyEnum>", myEnumScope);
-		assertContains(staticEnumArg, "std::make_shared<MyEnum>()",
-			"C++ static enum metadata fields should become enum value carriers when a carrier argument is expected");
+		assertContains(staticEnumArg, "std::make_shared<MyEnum>(std::string(\"A\"), 0, std::vector<std::string>{})",
+			"C++ static enum metadata fields should become metadata-preserving enum value carriers when a carrier argument is expected");
 		assertTrue(staticEnumArg.indexOf("MyEnum::A") < 0, "C++ static enum metadata fields should not pass metadata aggregates into carrier arguments");
 		final bareEnumArg = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(EIdent("A"), "std::shared_ptr<MyEnum>", myEnumScope);
-		assertContains(bareEnumArg, "std::make_shared<MyEnum>()",
-			"C++ bare enum constructor identifiers should become enum carrier values when a carrier value is expected");
-		assertTrue(bareEnumArg.indexOf("std::string(\"A\")") < 0,
-			"C++ bare enum constructor identifiers should not fall through to string enum rendering for carrier values");
+		assertContains(bareEnumArg, "std::make_shared<MyEnum>(std::string(\"A\"), 0, std::vector<std::string>{})",
+			"C++ bare enum constructor identifiers should become metadata-preserving enum carrier values when a carrier value is expected");
+		assertTrue(bareEnumArg.indexOf("return std::string(\"A\")") < 0,
+			"C++ bare enum constructor identifiers should not fall through to tag-only string enum rendering for carrier values");
 		final staticEnumCtorArg = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(ECall(EField(EIdent("MyEnum"), "C"),
 			[EInt(0), EString("hello")]), "std::shared_ptr<MyEnum>", myEnumScope);
-		assertContains(staticEnumCtorArg, "return std::make_shared<MyEnum>();",
-			"C++ static enum constructor calls should become enum carrier values when a carrier value is expected");
+		assertContains(staticEnumCtorArg,
+			"std::make_shared<MyEnum>(std::string(\"C\"), 2, std::vector<std::string>{std::to_string(0), std::string(\"hello\")})",
+			"C++ static enum constructor calls should preserve tag/index/payload values when a carrier value is expected");
 		final staticEnumCtorValue = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("MyEnum"), "C"), myEnumScope);
 		assertTrue(staticEnumCtorValue == "MyEnum::C", "C++ enum constructor values should render as callable static methods");
 		final simpleEnumScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(myEnum, {names: myEnumNames, byName: myEnumClasses}, "void");
@@ -6013,33 +6047,35 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ direct calls to shadowed callable locals should use the active C++ local name");
 		final staticEnumCall = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("MyEnum"), "D"), [EField(EIdent("MyEnum"), "A")]), myEnumScope);
-		assertContains(staticEnumCall, "MyEnum::D(std::make_shared<MyEnum>())",
-			"C++ static enum constructor calls should render static enum fields with callee argument types");
+		assertContains(staticEnumCall, "MyEnum::D(std::make_shared<MyEnum>(std::string(\"A\"), 0, std::vector<std::string>{}))",
+			"C++ static enum constructor calls should render static enum fields as metadata-preserving callee argument values");
 		myEnumScope.localTypes.set("c", "std::string");
 		final nestedStaticEnumCall = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("MyEnum"), "D"), [ECall(EField(EIdent("MyEnum"), "D"), [EIdent("c")])]), myEnumScope);
-		assertContains(nestedStaticEnumCall, "return std::make_shared<MyEnum>();",
-			"C++ nested static enum constructor calls should coerce tag-shaped values through the expected enum carrier");
+		assertContains(nestedStaticEnumCall, "std::make_shared<MyEnum>(std::string(\"D\"), 3, std::vector<std::string>{std::string(c)})",
+			"C++ nested static enum constructor calls should coerce tag-shaped values through the metadata-preserving enum carrier");
 		assertTrue(nestedStaticEnumCall.indexOf("MyEnum::D(c)") < 0,
 			"C++ nested static enum constructor calls should not pass tag-shaped locals as enum carrier arguments");
 		myEnumScope.localTypes.set("value", "std::shared_ptr<MyEnum>");
+		final enumCarrierStringExpr = @:privateAccess backend.cpp.CppTargetCore.stringExpr(EIdent("value"), myEnumScope);
+		assertTrue(enumCarrierStringExpr == "__hxhx_stringify(value)",
+			"C++ Std.string on typed enum carriers should use enum metadata stringification instead of Type.typeof naming");
 		final bareEnumComparison = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("==", EIdent("value"), EIdent("B")), myEnumScope);
-		assertContains(bareEnumComparison, "value == std::make_shared<MyEnum>()",
-			"C++ enum carrier comparisons should coerce bare enum constructor identifiers to carrier values");
-		assertTrue(bareEnumComparison.indexOf("std::string(\"B\")") < 0,
-			"C++ enum carrier comparisons should not compare bare enum constructor identifiers as strings");
+		assertContains(bareEnumComparison, "__hxhx_enum_value_eq(value, std::make_shared<MyEnum>(std::string(\"B\"), 1, std::vector<std::string>{}))",
+			"C++ enum carrier comparisons should compare preserved enum metadata instead of pointer identity");
+		assertTrue(bareEnumComparison.indexOf("value == std::string(\"B\")") < 0,
+			"C++ enum carrier comparisons should not compare bare enum constructor identifiers as tag strings");
 		final typeEnumEqBare = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"), [EIdent("A"), ENull]), myEnumScope);
-		assertContains(typeEnumEqBare, "Type::enumEq<std::shared_ptr<MyEnum>>(std::make_shared<MyEnum>(), nullptr)",
+		assertContains(typeEnumEqBare, "__hxhx_enum_value_eq(std::make_shared<MyEnum>(std::string(\"A\"), 0, std::vector<std::string>{}), nullptr)",
 			"C++ Type.enumEq should render imported zero-arg enum constructors through the enum carrier seam");
 		assertTrue(typeEnumEqBare.indexOf("Type::enumEq(A, nullptr)") < 0,
 			"C++ Type.enumEq should not leak bare imported enum constructors into generated C++");
 		final typeEnumEqPayload = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"),
 			[ECall(EIdent("D"), [EIdent("A")]), ECall(EIdent("D"), [EIdent("B")])]), myEnumScope);
-		assertContains(typeEnumEqPayload, "Type::enumEq<std::shared_ptr<MyEnum>>(",
-			"C++ Type.enumEq should infer the enum carrier for imported payload constructors");
-		assertContains(typeEnumEqPayload, "return std::make_shared<MyEnum>();",
-			"C++ Type.enumEq payload constructors should be coerced to enum carrier values");
+		assertContains(typeEnumEqPayload, "__hxhx_enum_value_eq(", "C++ Type.enumEq payload constructors should compare enum carrier metadata");
+		assertContains(typeEnumEqPayload, "std::make_shared<MyEnum>(std::string(\"D\"), 3, std::vector<std::string>{",
+			"C++ Type.enumEq payload constructors should be coerced to metadata-preserving enum carrier values");
 		assertTrue(typeEnumEqPayload.indexOf("D(A)") < 0 && typeEnumEqPayload.indexOf("D(B)") < 0,
 			"C++ Type.enumEq should not render imported payload constructors as raw bare calls");
 		myEnumScope.localTypes.set("c_2", "std::function<std::string(int, std::string)>");
@@ -6052,8 +6088,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(typeEnumEqCallableAlias, "Type::enumEq(MyEnum::C(1, \"hello\"), c_2(1, \"hello\"))",
 			"C++ Type.enumEq should preserve callable enum-constructor aliases through the generic comparison path");
 		final myEnumLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(myEnum, {names: myEnumNames, byName: myEnumClasses}).join("\n");
-		assertContains(myEnumLines, "inline static std::shared_ptr<MyEnum> A = std::make_shared<MyEnum>();",
-			"C++ enum carrier static metadata fields should render as carrier values");
+		assertContains(myEnumLines, "std::string __hxhx_enum_tag = std::string();",
+			"C++ enum carriers should expose target-owned constructor metadata storage");
+		assertContains(myEnumLines, "MyEnum(std::string tag, int index = 0, std::vector<std::string> params = {})",
+			"C++ enum carriers should expose a metadata constructor for generated enum values");
+		assertContains(myEnumLines, "inline static std::shared_ptr<MyEnum> A = std::make_shared<MyEnum>(std::string(\"A\"), 0, std::vector<std::string>{});",
+			"C++ enum carrier static metadata fields should render as metadata-preserving carrier values");
 		assertTrue(myEnumLines.indexOf("inline static std::string A") < 0, "C++ enum carrier static metadata fields should not render as string metadata");
 		final xmlType = new HxClassDecl("XmlType", false, [], [
 			new HxFieldDecl("Element", Public, true, "Dynamic", EInt(0)),
@@ -6100,9 +6140,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertWarnScope.localTypes.set("typedResults", "std::shared_ptr<List<std::shared_ptr<Assertation>>>");
 		final typedAssertWarnAdd:HxExpr = ECall(EField(EIdent("typedResults"), "add"), [ECall(EEnumValue("Warning"), [EIdent("msg")])]);
 		final typedAssertWarnAddExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedAssertWarnAdd, assertWarnScope);
-		assertContains(typedAssertWarnAddExpr, "typedResults->add(([&]() {", "C++ List<T>.add should render arguments with the list element expected type");
-		assertContains(typedAssertWarnAddExpr, "return std::make_shared<Assertation>();",
-			"C++ List<Assertation>.add should receive an Assertation carrier, not a string tag");
+		assertContains(typedAssertWarnAddExpr,
+			"typedResults->add(std::make_shared<Assertation>(std::string(\"Warning\"), 0, std::vector<std::string>{std::string(msg)}))",
+			"C++ List<T>.add should render arguments with the list element expected type");
+		assertContains(typedAssertWarnAddExpr, "std::vector<std::string>{std::string(msg)}",
+			"C++ List<Assertation>.add should receive an Assertation carrier with payload metadata, not a string tag");
 		assertTrue(typedAssertWarnAddExpr.indexOf("return std::string(\"Warning\")") < 0,
 			"C++ typed List enum arguments should not preserve the erased string-tag lowering");
 		final typedAssertWarnSequenceExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(ELambda(["__hxhx_lambda_seq_0"], ENull),
@@ -6640,7 +6682,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		}).join("\n");
 		assertTrue(impossibleEnumPayloadLines.indexOf("auto __hxhx_enum_arg_0 = e;") < 0,
 			"C++ impossible enum-pattern branches should not render unbound enum-constructor payload references");
-		assertContains(impossibleEnumPayloadLines, "return std::make_shared<TypeParam>();",
+		assertContains(impossibleEnumPayloadLines, "return std::make_shared<TypeParam>(std::string(\"TPType\"), 0, std::vector<std::string>{});",
 			"C++ switch expressions should keep the reachable default branch when impossible enum payload branches are skipped");
 		final baseTypeClass = new HxClassDecl("BaseType", false, [], [new HxFieldDecl("module", Public, false, "String", null)]);
 		typeToolsNames.set("BaseType", true);
@@ -13232,6 +13274,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				+ "function=true\n" + "unknown=true\n" + "mismatch=false\n",
 				"unexpected C++ Type.ValueType stdout: "
 				+ typeValueRun.stdout);
+
+			final enumCarrierMetadataBuildDir = Path.join([root, "enum-carrier-metadata-runtime-build"]);
+			final enumCarrierMetadataBuilt = BackendRegistry.createForTarget("cpp-native")
+				.emit(enumCarrierMetadataRuntimeProgram(), context(enumCarrierMetadataBuildDir, true, false));
+			assertTrue(enumCarrierMetadataBuilt.builtExecutable, "C++ enum carrier metadata runtime smoke should build executable");
+			final enumCarrierMetadataRun = commandOutput(enumCarrierMetadataBuilt.entryPath, []);
+			assertTrue(enumCarrierMetadataRun.code == 0, "C++ enum carrier metadata runtime smoke failed: " + enumCarrierMetadataRun.stderr);
+			assertTrue(enumCarrierMetadataRun.stdout == "A\nPair(3,x)\ntrue\nfalse\nPair\n2\n2\n3\nx\nPair(3,x)\n",
+				"unexpected C++ enum carrier metadata stdout: " + enumCarrierMetadataRun.stdout);
 
 			final typeResolverBuildDir = Path.join([root, "type-resolver-build"]);
 			final typeResolverBuilt = BackendRegistry.createForTarget("cpp-native")

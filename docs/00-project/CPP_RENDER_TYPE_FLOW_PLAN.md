@@ -435,10 +435,24 @@ evidence, not Cpp support: the next Cpp implementation must either preserve the
 seeded payload behavior or explicitly classify any remaining gap as
 `unsupported_diagnostic` / `known_divergence` while the carrier seam is split.
 
-No Cpp implementation change was made for this checkpoint. README and North
-Star progress bars stay unchanged because strict Cpp remains red, public
-production readiness did not change, and the only new implementation path is
-the payload-preserving enum carrier follow-up `haxe_ocaml-puquq`.
+The first `haxe_ocaml-puquq` implementation seam now gives typed generated enum
+carriers target-owned constructor metadata: tag, index, and stringified
+payloads. Focused Cpp smoke coverage pins typed enum constructor coercion,
+static metadata field coercion, same-carrier `Type.enumEq`, typed `Std.string`,
+`List<T>` argument coercion, `Type.enumConstructor` / `Type.enumIndex` /
+`Type.enumParameters`, Dynamic stringification, and the existing
+unreachable-payload switch guard under that representation. The smoke also
+builds and runs a generated C++ enum metadata program, so the helper declaration
+order and runtime metadata access are covered, not only render strings.
+
+This is not full enum parity. Raw generated constructor helpers may still keep
+their current tag-shaped callable form in non-carrier contexts, switch payload
+extraction still needs a behavior-owned seam, `Type.createEnum` /
+`Type.createEnumIndex` / `Type.allEnums` are not proven as typed value
+factories, and Serializer/Unserializer enum support remains blocked on the enum
+carrier plus Reflect/Dynamic prerequisites. README and North Star progress bars
+stay unchanged because strict Cpp remains red and public production readiness
+did not change.
 
 Slow diagnostic validation for hotspot claims:
 
