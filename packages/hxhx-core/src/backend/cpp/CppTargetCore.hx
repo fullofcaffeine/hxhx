@@ -3725,7 +3725,9 @@ class CppTargetCore {
 					out.push(line);
 				continue;
 			}
-			for (line in renderUtestAssertNeutralMethod(fn, cls, classLookup))
+			final neutralLines = renderUtestAssertFastNeutralMethod(fn);
+			final renderedNeutralLines = neutralLines == null ? renderUtestAssertNeutralMethod(fn, cls, classLookup) : neutralLines;
+			for (line in renderedNeutralLines)
 				out.push(line);
 		}
 		out.push("};");
@@ -3929,6 +3931,166 @@ class CppTargetCore {
 			out.push("    return " + cppDefaultValue(returnType, scope) + ";");
 		out.push("  }");
 		return out;
+	}
+
+	/**
+		Render target-owned `utest.Assert` no-op methods without building a full
+		render scope for every diagnostic helper. Polymorphic helpers and complex
+		signatures stay on the normal helper path so this only optimizes the
+		neutral support surface used to keep unit-test harnesses compile-safe.
+	**/
+	static function renderUtestAssertFastNeutralMethod(fn:HxFunctionDecl):Null<Array<String>> {
+		if (genericFunctionTypeParams(fn).length > 0)
+			return null;
+		final returnType = fastUtestAssertType(HxFunctionDecl.getReturnTypeHint(fn), HxDefaultValue.NoDefault, false);
+		if (returnType == null)
+			return null;
+		final renderedArgs = new Array<String>();
+		for (arg in HxFunctionDecl.getArgs(fn)) {
+			final baseType = fastUtestAssertType(HxFunctionArg.getTypeHint(arg), HxFunctionArg.getDefaultValue(arg), true);
+			if (baseType == null)
+				return null;
+			final typeName = fastNeutralArgType(arg, baseType);
+			renderedArgs.push(typeName + " " + sanitizeIdentifier(HxFunctionArg.getName(arg)) + fastNeutralArgDefaultSuffix(arg, typeName));
+		}
+		final out = ["  "
+			+ (HxFunctionDecl.getIsStatic(fn) ? "static " : "")
+			+ returnType
+			+ " "
+			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
+			+ "("
+			+ renderedArgs.join(", ")
+			+ ") {"];
+		for (line in renderTemplateUnusedArgs(HxFunctionDecl.getArgs(fn)))
+			out.push(line);
+		if (returnType != "void")
+			out.push("    return " + fastNeutralDefaultValue(returnType) + ";");
+		out.push("  }");
+		return out;
+	}
+
+	static function fastUtestAssertType(typeHint:String, defaultValue:HxDefaultValue, isArg:Bool):Null<String> {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (hint.length == 0)
+			return fastUtestAssertDefaultType(defaultValue, isArg);
+		if (isDynamicLikeTypeHint(hint))
+			return "std::any";
+		if (isFunctionTypeHint(hint))
+			return fastUtestAssertFunctionType(hint);
+		if (isArrayLikeTypeHint(hint)) {
+			final arg = genericTypeHintArg(hint);
+			final itemType = isDynamicLikeTypeHint(arg) ? "std::any" : fastUtestAssertType(arg, HxDefaultValue.NoDefault, true);
+			return itemType == null ? null : "std::vector<" + itemType + ">";
+		}
+		return switch (hint) {
+			case "Void" | "StdTypes.Void":
+				"void";
+			case "Bool" | "StdTypes.Bool":
+				"bool";
+			case "Int" | "StdTypes.Int":
+				"int";
+			case "Float" | "StdTypes.Float":
+				"double";
+			case "String" | "StdTypes.String":
+				"std::string";
+			case "PosInfos" | "haxe.PosInfos":
+				"PosInfos";
+			case "EReg":
+				"std::shared_ptr<EReg>";
+			case _:
+				null;
+		};
+	}
+
+	static function fastUtestAssertDefaultType(defaultValue:HxDefaultValue, isArg:Bool):Null<String> {
+		return switch (defaultValue) {
+			case Default(EString(_)):
+				"std::string";
+			case Default(EBool(_)):
+				"bool";
+			case Default(EInt(_)):
+				"int";
+			case Default(EFloat(_)):
+				"double";
+			case Default(ENull):
+				isArg ? "std::any" : "void";
+			case NoDefault:
+				isArg ? "std::any" : "void";
+			case Default(_):
+				null;
+		};
+	}
+
+	static function fastUtestAssertFunctionType(typeHint:String):Null<String> {
+		final parts = splitTopLevelFunctionType(typeHint);
+		if (parts.length <= 1)
+			return null;
+		final returnType = fastUtestAssertType(parts[parts.length - 1], HxDefaultValue.NoDefault, false);
+		if (returnType == null)
+			return null;
+		final args = new Array<String>();
+		for (part in CppTypeModel.functionArgTypeParts(parts.slice(0, parts.length - 1))) {
+			final typePart = CppTypeModel.functionArgTypePartType(part);
+			final argType = fastUtestAssertType(typePart, HxDefaultValue.NoDefault, true);
+			if (argType == null)
+				return null;
+			if (argType != "void")
+				args.push(CppTypeModel.functionArgTypePartIsOptional(part) ? fastNeutralOptionalType(argType) : argType);
+		}
+		return "std::function<" + returnType + "(" + args.join(", ") + ")>";
+	}
+
+	static function fastNeutralArgType(arg:HxFunctionArg, baseType:String):String {
+		return HxFunctionArg.getIsOptional(arg)
+			&& !HxFunctionArg.getIsRest(arg)
+			&& !isCppReferenceType(baseType)
+			&& !isCppOptionalType(baseType) ? fastNeutralOptionalType(baseType) : baseType;
+	}
+
+	static function fastNeutralOptionalType(typeName:String):String {
+		return "std::optional<" + typeName + ">";
+	}
+
+	static function fastNeutralArgDefaultSuffix(arg:HxFunctionArg, typeName:String):String {
+		if (HxFunctionArg.getIsRest(arg))
+			return "";
+		final optionalType = isCppOptionalType(typeName);
+		final referenceType = isCppReferenceType(typeName);
+		return switch (HxFunctionArg.getDefaultValue(arg)) {
+			case NoDefault:
+				if (HxFunctionArg.getIsOptional(arg) && (optionalType || referenceType)) optionalType ? " = std::nullopt" : " = nullptr"; else "";
+			case Default(ENull):
+				if (optionalType || referenceType) optionalType ? " = std::nullopt" : " = nullptr"; else " = " + fastNeutralDefaultValue(typeName);
+			case Default(EString(value)):
+				" = std::string(" + quoteString(value) + ")";
+			case Default(EBool(value)):
+				" = " + (value ? "true" : "false");
+			case Default(EInt(value)):
+				" = " + Std.string(value);
+			case Default(EFloat(value)):
+				" = " + Std.string(value);
+			case Default(_):
+				"";
+		};
+	}
+
+	static function fastNeutralDefaultValue(typeName:String):String {
+		return switch (typeName) {
+			case "void":
+				"";
+			case "bool":
+				"false";
+			case "int":
+				"0";
+			case "double":
+				"0.0";
+			case "std::string":
+				"std::string()";
+			case _ if (isCppOptionalType(typeName)):
+				"std::nullopt";
+			case _:
+				cppDefaultValue(typeName);
+		};
 	}
 
 	static function renderUtestAssertCallableHookField(method:String):Array<String> {

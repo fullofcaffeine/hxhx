@@ -62,6 +62,17 @@ package/source-gated to the real stdlib class and emitted from target-owned C++
 runtime support to avoid re-rendering the parsed List body in strict-gate
 diagnostics. This does not generalize to user-defined classes named `List`.
 
+`utest.Assert` is also target-owned for Cpp strict-gate diagnostics, but only in
+two narrow ways:
+
+- semantic helpers that Cpp call sites actually need, such as polymorphic
+  `q`, `same`, and `sameAs`, must stay on explicit Cpp support paths with focused
+  smoke coverage;
+- public non-generic assertion helpers whose bodies are only diagnostic/reporting
+  machinery may render direct neutral no-op signatures. This avoids building a
+  full render scope for each assertion stub, but it must not be generalized to
+  arbitrary default-return helper methods or to user-defined `Assert` classes.
+
 Macro-time assertion helpers must not accidentally become runtime semantics.
 For example, upstream unit `HelperMacros.typedAs(actual, expected)` is a
 macro-time type probe; Cpp lowering may use it for local type-inference evidence

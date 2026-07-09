@@ -5026,6 +5026,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			], "Bool", [
 				SReturn(ECall(EField(EIdent("Misc"), "isOfType"), [EIdent("value"), EIdent("type")]), HxPos.unknown())
 			], ""),
+			new HxFunctionDecl("pass", Public, true, [
+				new HxFunctionArg("msg", "String", Default(EString("pass expected")), true, false),
+				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
+			], "Bool", [SReturn(EBool(true), HxPos.unknown())], ""),
 			new HxFunctionDecl("createAsync", Public, true, [
 				new HxFunctionArg("f", "Void -> Void", NoDefault, true, false),
 				new HxFunctionArg("timeout", "Int", NoDefault, true, false)
@@ -5055,6 +5059,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"template<typename TExpected, typename TValue, typename TStatus>\n  static bool sameAs(const TExpected& expected, const TValue& value, TStatus& status, double approx)",
 			"C++ utest Assert support should keep sameAs polymorphic");
 		assertContains(utestAssertLines, "static bool isOfType(", "C++ utest Assert support should keep assertion method signatures");
+		assertContains(utestAssertLines,
+			"static bool isOfType(std::any value, std::any type, std::optional<std::string> msg = std::nullopt, std::optional<PosInfos> pos = std::nullopt)",
+			"C++ utest Assert neutral support should render common no-op signatures without full helper body rendering");
+		assertContains(utestAssertLines,
+			"static bool pass(std::optional<std::string> msg = std::string(\"pass expected\"), std::optional<PosInfos> pos = std::nullopt)",
+			"C++ utest Assert neutral support should keep simple default arguments on the fast path");
 		assertContains(utestAssertLines, "return false;", "C++ utest Assert support should neutralize nonessential assertion helper bodies");
 		assertTrue(utestAssertLines.indexOf("Misc::isOfType") < 0, "C++ utest Assert support should not render expensive diagnostic helper bodies");
 		assertTrue(utestAssertLines.indexOf("typeToString") < 0, "C++ utest Assert support should omit private diagnostic helpers");
