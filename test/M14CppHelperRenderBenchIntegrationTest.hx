@@ -31,6 +31,12 @@ typedef BytesStringArgPhaseBenchResult = {
 	var directSample:String;
 }
 
+typedef FreshERegReturnBenchResult = {
+	var calls:Int;
+	var elapsed:Float;
+	var sample:String;
+}
+
 /**
 	Renderer-only latency probe for the C++ helper-class frontier.
 
@@ -50,6 +56,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_PRIMITIVE_ARG_CALLS = 250;
 	static inline final DEFAULT_BYTES_REFERENCE_CALLS = 10;
 	static inline final DEFAULT_BYTES_STRING_ARG_CALLS = 100;
+	static inline final DEFAULT_FRESH_EREG_RETURN_CALLS = 10;
 
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -466,6 +473,48 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
+	static function inferFreshERegReturns(callCount:Int):FreshERegReturnBenchResult {
+		final eReg = new HxClassDecl("EReg", false, [
+			new HxFunctionDecl("replace", Public, false, [
+				new HxFunctionArg("s", "String", NoDefault, false, false),
+				new HxFunctionArg("by", "String", NoDefault, false, false)
+			], "String", [], ""),
+			new HxFunctionDecl("map", Public, false, [
+				new HxFunctionArg("s", "String", NoDefault, false, false),
+				new HxFunctionArg("f", "EReg->String", NoDefault, false, false)
+			], "String", [], "")
+		], []);
+		final owner = new HxClassDecl("FreshERegReturnBenchOwner", false, [], []);
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		final all = new Array<HxClassDecl>();
+		for (cls in [eReg, owner]) {
+			final name = HxClassDecl.getName(cls);
+			names.set(name, true);
+			classes.set(name, cls);
+			all.push(cls);
+		}
+		for (i in 0...280) {
+			final cls = new HxClassDecl("FreshERegDummy" + i, false, [], []);
+			final name = HxClassDecl.getName(cls);
+			names.set(name, true);
+			classes.set(name, cls);
+			all.push(cls);
+		}
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes, all: all}, "void");
+		final fresh = ENew("EReg", [EString("a+"), EString("g")]);
+		final replace = ECall(EField(fresh, "replace"), [EString("aa"), EString("x")]);
+		final map = ECall(EField(fresh, "map"), [EString("aa"), ELambda(["r"], ECall(EField(EIdent("r"), "matchedLeft"), []))]);
+		resetRendererCaches();
+		final start = Sys.time();
+		var sample = "";
+		for (_ in 0...callCount)
+			sample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(replace, scope)
+				+ ","
+				+ @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(map, scope);
+		return {calls: callCount, elapsed: Sys.time() - start, sample: sample};
+	}
+
 	static function assertCallableArgOverridePolicy():Void {
 		final stringOnly = new HxFunctionDecl("stringOnly", Public, false, [new HxFunctionArg("event", "String", NoDefault, false, false)], "Void", [], "");
 		final stringCallable = new HxFunctionDecl("stringCallable", Public, false, [new HxFunctionArg("f", "String", NoDefault, false, false)], "String",
@@ -490,6 +539,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final primitiveArgCalls = envInt("HXHX_CPP_PRIMITIVE_ARG_BENCH_CALLS", DEFAULT_PRIMITIVE_ARG_CALLS);
 		final bytesReferenceCalls = envInt("HXHX_CPP_BYTES_REFERENCE_BENCH_CALLS", DEFAULT_BYTES_REFERENCE_CALLS);
 		final bytesStringArgCalls = envInt("HXHX_CPP_BYTES_STRING_ARG_BENCH_CALLS", DEFAULT_BYTES_STRING_ARG_CALLS);
+		final freshERegReturnCalls = envInt("HXHX_CPP_FRESH_EREG_RETURN_BENCH_CALLS", DEFAULT_FRESH_EREG_RETURN_CALLS);
 		var best:HelperRenderBenchResult = null;
 		var total = 0.0;
 		for (_ in 0...reps) {
@@ -522,6 +572,8 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& bytesStringArgs.stringSample == bytesStringArgs.valueSample
 			&& bytesStringArgs.directSample == bytesStringArgs.valueSample,
 			"Bytes String argument phases should preserve the existing std::string wrapper for typed locals");
+		final freshERegReturns = inferFreshERegReturns(freshERegReturnCalls);
+		assertTrue(freshERegReturns.sample == "std::string,std::string", "Fresh EReg replace/map calls should keep their known String return types");
 
 		Sys.println("CPP_HELPER_RENDER_BENCH:PASS extra_methods="
 			+ extraMethods
@@ -551,6 +603,10 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ bytesStringArgs.stringElapsed
 			+ " bytes_string_direct_seconds="
 			+ bytesStringArgs.directElapsed
+			+ " fresh_ereg_return_calls="
+			+ freshERegReturns.calls
+			+ " fresh_ereg_return_seconds="
+			+ freshERegReturns.elapsed
 			+ (stdList == null ? "" : " std_list_seconds=" + stdList.elapsed + " std_list_lines=" + stdList.lines));
 	}
 }

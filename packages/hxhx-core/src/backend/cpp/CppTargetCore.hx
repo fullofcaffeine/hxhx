@@ -17922,6 +17922,8 @@ class CppTargetCore {
 		return switch (expr) {
 			case EIdent(_):
 				exprCppType(expr, scope);
+			case ECall(EField(receiver, method), args) if (isFreshERegStringCall(receiver, method, args.length)):
+				"std::string";
 			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver)):
 				typeIntrinsicReturnCppType(method, args, scope);
 			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):
@@ -18190,6 +18192,22 @@ class CppTargetCore {
 	}
 
 	/**
+		Recognize fresh `EReg` replacement calls with a known String result.
+
+		A syntactic `new EReg(...).map/replace(...)` receiver already establishes the
+		core API owner. Resolving its general C++ receiver type first would run class,
+		container, and abstract probes only to recover that same owner.
+	**/
+	static function isFreshERegStringCall(receiver:HxExpr, method:String, arity:Int):Bool {
+		return switch (receiver) {
+			case ENew(typePath, _) if (isERegTypeName(typePath) && arity == 2 && (method == "map" || method == "replace")):
+				true;
+			case _:
+				false;
+		};
+	}
+
+	/**
 		Fold `new Map<K,V>().toString()` for a fresh empty map.
 
 		The strict C++ unit frontier hits this exact stdlib shape repeatedly while
@@ -18216,6 +18234,8 @@ class CppTargetCore {
 	static function knownFieldCallReturnCppTypeWithReceiverCppType(receiver:HxExpr, method:String, args:Array<HxExpr>, receiverCppType:Void->String,
 			?scope:CppRenderScope):String {
 		final arity = args == null ? 0 : args.length;
+		if (isFreshERegStringCall(receiver, method, arity))
+			return "std::string";
 		if (isReflectStaticReceiver(receiver)) {
 			switch (method) {
 				case "getProperty" if (arity == 2):

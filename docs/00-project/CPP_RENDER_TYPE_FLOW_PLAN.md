@@ -842,6 +842,55 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp still
 times out, and this internal known-call render improvement does not change
 public production readiness.
 
+## 2026-07-09 Fresh EReg Return-Type Guard
+
+Follow-up bead `haxe_ocaml-debpm` selected `TestEReg.test` from repeated shared
+timings rather than the latest timeout boundary. It remains the largest
+repeated method in the comparable omitted-Encoding and warmed direct-String
+logs at about 22.68s and 22.41s. The earlier detailed
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-test-filter-after-prep-guards.log`
+isolates a still-relevant receiver-type seam: six syntactic
+`new EReg(...).map(...)` calls spent about 0.714s in failed generic known-field
+checks, and two `new EReg(...).replace(...)` calls spent about 0.248s in failed
+primitive-abstract checks before ordinary instance lookup recovered their
+String return type.
+
+The local upstream 4.3.7 stdlib declaration confirms that both `map` and
+`replace` take two arguments and return `String`. The retained guard recognizes
+only those two-argument methods on a syntactic fresh `EReg` receiver at the top
+of expression type inference, and repeats the same guard at the lower known
+field boundary. Non-fresh receivers, other methods or arities, callback
+adaptation, constructor rendering, and the target-owned EReg runtime remain on
+their existing paths.
+
+The helper render bench now builds a 282-class lookup and repeatedly infers
+fresh `EReg.map` and `EReg.replace` return types. Two pre-change ten-pair samples
+reported about 0.577s and 0.573s. Two post-change samples reported about
+0.000179s and 0.000116s while asserting that both results remain
+`std::string`. The full Cpp native backend smoke also passed, including its
+existing generated EReg callback and runtime-support assertions.
+
+No new strict method-level delta is claimed for this slice. Recreating a
+warmed external upstream worktree requires a serialized seed run plus the full
+480s probe; the focused scaled fixture directly exercises the identified
+return-type seam, while the latest comparable strict log already establishes
+`TestEReg.test` as a repeated hotspot. A follow-up should phase the remaining
+EReg lambda/call work before choosing another patch.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+times out, and this internal fresh-receiver inference improvement does not
+change public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
