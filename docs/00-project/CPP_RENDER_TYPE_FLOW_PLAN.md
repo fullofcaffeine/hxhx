@@ -357,6 +357,75 @@ No code change was made for this checkpoint. README and North Star progress
 bars stay unchanged because strict Cpp remains red and this checkpoint records
 negative evidence, not a production-readiness improvement.
 
+## 2026-07-09 Assertation Shared Timing Checkpoint
+
+The follow-up diagnostic checked whether the repeated `Assertation` helper
+timing from the TestExceptions variance run was a credible next Cpp patch seam.
+It is not, at least not as a timing-only change.
+
+A two-log comparison of the latest comparable timeout probes:
+
+```bash
+node scripts/ci/cpp-strict-frontier-summary.js --top 8 \
+  .artifacts/full1/cpp-strict-current/direct-source-only-testmap-empty-map-fold-timing-current.log \
+  .artifacts/full1/cpp-strict-current/direct-source-only-testexceptions-rethrow-timing-current.log
+```
+
+reported `CPP_STRICT_FRONTIER_SUMMARY:PASS classification=moving-frontier`,
+with no repeated frontier and no repeated top timings. The post-map run reached
+`TestExceptions.testValueException`; the TestExceptions-filtered rerun stopped
+much earlier at `Lambda.map`.
+
+A broader comparison that also included older completed source-only runs:
+
+```bash
+node scripts/ci/cpp-strict-frontier-summary.js --top 8 \
+  .artifacts/full1/cpp-strict-current/direct-source-only-testmap-empty-map-fold-timing-current.log \
+  .artifacts/full1/cpp-strict-current/direct-source-only-testexceptions-rethrow-timing-current.log \
+  .artifacts/full1/cpp-strict-current/direct-source-only-kind-cache-timing.log \
+  .artifacts/full1/cpp-strict-current/direct-source-only-after-anon-local-callable.log \
+  .artifacts/full1/cpp-strict-current/direct-source-only-after-enum-constructor-value.log
+```
+
+reported `classification=repeated-frontier` only because the two older
+completed runs both ended at `Report`, which rendered in about 0.007s. That is
+a completion marker, not a performance target. The expensive completed classes
+in those older logs remained much larger moving surfaces such as
+`TestNumericCasts` (~236-239s), `TestXML` (~86-87s), `TestType` (~67s),
+`TestBasetypes` (~36s), and `TestExceptions` (~13s).
+
+Direct extraction across seven strict timing logs showed `Assertation` is stable
+but small:
+
+- `direct-source-only-fast-assert-timing.log`: ~2.03s
+- `direct-source-only-after-anon-method-carrier.log`: ~2.97s
+- `direct-source-only-testmap-empty-map-fold-timing-current.log`: ~1.85s
+- `direct-source-only-testexceptions-rethrow-timing-current.log`: ~2.63s
+- `direct-source-only-kind-cache-timing.log`: ~1.89s
+- `direct-source-only-after-anon-local-callable.log`: ~1.72s
+- `direct-source-only-after-enum-constructor-value.log`: ~1.72s
+
+The local utest source confirms `Assertation` is an enum with nine constructors
+from `utest.Assertation`. The generated Cpp artifact currently renders those
+constructors as static tag-returning methods such as
+`static std::string Error(...) { return std::string("Error"); }`; general enum
+payloads are still not preserved by the Cpp enum carrier model. The slowest
+`Assertation` method timings are the payload-shaped constructors, but each
+method emits only three lines. That points to repeated helper-method
+preparation/type-flow overhead around enum constructors rather than a large
+method body that can be optimized safely in isolation.
+
+Do not add an `Assertation`-specific special case. A general shortcut that
+renders generated enum-constructor methods directly as tag-returning helpers may
+be a valid non-semantic optimization, but it must be decided together with the
+enum carrier behavior contract so it does not freeze today's payload-dropping
+bring-up model. Track that work in `haxe_ocaml-gs7lw`.
+
+No code change was made for this checkpoint. README and North Star progress
+bars stay unchanged because strict Cpp remains red, public production readiness
+did not change, and the only new implementation path is a follow-up enum
+carrier design task.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
