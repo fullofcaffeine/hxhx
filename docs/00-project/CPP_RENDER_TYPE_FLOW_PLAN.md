@@ -103,6 +103,10 @@ should be promoted from P2 to P1:
 - `HXHX_TRACE_STAGE3_CPP_TIMINGS=1` enables Cpp timing output.
 - `HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER=<Owner.method>` narrows
   statement/expression timing for a hotspot method.
+- `HXHX_TRACE_STAGE3_CPP_LAMBDA_PHASES=1`, used with both settings above,
+  adds inner typed-lambda setup/body/restore phases. Omit it when comparing
+  enclosing statement or method timings because the nested clocks and records
+  intentionally perturb those totals.
 - `render_helper_method_prepare_timing` and
   `render_helper_method_prepare_counts` measure `prepareFunctionScope` phases.
 - `field_infer_known`, `field_infer_primitive`, `field_infer_static_owner`,
@@ -1428,7 +1432,10 @@ lambda rendering without changing generated C++. The phases separate expected
 function argument and return parsing, lambda header construction, local type
 and name map copies, callback argument registration, direct EReg body
 recognition/rendering, fallback body rendering, scope restoration, and final
-lambda assembly. They run only under the existing filtered Cpp statement trace.
+lambda assembly. They run only when the existing filtered Cpp statement trace
+and `HXHX_TRACE_STAGE3_CPP_LAMBDA_PHASES=1` are both enabled. Keeping the inner
+flag separate preserves comparable outer statement and method timing when only
+the broad trace is requested.
 
 A rebuilt current-source warm trace retained the same 280 typed modules and
 384-helper inventory: 253 full bodies, 83 declaration-only helpers, and 48
@@ -1488,6 +1495,76 @@ Focused validation for this slice includes:
 
 README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this diagnostic does not change public production readiness.
+
+## 2026-07-10 Direct Expected-Function Lambda Fast Path
+
+Follow-up bead `haxe_ocaml-r902r` moved only a raw `ELambda` with an expected
+C++ function type ahead of the general value-adaptation probes that cannot
+match that syntactic shape. The shortcut delegates to the existing typed-lambda
+renderer, so capture, expected argument and return types, local scope
+shadowing/restoration, callback bodies, and generated C++ remain owned by the
+canonical path. Named function values, bound calls, Reflect varargs, non-lambda
+expressions, and non-function expected types continue through general value
+adaptation.
+
+Focused hit/decline assertions freeze that boundary and the exact nested
+`std::function<std::string(std::shared_ptr<EReg>)>` lambda output. In two final
+100-call samples, full expected-function value adaptation fell from the prior
+0.291614-0.305562s range to 0.002460-0.002530s. The complete map fixture measured
+0.043114-0.045682s, known-owner argument rendering 0.041042-0.044445s, direct
+typed-lambda rendering 0.003615-0.003817s, and the nested callback
+0.002445-0.002474s.
+
+The rebuilt current-source warm trace retained the same 280 typed modules and
+384-helper inventory: 253 full bodies, 83 declaration-only helpers, and 48
+runtime-owned helpers. Index 43 expected-function adaptation fell from
+0.051508s to 0.000121s and its complete statement from 0.055540s to 0.004166s.
+Index 44 adaptation fell from 0.051652s to 0.000116s and its statement from
+0.055613s to 0.004156s.
+
+Across all eight inline EReg-to-String callbacks, expected-function adaptation
+fell from 0.410734s to 0.001000s, about 99.76%. The seven callback statements at
+indices 43-47, 49, and 50 fell from 0.389602s to 0.031516s, about 91.91%, while
+the broader indices 41-50 window fell from 0.600665s to 0.251815s, about 58.08%.
+`TestEReg.test` fell from 1.336176s to 0.748521s, about 43.98%. The nearby
+controls moved much less and in opposite directions: `TestBytes.test` was about
+6.9% faster while `TestXML.testBasic` was about 4.8% slower. The callback and
+method deltas are therefore treated as localized evidence, not as a full-target
+throughput claim.
+
+The 480s trace timed out at the start of `TestResource` as expected, so strict
+Cpp remains red. Relevant logs are:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-direct-lambda-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-direct-expected-lambda-warm.log`
+
+The disposable external upstream 4.3.7 worktree was removed after the run.
+Indices 41 and 42 are now the top `TestEReg.test` statements at about 0.112885s
+and 0.106976s. Each passes a scope-typed String identifier whose final render is
+only about 0.000013s but whose enclosing parameter render remains about
+0.055-0.056s. Follow-up bead `haxe_ocaml-neeo0` owns diagnostic attribution of
+the intervening class/enum/value probes before any further shortcut is chosen.
+
+This remains a narrow ordering optimization inside the existing value/lambda
+render seam and adds no runtime or stdlib behavior. Broader Cpp render/type-flow
+extraction remains owned by `haxe_ocaml-36ec`. Committed bootstrap snapshots are
+not regenerated because the slice changes neither the bootstrap interface nor
+snapshot acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness.
 
 Slow diagnostic validation for hotspot claims:
 

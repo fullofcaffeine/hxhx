@@ -95,6 +95,7 @@ typedef ERegLambdaPhaseBenchResult = {
 	var inferElapsed:Float;
 	var mapSample:String;
 	var argsSample:String;
+	var expectedFunctionSample:String;
 	var lambdaSample:String;
 	var nestedLambdaSample:String;
 	var directBodySample:String;
@@ -798,6 +799,15 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final nestedCallback = ELambda(["r"], nestedBody);
 		final mapArgs = [EString("aa"), nestedCallback];
 		final map = ECall(EField(ENew("EReg", [EString("a+"), EString("g")]), "map"), mapArgs);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directLambdaValueExprForExpectedFunction(nestedCallback, expectedType, scope) != null,
+			"A raw lambda with an expected C++ function type should use direct typed-lambda adaptation");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directLambdaValueExprForExpectedFunction(nestedCallback, "std::string", scope) == null
+			&& @:privateAccess backend.cpp.CppTargetCore.directLambdaValueExprForExpectedFunction(EIdent("f"), expectedType, scope) == null
+			&& @:privateAccess backend.cpp.CppTargetCore.directLambdaValueExprForExpectedFunction(ECall(EField(EIdent("f"), "bind"), []), expectedType,
+				scope) == null
+			&& @:privateAccess backend.cpp.CppTargetCore.directLambdaValueExprForExpectedFunction(ECall(EField(EIdent("Reflect"), "makeVarArgs"),
+				[nestedCallback]), expectedType, scope) == null,
+			"Non-function expectations, named/bound values, and Reflect varargs should retain general value adaptation");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.dynamicIdentityCallExprForExpectedFunction(nestedCallback, expectedType,
 			scope) == null && @:privateAccess backend.cpp.CppTargetCore.boundFunctionValueExprForExpectedFunction(nestedCallback, expectedType,
 				scope) == null && @:privateAccess backend.cpp.CppTargetCore.reflectMakeVarArgsExprForExpectedFunction(nestedCallback, expectedType, scope) == null,
@@ -822,8 +832,9 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final argsElapsed = Sys.time() - argsStart;
 		resetRendererCaches();
 		final expectedFunctionStart = Sys.time();
+		var expectedFunctionSample = "";
 		for (_ in 0...callCount)
-			@:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(nestedCallback, expectedType, scope);
+			expectedFunctionSample = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(nestedCallback, expectedType, scope);
 		final expectedFunctionElapsed = Sys.time() - expectedFunctionStart;
 		resetRendererCaches();
 		final identityPreflightStart = Sys.time();
@@ -928,6 +939,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 			inferElapsed: Sys.time() - inferStart,
 			mapSample: mapSample,
 			argsSample: argsSample,
+			expectedFunctionSample: expectedFunctionSample,
 			lambdaSample: lambdaSample,
 			nestedLambdaSample: nestedLambdaSample,
 			directBodySample: directBodySample,
@@ -1040,7 +1052,8 @@ class M14CppHelperRenderBenchIntegrationTest {
 			"EReg.map callback fixtures should preserve the callback-owned matched/substr chain");
 		assertTrue(eRegLambdaPhases.nestedLeafSample == "r->matched(2).substr(3)"
 			&& eRegLambdaPhases.nestedBodySample == '(std::string("match:") + r->matched(2).substr(3))'
-			&& eRegLambdaPhases.nestedLambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (std::string("match:") + r->matched(2).substr(3)); }',
+			&& eRegLambdaPhases.nestedLambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (std::string("match:") + r->matched(2).substr(3)); }'
+			&& eRegLambdaPhases.expectedFunctionSample == eRegLambdaPhases.nestedLambdaSample,
 			"EReg.map callback fixtures should preserve exact nested matched/substr and lambda shapes");
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(EIdent("r"), "matchedLeft"), []), "r",

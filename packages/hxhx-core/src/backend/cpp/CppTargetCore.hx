@@ -113,6 +113,7 @@ class CppTargetCore {
 	static var functionReturnTypesCache = new haxe.ds.StringMap<String>();
 	static var traceCppDeepEnabledCache = -1;
 	static var traceCppTimingsEnabledCache = -1;
+	static var traceCppLambdaPhasesEnabledCache = -1;
 	static var traceCppHelperClassificationDetailsEnabledCache = -1;
 	static var traceCppTimingMethodFilterCache:Null<String> = null;
 
@@ -195,6 +196,12 @@ class CppTargetCore {
 			Sys.println("cpp_target_phase=" + label);
 	}
 
+	static function traceCppLambdaPhasesEnabled():Bool {
+		if (traceCppLambdaPhasesEnabledCache < 0)
+			traceCppLambdaPhasesEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_LAMBDA_PHASES") ? 1 : 0;
+		return traceCppLambdaPhasesEnabledCache == 1;
+	}
+
 	static function traceCppHelperClassificationDetailsEnabled():Bool {
 		if (traceCppHelperClassificationDetailsEnabledCache < 0)
 			traceCppHelperClassificationDetailsEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_HELPER_CLASSIFICATION_DETAILS") ? 1 : 0;
@@ -232,6 +239,10 @@ class CppTargetCore {
 			&& traceCppMethodStmtTimingsEnabled(scope.traceOwnerName, scope.traceMethodName);
 	}
 
+	static function traceCppLambdaPhaseTimingEnabled(?scope:CppRenderScope):Bool {
+		return traceCppLambdaPhasesEnabled() && traceCppScopeStmtTimingEnabled(scope);
+	}
+
 	static function traceCppScopeStmtTimingPhase(scope:CppRenderScope, label:String):Void {
 		if (!traceCppScopeStmtTimingEnabled(scope))
 			return;
@@ -242,7 +253,7 @@ class CppTargetCore {
 
 	/** Record opt-in typed-lambda render phases for the currently filtered helper statement. **/
 	static function traceLambdaRenderPhase(scope:CppRenderScope, phase:String, elapsed:Float, argCount:Int, detail:String = ""):Void {
-		if (!traceCppScopeStmtTimingEnabled(scope))
+		if (!traceCppLambdaPhaseTimingEnabled(scope))
 			return;
 		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
 		traceCppTimingPhase("render_helper_lambda_phase_timing owner=" + scope.traceOwnerName + " name=" + sanitizeIdentifier(scope.traceMethodName)
@@ -12306,7 +12317,23 @@ class CppTargetCore {
 		return renderExpr(expr, scope);
 	}
 
+	/**
+		Render a raw lambda through its explicit C++ function contract before value
+		adaptation probes that cannot match this syntactic shape.
+	**/
+	static function directLambdaValueExprForExpectedFunction(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case ELambda(args, body) if (isCppFunctionType(expectedType)):
+				lambdaExprForExpectedFunction(args, body, expectedType, scope);
+			case _:
+				null;
+		};
+	}
+
 	static function valueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
+		final directLambda = directLambdaValueExprForExpectedFunction(expr, expectedType, scope);
+		if (directLambda != null)
+			return directLambda;
 		final macroApiCall = macroApiCallExprForExpected(expr, expectedType, scope);
 		if (macroApiCall != null)
 			return macroApiCall;
@@ -21549,7 +21576,7 @@ class CppTargetCore {
 	}
 
 	static function lambdaExprForExpectedFunction(args:Array<String>, body:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
-		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final timingEnabled = traceCppLambdaPhaseTimingEnabled(scope);
 		final argTypesStart = timingEnabled ? Sys.time() : 0.0;
 		final argTypes = CppTypeModel.cppFunctionArgTypesFromCppType(expectedType);
 		if (timingEnabled)
@@ -21639,7 +21666,7 @@ class CppTargetCore {
 
 	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope, ?expectedReturnType:String,
 			?capture:String):String {
-		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final timingEnabled = traceCppLambdaPhaseTimingEnabled(scope);
 		final headerStart = timingEnabled ? Sys.time() : 0.0;
 		final names = [for (arg in args) sanitizeIdentifier(arg)];
 		final params = [
