@@ -11741,9 +11741,23 @@ class CppTargetCore {
 						scope.localNames.remove(sourceLocal);
 				}
 				final rhsStart = timingEnabled ? Sys.time() : 0.0;
+				final shadowStart = timingEnabled ? Sys.time() : 0.0;
 				final fieldShadowRhs = shadowedCurrentOwnerFieldInitExpr(name, init, declaredType, localType, hadPreviousName, scope);
+				if (timingEnabled)
+					traceCppScopeStmtTimingPhase(scope,
+						"svar_rhs_phase=shadowed_field seconds="
+						+ Std.string(Sys.time() - shadowStart)
+						+ " hit="
+						+ (fieldShadowRhs != null));
+				final renderInitStart = timingEnabled ? Sys.time() : 0.0;
 				final rhs = fieldShadowRhs != null ? fieldShadowRhs : init == null ? cppDefaultValue(declaredType == "auto" ? "int" : declaredType,
 					scope) : renderLocalInitExpr(init, declaredType, localType, scope);
+				if (timingEnabled)
+					traceCppScopeStmtTimingPhase(scope,
+						"svar_rhs_phase=render_init seconds="
+						+ Std.string(Sys.time() - renderInitStart)
+						+ " used_shadow="
+						+ (fieldShadowRhs != null));
 				if (timingEnabled)
 					traceCppScopeStmtTimingPhase(scope,
 						"svar_phase=rhs local="
@@ -13210,18 +13224,36 @@ class CppTargetCore {
 	}
 
 	static function renderLocalInitExpr(init:HxExpr, declaredType:String, localType:String, ?scope:CppRenderScope):String {
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final macroStart = timingEnabled ? Sys.time() : 0.0;
 		final macroApiCall = macroApiCallExprForExpected(init, localType, scope);
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope, "local_init_phase=macro_api seconds=" + Std.string(Sys.time() - macroStart) + " hit=" + (macroApiCall != null));
 		if (macroApiCall != null)
 			return macroApiCall;
+		final structuredMapStart = timingEnabled ? Sys.time() : 0.0;
 		final structuredStringMap = renderStructuredStringMapInitExpr(init, scope);
+		if (timingEnabled)
+			traceCppScopeStmtTimingPhase(scope,
+				"local_init_phase=structured_string_map seconds="
+				+ Std.string(Sys.time() - structuredMapStart)
+				+ " hit="
+				+ (structuredStringMap != null));
 		if (structuredStringMap != null)
 			return structuredStringMap;
-		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 		return switch (init) {
 			case ENull if (isCppOptionalType(declaredType)):
 				"std::nullopt";
 			case ENew(typePath, args):
-				newExpr(typePath, args, scope, localType);
+				final newExprStart = timingEnabled ? Sys.time() : 0.0;
+				final out = newExpr(typePath, args, scope, localType);
+				if (timingEnabled)
+					traceCppScopeStmtTimingPhase(scope,
+						"local_init_phase=new_expr seconds="
+						+ Std.string(Sys.time() - newExprStart)
+						+ " type="
+						+ sanitizeTypePath(typeBaseName(typePath)));
+				out;
 			case ECall(EField(EIdent("NativeArray"), "create"), args) if (args.length == 1):
 				nativeArrayCreateExpr(args[0], scope, localType);
 			case ECall(EField(receiver, "create"), args) if (args.length == 1 && isCppNativeArrayReceiver(receiver)):

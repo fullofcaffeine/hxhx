@@ -1139,6 +1139,59 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this internal local-type improvement does not change public
 production readiness.
 
+## 2026-07-09 Fresh EReg SVar RHS Phase Timing
+
+Bead `haxe_ocaml-apz4n` added opt-in inner timing to the existing filtered Cpp
+statement trace without changing rendered output. The new phases split an
+`SVar` RHS across shadowed-field recovery and local-initializer rendering, then
+split local initialization across macro-API recognition, structured string-map
+recognition, and `newExpr`. These probes run only when the existing
+`HXHX_TRACE_STAGE3_CPP_TIMINGS` method filter selects the enclosing method.
+
+A current-source build seeded and warmed an external upstream Haxe 4.3.7
+worktree. The warm trace retained the same 280 typed modules and 384-helper
+inventory: 253 full bodies, 83 declaration-only helpers, and 48 runtime-owned
+helpers. The temporary worktree was removed immediately after the run. The
+source logs were:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-rhs-phase-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-rhs-phase-warm.log`
+
+Across the eleven fresh-EReg declaration indices selected by the preceding
+trace, statement rendering totaled about 1.196905s. The outer RHS phase totaled
+about 1.194921s, local-initializer rendering about 1.193725s, and `newExpr`
+about 1.191919s. The alternative probes were negligible: local type selection
+totaled about 0.000452s after its guard, structured string-map recognition
+about 0.000030s, shadowed-field recovery about 0.000010s, and macro-API
+recognition about 0.000007s.
+
+This explains the interpreter-fixture discrepancy: the Haxe interpreter did
+not expose the target-owned construction lookup cost, while the current-source
+OCaml trace assigns effectively all of the repeated RHS time to `newExpr`.
+`TestEReg.test` measured about 4.91s in this run, but no direct method-level
+delta is claimed because the wider run was also faster than the previous warm
+probe. Follow-up bead `haxe_ocaml-5zl0h` owns an early EReg construction
+preflight that can bypass general class-name and primitive-abstract setup while
+preserving all non-EReg construction paths.
+
+This diagnostic remains inside the existing opt-in Cpp timing surface and adds
+no runtime, stdlib, or rendering behavior. Broader Cpp render/type-flow
+extraction remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this diagnostic does not change public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
