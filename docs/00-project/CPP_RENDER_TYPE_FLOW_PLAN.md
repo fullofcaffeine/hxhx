@@ -1192,6 +1192,74 @@ Focused validation for this slice includes:
 README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this diagnostic does not change public production readiness.
 
+## 2026-07-10 Target-Owned EReg Construction Fast Path
+
+Follow-up bead `haxe_ocaml-5zl0h` moved syntactic EReg construction ahead of
+general class-name and primitive-abstract discovery. The first cut retained
+`renderConstructorArgs`; a 1,000-call interpreter fixture improved from about
+0.300130s to 0.188760-0.195699s, but the current-source trace correctly rejected
+that as the full strict fix. Its eleven `newExpr` phases still totaled about
+1.334684s, compared with 1.191919s in the prior warm run, because constructor
+argument type rediscovery remained on the target-owned path.
+
+The retained fast path also bypasses that rediscovery. Haxe has already checked
+the two EReg constructor arguments against the String contract, and the generic
+constructor path ultimately rendered those String arguments through ordinary
+expression rendering. The focused fixture now freezes equivalence for typed
+String locals in addition to literal arguments, package-qualified EReg paths,
+an explicit expected EReg carrier, and exact
+`std::make_shared<EReg>(...)` output. A non-EReg constructor assertion remains
+on general class and expected-type discovery; abstract and generic constructor
+coverage remains in the full Cpp smoke gate.
+
+Two post-change 1,000-call samples measured about 0.004904s and 0.004951s for
+direct EReg construction. A rebuilt current-source warm trace retained the same
+280 typed modules and 384-helper inventory: 253 full bodies, 83 declaration-only
+helpers, and 48 runtime-owned helpers. Across the same eleven declaration
+indices, `newExpr` fell from about 1.191919s to 0.000434s and the complete SVar
+statements fell from about 1.311631s to 0.124541s. The enclosing trace phases
+include the cost of printing their inner timing records, so `newExpr` is the
+cleanest measurement of the moved seam.
+
+`TestEReg.test` fell from about 4.910285s to 1.742630s, roughly 64.5%. This is
+larger than cross-run variation and moved in the opposite direction from two
+controls: `TestBytes.test` rose from about 8.091464s to 8.569097s, and
+`TestXML.testBasic` rose from about 7.480588s to 7.818682s. The 480s probe still
+timed out later after `TestMisc`, so strict Cpp remains expected-red. The seeded
+external upstream worktree was removed after the final run. Relevant logs are:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-constructor-preflight-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-construction-preflight-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-direct-constructor-args-warm.log`
+
+After the construction seam moved, statement indices 41-50 became the next
+repeated family at about 0.932430s. Index 42 alone measured about 0.260401s and
+repeatedly rediscovered a typed EReg local and the String-vector result of
+`split`. Follow-up bead `haxe_ocaml-eovyq` owns a scaled split-chain fixture
+before any broader instance-dispatch shortcut is retained.
+
+This is a narrow target-owned construction branch inside the existing Cpp
+dispatcher. It adds no runtime or stdlib implementation and changes no
+non-EReg construction behavior. Broader Cpp render/type-flow extraction remains
+owned by `haxe_ocaml-36ec`. Committed bootstrap snapshots are not regenerated
+because the slice changes neither the bootstrap interface nor snapshot
+acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

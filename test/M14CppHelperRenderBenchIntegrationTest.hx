@@ -618,6 +618,24 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static function renderFreshERegLocalDeclPhases(callCount:Int):FreshERegLocalDeclPhaseBenchResult {
 		final scope = eRegBenchScope();
 		final fresh = ENew("EReg", [EString("a+"), EString("g")]);
+		final qualifiedFresh = ENew("fixture.regex.EReg", [EString("a+"), EString("g")]);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(qualifiedFresh, scope) == 'std::make_shared<EReg>("a+", "g")',
+			"Package-qualified EReg construction should retain the target-owned carrier");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.newExpr("EReg", [EString("a+"), EString("g")], scope, "std::shared_ptr<EReg>") == 'std::make_shared<EReg>("a+", "g")',
+			"Explicit expected EReg types should retain exact target-owned construction");
+		scope.localNames.set("pattern", "pattern");
+		scope.localNames.set("options", "options");
+		scope.localTypes.set("pattern", "std::string");
+		scope.localTypes.set("options", "std::string");
+		final localArgs = [EIdent("pattern"), EIdent("options")];
+		final discoveredLocalArgs = @:privateAccess backend.cpp.CppTargetCore.renderConstructorArgs("EReg", localArgs, scope).join(", ");
+		assertTrue(discoveredLocalArgs == "pattern, options"
+			&& @:privateAccess backend.cpp.CppTargetCore.newExpr("EReg", localArgs, scope) == "std::make_shared<EReg>(" + discoveredLocalArgs + ")",
+			"Target-owned EReg construction should preserve ordinary typed String-local argument rendering");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.newExpr("FreshERegDummy0", [], scope, "std::shared_ptr<FreshERegDummy0>") == "std::make_shared<FreshERegDummy0>()",
+			"Non-EReg constructors should retain general class and expected-type discovery");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalDeclaredType("typed", "EReg", fresh, scope, "typed") == "std::shared_ptr<EReg>",
 			"Explicit EReg local hints should retain their reference carrier");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalDeclaredType("count", "", EInt(1), scope, "count") == "int",

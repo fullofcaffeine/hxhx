@@ -13353,7 +13353,18 @@ class CppTargetCore {
 		return cppTypeHint(typePath, scope);
 	}
 
+	/**
+		Render construction through target-owned or source-declared C++ carriers.
+
+		EReg has a fixed target-owned carrier and Haxe already type-checks its String
+		constructor arguments. Render those arguments directly, without rediscovering
+		the source declaration, class name, or primitive-abstract shape. Other
+		constructors retain declaration and expected-type lookup for templates and
+		abstracts.
+	**/
 	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?expectedCppType:String):String {
+		if (isERegTypeName(typePath))
+			return "std::make_shared<EReg>(" + renderSimpleCallArgs(args, scope).join(", ") + ")";
 		final lookup = lookupForScope(scope);
 		final cls = lookupClassForTypeHint(typePath, scope, lookup);
 		final className = cls == null ? sanitizeTypePath(typeBaseName(typePath)) : renderedClassName(cls, lookup);
@@ -13365,8 +13376,6 @@ class CppTargetCore {
 		final primitiveAbstract = primitiveBackedAbstractNewExpr(typePath, args, scope);
 		if (primitiveAbstract != null)
 			return primitiveAbstract;
-		if (isERegTypeName(typePath))
-			return "std::make_shared<EReg>(" + renderConstructorArgs("EReg", args, scope).join(", ") + ")";
 		if (isStdArrayTypePath(typePath))
 			return stdArrayConstructionExpr(typePath, args, scope, expectedCppType);
 		if (scopeHasClass(scope, className) && isTemplateWrapSupportClass(scope.classByName.get(className)))
