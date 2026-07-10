@@ -107,6 +107,9 @@ should be promoted from P2 to P1:
   adds inner typed-lambda setup/body/restore phases. Omit it when comparing
   enclosing statement or method timings because the nested clocks and records
   intentionally perturb those totals.
+- `HXHX_TRACE_STAGE3_CPP_CALL_ARG_DETAIL_PHASES=1`, also used with the broad
+  timing flag and method filter, adds the otherwise-unmeasured declared-enum,
+  enum, and structural-typedef call-argument probes.
 - `render_helper_method_prepare_timing` and
   `render_helper_method_prepare_counts` measure `prepareFunctionScope` phases.
 - `field_infer_known`, `field_infer_primitive`, `field_infer_static_owner`,
@@ -1565,6 +1568,65 @@ Focused validation for this slice includes:
 README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this internal render-latency improvement does not change
 public production readiness.
+
+## 2026-07-10 Matched String Call-Argument Phase Timing
+
+Follow-up bead `haxe_ocaml-neeo0` added an opt-in detail flag around the
+unmeasured declared-enum, enum, and structural-typedef probes in
+`callArgExprForParam`. The diagnostics do not change generated C++. A focused
+fixture now reproduces the remaining `TestEReg.test` shape with a local named
+`test`, prepared as `std::string`, passed to an expected String parameter. It
+freezes the exact direct `test` output and confirms that the value is neither an
+enum reference nor a structural typedef value.
+
+Two cold 100-call samples measured full argument rendering at 0.286472s and
+0.285453s. The structural-typedef lookup alone measured 0.263097s and
+0.265933s, about 91.8-93.2% of the full path. Each enum probe measured only
+about 0.000033-0.000036s, actual-type lookup about 0.00104-0.00107s, and final
+identifier rendering about 0.00123-0.00132s.
+
+The rebuilt current-source detail trace retained 280 typed modules and the
+same 384-helper inventory: 253 full bodies, 83 declaration-only helpers, and
+48 runtime-owned helpers. At statement index 41, the structural-typedef probe
+measured 0.054136s out of a 0.055775s parameter render. At index 42 it measured
+0.053918s out of 0.055553s. Both are about 97.06%; their declared-enum and enum
+probes were at timer resolution, actual-type lookup was about 0.000010s, and
+final rendering about 0.000016-0.000020s.
+
+The detail records did not materially perturb the enclosing result:
+`TestEReg.test` measured 0.750973s versus 0.748521s in the preceding broad
+trace. Index 41 measured 0.112638s and index 42 0.106813s. Controls were
+`TestBytes.test` at 7.199936s and `TestXML.testBasic` at 7.517039s. The 480s
+trace timed out during `TestInt64` as expected, so strict Cpp remains red.
+Relevant logs are:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-string-arg-detail-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-string-arg-detail-warm.log`
+
+The disposable upstream 4.3.7 worktree was removed after the run. No shortcut
+is retained in this diagnostic slice. Follow-up bead `haxe_ocaml-47jmk` owns a
+condition reorder limited to declining structural-typedef discovery before the
+lookup when `actualType == valueType`; mismatched types must retain the existing
+lookup and structural conversion.
+
+This remains opt-in timing and focused benchmark coverage inside the existing
+call-argument seam. Broader Cpp render/type-flow extraction remains owned by
+`haxe_ocaml-36ec`. Committed bootstrap snapshots are not regenerated because
+the slice changes neither the bootstrap interface nor snapshot acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this diagnostic does not change public production readiness.
 
 Slow diagnostic validation for hotspot claims:
 

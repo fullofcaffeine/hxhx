@@ -75,6 +75,22 @@ typedef TypedERegSplitPhaseBenchResult = {
 	var joinSample:String;
 }
 
+typedef MatchedStringCallArgPhaseBenchResult = {
+	var calls:Int;
+	var fullElapsed:Float;
+	var declaredEnumElapsed:Float;
+	var enumElapsed:Float;
+	var structuralElapsed:Float;
+	var actualTypeElapsed:Float;
+	var renderElapsed:Float;
+	var fullSample:String;
+	var declaredEnumSample:Bool;
+	var enumSample:Bool;
+	var structuralSample:Bool;
+	var actualTypeSample:String;
+	var renderSample:String;
+}
+
 typedef ERegLambdaPhaseBenchResult = {
 	var calls:Int;
 	var mapElapsed:Float;
@@ -128,6 +144,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_FRESH_EREG_FIELD_CALLS = 10;
 	static inline final DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS = 10;
 	static inline final DEFAULT_TYPED_EREG_SPLIT_CALLS = 10;
+	static inline final DEFAULT_MATCHED_STRING_CALL_ARG_CALLS = 10;
 	static inline final DEFAULT_EREG_LAMBDA_CALLS = 10;
 
 	static function assertTrue(cond:Bool, message:String):Void {
@@ -787,6 +804,65 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
+	/** Separate a matched typed String identifier argument from its non-matching reference probes. **/
+	static function renderMatchedStringCallArgPhases(callCount:Int):MatchedStringCallArgPhaseBenchResult {
+		final scope = eRegBenchScope();
+		scope.localNames.set("test", "test");
+		scope.localTypes.set("test", "std::string");
+		final arg = EIdent("test");
+		final param = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
+		resetRendererCaches();
+		final fullStart = Sys.time();
+		var fullSample = "";
+		for (_ in 0...callCount)
+			fullSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(arg, param, scope, "std::string");
+		final fullElapsed = Sys.time() - fullStart;
+		resetRendererCaches();
+		final declaredEnumStart = Sys.time();
+		var declaredEnumSample = false;
+		for (_ in 0...callCount)
+			declaredEnumSample = @:privateAccess backend.cpp.CppTargetCore.enumReferenceArgExprForExpectedType(arg, "std::string", scope) != null;
+		final declaredEnumElapsed = Sys.time() - declaredEnumStart;
+		resetRendererCaches();
+		final enumStart = Sys.time();
+		var enumSample = false;
+		for (_ in 0...callCount)
+			enumSample = @:privateAccess backend.cpp.CppTargetCore.enumReferenceArgExprForExpectedType(arg, "std::string", scope) != null;
+		final enumElapsed = Sys.time() - enumStart;
+		resetRendererCaches();
+		final structuralStart = Sys.time();
+		var structuralSample = false;
+		for (_ in 0...callCount)
+			structuralSample = @:privateAccess backend.cpp.CppTargetCore.structuralTypedefClassForCppType("std::string", scope) != null;
+		final structuralElapsed = Sys.time() - structuralStart;
+		resetRendererCaches();
+		final actualTypeStart = Sys.time();
+		var actualTypeSample = "";
+		for (_ in 0...callCount)
+			actualTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(arg, scope);
+		final actualTypeElapsed = Sys.time() - actualTypeStart;
+		resetRendererCaches();
+		final renderStart = Sys.time();
+		var renderSample = "";
+		for (_ in 0...callCount)
+			renderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(arg, scope);
+		return {
+			calls: callCount,
+			fullElapsed: fullElapsed,
+			declaredEnumElapsed: declaredEnumElapsed,
+			enumElapsed: enumElapsed,
+			structuralElapsed: structuralElapsed,
+			actualTypeElapsed: actualTypeElapsed,
+			renderElapsed: Sys.time() - renderStart,
+			fullSample: fullSample,
+			declaredEnumSample: declaredEnumSample,
+			enumSample: enumSample,
+			structuralSample: structuralSample,
+			actualTypeSample: actualTypeSample,
+			renderSample: renderSample
+		};
+	}
+
 	static function renderERegLambdaPhases(callCount:Int):ERegLambdaPhaseBenchResult {
 		final scope = eRegBenchScope();
 		final matchedLeft = ECall(EField(EIdent("r"), "matchedLeft"), []);
@@ -978,6 +1054,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final freshERegFieldCalls = envInt("HXHX_CPP_FRESH_EREG_FIELD_CALL_BENCH_CALLS", DEFAULT_FRESH_EREG_FIELD_CALLS);
 		final freshERegLocalDeclCalls = envInt("HXHX_CPP_FRESH_EREG_LOCAL_DECL_BENCH_CALLS", DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS);
 		final typedERegSplitCalls = envInt("HXHX_CPP_TYPED_EREG_SPLIT_BENCH_CALLS", DEFAULT_TYPED_EREG_SPLIT_CALLS);
+		final matchedStringCallArgCalls = envInt("HXHX_CPP_MATCHED_STRING_CALL_ARG_BENCH_CALLS", DEFAULT_MATCHED_STRING_CALL_ARG_CALLS);
 		final eRegLambdaCalls = envInt("HXHX_CPP_EREG_LAMBDA_BENCH_CALLS", DEFAULT_EREG_LAMBDA_CALLS);
 		var best:HelperRenderBenchResult = null;
 		var total = 0.0;
@@ -1036,6 +1113,15 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ typedERegSplitPhases.lengthSample
 			+ " join="
 			+ typedERegSplitPhases.joinSample);
+		final matchedStringCallArgPhases = renderMatchedStringCallArgPhases(matchedStringCallArgCalls);
+		assertTrue(matchedStringCallArgPhases.fullSample == "test"
+			&& matchedStringCallArgPhases.actualTypeSample == "std::string"
+			&& matchedStringCallArgPhases.renderSample == matchedStringCallArgPhases.fullSample,
+			"Matched typed String identifier arguments should preserve their exact direct value shape");
+		assertTrue(!matchedStringCallArgPhases.declaredEnumSample
+			&& !matchedStringCallArgPhases.enumSample
+			&& !matchedStringCallArgPhases.structuralSample,
+			"Matched typed String identifier arguments should not become enum references or structural typedef values");
 		final eRegLambdaPhases = renderERegLambdaPhases(eRegLambdaCalls);
 		assertTrue(eRegLambdaPhases.lambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight()); }',
 			"EReg.map callback fixtures should keep their typed callback and concatenation shape");
@@ -1137,6 +1223,20 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ typedERegSplitPhases.lengthElapsed
 			+ " typed_ereg_split_join_seconds="
 			+ typedERegSplitPhases.joinElapsed
+			+ " matched_string_call_arg_calls="
+			+ matchedStringCallArgPhases.calls
+			+ " matched_string_call_arg_seconds="
+			+ matchedStringCallArgPhases.fullElapsed
+			+ " matched_string_declared_enum_seconds="
+			+ matchedStringCallArgPhases.declaredEnumElapsed
+			+ " matched_string_enum_seconds="
+			+ matchedStringCallArgPhases.enumElapsed
+			+ " matched_string_structural_seconds="
+			+ matchedStringCallArgPhases.structuralElapsed
+			+ " matched_string_actual_type_seconds="
+			+ matchedStringCallArgPhases.actualTypeElapsed
+			+ " matched_string_render_seconds="
+			+ matchedStringCallArgPhases.renderElapsed
 			+ " ereg_lambda_calls="
 			+ eRegLambdaPhases.calls
 			+ " ereg_lambda_map_seconds="

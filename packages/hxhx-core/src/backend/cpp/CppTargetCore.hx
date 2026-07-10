@@ -114,6 +114,7 @@ class CppTargetCore {
 	static var traceCppDeepEnabledCache = -1;
 	static var traceCppTimingsEnabledCache = -1;
 	static var traceCppLambdaPhasesEnabledCache = -1;
+	static var traceCppCallArgDetailPhasesEnabledCache = -1;
 	static var traceCppHelperClassificationDetailsEnabledCache = -1;
 	static var traceCppTimingMethodFilterCache:Null<String> = null;
 
@@ -202,6 +203,12 @@ class CppTargetCore {
 		return traceCppLambdaPhasesEnabledCache == 1;
 	}
 
+	static function traceCppCallArgDetailPhasesEnabled():Bool {
+		if (traceCppCallArgDetailPhasesEnabledCache < 0)
+			traceCppCallArgDetailPhasesEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_CALL_ARG_DETAIL_PHASES") ? 1 : 0;
+		return traceCppCallArgDetailPhasesEnabledCache == 1;
+	}
+
 	static function traceCppHelperClassificationDetailsEnabled():Bool {
 		if (traceCppHelperClassificationDetailsEnabledCache < 0)
 			traceCppHelperClassificationDetailsEnabledCache = envFlagEnabled("HXHX_TRACE_STAGE3_CPP_HELPER_CLASSIFICATION_DETAILS") ? 1 : 0;
@@ -241,6 +248,10 @@ class CppTargetCore {
 
 	static function traceCppLambdaPhaseTimingEnabled(?scope:CppRenderScope):Bool {
 		return traceCppLambdaPhasesEnabled() && traceCppScopeStmtTimingEnabled(scope);
+	}
+
+	static function traceCppCallArgDetailPhaseTimingEnabled(?scope:CppRenderScope):Bool {
+		return traceCppCallArgDetailPhasesEnabled() && traceCppScopeStmtTimingEnabled(scope);
 	}
 
 	static function traceCppScopeStmtTimingPhase(scope:CppRenderScope, label:String):Void {
@@ -16014,6 +16025,7 @@ class CppTargetCore {
 
 	static function callArgExprForParam(arg:HxExpr, param:HxFunctionArg, ?scope:CppRenderScope, ?expectedParamType:String):String {
 		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final detailTimingEnabled = traceCppCallArgDetailPhaseTimingEnabled(scope);
 		final declaredTypeStart = timingEnabled ? Sys.time() : 0.0;
 		final declaredParamType = cppFunctionArgType(param, scope);
 		final declaredValueType = cppOptionalInnerType(declaredParamType).length > 0 ? cppOptionalInnerType(declaredParamType) : declaredParamType;
@@ -16041,7 +16053,11 @@ class CppTargetCore {
 				declaredValueType, "", "hit=" + Std.string(declaredClassReferenceArg != null));
 		if (declaredClassReferenceArg != null)
 			return declaredClassReferenceArg;
+		final declaredEnumRefStart = detailTimingEnabled ? Sys.time() : 0.0;
 		final declaredEnumReferenceArg = enumReferenceArgExprForExpectedType(arg, declaredValueType, scope);
+		if (detailTimingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "declared_enum_ref", Sys.time() - declaredEnumRefStart, declaredParamType, paramType,
+				declaredValueType, "", "hit=" + Std.string(declaredEnumReferenceArg != null));
 		if (declaredEnumReferenceArg != null)
 			return declaredEnumReferenceArg;
 		final abstractStart = timingEnabled ? Sys.time() : 0.0;
@@ -16089,7 +16105,11 @@ class CppTargetCore {
 				"hit=" + Std.string(classReferenceArg != null));
 		if (classReferenceArg != null)
 			return classReferenceArg;
+		final enumRefStart = detailTimingEnabled ? Sys.time() : 0.0;
 		final enumReferenceArg = enumReferenceArgExprForExpectedType(arg, valueType, scope);
+		if (detailTimingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "enum_ref", Sys.time() - enumRefStart, declaredParamType, paramType, valueType, "",
+				"hit=" + Std.string(enumReferenceArg != null));
 		if (enumReferenceArg != null)
 			return enumReferenceArg;
 		final actualTypeStart = timingEnabled ? Sys.time() : 0.0;
@@ -16113,7 +16133,12 @@ class CppTargetCore {
 				traceCallArgRenderPhase(scope, arg, param, "enum_any_render", Sys.time() - enumStart, declaredParamType, paramType, valueType, actualType);
 			return rendered;
 		}
-		if (structuralTypedefClassForCppType(valueType, scope) != null && actualType != valueType) {
+		final structuralTypedefStart = detailTimingEnabled ? Sys.time() : 0.0;
+		final structuralTypedefClass = structuralTypedefClassForCppType(valueType, scope);
+		if (detailTimingEnabled)
+			traceCallArgRenderPhase(scope, arg, param, "structural_typedef", Sys.time() - structuralTypedefStart, declaredParamType, paramType, valueType,
+				actualType, "hit=" + Std.string(structuralTypedefClass != null));
+		if (structuralTypedefClass != null && actualType != valueType) {
 			final structuralStart = timingEnabled ? Sys.time() : 0.0;
 			final rendered = valueExprForExpectedType(arg, valueType, scope);
 			if (timingEnabled)
