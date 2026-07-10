@@ -946,6 +946,52 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp still
 times out, and this internal callback-render improvement does not change
 public production readiness.
 
+## 2026-07-09 Post-EReg Guards Warm Timing
+
+Follow-up bead `haxe_ocaml-jcc5n` obtained the required current-source method
+trace after the fresh-EReg return and EReg callback guards. As with the warmed
+Bytes probe, a disposable upstream 4.3.7 worktree outside this repository was
+seeded with worktree-local utest and hxcpp dependencies. The retained probe
+reused that setup, reached the filtered method, and the worktree was removed
+immediately afterward. The comparable log is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-test-filter-post-ereg-guards-warm.log`.
+
+Both this log and the preceding warmed direct-String-argument log contain 280
+typed modules and classify the same 384 reachable helpers: 253 full body, 83
+declaration only, and 48 runtime module. `TestEReg.test` changed from about
+22.41s to 15.68s, while the whole class changed from about 22.42s to 15.68s.
+That is a reduction of about 6.74s, or 30%. As a stability check earlier in the
+same render order, `TestBytes.test` measured about 8.71s versus 8.73s in the
+preceding warm log. The 480s probe still timed out later in the helper render;
+that final boundary is context only and is not the performance claim.
+
+The new detailed trace also confirms that the earlier focused seams moved in
+the expected direction. Compared with the older detailed pre-guard trace,
+aggregate `eq_infer_first` work fell from about 4.76s to 0.054s,
+`eq_render_first` fell from about 7.93s to 4.79s, and the twenty callback
+`function_expected_render` samples fell from about 1.59s to 0.59s. These phase
+figures explain the current hotspot shape; the method-level claim above uses
+the two comparable warmed logs.
+
+The next repeated current seam is not the last timeout class. TestEReg
+statement indices 23 through 33 are eleven immediate regex-literal
+`.match(...)` calls and total about 5.21s, with individual statements around
+0.45s to 0.53s. Their syntactic `new EReg(...)` receiver establishes the
+target-owned owner, but `fieldCallExpr` still enters general static-receiver and
+receiver-C++-type setup before rendering the method. Follow-up bead
+`haxe_ocaml-0hryf` will first isolate that render setup in a scaled fixture and
+will retain a shortcut only if the syntactic-owner seam remains bounded.
+
+Focused validation for this diagnostic slice includes:
+
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red at the explicit timeout, and this timing evidence does not change
+public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
