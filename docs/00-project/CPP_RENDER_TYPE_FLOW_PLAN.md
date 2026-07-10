@@ -1043,6 +1043,50 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this internal dispatch improvement does not change public
 production readiness.
 
+## 2026-07-09 Post-Fresh-EReg-Dispatch Warm Timing
+
+Follow-up bead `haxe_ocaml-y0ppt` obtained the comparable current-source trace
+after the top-level fresh-EReg dispatch guard. A new disposable upstream 4.3.7
+worktree outside this repository was seeded with worktree-local utest and hxcpp
+dependencies, the retained 480s probe reused that setup, and the worktree was
+removed immediately after the trace reached `TestEReg.test`. The log is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-test-filter-post-fresh-ereg-dispatch-warm.log`.
+
+This log and the preceding post-EReg-guards warm log both contain 280 typed
+modules and classify the same 384 reachable helpers: 253 full body, 83
+declaration only, and 48 runtime module. `TestEReg.test` changed from about
+15.68s to 9.29s, while the class changed from about 15.68s to 9.29s. That is a
+reduction of about 6.39s, or 41%. The eleven statement indices 23 through 33
+that selected the focused patch fell from about 5.21s to 1.47s. Earlier shared
+classes varied much less: for example, `TestBytes.test` measured about 9.17s
+versus 8.71s, so the EReg method movement is substantially larger than the
+cross-run noise visible before it.
+
+The detailed phases confirm that the selected render seam moved:
+`render_function_call_args` fell from about 5.50s to 1.76s,
+`eq_render_first` fell from about 4.79s to 2.06s, and the sum of the 88 traced
+statements fell from about 13.09s to 6.68s. The method still spends about 1.33s
+in its unchanged dynamic-local preparation pass, but the largest repeated
+statement family is now eleven fresh-EReg local declarations. Those statements
+total about 2.63s, split between about 1.30s of local-type selection and 1.32s
+of RHS rendering even though each initializer is syntactically
+`new EReg(pattern, flags)`.
+
+Follow-up bead `haxe_ocaml-9qkoe` owns a scaled declaration fixture that will
+separate local-type selection, expected-value adaptation, and direct EReg
+construction before retaining any shortcut. The final 480s timeout occurred
+later in helper rendering and remains context only, not the next patch target.
+
+Focused validation for this diagnostic slice includes:
+
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red at the explicit timeout, and this timing checkpoint does not
+change public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
