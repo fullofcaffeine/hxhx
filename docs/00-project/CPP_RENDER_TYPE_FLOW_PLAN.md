@@ -1260,6 +1260,74 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this internal render-latency improvement does not change
 public production readiness.
 
+## 2026-07-10 Typed-Local EReg Split Fast Path
+
+Follow-up bead `haxe_ocaml-eovyq` isolated the typed-local EReg split chain at
+the head of the post-construction trace. The helper bench now measures split
+return inference, direct call rendering, field-call argument rendering, and
+the enclosing vector `length` and `join` shapes separately. It also proves
+that non-EReg locals, the wrong split arity, and non-split EReg methods decline
+the shortcut.
+
+Across two pre-change 100-call samples, return inference measured about
+0.0251-0.0253s, direct rendering about 0.0433-0.0437s, argument rendering about
+0.0210-0.0212s, vector length rendering about 0.1236-0.1263s, and join rendering
+about 0.0998-0.1036s. The retained path recognizes only an identifier whose
+prepared local type is `std::shared_ptr<EReg>`, the method `split`, and arity
+one. It returns the known `std::vector<std::string>` carrier and renders the
+target-owned call without general instance-owner discovery. Exact fixture
+assertions preserve `block->split("a")`, its String argument, vector `.size()`,
+and `__hxhx_join(...)` output.
+
+Two final 100-call samples measured about 0.0062-0.0063s for return inference,
+0.0225-0.0229s for direct rendering, 0.0209-0.0212s for argument rendering,
+0.0464-0.0468s for length rendering, and 0.0450-0.0457s for join rendering.
+Argument rendering is intentionally unchanged; the other isolated phases fell
+by roughly 48% to 75%.
+
+A rebuilt current-source warm trace retained the same 280 typed modules and
+384-helper inventory: 253 full bodies, 83 declaration-only helpers, and 48
+runtime-owned helpers. Statement indices 41-50 fell from about 0.932430s to
+0.739076s. Index 42, the selected split-chain statement, fell from about
+0.260401s to 0.105550s, roughly 59.5%. `TestEReg.test` fell from about
+1.742630s to 1.510947s, roughly 13.3%. Earlier controls were also somewhat
+faster in this run (`TestBytes.test` by about 5.0% and `TestXML.testBasic` by
+about 1.4%), but the targeted statement moved substantially more than either
+control. The 480s probe reached beyond `TestResource` and timed out during
+`TestInt64`, so strict Cpp remains expected-red. Relevant logs are:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-split-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-typed-split-warm.log`
+
+The disposable external upstream 4.3.7 worktree was removed after the run.
+The next repeated bounded family is fresh `EReg.map(...)` callback rendering
+at statement indices 43 and 44. Those statements total about 0.218876s, with
+about 0.210648s in their typed callback render phase. Follow-up bead
+`haxe_ocaml-j941e` owns a focused callback fixture before any broader function
+or instance-argument shortcut is considered.
+
+This remains a documented target-owned branch inside the existing Cpp
+dispatcher. It adds no runtime or stdlib implementation and changes no
+unsupported receiver or method behavior. Broader Cpp render/type-flow
+extraction remains owned by `haxe_ocaml-36ec`. Committed bootstrap snapshots
+are not regenerated because the slice changes neither the bootstrap interface
+nor snapshot acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

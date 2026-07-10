@@ -61,6 +61,20 @@ typedef FreshERegLocalDeclPhaseBenchResult = {
 	var shapeSample:String;
 }
 
+typedef TypedERegSplitPhaseBenchResult = {
+	var calls:Int;
+	var inferElapsed:Float;
+	var renderElapsed:Float;
+	var argsElapsed:Float;
+	var lengthElapsed:Float;
+	var joinElapsed:Float;
+	var inferSample:String;
+	var renderSample:String;
+	var argsSample:String;
+	var lengthSample:String;
+	var joinSample:String;
+}
+
 typedef ERegLambdaPhaseBenchResult = {
 	var calls:Int;
 	var lambdaElapsed:Float;
@@ -94,6 +108,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_FRESH_EREG_RETURN_CALLS = 10;
 	static inline final DEFAULT_FRESH_EREG_FIELD_CALLS = 10;
 	static inline final DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS = 10;
+	static inline final DEFAULT_TYPED_EREG_SPLIT_CALLS = 10;
 	static inline final DEFAULT_EREG_LAMBDA_CALLS = 10;
 
 	static function assertTrue(cond:Bool, message:String):Void {
@@ -514,6 +529,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static function eRegBenchScope():backend.cpp.CppRenderScope {
 		final eReg = new HxClassDecl("EReg", false, [
 			new HxFunctionDecl("match", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Bool", [], ""),
+			new HxFunctionDecl("split", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Array<String>", [], ""),
 			new HxFunctionDecl("replace", Public, false, [
 				new HxFunctionArg("s", "String", NoDefault, false, false),
 				new HxFunctionArg("by", "String", NoDefault, false, false)
@@ -692,6 +708,66 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
+	/** Separate typed-local EReg split discovery from argument and vector-chain rendering. **/
+	static function renderTypedERegSplitPhases(callCount:Int):TypedERegSplitPhaseBenchResult {
+		final scope = eRegBenchScope();
+		scope.localNames.set("block", "block");
+		scope.localTypes.set("block", "std::shared_ptr<EReg>");
+		scope.localTypes.set("text", "std::string");
+		final args = [EString("a")];
+		final split = ECall(EField(EIdent("block"), "split"), args);
+		final length = EField(split, "length");
+		final join = ECall(EField(split, "join"), [EString("|")]);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitCall(EIdent("block"), "split", 1, scope),
+			"Typed-local EReg split should use the bounded known-return path");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitCall(EIdent("text"), "split", 1, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitCall(EIdent("block"), "split", 2, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitCall(EIdent("block"), "match", 1, scope),
+			"Non-EReg locals, wrong arity, and non-split methods should retain general return discovery");
+		resetRendererCaches();
+		final inferStart = Sys.time();
+		var inferSample = "";
+		for (_ in 0...callCount)
+			inferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(split, scope);
+		final inferElapsed = Sys.time() - inferStart;
+		resetRendererCaches();
+		final renderStart = Sys.time();
+		var renderSample = "";
+		for (_ in 0...callCount)
+			renderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(split, scope);
+		final renderElapsed = Sys.time() - renderStart;
+		resetRendererCaches();
+		final argsStart = Sys.time();
+		var argsSample = "";
+		for (_ in 0...callCount)
+			argsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "split", args, scope).join(", ");
+		final argsElapsed = Sys.time() - argsStart;
+		resetRendererCaches();
+		final lengthStart = Sys.time();
+		var lengthSample = "";
+		for (_ in 0...callCount)
+			lengthSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(length, scope);
+		final lengthElapsed = Sys.time() - lengthStart;
+		resetRendererCaches();
+		final joinStart = Sys.time();
+		var joinSample = "";
+		for (_ in 0...callCount)
+			joinSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(join, scope);
+		return {
+			calls: callCount,
+			inferElapsed: inferElapsed,
+			renderElapsed: renderElapsed,
+			argsElapsed: argsElapsed,
+			lengthElapsed: lengthElapsed,
+			joinElapsed: Sys.time() - joinStart,
+			inferSample: inferSample,
+			renderSample: renderSample,
+			argsSample: argsSample,
+			lengthSample: lengthSample,
+			joinSample: joinSample
+		};
+	}
+
 	static function renderERegLambdaPhases(callCount:Int):ERegLambdaPhaseBenchResult {
 		final scope = eRegBenchScope();
 		final body = EBinop("+",
@@ -765,6 +841,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final freshERegReturnCalls = envInt("HXHX_CPP_FRESH_EREG_RETURN_BENCH_CALLS", DEFAULT_FRESH_EREG_RETURN_CALLS);
 		final freshERegFieldCalls = envInt("HXHX_CPP_FRESH_EREG_FIELD_CALL_BENCH_CALLS", DEFAULT_FRESH_EREG_FIELD_CALLS);
 		final freshERegLocalDeclCalls = envInt("HXHX_CPP_FRESH_EREG_LOCAL_DECL_BENCH_CALLS", DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS);
+		final typedERegSplitCalls = envInt("HXHX_CPP_TYPED_EREG_SPLIT_BENCH_CALLS", DEFAULT_TYPED_EREG_SPLIT_CALLS);
 		final eRegLambdaCalls = envInt("HXHX_CPP_EREG_LAMBDA_BENCH_CALLS", DEFAULT_EREG_LAMBDA_CALLS);
 		var best:HelperRenderBenchResult = null;
 		var total = 0.0;
@@ -812,6 +889,17 @@ class M14CppHelperRenderBenchIntegrationTest {
 			"Fresh EReg local initializer adaptation should preserve direct construction");
 		assertTrue(freshERegLocalDeclPhases.shapeSample == 'auto r = std::make_shared<EReg>("a+", "g");',
 			"Fresh EReg local declarations should preserve their exact generated shape");
+		final typedERegSplitPhases = renderTypedERegSplitPhases(typedERegSplitCalls);
+		assertTrue(typedERegSplitPhases.inferSample == "std::vector<std::string>",
+			"Typed-local EReg split calls should retain their known String-vector result");
+		assertTrue(typedERegSplitPhases.renderSample == 'block->split("a")' && typedERegSplitPhases.argsSample == '"a"',
+			"Typed-local EReg split calls should preserve exact receiver and String-argument rendering");
+		assertTrue(typedERegSplitPhases.lengthSample == '(block->split("a").size())'
+			&& typedERegSplitPhases.joinSample == '__hxhx_join(block->split("a"), std::string("|"))',
+			"Typed-local EReg split chains should preserve exact vector length and join rendering, got length="
+			+ typedERegSplitPhases.lengthSample
+			+ " join="
+			+ typedERegSplitPhases.joinSample);
 		final eRegLambdaPhases = renderERegLambdaPhases(eRegLambdaCalls);
 		assertTrue(eRegLambdaPhases.lambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight()); }',
 			"EReg.map callback fixtures should keep their typed callback and concatenation shape");
@@ -867,6 +955,18 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ freshERegLocalDeclPhases.initElapsed
 			+ " fresh_ereg_local_constructor_seconds="
 			+ freshERegLocalDeclPhases.constructorElapsed
+			+ " typed_ereg_split_calls="
+			+ typedERegSplitPhases.calls
+			+ " typed_ereg_split_infer_seconds="
+			+ typedERegSplitPhases.inferElapsed
+			+ " typed_ereg_split_render_seconds="
+			+ typedERegSplitPhases.renderElapsed
+			+ " typed_ereg_split_args_seconds="
+			+ typedERegSplitPhases.argsElapsed
+			+ " typed_ereg_split_length_seconds="
+			+ typedERegSplitPhases.lengthElapsed
+			+ " typed_ereg_split_join_seconds="
+			+ typedERegSplitPhases.joinElapsed
 			+ " ereg_lambda_calls="
 			+ eRegLambdaPhases.calls
 			+ " ereg_lambda_seconds="

@@ -12752,6 +12752,8 @@ class CppTargetCore {
 				newExpr(typePath, args, scope);
 			case ECall(EField(receiver, method), args) if (isFreshERegFieldCall(receiver, method, args.length)):
 				freshERegFieldCallExpr(receiver, method, args, scope);
+			case ECall(EField(receiver, method), args) if (isTypedLocalERegSplitCall(receiver, method, args.length, scope)):
+				typedLocalERegSplitCallExpr(receiver, args, scope);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
 			case ECall(EField(receiver, "getClassName"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
@@ -13923,6 +13925,14 @@ class CppTargetCore {
 			+ sanitizeIdentifier(method)
 			+ "("
 			+ renderFieldCallArgs("std::shared_ptr<EReg>", method, args, scope).join(", ")
+			+ ")";
+	}
+
+	/** Render the confirmed typed-local EReg split shape through its target-owned carrier. **/
+	static function typedLocalERegSplitCallExpr(receiver:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		return renderExpr(receiver, scope)
+			+ "->split("
+			+ renderFieldCallArgs("std::shared_ptr<EReg>", "split", args, scope).join(", ")
 			+ ")";
 	}
 
@@ -18287,6 +18297,18 @@ class CppTargetCore {
 		};
 	}
 
+	/** Recognize the typed-local EReg split shape without general instance-owner discovery. **/
+	static function isTypedLocalERegSplitCall(receiver:HxExpr, method:String, arity:Int, ?scope:CppRenderScope):Bool {
+		if (method != "split" || arity != 1)
+			return false;
+		return switch (receiver) {
+			case EIdent(_):
+				exprCppType(receiver, scope) == "std::shared_ptr<EReg>";
+			case _:
+				false;
+		};
+	}
+
 	/**
 		Fold `new Map<K,V>().toString()` for a fresh empty map.
 
@@ -18314,6 +18336,8 @@ class CppTargetCore {
 	static function knownFieldCallReturnCppTypeWithReceiverCppType(receiver:HxExpr, method:String, args:Array<HxExpr>, receiverCppType:Void->String,
 			?scope:CppRenderScope):String {
 		final arity = args == null ? 0 : args.length;
+		if (isTypedLocalERegSplitCall(receiver, method, arity, scope))
+			return "std::vector<std::string>";
 		if (isFreshERegStringCall(receiver, method, arity))
 			return "std::string";
 		if (isReflectStaticReceiver(receiver)) {
