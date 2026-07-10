@@ -992,6 +992,57 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red at the explicit timeout, and this timing evidence does not change
 public production readiness.
 
+## 2026-07-09 Fresh EReg Field-Call Dispatch Guard
+
+Follow-up bead `haxe_ocaml-0hryf` isolated the eleven immediate regex-literal
+`.match(...)` statements identified by the warmed post-guard trace. A new
+282-class helper fixture measures a complete `new EReg(...).match(...)` render
+separately from the same constructor and the known `std::shared_ptr<EReg>`
+instance arguments. Two pre-change ten-call samples put the full expression at
+about 0.1752s, while constructor-only work was about 0.0027s to 0.0028s and
+known-owner argument rendering was about 0.0023s to 0.0024s. The gap confirmed
+that general expression/field-call dispatch, not EReg construction or String
+argument conversion, owned this focused cost.
+
+An intermediate shortcut inside `fieldCallExpr` only reduced the ten calls to
+about 0.118s to 0.121s. The remaining time came before that helper: the general
+expression dispatcher still tested many unrelated specialized field-call
+guards first. The retained branch therefore recognizes the same narrow shape
+near the top of `renderExpr`, before those probes. Two retained-path samples
+reported about 0.0054s and 0.0067s for ten calls.
+
+The guard accepts only a syntactic fresh `EReg` receiver with `match` arity one
+or `map`/`replace` arity two. It renders arguments through the existing known
+instance-method path, preserving String adaptation and the typed
+EReg-to-String callback contract. Exact fixture coverage keeps the generated
+match, replace, and map lines unchanged, including the map callback signature.
+Non-fresh receivers, wrong arities, and other EReg methods explicitly decline
+the shortcut.
+
+This is a bounded repair in the existing Cpp expression-render seam, not a new
+runtime or stdlib semantic family. Broader Cpp render/type-flow extraction
+remains owned by `haxe_ocaml-36ec`, and the mega-file gravity guard remains part
+of validation. No new strict method-level delta is claimed: the comparable
+warm trace identified this repeated seam, while recreating the disposable
+external worktree and dependency seed solely for this isolated render branch
+would serialize another full timeout probe. Follow-up bead `haxe_ocaml-y0ppt`
+owns that comparable warmed trace before another `TestEReg` phase is selected.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal dispatch improvement does not change public
+production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

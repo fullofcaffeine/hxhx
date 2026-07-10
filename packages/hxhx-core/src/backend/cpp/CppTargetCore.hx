@@ -12736,6 +12736,8 @@ class CppTargetCore {
 				"static_cast<int>((static_cast<unsigned long long>(" + renderExpr(receiver, scope) + ") >> 32) & 0xFFFFFFFFULL)";
 			case ENew(typePath, args):
 				newExpr(typePath, args, scope);
+			case ECall(EField(receiver, method), args) if (isFreshERegFieldCall(receiver, method, args.length)):
+				freshERegFieldCallExpr(receiver, method, args, scope);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
 			case ECall(EField(receiver, "getClassName"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
@@ -13865,6 +13867,22 @@ class CppTargetCore {
 			case _:
 				throw "C++ source backend MVP unsupported Math function value: " + method;
 		};
+	}
+
+	/**
+		Render the target-owned immediate EReg calls without general receiver discovery.
+
+		A syntactic `new EReg(...)` cannot be a static receiver, and its C++ carrier
+		is already fixed. Keep argument conversion on the ordinary known-instance
+		path so callbacks and primitive arguments retain their existing contracts.
+	**/
+	static function freshERegFieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		return renderExpr(receiver, scope)
+			+ "->"
+			+ sanitizeIdentifier(method)
+			+ "("
+			+ renderFieldCallArgs("std::shared_ptr<EReg>", method, args, scope).join(", ")
+			+ ")";
 	}
 
 	static function fieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -18201,6 +18219,18 @@ class CppTargetCore {
 	static function isFreshERegStringCall(receiver:HxExpr, method:String, arity:Int):Bool {
 		return switch (receiver) {
 			case ENew(typePath, _) if (isERegTypeName(typePath) && arity == 2 && (method == "map" || method == "replace")):
+				true;
+			case _:
+				false;
+		};
+	}
+
+	/** Limit immediate EReg render dispatch to target-owned method shapes with stable argument contracts. **/
+	static function isFreshERegFieldCall(receiver:HxExpr, method:String, arity:Int):Bool {
+		if (!((method == "match" && arity == 1) || ((method == "replace" || method == "map") && arity == 2)))
+			return false;
+		return switch (receiver) {
+			case ENew(typePath, _) if (isERegTypeName(typePath)):
 				true;
 			case _:
 				false;

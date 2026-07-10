@@ -37,6 +37,17 @@ typedef FreshERegReturnBenchResult = {
 	var sample:String;
 }
 
+typedef FreshERegFieldCallPhaseBenchResult = {
+	var calls:Int;
+	var fullElapsed:Float;
+	var constructorElapsed:Float;
+	var argsElapsed:Float;
+	var fullSample:String;
+	var constructorSample:String;
+	var argsSample:String;
+	var shapeSample:String;
+}
+
 typedef ERegLambdaPhaseBenchResult = {
 	var calls:Int;
 	var lambdaElapsed:Float;
@@ -68,6 +79,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_BYTES_REFERENCE_CALLS = 10;
 	static inline final DEFAULT_BYTES_STRING_ARG_CALLS = 100;
 	static inline final DEFAULT_FRESH_EREG_RETURN_CALLS = 10;
+	static inline final DEFAULT_FRESH_EREG_FIELD_CALLS = 10;
 	static inline final DEFAULT_EREG_LAMBDA_CALLS = 10;
 
 	static function assertTrue(cond:Bool, message:String):Void {
@@ -487,6 +499,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 
 	static function eRegBenchScope():backend.cpp.CppRenderScope {
 		final eReg = new HxClassDecl("EReg", false, [
+			new HxFunctionDecl("match", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Bool", [], ""),
 			new HxFunctionDecl("replace", Public, false, [
 				new HxFunctionArg("s", "String", NoDefault, false, false),
 				new HxFunctionArg("by", "String", NoDefault, false, false)
@@ -533,6 +546,58 @@ class M14CppHelperRenderBenchIntegrationTest {
 				+ ","
 				+ @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(map, scope);
 		return {calls: callCount, elapsed: Sys.time() - start, sample: sample};
+	}
+
+	/** Measure immediate EReg field-call setup separately from the constructor and known-owner argument paths. **/
+	static function renderFreshERegFieldCallPhases(callCount:Int):FreshERegFieldCallPhaseBenchResult {
+		final scope = eRegBenchScope();
+		final fresh = ENew("EReg", [EString("a+"), EString("g")]);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isFreshERegFieldCall(fresh, "match",
+			1), "Fresh EReg match should use the bounded direct field-call path");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isFreshERegFieldCall(EIdent("r"), "match", 1),
+			"Non-fresh EReg receivers should keep general field-call discovery");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isFreshERegFieldCall(fresh, "match", 2),
+			"Fresh EReg calls with the wrong arity should keep general field-call discovery");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isFreshERegFieldCall(fresh, "split", 1),
+			"Fresh EReg methods outside the bounded match/map/replace surface should keep general field-call discovery");
+		final matchArgs = [EString("aa")];
+		final match = ECall(EField(fresh, "match"), matchArgs);
+		final replace = ECall(EField(fresh, "replace"), [EString("aa"), EString("x")]);
+		final map = ECall(EField(fresh, "map"), [EString("aa"), ELambda(["r"], ECall(EField(EIdent("r"), "matchedLeft"), []))]);
+		resetRendererCaches();
+		final fullStart = Sys.time();
+		var fullSample = "";
+		for (_ in 0...callCount)
+			fullSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(match, scope);
+		final fullElapsed = Sys.time() - fullStart;
+		resetRendererCaches();
+		final constructorStart = Sys.time();
+		var constructorSample = "";
+		for (_ in 0...callCount)
+			constructorSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(fresh, scope);
+		final constructorElapsed = Sys.time() - constructorStart;
+		resetRendererCaches();
+		final argsStart = Sys.time();
+		var argsSample = "";
+		for (_ in 0...callCount)
+			argsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "match", matchArgs, scope).join(", ");
+		final argsElapsed = Sys.time() - argsStart;
+		resetRendererCaches();
+		final shapeSample = [@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(match, scope), @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(replace, scope), @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(map, scope)
+		].join("\n");
+		return {
+			calls: callCount,
+			fullElapsed: fullElapsed,
+			constructorElapsed: constructorElapsed,
+			argsElapsed: argsElapsed,
+			fullSample: fullSample,
+			constructorSample: constructorSample,
+			argsSample: argsSample,
+			shapeSample: shapeSample
+		};
 	}
 
 	static function renderERegLambdaPhases(callCount:Int):ERegLambdaPhaseBenchResult {
@@ -606,6 +671,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final bytesReferenceCalls = envInt("HXHX_CPP_BYTES_REFERENCE_BENCH_CALLS", DEFAULT_BYTES_REFERENCE_CALLS);
 		final bytesStringArgCalls = envInt("HXHX_CPP_BYTES_STRING_ARG_BENCH_CALLS", DEFAULT_BYTES_STRING_ARG_CALLS);
 		final freshERegReturnCalls = envInt("HXHX_CPP_FRESH_EREG_RETURN_BENCH_CALLS", DEFAULT_FRESH_EREG_RETURN_CALLS);
+		final freshERegFieldCalls = envInt("HXHX_CPP_FRESH_EREG_FIELD_CALL_BENCH_CALLS", DEFAULT_FRESH_EREG_FIELD_CALLS);
 		final eRegLambdaCalls = envInt("HXHX_CPP_EREG_LAMBDA_BENCH_CALLS", DEFAULT_EREG_LAMBDA_CALLS);
 		var best:HelperRenderBenchResult = null;
 		var total = 0.0;
@@ -641,6 +707,9 @@ class M14CppHelperRenderBenchIntegrationTest {
 			"Bytes String argument phases should preserve the existing std::string wrapper for typed locals");
 		final freshERegReturns = inferFreshERegReturns(freshERegReturnCalls);
 		assertTrue(freshERegReturns.sample == "std::string,std::string", "Fresh EReg replace/map calls should keep their known String return types");
+		final freshERegFieldCallPhases = renderFreshERegFieldCallPhases(freshERegFieldCalls);
+		assertTrue(freshERegFieldCallPhases.shapeSample == 'std::make_shared<EReg>("a+", "g")->match("aa")\nstd::make_shared<EReg>("a+", "g")->replace("aa", "x")\nstd::make_shared<EReg>("a+", "g")->map("aa", [&](std::shared_ptr<EReg> r) -> std::string { return r->matchedLeft(); })',
+			"Fresh EReg field-call phases should preserve exact match, replace, and typed map rendering");
 		final eRegLambdaPhases = renderERegLambdaPhases(eRegLambdaCalls);
 		assertTrue(eRegLambdaPhases.lambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight()); }',
 			"EReg.map callback fixtures should keep their typed callback and concatenation shape");
@@ -678,6 +747,14 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ freshERegReturns.calls
 			+ " fresh_ereg_return_seconds="
 			+ freshERegReturns.elapsed
+			+ " fresh_ereg_field_call_calls="
+			+ freshERegFieldCallPhases.calls
+			+ " fresh_ereg_field_call_seconds="
+			+ freshERegFieldCallPhases.fullElapsed
+			+ " fresh_ereg_constructor_seconds="
+			+ freshERegFieldCallPhases.constructorElapsed
+			+ " fresh_ereg_field_args_seconds="
+			+ freshERegFieldCallPhases.argsElapsed
 			+ " ereg_lambda_calls="
 			+ eRegLambdaPhases.calls
 			+ " ereg_lambda_seconds="
