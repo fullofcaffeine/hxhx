@@ -23004,6 +23004,8 @@ class CppTargetCore {
 	static function structuralTypedefClassForCppType(typeName:String, ?scope:CppRenderScope):Null<HxClassDecl> {
 		if (scope == null || typeName == null || typeName.length == 0)
 			return null;
+		if (!CppTypeModel.mayNameStructuralTypedefValueCppType(typeName))
+			return null;
 		final cls = CppTypeModel.structuralTypedefValueClassForTypeHint(typeName, scope,
 			{names: scope.classNames, byName: scope.classByName, all: scope.allClasses});
 		if (cls == null || HxClassDecl.getFields(cls).length == 0)

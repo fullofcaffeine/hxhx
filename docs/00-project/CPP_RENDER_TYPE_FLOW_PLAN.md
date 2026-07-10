@@ -1748,6 +1748,89 @@ Focused validation for this slice includes:
 README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this diagnostic does not change public production readiness.
 
+## 2026-07-10 Built-In Structural Lookup Guard
+
+Follow-up bead `haxe_ocaml-ppx9p` added a conservative type-model predicate in
+front of `structuralTypedefClassForCppType`. Rendered C++ fundamental names and
+outer `std::` carriers cannot identify generated structural value helpers:
+Haxe helper names are sanitized global identifiers and never occupy the C++
+standard-library namespace. Those terminal target shapes now decline before
+walking class candidates. User-shaped names, globally qualified generated
+names, rendered aliases, and generic outer carriers remain eligible for the
+existing lookup.
+
+Focused positive controls retain named `ResidualStructuralValue`, generic
+`ResidualStructuralGeneric<std::string>`, ordinary non-structural user-class,
+and globally qualified generated-name behavior. The native Cpp smoke also
+checks direct lookup of named `Bar` and rendered alias
+`Display_SignatureInformation`, while its existing generated-output assertions
+retain structural construction, assignment, and mismatched call conversion
+such as `AdrianV::testFoo(Foo(*me));`.
+
+Two final 100-call samples reduced the direct `int` probe from the prior
+0.252728-0.252829s range to 0.000072-0.000073s, `std::string` from
+0.252154-0.252217s to 0.000392-0.000407s, and
+`std::vector<std::string>` from 0.252101-0.253429s to 0.000072-0.000074s.
+Enclosing unary-Int arguments fell to 0.014619-0.014886s, about 94.4-94.5%;
+String-concatenation arguments fell to 0.031406-0.031923s, about 88.5-88.6%;
+and String-local initialization fell to 0.004726-0.005076s, about 98.0-98.2%.
+Exact unary, concatenation, local String, typed vector split/join, and matched
+call-argument outputs remain unchanged.
+
+The rebuilt current-source strict trace retained 280 typed modules and the same
+384-helper inventory: 253 full bodies, 83 declaration-only helpers, and 48
+runtime-owned helpers. In `TestEReg.test`, statements 18, 32, 33, and 39 fell
+from a combined 0.228202s to 0.010425s, about 95.43%. Individually they fell
+94.10%, 94.52%, 94.62%, and 98.69%. The method fell from 0.639866s to
+0.422670s, about 33.94%.
+
+The same helper guard improved independent controls: `TestBytes.test` fell from
+7.313600s to 1.154239s, about 84.22%, and its class from 11.152335s to
+3.080435s, about 72.38%. `TestXML.testBasic` fell from 7.540301s to
+6.731626s, about 10.72%, and its class from 80.739448s to 71.095864s, about
+11.94%. This is evidence that impossible built-in scans were repeated across
+the renderer, not a full-target throughput claim.
+
+The 480-second native trace remains expected-red. It advanced from starting
+`TestResource` to rendering `TestType`, where the last completed method was
+`testWiderVisibility`. The frontier summary classifies the pair as
+`shared-hotspots-moving-frontier`. Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-matched-structural-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-builtin-structural-warm.log`
+
+The setup-only compatibility run populated the disposable upstream checkout;
+it is not counted as native strict evidence. The external upstream 4.3.7
+worktree was removed after the trace.
+
+Indices 41 and 42 are now the clear remaining `TestEReg.test` statements at
+0.059115s and 0.051464s. Their first-argument inference is only 0.000248s and
+0.003386s, but first-argument rendering remains 0.058564s and 0.047569s for the
+typed split-length and split/join expression shapes. Follow-up bead
+`haxe_ocaml-jfn2q` owns inner phase attribution before another shortcut is
+selected.
+
+This is a target type-model guard, not a new runtime or stdlib semantic rule.
+Broader Cpp render/type-flow extraction remains owned by `haxe_ocaml-36ec`.
+Committed bootstrap snapshots are not regenerated because the slice changes
+neither the bootstrap interface nor snapshot acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

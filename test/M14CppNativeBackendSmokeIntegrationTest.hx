@@ -6546,6 +6546,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final structuralFooLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(structuralFoo, structuralLookup).join("\n");
 		final structuralAdrianLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(structuralAdrian, structuralLookup).join("\n");
 		final structuralCallLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(structuralCallOwner, structuralLookup).join("\n");
+		final structuralScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(structuralCallOwner, structuralLookup, "void");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.structuralTypedefClassForCppType("Bar", structuralScope) == structuralBar,
+			"C++ named structural typedef values should remain eligible for class lookup");
 		assertContains(structuralBarLines, "Bar(int __hxhx_data) : data(__hxhx_data) {}",
 			"C++ structural typedef helpers should expose value constructors for anonymous payloads");
 		assertContains(structuralFooLines, "Foo(Bar __hxhx_bar) : bar(__hxhx_bar) {}", "C++ structural typedef helpers should use value-typed fields");
@@ -8183,6 +8186,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ already-shaped vector/shared_ptr type hints should still pass through rendered class aliases");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("SignatureInformation", renderedScope) == "Display_SignatureInformation",
 			"C++ structural typedef value hints should render through class aliases instead of raw short names");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.structuralTypedefClassForCppType("Display_SignatureInformation",
+			renderedScope) == signatureInformation,
+			"C++ rendered structural typedef aliases should remain eligible for class lookup");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("Array<SignatureInformation>",
 			renderedScope) == "std::vector<Display_SignatureInformation>",
 			"C++ arrays of structural typedef values should use rendered element names");

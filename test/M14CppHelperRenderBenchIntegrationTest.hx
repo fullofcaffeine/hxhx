@@ -102,6 +102,9 @@ typedef ResidualStructuralProbeBenchResult = {
 	var intProbeSample:Bool;
 	var stringProbeSample:Bool;
 	var vectorProbeSample:Bool;
+	var namedStructuralSample:Bool;
+	var genericStructuralSample:Bool;
+	var ordinaryUserSample:Bool;
 	var unaryArgSample:String;
 	var concatArgSample:String;
 	var localStringSample:String;
@@ -597,10 +600,17 @@ class M14CppHelperRenderBenchIntegrationTest {
 			new HxFunctionDecl("matchedRight", Public, false, [], "String", [], "")
 		], []);
 		final owner = new HxClassDecl("ERegBenchOwner", false, [], []);
+		final structuralValue = new HxClassDecl("ResidualStructuralValue", false, [], [new HxFieldDecl("value", Public, false, "Int", null)], "",
+			["__hxhx_typedef"]);
+		final genericStructuralValue = new HxClassDecl("ResidualStructuralGeneric", false, [], [new HxFieldDecl("value", Public, false, "Int", null)], "",
+			["__hxhx_typedef", "__hxhx_type_params=T"]);
+		final ordinaryUserClass = new HxClassDecl("ResidualStructuralUserClass", false, [
+			new HxFunctionDecl("read", Public, false, [], "Int", [SReturn(EInt(1), HxPos.unknown())], "")
+		], []);
 		final names = new StringMap<Bool>();
 		final classes = new StringMap<HxClassDecl>();
 		final all = new Array<HxClassDecl>();
-		for (cls in [eReg, owner]) {
+		for (cls in [eReg, owner, structuralValue, genericStructuralValue, ordinaryUserClass]) {
 			final name = HxClassDecl.getName(cls);
 			names.set(name, true);
 			classes.set(name, cls);
@@ -906,6 +916,12 @@ class M14CppHelperRenderBenchIntegrationTest {
 		for (_ in 0...callCount)
 			vectorProbeSample = @:privateAccess backend.cpp.CppTargetCore.structuralTypedefClassForCppType("std::vector<std::string>", scope) != null;
 		final vectorProbeElapsed = Sys.time() - vectorProbeStart;
+		final namedStructuralSample = @:privateAccess
+			backend.cpp.CppTargetCore.structuralTypedefClassForCppType("ResidualStructuralValue", scope) != null;
+		final genericStructuralSample = @:privateAccess
+			backend.cpp.CppTargetCore.structuralTypedefClassForCppType("ResidualStructuralGeneric<std::string>", scope) != null;
+		final ordinaryUserSample = @:privateAccess
+			backend.cpp.CppTargetCore.structuralTypedefClassForCppType("ResidualStructuralUserClass", scope) != null;
 		resetRendererCaches();
 		final unaryArgStart = Sys.time();
 		var unaryArgSample = "";
@@ -934,6 +950,9 @@ class M14CppHelperRenderBenchIntegrationTest {
 			intProbeSample: intProbeSample,
 			stringProbeSample: stringProbeSample,
 			vectorProbeSample: vectorProbeSample,
+			namedStructuralSample: namedStructuralSample,
+			genericStructuralSample: genericStructuralSample,
+			ordinaryUserSample: ordinaryUserSample,
 			unaryArgSample: unaryArgSample,
 			concatArgSample: concatArgSample,
 			localStringSample: localStringSample
@@ -1205,6 +1224,13 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& !residualStructuralProbePhases.stringProbeSample
 			&& !residualStructuralProbePhases.vectorProbeSample,
 			"Built-in Int, String, and String-vector types should not resolve as structural typedef values");
+		assertTrue(residualStructuralProbePhases.namedStructuralSample
+			&& residualStructuralProbePhases.genericStructuralSample
+			&& !residualStructuralProbePhases.ordinaryUserSample,
+			"Named and generic structural typedef values should retain lookup while ordinary user classes remain non-structural");
+		assertTrue(backend.cpp.CppTypeModel.mayNameStructuralTypedefValueCppType("ResidualStructuralUserClass")
+			&& backend.cpp.CppTypeModel.mayNameStructuralTypedefValueCppType("::ResidualStructuralValue"),
+			"User-shaped and globally qualified generated C++ names should remain eligible for structural lookup");
 		assertTrue(residualStructuralProbePhases.unaryArgSample == "(-1)"
 			&& residualStructuralProbePhases.concatArgSample == '(std::string("left") + std::string("right"))'
 			&& residualStructuralProbePhases.localStringSample == 'std::string("{ local } value")',

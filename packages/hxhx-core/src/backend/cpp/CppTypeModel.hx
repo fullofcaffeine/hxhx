@@ -316,6 +316,27 @@ class CppTypeModel {
 		};
 	}
 
+	/**
+		Report whether a rendered C++ type name may identify a generated structural value helper.
+
+		A `true` result is deliberately conservative and still requires the normal
+		class lookup. C++ fundamental types and `std::` carriers are terminal target
+		shapes: generated Haxe helpers use sanitized global identifiers and never
+		occupy the standard-library namespace.
+	**/
+	public static function mayNameStructuralTypedefValueCppType(typeName:String):Bool {
+		final name = StringTools.trim(typeName == null ? "" : typeName);
+		if (name.length == 0 || StringTools.startsWith(name, "std::"))
+			return false;
+		return switch (name) {
+			case "void" | "auto" | "bool" | "char" | "signed char" | "unsigned char" | "short" | "unsigned short" | "int" | "unsigned int" | "long" |
+				"unsigned long" | "long long" | "unsigned long long" | "float" | "double" | "long double":
+				false;
+			case _:
+				true;
+		};
+	}
+
 	public static function structuralTypedefTypeNameForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
 		final cls = structuralTypedefValueClassForTypeHint(typeHint, scope, classLookup);
 		if (cls == null)
