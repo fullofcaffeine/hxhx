@@ -1328,6 +1328,99 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this internal render-latency improvement does not change
 public production readiness.
 
+## 2026-07-10 Fresh EReg Map Callback Leaf Fast Path
+
+Follow-up bead `haxe_ocaml-j941e` isolated fresh `EReg.map(...)` callback
+adaptation after the typed-local split improvement. The two selected statements
+at indices 43 and 44 totaled about 0.218876s, including about 0.210648s in their
+typed `std::function<std::string(std::shared_ptr<EReg>)>` callback render phases.
+
+The first focused fixture separated full fresh-map rendering, known-owner
+argument rendering, typed lambda adaptation, direct callback-body rendering,
+standalone EReg leaf rendering, and the existing generic String/body probes.
+It confirmed that the existing EReg-to-String concatenation helper still spent
+most of its time rediscovering callback-owned `matched*` leaves. A first narrow
+literal/direct-leaf shortcut improved the interpreter fixture, but the first
+rebuilt current-source trace rejected it as the selected strict boundary:
+indices 43 and 44 and their approximately 0.105s callback phases did not move,
+and the method-level change matched control noise. That trace is retained as
+negative evidence rather than presented as an improvement.
+
+A behavior-level upstream 4.3.7 oracle check then showed that the selected
+callbacks continue from a matched String into a String slicing call. No
+upstream fixture was copied. A distinct repo-owned fixture uses different
+literals and indices to measure a callback-owned `matched`/`substr` chain. In
+its pre-shortcut 100-call sample, full map rendering measured about 0.489044s,
+known-owner argument rendering about 0.496950s, nested typed-lambda adaptation
+about 0.240668s, and its direct nested body about 0.197422s. The same nested
+leaf rendered through the general standalone path in about 0.153195s.
+
+The retained helper is confined to an EReg-to-String concatenation callback
+whose single typed argument is the callback receiver. It directly preserves
+String literals, callback-owned zero-argument `matchedLeft`/`matchedRight`, a
+literal-index `matched`, and a literal-index `matched(...).substr(...)` chain.
+All other leaves still call the canonical String renderer. Focused decline
+assertions cover other receivers, unsupported methods, non-literal match and
+substr indices, non-EReg arguments, non-String returns, and non-concatenation
+callbacks. Exact assertions freeze the full target-owned map call, typed lambda,
+concatenation, matched calls, and nested substr output.
+
+Two final 100-call samples measured about 0.291510-0.291960s for the full map,
+0.288123-0.289503s for known-owner arguments, 0.002326-0.002340s for the nested
+typed lambda, and 0.000904-0.000926s for its direct nested body. The standalone
+general nested leaf remained about 0.158684-0.160503s, confirming that the
+shortcut does not broaden ordinary EReg or String call rendering.
+
+The final rebuilt current-source warm trace retained the same 280 typed modules
+and 384-helper inventory: 253 full bodies, 83 declaration-only helpers, and 48
+runtime-owned helpers. Index 43 callback adaptation fell from about 0.105812s
+to 0.051508s and its complete statement from about 0.109953s to 0.055540s.
+Index 44 callback adaptation fell from about 0.104836s to 0.051652s and its
+statement from about 0.108923s to 0.055613s. Combined, the selected callback
+phases fell by about 51.0% and their statements by about 49.2%. Statement
+indices 41-50 fell from about 0.739076s to 0.600665s.
+
+`TestEReg.test` fell from about 1.510947s to 1.336176s, roughly 11.6%. Controls
+were also faster: `TestBytes.test` by about 3.7% and `TestXML.testBasic` by
+about 6.3%. The selected callback phases moved by about 51%, substantially more
+than either control, while the method-level result is treated more cautiously.
+The 480s trace again timed out during `TestInt64`, so strict Cpp remains
+expected-red. Relevant logs are:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-map-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-map-callback-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-map-final-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-nested-map-callback-warm.log`
+
+Both disposable external upstream 4.3.7 worktrees were removed after their
+runs. Eight inline EReg-to-String callbacks now retain a nearly uniform
+0.050906-0.051980s setup floor, about 0.410834s total, even though the focused
+direct body is nearly free. Follow-up bead `haxe_ocaml-bqd0n` owns opt-in phases
+inside typed lambda setup and scope restoration before another shortcut is
+considered.
+
+This remains a bounded extension of the existing EReg callback-concatenation
+helper, not a general lambda, EReg, or String dispatch path. It adds no runtime
+or stdlib implementation. Broader Cpp render/type-flow extraction remains
+owned by `haxe_ocaml-36ec`. Committed bootstrap snapshots are not regenerated
+because the slice changes neither the bootstrap interface nor snapshot
+acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal callback-render improvement does not change
+public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

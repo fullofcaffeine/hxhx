@@ -21551,32 +21551,72 @@ class CppTargetCore {
 		abstract `toString` behavior. Skipping whole-value probes is limited to `+`
 		bodies with the core EReg callback argument shape.
 	**/
-	static function directERegStringCallbackBodyExpr(body:HxExpr, argTypes:Array<String>, returnType:String, ?scope:CppRenderScope):Null<String> {
-		if (scope == null || returnType != "std::string" || argTypes == null || argTypes.length != 1)
+	static function directERegStringCallbackBodyExpr(body:HxExpr, argNames:Array<String>, argTypes:Array<String>, returnType:String,
+			?scope:CppRenderScope):Null<String> {
+		if (scope == null || returnType != "std::string" || argNames == null || argNames.length != 1 || argTypes == null || argTypes.length != 1)
 			return null;
 		final argClass = classNameFromCppType(argTypes[0]);
 		if (argClass == null || !isERegTypeName(argClass))
 			return null;
 		return switch (body) {
 			case EBinop("+", _, _):
-				directERegStringConcatExpr(body, scope);
+				directERegStringConcatExpr(body, sanitizeIdentifier(argNames[0]), scope);
 			case _:
 				null;
 		};
 	}
 
 	/** Preserve canonical String coercion at EReg callback leaves while bypassing redundant probes on each enclosing concatenation. **/
-	static function directERegStringConcatExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+	static function directERegStringConcatExpr(expr:HxExpr, callbackArg:String, ?scope:CppRenderScope):String {
 		return switch (expr) {
 			case EBinop("+", left, right):
 				"("
-				+ directERegStringConcatExpr(left, scope)
+				+ directERegStringConcatExpr(left, callbackArg, scope)
 				+ " + "
-				+ directERegStringConcatExpr(right, scope)
+				+ directERegStringConcatExpr(right, callbackArg, scope)
 				+ ")";
 			case _:
-				stringExpr(expr, scope);
+				final direct = directERegStringCallbackConcatLeafExpr(expr, callbackArg, scope);
+				direct == null ? stringExpr(expr, scope) : direct;
 		};
+	}
+
+	/**
+		Render only literal and callback-owned EReg leaves whose target contracts are
+		fixed inside a typed EReg-to-String concatenation callback.
+	**/
+	static function directERegStringCallbackConcatLeafExpr(expr:HxExpr, callbackArg:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case EString(value):
+				"std::string(" + quoteString(value) + ")";
+			case ECall(EField(ECall(EField(EIdent(receiver), "matched"), matchedArgs), "substr"), substrArgs) if (sanitizeIdentifier(receiver) == callbackArg):
+				directERegMatchedSubstrCallbackLeafExpr(receiver, matchedArgs, substrArgs, scope);
+			case ECall(EField(EIdent(receiver), method), args) if (sanitizeIdentifier(receiver) == callbackArg):
+				final target = localCppName(receiver, scope);
+				switch (sanitizeIdentifier(method)) {
+					case "matchedLeft" | "matchedRight" if (args.length == 0):
+						target + "->" + sanitizeIdentifier(method) + "()";
+					case "matched" if (args.length == 1):
+						final index = directPrimitiveLiteralCallArgExprForExpectedType(args[0], "int", scope);
+						index == null ? null : target + "->matched(" + index + ")";
+					case _:
+						null;
+				}
+			case _:
+				null;
+		};
+	}
+
+	/** Preserve the existing matched-String substr shape only when both callback indices are literal Ints. **/
+	static function directERegMatchedSubstrCallbackLeafExpr(receiver:String, matchedArgs:Array<HxExpr>, substrArgs:Array<HxExpr>,
+			?scope:CppRenderScope):Null<String> {
+		if (matchedArgs.length != 1 || substrArgs.length != 1)
+			return null;
+		final matchedIndex = directPrimitiveLiteralCallArgExprForExpectedType(matchedArgs[0], "int", scope);
+		final substrStart = directPrimitiveLiteralCallArgExprForExpectedType(substrArgs[0], "int", scope);
+		if (matchedIndex == null || substrStart == null)
+			return null;
+		return localCppName(receiver, scope) + "->matched(" + matchedIndex + ").substr(" + substrStart + ")";
 	}
 
 	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope, ?expectedReturnType:String,
@@ -21608,7 +21648,7 @@ class CppTargetCore {
 			if (i < argTypes.length && argTypes[i].length > 0)
 				scope.localTypes.set(names[i], argTypes[i]);
 		}
-		final directERegStringBody = explicitReturn ? directERegStringCallbackBodyExpr(body, argTypes, returnType, scope) : null;
+		final directERegStringBody = explicitReturn ? directERegStringCallbackBodyExpr(body, names, argTypes, returnType, scope) : null;
 		final renderedBody = returnType == "void" ? renderExpr(body,
 			scope) : directERegStringBody != null ? directERegStringBody : explicitReturn ? valueExprForExpectedType(body, returnType,
 				scope) : renderExpr(body, scope);

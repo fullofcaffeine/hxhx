@@ -77,12 +77,26 @@ typedef TypedERegSplitPhaseBenchResult = {
 
 typedef ERegLambdaPhaseBenchResult = {
 	var calls:Int;
+	var mapElapsed:Float;
+	var argsElapsed:Float;
 	var lambdaElapsed:Float;
+	var nestedLambdaElapsed:Float;
+	var directBodyElapsed:Float;
+	var nestedBodyElapsed:Float;
+	var leafElapsed:Float;
+	var nestedLeafElapsed:Float;
 	var bodyElapsed:Float;
 	var stringElapsed:Float;
 	var renderElapsed:Float;
 	var inferElapsed:Float;
+	var mapSample:String;
+	var argsSample:String;
 	var lambdaSample:String;
+	var nestedLambdaSample:String;
+	var directBodySample:String;
+	var nestedBodySample:String;
+	var leafSample:String;
+	var nestedLeafSample:String;
 	var bodySample:String;
 }
 
@@ -770,18 +784,82 @@ class M14CppHelperRenderBenchIntegrationTest {
 
 	static function renderERegLambdaPhases(callCount:Int):ERegLambdaPhaseBenchResult {
 		final scope = eRegBenchScope();
-		final body = EBinop("+",
-			EBinop("+", EBinop("+", EString("["), ECall(EField(EIdent("r"), "matchedLeft"), [])), ECall(EField(EIdent("r"), "matched"), [EInt(0)])),
-			ECall(EField(EIdent("r"), "matchedRight"), []));
+		final matchedLeft = ECall(EField(EIdent("r"), "matchedLeft"), []);
+		final matched = ECall(EField(EIdent("r"), "matched"), [EInt(0)]);
+		final matchedRight = ECall(EField(EIdent("r"), "matchedRight"), []);
+		final body = EBinop("+", EBinop("+", EBinop("+", EString("["), matchedLeft), matched), matchedRight);
+		final nestedLeaf = ECall(EField(ECall(EField(EIdent("r"), "matched"), [EInt(2)]), "substr"), [EInt(3)]);
+		final nestedBody = EBinop("+", EString("match:"), nestedLeaf);
 		final expectedType = "std::function<std::string(std::shared_ptr<EReg>)>";
+		final nestedCallback = ELambda(["r"], nestedBody);
+		final mapArgs = [EString("aa"), nestedCallback];
+		final map = ECall(EField(ENew("EReg", [EString("a+"), EString("g")]), "map"), mapArgs);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(body, ["r"], ["std::string"], "std::string", scope) == null
+			&& @:privateAccess
+			backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(body, ["r"], ["std::shared_ptr<EReg>"], "int", scope) == null
+			&& @:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(matchedLeft, ["r"], ["std::shared_ptr<EReg>"], "std::string",
+				scope) == null,
+			"Non-EReg arguments, non-String returns, and non-concatenation callbacks should retain general lambda rendering");
+		resetRendererCaches();
+		final mapStart = Sys.time();
+		var mapSample = "";
+		for (_ in 0...callCount)
+			mapSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(map, scope);
+		final mapElapsed = Sys.time() - mapStart;
+		resetRendererCaches();
+		final argsStart = Sys.time();
+		var argsSample = "";
+		for (_ in 0...callCount)
+			argsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "map", mapArgs, scope).join(", ");
+		final argsElapsed = Sys.time() - argsStart;
 		resetRendererCaches();
 		final lambdaStart = Sys.time();
 		var lambdaSample = "";
 		for (_ in 0...callCount)
 			lambdaSample = @:privateAccess backend.cpp.CppTargetCore.lambdaExprForExpectedFunction(["r"], body, expectedType, scope);
 		final lambdaElapsed = Sys.time() - lambdaStart;
+		resetRendererCaches();
+		final nestedLambdaStart = Sys.time();
+		var nestedLambdaSample = "";
+		for (_ in 0...callCount)
+			nestedLambdaSample = @:privateAccess backend.cpp.CppTargetCore.lambdaExprForExpectedFunction(["r"], nestedBody, expectedType, scope);
+		final nestedLambdaElapsed = Sys.time() - nestedLambdaStart;
 		scope.localTypes.set("r", "std::shared_ptr<EReg>");
 		scope.localNames.set("r", "r");
+		resetRendererCaches();
+		final directBodyStart = Sys.time();
+		var directBodySample = "";
+		for (_ in 0...callCount) {
+			final rendered = @:privateAccess
+				backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(body, ["r"], ["std::shared_ptr<EReg>"], "std::string", scope);
+			directBodySample = rendered == null ? "" : rendered;
+		}
+		final directBodyElapsed = Sys.time() - directBodyStart;
+		resetRendererCaches();
+		final nestedBodyStart = Sys.time();
+		var nestedBodySample = "";
+		for (_ in 0...callCount) {
+			final rendered = @:privateAccess
+				backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(nestedBody, ["r"], ["std::shared_ptr<EReg>"], "std::string", scope);
+			nestedBodySample = rendered == null ? "" : rendered;
+		}
+		final nestedBodyElapsed = Sys.time() - nestedBodyStart;
+		resetRendererCaches();
+		final leafStart = Sys.time();
+		var leafSample = "";
+		for (_ in 0...callCount)
+			leafSample = [@:privateAccess
+				backend.cpp.CppTargetCore.renderExpr(matchedLeft, scope), @:privateAccess
+				backend.cpp.CppTargetCore.renderExpr(matched, scope), @:privateAccess
+				backend.cpp.CppTargetCore.renderExpr(matchedRight, scope)
+			].join("|");
+		final leafElapsed = Sys.time() - leafStart;
+		resetRendererCaches();
+		final nestedLeafStart = Sys.time();
+		var nestedLeafSample = "";
+		for (_ in 0...callCount)
+			nestedLeafSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(nestedLeaf, scope);
+		final nestedLeafElapsed = Sys.time() - nestedLeafStart;
 		resetRendererCaches();
 		final bodyStart = Sys.time();
 		var bodySample = "";
@@ -804,12 +882,26 @@ class M14CppHelperRenderBenchIntegrationTest {
 			@:privateAccess backend.cpp.CppTargetCore.inferExprCppType(body, scope);
 		return {
 			calls: callCount,
+			mapElapsed: mapElapsed,
+			argsElapsed: argsElapsed,
 			lambdaElapsed: lambdaElapsed,
+			nestedLambdaElapsed: nestedLambdaElapsed,
+			directBodyElapsed: directBodyElapsed,
+			nestedBodyElapsed: nestedBodyElapsed,
+			leafElapsed: leafElapsed,
+			nestedLeafElapsed: nestedLeafElapsed,
 			bodyElapsed: bodyElapsed,
 			stringElapsed: stringElapsed,
 			renderElapsed: renderElapsed,
 			inferElapsed: Sys.time() - inferStart,
+			mapSample: mapSample,
+			argsSample: argsSample,
 			lambdaSample: lambdaSample,
+			nestedLambdaSample: nestedLambdaSample,
+			directBodySample: directBodySample,
+			nestedBodySample: nestedBodySample,
+			leafSample: leafSample,
+			nestedLeafSample: nestedLeafSample,
 			bodySample: bodySample
 		};
 	}
@@ -903,6 +995,39 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final eRegLambdaPhases = renderERegLambdaPhases(eRegLambdaCalls);
 		assertTrue(eRegLambdaPhases.lambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight()); }',
 			"EReg.map callback fixtures should keep their typed callback and concatenation shape");
+		assertTrue(eRegLambdaPhases.mapSample == 'std::make_shared<EReg>("a+", "g")->map("aa", ' + eRegLambdaPhases.nestedLambdaSample + ')'
+			&& eRegLambdaPhases.argsSample == '"aa", ' + eRegLambdaPhases.nestedLambdaSample,
+			"Fresh EReg.map fixtures should preserve their exact target-owned call and callback argument shapes");
+		assertTrue(eRegLambdaPhases.directBodySample == '(((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight())'
+			&& eRegLambdaPhases.leafSample == 'r->matchedLeft()|r->matched(0)|r->matchedRight()',
+			"EReg.map callback fixtures should preserve exact direct-body and target-owned leaf call shapes, got body="
+			+ eRegLambdaPhases.directBodySample
+			+ " leaves="
+			+ eRegLambdaPhases.leafSample);
+		assertContains(eRegLambdaPhases.nestedBodySample, "r->matched(2)",
+			"EReg.map callback fixtures should preserve the callback-owned matched/substr chain");
+		assertTrue(eRegLambdaPhases.nestedLeafSample == "r->matched(2).substr(3)"
+			&& eRegLambdaPhases.nestedBodySample == '(std::string("match:") + r->matched(2).substr(3))'
+			&& eRegLambdaPhases.nestedLambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (std::string("match:") + r->matched(2).substr(3)); }',
+			"EReg.map callback fixtures should preserve exact nested matched/substr and lambda shapes");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(EIdent("r"), "matchedLeft"), []), "r",
+				eRegBenchScope()) == "r->matchedLeft()",
+			"Typed EReg callbacks should use the bounded target-owned matched leaf path");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(ECall(EField(EIdent("r"), "matched"), [EInt(2)]), "substr"),
+				[EInt(3)]), "r", eRegBenchScope()) == "r->matched(2).substr(3)",
+			"Typed EReg callbacks should use the bounded target-owned matched/substr leaf path");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(EIdent("other"), "matchedLeft"), []), "r",
+			eRegBenchScope()) == null && @:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(EIdent("r"), "match"),
+				[EString("a")]), "r",
+				eRegBenchScope()) == null && @:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(EIdent("r"),
+				"matched"), [EIdent("index")]), "r", eRegBenchScope()) == null,
+			"Other receivers, unsupported methods, and non-literal match indices should retain general String rendering");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(ECall(EField(EIdent("r"), "matched"), [EInt(2)]), "substr"),
+				[EIdent("start")]), "r", eRegBenchScope()) == null,
+			"Matched/substr callback chains with non-literal starts should retain general String rendering");
 		assertContains(eRegLambdaPhases.bodySample, "r->matchedLeft()", "EReg.map callback fixtures should keep nested EReg body calls");
 
 		Sys.println("CPP_HELPER_RENDER_BENCH:PASS extra_methods="
@@ -969,8 +1094,22 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ typedERegSplitPhases.joinElapsed
 			+ " ereg_lambda_calls="
 			+ eRegLambdaPhases.calls
+			+ " ereg_lambda_map_seconds="
+			+ eRegLambdaPhases.mapElapsed
+			+ " ereg_lambda_args_seconds="
+			+ eRegLambdaPhases.argsElapsed
 			+ " ereg_lambda_seconds="
 			+ eRegLambdaPhases.lambdaElapsed
+			+ " ereg_lambda_nested_seconds="
+			+ eRegLambdaPhases.nestedLambdaElapsed
+			+ " ereg_lambda_direct_body_seconds="
+			+ eRegLambdaPhases.directBodyElapsed
+			+ " ereg_lambda_nested_body_seconds="
+			+ eRegLambdaPhases.nestedBodyElapsed
+			+ " ereg_lambda_leaf_seconds="
+			+ eRegLambdaPhases.leafElapsed
+			+ " ereg_lambda_nested_leaf_seconds="
+			+ eRegLambdaPhases.nestedLeafElapsed
 			+ " ereg_lambda_body_seconds="
 			+ eRegLambdaPhases.bodyElapsed
 			+ " ereg_lambda_string_seconds="
