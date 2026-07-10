@@ -16134,11 +16134,16 @@ class CppTargetCore {
 			return rendered;
 		}
 		final structuralTypedefStart = detailTimingEnabled ? Sys.time() : 0.0;
-		final structuralTypedefClass = structuralTypedefClassForCppType(valueType, scope);
+		final structuralTypesMatch = actualType == valueType;
+		final structuralTypedefClass = structuralTypesMatch ? null : structuralTypedefClassForCppType(valueType, scope);
 		if (detailTimingEnabled)
-			traceCallArgRenderPhase(scope, arg, param, "structural_typedef", Sys.time() - structuralTypedefStart, declaredParamType, paramType, valueType,
-				actualType, "hit=" + Std.string(structuralTypedefClass != null));
-		if (structuralTypedefClass != null && actualType != valueType) {
+			traceCallArgRenderPhase(scope, arg, param, "structural_typedef", Sys.time()
+				- structuralTypedefStart, declaredParamType, paramType, valueType,
+				actualType, "hit="
+				+ Std.string(structuralTypedefClass != null)
+				+ " skipped_matched="
+				+ Std.string(structuralTypesMatch));
+		if (structuralTypedefClass != null) {
 			final structuralStart = timingEnabled ? Sys.time() : 0.0;
 			final rendered = valueExprForExpectedType(arg, valueType, scope);
 			if (timingEnabled)

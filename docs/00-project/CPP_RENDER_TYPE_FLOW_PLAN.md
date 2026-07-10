@@ -1628,6 +1628,67 @@ Focused validation for this slice includes:
 README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this diagnostic does not change public production readiness.
 
+## 2026-07-10 Matched Call-Argument Structural Lookup Skip
+
+Follow-up bead `haxe_ocaml-47jmk` reordered the existing structural conversion
+condition in `callArgExprForParam`. When `actualType == valueType`, the path now
+declines before calling `structuralTypedefClassForCppType`; mismatched types
+still perform the lookup and retain the same conversion. The optional detail
+trace records `skipped_matched=true` for the declined lookup.
+
+The focused String identifier fixture preserves the exact direct `test` output.
+Two final 100-call samples measured the full argument path at 0.019930s and
+0.019106s, down from 0.286472s and 0.285453s, about 93.0-93.3%. The standalone
+structural lookup remained expensive at 0.253167s and 0.244806s, confirming that
+the slice changes only whether the already-matched path invokes it. The native
+Cpp smoke also preserves the existing mismatched structural conversion
+`AdrianV::testFoo(Foo(*me));`.
+
+The rebuilt current-source broad trace retained 280 typed modules and the same
+384-helper inventory: 253 full bodies, 83 declaration-only helpers, and 48
+runtime-owned helpers. Index 41 parameter rendering fell from 0.054987s to
+0.001349s and its complete statement from 0.112885s to 0.058623s. Index 42
+parameter rendering fell from 0.056136s to 0.001365s and its statement from
+0.106976s to 0.051824s. The parameter phases fell about 97.6%; together the two
+statements fell from 0.219861s to 0.110447s, about 49.8%.
+
+`TestEReg.test` fell from 0.748521s to 0.639866s, about 14.5%. Controls were
+stable by comparison: `TestBytes.test` was about 0.23% slower and
+`TestXML.testBasic` about 0.46% faster. The 480s run timed out at the start of
+`TestResource` as expected, so strict Cpp remains red. Relevant logs are:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-matched-structural-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-matched-structural-warm.log`
+
+The disposable external upstream 4.3.7 worktree was removed after the run. A
+new six-statement cluster now spans indices 41, 18, 33, 32, 39, and 42 at about
+0.051824-0.058623s. The selected parameter renders at indices 41 and 42 are now
+only about 0.00135s, while their enclosing `eq_render_first` phases remain
+0.058111s and 0.047996s. Follow-up bead `haxe_ocaml-eemjm` owns attribution
+across the split expressions, direct helpers, and callback declaration before
+another shortcut is considered.
+
+This is a semantics-preserving condition reorder inside the existing call-arg
+structural conversion seam. It adds no runtime or stdlib behavior. Broader Cpp
+render/type-flow extraction remains owned by `haxe_ocaml-36ec`. Committed
+bootstrap snapshots are not regenerated because the slice changes neither the
+bootstrap interface nor snapshot acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
