@@ -240,6 +240,16 @@ class CppTargetCore {
 			+ Std.string(index) + " " + label);
 	}
 
+	/** Record opt-in typed-lambda render phases for the currently filtered helper statement. **/
+	static function traceLambdaRenderPhase(scope:CppRenderScope, phase:String, elapsed:Float, argCount:Int, detail:String = ""):Void {
+		if (!traceCppScopeStmtTimingEnabled(scope))
+			return;
+		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
+		traceCppTimingPhase("render_helper_lambda_phase_timing owner=" + scope.traceOwnerName + " name=" + sanitizeIdentifier(scope.traceMethodName)
+			+ " index=" + Std.string(index) + " phase=" + phase + " seconds=" + Std.string(elapsed) + " args=" + Std.string(argCount)
+			+ (detail.length == 0 ? "" : " " + detail));
+	}
+
 	static function traceCppTypeToken(typeName:String):String {
 		return StringTools.replace(traceCppSnippet(typeName), " ", "_");
 	}
@@ -21539,8 +21549,16 @@ class CppTargetCore {
 	}
 
 	static function lambdaExprForExpectedFunction(args:Array<String>, body:HxExpr, expectedType:String, ?scope:CppRenderScope):String {
-		return lambdaExprWithArgTypes(args, body, CppTypeModel.cppFunctionArgTypesFromCppType(expectedType), scope,
-			cppFunctionReturnTypeFromCppType(expectedType));
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final argTypesStart = timingEnabled ? Sys.time() : 0.0;
+		final argTypes = CppTypeModel.cppFunctionArgTypesFromCppType(expectedType);
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "expected_arg_types", Sys.time() - argTypesStart, args.length);
+		final returnTypeStart = timingEnabled ? Sys.time() : 0.0;
+		final returnType = cppFunctionReturnTypeFromCppType(expectedType);
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "expected_return_type", Sys.time() - returnTypeStart, args.length);
+		return lambdaExprWithArgTypes(args, body, argTypes, scope, returnType);
 	}
 
 	/**
@@ -21621,6 +21639,8 @@ class CppTargetCore {
 
 	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope, ?expectedReturnType:String,
 			?capture:String):String {
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final headerStart = timingEnabled ? Sys.time() : 0.0;
 		final names = [for (arg in args) sanitizeIdentifier(arg)];
 		final params = [
 			for (i in 0...names.length) {
@@ -21632,6 +21652,8 @@ class CppTargetCore {
 		final explicitReturn = returnType.length > 0 && returnType != "auto";
 		final suffix = explicitReturn ? " -> " + returnType : "";
 		final lambdaCapture = capture == null || capture.length == 0 ? "[&]" : capture;
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "header", Sys.time() - headerStart, args.length, "return_type=" + traceCppTypeToken(returnType));
 		if (scope == null)
 			return returnType == "void" ? lambdaCapture + "(" + params.join(", ") + ")" + suffix + " { " + renderExpr(body, scope) + "; }" : lambdaCapture
 				+ "("
@@ -21641,22 +21663,49 @@ class CppTargetCore {
 				+ " { return "
 				+ (explicitReturn ? valueExprForExpectedType(body, returnType, scope) : renderExpr(body, scope))
 				+ "; }";
+		final copyLocalTypesStart = timingEnabled ? Sys.time() : 0.0;
 		final savedLocalTypes = copyStringMap(scope.localTypes);
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "copy_local_types", Sys.time() - copyLocalTypesStart, args.length);
+		final copyLocalNamesStart = timingEnabled ? Sys.time() : 0.0;
 		final savedLocalNames = copyStringMap(scope.localNames);
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "copy_local_names", Sys.time() - copyLocalNamesStart, args.length);
+		final registerArgsStart = timingEnabled ? Sys.time() : 0.0;
 		for (i in 0...names.length) {
 			scope.localNames.set(names[i], names[i]);
 			if (i < argTypes.length && argTypes[i].length > 0)
 				scope.localTypes.set(names[i], argTypes[i]);
 		}
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "register_args", Sys.time() - registerArgsStart, args.length);
+		final directBodyStart = timingEnabled ? Sys.time() : 0.0;
 		final directERegStringBody = explicitReturn ? directERegStringCallbackBodyExpr(body, names, argTypes, returnType, scope) : null;
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "direct_ereg_body", Sys.time() - directBodyStart, args.length, "hit=" + Std.string(directERegStringBody != null));
+		final renderBodyStart = timingEnabled ? Sys.time() : 0.0;
 		final renderedBody = returnType == "void" ? renderExpr(body,
 			scope) : directERegStringBody != null ? directERegStringBody : explicitReturn ? valueExprForExpectedType(body, returnType,
 				scope) : renderExpr(body, scope);
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "render_body", Sys.time() - renderBodyStart, args.length, "used_direct=" + Std.string(directERegStringBody != null));
+		final restoreScopeStart = timingEnabled ? Sys.time() : 0.0;
 		scope.localTypes = savedLocalTypes;
 		scope.localNames = savedLocalNames;
-		if (returnType == "void")
-			return lambdaCapture + "(" + params.join(", ") + ")" + suffix + " { " + renderedBody + "; }";
-		return lambdaCapture + "(" + params.join(", ") + ")" + suffix + " { return " + renderedBody + "; }";
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "restore_scope", Sys.time() - restoreScopeStart, args.length);
+		final assembleStart = timingEnabled ? Sys.time() : 0.0;
+		final rendered = returnType == "void" ? lambdaCapture + "(" + params.join(", ") + ")" + suffix + " { " + renderedBody + "; }" : lambdaCapture
+			+ "("
+			+ params.join(", ")
+			+ ")"
+			+ suffix
+			+ " { return "
+			+ renderedBody
+			+ "; }";
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "assemble", Sys.time() - assembleStart, args.length);
+		return rendered;
 	}
 
 	static function instanceMethodValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {

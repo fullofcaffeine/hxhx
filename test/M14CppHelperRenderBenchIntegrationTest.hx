@@ -79,6 +79,10 @@ typedef ERegLambdaPhaseBenchResult = {
 	var calls:Int;
 	var mapElapsed:Float;
 	var argsElapsed:Float;
+	var expectedFunctionElapsed:Float;
+	var identityPreflightElapsed:Float;
+	var boundPreflightElapsed:Float;
+	var varArgsPreflightElapsed:Float;
 	var lambdaElapsed:Float;
 	var nestedLambdaElapsed:Float;
 	var directBodyElapsed:Float;
@@ -794,6 +798,10 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final nestedCallback = ELambda(["r"], nestedBody);
 		final mapArgs = [EString("aa"), nestedCallback];
 		final map = ECall(EField(ENew("EReg", [EString("a+"), EString("g")]), "map"), mapArgs);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.dynamicIdentityCallExprForExpectedFunction(nestedCallback, expectedType,
+			scope) == null && @:privateAccess backend.cpp.CppTargetCore.boundFunctionValueExprForExpectedFunction(nestedCallback, expectedType,
+				scope) == null && @:privateAccess backend.cpp.CppTargetCore.reflectMakeVarArgsExprForExpectedFunction(nestedCallback, expectedType, scope) == null,
+			"Direct typed lambdas should decline identity, bind, and Reflect.makeVarArgs expected-function preflights");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(body, ["r"], ["std::string"], "std::string", scope) == null
 			&& @:privateAccess
 			backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(body, ["r"], ["std::shared_ptr<EReg>"], "int", scope) == null
@@ -812,6 +820,26 @@ class M14CppHelperRenderBenchIntegrationTest {
 		for (_ in 0...callCount)
 			argsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "map", mapArgs, scope).join(", ");
 		final argsElapsed = Sys.time() - argsStart;
+		resetRendererCaches();
+		final expectedFunctionStart = Sys.time();
+		for (_ in 0...callCount)
+			@:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(nestedCallback, expectedType, scope);
+		final expectedFunctionElapsed = Sys.time() - expectedFunctionStart;
+		resetRendererCaches();
+		final identityPreflightStart = Sys.time();
+		for (_ in 0...callCount)
+			@:privateAccess backend.cpp.CppTargetCore.dynamicIdentityCallExprForExpectedFunction(nestedCallback, expectedType, scope);
+		final identityPreflightElapsed = Sys.time() - identityPreflightStart;
+		resetRendererCaches();
+		final boundPreflightStart = Sys.time();
+		for (_ in 0...callCount)
+			@:privateAccess backend.cpp.CppTargetCore.boundFunctionValueExprForExpectedFunction(nestedCallback, expectedType, scope);
+		final boundPreflightElapsed = Sys.time() - boundPreflightStart;
+		resetRendererCaches();
+		final varArgsPreflightStart = Sys.time();
+		for (_ in 0...callCount)
+			@:privateAccess backend.cpp.CppTargetCore.reflectMakeVarArgsExprForExpectedFunction(nestedCallback, expectedType, scope);
+		final varArgsPreflightElapsed = Sys.time() - varArgsPreflightStart;
 		resetRendererCaches();
 		final lambdaStart = Sys.time();
 		var lambdaSample = "";
@@ -884,6 +912,10 @@ class M14CppHelperRenderBenchIntegrationTest {
 			calls: callCount,
 			mapElapsed: mapElapsed,
 			argsElapsed: argsElapsed,
+			expectedFunctionElapsed: expectedFunctionElapsed,
+			identityPreflightElapsed: identityPreflightElapsed,
+			boundPreflightElapsed: boundPreflightElapsed,
+			varArgsPreflightElapsed: varArgsPreflightElapsed,
 			lambdaElapsed: lambdaElapsed,
 			nestedLambdaElapsed: nestedLambdaElapsed,
 			directBodyElapsed: directBodyElapsed,
@@ -1098,6 +1130,14 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ eRegLambdaPhases.mapElapsed
 			+ " ereg_lambda_args_seconds="
 			+ eRegLambdaPhases.argsElapsed
+			+ " ereg_lambda_expected_function_seconds="
+			+ eRegLambdaPhases.expectedFunctionElapsed
+			+ " ereg_lambda_identity_preflight_seconds="
+			+ eRegLambdaPhases.identityPreflightElapsed
+			+ " ereg_lambda_bound_preflight_seconds="
+			+ eRegLambdaPhases.boundPreflightElapsed
+			+ " ereg_lambda_varargs_preflight_seconds="
+			+ eRegLambdaPhases.varArgsPreflightElapsed
 			+ " ereg_lambda_seconds="
 			+ eRegLambdaPhases.lambdaElapsed
 			+ " ereg_lambda_nested_seconds="

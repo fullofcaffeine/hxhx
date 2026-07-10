@@ -1421,6 +1421,74 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this internal callback-render improvement does not change
 public production readiness.
 
+## 2026-07-10 EReg Callback Setup Phase Timing
+
+Follow-up bead `haxe_ocaml-bqd0n` added opt-in inner timing around direct typed
+lambda rendering without changing generated C++. The phases separate expected
+function argument and return parsing, lambda header construction, local type
+and name map copies, callback argument registration, direct EReg body
+recognition/rendering, fallback body rendering, scope restoration, and final
+lambda assembly. They run only under the existing filtered Cpp statement trace.
+
+A rebuilt current-source warm trace retained the same 280 typed modules and
+384-helper inventory: 253 full bodies, 83 declaration-only helpers, and 48
+runtime-owned helpers. For selected inline callback indices 43 and 44,
+expected-argument parsing measured about 0.000044s each, expected-return parsing
+about 0.000012-0.000013s, header construction about 0.000015-0.000018s, local
+type copying about 0.000010s, local name copying about 0.000006s, callback
+registration about 0.000002-0.000003s, and direct EReg body rendering about
+0.000038s. Direct-body selection, restoration, and assembly were at or below
+about 0.000002s each. The measured inner work totals only about 0.000132s per
+selected callback, while the enclosing expected-function render remains about
+0.0513s.
+
+The focused 100-call fixture closes that attribution gap. Full
+`valueExprForExpectedType` adaptation for the direct typed lambda measured
+about 0.291614-0.305562s. The function-specific preflights after the general
+value cascade were negligible: dynamic identity about 0.000072-0.000074s,
+bound-function recognition about 0.000015s, and Reflect varargs recognition
+about 0.000009-0.000010s. Direct typed-lambda rendering measured about
+0.004159-0.006684s. The repeated cost therefore belongs to the general value
+adaptation probes before the existing raw-lambda/function-expected branch, not
+to expected-function parsing, lambda scope copying, EReg body rendering, or
+scope restoration.
+
+No shortcut is retained in this diagnostic slice. Follow-up bead
+`haxe_ocaml-r902r` owns an early path limited to a syntactic `ELambda` with a
+C++ function expected type. Non-lambda function values and non-function
+expected types must retain the existing identity, bind, Reflect varargs,
+optional-lambda, bound-method, method-value, and general value-adaptation paths.
+
+The seeded and warm traces are:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-lambda-phase-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-lambda-phase-warm.log`
+
+The warm run timed out during `TestInt64` as expected. The external upstream
+4.3.7 worktree was removed afterward. No method-level performance delta is
+claimed because the added nested trace records intentionally perturb enclosing
+timings; their inner clocks and the scaled fixture are the diagnostic evidence.
+
+This is opt-in timing inside the existing Cpp lambda/value-render seam and adds
+no runtime, stdlib, or output behavior. Broader Cpp render/type-flow extraction
+remains owned by `haxe_ocaml-36ec`. Committed bootstrap snapshots are not
+regenerated because the slice changes neither the bootstrap interface nor
+snapshot acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this diagnostic does not change public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
