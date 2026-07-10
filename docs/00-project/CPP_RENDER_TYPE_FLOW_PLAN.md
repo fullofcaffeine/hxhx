@@ -1689,6 +1689,65 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this internal render-latency improvement does not change
 public production readiness.
 
+## 2026-07-10 Residual Built-In Structural Probe Timing
+
+Follow-up bead `haxe_ocaml-eemjm` added a focused cross-family fixture for the
+six-statement residual cluster left after matched call arguments stopped
+performing structural-typedef discovery. It measures the same
+`structuralTypedefClassForCppType` helper directly for `int`, `std::string`, and
+`std::vector<std::string>`, then measures enclosing unary-Int argument,
+String-concatenation argument, and String-local initialization paths. Exact
+assertions preserve `(-1)`, the typed String concatenation, and the typed local
+String initializer. All three direct probes correctly return no structural
+typedef class.
+
+Two cold 100-call samples measured the direct `int` probe at 0.252728s and
+0.252829s, the `std::string` probe at 0.252217s and 0.252154s, and the String
+vector probe at 0.252101s and 0.253429s. The enclosing unary argument measured
+0.265780s and 0.267081s, the concatenation argument 0.274767s and 0.277734s,
+and the local String initializer 0.267874s and 0.255962s. The same impossible
+lookup therefore owns roughly 92-99% of each expression family rather than
+being specific to one call-argument or equality shape.
+
+The preceding current-source warm trace already assigns the residual cluster
+to these families. At index 18, the unary-Int argument spends 0.055786s in
+parameter rendering. Indices 32 and 33 spend 0.055998s and 0.056050s rendering
+String-concatenation arguments. Index 39 spends 0.054031s rendering its String
+local initializer. The now-cheap matched identifier arguments at indices 41
+and 42 cost only 0.001349s and 0.001365s, while the enclosing first-equality
+renders still cost 0.058111s and 0.047996s. Together with the focused direct
+probes, this establishes one repeated helper seam across the cluster.
+
+No production shortcut is retained in this diagnostic slice. A new broad
+current-source run was intentionally skipped: the existing comparable warm
+trace identifies the affected expression families, while the focused fixture
+isolates their shared helper directly. Rebuilding and rerunning the same
+480-second expected-red workload would not strengthen that seam selection.
+Follow-up bead `haxe_ocaml-ppx9p` owns a conservative guard inside
+`structuralTypedefClassForCppType` for canonical built-in and standard-library
+C++ carriers that cannot name generated structural typedef helpers. Named and
+generic structural carriers plus ordinary user class-shaped names must retain
+lookup behavior.
+
+This remains focused timing coverage inside the existing structural type-flow
+seam. Broader Cpp render/type-flow extraction remains owned by
+`haxe_ocaml-36ec`. Committed bootstrap snapshots are not regenerated because
+the slice changes neither the bootstrap interface nor snapshot acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this diagnostic does not change public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

@@ -91,6 +91,22 @@ typedef MatchedStringCallArgPhaseBenchResult = {
 	var renderSample:String;
 }
 
+typedef ResidualStructuralProbeBenchResult = {
+	var calls:Int;
+	var intProbeElapsed:Float;
+	var stringProbeElapsed:Float;
+	var vectorProbeElapsed:Float;
+	var unaryArgElapsed:Float;
+	var concatArgElapsed:Float;
+	var localStringElapsed:Float;
+	var intProbeSample:Bool;
+	var stringProbeSample:Bool;
+	var vectorProbeSample:Bool;
+	var unaryArgSample:String;
+	var concatArgSample:String;
+	var localStringSample:String;
+}
+
 typedef ERegLambdaPhaseBenchResult = {
 	var calls:Int;
 	var mapElapsed:Float;
@@ -145,6 +161,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS = 10;
 	static inline final DEFAULT_TYPED_EREG_SPLIT_CALLS = 10;
 	static inline final DEFAULT_MATCHED_STRING_CALL_ARG_CALLS = 10;
+	static inline final DEFAULT_RESIDUAL_STRUCTURAL_PROBE_CALLS = 10;
 	static inline final DEFAULT_EREG_LAMBDA_CALLS = 10;
 
 	static function assertTrue(cond:Bool, message:String):Void {
@@ -863,6 +880,66 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
+	/** Measure built-in structural probes across the residual EReg statement expression families. **/
+	static function renderResidualStructuralProbePhases(callCount:Int):ResidualStructuralProbeBenchResult {
+		final scope = eRegBenchScope();
+		final intParam = new HxFunctionArg("n", "Int", HxDefaultValue.NoDefault);
+		final stringParam = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
+		final unary = EUnop("-", EInt(1));
+		final concat = EBinop("+", EString("left"), EString("right"));
+		final localString = EString("{ local } value");
+		resetRendererCaches();
+		final intProbeStart = Sys.time();
+		var intProbeSample = false;
+		for (_ in 0...callCount)
+			intProbeSample = @:privateAccess backend.cpp.CppTargetCore.structuralTypedefClassForCppType("int", scope) != null;
+		final intProbeElapsed = Sys.time() - intProbeStart;
+		resetRendererCaches();
+		final stringProbeStart = Sys.time();
+		var stringProbeSample = false;
+		for (_ in 0...callCount)
+			stringProbeSample = @:privateAccess backend.cpp.CppTargetCore.structuralTypedefClassForCppType("std::string", scope) != null;
+		final stringProbeElapsed = Sys.time() - stringProbeStart;
+		resetRendererCaches();
+		final vectorProbeStart = Sys.time();
+		var vectorProbeSample = false;
+		for (_ in 0...callCount)
+			vectorProbeSample = @:privateAccess backend.cpp.CppTargetCore.structuralTypedefClassForCppType("std::vector<std::string>", scope) != null;
+		final vectorProbeElapsed = Sys.time() - vectorProbeStart;
+		resetRendererCaches();
+		final unaryArgStart = Sys.time();
+		var unaryArgSample = "";
+		for (_ in 0...callCount)
+			unaryArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(unary, intParam, scope, "int");
+		final unaryArgElapsed = Sys.time() - unaryArgStart;
+		resetRendererCaches();
+		final concatArgStart = Sys.time();
+		var concatArgSample = "";
+		for (_ in 0...callCount)
+			concatArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(concat, stringParam, scope, "std::string");
+		final concatArgElapsed = Sys.time() - concatArgStart;
+		resetRendererCaches();
+		final localStringStart = Sys.time();
+		var localStringSample = "";
+		for (_ in 0...callCount)
+			localStringSample = @:privateAccess backend.cpp.CppTargetCore.renderLocalInitExpr(localString, "std::string", "std::string", scope);
+		return {
+			calls: callCount,
+			intProbeElapsed: intProbeElapsed,
+			stringProbeElapsed: stringProbeElapsed,
+			vectorProbeElapsed: vectorProbeElapsed,
+			unaryArgElapsed: unaryArgElapsed,
+			concatArgElapsed: concatArgElapsed,
+			localStringElapsed: Sys.time() - localStringStart,
+			intProbeSample: intProbeSample,
+			stringProbeSample: stringProbeSample,
+			vectorProbeSample: vectorProbeSample,
+			unaryArgSample: unaryArgSample,
+			concatArgSample: concatArgSample,
+			localStringSample: localStringSample
+		};
+	}
+
 	static function renderERegLambdaPhases(callCount:Int):ERegLambdaPhaseBenchResult {
 		final scope = eRegBenchScope();
 		final matchedLeft = ECall(EField(EIdent("r"), "matchedLeft"), []);
@@ -1055,6 +1132,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final freshERegLocalDeclCalls = envInt("HXHX_CPP_FRESH_EREG_LOCAL_DECL_BENCH_CALLS", DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS);
 		final typedERegSplitCalls = envInt("HXHX_CPP_TYPED_EREG_SPLIT_BENCH_CALLS", DEFAULT_TYPED_EREG_SPLIT_CALLS);
 		final matchedStringCallArgCalls = envInt("HXHX_CPP_MATCHED_STRING_CALL_ARG_BENCH_CALLS", DEFAULT_MATCHED_STRING_CALL_ARG_CALLS);
+		final residualStructuralProbeCalls = envInt("HXHX_CPP_RESIDUAL_STRUCTURAL_PROBE_BENCH_CALLS", DEFAULT_RESIDUAL_STRUCTURAL_PROBE_CALLS);
 		final eRegLambdaCalls = envInt("HXHX_CPP_EREG_LAMBDA_BENCH_CALLS", DEFAULT_EREG_LAMBDA_CALLS);
 		var best:HelperRenderBenchResult = null;
 		var total = 0.0;
@@ -1122,6 +1200,15 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& !matchedStringCallArgPhases.enumSample
 			&& !matchedStringCallArgPhases.structuralSample,
 			"Matched typed String identifier arguments should not become enum references or structural typedef values");
+		final residualStructuralProbePhases = renderResidualStructuralProbePhases(residualStructuralProbeCalls);
+		assertTrue(!residualStructuralProbePhases.intProbeSample
+			&& !residualStructuralProbePhases.stringProbeSample
+			&& !residualStructuralProbePhases.vectorProbeSample,
+			"Built-in Int, String, and String-vector types should not resolve as structural typedef values");
+		assertTrue(residualStructuralProbePhases.unaryArgSample == "(-1)"
+			&& residualStructuralProbePhases.concatArgSample == '(std::string("left") + std::string("right"))'
+			&& residualStructuralProbePhases.localStringSample == 'std::string("{ local } value")',
+			"Residual structural-probe fixtures should preserve exact unary, concatenation, and String-local output");
 		final eRegLambdaPhases = renderERegLambdaPhases(eRegLambdaCalls);
 		assertTrue(eRegLambdaPhases.lambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight()); }',
 			"EReg.map callback fixtures should keep their typed callback and concatenation shape");
@@ -1237,6 +1324,20 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ matchedStringCallArgPhases.actualTypeElapsed
 			+ " matched_string_render_seconds="
 			+ matchedStringCallArgPhases.renderElapsed
+			+ " residual_structural_probe_calls="
+			+ residualStructuralProbePhases.calls
+			+ " residual_structural_int_seconds="
+			+ residualStructuralProbePhases.intProbeElapsed
+			+ " residual_structural_string_seconds="
+			+ residualStructuralProbePhases.stringProbeElapsed
+			+ " residual_structural_vector_seconds="
+			+ residualStructuralProbePhases.vectorProbeElapsed
+			+ " residual_structural_unary_arg_seconds="
+			+ residualStructuralProbePhases.unaryArgElapsed
+			+ " residual_structural_concat_arg_seconds="
+			+ residualStructuralProbePhases.concatArgElapsed
+			+ " residual_structural_local_string_seconds="
+			+ residualStructuralProbePhases.localStringElapsed
 			+ " ereg_lambda_calls="
 			+ eRegLambdaPhases.calls
 			+ " ereg_lambda_map_seconds="
