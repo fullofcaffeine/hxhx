@@ -1087,6 +1087,58 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red at the explicit timeout, and this timing checkpoint does not
 change public production readiness.
 
+## 2026-07-09 Fresh EReg Local-Type Guard
+
+Follow-up bead `haxe_ocaml-9qkoe` isolated the eleven fresh-EReg declarations
+selected by the post-dispatch warm trace. The helper bench now measures local
+declaration type selection, direct `EReg` type-hint resolution, local
+initializer adaptation, and direct constructor rendering separately. It also
+freezes the complete unhinted and explicit declaration shapes.
+
+Two pre-change ten-call samples put local type selection at about 0.0588s and
+0.0606s. Direct `cppTypeHint("EReg")` resolution was similarly expensive at
+about 0.0569s and 0.0678s. In contrast, initializer adaptation measured about
+0.0031s to 0.0074s and direct construction about 0.0032s to 0.0063s. A
+thousand-call sample made the boundary clearer: local type selection took about
+6.43s, while initializer adaptation and construction were about 0.308s and
+0.315s. The retained change therefore does not alter the RHS path.
+
+For local declarations only, an explicit EReg hint or a syntactic
+`new EReg(...)` initializer now selects `std::shared_ptr<EReg>` before general
+type lookup. `cppLocalDeclaredType` still applies explicit-hint rules and
+prepared source/renamed-local overrides afterward. Focused assertions keep
+non-EReg inference unchanged and preserve both exact declaration forms:
+`auto r = std::make_shared<EReg>(...)` and
+`std::shared_ptr<EReg> typed = std::make_shared<EReg>(...)`.
+
+Two post-change ten-call samples measured about 0.000163s and 0.000182s for
+local type selection; a final validation sample was about 0.000177s. No new
+strict method-level delta is claimed for this isolated slice. The current warm
+trace already establishes the repeated declaration family, while the scaled
+fixture directly proves the retained type-selection seam and explicitly
+declines an unsupported RHS shortcut. Follow-up bead `haxe_ocaml-apz4n` owns
+inner current-source RHS timing to explain the strict/interpreter discrepancy
+before any behavior change is considered.
+
+This remains a small repair inside the existing Cpp local-type dispatcher and
+adds no runtime or stdlib semantic family. Broader Cpp render/type-flow
+extraction remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal local-type improvement does not change public
+production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

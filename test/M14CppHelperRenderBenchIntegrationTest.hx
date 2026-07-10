@@ -48,6 +48,19 @@ typedef FreshERegFieldCallPhaseBenchResult = {
 	var shapeSample:String;
 }
 
+typedef FreshERegLocalDeclPhaseBenchResult = {
+	var calls:Int;
+	var typeElapsed:Float;
+	var hintElapsed:Float;
+	var initElapsed:Float;
+	var constructorElapsed:Float;
+	var typeSample:String;
+	var hintSample:String;
+	var initSample:String;
+	var constructorSample:String;
+	var shapeSample:String;
+}
+
 typedef ERegLambdaPhaseBenchResult = {
 	var calls:Int;
 	var lambdaElapsed:Float;
@@ -80,6 +93,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_BYTES_STRING_ARG_CALLS = 100;
 	static inline final DEFAULT_FRESH_EREG_RETURN_CALLS = 10;
 	static inline final DEFAULT_FRESH_EREG_FIELD_CALLS = 10;
+	static inline final DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS = 10;
 	static inline final DEFAULT_EREG_LAMBDA_CALLS = 10;
 
 	static function assertTrue(cond:Bool, message:String):Void {
@@ -600,6 +614,66 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
+	/** Separate fresh EReg local type selection and initializer adaptation from direct construction. **/
+	static function renderFreshERegLocalDeclPhases(callCount:Int):FreshERegLocalDeclPhaseBenchResult {
+		final scope = eRegBenchScope();
+		final fresh = ENew("EReg", [EString("a+"), EString("g")]);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalDeclaredType("typed", "EReg", fresh, scope, "typed") == "std::shared_ptr<EReg>",
+			"Explicit EReg local hints should retain their reference carrier");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalDeclaredType("count", "", EInt(1), scope, "count") == "int",
+			"Non-EReg local declarations should retain general type inference");
+		scope.localTypeOverrides.set("r", "std::any");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalDeclaredType("r", "", fresh, scope, "r") == "std::any",
+			"Fresh EReg inference should retain prepared source-local overrides");
+		scope.localTypeOverrides.remove("r");
+		scope.localTypeOverrides.set("r_2", "std::any");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalDeclaredType("r", "", fresh, scope, "r_2") == "std::any",
+			"Fresh EReg inference should retain prepared renamed-local overrides");
+		scope.localTypeOverrides.remove("r_2");
+		resetRendererCaches();
+		final typeStart = Sys.time();
+		var typeSample = "";
+		for (_ in 0...callCount)
+			typeSample = @:privateAccess backend.cpp.CppTargetCore.cppLocalDeclaredType("r", "", fresh, scope, "r");
+		final typeElapsed = Sys.time() - typeStart;
+		resetRendererCaches();
+		final hintStart = Sys.time();
+		var hintSample = "";
+		for (_ in 0...callCount)
+			hintSample = @:privateAccess backend.cpp.CppTargetCore.cppTypeHint("EReg", scope);
+		final hintElapsed = Sys.time() - hintStart;
+		resetRendererCaches();
+		final initStart = Sys.time();
+		var initSample = "";
+		for (_ in 0...callCount)
+			initSample = @:privateAccess backend.cpp.CppTargetCore.renderLocalInitExpr(fresh, "auto", "std::shared_ptr<EReg>", scope);
+		final initElapsed = Sys.time() - initStart;
+		resetRendererCaches();
+		final constructorStart = Sys.time();
+		var constructorSample = "";
+		for (_ in 0...callCount)
+			constructorSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(fresh, scope);
+		final constructorElapsed = Sys.time() - constructorStart;
+		final shapeScope = eRegBenchScope();
+		final shapeSample = @:privateAccess backend.cpp.CppTargetCore.renderStmt(SVar("r", "", fresh, HxPos.unknown()), "", shapeScope).join("\n");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderStmt(SVar("typed", "EReg", fresh, HxPos.unknown()), "", shapeScope)
+				.join("\n") == 'std::shared_ptr<EReg> typed = std::make_shared<EReg>("a+", "g");',
+			"Explicit EReg local declarations should preserve their exact generated shape");
+		return {
+			calls: callCount,
+			typeElapsed: typeElapsed,
+			hintElapsed: hintElapsed,
+			initElapsed: initElapsed,
+			constructorElapsed: constructorElapsed,
+			typeSample: typeSample,
+			hintSample: hintSample,
+			initSample: initSample,
+			constructorSample: constructorSample,
+			shapeSample: shapeSample
+		};
+	}
+
 	static function renderERegLambdaPhases(callCount:Int):ERegLambdaPhaseBenchResult {
 		final scope = eRegBenchScope();
 		final body = EBinop("+",
@@ -672,6 +746,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final bytesStringArgCalls = envInt("HXHX_CPP_BYTES_STRING_ARG_BENCH_CALLS", DEFAULT_BYTES_STRING_ARG_CALLS);
 		final freshERegReturnCalls = envInt("HXHX_CPP_FRESH_EREG_RETURN_BENCH_CALLS", DEFAULT_FRESH_EREG_RETURN_CALLS);
 		final freshERegFieldCalls = envInt("HXHX_CPP_FRESH_EREG_FIELD_CALL_BENCH_CALLS", DEFAULT_FRESH_EREG_FIELD_CALLS);
+		final freshERegLocalDeclCalls = envInt("HXHX_CPP_FRESH_EREG_LOCAL_DECL_BENCH_CALLS", DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS);
 		final eRegLambdaCalls = envInt("HXHX_CPP_EREG_LAMBDA_BENCH_CALLS", DEFAULT_EREG_LAMBDA_CALLS);
 		var best:HelperRenderBenchResult = null;
 		var total = 0.0;
@@ -710,6 +785,15 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final freshERegFieldCallPhases = renderFreshERegFieldCallPhases(freshERegFieldCalls);
 		assertTrue(freshERegFieldCallPhases.shapeSample == 'std::make_shared<EReg>("a+", "g")->match("aa")\nstd::make_shared<EReg>("a+", "g")->replace("aa", "x")\nstd::make_shared<EReg>("a+", "g")->map("aa", [&](std::shared_ptr<EReg> r) -> std::string { return r->matchedLeft(); })',
 			"Fresh EReg field-call phases should preserve exact match, replace, and typed map rendering");
+		final freshERegLocalDeclPhases = renderFreshERegLocalDeclPhases(freshERegLocalDeclCalls);
+		assertTrue(freshERegLocalDeclPhases.typeSample == "std::shared_ptr<EReg>"
+			&& freshERegLocalDeclPhases.hintSample == freshERegLocalDeclPhases.typeSample,
+			"Fresh EReg local declarations should retain the direct EReg reference type");
+		assertTrue(freshERegLocalDeclPhases.initSample == 'std::make_shared<EReg>("a+", "g")'
+			&& freshERegLocalDeclPhases.constructorSample == freshERegLocalDeclPhases.initSample,
+			"Fresh EReg local initializer adaptation should preserve direct construction");
+		assertTrue(freshERegLocalDeclPhases.shapeSample == 'auto r = std::make_shared<EReg>("a+", "g");',
+			"Fresh EReg local declarations should preserve their exact generated shape");
 		final eRegLambdaPhases = renderERegLambdaPhases(eRegLambdaCalls);
 		assertTrue(eRegLambdaPhases.lambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight()); }',
 			"EReg.map callback fixtures should keep their typed callback and concatenation shape");
@@ -755,6 +839,16 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ freshERegFieldCallPhases.constructorElapsed
 			+ " fresh_ereg_field_args_seconds="
 			+ freshERegFieldCallPhases.argsElapsed
+			+ " fresh_ereg_local_decl_calls="
+			+ freshERegLocalDeclPhases.calls
+			+ " fresh_ereg_local_type_seconds="
+			+ freshERegLocalDeclPhases.typeElapsed
+			+ " fresh_ereg_local_hint_seconds="
+			+ freshERegLocalDeclPhases.hintElapsed
+			+ " fresh_ereg_local_init_seconds="
+			+ freshERegLocalDeclPhases.initElapsed
+			+ " fresh_ereg_local_constructor_seconds="
+			+ freshERegLocalDeclPhases.constructorElapsed
 			+ " ereg_lambda_calls="
 			+ eRegLambdaPhases.calls
 			+ " ereg_lambda_seconds="

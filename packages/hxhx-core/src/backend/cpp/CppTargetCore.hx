@@ -17705,12 +17705,21 @@ class CppTargetCore {
 	static function cppLocalTypeHint(typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
 		final explicit = StringTools.trim(typeHint == null ? "" : typeHint);
 		if (explicit.length > 0) {
+			if (isERegTypeName(explicit))
+				return "std::shared_ptr<EReg>";
 			final localCallable = cppLocalCallableTypeHint(explicit, init, scope);
 			if (localCallable.length > 0)
 				return localCallable;
 			return cppTypeHint(explicit, scope);
 		}
-		return init == null ? "" : inferExprCppType(init, scope);
+		return switch (init) {
+			case ENew(typePath, _) if (isERegTypeName(typePath)):
+				"std::shared_ptr<EReg>";
+			case null:
+				"";
+			case _:
+				inferExprCppType(init, scope);
+		};
 	}
 
 	/**
