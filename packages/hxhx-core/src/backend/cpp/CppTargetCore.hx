@@ -12828,6 +12828,8 @@ class CppTargetCore {
 				typedLocalERegSplitCallExpr(receiver, args, scope);
 			case ECall(EField(receiver, method), args) if (isTypedLocalERegMapCall(receiver, method, args.length, scope)):
 				typedLocalERegMapCallExpr(receiver, args, scope);
+			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchSubCall(receiver, method, args.length, scope)):
+				typedLocalERegMatchSubCallExpr(receiver, args, scope);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
 			case ECall(EField(receiver, "getClassName"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
@@ -14023,6 +14025,18 @@ class CppTargetCore {
 			+ ", "
 			+ eRegMapCallbackArgExpr(args[1], scope)
 			+ ")";
+	}
+
+	/** Render the fixed typed-local EReg matchSub contract without general instance-method discovery. **/
+	static function typedLocalERegMatchSubCallExpr(receiver:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		var rendered = renderExpr(receiver, scope)
+			+ "->matchSub("
+			+ eRegStringCallArgExpr(args[0], scope)
+			+ ", "
+			+ eRegIntCallArgExpr(args[1], false, scope);
+		if (args.length == 3)
+			rendered += ", " + eRegIntCallArgExpr(args[2], true, scope);
+		return rendered + ")";
 	}
 
 	static function fieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
@@ -16362,6 +16376,20 @@ class CppTargetCore {
 		return valueExprForExpectedType(arg, expectedType, scope);
 	}
 
+	/** Render common EReg Int arguments directly while preserving the general adapter for uncommon shapes. **/
+	static function eRegIntCallArgExpr(arg:HxExpr, preserveOptionalStorage:Bool, ?scope:CppRenderScope):String {
+		final literal = directPrimitiveLiteralCallArgExprForExpectedType(arg, "int", scope);
+		if (literal != null)
+			return literal;
+		final actualType = exprCppType(arg, scope);
+		if (actualType == "int")
+			return renderExpr(arg, scope);
+		if (preserveOptionalStorage && actualType == "std::optional<int>")
+			return optionalStorageExpr(arg, scope);
+		final param = new HxFunctionArg(preserveOptionalStorage ? "len" : "pos", "Int", HxDefaultValue.NoDefault, preserveOptionalStorage, false);
+		return callArgExprForParam(arg, param, scope, preserveOptionalStorage ? "std::optional<int>" : "int");
+	}
+
 	/**
 		Bypass generic call-argument adaptation for literals whose C++ type already
 		matches the expected parameter type.
@@ -18200,6 +18228,8 @@ class CppTargetCore {
 				"int";
 			case ECall(EField(receiver, method), args) if (isTypedLocalERegMapCall(receiver, method, args.length, scope)):
 				"std::string";
+			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchSubCall(receiver, method, args.length, scope)):
+				"bool";
 			case ECall(EField(receiver, method), args) if (isFreshERegStringCall(receiver, method, args.length)):
 				"std::string";
 			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver)):
@@ -18511,6 +18541,13 @@ class CppTargetCore {
 		return isTypedLocalERegReceiver(receiver, scope);
 	}
 
+	/** Recognize the exact target-owned two- or three-argument EReg matchSub contract. **/
+	static function isTypedLocalERegMatchSubCall(receiver:HxExpr, method:String, arity:Int, ?scope:CppRenderScope):Bool {
+		if (method != "matchSub" || (arity != 2 && arity != 3))
+			return false;
+		return isTypedLocalERegReceiver(receiver, scope);
+	}
+
 	/** Recognize the target-owned structural fields of a typed-local EReg matched-position call. **/
 	static function isTypedLocalERegMatchedPosField(receiver:HxExpr, method:String, arity:Int, field:String, ?scope:CppRenderScope):Bool {
 		if (method != "matchedPos" || arity != 0 || (field != "pos" && field != "len"))
@@ -18567,6 +18604,8 @@ class CppTargetCore {
 			return "std::vector<std::string>";
 		if (isTypedLocalERegMapCall(receiver, method, arity, scope))
 			return "std::string";
+		if (isTypedLocalERegMatchSubCall(receiver, method, arity, scope))
+			return "bool";
 		if (isFreshERegStringCall(receiver, method, arity))
 			return "std::string";
 		if (isReflectStaticReceiver(receiver)) {

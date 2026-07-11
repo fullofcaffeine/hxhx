@@ -158,6 +158,44 @@ typedef TypedERegMatchedPosPhaseBenchResult = {
 	var jsonSample:Bool;
 }
 
+typedef TypedERegMatchSubPhaseBenchResult = {
+	var calls:Int;
+	var twoRenderElapsed:Float;
+	var threeRenderElapsed:Float;
+	var twoInferElapsed:Float;
+	var threeInferElapsed:Float;
+	var twoArgsElapsed:Float;
+	var threeArgsElapsed:Float;
+	var twoInstanceArgsElapsed:Float;
+	var threeInstanceArgsElapsed:Float;
+	var twoExpectedBoolElapsed:Float;
+	var threeExpectedBoolElapsed:Float;
+	var knownReturnElapsed:Float;
+	var instanceReturnElapsed:Float;
+	var receiverTypeElapsed:Float;
+	var stringArgElapsed:Float;
+	var posArgElapsed:Float;
+	var optionalMatchElapsed:Float;
+	var lenArgElapsed:Float;
+	var twoRenderSample:String;
+	var threeRenderSample:String;
+	var twoInferSample:String;
+	var threeInferSample:String;
+	var twoArgsSample:String;
+	var threeArgsSample:String;
+	var twoInstanceArgsSample:String;
+	var threeInstanceArgsSample:String;
+	var twoExpectedBoolSample:String;
+	var threeExpectedBoolSample:String;
+	var knownReturnSample:String;
+	var instanceReturnSample:String;
+	var receiverTypeSample:String;
+	var stringArgSample:String;
+	var posArgSample:String;
+	var optionalMatchSample:Bool;
+	var lenArgSample:String;
+}
+
 typedef MatchedStringCallArgPhaseBenchResult = {
 	var calls:Int;
 	var fullElapsed:Float;
@@ -273,6 +311,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS = 10;
 	static inline final DEFAULT_TYPED_EREG_SPLIT_CALLS = 10;
 	static inline final DEFAULT_TYPED_EREG_MATCHED_POS_CALLS = 10;
+	static inline final DEFAULT_TYPED_EREG_MATCH_SUB_CALLS = 10;
 	static inline final DEFAULT_MATCHED_STRING_CALL_ARG_CALLS = 10;
 	static inline final DEFAULT_RESIDUAL_STRUCTURAL_PROBE_CALLS = 10;
 	static inline final DEFAULT_EREG_LAMBDA_CALLS = 10;
@@ -695,6 +734,12 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static function eRegBenchScope():backend.cpp.CppRenderScope {
 		final eReg = new HxClassDecl("EReg", false, [
 			new HxFunctionDecl("match", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Bool", [], ""),
+			new HxFunctionDecl("matchSub", Public, false, [
+				new HxFunctionArg("s", "String", NoDefault, false, false),
+				new HxFunctionArg("pos", "Int", NoDefault, false, false),
+				new HxFunctionArg("len", "Int", NoDefault, true, false)
+			],
+				"Bool", [], ""),
 			new HxFunctionDecl("split", Public, false, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Array<String>", [], ""),
 			new HxFunctionDecl("replace", Public, false, [
 				new HxFunctionArg("s", "String", NoDefault, false, false),
@@ -1372,6 +1417,217 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
+	/** Separate typed-local EReg matchSub rendering, inference, and fixed argument contracts. **/
+	static function renderTypedERegMatchSubPhases(callCount:Int):TypedERegMatchSubPhaseBenchResult {
+		final scope = eRegBenchScope();
+		scope.localNames.set("regex", "regex");
+		scope.localTypes.set("regex", "std::shared_ptr<EReg>");
+		for (name in ["text", "dynamicText", "number", "position", "dynamicPosition", "optionalLength"])
+			scope.localNames.set(name, name);
+		scope.localTypes.set("text", "std::string");
+		scope.localTypes.set("dynamicText", "std::any");
+		scope.localTypes.set("number", "int");
+		scope.localTypes.set("position", "int");
+		scope.localTypes.set("dynamicPosition", "std::any");
+		scope.localTypes.set("optionalLength", "std::optional<int>");
+		final stringArg = EString("aa12");
+		final posArg = EInt(1);
+		final lenArg = EInt(2);
+		final twoArgs = [stringArg, posArg];
+		final threeArgs = [stringArg, posArg, lenArg];
+		final twoCall = ECall(EField(EIdent("regex"), "matchSub"), twoArgs);
+		final threeCall = ECall(EField(EIdent("regex"), "matchSub"), threeArgs);
+		final stringParam = new HxFunctionArg("s", "String", NoDefault, false, false);
+		final posParam = new HxFunctionArg("pos", "Int", NoDefault, false, false);
+		final lenParam = new HxFunctionArg("len", "Int", NoDefault, true, false);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchSubCall(EIdent("regex"), "matchSub", 2,
+			scope) && @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchSubCall(EIdent("regex"), "matchSub", 3, scope),
+			"Typed-local EReg matchSub calls should use the exact target-owned two- or three-argument contract");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchSubCall(EIdent("unknown"), "matchSub", 2, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchSubCall(EIdent("regex"), "matchSub", 1, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchSubCall(EIdent("regex"), "matchSub", 4, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchSubCall(EIdent("regex"), "match", 2, scope),
+			"Unknown receivers, unsupported arities, and other EReg methods should retain general field-call rendering");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.eRegIntCallArgExpr(EFloat(1.5), false, scope) == @:privateAccess
+			backend.cpp.CppTargetCore.callArgExprForParam(EFloat(1.5), posParam, scope, "int"),
+			"Uncommon EReg Int argument shapes should retain the general parameter adapter");
+		final typedStringSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"),
+			[EIdent("text"), EIdent("position")]), scope);
+		final dynamicStringSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"),
+			[EIdent("dynamicText"), EIdent("position")]), scope);
+		final scalarStringSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"),
+			[EIdent("number"), EIdent("position")]), scope);
+		final dynamicPositionSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"),
+			[EIdent("text"), EIdent("dynamicPosition")]), scope);
+		final optionalLengthSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"),
+			[EIdent("text"), EIdent("position"), EIdent("optionalLength")]), scope);
+		final negativeLengthSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"),
+			[EIdent("text"), EIdent("position"), EUnop("-", EInt(1))]), scope);
+		assertTrue(typedStringSample == "regex->matchSub(text, position)"
+			&& dynamicStringSample == "regex->matchSub(__hxhx_stringify(dynamicText), position)"
+			&& scalarStringSample == "regex->matchSub(std::to_string(number), position)"
+			&& dynamicPositionSample == "regex->matchSub(text, static_cast<int>(__hxhx_any_double(dynamicPosition)))"
+			&& optionalLengthSample == "regex->matchSub(text, position, optionalLength)"
+			&& negativeLengthSample == "regex->matchSub(text, position, (-1))",
+			"Typed-local EReg matchSub should preserve typed, erased, scalar, and optional argument adaptation");
+		final unknownSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("unknown"), "matchSub"), twoArgs), scope);
+		final wrongAritySample = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"), [stringArg]), scope);
+		final extraAritySample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"),
+			[stringArg, posArg, lenArg, EInt(3)]), scope);
+		final otherMethodSample = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "match"), [stringArg]), scope);
+		assertTrue(unknownSample == 'unknown.matchSub("aa12", 1)'
+			&& wrongAritySample == 'regex->matchSub("aa12")'
+			&& extraAritySample == 'regex->matchSub("aa12", 1, 2, 3)'
+			&& otherMethodSample == 'regex->match("aa12")',
+			"Unknown receivers, wrong matchSub arity, and other EReg methods should retain general field-call rendering");
+		resetRendererCaches();
+		final twoRenderStart = Sys.time();
+		var twoRenderSample = "";
+		for (_ in 0...callCount)
+			twoRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(twoCall, scope);
+		final twoRenderElapsed = Sys.time() - twoRenderStart;
+		resetRendererCaches();
+		final threeRenderStart = Sys.time();
+		var threeRenderSample = "";
+		for (_ in 0...callCount)
+			threeRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(threeCall, scope);
+		final threeRenderElapsed = Sys.time() - threeRenderStart;
+		resetRendererCaches();
+		final twoInferStart = Sys.time();
+		var twoInferSample = "";
+		for (_ in 0...callCount)
+			twoInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(twoCall, scope);
+		final twoInferElapsed = Sys.time() - twoInferStart;
+		resetRendererCaches();
+		final threeInferStart = Sys.time();
+		var threeInferSample = "";
+		for (_ in 0...callCount)
+			threeInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(threeCall, scope);
+		final threeInferElapsed = Sys.time() - threeInferStart;
+		resetRendererCaches();
+		final twoArgsStart = Sys.time();
+		var twoArgsSample = "";
+		for (_ in 0...callCount)
+			twoArgsSample = @:privateAccess
+				backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "matchSub", twoArgs, scope).join(", ");
+		final twoArgsElapsed = Sys.time() - twoArgsStart;
+		resetRendererCaches();
+		final threeArgsStart = Sys.time();
+		var threeArgsSample = "";
+		for (_ in 0...callCount)
+			threeArgsSample = @:privateAccess
+				backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "matchSub", threeArgs, scope).join(", ");
+		final threeArgsElapsed = Sys.time() - threeArgsStart;
+		resetRendererCaches();
+		final twoInstanceArgsStart = Sys.time();
+		var twoInstanceArgsSample = "";
+		for (_ in 0...callCount)
+			twoInstanceArgsSample = @:privateAccess
+				backend.cpp.CppTargetCore.renderInstanceMethodCallArgs("std::shared_ptr<EReg>", "matchSub", twoArgs, scope).join(", ");
+		final twoInstanceArgsElapsed = Sys.time() - twoInstanceArgsStart;
+		resetRendererCaches();
+		final threeInstanceArgsStart = Sys.time();
+		var threeInstanceArgsSample = "";
+		for (_ in 0...callCount)
+			threeInstanceArgsSample = @:privateAccess
+				backend.cpp.CppTargetCore.renderInstanceMethodCallArgs("std::shared_ptr<EReg>", "matchSub", threeArgs, scope).join(", ");
+		final threeInstanceArgsElapsed = Sys.time() - threeInstanceArgsStart;
+		resetRendererCaches();
+		final twoExpectedBoolStart = Sys.time();
+		var twoExpectedBoolSample = "";
+		for (_ in 0...callCount)
+			twoExpectedBoolSample = @:privateAccess backend.cpp.CppTargetCore.functionTypeArgExpr(twoCall, "bool", scope);
+		final twoExpectedBoolElapsed = Sys.time() - twoExpectedBoolStart;
+		resetRendererCaches();
+		final threeExpectedBoolStart = Sys.time();
+		var threeExpectedBoolSample = "";
+		for (_ in 0...callCount)
+			threeExpectedBoolSample = @:privateAccess backend.cpp.CppTargetCore.functionTypeArgExpr(threeCall, "bool", scope);
+		final threeExpectedBoolElapsed = Sys.time() - threeExpectedBoolStart;
+		resetRendererCaches();
+		final knownReturnStart = Sys.time();
+		var knownReturnSample = "";
+		for (_ in 0...callCount)
+			knownReturnSample = @:privateAccess
+				backend.cpp.CppTargetCore.knownFieldCallReturnCppType(EIdent("regex"), "matchSub", threeArgs, scope);
+		final knownReturnElapsed = Sys.time() - knownReturnStart;
+		resetRendererCaches();
+		final instanceReturnStart = Sys.time();
+		var instanceReturnSample = "";
+		for (_ in 0...callCount)
+			instanceReturnSample = @:privateAccess backend.cpp.CppTargetCore.classMethodCppReturnType("EReg", "matchSub", false, scope);
+		final instanceReturnElapsed = Sys.time() - instanceReturnStart;
+		resetRendererCaches();
+		final receiverTypeStart = Sys.time();
+		var receiverTypeSample = "";
+		for (_ in 0...callCount)
+			receiverTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(EIdent("regex"), scope);
+		final receiverTypeElapsed = Sys.time() - receiverTypeStart;
+		resetRendererCaches();
+		final stringArgStart = Sys.time();
+		var stringArgSample = "";
+		for (_ in 0...callCount)
+			stringArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(stringArg, stringParam, scope, "std::string");
+		final stringArgElapsed = Sys.time() - stringArgStart;
+		resetRendererCaches();
+		final posArgStart = Sys.time();
+		var posArgSample = "";
+		for (_ in 0...callCount)
+			posArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(posArg, posParam, scope, "int");
+		final posArgElapsed = Sys.time() - posArgStart;
+		resetRendererCaches();
+		final optionalMatchStart = Sys.time();
+		var optionalMatchSample = false;
+		for (_ in 0...callCount)
+			optionalMatchSample = @:privateAccess backend.cpp.CppTargetCore.callArgMatchesParam(lenArg, lenParam, scope);
+		final optionalMatchElapsed = Sys.time() - optionalMatchStart;
+		resetRendererCaches();
+		final lenArgStart = Sys.time();
+		var lenArgSample = "";
+		for (_ in 0...callCount)
+			lenArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(lenArg, lenParam, scope, "std::optional<int>");
+		final lenArgElapsed = Sys.time() - lenArgStart;
+		return {
+			calls: callCount,
+			twoRenderElapsed: twoRenderElapsed,
+			threeRenderElapsed: threeRenderElapsed,
+			twoInferElapsed: twoInferElapsed,
+			threeInferElapsed: threeInferElapsed,
+			twoArgsElapsed: twoArgsElapsed,
+			threeArgsElapsed: threeArgsElapsed,
+			twoInstanceArgsElapsed: twoInstanceArgsElapsed,
+			threeInstanceArgsElapsed: threeInstanceArgsElapsed,
+			twoExpectedBoolElapsed: twoExpectedBoolElapsed,
+			threeExpectedBoolElapsed: threeExpectedBoolElapsed,
+			knownReturnElapsed: knownReturnElapsed,
+			instanceReturnElapsed: instanceReturnElapsed,
+			receiverTypeElapsed: receiverTypeElapsed,
+			stringArgElapsed: stringArgElapsed,
+			posArgElapsed: posArgElapsed,
+			optionalMatchElapsed: optionalMatchElapsed,
+			lenArgElapsed: lenArgElapsed,
+			twoRenderSample: twoRenderSample,
+			threeRenderSample: threeRenderSample,
+			twoInferSample: twoInferSample,
+			threeInferSample: threeInferSample,
+			twoArgsSample: twoArgsSample,
+			threeArgsSample: threeArgsSample,
+			twoInstanceArgsSample: twoInstanceArgsSample,
+			threeInstanceArgsSample: threeInstanceArgsSample,
+			twoExpectedBoolSample: twoExpectedBoolSample,
+			threeExpectedBoolSample: threeExpectedBoolSample,
+			knownReturnSample: knownReturnSample,
+			instanceReturnSample: instanceReturnSample,
+			receiverTypeSample: receiverTypeSample,
+			stringArgSample: stringArgSample,
+			posArgSample: posArgSample,
+			optionalMatchSample: optionalMatchSample,
+			lenArgSample: lenArgSample
+		};
+	}
+
 	/** Separate a matched typed String identifier argument from its non-matching reference probes. **/
 	static function renderMatchedStringCallArgPhases(callCount:Int):MatchedStringCallArgPhaseBenchResult {
 		final scope = eRegBenchScope();
@@ -1847,6 +2103,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final freshERegLocalDeclCalls = envInt("HXHX_CPP_FRESH_EREG_LOCAL_DECL_BENCH_CALLS", DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS);
 		final typedERegSplitCalls = envInt("HXHX_CPP_TYPED_EREG_SPLIT_BENCH_CALLS", DEFAULT_TYPED_EREG_SPLIT_CALLS);
 		final typedERegMatchedPosCalls = envInt("HXHX_CPP_TYPED_EREG_MATCHED_POS_BENCH_CALLS", DEFAULT_TYPED_EREG_MATCHED_POS_CALLS);
+		final typedERegMatchSubCalls = envInt("HXHX_CPP_TYPED_EREG_MATCH_SUB_BENCH_CALLS", DEFAULT_TYPED_EREG_MATCH_SUB_CALLS);
 		final matchedStringCallArgCalls = envInt("HXHX_CPP_MATCHED_STRING_CALL_ARG_BENCH_CALLS", DEFAULT_MATCHED_STRING_CALL_ARG_CALLS);
 		final residualStructuralProbeCalls = envInt("HXHX_CPP_RESIDUAL_STRUCTURAL_PROBE_BENCH_CALLS", DEFAULT_RESIDUAL_STRUCTURAL_PROBE_CALLS);
 		final eRegLambdaCalls = envInt("HXHX_CPP_EREG_LAMBDA_BENCH_CALLS", DEFAULT_EREG_LAMBDA_CALLS);
@@ -1966,6 +2223,36 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& !typedERegMatchedPosPhases.propertySample
 			&& !typedERegMatchedPosPhases.jsonSample,
 			"Typed-local EReg matched-position field reads should decline unrelated abstract, method, reference, class, property, and JSON preflights");
+		final typedERegMatchSubPhases = renderTypedERegMatchSubPhases(typedERegMatchSubCalls);
+		assertTrue(typedERegMatchSubPhases.twoRenderSample == 'regex->matchSub("aa12", 1)'
+			&& typedERegMatchSubPhases.threeRenderSample == 'regex->matchSub("aa12", 1, 2)'
+			&& typedERegMatchSubPhases.twoExpectedBoolSample == typedERegMatchSubPhases.twoRenderSample
+			&& typedERegMatchSubPhases.threeExpectedBoolSample == typedERegMatchSubPhases.threeRenderSample,
+			"Typed-local EReg matchSub calls and Bool-expected outer arguments should preserve omitted and explicit length output");
+		assertTrue(typedERegMatchSubPhases.twoInferSample == "bool"
+			&& typedERegMatchSubPhases.threeInferSample == "bool"
+			&& typedERegMatchSubPhases.knownReturnSample == "bool"
+			&& typedERegMatchSubPhases.instanceReturnSample == "bool"
+			&& typedERegMatchSubPhases.receiverTypeSample == "std::shared_ptr<EReg>",
+			"Typed-local EReg matchSub inference should retain its Bool result and EReg receiver carrier, got two="
+			+ typedERegMatchSubPhases.twoInferSample
+			+ " three="
+			+ typedERegMatchSubPhases.threeInferSample
+			+ " known="
+			+ typedERegMatchSubPhases.knownReturnSample
+			+ " instance="
+			+ typedERegMatchSubPhases.instanceReturnSample
+			+ " receiver="
+			+ typedERegMatchSubPhases.receiverTypeSample);
+		assertTrue(typedERegMatchSubPhases.twoArgsSample == '"aa12", 1'
+			&& typedERegMatchSubPhases.threeArgsSample == '"aa12", 1, 2'
+			&& typedERegMatchSubPhases.twoInstanceArgsSample == typedERegMatchSubPhases.twoArgsSample
+			&& typedERegMatchSubPhases.threeInstanceArgsSample == typedERegMatchSubPhases.threeArgsSample
+			&& typedERegMatchSubPhases.stringArgSample == '"aa12"'
+			&& typedERegMatchSubPhases.posArgSample == "1"
+			&& typedERegMatchSubPhases.optionalMatchSample
+			&& typedERegMatchSubPhases.lenArgSample == "2",
+			"Typed-local EReg matchSub argument phases should retain String, position, and optional-length contracts");
 		final matchedStringCallArgPhases = renderMatchedStringCallArgPhases(matchedStringCallArgCalls);
 		assertTrue(matchedStringCallArgPhases.fullSample == "test"
 			&& matchedStringCallArgPhases.actualTypeSample == "std::string"
@@ -2193,6 +2480,42 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ typedERegMatchedPosPhases.propertyElapsed
 			+ " typed_ereg_matched_pos_json_seconds="
 			+ typedERegMatchedPosPhases.jsonElapsed
+			+ " typed_ereg_match_sub_calls="
+			+ typedERegMatchSubPhases.calls
+			+ " typed_ereg_match_sub_two_render_seconds="
+			+ typedERegMatchSubPhases.twoRenderElapsed
+			+ " typed_ereg_match_sub_three_render_seconds="
+			+ typedERegMatchSubPhases.threeRenderElapsed
+			+ " typed_ereg_match_sub_two_infer_seconds="
+			+ typedERegMatchSubPhases.twoInferElapsed
+			+ " typed_ereg_match_sub_three_infer_seconds="
+			+ typedERegMatchSubPhases.threeInferElapsed
+			+ " typed_ereg_match_sub_two_args_seconds="
+			+ typedERegMatchSubPhases.twoArgsElapsed
+			+ " typed_ereg_match_sub_three_args_seconds="
+			+ typedERegMatchSubPhases.threeArgsElapsed
+			+ " typed_ereg_match_sub_two_instance_args_seconds="
+			+ typedERegMatchSubPhases.twoInstanceArgsElapsed
+			+ " typed_ereg_match_sub_three_instance_args_seconds="
+			+ typedERegMatchSubPhases.threeInstanceArgsElapsed
+			+ " typed_ereg_match_sub_two_expected_bool_seconds="
+			+ typedERegMatchSubPhases.twoExpectedBoolElapsed
+			+ " typed_ereg_match_sub_three_expected_bool_seconds="
+			+ typedERegMatchSubPhases.threeExpectedBoolElapsed
+			+ " typed_ereg_match_sub_known_return_seconds="
+			+ typedERegMatchSubPhases.knownReturnElapsed
+			+ " typed_ereg_match_sub_instance_return_seconds="
+			+ typedERegMatchSubPhases.instanceReturnElapsed
+			+ " typed_ereg_match_sub_receiver_type_seconds="
+			+ typedERegMatchSubPhases.receiverTypeElapsed
+			+ " typed_ereg_match_sub_string_arg_seconds="
+			+ typedERegMatchSubPhases.stringArgElapsed
+			+ " typed_ereg_match_sub_pos_arg_seconds="
+			+ typedERegMatchSubPhases.posArgElapsed
+			+ " typed_ereg_match_sub_optional_match_seconds="
+			+ typedERegMatchSubPhases.optionalMatchElapsed
+			+ " typed_ereg_match_sub_len_arg_seconds="
+			+ typedERegMatchSubPhases.lenArgElapsed
 			+ " matched_string_call_arg_calls="
 			+ matchedStringCallArgPhases.calls
 			+ " matched_string_call_arg_seconds="

@@ -2203,6 +2203,117 @@ Oracle were deliberately skipped because focused and strict attribution led to
 an exact existing target-owned render seam without changing scope, release,
 provenance, runtime architecture, or semantic policy.
 
+## 2026-07-10 Typed-Local EReg MatchSub Argument Guard
+
+Follow-up bead `haxe_ocaml-81ifg` attributed the post-map `TestEReg.test`
+floor to eight helper calls whose Bool argument is a two- or three-argument
+typed-local `EReg.matchSub(...)` call. The focused fixture now measures both
+full calls, Bool-expected outer argument adaptation, result inference, known
+and general instance returns, field and instance argument discovery, receiver
+typing, each String/Int argument, and optional-parameter matching.
+
+Two pre-change 100-call samples measured two-argument rendering at 0.052043s
+and 0.050900s, and three-argument rendering at 0.064528s and 0.065920s. Bool
+result inference took 0.016314s/0.016039s and 0.015967s/0.016465s. Adapting the
+complete calls as Bool function arguments took 0.067144s/0.068018s and
+0.080425s/0.080714s. General field arguments took 0.028515s/0.028909s and
+0.043275s/0.043496s; the corresponding instance-argument path was almost the
+same. Receiver typing took only about 0.00036-0.00046s. The separately timed
+String, position, optional match, and length adapters plus instance discovery
+therefore explained the argument floor, while inference explained the rest of
+the outer Bool path.
+
+`renderExpr`, `inferExprCppType`, and known field-call return discovery now
+recognize only `matchSub` with two or three arguments on an identifier whose
+C++ type is exactly `std::shared_ptr<EReg>`. The renderer uses the fixed
+target-owned `matchSub(String, Int, ?Int):Bool` contract. String conversion
+reuses the existing EReg helper. Int literals and proven Int values render
+directly; an exact `std::optional<int>` length preserves its storage. All
+other numeric shapes fall back to `callArgExprForParam`, keeping the general
+parameter-conversion owner for uncommon inputs.
+
+Exact controls retain `regex->matchSub("aa12", 1)` and
+`regex->matchSub("aa12", 1, 2)`. Negative length, typed and Dynamic
+positions, and optional Int storage retain their prior output. Typed, erased,
+and scalar String inputs remain `text`, `__hxhx_stringify(dynamicText)`, and
+`std::to_string(number)`. Unknown receivers, one- and four-argument calls, and
+the separate `match` method retain general field-call rendering. A floating
+argument control also proves that the new Int helper delegates uncommon
+shapes to the old adapter.
+
+The native smoke builds and runs both omitted- and explicit-length calls over
+the same substring. Both return true and retain the expected `2:2`
+match-state position, so bounds and state behavior remain on the existing Cpp
+runtime implementation.
+
+Two final 100-call samples reduced two-argument rendering to 0.001252s and
+0.001130s, about 97.59-97.78%, and three-argument rendering to 0.001313s and
+0.001238s, about 97.97-98.12%. Two-argument inference fell to 0.000613s and
+0.000546s, about 96.24-96.60%; the three-argument form fell to 0.000780s and
+0.000571s, about 95.12-96.53%. Bool-expected outer adaptation fell to
+0.005165s/0.004468s and 0.004940s/0.004645s, about 92.31-94.25%. The
+separately measured general field-argument controls remained about 0.028s and
+0.041-0.042s.
+
+The rebuilt current-source strict trace retained 260 resolved modules, 280
+typed modules, and the same 384-helper inventory: 253 full bodies, 83
+declaration-only helpers, and 48 runtime-owned helpers. Across statement
+indices 52, 54, 57, 59, and 62-65, the inner function-argument render fell
+from 0.028365s to 0.000412s, about 98.55%. The enclosing direct-call argument
+phase fell from 0.029272s to 0.001398s, about 95.23%, and the complete
+statements fell from 0.032603s to 0.004842s, about 85.15%.
+
+`TestEReg.test` fell from 0.219547s to 0.192406s, about 12.36%, and its class
+fell from 0.221171s to 0.194003s, about 12.28%. The targeted statement delta
+is about 102.29% of the method delta because unrelated statements offset
+about 0.000620s of the improvement. Independent controls were also faster:
+`TestBytes.test` by about 0.49% and `TestXML.testBasic` by about 4.29%. Those
+controls make broad run variance explicit; only the much larger same-index
+phase reductions are retained as causal evidence.
+
+The setup-only upstream Haxe 4.3.7 Cpp compatibility run passed in 155 seconds
+and is not counted as native evidence. The retained 480-second native trace
+remained expected-red and timed out at 482 seconds. The frontier helper
+classifies the baseline/final pair as `shared-hotspots-moving-frontier`. The
+later run advanced from `MyAbstract_ExposingAbstract` through
+`MyAbstract_GADTEnumAbstract` into `TestType.testContravariantArgs`, but no
+broad frontier-advance claim is made because shared top timings and controls
+also moved.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-map-equality-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-matchsub-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-matchsub-warm.log`
+
+The disposable upstream worktree was removed and verified absent after the
+trace, and temporary-log cleanup found no remaining candidates. Follow-up
+bead `haxe_ocaml-xhtte` owns the next repeated `TestEReg.test` floor: six
+fresh `EReg.map` equality calls and one fresh `EReg.replace` equality call
+whose statements total 0.029534s, including 0.026717s in first-argument
+rendering. Broader Cpp render/type-flow extraction remains owned by
+`haxe_ocaml-36ec`. Committed bootstrap snapshots are not regenerated because
+this slice changes neither the bootstrap interface nor snapshot acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness. `thinking:xhigh` was not crossed. GPT 5.5 Pro and
+Oracle were deliberately skipped because focused and strict attribution led to
+an exact existing target-owned render seam without changing scope, release,
+provenance, runtime architecture, or semantic policy.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
