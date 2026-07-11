@@ -4100,6 +4100,96 @@ remains ignored. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were
 deliberately skipped because the existing target-owned EReg contract and
 same-phase strict evidence supplied a bounded, provenance-neutral seam.
 
+## 2026-07-11 Unit-Test Value Assertion Direct Calls
+
+Follow-up bead `haxe_ocaml-5zt9a` re-ranked the statement families after
+dynamic-local preparation stopped dominating. In the post-EReg-forwarding
+baseline, 44 `eq` statements totaled 0.015578s, 19 `t` statements 0.007718s,
+13 local declarations 0.005128s, nine `f` statements 0.003868s, two `unspec`
+statements 0.000940s, and one `exc` statement 0.000463s. The 88 statements
+totaled 0.033695s of the 0.039329s method. Inside ordinary direct-call timing,
+argument dispatch for `t` and `f` accounted for 0.004530s.
+
+The Cpp target already emits `Test.t` and `Test.f` as templated unit-test value
+assertion methods: the first value is intentionally unconstrained and the
+second argument is an optional source position. Direct-call rendering now
+reuses that target-owned contract only when the current owner is `Test` or an
+actual subclass, the method is exactly `t` or `f`, and the call has one or two
+arguments. Local callables still win before this check. Unrelated owners,
+other names, missing/extra arguments, and ordinary free calls retain general
+dispatch. The selected path uses the existing unknown-function argument
+adapter, preserving optional-position output such as `position.value()` rather
+than inventing a new value conversion.
+
+Two 1,000-call focused pre-change samples measured `t` at
+0.294368s/0.302582s and `f` at 0.301560s/0.297893s. Final samples measured
+`t` at 0.006535s/0.006643s and `f` at 0.006488s/0.006295s, reductions of
+about 97.78-97.81% and 97.85-97.89% respectively. Focused controls freeze
+both exact outputs, an explicit optional position, local shadowing, the Test
+owner requirement, method and arity rejection, and the generic value contract.
+
+The first exact-command non-delegating strict attempt was non-comparable: the
+current-source build took about 210 seconds versus the recent 120-second norm,
+and the probe timed out before `TestEReg`. The slowdown was outside the changed
+method: hxcpp setup/tool compilation consumed about 173 seconds and target
+source timing did not begin until around 440 seconds. The log was retained as
+explicit non-comparable evidence rather than treated as a regression or a
+normal verification cost.
+
+One bounded retry with the same command reached the complete method. Relative
+to the EReg-forwarding baseline, `TestEReg.test` fell from 0.039329s to
+0.032882s, about 16.39%, and its class fell from 0.041024s to 0.034571s,
+about 15.73%. The statement sum fell from 0.033695s to 0.027074s, about
+19.65%; the `t` family fell to 0.002766s, about 64.16%, and the `f` family to
+0.001529s, about 60.47%. All 88 statements rendered. Selected method records
+fell from 680 to 484 because the direct assertions no longer emit skipped
+owner, support-signature, inferred-argument, and explicit-type subphase lines;
+this is expected diagnostic contraction, not lost output coverage.
+
+Run-wide timing was slower: `TestBytes.test` moved from 1.140892s to
+1.168548s, about 2.42%, and unchanged equality statements also rose slightly.
+No aggregate whole-run speedup is claimed beyond the same-method and
+same-family evidence. The retry reached `Parser_XmlParserException` before the
+expected 480-second timeout, with target exit 124 and wrapper
+`expected_red_probe_exit=1`. The 44 equality statements now account for about
+59% of measured statement time; follow-up `haxe_ocaml-6umpq` owns their
+untraced shape attribution rather than assuming the trace aggregate is useful
+work.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-ereg-map-forwarded-override-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-test-value-assert-direct-slow-noncomparable.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-test-value-assert-direct-warm.log`
+
+Focused validation for this slice includes:
+
+- two 1,000-call focused pre/post samples
+- `npm run hxhx:build-current-source`
+- two exact-command non-delegating 480-second strict Cpp attempts
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is another
+measured internal strict-render improvement, but strict Cpp remains
+expected-red and public production readiness does not change. Generated C++ is
+frozen by focused and native controls, runtime support and committed bootstrap
+snapshots are unaffected, and `CppTargetCore.hx` remains a red mega-file at
+26,150 lines. The 22-line production increase stays within the existing
+target-owned unit-test support and direct-call seams; broader extraction
+remains owned by `haxe_ocaml-36ec`. No upstream compiler or test source was
+copied or consulted for this slice. `thinking:xhigh` was not crossed. GPT 5.5
+Pro and Oracle were deliberately skipped because the existing target-owned
+support renderer and repeated same-family evidence supplied a bounded,
+provenance-neutral seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

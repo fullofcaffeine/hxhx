@@ -361,6 +361,16 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			explicitSample = @:privateAccess
 				backend.cpp.CppTargetCore.directCallExpr("unspec", [callback, EIdent("position")], supportFixture.scope);
 		});
+		var trueAssertSample = "";
+		final trueAssertSeconds = elapsed(calls, () -> {
+			trueAssertSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("t", [EBool(true)], supportFixture.scope);
+		});
+		var falseAssertSample = "";
+		final falseAssertSeconds = elapsed(calls, () -> {
+			falseAssertSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("f", [EBool(false)], supportFixture.scope);
+		});
+		final explicitTrueAssertSample = @:privateAccess
+			backend.cpp.CppTargetCore.directCallExpr("t", [EBool(true), EIdent("position")], supportFixture.scope);
 		final excSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("exc", [callback], supportFixture.scope);
 		final positiveSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("ownInt", [EInt(1)], supportFixture.scope);
 		final negativeSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("inheritedInt", [EUnop("-", EInt(1))], supportFixture.scope);
@@ -374,6 +384,35 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			"omitted PosInfos should continue relying on the support helper's C++ default");
 		assertTrue(StringTools.startsWith(explicitSample, "unspec(") && explicitSample.indexOf("position") >= 0,
 			"explicit PosInfos should retain target-owned optional-position forwarding, got " + explicitSample);
+		assertTrue(trueAssertSample == "t(true)"
+			&& falseAssertSample == "f(false)"
+			&& explicitTrueAssertSample == "t(true, position.value())",
+			"unit-test value assertions should retain generic values and optional explicit positions: t="
+			+ trueAssertSample
+			+ " f="
+			+ falseAssertSample
+			+ " explicit="
+			+ explicitTrueAssertSample);
+		final unrelatedAssertOwner = new HxClassDecl("UnrelatedAssertOwner", false, [], []);
+		final unrelatedAssertNames = new StringMap<Bool>();
+		unrelatedAssertNames.set("UnrelatedAssertOwner", true);
+		final unrelatedAssertClasses = new StringMap<HxClassDecl>();
+		unrelatedAssertClasses.set("UnrelatedAssertOwner", unrelatedAssertOwner);
+		final unrelatedAssertScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(unrelatedAssertOwner, {
+			names: unrelatedAssertNames,
+			byName: unrelatedAssertClasses,
+			all: [unrelatedAssertOwner]
+		}, "void");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directUnitTestValueAssertCallExpr("t", [EBool(true)], supportFixture.scope) == "t(true)"
+			&& @:privateAccess backend.cpp.CppTargetCore.directUnitTestValueAssertCallExpr("t", [], supportFixture.scope) == null
+			&& @:privateAccess backend.cpp.CppTargetCore.directUnitTestValueAssertCallExpr("other", [EBool(true)], supportFixture.scope) == null
+			&& @:privateAccess backend.cpp.CppTargetCore.directUnitTestValueAssertCallExpr("t", [EBool(true)], unrelatedAssertScope) == null,
+			"unit-test assertion dispatch should require the exact Test owner, method, and arity contract");
+		final shadowAssertFixture = fixture();
+		shadowAssertFixture.scope.localNames.set("t", "local_t");
+		shadowAssertFixture.scope.localTypes.set("t", "std::function<void(bool)>");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directCallExpr("t", [EBool(true)], shadowAssertFixture.scope) == "local_t(true)",
+			"local callables should continue shadowing target-owned Test assertion helpers");
 		assertTrue(StringTools.startsWith(excSample, "exc(") && excSample.indexOf("PosInfos") < 0,
 			"inherited Test.exc should share the omitted-position support contract");
 		assertTrue(positiveSample == "ownInt(1)" && negativeSample == "inheritedInt((-1))",
@@ -448,10 +487,11 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			+ " forwarded_ereg_map_seconds=" + forwardedERegMapSeconds + " dynamic_evidence_seconds=" + dynamicEvidenceSeconds
 			+ " dynamic_exact_callback_seconds=" + dynamicExactCallbackSeconds + " dynamic_stale_callback_seconds=" + dynamicStaleCallbackSeconds
 			+ " cold_support_call_seconds=" + coldSupportCallSeconds + " support_arg_render_seconds=" + argRenderSeconds + " omitted_support_seconds="
-			+ omittedSupportSeconds + " explicit_support_seconds=" + explicitSupportSeconds + " null_check_render_seconds=" + nullCheckRenderSeconds
-			+ " null_check_arg_seconds=" + nullCheckArgSeconds + " matched_render_seconds=" + matchedRenderSeconds + " matched_optional_seconds="
-			+ matchedOptionalSeconds + " matched_non_nullable_seconds=" + matchedNonNullableSeconds + " matched_exact_shape_seconds="
-			+ matchedExactShapeSeconds + " null_check_call_seconds=" + nullCheckCallSeconds + " unrelated_null_sample=" + unrelatedNullSample
-			+ " unknown_matched_null_sample=" + unknownMatchedNullSample);
+			+ omittedSupportSeconds + " explicit_support_seconds=" + explicitSupportSeconds + " true_assert_seconds=" + trueAssertSeconds
+			+ " false_assert_seconds=" + falseAssertSeconds + " null_check_render_seconds=" + nullCheckRenderSeconds + " null_check_arg_seconds="
+			+ nullCheckArgSeconds + " matched_render_seconds=" + matchedRenderSeconds + " matched_optional_seconds=" + matchedOptionalSeconds
+			+ " matched_non_nullable_seconds=" + matchedNonNullableSeconds + " matched_exact_shape_seconds=" + matchedExactShapeSeconds
+			+ " null_check_call_seconds=" + nullCheckCallSeconds + " unrelated_null_sample=" + unrelatedNullSample + " unknown_matched_null_sample="
+			+ unknownMatchedNullSample);
 	}
 }

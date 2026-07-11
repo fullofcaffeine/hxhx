@@ -14753,6 +14753,9 @@ class CppTargetCore {
 				+ Std.string(bytesFastGet != null));
 		if (bytesFastGet != null)
 			return bytesFastGet;
+		final unitTestValueAssert = directUnitTestValueAssertCallExpr(cleanName, args, scope);
+		if (unitTestValueAssert != null)
+			return unitTestValueAssert;
 		if (cleanName == "eq" && args.length >= 2)
 			return cleanName + "(" + renderEqCallArgs(args, scope).join(", ") + ")";
 		final ownerLookupStart = timingEnabled ? Sys.time() : 0.0;
@@ -14849,6 +14852,25 @@ class CppTargetCore {
 				+ " emitted="
 				+ Std.string(explicitTypes.length > 0));
 		return cleanName + explicitTypes + "(" + renderedArgs.join(", ") + ")";
+	}
+
+	/**
+		Render the target-owned templated `Test.t`/`Test.f` calls without method
+		discovery. Their first value remains unconstrained and their optional position
+		keeps the general unknown-function argument adaptation.
+	**/
+	static function directUnitTestValueAssertCallExpr(name:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
+		if (scope == null
+			|| scope.owner == null
+			|| args == null
+			|| args.length < 1
+			|| args.length > 2
+			|| (name != "t" && name != "f"))
+			return null;
+		final ownerName = renderedClassName(scope.owner, lookupForScope(scope));
+		if (ownerName != "Test" && !classExtendsClass(ownerName, "Test", scope))
+			return null;
+		return name + "(" + renderFunctionTypeCallArgs("", args, scope).join(", ") + ")";
 	}
 
 	/**
