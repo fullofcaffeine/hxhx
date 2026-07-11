@@ -49,12 +49,23 @@ class M14CppEqualityArgBenchIntegrationTest {
 			all.push(cls);
 		}
 		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes, all: all}, "void");
-		for (name in ["typedText", "dynamicText", "aliasText", "optionalText"])
+		for (name in [
+			"typedText",
+			"dynamicText",
+			"aliasText",
+			"optionalText",
+			"block",
+			"items",
+			"unknown"
+		])
 			scope.localNames.set(name, name);
 		scope.localTypes.set("typedText", "std::string");
 		scope.localTypes.set("dynamicText", "std::any");
 		scope.localTypes.set("aliasText", "std::string");
 		scope.localTypes.set("optionalText", "std::optional<std::string>");
+		scope.localTypes.set("block", "std::shared_ptr<EReg>");
+		scope.localTypes.set("items", "std::vector<std::string>");
+		scope.localTypes.set("unknown", "std::any");
 		scope.localTypeHints.set("typedText", "String");
 		scope.localTypeHints.set("dynamicText", "Dynamic");
 		scope.localTypeHints.set("aliasText", "StringAlias");
@@ -76,6 +87,7 @@ class M14CppEqualityArgBenchIntegrationTest {
 		final concat = EBinop("+", EString("prefix:"), EIdent("typedText"));
 		final freshMap = ECall(EField(ENew("EReg", [EString("z?"), EString("g")]), "map"),
 			[EString("ab"), ELambda(["r"], ECall(EField(EIdent("r"), "matched"), [EInt(0)]))]);
+		final splitLength = EField(ECall(EField(EIdent("block"), "split"), [EString("a")]), "length");
 
 		var directLiteralSample = "";
 		final directLiteralSeconds = elapsed(calls, () -> {
@@ -98,6 +110,22 @@ class M14CppEqualityArgBenchIntegrationTest {
 		final freshMapEqualitySeconds = elapsed(calls, () -> {
 			freshMapEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([freshMap, EString("mapped")], scope).join(", ");
 		});
+		var splitLengthInferSample = "";
+		final splitLengthInferSeconds = elapsed(calls, () -> {
+			splitLengthInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(splitLength, scope);
+		});
+		var splitLengthPredicateSample = false;
+		final splitLengthPredicateSeconds = elapsed(calls, () -> {
+			splitLengthPredicateSample = @:privateAccess backend.cpp.CppTargetCore.isCppVectorLengthExpr(splitLength, scope);
+		});
+		var splitLengthRenderSample = "";
+		final splitLengthRenderSeconds = elapsed(calls, () -> {
+			splitLengthRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(splitLength, scope);
+		});
+		var splitLengthEqualitySample = "";
+		final splitLengthEqualitySeconds = elapsed(calls, () -> {
+			splitLengthEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([splitLength, EInt(1)], scope).join(", ");
+		});
 
 		final typedEqualitySample = @:privateAccess
 			backend.cpp.CppTargetCore.renderEqCallArgs([EIdent("typedText"), EString("typed")], scope).join(", ");
@@ -109,6 +137,13 @@ class M14CppEqualityArgBenchIntegrationTest {
 			backend.cpp.CppTargetCore.renderEqCallArgs([EIdent("optionalText"), ENull], scope).join(", ");
 		final numericEqualitySample = @:privateAccess
 			backend.cpp.CppTargetCore.renderEqCallArgs([EInt(1), EInt(2)], scope).join(", ");
+		final unknownLength = EField(ECall(EField(EIdent("unknown"), "split"), [EString("a")]), "length");
+		final wrongArityLength = EField(ECall(EField(EIdent("block"), "split"), []), "length");
+		final wrongMethodLength = EField(ECall(EField(EIdent("block"), "map"), [EString("a")]), "length");
+		final vectorLength = EField(EIdent("items"), "length");
+		final declineSample = [unknownLength, wrongArityLength, wrongMethodLength].map(expr -> @:privateAccess
+			backend.cpp.CppTargetCore.inferExprCppType(expr, scope)).join(",");
+		final vectorLengthInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(vectorLength, scope);
 
 		assertTrue(directLiteralSample == '"{ test } \\"quoted\\"\\nnext"', "direct String literals should retain their escaped token");
 		assertTrue(stringLiteralSample == "std::string(" + directLiteralSample + ")",
@@ -129,9 +164,23 @@ class M14CppEqualityArgBenchIntegrationTest {
 		assertTrue(optionalEqualitySample == 'optionalText.value(), std::optional<std::string>{}',
 			"optional String equality should retain its empty optional carrier, got " + optionalEqualitySample);
 		assertTrue(numericEqualitySample == "1, 2", "numeric equality should remain outside String adaptation");
+		assertTrue(splitLengthPredicateSample, "typed-local EReg split length should retain its exact vector-length predicate");
+		assertTrue(splitLengthInferSample == "int", "typed-local EReg split length should expose its exact Int type");
+		assertTrue(splitLengthRenderSample == '(block->split("a").size())',
+			"typed-local EReg split length should retain exact rendering, got " + splitLengthRenderSample);
+		assertTrue(splitLengthEqualitySample == 'static_cast<int>((block->split("a").size())), 1',
+			"typed-local EReg split length equality should retain exact adaptation, got " + splitLengthEqualitySample);
+		assertTrue(declineSample == ",," && vectorLengthInferSample == "",
+			"unknown, wrong-arity, wrong-method, and ordinary vector lengths should retain general inference, got decline="
+			+ declineSample
+			+ " vector="
+			+ vectorLengthInferSample);
 
 		Sys.println("CPP_EQUALITY_ARG_BENCH:PASS calls=" + calls + " direct_literal_seconds=" + directLiteralSeconds + " string_literal_seconds="
 			+ stringLiteralSeconds + " comparable_literal_seconds=" + comparableLiteralSeconds + " concat_equality_seconds=" + concatEqualitySeconds
 			+ " fresh_map_equality_seconds=" + freshMapEqualitySeconds);
+		Sys.println("CPP_SPLIT_LENGTH_INFER_BENCH:PASS calls=" + calls + " infer_seconds=" + splitLengthInferSeconds + " predicate_seconds="
+			+ splitLengthPredicateSeconds + " render_seconds=" + splitLengthRenderSeconds + " equality_seconds=" + splitLengthEqualitySeconds
+			+ " inferred_type=" + splitLengthInferSample);
 	}
 }

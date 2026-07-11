@@ -3210,7 +3210,7 @@ the exact String literal operand. `renderEqCallArgs` had already inferred
 `stringExpr`, where macro, JSON, enum, abstract, and class preflights all ran
 before the final `EString` case.
 
-A separate 137-line equality-argument probe now runs under
+A separate equality-argument probe now runs under
 `test:m14:cpp-helper-render-bench`. It times direct literal rendering, String
 adaptation, comparable-argument adaptation, complete concatenation equality,
 and fresh-EReg equality without growing the older mixed helper benchmark.
@@ -3288,6 +3288,91 @@ adapter, while the focused probe and package wiring remain separate.
 `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were deliberately
 skipped because the exact literal AST cannot represent any of the bypassed
 conversion shapes, giving a bounded, local, provenance-neutral seam.
+
+## 2026-07-11 Typed EReg Split-Length Type
+
+Follow-up bead `haxe_ocaml-39p17` attributed the largest stable remaining
+`TestEReg.test` statement to type inference for the already-bounded typed-local
+EReg split-length shape. Rendering and equality adaptation already recognized
+`block.split(...).length` through the exact EReg/vector contract, but
+`exprCppType` did not. `inferExprCppType` therefore ran general field flow and
+returned no type before the renderer later proved the same value was `int`.
+
+The separate equality-argument probe now also times split-length inference,
+the exact vector-length predicate, direct rendering, and complete equality
+adaptation. Its controls freeze typed-EReg output and verify that unknown
+receivers, wrong split arity, other methods, and ordinary vector fields retain
+their existing general inference behavior.
+
+Two pre-change 1,000-call samples measured split-length inference at
+0.077721s/0.077376s while returning no type. The exact predicate took
+0.004714s/0.004428s, direct rendering took 0.011594s/0.012325s, and complete
+equality adaptation took 0.169470s/0.166021s.
+
+`exprCppType` now returns `int` only for the same exact typed-local EReg
+single-argument `split(...).length` AST and receiver contract already used by
+rendering. Unknown, wrong-arity, wrong-method, and general vector length shapes
+continue returning no inferred type.
+
+Two final 1,000-call samples measured inference at 0.010361s/0.009161s, about
+87.41% lower, and complete equality adaptation at 0.046925s/0.049162s, about
+71.36% lower. The predicate and direct-render controls remained comparable,
+the inferred type became `int`, and every exact output/decline assertion
+remained unchanged.
+
+In the comparable current-source strict trace, index 41's first-operand
+inference fell from 0.000244s with no type to 0.000014s with `int`, about
+94.23%. Its rendering remained comparable at 0.000088s/0.000096s, and the
+complete statement fell from 0.000620s to 0.000426s, about 31.29%.
+
+`TestEReg.test` was about 2.97% slower and its class about 2.83% slower because
+unrelated statements moved oppositely; no method- or class-level speed claim is
+made. Independent controls were faster: `TestBytes.test` by about 0.65% and
+`TestXML.testBasic` by about 1.07%. Both logs contain the same 88 indexed
+statements, while the selected inference phase moved by 94.23% and returned
+the expected concrete type.
+
+The target setup/toolchain phase completed before native rendering and is not
+counted as target evidence. The retained native probe ended with
+`Cpp: FAIL (481s, exit 124)` and the wrapper's validated
+`expected_red_probe_exit=1`, after fully rendering `TestEReg`. It reached later
+classes within the fixed budget, but no full-target frontier claim is made.
+The disposable upstream worktree was removed by the runner.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-string-literal-adapter-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-split-length-type-warm.log`
+
+Follow-up bead `haxe_ocaml-2fra4` owns the next stable top statement: index
+69's typed callback local declaration at 0.000588s/0.000659s across the two
+traces. Its local type selection is cheap, while initializer rendering costs
+0.000265s/0.000319s; the follow-up will attribute that path before changing
+it. Broader Cpp render/type-flow extraction remains owned by
+`haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal type-flow latency improvement does not change
+public production readiness. Committed bootstrap snapshots are unaffected.
+`CppTargetCore.hx` remains a red mega-file at 25,965 lines; production changes
+are a two-line exact case at the existing expression-type seam, while the
+expanded 186-line probe remains separate. `thinking:xhigh` was not crossed.
+GPT 5.5 Pro and Oracle were deliberately skipped because the exact render and
+predicate contract already supplied a bounded, local, provenance-neutral type
+boundary.
 
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or

@@ -16812,6 +16812,8 @@ class CppTargetCore {
 				exprCppType(args[0], scope);
 			case EField(ECall(EField(receiver, method), args), field) if (isTypedLocalERegMatchedPosField(receiver, method, args.length, field, scope)):
 				"int";
+			case EField(ECall(EField(receiver, method), args), "length") if (isTypedLocalERegSplitCall(receiver, method, args.length, scope)):
+				"int";
 			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchCall(receiver, method, args.length, scope)):
 				"bool";
 			case ECall(EField(receiver, method), args) if (isFreshERegMatchCall(receiver, method, args.length)):
