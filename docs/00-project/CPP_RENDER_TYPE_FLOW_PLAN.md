@@ -2643,6 +2643,102 @@ extraction remains `haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT
 5.5 Pro and Oracle were deliberately skipped because the behavior and seam
 were exact, local, provenance-neutral, and scope-neutral.
 
+## 2026-07-11 EReg Split/Join Concat Type Guard
+
+Follow-up bead `haxe_ocaml-ao6dj` attributed the largest remaining
+`TestEReg.test` statement to first-operand inference for the nested String
+concatenation around a typed-local `EReg.split(...).join(...)` call. The render
+shape was already owned by `directTypedLocalERegSplitJoinConcatExpr`; generic
+inference still rediscovered the split vector, join result, and enclosing
+String additions before equality adaptation.
+
+Two pre-change 100-call samples measured whole-concat inference at 0.183930s
+and 0.185064s. Explicit type lookup took 0.044372s in the retained sample,
+whole-concat rendering took 0.496228s/0.490993s, and `stringExpr` took
+1.284712s in the retained sample. The direct equality argument renderer
+remained only 0.002440-0.002655s, and the split/join leaf renderer remained
+0.007256-0.007510s. Repeated generic type selection around the exact concat
+tree, not split/join rendering, owned the removable cost.
+
+The existing recursive concat recognizer now has a non-rendering mode. It
+accepts only String literals or explicitly typed String locals around an exact
+one-argument `join` of an exact one-argument typed-local EReg `split`. Both
+`exprCppType` and `inferExprCppType` expose `std::string` for that proven tree
+before abstract, Dynamic-addition, collection, and general field-call probes.
+The equality path continues to use the same recognizer in rendering mode, so
+the generated expression and String conversions remain centralized.
+
+Focused controls retain literal and typed String leaves, plus typed, Dynamic,
+and scalar split/join arguments through their existing String adapters.
+Unknown split receivers, Dynamic or scalar outer addition leaves, wrong join
+arity, and a bare join decline the exact type path. Abstract operators and
+general concatenations therefore retain normal type-flow semantics. The
+native smoke preserves the existing split/join runtime output and generated
+call shape.
+
+Two final 100-call samples reduced whole-concat inference to 0.000699s and
+0.001262s, about 99.31-99.62%. Explicit type lookup fell to
+0.000631s/0.000740s, about 98.33-98.58%. Whole-concat rendering fell to
+0.094940s/0.096073s, about 80.43-80.87%, and `stringExpr` to
+0.118051s/0.117585s, about 90.81-90.85%, because both can now select the
+proven String type without general rediscovery. The direct equality renderer
+remained in the 0.002440-0.003017s range, and split/join rendering remained in
+the 0.006894-0.007510s range.
+
+In the comparable current-source strict trace, index 42 first-operand
+inference fell from 0.003257s to 0.000025s, about 99.23%. Its rendering stayed
+comparable at 0.000134s versus 0.000127s. The complete statement fell from
+0.003874s to 0.000641s, about 83.46%. `TestEReg.test` fell from 0.079503s to
+0.075656s, about 4.84%, and its class fell from 0.081171s to 0.077328s, about
+4.73%. The targeted statement accounts for about 84.04% of the method delta.
+
+Independent controls remained comparable: `TestBytes.test` was about 0.23%
+slower and `TestXML.testBasic` about 0.42% faster. The runner filtered module
+and classification summary lines from this retained trace, so no fresh helper
+inventory claim is made; the statement inventory and all 88 indexed method
+statements remained aligned with the comparable baseline.
+
+The setup-only upstream Haxe 4.3.7 Cpp compatibility run passed in 194 seconds
+and is not counted as native evidence. The retained 480-second native trace
+remained expected-red and ended with `Cpp: FAIL (480s, exit 124)` plus the
+wrapper's validated `expected_red_probe_exit=1`, after fully rendering
+`TestEReg`. The frontier helper again classifies the baseline/final pair as
+`shared-hotspots-moving-frontier`; no claim is based on the variable terminal
+class.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-match-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-split-join-infer-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-split-join-infer-warm.log`
+
+The disposable upstream worktree was removed and verified absent. Follow-up
+bead `haxe_ocaml-gpp6y` owns the new largest statement, `unspec(-1)`, whose
+negative Int argument adaptation takes 0.001124s inside a 0.001916s statement.
+Broader Cpp render/type-flow extraction remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness. Committed bootstrap snapshots are unaffected.
+`CppTargetCore.hx` remains a red mega-file at 25,875 lines; this bounded
+existing-seam refinement adds no runtime/stdlib semantic family, and broader
+extraction remains `haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT
+5.5 Pro and Oracle were deliberately skipped because the behavior and seam
+were exact, local, provenance-neutral, and scope-neutral.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

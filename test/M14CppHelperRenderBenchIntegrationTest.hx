@@ -1220,8 +1220,17 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& directDynamicDelimiter == '(std::string("dynamic:") + __hxhx_join(block->split("a"), __hxhx_stringify(dynamicText)))'
 			&& directNumericDelimiter == '(std::string("numeric:") + __hxhx_join(block->split("a"), std::to_string(number)))',
 			"Direct typed-local EReg split/join concatenation should reuse established String separator and local adaptation");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(concat, scope)
+			&& @:privateAccess
+			backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("typed:"), typedStringJoin), scope)
+			&& @:privateAccess
+			backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("dynamic:"), dynamicStringJoin), scope)
+			&& @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("numeric:"), numericStringJoin), scope),
+			"Exact typed-local EReg split/join concatenations should expose their fixed String type without rendering");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("unknown:"), unknownJoin),
 			scope) == null
+			&& ! @:privateAccess
+			backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("unknown:"), unknownJoin), scope)
 			&& @:privateAccess
 			backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EIdent("dynamicText"), join), scope) == null
 			&& @:privateAccess
@@ -1230,6 +1239,14 @@ class M14CppHelperRenderBenchIntegrationTest {
 			backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("wrong:"), ECall(EField(split, "join"), [])), scope) == null
 			&& @:privateAccess backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(join, scope) == null,
 			"Unknown split receivers, Dynamic/scalar concat leaves, wrong join arity, and bare joins should retain general String rendering");
+		assertTrue(! @:privateAccess
+			backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(EBinop("+", EIdent("dynamicText"), join), scope)
+			&& ! @:privateAccess
+			backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(EBinop("+", EIdent("number"), join), scope)
+			&& ! @:privateAccess
+			backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("wrong:"), ECall(EField(split, "join"), [])), scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitJoinConcatExpr(join, scope),
+			"Dynamic/scalar outer leaves, wrong join arity, and bare joins should retain general type inference");
 		resetRendererCaches();
 		final inferStart = Sys.time();
 		var inferSample = "";
@@ -2663,10 +2680,23 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& typedERegSplitPhases.concatStringSelectSample
 			&& !typedERegSplitPhases.concatPrimitiveAbstractSample
 			&& !typedERegSplitPhases.concatClassAbstractSample
-			&& typedERegSplitPhases.concatExplicitTypeSample == ""
+			&& typedERegSplitPhases.concatExplicitTypeSample == "std::string"
 			&& !typedERegSplitPhases.concatClassMetadataSample
 			&& typedERegSplitPhases.concatInferSample == "std::string",
-			"Typed-local EReg split concatenation should remain a String expression while unrelated Any, abstract, and class preflights decline");
+			"The exact typed-local EReg split concatenation should expose its String type while unrelated Any, abstract, and class preflights decline, got anyAdd="
+			+ typedERegSplitPhases.concatAnyAddSample
+			+ " stringSelect="
+			+ typedERegSplitPhases.concatStringSelectSample
+			+ " primitiveAbstract="
+			+ typedERegSplitPhases.concatPrimitiveAbstractSample
+			+ " classAbstract="
+			+ typedERegSplitPhases.concatClassAbstractSample
+			+ " explicitType="
+			+ typedERegSplitPhases.concatExplicitTypeSample
+			+ " classMetadata="
+			+ typedERegSplitPhases.concatClassMetadataSample
+			+ " infer="
+			+ typedERegSplitPhases.concatInferSample);
 		final typedERegMatchedPosPhases = renderTypedERegMatchedPosPhases(typedERegMatchedPosCalls);
 		assertTrue(typedERegMatchedPosPhases.posSample == "(r->matchedPos().pos)"
 			&& typedERegMatchedPosPhases.lenSample == "(r->matchedPos().len)"

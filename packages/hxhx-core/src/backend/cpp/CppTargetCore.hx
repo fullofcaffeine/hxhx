@@ -15078,39 +15078,49 @@ class CppTargetCore {
 	**/
 	static function directTypedLocalERegSplitJoinConcatExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
 		return switch (expr) {
-			case EBinop("+", _, _): final node = directTypedLocalERegSplitJoinConcatNode(expr,
-					scope); node != null && node.hasTypedLocalERegSplitJoin ? node.rendered : null;
+			case EBinop("+", _, _): final node = directTypedLocalERegSplitJoinConcatNode(expr, scope,
+					true); node != null && node.hasTypedLocalERegSplitJoin ? node.rendered : null;
 			case _:
 				null;
 		};
 	}
 
-	static function directTypedLocalERegSplitJoinConcatNode(expr:HxExpr, ?scope:CppRenderScope):Null<CppDirectStringConcatNode> {
+	/** Recognize the same exact split/join concat tree without constructing its rendered form. **/
+	static function isTypedLocalERegSplitJoinConcatExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return switch (expr) {
+			case EBinop("+", _, _): final node = directTypedLocalERegSplitJoinConcatNode(expr, scope, false); node != null && node.hasTypedLocalERegSplitJoin;
+			case _:
+				false;
+		};
+	}
+
+	/** Traverse the exact concat grammar, optionally rendering it while recording whether it contains the target-owned join leaf. **/
+	static function directTypedLocalERegSplitJoinConcatNode(expr:HxExpr, ?scope:CppRenderScope, renderNode:Bool):Null<CppDirectStringConcatNode> {
 		return switch (expr) {
 			case EString(value):
 				{
-					rendered: "std::string(" + quoteString(value) + ")",
+					rendered: renderNode ? "std::string(" + quoteString(value) + ")" : "",
 					hasTypedLocalERegSplitJoin: false
 				};
 			case EIdent(name) if (exprCppType(expr, scope) == "std::string"):
 				{
-					rendered: "std::string(" + localCppName(name, scope) + ")",
+					rendered: renderNode ? "std::string(" + localCppName(name, scope) + ")" : "",
 					hasTypedLocalERegSplitJoin: false
 				};
 			case ECall(EField(ECall(EField(receiver, splitMethod), splitArgs), "join"), joinArgs)
 				if (joinArgs.length == 1 && isTypedLocalERegSplitCall(receiver, splitMethod, splitArgs.length, scope)):
-				{rendered: "__hxhx_join("
+				{rendered: renderNode ? "__hxhx_join("
 					+ typedLocalERegSplitCallExpr(receiver, splitArgs, scope)
 					+ ", "
 					+ stringExpr(joinArgs[0], scope)
-					+ ")",
+					+ ")" : "",
 					hasTypedLocalERegSplitJoin: true
 				};
 			case EBinop("+", left, right):
-				final directLeft = directTypedLocalERegSplitJoinConcatNode(left, scope);
-				final directRight = directTypedLocalERegSplitJoinConcatNode(right, scope);
+				final directLeft = directTypedLocalERegSplitJoinConcatNode(left, scope, renderNode);
+				final directRight = directTypedLocalERegSplitJoinConcatNode(right, scope, renderNode);
 				if (directLeft == null || directRight == null) null; else {
-					rendered: "(" + directLeft.rendered + " + " + directRight.rendered + ")",
+					rendered: renderNode ? "(" + directLeft.rendered + " + " + directRight.rendered + ")" : "",
 					hasTypedLocalERegSplitJoin: directLeft.hasTypedLocalERegSplitJoin || directRight.hasTypedLocalERegSplitJoin};
 			case _:
 				null;
@@ -16898,6 +16908,8 @@ class CppTargetCore {
 				lambdaCallReturnCppType(lambdaArgs, body, args, scope);
 			case EBinop("=", left, _):
 				assignmentExpectedCppType(left, scope);
+			case EBinop("+", _, _) if (isTypedLocalERegSplitJoinConcatExpr(expr, scope)):
+				"std::string";
 			case EBinop(op, left, right) if (primitiveStringAbstractBinaryOpCppType(op, left, right, scope).length > 0):
 				primitiveStringAbstractBinaryOpCppType(op, left, right, scope);
 			case EBinop(op, left, right) if (classBackedAbstractBinaryOpCppType(op, left, right, scope).length > 0):
@@ -18435,6 +18447,8 @@ class CppTargetCore {
 				lambdaCallReturnCppType(lambdaArgs, body, args, scope);
 			case EBinop("=", left, _):
 				assignmentExpectedCppType(left, scope);
+			case EBinop("+", _, _) if (isTypedLocalERegSplitJoinConcatExpr(expr, scope)):
+				"std::string";
 			case EBinop(op, left, right) if (primitiveStringAbstractBinaryOpCppType(op, left, right, scope).length > 0):
 				primitiveStringAbstractBinaryOpCppType(op, left, right, scope);
 			case EBinop(op, left, right) if (classBackedAbstractBinaryOpCppType(op, left, right, scope).length > 0):
