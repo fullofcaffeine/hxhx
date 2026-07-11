@@ -87,8 +87,68 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 		return Sys.time() - start;
 	}
 
+	static function walkOwnerChain(entry:DirectCallSupportFixture, visit:HxClassDecl->Void, inheritanceLookup:Bool = false):Void {
+		final scope = entry.scope;
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.lookupForScope(scope);
+		var current:HxClassDecl = entry.owner;
+		final seen = new StringMap<Bool>();
+		while (current != null) {
+			final key = @:privateAccess backend.cpp.CppTargetCore.renderedClassName(current, lookup);
+			if (key.length == 0 || seen.exists(key))
+				break;
+			seen.set(key, true);
+			visit(current);
+			final next = HxClassDecl.getExtendsPath(current);
+			if (next == null || next.length == 0)
+				break;
+			current = if (inheritanceLookup) @:privateAccess backend.cpp.CppTargetCore.lookupClassForInheritancePath(next, scope, lookup);
+			else
+				@:privateAccess backend.cpp.CppTargetCore.lookupClassForTypeHint(next, scope, lookup);
+		}
+	}
+
+	static function assertInheritanceLookupParity(entry:DirectCallSupportFixture):Void {
+		final scope = entry.scope;
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.lookupForScope(scope);
+		var current:HxClassDecl = entry.owner;
+		while (current != null) {
+			final next = HxClassDecl.getExtendsPath(current);
+			if (next == null || next.length == 0)
+				break;
+			final general = @:privateAccess backend.cpp.CppTargetCore.lookupClassForTypeHint(next, scope, lookup);
+			final inheritance = @:privateAccess backend.cpp.CppTargetCore.lookupClassForInheritancePath(next, scope, lookup);
+			assertTrue(inheritance == general, "inheritance lookup should match general class lookup for " + next);
+			current = inheritance;
+		}
+	}
+
+	static function assertInheritanceLookupPathControls():Void {
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		final localBase = new HxClassDecl("Module.Base", false, [], []);
+		final otherBase = new HxClassDecl("Other.Base", false, [], []);
+		final owner = new HxClassDecl("Module.Child", false, [], [], "Base");
+		for (entry in [
+			{name: "Module_Base", cls: localBase},
+			{name: "Other_Base", cls: otherBase},
+			{name: "Base", cls: otherBase},
+			{name: "Module_Child", cls: owner}
+		]) {
+			names.set(entry.name, true);
+			classes.set(entry.name, entry.cls);
+		}
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes, all: [localBase, otherBase, owner]}, "void");
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.lookupForScope(scope);
+		final resolve = path -> @:privateAccess backend.cpp.CppTargetCore.lookupClassForInheritancePath(path, scope, lookup);
+		assertTrue(resolve("Base") == localBase, "unqualified inheritance should prefer the owner's module-local class");
+		assertTrue(resolve("Other.Base") == otherBase, "qualified inheritance should retain its exact class owner");
+		assertTrue(resolve("Module.Base<T>") == localBase, "generic inheritance should resolve its class path without probing value carriers");
+	}
+
 	static function main():Void {
 		final calls = envInt("HXHX_CPP_DIRECT_SUPPORT_BENCH_CALLS", DEFAULT_CALLS);
+		assertInheritanceLookupParity(fixture());
+		assertInheritanceLookupPathControls();
 		var sampleOwner:HxClassDecl = null;
 		final currentFixture = fixture();
 		final currentOwnerSeconds = elapsed(calls, () -> {
@@ -115,6 +175,42 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			sampleOwner = @:privateAccess backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("ordinaryFree", missingFixture.scope);
 		});
 		assertTrue(sampleOwner == null, "ordinary free calls should not gain an owner");
+		final coldMissingFixtures = [for (_ in 0...calls) fixture()];
+		final coldMissingSeconds = elapsedIndexed(calls, i -> {
+			sampleOwner = @:privateAccess
+				backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("ordinaryFree", coldMissingFixtures[i].scope);
+		});
+		assertTrue(sampleOwner == null, "fresh ordinary free calls should retain a complete owner miss");
+		final hierarchyFixtures = [for (_ in 0...calls) fixture()];
+		final hierarchySeconds = elapsedIndexed(calls, i -> walkOwnerChain(hierarchyFixtures[i], _ -> {}));
+		final inheritanceLookupFixtures = [for (_ in 0...calls) fixture()];
+		final inheritanceLookupSeconds = elapsedIndexed(calls, i -> walkOwnerChain(inheritanceLookupFixtures[i], _ -> {}, true));
+		final inheritanceFixtures = [for (_ in 0...calls) fixture()];
+		final inheritanceSeconds = elapsedIndexed(calls, i -> {
+			final entry = inheritanceFixtures[i];
+			final lookup = @:privateAccess backend.cpp.CppTargetCore.lookupForScope(entry.scope);
+			final root = @:privateAccess backend.cpp.CppTargetCore.renderedClassName(entry.owner, lookup);
+			walkOwnerChain(entry,
+				cls -> @:privateAccess backend.cpp.CppTargetCore.cacheKnownClassInheritance(root,
+					@:privateAccess backend.cpp.CppTargetCore.renderedClassName(cls, lookup),
+					entry.scope));
+		});
+		final methodIndexFixtures = [for (_ in 0...calls) fixture()];
+		final methodIndexSeconds = elapsedIndexed(calls,
+			i -> walkOwnerChain(methodIndexFixtures[i],
+				cls -> @:privateAccess backend.cpp.CppTargetCore.cacheNearestMethodOwners(cls, methodIndexFixtures[i].scope)));
+		final combinedWalkFixtures = [for (_ in 0...calls) fixture()];
+		final combinedWalkSeconds = elapsedIndexed(calls, i -> {
+			final entry = combinedWalkFixtures[i];
+			final lookup = @:privateAccess backend.cpp.CppTargetCore.lookupForScope(entry.scope);
+			final root = @:privateAccess backend.cpp.CppTargetCore.renderedClassName(entry.owner, lookup);
+			walkOwnerChain(entry, cls -> {
+				@:privateAccess backend.cpp.CppTargetCore.cacheKnownClassInheritance(root, @:privateAccess backend.cpp.CppTargetCore.renderedClassName(cls,
+					lookup),
+					entry.scope);
+				@:privateAccess backend.cpp.CppTargetCore.cacheNearestMethodOwners(cls, entry.scope);
+			});
+		});
 		final postMissFixtures = [for (_ in 0...calls) fixture()];
 		for (entry in postMissFixtures)
 			@:privateAccess backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("firstMissing", entry.scope);
@@ -200,9 +296,11 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 
 		Sys.println("CPP_DIRECT_CALL_SUPPORT_BENCH:PASS calls=" + calls + " current_owner_seconds=" + currentOwnerSeconds + " inherited_owner_seconds="
 			+ inheritedOwnerSeconds + " inferred_arg_types_seconds=" + inferredArgTypesSeconds + " missing_owner_seconds=" + missingOwnerSeconds
-			+ " post_miss_missing_seconds=" + postMissMissingSeconds + " post_miss_inherited_seconds=" + postMissInheritedSeconds
-			+ " support_signature_seconds=" + supportSignatureSeconds + " cold_lookup_seconds=" + coldLookupSeconds + " cold_support_call_seconds="
-			+ coldSupportCallSeconds + " support_arg_render_seconds=" + argRenderSeconds + " omitted_support_seconds=" + omittedSupportSeconds
-			+ " explicit_support_seconds=" + explicitSupportSeconds);
+			+ " cold_missing_seconds=" + coldMissingSeconds + " hierarchy_seconds=" + hierarchySeconds + " inheritance_lookup_seconds="
+			+ inheritanceLookupSeconds + " inheritance_seconds=" + inheritanceSeconds + " method_index_seconds=" + methodIndexSeconds
+			+ " combined_walk_seconds=" + combinedWalkSeconds + " post_miss_missing_seconds=" + postMissMissingSeconds + " post_miss_inherited_seconds="
+			+ postMissInheritedSeconds + " support_signature_seconds=" + supportSignatureSeconds + " cold_lookup_seconds=" + coldLookupSeconds
+			+ " cold_support_call_seconds=" + coldSupportCallSeconds + " support_arg_render_seconds=" + argRenderSeconds + " omitted_support_seconds="
+			+ omittedSupportSeconds + " explicit_support_seconds=" + explicitSupportSeconds);
 	}
 }

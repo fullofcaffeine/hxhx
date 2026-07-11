@@ -12681,7 +12681,7 @@ class CppTargetCore {
 			final next = HxClassDecl.getExtendsPath(currentCls);
 			if (next == null || next.length == 0)
 				break;
-			currentCls = lookupClassForTypeHint(next, scope, lookup);
+			currentCls = lookupClassForInheritancePath(next, scope, lookup);
 		}
 		scope.classInheritanceCache.set(cacheKey, result);
 		return result;
@@ -17586,7 +17586,7 @@ class CppTargetCore {
 				graphComplete = true;
 				break;
 			}
-			currentCls = lookupClassForTypeHint(next, scope, lookup);
+			currentCls = lookupClassForInheritancePath(next, scope, lookup);
 			if (currentCls == null)
 				graphComplete = true;
 		}
@@ -23514,6 +23514,10 @@ class CppTargetCore {
 
 	static function lookupClassForTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
 		return CppTypeModel.lookupClassForTypeHint(typeHint, scope, classLookup);
+	}
+
+	static function lookupClassForInheritancePath(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
+		return CppTypeModel.lookupClassForInheritancePath(typeHint, scope, classLookup);
 	}
 
 	static function isArrayLikeTypeHint(typeHint:String):Bool {

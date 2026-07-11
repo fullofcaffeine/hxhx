@@ -3532,6 +3532,90 @@ sink/class-render wrapper, and broader extraction already belongs to
 were deliberately skipped because the timer nesting and output ownership
 supplied a bounded, local, provenance-neutral diagnostic seam.
 
+## 2026-07-11 Inheritance-Path Owner Lookup
+
+Follow-up bead `haxe_ocaml-qr0tk` attributed index 1's first cold free-call
+owner miss to general class-hint resolution on every immutable inheritance
+edge. Parsed `extends` paths cannot be nullable, iterable, array, or function
+carriers, so those general value-shape probes were unrelated work rather than
+part of the inheritance contract.
+
+`CppTypeModel.lookupClassForInheritancePath` now preserves the general
+resolver's owner, qualified, module-local, and short-name order while skipping
+the impossible carrier checks. Both immutable inheritance consumers use the
+specialized resolver: class ancestry and nearest current/inherited method
+ownership. The type-model seam owns the lookup behavior; `CppTargetCore`
+retains only a forwarding wrapper and the two call-site substitutions.
+
+The expanded direct-call probe compares general and specialized resolution on
+every fixture edge and freezes current, inherited, missing, override,
+static/instance, sanitized, local-shadow, support-helper, ordinary free-call,
+`PosInfos`, and imported `Int64` behavior. Separate synthetic module-local,
+qualified, and generic inheritance controls preserve class-path precedence.
+
+Two 1,000-call focused samples measured fresh missing-owner walks at
+1.833159s/1.816052s before and 1.304724s/1.306694s after, about 28.44% lower.
+The combined cold lookup fell from 1.820438s/1.811113s to
+1.298960s/1.304251s, about 28.32%, and the complete cold support call fell
+from 1.799928s/1.851921s to 1.293273s/1.253597s, about 30.26%. In the retained
+probe, specialized inheritance lookup measured 1.248699s/1.224861s versus
+1.786817s/1.773863s for the same general hierarchy walk, about 30.53% lower.
+The unchanged general hierarchy control distinguishes removed resolver work
+from timer relocation or eager index construction.
+
+The exact-command current-source trace fully rendered the same 88
+`TestEReg.test` statements and ended at the expected 480-second red timeout
+with `Cpp: FAIL (480s, exit 124)` and validated
+`expected_red_probe_exit=1`. Against the buffered-timing baseline, index 1's
+owner lookup fell from 0.000172138s to 0.000132084s, about 23.27%. All statement
+timings summed from 0.034200s to 0.032816s, about 4.05% lower;
+`TestEReg.test` fell from 0.062800s to 0.060472s, about 3.71%; and its class
+fell from 0.064493s to 0.062084s, about 3.74%.
+
+No enclosing index 1 statement win is claimed: its complete timing rose from
+0.000575s to 0.000613s because the unrelated outer `render_args` interval
+varied from 0.000153s to 0.000242s. The current hxcpp download also took 90
+seconds versus 104 seconds in the baseline, so equal-budget terminal position
+is not comparable. The trace proves the targeted lookup reduction, not a new
+strict frontier.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-buffered-timing-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-inheritance-path-lookup-warm.log`
+
+Follow-up bead `haxe_ocaml-c0aj4` owns residual buffered trace bookkeeping
+attribution. Outer `render_args` timing still includes nested phase-label
+construction and buffer insertion, so future production burn-down must
+separate that opt-in diagnostic cost before ranking another small renderer
+seam. Broader Cpp render/type-flow extraction remains owned by
+`haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- native current-source direct-call timing probes
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal lookup improvement does not change public
+production readiness. Generated Cpp and committed bootstrap snapshots are
+unaffected. `CppTargetCore.hx` remains a red mega-file at 26,019 lines; this
+slice adds only the four-line forwarding wrapper there and changes two
+existing call sites, while the documented resolver lives in the 1,198-line
+`CppTypeModel`. Broader extraction remains owned by `haxe_ocaml-36ec`.
+`thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were deliberately
+skipped because exact parity controls and the focused probe exposed a bounded,
+local, provenance-neutral type-model seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

@@ -216,6 +216,40 @@ class CppTypeModel {
 		return fallback == null ? null : fallback;
 	}
 
+	/**
+		Resolve a parsed class `extends` path without probing non-class hint forms.
+
+		Inheritance paths cannot denote nullable, iterable, array, or function
+		carriers. Keep the same owner, module-local, qualified, and short-name
+		lookup order as general class-hint resolution while avoiding those
+		unrelated shape checks on every edge of an immutable owner-chain walk.
+	**/
+	public static function lookupClassForInheritancePath(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (hint.length == 0)
+			return null;
+		final generic = hint.indexOf("<");
+		final full = sanitizeTypePath(generic >= 0 ? hint.substr(0, generic) : hint);
+		final base = sanitizeTypePath(typeBaseName(hint));
+		final owner = scope == null ? null : scope.owner;
+		if (owner != null) {
+			final ownerFull = sanitizeTypePath(HxClassDecl.getName(owner));
+			final ownerBase = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
+			if (full == ownerFull || full == ownerBase || base == ownerFull || base == ownerBase)
+				return owner;
+		}
+		if (hint.indexOf(".") >= 0) {
+			final qualified = lookupClassByName(full, scope, classLookup);
+			if (qualified != null)
+				return qualified;
+		} else {
+			final local = lookupModuleLocalClass(hint, base, scope, classLookup);
+			if (local != null)
+				return local;
+		}
+		return lookupClassByName(base, scope, classLookup);
+	}
+
 	public static function isArrayLikeTypeHint(typeHint:String):Bool {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		return typeBaseName(hint) == "Array" && StringTools.endsWith(hint, ">");
@@ -417,6 +451,20 @@ class CppTypeModel {
 				add(sanitizeTypePath(ownerName.substr(0, dot + 1) + base));
 		}
 		return out;
+	}
+
+	static function lookupModuleLocalClass(raw:String, base:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
+		if (scope == null || scope.owner == null || raw.indexOf(".") >= 0 || base.length == 0)
+			return null;
+		final ownerName = HxClassDecl.getName(scope.owner);
+		final ownerBase = sanitizeTypePath(typeBaseName(ownerName == null ? "" : ownerName));
+		if (ownerBase.length > 0 && ownerBase != base) {
+			final byModule = lookupClassByName(sanitizeTypePath(ownerBase + "." + base), scope, classLookup);
+			if (byModule != null)
+				return byModule;
+		}
+		final dot = ownerName == null ? -1 : ownerName.lastIndexOf(".");
+		return dot > 0 ? lookupClassByName(sanitizeTypePath(ownerName.substr(0, dot + 1) + base), scope, classLookup) : null;
 	}
 
 	static function nearestClassForBaseName(base:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
