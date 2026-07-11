@@ -48,6 +48,34 @@ typedef FreshERegFieldCallPhaseBenchResult = {
 	var shapeSample:String;
 }
 
+typedef FreshERegMapReplacePhaseBenchResult = {
+	var calls:Int;
+	var mapRenderElapsed:Float;
+	var replaceRenderElapsed:Float;
+	var mapInferElapsed:Float;
+	var replaceInferElapsed:Float;
+	var mapEqualityElapsed:Float;
+	var replaceEqualityElapsed:Float;
+	var constructorElapsed:Float;
+	var stringArgElapsed:Float;
+	var callbackArgElapsed:Float;
+	var genericMapArgsElapsed:Float;
+	var genericReplaceArgsElapsed:Float;
+	var mapRenderSample:String;
+	var replaceRenderSample:String;
+	var mapInferSample:String;
+	var replaceInferSample:String;
+	var mapEqualitySample:String;
+	var replaceEqualitySample:String;
+	var constructorSample:String;
+	var stringArgSample:String;
+	var callbackArgSample:String;
+	var genericMapArgsSample:String;
+	var genericReplaceArgsSample:String;
+	var conversionSample:String;
+	var declineSample:String;
+}
+
 typedef FreshERegLocalDeclPhaseBenchResult = {
 	var calls:Int;
 	var typeElapsed:Float;
@@ -308,6 +336,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_BYTES_STRING_ARG_CALLS = 100;
 	static inline final DEFAULT_FRESH_EREG_RETURN_CALLS = 10;
 	static inline final DEFAULT_FRESH_EREG_FIELD_CALLS = 10;
+	static inline final DEFAULT_FRESH_EREG_MAP_REPLACE_CALLS = 10;
 	static inline final DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS = 10;
 	static inline final DEFAULT_TYPED_EREG_SPLIT_CALLS = 10;
 	static inline final DEFAULT_TYPED_EREG_MATCHED_POS_CALLS = 10;
@@ -846,6 +875,143 @@ class M14CppHelperRenderBenchIntegrationTest {
 			constructorSample: constructorSample,
 			argsSample: argsSample,
 			shapeSample: shapeSample
+		};
+	}
+
+	/** Separate fresh EReg map/replace rendering from inference, equality, and the retained generic argument path. **/
+	static function renderFreshERegMapReplacePhases(callCount:Int):FreshERegMapReplacePhaseBenchResult {
+		final scope = eRegBenchScope();
+		for (name in ["prefix", "typedText", "dynamicText", "number", "replacement", "callback"])
+			scope.localNames.set(name, name);
+		scope.localTypes.set("prefix", "std::string");
+		scope.localTypes.set("typedText", "std::string");
+		scope.localTypes.set("dynamicText", "std::any");
+		scope.localTypes.set("number", "int");
+		scope.localTypes.set("replacement", "std::string");
+		scope.localTypes.set("callback", "std::function<std::string(std::shared_ptr<EReg>)>");
+		scope.localTypeHints.set("prefix", "String");
+		scope.localTypeHints.set("typedText", "String");
+		scope.localTypeHints.set("dynamicText", "Dynamic");
+		scope.localTypeHints.set("number", "Int");
+		scope.localTypeHints.set("replacement", "String");
+		final fresh = ENew("EReg", [EString("z?"), EString("g")]);
+		final qualifiedFresh = ENew("fixture.regex.EReg", [EString("z?"), EString("g")]);
+		final callback = ELambda(["r"], EBinop("+", EIdent("prefix"), ECall(EField(EIdent("r"), "matched"), [EInt(0)])));
+		final mapArgs = [EString("ab"), callback];
+		final replaceArgs = [EString("baacaa"), EString("X")];
+		final map = ECall(EField(fresh, "map"), mapArgs);
+		final replace = ECall(EField(fresh, "replace"), replaceArgs);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isFreshERegFieldCall(fresh, "map",
+			2) && @:privateAccess backend.cpp.CppTargetCore.isFreshERegFieldCall(fresh, "replace",
+				2) && @:privateAccess backend.cpp.CppTargetCore.isFreshERegFieldCall(qualifiedFresh, "map", 2),
+			"Fresh EReg map/replace calls should use only their exact target-owned two-argument contracts");
+		final declineSample = [@:privateAccess
+			backend.cpp.CppTargetCore.isFreshERegFieldCall(EIdent("regex"), "map", 2), @:privateAccess
+			backend.cpp.CppTargetCore.isFreshERegFieldCall(fresh, "map", 1), @:privateAccess
+			backend.cpp.CppTargetCore.isFreshERegFieldCall(fresh, "map", 3), @:privateAccess
+			backend.cpp.CppTargetCore.isFreshERegFieldCall(fresh, "replace", 1), @:privateAccess
+			backend.cpp.CppTargetCore.isFreshERegFieldCall(fresh, "split", 1)
+		].map(Std.string).join(",");
+		assertTrue(declineSample == "false,false,false,false,false",
+			"Non-fresh receivers, wrong arities, and unrelated EReg methods should retain general field-call discovery");
+		final conversionSample = [@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "replace"), [EIdent("typedText"), EIdent("replacement")]), scope), @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "replace"), [EIdent("dynamicText"), EIdent("replacement")]), scope), @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "replace"), [EIdent("number"), EIdent("replacement")]), scope), @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "map"), [EIdent("typedText"), EIdent("callback")]), scope)
+		].join("\n");
+		resetRendererCaches();
+		final mapRenderStart = Sys.time();
+		var mapRenderSample = "";
+		for (_ in 0...callCount)
+			mapRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(map, scope);
+		final mapRenderElapsed = Sys.time() - mapRenderStart;
+		resetRendererCaches();
+		final replaceRenderStart = Sys.time();
+		var replaceRenderSample = "";
+		for (_ in 0...callCount)
+			replaceRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(replace, scope);
+		final replaceRenderElapsed = Sys.time() - replaceRenderStart;
+		resetRendererCaches();
+		final mapInferStart = Sys.time();
+		var mapInferSample = "";
+		for (_ in 0...callCount)
+			mapInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(map, scope);
+		final mapInferElapsed = Sys.time() - mapInferStart;
+		resetRendererCaches();
+		final replaceInferStart = Sys.time();
+		var replaceInferSample = "";
+		for (_ in 0...callCount)
+			replaceInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(replace, scope);
+		final replaceInferElapsed = Sys.time() - replaceInferStart;
+		resetRendererCaches();
+		final mapEqualityStart = Sys.time();
+		var mapEqualitySample = "";
+		for (_ in 0...callCount)
+			mapEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([map, EString("mapped")], scope).join(", ");
+		final mapEqualityElapsed = Sys.time() - mapEqualityStart;
+		resetRendererCaches();
+		final replaceEqualityStart = Sys.time();
+		var replaceEqualitySample = "";
+		for (_ in 0...callCount)
+			replaceEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([replace, EString("replaced")], scope).join(", ");
+		final replaceEqualityElapsed = Sys.time() - replaceEqualityStart;
+		resetRendererCaches();
+		final constructorStart = Sys.time();
+		var constructorSample = "";
+		for (_ in 0...callCount)
+			constructorSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(fresh, scope);
+		final constructorElapsed = Sys.time() - constructorStart;
+		resetRendererCaches();
+		final stringArgStart = Sys.time();
+		var stringArgSample = "";
+		for (_ in 0...callCount)
+			stringArgSample = @:privateAccess backend.cpp.CppTargetCore.eRegStringCallArgExpr(mapArgs[0], scope);
+		final stringArgElapsed = Sys.time() - stringArgStart;
+		resetRendererCaches();
+		final callbackArgStart = Sys.time();
+		var callbackArgSample = "";
+		for (_ in 0...callCount)
+			callbackArgSample = @:privateAccess backend.cpp.CppTargetCore.eRegMapCallbackArgExpr(mapArgs[1], scope);
+		final callbackArgElapsed = Sys.time() - callbackArgStart;
+		resetRendererCaches();
+		final genericMapArgsStart = Sys.time();
+		var genericMapArgsSample = "";
+		for (_ in 0...callCount)
+			genericMapArgsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "map", mapArgs, scope).join(", ");
+		final genericMapArgsElapsed = Sys.time() - genericMapArgsStart;
+		resetRendererCaches();
+		final genericReplaceArgsStart = Sys.time();
+		var genericReplaceArgsSample = "";
+		for (_ in 0...callCount)
+			genericReplaceArgsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "replace", replaceArgs, scope)
+				.join(", ");
+		return {
+			calls: callCount,
+			mapRenderElapsed: mapRenderElapsed,
+			replaceRenderElapsed: replaceRenderElapsed,
+			mapInferElapsed: mapInferElapsed,
+			replaceInferElapsed: replaceInferElapsed,
+			mapEqualityElapsed: mapEqualityElapsed,
+			replaceEqualityElapsed: replaceEqualityElapsed,
+			constructorElapsed: constructorElapsed,
+			stringArgElapsed: stringArgElapsed,
+			callbackArgElapsed: callbackArgElapsed,
+			genericMapArgsElapsed: genericMapArgsElapsed,
+			genericReplaceArgsElapsed: Sys.time() - genericReplaceArgsStart,
+			mapRenderSample: mapRenderSample,
+			replaceRenderSample: replaceRenderSample,
+			mapInferSample: mapInferSample,
+			replaceInferSample: replaceInferSample,
+			mapEqualitySample: mapEqualitySample,
+			replaceEqualitySample: replaceEqualitySample,
+			constructorSample: constructorSample,
+			stringArgSample: stringArgSample,
+			callbackArgSample: callbackArgSample,
+			genericMapArgsSample: genericMapArgsSample,
+			genericReplaceArgsSample: genericReplaceArgsSample,
+			conversionSample: conversionSample,
+			declineSample: declineSample
 		};
 	}
 
@@ -2100,6 +2266,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final bytesStringArgCalls = envInt("HXHX_CPP_BYTES_STRING_ARG_BENCH_CALLS", DEFAULT_BYTES_STRING_ARG_CALLS);
 		final freshERegReturnCalls = envInt("HXHX_CPP_FRESH_EREG_RETURN_BENCH_CALLS", DEFAULT_FRESH_EREG_RETURN_CALLS);
 		final freshERegFieldCalls = envInt("HXHX_CPP_FRESH_EREG_FIELD_CALL_BENCH_CALLS", DEFAULT_FRESH_EREG_FIELD_CALLS);
+		final freshERegMapReplaceCalls = envInt("HXHX_CPP_FRESH_EREG_MAP_REPLACE_BENCH_CALLS", DEFAULT_FRESH_EREG_MAP_REPLACE_CALLS);
 		final freshERegLocalDeclCalls = envInt("HXHX_CPP_FRESH_EREG_LOCAL_DECL_BENCH_CALLS", DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS);
 		final typedERegSplitCalls = envInt("HXHX_CPP_TYPED_EREG_SPLIT_BENCH_CALLS", DEFAULT_TYPED_EREG_SPLIT_CALLS);
 		final typedERegMatchedPosCalls = envInt("HXHX_CPP_TYPED_EREG_MATCHED_POS_BENCH_CALLS", DEFAULT_TYPED_EREG_MATCHED_POS_CALLS);
@@ -2144,6 +2311,34 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final freshERegFieldCallPhases = renderFreshERegFieldCallPhases(freshERegFieldCalls);
 		assertTrue(freshERegFieldCallPhases.shapeSample == 'std::make_shared<EReg>("a+", "g")->match("aa")\nstd::make_shared<EReg>("a+", "g")->replace("aa", "x")\nstd::make_shared<EReg>("a+", "g")->map("aa", [&](std::shared_ptr<EReg> r) -> std::string { return r->matchedLeft(); })',
 			"Fresh EReg field-call phases should preserve exact match, replace, and typed map rendering");
+		final freshERegMapReplacePhases = renderFreshERegMapReplacePhases(freshERegMapReplaceCalls);
+		assertTrue(freshERegMapReplacePhases.mapInferSample == "std::string"
+			&& freshERegMapReplacePhases.replaceInferSample == "std::string",
+			"Fresh EReg map/replace inference should retain its known String results");
+		final expectedFreshMap = 'std::make_shared<EReg>("z?", "g")->map("ab", [&](std::shared_ptr<EReg> r) -> std::string { return (std::string(prefix) + r->matched(0)); })';
+		final expectedFreshReplace = 'std::make_shared<EReg>("z?", "g")->replace("baacaa", "X")';
+		assertTrue(freshERegMapReplacePhases.mapRenderSample == expectedFreshMap
+			&& freshERegMapReplacePhases.replaceRenderSample == expectedFreshReplace
+			&& freshERegMapReplacePhases.mapEqualitySample == expectedFreshMap + ', std::string("mapped")'
+			&& freshERegMapReplacePhases.replaceEqualitySample == expectedFreshReplace + ', std::string("replaced")',
+			"Fresh EReg map/replace and equality phases should preserve exact generated output, got map="
+			+ freshERegMapReplacePhases.mapRenderSample
+			+ " replace="
+			+ freshERegMapReplacePhases.replaceRenderSample
+			+ " map_eq="
+			+ freshERegMapReplacePhases.mapEqualitySample
+			+ " replace_eq="
+			+ freshERegMapReplacePhases.replaceEqualitySample);
+		assertTrue(freshERegMapReplacePhases.stringArgSample == '"ab"'
+			&& freshERegMapReplacePhases.genericMapArgsSample == freshERegMapReplacePhases.stringArgSample + ", " + freshERegMapReplacePhases.callbackArgSample
+			&& freshERegMapReplacePhases.genericReplaceArgsSample == '"baacaa", "X"',
+			"Fresh EReg focused phases should preserve exact String, callback, and retained generic-argument output");
+		assertTrue(freshERegMapReplacePhases.conversionSample == 'std::make_shared<EReg>("z?", "g")->replace(typedText, replacement)\n'
+			+ 'std::make_shared<EReg>("z?", "g")->replace(__hxhx_stringify(dynamicText), replacement)\n'
+			+ 'std::make_shared<EReg>("z?", "g")->replace(std::to_string(number), replacement)\n'
+			+ 'std::make_shared<EReg>("z?", "g")->map(typedText, callback)',
+			"Fresh EReg map/replace should preserve typed, erased, and scalar String conversion plus named callbacks, got "
+			+ freshERegMapReplacePhases.conversionSample);
 		final freshERegLocalDeclPhases = renderFreshERegLocalDeclPhases(freshERegLocalDeclCalls);
 		assertTrue(freshERegLocalDeclPhases.typeSample == "std::shared_ptr<EReg>"
 			&& freshERegLocalDeclPhases.hintSample == freshERegLocalDeclPhases.typeSample,
@@ -2380,6 +2575,30 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ freshERegFieldCallPhases.constructorElapsed
 			+ " fresh_ereg_field_args_seconds="
 			+ freshERegFieldCallPhases.argsElapsed
+			+ " fresh_ereg_map_replace_calls="
+			+ freshERegMapReplacePhases.calls
+			+ " fresh_ereg_map_render_seconds="
+			+ freshERegMapReplacePhases.mapRenderElapsed
+			+ " fresh_ereg_replace_render_seconds="
+			+ freshERegMapReplacePhases.replaceRenderElapsed
+			+ " fresh_ereg_map_infer_seconds="
+			+ freshERegMapReplacePhases.mapInferElapsed
+			+ " fresh_ereg_replace_infer_seconds="
+			+ freshERegMapReplacePhases.replaceInferElapsed
+			+ " fresh_ereg_map_equality_seconds="
+			+ freshERegMapReplacePhases.mapEqualityElapsed
+			+ " fresh_ereg_replace_equality_seconds="
+			+ freshERegMapReplacePhases.replaceEqualityElapsed
+			+ " fresh_ereg_map_replace_constructor_seconds="
+			+ freshERegMapReplacePhases.constructorElapsed
+			+ " fresh_ereg_map_replace_string_arg_seconds="
+			+ freshERegMapReplacePhases.stringArgElapsed
+			+ " fresh_ereg_map_callback_arg_seconds="
+			+ freshERegMapReplacePhases.callbackArgElapsed
+			+ " fresh_ereg_generic_map_args_seconds="
+			+ freshERegMapReplacePhases.genericMapArgsElapsed
+			+ " fresh_ereg_generic_replace_args_seconds="
+			+ freshERegMapReplacePhases.genericReplaceArgsElapsed
 			+ " fresh_ereg_local_decl_calls="
 			+ freshERegLocalDeclPhases.calls
 			+ " fresh_ereg_local_type_seconds="

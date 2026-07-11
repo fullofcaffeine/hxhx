@@ -13992,16 +13992,21 @@ class CppTargetCore {
 		Render the target-owned immediate EReg calls without general receiver discovery.
 
 		A syntactic `new EReg(...)` cannot be a static receiver, and its C++ carrier
-		is already fixed. Keep argument conversion on the ordinary known-instance
-		path so callbacks and primitive arguments retain their existing contracts.
+		is already fixed. For the fixed-result `map` and `replace` contracts, the
+		dispatch predicate also proves the exact method arity, so reuse the target-owned
+		String and callback adapters without rediscovering the EReg declaration for
+		each argument. Other guarded calls retain the ordinary known-instance path.
 	**/
 	static function freshERegFieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
-		return renderExpr(receiver, scope)
-			+ "->"
-			+ sanitizeIdentifier(method)
-			+ "("
-			+ renderFieldCallArgs("std::shared_ptr<EReg>", method, args, scope).join(", ")
-			+ ")";
+		final renderedArgs = switch (method) {
+			case "replace" if (args.length == 2):
+				[eRegStringCallArgExpr(args[0], scope), eRegStringCallArgExpr(args[1], scope)];
+			case "map" if (args.length == 2):
+				[eRegStringCallArgExpr(args[0], scope), eRegMapCallbackArgExpr(args[1], scope)];
+			case _:
+				renderFieldCallArgs("std::shared_ptr<EReg>", method, args, scope);
+		};
+		return renderExpr(receiver, scope) + "->" + sanitizeIdentifier(method) + "(" + renderedArgs.join(", ") + ")";
 	}
 
 	/**

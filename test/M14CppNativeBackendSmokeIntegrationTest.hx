@@ -284,6 +284,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(subRe.matchedPos().pos) + \":\" + Std.string(subRe.matchedPos().len));",
 			"    Sys.println(Std.string(subRe.matchSub(\"xx12yy\", 2)));",
 			"    Sys.println(Std.string(subRe.matchedPos().pos) + \":\" + Std.string(subRe.matchedPos().len));",
+			"    var mapPrefix = \"#\";",
+			"    Sys.println(new EReg(\"[0-9]+\", \"g\").map(\"a12b3\", function(match) return mapPrefix + match.matched(0)));",
+			"    Sys.println(new EReg(\"z?\", \"g\").map(\"ab\", function(match) return \"<\" + match.matched(0) + \">\"));",
+			"    Sys.println(new EReg(\"a+\", \"g\").replace(\"baacaa\", \"X\"));",
+			"    Sys.println(new EReg(\"a+\", \"\").replace(\"baacaa\", \"X\"));",
 			"    var words = [\"alpha\", \"beta\"];",
 			"    Sys.println(Std.string(words.length));",
 			"    Sys.println(words[1]);",
@@ -11691,6 +11696,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ EReg.matchSub should keep match state from std::regex_search");
 		assertContains(source, "subRe->matchSub(\"xx12yy\", 2, 2)", "C++ typed-local EReg.matchSub should preserve an explicit bounded length");
 		assertContains(source, "subRe->matchSub(\"xx12yy\", 2)", "C++ typed-local EReg.matchSub should preserve omitted optional length");
+		assertContains(source, "std::make_shared<EReg>(\"[0-9]+\", \"g\")->map(\"a12b3\",",
+			"C++ fresh EReg.map should preserve literal construction, input, and callback dispatch");
+		assertContains(source, "std::string(mapPrefix) + match->matched(0)", "C++ fresh EReg.map callbacks should preserve captured String and matched text");
+		assertContains(source, "std::make_shared<EReg>(\"z?\", \"g\")->map(\"ab\",", "C++ fresh EReg.map should retain the zero-length global-match fixture");
+		assertContains(source, "std::make_shared<EReg>(\"a+\", \"g\")->replace(\"baacaa\", \"X\")",
+			"C++ fresh EReg.replace should preserve global replacement arguments");
+		assertContains(source, "std::make_shared<EReg>(\"a+\", \"\")->replace(\"baacaa\", \"X\")",
+			"C++ fresh EReg.replace should preserve non-global replacement arguments");
 		assertTrue(source.indexOf("Regular expressions are not implemented for this platform") < 0,
 			"C++ EReg support should not throw an unsupported constructor diagnostic");
 		assertContains(source, "auto suffix = std::string(\"smoke\");", "C++ smoke should emit string local vars as std::string");
@@ -13584,7 +13597,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\ntrue\na12\n12\nb\nz\n1:3\ntrue\n2:2\ntrue\n2:2\n2\nbeta\n0\ntrue\n3\n4\nfalse\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore(reason)\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\ntrue\na12\n12\nb\nz\n1:3\ntrue\n2:2\ntrue\n2:2\na#12b#3\n<>a<>b<>\nbXcX\nbXcaa\n2\nbeta\n0\ntrue\n3\n4\nfalse\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore(reason)\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

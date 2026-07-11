@@ -2314,6 +2314,119 @@ Oracle were deliberately skipped because focused and strict attribution led to
 an exact existing target-owned render seam without changing scope, release,
 provenance, runtime architecture, or semantic policy.
 
+## 2026-07-10 Fresh EReg Map/Replace Argument Guard
+
+Follow-up bead `haxe_ocaml-xhtte` attributed the next `TestEReg.test` floor to
+six equality statements over an immediate `new EReg(...).map(...)` result and
+one over an immediate `replace(...)` result. The focused fixture now separates
+full map/replace rendering, String-result inference, equality adaptation,
+constructor rendering, the input String adapter, the map callback adapter, and
+the retained general field-argument path.
+
+Two pre-change 100-call samples measured fresh map rendering at 0.068692s and
+0.066979s, and fresh replace rendering at 0.032734s and 0.032578s. Rendering
+the complete calls as equality arguments took 0.077343s/0.075209s and
+0.042362s/0.041472s. Constructor rendering took about 0.00052-0.00054s,
+literal String adaptation about 0.00007s, and the required map callback
+renderer 0.01443-0.01484s. The general field-argument path accounted for
+0.05310-0.05377s for map and 0.02959-0.02996s for replace, establishing
+declaration/parameter rediscovery as the removable cost.
+
+`freshERegFieldCallExpr` already runs only after a syntactic fresh-EReg,
+method, and exact-arity predicate. Under that existing guard, two-argument
+`map` now reuses `eRegStringCallArgExpr` and `eRegMapCallbackArgExpr`, while
+two-argument `replace` reuses the String adapter for both arguments. The
+separate fresh `match` contract deliberately retains the prior general
+field-argument path. An exploratory strict pass initially included `match`;
+the second-pass review removed it so this slice and its evidence stay aligned
+with the bead-owned map/replace floor.
+
+Exact controls preserve fresh and package-qualified EReg map/replace output,
+capturing inline callbacks, and named callbacks. Typed, erased, and scalar
+String inputs remain direct, `__hxhx_stringify(...)`, and
+`std::to_string(...)`. Non-fresh receivers, wrong arities, and unrelated EReg
+methods decline the bounded predicate. The retained generic map/replace
+argument controls remain separately timed, and the pre-existing fresh `match`
+fixture proves its general argument path remains in place.
+
+The native smoke builds and runs a captured map callback, global and
+non-global replacements, and a global map whose regex can match an empty
+substring. Generated-source assertions cover both fresh method shapes. The
+runtime output preserves captured text, replacement multiplicity, and
+zero-length progress without changing `CppRuntimeSupport`.
+
+Two final narrowed 100-call samples reduced fresh map rendering to 0.027085s
+and 0.026172s, about 60.57-60.93%, and replace rendering to 0.002021s and
+0.002033s, about 93.76-93.83%. Equality adaptation fell to
+0.036598s/0.038316s and 0.011281s/0.011711s, about 49.05-52.68% and
+71.76-73.37%. The required callback phase was about 0.0238s in the final
+samples, so no callback-speed claim is made. General field-argument controls
+remained expensive at about 0.058s for map and 0.031s for replace; their
+continued cost confirms that the bounded call path bypasses rather than
+globally changes parameter adaptation.
+
+The rebuilt current-source strict trace retained 260 resolved modules, 280
+typed modules, and the same 384-helper inventory: 253 full bodies, 83
+declaration-only helpers, and 48 runtime-owned helpers. Across statement
+indices 37, 43-47, and 68, first-operand rendering fell from 0.026717s to
+0.001096s, about 95.90%. The six map render phases fell about 95.37%, and the
+replace render phase fell about 98.70%. Their complete statements fell from
+0.029534s to 0.003829s, about 87.04%; map statements fell about 86.29% and the
+replace statement about 91.03%. First-operand inference stayed negligible at
+0.000123s versus 0.000117s.
+
+`TestEReg.test` fell from 0.192406s to 0.165431s, about 14.02%, and its class
+fell from 0.194003s to 0.167142s, about 13.85%. The seven targeted statement
+delta accounts for about 95.29% of the method delta. Independent controls were
+slower in the final run: `TestBytes.test` by about 4.13% and
+`TestXML.testBasic` by about 4.50%. Those controls rule out a broad faster-run
+claim and strengthen the same-index phase attribution.
+
+The setup-only upstream Haxe 4.3.7 Cpp compatibility run passed in 205 seconds
+and is not counted as native evidence. The retained 480-second native trace
+remained expected-red and timed out at 482 seconds. The frontier helper
+classifies the baseline/final pair as `shared-hotspots-moving-frontier`.
+The baseline reached `TestType.testContravariantArgs`; the final run reached
+`TestType.testFields`. No broad frontier claim is made because the fixed
+timeout and shared hot timings moved independently of the targeted method.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-matchsub-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-map-replace-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-map-replace-warm.log`
+
+The diagnostic-only broad-match pass is retained as
+`.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-map-replace-broad-match-exploratory.log`;
+its extra `match` shortcut was removed before the final evidence run. The
+disposable upstream worktree was removed and verified absent. Follow-up bead
+`haxe_ocaml-i8ymm` owns the next repeated floor: 18 typed-local
+`matched`/`matchedLeft`/`matchedRight` String equality statements totaling
+0.048305s, including 0.029400s in first-operand rendering and 0.013010s in
+first-operand inference. Broader Cpp render/type-flow extraction remains owned
+by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness. Committed bootstrap snapshots are unaffected.
+`CppTargetCore.hx` remains a red mega-file at 25,801 lines; this bounded
+existing-seam repair adds no runtime/stdlib semantic family, and broader
+extraction remains `haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT
+5.5 Pro and Oracle were deliberately skipped because the behavior and seam
+were exact, local, provenance-neutral, and scope-neutral.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
