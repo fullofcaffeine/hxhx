@@ -1831,6 +1831,95 @@ README Goals and North Star progress bars remain unchanged. Strict Cpp remains
 expected-red, and this internal render-latency improvement does not change
 public production readiness.
 
+## 2026-07-10 Typed-Local EReg Split Chain and Argument Contract Guards
+
+Follow-up bead `haxe_ocaml-jfn2q` attributed the two remaining
+`TestEReg.test` equality statements to typed-local `EReg.split` chains. Two
+cold 100-call focused samples measured direct split rendering at 0.027532s and
+0.027849s, of which argument rendering cost 0.022943s and 0.023235s. The
+enclosing split-length shape cost 0.086773s and 0.089164s, while split/join
+cost 0.047760s and 0.047980s. Focused subphases showed that length paid
+unrelated general field-read preflights and join paid general field-call
+return/argument discovery even though the typed local already established the
+target-owned `EReg.split(String):Array<String>` contract.
+
+`renderExpr` now recognizes only the immediate typed-local split `length` and
+`join` shapes. Both reuse `typedLocalERegSplitCallExpr`, so receiver rendering
+and EReg argument adaptation remain centralized. `isCppVectorLengthExpr`
+recognizes the same length shape before general vector return discovery. The
+split argument renderer now handles the exact one-argument EReg contract
+before general instance-method metadata scans. The shared
+`knownStringCallArgExpr` helper preserves the existing call-argument decisions
+for typed String, erased `Dynamic`, and scalar values instead of creating a
+second String conversion model.
+
+Exact focused assertions retain:
+
+- `block->split("a")` for the direct split;
+- `(block->split("a").size())` for length;
+- `__hxhx_join(block->split("a"), std::string("|"))` for join;
+- the same length cast, String concatenation, and both equality wrappers;
+- `block->split(text)`, `block->split(__hxhx_stringify(dynamicText))`, and
+  `block->split(std::to_string(number))` for typed, erased, and scalar String
+  adaptation; and
+- general dot-based rendering for unknown split receivers.
+
+Two final 100-call samples reduced direct split rendering to 0.001792s and
+0.001998s, argument rendering to 0.000160s and 0.000162s, split-length to
+0.001468s and 0.001551s, and split/join to 0.003089s and 0.003010s. The direct
+typed vector-length predicate measured 0.000455s and 0.000495s for 100 calls.
+Unrelated field/call preflight controls continue to decline, and the existing
+general `fieldCallExpr` sample remains equal to the fast-path join result.
+
+The rebuilt current-source strict trace retained 280 typed modules and the
+same 384-helper inventory: 253 full bodies, 83 declaration-only helpers, and
+48 runtime-owned helpers. Against the pre-slice warm baseline, index 41 fell
+from 0.059115s to 0.000618s, about 98.95%; its first-argument render fell from
+0.058564s to 0.000088s, about 99.85%. Index 42 fell from 0.051464s to
+0.025303s, about 50.83%; its first-argument render fell from 0.047569s to
+0.021456s, about 54.89%. `TestEReg.test` fell from 0.422670s to 0.335295s,
+about 20.67%, and its class fell from 0.424382s to 0.336943s.
+
+Independent controls remained comparable: `TestBytes.test` moved from
+1.154239s to 1.155742s, about 0.13% slower, and `TestXML.testBasic` moved from
+6.731626s to 6.844845s, about 1.68% slower. The 480-second native trace remains
+expected-red. Equal-budget terminal locations varied substantially between
+the baseline and final runs, so no broad frontier advance is claimed. The
+frontier helper classifies the pair as `shared-hotspots-moving-frontier` and
+continues to recommend repeated shared timings over the last timeout boundary.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-builtin-structural-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-split-chain-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-split-chain-vector-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-split-arg-contract-warm.log`
+
+The setup-only upstream 4.3.7 compatibility run passed Cpp in 158 seconds; it
+is not counted as native strict evidence. The disposable upstream worktree was
+removed and verified absent after the trace. Follow-up bead
+`haxe_ocaml-vzxtn` owns attribution of the remaining index-42 join/concatenation
+render floor, now 0.025303s. Broader Cpp render/type-flow extraction remains
+owned by `haxe_ocaml-36ec`. Committed bootstrap snapshots are not regenerated
+because this slice changes neither the bootstrap interface nor snapshot
+acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

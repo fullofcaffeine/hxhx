@@ -12776,6 +12776,11 @@ class CppTargetCore {
 				exprHasOptionalType(expr, scope) ? local + ".value()" : local;
 			case EField(EThis, "length") if (scopeOwnerIsArrayBackedAbstract(scope)):
 				"this->__values.size()";
+			case EField(ECall(EField(receiver, splitMethod), splitArgs), "length")
+				if (isTypedLocalERegSplitCall(receiver, splitMethod, splitArgs.length, scope)):
+				"("
+				+ typedLocalERegSplitCallExpr(receiver, splitArgs, scope)
+				+ ".size())";
 			case EField(receiver, field) if (primitiveBackedAbstractPropertyExpr(receiver, field, scope) != null):
 				primitiveBackedAbstractPropertyExpr(receiver, field, scope);
 			case EField(_, _) if (instanceMethodValueExpr(expr, scope) != null):
@@ -12798,6 +12803,13 @@ class CppTargetCore {
 				"static_cast<int>((static_cast<unsigned long long>(" + renderExpr(receiver, scope) + ") >> 32) & 0xFFFFFFFFULL)";
 			case ENew(typePath, args):
 				newExpr(typePath, args, scope);
+			case ECall(EField(ECall(EField(receiver, splitMethod), splitArgs), "join"), joinArgs)
+				if (joinArgs.length == 1 && isTypedLocalERegSplitCall(receiver, splitMethod, splitArgs.length, scope)):
+				"__hxhx_join("
+				+ typedLocalERegSplitCallExpr(receiver, splitArgs, scope)
+				+ ", "
+				+ stringExpr(joinArgs[0], scope)
+				+ ")";
 			case ECall(EField(receiver, method), args) if (isFreshERegFieldCall(receiver, method, args.length)):
 				freshERegFieldCallExpr(receiver, method, args, scope);
 			case ECall(EField(receiver, method), args) if (isTypedLocalERegSplitCall(receiver, method, args.length, scope)):
@@ -13976,7 +13988,12 @@ class CppTargetCore {
 			+ ")";
 	}
 
-	/** Render the confirmed typed-local EReg split shape through its target-owned carrier. **/
+	/**
+		Render the confirmed typed-local EReg split shape through its target-owned carrier.
+
+		The immediate call and its vector-only `length`/`join` chains share this
+		implementation so the fast dispatch never forks EReg argument conversion.
+	**/
 	static function typedLocalERegSplitCallExpr(receiver:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		return renderExpr(receiver, scope)
 			+ "->split("
@@ -14469,7 +14486,19 @@ class CppTargetCore {
 		};
 	}
 
+	/** Render arguments against target-known instance contracts before falling back to general method discovery. **/
 	static function renderFieldCallArgs(receiverCppType:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
+		if (receiverCppType == "std::shared_ptr<EReg>" && method == "split" && args.length == 1) {
+			final arg = args[0];
+			final literal = directPrimitiveLiteralCallArgExprForExpectedType(arg, "std::string", scope);
+			if (literal != null)
+				return [literal];
+			final classReferencePath = classReferencePathText(arg, scope);
+			if (classReferencePath != null)
+				return ["std::string(" + quoteString(classReferencePath) + ")"];
+			final knownString = knownStringCallArgExpr(arg, exprCppType(arg, scope), scope);
+			return [knownString == null ? renderExpr(arg, scope) : knownString];
+		}
 		final listElementType = listElementCppType(receiverCppType);
 		if ((sanitizeIdentifier(method) == "add" || sanitizeIdentifier(method) == "remove")
 			&& args.length == 1
@@ -15029,6 +15058,8 @@ class CppTargetCore {
 
 	static function isCppVectorLengthExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
 		return switch (expr) {
+			case EField(ECall(EField(receiver, method), args), "length") if (isTypedLocalERegSplitCall(receiver, method, args.length, scope)):
+				true;
 			case EField(receiver, "length"):
 				isCppVectorType(exprCppType(receiver, scope));
 			case ECall(EField(receiver, "size"), []) | ECall(EField(receiver, "length"), []):
@@ -16162,22 +16193,12 @@ class CppTargetCore {
 			final classReferencePath = classReferencePathText(arg, scope);
 			if (classReferencePath != null)
 				return "std::string(" + quoteString(classReferencePath) + ")";
-			if (actualType == "std::string") {
-				final stringStart = timingEnabled ? Sys.time() : 0.0;
-				final rendered = renderExpr(arg, scope);
+			final stringStart = timingEnabled ? Sys.time() : 0.0;
+			final rendered = knownStringCallArgExpr(arg, actualType, scope);
+			if (rendered != null) {
 				if (timingEnabled)
-					traceCallArgRenderPhase(scope, arg, param, "string_render", Sys.time() - stringStart, declaredParamType, paramType, valueType, actualType);
-				return rendered;
-			}
-			if (actualType == "std::any"
-				|| isScalarStringCoercibleCppType(actualType)
-				|| isCppAnonStructType(actualType)
-				|| argHasErasedArgTypeOverride(arg, scope)) {
-				final stringStart = timingEnabled ? Sys.time() : 0.0;
-				final rendered = stringExpr(arg, scope);
-				if (timingEnabled)
-					traceCallArgRenderPhase(scope, arg, param, "string_coerce_render", Sys.time() - stringStart, declaredParamType, paramType, valueType,
-						actualType);
+					traceCallArgRenderPhase(scope, arg, param, actualType == "std::string" ? "string_render" : "string_coerce_render",
+						Sys.time() - stringStart, declaredParamType, paramType, valueType, actualType);
 				return rendered;
 			}
 		}
@@ -16233,6 +16254,18 @@ class CppTargetCore {
 		if (timingEnabled)
 			traceCallArgRenderPhase(scope, arg, param, "final_render", Sys.time() - finalRenderStart, declaredParamType, paramType, valueType, actualType);
 		return rendered;
+	}
+
+	/** Preserve established String call-argument rendering once the argument's C++ type is already known. **/
+	static function knownStringCallArgExpr(arg:HxExpr, actualType:String, ?scope:CppRenderScope):Null<String> {
+		if (actualType == "std::string")
+			return renderExpr(arg, scope);
+		if (actualType == "std::any"
+			|| isScalarStringCoercibleCppType(actualType)
+			|| isCppAnonStructType(actualType)
+			|| argHasErasedArgTypeOverride(arg, scope))
+			return stringExpr(arg, scope);
+		return null;
 	}
 
 	/**

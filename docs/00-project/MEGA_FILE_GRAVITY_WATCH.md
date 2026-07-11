@@ -13,13 +13,13 @@ MEGA_FILE_GRAVITY_WATCH:PASS
 
 ## Current Hotspots
 
-Measured on July 9, 2026. The guard allows small drift but asks for this table
+Measured on July 10, 2026. The guard allows small drift but asks for this table
 to be refreshed when a watched file moves by more than 250 lines.
 
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,373 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,628 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,031 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -92,6 +92,12 @@ extraction remains covered by `haxe_ocaml-36ec`.
 and dependency wiring needed to route the stdlib bases there; concrete stream
 subclasses remain parsed. Broader Cpp render/type-flow extraction remains
 covered by `haxe_ocaml-36ec`.
+
+2026-07-10 checkpoint: `haxe_ocaml-jfn2q` added bounded typed-local EReg split
+dispatch and reused the existing String call-argument contract inside the Cpp
+renderer. This adds no runtime/stdlib semantic family and keeps the change in
+existing expression/type-flow seams. Broader extraction remains covered by
+`haxe_ocaml-36ec`.
 
 ## Upstream Reference Boundary
 

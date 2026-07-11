@@ -67,12 +67,39 @@ typedef TypedERegSplitPhaseBenchResult = {
 	var renderElapsed:Float;
 	var argsElapsed:Float;
 	var lengthElapsed:Float;
+	var lengthVectorElapsed:Float;
+	var lengthPrimitiveElapsed:Float;
+	var lengthMethodValueElapsed:Float;
+	var lengthReferenceElapsed:Float;
+	var lengthClassPreflightElapsed:Float;
+	var lengthPropertyElapsed:Float;
+	var lengthJsonElapsed:Float;
 	var joinElapsed:Float;
+	var joinBoundElapsed:Float;
+	var joinQualifiedElapsed:Float;
+	var joinReceiverTypeElapsed:Float;
+	var joinTemplateElapsed:Float;
+	var joinFieldCallElapsed:Float;
 	var inferSample:String;
 	var renderSample:String;
 	var argsSample:String;
 	var lengthSample:String;
+	var lengthEqSample:String;
+	var lengthVectorSample:Bool;
+	var lengthPrimitiveSample:Bool;
+	var lengthMethodValueSample:Bool;
+	var lengthReferenceSample:Bool;
+	var lengthClassPreflightSample:Bool;
+	var lengthPropertySample:Bool;
+	var lengthJsonSample:Bool;
 	var joinSample:String;
+	var concatSample:String;
+	var concatEqSample:String;
+	var joinBoundSample:Bool;
+	var joinQualifiedSample:Bool;
+	var joinReceiverTypeSample:String;
+	var joinTemplateSample:Bool;
+	var joinFieldCallSample:String;
 }
 
 typedef MatchedStringCallArgPhaseBenchResult = {
@@ -775,18 +802,50 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static function renderTypedERegSplitPhases(callCount:Int):TypedERegSplitPhaseBenchResult {
 		final scope = eRegBenchScope();
 		scope.localNames.set("block", "block");
+		scope.localNames.set("unknown", "unknown");
 		scope.localTypes.set("block", "std::shared_ptr<EReg>");
 		scope.localTypes.set("text", "std::string");
+		scope.localTypes.set("dynamicText", "std::any");
+		scope.localTypes.set("number", "int");
 		final args = [EString("a")];
 		final split = ECall(EField(EIdent("block"), "split"), args);
 		final length = EField(split, "length");
-		final join = ECall(EField(split, "join"), [EString("|")]);
+		final joinArgs = [EString("|")];
+		final join = ECall(EField(split, "join"), joinArgs);
+		final concat = EBinop("+", EString("parts:"), join);
+		final lengthEq = ECall(EIdent("eq"), [length, EInt(1)]);
+		final concatEq = ECall(EIdent("eq"), [concat, EString("parts:a|b")]);
+		final unknownSplit = ECall(EField(EIdent("unknown"), "split"), args);
+		final unknownLength = EField(unknownSplit, "length");
+		final unknownJoin = ECall(EField(unknownSplit, "join"), joinArgs);
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitCall(EIdent("block"), "split", 1, scope),
 			"Typed-local EReg split should use the bounded known-return path");
-		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitCall(EIdent("text"), "split", 1, scope)
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitCall(EIdent("unknown"), "split", 1, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitCall(EIdent("text"), "split", 1, scope)
 			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitCall(EIdent("block"), "split", 2, scope)
 			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegSplitCall(EIdent("block"), "match", 1, scope),
-			"Non-EReg locals, wrong arity, and non-split methods should retain general return discovery");
+			"Unknown and non-EReg locals, wrong arity, and non-split methods should retain general return discovery");
+		final unknownLengthSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(unknownLength, scope);
+		final unknownJoinSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(unknownJoin, scope);
+		assertTrue(unknownLengthSample == '(unknown.split("a").size())' && unknownJoinSample == 'unknown.split("a").join("|")',
+			"Unknown split receivers should retain general field and call rendering, got length="
+			+ unknownLengthSample
+			+ " join="
+			+ unknownJoinSample);
+		final typedStringSplit = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("block"), "split"), [EIdent("text")]), scope);
+		final dynamicStringSplit = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("block"), "split"), [EIdent("dynamicText")]), scope);
+		final numericStringSplit = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("block"), "split"), [EIdent("number")]), scope);
+		assertTrue(typedStringSplit == "block->split(text)"
+			&& dynamicStringSplit == "block->split(__hxhx_stringify(dynamicText))"
+			&& numericStringSplit == "block->split(std::to_string(number))",
+			"Typed-local EReg split should preserve typed, erased, and scalar String argument adaptation, got typed="
+			+ typedStringSplit
+			+ " dynamic="
+			+ dynamicStringSplit
+			+ " numeric="
+			+ numericStringSplit);
 		resetRendererCaches();
 		final inferStart = Sys.time();
 		var inferSample = "";
@@ -812,22 +871,129 @@ class M14CppHelperRenderBenchIntegrationTest {
 			lengthSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(length, scope);
 		final lengthElapsed = Sys.time() - lengthStart;
 		resetRendererCaches();
+		final lengthVectorStart = Sys.time();
+		var lengthVectorSample = false;
+		for (_ in 0...callCount)
+			lengthVectorSample = @:privateAccess backend.cpp.CppTargetCore.isCppVectorLengthExpr(length, scope);
+		final lengthVectorElapsed = Sys.time() - lengthVectorStart;
+		resetRendererCaches();
+		final lengthPrimitiveStart = Sys.time();
+		var lengthPrimitiveSample = false;
+		for (_ in 0...callCount)
+			lengthPrimitiveSample = @:privateAccess backend.cpp.CppTargetCore.primitiveBackedAbstractPropertyExpr(split, "length", scope) != null;
+		final lengthPrimitiveElapsed = Sys.time() - lengthPrimitiveStart;
+		resetRendererCaches();
+		final lengthMethodValueStart = Sys.time();
+		var lengthMethodValueSample = false;
+		for (_ in 0...callCount)
+			lengthMethodValueSample = @:privateAccess backend.cpp.CppTargetCore.instanceMethodValueExpr(length, scope) != null;
+		final lengthMethodValueElapsed = Sys.time() - lengthMethodValueStart;
+		resetRendererCaches();
+		final lengthReferenceStart = Sys.time();
+		var lengthReferenceSample = false;
+		for (_ in 0...callCount)
+			lengthReferenceSample = @:privateAccess backend.cpp.CppTargetCore.exprHasReferenceType(split, scope);
+		final lengthReferenceElapsed = Sys.time() - lengthReferenceStart;
+		resetRendererCaches();
+		final lengthClassPreflightStart = Sys.time();
+		var lengthClassPreflightSample = false;
+		for (_ in 0...callCount)
+			lengthClassPreflightSample = @:privateAccess backend.cpp.CppTargetCore.staticEnumMethodValueExpr(split, "length", scope) != null
+				|| @:privateAccess backend.cpp.CppTargetCore.staticFieldExpr(split, "length", scope) != null
+				|| @:privateAccess backend.cpp.CppTargetCore.staticEnumTagValueExpr(split, "length", scope) != null
+				|| @:privateAccess backend.cpp.CppTargetCore.classReferenceValueExpr(length, scope) != null;
+		final lengthClassPreflightElapsed = Sys.time() - lengthClassPreflightStart;
+		resetRendererCaches();
+		final lengthPropertyStart = Sys.time();
+		var lengthPropertySample = false;
+		for (_ in 0...callCount)
+			lengthPropertySample = @:privateAccess backend.cpp.CppTargetCore.typedPropertyGetReadExpr(split, "length", scope) != null;
+		final lengthPropertyElapsed = Sys.time() - lengthPropertyStart;
+		resetRendererCaches();
+		final lengthJsonStart = Sys.time();
+		var lengthJsonSample = false;
+		for (_ in 0...callCount)
+			lengthJsonSample = @:privateAccess backend.cpp.CppTargetCore.jsonAnyFieldReadExpr(split, "length", scope) != null;
+		final lengthJsonElapsed = Sys.time() - lengthJsonStart;
+		resetRendererCaches();
 		final joinStart = Sys.time();
 		var joinSample = "";
 		for (_ in 0...callCount)
 			joinSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(join, scope);
+		final joinElapsed = Sys.time() - joinStart;
+		resetRendererCaches();
+		final joinBoundStart = Sys.time();
+		var joinBoundSample = false;
+		for (_ in 0...callCount)
+			joinBoundSample = @:privateAccess backend.cpp.CppTargetCore.boundFunctionCallExpr(EField(split, "join"), joinArgs, scope) != null;
+		final joinBoundElapsed = Sys.time() - joinBoundStart;
+		resetRendererCaches();
+		final joinQualifiedStart = Sys.time();
+		var joinQualifiedSample = false;
+		for (_ in 0...callCount)
+			joinQualifiedSample = @:privateAccess backend.cpp.CppTargetCore.qualifiedValueTypeCarrierCtorExpr(split, "join", joinArgs, scope) != null;
+		final joinQualifiedElapsed = Sys.time() - joinQualifiedStart;
+		resetRendererCaches();
+		final joinReceiverTypeStart = Sys.time();
+		var joinReceiverTypeSample = "";
+		for (_ in 0...callCount)
+			joinReceiverTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(split, scope);
+		final joinReceiverTypeElapsed = Sys.time() - joinReceiverTypeStart;
+		resetRendererCaches();
+		final joinTemplateStart = Sys.time();
+		var joinTemplateSample = false;
+		for (_ in 0...callCount)
+			joinTemplateSample = @:privateAccess
+				backend.cpp.CppTargetCore.templateWrapValueMethodCallExpr("std::vector<std::string>", split, "join", joinArgs, scope) != null;
+		final joinTemplateElapsed = Sys.time() - joinTemplateStart;
+		resetRendererCaches();
+		final joinFieldCallStart = Sys.time();
+		var joinFieldCallSample = "";
+		for (_ in 0...callCount)
+			joinFieldCallSample = @:privateAccess backend.cpp.CppTargetCore.fieldCallExpr(split, "join", joinArgs, scope);
+		final joinFieldCallElapsed = Sys.time() - joinFieldCallStart;
+		final lengthEqSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(lengthEq, scope);
+		final concatSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(concat, scope);
+		final concatEqSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(concatEq, scope);
 		return {
 			calls: callCount,
 			inferElapsed: inferElapsed,
 			renderElapsed: renderElapsed,
 			argsElapsed: argsElapsed,
 			lengthElapsed: lengthElapsed,
-			joinElapsed: Sys.time() - joinStart,
+			lengthVectorElapsed: lengthVectorElapsed,
+			lengthPrimitiveElapsed: lengthPrimitiveElapsed,
+			lengthMethodValueElapsed: lengthMethodValueElapsed,
+			lengthReferenceElapsed: lengthReferenceElapsed,
+			lengthClassPreflightElapsed: lengthClassPreflightElapsed,
+			lengthPropertyElapsed: lengthPropertyElapsed,
+			lengthJsonElapsed: lengthJsonElapsed,
+			joinElapsed: joinElapsed,
+			joinBoundElapsed: joinBoundElapsed,
+			joinQualifiedElapsed: joinQualifiedElapsed,
+			joinReceiverTypeElapsed: joinReceiverTypeElapsed,
+			joinTemplateElapsed: joinTemplateElapsed,
+			joinFieldCallElapsed: joinFieldCallElapsed,
 			inferSample: inferSample,
 			renderSample: renderSample,
 			argsSample: argsSample,
 			lengthSample: lengthSample,
-			joinSample: joinSample
+			lengthEqSample: lengthEqSample,
+			lengthVectorSample: lengthVectorSample,
+			lengthPrimitiveSample: lengthPrimitiveSample,
+			lengthMethodValueSample: lengthMethodValueSample,
+			lengthReferenceSample: lengthReferenceSample,
+			lengthClassPreflightSample: lengthClassPreflightSample,
+			lengthPropertySample: lengthPropertySample,
+			lengthJsonSample: lengthJsonSample,
+			joinSample: joinSample,
+			concatSample: concatSample,
+			concatEqSample: concatEqSample,
+			joinBoundSample: joinBoundSample,
+			joinQualifiedSample: joinQualifiedSample,
+			joinReceiverTypeSample: joinReceiverTypeSample,
+			joinTemplateSample: joinTemplateSample,
+			joinFieldCallSample: joinFieldCallSample
 		};
 	}
 
@@ -1210,6 +1376,29 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ typedERegSplitPhases.lengthSample
 			+ " join="
 			+ typedERegSplitPhases.joinSample);
+		assertTrue(typedERegSplitPhases.lengthEqSample == 'eq(static_cast<int>((block->split("a").size())), 1)'
+			&& typedERegSplitPhases.concatSample == '(std::string("parts:") + __hxhx_join(block->split("a"), std::string("|")))'
+			&& typedERegSplitPhases.concatEqSample == 'eq((std::string("parts:") + __hxhx_join(block->split("a"), std::string("|"))), std::string("parts:a|b"))',
+			"Typed-local EReg split chains should preserve exact concatenation and equality rendering, got lengthEq="
+			+ typedERegSplitPhases.lengthEqSample
+			+ " concat="
+			+ typedERegSplitPhases.concatSample
+			+ " concatEq="
+			+ typedERegSplitPhases.concatEqSample);
+		assertTrue(!typedERegSplitPhases.lengthPrimitiveSample
+			&& typedERegSplitPhases.lengthVectorSample
+			&& !typedERegSplitPhases.lengthMethodValueSample
+			&& !typedERegSplitPhases.lengthReferenceSample
+			&& !typedERegSplitPhases.lengthClassPreflightSample
+			&& !typedERegSplitPhases.lengthPropertySample
+			&& !typedERegSplitPhases.lengthJsonSample,
+			"Typed-local EReg split length should decline unrelated field-read preflights");
+		assertTrue(!typedERegSplitPhases.joinBoundSample
+			&& !typedERegSplitPhases.joinQualifiedSample
+			&& typedERegSplitPhases.joinReceiverTypeSample == "std::vector<std::string>"
+			&& !typedERegSplitPhases.joinTemplateSample
+			&& typedERegSplitPhases.joinFieldCallSample == typedERegSplitPhases.joinSample,
+			"Typed-local EReg split join should retain general vector lowering while unrelated call preflights decline");
 		final matchedStringCallArgPhases = renderMatchedStringCallArgPhases(matchedStringCallArgCalls);
 		assertTrue(matchedStringCallArgPhases.fullSample == "test"
 			&& matchedStringCallArgPhases.actualTypeSample == "std::string"
@@ -1334,8 +1523,32 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ typedERegSplitPhases.argsElapsed
 			+ " typed_ereg_split_length_seconds="
 			+ typedERegSplitPhases.lengthElapsed
+			+ " typed_ereg_split_length_vector_seconds="
+			+ typedERegSplitPhases.lengthVectorElapsed
+			+ " typed_ereg_split_length_primitive_seconds="
+			+ typedERegSplitPhases.lengthPrimitiveElapsed
+			+ " typed_ereg_split_length_method_value_seconds="
+			+ typedERegSplitPhases.lengthMethodValueElapsed
+			+ " typed_ereg_split_length_reference_seconds="
+			+ typedERegSplitPhases.lengthReferenceElapsed
+			+ " typed_ereg_split_length_class_preflight_seconds="
+			+ typedERegSplitPhases.lengthClassPreflightElapsed
+			+ " typed_ereg_split_length_property_seconds="
+			+ typedERegSplitPhases.lengthPropertyElapsed
+			+ " typed_ereg_split_length_json_seconds="
+			+ typedERegSplitPhases.lengthJsonElapsed
 			+ " typed_ereg_split_join_seconds="
 			+ typedERegSplitPhases.joinElapsed
+			+ " typed_ereg_split_join_bound_seconds="
+			+ typedERegSplitPhases.joinBoundElapsed
+			+ " typed_ereg_split_join_qualified_seconds="
+			+ typedERegSplitPhases.joinQualifiedElapsed
+			+ " typed_ereg_split_join_receiver_type_seconds="
+			+ typedERegSplitPhases.joinReceiverTypeElapsed
+			+ " typed_ereg_split_join_template_seconds="
+			+ typedERegSplitPhases.joinTemplateElapsed
+			+ " typed_ereg_split_join_field_call_seconds="
+			+ typedERegSplitPhases.joinFieldCallElapsed
 			+ " matched_string_call_arg_calls="
 			+ matchedStringCallArgPhases.calls
 			+ " matched_string_call_arg_seconds="
