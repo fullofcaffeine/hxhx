@@ -2005,6 +2005,100 @@ Oracle were deliberately skipped because focused and strict attribution led to
 an exact existing target-owned render seam without changing scope, release,
 provenance, runtime architecture, or semantic policy.
 
+## 2026-07-10 Typed-Local EReg Matched-Position Field Guard
+
+Follow-up bead `haxe_ocaml-f2ne1` attributed the next two largest
+`TestEReg.test` statements to equality checks over the `pos` and `len` fields
+of a typed-local `EReg.matchedPos()` result. The focused fixture now separates
+the complete field render, inference, equality adaptation, matched-position
+call render and type lookup, structural-field lookup, access selection, and
+the unrelated primitive-abstract, method-value, reference, class, property,
+and JSON preflights.
+
+Two pre-change 100-call samples measured rendering both fields at 0.507332s
+and 0.517188s. Position inference took 0.052092s and 0.054134s, while equality
+adaptation took 0.312127s and 0.323117s. The inner `matchedPos()` call render
+was only about 0.022s, direct structural-field lookup about 0.0002s, and the
+repeated general field/equality preflights owned the remaining cost.
+
+`renderExpr`, `exprCppType`, and `inferExprCppType` now recognize only the
+target-owned shape `typedLocalEReg.matchedPos().pos|len`: a typed local EReg
+receiver, the exact `matchedPos` name, zero arguments, and one of the two
+structural fields. Equality adaptation reuses that proven `Int` result before
+generic String/abstract probes. The receiver predicate is shared with the
+existing typed-local EReg split path, but no other receiver or method shape is
+accepted. Unknown receivers, wrong arity, unrelated fields, and other methods
+retain general rendering. Exact output remains `(r->matchedPos().pos)` or
+`(r->matchedPos().len)`.
+
+The runtime EReg implementation and its structural result carrier are
+unchanged. The native smoke continues to check stored match position/length,
+the concrete `{pos:Int, len:Int}` carrier, and its no-match/null fallback to a
+structural default rather than `nullptr`. This slice adds no fake runtime class
+and does not broaden optional or match-state semantics.
+
+Two final 100-call samples reduced rendering both fields to 0.001693s and
+0.001565s, about 99.67-99.70%. Position inference fell to 0.000496s and
+0.000427s, about 99.05-99.21%, and equality adaptation fell to 0.001136s and
+0.001073s, about 99.64-99.67%. The separately measured general
+`matchedPos()` call and unrelated preflights remain in the fixture as controls.
+
+The rebuilt current-source strict trace retained 260 resolved modules, 280
+typed modules, and the same 384-helper inventory: 253 full bodies, 83
+declaration-only helpers, and 48 runtime-owned helpers. Against the preceding
+warm trace, index 9 fell from 0.015232s to 0.000369s, about 97.58%; its
+first-argument render fell from 0.013258s to 0.000026s, about 99.80%, and
+inference from 0.001656s to 0.000013s, about 99.22%. Index 10 fell from
+0.014527s to 0.000327s, about 97.75%; its first-argument render fell from
+0.012481s to 0.000024s, about 99.81%, and inference from 0.001700s to
+0.000009s, about 99.47%.
+
+`TestEReg.test` fell from 0.318647s to 0.288173s, about 9.56%, and its class
+fell from 0.320351s to 0.289893s, about 9.51%. Independent controls remained
+comparable: `TestBytes.test` moved from 1.153842s to 1.158127s, about 0.37%
+slower, while `TestXML.testBasic` moved from 6.893126s to 6.889705s, about
+0.05% faster. The first setup-only attempt exhausted its 220-second window
+while cloning `hxcpp`; the bounded retry passed in 159 seconds after the clone
+completed, so the network/setup failure is excluded from native evidence.
+
+The retained 480-second native trace remained expected-red and timed out at
+482 seconds. The frontier helper classifies the baseline/final pair as
+`repeated-frontier`: both stop after `ExprToken` and retain the same broad top
+timings. No broad timeout-frontier advance is claimed.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-join-concat-equality-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-matched-pos-seed-retry.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-matched-pos-field-warm.log`
+
+The disposable upstream worktree was removed and verified absent after the
+trace. Follow-up bead `haxe_ocaml-z5oql` owns the new repeated
+`TestEReg.test` hotspot: 14 typed-local `EReg.map(...)` equality renders total
+0.056616s, with inline-lambda and typed-local callback variants. Broader Cpp
+render/type-flow extraction remains owned by `haxe_ocaml-36ec`. Committed
+bootstrap snapshots are not regenerated because this slice changes neither
+the bootstrap interface nor snapshot acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness. `thinking:xhigh` was not crossed. GPT 5.5 Pro and
+Oracle were deliberately skipped because focused and strict attribution led to
+an exact existing target-owned render seam without changing scope, release,
+provenance, runtime architecture, or semantic policy.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

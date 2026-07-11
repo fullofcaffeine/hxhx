@@ -125,6 +125,39 @@ typedef TypedERegSplitPhaseBenchResult = {
 	var concatInferSample:String;
 }
 
+typedef TypedERegMatchedPosPhaseBenchResult = {
+	var calls:Int;
+	var renderElapsed:Float;
+	var inferElapsed:Float;
+	var eqArgElapsed:Float;
+	var callRenderElapsed:Float;
+	var callInferElapsed:Float;
+	var callExplicitTypeElapsed:Float;
+	var fieldAccessElapsed:Float;
+	var fieldTypeElapsed:Float;
+	var primitiveElapsed:Float;
+	var methodValueElapsed:Float;
+	var referenceElapsed:Float;
+	var classPreflightElapsed:Float;
+	var propertyElapsed:Float;
+	var jsonElapsed:Float;
+	var posSample:String;
+	var lenSample:String;
+	var inferSample:String;
+	var eqArgSample:String;
+	var callRenderSample:String;
+	var callInferSample:String;
+	var callExplicitTypeSample:String;
+	var fieldAccessSample:String;
+	var fieldTypeSample:String;
+	var primitiveSample:Bool;
+	var methodValueSample:Bool;
+	var referenceSample:Bool;
+	var classPreflightSample:Bool;
+	var propertySample:Bool;
+	var jsonSample:Bool;
+}
+
 typedef MatchedStringCallArgPhaseBenchResult = {
 	var calls:Int;
 	var fullElapsed:Float;
@@ -213,6 +246,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_FRESH_EREG_FIELD_CALLS = 10;
 	static inline final DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS = 10;
 	static inline final DEFAULT_TYPED_EREG_SPLIT_CALLS = 10;
+	static inline final DEFAULT_TYPED_EREG_MATCHED_POS_CALLS = 10;
 	static inline final DEFAULT_MATCHED_STRING_CALL_ARG_CALLS = 10;
 	static inline final DEFAULT_RESIDUAL_STRUCTURAL_PROBE_CALLS = 10;
 	static inline final DEFAULT_EREG_LAMBDA_CALLS = 10;
@@ -647,7 +681,8 @@ class M14CppHelperRenderBenchIntegrationTest {
 				"String", [], ""),
 			new HxFunctionDecl("matched", Public, false, [new HxFunctionArg("n", "Int", NoDefault, false, false)], "String", [], ""),
 			new HxFunctionDecl("matchedLeft", Public, false, [], "String", [], ""),
-			new HxFunctionDecl("matchedRight", Public, false, [], "String", [], "")
+			new HxFunctionDecl("matchedRight", Public, false, [], "String", [], ""),
+			new HxFunctionDecl("matchedPos", Public, false, [], "{pos:Int,len:Int}", [], "")
 		], []);
 		final owner = new HxClassDecl("ERegBenchOwner", false, [], []);
 		final structuralValue = new HxClassDecl("ResidualStructuralValue", false, [], [new HxFieldDecl("value", Public, false, "Int", null)], "",
@@ -1158,6 +1193,159 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
+	/** Separate typed-local EReg matched-position field rendering from its structural and general field preflights. **/
+	static function renderTypedERegMatchedPosPhases(callCount:Int):TypedERegMatchedPosPhaseBenchResult {
+		final scope = eRegBenchScope();
+		scope.localNames.set("r", "r");
+		scope.localNames.set("unknown", "unknown");
+		scope.localTypes.set("r", "std::shared_ptr<EReg>");
+		final matchedPos = ECall(EField(EIdent("r"), "matchedPos"), []);
+		final pos = EField(matchedPos, "pos");
+		final len = EField(matchedPos, "len");
+		final unknownMatchedPos = ECall(EField(EIdent("unknown"), "matchedPos"), []);
+		final unknownPos = EField(unknownMatchedPos, "pos");
+		final wrongArityPos = EField(ECall(EField(EIdent("r"), "matchedPos"), [EInt(0)]), "pos");
+		final wrongField = EField(matchedPos, "other");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedPosField(EIdent("r"), "matchedPos", 0, "pos",
+			scope) && @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedPosField(EIdent("r"), "matchedPos", 0, "len", scope),
+			"Typed-local EReg matchedPos pos/len fields should use the bounded target-owned path");
+		assertTrue(! @:privateAccess
+			backend.cpp.CppTargetCore.isTypedLocalERegMatchedPosField(EIdent("unknown"), "matchedPos", 0, "pos", scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedPosField(EIdent("r"), "matchedPos", 1, "pos", scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedPosField(EIdent("r"), "matchedPos", 0, "other", scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedPosField(EIdent("r"), "matched", 0, "pos", scope),
+			"Unknown receivers, wrong arity, unrelated fields, and other EReg methods should retain general field rendering");
+		final unknownPosSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(unknownPos, scope);
+		assertTrue(unknownPosSample == "(unknown.matchedPos().pos)",
+			"Unknown matchedPos receivers should retain general field and call rendering, got " + unknownPosSample);
+		final wrongAritySample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(wrongArityPos, scope);
+		final wrongFieldSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(wrongField, scope);
+		assertTrue(wrongAritySample == "(r->matchedPos(0).pos)" && wrongFieldSample == "(r->matchedPos().other)",
+			"Wrong matchedPos arity and unrelated fields should retain general rendering");
+		resetRendererCaches();
+		final renderStart = Sys.time();
+		var posSample = "";
+		var lenSample = "";
+		for (_ in 0...callCount) {
+			posSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(pos, scope);
+			lenSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(len, scope);
+		}
+		final renderElapsed = Sys.time() - renderStart;
+		resetRendererCaches();
+		final inferStart = Sys.time();
+		var inferSample = "";
+		for (_ in 0...callCount)
+			inferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(pos, scope);
+		final inferElapsed = Sys.time() - inferStart;
+		resetRendererCaches();
+		final eqArgStart = Sys.time();
+		var eqArgSample = "";
+		for (_ in 0...callCount)
+			eqArgSample = @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(pos, "int", "int", scope);
+		final eqArgElapsed = Sys.time() - eqArgStart;
+		resetRendererCaches();
+		final callRenderStart = Sys.time();
+		var callRenderSample = "";
+		for (_ in 0...callCount)
+			callRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedPos, scope);
+		final callRenderElapsed = Sys.time() - callRenderStart;
+		resetRendererCaches();
+		final callInferStart = Sys.time();
+		var callInferSample = "";
+		for (_ in 0...callCount)
+			callInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(matchedPos, scope);
+		final callInferElapsed = Sys.time() - callInferStart;
+		resetRendererCaches();
+		final callExplicitTypeStart = Sys.time();
+		var callExplicitTypeSample = "";
+		for (_ in 0...callCount)
+			callExplicitTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(matchedPos, scope);
+		final callExplicitTypeElapsed = Sys.time() - callExplicitTypeStart;
+		resetRendererCaches();
+		final fieldAccessStart = Sys.time();
+		var fieldAccessSample = "";
+		for (_ in 0...callCount)
+			fieldAccessSample = @:privateAccess backend.cpp.CppTargetCore.fieldAccessOp(matchedPos, scope);
+		final fieldAccessElapsed = Sys.time() - fieldAccessStart;
+		resetRendererCaches();
+		final fieldTypeStart = Sys.time();
+		var fieldTypeSample = "";
+		for (_ in 0...callCount)
+			fieldTypeSample = @:privateAccess backend.cpp.CppTargetCore.anonStructFieldCppType("__hxhx_anon_pos_int__len_int_", "pos", scope);
+		final fieldTypeElapsed = Sys.time() - fieldTypeStart;
+		resetRendererCaches();
+		final primitiveStart = Sys.time();
+		var primitiveSample = false;
+		for (_ in 0...callCount)
+			primitiveSample = @:privateAccess backend.cpp.CppTargetCore.primitiveBackedAbstractPropertyExpr(matchedPos, "pos", scope) != null;
+		final primitiveElapsed = Sys.time() - primitiveStart;
+		resetRendererCaches();
+		final methodValueStart = Sys.time();
+		var methodValueSample = false;
+		for (_ in 0...callCount)
+			methodValueSample = @:privateAccess backend.cpp.CppTargetCore.instanceMethodValueExpr(pos, scope) != null;
+		final methodValueElapsed = Sys.time() - methodValueStart;
+		resetRendererCaches();
+		final referenceStart = Sys.time();
+		var referenceSample = false;
+		for (_ in 0...callCount)
+			referenceSample = @:privateAccess backend.cpp.CppTargetCore.exprHasReferenceType(matchedPos, scope);
+		final referenceElapsed = Sys.time() - referenceStart;
+		resetRendererCaches();
+		final classPreflightStart = Sys.time();
+		var classPreflightSample = false;
+		for (_ in 0...callCount)
+			classPreflightSample = @:privateAccess backend.cpp.CppTargetCore.staticEnumMethodValueExpr(matchedPos, "pos", scope) != null
+				|| @:privateAccess backend.cpp.CppTargetCore.staticFieldExpr(matchedPos, "pos", scope) != null
+				|| @:privateAccess backend.cpp.CppTargetCore.staticEnumTagValueExpr(matchedPos, "pos", scope) != null
+				|| @:privateAccess backend.cpp.CppTargetCore.classReferenceValueExpr(pos, scope) != null;
+		final classPreflightElapsed = Sys.time() - classPreflightStart;
+		resetRendererCaches();
+		final propertyStart = Sys.time();
+		var propertySample = false;
+		for (_ in 0...callCount)
+			propertySample = @:privateAccess backend.cpp.CppTargetCore.typedPropertyGetReadExpr(matchedPos, "pos", scope) != null;
+		final propertyElapsed = Sys.time() - propertyStart;
+		resetRendererCaches();
+		final jsonStart = Sys.time();
+		var jsonSample = false;
+		for (_ in 0...callCount)
+			jsonSample = @:privateAccess backend.cpp.CppTargetCore.jsonAnyFieldReadExpr(matchedPos, "pos", scope) != null;
+		final jsonElapsed = Sys.time() - jsonStart;
+		return {
+			calls: callCount,
+			renderElapsed: renderElapsed,
+			inferElapsed: inferElapsed,
+			eqArgElapsed: eqArgElapsed,
+			callRenderElapsed: callRenderElapsed,
+			callInferElapsed: callInferElapsed,
+			callExplicitTypeElapsed: callExplicitTypeElapsed,
+			fieldAccessElapsed: fieldAccessElapsed,
+			fieldTypeElapsed: fieldTypeElapsed,
+			primitiveElapsed: primitiveElapsed,
+			methodValueElapsed: methodValueElapsed,
+			referenceElapsed: referenceElapsed,
+			classPreflightElapsed: classPreflightElapsed,
+			propertyElapsed: propertyElapsed,
+			jsonElapsed: jsonElapsed,
+			posSample: posSample,
+			lenSample: lenSample,
+			inferSample: inferSample,
+			eqArgSample: eqArgSample,
+			callRenderSample: callRenderSample,
+			callInferSample: callInferSample,
+			callExplicitTypeSample: callExplicitTypeSample,
+			fieldAccessSample: fieldAccessSample,
+			fieldTypeSample: fieldTypeSample,
+			primitiveSample: primitiveSample,
+			methodValueSample: methodValueSample,
+			referenceSample: referenceSample,
+			classPreflightSample: classPreflightSample,
+			propertySample: propertySample,
+			jsonSample: jsonSample
+		};
+	}
+
 	/** Separate a matched typed String identifier argument from its non-matching reference probes. **/
 	static function renderMatchedStringCallArgPhases(callCount:Int):MatchedStringCallArgPhaseBenchResult {
 		final scope = eRegBenchScope();
@@ -1477,6 +1665,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final freshERegFieldCalls = envInt("HXHX_CPP_FRESH_EREG_FIELD_CALL_BENCH_CALLS", DEFAULT_FRESH_EREG_FIELD_CALLS);
 		final freshERegLocalDeclCalls = envInt("HXHX_CPP_FRESH_EREG_LOCAL_DECL_BENCH_CALLS", DEFAULT_FRESH_EREG_LOCAL_DECL_CALLS);
 		final typedERegSplitCalls = envInt("HXHX_CPP_TYPED_EREG_SPLIT_BENCH_CALLS", DEFAULT_TYPED_EREG_SPLIT_CALLS);
+		final typedERegMatchedPosCalls = envInt("HXHX_CPP_TYPED_EREG_MATCHED_POS_BENCH_CALLS", DEFAULT_TYPED_EREG_MATCHED_POS_CALLS);
 		final matchedStringCallArgCalls = envInt("HXHX_CPP_MATCHED_STRING_CALL_ARG_BENCH_CALLS", DEFAULT_MATCHED_STRING_CALL_ARG_CALLS);
 		final residualStructuralProbeCalls = envInt("HXHX_CPP_RESIDUAL_STRUCTURAL_PROBE_BENCH_CALLS", DEFAULT_RESIDUAL_STRUCTURAL_PROBE_CALLS);
 		final eRegLambdaCalls = envInt("HXHX_CPP_EREG_LAMBDA_BENCH_CALLS", DEFAULT_EREG_LAMBDA_CALLS);
@@ -1572,6 +1761,30 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& !typedERegSplitPhases.concatClassMetadataSample
 			&& typedERegSplitPhases.concatInferSample == "std::string",
 			"Typed-local EReg split concatenation should remain a String expression while unrelated Any, abstract, and class preflights decline");
+		final typedERegMatchedPosPhases = renderTypedERegMatchedPosPhases(typedERegMatchedPosCalls);
+		assertTrue(typedERegMatchedPosPhases.posSample == "(r->matchedPos().pos)"
+			&& typedERegMatchedPosPhases.lenSample == "(r->matchedPos().len)"
+			&& typedERegMatchedPosPhases.eqArgSample == typedERegMatchedPosPhases.posSample,
+			"Typed-local EReg matched-position fields and equality adaptation should preserve exact output, got pos="
+			+ typedERegMatchedPosPhases.posSample
+			+ " len="
+			+ typedERegMatchedPosPhases.lenSample
+			+ " eq="
+			+ typedERegMatchedPosPhases.eqArgSample);
+		assertTrue(typedERegMatchedPosPhases.inferSample == "int"
+			&& typedERegMatchedPosPhases.callRenderSample == "r->matchedPos()"
+			&& typedERegMatchedPosPhases.callInferSample == "__hxhx_anon_pos_int__len_int_"
+			&& typedERegMatchedPosPhases.callExplicitTypeSample == typedERegMatchedPosPhases.callInferSample
+			&& typedERegMatchedPosPhases.fieldAccessSample == "."
+			&& typedERegMatchedPosPhases.fieldTypeSample == "int",
+			"Typed-local EReg matchedPos should retain its target-owned structural return and Int fields");
+		assertTrue(!typedERegMatchedPosPhases.primitiveSample
+			&& !typedERegMatchedPosPhases.methodValueSample
+			&& !typedERegMatchedPosPhases.referenceSample
+			&& !typedERegMatchedPosPhases.classPreflightSample
+			&& !typedERegMatchedPosPhases.propertySample
+			&& !typedERegMatchedPosPhases.jsonSample,
+			"Typed-local EReg matched-position field reads should decline unrelated abstract, method, reference, class, property, and JSON preflights");
 		final matchedStringCallArgPhases = renderMatchedStringCallArgPhases(matchedStringCallArgCalls);
 		assertTrue(matchedStringCallArgPhases.fullSample == "test"
 			&& matchedStringCallArgPhases.actualTypeSample == "std::string"
@@ -1746,6 +1959,36 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ typedERegSplitPhases.concatClassMetadataElapsed
 			+ " typed_ereg_concat_infer_seconds="
 			+ typedERegSplitPhases.concatInferElapsed
+			+ " typed_ereg_matched_pos_calls="
+			+ typedERegMatchedPosPhases.calls
+			+ " typed_ereg_matched_pos_render_seconds="
+			+ typedERegMatchedPosPhases.renderElapsed
+			+ " typed_ereg_matched_pos_infer_seconds="
+			+ typedERegMatchedPosPhases.inferElapsed
+			+ " typed_ereg_matched_pos_eq_arg_seconds="
+			+ typedERegMatchedPosPhases.eqArgElapsed
+			+ " typed_ereg_matched_pos_call_render_seconds="
+			+ typedERegMatchedPosPhases.callRenderElapsed
+			+ " typed_ereg_matched_pos_call_infer_seconds="
+			+ typedERegMatchedPosPhases.callInferElapsed
+			+ " typed_ereg_matched_pos_call_explicit_type_seconds="
+			+ typedERegMatchedPosPhases.callExplicitTypeElapsed
+			+ " typed_ereg_matched_pos_field_access_seconds="
+			+ typedERegMatchedPosPhases.fieldAccessElapsed
+			+ " typed_ereg_matched_pos_field_type_seconds="
+			+ typedERegMatchedPosPhases.fieldTypeElapsed
+			+ " typed_ereg_matched_pos_primitive_seconds="
+			+ typedERegMatchedPosPhases.primitiveElapsed
+			+ " typed_ereg_matched_pos_method_value_seconds="
+			+ typedERegMatchedPosPhases.methodValueElapsed
+			+ " typed_ereg_matched_pos_reference_seconds="
+			+ typedERegMatchedPosPhases.referenceElapsed
+			+ " typed_ereg_matched_pos_class_preflight_seconds="
+			+ typedERegMatchedPosPhases.classPreflightElapsed
+			+ " typed_ereg_matched_pos_property_seconds="
+			+ typedERegMatchedPosPhases.propertyElapsed
+			+ " typed_ereg_matched_pos_json_seconds="
+			+ typedERegMatchedPosPhases.jsonElapsed
 			+ " matched_string_call_arg_calls="
 			+ matchedStringCallArgPhases.calls
 			+ " matched_string_call_arg_seconds="

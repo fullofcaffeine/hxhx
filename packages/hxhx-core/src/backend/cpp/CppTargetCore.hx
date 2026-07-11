@@ -12787,6 +12787,12 @@ class CppTargetCore {
 				"("
 				+ typedLocalERegSplitCallExpr(receiver, splitArgs, scope)
 				+ ".size())";
+			case EField(ECall(EField(receiver, method), args), field) if (isTypedLocalERegMatchedPosField(receiver, method, args.length, field, scope)):
+				"("
+				+ renderExpr(receiver, scope)
+				+ "->matchedPos()."
+				+ sanitizeIdentifier(field)
+				+ ")";
 			case EField(receiver, field) if (primitiveBackedAbstractPropertyExpr(receiver, field, scope) != null):
 				primitiveBackedAbstractPropertyExpr(receiver, field, scope);
 			case EField(_, _) if (instanceMethodValueExpr(expr, scope) != null):
@@ -14996,6 +15002,8 @@ class CppTargetCore {
 			if (directSplitJoinConcat != null)
 				return directSplitJoinConcat;
 		}
+		if (argType == "int" && isTypedLocalERegMatchedPosFieldExpr(arg, scope))
+			return renderExpr(arg, scope);
 		final otherOptionalInner = cppOptionalInnerType(otherType);
 		return switch (arg) {
 			case ENull if (otherOptionalInner.length > 0):
@@ -16669,6 +16677,8 @@ class CppTargetCore {
 				exprCppType(args[2], scope);
 			case ECall(EIdent("__hxhx_parenthesized"), args) if (args.length == 1):
 				exprCppType(args[0], scope);
+			case EField(ECall(EField(receiver, method), args), field) if (isTypedLocalERegMatchedPosField(receiver, method, args.length, field, scope)):
+				"int";
 			case EThis:
 				sanitizeTypePath(HxClassDecl.getName(scope.owner));
 			case ENew(typePath, args):
@@ -18160,6 +18170,8 @@ class CppTargetCore {
 		return switch (expr) {
 			case EIdent(_):
 				exprCppType(expr, scope);
+			case EField(ECall(EField(receiver, method), args), field) if (isTypedLocalERegMatchedPosField(receiver, method, args.length, field, scope)):
+				"int";
 			case ECall(EField(receiver, method), args) if (isFreshERegStringCall(receiver, method, args.length)):
 				"std::string";
 			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver)):
@@ -18461,6 +18473,26 @@ class CppTargetCore {
 	static function isTypedLocalERegSplitCall(receiver:HxExpr, method:String, arity:Int, ?scope:CppRenderScope):Bool {
 		if (method != "split" || arity != 1)
 			return false;
+		return isTypedLocalERegReceiver(receiver, scope);
+	}
+
+	/** Recognize the target-owned structural fields of a typed-local EReg matched-position call. **/
+	static function isTypedLocalERegMatchedPosField(receiver:HxExpr, method:String, arity:Int, field:String, ?scope:CppRenderScope):Bool {
+		if (method != "matchedPos" || arity != 0 || (field != "pos" && field != "len"))
+			return false;
+		return isTypedLocalERegReceiver(receiver, scope);
+	}
+
+	static function isTypedLocalERegMatchedPosFieldExpr(expr:HxExpr, ?scope:CppRenderScope):Bool {
+		return switch (expr) {
+			case EField(ECall(EField(receiver, method), args), field):
+				isTypedLocalERegMatchedPosField(receiver, method, args.length, field, scope);
+			case _:
+				false;
+		};
+	}
+
+	static function isTypedLocalERegReceiver(receiver:HxExpr, ?scope:CppRenderScope):Bool {
 		return switch (receiver) {
 			case EIdent(_):
 				exprCppType(receiver, scope) == "std::shared_ptr<EReg>";
