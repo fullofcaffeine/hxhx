@@ -278,6 +278,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(re.matched(1));",
 			"    Sys.println(re.matchedLeft());",
 			"    Sys.println(re.matchedRight());",
+			"    var optionalRe = new EReg(\"(a)?b\", \"\");",
+			"    Sys.println(Std.string(optionalRe.match(\"b\")));",
+			"    Sys.println(\"[\" + optionalRe.matched(1) + \"]\");",
+			"    Sys.println(\"[\" + optionalRe.matchedLeft() + \"]\");",
+			"    Sys.println(\"[\" + optionalRe.matchedRight() + \"]\");",
 			"    Sys.println(Std.string(re.matchedPos().pos) + \":\" + Std.string(re.matchedPos().len));",
 			"    var subRe = new EReg(\"[0-9]+\", \"\");",
 			"    Sys.println(Std.string(subRe.matchSub(\"xx12yy\", 2, 2)));",
@@ -11696,6 +11701,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ EReg.matchSub should keep match state from std::regex_search");
 		assertContains(source, "subRe->matchSub(\"xx12yy\", 2, 2)", "C++ typed-local EReg.matchSub should preserve an explicit bounded length");
 		assertContains(source, "subRe->matchSub(\"xx12yy\", 2)", "C++ typed-local EReg.matchSub should preserve omitted optional length");
+		assertContains(source, "re->matched(0)", "C++ typed-local EReg.matched should preserve its exact capture index");
+		assertContains(source, "re->matchedLeft()", "C++ typed-local EReg.matchedLeft should preserve zero-argument dispatch");
+		assertContains(source, "re->matchedRight()", "C++ typed-local EReg.matchedRight should preserve zero-argument dispatch");
+		assertContains(source, "optionalRe->matched(1)", "C++ typed-local EReg.matched should preserve the existing missing-capture runtime path");
 		assertContains(source, "std::make_shared<EReg>(\"[0-9]+\", \"g\")->map(\"a12b3\",",
 			"C++ fresh EReg.map should preserve literal construction, input, and callback dispatch");
 		assertContains(source, "std::string(mapPrefix) + match->matched(0)", "C++ fresh EReg.map callbacks should preserve captured String and matched text");
@@ -13597,7 +13606,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\ntrue\na12\n12\nb\nz\n1:3\ntrue\n2:2\ntrue\n2:2\na#12b#3\n<>a<>b<>\nbXcX\nbXcaa\n2\nbeta\n0\ntrue\n3\n4\nfalse\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore(reason)\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\ntrue\na12\n12\nb\nz\ntrue\n[]\n[]\n[]\n1:3\ntrue\n2:2\ntrue\n2:2\na#12b#3\n<>a<>b<>\nbXcX\nbXcaa\n2\nbeta\n0\ntrue\n3\n4\nfalse\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore(reason)\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

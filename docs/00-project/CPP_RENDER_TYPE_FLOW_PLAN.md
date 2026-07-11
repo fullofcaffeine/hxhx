@@ -2427,6 +2427,114 @@ extraction remains `haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT
 5.5 Pro and Oracle were deliberately skipped because the behavior and seam
 were exact, local, provenance-neutral, and scope-neutral.
 
+## 2026-07-11 Typed-Local EReg Matched String Guard
+
+Follow-up bead `haxe_ocaml-i8ymm` attributed the next `TestEReg.test` floor to
+18 equality statements whose first operand is a typed-local EReg
+`matched(...)`, `matchedLeft()`, or `matchedRight()` call. The focused fixture
+now separates indexed and zero-argument rendering, String-result inference,
+equality adaptation, the retained general argument path, and the existing
+target-owned Int adapter.
+
+Two pre-change 100-call samples measured `matched(1)` rendering at 0.041368s
+and 0.040508s, and the combined side calls at 0.053517s and 0.053340s.
+Inference took 0.015823s/0.015417s and 0.032283s/0.031952s. Equality
+adaptation took 0.059645s/0.058333s and 0.091437s/0.091625s. General
+`matched` argument discovery alone took 0.018997s and 0.018369s, while the
+existing direct Int adapter took only about 0.000044-0.000048s. Fixed return
+and parameter discovery, rather than index rendering, therefore owned the
+removable cost.
+
+`renderExpr`, `inferExprCppType`, and known field-call return discovery now
+recognize only `matched` with one argument or `matchedLeft`/`matchedRight`
+with zero arguments on an identifier whose C++ type is exactly
+`std::shared_ptr<EReg>`. The indexed form reuses `eRegIntCallArgExpr`; the
+side forms have no argument conversion. No broad String-call or equality
+shortcut was added.
+
+Exact controls preserve `regex->matched(1)`, `regex->matchedLeft()`, and
+`regex->matchedRight()`. Typed, Dynamic, and negative indices remain direct,
+`static_cast<int>(__hxhx_any_double(...))`, and parenthesized negative Int
+output. Unknown receivers, missing/extra `matched` arguments, nonzero side
+method arity, and the separate `match` method retain general field-call
+rendering. The separately timed generic argument path remains unchanged.
+
+The native smoke builds and runs all three typed-local call shapes after a
+successful match, preserving capture text, left/right text, and match state.
+It also exercises a non-participating optional capture through the existing
+Cpp runtime path. A black-box upstream Haxe 4.3.7 probe returns `null` for
+that capture, while the current Cpp `std::string` carrier returns an empty
+string. This optimization does not change that pre-existing behavior;
+parity follow-up `haxe_ocaml-vywzf` owns the nullable-capture contract.
+
+Two final 100-call samples reduced `matched(1)` rendering to 0.001333s and
+0.001398s, about 96.55-96.78%, and the combined side-call render to
+0.002785s and 0.002733s, about 94.80-94.88%. Indexed inference fell to
+0.000721s/0.000743s and side inference to 0.001582s/0.001501s, about
+95.18-95.44% and 95.10-95.30%. Equality adaptation fell to
+0.004665s/0.004781s and 0.008918s/0.008648s, about 91.80-92.18% and
+90.25-90.56%. General argument controls remained 0.018953s/0.018714s, and
+the direct Int adapter remained about 0.000044-0.000049s.
+
+The rebuilt current-source strict trace retained 260 resolved modules, 280
+typed modules, and the same 384-helper inventory: 253 full bodies, 83
+declaration-only helpers, and 48 runtime-owned helpers. Across statement
+indices 4-8, 12-14, 16, 21, 53, 55-56, 58, 60-61, and 66-67, first-operand
+inference fell from 0.013010s to 0.000144s, about 98.89%, and first-operand
+rendering fell from 0.029400s to 0.000447s, about 98.48%. The complete 18
+statements fell from 0.048305s to 0.006227s, about 87.11%.
+
+`TestEReg.test` fell from 0.165431s to 0.116673s, about 29.47%, and its class
+fell from 0.167142s to 0.118305s, about 29.22%. The targeted statement delta
+accounts for about 86.30% of the method delta. Independent controls were
+slower in the final run: `TestBytes.test` by about 1.99% and
+`TestXML.testBasic` by about 0.56%. No broad run-speed claim is made.
+
+The setup-only upstream Haxe 4.3.7 Cpp compatibility run passed in 220 seconds
+and is not counted as native evidence. The retained 480-second native trace
+remained expected-red and timed out at 482 seconds after fully rendering
+`TestEReg`. The post-gate shell status check used Bash-only `PIPESTATUS` under
+zsh and failed after the runner had already emitted its terminal summary; the
+retained log itself contains the complete `Cpp: FAIL (482s, exit 124)` result.
+The frontier helper classifies the baseline/final pair as
+`shared-hotspots-moving-frontier`. The final trace reached
+`MyClass_ChildSuperProp`, but no frontier-advance claim is made because the
+fixed timeout and shared hot timings vary independently of this method.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-map-replace-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-matched-string-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-matched-string-warm.log`
+
+The disposable upstream worktree was removed and verified absent. Follow-up
+bead `haxe_ocaml-qpmn4` owns the next repeated floor: 19 Bool helper calls
+around typed-local or fresh `EReg.match(String)` results totaling 0.048553s,
+including 0.040534s in enclosing argument rendering and 0.013127s in the
+inner String parameter adapter. Broader Cpp render/type-flow extraction
+remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness. Committed bootstrap snapshots are unaffected.
+`CppTargetCore.hx` remains a red mega-file at 25,820 lines; this bounded
+existing-seam repair adds no runtime/stdlib semantic family, and broader
+extraction remains `haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT
+5.5 Pro and Oracle were deliberately skipped because the behavior and seam
+were exact, local, provenance-neutral, and scope-neutral.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
