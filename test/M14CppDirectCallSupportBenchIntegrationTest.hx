@@ -294,6 +294,63 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 		assertTrue(int64Sample == "static_cast<long long>(3)", "imported Int64 controls should retain intrinsic lowering");
 		assertTrue(StringTools.startsWith(shadowSample, "local_unspec("), "local callables should continue shadowing inherited support helpers");
 
+		final nullCheckScope = fixture().scope;
+		for (name in ["regex", "optionalText", "unknown"])
+			nullCheckScope.localNames.set(name, name);
+		nullCheckScope.localTypes.set("regex", "std::shared_ptr<EReg>");
+		nullCheckScope.localTypes.set("optionalText", "std::optional<std::string>");
+		final matched = ECall(EField(EIdent("regex"), "matched"), [EInt(1)]);
+		final matchedNull = EBinop("==", matched, ENull);
+		final matchedNotNull = EBinop("!=", matched, ENull);
+		final nullMatched = EBinop("==", ENull, matched);
+		final nullMatchedNot = EBinop("!=", ENull, matched);
+		final matchedLeftNull = EBinop("==", ECall(EField(EIdent("regex"), "matchedLeft"), []), ENull);
+		final nullMatchedRightNot = EBinop("!=", ENull, ECall(EField(EIdent("regex"), "matchedRight"), []));
+		final optionalNull = EBinop("==", EIdent("optionalText"), ENull);
+		final unrelatedNull = EBinop("==", ECall(EField(EIdent("regex"), "match"), [EString("value")]), ENull);
+		final unknownMatchedNull = EBinop("==", ECall(EField(EIdent("unknown"), "matched"), [EInt(1)]), ENull);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedNull, nullCheckScope) == "false"
+			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedNotNull, nullCheckScope) == "true"
+			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(nullMatched, nullCheckScope) == "false"
+			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(nullMatchedNot, nullCheckScope) == "true"
+			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedLeftNull, nullCheckScope) == "false"
+			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(nullMatchedRightNot, nullCheckScope) == "true",
+			"typed EReg String captures should retain their existing non-nullable null-comparison result");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(optionalNull, nullCheckScope) == "(!optionalText.has_value())",
+			"optional locals should retain storage-aware null comparison");
+		final unrelatedNullSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(unrelatedNull, nullCheckScope);
+		final unknownMatchedNullSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(unknownMatchedNull, nullCheckScope);
+		final nullCheckArgs = [matchedNull];
+		var nullCheckSample = "";
+		final nullCheckRenderSeconds = elapsed(calls,
+			() -> nullCheckSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedNull, nullCheckScope));
+		var nullCheckArgSample = "";
+		final nullCheckArgSeconds = elapsed(calls,
+			() -> nullCheckArgSample = @:privateAccess backend.cpp.CppTargetCore.renderFunctionTypeCallArgs("", nullCheckArgs, nullCheckScope).join(", "));
+		var matchedRenderSample = "";
+		final matchedRenderSeconds = elapsed(calls, () -> matchedRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(matched, nullCheckScope));
+		var optionalSample = false;
+		final matchedOptionalSeconds = elapsed(calls,
+			() -> optionalSample = @:privateAccess backend.cpp.CppTargetCore.exprHasOptionalType(matched, nullCheckScope));
+		var nonNullableSample = false;
+		final matchedNonNullableSeconds = elapsed(calls,
+			() -> nonNullableSample = @:privateAccess backend.cpp.CppTargetCore.exprHasNonNullableValueType(matched, nullCheckScope));
+		var exactShapeSample = false;
+		final matchedExactShapeSeconds = elapsed(calls,
+			() -> exactShapeSample = @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedStringCall(EIdent("regex"), "matched", 1,
+				nullCheckScope));
+		var nullCheckCallSample = "";
+		final nullCheckCallSeconds = elapsed(calls,
+			() -> nullCheckCallSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("t", nullCheckArgs, nullCheckScope));
+		assertTrue(nullCheckSample == "false"
+			&& nullCheckArgSample == nullCheckSample
+			&& matchedRenderSample == "regex->matched(1)"
+			&& !optionalSample
+			&& nonNullableSample
+			&& exactShapeSample
+			&& nullCheckCallSample == "t(false)",
+			"focused typed EReg null checks should reproduce the repeated free-call argument leaf");
+
 		Sys.println("CPP_DIRECT_CALL_SUPPORT_BENCH:PASS calls=" + calls + " current_owner_seconds=" + currentOwnerSeconds + " inherited_owner_seconds="
 			+ inheritedOwnerSeconds + " inferred_arg_types_seconds=" + inferredArgTypesSeconds + " missing_owner_seconds=" + missingOwnerSeconds
 			+ " cold_missing_seconds=" + coldMissingSeconds + " hierarchy_seconds=" + hierarchySeconds + " inheritance_lookup_seconds="
@@ -301,6 +358,10 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			+ " combined_walk_seconds=" + combinedWalkSeconds + " post_miss_missing_seconds=" + postMissMissingSeconds + " post_miss_inherited_seconds="
 			+ postMissInheritedSeconds + " support_signature_seconds=" + supportSignatureSeconds + " cold_lookup_seconds=" + coldLookupSeconds
 			+ " cold_support_call_seconds=" + coldSupportCallSeconds + " support_arg_render_seconds=" + argRenderSeconds + " omitted_support_seconds="
-			+ omittedSupportSeconds + " explicit_support_seconds=" + explicitSupportSeconds);
+			+ omittedSupportSeconds + " explicit_support_seconds=" + explicitSupportSeconds + " null_check_render_seconds=" + nullCheckRenderSeconds
+			+ " null_check_arg_seconds=" + nullCheckArgSeconds + " matched_render_seconds=" + matchedRenderSeconds + " matched_optional_seconds="
+			+ matchedOptionalSeconds + " matched_non_nullable_seconds=" + matchedNonNullableSeconds + " matched_exact_shape_seconds="
+			+ matchedExactShapeSeconds + " null_check_call_seconds=" + nullCheckCallSeconds + " unrelated_null_sample=" + unrelatedNullSample
+			+ " unknown_matched_null_sample=" + unknownMatchedNullSample);
 	}
 }

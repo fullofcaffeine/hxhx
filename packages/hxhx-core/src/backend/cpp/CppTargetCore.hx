@@ -13190,6 +13190,16 @@ class CppTargetCore {
 				+ ")";
 			case EBinop("=", left, right):
 				assignmentExpr(left, right, scope);
+			// A typed EReg capture already has the target-owned String contract. Preserve the
+			// existing non-nullable result without resolving that exact call type twice.
+			case EBinop("==", ECall(EField(receiver, method), args), ENull) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
+				"false";
+			case EBinop("==", ENull, ECall(EField(receiver, method), args)) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
+				"false";
+			case EBinop("!=", ECall(EField(receiver, method), args), ENull) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
+				"true";
+			case EBinop("!=", ENull, ECall(EField(receiver, method), args)) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
+				"true";
 			case EBinop("==", left, ENull) if (exprHasOptionalType(left, scope)):
 				"(!" + optionalStorageExpr(left, scope) + ".has_value())";
 			case EBinop("==", ENull, right) if (exprHasOptionalType(right, scope)):

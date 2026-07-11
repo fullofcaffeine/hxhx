@@ -3694,6 +3694,92 @@ crossed. GPT 5.5 Pro and Oracle were deliberately skipped because the existing
 timer boundaries and focused samples supplied bounded, local,
 provenance-neutral attribution.
 
+## 2026-07-11 Typed EReg Capture Null-Check Dispatch
+
+Follow-up bead `haxe_ocaml-35pgn` reproduced the next stable leaf at statement
+indices 15 and 22. Both pass the same argument shape to the free Bool helper:
+a typed-local EReg `matched(1)` capture compared with null. The current target
+models that capture as non-nullable `std::string`, so general expression
+rendering first resolves the call as not optional, then resolves the same call
+again as a non-nullable value before emitting the existing constant result.
+
+`renderExpr` now recognizes only `matched` with one argument or
+`matchedLeft`/`matchedRight` with no arguments on the existing exact
+typed-local EReg carrier before those two general type probes. Both equality
+operators and both null operand orders preserve the same generated `false` or
+`true` result. Optional locals, unknown receivers, wrong call shapes, and the
+separate Bool-returning `match` method retain general null-comparison routing.
+
+The expanded direct-call probe freezes the complete `t(false)` output,
+standalone argument output, capture-call output, all four operator/order
+combinations, both side-capture methods, optional storage-aware comparison,
+an unrelated EReg method, and an unknown receiver. Existing current,
+inherited, missing, override, static/instance, sanitized, shadow, support,
+free-call, `PosInfos`, and imported `Int64` controls remain unchanged.
+
+Two 1,000-call pre-change samples measured the focused null-check renderer at
+0.137829s/0.143876s, its function-type argument wrapper at
+0.158698s/0.157918s, and the complete untraced free call at
+0.495095s/0.495634s. Two post-change samples reduced them to
+0.004865s/0.004773s, 0.005615s/0.005607s, and
+0.287012s/0.282716s: about 96.47-96.68%, 96.46%, and
+42.03-42.96% lower respectively. The exact shape predicate is the only new
+production preflight; no general call-argument or null-comparison policy
+changed.
+
+The exact-command current-source trace retained the same 88 statements, 680
+selected `TestEReg.test` records, 90 method lines, and 95 class lines. Index
+15's leaf `render_function_call_args` fell from 0.000108957s to
+0.000036955s, about 66.08%, and index 22 fell from 0.000109196s to
+0.000030994s, about 71.62%. Their outer `render_args` intervals fell about
+32.66% and 37.53%, while their complete statements fell about 25.01% and
+17.54%.
+
+No aggregate method/class improvement is claimed. All statement timings rose
+about 0.87% in aggregate, the method about 1.90%, and the class about 1.88%,
+consistent with cross-run variance outside the exact leaves. The hxcpp setup
+also took 79 seconds versus 90 seconds in the baseline. The run fully rendered
+`TestEReg`, ended at `Cpp: FAIL (480s, exit 124)`, and retained the wrapper's
+validated `expected_red_probe_exit=1`; no terminal-frontier claim is made.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-inheritance-path-lookup-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-typed-ereg-null-check-fastpath-warm.log`
+
+This shortcut deliberately preserves the current target contract, including
+its known nullable-capture mismatch. Upstream Haxe 4.3.7 can return null for a
+non-participating `matched` group, while the current `std::string` carrier
+exposes an empty string. Existing parity bug `haxe_ocaml-vywzf` is therefore
+the next owner and must revise or remove this shortcut when it introduces the
+nullable carrier; further performance ranking should wait for that semantic
+contract to settle.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- two 1,000-call focused pre/post samples
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, the nullable-capture bug remains open, and this internal render
+improvement does not change public production readiness. Generated Cpp is
+frozen by the focused controls and committed bootstrap snapshots are
+unaffected. `CppTargetCore.hx` remains a red mega-file at 26,029 lines; the
+ten-line production change stays at the existing exact expression dispatch
+seam, while the 367-line focused fixture remains separate. `thinking:xhigh`
+was not crossed. GPT 5.5 Pro and Oracle were deliberately skipped because the
+current behavior, exact target-owned shape, and linked parity follow-up make
+this a bounded, local, provenance-neutral seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
