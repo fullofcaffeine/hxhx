@@ -152,7 +152,7 @@ class M14CppEqualityArgBenchIntegrationTest {
 			"typed String equality literals should retain String adaptation, got " + comparableLiteralSample);
 		assertTrue(concatEqualitySample == '(std::string("prefix:") + std::string(typedText)), ' + stringLiteralSample,
 			"typed concat equality should retain exact comparable arguments, got " + concatEqualitySample);
-		assertTrue(freshMapEqualitySample == 'std::make_shared<EReg>("z?", "g")->map("ab", [&](std::shared_ptr<EReg> r) -> std::string { return r->matched(0); }), std::string("mapped")',
+		assertTrue(freshMapEqualitySample == 'std::make_shared<EReg>("z?", "g")->map("ab", [&](std::shared_ptr<EReg> r) -> std::string { return r->matched(0).value_or(std::string()); }), std::string("mapped")',
 			"fresh EReg equality should retain its target-owned String result, got "
 			+ freshMapEqualitySample);
 		assertTrue(typedEqualitySample == 'std::string(typedText), std::string("typed")',

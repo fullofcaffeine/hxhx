@@ -280,9 +280,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(re.matchedRight());",
 			"    var optionalRe = new EReg(\"(a)?b\", \"\");",
 			"    Sys.println(Std.string(optionalRe.match(\"b\")));",
-			"    Sys.println(\"[\" + optionalRe.matched(1) + \"]\");",
+			"    Sys.println(Std.string(optionalRe.matched(1)));",
+			"    Sys.println(Std.string(optionalRe.matched(1) == null));",
 			"    Sys.println(\"[\" + optionalRe.matchedLeft() + \"]\");",
 			"    Sys.println(\"[\" + optionalRe.matchedRight() + \"]\");",
+			"    try { optionalRe.matched(3); } catch (error:Dynamic) { Sys.println(\"matched:oob\"); }",
+			"    Sys.println(Std.string(optionalRe.match(\"ab\")));",
+			"    Sys.println(Std.string(optionalRe.matched(1)));",
+			"    Sys.println(Std.string(optionalRe.matched(1) != null));",
+			"    Sys.println(Std.string(optionalRe.matched(0) == \"ab\"));",
+			"    Sys.println(Std.string(optionalRe.match(\"x\")));",
+			"    try { optionalRe.matched(0); } catch (error:Dynamic) { Sys.println(\"matched:no-state\"); }",
+			"    try { optionalRe.matchedLeft(); } catch (error:Dynamic) { Sys.println(\"left:no-state\"); }",
+			"    try { optionalRe.matchedRight(); } catch (error:Dynamic) { Sys.println(\"right:no-state\"); }",
+			"    try { optionalRe.matchedPos(); } catch (error:Dynamic) { Sys.println(\"pos:no-state\"); }",
 			"    Sys.println(Std.string(new EReg(\"a+\", \"\").match(\"aa\")));",
 			"    Sys.println(Std.string(re.matchedPos().pos) + \":\" + Std.string(re.matchedPos().len));",
 			"    var subRe = new EReg(\"[0-9]+\", \"\");",
@@ -292,6 +303,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(subRe.matchedPos().pos) + \":\" + Std.string(subRe.matchedPos().len));",
 			"    var mapPrefix = \"#\";",
 			"    Sys.println(new EReg(\"[0-9]+\", \"g\").map(\"a12b3\", function(match) return mapPrefix + match.matched(0)));",
+			"    Sys.println(new EReg(\"[0-9]+\", \"\").map(\"a12b\", function(match) return match.matched(0).substr(1)));",
 			"    Sys.println(new EReg(\"z?\", \"g\").map(\"ab\", function(match) return \"<\" + match.matched(0) + \">\"));",
 			"    Sys.println(new EReg(\"a+\", \"g\").replace(\"baacaa\", \"X\"));",
 			"    Sys.println(new EReg(\"a+\", \"\").replace(\"baacaa\", \"X\"));",
@@ -11705,11 +11717,19 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "re->matched(0)", "C++ typed-local EReg.matched should preserve its exact capture index");
 		assertContains(source, "re->matchedLeft()", "C++ typed-local EReg.matchedLeft should preserve zero-argument dispatch");
 		assertContains(source, "re->matchedRight()", "C++ typed-local EReg.matchedRight should preserve zero-argument dispatch");
-		assertContains(source, "optionalRe->matched(1)", "C++ typed-local EReg.matched should preserve the existing missing-capture runtime path");
+		assertContains(source, "std::optional<std::string> matched(int n)", "C++ EReg.matched should expose a nullable capture carrier");
+		assertContains(source, "if (!lastMatch[n].matched) return std::nullopt;", "C++ EReg.matched should preserve a missing optional capture as null");
+		assertContains(source, "__hxhx_stringify(optionalRe->matched(1))", "C++ typed-local EReg.matched should stringify a missing capture as null");
+		assertContains(source, "(!optionalRe->matched(1).has_value())", "C++ typed-local EReg.matched null comparison should test capture presence");
+		assertContains(source, "throw std::runtime_error(\"EReg.matched capture index out of range\")",
+			"C++ EReg.matched should reject an out-of-range capture index");
 		assertContains(source, "std::make_shared<EReg>(\"a+\", \"\")->match(\"aa\")", "C++ fresh EReg.match should preserve its exact String-to-Bool contract");
 		assertContains(source, "std::make_shared<EReg>(\"[0-9]+\", \"g\")->map(\"a12b3\",",
 			"C++ fresh EReg.map should preserve literal construction, input, and callback dispatch");
-		assertContains(source, "std::string(mapPrefix) + match->matched(0)", "C++ fresh EReg.map callbacks should preserve captured String and matched text");
+		assertContains(source, "std::string(mapPrefix) + __hxhx_stringify(match->matched(0))",
+			"C++ fresh EReg.map callbacks should adapt the nullable capture into callback String output");
+		assertContains(source, "match->matched(0).value().substr(1)",
+			"C++ fresh EReg.map callbacks should unwrap a present capture before String method access");
 		assertContains(source, "std::make_shared<EReg>(\"z?\", \"g\")->map(\"ab\",", "C++ fresh EReg.map should retain the zero-length global-match fixture");
 		assertContains(source, "std::make_shared<EReg>(\"a+\", \"g\")->replace(\"baacaa\", \"X\")",
 			"C++ fresh EReg.replace should preserve global replacement arguments");
@@ -12662,8 +12682,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ parsed EReg.matchedPos support should collect the structural pos/len return type");
 		assertContains(parsedERegMatchedPosERegLines, "__hxhx_anon_pos_int__len_int_ matchedPos() {",
 			"C++ parsed EReg.matchedPos should expose a concrete structural return type");
-		assertContains(parsedERegMatchedPosERegLines, "return __hxhx_anon_pos_int__len_int_{};",
-			"C++ parsed EReg.matchedPos null fallback should return a structural default instead of nullptr");
+		assertContains(parsedERegMatchedPosERegLines, "if (!hasLastMatch) throw std::runtime_error(\"EReg.matchedPos called without a successful match\");",
+			"C++ parsed EReg.matchedPos should reject reads without successful match state");
 		assertContains(parsedERegMatchedPosMainLines, "return static_cast<int>(((r->matchedPos().pos) + (r->matchedPos().len)));",
 			"C++ parsed EReg.matchedPos field reads should compile against the structural return value");
 		assertContains(source, "auto macroQuote = __hxhx_macro_expr(", "C++ smoke should lower macro quotes to structural macro objects");
@@ -13608,7 +13628,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(built.builtExecutable, "C++ compiler smoke should mark built executable");
 			final run = commandOutput(built.entryPath, ["needle"]);
 			assertTrue(run.code == 0, "C++ smoke executable failed: " + run.stderr);
-			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\ntrue\na12\n12\nb\nz\ntrue\n[]\n[]\n[]\ntrue\n1:3\ntrue\n2:2\ntrue\n2:2\na#12b#3\n<>a<>b<>\nbXcX\nbXcaa\n2\nbeta\n0\ntrue\n3\n4\nfalse\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore(reason)\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
+			assertTrue(run.stdout == "cpp-native:smoke\ntrace:smoke\n1\n-1\n1\nneedle\n0\ntrue\na12\n12\nb\nz\ntrue\nnull\ntrue\n[]\n[]\nmatched:oob\ntrue\na\ntrue\ntrue\nfalse\nmatched:no-state\nleft:no-state\nright:no-state\npos:no-state\ntrue\n1:3\ntrue\n2:2\ntrue\n2:2\na#12b#3\na2b\n<>a<>b<>\nbXcX\nbXcaa\n2\nbeta\n0\ntrue\n3\n4\nfalse\n10\nq:1.5:true:ok\n11\n5\n3\n9\ntry:body\ntry:catch\n3\n1\n8\n4\n2147483647\n-2\n42\n41\nroot\nref:null\n0\n1\n1\n0\n2\n2\n1\n2\n4\n2\n15\n3\nalpha\nbeta\n0\nalpha\n1\nbeta\n2\n10\nif:then\nor:true\nand:true\nnot:true\nMacro\nenum:eq\ntrue\ntrue\nIgnore(reason)\n7\nEParenthesis(EConst(CString(macro:value)))\nmacro:value\nX -> Y\ntwo\nswitch:seven\n7\n-3\nternary:yes\n5\n42\n3\n4\nalpha,beta\n",
 				"unexpected C++ smoke stdout: "
 				+ run.stdout);
 		}

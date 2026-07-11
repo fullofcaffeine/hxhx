@@ -1978,15 +1978,15 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final matched = ECall(EField(EIdent("regex"), "matched"), matchedArgs);
 		final matchedLeft = ECall(EField(EIdent("regex"), "matchedLeft"), []);
 		final matchedRight = ECall(EField(EIdent("regex"), "matchedRight"), []);
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedStringCall(EIdent("regex"), "matched", 1,
-			scope) && @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedStringCall(EIdent("regex"), "matchedLeft", 0,
-				scope) && @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedStringCall(EIdent("regex"), "matchedRight", 0, scope),
-			"Typed-local EReg capture calls should use only their exact target-owned String contracts");
-		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedStringCall(EIdent("unknown"), "matched", 1, scope)
-			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedStringCall(EIdent("regex"), "matched", 0, scope)
-			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedStringCall(EIdent("regex"), "matched", 2, scope)
-			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedStringCall(EIdent("regex"), "matchedLeft", 1, scope)
-			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedStringCall(EIdent("regex"), "match", 1, scope),
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegCaptureCall(EIdent("regex"), "matched", 1,
+			scope) && @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegCaptureCall(EIdent("regex"), "matchedLeft", 0,
+				scope) && @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegCaptureCall(EIdent("regex"), "matchedRight", 0, scope),
+			"Typed-local EReg capture calls should use only their exact target-owned nullable/indexed or String side contracts");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegCaptureCall(EIdent("unknown"), "matched", 1, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegCaptureCall(EIdent("regex"), "matched", 0, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegCaptureCall(EIdent("regex"), "matched", 2, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegCaptureCall(EIdent("regex"), "matchedLeft", 1, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegCaptureCall(EIdent("regex"), "match", 1, scope),
 			"Unknown receivers, wrong arities, and unrelated methods should retain general EReg call discovery");
 		final conversionSample = [@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matched"), [EIdent("index")]), scope), @:privateAccess
@@ -2728,7 +2728,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		assertTrue(freshERegMapReplacePhases.mapInferSample == "std::string"
 			&& freshERegMapReplacePhases.replaceInferSample == "std::string",
 			"Fresh EReg map/replace inference should retain its known String results");
-		final expectedFreshMap = 'std::make_shared<EReg>("z?", "g")->map("ab", [&](std::shared_ptr<EReg> r) -> std::string { return (std::string(prefix) + r->matched(0)); })';
+		final expectedFreshMap = 'std::make_shared<EReg>("z?", "g")->map("ab", [&](std::shared_ptr<EReg> r) -> std::string { return (std::string(prefix) + __hxhx_stringify(r->matched(0))); })';
 		final expectedFreshReplace = 'std::make_shared<EReg>("z?", "g")->replace("baacaa", "X")';
 		assertTrue(freshERegMapReplacePhases.mapRenderSample == expectedFreshMap
 			&& freshERegMapReplacePhases.replaceRenderSample == expectedFreshReplace
@@ -2877,9 +2877,9 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final typedERegMatchedStringPhases = renderTypedERegMatchedStringPhases(typedERegMatchedStringCalls);
 		assertTrue(typedERegMatchedStringPhases.matchedRenderSample == "regex->matched(1)"
 			&& typedERegMatchedStringPhases.sideRenderSample == "regex->matchedLeft()|regex->matchedRight()"
-			&& typedERegMatchedStringPhases.matchedInferSample == "std::string"
+			&& typedERegMatchedStringPhases.matchedInferSample == "std::optional<std::string>"
 			&& typedERegMatchedStringPhases.sideInferSample == "std::string|std::string",
-			"Typed-local EReg matched calls should preserve exact String-returning call shapes");
+			"Typed-local EReg matched calls should preserve nullable indexed and non-nullable side-capture shapes");
 		assertTrue(typedERegMatchedStringPhases.matchedEqualitySample == 'regex->matched(1), std::string("capture")'
 			&& typedERegMatchedStringPhases.sideEqualitySample == 'regex->matchedLeft(), std::string("left")|regex->matchedRight(), std::string("right")',
 			"Typed-local EReg matched calls should preserve exact String equality arguments");
@@ -2931,7 +2931,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& residualStructuralProbePhases.localStringSample == 'std::string("{ local } value")',
 			"Residual structural-probe fixtures should preserve exact unary, concatenation, and String-local output");
 		final eRegLambdaPhases = renderERegLambdaPhases(eRegLambdaCalls);
-		assertTrue(eRegLambdaPhases.lambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight()); }',
+		assertTrue(eRegLambdaPhases.lambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (((std::string("[") + r->matchedLeft()) + __hxhx_stringify(r->matched(0))) + r->matchedRight()); }',
 			"EReg.map callback fixtures should keep their typed callback and concatenation shape");
 		assertTrue(eRegLambdaPhases.mapSample == 'std::make_shared<EReg>("a+", "g")->map("aa", ' + eRegLambdaPhases.nestedLambdaSample + ')'
 			&& eRegLambdaPhases.argsSample == '"aa", ' + eRegLambdaPhases.nestedLambdaSample,
@@ -2959,17 +2959,17 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& eRegLambdaPhases.typedInlineCallbackSample == eRegLambdaPhases.nestedLambdaSample
 			&& eRegLambdaPhases.typedNamedCallbackSample == "f",
 			"Typed-local EReg.map argument phases should retain String and callback contracts");
-		assertTrue(eRegLambdaPhases.directBodySample == '(((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight())'
+		assertTrue(eRegLambdaPhases.directBodySample == '(((std::string("[") + r->matchedLeft()) + __hxhx_stringify(r->matched(0))) + r->matchedRight())'
 			&& eRegLambdaPhases.leafSample == 'r->matchedLeft()|r->matched(0)|r->matchedRight()',
 			"EReg.map callback fixtures should preserve exact direct-body and target-owned leaf call shapes, got body="
 			+ eRegLambdaPhases.directBodySample
 			+ " leaves="
 			+ eRegLambdaPhases.leafSample);
-		assertContains(eRegLambdaPhases.nestedBodySample, "r->matched(2)",
+		assertContains(eRegLambdaPhases.nestedBodySample, "r->matched(2).value()",
 			"EReg.map callback fixtures should preserve the callback-owned matched/substr chain");
-		assertTrue(eRegLambdaPhases.nestedLeafSample == "r->matched(2).substr(3)"
-			&& eRegLambdaPhases.nestedBodySample == '(std::string("match:") + r->matched(2).substr(3))'
-			&& eRegLambdaPhases.nestedLambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (std::string("match:") + r->matched(2).substr(3)); }'
+		assertTrue(eRegLambdaPhases.nestedLeafSample == "r->matched(2).value().substr(3)"
+			&& eRegLambdaPhases.nestedBodySample == '(std::string("match:") + r->matched(2).value().substr(3))'
+			&& eRegLambdaPhases.nestedLambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (std::string("match:") + r->matched(2).value().substr(3)); }'
 			&& eRegLambdaPhases.expectedFunctionSample == eRegLambdaPhases.nestedLambdaSample,
 			"EReg.map callback fixtures should preserve exact nested matched/substr and lambda shapes");
 		assertTrue(@:privateAccess
@@ -2978,7 +2978,8 @@ class M14CppHelperRenderBenchIntegrationTest {
 			"Typed EReg callbacks should use the bounded target-owned matched leaf path");
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(ECall(EField(EIdent("r"), "matched"), [EInt(2)]), "substr"),
-				[EInt(3)]), "r", eRegBenchScope()) == "r->matched(2).substr(3)",
+				[EInt(3)]), "r",
+				eRegBenchScope()) == "r->matched(2).value().substr(3)",
 			"Typed EReg callbacks should use the bounded target-owned matched/substr leaf path");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(EIdent("other"), "matchedLeft"), []), "r",
 			eRegBenchScope()) == null && @:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(EIdent("r"), "match"),

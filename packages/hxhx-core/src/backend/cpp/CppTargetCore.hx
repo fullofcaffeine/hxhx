@@ -12921,8 +12921,14 @@ class CppTargetCore {
 				typedLocalERegMatchSubCallExpr(receiver, args, scope);
 			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchCall(receiver, method, args.length, scope)):
 				typedLocalERegMatchCallExpr(receiver, args, scope);
-			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
-				typedLocalERegMatchedStringCallExpr(receiver, method, args, scope);
+			case ECall(EField(ECall(EField(receiver, "matched"), matchedArgs), "substr"), substrArgs)
+				if (isTypedLocalERegMatchedSubstrCall(receiver, matchedArgs.length, substrArgs.length, scope)):
+				typedLocalERegCaptureCallExpr(receiver, "matched", matchedArgs, scope)
+				+ ".value().substr("
+				+ renderSimpleCallArgs(substrArgs, scope).join(", ")
+				+ ")";
+			case ECall(EField(receiver, method), args) if (isTypedLocalERegCaptureCall(receiver, method, args.length, scope)):
+				typedLocalERegCaptureCallExpr(receiver, method, args, scope);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
 			case ECall(EField(receiver, "getClassName"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
@@ -13190,16 +13196,14 @@ class CppTargetCore {
 				+ ")";
 			case EBinop("=", left, right):
 				assignmentExpr(left, right, scope);
-			// A typed EReg capture already has the target-owned String contract. Preserve the
-			// existing non-nullable result without resolving that exact call type twice.
-			case EBinop("==", ECall(EField(receiver, method), args), ENull) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
-				"false";
-			case EBinop("==", ENull, ECall(EField(receiver, method), args)) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
-				"false";
-			case EBinop("!=", ECall(EField(receiver, method), args), ENull) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
-				"true";
-			case EBinop("!=", ENull, ECall(EField(receiver, method), args)) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
-				"true";
+			case EBinop("==", ECall(EField(receiver, method), args), ENull) if (isTypedLocalERegCaptureCall(receiver, method, args.length, scope)):
+				method == "matched" ? "(!" + typedLocalERegCaptureCallExpr(receiver, method, args, scope) + ".has_value())" : "false";
+			case EBinop("==", ENull, ECall(EField(receiver, method), args)) if (isTypedLocalERegCaptureCall(receiver, method, args.length, scope)):
+				method == "matched" ? "(!" + typedLocalERegCaptureCallExpr(receiver, method, args, scope) + ".has_value())" : "false";
+			case EBinop("!=", ECall(EField(receiver, method), args), ENull) if (isTypedLocalERegCaptureCall(receiver, method, args.length, scope)):
+				method == "matched" ? "(" + typedLocalERegCaptureCallExpr(receiver, method, args, scope) + ".has_value())" : "true";
+			case EBinop("!=", ENull, ECall(EField(receiver, method), args)) if (isTypedLocalERegCaptureCall(receiver, method, args.length, scope)):
+				method == "matched" ? "(" + typedLocalERegCaptureCallExpr(receiver, method, args, scope) + ".has_value())" : "true";
 			case EBinop("==", left, ENull) if (exprHasOptionalType(left, scope)):
 				"(!" + optionalStorageExpr(left, scope) + ".has_value())";
 			case EBinop("==", ENull, right) if (exprHasOptionalType(right, scope)):
@@ -14154,8 +14158,8 @@ class CppTargetCore {
 		return renderExpr(receiver, scope) + "->match(" + eRegStringCallArgExpr(args[0], scope) + ")";
 	}
 
-	/** Render the fixed typed-local EReg String capture calls without general method discovery. **/
-	static function typedLocalERegMatchedStringCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+	/** Render typed-local EReg capture calls without general method discovery. **/
+	static function typedLocalERegCaptureCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final renderedArgs = method == "matched" ? eRegIntCallArgExpr(args[0], false, scope) : "";
 		return renderExpr(receiver, scope) + "->" + sanitizeIdentifier(method) + "(" + renderedArgs + ")";
 	}
@@ -18417,8 +18421,11 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(receiver, method), args) if (isFreshERegMatchCall(receiver, method, args.length)):
 				"bool";
-			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
+			case ECall(EField(ECall(EField(receiver, "matched"), matchedArgs), "substr"), substrArgs)
+				if (isTypedLocalERegMatchedSubstrCall(receiver, matchedArgs.length, substrArgs.length, scope)):
 				"std::string";
+			case ECall(EField(receiver, method), args) if (isTypedLocalERegCaptureCall(receiver, method, args.length, scope)):
+				method == "matched" ? "std::optional<std::string>" : "std::string";
 			case ECall(EField(receiver, method), args) if (isFreshERegStringCall(receiver, method, args.length)):
 				"std::string";
 			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver)):
@@ -18758,11 +18765,16 @@ class CppTargetCore {
 		return isTypedLocalERegReceiver(receiver, scope);
 	}
 
-	/** Recognize the exact target-owned String capture contracts of a typed-local EReg. **/
-	static function isTypedLocalERegMatchedStringCall(receiver:HxExpr, method:String, arity:Int, ?scope:CppRenderScope):Bool {
+	/** Recognize the nullable indexed and non-nullable side-capture contracts of a typed-local EReg. **/
+	static function isTypedLocalERegCaptureCall(receiver:HxExpr, method:String, arity:Int, ?scope:CppRenderScope):Bool {
 		if (!((method == "matched" && arity == 1) || ((method == "matchedLeft" || method == "matchedRight") && arity == 0)))
 			return false;
 		return isTypedLocalERegReceiver(receiver, scope);
+	}
+
+	/** Recognize String method access through a present typed-local indexed capture. **/
+	static function isTypedLocalERegMatchedSubstrCall(receiver:HxExpr, matchedArity:Int, substrArity:Int, ?scope:CppRenderScope):Bool {
+		return matchedArity == 1 && (substrArity == 1 || substrArity == 2) && isTypedLocalERegReceiver(receiver, scope);
 	}
 
 	/** Recognize the target-owned structural fields of a typed-local EReg matched-position call. **/
@@ -18827,8 +18839,8 @@ class CppTargetCore {
 			return "bool";
 		if (isFreshERegMatchCall(receiver, method, arity))
 			return "bool";
-		if (isTypedLocalERegMatchedStringCall(receiver, method, arity, scope))
-			return "std::string";
+		if (isTypedLocalERegCaptureCall(receiver, method, arity, scope))
+			return method == "matched" ? "std::optional<std::string>" : "std::string";
 		if (isFreshERegStringCall(receiver, method, arity))
 			return "std::string";
 		if (isReflectStaticReceiver(receiver)) {
@@ -22103,7 +22115,7 @@ class CppTargetCore {
 						target + "->" + sanitizeIdentifier(method) + "()";
 					case "matched" if (args.length == 1):
 						final index = directPrimitiveLiteralCallArgExprForExpectedType(args[0], "int", scope);
-						index == null ? null : target + "->matched(" + index + ")";
+						index == null ? null : "__hxhx_stringify(" + target + "->matched(" + index + "))";
 					case _:
 						null;
 				}
@@ -22121,7 +22133,7 @@ class CppTargetCore {
 		final substrStart = directPrimitiveLiteralCallArgExprForExpectedType(substrArgs[0], "int", scope);
 		if (matchedIndex == null || substrStart == null)
 			return null;
-		return localCppName(receiver, scope) + "->matched(" + matchedIndex + ").substr(" + substrStart + ")";
+		return localCppName(receiver, scope) + "->matched(" + matchedIndex + ").value().substr(" + substrStart + ")";
 	}
 
 	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope, ?expectedReturnType:String,

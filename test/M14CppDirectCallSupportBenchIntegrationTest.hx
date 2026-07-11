@@ -309,13 +309,13 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 		final optionalNull = EBinop("==", EIdent("optionalText"), ENull);
 		final unrelatedNull = EBinop("==", ECall(EField(EIdent("regex"), "match"), [EString("value")]), ENull);
 		final unknownMatchedNull = EBinop("==", ECall(EField(EIdent("unknown"), "matched"), [EInt(1)]), ENull);
-		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedNull, nullCheckScope) == "false"
-			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedNotNull, nullCheckScope) == "true"
-			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(nullMatched, nullCheckScope) == "false"
-			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(nullMatchedNot, nullCheckScope) == "true"
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedNull, nullCheckScope) == "(!regex->matched(1).has_value())"
+			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedNotNull, nullCheckScope) == "(regex->matched(1).has_value())"
+			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(nullMatched, nullCheckScope) == "(!regex->matched(1).has_value())"
+			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(nullMatchedNot, nullCheckScope) == "(regex->matched(1).has_value())"
 			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(matchedLeftNull, nullCheckScope) == "false"
 			&& @:privateAccess backend.cpp.CppTargetCore.renderExpr(nullMatchedRightNot, nullCheckScope) == "true",
-			"typed EReg String captures should retain their existing non-nullable null-comparison result");
+			"typed EReg indexed captures should use nullable presence while side captures remain non-nullable");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(optionalNull, nullCheckScope) == "(!optionalText.has_value())",
 			"optional locals should retain storage-aware null comparison");
 		final unrelatedNullSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(unrelatedNull, nullCheckScope);
@@ -337,18 +337,17 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			() -> nonNullableSample = @:privateAccess backend.cpp.CppTargetCore.exprHasNonNullableValueType(matched, nullCheckScope));
 		var exactShapeSample = false;
 		final matchedExactShapeSeconds = elapsed(calls,
-			() -> exactShapeSample = @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchedStringCall(EIdent("regex"), "matched", 1,
-				nullCheckScope));
+			() -> exactShapeSample = @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegCaptureCall(EIdent("regex"), "matched", 1, nullCheckScope));
 		var nullCheckCallSample = "";
 		final nullCheckCallSeconds = elapsed(calls,
 			() -> nullCheckCallSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("t", nullCheckArgs, nullCheckScope));
-		assertTrue(nullCheckSample == "false"
+		assertTrue(nullCheckSample == "(!regex->matched(1).has_value())"
 			&& nullCheckArgSample == nullCheckSample
 			&& matchedRenderSample == "regex->matched(1)"
-			&& !optionalSample
-			&& nonNullableSample
+			&& optionalSample
+			&& !nonNullableSample
 			&& exactShapeSample
-			&& nullCheckCallSample == "t(false)",
+			&& nullCheckCallSample == "t((!regex->matched(1).has_value()))",
 			"focused typed EReg null checks should reproduce the repeated free-call argument leaf");
 
 		Sys.println("CPP_DIRECT_CALL_SUPPORT_BENCH:PASS calls=" + calls + " current_owner_seconds=" + currentOwnerSeconds + " inherited_owner_seconds="

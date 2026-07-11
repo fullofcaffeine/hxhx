@@ -3780,6 +3780,84 @@ was not crossed. GPT 5.5 Pro and Oracle were deliberately skipped because the
 current behavior, exact target-owned shape, and linked parity follow-up make
 this a bounded, local, provenance-neutral seam.
 
+## 2026-07-11 Nullable EReg Indexed Captures
+
+Parity bug `haxe_ocaml-vywzf` replaces the temporary non-nullable indexed
+capture contract described above. A black-box upstream Haxe 4.3.7 interpreter
+probe established that an optional group which did not participate returns
+null, a participating group returns its text, and an out-of-range index
+throws. It also established that a failed subsequent match invalidates the
+last-match state: `matched`, `matchedLeft`, `matchedRight`, and `matchedPos`
+then throw. Before that failed transition, `matchedLeft` and `matchedRight`
+retain their ordinary non-null String results. The upstream fixture remains
+ignored and untracked; no upstream compiler or test source entered the repo.
+
+The target-owned Cpp EReg runtime now represents only indexed `matched(Int)`
+results as `std::optional<std::string>`. A non-participating group returns an
+empty optional, while missing successful state and out-of-range indices throw.
+The side captures remain `std::string`, and their successful-match behavior is
+unchanged. `matchedPos` now shares the upstream failed-state error contract
+instead of returning a default structural value.
+
+The typed-local renderer and type model preserve that distinction. Exact null
+comparisons on `matched(Int)` test optional presence; exact null comparisons on
+`matchedLeft()` and `matchedRight()` retain their non-null constant result.
+String concatenation and EReg callback return paths stringify the optional,
+while the exact present-capture `substr` path unwraps before String method
+access. Unknown receivers, wrong arities, unrelated methods, and general
+optional values retain their existing routing. Focused controls revise the
+previous null-check shortcut rather than leaving its constant result in front
+of the nullable carrier.
+
+The native Cpp smoke covers missing and participating optional groups, both
+null comparisons, whole-capture String equality, an out-of-range index,
+failed-match reads through all four last-match APIs, unchanged left/right
+text, callback concatenation, and callback `matched(...).substr(...)`. The
+focused helper and direct-call suites freeze the optional return type,
+presence checks, callback conversion, present-capture String method access,
+and non-null side-capture contract.
+
+The exact-command current-source strict probe fully rendered the same 88
+`TestEReg.test` statements and ended at the expected 480-second Cpp timeout
+with target exit 124 and wrapper `expected_red_probe_exit=1`. It reached the
+later `Parser_XmlParserException` frontier, so the nullable carrier introduced
+no early source-generation failure. One timing record was split by a heartbeat,
+leaving 679 selected records rather than the prior 680; therefore no timing or
+frontier improvement is claimed. The method measured 0.062475s, its class
+0.064123s, and the statement sum 0.033927s, all treated only as semantic-run
+evidence.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-typed-ereg-null-check-fastpath-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-ereg-nullable-capture-warm.log`
+
+Focused validation for this slice includes:
+
+- black-box upstream Haxe 4.3.7 interpreter behavior
+- `npm run hxhx:build-current-source`
+- the exact-command 480-second strict Cpp probe
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This repairs one
+EReg parity contract, but strict Cpp remains expected-red and the target is not
+yet production-ready. Committed bootstrap snapshots are unaffected.
+`CppTargetCore.hx` remains a red mega-file at 26,041 lines; its change is a
+bounded revision of existing EReg expression/type-flow seams. The runtime
+contract stays in the existing `CppRuntimeSupport` boundary rather than
+growing an inline emitter stub, and broader extraction remains owned by
+`haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle
+were deliberately skipped because the black-box oracle and existing
+target-owned EReg boundary supplied a bounded, provenance-neutral seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

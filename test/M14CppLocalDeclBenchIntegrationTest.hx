@@ -160,7 +160,7 @@ class M14CppLocalDeclBenchIntegrationTest {
 			"nonliteral same-name field initialization should retain explicit owner qualification");
 		assertTrue(nonliteralSample == "std::string copied = std::string(source);",
 			"ordinary nonliteral String initialization should remain on the general conversion path");
-		final expectedCallbackBody = '(((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight())';
+		final expectedCallbackBody = '(((std::string("[") + r->matchedLeft()) + __hxhx_stringify(r->matched(0))) + r->matchedRight())';
 		final expectedCallback = '[&](std::shared_ptr<EReg> r) -> std::string { return ' + expectedCallbackBody + '; }';
 		assertTrue(callbackBodySample == expectedCallbackBody
 			&& callbackLambdaSample == expectedCallback
