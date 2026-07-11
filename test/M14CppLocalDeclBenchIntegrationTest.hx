@@ -36,8 +36,9 @@ class M14CppLocalDeclBenchIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		final all = new Array<HxClassDecl>();
 		final stringAlias = new HxClassDecl("StringAlias", false, [], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=String"]);
+		final eReg = new HxClassDecl("EReg", false, [], []);
 		final owner = new HxClassDecl("LocalDeclBenchOwner", false, [], [new HxFieldDecl("value", Public, false, "String", null)]);
-		for (cls in [stringAlias, owner]) {
+		for (cls in [stringAlias, eReg, owner]) {
 			final name = HxClassDecl.getName(cls);
 			names.set(name, true);
 			classes.set(name, cls);
@@ -93,6 +94,38 @@ class M14CppLocalDeclBenchIntegrationTest {
 		final fullSeconds = elapsedIndexed(calls, i -> {
 			fullSample = render(typedStmt, fullFixtures[i].scope);
 		});
+		final callbackType = "std::function<std::string(std::shared_ptr<EReg>)>";
+		final matchedLeft = ECall(EField(EIdent("r"), "matchedLeft"), []);
+		final matched = ECall(EField(EIdent("r"), "matched"), [EInt(0)]);
+		final matchedRight = ECall(EField(EIdent("r"), "matchedRight"), []);
+		final callbackBody = EBinop("+", EBinop("+", EBinop("+", EString("["), matchedLeft), matched), matchedRight);
+		final callback = ELambda(["r"], callbackBody);
+		final callbackStmt = SVar("callback", "EReg->String", callback, HxPos.unknown());
+		final callbackPhaseFixture = fixture();
+		var callbackExpectedSample = "";
+		final callbackExpectedSeconds = elapsed(calls, () -> {
+			callbackExpectedSample = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(callback, callbackType, callbackPhaseFixture.scope);
+		});
+		var callbackInitSample = "";
+		final callbackInitSeconds = elapsed(calls, () -> {
+			callbackInitSample = @:privateAccess
+				backend.cpp.CppTargetCore.renderLocalInitExpr(callback, callbackType, callbackType, callbackPhaseFixture.scope);
+		});
+		var callbackLambdaSample = "";
+		final callbackLambdaSeconds = elapsed(calls, () -> {
+			callbackLambdaSample = @:privateAccess
+				backend.cpp.CppTargetCore.lambdaExprForExpectedFunction(["r"], callbackBody, callbackType, callbackPhaseFixture.scope);
+		});
+		final callbackBodyFixture = fixture();
+		callbackBodyFixture.scope.localNames.set("r", "r");
+		callbackBodyFixture.scope.localTypes.set("r", "std::shared_ptr<EReg>");
+		var callbackBodySample = "";
+		final callbackBodySeconds = elapsed(calls, () -> {
+			final rendered = @:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(callbackBody, ["r"], ["std::shared_ptr<EReg>"],
+				"std::string", callbackBodyFixture.scope);
+			callbackBodySample = rendered == null ? "" : rendered;
+		});
+		final callbackFullSample = render(callbackStmt, fixture().scope);
 
 		final controls = fixture();
 		final untypedSample = render(SVar("untypedText", "", EString("literal"), HxPos.unknown()), controls.scope);
@@ -105,6 +138,11 @@ class M14CppLocalDeclBenchIntegrationTest {
 		controls.scope.localTypes.set("source", "std::string");
 		controls.scope.localTypeHints.set("source", "String");
 		final nonliteralSample = render(SVar("copied", "String", EIdent("source"), HxPos.unknown()), controls.scope);
+		controls.scope.localNames.set("namedCallback", "namedCallback");
+		controls.scope.localTypes.set("namedCallback", callbackType);
+		final namedCallbackSample = render(SVar("callbackCopy", "EReg->String", EIdent("namedCallback"), HxPos.unknown()), controls.scope);
+		final nonFunctionDirectSample = @:privateAccess
+			backend.cpp.CppTargetCore.directLambdaValueExprForExpectedFunction(callback, "std::string", controls.scope);
 
 		assertTrue(declaredTypeSample == "std::string", "typed String literal locals should retain their declared C++ type");
 		assertTrue(initSample == 'std::string("{ test } \\"quoted\\"\\nnext")',
@@ -122,8 +160,20 @@ class M14CppLocalDeclBenchIntegrationTest {
 			"nonliteral same-name field initialization should retain explicit owner qualification");
 		assertTrue(nonliteralSample == "std::string copied = std::string(source);",
 			"ordinary nonliteral String initialization should remain on the general conversion path");
+		final expectedCallbackBody = '(((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight())';
+		final expectedCallback = '[&](std::shared_ptr<EReg> r) -> std::string { return ' + expectedCallbackBody + '; }';
+		assertTrue(callbackBodySample == expectedCallbackBody
+			&& callbackLambdaSample == expectedCallback
+			&& callbackExpectedSample == expectedCallback
+			&& callbackInitSample == expectedCallback,
+			"typed callback local phases should preserve exact EReg callback output");
+		assertTrue(callbackFullSample == callbackType + " callback = " + expectedCallback + ";",
+			"typed callback local declarations should retain exact output, got " + callbackFullSample);
+		assertTrue(namedCallbackSample == callbackType + " callbackCopy = namedCallback;" && nonFunctionDirectSample == null,
+			"named callbacks and non-function expectations should retain general value adaptation");
 
 		Sys.println("CPP_LOCAL_DECL_BENCH:PASS calls=" + calls + " declared_type_seconds=" + declaredTypeSeconds + " init_seconds=" + initSeconds
-			+ " full_seconds=" + fullSeconds);
+			+ " full_seconds=" + fullSeconds + " callback_expected_seconds=" + callbackExpectedSeconds + " callback_init_seconds=" + callbackInitSeconds
+			+ " callback_lambda_seconds=" + callbackLambdaSeconds + " callback_body_seconds=" + callbackBodySeconds);
 	}
 }

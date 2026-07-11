@@ -3374,6 +3374,78 @@ GPT 5.5 Pro and Oracle were deliberately skipped because the exact render and
 predicate contract already supplied a bounded, local, provenance-neutral type
 boundary.
 
+## 2026-07-11 Typed Callback Local Attribution
+
+Follow-up bead `haxe_ocaml-2fra4` attributed the next stable top statement,
+index 69's typed EReg-to-String callback local declaration. The two preceding
+strict traces measured the statement at 0.000588s/0.000659s and its initializer
+at 0.000265s/0.000319s, while local type selection was only
+0.000028s/0.000032s.
+
+The separate local-declaration probe now times the callback initializer after
+its concrete C++ function type is known, direct expected-value adaptation, the
+canonical typed-lambda renderer, and the exact target-owned EReg concat body.
+It also freezes the complete typed callback declaration and retains named
+callback plus non-function-expectation decline controls.
+
+Two 1,000-call samples measured expected-value adaptation at
+0.037861s/0.038205s, `renderLocalInitExpr` at 0.039303s/0.039022s, canonical
+typed-lambda rendering at 0.036924s/0.037348s, and the direct EReg concat body
+at 0.022193s/0.022092s. Initializer adaptation is only about 2.97% above the
+expected-value phase, expected-value adaptation about 2.42% above the canonical
+lambda, and the body accounts for about 59.62% of lambda rendering. There is
+no irrelevant production preflight or duplicate body render left to bypass.
+
+The larger strict initializer result is a diagnostic artifact. Its outer
+`render_init` timer wraps `renderLocalInitExpr`, which synchronously emits the
+nested `macro_api` and `structured_string_map` phase lines through
+`Sys.println` before returning. Statement, method, and class totals likewise
+include filtered detail-line emission. Their residual floor and variance
+therefore cannot justify another production renderer shortcut.
+
+No production change was retained. The probe preserves the exact
+`std::function<std::string(std::shared_ptr<EReg>)>` declaration, capture mode,
+typed argument and return, matched-left/matched/matched-right concatenation,
+named function value, and non-function decline behavior.
+
+A new current-source strict run was deliberately skipped for this
+diagnostic-only slice. The immediately preceding expected-red trace already
+contains the selected callback phases and 88 statements; repeating a
+480-second run without a production or tracing change would not improve the
+attribution or closure evidence.
+
+Relevant current-source evidence remains:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-string-literal-adapter-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-split-length-type-warm.log`
+
+Follow-up bead `haxe_ocaml-jdmr9` owns the measurement seam: buffer filtered
+statement detail lines and flush them after enclosing method timing while
+preserving labels and order. Further Cpp burn-down should use corrected totals
+instead of chasing synchronous trace I/O. Broader Cpp render/type-flow
+extraction remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This attribution
+changes neither generated Cpp nor expected-red production readiness, and
+committed bootstrap snapshots are unaffected. `CppTargetCore.hx` remains
+unchanged at 25,965 lines; the focused local-declaration probe is 180 lines and
+stays separate from the mixed helper benchmark. `thinking:xhigh` was not
+crossed. GPT 5.5 Pro and Oracle were deliberately skipped because focused and
+strict timing exposed a bounded diagnostic-instrumentation issue without a
+scope, release, provenance, or architecture decision.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
