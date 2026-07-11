@@ -3858,6 +3858,92 @@ growing an inline emitter stub, and broader extraction remains owned by
 were deliberately skipped because the black-box oracle and existing
 target-owned EReg boundary supplied a bounded, provenance-neutral seam.
 
+## 2026-07-11 Scope-Isolated EReg Callback Lambdas
+
+Follow-up bead `haxe_ocaml-cjah7` re-ranked the post-parity
+`TestEReg.test` trace before changing production rendering. Both the nullable
+capture baseline and the final trace retain all 88 indexed statements and 679
+selected records. In each log, a target heartbeat splits one zero-cost
+index-86 bookkeeping line; the statement and measured leaf records remain
+complete, so it is not treated as missing semantics.
+
+The largest repeated leaf family after the nullable contract settled is six
+immediate EReg `map` calls used as equality operands. Their first-operand
+render phases total 0.001034s in the baseline. Focused untraced attribution
+showed that the exact EReg-to-String callback renderer still copied and
+restored the surrounding local-name and local-type maps even when every leaf
+was a literal or a callback-owned `matched`, `matchedLeft`, `matchedRight`, or
+literal-index `matched(...).substr(...)` call.
+
+`lambdaExprWithArgTypes` now checks that closed callback grammar before any
+scope mutation. When every leaf is target-owned, it renders and assembles the
+typed lambda directly. A captured value, non-concatenation body, non-EReg
+argument, non-String return, unsupported method, other receiver, or
+non-literal index declines and retains the canonical scope-registration,
+fallback rendering, and restoration path. The direct leaf uses the sanitized
+lambda argument rather than consulting an outer same-name local. A focused
+shadow control freezes both the generated argument name and preservation of
+the outer scope.
+
+Two 1,000-call pre-change samples measured the exact multi-capture lambda at
+0.039152s/0.039867s, the matched/substr lambda at 0.026389s/0.026853s,
+fresh exact-map rendering at 0.040991s/0.040688s, typed-local inline map
+rendering at 0.066365s/0.064757s, and expected-function rendering at
+0.027798s/0.028283s. Two final samples measured
+0.032522s/0.032529s, 0.022142s/0.022197s,
+0.035718s/0.035472s, 0.036545s/0.035296s, and
+0.022799s/0.022986s respectively. The exact phases are about
+16.93-18.41%, 16.09-17.34%, 12.82-12.86%, 44.93-45.49%, and
+17.98-18.73% lower. Captured-value callbacks remain separately covered on the
+general path; no general lambda or String-render claim is made.
+
+The exact-command final current-source trace, with stage0 delegation forbidden,
+reduced the six selected first-operand render phases from 0.001034s to
+0.000908s, about 12.20%, and their statements from 0.002858s to 0.002717s,
+about 4.94%. The named callback declaration at index 69 also uses the exact
+grammar: its initializer render fell from 0.000276s to 0.000227s, about
+17.72%, and its statement from 0.000599s to 0.000543s, about 9.32%.
+
+No aggregate improvement is claimed. `TestEReg.test` was effectively flat at
+0.062475s versus 0.062455s, its class moved from 0.064123s to 0.064175s, and
+`TestBytes.test` was about 1.94% faster. The final run fully rendered
+`TestEReg`, reached `Parser_XmlParserException`, and ended at the expected
+480-second timeout with target exit 124 and wrapper
+`expected_red_probe_exit=1`. An initial delegated command was stopped as soon
+as it entered upstream hxcpp compilation; its non-comparable partial log was
+removed before the non-delegating probe.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-ereg-nullable-capture-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-isolated-ereg-callback-warm.log`
+
+Focused validation for this slice includes:
+
+- two 1,000-call focused pre/post samples
+- `npm run hxhx:build-current-source`
+- the exact-command non-delegating 480-second strict Cpp probe
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is an internal
+render-latency refinement while strict Cpp remains expected-red, so public
+production readiness does not change. Generated Cpp is frozen by focused and
+native controls, runtime support and committed bootstrap snapshots are
+unaffected, and `CppTargetCore.hx` remains a red mega-file at 26,084 lines.
+The 43-line production change extends the existing EReg callback/lambda seam;
+broader extraction remains owned by `haxe_ocaml-36ec`. `thinking:xhigh` was
+not crossed. GPT 5.5 Pro and Oracle were deliberately skipped because the
+existing exact callback grammar, focused attribution, and strict same-index
+evidence supplied a bounded, provenance-neutral seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

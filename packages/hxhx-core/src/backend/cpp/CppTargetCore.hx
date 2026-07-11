@@ -22083,6 +22083,42 @@ class CppTargetCore {
 		};
 	}
 
+	/**
+		Render an EReg String-concatenation callback without mutating render scope.
+
+		This deliberately accepts only literal and callback-owned EReg leaves. A
+		captured value or any other leaf declines so the general lambda path can
+		register arguments and restore lambda-local scope normally.
+	**/
+	static function directIsolatedERegStringCallbackBodyExpr(body:HxExpr, argNames:Array<String>, argTypes:Array<String>, returnType:String,
+			?scope:CppRenderScope):Null<String> {
+		if (scope == null || returnType != "std::string" || argNames == null || argNames.length != 1 || argTypes == null || argTypes.length != 1)
+			return null;
+		final argClass = classNameFromCppType(argTypes[0]);
+		if (argClass == null || !isERegTypeName(argClass))
+			return null;
+		return switch (body) {
+			case EBinop("+", _, _):
+				directIsolatedERegStringConcatExpr(body, sanitizeIdentifier(argNames[0]), scope);
+			case _:
+				null;
+		};
+	}
+
+	/** Require every leaf before taking the scope-isolated EReg callback path. **/
+	static function directIsolatedERegStringConcatExpr(expr:HxExpr, callbackArg:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case EBinop("+", left, right):
+				final renderedLeft = directIsolatedERegStringConcatExpr(left, callbackArg, scope);
+				if (renderedLeft == null)
+					return null;
+				final renderedRight = directIsolatedERegStringConcatExpr(right, callbackArg, scope);
+				renderedRight == null ? null : "(" + renderedLeft + " + " + renderedRight + ")";
+			case _:
+				directERegStringCallbackConcatLeafExpr(expr, callbackArg, scope);
+		};
+	}
+
 	/** Preserve canonical String coercion at EReg callback leaves while bypassing redundant probes on each enclosing concatenation. **/
 	static function directERegStringConcatExpr(expr:HxExpr, callbackArg:String, ?scope:CppRenderScope):String {
 		return switch (expr) {
@@ -22109,7 +22145,7 @@ class CppTargetCore {
 			case ECall(EField(ECall(EField(EIdent(receiver), "matched"), matchedArgs), "substr"), substrArgs) if (sanitizeIdentifier(receiver) == callbackArg):
 				directERegMatchedSubstrCallbackLeafExpr(receiver, matchedArgs, substrArgs, scope);
 			case ECall(EField(EIdent(receiver), method), args) if (sanitizeIdentifier(receiver) == callbackArg):
-				final target = localCppName(receiver, scope);
+				final target = callbackArg;
 				switch (sanitizeIdentifier(method)) {
 					case "matchedLeft" | "matchedRight" if (args.length == 0):
 						target + "->" + sanitizeIdentifier(method) + "()";
@@ -22133,7 +22169,7 @@ class CppTargetCore {
 		final substrStart = directPrimitiveLiteralCallArgExprForExpectedType(substrArgs[0], "int", scope);
 		if (matchedIndex == null || substrStart == null)
 			return null;
-		return localCppName(receiver, scope) + "->matched(" + matchedIndex + ").value().substr(" + substrStart + ")";
+		return sanitizeIdentifier(receiver) + "->matched(" + matchedIndex + ").value().substr(" + substrStart + ")";
 	}
 
 	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope, ?expectedReturnType:String,
@@ -22162,6 +22198,13 @@ class CppTargetCore {
 				+ " { return "
 				+ (explicitReturn ? valueExprForExpectedType(body, returnType, scope) : renderExpr(body, scope))
 				+ "; }";
+		final isolatedBodyStart = timingEnabled ? Sys.time() : 0.0;
+		final isolatedERegStringBody = explicitReturn ? directIsolatedERegStringCallbackBodyExpr(body, names, argTypes, returnType, scope) : null;
+		if (timingEnabled)
+			traceLambdaRenderPhase(scope, "isolated_ereg_body", Sys.time() - isolatedBodyStart, args.length,
+				"hit=" + Std.string(isolatedERegStringBody != null));
+		if (isolatedERegStringBody != null)
+			return lambdaCapture + "(" + params.join(", ") + ")" + suffix + " { return " + isolatedERegStringBody + "; }";
 		final copyLocalTypesStart = timingEnabled ? Sys.time() : 0.0;
 		final savedLocalTypes = copyStringMap(scope.localTypes);
 		if (timingEnabled)

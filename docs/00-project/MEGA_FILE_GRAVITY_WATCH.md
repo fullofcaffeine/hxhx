@@ -19,7 +19,7 @@ to be refreshed when a watched file moves by more than 250 lines.
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,041 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,084 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,031 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -179,6 +179,14 @@ revises its existing exact EReg render/type seams for presence checks, String
 adaptation, and present-capture String method access. This is a bounded parity
 repair, not a new runtime/stdlib semantic family; broader extraction remains
 covered by `haxe_ocaml-36ec`.
+
+2026-07-11 checkpoint: `haxe_ocaml-cjah7` extended the existing exact
+EReg-to-String callback grammar so literal/callback-owned concatenations can be
+rendered before lambda scope maps are copied or mutated. Captured values,
+unsupported leaves, other function signatures, and general lambdas decline to
+the canonical scoped path. This is a bounded EReg callback-render refinement,
+not a new runtime/stdlib semantic family; broader extraction remains covered
+by `haxe_ocaml-36ec`.
 
 ## Upstream Reference Boundary
 

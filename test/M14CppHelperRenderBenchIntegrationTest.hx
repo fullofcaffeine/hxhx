@@ -353,6 +353,7 @@ typedef ERegLambdaPhaseBenchResult = {
 	var nestedLambdaElapsed:Float;
 	var directBodyElapsed:Float;
 	var nestedBodyElapsed:Float;
+	var isolatedBodyElapsed:Float;
 	var leafElapsed:Float;
 	var nestedLeafElapsed:Float;
 	var bodyElapsed:Float;
@@ -379,6 +380,7 @@ typedef ERegLambdaPhaseBenchResult = {
 	var nestedLambdaSample:String;
 	var directBodySample:String;
 	var nestedBodySample:String;
+	var isolatedBodySample:String;
 	var leafSample:String;
 	var nestedLeafSample:String;
 	var bodySample:String;
@@ -2395,6 +2397,12 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& @:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(matchedLeft, ["r"], ["std::shared_ptr<EReg>"], "std::string",
 				scope) == null,
 			"Non-EReg arguments, non-String returns, and non-concatenation callbacks should retain general lambda rendering");
+		final shadowScope = eRegBenchScope();
+		shadowScope.localNames.set("r", "outer_r");
+		shadowScope.localTypes.set("r", "std::string");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.lambdaExprForExpectedFunction(["r"], nestedBody, expectedType,
+			shadowScope) == '[&](std::shared_ptr<EReg> r) -> std::string { return (std::string("match:") + r->matched(2).value().substr(3)); }' && shadowScope.localNames.get("r") == "outer_r" && shadowScope.localTypes.get("r") == "std::string",
+			"Scope-isolated EReg callbacks should use the lambda argument and preserve an outer same-name local");
 		resetRendererCaches();
 		final mapStart = Sys.time();
 		var mapSample = "";
@@ -2543,6 +2551,15 @@ class M14CppHelperRenderBenchIntegrationTest {
 		}
 		final nestedBodyElapsed = Sys.time() - nestedBodyStart;
 		resetRendererCaches();
+		final isolatedBodyStart = Sys.time();
+		var isolatedBodySample = "";
+		for (_ in 0...callCount) {
+			final rendered = @:privateAccess
+				backend.cpp.CppTargetCore.directIsolatedERegStringCallbackBodyExpr(nestedBody, ["r"], ["std::shared_ptr<EReg>"], "std::string", scope);
+			isolatedBodySample = rendered == null ? "" : rendered;
+		}
+		final isolatedBodyElapsed = Sys.time() - isolatedBodyStart;
+		resetRendererCaches();
 		final leafStart = Sys.time();
 		var leafSample = "";
 		for (_ in 0...callCount)
@@ -2603,6 +2620,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 			nestedLambdaElapsed: nestedLambdaElapsed,
 			directBodyElapsed: directBodyElapsed,
 			nestedBodyElapsed: nestedBodyElapsed,
+			isolatedBodyElapsed: isolatedBodyElapsed,
 			leafElapsed: leafElapsed,
 			nestedLeafElapsed: nestedLeafElapsed,
 			bodyElapsed: bodyElapsed,
@@ -2629,6 +2647,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 			nestedLambdaSample: nestedLambdaSample,
 			directBodySample: directBodySample,
 			nestedBodySample: nestedBodySample,
+			isolatedBodySample: isolatedBodySample,
 			leafSample: leafSample,
 			nestedLeafSample: nestedLeafSample,
 			bodySample: bodySample
@@ -2969,6 +2988,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 			"EReg.map callback fixtures should preserve the callback-owned matched/substr chain");
 		assertTrue(eRegLambdaPhases.nestedLeafSample == "r->matched(2).value().substr(3)"
 			&& eRegLambdaPhases.nestedBodySample == '(std::string("match:") + r->matched(2).value().substr(3))'
+			&& eRegLambdaPhases.isolatedBodySample == eRegLambdaPhases.nestedBodySample
 			&& eRegLambdaPhases.nestedLambdaSample == '[&](std::shared_ptr<EReg> r) -> std::string { return (std::string("match:") + r->matched(2).value().substr(3)); }'
 			&& eRegLambdaPhases.expectedFunctionSample == eRegLambdaPhases.nestedLambdaSample,
 			"EReg.map callback fixtures should preserve exact nested matched/substr and lambda shapes");
@@ -2991,6 +3011,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 			backend.cpp.CppTargetCore.directERegStringCallbackConcatLeafExpr(ECall(EField(ECall(EField(EIdent("r"), "matched"), [EInt(2)]), "substr"),
 				[EIdent("start")]), "r", eRegBenchScope()) == null,
 			"Matched/substr callback chains with non-literal starts should retain general String rendering");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.directIsolatedERegStringCallbackBodyExpr(EBinop("+", EIdent("prefix"),
+				ECall(EField(EIdent("r"), "matched"), [EInt(0)])), ["r"], ["std::shared_ptr<EReg>"], "std::string",
+				eRegBenchScope()) == null,
+			"Captured callback leaves should retain general lambda scope registration and restoration");
 		assertContains(eRegLambdaPhases.bodySample, "r->matchedLeft()", "EReg.map callback fixtures should keep nested EReg body calls");
 
 		Sys.println("CPP_HELPER_RENDER_BENCH:PASS extra_methods="
@@ -3321,6 +3346,8 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ eRegLambdaPhases.directBodyElapsed
 			+ " ereg_lambda_nested_body_seconds="
 			+ eRegLambdaPhases.nestedBodyElapsed
+			+ " ereg_lambda_isolated_body_seconds="
+			+ eRegLambdaPhases.isolatedBodyElapsed
 			+ " ereg_lambda_leaf_seconds="
 			+ eRegLambdaPhases.leafElapsed
 			+ " ereg_lambda_nested_leaf_seconds="
