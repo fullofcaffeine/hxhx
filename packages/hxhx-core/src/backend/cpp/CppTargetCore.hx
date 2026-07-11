@@ -20488,7 +20488,13 @@ class CppTargetCore {
 			sanitizeTypePath(typeBaseName(typePath == null ? "" : typePath)) == "NotImplementedException" ? "std::string(\"Not implemented\")" : "std::string()";
 	}
 
+	/** Adapt an expression to the C++ String carrier while preserving target-specific conversions. **/
 	static function stringExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		switch (expr) {
+			case EString(value):
+				return "std::string(" + quoteString(value) + ")";
+			case _:
+		}
 		final macroApiCall = macroApiCallExprForExpected(expr, "std::string", scope);
 		if (macroApiCall != null)
 			return macroApiCall;

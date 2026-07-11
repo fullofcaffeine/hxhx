@@ -3202,6 +3202,93 @@ separate from the core renderer. `thinking:xhigh` was not crossed. GPT 5.5 Pro
 and Oracle were deliberately skipped because the immutable hierarchy and
 nearest-owner contract supplied a bounded, local, provenance-neutral seam.
 
+## 2026-07-11 Exact String Literal Adapter
+
+Follow-up bead `haxe_ocaml-sqdle` attributed the next stable equality cost to
+the exact String literal operand. `renderEqCallArgs` had already inferred
+`std::string`, but `eqComparableArgExpr` still sent the literal through
+`stringExpr`, where macro, JSON, enum, abstract, and class preflights all ran
+before the final `EString` case.
+
+A separate 137-line equality-argument probe now runs under
+`test:m14:cpp-helper-render-bench`. It times direct literal rendering, String
+adaptation, comparable-argument adaptation, complete concatenation equality,
+and fresh-EReg equality without growing the older mixed helper benchmark.
+Exact controls cover escaped literals, typed String locals, Dynamic values,
+String-backed abstracts, optional String values, numeric equality, typed
+concatenation, and target-owned fresh EReg calls.
+
+Two pre-change 1,000-call samples measured direct literal rendering at
+0.002854s/0.002870s, String adaptation at 0.028465s/0.029051s,
+comparable-literal adaptation at 0.028975s/0.029650s, complete concatenation
+equality at 1.172661s/1.168174s, and fresh-EReg equality at
+0.237999s/0.236512s. The matching String and comparable timings assigned the
+excess to String adaptation rather than equality dispatch.
+
+`stringExpr` now handles an exact `EString` immediately with the same escaped
+`std::string` construction. Casts, untyped and metadata wrappers, macro/API
+expressions, JSON values, enum carriers, Dynamic values, abstract-backed
+values, calls, fields, and optionals retain the existing conversion pipeline.
+
+Two final 1,000-call samples measured String adaptation at
+0.002769s/0.002850s, about 90.23% lower, and comparable-literal adaptation at
+0.003292s/0.003467s, about 88.47% lower. Complete concatenation equality fell
+about 6.55%, and fresh-EReg equality about 34.22%. Direct literal rendering
+remained comparable, and all exact output controls remained unchanged.
+
+In the comparable current-source strict trace, index 42's right-literal render
+fell from 0.000190s to 0.000019s, about 89.96%. Its concatenated left render
+also fell from 0.000128s to 0.000098s because that tree contains exact String
+literals, and the complete statement fell from 0.000644s to 0.000433s, about
+32.77%. The same right-literal phase fell about 90.62% at fresh-EReg index 47
+and 91.25% at index 68; their statements fell about 19.41% and 21.34%.
+
+`TestEReg.test` fell from 0.066621s to 0.063764s, about 4.29%, and its class
+fell from 0.068245s to 0.065487s, about 4.04%. `TestBytes.test` was about 0.55%
+faster. `TestXML.testBasic` was about 3.50% slower in this trace, so no broad
+cross-class speed claim is made. Both logs contain the same 88 indexed
+statements, while the selected literal phases moved by about 90%.
+
+The target setup/toolchain phase completed before native rendering and is not
+counted as target evidence. The retained native probe ended with
+`Cpp: FAIL (480s, exit 124)` and the wrapper's validated
+`expected_red_probe_exit=1`, after fully rendering `TestEReg`. The disposable
+upstream worktree was removed by the runner.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-method-owner-index-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-string-literal-adapter-warm.log`
+
+Follow-up bead `haxe_ocaml-39p17` owns the largest stable remaining statement:
+index 41's typed-local EReg split length at 0.000620s. Its first-operand
+inference costs 0.000244s yet returns no type even though the existing exact
+render predicate later proves the value is `int`. Broader Cpp render/type-flow
+extraction remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal String-adaptation latency improvement does not
+change public production readiness. Committed bootstrap snapshots are
+unaffected. `CppTargetCore.hx` remains a red mega-file at 25,963 lines; the
+production change is a documented six-line branch at the existing String
+adapter, while the focused probe and package wiring remain separate.
+`thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were deliberately
+skipped because the exact literal AST cannot represent any of the bypassed
+conversion shapes, giving a bounded, local, provenance-neutral seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
