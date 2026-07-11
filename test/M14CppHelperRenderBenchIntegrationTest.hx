@@ -197,6 +197,19 @@ typedef ERegLambdaPhaseBenchResult = {
 	var calls:Int;
 	var mapElapsed:Float;
 	var argsElapsed:Float;
+	var typedInlineMapElapsed:Float;
+	var typedNamedMapElapsed:Float;
+	var typedInferElapsed:Float;
+	var typedKnownReturnElapsed:Float;
+	var typedInstanceReturnElapsed:Float;
+	var typedInlineEqElapsed:Float;
+	var typedNamedEqElapsed:Float;
+	var typedInlineArgsElapsed:Float;
+	var typedNamedArgsElapsed:Float;
+	var typedStringArgElapsed:Float;
+	var typedInlineCallbackElapsed:Float;
+	var typedNamedCallbackElapsed:Float;
+	var typedReceiverTypeElapsed:Float;
 	var expectedFunctionElapsed:Float;
 	var identityPreflightElapsed:Float;
 	var boundPreflightElapsed:Float;
@@ -213,6 +226,19 @@ typedef ERegLambdaPhaseBenchResult = {
 	var inferElapsed:Float;
 	var mapSample:String;
 	var argsSample:String;
+	var typedInlineMapSample:String;
+	var typedNamedMapSample:String;
+	var typedInferSample:String;
+	var typedKnownReturnSample:String;
+	var typedInstanceReturnSample:String;
+	var typedInlineEqSample:String;
+	var typedNamedEqSample:String;
+	var typedInlineArgsSample:String;
+	var typedNamedArgsSample:String;
+	var typedStringArgSample:String;
+	var typedInlineCallbackSample:String;
+	var typedNamedCallbackSample:String;
+	var typedReceiverTypeSample:String;
 	var expectedFunctionSample:String;
 	var lambdaSample:String;
 	var nestedLambdaSample:String;
@@ -1486,6 +1512,53 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final nestedCallback = ELambda(["r"], nestedBody);
 		final mapArgs = [EString("aa"), nestedCallback];
 		final map = ECall(EField(ENew("EReg", [EString("a+"), EString("g")]), "map"), mapArgs);
+		scope.localNames.set("regex", "regex");
+		scope.localTypes.set("regex", "std::shared_ptr<EReg>");
+		scope.localNames.set("f", "f");
+		scope.localTypes.set("f", expectedType);
+		scope.localNames.set("text", "text");
+		scope.localTypes.set("text", "std::string");
+		scope.localNames.set("dynamicText", "dynamicText");
+		scope.localTypes.set("dynamicText", "std::any");
+		scope.localNames.set("number", "number");
+		scope.localTypes.set("number", "int");
+		scope.localNames.set("dynamicCallback", "dynamicCallback");
+		scope.localTypes.set("dynamicCallback", "std::any");
+		final typedInlineMap = ECall(EField(EIdent("regex"), "map"), mapArgs);
+		final typedNamedArgs = [EString("aa"), EIdent("f")];
+		final typedNamedMap = ECall(EField(EIdent("regex"), "map"), typedNamedArgs);
+		final stringParam = new HxFunctionArg("s", "String", NoDefault, false, false);
+		final callbackParam = new HxFunctionArg("f", "EReg->String", NoDefault, false, false);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMapCall(EIdent("regex"), "map", 2, scope),
+			"Typed-local EReg map calls should use the exact target-owned String/callback contract");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMapCall(EIdent("unknown"), "map", 2, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMapCall(EIdent("regex"), "map", 1, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMapCall(EIdent("regex"), "replace", 2, scope),
+			"Unknown receivers, wrong arity, and other EReg methods should retain general field-call rendering");
+		final unknownMapSample = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("unknown"), "map"), typedNamedArgs), scope);
+		final wrongAritySample = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "map"), [EString("aa")]), scope);
+		final otherMethodSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "replace"),
+			[EString("aa"), EString("x")]), scope);
+		assertTrue(unknownMapSample == 'unknown.map("aa", f)'
+			&& wrongAritySample == 'regex->map("aa")'
+			&& otherMethodSample == 'regex->replace("aa", "x")',
+			"Declined EReg map shapes should preserve general field-call output");
+		final typedStringMapSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "map"),
+			[EIdent("text"), EIdent("f")]), scope);
+		final dynamicStringMapSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "map"),
+			[EIdent("dynamicText"), EIdent("f")]), scope);
+		final scalarStringMapSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "map"),
+			[EIdent("number"), EIdent("f")]), scope);
+		assertTrue(typedStringMapSample == "regex->map(text, f)"
+			&& dynamicStringMapSample == "regex->map(__hxhx_stringify(dynamicText), f)"
+			&& scalarStringMapSample == "regex->map(std::to_string(number), f)",
+			"Typed-local EReg map should retain typed, erased, and scalar String argument adaptation");
+		final dynamicCallback = EIdent("dynamicCallback");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.eRegMapCallbackArgExpr(dynamicCallback, scope) == @:privateAccess
+			backend.cpp.CppTargetCore.valueExprForExpectedType(dynamicCallback, expectedType, scope),
+			"Callbacks without the exact function type should retain general expected-value adaptation");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directLambdaValueExprForExpectedFunction(nestedCallback, expectedType, scope) != null,
 			"A raw lambda with an expected C++ function type should use direct typed-lambda adaptation");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directLambdaValueExprForExpectedFunction(nestedCallback, "std::string", scope) == null
@@ -1517,6 +1590,88 @@ class M14CppHelperRenderBenchIntegrationTest {
 		for (_ in 0...callCount)
 			argsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "map", mapArgs, scope).join(", ");
 		final argsElapsed = Sys.time() - argsStart;
+		resetRendererCaches();
+		final typedInlineMapStart = Sys.time();
+		var typedInlineMapSample = "";
+		for (_ in 0...callCount)
+			typedInlineMapSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedInlineMap, scope);
+		final typedInlineMapElapsed = Sys.time() - typedInlineMapStart;
+		resetRendererCaches();
+		final typedNamedMapStart = Sys.time();
+		var typedNamedMapSample = "";
+		for (_ in 0...callCount)
+			typedNamedMapSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedNamedMap, scope);
+		final typedNamedMapElapsed = Sys.time() - typedNamedMapStart;
+		resetRendererCaches();
+		final typedInferStart = Sys.time();
+		var typedInferSample = "";
+		for (_ in 0...callCount)
+			typedInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(typedInlineMap, scope);
+		final typedInferElapsed = Sys.time() - typedInferStart;
+		resetRendererCaches();
+		final typedKnownReturnStart = Sys.time();
+		var typedKnownReturnSample = "";
+		for (_ in 0...callCount)
+			typedKnownReturnSample = @:privateAccess backend.cpp.CppTargetCore.knownFieldCallReturnCppType(EIdent("regex"), "map", mapArgs, scope);
+		final typedKnownReturnElapsed = Sys.time() - typedKnownReturnStart;
+		resetRendererCaches();
+		final typedInstanceReturnStart = Sys.time();
+		var typedInstanceReturnSample = "";
+		for (_ in 0...callCount)
+			typedInstanceReturnSample = @:privateAccess backend.cpp.CppTargetCore.classMethodCppReturnType("EReg", "map", false, scope);
+		final typedInstanceReturnElapsed = Sys.time() - typedInstanceReturnStart;
+		resetRendererCaches();
+		final typedInlineEqStart = Sys.time();
+		var typedInlineEqSample = "";
+		for (_ in 0...callCount)
+			typedInlineEqSample = @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(typedInlineMap, "std::string", "std::string", scope);
+		final typedInlineEqElapsed = Sys.time() - typedInlineEqStart;
+		resetRendererCaches();
+		final typedNamedEqStart = Sys.time();
+		var typedNamedEqSample = "";
+		for (_ in 0...callCount)
+			typedNamedEqSample = @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(typedNamedMap, "std::string", "std::string", scope);
+		final typedNamedEqElapsed = Sys.time() - typedNamedEqStart;
+		resetRendererCaches();
+		final typedInlineArgsStart = Sys.time();
+		var typedInlineArgsSample = "";
+		for (_ in 0...callCount)
+			typedInlineArgsSample = @:privateAccess
+				backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "map", mapArgs, scope).join(", ");
+		final typedInlineArgsElapsed = Sys.time() - typedInlineArgsStart;
+		resetRendererCaches();
+		final typedNamedArgsStart = Sys.time();
+		var typedNamedArgsSample = "";
+		for (_ in 0...callCount)
+			typedNamedArgsSample = @:privateAccess
+				backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "map", typedNamedArgs, scope).join(", ");
+		final typedNamedArgsElapsed = Sys.time() - typedNamedArgsStart;
+		resetRendererCaches();
+		final typedStringArgStart = Sys.time();
+		var typedStringArgSample = "";
+		for (_ in 0...callCount)
+			typedStringArgSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(EString("aa"), stringParam, scope, "std::string");
+		final typedStringArgElapsed = Sys.time() - typedStringArgStart;
+		resetRendererCaches();
+		final typedInlineCallbackStart = Sys.time();
+		var typedInlineCallbackSample = "";
+		for (_ in 0...callCount)
+			typedInlineCallbackSample = @:privateAccess
+				backend.cpp.CppTargetCore.callArgExprForParam(nestedCallback, callbackParam, scope, expectedType);
+		final typedInlineCallbackElapsed = Sys.time() - typedInlineCallbackStart;
+		resetRendererCaches();
+		final typedNamedCallbackStart = Sys.time();
+		var typedNamedCallbackSample = "";
+		for (_ in 0...callCount)
+			typedNamedCallbackSample = @:privateAccess
+				backend.cpp.CppTargetCore.callArgExprForParam(EIdent("f"), callbackParam, scope, expectedType);
+		final typedNamedCallbackElapsed = Sys.time() - typedNamedCallbackStart;
+		resetRendererCaches();
+		final typedReceiverTypeStart = Sys.time();
+		var typedReceiverTypeSample = "";
+		for (_ in 0...callCount)
+			typedReceiverTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(EIdent("regex"), scope);
+		final typedReceiverTypeElapsed = Sys.time() - typedReceiverTypeStart;
 		resetRendererCaches();
 		final expectedFunctionStart = Sys.time();
 		var expectedFunctionSample = "";
@@ -1610,6 +1765,19 @@ class M14CppHelperRenderBenchIntegrationTest {
 			calls: callCount,
 			mapElapsed: mapElapsed,
 			argsElapsed: argsElapsed,
+			typedInlineMapElapsed: typedInlineMapElapsed,
+			typedNamedMapElapsed: typedNamedMapElapsed,
+			typedInferElapsed: typedInferElapsed,
+			typedKnownReturnElapsed: typedKnownReturnElapsed,
+			typedInstanceReturnElapsed: typedInstanceReturnElapsed,
+			typedInlineEqElapsed: typedInlineEqElapsed,
+			typedNamedEqElapsed: typedNamedEqElapsed,
+			typedInlineArgsElapsed: typedInlineArgsElapsed,
+			typedNamedArgsElapsed: typedNamedArgsElapsed,
+			typedStringArgElapsed: typedStringArgElapsed,
+			typedInlineCallbackElapsed: typedInlineCallbackElapsed,
+			typedNamedCallbackElapsed: typedNamedCallbackElapsed,
+			typedReceiverTypeElapsed: typedReceiverTypeElapsed,
 			expectedFunctionElapsed: expectedFunctionElapsed,
 			identityPreflightElapsed: identityPreflightElapsed,
 			boundPreflightElapsed: boundPreflightElapsed,
@@ -1626,6 +1794,19 @@ class M14CppHelperRenderBenchIntegrationTest {
 			inferElapsed: Sys.time() - inferStart,
 			mapSample: mapSample,
 			argsSample: argsSample,
+			typedInlineMapSample: typedInlineMapSample,
+			typedNamedMapSample: typedNamedMapSample,
+			typedInferSample: typedInferSample,
+			typedKnownReturnSample: typedKnownReturnSample,
+			typedInstanceReturnSample: typedInstanceReturnSample,
+			typedInlineEqSample: typedInlineEqSample,
+			typedNamedEqSample: typedNamedEqSample,
+			typedInlineArgsSample: typedInlineArgsSample,
+			typedNamedArgsSample: typedNamedArgsSample,
+			typedStringArgSample: typedStringArgSample,
+			typedInlineCallbackSample: typedInlineCallbackSample,
+			typedNamedCallbackSample: typedNamedCallbackSample,
+			typedReceiverTypeSample: typedReceiverTypeSample,
 			expectedFunctionSample: expectedFunctionSample,
 			lambdaSample: lambdaSample,
 			nestedLambdaSample: nestedLambdaSample,
@@ -1816,6 +1997,29 @@ class M14CppHelperRenderBenchIntegrationTest {
 		assertTrue(eRegLambdaPhases.mapSample == 'std::make_shared<EReg>("a+", "g")->map("aa", ' + eRegLambdaPhases.nestedLambdaSample + ')'
 			&& eRegLambdaPhases.argsSample == '"aa", ' + eRegLambdaPhases.nestedLambdaSample,
 			"Fresh EReg.map fixtures should preserve their exact target-owned call and callback argument shapes");
+		assertTrue(eRegLambdaPhases.typedInlineMapSample == 'regex->map("aa", ' + eRegLambdaPhases.nestedLambdaSample + ')'
+			&& eRegLambdaPhases.typedInlineEqSample == eRegLambdaPhases.typedInlineMapSample
+			&& eRegLambdaPhases.typedNamedMapSample == 'regex->map("aa", f)'
+			&& eRegLambdaPhases.typedNamedEqSample == eRegLambdaPhases.typedNamedMapSample,
+			"Typed-local EReg.map calls and String equality adaptation should preserve inline and named callback output");
+		assertTrue(eRegLambdaPhases.typedInferSample == "std::string"
+			&& eRegLambdaPhases.typedKnownReturnSample == "std::string"
+			&& eRegLambdaPhases.typedInstanceReturnSample == "std::string"
+			&& eRegLambdaPhases.typedReceiverTypeSample == "std::shared_ptr<EReg>",
+			"Typed-local EReg.map inference should retain its target-owned String result and EReg receiver carrier, got infer="
+			+ eRegLambdaPhases.typedInferSample
+			+ " known="
+			+ eRegLambdaPhases.typedKnownReturnSample
+			+ " instance="
+			+ eRegLambdaPhases.typedInstanceReturnSample
+			+ " receiver="
+			+ eRegLambdaPhases.typedReceiverTypeSample);
+		assertTrue(eRegLambdaPhases.typedInlineArgsSample == '"aa", ' + eRegLambdaPhases.nestedLambdaSample
+			&& eRegLambdaPhases.typedNamedArgsSample == '"aa", f'
+			&& eRegLambdaPhases.typedStringArgSample == '"aa"'
+			&& eRegLambdaPhases.typedInlineCallbackSample == eRegLambdaPhases.nestedLambdaSample
+			&& eRegLambdaPhases.typedNamedCallbackSample == "f",
+			"Typed-local EReg.map argument phases should retain String and callback contracts");
 		assertTrue(eRegLambdaPhases.directBodySample == '(((std::string("[") + r->matchedLeft()) + r->matched(0)) + r->matchedRight())'
 			&& eRegLambdaPhases.leafSample == 'r->matchedLeft()|r->matched(0)|r->matchedRight()',
 			"EReg.map callback fixtures should preserve exact direct-body and target-owned leaf call shapes, got body="
@@ -2023,6 +2227,32 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ eRegLambdaPhases.mapElapsed
 			+ " ereg_lambda_args_seconds="
 			+ eRegLambdaPhases.argsElapsed
+			+ " ereg_typed_inline_map_seconds="
+			+ eRegLambdaPhases.typedInlineMapElapsed
+			+ " ereg_typed_named_map_seconds="
+			+ eRegLambdaPhases.typedNamedMapElapsed
+			+ " ereg_typed_infer_seconds="
+			+ eRegLambdaPhases.typedInferElapsed
+			+ " ereg_typed_known_return_seconds="
+			+ eRegLambdaPhases.typedKnownReturnElapsed
+			+ " ereg_typed_instance_return_seconds="
+			+ eRegLambdaPhases.typedInstanceReturnElapsed
+			+ " ereg_typed_inline_eq_seconds="
+			+ eRegLambdaPhases.typedInlineEqElapsed
+			+ " ereg_typed_named_eq_seconds="
+			+ eRegLambdaPhases.typedNamedEqElapsed
+			+ " ereg_typed_inline_args_seconds="
+			+ eRegLambdaPhases.typedInlineArgsElapsed
+			+ " ereg_typed_named_args_seconds="
+			+ eRegLambdaPhases.typedNamedArgsElapsed
+			+ " ereg_typed_string_arg_seconds="
+			+ eRegLambdaPhases.typedStringArgElapsed
+			+ " ereg_typed_inline_callback_seconds="
+			+ eRegLambdaPhases.typedInlineCallbackElapsed
+			+ " ereg_typed_named_callback_seconds="
+			+ eRegLambdaPhases.typedNamedCallbackElapsed
+			+ " ereg_typed_receiver_type_seconds="
+			+ eRegLambdaPhases.typedReceiverTypeElapsed
 			+ " ereg_lambda_expected_function_seconds="
 			+ eRegLambdaPhases.expectedFunctionElapsed
 			+ " ereg_lambda_identity_preflight_seconds="

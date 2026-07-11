@@ -12826,6 +12826,8 @@ class CppTargetCore {
 				freshERegFieldCallExpr(receiver, method, args, scope);
 			case ECall(EField(receiver, method), args) if (isTypedLocalERegSplitCall(receiver, method, args.length, scope)):
 				typedLocalERegSplitCallExpr(receiver, args, scope);
+			case ECall(EField(receiver, method), args) if (isTypedLocalERegMapCall(receiver, method, args.length, scope)):
+				typedLocalERegMapCallExpr(receiver, args, scope);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
 				"__hxhx_args(argc, argv)";
 			case ECall(EField(receiver, "getClassName"), args) if (isTypeStaticReceiver(receiver) && args.length == 1):
@@ -14013,6 +14015,16 @@ class CppTargetCore {
 			+ ")";
 	}
 
+	/** Render the fixed typed-local EReg map contract without general instance-method discovery. **/
+	static function typedLocalERegMapCallExpr(receiver:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		return renderExpr(receiver, scope)
+			+ "->map("
+			+ eRegStringCallArgExpr(args[0], scope)
+			+ ", "
+			+ eRegMapCallbackArgExpr(args[1], scope)
+			+ ")";
+	}
+
 	static function fieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final receiverTypeName = staticReceiverClassName(receiver, scope);
 		final receiverCppType = exprCppType(receiver, scope);
@@ -14500,17 +14512,8 @@ class CppTargetCore {
 
 	/** Render arguments against target-known instance contracts before falling back to general method discovery. **/
 	static function renderFieldCallArgs(receiverCppType:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
-		if (receiverCppType == "std::shared_ptr<EReg>" && method == "split" && args.length == 1) {
-			final arg = args[0];
-			final literal = directPrimitiveLiteralCallArgExprForExpectedType(arg, "std::string", scope);
-			if (literal != null)
-				return [literal];
-			final classReferencePath = classReferencePathText(arg, scope);
-			if (classReferencePath != null)
-				return ["std::string(" + quoteString(classReferencePath) + ")"];
-			final knownString = knownStringCallArgExpr(arg, exprCppType(arg, scope), scope);
-			return [knownString == null ? renderExpr(arg, scope) : knownString];
-		}
+		if (receiverCppType == "std::shared_ptr<EReg>" && method == "split" && args.length == 1)
+			return [eRegStringCallArgExpr(args[0], scope)];
 		final listElementType = listElementCppType(receiverCppType);
 		if ((sanitizeIdentifier(method) == "add" || sanitizeIdentifier(method) == "remove")
 			&& args.length == 1
@@ -16334,6 +16337,29 @@ class CppTargetCore {
 			|| argHasErasedArgTypeOverride(arg, scope))
 			return stringExpr(arg, scope);
 		return null;
+	}
+
+	/** Preserve the established String call-argument contract for target-owned EReg methods. **/
+	static function eRegStringCallArgExpr(arg:HxExpr, ?scope:CppRenderScope):String {
+		final literal = directPrimitiveLiteralCallArgExprForExpectedType(arg, "std::string", scope);
+		if (literal != null)
+			return literal;
+		final classReferencePath = classReferencePathText(arg, scope);
+		if (classReferencePath != null)
+			return "std::string(" + quoteString(classReferencePath) + ")";
+		final knownString = knownStringCallArgExpr(arg, exprCppType(arg, scope), scope);
+		return knownString == null ? renderExpr(arg, scope) : knownString;
+	}
+
+	/** Adapt EReg.map callbacks directly only when the fixed target contract proves their function type. **/
+	static function eRegMapCallbackArgExpr(arg:HxExpr, ?scope:CppRenderScope):String {
+		final expectedType = "std::function<std::string(std::shared_ptr<EReg>)>";
+		final directLambda = directLambdaValueExprForExpectedFunction(arg, expectedType, scope);
+		if (directLambda != null)
+			return directLambda;
+		if (exprCppType(arg, scope) == expectedType)
+			return renderExpr(arg, scope);
+		return valueExprForExpectedType(arg, expectedType, scope);
 	}
 
 	/**
@@ -18172,6 +18198,8 @@ class CppTargetCore {
 				exprCppType(expr, scope);
 			case EField(ECall(EField(receiver, method), args), field) if (isTypedLocalERegMatchedPosField(receiver, method, args.length, field, scope)):
 				"int";
+			case ECall(EField(receiver, method), args) if (isTypedLocalERegMapCall(receiver, method, args.length, scope)):
+				"std::string";
 			case ECall(EField(receiver, method), args) if (isFreshERegStringCall(receiver, method, args.length)):
 				"std::string";
 			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver)):
@@ -18476,6 +18504,13 @@ class CppTargetCore {
 		return isTypedLocalERegReceiver(receiver, scope);
 	}
 
+	/** Recognize the exact target-owned String/callback contract of a typed-local EReg map call. **/
+	static function isTypedLocalERegMapCall(receiver:HxExpr, method:String, arity:Int, ?scope:CppRenderScope):Bool {
+		if (method != "map" || arity != 2)
+			return false;
+		return isTypedLocalERegReceiver(receiver, scope);
+	}
+
 	/** Recognize the target-owned structural fields of a typed-local EReg matched-position call. **/
 	static function isTypedLocalERegMatchedPosField(receiver:HxExpr, method:String, arity:Int, field:String, ?scope:CppRenderScope):Bool {
 		if (method != "matchedPos" || arity != 0 || (field != "pos" && field != "len"))
@@ -18530,6 +18565,8 @@ class CppTargetCore {
 		final arity = args == null ? 0 : args.length;
 		if (isTypedLocalERegSplitCall(receiver, method, arity, scope))
 			return "std::vector<std::string>";
+		if (isTypedLocalERegMapCall(receiver, method, arity, scope))
+			return "std::string";
 		if (isFreshERegStringCall(receiver, method, arity))
 			return "std::string";
 		if (isReflectStaticReceiver(receiver)) {

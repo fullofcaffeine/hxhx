@@ -12610,6 +12610,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(parsedERegMapLines,
 			"std::function<std::string(std::shared_ptr<EReg>)> f = [&](std::shared_ptr<EReg> x) -> std::string { return x->matchedLeft(); };",
 			"C++ callable locals passed to typed instance methods should adopt the expected pointer function type");
+		assertContains(parsedERegMapLines, "return r->map(\"a\", f);",
+			"C++ typed-local EReg.map calls should preserve the target-owned String and callback contract");
 		final parsedERegMatchedPosModule = new HxParser("class EReg { public function new(pattern:String, options:String) {} public function matchedPos():{pos:Int, len:Int} return null; } class ERegMatchedPosLike { public static function main():Int { var r = new EReg(\"a\", \"g\"); return r.matchedPos().pos + r.matchedPos().len; } }")
 			.parseModule("ERegMatchedPosLike");
 		final parsedERegMatchedPosNames = new StringMap<Bool>();

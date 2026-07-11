@@ -19,7 +19,7 @@ to be refreshed when a watched file moves by more than 250 lines.
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,720 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,757 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,031 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -112,6 +112,13 @@ typed-local EReg `matchedPos()` call. It reuses the existing typed-local EReg
 receiver seam and changes no runtime support or structural carrier behavior.
 This is a bounded expression-render repair, not a new runtime/stdlib semantic
 family; broader extraction remains covered by `haxe_ocaml-36ec`.
+
+2026-07-10 checkpoint: `haxe_ocaml-z5oql` added an exact render/type path for
+the fixed String/callback contract of a two-argument typed-local EReg `map`
+call. It reuses the existing EReg String conversion and direct typed-lambda
+seams, while non-matching callback values retain general adaptation. This is a
+bounded expression-render repair, not a new runtime/stdlib semantic family;
+broader extraction remains covered by `haxe_ocaml-36ec`.
 
 ## Upstream Reference Boundary
 

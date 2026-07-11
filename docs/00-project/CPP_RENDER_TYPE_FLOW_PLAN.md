@@ -2099,6 +2099,110 @@ Oracle were deliberately skipped because focused and strict attribution led to
 an exact existing target-owned render seam without changing scope, release,
 provenance, runtime architecture, or semantic policy.
 
+## 2026-07-10 Typed-Local EReg Map Equality Guard
+
+Follow-up bead `haxe_ocaml-z5oql` attributed the repeated post-`matchedPos`
+floor to 14 equality checks over typed-local `EReg.map(...)` calls. The
+existing EReg callback fixture now measures inline-lambda and explicitly typed
+local callbacks across full map rendering, String-result inference, equality
+adaptation, general field-call arguments, each String/callback argument, the
+receiver type, and instance-return discovery.
+
+Two pre-change 100-call samples measured typed-local inline map rendering at
+0.063529s and 0.063676s, and named-callback map rendering at 0.063577s and
+0.061031s. Inference took 0.015362s and 0.015084s. Inline equality adaptation
+took 0.062769s and 0.063589s; the named form took 0.060930s and 0.060878s.
+General argument rendering owned 0.041370-0.041408s for the inline form and
+0.038699-0.038764s for the named form. The receiver type itself cost only
+about 0.00037s. Direct expected-function rendering was about 0.00256s, so
+generic instance and call-argument preflights, not lambda body rendering,
+explained the floor.
+
+`renderExpr`, `inferExprCppType`, and known field-call return discovery now
+recognize only `map` with two arguments on an identifier whose C++ type is
+exactly `std::shared_ptr<EReg>`. The renderer uses the fixed target-owned
+`map(String, EReg->String):String` contract. The String argument reuses the
+same helper already established for typed-local EReg split calls; extracting
+that helper changes no split output. Inline lambdas use the existing direct
+expected-function renderer, and named values bypass general adaptation only
+when their C++ type exactly matches the EReg callback type. Other callback
+shapes retain `valueExprForExpectedType`.
+
+Exact controls retain `regex->map("aa", lambda)` and
+`regex->map("aa", f)`, including `[&]` capture and typed EReg callback
+parameters. Typed, erased, and scalar String inputs remain `text`,
+`__hxhx_stringify(dynamicText)`, and `std::to_string(number)`. Unknown
+receivers, wrong arity, and `replace` retain general field-call output, while
+Dynamic callbacks retain general expected-value adaptation. The Cpp native
+smoke also checks the parsed typed-local map call alongside its typed callback
+local. Runtime EReg replacement, global/zero-length progression, capture, and
+match-state behavior are unchanged.
+
+Two final 100-call samples reduced inline map rendering to 0.003919s and
+0.003920s, about 93.83%, and named-callback rendering to 0.001748s and
+0.001824s, about 97.01-97.25%. Inference fell to 0.000572s and 0.000598s,
+about 96.04-96.27%. Inline equality adaptation fell to 0.004065s and
+0.004021s, about 93.52-93.68%; the named form fell to 0.002090s and
+0.002097s, about 96.56-96.57%. The separately measured general argument path
+remained around 0.039-0.042s as a control.
+
+The rebuilt current-source strict trace retained 260 resolved modules, 280
+typed modules, and the same 384-helper inventory: 253 full bodies, 83
+declaration-only helpers, and 48 runtime-owned helpers. Across the 14 targeted
+statements, first-argument inference fell from 0.009819s to 0.000101s, about
+98.98%, and first-argument rendering from 0.056616s to 0.000687s, about
+98.79%. The complete statements fell from 0.071838s to 0.006121s, about
+91.48%.
+
+`TestEReg.test` fell from 0.288173s to 0.219547s, about 23.81%, and its class
+fell from 0.289893s to 0.221171s, about 23.71%. The targeted statement delta
+accounts for about 95.76% of the method delta. Independent controls were also
+faster in this run: `TestBytes.test` by about 5.57% and `TestXML.testBasic` by
+about 0.81%. Those controls make the broad run-to-run speed shift explicit;
+the much larger same-statement phase reductions and their share of the method
+delta are the retained claim.
+
+The setup-only upstream Haxe 4.3.7 Cpp compatibility run passed in 161 seconds
+and is not counted as native evidence. The retained 480-second native trace
+remained expected-red and timed out at 482 seconds. The frontier helper
+classifies the baseline/final pair as `shared-hotspots-moving-frontier`. The
+later run advanced from `ExprToken` to `MyAbstract_ExposingAbstract`, but no
+broad frontier-advance claim is made because the independent controls also
+moved.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-matched-pos-field-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-map-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-map-equality-warm.log`
+
+The disposable upstream worktree was removed and verified absent after the
+trace. Follow-up bead `haxe_ocaml-81ifg` owns the new repeated
+`TestEReg.test` hotspot: eight typed-local `matchSub` calls whose statements
+total 0.032603s, including 0.029272s in outer argument rendering. Broader Cpp
+render/type-flow extraction remains owned by `haxe_ocaml-36ec`. Committed
+bootstrap snapshots are not regenerated because this slice changes neither
+the bootstrap interface nor snapshot acceptance.
+
+Focused validation for this slice includes:
+
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness. `thinking:xhigh` was not crossed. GPT 5.5 Pro and
+Oracle were deliberately skipped because focused and strict attribution led to
+an exact existing target-owned render seam without changing scope, release,
+provenance, runtime architecture, or semantic policy.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over
