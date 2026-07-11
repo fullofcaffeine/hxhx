@@ -18210,6 +18210,8 @@ class CppTargetCore {
 		final typePart = CppTypeModel.functionArgTypePartType(part);
 		if (isDynamicLikeTypeHint(typePart))
 			return "std::any";
+		if (!CppTypeModel.functionArgTypePartIsOptional(part) && isERegTypeName(typePart))
+			return "std::shared_ptr<EReg>";
 		return CppTypeModel.functionArgTypePartIsOptional(part) ? cppNullableTypeHint(typePart, scope) : cppTypeHint(typePart, scope);
 	}
 

@@ -3944,6 +3944,80 @@ not crossed. GPT 5.5 Pro and Oracle were deliberately skipped because the
 existing exact callback grammar, focused attribution, and strict same-index
 evidence supplied a bounded, provenance-neutral seam.
 
+## 2026-07-11 EReg Callback Local Argument Type Hint
+
+Follow-up bead `haxe_ocaml-zlms3` isolated the remaining typed-local cost at
+`TestEReg.test` statement 69 without widening callback grammar. Two 500-call
+pre-change samples using a fresh class scope for each full declaration measured
+callback declared-type rendering at 2.720018s/2.753687s and full declaration
+rendering at 2.740867s/2.771984s. The expected-value, initializer, lambda, and
+body phases were only 0.016749-0.017135s, 0.017810-0.017823s,
+0.016276-0.016660s, and 0.010006-0.010038s respectively. Declared-type
+resolution therefore accounted for more than 99% of the fresh-scope full
+declaration probe.
+
+The local callable argument renderer now recognizes only a required EReg
+argument and emits the existing target-owned `std::shared_ptr<EReg>` type
+directly. Optional arguments still use nullable type rendering, and every
+non-EReg argument still uses general class/type lookup. The surrounding local
+callable guard continues to require a lambda initializer and a function-shaped
+declared type, so named callback values and non-function expectations do not
+enter this seam.
+
+Two 500-call post-change samples measured callback declared-type rendering at
+0.045387s/0.044695s and full declaration rendering at
+0.069712s/0.069957s, reductions of about 98.33-98.38% and 97.46-97.48%
+respectively. Expected-value, initializer, lambda, and body timing remained in
+their prior range. Focused controls freeze exact explicit and package-qualified
+EReg callback types, the general non-EReg callback type, inferred callbacks,
+named callback values, non-function expectations, and the exact generated
+declaration.
+
+The exact-command non-delegating current-source strict probe fully rendered
+the same 88 `TestEReg.test` statements, reached `Parser_XmlParserException`,
+and ended at the expected 480-second timeout with target exit 124 and wrapper
+`expected_red_probe_exit=1`. It recorded 680 selected method records; the
+baseline has 679 because a heartbeat split one zero-cost bookkeeping line.
+Statement 69's local-type phase was effectively flat at 0.000027s versus
+0.000026s, its initializer at 0.000235s versus 0.000227s, and its statement at
+0.000552s versus 0.000543s. The method and class were also flat at
+0.062432s/0.064134s versus 0.062455s/0.064175s, while `TestBytes.test` varied
+by about 1.25%. No strict aggregate or same-statement timing improvement is
+claimed: the warmed real scope makes this exact type lookup cheap, and the
+focused fresh-scope probe is the evidence for the avoided repeated class scan.
+The strict run proves unchanged output coverage and frontier only.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-isolated-ereg-callback-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-ereg-callback-arg-typehint-warm.log`
+
+Focused validation for this slice includes:
+
+- two 500-call focused pre/post samples
+- `npm run hxhx:build-current-source`
+- the exact-command non-delegating 480-second strict Cpp probe
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is a bounded
+internal render-latency refinement while strict Cpp remains expected-red, so
+public production readiness does not change. Generated Cpp is frozen by the
+focused controls, runtime support and committed bootstrap snapshots are
+unaffected, and `CppTargetCore.hx` remains a red mega-file at 26,086 lines.
+The two-line production change stays within the existing local callable type
+seam; broader extraction remains owned by `haxe_ocaml-36ec`. No upstream
+compiler or test source was copied. `thinking:xhigh` was not crossed. GPT 5.5
+Pro and Oracle were deliberately skipped because the target-owned EReg type
+and fresh-scope attribution supplied a bounded, provenance-neutral seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

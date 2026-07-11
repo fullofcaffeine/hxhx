@@ -37,8 +37,9 @@ class M14CppLocalDeclBenchIntegrationTest {
 		final all = new Array<HxClassDecl>();
 		final stringAlias = new HxClassDecl("StringAlias", false, [], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=String"]);
 		final eReg = new HxClassDecl("EReg", false, [], []);
+		final otherCallbackArg = new HxClassDecl("OtherCallbackArg", false, [], []);
 		final owner = new HxClassDecl("LocalDeclBenchOwner", false, [], [new HxFieldDecl("value", Public, false, "String", null)]);
-		for (cls in [stringAlias, eReg, owner]) {
+		for (cls in [stringAlias, eReg, otherCallbackArg, owner]) {
 			final name = HxClassDecl.getName(cls);
 			names.set(name, true);
 			classes.set(name, cls);
@@ -102,6 +103,11 @@ class M14CppLocalDeclBenchIntegrationTest {
 		final callback = ELambda(["r"], callbackBody);
 		final callbackStmt = SVar("callback", "EReg->String", callback, HxPos.unknown());
 		final callbackPhaseFixture = fixture();
+		var callbackDeclaredTypeSample = "";
+		final callbackDeclaredTypeSeconds = elapsed(calls, () -> {
+			callbackDeclaredTypeSample = @:privateAccess
+				backend.cpp.CppTargetCore.cppLocalDeclaredType("callback", "EReg->String", callback, callbackPhaseFixture.scope, "callback");
+		});
 		var callbackExpectedSample = "";
 		final callbackExpectedSeconds = elapsed(calls, () -> {
 			callbackExpectedSample = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(callback, callbackType, callbackPhaseFixture.scope);
@@ -125,7 +131,11 @@ class M14CppLocalDeclBenchIntegrationTest {
 				"std::string", callbackBodyFixture.scope);
 			callbackBodySample = rendered == null ? "" : rendered;
 		});
-		final callbackFullSample = render(callbackStmt, fixture().scope);
+		final callbackFullFixtures = [for (_ in 0...calls) fixture()];
+		var callbackFullSample = "";
+		final callbackFullSeconds = elapsedIndexed(calls, i -> {
+			callbackFullSample = render(callbackStmt, callbackFullFixtures[i].scope);
+		});
 
 		final controls = fixture();
 		final untypedSample = render(SVar("untypedText", "", EString("literal"), HxPos.unknown()), controls.scope);
@@ -141,6 +151,12 @@ class M14CppLocalDeclBenchIntegrationTest {
 		controls.scope.localNames.set("namedCallback", "namedCallback");
 		controls.scope.localTypes.set("namedCallback", callbackType);
 		final namedCallbackSample = render(SVar("callbackCopy", "EReg->String", EIdent("namedCallback"), HxPos.unknown()), controls.scope);
+		final qualifiedCallbackTypeSample = @:privateAccess
+			backend.cpp.CppTargetCore.cppLocalDeclaredType("qualifiedCallback", "fixture.regex.EReg->String", callback, controls.scope, "qualifiedCallback");
+		final otherCallback = ELambda(["value"], EString("ok"));
+		final otherCallbackTypeSample = @:privateAccess
+			backend.cpp.CppTargetCore.cppLocalDeclaredType("otherCallback", "OtherCallbackArg->String", otherCallback, controls.scope, "otherCallback");
+		final inferredCallbackSample = render(SVar("inferredCallback", "", ELambda([], EString("ok")), HxPos.unknown()), controls.scope);
 		final nonFunctionDirectSample = @:privateAccess
 			backend.cpp.CppTargetCore.directLambdaValueExprForExpectedFunction(callback, "std::string", controls.scope);
 
@@ -162,18 +178,31 @@ class M14CppLocalDeclBenchIntegrationTest {
 			"ordinary nonliteral String initialization should remain on the general conversion path");
 		final expectedCallbackBody = '(((std::string("[") + r->matchedLeft()) + __hxhx_stringify(r->matched(0))) + r->matchedRight())';
 		final expectedCallback = '[&](std::shared_ptr<EReg> r) -> std::string { return ' + expectedCallbackBody + '; }';
-		assertTrue(callbackBodySample == expectedCallbackBody
+		assertTrue(callbackDeclaredTypeSample == callbackType
+			&& callbackBodySample == expectedCallbackBody
 			&& callbackLambdaSample == expectedCallback
 			&& callbackExpectedSample == expectedCallback
 			&& callbackInitSample == expectedCallback,
 			"typed callback local phases should preserve exact EReg callback output");
 		assertTrue(callbackFullSample == callbackType + " callback = " + expectedCallback + ";",
 			"typed callback local declarations should retain exact output, got " + callbackFullSample);
-		assertTrue(namedCallbackSample == callbackType + " callbackCopy = namedCallback;" && nonFunctionDirectSample == null,
-			"named callbacks and non-function expectations should retain general value adaptation");
+		assertTrue(namedCallbackSample == callbackType + " callbackCopy = namedCallback;"
+			&& qualifiedCallbackTypeSample == callbackType
+			&& otherCallbackTypeSample == "std::function<std::string(std::shared_ptr<OtherCallbackArg>)>"
+			&& inferredCallbackSample == 'auto inferredCallback = [&]() { return "ok"; };'
+			&& nonFunctionDirectSample == null,
+			"named, qualified, non-EReg, inferred, and non-function callback paths should retain their contracts: named="
+			+ namedCallbackSample
+			+ " qualified="
+			+ qualifiedCallbackTypeSample
+			+ " other="
+			+ otherCallbackTypeSample
+			+ " inferred="
+			+ inferredCallbackSample);
 
 		Sys.println("CPP_LOCAL_DECL_BENCH:PASS calls=" + calls + " declared_type_seconds=" + declaredTypeSeconds + " init_seconds=" + initSeconds
-			+ " full_seconds=" + fullSeconds + " callback_expected_seconds=" + callbackExpectedSeconds + " callback_init_seconds=" + callbackInitSeconds
-			+ " callback_lambda_seconds=" + callbackLambdaSeconds + " callback_body_seconds=" + callbackBodySeconds);
+			+ " full_seconds=" + fullSeconds + " callback_declared_type_seconds=" + callbackDeclaredTypeSeconds + " callback_expected_seconds="
+			+ callbackExpectedSeconds + " callback_init_seconds=" + callbackInitSeconds + " callback_lambda_seconds=" + callbackLambdaSeconds
+			+ " callback_body_seconds=" + callbackBodySeconds + " callback_full_seconds=" + callbackFullSeconds);
 	}
 }
