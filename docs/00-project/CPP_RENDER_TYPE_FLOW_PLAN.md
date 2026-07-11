@@ -2739,6 +2739,111 @@ extraction remains `haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT
 5.5 Pro and Oracle were deliberately skipped because the behavior and seam
 were exact, local, provenance-neutral, and scope-neutral.
 
+## 2026-07-11 Negative Primitive Call-Argument Guard
+
+Follow-up bead `haxe_ocaml-gpp6y` attributed the largest remaining
+`TestEReg.test` statement to `unspec(-1)`. The unary-minus AST shape already
+rendered correctly as `(-1)`, but it was not recognized as a primitive literal.
+It therefore missed the direct literal path and paid primitive-backed abstract,
+class, reference, actual-type, and final-render probes despite both the declared
+and expected parameter type being `int`.
+
+The focused fixture now separates the complete argument adapter, negative
+literal type recognition, direct literal rendering, declared type discovery,
+the canonical primitive-vs-abstract gate, and an actual primitive-backed
+abstract control. It also covers a positive Int literal, a negative Float
+literal, a nonliteral unary expression, and mismatched String and Dynamic
+expected types.
+
+Two pre-change 100-call samples measured the complete negative Int adapter at
+0.018198s and 0.017901s. After recognizing unary minus over an exact Int or
+Float literal, the adapter still took 0.011626s/0.011561s because canonical
+`Int` parameters ran the same abstract metadata lookup used by user-defined
+primitive-backed abstracts. Isolated canonical gate samples took
+0.005469s/0.005466s, while declared type discovery took
+0.005907s/0.005910s. The real abstract control took
+0.006723s/0.006805s and had to remain on that path.
+
+`primitiveLiteralCallArgCppType` now treats only unary minus directly over an
+Int or Float literal as the corresponding primitive literal type. Arbitrary
+unary expressions still decline. The abstract-conversion predicate also
+returns immediately for the canonical `Int`, `Float`, `Bool`, and `String`
+type hints; nullable and user-defined abstract hints retain metadata discovery
+and conversion. The existing expected-type compatibility rule remains the
+owner of exact matches and Int-to-Float promotion.
+
+Exact controls preserve `(-1)`, `(-1.5)`, positive `1`, and `(-number)` output.
+Nonliteral unary expressions and negative numeric literals expected as String
+or Dynamic decline direct literal adaptation. The synthetic `IntAbstract`
+parameter still selects the abstract gate and renders the same value. The
+native smoke continues to build and run negative numeric call arguments,
+including the existing String `substr` negative-index case, without output
+changes.
+
+Two final 100-call samples reduced the complete negative Int adapter to
+0.006498s and 0.006635s, about 62.93-64.29%. The canonical primitive gate fell
+to 0.000212s/0.000225s, about 95.89-96.12%. Declared type discovery remained
+0.006011s/0.006185s and the real abstract control remained
+0.006947s/0.007108s. The broader 250-call primitive argument benchmark also
+fell from 0.141342s to 0.087378s in the retained default samples while keeping
+the same generated call.
+
+In the comparable current-source strict trace, index 18 function-argument
+adaptation fell from 0.001124s to 0.000052s, about 95.38%, and enclosing
+argument rendering fell from 0.001491s to 0.000425s, about 71.49%. The complete
+statement fell from 0.001916s to 0.000853s, about 55.48%. The method moved from
+0.075656s to 0.075496s, about 0.21%, and the class from 0.077328s to 0.077203s,
+about 0.16%; unrelated per-statement variance absorbed most of the targeted
+delta, so no larger method-speed claim is made.
+
+Independent controls remained comparable: `TestBytes.test` was about 0.63%
+faster and `TestXML.testBasic` about 0.45% slower. Both strict logs contain the
+same 88 indexed `TestEReg.test` statements. As in the preceding slice, the
+runner filtered module and classification summary lines, so no new helper
+inventory claim is made.
+
+The setup-only upstream Haxe 4.3.7 Cpp compatibility run passed in 201 seconds
+and is not counted as native evidence. The retained 480-second native trace
+remained expected-red and ended with `Cpp: FAIL (480s, exit 124)` plus the
+wrapper's validated `expected_red_probe_exit=1`, after fully rendering
+`TestEReg`. The frontier helper classifies the baseline/final pair as
+`repeated-frontier`; both traces ended after `ExprToken`, but the shared hot
+timings remain the relevant comparison for this slice.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-split-join-infer-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-negative-primitive-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-negative-primitive-warm.log`
+
+The disposable upstream worktree was removed and verified absent. Follow-up
+bead `haxe_ocaml-slpwj` owns the two remaining `unspec` statements, now totaling
+0.001801s, where inherited support-owner and parameter-signature discovery
+dominate. Broader Cpp render/type-flow extraction remains owned by
+`haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness. Committed bootstrap snapshots are unaffected.
+`CppTargetCore.hx` remains a red mega-file at 25,882 lines; this bounded shared
+argument-adapter refinement adds no runtime/stdlib semantic family, and broader
+extraction remains `haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT
+5.5 Pro and Oracle were deliberately skipped because the behavior and seam
+were exact, local, provenance-neutral, and scope-neutral.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

@@ -16424,7 +16424,8 @@ class CppTargetCore {
 
 	/**
 		Bypass generic call-argument adaptation for literals whose C++ type already
-		matches the expected parameter type.
+		matches the expected parameter type, including numeric literals represented
+		by the AST as unary minus over an Int or Float literal.
 
 		This stays deliberately narrower than `valueExprForExpectedType`: string-shaped
 		Dynamic helpers still stringify numeric literals, and target-specific wrappers
@@ -16441,6 +16442,10 @@ class CppTargetCore {
 		return switch (arg) {
 			case ECast(inner, _) | EUntyped(inner):
 				primitiveLiteralCallArgCppType(inner);
+			case EUnop("-", EInt(_)):
+				"int";
+			case EUnop("-", EFloat(_)):
+				"double";
 			case EString(_):
 				"std::string";
 			case EInt(_):
@@ -16458,6 +16463,7 @@ class CppTargetCore {
 		return expectedType == literalType || (literalType == "int" && (expectedType == "double" || expectedType == "float"));
 	}
 
+	/** Distinguish user abstracts from canonical primitive parameters before scanning abstract metadata. **/
 	static function primitiveBackedAbstractCallArgMayNeedConversion(param:HxFunctionArg, valueType:String, ?scope:CppRenderScope):Bool {
 		if (param == null || scope == null)
 			return false;
@@ -16465,6 +16471,8 @@ class CppTargetCore {
 		final hint = removeTypeHintWhitespace(StringTools.trim(rawHint == null ? "" : rawHint));
 		final nullableInner = CppTypeModel.nullTypeHintArg(hint);
 		final abstractHint = nullableInner == null ? hint : nullableInner;
+		if (abstractHint == "Int" || abstractHint == "Float" || abstractHint == "Bool" || abstractHint == "String")
+			return false;
 		final underlying = primitiveBackedAbstractCppTypeForTypeHint(abstractHint, scope);
 		return underlying != null && underlying == valueType;
 	}

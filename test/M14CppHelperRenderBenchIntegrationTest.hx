@@ -15,6 +15,29 @@ typedef PrimitiveCallArgBenchResult = {
 	var sample:String;
 }
 
+typedef NegativePrimitiveCallArgPhaseBenchResult = {
+	var calls:Int;
+	var fullElapsed:Float;
+	var literalTypeElapsed:Float;
+	var directElapsed:Float;
+	var declaredTypeElapsed:Float;
+	var primitiveGateElapsed:Float;
+	var abstractProbeElapsed:Float;
+	var fullSample:String;
+	var literalTypeSample:Null<String>;
+	var directSample:Null<String>;
+	var positiveDirectSample:Null<String>;
+	var negativeFloatSample:String;
+	var negativeFloatDirectSample:Null<String>;
+	var nonLiteralSample:String;
+	var nonLiteralDirectSample:Null<String>;
+	var stringDirectSample:Null<String>;
+	var dynamicDirectSample:Null<String>;
+	var primitiveGateSample:Bool;
+	var abstractGateSample:Bool;
+	var abstractSample:String;
+}
+
 typedef BytesReferenceCallBenchResult = {
 	var elapsed:Float;
 	var calls:Int;
@@ -378,6 +401,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_EXTRA_METHODS = 16;
 	static inline final DEFAULT_REPS = 2;
 	static inline final DEFAULT_PRIMITIVE_ARG_CALLS = 250;
+	static inline final DEFAULT_NEGATIVE_PRIMITIVE_ARG_CALLS = 10;
 	static inline final DEFAULT_BYTES_REFERENCE_CALLS = 10;
 	static inline final DEFAULT_BYTES_STRING_ARG_CALLS = 100;
 	static inline final DEFAULT_FRESH_EREG_RETURN_CALLS = 10;
@@ -711,6 +735,89 @@ class M14CppHelperRenderBenchIntegrationTest {
 			elapsed: Sys.time() - start,
 			calls: callCount,
 			sample: sample
+		};
+	}
+
+	/** Attribute negative numeric literal adaptation without treating arbitrary unary expressions as literals. **/
+	static function renderNegativePrimitiveCallArgPhases(callCount:Int):NegativePrimitiveCallArgPhaseBenchResult {
+		final intAbstract = new HxClassDecl("IntAbstract", false, [], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=Int"]);
+		final owner = new HxClassDecl("NegativePrimitiveArgBenchOwner", false, [], []);
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		for (cls in [intAbstract, owner]) {
+			final name = HxClassDecl.getName(cls);
+			names.set(name, true);
+			classes.set(name, cls);
+		}
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		scope.localNames.set("number", "number");
+		scope.localTypes.set("number", "int");
+		final intParam = new HxFunctionArg("value", "Int", NoDefault, false, false);
+		final floatParam = new HxFunctionArg("value", "Float", NoDefault, false, false);
+		final abstractParam = new HxFunctionArg("value", "IntAbstract", NoDefault, false, false);
+		final negativeInt = EUnop("-", EInt(1));
+		final negativeFloat = EUnop("-", EFloat(1.5));
+		final nonLiteral = EUnop("-", EIdent("number"));
+		resetRendererCaches();
+		final fullStart = Sys.time();
+		var fullSample = "";
+		for (_ in 0...callCount)
+			fullSample = @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(negativeInt, intParam, scope, "int");
+		final fullElapsed = Sys.time() - fullStart;
+		resetRendererCaches();
+		final literalTypeStart = Sys.time();
+		var literalTypeSample:Null<String> = null;
+		for (_ in 0...callCount)
+			literalTypeSample = @:privateAccess backend.cpp.CppTargetCore.primitiveLiteralCallArgCppType(negativeInt);
+		final literalTypeElapsed = Sys.time() - literalTypeStart;
+		resetRendererCaches();
+		final directStart = Sys.time();
+		var directSample:Null<String> = null;
+		for (_ in 0...callCount)
+			directSample = @:privateAccess backend.cpp.CppTargetCore.directPrimitiveLiteralCallArgExprForExpectedType(negativeInt, "int", scope);
+		final directElapsed = Sys.time() - directStart;
+		resetRendererCaches();
+		final declaredTypeStart = Sys.time();
+		for (_ in 0...callCount)
+			@:privateAccess backend.cpp.CppTargetCore.cppFunctionArgType(intParam, scope);
+		final declaredTypeElapsed = Sys.time() - declaredTypeStart;
+		resetRendererCaches();
+		final primitiveGateStart = Sys.time();
+		var primitiveGateSample = false;
+		for (_ in 0...callCount)
+			primitiveGateSample = @:privateAccess backend.cpp.CppTargetCore.primitiveBackedAbstractCallArgMayNeedConversion(intParam, "int", scope);
+		final primitiveGateElapsed = Sys.time() - primitiveGateStart;
+		resetRendererCaches();
+		final abstractProbeStart = Sys.time();
+		var abstractGateSample = false;
+		for (_ in 0...callCount)
+			abstractGateSample = @:privateAccess backend.cpp.CppTargetCore.primitiveBackedAbstractCallArgMayNeedConversion(abstractParam, "int", scope);
+		final abstractProbeElapsed = Sys.time() - abstractProbeStart;
+		return {
+			calls: callCount,
+			fullElapsed: fullElapsed,
+			literalTypeElapsed: literalTypeElapsed,
+			directElapsed: directElapsed,
+			declaredTypeElapsed: declaredTypeElapsed,
+			primitiveGateElapsed: primitiveGateElapsed,
+			abstractProbeElapsed: abstractProbeElapsed,
+			fullSample: fullSample,
+			literalTypeSample: literalTypeSample,
+			directSample: directSample,
+			positiveDirectSample: @:privateAccess backend.cpp.CppTargetCore.directPrimitiveLiteralCallArgExprForExpectedType(EInt(1), "int", scope),
+			negativeFloatSample: @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(negativeFloat, floatParam, scope, "double"),
+			negativeFloatDirectSample: @:privateAccess
+			backend.cpp.CppTargetCore.directPrimitiveLiteralCallArgExprForExpectedType(negativeFloat, "double", scope),
+			nonLiteralSample: @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(nonLiteral, intParam, scope, "int"),
+			nonLiteralDirectSample: @:privateAccess
+			backend.cpp.CppTargetCore.directPrimitiveLiteralCallArgExprForExpectedType(nonLiteral, "int", scope),
+			stringDirectSample: @:privateAccess
+			backend.cpp.CppTargetCore.directPrimitiveLiteralCallArgExprForExpectedType(negativeInt, "std::string", scope),
+			dynamicDirectSample: @:privateAccess
+			backend.cpp.CppTargetCore.directPrimitiveLiteralCallArgExprForExpectedType(negativeInt, "std::any", scope),
+			primitiveGateSample: primitiveGateSample,
+			abstractGateSample: abstractGateSample,
+			abstractSample: @:privateAccess backend.cpp.CppTargetCore.callArgExprForParam(negativeInt, abstractParam, scope, "int")
 		};
 	}
 
@@ -2550,6 +2657,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final extraMethods = envInt("HXHX_CPP_HELPER_RENDER_BENCH_EXTRA_METHODS", DEFAULT_EXTRA_METHODS);
 		final reps = envInt("HXHX_CPP_HELPER_RENDER_BENCH_REPS", DEFAULT_REPS);
 		final primitiveArgCalls = envInt("HXHX_CPP_PRIMITIVE_ARG_BENCH_CALLS", DEFAULT_PRIMITIVE_ARG_CALLS);
+		final negativePrimitiveArgCalls = envInt("HXHX_CPP_NEGATIVE_PRIMITIVE_ARG_BENCH_CALLS", DEFAULT_NEGATIVE_PRIMITIVE_ARG_CALLS);
 		final bytesReferenceCalls = envInt("HXHX_CPP_BYTES_REFERENCE_BENCH_CALLS", DEFAULT_BYTES_REFERENCE_CALLS);
 		final bytesStringArgCalls = envInt("HXHX_CPP_BYTES_STRING_ARG_BENCH_CALLS", DEFAULT_BYTES_STRING_ARG_CALLS);
 		final freshERegReturnCalls = envInt("HXHX_CPP_FRESH_EREG_RETURN_BENCH_CALLS", DEFAULT_FRESH_EREG_RETURN_CALLS);
@@ -2588,6 +2696,21 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final primitiveArgs = renderPrimitiveLiteralCallArgs(primitiveArgCalls);
 		assertTrue(primitiveArgs.sample == "target(\"literal\", 7, true, 1.25)",
 			"primitive call-argument bench should keep direct literal call rendering stable");
+		final negativePrimitiveArgs = renderNegativePrimitiveCallArgPhases(negativePrimitiveArgCalls);
+		assertTrue(negativePrimitiveArgs.fullSample == "(-1)"
+			&& negativePrimitiveArgs.literalTypeSample == "int"
+			&& negativePrimitiveArgs.directSample == "(-1)"
+			&& negativePrimitiveArgs.positiveDirectSample == "1"
+			&& negativePrimitiveArgs.negativeFloatSample == "(-1.5)"
+			&& negativePrimitiveArgs.negativeFloatDirectSample == "(-1.5)"
+			&& negativePrimitiveArgs.nonLiteralSample == "(-number)"
+			&& negativePrimitiveArgs.nonLiteralDirectSample == null
+			&& negativePrimitiveArgs.stringDirectSample == null
+			&& negativePrimitiveArgs.dynamicDirectSample == null
+			&& !negativePrimitiveArgs.primitiveGateSample,
+			"Negative numeric arguments should preserve precedence while nonliteral unary and mismatched expected types remain generic");
+		assertTrue(negativePrimitiveArgs.abstractGateSample && negativePrimitiveArgs.abstractSample == "(-1)",
+			"Primitive-backed abstract parameters should retain their conversion gate and output");
 		final bytesReferences = renderBytesReferenceCalls(bytesReferenceCalls);
 		assertTrue(bytesReferences.sample == "Bytes::ofString(std::string(s1))->sub(0, 1)->compare(Bytes::ofString(std::string(s2)))",
 			"Bytes reference bench should keep nested ofString/sub/compare rendering stable");
@@ -2885,6 +3008,20 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ primitiveArgs.calls
 			+ " primitive_arg_seconds="
 			+ primitiveArgs.elapsed
+			+ " negative_primitive_arg_calls="
+			+ negativePrimitiveArgs.calls
+			+ " negative_primitive_arg_seconds="
+			+ negativePrimitiveArgs.fullElapsed
+			+ " negative_primitive_literal_type_seconds="
+			+ negativePrimitiveArgs.literalTypeElapsed
+			+ " negative_primitive_direct_seconds="
+			+ negativePrimitiveArgs.directElapsed
+			+ " negative_primitive_declared_type_seconds="
+			+ negativePrimitiveArgs.declaredTypeElapsed
+			+ " negative_primitive_gate_seconds="
+			+ negativePrimitiveArgs.primitiveGateElapsed
+			+ " negative_primitive_abstract_probe_seconds="
+			+ negativePrimitiveArgs.abstractProbeElapsed
 			+ " bytes_reference_calls="
 			+ bytesReferences.calls
 			+ " bytes_reference_seconds="
