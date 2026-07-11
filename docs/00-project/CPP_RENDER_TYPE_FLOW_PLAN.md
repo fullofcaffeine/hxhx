@@ -3036,6 +3036,90 @@ class-graph query seam and does not add a target runtime/stdlib family.
 skipped because the ancestry fact was already proven by the bounded immutable
 lookup and reused through the existing cache contract.
 
+## 2026-07-11 Typed String Literal Local Fast Path
+
+Follow-up bead `haxe_ocaml-2a40h` attributed the largest stable remaining
+`TestEReg.test` statement to an explicitly typed String local initialized by a
+literal. Despite the exact declared type and literal AST shape, the general
+`SVar` renderer still ran declared-type inference, same-name field-shadow
+probing, macro API and structured-map preflights, and general String
+adaptation.
+
+A separate local-declaration attribution probe now runs under
+`test:m14:cpp-helper-render-bench`. It measures declared-type discovery,
+general initializer rendering, and full fresh-scope declaration rendering.
+Exact controls cover braces, escaped quotes and newlines, unhinted String
+literals, Dynamic-shaped locals, String-backed abstracts, duplicate local
+names, same-name field initialization, and ordinary nonliteral String locals.
+
+Two pre-change 1,000-call samples measured declared-type discovery at
+0.033026s/0.033918s, general initializer rendering at
+0.032628s/0.032317s, and the full declaration at
+0.088486s/0.087548s. The isolated first two phases identify the work that the
+exact declaration can avoid; they remain as controls after the change.
+
+`renderStmt` now selects a narrow branch only for canonical explicit `String`
+plus exact `EString`. It emits the same `std::string` construction directly,
+uses the normal local-name allocator, and registers the same C++ and Haxe local
+types. Untyped, Dynamic, abstract-backed, nonliteral, and same-name field
+initializers retain the general pipeline. No literal contents or upstream test
+owner is special-cased.
+
+Two final 1,000-call samples measured the full declaration at
+0.010300s/0.010457s, about 88.21% lower. Declared-type discovery remained at
+0.032849s/0.031695s and the general initializer control at
+0.032437s/0.031406s. All exact output controls remained unchanged.
+
+In the comparable current-source strict trace, index 39 fell from 0.000726s to
+0.000043s, about 94.09%. `TestEReg.test` fell from 0.069295s to 0.067711s,
+about 2.29%, and its class fell from 0.071001s to 0.069514s, about 2.09%.
+Independent controls remained comparable: `TestBytes.test` was about 0.14%
+faster and `TestXML.testBasic` about 0.16% slower. Both logs contain the same
+88 indexed statements.
+
+The target setup/toolchain phase completed before native rendering and is not
+counted as target evidence. The retained native probe ended with
+`Cpp: FAIL (480s, exit 124)` and the wrapper's validated
+`expected_red_probe_exit=1`, after fully rendering `TestEReg`. The frontier
+helper classifies the pair as `shared-hotspots-moving-frontier`; shared timing
+comparisons remain the evidence rather than the variable terminal class. The
+disposable upstream worktree was removed by the runner.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-cold-support-fusion-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-typed-string-literal-local-warm.log`
+
+Follow-up bead `haxe_ocaml-2mrm3` owns the next stable paired cost: distinct
+`unspec` and `exc` method-owner misses at 0.000181s/0.000178s inside
+0.000656s/0.000651s statements. An earlier full-chain miss has already proven
+the immutable owner graph, so the follow-up will attribute generic nearest-
+method indexing rather than another helper-specific shortcut. Broader Cpp
+render/type-flow extraction remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal local-render latency improvement does not
+change public production readiness. Committed bootstrap snapshots are
+unaffected. `CppTargetCore.hx` remains a red mega-file at 25,934 lines; the
+change is a narrow branch at the existing local statement seam, while the
+129-line attribution probe stays separate from the older helper benchmark.
+`thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were deliberately
+skipped because the exact literal/type seam and output contract were bounded,
+local, and provenance-neutral.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

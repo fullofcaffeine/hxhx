@@ -11751,6 +11751,8 @@ class CppTargetCore {
 				[indent + (macroApiCall == null ? renderExpr(expr, scope) : macroApiCall) + ";"];
 			case SThrow(expr, _):
 				[indent + "throw std::runtime_error(" + thrownValueStringExpr(expr, scope) + ");"];
+			case SVar(name, typeHint, EString(value), _) if (removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint)) == "String"):
+				renderTypedStringLiteralLocalStmt(name, typeHint, value, indent, scope);
 			case SVar(name, typeHint, init, _):
 				final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 				final sourceLocal = sanitizeIdentifier(name);
@@ -11829,6 +11831,21 @@ class CppTargetCore {
 			case _:
 				throw "C++ source backend MVP unsupported statement: " + stmtKind(stmt);
 		};
+	}
+
+	/** Render an explicitly typed String literal local without unrelated type and initializer probes. **/
+	static function renderTypedStringLiteralLocalStmt(name:String, typeHint:String, value:String, indent:String, ?scope:CppRenderScope):Array<String> {
+		final sourceLocal = sanitizeIdentifier(name);
+		final localName = declareLocalName(name, scope);
+		if (scope != null) {
+			scope.localTypes.set(sourceLocal, "std::string");
+			if (localName != sourceLocal)
+				scope.localTypes.set(localName, "std::string");
+			recordLocalTypeHint(scope, sourceLocal, typeHint);
+		}
+		return [
+			indent + "std::string " + localName + " = std::string(" + quoteString(value) + ");"
+		];
 	}
 
 	/**
