@@ -12592,7 +12592,7 @@ class CppTargetCore {
 	static function classExtendsClass(childName:String, baseName:String, scope:CppRenderScope):Bool {
 		if (scope == null)
 			return false;
-		final cacheKey = (childName == null ? "" : childName) + "\x1f" + (baseName == null ? "" : baseName);
+		final cacheKey = classInheritanceCacheKey(childName, baseName);
 		if (scope.classInheritanceCache.exists(cacheKey))
 			return scope.classInheritanceCache.get(cacheKey);
 		final lookup = lookupForScope(scope);
@@ -12617,6 +12617,17 @@ class CppTargetCore {
 		}
 		scope.classInheritanceCache.set(cacheKey, result);
 		return result;
+	}
+
+	static function classInheritanceCacheKey(childName:String, baseName:String):String {
+		return (childName == null ? "" : childName) + "\x1f" + (baseName == null ? "" : baseName);
+	}
+
+	/** Reuse ancestry already proven while another immutable class-graph query was walking the same scope. **/
+	static function cacheKnownClassInheritance(childName:String, baseName:String, scope:CppRenderScope):Void {
+		if (scope == null || childName == null || childName.length == 0 || baseName == null || baseName.length == 0)
+			return;
+		scope.classInheritanceCache.set(classInheritanceCacheKey(childName, baseName), true);
 	}
 
 	static function classDeclForCppOrHintName(name:String, scope:CppRenderScope, classLookup:CppClassLookup):Null<HxClassDecl> {
@@ -17480,6 +17491,7 @@ class CppTargetCore {
 		if (scope.missingMethodOwnerCache.exists(cacheKey))
 			return null;
 		final lookup = lookupForScope(scope);
+		final rootClassName = renderedClassName(scope.owner, lookup);
 		var currentCls:Null<HxClassDecl> = scope.owner;
 		final seen = new haxe.ds.StringMap<Bool>();
 		var resolved:Null<HxClassDecl> = null;
@@ -17488,6 +17500,7 @@ class CppTargetCore {
 			if (key.length == 0 || seen.exists(key))
 				break;
 			seen.set(key, true);
+			cacheKnownClassInheritance(rootClassName, key, scope);
 			if (ownerMethodDeclIn(currentCls, methodName) != null) {
 				resolved = currentCls;
 				break;

@@ -2952,6 +2952,90 @@ stays at the existing lookup seams. `thinking:xhigh` was not crossed. GPT 5.5
 Pro and Oracle were deliberately skipped because the behavior and seam were
 exact, local, provenance-neutral, and scope-neutral.
 
+## 2026-07-11 Cold Direct-Call Ancestry Reuse
+
+Follow-up bead `haxe_ocaml-o8m0u` isolated the remaining first-call cost after
+the direct-call class-graph cache landed. A cold missing method-owner query
+already walked the full immutable inheritance chain, but the immediately
+following support-signature query still walked that same chain again because
+the first query only cached its method miss.
+
+The focused direct-call probe now prepares independent fresh render scopes
+outside the measured region. It times both cold owner-plus-support discovery
+and the complete cold support call, in addition to the existing warm phases
+and semantic controls. Two pre-change 1,000-call samples measured cold lookup
+at 4.105230s/4.099242s and complete cold calls at
+4.129122s/4.115799s.
+
+`currentOrInheritedOwnerMethodOwner` now records each rendered root-to-ancestor
+relationship it proves while walking the class chain. The existing generic
+inheritance cache owns those facts; support-signature discovery consumes them
+through the unchanged `classExtendsClass` path. No call name, support owner, or
+upstream test class is embedded in the traversal. Method hit/miss semantics,
+local shadowing, argument adaptation, and support-signature ownership remain
+unchanged.
+
+Two final 1,000-call samples measured cold lookup at
+1.882097s/1.872871s and complete cold calls at
+1.886963s/1.887251s, reductions of about 54.23% and 54.22%. Current,
+inherited, missing, warm support, inferred-argument, omitted/explicit
+`PosInfos`, `exc`/`unspec`, signed Int, local shadowing, free-call, and imported
+Int64 controls all retain their exact output.
+
+In the comparable current-source strict trace, the first `unspec` statement's
+support-signature discovery fell from 0.000272s to 0.000034s, about 87.47%,
+and enclosing argument rendering fell from 0.000447s to 0.000197s, about
+55.89%. The statement fell from 0.000904s to 0.000674s, about 25.45%. The two
+`unspec` statements together fell from 0.001416s to 0.001143s, about 19.28%.
+
+The complete method was about 0.74% slower and its class about 0.81% slower in
+this generally slower trace; `TestBytes.test` was about 1.85% slower and
+`TestXML.testBasic` about 2.99% slower. No method- or class-level speed claim is
+made. Both comparable logs contain the same 88 indexed statements, while the
+targeted cold support phase and statement moved in the expected direction.
+
+The target setup/toolchain phase completed before native rendering and is not
+counted as target evidence. The retained native probe ended with
+`Cpp: FAIL (480s, exit 124)` and the wrapper's validated
+`expected_red_probe_exit=1`, after fully rendering `TestEReg`. The frontier
+helper classifies the pair as `shared-hotspots-moving-frontier`; the shared
+timings, rather than the variable terminal class, remain the comparison basis.
+The disposable upstream worktree was removed by the runner.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-direct-support-cache-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-cold-support-fusion-warm.log`
+
+Follow-up bead `haxe_ocaml-2a40h` owns the largest stable remaining statement:
+index 39's typed String literal local declaration at 0.000729s/0.000726s across
+the two comparable traces. The current trace's larger index 4 result is not
+selected because its measured subphases remain small and its total moved from
+0.000361s to 0.000869s without a matching phase change. Broader Cpp
+render/type-flow extraction remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal query reuse does not change public production
+readiness. Committed bootstrap snapshots are unaffected. `CppTargetCore.hx`
+remains a red mega-file at 25,917 lines; this change stays at the existing
+class-graph query seam and does not add a target runtime/stdlib family.
+`thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were deliberately
+skipped because the ancestry fact was already proven by the bounded immutable
+lookup and reused through the existing cache contract.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

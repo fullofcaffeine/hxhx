@@ -69,6 +69,13 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 		return Sys.time() - start;
 	}
 
+	static function elapsedIndexed(calls:Int, action:Int->Void):Float {
+		final start = Sys.time();
+		for (i in 0...calls)
+			action(i);
+		return Sys.time() - start;
+	}
+
 	static function main():Void {
 		final calls = envInt("HXHX_CPP_DIRECT_SUPPORT_BENCH_CALLS", DEFAULT_CALLS);
 		var sampleOwner:HxClassDecl = null;
@@ -107,6 +114,20 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			"inherited Test.unspec should keep its target-owned support signature");
 
 		final callback = ELambda([], EBool(true));
+		final coldLookupFixtures = [for (_ in 0...calls) fixture()];
+		var coldLookupTypes:Array<String> = null;
+		final coldLookupSeconds = elapsedIndexed(calls, i -> {
+			final cold = coldLookupFixtures[i];
+			final owner = @:privateAccess backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("unspec", cold.scope);
+			coldLookupTypes = @:privateAccess backend.cpp.CppTargetCore.knownDirectCallSupportParamCppTypes(owner, "unspec", cold.scope);
+		});
+		assertTrue(coldLookupTypes.join(",") == supportTypes.join(","), "cold owner and support discovery should retain the inherited support signature");
+		final coldCallFixtures = [for (_ in 0...calls) fixture()];
+		var coldCallSample = "";
+		final coldSupportCallSeconds = elapsedIndexed(calls, i -> {
+			coldCallSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("unspec", [callback], coldCallFixtures[i].scope);
+		});
+		assertTrue(StringTools.startsWith(coldCallSample, "unspec("), "cold support calls should retain exact direct-call dispatch");
 		var argRenderSample:Array<String> = null;
 		final argRenderSeconds = elapsed(calls, () -> {
 			argRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderKnownCppParamCallArgs(supportTypes, [callback], supportFixture.scope);
@@ -147,7 +168,8 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 
 		Sys.println("CPP_DIRECT_CALL_SUPPORT_BENCH:PASS calls=" + calls + " current_owner_seconds=" + currentOwnerSeconds + " inherited_owner_seconds="
 			+ inheritedOwnerSeconds + " inferred_arg_types_seconds=" + inferredArgTypesSeconds + " missing_owner_seconds=" + missingOwnerSeconds
-			+ " support_signature_seconds=" + supportSignatureSeconds + " support_arg_render_seconds=" + argRenderSeconds + " omitted_support_seconds="
-			+ omittedSupportSeconds + " explicit_support_seconds=" + explicitSupportSeconds);
+			+ " support_signature_seconds=" + supportSignatureSeconds + " cold_lookup_seconds=" + coldLookupSeconds + " cold_support_call_seconds="
+			+ coldSupportCallSeconds + " support_arg_render_seconds=" + argRenderSeconds + " omitted_support_seconds=" + omittedSupportSeconds
+			+ " explicit_support_seconds=" + explicitSupportSeconds);
 	}
 }
