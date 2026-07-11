@@ -6181,6 +6181,7 @@ class CppTargetCore {
 			classInheritanceCache: new haxe.ds.StringMap<Bool>(),
 			methodOwnerCache: new haxe.ds.StringMap<HxClassDecl>(),
 			missingMethodOwnerCache: new haxe.ds.StringMap<Bool>(),
+			methodOwnerGraphComplete: false,
 			typeParams: typeParams,
 			typeParamCppNames: typeParamCppNames,
 			localTypes: new haxe.ds.StringMap<String>(),
@@ -17507,31 +17508,53 @@ class CppTargetCore {
 			return scope.methodOwnerCache.get(cacheKey);
 		if (scope.missingMethodOwnerCache.exists(cacheKey))
 			return null;
+		if (scope.methodOwnerGraphComplete) {
+			scope.missingMethodOwnerCache.set(cacheKey, true);
+			return null;
+		}
 		final lookup = lookupForScope(scope);
 		final rootClassName = renderedClassName(scope.owner, lookup);
 		var currentCls:Null<HxClassDecl> = scope.owner;
 		final seen = new haxe.ds.StringMap<Bool>();
 		var resolved:Null<HxClassDecl> = null;
+		var graphComplete = false;
 		while (currentCls != null) {
 			final key = renderedClassName(currentCls, lookup);
 			if (key.length == 0 || seen.exists(key))
 				break;
 			seen.set(key, true);
 			cacheKnownClassInheritance(rootClassName, key, scope);
-			if (ownerMethodDeclIn(currentCls, methodName) != null) {
-				resolved = currentCls;
+			cacheNearestMethodOwners(currentCls, scope);
+			if (scope.methodOwnerCache.exists(cacheKey)) {
+				resolved = scope.methodOwnerCache.get(cacheKey);
 				break;
 			}
 			final next = HxClassDecl.getExtendsPath(currentCls);
-			if (next == null || next.length == 0)
+			if (next == null || next.length == 0) {
+				graphComplete = true;
 				break;
+			}
 			currentCls = lookupClassForTypeHint(next, scope, lookup);
+			if (currentCls == null)
+				graphComplete = true;
 		}
+		if (graphComplete)
+			scope.methodOwnerGraphComplete = true;
 		if (resolved == null)
 			scope.missingMethodOwnerCache.set(cacheKey, true);
-		else
-			scope.methodOwnerCache.set(cacheKey, resolved);
 		return resolved;
+	}
+
+	/** Index nearest non-constructor owners while an immutable owner-chain walk is already visiting the class. **/
+	static function cacheNearestMethodOwners(owner:HxClassDecl, scope:CppRenderScope):Void {
+		if (owner == null || scope == null)
+			return;
+		for (fn in HxClassDecl.getFunctions(owner)) {
+			final rawName = HxFunctionDecl.getName(fn);
+			final methodName = sanitizeIdentifier(rawName);
+			if (rawName != "new" && methodName.length > 0 && !scope.methodOwnerCache.exists(methodName))
+				scope.methodOwnerCache.set(methodName, owner);
+		}
 	}
 
 	static function callableOrSameOwnerReturnCppType(name:String, ?scope:CppRenderScope):String {

@@ -3120,6 +3120,88 @@ change is a narrow branch at the existing local statement seam, while the
 skipped because the exact literal/type seam and output contract were bounded,
 local, and provenance-neutral.
 
+## 2026-07-11 Full-Chain Direct-Call Owner Index
+
+Follow-up bead `haxe_ocaml-2mrm3` attributed the next stable paired cost to
+distinct direct-call method-owner misses. The first missing name had already
+walked the complete reachable immutable owner chain, but each later missing
+name repeated that walk because the cache only represented the queried name.
+
+The direct-call support probe now warms each fresh render scope with one full
+owner miss, then separately times another missing name and an inherited
+method. Exact controls cover nearest overrides, static methods, sanitized
+identifiers, current and inherited owners, local shadowing, ordinary free
+calls, support signatures, and imported Int64 behavior.
+
+Two pre-change 1,000-call samples measured the post-miss missing lookup at
+1.894139s/1.904500s and the post-miss inherited lookup at
+0.916540s/0.926749s. `currentOrInheritedOwnerMethodOwner` now indexes the
+nearest non-constructor owner for every sanitized method name while its
+existing hierarchy walk is already visiting each class. The first root-to-base
+definition wins, preserving override precedence. A scope bit records when the
+complete reachable chain has been indexed so later unknown names become cache
+misses instead of new traversals.
+
+Two final 1,000-call samples measured the post-miss missing lookup at
+0.004059s/0.004498s, about 99.77% lower, and the inherited lookup at
+0.002826s/0.002845s, about 99.69% lower. The independent cold first-lookup
+control remained comparable at 1.842818s/1.822930s. All exact output controls
+remained unchanged.
+
+In the comparable current-source strict trace, index 17's `unspec` owner
+lookup fell from 0.000181s to 0.000008s, about 95.52%, and its statement fell
+from 0.000656s to 0.000504s, about 23.18%. Index 87's `exc` owner lookup fell
+from 0.000178s to 0.000007s, about 96.12%, and its statement fell from
+0.000651s to 0.000504s, about 22.63%. The first full-chain miss at index 1
+remained comparable: its owner lookup fell about 2.19% and its statement about
+5.61%.
+
+`TestEReg.test` fell from 0.067711s to 0.066621s, about 1.61%, and its class
+fell from 0.069514s to 0.068245s, about 1.83%. Independent controls moved in
+the same direction: `TestBytes.test` was effectively flat at about 0.01%
+faster and `TestXML.testBasic` was about 4.24% faster. Both logs contain the
+same 88 indexed statements.
+
+The target setup/toolchain phase completed before native rendering and is not
+counted as target evidence. The retained native probe ended with
+`Cpp: FAIL (480s, exit 124)` and the wrapper's validated
+`expected_red_probe_exit=1`, after fully rendering `TestEReg`. The disposable
+upstream worktree was removed by the runner.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-typed-string-literal-local-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-method-owner-index-warm.log`
+
+Follow-up bead `haxe_ocaml-sqdle` owns the largest stable remaining statement:
+index 42's typed String equality at 0.000644s. Its right literal render costs
+0.000190s and its concatenated left render costs 0.000128s; the follow-up will
+attribute the generic equality argument seam before changing it. Broader Cpp
+render/type-flow extraction remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal owner-query latency improvement does not change
+public production readiness. Committed bootstrap snapshots are unaffected.
+`CppTargetCore.hx` remains a red mega-file at 25,957 lines; the 42-line
+`CppRenderScope` owns the new cache state, while the core change stays at the
+existing owner-query seam. The enlarged 208-line attribution probe remains
+separate from the core renderer. `thinking:xhigh` was not crossed. GPT 5.5 Pro
+and Oracle were deliberately skipped because the immutable hierarchy and
+nearest-owner contract supplied a bounded, local, provenance-neutral seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

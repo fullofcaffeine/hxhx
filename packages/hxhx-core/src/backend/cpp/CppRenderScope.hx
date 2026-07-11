@@ -22,6 +22,9 @@ typedef CppRenderScope = {
 	/** Direct method names proven absent from this scope's immutable class graph. **/
 	var missingMethodOwnerCache:haxe.ds.StringMap<Bool>;
 
+	/** Whether the nearest-owner cache has indexed the complete reachable owner chain. **/
+	var methodOwnerGraphComplete:Bool;
+
 	var typeParams:Array<String>;
 	var typeParamCppNames:haxe.ds.StringMap<String>;
 	var localTypes:haxe.ds.StringMap<String>;

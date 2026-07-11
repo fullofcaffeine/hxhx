@@ -37,9 +37,19 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 		final testBase = new HxClassDecl("Test", false, [], []);
 		var parent = testBase;
 		for (i in 0...24) {
-			final functions = i == 12 ? [
-				new HxFunctionDecl("inheritedInt", Public, false, [new HxFunctionArg("value", "Int", NoDefault, false, false)], "Void", [], "")
-			] : [];
+			final functions = switch (i) {
+				case 5: [
+						new HxFunctionDecl("overridden", Public, false, [new HxFunctionArg("value", "Int", NoDefault, false, false)], "Void", [], "")
+					];
+				case 8: [
+						new HxFunctionDecl("staticInt", Public, true, [new HxFunctionArg("value", "Int", NoDefault, false, false)], "Void", [], "")
+					];
+				case 10: [new HxFunctionDecl("and", Public, false, [], "Void", [], "")];
+				case 12: [
+						new HxFunctionDecl("inheritedInt", Public, false, [new HxFunctionArg("value", "Int", NoDefault, false, false)], "Void", [], "")
+					];
+				case _: [];
+			};
 			final layer = new HxClassDecl("DirectSupportLayer" + i, false, functions, [], HxClassDecl.getName(parent));
 			for (cls in [parent, layer]) {
 				final name = HxClassDecl.getName(cls);
@@ -52,7 +62,8 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			parent = layer;
 		}
 		final ownInt = new HxFunctionDecl("ownInt", Public, false, [new HxFunctionArg("value", "Int", NoDefault, false, false)], "Void", [], "");
-		final owner = new HxClassDecl("DirectSupportOwner", false, [ownInt], [], HxClassDecl.getName(parent));
+		final overrideFn = new HxFunctionDecl("overridden", Public, false, [new HxFunctionArg("value", "String", NoDefault, false, false)], "Void", [], "");
+		final owner = new HxClassDecl("DirectSupportOwner", false, [ownInt, overrideFn], [], HxClassDecl.getName(parent));
 		names.set(HxClassDecl.getName(owner), true);
 		classes.set(HxClassDecl.getName(owner), owner);
 		all.push(owner);
@@ -104,6 +115,27 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			sampleOwner = @:privateAccess backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("ordinaryFree", missingFixture.scope);
 		});
 		assertTrue(sampleOwner == null, "ordinary free calls should not gain an owner");
+		final postMissFixtures = [for (_ in 0...calls) fixture()];
+		for (entry in postMissFixtures)
+			@:privateAccess backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("firstMissing", entry.scope);
+		final postMissMissingSeconds = elapsedIndexed(calls, i -> {
+			sampleOwner = @:privateAccess backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("secondMissing", postMissFixtures[i].scope);
+		});
+		assertTrue(sampleOwner == null, "a distinct name after a full owner miss should remain ownerless");
+		final postMissInheritedSeconds = elapsedIndexed(calls, i -> {
+			sampleOwner = @:privateAccess backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("inheritedInt", postMissFixtures[i].scope);
+		});
+		assertTrue(sampleOwner != null && HxClassDecl.getName(sampleOwner) == "DirectSupportLayer12",
+			"a full owner miss should not change later inherited-owner resolution");
+		final indexedControl = postMissFixtures[0];
+		final overriddenOwner = @:privateAccess backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("overridden", indexedControl.scope);
+		final staticOwner = @:privateAccess backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("staticInt", indexedControl.scope);
+		final sanitizedOwner = @:privateAccess backend.cpp.CppTargetCore.currentOrInheritedOwnerMethodOwner("and_", indexedControl.scope);
+		assertTrue(overriddenOwner == indexedControl.owner, "nearest overrides should win after a full-chain miss");
+		assertTrue(staticOwner != null && HxClassDecl.getName(staticOwner) == "DirectSupportLayer8",
+			"static owner methods should retain direct owner discovery");
+		assertTrue(sanitizedOwner != null && HxClassDecl.getName(sanitizedOwner) == "DirectSupportLayer10",
+			"sanitized direct-call names should retain owner discovery");
 
 		final supportFixture = fixture();
 		var supportTypes:Array<String> = null;
@@ -168,6 +200,7 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 
 		Sys.println("CPP_DIRECT_CALL_SUPPORT_BENCH:PASS calls=" + calls + " current_owner_seconds=" + currentOwnerSeconds + " inherited_owner_seconds="
 			+ inheritedOwnerSeconds + " inferred_arg_types_seconds=" + inferredArgTypesSeconds + " missing_owner_seconds=" + missingOwnerSeconds
+			+ " post_miss_missing_seconds=" + postMissMissingSeconds + " post_miss_inherited_seconds=" + postMissInheritedSeconds
 			+ " support_signature_seconds=" + supportSignatureSeconds + " cold_lookup_seconds=" + coldLookupSeconds + " cold_support_call_seconds="
 			+ coldSupportCallSeconds + " support_arg_render_seconds=" + argRenderSeconds + " omitted_support_seconds=" + omittedSupportSeconds
 			+ " explicit_support_seconds=" + explicitSupportSeconds);
