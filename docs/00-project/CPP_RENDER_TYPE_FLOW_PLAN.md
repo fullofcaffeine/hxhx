@@ -4018,6 +4018,88 @@ compiler or test source was copied. `thinking:xhigh` was not crossed. GPT 5.5
 Pro and Oracle were deliberately skipped because the target-owned EReg type
 and fresh-scope attribution supplied a bounded, provenance-neutral seam.
 
+## 2026-07-11 Typed EReg Map Forwarding During Dynamic Inference
+
+Follow-up bead `haxe_ocaml-oohj8` attributed the 0.024278s
+`infer_dynamic_locals` phase in the post-local-type `TestEReg.test` baseline.
+The first bounded experiment moved the existing direct-candidate check before
+known call-parameter discovery. Two 500-call focused samples reduced a
+candidate-miss forwarding probe from 0.031086s/0.032636s to about 0.0002s,
+while a generic candidate hit and stale direct-call callable refinement stayed
+flat. A current-source strict checkpoint then measured dynamic inference at
+0.023948s and the method at 0.062536s. That checkpoint prevented a false
+attribution: non-candidate calls were not the dominant real cost.
+
+The remaining repeated work was positive forwarding of the same named
+callback through typed-local `EReg.map` calls. The target already owns that
+receiver, arity, String input, and EReg-to-String callback contract in its
+render and type-inference paths. Dynamic-local forwarding now reuses the same
+fixed callback C++ type when the second map argument is a direct candidate
+identifier. Other receivers, methods, arities, non-identifier callbacks, and
+generic forwarded calls retain ordinary parameter discovery and refinement.
+There is no owner/method-name skip table entry.
+
+Two 500-call samples before the target-owned positive shortcut measured a
+single typed-local EReg map forwarding phase at 0.172369s/0.174179s and a
+40-map full dynamic-inference fixture at 7.403025s/7.388550s. Final samples
+measured 0.006158s/0.006156s and 0.418010s/0.425256s, reductions of about
+96.43-96.47% and 94.24-94.35% respectively. The focused fixture also freezes
+generic candidate hits, candidate misses, explicitly stale call signatures,
+captured callbacks, inferred zero-argument callbacks, open Dynamic assignment,
+ordinary non-callable locals, and the exact EReg callback override.
+
+The exact-command non-delegating final current-source probe reduced
+`infer_dynamic_locals` from 0.024278s to 0.001406s, about 94.21%.
+`TestEReg.test` fell from 0.062432s to 0.039329s, about 37.01%, and its class
+fell from 0.064134s to 0.041024s, about 36.03%. `TestBytes.test` was flat at
+1.140892s versus 1.140883s. Both baseline and final logs contain all 88
+`TestEReg.test` statements and 680 selected method records. The final run
+reached `Parser_XmlParserException` before the expected 480-second timeout;
+the hxcpp dependency fetch consumed about 38 seconds more than the baseline,
+so no later whole-run frontier improvement is claimed. The target exited 124
+and the wrapper recorded `expected_red_probe_exit=1` as expected.
+
+The post-change method is now statement-dominated: the 88 statement timings
+sum to about 0.033695s of the 0.039329s method, while the entire cold prep miss
+is about 0.003210s. Follow-up `haxe_ocaml-5zt9a` owns the next statement-family
+re-rank; it must not select the cold first free call or statement 69 from rank
+alone without repeated leaf evidence.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-ereg-callback-arg-typehint-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-forwarded-candidate-preflight-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-ereg-map-forwarded-override-warm.log`
+
+Focused validation for this slice includes:
+
+- two 500-call candidate-miss and generic-hit samples
+- two 500-call typed EReg map forwarding and full dynamic-inference samples
+- `npm run hxhx:build-current-source`
+- two exact-command non-delegating 480-second strict Cpp probes
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is a measured
+internal strict-render improvement, but the strict Cpp gate still times out and
+public production readiness does not change. Generated C++ is frozen by the
+focused and native controls, runtime support and committed bootstrap snapshots
+are unaffected, and `CppTargetCore.hx` remains a red mega-file at 26,128 lines.
+The 42-line net production increase documents and extends the existing dynamic
+forwarding and target-owned EReg seams; broader extraction remains owned by
+`haxe_ocaml-36ec`. No upstream compiler or test source was copied. The upstream
+fixture was consulted only to confirm behavior-level callback placement and
+remains ignored. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were
+deliberately skipped because the existing target-owned EReg contract and
+same-phase strict evidence supplied a bounded, provenance-neutral seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

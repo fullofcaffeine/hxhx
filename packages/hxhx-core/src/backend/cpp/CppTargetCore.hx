@@ -11010,18 +11010,17 @@ class CppTargetCore {
 		}
 	}
 
+	/**
+		Refine direct candidate identifiers passed to known call parameters.
+
+		Calls without a direct candidate argument cannot affect an override, so they
+		must decline before resolving the callee signature.
+	**/
 	static function collectForwardedCallArgTypeOverrides(callee:HxExpr, args:Array<HxExpr>, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
 		if (isHelperMacrosTypedAsCallee(callee))
 			return;
-		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
-		final paramsStartTime = timingEnabled ? Sys.time() : 0.0;
-		final params = knownCallParams(callee, scope);
-		if (timingEnabled)
-			traceForwardedCallPhase(scope, callee, "known_params", Sys.time() - paramsStartTime, candidates, args, params);
-		if (params == null || params.length == 0 || args == null || args.length == 0)
+		if (args == null || args.length == 0)
 			return;
-		var paramTypes:Null<Array<String>> = null;
-		var paramTypesLoaded = false;
 		function forwardedArgNeedsOverride(arg:HxExpr):Bool {
 			return switch (arg) {
 				case EIdent(name):
@@ -11030,6 +11029,25 @@ class CppTargetCore {
 					false;
 			};
 		}
+		var hasCandidateArg = false;
+		for (arg in args)
+			if (forwardedArgNeedsOverride(arg)) {
+				hasCandidateArg = true;
+				break;
+			}
+		if (!hasCandidateArg)
+			return;
+		if (applyTargetOwnedForwardedERegMapCallbackOverride(callee, args, scope, candidates))
+			return;
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		final paramsStartTime = timingEnabled ? Sys.time() : 0.0;
+		final params = knownCallParams(callee, scope);
+		if (timingEnabled)
+			traceForwardedCallPhase(scope, callee, "known_params", Sys.time() - paramsStartTime, candidates, args, params);
+		if (params == null || params.length == 0)
+			return;
+		var paramTypes:Null<Array<String>> = null;
+		var paramTypesLoaded = false;
 		function inferredParamTypeAt(paramIndex:Int, argIndex:Int, param:HxFunctionArg, arg:HxExpr):String {
 			if (!forwardedArgNeedsOverride(arg)) {
 				if (timingEnabled)
@@ -11098,6 +11116,26 @@ class CppTargetCore {
 			paramIndex++;
 			argIndex++;
 		}
+	}
+
+	/** Apply the fixed typed-local EReg.map callback parameter without rediscovering its declaration. **/
+	static function applyTargetOwnedForwardedERegMapCallbackOverride(callee:HxExpr, args:Array<HxExpr>, scope:CppRenderScope,
+			candidates:haxe.ds.StringMap<Bool>):Bool {
+		return switch (callee) {
+			case EField(receiver, method) if (isTypedLocalERegMapCall(receiver, method, args.length, scope)):
+				switch (args[1]) {
+					case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
+						final local = sanitizeIdentifier(name);
+						final expectedType = eRegMapCallbackCppType();
+						setAssignedArgTypeOverride(scope, local, expectedType);
+						setDynamicLocalTypeOverride(scope, local, expectedType);
+						true;
+					case _:
+						false;
+				}
+			case _:
+				false;
+		};
 	}
 
 	static function isHelperMacrosTypedAsCallee(callee:HxExpr):Bool {
@@ -16502,13 +16540,17 @@ class CppTargetCore {
 
 	/** Adapt EReg.map callbacks directly only when the fixed target contract proves their function type. **/
 	static function eRegMapCallbackArgExpr(arg:HxExpr, ?scope:CppRenderScope):String {
-		final expectedType = "std::function<std::string(std::shared_ptr<EReg>)>";
+		final expectedType = eRegMapCallbackCppType();
 		final directLambda = directLambdaValueExprForExpectedFunction(arg, expectedType, scope);
 		if (directLambda != null)
 			return directLambda;
 		if (exprCppType(arg, scope) == expectedType)
 			return renderExpr(arg, scope);
 		return valueExprForExpectedType(arg, expectedType, scope);
+	}
+
+	static function eRegMapCallbackCppType():String {
+		return "std::function<std::string(std::shared_ptr<EReg>)>";
 	}
 
 	/** Render common EReg Int arguments directly while preserving the general adapter for uncommon shapes. **/

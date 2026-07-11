@@ -1,4 +1,5 @@
 import HxExpr;
+import HxStmt;
 import haxe.ds.StringMap;
 
 typedef DirectCallSupportFixture = {
@@ -62,8 +63,19 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			parent = layer;
 		}
 		final ownInt = new HxFunctionDecl("ownInt", Public, false, [new HxFunctionArg("value", "Int", NoDefault, false, false)], "Void", [], "");
+		final ownCallback = new HxFunctionDecl("ownCallback", Public, false, [new HxFunctionArg("callback", "EReg->String", NoDefault, false, false)], "Void",
+			[], "");
 		final overrideFn = new HxFunctionDecl("overridden", Public, false, [new HxFunctionArg("value", "String", NoDefault, false, false)], "Void", [], "");
-		final owner = new HxClassDecl("DirectSupportOwner", false, [ownInt, overrideFn], [], HxClassDecl.getName(parent));
+		final owner = new HxClassDecl("DirectSupportOwner", false, [ownInt, ownCallback, overrideFn], [], HxClassDecl.getName(parent));
+		final eReg = new HxClassDecl("EReg", false, [
+			new HxFunctionDecl("map", Public, false, [
+				new HxFunctionArg("value", "String", NoDefault, false, false),
+				new HxFunctionArg("callback", "EReg->String", NoDefault, false, false)
+			], "String", [], "")
+		], []);
+		names.set("EReg", true);
+		classes.set("EReg", eReg);
+		all.push(eReg);
 		names.set(HxClassDecl.getName(owner), true);
 		classes.set(HxClassDecl.getName(owner), owner);
 		all.push(owner);
@@ -85,6 +97,10 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 		for (i in 0...calls)
 			action(i);
 		return Sys.time() - start;
+	}
+
+	static function cppDynamicTypeHint(typeHint:String):Bool {
+		return @:privateAccess backend.cpp.CppTargetCore.isDynamicLikeTypeHint(typeHint);
 	}
 
 	static function walkOwnerChain(entry:DirectCallSupportFixture, visit:HxClassDecl->Void, inheritanceLookup:Bool = false):Void {
@@ -241,6 +257,78 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 		assertTrue(supportTypes.join(",") == "std::function<void()>,std::optional<PosInfos>",
 			"inherited Test.unspec should keep its target-owned support signature");
 
+		final forwardedFixture = fixture();
+		final forwardedCandidates = new StringMap<Bool>();
+		forwardedCandidates.set("callback", true);
+		forwardedFixture.scope.localNames.set("callback", "callback");
+		forwardedFixture.scope.localTypes.set("callback", "std::function<std::string(std::shared_ptr<EReg>)>");
+		final forwardedCandidateMissSeconds = elapsed(calls, () -> {
+			@:privateAccess backend.cpp.CppTargetCore.collectForwardedCallArgTypeOverrides(EIdent("ownInt"), [EInt(1)], forwardedFixture.scope,
+				forwardedCandidates);
+		});
+		final forwardedCandidateHitSeconds = elapsed(calls, () -> {
+			@:privateAccess backend.cpp.CppTargetCore.collectForwardedCallArgTypeOverrides(EIdent("ownCallback"), [EIdent("callback")],
+				forwardedFixture.scope, forwardedCandidates);
+		});
+		assertTrue(forwardedFixture.scope.localTypeOverrides.get("callback") == "std::function<std::string(std::shared_ptr<EReg>)>",
+			"forwarded candidate identifiers should retain their exact callback parameter override");
+		forwardedFixture.scope.localNames.set("regex", "regex");
+		forwardedFixture.scope.localTypes.set("regex", "std::shared_ptr<EReg>");
+		final forwardedERegMapSeconds = elapsed(calls, () -> {
+			@:privateAccess backend.cpp.CppTargetCore.collectForwardedCallArgTypeOverrides(EField(EIdent("regex"), "map"),
+				[EString("value"), EIdent("callback")], forwardedFixture.scope, forwardedCandidates);
+		});
+		assertTrue(forwardedFixture.scope.localTypeOverrides.get("callback") == "std::function<std::string(std::shared_ptr<EReg>)>",
+			"typed EReg.map forwarding should retain its exact named callback override");
+
+		final exactCallbackBody = new Array<HxStmt>();
+		exactCallbackBody.push(SVar("regex", "EReg", ENew("EReg", [EString("a"), EString("")]), HxPos.unknown()));
+		exactCallbackBody.push(SVar("callback", "EReg->String", ELambda(["value"], EString("ok")), HxPos.unknown()));
+		for (i in 0...40)
+			exactCallbackBody.push(SExpr(ECall(EField(EIdent("regex"), "map"), [EString("value" + i), EIdent("callback")]), HxPos.unknown()));
+		final exactCallbackFn = new HxFunctionDecl("exactCallback", Public, false, [], "Void", exactCallbackBody, "");
+		final exactCallbackFixture = fixture();
+		var exactCallbackOverride = "";
+		final dynamicExactCallbackSeconds = elapsed(calls, () -> {
+			exactCallbackFixture.scope.localTypeOverrides = new StringMap<String>();
+			@:privateAccess backend.cpp.CppTargetCore.inferDynamicLocalTypeOverrides(exactCallbackFixture.scope, exactCallbackFn);
+			exactCallbackOverride = exactCallbackFixture.scope.localTypeOverrides.get("callback");
+		});
+		assertTrue(exactCallbackOverride == "std::function<std::string(std::shared_ptr<EReg>)>",
+			"full dynamic-local inference should retain an exact forwarded EReg callback type");
+
+		final staleCallbackFn = new HxFunctionDecl("staleCallback", Public, false, [], "Void", [
+			SVar("callback", "(String)->String", ELambda(["value"], EIdent("value")), HxPos.unknown()),
+			SExpr(ECall(EIdent("callback"), [EBool(true)]), HxPos.unknown())
+		], "");
+		final staleCallbackFixture = fixture();
+		var staleCallbackOverride = "";
+		final dynamicStaleCallbackSeconds = elapsed(calls, () -> {
+			staleCallbackFixture.scope.localTypeOverrides = new StringMap<String>();
+			@:privateAccess backend.cpp.CppTargetCore.inferDynamicLocalTypeOverrides(staleCallbackFixture.scope, staleCallbackFn);
+			staleCallbackOverride = staleCallbackFixture.scope.localTypeOverrides.get("callback");
+		});
+		assertTrue(staleCallbackOverride == "std::function<std::string(bool)>",
+			"full dynamic-local inference should still refine stale callable argument types from direct calls");
+		final dynamicControlFn = new HxFunctionDecl("dynamicControls", Public, false, [], "Void", [
+			SVar("capturedText", "String", EString("captured"), HxPos.unknown()),
+			SVar("capturedCallback", "EReg->String", ELambda(["value"], EIdent("capturedText")), HxPos.unknown()),
+			SExpr(ECall(EIdent("ownCallback"), [EIdent("capturedCallback")]), HxPos.unknown()),
+			SVar("inferredCallback", "", ELambda([], EString("inferred")), HxPos.unknown()),
+			SVar("dynamicValue", "Dynamic", ENull, HxPos.unknown()),
+			SExpr(EBinop("=", EIdent("dynamicValue"), EInt(3)), HxPos.unknown()),
+			SVar("ordinary", "Int", EInt(1), HxPos.unknown())
+		], "");
+		final dynamicControlFixture = fixture();
+		@:privateAccess backend.cpp.CppTargetCore.inferDynamicLocalTypeOverrides(dynamicControlFixture.scope, dynamicControlFn);
+		assertTrue(dynamicControlFixture.scope.localTypeOverrides.get("capturedCallback") == "std::function<std::string(std::shared_ptr<EReg>)>"
+			&& dynamicControlFixture.scope.localTypeOverrides.get("inferredCallback") == "std::function<std::string()>"
+			&& dynamicControlFixture.scope.localTypeOverrides.get("dynamicValue") == "int"
+			&& !dynamicControlFixture.scope.localTypeOverrides.exists("ordinary"),
+			"dynamic-local inference should preserve captured, inferred, open, and non-callable controls");
+		final dynamicEvidenceSeconds = elapsed(calls,
+			() -> backend.cpp.CppPrepLocalInferenceGuard.functionHasDynamicLocalInferenceEvidence(exactCallbackFn, cppDynamicTypeHint));
+
 		final callback = ELambda([], EBool(true));
 		final coldLookupFixtures = [for (_ in 0...calls) fixture()];
 		var coldLookupTypes:Array<String> = null;
@@ -356,6 +444,9 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			+ inheritanceLookupSeconds + " inheritance_seconds=" + inheritanceSeconds + " method_index_seconds=" + methodIndexSeconds
 			+ " combined_walk_seconds=" + combinedWalkSeconds + " post_miss_missing_seconds=" + postMissMissingSeconds + " post_miss_inherited_seconds="
 			+ postMissInheritedSeconds + " support_signature_seconds=" + supportSignatureSeconds + " cold_lookup_seconds=" + coldLookupSeconds
+			+ " forwarded_candidate_miss_seconds=" + forwardedCandidateMissSeconds + " forwarded_candidate_hit_seconds=" + forwardedCandidateHitSeconds
+			+ " forwarded_ereg_map_seconds=" + forwardedERegMapSeconds + " dynamic_evidence_seconds=" + dynamicEvidenceSeconds
+			+ " dynamic_exact_callback_seconds=" + dynamicExactCallbackSeconds + " dynamic_stale_callback_seconds=" + dynamicStaleCallbackSeconds
 			+ " cold_support_call_seconds=" + coldSupportCallSeconds + " support_arg_render_seconds=" + argRenderSeconds + " omitted_support_seconds="
 			+ omittedSupportSeconds + " explicit_support_seconds=" + explicitSupportSeconds + " null_check_render_seconds=" + nullCheckRenderSeconds
 			+ " null_check_arg_seconds=" + nullCheckArgSeconds + " matched_render_seconds=" + matchedRenderSeconds + " matched_optional_seconds="
