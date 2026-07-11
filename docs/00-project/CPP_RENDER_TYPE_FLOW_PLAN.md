@@ -3616,6 +3616,84 @@ existing call sites, while the documented resolver lives in the 1,198-line
 skipped because exact parity controls and the focused probe exposed a bounded,
 local, provenance-neutral type-model seam.
 
+## 2026-07-11 Buffered Phase Bookkeeping Attribution
+
+Follow-up bead `haxe_ocaml-c0aj4` separated the diagnostic work still present
+inside filtered Cpp statement intervals after synchronous output was removed.
+`directCallExpr` captures the leaf `render_function_call_args` elapsed value
+before assembling that phase's label, but the outer `render_args` interval
+also includes assembly and buffer insertion for its nested support-signature,
+argument-inference, and leaf-render records. Statement, method, and class
+totals similarly include all selected nested record construction.
+
+The timing-buffer fixture now freezes a complete traced and untraced free call
+alongside isolated timer-read, dynamic-label, raw-buffer-push, prebuilt-record,
+scope-record, and leaf argument-render samples. It retains the existing exact
+line, order, exception, sink-restoration, and disabled-timing controls. Each
+traced call must produce the same Cpp expression as the untraced call and the
+same eight ordered phase records, without imposing a wall-clock threshold on
+developer machines.
+
+Two 5,000-call samples measured the untraced complete call at
+0.076956s/0.077134s and the same call with 40,000 buffered timing records at
+0.476736s/0.499736s. Diagnostic work therefore accounts for about
+83.87%/84.57% of the traced total. One exact scope record measured
+0.047829s/0.049574s per 5,000 calls; eight such records explain about
+95.71%/93.84% of the complete traced-over-untraced delta. The leaf argument
+renderer itself measured only 0.007070s/0.006904s.
+
+For scale, paired timer reads measured 0.001421s/0.001381s, dynamic leaf-label
+assembly 0.006855s/0.006851s, raw array insertion
+0.000391s/0.000417s, and prebuilt timing-record prefix/check/insert work
+0.001722s/0.001709s. The complete scope record is the correct unit because it
+also performs method-filter checks and assembles the owner, method, and
+statement prefix.
+
+No production or timing-placement change was retained. Moving nested labels
+outside `render_args` would make that one interval smaller while leaving the
+same diagnostic work in its statement, method, and class parents; it would not
+reduce untraced rendering. Future burn-down must rank captured leaf work, not
+instrumentation-heavy enclosing intervals.
+
+The existing exact traces already supply comparable ownership. The repeated
+free helper `t` has the largest stable call-argument leaf in both: index 15 is
+0.000116110s/0.000108957s and index 22 is
+0.000113964s/0.000109196s, while their cached owner, support, and inference
+phases remain in the low microseconds. A new 480-second strict run was
+deliberately skipped because neither production rendering nor tracing changed.
+
+Relevant current-source evidence remains:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-buffered-timing-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-inheritance-path-lookup-warm.log`
+
+Follow-up bead `haxe_ocaml-35pgn` owns focused untraced attribution of that
+repeated `t` argument-render leaf. Broader Cpp render/type-flow extraction
+remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- two 5,000-call timing-bookkeeping samples
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is
+diagnostic-only coverage while strict Cpp remains expected-red, so public
+production readiness does not change. Generated Cpp and committed bootstrap
+snapshots are unaffected. `CppTargetCore.hx` remains unchanged at 26,019 lines;
+the 176-line focused fixture stays separate from the emitter, and broader
+extraction remains owned by `haxe_ocaml-36ec`. `thinking:xhigh` was not
+crossed. GPT 5.5 Pro and Oracle were deliberately skipped because the existing
+timer boundaries and focused samples supplied bounded, local,
+provenance-neutral attribution.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
