@@ -2535,6 +2535,114 @@ extraction remains `haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT
 5.5 Pro and Oracle were deliberately skipped because the behavior and seam
 were exact, local, provenance-neutral, and scope-neutral.
 
+## 2026-07-11 EReg Match Bool Call Guard
+
+Follow-up bead `haxe_ocaml-qpmn4` attributed the next `TestEReg.test` floor to
+19 helper statements whose Bool argument is an `EReg.match(String)` result:
+seven calls on a typed-local EReg and twelve calls on an immediately fresh
+EReg. The focused fixture now separates typed and fresh rendering, Bool return
+inference, enclosing Bool adaptation, fresh construction, direct String
+adaptation, and retained general field-call argument discovery.
+
+Two pre-change 100-call samples measured typed rendering at 0.040929s and
+0.040581s and fresh rendering at 0.020295s and 0.019888s. Typed inference took
+0.015192s/0.015113s, while fresh inference took 2.754969s/2.743135s. Enclosing
+Bool adaptation took 0.055915s/0.056779s and 2.771127s/2.777000s. The fresh
+constructor itself took only 0.000486s/0.000504s, the direct String adapter
+0.000069s/0.000077s, and the retained general argument path
+0.018863s/0.018870s. Fixed dispatch and result discovery, rather than
+construction or String conversion, owned the removable cost.
+
+`renderExpr`, `exprCppType`, `inferExprCppType`, and known field-call return
+discovery now recognize only `match` with one argument on either an identifier
+whose C++ type is exactly `std::shared_ptr<EReg>` or a syntactically fresh
+`EReg`. Both forms reuse the established EReg String adapter; fresh rendering
+still renders the constructor normally. No broad Bool-call or field-call
+shortcut was added.
+
+Exact controls preserve `regex->match("aa")` and
+`std::make_shared<EReg>("a+", "")->match("aa")`, including a
+package-qualified fresh receiver. Typed String input remains direct, Dynamic
+input remains `__hxhx_stringify`, and scalar input remains `std::to_string`.
+Unknown receivers, missing or extra arguments, and unrelated fresh EReg
+methods retain general rendering. The separately timed generic argument path
+remains unchanged.
+
+The native smoke builds and runs an immediate fresh EReg match alongside the
+existing typed match, capture, state, map, replace, split, and matchSub cases.
+It preserves the expected Bool result and exact generated call shape. This
+slice does not change the pre-existing nullable-capture behavior owned by
+`haxe_ocaml-vywzf`.
+
+Two final 100-call samples reduced typed rendering to 0.001340s and 0.001192s,
+about 96.70-97.09%, and fresh rendering to 0.001237s and 0.001316s, about
+93.38-93.90%. Typed inference fell to 0.000941s/0.000777s, about
+93.77-94.89%, and fresh inference to 0.000774s/0.000699s, about 99.97%.
+Enclosing Bool adaptation fell to 0.002192s/0.002000s, about 96.08-96.48%,
+and 0.001988s/0.001833s, about 99.93%. The constructor and String adapter
+remained about 0.000508-0.000529s and 0.000070-0.000074s. The retained general
+argument control remained 0.018922s/0.019087s.
+
+The rebuilt current-source strict trace retained 260 resolved modules, 280
+typed modules, and the same 384-helper inventory: 253 full bodies, 83
+declaration-only helpers, and 48 runtime-owned helpers. Across the seven
+typed statements, total statement time fell from 0.020167s to 0.004086s,
+about 79.74%, and enclosing argument rendering fell from 0.017236s to
+0.001194s, about 93.07%. Across the twelve fresh statements, total time fell
+from 0.028386s to 0.007276s, about 74.37%, and argument rendering fell from
+0.023298s to 0.002342s, about 89.95%. All 19 statements fell from 0.048553s
+to 0.011362s, about 76.60%; enclosing argument rendering fell from 0.040534s
+to 0.003536s, about 91.28%, and the formerly visible inner String parameter
+adapter no longer appeared in these exact paths.
+
+`TestEReg.test` fell from 0.116673s to 0.079503s, about 31.86%, and its class
+fell from 0.118305s to 0.081171s, about 31.39%. The targeted statement delta
+accounts for essentially all of the method delta. Independent controls were
+stable: `TestBytes.test` was about 0.09% faster and `TestXML.testBasic` about
+0.05% slower. No broad run-speed claim is made.
+
+The setup-only upstream Haxe 4.3.7 Cpp compatibility run passed in 220 seconds
+and is not counted as native evidence. The retained 480-second native trace
+remained expected-red and timed out at 482 seconds after fully rendering
+`TestEReg`. Its terminal summary is `Cpp: FAIL (482s, exit 124)`, followed by
+the wrapper's validated `expected_red_probe_exit=1`. The frontier helper
+classifies the baseline/final pair as `shared-hotspots-moving-frontier`; shared
+top timings, not the variable timeout boundary, remain the selection rule.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-matched-string-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-match-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-match-warm.log`
+
+The disposable upstream worktree was removed and verified absent. Follow-up
+bead `haxe_ocaml-ao6dj` owns the largest remaining statement: a nested EReg
+split/String join equality whose first-operand inference takes 0.003257s of
+the statement's 0.003874s. Broader Cpp render/type-flow extraction remains
+owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness. Committed bootstrap snapshots are unaffected.
+`CppTargetCore.hx` remains a red mega-file at 25,860 lines; this bounded
+existing-seam repair adds no runtime/stdlib semantic family, and broader
+extraction remains `haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT
+5.5 Pro and Oracle were deliberately skipped because the behavior and seam
+were exact, local, provenance-neutral, and scope-neutral.
+
 Slow diagnostic validation for hotspot claims:
 
 - run `node scripts/ci/cpp-strict-frontier-summary.js --top 15 <log>...` over

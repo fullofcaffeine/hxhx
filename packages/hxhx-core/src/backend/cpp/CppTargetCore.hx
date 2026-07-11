@@ -12830,6 +12830,8 @@ class CppTargetCore {
 				typedLocalERegMapCallExpr(receiver, args, scope);
 			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchSubCall(receiver, method, args.length, scope)):
 				typedLocalERegMatchSubCallExpr(receiver, args, scope);
+			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchCall(receiver, method, args.length, scope)):
+				typedLocalERegMatchCallExpr(receiver, args, scope);
 			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
 				typedLocalERegMatchedStringCallExpr(receiver, method, args, scope);
 			case ECall(EField(EIdent("Sys"), "args"), args) if (args.length == 0):
@@ -14001,6 +14003,8 @@ class CppTargetCore {
 	**/
 	static function freshERegFieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final renderedArgs = switch (method) {
+			case "match" if (args.length == 1):
+				[eRegStringCallArgExpr(args[0], scope)];
 			case "replace" if (args.length == 2):
 				[eRegStringCallArgExpr(args[0], scope), eRegStringCallArgExpr(args[1], scope)];
 			case "map" if (args.length == 2):
@@ -14044,6 +14048,11 @@ class CppTargetCore {
 		if (args.length == 3)
 			rendered += ", " + eRegIntCallArgExpr(args[2], true, scope);
 		return rendered + ")";
+	}
+
+	/** Render the fixed typed-local EReg match contract without general instance-method discovery. **/
+	static function typedLocalERegMatchCallExpr(receiver:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		return renderExpr(receiver, scope) + "->match(" + eRegStringCallArgExpr(args[0], scope) + ")";
 	}
 
 	/** Render the fixed typed-local EReg String capture calls without general method discovery. **/
@@ -16746,6 +16755,10 @@ class CppTargetCore {
 				exprCppType(args[0], scope);
 			case EField(ECall(EField(receiver, method), args), field) if (isTypedLocalERegMatchedPosField(receiver, method, args.length, field, scope)):
 				"int";
+			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchCall(receiver, method, args.length, scope)):
+				"bool";
+			case ECall(EField(receiver, method), args) if (isFreshERegMatchCall(receiver, method, args.length)):
+				"bool";
 			case EThis:
 				sanitizeTypePath(HxClassDecl.getName(scope.owner));
 			case ENew(typePath, args):
@@ -18243,6 +18256,10 @@ class CppTargetCore {
 				"std::string";
 			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchSubCall(receiver, method, args.length, scope)):
 				"bool";
+			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchCall(receiver, method, args.length, scope)):
+				"bool";
+			case ECall(EField(receiver, method), args) if (isFreshERegMatchCall(receiver, method, args.length)):
+				"bool";
 			case ECall(EField(receiver, method), args) if (isTypedLocalERegMatchedStringCall(receiver, method, args.length, scope)):
 				"std::string";
 			case ECall(EField(receiver, method), args) if (isFreshERegStringCall(receiver, method, args.length)):
@@ -18542,6 +18559,18 @@ class CppTargetCore {
 		};
 	}
 
+	/** Recognize the exact Bool-returning match contract on a syntactically fresh EReg. **/
+	static function isFreshERegMatchCall(receiver:HxExpr, method:String, arity:Int):Bool {
+		if (method != "match" || arity != 1)
+			return false;
+		return switch (receiver) {
+			case ENew(typePath, _) if (isERegTypeName(typePath)):
+				true;
+			case _:
+				false;
+		};
+	}
+
 	/** Recognize the typed-local EReg split shape without general instance-owner discovery. **/
 	static function isTypedLocalERegSplitCall(receiver:HxExpr, method:String, arity:Int, ?scope:CppRenderScope):Bool {
 		if (method != "split" || arity != 1)
@@ -18559,6 +18588,13 @@ class CppTargetCore {
 	/** Recognize the exact target-owned two- or three-argument EReg matchSub contract. **/
 	static function isTypedLocalERegMatchSubCall(receiver:HxExpr, method:String, arity:Int, ?scope:CppRenderScope):Bool {
 		if (method != "matchSub" || (arity != 2 && arity != 3))
+			return false;
+		return isTypedLocalERegReceiver(receiver, scope);
+	}
+
+	/** Recognize the exact target-owned String-to-Bool contract of a typed-local EReg match call. **/
+	static function isTypedLocalERegMatchCall(receiver:HxExpr, method:String, arity:Int, ?scope:CppRenderScope):Bool {
+		if (method != "match" || arity != 1)
 			return false;
 		return isTypedLocalERegReceiver(receiver, scope);
 	}
@@ -18627,6 +18663,10 @@ class CppTargetCore {
 		if (isTypedLocalERegMapCall(receiver, method, arity, scope))
 			return "std::string";
 		if (isTypedLocalERegMatchSubCall(receiver, method, arity, scope))
+			return "bool";
+		if (isTypedLocalERegMatchCall(receiver, method, arity, scope))
+			return "bool";
+		if (isFreshERegMatchCall(receiver, method, arity))
 			return "bool";
 		if (isTypedLocalERegMatchedStringCall(receiver, method, arity, scope))
 			return "std::string";

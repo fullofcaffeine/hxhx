@@ -246,6 +246,30 @@ typedef TypedERegMatchedStringPhaseBenchResult = {
 	var declineSample:String;
 }
 
+typedef ERegMatchPhaseBenchResult = {
+	var calls:Int;
+	var typedRenderElapsed:Float;
+	var freshRenderElapsed:Float;
+	var typedInferElapsed:Float;
+	var freshInferElapsed:Float;
+	var typedBoolElapsed:Float;
+	var freshBoolElapsed:Float;
+	var constructorElapsed:Float;
+	var stringArgElapsed:Float;
+	var genericArgsElapsed:Float;
+	var typedRenderSample:String;
+	var freshRenderSample:String;
+	var typedInferSample:String;
+	var freshInferSample:String;
+	var typedBoolSample:String;
+	var freshBoolSample:String;
+	var constructorSample:String;
+	var stringArgSample:String;
+	var genericArgsSample:String;
+	var conversionSample:String;
+	var declineSample:String;
+}
+
 typedef MatchedStringCallArgPhaseBenchResult = {
 	var calls:Int;
 	var fullElapsed:Float;
@@ -364,6 +388,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 	static inline final DEFAULT_TYPED_EREG_MATCHED_POS_CALLS = 10;
 	static inline final DEFAULT_TYPED_EREG_MATCH_SUB_CALLS = 10;
 	static inline final DEFAULT_TYPED_EREG_MATCHED_STRING_CALLS = 10;
+	static inline final DEFAULT_EREG_MATCH_CALLS = 10;
 	static inline final DEFAULT_MATCHED_STRING_CALL_ARG_CALLS = 10;
 	static inline final DEFAULT_RESIDUAL_STRUCTURAL_PROBE_CALLS = 10;
 	static inline final DEFAULT_EREG_LAMBDA_CALLS = 10;
@@ -1928,6 +1953,118 @@ class M14CppHelperRenderBenchIntegrationTest {
 		};
 	}
 
+	/** Separate typed-local and fresh EReg match rendering from Bool inference and String argument discovery. **/
+	static function renderERegMatchPhases(callCount:Int):ERegMatchPhaseBenchResult {
+		final scope = eRegBenchScope();
+		for (name in ["regex", "text", "dynamicText", "number"])
+			scope.localNames.set(name, name);
+		scope.localTypes.set("regex", "std::shared_ptr<EReg>");
+		scope.localTypes.set("text", "std::string");
+		scope.localTypes.set("dynamicText", "std::any");
+		scope.localTypes.set("number", "int");
+		final args = [EString("aa")];
+		final fresh = ENew("EReg", [EString("a+"), EString("")]);
+		final qualifiedFresh = ENew("fixture.regex.EReg", [EString("a+"), EString("")]);
+		final typedCall = ECall(EField(EIdent("regex"), "match"), args);
+		final freshCall = ECall(EField(fresh, "match"), args);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchCall(EIdent("regex"), "match", 1,
+			scope) && @:privateAccess backend.cpp.CppTargetCore.isFreshERegMatchCall(fresh, "match",
+				1) && @:privateAccess backend.cpp.CppTargetCore.isFreshERegMatchCall(qualifiedFresh, "match", 1),
+			"Typed-local and package-qualified fresh EReg match calls should use only the exact target-owned contract");
+		assertTrue(! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchCall(EIdent("unknown"), "match", 1, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMatchCall(EIdent("regex"), "match", 0, scope)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isFreshERegMatchCall(fresh, "match", 2)
+			&& ! @:privateAccess backend.cpp.CppTargetCore.isFreshERegMatchCall(fresh, "split", 1),
+			"Unknown receivers, wrong arities, and unrelated fresh methods should retain general EReg discovery");
+		final conversionSample = [@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "match"), [EIdent("text")]), scope), @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "match"), [EIdent("dynamicText")]), scope), @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "match"), [EIdent("number")]), scope)
+		].join("\n");
+		final declineSample = [@:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("unknown"), "match"), args), scope), @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "match"), []), scope), @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "match"), [EString("a"), EString("b")]), scope), @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(fresh, "split"), args), scope)
+		].join("\n");
+		resetRendererCaches();
+		final typedRenderStart = Sys.time();
+		var typedRenderSample = "";
+		for (_ in 0...callCount)
+			typedRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedCall, scope);
+		final typedRenderElapsed = Sys.time() - typedRenderStart;
+		resetRendererCaches();
+		final freshRenderStart = Sys.time();
+		var freshRenderSample = "";
+		for (_ in 0...callCount)
+			freshRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(freshCall, scope);
+		final freshRenderElapsed = Sys.time() - freshRenderStart;
+		resetRendererCaches();
+		final typedInferStart = Sys.time();
+		var typedInferSample = "";
+		for (_ in 0...callCount)
+			typedInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(typedCall, scope);
+		final typedInferElapsed = Sys.time() - typedInferStart;
+		resetRendererCaches();
+		final freshInferStart = Sys.time();
+		var freshInferSample = "";
+		for (_ in 0...callCount)
+			freshInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(freshCall, scope);
+		final freshInferElapsed = Sys.time() - freshInferStart;
+		resetRendererCaches();
+		final typedBoolStart = Sys.time();
+		var typedBoolSample = "";
+		for (_ in 0...callCount)
+			typedBoolSample = @:privateAccess backend.cpp.CppTargetCore.functionTypeArgExpr(typedCall, "bool", scope);
+		final typedBoolElapsed = Sys.time() - typedBoolStart;
+		resetRendererCaches();
+		final freshBoolStart = Sys.time();
+		var freshBoolSample = "";
+		for (_ in 0...callCount)
+			freshBoolSample = @:privateAccess backend.cpp.CppTargetCore.functionTypeArgExpr(freshCall, "bool", scope);
+		final freshBoolElapsed = Sys.time() - freshBoolStart;
+		resetRendererCaches();
+		final constructorStart = Sys.time();
+		var constructorSample = "";
+		for (_ in 0...callCount)
+			constructorSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(fresh, scope);
+		final constructorElapsed = Sys.time() - constructorStart;
+		resetRendererCaches();
+		final stringArgStart = Sys.time();
+		var stringArgSample = "";
+		for (_ in 0...callCount)
+			stringArgSample = @:privateAccess backend.cpp.CppTargetCore.eRegStringCallArgExpr(args[0], scope);
+		final stringArgElapsed = Sys.time() - stringArgStart;
+		resetRendererCaches();
+		final genericArgsStart = Sys.time();
+		var genericArgsSample = "";
+		for (_ in 0...callCount)
+			genericArgsSample = @:privateAccess backend.cpp.CppTargetCore.renderFieldCallArgs("std::shared_ptr<EReg>", "match", args, scope).join(", ");
+		return {
+			calls: callCount,
+			typedRenderElapsed: typedRenderElapsed,
+			freshRenderElapsed: freshRenderElapsed,
+			typedInferElapsed: typedInferElapsed,
+			freshInferElapsed: freshInferElapsed,
+			typedBoolElapsed: typedBoolElapsed,
+			freshBoolElapsed: freshBoolElapsed,
+			constructorElapsed: constructorElapsed,
+			stringArgElapsed: stringArgElapsed,
+			genericArgsElapsed: Sys.time() - genericArgsStart,
+			typedRenderSample: typedRenderSample,
+			freshRenderSample: freshRenderSample,
+			typedInferSample: typedInferSample,
+			freshInferSample: freshInferSample,
+			typedBoolSample: typedBoolSample,
+			freshBoolSample: freshBoolSample,
+			constructorSample: constructorSample,
+			stringArgSample: stringArgSample,
+			genericArgsSample: genericArgsSample,
+			conversionSample: conversionSample,
+			declineSample: declineSample
+		};
+	}
+
 	/** Separate a matched typed String identifier argument from its non-matching reference probes. **/
 	static function renderMatchedStringCallArgPhases(callCount:Int):MatchedStringCallArgPhaseBenchResult {
 		final scope = eRegBenchScope();
@@ -2406,6 +2543,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final typedERegMatchedPosCalls = envInt("HXHX_CPP_TYPED_EREG_MATCHED_POS_BENCH_CALLS", DEFAULT_TYPED_EREG_MATCHED_POS_CALLS);
 		final typedERegMatchSubCalls = envInt("HXHX_CPP_TYPED_EREG_MATCH_SUB_BENCH_CALLS", DEFAULT_TYPED_EREG_MATCH_SUB_CALLS);
 		final typedERegMatchedStringCalls = envInt("HXHX_CPP_TYPED_EREG_MATCHED_STRING_BENCH_CALLS", DEFAULT_TYPED_EREG_MATCHED_STRING_CALLS);
+		final eRegMatchCalls = envInt("HXHX_CPP_EREG_MATCH_BENCH_CALLS", DEFAULT_EREG_MATCH_CALLS);
 		final matchedStringCallArgCalls = envInt("HXHX_CPP_MATCHED_STRING_CALL_ARG_BENCH_CALLS", DEFAULT_MATCHED_STRING_CALL_ARG_CALLS);
 		final residualStructuralProbeCalls = envInt("HXHX_CPP_RESIDUAL_STRUCTURAL_PROBE_BENCH_CALLS", DEFAULT_RESIDUAL_STRUCTURAL_PROBE_CALLS);
 		final eRegLambdaCalls = envInt("HXHX_CPP_EREG_LAMBDA_BENCH_CALLS", DEFAULT_EREG_LAMBDA_CALLS);
@@ -2598,6 +2736,22 @@ class M14CppHelperRenderBenchIntegrationTest {
 			"Typed-local EReg matched index adaptation should preserve typed, erased, and negative Int values");
 		assertTrue(typedERegMatchedStringPhases.declineSample == "unknown.matched(1)\nregex->matched()\nregex->matched(0, 1)\nregex->matchedLeft(0)\nregex->match(\"a\")",
 			"Unknown receivers, wrong arities, and unrelated EReg methods should retain general call rendering");
+		final eRegMatchPhases = renderERegMatchPhases(eRegMatchCalls);
+		assertTrue(eRegMatchPhases.typedRenderSample == 'regex->match("aa")'
+			&& eRegMatchPhases.freshRenderSample == 'std::make_shared<EReg>("a+", "")->match("aa")'
+			&& eRegMatchPhases.typedInferSample == "bool"
+			&& eRegMatchPhases.freshInferSample == "bool"
+			&& eRegMatchPhases.typedBoolSample == eRegMatchPhases.typedRenderSample
+			&& eRegMatchPhases.freshBoolSample == eRegMatchPhases.freshRenderSample,
+			"Typed-local and fresh EReg match calls should preserve exact Bool call shapes");
+		assertTrue(eRegMatchPhases.constructorSample == 'std::make_shared<EReg>("a+", "")'
+			&& eRegMatchPhases.stringArgSample == '"aa"'
+			&& eRegMatchPhases.genericArgsSample == '"aa"',
+			"EReg match phases should preserve constructor and String argument output");
+		assertTrue(eRegMatchPhases.conversionSample == "regex->match(text)\nregex->match(__hxhx_stringify(dynamicText))\nstd::make_shared<EReg>(\"a+\", \"\")->match(std::to_string(number))",
+			"Typed-local and fresh EReg match should preserve typed, erased, and scalar String conversion");
+		assertTrue(eRegMatchPhases.declineSample == "unknown.match(\"aa\")\nregex->match()\nstd::make_shared<EReg>(\"a+\", \"\")->match(\"a\", \"b\")\nstd::make_shared<EReg>(\"a+\", \"\")->split(\"aa\")",
+			"Unknown receivers, wrong arities, and unrelated fresh EReg methods should retain general rendering");
 		final matchedStringCallArgPhases = renderMatchedStringCallArgPhases(matchedStringCallArgCalls);
 		assertTrue(matchedStringCallArgPhases.fullSample == "test"
 			&& matchedStringCallArgPhases.actualTypeSample == "std::string"
@@ -2903,6 +3057,26 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ typedERegMatchedStringPhases.genericArgsElapsed
 			+ " typed_ereg_matched_int_arg_seconds="
 			+ typedERegMatchedStringPhases.intArgElapsed
+			+ " ereg_match_calls="
+			+ eRegMatchPhases.calls
+			+ " ereg_match_typed_render_seconds="
+			+ eRegMatchPhases.typedRenderElapsed
+			+ " ereg_match_fresh_render_seconds="
+			+ eRegMatchPhases.freshRenderElapsed
+			+ " ereg_match_typed_infer_seconds="
+			+ eRegMatchPhases.typedInferElapsed
+			+ " ereg_match_fresh_infer_seconds="
+			+ eRegMatchPhases.freshInferElapsed
+			+ " ereg_match_typed_bool_seconds="
+			+ eRegMatchPhases.typedBoolElapsed
+			+ " ereg_match_fresh_bool_seconds="
+			+ eRegMatchPhases.freshBoolElapsed
+			+ " ereg_match_constructor_seconds="
+			+ eRegMatchPhases.constructorElapsed
+			+ " ereg_match_string_arg_seconds="
+			+ eRegMatchPhases.stringArgElapsed
+			+ " ereg_match_generic_args_seconds="
+			+ eRegMatchPhases.genericArgsElapsed
 			+ " matched_string_call_arg_calls="
 			+ matchedStringCallArgPhases.calls
 			+ " matched_string_call_arg_seconds="
