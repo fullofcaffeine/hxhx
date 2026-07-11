@@ -19,7 +19,7 @@ to be refreshed when a watched file moves by more than 250 lines.
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,628 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,688 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,031 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -98,6 +98,13 @@ dispatch and reused the existing String call-argument contract inside the Cpp
 renderer. This adds no runtime/stdlib semantic family and keeps the change in
 existing expression/type-flow seams. Broader extraction remains covered by
 `haxe_ocaml-36ec`.
+
+2026-07-10 checkpoint: `haxe_ocaml-vzxtn` added an equality-render shortcut
+only for proven String-concat trees around the existing typed-local EReg
+split/join lowering. Literal and typed String leaves are explicit, while the
+join keeps the established String conversion path for its separator. This is
+a bounded expression-render repair, not a new runtime/stdlib semantic family;
+broader extraction remains covered by `haxe_ocaml-36ec`.
 
 ## Upstream Reference Boundary
 

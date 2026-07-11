@@ -80,6 +80,18 @@ typedef TypedERegSplitPhaseBenchResult = {
 	var joinReceiverTypeElapsed:Float;
 	var joinTemplateElapsed:Float;
 	var joinFieldCallElapsed:Float;
+	var concatRenderElapsed:Float;
+	var concatStringElapsed:Float;
+	var concatLeftStringElapsed:Float;
+	var concatRightStringElapsed:Float;
+	var concatEqArgElapsed:Float;
+	var concatAnyAddElapsed:Float;
+	var concatStringSelectElapsed:Float;
+	var concatPrimitiveAbstractElapsed:Float;
+	var concatClassAbstractElapsed:Float;
+	var concatExplicitTypeElapsed:Float;
+	var concatClassMetadataElapsed:Float;
+	var concatInferElapsed:Float;
 	var inferSample:String;
 	var renderSample:String;
 	var argsSample:String;
@@ -100,6 +112,17 @@ typedef TypedERegSplitPhaseBenchResult = {
 	var joinReceiverTypeSample:String;
 	var joinTemplateSample:Bool;
 	var joinFieldCallSample:String;
+	var concatStringSample:String;
+	var concatLeftStringSample:String;
+	var concatRightStringSample:String;
+	var concatEqArgSample:String;
+	var concatAnyAddSample:Bool;
+	var concatStringSelectSample:Bool;
+	var concatPrimitiveAbstractSample:Bool;
+	var concatClassAbstractSample:Bool;
+	var concatExplicitTypeSample:String;
+	var concatClassMetadataSample:Bool;
+	var concatInferSample:String;
 }
 
 typedef MatchedStringCallArgPhaseBenchResult = {
@@ -812,7 +835,10 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final length = EField(split, "length");
 		final joinArgs = [EString("|")];
 		final join = ECall(EField(split, "join"), joinArgs);
-		final concat = EBinop("+", EString("parts:"), join);
+		final concatPrefix = EString("parts:");
+		final concatLeft = EBinop("+", concatPrefix, join);
+		final concatRight = EString(":done");
+		final concat = EBinop("+", concatLeft, concatRight);
 		final lengthEq = ECall(EIdent("eq"), [length, EInt(1)]);
 		final concatEq = ECall(EIdent("eq"), [concat, EString("parts:a|b")]);
 		final unknownSplit = ECall(EField(EIdent("unknown"), "split"), args);
@@ -846,6 +872,44 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ dynamicStringSplit
 			+ " numeric="
 			+ numericStringSplit);
+		final typedStringJoin = ECall(EField(split, "join"), [EIdent("text")]);
+		final dynamicStringJoin = ECall(EField(split, "join"), [EIdent("dynamicText")]);
+		final numericStringJoin = ECall(EField(split, "join"), [EIdent("number")]);
+		final typedStringJoinSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedStringJoin, scope);
+		final dynamicStringJoinSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(dynamicStringJoin, scope);
+		final numericStringJoinSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(numericStringJoin, scope);
+		assertTrue(typedStringJoinSample == '__hxhx_join(block->split("a"), std::string(text))'
+			&& dynamicStringJoinSample == '__hxhx_join(block->split("a"), __hxhx_stringify(dynamicText))'
+			&& numericStringJoinSample == '__hxhx_join(block->split("a"), std::to_string(number))',
+			"Typed-local EReg split join should preserve typed, erased, and scalar separator adaptation, got typed="
+			+ typedStringJoinSample
+			+ " dynamic="
+			+ dynamicStringJoinSample
+			+ " numeric="
+			+ numericStringJoinSample);
+		final directTypedOuter = @:privateAccess
+			backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EIdent("text"), join), scope);
+		final directTypedDelimiter = @:privateAccess
+			backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("typed:"), typedStringJoin), scope);
+		final directDynamicDelimiter = @:privateAccess
+			backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("dynamic:"), dynamicStringJoin), scope);
+		final directNumericDelimiter = @:privateAccess
+			backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("numeric:"), numericStringJoin), scope);
+		assertTrue(directTypedOuter == '(std::string(text) + __hxhx_join(block->split("a"), std::string("|")))'
+			&& directTypedDelimiter == '(std::string("typed:") + __hxhx_join(block->split("a"), std::string(text)))'
+			&& directDynamicDelimiter == '(std::string("dynamic:") + __hxhx_join(block->split("a"), __hxhx_stringify(dynamicText)))'
+			&& directNumericDelimiter == '(std::string("numeric:") + __hxhx_join(block->split("a"), std::to_string(number)))',
+			"Direct typed-local EReg split/join concatenation should reuse established String separator and local adaptation");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("unknown:"), unknownJoin),
+			scope) == null
+			&& @:privateAccess
+			backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EIdent("dynamicText"), join), scope) == null
+			&& @:privateAccess
+			backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EIdent("number"), join), scope) == null
+			&& @:privateAccess
+			backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(EBinop("+", EString("wrong:"), ECall(EField(split, "join"), [])), scope) == null
+			&& @:privateAccess backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(join, scope) == null,
+			"Unknown split receivers, Dynamic/scalar concat leaves, wrong join arity, and bare joins should retain general String rendering");
 		resetRendererCaches();
 		final inferStart = Sys.time();
 		var inferSample = "";
@@ -952,8 +1016,82 @@ class M14CppHelperRenderBenchIntegrationTest {
 		for (_ in 0...callCount)
 			joinFieldCallSample = @:privateAccess backend.cpp.CppTargetCore.fieldCallExpr(split, "join", joinArgs, scope);
 		final joinFieldCallElapsed = Sys.time() - joinFieldCallStart;
+		resetRendererCaches();
+		final concatRenderStart = Sys.time();
+		var concatSample = "";
+		for (_ in 0...callCount)
+			concatSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(concat, scope);
+		final concatRenderElapsed = Sys.time() - concatRenderStart;
+		resetRendererCaches();
+		final concatStringStart = Sys.time();
+		var concatStringSample = "";
+		for (_ in 0...callCount)
+			concatStringSample = @:privateAccess backend.cpp.CppTargetCore.stringExpr(concat, scope);
+		final concatStringElapsed = Sys.time() - concatStringStart;
+		resetRendererCaches();
+		final concatLeftStringStart = Sys.time();
+		var concatLeftStringSample = "";
+		for (_ in 0...callCount)
+			concatLeftStringSample = @:privateAccess backend.cpp.CppTargetCore.stringExpr(concatLeft, scope);
+		final concatLeftStringElapsed = Sys.time() - concatLeftStringStart;
+		resetRendererCaches();
+		final concatRightStringStart = Sys.time();
+		var concatRightStringSample = "";
+		for (_ in 0...callCount)
+			concatRightStringSample = @:privateAccess backend.cpp.CppTargetCore.stringExpr(concatRight, scope);
+		final concatRightStringElapsed = Sys.time() - concatRightStringStart;
+		resetRendererCaches();
+		final concatEqArgStart = Sys.time();
+		var concatEqArgSample = "";
+		for (_ in 0...callCount)
+			concatEqArgSample = @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(concat, "std::string", "std::string", scope);
+		final concatEqArgElapsed = Sys.time() - concatEqArgStart;
+		resetRendererCaches();
+		final concatAnyAddStart = Sys.time();
+		var concatAnyAddSample = false;
+		for (_ in 0...callCount)
+			concatAnyAddSample = @:privateAccess backend.cpp.CppTargetCore.anyAddExpr(concatLeft, concatRight, scope) != null;
+		final concatAnyAddElapsed = Sys.time() - concatAnyAddStart;
+		resetRendererCaches();
+		final concatStringSelectStart = Sys.time();
+		var concatStringSelectSample = false;
+		for (_ in 0...callCount)
+			concatStringSelectSample = @:privateAccess backend.cpp.CppTargetCore.isCppStringExpr(concatLeft, scope)
+				|| @:privateAccess backend.cpp.CppTargetCore.isCppStringExpr(concatRight, scope);
+		final concatStringSelectElapsed = Sys.time() - concatStringSelectStart;
+		resetRendererCaches();
+		final concatPrimitiveAbstractStart = Sys.time();
+		var concatPrimitiveAbstractSample = false;
+		for (_ in 0...callCount)
+			concatPrimitiveAbstractSample = @:privateAccess backend.cpp.CppTargetCore.primitiveBackedAbstractToStringExpr(concat, scope) != null;
+		final concatPrimitiveAbstractElapsed = Sys.time() - concatPrimitiveAbstractStart;
+		resetRendererCaches();
+		final concatClassAbstractStart = Sys.time();
+		var concatClassAbstractSample = false;
+		for (_ in 0...callCount)
+			concatClassAbstractSample = @:privateAccess backend.cpp.CppTargetCore.classBackedAbstractToStringExpr(concat, scope) != null;
+		final concatClassAbstractElapsed = Sys.time() - concatClassAbstractStart;
+		resetRendererCaches();
+		final concatExplicitTypeStart = Sys.time();
+		var concatExplicitTypeSample = "";
+		for (_ in 0...callCount)
+			concatExplicitTypeSample = @:privateAccess backend.cpp.CppTargetCore.exprCppType(concat, scope);
+		final concatExplicitTypeElapsed = Sys.time() - concatExplicitTypeStart;
+		resetRendererCaches();
+		final concatClassMetadataStart = Sys.time();
+		var concatClassMetadataSample = false;
+		for (_ in 0...callCount)
+			concatClassMetadataSample = @:privateAccess backend.cpp.CppTargetCore.isCppEnumCarrierReferenceType("", scope)
+				|| @:privateAccess backend.cpp.CppTargetCore.classNameFromCppExprType("", scope) != null
+				|| @:privateAccess backend.cpp.CppTargetCore.classReferencePathText(concat, scope) != null;
+		final concatClassMetadataElapsed = Sys.time() - concatClassMetadataStart;
+		resetRendererCaches();
+		final concatInferStart = Sys.time();
+		var concatInferSample = "";
+		for (_ in 0...callCount)
+			concatInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(concat, scope);
+		final concatInferElapsed = Sys.time() - concatInferStart;
 		final lengthEqSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(lengthEq, scope);
-		final concatSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(concat, scope);
 		final concatEqSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(concatEq, scope);
 		return {
 			calls: callCount,
@@ -974,6 +1112,18 @@ class M14CppHelperRenderBenchIntegrationTest {
 			joinReceiverTypeElapsed: joinReceiverTypeElapsed,
 			joinTemplateElapsed: joinTemplateElapsed,
 			joinFieldCallElapsed: joinFieldCallElapsed,
+			concatRenderElapsed: concatRenderElapsed,
+			concatStringElapsed: concatStringElapsed,
+			concatLeftStringElapsed: concatLeftStringElapsed,
+			concatRightStringElapsed: concatRightStringElapsed,
+			concatEqArgElapsed: concatEqArgElapsed,
+			concatAnyAddElapsed: concatAnyAddElapsed,
+			concatStringSelectElapsed: concatStringSelectElapsed,
+			concatPrimitiveAbstractElapsed: concatPrimitiveAbstractElapsed,
+			concatClassAbstractElapsed: concatClassAbstractElapsed,
+			concatExplicitTypeElapsed: concatExplicitTypeElapsed,
+			concatClassMetadataElapsed: concatClassMetadataElapsed,
+			concatInferElapsed: concatInferElapsed,
 			inferSample: inferSample,
 			renderSample: renderSample,
 			argsSample: argsSample,
@@ -993,7 +1143,18 @@ class M14CppHelperRenderBenchIntegrationTest {
 			joinQualifiedSample: joinQualifiedSample,
 			joinReceiverTypeSample: joinReceiverTypeSample,
 			joinTemplateSample: joinTemplateSample,
-			joinFieldCallSample: joinFieldCallSample
+			joinFieldCallSample: joinFieldCallSample,
+			concatStringSample: concatStringSample,
+			concatLeftStringSample: concatLeftStringSample,
+			concatRightStringSample: concatRightStringSample,
+			concatEqArgSample: concatEqArgSample,
+			concatAnyAddSample: concatAnyAddSample,
+			concatStringSelectSample: concatStringSelectSample,
+			concatPrimitiveAbstractSample: concatPrimitiveAbstractSample,
+			concatClassAbstractSample: concatClassAbstractSample,
+			concatExplicitTypeSample: concatExplicitTypeSample,
+			concatClassMetadataSample: concatClassMetadataSample,
+			concatInferSample: concatInferSample
 		};
 	}
 
@@ -1377,8 +1538,12 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ " join="
 			+ typedERegSplitPhases.joinSample);
 		assertTrue(typedERegSplitPhases.lengthEqSample == 'eq(static_cast<int>((block->split("a").size())), 1)'
-			&& typedERegSplitPhases.concatSample == '(std::string("parts:") + __hxhx_join(block->split("a"), std::string("|")))'
-			&& typedERegSplitPhases.concatEqSample == 'eq((std::string("parts:") + __hxhx_join(block->split("a"), std::string("|"))), std::string("parts:a|b"))',
+			&& typedERegSplitPhases.concatSample == '((std::string("parts:") + __hxhx_join(block->split("a"), std::string("|"))) + std::string(":done"))'
+			&& typedERegSplitPhases.concatStringSample == typedERegSplitPhases.concatSample
+			&& typedERegSplitPhases.concatEqArgSample == typedERegSplitPhases.concatSample
+			&& typedERegSplitPhases.concatLeftStringSample == '(std::string("parts:") + __hxhx_join(block->split("a"), std::string("|")))'
+			&& typedERegSplitPhases.concatRightStringSample == 'std::string(":done")'
+			&& typedERegSplitPhases.concatEqSample == 'eq(((std::string("parts:") + __hxhx_join(block->split("a"), std::string("|"))) + std::string(":done")), std::string("parts:a|b"))',
 			"Typed-local EReg split chains should preserve exact concatenation and equality rendering, got lengthEq="
 			+ typedERegSplitPhases.lengthEqSample
 			+ " concat="
@@ -1399,6 +1564,14 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& !typedERegSplitPhases.joinTemplateSample
 			&& typedERegSplitPhases.joinFieldCallSample == typedERegSplitPhases.joinSample,
 			"Typed-local EReg split join should retain general vector lowering while unrelated call preflights decline");
+		assertTrue(!typedERegSplitPhases.concatAnyAddSample
+			&& typedERegSplitPhases.concatStringSelectSample
+			&& !typedERegSplitPhases.concatPrimitiveAbstractSample
+			&& !typedERegSplitPhases.concatClassAbstractSample
+			&& typedERegSplitPhases.concatExplicitTypeSample == ""
+			&& !typedERegSplitPhases.concatClassMetadataSample
+			&& typedERegSplitPhases.concatInferSample == "std::string",
+			"Typed-local EReg split concatenation should remain a String expression while unrelated Any, abstract, and class preflights decline");
 		final matchedStringCallArgPhases = renderMatchedStringCallArgPhases(matchedStringCallArgCalls);
 		assertTrue(matchedStringCallArgPhases.fullSample == "test"
 			&& matchedStringCallArgPhases.actualTypeSample == "std::string"
@@ -1549,6 +1722,30 @@ class M14CppHelperRenderBenchIntegrationTest {
 			+ typedERegSplitPhases.joinTemplateElapsed
 			+ " typed_ereg_split_join_field_call_seconds="
 			+ typedERegSplitPhases.joinFieldCallElapsed
+			+ " typed_ereg_concat_render_seconds="
+			+ typedERegSplitPhases.concatRenderElapsed
+			+ " typed_ereg_concat_string_seconds="
+			+ typedERegSplitPhases.concatStringElapsed
+			+ " typed_ereg_concat_left_string_seconds="
+			+ typedERegSplitPhases.concatLeftStringElapsed
+			+ " typed_ereg_concat_right_string_seconds="
+			+ typedERegSplitPhases.concatRightStringElapsed
+			+ " typed_ereg_concat_eq_arg_seconds="
+			+ typedERegSplitPhases.concatEqArgElapsed
+			+ " typed_ereg_concat_any_add_seconds="
+			+ typedERegSplitPhases.concatAnyAddElapsed
+			+ " typed_ereg_concat_string_select_seconds="
+			+ typedERegSplitPhases.concatStringSelectElapsed
+			+ " typed_ereg_concat_primitive_abstract_seconds="
+			+ typedERegSplitPhases.concatPrimitiveAbstractElapsed
+			+ " typed_ereg_concat_class_abstract_seconds="
+			+ typedERegSplitPhases.concatClassAbstractElapsed
+			+ " typed_ereg_concat_explicit_type_seconds="
+			+ typedERegSplitPhases.concatExplicitTypeElapsed
+			+ " typed_ereg_concat_class_metadata_seconds="
+			+ typedERegSplitPhases.concatClassMetadataElapsed
+			+ " typed_ereg_concat_infer_seconds="
+			+ typedERegSplitPhases.concatInferElapsed
 			+ " matched_string_call_arg_calls="
 			+ matchedStringCallArgPhases.calls
 			+ " matched_string_call_arg_seconds="

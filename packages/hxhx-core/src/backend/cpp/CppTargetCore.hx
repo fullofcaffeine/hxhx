@@ -54,6 +54,12 @@ typedef CppReflectPropertyInfo = {
 	var field:HxFieldDecl;
 }
 
+/** Carries a proven direct String-concat rendering and whether it owns the exact EReg split/join leaf. **/
+typedef CppDirectStringConcatNode = {
+	var rendered:String;
+	var hasTypedLocalERegSplitJoin:Bool;
+}
+
 /**
 	Coarse render policy bucket for reachable Cpp helper classes.
 
@@ -14985,6 +14991,11 @@ class CppTargetCore {
 	}
 
 	static function eqComparableArgExpr(arg:HxExpr, argType:String, otherType:String, ?scope:CppRenderScope):String {
+		if (argType == "std::string") {
+			final directSplitJoinConcat = directTypedLocalERegSplitJoinConcatExpr(arg, scope);
+			if (directSplitJoinConcat != null)
+				return directSplitJoinConcat;
+		}
 		final otherOptionalInner = cppOptionalInnerType(otherType);
 		return switch (arg) {
 			case ENull if (otherOptionalInner.length > 0):
@@ -15007,6 +15018,55 @@ class CppTargetCore {
 					+ ">("
 					+ renderExpr(arg, scope)
 					+ ")"; else renderExpr(arg, scope);
+		};
+	}
+
+	/**
+		Render the exact String-concat tree around a typed-local `EReg.split(...).join(...)` leaf.
+
+		Only String literals and explicitly typed String locals may surround the join. This keeps
+		abstract operators, Dynamic addition, unknown receivers, and general call results on the
+		normal String/type-flow path while equality rendering avoids rediscovering the same nested
+		concat and join types several times.
+	**/
+	static function directTypedLocalERegSplitJoinConcatExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case EBinop("+", _, _): final node = directTypedLocalERegSplitJoinConcatNode(expr,
+					scope); node != null && node.hasTypedLocalERegSplitJoin ? node.rendered : null;
+			case _:
+				null;
+		};
+	}
+
+	static function directTypedLocalERegSplitJoinConcatNode(expr:HxExpr, ?scope:CppRenderScope):Null<CppDirectStringConcatNode> {
+		return switch (expr) {
+			case EString(value):
+				{
+					rendered: "std::string(" + quoteString(value) + ")",
+					hasTypedLocalERegSplitJoin: false
+				};
+			case EIdent(name) if (exprCppType(expr, scope) == "std::string"):
+				{
+					rendered: "std::string(" + localCppName(name, scope) + ")",
+					hasTypedLocalERegSplitJoin: false
+				};
+			case ECall(EField(ECall(EField(receiver, splitMethod), splitArgs), "join"), joinArgs)
+				if (joinArgs.length == 1 && isTypedLocalERegSplitCall(receiver, splitMethod, splitArgs.length, scope)):
+				{rendered: "__hxhx_join("
+					+ typedLocalERegSplitCallExpr(receiver, splitArgs, scope)
+					+ ", "
+					+ stringExpr(joinArgs[0], scope)
+					+ ")",
+					hasTypedLocalERegSplitJoin: true
+				};
+			case EBinop("+", left, right):
+				final directLeft = directTypedLocalERegSplitJoinConcatNode(left, scope);
+				final directRight = directTypedLocalERegSplitJoinConcatNode(right, scope);
+				if (directLeft == null || directRight == null) null; else {
+					rendered: "(" + directLeft.rendered + " + " + directRight.rendered + ")",
+					hasTypedLocalERegSplitJoin: directLeft.hasTypedLocalERegSplitJoin || directRight.hasTypedLocalERegSplitJoin};
+			case _:
+				null;
 		};
 	}
 
