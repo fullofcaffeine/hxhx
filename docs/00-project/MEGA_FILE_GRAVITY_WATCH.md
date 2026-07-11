@@ -13,13 +13,13 @@ MEGA_FILE_GRAVITY_WATCH:PASS
 
 ## Current Hotspots
 
-Measured on July 10, 2026. The guard allows small drift but asks for this table
+Measured on July 11, 2026. The guard allows small drift but asks for this table
 to be refreshed when a watched file moves by more than 250 lines.
 
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,882 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,015 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,031 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -80,6 +80,12 @@ Pause for an extraction note or follow-up bead when a change would:
 
 Source/native target-family extraction should be filed before adding more broad
 target-specific runtime/API support to `SourceTargetCommon.hx`.
+
+2026-07-11 checkpoint: `haxe_ocaml-jdmr9` added a bounded diagnostic buffer at
+the existing Cpp timing-output seam. It removes synchronous timing-line output
+from enclosing statement, method, and class measurements without changing
+generated Cpp or adding runtime semantics. Broader Cpp render/type-flow
+extraction remains covered by `haxe_ocaml-36ec`.
 
 2026-07-09 checkpoint: `haxe_ocaml-nheiw` added a bounded target-owned
 `utest.Assert` neutral-support fast path inside the existing Cpp helper support

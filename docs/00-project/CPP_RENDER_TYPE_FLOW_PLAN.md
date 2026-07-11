@@ -3446,6 +3446,92 @@ crossed. GPT 5.5 Pro and Oracle were deliberately skipped because focused and
 strict timing exposed a bounded diagnostic-instrumentation issue without a
 scope, release, provenance, or architecture decision.
 
+## 2026-07-11 Buffered Helper Timing Output
+
+Follow-up bead `haxe_ocaml-jdmr9` corrected the filtered Cpp timing contract
+before further render burn-down. Timing-detail, statement, and method lines
+previously called `Sys.println` while their enclosing statement, method, and
+class timers were still running. This made diagnostic output latency look like
+renderer latency, most visibly in the typed callback local at index 69.
+
+`traceCppTimingPhase` now retains complete output lines while a helper class is
+rendering. The class wrapper captures its elapsed value first, restores the
+normal sink, flushes the retained lines verbatim in insertion order, and only
+then emits the class timing line. General class-begin/class-end tracing stays
+outside the measured callback. Exceptional renders flush diagnostics already
+recorded and rethrow the original error. When timings are disabled, helper
+rendering retains the original direct branch and allocates no timing buffer.
+
+A separate 57-line timing-buffer fixture now runs under
+`test:m14:cpp-helper-render-bench`. It proves that two nested timing labels are
+not emitted while the measured callback is active, that their complete output
+strings and order survive until after elapsed capture, that the buffer is
+detached before flush, that exceptions restore the sink and preserve the
+original error, and that disabled timing enqueues nothing. The native
+current-source micro-probe also caught and rejected an initial generic result
+carrier that reported zero class line counts only after promotion to OCaml.
+The retained `Void` callback wrapper preserves native line counts: the probe
+reported 9 lines for `Base`, 40 for `String`, and 62 for `Sys`.
+
+The exact-command current-source trace retains the same 88 indexed
+`TestEReg.test` statements and 640 selected expression/statement/method timing
+records as the baseline. Excluding index 86, where each raw log has one line
+split by an independently emitted heartbeat, all 632 normalized phase records
+have identical labels and order. Generated Cpp, method line counts, and class
+line counts remain unchanged.
+
+Against the preceding trace, all 88 statement timings sum from 0.036709s to
+0.034200s, about 6.83% lower. Index 69's outer initializer fell from
+0.000319s to 0.000269s, about 15.70%; its recorded RHS fell from 0.000502s to
+0.000439s, about 12.58%; and the complete statement fell from 0.000659s to
+0.000588s, about 10.78%. `TestEReg.test` fell from 0.065659s to 0.062800s,
+about 4.35%, and its class from 0.067341s to 0.064493s, about 4.23%. These are
+measurement-contract corrections, not production renderer speedups.
+
+The target setup/toolchain phase completed before native rendering and is not
+counted as target evidence. The exact-command run's external hxcpp download
+took 104 seconds, versus 50 seconds in the baseline, so equal-budget terminal
+location is not comparable. It nevertheless fully rendered `TestEReg`, ended
+with `Cpp: FAIL (480s, exit 124)`, and retained the wrapper's validated
+`expected_red_probe_exit=1`. No timeout-frontier claim is made.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-split-length-type-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-buffered-timing-warm.log`
+
+Follow-up bead `haxe_ocaml-qr0tk` owns the next actionable stable statement.
+Index 69 remains the largest at 0.000588s, but the preceding focused callback
+attribution found no irrelevant renderer work to remove. Index 1 is next at
+0.000575s and spends 0.000172s building the first complete free-call owner
+miss; the follow-up must prove a total render reduction rather than merely
+move that index construction into another timer. Broader Cpp render/type-flow
+extraction remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- native current-source Cpp source-only timing probe
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This corrects
+opt-in diagnostics, while strict Cpp remains expected-red and public
+production readiness does not change. Generated Cpp and committed bootstrap
+snapshots are unaffected. `CppTargetCore.hx` remains a red mega-file at 26,015
+lines; the roughly 50-line production change stays at the existing diagnostic
+sink/class-render wrapper, and broader extraction already belongs to
+`haxe_ocaml-36ec`. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle
+were deliberately skipped because the timer nesting and output ownership
+supplied a bounded, local, provenance-neutral diagnostic seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

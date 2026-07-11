@@ -123,6 +123,7 @@ class CppTargetCore {
 	static var traceCppCallArgDetailPhasesEnabledCache = -1;
 	static var traceCppHelperClassificationDetailsEnabledCache = -1;
 	static var traceCppTimingMethodFilterCache:Null<String> = null;
+	static var traceCppTimingPhaseBuffer:Null<Array<String>> = null;
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		traceCppPhase("emit_before_main_module");
@@ -199,8 +200,45 @@ class CppTargetCore {
 	}
 
 	static function traceCppTimingPhase(label:String):Void {
-		if (traceCppTimingsEnabled())
-			Sys.println("cpp_target_phase=" + label);
+		if (!traceCppTimingsEnabled())
+			return;
+		final line = "cpp_target_phase=" + label;
+		if (traceCppTimingPhaseBuffer == null) {
+			Sys.println(line);
+		} else {
+			traceCppTimingPhaseBuffer.push(line);
+		}
+	}
+
+	/**
+		Measure one helper-class render while retaining its nested timing lines.
+
+		The elapsed value is captured before buffered lines are returned to the
+		caller for emission, so synchronous diagnostic output cannot inflate
+		statement, method, or class render timings. An exceptional render still
+		flushes any diagnostics recorded before rethrowing the original error.
+	**/
+	static function measureWithBufferedCppTimingPhases(body:Void->Void):{elapsed:Float, phases:Array<String>} {
+		final priorBuffer = traceCppTimingPhaseBuffer;
+		final phases = new Array<String>();
+		traceCppTimingPhaseBuffer = phases;
+		final startTime = Sys.time();
+		try {
+			body();
+			final elapsed = Sys.time() - startTime;
+			traceCppTimingPhaseBuffer = priorBuffer;
+			return {elapsed: elapsed, phases: phases};
+		} catch (error:Dynamic) {
+			traceCppTimingPhaseBuffer = priorBuffer;
+			flushCppTimingPhases(phases);
+			throw error;
+		}
+	}
+
+	/** Emit buffered timing lines verbatim and in their original order. **/
+	static function flushCppTimingPhases(phases:Array<String>):Void {
+		for (line in phases)
+			Sys.println(line);
 	}
 
 	static function traceCppLambdaPhasesEnabled():Bool {
@@ -2698,15 +2736,27 @@ class CppTargetCore {
 		for (cls in orderedHelpers) {
 			final helperName = renderedClassName(cls, classLookup);
 			final timingEnabled = traceCppTimingsEnabled();
-			final startTime = timingEnabled ? Sys.time() : 0.0;
-			traceCppPhase("render_helper_class_begin name=" + helperName);
-			final rendered = renderHelperClass(cls, classLookup);
-			out.push(rendered);
-			traceCppPhase("render_helper_class_end name=" + helperName);
-			if (timingEnabled) {
-				final elapsed = Sys.time() - startTime;
-				traceCppTimingPhase("render_helper_class_timing name=" + helperName + " seconds=" + Std.string(elapsed) + " lines=" + rendered.length);
+			if (!timingEnabled) {
+				traceCppPhase("render_helper_class_begin name=" + helperName);
+				final rendered = renderHelperClass(cls, classLookup);
+				out.push(rendered);
+				traceCppPhase("render_helper_class_end name=" + helperName);
+				continue;
 			}
+			traceCppPhase("render_helper_class_begin name=" + helperName);
+			var rendered:Array<String> = null;
+			final measured = measureWithBufferedCppTimingPhases(() -> {
+				rendered = renderHelperClass(cls, classLookup);
+				out.push(rendered);
+			});
+			flushCppTimingPhases(measured.phases);
+			traceCppPhase("render_helper_class_end name=" + helperName);
+			traceCppTimingPhase("render_helper_class_timing name="
+				+ helperName
+				+ " seconds="
+				+ Std.string(measured.elapsed)
+				+ " lines="
+				+ rendered.length);
 		}
 		return out;
 	}
