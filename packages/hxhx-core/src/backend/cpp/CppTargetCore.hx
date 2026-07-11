@@ -6178,6 +6178,9 @@ class CppTargetCore {
 			classByName: classLookup.byName,
 			allClasses: classLookup.all == null ? [] : classLookup.all,
 			classLookup: classLookup,
+			classInheritanceCache: new haxe.ds.StringMap<Bool>(),
+			methodOwnerCache: new haxe.ds.StringMap<HxClassDecl>(),
+			missingMethodOwnerCache: new haxe.ds.StringMap<Bool>(),
 			typeParams: typeParams,
 			typeParamCppNames: typeParamCppNames,
 			localTypes: new haxe.ds.StringMap<String>(),
@@ -12589,24 +12592,31 @@ class CppTargetCore {
 	static function classExtendsClass(childName:String, baseName:String, scope:CppRenderScope):Bool {
 		if (scope == null)
 			return false;
+		final cacheKey = (childName == null ? "" : childName) + "\x1f" + (baseName == null ? "" : baseName);
+		if (scope.classInheritanceCache.exists(cacheKey))
+			return scope.classInheritanceCache.get(cacheKey);
 		final lookup = lookupForScope(scope);
 		final target = sanitizeTypePath(typeBaseName(baseName == null ? "" : baseName));
 		var currentCls = classDeclForCppOrHintName(childName, scope, lookup);
 		final targetCls = classDeclForCppOrHintName(baseName, scope, lookup);
 		final seen = new haxe.ds.StringMap<Bool>();
+		var result = false;
 		while (currentCls != null) {
 			final currentKey = renderedClassName(currentCls, lookup);
 			if (currentKey.length == 0 || seen.exists(currentKey))
-				return false;
-			if ((targetCls != null && currentCls == targetCls) || classDeclMatchesCppOrHintName(currentCls, target, lookup))
-				return true;
+				break;
+			if ((targetCls != null && currentCls == targetCls) || classDeclMatchesCppOrHintName(currentCls, target, lookup)) {
+				result = true;
+				break;
+			}
 			seen.set(currentKey, true);
 			final next = HxClassDecl.getExtendsPath(currentCls);
 			if (next == null || next.length == 0)
-				return false;
+				break;
 			currentCls = lookupClassForTypeHint(next, scope, lookup);
 		}
-		return false;
+		scope.classInheritanceCache.set(cacheKey, result);
+		return result;
 	}
 
 	static function classDeclForCppOrHintName(name:String, scope:CppRenderScope, classLookup:CppClassLookup):Null<HxClassDecl> {
@@ -17464,22 +17474,34 @@ class CppTargetCore {
 	static function currentOrInheritedOwnerMethodOwner(methodName:String, scope:CppRenderScope):Null<HxClassDecl> {
 		if (scope == null || scope.owner == null)
 			return null;
+		final cacheKey = sanitizeIdentifier(methodName == null ? "" : methodName);
+		if (scope.methodOwnerCache.exists(cacheKey))
+			return scope.methodOwnerCache.get(cacheKey);
+		if (scope.missingMethodOwnerCache.exists(cacheKey))
+			return null;
 		final lookup = lookupForScope(scope);
 		var currentCls:Null<HxClassDecl> = scope.owner;
 		final seen = new haxe.ds.StringMap<Bool>();
+		var resolved:Null<HxClassDecl> = null;
 		while (currentCls != null) {
 			final key = renderedClassName(currentCls, lookup);
 			if (key.length == 0 || seen.exists(key))
-				return null;
+				break;
 			seen.set(key, true);
-			if (ownerMethodDeclIn(currentCls, methodName) != null)
-				return currentCls;
+			if (ownerMethodDeclIn(currentCls, methodName) != null) {
+				resolved = currentCls;
+				break;
+			}
 			final next = HxClassDecl.getExtendsPath(currentCls);
 			if (next == null || next.length == 0)
-				return null;
+				break;
 			currentCls = lookupClassForTypeHint(next, scope, lookup);
 		}
-		return null;
+		if (resolved == null)
+			scope.missingMethodOwnerCache.set(cacheKey, true);
+		else
+			scope.methodOwnerCache.set(cacheKey, resolved);
+		return resolved;
 	}
 
 	static function callableOrSameOwnerReturnCppType(name:String, ?scope:CppRenderScope):String {

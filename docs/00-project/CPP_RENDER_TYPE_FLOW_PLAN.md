@@ -2858,6 +2858,100 @@ Slow diagnostic validation for hotspot claims:
 README/North Star progress bars recorded as unchanged unless strict gate and
 public usability evidence changes.
 
+## 2026-07-11 Direct-Call Class-Graph Cache
+
+Follow-up bead `haxe_ocaml-slpwj` attributed the remaining paired
+`TestEReg.test` `unspec` statements to repeated immutable class-graph queries.
+Every direct call searched the current/inherited method chain, including
+repeated misses for the same helper name. Inherited support-signature discovery
+then independently searched the same graph to prove the support relationship.
+
+A separate focused probe now runs under
+`test:m14:cpp-helper-render-bench`. It measures current, inherited, and missing
+method-owner queries; ordinary inferred argument types; inherited support
+signature discovery; support argument rendering; and omitted and explicit
+`PosInfos` calls. Exact controls cover both `unspec` and `exc`, positive and
+negative Int arguments, same-owner and inherited methods, local callable
+shadowing, an unrelated free call, and imported Int64 intrinsic lowering.
+
+`CppRenderScope` now owns method-owner hit/miss caches and an inheritance-result
+cache. Both cache only the immutable owner/class lookup graph associated with
+one render scope. Local callable shadowing remains checked before owner lookup,
+and argument types, arguments, and call-site position values are not cached.
+The change is generic shared Cpp lookup state; it does not add another
+upstream-test owner special case or alter the existing support-signature table.
+
+Two pre-change 2,500-call samples measured missing-owner lookup at
+4.656029s/4.627699s, support-signature discovery at
+5.588614s/5.549379s, and the complete omitted-position support call at
+10.190494s/10.123195s. Two final samples measured the same paths at
+0.007727s/0.007716s, 0.028628s/0.028515s, and
+0.065171s/0.064741s: reductions of about 99.83%, 99.49%, and 99.36%
+respectively. The fixture preserves exact generated output across all controls.
+
+In the comparable current-source strict warm trace, the second `unspec`
+statement's owner lookup fell from 0.000156s to 0.000008s, about 94.95%, and
+support-signature discovery fell from 0.000260s to 0.000041s, about 84.23%.
+Its enclosing argument rendering fell from 0.000425s to 0.000215s, about
+49.41%, and the statement fell from 0.000853s to 0.000512s, about 39.99%.
+The two `unspec` statements together fell from 0.001801s to 0.001416s, about
+21.38%; the first statement remains cold and therefore receives only a small
+cache benefit.
+
+The later `exc` call reuses the warmed inheritance result even though its
+method-owner miss is name-specific. Its support-signature discovery fell from
+0.000256s to 0.000032s, about 87.52%, and its statement fell from 0.000848s to
+0.000636s, about 25.02%. `TestEReg.test` fell from 0.075496s to 0.068784s,
+about 8.89%, and its class fell from 0.077203s to 0.070432s, about 8.77%.
+This broader method delta also includes cache hits for other repeated direct
+call names, so it is not attributed only to the three support-helper calls.
+
+Independent controls remained comparable: `TestBytes.test` was about 1.55%
+faster and `TestXML.testBasic` about 2.49% faster. Both comparable logs contain
+the same 88 indexed `TestEReg.test` statements. The frontier helper classifies
+the baseline/seed/warm set as `shared-hotspots-moving-frontier`; the shared hot
+timings, rather than the variable terminal class, remain the relevant evidence.
+
+The retained seed reached all 88 statements and the expected native timeout,
+but its outer zsh wrapper could not read Bash's `PIPESTATUS`, so it is retained
+as timing-only evidence. The Bash-run warm probe ended with
+`Cpp: FAIL (480s, exit 124)` and the wrapper's validated
+`expected_red_probe_exit=1`, after fully rendering `TestEReg`. The disposable
+upstream worktrees were removed by the runner.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-negative-primitive-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-direct-support-cache-seed.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-direct-support-cache-warm.log`
+
+Follow-up bead `haxe_ocaml-o8m0u` owns the first cold `unspec` statement, now
+the largest at 0.000904s, where method-owner miss and inherited support
+signature discovery still traverse the same class chain separately. Broader
+Cpp render/type-flow extraction remains owned by `haxe_ocaml-36ec`.
+
+Focused validation for this slice includes:
+
+- `npm run hxhx:build-current-source`
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp remains
+expected-red, and this internal render-latency improvement does not change
+public production readiness. Committed bootstrap snapshots are unaffected.
+`CppTargetCore.hx` remains a red mega-file at 25,904 lines; the cache state
+lives in the dedicated 39-line `CppRenderScope` module, while the core change
+stays at the existing lookup seams. `thinking:xhigh` was not crossed. GPT 5.5
+Pro and Oracle were deliberately skipped because the behavior and seam were
+exact, local, provenance-neutral, and scope-neutral.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

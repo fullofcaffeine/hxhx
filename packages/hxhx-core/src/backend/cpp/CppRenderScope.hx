@@ -12,6 +12,16 @@ typedef CppRenderScope = {
 	var classByName:haxe.ds.StringMap<HxClassDecl>;
 	var allClasses:Array<HxClassDecl>;
 	@:optional var classLookup:CppClassLookup;
+
+	/** Immutable class-graph inheritance results reused throughout one render scope. **/
+	var classInheritanceCache:haxe.ds.StringMap<Bool>;
+
+	/** Direct method owners already resolved in this scope's immutable class graph. **/
+	var methodOwnerCache:haxe.ds.StringMap<HxClassDecl>;
+
+	/** Direct method names proven absent from this scope's immutable class graph. **/
+	var missingMethodOwnerCache:haxe.ds.StringMap<Bool>;
+
 	var typeParams:Array<String>;
 	var typeParamCppNames:haxe.ds.StringMap<String>;
 	var localTypes:haxe.ds.StringMap<String>;
