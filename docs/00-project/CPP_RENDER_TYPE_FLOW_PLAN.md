@@ -5592,6 +5592,54 @@ timing bench. No upstream source was copied; the ignored suite was used only as
 a behavior/performance oracle. `thinking:xhigh` was not crossed; Oracle/GPT
 were skipped because exact trace-on/off evidence gave a bounded result.
 
+## 2026-07-12 XML Node-Value Render Fast Path
+
+Follow-up bead `haxe_ocaml-pgy4z` decomposed the unfiltered
+`TestXML.testCreate` hotspot with repo-owned factory, parse, first-child,
+node-value, equality, and local-update shapes. The dominant repeated leaf was
+a known `Xml.nodeValue` read: the general field path re-resolved the receiver
+while probing property-getter and erased-JSON behavior that cannot apply to a
+declared plain `Xml` field.
+
+`renderExpr` now recognizes only a declared, non-property `nodeValue` field on
+a resolved `Xml` instance. It renders that field after one receiver-type
+resolution. `this`, `super`, static receivers, interfaces, erased or unknown
+receivers, other field names, and missing declarations stay on the general
+path. An initial broader plain-field experiment was discarded because it
+changed existing `this` rendering and slowed unrelated helper families; the
+retained production seam is intentionally XML-specific.
+
+Across three fresh untraced 50-call processes, the same-source old
+node-value path had a median of 0.859496s and the retained path had a median of
+0.308626s, a 64.1% reduction. Exact output controls retain Xml factory calls,
+parse/first-child/node-value chains, local node-value assignment, explicit
+return rendering, property getter dispatch, and erased JSON field access.
+
+A fresh current-source hxhx build completed after the change. The exact
+unfiltered 480-second strict Cpp probe again reached TestMisc before its
+expected timeout (target exit 124, wrapper exit 1). `TestXML.testCreate` fell
+from 20.523928s to 15.189310s, a 26.0% reduction, while the whole `TestXML`
+class fell from 71.774157s to 60.925508s, a 15.1% reduction.
+`TestEReg.test` stayed flat at 0.012488s versus 0.011853s. The remaining
+`TestXML.testCreate` work is still the leading method and is owned separately
+by `haxe_ocaml-94hk1`.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-xml-create-render-attribution-final.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-xml-plain-field.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-method-timing.log`
+
+README Goals and North Star progress bars remain unchanged. The strict Cpp
+gate is still red at the same timeout frontier, so this internal render-speed
+slice does not yet change production usability. `CppTargetCore.hx` is now
+26,301 lines; extraction remains owned by `haxe_ocaml-36ec`, and the focused
+fixture is isolated in a documented 262-line bench module. No upstream source
+or fixture was copied; the ignored Haxe 4.3.7 suite was consulted only as a
+behavior and performance oracle. `thinking:xhigh` was not crossed; Oracle/GPT
+were skipped because the leaf attribution, semantic controls, and narrow
+receiver/field boundary provided a bounded seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

@@ -12964,6 +12964,9 @@ class CppTargetCore {
 	}
 
 	static function renderExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final plainFieldRead = knownPlainInstanceFieldReadExpr(expr, scope);
+		if (plainFieldRead != null)
+			return plainFieldRead;
 		return switch (expr) {
 			case ENull:
 				"nullptr";
@@ -13470,6 +13473,50 @@ class CppTargetCore {
 				recovery;
 			case _:
 				throw "C++ source backend MVP unsupported expression: " + exprKind(expr);
+		};
+	}
+
+	/**
+		Render a declared plain Xml nodeValue field after one receiver-type resolution.
+
+		Property getters, interfaces, erased values, static receivers, and unknown
+		fields stay on the general field-rendering path so this shortcut cannot
+		change their dispatch or runtime carrier semantics.
+	**/
+	static function knownPlainInstanceFieldReadExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		return switch (expr) {
+			case EField(receiver, field):
+				final directReceiver = switch (receiver) {
+					case EThis:
+						false;
+					case ESuper:
+						false;
+					case _:
+						true;
+				};
+				if (!directReceiver || sanitizeIdentifier(field) != "nodeValue" || staticReceiverClassName(receiver, scope) != null) {
+					null;
+				} else {
+					final receiverType = exprCppType(receiver, scope);
+					if (receiverType.length == 0 || receiverType == "std::any" || cppOptionalInnerType(receiverType) == "std::any") {
+						null;
+					} else {
+						final owner = instanceMethodReceiverClassName(receiverType, scope);
+						final info = owner == null
+							|| sanitizeTypePath(typeBaseName(owner)) != "Xml" ? null : classInstanceFieldInfo(owner, field, scope);
+						if (info == null
+							|| HxFieldDecl.getPropertyGet(info.field) == "get"
+							|| reflectPropertyOwnerIsInterface(info, scope)) {
+							null;
+						} else {
+							"(" + renderExpr(receiver, scope) + fieldAccessOpForCppType(receiverType) + sanitizeIdentifier(field) + ")";
+						}
+					}
+				}
+			case _:
+				null;
 		};
 	}
 
