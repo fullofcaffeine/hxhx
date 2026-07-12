@@ -4488,6 +4488,80 @@ test source was copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and
 Oracle were deliberately skipped because complete method-local evidence gives
 a bounded next attribution seam.
 
+## 2026-07-12 TestEReg Local-Declaration Attribution
+
+Follow-up bead `haxe_ocaml-ww5cj` tested whether the 13 local declarations in
+the post-signature `TestEReg.test` trace represented useful renderer work or
+statement-timing overhead. Their stable traced total was about 0.00525s, the
+largest non-equality statement family, and 11 of the declarations construct a
+fresh EReg.
+
+The existing local-declaration bench now supports one fresh-process timing
+selection through `HXHX_CPP_LOCAL_DECL_BENCH_ONLY`. It separately measures
+fresh EReg declared-type discovery, exact construction, initializer rendering,
+the complete declaration, and the identical declaration with the eight
+buffered timing records used by a method-selected strict trace. Exact output
+assertions remain active for every selection. Explicit and package-qualified
+EReg hints, String-local constructor arguments, and an unrelated reference
+constructor freeze the general-path controls.
+
+Across independent 5,000-call processes, medians were 0.041829s for declared
+type discovery, 0.027028s for exact construction, 0.032187s for initializer
+rendering, and 0.132405s for a complete untraced declaration. The identical
+buffered-timing declaration measured 0.822819s, about 6.2 times the untraced
+total. The typed callback declaration control measured 0.771906s. On a
+per-call basis, the 11 constructor declarations plus the one callback account
+for only about 0.000445s of useful focused work, roughly 8.5% of the strict
+0.00525s family. The estimate is used only to reject a production shortcut;
+it is not an end-to-end timing claim.
+
+No production Cpp change is retained. The exact-command current-source probe
+cloned `hxcpp` in 77 seconds, rendered all 88 TestEReg statements, and reached
+the same `Parser_XmlParserException` frontier before the expected 480-second
+timeout. `TestEReg.test` measured 0.031944s, its class 0.033653s, the 88
+statement total 0.026408s, and the 13 local declarations 0.005228s. The prior
+no-code comparator measured 0.032458s, 0.034208s, 0.026584s, and 0.005246s;
+the local family is effectively flat. Preparation miss/hit totals were
+0.003133s/0.000293s, and the independent `TestBytes.test` control moved from
+1.143601s to 1.160272s, so no aggregate improvement is claimed. All 484
+method-selected records were present.
+
+The largest stable preparation subphase is now the better attribution target:
+`infer_dynamic_locals` measured 0.001384s in this run and 0.001330-0.001482s
+in the two preceding non-lambda logs, about 43-44% of cache-miss method
+preparation. Follow-up `haxe_ocaml-18obk` owns traversal, predicate, inference,
+and override-write attribution before any implementation change.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-local-decl-selected-baseline.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-fixed-ereg-map-signature-warm-retry.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-local-decl-attribution.log`
+
+Validation for this benchmark-only slice includes:
+
+- three independent 5,000-call selections for each fresh EReg phase and the
+  typed callback declaration
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run hxhx:build-current-source`
+- the exact-command non-delegating strict Cpp probe
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This slice adds
+diagnostic precision and rejects a low-value shortcut without changing
+compiler behavior or public production usability. `CppTargetCore.hx` remains
+unchanged at 26,175 lines, and broader extraction remains owned by
+`haxe_ocaml-36ec`; the focused bench retains and expands its class-level
+maintenance documentation. The ignored upstream suite was executed only as a
+behavior oracle; no upstream compiler or test source was copied. `thinking:xhigh`
+was not crossed. GPT 5.5 Pro and Oracle were deliberately skipped because
+selectable local evidence produced a bounded negative result and a clear next
+preparation seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

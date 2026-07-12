@@ -10,9 +10,10 @@ typedef CppLocalDeclFixture = {
 /**
 	Focused attribution probe for C++ local-declaration rendering.
 
-	Strict Cpp timing identifies an explicit String local initialized by a literal
-	as a stable statement hotspot. This probe separates declared-type discovery,
-	initializer rendering, and the complete declaration while retaining controls
+	Strict Cpp timing identifies explicit String literals, typed callbacks, and
+	fresh EReg construction as stable statement hotspots. This probe separates
+	declared-type discovery, initializer and constructor rendering, complete
+	declarations, and buffered statement instrumentation while retaining controls
 	that must continue through the general local-declaration pipeline.
 **/
 class M14CppLocalDeclBenchIntegrationTest {
@@ -72,6 +73,34 @@ class M14CppLocalDeclBenchIntegrationTest {
 		return Sys.time() - start;
 	}
 
+	static function selectedBench(name:String):Bool {
+		final only = Sys.getEnv("HXHX_CPP_LOCAL_DECL_BENCH_ONLY");
+		return only == null || StringTools.trim(only).length == 0 || only == name;
+	}
+
+	static function elapsedNamed(name:String, calls:Int, action:Void->Void):Float {
+		action();
+		return selectedBench(name) ? elapsed(calls, action) : -1.;
+	}
+
+	static function elapsedIndexedNamed(name:String, calls:Int, action:Int->Void):Float {
+		action(0);
+		return selectedBench(name) ? elapsedIndexed(calls, i -> action(i + 1)) : -1.;
+	}
+
+	static function indexedBenchFixtureCount(name:String, calls:Int):Int {
+		return selectedBench(name) ? calls + 1 : 1;
+	}
+
+	static function resetTimingCaches():Void {
+		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
+		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingMethodFilterCache = null;
+	}
+
+	static function restoreEnv(name:String, value:Null<String>):Void {
+		Sys.putEnv(name, value);
+	}
+
 	static function render(stmt:HxStmt, scope:backend.cpp.CppRenderScope):String {
 		return @:privateAccess backend.cpp.CppTargetCore.renderStmt(stmt, "", scope).join("\n");
 	}
@@ -82,17 +111,17 @@ class M14CppLocalDeclBenchIntegrationTest {
 		final typedStmt = SVar("text", "String", literal, HxPos.unknown());
 		final phaseFixture = fixture();
 		var declaredTypeSample = "";
-		final declaredTypeSeconds = elapsed(calls, () -> {
+		final declaredTypeSeconds = elapsedNamed("string_declared_type", calls, () -> {
 			declaredTypeSample = @:privateAccess
 				backend.cpp.CppTargetCore.cppLocalDeclaredType("text", "String", literal, phaseFixture.scope, "text");
 		});
 		var initSample = "";
-		final initSeconds = elapsed(calls, () -> {
+		final initSeconds = elapsedNamed("string_init", calls, () -> {
 			initSample = @:privateAccess backend.cpp.CppTargetCore.renderLocalInitExpr(literal, "std::string", "std::string", phaseFixture.scope);
 		});
-		final fullFixtures = [for (_ in 0...calls) fixture()];
+		final fullFixtures = [for (_ in 0...indexedBenchFixtureCount("string_full", calls)) fixture()];
 		var fullSample = "";
-		final fullSeconds = elapsedIndexed(calls, i -> {
+		final fullSeconds = elapsedIndexedNamed("string_full", calls, i -> {
 			fullSample = render(typedStmt, fullFixtures[i].scope);
 		});
 		final callbackType = "std::function<std::string(std::shared_ptr<EReg>)>";
@@ -104,21 +133,21 @@ class M14CppLocalDeclBenchIntegrationTest {
 		final callbackStmt = SVar("callback", "EReg->String", callback, HxPos.unknown());
 		final callbackPhaseFixture = fixture();
 		var callbackDeclaredTypeSample = "";
-		final callbackDeclaredTypeSeconds = elapsed(calls, () -> {
+		final callbackDeclaredTypeSeconds = elapsedNamed("callback_declared_type", calls, () -> {
 			callbackDeclaredTypeSample = @:privateAccess
 				backend.cpp.CppTargetCore.cppLocalDeclaredType("callback", "EReg->String", callback, callbackPhaseFixture.scope, "callback");
 		});
 		var callbackExpectedSample = "";
-		final callbackExpectedSeconds = elapsed(calls, () -> {
+		final callbackExpectedSeconds = elapsedNamed("callback_expected", calls, () -> {
 			callbackExpectedSample = @:privateAccess backend.cpp.CppTargetCore.valueExprForExpectedType(callback, callbackType, callbackPhaseFixture.scope);
 		});
 		var callbackInitSample = "";
-		final callbackInitSeconds = elapsed(calls, () -> {
+		final callbackInitSeconds = elapsedNamed("callback_init", calls, () -> {
 			callbackInitSample = @:privateAccess
 				backend.cpp.CppTargetCore.renderLocalInitExpr(callback, callbackType, callbackType, callbackPhaseFixture.scope);
 		});
 		var callbackLambdaSample = "";
-		final callbackLambdaSeconds = elapsed(calls, () -> {
+		final callbackLambdaSeconds = elapsedNamed("callback_lambda", calls, () -> {
 			callbackLambdaSample = @:privateAccess
 				backend.cpp.CppTargetCore.lambdaExprForExpectedFunction(["r"], callbackBody, callbackType, callbackPhaseFixture.scope);
 		});
@@ -126,16 +155,70 @@ class M14CppLocalDeclBenchIntegrationTest {
 		callbackBodyFixture.scope.localNames.set("r", "r");
 		callbackBodyFixture.scope.localTypes.set("r", "std::shared_ptr<EReg>");
 		var callbackBodySample = "";
-		final callbackBodySeconds = elapsed(calls, () -> {
+		final callbackBodySeconds = elapsedNamed("callback_body", calls, () -> {
 			final rendered = @:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(callbackBody, ["r"], ["std::shared_ptr<EReg>"],
 				"std::string", callbackBodyFixture.scope);
 			callbackBodySample = rendered == null ? "" : rendered;
 		});
-		final callbackFullFixtures = [for (_ in 0...calls) fixture()];
+		final callbackFullFixtures = [for (_ in 0...indexedBenchFixtureCount("callback_full", calls)) fixture()];
 		var callbackFullSample = "";
-		final callbackFullSeconds = elapsedIndexed(calls, i -> {
+		final callbackFullSeconds = elapsedIndexedNamed("callback_full", calls, i -> {
 			callbackFullSample = render(callbackStmt, callbackFullFixtures[i].scope);
 		});
+
+		final eReg = ENew("EReg", [EString("a+"), EString("g")]);
+		final eRegStmt = SVar("regex", "", eReg, HxPos.unknown());
+		final eRegPhaseFixture = fixture();
+		var eRegDeclaredTypeSample = "";
+		final eRegDeclaredTypeSeconds = elapsedNamed("ereg_declared_type", calls, () -> {
+			eRegDeclaredTypeSample = @:privateAccess
+				backend.cpp.CppTargetCore.cppLocalDeclaredType("regex", "", eReg, eRegPhaseFixture.scope, "regex");
+		});
+		var eRegConstructorSample = "";
+		final eRegConstructorSeconds = elapsedNamed("ereg_constructor", calls, () -> {
+			eRegConstructorSample = @:privateAccess
+				backend.cpp.CppTargetCore.newExpr("EReg", [EString("a+"), EString("g")], eRegPhaseFixture.scope, "std::shared_ptr<EReg>");
+		});
+		var eRegInitSample = "";
+		final eRegInitSeconds = elapsedNamed("ereg_init", calls, () -> {
+			eRegInitSample = @:privateAccess
+				backend.cpp.CppTargetCore.renderLocalInitExpr(eReg, "auto", "std::shared_ptr<EReg>", eRegPhaseFixture.scope);
+		});
+		final eRegFullFixtures = [for (_ in 0...indexedBenchFixtureCount("ereg_full", calls)) fixture()];
+		var eRegFullSample = "";
+		final eRegFullSeconds = elapsedIndexedNamed("ereg_full", calls, i -> {
+			eRegFullSample = render(eRegStmt, eRegFullFixtures[i].scope);
+		});
+
+		final timingEnv = "HXHX_TRACE_STAGE3_CPP_TIMINGS";
+		final filterEnv = "HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER";
+		final priorTiming = Sys.getEnv(timingEnv);
+		final priorFilter = Sys.getEnv(filterEnv);
+		final eRegTracedFixtures = [for (_ in 0...indexedBenchFixtureCount("ereg_full_traced", calls)) fixture()];
+		var eRegTracedSample = "";
+		var eRegTracedLineCount = 0;
+		var eRegTracedSeconds = -1.;
+		try {
+			Sys.putEnv(timingEnv, "1");
+			Sys.putEnv(filterEnv, "LocalDeclBenchOwner.test");
+			resetTimingCaches();
+			eRegTracedSeconds = elapsedIndexedNamed("ereg_full_traced", calls, i -> {
+				final measured = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+					eRegTracedSample = @:privateAccess
+						backend.cpp.CppTargetCore.renderTimedHelperFunctionBody("LocalDeclBenchOwner", "test", [eRegStmt], "", eRegTracedFixtures[i].scope)
+							.join("\n");
+				});
+				eRegTracedLineCount = measured.phases.length;
+			});
+		} catch (error:Dynamic) {
+			restoreEnv(timingEnv, priorTiming);
+			restoreEnv(filterEnv, priorFilter);
+			resetTimingCaches();
+			throw error;
+		}
+		restoreEnv(timingEnv, priorTiming);
+		restoreEnv(filterEnv, priorFilter);
+		resetTimingCaches();
 
 		final controls = fixture();
 		final untypedSample = render(SVar("untypedText", "", EString("literal"), HxPos.unknown()), controls.scope);
@@ -159,6 +242,14 @@ class M14CppLocalDeclBenchIntegrationTest {
 		final inferredCallbackSample = render(SVar("inferredCallback", "", ELambda([], EString("ok")), HxPos.unknown()), controls.scope);
 		final nonFunctionDirectSample = @:privateAccess
 			backend.cpp.CppTargetCore.directLambdaValueExprForExpectedFunction(callback, "std::string", controls.scope);
+		controls.scope.localNames.set("pattern", "pattern");
+		controls.scope.localNames.set("options", "options");
+		controls.scope.localTypes.set("pattern", "std::string");
+		controls.scope.localTypes.set("options", "std::string");
+		final explicitERegSample = render(SVar("typedRegex", "EReg", eReg, HxPos.unknown()), controls.scope);
+		final qualifiedERegSample = render(SVar("qualifiedRegex", "fixture.regex.EReg", eReg, HxPos.unknown()), controls.scope);
+		final localArgERegSample = render(SVar("localRegex", "", ENew("EReg", [EIdent("pattern"), EIdent("options")]), HxPos.unknown()), controls.scope);
+		final nonERegSample = render(SVar("other", "", ENew("OtherCallbackArg", []), HxPos.unknown()), controls.scope);
 
 		assertTrue(declaredTypeSample == "std::string", "typed String literal locals should retain their declared C++ type");
 		assertTrue(initSample == 'std::string("{ test } \\"quoted\\"\\nnext")',
@@ -186,6 +277,24 @@ class M14CppLocalDeclBenchIntegrationTest {
 			"typed callback local phases should preserve exact EReg callback output");
 		assertTrue(callbackFullSample == callbackType + " callback = " + expectedCallback + ";",
 			"typed callback local declarations should retain exact output, got " + callbackFullSample);
+		assertTrue(eRegDeclaredTypeSample == "std::shared_ptr<EReg>"
+			&& eRegConstructorSample == 'std::make_shared<EReg>("a+", "g")'
+			&& eRegInitSample == eRegConstructorSample,
+			"fresh EReg declaration phases should preserve their exact target-owned carrier and constructor");
+		assertTrue(eRegFullSample == "auto regex = " + eRegConstructorSample + ";"
+			&& eRegTracedSample == eRegFullSample
+			&& eRegTracedLineCount == 8,
+			"fresh EReg full and buffered-timing declarations should preserve output and eight timing records, got full="
+			+ eRegFullSample
+			+ " traced="
+			+ eRegTracedSample
+			+ " records="
+			+ eRegTracedLineCount);
+		assertTrue(explicitERegSample == 'std::shared_ptr<EReg> typedRegex = std::make_shared<EReg>("a+", "g");'
+			&& qualifiedERegSample == 'std::shared_ptr<EReg> qualifiedRegex = std::make_shared<EReg>("a+", "g");'
+			&& localArgERegSample == "auto localRegex = std::make_shared<EReg>(pattern, options);"
+			&& nonERegSample == "auto other = std::make_shared<OtherCallbackArg>();",
+			"explicit, qualified, local-argument, and non-EReg constructor controls should retain the general declaration contract");
 		assertTrue(namedCallbackSample == callbackType + " callbackCopy = namedCallback;"
 			&& qualifiedCallbackTypeSample == callbackType
 			&& otherCallbackTypeSample == "std::function<std::string(std::shared_ptr<OtherCallbackArg>)>"
@@ -203,6 +312,8 @@ class M14CppLocalDeclBenchIntegrationTest {
 		Sys.println("CPP_LOCAL_DECL_BENCH:PASS calls=" + calls + " declared_type_seconds=" + declaredTypeSeconds + " init_seconds=" + initSeconds
 			+ " full_seconds=" + fullSeconds + " callback_declared_type_seconds=" + callbackDeclaredTypeSeconds + " callback_expected_seconds="
 			+ callbackExpectedSeconds + " callback_init_seconds=" + callbackInitSeconds + " callback_lambda_seconds=" + callbackLambdaSeconds
-			+ " callback_body_seconds=" + callbackBodySeconds + " callback_full_seconds=" + callbackFullSeconds);
+			+ " callback_body_seconds=" + callbackBodySeconds + " callback_full_seconds=" + callbackFullSeconds + " ereg_declared_type_seconds="
+			+ eRegDeclaredTypeSeconds + " ereg_constructor_seconds=" + eRegConstructorSeconds + " ereg_init_seconds=" + eRegInitSeconds
+			+ " ereg_full_seconds=" + eRegFullSeconds + " ereg_full_traced_seconds=" + eRegTracedSeconds + " ereg_traced_lines=" + eRegTracedLineCount);
 	}
 }
