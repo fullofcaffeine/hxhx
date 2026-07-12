@@ -5173,6 +5173,84 @@ behavior oracle; no upstream compiler or test source was copied.
 skipped because an empty declared-argument list makes override writes
 impossible and exact positive paths retain the complete behavior.
 
+## 2026-07-12 Bind-Callable Candidate Attribution
+
+Follow-up bead `haxe_ocaml-xqw8e` tested whether the existing deep bind-call
+syntax scan should first require an unhinted local callable candidate. A new
+documented focused module reproduces the repo-owned 88-statement TestEReg
+scale and separates local-candidate recognition, deep bind recognition, the
+current branch, a candidate-gated branch, and valid positive inference.
+
+The interpreter evidence initially supported the prerequisite. Across three
+fresh 5,000-call processes, the local-candidate median was 0.075059s, the deep
+bind scan was 0.211581s, the current complete negative branch was 0.210800s,
+and the candidate-gated branch was 0.074548s, about 64.6% lower. A separately
+selected valid bind inference measured 0.336094s on the current branch versus
+0.345229s with the candidate check, about 2.7% higher. After implementing the
+syntax-only prerequisite, repeated medians remained 0.076069s for the
+candidate check, 0.211333s for the deep bind scan, 0.212727s for the replayed
+current branch, and 0.075728s for the candidate-gated branch, about 64.4%
+lower. The valid positive control was effectively flat at 0.341718s versus
+0.340174s and retained the exact `std::function<int(int)>` override.
+
+The current-source strict probe rejected the production change. It cloned
+hxcpp in 69 seconds, rendered all 88 TestEReg statements, and recorded all 484
+selected records, but `infer_bind_callable_locals` increased from 0.000090s to
+0.000114s, about 26.7%. Total cache-miss preparation moved from 0.002514s to
+0.002535s. Adjacent `infer_dynamic_locals` and helper typed-as phases were
+flat-to-lower, so the bind increase is not attributed to those phases.
+TestEReg.test measured 0.031736s versus 0.031551s, its class measured
+0.033517s versus 0.033294s, the statement sum was 0.026770s versus 0.026571s,
+and TestBytes.test measured 1.153046s versus 1.144838s. Those small broad
+movements and the slower dependency setup are not used as aggregate evidence.
+The run reached TestXML and ended expected-red at `Cpp: FAIL (482s, exit 124)`
+with `expected_red_probe_exit=1`.
+
+The candidate prerequisite, its guard API, and its smoke wiring were therefore
+removed. No production Cpp change is retained. The dedicated attribution
+module keeps exact candidate-only, external-bind-only, explicitly typed,
+optional-lambda, rest-lambda, optional-rest, valid bind, nested, and shadowed
+controls so the rejected seam stays reproducible without weakening bind
+semantics.
+
+Follow-up `haxe_ocaml-r76oz` owns separate attribution of the next stable
+bounded phase, `infer_helper_typed_as_locals` at about 0.000087s. It does not
+reuse the rejected bind prerequisite or assume independent guards should be
+merged.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-bind-callable-prep-candidate-attribution.log`
+- `.artifacts/full1/cpp-strict-current/cpp-bind-callable-prep-after-candidate-gate.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-known-arg-zero-gate.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-bind-candidate-gate.log`
+
+Validation for this attribution-only slice includes:
+
+- three independent 5,000-call candidate, bind, current/candidate-gated
+  negative, and current/candidate-gated positive selections
+- exact candidate-only, unrelated bind, typed, parser-wrapper, nested,
+  shadowed, and callable-override controls in the dedicated bench
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- the experimental current-source build and exact-command strict Cpp probe
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This slice records
+a rejected internal hxhx Cpp preparation experiment and does not change
+compiler behavior or public production usability. `CppTargetCore.hx` remains
+unchanged at 26,254 lines and broader extraction remains owned by
+`haxe_ocaml-36ec`; attribution is isolated in a dedicated documented 218-line
+bench module. The ignored upstream suite was executed only as a behavior
+oracle; no upstream compiler or test source was copied. `thinking:xhigh` was
+not crossed. GPT 5.5 Pro and Oracle were deliberately skipped because strict
+native evidence gave a decisive local stop signal and the production edit was
+fully reversible.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
