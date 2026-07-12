@@ -63,6 +63,13 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 		return selectedBench(name) ? calls + 1 : 1;
 	}
 
+	static function countKeys<T>(map:StringMap<T>):Int {
+		var count = 0;
+		for (_ in map.keys())
+			count++;
+		return count;
+	}
+
 	static function fixture():CppDynamicLocalPrepFixture {
 		final names = new StringMap<Bool>();
 		final classes = new StringMap<HxClassDecl>();
@@ -119,6 +126,10 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 		final callback = ELambda(["value"], ECall(EField(EIdent("value"), "matchedLeft"), []));
 		final shapedFn = testERegShapedFunction(callback, true);
 		final noForwardFn = testERegShapedFunction(callback, false);
+		final shapedBody = HxFunctionDecl.getBody(shapedFn);
+		final prefixStmts = shapedBody.slice(0, 68);
+		final callbackStmt = shapedBody[68];
+		final postCandidateStmts = shapedBody.slice(69);
 		final phaseFixture = fixture();
 
 		var guardSample = false;
@@ -132,6 +143,75 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 		var declaredTypeSample = "";
 		final declaredTypeSeconds = elapsedNamed("declared_type", calls, () -> {
 			declaredTypeSample = @:privateAccess backend.cpp.CppTargetCore.cppLocalTypeHint("EReg->String", callback, phaseFixture.scope);
+		});
+		var snapshotSample = 0;
+		final snapshotSeconds = elapsedNamed("scope_snapshot", calls, () -> {
+			final localTypes = @:privateAccess backend.cpp.CppTargetCore.copyStringMap(phaseFixture.scope.localTypes);
+			final localNames = @:privateAccess backend.cpp.CppTargetCore.copyStringMap(phaseFixture.scope.localNames);
+			final localNameCounts = @:privateAccess backend.cpp.CppTargetCore.copyIntMap(phaseFixture.scope.localNameCounts);
+			snapshotSample = countKeys(localTypes) + countKeys(localNames) + countKeys(localNameCounts);
+		});
+
+		final prefixFixture = fixture();
+		final prefixCount = indexedMapCount("prefix_collect", calls);
+		final prefixLocalTypes = [for (_ in 0...prefixCount) new StringMap<String>()];
+		final prefixLocalNames = [for (_ in 0...prefixCount) new StringMap<String>()];
+		final prefixLocalNameCounts = [for (_ in 0...prefixCount) new StringMap<Int>()];
+		final prefixCandidates = [for (_ in 0...prefixCount) new StringMap<Bool>()];
+		var prefixSample = "";
+		final prefixSeconds = elapsedIndexedNamed("prefix_collect", calls, i -> {
+			prefixFixture.scope.localTypes = prefixLocalTypes[i];
+			prefixFixture.scope.localNames = prefixLocalNames[i];
+			prefixFixture.scope.localNameCounts = prefixLocalNameCounts[i];
+			for (stmt in prefixStmts)
+				@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromStmt(stmt, prefixFixture.scope, prefixCandidates[i]);
+			prefixSample = countKeys(prefixFixture.scope.localTypes) + "/" + countKeys(prefixCandidates[i]);
+		});
+
+		final candidateSeed = fixture();
+		final candidateSeedCandidates = new StringMap<Bool>();
+		for (stmt in prefixStmts)
+			@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromStmt(stmt, candidateSeed.scope, candidateSeedCandidates);
+		final candidateCount = indexedMapCount("candidate_decl", calls);
+		final candidateLocalTypes = [
+			for (_ in 0...candidateCount)
+				@:privateAccess backend.cpp.CppTargetCore.copyStringMap(candidateSeed.scope.localTypes)
+		];
+		final candidateLocalNames = [
+			for (_ in 0...candidateCount)
+				@:privateAccess backend.cpp.CppTargetCore.copyStringMap(candidateSeed.scope.localNames)
+		];
+		final candidateLocalNameCounts = [
+			for (_ in 0...candidateCount)
+				@:privateAccess backend.cpp.CppTargetCore.copyIntMap(candidateSeed.scope.localNameCounts)
+		];
+		final candidateMaps = [for (_ in 0...candidateCount) new StringMap<Bool>()];
+		var candidateSample = "";
+		final candidateSeconds = elapsedIndexedNamed("candidate_decl", calls, i -> {
+			candidateSeed.scope.localTypes = candidateLocalTypes[i];
+			candidateSeed.scope.localNames = candidateLocalNames[i];
+			candidateSeed.scope.localNameCounts = candidateLocalNameCounts[i];
+			@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromStmt(callbackStmt, candidateSeed.scope, candidateMaps[i]);
+			candidateSample = candidateSeed.scope.localTypes.get("callback") + "/" + candidateMaps[i].exists("callback");
+		});
+
+		final postSeed = fixture();
+		final postSeedCandidates = new StringMap<Bool>();
+		for (stmt in shapedBody.slice(0, 69))
+			@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromStmt(stmt, postSeed.scope, postSeedCandidates);
+		final postCount = indexedMapCount("post_candidate_collect", calls);
+		final postLocalTypes = [
+			for (_ in 0...postCount)
+				@:privateAccess backend.cpp.CppTargetCore.copyStringMap(postSeed.scope.localTypes)
+		];
+		final postOverrideMaps = [for (_ in 0...postCount) new StringMap<String>()];
+		var postSample = "";
+		final postSeconds = elapsedIndexedNamed("post_candidate_collect", calls, i -> {
+			postSeed.scope.localTypes = postLocalTypes[i];
+			postSeed.scope.localTypeOverrides = postOverrideMaps[i];
+			for (stmt in postCandidateStmts)
+				@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromStmt(stmt, postSeed.scope, postSeedCandidates);
+			postSample = postSeed.scope.localTypeOverrides.get("callback");
 		});
 
 		final overrideFixture = fixture();
@@ -207,6 +287,24 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 				[EString("value"), EIdent("callback")], mapFixture.scope, mapCandidates);
 			forwardedMapSample = mapFixture.scope.localTypeOverrides.get("callback");
 		});
+		final resolvedMapFixture = fixture();
+		resolvedMapFixture.scope.localNames.set("regex0", "regex0");
+		resolvedMapFixture.scope.localNames.set("callback", "callback");
+		resolvedMapFixture.scope.localTypes.set("regex0", "std::shared_ptr<EReg>");
+		resolvedMapFixture.scope.localTypes.set("callback", EXPECTED_CALLBACK_TYPE);
+		resolvedMapFixture.scope.localTypeOverrides.set("callback", EXPECTED_CALLBACK_TYPE);
+		resolvedMapFixture.scope.argTypeOverrides.set("callback", EXPECTED_CALLBACK_TYPE);
+		var resolvedMapSample = "";
+		final resolvedMapSeconds = elapsedNamed("resolved_forwarded_map", calls, () -> {
+			@:privateAccess backend.cpp.CppTargetCore.collectForwardedCallArgTypeOverrides(EField(EIdent("regex0"), "map"),
+				[EString("value"), EIdent("callback")], resolvedMapFixture.scope, mapCandidates);
+			resolvedMapSample = resolvedMapFixture.scope.localTypeOverrides.get("callback") + "/" + resolvedMapFixture.scope.argTypeOverrides.get("callback");
+		});
+		var resolvedMapOldSample = false;
+		final resolvedMapOldSeconds = elapsedNamed("resolved_forwarded_map_old", calls, () -> {
+			resolvedMapOldSample = @:privateAccess backend.cpp.CppTargetCore.applyTargetOwnedForwardedERegMapCallbackOverride(EField(EIdent("regex0"), "map"),
+				[EString("value"), EIdent("callback")], resolvedMapFixture.scope, mapCandidates);
+		});
 
 		final staleFn = new HxFunctionDecl("stale", Public, false, [], "Void", [
 			SVar("callback", "String->String", ELambda(["value"], EIdent("value")), HxPos.unknown()),
@@ -230,6 +328,11 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 
 		assertTrue(guardSample && callableSample, "late explicit EReg callback evidence should reach the dynamic-local pass");
 		assertTrue(declaredTypeSample == EXPECTED_CALLBACK_TYPE, "explicit EReg callbacks should retain their exact declared callable type");
+		assertTrue(snapshotSample == 0
+			&& prefixSample == "11/0"
+			&& candidateSample == EXPECTED_CALLBACK_TYPE + "/true"
+			&& postSample == EXPECTED_CALLBACK_TYPE,
+			"snapshot, prefix, candidate, and post-candidate phase outputs should retain exact local state");
 		assertTrue(overrideSample == EXPECTED_CALLBACK_TYPE && completeSample == EXPECTED_CALLBACK_TYPE,
 			"isolated and complete override writes should retain the exact EReg callback type");
 		assertTrue(completeOldSample == EXPECTED_CALLBACK_TYPE
@@ -238,12 +341,17 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			&& mapExprOldSample == EXPECTED_CALLBACK_TYPE
 			&& forwardedMapSample == EXPECTED_CALLBACK_TYPE,
 			"no-forward, complete map-expression, and direct forwarded-map phases should retain their exact override contracts");
+		assertTrue(resolvedMapSample == EXPECTED_CALLBACK_TYPE + "/" + EXPECTED_CALLBACK_TYPE && resolvedMapOldSample,
+			"already-resolved EReg.map callback evidence should retain both exact override maps");
 		assertTrue(staleSample == "std::function<std::string(bool)>" && openSample == "int" && !plainEvidence,
 			"stale callable, open Dynamic, and ordinary local controls should retain their inference contracts");
 
 		Sys.println("CPP_DYNAMIC_LOCAL_PREP_BENCH:PASS calls=" + calls + " guard_seconds=" + guardSeconds + " callable_predicate_seconds=" + callableSeconds
-			+ " declared_type_seconds=" + declaredTypeSeconds + " override_write_seconds=" + overrideWriteSeconds + " complete_seconds=" + completeSeconds
-			+ " complete_old_seconds=" + completeOldSeconds + " complete_no_forward_seconds=" + noForwardSeconds + " map_expr_seconds=" + mapExprSeconds
-			+ " map_expr_old_seconds=" + mapExprOldSeconds + " forwarded_map_seconds=" + forwardedMapSeconds + " override=" + completeSample);
+			+ " declared_type_seconds=" + declaredTypeSeconds + " scope_snapshot_seconds=" + snapshotSeconds + " prefix_collect_seconds=" + prefixSeconds
+			+ " candidate_decl_seconds=" + candidateSeconds + " post_candidate_collect_seconds=" + postSeconds + " override_write_seconds="
+			+ overrideWriteSeconds + " complete_seconds=" + completeSeconds + " complete_old_seconds=" + completeOldSeconds + " complete_no_forward_seconds="
+			+ noForwardSeconds + " map_expr_seconds=" + mapExprSeconds + " map_expr_old_seconds=" + mapExprOldSeconds + " forwarded_map_seconds="
+			+ forwardedMapSeconds + " resolved_forwarded_map_seconds=" + resolvedMapSeconds + " resolved_forwarded_map_old_seconds=" + resolvedMapOldSeconds
+			+ " override=" + completeSample);
 	}
 }

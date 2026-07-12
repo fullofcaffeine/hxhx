@@ -11053,6 +11053,8 @@ class CppTargetCore {
 			}
 		if (!hasCandidateArg)
 			return;
+		if (targetOwnedForwardedERegMapCallbackAlreadyResolved(callee, args, scope, candidates))
+			return;
 		if (applyTargetOwnedForwardedERegMapCallbackOverride(callee, args, scope, candidates))
 			return;
 		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
@@ -11132,6 +11134,25 @@ class CppTargetCore {
 			paramIndex++;
 			argIndex++;
 		}
+	}
+
+	/** Reuse a fixed EReg.map callback override after both preparation maps already agree. **/
+	static function targetOwnedForwardedERegMapCallbackAlreadyResolved(callee:HxExpr, args:Array<HxExpr>, scope:CppRenderScope,
+			candidates:haxe.ds.StringMap<Bool>):Bool {
+		if (scope == null || args == null || args.length != 2)
+			return false;
+		return switch (callee) {
+			case EField(EIdent(receiverName), method)
+				if (sanitizeIdentifier(method) == "map"
+					&& scope.localTypes.get(localCppName(receiverName, scope)) == "std::shared_ptr<EReg>"):
+				switch (args[1]) {
+					case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))): final local = sanitizeIdentifier(name); final expectedType = eRegMapCallbackCppType(); scope.localTypeOverrides.get(local) == expectedType && scope.argTypeOverrides.get(local) == expectedType;
+					case _:
+						false;
+				}
+			case _:
+				false;
+		};
 	}
 
 	/** Apply the fixed typed-local EReg.map callback parameter without rediscovering its declaration. **/
