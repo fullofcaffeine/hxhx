@@ -10065,70 +10065,75 @@ class CppTargetCore {
 	static function collectDynamicLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
 		if (!boolMapHasEntries(candidates))
 			return;
+		collectDynamicLocalTypeOverridesFromExprWithCandidates(expr, scope, candidates);
+	}
+
+	/** Traverse an expression after the caller has proven the candidate map is nonempty. **/
+	static function collectDynamicLocalTypeOverridesFromExprWithCandidates(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
 		switch (expr) {
 			case EBinop("=", EIdent(name), rhs) if (candidateLocalName(name, scope, candidates).length > 0):
-				collectDynamicLocalTypeOverridesFromExpr(rhs, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(rhs, scope, candidates);
 				final inferred = dynamicLocalAssignedType(rhs, scope);
 				if (inferred.length > 0)
 					setDynamicLocalTypeOverride(scope, candidateLocalName(name, scope, candidates), inferred);
 			case ECall(EField(EIdent(name), "push"), [value]) if (candidateLocalName(name, scope, candidates).length > 0):
-				collectDynamicLocalTypeOverridesFromExpr(value, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(value, scope, candidates);
 				final inferred = dynamicLocalAssignedType(value, scope);
 				if (inferred.length > 0)
 					setDynamicLocalTypeOverride(scope, candidateLocalName(name, scope, candidates), "std::vector<" + inferred + ">");
 			case EBinop(_, left, right):
-				collectDynamicLocalTypeOverridesFromExpr(left, scope, candidates);
-				collectDynamicLocalTypeOverridesFromExpr(right, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(left, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(right, scope, candidates);
 			case ECall(EIdent(name), args) if (candidateLocalName(name, scope, candidates).length > 0):
 				refineLocalCallableTypeFromCall(scope, candidateLocalName(name, scope, candidates), args);
 				for (arg in args)
-					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
+					collectDynamicLocalTypeOverridesFromExprWithCandidates(arg, scope, candidates);
 			case ECall(EIdent(methodName), args):
 				if (callArgsHaveDirectDynamicLocalCandidate(args, candidates)) {
 					collectSameOwnerDeclaredArgTypeOverrides(methodName, args, scope, candidates);
 					collectForwardedCallArgTypeOverrides(EIdent(methodName), args, scope, candidates);
 				}
-				collectDynamicLocalTypeOverridesFromExpr(EIdent(methodName), scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(EIdent(methodName), scope, candidates);
 				for (arg in args)
-					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
+					collectDynamicLocalTypeOverridesFromExprWithCandidates(arg, scope, candidates);
 			case ECall(callee, args):
 				collectForwardedCallArgTypeOverrides(callee, args, scope, candidates);
-				collectDynamicLocalTypeOverridesFromExpr(callee, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(callee, scope, candidates);
 				for (arg in args)
-					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
+					collectDynamicLocalTypeOverridesFromExprWithCandidates(arg, scope, candidates);
 			case EArrayAccess(array, index):
-				collectDynamicLocalTypeOverridesFromExpr(array, scope, candidates);
-				collectDynamicLocalTypeOverridesFromExpr(index, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(array, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(index, scope, candidates);
 			case EField(receiver, _):
-				collectDynamicLocalTypeOverridesFromExpr(receiver, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(receiver, scope, candidates);
 			case EArrayDecl(elements):
 				for (element in elements)
-					collectDynamicLocalTypeOverridesFromExpr(element, scope, candidates);
+					collectDynamicLocalTypeOverridesFromExprWithCandidates(element, scope, candidates);
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
-				collectDynamicLocalTypeOverridesFromExpr(iterable, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(iterable, scope, candidates);
 				withScopedLocal(scope, sanitizeIdentifier(name), iterableElementType(iterable, scope), () -> {
 					if (guardExpr != null)
-						collectDynamicLocalTypeOverridesFromExpr(guardExpr, scope, candidates);
-					collectDynamicLocalTypeOverridesFromExpr(yieldExpr, scope, candidates);
+						collectDynamicLocalTypeOverridesFromExprWithCandidates(guardExpr, scope, candidates);
+					collectDynamicLocalTypeOverridesFromExprWithCandidates(yieldExpr, scope, candidates);
 				});
 			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
-				collectDynamicLocalTypeOverridesFromExpr(inner, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(inner, scope, candidates);
 			case ETernary(cond, thenExpr, elseExpr):
-				collectDynamicLocalTypeOverridesFromExpr(cond, scope, candidates);
-				collectDynamicLocalTypeOverridesFromExpr(thenExpr, scope, candidates);
-				collectDynamicLocalTypeOverridesFromExpr(elseExpr, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(cond, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(thenExpr, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(elseExpr, scope, candidates);
 			case EAnon(_, fieldValues):
 				for (value in fieldValues)
-					collectDynamicLocalTypeOverridesFromExpr(value, scope, candidates);
+					collectDynamicLocalTypeOverridesFromExprWithCandidates(value, scope, candidates);
 			case ESwitch(scrutinee, _, exprs):
-				collectDynamicLocalTypeOverridesFromExpr(scrutinee, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(scrutinee, scope, candidates);
 				for (value in exprs)
-					collectDynamicLocalTypeOverridesFromExpr(value, scope, candidates);
+					collectDynamicLocalTypeOverridesFromExprWithCandidates(value, scope, candidates);
 			case ELambda(_, body):
-				collectDynamicLocalTypeOverridesFromExpr(body, scope, candidates);
+				collectDynamicLocalTypeOverridesFromExprWithCandidates(body, scope, candidates);
 			case ENew(_, args):
 				for (arg in args)
-					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
+					collectDynamicLocalTypeOverridesFromExprWithCandidates(arg, scope, candidates);
 			case _:
 		}
 	}

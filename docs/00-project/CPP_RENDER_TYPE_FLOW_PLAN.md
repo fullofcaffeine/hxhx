@@ -4805,6 +4805,85 @@ test source was copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and
 Oracle were deliberately skipped because the exact fresh-constructor contract
 and repeated same-source evidence produced a bounded seam.
 
+## 2026-07-12 Candidate-Preserving Recursive Traversal
+
+Follow-up bead `haxe_ocaml-qnktj` decomposed one already-resolved EReg
+map/equality expression after the preceding prefix and callback caches. Across
+fresh 5,000-call processes, the medians were 0.001384s for the outer direct-
+candidate gate, 0.043756s for resolved forwarded-map dispatch, 0.015042s for
+the simple recursive leaves, and 0.015775s for eight standalone nonempty-map
+checks. These components explain the 0.059072s complete expression and show
+that repeatedly constructing a `StringMap` iterator to re-prove the same
+candidate invariant was material residual work.
+
+The public collector entry still declines immediately when there are no
+dynamic-local candidates. Once that check succeeds, recursive expression
+descent now uses a documented internal helper that relies on the already-
+nonempty map. The traversal never removes candidates, so recursive children
+cannot invalidate the invariant. Assignments, pushes, free calls, field calls,
+arrays, comprehensions, casts, conditionals, anonymous values, switches,
+lambdas, constructors, scoped locals, and all candidate/refinement behavior
+still execute the same branches; only redundant recursive entry checks are
+removed.
+
+Across three same-source 5,000-call processes, one map/equality expression
+measured 0.059072s versus 0.073095s with the seven removed recursive checks
+replayed, about 19.2% lower. Post-candidate collection moved from 1.453301s to
+1.187770s, about 18.3%, and the complete pass moved from 2.594822s to
+2.329319s, about 10.2%. Prefix collection was effectively flat at 0.771742s
+versus 0.780775s, as was callback declaration at 0.345265s versus 0.348587s.
+Exact override, candidate, stale-callable, open-Dynamic, nested, and ordinary-
+local assertions remain active for every selection.
+
+The exact-command current-source strict probe cloned `hxcpp` in 84 seconds,
+rendered all 88 TestEReg statements, and reached the same
+`Parser_XmlParserException` frontier before the expected 480-second timeout.
+`infer_dynamic_locals` moved from 0.001218s to 0.001119s, about 8.1%, and the
+cache-miss preparation total moved from 0.003126s to 0.002992s. The method,
+class, and 88-statement total moved about 2% lower, while the independent
+`TestBytes.test` control was effectively flat at 1.144178s versus 1.147555s.
+All 484 selected records and all 88 statement records were present. The
+focused same-source evidence remains the production-decision boundary; no
+end-to-end strict throughput claim is made.
+
+Follow-up `haxe_ocaml-j3v4d` owns the remaining exact target-owned leaf work:
+once both EReg callback override maps already agree, the typed receiver,
+String argument, and callback identifier cannot add new evidence, but
+unresolved, conflicting, nested, and general calls must retain recursion.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-dynamic-local-post-candidate-components.log`
+- `.artifacts/full1/cpp-strict-current/cpp-dynamic-local-post-candidate-after-unchecked-recursion.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-fresh-ereg-prefix-fast-path.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-dynamic-local-unchecked-recursion.log`
+
+Focused validation for this slice includes:
+
+- three independent 5,000-call component, current/old expression,
+  post-candidate, callback, prefix, and complete samples
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run hxhx:build-current-source`
+- the exact-command non-delegating strict Cpp probe
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is a bounded
+internal preparation improvement while strict Cpp remains expected-red, so
+public production usability does not change. `CppTargetCore.hx` remains a red
+mega-file at 26,231 lines; the five-line net production increase documents and
+separates the checked entry from existing recursive traversal, while broader
+extraction remains owned by `haxe_ocaml-36ec`. Attribution remains isolated in
+the dedicated documented 554-line bench module. The ignored upstream suite was
+executed only as a behavior oracle; no upstream compiler or test source was
+copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were
+deliberately skipped because the nonempty-map invariant is local, monotonic,
+and covered by exact state assertions.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
