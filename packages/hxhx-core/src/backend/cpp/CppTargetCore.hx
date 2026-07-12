@@ -11177,10 +11177,15 @@ class CppTargetCore {
 			return false;
 		return switch (callee) {
 			case EField(EIdent(receiverName), method)
-				if (sanitizeIdentifier(method) == "map"
-					&& scope.localTypes.get(localCppName(receiverName, scope)) == "std::shared_ptr<EReg>"):
+				if (method == "map" && scope.localTypes.get(localCppName(receiverName, scope)) == "std::shared_ptr<EReg>"):
 				switch (args[1]) {
-					case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))): final local = sanitizeIdentifier(name); final expectedType = eRegMapCallbackCppType(); scope.localTypeOverrides.get(local) == expectedType && scope.argTypeOverrides.get(local) == expectedType;
+					case EIdent(name):
+						final local = sanitizeIdentifier(name);
+						if (!candidates.exists(local)) false; else {
+							final expectedType = eRegMapCallbackCppType();
+							scope.localTypeOverrides.get(local) == expectedType && scope.argTypeOverrides.get(local) == expectedType
+							;
+						};
 					case _:
 						false;
 				}

@@ -138,6 +138,24 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromExprWithCandidates(arg, scope, candidates);
 	}
 
+	/** Replay the pre-normalization resolved EReg.map gate for a same-source comparison. **/
+	static function replayOldResolvedERegMapGate(callee:HxExpr, args:Array<HxExpr>, scope:backend.cpp.CppRenderScope, candidates:StringMap<Bool>):Bool {
+		if (scope == null || args == null || args.length != 2)
+			return false;
+		return switch (callee) {
+			case EField(EIdent(receiverName), method)
+				if (@:privateAccess backend.cpp.CppTargetCore.sanitizeIdentifier(method) == "map"
+					&& scope.localTypes.get(@:privateAccess backend.cpp.CppTargetCore.localCppName(receiverName, scope)) == "std::shared_ptr<EReg>"):
+				switch (args[1]) {
+					case EIdent(name) if (candidates.exists(@:privateAccess backend.cpp.CppTargetCore.sanitizeIdentifier(name))): final local = @:privateAccess backend.cpp.CppTargetCore.sanitizeIdentifier(name); final expected = @:privateAccess backend.cpp.CppTargetCore.eRegMapCallbackCppType(); scope.localTypeOverrides.get(local) == expected && scope.argTypeOverrides.get(local) == expected;
+					case _:
+						false;
+				}
+			case _:
+				false;
+		};
+	}
+
 	/** Build a late-candidate method with the strict frontier's statement count. **/
 	static function testERegShapedFunction(callback:HxExpr, forwardedCalls:Bool):HxFunctionDecl {
 		final body = new Array<HxStmt>();
@@ -496,6 +514,47 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 		resolvedMapFixture.scope.localTypes.set("callback", EXPECTED_CALLBACK_TYPE);
 		resolvedMapFixture.scope.localTypeOverrides.set("callback", EXPECTED_CALLBACK_TYPE);
 		resolvedMapFixture.scope.argTypeOverrides.set("callback", EXPECTED_CALLBACK_TYPE);
+		final resolvedGateCallee = EField(EIdent("regex0"), "map");
+		final resolvedGateArgs = [EString("value"), EIdent("callback")];
+		var resolvedGateShapeSample = false;
+		final resolvedGateShapeSeconds = elapsedNamed("resolved_gate_shape", calls, () -> {
+			resolvedGateShapeSample = switch (resolvedGateCallee) {
+				case EField(EIdent(_), _) if (resolvedGateArgs.length == 2):
+					true;
+				case _:
+					false;
+			};
+		});
+		var resolvedGateMethodSample = false;
+		final resolvedGateMethodSeconds = elapsedNamed("resolved_gate_method", calls, () -> {
+			resolvedGateMethodSample = @:privateAccess backend.cpp.CppTargetCore.sanitizeIdentifier("map") == "map";
+		});
+		var resolvedGateReceiverSample = false;
+		final resolvedGateReceiverSeconds = elapsedNamed("resolved_gate_receiver", calls, () -> {
+			final local = @:privateAccess backend.cpp.CppTargetCore.localCppName("regex0", resolvedMapFixture.scope);
+			resolvedGateReceiverSample = resolvedMapFixture.scope.localTypes.get(local) == "std::shared_ptr<EReg>";
+		});
+		var resolvedGateCandidateSample = false;
+		final resolvedGateCandidateSeconds = elapsedNamed("resolved_gate_candidate", calls, () -> {
+			final local = @:privateAccess backend.cpp.CppTargetCore.sanitizeIdentifier("callback");
+			resolvedGateCandidateSample = mapCandidates.exists(local);
+		});
+		var resolvedGateOverrideSample = false;
+		final resolvedGateOverrideSeconds = elapsedNamed("resolved_gate_overrides", calls, () -> {
+			final local = @:privateAccess backend.cpp.CppTargetCore.sanitizeIdentifier("callback");
+			final expected = @:privateAccess backend.cpp.CppTargetCore.eRegMapCallbackCppType();
+			resolvedGateOverrideSample = resolvedMapFixture.scope.localTypeOverrides.get(local) == expected
+				&& resolvedMapFixture.scope.argTypeOverrides.get(local) == expected;
+		});
+		var resolvedGateCompleteSample = false;
+		final resolvedGateCompleteSeconds = elapsedNamed("resolved_gate_complete", calls, () -> {
+			resolvedGateCompleteSample = @:privateAccess backend.cpp.CppTargetCore.targetOwnedForwardedERegMapCallbackAlreadyResolved(resolvedGateCallee,
+				resolvedGateArgs, resolvedMapFixture.scope, mapCandidates);
+		});
+		var resolvedGateCompleteOldSample = false;
+		final resolvedGateCompleteOldSeconds = elapsedNamed("resolved_gate_complete_old", calls, () -> {
+			resolvedGateCompleteOldSample = replayOldResolvedERegMapGate(resolvedGateCallee, resolvedGateArgs, resolvedMapFixture.scope, mapCandidates);
+		});
 		var resolvedMapSample = "";
 		final resolvedMapSeconds = elapsedNamed("resolved_forwarded_map", calls, () -> {
 			@:privateAccess backend.cpp.CppTargetCore.collectForwardedCallArgTypeOverrides(EField(EIdent("regex0"), "map"),
@@ -513,6 +572,25 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			"map"), [ECall(EIdent("identity"), [EIdent("callback")]), EIdent("callback")], resolvedMapFixture.scope, mapCandidates);
 		final unrelatedReceiverLeafSample = @:privateAccess backend.cpp.CppTargetCore.targetOwnedResolvedERegMapInferenceLeavesAreInert(EField(EIdent("other"),
 			"map"), [EString("value"), EIdent("callback")], resolvedMapFixture.scope, mapCandidates);
+		final unresolvedGateFixture = fixture();
+		unresolvedGateFixture.scope.localTypes.set("regex0", "std::shared_ptr<EReg>");
+		final unresolvedGateSample = @:privateAccess backend.cpp.CppTargetCore.targetOwnedForwardedERegMapCallbackAlreadyResolved(resolvedGateCallee,
+			resolvedGateArgs, unresolvedGateFixture.scope, mapCandidates);
+		final conflictingGateFixture = fixture();
+		conflictingGateFixture.scope.localTypes.set("regex0", "std::shared_ptr<EReg>");
+		conflictingGateFixture.scope.localTypeOverrides.set("callback", EXPECTED_CALLBACK_TYPE);
+		conflictingGateFixture.scope.argTypeOverrides.set("callback", "std::function<bool()>");
+		final conflictingGateSample = @:privateAccess backend.cpp.CppTargetCore.targetOwnedForwardedERegMapCallbackAlreadyResolved(resolvedGateCallee,
+			resolvedGateArgs, conflictingGateFixture.scope, mapCandidates);
+		final shadowedGateFixture = fixture();
+		shadowedGateFixture.scope.localNames.set("regex0", "regex0_2");
+		shadowedGateFixture.scope.localTypes.set("regex0_2", "std::shared_ptr<EReg>");
+		shadowedGateFixture.scope.localTypeOverrides.set("callback", EXPECTED_CALLBACK_TYPE);
+		shadowedGateFixture.scope.argTypeOverrides.set("callback", EXPECTED_CALLBACK_TYPE);
+		final shadowedGateSample = @:privateAccess backend.cpp.CppTargetCore.targetOwnedForwardedERegMapCallbackAlreadyResolved(resolvedGateCallee,
+			resolvedGateArgs, shadowedGateFixture.scope, mapCandidates);
+		final qualifiedReceiverGateSample = @:privateAccess backend.cpp.CppTargetCore.targetOwnedForwardedERegMapCallbackAlreadyResolved(EField(EField(EIdent("holder"),
+			"regex0"), "map"), resolvedGateArgs, resolvedMapFixture.scope, mapCandidates);
 
 		final staleFn = new HxFunctionDecl("stale", Public, false, [], "Void", [
 			SVar("callback", "String->String", ELambda(["value"], EIdent("value")), HxPos.unknown()),
@@ -569,8 +647,13 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			"outer-gate, recursive-leaf, and nonempty-candidate attribution should retain exact map-expression state");
 		assertTrue(resolvedMapSample == EXPECTED_CALLBACK_TYPE + "/" + EXPECTED_CALLBACK_TYPE && resolvedMapOldSample,
 			"already-resolved EReg.map callback evidence should retain both exact override maps");
+		assertTrue(resolvedGateShapeSample && resolvedGateMethodSample && resolvedGateReceiverSample && resolvedGateCandidateSample
+			&& resolvedGateOverrideSample && resolvedGateCompleteSample && resolvedGateCompleteOldSample,
+			"resolved EReg.map gate component attribution should retain exact true results");
 		assertTrue(resolvedInertLeafSample && !nestedCandidateLeafSample && !unrelatedReceiverLeafSample,
 			"resolved EReg.map leaf skipping should preserve nested-candidate and unrelated-receiver traversal");
+		assertTrue(!unresolvedGateSample && !conflictingGateSample && shadowedGateSample && !qualifiedReceiverGateSample,
+			"resolved EReg.map gate normalization should preserve unresolved, conflicting, shadowed, and qualified receiver contracts");
 		assertTrue(staleSample == "std::function<std::string(bool)>" && openSample == "int" && !plainEvidence,
 			"stale callable, open Dynamic, and ordinary local controls should retain their inference contracts");
 
@@ -586,6 +669,10 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			+ " map_expr_old_walk_seconds=" + mapExprOldWalkSeconds + " map_expr_resolved_old_seconds=" + mapExprResolvedOldSeconds
 			+ " resolved_map_call_seconds=" + resolvedMapCallSeconds + " resolved_map_call_old_seconds=" + resolvedMapCallOldSeconds
 			+ " forwarded_map_seconds=" + forwardedMapSeconds + " resolved_forwarded_map_seconds=" + resolvedMapSeconds
-			+ " resolved_forwarded_map_old_seconds=" + resolvedMapOldSeconds + " override=" + completeSample);
+			+ " resolved_forwarded_map_old_seconds=" + resolvedMapOldSeconds + " resolved_gate_shape_seconds=" + resolvedGateShapeSeconds
+			+ " resolved_gate_method_seconds=" + resolvedGateMethodSeconds + " resolved_gate_receiver_seconds=" + resolvedGateReceiverSeconds
+			+ " resolved_gate_candidate_seconds=" + resolvedGateCandidateSeconds + " resolved_gate_overrides_seconds=" + resolvedGateOverrideSeconds
+			+ " resolved_gate_complete_seconds=" + resolvedGateCompleteSeconds + " resolved_gate_complete_old_seconds=" + resolvedGateCompleteOldSeconds
+			+ " override=" + completeSample);
 	}
 }
