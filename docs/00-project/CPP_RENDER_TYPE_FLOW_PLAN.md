@@ -5251,6 +5251,63 @@ not crossed. GPT 5.5 Pro and Oracle were deliberately skipped because strict
 native evidence gave a decisive local stop signal and the production edit was
 fully reversible.
 
+## 2026-07-12 Helper Typed-As Direct-Call Attribution
+
+Follow-up bead `haxe_ocaml-r76oz` attributed the next TestEReg preparation
+phase without a production edit. The existing helper typed-as guard recursively
+checks call callees and arguments. A direct non-`typedAs` identifier callee is
+already a terminal leaf, so a focused replay tested skipping that redundant
+callee recursion while retaining argument traversal and every qualified call
+shape.
+
+Across three fresh 5,000-call processes, the current TestEReg-shaped guard
+median was 0.223578s and the direct-identifier replay was 0.204377s, about 8.6%
+lower. That margin is too small to justify a native production trial after the
+preceding bind candidate experiment showed that even a 64% interpreter
+improvement could regress the strict native phase. No helper guard or compiler
+change is retained.
+
+The dedicated focused module preserves exact direct `typedAs`,
+`HelperMacros.typedAs`, `unit.HelperMacros.typedAs`, nested-argument, and
+unrelated qualified lookalike controls. It also executes the real inference
+pass and asserts that a direct probe refines its local to the exact
+`std::string` override.
+
+The latest current-source strict evidence remains the preceding rejected bind
+experiment. Its helper typed-as phase was 0.000087s versus 0.000088s in the
+prior run, confirming that this is a small stable family rather than a moving
+hotspot. No rebuild or strict rerun is required for this attribution-only
+slice because final compiler source is unchanged.
+
+Follow-up `haxe_ocaml-hck3a` owns separate attribution of
+`infer_closure_vector_locals`, about 0.000084s in the latest strict trace.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-helper-typed-as-direct-ident-attribution.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-bind-candidate-gate.log`
+
+Validation for this attribution-only slice includes:
+
+- three independent 5,000-call current and direct-identifier guard selections
+- exact direct, qualified, nested, lookalike, and local-override controls
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This slice adds
+reproducible hxhx Cpp attribution without changing compiler behavior or public
+production usability. `CppTargetCore.hx` remains unchanged at 26,254 lines and
+broader extraction remains owned by `haxe_ocaml-36ec`; attribution is isolated
+in a dedicated documented 151-line bench module. No upstream compiler or test
+source was copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle
+were deliberately skipped because focused evidence gave a bounded low-margin
+stop and did not expose an architectural blocker.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
