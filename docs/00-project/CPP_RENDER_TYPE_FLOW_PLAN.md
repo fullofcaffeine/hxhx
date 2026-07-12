@@ -5448,6 +5448,54 @@ remains owned by `haxe_ocaml-36ec`, and attribution is isolated in a documented
 crossed; Oracle/GPT were skipped because the existing skip and guard fully
 account for the negative phase.
 
+## 2026-07-12 Optional-Lambda Preparation Attribution
+
+Follow-up bead `haxe_ocaml-2lv4j` decomposed TestEReg optional-lambda local
+preparation without a production edit. The production branch first checks the
+exact target-known method exclusions, neither of which applies to this phase,
+then uses a syntax-only guard for unhinted parser-normalized optional-lambda
+locals before entering call-shape and function-type inference.
+
+Across three fresh selectable 5,000-call processes, the target-known skip
+median was 0.034195s, the evidence-guard median was 0.077469s, and the complete
+negative branch median was 0.111940s. The sum of the two required checks is
+within about 0.25% of the complete branch, leaving no distinct inference seam
+after them. The complete positive branch median was 0.613277s and retained the
+exact `std::function<int(int, std::optional<int>)>` override.
+
+Exact controls cover unhinted and explicitly typed normalized optional
+lambdas, ordinary and malformed lambda/helper exclusion, nested inference, a
+typed outer shadow with distinct nested local naming, unrelated locals, the
+non-applicability of the existing `Unserializer.unserialize` and
+`TestType.testInlineCast` skips, negative no-write state, and exact positive
+override state. No compiler source changed, so no current-source rebuild or
+strict rerun is required.
+
+Follow-up `haxe_ocaml-1kt87` owns separate attribution of the next unowned
+`infer_callable_args` phase, about 0.000028s in the latest strict trace. The
+larger bind, dynamic-local, and helper-typed-as phases already have separate
+completed attribution.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-optional-lambda-prep-attribution.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-bind-candidate-gate.log`
+
+Validation for this attribution-only slice includes three independent 5,000-
+call target-known-skip, guard, complete-negative, and complete-positive
+selections; exact normalized, typed, nesting, shadow, malformed, unrelated,
+skip, and override controls; the Cpp native smoke and full helper-render bench;
+the Cpp plan, mega-file, changed/full Haxe format guards; and
+`git diff --check`.
+
+README Goals and North Star progress bars remain unchanged. This adds
+reproducible hxhx Cpp attribution without changing compiler behavior or public
+readiness. `CppTargetCore.hx` remains unchanged at 26,254 lines, extraction
+remains owned by `haxe_ocaml-36ec`, and attribution is isolated in a documented
+166-line bench module. No upstream source was copied. `thinking:xhigh` was not
+crossed; Oracle/GPT were skipped because the existing skip and guard fully
+account for the negative phase.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
