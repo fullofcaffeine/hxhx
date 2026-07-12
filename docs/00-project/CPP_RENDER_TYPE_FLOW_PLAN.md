@@ -4190,6 +4190,82 @@ Pro and Oracle were deliberately skipped because the existing target-owned
 support renderer and repeated same-family evidence supplied a bounded,
 provenance-neutral seam.
 
+## 2026-07-11 TestEReg Equality Attribution
+
+Follow-up bead `haxe_ocaml-6umpq` tested whether the 44 equality statements in
+the post-value-assertion `TestEReg.test` baseline represented useful render
+work or diagnostic overhead. Their traced statement time was about 0.016039s,
+roughly 59% of the 0.027074s statement sum, but the aggregate combined ten
+different expression shapes and per-statement timing instrumentation.
+
+The focused equality bench now times typed indexed and side captures, typed
+and fresh maps, fresh replace, matched-position fields, split length, concat,
+nullable String, Dynamic, and the complete direct equality call. Every shape
+also freezes its exact generated C++ output. Setting
+`HXHX_CPP_EQUALITY_ARG_BENCH_ONLY` selects one named timing case while all
+output assertions still execute once; this avoids attributing interpreter
+frame and garbage-collection redistribution between sequential samples to a
+production shortcut.
+
+Fresh-process 5,000-call baseline measurements were 1.060256s for fresh map,
+1.182252s for typed map, 0.560849s for the paired left/right capture sample,
+0.251347s for fresh replace, 5.575393s for concat, 0.607772s for indexed
+capture, 0.350479s for matched position, and 0.359420s for split-length
+equality. Weighting those untraced measurements by the strict method's exact
+6/14/12/2/1/6/2/1 shape counts estimates about 0.0074s of useful equality
+render work. The remaining roughly 0.0086s of the traced 0.0160s aggregate is
+primarily instrumentation and cross-statement overhead, so the trace rank
+overstated the optimization opportunity by more than two times.
+
+Two bounded production experiments were rejected. A pair-level exact EReg
+String shortcut made independent intended cases 22-43% slower and nullable,
+Dynamic, and concat controls 25-43% slower because it added work around the
+whole equality renderer. Reusing the existing exact-String local inside
+`eqComparableArgExpr` also made intended and control cases slower; the normal
+call renderer already owns cheaper exact EReg paths. No production Cpp change
+is retained. Follow-up `haxe_ocaml-thvk6` owns attribution inside the largest
+remaining useful-work family, the 14 typed-local and six fresh EReg map
+expressions, without reintroducing a pair-level equality probe.
+
+The current-source compiler rebuilt successfully. Both exact-command strict
+Cpp attempts were non-comparable: the upstream harness spent the full
+480-second target budget cloning `hxcpp`, failed before invoking `hxhx`, and
+therefore produced no `TestEReg` timing or output-coverage evidence. The
+second attempt used explicit Bash exit capture and reproduced the same
+external dependency failure. Neither timeout is treated as a compiler
+regression or performance result.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-test-value-assert-direct-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-direct-ereg-string-equality-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-direct-ereg-string-equality-warm-retry.log`
+
+Focused validation for this slice includes:
+
+- independent 5,000-call selected equality-shape samples
+- `npm run hxhx:build-current-source`
+- two non-comparable exact-command strict Cpp attempts
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This slice adds
+diagnostic precision and rejects two regressions, but strict Cpp remains
+expected-red and public production usability does not change. Generated C++,
+runtime support, and committed bootstrap snapshots are unchanged;
+`CppTargetCore.hx` remains a red mega-file at 26,150 lines, with broader
+extraction owned by `haxe_ocaml-36ec`. No upstream compiler or test source was
+copied or consulted. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle
+were deliberately skipped because selectable local attribution exposed a
+bounded negative result and a clear next profiling seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

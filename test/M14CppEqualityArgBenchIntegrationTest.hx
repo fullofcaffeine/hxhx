@@ -80,6 +80,14 @@ class M14CppEqualityArgBenchIntegrationTest {
 		return Sys.time() - start;
 	}
 
+	static function elapsedNamed(name:String, calls:Int, action:Void->Void):Float {
+		action();
+		final only = Sys.getEnv("HXHX_CPP_EQUALITY_ARG_BENCH_ONLY");
+		if (only != null && StringTools.trim(only).length > 0 && only != name)
+			return -1.;
+		return elapsed(calls, action);
+	}
+
 	static function main():Void {
 		final calls = envInt("HXHX_CPP_EQUALITY_ARG_BENCH_CALLS", DEFAULT_CALLS);
 		final scope = fixture().scope;
@@ -87,43 +95,77 @@ class M14CppEqualityArgBenchIntegrationTest {
 		final concat = EBinop("+", EString("prefix:"), EIdent("typedText"));
 		final freshMap = ECall(EField(ENew("EReg", [EString("z?"), EString("g")]), "map"),
 			[EString("ab"), ELambda(["r"], ECall(EField(EIdent("r"), "matched"), [EInt(0)]))]);
+		final typedMatched = ECall(EField(EIdent("block"), "matched"), [EInt(0)]);
+		final typedMatchedLeft = ECall(EField(EIdent("block"), "matchedLeft"), []);
+		final typedMatchedRight = ECall(EField(EIdent("block"), "matchedRight"), []);
+		final typedMap = ECall(EField(EIdent("block"), "map"), [EString("ab"), ELambda(["r"], ECall(EField(EIdent("r"), "matchedLeft"), []))]);
+		final freshReplace = ECall(EField(ENew("EReg", [EString("z?"), EString("g")]), "replace"), [EString("ab"), EString("x")]);
+		final matchedPosField = EField(ECall(EField(EIdent("block"), "matchedPos"), []), "pos");
 		final splitLength = EField(ECall(EField(EIdent("block"), "split"), [EString("a")]), "length");
 
 		var directLiteralSample = "";
-		final directLiteralSeconds = elapsed(calls, () -> {
+		final directLiteralSeconds = elapsedNamed("direct_literal", calls, () -> {
 			directLiteralSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(literal, scope);
 		});
 		var stringLiteralSample = "";
-		final stringLiteralSeconds = elapsed(calls, () -> {
+		final stringLiteralSeconds = elapsedNamed("string_literal", calls, () -> {
 			stringLiteralSample = @:privateAccess backend.cpp.CppTargetCore.stringExpr(literal, scope);
 		});
 		var comparableLiteralSample = "";
-		final comparableLiteralSeconds = elapsed(calls, () -> {
+		final comparableLiteralSeconds = elapsedNamed("comparable_literal", calls, () -> {
 			comparableLiteralSample = @:privateAccess
 				backend.cpp.CppTargetCore.eqComparableArgExpr(literal, "std::string", "std::string", scope);
 		});
 		var concatEqualitySample = "";
-		final concatEqualitySeconds = elapsed(calls, () -> {
+		final concatEqualitySeconds = elapsedNamed("concat", calls, () -> {
 			concatEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([concat, literal], scope).join(", ");
 		});
 		var freshMapEqualitySample = "";
-		final freshMapEqualitySeconds = elapsed(calls, () -> {
+		final freshMapEqualitySeconds = elapsedNamed("fresh_map", calls, () -> {
 			freshMapEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([freshMap, EString("mapped")], scope).join(", ");
 		});
+		var typedMatchedEqualitySample = "";
+		final typedMatchedEqualitySeconds = elapsedNamed("typed_matched", calls, () -> {
+			typedMatchedEqualitySample = @:privateAccess
+				backend.cpp.CppTargetCore.renderEqCallArgs([typedMatched, EString("capture")], scope).join(", ");
+		});
+		var typedSideEqualitySample = "";
+		final typedSideEqualitySeconds = elapsedNamed("typed_side", calls, () -> {
+			typedSideEqualitySample = @:privateAccess
+				backend.cpp.CppTargetCore.renderEqCallArgs([typedMatchedLeft, EString("left")], scope)
+					.join(", ") + "|" + @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([typedMatchedRight, EString("right")], scope).join(", ");
+		});
+		var typedMapEqualitySample = "";
+		final typedMapEqualitySeconds = elapsedNamed("typed_map", calls, () -> {
+			typedMapEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([typedMap, EString("mapped")], scope).join(", ");
+		});
+		var freshReplaceEqualitySample = "";
+		final freshReplaceEqualitySeconds = elapsedNamed("fresh_replace", calls, () -> {
+			freshReplaceEqualitySample = @:privateAccess
+				backend.cpp.CppTargetCore.renderEqCallArgs([freshReplace, EString("replaced")], scope).join(", ");
+		});
+		var matchedPosEqualitySample = "";
+		final matchedPosEqualitySeconds = elapsedNamed("matched_pos", calls, () -> {
+			matchedPosEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([matchedPosField, EInt(0)], scope).join(", ");
+		});
+		var typedMapDirectEqSample = "";
+		final typedMapDirectEqSeconds = elapsedNamed("typed_map_direct_eq", calls, () -> {
+			typedMapDirectEqSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("eq", [typedMap, EString("mapped")], scope);
+		});
 		var splitLengthInferSample = "";
-		final splitLengthInferSeconds = elapsed(calls, () -> {
+		final splitLengthInferSeconds = elapsedNamed("split_length_infer", calls, () -> {
 			splitLengthInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(splitLength, scope);
 		});
 		var splitLengthPredicateSample = false;
-		final splitLengthPredicateSeconds = elapsed(calls, () -> {
+		final splitLengthPredicateSeconds = elapsedNamed("split_length_predicate", calls, () -> {
 			splitLengthPredicateSample = @:privateAccess backend.cpp.CppTargetCore.isCppVectorLengthExpr(splitLength, scope);
 		});
 		var splitLengthRenderSample = "";
-		final splitLengthRenderSeconds = elapsed(calls, () -> {
+		final splitLengthRenderSeconds = elapsedNamed("split_length_render", calls, () -> {
 			splitLengthRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(splitLength, scope);
 		});
 		var splitLengthEqualitySample = "";
-		final splitLengthEqualitySeconds = elapsed(calls, () -> {
+		final splitLengthEqualitySeconds = elapsedNamed("split_length_equality", calls, () -> {
 			splitLengthEqualitySample = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs([splitLength, EInt(1)], scope).join(", ");
 		});
 
@@ -135,6 +177,16 @@ class M14CppEqualityArgBenchIntegrationTest {
 			backend.cpp.CppTargetCore.renderEqCallArgs([EIdent("aliasText"), EString("alias")], scope).join(", ");
 		final optionalEqualitySample = @:privateAccess
 			backend.cpp.CppTargetCore.renderEqCallArgs([EIdent("optionalText"), ENull], scope).join(", ");
+		var optionalEqualityTimedSample = "";
+		final optionalEqualitySeconds = elapsedNamed("optional", calls, () -> {
+			optionalEqualityTimedSample = @:privateAccess
+				backend.cpp.CppTargetCore.renderEqCallArgs([EIdent("optionalText"), ENull], scope).join(", ");
+		});
+		var dynamicEqualityTimedSample = "";
+		final dynamicEqualitySeconds = elapsedNamed("dynamic", calls, () -> {
+			dynamicEqualityTimedSample = @:privateAccess
+				backend.cpp.CppTargetCore.renderEqCallArgs([EIdent("dynamicText"), EString("dynamic")], scope).join(", ");
+		});
 		final numericEqualitySample = @:privateAccess
 			backend.cpp.CppTargetCore.renderEqCallArgs([EInt(1), EInt(2)], scope).join(", ");
 		final unknownLength = EField(ECall(EField(EIdent("unknown"), "split"), [EString("a")]), "length");
@@ -155,6 +207,26 @@ class M14CppEqualityArgBenchIntegrationTest {
 		assertTrue(freshMapEqualitySample == 'std::make_shared<EReg>("z?", "g")->map("ab", [&](std::shared_ptr<EReg> r) -> std::string { return r->matched(0).value_or(std::string()); }), std::string("mapped")',
 			"fresh EReg equality should retain its target-owned String result, got "
 			+ freshMapEqualitySample);
+		assertTrue(typedMatchedEqualitySample == 'block->matched(0), std::string("capture")'
+			&& typedSideEqualitySample == 'block->matchedLeft(), std::string("left")|block->matchedRight(), std::string("right")',
+			"typed EReg capture equality should preserve indexed and side-capture contracts");
+		assertTrue(typedMapEqualitySample == 'block->map("ab", [&](std::shared_ptr<EReg> r) -> std::string { return r->matchedLeft(); }), std::string("mapped")'
+			&& typedMapDirectEqSample == "eq("
+			+ typedMapEqualitySample
+			+ ")",
+			"typed EReg map equality should preserve exact argument and direct-call output");
+		assertTrue(freshReplaceEqualitySample == 'std::make_shared<EReg>("z?", "g")->replace("ab", "x"), std::string("replaced")',
+			"fresh EReg replace equality should preserve its fixed String result");
+		assertTrue(matchedPosEqualitySample == "(block->matchedPos().pos), 0",
+			"typed EReg matched-position equality should preserve its fixed Int field, got " + matchedPosEqualitySample);
+		final reversedTypedMapSample = @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs([EString("mapped"), typedMap, EInt(7)], scope).join(", ");
+		final nonliteralTypedMapSample = @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs([typedMap, EIdent("typedText")], scope).join(", ");
+		assertTrue(reversedTypedMapSample == 'std::string("mapped"), block->map("ab", [&](std::shared_ptr<EReg> r) -> std::string { return r->matchedLeft(); }), 7'
+			&& nonliteralTypedMapSample == 'block->map("ab", [&](std::shared_ptr<EReg> r) -> std::string { return r->matchedLeft(); }), std::string(typedText)'
+			&& typedMatchedEqualitySample == 'block->matched(0), std::string("capture")',
+			"EReg String equality controls should preserve reversal, extras, nonliteral peers, and nullable indexed captures");
 		assertTrue(typedEqualitySample == 'std::string(typedText), std::string("typed")',
 			"typed String locals should retain normal equality adaptation, got " + typedEqualitySample);
 		assertTrue(dynamicEqualitySample == '__hxhx_stringify(dynamicText), std::string("dynamic")',
@@ -163,6 +235,8 @@ class M14CppEqualityArgBenchIntegrationTest {
 			"String-backed abstracts should retain their equality conversion, got " + abstractEqualitySample);
 		assertTrue(optionalEqualitySample == 'optionalText.value(), std::optional<std::string>{}',
 			"optional String equality should retain its empty optional carrier, got " + optionalEqualitySample);
+		assertTrue(optionalEqualityTimedSample == optionalEqualitySample && dynamicEqualityTimedSample == dynamicEqualitySample,
+			"timed optional and Dynamic equality controls should retain their exact outputs");
 		assertTrue(numericEqualitySample == "1, 2", "numeric equality should remain outside String adaptation");
 		assertTrue(splitLengthPredicateSample, "typed-local EReg split length should retain its exact vector-length predicate");
 		assertTrue(splitLengthInferSample == "int", "typed-local EReg split length should expose its exact Int type");
@@ -178,7 +252,11 @@ class M14CppEqualityArgBenchIntegrationTest {
 
 		Sys.println("CPP_EQUALITY_ARG_BENCH:PASS calls=" + calls + " direct_literal_seconds=" + directLiteralSeconds + " string_literal_seconds="
 			+ stringLiteralSeconds + " comparable_literal_seconds=" + comparableLiteralSeconds + " concat_equality_seconds=" + concatEqualitySeconds
-			+ " fresh_map_equality_seconds=" + freshMapEqualitySeconds);
+			+ " fresh_map_equality_seconds=" + freshMapEqualitySeconds + " typed_matched_equality_seconds=" + typedMatchedEqualitySeconds
+			+ " typed_side_equality_seconds=" + typedSideEqualitySeconds + " typed_map_equality_seconds=" + typedMapEqualitySeconds
+			+ " fresh_replace_equality_seconds=" + freshReplaceEqualitySeconds + " matched_pos_equality_seconds=" + matchedPosEqualitySeconds
+			+ " optional_equality_seconds=" + optionalEqualitySeconds + " dynamic_equality_seconds=" + dynamicEqualitySeconds
+			+ " typed_map_direct_eq_seconds=" + typedMapDirectEqSeconds);
 		Sys.println("CPP_SPLIT_LENGTH_INFER_BENCH:PASS calls=" + calls + " infer_seconds=" + splitLengthInferSeconds + " predicate_seconds="
 			+ splitLengthPredicateSeconds + " render_seconds=" + splitLengthRenderSeconds + " equality_seconds=" + splitLengthEqualitySeconds
 			+ " inferred_type=" + splitLengthInferSample);
