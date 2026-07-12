@@ -4562,6 +4562,93 @@ was not crossed. GPT 5.5 Pro and Oracle were deliberately skipped because
 selectable local evidence produced a bounded negative result and a clear next
 preparation seam.
 
+## 2026-07-12 Direct Dynamic-Local Candidate Gate
+
+Follow-up bead `haxe_ocaml-18obk` attributed the remaining
+`infer_dynamic_locals` preparation cost with a new repo-owned synthetic
+88-statement method. The fixture preserves only the strict frontier's scale
+and late explicit EReg callback shape; it does not copy or reconstruct the
+upstream test. `HXHX_CPP_DYNAMIC_LOCAL_PREP_BENCH_ONLY` selects guard traversal,
+callable recognition, declared-type selection, override writes, complete
+inference, a no-forward control, nested map/equality traversal, or direct
+forwarded-map handling in an independent process. Exact stale-callable, open
+Dynamic, ordinary-local, candidate, override, and scope-restoration contracts
+remain active for every selection.
+
+The pre-change 5,000-call medians were 0.400592s for the conservative evidence
+guard, 0.000699s for callable recognition, 0.354155s for declared callback
+typing, 0.003088s for an isolated override write, 5.107631s for the complete
+88-statement pass, 1.779010s for the no-forward shape, 0.160171s for one nested
+map/equality expression, and 0.098017s for its direct forwarded-map subphase.
+The 19 nested expressions accounted for most of the gap between complete and
+no-forward preparation.
+
+For a free call such as the outer equality helper, same-owner and forwarded
+signature lookup can refine only a direct candidate identifier argument. The
+dynamic-local collector previously ran both lookups even when its candidate
+appeared only inside a nested map call; it then recursively reached that map
+and applied the real target-owned callback evidence. The collector now gates
+the two outer lookups on a direct candidate identifier while preserving the
+same recursive walk. Direct candidate calls, assignments, pushes, nested
+candidates, stale callable refinement, and open Dynamic assignment inference
+are unchanged.
+
+Because unrelated fresh-process controls moved materially after the source
+edit, the production decision uses same-source branch-disabled samples. The
+bench replays exactly the two skipped outer lookups before the current walk.
+Across three 5,000-call processes, the complete current-path median was
+3.471086s versus 4.089334s with the old lookups replayed, about 15.1% lower.
+One nested map/equality expression measured 0.108286s versus 0.142788s, about
+24.2% lower. The current no-forward control measured 1.410204s. Generated C++
+and inferred override maps are identical across current and replayed paths.
+
+The exact-command current-source probe cloned `hxcpp` in 132 seconds, still
+rendered all 88 TestEReg statements, and reached the same
+`Parser_XmlParserException` frontier before the expected 480-second timeout.
+`infer_dynamic_locals` fell from 0.001384s to 0.001119s, about 19.1%, and the
+cache-miss preparation total moved from 0.003133s to 0.002942s. The method,
+class, and independent `TestBytes.test` control also moved lower, so no
+aggregate claim is made. The statement sum stayed effectively flat at
+0.026309s versus 0.026408s, and all 484 selected records were present.
+
+Follow-up `haxe_ocaml-f4lm9` owns the remaining candidate-collection cost:
+the late conservative guard scan, ordinary-local type registration, explicit
+callable type selection, scope snapshot/restore, and post-candidate recursion.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-dynamic-local-prep-selected-baseline-v2.log`
+- `.artifacts/full1/cpp-strict-current/cpp-dynamic-local-prep-selected-after-direct-candidate-gate.log`
+- `.artifacts/full1/cpp-strict-current/cpp-dynamic-local-prep-same-source-ab.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-local-decl-attribution.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-direct-dynamic-local-candidate-gate.log`
+
+Focused validation for this slice includes:
+
+- three independent 5,000-call baseline, post-change, and same-source A/B
+  samples
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run hxhx:build-current-source`
+- the exact-command non-delegating strict Cpp probe
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is a bounded
+internal preparation improvement while strict Cpp remains expected-red, so
+public production usability does not change. `CppTargetCore.hx` remains a red
+mega-file at 26,191 lines; the 16-line production increase stays inside its
+existing dynamic-local collector, while broader extraction remains owned by
+`haxe_ocaml-36ec`. The new focused bench is isolated in its own documented
+module rather than expanding an existing mixed-purpose test. The ignored
+upstream suite was executed only as a behavior oracle; no upstream compiler or
+test source was copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and
+Oracle were deliberately skipped because exact same-source evidence and a
+direct semantic ownership boundary produced a bounded change.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

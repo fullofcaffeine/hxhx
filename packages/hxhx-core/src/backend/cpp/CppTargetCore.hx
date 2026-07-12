@@ -10070,8 +10070,10 @@ class CppTargetCore {
 				for (arg in args)
 					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
 			case ECall(EIdent(methodName), args):
-				collectSameOwnerDeclaredArgTypeOverrides(methodName, args, scope, candidates);
-				collectForwardedCallArgTypeOverrides(EIdent(methodName), args, scope, candidates);
+				if (callArgsHaveDirectDynamicLocalCandidate(args, candidates)) {
+					collectSameOwnerDeclaredArgTypeOverrides(methodName, args, scope, candidates);
+					collectForwardedCallArgTypeOverrides(EIdent(methodName), args, scope, candidates);
+				}
 				collectDynamicLocalTypeOverridesFromExpr(EIdent(methodName), scope, candidates);
 				for (arg in args)
 					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
@@ -10115,6 +10117,20 @@ class CppTargetCore {
 					collectDynamicLocalTypeOverridesFromExpr(arg, scope, candidates);
 			case _:
 		}
+	}
+
+	/** Whether a free call can directly refine one of the current dynamic-local candidates. **/
+	static function callArgsHaveDirectDynamicLocalCandidate(args:Array<HxExpr>, candidates:haxe.ds.StringMap<Bool>):Bool {
+		if (args == null || candidates == null)
+			return false;
+		for (arg in args) {
+			switch (arg) {
+				case EIdent(name) if (candidates.exists(sanitizeIdentifier(name))):
+					return true;
+				case _:
+			}
+		}
+		return false;
 	}
 
 	static function dynamicLocalAssignedType(expr:HxExpr, scope:CppRenderScope):String {
