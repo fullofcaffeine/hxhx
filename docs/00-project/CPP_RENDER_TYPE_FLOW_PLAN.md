@@ -5542,6 +5542,56 @@ remains owned by `haxe_ocaml-36ec`, and attribution is isolated in a documented
 crossed; Oracle/GPT were skipped because the existing checks fully account for
 the negative phase.
 
+## 2026-07-12 Preparation Timing-Overhead Reconciliation
+
+Follow-up bead `haxe_ocaml-3w49c` reconciled the deeply filtered TestEReg
+preparation trace against exact untraced work. The existing timing-bookkeeping
+probe now reproduces each preparation phase's timing record, map-count/value
+record, and the complete 31-record cache-miss preparation path for empty and
+positive callable-override state. Compiler behavior and instrumentation output
+remain unchanged.
+
+Across three fresh 5,000-call processes, median zero-argument callable
+preflight work was 0.000975s. Timing-record construction was 0.005340s, empty
+count/value records were 0.017854s, positive count/value records were
+0.019877s, and complete timing-plus-count recording was 0.022502s empty or
+0.026337s positive. The full cache-miss preparation path measured 0.339028s
+untraced versus 1.809986s deeply traced, about 5.34x. Individual phase seconds
+are captured before their records are assembled, but enclosing method/class
+and total-cache-miss timings include nested diagnostic bookkeeping.
+
+A fresh current-source hxhx build completed, followed by the exact 480-second
+strict Cpp probe with top-level method/class timing enabled and no deep method
+filter. It reached TestMisc before the expected timeout (target exit 124,
+wrapper exit 1), compared with the prior deep-filter run's later Parser
+frontier. `TestEReg.test` measured 0.011853s unfiltered versus 0.031684s deeply
+traced, and its class measured 0.013516s versus 0.033414s. No preparation or
+statement records leaked into the unfiltered run; it retained 401 method and
+166 class timing records.
+
+The real unfiltered rerank is led by `TestXML.testCreate` at 20.523928s,
+followed by `TestXML.testIssue2299` at 7.315609s,
+`TestXML.testBasic` at 6.869321s, `TestXML.testMore` at 6.753287s, and
+`TestXML.testCustomXmlParser` at 6.440763s. Top classes were TestXML at
+71.774157s, TestExceptions at 12.334006s, MyDynamicClass at 10.961465s,
+TestBasetypes at 9.434394s, and Md5 at 8.229283s. Thus TestEReg is no longer a
+production hotspot; follow-up `haxe_ocaml-pgy4z` owns untraced
+`TestXML.testCreate` attribution.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-prep-timing-overhead-attribution.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-method-timing.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-bind-candidate-gate.log`
+
+README Goals and North Star progress bars remain unchanged. This is diagnostic
+correction and blocker reranking, not changed production usability.
+`CppTargetCore.hx` remains unchanged at 26,254 lines, extraction remains owned
+by `haxe_ocaml-36ec`, and focused evidence stays in the documented 276-line
+timing bench. No upstream source was copied; the ignored suite was used only as
+a behavior/performance oracle. `thinking:xhigh` was not crossed; Oracle/GPT
+were skipped because exact trace-on/off evidence gave a bounded result.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

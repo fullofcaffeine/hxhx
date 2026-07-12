@@ -53,6 +53,30 @@ class M14CppTimingBufferIntegrationTest {
 		Sys.putEnv(name, value);
 	}
 
+	static function tracePrepTiming(owner:String, method:String, phase:String, seconds:Float):Void {
+		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase("render_helper_method_prepare_timing owner=" + owner + " name=" + method + " phase="
+			+ phase + " seconds=" + Std.string(seconds));
+	}
+
+	static function tracePrepCounts(owner:String, method:String, phase:String, scope:backend.cpp.CppRenderScope):Void {
+		@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhase("render_helper_method_prepare_counts owner="
+			+ owner
+			+ " name="
+			+ method
+			+ " phase="
+			+ phase
+			+ " arg_overrides="
+			+ Std.string(@:privateAccess backend.cpp.CppTargetCore.countStringMap(scope.argTypeOverrides))
+			+ " local_overrides="
+			+ Std.string(@:privateAccess backend.cpp.CppTargetCore.countStringMap(scope.localTypeOverrides))
+			+ " local_types="
+			+ Std.string(@:privateAccess backend.cpp.CppTargetCore.countStringMap(scope.localTypes))
+			+ " arg_override_values="
+			+ @:privateAccess backend.cpp.CppTargetCore.summarizeStringValueMap(scope.argTypeOverrides)
+			+ " local_override_values="
+			+ @:privateAccess backend.cpp.CppTargetCore.summarizeStringValueMap(scope.localTypeOverrides));
+	}
+
 	static function main():Void {
 		final timingEnv = "HXHX_TRACE_STAGE3_CPP_TIMINGS";
 		final filterEnv = "HXHX_TRACE_STAGE3_CPP_METHOD_TIMING_FILTER";
@@ -68,6 +92,16 @@ class M14CppTimingBufferIntegrationTest {
 		var untracedCallSeconds = 0.0;
 		var tracedCallSeconds = 0.0;
 		var tracedLineCount = 0;
+		var prepWorkSeconds = 0.0;
+		var prepTimingRecordSeconds = 0.0;
+		var prepNegativeCountRecordSeconds = 0.0;
+		var prepPositiveCountRecordSeconds = 0.0;
+		var prepTracedNegativeSeconds = 0.0;
+		var prepTracedPositiveSeconds = 0.0;
+		var prepTracedLineCount = 0;
+		var prepFullUntracedSeconds = 0.0;
+		var prepFullTracedSeconds = 0.0;
+		var prepFullTracedLineCount = 0;
 		try {
 			Sys.putEnv(timingEnv, "1");
 			Sys.putEnv(filterEnv, "TestEReg.test");
@@ -125,6 +159,68 @@ class M14CppTimingBufferIntegrationTest {
 			assertTrue(scopeRecords.phases.length == calls, "scope timing attribution should record one complete line per call");
 			scopeRecordSeconds = scopeRecords.elapsed;
 
+			final prepFn = new HxFunctionDecl("test", Public, false, [], "Void", [], "");
+			prepWorkSeconds = elapsed(calls,
+				() -> intSink += @:privateAccess backend.cpp.CppTargetCore.functionMayNeedCallableArgTypeOverrides(prepFn) ? 1 : 0);
+			final prepTimingRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+				for (_ in 0...calls)
+					tracePrepTiming("TestEReg", "test", "infer_callable_args", 0.000001);
+			});
+			prepTimingRecordSeconds = prepTimingRecords.elapsed;
+			final prepNegativeCountRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+				for (_ in 0...calls)
+					tracePrepCounts("TestEReg", "test", "infer_callable_args", scope);
+			});
+			prepNegativeCountRecordSeconds = prepNegativeCountRecords.elapsed;
+			final positiveScope = timingScope();
+			positiveScope.argTypeOverrides.set("callback", "std::function<int(int)>");
+			positiveScope.localTypeOverrides.set("callback", "std::function<int(int)>");
+			final prepPositiveCountRecords = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+				for (_ in 0...calls)
+					tracePrepCounts("PositiveOwner", "run", "infer_callable_args", positiveScope);
+			});
+			prepPositiveCountRecordSeconds = prepPositiveCountRecords.elapsed;
+			final prepTracedNegative = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+				for (_ in 0...calls) {
+					final phaseStart = Sys.time();
+					intSink += @:privateAccess backend.cpp.CppTargetCore.functionMayNeedCallableArgTypeOverrides(prepFn) ? 1 : 0;
+					tracePrepTiming("TestEReg", "test", "infer_callable_args", Sys.time() - phaseStart);
+					tracePrepCounts("TestEReg", "test", "infer_callable_args", scope);
+				}
+			});
+			prepTracedNegativeSeconds = prepTracedNegative.elapsed;
+			final prepTracedPositive = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+				for (_ in 0...calls) {
+					final phaseStart = Sys.time();
+					intSink += @:privateAccess backend.cpp.CppTargetCore.functionMayNeedCallableArgTypeOverrides(prepFn) ? 1 : 0;
+					tracePrepTiming("PositiveOwner", "run", "infer_callable_args", Sys.time() - phaseStart);
+					tracePrepCounts("PositiveOwner", "run", "infer_callable_args", positiveScope);
+				}
+			});
+			prepTracedPositiveSeconds = prepTracedPositive.elapsed;
+			prepTracedLineCount = prepTracedNegative.phases.length + prepTracedPositive.phases.length;
+			assertTrue(prepTracedNegative.phases.length == calls * 2 && prepTracedPositive.phases.length == calls * 2,
+				"each traced preparation phase should retain one timing and one count record");
+
+			Sys.putEnv(timingEnv, null);
+			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
+			prepFullUntracedSeconds = elapsed(calls, () -> {
+				@:privateAccess backend.cpp.CppTargetCore.functionScopePrepCache = new StringMap();
+				@:privateAccess backend.cpp.CppTargetCore.prepareFunctionScope(scope, prepFn);
+			});
+			Sys.putEnv(timingEnv, "1");
+			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
+			final prepFullTraced = @:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> {
+				for (_ in 0...calls) {
+					@:privateAccess backend.cpp.CppTargetCore.functionScopePrepCache = new StringMap();
+					@:privateAccess backend.cpp.CppTargetCore.prepareFunctionScope(scope, prepFn);
+				}
+			});
+			prepFullTracedSeconds = prepFullTraced.elapsed;
+			prepFullTracedLineCount = prepFullTraced.phases.length;
+			assertTrue(prepFullTracedLineCount == calls * 31,
+				"each traced cache-miss preparation should retain fifteen timing/count pairs plus the total record");
+
 			final args = [EString("value")];
 			Sys.putEnv(timingEnv, null);
 			@:privateAccess backend.cpp.CppTargetCore.traceCppTimingsEnabledCache = -1;
@@ -171,6 +267,10 @@ class M14CppTimingBufferIntegrationTest {
 		Sys.println("M14_CPP_TIMING_BUFFER:PASS calls=" + calls + " timer_read_seconds=" + timerReadSeconds + " label_seconds=" + labelSeconds
 			+ " push_seconds=" + pushSeconds + " prebuilt_record_seconds=" + prebuiltRecordSeconds + " scope_record_seconds=" + scopeRecordSeconds
 			+ " arg_render_seconds=" + argRenderSeconds + " untraced_call_seconds=" + untracedCallSeconds + " traced_call_seconds=" + tracedCallSeconds
-			+ " traced_lines=" + tracedLineCount);
+			+ " traced_lines=" + tracedLineCount + " prep_work_seconds=" + prepWorkSeconds + " prep_timing_record_seconds=" + prepTimingRecordSeconds
+			+ " prep_negative_count_record_seconds=" + prepNegativeCountRecordSeconds + " prep_positive_count_record_seconds="
+			+ prepPositiveCountRecordSeconds + " prep_traced_negative_seconds=" + prepTracedNegativeSeconds + " prep_traced_positive_seconds="
+			+ prepTracedPositiveSeconds + " prep_traced_lines=" + prepTracedLineCount + " prep_full_untraced_seconds=" + prepFullUntracedSeconds
+			+ " prep_full_traced_seconds=" + prepFullTracedSeconds + " prep_full_traced_lines=" + prepFullTracedLineCount);
 	}
 }
