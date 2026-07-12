@@ -16562,10 +16562,12 @@ class CppTargetCore {
 
 	/** Adapt EReg.map callbacks directly only when the fixed target contract proves their function type. **/
 	static function eRegMapCallbackArgExpr(arg:HxExpr, ?scope:CppRenderScope):String {
+		switch (arg) {
+			case ELambda(args, body):
+				return lambdaExprWithArgTypes(args, body, ["std::shared_ptr<EReg>"], scope, "std::string");
+			case _:
+		}
 		final expectedType = eRegMapCallbackCppType();
-		final directLambda = directLambdaValueExprForExpectedFunction(arg, expectedType, scope);
-		if (directLambda != null)
-			return directLambda;
 		if (exprCppType(arg, scope) == expectedType)
 			return renderExpr(arg, scope);
 		return valueExprForExpectedType(arg, expectedType, scope);
