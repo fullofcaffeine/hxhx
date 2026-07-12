@@ -5496,6 +5496,52 @@ remains owned by `haxe_ocaml-36ec`, and attribution is isolated in a documented
 crossed; Oracle/GPT were skipped because the existing skip and guard fully
 account for the negative phase.
 
+## 2026-07-12 Callable-Argument Preparation Attribution
+
+Follow-up bead `haxe_ocaml-1kt87` decomposed TestEReg callable-argument
+preparation without a production edit. TestEReg.test has zero arguments, so
+the production branch runs only the target-known declared-argument method
+check and the argument-list preflight before skipping semantic inference.
+
+Across three fresh selectable 5,000-call processes, the declared-method check
+median was 0.034158s, the zero-argument preflight median was 0.001276s, and the
+complete negative branch median was 0.035426s. The two required checks sum to
+within about 0.02% of the complete branch, leaving no distinct inference seam.
+The complete positive branch median was 0.445003s and retained the exact
+`std::function<int(int)>` override.
+
+Exact controls cover legacy String-shaped and Dynamic called arguments,
+concrete declared callable arguments, unused String and open arguments,
+same-owner callable forwarding, the exact `DefaultResolver.resolveClass`
+declared-argument skip, negative no-write state, and exact positive override
+state. No compiler source changed, so no current-source rebuild or strict
+rerun is required.
+
+Follow-up `haxe_ocaml-3w49c` owns reconciliation of strict preparation timing
+instrumentation overhead before another production seam is selected from
+micro-phase traces. The untraced zero-argument preflight is about 0.26
+microseconds per call in this probe, while the latest strict instrumented phase
+reports about 28 microseconds.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-callable-arg-prep-attribution.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-bind-candidate-gate.log`
+
+Validation for this attribution-only slice includes three independent 5,000-
+call declared-method, preflight, complete-negative, and complete-positive
+selections; exact erased, concrete, unused, forwarding, skip, and override
+controls; the Cpp native smoke and full helper-render bench; the Cpp plan,
+mega-file, changed/full Haxe format guards; and `git diff --check`.
+
+README Goals and North Star progress bars remain unchanged. This adds
+reproducible hxhx Cpp attribution without changing compiler behavior or public
+readiness. `CppTargetCore.hx` remains unchanged at 26,254 lines, extraction
+remains owned by `haxe_ocaml-36ec`, and attribution is isolated in a documented
+154-line bench module. No upstream source was copied. `thinking:xhigh` was not
+crossed; Oracle/GPT were skipped because the existing checks fully account for
+the negative phase.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
