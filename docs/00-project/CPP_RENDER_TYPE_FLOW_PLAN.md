@@ -5031,6 +5031,66 @@ not crossed. GPT 5.5 Pro and Oracle were deliberately skipped because direct
 member-name ownership and single callback normalization are local invariants
 with exact positive and negative controls.
 
+## 2026-07-12 Dynamic-Local Re-rank after EReg Burn-down
+
+Follow-up bead `haxe_ocaml-qlgow` repeated the current dynamic-local phases
+without another production edit. Across three fresh 5,000-call processes, the
+medians were 0.406030s for the conservative evidence guard, 0.013358s for scope
+snapshots, 0.795398s for the 68-statement prefix, 0.370117s for the explicit
+callback declaration, 0.782893s for the 19 post-candidate statements, and
+1.952693s for the complete inference pass. Snapshot, prefix, candidate, and
+post-candidate component medians sum to 1.961766s, within about 0.5% of the
+complete pass.
+
+The result is a deliberate negative stop signal. Prefix and post-candidate
+work are now effectively tied, callback declaration is smaller, and the guard
+is a separate conservative syntax scan. No single dynamic-local subphase
+dominates enough to justify extending the EReg-specific shortcut chain or
+merging syntax gating with semantic inference. All exact candidate, local,
+override, stale-callable, open-Dynamic, nested, shadowed, and unrelated
+controls remain green. No production Cpp change is retained in this slice.
+
+The latest current-source strict evidence remains the immediately preceding
+resolved-gate run. It rendered all 88 TestEReg statements and recorded all 484
+selected records before the expected-red target timeout. Its cache-miss
+preparation phases measured 0.000978s for `infer_dynamic_locals`, 0.000236s for
+`known_arg_types`, 0.000094s for `infer_helper_typed_as_locals`, and about
+0.000062-0.000085s for each remaining local-inference family. The dynamic pass
+is still the largest named phase, but its newly diffuse internal distribution
+makes `known_arg_types` the better bounded attribution target rather than
+another speculative micro-shortcut.
+
+Follow-up `haxe_ocaml-kvhtl` owns selectable attribution of TestEReg known
+argument types, including stdlib owner/method recognition, declared argument
+selection, callback type conversion, and override writes.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-dynamic-local-rerank-after-ereg-burndown.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-resolved-gate-normalization.log`
+
+Validation for this attribution-only slice includes:
+
+- three independent 5,000-call guard, snapshot, prefix, callback,
+  post-candidate, and complete selections
+- exact candidate/local/override and negative control assertions in the
+  dedicated dynamic-local bench
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This slice
+re-ranks internal hxhx Cpp preparation without changing compiler behavior or
+public production usability. `CppTargetCore.hx` remains unchanged at 26,251
+lines and broader extraction remains owned by `haxe_ocaml-36ec`; the dedicated
+bench remains unchanged at 678 lines. The latest ignored upstream run remains
+behavior-oracle evidence only; no upstream compiler or test source was copied.
+`thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were deliberately
+skipped because complete focused attribution produced a clear negative result
+and a bounded next preparation family.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
