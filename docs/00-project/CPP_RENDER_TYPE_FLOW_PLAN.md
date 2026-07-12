@@ -5361,6 +5361,49 @@ source was copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle
 were deliberately skipped because the pass already has the exact necessary
 early return and focused evidence accounts for the remaining cost.
 
+## 2026-07-12 StringMap Preparation Attribution
+
+Follow-up bead `haxe_ocaml-3lv9w` decomposed the TestEReg StringMap preparation
+phase without a production edit. The phase already runs a syntax-only guard
+for unhinted Map/StringMap/IntMap constructor locals before entering the
+stateful inference pass.
+
+Across three fresh 5,000-call processes, the guard median was 0.078727s and
+the complete negative branch median was 0.078442s, which is timing-equivalent.
+The positive constructor/set/inference path measured 0.382782s and retained
+the exact `std::shared_ptr<StringMap<int>>` override. Thus the entire negative
+TestEReg phase is the necessary evidence guard; no inference, snapshot,
+restoration, or write work remains behind it.
+
+Exact controls cover unhinted and explicitly typed StringMap locals, nested
+maps, a typed outer shadow around a block-local inferred map, unrelated
+map-like constructors, negative no-write state, and exact positive override
+state. No compiler source changed, so no current-source rebuild or strict
+rerun is required.
+
+Follow-up `haxe_ocaml-52x73` owns separate attribution of the next stable
+`infer_generic_factory_locals` phase, about 0.000065s in the latest strict
+trace.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-string-map-prep-attribution.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-bind-candidate-gate.log`
+
+Validation for this attribution-only slice includes three independent 5,000-
+call guard, complete-negative, and complete-positive selections; exact map,
+typing, nesting, shadow, unrelated, and override controls; the Cpp native
+smoke and full helper-render bench; the Cpp plan, mega-file, changed/full Haxe
+format guards; and `git diff --check`.
+
+README Goals and North Star progress bars remain unchanged. This adds
+reproducible hxhx Cpp attribution without changing compiler behavior or public
+readiness. `CppTargetCore.hx` remains unchanged at 26,254 lines, extraction
+remains owned by `haxe_ocaml-36ec`, and attribution is isolated in a documented
+127-line bench module. No upstream source was copied. `thinking:xhigh` was not
+crossed; Oracle/GPT were skipped because the existing guard fully accounts for
+the negative phase.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
