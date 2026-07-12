@@ -2397,6 +2397,15 @@ class M14CppHelperRenderBenchIntegrationTest {
 			&& @:privateAccess backend.cpp.CppTargetCore.directERegStringCallbackBodyExpr(matchedLeft, ["r"], ["std::shared_ptr<EReg>"], "std::string",
 				scope) == null,
 			"Non-EReg arguments, non-String returns, and non-concatenation callbacks should retain general lambda rendering");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.directIsolatedERegStringCallbackBodyExpr(matchedLeft, ["r"], ["std::shared_ptr<EReg>"],
+			"std::string", scope) == "r->matchedLeft()"
+			&& @:privateAccess backend.cpp.CppTargetCore.directIsolatedERegStringCallbackBodyExpr(matched, ["r"], ["std::shared_ptr<EReg>"], "std::string",
+				scope) == "r->matched(0).value_or(std::string())"
+			&& @:privateAccess backend.cpp.CppTargetCore.directIsolatedERegStringCallbackBodyExpr(ECall(EField(EIdent("r"), "matched"), [EIdent("number")]),
+				["r"], ["std::shared_ptr<EReg>"], "std::string", scope) == null
+			&& @:privateAccess backend.cpp.CppTargetCore.directIsolatedERegStringCallbackBodyExpr(ECall(EField(EIdent("other"), "matchedLeft"), []), ["r"],
+				["std::shared_ptr<EReg>"], "std::string", scope) == null,
+			"Scope-isolated EReg callback returns should accept exact capture leaves and decline dynamic indices or other receivers");
 		final shadowScope = eRegBenchScope();
 		shadowScope.localNames.set("r", "outer_r");
 		shadowScope.localTypes.set("r", "std::string");

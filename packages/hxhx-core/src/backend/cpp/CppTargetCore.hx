@@ -22167,6 +22167,29 @@ class CppTargetCore {
 			case EBinop("+", _, _):
 				directIsolatedERegStringConcatExpr(body, sanitizeIdentifier(argNames[0]), scope);
 			case _:
+				directIsolatedERegStringCallbackReturnExpr(body, sanitizeIdentifier(argNames[0]), scope);
+		};
+	}
+
+	/** Render an exact callback-owned EReg String result without installing lambda-local scope. **/
+	static function directIsolatedERegStringCallbackReturnExpr(expr:HxExpr, callbackArg:String, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case EString(value):
+				"std::string(" + quoteString(value) + ")";
+			case ECall(EField(ECall(EField(EIdent(receiver), "matched"), matchedArgs), "substr"), substrArgs) if (sanitizeIdentifier(receiver) == callbackArg):
+				directERegMatchedSubstrCallbackLeafExpr(receiver, matchedArgs, substrArgs, scope);
+			case ECall(EField(EIdent(receiver), method), args) if (sanitizeIdentifier(receiver) == callbackArg):
+				final target = callbackArg;
+				switch (sanitizeIdentifier(method)) {
+					case "matchedLeft" | "matchedRight" if (args.length == 0):
+						target + "->" + sanitizeIdentifier(method) + "()";
+					case "matched" if (args.length == 1):
+						final index = directPrimitiveLiteralCallArgExprForExpectedType(args[0], "int", scope);
+						index == null ? null : target + "->matched(" + index + ").value_or(std::string())";
+					case _:
+						null;
+				}
+			case _:
 				null;
 		};
 	}

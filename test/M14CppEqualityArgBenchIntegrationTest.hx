@@ -93,12 +93,14 @@ class M14CppEqualityArgBenchIntegrationTest {
 		final scope = fixture().scope;
 		final literal = EString('{ test } "quoted"\nnext');
 		final concat = EBinop("+", EString("prefix:"), EIdent("typedText"));
-		final freshMap = ECall(EField(ENew("EReg", [EString("z?"), EString("g")]), "map"),
-			[EString("ab"), ELambda(["r"], ECall(EField(EIdent("r"), "matched"), [EInt(0)]))]);
+		final freshMapReceiver = ENew("EReg", [EString("z?"), EString("g")]);
+		final freshMapCallback = ELambda(["r"], ECall(EField(EIdent("r"), "matched"), [EInt(0)]));
+		final freshMap = ECall(EField(freshMapReceiver, "map"), [EString("ab"), freshMapCallback]);
 		final typedMatched = ECall(EField(EIdent("block"), "matched"), [EInt(0)]);
 		final typedMatchedLeft = ECall(EField(EIdent("block"), "matchedLeft"), []);
 		final typedMatchedRight = ECall(EField(EIdent("block"), "matchedRight"), []);
-		final typedMap = ECall(EField(EIdent("block"), "map"), [EString("ab"), ELambda(["r"], ECall(EField(EIdent("r"), "matchedLeft"), []))]);
+		final typedMapCallback = ELambda(["r"], ECall(EField(EIdent("r"), "matchedLeft"), []));
+		final typedMap = ECall(EField(EIdent("block"), "map"), [EString("ab"), typedMapCallback]);
 		final freshReplace = ECall(EField(ENew("EReg", [EString("z?"), EString("g")]), "replace"), [EString("ab"), EString("x")]);
 		final matchedPosField = EField(ECall(EField(EIdent("block"), "matchedPos"), []), "pos");
 		final splitLength = EField(ECall(EField(EIdent("block"), "split"), [EString("a")]), "length");
@@ -151,6 +153,60 @@ class M14CppEqualityArgBenchIntegrationTest {
 		var typedMapDirectEqSample = "";
 		final typedMapDirectEqSeconds = elapsedNamed("typed_map_direct_eq", calls, () -> {
 			typedMapDirectEqSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("eq", [typedMap, EString("mapped")], scope);
+		});
+		var typedMapInferSample = "";
+		final typedMapInferSeconds = elapsedNamed("typed_map_infer", calls, () -> {
+			typedMapInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(typedMap, scope);
+		});
+		var typedMapRenderSample = "";
+		final typedMapRenderSeconds = elapsedNamed("typed_map_render", calls, () -> {
+			typedMapRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(typedMap, scope);
+		});
+		var typedMapReceiverSample = "";
+		final typedMapReceiverSeconds = elapsedNamed("typed_map_receiver", calls, () -> {
+			typedMapReceiverSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EIdent("block"), scope);
+		});
+		var typedMapStringArgSample = "";
+		final typedMapStringArgSeconds = elapsedNamed("typed_map_string_arg", calls, () -> {
+			typedMapStringArgSample = @:privateAccess backend.cpp.CppTargetCore.eRegStringCallArgExpr(EString("ab"), scope);
+		});
+		var typedMapCallbackArgSample = "";
+		final typedMapCallbackArgSeconds = elapsedNamed("typed_map_callback_arg", calls, () -> {
+			typedMapCallbackArgSample = @:privateAccess backend.cpp.CppTargetCore.eRegMapCallbackArgExpr(typedMapCallback, scope);
+		});
+		var typedMapComparableSample = "";
+		final typedMapComparableSeconds = elapsedNamed("typed_map_comparable", calls, () -> {
+			typedMapComparableSample = @:privateAccess
+				backend.cpp.CppTargetCore.eqComparableArgExpr(typedMap, "std::string", "std::string", scope);
+		});
+		var typedMapOptionalProbeSample:Null<String> = "unexpected";
+		final typedMapOptionalProbeSeconds = elapsedNamed("typed_map_optional_probe", calls, () -> {
+			typedMapOptionalProbeSample = @:privateAccess backend.cpp.CppTargetCore.stringCodeAccessOptionalExpr(typedMap, scope);
+		});
+		var typedMapPredicateSample = false;
+		final typedMapPredicateSeconds = elapsedNamed("typed_map_predicate", calls, () -> {
+			typedMapPredicateSample = @:privateAccess backend.cpp.CppTargetCore.isTypedLocalERegMapCall(EIdent("block"), "map", 2, scope);
+		});
+		var freshMapInferSample = "";
+		final freshMapInferSeconds = elapsedNamed("fresh_map_infer", calls, () -> {
+			freshMapInferSample = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(freshMap, scope);
+		});
+		var freshMapRenderSample = "";
+		final freshMapRenderSeconds = elapsedNamed("fresh_map_render", calls, () -> {
+			freshMapRenderSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(freshMap, scope);
+		});
+		var freshMapReceiverSample = "";
+		final freshMapReceiverSeconds = elapsedNamed("fresh_map_receiver", calls, () -> {
+			freshMapReceiverSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(freshMapReceiver, scope);
+		});
+		var freshMapCallbackArgSample = "";
+		final freshMapCallbackArgSeconds = elapsedNamed("fresh_map_callback_arg", calls, () -> {
+			freshMapCallbackArgSample = @:privateAccess backend.cpp.CppTargetCore.eRegMapCallbackArgExpr(freshMapCallback, scope);
+		});
+		var freshMapComparableSample = "";
+		final freshMapComparableSeconds = elapsedNamed("fresh_map_comparable", calls, () -> {
+			freshMapComparableSample = @:privateAccess
+				backend.cpp.CppTargetCore.eqComparableArgExpr(freshMap, "std::string", "std::string", scope);
 		});
 		var splitLengthInferSample = "";
 		final splitLengthInferSeconds = elapsedNamed("split_length_infer", calls, () -> {
@@ -215,6 +271,21 @@ class M14CppEqualityArgBenchIntegrationTest {
 			+ typedMapEqualitySample
 			+ ")",
 			"typed EReg map equality should preserve exact argument and direct-call output");
+		assertTrue(typedMapInferSample == "std::string"
+			&& typedMapRenderSample == typedMapEqualitySample.substr(0, typedMapEqualitySample.lastIndexOf(", std::string"))
+			&& typedMapComparableSample == typedMapRenderSample
+			&& typedMapReceiverSample == "block"
+			&& typedMapStringArgSample == '"ab"'
+			&& typedMapCallbackArgSample == '[&](std::shared_ptr<EReg> r) -> std::string { return r->matchedLeft(); }'
+			&& typedMapOptionalProbeSample == null
+			&& typedMapPredicateSample,
+			"typed EReg map phase probes should preserve exact inference, receiver, arguments, and final render output");
+		assertTrue(freshMapInferSample == "std::string"
+			&& freshMapRenderSample == freshMapEqualitySample.substr(0, freshMapEqualitySample.lastIndexOf(", std::string"))
+			&& freshMapComparableSample == freshMapRenderSample
+			&& freshMapReceiverSample == 'std::make_shared<EReg>("z?", "g")'
+			&& freshMapCallbackArgSample == '[&](std::shared_ptr<EReg> r) -> std::string { return r->matched(0).value_or(std::string()); }',
+			"fresh EReg map phase probes should preserve exact inference, receiver, callback, and final render output");
 		assertTrue(freshReplaceEqualitySample == 'std::make_shared<EReg>("z?", "g")->replace("ab", "x"), std::string("replaced")',
 			"fresh EReg replace equality should preserve its fixed String result");
 		assertTrue(matchedPosEqualitySample == "(block->matchedPos().pos), 0",
@@ -256,7 +327,13 @@ class M14CppEqualityArgBenchIntegrationTest {
 			+ " typed_side_equality_seconds=" + typedSideEqualitySeconds + " typed_map_equality_seconds=" + typedMapEqualitySeconds
 			+ " fresh_replace_equality_seconds=" + freshReplaceEqualitySeconds + " matched_pos_equality_seconds=" + matchedPosEqualitySeconds
 			+ " optional_equality_seconds=" + optionalEqualitySeconds + " dynamic_equality_seconds=" + dynamicEqualitySeconds
-			+ " typed_map_direct_eq_seconds=" + typedMapDirectEqSeconds);
+			+ " typed_map_direct_eq_seconds=" + typedMapDirectEqSeconds + " typed_map_infer_seconds=" + typedMapInferSeconds + " typed_map_render_seconds="
+			+ typedMapRenderSeconds + " typed_map_receiver_seconds=" + typedMapReceiverSeconds + " typed_map_string_arg_seconds=" + typedMapStringArgSeconds
+			+ " typed_map_callback_arg_seconds=" + typedMapCallbackArgSeconds + " typed_map_comparable_seconds=" + typedMapComparableSeconds
+			+ " typed_map_optional_probe_seconds=" + typedMapOptionalProbeSeconds + " typed_map_predicate_seconds=" + typedMapPredicateSeconds
+			+ " fresh_map_infer_seconds=" + freshMapInferSeconds + " fresh_map_render_seconds=" + freshMapRenderSeconds + " fresh_map_receiver_seconds="
+			+ freshMapReceiverSeconds + " fresh_map_callback_arg_seconds=" + freshMapCallbackArgSeconds + " fresh_map_comparable_seconds="
+			+ freshMapComparableSeconds);
 		Sys.println("CPP_SPLIT_LENGTH_INFER_BENCH:PASS calls=" + calls + " infer_seconds=" + splitLengthInferSeconds + " predicate_seconds="
 			+ splitLengthPredicateSeconds + " render_seconds=" + splitLengthRenderSeconds + " equality_seconds=" + splitLengthEqualitySeconds
 			+ " inferred_type=" + splitLengthInferSample);

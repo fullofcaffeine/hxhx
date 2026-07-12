@@ -4266,6 +4266,84 @@ copied or consulted. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle
 were deliberately skipped because selectable local attribution exposed a
 bounded negative result and a clear next profiling seam.
 
+## 2026-07-11 Scope-Isolated EReg Capture Callbacks
+
+Follow-up bead `haxe_ocaml-thvk6` decomposed typed and fresh `EReg.map`
+equality rendering with selectable fresh-process phases for inference,
+receiver rendering, String adaptation, callback adaptation, exact map
+rendering, comparable-argument rendering, optional probing, and typed-local
+dispatch. The new probes retain exact full-call output and independently time
+one named phase while all other assertions execute only once.
+
+The dominant simple-map cost was callback adaptation, not receiver or result
+inference. With only the candidate branch disabled but the same helper and
+source layout present, three 5,000-call samples had medians of 0.884249s for
+the typed callback, 0.959607s for typed map rendering, and 1.197377s for the
+complete typed equality. Fresh equivalents were 0.847245s, 0.909274s, and
+1.070222s. Receiver, literal String argument, optional-result probe, and
+target-owned map predicate timings were much smaller.
+
+The existing scope-isolated EReg callback renderer accepted exact
+concatenations but declined a single callback-owned capture. It now also
+accepts a String literal, zero-argument `matchedLeft`/`matchedRight`, a
+literal-indexed `matched`, or the existing literal-indexed matched substring.
+These shapes render before lambda-local scope copying. Dynamic indices,
+captured values, other receivers, wrong arities, and every other callback body
+still use the general lambda path. Nullable indexed captures preserve
+`.value_or(std::string())`; side captures remain non-nullable Strings.
+
+Three 5,000-call post-change samples had medians of 0.154169s for typed
+callback adaptation, 0.233324s for typed map rendering, and 0.573383s for the
+complete typed equality, reductions of about 82.6%, 75.7%, and 52.1%.
+Fresh callback, map-render, and complete-equality medians were 0.118218s,
+0.198128s, and 0.508186s, reductions of about 86.0%, 78.2%, and 52.5%.
+Focused controls freeze exact side and nullable indexed output plus declines
+for dynamic indices and non-callback receivers.
+
+The exact-command current-source strict probe rendered all 88
+`TestEReg.test` statements and reached the same `Parser_XmlParserException`
+frontier before the expected 480-second timeout. The method moved from
+0.032882s to 0.032201s and its class from 0.034571s to 0.033852s, about 2.1%
+lower, while `TestBytes.test` moved from 1.168548s to 1.147620s. That aggregate
+movement is not attributed to this shortcut: the 20 traced map statements
+were effectively flat at 0.007719s versus 0.007548s, and their first-argument
+render phases show that the 14 typed maps already use a cheap named callback.
+The six fresh maps use different inline callback bodies. Follow-up
+`haxe_ocaml-1upd7` owns those exact bodies and must use lambda-phase evidence
+rather than infer a win from the method aggregate.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-test-value-assert-direct-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-isolated-ereg-capture-callback-warm.log`
+
+Focused validation for this slice includes:
+
+- three branch-disabled and three post-change 5,000-call selected samples
+- `npm run hxhx:build-current-source`
+- the exact-command non-delegating 480-second strict Cpp probe
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run test:m14:cpp-numeric-casts-render-bench`
+- `npm run test:m14:cpp-strict-frontier-summary`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is a bounded
+internal callback-render improvement while strict Cpp remains expected-red,
+so public production usability does not change. Generated C++ is frozen by
+focused and native controls; runtime support and committed bootstrap snapshots
+are unchanged. `CppTargetCore.hx` remains a red mega-file at 26,173 lines; the
+23-line production increase extends its existing target-owned EReg callback
+seam, while broader extraction remains owned by `haxe_ocaml-36ec`. No upstream
+compiler or test source was copied or consulted. `thinking:xhigh` was not
+crossed. GPT 5.5 Pro and Oracle were deliberately skipped because exact
+callback ownership, focused A/B evidence, and same-index strict evidence gave
+a bounded, provenance-neutral seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
