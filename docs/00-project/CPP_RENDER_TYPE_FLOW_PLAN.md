@@ -4422,6 +4422,72 @@ source was copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were
 deliberately skipped because the fixed callback contract and same-index phase
 evidence gave a bounded, provenance-neutral seam.
 
+## 2026-07-12 TestEReg Post-Signature Re-Rank
+
+Follow-up bead `haxe_ocaml-ymabs` re-established the non-lambda-phase
+`TestEReg.test` ranking after the fixed `EReg.map` callback signature. The
+first exact-command attempt was non-comparable because `hxcpp` cloning used
+the entire 480-second target budget and never reached the compiler. One
+bounded retry cloned in 72 seconds and rendered all 88 TestEReg statements,
+but the outer target budget expired later at the same
+`Parser_XmlParserException` frontier. The retry therefore supplies complete
+method-local evidence but is not an all-suite timing comparison.
+
+Relative to the preceding non-lambda scope-isolated callback log, the 88
+statement total moved from 0.026763s to 0.026584s. The 44 equality statements
+remain the largest traced family at 0.015401s, followed by 13 local
+declarations at 0.005246s, 19 true assertions at 0.002805s, nine false
+assertions at 0.001573s, two other statements at 0.001085s, and one exception
+assertion at 0.000475s. Equality tracing still overstates useful work according
+to the earlier selectable fresh-process attribution, so its rank alone does
+not justify another pair-level equality shortcut.
+
+The same-index 20-map equality residual fell from 0.007719s to 0.007097s,
+about 8.1%. The six raw-lambda maps affected by the fixed-signature change
+fell from 0.002797s to 0.002417s, about 13.6%; the 14 named-callback maps moved
+from 0.004922s to 0.004681s, about 4.9%, which is treated as run variation
+rather than causal evidence. Method preparation measured 0.003368s on its
+cache miss and 0.000319s on its cache hit, versus 0.003057s and 0.000300s in
+the comparator. `TestEReg.test` measured 0.032458s and its class 0.034208s,
+about 0.8% and 1.1% higher, while the independent `TestBytes.test` control
+moved from 1.147620s to 1.143601s. These mixed aggregate movements reinforce
+the same-index, focused-evidence boundary.
+
+The comparator contains 484 method-selected trace records. The retry has 483
+prefix-matched records because the timeout heartbeat spliced the prefix from
+the index-84 `eq_render_first` line; its payload remains in the log and all 88
+statement records are complete. No trace phase was intentionally removed in
+this non-lambda configuration. Follow-up `haxe_ocaml-ww5cj` owns selectable
+attribution of the stable 0.005246s local-declaration family, especially its
+11 repeated EReg constructor locals, before any production shortcut is
+considered.
+
+Relevant current-source evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-isolated-ereg-capture-callback-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-fixed-ereg-map-signature-warm.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-fixed-ereg-map-signature-warm-retry.log`
+
+Validation for this attribution-only slice includes:
+
+- `npm run hxhx:build-current-source`
+- two exact-command non-delegating strict Cpp attempts, one setup-only and one
+  with complete TestEReg method-local evidence
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This slice
+re-ranks internal Cpp renderer work without changing compiler behavior or
+public production usability. `CppTargetCore.hx` remains unchanged at 26,175
+lines, and broader extraction remains owned by `haxe_ocaml-36ec`. The ignored
+upstream suite was executed only as a behavior oracle; no upstream compiler or
+test source was copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and
+Oracle were deliberately skipped because complete method-local evidence gives
+a bounded next attribution seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
