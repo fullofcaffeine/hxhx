@@ -6056,8 +6056,12 @@ class CppTargetCore {
 		return stdlibConstructorOwnerName(removeTypeHintWhitespace(StringTools.trim(HxFunctionArg.getTypeHint(arg))));
 	}
 
+	/** Apply target-known argument types only to declared parameters that can receive an override. **/
 	static function applyKnownStdlibFunctionArgOverrides(scope:CppRenderScope, fn:HxFunctionDecl):Void {
 		if (scope == null || scope.owner == null || fn == null)
+			return;
+		final args = HxFunctionDecl.getArgs(fn);
+		if (args.length == 0)
 			return;
 		applyKnownUtestForwardedPositionArgOverride(scope, fn);
 		final ownerName = HxClassDecl.getName(scope.owner);
@@ -6066,7 +6070,6 @@ class CppTargetCore {
 			fn) : knownStdlibMethodParamCppTypes(ownerName, methodName, scope, scope.classLookup);
 		if (knownTypes.length == 0)
 			return;
-		final args = HxFunctionDecl.getArgs(fn);
 		for (i in 0...args.length) {
 			if (i >= knownTypes.length)
 				break;

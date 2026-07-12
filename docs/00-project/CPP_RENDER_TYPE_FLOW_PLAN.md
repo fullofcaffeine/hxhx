@@ -5091,6 +5091,88 @@ behavior-oracle evidence only; no upstream compiler or test source was copied.
 skipped because complete focused attribution produced a clear negative result
 and a bounded next preparation family.
 
+## 2026-07-12 Zero-Argument Known-Type Preparation Gate
+
+Follow-up bead `haxe_ocaml-kvhtl` attributed the next named TestEReg
+cache-miss phase to `applyKnownStdlibFunctionArgOverrides`. TestEReg.test has
+no declared arguments, so neither inherited utest position recognition nor a
+target-owned stdlib signature can write an argument override. The preparation
+function now returns after reading the empty argument list. Functions with one
+or more arguments retain inherited-position scanning, constructor or method
+signature lookup, optional-position handling, and bounded override writes.
+
+A new documented 207-line focused module reproduces the repo-owned TestEReg
+owner/inheritance and 88-statement scale without copying upstream source.
+Across three fresh 5,000-call baseline processes, medians were 0.000827s for
+the zero-argument check, 0.013707s for inherited Test recognition, 0.033480s
+for the empty known-signature lookup, 0.047970s for the replayed ungated pass,
+0.048406s for the complete pre-change pass, and 0.080025s for a target-owned
+two-override write control.
+
+After the production gate, the complete-pass median was 0.001117s versus
+0.047906s for the same-source ungated replay, about 97.7% lower. The
+zero-argument check was 0.000813s. Inherited recognition was 0.013829s, known
+signature lookup was 0.033502s, and target-owned override writes were
+0.080181s; those independent controls were effectively flat. Exact assertions
+cover an inherited forwarded optional position, a non-forwarded optional
+position, the two target-owned Test.exc argument types, an extra argument
+beyond that known signature, an unrelated exc lookalike, and both JsonPrinter
+constructor argument types.
+
+The exact-command current-source strict probe cloned hxcpp in 53 seconds,
+rendered all 88 TestEReg statements, and recorded all 484 selected records
+before the expected-red 480-second target timeout. `known_arg_types` fell from
+0.000235796s to 0.000000954s, about 99.6%, and total cache-miss preparation
+fell from 0.002727985s to 0.002513885s, about 7.8%.
+`infer_dynamic_locals` was also slightly lower at 0.000944s versus 0.000978s.
+TestEReg.test was flat at 0.031551s versus 0.031522s, its class was flat at
+0.033294s versus 0.033203s, the 88-statement sum was 0.026571s versus
+0.026400s, and the independent TestBytes.test control was 1.144838s versus
+1.139095s. Setup and later-frontier variation let the run continue through
+TestXML and Md5 into StringTools, so no aggregate or final-frontier throughput
+claim is made. The terminal result remained `Cpp: FAIL (482s, exit 124)` and
+the strict wrapper recorded `expected_red_probe_exit=1`.
+
+Follow-up `haxe_ocaml-xqw8e` owns selectable attribution of the next stable
+bounded phase, `infer_bind_callable_locals` at about 0.000090s. The larger
+dynamic-local phase retains the preceding diffuse negative stopping result.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-known-arg-types-prep-baseline.log`
+- `.artifacts/full1/cpp-strict-current/cpp-known-arg-types-prep-after-zero-arg-gate.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-resolved-gate-normalization.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-known-arg-zero-gate.log`
+
+Focused validation for this slice includes:
+
+- three independent 5,000-call zero-argument, inherited-recognition,
+  known-signature, current/old complete, and override-write selections
+- exact inherited, optional, extra-argument, unrelated, and target-owned
+  signature controls in the dedicated known-argument-type bench
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run hxhx:build-current-source`
+- the exact-command non-delegating strict Cpp probe
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is a bounded
+internal hxhx Cpp preparation improvement while strict Cpp remains
+expected-red, so public production usability does not change.
+`CppTargetCore.hx` remains a red mega-file at 26,254 lines; the three-line net
+production increase is an argument-count invariant inside the existing
+preparation function, while broader extraction remains owned by
+`haxe_ocaml-36ec`. New attribution is isolated in the dedicated documented
+207-line bench module. The ignored upstream suite was executed only as a
+behavior oracle; no upstream compiler or test source was copied.
+`thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were deliberately
+skipped because an empty declared-argument list makes override writes
+impossible and exact positive paths retain the complete behavior.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
