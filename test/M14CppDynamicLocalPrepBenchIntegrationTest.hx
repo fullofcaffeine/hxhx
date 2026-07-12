@@ -130,6 +130,14 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 		}
 	}
 
+	/** Replay the resolved EReg.map dispatch and inert-leaf descent skipped by the current collector. **/
+	static function replayResolvedERegMapInferenceWork(callee:HxExpr, args:Array<HxExpr>, scope:backend.cpp.CppRenderScope, candidates:StringMap<Bool>):Void {
+		@:privateAccess backend.cpp.CppTargetCore.collectForwardedCallArgTypeOverrides(callee, args, scope, candidates);
+		@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromExprWithCandidates(callee, scope, candidates);
+		for (arg in args)
+			@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromExprWithCandidates(arg, scope, candidates);
+	}
+
 	/** Build a late-candidate method with the strict frontier's statement count. **/
 	static function testERegShapedFunction(callback:HxExpr, forwardedCalls:Bool):HxFunctionDecl {
 		final body = new Array<HxStmt>();
@@ -453,6 +461,22 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromExpr(mapExpr, mapFixture.scope, mapCandidates);
 			mapExprOldWalkSample = mapFixture.scope.localTypeOverrides.get("callback");
 		});
+		var mapExprResolvedOldSample = "";
+		final mapExprResolvedOldSeconds = elapsedNamed("map_expr_resolved_old", calls, () -> {
+			@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromExpr(mapExpr, mapFixture.scope, mapCandidates);
+			replayResolvedERegMapInferenceWork(EField(EIdent("regex0"), "map"), [EString("value"), EIdent("callback")], mapFixture.scope, mapCandidates);
+			mapExprResolvedOldSample = mapFixture.scope.localTypeOverrides.get("callback");
+		});
+		var resolvedMapCallSample = "";
+		final resolvedMapCallSeconds = elapsedNamed("resolved_map_call", calls, () -> {
+			@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromExpr(mapCall, mapFixture.scope, mapCandidates);
+			resolvedMapCallSample = mapFixture.scope.localTypeOverrides.get("callback");
+		});
+		var resolvedMapCallOldSample = "";
+		final resolvedMapCallOldSeconds = elapsedNamed("resolved_map_call_old", calls, () -> {
+			replayResolvedERegMapInferenceWork(EField(EIdent("regex0"), "map"), [EString("value"), EIdent("callback")], mapFixture.scope, mapCandidates);
+			resolvedMapCallOldSample = mapFixture.scope.localTypeOverrides.get("callback");
+		});
 		var mapExprOldSample = "";
 		final mapExprOldSeconds = elapsedNamed("map_expr_old", calls, () -> {
 			replayOldFreeCallCandidateLookup([mapCall, EString("mapped")], mapFixture.scope, mapCandidates);
@@ -483,6 +507,12 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			resolvedMapOldSample = @:privateAccess backend.cpp.CppTargetCore.applyTargetOwnedForwardedERegMapCallbackOverride(EField(EIdent("regex0"), "map"),
 				[EString("value"), EIdent("callback")], resolvedMapFixture.scope, mapCandidates);
 		});
+		final resolvedInertLeafSample = @:privateAccess backend.cpp.CppTargetCore.targetOwnedResolvedERegMapInferenceLeavesAreInert(EField(EIdent("regex0"),
+			"map"), [EString("value"), EIdent("callback")], resolvedMapFixture.scope, mapCandidates);
+		final nestedCandidateLeafSample = @:privateAccess backend.cpp.CppTargetCore.targetOwnedResolvedERegMapInferenceLeavesAreInert(EField(EIdent("regex0"),
+			"map"), [ECall(EIdent("identity"), [EIdent("callback")]), EIdent("callback")], resolvedMapFixture.scope, mapCandidates);
+		final unrelatedReceiverLeafSample = @:privateAccess backend.cpp.CppTargetCore.targetOwnedResolvedERegMapInferenceLeavesAreInert(EField(EIdent("other"),
+			"map"), [EString("value"), EIdent("callback")], resolvedMapFixture.scope, mapCandidates);
 
 		final staleFn = new HxFunctionDecl("stale", Public, false, [], "Void", [
 			SVar("callback", "String->String", ELambda(["value"], EIdent("value")), HxPos.unknown()),
@@ -532,10 +562,15 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 		assertTrue(!mapOuterGateSample
 			&& mapLeafSample == EXPECTED_CALLBACK_TYPE
 			&& mapNonemptyCheckSample == 8
-			&& mapExprOldWalkSample == EXPECTED_CALLBACK_TYPE,
+			&& mapExprOldWalkSample == EXPECTED_CALLBACK_TYPE
+			&& mapExprResolvedOldSample == EXPECTED_CALLBACK_TYPE
+			&& resolvedMapCallSample == EXPECTED_CALLBACK_TYPE
+			&& resolvedMapCallOldSample == EXPECTED_CALLBACK_TYPE,
 			"outer-gate, recursive-leaf, and nonempty-candidate attribution should retain exact map-expression state");
 		assertTrue(resolvedMapSample == EXPECTED_CALLBACK_TYPE + "/" + EXPECTED_CALLBACK_TYPE && resolvedMapOldSample,
 			"already-resolved EReg.map callback evidence should retain both exact override maps");
+		assertTrue(resolvedInertLeafSample && !nestedCandidateLeafSample && !unrelatedReceiverLeafSample,
+			"resolved EReg.map leaf skipping should preserve nested-candidate and unrelated-receiver traversal");
 		assertTrue(staleSample == "std::function<std::string(bool)>" && openSample == "int" && !plainEvidence,
 			"stale callable, open Dynamic, and ordinary local controls should retain their inference contracts");
 
@@ -548,7 +583,9 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			+ overrideWriteSeconds + " complete_seconds=" + completeSeconds + " complete_old_seconds=" + completeOldSeconds + " complete_no_forward_seconds="
 			+ noForwardSeconds + " map_expr_seconds=" + mapExprSeconds + " map_outer_gate_seconds=" + mapOuterGateSeconds + " map_leaf_walk_seconds="
 			+ mapLeafSeconds + " map_nonempty_checks_seconds=" + mapNonemptyCheckSeconds + " map_expr_old_seconds=" + mapExprOldSeconds
-			+ " map_expr_old_walk_seconds=" + mapExprOldWalkSeconds + " forwarded_map_seconds=" + forwardedMapSeconds + " resolved_forwarded_map_seconds="
-			+ resolvedMapSeconds + " resolved_forwarded_map_old_seconds=" + resolvedMapOldSeconds + " override=" + completeSample);
+			+ " map_expr_old_walk_seconds=" + mapExprOldWalkSeconds + " map_expr_resolved_old_seconds=" + mapExprResolvedOldSeconds
+			+ " resolved_map_call_seconds=" + resolvedMapCallSeconds + " resolved_map_call_old_seconds=" + resolvedMapCallOldSeconds
+			+ " forwarded_map_seconds=" + forwardedMapSeconds + " resolved_forwarded_map_seconds=" + resolvedMapSeconds
+			+ " resolved_forwarded_map_old_seconds=" + resolvedMapOldSeconds + " override=" + completeSample);
 	}
 }

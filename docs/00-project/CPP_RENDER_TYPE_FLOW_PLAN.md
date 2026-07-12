@@ -4884,6 +4884,77 @@ copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were
 deliberately skipped because the nonempty-map invariant is local, monotonic,
 and covered by exact state assertions.
 
+## 2026-07-12 Resolved EReg Map Inert Leaves
+
+Follow-up bead `haxe_ocaml-j3v4d` tested the remaining target-owned work after
+checked-entry recursive traversal. Once both override maps already contain the
+exact EReg callback type, a typed-local EReg `map` call with a literal String
+first argument and direct callback candidate has no child expression that can
+add dynamic-local evidence. The collector now returns after proving that exact
+shape. A nonliteral first argument, nested candidate, unresolved or conflicting
+override, unrelated receiver, non-map call, or general call retains forwarded
+dispatch and recursive descent.
+
+The dedicated bench replays the prior resolved forwarded-map dispatch and
+callee/argument descent without replaying unrelated outer work. Across three
+fresh 5,000-call processes, the current resolved map-call median was 0.034727s
+versus 0.043881s for the old work, about 20.9% lower. One complete map/equality
+expression moved from 0.059072s to 0.046822s, about 20.7%, post-candidate
+collection moved from 1.187770s to 1.002376s, about 15.6%, and the complete
+pass moved from 2.329319s to 2.122414s, about 8.9%. Prefix collection was flat
+at 0.771798s versus 0.771742s, and callback declaration was effectively flat
+at 0.348515s versus 0.345265s. Exact resolved/unresolved, nested-candidate,
+unrelated-receiver, stale-callable, open-Dynamic, candidate, and override state
+assertions remain active for every selection.
+
+The exact-command current-source strict probe cloned `hxcpp` in 35 seconds,
+rendered all 88 TestEReg statements, and remained expected-red at the
+480-second target timeout. Faster setup allowed it to continue beyond the
+previous `Parser_XmlParserException` point into later helpers, so final-frontier
+position is not compared. The method-local evidence remains comparable:
+`infer_dynamic_locals` moved from 0.001119s to 0.001071s, about 4.3%, and the
+cache-miss preparation total moved from 0.002992s to 0.002890s. The method,
+class, and statement total moved slightly upward while the independent
+`TestBytes.test` control was flat at 1.144197s versus 1.144178s, so no aggregate
+claim is made. All 484 selected TestEReg records and all 88 statement records
+were present.
+
+Follow-up `haxe_ocaml-4eutf` owns decomposition of the remaining 0.034727s
+resolved-map proof: receiver/local-name recognition, method normalization,
+candidate lookup, exact callback type selection, and override comparisons.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-dynamic-local-resolved-map-inert-leaves.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-dynamic-local-unchecked-recursion.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-resolved-ereg-inert-leaves.log`
+
+Focused validation for this slice includes:
+
+- three independent 5,000-call current/old resolved-map, complete expression,
+  post-candidate, callback, prefix, and complete samples
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run hxhx:build-current-source`
+- the exact-command non-delegating strict Cpp probe
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is a bounded
+internal preparation improvement while strict Cpp remains expected-red, so
+public production usability does not change. `CppTargetCore.hx` remains a red
+mega-file at 26,246 lines; the 15-line production increase is an exact
+target-owned EReg predicate beside the existing dynamic-local traversal, while
+broader extraction remains owned by `haxe_ocaml-36ec`. Attribution remains in
+the dedicated documented 591-line bench module. The ignored upstream suite was
+executed only as a behavior oracle; no upstream compiler or test source was
+copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle were
+deliberately skipped because the literal/direct-candidate boundary is exact,
+locally provable, and covered by negative controls.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

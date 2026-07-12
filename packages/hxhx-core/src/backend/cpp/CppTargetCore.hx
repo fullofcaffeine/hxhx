@@ -10097,6 +10097,8 @@ class CppTargetCore {
 				for (arg in args)
 					collectDynamicLocalTypeOverridesFromExprWithCandidates(arg, scope, candidates);
 			case ECall(callee, args):
+				if (targetOwnedResolvedERegMapInferenceLeavesAreInert(callee, args, scope, candidates))
+					return;
 				collectForwardedCallArgTypeOverrides(callee, args, scope, candidates);
 				collectDynamicLocalTypeOverridesFromExprWithCandidates(callee, scope, candidates);
 				for (arg in args)
@@ -10136,6 +10138,19 @@ class CppTargetCore {
 					collectDynamicLocalTypeOverridesFromExprWithCandidates(arg, scope, candidates);
 			case _:
 		}
+	}
+
+	/** Recognize a resolved EReg.map call whose literal/identifier leaves cannot add candidate evidence. **/
+	static function targetOwnedResolvedERegMapInferenceLeavesAreInert(callee:HxExpr, args:Array<HxExpr>, scope:CppRenderScope,
+			candidates:haxe.ds.StringMap<Bool>):Bool {
+		if (!targetOwnedForwardedERegMapCallbackAlreadyResolved(callee, args, scope, candidates))
+			return false;
+		return switch (args[0]) {
+			case EString(_):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	/** Whether a free call can directly refine one of the current dynamic-local candidates. **/
