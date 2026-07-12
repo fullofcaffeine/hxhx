@@ -4726,6 +4726,85 @@ as a behavior oracle; no upstream compiler or test source was copied.
 skipped because exact same-source evidence and an already-established
 target-owned callback contract produced a bounded change.
 
+## 2026-07-12 Fresh EReg Prefix Registration
+
+Follow-up bead `haxe_ocaml-to5wc` split the 68-statement pre-candidate prefix
+into independently selectable work. Across fresh 5,000-call processes, the
+medians were 0.033610s for empty-candidate initializer walks, 0.137832s for
+local-name registration, 0.238096s for explicit EReg type selection, 0.391806s
+for the remaining callable/Dynamic predicates, 0.167908s for 57 empty-candidate
+equality statements, and 1.004866s for the complete prefix. The component
+phases explain about 96% of the total.
+
+The predicate phase split further into 0.016767s of callable checks and
+0.375897s of unhinted/Dynamic checks. All 11 declarations have already
+selected `std::shared_ptr<EReg>` from a syntactically fresh EReg constructor,
+so they cannot become callable or Dynamic candidates. The collector now stores
+that exact target-owned local type and returns before those candidate
+predicates. It still walks the initializer first, allocates the same shadow-safe
+local name, and takes the general path for non-fresh, unrelated, Dynamic,
+callable, and unknown initializers. Focused assertions cover plain and
+package-qualified EReg constructors plus an unrelated constructor.
+
+Across three same-source 5,000-call processes, the current prefix median was
+0.780775s versus 0.978042s with the old declaration work replayed, about 20.2%
+lower. The complete pass measured 2.594822s versus the preceding 2.854434s,
+about 9.1% lower. Callback declaration was effectively flat at 0.348587s versus
+0.351865s, and post-candidate collection moved only from 1.491344s to
+1.453301s. The no-forward shape also includes the optimized prefix and moved
+from 1.430209s to 1.182255s; it is supporting evidence, not an independent
+control. Exact local, candidate, override, stale-callable, open-Dynamic, and
+ordinary-local contracts remain active for every selection.
+
+The exact-command current-source strict probe cloned `hxcpp` in 76 seconds,
+rendered all 88 TestEReg statements, and reached the same
+`Parser_XmlParserException` frontier before the expected 480-second timeout.
+Its `infer_dynamic_locals` sample was 0.001218s versus 0.001027s, and cache-miss
+preparation was 0.003126s versus 0.002789s. The method, class, statement sum,
+and independent `TestBytes.test` control moved only slightly in mixed
+directions. This single strict micro-sample does not confirm the focused gain,
+so no strict or aggregate timing claim is made. All 484 selected records and
+all 88 statement records were present.
+
+Follow-up `haxe_ocaml-qnktj` owns the remaining 1.453301s post-candidate phase,
+especially outer equality recursion and the residual work around 19
+already-resolved EReg map calls.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-dynamic-local-prefix-selected.log`
+- `.artifacts/full1/cpp-strict-current/cpp-dynamic-local-prefix-predicate-selected.log`
+- `.artifacts/full1/cpp-strict-current/cpp-dynamic-local-prefix-after-fresh-ereg-fast-path.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-resolved-ereg-map-callback-cache.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-fresh-ereg-prefix-fast-path.log`
+
+Focused validation for this slice includes:
+
+- three independent 5,000-call samples for each prefix component, current/old
+  complete prefix, callback declaration, post-candidate, complete, and
+  no-forward phases
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run hxhx:build-current-source`
+- the exact-command non-delegating strict Cpp probe
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This is a bounded
+internal preparation improvement while strict Cpp remains expected-red, so
+public production usability does not change. `CppTargetCore.hx` remains a red
+mega-file at 26,226 lines; the 14-line production increase stays inside its
+existing dynamic-local collector, while broader extraction remains owned by
+`haxe_ocaml-36ec`. Attribution remains isolated in the dedicated documented
+517-line bench module rather than expanding the backend further. The ignored
+upstream suite was executed only as a behavior oracle; no upstream compiler or
+test source was copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and
+Oracle were deliberately skipped because the exact fresh-constructor contract
+and repeated same-source evidence produced a bounded seam.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict

@@ -10008,6 +10008,10 @@ class CppTargetCore {
 					collectDynamicLocalTypeOverridesFromExpr(init, scope, candidates);
 				final local = declareLocalName(name, scope);
 				final localType = cppLocalTypeHint(typeHint, init, scope);
+				if (localType == "std::shared_ptr<EReg>" && isFreshERegLocalInitializer(init)) {
+					scope.localTypes.set(local, localType);
+					return;
+				}
 				if (isLocalCallableInit(init) && isCppFunctionType(localType)) {
 					candidates.set(local, true);
 					scope.localTypes.set(local, localType);
@@ -10046,6 +10050,16 @@ class CppTargetCore {
 				collectDynamicLocalTypeOverridesFromExpr(expr, scope, candidates);
 			case SReturnVoid(_) | SBreak(_) | SContinue(_):
 		}
+	}
+
+	/** Register a fresh EReg local without running callable or Dynamic candidate predicates. **/
+	static function isFreshERegLocalInitializer(init:Null<HxExpr>):Bool {
+		return switch (init) {
+			case ENew(typePath, _) if (isERegTypeName(typePath)):
+				true;
+			case _:
+				false;
+		};
 	}
 
 	static function collectDynamicLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {

@@ -104,6 +104,32 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 		@:privateAccess backend.cpp.CppTargetCore.collectForwardedCallArgTypeOverrides(EIdent("eq"), args, scope, candidates);
 	}
 
+	/** Replay the pre-fast-path fresh EReg declaration work for a same-source comparison. **/
+	static function replayOldFreshERegPrefix(stmt:HxStmt, scope:backend.cpp.CppRenderScope, candidates:StringMap<Bool>):Void {
+		switch (stmt) {
+			case SVar(name, typeHint, init, _):
+				if (init != null)
+					@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromExpr(init, scope, candidates);
+				final local = @:privateAccess backend.cpp.CppTargetCore.declareLocalName(name, scope);
+				final localType = @:privateAccess backend.cpp.CppTargetCore.cppLocalTypeHint(typeHint, init, scope);
+				if (@:privateAccess backend.cpp.CppTargetCore.isLocalCallableInit(init))
+					throw "fresh EReg fixture unexpectedly became callable";
+				if (@:privateAccess backend.cpp.CppTargetCore.inferredLocalCallableType(init, scope).length > 0)
+					throw "fresh EReg fixture unexpectedly inferred a callable";
+				if (@:privateAccess backend.cpp.CppTargetCore.isLocalCallableInit(init) && localType.length == 0)
+					throw "fresh EReg fixture unexpectedly became an untyped callable";
+				if (@:privateAccess backend.cpp.CppTargetCore.isLocalCallableInit(init) && localType.length == 0)
+					throw "fresh EReg fixture unexpectedly became an open callable";
+				if (@:privateAccess backend.cpp.CppTargetCore.isUnhintedNoInitLocal(typeHint, init)
+					|| @:privateAccess backend.cpp.CppTargetCore.isUnhintedEmptyArray(typeHint, init)
+					|| @:privateAccess backend.cpp.CppTargetCore.isUnhintedNullLocal(typeHint, init)
+					|| @:privateAccess backend.cpp.CppTargetCore.isDynamicLikeTypeHint(typeHint))
+					throw "fresh explicit EReg fixture unexpectedly became Dynamic";
+				scope.localTypes.set(local, localType);
+			case _:
+		}
+	}
+
 	/** Build a late-candidate method with the strict frontier's statement count. **/
 	static function testERegShapedFunction(callback:HxExpr, forwardedCalls:Bool):HxFunctionDecl {
 		final body = new Array<HxStmt>();
@@ -128,9 +154,14 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 		final noForwardFn = testERegShapedFunction(callback, false);
 		final shapedBody = HxFunctionDecl.getBody(shapedFn);
 		final prefixStmts = shapedBody.slice(0, 68);
+		final prefixVarStmts = prefixStmts.slice(0, 11);
+		final prefixEqStmts = prefixStmts.slice(11);
 		final callbackStmt = shapedBody[68];
 		final postCandidateStmts = shapedBody.slice(69);
 		final phaseFixture = fixture();
+		final freshERegLocalGateSample = @:privateAccess backend.cpp.CppTargetCore.isFreshERegLocalInitializer(ENew("EReg", []));
+		final qualifiedFreshERegLocalGateSample = @:privateAccess backend.cpp.CppTargetCore.isFreshERegLocalInitializer(ENew("haxe.EReg", []));
+		final unrelatedFreshLocalGateSample = @:privateAccess backend.cpp.CppTargetCore.isFreshERegLocalInitializer(ENew("Other", []));
 
 		var guardSample = false;
 		final guardSeconds = elapsedNamed("guard", calls, () -> {
@@ -152,6 +183,105 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			snapshotSample = countKeys(localTypes) + countKeys(localNames) + countKeys(localNameCounts);
 		});
 
+		final prefixInitFixture = fixture();
+		final prefixInitCandidates = new StringMap<Bool>();
+		var prefixInitSample = 0;
+		final prefixInitSeconds = elapsedNamed("prefix_init_walk", calls, () -> {
+			for (stmt in prefixVarStmts)
+				switch (stmt) {
+					case SVar(_, _, init, _) if (init != null):
+						@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromExpr(init, prefixInitFixture.scope, prefixInitCandidates);
+					case _:
+				}
+			prefixInitSample = countKeys(prefixInitCandidates) + countKeys(prefixInitFixture.scope.localTypes);
+		});
+
+		final prefixNameFixture = fixture();
+		final prefixNameCount = indexedMapCount("prefix_names", calls);
+		final prefixLocalNameMaps = [for (_ in 0...prefixNameCount) new StringMap<String>()];
+		final prefixLocalNameCountMaps = [for (_ in 0...prefixNameCount) new StringMap<Int>()];
+		var prefixNameSample = "";
+		final prefixNameSeconds = elapsedIndexedNamed("prefix_names", calls, i -> {
+			prefixNameFixture.scope.localNames = prefixLocalNameMaps[i];
+			prefixNameFixture.scope.localNameCounts = prefixLocalNameCountMaps[i];
+			for (stmt in prefixVarStmts)
+				switch (stmt) {
+					case SVar(name, _, _, _):
+						@:privateAccess backend.cpp.CppTargetCore.declareLocalName(name, prefixNameFixture.scope);
+					case _:
+				}
+			prefixNameSample = countKeys(prefixNameFixture.scope.localNames) + "/" + countKeys(prefixNameFixture.scope.localNameCounts);
+		});
+
+		final prefixTypeFixture = fixture();
+		var prefixTypeSample = 0;
+		final prefixTypeSeconds = elapsedNamed("prefix_types", calls, () -> {
+			prefixTypeSample = 0;
+			for (stmt in prefixVarStmts)
+				switch (stmt) {
+					case SVar(_, typeHint, init, _):
+						if (@:privateAccess backend.cpp.CppTargetCore.cppLocalTypeHint(typeHint, init,
+							prefixTypeFixture.scope) == "std::shared_ptr<EReg>") prefixTypeSample++;
+					case _:
+				}
+		});
+
+		var prefixPredicateSample = 0;
+		final prefixPredicateSeconds = elapsedNamed("prefix_predicates", calls, () -> {
+			prefixPredicateSample = 0;
+			for (stmt in prefixVarStmts)
+				switch (stmt) {
+					case SVar(_, typeHint, init, _):
+						for (_ in 0...3)
+							if (@:privateAccess backend.cpp.CppTargetCore.isLocalCallableInit(init))
+								prefixPredicateSample++;
+						if (@:privateAccess backend.cpp.CppTargetCore.inferredLocalCallableType(init, prefixTypeFixture.scope).length > 0)
+							prefixPredicateSample++;
+						if (@:privateAccess backend.cpp.CppTargetCore.isUnhintedNoInitLocal(typeHint, init)
+							|| @:privateAccess backend.cpp.CppTargetCore.isUnhintedEmptyArray(typeHint, init)
+							|| @:privateAccess backend.cpp.CppTargetCore.isUnhintedNullLocal(typeHint, init)
+							|| @:privateAccess backend.cpp.CppTargetCore.isDynamicLikeTypeHint(typeHint)) prefixPredicateSample++;
+					case _:
+				}
+		});
+
+		var prefixCallableSample = 0;
+		final prefixCallableSeconds = elapsedNamed("prefix_callable_checks", calls, () -> {
+			prefixCallableSample = 0;
+			for (stmt in prefixVarStmts)
+				switch (stmt) {
+					case SVar(_, _, init, _):
+						for (_ in 0...3)
+							if (@:privateAccess backend.cpp.CppTargetCore.isLocalCallableInit(init))
+								prefixCallableSample++;
+						if (@:privateAccess backend.cpp.CppTargetCore.inferredLocalCallableType(init, prefixTypeFixture.scope)
+							.length > 0) prefixCallableSample++;
+					case _:
+				}
+		});
+		var prefixDynamicSample = 0;
+		final prefixDynamicSeconds = elapsedNamed("prefix_dynamic_checks", calls, () -> {
+			prefixDynamicSample = 0;
+			for (stmt in prefixVarStmts)
+				switch (stmt) {
+					case SVar(_, typeHint, init, _):
+						if (@:privateAccess backend.cpp.CppTargetCore.isUnhintedNoInitLocal(typeHint, init)
+							|| @:privateAccess backend.cpp.CppTargetCore.isUnhintedEmptyArray(typeHint, init)
+							|| @:privateAccess backend.cpp.CppTargetCore.isUnhintedNullLocal(typeHint, init)
+							|| @:privateAccess backend.cpp.CppTargetCore.isDynamicLikeTypeHint(typeHint)) prefixDynamicSample++;
+					case _:
+				}
+		});
+
+		final prefixEqFixture = fixture();
+		final prefixEqCandidates = new StringMap<Bool>();
+		var prefixEqSample = 0;
+		final prefixEqSeconds = elapsedNamed("prefix_eq_walk", calls, () -> {
+			for (stmt in prefixEqStmts)
+				@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromStmt(stmt, prefixEqFixture.scope, prefixEqCandidates);
+			prefixEqSample = countKeys(prefixEqCandidates) + countKeys(prefixEqFixture.scope.localTypes);
+		});
+
 		final prefixFixture = fixture();
 		final prefixCount = indexedMapCount("prefix_collect", calls);
 		final prefixLocalTypes = [for (_ in 0...prefixCount) new StringMap<String>()];
@@ -166,6 +296,23 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			for (stmt in prefixStmts)
 				@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromStmt(stmt, prefixFixture.scope, prefixCandidates[i]);
 			prefixSample = countKeys(prefixFixture.scope.localTypes) + "/" + countKeys(prefixCandidates[i]);
+		});
+		final prefixOldFixture = fixture();
+		final prefixOldCount = indexedMapCount("prefix_collect_old", calls);
+		final prefixOldLocalTypes = [for (_ in 0...prefixOldCount) new StringMap<String>()];
+		final prefixOldLocalNames = [for (_ in 0...prefixOldCount) new StringMap<String>()];
+		final prefixOldLocalNameCounts = [for (_ in 0...prefixOldCount) new StringMap<Int>()];
+		final prefixOldCandidates = [for (_ in 0...prefixOldCount) new StringMap<Bool>()];
+		var prefixOldSample = "";
+		final prefixOldSeconds = elapsedIndexedNamed("prefix_collect_old", calls, i -> {
+			prefixOldFixture.scope.localTypes = prefixOldLocalTypes[i];
+			prefixOldFixture.scope.localNames = prefixOldLocalNames[i];
+			prefixOldFixture.scope.localNameCounts = prefixOldLocalNameCounts[i];
+			for (stmt in prefixVarStmts)
+				replayOldFreshERegPrefix(stmt, prefixOldFixture.scope, prefixOldCandidates[i]);
+			for (stmt in prefixEqStmts)
+				@:privateAccess backend.cpp.CppTargetCore.collectDynamicLocalTypeOverridesFromStmt(stmt, prefixOldFixture.scope, prefixOldCandidates[i]);
+			prefixOldSample = countKeys(prefixOldFixture.scope.localTypes) + "/" + countKeys(prefixOldCandidates[i]);
 		});
 
 		final candidateSeed = fixture();
@@ -327,9 +474,19 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 		final plainEvidence = backend.cpp.CppPrepLocalInferenceGuard.functionHasDynamicLocalInferenceEvidence(plainFn, cppDynamicTypeHint);
 
 		assertTrue(guardSample && callableSample, "late explicit EReg callback evidence should reach the dynamic-local pass");
+		assertTrue(freshERegLocalGateSample && qualifiedFreshERegLocalGateSample && !unrelatedFreshLocalGateSample,
+			"fresh EReg local registration should stay limited to exact target-owned EReg constructors");
 		assertTrue(declaredTypeSample == EXPECTED_CALLBACK_TYPE, "explicit EReg callbacks should retain their exact declared callable type");
 		assertTrue(snapshotSample == 0
+			&& prefixInitSample == 0
+			&& prefixNameSample == "11/11"
+			&& prefixTypeSample == 11
+			&& prefixPredicateSample == 0
+			&& prefixCallableSample == 0
+			&& prefixDynamicSample == 0
+			&& prefixEqSample == 0
 			&& prefixSample == "11/0"
+			&& prefixOldSample == "11/0"
 			&& candidateSample == EXPECTED_CALLBACK_TYPE + "/true"
 			&& postSample == EXPECTED_CALLBACK_TYPE,
 			"snapshot, prefix, candidate, and post-candidate phase outputs should retain exact local state");
@@ -347,7 +504,10 @@ class M14CppDynamicLocalPrepBenchIntegrationTest {
 			"stale callable, open Dynamic, and ordinary local controls should retain their inference contracts");
 
 		Sys.println("CPP_DYNAMIC_LOCAL_PREP_BENCH:PASS calls=" + calls + " guard_seconds=" + guardSeconds + " callable_predicate_seconds=" + callableSeconds
-			+ " declared_type_seconds=" + declaredTypeSeconds + " scope_snapshot_seconds=" + snapshotSeconds + " prefix_collect_seconds=" + prefixSeconds
+			+ " declared_type_seconds=" + declaredTypeSeconds + " scope_snapshot_seconds=" + snapshotSeconds + " prefix_init_walk_seconds="
+			+ prefixInitSeconds + " prefix_names_seconds=" + prefixNameSeconds + " prefix_types_seconds=" + prefixTypeSeconds + " prefix_predicates_seconds="
+			+ prefixPredicateSeconds + " prefix_callable_checks_seconds=" + prefixCallableSeconds + " prefix_dynamic_checks_seconds=" + prefixDynamicSeconds
+			+ " prefix_eq_walk_seconds=" + prefixEqSeconds + " prefix_collect_seconds=" + prefixSeconds + " prefix_collect_old_seconds=" + prefixOldSeconds
 			+ " candidate_decl_seconds=" + candidateSeconds + " post_candidate_collect_seconds=" + postSeconds + " override_write_seconds="
 			+ overrideWriteSeconds + " complete_seconds=" + completeSeconds + " complete_old_seconds=" + completeOldSeconds + " complete_no_forward_seconds="
 			+ noForwardSeconds + " map_expr_seconds=" + mapExprSeconds + " map_expr_old_seconds=" + mapExprOldSeconds + " forwarded_map_seconds="
