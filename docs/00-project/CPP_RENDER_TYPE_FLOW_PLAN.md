@@ -5308,6 +5308,59 @@ source was copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle
 were deliberately skipped because focused evidence gave a bounded low-margin
 stop and did not expose an architectural blocker.
 
+## 2026-07-12 Closure-Vector Preparation Attribution
+
+Follow-up bead `haxe_ocaml-hck3a` decomposed closure-vector preparation without
+a production edit. The pass already collects unhinted empty-array candidates
+before allocating scope snapshots or walking push/call evidence, and returns
+immediately when that candidate map is empty.
+
+Across three fresh 5,000-call processes on the repo-owned 88-statement
+TestEReg shape, the candidate-scan median was 0.080503s and the complete
+negative-pass median was 0.081987s, within about 1.8%. The complete positive
+capture/vector-inference path measured 0.302627s and retained the exact
+`std::vector<std::function<int()>>` override. The negative result means the
+existing necessary candidate scan accounts for essentially the whole strict
+phase; no later inference, snapshot, restoration, or write seam is available
+to remove.
+
+Exact focused controls cover captured and non-captured closures, explicitly
+typed arrays, candidate-only arrays without pushes, nested candidates, a typed
+nested shadow, unrelated locals, negative no-write state, and positive exact
+override state. No compiler source changed, so the latest strict evidence
+remains the preceding 0.000084s TestEReg closure-vector phase and no rebuild or
+strict rerun is required.
+
+Follow-up `haxe_ocaml-3lv9w` owns separate attribution of the next stable
+`infer_string_map_locals` phase, about 0.000082s in the latest strict trace.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-closure-vector-prep-attribution.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-testereg-after-bind-candidate-gate.log`
+
+Validation for this attribution-only slice includes:
+
+- three independent 5,000-call candidate-scan, complete-negative, and
+  complete-positive selections
+- exact capture, typing, nesting, shadow, unrelated, and override controls
+- `npm run test:m14:cpp-native-backend-smoke`
+- `npm run test:m14:cpp-helper-render-bench`
+- `npm run guard:cpp-render-type-flow-plan`
+- `npm run guard:mega-file-gravity-watch`
+- `npm run guard:hx-format:changed`
+- `npm run guard:hx-format`
+- `git diff --check`
+
+README Goals and North Star progress bars remain unchanged. This slice adds
+reproducible hxhx Cpp attribution without changing compiler behavior or public
+production usability. `CppTargetCore.hx` remains unchanged at 26,254 lines and
+broader extraction remains owned by `haxe_ocaml-36ec`; attribution is isolated
+in a dedicated documented 155-line bench module. No upstream compiler or test
+source was copied. `thinking:xhigh` was not crossed. GPT 5.5 Pro and Oracle
+were deliberately skipped because the pass already has the exact necessary
+early return and focused evidence accounts for the remaining cost.
+
 Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
