@@ -94,6 +94,9 @@ function checkWorkload(workload, packageScripts) {
   if (workload.npmScript && !packageScripts[workload.npmScript]) {
     fail(`${owner} references missing package.json script: ${workload.npmScript}`)
   }
+  if (workload.id === 'full1-kpi-compile-and-macro' && workload.schema !== 'hxhx.kpi.v2') {
+    fail(`${owner} must hard-cut to the self-describing hxhx.kpi.v2 schema`)
+  }
 }
 
 function main() {
@@ -113,6 +116,7 @@ function main() {
     'scripts/ci/full1-perf-policy-check.js',
     'scripts/ci/full1-perf-evaluator.js',
     'scripts/ci/full1-kpi-evidence.js',
+    'scripts/ci/hxhx-kpi-report-validator.js',
     'scripts/ci/full1-eval-evidence.js',
     'scripts/ci/full1-suite-evidence.js',
     'npm run hxhx:bench:kpi',

@@ -302,14 +302,22 @@
     {
       "id": "kpi-manual-missing-20260713",
       "checkId": "kpi-manual-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "missing",
       "failureClass": "unknown",
       "bead": "haxe_ocaml-850ii",
       "recordedAt": "2026-07-13T06:40:00Z",
       "run": null,
-      "reproductionOrEvidence": "No manual weekly KPI workflow run exists yet; push-time report-only runs do not replace that declared audit step.",
-      "closureGate": "A manual KPI run must publish a fresh report with machine, toolchain, command, samples, and commit metadata."
+      "reproductionOrEvidence": "No manual weekly KPI workflow run existed when this incident was recorded. Manual run 29283471461 now supersedes that missing-run condition; its v1 report exposes a separate self-description gap owned by haxe_ocaml-850ii.1.",
+      "closureGate": "Superseded by manual run 29283471461. The successor report-contract task requires a fresh v2 artifact with commit, runner, toolchain, method, and sample provenance.",
+      "supersededBy": {
+        "runId": 29283471461,
+        "runAttempt": 1,
+        "headSha": "69855ebbddc505633c90e8fdea4a20361b418a17",
+        "conclusion": "success",
+        "updatedAt": "2026-07-13T20:47:58Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29283471461"
+      }
     }
   ]
 }

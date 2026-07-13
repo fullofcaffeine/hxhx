@@ -71,7 +71,9 @@ function main() {
   for (const snippet of [
     'NATIVE_ITERATION_LATENCY_POLICY:PASS',
     'haxe.ocaml-5rjl',
+    'haxe_ocaml-850ii',
     'scripts/ci/full1-phase-timing.js',
+    'scripts/ci/hxhx-kpi-report-validator.js',
     'scripts/hxhx/bench-bootstrap-regen.sh',
     'scripts/hxhx/bench-native-reflaxe.sh',
     'FULL1_PERF_PARITY:PASS',
@@ -97,14 +99,30 @@ function main() {
   if (policy.haxeCompatibilityBaseline !== '4.3.7') {
     fail(`policy baseline must be 4.3.7, received ${policy.haxeCompatibilityBaseline}`)
   }
-  if (policy.primaryOwnerBead !== 'haxe.ocaml-5rjl') {
-    fail(`policy.primaryOwnerBead must be haxe.ocaml-5rjl`)
+  if (policy.primaryOwnerBead !== 'haxe_ocaml-850ii') {
+    fail('policy.primaryOwnerBead must point at active successor haxe_ocaml-850ii')
+  }
+  if (policy.completedFoundationBead !== 'haxe.ocaml-5rjl') {
+    fail('policy.completedFoundationBead must preserve haxe.ocaml-5rjl')
   }
   if (!policy.timingTool || !fs.existsSync(policy.timingTool)) {
     fail(`policy.timingTool references missing path: ${policy.timingTool}`)
   }
   if (!policy.policyGuard || policy.policyGuard !== 'scripts/ci/native-iteration-latency-contract-check.js') {
     fail('policy.policyGuard must point at scripts/ci/native-iteration-latency-contract-check.js')
+  }
+  if (!policy.activeEvidenceLoop || typeof policy.activeEvidenceLoop !== 'object') {
+    fail('policy.activeEvidenceLoop must describe the current KPI evidence path')
+  } else {
+    if (policy.activeEvidenceLoop.reportSchema !== 'hxhx.kpi.v2') {
+      fail('policy.activeEvidenceLoop.reportSchema must be hxhx.kpi.v2')
+    }
+    for (const field of ['reportValidator', 'reportWorkflow']) {
+      const evidencePath = policy.activeEvidenceLoop[field]
+      if (!evidencePath || !fs.existsSync(evidencePath)) {
+        fail(`policy.activeEvidenceLoop.${field} references missing path: ${evidencePath}`)
+      }
+    }
   }
   if (!Array.isArray(policy.measurementBuckets) || policy.measurementBuckets.length < 5) {
     fail('policy.measurementBuckets must define at least five buckets')

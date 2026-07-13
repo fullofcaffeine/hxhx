@@ -3,18 +3,22 @@
  * Convert the existing HXHX KPI report into Full1 perf evidence.
  *
  * The KPI harness remains the workload runner. This adapter only reshapes its
- * stable hxhx.kpi.v1 JSON into the evaluator input schema and intentionally
- * maps exactly one native hxhx lane to the normalized `hxhx` lane name.
+ * self-describing hxhx.kpi.v2 JSON into the evaluator input schema. It maps
+ * exactly one native hxhx lane to the normalized `hxhx` lane name.
  */
 
 const fs = require('fs')
 const path = require('path')
+const {
+  schema: kpiSchema,
+  validateKpiReport
+} = require('./hxhx-kpi-report-validator.js')
 
 function usage() {
   console.error(`Usage: node scripts/ci/full1-kpi-evidence.js --kpi-report <report.json> --json-out <evidence.json>
 
 Options:
-  --kpi-report <path>  hxhx.kpi.v1 report from npm run hxhx:bench:kpi
+  --kpi-report <path>  hxhx.kpi.v2 report from npm run hxhx:bench:kpi
   --json-out <path>    Full1 perf evidence JSON output path
   --hxhx-lane <lane>   KPI lane to compare against upstream_haxe (default: ocaml_metal_builtin)
 `)
@@ -68,9 +72,10 @@ function metricSamples(report, metric, lane) {
   return values.length === 0 ? null : values
 }
 
-function gitMetadata() {
+function gitMetadata(report) {
   return {
-    sha: process.env.GITHUB_SHA || null,
+    sha: report.git.commit,
+    tracked_source_clean: report.git.tracked_source_clean,
     ref: process.env.GITHUB_REF || null,
     run_id: process.env.GITHUB_RUN_ID || null,
     run_attempt: process.env.GITHUB_RUN_ATTEMPT || null
@@ -80,10 +85,14 @@ function gitMetadata() {
 function main() {
   const parsed = parseArgs(process.argv.slice(2))
   const report = readJson(parsed.kpiReport)
-  if (!report || report.schema !== 'hxhx.kpi.v1') {
-    fail(`unexpected KPI report schema: ${report && report.schema}`)
+  const reportErrors = validateKpiReport(report)
+  if (reportErrors.length > 0) fail(`invalid KPI report: ${reportErrors.join('; ')}`)
+  if (report.git.tracked_source_clean !== true) {
+    fail('KPI report was measured with tracked source changes; Full1 evidence requires a clean checkout')
   }
-  if (!Array.isArray(report.metrics)) fail('KPI report must include metrics[]')
+  if (process.env.GITHUB_SHA && process.env.GITHUB_SHA !== report.git.commit) {
+    fail(`KPI report commit ${report.git.commit} does not match GITHUB_SHA ${process.env.GITHUB_SHA}`)
+  }
 
   const requiredMetrics = ['compile_wall_ms', 'incremental_rebuild_ms', 'macro_overhead_ms', 'peak_rss_kb']
   const samples = []
@@ -114,12 +123,14 @@ function main() {
     haxeCompatibilityBaseline: '4.3.7',
     runner: {
       source: 'scripts/hxhx/bench-kpi.sh',
-      inputSchema: 'hxhx.kpi.v1',
-      inputPath: parsed.kpiReport,
+      inputSchema: kpiSchema,
+      inputFile: path.basename(parsed.kpiReport),
       hxhxLane: parsed.hxhxLane,
-      missingSamples: missing
+      missingSamples: missing,
+      environment: report.environment,
+      measurement: report.measurement
     },
-    git: gitMetadata(),
+    git: gitMetadata(report),
     workloads: [
       {
         id: 'full1-kpi-compile-and-macro',

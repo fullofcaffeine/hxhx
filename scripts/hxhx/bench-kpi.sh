@@ -27,7 +27,7 @@ Environment knobs:
 
 Outputs:
   samples.tsv  (machine-readable samples)
-  report.json  (stable summary schema: hxhx.kpi.v1 + lane ratio deltas)
+  report.json  (self-describing schema: hxhx.kpi.v2 + raw samples and provenance)
 USAGE
 }
 
@@ -271,6 +271,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
+from pathlib import Path
 
 samples_path, report_path, reps, haxe_bin, hxhx_bin, run_macro_lane, repo_root = sys.argv[1:]
 groups = defaultdict(list)
@@ -373,21 +374,100 @@ def normalize_path(path):
     prefix = repo_root.rstrip("/") + "/"
     if path.startswith(prefix):
         return path[len(prefix):]
+    if Path(path).is_absolute():
+        return "$PATH/" + Path(path).name
     return path
 
+def command_output(command):
+    try:
+        proc = subprocess.run(command, check=False, capture_output=True, text=True)
+        if proc.returncode == 0:
+            value = proc.stdout.strip() or proc.stderr.strip()
+            if value:
+                return value.splitlines()[0]
+    except Exception:
+        pass
+    return "unavailable"
+
+def hxhx_artifact_kind(path):
+    if Path(path).suffix.lower() == ".bc":
+        return "ocaml-bytecode"
+    try:
+        with open(path, "rb") as handle:
+            if handle.read(2) == b"#!":
+                return "script-wrapper"
+    except Exception:
+        return "unavailable"
+    return "native-executable"
+
+def cpu_model():
+    if sys.platform == "darwin":
+        value = command_output(["sysctl", "-n", "machdep.cpu.brand_string"])
+        if value != "unavailable":
+            return value
+    if sys.platform.startswith("linux"):
+        try:
+            for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
+                if line.lower().startswith("model name") and ":" in line:
+                    value = line.split(":", 1)[1].strip()
+                    if value:
+                        return value
+        except Exception:
+            pass
+    value = platform.processor().strip()
+    if value:
+        return value
+    return "unavailable"
+
+git_commit = command_output(["git", "-C", repo_root, "rev-parse", "HEAD"])
+tracked_source_clean = (
+    subprocess.run(["git", "-C", repo_root, "diff", "--quiet"], check=False).returncode == 0
+    and subprocess.run(["git", "-C", repo_root, "diff", "--cached", "--quiet"], check=False).returncode == 0
+)
+
 report = {
-    "schema": "hxhx.kpi.v1",
+    "schema": "hxhx.kpi.v2",
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+    "git": {
+        "commit": git_commit,
+        "tracked_source_clean": tracked_source_clean,
+    },
     "config": {
         "reps": int(reps),
         "run_macro_lane": run_macro_lane == "1",
     },
     "environment": {
         "platform": platform.platform(),
+        "os": platform.system() or "unavailable",
+        "os_release": platform.release() or "unavailable",
+        "architecture": platform.machine() or "unavailable",
+        "cpu_model": cpu_model(),
         "python_version": platform.python_version(),
-        "haxe_bin": haxe_bin,
+        "haxe_bin": normalize_path(haxe_bin),
         "haxe_version": haxe_version,
         "hxhx_bin": normalize_path(hxhx_bin),
+        "hxhx_artifact_kind": hxhx_artifact_kind(hxhx_bin),
+        "node_version": command_output(["node", "--version"]),
+        "ocaml_version": command_output(["ocamlc", "-version"]),
+        "dune_version": command_output(["dune", "--version"]),
+    },
+    "measurement": {
+        "command": "npm run hxhx:bench:kpi",
+        "source": "scripts/hxhx/bench-kpi.sh",
+        "repetitions": int(reps),
+        "raw_samples_embedded": True,
+        "warmup_runs": {
+            "compile_wall_ms": 0,
+            "incremental_rebuild_ms": 1,
+            "macro_overhead_ms": 0,
+            "peak_rss_kb": 0,
+        },
+        "states": {
+            "compile_wall_ms": "one compiler invocation per sample with prebuilt compiler binaries; lane output directories are reused across repetitions",
+            "incremental_rebuild_ms": "unchanged input measured immediately after one unrecorded warmup invocation per sample",
+            "macro_overhead_ms": "paired macro-enabled compile minus its baseline compile; lane output directories are reused across repetitions",
+            "peak_rss_kb": "maximum resident set size for the same compiler process tree measured by compile_wall_ms",
+        },
     },
     "metrics": [],
     "lane_ratios": lane_ratios,

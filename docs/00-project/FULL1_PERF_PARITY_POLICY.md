@@ -1,6 +1,6 @@
 # Full1 Performance Parity Policy
 
-Last audited: 2026-04-14
+Last audited: 2026-07-13
 
 This document defines the Full 1.0 performance policy for `hxhx` against
 upstream Haxe 4.3.7.
@@ -89,7 +89,10 @@ does not drift from runnable repo surfaces:
   - report-only workflow today: `.github/workflows/hxhx-kpi-report.yml`
   - blocking workflow: `.github/workflows/gate-perf-full1.yml`
   - Full1 evidence adapter: `scripts/ci/full1-kpi-evidence.js`
-  - expected schema today: `hxhx.kpi.v1`
+  - expected schema today: `hxhx.kpi.v2`
+  - the report carries its own commit, clean-source flag, runner/CPU details,
+    toolchain versions, hxhx artifact kind (for example OCaml bytecode versus a
+    native executable), measurement method, and raw samples
 - Native eval/interp latency probe:
   - command: `npm run test:full1:eval-native`
   - source: `scripts/ci/run-full1-eval-native.js`
@@ -144,13 +147,15 @@ Synthetic evaluator fixtures are validated by:
 The first raw workload adapter is:
 
 - `scripts/ci/full1-kpi-evidence.js`
+- `scripts/ci/hxhx-kpi-report-validator.js` validates the source report before
+  it can become Full1 evidence
 
 Additional Full1 evidence adapters are:
 
 - `scripts/ci/full1-eval-evidence.js`
 - `scripts/ci/full1-suite-evidence.js`
 
-It converts the existing `hxhx.kpi.v1` report into
+It converts the self-describing `hxhx.kpi.v2` report into
 `full1-perf-evidence.v1`. Missing policy workloads or required metrics must
 make `scripts/ci/full1-perf-evaluator.js` fail; partial evidence must never
 emit `FULL1_PERF_PARITY:PASS`.
@@ -205,7 +210,7 @@ The guard parses the machine-readable policy block below and validates:
       "workflow": ".github/workflows/gate-perf-full1.yml",
       "reportOnlyWorkflow": ".github/workflows/hxhx-kpi-report.yml",
       "adapter": "scripts/ci/full1-kpi-evidence.js",
-      "schema": "hxhx.kpi.v1",
+      "schema": "hxhx.kpi.v2",
       "requiredMetrics": [
         "compile_wall_ms",
         "incremental_rebuild_ms",

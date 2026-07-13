@@ -93,6 +93,17 @@ jobs:
           echo "report_dir=$REPORT_DIR" >> "$GITHUB_OUTPUT"
           HXHX_KPI_REPORT_DIR="$REPORT_DIR" npm run hxhx:bench:kpi
           status=$?
+          validation_status=0
+          if [ -f "$REPORT_DIR/report.json" ]; then
+            node scripts/ci/hxhx-kpi-report-validator.js --report "$REPORT_DIR/report.json"
+            validation_status=$?
+          else
+            echo "KPI report.json was not created." >&2
+            validation_status=1
+          fi
+          if [ "$status" -eq 0 ] && [ "$validation_status" -ne 0 ]; then
+            status="$validation_status"
+          fi
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           if [ "$status" -ne 0 ]; then
             echo "HXHX KPI benchmark failed (report-only)." >&2
@@ -127,6 +138,22 @@ jobs:
 
           payload = json.loads(report_path.read_text(encoding="utf-8"))
           config = payload.get("config", {})
+          git = payload.get("git", {})
+          environment = payload.get("environment", {})
+          measurement = payload.get("measurement", {})
+          lines.append(f"- Schema: `{payload.get('schema')}`")
+          lines.append(f"- Commit: `{git.get('commit')}` | Tracked source clean: `{git.get('tracked_source_clean')}`")
+          lines.append(
+            f"- Runner: `{environment.get('os')} {environment.get('architecture')}` | "
+            f"CPU: `{environment.get('cpu_model')}`"
+          )
+          lines.append(
+            f"- Toolchains: Haxe `{environment.get('haxe_version')}`, "
+            f"Node `{environment.get('node_version')}`, OCaml `{environment.get('ocaml_version')}`, "
+            f"Dune `{environment.get('dune_version')}`"
+          )
+          lines.append(f"- hxhx artifact kind: `{environment.get('hxhx_artifact_kind')}`")
+          lines.append(f"- Command: `{measurement.get('command')}`")
           lines.append(f"- Reps: `{config.get('reps')}` | Macro lane: `{config.get('run_macro_lane')}`")
           lines.append("")
 

@@ -72,11 +72,13 @@ npm run guard:ci-evidence-ownership
 
 The original 2026-07-12 Core local-path and Portable Tier1 Rest failures are
 resolved by exact-head required runs and retained as machine-readable history.
-The plugin failure is resolved by artifact-backed run `29281925684`. The
-current open records are the macro-runtime failure, M7 timeout with no
-successor, the expected Full1 aggregate no-go, and the missing manual weekly
-KPI run. Their owners are recorded in the JSON ledger; none of those open
-records counts as passing product or Full1 evidence.
+The plugin failure is resolved by artifact-backed run `29281925684`. Manual
+KPI run `29283471461` supersedes the original missing-run record; its v1 report
+motivated the active self-describing v2 follow-up `haxe_ocaml-850ii.1`. The
+current open incident records are the macro-runtime failure, M7 timeout with no
+successor, and the expected Full1 aggregate no-go. Their owners are recorded
+in the JSON ledger; none of those open records counts as passing product or
+Full1 evidence.
 
 ## Audit window
 
@@ -126,9 +128,16 @@ records counts as passing product or Full1 evidence.
    - `PASS`: source-build probe agrees with current strict matrix behavior.
    - `WARN`: do not block release by this alone; open/update a bead with artifact links and classify as bootstrap-lag, source-build instability, or parity bug.
 9. Manually dispatch `Perf / HXHX KPI (Report Only)`.
-10. Download KPI artifact and compare `report.json` against:
+10. Download the KPI artifact, require a valid self-describing `hxhx.kpi.v2`
+    report, and compare it against:
    - `docs/benchmarks/kpi/hxhx-kpi-thresholds.v1.json`
    - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
+
+Validate the downloaded report with:
+
+```bash
+node scripts/ci/hxhx-kpi-report-validator.js --report <artifact>/report.json
+```
 11. Check GitHub branch protection for `main` and compare it with the `PR required` table in `docs/00-project/CI_GATES.md`.
 12. Record evidence links and outcomes in the weekly ops note/bead comment.
 

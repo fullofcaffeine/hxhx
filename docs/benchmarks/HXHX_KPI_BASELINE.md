@@ -3,7 +3,10 @@
 This file records baseline numbers for the KPI harness introduced in `scripts/hxhx/bench-kpi.sh`.
 
 - Command: `npm run hxhx:bench:kpi`
-- Schema: `hxhx.kpi.v1` (`metrics` + `lane_ratios`)
+- Historical artifact schema: `hxhx.kpi.v1` (`metrics` + `lane_ratios`)
+- Current harness schema: `hxhx.kpi.v2` (adds commit, clean-source state,
+  runner/CPU and toolchain details, compiler artifact kind, measurement method,
+  and embedded raw samples)
 - Raw machine-readable artifacts:
   - `docs/benchmarks/kpi/2026-02-24-macos-arm64-report.json`
   - `docs/benchmarks/kpi/2026-02-24-macos-arm64-samples.tsv`

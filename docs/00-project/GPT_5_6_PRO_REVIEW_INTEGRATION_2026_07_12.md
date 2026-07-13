@@ -55,10 +55,11 @@ focused repo-owned coverage and closed evidence beads.
 loop. `docs/00-project/CI_EVIDENCE_OWNERSHIP.json` names watched workflows and
 incidents; the evaluator joins live GitHub runs to active Beads; and
 `CI / Evidence Ownership Audit` reports unowned, cancelled-without-successor,
-stale, or missing evidence. The current scheduled macro, M7, Full1, and
-manual-KPI gaps remain explicitly open. This is accountability evidence,
-not Full1 or product-readiness progress, so the README/North Star state is
-unchanged.
+stale, or missing evidence. The current scheduled macro, M7, and Full1 gaps
+remain explicitly open. The first manual KPI run now exists, while
+`haxe_ocaml-850ii.1` owns its self-describing v2 evidence follow-up. This is
+accountability evidence, not Full1 or product-readiness progress, so the
+README/North Star state is unchanged.
 
 ### Plugin evidence follow-up
 

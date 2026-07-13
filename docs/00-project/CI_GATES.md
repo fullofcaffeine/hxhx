@@ -329,7 +329,7 @@ Local suite runner guide for Full1 suite scaffolding (`misc/server/threads/optim
 
 | Workflow | File | Purpose | Trigger class | Triggers |
 | --- | --- | --- | --- |
-| `Perf / HXHX KPI (Report Only)` | `.github/workflows/hxhx-kpi-report.yml` | KPI telemetry/report lane (non-blocking). | **Manual + PR visibility** | `push`, `pull_request`, manual |
+| `Perf / HXHX KPI (Report Only)` | `.github/workflows/hxhx-kpi-report.yml` | KPI telemetry/report lane (non-blocking). Its `hxhx.kpi.v2` report identifies the commit, clean-source state, runner/CPU, toolchains, compiler artifact kind, measurement method, and raw samples. | **Manual + PR visibility** | `push`, `pull_request`, manual |
 | `Perf / M14 Portable vs Metal (Report Only)` | `.github/workflows/m14-perf-report.yml` | Portable vs metal benchmark reports (non-blocking). | **Manual + PR visibility** | `push`, `pull_request`, manual |
 | `Pilot / Reflaxe.Elixir Todo Promotion` | `.github/workflows/reflaxe-elixir-pilot.yml` | Scheduled/manual promotion pilot against pinned external todo-app source checkout, uploading promotion/load evidence. | **Manual + scheduled diagnostic** | weekly + manual |
 | `Utility / Bootstrap Regen Benchmark` | `.github/workflows/bootstrap-regen-bench.yml` | Harness benchmark runs for bootstrap regeneration speed. | **Manual utility** | manual |

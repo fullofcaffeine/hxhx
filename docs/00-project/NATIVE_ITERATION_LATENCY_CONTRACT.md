@@ -1,6 +1,6 @@
 # Native Iteration Latency Contract
 
-Last audited: 2026-07-03
+Last audited: 2026-07-13
 
 This document defines the project-level latency north star for native
 `hxhx + reflaxe.ocaml` work. It is a measurement contract, not a claim that the
@@ -77,9 +77,15 @@ performance claim must use measured medians from the relevant runner class.
   "schema": "native-iteration-latency-policy.v1",
   "contractMarker": "NATIVE_ITERATION_LATENCY_POLICY:PASS",
   "haxeCompatibilityBaseline": "4.3.7",
-  "primaryOwnerBead": "haxe.ocaml-5rjl",
+  "primaryOwnerBead": "haxe_ocaml-850ii",
+  "completedFoundationBead": "haxe.ocaml-5rjl",
   "timingTool": "scripts/ci/full1-phase-timing.js",
   "policyGuard": "scripts/ci/native-iteration-latency-contract-check.js",
+  "activeEvidenceLoop": {
+    "reportSchema": "hxhx.kpi.v2",
+    "reportValidator": "scripts/ci/hxhx-kpi-report-validator.js",
+    "reportWorkflow": ".github/workflows/hxhx-kpi-report.yml"
+  },
   "measurementBuckets": [
     {
       "id": "focused-local-smoke",
