@@ -24,6 +24,9 @@ extern class Array<T> {
 	public function concat(a:Array<T>):Array<T>;
 	public function join(sep:String):String;
 
+	/** Returns the array using Haxe's bracketed, comma-separated representation. */
+	public function toString():String;
+
 	public function pop():Null<T>;
 	public function push(x:T):Int;
 	public function reverse():Void;

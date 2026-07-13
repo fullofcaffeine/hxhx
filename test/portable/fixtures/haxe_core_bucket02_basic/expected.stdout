@@ -4,6 +4,7 @@ nativeStack.nonneg=true
 pos.line=42
 resource.count=0
 rest.len=4
+rest.string=[1,2,3]
 serializer.int=7
 serializer.string=hxhx
 serializer.object.name=hxhx

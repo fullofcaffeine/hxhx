@@ -24,6 +24,7 @@ class Main {
 
 		Sys.println("resource.count=" + haxe.Resource.listNames().length);
 		Sys.println("rest.len=" + restLen(1, 2, 3));
+		Sys.println("rest.string=" + haxe.Rest.of([1, 2, 3]).toString());
 
 		final serializedInt = haxe.Serializer.run(7);
 		final decodedInt = haxe.Unserializer.run(serializedInt);

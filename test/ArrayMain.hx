@@ -83,6 +83,8 @@ class ArrayMain {
 		final strArr = ["a", "b", "c"];
 		if (strArr.join("-") != "a-b-c")
 			throw "join";
+		if (strArr.toString() != "[a,b,c]")
+			throw "toString";
 
 		final mapped = b.map(v -> v * 2);
 		if (mapped.length != 4 || mapped[0] != 2 || mapped[3] != 8)

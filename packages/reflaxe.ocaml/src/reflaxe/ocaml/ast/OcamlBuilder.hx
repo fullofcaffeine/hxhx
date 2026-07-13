@@ -2308,11 +2308,8 @@ class OcamlBuilder {
 																buildArrayJoinStringifier(objExpr, e.pos)
 															]);
 														case "toString" if (args.length == 0):
-															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "join"), [
-																buildExpr(objExpr),
-																OcamlExpr.EConst(OcamlConst.CString(",")),
-																buildArrayJoinStringifier(objExpr, e.pos)
-															]);
+															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "toString"),
+																[buildExpr(objExpr), buildArrayJoinStringifier(objExpr, e.pos)]);
 														case "push":
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"),
 																[buildExpr(objExpr), buildExpr(args[0])]);
