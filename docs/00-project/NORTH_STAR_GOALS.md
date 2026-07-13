@@ -20,14 +20,18 @@ The short version:
 
 Current planning owners:
 
-- standalone upstream-Haxe product readiness: `haxe.ocaml-ro10`
-- `hxhx + reflaxe.ocaml` production-route status: `haxe.ocaml-n5ae`
+- standalone upstream-Haxe product: `haxe_ocaml-s7jry`
+  (completed foundation/proof: `haxe.ocaml-ro10`)
+- `hxhx + reflaxe.ocaml` product route: `haxe_ocaml-38gsp`
+  (completed definition foundation: `haxe.ocaml-n5ae`)
 - public status board: README `Goals status` table
 
 ## Public Progress Tracking
 
 The README `Goals status` table is the public progress board. Its ASCII bars
-are coarse production-readiness indicators, not exact completion percentages.
+are coarse editorial production-readiness indicators, not computed completion
+percentages. Capability state, declared scope, strongest nonstale evidence,
+active owner, and next blocker control the wording.
 
 Update the bars only when evidence changes readiness for an intended use case:
 
@@ -35,6 +39,21 @@ Update the bars only when evidence changes readiness for an intended use case:
 - a local or CI gate changes the production-readiness picture,
 - a release-contract document changes,
 - or a user-facing workflow becomes more or less suitable for real projects.
+
+Evidence is not interchangeable. Use these levels when interpreting a marker
+or closure note:
+
+1. policy/schema guard or synthetic evaluator fixture,
+2. focused repo-owned regression or generated-output snapshot,
+3. runtime and stage0-forbidden native evidence,
+4. strict upstream Haxe `4.3.7` suite/target evidence,
+5. authentic plugin/promotion workload and measured performance evidence,
+6. same-candidate release aggregate with provenance and freshness.
+
+Lower levels can be prerequisites but cannot substitute for the higher level
+required by a product claim. Evidence records should identify scope, SHA,
+workflow run/attempt, artifact identity, timestamp/freshness, and owner bead
+where those fields exist.
 
 If a checkpoint advances an internal burn-down blocker but does not change a
 user-facing readiness claim, keep the bars unchanged and record that decision in
@@ -57,18 +76,29 @@ The bar is not “passes our local smoke tests.” The bar is upstream-derived b
 Current planning owners:
 
 - Full 1.0 closure: `haxe.ocaml-f1cl`
-- native iteration latency/perf metric: `haxe.ocaml-5rjl`
+- required/release-evidence failure ownership: `haxe_ocaml-145dn`
+- exact target/generator scope decision: `haxe_ocaml-rttuj`
+- Scoped profile versus semantic-version decision: `haxe_ocaml-ftrhr`
+- prepublication RC provenance and release handoff: `haxe_ocaml-7c1ke`
+- actual macro/eval, plugin, and performance outcomes:
+  `haxe_ocaml-vhk47`, `haxe_ocaml-gskz9`, `haxe_ocaml-u6esu`
+- native iteration latency regression loop: `haxe_ocaml-850ii`
+  (completed policy foundation: `haxe.ocaml-5rjl`)
 - native iteration latency measurement contract:
   `docs/00-project/NATIVE_ITERATION_LATENCY_CONTRACT.md`
-- strict upstream target gates: `haxe.ocaml-f1cl.3`, `haxe.ocaml-f1cl.3.1`, `haxe.ocaml-blsl`, `haxe.ocaml-sssk`
+- strict upstream suite and target outcomes: `haxe.ocaml-f1cl.3`,
+  `haxe.ocaml-f1cl.3.1`, `haxe.ocaml-f1cl.3.11`
 - Full 1.0 release go/no-go: `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
-  (`haxe.ocaml-f1cl.6`)
+  (completed contract foundation: `haxe.ocaml-f1cl.6`; active provenance
+  correction: `haxe_ocaml-7c1ke`)
 - release enforcement: `scripts/release/full1-release-enforcement.js`
   (`haxe.ocaml-f1cl.7`)
 
 Cpp Gate3 execution checkpoint:
 
-- Strict Cpp Gate3 remains the active source/native target blocker.
+- Strict Cpp Gate3 remains a measured source/native blocker, but its priority
+  within Full1 depends on the target-scope decision and current cross-lane
+  evidence.
 - Bounded, non-semantic Cpp render/cache/inference optimizations may
   continue when they have focused smoke evidence and strict timing validation.
 - New broad stdlib/runtime semantics must not be added directly to the Cpp
@@ -105,7 +135,10 @@ This does not weaken compatibility. The default compiler still has to behave lik
 Current planning owners:
 
 - Full 1.0 parity and release contract: `haxe.ocaml-f1cl`
-- modular customization and variation architecture: `haxe.ocaml-vary`
+- bounded bridge exit criteria: `haxe_ocaml-slobw`
+- source/Cpp smoke decomposition: `haxe_ocaml-o2udb`
+- customization/variation product lifecycle after Full1: `haxe_ocaml-h5jta`
+  (completed architecture/toggle foundation: `haxe.ocaml-vary`)
 - customization and variation architecture note:
   `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
 - mega-file gravity watch: `docs/00-project/MEGA_FILE_GRAVITY_WATCH.md`
@@ -126,7 +159,8 @@ Candidate mechanisms include compiler plugins, native target plugins, macro/runt
 
 Current planning owner:
 
-- modular compiler customization and dialect architecture: `haxe.ocaml-vary`
+- post-Full1 customization/variation platform: `haxe_ocaml-h5jta`
+  (completed architecture/toggle foundation: `haxe.ocaml-vary`)
 - architecture note:
   `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
 - Haxe-family variation workflow:
@@ -147,7 +181,8 @@ This is related to plugin extensibility, but not identical: plugins should cover
 
 Current planning owner:
 
-- modular compiler customization and dialect architecture: `haxe.ocaml-vary`
+- post-Full1 customization/variation platform: `haxe_ocaml-h5jta`
+  (completed architecture/toggle foundation: `haxe.ocaml-vary`)
 - architecture note:
   `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
 - Haxe-family variation workflow:
@@ -205,9 +240,11 @@ The performance bar is intentionally ambitious:
 
 Current planning owners:
 
-- promotion matrix: `haxe.ocaml-rpmx`
-- Full 1.0 plugin parity inside `hxhx`: `haxe.ocaml-f1cl.8`
-- native plugin hardening: `haxe.ocaml-anoy`
+- promotion product: `haxe_ocaml-bomhr`
+  (completed matrix/hardening foundations: `haxe.ocaml-rpmx`,
+  `haxe.ocaml-anoy`)
+- actual Full1 plugin outcome: `haxe_ocaml-gskz9`
+  (completed contract/workflow foundation: `haxe.ocaml-f1cl.8`)
 - native Reflaxe artifact-loop latency:
   `docs/00-project/NATIVE_ITERATION_LATENCY_CONTRACT.md`
 

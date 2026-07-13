@@ -1,8 +1,31 @@
 # Weekly CI Evidence Runbook
 
-Last audited: 2026-04-14
+Last audited: 2026-07-12
 
 This runbook defines how maintainers audit scheduled CI health each week and what to do when a gate regresses.
+
+## Required-red ownership rule
+
+`haxe_ocaml-145dn` owns the operational implementation of this rule. Until its
+guard/report lands, apply it manually:
+
+- the latest non-superseded current-head required red must have one active
+  P0/P1 bead containing SHA, run ID/attempt, failure class, reproducer or
+  infrastructure evidence, and a remote-current-head closure gate;
+- a cancelled run counts as missing evidence unless a valid successor is
+  linked;
+- a stale or cross-SHA success is historical evidence, not RC evidence;
+- repeated runs with the same root cause update one bounded bead;
+- a local pass is not closure for a required remote lane.
+
+Use these failure classes: `semantic`, `repository-policy`, `toolchain`,
+`infrastructure`, `timeout-performance`, `expected-no-go`,
+`cancelled-superseded`, `cancelled-no-successor`, and `unknown`.
+
+The 2026-07-12 reviewed baseline had two deterministic required failures:
+Core PR local-path policy (`haxe_ocaml-t7bmv`) and Portable Tier1 Rest behavior
+(`haxe_ocaml-lg7be`). They block Full1 status advancement until current-head
+remote evidence is green.
 
 ## Audit window
 

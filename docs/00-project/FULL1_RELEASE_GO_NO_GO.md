@@ -1,6 +1,6 @@
 # Full1 Release Go/No-Go
 
-Last audited: 2026-03-14
+Last audited: 2026-07-12
 
 This page defines the release decision boundary for a public `Full 1.0`
 claim only. It does not redefine `Scoped 1.0`, and it must not be used to
@@ -18,6 +18,19 @@ The scope manifest owns the required `Full 1.0` marker set. The RC evaluator
 must read that manifest and emit `FULL1_RELEASE_GO:PASS` only when every
 required marker except the release marker itself is present.
 
+## Current implementation status
+
+The current `>=1.0.0` enforcement is fail-safe when RC inputs are absent, but
+the positive publication path does not yet implement this complete contract.
+The RC workflow currently runs automatically only after publication, derives
+detailed markers from aggregate job status instead of verified child artifacts,
+and emits a v1 summary without candidate/artifact provenance. The semantic
+release workflow does not download an RC artifact.
+
+Therefore no current workflow run can authorize a public Full1 publication.
+`haxe_ocaml-7c1ke` owns the prepublication, same-candidate artifact and release
+handoff correction. Contract/evaluator fixtures prove only their policy logic.
+
 ## Go decision
 
 A public `Full 1.0` claim is allowed only when all of these are true:
@@ -25,13 +38,20 @@ A public `Full 1.0` claim is allowed only when all of these are true:
 1. `.github/workflows/gate-full1-rc.yml` completed successfully for the release
    candidate commit.
 2. The RC evaluator printed `FULL1_RELEASE_GO:PASS`.
-3. The uploaded RC summary JSON uses schema `full1-rc-summary.v1`.
+3. The uploaded RC summary uses the candidate-bound schema accepted by release
+   enforcement; the current v1 schema is not sufficient for positive release
+   authorization.
 4. `missingMarkers` in that summary is empty.
 5. `requiredMarkers` in that summary matches the current `Full 1.0` marker set
    from `docs/02-user-guide/compat/full-1.0-scope.json`, excluding
    `FULL1_RELEASE_GO:PASS`.
 6. The public release wording says `Full 1.0` explicitly and passes
    `docs/00-project/PUBLIC_1_0_CHECKLIST.md`.
+7. The summary binds candidate SHA/version, current manifest digests, source
+   workflow runs/attempts, child artifact identities/digests, timestamps,
+   evidence tiers, and freshness decisions.
+8. Semantic release downloads and validates exactly that prepublication RC
+   artifact before publishing.
 
 ## No-go decision
 
@@ -58,5 +78,8 @@ For any candidate version `>=1.0.0`, publication requires:
 - `FULL1_RELEASE_GO_MARKER=FULL1_RELEASE_GO:PASS`
 - `FULL1_RC_SUMMARY_JSON=<path-to-full1-rc.summary.json>`
 
-The summary JSON must use schema `full1-rc-summary.v1`, report
-`FULL1_RELEASE_GO:PASS`, and have an empty `missingMarkers` list.
+The current script recognizes `full1-rc-summary.v1`, reports
+`FULL1_RELEASE_GO:PASS`, and requires an empty `missingMarkers` list. This is a
+negative safety boundary only until `haxe_ocaml-7c1ke` lands and the release
+path also validates candidate identity, current manifests, authentic child
+artifacts, digests, attempts, timestamps, and freshness.

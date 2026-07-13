@@ -2,6 +2,23 @@
 
 This guide explains where we are in the `hxhx Scoped 1.0` journey without assuming compiler expertise.
 
+`Scoped 1.0` is currently a compatibility-profile name, not authorization to
+publish semantic version `1.0.0`. The current release guard reserves every
+version `>=1.0.0` for Full1 evidence. `haxe_ocaml-ftrhr` owns the xhigh decision
+about whether the scoped profile remains a `0.x` candidate name or receives a
+different explicit version identity. Until it closes, do not publish a scoped
+semantic `1.0.0` or use unqualified `1.0` wording.
+
+Status vocabulary on this page is intentionally bounded:
+
+- `contract complete`: policy, inventory, or gate wiring exists;
+- `implementation complete`: the named bounded implementation milestone closed;
+- `current evidence green`: the required nonstale run passed for the named SHA;
+- `released`: publication consumed the required candidate-bound evidence.
+
+An older `Done` label means the bounded milestone closed. It does not by itself
+mean current evidence is green or that a product was released.
+
 Use this when you want to answer:
 
 - What does “Scoped 1.0” actually mean here?
@@ -126,7 +143,8 @@ Meaning in plain terms:
 
 ### M7. Replacement-ready acceptance
 
-Status: Done (replacement bundle under current gate policy)  
+Status: Contract/implementation complete for the bounded replacement bundle;
+current release evidence is a separate requirement.
 Beads: `haxe.ocaml-xgv.10`, `haxe.ocaml-xgv.10.40`, `haxe.ocaml-ayi`
 
 Meaning in plain terms:
@@ -143,7 +161,9 @@ Meaning in plain terms:
 
 ### M16. Portable stdlib parity closure (hard Scoped 1.0 blocker)
 
-Status: Done (for the declared Haxe 4.3.7 portable baseline scope)  
+Status: Inventory/closure contract complete for the declared Haxe `4.3.7`
+portable baseline; current required Tier1 evidence is red and owned by
+`haxe_ocaml-lg7be`.
 Bead: `haxe.ocaml-yfh`
 
 Meaning in plain terms:
