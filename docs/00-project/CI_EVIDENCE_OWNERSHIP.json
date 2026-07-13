@@ -208,25 +208,25 @@
       }
     },
     {
-      "id": "macro-runtime-28789312872",
+      "id": "macro-runtime-29243580105",
       "checkId": "macro-runtime-weekly",
       "state": "open",
       "evidenceState": "failure-current",
       "failureClass": "unknown",
       "bead": "haxe_ocaml-vhk47",
-      "recordedAt": "2026-07-13T06:40:00Z",
+      "recordedAt": "2026-07-13T11:39:00Z",
       "run": {
-        "id": 28789312872,
+        "id": 29243580105,
         "attempt": 1,
-        "headSha": "07cdb91a6124d25cbd2ef81db38fe6602681f89e",
+        "headSha": "be044b128eaa8b9f0853ff8d45af5a34f00b656a",
         "event": "schedule",
         "conclusion": "failure",
-        "createdAt": "2026-07-06T11:48:50Z",
-        "updatedAt": "2026-07-06T11:54:52Z",
-        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/28789312872"
+        "createdAt": "2026-07-13T10:40:40Z",
+        "updatedAt": "2026-07-13T10:46:26Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29243580105"
       },
-      "reproductionOrEvidence": "The latest weekly macro-runtime aggregate failed; its first deterministic child failure still needs artifact-level classification.",
-      "closureGate": "The owner must classify the first real blocker and a fresh required macro-runtime run must pass without fallback or skip."
+      "reproductionOrEvidence": "The in-process macro mode passed, while external-host failed during automatic macro-host building after 252.182 seconds. Artifact 8276541049 records only the generic build exit, so retained build logs are required to classify the underlying failure.",
+      "closureGate": "The owner must reproduce with retained macro-host logs, fix the bounded owned cause without weakening either mode, and record a fresh passing aggregate for the fix SHA."
     },
     {
       "id": "m7-timeout-29188919192",
