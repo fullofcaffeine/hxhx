@@ -79,7 +79,9 @@ Current planning owners:
 - required/release-evidence failure ownership: `haxe_ocaml-145dn`
 - exact target/generator scope decision: `haxe_ocaml-rttuj`
 - Scoped profile versus semantic-version decision: `haxe_ocaml-ftrhr`
-- prepublication RC provenance and release handoff: `haxe_ocaml-7c1ke`
+- prepublication RC provenance and release handoff: completed foundation
+  `haxe_ocaml-7c1ke`; authentic candidate outcome remains under
+  `haxe.ocaml-f1cl`
 - actual macro/eval, plugin, and performance outcomes:
   `haxe_ocaml-vhk47`, `haxe_ocaml-gskz9`, `haxe_ocaml-u6esu`
 - native iteration latency regression loop: `haxe_ocaml-850ii`
@@ -89,8 +91,8 @@ Current planning owners:
 - strict upstream suite and target outcomes: `haxe.ocaml-f1cl.3`,
   `haxe.ocaml-f1cl.3.1`, `haxe.ocaml-f1cl.3.11`
 - Full 1.0 release go/no-go: `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
-  (completed contract foundation: `haxe.ocaml-f1cl.6`; active provenance
-  correction: `haxe_ocaml-7c1ke`)
+  (completed contract foundation: `haxe.ocaml-f1cl.6`; completed
+  candidate-bound provenance correction: `haxe_ocaml-7c1ke`)
 - release enforcement: `scripts/release/full1-release-enforcement.js`
   (`haxe.ocaml-f1cl.7`)
 
