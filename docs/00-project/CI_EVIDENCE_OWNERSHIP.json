@@ -181,7 +181,7 @@
     {
       "id": "core-kpi-fixture-29285144376",
       "checkId": "core-pr",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
       "failureClass": "repository-policy",
       "bead": "haxe_ocaml-93xkb",
@@ -197,7 +197,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29285144376"
       },
       "reproductionOrEvidence": "The Full1 KPI adapter fixture inherited GitHub's real GITHUB_SHA while its normal pass case intentionally used a synthetic commit. The adapter correctly rejected the mismatch before the fixture reached its dedicated cross-SHA check.",
-      "closureGate": "Normal synthetic fixtures must isolate inherited GitHub candidate metadata, the explicit cross-SHA rejection must remain covered, and a later exact-head Core run must pass."
+      "closureGate": "Normal synthetic fixtures must isolate inherited GitHub candidate metadata, the explicit cross-SHA rejection must remain covered, and a later exact-head Core run must pass.",
+      "resolution": {
+        "runId": 29286291756,
+        "runAttempt": 1,
+        "headSha": "bd450a7af2466ddfbcef6c0a33565665ec478da4",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-13T22:15:58Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29286291756"
+      }
     },
     {
       "id": "portable-rest-29209024773",
