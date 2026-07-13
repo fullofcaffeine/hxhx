@@ -14817,6 +14817,30 @@ class CppTargetCore {
 		};
 	}
 
+	/**
+		Return the Xml factory call inside an exact zero-argument `toString()` equality operand.
+
+		This is intentionally limited to core Xml factories with their declared arity.
+		Other factory classes, a local that shadows `Xml`, local receivers, Dynamic
+		values, and general method calls remain on the normal type-inference and
+		rendering path.
+	**/
+	static function directXmlFactoryToStringReceiver(expr:HxExpr, ?scope:CppRenderScope):Null<HxExpr> {
+		return switch (expr) {
+			case ECall(EField(factoryCall = ECall(EField(EIdent("Xml"), factoryMethod), factoryArgs), "toString"),
+				outerArgs): final arityMatches = switch (factoryMethod) {
+					case "createDocument":
+						factoryArgs.length == 0;
+					case "createElement" | "createPCData" | "createCData" | "createComment" | "createDocType" | "createProcessingInstruction":
+						factoryArgs.length == 1;
+					case _:
+						false;
+				}; outerArgs.length == 0 && arityMatches && !exprNameHasLocalStorage("Xml", scope) ? factoryCall : null;
+			case _:
+				null;
+		};
+	}
+
 	/** Render arguments against target-known instance contracts before falling back to general method discovery. **/
 	static function renderFieldCallArgs(receiverCppType:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
 		if (receiverCppType == "std::shared_ptr<EReg>" && method == "split" && args.length == 1)
@@ -15294,9 +15318,21 @@ class CppTargetCore {
 				out.push(renderExpr(args[i], scope));
 			return out;
 		}
+		final firstDirectXmlFactory = switch (args[0]) {
+			case ECall(EField(ECall(_, _), "toString"), outerArgs) if (outerArgs.length == 0):
+				directXmlFactoryToStringReceiver(args[0], scope);
+			case _:
+				null;
+		};
+		final secondDirectXmlFactory = switch (args[1]) {
+			case ECall(EField(ECall(_, _), "toString"), outerArgs) if (outerArgs.length == 0):
+				directXmlFactoryToStringReceiver(args[1], scope);
+			case _:
+				null;
+		};
 		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 		final firstTypeStart = timingEnabled ? Sys.time() : 0.;
-		final firstType = inferExprCppType(args[0], scope);
+		final firstType = firstDirectXmlFactory == null ? inferExprCppType(args[0], scope) : "std::string";
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope,
 				"phase=eq_infer_first seconds="
@@ -15306,7 +15342,7 @@ class CppTargetCore {
 				+ " type="
 				+ firstType);
 		final secondTypeStart = timingEnabled ? Sys.time() : 0.;
-		final secondType = inferExprCppType(args[1], scope);
+		final secondType = secondDirectXmlFactory == null ? inferExprCppType(args[1], scope) : "std::string";
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope,
 				"phase=eq_infer_second seconds="
@@ -15316,11 +15352,13 @@ class CppTargetCore {
 				+ " type="
 				+ secondType);
 		final firstRenderStart = timingEnabled ? Sys.time() : 0.;
-		out.push(eqComparableArgExpr(args[0], firstType, secondType, scope));
+		out.push(firstDirectXmlFactory == null ? eqComparableArgExpr(args[0], firstType, secondType, scope) : renderExpr(firstDirectXmlFactory, scope)
+			+ "->toString()");
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope, "phase=eq_render_first seconds=" + Std.string(Sys.time() - firstRenderStart) + " kind=" + exprKind(args[0]));
 		final secondRenderStart = timingEnabled ? Sys.time() : 0.;
-		out.push(eqComparableArgExpr(args[1], secondType, firstType, scope));
+		out.push(secondDirectXmlFactory == null ? eqComparableArgExpr(args[1], secondType, firstType, scope) : renderExpr(secondDirectXmlFactory, scope)
+			+ "->toString()");
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope, "phase=eq_render_second seconds=" + Std.string(Sys.time() - secondRenderStart) + " kind=" + exprKind(args[1]));
 		for (i in 2...args.length)

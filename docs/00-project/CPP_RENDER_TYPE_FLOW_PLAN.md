@@ -5697,3 +5697,65 @@ suite was used only as a behavior and performance oracle. Committed generated
 OCaml snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or
 Oracle review was deliberately skipped because exact output controls, fresh
 timings, and the existing narrow field boundary gave a safe local seam.
+
+## 2026-07-13 XML Factory `toString()` Equality Fast Path
+
+Follow-up bead `haxe_ocaml-vhfsr` measured comparisons such as
+`Xml.createComment("note").toString() == expected`. In plain language, the Cpp
+renderer first walked the complete factory and `toString()` call to prove that
+it produced a String. It then walked nearly the same call again to render the
+String argument. The final C++ text was simple, but getting there repeated most
+of the work.
+
+`renderEqCallArgs` now recognizes only a zero-argument `toString()` call whose
+receiver is one of the core `Xml.create*` factories with its declared argument
+count. Once that exact shape is known, equality rendering can use the known C++
+String type and render the factory call once. A cheap outer-shape check keeps
+ordinary equality arguments away from this helper. Typed local receivers, a
+local value that shadows the name `Xml`, Dynamic values, unrelated factories,
+wrong factory arities, property getters, and general calls remain on the
+existing path.
+
+Five fresh 100-call processes measured the factory comparison against the exact
+same source with the shortcut temporarily disabled. The median fell from
+0.672765s to 0.073267s, an 89.1% reduction. Separate fresh control processes
+kept parsed-node equality flat at 1.100880s versus 1.097513s. Typed-local
+`toString()` was flat at 0.083064s versus 0.084561s, an unrelated factory was
+flat at 0.685974s versus 0.678594s, and the Dynamic control was flat at
+0.105922s versus 0.100294s. Exact output assertions cover both the
+zero-argument `createDocument()` form and the one-argument factories, as well
+as a wrong-arity call that must decline the shortcut.
+
+A final current-source `hxhx` build completed in about 120 seconds after the
+shadowed-name safety control was added. The same strict, stage0-forbidden Cpp
+probe remained expected-red after 482 seconds (target exit 124, wrapper exit
+1). `TestXML.testCreate` fell from 12.131515s to 6.033482s, a 50.3%
+reduction, while the whole `TestXML` class fell from 53.685283s to 47.139919s,
+a 12.2% reduction. Flat controls were comparable: `TestEReg.test` measured
+0.012517s versus 0.011930s, `MyDynamicClass` measured 10.723831s versus
+10.875510s, and `TestMisc` measured 19.856122s versus 20.046458s. The probe
+completed `Serializer` and reached `DateTools`, advancing beyond the prior
+run's `Serializer` start. The required target still timed out, so this is an
+aggregate rendering-frontier advance rather than Cpp release readiness.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-xml-factory-tostring-shadow-safe.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-xml-equality.log`
+- `test/M14CppXmlCreateRenderBenchIntegrationTest.hx`
+
+README Goals and North Star progress bars remain unchanged. The required Cpp
+target is still red, so this internal rendering improvement does not yet change
+what end users can rely on. `CppTargetCore.hx` is now 26,347 lines; this slice
+adds a narrow 38-line net change to that existing mega-file, while the
+measurement and controls stay in a documented 554-line bench module. The
+bounded extraction plan remains owned by `haxe_ocaml-36ec`; this result does
+not justify a broad backend or IR rewrite. A separate follow-up should measure
+whether the remaining parsed-`Xml.nodeValue` equality work can share its exact
+field fact before type inference, rather than adding more work to this slice.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite was used only as a behavior and performance oracle. Committed generated
+OCaml snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or
+Oracle review was deliberately skipped because the exact AST shape, output
+controls, and same-source timing comparison provided a bounded local seam.

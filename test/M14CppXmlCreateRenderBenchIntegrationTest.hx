@@ -125,9 +125,13 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		], [
 			new HxFieldDecl("label", Public, false, "String", null, null, null, null, false, "get", "null")
 		]);
+		final otherFactory = new HxClassDecl("OtherFactory", false, [
+			new HxFunctionDecl("create", Public, true, [new HxFunctionArg("value", "String", NoDefault, false, false)], "OtherFactory", [], ""),
+			new HxFunctionDecl("toString", Public, false, [], "String", [], "")
+		]);
 		final names = new StringMap<Bool>();
 		final classes = new StringMap<HxClassDecl>();
-		final all = [owner, test, xml, propertyNode, stringPropertyNode];
+		final all = [owner, test, xml, propertyNode, stringPropertyNode, otherFactory];
 		for (cls in all) {
 			final name = HxClassDecl.getName(cls);
 			names.set(name, true);
@@ -220,6 +224,52 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		return out;
 	}
 
+	/** Return the exact Xml factory call inside a zero-argument toString call. **/
+	static function directXmlFactoryToStringReceiver(expr:HxExpr, scope:backend.cpp.CppRenderScope):Null<HxExpr> {
+		return switch (expr) {
+			case ECall(EField(factoryCall = ECall(EField(EIdent("Xml"), factoryMethod), factoryArgs), "toString"),
+				outerArgs): final arityMatches = switch (factoryMethod) {
+					case "createDocument":
+						factoryArgs.length == 0;
+					case "createElement" | "createPCData" | "createCData" | "createComment" | "createDocType" | "createProcessingInstruction":
+						factoryArgs.length == 1;
+					case _:
+						false;
+				}; outerArgs.length == 0 && arityMatches && ! @:privateAccess backend.cpp.CppTargetCore.exprNameHasLocalStorage("Xml",
+					scope) ? factoryCall : null;
+			case _:
+				null;
+		};
+	}
+
+	/** Model direct rendering after the exact Xml factory/toString shape is known. **/
+	static function directXmlFactoryToStringExpr(expr:HxExpr, scope:backend.cpp.CppRenderScope):Null<String> {
+		final receiver = directXmlFactoryToStringReceiver(expr, scope);
+		return receiver == null ? null : @:privateAccess backend.cpp.CppTargetCore.renderExpr(receiver, scope) + "->toString()";
+	}
+
+	/** Model equality rendering when type inference and expression rendering share the exact Xml factory fact. **/
+	static function renderEqCallArgsWithDirectXmlFactoryToString(args:Array<HxExpr>, scope:backend.cpp.CppRenderScope):Array<String> {
+		final firstOptionalStringCode = @:privateAccess backend.cpp.CppTargetCore.stringCodeAccessOptionalExpr(args[0], scope);
+		final secondOptionalStringCode = @:privateAccess backend.cpp.CppTargetCore.stringCodeAccessOptionalExpr(args[1], scope);
+		if ((firstOptionalStringCode != null && @:privateAccess backend.cpp.CppTargetCore.isNullExpr(args[1]))
+			|| (secondOptionalStringCode != null && @:privateAccess backend.cpp.CppTargetCore.isNullExpr(args[0])))
+			return @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs(args, scope);
+		final directFirst = directXmlFactoryToStringExpr(args[0], scope);
+		final directSecond = directXmlFactoryToStringExpr(args[1], scope);
+		if (directFirst == null && directSecond == null)
+			return @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs(args, scope);
+		final firstType = directFirst == null ? @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(args[0], scope) : "std::string";
+		final secondType = directSecond == null ? @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(args[1], scope) : "std::string";
+		final out = [
+			directFirst == null ? @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(args[0], firstType, secondType, scope) : directFirst,
+			directSecond == null ? @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(args[1], secondType, firstType, scope) : directSecond
+		];
+		for (i in 2...args.length)
+			out.push(@:privateAccess backend.cpp.CppTargetCore.renderExpr(args[i], scope));
+		return out;
+	}
+
 	static function main():Void {
 		final sample = fixture();
 		final factoryOutput = render(sample, "factoryChains");
@@ -249,12 +299,14 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(EField(EIdent("erased"), "value"), sample.scope) == "__hxhx_json_any_field(erased, std::string(\"value\"))",
 			"plain-field rendering must not bypass erased JSON field reads");
-		for (name in ["node", "text"])
+		for (name in ["node", "text", "dynamicNode"])
 			sample.scope.localNames.set(name, name);
 		sample.scope.localTypes.set("node", "std::shared_ptr<Xml>");
 		sample.scope.localTypeHints.set("node", "Xml");
 		sample.scope.localTypes.set("text", "std::string");
 		sample.scope.localTypeHints.set("text", "String");
+		sample.scope.localTypes.set("dynamicNode", "std::any");
+		sample.scope.localTypeHints.set("dynamicNode", "Dynamic");
 
 		final calls = envInt("HXHX_CPP_XML_CREATE_RENDER_BENCH_CALLS", DEFAULT_CALLS);
 		var sink = 0;
@@ -262,8 +314,14 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		final factoryToString = toStringCall(factoryCall);
 		final factoryEqualityArgs = [factoryToString, EString("<!--leaf note-->")];
 		final factoryEqualityStmt = eq(factoryEqualityArgs[0], factoryEqualityArgs[1]);
+		final documentFactoryEqualityArgs = [toStringCall(xmlCall("createDocument", [])), EString("")];
+		final wrongArityFactoryEqualityArgs = [toStringCall(xmlCall("createComment", [])), EString("")];
 		final localToString = toStringCall(EIdent("node"));
+		final localToStringEqualityArgs = [localToString, EString("<!--leaf note-->")];
 		final localEqualityArgs = [EIdent("text"), EString("leaf note")];
+		final otherFactoryToString = toStringCall(ECall(EField(EIdent("OtherFactory"), "create"), [EString("other")]));
+		final otherFactoryEqualityArgs = [otherFactoryToString, EString("other")];
+		final dynamicToStringEqualityArgs = [toStringCall(EIdent("dynamicNode")), EString("dynamic")];
 		final parseCall = xmlCall("parse", [EString("<!--leaf note-->")]);
 		final firstChildCall = ECall(EField(parseCall, "firstChild"), []);
 		final nodeValueAccess = parseValueExpr();
@@ -275,6 +333,13 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		final factoryEqualityOutput = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs(factoryEqualityArgs, sample.scope).join(", ");
 		final parseEqualityOutput = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs(parseEqualityArgs, sample.scope).join(", ");
 		final localEqualityOutput = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs(localEqualityArgs, sample.scope).join(", ");
+		final localToStringEqualityOutput = @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(localToStringEqualityArgs, sample.scope).join(", ");
+		final otherFactoryEqualityOutput = @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(otherFactoryEqualityArgs, sample.scope).join(", ");
+		final dynamicToStringEqualityOutput = @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(dynamicToStringEqualityArgs, sample.scope).join(", ");
+		final directFactoryEqualityOutput = renderEqCallArgsWithDirectXmlFactoryToString(factoryEqualityArgs, sample.scope).join(", ");
 		final generalFactoryEqualityOutput = renderEqCallArgsWithoutKnownPlainFieldShortcut(factoryEqualityArgs, sample.scope).join(", ");
 		final generalParseEqualityOutput = renderEqCallArgsWithoutKnownPlainFieldShortcut(parseEqualityArgs, sample.scope).join(", ");
 		final generalLocalEqualityOutput = renderEqCallArgsWithoutKnownPlainFieldShortcut(localEqualityArgs, sample.scope).join(", ");
@@ -285,10 +350,40 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		assertTrue(localToStringOutput == "node->toString()", "typed-local toString control should remain flat, got " + localToStringOutput);
 		assertTrue(factoryEqualityOutput == factoryToStringOutput + ', std::string("<!--leaf note-->")',
 			"factory equality arguments should retain exact String adaptation, got " + factoryEqualityOutput);
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(documentFactoryEqualityArgs, sample.scope)
+				.join(", ") == 'Xml::createDocument()->toString(), std::string("")',
+			"zero-argument Xml.createDocument should use the same direct equality rendering");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(wrongArityFactoryEqualityArgs, sample.scope)
+				.join(", ") == renderEqCallArgsWithoutKnownPlainFieldShortcut(wrongArityFactoryEqualityArgs, sample.scope)
+				.join(", "),
+			"an Xml factory call with the wrong arity must stay on the general equality path");
+		sample.scope.localNames.set("Xml", "Xml");
+		sample.scope.localTypes.set("Xml", "std::shared_ptr<OtherFactory>");
+		final shadowedFactoryEqualityOutput = @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(factoryEqualityArgs, sample.scope).join(", ");
+		final shadowedFactoryGeneralOutput = renderEqCallArgsWithoutKnownPlainFieldShortcut(factoryEqualityArgs, sample.scope).join(", ");
+		assertTrue(shadowedFactoryEqualityOutput == shadowedFactoryGeneralOutput,
+			"a local named Xml must keep factory-shaped calls on the general equality path");
+		sample.scope.localNames.remove("Xml");
+		sample.scope.localTypes.remove("Xml");
 		assertTrue(parseEqualityOutput == '(Xml::parse(std::string("<!--leaf note-->"))->firstChild()->nodeValue), std::string("leaf note")',
 			"parse equality arguments should retain the exact chain, got " + parseEqualityOutput);
 		assertTrue(localEqualityOutput == 'std::string(text), std::string("leaf note")',
 			"typed-local equality control should retain ordinary String adaptation, got " + localEqualityOutput);
+		assertTrue(localToStringEqualityOutput == 'node->toString(), std::string("<!--leaf note-->")',
+			"typed-local toString equality should retain its instance call, got " + localToStringEqualityOutput);
+		assertTrue(otherFactoryEqualityOutput == 'std::make_shared<OtherFactory>("other")->toString(), std::string("other")',
+			"unrelated factory equality should retain its instance call, got " + otherFactoryEqualityOutput);
+		assertTrue(directFactoryEqualityOutput == factoryEqualityOutput,
+			"direct Xml factory/toString equality must preserve exact output, got " + directFactoryEqualityOutput);
+		assertTrue(renderEqCallArgsWithDirectXmlFactoryToString(localToStringEqualityArgs, sample.scope).join(", ") == localToStringEqualityOutput,
+			"direct Xml factory/toString candidate must decline a typed-local receiver");
+		assertTrue(renderEqCallArgsWithDirectXmlFactoryToString(otherFactoryEqualityArgs, sample.scope).join(", ") == otherFactoryEqualityOutput,
+			"direct Xml factory/toString candidate must decline an unrelated factory");
+		assertTrue(renderEqCallArgsWithDirectXmlFactoryToString(dynamicToStringEqualityArgs, sample.scope).join(", ") == dynamicToStringEqualityOutput,
+			"direct Xml factory/toString candidate must decline a Dynamic receiver");
 		assertTrue(generalFactoryEqualityOutput == factoryEqualityOutput,
 			"plain-field shortcut must not change factory equality output, got " + generalFactoryEqualityOutput);
 		assertTrue(generalParseEqualityOutput == parseEqualityOutput,
@@ -312,12 +407,22 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 			() -> sink += @:privateAccess backend.cpp.CppTargetCore.renderExpr(localToString, sample.scope).length);
 		final factoryToStringSeconds = elapsed("factory_to_string", calls,
 			() -> sink += @:privateAccess backend.cpp.CppTargetCore.renderExpr(factoryToString, sample.scope).length);
+		final factoryToStringShapeSeconds = elapsed("factory_to_string_shape", calls, () -> {
+			final value = directXmlFactoryToStringReceiver(factoryToString, sample.scope);
+			sink += value == null ? 0 : 1;
+		});
+		final factoryToStringDirectSeconds = elapsed("factory_to_string_direct", calls, () -> {
+			final value = directXmlFactoryToStringExpr(factoryToString, sample.scope);
+			sink += value == null ? 0 : value.length;
+		});
 		final factoryEqualityInferSeconds = elapsed("factory_equality_infer", calls,
 			() -> sink += @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(factoryToString, sample.scope).length);
 		final factoryEqualityComparableSeconds = elapsed("factory_equality_comparable", calls, () -> sink += @:privateAccess
 			backend.cpp.CppTargetCore.eqComparableArgExpr(factoryToString, "std::string", "std::string", sample.scope).length);
 		final factoryEqualityArgsSeconds = elapsed("factory_equality_args", calls, () -> sink += @:privateAccess
 			backend.cpp.CppTargetCore.renderEqCallArgs(factoryEqualityArgs, sample.scope).join(", ").length);
+		final factoryEqualityDirectSeconds = elapsed("factory_equality_direct", calls,
+			() -> sink += renderEqCallArgsWithDirectXmlFactoryToString(factoryEqualityArgs, sample.scope).join(", ").length);
 		final factoryEqualityGeneralSeconds = elapsed("factory_equality_general", calls,
 			() -> sink += renderEqCallArgsWithoutKnownPlainFieldShortcut(factoryEqualityArgs, sample.scope).join(", ").length);
 		final factoryEqualityCallSeconds = elapsed("factory_equality_call", calls, () -> sink += @:privateAccess
@@ -330,6 +435,18 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 			() -> sink += renderEqCallArgsWithoutKnownPlainFieldShortcut(localEqualityArgs, sample.scope).join(", ").length);
 		final localEqualityCallSeconds = elapsed("local_equality_call", calls, () -> sink += @:privateAccess
 			backend.cpp.CppTargetCore.directCallExpr("eq", localEqualityArgs, sample.scope).length);
+		final localToStringEqualityArgsSeconds = elapsed("local_to_string_equality_args", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(localToStringEqualityArgs, sample.scope).join(", ").length);
+		final localToStringEqualityDirectSeconds = elapsed("local_to_string_equality_direct", calls,
+			() -> sink += renderEqCallArgsWithDirectXmlFactoryToString(localToStringEqualityArgs, sample.scope).join(", ").length);
+		final otherFactoryEqualityArgsSeconds = elapsed("other_factory_equality_args", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(otherFactoryEqualityArgs, sample.scope).join(", ").length);
+		final otherFactoryEqualityDirectSeconds = elapsed("other_factory_equality_direct", calls,
+			() -> sink += renderEqCallArgsWithDirectXmlFactoryToString(otherFactoryEqualityArgs, sample.scope).join(", ").length);
+		final dynamicToStringEqualityArgsSeconds = elapsed("dynamic_to_string_equality_args", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(dynamicToStringEqualityArgs, sample.scope).join(", ").length);
+		final dynamicToStringEqualityDirectSeconds = elapsed("dynamic_to_string_equality_direct", calls,
+			() -> sink += renderEqCallArgsWithDirectXmlFactoryToString(dynamicToStringEqualityArgs, sample.scope).join(", ").length);
 		final plainFieldFastSeconds = elapsed("plain_field_fast", calls, () -> {
 			final value = @:privateAccess backend.cpp.CppTargetCore.knownPlainInstanceFieldReadExpr(nodeValueAccess, sample.scope);
 			sink += value == null ? 0 : value.length;
@@ -392,15 +509,24 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		Sys.println("factory_result_type_seconds=" + factoryResultTypeSeconds);
 		Sys.println("local_to_string_seconds=" + localToStringSeconds);
 		Sys.println("factory_to_string_seconds=" + factoryToStringSeconds);
+		Sys.println("factory_to_string_shape_seconds=" + factoryToStringShapeSeconds);
+		Sys.println("factory_to_string_direct_seconds=" + factoryToStringDirectSeconds);
 		Sys.println("factory_equality_infer_seconds=" + factoryEqualityInferSeconds);
 		Sys.println("factory_equality_comparable_seconds=" + factoryEqualityComparableSeconds);
 		Sys.println("factory_equality_args_seconds=" + factoryEqualityArgsSeconds);
+		Sys.println("factory_equality_direct_seconds=" + factoryEqualityDirectSeconds);
 		Sys.println("factory_equality_general_seconds=" + factoryEqualityGeneralSeconds);
 		Sys.println("factory_equality_call_seconds=" + factoryEqualityCallSeconds);
 		Sys.println("factory_equality_stmt_seconds=" + factoryEqualityStmtSeconds);
 		Sys.println("local_equality_args_seconds=" + localEqualityArgsSeconds);
 		Sys.println("local_equality_general_seconds=" + localEqualityGeneralSeconds);
 		Sys.println("local_equality_call_seconds=" + localEqualityCallSeconds);
+		Sys.println("local_to_string_equality_args_seconds=" + localToStringEqualityArgsSeconds);
+		Sys.println("local_to_string_equality_direct_seconds=" + localToStringEqualityDirectSeconds);
+		Sys.println("other_factory_equality_args_seconds=" + otherFactoryEqualityArgsSeconds);
+		Sys.println("other_factory_equality_direct_seconds=" + otherFactoryEqualityDirectSeconds);
+		Sys.println("dynamic_to_string_equality_args_seconds=" + dynamicToStringEqualityArgsSeconds);
+		Sys.println("dynamic_to_string_equality_direct_seconds=" + dynamicToStringEqualityDirectSeconds);
 		Sys.println("plain_field_fast_seconds=" + plainFieldFastSeconds);
 		Sys.println("old_node_value_access_seconds=" + oldNodeValueAccessSeconds);
 		Sys.println("receiver_type_seconds=" + receiverTypeSeconds);
