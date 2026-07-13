@@ -52,6 +52,33 @@ Macro lane: enabled
 Each ratio row carries metric-specific deltas for compile/macro/memory lanes when both source lanes exist.
 These deltas are report-only today; enforcement remains a follow-up benchmark gate task.
 
+## Bytecode versus native hxhx
+
+The normal report workflow builds the OCaml bytecode form of `hxhx`. That is a
+real compiler, but it does not answer how fast the native executable is. When
+manually starting `Perf / HXHX KPI (Report Only)`, enable `compare_native` to
+measure both forms one after the other on the same GitHub runner.
+
+The comparison artifact contains both complete `hxhx.kpi.v2` reports and a
+`hxhx.kpi-artifact-comparison.v1` summary. A `nativeOverBytecode` value below
+`1` means the native executable took less time for that row. The result is
+diagnostic only: one run does not create or change a release threshold. If the
+requested native build falls back to bytecode, the comparator rejects it
+instead of presenting it as native evidence.
+
+To exercise the same flow locally:
+
+```bash
+HXHX_KPI_REPS=2 \
+  HXHX_KPI_REPORT_DIR=.tmp/kpi-bytecode \
+  npm run hxhx:bench:kpi
+
+HXHX_KPI_REPS=2 \
+  HXHX_KPI_BYTECODE_REPORT_DIR=.tmp/kpi-bytecode \
+  HXHX_KPI_COMPARISON_DIR=.tmp/kpi-bytecode-native \
+  bash scripts/hxhx/bench-kpi-artifact-comparison.sh
+```
+
 ## Regeneration
 
 ```bash

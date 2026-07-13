@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ master, main ]
   workflow_dispatch:
+    inputs:
+      compare_native:
+        description: Measure bytecode and native hxhx sequentially on the same runner
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: hxhx-kpi-${{ github.ref }}
@@ -110,6 +116,22 @@ jobs:
           fi
           exit 0
 
+      - name: Compare bytecode and native hxhx (manual opt-in, report-only)
+        id: artifact_compare
+        if: github.event_name == 'workflow_dispatch' && inputs.compare_native
+        run: |
+          set +e
+          comparison_dir="$RUNNER_TEMP/hxhx_kpi_artifact_comparison"
+          HXHX_KPI_BYTECODE_REPORT_DIR="${{ steps.bench.outputs.report_dir }}" \
+            HXHX_KPI_COMPARISON_DIR="$comparison_dir" \
+            bash scripts/hxhx/bench-kpi-artifact-comparison.sh
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -ne 0 ]; then
+            echo "Bytecode/native KPI comparison did not produce comparable evidence (report-only)." >&2
+          fi
+          exit 0
+
       - name: Add benchmark summary
         if: always()
         run: |
@@ -177,11 +199,68 @@ jobs:
           KPI_REPORT_DIR: ${{ steps.bench.outputs.report_dir }}
           KPI_EXIT_CODE: ${{ steps.bench.outputs.exit_code }}
 
+      - name: Add bytecode/native comparison summary
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.compare_native
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          comparison_path = Path(os.environ["KPI_COMPARISON_DIR"]) / "comparison.json"
+          exit_code = os.environ.get("KPI_COMPARISON_EXIT_CODE", "")
+          lines = [
+            "",
+            "### Same-run hxhx bytecode/native comparison",
+            "",
+            f"- Exit code: `{exit_code}`",
+            "- Mode: `diagnostic-only` (no release threshold)",
+          ]
+          if not comparison_path.exists():
+            lines.extend(["", "No comparable bytecode/native artifact was produced."])
+          else:
+            payload = json.loads(comparison_path.read_text(encoding="utf-8"))
+            lines.extend([
+              f"- Commit: `{payload['git']['commit']}`",
+              f"- CPU: `{payload['environment']['cpu_model']}`",
+              "",
+              "| Metric | Lane | Bytecode median | Native median | Native / bytecode |",
+              "|---|---|---:|---:|---:|",
+            ])
+            for row in payload.get("metrics", []):
+              if row.get("metric") not in {"compile_wall_ms", "incremental_rebuild_ms"}:
+                continue
+              if row.get("lane") == "upstream_haxe":
+                continue
+              ratio = row.get("nativeOverBytecode")
+              ratio_text = "n/a" if ratio is None else str(ratio)
+              lines.append(
+                f"| `{row['metric']}` | `{row['lane']}` | "
+                f"{row['bytecodeMedian']} {row['unit']} | {row['nativeMedian']} {row['unit']} | {ratio_text} |"
+              )
+          with summary_path.open("a", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+          PY
+        env:
+          KPI_COMPARISON_DIR: ${{ runner.temp }}/hxhx_kpi_artifact_comparison
+          KPI_COMPARISON_EXIT_CODE: ${{ steps.artifact_compare.outputs.exit_code }}
+
       - name: Upload KPI artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: hxhx-kpi-report-${{ github.run_id }}
           path: ${{ steps.bench.outputs.report_dir }}
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload bytecode/native comparison artifacts
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.compare_native
+        uses: actions/upload-artifact@v4
+        with:
+          name: hxhx-kpi-bytecode-native-${{ github.run_id }}
+          path: ${{ runner.temp }}/hxhx_kpi_artifact_comparison
           if-no-files-found: warn
           retention-days: 14

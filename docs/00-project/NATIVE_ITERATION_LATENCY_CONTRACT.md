@@ -84,7 +84,10 @@ performance claim must use measured medians from the relevant runner class.
   "activeEvidenceLoop": {
     "reportSchema": "hxhx.kpi.v2",
     "reportValidator": "scripts/ci/hxhx-kpi-report-validator.js",
-    "reportWorkflow": ".github/workflows/hxhx-kpi-report.yml"
+    "reportWorkflow": ".github/workflows/hxhx-kpi-report.yml",
+    "artifactComparisonSchema": "hxhx.kpi-artifact-comparison.v1",
+    "artifactComparisonValidator": "scripts/ci/hxhx-kpi-artifact-comparison.js",
+    "artifactComparisonRunner": "scripts/hxhx/bench-kpi-artifact-comparison.sh"
   },
   "measurementBuckets": [
     {
@@ -163,6 +166,14 @@ Expected to remain intentionally heavier:
   release claims.
 
 ## Reporting Rule
+
+The report workflow has an opt-in bytecode/native comparison. It runs both
+compiler forms sequentially in one GitHub job and accepts the comparison only
+when the commit, runner, CPU, toolchains, commands, repetition rules, and raw
+metric rows match. A requested native build that falls back to bytecode is
+reported as missing native evidence, not renamed to make the comparison pass.
+The comparison remains diagnostic until repeated observations justify a
+separate threshold decision.
 
 When a bead materially changes compiler iteration speed, plugin/native artifact
 loops, bootstrap regeneration, or Full1 throughput:

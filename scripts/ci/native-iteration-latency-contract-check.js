@@ -13,6 +13,8 @@ const northStarPath = 'docs/00-project/NORTH_STAR_GOALS.md'
 const ciGatesPath = 'docs/00-project/CI_GATES.md'
 const readmePath = 'README.md'
 const packageJsonPath = 'package.json'
+const kpiWorkflowPath = '.github/workflows/hxhx-kpi-report.yml'
+const artifactComparisonRunnerPath = 'scripts/hxhx/bench-kpi-artifact-comparison.sh'
 
 function fail(message) {
   console.error(`[native-iteration-latency-contract-check] ERROR: ${message}`)
@@ -67,6 +69,8 @@ function main() {
   const ciGates = readText(ciGatesPath)
   const readme = readText(readmePath)
   const packageJson = readText(packageJsonPath)
+  const kpiWorkflow = readText(kpiWorkflowPath)
+  const artifactComparisonRunner = readText(artifactComparisonRunnerPath)
 
   for (const snippet of [
     'NATIVE_ITERATION_LATENCY_POLICY:PASS',
@@ -74,6 +78,7 @@ function main() {
     'haxe_ocaml-850ii',
     'scripts/ci/full1-phase-timing.js',
     'scripts/ci/hxhx-kpi-report-validator.js',
+    'scripts/ci/hxhx-kpi-artifact-comparison.js',
     'scripts/hxhx/bench-bootstrap-regen.sh',
     'scripts/hxhx/bench-native-reflaxe.sh',
     'FULL1_PERF_PARITY:PASS',
@@ -86,6 +91,22 @@ function main() {
   requireIncludes(ciGatesPath, ciGates, contractPath)
   requireIncludes(readmePath, readme, 'practical edit-compile-test latency')
   requireIncludes(packageJsonPath, packageJson, 'native-iteration-latency-contract-check.js')
+  requireIncludes(packageJsonPath, packageJson, 'hxhx-kpi-artifact-comparison-fixture-test.js')
+  for (const snippet of [
+    'compare_native:',
+    'scripts/hxhx/bench-kpi-artifact-comparison.sh',
+    'hxhx-kpi-bytecode-native-${{ github.run_id }}'
+  ]) {
+    requireIncludes(kpiWorkflowPath, kpiWorkflow, snippet)
+  }
+  for (const snippet of [
+    'HXHX_BOOTSTRAP_PREFER_NATIVE=1',
+    'HXHX_STAGE0_OCAML_BUILD=native',
+    'scripts/ci/hxhx-kpi-report-validator.js',
+    'scripts/ci/hxhx-kpi-artifact-comparison.js'
+  ]) {
+    requireIncludes(artifactComparisonRunnerPath, artifactComparisonRunner, snippet)
+  }
 
   const policy = extractPolicyJson(contract)
   if (!policy) return
@@ -117,7 +138,15 @@ function main() {
     if (policy.activeEvidenceLoop.reportSchema !== 'hxhx.kpi.v2') {
       fail('policy.activeEvidenceLoop.reportSchema must be hxhx.kpi.v2')
     }
-    for (const field of ['reportValidator', 'reportWorkflow']) {
+    if (policy.activeEvidenceLoop.artifactComparisonSchema !== 'hxhx.kpi-artifact-comparison.v1') {
+      fail('policy.activeEvidenceLoop.artifactComparisonSchema must be hxhx.kpi-artifact-comparison.v1')
+    }
+    for (const field of [
+      'reportValidator',
+      'reportWorkflow',
+      'artifactComparisonValidator',
+      'artifactComparisonRunner'
+    ]) {
       const evidencePath = policy.activeEvidenceLoop[field]
       if (!evidencePath || !fs.existsSync(evidencePath)) {
         fail(`policy.activeEvidenceLoop.${field} references missing path: ${evidencePath}`)
