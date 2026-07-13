@@ -798,6 +798,9 @@ let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
       Buffer.contents b
     )
 
+let toString (a : 'a t) (to_string : 'a -> string) : string =
+  "[" ^ join a "," to_string ^ "]"
+
 let map (a : 'a t) (f : 'a -> 'b) : 'b t =
   match unwrap_or_empty a with
   | None -> create ()
