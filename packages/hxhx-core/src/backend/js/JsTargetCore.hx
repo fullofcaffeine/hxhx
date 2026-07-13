@@ -148,12 +148,24 @@ class JsTargetCore implements ITargetCore {
 		return true;
 	}
 
+	/**
+		Collects classes that an initializer reads while the initializer itself runs.
+
+		Lambda bodies are deliberately lazy: creating a callback does not execute its
+		body, so following references inside it can invent dependency cycles and hide
+		real eager reads that must be ordered.
+	**/
 	static function staticInitClassDeps(unit:JsClassUnit, byFullName:haxe.ds.StringMap<String>, bySimpleFullName:haxe.ds.StringMap<String>):Array<String> {
 		final deps = new Array<String>();
 		for (field in HxClassDecl.getFields(unit.decl)) {
 			if (!HxFieldDecl.getIsStatic(field))
 				continue;
-			collectStaticInitClassDeps(HxFieldDecl.getInit(field), deps, byFullName, bySimpleFullName);
+			final init = HxFieldDecl.getInit(field);
+			collectStaticInitClassDeps(init, deps, byFullName, bySimpleFullName);
+			final compactedPath = compactedCastStaticInitPath(HxFieldDecl.getInitText(field));
+			final dep = resolveStaticInitPath(compactedPath, byFullName, bySimpleFullName);
+			if (dep != null)
+				deps.push(dep);
 		}
 		return deps;
 	}
@@ -163,6 +175,10 @@ class JsTargetCore implements ITargetCore {
 		if (expr == null)
 			return;
 		switch (expr) {
+			case EIdent(_) | EEnumValue(_):
+				final dep = resolveStaticInitValuePath(expr, byFullName, bySimpleFullName);
+				if (dep != null)
+					deps.push(dep);
 			case ENew(typePath, args):
 				final dep = resolveStaticInitTypePath(typePath, byFullName, bySimpleFullName);
 				if (dep != null)
@@ -170,7 +186,7 @@ class JsTargetCore implements ITargetCore {
 				for (arg in args)
 					collectStaticInitClassDeps(arg, deps, byFullName, bySimpleFullName);
 			case EField(obj, _):
-				final dep = resolveStaticInitTypePath(staticInitExprTypePath(obj), byFullName, bySimpleFullName);
+				final dep = resolveStaticInitValuePath(obj, byFullName, bySimpleFullName);
 				if (dep != null)
 					deps.push(dep);
 				collectStaticInitClassDeps(obj, deps, byFullName, bySimpleFullName);
@@ -180,8 +196,8 @@ class JsTargetCore implements ITargetCore {
 					collectStaticInitClassDeps(arg, deps, byFullName, bySimpleFullName);
 			case EMacroExpr(inner, _):
 				collectStaticInitClassDeps(inner, deps, byFullName, bySimpleFullName);
-			case ELambda(_, body):
-				collectStaticInitClassDeps(body, deps, byFullName, bySimpleFullName);
+			case ELambda(_, _):
+				// The callback body runs later and cannot constrain startup order.
 			case ESwitch(scrutinee, _, exprs):
 				collectStaticInitClassDeps(scrutinee, deps, byFullName, bySimpleFullName);
 				for (caseExpr in exprs)
@@ -237,6 +253,58 @@ class JsTargetCore implements ITargetCore {
 			case _:
 				null;
 		};
+	}
+
+	static function resolveStaticInitPath(rawPath:Null<String>, byFullName:haxe.ds.StringMap<String>, bySimpleFullName:haxe.ds.StringMap<String>):Null<String> {
+		if (rawPath == null || rawPath.length == 0)
+			return null;
+		var candidate = rawPath;
+		while (candidate.length > 0) {
+			if (byFullName.exists(candidate))
+				return candidate;
+			final dot = candidate.lastIndexOf(".");
+			if (dot < 0)
+				break;
+			candidate = candidate.substr(0, dot);
+		}
+		return resolveStaticInitTypePath(rawPath, byFullName, bySimpleFullName);
+	}
+
+	/** Resolves the owning class from either a class path or a qualified member path. **/
+	static function resolveStaticInitValuePath(expr:HxExpr, byFullName:haxe.ds.StringMap<String>, bySimpleFullName:haxe.ds.StringMap<String>):Null<String> {
+		return resolveStaticInitPath(staticInitExprTypePath(expr), byFullName, bySimpleFullName);
+	}
+
+	/**
+		Recovers the value path from a compacted `cast path.to.Class.field` initializer.
+
+		The native protocol can remove the space after `cast` while the lightweight
+		bootstrap parser is active. This supplementary scan accepts only that narrow text
+		shape and is used only to order classes; normal expression emission remains owned
+		by the parsed AST or established static-field fallback.
+	**/
+	static function compactedCastStaticInitPath(initText:String):Null<String> {
+		final text = initText == null ? "" : StringTools.trim(initText);
+		if (!StringTools.startsWith(text, "cast"))
+			return null;
+		var index = 4;
+		while (index < text.length) {
+			final code = text.charCodeAt(index);
+			if (code != " ".code && code != "\t".code && code != "\n".code && code != "\r".code)
+				break;
+			index++;
+		}
+		final start = index;
+		while (index < text.length) {
+			final code = text.charCodeAt(index);
+			final isUpper = code >= "A".code && code <= "Z".code;
+			final isLower = code >= "a".code && code <= "z".code;
+			final isDigit = code >= "0".code && code <= "9".code;
+			if (!isUpper && !isLower && !isDigit && code != "_".code && code != ".".code)
+				break;
+			index++;
+		}
+		return index == start ? null : text.substring(start, index);
 	}
 
 	static function simpleName(fullName:String):String {
