@@ -183,6 +183,33 @@ hxhx --ocaml-eval -main Main -cp src
 hxhx --ocaml -main Main -cp src --hxhx-no-emit
 ```
 
+## Beginner-Friendly Communication
+
+Assume the reader is a Haxe user who wants to understand and contribute to
+`hxhx`, but is not yet a compiler or `hxhx` expert.
+
+- Lead progress updates, task descriptions, bead notes, plans, and hand-offs
+  with the practical outcome: what now works, what is still broken, why it
+  matters to a user, and what happens next.
+- Introduce an internal term only after explaining it in everyday language.
+  For example, say "the required automated checks are failing" before
+  referring to a "red required lane", and say what a stage or gate actually
+  does before using its short name.
+- Keep bead titles, descriptions, and acceptance criteria understandable on a
+  first read. Precise marker names, workflow IDs, compiler phases, and target
+  internals can follow as supporting evidence instead of carrying the main
+  explanation.
+- When describing architecture, give the smallest useful mental model or
+  concrete example. Explain which part reads Haxe code, checks it, generates a
+  target language, or runs macros before naming the owning module.
+- For status questions, answer in this order: current user-visible capability,
+  current blocker, distance to the next meaningful goal, and then technical
+  evidence such as commits, beads, tests, or CI run IDs.
+- Do not remove important limitations or make unfinished behavior sound ready
+  in order to simplify the wording. Plain language must remain technically
+  honest, and deep implementation detail must remain available in technical
+  docs and evidence records.
+
 ## Autonomy Policy
 
 - If you're working towards goals, do **not** end your turn. This allows for continuous autonomous work.
