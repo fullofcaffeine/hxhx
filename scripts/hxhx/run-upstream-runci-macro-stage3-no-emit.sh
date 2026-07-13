@@ -128,11 +128,19 @@ fi
 prepare_haxelib_hxml utest
 
 echo "== Gate 2 (stage3 no-emit rung): upstream tests/RunCi.hxml"
+set +e
 out="$(
   cd "$UPSTREAM_DIR/tests"
   rm -rf out_hxhx_runci_stage3_no_emit
   HAXE_BIN="__disabled__" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit RunCi.hxml --hxhx-out out_hxhx_runci_stage3_no_emit 2>&1
 )"
-echo "$out"
+code="$?"
+set -e
+printf '%s\n' "$out"
 
-echo "$out" | grep -q "^stage3=no_emit_ok$"
+if [ "$code" != "0" ]; then
+  echo "FAILED: hxhx stage3 no-emit rung exited with code $code" >&2
+  exit "$code"
+fi
+
+printf '%s\n' "$out" | grep -q "^stage3=no_emit_ok$"
