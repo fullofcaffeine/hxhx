@@ -123,8 +123,11 @@ jobs:
         run: |
           set -euo pipefail
           REPORT_DIR="${{ steps.bench.outputs.report_dir }}"
+          REPORT="$REPORT_DIR/report.json"
           RESULTS="$REPORT_DIR/results.tsv"
-          if [ -f "$RESULTS" ]; then
+          if [ -f "$REPORT" ]; then
+            node scripts/ci/bootstrap-regen-benchmark-report.js markdown --report "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+          elif [ -f "$RESULTS" ]; then
             {
               echo "### Bootstrap regen benchmark"
               echo ""

@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REGEN_SCRIPT="$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh"
 SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
+REPORT_BUILDER="$ROOT/scripts/ci/bootstrap-regen-benchmark-report.js"
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 REPS="${HXHX_BOOTSTRAP_BENCH_REPS:-1}"
@@ -19,6 +20,15 @@ STAGE0_DISABLE_PREPASSES="${HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES:-0}"
 STAGE0_OCAMLRUNPARAM="${HXHX_BOOTSTRAP_BENCH_STAGE0_OCAMLRUNPARAM:-}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 REPORT_DIR="${HXHX_BOOTSTRAP_BENCH_REPORT_DIR:-$ROOT/.hxhx/bench/bootstrap-regen/$TIMESTAMP}"
+REPORT_JSON="$REPORT_DIR/report.json"
+
+SOURCE_COMMIT="$(git -C "$ROOT" rev-parse HEAD)"
+if git -C "$ROOT" diff --quiet --ignore-submodules -- \
+	&& git -C "$ROOT" diff --cached --quiet --ignore-submodules --; then
+	SOURCE_CLEAN_AT_START="true"
+else
+	SOURCE_CLEAN_AT_START="false"
+fi
 
 usage() {
 	cat <<'USAGE'
@@ -48,6 +58,11 @@ Environment knobs:
   HXHX_BOOTSTRAP_BENCH_STAGE0_OCAMLRUNPARAM
                                       pass HXHX_STAGE0_OCAMLRUNPARAM to regen runs
   HXHX_BOOTSTRAP_BENCH_REPORT_DIR     Output directory for per-run JSON reports
+
+Outputs:
+  results.tsv                         Raw run rows
+  <scenario>.<policy>.*.json          Low-level regeneration reports
+  report.json                         Self-describing report with medians and provenance
 
 Examples:
   # Run warm + skip only (faster local loop)
@@ -102,6 +117,11 @@ if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
 	exit 1
 fi
 
+if ! command -v node >/dev/null 2>&1; then
+	echo "Missing node on PATH (required for the benchmark report)." >&2
+	exit 1
+fi
+
 if [ ! -x "$REGEN_SCRIPT" ]; then
 	echo "Missing regen script: $REGEN_SCRIPT" >&2
 	exit 1
@@ -109,6 +129,11 @@ fi
 
 if [ ! -x "$SERVER_HELPER" ]; then
 	echo "Missing haxe server helper: $SERVER_HELPER" >&2
+	exit 1
+fi
+
+if [ ! -f "$REPORT_BUILDER" ]; then
+	echo "Missing report builder: $REPORT_BUILDER" >&2
 	exit 1
 fi
 
@@ -460,3 +485,31 @@ END {
 
 echo ""
 echo "Detailed results: $RESULTS_TSV"
+
+if git -C "$ROOT" diff --quiet --ignore-submodules -- \
+	&& git -C "$ROOT" diff --cached --quiet --ignore-submodules --; then
+	SOURCE_CLEAN_AT_END="true"
+else
+	SOURCE_CLEAN_AT_END="false"
+fi
+
+node "$REPORT_BUILDER" build \
+	--results-tsv "$RESULTS_TSV" \
+	--reports-dir "$REPORT_DIR" \
+	--json-out "$REPORT_JSON" \
+	--git-commit "$SOURCE_COMMIT" \
+	--start-tracked-source-clean "$SOURCE_CLEAN_AT_START" \
+	--end-tracked-source-clean "$SOURCE_CLEAN_AT_END" \
+	--scenarios "$SCENARIOS_RAW" \
+	--reps "$REPS" \
+	--verify "$VERIFY_FLAG" \
+	--dune-jobs "$DUNE_JOBS_RAW" \
+	--compare-stage0-policies "$COMPARE_STAGE0_POLICIES" \
+	--stage0-policy "$STAGE0_POLICY" \
+	--stage0-native-bin "$STAGE0_NATIVE_BIN" \
+	--stage0-no-opt "$STAGE0_NO_OPT" \
+	--stage0-no-inline "$STAGE0_NO_INLINE" \
+	--stage0-disable-prepasses "$STAGE0_DISABLE_PREPASSES" \
+	--stage0-ocamlrunparam "$STAGE0_OCAMLRUNPARAM"
+node "$REPORT_BUILDER" validate --report "$REPORT_JSON"
+echo "Self-describing report: $REPORT_JSON"

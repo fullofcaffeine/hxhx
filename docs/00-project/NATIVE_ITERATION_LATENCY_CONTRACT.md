@@ -87,7 +87,10 @@ performance claim must use measured medians from the relevant runner class.
     "reportWorkflow": ".github/workflows/hxhx-kpi-report.yml",
     "artifactComparisonSchema": "hxhx.kpi-artifact-comparison.v1",
     "artifactComparisonValidator": "scripts/ci/hxhx-kpi-artifact-comparison.js",
-    "artifactComparisonRunner": "scripts/hxhx/bench-kpi-artifact-comparison.sh"
+    "artifactComparisonRunner": "scripts/hxhx/bench-kpi-artifact-comparison.sh",
+    "bootstrapReportSchema": "hxhx.bootstrap-regen-benchmark.v1",
+    "bootstrapReportValidator": "scripts/ci/bootstrap-regen-benchmark-report.js",
+    "bootstrapReportWorkflow": ".github/workflows/bootstrap-regen-bench.yml"
   },
   "measurementBuckets": [
     {
@@ -105,6 +108,8 @@ performance claim must use measured medians from the relevant runner class.
       "target": "Native/stage0-free refresh should become materially faster than the stage0/delegated baseline before a 1.0 speed claim; until then, record medians and artifact footprint.",
       "evidence": [
         "scripts/hxhx/bench-bootstrap-regen.sh",
+        "scripts/ci/bootstrap-regen-benchmark-report.js",
+        ".github/workflows/bootstrap-regen-bench.yml",
         "scripts/hxhx/profile-stage0-regen.sh",
         "docs/00-project/STAGE0_POLICY.md"
       ]
@@ -174,6 +179,13 @@ metric rows match. A requested native build that falls back to bytecode is
 reported as missing native evidence, not renamed to make the comparison pass.
 The comparison remains diagnostic until repeated observations justify a
 separate threshold decision.
+
+The bootstrap-regeneration benchmark also writes one self-describing,
+report-only summary. In plain language, that summary tells a reader which
+commit and machine ran, which tool versions and benchmark settings were used,
+what `cold`, `warm`, `skip`, and `select` mean, and which raw run reports back
+each median. It does not turn a quick `select` wiring check into evidence that
+full snapshot regeneration is fast.
 
 When a bead materially changes compiler iteration speed, plugin/native artifact
 loops, bootstrap regeneration, or Full1 throughput:

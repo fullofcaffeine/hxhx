@@ -79,6 +79,7 @@ function main() {
     'scripts/ci/full1-phase-timing.js',
     'scripts/ci/hxhx-kpi-report-validator.js',
     'scripts/ci/hxhx-kpi-artifact-comparison.js',
+    'scripts/ci/bootstrap-regen-benchmark-report.js',
     'scripts/hxhx/bench-bootstrap-regen.sh',
     'scripts/hxhx/bench-native-reflaxe.sh',
     'FULL1_PERF_PARITY:PASS',
@@ -141,11 +142,16 @@ function main() {
     if (policy.activeEvidenceLoop.artifactComparisonSchema !== 'hxhx.kpi-artifact-comparison.v1') {
       fail('policy.activeEvidenceLoop.artifactComparisonSchema must be hxhx.kpi-artifact-comparison.v1')
     }
+    if (policy.activeEvidenceLoop.bootstrapReportSchema !== 'hxhx.bootstrap-regen-benchmark.v1') {
+      fail('policy.activeEvidenceLoop.bootstrapReportSchema must be hxhx.bootstrap-regen-benchmark.v1')
+    }
     for (const field of [
       'reportValidator',
       'reportWorkflow',
       'artifactComparisonValidator',
-      'artifactComparisonRunner'
+      'artifactComparisonRunner',
+      'bootstrapReportValidator',
+      'bootstrapReportWorkflow'
     ]) {
       const evidencePath = policy.activeEvidenceLoop[field]
       if (!evidencePath || !fs.existsSync(evidencePath)) {
