@@ -5759,3 +5759,64 @@ suite was used only as a behavior and performance oracle. Committed generated
 OCaml snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or
 Oracle review was deliberately skipped because the exact AST shape, output
 controls, and same-source timing comparison provided a bounded local seam.
+
+## 2026-07-13 Parsed Xml Field Fact Is Shared Before Equality Inference
+
+Follow-up bead `haxe_ocaml-48f9i` measured comparisons shaped like
+`Xml.parse(text).firstChild().nodeValue == expected`. In plain language, the
+Cpp renderer already had a careful check that proved `nodeValue` was a normal
+String field, but equality rendering first walked the full parse/first-child
+chain separately to discover the same String type. The same expression was
+therefore analyzed once for its type and again for its final C++ text.
+
+`renderEqCallArgs` now recognizes only the exact one-argument `Xml.parse(...)`,
+zero-argument `firstChild()`, plain `nodeValue` chain. It reuses the existing
+plain-field proof as both the known `std::string` type and the rendered
+argument. The helper still checks the declared receiver and field before it
+returns anything. A local value named `Xml`, wrong call arities, a property
+getter, a Dynamic value, another parsed field, an unrelated class, and general
+field reads all remain on the normal inference/rendering path. Exact assertions
+cover both equality operand orders and every rejection family.
+
+Six fresh 100-call same-source comparisons measured the retained path against
+the immediately preceding path with this one fact disabled. Median time fell
+from 1.634475s to 1.081456s, a 33.8% reduction. Separate candidate checks kept
+the typed-local String, property getter, Dynamic field, different parsed field,
+and unrelated-class controls in their existing timing ranges. The complete
+helper-render benchmark passed and preserved exact generated C++ for all
+controls.
+
+A fresh current-source `hxhx` build completed in 140 seconds. The same strict,
+stage0-forbidden Cpp probe remained expected-red at 483 seconds (target exit
+124, wrapper exit 1). `TestXML.testCreate` fell from 6.033482s to 4.701785s,
+about 22.1%, and the full `TestXML` class fell from 47.139919s to 46.170304s,
+about 2.1%. Unrelated controls remained comparable: `TestEReg` measured
+0.013443s versus 0.014270s, `MyDynamicClass` measured 10.927653s versus
+10.723831s, and `TestMisc` measured 19.972594s versus 19.856122s. The fixed
+timer completed `Serializer`, `TestSerialize`, and `TestMeta`, then ended near
+`MyClass_CI1`; the prior run reached the slightly later `MyClass_InlineCastB`.
+The frontier summary classifies this as shared hotspots with a moving frontier,
+so only the focused method/class improvements are claimed.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-parsed-xml-field-share.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-xml-factory-tostring-shadow-safe.log`
+- `test/M14CppXmlCreateRenderBenchIntegrationTest.hx`
+
+README Goals and North Star progress bars remain unchanged. The required Cpp
+target still times out, so this internal compiler speedup does not change what
+end users can rely on. `CppTargetCore.hx` is now 26,384 lines; the production
+change is a narrow 37-line net addition in the existing equality/type-flow
+seam, while the measurement and safety controls stay in a dedicated 710-line
+benchmark module. Broader Cpp render/type-flow extraction remains owned by
+`haxe_ocaml-36ec`. Follow-up `haxe_ocaml-qa5jq` now measures the slower
+`TestXML.testMore` and `TestXML.testBasic` methods instead of continuing to
+optimize `testCreate` after it stopped being the class leader.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite was used only as a behavior and performance oracle. Committed generated
+OCaml snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or
+Oracle review was deliberately skipped because the exact AST shape, existing
+plain-field proof, rejection controls, and current-source evidence provided a
+bounded local seam.

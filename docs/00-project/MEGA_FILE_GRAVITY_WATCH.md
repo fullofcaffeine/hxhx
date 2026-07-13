@@ -19,7 +19,7 @@ to be refreshed when a watched file moves by more than 250 lines.
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,347 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,384 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,031 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -89,6 +89,15 @@ unrelated factories, property getters, and wrong factory arities remain on the
 general path. This is a bounded expression-render repair, not a new
 runtime/stdlib semantic family; broader Cpp render/type-flow extraction remains
 covered by `haxe_ocaml-36ec`.
+
+2026-07-13 checkpoint: `haxe_ocaml-48f9i` reuses the existing proven plain
+String field result for the exact `Xml.parse(...).firstChild().nodeValue`
+equality shape before general type inference. In plain language, it stops the
+renderer from answering the same field/type question twice. Wrong arities,
+name shadowing, properties, Dynamic values, other fields, unrelated classes,
+and general expressions keep the old path. This is a bounded equality/type-flow
+repair, not a new Xml runtime surface; broader extraction remains covered by
+`haxe_ocaml-36ec`.
 
 2026-07-11 checkpoint: `haxe_ocaml-jdmr9` added a bounded diagnostic buffer at
 the existing Cpp timing-output seam. It removes synchronous timing-line output

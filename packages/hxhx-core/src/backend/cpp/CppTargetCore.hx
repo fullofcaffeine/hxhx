@@ -14841,6 +14841,25 @@ class CppTargetCore {
 		};
 	}
 
+	/**
+		Render the exact `Xml.parse(...).firstChild().nodeValue` String field once.
+
+		The parsed field is already proven by the declared Xml receiver and plain-field
+		lookup. A different field, wrong arity, shadowed `Xml`, property, Dynamic value,
+		or unrelated receiver stays on the general equality path.
+	**/
+	static function directParsedXmlNodeValueExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case EField(ECall(EField(ECall(EField(EIdent("Xml"), "parse"), parseArgs), "firstChild"), firstChildArgs), field):
+				parseArgs.length == 1
+				&& firstChildArgs.length == 0
+				&& sanitizeIdentifier(field) == "nodeValue"
+				&& !exprNameHasLocalStorage("Xml", scope) ? knownPlainInstanceFieldReadExpr(expr, scope) : null;
+			case _:
+				null;
+		};
+	}
+
 	/** Render arguments against target-known instance contracts before falling back to general method discovery. **/
 	static function renderFieldCallArgs(receiverCppType:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
 		if (receiverCppType == "std::shared_ptr<EReg>" && method == "split" && args.length == 1)
@@ -15318,13 +15337,27 @@ class CppTargetCore {
 				out.push(renderExpr(args[i], scope));
 			return out;
 		}
-		final firstDirectXmlFactory = switch (args[0]) {
+		final firstDirectParsedXmlNodeValue = switch (args[0]) {
+			case EField(ECall(EField(ECall(_, _), "firstChild"), firstChildArgs), field)
+				if (firstChildArgs.length == 0 && sanitizeIdentifier(field) == "nodeValue"):
+				directParsedXmlNodeValueExpr(args[0], scope);
+			case _:
+				null;
+		};
+		final secondDirectParsedXmlNodeValue = switch (args[1]) {
+			case EField(ECall(EField(ECall(_, _), "firstChild"), firstChildArgs), field)
+				if (firstChildArgs.length == 0 && sanitizeIdentifier(field) == "nodeValue"):
+				directParsedXmlNodeValueExpr(args[1], scope);
+			case _:
+				null;
+		};
+		final firstDirectXmlFactory = if (firstDirectParsedXmlNodeValue != null) null; else switch (args[0]) {
 			case ECall(EField(ECall(_, _), "toString"), outerArgs) if (outerArgs.length == 0):
 				directXmlFactoryToStringReceiver(args[0], scope);
 			case _:
 				null;
 		};
-		final secondDirectXmlFactory = switch (args[1]) {
+		final secondDirectXmlFactory = if (secondDirectParsedXmlNodeValue != null) null; else switch (args[1]) {
 			case ECall(EField(ECall(_, _), "toString"), outerArgs) if (outerArgs.length == 0):
 				directXmlFactoryToStringReceiver(args[1], scope);
 			case _:
@@ -15332,7 +15365,8 @@ class CppTargetCore {
 		};
 		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
 		final firstTypeStart = timingEnabled ? Sys.time() : 0.;
-		final firstType = firstDirectXmlFactory == null ? inferExprCppType(args[0], scope) : "std::string";
+		final firstType = firstDirectXmlFactory == null
+			&& firstDirectParsedXmlNodeValue == null ? inferExprCppType(args[0], scope) : "std::string";
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope,
 				"phase=eq_infer_first seconds="
@@ -15342,7 +15376,8 @@ class CppTargetCore {
 				+ " type="
 				+ firstType);
 		final secondTypeStart = timingEnabled ? Sys.time() : 0.;
-		final secondType = secondDirectXmlFactory == null ? inferExprCppType(args[1], scope) : "std::string";
+		final secondType = secondDirectXmlFactory == null
+			&& secondDirectParsedXmlNodeValue == null ? inferExprCppType(args[1], scope) : "std::string";
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope,
 				"phase=eq_infer_second seconds="
@@ -15352,13 +15387,15 @@ class CppTargetCore {
 				+ " type="
 				+ secondType);
 		final firstRenderStart = timingEnabled ? Sys.time() : 0.;
-		out.push(firstDirectXmlFactory == null ? eqComparableArgExpr(args[0], firstType, secondType, scope) : renderExpr(firstDirectXmlFactory, scope)
-			+ "->toString()");
+		out.push(if (firstDirectParsedXmlNodeValue != null) firstDirectParsedXmlNodeValue; else if (firstDirectXmlFactory != null)
+			renderExpr(firstDirectXmlFactory, scope)
+			+ "->toString()"; else eqComparableArgExpr(args[0], firstType, secondType, scope));
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope, "phase=eq_render_first seconds=" + Std.string(Sys.time() - firstRenderStart) + " kind=" + exprKind(args[0]));
 		final secondRenderStart = timingEnabled ? Sys.time() : 0.;
-		out.push(secondDirectXmlFactory == null ? eqComparableArgExpr(args[1], secondType, firstType, scope) : renderExpr(secondDirectXmlFactory, scope)
-			+ "->toString()");
+		out.push(if (secondDirectParsedXmlNodeValue != null) secondDirectParsedXmlNodeValue; else if (secondDirectXmlFactory != null)
+			renderExpr(secondDirectXmlFactory, scope)
+			+ "->toString()"; else eqComparableArgExpr(args[1], secondType, firstType, scope));
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope, "phase=eq_render_second seconds=" + Std.string(Sys.time() - secondRenderStart) + " kind=" + exprKind(args[1]));
 		for (i in 2...args.length)
