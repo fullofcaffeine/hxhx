@@ -642,8 +642,6 @@ cleanup_repo_server() {
 	fi
 }
 
-trap cleanup_repo_server EXIT
-
 run_haxe_server_preflight() {
 	if [ "$HXHX_HAXE_SERVER_PREFLIGHT" != "1" ]; then
 		echo "== Haxe server preflight: skipped (HXHX_HAXE_SERVER_PREFLIGHT=0)"
@@ -978,6 +976,10 @@ on_script_exit() {
 		write_report_json "$HXHX_BOOTSTRAP_REPORT_JSON" || true
 		echo "== Wrote regen timing report after failure (exit=$code): $HXHX_BOOTSTRAP_REPORT_JSON" >&2
 	fi
+	# This is the single EXIT handler. Keep report preservation and temporary
+	# repo-server cleanup together so adding one cannot silently disable the
+	# other. --keep-repo-server remains the explicit opt-out.
+	cleanup_repo_server
 	return "$code"
 }
 
