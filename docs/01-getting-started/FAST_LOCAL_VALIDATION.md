@@ -79,6 +79,50 @@ HXHX_CURRENT_SOURCE_ALLOW_STALE=1 npm run hxhx:current-source-bin
 Do not use stale reuse as final proof for a code change. Rebuild before closing a
 bead that depends on current-source compiler behavior.
 
+## Focused Native-Backend Smoke Groups
+
+The complete C++ and source-target smoke tests are still the final local check:
+
+```bash
+npm run test:m14:cpp-native-backend-smoke
+npm run test:m14:source-native-backend-smoke
+```
+
+While fixing one area, use a smaller group first. These commands run real checks
+from the complete smoke; they are not replacement or reduced-coverage fixtures.
+
+For C++:
+
+```bash
+# Individual Haxe-to-C++ rendering rules; no native build is required.
+npm run test:m14:cpp-native-backend-smoke:render
+
+# Generated C++ files plus available compiler/build/run checks.
+npm run test:m14:cpp-native-backend-smoke:generated
+```
+
+For Python, Java, C#, PHP, and Lua source generation:
+
+```bash
+npm run test:m14:source-native-backend-smoke:targets
+npm run test:m14:source-native-backend-smoke:language
+npm run test:m14:source-native-backend-smoke:runtime
+npm run test:m14:source-native-backend-smoke:objects
+npm run test:m14:source-native-backend-smoke:platforms
+```
+
+The group names describe the kind of behavior being checked:
+
+- `targets`: output files, packaging, and target setup;
+- `language`: common statements and expressions;
+- `runtime`: standard-library, macro, and runtime helpers;
+- `objects`: classes, inheritance, collections, and related expressions;
+- `platforms`: platform-specific process, filesystem, and switch behavior.
+
+Run the complete command before closing a backend change. A focused group helps
+you get a quick answer during development; the aggregate proves that none of its
+sibling groups regressed.
+
 ## Timeouts And Heartbeats
 
 Prefer repo gate runners that already have timeout and heartbeat knobs. For

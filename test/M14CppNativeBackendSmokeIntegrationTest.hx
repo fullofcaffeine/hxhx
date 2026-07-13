@@ -7,6 +7,13 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
+/**
+	Covers the complete C++ native-backend smoke contract.
+
+	`main` remains the all-in-one CI entry point. The two public group methods are
+	also independently runnable through the focused package scripts, which keeps a
+	C++ rendering change from requiring an unrelated native toolchain retry.
+**/
 class M14CppNativeBackendSmokeIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -4323,7 +4330,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return false;
 	}
 
-	static function main():Void {
+	public static function runRenderChecks():Void {
 		assertNativeProtocolStructuralArgTypeSplitting();
 		assertNativeProtocolStructuralNullReturnRecovery();
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("8")) == "8",
@@ -11614,7 +11621,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(anyLines, "std::any __value;", "C++ Any support should carry the erased payload instead of casting the wrapper");
 		assertContains(anyLines, "std::any_cast<T>(__value)", "C++ Any.__promote should extract from the payload");
 		assertTrue(anyLines.indexOf("static_cast<int>((*this))") < 0, "C++ Any.__promote must not cast the wrapper object itself");
+	}
 
+	public static function runGeneratedSourceChecks():Void {
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
 		assertTrue(descriptor != null, "missing cpp-native descriptor");
@@ -13634,5 +13643,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		}
 
 		deleteRecursive(root);
+	}
+
+	static function main():Void {
+		switch (M14SmokeGroupSelection.selected(["render", "generated"])) {
+			case "all":
+				runRenderChecks();
+				runGeneratedSourceChecks();
+			case "render":
+				runRenderChecks();
+			case "generated":
+				runGeneratedSourceChecks();
+			case _:
+		}
 	}
 }

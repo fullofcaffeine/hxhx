@@ -6,6 +6,14 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
+/**
+	Covers the complete source-target smoke contract for Python, Java, C#, PHP,
+	and Lua.
+
+	`main` remains the all-in-one CI entry point. The public group methods preserve
+	the existing case order while allowing a contributor to retry one understandable
+	area instead of all source targets after every small change.
+**/
 class M14SourceNativeBackendSmokeIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -16069,7 +16077,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
-	static function main():Void {
+	public static function runTargetChecks():Void {
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
 		emit("cs-native", "cs", "Main.cs", "System.Console.WriteLine((\"source-native:\" + \"cs\"));");
@@ -16125,6 +16133,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaLibraryEnumJarPackaging();
 		assertJavaOperationInterfaceRuntime();
 		assertUnsupportedDiagnostic();
+	}
+
+	public static function runLanguageChecks():Void {
 		assertWhileStatement();
 		assertIfStatement();
 		assertGenericCallStatement();
@@ -16148,6 +16159,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpPostfixExpressions();
 		assertUnsignedRightShiftExpression();
 		assertHelperClassEmission();
+	}
+
+	public static function runRuntimeChecks():Void {
 		assertPhpStaticClassAccess();
 		assertPhpRuntimeShim();
 		assertPhpMapRuntimeShim();
@@ -16331,6 +16345,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPythonObjectPatternSwitchExpression();
 		assertPhpUnitMatchExtractorFallback();
 		assertPhpHelperInstanceFieldEmission();
+	}
+
+	public static function runObjectChecks():Void {
 		assertHelperInstanceFieldEmission();
 		assertSuperEmission();
 		assertPythonSuperMethodReference();
@@ -16379,6 +16396,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpClassSwitch();
 		assertPhpOptionalEnumCtor();
 		assertSwitchStatement();
+	}
+
+	public static function runPlatformChecks():Void {
 		assertJavaArraySwitchStatement();
 		assertCsReservedLocalIdentifier();
 		assertCsUtilityProcessCallableRuntimeShape();
@@ -16391,5 +16411,27 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpStrictScalarSwitch();
 		assertLuaSwitchStatement();
 		assertLuaArraySwitchStatement();
+	}
+
+	static function main():Void {
+		switch (M14SmokeGroupSelection.selected(["targets", "language", "runtime", "objects", "platforms"])) {
+			case "all":
+				runTargetChecks();
+				runLanguageChecks();
+				runRuntimeChecks();
+				runObjectChecks();
+				runPlatformChecks();
+			case "targets":
+				runTargetChecks();
+			case "language":
+				runLanguageChecks();
+			case "runtime":
+				runRuntimeChecks();
+			case "objects":
+				runObjectChecks();
+			case "platforms":
+				runPlatformChecks();
+			case _:
+		}
 	}
 }

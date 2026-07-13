@@ -149,7 +149,7 @@ Current planning owners:
 
 - Full 1.0 parity and release contract: `haxe.ocaml-f1cl`
 - bounded bridge exit criteria: `haxe_ocaml-slobw`
-- source/Cpp smoke decomposition: `haxe_ocaml-o2udb`
+- grouped source/Cpp smoke retry foundation (completed): `haxe_ocaml-o2udb`
 - customization/variation product lifecycle after Full1: `haxe_ocaml-h5jta`
   (completed architecture/toggle foundation: `haxe.ocaml-vary`)
 - customization and variation architecture note:
