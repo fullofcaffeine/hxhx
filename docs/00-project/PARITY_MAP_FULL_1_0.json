@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.0.0",
+  "contractVersion": "1.1.0",
   "haxeCompatibilityBaseline": "4.3.7",
   "scopeManifest": "docs/02-user-guide/compat/full-1.0-scope.json",
   "requiredNowSuites": [
@@ -10,6 +10,7 @@
     "plugin-matrix-strict",
     "m7-strict-replacement",
     "full1-gate3-extended-strict",
+    "full1-target-scope-contract",
     "full1-parity-map-contract",
     "full1-flake-policy",
     "full-perf-policy",
@@ -132,6 +133,20 @@
     },
     {
       "id": "F1-PM-08A",
+      "suite": "full1-target-scope-contract",
+      "lane": "full",
+      "targets": [
+        "release",
+        "targets",
+        "planning"
+      ],
+      "profile": "contract",
+      "marker": "FULL1_TARGET_SCOPE_CONTRACT:PASS",
+      "workflow": "scripts/ci/full1-target-scope-check.js",
+      "enforcement": "required_now"
+    },
+    {
+      "id": "F1-PM-08B",
       "suite": "full1-parity-map-contract",
       "lane": "full",
       "targets": [
@@ -191,6 +206,18 @@
     },
     {
       "id": "F1-PM-10B",
+      "suite": "full1-macro-runtime-parity",
+      "lane": "full",
+      "targets": [
+        "Macro"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_MACRO_PARITY:PASS",
+      "workflow": ".github/workflows/macro-runtime-parity-weekly.yml",
+      "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-10C",
       "suite": "full1-macro-eval-contract",
       "lane": "full",
       "targets": [

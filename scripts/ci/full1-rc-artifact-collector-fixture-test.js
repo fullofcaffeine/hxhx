@@ -41,6 +41,7 @@ function validFixtures() {
       candidate: { sha: context.candidateSha, version: context.candidateVersion },
       run: { id: context.runId, attempt: context.runAttempt },
       markers: [
+        'FULL1_TARGET_SCOPE_CONTRACT:PASS',
         'FULL1_PARITY_MAP:PASS',
         'FULL1_MACRO_EVAL_CONTRACT:PASS',
         'FULL1_PLUGIN_PARITY_CONTRACT:PASS',
@@ -48,6 +49,7 @@ function validFixtures() {
         'FULL1_PERF_POLICY:PASS'
       ],
       results: [
+        'FULL1_TARGET_SCOPE_CONTRACT:PASS',
         'FULL1_PARITY_MAP:PASS',
         'FULL1_MACRO_EVAL_CONTRACT:PASS',
         'FULL1_PLUGIN_PARITY_CONTRACT:PASS',

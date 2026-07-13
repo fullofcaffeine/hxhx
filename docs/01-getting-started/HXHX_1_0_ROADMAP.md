@@ -44,6 +44,23 @@ Scope lock for release naming:
 For strict Full 1.0 contract details, see:
 
 - `docs/00-project/FULL_1_0_CONTRACT.md`
+- `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`
+
+## Full1 target promise (now explicit)
+
+The first Full1 release requires JavaScript, Lua, Neko, PHP, C++ **including
+Cppia**, C#, Java source output, Python, both HashLink output forms, and native
+interpreter/run-module behavior. C++/hxcpp is not optional.
+
+It does not claim every upstream output choice. Flash/SWF is intentionally
+unsupported. Direct JVM bytecode and XML/JSON type-description generation are
+deferred, so projects that need those outputs must keep upstream Haxe for that
+step. This narrower promise must always be described as compatibility for the
+declared Full1 scope, not as an all-target drop-in.
+
+Choosing the list does not mean those targets pass today. The strict matrix,
+suite, macro, plugin, performance, and candidate release evidence still have
+to turn green.
 
 This is tracked primarily under epic: `haxe.ocaml-xgv.10`.
 

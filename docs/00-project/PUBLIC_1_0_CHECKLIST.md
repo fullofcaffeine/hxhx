@@ -41,22 +41,28 @@ The current scoped public-claim baseline is:
 
 You may say `Full 1.0` publicly only when all of the following are true:
 
-1. `FULL1_SUITE_MATRIX:PASS`
-2. `FULL1_MACRO_PARITY:PASS`
-3. `FULL1_EVAL_NATIVE:PASS`
-4. `FULL1_MACRO_EVAL_PARITY:PASS`
-5. `FULL1_PLUGIN_PARITY:PASS`
-6. `FULL1_FLAKE_POLICY:PASS`
-7. `FULL1_PERF_PARITY:PASS`
-8. `FULL1_RELEASE_GO:PASS`
-9. A prepublication `.github/workflows/gate-full1-rc.yml` run is the actual
+1. `FULL1_TARGET_SCOPE_CONTRACT:PASS`
+2. `FULL1_SUITE_MATRIX:PASS`
+3. `FULL1_MACRO_PARITY:PASS`
+4. `FULL1_EVAL_NATIVE:PASS`
+5. `FULL1_MACRO_EVAL_PARITY:PASS`
+6. `FULL1_PLUGIN_PARITY:PASS`
+7. `FULL1_FLAKE_POLICY:PASS`
+8. `FULL1_PERF_PARITY:PASS`
+9. `FULL1_RELEASE_GO:PASS`
+10. A prepublication `.github/workflows/gate-full1-rc.yml` run is the actual
    Full1 release source of truth. Its `full1-rc-summary.v2` receipt identifies
    the candidate SHA/version, run attempt, current manifests, and each real
    child artifact; a job-status string is not enough.
-10. Semantic release downloads the exact RC artifact and checks its artifact
+11. Semantic release downloads the exact RC artifact and checks its artifact
     digest before checking out the same candidate. It blocks `>=1.0.0` unless
     freshness and the complete marker set still validate.
-11. Relevant upstream Haxe 4.3.7 suites are treated as the primary proof of equivalence; local focused regressions are only supporting evidence.
+12. Relevant upstream Haxe 4.3.7 suites are treated as the primary proof of
+    compatibility for the declared scope; local focused regressions are only
+    supporting evidence.
+13. Release notes use the wording “Haxe 4.3.7-compatible for the declared
+    Full1 target and generator scope” and link the target table. They do not
+    imply JVM, Flash/SWF, XML, or JSON generator support.
 
 The current strict public-claim baseline is:
 
@@ -64,6 +70,7 @@ The current strict public-claim baseline is:
 - `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
 - `docs/00-project/PARITY_MAP_FULL_1_0.md`
 - `docs/02-user-guide/compat/full-1.0-scope.json`
+- `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`
 - relevant upstream Haxe 4.3.7 suite results produced by the Full1 gate stack
 
 ## Public wording rule
@@ -82,7 +89,11 @@ Do not use:
 
 - `1.0` by itself
 - `production ready` by itself
-- `Haxe 4.3.7 equivalent` unless the Full 1.0 checklist is actually green
+- unqualified `Haxe 4.3.7 equivalent` or `all-target drop-in replacement`
+
+The safe Full1 wording, once every checklist item is green, is:
+
+- `Haxe 4.3.7-compatible for the declared Full1 target and generator scope`
 
 ## Practical release shorthand
 

@@ -31,8 +31,14 @@ Rationale:
 Instead:
 
 - upstream `haxe` (the OCaml compiler) remains the **source of truth** for behavior
-- `hxhx` aims to become a **drop-in replacement** for a specific compatibility target:
-  - initial compatibility target: **Haxe 4.3.7**
+- `hxhx` aims to become a practical replacement for a specific compatibility
+  baseline and an explicit public surface:
+  - compatibility baseline: **Haxe 4.3.7**
+  - first Full1 target/generator scope:
+    `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`
+
+This is not an all-target claim. Release wording must name or link the declared
+scope rather than using “drop-in” without qualification.
 
 “Replacement-ready” is defined by upstream test gates (see `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`).
 

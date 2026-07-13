@@ -26,6 +26,8 @@ or a hand-written marker is rejected.
 ## Sources of truth
 
 - Scope manifest: `docs/02-user-guide/compat/full-1.0-scope.json`
+- Plain-language target/generator scope:
+  `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`
 - Public claim checklist: `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 - Prepublication RC workflow: `.github/workflows/gate-full1-rc.yml`
 - Child-artifact collector: `scripts/ci/full1-rc-artifact-collector.js`
@@ -89,13 +91,16 @@ A public `Full 1.0` claim is allowed only when all of these are true:
    its declared evidence role.
 4. `requiredMarkers` exactly matches the current scope manifest, excluding the
    final release marker.
-5. `missingMarkers`, `missingArtifacts`, and `invalidArtifacts` are empty.
-6. The evaluator recorded `decision=go` and `FULL1_RELEASE_GO:PASS`.
-7. The release workflow downloaded and verified that exact RC artifact, then
+5. `FULL1_TARGET_SCOPE_CONTRACT:PASS` proves that the declared target table,
+   Gate3 defaults, parity map, and public docs agree.
+6. `missingMarkers`, `missingArtifacts`, and `invalidArtifacts` are empty.
+7. The evaluator recorded `decision=go` and `FULL1_RELEASE_GO:PASS`.
+8. The release workflow downloaded and verified that exact RC artifact, then
    checked out the same candidate SHA.
-8. Release-side enforcement recomputed the marker result from the child records
+9. Release-side enforcement recomputed the marker result from the child records
    and still passed.
-9. Public wording explicitly says `Full 1.0` and passes
+10. Public wording explicitly says `Full 1.0`, limits compatibility to the
+    declared target/generator scope, and passes
    `docs/00-project/PUBLIC_1_0_CHECKLIST.md`.
 
 ## No-go decision

@@ -11,6 +11,8 @@ For lane/profile context, use the canonical beginner truth table:
   `docs/00-project/PARITY_MAP_HAXE_4_3_7.md`
 - Full 1.0 parity contract map (strict closure track):
   `docs/00-project/PARITY_MAP_FULL_1_0.md`
+- Plain-language Full1 target/generator decisions:
+  `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`
 - Macro runtime parity blocker list (explicit gaps before inproc-default):
   `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`
 - Weekly ops audit procedure (scheduled gates + triage):
@@ -85,7 +87,9 @@ exact RC run attempt, verifies its artifact digest, checks out the candidate
 SHA named by the receipt, and recomputes the required evidence before it can
 accept `FULL1_RELEASE_GO:PASS`.
 
-For strict `Full 1.0` / `Haxe 4.3.7-equivalent` claims, the primary proof is the relevant upstream Haxe 4.3.7 suite matrix running under `hxhx`.
+For strict Full1 compatibility claims within the declared target/generator
+scope, the primary proof is the relevant upstream Haxe 4.3.7 suite matrix
+running under `hxhx`.
 Repo-local focused regressions and bridge tests are supporting evidence for diagnosis and closure work; they do not replace upstream-suite proof.
 
 ## PR-required fast lanes
@@ -129,7 +133,7 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Macro Runtime Parity (Weekly)` | `.github/workflows/macro-runtime-parity-weekly.yml` | Runs upstream macro + display checks in both macro runtime modes (`external-host`, `inproc`) with mode-tagged artifacts, phase timings, reusable outputs, and aggregate macro parity markers. | **Nightly/scheduled + Release + Reusable** | weekly schedule, manual, `release`, `workflow_call` |
 | `Full1 / Eval Native` | `.github/workflows/full1-eval-native.yml` | Runs the upstream-aligned native eval/interp baseline (`tests/unit/compile-macro.hxml`) in strict stage0-forbidden mode and emits a structured eval marker/artifact. | **Release + Manual + Reusable** | manual, `release`, `workflow_call` |
 | `Gate 3 / Upstream Target Matrix` | `.github/workflows/gate3.yml` | Upstream target/workflow compatibility matrix checks. | **Nightly/scheduled** | weekly schedule, manual |
-| `Gate 3 Full1 / Extended Targets Strict` | `.github/workflows/gate3-full1-extended.yml` | Full1 strict extended target matrix (`Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php`) with no-skip enforcement, bounded target-level parallelism, controlled inner timeout, JSON summary, and phase-timing artifacts. | **Nightly/scheduled** | weekly schedule, manual |
+| `Gate 3 Full1 / Extended Targets Strict` | `.github/workflows/gate3-full1-extended.yml` | Full1 strict extended target matrix (`Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php`) with no-skip enforcement, bounded target-level parallelism, controlled inner timeout, JSON summary, and phase-timing artifacts. `Cpp` includes upstream Cppia checks; `Hl` includes its required bytecode and C-output checks. JVM, Flash, XML, and JSON decisions are explicit in the target-scope doc rather than silently skipped. | **Nightly/scheduled** | weekly schedule, manual |
 | `Full1 / Suite Runners Strict` | `.github/workflows/full1-suite-runners.yml` | Full1 strict suite runners for `misc`, `server`, `threads`, `optimization`, `display` with per-suite log, summary, and phase-timing artifacts. Inproc suites (`misc`, `threads`, `display`) do not download or export a macro host; current external-host suites (`server`, `optimization`) consume the shared macro-host artifact until inproc parity catches up. | **Nightly/scheduled** | weekly schedule, manual |
 | `Full1 / Source-Build Probe` | `.github/workflows/full1-source-probe.yml` | Non-blocking diagnostic lane: force source build (`HXHX_FORCE_STAGE0=1`) and run narrowed strict suites (`server`, `optimization`) to detect bootstrap-lagged fixes without destabilizing the primary matrix. Summary JSON stays compact; child processes are hard-timeboxed and full logs are separate artifacts. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
 | `Full1 / Bootstrap-Source Reconciliation` | `.github/workflows/full1-bootstrap-source-reconcile.yml` | Diagnostic evidence lane that runs `server` + `optimization` in both bootstrap-built and source-built lanes on the same commit, then classifies each blocker as bootstrap lag vs source-build instability vs real parity bug. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
@@ -225,6 +229,15 @@ Macro runtime parity weekly markers:
 Full1 extended Gate3 marker:
 
 - `FULL1_GATE3_EXTENDED_TARGETS:PASS` (`.github/workflows/gate3-full1-extended.yml`)
+
+Full1 target-scope contract marker:
+
+- `FULL1_TARGET_SCOPE_CONTRACT:PASS`
+  (`scripts/ci/full1-target-scope-check.js`; policy source:
+  `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`)
+
+This policy marker means the inventory, matrix, and docs agree. It does not
+mean the targets themselves passed; that requires the Gate3 marker above.
 
 Full1 strict suite runner markers:
 

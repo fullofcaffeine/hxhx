@@ -12,6 +12,9 @@ const { requiredMarkers, sha256File } = require('./full1-release-enforcement')
 
 const root = path.resolve(__dirname, '../..')
 const script = path.join(root, 'scripts/release/full1-release-enforcement.js')
+const scopeContractVersion = JSON.parse(
+  fs.readFileSync(path.join(root, 'docs/02-user-guide/compat/full-1.0-scope.json'), 'utf8')
+).contractVersion
 const marker = 'FULL1_RELEASE_GO:PASS'
 const candidateSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 const candidateVersion = '1.0.0-rc.1'
@@ -102,7 +105,7 @@ function validSummary() {
       version: candidateVersion
     },
     contract: {
-      contractVersion: '1.0.0',
+      contractVersion: scopeContractVersion,
       haxeCompatibilityBaseline: '4.3.7',
       scopeManifest: 'docs/02-user-guide/compat/full-1.0-scope.json',
       scopeManifestDigest: sha256File('docs/02-user-guide/compat/full-1.0-scope.json'),

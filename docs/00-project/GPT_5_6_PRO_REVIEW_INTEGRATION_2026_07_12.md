@@ -70,14 +70,16 @@ unchanged.
 3. **Explicit Full1 outcome lanes.** Macro/eval `haxe_ocaml-vhk47`, plugin
    `haxe_ocaml-gskz9`, and performance `haxe_ocaml-u6esu` are active successors
    to completed contract/workflow foundations.
-4. **Target-scope decision.** `haxe_ocaml-rttuj` must explicitly disposition
-   every Haxe `4.3.7` public target/generator, including JVM, Flash/AS3, XML,
-   and Cpp/hxcpp. Until it closes, wording is limited to the declared target
-   and API scope.
+4. **Target-scope decision.** Completed under `haxe_ocaml-rttuj`. C++/Cppia,
+   both HashLink forms, JS, Lua, Neko, PHP, C#, Java source, Python, and native
+   interpreter/run behavior are required. Flash/SWF is intentionally
+   incompatible; direct JVM bytecode and XML/JSON type descriptions are
+   deferred. The guarded plain-language table is
+   `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`.
 5. **Scoped version identity.** `haxe_ocaml-ftrhr` owns the xhigh choice. The
    current safe default is a Scoped profile candidate under `0.x`, because
    current enforcement reserves semantic versions `>=1.0.0` for Full1.
-6. **Prepublication provenance.** `haxe_ocaml-7c1ke` owns authentic child
+6. **Prepublication provenance.** Completed foundation `haxe_ocaml-7c1ke` owns authentic child
    artifacts, candidate SHA/version, manifest digests, run attempts, artifact
    IDs/digests, timestamps, evidence tier/freshness, release handoff, and
    negative fixtures.
@@ -99,10 +101,10 @@ unchanged.
 - README bars remain as coarse editorial indicators because repository policy
   still requires them, but numeric percentages were removed. Declared state,
   strongest evidence, freshness, owner, and next blocker control the claim.
-- Cpp burn-down is not stopped. `haxe_ocaml-94hk1` remains a valid P2 bounded
-  attribution leaf. It becomes P1 only if the target-scope decision makes Cpp
-  mandatory for the first Full1 claim and current profiling proves critical-
-  path leverage.
+- Cpp burn-down is not stopped. C++ and Cppia are mandatory for the first
+  Full1 claim, so their matrix outcome is P1. `haxe_ocaml-94hk1` remains a
+  valid P2 bounded attribution leaf until current profiling proves that its
+  specific seam has critical-path leverage.
 - The review recommended several plausible extractions. Only bridge ownership
   and smoke decomposition received immediate beads. Cpp/source/emitter
   extraction remains trigger-based because existing closed extraction work

@@ -8,6 +8,7 @@ const path = require('path')
 const { spawnSync } = require('child_process')
 
 const guards = [
+  ['FULL1_TARGET_SCOPE_CONTRACT:PASS', 'scripts/ci/full1-target-scope-check.js'],
   ['FULL1_PARITY_MAP:PASS', 'scripts/ci/full1-parity-map-check.js'],
   ['FULL1_MACRO_EVAL_CONTRACT:PASS', 'scripts/ci/full1-macro-eval-contract-check.js'],
   ['FULL1_PLUGIN_PARITY_CONTRACT:PASS', 'scripts/ci/full1-plugin-parity-contract-check.js'],

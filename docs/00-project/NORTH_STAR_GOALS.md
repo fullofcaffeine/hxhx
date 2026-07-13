@@ -5,7 +5,11 @@ This page records the long-term product direction for this repository. It is a p
 The short version:
 
 1. Make `reflaxe.ocaml` a stable OCaml target that works well with both upstream Haxe and `hxhx`.
-2. Make `hxhx` a stable, MIT-licensed Haxe-in-Haxe compiler that is 1:1 compatible with Haxe `4.3.7`, or better where compatibility allows, including compiler performance and developer iteration speed.
+2. Make `hxhx` a stable, MIT-licensed Haxe-in-Haxe compiler with strict Haxe
+   `4.3.7` compatibility for an explicit public scope, or better where
+   compatibility allows, including compiler performance and developer
+   iteration speed. Broader targets may follow, but omitted surfaces are never
+   implied.
 3. Make Haxe easier to hack by implementing the compiler in Haxe: the compiler should be readable, editable, testable, and approachable to Haxe developers.
 4. Make Haxe easy to bend without breaking Haxe: extensions should be pluggable, removable, and isolated from the baseline compiler contract.
 5. Make it practical to create full Haxe-family compiler variations in Haxe when a project needs a real fork or dialect.
@@ -61,7 +65,11 @@ the relevant bead/checkpoint note.
 
 ## Goal 2: Stable `hxhx` parity
 
-`hxhx` should become a practical drop-in equivalent to upstream Haxe `4.3.7` while staying MIT-compatible and clean-room in implementation.
+`hxhx` should become a practical replacement for upstream Haxe `4.3.7` within
+its declared compatibility scope while staying MIT-compatible and clean-room
+in implementation. The first Full1 scope is listed in
+`docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`; it is not an all-target
+claim.
 
 The bar is not “passes our local smoke tests.” The bar is upstream-derived behavioral evidence:
 
@@ -77,7 +85,10 @@ Current planning owners:
 
 - Full 1.0 closure: `haxe.ocaml-f1cl`
 - required/release-evidence failure ownership: `haxe_ocaml-145dn`
-- exact target/generator scope decision: `haxe_ocaml-rttuj`
+- exact target/generator scope: completed decision `haxe_ocaml-rttuj`;
+  machine-readable contract and plain-language table:
+  `docs/02-user-guide/compat/full-1.0-scope.json` and
+  `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`
 - Scoped profile versus semantic-version decision: `haxe_ocaml-ftrhr`
 - prepublication RC provenance and release handoff: completed foundation
   `haxe_ocaml-7c1ke`; authentic candidate outcome remains under
@@ -98,9 +109,9 @@ Current planning owners:
 
 Cpp Gate3 execution checkpoint:
 
-- Strict Cpp Gate3 remains a measured source/native blocker, but its priority
-  within Full1 depends on the target-scope decision and current cross-lane
-  evidence.
+- Strict Cpp Gate3, including Cppia, is a mandatory Full1 target obligation.
+  The matrix work is P1 release work; an individual profiling leaf may remain
+  P2 until evidence shows that it is the next high-leverage blocker.
 - Bounded, non-semantic Cpp render/cache/inference optimizations may
   continue when they have focused smoke evidence and strict timing validation.
 - New broad stdlib/runtime semantics must not be added directly to the Cpp

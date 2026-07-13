@@ -1,11 +1,12 @@
 # Full 1.0 Contract (vs Scoped 1.0)
 
-Last audited: 2026-03-05
+Last audited: 2026-07-13
 
 This page is the canonical definition boundary for release claims:
 
 - **Scoped 1.0**: the currently declared replacement-ready scope.
-- **Full 1.0**: strict Haxe 4.3.7-equivalent claim with explicit parity/perf/release gates.
+- **Full 1.0**: strict Haxe 4.3.7 compatibility for the declared target and
+  generator scope, with explicit parity/performance/release gates.
 
 Public-claim checklist:
 
@@ -18,6 +19,7 @@ Full1 release go/no-go decision:
 Machine-readable scope source of truth:
 
 - `docs/02-user-guide/compat/full-1.0-scope.json`
+- `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`
 - `docs/00-project/PARITY_MAP_FULL_1_0.json`
 
 ## Baseline
@@ -39,16 +41,36 @@ Scoped 1.0 sign-off uses M7 strict markers:
 - `M7_STRICT_STAGE0:PASS`
 - `M7_REPLACEMENT_READY:PASS`
 
-## Full 1.0 (strict equivalence claim)
+## Full 1.0 (strict declared-scope compatibility claim)
 
 Full 1.0 is a stricter claim than Scoped 1.0. It requires:
 
-- relevant upstream Haxe 4.3.7 suites to pass under `hxhx` as the primary proof of equivalence,
+- relevant upstream Haxe 4.3.7 suites to pass under `hxhx` as the primary
+  proof of compatibility for the declared scope,
 - strict non-delegating parity coverage against the contract matrix,
 - macro/eval closure markers,
 - plugin parity markers,
 - upstream-relative performance parity gate,
 - release RC aggregation marker.
+
+### Exactly which targets and generators are included?
+
+In plain language, the first Full1 release requires JavaScript, Lua, Neko,
+PHP, C++ plus Cppia, C#, Java source output, Python, both HashLink output
+forms, and native interpreter/run-module behavior. C++/hxcpp is mandatory.
+
+It deliberately does not claim every Haxe 4.3.7 output:
+
+- Flash SWF/SWC is intentionally incompatible with the `hxhx` product scope.
+- Direct JVM bytecode is deferred; Java source output is still required.
+- XML and JSON type-description generation are deferred.
+
+The complete per-surface table and user consequences are in
+`docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`. The machine-readable list is
+`full.targetAndGeneratorScope` in the scope manifest. The
+`FULL1_TARGET_SCOPE_CONTRACT:PASS` policy marker proves that this list, the
+strict target matrix, and the public docs still agree. It does **not** prove
+that any runtime target has passed.
 
 For Full 1.0, repo-local focused regressions and bridge-specific tests are supporting evidence only.
 They are valuable for fast diagnosis and iteration, but they do not replace upstream-suite proof.
@@ -105,7 +127,9 @@ cross-candidate evidence is no-go. It does not redefine `Scoped 1.0`.
 ## Non-goals policy
 
 Anything not explicitly declared in the scope manifest is out-of-scope for the claim.
-This prevents "scope drift by implication."
+This prevents "scope drift by implication." Public wording must say
+"Haxe 4.3.7-compatible for the declared Full1 target and generator scope," not
+an unqualified all-target drop-in replacement.
 
 ## Documentation disambiguation rule
 

@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.0.0",
+  "contractVersion": "1.1.0",
   "haxeCompatibilityBaseline": "4.3.7",
   "scoped": {
     "name": "Scoped 1.0",
@@ -43,9 +43,272 @@
   },
   "full": {
     "name": "Full 1.0",
-    "description": "Strict Haxe 4.3.7-equivalent claim. These markers are planned and become mandatory when their gates exist.",
+    "description": "Strict Haxe 4.3.7 compatibility claim for the declared targets and generators below. This is not an all-target drop-in claim.",
+    "targetAndGeneratorScope": {
+      "inventoryBasis": "Haxe 4.3.7 `haxe --help` Target section plus its XML and JSON type-description generators; HashLink is split into its two documented output forms.",
+      "plainLanguageDoc": "docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md",
+      "publicClaim": "Haxe 4.3.7-compatible for the declared Full1 target and generator scope.",
+      "requiredGate3Targets": [
+        "Macro",
+        "Js",
+        "Neko",
+        "Hl",
+        "Python",
+        "Java",
+        "Cs",
+        "Cpp",
+        "Lua",
+        "Php"
+      ],
+      "surfaces": [
+        {
+          "id": "javascript",
+          "label": "JavaScript output",
+          "kind": "target",
+          "upstreamFlags": [
+            "--js"
+          ],
+          "disposition": "required",
+          "gate3Target": "Js",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "JavaScript is a core Haxe target and already has a native hxhx backend lane.",
+          "userConsequence": "A Full1 release cannot ship until the same candidate passes the strict JavaScript target evidence."
+        },
+        {
+          "id": "lua",
+          "label": "Lua output",
+          "kind": "target",
+          "upstreamFlags": [
+            "--lua"
+          ],
+          "disposition": "required",
+          "gate3Target": "Lua",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "Lua is part of the declared source-target matrix.",
+          "userConsequence": "A Full1 release cannot ship until Lua programs compile and run through the strict target lane."
+        },
+        {
+          "id": "flash-swf",
+          "label": "Flash SWF/SWC output",
+          "kind": "target",
+          "upstreamFlags": [
+            "--swf"
+          ],
+          "disposition": "incompatible",
+          "evidenceMarkers": [],
+          "rationale": "Legacy Flash/AS3 output is intentionally outside the hxhx product scope.",
+          "userConsequence": "Projects that still produce SWF or SWC files must keep using upstream Haxe 4.3.7 or another Flash-capable toolchain."
+        },
+        {
+          "id": "neko",
+          "label": "Neko bytecode output",
+          "kind": "target",
+          "upstreamFlags": [
+            "--neko"
+          ],
+          "disposition": "required",
+          "gate3Target": "Neko",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "Neko remains part of Haxe 4.3.7 tooling and test orchestration.",
+          "userConsequence": "A Full1 release cannot ship until the strict Neko target lane passes."
+        },
+        {
+          "id": "php",
+          "label": "PHP output",
+          "kind": "target",
+          "upstreamFlags": [
+            "--php"
+          ],
+          "disposition": "required",
+          "gate3Target": "Php",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "PHP is part of the declared source-target matrix.",
+          "userConsequence": "A Full1 release cannot ship until PHP programs compile and run through the strict target lane."
+        },
+        {
+          "id": "cpp",
+          "label": "C++ source output",
+          "kind": "target",
+          "upstreamFlags": [
+            "--cpp"
+          ],
+          "disposition": "required",
+          "gate3Target": "Cpp",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "C++/hxcpp is a required first-Full1 compatibility target, not an optional follow-up.",
+          "userConsequence": "Full1 stays blocked until the same candidate passes the complete strict C++ lane."
+        },
+        {
+          "id": "cppia",
+          "label": "Cppia bytecode output",
+          "kind": "target-variant",
+          "upstreamFlags": [
+            "--cppia"
+          ],
+          "disposition": "required",
+          "gate3Target": "Cpp",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "Upstream Haxe 4.3.7 exercises Cppia inside its C++ target lane, so Cppia cannot be silently removed from a passing C++ claim.",
+          "userConsequence": "The C++ target does not count as Full1-complete unless its Cppia compile-and-run checks pass too."
+        },
+        {
+          "id": "csharp",
+          "label": "C# output",
+          "kind": "target",
+          "upstreamFlags": [
+            "--cs"
+          ],
+          "disposition": "required",
+          "gate3Target": "Cs",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "C# is part of the declared source-target matrix.",
+          "userConsequence": "A Full1 release cannot ship until C# evidence passes with its declared .NET/Mono toolchain."
+        },
+        {
+          "id": "java",
+          "label": "Java source output",
+          "kind": "target",
+          "upstreamFlags": [
+            "--java"
+          ],
+          "disposition": "required",
+          "gate3Target": "Java",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "Java source output is part of the declared source-target matrix.",
+          "userConsequence": "A Full1 release cannot ship until Java source output compiles and runs in the strict target lane."
+        },
+        {
+          "id": "jvm",
+          "label": "Direct JVM bytecode output",
+          "kind": "target",
+          "upstreamFlags": [
+            "--jvm"
+          ],
+          "disposition": "deferred",
+          "evidenceMarkers": [],
+          "rationale": "Direct JVM bytecode is a separate upstream generator from Java source output and has no declared Full1 evidence lane yet.",
+          "userConsequence": "Projects that require `--jvm` must keep using upstream Haxe 4.3.7; accepting or routing the flag experimentally is not a support promise."
+        },
+        {
+          "id": "python",
+          "label": "Python output",
+          "kind": "target",
+          "upstreamFlags": [
+            "--python"
+          ],
+          "disposition": "required",
+          "gate3Target": "Python",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "Python is part of the declared source-target matrix.",
+          "userConsequence": "A Full1 release cannot ship until Python programs compile and run through the strict target lane."
+        },
+        {
+          "id": "hashlink-bytecode",
+          "label": "HashLink bytecode output",
+          "kind": "target-variant",
+          "upstreamFlags": [
+            "--hl <file.hl>"
+          ],
+          "disposition": "required",
+          "gate3Target": "Hl",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "HashLink bytecode is part of the declared VM target matrix.",
+          "userConsequence": "A Full1 release cannot ship until real `.hl` output compiles and runs in the strict HashLink lane."
+        },
+        {
+          "id": "hashlink-c",
+          "label": "HashLink C output",
+          "kind": "target-variant",
+          "upstreamFlags": [
+            "--hl <file.c>"
+          ],
+          "disposition": "required",
+          "gate3Target": "Hl",
+          "evidenceMarkers": [
+            "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          ],
+          "rationale": "The upstream HashLink target lane also generates and executes C output on its supported CI platform.",
+          "userConsequence": "HashLink does not count as Full1-complete unless its required C-output checks pass too."
+        },
+        {
+          "id": "interp",
+          "label": "Interpreter execution",
+          "kind": "execution-mode",
+          "upstreamFlags": [
+            "--interp"
+          ],
+          "disposition": "required",
+          "evidenceMarkers": [
+            "FULL1_EVAL_NATIVE:PASS",
+            "FULL1_MACRO_EVAL_PARITY:PASS"
+          ],
+          "rationale": "Interpreter-style execution is a core compiler behavior used by Haxe projects and upstream suites.",
+          "userConsequence": "A Full1 release cannot ship until interpreter-style workloads pass without required stage0 delegation."
+        },
+        {
+          "id": "run",
+          "label": "Run-module execution",
+          "kind": "execution-mode",
+          "upstreamFlags": [
+            "--run"
+          ],
+          "disposition": "required",
+          "evidenceMarkers": [
+            "FULL1_EVAL_NATIVE:PASS",
+            "FULL1_SUITE_MATRIX:PASS"
+          ],
+          "rationale": "`--run` is a public Haxe execution mode and is used by normal tooling and test orchestration.",
+          "userConsequence": "A Full1 release cannot ship until run-module behavior is covered by same-candidate native evidence."
+        },
+        {
+          "id": "xml-type-description",
+          "label": "XML type-description output",
+          "kind": "generator-service",
+          "upstreamFlags": [
+            "--xml"
+          ],
+          "disposition": "deferred",
+          "evidenceMarkers": [],
+          "rationale": "The first Full1 claim does not yet include a compatible XML type-description generator.",
+          "userConsequence": "Builds or tools that require `--xml` must keep using upstream Haxe 4.3.7 for that step."
+        },
+        {
+          "id": "json-type-description",
+          "label": "JSON type-description output",
+          "kind": "generator-service",
+          "upstreamFlags": [
+            "--json"
+          ],
+          "disposition": "deferred",
+          "evidenceMarkers": [],
+          "rationale": "The first Full1 claim does not yet include a compatible JSON type-description generator.",
+          "userConsequence": "Builds or tools that require `--json` must keep using upstream Haxe 4.3.7 for that step."
+        }
+      ]
+    },
     "requiredMarkersPlanned": [
       "FULL1_GATE3_EXTENDED_TARGETS:PASS",
+      "FULL1_TARGET_SCOPE_CONTRACT:PASS",
       "FULL1_PARITY_MAP:PASS",
       "FULL1_SUITE_MISC:PASS",
       "FULL1_SUITE_SERVER:PASS",
@@ -54,6 +317,8 @@
       "FULL1_SUITE_DISPLAY:PASS",
       "FULL1_SUITE_MATRIX:PASS",
       "FULL1_MACRO_EVAL_CONTRACT:PASS",
+      "FULL1_MACRO_PARITY:PASS",
+      "FULL1_EVAL_NATIVE:PASS",
       "FULL1_MACRO_EVAL_PARITY:PASS",
       "FULL1_PLUGIN_PARITY_CONTRACT:PASS",
       "FULL1_PLUGIN_PARITY:PASS",
@@ -63,7 +328,9 @@
       "FULL1_RELEASE_GO:PASS"
     ],
     "nonGoals": [
-      "Targets outside the explicit scope manifest",
+      "An unqualified all-target Haxe 4.3.7 drop-in claim",
+      "Flash/SWF/SWC output",
+      "Direct JVM bytecode, XML type-description, and JSON type-description output in the first Full1 release",
       "Implicit 1.0 claims without marker evidence"
     ]
   },

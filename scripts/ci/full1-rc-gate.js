@@ -21,6 +21,7 @@ const rolePolicy = {
   policy: {
     tier: 1,
     markers: [
+      'FULL1_TARGET_SCOPE_CONTRACT:PASS',
       'FULL1_PARITY_MAP:PASS',
       'FULL1_MACRO_EVAL_CONTRACT:PASS',
       'FULL1_PLUGIN_PARITY_CONTRACT:PASS',
