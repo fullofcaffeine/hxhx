@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Manages one repository-owned Haxe compilation server. A live server is only
+# reused when it was started with the same Haxe executable requested now;
+# otherwise the helper restarts it so callers cannot silently change labels
+# while continuing to use an older wrapper or compiler binary.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 STATE_DIR="${HXHX_STATE_DIR:-$ROOT/.hxhx/state}"
 HAXE_BIN="${HAXE_BIN:-haxe}"
 HXHX_HAXE_SERVER_PORT="${HXHX_HAXE_SERVER_PORT:-}"
 PORT_FILE="$STATE_DIR/haxe-server.port"
 PID_FILE="$STATE_DIR/haxe-server.pid"
+BIN_FILE="$STATE_DIR/haxe-server.bin"
 LOG_FILE="$STATE_DIR/haxe-server.log"
 
 usage() {
@@ -14,7 +19,7 @@ usage() {
 Usage: bash scripts/hxhx/haxe-server.sh <command> [options]
 
 Commands:
-  start             Start repo-owned haxe --wait server if not already running.
+  start             Start/reuse a matching repo-owned haxe --wait server.
   stop              Stop repo-owned haxe --wait server if running.
   status            Print server status (running/not-running).
   port              Print resolved server port.
@@ -29,6 +34,25 @@ USAGE
 
 ensure_state_dir() {
 	mkdir -p "$STATE_DIR"
+}
+
+resolve_haxe_identity() {
+	local resolved
+	resolved="$(command -v "$HAXE_BIN" 2>/dev/null || true)"
+	if [ -z "$resolved" ]; then
+		echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
+		return 1
+	fi
+	local resolved_dir
+	resolved_dir="$(cd "$(dirname "$resolved")" && pwd -P)"
+	printf '%s/%s\n' "$resolved_dir" "$(basename "$resolved")"
+}
+
+read_server_identity() {
+	if [ ! -s "$BIN_FILE" ]; then
+		return 1
+	fi
+	cat "$BIN_FILE"
 }
 
 is_pid_alive() {
@@ -120,10 +144,8 @@ wait_for_server_ready() {
 }
 
 start_server() {
-	if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
-		echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
-		exit 1
-	fi
+	local requested_identity
+	requested_identity="$(resolve_haxe_identity)"
 	ensure_state_dir
 
 	local existing_pid
@@ -133,32 +155,39 @@ start_server() {
 	save_port "$port"
 
 	if [ -n "$existing_pid" ]; then
-		echo "haxe-server: already running pid=$existing_pid port=$port" >&2
-		return 0
+		local existing_identity
+		existing_identity="$(read_server_identity || true)"
+		if [ "$existing_identity" = "$requested_identity" ]; then
+			echo "haxe-server: already running pid=$existing_pid port=$port haxe_bin=$requested_identity" >&2
+			return 0
+		fi
+		echo "haxe-server: selected Haxe changed; restarting old=${existing_identity:-unknown} new=$requested_identity" >&2
+		stop_server
 	fi
 
-	echo "haxe-server: starting port=$port" >&2
+	echo "haxe-server: starting port=$port haxe_bin=$requested_identity" >&2
 	nohup "$HAXE_BIN" --wait "$port" >"$LOG_FILE" 2>&1 &
 	local pid="$!"
 	printf '%s\n' "$pid" >"$PID_FILE"
+	printf '%s\n' "$requested_identity" >"$BIN_FILE"
 
 	if ! wait_for_server_ready "$port"; then
 		echo "haxe-server: failed to become ready at port=$port (pid=$pid)." >&2
 		kill "$pid" >/dev/null 2>&1 || true
 		sleep 0.2
 		kill -9 "$pid" >/dev/null 2>&1 || true
-		rm -f "$PID_FILE"
+		rm -f "$PID_FILE" "$BIN_FILE"
 		exit 1
 	fi
 
-	echo "haxe-server: ready pid=$pid port=$port" >&2
+	echo "haxe-server: ready pid=$pid port=$port haxe_bin=$requested_identity" >&2
 }
 
 stop_server() {
 	local pid
 	pid="$(read_running_pid || true)"
 	if [ -z "$pid" ]; then
-		rm -f "$PID_FILE"
+		rm -f "$PID_FILE" "$BIN_FILE"
 		echo "haxe-server: not-running" >&2
 		return 0
 	fi
@@ -168,7 +197,7 @@ stop_server() {
 	if is_pid_alive "$pid"; then
 		kill -9 "$pid" >/dev/null 2>&1 || true
 	fi
-	rm -f "$PID_FILE"
+	rm -f "$PID_FILE" "$BIN_FILE"
 }
 
 status_server() {
@@ -177,7 +206,9 @@ status_server() {
 	local pid
 	pid="$(read_running_pid || true)"
 	if [ -n "$pid" ]; then
-		echo "running pid=$pid port=$endpoint"
+		local identity
+		identity="$(read_server_identity || true)"
+		echo "running pid=$pid port=$endpoint haxe_bin=${identity:-unknown}"
 		return 0
 	fi
 	echo "not-running port=$endpoint"
