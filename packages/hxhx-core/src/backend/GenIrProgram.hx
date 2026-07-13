@@ -1,19 +1,19 @@
 package backend;
 
 /**
-	Stage3 codegen IR contract (v0 alias).
+	Names the typed program value passed from Stage3 into a backend.
 
-	Why
-	- Backend APIs should consume an explicit "codegen IR" type rather than exposing
-	  internal compiler pipeline classes directly.
-	- We need a migration-safe bridge while the dedicated backend-neutral IR is extracted.
+	What it is today
+	- `GenIrProgram` is an alias to `MacroExpandedProgram`.
+	- It gives backend APIs one stable, readable name for their current input.
 
-	What
-	- `GenIrProgram` is currently an alias to `MacroExpandedProgram` (v0).
-	- Backends should treat this as the canonical codegen input contract.
+	What it is not
+	- It is not a normalized or target-neutral IR.
+	- Its name does not authorize moving target runtime behavior or backend-specific
+	  lowering into a new shared compiler layer.
 
-	How
-	- Keep the alias in one place so we can swap to a dedicated IR structure later with
-	  minimal API churn.
+	Future rule
+	- Introduce a separate IR only after two or more backends demonstrate the same
+	  repeated transformation and behavior tests define the shared invariant.
 **/
 typedef GenIrProgram = MacroExpandedProgram;

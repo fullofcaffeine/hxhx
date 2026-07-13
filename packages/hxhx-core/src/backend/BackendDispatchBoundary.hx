@@ -17,6 +17,9 @@ import backend.ocaml.OcamlStage3Backend;
 	Policy
 	- Keep backend recovery casts in this class only.
 	- Do not spread backend `Dynamic`/`cast` recovery through Stage3 compiler logic.
+	- `Stage3EmitSupport` is the only production caller of this boundary.
+	- See `docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md` for the proof required
+	  before removing or expanding it.
 **/
 class BackendDispatchBoundary {
 	static inline function traceEnabled():Bool {
@@ -70,6 +73,10 @@ class BackendDispatchBoundary {
 		- Resolve `emit` reflectively from the runtime backend value and call it with the
 		  standard `(program, context)` payload.
 		- Keep this reflection confined to this boundary class.
+
+		Exit
+		- Remove this fallback only after a real native plugin and a builtin backend both
+		  preserve typed `IBackend.emit` dispatch and pass the focused/plugin gates.
 	**/
 	public static function emitReflective(backend:Dynamic, program:GenIrProgram, context:BackendContext):EmitResult {
 		final emitFn:Dynamic = Reflect.field(backend, "emit");
@@ -89,8 +96,9 @@ class BackendDispatchBoundary {
 		How
 		- Fast-path known backend wrappers (`JsBackend`, `OcamlStage3Backend`,
 		  `TargetCoreBackend`) through typed static bridges.
-		- Fallback for custom plugin/bundled backends uses the typed `IBackend.emit`
-		  interface call (no reflection).
+		- In Reflaxe-generated native output, custom plugin/bundled backends use the one
+		  reflective fallback documented above. Other Haxe targets call `IBackend.emit`
+		  directly.
 	**/
 	public static function emit(backend:IBackend, program:GenIrProgram, context:BackendContext):EmitResult {
 		#if reflaxe

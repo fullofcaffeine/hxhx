@@ -25,6 +25,8 @@ For lane/profile context, use the canonical beginner truth table:
   `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 - Full1 release go/no-go decision page:
   `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
+- Plain-language temporary adapter boundaries and removal checks:
+  `docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md`
 
 ## Gate purpose by lane (quick map)
 
@@ -65,6 +67,18 @@ The audit runs after the workflows listed in
 an owner. That marker means the failure queue is accountable; it does **not**
 mean the owned compiler, target, macro, plugin, performance, or Full1 failures
 have passed.
+
+## Temporary bridge guard
+
+`npm run guard:bridge-boundaries` protects four small native/bootstrap adapters
+that are still needed today. In plain language, it checks that reflective
+backend calls, backend input type recovery, one OCaml-only compiler-driver hint,
+and the compiler-server socket helper have not quietly spread into new files.
+
+The guard validates both current call sites and negative fixtures, then emits
+`BRIDGE_RETIREMENT_INVENTORY:PASS`. That marker means the adapters are confined
+and have named removal evidence. It does **not** mean they are removed or that
+Full1 compatibility has passed.
 
 ## Release policy (Scoped 1.0)
 

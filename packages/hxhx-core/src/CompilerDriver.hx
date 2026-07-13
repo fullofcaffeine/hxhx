@@ -23,11 +23,14 @@ class CompilerDriver {
 		// many generic types, the OCaml compiler may not "see" `ResolvedModule` as a dependency
 		// at this point unless we reference it explicitly.
 		//
-		// We do that with a zero-cost reference to a provider that Stage3 emits reliably via the
-		// `__ocaml__` escape hatch (no allocation).
+		// We do that with one zero-cost reference that Stage3 emits reliably via the `__ocaml__`
+		// escape hatch (no allocation). This is the only approved compiler-driver raw target hint;
+		// it is not a general API for embedding OCaml in compiler code.
 		//
 		// Guard it behind the OCaml backend define so regular `haxe --run` smoke checks can still
-		// compile this module without the escape symbol being available.
+		// compile this module without the escape symbol being available. Remove it only after a
+		// clean current-source native build and `--hxhx-selftest` prove the generic/record-label
+		// path works without it; see docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md.
 		#if reflaxe_ocaml
 		untyped __ocaml__("(ResolvedModule.getParsed)");
 		#end

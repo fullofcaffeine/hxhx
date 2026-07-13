@@ -18,10 +18,14 @@ package hxhx;
 	How
 	- Implemented in `std/runtime/HxHxCompilerServer.ml`.
 	- This is a transport-only bridge: Stage3 still owns request shaping and response printing logic.
+	- `Stage3WaitServer` is the only production caller. Do not add socket behavior to other
+	  compiler modules through this extern.
 
-	Long-term note
-	- Once socket IO is fully reliable in the Haxe layer for our bootstrap path, this bridge can be
-	  replaced by a pure-Haxe transport without changing Stage3 CLI surface behavior.
+	Exit
+	- Replace this bridge only after a pure-Haxe `sys.net.Socket` transport preserves framing,
+	  connection failures, shutdown behavior, and the existing wait/connect roundtrip.
+	- The complete exit evidence is recorded in
+	  `docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md`.
 **/
 // `--interp` tests can import Stage3Compiler without linking the OCaml runtime bridge.
 // Real socket transport still requires the native implementation below.

@@ -29,6 +29,8 @@ private typedef WaitStdioReply = {
 	How
 	- `Stage3Compiler` stays the public entrypoint and passes the minimum callbacks
 	  needed for one-shot compilation and standard Stage3 error shaping.
+	- This module is the only production caller of the temporary native socket helper;
+	  see `docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md` before expanding that boundary.
 **/
 class Stage3WaitServer {
 	public static function parseWaitMode(args:Array<String>) {

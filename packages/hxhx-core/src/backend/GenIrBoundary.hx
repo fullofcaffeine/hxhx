@@ -13,6 +13,9 @@ package backend;
 	- This is the only allowed `Dynamic` boundary for `program` recovery in backend
 	  target-core emit paths.
 	- Do not duplicate local `program` recovery casts in individual target cores.
+	- Remove these helpers only after native interface dispatch preserves the backend
+	  input type across JS, OCaml, and one source/native target. The full exit proof is
+	  recorded in `docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md`.
 **/
 class GenIrBoundary {
 	/**

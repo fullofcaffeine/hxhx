@@ -1,0 +1,96 @@
+{
+  "schema": "hxhx.bootstrap-bridge-inventory.v1",
+  "marker": "BRIDGE_RETIREMENT_INVENTORY:PASS",
+  "bridges": [
+    {
+      "id": "backend-dispatch-reflection",
+      "plainName": "Backend method adapter",
+      "reason": "Native Reflaxe output can lose the IBackend interface method table, so custom backends need one confined reflective emit fallback.",
+      "ownerBeads": [
+        "haxe_ocaml-gskz9",
+        "haxe_ocaml-bomhr"
+      ],
+      "allowedHaxeFiles": [
+        "packages/hxhx-core/src/backend/BackendDispatchBoundary.hx",
+        "packages/hxhx/src/hxhx/Stage3EmitSupport.hx"
+      ],
+      "focusedRegressions": [
+        "npm run test:m14:backend-dispatch-boundary",
+        "npm run guard:bridge-boundaries"
+      ],
+      "exitEvidence": [
+        "A native custom-plugin workload and builtin target both use typed IBackend.emit dispatch.",
+        "The reflective branch is not reached and focused plus Full1 plugin evidence stays green."
+      ]
+    },
+    {
+      "id": "genir-dynamic-recovery",
+      "plainName": "Backend input type recovery",
+      "reason": "Native interface dispatch can expose the already-typed backend program as an opaque runtime value, so the type is recovered at one named boundary.",
+      "ownerBeads": [
+        "haxe.ocaml-f1cl",
+        "haxe_ocaml-bomhr"
+      ],
+      "allowedHaxeFiles": [
+        "packages/hxhx-core/src/backend/GenIrBoundary.hx",
+        "packages/hxhx/src/hxhx/Stage3EmitSupport.hx",
+        "packages/hxhx-core/src/backend/js/JsTargetCore.hx",
+        "packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx"
+      ],
+      "focusedRegressions": [
+        "npm run test:m14:backend-dispatch-boundary",
+        "npm run test:m14:target-core-wiring",
+        "npm run test:m14:js-target-core-wiring",
+        "npm run guard:bridge-boundaries"
+      ],
+      "exitEvidence": [
+        "Generated native code preserves the backend-facing program type without recovery casts.",
+        "JS, OCaml, and one source/native target pass after the recovery calls are removed."
+      ]
+    },
+    {
+      "id": "compiler-driver-ocaml-hint",
+      "plainName": "Compiler-driver OCaml hint",
+      "reason": "One zero-cost OCaml reference makes the generated compiler recognize the module that owns a record label before CompilerDriver reads it.",
+      "ownerBeads": [
+        "haxe.ocaml-f1cl",
+        "haxe_ocaml-38gsp"
+      ],
+      "allowedHaxeFiles": [
+        "packages/hxhx-core/src/CompilerDriver.hx"
+      ],
+      "focusedRegressions": [
+        "npm run guard:bridge-boundaries",
+        "native hxhx --hxhx-selftest in the bootstrap/current-source validation lane"
+      ],
+      "exitEvidence": [
+        "A clean current-source native build succeeds without the hint.",
+        "The compiler selftest and generic/record-label bootstrap cases pass without generated-source patching."
+      ]
+    },
+    {
+      "id": "compiler-server-socket-helper",
+      "plainName": "Compiler-server socket helper",
+      "reason": "Current native output cannot yet use the required sys.net.Socket input/output path reliably, so a small OCaml runtime module owns only the socket transport.",
+      "ownerBeads": [
+        "haxe.ocaml-f1cl",
+        "haxe_ocaml-38gsp"
+      ],
+      "allowedHaxeFiles": [
+        "packages/hxhx/src/hxhx/NativeCompilerServer.hx",
+        "packages/hxhx/src/hxhx/Stage3WaitServer.hx"
+      ],
+      "runtimeSourceFiles": [
+        "packages/reflaxe.ocaml/std/runtime/HxHxCompilerServer.ml"
+      ],
+      "focusedRegressions": [
+        "Stage3 --wait socket + --connect roundtrip in npm run test:hxhx-targets",
+        "npm run guard:bridge-boundaries"
+      ],
+      "exitEvidence": [
+        "A pure-Haxe sys.net.Socket transport preserves framing, lifecycle, errors, and shutdown behavior.",
+        "The native socket roundtrip passes and a trace proves HxHxCompilerServer is no longer linked or called."
+      ]
+    }
+  ]
+}

@@ -13,9 +13,21 @@ This repo treats `Dynamic`, `Any`, and `untyped` as restricted escape hatches.
 `npm run ci:guards` runs:
 
 - `scripts/ci/no-dynamic-check.js`
+- `scripts/ci/bridge-boundary-check.js`
+- `scripts/ci/bridge-boundary-check-fixture-test.js`
 
 That guard scans scoped compiler lanes and fails if restricted constructs appear outside allowlisted boundary files.
 It explicitly checks typed/generic `Dynamic` and typed/generic `Any` usage, plus `untyped __ocaml__`.
+
+The bridge guard is narrower and more specific. It records the exact approved callers for backend reflection,
+backend input recovery, the compiler-driver OCaml hint, and the compiler-server socket helper. Its plain-language
+contract and removal conditions live in:
+
+- `docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md`
+- `docs/00-project/BOOTSTRAP_BRIDGE_INVENTORY.json`
+
+Adding an allowlisted file is an architecture change, not routine cleanup. Update the owning bead, focused test,
+inventory, and exit evidence rather than adding a path only to make CI green.
 
 Raw target injection has an additional OCaml-specific design record:
 
@@ -51,3 +63,5 @@ Previously-allowlisted emitter seams were moved to typed map/context helpers.
 - Do not spread `Dynamic`/`Any` through internal APIs.
 - If you need a boundary exception, add it in one file at the seam and document why.
 - Prefer typed adapters that immediately convert boundary values into concrete types.
+- Do not hand-edit generated bootstrap `.ml` snapshots to change a bridge. Change the owning Haxe or hand-written
+  runtime source and regenerate through the documented build path.
