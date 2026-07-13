@@ -249,7 +249,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full1-perf-raw-${{ github.run_id }}
+          name: full1-perf-raw-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/full1_perf/raw
           if-no-files-found: warn
           retention-days: 14
@@ -258,7 +258,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full1-perf-evaluated-${{ github.run_id }}
+          name: full1-perf-evaluated-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/full1_perf/evaluated
           if-no-files-found: warn
           retention-days: 14

@@ -12,6 +12,7 @@ const scopeManifestPath = 'docs/02-user-guide/compat/full-1.0-scope.json'
 const parityMapPath = 'docs/00-project/PARITY_MAP_FULL_1_0.json'
 const ciGatesPath = 'docs/00-project/CI_GATES.md'
 const rcWorkflowPath = '.github/workflows/gate-full1-rc.yml'
+const rcPolicyEvidencePath = 'scripts/ci/full1-rc-policy-evidence.js'
 const marker = 'FULL1_FLAKE_POLICY:PASS'
 
 const requiredDocSnippets = [
@@ -102,6 +103,7 @@ function main() {
   const parityMap = readUtf8(parityMapPath)
   const ciGates = readUtf8(ciGatesPath)
   const rcWorkflow = readUtf8(rcWorkflowPath)
+  const rcPolicyEvidence = readUtf8(rcPolicyEvidencePath)
 
   for (const snippet of requiredDocSnippets) {
     requireIncludes(docPath, doc, snippet)
@@ -110,8 +112,9 @@ function main() {
   requireIncludes(scopeManifestPath, scopeManifest, marker)
   requireIncludes(parityMapPath, parityMap, marker)
   requireIncludes(ciGatesPath, ciGates, marker)
-  requireIncludes(rcWorkflowPath, rcWorkflow, marker)
-  requireIncludes(rcWorkflowPath, rcWorkflow, 'scripts/ci/full1-flake-policy-check.js')
+  requireIncludes(rcWorkflowPath, rcWorkflow, rcPolicyEvidencePath)
+  requireIncludes(rcPolicyEvidencePath, rcPolicyEvidence, marker)
+  requireIncludes(rcPolicyEvidencePath, rcPolicyEvidence, 'scripts/ci/full1-flake-policy-check.js')
 
   if (!allowlist) return
   if (allowlist.schema !== 'full1-flake-allowlist.v1') {

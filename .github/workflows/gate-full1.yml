@@ -75,7 +75,7 @@ jobs:
             --arg run_id "${{ github.run_id }}" \
             --arg run_attempt "${{ github.run_attempt }}" \
             '{
-              schema: "full1-gate-summary.v1",
+              schema: "full1-gate-summary.v2",
               workflow: $workflow,
               run_id: $run_id,
               run_attempt: $run_attempt,
@@ -86,18 +86,26 @@ jobs:
                 full1_eval_native: { result: $eval_result },
                 full1_plugin_parity: { result: $plugin_result }
               },
-              aggregate_markers: [
+              expected_markers: [
                 "FULL1_SUITE_MATRIX:PASS",
                 "FULL1_MACRO_EVAL_PARITY:PASS",
                 "FULL1_PLUGIN_PARITY:PASS"
-              ]
+              ],
+              emitted_markers: (
+                (if $gate3_result == "success" and $suites_result == "success"
+                 then ["FULL1_SUITE_MATRIX:PASS"] else [] end) +
+                (if $macro_result == "success" and $eval_result == "success"
+                 then ["FULL1_MACRO_EVAL_PARITY:PASS"] else [] end) +
+                (if $plugin_result == "success"
+                 then ["FULL1_PLUGIN_PARITY:PASS"] else [] end)
+              )
             }' > .artifacts/full1/full1.summary.json
 
       - name: Upload Full1 aggregate artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full1-summary-${{ github.run_id }}
+          name: full1-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/full1.summary.json
           if-no-files-found: error
 

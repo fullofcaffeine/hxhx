@@ -96,9 +96,11 @@ Full1 release go/no-go has its own explicit decision page:
 
 - `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
 
-That page defines the public `Full 1.0` go/no-go boundary, the RC summary JSON
-artifact, and the no-go conditions for missing, stale, skipped, or ambiguous
-release evidence. It does not redefine `Scoped 1.0`.
+That page defines the public `Full 1.0` go/no-go boundary and its
+`full1-rc-summary.v2` receipt. The receipt must be created before publication,
+must identify one exact candidate SHA/version and run attempt, and must point
+to verified child artifact digests. Missing, stale, skipped, synthetic, or
+cross-candidate evidence is no-go. It does not redefine `Scoped 1.0`.
 
 ## Non-goals policy
 

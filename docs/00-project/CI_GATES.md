@@ -79,8 +79,11 @@ For Full 1.0 claims, use the strict Full contract and markers in:
 - `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 
 The semantic-release publication path blocks candidate versions `>=1.0.0`
-through `scripts/release/full1-release-enforcement.js` unless
-`FULL1_RELEASE_GO:PASS` and a valid Full1 RC summary JSON are supplied.
+through `scripts/release/full1-release-enforcement.js`. A Full1 release must
+first run the manual prepublication RC workflow. The release job downloads the
+exact RC run attempt, verifies its artifact digest, checks out the candidate
+SHA named by the receipt, and recomputes the required evidence before it can
+accept `FULL1_RELEASE_GO:PASS`.
 
 For strict `Full 1.0` / `Haxe 4.3.7-equivalent` claims, the primary proof is the relevant upstream Haxe 4.3.7 suite matrix running under `hxhx`.
 Repo-local focused regressions and bridge tests are supporting evidence for diagnosis and closure work; they do not replace upstream-suite proof.
@@ -133,7 +136,7 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Gate Perf Full1 / HXHX vs Haxe` | `.github/workflows/gate-perf-full1.yml` | Release-blocking Full1 performance parity lane. Uploads raw KPI evidence, phase timings, and evaluated Full1 perf summary, then emits `FULL1_PERF_PARITY:PASS` only through the evaluator after the policy passes. | **Nightly/scheduled + Release + Reusable** | weekly schedule, `release`, manual, `workflow_call` |
 | `Full1 / Plugin Parity` | `.github/workflows/full1-plugin-parity.yml` | Runs the three required `reflaxe.ocaml` plugin proof rows, uploads per-proof artifacts with phase timings, and emits `FULL1_PLUGIN_PARITY:PASS` only when all proof rows pass. | **Nightly/scheduled + Release + Reusable** | weekly schedule, `release`, manual, `workflow_call` |
 | `Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity` | `.github/workflows/gate-full1.yml` | Full1 aggregate gate that composes strict suite runners, strict extended Gate3, reusable macro runtime parity, reusable native eval, and reusable plugin parity. It emits `FULL1_SUITE_MATRIX:PASS` for strict matrix success, `FULL1_MACRO_EVAL_PARITY:PASS` for macro+eval closure, and `FULL1_PLUGIN_PARITY:PASS` for plugin closure. | **Nightly/scheduled + Release + Reusable** | weekly schedule, `release`, manual, `workflow_call` |
-| `Gate Full1 RC / Release Go-No-Go` | `.github/workflows/gate-full1-rc.yml` | Full1 public-claim release gate that composes Gate Full1, Gate Perf Full1, and local contract guards through `scripts/ci/full1-rc-gate.js`. It uploads RC summary JSON and emits `FULL1_RELEASE_GO:PASS` only when every required Full1 scope marker is present. | **Release + Manual** | `release`, manual |
+| `Gate Full1 RC / Release Go-No-Go` | `.github/workflows/gate-full1-rc.yml` | Prepublication Full1 decision gate. It downloads and verifies same-run child artifacts, writes a candidate-bound `full1-rc-summary.v2` receipt, and emits `FULL1_RELEASE_GO:PASS` only when every required artifact and marker is valid. Its `provenance_only` mode safely proves a no-go handoff without running the expensive matrix. | **Prepublication manual** | manual |
 | `Gate M7 / Replacement Bundle` | `.github/workflows/gate-m7.yml` | Strict replacement-readiness lane (scheduled/manual + release-event verification). | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Stdlib Portable / Full` | `.github/workflows/stdlib-portable-full.yml` | Full portable stdlib conformance lane. | **Nightly/scheduled** | weekly schedule, manual |
 | `Smoke / Stage0 Source Build` | `.github/workflows/stage0-source-smoke.yml` | Source-only stage0 smoke path integrity check. | **Nightly/scheduled** | daily schedule, manual |
@@ -266,14 +269,17 @@ Full1 measured performance parity marker:
 Full1 release go/no-go marker:
 
 - `FULL1_RELEASE_GO:PASS` (`.github/workflows/gate-full1-rc.yml`;
-  evaluator: `scripts/ci/full1-rc-gate.js`; scope source:
+  collector: `scripts/ci/full1-rc-artifact-collector.js`; evaluator:
+  `scripts/ci/full1-rc-gate.js`; release downloader:
+  `scripts/release/download-full1-rc-artifact.js`; scope source:
   `docs/02-user-guide/compat/full-1.0-scope.json`; decision page:
   `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`)
 
 Full1 semantic-release enforcement marker:
 
 - `FULL1_RELEASE_ENFORCEMENT:PASS` (`scripts/release/full1-release-enforcement.js`;
-  fixture coverage: `scripts/release/full1-release-enforcement-fixture-test.js`)
+  fixture coverage: `scripts/release/full1-release-enforcement-fixture-test.js`
+  and `scripts/release/download-full1-rc-artifact-fixture-test.js`)
 
 Gate Full1 also requires green reusable jobs from:
 

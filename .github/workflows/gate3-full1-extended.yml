@@ -469,7 +469,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full1-gate3-extended-${{ github.run_id }}
+          name: full1-gate3-extended-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .artifacts/full1/gate3-full1-extended.log
             .artifacts/full1/gate3-full1-extended.live.log

@@ -411,7 +411,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: macro-runtime-parity-${{ matrix.macro_runtime_mode }}-${{ github.run_id }}
+          name: macro-runtime-parity-${{ matrix.macro_runtime_mode }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/macro-runtime-parity/${{ matrix.macro_runtime_mode }}
           if-no-files-found: warn
 
@@ -437,7 +437,7 @@ jobs:
             --arg matrix_result "$matrix_result" \
             --arg trigger "$trigger" \
             '{
-              schema: "macro-runtime-parity-summary.v1",
+              schema: "macro-runtime-parity-summary.v2",
               workflow: $workflow,
               run_id: $run_id,
               run_attempt: $run_attempt,
@@ -445,17 +445,23 @@ jobs:
               jobs: {
                 macro_runtime_parity: { result: $matrix_result }
               },
-              aggregate_markers: [
+              expected_markers: [
                 "MACRO_RUNTIME_PARITY_WEEKLY:PASS",
                 "FULL1_MACRO_PARITY:PASS"
-              ]
+              ],
+              emitted_markers: (
+                if $matrix_result == "success"
+                then ["MACRO_RUNTIME_PARITY_WEEKLY:PASS", "FULL1_MACRO_PARITY:PASS"]
+                else []
+                end
+              )
             }' > .artifacts/macro-runtime-parity/summary.json
 
       - name: Upload parity summary artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: macro-runtime-parity-summary-${{ github.run_id }}
+          name: macro-runtime-parity-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/macro-runtime-parity/summary.json
           if-no-files-found: error
 

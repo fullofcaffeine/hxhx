@@ -2,110 +2,143 @@ name: Gate Full1 RC / Release Go-No-Go
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
+    inputs:
+      candidate_version:
+        description: "Exact semantic version this evidence would authorize"
+        required: true
+        type: string
+      provenance_only:
+        description: "Exercise the artifact handoff and expect a no-go decision"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
-  group: gate-full1-rc-${{ github.ref }}
+  group: gate-full1-rc-${{ github.ref }}-${{ inputs.candidate_version }}
   cancel-in-progress: true
 
 permissions:
+  actions: read
   contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  FULL1_RC_RELEASE_MARKER: "FULL1_RELEASE_GO:PASS"
+  NODE_VERSION: "20"
+  FULL1_RC_MAX_AGE_HOURS: "24"
 
 jobs:
+  policy_evidence:
+    name: Candidate-bound policy evidence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Run policy guards and write evidence
+        run: |
+          set -euo pipefail
+          node scripts/ci/full1-rc-policy-evidence.js \
+            --candidate-sha "${{ github.sha }}" \
+            --candidate-version "${{ inputs.candidate_version }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --json-out .artifacts/full1/rc-policy/full1-rc-policy.summary.json
+
+      - name: Upload policy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-rc-policy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/full1/rc-policy/full1-rc-policy.summary.json
+          if-no-files-found: error
+          retention-days: 30
+
   full1_gate:
     name: Full1 strict matrix, macro/eval, and plugin gate
+    if: ${{ !inputs.provenance_only }}
     uses: ./.github/workflows/gate-full1.yml
     secrets: inherit
 
   full1_perf:
     name: Full1 performance parity gate
+    if: ${{ !inputs.provenance_only }}
     uses: ./.github/workflows/gate-perf-full1.yml
     secrets: inherit
 
   full1_rc:
-    name: Full1 RC aggregate marker
+    name: Verify child artifacts and decide go/no-go
     runs-on: ubuntu-latest
     needs:
+      - policy_evidence
       - full1_gate
       - full1_perf
     if: always()
     steps:
-      - name: Checkout
+      - name: Checkout candidate
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Evaluate Full1 RC evidence
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download and validate exact child artifacts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PROVENANCE_ONLY: ${{ inputs.provenance_only }}
         run: |
           set -euo pipefail
-          mkdir -p .artifacts/full1/rc
-          markers=()
-
-          add_marker() {
-            markers+=("--marker" "$1")
-          }
-
-          run_guard() {
-            local marker="$1"
-            shift
-            local log=".artifacts/full1/rc/${marker%%:*}.log"
-            set +e
-            "$@" >"$log" 2>&1
-            local status="$?"
-            set -e
-            cat "$log"
-            if [ "$status" -eq 0 ]; then
-              add_marker "$marker"
-            else
-              echo "Full1 RC guard failed for ${marker}: $*" >&2
-            fi
-          }
-
-          full1_gate_result='${{ needs.full1_gate.result }}'
-          full1_perf_result='${{ needs.full1_perf.result }}'
-          echo "full1_gate=${full1_gate_result}"
-          echo "full1_perf=${full1_perf_result}"
-
-          if [ "$full1_gate_result" = "success" ]; then
-            add_marker "FULL1_GATE3_EXTENDED_TARGETS:PASS"
-            add_marker "FULL1_SUITE_MISC:PASS"
-            add_marker "FULL1_SUITE_SERVER:PASS"
-            add_marker "FULL1_SUITE_THREADS:PASS"
-            add_marker "FULL1_SUITE_OPTIMIZATION:PASS"
-            add_marker "FULL1_SUITE_DISPLAY:PASS"
-            add_marker "FULL1_SUITE_MATRIX:PASS"
-            add_marker "FULL1_MACRO_EVAL_PARITY:PASS"
-            add_marker "FULL1_PLUGIN_PARITY:PASS"
-          else
-            echo "Full1 aggregate gate did not pass; release marker will not be emitted." >&2
+          extra_args=()
+          if [ "$PROVENANCE_ONLY" = "true" ]; then
+            extra_args+=(--provenance-only)
           fi
+          node scripts/ci/full1-rc-artifact-collector.js \
+            --repository "${{ github.repository }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --candidate-sha "${{ github.sha }}" \
+            --candidate-version "${{ inputs.candidate_version }}" \
+            --out-dir "${RUNNER_TEMP}/full1-rc-child-artifacts" \
+            --index-out .artifacts/full1/rc/full1-rc.evidence-index.json \
+            "${extra_args[@]}"
 
-          if [ "$full1_perf_result" = "success" ]; then
-            add_marker "FULL1_PERF_PARITY:PASS"
-          else
-            echo "Full1 perf gate did not pass; release marker will not be emitted." >&2
-          fi
-
-          run_guard "FULL1_PARITY_MAP:PASS" node scripts/ci/full1-parity-map-check.js
-          run_guard "FULL1_MACRO_EVAL_CONTRACT:PASS" node scripts/ci/full1-macro-eval-contract-check.js
-          run_guard "FULL1_PLUGIN_PARITY_CONTRACT:PASS" node scripts/ci/full1-plugin-parity-contract-check.js
-          run_guard "FULL1_FLAKE_POLICY:PASS" node scripts/ci/full1-flake-policy-check.js
-          run_guard "FULL1_PERF_POLICY:PASS" node scripts/ci/full1-perf-policy-check.js
-
+      - name: Evaluate verified Full1 evidence
+        id: evaluate
+        continue-on-error: true
+        run: |
+          set -euo pipefail
           node scripts/ci/full1-rc-gate.js \
-            --json-out .artifacts/full1/rc/full1-rc.summary.json \
-            "${markers[@]}"
+            --evidence-index .artifacts/full1/rc/full1-rc.evidence-index.json \
+            --candidate-sha "${{ github.sha }}" \
+            --candidate-version "${{ inputs.candidate_version }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --max-age-hours "$FULL1_RC_MAX_AGE_HOURS" \
+            --json-out .artifacts/full1/rc/full1-rc.summary.json
 
-      - name: Upload Full1 RC summary
+      - name: Upload candidate-bound RC decision
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full1-rc-summary-${{ github.run_id }}
-          path: .artifacts/full1/rc
-          if-no-files-found: warn
+          name: full1-rc-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .artifacts/full1/rc/full1-rc.evidence-index.json
+            .artifacts/full1/rc/full1-rc.summary.json
+          if-no-files-found: error
           retention-days: 30
+
+      - name: Enforce the RC decision
+        if: steps.evaluate.outcome != 'success'
+        run: |
+          echo "FULL1_RELEASE_GO:FAIL"
+          echo "The RC artifact was preserved, but this candidate is not authorized for publication." >&2
+          exit 1

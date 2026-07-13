@@ -5,9 +5,25 @@ on:
     workflows: ["CI / Core PR Checks"]
     types: [completed]
     branches: [master, main]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      full1_rc_run_id:
+        description: "Prepublication Full1 RC workflow run ID (required for a Full1 release or handoff dry run)"
+        required: false
+        type: string
+      full1_rc_run_attempt:
+        description: "Exact attempt of the selected Full1 RC workflow run"
+        required: false
+        type: string
+        default: "1"
+      provenance_dry_run:
+        description: "Verify the RC handoff without publishing anything"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -17,8 +33,6 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NODE_VERSION: "20"
-  FULL1_RELEASE_GO_MARKER: ""
-  FULL1_RC_SUMMARY_JSON: ""
 
 jobs:
   release:
@@ -30,27 +44,68 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        !contains(github.event.workflow_run.head_commit.message, 'chore(release):'))
     permissions:
+      actions: read
       contents: write
       issues: write
       pull-requests: write
     steps:
-      - name: Checkout
+      - name: Checkout release control code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
           token: ${{ secrets.RELEASE_TOKEN || github.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+
+      - name: Verify the selected Full1 RC artifact
+        id: rc
+        if: inputs.full1_rc_run_id != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          RC_RUN_ID: ${{ inputs.full1_rc_run_id }}
+          RC_RUN_ATTEMPT: ${{ inputs.full1_rc_run_attempt }}
+          PROVENANCE_DRY_RUN: ${{ inputs.provenance_dry_run }}
+        run: |
+          set -euo pipefail
+          extra_args=()
+          if [ "$PROVENANCE_DRY_RUN" = "true" ]; then
+            extra_args+=(--allow-no-go)
+          fi
+          node scripts/release/download-full1-rc-artifact.js \
+            --repository "${{ github.repository }}" \
+            --run-id "$RC_RUN_ID" \
+            --run-attempt "$RC_RUN_ATTEMPT" \
+            --out-dir "${RUNNER_TEMP}/full1-release-handoff" \
+            --metadata-out "${RUNNER_TEMP}/full1-release-handoff/metadata.json" \
+            --github-output "$GITHUB_OUTPUT" \
+            "${extra_args[@]}"
+
+      - name: Require an RC artifact for a handoff dry run
+        if: inputs.provenance_dry_run && inputs.full1_rc_run_id == ''
+        run: |
+          echo "A provenance dry run requires full1_rc_run_id." >&2
+          exit 1
+
+      - name: Checkout the exact release candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.rc.outputs.candidate_sha || github.event.workflow_run.head_sha || github.sha }}
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+
+      - name: Record checked-out candidate
+        id: candidate
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Install npm dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Configure git identity (for release commits)
+        if: ${{ !inputs.provenance_dry_run }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -60,11 +115,53 @@ jobs:
           set -euo pipefail
           echo "M7_RELEASE_POLICY=SEPARATE_GATE"
           echo "M7 strict is not a blocking precondition for automated 0.x semantic publish."
-          echo "Scoped 1.0 release sign-off requires Gate M7 strict markers (M7_STRICT_STAGE0:PASS and M7_REPLACEMENT_READY:PASS)."
-          echo "Full 1.0 / >=1.0.0 release paths are blocked by semantic-release verifyReleaseCmd unless FULL1_RELEASE_GO:PASS and a valid Full1 RC summary JSON are supplied."
+          echo "Scoped profile sign-off stays separate from semantic version 1.0.0."
+          echo "A Full1 publication is blocked unless this job verifies the exact prepublication RC artifact for the checked-out candidate."
+
+      - name: Prove RC handoff without publishing
+        if: inputs.provenance_dry_run
+        env:
+          FULL1_RELEASE_GO_MARKER: ${{ steps.rc.outputs.marker }}
+          FULL1_RC_SUMMARY_JSON: ${{ steps.rc.outputs.summary_path }}
+          FULL1_RELEASE_CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+          FULL1_RC_SOURCE_RUN_ID: ${{ steps.rc.outputs.source_run_id }}
+          FULL1_RC_SOURCE_RUN_ATTEMPT: ${{ steps.rc.outputs.source_run_attempt }}
+          FULL1_RC_ARTIFACT_ID: ${{ steps.rc.outputs.artifact_id }}
+          FULL1_RC_ARTIFACT_DIGEST: ${{ steps.rc.outputs.artifact_digest }}
+          FULL1_RC_ARTIFACT_VERIFIED: ${{ steps.rc.outputs.verified }}
+          RC_DECISION: ${{ steps.rc.outputs.decision }}
+          RC_CANDIDATE_VERSION: ${{ steps.rc.outputs.candidate_version }}
+        run: |
+          set -euo pipefail
+          set +e
+          node scripts/release/full1-release-enforcement.js "$RC_CANDIDATE_VERSION"
+          enforcement_status="$?"
+          set -e
+          if [ "$RC_DECISION" = "no-go" ]; then
+            if [ "$enforcement_status" -eq 0 ]; then
+              echo "A no-go RC was incorrectly accepted." >&2
+              exit 1
+            fi
+            echo "FULL1_RELEASE_HANDOFF_DRY_RUN:NO_GO_EXPECTED"
+            exit 0
+          fi
+          if [ "$enforcement_status" -ne 0 ]; then
+            echo "A go RC did not survive the release-side checks." >&2
+            exit "$enforcement_status"
+          fi
+          echo "FULL1_RELEASE_HANDOFF_DRY_RUN:GO_VALIDATED"
 
       - name: Release
+        if: ${{ !inputs.provenance_dry_run }}
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          FULL1_RELEASE_GO_MARKER: ${{ steps.rc.outputs.marker }}
+          FULL1_RC_SUMMARY_JSON: ${{ steps.rc.outputs.summary_path }}
+          FULL1_RELEASE_CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+          FULL1_RC_SOURCE_RUN_ID: ${{ steps.rc.outputs.source_run_id }}
+          FULL1_RC_SOURCE_RUN_ATTEMPT: ${{ steps.rc.outputs.source_run_attempt }}
+          FULL1_RC_ARTIFACT_ID: ${{ steps.rc.outputs.artifact_id }}
+          FULL1_RC_ARTIFACT_DIGEST: ${{ steps.rc.outputs.artifact_digest }}
+          FULL1_RC_ARTIFACT_VERIFIED: ${{ steps.rc.outputs.verified }}
         run: npx semantic-release

@@ -201,7 +201,7 @@ jobs:
       - name: Upload shared hxhx artifact
         uses: actions/upload-artifact@v4
         with:
-          name: full1-suite-hxhx-${{ github.run_id }}
+          name: full1-suite-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .artifacts/full1/suites/hxhx
             .artifacts/full1/suites/haxelib_repo/**
@@ -336,7 +336,7 @@ jobs:
       - name: Upload shared macro host artifact
         uses: actions/upload-artifact@v4
         with:
-          name: full1-suite-macro-host-${{ github.run_id }}
+          name: full1-suite-macro-host-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .artifacts/full1/suites/hxhx-macro-host
             .artifacts/full1/suites/build-hxhx-macro-host.stdout.log
@@ -436,7 +436,7 @@ jobs:
       - name: Download shared hxhx artifact
         uses: actions/download-artifact@v4
         with:
-          name: full1-suite-hxhx-${{ github.run_id }}
+          name: full1-suite-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/suites
 
       - name: Run Full1 strict suite
@@ -491,7 +491,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full1-suite-${{ matrix.suite }}-${{ github.run_id }}
+          name: full1-suite-${{ matrix.suite }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .artifacts/full1/suites/${{ matrix.suite }}.log
             .artifacts/full1/suites/${{ matrix.suite }}.summary.json
@@ -593,13 +593,13 @@ jobs:
       - name: Download shared hxhx artifact
         uses: actions/download-artifact@v4
         with:
-          name: full1-suite-hxhx-${{ github.run_id }}
+          name: full1-suite-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/suites
 
       - name: Download shared macro host artifact
         uses: actions/download-artifact@v4
         with:
-          name: full1-suite-macro-host-${{ github.run_id }}
+          name: full1-suite-macro-host-${{ github.run_id }}-${{ github.run_attempt }}
           path: .artifacts/full1/suites
 
       - name: Run Full1 strict suite
@@ -655,7 +655,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full1-suite-${{ matrix.suite }}-${{ github.run_id }}
+          name: full1-suite-${{ matrix.suite }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .artifacts/full1/suites/${{ matrix.suite }}.log
             .artifacts/full1/suites/${{ matrix.suite }}.summary.json

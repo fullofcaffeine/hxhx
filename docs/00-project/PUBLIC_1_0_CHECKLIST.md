@@ -50,11 +50,12 @@ You may say `Full 1.0` publicly only when all of the following are true:
 7. `FULL1_PERF_PARITY:PASS`
 8. `FULL1_RELEASE_GO:PASS`
 9. A prepublication `.github/workflows/gate-full1-rc.yml` run is the actual
-   Full1 release source of truth and consumes authentic same-candidate child
-   artifacts rather than aggregate result strings.
-10. Semantic release downloads the exact RC artifact and blocks `>=1.0.0`
-    unless candidate SHA/version, current manifests, artifact provenance,
-    freshness, and the complete marker set validate.
+   Full1 release source of truth. Its `full1-rc-summary.v2` receipt identifies
+   the candidate SHA/version, run attempt, current manifests, and each real
+   child artifact; a job-status string is not enough.
+10. Semantic release downloads the exact RC artifact and checks its artifact
+    digest before checking out the same candidate. It blocks `>=1.0.0` unless
+    freshness and the complete marker set still validate.
 11. Relevant upstream Haxe 4.3.7 suites are treated as the primary proof of equivalence; local focused regressions are only supporting evidence.
 
 The current strict public-claim baseline is:
@@ -74,6 +75,8 @@ Before any public claim:
    - `Full 1.0`
 2. Verify the marker set for that claim.
 3. Verify the corresponding release policy and gate docs still match the implementation.
+4. If the handoff plumbing changed, run the no-publish provenance dry run and
+   confirm that an incomplete/no-go receipt is rejected.
 
 Do not use:
 
