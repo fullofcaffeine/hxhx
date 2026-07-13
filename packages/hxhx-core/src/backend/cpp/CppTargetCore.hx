@@ -228,7 +228,11 @@ class CppTargetCore {
 			final elapsed = Sys.time() - startTime;
 			traceCppTimingPhaseBuffer = priorBuffer;
 			return {elapsed: elapsed, phases: phases};
-		} catch (error:Dynamic) {
+		} catch (error:haxe.Exception) {
+			traceCppTimingPhaseBuffer = priorBuffer;
+			flushCppTimingPhases(phases);
+			throw error;
+		} catch (error:String) {
 			traceCppTimingPhaseBuffer = priorBuffer;
 			flushCppTimingPhases(phases);
 			throw error;

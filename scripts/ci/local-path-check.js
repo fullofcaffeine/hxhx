@@ -52,22 +52,16 @@ const patterns = [
 	},
 ]
 
-const violations = []
 const maxViolations = 200
 
-const stagedOnly = process.argv.includes('--staged')
-const files = stagedOnly ? gitStagedFiles() : gitTrackedAll()
-
-for (const path of files) {
-	if (!shouldScanText(path)) continue
-
-	let text
-	try {
-		text = fs.readFileSync(path, 'utf8')
-	} catch (_) {
-		continue
-	}
-
+/**
+ * Find machine-local home paths in one text payload.
+ *
+ * This pure boundary keeps the repository scan behavior fixture-testable
+ * without weakening which tracked files the command checks.
+ */
+function violationsInText(path, text, limit = maxViolations) {
+	const violations = []
 	const lines = text.split('\n')
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i]
@@ -81,20 +75,44 @@ for (const path of files) {
 					pattern: pattern.name,
 					match: m[0],
 				})
-				if (violations.length >= maxViolations) break
+				if (violations.length >= limit) break
 			}
-			if (violations.length >= maxViolations) break
+			if (violations.length >= limit) break
 		}
-		if (violations.length >= maxViolations) break
+		if (violations.length >= limit) break
 	}
-	if (violations.length >= maxViolations) break
+	return violations
 }
 
-if (violations.length > 0) {
-	const lines = violations.slice(0, 40).map((v) => `- ${v.path}:${v.line} [${v.pattern}] ${v.match}`)
-	const extra = violations.length > 40 ? `\n- ... (${violations.length - 40} more)` : ''
-	fail(`machine-local absolute paths found in tracked text:\n${lines.join('\n')}${extra}`)
-} else {
-	const scope = stagedOnly ? 'staged files' : 'tracked files'
-	console.log(`[ci:guards] OK: no machine-local absolute paths found in ${scope}`)
+function main() {
+	const violations = []
+	const stagedOnly = process.argv.includes('--staged')
+	const files = stagedOnly ? gitStagedFiles() : gitTrackedAll()
+
+	for (const path of files) {
+		if (!shouldScanText(path)) continue
+
+		let text
+		try {
+			text = fs.readFileSync(path, 'utf8')
+		} catch (_) {
+			continue
+		}
+
+		violations.push(...violationsInText(path, text, maxViolations - violations.length))
+		if (violations.length >= maxViolations) break
+	}
+
+	if (violations.length > 0) {
+		const lines = violations.slice(0, 40).map((v) => `- ${v.path}:${v.line} [${v.pattern}] ${v.match}`)
+		const extra = violations.length > 40 ? `\n- ... (${violations.length - 40} more)` : ''
+		fail(`machine-local absolute paths found in tracked text:\n${lines.join('\n')}${extra}`)
+	} else {
+		const scope = stagedOnly ? 'staged files' : 'tracked files'
+		console.log(`[ci:guards] OK: no machine-local absolute paths found in ${scope}`)
+	}
 }
+
+if (require.main === module) main()
+
+module.exports = { violationsInText }

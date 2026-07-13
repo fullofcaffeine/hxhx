@@ -128,6 +128,15 @@ class M14CppTimingBufferIntegrationTest {
 			}
 			assertTrue(caughtExpectedError, "timed render should rethrow its original error");
 			assertTrue(@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhaseBuffer == null, "exceptional timed render should restore the timing sink");
+			var caughtExpectedException = false;
+			try {
+				@:privateAccess backend.cpp.CppTargetCore.measureWithBufferedCppTimingPhases(() -> throw new haxe.Exception("timing fixture exception"));
+			} catch (error:haxe.Exception) {
+				caughtExpectedException = error.message == "timing fixture exception";
+			}
+			assertTrue(caughtExpectedException, "timed render should rethrow its original haxe.Exception");
+			assertTrue(@:privateAccess backend.cpp.CppTargetCore.traceCppTimingPhaseBuffer == null,
+				"exceptional timed render should restore the timing sink for haxe.Exception values");
 
 			final scope = timingScope();
 			timerReadSeconds = elapsed(calls, () -> {

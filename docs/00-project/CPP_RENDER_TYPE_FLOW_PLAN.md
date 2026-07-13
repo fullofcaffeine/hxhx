@@ -280,7 +280,7 @@ now includes `source=...` so future probes can explain source-identity misses.
 Focused validation used
 `.artifacts/full1/cpp-strict-current/stringbuf-identity-probe-after-fix.log`:
 the tiny Cpp fixture classified `StringBuf` as `runtime_module` from
-`/Users/fullofcaffeine/haxe/versions/4.3.7/std/StringBuf.hx`, built, ran, and
+the active versioned Haxe `4.3.7` std root, built, ran, and
 printed `ab`. The full direct current-source 360s probe still timed out
 (`probe_exit=124`) in
 `.artifacts/full1/cpp-strict-current/direct-source-only-stringbuf-versioned-runtime-timing-current.log`;
