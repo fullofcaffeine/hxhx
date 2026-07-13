@@ -5644,3 +5644,56 @@ Promotion to P1 is justified only when latest strict Cpp logs show render/type
 flow dominates after helper classification and runtime-helper policy work, or
 when the same field/call inference hotspot repeats across multiple strict
 frontiers.
+
+## 2026-07-13 XML Equality Reuses the Known Field Read
+
+Follow-up bead `haxe_ocaml-94hk1` found a second cost around the same parsed
+`Xml.nodeValue` expression. In plain language, an equality check such as
+`parsedNode.nodeValue == "text"` first worked out that the field was a String,
+then sent the field through the general String conversion path. That general
+path asked several of the same type and field questions again before producing
+the same C++ text.
+
+`eqComparableArgExpr` now reuses the existing, narrow plain-`Xml.nodeValue`
+field renderer when the equality argument is already known to use the C++
+String carrier. This does not add a new kind of field shortcut. Property
+getters, other classes and fields, erased/Dynamic values, unknown receivers,
+interfaces, and static reads still use the general path. Exact controls also
+show that an ordinary String property still calls its getter.
+
+Across three fresh 100-call processes, the same-source general equality path
+had a median of 1.781953s and the retained path had a median of 1.036605s, a
+41.8% reduction. The unrelated factory equality control stayed flat at
+0.654014s versus 0.654599s, and the typed-local String control stayed flat at
+0.030356s versus 0.029853s. The focused complete XML fixture improved by about
+16%, with most of that movement coming from its two parsed-field checks.
+
+A fresh current-source `hxhx` build completed in 140 seconds. The same capped,
+unfiltered strict Cpp probe remained expected-red after 482 seconds (target
+exit 124, wrapper exit 1), but it advanced from starting `TestMisc` to reaching
+`Serializer`. `TestXML.testCreate` fell from 15.189310s to 12.131515s, a 20.1%
+reduction, while the whole `TestXML` class fell from 60.925508s to 53.685283s,
+an 11.9% reduction. The `TestEReg.test` flat control was 0.011930s versus
+0.012488s.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-xml-equality.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-xml-plain-field.log`
+- `test/M14CppXmlCreateRenderBenchIntegrationTest.hx`
+
+README Goals and North Star progress bars remain unchanged. The required Cpp
+target is still not through its strict gate, so this internal speed improvement
+does not yet change what end users can rely on. `CppTargetCore.hx` is now 26,309
+lines; the production change is four lines inside the existing equality seam,
+and the measurement/control code is isolated in a documented 428-line bench.
+The bounded extraction plan remains recorded by `haxe_ocaml-36ec`; this result
+does not justify a compiler-wide IR or backend rewrite. Follow-up
+`haxe_ocaml-vhfsr` owns the now-dominant factory/`toString()` part of the focused
+XML fixture.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite was used only as a behavior and performance oracle. Committed generated
+OCaml snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or
+Oracle review was deliberately skipped because exact output controls, fresh
+timings, and the existing narrow field boundary gave a safe local seam.

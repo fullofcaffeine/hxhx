@@ -15328,8 +15328,12 @@ class CppTargetCore {
 		return out;
 	}
 
+	/** Adapt one equality argument without changing its declared C++ carrier semantics. **/
 	static function eqComparableArgExpr(arg:HxExpr, argType:String, otherType:String, ?scope:CppRenderScope):String {
 		if (argType == "std::string") {
+			final directPlainFieldRead = knownPlainInstanceFieldReadExpr(arg, scope);
+			if (directPlainFieldRead != null)
+				return directPlainFieldRead;
 			final directSplitJoinConcat = directTypedLocalERegSplitJoinConcatExpr(arg, scope);
 			if (directSplitJoinConcat != null)
 				return directSplitJoinConcat;

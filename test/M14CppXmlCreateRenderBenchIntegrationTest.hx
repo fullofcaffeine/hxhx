@@ -120,9 +120,14 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		], [
 			new HxFieldDecl("prop", Public, false, "Int", null, null, null, null, false, "get", "null")
 		]);
+		final stringPropertyNode = new HxClassDecl("StringPropertyNode", false, [
+			new HxFunctionDecl("get_label", Public, false, [], "String", [SReturn(EString("property label"), HxPos.unknown())], "")
+		], [
+			new HxFieldDecl("label", Public, false, "String", null, null, null, null, false, "get", "null")
+		]);
 		final names = new StringMap<Bool>();
 		final classes = new StringMap<HxClassDecl>();
-		final all = [owner, test, xml, propertyNode];
+		final all = [owner, test, xml, propertyNode, stringPropertyNode];
 		for (cls in all) {
 			final name = HxClassDecl.getName(cls);
 			names.set(name, true);
@@ -169,6 +174,52 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 			+ "nodeValue)";
 	}
 
+	/** Model the former general String path for comparison with the plain-field shortcut. **/
+	static function comparableArgWithoutKnownPlainFieldShortcut(arg:HxExpr, argType:String, otherType:String, scope:backend.cpp.CppRenderScope):String {
+		if (argType == "std::string") {
+			final directSplitJoinConcat = @:privateAccess backend.cpp.CppTargetCore.directTypedLocalERegSplitJoinConcatExpr(arg, scope);
+			if (directSplitJoinConcat != null)
+				return directSplitJoinConcat;
+			return switch (arg) {
+				case ECall(_, _):
+					@:privateAccess backend.cpp.CppTargetCore.renderExpr(arg, scope);
+				case _ if (@:privateAccess backend.cpp.CppTargetCore.isEqStringArgExpr(arg, argType, scope)):
+					@:privateAccess backend.cpp.CppTargetCore.stringExpr(arg, scope);
+				case _:
+					@:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(arg, argType, otherType, scope);
+			};
+		}
+		return @:privateAccess backend.cpp.CppTargetCore.eqComparableArgExpr(arg, argType, otherType, scope);
+	}
+
+	/** Render benchmark equality arguments as they ran before the plain-field shortcut. **/
+	static function renderEqCallArgsWithoutKnownPlainFieldShortcut(args:Array<HxExpr>, scope:backend.cpp.CppRenderScope):Array<String> {
+		final out = new Array<String>();
+		final firstOptionalStringCode = @:privateAccess backend.cpp.CppTargetCore.stringCodeAccessOptionalExpr(args[0], scope);
+		final secondOptionalStringCode = @:privateAccess backend.cpp.CppTargetCore.stringCodeAccessOptionalExpr(args[1], scope);
+		if (firstOptionalStringCode != null && @:privateAccess backend.cpp.CppTargetCore.isNullExpr(args[1])) {
+			out.push(firstOptionalStringCode);
+			out.push("std::optional<int>{}");
+			for (i in 2...args.length)
+				out.push(@:privateAccess backend.cpp.CppTargetCore.renderExpr(args[i], scope));
+			return out;
+		}
+		if (secondOptionalStringCode != null && @:privateAccess backend.cpp.CppTargetCore.isNullExpr(args[0])) {
+			out.push("std::optional<int>{}");
+			out.push(secondOptionalStringCode);
+			for (i in 2...args.length)
+				out.push(@:privateAccess backend.cpp.CppTargetCore.renderExpr(args[i], scope));
+			return out;
+		}
+		final firstType = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(args[0], scope);
+		final secondType = @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(args[1], scope);
+		out.push(comparableArgWithoutKnownPlainFieldShortcut(args[0], firstType, secondType, scope));
+		out.push(comparableArgWithoutKnownPlainFieldShortcut(args[1], secondType, firstType, scope));
+		for (i in 2...args.length)
+			out.push(@:privateAccess backend.cpp.CppTargetCore.renderExpr(args[i], scope));
+		return out;
+	}
+
 	static function main():Void {
 		final sample = fixture();
 		final factoryOutput = render(sample, "factoryChains");
@@ -184,17 +235,101 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		sample.scope.localTypes.set("propertyNode", "std::shared_ptr<PropertyNode>");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EField(EIdent("propertyNode"), "prop"), sample.scope) == "propertyNode->get_prop()",
 			"plain-field rendering must not bypass declared property getters");
+		sample.scope.localNames.set("stringPropertyNode", "stringPropertyNode");
+		sample.scope.localTypes.set("stringPropertyNode", "std::shared_ptr<StringPropertyNode>");
+		sample.scope.localTypeHints.set("stringPropertyNode", "StringPropertyNode");
+		final stringPropertyEqualityArgs = [EField(EIdent("stringPropertyNode"), "label"), EString("property label")];
+		final stringPropertyEqualityOutput = @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(stringPropertyEqualityArgs, sample.scope).join(", ");
+		assertTrue(stringPropertyEqualityOutput == 'stringPropertyNode->get_label(), std::string("property label")',
+			"String equality rendering must not bypass a declared property getter, got " + stringPropertyEqualityOutput);
+		assertTrue(renderEqCallArgsWithoutKnownPlainFieldShortcut(stringPropertyEqualityArgs, sample.scope).join(", ") == stringPropertyEqualityOutput,
+			"plain-field shortcut must keep String property equality on the former getter path");
 		sample.scope.localTypes.set("erased", "std::any");
 		assertTrue(@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(EField(EIdent("erased"), "value"), sample.scope) == "__hxhx_json_any_field(erased, std::string(\"value\"))",
 			"plain-field rendering must not bypass erased JSON field reads");
+		for (name in ["node", "text"])
+			sample.scope.localNames.set(name, name);
+		sample.scope.localTypes.set("node", "std::shared_ptr<Xml>");
+		sample.scope.localTypeHints.set("node", "Xml");
+		sample.scope.localTypes.set("text", "std::string");
+		sample.scope.localTypeHints.set("text", "String");
 
 		final calls = envInt("HXHX_CPP_XML_CREATE_RENDER_BENCH_CALLS", DEFAULT_CALLS);
 		var sink = 0;
+		final factoryCall = xmlCall("createComment", [EString("leaf note")]);
+		final factoryToString = toStringCall(factoryCall);
+		final factoryEqualityArgs = [factoryToString, EString("<!--leaf note-->")];
+		final factoryEqualityStmt = eq(factoryEqualityArgs[0], factoryEqualityArgs[1]);
+		final localToString = toStringCall(EIdent("node"));
+		final localEqualityArgs = [EIdent("text"), EString("leaf note")];
 		final parseCall = xmlCall("parse", [EString("<!--leaf note-->")]);
 		final firstChildCall = ECall(EField(parseCall, "firstChild"), []);
 		final nodeValueAccess = parseValueExpr();
-		final equalityStmt = eq(nodeValueAccess, EString("leaf note"));
+		final parseEqualityArgs = [nodeValueAccess, EString("leaf note")];
+		final equalityStmt = eq(parseEqualityArgs[0], parseEqualityArgs[1]);
+		final factoryCallOutput = @:privateAccess backend.cpp.CppTargetCore.renderExpr(factoryCall, sample.scope);
+		final factoryToStringOutput = @:privateAccess backend.cpp.CppTargetCore.renderExpr(factoryToString, sample.scope);
+		final localToStringOutput = @:privateAccess backend.cpp.CppTargetCore.renderExpr(localToString, sample.scope);
+		final factoryEqualityOutput = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs(factoryEqualityArgs, sample.scope).join(", ");
+		final parseEqualityOutput = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs(parseEqualityArgs, sample.scope).join(", ");
+		final localEqualityOutput = @:privateAccess backend.cpp.CppTargetCore.renderEqCallArgs(localEqualityArgs, sample.scope).join(", ");
+		final generalFactoryEqualityOutput = renderEqCallArgsWithoutKnownPlainFieldShortcut(factoryEqualityArgs, sample.scope).join(", ");
+		final generalParseEqualityOutput = renderEqCallArgsWithoutKnownPlainFieldShortcut(parseEqualityArgs, sample.scope).join(", ");
+		final generalLocalEqualityOutput = renderEqCallArgsWithoutKnownPlainFieldShortcut(localEqualityArgs, sample.scope).join(", ");
+		assertTrue(factoryCallOutput == 'Xml::createComment(std::string("leaf note"))',
+			"factory leaf should retain the exact Xml static call, got " + factoryCallOutput);
+		assertTrue(factoryToStringOutput == factoryCallOutput + "->toString()",
+			"factory toString leaf should retain the exact instance call, got " + factoryToStringOutput);
+		assertTrue(localToStringOutput == "node->toString()", "typed-local toString control should remain flat, got " + localToStringOutput);
+		assertTrue(factoryEqualityOutput == factoryToStringOutput + ', std::string("<!--leaf note-->")',
+			"factory equality arguments should retain exact String adaptation, got " + factoryEqualityOutput);
+		assertTrue(parseEqualityOutput == '(Xml::parse(std::string("<!--leaf note-->"))->firstChild()->nodeValue), std::string("leaf note")',
+			"parse equality arguments should retain the exact chain, got " + parseEqualityOutput);
+		assertTrue(localEqualityOutput == 'std::string(text), std::string("leaf note")',
+			"typed-local equality control should retain ordinary String adaptation, got " + localEqualityOutput);
+		assertTrue(generalFactoryEqualityOutput == factoryEqualityOutput,
+			"plain-field shortcut must not change factory equality output, got " + generalFactoryEqualityOutput);
+		assertTrue(generalParseEqualityOutput == parseEqualityOutput,
+			"plain-field shortcut must not change parse equality output, got " + generalParseEqualityOutput);
+		assertTrue(generalLocalEqualityOutput == localEqualityOutput,
+			"plain-field shortcut must not change typed-local equality output, got " + generalLocalEqualityOutput);
+
+		final factoryStaticReceiverSeconds = elapsed("factory_static_receiver", calls, () -> {
+			final value = @:privateAccess backend.cpp.CppTargetCore.staticReceiverClassName(EIdent("Xml"), sample.scope);
+			sink += value == null ? 0 : value.length;
+		});
+		final factoryReceiverTypeSeconds = elapsed("factory_receiver_type", calls,
+			() -> sink += @:privateAccess backend.cpp.CppTargetCore.exprCppType(EIdent("Xml"), sample.scope).length);
+		final factoryArgRenderSeconds = elapsed("factory_arg_render", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.renderClassMethodCallArgs("Xml", "createComment", true, [EString("leaf note")], sample.scope).join(", ").length);
+		final factoryCallSeconds = elapsed("factory_call", calls,
+			() -> sink += @:privateAccess backend.cpp.CppTargetCore.renderExpr(factoryCall, sample.scope).length);
+		final factoryResultTypeSeconds = elapsed("factory_result_type", calls,
+			() -> sink += @:privateAccess backend.cpp.CppTargetCore.exprCppType(factoryCall, sample.scope).length);
+		final localToStringSeconds = elapsed("local_to_string", calls,
+			() -> sink += @:privateAccess backend.cpp.CppTargetCore.renderExpr(localToString, sample.scope).length);
+		final factoryToStringSeconds = elapsed("factory_to_string", calls,
+			() -> sink += @:privateAccess backend.cpp.CppTargetCore.renderExpr(factoryToString, sample.scope).length);
+		final factoryEqualityInferSeconds = elapsed("factory_equality_infer", calls,
+			() -> sink += @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(factoryToString, sample.scope).length);
+		final factoryEqualityComparableSeconds = elapsed("factory_equality_comparable", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.eqComparableArgExpr(factoryToString, "std::string", "std::string", sample.scope).length);
+		final factoryEqualityArgsSeconds = elapsed("factory_equality_args", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(factoryEqualityArgs, sample.scope).join(", ").length);
+		final factoryEqualityGeneralSeconds = elapsed("factory_equality_general", calls,
+			() -> sink += renderEqCallArgsWithoutKnownPlainFieldShortcut(factoryEqualityArgs, sample.scope).join(", ").length);
+		final factoryEqualityCallSeconds = elapsed("factory_equality_call", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.directCallExpr("eq", factoryEqualityArgs, sample.scope).length);
+		final factoryEqualityStmtSeconds = elapsed("factory_equality_stmt", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.renderStmt(factoryEqualityStmt, "    ", sample.scope).join("\n").length);
+		final localEqualityArgsSeconds = elapsed("local_equality_args", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(localEqualityArgs, sample.scope).join(", ").length);
+		final localEqualityGeneralSeconds = elapsed("local_equality_general", calls,
+			() -> sink += renderEqCallArgsWithoutKnownPlainFieldShortcut(localEqualityArgs, sample.scope).join(", ").length);
+		final localEqualityCallSeconds = elapsed("local_equality_call", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.directCallExpr("eq", localEqualityArgs, sample.scope).length);
 		final plainFieldFastSeconds = elapsed("plain_field_fast", calls, () -> {
 			final value = @:privateAccess backend.cpp.CppTargetCore.knownPlainInstanceFieldReadExpr(nodeValueAccess, sample.scope);
 			sink += value == null ? 0 : value.length;
@@ -232,6 +367,16 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 			() -> sink += @:privateAccess backend.cpp.CppTargetCore.renderExpr(firstChildCall, sample.scope).length);
 		final nodeValueAccessSeconds = elapsed("node_value_access", calls,
 			() -> sink += @:privateAccess backend.cpp.CppTargetCore.renderExpr(nodeValueAccess, sample.scope).length);
+		final parseEqualityInferSeconds = elapsed("parse_equality_infer", calls,
+			() -> sink += @:privateAccess backend.cpp.CppTargetCore.inferExprCppType(nodeValueAccess, sample.scope).length);
+		final parseEqualityComparableSeconds = elapsed("parse_equality_comparable", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.eqComparableArgExpr(nodeValueAccess, "std::string", "std::string", sample.scope).length);
+		final parseEqualityArgsSeconds = elapsed("parse_equality_args", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.renderEqCallArgs(parseEqualityArgs, sample.scope).join(", ").length);
+		final parseEqualityGeneralSeconds = elapsed("parse_equality_general", calls,
+			() -> sink += renderEqCallArgsWithoutKnownPlainFieldShortcut(parseEqualityArgs, sample.scope).join(", ").length);
+		final parseEqualityCallSeconds = elapsed("parse_equality_call", calls, () -> sink += @:privateAccess
+			backend.cpp.CppTargetCore.directCallExpr("eq", parseEqualityArgs, sample.scope).length);
 		final equalityStmtSeconds = elapsed("equality_stmt", calls,
 			() -> sink += @:privateAccess backend.cpp.CppTargetCore.renderStmt(equalityStmt, "    ", sample.scope).join("\n").length);
 		final factorySeconds = elapsed("factory_chains", calls, () -> sink += render(sample, "factoryChains").length);
@@ -240,6 +385,22 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		final completeSeconds = elapsed("complete", calls, () -> sink += render(sample, "completeCreate").length);
 		assertTrue(sink > 0, "XML render attribution should retain generated output");
 		Sys.println("cpp_xml_create_render_bench_calls=" + calls);
+		Sys.println("factory_static_receiver_seconds=" + factoryStaticReceiverSeconds);
+		Sys.println("factory_receiver_type_seconds=" + factoryReceiverTypeSeconds);
+		Sys.println("factory_arg_render_seconds=" + factoryArgRenderSeconds);
+		Sys.println("factory_call_seconds=" + factoryCallSeconds);
+		Sys.println("factory_result_type_seconds=" + factoryResultTypeSeconds);
+		Sys.println("local_to_string_seconds=" + localToStringSeconds);
+		Sys.println("factory_to_string_seconds=" + factoryToStringSeconds);
+		Sys.println("factory_equality_infer_seconds=" + factoryEqualityInferSeconds);
+		Sys.println("factory_equality_comparable_seconds=" + factoryEqualityComparableSeconds);
+		Sys.println("factory_equality_args_seconds=" + factoryEqualityArgsSeconds);
+		Sys.println("factory_equality_general_seconds=" + factoryEqualityGeneralSeconds);
+		Sys.println("factory_equality_call_seconds=" + factoryEqualityCallSeconds);
+		Sys.println("factory_equality_stmt_seconds=" + factoryEqualityStmtSeconds);
+		Sys.println("local_equality_args_seconds=" + localEqualityArgsSeconds);
+		Sys.println("local_equality_general_seconds=" + localEqualityGeneralSeconds);
+		Sys.println("local_equality_call_seconds=" + localEqualityCallSeconds);
 		Sys.println("plain_field_fast_seconds=" + plainFieldFastSeconds);
 		Sys.println("old_node_value_access_seconds=" + oldNodeValueAccessSeconds);
 		Sys.println("receiver_type_seconds=" + receiverTypeSeconds);
@@ -253,6 +414,11 @@ class M14CppXmlCreateRenderBenchIntegrationTest {
 		Sys.println("parse_call_seconds=" + parseCallSeconds);
 		Sys.println("first_child_call_seconds=" + firstChildCallSeconds);
 		Sys.println("node_value_access_seconds=" + nodeValueAccessSeconds);
+		Sys.println("parse_equality_infer_seconds=" + parseEqualityInferSeconds);
+		Sys.println("parse_equality_comparable_seconds=" + parseEqualityComparableSeconds);
+		Sys.println("parse_equality_args_seconds=" + parseEqualityArgsSeconds);
+		Sys.println("parse_equality_general_seconds=" + parseEqualityGeneralSeconds);
+		Sys.println("parse_equality_call_seconds=" + parseEqualityCallSeconds);
 		Sys.println("equality_stmt_seconds=" + equalityStmtSeconds);
 		Sys.println("factory_chains_seconds=" + factorySeconds);
 		Sys.println("parse_chains_seconds=" + parseSeconds);
