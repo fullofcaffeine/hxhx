@@ -61,6 +61,10 @@ class Stage3MacroHostSupport {
 		return ["unit.HelperMacros.getCompilationDate()", "HelperMacros.getCompilationDate()"];
 	}
 
+	static function isBuiltinExprMacro(expr:String):Bool {
+		return builtinExprMacros().indexOf(trim(expr)) != -1;
+	}
+
 	public static function exprMacroAllowlistFromEnv():Array<String> {
 		final out = new Array<String>();
 		for (expr in builtinExprMacros())
@@ -93,6 +97,31 @@ class Stage3MacroHostSupport {
 		return value == "1" || value == "true" || value == "yes";
 	}
 
+	/**
+		Select the project-owned expressions that must be compiled into an external macro host.
+
+		Built-in CLI macros and expression macros already live in the macro runtime itself. Keeping
+		them out of the generated entrypoint registry prevents an optional spelling alias from being
+		compiled as a project type that may not exist. Explicit project and library macros remain in
+		stable first-seen order.
+	**/
+	public static function macroHostEntrypoints(parsedMacros:Array<String>, exprMacros:Array<String>, runHaxelibMacros:Bool,
+			libMacros:Array<String>):Array<String> {
+		final entrypoints = new Array<String>();
+		if (runHaxelibMacros) {
+			for (expr in libMacros)
+				if (!isBuiltinMacroExpr(expr) && entrypoints.indexOf(expr) == -1)
+					entrypoints.push(expr);
+		}
+		for (expr in parsedMacros)
+			if (!isBuiltinMacroExpr(expr) && entrypoints.indexOf(expr) == -1)
+				entrypoints.push(expr);
+		for (expr in exprMacros)
+			if (!isBuiltinExprMacro(expr) && entrypoints.indexOf(expr) == -1)
+				entrypoints.push(expr);
+		return entrypoints;
+	}
+
 	public static function buildMacroHostExe(repoRoot:String, extraCp:Array<String>, entrypoints:Array<String>):String {
 		final script = Path.join([repoRoot, "scripts", "hxhx", "build-hxhx-macro-host.sh"]);
 		if (!sys.FileSystem.exists(script))
@@ -101,17 +130,25 @@ class Stage3MacroHostSupport {
 		Sys.putEnv("HXHX_MACRO_HOST_EXTRA_CP", (extraCp != null && extraCp.length > 0) ? extraCp.join(":") : "");
 		Sys.putEnv("HXHX_MACRO_HOST_ENTRYPOINTS", (entrypoints != null && entrypoints.length > 0) ? entrypoints.join(";") : "");
 
-		final process = new sys.io.Process("bash", [script]);
+		// Merge stderr into stdout before creating the process. The build script deliberately writes
+		// diagnostics to stderr and only prints the executable path to stdout. Reading just stdout used
+		// to discard the useful compiler error and could block if the unread stderr pipe filled.
+		final process = new sys.io.Process("bash", ["-c", 'exec bash "$1" 2>&1', "hxhx-macro-host-build", script]);
 		final lines = new Array<String>();
 		try {
-			while (true)
+			while (true) {
 				lines.push(process.stdout.readLine());
+				if (lines.length > 80)
+					lines.shift();
+			}
 		} catch (_:Eof) {}
 
 		final code = process.exitCode();
 		process.close();
-		if (code != 0)
-			throw "macro host build failed with exit code " + code;
+		if (code != 0) {
+			final detail = lines.join("\n");
+			throw "macro host build failed with exit code " + code + (detail.length > 0 ? ":\n" + detail : "");
+		}
 
 		var exe = "";
 		for (line in lines) {
@@ -135,20 +172,7 @@ class Stage3MacroHostSupport {
 				return {session: null, error: "macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)"};
 
 			try {
-				final entrypoints = new Array<String>();
-				if (runHaxelibMacros) {
-					for (e in libMacros)
-						if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1)
-							entrypoints.push(e);
-				}
-				if (anyNonBuiltinMacro(parsedMacros)) {
-					for (e in parsedMacros)
-						if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1)
-							entrypoints.push(e);
-				}
-				for (e in exprMacros)
-					if (entrypoints.indexOf(e) == -1)
-						entrypoints.push(e);
+				final entrypoints = macroHostEntrypoints(parsedMacros, exprMacros, runHaxelibMacros, libMacros);
 				final exe = buildMacroHostExe(repoRoot, macroHostClassPaths, entrypoints);
 				Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
 			} catch (e:String) {

@@ -1,5 +1,8 @@
+import haxe.io.Path;
+import hxhx.Stage3MacroHostSupport;
 import hxhx.macro.MacroRuntimeMode;
 import hxhx.macro.MacroState;
+import sys.io.File;
 
 class M14MacroRuntimeModeSwitchIntegrationTest {
 	static function fail(message:String):Void {
@@ -36,7 +39,51 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 		assertContains(label + " message", caught, expected);
 	}
 
+	static function deleteRecursive(path:String):Void {
+		if (!sys.FileSystem.exists(path))
+			return;
+		if (!sys.FileSystem.isDirectory(path)) {
+			sys.FileSystem.deleteFile(path);
+			return;
+		}
+		for (entry in sys.FileSystem.readDirectory(path))
+			deleteRecursive(Path.join([path, entry]));
+		sys.FileSystem.deleteDirectory(path);
+	}
+
 	static function main():Void {
+		final plannedEntrypoints = Stage3MacroHostSupport.macroHostEntrypoints(["BuiltinMacros.smoke()", "demo.CliMacros.init()", "demo.CliMacros.init()"], [
+			"unit.HelperMacros.getCompilationDate()",
+			"HelperMacros.getCompilationDate()",
+			"demo.ExprMacros.expand()"
+		], true, ["nullSafety(\"demo\")", "demo.LibraryMacros.init()"]);
+		assertEq("external macro host entrypoints", plannedEntrypoints.join(";"), "demo.LibraryMacros.init();demo.CliMacros.init();demo.ExprMacros.expand()");
+
+		final fakeRepo = ".tmp/m14_stage3_macro_host_support";
+		deleteRecursive(fakeRepo);
+		sys.FileSystem.createDirectory(fakeRepo);
+		sys.FileSystem.createDirectory(Path.join([fakeRepo, "scripts"]));
+		sys.FileSystem.createDirectory(Path.join([fakeRepo, "scripts", "hxhx"]));
+		final fakeBuildScript = Path.join([fakeRepo, "scripts", "hxhx", "build-hxhx-macro-host.sh"]);
+		File.saveContent(fakeBuildScript, [
+			"#!/usr/bin/env bash",
+			"echo visible-build-context",
+			"echo hidden-build-diagnostic >&2",
+			"exit 7"
+		].join("\n"));
+		var buildError = "";
+		try {
+			Stage3MacroHostSupport.buildMacroHostExe(fakeRepo, [], []);
+		} catch (e:String) {
+			buildError = e;
+		}
+		assertContains("macro host build exit", buildError, "exit code 7");
+		assertContains("macro host build stderr", buildError, "hidden-build-diagnostic");
+
+		File.saveContent(fakeBuildScript, ["#!/usr/bin/env bash", "echo build-note >&2", "echo /tmp/fake-macro-host.exe"].join("\n"));
+		assertEq("macro host executable path", Stage3MacroHostSupport.buildMacroHostExe(fakeRepo, [], []), "/tmp/fake-macro-host.exe");
+		deleteRecursive(fakeRepo);
+
 		Sys.putEnv("HXHX_MACRO_RUNTIME_MODE", null);
 		assertEq("default mode", MacroRuntimeMode.resolve(null), MacroRuntimeMode.INPROC);
 
