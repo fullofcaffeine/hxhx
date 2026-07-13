@@ -12968,6 +12968,14 @@ class CppTargetCore {
 	}
 
 	static function renderExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final directXmlNamedNext = switch (expr) {
+			case ECall(EField(ECall(EField(EIdent(_), "elementsNamed"), _), "next"), _):
+				directTypedLocalXmlElementsNamedNextExpr(expr, scope);
+			case _:
+				null;
+		};
+		if (directXmlNamedNext != null)
+			return directXmlNamedNext;
 		final plainFieldRead = knownPlainInstanceFieldReadExpr(expr, scope);
 		if (plainFieldRead != null)
 			return plainFieldRead;
@@ -14855,6 +14863,43 @@ class CppTargetCore {
 				&& firstChildArgs.length == 0
 				&& sanitizeIdentifier(field) == "nodeValue"
 				&& !exprNameHasLocalStorage("Xml", scope) ? knownPlainInstanceFieldReadExpr(expr, scope) : null;
+			case _:
+				null;
+		};
+	}
+
+	/**
+		Recognize `typedXml.elementsNamed(...).next()` without rediscovering the
+		intermediate Iterator<Xml> type.
+
+		Only an identifier already recorded as the exact Xml carrier qualifies.
+		Computed, erased, unrelated, wrong-name, and wrong-arity receivers keep the
+		general method path and its normal dispatch rules.
+	**/
+	static function isTypedLocalXmlElementsNamedNextCall(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Bool {
+		if (scope == null
+			|| sanitizeIdentifier(method) != "next"
+			|| args == null
+			|| args.length != 0
+			|| !scopeHasClass(scope, "Xml"))
+			return false;
+		return switch (receiver) {
+			case ECall(EField(xmlReceiver = EIdent(_), namedMethod), namedArgs): sanitizeIdentifier(namedMethod) == "elementsNamed" && namedArgs.length == 1 && exprCppType(xmlReceiver,
+					scope) == "std::shared_ptr<Xml>";
+			case _:
+				false;
+		};
+	}
+
+	/** Render the confirmed typed-local Xml navigation expression with its existing String contract. **/
+	static function directTypedLocalXmlElementsNamedNextExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case ECall(EField(receiver = ECall(EField(xmlReceiver, _), namedArgs), method), args)
+				if (isTypedLocalXmlElementsNamedNextCall(receiver, method, args, scope)):
+				renderExpr(xmlReceiver, scope)
+				+ "->elementsNamed("
+				+ renderFieldCallArgs("std::shared_ptr<Xml>", "elementsNamed", namedArgs, scope).join(", ")
+				+ ")->next()";
 			case _:
 				null;
 		};
@@ -17157,6 +17202,9 @@ class CppTargetCore {
 				"bool";
 			case ECall(EField(receiver, method), args) if (isFreshERegMatchCall(receiver, method, args.length)):
 				"bool";
+			case ECall(EField(receiver = ECall(EField(EIdent(_), "elementsNamed"), _), method = "next"), args)
+				if (isTypedLocalXmlElementsNamedNextCall(receiver, method, args, scope)):
+				"std::shared_ptr<Xml>";
 			case EThis:
 				sanitizeTypePath(HxClassDecl.getName(scope.owner));
 			case ENew(typePath, args):
@@ -18705,6 +18753,9 @@ class CppTargetCore {
 				method == "matched" ? "std::optional<std::string>" : "std::string";
 			case ECall(EField(receiver, method), args) if (isFreshERegStringCall(receiver, method, args.length)):
 				"std::string";
+			case ECall(EField(receiver = ECall(EField(EIdent(_), "elementsNamed"), _), method = "next"), args)
+				if (isTypedLocalXmlElementsNamedNextCall(receiver, method, args, scope)):
+				"std::shared_ptr<Xml>";
 			case ECall(EField(receiver, method), args) if (isTypeStaticReceiver(receiver)):
 				typeIntrinsicReturnCppType(method, args, scope);
 			case ECall(EField(receiver, "fromCharCode"), args) if (isStringStaticReceiver(receiver) && args.length == 1):

@@ -19,7 +19,7 @@ to be refreshed when a watched file moves by more than 250 lines.
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,384 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,435 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,031 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -80,6 +80,16 @@ Pause for an extraction note or follow-up bead when a change would:
 
 Source/native target-family extraction should be filed before adding more broad
 target-specific runtime/API support to `SourceTargetCommon.hx`.
+
+2026-07-13 checkpoint: `haxe_ocaml-qa5jq` added an exact render/type shortcut
+for `typedXml.elementsNamed(...).next()`. In plain language, it stops the Cpp
+renderer from repeatedly rediscovering the `Iterator<Xml>` result when the
+receiver is already a known local Xml value. Computed receivers, Dynamic
+values, unrelated classes, wrong methods or argument counts, and ordinary
+typed iterators remain on the general path. This is a bounded expression and
+type-flow repair, not a new Xml runtime surface. Its measurement and safety
+coverage is isolated in a dedicated 311-line fixture; broader extraction
+remains covered by `haxe_ocaml-36ec`.
 
 2026-07-13 checkpoint: `haxe_ocaml-vhfsr` added an exact equality-rendering
 shortcut for zero-argument `toString()` calls on core `Xml.create*` factories.

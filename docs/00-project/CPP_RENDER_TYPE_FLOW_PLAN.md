@@ -5820,3 +5820,69 @@ OCaml snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or
 Oracle review was deliberately skipped because the exact AST shape, existing
 plain-field proof, rejection controls, and current-source evidence provided a
 bounded local seam.
+
+## 2026-07-13 Typed Xml Named-Iterator Result Fast Path
+
+Follow-up bead `haxe_ocaml-qa5jq` traced the new slowest Xml method,
+`TestXML.testMore`. In plain language, code such as
+`document.elementsNamed("branch").next()` caused the Cpp renderer to work out
+the intermediate `Iterator<Xml>` type several times. The answer was already
+fixed by the exact method chain and the known local `Xml` type, but the general
+call path repeatedly searched method and return-type information before
+emitting a simple C++ call.
+
+`renderExpr`, `exprCppType`, and `inferExprCppType` now share an exact shortcut
+only for `elementsNamed(oneStringArgument).next()` on a local identifier whose
+C++ type is already the exact `Xml` pointer carrier. It keeps the existing
+String argument renderer and emits the same C++ text as the general path.
+Wrong method names or argument counts, computed Xml receivers, Dynamic values,
+unrelated classes, and already-typed iterator values all stay on their previous
+paths. The dedicated fixture checks the exact output and each rejection case.
+
+Six fresh 50-call processes measured the retained path after the change.
+Finding the result type had a median of 0.001643s, compared with 0.052820s for
+the same general type-discovery model. Rendering had a median of 0.030424s,
+compared with 0.096701s for the general assembly model and 0.029782s for the
+direct candidate. The inferred local declaration paths measured 0.001073s for
+type selection and 0.033525s for initialization. The complete two-navigation
+fixture measured 0.321990s after the change; the earlier six-process baseline
+had measured about 1.689455s. Typed-iterator and unrelated-navigation controls
+remain outside the shortcut.
+
+A fresh current-source `hxhx` build completed in about 151 seconds. The same
+strict, stage0-forbidden Cpp probe remained expected-red at 482 seconds (target
+exit 124, wrapper exit 1), but the intended upstream-oracle method improved:
+`TestXML.testMore` fell from 6.926531s to 0.886621s, an 87.2% reduction. The
+whole `TestXML` class fell from 46.170304s to 40.460335s, a 12.4% reduction.
+The nearby `testBasic` and `testCreate` methods stayed comparable at 6.223915s
+and 4.832099s versus 6.168104s and 4.701785s. Unrelated controls also stayed
+comparable: `TestEReg` was 0.013604s versus 0.013443s, `MyDynamicClass` was
+10.798305s versus 10.927653s, and `TestMisc` was 19.765092s versus 19.972594s.
+The fixed timer advanced from `MyClass_CI1` to `MyClass_CovI2`, while the
+frontier summary still classifies the run as shared hotspots with a moving
+frontier.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/xml-navigation-samples/post-*.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-xml-navigation-next.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-parsed-xml-field-share.log`
+- `test/M14CppXmlNavigationRenderBenchIntegrationTest.hx`
+
+README Goals and North Star progress bars remain unchanged. The required Cpp
+target still times out, so this compiler-internal speedup does not yet change
+what end users can rely on. `CppTargetCore.hx` is now 26,435 lines; the
+production change is a narrow 51-line addition in the existing expression and
+type-flow seams. The measurement and safety checks live in a separate
+311-line benchmark rather than enlarging the existing 710-line Xml creation
+fixture. Broader Cpp render/type-flow extraction remains owned by
+`haxe_ocaml-36ec`. The next Xml investigation should measure `testBasic`, now
+the slowest method in that class, before choosing another implementation seam.
+
+No upstream compiler source or test fixture was copied. A small original
+program was run with upstream Haxe 4.3.7 only to confirm the public Xml
+navigation behavior. Committed generated OCaml snapshots were not edited; the
+ignored `.ml` files produced by the current-source build were temporary build
+output. `thinking:xhigh` was not crossed, and GPT or Oracle review was
+deliberately skipped because the exact call shape, strict rejection controls,
+same-output assertion, and fresh before/after evidence provided a bounded seam.
