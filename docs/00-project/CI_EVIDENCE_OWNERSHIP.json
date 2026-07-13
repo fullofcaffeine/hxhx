@@ -1,0 +1,307 @@
+{
+  "schema": "hxhx.ci-evidence-ownership.v1",
+  "policy": "docs/00-project/WEEKLY_CI_EVIDENCE.md",
+  "defaultBranch": "main",
+  "failureClasses": [
+    "semantic",
+    "repository-policy",
+    "toolchain",
+    "infrastructure",
+    "timeout-performance",
+    "expected-no-go",
+    "unknown"
+  ],
+  "evidenceStates": [
+    "failure-current",
+    "cancelled-superseded",
+    "cancelled-no-successor",
+    "stale-success",
+    "missing"
+  ],
+  "checks": [
+    {
+      "id": "core-pr",
+      "name": "CI / Core PR Checks",
+      "workflow": ".github/workflows/ci.yml",
+      "kind": "required",
+      "events": ["push"],
+      "missingGraceMinutes": 180
+    },
+    {
+      "id": "codeql-pr",
+      "name": "Security / CodeQL",
+      "workflow": ".github/workflows/codeql.yml",
+      "kind": "required",
+      "events": ["push"],
+      "missingGraceMinutes": 180
+    },
+    {
+      "id": "gate1-lite-pr",
+      "name": "Gate 1 Lite / Upstream Macro Unit Smoke",
+      "workflow": ".github/workflows/gate1-lite.yml",
+      "kind": "required",
+      "events": ["push"],
+      "missingGraceMinutes": 180
+    },
+    {
+      "id": "gate2-lite-pr",
+      "name": "Gate 2 Lite / Workloads Smoke",
+      "workflow": ".github/workflows/gate2-lite.yml",
+      "kind": "required",
+      "events": ["push"],
+      "missingGraceMinutes": 180
+    },
+    {
+      "id": "gate3-builtin-pr",
+      "name": "Gate 3 Builtin / Native Target Smoke",
+      "workflow": ".github/workflows/gate3-builtin.yml",
+      "kind": "required",
+      "events": ["push"],
+      "missingGraceMinutes": 180
+    },
+    {
+      "id": "js-oracle-pr",
+      "name": "Oracle / JS Smoke (Upstream vs HXHX)",
+      "workflow": ".github/workflows/js-oracle-smoke.yml",
+      "kind": "required",
+      "events": ["push"],
+      "missingGraceMinutes": 180
+    },
+    {
+      "id": "portable-tier1-pr",
+      "name": "Stdlib Portable / Tier1",
+      "workflow": ".github/workflows/stdlib-portable-lite.yml",
+      "kind": "required",
+      "events": ["push"],
+      "missingGraceMinutes": 180
+    },
+    {
+      "id": "semantic-diff-pr",
+      "name": "Stdlib / Semantic Diff",
+      "workflow": ".github/workflows/semantic-diff.yml",
+      "kind": "required",
+      "events": ["push"],
+      "missingGraceMinutes": 180
+    },
+    {
+      "id": "gate1-weekly",
+      "name": "Gate 1 / Upstream Macro Unit Compatibility",
+      "workflow": ".github/workflows/gate1.yml",
+      "kind": "release-evidence",
+      "events": ["schedule"],
+      "freshnessHours": 192
+    },
+    {
+      "id": "gate2-weekly",
+      "name": "Gate 2 / Upstream Macro Workloads",
+      "workflow": ".github/workflows/gate2.yml",
+      "kind": "release-evidence",
+      "events": ["schedule"],
+      "freshnessHours": 192
+    },
+    {
+      "id": "macro-runtime-weekly",
+      "name": "Macro Runtime Parity (Weekly)",
+      "workflow": ".github/workflows/macro-runtime-parity-weekly.yml",
+      "kind": "release-evidence",
+      "events": ["schedule"],
+      "freshnessHours": 192
+    },
+    {
+      "id": "m7-weekly",
+      "name": "Gate M7 / Replacement Bundle",
+      "workflow": ".github/workflows/gate-m7.yml",
+      "kind": "release-evidence",
+      "events": ["schedule"],
+      "freshnessHours": 192
+    },
+    {
+      "id": "full1-plugin-weekly",
+      "name": "Full1 / Plugin Parity",
+      "workflow": ".github/workflows/full1-plugin-parity.yml",
+      "kind": "release-evidence",
+      "events": ["schedule"],
+      "freshnessHours": 192
+    },
+    {
+      "id": "full1-aggregate-weekly",
+      "name": "Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity",
+      "workflow": ".github/workflows/gate-full1.yml",
+      "kind": "release-evidence",
+      "events": ["schedule"],
+      "freshnessHours": 192
+    },
+    {
+      "id": "semantic-diff-weekly",
+      "name": "Stdlib / Semantic Diff",
+      "workflow": ".github/workflows/semantic-diff.yml",
+      "kind": "release-evidence",
+      "events": ["schedule"],
+      "freshnessHours": 192
+    },
+    {
+      "id": "kpi-manual-weekly",
+      "name": "Perf / HXHX KPI (Report Only)",
+      "workflow": ".github/workflows/hxhx-kpi-report.yml",
+      "kind": "release-evidence",
+      "events": ["workflow_dispatch"],
+      "freshnessHours": 192
+    }
+  ],
+  "incidents": [
+    {
+      "id": "core-path-29209024798",
+      "checkId": "core-pr",
+      "state": "resolved",
+      "evidenceState": "failure-current",
+      "failureClass": "repository-policy",
+      "bead": "haxe_ocaml-t7bmv",
+      "recordedAt": "2026-07-12T23:04:23Z",
+      "run": {
+        "id": 29209024798,
+        "attempt": 1,
+        "headSha": "b094f7bbfb2188bcb6b8ffa25a64dbb99280919a",
+        "event": "push",
+        "conclusion": "failure",
+        "createdAt": "2026-07-12T21:06:58Z",
+        "updatedAt": "2026-07-12T21:08:35Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29209024798"
+      },
+      "reproductionOrEvidence": "The Core guard reported a machine-local absolute path in a tracked planning document.",
+      "closureGate": "The path guard must keep rejecting local home paths and a later exact-head Core run must pass.",
+      "resolution": {
+        "runId": 29225866252,
+        "runAttempt": 1,
+        "headSha": "4997112334e808547d20e843eb8f978378b50911",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-13T06:09:51Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29225866252"
+      }
+    },
+    {
+      "id": "portable-rest-29209024773",
+      "checkId": "portable-tier1-pr",
+      "state": "resolved",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-lg7be",
+      "recordedAt": "2026-07-12T23:20:59Z",
+      "run": {
+        "id": 29209024773,
+        "attempt": 1,
+        "headSha": "b094f7bbfb2188bcb6b8ffa25a64dbb99280919a",
+        "event": "push",
+        "conclusion": "failure",
+        "createdAt": "2026-07-12T21:06:58Z",
+        "updatedAt": "2026-07-12T21:09:25Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29209024773"
+      },
+      "reproductionOrEvidence": "The portable Rest fixture exposed a missing Array.toString surface in the OCaml target stdlib.",
+      "closureGate": "The repo-owned oracle case, full Tier1 lane, and a later exact-head Core run must pass.",
+      "resolution": {
+        "runId": 29225866229,
+        "runAttempt": 1,
+        "headSha": "4997112334e808547d20e843eb8f978378b50911",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-13T05:21:13Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29225866229"
+      }
+    },
+    {
+      "id": "macro-runtime-28789312872",
+      "checkId": "macro-runtime-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "unknown",
+      "bead": "haxe_ocaml-vhk47",
+      "recordedAt": "2026-07-13T06:40:00Z",
+      "run": {
+        "id": 28789312872,
+        "attempt": 1,
+        "headSha": "07cdb91a6124d25cbd2ef81db38fe6602681f89e",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-07-06T11:48:50Z",
+        "updatedAt": "2026-07-06T11:54:52Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/28789312872"
+      },
+      "reproductionOrEvidence": "The latest weekly macro-runtime aggregate failed; its first deterministic child failure still needs artifact-level classification.",
+      "closureGate": "The owner must classify the first real blocker and a fresh required macro-runtime run must pass without fallback or skip."
+    },
+    {
+      "id": "m7-timeout-29188919192",
+      "checkId": "m7-weekly",
+      "state": "open",
+      "evidenceState": "cancelled-no-successor",
+      "failureClass": "timeout-performance",
+      "bead": "haxe_ocaml-850ii",
+      "recordedAt": "2026-07-13T06:40:00Z",
+      "run": {
+        "id": 29188919192,
+        "attempt": 1,
+        "headSha": "88fad618a69095b7115c85af78cd927c20ce6ef9",
+        "event": "schedule",
+        "conclusion": "cancelled",
+        "createdAt": "2026-07-12T10:18:46Z",
+        "updatedAt": "2026-07-12T13:19:05Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29188919192"
+      },
+      "reproductionOrEvidence": "The replacement job reached its three-hour limit while running the bundle; no newer M7 run replaces it.",
+      "closureGate": "A fresh M7 run must finish, upload its evidence, and produce the required markers without timing out."
+    },
+    {
+      "id": "full1-plugin-29158896644",
+      "checkId": "full1-plugin-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "unknown",
+      "bead": "haxe_ocaml-gskz9",
+      "recordedAt": "2026-07-13T06:40:00Z",
+      "run": {
+        "id": 29158896644,
+        "attempt": 1,
+        "headSha": "5e7bd539f46d65808c6dd34d580e34553f970349",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-07-11T15:58:05Z",
+        "updatedAt": "2026-07-11T16:03:28Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29158896644"
+      },
+      "reproductionOrEvidence": "The latest scheduled plugin-parity aggregate failed; the first ABI, load, output, or workload blocker still needs classification.",
+      "closureGate": "The first real blocker must have focused evidence and a fresh plugin-parity run must pass from authentic artifacts."
+    },
+    {
+      "id": "full1-aggregate-29151698264",
+      "checkId": "full1-aggregate-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "expected-no-go",
+      "bead": "haxe.ocaml-f1cl",
+      "recordedAt": "2026-07-13T06:40:00Z",
+      "run": {
+        "id": 29151698264,
+        "attempt": 1,
+        "headSha": "9775d73dc288c1364315443ffbaced9902fb438f",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-07-11T11:52:34Z",
+        "updatedAt": "2026-07-11T12:35:10Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29151698264"
+      },
+      "reproductionOrEvidence": "The Full1 aggregate correctly remains no-go while required suite, target, macro, and plugin child evidence is not all green.",
+      "closureGate": "One candidate SHA must provide authentic passing child evidence and the aggregate must derive its pass from those artifacts."
+    },
+    {
+      "id": "kpi-manual-missing-20260713",
+      "checkId": "kpi-manual-weekly",
+      "state": "open",
+      "evidenceState": "missing",
+      "failureClass": "unknown",
+      "bead": "haxe_ocaml-850ii",
+      "recordedAt": "2026-07-13T06:40:00Z",
+      "run": null,
+      "reproductionOrEvidence": "No manual weekly KPI workflow run exists yet; push-time report-only runs do not replace that declared audit step.",
+      "closureGate": "A manual KPI run must publish a fresh report with machine, toolchain, command, samples, and commit metadata."
+    }
+  ]
+}

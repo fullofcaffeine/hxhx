@@ -15,6 +15,8 @@ For lane/profile context, use the canonical beginner truth table:
   `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`
 - Weekly ops audit procedure (scheduled gates + triage):
   `docs/00-project/WEEKLY_CI_EVIDENCE.md`
+- Machine-readable workflow/failure ownership ledger:
+  `docs/00-project/CI_EVIDENCE_OWNERSHIP.json`
 - Full vs scoped release contract:
   `docs/00-project/FULL_1_0_CONTRACT.md`
 - Public `Scoped 1.0` vs `Full 1.0` claim checklist:
@@ -46,6 +48,21 @@ For lane/profile context, use the canonical beginner truth table:
 When GitHub branch protection is enabled, it should require the PR-required fast lanes listed below. When branch protection is disabled, the docs remain the source of truth for the intended baseline, and maintainers must verify these workflows manually before merging release-relevant work.
 
 Cancelled runs on older commits are not baseline failures when they were superseded by a newer push under the same concurrency group. Evaluate the latest run for the current head SHA. A skipped `Release / Semantic Publish` workflow-run after a non-successful or superseded `CI / Core PR Checks` run is also expected and does not count as a release-lane failure by itself.
+
+## Evidence ownership audit
+
+`CI / Evidence Ownership Audit`
+(`.github/workflows/ci-evidence-ownership.yml`) is an operations guard, not a
+compiler-parity gate. It answers a narrower question: does every important
+red, cancelled-without-successor, stale, or missing run point to an active
+P0/P1 bead with enough information to fix and close it?
+
+The audit runs after the workflows listed in
+`docs/00-project/CI_EVIDENCE_OWNERSHIP.json` and once per day. It emits
+`CI_EVIDENCE_OWNERSHIP:PASS` and uploads a JSON report when every problem has
+an owner. That marker means the failure queue is accountable; it does **not**
+mean the owned compiler, target, macro, plugin, performance, or Full1 failures
+have passed.
 
 ## Release policy (Scoped 1.0)
 

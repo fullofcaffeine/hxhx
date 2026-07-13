@@ -1,0 +1,72 @@
+name: CI / Evidence Ownership Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 8 * * *'
+  workflow_run:
+    workflows:
+      - CI / Core PR Checks
+      - Security / CodeQL
+      - Gate 1 Lite / Upstream Macro Unit Smoke
+      - Gate 2 Lite / Workloads Smoke
+      - Gate 3 Builtin / Native Target Smoke
+      - Oracle / JS Smoke (Upstream vs HXHX)
+      - Stdlib Portable / Tier1
+      - Stdlib / Semantic Diff
+      - Gate 1 / Upstream Macro Unit Compatibility
+      - Gate 2 / Upstream Macro Workloads
+      - Macro Runtime Parity (Weekly)
+      - Gate M7 / Replacement Bundle
+      - Full1 / Plugin Parity
+      - Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity
+      - Perf / HXHX KPI (Report Only)
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: ci-evidence-ownership-${{ github.event.repository.default_branch }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Match important CI failures to Beads owners
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.head_branch == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout current default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Audit current required and release-evidence runs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/ci-evidence-ownership
+          node scripts/ci/ci-evidence-ownership.js \
+            --live \
+            --repository "$GITHUB_REPOSITORY" \
+            --json-out .artifacts/ci-evidence-ownership/report.json
+
+      - name: Upload ownership report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evidence-ownership-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/ci-evidence-ownership/report.json
+          if-no-files-found: warn
+          retention-days: 14

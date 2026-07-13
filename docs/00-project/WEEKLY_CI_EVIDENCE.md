@@ -4,28 +4,71 @@ Last audited: 2026-07-12
 
 This runbook defines how maintainers audit scheduled CI health each week and what to do when a gate regresses.
 
-## Required-red ownership rule
+## CI failure ownership rule
 
-`haxe_ocaml-145dn` owns the operational implementation of this rule. Until its
-guard/report lands, apply it manually:
+The user-facing outcome is simple: an important failed check must never leave
+someone asking, “Who is handling this?” The repository now answers that with:
 
-- the latest non-superseded current-head required red must have one active
-  P0/P1 bead containing SHA, run ID/attempt, failure class, reproducer or
-  infrastructure evidence, and a remote-current-head closure gate;
-- a cancelled run counts as missing evidence unless a valid successor is
-  linked;
-- a stale or cross-SHA success is historical evidence, not RC evidence;
-- repeated runs with the same root cause update one bounded bead;
-- a local pass is not closure for a required remote lane.
+- `docs/00-project/CI_EVIDENCE_OWNERSHIP.json`: the watched checks and their
+  current failure records;
+- `scripts/ci/ci-evidence-ownership.js`: compares those records with GitHub
+  runs and the tracked Beads export;
+- `CI / Evidence Ownership Audit`: runs after watched workflows and once per
+  day, then uploads a JSON report.
 
-Use these failure classes: `semantic`, `repository-policy`, `toolchain`,
-`infrastructure`, `timeout-performance`, `expected-no-go`,
-`cancelled-superseded`, `cancelled-no-successor`, and `unknown`.
+The audit rejects a current failure, uncaught cancellation, stale scheduled
+success, or missing scheduled run unless it points to one active P0/P1 bead.
+The bead and JSON record must include the commit, run and attempt, observed
+problem, classification, and the remote evidence needed for closure. A local
+pass is useful diagnosis, but it does not close a required remote failure.
+A clean audit prints `CI_EVIDENCE_OWNERSHIP:PASS`; that means every problem is
+owned, not that the owned checks themselves are green.
 
-The 2026-07-12 reviewed baseline had two deterministic required failures:
-Core PR local-path policy (`haxe_ocaml-t7bmv`) and Portable Tier1 Rest behavior
-(`haxe_ocaml-lg7be`). They block Full1 status advancement until current-head
-remote evidence is green.
+### Two labels, for two different questions
+
+Keep the observed GitHub state separate from the likely cause:
+
+| Evidence state | Plain meaning |
+| --- | --- |
+| `failure-current` | The newest relevant run completed unsuccessfully. |
+| `cancelled-superseded` | A newer valid run replaced the cancellation. Only the newer run counts. |
+| `cancelled-no-successor` | Nothing valid replaced the cancellation, so evidence is missing. |
+| `stale-success` | A run passed, but it is too old for the declared freshness window. |
+| `missing` | No qualifying run exists for the declared event/profile. |
+
+Then classify the likely cause as `semantic`, `repository-policy`,
+`toolchain`, `infrastructure`, `timeout-performance`, `expected-no-go`, or
+`unknown`. `unknown` is an honest temporary classification; the owner still
+has to inspect the first useful log or artifact.
+
+### What to do when a check fails
+
+1. Reuse an existing bead when the root cause is already owned; otherwise
+   create one bounded P0/P1 bead.
+2. Add or update one open incident in
+   `CI_EVIDENCE_OWNERSHIP.json`. Record the exact SHA, run ID, attempt, URL,
+   evidence state, cause class, and closure gate.
+3. Put the incident ID and the same facts in the bead comment so a human can
+   understand the record without reading the evaluator code.
+4. If a newer run repeats the same root cause, keep the same bead, mark the old
+   incident superseded, and record the newer run as the open incident.
+5. Close the bead and mark the incident resolved only after a valid remote
+   successor passes. A cancelled run is not a pass.
+
+Run the local contract check with:
+
+```bash
+npm run guard:ci-evidence-ownership
+```
+
+### Current reviewed ledger
+
+The original 2026-07-12 Core local-path and Portable Tier1 Rest failures are
+resolved by exact-head required runs and retained as machine-readable history.
+The current open scheduled records are macro-runtime failure, M7 timeout with
+no successor, plugin-parity failure, the expected Full1 aggregate no-go, and
+the missing manual weekly KPI run. Their owners are recorded in the JSON
+ledger; none of those records counts as passing product or Full1 evidence.
 
 ## Audit window
 
@@ -58,26 +101,28 @@ remote evidence is green.
 
 ## Weekly procedure
 
-1. Open GitHub Actions and filter to the weekly evidence workflows above.
-2. Verify latest scheduled runs for Gate 1, Gate 2, Macro Runtime Parity, Gate M7, Gate Full1, and semantic-diff are green.
-3. Open each run and confirm expected markers appear in logs.
-4. For Macro Runtime Parity, download both mode-tagged artifacts and inspect:
+1. Open the latest `CI / Evidence Ownership Audit` report. Fix any unowned,
+   stale, or missing row before treating the weekly set as reviewed.
+2. Open GitHub Actions and filter to the weekly evidence workflows above.
+3. Verify latest scheduled runs for Gate 1, Gate 2, Macro Runtime Parity, Gate M7, Gate Full1, and semantic-diff are green.
+4. Open each run and confirm expected markers appear in logs.
+5. For Macro Runtime Parity, download both mode-tagged artifacts and inspect:
    - `markers.txt`
    - `macro-runtime-parity-blockers.md`
    - suite logs (`unit`, `runci`, `display/protocol`)
-5. For Gate M7, Gate Full1, and semantic-diff, download artifacts and confirm expected files are present.
-6. For Gate Full1, confirm both aggregate markers appear:
+6. For Gate M7, Gate Full1, and semantic-diff, download artifacts and confirm expected files are present.
+7. For Gate Full1, confirm both aggregate markers appear:
    - `FULL1_SUITE_MATRIX:PASS`
    - `FULL1_MACRO_EVAL_PARITY:PASS`
-7. Check `Full1 / Source-Build Probe`:
+8. Check `Full1 / Source-Build Probe`:
    - `PASS`: source-build probe agrees with current strict matrix behavior.
    - `WARN`: do not block release by this alone; open/update a bead with artifact links and classify as bootstrap-lag, source-build instability, or parity bug.
-8. Manually dispatch `Perf / HXHX KPI (Report Only)`.
-9. Download KPI artifact and compare `report.json` against:
+9. Manually dispatch `Perf / HXHX KPI (Report Only)`.
+10. Download KPI artifact and compare `report.json` against:
    - `docs/benchmarks/kpi/hxhx-kpi-thresholds.v1.json`
    - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
-10. Check GitHub branch protection for `main` and compare it with the `PR required` table in `docs/00-project/CI_GATES.md`.
-11. Record evidence links and outcomes in the weekly ops note/bead comment.
+11. Check GitHub branch protection for `main` and compare it with the `PR required` table in `docs/00-project/CI_GATES.md`.
+12. Record evidence links and outcomes in the weekly ops note/bead comment.
 
 ## GitHub UI Interpretation
 
@@ -133,5 +178,6 @@ npm run -s test:full1:bootstrap-source-reconcile
 ## Related docs
 
 - `docs/00-project/CI_GATES.md`
+- `docs/00-project/CI_EVIDENCE_OWNERSHIP.json`
 - `docs/00-project/PARITY_MAP_HAXE_4_3_7.md`
 - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`

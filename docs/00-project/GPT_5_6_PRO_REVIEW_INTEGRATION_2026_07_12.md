@@ -42,6 +42,24 @@ Gate3 builtin/native smoke, JS oracle smoke, semantic-diff, report-only KPI,
 and security runs. Those successes remain useful evidence for their declared
 scope; they do not cancel the two required reds or prove Full1.
 
+### Phase 0 follow-up
+
+The required baseline is now restored at
+`4997112334e808547d20e843eb8f978378b50911`: Portable Tier1 run
+`29225866229` and Core PR run `29225866252` both passed on attempt 1. The
+machine-local path, typed Cpp timing-buffer catch, OCaml Array/Rest string
+surface, generated snapshot, and linked-JS class-order frontiers each have
+focused repo-owned coverage and closed evidence beads.
+
+`haxe_ocaml-145dn` then turned the review's ownership rule into an executable
+loop. `docs/00-project/CI_EVIDENCE_OWNERSHIP.json` names watched workflows and
+incidents; the evaluator joins live GitHub runs to active Beads; and
+`CI / Evidence Ownership Audit` reports unowned, cancelled-without-successor,
+stale, or missing evidence. The current scheduled macro, M7, plugin, Full1,
+and manual-KPI gaps remain explicitly open. This is accountability evidence,
+not Full1 or product-readiness progress, so the README/North Star state is
+unchanged.
+
 ## Accepted and integrated
 
 1. **Outcome-based Full1 ownership.** `haxe.ocaml-f1cl`, `.3`, `.3.1`, and
