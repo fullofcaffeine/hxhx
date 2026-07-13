@@ -25,7 +25,7 @@ on:
         default: "1"
       stage0_policy:
         description: "Stage0 policy override when compare_stage0_policies=0"
-        required: true
+        required: false
         default: ""
 
 permissions:

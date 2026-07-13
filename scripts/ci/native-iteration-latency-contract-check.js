@@ -14,6 +14,7 @@ const ciGatesPath = 'docs/00-project/CI_GATES.md'
 const readmePath = 'README.md'
 const packageJsonPath = 'package.json'
 const kpiWorkflowPath = '.github/workflows/hxhx-kpi-report.yml'
+const bootstrapWorkflowPath = '.github/workflows/bootstrap-regen-bench.yml'
 const artifactComparisonRunnerPath = 'scripts/hxhx/bench-kpi-artifact-comparison.sh'
 
 function fail(message) {
@@ -70,6 +71,7 @@ function main() {
   const readme = readText(readmePath)
   const packageJson = readText(packageJsonPath)
   const kpiWorkflow = readText(kpiWorkflowPath)
+  const bootstrapWorkflow = readText(bootstrapWorkflowPath)
   const artifactComparisonRunner = readText(artifactComparisonRunnerPath)
 
   for (const snippet of [
@@ -99,6 +101,15 @@ function main() {
     'hxhx-kpi-bytecode-native-${{ github.run_id }}'
   ]) {
     requireIncludes(kpiWorkflowPath, kpiWorkflow, snippet)
+  }
+  const stage0PolicyInput = bootstrapWorkflow.match(
+    /\n      stage0_policy:\n([\s\S]*?)(?=\n      [a-zA-Z0-9_]+:|\n\n)/
+  )
+  if (!stage0PolicyInput) {
+    fail(`${bootstrapWorkflowPath} must define the stage0_policy workflow input`)
+  } else {
+    requireIncludes(bootstrapWorkflowPath, stage0PolicyInput[1], 'required: false')
+    requireIncludes(bootstrapWorkflowPath, stage0PolicyInput[1], 'default: ""')
   }
   for (const snippet of [
     'HXHX_BOOTSTRAP_PREFER_NATIVE=1',
