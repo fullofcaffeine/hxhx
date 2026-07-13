@@ -1,6 +1,6 @@
 # Weekly CI Evidence Runbook
 
-Last audited: 2026-07-12
+Last audited: 2026-07-13
 
 This runbook defines how maintainers audit scheduled CI health each week and what to do when a gate regresses.
 
@@ -55,6 +55,13 @@ has to inspect the first useful log or artifact.
 5. Close the bead and mark the incident resolved only after a valid remote
    successor passes. A cancelled run is not a pass.
 
+Scheduled runs remain the normal freshness signal. For the Full1 plugin lane,
+an explicit `workflow_dispatch` rerun may also resolve an owned failure when
+it uses the same workflow and produces the candidate-bound, artifact-verified
+`full1-plugin-parity-summary.v3` receipt. This lets maintainers prove a fix
+without waiting for the next calendar run; it does not remove the weekly
+schedule or turn a local pass into release evidence.
+
 Run the local contract check with:
 
 ```bash
@@ -65,10 +72,11 @@ npm run guard:ci-evidence-ownership
 
 The original 2026-07-12 Core local-path and Portable Tier1 Rest failures are
 resolved by exact-head required runs and retained as machine-readable history.
-The current open scheduled records are macro-runtime failure, M7 timeout with
-no successor, plugin-parity failure, the expected Full1 aggregate no-go, and
-the missing manual weekly KPI run. Their owners are recorded in the JSON
-ledger; none of those records counts as passing product or Full1 evidence.
+The plugin failure is resolved by artifact-backed run `29281925684`. The
+current open records are the macro-runtime failure, M7 timeout with no
+successor, the expected Full1 aggregate no-go, and the missing manual weekly
+KPI run. Their owners are recorded in the JSON ledger; none of those open
+records counts as passing product or Full1 evidence.
 
 ## Audit window
 

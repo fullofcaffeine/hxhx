@@ -93,8 +93,10 @@ Current planning owners:
 - prepublication RC provenance and release handoff: completed foundation
   `haxe_ocaml-7c1ke`; authentic candidate outcome remains under
   `haxe.ocaml-f1cl`
-- actual macro/eval, plugin, and performance outcomes:
-  `haxe_ocaml-vhk47`, `haxe_ocaml-gskz9`, `haxe_ocaml-u6esu`
+- actual macro/eval and performance outcomes:
+  `haxe_ocaml-vhk47`, `haxe_ocaml-u6esu`
+- completed same-candidate Full1 plugin outcome: `haxe_ocaml-gskz9`
+  (artifact-backed run `29281925684` at `31eaa7e5`)
 - native iteration latency regression loop: `haxe_ocaml-850ii`
   (completed policy foundation: `haxe.ocaml-5rjl`)
 - native iteration latency measurement contract:
@@ -258,8 +260,9 @@ Current planning owners:
 - promotion product: `haxe_ocaml-bomhr`
   (completed matrix/hardening foundations: `haxe.ocaml-rpmx`,
   `haxe.ocaml-anoy`)
-- actual Full1 plugin outcome: `haxe_ocaml-gskz9`
-  (completed contract/workflow foundation: `haxe.ocaml-f1cl.8`)
+- completed actual Full1 plugin outcome: `haxe_ocaml-gskz9`
+  (artifact-backed run `29281925684`; completed contract/workflow foundation:
+  `haxe.ocaml-f1cl.8`)
 - native Reflaxe artifact-loop latency:
   `docs/00-project/NATIVE_ITERATION_LATENCY_CONTRACT.md`
 

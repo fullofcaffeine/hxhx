@@ -120,7 +120,7 @@
       "name": "Full1 / Plugin Parity",
       "workflow": ".github/workflows/full1-plugin-parity.yml",
       "kind": "release-evidence",
-      "events": ["schedule"],
+      "events": ["schedule", "workflow_dispatch"],
       "freshnessHours": 192
     },
     {
@@ -252,9 +252,9 @@
     {
       "id": "full1-plugin-29158896644",
       "checkId": "full1-plugin-weekly",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
-      "failureClass": "unknown",
+      "failureClass": "semantic",
       "bead": "haxe_ocaml-gskz9",
       "recordedAt": "2026-07-13T06:40:00Z",
       "run": {
@@ -267,8 +267,16 @@
         "updatedAt": "2026-07-11T16:03:28Z",
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29158896644"
       },
-      "reproductionOrEvidence": "The latest scheduled plugin-parity aggregate failed; the first ABI, load, output, or workload blocker still needs classification.",
-      "closureGate": "The first real blocker must have focused evidence and a fresh plugin-parity run must pass from authentic artifacts."
+      "reproductionOrEvidence": "The hxhx-to-hxhx route loaded its plugin but generated JavaScript initialized StringTools before SysTools. The class-order fix restored runtime output; the aggregate was then upgraded to verify all three same-candidate receipts and uploaded plugin checksums instead of trusting the matrix job result.",
+      "closureGate": "The bounded JavaScript ordering regression must pass, every plugin route must upload authentic same-candidate evidence, and the artifact-derived aggregate must pass remotely.",
+      "resolution": {
+        "runId": 29281925684,
+        "runAttempt": 1,
+        "headSha": "31eaa7e583dc6b0217438fe745003a775a526d2d",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-13T20:25:42Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29281925684"
+      }
     },
     {
       "id": "full1-aggregate-29151698264",

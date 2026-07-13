@@ -55,10 +55,26 @@ focused repo-owned coverage and closed evidence beads.
 loop. `docs/00-project/CI_EVIDENCE_OWNERSHIP.json` names watched workflows and
 incidents; the evaluator joins live GitHub runs to active Beads; and
 `CI / Evidence Ownership Audit` reports unowned, cancelled-without-successor,
-stale, or missing evidence. The current scheduled macro, M7, plugin, Full1,
-and manual-KPI gaps remain explicitly open. This is accountability evidence,
+stale, or missing evidence. The current scheduled macro, M7, Full1, and
+manual-KPI gaps remain explicitly open. This is accountability evidence,
 not Full1 or product-readiness progress, so the README/North Star state is
 unchanged.
+
+### Plugin evidence follow-up
+
+The review's warning about job-status-derived plugin evidence is now resolved
+under `haxe_ocaml-gskz9` and child `haxe_ocaml-gskz9.1`. Run `29281925684` at
+candidate `31eaa7e583dc6b0217438fe745003a775a526d2d` passed all three real
+plugin routes. Its aggregate downloaded the exact same-run artifacts, checked
+the candidate/host/stage0/load/runtime fields, re-hashed each uploaded plugin
+file, and emitted `FULL1_PLUGIN_PARITY:PASS` from a zero-error
+`full1-plugin-parity-summary.v3` receipt. The Full1 RC collector now rejects
+the older result-only v2 shape.
+
+This closes the Full1 plugin workload outcome, not the broader supported
+plugin product. Package/install, public support/versioning, repeated target
+workloads, and release-grade product artifacts remain under
+`haxe_ocaml-bomhr`. The README bar therefore stays unchanged.
 
 ## Accepted and integrated
 
@@ -67,9 +83,10 @@ unchanged.
    existence. Target-specific implementation stays in bounded children.
 2. **Required-red and scheduled-evidence ownership.** `haxe_ocaml-145dn` owns
    the durable classification, freshness, cancellation, and closure loop.
-3. **Explicit Full1 outcome lanes.** Macro/eval `haxe_ocaml-vhk47`, plugin
-   `haxe_ocaml-gskz9`, and performance `haxe_ocaml-u6esu` are active successors
-   to completed contract/workflow foundations.
+3. **Explicit Full1 outcome lanes.** Macro/eval `haxe_ocaml-vhk47` and
+   performance `haxe_ocaml-u6esu` remain active successors to completed
+   contract/workflow foundations. Plugin outcome `haxe_ocaml-gskz9` is now a
+   completed same-candidate workload foundation as recorded above.
 4. **Target-scope decision.** Completed under `haxe_ocaml-rttuj`. C++/Cppia,
    both HashLink forms, JS, Lua, Neko, PHP, C#, Java source, Python, and native
    interpreter/run behavior are required. Flash/SWF is intentionally
