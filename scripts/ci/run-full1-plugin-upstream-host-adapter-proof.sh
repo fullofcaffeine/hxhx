@@ -6,6 +6,9 @@ RPMX_PROOF_SCRIPT="$ROOT/scripts/ci/run-rpmx-haxe-plugin-proof.sh"
 
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
 ARTIFACT_DIR="${FULL1_PLUGIN_UPSTREAM_HOST_ADAPTER_ARTIFACT_DIR:-$ROOT/.artifacts/full1/plugin-upstream-host-adapter/$RUN_ID}"
+CANDIDATE_SHA="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
+WORKFLOW_RUN_ID="${GITHUB_RUN_ID:-local}"
+WORKFLOW_RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT:-1}"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -88,8 +91,14 @@ RPMX_SUMMARY="$rpmx_summary" \
 RPMX_STDOUT="$rpmx_stdout" \
 RPMX_STDERR="$rpmx_stderr" \
 SUMMARY_JSON="$summary_json" \
+ARTIFACT_DIR="$ARTIFACT_DIR" \
+CANDIDATE_SHA="$CANDIDATE_SHA" \
+WORKFLOW_RUN_ID="$WORKFLOW_RUN_ID" \
+WORKFLOW_RUN_ATTEMPT="$WORKFLOW_RUN_ATTEMPT" \
 node <<'NODE'
+const crypto = require('crypto')
 const fs = require('fs')
+const path = require('path')
 
 function fail(message) {
   console.error(`full1 plugin upstream host-adapter proof: ${message}`)
@@ -115,7 +124,24 @@ if (!rpmxSummary.proof?.loadArtifact) {
   fail('rpmx summary is missing the loaded artifact path')
 }
 
+const loadedArtifact = rpmxSummary.proof.loadArtifact
+if (!fs.existsSync(loadedArtifact) || !fs.statSync(loadedArtifact).isFile()) {
+  fail(`rpmx loaded artifact is missing: ${loadedArtifact}`)
+}
+const evidenceArtifactName = `verified-plugin-artifact${path.extname(loadedArtifact)}`
+const evidenceArtifactPath = path.join(process.env.ARTIFACT_DIR, evidenceArtifactName)
+fs.copyFileSync(loadedArtifact, evidenceArtifactPath)
+const evidenceArtifactSha256 = crypto.createHash('sha256').update(fs.readFileSync(evidenceArtifactPath)).digest('hex')
+
 const summary = {
+  schema: 'full1-plugin-proof.v1',
+  synthetic: false,
+  route: 'upstream-host-adapter',
+  candidateSha: process.env.CANDIDATE_SHA,
+  workflowRun: {
+    id: process.env.WORKFLOW_RUN_ID,
+    attempt: process.env.WORKFLOW_RUN_ATTEMPT,
+  },
   runId: process.env.RUN_ID,
   proof: 'reflaxe.ocaml upstream Haxe artifact loaded through explicit upstream Haxe eval host adaptation',
   repoRoot: process.env.ROOT,
@@ -145,7 +171,9 @@ const summary = {
   pluginArtifact: {
     layout: rpmxSummary.proof.artifactLayout,
     builtArtifacts: rpmxSummary.proof.builtArtifacts,
-    loadedArtifact: rpmxSummary.proof.loadArtifact,
+    loadedArtifact,
+    artifactSha256: evidenceArtifactSha256,
+    evidenceArtifact: evidenceArtifactName,
     loadStatus: rpmxSummary.proof.loadStatus,
     requiredGeneratedModules: rpmxSummary.proof.requiredGeneratedModules,
   },
@@ -160,6 +188,7 @@ const summary = {
     'Does not claim one native plugin binary is portable between upstream Haxe and hxhx.',
     'Does not introduce hxhx stage0 delegation or vendored upstream compiler/test code.',
   ],
+  marker: 'REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS',
   result: 'REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS',
 }
 

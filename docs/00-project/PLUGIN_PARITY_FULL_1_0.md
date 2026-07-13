@@ -1,6 +1,6 @@
 # Full 1.0 Plugin Parity Contract
 
-Last audited: 2026-04-18
+Last audited: 2026-07-13
 
 This page defines the Full 1.0 plugin parity evidence required for `hxhx`
 itself. It is a contract-definition document, not runtime proof by itself.
@@ -55,6 +55,28 @@ Runtime/evidence markers:
 `FULL1_PLUGIN_PARITY:PASS` must not be emitted until all blocking
 `reflaxe.ocaml` matrix rows above have artifact-backed evidence.
 
+## How the final check works
+
+Each row uploads two important pieces of proof: a JSON receipt describing
+what ran and the actual plugin file that was loaded. The final workflow job
+does not treat a green job icon as proof by itself. It downloads the three
+exact artifacts for the current workflow run and attempt, then
+`scripts/ci/full1-plugin-parity-evidence.js` checks that:
+
+- every receipt names the same candidate commit, workflow run, and attempt;
+- each route used the expected build compiler and load host;
+- stage0 was forbidden in both strict `hxhx` routes;
+- the expected plugin was loaded and selected;
+- the generated sample program printed `sum=6`;
+- the uploaded plugin file's SHA-256 checksum matches its receipt; and
+- none of the receipts is marked synthetic.
+
+Only a zero-error `full1-plugin-parity-summary.v3` receipt may emit
+`FULL1_PLUGIN_PARITY:PASS`. The Full1 release-candidate collector requires
+that artifact-backed schema. Missing, duplicate, cross-commit, stage0-enabled,
+bad-checksum, bad-output, and synthetic examples are covered by
+`npm run test:full1:plugin:evidence`.
+
 ## Non-Goals
 
 - `reflaxe.elixir` is example-only and non-blocking for the Full 1.0 plugin
@@ -77,4 +99,4 @@ Runtime/evidence markers:
   - Row marker: `REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS`.
 - `haxe.ocaml-f1cl.8.5`: CI workflow: Gate Full1 plugin parity.
   - Workflow: `.github/workflows/full1-plugin-parity.yml`.
-  - Aggregate marker: `FULL1_PLUGIN_PARITY:PASS` only after all three proof rows pass.
+  - Aggregate marker: `FULL1_PLUGIN_PARITY:PASS` only after all three proof rows pass and their exact artifacts are verified.

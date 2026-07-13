@@ -12,6 +12,9 @@ TARGET_ID="js-native"
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
 ARTIFACT_DIR="${FULL1_PLUGIN_HXHX_ARTIFACT_DIR:-$ROOT/.artifacts/full1/plugin-hxhx-to-hxhx/$RUN_ID}"
 KEEP_TMP="${FULL1_PLUGIN_HXHX_KEEP_TMP:-0}"
+CANDIDATE_SHA="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
+WORKFLOW_RUN_ID="${GITHUB_RUN_ID:-local}"
+WORKFLOW_RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT:-1}"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -187,7 +190,9 @@ fi
 plugin_artifact_rel="plugins/$dune_exe_name.$artifact_ext"
 plugin_artifact="$plugin_out_dir/$plugin_artifact_rel"
 cp "$generated_artifact" "$plugin_artifact"
-plugin_artifact_sha256="$(shasum -a 256 "$plugin_artifact" | awk '{print $1}')"
+evidence_plugin_artifact="$ARTIFACT_DIR/verified-plugin-artifact.$artifact_ext"
+cp "$plugin_artifact" "$evidence_plugin_artifact"
+plugin_artifact_sha256="$(shasum -a 256 "$evidence_plugin_artifact" | awk '{print $1}')"
 
 abi_version="$(read_abi_const VERSION)"
 gen_ir_version="$(read_abi_const GEN_IR_VERSION)"
@@ -273,9 +278,20 @@ HXHX_BIN_JSON="$(json_escape "$hxhx_bin")"
 MANIFEST_JSON="$(json_escape "$manifest_path")"
 ARTIFACT_JSON="$(json_escape "$plugin_artifact")"
 COMPILE_OUT_JSON="$(json_escape "$compile_out_dir/main.js")"
+CANDIDATE_SHA_JSON="$(json_escape "$CANDIDATE_SHA")"
+WORKFLOW_RUN_ID_JSON="$(json_escape "$WORKFLOW_RUN_ID")"
+WORKFLOW_RUN_ATTEMPT_JSON="$(json_escape "$WORKFLOW_RUN_ATTEMPT")"
 
 cat >"$summary_json" <<EOF
 {
+  "schema": "full1-plugin-proof.v1",
+  "synthetic": false,
+  "route": "hxhx-to-hxhx",
+  "candidateSha": "$CANDIDATE_SHA_JSON",
+  "workflowRun": {
+    "id": "$WORKFLOW_RUN_ID_JSON",
+    "attempt": "$WORKFLOW_RUN_ATTEMPT_JSON"
+  },
   "runId": "$RUN_ID",
   "proof": "reflaxe.ocaml hxhx-built plugin artifact loaded by hxhx",
   "repoRoot": "$ROOT_JSON",
@@ -308,6 +324,7 @@ cat >"$summary_json" <<EOF
     "artifactKind": "ocaml-dynlink",
     "artifactPath": "$ARTIFACT_JSON",
     "artifactSha256": "$plugin_artifact_sha256",
+    "evidenceArtifact": "verified-plugin-artifact.$artifact_ext",
     "manifestPath": "$MANIFEST_JSON",
     "loadSideEffect": "full1_hxhx_plugin_loaded=ok"
   },
@@ -326,6 +343,7 @@ cat >"$summary_json" <<EOF
     "hxhxStderr": "hxhx.stderr.log",
     "nodeStdout": "node.stdout.log"
   },
+  "marker": "REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS",
   "result": "REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS"
 }
 EOF

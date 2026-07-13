@@ -368,39 +368,43 @@ jobs:
     outputs:
       full1_plugin_parity_marker: ${{ steps.emit.outputs.full1_plugin_parity_marker }}
     steps:
-      - name: Write Full1 plugin summary artifact
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download upstream Haxe to hxhx proof
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: full1-plugin-upstream-to-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/full1/plugin-parity/proofs/full1-plugin-upstream-to-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Download hxhx to hxhx proof
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: full1-plugin-hxhx-to-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/full1/plugin-parity/proofs/full1-plugin-hxhx-to-hxhx-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Download upstream host-adapter proof
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: full1-plugin-upstream-host-adapter-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/full1/plugin-parity/proofs/full1-plugin-upstream-host-adapter-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify Full1 plugin proof artifacts
+        id: verify
+        continue-on-error: true
         run: |
           set -euo pipefail
           mkdir -p .artifacts/full1/plugin-parity
-          proofs_result='${{ needs.full1_plugin_proofs.result }}'
-          jq -n \
-            --arg proofs_result "$proofs_result" \
-            --arg workflow "Full1 / Plugin Parity" \
-            --arg run_id "${{ github.run_id }}" \
-            --arg run_attempt "${{ github.run_attempt }}" \
-            '{
-              schema: "full1-plugin-parity-summary.v2",
-              workflow: $workflow,
-              run_id: $run_id,
-              run_attempt: $run_attempt,
-              jobs: {
-                full1_plugin_proofs: { result: $proofs_result }
-              },
-              required_markers: [
-                "REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS",
-                "REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS",
-                "REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS"
-              ],
-              expected_markers: [
-                "FULL1_PLUGIN_PARITY:PASS"
-              ],
-              emitted_markers: (
-                if $proofs_result == "success"
-                then ["FULL1_PLUGIN_PARITY:PASS"]
-                else []
-                end
-              )
-            }' > .artifacts/full1/plugin-parity/full1-plugin-parity.summary.json
+          node scripts/ci/full1-plugin-parity-evidence.js \
+            --artifacts-dir .artifacts/full1/plugin-parity/proofs \
+            --output .artifacts/full1/plugin-parity/full1-plugin-parity.summary.json \
+            --candidate-sha "${{ github.sha }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --matrix-result "${{ needs.full1_plugin_proofs.result }}"
 
       - name: Upload Full1 plugin aggregate artifact
         if: always()
@@ -413,11 +417,15 @@ jobs:
 
       - name: Emit Full1 plugin parity marker
         id: emit
+        if: always()
         run: |
           set -euo pipefail
-          proofs_result='${{ needs.full1_plugin_proofs.result }}'
-          echo "full1_plugin_proofs=${proofs_result}"
-          if [ "$proofs_result" = "success" ]; then
+          verify_outcome='${{ steps.verify.outcome }}'
+          summary=.artifacts/full1/plugin-parity/full1-plugin-parity.summary.json
+          echo "full1_plugin_artifact_verification=${verify_outcome}"
+          if [ "$verify_outcome" = "success" ] \
+            && [ -f "$summary" ] \
+            && jq -e '.errors == [] and .emitted_markers == ["FULL1_PLUGIN_PARITY:PASS"]' "$summary" >/dev/null; then
             echo "FULL1_PLUGIN_PARITY:PASS"
             echo "full1_plugin_parity_marker=FULL1_PLUGIN_PARITY:PASS" >> "$GITHUB_OUTPUT"
             exit 0

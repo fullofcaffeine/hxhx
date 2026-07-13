@@ -2,8 +2,9 @@
 /**
  * Guard the Full 1.0 plugin parity contract.
  *
- * This is a documentation-contract check only. It proves that the release
- * matrix, marker names, non-goals, and follow-up proof owners are explicit.
+ * This is a contract-shape check, not runtime proof. It proves that the
+ * documented matrix and marker names remain connected to the artifact-backed
+ * workflow and its fail-closed evaluator.
  */
 
 const fs = require('fs')
@@ -14,6 +15,7 @@ const fullParityMapPath = 'docs/00-project/PARITY_MAP_FULL_1_0.json'
 const fullContractPath = 'docs/00-project/FULL_1_0_CONTRACT.md'
 const scopeManifestPath = 'docs/02-user-guide/compat/full-1.0-scope.json'
 const pluginWorkflowPath = '.github/workflows/full1-plugin-parity.yml'
+const pluginEvidencePath = 'scripts/ci/full1-plugin-parity-evidence.js'
 const full1WorkflowPath = '.github/workflows/gate-full1.yml'
 
 const requiredDocSnippets = [
@@ -36,6 +38,9 @@ const requiredDocSnippets = [
   'npm run test:full1:plugin:upstream-to-hxhx',
   'npm run test:full1:plugin:hxhx-to-hxhx',
   'npm run test:full1:plugin:upstream-host-adapter',
+  'npm run test:full1:plugin:evidence',
+  'full1-plugin-parity-summary.v3',
+  "uploaded plugin file's SHA-256 checksum matches its receipt",
   '.github/workflows/full1-plugin-parity.yml',
   'FULL1_PLUGIN_PARITY:PASS` only after all three proof rows pass',
   'reflaxe.elixir` is example-only and non-blocking',
@@ -65,6 +70,7 @@ function main() {
   const fullContract = readUtf8(fullContractPath)
   const scopeManifest = readUtf8(scopeManifestPath)
   const pluginWorkflow = readUtf8(pluginWorkflowPath)
+  const pluginEvidence = readUtf8(pluginEvidencePath)
   const full1Workflow = readUtf8(full1WorkflowPath)
 
   for (const snippet of requiredDocSnippets) {
@@ -84,11 +90,19 @@ function main() {
   requireIncludes(fullContractPath, fullContract, docPath)
   requireIncludes(scopeManifestPath, scopeManifest, 'FULL1_PLUGIN_PARITY_CONTRACT:PASS')
   requireIncludes(scopeManifestPath, scopeManifest, 'FULL1_PLUGIN_PARITY:PASS')
-  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS')
-  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS')
-  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS')
   requireIncludes(pluginWorkflowPath, pluginWorkflow, 'FULL1_PLUGIN_PARITY:PASS')
+  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'actions/download-artifact@v4')
   requireIncludes(pluginWorkflowPath, pluginWorkflow, 'actions/upload-artifact@v4')
+  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'scripts/ci/full1-plugin-parity-evidence.js')
+  requireIncludes(pluginWorkflowPath, pluginWorkflow, 'full1_plugin_artifact_verification')
+  requireIncludes(pluginEvidencePath, pluginEvidence, 'full1-plugin-parity-summary.v3')
+  requireIncludes(pluginEvidencePath, pluginEvidence, 'full1-plugin-proof.v1')
+  requireIncludes(pluginEvidencePath, pluginEvidence, 'REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS')
+  requireIncludes(pluginEvidencePath, pluginEvidence, 'REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS')
+  requireIncludes(pluginEvidencePath, pluginEvidence, 'REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS')
+  requireIncludes(pluginEvidencePath, pluginEvidence, 'candidate SHA mismatch')
+  requireIncludes(pluginEvidencePath, pluginEvidence, 'plugin artifact digest does not match the uploaded file')
+  requireIncludes(pluginEvidencePath, pluginEvidence, 'proof must be authentic, not synthetic')
   requireIncludes(full1WorkflowPath, full1Workflow, './.github/workflows/full1-plugin-parity.yml')
   requireIncludes(full1WorkflowPath, full1Workflow, 'FULL1_PLUGIN_PARITY:PASS')
 

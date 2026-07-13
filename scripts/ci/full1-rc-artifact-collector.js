@@ -232,14 +232,42 @@ function validateSummary(spec, summary, context) {
     return { schema: summary.schema, markers: rolePolicy.eval.markers }
   }
   if (spec.role === 'plugin') {
-    if (summary.schema !== 'full1-plugin-parity-summary.v2') throw new Error('wrong plugin schema')
+    if (summary.schema !== 'full1-plugin-parity-summary.v3') throw new Error('wrong plugin schema')
     if (String(summary.run_id) !== String(context.runId)
       || String(summary.run_attempt) !== String(context.runAttempt)) {
       throw new Error('plugin run identity mismatch')
     }
+    if (summary.synthetic !== false || summary.candidate_sha !== context.candidateSha) {
+      throw new Error('plugin candidate identity or authenticity mismatch')
+    }
     if (!summary.jobs || !summary.jobs.full1_plugin_proofs
       || summary.jobs.full1_plugin_proofs.result !== 'success') {
       throw new Error('plugin proofs did not succeed')
+    }
+    if (!Array.isArray(summary.errors) || summary.errors.length !== 0) {
+      throw new Error('plugin artifact validation contains errors')
+    }
+    const expectedProofs = [
+      ['upstream-to-hxhx', 'full1-plugin-upstream-to-hxhx', 'REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS'],
+      ['hxhx-to-hxhx', 'full1-plugin-hxhx-to-hxhx', 'REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS'],
+      ['upstream-host-adapter', 'full1-plugin-upstream-host-adapter', 'REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS']
+    ]
+    if (!Array.isArray(summary.proofs) || summary.proofs.length !== expectedProofs.length) {
+      throw new Error('plugin aggregate does not contain every verified proof')
+    }
+    for (const [id, prefix, marker] of expectedProofs) {
+      const proof = summary.proofs.find(item => item.id === id)
+      const expectedArtifact = `${prefix}-${context.runId}-${context.runAttempt}`
+      if (!proof || proof.verified !== true || proof.artifact_name !== expectedArtifact
+        || proof.marker !== marker
+        || proof.summary_schema !== 'full1-plugin-proof.v1'
+        || !/^[0-9a-f]{64}$/i.test(String(proof.summary_sha256 || ''))
+        || !/^[0-9a-f]{64}$/i.test(String(proof.plugin_artifact_sha256 || ''))) {
+        throw new Error(`plugin proof ${id} is missing, unverified, or has invalid provenance`)
+      }
+    }
+    if (!sameMembers(summary.required_markers, expectedProofs.map(item => item[2]))) {
+      throw new Error('plugin required marker set mismatch')
     }
     if (!sameMembers(summary.emitted_markers, ['FULL1_PLUGIN_PARITY:PASS'])) {
       throw new Error('plugin summary did not emit its real pass marker')

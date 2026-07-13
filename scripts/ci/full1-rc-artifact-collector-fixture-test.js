@@ -88,10 +88,31 @@ function validFixtures() {
       result: { exit_code: 0 }
     },
     plugin: {
-      schema: 'full1-plugin-parity-summary.v2',
+      schema: 'full1-plugin-parity-summary.v3',
+      synthetic: false,
+      candidate_sha: context.candidateSha,
       run_id: String(context.runId),
       run_attempt: String(context.runAttempt),
       jobs: { full1_plugin_proofs: { result: 'success' } },
+      required_markers: [
+        'REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS',
+        'REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS',
+        'REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS'
+      ],
+      proofs: [
+        ['upstream-to-hxhx', 'full1-plugin-upstream-to-hxhx', 'REFLAXE_OCAML_PLUGIN_UPSTREAM_TO_HXHX:PASS'],
+        ['hxhx-to-hxhx', 'full1-plugin-hxhx-to-hxhx', 'REFLAXE_OCAML_PLUGIN_HXHX_TO_HXHX:PASS'],
+        ['upstream-host-adapter', 'full1-plugin-upstream-host-adapter', 'REFLAXE_OCAML_PLUGIN_UPSTREAM_HOST_ADAPTER:PASS']
+      ].map(([id, prefix, marker]) => ({
+        id,
+        artifact_name: `${prefix}-${context.runId}-${context.runAttempt}`,
+        summary_schema: 'full1-plugin-proof.v1',
+        summary_sha256: 'b'.repeat(64),
+        plugin_artifact_sha256: 'c'.repeat(64),
+        marker,
+        verified: true
+      })),
+      errors: [],
       emitted_markers: ['FULL1_PLUGIN_PARITY:PASS']
     },
     performance: {
@@ -177,6 +198,27 @@ function testSummaryValidation() {
   assert.throws(
     () => validateSummary(specById('plugin'), claimedPlugin, context),
     /did not emit/
+  )
+
+  const crossCandidatePlugin = clone(fixtures.plugin)
+  crossCandidatePlugin.candidate_sha = 'f'.repeat(40)
+  assert.throws(
+    () => validateSummary(specById('plugin'), crossCandidatePlugin, context),
+    /candidate identity/
+  )
+
+  const unverifiedPlugin = clone(fixtures.plugin)
+  unverifiedPlugin.proofs[1].verified = false
+  assert.throws(
+    () => validateSummary(specById('plugin'), unverifiedPlugin, context),
+    /unverified/
+  )
+
+  const wrongPluginProofSchema = clone(fixtures.plugin)
+  wrongPluginProofSchema.proofs[0].summary_schema = 'full1-plugin-proof.v0'
+  assert.throws(
+    () => validateSummary(specById('plugin'), wrongPluginProofSchema, context),
+    /invalid provenance/
   )
 
   const failedPerformance = clone(fixtures.performance)

@@ -131,7 +131,7 @@ const evidenceContracts = {
     role: 'plugin',
     workflowFile: '.github/workflows/full1-plugin-parity.yml',
     artifactPrefix: 'full1-plugin-parity-summary',
-    summarySchema: 'full1-plugin-parity-summary.v2',
+    summarySchema: 'full1-plugin-parity-summary.v3',
     markers: rolePolicy.plugin.markers
   },
   performance: {
