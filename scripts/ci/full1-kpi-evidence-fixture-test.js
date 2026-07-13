@@ -32,14 +32,24 @@ function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, JSON.stringify(payload, null, 2) + '\n')
 }
 
+/**
+ * Runs the adapter with synthetic candidate metadata isolated from the GitHub
+ * job that happens to be executing this fixture. Individual cases may add
+ * candidate metadata back through `env` when that metadata is what they test.
+ */
 function runAdapter(reportPath, evidencePath, env = {}) {
+  const childEnv = { ...process.env }
+  for (const name of ['GITHUB_SHA', 'GITHUB_REF', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT']) {
+    delete childEnv[name]
+  }
+  Object.assign(childEnv, env)
   return childProcess.spawnSync(
     process.execPath,
     [adapter, '--kpi-report', reportPath, '--json-out', evidencePath],
     {
       cwd: repoRoot,
       encoding: 'utf8',
-      env: { ...process.env, ...env }
+      env: childEnv
     }
   )
 }

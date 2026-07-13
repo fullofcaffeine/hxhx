@@ -62,18 +62,24 @@ function syntheticRun(check, id, overrides = {}) {
 function baselineSnapshot(manifest) {
   const runs = {}
   let id = 99000000000
+  const openRequiredIncident = manifest.incidents.find(incident => {
+    if (incident.state !== 'open' || !incident.run) return false
+    const check = manifest.checks.find(candidate => candidate.id === incident.checkId)
+    return check && check.kind === 'required'
+  })
+  const baselineHead = openRequiredIncident ? openRequiredIncident.run.headSha : fixtureHead
   for (const check of manifest.checks) {
     const incident = manifest.incidents.find(candidate => (
       candidate.state === 'open' && candidate.checkId === check.id
     ))
-    if (check.kind === 'required') {
-      runs[check.id] = [syntheticRun(check, id++)]
-    } else if (incident && incident.run) {
+    if (incident && incident.run) {
       runs[check.id] = [{
         ...incident.run,
         name: check.name,
         status: 'completed'
       }]
+    } else if (check.kind === 'required') {
+      runs[check.id] = [syntheticRun(check, id++, { headSha: baselineHead })]
     } else if (incident && incident.evidenceState === 'missing') {
       runs[check.id] = []
     } else {
@@ -84,7 +90,7 @@ function baselineSnapshot(manifest) {
     schema: 'hxhx.ci-run-snapshot.v1',
     repository: 'example/hxhx',
     defaultBranch: 'main',
-    headSha: fixtureHead,
+    headSha: baselineHead,
     headCreatedAt: '2026-07-13T05:30:00Z',
     observedAt: fixedNow,
     runs
@@ -110,19 +116,31 @@ function main() {
 
     const core = manifest.checks.find(check => check.id === 'core-pr')
     assert(core, 'production manifest is missing core-pr')
+    const noOpenCoreManifest = structuredClone(manifest)
+    noOpenCoreManifest.incidents = noOpenCoreManifest.incidents.filter(incident => (
+      incident.state !== 'open' || incident.checkId !== core.id
+    ))
+    const noOpenCoreManifestPath = path.join(tmpDir, 'no-open-core.manifest.json')
+    writeJson(noOpenCoreManifestPath, noOpenCoreManifest)
 
     const unowned = structuredClone(baseSnapshot)
-    unowned.runs[core.id] = [syntheticRun(core, 99100000001, { conclusion: 'failure' })]
+    unowned.runs[core.id] = [syntheticRun(core, 99100000001, {
+      conclusion: 'failure',
+      headSha: baseSnapshot.headSha
+    })]
     const unownedPath = path.join(tmpDir, 'unowned.snapshot.json')
     writeJson(unownedPath, unowned)
     expectFailure(
-      runEvaluator(productionManifestPath, productionBeadsPath, unownedPath),
+      runEvaluator(noOpenCoreManifestPath, productionBeadsPath, unownedPath),
       'has no matching open P0/P1 incident',
       'unowned required failure'
     )
 
-    const ownedManifest = structuredClone(manifest)
-    const ownedRun = syntheticRun(core, 99100000002, { conclusion: 'failure' })
+    const ownedManifest = structuredClone(noOpenCoreManifest)
+    const ownedRun = syntheticRun(core, 99100000002, {
+      conclusion: 'failure',
+      headSha: baseSnapshot.headSha
+    })
     ownedManifest.incidents.push({
       id: 'fixture-owned-core',
       checkId: core.id,
@@ -169,11 +187,14 @@ function main() {
     assert(ownedResult.status === 0, `owned required failure did not pass\n${ownedResult.stderr}`)
 
     const cancelled = structuredClone(baseSnapshot)
-    cancelled.runs[core.id] = [syntheticRun(core, 99100000003, { conclusion: 'cancelled' })]
+    cancelled.runs[core.id] = [syntheticRun(core, 99100000003, {
+      conclusion: 'cancelled',
+      headSha: baseSnapshot.headSha
+    })]
     const cancelledPath = path.join(tmpDir, 'cancelled.snapshot.json')
     writeJson(cancelledPath, cancelled)
     expectFailure(
-      runEvaluator(productionManifestPath, productionBeadsPath, cancelledPath),
+      runEvaluator(noOpenCoreManifestPath, productionBeadsPath, cancelledPath),
       'cancelled-no-successor',
       'cancelled run without successor'
     )
@@ -182,10 +203,12 @@ function main() {
     superseded.runs[core.id] = [
       syntheticRun(core, 99100000004, {
         conclusion: 'cancelled',
+        headSha: baseSnapshot.headSha,
         createdAt: '2026-07-13T05:40:00Z',
         updatedAt: '2026-07-13T05:50:00Z'
       }),
       syntheticRun(core, 99100000005, {
+        headSha: baseSnapshot.headSha,
         createdAt: '2026-07-13T06:20:00Z',
         updatedAt: '2026-07-13T06:30:00Z'
       })
@@ -194,7 +217,7 @@ function main() {
     const supersededReportPath = path.join(tmpDir, 'superseded.report.json')
     writeJson(supersededPath, superseded)
     const supersededResult = runEvaluator(
-      productionManifestPath,
+      noOpenCoreManifestPath,
       productionBeadsPath,
       supersededPath,
       supersededReportPath
@@ -230,7 +253,7 @@ function main() {
     const crossShaPath = path.join(tmpDir, 'cross-sha.snapshot.json')
     writeJson(crossShaPath, crossSha)
     expectFailure(
-      runEvaluator(productionManifestPath, productionBeadsPath, crossShaPath),
+      runEvaluator(noOpenCoreManifestPath, productionBeadsPath, crossShaPath),
       'no qualifying run',
       'cross-SHA required success'
     )
