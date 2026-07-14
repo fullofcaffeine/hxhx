@@ -40,6 +40,8 @@ class M14Stage3LuaRunSupportIntegrationTest {
 		final collectDirectStdout = runChild("collect-neko-ndll-direct-platform");
 		assertTrue(collectDirectStdout.indexOf("/dummy_ndll/ndll/") >= 0,
 			"expected direct Neko ndll platform discovery output, got `" + collectDirectStdout + "`");
+		final nekoPlatformStdout = runChild("neko-platform-map");
+		assertTrue(nekoPlatformStdout.indexOf("neko-platform-map=ok:") == 0, "expected Neko host-platform mappings to pass, got `" + nekoPlatformStdout + "`");
 
 		final resolverStdout = runChild("library-resolver-haxelib-always");
 		assertTrue(resolverStdout == "resolver=always", "expected haxelib --always resolver fallback, got `" + resolverStdout + "`");

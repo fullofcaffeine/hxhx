@@ -129,6 +129,28 @@ class M14Stage3LuaRunSupportChild {
 					if (paths.length != 1)
 						throw "expected one direct Neko ndll path, got " + paths.length;
 					Sys.println("ndll-direct-path=" + paths[0]);
+				case "neko-platform-map":
+					final cases = [
+						{system: "Mac", architecture: "arm64", expected: "MacArm64"},
+						{system: "Mac", architecture: "x86_64", expected: "Mac64"},
+						{system: "Linux", architecture: "aarch64", expected: "LinuxArm64"},
+						{system: "Linux", architecture: "amd64", expected: "Linux64"},
+						{system: "Windows", architecture: "ARM64", expected: "WindowsArm64"},
+						{system: "Windows", architecture: "AMD64", expected: "Windows64"},
+						{system: "Windows", architecture: "x86", expected: "Windows64"}
+					];
+					for (entry in cases) {
+						final actual = Stage3SetupSupport.nekoNdllPlatformForHost(entry.system, entry.architecture);
+						if (actual != entry.expected)
+							throw 'expected ${entry.system}/${entry.architecture} to map to ${entry.expected}, got $actual';
+					}
+					if (Sys.systemName() == "Mac") {
+						final hostArchitecture = @:privateAccess Stage3SetupSupport.hostArchitecture().toLowerCase();
+						final expectedHost = hostArchitecture == "arm64" || hostArchitecture == "aarch64" ? "MacArm64" : "Mac64";
+						if (Stage3SetupSupport.nekoNdllHostPlatform() != expectedHost)
+							throw 'expected this Mac host to use $expectedHost, got ${Stage3SetupSupport.nekoNdllHostPlatform()}';
+					}
+					Sys.println("neko-platform-map=ok:" + Stage3SetupSupport.nekoNdllHostPlatform());
 				case "library-resolver-haxelib-always":
 					final libRoot = Path.join([tmp, "dummy_ndll"]);
 					mkdirp(Path.join([libRoot, "ndll", Stage3SetupSupport.nekoNdllHostPlatform()]));

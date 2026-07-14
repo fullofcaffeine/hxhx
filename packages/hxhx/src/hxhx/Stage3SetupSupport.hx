@@ -110,23 +110,36 @@ class Stage3SetupSupport {
 
 	public static function nekoNdllHostPlatforms():Array<String> {
 		final system = Sys.systemName();
-		final suffix = nekoNdllHostSuffix();
 		final out = new Array<String>();
 		function push(value:String):Void {
 			if (value != null && value.length > 0 && out.indexOf(value) == -1)
 				out.push(value);
 		}
-		if (suffix.length > 0)
-			push(system + suffix);
-		else
-			push(system + "64");
+		push(nekoNdllPlatformForHost(system, hostArchitecture()));
 		push(system);
 		return out;
 	}
 
-	static function nekoNdllHostSuffix():String {
-		final arch = hostArchitecture().toLowerCase();
-		if (arch.indexOf("64") >= 0 || arch == "aarch64" || arch == "arm64")
+	/**
+		Returns the first Neko native-library folder to try for a host.
+
+		Neko package folders distinguish 64-bit ARM (`MacArm64`,
+		`LinuxArm64`, and `WindowsArm64`) from ordinary 64-bit hosts such as
+		`Mac64`. Unknown and 32-bit architecture strings keep the historical
+		64-bit-first fallback; `nekoNdllHostPlatforms` still tries the unsuffixed
+		platform immediately afterwards.
+	**/
+	public static function nekoNdllPlatformForHost(system:String, architecture:String):String {
+		final normalizedSystem = trim(system);
+		final suffix = nekoNdllHostSuffixForArchitecture(architecture);
+		return normalizedSystem + (suffix.length > 0 ? suffix : "64");
+	}
+
+	static function nekoNdllHostSuffixForArchitecture(architecture:String):String {
+		final arch = trim(architecture).toLowerCase();
+		if (arch == "aarch64" || arch == "arm64")
+			return "Arm64";
+		if (arch.indexOf("64") >= 0)
 			return "64";
 		return "";
 	}
@@ -139,8 +152,11 @@ class Stage3SetupSupport {
 		}
 		try {
 			final p = new sys.io.Process("uname", ["-m"]);
-			final stdout = trim(p.stdout.readAll().toString());
-			p.stderr.readAll();
+			final stdout = try {
+				trim(p.stdout.readLine());
+			} catch (_:haxe.io.Eof) {
+				"";
+			};
 			final code = p.exitCode();
 			p.close();
 			if (code == 0 && stdout.length > 0)
