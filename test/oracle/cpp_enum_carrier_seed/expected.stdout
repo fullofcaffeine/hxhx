@@ -10,6 +10,13 @@ enum-generic-id-01:object|value|13
 enum-eq-01:zero|value|true
 enum-eq-01:payload-same|value|true
 enum-eq-01:payload-different|value|false
+enum-null-eq-01:type-enum-null|value|false
+enum-null-eq-01:type-null-enum|value|false
+enum-null-eq-01:type-null-null|value|true
+enum-null-eq-01:direct-enum-null|value|false
+enum-null-eq-01:direct-null-enum|value|false
+enum-null-eq-01:direct-nonenum-null|value|true
+enum-null-eq-01:direct-null-nonenum|value|true
 enum-switch-01|payload|7:x
 enum-type-create-01:name|value|Pair(9,y)
 enum-type-create-01:name|summary|Pair:2:9,y

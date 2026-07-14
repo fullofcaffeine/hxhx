@@ -24442,15 +24442,26 @@ class CppTargetCore {
 		};
 	}
 
+	/**
+		Compare enum values through their metadata carrier without leaving literal null
+		untyped at the C++ template call. Two literal nulls are equal by the upstream
+		`Type.enumEq` contract and need no generated runtime dispatch.
+	**/
 	static function typeEnumEqExpr(left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
 		final valueTypeEq = typeValueTypeEnumEqExpr(left, right, scope);
 		if (valueTypeEq != null)
 			return valueTypeEq;
+		if (typeEnumEqNullArg(left) && typeEnumEqNullArg(right))
+			return "true";
 		final carrierType = typeEnumEqCarrierCppType(left, right, scope);
 		if (carrierType.length > 0)
-			return "__hxhx_enum_value_eq(" + valueExprForExpectedType(left, carrierType, scope) + ", " + valueExprForExpectedType(right, carrierType, scope)
-				+ ")";
+			return "__hxhx_enum_value_eq(" + typeEnumEqCarrierValueExpr(left, carrierType, scope) + ", "
+				+ typeEnumEqCarrierValueExpr(right, carrierType, scope) + ")";
 		return "Type::enumEq(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
+	}
+
+	static function typeEnumEqCarrierValueExpr(expr:HxExpr, carrierType:String, ?scope:CppRenderScope):String {
+		return typeEnumEqNullArg(expr) ? carrierType + "{}" : valueExprForExpectedType(expr, carrierType, scope);
 	}
 
 	/**

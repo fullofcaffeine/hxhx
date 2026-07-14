@@ -82,6 +82,14 @@ class Main {
 		emit("enum-eq-01:zero", "value", bool(Type.enumEq(red, Red)));
 		emit("enum-eq-01:payload-same", "value", bool(Type.enumEq(pair, Pair(7, "x"))));
 		emit("enum-eq-01:payload-different", "value", bool(Type.enumEq(pair, Pair(8, "x"))));
+		emit("enum-null-eq-01:type-enum-null", "value", bool(Type.enumEq(red, null)));
+		emit("enum-null-eq-01:type-null-enum", "value", bool(Type.enumEq(null, red)));
+		emit("enum-null-eq-01:type-null-null", "value", bool(Type.enumEq(null, null)));
+		emit("enum-null-eq-01:direct-enum-null", "value", bool(red == null));
+		emit("enum-null-eq-01:direct-null-enum", "value", bool(null == red));
+		final missingText:String = null;
+		emit("enum-null-eq-01:direct-nonenum-null", "value", bool(missingText == null));
+		emit("enum-null-eq-01:direct-null-nonenum", "value", bool(null == missingText));
 
 		emit("enum-switch-01", "payload", switch (pair) {
 			case Pair(i, s):

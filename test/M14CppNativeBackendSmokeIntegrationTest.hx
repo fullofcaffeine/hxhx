@@ -1346,6 +1346,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(identity(Choice.Wrap(Choice.Pair(6, \"id\")))));",
 			"    Sys.println(Std.string(Type.enumEq(p1, p2)));",
 			"    Sys.println(Std.string(Type.enumEq(p1, p3)));",
+			"    Sys.println(Std.string(Type.enumEq(p1, null)));",
+			"    Sys.println(Std.string(Type.enumEq(null, p1)));",
+			"    Sys.println(Std.string(Type.enumEq(null, null)));",
+			"    Sys.println(Std.string(p1 == null));",
+			"    Sys.println(Std.string(null == p1));",
 			"    Sys.println(Type.enumConstructor(p1));",
 			"    Sys.println(Std.string(Type.enumIndex(p1)));",
 			"    var params = Type.enumParameters(p1);",
@@ -6293,10 +6298,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final typeEnumEqBare = @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"), [EIdent("A"), ENull]), myEnumScope);
 		assertContains(typeEnumEqBare,
-			"__hxhx_enum_value_eq(std::make_shared<MyEnum>(std::string(\"A\"), 0, std::vector<std::string>{}, std::vector<std::any>{}), nullptr)",
-			"C++ Type.enumEq should render imported zero-arg enum constructors through the enum carrier seam");
+			"__hxhx_enum_value_eq(std::make_shared<MyEnum>(std::string(\"A\"), 0, std::vector<std::string>{}, std::vector<std::any>{}), std::shared_ptr<MyEnum>{})",
+			"C++ Type.enumEq should give null the enum carrier type needed by the metadata helper");
 		assertTrue(typeEnumEqBare.indexOf("Type::enumEq(A, nullptr)") < 0,
 			"C++ Type.enumEq should not leak bare imported enum constructors into generated C++");
+		final typeEnumEqNullFirst = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"), [ENull, EIdent("A")]), myEnumScope);
+		assertContains(typeEnumEqNullFirst,
+			"__hxhx_enum_value_eq(std::shared_ptr<MyEnum>{}, std::make_shared<MyEnum>(std::string(\"A\"), 0, std::vector<std::string>{}, std::vector<std::any>{}))",
+			"C++ Type.enumEq should type a leading null from the enum carrier on the right");
+		final typeEnumEqNulls = @:privateAccess
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"), [ENull, ENull]), myEnumScope);
+		assertTrue(typeEnumEqNulls == "true", "C++ Type.enumEq should preserve upstream null/null equality without unresolved templates");
+		final directEnumNull = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("==", EIdent("value"), ENull), myEnumScope);
+		assertContains(directEnumNull, "value == nullptr", "C++ direct enum/null equality should stay on native shared_ptr comparison");
+		final directNullEnum = @:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("==", ENull, EIdent("value")), myEnumScope);
+		assertContains(directNullEnum, "nullptr == value", "C++ direct null/enum equality should stay on native shared_ptr comparison");
+		myEnumScope.localTypes.set("count", "int");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EBinop("==", EIdent("count"), ENull), myEnumScope) == "false",
+			"C++ non-nullable value/null equality controls should keep their existing constant result");
 		final typeEnumEqPayload = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Type"), "enumEq"),
 			[ECall(EIdent("D"), [EIdent("A")]), ECall(EIdent("D"), [EIdent("B")])]), myEnumScope);
 		assertContains(typeEnumEqPayload, "__hxhx_enum_value_eq(", "C++ Type.enumEq payload constructors should compare enum carrier metadata");
@@ -13577,7 +13597,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(enumCarrierMetadataBuilt.builtExecutable, "C++ enum carrier metadata runtime smoke should build executable");
 			final enumCarrierMetadataRun = commandOutput(enumCarrierMetadataBuilt.entryPath, []);
 			assertTrue(enumCarrierMetadataRun.code == 0, "C++ enum carrier metadata runtime smoke failed: " + enumCarrierMetadataRun.stderr);
-			assertTrue(enumCarrierMetadataRun.stdout == "A\nPair(3,x)\n[Pair(5,map) => 7]\nWrap(Pair(6,id))\ntrue\nfalse\nPair\n2\n2\n3\nx\nPair(3,x)\n3:x\nfalse\nInt\nString\n1\n",
+			assertTrue(enumCarrierMetadataRun.stdout == "A\nPair(3,x)\n[Pair(5,map) => 7]\nWrap(Pair(6,id))\ntrue\nfalse\nfalse\nfalse\ntrue\nfalse\nfalse\nPair\n2\n2\n3\nx\nPair(3,x)\n3:x\nfalse\nInt\nString\n1\n",
 				"unexpected C++ enum carrier metadata stdout: "
 				+ enumCarrierMetadataRun.stdout);
 

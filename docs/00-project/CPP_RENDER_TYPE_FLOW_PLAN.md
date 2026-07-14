@@ -6136,3 +6136,67 @@ snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or Oracle
 review was deliberately skipped because the exact mismatch, shared call-type
 consumer, existing enum classifier, and focused non-enum controls identify a
 bounded target-owned seam.
+
+## 2026-07-14 Enum Null Carrier Equality
+
+Follow-up bead `haxe_ocaml-le8is` removes the next strict native compiler
+error. In plain language, `Type.enumEq(value, null)` already knew that `value`
+was carried as `shared_ptr<MyEnum>`, but it passed the null operand to the C++
+metadata helper as an untyped `nullptr`. C++ could not infer the helper template
+from one enum pointer and one untyped null. The reverse operand order failed for
+the same reason.
+
+The existing `Type.enumEq` lowering now renders literal null as an empty value
+of the proven enum carrier, for example `std::shared_ptr<MyEnum>{}`. Two literal
+null arguments become the upstream-defined constant `true`. Direct `enum ==
+null` and `null == enum` expressions retain native `shared_ptr` comparison, and
+the general null-comparison and dynamic paths are unchanged. The existing
+metadata equality helper was not expanded and no runtime overload, fake class,
+or target stub was added.
+
+The repo-owned upstream oracle adds seven original observations: `Type.enumEq`
+with enum/null in both orders, null/null, direct enum/null in both orders, and
+nullable String controls in both orders. Haxe 4.3.7 reports false, false, true,
+false, false, true, and true respectively. Before the fix, the direct render
+regression reproduced the exact raw-`nullptr` helper call. It now pins the typed
+empty enum carrier in both orders and the constant null/null result. The
+generated native smoke builds and runs the same metadata, direct comparison,
+and null/null cases.
+
+The focused render smoke, generated native C++ build/run, enum carrier oracle,
+shell syntax check, local-declaration benchmark, official touched-file
+formatter, repo-wide Haxe format guard, Cpp type-flow plan guard, mega-file
+gravity guard, and `git diff --check` all pass. The 250-call local-declaration
+benchmark remained bounded: declared 0.00994 seconds, full 0.00286 seconds,
+callback full 0.03625 seconds, EReg full 0.00763 seconds, and traced 0.04448
+seconds. A fresh current-source compiler build completed in about 220 seconds
+and passed the current-source binary validator.
+
+The stage0-forbidden strict Cpp probe rendered all 384 reachable helpers and
+reached the host compiler in 385 seconds. The former errors at generated
+`TestMain.cpp:16174-16175` are gone; the retained source passes typed empty
+`shared_ptr<MyEnum>` values to the equality helper. `TestXML.testBasic` remained
+healthy at 0.450557 seconds, its complete class rendered in 4.245302 seconds,
+and `TestType.testEnumEq` rendered in 1.049789 seconds. The expected-red native
+build now begins at `TestMain.cpp:16496`: a zero-argument
+`new haxe.ds.GenericStack<Int>()` call reaches a generated factory that
+incorrectly requires the two arguments belonging to `GenericCell.new(elt,
+next)`. Follow-up `haxe_ocaml-n80xs` owns that generic-constructor arity seam
+before later generic container, abstract conversion, Map-access, and operator
+errors. The retained evidence is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-enum-null-carrier.log`.
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+does not compile or run the full unit program, so this internal frontier move
+does not change production readiness. `CppTargetCore.hx` is 26,473 lines and
+receives a documented, bounded helper in its existing `Type.enumEq` lowering.
+The 2,424-line `CppRuntimeSupport.hx` is unchanged, and broader extraction
+remains owned by `haxe_ocaml-36ec`.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite and permissively licensed stdlib source were read only as behavior and
+API oracles; committed generated OCaml snapshots were not edited.
+`thinking:xhigh` was not crossed, and GPT or Oracle review was deliberately
+skipped because the exact template error, upstream contract, existing carrier
+classifier, and focused null/non-null controls identify a bounded target-owned
+seam.
