@@ -284,6 +284,8 @@ Use this when you want the repo to function as a compiler-bootstrap example:
   - Selection-only probe (no emit/copy/verify): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-selection-only`
   - Wrapper-vs-native benchmark utility (policy compare + RSS summary):
     - `HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4 HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen`
+    - `warm` reuses generated output, not compiler-server state: every measured sample gets a fresh server matched to the selected upstream-Haxe wrapper/direct-binary policy.
+    - Both policy labels still describe upstream Haxe stage0; neither is native `hxhx`. The current peak-RSS column excludes the server process.
     - include compile knobs in benchmark runs:
       `HXHX_BOOTSTRAP_BENCH_STAGE0_NO_OPT=1`, `HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE=1`, `HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES=1`, and/or `HXHX_BOOTSTRAP_BENCH_STAGE0_OCAMLRUNPARAM=s=4M`
     - benchmark evidence artifact (local + CI-like worker/policy matrix):

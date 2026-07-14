@@ -10,6 +10,7 @@ const path = require('path')
 
 const repoRoot = process.cwd()
 const validator = path.join(repoRoot, 'scripts/ci/bootstrap-regen-benchmark-report.js')
+const runner = path.join(repoRoot, 'scripts/hxhx/bench-bootstrap-regen.sh')
 const digest = 'a'.repeat(64)
 
 function fail(message) {
@@ -105,15 +106,17 @@ function validReport() {
       threshold_policy: 'report-only',
       raw_runs_embedded: true,
       per_run_reports_retained: true,
+      stage0_policy_meaning: 'wrapper uses the upstream-Haxe launcher; native uses the direct upstream-Haxe executable. Neither label means native hxhx.',
+      peak_rss_scope: 'focused stage0 client process only; the repository Haxe server and total job memory are not included',
       scenario_definitions: {
         cold: 'full regeneration after removing prior generated output',
-        warm: 'forced incremental regeneration while reusing the repository Haxe server',
+        warm: 'forced incremental regeneration with primed generated output and a fresh policy-matched repository Haxe server for each sample',
         skip: 'unchanged-input check after one unmeasured fingerprint-priming regeneration',
         select: 'stage0 compiler selection only; no snapshot regeneration'
       },
       warmup_rules: {
         cold: 'none',
-        warm: 'no explicit warmup; repetitions reuse the repository Haxe server',
+        warm: 'one unmeasured forced incremental regeneration primes generated output; every measured sample starts and stops a fresh policy-matched repository Haxe server',
         skip: 'one unmeasured forced incremental regeneration before each measured unchanged-input check',
         select: 'none'
       }
@@ -147,11 +150,28 @@ function runValidator(report, expectedStatus, label, tmpDir) {
 }
 
 function main() {
+  const runnerSource = fs.readFileSync(runner, 'utf8')
+  const warmRunner = runnerSource.match(/run_scenario_warm\(\) \{([\s\S]*?)\n\}/)
+  if (!warmRunner) fail('could not locate run_scenario_warm in the benchmark runner')
+  if (!warmRunner[1].includes('--incremental --use-repo-server --force')) {
+    fail('warm samples must use incremental output with a policy-matched repo server')
+  }
+  if (warmRunner[1].includes('--keep-repo-server')) {
+    fail('warm samples must not share one Haxe server across measurements')
+  }
+
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hxhx-bootstrap-regen-report-fixtures-'))
   try {
     runValidator(validReport(), 0, 'valid', tmpDir)
+    const legacyReport = validReport()
+    legacyReport.measurement.scenario_definitions.warm = 'forced incremental regeneration while reusing the repository Haxe server'
+    legacyReport.measurement.warmup_rules.warm = 'no explicit warmup; repetitions reuse the repository Haxe server'
+    delete legacyReport.measurement.stage0_policy_meaning
+    delete legacyReport.measurement.peak_rss_scope
+    runValidator(legacyReport, 0, 'legacy-v1', tmpDir)
     const cases = [
       ['missing-provenance', report => { delete report.environment.cpu_model }],
+      ['missing-stage0-policy-meaning', report => { delete report.measurement.stage0_policy_meaning }],
       ['row-count-mismatch', report => { report.config.reps = 3 }],
       ['invalid-scenario', report => { report.runs[0].scenario = 'mystery' }],
       ['summary-mismatch', report => { report.summaries[0].elapsed_sec.median = 1 }],

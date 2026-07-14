@@ -20,10 +20,16 @@ const repoRoot = path.resolve(__dirname, '../..')
 
 const scenarioDefinitions = {
   cold: 'full regeneration after removing prior generated output',
-  warm: 'forced incremental regeneration while reusing the repository Haxe server',
+  warm: 'forced incremental regeneration with primed generated output and a fresh policy-matched repository Haxe server for each sample',
   skip: 'unchanged-input check after one unmeasured fingerprint-priming regeneration',
   select: 'stage0 compiler selection only; no snapshot regeneration'
 }
+const legacyScenarioDefinitionsV1 = {
+  ...scenarioDefinitions,
+  warm: 'forced incremental regeneration while reusing the repository Haxe server'
+}
+const stage0PolicyMeaning = 'wrapper uses the upstream-Haxe launcher; native uses the direct upstream-Haxe executable. Neither label means native hxhx.'
+const peakRssScope = 'focused stage0 client process only; the repository Haxe server and total job memory are not included'
 
 const expectedTsvHeader = [
   'scenario',
@@ -334,10 +340,12 @@ function buildReport(args) {
       threshold_policy: 'report-only',
       raw_runs_embedded: true,
       per_run_reports_retained: true,
+      stage0_policy_meaning: stage0PolicyMeaning,
+      peak_rss_scope: peakRssScope,
       scenario_definitions: scenarioDefinitions,
       warmup_rules: {
         cold: 'none',
-        warm: 'no explicit warmup; repetitions reuse the repository Haxe server',
+        warm: 'one unmeasured forced incremental regeneration primes generated output; every measured sample starts and stops a fresh policy-matched repository Haxe server',
         skip: 'one unmeasured forced incremental regeneration before each measured unchanged-input check',
         select: 'none'
       }
@@ -450,8 +458,25 @@ function validateReport(report) {
     if (measurement.threshold_policy !== 'report-only') errors.push('measurement.threshold_policy must be report-only')
     if (measurement.raw_runs_embedded !== true) errors.push('measurement.raw_runs_embedded must be true')
     if (measurement.per_run_reports_retained !== true) errors.push('measurement.per_run_reports_retained must be true')
-    if (!sameJson(measurement.scenario_definitions, scenarioDefinitions)) {
+    const usesCurrentScenarioDefinitions = sameJson(measurement.scenario_definitions, scenarioDefinitions)
+    const usesLegacyScenarioDefinitions = sameJson(measurement.scenario_definitions, legacyScenarioDefinitionsV1)
+    if (!usesCurrentScenarioDefinitions && !usesLegacyScenarioDefinitions) {
       errors.push('measurement.scenario_definitions must describe the supported scenarios')
+    }
+    if (usesCurrentScenarioDefinitions) {
+      if (measurement.stage0_policy_meaning !== stage0PolicyMeaning) {
+        errors.push('measurement.stage0_policy_meaning must explain that both policies use upstream Haxe')
+      }
+      if (measurement.peak_rss_scope !== peakRssScope) {
+        errors.push('measurement.peak_rss_scope must explain the measured process boundary')
+      }
+    } else {
+      if (measurement.stage0_policy_meaning !== undefined && measurement.stage0_policy_meaning !== stage0PolicyMeaning) {
+        errors.push('measurement.stage0_policy_meaning is invalid')
+      }
+      if (measurement.peak_rss_scope !== undefined && measurement.peak_rss_scope !== peakRssScope) {
+        errors.push('measurement.peak_rss_scope is invalid')
+      }
     }
     if (!measurement.warmup_rules || typeof measurement.warmup_rules !== 'object') {
       errors.push('measurement.warmup_rules must be an object')
@@ -610,6 +635,8 @@ function markdown(report) {
     `- Machine: \`${report.environment.os} ${report.environment.architecture}\` — \`${report.environment.cpu_model}\``,
     `- Toolchains: Haxe \`${report.environment.haxe_version}\`, OCaml \`${report.environment.ocaml_version}\`, Dune \`${report.environment.dune_version}\`, Node \`${report.environment.node_version}\``,
     '- Evidence level: `diagnostic / report-only`',
+    `- Stage0 policy labels: ${report.measurement.stage0_policy_meaning || stage0PolicyMeaning}`,
+    `- Peak RSS scope: ${report.measurement.peak_rss_scope || 'legacy report; see its source commit for the process boundary'}`,
     '',
     '| Scenario | Stage0 policy | Dune jobs | Runs | Median elapsed | Median emit | Peak RSS median |',
     '|---|---|---:|---:|---:|---:|---:|'

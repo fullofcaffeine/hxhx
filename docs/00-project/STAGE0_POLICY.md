@@ -109,6 +109,18 @@ HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 \
 npm run hxhx:bench:bootstrap-regen
 ```
 
+In this benchmark, `warm` means the generated output directory is prepared once
+and then reused. Each measured sample starts a fresh repo-owned Haxe server that
+matches its selected policy, then stops that server. We do not share compiler
+server state between samples because repeated Reflaxe snapshot emission through
+one server produced incomplete output in CI.
+
+The policy names are easy to overread: `wrapper` means the upstream Haxe `4.3.7`
+launcher, while `native` means its direct upstream-Haxe executable. Neither one
+is the future stage0-free native `hxhx` compiler. The reported `peak_rss_mb`
+covers the focused client process only; it does not include the persistent Haxe
+server or total job memory.
+
 The benchmark writes `results.tsv` with per-run policy + peak RSS columns:
 
 - `policy` (`wrapper` or `native`)

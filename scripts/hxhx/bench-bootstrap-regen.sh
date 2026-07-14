@@ -64,6 +64,10 @@ Outputs:
   <scenario>.<policy>.*.json          Low-level regeneration reports
   report.json                         Self-describing report with medians and provenance
 
+Warm means the generated output directory is primed once and reused. Every
+measured warm sample gets a fresh repo Haxe server that matches its selected
+wrapper/direct-Haxe policy; compiler-server state is not shared across samples.
+
 Examples:
   # Run warm + skip only (faster local loop)
   HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm,skip bash scripts/hxhx/bench-bootstrap-regen.sh
@@ -378,9 +382,23 @@ run_scenario_cold() {
 }
 
 run_scenario_warm() {
+	local prime_policy="$STAGE0_POLICY"
+	local prime_label="${STAGE0_POLICY:-default}"
+	if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
+		prime_policy="prefer-native"
+		prime_label="native"
+	fi
+	local prime_jobs="${DUNE_JOBS_LIST[0]}"
+	local prime_report="$REPORT_DIR/warm.prime.${prime_label}.jobs${prime_jobs}.json"
+	echo "Priming generated output for warm samples policy=$prime_label jobs=$prime_jobs (not measured)..."
+	bash "$SERVER_HELPER" stop >/dev/null 2>&1 || true
+	run_regen_with_policy "$prime_policy" "$prime_jobs" "$prime_report" --incremental --use-repo-server --force --no-verify >/dev/null
+
 	local rep
 	for rep in $(seq 1 "$REPS"); do
-		run_once_for_active_policies "warm" "$rep" --incremental --use-repo-server --keep-repo-server --force
+		# A fresh server keeps each sample independent and makes the policy label
+		# describe the compiler server that actually performs the work.
+		run_once_for_active_policies "warm" "$rep" --incremental --use-repo-server --force
 	done
 }
 
