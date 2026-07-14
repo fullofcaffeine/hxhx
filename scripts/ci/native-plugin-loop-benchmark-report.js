@@ -6,11 +6,25 @@
  * proof, so a failed build/load/runtime path cannot look like fast evidence.
  */
 
-const childProcess = require('child_process')
-const crypto = require('crypto')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+const {
+  isDigest,
+  isIsoTimestamp,
+  isNormalizedPath,
+  isSha,
+  nonEmptyString,
+  normalizeToolLabel,
+  numericSummary,
+  parseBoolean,
+  parseInteger,
+  readJson,
+  round,
+  runTool,
+  sameJson,
+  sha256
+} = require('./benchmark-report-common.js')
 
 const schema = 'hxhx.native-plugin-loop.v1'
 const artifactKind = 'native-plugin-author-loop'
@@ -35,40 +49,6 @@ function fail(message) {
   process.exit(1)
 }
 
-function nonEmptyString(value) {
-  return typeof value === 'string' && value.trim().length > 0
-}
-
-function isSha(value) {
-  return /^[0-9a-f]{40}$/i.test(value || '')
-}
-
-function isDigest(value) {
-  return /^[0-9a-f]{64}$/i.test(value || '')
-}
-
-function isNormalizedPath(value) {
-  return nonEmptyString(value)
-    && !path.isAbsolute(value)
-    && !/^[A-Za-z]:[\\/]/.test(value)
-    && !value.startsWith('~')
-    && !value.split(/[\\/]/).includes('..')
-}
-
-function parseBoolean(value, label) {
-  if (value === true || value === 'true' || value === '1' || value === 1) return true
-  if (value === false || value === 'false' || value === '0' || value === 0) return false
-  throw new Error(`${label} must be true/false or 1/0`)
-}
-
-function parseInteger(value, label, minimum = 0) {
-  const parsed = Number(value)
-  if (!Number.isInteger(parsed) || parsed < minimum) {
-    throw new Error(`${label} must be an integer >= ${minimum}`)
-  }
-  return parsed
-}
-
 function parseArgs(argv) {
   const args = { command: argv[0] || '' }
   for (let index = 1; index < argv.length; index += 1) {
@@ -87,55 +67,6 @@ function requireArg(args, key) {
   return args[key]
 }
 
-function median(values) {
-  const ordered = [...values].sort((left, right) => left - right)
-  const middle = Math.floor(ordered.length / 2)
-  if (ordered.length % 2 === 1) return ordered[middle]
-  return (ordered[middle - 1] + ordered[middle]) / 2
-}
-
-function numericSummary(values) {
-  return {
-    count: values.length,
-    min: Math.min(...values),
-    max: Math.max(...values),
-    median: median(values),
-    samples: [...values]
-  }
-}
-
-function round(value, places) {
-  const scale = 10 ** places
-  return Math.round(value * scale) / scale
-}
-
-function sha256(filePath) {
-  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')
-}
-
-function runTool(command, args, label) {
-  const result = childProcess.spawnSync(command, args, {
-    cwd: repoRoot,
-    encoding: 'utf8'
-  })
-  if (result.status !== 0) {
-    throw new Error(`could not read ${label} from ${command}: ${(result.stderr || result.stdout || '').trim()}`)
-  }
-  const output = `${result.stdout || ''}\n${result.stderr || ''}`.trim().split(/\r?\n/)[0]
-  if (!output) throw new Error(`${label} output was empty`)
-  return output
-}
-
-function normalizeToolLabel(value) {
-  if (!nonEmptyString(value)) return 'unknown'
-  if (!path.isAbsolute(value)) return value
-  const relative = path.relative(repoRoot, value)
-  if (relative && !relative.startsWith('..') && !path.isAbsolute(relative)) {
-    return relative.split(path.sep).join('/')
-  }
-  return path.basename(value)
-}
-
 function relativeEvidencePath(filePath, reportsDir) {
   const resolvedDir = path.resolve(reportsDir)
   const resolvedFile = path.resolve(filePath)
@@ -144,16 +75,6 @@ function relativeEvidencePath(filePath, reportsDir) {
     throw new Error(`proof summary must stay inside reports directory: ${filePath}`)
   }
   return relative.split(path.sep).join('/')
-}
-
-function readJson(filePath, label) {
-  let parsed
-  try {
-    parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'))
-  } catch (error) {
-    throw new Error(`could not read ${label} ${filePath}: ${error.message}`)
-  }
-  return parsed
 }
 
 function validateProofSummary(summary, route, commit, filePath) {
@@ -304,13 +225,13 @@ function buildReport(args) {
       architecture: os.arch(),
       cpu_model: cpu,
       node_version: process.version,
-      haxe_path: normalizeToolLabel(runTool('which', ['haxe'], 'Haxe path')),
-      haxe_version: runTool('haxe', ['--version'], 'Haxe version'),
-      ocamlc_version: runTool('ocamlc', ['-version'], 'OCaml bytecode compiler version'),
-      ocamlopt_version: runTool('ocamlopt', ['-version'], 'OCaml native compiler version'),
-      dune_version: runTool('dune', ['--version'], 'Dune version'),
+      haxe_path: normalizeToolLabel(runTool('which', ['haxe'], 'Haxe path', repoRoot), repoRoot),
+      haxe_version: runTool('haxe', ['--version'], 'Haxe version', repoRoot),
+      ocamlc_version: runTool('ocamlc', ['-version'], 'OCaml bytecode compiler version', repoRoot),
+      ocamlopt_version: runTool('ocamlopt', ['-version'], 'OCaml native compiler version', repoRoot),
+      dune_version: runTool('dune', ['--version'], 'Dune version', repoRoot),
       hxhx_artifact_kind: 'native',
-      hxhx_artifact_path: normalizeToolLabel(hxhxBin),
+      hxhx_artifact_path: normalizeToolLabel(hxhxBin, repoRoot),
       hxhx_artifact_commit: hxhxCommit,
       hxhx_artifact_sha256: sha256(hxhxBin)
     },
@@ -340,10 +261,6 @@ function buildReport(args) {
   }
 }
 
-function sameJson(left, right) {
-  return JSON.stringify(left) === JSON.stringify(right)
-}
-
 function validateNumericSummary(summary, values, owner, errors) {
   if (!summary || typeof summary !== 'object') {
     errors.push(`${owner} must be an object`)
@@ -360,8 +277,8 @@ function validateReport(report) {
   if (report.artifact_kind !== artifactKind) errors.push(`artifact_kind must be ${artifactKind}`)
   if (report.evidence_level !== 'diagnostic-report-only') errors.push('evidence_level must be diagnostic-report-only')
   if (report.marker !== passMarker) errors.push(`marker must be ${passMarker}`)
-  if (!nonEmptyString(report.recorded_at) || Number.isNaN(Date.parse(report.recorded_at))) {
-    errors.push('recorded_at must be an ISO-compatible timestamp')
+  if (!isIsoTimestamp(report.recorded_at)) {
+    errors.push('recorded_at must be a canonical ISO timestamp')
   }
 
   if (!isSha(report.git?.commit)) errors.push('git.commit must be a 40-character SHA')
