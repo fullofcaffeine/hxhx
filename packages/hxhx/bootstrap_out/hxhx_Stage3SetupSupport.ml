@@ -404,151 +404,106 @@ let collectMacroStdPaths = fun cwd -> let out = Obj.magic (HxArray.create ()) in
   )
 )
 
-let macroHostClassPaths = fun parsedClassPaths libsResolved cwd -> try let __fallback_result_103 = let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-  ignore (let _g = Obj.magic (let __arr_87 = HxArray.create () in __arr_87) in (
-    ignore (let _g1 = ref 0 in let _g2 = Obj.magic parsedClassPaths in while !_g1 < HxArray.length _g2 do ignore (let v = (HxArray.get (Obj.magic _g2) (!_g1) : string) in (
-      ignore (let __old_88 = !_g1 in let __new_89 = HxInt.add __old_88 1 in (
-        ignore (_g1 := __new_89);
-        __new_89
+let macroHostClassPaths = fun parsedClassPaths libsResolved cwd -> try let __fallback_result_99 = let base = Obj.magic (HxArray.map parsedClassPaths (fun cp -> Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (cp : string))) in let libs = Obj.magic (HxArray.create ()) in (
+  ignore (let _g = ref 0 in while !_g < HxArray.length libsResolved do ignore (let s = HxArray.get (Obj.magic libsResolved) (!_g) in (
+    ignore (let __old_87 = !_g in let __new_88 = HxInt.add __old_87 1 in (
+      ignore (_g := __new_88);
+      __new_88
+    ));
+    let _g2 = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get s "classPaths")) in while !_g2 < HxArray.length _g1 do ignore (let p = (HxArray.get (Obj.magic _g1) (!_g2) : string) in (
+      ignore (let __old_89 = !_g2 in let __new_90 = HxInt.add __old_89 1 in (
+        ignore (_g2 := __new_90);
+        __new_90
       ));
-      HxArray.push _g (Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (v : string))
-    )) done);
-    let __assign_90 = Obj.magic _g in (
-      tempArray := __assign_90;
-      __assign_90
-    )
-  ));
-  let libs = Obj.magic (HxArray.create ()) in (
-    ignore (let _g = ref 0 in while !_g < HxArray.length libsResolved do ignore (let s = HxArray.get (Obj.magic libsResolved) (!_g) in (
-      ignore (let __old_91 = !_g in let __new_92 = HxInt.add __old_91 1 in (
-        ignore (_g := __new_92);
-        __new_92
-      ));
-      let _g2 = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get s "classPaths")) in while !_g2 < HxArray.length _g1 do ignore (let p = (HxArray.get (Obj.magic _g1) (!_g2) : string) in (
-        ignore (let __old_93 = !_g2 in let __new_94 = HxInt.add __old_93 1 in (
-          ignore (_g2 := __new_94);
-          __new_94
+      HxArray.push libs (Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (p : string))
+    )) done
+  )) done);
+  let outAll = Obj.magic (HxArray.concat base libs) in let tempString = ref ("" : string) in let value = (HxSys.getEnv "HAXE_STD_PATH" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_91 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_91;
+      __assign_91
+    ) else if HxString.isNull (value : string) then let __assign_92 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_92;
+      __assign_92
+    ) else let __assign_93 = Obj.magic (value : string) in (
+      tempMaybeString := __assign_93;
+      __assign_93
+    ));
+    ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_94 = ("" : string) in (
+      tempString := __assign_94;
+      __assign_94
+    ) else let __assign_95 = (StringTools.trim (!tempMaybeString : string) : string) in (
+      tempString := __assign_95;
+      __assign_95
+    ));
+    ignore (if HxString.length (!tempString) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic outAll))) else ());
+    let stdAbs = (Haxe_io_Path.normalize (!tempString : string) : string) in let filtered = Obj.magic (HxArray.create ()) in (
+      ignore (let _g = ref 0 in while !_g < HxArray.length outAll do ignore (let cp = (HxArray.get (Obj.magic outAll) (!_g) : string) in (
+        ignore (let __old_96 = !_g in let __new_97 = HxInt.add __old_96 1 in (
+          ignore (_g := __new_97);
+          __new_97
         ));
-        HxArray.push libs (Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (p : string))
-      )) done
-    )) done);
-    let outAll = Obj.magic (HxArray.concat (!tempArray) libs) in let tempString = ref ("" : string) in let value = (HxSys.getEnv "HAXE_STD_PATH" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-      ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_95 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempMaybeString := __assign_95;
-        __assign_95
-      ) else if HxString.isNull (value : string) then let __assign_96 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempMaybeString := __assign_96;
-        __assign_96
-      ) else let __assign_97 = Obj.magic (value : string) in (
-        tempMaybeString := __assign_97;
-        __assign_97
-      ));
-      ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_98 = ("" : string) in (
-        tempString := __assign_98;
-        __assign_98
-      ) else let __assign_99 = (StringTools.trim (!tempMaybeString : string) : string) in (
-        tempString := __assign_99;
-        __assign_99
-      ));
-      ignore (if HxString.length (!tempString) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic outAll))) else ());
-      let stdAbs = (Haxe_io_Path.normalize (!tempString : string) : string) in let filtered = Obj.magic (HxArray.create ()) in (
-        ignore (let _g = ref 0 in while !_g < HxArray.length outAll do ignore (let cp = (HxArray.get (Obj.magic outAll) (!_g) : string) in (
-          ignore (let __old_100 = !_g in let __new_101 = HxInt.add __old_100 1 in (
-            ignore (_g := __new_101);
-            __new_101
-          ));
-          if not (HxString.equals (Haxe_io_Path.normalize (cp : string)) stdAbs) then ignore (HxArray.push filtered cp) else ()
-        )) done);
-        filtered
-      )
+        if not (HxString.equals (Haxe_io_Path.normalize (cp : string)) stdAbs) then ignore (HxArray.push filtered cp) else ()
+      )) done);
+      filtered
     )
   )
-) in Obj.magic __fallback_result_103 with
-  | HxRuntime.Hx_return __ret_102 -> Obj.obj __ret_102
+) in Obj.magic __fallback_result_99 with
+  | HxRuntime.Hx_return __ret_98 -> Obj.obj __ret_98
 
-let projectClassPaths = fun parsedClassPaths libsResolved cwd -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-  ignore (let _g = Obj.magic (let __arr_104 = HxArray.create () in __arr_104) in (
-    ignore (let _g1 = ref 0 in let _g2 = Obj.magic parsedClassPaths in while !_g1 < HxArray.length _g2 do ignore (let v = (HxArray.get (Obj.magic _g2) (!_g1) : string) in (
-      ignore (let __old_105 = !_g1 in let __new_106 = HxInt.add __old_105 1 in (
-        ignore (_g1 := __new_106);
-        __new_106
+let projectClassPaths = fun parsedClassPaths libsResolved cwd -> let base = Obj.magic (HxArray.map parsedClassPaths (fun cp -> Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (cp : string))) in let libs = Obj.magic (HxArray.create ()) in (
+  ignore (let _g = ref 0 in while !_g < HxArray.length libsResolved do ignore (let s = HxArray.get (Obj.magic libsResolved) (!_g) in (
+    ignore (let __old_100 = !_g in let __new_101 = HxInt.add __old_100 1 in (
+      ignore (_g := __new_101);
+      __new_101
+    ));
+    let _g2 = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get s "classPaths")) in while !_g2 < HxArray.length _g1 do ignore (let p = (HxArray.get (Obj.magic _g1) (!_g2) : string) in (
+      ignore (let __old_102 = !_g2 in let __new_103 = HxInt.add __old_102 1 in (
+        ignore (_g2 := __new_103);
+        __new_103
       ));
-      HxArray.push _g (Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (v : string))
-    )) done);
-    let __assign_107 = Obj.magic _g in (
-      tempArray := __assign_107;
-      __assign_107
-    )
-  ));
-  let libs = Obj.magic (HxArray.create ()) in (
-    ignore (let _g = ref 0 in while !_g < HxArray.length libsResolved do ignore (let s = HxArray.get (Obj.magic libsResolved) (!_g) in (
-      ignore (let __old_108 = !_g in let __new_109 = HxInt.add __old_108 1 in (
-        ignore (_g := __new_109);
-        __new_109
-      ));
-      let _g2 = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get s "classPaths")) in while !_g2 < HxArray.length _g1 do ignore (let p = (HxArray.get (Obj.magic _g1) (!_g2) : string) in (
-        ignore (let __old_110 = !_g2 in let __new_111 = HxInt.add __old_110 1 in (
-          ignore (_g2 := __new_111);
-          __new_111
+      HxArray.push libs (Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (p : string))
+    )) done
+  )) done);
+  let extra = Obj.magic (HxArray.map (Hxhx_macro_MacroState.listClassPaths ()) (fun cp -> Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (cp : string))) in let out = Obj.magic (HxArray.concat (HxArray.concat base libs) extra) in let generatedHxDir = (Hxhx_macro_MacroState.getGeneratedHxDir () : string) in (
+    ignore (if generatedHxDir != Obj.magic (HxRuntime.hx_null) && HxString.length generatedHxDir > 0 then ignore (let generatedNorm = (Haxe_io_Path.normalize (generatedHxDir : string) : string) in let hasGeneratedDir = ref false in (
+      ignore (let _g = ref 0 in try while !_g < HxArray.length out do try ignore (let cp = (HxArray.get (Obj.magic out) (!_g) : string) in (
+        ignore (let __old_104 = !_g in let __new_105 = HxInt.add __old_104 1 in (
+          ignore (_g := __new_105);
+          __new_105
         ));
-        HxArray.push libs (Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (p : string))
-      )) done
-    )) done);
-    let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _this = Obj.magic (Hxhx_macro_MacroState.listClassPaths ()) in (
-      ignore (let _g = Obj.magic (let __arr_112 = HxArray.create () in __arr_112) in (
-        ignore (let _g1 = ref 0 in while !_g1 < HxArray.length _this do ignore (let v = (HxArray.get (Obj.magic _this) (!_g1) : string) in (
-          ignore (let __old_113 = !_g1 in let __new_114 = HxInt.add __old_113 1 in (
-            ignore (_g1 := __new_114);
-            __new_114
+        if HxString.equals (Haxe_io_Path.normalize (cp : string)) generatedNorm then ignore ((
+          ignore (let __assign_106 = true in (
+            hasGeneratedDir := __assign_106;
+            __assign_106
           ));
-          HxArray.push _g (Hxhx_Stage3PathSupport.absFromCwd (cwd : string) (v : string))
-        )) done);
-        let __assign_115 = Obj.magic _g in (
-          tempArray1 := __assign_115;
-          __assign_115
-        )
-      ));
-      let out = Obj.magic (HxArray.concat (HxArray.concat (!tempArray) libs) (!tempArray1)) in let generatedHxDir = (Hxhx_macro_MacroState.getGeneratedHxDir () : string) in (
-        ignore (if generatedHxDir != Obj.magic (HxRuntime.hx_null) && HxString.length generatedHxDir > 0 then ignore (let generatedNorm = (Haxe_io_Path.normalize (generatedHxDir : string) : string) in let hasGeneratedDir = ref false in (
-          ignore (let _g = ref 0 in try while !_g < HxArray.length out do try ignore (let cp = (HxArray.get (Obj.magic out) (!_g) : string) in (
-            ignore (let __old_116 = !_g in let __new_117 = HxInt.add __old_116 1 in (
-              ignore (_g := __new_117);
-              __new_117
+          raise (HxRuntime.Hx_break)
+        )) else ()
+      )) with
+        | HxRuntime.Hx_continue -> () done with
+        | HxRuntime.Hx_break -> ());
+      if not (!hasGeneratedDir) then ignore (HxArray.push out generatedHxDir) else ()
+    )) else ());
+    let inferredStd = (Hxhx_Stage1Compiler.stage1args_inferStdRootForCwd (cwd : string) : string) in (
+      ignore (if HxString.length inferredStd > 0 then ignore (let inferredNorm = (Haxe_io_Path.normalize (inferredStd : string) : string) in let hasStd = ref false in (
+        ignore (let _g = ref 0 in try while !_g < HxArray.length out do try ignore (let cp = (HxArray.get (Obj.magic out) (!_g) : string) in (
+          ignore (let __old_107 = !_g in let __new_108 = HxInt.add __old_107 1 in (
+            ignore (_g := __new_108);
+            __new_108
+          ));
+          if HxString.equals (Haxe_io_Path.normalize (cp : string)) inferredNorm then ignore ((
+            ignore (let __assign_109 = true in (
+              hasStd := __assign_109;
+              __assign_109
             ));
-            if HxString.equals (Haxe_io_Path.normalize (cp : string)) generatedNorm then ignore ((
-              ignore (let __assign_118 = true in (
-                hasGeneratedDir := __assign_118;
-                __assign_118
-              ));
-              raise (HxRuntime.Hx_break)
-            )) else ()
-          )) with
-            | HxRuntime.Hx_continue -> () done with
-            | HxRuntime.Hx_break -> ());
-          if not (!hasGeneratedDir) then ignore (HxArray.push out generatedHxDir) else ()
-        )) else ());
-        let inferredStd = (Hxhx_Stage1Compiler.stage1args_inferStdRootForCwd (cwd : string) : string) in (
-          ignore (if HxString.length inferredStd > 0 then ignore (let inferredNorm = (Haxe_io_Path.normalize (inferredStd : string) : string) in let hasStd = ref false in (
-            ignore (let _g = ref 0 in try while !_g < HxArray.length out do try ignore (let cp = (HxArray.get (Obj.magic out) (!_g) : string) in (
-              ignore (let __old_119 = !_g in let __new_120 = HxInt.add __old_119 1 in (
-                ignore (_g := __new_120);
-                __new_120
-              ));
-              if HxString.equals (Haxe_io_Path.normalize (cp : string)) inferredNorm then ignore ((
-                ignore (let __assign_121 = true in (
-                  hasStd := __assign_121;
-                  __assign_121
-                ));
-                raise (HxRuntime.Hx_break)
-              )) else ()
-            )) with
-              | HxRuntime.Hx_continue -> () done with
-              | HxRuntime.Hx_break -> ());
-            if not (!hasStd) then ignore (HxArray.push out inferredStd) else ()
-          )) else ());
-          ResolverStage.withImplicitCwdClassPath (Obj.magic out) (cwd : string)
-        )
-      )
+            raise (HxRuntime.Hx_break)
+          )) else ()
+        )) with
+          | HxRuntime.Hx_continue -> () done with
+          | HxRuntime.Hx_break -> ());
+        if not (!hasStd) then ignore (HxArray.push out inferredStd) else ()
+      )) else ());
+      ResolverStage.withImplicitCwdClassPath (Obj.magic out) (cwd : string)
     )
   )
 )
@@ -558,9 +513,9 @@ let buildDefinesMap = fun allDefines backendTargetDefine backendId -> let define
   ignore (HxMap.set_string definesMap backendTargetDefine "1");
   let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefineNames ()) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let n = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-      ignore (let __old_122 = !_g in let __new_123 = HxInt.add __old_122 1 in (
-        ignore (_g := __new_123);
-        __new_123
+      ignore (let __old_110 = !_g in let __new_111 = HxInt.add __old_110 1 in (
+        ignore (_g := __new_111);
+        __new_111
       ));
       HxMap.set_string definesMap n (Hxhx_macro_MacroState.definedValue (n : string))
     )) done);

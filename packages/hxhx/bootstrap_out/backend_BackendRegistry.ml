@@ -37,7 +37,7 @@ let buildBuiltinRegistrations = fun () -> let registrations = Obj.magic (HxArray
 
 let builtinRegistrations = Obj.magic (buildBuiltinRegistrations ())
 
-let dynamicRegistrations = Obj.magic (let __arr_33 = HxArray.create () in __arr_33)
+let dynamicRegistrations = Obj.magic (let __arr_27 = HxArray.create () in __arr_27)
 
 let allRegistrations = fun () -> HxArray.concat builtinRegistrations dynamicRegistrations
 
@@ -49,51 +49,35 @@ let sortedForTarget = fun targetId -> let tempString = ref ("" : string) in (
     tempString := __assign_4;
     __assign_4
   ));
-  let _this = Obj.magic (allRegistrations ()) in let _g = Obj.magic (let __arr_5 = HxArray.create () in __arr_5) in let _g1 = ref 0 in (
-    ignore (while !_g1 < HxArray.length _this do ignore (let v = HxArray.get (Obj.magic _this) (!_g1) in (
-      ignore (let __old_6 = !_g1 in let __new_7 = HxInt.add __old_6 1 in (
-        ignore (_g1 := __new_7);
-        __new_7
-      ));
-      if HxString.equals (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get v "descriptor")) "id")) (!tempString) then ignore (HxArray.push _g v) else ()
-    )) done);
-    ignore (HxArray.sort _g (fun a b -> try let __fallback_result_12 = (
+  let candidates = Obj.magic (HxArray.filter (allRegistrations ()) (fun r -> HxString.equals (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get r "descriptor")) "id")) (!tempString))) in (
+    ignore (HxArray.sort candidates (fun a b -> try let __fallback_result_9 = (
       ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority") <> Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority") then raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority"))))) else ());
       let tempResult = ref (0 : int) in (
-        ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") < Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_8 = -1 in (
-          tempResult := __assign_8;
-          __assign_8
-        ) else if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") > Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_9 = 1 in (
-          tempResult := __assign_9;
-          __assign_9
-        ) else let __assign_10 = 0 in (
-          tempResult := __assign_10;
-          __assign_10
+        ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") < Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_5 = -1 in (
+          tempResult := __assign_5;
+          __assign_5
+        ) else if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") > Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_6 = 1 in (
+          tempResult := __assign_6;
+          __assign_6
+        ) else let __assign_7 = 0 in (
+          tempResult := __assign_7;
+          __assign_7
         ));
         !tempResult
       )
-    ) in Obj.magic __fallback_result_12 with
-      | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11));
-    _g
+    ) in Obj.magic __fallback_result_9 with
+      | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8));
+    candidates
   )
 )
 
-let listDescriptors = fun () -> let _this = Obj.magic (allRegistrations ()) in let _g = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in let _g1 = ref 0 in (
-  ignore (while !_g1 < HxArray.length _this do ignore (let v = HxArray.get (Obj.magic _this) (!_g1) in (
-    ignore (let __old_14 = !_g1 in let __new_15 = HxInt.add __old_14 1 in (
-      ignore (_g1 := __new_15);
-      __new_15
-    ));
-    HxArray.push _g (Obj.obj (HxAnon.get v "descriptor"))
-  )) done);
-  _g
-)
+let listDescriptors = fun () -> HxArray.map (allRegistrations ()) (fun r -> Obj.obj (HxAnon.get r "descriptor"))
 
 let supportedTargetIds = fun () -> let seen = Obj.magic (HxMap.create_string ()) in let ids = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (allRegistrations ()) in (
   ignore (try while !_g < HxArray.length _g1 do try ignore (let r = HxArray.get (Obj.magic _g1) (!_g) in (
-    ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
-      ignore (_g := __new_17);
-      __new_17
+    ignore (let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (
+      ignore (_g := __new_11);
+      __new_11
     ));
     let id = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get r "descriptor")) "id") : string) in (
       ignore (if HxMap.exists_string seen id then raise (HxRuntime.Hx_continue) else ());
@@ -115,9 +99,9 @@ let register = fun spec -> ignore ((
       ignore (if compatibilityError != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr compatibilityError) ["Dynamic"; "String"]) else ());
       let _g = ref 0 in let _g1 = Obj.magic (allRegistrations ()) in (
         ignore (while !_g < HxArray.length _g1 do ignore (let existing = HxArray.get (Obj.magic _g1) (!_g) in (
-          ignore (let __old_18 = !_g in let __new_19 = HxInt.add __old_18 1 in (
-            ignore (_g := __new_19);
-            __new_19
+          ignore (let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
+            ignore (_g := __new_13);
+            __new_13
           ));
           if HxString.equals (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get existing "descriptor")) "implId")) (Obj.obj (HxAnon.get d "implId")) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("duplicate backend registration: descriptor.implId already registered: " ^ HxString.toStdString (Obj.obj (HxAnon.get d "implId")))) ["Dynamic"; "String"]) else ()
         )) done);
@@ -127,62 +111,62 @@ let register = fun spec -> ignore ((
   )
 ))
 
-let registerProvider = fun regs -> try let __fallback_result_23 = (
+let registerProvider = fun regs -> try let __fallback_result_17 = (
   ignore (if regs == Obj.magic (HxRuntime.hx_null) || HxArray.length regs = 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length regs do ignore (let reg = HxArray.get (Obj.magic regs) (!_g) in (
-      ignore (let __old_20 = !_g in let __new_21 = HxInt.add __old_20 1 in (
-        ignore (_g := __new_21);
-        __new_21
+      ignore (let __old_14 = !_g in let __new_15 = HxInt.add __old_14 1 in (
+        ignore (_g := __new_15);
+        __new_15
       ));
       register reg
     )) done);
     HxArray.length regs
   )
-) in Obj.magic __fallback_result_23 with
-  | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
+) in Obj.magic __fallback_result_17 with
+  | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16
 
 let clearDynamicRegistrations = fun () -> ignore (HxArray.splice dynamicRegistrations 0 (HxArray.length dynamicRegistrations))
 
 let descriptorForTarget = fun targetId -> let candidates = Obj.magic (sortedForTarget (targetId : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if HxArray.length candidates = 0 then let __assign_24 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_24;
-    __assign_24
-  ) else let __assign_25 = Obj.magic (Obj.obj (HxAnon.get (HxArray.get (Obj.magic candidates) 0) "descriptor")) in (
-    tempResult := __assign_25;
-    __assign_25
+  ignore (if HxArray.length candidates = 0 then let __assign_18 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_18;
+    __assign_18
+  ) else let __assign_19 = Obj.magic (Obj.obj (HxAnon.get (HxArray.get (Obj.magic candidates) 0) "descriptor")) in (
+    tempResult := __assign_19;
+    __assign_19
   ));
   Obj.magic (!tempResult)
 )
 
 let createForTarget = fun targetId -> let candidates = Obj.magic (sortedForTarget (targetId : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Backend_IBackend.t) in (
-  ignore (if HxArray.length candidates = 0 then let __assign_26 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-    tempResult := __assign_26;
-    __assign_26
-  ) else let __assign_27 = Obj.magic (Obj.magic (Obj.obj (HxAnon.get (HxArray.get (Obj.magic candidates) 0) "create") ())) in (
-    tempResult := __assign_27;
-    __assign_27
+  ignore (if HxArray.length candidates = 0 then let __assign_20 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_20;
+    __assign_20
+  ) else let __assign_21 = Obj.magic (Obj.magic (Obj.obj (HxAnon.get (HxArray.get (Obj.magic candidates) 0) "create") ())) in (
+    tempResult := __assign_21;
+    __assign_21
   ));
   !tempResult
 )
 
-let requireForTarget = fun targetId -> try let __fallback_result_32 = let backend = Obj.magic (createForTarget (targetId : string)) in (
+let requireForTarget = fun targetId -> try let __fallback_result_26 = let backend = Obj.magic (createForTarget (targetId : string)) in (
   ignore (if backend != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic backend))) else ());
   let supported = Obj.magic (supportedTargetIds ()) in (
     ignore (HxArray.sort supported (fun a b -> let tempResult = ref (0 : int) in (
-      ignore (if a < b then let __assign_28 = -1 in (
-        tempResult := __assign_28;
-        __assign_28
-      ) else if a > b then let __assign_29 = 1 in (
-        tempResult := __assign_29;
-        __assign_29
-      ) else let __assign_30 = 0 in (
-        tempResult := __assign_30;
-        __assign_30
+      ignore (if a < b then let __assign_22 = -1 in (
+        tempResult := __assign_22;
+        __assign_22
+      ) else if a > b then let __assign_23 = 1 in (
+        tempResult := __assign_23;
+        __assign_23
+      ) else let __assign_24 = 0 in (
+        tempResult := __assign_24;
+        __assign_24
       ));
       !tempResult
     )));
     HxType.hx_throw_typed_rtti (Obj.repr (((("unknown Stage3 backend: " ^ HxString.toStdString targetId) ^ " (supported: ") ^ HxString.toStdString (HxArray.join supported ", " (fun x -> x))) ^ ")")) ["Dynamic"; "String"]
   )
-) in Obj.magic __fallback_result_32 with
-  | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31
+) in Obj.magic __fallback_result_26 with
+  | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25

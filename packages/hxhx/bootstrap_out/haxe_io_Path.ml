@@ -126,78 +126,78 @@ let directory = fun path -> try let __fallback_result_23 = let s = Obj.magic (cr
 ) in Obj.magic __fallback_result_23 with
   | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
 
-let normalize = fun path -> try let __fallback_result_51 = let slash = ("/" : string) in let path = (HxArray.join (HxString.split path "\\") slash (fun x -> x) : string) in (
+let normalize = fun path -> try let __fallback_result_47 = let slash = ("/" : string) in let path = (HxArray.join (HxString.split path "\\") slash (fun x -> x) : string) in (
   ignore (if HxString.equals path slash then raise (HxRuntime.Hx_return (Obj.repr (slash : string))) else ());
-  let target = Obj.magic (let __arr_33 = HxArray.create () in __arr_33) in let _g = ref 0 in let _g1 = Obj.magic (HxString.split path slash) in (
+  let target = Obj.magic (let __arr_29 = HxArray.create () in __arr_29) in let _g = ref 0 in let _g1 = Obj.magic (HxString.split path slash) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let token = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-      ignore (let __old_34 = !_g in let __new_35 = HxInt.add __old_34 1 in (
-        ignore (_g := __new_35);
-        __new_35
+      ignore (let __old_30 = !_g in let __new_31 = HxInt.add __old_30 1 in (
+        ignore (_g := __new_31);
+        __new_31
       ));
-      if HxString.equals token ".." && HxArray.length target > 0 && not (HxString.equals (HxArray.get (Obj.magic target) (HxInt.sub (HxArray.length target) 1)) "..") then ignore (HxArray.pop target ()) else ignore (if HxString.equals token "" then ignore (if HxArray.length target > 0 || (let __nullable_36 = HxString.charCodeAt path 0 in if __nullable_36 == HxRuntime.hx_null then false else Obj.obj __nullable_36 = 47) then ignore (HxArray.push target token) else ()) else ignore (if not (HxString.equals token ".") then ignore (HxArray.push target token) else ()))
+      if HxString.equals token ".." && HxArray.length target > 0 && not (HxString.equals (HxArray.get (Obj.magic target) (HxInt.sub (HxArray.length target) 1)) "..") then ignore (HxArray.pop target ()) else ignore (if HxString.equals token "" then ignore (if HxArray.length target > 0 || (let __nullable_32 = HxString.charCodeAt path 0 in if __nullable_32 == HxRuntime.hx_null then false else Obj.obj __nullable_32 = 47) then ignore (HxArray.push target token) else ()) else ignore (if not (HxString.equals token ".") then ignore (HxArray.push target token) else ()))
     )) done);
     let tmp = (HxArray.join target slash (fun x -> x) : string) in let acc = Obj.magic (StringBuf.create ()) in let colon = ref false in let slashes = ref false in let _g_offset = ref 0 in (
       ignore (while !_g_offset < HxString.length tmp do ignore (let tempNumber = ref (0 : int) in (
         ignore (let tempNumber1 = ref (0 : int) in (
-          ignore (let s = (tmp : string) in let index = let __old_37 = !_g_offset in let __new_38 = HxInt.add __old_37 1 in (
-            ignore (_g_offset := __new_38);
-            __old_37
+          ignore (let s = (tmp : string) in let index = let __old_33 = !_g_offset in let __new_34 = HxInt.add __old_33 1 in (
+            ignore (_g_offset := __new_34);
+            __old_33
           ) in let c = ref (Obj.obj (HxAnon.get (Obj.repr s) "cca") index) in (
-            ignore (if !c >= 55296 && !c <= 56319 then ignore (let __assign_39 = HxInt.logor (HxInt.shl (HxInt.sub (!c) 55232) 10) (HxInt.logand (Obj.obj (HxAnon.get (Obj.repr s) "cca") (HxInt.add index 1)) 1023) in (
-              c := __assign_39;
-              __assign_39
+            ignore (if !c >= 55296 && !c <= 56319 then ignore (let __assign_35 = HxInt.logor (HxInt.shl (HxInt.sub (!c) 55232) 10) (HxInt.logand (Obj.obj (HxAnon.get (Obj.repr s) "cca") (HxInt.add index 1)) 1023) in (
+              c := __assign_35;
+              __assign_35
             )) else ());
-            let __assign_40 = !c in (
-              tempNumber1 := __assign_40;
-              __assign_40
+            let __assign_36 = !c in (
+              tempNumber1 := __assign_36;
+              __assign_36
             )
           ));
           let c = !tempNumber1 in (
-            ignore (if c >= 65536 then ignore (let __old_41 = !_g_offset in let __new_42 = HxInt.add __old_41 1 in (
-              ignore (_g_offset := __new_42);
-              __old_41
+            ignore (if c >= 65536 then ignore (let __old_37 = !_g_offset in let __new_38 = HxInt.add __old_37 1 in (
+              ignore (_g_offset := __new_38);
+              __old_37
             )) else ());
-            let __assign_43 = c in (
-              tempNumber := __assign_43;
-              __assign_43
+            let __assign_39 = c in (
+              tempNumber := __assign_39;
+              __assign_39
             )
           )
         ));
         let c = !tempNumber in match c with
-          | 47 -> ignore (if not (!colon) then ignore (let __assign_46 = true in (
-            slashes := __assign_46;
-            __assign_46
+          | 47 -> ignore (if not (!colon) then ignore (let __assign_42 = true in (
+            slashes := __assign_42;
+            __assign_42
           )) else ignore (let i = c in (
-            ignore (let __assign_47 = false in (
-              colon := __assign_47;
-              __assign_47
+            ignore (let __assign_43 = false in (
+              colon := __assign_43;
+              __assign_43
             ));
             ignore (if !slashes then ignore ((
               ignore (StringBuf.add (Obj.magic acc) (Obj.repr "/"));
-              let __assign_48 = false in (
-                slashes := __assign_48;
-                __assign_48
+              let __assign_44 = false in (
+                slashes := __assign_44;
+                __assign_44
               )
             )) else ());
             StringBuf.addChar (Obj.magic acc) i
           )))
           | 58 -> ignore ((
             ignore (StringBuf.add (Obj.magic acc) (Obj.repr ":"));
-            let __assign_49 = true in (
-              colon := __assign_49;
-              __assign_49
+            let __assign_45 = true in (
+              colon := __assign_45;
+              __assign_45
             )
           ))
           | _ -> ignore (let i = c in (
-            ignore (let __assign_44 = false in (
-              colon := __assign_44;
-              __assign_44
+            ignore (let __assign_40 = false in (
+              colon := __assign_40;
+              __assign_40
             ));
             ignore (if !slashes then ignore ((
               ignore (StringBuf.add (Obj.magic acc) (Obj.repr "/"));
-              let __assign_45 = false in (
-                slashes := __assign_45;
-                __assign_45
+              let __assign_41 = false in (
+                slashes := __assign_41;
+                __assign_41
               )
             )) else ());
             StringBuf.addChar (Obj.magic acc) i
@@ -206,65 +206,52 @@ let normalize = fun path -> try let __fallback_result_51 = let slash = ("/" : st
       StringBuf.toString (Obj.magic acc) ()
     )
   )
-) in Obj.magic __fallback_result_51 with
-  | HxRuntime.Hx_return __ret_50 -> Obj.obj __ret_50
+) in Obj.magic __fallback_result_47 with
+  | HxRuntime.Hx_return __ret_46 -> Obj.obj __ret_46
 
-let addTrailingSlash = fun path -> try let __fallback_result_57 = (
+let addTrailingSlash = fun path -> try let __fallback_result_53 = (
   ignore (if HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr ("/" : string))) else ());
   let c1 = HxString.lastIndexOf path "/" (HxString.length path) in let c2 = HxString.lastIndexOf path "\\" (HxString.length path) in let tempResult = ref ("" : string) in (
-    ignore (if c1 < c2 then if c2 <> HxInt.sub (HxString.length path) 1 then let __assign_52 = (HxString.toStdString path ^ "\\" : string) in (
-      tempResult := __assign_52;
-      __assign_52
-    ) else let __assign_53 = (path : string) in (
-      tempResult := __assign_53;
-      __assign_53
-    ) else if c1 <> HxInt.sub (HxString.length path) 1 then let __assign_54 = (HxString.toStdString path ^ "/" : string) in (
-      tempResult := __assign_54;
-      __assign_54
-    ) else let __assign_55 = (path : string) in (
-      tempResult := __assign_55;
-      __assign_55
+    ignore (if c1 < c2 then if c2 <> HxInt.sub (HxString.length path) 1 then let __assign_48 = (HxString.toStdString path ^ "\\" : string) in (
+      tempResult := __assign_48;
+      __assign_48
+    ) else let __assign_49 = (path : string) in (
+      tempResult := __assign_49;
+      __assign_49
+    ) else if c1 <> HxInt.sub (HxString.length path) 1 then let __assign_50 = (HxString.toStdString path ^ "/" : string) in (
+      tempResult := __assign_50;
+      __assign_50
+    ) else let __assign_51 = (path : string) in (
+      tempResult := __assign_51;
+      __assign_51
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_57 with
-  | HxRuntime.Hx_return __ret_56 -> Obj.obj __ret_56
+) in Obj.magic __fallback_result_53 with
+  | HxRuntime.Hx_return __ret_52 -> Obj.obj __ret_52
 
-let join = fun paths -> try let __fallback_result_32 = let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-  ignore (let _g = Obj.magic (let __arr_24 = HxArray.create () in __arr_24) in (
-    ignore (let _g1 = ref 0 in while !_g1 < HxArray.length paths do ignore (let v = (HxArray.get (Obj.magic paths) (!_g1) : string) in (
-      ignore (let __old_25 = !_g1 in let __new_26 = HxInt.add __old_25 1 in (
-        ignore (_g1 := __new_26);
-        __new_26
-      ));
-      if v != Obj.magic (HxRuntime.hx_null) && not (HxString.equals v "") then ignore (HxArray.push _g v) else ()
-    )) done);
-    let __assign_27 = Obj.magic _g in (
-      tempArray := __assign_27;
-      __assign_27
-    )
-  ));
-  ignore (if HxArray.length (!tempArray) = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  let path = ref (HxArray.get (Obj.magic (!tempArray)) 0 : string) in (
-    ignore (let _g = ref 1 in let _g1 = HxArray.length (!tempArray) in while !_g < _g1 do ignore (let i = let __old_28 = !_g in let __new_29 = HxInt.add __old_28 1 in (
-      ignore (_g := __new_29);
-      __old_28
+let join = fun paths -> try let __fallback_result_28 = let paths2 = Obj.magic (HxArray.filter paths (fun s -> s != Obj.magic (HxRuntime.hx_null) && not (HxString.equals s ""))) in (
+  ignore (if HxArray.length paths2 = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  let path = ref (HxArray.get (Obj.magic paths2) 0 : string) in let _g = ref 1 in let _g1 = HxArray.length paths2 in (
+    ignore (while !_g < _g1 do ignore (let i = let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
+      ignore (_g := __new_25);
+      __old_24
     ) in (
-      ignore (let __assign_30 = (addTrailingSlash (!path : string) : string) in (
-        path := __assign_30;
-        __assign_30
+      ignore (let __assign_26 = (addTrailingSlash (!path : string) : string) in (
+        path := __assign_26;
+        __assign_26
       ));
-      path := HxString.toStdString (!path) ^ HxString.toStdString (HxArray.get (Obj.magic (!tempArray)) i)
+      path := HxString.toStdString (!path) ^ HxString.toStdString (HxArray.get (Obj.magic paths2) i)
     )) done);
     normalize (!path : string)
   )
-) in Obj.magic __fallback_result_32 with
-  | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31
+) in Obj.magic __fallback_result_28 with
+  | HxRuntime.Hx_return __ret_27 -> Obj.obj __ret_27
 
-let isAbsolute = fun path -> try let __fallback_result_59 = (
+let isAbsolute = fun path -> try let __fallback_result_55 = (
   ignore (if StringTools.startsWith (path : string) ("/" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxString.equals (HxString.charAt path 1) ":" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if StringTools.startsWith (path : string) ("\\\\" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   false
-) in Obj.magic __fallback_result_59 with
-  | HxRuntime.Hx_return __ret_58 -> Obj.obj __ret_58
+) in Obj.magic __fallback_result_55 with
+  | HxRuntime.Hx_return __ret_54 -> Obj.obj __ret_54

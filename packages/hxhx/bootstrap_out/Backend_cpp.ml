@@ -4,6 +4,7 @@ module CppLocalCallScanner = Backend_cpp_CppLocalCallScanner
 module CppLocalTypeInference = Backend_cpp_CppLocalTypeInference
 module CppMacroExpr = Backend_cpp_CppMacroExpr
 module CppNativeBackend = Backend_cpp_CppNativeBackend
+module CppPrepLocalInferenceGuard = Backend_cpp_CppPrepLocalInferenceGuard
 module CppRuntimeSupport = Backend_cpp_CppRuntimeSupport
 module CppTargetCore = Backend_cpp_CppTargetCore
 module CppTypeModel = Backend_cpp_CppTypeModel
