@@ -1,5 +1,9 @@
 package hxhx.macro;
 
+import hxhxmacrohost.NativeMacroModuleDynlink;
+import hxhxmacrohost.NativeMacroModuleHost;
+import hxhxmacrohost.NativeMacroModuleHostAbi;
+
 /**
 	In-process macro runtime session implementation.
 
@@ -28,11 +32,15 @@ class InProcMacroSession {
 	final onGenerateHooks:Array<Void->Void>;
 	final afterGenerateHooks:Array<Void->Void>;
 	final effectSink:InProcMacroEffectSink;
+	final nativeExpressions:haxe.ds.StringMap<Bool>;
+	var nativeModuleTouched:Bool;
 
 	public function new() {
 		afterTypingHooks = [];
 		onGenerateHooks = [];
 		afterGenerateHooks = [];
+		nativeExpressions = new haxe.ds.StringMap();
+		nativeModuleTouched = false;
 		effectSink = {
 			setDefine: setDefine,
 			definedValue: definedValue,
@@ -62,6 +70,8 @@ class InProcMacroSession {
 		final generated = InProcGeneratedEntrypoints.run(e, effectSink);
 		if (generated != null)
 			return generated;
+		if (nativeExpressions.exists(e))
+			return NativeMacroModuleHost.runExpr(e);
 
 		if (!isBuiltinExpr(e))
 			return "ran:" + e;
@@ -158,12 +168,29 @@ class InProcMacroSession {
 		final generated = InProcGeneratedEntrypoints.expandExpr(e);
 		if (generated != null)
 			return generated;
+		if (nativeExpressions.exists(e))
+			return NativeMacroModuleHost.runExpr(e);
 		return switch (e) {
 			case "unit.HelperMacros.getCompilationDate()", "HelperMacros.getCompilationDate()":
 				"\"<compilation-date>\"";
 			case _:
 				throw "macro.expandExpr: expr not registered: " + e;
 		}
+	}
+
+	/** Load one validated project-macro plugin into this in-process compilation session. **/
+	public function loadNativeModule(modulePath:String, pluginId:String):Array<String> {
+		nativeModuleTouched = true;
+		final snapshot = NativeMacroModuleDynlink.loadAndCapture(modulePath, pluginId);
+		final expressions = NativeMacroModuleHostAbi.exprsForPlugin(snapshot, pluginId, modulePath);
+		for (expr in expressions) {
+			if (isBuiltinExpr(expr) || InProcGeneratedEntrypoints.handles(expr))
+				throw "native macro module cannot override built-in/generated expression `" + expr + "`";
+			if (nativeExpressions.exists(expr))
+				throw "native macro module expression already loaded: " + expr;
+			nativeExpressions.set(expr, true);
+		}
+		return expressions;
 	}
 
 	public function setDefine(name:String, value:String):Void {
@@ -204,7 +231,12 @@ class InProcMacroSession {
 		MacroState.registerHook("afterGenerate", id);
 	}
 
-	public function close():Void {}
+	public function close():Void {
+		if (nativeModuleTouched) {
+			NativeMacroModuleHost.clear();
+			nativeModuleTouched = false;
+		}
+	}
 
 	static function parseIncludeStringLiteralArg(s:String):Null<String> {
 		if (s == null)

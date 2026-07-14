@@ -30,6 +30,23 @@ import hxhx.runtime.NullableRuntimeString;
 	  `hxhx-macro-host` until both modes share a stronger manifest/story.
 **/
 class InProcGeneratedEntrypoints {
+	public static function handles(expr:String):Bool {
+		final e = StringTools.trim(expr == null ? "" : expr);
+		if (e.length == 0)
+			return false;
+		if (parseStringLiteralCallArg(e, "hxhxmacros.ArgsMacros.setArg") != null)
+			return true;
+		return switch (e) {
+			case "Macro.init()", "hxhxmacros.ExternalMacros.external()", "hxhxmacros.BuildFieldMacros.addGeneratedField()",
+				"hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()", "hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn()",
+				"hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar()", "hxhxmacros.HaxelibInitMacros.init()", "hxhxmacros.PluginFixtureMacros.init()",
+				"hxhxmacros.ExprMacroShim.hello()":
+				true;
+			case _:
+				false;
+		};
+	}
+
 	public static function run(expr:String, sink:InProcMacroEffectSink):Null<String> {
 		final e = StringTools.trim(expr == null ? "" : expr);
 		if (e.length == 0 || sink == null)

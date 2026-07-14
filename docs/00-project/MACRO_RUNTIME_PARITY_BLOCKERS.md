@@ -8,15 +8,17 @@ Beginner summary:
 - `external-host`: macros run in a separate `hxhx-macro-host` process.
 - `inproc`: macros run inside `hxhx` directly.
 - Today the default runtime mode is already `inproc`.
-- The host lifecycle is now verified. The remaining macro-runtime work is to
-  support project-defined Haxe macros through that stage0-free host path and to
-  keep both modes comparable in release evidence.
+- The host lifecycle is verified, and the first real project-defined Haxe macro
+  now passes locally through both stage0-free paths.
+- The remaining step for this blocker is to repeat that proof in CI at the exact
+  commit we plan to accept. A local pass is useful, but it is not release
+  evidence by itself.
 
 ## Open blockers
 
 | Blocker ID | What remains in plain language | Owner | Closure evidence |
 | --- | --- | --- | --- |
-| MRP-B6 | Real projects need a stage0-free way to load their own Haxe-authored macro code into the reusable host; built-in aliases and hand-written OCaml module fixtures are not enough. | `haxe_ocaml-vhk47.3` | One repo-owned Haxe project macro passes through an authenticated host/module path, with an in-process comparison and upstream Haxe 4.3.7 oracle expectation. |
+| MRP-B6 | The first Haxe-authored project macro, authenticated plugin receipt, and two-mode local proof are implemented. The same-commit weekly CI job still has to pass before this slice is accepted as release evidence. | `haxe_ocaml-vhk47.3` | The exact commit's Macro Runtime Parity workflow passes its existing two-mode matrix and its separate project-macro-module job, then emits `FULL1_MACRO_PARITY:PASS`. |
 
 The accepted lifecycle and its claim limits are explained in
 `docs/00-project/MACRO_HOST_LIFECYCLE_DECISION.md`.
@@ -64,6 +66,19 @@ The accepted lifecycle and its claim limits are explained in
   protocol handshake, and stage0-forbidden policy are recorded and revalidated.
 - This lifecycle evidence does not prove arbitrary project macros. That distinct
   Full1 obligation is now `MRP-B6` / `haxe_ocaml-vhk47.3`.
+
+2026-07-14 project-module implementation checkpoint:
+
+- One repo-owned no-argument Haxe macro is compiled by the current `hxhx`
+  candidate into bytecode and native OCaml plugin forms without editing the
+  generated OCaml.
+- Both macro modes validate the same candidate/ABI/expression/digest receipt and
+  produce the same program output as the upstream Haxe 4.3.7 oracle.
+- Focused local evidence emits `PROJECT_MACRO_MODULE:PASS`, including negative
+  checks for wrong candidate, wrong ABI, changed digest, changed expression, and
+  missing files.
+- This is one bounded loading-path proof, not support for every project macro.
+  `MRP-B6` stays open until the same commit passes the weekly aggregate.
 
 ## Recently resolved
 

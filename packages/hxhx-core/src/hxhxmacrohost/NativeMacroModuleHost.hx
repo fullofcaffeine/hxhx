@@ -15,6 +15,7 @@ package hxhxmacrohost;
 	- Implemented in `packages/reflaxe.ocaml/std/runtime/HxHxMacroModuleHost.ml`.
 	- Typed decoding/validation is owned by `NativeMacroModuleHostAbi`.
 **/
+#if ocaml
 @:native("HxHxMacroModuleHost")
 private extern class NativeMacroModuleHostRuntime {
 	public static function clear():Void;
@@ -23,17 +24,30 @@ private extern class NativeMacroModuleHostRuntime {
 	@:native("run_expr")
 	public static function runExpr(expr:String):String;
 }
+#end
 
 class NativeMacroModuleHost {
-	public static inline function clear():Void {
+	public static function clear():Void {
+		#if !ocaml
+		throw "native macro module state requires an OCaml-native hxhx artifact";
+		#else
 		NativeMacroModuleHostRuntime.clear();
+		#end
 	}
 
-	public static inline function snapshot():String {
+	public static function snapshot():String {
+		#if !ocaml
+		throw "native macro module state requires an OCaml-native hxhx artifact";
+		#else
 		return NativeMacroModuleHostRuntime.snapshot();
+		#end
 	}
 
-	public static inline function runExpr(expr:String):String {
+	public static function runExpr(expr:String):String {
+		#if !ocaml
+		throw "native macro module execution requires an OCaml-native hxhx artifact";
+		#else
 		return NativeMacroModuleHostRuntime.runExpr(expr);
+		#end
 	}
 }

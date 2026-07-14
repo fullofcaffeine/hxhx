@@ -125,3 +125,56 @@ let run = fun expr -> try let __fallback_result_23 = (
   )
 ) in Obj.magic __fallback_result_23 with
   | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
+
+let handles = fun expr -> try let __fallback_result_36 = (
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let e = (StringTools.trim (expr : string) : string) in let tempResult = ref (false : bool) in (
+    ignore (match e with
+      | "Macro.init()" -> let __assign_25 = true in (
+        tempResult := __assign_25;
+        __assign_25
+      )
+      | "hxhxmacros.ArgsMacros.setArg(\"ok\")" -> let __assign_26 = true in (
+        tempResult := __assign_26;
+        __assign_26
+      )
+      | "hxhxmacros.BuildFieldMacros.addGeneratedField()" -> let __assign_27 = true in (
+        tempResult := __assign_27;
+        __assign_27
+      )
+      | "hxhxmacros.ExprMacroShim.hello()" -> let __assign_28 = true in (
+        tempResult := __assign_28;
+        __assign_28
+      )
+      | "hxhxmacros.ExternalMacros.external()" -> let __assign_29 = true in (
+        tempResult := __assign_29;
+        __assign_29
+      )
+      | "hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar()" -> let __assign_30 = true in (
+        tempResult := __assign_30;
+        __assign_30
+      )
+      | "hxhxmacros.HaxelibInitMacros.init()" -> let __assign_31 = true in (
+        tempResult := __assign_31;
+        __assign_31
+      )
+      | "hxhxmacros.PluginFixtureMacros.init()" -> let __assign_32 = true in (
+        tempResult := __assign_32;
+        __assign_32
+      )
+      | "hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()" -> let __assign_33 = true in (
+        tempResult := __assign_33;
+        __assign_33
+      )
+      | "hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn()" -> let __assign_34 = true in (
+        tempResult := __assign_34;
+        __assign_34
+      )
+      | _ -> let __assign_24 = false in (
+        tempResult := __assign_24;
+        __assign_24
+      ));
+    !tempResult
+  )
+) in Obj.magic __fallback_result_36 with
+  | HxRuntime.Hx_return __ret_35 -> Obj.obj __ret_35

@@ -34,6 +34,15 @@ class MacroRuntimeMode {
 				throw "invalid macro runtime mode `" + mode + "` (external-host disabled in stage0 profiling lane; expected inproc)";
 				#else
 				final impl = MacroHostClient.openSession();
+				try {
+					NativeMacroModuleRuntimeLoader.loadConfigured(hxhxmacrohost.NativeMacroModuleReceipt.NATIVE_ARTIFACT, impl.loadNativeModule);
+				} catch (error:String) {
+					impl.close();
+					throw error;
+				} catch (error:haxe.Exception) {
+					impl.close();
+					throw error.message;
+				}
 				return {
 					run: impl.run,
 					runHook: impl.runHook,

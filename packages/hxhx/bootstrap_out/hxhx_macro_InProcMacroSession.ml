@@ -4,17 +4,17 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable afterTypingHooks : (unit -> unit) HxArray.t; mutable onGenerateHooks : (unit -> unit) HxArray.t; mutable afterGenerateHooks : (unit -> unit) HxArray.t; mutable effectSink : Obj.t }
+type t = { __hx_type : Obj.t; mutable afterTypingHooks : (unit -> unit) HxArray.t; mutable onGenerateHooks : (unit -> unit) HxArray.t; mutable afterGenerateHooks : (unit -> unit) HxArray.t; mutable effectSink : Obj.t; mutable nativeExpressions : bool HxMap.string_map; mutable nativeModuleTouched : bool }
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.InProcMacroSession"; afterTypingHooks = Obj.magic (HxRuntime.hx_null); onGenerateHooks = Obj.magic (HxRuntime.hx_null); afterGenerateHooks = Obj.magic (HxRuntime.hx_null); effectSink = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.InProcMacroSession"; afterTypingHooks = Obj.magic (HxRuntime.hx_null); onGenerateHooks = Obj.magic (HxRuntime.hx_null); afterGenerateHooks = Obj.magic (HxRuntime.hx_null); effectSink = Obj.magic (HxRuntime.hx_null); nativeExpressions = Obj.magic (HxRuntime.hx_null); nativeModuleTouched = false } : t)
 
 let runHook = fun self (kind : string) (id : int) -> ignore (ignore (let tempString = ref ("" : string) in (
-  ignore (if kind == Obj.magic (HxRuntime.hx_null) then let __assign_34 = ("" : string) in (
-    tempString := __assign_34;
-    __assign_34
-  ) else let __assign_35 = (kind : string) in (
-    tempString := __assign_35;
-    __assign_35
+  ignore (if kind == Obj.magic (HxRuntime.hx_null) then let __assign_36 = ("" : string) in (
+    tempString := __assign_36;
+    __assign_36
+  ) else let __assign_37 = (kind : string) in (
+    tempString := __assign_37;
+    __assign_37
   ));
   let _g = (!tempString : string) in match _g with
     | "afterGenerate" -> ignore ((
@@ -34,41 +34,39 @@ let runHook = fun self (kind : string) (id : int) -> ignore (ignore (let tempStr
 
 let runTypeNotFoundHook = fun self (id : int) (typePath : string) -> (
   ignore self;
-  try let __fallback_result_37 = (
+  try let __fallback_result_39 = (
     ignore (if id <> -1 || HxString.equals typePath "__hxhx_never__" then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     false
-  ) in Obj.magic __fallback_result_37 with
-    | HxRuntime.Hx_return __ret_36 -> Obj.obj __ret_36
+  ) in Obj.magic __fallback_result_39 with
+    | HxRuntime.Hx_return __ret_38 -> Obj.obj __ret_38
 )
 
-let expandExpr = fun self (expr : string) -> (
-  ignore self;
-  try let __fallback_result_42 = let tempString = ref ("" : string) in (
-    ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_38 = ("" : string) in (
-      tempString := __assign_38;
-      __assign_38
-    ) else let __assign_39 = (expr : string) in (
-      tempString := __assign_39;
-      __assign_39
-    ));
-    let e = (StringTools.trim (!tempString : string) : string) in (
-      ignore (if HxString.length e = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.expandExpr: empty expr") ["Dynamic"; "String"]) else ());
-      let generated = (Hxhx_macro_InProcGeneratedEntrypoints.expandExpr (e : string) : string) in (
-        ignore (if generated != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (generated : string))) else ());
-        let tempResult = ref ("" : string) in (
-          ignore (match e with
-            | "HelperMacros.getCompilationDate()" | "unit.HelperMacros.getCompilationDate()" -> let __assign_40 = ("\"<compilation-date>\"" : string) in (
-              tempResult := __assign_40;
-              __assign_40
-            )
-            | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("macro.expandExpr: expr not registered: " ^ HxString.toStdString e)) ["Dynamic"; "String"]);
-          !tempResult
-        )
+let expandExpr = fun self (expr : string) -> try let __fallback_result_44 = let tempString = ref ("" : string) in (
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_40 = ("" : string) in (
+    tempString := __assign_40;
+    __assign_40
+  ) else let __assign_41 = (expr : string) in (
+    tempString := __assign_41;
+    __assign_41
+  ));
+  let e = (StringTools.trim (!tempString : string) : string) in (
+    ignore (if HxString.length e = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.expandExpr: empty expr") ["Dynamic"; "String"]) else ());
+    let generated = (Hxhx_macro_InProcGeneratedEntrypoints.expandExpr (e : string) : string) in (
+      ignore (if generated != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (generated : string))) else ());
+      ignore (if HxMap.exists_string ((Obj.magic self : t).nativeExpressions) e then raise (HxRuntime.Hx_return (Obj.repr (Hxhxmacrohost_NativeMacroModuleHost.runExpr (e : string) : string))) else ());
+      let tempResult = ref ("" : string) in (
+        ignore (match e with
+          | "HelperMacros.getCompilationDate()" | "unit.HelperMacros.getCompilationDate()" -> let __assign_42 = ("\"<compilation-date>\"" : string) in (
+            tempResult := __assign_42;
+            __assign_42
+          )
+          | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("macro.expandExpr: expr not registered: " ^ HxString.toStdString e)) ["Dynamic"; "String"]);
+        !tempResult
       )
     )
-  ) in Obj.magic __fallback_result_42 with
-    | HxRuntime.Hx_return __ret_41 -> Obj.obj __ret_41
-)
+  )
+) in Obj.magic __fallback_result_44 with
+  | HxRuntime.Hx_return __ret_43 -> Obj.obj __ret_43
 
 let setDefine = fun self (name : string) (value : string) -> ignore ((
   ignore self;
@@ -110,7 +108,7 @@ let registerAfterGenerateHook = fun self (cb : unit -> unit) -> ignore (ignore (
   Hxhx_macro_MacroState.registerHook ("afterGenerate" : string) id
 )))
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.InProcMacroSession"; afterTypingHooks = Obj.magic (HxRuntime.hx_null); onGenerateHooks = Obj.magic (HxRuntime.hx_null); afterGenerateHooks = Obj.magic (HxRuntime.hx_null); effectSink = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.InProcMacroSession"; afterTypingHooks = Obj.magic (HxRuntime.hx_null); onGenerateHooks = Obj.magic (HxRuntime.hx_null); afterGenerateHooks = Obj.magic (HxRuntime.hx_null); effectSink = Obj.magic (HxRuntime.hx_null); nativeExpressions = Obj.magic (HxRuntime.hx_null); nativeModuleTouched = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).afterTypingHooks <- __assign_1;
@@ -124,71 +122,101 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.InPro
       (Obj.magic self : t).afterGenerateHooks <- __assign_5;
       __assign_5
     ));
-    let __assign_7 = Obj.magic (let __anon_8 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_8 "setDefine" (Obj.repr (fun a0 a1 -> setDefine self a0 a1)));
-      ignore (HxAnon.set __anon_8 "definedValue" (Obj.repr (fun a0 -> definedValue self a0)));
-      ignore (HxAnon.set __anon_8 "addClassPath" (Obj.repr (fun a0 -> addClassPath self a0)));
-      ignore (HxAnon.set __anon_8 "emitOcamlModule" (Obj.repr (fun a0 a1 -> emitOcamlModule self a0 a1)));
-      ignore (HxAnon.set __anon_8 "emitBuildFields" (Obj.repr (fun a0 a1 -> emitBuildFields self a0 a1)));
-      ignore (HxAnon.set __anon_8 "registerAfterTypingHook" (Obj.repr (fun a0 -> registerAfterTypingHook self a0)));
-      ignore (HxAnon.set __anon_8 "registerOnGenerateHook" (Obj.repr (fun a0 -> registerOnGenerateHook self a0)));
-      ignore (HxAnon.set __anon_8 "registerAfterGenerateHook" (Obj.repr (fun a0 -> registerAfterGenerateHook self a0)));
-      __anon_8
-    )) in (
-      (Obj.magic self : t).effectSink <- __assign_7;
+    ignore (let __assign_7 = Obj.magic (HxMap.create_string ()) in (
+      (Obj.magic self : t).nativeExpressions <- __assign_7;
       __assign_7
+    ));
+    ignore (let __assign_8 = false in (
+      (Obj.magic self : t).nativeModuleTouched <- __assign_8;
+      __assign_8
+    ));
+    let __assign_9 = Obj.magic (let __anon_10 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_10 "setDefine" (Obj.repr (fun a0 a1 -> setDefine self a0 a1)));
+      ignore (HxAnon.set __anon_10 "definedValue" (Obj.repr (fun a0 -> definedValue self a0)));
+      ignore (HxAnon.set __anon_10 "addClassPath" (Obj.repr (fun a0 -> addClassPath self a0)));
+      ignore (HxAnon.set __anon_10 "emitOcamlModule" (Obj.repr (fun a0 a1 -> emitOcamlModule self a0 a1)));
+      ignore (HxAnon.set __anon_10 "emitBuildFields" (Obj.repr (fun a0 a1 -> emitBuildFields self a0 a1)));
+      ignore (HxAnon.set __anon_10 "registerAfterTypingHook" (Obj.repr (fun a0 -> registerAfterTypingHook self a0)));
+      ignore (HxAnon.set __anon_10 "registerOnGenerateHook" (Obj.repr (fun a0 -> registerOnGenerateHook self a0)));
+      ignore (HxAnon.set __anon_10 "registerAfterGenerateHook" (Obj.repr (fun a0 -> registerAfterGenerateHook self a0)));
+      __anon_10
+    )) in (
+      (Obj.magic self : t).effectSink <- __assign_9;
+      __assign_9
     )
   )));
   self
 )
 
-let close = fun self () -> ignore ((
-  ignore self;
-  ignore ()
-))
+let close = fun self () -> ignore (ignore (if (Obj.magic self : t).nativeModuleTouched then ignore ((
+  ignore (Hxhxmacrohost_NativeMacroModuleHost.clear ());
+  let __assign_48 = false in (
+    (Obj.magic self : t).nativeModuleTouched <- __assign_48;
+    __assign_48
+  )
+)) else ()))
 
-let parseIncludeStringLiteralArg = fun s -> try let __fallback_result_48 = (
+let parseIncludeStringLiteralArg = fun s -> try let __fallback_result_54 = (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let t = (StringTools.trim (s : string) : string) in (
     ignore (if HxString.length t < 2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let q = HxString.charCodeAt t 0 in (
-      ignore (if not (let __nullable_43 = q in if __nullable_43 == HxRuntime.hx_null then false else Obj.obj __nullable_43 = 34) && not (let __nullable_44 = q in if __nullable_44 == HxRuntime.hx_null then false else Obj.obj __nullable_44 = 39) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      ignore (if not (let __nullable_45 = HxString.charCodeAt t (HxInt.sub (HxString.length t) 1) in let __nullable_46 = q in if __nullable_45 == HxRuntime.hx_null then __nullable_45 == HxRuntime.hx_null && __nullable_46 == HxRuntime.hx_null else not (__nullable_46 == HxRuntime.hx_null) && Obj.obj __nullable_45 = Obj.obj __nullable_46) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if not (let __nullable_49 = q in if __nullable_49 == HxRuntime.hx_null then false else Obj.obj __nullable_49 = 34) && not (let __nullable_50 = q in if __nullable_50 == HxRuntime.hx_null then false else Obj.obj __nullable_50 = 39) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if not (let __nullable_51 = HxString.charCodeAt t (HxInt.sub (HxString.length t) 1) in let __nullable_52 = q in if __nullable_51 == HxRuntime.hx_null then __nullable_51 == HxRuntime.hx_null && __nullable_52 == HxRuntime.hx_null else not (__nullable_52 == HxRuntime.hx_null) && Obj.obj __nullable_51 = Obj.obj __nullable_52) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
       let body = (HxString.substr t 1 (HxInt.sub (HxString.length t) 2) : string) in let body = (StringTools.replace (body : string) ("\\\\" : string) ("\\" : string) : string) in let body = (StringTools.replace (body : string) ("\\\"" : string) ("\"" : string) : string) in let body = (StringTools.replace (body : string) ("\\'" : string) ("'" : string) : string) in body
     )
   )
-) in Obj.magic __fallback_result_48 with
-  | HxRuntime.Hx_return __ret_47 -> Obj.obj __ret_47
+) in Obj.magic __fallback_result_54 with
+  | HxRuntime.Hx_return __ret_53 -> Obj.obj __ret_53
 
 let isBuiltinExpr = fun expr -> StringTools.startsWith (expr : string) ("BuiltinMacros." : string) || StringTools.startsWith (expr : string) ("hxhxmacrohost.BuiltinMacros." : string)
 
-let withoutBuiltinPrefixExpr = fun expr -> try let __fallback_result_50 = (
+let loadNativeModule = fun self (modulePath : string) (pluginId : string) -> (
+  ignore (let __assign_45 = true in (
+    (Obj.magic self : t).nativeModuleTouched <- __assign_45;
+    __assign_45
+  ));
+  let snapshot = (Hxhxmacrohost_NativeMacroModuleDynlink.loadAndCapture (modulePath : string) (pluginId : string) : string) in let expressions = Obj.magic (Hxhxmacrohost_NativeMacroModuleHostAbi.exprsForPlugin (snapshot : string) (pluginId : string) (modulePath : string)) in let _g = ref 0 in (
+    ignore (while !_g < HxArray.length expressions do ignore (let expr = (HxArray.get (Obj.magic expressions) (!_g) : string) in (
+      ignore (let __old_46 = !_g in let __new_47 = HxInt.add __old_46 1 in (
+        ignore (_g := __new_47);
+        __new_47
+      ));
+      ignore (if isBuiltinExpr (expr : string) || Hxhx_macro_InProcGeneratedEntrypoints.handles (expr : string) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("native macro module cannot override built-in/generated expression `" ^ HxString.toStdString expr) ^ "`")) ["Dynamic"; "String"]) else ());
+      ignore (if HxMap.exists_string ((Obj.magic self : t).nativeExpressions) expr then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("native macro module expression already loaded: " ^ HxString.toStdString expr)) ["Dynamic"; "String"]) else ());
+      HxMap.set_string ((Obj.magic self : t).nativeExpressions) expr true
+    )) done);
+    expressions
+  )
+)
+
+let withoutBuiltinPrefixExpr = fun expr -> try let __fallback_result_56 = (
   ignore (if StringTools.startsWith (expr : string) ("BuiltinMacros." : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr expr (HxString.length "BuiltinMacros.") (-1) : string))) else ());
   ignore (if StringTools.startsWith (expr : string) ("hxhxmacrohost.BuiltinMacros." : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr expr (HxString.length "hxhxmacrohost.BuiltinMacros.") (-1) : string))) else ());
   expr
-) in Obj.magic __fallback_result_50 with
-  | HxRuntime.Hx_return __ret_49 -> Obj.obj __ret_49
+) in Obj.magic __fallback_result_56 with
+  | HxRuntime.Hx_return __ret_55 -> Obj.obj __ret_55
 
 let builtinTypeDescExpr = fun name -> let tempResult = ref ("" : string) in (
   ignore (match name with
-    | "Bool" | "Float" | "Int" | "String" | "Void" -> let __assign_52 = ("builtin:" ^ HxString.toStdString name : string) in (
-      tempResult := __assign_52;
-      __assign_52
+    | "Bool" | "Float" | "Int" | "String" | "Void" -> let __assign_58 = ("builtin:" ^ HxString.toStdString name : string) in (
+      tempResult := __assign_58;
+      __assign_58
     )
-    | _ -> let __assign_51 = ("unknown:" ^ HxString.toStdString name : string) in (
-      tempResult := __assign_51;
-      __assign_51
+    | _ -> let __assign_57 = ("unknown:" ^ HxString.toStdString name : string) in (
+      tempResult := __assign_57;
+      __assign_57
     ));
   !tempResult
 )
 
-let run = fun self (expr : string) -> try let __fallback_result_33 = let tempString = ref ("" : string) in (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_9 = ("" : string) in (
-    tempString := __assign_9;
-    __assign_9
-  ) else let __assign_10 = (expr : string) in (
-    tempString := __assign_10;
-    __assign_10
+let run = fun self (expr : string) -> try let __fallback_result_35 = let tempString = ref ("" : string) in (
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_11 = ("" : string) in (
+    tempString := __assign_11;
+    __assign_11
+  ) else let __assign_12 = (expr : string) in (
+    tempString := __assign_12;
+    __assign_12
   ));
   let e = (StringTools.trim (!tempString : string) : string) in (
     ignore (if HxString.length e = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.run: missing expr") ["Dynamic"; "String"]) else ());
@@ -198,64 +226,65 @@ let run = fun self (expr : string) -> try let __fallback_result_33 = let tempStr
     )) else ()) else ());
     let generated = (Hxhx_macro_InProcGeneratedEntrypoints.run (e : string) ((Obj.magic self : t).effectSink) : string) in (
       ignore (if generated != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (generated : string))) else ());
+      ignore (if HxMap.exists_string ((Obj.magic self : t).nativeExpressions) e then raise (HxRuntime.Hx_return (Obj.repr (Hxhxmacrohost_NativeMacroModuleHost.runExpr (e : string) : string))) else ());
       ignore (if not (isBuiltinExpr (e : string)) then raise (HxRuntime.Hx_return (Obj.repr ("ran:" ^ HxString.toStdString e : string))) else ());
       let builtin = (withoutBuiltinPrefixExpr (e : string) : string) in let tempResult = ref ("" : string) in (
         ignore (match builtin with
           | "addCpFromEnv()" -> let cp = (HxSys.getEnv "HXHX_ADD_CP" : string) in if cp != Obj.magic (HxRuntime.hx_null) && HxString.length (StringTools.trim (cp : string)) > 0 then (
             ignore (Hxhx_macro_MacroState.addClassPath (cp : string));
-            let __assign_12 = ("addCp=ok" : string) in (
-              tempResult := __assign_12;
-              __assign_12
+            let __assign_14 = ("addCp=ok" : string) in (
+              tempResult := __assign_14;
+              __assign_14
             )
-          ) else let __assign_13 = ("addCp=skip" : string) in (
-            tempResult := __assign_13;
-            __assign_13
+          ) else let __assign_15 = ("addCp=skip" : string) in (
+            tempResult := __assign_15;
+            __assign_15
           )
           | "dumpDefines()" -> (
             ignore (Hxhx_macro_MacroState.setDefine ("HXHX_ENUM" : string) ("1" : string));
             let defs = Obj.magic (Hxhx_macro_MacroState.listDefinesPairsSorted ()) in let map = HxMap.create_string () in let _g = ref 0 in (
               ignore (while !_g < HxArray.length defs do ignore (let kv = Obj.magic (HxArray.get (Obj.magic defs) (!_g)) in (
-                ignore (let __old_14 = !_g in let __new_15 = HxInt.add __old_14 1 in (
-                  ignore (_g := __new_15);
-                  __new_15
+                ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
+                  ignore (_g := __new_17);
+                  __new_17
                 ));
                 HxMap.set_string map (HxArray.get (Obj.magic kv) 0) (HxArray.get (Obj.magic kv) 1)
               )) done);
               let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                ignore (if HxMap.exists_string map "HXHX_FLAG" then let __assign_16 = Obj.magic (HxMap.get_string map "HXHX_FLAG" : string) in (
-                  tempMaybeString := __assign_16;
-                  __assign_16
-                ) else let __assign_17 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                  tempMaybeString := __assign_17;
-                  __assign_17
+                ignore (if HxMap.exists_string map "HXHX_FLAG" then let __assign_18 = Obj.magic (HxMap.get_string map "HXHX_FLAG" : string) in (
+                  tempMaybeString := __assign_18;
+                  __assign_18
+                ) else let __assign_19 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                  tempMaybeString := __assign_19;
+                  __assign_19
                 ));
                 let flagMap = (!tempMaybeString : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                  ignore (if HxMap.exists_string map "HXHX_ENUM" then let __assign_18 = Obj.magic (HxMap.get_string map "HXHX_ENUM" : string) in (
-                    tempMaybeString1 := __assign_18;
-                    __assign_18
-                  ) else let __assign_19 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                    tempMaybeString1 := __assign_19;
-                    __assign_19
+                  ignore (if HxMap.exists_string map "HXHX_ENUM" then let __assign_20 = Obj.magic (HxMap.get_string map "HXHX_ENUM" : string) in (
+                    tempMaybeString1 := __assign_20;
+                    __assign_20
+                  ) else let __assign_21 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                    tempMaybeString1 := __assign_21;
+                    __assign_21
                   ));
                   let enumMap = (!tempMaybeString1 : string) in let tempMaybeString2 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                    ignore (if HxMap.exists_string map "HXHX_FLAG" then let __assign_20 = Obj.magic (HxMap.get_string map "HXHX_FLAG" : string) in (
-                      tempMaybeString2 := __assign_20;
-                      __assign_20
-                    ) else let __assign_21 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                      tempMaybeString2 := __assign_21;
-                      __assign_21
+                    ignore (if HxMap.exists_string map "HXHX_FLAG" then let __assign_22 = Obj.magic (HxMap.get_string map "HXHX_FLAG" : string) in (
+                      tempMaybeString2 := __assign_22;
+                      __assign_22
+                    ) else let __assign_23 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                      tempMaybeString2 := __assign_23;
+                      __assign_23
                     ));
                     let flagGet = (!tempMaybeString2 : string) in let tempMaybeString3 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                      ignore (if HxMap.exists_string map "HXHX_ENUM" then let __assign_22 = Obj.magic (HxMap.get_string map "HXHX_ENUM" : string) in (
-                        tempMaybeString3 := __assign_22;
-                        __assign_22
-                      ) else let __assign_23 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                        tempMaybeString3 := __assign_23;
-                        __assign_23
-                      ));
-                      let enumGet = (!tempMaybeString3 : string) in let __assign_24 = ((((((("defines:flag_map=" ^ HxString.toStdString (HxString.toStdString flagMap)) ^ ";flag_get=") ^ HxString.toStdString (HxString.toStdString flagGet)) ^ ";enum_map=") ^ HxString.toStdString (HxString.toStdString enumMap)) ^ ";enum_get=") ^ HxString.toStdString (HxString.toStdString enumGet) : string) in (
-                        tempResult := __assign_24;
+                      ignore (if HxMap.exists_string map "HXHX_ENUM" then let __assign_24 = Obj.magic (HxMap.get_string map "HXHX_ENUM" : string) in (
+                        tempMaybeString3 := __assign_24;
                         __assign_24
+                      ) else let __assign_25 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                        tempMaybeString3 := __assign_25;
+                        __assign_25
+                      ));
+                      let enumGet = (!tempMaybeString3 : string) in let __assign_26 = ((((((("defines:flag_map=" ^ HxString.toStdString (HxString.toStdString flagMap)) ^ ";flag_get=") ^ HxString.toStdString (HxString.toStdString flagGet)) ^ ";enum_map=") ^ HxString.toStdString (HxString.toStdString enumMap)) ^ ";enum_get=") ^ HxString.toStdString (HxString.toStdString enumGet) : string) in (
+                        tempResult := __assign_26;
+                        __assign_26
                       )
                     )
                   )
@@ -267,22 +296,22 @@ let run = fun self (expr : string) -> try let __fallback_result_33 = let tempStr
           | "genHxModule()" -> (
             ignore (Hxhx_macro_MacroState.emitHxModule ("Gen" : string) ("class Gen {}" : string));
             ignore (Hxhx_macro_MacroState.setDefine ("HXHX_HXGEN" : string) ("1" : string));
-            let __assign_25 = ("genHx=ok" : string) in (
-              tempResult := __assign_25;
-              __assign_25
+            let __assign_27 = ("genHx=ok" : string) in (
+              tempResult := __assign_27;
+              __assign_27
             )
           )
           | "genModule()" -> (
             ignore (Hxhx_macro_MacroState.emitOcamlModule ("HxHxGen" : string) (("let generated : string = \"" ^ HxString.toStdString (builtinTypeDescExpr ("String" : string))) ^ "\"" : string));
             ignore (Hxhx_macro_MacroState.setDefine ("HXHX_GEN" : string) ("1" : string));
-            let __assign_26 = ("genModule=ok" : string) in (
-              tempResult := __assign_26;
-              __assign_26
+            let __assign_28 = ("genModule=ok" : string) in (
+              tempResult := __assign_28;
+              __assign_28
             )
           )
-          | "readFlag()" -> let __assign_27 = ("flag=" ^ HxString.toStdString (Hxhx_macro_MacroState.definedValue ("HXHX_FLAG" : string)) : string) in (
-            tempResult := __assign_27;
-            __assign_27
+          | "readFlag()" -> let __assign_29 = ("flag=" ^ HxString.toStdString (Hxhx_macro_MacroState.definedValue ("HXHX_FLAG" : string)) : string) in (
+            tempResult := __assign_29;
+            __assign_29
           )
           | "registerHooks()" -> let afterTypingId = HxArray.length ((Obj.magic self : t).afterTypingHooks) in (
             ignore (HxArray.push ((Obj.magic self : t).afterTypingHooks) (fun () -> ignore (Hxhx_macro_MacroState.setDefine ("HXHX_AFTER_TYPING" : string) ("1" : string))));
@@ -293,35 +322,35 @@ let run = fun self (expr : string) -> try let __fallback_result_33 = let tempStr
                 Hxhx_macro_MacroState.setDefine ("HXHX_ON_GENERATE" : string) ("1" : string)
               ))));
               ignore (Hxhx_macro_MacroState.registerHook ("onGenerate" : string) onGenerateId);
-              let __assign_28 = ("hooks=ok" : string) in (
-                tempResult := __assign_28;
-                __assign_28
+              let __assign_30 = ("hooks=ok" : string) in (
+                tempResult := __assign_30;
+                __assign_30
               )
             )
           )
           | "smoke()" -> (
             ignore (Hxhx_macro_MacroState.setDefine ("HXHX_SMOKE" : string) ("1" : string));
             let tempString1 = ref ("" : string) in (
-              ignore (if Hxhx_macro_MacroState.defined ("HXHX_SMOKE" : string) then let __assign_29 = ("yes" : string) in (
-                tempString1 := __assign_29;
-                __assign_29
-              ) else let __assign_30 = ("no" : string) in (
-                tempString1 := __assign_30;
-                __assign_30
-              ));
-              let __assign_31 = ((("smoke:type=" ^ HxString.toStdString (builtinTypeDescExpr ("String" : string))) ^ ";define=") ^ HxString.toStdString (!tempString1) : string) in (
-                tempResult := __assign_31;
+              ignore (if Hxhx_macro_MacroState.defined ("HXHX_SMOKE" : string) then let __assign_31 = ("yes" : string) in (
+                tempString1 := __assign_31;
                 __assign_31
+              ) else let __assign_32 = ("no" : string) in (
+                tempString1 := __assign_32;
+                __assign_32
+              ));
+              let __assign_33 = ((("smoke:type=" ^ HxString.toStdString (builtinTypeDescExpr ("String" : string))) ^ ";define=") ^ HxString.toStdString (!tempString1) : string) in (
+                tempResult := __assign_33;
+                __assign_33
               )
             )
           )
-          | _ -> let __assign_11 = ("ran:" ^ HxString.toStdString e : string) in (
-            tempResult := __assign_11;
-            __assign_11
+          | _ -> let __assign_13 = ("ran:" ^ HxString.toStdString e : string) in (
+            tempResult := __assign_13;
+            __assign_13
           ));
         !tempResult
       )
     )
   )
-) in Obj.magic __fallback_result_33 with
-  | HxRuntime.Hx_return __ret_32 -> Obj.obj __ret_32
+) in Obj.magic __fallback_result_35 with
+  | HxRuntime.Hx_return __ret_34 -> Obj.obj __ret_34

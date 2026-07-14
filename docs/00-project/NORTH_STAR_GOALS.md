@@ -97,7 +97,8 @@ Current planning owners:
   `haxe_ocaml-vhk47`, `haxe_ocaml-u6esu`
 - completed macro-host lifecycle child: `haxe_ocaml-vhk47.1`, backed by
   same-commit two-mode run `29334023225`; project-defined Haxe macro loading
-  remains open under `haxe_ocaml-vhk47.3`
+  has a green local two-mode plugin/receipt proof and remains open under
+  `haxe_ocaml-vhk47.3` until the same commit passes the weekly aggregate
 - completed same-candidate Full1 plugin outcome: `haxe_ocaml-gskz9`
   (artifact-backed run `29281925684` at `31eaa7e5`)
 - native iteration latency regression loop: `haxe_ocaml-850ii`

@@ -4,10 +4,10 @@ on:
   workflow_call:
     outputs:
       macro_runtime_parity_weekly_marker:
-        description: "Weekly parity marker emitted when both runtime modes pass."
+        description: "Weekly parity marker emitted when both runtime modes and the project-macro module proof pass."
         value: ${{ jobs.macro-runtime-parity-summary.outputs.macro_runtime_parity_weekly_marker }}
       full1_macro_parity_marker:
-        description: "Full1 macro parity marker emitted when both runtime modes pass."
+        description: "Full1 macro parity marker emitted when both runtime modes and the project-macro module proof pass."
         value: ${{ jobs.macro-runtime-parity-summary.outputs.full1_macro_parity_marker }}
   schedule:
     - cron: '40 7 * * 1'
@@ -517,10 +517,75 @@ jobs:
           path: .artifacts/macro-runtime-parity/${{ matrix.macro_runtime_mode }}
           if-no-files-found: warn
 
+  project-macro-module:
+    name: Haxe-authored project macro module
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HXHX_FORBID_STAGE0: '1'
+      HXHX_MACRO_HOST_AUTO_BUILD: '0'
+      HXHX_CANDIDATE_COMMIT: ${{ github.sha }}
+      HXHX_PROJECT_MACRO_ARTIFACT_DIR: .artifacts/project-macro-module
+      HAXE_STD_PATH: ${{ github.workspace }}/vendor/haxe/std
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install OCaml toolchain
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "$dune_candidate" != "(none)" ]; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+          sudo apt-get install -y ocaml "$dune_pkg" ocaml-findlib
+          dune --version
+          ocamlc -version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies and Haxe 4.3.7
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx lix download
+          npx lix download haxe "${HAXE_VERSION}"
+          npx lix use haxe "${HAXE_VERSION}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Fetch upstream Haxe checkout for the pinned std path
+        run: |
+          set -euo pipefail
+          bash scripts/vendor/fetch-haxe-upstream.sh
+
+      - name: Build, load, and run one project macro in both native modes
+        run: |
+          set -euo pipefail
+          npm run test:macro-runtime:project-module
+
+      - name: Upload project macro evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-macro-module-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/project-macro-module
+          if-no-files-found: error
+
   macro-runtime-parity-summary:
     name: Macro runtime parity summary
     runs-on: ubuntu-latest
-    needs: [macro-runtime-parity]
+    needs: [macro-runtime-parity, project-macro-module]
     if: always()
     outputs:
       macro_runtime_parity_weekly_marker: ${{ steps.emit.outputs.macro_runtime_parity_weekly_marker }}
@@ -531,28 +596,31 @@ jobs:
           set -euo pipefail
           mkdir -p .artifacts/macro-runtime-parity
           matrix_result='${{ needs.macro-runtime-parity.result }}'
+          project_macro_result='${{ needs.project-macro-module.result }}'
           trigger='${{ github.event_name }}'
           jq -n \
             --arg workflow "Macro Runtime Parity (Weekly)" \
             --arg run_id "${{ github.run_id }}" \
             --arg run_attempt "${{ github.run_attempt }}" \
             --arg matrix_result "$matrix_result" \
+            --arg project_macro_result "$project_macro_result" \
             --arg trigger "$trigger" \
             '{
-              schema: "macro-runtime-parity-summary.v2",
+              schema: "macro-runtime-parity-summary.v3",
               workflow: $workflow,
               run_id: $run_id,
               run_attempt: $run_attempt,
               trigger: $trigger,
               jobs: {
-                macro_runtime_parity: { result: $matrix_result }
+                macro_runtime_parity: { result: $matrix_result },
+                project_macro_module: { result: $project_macro_result }
               },
               expected_markers: [
                 "MACRO_RUNTIME_PARITY_WEEKLY:PASS",
                 "FULL1_MACRO_PARITY:PASS"
               ],
               emitted_markers: (
-                if $matrix_result == "success"
+                if $matrix_result == "success" and $project_macro_result == "success"
                 then ["MACRO_RUNTIME_PARITY_WEEKLY:PASS", "FULL1_MACRO_PARITY:PASS"]
                 else []
                 end
@@ -572,8 +640,10 @@ jobs:
         run: |
           set -euo pipefail
           matrix_result='${{ needs.macro-runtime-parity.result }}'
+          project_macro_result='${{ needs.project-macro-module.result }}'
           echo "macro_runtime_parity=${matrix_result}"
-          if [ "$matrix_result" = "success" ]; then
+          echo "project_macro_module=${project_macro_result}"
+          if [ "$matrix_result" = "success" ] && [ "$project_macro_result" = "success" ]; then
             echo "MACRO_RUNTIME_PARITY_WEEKLY:PASS"
             echo "FULL1_MACRO_PARITY:PASS"
             echo "macro_runtime_parity_weekly_marker=MACRO_RUNTIME_PARITY_WEEKLY:PASS" >> "$GITHUB_OUTPUT"

@@ -112,6 +112,11 @@ try {
     "HXHX_FORBID_STAGE0: '1'",
     'Prepare one external macro-host artifact',
     'macro-runtime-host-evidence.js write',
+    'Haxe-authored project macro module',
+    'npm run test:macro-runtime:project-module',
+    'macro-runtime-parity-summary.v3',
+    'project_macro_module: { result: $project_macro_result }',
+    'if $matrix_result == "success" and $project_macro_result == "success"',
     marker
   ]) {
     if (!workflowSource.includes(expected)) throw new Error(`macro parity workflow is missing: ${expected}`)

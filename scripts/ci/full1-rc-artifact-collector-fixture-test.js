@@ -75,10 +75,13 @@ function validFixtures() {
       commands: [{ exit_code: 0, signal: null }]
     },
     macro: {
-      schema: 'macro-runtime-parity-summary.v2',
+      schema: 'macro-runtime-parity-summary.v3',
       run_id: String(context.runId),
       run_attempt: String(context.runAttempt),
-      jobs: { macro_runtime_parity: { result: 'success' } },
+      jobs: {
+        macro_runtime_parity: { result: 'success' },
+        project_macro_module: { result: 'success' }
+      },
       emitted_markers: ['MACRO_RUNTIME_PARITY_WEEKLY:PASS', 'FULL1_MACRO_PARITY:PASS']
     },
     eval: {
@@ -170,6 +173,13 @@ function testSummaryValidation() {
   assert.throws(
     () => validateSummary(specById('macro'), cancelledMacro, context),
     /did not succeed/
+  )
+
+  const cancelledProjectMacro = clone(fixtures.macro)
+  cancelledProjectMacro.jobs.project_macro_module.result = 'cancelled'
+  assert.throws(
+    () => validateSummary(specById('macro'), cancelledProjectMacro, context),
+    /project macro module did not succeed/
   )
 
   const claimedMacro = clone(fixtures.macro)

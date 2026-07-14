@@ -14,14 +14,19 @@ package hxhxmacrohost;
 	  - loads native module artifact via Dynlink,
 	  - returns encoded registration snapshot.
 **/
+#if ocaml
 @:native("HxHxMacroModuleDynlink")
 private extern class NativeMacroModuleDynlinkRuntime {
 	@:native("load_and_capture_safe")
 	public static function loadAndCapture(modulePath:String, pluginId:String):String;
 }
+#end
 
 class NativeMacroModuleDynlink {
-	public static inline function loadAndCapture(modulePath:String, pluginId:String):String {
+	public static function loadAndCapture(modulePath:String, pluginId:String):String {
+		#if !ocaml
+		throw "native macro module loading requires an OCaml-native hxhx artifact";
+		#else
 		final response = NativeMacroModuleDynlinkRuntime.loadAndCapture(modulePath, pluginId);
 		if (response == null)
 			throw "native macro module loader returned no response";
@@ -30,5 +35,6 @@ class NativeMacroModuleDynlink {
 		if (StringTools.startsWith(response, "err\n"))
 			throw response.substr(4);
 		throw "native macro module loader returned malformed response";
+		#end
 	}
 }

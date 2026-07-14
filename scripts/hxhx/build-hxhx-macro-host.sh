@@ -212,6 +212,7 @@ trim_ws() {
     # For bring-up we only support:
     # - `pack.Class.method()` (no args)
     # - `pack.Class.method(\"...\")` (one String literal arg)
+    registered_entries=()
     {
       echo "package hxhxmacrohost;"
       echo ""
@@ -262,6 +263,7 @@ trim_ws() {
         fi
 
         entry_escaped="$(escape_hx_string "$entry")"
+        registered_entries+=("$entry_escaped")
 
         # Emit case.
         #
@@ -296,6 +298,17 @@ trim_ws() {
       done
 
       echo "      case _: null;"
+      echo "    }"
+      echo "  }"
+      echo ""
+      echo "  public static function handles(expr:String):Bool {"
+      echo "    if (expr == null) return false;"
+      echo "    final e = StringTools.trim(expr);"
+      echo "    return switch (e) {"
+      for entry_escaped in "${registered_entries[@]}"; do
+        echo "      case \"${entry_escaped}\": true;"
+      done
+      echo "      case _: false;"
       echo "    }"
       echo "  }"
       echo "}"

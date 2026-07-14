@@ -29,8 +29,16 @@ That workflow runs both modes against:
 - upstream unit macro stage3 no-emit checks
 - upstream runci macro stage3 no-emit workload checks
 - display + macro protocol checks
+- one repo-owned Haxe project macro, compiled into authenticated bytecode and
+  native plugin forms and then exercised through both modes
 
 It emits mode-specific markers and uploads mode-tagged artifacts for triage.
+
+The project-macro module is currently a deliberately small compatibility proof:
+one exact no-argument macro expression with a Haxe-authored native handler. It
+shows the loading boundary works without stage0; it is not yet a general package
+format for arbitrary project macro libraries. The design and receipt checks are
+documented in `docs/00-project/PROJECT_MACRO_MODULE_PATH_DECISION.md`.
 
 Open parity gaps are tracked in:
 

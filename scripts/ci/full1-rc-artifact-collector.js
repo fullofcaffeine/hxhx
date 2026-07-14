@@ -203,7 +203,7 @@ function validateSummary(spec, summary, context) {
     return { schema: summary.schema, markers: [spec.marker] }
   }
   if (spec.role === 'macro') {
-    if (summary.schema !== 'macro-runtime-parity-summary.v2') throw new Error('wrong macro schema')
+    if (summary.schema !== 'macro-runtime-parity-summary.v3') throw new Error('wrong macro schema')
     if (String(summary.run_id) !== String(context.runId)
       || String(summary.run_attempt) !== String(context.runAttempt)) {
       throw new Error('macro run identity mismatch')
@@ -211,6 +211,10 @@ function validateSummary(spec, summary, context) {
     if (!summary.jobs || !summary.jobs.macro_runtime_parity
       || summary.jobs.macro_runtime_parity.result !== 'success') {
       throw new Error('macro matrix did not succeed')
+    }
+    if (!summary.jobs.project_macro_module
+      || summary.jobs.project_macro_module.result !== 'success') {
+      throw new Error('project macro module did not succeed')
     }
     if (!sameMembers(summary.emitted_markers, [
       'MACRO_RUNTIME_PARITY_WEEKLY:PASS',

@@ -17,6 +17,18 @@ package hxhx.macro;
 class InProcMacroRuntime {
 	public static function openSession():MacroRuntimeSession {
 		final impl = new InProcMacroSession();
+		try {
+			final programPath = Sys.programPath().toLowerCase();
+			final usesBytecodePlugin = StringTools.endsWith(programPath, ".bc") || StringTools.endsWith(programPath, ".byte");
+			final artifactKind = usesBytecodePlugin ? hxhxmacrohost.NativeMacroModuleReceipt.BYTECODE_ARTIFACT : hxhxmacrohost.NativeMacroModuleReceipt.NATIVE_ARTIFACT;
+			NativeMacroModuleRuntimeLoader.loadConfigured(artifactKind, impl.loadNativeModule);
+		} catch (error:String) {
+			impl.close();
+			throw error;
+		} catch (error:haxe.Exception) {
+			impl.close();
+			throw error.message;
+		}
 		return {
 			run: impl.run,
 			runHook: impl.runHook,

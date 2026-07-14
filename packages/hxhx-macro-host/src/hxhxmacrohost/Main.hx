@@ -265,8 +265,20 @@ class Main {
 		final ext = EntryPoints.run(e);
 		if (ext != null)
 			return ext;
+		if (nativeExprToPlugin.exists(e))
+			return NativeMacroModuleHost.runExpr(e);
 
 		return "ran:" + e;
+	}
+
+	static function isReservedNativeExpression(expr:String):Bool {
+		final value = StringTools.trim(expr == null ? "" : expr);
+		return StringTools.startsWith(value, "BuiltinMacros.")
+			|| StringTools.startsWith(value, "hxhxmacrohost.BuiltinMacros.")
+			|| StringTools.startsWith(value, "include(")
+			|| value == "unit.HelperMacros.getCompilationDate()"
+			|| value == "HelperMacros.getCompilationDate()"
+			|| EntryPoints.handles(value);
 	}
 
 	static function loadNativeModule(modulePath:String, pluginId:String):String {
@@ -280,6 +292,8 @@ class Main {
 		final snapshot = NativeMacroModuleDynlink.loadAndCapture(path, pid);
 		final exprs = NativeMacroModuleHostAbi.exprsForPlugin(snapshot, pid, path);
 		for (expr in exprs) {
+			if (isReservedNativeExpression(expr))
+				throw "macro.loadNativeModule: project module cannot override built-in/generated expression `" + expr + "`";
 			final existingPlugin = nativeExprToPlugin.get(expr);
 			if (existingPlugin == null) {
 				nativeExprToPlugin.set(expr, pid);
@@ -318,6 +332,8 @@ class Main {
 		final ext = EntryPoints.run(e);
 		if (ext != null)
 			return ext;
+		if (nativeExprToPlugin.exists(e))
+			return NativeMacroModuleHost.runExpr(e);
 
 		// Minimal builtin expansions for bring-up.
 		//
