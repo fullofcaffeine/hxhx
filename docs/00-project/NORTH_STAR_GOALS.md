@@ -99,6 +99,13 @@ Current planning owners:
   (artifact-backed run `29281925684` at `31eaa7e5`)
 - native iteration latency regression loop: `haxe_ocaml-850ii`
   (completed policy foundation: `haxe.ocaml-5rjl`)
+- fresh bounded replacement-bundle evidence: strict/full M7 run
+  `29321576340` passed at commit `30a0b371` in about 102 minutes and emitted
+  `M7_STRICT_STAGE0:PASS` plus `M7_REPLACEMENT_READY:PASS`; artifact
+  `8309183633` has digest
+  `sha256:ee827a40371ce72ca36fe90cc13ea2b93296f6cc4e6ce9a4946415286c8fff33`.
+  This advances the scoped native replacement route, but it is not the broader
+  Full1 suite/target/performance/release aggregate.
 - native iteration latency measurement contract:
   `docs/00-project/NATIVE_ITERATION_LATENCY_CONTRACT.md`
 - strict upstream suite and target outcomes: `haxe.ocaml-f1cl.3`,

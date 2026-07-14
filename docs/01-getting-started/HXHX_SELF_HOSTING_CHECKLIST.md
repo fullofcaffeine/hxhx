@@ -8,7 +8,10 @@ When can we honestly say **"hxhx compiles hxhx"**?
 
 We are **not fully there yet**.
 
-Today we can do a lot of stage0-free work, but we still rely on stage0 `haxe` for some bootstrap regeneration paths.
+Today the bounded strict replacement bundle passes without stage0 delegation,
+but we still rely on stage0 `haxe` to regenerate the full committed bootstrap
+snapshot. That remaining regeneration dependency keeps this page from calling
+the compiler strongly self-hosting.
 
 Related status pages:
 
@@ -17,7 +20,7 @@ Related status pages:
 - Portable stdlib parity status:
   - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 
-## Status matrix (as of 2026-04-11)
+## Status matrix (as of 2026-07-14)
 
 Use this table as the short answer for "are we self-hosting yet?"
 
@@ -28,7 +31,7 @@ Use this table as the short answer for "are we self-hosting yet?"
 | Run macro host selftest with stage0 blocked | Proves macro host bootstrap path works in stage0-forbidden mode | Pass | `.github/workflows/ci.yml` job `stage0-free-smoke` (`--hxhx-macro-selftest`) |
 | Prototype native bootstrap refresh on a minimal subset with stage0 blocked | Proves the chosen refresh architecture can emit/build repo-owned Haxe through Stage3 without invoking stage0 | Pass | `npm run hxhx:probe:stage0-free-refresh` |
 | Regenerate `packages/hxhx/bootstrap_out` without stage0 `haxe` | This is the major blocker for strong self-hosting | Not yet | `scripts/hxhx/regenerate-hxhx-bootstrap.sh` still uses stage0 emit |
-| Replacement-ready gates pass with delegation blocked | Needed for strong release confidence | Partial | Criteria command: `HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full`; expected marker: `M7_STRICT_STAGE0:PASS`; current state: strict definition is documented, but full strong-self-hosting closure is still in progress |
+| Replacement-ready gates pass with delegation blocked | Needed for strong release confidence | Pass for the bounded M7 scope | Exact-commit run `29321576340` at `30a0b371` emitted `M7_STRICT_STAGE0:PASS` and `M7_REPLACEMENT_READY:PASS`; this does not prove stage0-free bootstrap regeneration or the larger Full1 matrix |
 
 Status meaning:
 
@@ -83,8 +86,9 @@ This repo tracks the **strong** definition as the real goal.
 ## What is still missing for strong self-hosting
 
 1. Stage0-free bootstrap refresh for `packages/hxhx/bootstrap_out` by default.
-2. Stage0-free macro + gate paths as the normal/primary route (not just smoke/partial lanes).
-3. Stable acceptance evidence in replacement gates with stage0 delegation blocked.
+2. Make stage0-free execution the normal release path across the entire
+   declared Full1 suite, target, macro, plugin, and performance matrix—not only
+   the bounded M7 bundle.
 
 ## Bootstrap refresh architecture choice
 

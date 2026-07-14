@@ -260,10 +260,10 @@
     {
       "id": "m7-timeout-29188919192",
       "checkId": "m7-weekly",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "cancelled-no-successor",
       "failureClass": "timeout-performance",
-      "bead": "haxe_ocaml-850ii",
+      "bead": "haxe_ocaml-850ii.7",
       "recordedAt": "2026-07-13T06:40:00Z",
       "run": {
         "id": 29188919192,
@@ -276,7 +276,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29188919192"
       },
       "reproductionOrEvidence": "The replacement job reached its three-hour limit while running the bundle; no newer M7 run replaces it.",
-      "closureGate": "A fresh M7 run must finish, upload its evidence, and produce the required markers without timing out."
+      "closureGate": "A fresh M7 run must finish, upload its evidence, and produce the required markers without timing out.",
+      "resolution": {
+        "runId": 29321576340,
+        "runAttempt": 1,
+        "headSha": "30a0b371a96382ca2091bc097166836572d62655",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-14T11:30:11Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29321576340"
+      }
     },
     {
       "id": "full1-plugin-29158896644",

@@ -19,6 +19,11 @@ If you need deeper architectural details, use:
 | Native backend plugin loading | `-D hxhx_backend_plugin_manifest=...` | Working | Uses `ocaml-dynlink` manifest kind (`.cmxs` / `.cma`). |
 | Native macro module loading | `macro.loadNativeModule` / `macro.runNativeExpr` | Working (promoted-module rung) | ABI/version validation is enforced before registration. |
 
+A useful milestone, but not the finish line: strict/full M7 run `29321576340`
+proved that the bounded Macro, JavaScript, Neko, and plugin bundle works without
+delegating to stage0 at commit `30a0b371`. It does **not** yet prove the complete
+Full1 suite/target matrix or stage0-free bootstrap regeneration.
+
 ## Recommended starting points by intent
 
 | I want to... | Start here |

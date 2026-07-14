@@ -1,6 +1,6 @@
 # Weekly CI Evidence Runbook
 
-Last audited: 2026-07-13
+Last audited: 2026-07-14
 
 This runbook defines how maintainers audit scheduled CI health each week and what to do when a gate regresses.
 
@@ -79,10 +79,12 @@ produced the independently validated, self-describing v2 report and completed
 that follow-up. Full1 phase receipts received the same treatment under
 `haxe_ocaml-850ii.6`; exact-commit plugin run `29303951143` produced three
 independently validated v2 timing reports. These are report-quality results,
-not proof that the compiler is fast enough. The current open incident records
-are the macro-runtime failure, M7 timeout with no successor, and the expected
-Full1 aggregate no-go. Their owners are recorded in the JSON ledger; none of
-those open records counts as passing product or Full1 evidence.
+not proof that the compiler is fast enough. The M7 timeout is now resolved by
+exact-commit strict/full run `29321576340`, which finished in about 102 minutes,
+uploaded artifact `8309183633`, and emitted both required M7 markers. The
+current open incident records are the macro-runtime failure and the expected
+Full1 aggregate no-go. Their owners are recorded in the JSON ledger; neither
+open record counts as passing product or Full1 evidence.
 
 ## Audit window
 

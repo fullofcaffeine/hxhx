@@ -160,8 +160,9 @@ Meaning in plain terms:
 
 ### M7. Replacement-ready acceptance
 
-Status: Contract/implementation complete for the bounded replacement bundle;
-current release evidence is a separate requirement.
+Status: Current strict/full evidence is green for the bounded replacement
+bundle at commit `30a0b371` (run `29321576340`); Full1 release evidence is a
+separate and still-incomplete requirement.
 Beads: `haxe.ocaml-xgv.10`, `haxe.ocaml-xgv.10.40`, `haxe.ocaml-ayi`
 
 Meaning in plain terms:
@@ -169,6 +170,12 @@ Meaning in plain terms:
 - The replacement-ready acceptance gate is closed for the current documented scope/target policy.
 - We now have a single replacement bundle runner (`scripts/hxhx/run-replacement-ready.sh`) with `fast` and `full` profiles so M7 evidence can be reproduced with one command.
 - CI now runs `.github/workflows/gate-m7.yml` weekly in strict/full mode, and keeps manual `workflow_dispatch` controls for profile/strict overrides.
+- The fresh strict run finished in about 102 minutes, below the unchanged
+  180-minute limit. It reused one commit-bound native compiler/macro-host
+  bundle across later checks, while preserving every gate and plugin row.
+- The run emitted `M7_SHARED_ARTIFACTS:PASS`, `M7_STRICT_STAGE0:PASS`, and
+  `M7_REPLACEMENT_READY:PASS`. Its evidence artifact is
+  `gate-m7-logs-29321576340` (artifact `8309183633`).
 - This status does **not** mean strict stage0-forbidden closure for all replacement claims. For strict closure status, use:
   - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
 - Current reproducible local fast path on macOS:
