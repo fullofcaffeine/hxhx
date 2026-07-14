@@ -1,0 +1,4 @@
+-cp packages/hxhx-core/src
+-cp test
+--interp
+-main M14CppXmlBasicRenderBenchIntegrationTest

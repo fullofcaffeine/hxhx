@@ -5886,3 +5886,77 @@ ignored `.ml` files produced by the current-source build were temporary build
 output. `thinking:xhigh` was not crossed, and GPT or Oracle review was
 deliberately skipped because the exact call shape, strict rejection controls,
 same-output assertion, and fresh before/after evidence provided a bounded seam.
+
+## 2026-07-14 Render-Scope Nearest-Class Lookup Cache
+
+Follow-up bead `haxe_ocaml-7x2ye` split the ordinary operations in
+`TestXML.testBasic` into an original, repo-owned fixture. In plain language,
+the slow XML operations were not expensive because of XML itself. Unqualified
+type hints such as `Xml` repeatedly searched the complete reachable class list
+to select the declaration nearest to the method being rendered. The answer is
+fixed for that method, but child identity, attributes, field reads, and their
+type checks all paid for the same whole-program search again.
+
+The focused fixture compares 512 filler classes with an otherwise identical
+zero-filler graph and includes unrelated node and static-marker controls. Before
+the change, 25 complete method renders took 8.270169s. Child identity took
+2.720322s with the large graph versus 0.206457s with the small graph; attribute
+equality took 1.133551s versus 0.095180s; and child-name equality took 2.290366s
+versus 0.185639s. Node-kind equality stayed flat at 0.053937s versus 0.055019s,
+which ruled out the XML marker itself as the leading seam.
+
+`CppRenderScope` now owns positive and negative nearest-class caches for its
+immutable class graph. `CppTypeModel.nearestClassForBaseName` normalizes the
+base name once and shares the selected declaration or absence. An explicit
+alternate class graph bypasses the cache, preserving callers that ask a
+different lookup question. Focused controls pin duplicate short names, the
+nearest-declaration rule, the existing short-name map pointing at a farther
+class, negative lookup caching, and alternate-graph isolation. Generated C++
+for every XML and unrelated control is unchanged.
+
+After the cache, the same 25-call complete fixture took 1.034955s, an 87.5%
+reduction. Large and small lookup graphs were comparable for the attributed
+leaves: child identity was 0.256386s versus 0.217382s, attributes were
+0.084021s versus 0.093203s, and child-name equality was 0.206752s versus
+0.199219s. A fresh current-source build completed in 201 seconds. On an exact
+source-only render of the ignored Haxe 4.3.7 unit program,
+`TestXML.testBasic` fell from 0.537546s to 0.195845s and the complete
+`TestXML` helper from 3.663454s to 1.494824s.
+
+The unfiltered, stage0-forbidden strict probe confirmed the larger effect.
+`TestXML.testBasic` fell from 6.223915s to 0.444743s, a 92.9% reduction, and
+the complete `TestXML` helper fell from 40.460335s to 4.173797s, an 89.7%
+reduction. The unrelated `TestEReg.test` control stayed comparable at
+0.012227s versus 0.011927s. The target rendered all 384 helper classes,
+finished program emission, and reached the host C++ compiler instead of timing
+out at 480 seconds. It remains correctly red: native compilation stopped after
+377 seconds on existing generated-code errors, beginning with a payload enum
+passed directly to `std::string`, followed by generic container and abstract
+conversion errors. Follow-up `haxe_ocaml-ejpzm` owns the first enum
+stringification failure.
+
+Relevant evidence is:
+
+- `.artifacts/full1/cpp-strict-current/cpp-xml-basic-render-attribution-baseline.log`
+- `.artifacts/full1/cpp-strict-current/cpp-xml-basic-render-attribution-nearest-cache.log`
+- `.artifacts/full1/cpp-strict-current/testxml-basic-source-only-current.log`
+- `.artifacts/full1/cpp-strict-current/testxml-basic-source-only-nearest-cache.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-xml-navigation-next.log`
+- `.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-nearest-class-cache.log`
+
+README Goals and North Star progress bars remain unchanged. Completing render
+is a meaningful internal frontier advance, but the required Cpp target still
+does not compile or run the strict unit program, so end-user readiness has not
+changed. `CppTargetCore.hx` is 26,437 lines and receives only the two cache
+initializers. Cache ownership is documented in the 55-line `CppRenderScope`
+type, the bounded lookup behavior stays in `CppTypeModel`, and the 327-line
+measurement/control module is separate. The architecture plan recorded by
+`haxe_ocaml-36ec` remains the boundary; this result does not justify another
+ad hoc runtime surface or a broad backend rewrite.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite was used only as a behavior and performance oracle, and committed
+generated OCaml snapshots were not edited. `thinking:xhigh` was not crossed,
+and GPT or Oracle review was deliberately skipped because the immutable graph,
+exact output controls, alternate-graph rejection case, and strict evidence
+provided a bounded cache seam.

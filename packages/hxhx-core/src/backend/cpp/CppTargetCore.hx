@@ -6239,6 +6239,8 @@ class CppTargetCore {
 			methodOwnerCache: new haxe.ds.StringMap<HxClassDecl>(),
 			missingMethodOwnerCache: new haxe.ds.StringMap<Bool>(),
 			methodOwnerGraphComplete: false,
+			nearestClassByBaseNameCache: new haxe.ds.StringMap<HxClassDecl>(),
+			missingNearestClassByBaseNameCache: new haxe.ds.StringMap<Bool>(),
 			typeParams: typeParams,
 			typeParamCppNames: typeParamCppNames,
 			localTypes: new haxe.ds.StringMap<String>(),

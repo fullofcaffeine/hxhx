@@ -467,31 +467,56 @@ class CppTypeModel {
 		return dot > 0 ? lookupClassByName(sanitizeTypePath(ownerName.substr(0, dot + 1) + base), scope, classLookup) : null;
 	}
 
+	/**
+		Resolve the declaration nearest to the current owner for an unqualified base name.
+
+		The render scope's class graph is immutable, so positive and negative results
+		from that graph are shared across repeated type questions. Callers that supply
+		an alternate class graph deliberately bypass the scope cache.
+	**/
 	static function nearestClassForBaseName(base:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<HxClassDecl> {
 		if (base == null || base.length == 0 || scope == null || scope.owner == null)
 			return null;
+		final cleanBase = sanitizeTypePath(base);
 		final all = classLookup != null && classLookup.all != null ? classLookup.all : scope.allClasses;
-		if (all == null || all.length == 0)
+		final usesScopeGraph = all == scope.allClasses;
+		if (usesScopeGraph && scope.nearestClassByBaseNameCache.exists(cleanBase))
+			return scope.nearestClassByBaseNameCache.get(cleanBase);
+		if (usesScopeGraph && scope.missingNearestClassByBaseNameCache.exists(cleanBase))
 			return null;
+		if (all == null || all.length == 0) {
+			if (usesScopeGraph)
+				scope.missingNearestClassByBaseNameCache.set(cleanBase, true);
+			return null;
+		}
 		var ownerIndex = -1;
 		for (i in 0...all.length)
 			if (all[i] == scope.owner) {
 				ownerIndex = i;
 				break;
 			}
-		if (ownerIndex < 0)
+		if (ownerIndex < 0) {
+			if (usesScopeGraph)
+				scope.missingNearestClassByBaseNameCache.set(cleanBase, true);
 			return null;
+		}
 		var best:Null<HxClassDecl> = null;
 		var bestDistance = 0x3fffffff;
 		for (i in 0...all.length) {
 			final cls = all[i];
-			if (cls == scope.owner || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != base)
+			if (cls == scope.owner || sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls))) != cleanBase)
 				continue;
 			final distance = i > ownerIndex ? i - ownerIndex : ownerIndex - i;
 			if (distance < bestDistance) {
 				best = cls;
 				bestDistance = distance;
 			}
+		}
+		if (usesScopeGraph) {
+			if (best == null)
+				scope.missingNearestClassByBaseNameCache.set(cleanBase, true);
+			else
+				scope.nearestClassByBaseNameCache.set(cleanBase, best);
 		}
 		return best;
 	}

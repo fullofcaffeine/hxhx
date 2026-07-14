@@ -25,6 +25,19 @@ typedef CppRenderScope = {
 	/** Whether the nearest-owner cache has indexed the complete reachable owner chain. **/
 	var methodOwnerGraphComplete:Bool;
 
+	/**
+		Nearest same-base class declarations already resolved relative to this owner.
+
+		Unqualified type hints can have several module-local declarations with the
+		same short name. The class graph and owner position are immutable for one
+		render scope, so their nearest result can be shared by every type question
+		asked while rendering that method.
+	**/
+	var nearestClassByBaseNameCache:haxe.ds.StringMap<HxClassDecl>;
+
+	/** Same-base names proven absent from this scope's immutable class graph. **/
+	var missingNearestClassByBaseNameCache:haxe.ds.StringMap<Bool>;
+
 	var typeParams:Array<String>;
 	var typeParamCppNames:haxe.ds.StringMap<String>;
 	var localTypes:haxe.ds.StringMap<String>;
