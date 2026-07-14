@@ -1,6 +1,6 @@
 # Macro/Eval Parity Contract
 
-Last audited: 2026-04-14
+Last audited: 2026-07-14
 
 This page defines the Full 1.0 macro/eval closure contract. It is intentionally separate from
 the broader Full 1.0 contract so macro runtime parity, native eval evidence, aggregate gate
@@ -40,6 +40,13 @@ The contract is not release-satisfied unless the evidence run includes all of th
 - `FULL1_EVAL_NATIVE:PASS`
 - `FULL1_MACRO_EVAL_PARITY:PASS`
 
+The external-host child evidence must also contain:
+
+- `MACRO_RUNTIME_EXTERNAL_HOST_ARTIFACT:PASS`
+
+That child marker proves one candidate-bound host survived its receipt and
+protocol checks. It does not replace either aggregate macro marker above.
+
 The contract-definition marker is separate:
 
 - `FULL1_MACRO_EVAL_CONTRACT:PASS`
@@ -51,7 +58,7 @@ guarded. It does not substitute for any runtime, eval, or aggregate parity marke
 
 | Blocker | Status | Closure rule |
 | --- | --- | --- |
-| Macro runtime parity blockers | Resolved for the declared Full 1.0 surface | `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md` must continue to state that no scoped macro runtime parity blockers remain open. |
+| Macro runtime parity blockers | Open under `haxe_ocaml-vhk47.1` and `haxe_ocaml-vhk47.3` | The external-host lifecycle needs a fresh same-candidate aggregate, and project-defined Haxe macros need a stage0-free authenticated module path. See `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`. |
 | Native eval/interp baseline | Open until `haxe.ocaml-f1cl.4.2` is closed | `.github/workflows/full1-eval-native.yml` or the local runner must emit `FULL1_EVAL_NATIVE:PASS` from a stage0-forbidden run. |
 | Gate Full1 aggregate wiring | Open until `haxe.ocaml-f1cl.4.3` is closed | `.github/workflows/gate-full1.yml` must emit `FULL1_MACRO_EVAL_PARITY:PASS` only after the macro and eval evidence lanes pass without silent fallback. |
 

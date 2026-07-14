@@ -19,12 +19,15 @@ const requiredDocSnippets = [
   'FULL1_MACRO_EVAL_CONTRACT:PASS',
   'MACRO_RUNTIME_PARITY_WEEKLY:PASS',
   'FULL1_MACRO_PARITY:PASS',
+  'MACRO_RUNTIME_EXTERNAL_HOST_ARTIFACT:PASS',
   'FULL1_EVAL_NATIVE:PASS',
   'FULL1_MACRO_EVAL_PARITY:PASS',
   '## Blocker Map',
   '## Non-Goals',
   'haxe.ocaml-f1cl.4.2',
   'haxe.ocaml-f1cl.4.3',
+  'haxe_ocaml-vhk47.1',
+  'haxe_ocaml-vhk47.3',
   'Raw source-host Reflaxe custom-target discovery',
   'Treating `--compat` or stage0 delegation as native Full 1.0 macro/eval evidence',
 ]
@@ -57,7 +60,11 @@ function main() {
     requireIncludes(docPath, doc, snippet)
   }
 
-  requireIncludes(macroBlockersPath, macroBlockers, 'No scoped macro runtime parity blockers remain open')
+  requireIncludes(macroBlockersPath, macroBlockers, 'MRP-B5')
+  requireIncludes(macroBlockersPath, macroBlockers, 'haxe_ocaml-vhk47.1')
+  requireIncludes(macroBlockersPath, macroBlockers, 'MRP-B6')
+  requireIncludes(macroBlockersPath, macroBlockers, 'haxe_ocaml-vhk47.3')
+  requireIncludes(macroBlockersPath, macroBlockers, 'MACRO_HOST_LIFECYCLE_DECISION.md')
   requireIncludes(parityMapPath, parityMap, 'FULL1_EVAL_NATIVE:PASS')
   requireIncludes(parityMapPath, parityMap, 'FULL1_MACRO_EVAL_PARITY:PASS')
   requireIncludes(fullContractPath, fullContract, docPath)

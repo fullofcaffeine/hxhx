@@ -35,6 +35,25 @@ is_true() {
   [[ "$v" == "1" || "$v" == "true" || "$v" == "yes" ]]
 }
 
+# A macro-host build may launch hxhx for development-only dynamic inputs. That
+# compiler must never respond by starting another macro-host build: the second
+# request would recursively repeat the same work until the machine or CI job
+# runs out of time. Export depth=1 before any compiler can be launched and make
+# every nested request fail at this single shared boundary.
+MACRO_HOST_BUILD_DEPTH="${HXHX_MACRO_HOST_BUILD_DEPTH:-0}"
+case "$MACRO_HOST_BUILD_DEPTH" in
+  0) ;;
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_MACRO_HOST_BUILD_DEPTH: $MACRO_HOST_BUILD_DEPTH (expected 0 for a top-level build)." >&2
+    exit 2
+    ;;
+  *)
+    echo "hxhx macro host build: a macro-host build cannot start another macro-host build (depth=$MACRO_HOST_BUILD_DEPTH)." >&2
+    exit 2
+    ;;
+esac
+export HXHX_MACRO_HOST_BUILD_DEPTH=1
+
 case "$HXHX_DUNE_JOBS" in
   auto) ;;
   ''|*[!0-9]*)

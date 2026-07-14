@@ -88,6 +88,7 @@ for (const needle of [
   'HXHX_PARITY_TIMINGS_JSONL',
   '${{ matrix.macro_runtime_mode }}.timings.jsonl',
   'build_hxhx_binary',
+  'prepare_external_macro_host',
   'unit_macro_stage3_no_emit',
   'runci_macro_stage3_no_emit',
   'display_macro_protocol',

@@ -1,6 +1,6 @@
 # Macro Runtime Parity Blockers
 
-Last audited: 2026-03-08
+Last audited: 2026-07-14
 
 This list tracks the explicit blockers for declaring `inproc` and `external-host` macro runtime modes parity-equivalent for production defaults.
 
@@ -12,12 +12,23 @@ Beginner summary:
 
 ## Open blockers
 
-No scoped macro runtime parity blockers remain open for the declared Full1 surface.
+| Blocker ID | What remains in plain language | Owner | Closure evidence |
+| --- | --- | --- | --- |
+| MRP-B5 | The external checks need one stage0-free macro-host executable that is built before the workload, tied to the candidate commit, and reused without recursive rebuilding. | `haxe_ocaml-vhk47.1` | Candidate receipt plus a fresh same-commit unit/runci/display/protocol aggregate with both runtime modes green. |
+| MRP-B6 | Real projects need a stage0-free way to load their own Haxe-authored macro code into the reusable host; built-in aliases and hand-written OCaml module fixtures are not enough. | `haxe_ocaml-vhk47.3` | One repo-owned Haxe project macro passes through an authenticated host/module path, with an in-process comparison and upstream Haxe 4.3.7 oracle expectation. |
+
+The accepted lifecycle and its claim limits are explained in
+`docs/00-project/MACRO_HOST_LIFECYCLE_DECISION.md`.
+
 ## Exit criteria to clear this list
 
 1. `inproc` runs the same macro surfaces as `external-host` for the scoped compatibility matrix.
-2. Weekly parity workflow stays green across both modes and all selected suites.
-3. The current `inproc` default remains qualified for release with documented fallback policy and rollback plan.
+2. The external job prepares one candidate-bound host with stage0 forbidden and
+   proves that unit, runci, display, and protocol checks reuse its digest.
+3. Project-defined Haxe macro code has a stage0-free route into the reusable
+   external host.
+4. Weekly parity workflow stays green across both modes and all selected suites.
+5. The current `inproc` default remains qualified for release with documented fallback policy and rollback plan.
 
 ## Current xhigh review
 
@@ -42,6 +53,16 @@ No scoped macro runtime parity blockers remain open for the declared Full1 surfa
 - Upstream Haxe 4.3.7 remains the compatibility oracle. Sibling Reflaxe repos remain pressure tests only.
 - Residual synthetic-fidelity improvements that are not required for honest Full1 closure are now tracked as post-1.0 work in `haxe.ocaml-8nv.11.6`.
 - `MRP-B3` release/gate wiring is closed: macro runtime parity is reusable, release-aware, and consumed by Gate Full1.
+
+2026-07-14 lifecycle review outcome:
+
+- The prior semantic API work remains closed; it should not be reopened to own a
+  host-artifact lifecycle failure.
+- The generic committed host is accepted as the near-term artifact for the
+  selected external-host aggregate when its commit, snapshot tree, digest,
+  protocol handshake, and stage0-forbidden policy are recorded and revalidated.
+- This lifecycle evidence does not prove arbitrary project macros. That distinct
+  Full1 obligation is now `MRP-B6` / `haxe_ocaml-vhk47.3`.
 
 ## Recently resolved
 

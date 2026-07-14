@@ -13,6 +13,7 @@ set -euo pipefail
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXELIB_BIN="${HAXELIB_BIN:-haxelib}"
+MACRO_HOST_AUTO_BUILD="${HXHX_MACRO_HOST_AUTO_BUILD:-1}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
@@ -29,9 +30,29 @@ if [ ! -d "$UPSTREAM_DIR/tests/unit" ]; then
   exit 0
 fi
 
-if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
-  echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
-  exit 1
+needs_stage0_macro_host_build=0
+case "$MACRO_HOST_AUTO_BUILD" in
+  1|true|yes)
+    if [ "${HXHX_MACRO_RUNTIME_MODE:-inproc}" = "external-host" ] && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
+      needs_stage0_macro_host_build=1
+    fi
+    ;;
+  0|false|no|'') ;;
+  *)
+    echo "Invalid HXHX_MACRO_HOST_AUTO_BUILD: $MACRO_HOST_AUTO_BUILD (expected 0/1, false/true, or no/yes)." >&2
+    exit 2
+    ;;
+esac
+
+if [ "$needs_stage0_macro_host_build" = "1" ]; then
+  if [ "${HXHX_FORBID_STAGE0:-0}" = "1" ]; then
+    echo "External macro evidence forbids lazy host building; prepare HXHX_MACRO_HOST_EXE before this runner." >&2
+    exit 1
+  fi
+  if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
+    echo "Missing Haxe compiler on PATH for development macro-host auto-build (expected '$HAXE_BIN')." >&2
+    exit 1
+  fi
 fi
 
 if ! command -v "$HAXELIB_BIN" >/dev/null 2>&1; then
@@ -139,7 +160,7 @@ set +e
 out="$(
   cd "$UPSTREAM_DIR/tests/unit"
   rm -rf out_hxhx_unit_macro_stage3_no_emit
-  HXHX_MACRO_HOST_AUTO_BUILD=1 \
+  HXHX_MACRO_HOST_AUTO_BUILD="$MACRO_HOST_AUTO_BUILD" \
     HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" \
     "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_no_emit 2>&1
 )"

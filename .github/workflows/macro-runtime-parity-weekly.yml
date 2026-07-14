@@ -41,6 +41,8 @@ jobs:
         macro_runtime_mode: [external-host, inproc]
     env:
       HXHX_MACRO_RUNTIME_MODE: ${{ matrix.macro_runtime_mode }}
+      HXHX_MACRO_HOST_AUTO_BUILD: '0'
+      HXHX_FORBID_STAGE0: '1'
       HXHX_GATE2_SKIP_PARTY: '1'
       HXHX_PARITY_ARTIFACT_DIR: .artifacts/macro-runtime-parity/${{ matrix.macro_runtime_mode }}
       HXHX_PARITY_TIMINGS_JSONL: .artifacts/macro-runtime-parity/${{ matrix.macro_runtime_mode }}/${{ matrix.macro_runtime_mode }}.timings.jsonl
@@ -252,7 +254,7 @@ jobs:
           phase_start_ms="$(date +%s%3N)"
           run_phase_body() (
             set -euo pipefail
-            HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
+            HXHX_BIN="$(HAXE_BIN=__macro_runtime_build_stage0_forbidden__ bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
             if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
               echo "Failed to build hxhx binary for macro runtime parity lane." >&2
               exit 1
@@ -279,6 +281,81 @@ jobs:
             --exit-code "$phase_exit"
           exit "$phase_exit"
 
+      - name: Prepare one external macro-host artifact
+        if: matrix.macro_runtime_mode == 'external-host'
+        run: |
+          set -euo pipefail
+          mkdir -p "$HXHX_PARITY_ARTIFACT_DIR"
+          phase_start_ms="$(date +%s%3N)"
+          run_phase_body() (
+            set -euo pipefail
+            repo_root="$(pwd)"
+            artifact_dir="$repo_root/$HXHX_PARITY_ARTIFACT_DIR"
+            host_dir="$artifact_dir/candidate-host"
+            host_bin="$host_dir/hxhx-macro-host.exe"
+            receipt="$artifact_dir/macro-runtime-host-receipt.json"
+            build_stdout="$artifact_dir/build-macro-host.stdout.log"
+            build_stderr="$artifact_dir/build-macro-host.stderr.log"
+            mkdir -p "$host_dir"
+
+            HAXE_BIN=__macro_runtime_host_stage0_forbidden__ \
+              bash scripts/hxhx/build-hxhx-macro-host.sh >"$build_stdout" 2>"$build_stderr"
+            cat "$build_stderr"
+            built_path="$(awk 'NF { line=$0 } END { print line }' "$build_stdout")"
+            if [ -z "$built_path" ] || [ ! -x "$built_path" ]; then
+              echo "The stage0-free macro-host build did not produce an executable." >&2
+              cat "$build_stdout" >&2
+              exit 1
+            fi
+            cp "$built_path" "$host_bin"
+            chmod +x "$host_bin"
+
+            node scripts/ci/macro-runtime-host-evidence.js write \
+              --root "$repo_root" \
+              --report "$receipt" \
+              --macro-host-bin "$host_bin"
+            node scripts/ci/macro-runtime-host-evidence.js validate \
+              --root "$repo_root" \
+              --report "$receipt" \
+              --expected-commit "$GITHUB_SHA"
+
+            {
+              echo "HXHX_MACRO_HOST_EXE=$host_bin"
+              echo "HXHX_MACRO_HOST_RECEIPT=$receipt"
+            } >> "$GITHUB_ENV"
+            {
+              echo "macro_host_receipt=macro-runtime-host-receipt.json"
+              echo "macro_host_sha256=$(sha256sum "$host_bin" | awk '{ print $1 }')"
+              echo "macro_host_source=generic-committed-snapshot"
+              echo "macro_host_stage0_forbidden=1"
+            } >> "$artifact_dir/meta.txt"
+            echo "MACRO_RUNTIME_EXTERNAL_HOST_ARTIFACT:PASS" | tee -a "$artifact_dir/markers.txt"
+          )
+          set +e
+          run_phase_body
+          phase_exit="$?"
+          set -e
+          phase_end_ms="$(date +%s%3N)"
+          phase_status="pass"
+          if [ "$phase_exit" -ne 0 ]; then
+            phase_status="fail"
+          fi
+          node scripts/ci/full1-phase-timing.js append \
+            --jsonl "$HXHX_PARITY_TIMINGS_JSONL" \
+            --workflow "macro-runtime-parity-weekly" \
+            --job "$HXHX_MACRO_RUNTIME_MODE" \
+            --phase "prepare_external_macro_host" \
+            --started-ms "$phase_start_ms" \
+            --ended-ms "$phase_end_ms" \
+            --status "$phase_status" \
+            --exit-code "$phase_exit"
+          exit "$phase_exit"
+
+      - name: Block stage0 during macro workloads
+        run: |
+          set -euo pipefail
+          echo "HAXE_BIN=__macro_runtime_stage0_forbidden__" >> "$GITHUB_ENV"
+
       - name: Run upstream unit macro (stage3 no-emit)
         run: |
           set -euo pipefail
@@ -286,6 +363,12 @@ jobs:
           phase_start_ms="$(date +%s%3N)"
           run_phase_body() (
             set -euo pipefail
+            if [ "$HXHX_MACRO_RUNTIME_MODE" = "external-host" ]; then
+              node scripts/ci/macro-runtime-host-evidence.js validate \
+                --root "$(pwd)" \
+                --report "$HXHX_MACRO_HOST_RECEIPT" \
+                --expected-commit "$GITHUB_SHA"
+            fi
             npm run test:upstream:unit-macro-stage3-no-emit 2>&1 | tee "$artifact_dir/unit-macro-stage3-no-emit.log"
             phase_exit="${PIPESTATUS[0]}"
             if [ "$phase_exit" -ne 0 ]; then
@@ -320,6 +403,12 @@ jobs:
           phase_start_ms="$(date +%s%3N)"
           run_phase_body() (
             set -euo pipefail
+            if [ "$HXHX_MACRO_RUNTIME_MODE" = "external-host" ]; then
+              node scripts/ci/macro-runtime-host-evidence.js validate \
+                --root "$(pwd)" \
+                --report "$HXHX_MACRO_HOST_RECEIPT" \
+                --expected-commit "$GITHUB_SHA"
+            fi
             npm run test:upstream:runci-macro-stage3-no-emit 2>&1 | tee "$artifact_dir/runci-macro-stage3-no-emit.log"
             phase_exit="${PIPESTATUS[0]}"
             if [ "$phase_exit" -ne 0 ]; then
@@ -354,6 +443,12 @@ jobs:
           phase_start_ms="$(date +%s%3N)"
           run_phase_body() (
             set -euo pipefail
+            if [ "$HXHX_MACRO_RUNTIME_MODE" = "external-host" ]; then
+              node scripts/ci/macro-runtime-host-evidence.js validate \
+                --root "$(pwd)" \
+                --report "$HXHX_MACRO_HOST_RECEIPT" \
+                --expected-commit "$GITHUB_SHA"
+            fi
             npm run test:upstream:display-stage3-no-emit 2>&1 | tee "$artifact_dir/display-stage3-no-emit.log"
             phase_exit="${PIPESTATUS[0]}"
             if [ "$phase_exit" -ne 0 ]; then
@@ -390,6 +485,13 @@ jobs:
         run: |
           set -euo pipefail
           artifact_dir="${HXHX_PARITY_ARTIFACT_DIR}"
+          if [ "$HXHX_MACRO_RUNTIME_MODE" = "external-host" ]; then
+            node scripts/ci/macro-runtime-host-evidence.js validate \
+              --root "$(pwd)" \
+              --report "$HXHX_MACRO_HOST_RECEIPT" \
+              --expected-commit "$GITHUB_SHA"
+            echo "MACRO_RUNTIME_EXTERNAL_HOST_ARTIFACT:PASS" | tee -a "$artifact_dir/markers.txt"
+          fi
           cp docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md "$artifact_dir/macro-runtime-parity-blockers.md"
           echo "MACRO_RUNTIME_PARITY_BLOCKERS_${HXHX_MODE_MARKER}:TRACKED" | tee -a "$artifact_dir/markers.txt"
           echo "MACRO_RUNTIME_PARITY_${HXHX_MODE_MARKER}:PASS" | tee -a "$artifact_dir/markers.txt"

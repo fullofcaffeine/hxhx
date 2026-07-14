@@ -200,7 +200,10 @@ Full1 plugin parity timing artifacts:
 
 Macro runtime parity timing artifacts:
 - mode-tagged artifacts include `<mode>.timings.jsonl`, `<mode>.timings.summary.json`, and `<mode>.timings.md`
-- measured phases include host/toolchain setup, npm/Haxe dependency prep, upstream checkout fetch, `build_hxhx_binary`, unit macro, runci macro, and display/protocol checks
+- the external-host artifact includes `macro-runtime-host-receipt.json`, the exact host executable, its build logs, and `MACRO_RUNTIME_EXTERNAL_HOST_ARTIFACT:PASS`
+- the receipt binds the host to the candidate commit and committed macro-host snapshot tree, records its SHA-256 digest, and verifies the real RPC handshake; later workload steps revalidate it
+- release evidence sets `HXHX_FORBID_STAGE0=1`, disables `HXHX_MACRO_HOST_AUTO_BUILD`, and treats a recursive host build as a hard error
+- measured phases include host/toolchain setup, npm/Haxe dependency prep, upstream checkout fetch, `build_hxhx_binary`, `prepare_external_macro_host`, unit macro, runci macro, and display/protocol checks
 - timing Markdown is appended to `GITHUB_STEP_SUMMARY` for each runtime mode
 
 Full1 Gate3 extended timing artifacts:
