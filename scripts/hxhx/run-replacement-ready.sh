@@ -20,6 +20,7 @@ case "$PROFILE" in
     echo "  HXHX_M7_DRY_RUN=0|1                 (default 0)" >&2
     echo "  HXHX_M7_SCOPE_FILE=<json>           (default: strict=docs/02-user-guide/compat/native-scope-targets.json, otherwise docs/02-user-guide/compat/scoped-1.0-targets.json)" >&2
     echo "  HXHX_M7_REQUIRE_PLUGIN_MATRIX=0|1   (default: strict full=1, otherwise 0)" >&2
+    echo "  HXHX_M7_SHARED_ARTIFACT_DIR=<dir>   (default: .artifacts/gate-m7-shared)" >&2
     echo "  HAXE_UPSTREAM_DIR=/path/to/haxe     (default: $ROOT/vendor/haxe)" >&2
     exit 2
     ;;
@@ -72,6 +73,10 @@ esac
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$ROOT/vendor/haxe}"
 HOST_OS="$(uname -s)"
 M7_GATE3_TARGETS_DEFAULT=""
+SHARED_ARTIFACT_TOOL="$ROOT/scripts/ci/m7-shared-artifacts.js"
+SHARED_ARTIFACT_DIR="${HXHX_M7_SHARED_ARTIFACT_DIR:-$ROOT/.artifacts/gate-m7-shared}"
+SHARED_ARTIFACT_RECEIPT="$SHARED_ARTIFACT_DIR/receipt.json"
+SHARED_ARTIFACTS_READY=0
 
 load_scope_targets() {
   local scope_file="$1"
@@ -116,7 +121,7 @@ need_cmd() {
   return 0
 }
 
-if [ "$PROFILE" = "full" ] && [ "$STRICT" = "1" ]; then
+if [ "$PROFILE" = "full" ] && [ "$STRICT" = "1" ] && [ "$DRY_RUN" != "1" ]; then
   if [ ! -d "$UPSTREAM_DIR/tests/runci" ] || [ ! -f "$UPSTREAM_DIR/tests/RunCi.hxml" ]; then
     echo "Full M7 strict mode requires upstream checkout at '$UPSTREAM_DIR'." >&2
     echo "Run: bash scripts/vendor/fetch-haxe-upstream.sh" >&2
@@ -141,6 +146,104 @@ fi
 summary=()
 failures=0
 
+prepare_shared_strict_artifacts() {
+  local start end elapsed
+  local built_hxhx=""
+  local built_macro_host=""
+  local code=0
+
+  if [ "$STRICT" != "1" ]; then
+    return 0
+  fi
+
+  echo ""
+  echo "== M7 preparation: shared stage0-free native artifacts"
+  if [ "$DRY_RUN" = "1" ]; then
+    summary+=("shared-native-artifacts: DRY_RUN (0s)")
+    echo "M7_SHARED_ARTIFACTS:DRY_RUN"
+    return 0
+  fi
+
+  start="$(date +%s)"
+  rm -rf "$SHARED_ARTIFACT_DIR"
+  mkdir -p "$SHARED_ARTIFACT_DIR"
+  export HXHX_BOOTSTRAP_PREFER_NATIVE=1
+
+  set +e
+  built_hxhx="$(
+    HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used \
+      bash "$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1
+  )"
+  code="$?"
+  set -e
+  if [ "$code" -ne 0 ] || [ -z "$built_hxhx" ] || [ ! -x "$built_hxhx" ] || [[ "$built_hxhx" != *.exe ]]; then
+    end="$(date +%s)"
+    elapsed="$((end - start))"
+    summary+=("shared-native-artifacts: FAIL (${elapsed}s, hxhx build exit=$code)")
+    echo "M7 shared preparation did not produce a native hxhx executable." >&2
+    echo "M7_SHARED_ARTIFACTS:FAIL"
+    return 1
+  fi
+
+  set +e
+  built_macro_host="$(
+    HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used \
+      bash "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1
+  )"
+  code="$?"
+  set -e
+  if [ "$code" -ne 0 ] || [ -z "$built_macro_host" ] || [ ! -x "$built_macro_host" ] || [[ "$built_macro_host" != *.exe ]]; then
+    end="$(date +%s)"
+    elapsed="$((end - start))"
+    summary+=("shared-native-artifacts: FAIL (${elapsed}s, macro-host build exit=$code)")
+    echo "M7 shared preparation did not produce a native macro-host executable." >&2
+    echo "M7_SHARED_ARTIFACTS:FAIL"
+    return 1
+  fi
+
+  HXHX_BIN="$SHARED_ARTIFACT_DIR/hxhx.exe"
+  HXHX_MACRO_HOST_EXE="$SHARED_ARTIFACT_DIR/hxhx-macro-host.exe"
+  cp "$built_hxhx" "$HXHX_BIN"
+  cp "$built_macro_host" "$HXHX_MACRO_HOST_EXE"
+  chmod +x "$HXHX_BIN" "$HXHX_MACRO_HOST_EXE"
+  export HXHX_BIN HXHX_MACRO_HOST_EXE
+
+  if ! node "$SHARED_ARTIFACT_TOOL" write \
+    --root "$ROOT" \
+    --report "$SHARED_ARTIFACT_RECEIPT" \
+    --hxhx-bin "$HXHX_BIN" \
+    --macro-host-bin "$HXHX_MACRO_HOST_EXE"; then
+    end="$(date +%s)"
+    elapsed="$((end - start))"
+    summary+=("shared-native-artifacts: FAIL (${elapsed}s, receipt validation)")
+    echo "M7_SHARED_ARTIFACTS:FAIL"
+    return 1
+  fi
+
+  SHARED_ARTIFACTS_READY=1
+  end="$(date +%s)"
+  elapsed="$((end - start))"
+  summary+=("shared-native-artifacts: PASS (${elapsed}s)")
+  echo "m7_shared_hxhx=$HXHX_BIN"
+  echo "m7_shared_macro_host=$HXHX_MACRO_HOST_EXE"
+  echo "m7_shared_receipt=$SHARED_ARTIFACT_RECEIPT"
+}
+
+validate_shared_strict_artifacts() {
+  if [ "$STRICT" != "1" ] || [ "$DRY_RUN" = "1" ]; then
+    return 0
+  fi
+  if [ "$SHARED_ARTIFACTS_READY" != "1" ]; then
+    echo "M7 shared artifacts were not prepared." >&2
+    return 1
+  fi
+  node "$SHARED_ARTIFACT_TOOL" validate \
+    --root "$ROOT" \
+    --report "$SHARED_ARTIFACT_RECEIPT" \
+    --expected-commit "$(git -C "$ROOT" rev-parse HEAD)" \
+    --quiet
+}
+
 run_check() {
   local name="$1"
   local cmd="$2"
@@ -161,8 +264,17 @@ run_check() {
   else
     log_file="$(mktemp -t hxhx-m7-${name//[^a-zA-Z0-9]/_}.XXXXXX.log)"
     set +e
-    bash -lc "$cmd" 2>&1 | tee "$log_file"
-    code="${PIPESTATUS[0]}"
+    if ! validate_shared_strict_artifacts; then
+      echo "M7 shared artifact validation failed before '$name'." | tee "$log_file" >&2
+      code=4
+    else
+      bash -lc "$cmd" 2>&1 | tee "$log_file"
+      code="${PIPESTATUS[0]}"
+      if [ "$code" -eq 0 ] && ! validate_shared_strict_artifacts; then
+        echo "M7 shared artifact validation failed after '$name'." | tee -a "$log_file" >&2
+        code=4
+      fi
+    fi
     set -e
 
     if grep -Eq "Skipping upstream Gate|Skipping upstream|SKIP \(missing deps\)" "$log_file"; then
@@ -237,6 +349,18 @@ echo "require_plugin_matrix=$REQUIRE_PLUGIN_MATRIX"
 if [ "$STRICT" = "1" ]; then
   export HXHX_FORBID_STAGE0=1
   echo "strict_stage0=enabled (HXHX_FORBID_STAGE0=1)"
+fi
+if ! prepare_shared_strict_artifacts; then
+  echo ""
+  echo "== M7 summary"
+  for line in "${summary[@]}"; do
+    echo "$line"
+  done
+  if [ "$STRICT" = "1" ]; then
+    echo "M7_STRICT_STAGE0:FAIL"
+  fi
+  echo "M7_REPLACEMENT_READY:FAIL"
+  exit 1
 fi
 if [ "$HOST_OS" = "Darwin" ] && [ -z "${HXHX_GATE3_TARGETS:-}" ] && [ ! -f "$SCOPE_FILE" ]; then
   echo "note: using Darwin default Gate3 target set (Macro,Neko). Set HXHX_GATE3_TARGETS to override."

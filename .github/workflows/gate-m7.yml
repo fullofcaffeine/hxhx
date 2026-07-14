@@ -146,6 +146,7 @@ jobs:
           set -euo pipefail
           grep -q '^M7_REPLACEMENT_READY:' .artifacts/gate-m7.log
           if [ "${REQUIRE_STRICT_MARKER}" = "1" ]; then
+            grep -q '^M7_SHARED_ARTIFACTS:PASS' .artifacts/gate-m7.log
             grep -q '^M7_STRICT_STAGE0:' .artifacts/gate-m7.log
           fi
 
@@ -154,5 +155,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gate-m7-logs-${{ github.run_id }}
-          path: .artifacts/gate-m7.log
+          path: |
+            .artifacts/gate-m7.log
+            .artifacts/gate-m7-shared/receipt.json
           if-no-files-found: error

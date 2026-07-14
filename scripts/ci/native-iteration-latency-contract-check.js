@@ -79,6 +79,7 @@ function main() {
     'haxe.ocaml-5rjl',
     'haxe_ocaml-850ii',
     'scripts/ci/full1-phase-timing.js',
+    'scripts/ci/m7-shared-artifacts.js',
     'scripts/ci/hxhx-kpi-report-validator.js',
     'scripts/ci/hxhx-kpi-artifact-comparison.js',
     'scripts/ci/bootstrap-regen-benchmark-report.js',
@@ -156,6 +157,9 @@ function main() {
     if (policy.activeEvidenceLoop.full1PhaseTimingReportSchema !== 'full1-phase-timing-summary.v2') {
       fail('policy.activeEvidenceLoop.full1PhaseTimingReportSchema must be full1-phase-timing-summary.v2')
     }
+    if (policy.activeEvidenceLoop.m7SharedArtifactReceiptSchema !== 'm7-shared-artifacts.v1') {
+      fail('policy.activeEvidenceLoop.m7SharedArtifactReceiptSchema must be m7-shared-artifacts.v1')
+    }
     if (policy.activeEvidenceLoop.reportSchema !== 'hxhx.kpi.v2') {
       fail('policy.activeEvidenceLoop.reportSchema must be hxhx.kpi.v2')
     }
@@ -173,6 +177,8 @@ function main() {
     }
     for (const field of [
       'full1PhaseTimingReportValidator',
+      'm7SharedArtifactReceiptValidator',
+      'm7SharedArtifactRunner',
       'reportValidator',
       'reportWorkflow',
       'artifactComparisonValidator',

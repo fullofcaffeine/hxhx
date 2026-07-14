@@ -84,6 +84,9 @@ performance claim must use measured medians from the relevant runner class.
   "activeEvidenceLoop": {
     "full1PhaseTimingReportSchema": "full1-phase-timing-summary.v2",
     "full1PhaseTimingReportValidator": "scripts/ci/full1-phase-timing.js",
+    "m7SharedArtifactReceiptSchema": "m7-shared-artifacts.v1",
+    "m7SharedArtifactReceiptValidator": "scripts/ci/m7-shared-artifacts.js",
+    "m7SharedArtifactRunner": "scripts/hxhx/run-replacement-ready.sh",
     "reportSchema": "hxhx.kpi.v2",
     "reportValidator": "scripts/ci/hxhx-kpi-report-validator.js",
     "reportWorkflow": ".github/workflows/hxhx-kpi-report.yml",
@@ -153,6 +156,8 @@ performance claim must use measured medians from the relevant runner class.
         ".github/workflows/full1-eval-native.yml",
         ".github/workflows/gate3-full1-extended.yml",
         ".github/workflows/gate-perf-full1.yml",
+        ".github/workflows/gate-m7.yml",
+        "scripts/ci/m7-shared-artifacts.js",
         "docs/00-project/CI_GATES.md"
       ]
     }
@@ -192,6 +197,15 @@ phase row, uses repository-safe paths, and can be reopened with
 `unavailable` instead of silently disappearing. Its total is only the sum of
 the commands that were actually timed; it is not automatically the whole
 GitHub job runtime. These artifacts remain diagnostic and report-only.
+
+The strict M7 replacement bundle also avoids paying for the same compiler build
+before every independent check. It prepares one native `hxhx` and one macro
+host from the committed stage0-free snapshots, then writes
+`m7-shared-artifacts.v1`. The receipt records the commit, clean tracked-tree
+fingerprints, committed snapshot trees, repository-safe artifact paths, and
+SHA-256 digests. The bundle revalidates it around every check. This only shares
+the compiler tools; Gate1, Gate2, Gate3, plugin, policy, and builtin behavior
+checks still run separately and keep their existing pass markers.
 
 The report workflow has an opt-in bytecode/native comparison. It runs both
 compiler forms sequentially in one GitHub job and accepts the comparison only

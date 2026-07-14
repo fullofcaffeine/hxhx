@@ -226,7 +226,16 @@ Diagnostic Full1 timing scope:
 - `HXHX_M7_STRICT=1`
 - `HXHX_FORBID_STAGE0=1`
 
+Before those checks start, strict M7 builds one native `hxhx` executable and
+one native macro host from the committed stage0-free snapshots. Later checks
+reuse those exact files instead of rebuilding the compiler for every row. The
+`m7-shared-artifacts.v1` receipt binds both file hashes to the current commit,
+clean tracked tree, and committed snapshot trees. It is validated before and
+after every check. In plain language: M7 shares the oven, not the test results;
+each compatibility test still runs independently.
+
 Expected strict markers in logs:
+- `M7_SHARED_ARTIFACTS:PASS`
 - `M7_STRICT_STAGE0:PASS`
 - `M7_REPLACEMENT_READY:PASS`
 
