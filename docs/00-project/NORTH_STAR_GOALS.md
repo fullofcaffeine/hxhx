@@ -93,8 +93,10 @@ Current planning owners:
 - prepublication RC provenance and release handoff: completed foundation
   `haxe_ocaml-7c1ke`; authentic candidate outcome remains under
   `haxe.ocaml-f1cl`
-- actual macro/eval and performance outcomes:
-  `haxe_ocaml-vhk47`, `haxe_ocaml-u6esu`
+- completed one-candidate macro/eval outcome: `haxe_ocaml-vhk47`, backed by
+  artifact-verified run `29353274632` at `243f9801`; ongoing freshness remains
+  part of scheduled Gate Full1 evidence
+- active performance outcome: `haxe_ocaml-u6esu`
 - completed macro-host lifecycle child: `haxe_ocaml-vhk47.1`, backed by
   same-commit two-mode run `29334023225`
 - completed first project-defined Haxe macro child: `haxe_ocaml-vhk47.3`,
@@ -102,6 +104,10 @@ Current planning owners:
   authenticated, loaded, and executed one repo-owned Haxe macro through both
   native modes and emitted `FULL1_MACRO_PARITY:PASS`. This proves the loading
   seam, not arbitrary project-macro coverage or the complete macro/eval goal.
+- completed macro/eval artifact-trust child: `haxe_ocaml-vhk47.4`, backed by
+  exact-commit run `29353274632`; its combined artifact `8319351564` opened and
+  hashed the macro and eval summaries before emitting
+  `FULL1_MACRO_EVAL_PARITY:PASS`
 - completed same-candidate Full1 plugin outcome: `haxe_ocaml-gskz9`
   (artifact-backed run `29281925684` at `31eaa7e5`)
 - native iteration latency regression loop: `haxe_ocaml-850ii`

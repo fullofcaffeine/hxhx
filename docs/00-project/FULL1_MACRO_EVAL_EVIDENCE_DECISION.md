@@ -204,3 +204,41 @@ Before closing `haxe_ocaml-vhk47.4`:
 5. Download its macro, eval, and combined summaries and inspect the candidate
    commit, run identity, markers, and input hashes.
 6. Record a final xhigh review in the bead before closure.
+
+## Exact-Commit Result
+
+Focused run `29353274632` passed on commit
+`243f9801cbe07956b4fb6b79c4d05adf7588043a`, attempt `1`.
+
+In plain language, the run proved this chain:
+
+1. Both native macro modes passed their declared Haxe 4.3.7 workloads.
+2. One Haxe-authored project macro was generated, authenticated, loaded, and
+   run through both native modes.
+3. The macro summary opened those three proof packages before it passed.
+4. Native eval passed with stage0 forbidden and wrote its own candidate-bound
+   receipt.
+5. The final job opened the macro and eval summaries, matched their exact
+   commit/run/attempt, checked their markers and hashes, and only then emitted
+   `FULL1_MACRO_EVAL_PARITY:PASS`.
+
+The primary uploaded records are:
+
+- macro summary artifact `8319118237`, digest
+  `sha256:e655b57b2e5b7525b64ba30d4503dfab27701c149e2772d6b61eadd381eab841`;
+- native eval artifact `8319347057`, digest
+  `sha256:ffe1615ff2366a54e85e54b5ee87064886f1c5fe5ca9bf31f3f15a4fea600714`;
+- combined summary artifact `8319351564`, digest
+  `sha256:e0be361dffa7c246875196c5ca7da8ac22e31f8302c62a74e35388a12c6467a5`.
+
+The combined summary records content hash
+`47f0aaa39129cc56195e7e3ac2af6e09cc6e509d0bf1177ae3f1d7535880602a`
+for the macro summary and
+`e0632d2551c0df1f45efae376ac030c0da5679332e0b4727332492d0e39ecd82`
+for the eval summary. Rebuilding both summaries locally from the downloaded
+proofs produced byte-for-byte identical files.
+
+This exact manual run is fresh candidate evidence under the weekly evidence
+runbook. The scheduled Gate Full1 workflow remains the continuing freshness
+route; a newer failure or stale result supersedes this proof rather than being
+hidden by it.

@@ -97,6 +97,15 @@ artifact `8317497905` has digest
 `sha256:aa3c83f4b56e9cba8c1dd661e0319928447ccbd56620f298b778cc1a42248766`;
 summary artifact `8317500638` has digest
 `sha256:b294cbc5c7b9383cf9d4fb1494cc0ae0ecd4570253f0bc601e7165573b78d839`.
+The broader macro/eval outcome is now also green for one exact candidate.
+Focused run `29353274632` at `243f9801` opened the three macro proof packages,
+the candidate-bound native-eval receipt, and then both verified summaries
+before emitting `FULL1_MACRO_EVAL_PARITY:PASS`. Combined artifact `8319351564`
+has digest
+`sha256:e0be361dffa7c246875196c5ca7da8ac22e31f8302c62a74e35388a12c6467a5`.
+The native eval runner took 482.6 seconds, so this is correctness evidence; it
+does not close the separate performance goal. Gate Full1 remains scheduled and
+is the ongoing freshness route for this child evidence.
 The current open incident record is the expected broader Full1 aggregate no-go.
 Its owner is recorded in the JSON ledger, and the open record does not count as
 passing product or Full1 evidence.
