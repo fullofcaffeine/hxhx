@@ -4,6 +4,7 @@
  */
 
 const childProcess = require('child_process')
+const crypto = require('crypto')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
@@ -12,6 +13,7 @@ const repoRoot = process.cwd()
 const validator = path.join(repoRoot, 'scripts/ci/bootstrap-regen-benchmark-report.js')
 const runner = path.join(repoRoot, 'scripts/hxhx/bench-bootstrap-regen.sh')
 const digest = 'a'.repeat(64)
+const { collectWorktreeChanges } = require(validator)
 
 function fail(message) {
   console.error(`[bootstrap-regen-benchmark-report-fixture-test] ERROR: ${message}`)
@@ -73,7 +75,10 @@ function validReport() {
     git: {
       commit: '0123456789abcdef0123456789abcdef01234567',
       tracked_source_clean_at_start: true,
-      tracked_source_clean_at_end: true
+      tracked_source_clean_at_end: true,
+      bootstrap_snapshot_scope: 'packages/hxhx/bootstrap_out',
+      bootstrap_snapshot_clean_at_end: true,
+      bootstrap_snapshot_changes: []
     },
     environment: {
       os: 'Linux',
@@ -149,6 +154,57 @@ function runValidator(report, expectedStatus, label, tmpDir) {
   }
 }
 
+function runGit(cwd, args) {
+  const result = childProcess.spawnSync('git', args, { cwd, encoding: 'utf8' })
+  if (result.status !== 0) fail(`git ${args.join(' ')} failed: ${result.stderr || result.stdout}`)
+  return result.stdout.trim()
+}
+
+function contentDigest(value) {
+  return crypto.createHash('sha256').update(value).digest('hex')
+}
+
+function assertWorktreeChangeCollection(tmpDir) {
+  const fixtureRepo = path.join(tmpDir, 'worktree-change-repo')
+  const scope = 'packages/hxhx/bootstrap_out'
+  const snapshotDir = path.join(fixtureRepo, scope)
+  fs.mkdirSync(snapshotDir, { recursive: true })
+  runGit(fixtureRepo, ['init', '-q'])
+  runGit(fixtureRepo, ['config', 'user.name', 'Fixture'])
+  runGit(fixtureRepo, ['config', 'user.email', 'fixture@example.invalid'])
+  fs.writeFileSync(path.join(snapshotDir, 'changed.ml'), 'before\n')
+  fs.writeFileSync(path.join(snapshotDir, 'deleted.ml'), 'delete me\n')
+  runGit(fixtureRepo, ['add', '.'])
+  runGit(fixtureRepo, ['commit', '-qm', 'fixture baseline'])
+  const commit = runGit(fixtureRepo, ['rev-parse', 'HEAD'])
+
+  fs.writeFileSync(path.join(snapshotDir, 'changed.ml'), 'after\n')
+  fs.rmSync(path.join(snapshotDir, 'deleted.ml'))
+  fs.writeFileSync(path.join(snapshotDir, 'added.ml'), 'new\n')
+
+  const changes = collectWorktreeChanges(fixtureRepo, commit, scope)
+  if (changes.length !== 3) fail(`expected three captured worktree changes, received ${changes.length}`)
+  const byPath = new Map(changes.map(change => [path.basename(change.path), change]))
+  const changed = byPath.get('changed.ml')
+  const deleted = byPath.get('deleted.ml')
+  const added = byPath.get('added.ml')
+  if (changed?.kind !== 'modified'
+      || changed.before_sha256 !== contentDigest('before\n')
+      || changed.after_sha256 !== contentDigest('after\n')) {
+    fail('modified snapshot path did not preserve before/after digests')
+  }
+  if (deleted?.kind !== 'deleted'
+      || deleted.before_sha256 !== contentDigest('delete me\n')
+      || deleted.after_sha256 !== null) {
+    fail('deleted snapshot path did not preserve its before digest')
+  }
+  if (added?.kind !== 'added'
+      || added.before_sha256 !== null
+      || added.after_sha256 !== contentDigest('new\n')) {
+    fail('untracked snapshot path did not preserve its after digest')
+  }
+}
+
 function main() {
   const runnerSource = fs.readFileSync(runner, 'utf8')
   const warmRunner = runnerSource.match(/run_scenario_warm\(\) \{([\s\S]*?)\n\}/)
@@ -162,12 +218,16 @@ function main() {
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hxhx-bootstrap-regen-report-fixtures-'))
   try {
+    assertWorktreeChangeCollection(tmpDir)
     runValidator(validReport(), 0, 'valid', tmpDir)
     const legacyReport = validReport()
     legacyReport.measurement.scenario_definitions.warm = 'forced incremental regeneration while reusing the repository Haxe server'
     legacyReport.measurement.warmup_rules.warm = 'no explicit warmup; repetitions reuse the repository Haxe server'
     delete legacyReport.measurement.stage0_policy_meaning
     delete legacyReport.measurement.peak_rss_scope
+    delete legacyReport.git.bootstrap_snapshot_scope
+    delete legacyReport.git.bootstrap_snapshot_clean_at_end
+    delete legacyReport.git.bootstrap_snapshot_changes
     runValidator(legacyReport, 0, 'legacy-v1', tmpDir)
     const cases = [
       ['missing-provenance', report => { delete report.environment.cpu_model }],
@@ -175,7 +235,26 @@ function main() {
       ['row-count-mismatch', report => { report.config.reps = 3 }],
       ['invalid-scenario', report => { report.runs[0].scenario = 'mystery' }],
       ['summary-mismatch', report => { report.summaries[0].elapsed_sec.median = 1 }],
-      ['absolute-source-report', report => { report.runs[0].source_report.path = '/tmp/run.json' }]
+      ['absolute-source-report', report => { report.runs[0].source_report.path = '/tmp/run.json' }],
+      ['snapshot-clean-mismatch', report => { report.git.bootstrap_snapshot_clean_at_end = false }],
+      ['absolute-snapshot-path', report => {
+        report.git.bootstrap_snapshot_clean_at_end = false
+        report.git.bootstrap_snapshot_changes.push({
+          kind: 'added',
+          path: '/tmp/generated.ml',
+          before_sha256: null,
+          after_sha256: digest
+        })
+      }],
+      ['invalid-snapshot-digest', report => {
+        report.git.bootstrap_snapshot_clean_at_end = false
+        report.git.bootstrap_snapshot_changes.push({
+          kind: 'modified',
+          path: 'packages/hxhx/bootstrap_out/changed.ml',
+          before_sha256: 'not-a-digest',
+          after_sha256: digest
+        })
+      }]
     ]
     for (const [label, mutate] of cases) {
       const report = validReport()

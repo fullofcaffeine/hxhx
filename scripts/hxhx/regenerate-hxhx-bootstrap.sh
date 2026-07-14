@@ -1356,7 +1356,10 @@ if [ "$skipped_emit" = "0" ]; then
 		rm -rf "$OUT_DIR"
 	fi
 	mkdir -p "$OUT_DIR"
-	haxe_args=(build.hxml -D ocaml_emit_only)
+	# Reflaxe normally increments _GeneratedFiles.json.id after every compile.
+	# A committed bootstrap snapshot needs byte-for-byte repeatability instead,
+	# so use Reflaxe's documented stable-output switch for this maintenance path.
+	haxe_args=(build.hxml -D ocaml_emit_only -D reflaxe.dont_output_metadata_id)
 	if [ "$HXHX_STAGE0_VERBOSE" = "1" ]; then
 		haxe_args+=(-v)
 	fi

@@ -17,6 +17,8 @@ const schema = 'hxhx.bootstrap-regen-benchmark.v1'
 const passMarker = 'HXHX_BOOTSTRAP_REGEN_REPORT:PASS'
 const artifactKind = 'bootstrap-snapshot-regeneration'
 const repoRoot = path.resolve(__dirname, '../..')
+const bootstrapSnapshotScope = 'packages/hxhx/bootstrap_out'
+const gitMaxBuffer = 256 * 1024 * 1024
 
 const scenarioDefinitions = {
   cold: 'full regeneration after removing prior generated output',
@@ -141,6 +143,91 @@ function toolVersion(command, args, label) {
 
 function sha256(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')
+}
+
+function sha256Buffer(value) {
+  return crypto.createHash('sha256').update(value).digest('hex')
+}
+
+function runGit(root, args, encoding = 'utf8') {
+  const result = childProcess.spawnSync('git', args, {
+    cwd: root,
+    encoding,
+    maxBuffer: gitMaxBuffer
+  })
+  if (result.status !== 0) {
+    const stderr = encoding === null ? result.stderr.toString('utf8') : result.stderr
+    const stdout = encoding === null ? result.stdout.toString('utf8') : result.stdout
+    throw new Error(`git ${args.join(' ')} failed: ${(stderr || stdout || '').trim()}`)
+  }
+  return result.stdout
+}
+
+function commitFileDigest(root, commit, filePath) {
+  const content = runGit(root, ['show', `${commit}:${filePath}`], null)
+  return sha256Buffer(content)
+}
+
+function worktreeFileDigest(root, filePath) {
+  return sha256(path.join(root, filePath))
+}
+
+function changeKind(status) {
+  if (status.startsWith('A')) return 'added'
+  if (status.startsWith('D')) return 'deleted'
+  if (status.startsWith('R')) return 'renamed'
+  if (status.startsWith('C')) return 'copied'
+  if (status.startsWith('T')) return 'type-changed'
+  return 'modified'
+}
+
+/**
+ * Captures the exact generated-snapshot drift at the end of a benchmark.
+ * Paths stay repository-relative, while SHA-256 digests let a maintainer tell
+ * stale committed output from a generator that changes between equal runs.
+ */
+function collectWorktreeChanges(root, commit, scope = bootstrapSnapshotScope) {
+  if (!isSha(commit)) throw new Error('worktree change collection requires a 40-character commit SHA')
+  if (!isNormalizedPath(scope)) throw new Error('worktree change scope must be repository-relative')
+
+  const fields = runGit(root, ['diff', '--name-status', '-z', '--find-renames', commit, '--', scope])
+    .split('\0')
+  const changes = []
+  let index = 0
+  while (index < fields.length && fields[index]) {
+    const status = fields[index++]
+    let previousPath = null
+    let filePath
+    if (status.startsWith('R') || status.startsWith('C')) {
+      previousPath = fields[index++]
+      filePath = fields[index++]
+    } else {
+      filePath = fields[index++]
+    }
+    const kind = changeKind(status)
+    const beforePath = previousPath || filePath
+    changes.push({
+      kind,
+      path: filePath,
+      ...(previousPath ? { previous_path: previousPath } : {}),
+      before_sha256: kind === 'added' ? null : commitFileDigest(root, commit, beforePath),
+      after_sha256: kind === 'deleted' ? null : worktreeFileDigest(root, filePath)
+    })
+  }
+
+  const untracked = runGit(root, ['ls-files', '--others', '--exclude-standard', '-z', '--', scope])
+    .split('\0')
+    .filter(Boolean)
+  for (const filePath of untracked) {
+    changes.push({
+      kind: 'added',
+      path: filePath,
+      before_sha256: null,
+      after_sha256: worktreeFileDigest(root, filePath)
+    })
+  }
+
+  return changes.sort((left, right) => left.path.localeCompare(right.path))
 }
 
 function relativeReportPath(filePath, reportsDir) {
@@ -311,6 +398,7 @@ function buildReport(args) {
   const rows = parseResultsTsv(args.resultsTsv)
   const runs = rows.map((row, index) => buildRun(row, args.reportsDir, index))
   const haxeBin = process.env.HAXE_BIN || 'haxe'
+  const bootstrapSnapshotChanges = collectWorktreeChanges(repoRoot, args.gitCommit)
   const report = {
     schema,
     artifact_kind: artifactKind,
@@ -319,7 +407,10 @@ function buildReport(args) {
     git: {
       commit: args.gitCommit,
       tracked_source_clean_at_start: parseBoolean(args.startClean, '--start-tracked-source-clean'),
-      tracked_source_clean_at_end: parseBoolean(args.endClean, '--end-tracked-source-clean')
+      tracked_source_clean_at_end: parseBoolean(args.endClean, '--end-tracked-source-clean'),
+      bootstrap_snapshot_scope: bootstrapSnapshotScope,
+      bootstrap_snapshot_clean_at_end: bootstrapSnapshotChanges.length === 0,
+      bootstrap_snapshot_changes: bootstrapSnapshotChanges
     },
     environment: {
       os: os.type(),
@@ -389,6 +480,67 @@ function validateReport(report) {
     if (!isSha(git.commit)) errors.push('git.commit must be a 40-character commit SHA')
     for (const field of ['tracked_source_clean_at_start', 'tracked_source_clean_at_end']) {
       if (typeof git[field] !== 'boolean') errors.push(`git.${field} must be boolean`)
+    }
+    const hasSnapshotScope = git.bootstrap_snapshot_scope !== undefined
+    const hasSnapshotClean = git.bootstrap_snapshot_clean_at_end !== undefined
+    const hasSnapshotChanges = git.bootstrap_snapshot_changes !== undefined
+    if (hasSnapshotScope || hasSnapshotClean || hasSnapshotChanges) {
+      if (git.bootstrap_snapshot_scope !== bootstrapSnapshotScope) {
+        errors.push(`git.bootstrap_snapshot_scope must be ${bootstrapSnapshotScope}`)
+      }
+      if (typeof git.bootstrap_snapshot_clean_at_end !== 'boolean') {
+        errors.push('git.bootstrap_snapshot_clean_at_end must be boolean')
+      }
+      if (!Array.isArray(git.bootstrap_snapshot_changes)) {
+        errors.push('git.bootstrap_snapshot_changes must be an array')
+      } else {
+        const seenPaths = new Set()
+        for (let index = 0; index < git.bootstrap_snapshot_changes.length; index += 1) {
+          const change = git.bootstrap_snapshot_changes[index]
+          const owner = `git.bootstrap_snapshot_changes[${index}]`
+          if (!change || typeof change !== 'object' || Array.isArray(change)) {
+            errors.push(`${owner} must be an object`)
+            continue
+          }
+          if (!['added', 'deleted', 'modified', 'renamed', 'copied', 'type-changed'].includes(change.kind)) {
+            errors.push(`${owner}.kind is invalid`)
+          }
+          if (!isNormalizedPath(change.path) || !change.path.startsWith(`${bootstrapSnapshotScope}/`)) {
+            errors.push(`${owner}.path must stay inside ${bootstrapSnapshotScope}`)
+          } else if (seenPaths.has(change.path)) {
+            errors.push(`${owner}.path must be unique`)
+          } else {
+            seenPaths.add(change.path)
+          }
+          if (change.previous_path !== undefined
+              && (!isNormalizedPath(change.previous_path) || !change.previous_path.startsWith(`${bootstrapSnapshotScope}/`))) {
+            errors.push(`${owner}.previous_path must stay inside ${bootstrapSnapshotScope}`)
+          }
+          if (change.before_sha256 !== null && !isDigest(change.before_sha256)) {
+            errors.push(`${owner}.before_sha256 must be null or a SHA-256 digest`)
+          }
+          if (change.after_sha256 !== null && !isDigest(change.after_sha256)) {
+            errors.push(`${owner}.after_sha256 must be null or a SHA-256 digest`)
+          }
+          if (change.kind === 'added' && change.before_sha256 !== null) {
+            errors.push(`${owner}.before_sha256 must be null for an added file`)
+          }
+          if (change.kind === 'deleted' && change.after_sha256 !== null) {
+            errors.push(`${owner}.after_sha256 must be null for a deleted file`)
+          }
+          if (!['added', 'deleted'].includes(change.kind)
+              && (!isDigest(change.before_sha256) || !isDigest(change.after_sha256))) {
+            errors.push(`${owner} must record before and after digests`)
+          }
+          if (['renamed', 'copied'].includes(change.kind) && !nonEmptyString(change.previous_path)) {
+            errors.push(`${owner}.previous_path is required for ${change.kind}`)
+          }
+        }
+        if (typeof git.bootstrap_snapshot_clean_at_end === 'boolean'
+            && git.bootstrap_snapshot_clean_at_end !== (git.bootstrap_snapshot_changes.length === 0)) {
+          errors.push('git.bootstrap_snapshot_clean_at_end must match bootstrap_snapshot_changes')
+        }
+      }
     }
   }
 
@@ -627,11 +779,17 @@ function readReport(filePath) {
 }
 
 function markdown(report) {
+  const snapshotChanges = Array.isArray(report.git.bootstrap_snapshot_changes)
+    ? report.git.bootstrap_snapshot_changes
+    : null
   const lines = [
     '### Bootstrap regeneration benchmark',
     '',
     `- Commit: \`${report.git.commit}\``,
     `- Tracked source clean at start/end: \`${report.git.tracked_source_clean_at_start}\` / \`${report.git.tracked_source_clean_at_end}\``,
+    ...(snapshotChanges === null
+      ? []
+      : [`- Bootstrap snapshot clean at end: \`${report.git.bootstrap_snapshot_clean_at_end}\` (${snapshotChanges.length} changed path${snapshotChanges.length === 1 ? '' : 's'}; exact paths and SHA-256 digests are in report.json)`]),
     `- Machine: \`${report.environment.os} ${report.environment.architecture}\` — \`${report.environment.cpu_model}\``,
     `- Toolchains: Haxe \`${report.environment.haxe_version}\`, OCaml \`${report.environment.ocaml_version}\`, Dune \`${report.environment.dune_version}\`, Node \`${report.environment.node_version}\``,
     '- Evidence level: `diagnostic / report-only`',
@@ -688,6 +846,7 @@ if (require.main === module) main(process.argv.slice(2))
 module.exports = {
   artifactKind,
   buildSummaries,
+  collectWorktreeChanges,
   passMarker,
   scenarioDefinitions,
   schema,

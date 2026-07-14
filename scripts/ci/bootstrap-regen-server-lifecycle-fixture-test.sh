@@ -12,6 +12,7 @@ STATE_DIR="$TMP_DIR/state"
 FAKE_BIN_DIR="$TMP_DIR/bin"
 FAKE_HAXE="$FAKE_BIN_DIR/fake-haxe"
 SERVER_PID_CAPTURE="$TMP_DIR/server.pid"
+COMPILE_ARGS_CAPTURE="$TMP_DIR/compile-args.txt"
 PORT=31874
 
 cleanup() {
@@ -44,6 +45,7 @@ if [ "${1:-}" = "--version" ] || [ "${1:-}" = "-version" ]; then
 	echo "4.3.7"
 	exit 0
 fi
+printf '%s\n' "$@" >"$FAKE_COMPILE_ARGS_CAPTURE"
 exit 23
 FAKE_HAXE_SCRIPT
 chmod +x "$FAKE_HAXE"
@@ -62,6 +64,7 @@ run_failing_regen() {
 	set +e
 	PATH="$FAKE_BIN_DIR:$PATH" \
 	FAKE_SERVER_PID_CAPTURE="$SERVER_PID_CAPTURE" \
+	FAKE_COMPILE_ARGS_CAPTURE="$COMPILE_ARGS_CAPTURE" \
 	HXHX_STATE_DIR="$STATE_DIR" \
 	HXHX_HAXE_SERVER_PORT="$PORT" \
 	HXHX_HAXE_SERVER_PREFLIGHT=0 \
@@ -88,6 +91,8 @@ if (report.status !== "error" || report.exit_code !== 23) process.exit(1)
 temporary_report="$TMP_DIR/temporary-server-report.json"
 run_failing_regen "$temporary_report"
 assert_failure_report "$temporary_report"
+grep -Fx -- "reflaxe.dont_output_metadata_id" "$COMPILE_ARGS_CAPTURE" >/dev/null \
+	|| fail "regeneration did not request stable Reflaxe output metadata"
 temporary_server_pid="$(cat "$SERVER_PID_CAPTURE")"
 [ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "temporary run left its server PID state behind"
 [ ! -e "$STATE_DIR/haxe-server.bin" ] || fail "temporary run left its server identity state behind"
