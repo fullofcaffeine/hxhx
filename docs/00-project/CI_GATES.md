@@ -168,6 +168,16 @@ Heavy Full1 OCaml/dune worker and cache policy:
   In that bounded matrix, fixed worker settings increased peak RSS compared with `auto`, so `auto` remains the default.
 - Workflows that already require `ocaml/setup-ocaml` for opam-backed proof setup keep `dune-cache: true`; apt-based Full1 lanes should not be converted to opam/setup-ocaml without comparable timing/RSS evidence.
 
+All mandatory Full1 phase-timing summaries use
+`full1-phase-timing-summary.v2`. Each downloaded summary identifies the exact
+commit, GitHub run and attempt, workflow/job, machine, tool versions, tracked
+source state at summary time, and the raw phase rows. Missing tools are written
+as `unavailable`, and paths stay repository-safe. The validator recomputes the
+phase total and rejects mixed-commit, mixed-run, malformed, or absolute-path
+evidence. The displayed total means only the phases that were timed; it is not
+necessarily the complete GitHub job wall time. The evidence is report-only and
+does not emit a Full1 release or performance-pass marker.
+
 Full1 suite runner timing artifacts:
 - build jobs emit `build_hxhx.timings.*` and `build_macro_host.timings.*`
 - suite jobs emit `<suite>.timings.jsonl`, `<suite>.timings.summary.json`, and `<suite>.timings.md`

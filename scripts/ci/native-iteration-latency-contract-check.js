@@ -153,6 +153,9 @@ function main() {
   if (!policy.activeEvidenceLoop || typeof policy.activeEvidenceLoop !== 'object') {
     fail('policy.activeEvidenceLoop must describe the current KPI evidence path')
   } else {
+    if (policy.activeEvidenceLoop.full1PhaseTimingReportSchema !== 'full1-phase-timing-summary.v2') {
+      fail('policy.activeEvidenceLoop.full1PhaseTimingReportSchema must be full1-phase-timing-summary.v2')
+    }
     if (policy.activeEvidenceLoop.reportSchema !== 'hxhx.kpi.v2') {
       fail('policy.activeEvidenceLoop.reportSchema must be hxhx.kpi.v2')
     }
@@ -169,6 +172,7 @@ function main() {
       fail('policy.activeEvidenceLoop.stage0FreeBuildReportSchema must be hxhx.stage0-free-build.v1')
     }
     for (const field of [
+      'full1PhaseTimingReportValidator',
       'reportValidator',
       'reportWorkflow',
       'artifactComparisonValidator',

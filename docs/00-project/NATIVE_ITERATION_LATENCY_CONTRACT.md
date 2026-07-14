@@ -1,6 +1,6 @@
 # Native Iteration Latency Contract
 
-Last audited: 2026-07-13
+Last audited: 2026-07-14
 
 This document defines the project-level latency north star for native
 `hxhx + reflaxe.ocaml` work. It is a measurement contract, not a claim that the
@@ -82,6 +82,8 @@ performance claim must use measured medians from the relevant runner class.
   "timingTool": "scripts/ci/full1-phase-timing.js",
   "policyGuard": "scripts/ci/native-iteration-latency-contract-check.js",
   "activeEvidenceLoop": {
+    "full1PhaseTimingReportSchema": "full1-phase-timing-summary.v2",
+    "full1PhaseTimingReportValidator": "scripts/ci/full1-phase-timing.js",
     "reportSchema": "hxhx.kpi.v2",
     "reportValidator": "scripts/ci/hxhx-kpi-report-validator.js",
     "reportWorkflow": ".github/workflows/hxhx-kpi-report.yml",
@@ -181,6 +183,15 @@ Expected to remain intentionally heavier:
   release claims.
 
 ## Reporting Rule
+
+Heavy Full1 jobs write `full1-phase-timing-summary.v2`. In plain language, a
+downloaded timing file must say which commit, workflow run, machine, and tool
+versions produced it before anyone compares its numbers. It embeds every raw
+phase row, uses repository-safe paths, and can be reopened with
+`full1-phase-timing.js validate`. A tool that was unavailable is written as
+`unavailable` instead of silently disappearing. Its total is only the sum of
+the commands that were actually timed; it is not automatically the whole
+GitHub job runtime. These artifacts remain diagnostic and report-only.
 
 The report workflow has an opt-in bytecode/native comparison. It runs both
 compiler forms sequentially in one GitHub job and accepts the comparison only
