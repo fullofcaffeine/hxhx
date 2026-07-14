@@ -20,6 +20,11 @@ typedef CppLocalTypeInferenceApi = {
 	var localCppName:(String, CppRenderScope) -> String;
 	var declareLocalName:(String, CppRenderScope) -> String;
 	var cppLocalTypeHint:(String, Null<HxExpr>, CppRenderScope) -> String;
+	var cppTypeHint:(String, CppRenderScope) -> String;
+	var staticReceiverClassName:(HxExpr, CppRenderScope) -> Null<String>;
+	var isEnumCarrierClassName:(String, CppRenderScope) -> Bool;
+	var hasStaticEnumConstructorMethod:(String, String, CppRenderScope) -> Bool;
+	var hasStaticEnumMetadataField:(String, String, CppRenderScope) -> Bool;
 	var iterableElementType:(HxExpr, CppRenderScope) -> String;
 	var keyValueLoopTypes:(HxExpr, CppRenderScope) -> Array<String>;
 	var withScopedLocal:(CppRenderScope, String, String, Void->Void) -> Void;
@@ -63,6 +68,40 @@ class CppLocalTypeInference {
 		if (scope == null || local == null || local.length == 0)
 			return "";
 		return new CppLocalTypeInference(api).closureVectorTypeForLambdaArgImpl(local, body, scope);
+	}
+
+	/**
+		Recover the carrier type of an enum constructor assigned to an unhinted local.
+
+		Parsed enum constructor helpers retain their source-level `String` return
+		hint even though C++ emits metadata-preserving `shared_ptr` values. This
+		narrow analysis recognizes only qualified constructors owned by a known enum
+		carrier; ordinary String and reference factories keep using general
+		expression inference.
+	**/
+	public static function enumCarrierLocalType(init:Null<HxExpr>, scope:CppRenderScope, api:CppLocalTypeInferenceApi):String {
+		if (init == null || scope == null)
+			return "";
+		return enumCarrierLocalTypeImpl(init, scope, api);
+	}
+
+	static function enumCarrierLocalTypeImpl(init:HxExpr, scope:CppRenderScope, api:CppLocalTypeInferenceApi):String {
+		return switch (init) {
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+				enumCarrierLocalTypeImpl(inner, scope, api);
+			case ECall(EField(receiver, constructorName), args) if (args != null && args.length > 0):
+				final owner = api.staticReceiverClassName(receiver, scope);
+				if (owner != null
+					&& api.isEnumCarrierClassName(owner, scope)
+					&& api.hasStaticEnumConstructorMethod(owner, constructorName, scope)) api.cppTypeHint(owner, scope); else "";
+			case EField(receiver, constructorName):
+				final owner = api.staticReceiverClassName(receiver, scope);
+				if (owner != null
+					&& api.isEnumCarrierClassName(owner, scope)
+					&& api.hasStaticEnumMetadataField(owner, constructorName, scope)) api.cppTypeHint(owner, scope); else "";
+			case _:
+				"";
+		};
 	}
 
 	/**

@@ -1332,10 +1332,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"}",
 			"class Main {",
 			"  static function main() {",
-			"    var a:Choice = A;",
-			"    var p1:Choice = Pair(3, \"x\");",
-			"    var p2:Choice = Pair(3, \"x\");",
-			"    var p3:Choice = Pair(4, \"x\");",
+			"    var a = Choice.A;",
+			"    var p1 = Choice.Pair(3, \"x\");",
+			"    var p2 = Choice.Pair(3, \"x\");",
+			"    var p3 = Choice.Pair(4, \"x\");",
 			"    Sys.println(Std.string(a));",
 			"    Sys.println(Std.string(p1));",
 			"    Sys.println(Std.string(Type.enumEq(p1, p2)));",
@@ -6176,7 +6176,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		myEnumNames.set("MyEnum", true);
 		final myEnumClasses = new StringMap<HxClassDecl>();
 		myEnumClasses.set("MyEnum", myEnum);
+		final regularFactory = new HxClassDecl("RegularFactory", false, [
+			new HxFunctionDecl("text", Public, true, [], "String", [SReturn(EString("text"), HxPos.unknown())], ""),
+			new HxFunctionDecl("make", Public, true, [], "RegularFactory", [SReturn(ENew("RegularFactory", []), HxPos.unknown())], "")
+		], []);
+		myEnumNames.set("RegularFactory", true);
+		myEnumClasses.set("RegularFactory", regularFactory);
 		final myEnumScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(myEnum, {names: myEnumNames, byName: myEnumClasses}, "void");
+		final qualifiedPayloadEnumInit = ECall(EField(EIdent("MyEnum"), "C"), [EInt(0), EString("hello")]);
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalTypeHint("", qualifiedPayloadEnumInit, myEnumScope) == "std::shared_ptr<MyEnum>",
+			"C++ unhinted locals initialized by qualified payload enum constructors should keep the enum carrier type");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalTypeHint("", EField(EIdent("MyEnum"), "A"), myEnumScope) == "std::shared_ptr<MyEnum>",
+			"C++ unhinted locals initialized by qualified zero-argument enum constructors should keep the enum carrier type");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalTypeHint("", ECall(EField(EIdent("RegularFactory"), "text"), []),
+			myEnumScope) == "std::string",
+			"C++ enum local inference should not reclassify ordinary String factories");
+		assertTrue(@:privateAccess
+			backend.cpp.CppTargetCore.cppLocalTypeHint("", ECall(EField(EIdent("RegularFactory"), "make"), []),
+				myEnumScope) == "std::shared_ptr<RegularFactory>",
+			"C++ enum local inference should not reclassify ordinary reference factories");
 		final myEnumInit = HxFieldDecl.getInit(HxClassDecl.getFields(myEnum)[1]);
 		final myEnumFieldInit = @:privateAccess
 			backend.cpp.CppTargetCore.renderFieldInitExpr(myEnumInit, "std::shared_ptr<MyEnum>", myEnumScope);

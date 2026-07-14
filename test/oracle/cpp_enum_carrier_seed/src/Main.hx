@@ -46,8 +46,8 @@ class Main {
 	}
 
 	static function main():Void {
-		final red:Color = Red;
-		final pair:Color = Pair(7, "x");
+		final red = Color.Red;
+		final pair = Color.Pair(7, "x");
 
 		emit("enum-zero-01", "string", Std.string(red));
 		emit("enum-zero-01", "summary", summarize(red));

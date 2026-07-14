@@ -5960,3 +5960,57 @@ generated OCaml snapshots were not edited. `thinking:xhigh` was not crossed,
 and GPT or Oracle review was deliberately skipped because the immutable graph,
 exact output controls, alternate-graph rejection case, and strict evidence
 provided a bounded cache seam.
+
+## 2026-07-14 Qualified Enum Local Carrier Inference
+
+Follow-up bead `haxe_ocaml-ejpzm` traced the first native compiler error after
+Cpp rendering began completing. In plain language, an unhinted local such as
+`var value = MyEnum.C(0, "h")` already received the correct metadata-preserving
+`shared_ptr<MyEnum>` value, but its recorded local type came from the parser's
+source-level enum helper declaration. That declaration still says `String`, so
+later `Std.string(value)` and array rendering treated the enum carrier as a C++
+string and emitted invalid conversions.
+
+The existing Cpp runtime stringify helper already handles enum carriers and
+their payload metadata correctly. The fix therefore stays in
+`CppLocalTypeInference`: before general initializer inference, it recognizes
+only a qualified payload constructor or qualified zero-argument metadata field
+whose owner is a known enum carrier, then records that carrier's C++ type. A
+cached stateless inference callback bundle avoids allocating the helper API for
+every unhinted local. Focused controls prove that an ordinary static String
+factory and an ordinary reference factory retain their existing types.
+
+The repo-owned oracle seed now uses unhinted `Color.Red` and
+`Color.Pair(7, "x")` initializers and preserves its exact output under upstream
+Haxe 4.3.7. The native backend smoke builds and runs the same zero-argument and
+payload shapes, checks their string and equality behavior, and pins the direct
+type-inference controls. The focused render and generated-native smoke, local
+declaration benchmark, official Haxe formatter, repo-wide Haxe format guard,
+Cpp type-flow plan guard, mega-file gravity guard, and oracle seed all pass.
+
+A current-source, stage0-forbidden strict Cpp probe rendered all 384 helper
+classes and reached the host compiler. The two previous first errors are gone:
+the retained generated source now keeps `e` as `shared_ptr<MyEnum>`, calls
+`__hxhx_stringify(e)`, and renders its array as
+`vector<shared_ptr<MyEnum>>`. The expected-red run then stops at the next
+independent type-flow bug: a map literal with an enum key declares
+`vector<pair<string, int>>` while its key expression is a
+`shared_ptr<MyEnum>`. Follow-up `haxe_ocaml-y87e3` owns that map-literal key
+contract before later generic, enum/null equality, abstract conversion, and
+Map access failures. The retained evidence is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-qualified-enum-local-carrier-final.log`.
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+does not compile or run the full unit program, so this internal frontier move
+does not change what users can rely on. `CppTargetCore.hx` remains a mega-file,
+but receives only the cached stateless API wiring and narrow forwarding call;
+the documented behavior lives in `CppLocalTypeInference`. Broader extraction
+remains owned by `haxe_ocaml-36ec`, and no Cpp runtime-policy update is required
+because this change adds no runtime surface.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite was used only as a behavior oracle, and committed generated OCaml
+snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or Oracle
+review was deliberately skipped because upstream behavior, the generated type
+mismatch, the existing runtime carrier contract, and focused rejection controls
+identified a bounded target-owned seam.

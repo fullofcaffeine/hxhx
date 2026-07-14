@@ -124,6 +124,7 @@ class CppTargetCore {
 	static var traceCppHelperClassificationDetailsEnabledCache = -1;
 	static var traceCppTimingMethodFilterCache:Null<String> = null;
 	static var traceCppTimingPhaseBuffer:Null<Array<String>> = null;
+	static var cachedLocalTypeInferenceApi:Null<CppLocalTypeInference.CppLocalTypeInferenceApi> = null;
 
 	public static function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		traceCppPhase("emit_before_main_module");
@@ -9694,7 +9695,9 @@ class CppTargetCore {
 	}
 
 	static function localTypeInferenceApi():CppLocalTypeInference.CppLocalTypeInferenceApi {
-		return {
+		if (cachedLocalTypeInferenceApi != null)
+			return cachedLocalTypeInferenceApi;
+		final api:CppLocalTypeInference.CppLocalTypeInferenceApi = {
 			copyStringMap: copyStringMap,
 			copyIntMap: copyIntMap,
 			sanitizeIdentifier: sanitizeIdentifier,
@@ -9712,10 +9715,17 @@ class CppTargetCore {
 			localCppName: localCppName,
 			declareLocalName: declareLocalName,
 			cppLocalTypeHint: cppLocalTypeHint,
+			cppTypeHint: function(typeHint, scope) return cppTypeHint(typeHint, scope),
+			staticReceiverClassName: staticReceiverClassName,
+			isEnumCarrierClassName: isEnumCarrierClassName,
+			hasStaticEnumConstructorMethod: function(owner, constructorName, scope) return classMethodDecl(owner, constructorName, true, scope) != null,
+			hasStaticEnumMetadataField: classHasStaticEnumMetadataField,
 			iterableElementType: iterableElementType,
 			keyValueLoopTypes: keyValueLoopTypes,
 			withScopedLocal: withScopedLocal
 		};
+		cachedLocalTypeInferenceApi = api;
+		return api;
 	}
 
 	static function restoreStringMap(target:haxe.ds.StringMap<String>, saved:haxe.ds.StringMap<String>):Void {
@@ -18505,7 +18515,8 @@ class CppTargetCore {
 			case null:
 				"";
 			case _:
-				inferExprCppType(init, scope);
+				final enumCarrierType = CppLocalTypeInference.enumCarrierLocalType(init, scope, localTypeInferenceApi());
+				enumCarrierType.length > 0 ? enumCarrierType : inferExprCppType(init, scope);
 		};
 	}
 
