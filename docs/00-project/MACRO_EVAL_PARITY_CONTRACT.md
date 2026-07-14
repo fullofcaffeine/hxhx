@@ -58,7 +58,7 @@ guarded. It does not substitute for any runtime, eval, or aggregate parity marke
 
 | Blocker | Status | Closure rule |
 | --- | --- | --- |
-| Macro runtime parity blockers | Open under `haxe_ocaml-vhk47.1` and `haxe_ocaml-vhk47.3` | The external-host lifecycle needs a fresh same-candidate aggregate, and project-defined Haxe macros need a stage0-free authenticated module path. See `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`. |
+| Macro runtime parity blockers | Host lifecycle resolved under `haxe_ocaml-vhk47.1`; project macros remain open under `haxe_ocaml-vhk47.3` | Exact-commit run `29334023225` proves the selected aggregate can reuse one authenticated, stage0-forbidden external host. Project-defined Haxe macros still need a stage0-free authenticated module path. See `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`. |
 | Native eval/interp baseline | Open until `haxe.ocaml-f1cl.4.2` is closed | `.github/workflows/full1-eval-native.yml` or the local runner must emit `FULL1_EVAL_NATIVE:PASS` from a stage0-forbidden run. |
 | Gate Full1 aggregate wiring | Open until `haxe.ocaml-f1cl.4.3` is closed | `.github/workflows/gate-full1.yml` must emit `FULL1_MACRO_EVAL_PARITY:PASS` only after the macro and eval evidence lanes pass without silent fallback. |
 

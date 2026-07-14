@@ -104,7 +104,7 @@
       "name": "Macro Runtime Parity (Weekly)",
       "workflow": ".github/workflows/macro-runtime-parity-weekly.yml",
       "kind": "release-evidence",
-      "events": ["schedule"],
+      "events": ["schedule", "workflow_dispatch"],
       "freshnessHours": 192
     },
     {
@@ -112,7 +112,7 @@
       "name": "Gate M7 / Replacement Bundle",
       "workflow": ".github/workflows/gate-m7.yml",
       "kind": "release-evidence",
-      "events": ["schedule"],
+      "events": ["schedule", "workflow_dispatch"],
       "freshnessHours": 192
     },
     {
@@ -239,10 +239,10 @@
     {
       "id": "macro-runtime-29243580105",
       "checkId": "macro-runtime-weekly",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
       "failureClass": "unknown",
-      "bead": "haxe_ocaml-vhk47",
+      "bead": "haxe_ocaml-vhk47.1",
       "recordedAt": "2026-07-13T11:39:00Z",
       "run": {
         "id": 29243580105,
@@ -254,8 +254,16 @@
         "updatedAt": "2026-07-13T10:46:26Z",
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29243580105"
       },
-      "reproductionOrEvidence": "The in-process macro mode passed, while external-host failed during automatic macro-host building after 252.182 seconds. Artifact 8276541049 records only the generic build exit, so retained build logs are required to classify the underlying failure.",
-      "closureGate": "The owner must reproduce with retained macro-host logs, fix the bounded owned cause without weakening either mode, and record a fresh passing aggregate for the fix SHA."
+      "reproductionOrEvidence": "The in-process macro mode passed, while external-host failed during automatic macro-host building after 252.182 seconds. Artifact 8276541049 exposed only the generic build exit. Local retained logs first revealed a generated host-entry alias error; after that bounded fix, the next check exposed recursive per-process host building. The final lifecycle prepares one candidate-bound host before the workload and reuses it with stage0 and lazy auto-build disabled.",
+      "closureGate": "The owner must reproduce with retained macro-host logs, fix the bounded owned cause without weakening either mode, and record a fresh passing aggregate for the fix SHA.",
+      "resolution": {
+        "runId": 29334023225,
+        "runAttempt": 1,
+        "headSha": "6436974b5b92b0a313b04a1df6f4dbf6c1bdc9be",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-14T12:52:35Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29334023225"
+      }
     },
     {
       "id": "m7-timeout-29188919192",

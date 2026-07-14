@@ -24,6 +24,12 @@ proved that the bounded Macro, JavaScript, Neko, and plugin bundle works without
 delegating to stage0 at commit `30a0b371`. It does **not** yet prove the complete
 Full1 suite/target matrix or stage0-free bootstrap regeneration.
 
+The two selected macro runtime modes also pass together in exact-commit run
+`29334023225`. In plain language, the external mode can reuse one verified
+macro-host program without secretly rebuilding it or falling back to upstream
+Haxe. This still does **not** mean arbitrary projects can load all of their own
+Haxe-written macros through that host; `haxe_ocaml-vhk47.3` owns that next step.
+
 ## Recommended starting points by intent
 
 | I want to... | Start here |

@@ -1,6 +1,6 @@
 # External Macro-Host Lifecycle Decision
 
-Status: accepted near-term CI boundary; broader project-macro work remains open
+Status: implemented and verified for the selected aggregate; broader project-macro work remains open
 
 Owning bead: `haxe_ocaml-vhk47.1`
 
@@ -38,9 +38,18 @@ input. A receipt must additionally record:
 - a successful protocol handshake;
 - and that stage0 was forbidden during preparation and use.
 
-A local probe already reused one such host across the selected unit, runci,
-display, and protocol checks. That probe proves the lifecycle seam is viable.
-It does not replace a fresh CI aggregate.
+Exact-commit GitHub run `29334023225` reused one such host across the selected
+unit, runci, display, and protocol checks. Both the external-host and in-process
+jobs passed. The external receipt records candidate commit
+`6436974b5b92b0a313b04a1df6f4dbf6c1bdc9be`, committed snapshot tree
+`3b03e32c32d2e8fd91115a0191828723a7d2abca`, executable SHA-256
+`8072225980e686c73f0a69477eb5a5b2ad9953f005fd685cb422a8258f9e2a19`,
+protocol version `1`, stage0 forbidden, and lazy auto-build disabled.
+
+The downloaded Linux executable's digest matches that receipt. Its protocol
+probe ran on the Linux CI runner, where the executable was built, and the
+receipt was revalidated before every selected workload. A macOS checkout can
+inspect the receipt and digest but cannot execute that Linux binary directly.
 
 The 2026-07-12 whole-repository GPT-5.6 Pro review independently supported the
 explicit external/in-process macro boundary and required same-candidate,
@@ -51,7 +60,7 @@ and the current release contracts.
 
 ## What this proves—and what it does not
 
-When the updated external-host aggregate passes, it proves that one
+The passing external-host aggregate proves that one
 candidate-bound, stage0-free host artifact can serve the selected upstream unit,
 runci, display, and protocol workloads.
 

@@ -55,12 +55,16 @@ has to inspect the first useful log or artifact.
 5. Close the bead and mark the incident resolved only after a valid remote
    successor passes. A cancelled run is not a pass.
 
-Scheduled runs remain the normal freshness signal. For the Full1 plugin lane,
-an explicit `workflow_dispatch` rerun may also resolve an owned failure when
-it uses the same workflow and produces the candidate-bound, artifact-verified
-`full1-plugin-parity-summary.v3` receipt. This lets maintainers prove a fix
-without waiting for the next calendar run; it does not remove the weekly
-schedule or turn a local pass into release evidence.
+Scheduled runs remain the normal freshness signal. For M7, Full1 plugin, and
+macro-runtime lanes, an explicit `workflow_dispatch` rerun may also resolve an
+owned failure when it uses the same full workflow and produces the lane's
+candidate-bound, artifact-verified receipt. For M7, that is the
+`m7-shared-artifacts.v2` receipt plus both strict markers. For plugins, it is
+`full1-plugin-parity-summary.v3`. For external macros, it is
+`macro-runtime-host-evidence.v1`, accompanied by both mode artifacts and the
+aggregate summary. This lets maintainers prove a fix without waiting for the
+next calendar run; it does not remove the weekly schedule or turn a local pass
+into release evidence.
 
 Run the local contract check with:
 
@@ -82,9 +86,12 @@ independently validated v2 timing reports. These are report-quality results,
 not proof that the compiler is fast enough. The M7 timeout is now resolved by
 exact-commit strict/full run `29321576340`, which finished in about 102 minutes,
 uploaded artifact `8309183633`, and emitted both required M7 markers. The
-current open incident records are the macro-runtime failure and the expected
-Full1 aggregate no-go. Their owners are recorded in the JSON ledger; neither
-open record counts as passing product or Full1 evidence.
+macro-runtime incident is resolved by exact-commit run `29334023225`. That run
+reused one candidate-bound, stage0-forbidden external host and passed both
+runtime modes. It closes the host lifecycle failure, not the separate
+project-defined macro obligation. The current open incident record is the
+expected Full1 aggregate no-go. Its owner is recorded in the JSON ledger, and
+the open record does not count as passing product or Full1 evidence.
 
 ## Audit window
 
@@ -125,6 +132,8 @@ open record counts as passing product or Full1 evidence.
 5. For Macro Runtime Parity, download both mode-tagged artifacts and inspect:
    - `markers.txt`
    - `macro-runtime-parity-blockers.md`
+   - `macro-runtime-host-receipt.json` and its referenced executable digest in
+     the external-host artifact
    - suite logs (`unit`, `runci`, `display/protocol`)
 6. For Gate M7, Gate Full1, and semantic-diff, download artifacts and confirm expected files are present.
 7. For Gate Full1, confirm both aggregate markers appear:

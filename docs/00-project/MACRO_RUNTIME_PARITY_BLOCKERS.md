@@ -8,13 +8,14 @@ Beginner summary:
 - `external-host`: macros run in a separate `hxhx-macro-host` process.
 - `inproc`: macros run inside `hxhx` directly.
 - Today the default runtime mode is already `inproc`.
-- The remaining work is to qualify that default for release, keep `external-host` as the explicit fallback/debug lane, and close the remaining parity gaps.
+- The host lifecycle is now verified. The remaining macro-runtime work is to
+  support project-defined Haxe macros through that stage0-free host path and to
+  keep both modes comparable in release evidence.
 
 ## Open blockers
 
 | Blocker ID | What remains in plain language | Owner | Closure evidence |
 | --- | --- | --- | --- |
-| MRP-B5 | The external checks need one stage0-free macro-host executable that is built before the workload, tied to the candidate commit, and reused without recursive rebuilding. | `haxe_ocaml-vhk47.1` | Candidate receipt plus a fresh same-commit unit/runci/display/protocol aggregate with both runtime modes green. |
 | MRP-B6 | Real projects need a stage0-free way to load their own Haxe-authored macro code into the reusable host; built-in aliases and hand-written OCaml module fixtures are not enough. | `haxe_ocaml-vhk47.3` | One repo-owned Haxe project macro passes through an authenticated host/module path, with an in-process comparison and upstream Haxe 4.3.7 oracle expectation. |
 
 The accepted lifecycle and its claim limits are explained in
@@ -72,3 +73,4 @@ The accepted lifecycle and its claim limits are explained in
 | MRP-B2 | External-host/runtime macro API coverage is now sufficient for the declared Full1 scope. The remaining previously material seams (typedef/abstract payload reconstruction, component/slot signature introspection, balanced inline-markup parsing, anonymous complex-type roundtrip, typed lambda parsing, and build-field snapshot fidelity) all have focused direct regressions and no longer require keeping the semantic closure bead open. Residual synthetic-fidelity polish moved to post-1.0 follow-up `haxe.ocaml-8nv.11.6`. | `haxe.ocaml-bxlg.9.5` |
 | MRP-B3 | Macro runtime parity is now a release-aware reusable workflow and Gate Full1 consumes it before emitting Full1 aggregate pass markers. | `haxe.ocaml-bxlg.9.6` |
 | MRP-B4 | Default runtime mode flipped to `inproc`; fallback/rollback policy documented (`HXHX_MACRO_RUNTIME_MODE=external-host` or `--hxhx-macro-runtime external-host`). | `haxe.ocaml-bxlg.9.3` |
+| MRP-B5 | Exact-commit run `29334023225` built one generic host from the candidate's committed snapshot with stage0 forbidden, recorded and revalidated its commit/tree/digest/protocol receipt, reused it for unit/runci/display/protocol checks, and passed both external-host and in-process jobs without recursive or lazy rebuilding. | `haxe_ocaml-vhk47.1` |
