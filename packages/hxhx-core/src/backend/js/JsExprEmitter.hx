@@ -1267,35 +1267,43 @@ class JsExprEmitter {
 		}
 	}
 
+	/**
+		Emit a constructor call using the class name that exists at runtime.
+
+		Haxe generic arguments such as `<V>` guide type checking but are erased
+		from JavaScript class names. Only the lookup name is normalized; failures
+		still report the original source spelling so unsupported code is actionable.
+	**/
 	static function emitNew(typePath:String, args:Array<HxExpr>, scope:JsEmitScope):String {
 		final argsJs = args.map(a -> emitCallArg(a, scope)).join(", ");
-		switch (standardCtorTypePath(typePath)) {
+		final ctorTypePath = standardCtorTypePath(typePath);
+		switch (ctorTypePath) {
 			case "Array":
 				if (args.length == 0)
 					return "[]";
 				return "new Array(" + argsJs + ")";
 			case "Bytes" | "haxe.io.Bytes":
-				final ctor = resolveIdent(typePath, scope);
+				final ctor = resolveIdent(ctorTypePath, scope);
 				return "new " + ctor + "(" + argsJs + ")";
 			case _:
 		}
 
 		if (scope != null) {
-			final classCtor = scope.resolveClassRef(typePath);
+			final classCtor = scope.resolveClassRef(ctorTypePath);
 			if (classCtor != null)
 				return "new " + classCtor + "(" + argsJs + ")";
 
-			final lastDot = typePath.lastIndexOf(".");
-			if (lastDot > 0 && lastDot + 1 < typePath.length) {
-				final simpleType = typePath.substr(lastDot + 1);
+			final lastDot = ctorTypePath.lastIndexOf(".");
+			if (lastDot > 0 && lastDot + 1 < ctorTypePath.length) {
+				final simpleType = ctorTypePath.substr(lastDot + 1);
 				final simpleCtor = scope.resolveClassRef(simpleType);
 				if (simpleCtor != null)
 					return "new " + simpleCtor + "(" + argsJs + ")";
 			}
 		}
 
-		if (StringTools.startsWith(typePath, "js.lib.")) {
-			final nativeCtor = typePath.substr("js.lib.".length);
+		if (StringTools.startsWith(ctorTypePath, "js.lib.")) {
+			final nativeCtor = ctorTypePath.substr("js.lib.".length);
 			if (nativeCtor != null && nativeCtor.length > 0)
 				return "new " + nativeCtor + "(" + argsJs + ")";
 		}
@@ -1312,7 +1320,7 @@ class JsExprEmitter {
 			case "Array" | "StdTypes.Array":
 				"Array";
 			case _:
-				raw;
+				base;
 		}
 	}
 

@@ -1,0 +1,4 @@
+-cp test/fixtures/js-generic-constructor-oracle
+-main Main
+-D nodejs
+-js .tmp/m14_js_generic_constructor_oracle.js
