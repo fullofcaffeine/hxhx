@@ -18515,7 +18515,7 @@ class CppTargetCore {
 			case null:
 				"";
 			case _:
-				final enumCarrierType = CppLocalTypeInference.enumCarrierLocalType(init, scope, localTypeInferenceApi());
+				final enumCarrierType = CppLocalTypeInference.qualifiedEnumCarrierCppType(init, scope, localTypeInferenceApi());
 				enumCarrierType.length > 0 ? enumCarrierType : inferExprCppType(init, scope);
 		};
 	}
@@ -23259,6 +23259,9 @@ class CppTargetCore {
 	}
 
 	static function mapLiteralOperandCppType(expr:HxExpr, ?scope:CppRenderScope):String {
+		final enumCarrier = CppLocalTypeInference.qualifiedEnumCarrierCppType(expr, scope, localTypeInferenceApi());
+		if (enumCarrier.length > 0)
+			return enumCarrier;
 		final explicit = exprCppType(expr, scope);
 		if (explicit.length > 0)
 			return explicit;

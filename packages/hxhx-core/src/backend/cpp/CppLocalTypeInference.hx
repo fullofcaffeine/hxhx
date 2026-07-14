@@ -71,24 +71,25 @@ class CppLocalTypeInference {
 	}
 
 	/**
-		Recover the carrier type of an enum constructor assigned to an unhinted local.
+		Recover the C++ carrier type of a qualified enum constructor expression.
 
 		Parsed enum constructor helpers retain their source-level `String` return
 		hint even though C++ emits metadata-preserving `shared_ptr` values. This
 		narrow analysis recognizes only qualified constructors owned by a known enum
-		carrier; ordinary String and reference factories keep using general
-		expression inference.
+		carrier. Local declarations and map-literal pair selection share this answer;
+		ordinary String and reference factories keep using general expression
+		inference.
 	**/
-	public static function enumCarrierLocalType(init:Null<HxExpr>, scope:CppRenderScope, api:CppLocalTypeInferenceApi):String {
-		if (init == null || scope == null)
+	public static function qualifiedEnumCarrierCppType(expr:Null<HxExpr>, scope:CppRenderScope, api:CppLocalTypeInferenceApi):String {
+		if (expr == null || scope == null)
 			return "";
-		return enumCarrierLocalTypeImpl(init, scope, api);
+		return qualifiedEnumCarrierCppTypeImpl(expr, scope, api);
 	}
 
-	static function enumCarrierLocalTypeImpl(init:HxExpr, scope:CppRenderScope, api:CppLocalTypeInferenceApi):String {
-		return switch (init) {
+	static function qualifiedEnumCarrierCppTypeImpl(expr:HxExpr, scope:CppRenderScope, api:CppLocalTypeInferenceApi):String {
+		return switch (expr) {
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
-				enumCarrierLocalTypeImpl(inner, scope, api);
+				qualifiedEnumCarrierCppTypeImpl(inner, scope, api);
 			case ECall(EField(receiver, constructorName), args) if (args != null && args.length > 0):
 				final owner = api.staticReceiverClassName(receiver, scope);
 				if (owner != null

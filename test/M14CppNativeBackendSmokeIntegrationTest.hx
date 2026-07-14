@@ -1338,6 +1338,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    var p3 = Choice.Pair(4, \"x\");",
 			"    Sys.println(Std.string(a));",
 			"    Sys.println(Std.string(p1));",
+			"    Sys.println([Choice.Pair(5, \"map\") => 7].toString());",
 			"    Sys.println(Std.string(Type.enumEq(p1, p2)));",
 			"    Sys.println(Std.string(Type.enumEq(p1, p3)));",
 			"    Sys.println(Type.enumConstructor(p1));",
@@ -6188,6 +6189,24 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ unhinted locals initialized by qualified payload enum constructors should keep the enum carrier type");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalTypeHint("", EField(EIdent("MyEnum"), "A"), myEnumScope) == "std::shared_ptr<MyEnum>",
 			"C++ unhinted locals initialized by qualified zero-argument enum constructors should keep the enum carrier type");
+		final payloadEnumKeyMap = ECall(EField(EArrayDecl([EBinop("=>", qualifiedPayloadEnumInit, EInt(1))]), "toString"), []);
+		final payloadEnumKeyMapExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(payloadEnumKeyMap, myEnumScope);
+		assertContains(payloadEnumKeyMapExpr, "std::vector<std::pair<std::shared_ptr<MyEnum>, int>>{std::make_pair(MyEnum::C(0, \"hello\"), 1)}",
+			"C++ map literals should preserve qualified payload enum keys as enum carriers");
+		final zeroEnumKeyMap = ECall(EField(EArrayDecl([EBinop("=>", EField(EIdent("MyEnum"), "A"), EInt(1))]), "toString"), []);
+		assertContains(@:privateAccess backend.cpp.CppTargetCore.renderExpr(zeroEnumKeyMap,
+			myEnumScope), "std::vector<std::pair<std::shared_ptr<MyEnum>, int>>{",
+			"C++ map literals should preserve qualified zero-argument enum keys as enum carriers");
+		final stringKeyMap = ECall(EField(EArrayDecl([EBinop("=>", EString("key"), EInt(1))]), "toString"), []);
+		assertContains(@:privateAccess backend.cpp.CppTargetCore.renderExpr(stringKeyMap, myEnumScope),
+			"std::vector<std::pair<std::string, int>>{std::make_pair(\"key\", 1)}", "C++ enum-key inference should not reclassify ordinary String map keys");
+		final intKeyMap = ECall(EField(EArrayDecl([EBinop("=>", EInt(7), EInt(1))]), "toString"), []);
+		assertContains(@:privateAccess backend.cpp.CppTargetCore.renderExpr(intKeyMap, myEnumScope), "std::vector<std::pair<int, int>>{std::make_pair(7, 1)}",
+			"C++ enum-key inference should not reclassify ordinary Int map keys");
+		final objectKeyMap = ECall(EField(EArrayDecl([EBinop("=>", ENew("RegularFactory", []), EInt(1))]), "toString"), []);
+		assertContains(@:privateAccess backend.cpp.CppTargetCore.renderExpr(objectKeyMap,
+			myEnumScope), "std::vector<std::pair<std::shared_ptr<RegularFactory>, int>>{",
+			"C++ enum-key inference should not reclassify unrelated reference map keys");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppLocalTypeHint("", ECall(EField(EIdent("RegularFactory"), "text"), []),
 			myEnumScope) == "std::string",
 			"C++ enum local inference should not reclassify ordinary String factories");
@@ -13538,8 +13557,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(enumCarrierMetadataBuilt.builtExecutable, "C++ enum carrier metadata runtime smoke should build executable");
 			final enumCarrierMetadataRun = commandOutput(enumCarrierMetadataBuilt.entryPath, []);
 			assertTrue(enumCarrierMetadataRun.code == 0, "C++ enum carrier metadata runtime smoke failed: " + enumCarrierMetadataRun.stderr);
-			assertTrue(enumCarrierMetadataRun.stdout == "A\nPair(3,x)\ntrue\nfalse\nPair\n2\n2\n3\nx\nPair(3,x)\n3:x\nfalse\nInt\nString\n1\n",
-				"unexpected C++ enum carrier metadata stdout: " + enumCarrierMetadataRun.stdout);
+			assertTrue(enumCarrierMetadataRun.stdout == "A\nPair(3,x)\n[Pair(5,map) => 7]\ntrue\nfalse\nPair\n2\n2\n3\nx\nPair(3,x)\n3:x\nfalse\nInt\nString\n1\n",
+				"unexpected C++ enum carrier metadata stdout: "
+				+ enumCarrierMetadataRun.stdout);
 
 			final typeCreateEnumBuildDir = Path.join([root, "type-create-enum-runtime-build"]);
 			final typeCreateEnumBuilt = BackendRegistry.createForTarget("cpp-native")

@@ -6014,3 +6014,64 @@ snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or Oracle
 review was deliberately skipped because upstream behavior, the generated type
 mismatch, the existing runtime carrier contract, and focused rejection controls
 identified a bounded target-owned seam.
+
+## 2026-07-14 Enum-Key Map Literal Carrier Inference
+
+Follow-up bead `haxe_ocaml-y87e3` isolated the next native compiler error. In
+plain language, rendering a map literal such as `[MyEnum.C(0, "foo") => 1]`
+already produced the correct metadata-preserving `shared_ptr<MyEnum>` key, but
+the pair type was still selected from the parser's source-level enum helper
+declaration. That declaration says `String`, so generated C++ attempted to put
+the enum carrier into `pair<string, int>`.
+
+The fix keeps map-literal type selection consistent with unhinted local
+declarations. `CppLocalTypeInference.qualifiedEnumCarrierCppType` recognizes
+only the exact qualified payload-constructor and zero-argument metadata-field
+shapes whose owner is a known enum carrier. `mapLiteralOperandCppType` asks
+that helper before general expression inference, so the pair key and rendered
+value share `shared_ptr<MyEnum>`. String, Int, and unrelated reference-object
+keys remain on their existing paths. The helper's documentation now describes
+both consumers and explicitly leaves ordinary factory calls to general
+inference.
+
+The repo-owned oracle seed adds an original payload-enum map key and preserves
+`[Pair(11,map) => 42]` under upstream Haxe 4.3.7. The native backend smoke
+builds and runs the corresponding `Choice.Pair(5, "map")` map and checks
+`[Pair(5,map) => 7]`. Direct render controls pin payload and zero-argument enum
+keys as `pair<shared_ptr<MyEnum>, int>`, String and Int keys as their scalar
+pairs, and an ordinary factory object as its unrelated shared-pointer pair.
+
+The focused render smoke, generated native C++ build/run, local-declaration
+benchmark, oracle seed, shell syntax check, official touched-file formatter,
+repo-wide Haxe format guard, Cpp type-flow plan guard, mega-file gravity guard,
+and `git diff --check` all pass. A fresh current-source compiler build completed
+in about 232 seconds and passed the current-source binary validator.
+
+The stage0-forbidden strict Cpp probe then rendered all 384 reachable helpers
+and reached the host compiler in 393 seconds. The previous map error is gone:
+the retained source now emits
+`vector<pair<shared_ptr<MyEnum>, int>>` at the former failing site.
+`TestXML.testBasic` took 0.488165 seconds, confirming the render-speed frontier
+remains healthy. The expected-red native build now begins at generated
+`TestMain.cpp:14934`, where a nested enum carrier is passed through a generic
+identity call instantiated as `id<string>`. Follow-up `haxe_ocaml-t6a5w` owns
+that generic type-argument and return-carrier seam before later enum/null,
+generic-container, abstract-conversion, and Map-access errors. The retained
+evidence is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-enum-map-key-carrier.log`.
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+does not compile or run the full unit program, so this internal frontier move
+does not change production readiness. `CppTargetCore.hx` is 26,451 lines and
+receives only a three-line type-flow forwarding check plus the shared helper
+rename; the documented behavior remains in the 915-line
+`CppLocalTypeInference`. Broader extraction remains owned by
+`haxe_ocaml-36ec`. No Cpp runtime-policy update is required because this change
+adds no runtime surface or inline target stub.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite was used only as a behavior oracle, and committed generated OCaml
+snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or Oracle
+review was deliberately skipped because the exact mismatch, upstream behavior,
+shared carrier helper, and focused scalar/object rejection controls identify a
+bounded target-owned seam.

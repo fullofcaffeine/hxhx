@@ -53,6 +53,7 @@ class Main {
 		emit("enum-zero-01", "summary", summarize(red));
 		emit("enum-payload-01", "string", Std.string(pair));
 		emit("enum-payload-01", "summary", summarize(pair));
+		emit("enum-map-key-01", "string", [Color.Pair(11, "map") => 42].toString());
 
 		emit("enum-eq-01:zero", "value", bool(Type.enumEq(red, Red)));
 		emit("enum-eq-01:payload-same", "value", bool(Type.enumEq(pair, Pair(7, "x"))));
