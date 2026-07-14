@@ -8,7 +8,9 @@ CANDIDATE_COMMIT="${HXHX_CANDIDATE_COMMIT:-}"
 EXPR='projectmacro.ProjectMacro.message()'
 PLUGIN_ID='hxhx.project-macro.fixture'
 HANDLER='projectmacro.ProjectMacroNative.nativeExpansion'
-WORK_DIR="$(mktemp -d "$ROOT/.tmp/project-macro-module.XXXXXX")"
+TMP_ROOT="$ROOT/.tmp"
+mkdir -p "$TMP_ROOT"
+WORK_DIR="$(mktemp -d "$TMP_ROOT/project-macro-module.XXXXXX")"
 
 if [ -z "$CANDIDATE_COMMIT" ]; then
   CANDIDATE_COMMIT="$(git -C "$ROOT" rev-parse HEAD)"
