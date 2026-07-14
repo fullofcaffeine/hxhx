@@ -140,7 +140,7 @@ HXHX_KPI_REPS=3 npm run hxhx:bench:kpi
 KPI baseline numbers live in: `docs/benchmarks/HXHX_KPI_BASELINE.md:1`.
 KPI threshold policy lives in: `docs/benchmarks/HXHX_KPI_THRESHOLDS.md:1`.
 
-## Native reflaxe speed comparison bench
+## Generated-application native Reflaxe speed comparison
 
 Use this when you want a direct, plain-English comparison of:
 
@@ -171,4 +171,36 @@ HXHX_NATIVE_BENCH_BASELINE=both npm run hxhx:bench:native-reflaxe
 
 # Increase workload size
 HXHX_BENCH_ITERS=400000 npm run hxhx:bench:native-reflaxe
+```
+
+This older benchmark measures a normal generated Haxe application. It does not
+measure how long a Reflaxe target author waits to build and load a plugin.
+
+## Native plugin author-loop report
+
+To measure the real plugin loop, use:
+
+```bash
+npm run hxhx:bench:native-plugin-loop
+```
+
+The runner first prepares a native `hxhx` executable outside the samples. It
+then alternates two real, same-machine routes: upstream Haxe builds the OCaml
+plugin, and stage0-forbidden `hxhx` builds it. Every sample must also load the
+plugin, compile a small program through the registered backend, and run the
+result successfully. The resulting `hxhx.native-plugin-loop.v1` JSON includes
+the commit, machine/toolchains, artifact digests, raw timing samples, and exact
+proof summaries.
+
+The comparison is diagnostic and report-only. It does not claim that native
+`hxhx` is already faster, and it does not change Full1 release thresholds.
+
+Useful controls:
+
+```bash
+HXHX_NATIVE_PLUGIN_LOOP_REPS=3 npm run hxhx:bench:native-plugin-loop
+HXHX_NATIVE_PLUGIN_LOOP_WARMUPS=0 npm run hxhx:bench:native-plugin-loop
+HXHX_NATIVE_PLUGIN_LOOP_HXHX_BIN=/path/to/out.exe \
+HXHX_NATIVE_PLUGIN_LOOP_HXHX_COMMIT="$(git rev-parse HEAD)" \
+  npm run hxhx:bench:native-plugin-loop
 ```

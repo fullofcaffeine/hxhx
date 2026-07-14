@@ -90,7 +90,10 @@ performance claim must use measured medians from the relevant runner class.
     "artifactComparisonRunner": "scripts/hxhx/bench-kpi-artifact-comparison.sh",
     "bootstrapReportSchema": "hxhx.bootstrap-regen-benchmark.v1",
     "bootstrapReportValidator": "scripts/ci/bootstrap-regen-benchmark-report.js",
-    "bootstrapReportWorkflow": ".github/workflows/bootstrap-regen-bench.yml"
+    "bootstrapReportWorkflow": ".github/workflows/bootstrap-regen-bench.yml",
+    "nativePluginLoopReportSchema": "hxhx.native-plugin-loop.v1",
+    "nativePluginLoopReportValidator": "scripts/ci/native-plugin-loop-benchmark-report.js",
+    "nativePluginLoopReportRunner": "scripts/hxhx/bench-native-plugin-loop.sh"
   },
   "measurementBuckets": [
     {
@@ -128,6 +131,8 @@ performance claim must use measured medians from the relevant runner class.
       "purpose": "Build Haxe-authored compiler/backend code, such as a Reflaxe target or hxhx bootstrap artifact, as an OCaml-backed plugin or builtin artifact and run a focused smoke.",
       "target": "Native artifact iteration should beat the current delegated/stage0 promotion path for common compiler and target-development loops before it is recommended as the default path; where a direct OCaml compiler baseline exists, promoted Haxe-authored artifacts should be compared against that baseline and target the same performance class or better.",
       "evidence": [
+        "scripts/hxhx/bench-native-plugin-loop.sh",
+        "scripts/ci/native-plugin-loop-benchmark-report.js",
         "scripts/hxhx/bench-native-reflaxe.sh",
         "docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md"
       ]
@@ -186,6 +191,19 @@ commit and machine ran, which tool versions and benchmark settings were used,
 what `cold`, `warm`, `skip`, and `select` mean, and which raw run reports back
 each median. It does not turn a quick `select` wiring check into evidence that
 full snapshot regeneration is fast.
+
+The two similarly named Reflaxe benchmarks answer different questions:
+
+- `hxhx:bench:native-reflaxe` compiles and runs a normal Haxe application. It
+  measures generated-application compile/runtime behavior; it does not measure
+  how long a target author waits to build and load a plugin.
+- `hxhx:bench:native-plugin-loop` uses the real Full1 plugin proof paths. It
+  prepares one native `hxhx` executable separately, then measures fresh plugin
+  emission, Dune plugin build, plugin load, sample compilation, and sample
+  runtime for the upstream-Haxe and stage0-forbidden `hxhx` routes on the same
+  machine. Each numeric sample must carry a passing proof summary and artifact
+  digest. Its comparison is report-only until repeated observations support a
+  stable threshold.
 
 When a bead materially changes compiler iteration speed, plugin/native artifact
 loops, bootstrap regeneration, or Full1 throughput:

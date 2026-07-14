@@ -83,6 +83,8 @@ function main() {
     'scripts/ci/hxhx-kpi-artifact-comparison.js',
     'scripts/ci/bootstrap-regen-benchmark-report.js',
     'scripts/hxhx/bench-bootstrap-regen.sh',
+    'scripts/ci/native-plugin-loop-benchmark-report.js',
+    'scripts/hxhx/bench-native-plugin-loop.sh',
     'scripts/hxhx/bench-native-reflaxe.sh',
     'FULL1_PERF_PARITY:PASS',
     'README `Goals status` table'
@@ -95,6 +97,7 @@ function main() {
   requireIncludes(readmePath, readme, 'practical edit-compile-test latency')
   requireIncludes(packageJsonPath, packageJson, 'native-iteration-latency-contract-check.js')
   requireIncludes(packageJsonPath, packageJson, 'hxhx-kpi-artifact-comparison-fixture-test.js')
+  requireIncludes(packageJsonPath, packageJson, 'native-plugin-loop-benchmark-report-fixture-test.js')
   for (const snippet of [
     'compare_native:',
     'scripts/hxhx/bench-kpi-artifact-comparison.sh',
@@ -156,13 +159,18 @@ function main() {
     if (policy.activeEvidenceLoop.bootstrapReportSchema !== 'hxhx.bootstrap-regen-benchmark.v1') {
       fail('policy.activeEvidenceLoop.bootstrapReportSchema must be hxhx.bootstrap-regen-benchmark.v1')
     }
+    if (policy.activeEvidenceLoop.nativePluginLoopReportSchema !== 'hxhx.native-plugin-loop.v1') {
+      fail('policy.activeEvidenceLoop.nativePluginLoopReportSchema must be hxhx.native-plugin-loop.v1')
+    }
     for (const field of [
       'reportValidator',
       'reportWorkflow',
       'artifactComparisonValidator',
       'artifactComparisonRunner',
       'bootstrapReportValidator',
-      'bootstrapReportWorkflow'
+      'bootstrapReportWorkflow',
+      'nativePluginLoopReportValidator',
+      'nativePluginLoopReportRunner'
     ]) {
       const evidencePath = policy.activeEvidenceLoop[field]
       if (!evidencePath || !fs.existsSync(evidencePath)) {

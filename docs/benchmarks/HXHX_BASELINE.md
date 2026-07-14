@@ -8,6 +8,8 @@ This file records **baseline numbers** for the minimal `hxhx` benchmark harness:
 - `npm run hxhx:bench:kpi`
 - `bash scripts/hxhx/bench-native-reflaxe.sh`
 - `npm run hxhx:bench:native-reflaxe`
+- `bash scripts/hxhx/bench-native-plugin-loop.sh`
+- `npm run hxhx:bench:native-plugin-loop`
 
 ## Quick glossary (beginner-friendly)
 
@@ -56,7 +58,7 @@ stage1: --js emit  skipped  reason=target_unavailable
 
 Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and capture numeric native-JS results on hosts where the current binary lacks that target.
 
-## Native reflaxe bench gate
+## Generated-application native Reflaxe bench gate
 
 Use:
 
@@ -78,6 +80,38 @@ Controls:
 
 - `HXHX_NATIVE_BENCH_MIN_SPEEDUP_PCT` (default: `30`)
 - `HXHX_NATIVE_BENCH_BASELINE=interp|delegated|both` (default: `interp`)
+
+Despite its older short name, this benchmark measures a generated Haxe
+application. It does not measure the wait a target author experiences while
+building and loading a Reflaxe backend plugin.
+
+## Real native plugin author loop
+
+Use:
+
+```bash
+npm run hxhx:bench:native-plugin-loop
+```
+
+This report-only benchmark prepares one native `hxhx` executable separately,
+then measures the same real plugin workflow through two routes on one machine:
+
+1. upstream Haxe emits the OCaml plugin; `hxhx` loads and uses it,
+2. stage0-forbidden `hxhx` emits, loads, and uses the plugin.
+
+Each sample includes fresh plugin emission, Dune build, plugin load, sample
+compile, and sample runtime. A timing is accepted only when the existing Full1
+proof writes a passing summary and verified plugin-artifact digest. The report
+contains raw samples and provenance, but no speed threshold yet.
+
+Controls:
+
+- `HXHX_NATIVE_PLUGIN_LOOP_REPS` (default: `2`)
+- `HXHX_NATIVE_PLUGIN_LOOP_WARMUPS` (default: `1`)
+- `HXHX_NATIVE_PLUGIN_LOOP_REPORT_DIR` (default: ignored `.artifacts/` output)
+- `HXHX_NATIVE_PLUGIN_LOOP_HXHX_BIN` (optional prebuilt native `out.exe`)
+- `HXHX_NATIVE_PLUGIN_LOOP_HXHX_COMMIT` (required matching source SHA when a
+  prebuilt binary is supplied)
 
 ## KPI profile/plugin baseline
 
