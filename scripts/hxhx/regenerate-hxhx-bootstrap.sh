@@ -1446,7 +1446,7 @@ if [ "$skipped_emit" = "0" ]; then
 	rm -rf "$BOOTSTRAP_DIR"
 	mkdir -p "$BOOTSTRAP_DIR"
 	# Copy everything except build artifacts and generator sources.
-	(cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' --exclude='ocaml_profile_report.json' --exclude='ocaml_runtime_plan_report.json' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
+	bash "$ROOT/scripts/hxhx/copy-bootstrap-snapshot.sh" "$OUT_DIR" "$BOOTSTRAP_DIR"
 	phase_copy_sec="$(( $(now_ts) - copy_start ))"
 
 	echo "== Finalizing bootstrap snapshot"

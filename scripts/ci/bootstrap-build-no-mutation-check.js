@@ -5,6 +5,7 @@ const path = require('path')
 const repoRoot = path.resolve(__dirname, '..', '..')
 const buildScript = path.join(repoRoot, 'scripts', 'hxhx', 'build-hxhx.sh')
 const regenScript = path.join(repoRoot, 'scripts', 'hxhx', 'regenerate-hxhx-bootstrap.sh')
+const copyScript = path.join(repoRoot, 'scripts', 'hxhx', 'copy-bootstrap-snapshot.sh')
 const sanitizeScript = path.join(repoRoot, 'scripts', 'hxhx', 'sanitize-stage3-emit-dir.sh')
 const finalizeScript = path.join(repoRoot, 'scripts', 'hxhx', 'finalize-bootstrap-dir.sh')
 
@@ -19,6 +20,7 @@ function read(file) {
 
 const build = read(buildScript)
 const regen = read(regenScript)
+const copy = read(copyScript)
 const sanitize = read(sanitizeScript)
 const finalize = read(finalizeScript)
 const bootstrapPatchHelper = read(path.join(repoRoot, 'scripts', 'hxhx', 'bootstrap_patch_helper.py'))
@@ -42,6 +44,12 @@ for (const token of forbiddenBuildTokens) {
 
 if (!regen.includes('finalize-bootstrap-dir.sh')) {
   fail('scripts/hxhx/regenerate-hxhx-bootstrap.sh must finalize bootstrap_out before sharding')
+}
+if (!regen.includes('copy-bootstrap-snapshot.sh')) {
+  fail('scripts/hxhx/regenerate-hxhx-bootstrap.sh must use the tested snapshot-copy boundary')
+}
+if (!copy.includes("--exclude='hxhx-current-source.env'")) {
+  fail('bootstrap snapshot copying must exclude the current-source build receipt')
 }
 
 const retiredBootstrapPatchTokens = [
