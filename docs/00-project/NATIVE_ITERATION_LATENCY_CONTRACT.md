@@ -91,6 +91,9 @@ performance claim must use measured medians from the relevant runner class.
     "bootstrapReportSchema": "hxhx.bootstrap-regen-benchmark.v1",
     "bootstrapReportValidator": "scripts/ci/bootstrap-regen-benchmark-report.js",
     "bootstrapReportWorkflow": ".github/workflows/bootstrap-regen-bench.yml",
+    "stage0FreeBuildReportSchema": "hxhx.stage0-free-build.v1",
+    "stage0FreeBuildReportValidator": "scripts/ci/stage0-free-build-benchmark-report.js",
+    "stage0FreeBuildReportRunner": "scripts/hxhx/bench-stage0-free-build.sh",
     "nativePluginLoopReportSchema": "hxhx.native-plugin-loop.v1",
     "nativePluginLoopReportValidator": "scripts/ci/native-plugin-loop-benchmark-report.js",
     "nativePluginLoopReportRunner": "scripts/hxhx/bench-native-plugin-loop.sh"
@@ -122,6 +125,8 @@ performance claim must use measured medians from the relevant runner class.
       "purpose": "Rebuild usable native hxhx artifacts without relying on upstream Haxe at runtime.",
       "target": "Track wall time and peak RSS separately from correctness; Full1 performance parity remains governed by FULL1_PERF_PARITY:PASS.",
       "evidence": [
+        "scripts/hxhx/bench-stage0-free-build.sh",
+        "scripts/ci/stage0-free-build-benchmark-report.js",
         ".github/workflows/gate-perf-full1.yml",
         "docs/00-project/FULL1_PERF_PARITY_POLICY.md"
       ]
@@ -191,6 +196,17 @@ commit and machine ran, which tool versions and benchmark settings were used,
 what `cold`, `warm`, `skip`, and `select` mean, and which raw run reports back
 each median. It does not turn a quick `select` wiring check into evidence that
 full snapshot regeneration is fast.
+
+The stage0-free build benchmark answers a smaller everyday question: how long
+does it take to turn the already-committed OCaml bootstrap snapshot into a new
+native `hxhx` executable without running upstream Haxe? It measures fresh build
+workspaces twice: once with Dune's shared cache disabled, and once after priming
+a private benchmark-only cache. Each timing must produce a native `.exe`, pass
+a target-list smoke, and retain the executable and resource-record digests.
+The reported memory value is the operating system's maximum for the completed
+build child hierarchy; it is not simultaneous whole-machine or exact process-
+tree-sum memory. Both lanes remain report-only until repeated evidence is
+stable enough for a separate threshold decision.
 
 The two similarly named Reflaxe benchmarks answer different questions:
 

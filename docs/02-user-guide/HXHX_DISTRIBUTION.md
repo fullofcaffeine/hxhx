@@ -140,6 +140,35 @@ HXHX_KPI_REPS=3 npm run hxhx:bench:kpi
 KPI baseline numbers live in: `docs/benchmarks/HXHX_KPI_BASELINE.md:1`.
 KPI threshold policy lives in: `docs/benchmarks/HXHX_KPI_THRESHOLDS.md:1`.
 
+## Stage0-free native build report
+
+Use this when your question is: "How long does a clean native `hxhx` rebuild
+take if upstream Haxe is not allowed to help?"
+
+```bash
+npm run hxhx:bench:stage0-free-build
+```
+
+The runner builds from the committed OCaml bootstrap snapshot in a new
+workspace for every sample. It measures two states on the same machine: Dune's
+shared cache disabled, and a private Dune cache primed once before measurement.
+Every accepted sample must produce a native `.exe`, list the expected `js` and
+`ocaml` targets, and retain matching executable/resource digests.
+
+The JSON records raw wall-time and child peak-memory samples, the exact commit,
+machine and toolchains, cache/workspace rules, and bootstrap-snapshot digest.
+The memory number is not total machine memory or an exact simultaneous sum of
+every process. The comparison is diagnostic and has no release threshold.
+
+Useful controls:
+
+```bash
+HXHX_STAGE0_FREE_BUILD_REPS=3 npm run hxhx:bench:stage0-free-build
+HXHX_DUNE_JOBS=4 npm run hxhx:bench:stage0-free-build
+HXHX_STAGE0_FREE_BUILD_CACHE_STORAGE_MODE=copy \
+  npm run hxhx:bench:stage0-free-build
+```
+
 ## Generated-application native Reflaxe speed comparison
 
 Use this when you want a direct, plain-English comparison of:

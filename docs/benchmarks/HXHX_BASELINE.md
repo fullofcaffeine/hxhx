@@ -10,6 +10,8 @@ This file records **baseline numbers** for the minimal `hxhx` benchmark harness:
 - `npm run hxhx:bench:native-reflaxe`
 - `bash scripts/hxhx/bench-native-plugin-loop.sh`
 - `npm run hxhx:bench:native-plugin-loop`
+- `bash scripts/hxhx/bench-stage0-free-build.sh`
+- `npm run hxhx:bench:stage0-free-build`
 
 ## Quick glossary (beginner-friendly)
 
@@ -112,6 +114,36 @@ Controls:
 - `HXHX_NATIVE_PLUGIN_LOOP_HXHX_BIN` (optional prebuilt native `out.exe`)
 - `HXHX_NATIVE_PLUGIN_LOOP_HXHX_COMMIT` (required matching source SHA when a
   prebuilt binary is supplied)
+
+## Clean stage0-free native hxhx build
+
+Use:
+
+```bash
+npm run hxhx:bench:stage0-free-build
+```
+
+This report-only benchmark measures the maintenance wait before compiler use:
+building a native `hxhx` executable from the committed OCaml bootstrap snapshot
+without invoking upstream Haxe. Every sample gets a fresh build workspace and
+must produce a working native `.exe` whose target-list smoke and digest pass.
+
+The two same-machine lanes make cache state explicit:
+
+1. Dune shared cache disabled for every build,
+2. one private Dune cache primed once, then reused across fresh workspaces.
+
+The report stores raw wall-time and OS-reported child peak-RSS samples. That
+memory scope is not total machine memory or an exact simultaneous process-tree
+sum. No threshold or production-readiness claim is attached to the first
+observations.
+
+Controls:
+
+- `HXHX_STAGE0_FREE_BUILD_REPS` (default: `3`)
+- `HXHX_DUNE_JOBS` (default: `auto`)
+- `HXHX_STAGE0_FREE_BUILD_CACHE_STORAGE_MODE=auto|hardlink|copy`
+- `HXHX_STAGE0_FREE_BUILD_REPORT_DIR` (default: ignored `.artifacts/` output)
 
 ## KPI profile/plugin baseline
 

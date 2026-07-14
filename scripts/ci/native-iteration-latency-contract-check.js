@@ -83,6 +83,8 @@ function main() {
     'scripts/ci/hxhx-kpi-artifact-comparison.js',
     'scripts/ci/bootstrap-regen-benchmark-report.js',
     'scripts/hxhx/bench-bootstrap-regen.sh',
+    'scripts/ci/stage0-free-build-benchmark-report.js',
+    'scripts/hxhx/bench-stage0-free-build.sh',
     'scripts/ci/native-plugin-loop-benchmark-report.js',
     'scripts/hxhx/bench-native-plugin-loop.sh',
     'scripts/hxhx/bench-native-reflaxe.sh',
@@ -98,6 +100,7 @@ function main() {
   requireIncludes(packageJsonPath, packageJson, 'native-iteration-latency-contract-check.js')
   requireIncludes(packageJsonPath, packageJson, 'hxhx-kpi-artifact-comparison-fixture-test.js')
   requireIncludes(packageJsonPath, packageJson, 'native-plugin-loop-benchmark-report-fixture-test.js')
+  requireIncludes(packageJsonPath, packageJson, 'stage0-free-build-benchmark-report-fixture-test.js')
   for (const snippet of [
     'compare_native:',
     'scripts/hxhx/bench-kpi-artifact-comparison.sh',
@@ -162,6 +165,9 @@ function main() {
     if (policy.activeEvidenceLoop.nativePluginLoopReportSchema !== 'hxhx.native-plugin-loop.v1') {
       fail('policy.activeEvidenceLoop.nativePluginLoopReportSchema must be hxhx.native-plugin-loop.v1')
     }
+    if (policy.activeEvidenceLoop.stage0FreeBuildReportSchema !== 'hxhx.stage0-free-build.v1') {
+      fail('policy.activeEvidenceLoop.stage0FreeBuildReportSchema must be hxhx.stage0-free-build.v1')
+    }
     for (const field of [
       'reportValidator',
       'reportWorkflow',
@@ -169,6 +175,8 @@ function main() {
       'artifactComparisonRunner',
       'bootstrapReportValidator',
       'bootstrapReportWorkflow',
+      'stage0FreeBuildReportValidator',
+      'stage0FreeBuildReportRunner',
       'nativePluginLoopReportValidator',
       'nativePluginLoopReportRunner'
     ]) {
