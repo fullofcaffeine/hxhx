@@ -9,16 +9,15 @@ Beginner summary:
 - `inproc`: macros run inside `hxhx` directly.
 - Today the default runtime mode is already `inproc`.
 - The host lifecycle is verified, and the first real project-defined Haxe macro
-  now passes locally through both stage0-free paths.
-- The remaining step for this blocker is to repeat that proof in CI at the exact
-  commit we plan to accept. A local pass is useful, but it is not release
-  evidence by itself.
+  now passes through both stage0-free paths on a clean CI machine.
+- Exact-commit run `29349360051` proves this bounded loading path. It does not
+  mean every project macro or the complete Full1 macro/eval contract is done.
 
 ## Open blockers
 
-| Blocker ID | What remains in plain language | Owner | Closure evidence |
-| --- | --- | --- | --- |
-| MRP-B6 | The first Haxe-authored project macro, authenticated plugin receipt, and two-mode local proof are implemented. The same-commit weekly CI job still has to pass before this slice is accepted as release evidence. | `haxe_ocaml-vhk47.3` | The exact commit's Macro Runtime Parity workflow passes its existing two-mode matrix and its separate project-macro-module job, then emits `FULL1_MACRO_PARITY:PASS`. |
+There are no open runtime-mode blockers in this bounded list. The parent Full1
+macro/eval lane still has separate work, including native eval and a complete
+same-candidate release aggregate.
 
 The accepted lifecycle and its claim limits are explained in
 `docs/00-project/MACRO_HOST_LIFECYCLE_DECISION.md`.
@@ -78,7 +77,9 @@ The accepted lifecycle and its claim limits are explained in
   checks for wrong candidate, wrong ABI, changed digest, changed expression, and
   missing files.
 - This is one bounded loading-path proof, not support for every project macro.
-  `MRP-B6` stays open until the same commit passes the weekly aggregate.
+  Exact-commit run `29349360051` repeated the proof on a clean Linux runner,
+  passed both established macro-runtime jobs, and emitted the aggregate Full1
+  macro marker.
 
 ## Recently resolved
 
@@ -89,3 +90,4 @@ The accepted lifecycle and its claim limits are explained in
 | MRP-B3 | Macro runtime parity is now a release-aware reusable workflow and Gate Full1 consumes it before emitting Full1 aggregate pass markers. | `haxe.ocaml-bxlg.9.6` |
 | MRP-B4 | Default runtime mode flipped to `inproc`; fallback/rollback policy documented (`HXHX_MACRO_RUNTIME_MODE=external-host` or `--hxhx-macro-runtime external-host`). | `haxe.ocaml-bxlg.9.3` |
 | MRP-B5 | Exact-commit run `29334023225` built one generic host from the candidate's committed snapshot with stage0 forbidden, recorded and revalidated its commit/tree/digest/protocol receipt, reused it for unit/runci/display/protocol checks, and passed both external-host and in-process jobs without recursive or lazy rebuilding. | `haxe_ocaml-vhk47.1` |
+| MRP-B6 | Exact-commit run `29349360051` at `3806c611` generated one repo-owned Haxe project macro as authenticated bytecode/native plugins, loaded and ran it through both native macro modes without stage0, passed the established two-mode macro matrix, and emitted `FULL1_MACRO_PARITY:PASS`. Project evidence artifact `8317497905` has digest `sha256:aa3c83f4b56e9cba8c1dd661e0319928447ccbd56620f298b778cc1a42248766`; summary artifact `8317500638` has digest `sha256:b294cbc5c7b9383cf9d4fb1494cc0ae0ecd4570253f0bc601e7165573b78d839`. | `haxe_ocaml-vhk47.3` |

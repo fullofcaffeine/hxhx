@@ -1,10 +1,10 @@
 # External Macro-Host Lifecycle Decision
 
-Status: implemented and verified for the selected aggregate; broader project-macro work remains open
+Status: implemented and verified for the selected aggregate; first project-macro loading proof also verified
 
 Owning bead: `haxe_ocaml-vhk47.1`
 
-Project-macro follow-up: `haxe_ocaml-vhk47.3`
+Completed project-macro follow-up: `haxe_ocaml-vhk47.3`
 
 ## The short version
 
@@ -68,16 +68,16 @@ It does **not** yet prove:
 
 - that the current Haxe source can regenerate the committed host snapshot
   without stage0;
-- that an arbitrary project's Haxe-authored macros can be loaded by the generic
-  host;
-- that the hand-written OCaml native-module smoke is a complete project-macro
-  solution;
+- that arbitrary existing project macros, arguments, hooks, and the complete
+  `haxe.macro` API are supported;
 - that all Full1 macro/eval evidence is green;
 - or that `hxhx` is ready for a Full1 release.
 
-Project-defined Haxe macros remain an explicit Full1 child under
-`haxe_ocaml-vhk47.3`. That work must prove a stage0-free Haxe-authored module
-path rather than quietly rebuilding the whole host for each compile.
+The first project-defined Haxe macro child is complete under
+`haxe_ocaml-vhk47.3`. Exact-commit run `29349360051` generated one repo-owned
+no-argument macro as a separate authenticated plugin, loaded it through both
+native modes, and kept the reusable host separate. That proves the module path;
+broader macro-language coverage remains with the parent Full1 macro/eval lane.
 
 ## Ownership boundaries
 

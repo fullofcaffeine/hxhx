@@ -89,9 +89,17 @@ uploaded artifact `8309183633`, and emitted both required M7 markers. The
 macro-runtime incident is resolved by exact-commit run `29334023225`. That run
 reused one candidate-bound, stage0-forbidden external host and passed both
 runtime modes. It closes the host lifecycle failure, not the separate
-project-defined macro obligation. The current open incident record is the
-expected Full1 aggregate no-go. Its owner is recorded in the JSON ledger, and
-the open record does not count as passing product or Full1 evidence.
+project-defined macro obligation. That next obligation is now resolved by
+exact-commit run `29349360051` at `3806c611`: one repo-owned Haxe macro was
+generated, authenticated, loaded, and run in both native modes, while both
+established runtime jobs and the aggregate marker also passed. Project evidence
+artifact `8317497905` has digest
+`sha256:aa3c83f4b56e9cba8c1dd661e0319928447ccbd56620f298b778cc1a42248766`;
+summary artifact `8317500638` has digest
+`sha256:b294cbc5c7b9383cf9d4fb1494cc0ae0ecd4570253f0bc601e7165573b78d839`.
+The current open incident record is the expected broader Full1 aggregate no-go.
+Its owner is recorded in the JSON ledger, and the open record does not count as
+passing product or Full1 evidence.
 
 ## Audit window
 

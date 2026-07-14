@@ -1,6 +1,6 @@
 # Project macro modules: first safe native loading path
 
-Status: accepted implementation decision for `haxe_ocaml-vhk47.3`
+Status: implemented and verified for `haxe_ocaml-vhk47.3`
 Risk level: `thinking:xhigh`
 Decision date: 2026-07-14
 
@@ -16,9 +16,9 @@ replaces the call in the finished program.
 - **external host**: the macro runs inside the reusable `hxhx-macro-host`
   process.
 
-Neither path yet loads an ordinary project's Haxe-authored macro. The next
-bounded step is to prove one real project macro in both modes without asking the
-installed upstream `haxe` compiler (stage0) to do the work.
+Before this slice, neither path loaded an ordinary project's Haxe-authored
+macro. The implemented proof now runs one real project macro in both modes
+without asking the installed upstream `haxe` compiler (stage0) to do the work.
 
 ## Decision in plain language
 
@@ -83,8 +83,8 @@ macro implementation.
 
 ## The bounded Stage3 entrypoint
 
-Stage3 plugin output will accept one explicit project-macro registration for
-this pilot:
+Stage3 plugin output accepts one explicit project-macro registration for this
+pilot:
 
 - plugin ID;
 - exact expression text, for example
@@ -92,7 +92,7 @@ this pilot:
 - Haxe handler path, for example
   `projectmacro.ProjectMacroNative.nativeExpansion`.
 
-The generated OCaml entrypoint will do only this conceptual work:
+The generated OCaml entrypoint does only this conceptual work:
 
 ```text
 register(plugin ID, exact expression, call generated Haxe handler)
@@ -109,7 +109,7 @@ surface require later evidence and separate beads.
 
 ## One Haxe fixture, two kinds of proof
 
-The repo-owned fixture will keep the expected value in Haxe source:
+The repo-owned fixture keeps the expected value in Haxe source:
 
 - in an upstream macro context, `message()` returns a real `haxe.macro.Expr`;
 - in the promoted native module, `nativeExpansion()` returns equivalent Haxe
@@ -190,9 +190,9 @@ The focused runner must:
    expression failures;
 8. leave an artifact summary that identifies the candidate and digest.
 
-After focused evidence is green, the weekly macro parity workflow gets a
-separate project-macro job. `FULL1_MACRO_PARITY:PASS` may only be emitted when
-the existing two-mode matrix and this project-macro job both pass.
+The weekly macro parity workflow has a separate project-macro job.
+`FULL1_MACRO_PARITY:PASS` is emitted only when the existing two-mode matrix and
+this project-macro job all pass.
 
 ## Stop rules
 
@@ -233,5 +233,33 @@ and stop rules. The earlier whole-repository GPT review supports explicit
 macro/plugin artifact boundaries, but it is not treated as implementation or
 oracle evidence.
 
-Decision: proceed with the bounded path above, then require focused evidence and
-the strict aggregate before closing `haxe_ocaml-vhk47.3`.
+Decision: the bounded path above is accepted. Focused evidence and the strict
+aggregate are both green, so `haxe_ocaml-vhk47.3` may close.
+
+## Verification result
+
+Exact-commit Macro Runtime Parity run `29349360051` passed at
+`3806c61195cb9788b0db9521a869208792ae3247`.
+
+In plain language, the clean Linux runner:
+
+1. built the current `hxhx` candidate and reusable macro host with stage0
+   forbidden;
+2. generated one repo-owned Haxe macro as bytecode and native OCaml plugins;
+3. checked the candidate, ABI, expression, paths, and file digests in its
+   receipt;
+4. loaded and ran the macro in both native runtime modes;
+5. passed the wrong-candidate, wrong-ABI, changed-digest, changed-expression,
+   missing-artifact, and missing-receipt checks;
+6. kept both established macro-runtime jobs green; and
+7. emitted `PROJECT_MACRO_MODULE:PASS` and `FULL1_MACRO_PARITY:PASS`.
+
+The project evidence is artifact `8317497905`, digest
+`sha256:aa3c83f4b56e9cba8c1dd661e0319928447ccbd56620f298b778cc1a42248766`.
+The aggregate summary is artifact `8317500638`, digest
+`sha256:b294cbc5c7b9383cf9d4fb1494cc0ae0ecd4570253f0bc601e7165573b78d839`.
+
+This is a first loading-path proof, not complete support for every project
+macro. The README production-readiness bars remain unchanged because Full1
+still needs native eval, strict suite/target, performance, and release-candidate
+evidence.
