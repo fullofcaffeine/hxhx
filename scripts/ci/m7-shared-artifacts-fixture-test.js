@@ -58,10 +58,12 @@ try {
 
   const hxhxBin = path.join(fixture, '.artifacts', 'gate-m7-shared', 'hxhx.exe')
   const macroHostBin = path.join(fixture, '.artifacts', 'gate-m7-shared', 'hxhx-macro-host.exe')
+  const macroHostRuntimeDir = path.join(fixture, '.artifacts', 'gate-m7-shared', 'runtime', '.hx_runtime.objs', 'byte')
   write(hxhxBin, '#!/bin/sh\nexit 0\n', 0o755)
   write(macroHostBin, '#!/bin/sh\nexit 0\n', 0o755)
+  write(path.join(macroHostRuntimeDir, 'hxHxMacroModuleHost.cmi'), 'fixture interface\n')
 
-  const report = buildReport({ root: fixture, hxhxBin, macroHostBin })
+  const report = buildReport({ root: fixture, hxhxBin, macroHostBin, macroHostRuntimeDir })
   const commit = run('git', ['rev-parse', 'HEAD']).trim()
   validateReport({ root: fixture, report, expectedCommit: commit })
   if (report.schema !== schema || report.marker !== marker) throw new Error('valid receipt lost its schema or marker')
@@ -70,6 +72,14 @@ try {
   fs.appendFileSync(hxhxBin, '# changed\n')
   expectFailure('changed artifact digest', () => validateReport({ root: fixture, report, expectedCommit: commit }), /digest changed/)
   write(hxhxBin, '#!/bin/sh\nexit 0\n', 0o755)
+
+  fs.appendFileSync(path.join(macroHostRuntimeDir, 'hxHxMacroModuleHost.cmi'), 'changed\n')
+  expectFailure('changed macro host runtime interfaces', () => validateReport({ root: fixture, report, expectedCommit: commit }), /macroHostRuntime artifact digest changed/)
+  write(path.join(macroHostRuntimeDir, 'hxHxMacroModuleHost.cmi'), 'fixture interface\n')
+
+  fs.rmSync(path.join(macroHostRuntimeDir, 'hxHxMacroModuleHost.cmi'))
+  expectFailure('missing required macro host interface', () => validateReport({ root: fixture, report, expectedCommit: commit }), /missing hxHxMacroModuleHost\.cmi/)
+  write(path.join(macroHostRuntimeDir, 'hxHxMacroModuleHost.cmi'), 'fixture interface\n')
 
   write(path.join(fixture, 'tracked.txt'), 'dirty\n')
   expectFailure('changed tracked source', () => validateReport({ root: fixture, report, expectedCommit: commit }), /not clean|content changed|status changed/)
@@ -87,6 +97,14 @@ try {
     report: {
       ...report,
       artifacts: { ...report.artifacts, hxhx: { ...report.artifacts.hxhx, path: hxhxBin } }
+    },
+    expectedCommit: commit
+  }), /repository-relative/)
+  expectFailure('absolute macro host runtime path', () => validateReport({
+    root: fixture,
+    report: {
+      ...report,
+      artifacts: { ...report.artifacts, macroHostRuntime: { ...report.artifacts.macroHostRuntime, path: macroHostRuntimeDir } }
     },
     expectedCommit: commit
   }), /repository-relative/)

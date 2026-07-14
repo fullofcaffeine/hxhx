@@ -84,7 +84,7 @@ performance claim must use measured medians from the relevant runner class.
   "activeEvidenceLoop": {
     "full1PhaseTimingReportSchema": "full1-phase-timing-summary.v2",
     "full1PhaseTimingReportValidator": "scripts/ci/full1-phase-timing.js",
-    "m7SharedArtifactReceiptSchema": "m7-shared-artifacts.v1",
+    "m7SharedArtifactReceiptSchema": "m7-shared-artifacts.v2",
     "m7SharedArtifactReceiptValidator": "scripts/ci/m7-shared-artifacts.js",
     "m7SharedArtifactRunner": "scripts/hxhx/run-replacement-ready.sh",
     "reportSchema": "hxhx.kpi.v2",
@@ -201,11 +201,12 @@ GitHub job runtime. These artifacts remain diagnostic and report-only.
 The strict M7 replacement bundle also avoids paying for the same compiler build
 before every independent check. It prepares one native `hxhx` and one macro
 host from the committed stage0-free snapshots, then writes
-`m7-shared-artifacts.v1`. The receipt records the commit, clean tracked-tree
-fingerprints, committed snapshot trees, repository-safe artifact paths, and
-SHA-256 digests. The bundle revalidates it around every check. This only shares
-the compiler tools; Gate1, Gate2, Gate3, plugin, policy, and builtin behavior
-checks still run separately and keep their existing pass markers.
+`m7-shared-artifacts.v2`. The receipt records the commit, clean tracked-tree
+fingerprints, committed snapshot trees, repository-safe artifact paths, both
+executable hashes, and the hash of the macro host's companion interface
+folder. The bundle revalidates it around every check. This only shares the
+compiler tools; Gate1, Gate2, Gate3, plugin, policy, and builtin behavior checks
+still run separately and keep their existing pass markers.
 
 The report workflow has an opt-in bytecode/native comparison. It runs both
 compiler forms sequentially in one GitHub job and accepts the comparison only

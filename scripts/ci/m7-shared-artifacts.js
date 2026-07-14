@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Write and validate the receipt for binaries shared by one strict M7 run.
+ * Write and validate the receipt for native tools shared by one strict M7 run.
  *
  * The receipt prevents a speed optimization from silently reusing an artifact
  * from another commit or from a changed checkout. It deliberately records
@@ -14,10 +14,11 @@ const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
 
-const schema = 'm7-shared-artifacts.v1'
+const schema = 'm7-shared-artifacts.v2'
 const marker = 'M7_SHARED_ARTIFACTS:PASS'
 const commitPattern = /^[0-9a-f]{40}$/
 const digestPattern = /^[0-9a-f]{64}$/
+const requiredMacroHostInterface = 'hxHxMacroModuleHost.cmi'
 
 function fail(message) {
   throw new Error(message)
@@ -29,6 +30,51 @@ function sha256(value) {
 
 function sha256File(filePath) {
   return sha256(fs.readFileSync(filePath))
+}
+
+function directoryFiles(directoryPath, relativePath = '') {
+  const files = []
+  const entries = fs.readdirSync(path.join(directoryPath, relativePath), { withFileTypes: true })
+    .sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0)
+
+  for (const entry of entries) {
+    const childRelative = relativePath ? `${relativePath}/${entry.name}` : entry.name
+    if (entry.isSymbolicLink()) fail(`artifact support directory cannot contain symlinks: ${childRelative}`)
+    if (entry.isDirectory()) files.push(...directoryFiles(directoryPath, childRelative))
+    else if (entry.isFile()) files.push(childRelative)
+    else fail(`artifact support directory contains an unsupported entry: ${childRelative}`)
+  }
+  return files
+}
+
+function directoryRecord(root, label, directoryPath) {
+  const absoluteRoot = path.resolve(root)
+  const absolutePath = path.resolve(directoryPath)
+  const relativePath = path.relative(absoluteRoot, absolutePath).split(path.sep).join('/')
+
+  if (!relativePath || relativePath === '..' || relativePath.startsWith('../') || path.isAbsolute(relativePath)) {
+    fail(`${label} directory must live inside the repository: ${directoryPath}`)
+  }
+  if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isDirectory()) {
+    fail(`${label} directory does not exist: ${relativePath}`)
+  }
+
+  const files = directoryFiles(absolutePath)
+  if (files.length === 0) fail(`${label} directory is empty: ${relativePath}`)
+  const digestInput = files.map(file => `${file}\0${sha256File(path.join(absolutePath, file))}\n`).join('')
+  return {
+    path: relativePath,
+    sha256: sha256(digestInput),
+    fileCount: files.length
+  }
+}
+
+function macroHostRuntimeRecord(root, directoryPath) {
+  const requiredInterface = path.join(directoryPath, requiredMacroHostInterface)
+  if (!fs.existsSync(requiredInterface) || !fs.statSync(requiredInterface).isFile()) {
+    fail(`macro host runtime interfaces are missing ${requiredMacroHostInterface}`)
+  }
+  return directoryRecord(root, 'macro host runtime interfaces', directoryPath)
 }
 
 function runGit(root, args, encoding = 'utf8') {
@@ -82,7 +128,7 @@ function artifactRecord(root, label, artifactPath) {
   }
 }
 
-function buildReport({ root, hxhxBin, macroHostBin }) {
+function buildReport({ root, hxhxBin, macroHostBin, macroHostRuntimeDir }) {
   const fingerprint = trackedFingerprint(root)
   if (!fingerprint.trackedSourceClean) {
     fail('strict M7 shared artifacts require a clean tracked checkout')
@@ -107,7 +153,8 @@ function buildReport({ root, hxhxBin, macroHostBin }) {
     },
     artifacts: {
       hxhx: artifactRecord(root, 'hxhx', hxhxBin),
-      macroHost: artifactRecord(root, 'macro host', macroHostBin)
+      macroHost: artifactRecord(root, 'macro host', macroHostBin),
+      macroHostRuntime: macroHostRuntimeRecord(root, macroHostRuntimeDir)
     }
   }
 }
@@ -153,6 +200,30 @@ function validateReport({ root, report, expectedCommit }) {
     }
   }
 
+  const runtime = report?.artifacts?.macroHostRuntime
+  const runtimePath = String(runtime?.path || '')
+  if (!runtimePath || path.isAbsolute(runtimePath) || runtimePath === '..' || runtimePath.startsWith('../') || runtimePath.includes('\\')) {
+    errors.push('macroHostRuntime artifact path must be repository-relative')
+  } else {
+    if (!runtimePath.endsWith('/runtime/.hx_runtime.objs/byte')) {
+      errors.push('macroHostRuntime artifact must be the macro host byte-interface directory')
+    }
+    if (!digestPattern.test(String(runtime?.sha256 || ''))) errors.push('macroHostRuntime artifact digest is invalid')
+    if (!Number.isInteger(runtime?.fileCount) || runtime.fileCount < 1) errors.push('macroHostRuntime artifact fileCount is invalid')
+    const absoluteRuntimePath = path.resolve(root, runtimePath)
+    if (!fs.existsSync(absoluteRuntimePath) || !fs.statSync(absoluteRuntimePath).isDirectory()) {
+      errors.push('macroHostRuntime artifact is missing')
+    } else {
+      try {
+        const current = macroHostRuntimeRecord(root, absoluteRuntimePath)
+        if (current.sha256 !== runtime.sha256) errors.push('macroHostRuntime artifact digest changed after preparation')
+        if (current.fileCount !== runtime.fileCount) errors.push('macroHostRuntime artifact file count changed after preparation')
+      } catch (error) {
+        errors.push(error.message)
+      }
+    }
+  }
+
   if (errors.length > 0) fail(errors.join('; '))
   return report
 }
@@ -188,7 +259,8 @@ function main(argv) {
     const report = buildReport({
       root,
       hxhxBin: requireOption(options, 'hxhx-bin'),
-      macroHostBin: requireOption(options, 'macro-host-bin')
+      macroHostBin: requireOption(options, 'macro-host-bin'),
+      macroHostRuntimeDir: requireOption(options, 'macro-host-runtime')
     })
     fs.mkdirSync(path.dirname(reportPath), { recursive: true })
     fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
@@ -197,7 +269,7 @@ function main(argv) {
     const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
     validateReport({ root, report, expectedCommit: options['expected-commit'] || '' })
   } else {
-    fail('usage: m7-shared-artifacts.js <write|validate> --root <repo> --report <json> [--hxhx-bin <exe> --macro-host-bin <exe>] [--expected-commit <sha>] [--quiet]')
+    fail('usage: m7-shared-artifacts.js <write|validate> --root <repo> --report <json> [--hxhx-bin <exe> --macro-host-bin <exe> --macro-host-runtime <dir>] [--expected-commit <sha>] [--quiet]')
   }
 
   if (!options.quiet) console.log(marker)

@@ -150,6 +150,8 @@ prepare_shared_strict_artifacts() {
   local start end elapsed
   local built_hxhx=""
   local built_macro_host=""
+  local built_macro_host_runtime=""
+  local shared_macro_host_runtime=""
   local code=0
 
   if [ "$STRICT" != "1" ]; then
@@ -201,10 +203,23 @@ prepare_shared_strict_artifacts() {
     return 1
   fi
 
+  built_macro_host_runtime="$(dirname "$built_macro_host")/runtime/.hx_runtime.objs/byte"
+  if [ ! -d "$built_macro_host_runtime" ] || [ ! -f "$built_macro_host_runtime/hxHxMacroModuleHost.cmi" ]; then
+    end="$(date +%s)"
+    elapsed="$((end - start))"
+    summary+=("shared-native-artifacts: FAIL (${elapsed}s, macro-host runtime interfaces missing)")
+    echo "M7 shared preparation did not find the macro-host runtime interface files." >&2
+    echo "M7_SHARED_ARTIFACTS:FAIL"
+    return 1
+  fi
+
   HXHX_BIN="$SHARED_ARTIFACT_DIR/hxhx.exe"
   HXHX_MACRO_HOST_EXE="$SHARED_ARTIFACT_DIR/hxhx-macro-host.exe"
+  shared_macro_host_runtime="$SHARED_ARTIFACT_DIR/runtime/.hx_runtime.objs/byte"
   cp "$built_hxhx" "$HXHX_BIN"
   cp "$built_macro_host" "$HXHX_MACRO_HOST_EXE"
+  mkdir -p "$(dirname "$shared_macro_host_runtime")"
+  cp -R "$built_macro_host_runtime" "$shared_macro_host_runtime"
   chmod +x "$HXHX_BIN" "$HXHX_MACRO_HOST_EXE"
   export HXHX_BIN HXHX_MACRO_HOST_EXE
 
@@ -212,7 +227,8 @@ prepare_shared_strict_artifacts() {
     --root "$ROOT" \
     --report "$SHARED_ARTIFACT_RECEIPT" \
     --hxhx-bin "$HXHX_BIN" \
-    --macro-host-bin "$HXHX_MACRO_HOST_EXE"; then
+    --macro-host-bin "$HXHX_MACRO_HOST_EXE" \
+    --macro-host-runtime "$shared_macro_host_runtime"; then
     end="$(date +%s)"
     elapsed="$((end - start))"
     summary+=("shared-native-artifacts: FAIL (${elapsed}s, receipt validation)")
@@ -226,6 +242,7 @@ prepare_shared_strict_artifacts() {
   summary+=("shared-native-artifacts: PASS (${elapsed}s)")
   echo "m7_shared_hxhx=$HXHX_BIN"
   echo "m7_shared_macro_host=$HXHX_MACRO_HOST_EXE"
+  echo "m7_shared_macro_host_runtime=$shared_macro_host_runtime"
   echo "m7_shared_receipt=$SHARED_ARTIFACT_RECEIPT"
 }
 

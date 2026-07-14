@@ -157,8 +157,8 @@ function main() {
     if (policy.activeEvidenceLoop.full1PhaseTimingReportSchema !== 'full1-phase-timing-summary.v2') {
       fail('policy.activeEvidenceLoop.full1PhaseTimingReportSchema must be full1-phase-timing-summary.v2')
     }
-    if (policy.activeEvidenceLoop.m7SharedArtifactReceiptSchema !== 'm7-shared-artifacts.v1') {
-      fail('policy.activeEvidenceLoop.m7SharedArtifactReceiptSchema must be m7-shared-artifacts.v1')
+    if (policy.activeEvidenceLoop.m7SharedArtifactReceiptSchema !== 'm7-shared-artifacts.v2') {
+      fail('policy.activeEvidenceLoop.m7SharedArtifactReceiptSchema must be m7-shared-artifacts.v2')
     }
     if (policy.activeEvidenceLoop.reportSchema !== 'hxhx.kpi.v2') {
       fail('policy.activeEvidenceLoop.reportSchema must be hxhx.kpi.v2')
