@@ -86,6 +86,11 @@ That sub-contract distinguishes the contract-definition marker
 `FULL1_MACRO_PARITY:PASS`, `FULL1_EVAL_NATIVE:PASS`, and
 `FULL1_MACRO_EVAL_PARITY:PASS`.
 
+The aggregate macro/eval marker must be built from uploaded proof files for
+one exact commit and run attempt. Two green job labels are not enough. The
+plain-language trust-flow decision is documented in
+`docs/00-project/FULL1_MACRO_EVAL_EVIDENCE_DECISION.md`.
+
 Performance parity has its own explicit sub-contract:
 
 - `docs/00-project/FULL1_PERF_PARITY_POLICY.md`

@@ -111,6 +111,35 @@ function run(command, args, options) {
   })
 }
 
+function gitValue(cwd, args) {
+  const result = cp.spawnSync('git', args, { cwd, encoding: 'utf8' })
+  if (result.status !== 0) return ''
+  return String(result.stdout || '').trim()
+}
+
+/** Resolve the exact source and oracle identities carried by eval evidence. */
+function evidenceIdentity(root, upstreamDir, env) {
+  const candidateSha = String(
+    env.HXHX_CANDIDATE_COMMIT
+      || env.GITHUB_SHA
+      || gitValue(root, ['rev-parse', 'HEAD'])
+  ).trim()
+  if (!/^[0-9a-f]{40}$/i.test(candidateSha)) {
+    fail(`cannot resolve a full candidate commit SHA: ${candidateSha || '<empty>'}`)
+  }
+  const upstreamCommit = gitValue(upstreamDir, ['rev-parse', 'HEAD'])
+  if (upstreamCommit && !/^[0-9a-f]{40}$/i.test(upstreamCommit)) {
+    fail(`cannot resolve a full upstream oracle commit SHA: ${upstreamCommit}`)
+  }
+  return {
+    candidateSha,
+    runId: String(env.GITHUB_RUN_ID || 'local'),
+    runAttempt: String(env.GITHUB_RUN_ATTEMPT || '0'),
+    upstreamRef: String(env.HAXE_UPSTREAM_REF || '4.3.7'),
+    upstreamCommit: upstreamCommit || null,
+  }
+}
+
 function resolveCachedHxhxBin(root) {
   const buildDir = path.join(root, '.tmp/full1-eval-native-hxhx')
   const candidates = [
@@ -215,14 +244,24 @@ function main() {
   writeFile(stderrPath, result.stderr || '')
 
   const endedAt = new Date()
+  const identity = evidenceIdentity(parsed.root, parsed.upstreamDir, env)
   const summary = {
-    schema: 'full1-eval-native-summary.v1',
+    schema: 'full1-eval-native-summary.v2',
+    synthetic: false,
+    workflow: 'Full1 / Eval Native',
+    candidate_sha: identity.candidateSha,
+    run_id: identity.runId,
+    run_attempt: identity.runAttempt,
     started_at: startedAt.toISOString(),
     ended_at: endedAt.toISOString(),
     duration_ms: endedAt.getTime() - startedAt.getTime(),
     root: parsed.root,
     upstream_dir: parsed.upstreamDir,
     workflow_mode: 'full1-eval-native',
+    oracle: {
+      haxe_version: identity.upstreamRef,
+      checkout_commit: identity.upstreamCommit,
+    },
     eval_context: {
       entrypoint: 'tests/unit/compile-macro.hxml',
       command,

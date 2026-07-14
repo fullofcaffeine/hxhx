@@ -591,41 +591,44 @@ jobs:
       macro_runtime_parity_weekly_marker: ${{ steps.emit.outputs.macro_runtime_parity_weekly_marker }}
       full1_macro_parity_marker: ${{ steps.emit.outputs.full1_macro_parity_marker }}
     steps:
-      - name: Write macro parity summary artifact
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download in-process macro proof
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: macro-runtime-parity-inproc-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/macro-runtime-parity/proofs/macro-runtime-parity-inproc-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Download external-host macro proof
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: macro-runtime-parity-external-host-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/macro-runtime-parity/proofs/macro-runtime-parity-external-host-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Download project macro proof
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: project-macro-module-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/macro-runtime-parity/proofs/project-macro-module-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify macro proof artifacts
+        id: verify
+        continue-on-error: true
         run: |
           set -euo pipefail
           mkdir -p .artifacts/macro-runtime-parity
-          matrix_result='${{ needs.macro-runtime-parity.result }}'
-          project_macro_result='${{ needs.project-macro-module.result }}'
-          trigger='${{ github.event_name }}'
-          jq -n \
-            --arg workflow "Macro Runtime Parity (Weekly)" \
-            --arg run_id "${{ github.run_id }}" \
-            --arg run_attempt "${{ github.run_attempt }}" \
-            --arg matrix_result "$matrix_result" \
-            --arg project_macro_result "$project_macro_result" \
-            --arg trigger "$trigger" \
-            '{
-              schema: "macro-runtime-parity-summary.v3",
-              workflow: $workflow,
-              run_id: $run_id,
-              run_attempt: $run_attempt,
-              trigger: $trigger,
-              jobs: {
-                macro_runtime_parity: { result: $matrix_result },
-                project_macro_module: { result: $project_macro_result }
-              },
-              expected_markers: [
-                "MACRO_RUNTIME_PARITY_WEEKLY:PASS",
-                "FULL1_MACRO_PARITY:PASS"
-              ],
-              emitted_markers: (
-                if $matrix_result == "success" and $project_macro_result == "success"
-                then ["MACRO_RUNTIME_PARITY_WEEKLY:PASS", "FULL1_MACRO_PARITY:PASS"]
-                else []
-                end
-              )
-            }' > .artifacts/macro-runtime-parity/summary.json
+          node scripts/ci/full1-macro-parity-evidence.js \
+            --artifacts-dir .artifacts/macro-runtime-parity/proofs \
+            --output .artifacts/macro-runtime-parity/summary.json \
+            --candidate-sha "${{ github.sha }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --matrix-result "${{ needs.macro-runtime-parity.result }}" \
+            --project-result "${{ needs.project-macro-module.result }}"
 
       - name: Upload parity summary artifact
         if: always()
@@ -637,13 +640,15 @@ jobs:
 
       - name: Emit parity markers
         id: emit
+        if: always()
         run: |
           set -euo pipefail
-          matrix_result='${{ needs.macro-runtime-parity.result }}'
-          project_macro_result='${{ needs.project-macro-module.result }}'
-          echo "macro_runtime_parity=${matrix_result}"
-          echo "project_macro_module=${project_macro_result}"
-          if [ "$matrix_result" = "success" ] && [ "$project_macro_result" = "success" ]; then
+          verify_outcome='${{ steps.verify.outcome }}'
+          summary=.artifacts/macro-runtime-parity/summary.json
+          echo "macro_artifact_verification=${verify_outcome}"
+          if [ "$verify_outcome" = "success" ] \
+            && [ -f "$summary" ] \
+            && jq -e '.errors == [] and .emitted_markers == ["MACRO_RUNTIME_PARITY_WEEKLY:PASS", "FULL1_MACRO_PARITY:PASS"]' "$summary" >/dev/null; then
             echo "MACRO_RUNTIME_PARITY_WEEKLY:PASS"
             echo "FULL1_MACRO_PARITY:PASS"
             echo "macro_runtime_parity_weekly_marker=MACRO_RUNTIME_PARITY_WEEKLY:PASS" >> "$GITHUB_OUTPUT"

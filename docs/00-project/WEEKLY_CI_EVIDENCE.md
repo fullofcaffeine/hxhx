@@ -116,10 +116,10 @@ passing product or Full1 evidence.
 | --- | --- | --- | --- | --- |
 | Gate 1 / Upstream Macro Unit Compatibility | `.github/workflows/gate1.yml` | Weekly schedule | `GATE1_MACRO:PASS` | Workflow run logs (marker in log output) |
 | Gate 2 / Upstream Macro Workloads | `.github/workflows/gate2.yml` | Weekly schedule | `GATE2_MACRO:PASS` | Workflow run logs (marker in log output) |
-| Macro Runtime Parity (Weekly) | `.github/workflows/macro-runtime-parity-weekly.yml` | Weekly schedule | `MACRO_RUNTIME_PARITY_WEEKLY:PASS`, `FULL1_MACRO_PARITY:PASS`, plus mode markers (`..._EXTERNAL_HOST:PASS`, `..._INPROC:PASS`). The aggregate passes only when the separate Haxe-authored project-macro proof also succeeds. | Artifacts `macro-runtime-parity-external-host-<run_id>-<attempt>`, `macro-runtime-parity-inproc-<run_id>-<attempt>`, `project-macro-module-<run_id>-<attempt>`, and `macro-runtime-parity-summary-<run_id>-<attempt>` |
+| Macro Runtime Parity (Weekly) | `.github/workflows/macro-runtime-parity-weekly.yml` | Weekly schedule | `MACRO_RUNTIME_PARITY_WEEKLY:PASS`, `FULL1_MACRO_PARITY:PASS`, plus mode markers (`..._EXTERNAL_HOST:PASS`, `..._INPROC:PASS`). The summary opens the two mode packages and the Haxe-authored project-macro package before it can pass. | Artifacts `macro-runtime-parity-external-host-<run_id>-<attempt>`, `macro-runtime-parity-inproc-<run_id>-<attempt>`, `project-macro-module-<run_id>-<attempt>`, and verified `macro-runtime-parity-summary-<run_id>-<attempt>` |
 | Gate M7 / Replacement Bundle | `.github/workflows/gate-m7.yml` | Weekly schedule | `M7_SHARED_ARTIFACTS:PASS`, `M7_STRICT_STAGE0:PASS`, and `M7_REPLACEMENT_READY:PASS` | Artifact `gate-m7-logs-<run_id>` with the run log and `m7-shared-artifacts.v2` receipt + run logs |
 | Full1 / Plugin Parity | `.github/workflows/full1-plugin-parity.yml` | Weekly schedule | `FULL1_PLUGIN_PARITY:PASS` | Per-proof artifacts `full1-plugin-upstream-to-hxhx-<run_id>-<attempt>`, `full1-plugin-hxhx-to-hxhx-<run_id>-<attempt>`, `full1-plugin-upstream-host-adapter-<run_id>-<attempt>` each contain the receipt and loaded plugin file; aggregate artifact `full1-plugin-parity-summary-<run_id>-<attempt>` records same-candidate verification and checksums. |
-| Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity | `.github/workflows/gate-full1.yml` | Weekly schedule | `FULL1_SUITE_MATRIX:PASS`, `FULL1_MACRO_EVAL_PARITY:PASS`, and `FULL1_PLUGIN_PARITY:PASS` | Artifact `full1-summary-<run_id>` + logs from called Full1 workflows (`gate3-full1-extended`, `full1-suite-runners`, `macro-runtime-parity-weekly`, `full1-eval-native`, `full1-plugin-parity`) |
+| Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity | `.github/workflows/gate-full1.yml` | Weekly schedule | `FULL1_SUITE_MATRIX:PASS`, `FULL1_MACRO_EVAL_PARITY:PASS`, and `FULL1_PLUGIN_PARITY:PASS` | Artifacts `full1-macro-eval-summary-<run_id>-<attempt>` and `full1-summary-<run_id>-<attempt>` + child proof logs. Gate Full1 opens the combined macro/eval receipt before repeating its marker. |
 | Stdlib / Semantic Diff (nightly expanded job) | `.github/workflows/semantic-diff.yml` | Weekly schedule | `SEMANTIC_DIFF_NIGHTLY:PASS` | Artifact `semantic-diff-nightly-artifacts` |
 | Perf / HXHX KPI (Report Only) | `.github/workflows/hxhx-kpi-report.yml` | Manual weekly dispatch | job completes and emits `report.json` | Artifact `hxhx-kpi-report-<run_id>` (contains `report.json`) |
 
@@ -137,16 +137,21 @@ passing product or Full1 evidence.
 2. Open GitHub Actions and filter to the weekly evidence workflows above.
 3. Verify latest scheduled runs for Gate 1, Gate 2, Macro Runtime Parity, Gate M7, Gate Full1, and semantic-diff are green.
 4. Open each run and confirm expected markers appear in logs.
-5. For Macro Runtime Parity, download both mode-tagged artifacts and inspect:
+5. For Macro Runtime Parity, download both mode-tagged artifacts, the project
+   macro artifact, and the verified summary. Inspect:
    - `markers.txt`
    - `macro-runtime-parity-blockers.md`
    - `macro-runtime-host-receipt.json` and its referenced executable digest in
      the external-host artifact
    - suite logs (`unit`, `runci`, `display/protocol`)
+   - `summary.json`, whose schema must be `macro-runtime-parity-summary.v4`
+     and whose three proof records must belong to the same commit/run attempt
 6. For Gate M7, Gate Full1, and semantic-diff, download artifacts and confirm expected files are present.
-7. For Gate Full1, confirm both aggregate markers appear:
+7. For Gate Full1, inspect `full1-macro-eval.summary.json` and confirm all three
+   aggregate markers appear:
    - `FULL1_SUITE_MATRIX:PASS`
    - `FULL1_MACRO_EVAL_PARITY:PASS`
+   - `FULL1_PLUGIN_PARITY:PASS`
 8. Check `Full1 / Source-Build Probe`:
    - `PASS`: source-build probe agrees with current strict matrix behavior.
    - `WARN`: do not block release by this alone; open/update a bead with artifact links and classify as bootstrap-lag, source-build instability, or parity bug.

@@ -117,14 +117,14 @@ const evidenceContracts = {
     role: 'macro',
     workflowFile: '.github/workflows/macro-runtime-parity-weekly.yml',
     artifactPrefix: 'macro-runtime-parity-summary',
-    summarySchema: 'macro-runtime-parity-summary.v3',
+    summarySchema: 'macro-runtime-parity-summary.v4',
     markers: rolePolicy.macro.markers
   },
   eval: {
     role: 'eval',
     workflowFile: '.github/workflows/full1-eval-native.yml',
     artifactPrefix: 'full1-eval-native',
-    summarySchema: 'full1-eval-native-summary.v1',
+    summarySchema: 'full1-eval-native-summary.v2',
     markers: rolePolicy.eval.markers
   },
   plugin: {

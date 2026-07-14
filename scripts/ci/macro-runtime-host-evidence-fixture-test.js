@@ -114,9 +114,11 @@ try {
     'macro-runtime-host-evidence.js write',
     'Haxe-authored project macro module',
     'npm run test:macro-runtime:project-module',
-    'macro-runtime-parity-summary.v3',
-    'project_macro_module: { result: $project_macro_result }',
-    'if $matrix_result == "success" and $project_macro_result == "success"',
+    'full1-macro-parity-evidence.js',
+    'Download in-process macro proof',
+    'Download external-host macro proof',
+    'Download project macro proof',
+    'macro_artifact_verification=',
     marker
   ]) {
     if (!workflowSource.includes(expected)) throw new Error(`macro parity workflow is missing: ${expected}`)

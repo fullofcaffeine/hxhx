@@ -75,20 +75,61 @@ function validFixtures() {
       commands: [{ exit_code: 0, signal: null }]
     },
     macro: {
-      schema: 'macro-runtime-parity-summary.v3',
+      schema: 'macro-runtime-parity-summary.v4',
+      synthetic: false,
+      candidate_sha: context.candidateSha,
       run_id: String(context.runId),
       run_attempt: String(context.runAttempt),
       jobs: {
         macro_runtime_parity: { result: 'success' },
         project_macro_module: { result: 'success' }
       },
+      proofs: [
+        {
+          id: 'inproc',
+          artifact_name: `macro-runtime-parity-inproc-${context.runId}-${context.runAttempt}`,
+          timing_summary_sha256: 'b'.repeat(64),
+          markers_sha256: 'c'.repeat(64),
+          verified: true
+        },
+        {
+          id: 'external-host',
+          artifact_name: `macro-runtime-parity-external-host-${context.runId}-${context.runAttempt}`,
+          timing_summary_sha256: 'd'.repeat(64),
+          markers_sha256: 'e'.repeat(64),
+          host: {
+            receipt_sha256: 'f'.repeat(64),
+            executable_sha256: '1'.repeat(64)
+          },
+          verified: true
+        },
+        {
+          id: 'project-macro-module',
+          artifact_name: `project-macro-module-${context.runId}-${context.runAttempt}`,
+          summary_sha256: '2'.repeat(64),
+          receipt_sha256: '3'.repeat(64),
+          markers_sha256: '4'.repeat(64),
+          native_artifact_sha256: '5'.repeat(64),
+          bytecode_artifact_sha256: '6'.repeat(64),
+          verified: true
+        }
+      ],
+      errors: [],
       emitted_markers: ['MACRO_RUNTIME_PARITY_WEEKLY:PASS', 'FULL1_MACRO_PARITY:PASS']
     },
     eval: {
-      schema: 'full1-eval-native-summary.v1',
+      schema: 'full1-eval-native-summary.v2',
+      synthetic: false,
+      candidate_sha: context.candidateSha,
+      run_id: String(context.runId),
+      run_attempt: String(context.runAttempt),
+      oracle: {
+        haxe_version: '4.3.7',
+        checkout_commit: '7'.repeat(40)
+      },
       marker: 'FULL1_EVAL_NATIVE:PASS',
       eval_context: { stage0_forbidden: true },
-      result: { exit_code: 0 }
+      result: { exit_code: 0, signal: null }
     },
     plugin: {
       schema: 'full1-plugin-parity-summary.v3',
@@ -189,11 +230,39 @@ function testSummaryValidation() {
     /did not emit/
   )
 
+  const crossCandidateMacro = clone(fixtures.macro)
+  crossCandidateMacro.candidate_sha = 'f'.repeat(40)
+  assert.throws(
+    () => validateSummary(specById('macro'), crossCandidateMacro, context),
+    /candidate identity/
+  )
+
+  const unverifiedMacro = clone(fixtures.macro)
+  unverifiedMacro.proofs[0].verified = false
+  assert.throws(
+    () => validateSummary(specById('macro'), unverifiedMacro, context),
+    /unverified/
+  )
+
   const delegatedEval = clone(fixtures.eval)
   delegatedEval.eval_context.stage0_forbidden = false
   assert.throws(
     () => validateSummary(specById('eval'), delegatedEval, context),
     /stage0-forbidden/
+  )
+
+  const wrongEvalAttempt = clone(fixtures.eval)
+  wrongEvalAttempt.run_attempt = '2'
+  assert.throws(
+    () => validateSummary(specById('eval'), wrongEvalAttempt, context),
+    /run identity mismatch/
+  )
+
+  const syntheticEval = clone(fixtures.eval)
+  syntheticEval.synthetic = true
+  assert.throws(
+    () => validateSummary(specById('eval'), syntheticEval, context),
+    /authenticity/
   )
 
   const wrongPluginAttempt = clone(fixtures.plugin)

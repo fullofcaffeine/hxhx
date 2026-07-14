@@ -203,7 +203,10 @@ function validateSummary(spec, summary, context) {
     return { schema: summary.schema, markers: [spec.marker] }
   }
   if (spec.role === 'macro') {
-    if (summary.schema !== 'macro-runtime-parity-summary.v3') throw new Error('wrong macro schema')
+    if (summary.schema !== 'macro-runtime-parity-summary.v4') throw new Error('wrong macro schema')
+    if (summary.synthetic !== false || summary.candidate_sha !== context.candidateSha) {
+      throw new Error('macro candidate identity or authenticity mismatch')
+    }
     if (String(summary.run_id) !== String(context.runId)
       || String(summary.run_attempt) !== String(context.runAttempt)) {
       throw new Error('macro run identity mismatch')
@@ -216,6 +219,33 @@ function validateSummary(spec, summary, context) {
       || summary.jobs.project_macro_module.result !== 'success') {
       throw new Error('project macro module did not succeed')
     }
+    if (!Array.isArray(summary.errors) || summary.errors.length !== 0) {
+      throw new Error('macro artifact validation contains errors')
+    }
+    const expectedProofs = [
+      ['inproc', 'macro-runtime-parity-inproc'],
+      ['external-host', 'macro-runtime-parity-external-host'],
+      ['project-macro-module', 'project-macro-module']
+    ]
+    if (!Array.isArray(summary.proofs) || summary.proofs.length !== expectedProofs.length) {
+      throw new Error('macro aggregate does not contain every verified proof')
+    }
+    for (const [id, prefix] of expectedProofs) {
+      const proof = summary.proofs.find(item => item.id === id)
+      const expectedArtifact = `${prefix}-${context.runId}-${context.runAttempt}`
+      const digestFields = id === 'project-macro-module'
+        ? ['summary_sha256', 'receipt_sha256', 'markers_sha256', 'native_artifact_sha256', 'bytecode_artifact_sha256']
+        : ['timing_summary_sha256', 'markers_sha256']
+      if (!proof || proof.verified !== true || proof.artifact_name !== expectedArtifact
+        || digestFields.some(field => !/^[0-9a-f]{64}$/i.test(String(proof[field] || '')))) {
+        throw new Error(`macro proof ${id} is missing, unverified, or has invalid provenance`)
+      }
+      if (id === 'external-host'
+        && (!/^[0-9a-f]{64}$/i.test(String(proof.host?.receipt_sha256 || ''))
+          || !/^[0-9a-f]{64}$/i.test(String(proof.host?.executable_sha256 || '')))) {
+        throw new Error('external-host macro proof has invalid host provenance')
+      }
+    }
     if (!sameMembers(summary.emitted_markers, [
       'MACRO_RUNTIME_PARITY_WEEKLY:PASS',
       'FULL1_MACRO_PARITY:PASS'
@@ -225,12 +255,24 @@ function validateSummary(spec, summary, context) {
     return { schema: summary.schema, markers: rolePolicy.macro.markers }
   }
   if (spec.role === 'eval') {
-    if (summary.schema !== 'full1-eval-native-summary.v1') throw new Error('wrong eval schema')
+    if (summary.schema !== 'full1-eval-native-summary.v2') throw new Error('wrong eval schema')
+    if (summary.synthetic !== false || summary.candidate_sha !== context.candidateSha) {
+      throw new Error('eval candidate identity or authenticity mismatch')
+    }
+    if (String(summary.run_id) !== String(context.runId)
+      || String(summary.run_attempt) !== String(context.runAttempt)) {
+      throw new Error('eval run identity mismatch')
+    }
+    if (summary.oracle?.haxe_version !== '4.3.7'
+      || !/^[0-9a-f]{40}$/i.test(String(summary.oracle?.checkout_commit || ''))) {
+      throw new Error('native eval oracle identity is missing or invalid')
+    }
     if (summary.marker !== 'FULL1_EVAL_NATIVE:PASS'
       || !summary.eval_context
       || summary.eval_context.stage0_forbidden !== true
       || !summary.result
-      || summary.result.exit_code !== 0) {
+      || summary.result.exit_code !== 0
+      || summary.result.signal) {
       throw new Error('native eval evidence did not pass strict stage0-forbidden mode')
     }
     return { schema: summary.schema, markers: rolePolicy.eval.markers }

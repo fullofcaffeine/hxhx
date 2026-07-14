@@ -30,14 +30,9 @@ jobs:
     uses: ./.github/workflows/full1-suite-runners.yml
     secrets: inherit
 
-  full1_macro_parity:
-    name: Full1 macro runtime parity
-    uses: ./.github/workflows/macro-runtime-parity-weekly.yml
-    secrets: inherit
-
-  full1_eval_native:
-    name: Full1 native eval/interp
-    uses: ./.github/workflows/full1-eval-native.yml
+  full1_macro_eval:
+    name: Full1 artifact-verified macro/eval evidence
+    uses: ./.github/workflows/full1-macro-eval.yml
     secrets: inherit
 
   full1_plugin_parity:
@@ -51,25 +46,46 @@ jobs:
     needs:
       - full1_gate3_extended
       - full1_suite_runners
-      - full1_macro_parity
-      - full1_eval_native
+      - full1_macro_eval
       - full1_plugin_parity
     if: always()
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifact-verified macro/eval summary
+        id: download_macro_eval
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: full1-macro-eval-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/full1/macro-eval
+
+      - name: Validate macro/eval summary at the Full1 boundary
+        id: validate_macro_eval
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          node scripts/ci/full1-macro-eval-evidence.js verify \
+            --summary .artifacts/full1/macro-eval/full1-macro-eval.summary.json \
+            --candidate-sha "${{ github.sha }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}"
+
       - name: Write Full1 summary artifact
         run: |
           set -euo pipefail
           mkdir -p .artifacts/full1
           gate3_result='${{ needs.full1_gate3_extended.result }}'
           suites_result='${{ needs.full1_suite_runners.result }}'
-          macro_result='${{ needs.full1_macro_parity.result }}'
-          eval_result='${{ needs.full1_eval_native.result }}'
+          macro_eval_workflow_result='${{ needs.full1_macro_eval.result }}'
+          macro_eval_evidence_result='${{ steps.validate_macro_eval.outcome }}'
           plugin_result='${{ needs.full1_plugin_parity.result }}'
           jq -n \
             --arg gate3_result "$gate3_result" \
             --arg suites_result "$suites_result" \
-            --arg macro_result "$macro_result" \
-            --arg eval_result "$eval_result" \
+            --arg macro_eval_workflow_result "$macro_eval_workflow_result" \
+            --arg macro_eval_evidence_result "$macro_eval_evidence_result" \
             --arg plugin_result "$plugin_result" \
             --arg workflow "Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity" \
             --arg run_id "${{ github.run_id }}" \
@@ -82,8 +98,10 @@ jobs:
               jobs: {
                 full1_gate3_extended: { result: $gate3_result },
                 full1_suite_runners: { result: $suites_result },
-                full1_macro_parity: { result: $macro_result },
-                full1_eval_native: { result: $eval_result },
+                full1_macro_eval: {
+                  workflow_result: $macro_eval_workflow_result,
+                  artifact_verification: $macro_eval_evidence_result
+                },
                 full1_plugin_parity: { result: $plugin_result }
               },
               expected_markers: [
@@ -94,7 +112,8 @@ jobs:
               emitted_markers: (
                 (if $gate3_result == "success" and $suites_result == "success"
                  then ["FULL1_SUITE_MATRIX:PASS"] else [] end) +
-                (if $macro_result == "success" and $eval_result == "success"
+                (if $macro_eval_workflow_result == "success"
+                    and $macro_eval_evidence_result == "success"
                  then ["FULL1_MACRO_EVAL_PARITY:PASS"] else [] end) +
                 (if $plugin_result == "success"
                  then ["FULL1_PLUGIN_PARITY:PASS"] else [] end)
@@ -114,13 +133,13 @@ jobs:
           set -euo pipefail
           gate3_result='${{ needs.full1_gate3_extended.result }}'
           suites_result='${{ needs.full1_suite_runners.result }}'
-          macro_result='${{ needs.full1_macro_parity.result }}'
-          eval_result='${{ needs.full1_eval_native.result }}'
+          macro_eval_workflow_result='${{ needs.full1_macro_eval.result }}'
+          macro_eval_evidence_result='${{ steps.validate_macro_eval.outcome }}'
           plugin_result='${{ needs.full1_plugin_parity.result }}'
           echo "full1_gate3_extended=${gate3_result}"
           echo "full1_suite_runners=${suites_result}"
-          echo "full1_macro_parity=${macro_result}"
-          echo "full1_eval_native=${eval_result}"
+          echo "full1_macro_eval_workflow=${macro_eval_workflow_result}"
+          echo "full1_macro_eval_artifact_verification=${macro_eval_evidence_result}"
           echo "full1_plugin_parity=${plugin_result}"
           suite_matrix_ok=0
           macro_eval_ok=0
@@ -131,7 +150,8 @@ jobs:
           else
             echo "FULL1_SUITE_MATRIX:FAIL" >&2
           fi
-          if [ "$macro_result" = "success" ] && [ "$eval_result" = "success" ]; then
+          if jq -e '.emitted_markers | index("FULL1_MACRO_EVAL_PARITY:PASS") != null' \
+            .artifacts/full1/full1.summary.json >/dev/null; then
             macro_eval_ok=1
             echo "FULL1_MACRO_EVAL_PARITY:PASS"
           else

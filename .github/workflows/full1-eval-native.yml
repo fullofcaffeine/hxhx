@@ -24,6 +24,7 @@ env:
   # Benchmark-backed policy: keep dune worker selection automatic unless a
   # workflow-specific memory envelope has fresh evidence for a fixed cap.
   HXHX_DUNE_JOBS: "auto"
+  HXHX_CANDIDATE_COMMIT: ${{ github.sha }}
   FULL1_EVAL_NATIVE_ARTIFACTS_DIR: ".artifacts/full1/eval-native"
   FULL1_EVAL_NATIVE_TIMINGS_JSONL: ".artifacts/full1/eval-native/full1-eval-native.timings.jsonl"
 

@@ -1,0 +1,100 @@
+name: Full1 / Macro Eval Evidence
+
+on:
+  workflow_call:
+    outputs:
+      full1_macro_eval_parity_marker:
+        description: "Artifact-verified Full1 macro/eval marker."
+        value: ${{ jobs.full1_macro_eval_aggregate.outputs.full1_macro_eval_parity_marker }}
+  workflow_dispatch:
+
+concurrency:
+  group: full1-macro-eval-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  full1_macro:
+    name: Full1 macro runtime proof
+    uses: ./.github/workflows/macro-runtime-parity-weekly.yml
+    secrets: inherit
+
+  full1_eval:
+    name: Full1 native eval proof
+    uses: ./.github/workflows/full1-eval-native.yml
+    secrets: inherit
+
+  full1_macro_eval_aggregate:
+    name: Verify macro and eval proof artifacts
+    runs-on: ubuntu-latest
+    needs:
+      - full1_macro
+      - full1_eval
+    if: always()
+    outputs:
+      full1_macro_eval_parity_marker: ${{ steps.emit.outputs.full1_macro_eval_parity_marker }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download verified macro summary
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: macro-runtime-parity-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/full1/macro-eval/inputs/macro
+
+      - name: Download native eval proof
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: full1-eval-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/full1/macro-eval/inputs/eval
+
+      - name: Verify macro and eval summaries
+        id: verify
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/full1/macro-eval
+          node scripts/ci/full1-macro-eval-evidence.js build \
+            --macro-summary .artifacts/full1/macro-eval/inputs/macro/summary.json \
+            --eval-summary .artifacts/full1/macro-eval/inputs/eval/full1-eval-native.summary.json \
+            --output .artifacts/full1/macro-eval/full1-macro-eval.summary.json \
+            --candidate-sha "${{ github.sha }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --macro-result "${{ needs.full1_macro.result }}" \
+            --eval-result "${{ needs.full1_eval.result }}"
+
+      - name: Upload verified macro/eval summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-macro-eval-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/full1/macro-eval/full1-macro-eval.summary.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Emit artifact-verified macro/eval marker
+        id: emit
+        if: always()
+        run: |
+          set -euo pipefail
+          verify_outcome='${{ steps.verify.outcome }}'
+          summary=.artifacts/full1/macro-eval/full1-macro-eval.summary.json
+          echo "macro_eval_artifact_verification=${verify_outcome}"
+          if [ "$verify_outcome" = "success" ] \
+            && [ -f "$summary" ] \
+            && jq -e '.errors == [] and .emitted_markers == ["FULL1_MACRO_EVAL_PARITY:PASS"]' "$summary" >/dev/null; then
+            echo "FULL1_MACRO_EVAL_PARITY:PASS"
+            echo "full1_macro_eval_parity_marker=FULL1_MACRO_EVAL_PARITY:PASS" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "FULL1_MACRO_EVAL_PARITY:FAIL" >&2
+          exit 1
