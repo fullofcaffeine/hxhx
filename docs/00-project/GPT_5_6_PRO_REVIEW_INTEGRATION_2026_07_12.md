@@ -56,10 +56,14 @@ loop. `docs/00-project/CI_EVIDENCE_OWNERSHIP.json` names watched workflows and
 incidents; the evaluator joins live GitHub runs to active Beads; and
 `CI / Evidence Ownership Audit` reports unowned, cancelled-without-successor,
 stale, or missing evidence. The current scheduled macro, M7, and Full1 gaps
-remain explicitly open. The first manual KPI run now exists, while
-`haxe_ocaml-850ii.1` owns its self-describing v2 evidence follow-up. This is
-accountability evidence, not Full1 or product-readiness progress, so the
-README/North Star state is unchanged.
+remain explicitly open. The first manual KPI run now exists, and
+`haxe_ocaml-850ii.1` completed its self-describing KPI v2 follow-up with
+exact-commit run `29285154286`. Full1 phase timing then gained the same
+self-description and strict validation under completed follow-up
+`haxe_ocaml-850ii.6`; exact-commit plugin run `29303951143` produced three
+validated v2 timing receipts. This is accountability and measurement evidence,
+not Full1 or product-readiness progress, so the README/North Star state is
+unchanged.
 
 ### Plugin evidence follow-up
 

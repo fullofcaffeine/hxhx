@@ -73,12 +73,16 @@ npm run guard:ci-evidence-ownership
 The original 2026-07-12 Core local-path and Portable Tier1 Rest failures are
 resolved by exact-head required runs and retained as machine-readable history.
 The plugin failure is resolved by artifact-backed run `29281925684`. Manual
-KPI run `29283471461` supersedes the original missing-run record; its v1 report
-motivated the active self-describing v2 follow-up `haxe_ocaml-850ii.1`. The
-current open incident records are the macro-runtime failure, M7 timeout with no
-successor, and the expected Full1 aggregate no-go. Their owners are recorded
-in the JSON ledger; none of those open records counts as passing product or
-Full1 evidence.
+KPI run `29283471461` supersedes the original missing-run record. Its incomplete
+v1 report led to `haxe_ocaml-850ii.1`; exact-commit run `29285154286` then
+produced the independently validated, self-describing v2 report and completed
+that follow-up. Full1 phase receipts received the same treatment under
+`haxe_ocaml-850ii.6`; exact-commit plugin run `29303951143` produced three
+independently validated v2 timing reports. These are report-quality results,
+not proof that the compiler is fast enough. The current open incident records
+are the macro-runtime failure, M7 timeout with no successor, and the expected
+Full1 aggregate no-go. Their owners are recorded in the JSON ledger; none of
+those open records counts as passing product or Full1 evidence.
 
 ## Audit window
 

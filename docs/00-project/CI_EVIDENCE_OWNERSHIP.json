@@ -337,8 +337,8 @@
       "bead": "haxe_ocaml-850ii",
       "recordedAt": "2026-07-13T06:40:00Z",
       "run": null,
-      "reproductionOrEvidence": "No manual weekly KPI workflow run existed when this incident was recorded. Manual run 29283471461 now supersedes that missing-run condition; its v1 report exposes a separate self-description gap owned by haxe_ocaml-850ii.1.",
-      "closureGate": "Superseded by manual run 29283471461. The successor report-contract task requires a fresh v2 artifact with commit, runner, toolchain, method, and sample provenance.",
+      "reproductionOrEvidence": "No manual weekly KPI workflow run existed when this incident was recorded. Manual run 29283471461 superseded that missing-run condition; its incomplete v1 report exposed a separate self-description gap. Follow-up haxe_ocaml-850ii.1 is now closed after exact-commit run 29285154286 produced an independently validated v2 report with commit, runner, toolchain, method, and raw-sample provenance.",
+      "closureGate": "The original missing-run incident remains superseded by manual run 29283471461. Its separate report-contract follow-up was completed by validated v2 run 29285154286; future KPI freshness remains owned by haxe_ocaml-850ii.",
       "supersededBy": {
         "runId": 29283471461,
         "runAttempt": 1,
