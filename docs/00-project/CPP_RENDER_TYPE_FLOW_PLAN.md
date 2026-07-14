@@ -6075,3 +6075,64 @@ snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or Oracle
 review was deliberately skipped because the exact mismatch, upstream behavior,
 shared carrier helper, and focused scalar/object rejection controls identify a
 bounded target-owned seam.
+
+## 2026-07-14 Generic Call Enum Carrier Inference
+
+Follow-up bead `haxe_ocaml-t6a5w` isolated the next strict native error. In
+plain language, the generic identity helper correctly accepts and returns its
+argument's concrete type, but a direct argument such as
+`id(MyEnum.D(value))` was specialized from the parser's source-level enum
+helper return. That stale return says `String`, while the rendered constructor
+is a metadata-preserving `shared_ptr<MyEnum>`, producing an invalid
+`id<string>(shared_ptr<MyEnum>)` call.
+
+The existing call-argument matcher is the common decision point for explicit
+same-owner generic template arguments and identity-style return inference. It
+now asks `CppLocalTypeInference.qualifiedEnumCarrierCppType` before general
+expression typing. Only qualified constructors or metadata fields owned by a
+known enum carrier take that path. Ordinary String literals, unrelated
+reference constructors, anonymous records, shadowed locals, and other existing
+generic-call controls keep their prior types.
+
+The repo-owned upstream oracle adds a recursive enum passed through an original
+generic identity function and records `Wrap(Leaf)` plus its `Wrap` constructor
+under Haxe 4.3.7. String and unrelated object identities are observable
+controls. The direct render regression first reproduced the exact bad
+`id<string>(MyEnum::D(...))` output, then pins
+`id<shared_ptr<MyEnum>>(MyEnum::D(...))` and the matching inferred return type.
+The generated native C++ smoke builds and runs a recursive `Choice.Wrap` value
+through the same generic identity shape.
+
+The focused render smoke, generated native C++ build/run, oracle seed, shell
+syntax check, local-declaration benchmark, official touched-file formatter,
+repo-wide Haxe format guard, Cpp type-flow plan guard, mega-file gravity guard,
+and `git diff --check` all pass. A fresh current-source compiler build completed
+in about 293 seconds and passed the current-source binary validator.
+
+The stage0-forbidden strict Cpp probe rendered all 384 reachable helpers and
+reached the host compiler in 416 seconds. The previous generic error is gone:
+the retained source specializes the nested call and related switch value as
+`id<shared_ptr<MyEnum>>`. `TestXML.testBasic` remained healthy at 0.456011
+seconds. The expected-red native build now begins at generated
+`TestMain.cpp:16174-16175`, where the enum equality helper cannot deduce its
+pointer type when either operand is raw `nullptr`. Follow-up
+`haxe_ocaml-le8is` owns typed enum/null comparison before later generic
+container, abstract conversion, Map-access, and operator errors. The retained
+evidence is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-generic-enum-carrier.log`.
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+does not compile or run the full unit program, so this internal frontier move
+does not change production readiness. `CppTargetCore.hx` is 26,463 lines and
+receives only a documented three-line carrier preference in its existing call
+matching seam. The classifier remains in the 915-line
+`CppLocalTypeInference`; broader extraction remains owned by
+`haxe_ocaml-36ec`. No Cpp runtime-policy update is required because this change
+adds no runtime surface or inline target stub.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite was used only as a behavior oracle, and committed generated OCaml
+snapshots were not edited. `thinking:xhigh` was not crossed, and GPT or Oracle
+review was deliberately skipped because the exact mismatch, shared call-type
+consumer, existing enum classifier, and focused non-enum controls identify a
+bounded target-owned seam.

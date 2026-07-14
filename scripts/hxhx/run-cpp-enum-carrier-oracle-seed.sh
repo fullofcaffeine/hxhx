@@ -31,6 +31,7 @@ fi
 ZERO_COUNT="$(grep -c '^enum-zero-01|' "$ACTUAL")"
 PAYLOAD_COUNT="$(grep -c '^enum-payload-01|' "$ACTUAL")"
 MAP_KEY_COUNT="$(grep -c '^enum-map-key-01|' "$ACTUAL")"
+GENERIC_ID_COUNT="$(grep -c '^enum-generic-id-01:' "$ACTUAL")"
 EQ_COUNT="$(grep -c '^enum-eq-01:' "$ACTUAL")"
 SWITCH_COUNT="$(grep -c '^enum-switch-01|' "$ACTUAL")"
 TYPE_COUNT="$(grep -c '^enum-type-create-01:' "$ACTUAL")"
@@ -50,6 +51,7 @@ cat >"$REPORT" <<EOF
     "zero": $ZERO_COUNT,
     "payload": $PAYLOAD_COUNT,
     "mapKey": $MAP_KEY_COUNT,
+    "genericIdentity": $GENERIC_ID_COUNT,
     "enumEq": $EQ_COUNT,
     "switch": $SWITCH_COUNT,
     "typeFactory": $TYPE_COUNT,
@@ -61,4 +63,4 @@ cat >"$REPORT" <<EOF
 }
 EOF
 
-echo "CPP_ENUM_CARRIER_ORACLE_SEED:PASS zero=$ZERO_COUNT payload=$PAYLOAD_COUNT mapKey=$MAP_KEY_COUNT enumEq=$EQ_COUNT switch=$SWITCH_COUNT typeFactory=$TYPE_COUNT reflection=$REFLECT_COUNT dynamic=$DYNAMIC_COUNT serializer=$SERIALIZER_COUNT report=$REPORT"
+echo "CPP_ENUM_CARRIER_ORACLE_SEED:PASS zero=$ZERO_COUNT payload=$PAYLOAD_COUNT mapKey=$MAP_KEY_COUNT genericIdentity=$GENERIC_ID_COUNT enumEq=$EQ_COUNT switch=$SWITCH_COUNT typeFactory=$TYPE_COUNT reflection=$REFLECT_COUNT dynamic=$DYNAMIC_COUNT serializer=$SERIALIZER_COUNT report=$REPORT"

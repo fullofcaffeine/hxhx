@@ -11,6 +11,21 @@ enum Boxed {
 	Box(v:Dynamic);
 }
 
+/** Recursive enum used to pin generic identity calls around enum carriers. **/
+enum NestedColor {
+	Leaf;
+	Wrap(value:NestedColor);
+}
+
+/** Unrelated reference value used as a generic-call control. **/
+class Marker {
+	public final value:Int;
+
+	public function new(value:Int) {
+		this.value = value;
+	}
+}
+
 /**
 	Repo-owned upstream Haxe oracle cases for Cpp enum carriers.
 
@@ -45,6 +60,10 @@ class Main {
 		return Type.enumParameters(value);
 	}
 
+	static function identity<T>(value:T):T {
+		return value;
+	}
+
 	static function main():Void {
 		final red = Color.Red;
 		final pair = Color.Pair(7, "x");
@@ -54,6 +73,11 @@ class Main {
 		emit("enum-payload-01", "string", Std.string(pair));
 		emit("enum-payload-01", "summary", summarize(pair));
 		emit("enum-map-key-01", "string", [Color.Pair(11, "map") => 42].toString());
+		final nested = identity(NestedColor.Wrap(NestedColor.Leaf));
+		emit("enum-generic-id-01:nested", "string", Std.string(nested));
+		emit("enum-generic-id-01:nested", "constructor", Type.enumConstructor(nested));
+		emit("enum-generic-id-01:string", "value", identity("plain"));
+		emit("enum-generic-id-01:object", "value", Std.string(identity(new Marker(13)).value));
 
 		emit("enum-eq-01:zero", "value", bool(Type.enumEq(red, Red)));
 		emit("enum-eq-01:payload-same", "value", bool(Type.enumEq(pair, Pair(7, "x"))));

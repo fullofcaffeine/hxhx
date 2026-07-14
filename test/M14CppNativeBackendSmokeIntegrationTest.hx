@@ -1326,11 +1326,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"  A;",
 			"  B;",
 			"  Pair(i:Int, s:String);",
+			"  Wrap(value:Choice);",
 			"}",
 			"enum BoxedChoice {",
 			"  Box(v:Dynamic);",
 			"}",
 			"class Main {",
+			"  static function identity<T>(value:T):T {",
+			"    return value;",
+			"  }",
 			"  static function main() {",
 			"    var a = Choice.A;",
 			"    var p1 = Choice.Pair(3, \"x\");",
@@ -1339,6 +1343,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(a));",
 			"    Sys.println(Std.string(p1));",
 			"    Sys.println([Choice.Pair(5, \"map\") => 7].toString());",
+			"    Sys.println(Std.string(identity(Choice.Wrap(Choice.Pair(6, \"id\")))));",
 			"    Sys.println(Std.string(Type.enumEq(p1, p2)));",
 			"    Sys.println(Std.string(Type.enumEq(p1, p3)));",
 			"    Sys.println(Type.enumConstructor(p1));",
@@ -9802,6 +9807,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		identityClasses.set("IdentityOwner", identityOwner);
 		identityNames.set("ObjectMap", true);
 		identityClasses.set("ObjectMap", new HxClassDecl("ObjectMap", false, [], [], "", ["__hxhx_type_params=K,V"]));
+		identityNames.set("MyEnum", true);
+		identityClasses.set("MyEnum", myEnum);
+		identityNames.set("RegularFactory", true);
+		identityClasses.set("RegularFactory", regularFactory);
 		final identityScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(identityOwner, {
 			names: identityNames,
 			byName: identityClasses
@@ -9814,6 +9823,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		@:privateAccess backend.cpp.CppTargetCore.renderStmt(SVar("d2", "", identityCall, HxPos.unknown()), "  ", identityScope);
 		assertTrue(identityScope.localTypes.get("d2") == "std::shared_ptr<Date>",
 			"C++ unhinted locals initialized from generic identity calls should retain pointer-backed result types");
+		final nestedEnumIdentityCall = ECall(EIdent("id"), [ECall(EField(EIdent("MyEnum"), "D"), [EField(EIdent("MyEnum"), "A")])]);
+		final nestedEnumIdentityExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(nestedEnumIdentityCall, identityScope);
+		assertContains(nestedEnumIdentityExpr, "id<std::shared_ptr<MyEnum>>(MyEnum::D(",
+			"C++ generic identity calls should preserve nested qualified enum carriers as explicit template arguments");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.inferExprCppType(nestedEnumIdentityCall, identityScope) == "std::shared_ptr<MyEnum>",
+			"C++ generic identity calls should preserve nested qualified enum carriers as return types");
+		final stringIdentityExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("id"), [EString("plain")]), identityScope);
+		assertContains(stringIdentityExpr, "id<std::string>(\"plain\")", "C++ enum carrier inference should not reclassify ordinary String generic arguments");
+		final objectIdentityExpr = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EIdent("id"), [ENew("RegularFactory", [])]), identityScope);
+		assertContains(objectIdentityExpr, "id<std::shared_ptr<RegularFactory>>(std::make_shared<RegularFactory>())",
+			"C++ enum carrier inference should not reclassify unrelated reference generic arguments");
 		final anonIdentityLocal = @:privateAccess backend.cpp.CppTargetCore.renderStmt(SVar("o", "",
 			EAnon(["x", "y", "z"], [EString("a"), EFloat(-1.56), EString("hello")]), HxPos.unknown()), "  ", identityScope)
 			.join("\n");
@@ -13557,7 +13577,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(enumCarrierMetadataBuilt.builtExecutable, "C++ enum carrier metadata runtime smoke should build executable");
 			final enumCarrierMetadataRun = commandOutput(enumCarrierMetadataBuilt.entryPath, []);
 			assertTrue(enumCarrierMetadataRun.code == 0, "C++ enum carrier metadata runtime smoke failed: " + enumCarrierMetadataRun.stderr);
-			assertTrue(enumCarrierMetadataRun.stdout == "A\nPair(3,x)\n[Pair(5,map) => 7]\ntrue\nfalse\nPair\n2\n2\n3\nx\nPair(3,x)\n3:x\nfalse\nInt\nString\n1\n",
+			assertTrue(enumCarrierMetadataRun.stdout == "A\nPair(3,x)\n[Pair(5,map) => 7]\nWrap(Pair(6,id))\ntrue\nfalse\nPair\n2\n2\n3\nx\nPair(3,x)\n3:x\nfalse\nInt\nString\n1\n",
 				"unexpected C++ enum carrier metadata stdout: "
 				+ enumCarrierMetadataRun.stdout);
 

@@ -16593,7 +16593,18 @@ class CppTargetCore {
 		return inner.length > 0 && argType == inner;
 	}
 
+	/**
+		Return the emitted C++ type used to match a call argument.
+
+		Qualified enum constructor helpers retain a source-level `String` return
+		hint even though their C++ expression is a metadata-preserving carrier. Call
+		matching, explicit generic arguments, and identity-style return inference
+		must all use that carrier before consulting general expression types.
+	**/
 	static function callArgMatchCppType(arg:HxExpr, ?scope:CppRenderScope):String {
+		final enumCarrier = CppLocalTypeInference.qualifiedEnumCarrierCppType(arg, scope, localTypeInferenceApi());
+		if (enumCarrier.length > 0)
+			return enumCarrier;
 		final explicit = exprCppType(arg, scope);
 		if (explicit.length > 0)
 			return explicit;
