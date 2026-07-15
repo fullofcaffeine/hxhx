@@ -248,7 +248,8 @@ fixture must cover at least:
 - prefix versus postfix result and mutation behavior where the declared
   operator surface supports both;
 - a compound-assignment case that proves `++x` is not confused with `x += 1`;
-- side-effecting lvalue/operand evaluation exactly once;
+- side-effecting operand, receiver, property, and array-index evaluation counts,
+  measured against upstream rather than assumed to be exactly once;
 - ordinary numeric controls;
 - an ordinary class with similarly named methods that is not treated as an
   abstract operator;
@@ -257,6 +258,31 @@ fixture must cover at least:
 
 Do not copy upstream fixture source. The upstream suite remains the final
 strict proof after focused behavior is green.
+
+### Original oracle checkpoint: evaluation-count assumptions need correction
+
+An original temporary fixture was run with upstream Haxe 4.3.7 through
+`--interp`, generated JavaScript on Node, and generated Neko bytecode. All
+three routes agreed:
+
+- arbitrary-name class-backed and primitive-backed unary-minus helpers were
+  selected once;
+- distinct `@:op(++x)`, `@:op(x++)`, and `@:op(A += B)` declarations selected
+  the prefix, postfix, and compound helpers respectively for a local;
+- two overloaded increments on an array element evaluated a side-effecting
+  index four times total, while the corresponding ordinary-`Int` array control
+  evaluated it twice total;
+- two overloaded increments on an ordinary field evaluated the side-effecting
+  receiver twice total and selected the prefix/postfix helpers;
+- the equivalent property shape called its getter and setter once per
+  operation but did not select those abstract helpers in this fixture.
+
+This is black-box behavior evidence from original source, not copied upstream
+fixture or implementation material. It disproves the earlier blanket draft
+assumption that every overloaded lvalue index is evaluated exactly once. The
+review must distinguish required Haxe 4.3.7 compatibility from a deliberate
+semantic improvement. A backend must not silently choose the latter while
+claiming strict parity.
 
 ## Candidate architecture directions to challenge
 
@@ -321,8 +347,11 @@ for the current upstream test is not sufficient.
    calls?
 9. For primitive-backed abstracts, should C++ emit target-native static helper
    functions, inline typed helper bodies, or use another representation?
-10. How are prefix/postfix old/new values and mutations evaluated exactly once
-    for identifiers, fields, properties, and array access?
+10. How should prefix/postfix result, mutation, and lvalue evaluation counts be
+    represented for identifiers, ordinary fields, properties, and array access,
+    given the measured upstream differences above? Which behavior is required
+    for Full1 parity, and which possible exactly-once improvement would require
+    a separate explicit compatibility decision?
 11. What should happen when an operator declaration is missing, ambiguous,
     generic, commutative, overloaded, or has an unsupported body?
 12. Should the existing C++ binary helper-name dispatch be migrated immediately
@@ -346,7 +375,12 @@ Challenge and refine this draft set:
 - The selected declaration, operand conversion, result type, and mutation mode
   are explicit before target emission.
 - Runtime carrier erasure does not erase the semantic abstract type.
-- Each operand and lvalue receiver/index is evaluated exactly once.
+- Helper invocation and operand evaluation do not duplicate work beyond the
+  behavior selected by the shared lowering contract.
+- Lvalue receiver/index evaluation follows measured upstream Haxe 4.3.7
+  behavior for the strict compatibility profile; any exactly-once divergence
+  is explicit, separately tested, and excluded from an unqualified parity
+  claim.
 - Prefix returns the new value and postfix returns the old value when the Haxe
   operator contract requires a value.
 - Mutation is visible to the original lvalue and does not mutate a temporary.
@@ -366,7 +400,9 @@ Give concrete evidence tiers and stop conditions for:
 1. parser tests proving distinct prefix/postfix/compound AST shapes;
 2. typer tests proving metadata-driven helper binding, result type, ambiguity,
    and missing-operator diagnostics;
-3. an original upstream Haxe 4.3.7 oracle fixture;
+3. an original upstream Haxe 4.3.7 oracle fixture across interpreter plus at
+   least two generated targets, including side-effecting local, ordinary-field,
+   property, and array-index controls;
 4. focused C++ source-shape assertions and executable stdout;
 5. cross-backend ordinary increment/decrement regressions;
 6. macro-expression quoting/printing compatibility;
