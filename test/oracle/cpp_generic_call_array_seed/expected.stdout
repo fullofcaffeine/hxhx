@@ -1,0 +1,4 @@
+generic-call-array-01:flat|value|2
+generic-call-array-01:nested|value|1
+generic-call-array-01:concrete|value|3
+generic-call-array-01:control|value|2

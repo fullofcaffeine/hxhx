@@ -2721,6 +2721,37 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ generic same-owner calls should still infer explicit type arguments");
 	}
 
+	static function assertCppGenericCallArrayLiteralsStayConcrete():Void {
+		final generic = new HxFunctionDecl("gf2", Public, true, [
+			new HxFunctionArg("prefix", "A", NoDefault, false, false),
+			new HxFunctionArg("values", "Array<B>", NoDefault, false, false)
+		], "String", [], "", ["__hxhx_fn_type_params=A,B"]);
+		final concrete = new HxFunctionDecl("consumeInts", Public, true, [new HxFunctionArg("values", "Array<Int>", NoDefault, false, false)], "Void", [], "");
+		final owner = new HxClassDecl("GenericArrayCallOwner", false, [generic, concrete], []);
+		final names = new StringMap<Bool>();
+		names.set("GenericArrayCallOwner", true);
+		final classes = new StringMap<HxClassDecl>();
+		classes.set("GenericArrayCallOwner", owner);
+		final scope = @:privateAccess backend.cpp.CppTargetCore.renderScope(owner, {names: names, byName: classes}, "void");
+		final flat = @:privateAccess
+			backend.cpp.CppTargetCore.directCallExpr("gf2", [EString("foo"), EArrayDecl([EInt(1), EInt(2)])], scope);
+		assertContains(flat, "std::vector<int>{1, 2}", "C++ generic calls should keep flat array-literal element types concrete at the call site");
+		assertTrue(flat.indexOf("std::vector<B>") < 0, "C++ generic calls should not leak a callee-only element type into flat array literals");
+		final nested = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("gf2", [EString("foo"), EArrayDecl([EArrayDecl([EInt(1), EInt(2)])])], scope);
+		assertContains(nested, "std::vector<std::vector<int>>{std::vector<int>{1, 2}}",
+			"C++ generic calls should keep nested array-literal element types concrete at the call site");
+		assertTrue(nested.indexOf("std::vector<B>") < 0, "C++ generic calls should not leak a callee-only element type into nested array literals");
+		final nonGeneric = @:privateAccess
+			backend.cpp.CppTargetCore.directCallExpr("consumeInts", [EArrayDecl([EInt(1), EInt(2)])], scope);
+		assertTrue(nonGeneric == "consumeInts(std::vector<int>{1, 2})",
+			"C++ non-generic concrete array parameters should keep their existing literal lowering");
+		scope.localTypes.set("ints", "std::vector<int>");
+		final alreadyConcrete = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("gf2", [EString("foo"), EIdent("ints")], scope);
+		assertContains(alreadyConcrete, "ints", "C++ generic calls should preserve already-concrete vector arguments");
+		assertTrue(alreadyConcrete.indexOf("std::vector<B>") < 0,
+			"C++ generic calls should not rewrite already-concrete vector arguments through a callee-only element type");
+	}
+
 	static function assertCppFunctionTypeParamsWinOverSameNamedClasses():Void {
 		final staticSingle = new HxFunctionDecl("staticSingle", Public, true, [new HxFunctionArg("a", "A", NoDefault, false, false)], "A",
 			[SReturn(EIdent("a"), HxPos.unknown())], "", ["__hxhx_fn_type_params=A"]);
@@ -4360,6 +4391,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedLambda], []);
 	}
 
+	static function genericCallArrayLiteralProgram():GenIrProgram {
+		final sourcePath = "test/oracle/cpp_generic_call_array_seed/src/Main.hx";
+		final typed = TyperStage.typeModule(ParserStage.parse(File.getContent(sourcePath), sourcePath));
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function mathExternProgram():GenIrProgram {
 		final src = [
 			"extern class Math {",
@@ -4399,6 +4436,42 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			if (artifact.kind == kind)
 				return true;
 		return false;
+	}
+
+	/**
+		Compile and run the repo-owned generic-array oracle through the native C++
+		backend. Source assertions prove that callee-owned template names do not
+		appear in literal syntax; stdout proves the resulting artifact still behaves
+		like the upstream Haxe 4.3.7 oracle.
+	**/
+	public static function runGenericCallArrayLiteralChecks():Void {
+		BackendRegistry.clearDynamicRegistrations();
+		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_generic_call_array"]);
+		deleteRecursive(root);
+		FileSystem.createDirectory(root);
+		final program = genericCallArrayLiteralProgram();
+		final sourceOnlyDir = Path.join([root, "source-only"]);
+		final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program, context(sourceOnlyDir, true, true));
+		final source = File.getContent(sourceOnly.entryPath);
+		assertContains(source, "template<typename A, typename B>", "C++ generic-array smoke should preserve the helper template declaration");
+		assertContains(source, "static int count(A label, std::vector<B> values)",
+			"C++ generic-array smoke should preserve the declaration-owned element type");
+		assertContains(source, "count<std::string, int>(\"flat\", std::vector<int>{1, 2})",
+			"C++ generic-array smoke should specialize flat literals with caller-visible element types");
+		assertContains(source, "count<std::string, std::vector<int>>(\"nested\", std::vector<std::vector<int>>{std::vector<int>{1, 2}})",
+			"C++ generic-array smoke should specialize nested literals with caller-visible element types");
+		assertTrue(source.indexOf("std::vector<B>{") < 0, "C++ generic-array smoke should not expose a callee-only element type in call-site literal syntax");
+
+		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
+			final buildDir = Path.join([root, "build"]);
+			final built = BackendRegistry.createForTarget("cpp-native").emit(program, context(buildDir, true, false));
+			assertTrue(built.builtExecutable, "C++ generic-array smoke should build an executable");
+			final run = commandOutput(built.entryPath, []);
+			assertTrue(run.code == 0, "C++ generic-array smoke executable failed: " + run.stderr);
+			final expected = File.getContent("test/oracle/cpp_generic_call_array_seed/expected.stdout");
+			assertTrue(run.stdout == expected, "unexpected C++ generic-array smoke stdout: " + run.stdout);
+		}
+		deleteRecursive(root);
 	}
 
 	public static function runRenderChecks():Void {
@@ -4471,6 +4544,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertCppFunctionArgDeclaredTypeCacheUsesScopeShape();
 		assertCppFieldTypeCacheUsesScopeShape();
 		assertCppSameOwnerGenericCallTypeArgsSkipNonGenericFunctions();
+		assertCppGenericCallArrayLiteralsStayConcrete();
 		assertCppFunctionTypeParamsWinOverSameNamedClasses();
 		assertCppConstrainedGf3KeepsGenericSignatureAndArgs();
 		assertCppStringParamCallsCoerceScalarLiterals();
@@ -11762,6 +11836,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	}
 
 	public static function runGeneratedSourceChecks():Void {
+		runGenericCallArrayLiteralChecks();
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
 		assertTrue(descriptor != null, "missing cpp-native descriptor");
@@ -13785,7 +13860,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	}
 
 	static function main():Void {
-		switch (M14SmokeGroupSelection.selected(["render", "generated"])) {
+		switch (M14SmokeGroupSelection.selected(["render", "generated", "generic-call-array"])) {
 			case "all":
 				runRenderChecks();
 				runGeneratedSourceChecks();
@@ -13793,6 +13868,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				runRenderChecks();
 			case "generated":
 				runGeneratedSourceChecks();
+			case "generic-call-array":
+				runGenericCallArrayLiteralChecks();
 			case _:
 		}
 	}

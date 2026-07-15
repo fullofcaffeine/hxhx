@@ -6269,3 +6269,72 @@ were read only as behavior and API oracles. `thinking:xhigh` was not crossed,
 and GPT or Oracle review was deliberately skipped because the exact decoded
 arity mismatch, source ownership boundary, upstream behavior, and focused
 anchored/unanchored controls identify a bounded decoder seam.
+
+## 2026-07-14 Generic Call-Site Array Specialization
+
+Follow-up bead `haxe_ocaml-omaaq` removes the next strict native compiler
+error. In plain language, `gf2<A, B>(a:A, b:Array<B>)` retained its generic
+declaration correctly, but flat and nested array literals at concrete call
+sites were emitted as `std::vector<B>`. The generated caller therefore used a
+declaration-local type parameter that does not exist in its scope, instead of
+specializing the literal to `std::vector<int>` or
+`std::vector<std::vector<int>>`.
+
+Direct calls now derive one same-owner generic specialization from the source
+parameter hints and their lowered C++ shapes, then share that specialization
+between ordinary direct calls and calls rendered for an expected return type.
+Only vector-shaped expected parameter types are substituted at this seam.
+That boundary keeps generic array literals concrete without changing existing
+scalar, object, or enum argument rendering; an initial broader substitution
+exposed that distinction by regressing the nested enum-identity control.
+
+The repo-owned upstream oracle covers four original cases: flat and nested
+generic array literals, an already-concrete generic array value, and a
+non-generic `Array<Int>` control. Upstream Haxe 4.3.7 reports lengths 2, 1, 3,
+and 2 respectively. The focused native C++ smoke pins explicit concrete
+specializations in generated source, rejects any call-site
+`std::vector<B>{...}`, builds the artifact, runs it, and compares the same
+stdout contract.
+
+The focused render smoke, full generated native C++ smoke, upstream oracle,
+shell syntax check, package metadata parse, local-declaration benchmark,
+official touched-file formatter, repo-wide Haxe format guard, Cpp type-flow
+plan guard, mega-file gravity guard, and `git diff --check` all pass. The
+250-call benchmark remained bounded: declared 0.014642 seconds, full 0.006837
+seconds, callback full 0.058960 seconds, EReg full 0.010867 seconds, and traced
+0.055708 seconds. A fresh current-source compiler build completed in about 221
+seconds and passed the current-source binary validator.
+
+The stage0-forbidden strict Cpp probe rendered all 384 reachable helpers and
+reached the host compiler in 418 seconds. Retained generated source now calls
+`gf2<std::string, int>` with `std::vector<int>` and
+`gf2<std::string, std::vector<int>>` with
+`std::vector<std::vector<int>>`; no call-site `std::vector<B>{...}` remains.
+The preceding `GenericStack<Int>` fix also remains intact with a zero-argument
+constructor, factory declaration, definition, and call. `TestXML.testBasic`
+rendered in 0.441796 seconds, its complete class in 4.147122 seconds,
+`TestType.testEnumEq` in 2.012055 seconds, and
+`TestType.testGenericFunction` in 1.285848 seconds. These are frontier timings,
+not a broad performance claim.
+
+The expected-red native build now begins at generated
+`TestMain.cpp:16509-16515`, where calls pass two arguments to `gf3` but its
+declaration has lost both constrained generic parameters and its body refers to
+the missing `b`. Existing thinking-high bead `haxe_ocaml-wisp-707` owns that
+real full-parser-path arity regression. The retained evidence is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-generic-call-array.log`.
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+does not compile or run the full unit program, so this internal frontier move
+does not change production readiness. `CppTargetCore.hx` is 26,525 lines and
+receives a documented, bounded helper at the existing direct-call type-flow
+seam. The 2,424-line `CppRuntimeSupport.hx` is unchanged, and broader extraction
+remains owned by `haxe_ocaml-36ec`. No runtime stub, fake overload, generated
+bootstrap snapshot, or public API changed.
+
+No upstream compiler source or test fixture was copied. The ignored upstream
+Haxe 4.3.7 checkout was used only as a behavior oracle; the committed fixture
+is an original repo-owned program. `thinking:xhigh` was not crossed, and GPT or
+Oracle review was deliberately skipped because the invalid generated type, the
+upstream contract, the existing direct-call type-flow seam, and focused
+generic/non-generic controls identify a bounded target-owned fix.

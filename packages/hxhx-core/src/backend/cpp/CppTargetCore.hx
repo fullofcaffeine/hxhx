@@ -54,6 +54,12 @@ typedef CppReflectPropertyInfo = {
 	var field:HxFieldDecl;
 }
 
+/** Concrete caller-visible arguments for a template owned by one helper method. **/
+typedef CppGenericCallSpecialization = {
+	var typeParams:Array<String>;
+	var typeArgs:Array<String>;
+}
+
 /** Carries a proven direct String-concat rendering and whether it owns the exact EReg split/join leaf. **/
 typedef CppDirectStringConcatNode = {
 	var rendered:String;
@@ -15040,14 +15046,18 @@ class CppTargetCore {
 				+ Std.string(fn != null && owner != null)
 				+ " count="
 				+ Std.string(inferredArgTypes == null ? 0 : inferredArgTypes.length));
+		final genericSpecialization = supportParamTypes.length == 0
+			&& fn != null
+			&& owner != null ? sameOwnerGenericCallSpecialization(fn, owner, args, "", scope, inferredArgTypes) : null;
+		final callParamTypes = instantiateGenericCallArrayParamTypes(inferredArgTypes, genericSpecialization);
 		final renderFunctionArgsStart = timingEnabled ? Sys.time() : 0.0;
 		final renderedArgs = if (supportParamTypes.length > 0) {
 			renderKnownCppParamCallArgs(supportParamTypes, args, scope);
 		} else if (fn != null && owner != null) {
-			if (isStringComparisonHelperCall(cleanName, inferredArgTypes, args))
-				renderStringComparisonHelperCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredArgTypes);
+			if (isStringComparisonHelperCall(cleanName, callParamTypes, args))
+				renderStringComparisonHelperCallArgs(HxFunctionDecl.getArgs(fn), args, scope, callParamTypes);
 			else
-				renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, inferredArgTypes);
+				renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, callParamTypes);
 		} else {
 			renderFunctionTypeCallArgs(exprCppType(EIdent(name), scope), args, scope);
 		}
@@ -15072,7 +15082,7 @@ class CppTargetCore {
 				+ " rendered="
 				+ Std.string(renderedArgs.length));
 		final explicitTypesStart = timingEnabled ? Sys.time() : 0.0;
-		final explicitTypes = sameOwnerGenericCallTypeArgs(fn, owner, args, "", scope);
+		final explicitTypes = genericCallTypeArgs(genericSpecialization);
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope,
 				"direct_call_phase=explicit_types call="
@@ -15193,44 +15203,86 @@ class CppTargetCore {
 		final fn = owner == null ? null : ownerMethodDeclIn(owner, name);
 		if (fn == null || owner == null || scope == null)
 			return null;
-		final explicitTypes = sameOwnerGenericCallTypeArgs(fn, owner, args, expectedType, scope);
+		final inferredParamTypes = inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
+		final specialization = sameOwnerGenericCallSpecialization(fn, owner, args, expectedType, scope, inferredParamTypes);
+		final explicitTypes = genericCallTypeArgs(specialization);
 		if (explicitTypes.length == 0)
 			return null;
 		final renderedArgs = renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope,
-			inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses));
+			instantiateGenericCallArrayParamTypes(inferredParamTypes, specialization));
 		return sanitizeIdentifier(name) + explicitTypes + "(" + renderedArgs.join(", ") + ")";
 	}
 
 	static function sameOwnerGenericCallTypeArgs(fn:HxFunctionDecl, owner:HxClassDecl, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope):String {
+		final inferredParamTypes = fn == null
+			|| owner == null
+			|| scope == null ? null : inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
+		return genericCallTypeArgs(sameOwnerGenericCallSpecialization(fn, owner, args, expectedType, scope, inferredParamTypes));
+	}
+
+	/**
+		Resolve a same-owner helper's method-level template parameters using types that
+		exist at the call site. Source hints preserve Haxe generic structure, while the
+		already-lowered C++ parameter types bridge target shapes such as
+		`Array<B>`/`std::vector<B>` without exposing `B` in the caller.
+	**/
+	static function sameOwnerGenericCallSpecialization(fn:HxFunctionDecl, owner:HxClassDecl, args:Array<HxExpr>, expectedType:String, ?scope:CppRenderScope,
+			?inferredParamTypes:Array<String>):Null<CppGenericCallSpecialization> {
 		if (fn == null || owner == null || scope == null)
-			return "";
+			return null;
 		final typeParams = genericFunctionTypeParams(fn);
 		if (typeParams.length == 0)
-			return "";
+			return null;
 		final callScope = renderScope(owner, {names: scope.classNames, byName: scope.classByName, all: scope.allClasses}, "auto");
 		applyFunctionTypeParams(callScope, fn);
 		final returnType = cppReturnTypeHint(HxFunctionDecl.getReturnTypeHint(fn), callScope, {names: scope.classNames, byName: scope.classByName});
 		final emitted = emittedFunctionTypeParams(fn, returnType, callScope);
 		if (emitted.length == 0)
-			return "";
+			return null;
 		final mapped = new haxe.ds.StringMap<String>();
 		unifyGenericCallTypeHints(HxFunctionDecl.getReturnTypeHint(fn), expectedType, emitted, mapped, scope);
+		unifyGenericCallTypeHints(returnType, explicitCallTypeArg(expectedType, scope), emitted, mapped, scope);
 		final params = HxFunctionDecl.getArgs(fn);
 		final count = params.length < args.length ? params.length : args.length;
 		for (i in 0...count) {
 			final rawHint = rawTypeHintForExpr(args[i], scope);
 			final actualHint = genericCallActualTypeHint(args[i], rawHint, scope);
 			unifyGenericCallTypeHints(HxFunctionArg.getTypeHint(params[i]), actualHint, emitted, mapped, scope);
+			if (inferredParamTypes != null && i < inferredParamTypes.length)
+				unifyGenericCallTypeHints(inferredParamTypes[i], actualHint, emitted, mapped, scope);
 		}
 		final out = new Array<String>();
 		for (param in emitted) {
 			final clean = sanitizeIdentifier(param);
 			final value = mapped.get(clean);
 			if (value == null || value.length == 0)
-				return "";
+				return null;
 			out.push(value);
 		}
-		return "<" + out.join(", ") + ">";
+		return {typeParams: emitted, typeArgs: out};
+	}
+
+	static function genericCallTypeArgs(specialization:Null<CppGenericCallSpecialization>):String {
+		return specialization == null ? "" : "<" + specialization.typeArgs.join(", ") + ">";
+	}
+
+	/**
+		Apply one proven generic-call mapping only to vector-shaped parameters.
+
+		Generic scalar and object arguments already render from their expression shape;
+		forcing their concrete template type back into argument adaptation can replace
+		target-native enum constructor calls with unrelated allocation paths. Array
+		literals need the specialization because their element type is part of the C++
+		literal syntax itself.
+	**/
+	static function instantiateGenericCallArrayParamTypes(paramTypes:Null<Array<String>>,
+			specialization:Null<CppGenericCallSpecialization>):Null<Array<String>> {
+		if (paramTypes == null || paramTypes.length == 0 || specialization == null)
+			return paramTypes;
+		return [
+			for (typeName in paramTypes)
+				isCppVectorType(typeName) ? substituteCppTypeParams(typeName, specialization.typeParams, specialization.typeArgs) : typeName
+		];
 	}
 
 	/**
