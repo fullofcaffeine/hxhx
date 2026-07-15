@@ -1279,7 +1279,7 @@ let lookupClassForInheritancePath = fun typeHint scope classLookup -> try let __
 
 let nearestClassForBaseName = fun base scope classLookup -> try let __fallback_result_190 = (
   ignore (if base == Obj.magic (HxRuntime.hx_null) || HxString.length base = 0 || scope == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get scope "owner") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
-  let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : HxClassDecl.t HxArray.t) in (
+  let cleanBase = (sanitizeTypePath (base : string) : string) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : HxClassDecl.t HxArray.t) in (
     ignore (if classLookup != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get classLookup "all") != Obj.magic (HxRuntime.hx_null) then let __assign_178 = Obj.magic (Obj.magic (Obj.obj (HxAnon.get classLookup "all"))) in (
       tempMaybeArray := __assign_178;
       __assign_178
@@ -1287,8 +1287,13 @@ let nearestClassForBaseName = fun base scope classLookup -> try let __fallback_r
       tempMaybeArray := __assign_179;
       __assign_179
     ));
-    let all = Obj.magic (!tempMaybeArray) in (
-      ignore (if all == Obj.magic (HxRuntime.hx_null) || HxArray.length all = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+    let all = Obj.magic (!tempMaybeArray) in let usesScopeGraph = Obj.repr all == Obj.repr (Obj.obj (HxAnon.get scope "allClasses")) in (
+      ignore (if usesScopeGraph && HxMap.exists_string (Obj.obj (HxAnon.get scope "nearestClassByBaseNameCache")) cleanBase then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxMap.get_string (Obj.obj (HxAnon.get scope "nearestClassByBaseNameCache")) cleanBase)))) else ());
+      ignore (if usesScopeGraph && HxMap.exists_string (Obj.obj (HxAnon.get scope "missingNearestClassByBaseNameCache")) cleanBase then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+      ignore (if all == Obj.magic (HxRuntime.hx_null) || HxArray.length all = 0 then ignore ((
+        ignore (if usesScopeGraph then ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "missingNearestClassByBaseNameCache")) cleanBase true) else ());
+        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+      )) else ());
       let ownerIndex = ref (-1) in (
         ignore (let _g = ref 0 in let _g1 = HxArray.length all in try while !_g < _g1 do try ignore (let i = let __old_180 = !_g in let __new_181 = HxInt.add __old_180 1 in (
           ignore (_g := __new_181);
@@ -1302,13 +1307,16 @@ let nearestClassForBaseName = fun base scope classLookup -> try let __fallback_r
         )) else ()) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
-        ignore (if !ownerIndex < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+        ignore (if !ownerIndex < 0 then ignore ((
+          ignore (if usesScopeGraph then ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "missingNearestClassByBaseNameCache")) cleanBase true) else ());
+          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+        )) else ());
         let best = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : HxClassDecl.t) in let bestDistance = ref 1073741823 in (
           ignore (let _g = ref 0 in let _g1 = HxArray.length all in try while !_g < _g1 do try ignore (let i = let __old_183 = !_g in let __new_184 = HxInt.add __old_183 1 in (
             ignore (_g := __new_184);
             __old_183
           ) in let cls = Obj.magic (HxArray.get (Obj.magic all) i) in (
-            ignore (if Obj.repr cls == Obj.repr (Obj.obj (HxAnon.get scope "owner")) || not (HxString.equals (sanitizeTypePath (typeBaseName (HxClassDecl.getName (Obj.magic cls) : string) : string)) base) then raise (HxRuntime.Hx_continue) else ());
+            ignore (if Obj.repr cls == Obj.repr (Obj.obj (HxAnon.get scope "owner")) || not (HxString.equals (sanitizeTypePath (typeBaseName (HxClassDecl.getName (Obj.magic cls) : string) : string)) cleanBase) then raise (HxRuntime.Hx_continue) else ());
             let tempNumber = ref (0 : int) in (
               ignore (if i > !ownerIndex then let __assign_185 = HxInt.sub i (!ownerIndex) in (
                 tempNumber := __assign_185;
@@ -1331,6 +1339,7 @@ let nearestClassForBaseName = fun base scope classLookup -> try let __fallback_r
           )) with
             | HxRuntime.Hx_continue -> () done with
             | HxRuntime.Hx_break -> ());
+          ignore (if usesScopeGraph then ignore (if !best == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "missingNearestClassByBaseNameCache")) cleanBase true) else ignore (HxMap.set_string (Obj.obj (HxAnon.get scope "nearestClassByBaseNameCache")) cleanBase (!best))) else ());
           !best
         )
       )

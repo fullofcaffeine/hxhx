@@ -71,7 +71,7 @@ let requireObject = fun value fieldPath sourceLabel -> (
     ));
     HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "missing required object `") ^ HxString.toStdString fieldPath) ^ "`")) ["Dynamic"; "String"]
   )) else ());
-  ignore (if HxType.isOfType value (HxType.class_ "String") || (let __isBool_13 = value in if __isBool_13 == HxRuntime.hx_null then false else HxRuntime.is_boxed_bool __isBool_13) || (let __isInt_14 = value in if __isInt_14 == HxRuntime.hx_null then false else Obj.is_int __isInt_14 && not (HxRuntime.is_boxed_bool __isInt_14)) || (let __isFloat_15 = value in if __isFloat_15 == HxRuntime.hx_null then false else Obj.is_int __isFloat_15 && not (HxRuntime.is_boxed_bool __isFloat_15) || Obj.tag __isFloat_15 = Obj.double_tag) || HxType.isOfType value (HxType.class_ "Array") || HxType.isOfType value (HxType.class_ "backend.plugin.ManifestJsonArray") then ignore (let tempRight1 = ref ("" : string) in (
+  ignore (if HxType.isOfType value (HxType.class_ "String") || (let __isBool_13 = value in if __isBool_13 == HxRuntime.hx_null then false else HxRuntime.is_boxed_bool __isBool_13) || (let __isInt_14 = value in if __isInt_14 == HxRuntime.hx_null then false else Obj.is_int __isInt_14 && not (HxRuntime.is_boxed_bool __isInt_14)) || (let __isFloat_15 = value in if __isFloat_15 == HxRuntime.hx_null then false else Obj.is_int __isFloat_15 && not (HxRuntime.is_boxed_bool __isFloat_15) || Obj.tag __isFloat_15 = Obj.double_tag) || HxType.isOfType value (HxType.class_ "Array") || HxType.isOfType value (HxType.class_ "hxhx.CompilerJsonArray") then ignore (let tempRight1 = ref ("" : string) in (
     ignore (let tempString1 = ref ("" : string) in (
       ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_16 = ("" : string) in (
         tempString1 := __assign_16;
@@ -185,7 +185,7 @@ let requireInt = fun value fieldPath sourceLabel -> try let __fallback_result_39
   | HxRuntime.Hx_return __ret_38 -> Obj.obj __ret_38
 
 let requireStringArray = fun value fieldPath sourceLabel -> let raw = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
-  ignore (if HxType.isOfType value (HxType.class_ "backend.plugin.ManifestJsonArray") then ignore (let __assign_40 = Obj.magic ((Obj.magic (Obj.obj value) : Backend_plugin_ManifestJsonArray.t).values) in (
+  ignore (if HxType.isOfType value (HxType.class_ "hxhx.CompilerJsonArray") then ignore (let __assign_40 = Obj.magic ((Obj.magic (Obj.obj value) : Hxhx_CompilerJsonArray.t).values) in (
     raw := __assign_40;
     __assign_40
   )) else ignore (if HxType.isOfType value (HxType.class_ "Array") then ignore (let __assign_41 = Obj.magic (Obj.obj value) in (
@@ -416,7 +416,7 @@ let parse = fun content sourceLabel -> let tempString = ref ("" : string) in (
     HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "content is empty")) ["Dynamic"; "String"]
   )) else ());
   let tempVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-    ignore (try let __assign_88 = Obj.magic (Backend_plugin_ManifestJsonParser.parse (content : string)) in (
+    ignore (try let __assign_88 = Obj.magic (Hxhx_CompilerJsonParser.parse (content : string)) in (
       tempVar := __assign_88;
       __assign_88
     ) with

@@ -67,63 +67,52 @@ let normalizeDigest = fun value -> try let __fallback_result_23 = let digest = (
 ) in Obj.magic __fallback_result_23 with
   | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
 
-let decodeExpressions = fun value -> try let __fallback_result_32 = (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (fail ("expressions must be an array" : string))))) else ());
-  let tempArray = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
-    ignore (try let __assign_24 = Obj.magic (Obj.obj value) in (
-      tempArray := __assign_24;
-      __assign_24
-    ) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_25 -> raise (HxRuntime.Hx_return __ret_25)
-      | HxRuntime.Hx_exception (__exn_v_26, __exn_tags_27) -> if true then let _hx = (__exn_v_26 : Obj.t) in (
-        ignore _hx;
-        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (fail ("expressions must be an array" : string)))))
-      ) else HxRuntime.hx_throw_typed __exn_v_26 __exn_tags_27
-      | __exn_28 -> if true then let _hx = (Obj.repr __exn_28 : Obj.t) in (
-        ignore _hx;
-        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (fail ("expressions must be an array" : string)))))
-      ) else raise (__exn_28));
-    ignore (if HxArray.length (!tempArray) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (fail ("expressions must contain at least one exact macro call" : string))))) else ());
-    let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
-      ignore (while !_g < HxArray.length (!tempArray) do ignore (let entry = HxArray.get (Obj.magic (!tempArray)) (!_g) in (
-        ignore (let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
-          ignore (_g := __new_30);
-          __new_30
-        ));
-        let expr = (requiredString entry ("expressions[]" : string) : string) in (
-          ignore (if HxArray.indexOf out expr 0 <> -1 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (fail (("duplicate expression `" ^ HxString.toStdString expr) ^ "`" : string))))) else ());
-          HxArray.push out expr
-        )
-      )) done);
-      out
-    )
+let decodeExpressions = fun value -> try let __fallback_result_29 = let raw = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
+  ignore (if HxType.isOfType value (HxType.class_ "hxhx.CompilerJsonArray") then ignore (let __assign_24 = Obj.magic ((Obj.magic (Obj.obj value) : Hxhx_CompilerJsonArray.t).values) in (
+    raw := __assign_24;
+    __assign_24
+  )) else ignore (if HxType.isOfType value (HxType.class_ "Array") then ignore (let __assign_25 = Obj.magic (Obj.obj value) in (
+    raw := __assign_25;
+    __assign_25
+  )) else raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (fail ("expressions must be an array" : string)))))));
+  ignore (if HxArray.length (!raw) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (fail ("expressions must contain at least one exact macro call" : string))))) else ());
+  let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+    ignore (while !_g < HxArray.length (!raw) do ignore (let entry = HxArray.get (Obj.magic (!raw)) (!_g) in (
+      ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
+        ignore (_g := __new_27);
+        __new_27
+      ));
+      let expr = (requiredString entry ("expressions[]" : string) : string) in (
+        ignore (if HxArray.indexOf out expr 0 <> -1 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (fail (("duplicate expression `" ^ HxString.toStdString expr) ^ "`" : string))))) else ());
+        HxArray.push out expr
+      )
+    )) done);
+    out
   )
-) in Obj.magic __fallback_result_32 with
-  | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31
+) in Obj.magic __fallback_result_29 with
+  | HxRuntime.Hx_return __ret_28 -> Obj.obj __ret_28
 
 let loadFromEnvironment = fun artifactKind -> try let __fallback_result_42 = let configuredPath = (HxSys.getEnv "HXHX_NATIVE_MACRO_MODULE_RECEIPT" : string) in (
   ignore (if configuredPath == Obj.magic (HxRuntime.hx_null) || HxString.length (StringTools.trim (configuredPath : string)) = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   let selectedPath = (Haxe_io_Path.normalize (StringTools.trim (configuredPath : string) : string) : string) in (
     ignore (if not (HxFileSystem.exists selectedPath) || HxFileSystem.isDirectory selectedPath then raise (HxRuntime.Hx_return (Obj.repr (fail ("file not found: " ^ HxString.toStdString selectedPath : string)))) else ());
     let receiptPath = (Haxe_io_Path.normalize (HxFileSystem.fullPath selectedPath : string) : string) in let tempVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-      ignore (try let text = (HxFile.getContent (receiptPath : string) : string) in let __assign_33 = Obj.magic (Haxe_format_JsonParser.parse (text : string)) in (
-        tempVar := __assign_33;
-        __assign_33
+      ignore (try let __assign_30 = Obj.magic (Hxhx_CompilerJsonParser.parse (HxFile.getContent (receiptPath : string) : string)) in (
+        tempVar := __assign_30;
+        __assign_30
       ) with
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_34 -> raise (HxRuntime.Hx_return __ret_34)
-        | HxRuntime.Hx_exception (__exn_v_35, __exn_tags_36) -> if true then let error = (__exn_v_35 : Obj.t) in (
+        | HxRuntime.Hx_return __ret_31 -> raise (HxRuntime.Hx_return __ret_31)
+        | HxRuntime.Hx_exception (__exn_v_32, __exn_tags_33) -> if true then let error = (__exn_v_32 : Obj.t) in (
           ignore error;
           raise (HxRuntime.Hx_return (Obj.repr (fail ((("invalid JSON in `" ^ HxString.toStdString receiptPath) ^ "`: ") ^ HxString.toStdString (HxRuntime.dynamic_toStdString error) : string))))
-        ) else HxRuntime.hx_throw_typed __exn_v_35 __exn_tags_36
-        | __exn_37 -> if true then let error = (Obj.repr __exn_37 : Obj.t) in (
+        ) else HxRuntime.hx_throw_typed __exn_v_32 __exn_tags_33
+        | __exn_34 -> if true then let error = (Obj.repr __exn_34 : Obj.t) in (
           ignore error;
           raise (HxRuntime.Hx_return (Obj.repr (fail ((("invalid JSON in `" ^ HxString.toStdString receiptPath) ^ "`: ") ^ HxString.toStdString (HxRuntime.dynamic_toStdString error) : string))))
-        ) else raise (__exn_37));
-      ignore (if Obj.magic (!tempVar) == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (fail ("receipt JSON must be an object" : string)))) else ());
+        ) else raise (__exn_34));
+      ignore (if Obj.magic (!tempVar) == Obj.magic (HxRuntime.hx_null) || HxType.isOfType (Obj.magic (!tempVar)) (HxType.class_ "String") || (let __isBool_35 = Obj.magic (!tempVar) in if __isBool_35 == HxRuntime.hx_null then false else HxRuntime.is_boxed_bool __isBool_35) || (let __isInt_36 = Obj.magic (!tempVar) in if __isInt_36 == HxRuntime.hx_null then false else Obj.is_int __isInt_36 && not (HxRuntime.is_boxed_bool __isInt_36)) || (let __isFloat_37 = Obj.magic (!tempVar) in if __isFloat_37 == HxRuntime.hx_null then false else Obj.is_int __isFloat_37 && not (HxRuntime.is_boxed_bool __isFloat_37) || Obj.tag __isFloat_37 = Obj.double_tag) || HxType.isOfType (Obj.magic (!tempVar)) (HxType.class_ "Array") || HxType.isOfType (Obj.magic (!tempVar)) (HxType.class_ "hxhx.CompilerJsonArray") then raise (HxRuntime.Hx_return (Obj.repr (fail ("receipt JSON must be an object" : string)))) else ());
       let schema = (requiredString (requiredField (Obj.magic (!tempVar)) ("schema" : string)) ("schema" : string) : string) in (
         ignore (if not (HxString.equals schema "hxhx.native-macro-module.v1") then raise (HxRuntime.Hx_return (Obj.repr (fail (((("unsupported schema `" ^ HxString.toStdString schema) ^ "` (expected `") ^ "hxhx.native-macro-module.v1") ^ "`)" : string)))) else ());
         let candidateCommit = (requiredString (requiredField (Obj.magic (!tempVar)) ("candidateCommit" : string)) ("candidateCommit" : string) : string) in let expectedCandidate = (requiredString (Obj.repr (HxSys.getEnv "HXHX_CANDIDATE_COMMIT")) ("HXHX_CANDIDATE_COMMIT" : string) : string) in (

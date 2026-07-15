@@ -91,6 +91,7 @@
 		"HxModuleDecl.ml",
 		"HxLexer.ml",
 		"HxKeyword.ml",
+		"HxFunctionTypeParamMetadata.ml",
 		"HxFunctionDecl.ml",
 		"HxFunctionArg.ml",
 		"HxFieldDecl.ml",
