@@ -176,6 +176,27 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertEqString(HxFunctionDecl.getReturnTypeHint(mapi), "Array<B>", "scanned generic mapi return type");
 	}
 
+	static function assertScannedHelpersPreserveConstrainedGenericRelations():Void {
+		final source = [
+			"class Main {}",
+			"class GenericReflection {",
+			"  @:generic static function gf3<A:haxe.Constraints.Constructible<String -> Void>, B:Array<A>>(a:A, b:B):B {",
+			"    var clone = new A(\"copy\");",
+			"    b.push(clone);",
+			"    return b;",
+			"  }",
+			"}"
+		].join("\n");
+		final helpers = ParserStageScanHelpers.scanModuleLocalHelperClasses(source, "Main");
+		final genericReflection = findScannedClass(helpers, "GenericReflection");
+		final gf3 = findFunction(genericReflection, "gf3");
+		final metadata = HxFunctionDecl.getMetadata(gf3);
+		assertTrue(metadata.indexOf("__hxhx_fn_type_params=A,B") >= 0, "scanned constrained gf3 type params should come from the source signature");
+		assertTrue(metadata.indexOf("__hxhx_fn_type_constraint=A:haxe.Constraints.Constructible<String->Void>") >= 0,
+			"scanned helpers should preserve the Constructible constraint for A");
+		assertTrue(metadata.indexOf("__hxhx_fn_type_constraint=B:Array<A>") >= 0, "scanned helpers should preserve the relation between B and Array<A>");
+	}
+
 	static function assertVendorListParsesWhenAvailable():Void {
 		final listPath = "vendor/haxe/std/haxe/ds/List.hx";
 		final listSource = readOptional(listPath);
@@ -289,6 +310,10 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertEqString(HxFunctionArg.getTypeHint(HxFunctionDecl.getArgs(fn)[1]), "B", "native decode constrained gf3 arg 1 type");
 		assertTrue(HxFunctionDecl.getMetadata(fn).indexOf("__hxhx_fn_type_params=A,B") >= 0,
 			"native decode constrained gf3 type params should come from the source signature");
+		assertTrue(HxFunctionDecl.getMetadata(fn).indexOf("__hxhx_fn_type_constraint=A:haxe.Constraints.Constructible<String->Void>") >= 0,
+			"native decode should preserve the Constructible constraint for A");
+		assertTrue(HxFunctionDecl.getMetadata(fn).indexOf("__hxhx_fn_type_constraint=B:Array<A>") >= 0,
+			"native decode should preserve the relation between B and Array<A>");
 	}
 
 	static function assertNativeDecodeDoesNotBorrowArgsFromPrefixNamedFunction():Void {
@@ -325,6 +350,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertNativeDecodeRecoversConstrainedGenericArgsFromSource();
 		assertNativeDecodeDoesNotBorrowArgsFromPrefixNamedFunction();
 		assertScannedGenericNamedFunctionArg();
+		assertScannedHelpersPreserveConstrainedGenericRelations();
 
 		final src = '@:generic class GenericMethods<T> {\n'
 			+ '  public function new() {}\n'

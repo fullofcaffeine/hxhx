@@ -40,6 +40,10 @@ typedef CppRenderScope = {
 
 	var typeParams:Array<String>;
 	var typeParamCppNames:haxe.ds.StringMap<String>;
+
+	/** Source constraint hints keyed by the active C++ type-parameter name. **/
+	var typeParamConstraints:haxe.ds.StringMap<String>;
+
 	var localTypes:haxe.ds.StringMap<String>;
 	var localTypeHints:haxe.ds.StringMap<String>;
 	var localNames:haxe.ds.StringMap<String>;

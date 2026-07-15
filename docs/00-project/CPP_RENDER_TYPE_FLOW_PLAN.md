@@ -6405,3 +6405,85 @@ public API. The fixture and OCaml protocol runner are original repo-owned work.
 `thinking:xhigh` was not crossed, and GPT or Oracle review was deliberately
 skipped because the source/snapshot diff, exact token-depth failure, and
 focused protocol controls identify a bounded canonical-parser seam.
+
+## 2026-07-14 Constrained Generic Relation Preservation
+
+Follow-up bead `haxe_ocaml-jnj0n` restores the next strict native compiler
+contract. In plain language, the parser preserved the names `A` and `B` from a
+method such as `gf3<A:Constructible<String -> Void>, B:Array<A>>`, but discarded
+both constraints. The C++ caller therefore treated an empty `[]` as
+`std::vector<int>`, while the method body could not tell that `new A(...)`
+constructs the pointee represented by `A` or that `B.push(...)` has Array
+semantics.
+
+`HxFunctionTypeParamMetadata` is now the shared parser-to-target bridge for
+method generic declarations. It records the ordered parameter names plus one
+canonical constraint entry per parameter. The direct Haxe parser, extracted
+native decoder, intentional stage0 A/B inline decoder, and module-local helper
+scanner all use that helper instead of maintaining name-only copies. C++ reads
+the resulting AST metadata; it does not rescan Haxe source in the emitter.
+
+Same-owner generic call specialization now ignores the fake `Array<Int>`
+evidence contributed by an empty literal when the receiving parameter has an
+exact `B:Array<A>` relation. Once `A` is known, the relation fills `B` as
+`std::vector<A>` and supplies that concrete type to the empty literal. Inside
+the template body, an exact Constructible constraint lowers `new A(...)` to
+construction of `A::element_type`, and an exact Array constraint supplies
+vector member-dispatch shape while the public template signature remains `B`.
+No runtime helper, fake target class, inline library stub, or broad source-type
+guess was added.
+
+The repo-owned upstream oracle covers populated and empty constrained Array
+calls and records `first|copy` plus `copy` under Haxe 4.3.7. Before the repair,
+the focused generated source selected `std::vector<int>` for the empty call,
+emitted an unrelated same-named class for `new A`, and retained `push` instead
+of `push_back`. The direct render and executable generated-C++ regressions now
+pin the two concrete `std::vector<std::shared_ptr<RelationToken>>`
+specializations, pointee construction, vector append, build success, and exact
+stdout.
+
+Both parser decoder modes, both native OCaml parser variants, the helper
+scanner regression, focused C++ render smoke, full generated native C++
+build/run, upstream oracle, shell and package checks, official touched-file
+formatter, repo-wide Haxe format guard, C++ type-flow plan guard, mega-file
+gravity guard, and `git diff --check` pass. A fresh current-source compiler
+build completed in 221 seconds and passed its provenance validator. With
+stage0 explicitly forbidden, that binary resolved 55 modules, built the
+focused C++ executable, ran it, and produced the same two-line oracle output.
+
+The strict stage0-forbidden C++ probe rendered all 384 reachable helpers and
+reached the host compiler in 394 seconds. Retained source now specializes the
+empty call as `gf3<std::shared_ptr<Template>,
+std::vector<std::shared_ptr<Template>>>`, constructs
+`typename A::element_type`, calls `b.push_back`, and returns `B`. The earlier
+`gf2` array and zero-argument `GenericStack` repairs remain intact.
+`TestXML.testBasic` rendered in 0.474428 seconds, its complete class in 4.486837
+seconds, `TestType.testGenericFunction` in 1.154798 seconds, and `gf3` itself in
+0.082092 seconds. These are frontier timings, not a broad performance claim.
+
+The expected-red native build now begins at generated `TestMain.cpp:16558`.
+Haxe abstract `AbstractZ<T>` uses `AbstractBase<T>` as its underlying carrier,
+but generated C++ models the two as incompatible `shared_ptr` shells and then
+cannot apply the allowed String and Int conversions. Follow-up
+`haxe_ocaml-djqur` owns that independent abstract-carrier frontier before the
+later Map-access and operator errors. The retained evidence is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-constrained-generic-relation.log`.
+
+README Goals and North Star progress bars remain unchanged. Strict C++ still
+does not compile or run the full upstream unit program, so this internal
+frontier move does not change production readiness. The 172-line shared
+metadata helper removes duplicated parser logic; the large parser files gain
+only calls at their existing signature seams. `CppTargetCore.hx` is 26,668
+lines and receives bounded helpers at existing generic call, construction, and
+member-dispatch seams. `CppRuntimeSupport.hx` is unchanged, and broader C++
+target extraction remains owned by `haxe_ocaml-36ec`. No public example or API
+contract changed.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite was read only as a behavior oracle, and the permissively licensed
+`haxe.Constraints.Constructible` declaration was read before implementation to
+confirm its API. The committed fixture is an original repo-owned program.
+`thinking:xhigh` was not crossed, and GPT or Oracle review was deliberately
+skipped because the missing constraint metadata, exact `B:Array<A>` relation,
+upstream behavior, and focused populated/empty controls identify a bounded
+parser-metadata and target-type-flow seam.

@@ -56,6 +56,7 @@ typedef CppReflectPropertyInfo = {
 
 /** Concrete caller-visible arguments for a template owned by one helper method. **/
 typedef CppGenericCallSpecialization = {
+	var rawTypeParams:Array<String>;
 	var typeParams:Array<String>;
 	var typeArgs:Array<String>;
 }
@@ -6250,6 +6251,7 @@ class CppTargetCore {
 			missingNearestClassByBaseNameCache: new haxe.ds.StringMap<Bool>(),
 			typeParams: typeParams,
 			typeParamCppNames: typeParamCppNames,
+			typeParamConstraints: new haxe.ds.StringMap<String>(),
 			localTypes: new haxe.ds.StringMap<String>(),
 			localTypeHints: new haxe.ds.StringMap<String>(),
 			localNames: new haxe.ds.StringMap<String>(),
@@ -8511,14 +8513,13 @@ class CppTargetCore {
 				params.push(clean);
 			}
 		}
-		for (meta in HxFunctionDecl.getMetadata(fn)) {
-			final prefix = "__hxhx_fn_type_params=";
-			if (!StringTools.startsWith(meta, prefix))
-				continue;
-			for (param in meta.substr(prefix.length).split(","))
-				add(param);
-		}
+		for (param in HxFunctionTypeParamMetadata.typeParamNames(HxFunctionDecl.getMetadata(fn)))
+			add(param);
 		return params;
+	}
+
+	static function genericFunctionTypeConstraints(fn:HxFunctionDecl):haxe.ds.StringMap<String> {
+		return fn == null ? new haxe.ds.StringMap<String>() : HxFunctionTypeParamMetadata.constraints(HxFunctionDecl.getMetadata(fn));
 	}
 
 	static function genericFunctionTypeParams(fn:HxFunctionDecl):Array<String> {
@@ -8584,6 +8585,13 @@ class CppTargetCore {
 			}
 			seenCpp.set(cppName, true);
 			scope.typeParamCppNames.set(clean, cppName);
+		}
+		final constraints = genericFunctionTypeConstraints(fn);
+		for (rawParam in constraints.keys()) {
+			final cppName = cppTypeParamName(rawParam, scope);
+			final typeHint = constraints.get(rawParam);
+			if (cppName.length > 0 && typeHint != null && typeHint.length > 0)
+				scope.typeParamConstraints.set(cppName, typeHint);
 		}
 		scope.typeParams = merged;
 	}
@@ -13717,6 +13725,9 @@ class CppTargetCore {
 	}
 
 	static function cppNewExprType(typePath:String, ?scope:CppRenderScope, ?args:Array<HxExpr>):String {
+		final constructibleParam = constructibleFunctionTypeParamCppName(typePath, scope);
+		if (constructibleParam.length > 0)
+			return constructibleParam;
 		final lookup = lookupForScope(scope);
 		final cls = lookupClassForTypeHint(typePath, scope, lookup);
 		final className = cls == null ? sanitizeTypePath(typeBaseName(typePath)) : renderedClassName(cls, lookup);
@@ -13744,6 +13755,13 @@ class CppTargetCore {
 	static function newExpr(typePath:String, args:Array<HxExpr>, ?scope:CppRenderScope, ?expectedCppType:String):String {
 		if (isERegTypeName(typePath))
 			return "std::make_shared<EReg>(" + renderSimpleCallArgs(args, scope).join(", ") + ")";
+		final constructibleParam = constructibleFunctionTypeParamCppName(typePath, scope);
+		if (constructibleParam.length > 0)
+			return "std::make_shared<typename "
+				+ constructibleParam
+				+ "::element_type>("
+				+ renderSimpleCallArgs(args, scope).join(", ")
+				+ ")";
 		final lookup = lookupForScope(scope);
 		final cls = lookupClassForTypeHint(typePath, scope, lookup);
 		final className = cls == null ? sanitizeTypePath(typeBaseName(typePath)) : renderedClassName(cls, lookup);
@@ -13794,6 +13812,16 @@ class CppTargetCore {
 			+ "("
 			+ renderedArgs
 			+ ")";
+	}
+
+	/** Resolve `new A(...)` only when A carries Haxe's Constructible constraint. **/
+	static function constructibleFunctionTypeParamCppName(typePath:String, ?scope:CppRenderScope):String {
+		final cppParam = scopedGenericTypeParamName(typePath, scope);
+		if (cppParam.length == 0 || scope == null || scope.typeParamConstraints == null)
+			return "";
+		final constraint = scope.typeParamConstraints.get(cppParam);
+		final base = sanitizeTypePath(typeBaseName(constraint == null ? "" : constraint));
+		return base == "Constructible" ? cppParam : "";
 	}
 
 	/**
@@ -14360,7 +14388,7 @@ class CppTargetCore {
 
 	static function fieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
 		final receiverTypeName = staticReceiverClassName(receiver, scope);
-		final receiverCppType = exprCppType(receiver, scope);
+		final receiverCppType = constrainedArrayDispatchCppType(exprCppType(receiver, scope), scope);
 		if (sanitizeIdentifier(method) == "bind") {
 			final boundFunction = boundFunctionValueExpr(receiver, args, "", scope);
 			if (boundFunction != null)
@@ -14608,6 +14636,19 @@ class CppTargetCore {
 			+ "("
 			+ renderedArgs()
 			+ ")";
+	}
+
+	/** Use an Array constraint for member dispatch while retaining the template parameter in signatures. **/
+	static function constrainedArrayDispatchCppType(typeName:String, ?scope:CppRenderScope):String {
+		if (scope == null || scope.typeParamConstraints == null)
+			return typeName;
+		final clean = sanitizeIdentifier(StringTools.trim(typeName == null ? "" : typeName));
+		final constraint = scope.typeParamConstraints.get(clean);
+		final hint = removeTypeHintWhitespace(StringTools.trim(constraint == null ? "" : constraint));
+		if (sanitizeTypePath(typeBaseName(hint)) != "Array")
+			return typeName;
+		final args = genericTypeHintArgs(hint);
+		return args.length == 1 ? "std::vector<" + cppTypeHint(args[0], scope) + ">" : typeName;
 	}
 
 	static function jsonStaticCallExpr(receiverTypeName:String, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
@@ -15049,7 +15090,7 @@ class CppTargetCore {
 		final genericSpecialization = supportParamTypes.length == 0
 			&& fn != null
 			&& owner != null ? sameOwnerGenericCallSpecialization(fn, owner, args, "", scope, inferredArgTypes) : null;
-		final callParamTypes = instantiateGenericCallArrayParamTypes(inferredArgTypes, genericSpecialization);
+		final callParamTypes = instantiateGenericCallArrayParamTypes(fn, inferredArgTypes, genericSpecialization, scope);
 		final renderFunctionArgsStart = timingEnabled ? Sys.time() : 0.0;
 		final renderedArgs = if (supportParamTypes.length > 0) {
 			renderKnownCppParamCallArgs(supportParamTypes, args, scope);
@@ -15209,7 +15250,7 @@ class CppTargetCore {
 		if (explicitTypes.length == 0)
 			return null;
 		final renderedArgs = renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope,
-			instantiateGenericCallArrayParamTypes(inferredParamTypes, specialization));
+			instantiateGenericCallArrayParamTypes(fn, inferredParamTypes, specialization, scope));
 		return sanitizeIdentifier(name) + explicitTypes + "(" + renderedArgs.join(", ") + ")";
 	}
 
@@ -15239,18 +15280,30 @@ class CppTargetCore {
 		final emitted = emittedFunctionTypeParams(fn, returnType, callScope);
 		if (emitted.length == 0)
 			return null;
+		final emittedRaw = new Array<String>();
+		for (param in typeParams) {
+			final cppName = cppTypeParamName(param, callScope);
+			if (emitted.indexOf(cppName) >= 0)
+				emittedRaw.push(param);
+		}
 		final mapped = new haxe.ds.StringMap<String>();
 		unifyGenericCallTypeHints(HxFunctionDecl.getReturnTypeHint(fn), expectedType, emitted, mapped, scope);
 		unifyGenericCallTypeHints(returnType, explicitCallTypeArg(expectedType, scope), emitted, mapped, scope);
 		final params = HxFunctionDecl.getArgs(fn);
 		final count = params.length < args.length ? params.length : args.length;
 		for (i in 0...count) {
-			final rawHint = rawTypeHintForExpr(args[i], scope);
-			final actualHint = genericCallActualTypeHint(args[i], rawHint, scope);
-			unifyGenericCallTypeHints(HxFunctionArg.getTypeHint(params[i]), actualHint, emitted, mapped, scope);
-			if (inferredParamTypes != null && i < inferredParamTypes.length)
-				unifyGenericCallTypeHints(inferredParamTypes[i], actualHint, emitted, mapped, scope);
+			final paramHint = HxFunctionArg.getTypeHint(params[i]);
+			final directParam = genericTypeParamName(paramHint);
+			final relationOwnedEmptyArray = isEmptyArrayLiteral(args[i]) && genericArrayConstraintElementParam(fn, directParam).length > 0;
+			if (!relationOwnedEmptyArray) {
+				final rawHint = rawTypeHintForExpr(args[i], scope);
+				final actualHint = genericCallActualTypeHint(args[i], rawHint, scope);
+				unifyGenericCallTypeHints(paramHint, actualHint, emitted, mapped, scope);
+				if (inferredParamTypes != null && i < inferredParamTypes.length)
+					unifyGenericCallTypeHints(inferredParamTypes[i], actualHint, emitted, mapped, scope);
+			}
 		}
+		fillGenericArrayConstraintMappings(fn, emittedRaw, emitted, mapped);
 		final out = new Array<String>();
 		for (param in emitted) {
 			final clean = sanitizeIdentifier(param);
@@ -15259,7 +15312,7 @@ class CppTargetCore {
 				return null;
 			out.push(value);
 		}
-		return {typeParams: emitted, typeArgs: out};
+		return {rawTypeParams: emittedRaw, typeParams: emitted, typeArgs: out};
 	}
 
 	static function genericCallTypeArgs(specialization:Null<CppGenericCallSpecialization>):String {
@@ -15275,14 +15328,91 @@ class CppTargetCore {
 		literals need the specialization because their element type is part of the C++
 		literal syntax itself.
 	**/
-	static function instantiateGenericCallArrayParamTypes(paramTypes:Null<Array<String>>,
-			specialization:Null<CppGenericCallSpecialization>):Null<Array<String>> {
+	static function instantiateGenericCallArrayParamTypes(fn:HxFunctionDecl, paramTypes:Null<Array<String>>,
+			specialization:Null<CppGenericCallSpecialization>, ?scope:CppRenderScope):Null<Array<String>> {
 		if (paramTypes == null || paramTypes.length == 0 || specialization == null)
 			return paramTypes;
-		return [
-			for (typeName in paramTypes)
-				isCppVectorType(typeName) ? substituteCppTypeParams(typeName, specialization.typeParams, specialization.typeArgs) : typeName
-		];
+		final out = new Array<String>();
+		final args = fn == null ? [] : HxFunctionDecl.getArgs(fn);
+		for (i in 0...paramTypes.length) {
+			final typeName = paramTypes[i];
+			if (isCppVectorType(typeName)) {
+				out.push(substituteCppTypeParams(typeName, specialization.typeParams, specialization.typeArgs));
+				continue;
+			}
+			final rawParam = i < args.length ? genericTypeParamName(HxFunctionArg.getTypeHint(args[i])) : "";
+			final constrained = specializedArrayConstraintCppType(fn, rawParam, specialization);
+			out.push(constrained.length > 0 ? constrained : typeName);
+		}
+		return out;
+	}
+
+	static function isEmptyArrayLiteral(expr:HxExpr):Bool {
+		return switch (expr) {
+			case EArrayDecl(values):
+				values.length == 0;
+			case ECast(inner, _) | EUntyped(inner):
+				isEmptyArrayLiteral(inner);
+			case _:
+				false;
+		};
+	}
+
+	/** Return the related element parameter for constraints shaped exactly as `Array<A>`. **/
+	static function genericArrayConstraintElementParam(fn:HxFunctionDecl, rawParam:String):String {
+		final wanted = sanitizeIdentifier(rawParam == null ? "" : rawParam);
+		if (fn == null || wanted.length == 0)
+			return "";
+		final constraints = genericFunctionTypeConstraints(fn);
+		var constraint = "";
+		for (name in constraints.keys())
+			if (sanitizeIdentifier(name) == wanted)
+				constraint = constraints.get(name);
+		final hint = removeTypeHintWhitespace(StringTools.trim(constraint == null ? "" : constraint));
+		if (sanitizeTypePath(typeBaseName(hint)) != "Array")
+			return "";
+		final args = genericTypeHintArgs(hint);
+		return args.length == 1 ? genericTypeParamName(args[0]) : "";
+	}
+
+	static function rawTypeParamIndex(params:Array<String>, rawParam:String):Int {
+		final wanted = sanitizeIdentifier(rawParam == null ? "" : rawParam);
+		for (i in 0...params.length)
+			if (sanitizeIdentifier(params[i]) == wanted)
+				return i;
+		return -1;
+	}
+
+	/** Fill an unresolved carrier parameter from a previously resolved `B:Array<A>` relation. **/
+	static function fillGenericArrayConstraintMappings(fn:HxFunctionDecl, rawTypeParams:Array<String>, emitted:Array<String>,
+			mapped:haxe.ds.StringMap<String>):Void {
+		for (_ in 0...rawTypeParams.length) {
+			var changed = false;
+			for (i in 0...rawTypeParams.length) {
+				final target = emitted[i];
+				if (mapped.exists(target))
+					continue;
+				final elementParam = genericArrayConstraintElementParam(fn, rawTypeParams[i]);
+				final elementIndex = rawTypeParamIndex(rawTypeParams, elementParam);
+				if (elementIndex < 0)
+					continue;
+				final elementType = mapped.get(emitted[elementIndex]);
+				if (elementType == null || elementType.length == 0)
+					continue;
+				mapped.set(target, "std::vector<" + elementType + ">");
+				changed = true;
+			}
+			if (!changed)
+				break;
+		}
+	}
+
+	static function specializedArrayConstraintCppType(fn:HxFunctionDecl, rawParam:String, specialization:CppGenericCallSpecialization):String {
+		final elementParam = genericArrayConstraintElementParam(fn, rawParam);
+		final elementIndex = rawTypeParamIndex(specialization.rawTypeParams, elementParam);
+		if (elementIndex < 0 || elementIndex >= specialization.typeArgs.length)
+			return "";
+		return "std::vector<" + specialization.typeArgs[elementIndex] + ">";
 	}
 
 	/**
@@ -18058,6 +18188,18 @@ class CppTargetCore {
 				declared = true;
 		if (!declared)
 			return "";
+		if (scope != null && genericArrayConstraintElementParam(fn, returnParam).length > 0) {
+			final owner = currentOrInheritedOwnerMethodOwner(HxFunctionDecl.getName(fn), scope);
+			if (owner != null) {
+				final inferredParamTypes = inferredFunctionArgCppTypes(fn, owner, scope.classByName, scope.allClasses);
+				final specialization = sameOwnerGenericCallSpecialization(fn, owner, args, "", scope, inferredParamTypes);
+				if (specialization != null) {
+					final index = rawTypeParamIndex(specialization.rawTypeParams, returnParam);
+					if (index >= 0 && index < specialization.typeArgs.length)
+						return specialization.typeArgs[index];
+				}
+			}
+		}
 		final params = HxFunctionDecl.getArgs(fn);
 		final count = params.length < args.length ? params.length : args.length;
 		for (i in 0...count) {

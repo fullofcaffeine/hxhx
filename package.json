@@ -276,6 +276,7 @@
     "test:cpp-generic-constructor-oracle-seed": "bash scripts/hxhx/run-cpp-generic-constructor-oracle-seed.sh",
     "test:cpp-generic-call-array-oracle-seed": "bash scripts/hxhx/run-cpp-generic-call-array-oracle-seed.sh",
     "test:cpp-constrained-generic-arity-oracle-seed": "bash scripts/hxhx/run-cpp-constrained-generic-arity-oracle-seed.sh",
+    "test:cpp-constrained-generic-relation-oracle-seed": "bash scripts/hxhx/run-cpp-constrained-generic-relation-oracle-seed.sh",
     "test:cpp-testjson-oracle-seed": "bash scripts/hxhx/run-cpp-testjson-dynamic-numeric-oracle-seed.sh",
     "test:upstream:runci-macro-stage3-emit-runner": "bash scripts/hxhx/run-upstream-runci-macro-stage3-emit-runner.sh",
     "test:upstream:stage2": "bash scripts/hxhx/stage2-repro.sh",

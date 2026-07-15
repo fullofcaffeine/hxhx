@@ -280,8 +280,8 @@ class ParserStageScanHelpers {
 		return params == null || params.length == 0 ? [] : ["__hxhx_type_params=" + params.join(",")];
 	}
 
-	static function functionTypeParamsMetadata(params:Array<String>):Array<String> {
-		return params == null || params.length == 0 ? [] : ["__hxhx_fn_type_params=" + params.join(",")];
+	static function functionTypeParamsMetadata(source:String, start:Int, end:Int):Array<String> {
+		return end <= start ? [] : HxFunctionTypeParamMetadata.fromGenericText(source.substring(start, end));
 	}
 
 	/**
@@ -1782,6 +1782,7 @@ class ParserStageScanHelpers {
 						nameTok = scanNextToken(source, nameTok.nextPos);
 					final fnName = (nameTok.isIdent && nameTok.text.length > 0) ? nameTok.text : "";
 					i = nameTok.nextPos;
+					final functionTypeParamsStart = i;
 					final functionTypeParams = scanTypeParameterNames(source, i);
 					i = functionTypeParams.nextPos;
 
@@ -1896,7 +1897,8 @@ class ParserStageScanHelpers {
 						i = bodyCapture.nextPos;
 
 					if (fnName.length > 0) {
-						final metadata = pendingMetadata.copy().concat(functionTypeParamsMetadata(functionTypeParams.params));
+						final metadata = pendingMetadata.copy()
+							.concat(functionTypeParamsMetadata(source, functionTypeParamsStart, functionTypeParams.nextPos));
 						if (sawMacro)
 							metadata.push("macro");
 						if (sawOverload)

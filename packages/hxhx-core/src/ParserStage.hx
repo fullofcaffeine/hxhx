@@ -1374,8 +1374,8 @@ class ParserStage {
 		return params == null || params.length == 0 ? [] : ["__hxhx_type_params=" + params.join(",")];
 	}
 
-	static function functionTypeParamsMetadata(params:Array<String>):Array<String> {
-		return params == null || params.length == 0 ? [] : ["__hxhx_fn_type_params=" + params.join(",")];
+	static function functionTypeParamsMetadata(source:String, start:Int, end:Int):Array<String> {
+		return end <= start ? [] : HxFunctionTypeParamMetadata.fromGenericText(source.substring(start, end));
 	}
 
 	/**
@@ -2685,6 +2685,7 @@ class ParserStage {
 						nameTok = scanNextToken(source, nameTok.nextPos);
 					final fnName = (nameTok.isIdent && nameTok.text.length > 0) ? nameTok.text : "";
 					i = nameTok.nextPos;
+					final functionTypeParamsStart = i;
 					final functionTypeParams = scanTypeParameterNames(source, i);
 					i = functionTypeParams.nextPos;
 
@@ -2775,7 +2776,8 @@ class ParserStage {
 						i = bodyCapture.nextPos;
 
 					if (fnName.length > 0) {
-						final metadata = pendingMetadata.copy().concat(functionTypeParamsMetadata(functionTypeParams.params));
+						final metadata = pendingMetadata.copy()
+							.concat(functionTypeParamsMetadata(source, functionTypeParamsStart, functionTypeParams.nextPos));
 						if (sawMacro)
 							metadata.push("macro");
 						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", body, "", metadata, null, null, bodyText));
@@ -3741,7 +3743,7 @@ class ParserStage {
 		return StringTools.trim(source.substr(hintStart));
 	}
 
-	static function sourceFunctionTypeParams(name:String, ?source:String, methodBodyStart:Int = -1, ?argNames:Array<String>):Array<String> {
+	static function sourceFunctionTypeMetadata(name:String, ?source:String, methodBodyStart:Int = -1, ?argNames:Array<String>):Array<String> {
 		if (source == null || source.length == 0 || name == null || name.length == 0)
 			return [];
 		final needle = "function " + name;
@@ -3761,7 +3763,7 @@ class ParserStage {
 			if (!sourceArgHintsMatchNames(hints, argNames))
 				return [];
 			final genericText = StringTools.trim(source.substring(afterName, open));
-			return parseSourceTypeParamNames(genericText);
+			return HxFunctionTypeParamMetadata.fromGenericText(genericText);
 		}
 		final anchoredIndex = methodBodyStart > 0 ? source.lastIndexOf(needle, methodBodyStart) : -1;
 		final anchoredParams = paramsAt(anchoredIndex);
@@ -3778,19 +3780,6 @@ class ParserStage {
 			searchFrom = fnIndex + needle.length;
 		}
 		return [];
-	}
-
-	static function parseSourceTypeParamNames(text:String):Array<String> {
-		final params = new Array<String>();
-		final trimmed = StringTools.trim(text == null ? "" : text);
-		if (!StringTools.startsWith(trimmed, "<") || !StringTools.endsWith(trimmed, ">"))
-			return params;
-		for (segment in splitTopLevelComma(trimmed.substr(1, trimmed.length - 2))) {
-			final name = sourceTypeParamName(segment);
-			if (name.length > 0)
-				params.push(name);
-		}
-		return params;
 	}
 
 	/**
@@ -3817,11 +3806,6 @@ class ParserStage {
 			|| (c >= "a".code && c <= "z".code)
 			|| (c >= "0".code && c <= "9".code)
 			|| c == "_".code;
-	}
-
-	static function sourceTypeParamName(text:String):String {
-		final match = ~/^[ \t\r\n]*([A-Za-z_][A-Za-z0-9_]*)/;
-		return match.match(text == null ? "" : text) ? match.matched(1) : "";
 	}
 
 	static function sourceArgHintsMatchNames(hints:Array<{
@@ -4079,7 +4063,7 @@ class ParserStage {
 		final args = new Array<HxFunctionArg>();
 		final argNames = protocolArgNames(argsPayload);
 		final sourceHints = sourceSignatureArgHints(name, source, methodBodyStart, argNames);
-		final functionMetadata = functionTypeParamsMetadata(sourceFunctionTypeParams(name, source, methodBodyStart, argNames));
+		final functionMetadata = sourceFunctionTypeMetadata(name, source, methodBodyStart, argNames);
 		if (argsPayload.length > 0) {
 			for (a in argsPayload.split(",")) {
 				if (a.length == 0)

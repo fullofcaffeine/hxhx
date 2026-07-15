@@ -1336,10 +1336,6 @@ class HxParser {
 		return params;
 	}
 
-	static function functionTypeParamsMetadata(params:Array<String>):Array<String> {
-		return params == null || params.length == 0 ? [] : ["__hxhx_fn_type_params=" + params.join(",")];
-	}
-
 	function skipBalancedBraces():Void {
 		// Called when current token is '{' already consumed by caller.
 		var depth = 1;
@@ -4523,7 +4519,11 @@ class HxParser {
 		}
 		// Generic function declarations can carry a type-parameter group immediately after the
 		// function name, e.g. `static function coalesce<T>(left:T, right:T):T;`.
-		final functionTypeParams = isOtherChar("<") ? readTypeParameterNamesFromCurrentAngles() : [];
+		final functionTypeMetadata = if (isOtherChar("<")) {
+			final genericStart = currentIndex();
+			readTypeParameterNamesFromCurrentAngles();
+			HxFunctionTypeParamMetadata.fromGenericText(sliceSource(genericStart, currentIndex()));
+		} else [];
 		expect(TLParen, "'('");
 
 		final args = new Array<HxFunctionArg>();
@@ -4614,8 +4614,8 @@ class HxParser {
 				}
 		}
 
-		return new HxFunctionDecl(name, visibility, isStatic, args, returnType, body, capturedReturnStringLiteral,
-			metadata.concat(functionTypeParamsMetadata(functionTypeParams)), startPos, cur.getPos(), bodyText);
+		return new HxFunctionDecl(name, visibility, isStatic, args, returnType, body, capturedReturnStringLiteral, metadata.concat(functionTypeMetadata),
+			startPos, cur.getPos(), bodyText);
 	}
 
 	function parseClassMembers():{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {

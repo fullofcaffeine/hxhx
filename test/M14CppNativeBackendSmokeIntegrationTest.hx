@@ -2802,6 +2802,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		].join("\n");
 		final module = new HxParser(source).parseModule("GenericReflection");
 		final owner = HxModuleDecl.getMainClass(module);
+		final gf3 = HxClassDecl.getFunctions(owner).filter(fn -> HxFunctionDecl.getName(fn) == "gf3")[0];
+		assertTrue(HxFunctionDecl.getMetadata(gf3).indexOf("__hxhx_fn_type_constraint=A:haxe.Constraints.Constructible<String->Void>") >= 0,
+			"Haxe parser should preserve the Constructible constraint for C++ type flow");
+		assertTrue(HxFunctionDecl.getMetadata(gf3).indexOf("__hxhx_fn_type_constraint=B:Array<A>") >= 0,
+			"Haxe parser should preserve the relation between B and Array<A>");
 		final names = new StringMap<Bool>();
 		names.set("GenericReflection", true);
 		final classes = new StringMap<HxClassDecl>();
@@ -2815,7 +2820,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ constrained gf3 calls should pass source arguments and explicit type args");
 		assertContains(lines, "return b;", "C++ constrained gf3 helpers should return the generic carrier instead of stringifying an unbound name");
 		assertTrue(lines.indexOf("static std::string gf3()") < 0, "C++ constrained gf3 helpers should not collapse to a zero-arg string helper");
-		assertTrue(lines.indexOf("b.push(clone);") >= 0, "C++ constrained gf3 body should still reference the value parameter b");
+		assertTrue(lines.indexOf("b.push_back(clone);") >= 0, "C++ constrained gf3 body should lower Array.push through the constrained value parameter b");
 	}
 
 	static function assertCppStringParamCallsCoerceScalarLiterals():Void {
@@ -4397,6 +4402,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function constrainedGenericRelationProgram():GenIrProgram {
+		final sourcePath = "test/oracle/cpp_constrained_generic_relation_seed/src/Main.hx";
+		final typed = TyperStage.typeModule(ParserStage.parse(File.getContent(sourcePath), sourcePath));
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function mathExternProgram():GenIrProgram {
 		final src = [
 			"extern class Math {",
@@ -4470,6 +4481,42 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(run.code == 0, "C++ generic-array smoke executable failed: " + run.stderr);
 			final expected = File.getContent("test/oracle/cpp_generic_call_array_seed/expected.stdout");
 			assertTrue(run.stdout == expected, "unexpected C++ generic-array smoke stdout: " + run.stdout);
+		}
+		deleteRecursive(root);
+	}
+
+	/**
+		Compile and run a constrained generic whose empty array must inherit its
+		element type from another type parameter. Generated source also pins `new A`
+		and Array.push lowering inside the templated body.
+	**/
+	public static function runConstrainedGenericRelationChecks():Void {
+		BackendRegistry.clearDynamicRegistrations();
+		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_constrained_generic_relation"]);
+		deleteRecursive(root);
+		FileSystem.createDirectory(root);
+		final program = constrainedGenericRelationProgram();
+		final sourceOnlyDir = Path.join([root, "source-only"]);
+		final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program, context(sourceOnlyDir, true, true));
+		final source = File.getContent(sourceOnly.entryPath);
+		assertContains(source, "template<typename A, typename B>", "C++ constrained-relation smoke should preserve both template parameters");
+		assertContains(source, "static B appendClone(A seed, B values)", "C++ constrained-relation smoke should preserve the relation-owned carrier signature");
+		assertContains(source, "appendClone<std::shared_ptr<RelationToken>, std::vector<std::shared_ptr<RelationToken>>>",
+			"C++ constrained-relation calls should specialize B as Array<A> for both populated and empty literals");
+		assertTrue(source.indexOf("appendClone<std::shared_ptr<RelationToken>, std::vector<int>>") < 0,
+			"C++ constrained-relation empty literals must not default B to Array<Int>");
+		assertContains(source, "std::make_shared<typename A::element_type>", "C++ constrained-relation bodies should construct the pointee represented by A");
+		assertContains(source, "values.push_back(clone);", "C++ Array-constrained type parameters should lower push through std::vector");
+		assertTrue(source.indexOf("TestNullCoalescing_A") < 0, "C++ constrained generic construction must not resolve A to an unrelated same-named class");
+
+		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
+			final buildDir = Path.join([root, "build"]);
+			final built = BackendRegistry.createForTarget("cpp-native").emit(program, context(buildDir, true, false));
+			assertTrue(built.builtExecutable, "C++ constrained-relation smoke should build an executable");
+			final run = commandOutput(built.entryPath, []);
+			assertTrue(run.code == 0, "C++ constrained-relation smoke executable failed: " + run.stderr);
+			final expected = File.getContent("test/oracle/cpp_constrained_generic_relation_seed/expected.stdout");
+			assertTrue(run.stdout == expected, "unexpected C++ constrained-relation smoke stdout: " + run.stdout);
 		}
 		deleteRecursive(root);
 	}
@@ -11837,6 +11884,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 
 	public static function runGeneratedSourceChecks():Void {
 		runGenericCallArrayLiteralChecks();
+		runConstrainedGenericRelationChecks();
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
 		assertTrue(descriptor != null, "missing cpp-native descriptor");
