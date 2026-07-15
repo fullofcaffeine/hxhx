@@ -25,6 +25,7 @@ typedef CppLocalTypeInferenceApi = {
 	var isEnumCarrierClassName:(String, CppRenderScope) -> Bool;
 	var hasStaticEnumConstructorMethod:(String, String, CppRenderScope) -> Bool;
 	var hasStaticEnumMetadataField:(String, String, CppRenderScope) -> Bool;
+	var arrowMapLiteralCppType:(HxExpr, CppRenderScope) -> String;
 	var iterableElementType:(HxExpr, CppRenderScope) -> String;
 	var keyValueLoopTypes:(HxExpr, CppRenderScope) -> Array<String>;
 	var withScopedLocal:(CppRenderScope, String, String, Void->Void) -> Void;
@@ -34,7 +35,8 @@ typedef CppLocalTypeInferenceApi = {
 	C++ local type inference passes that run before source rendering.
 
 	`CppTargetCore` owns emission. This module owns focused pre-render inference
-	traversals that refine local type overrides without writing C++ source. Keep
+	traversals that refine local type overrides without writing C++ source. This
+	includes key/value carriers already present in arrow-map literals. Keep
 	new local/arg/return flow passes here when they are reusable analysis over
 	`HxStmt`/`HxExpr`; leave target-specific rendering decisions in
 	`CppTargetCore`.
@@ -671,7 +673,12 @@ class CppLocalTypeInference {
 					collectStringMapLocalTypeOverridesFromExpr(init, scope, candidates);
 				final local = declareLocalName(name, scope);
 				final mapClass = mapClassNameFromNewExpr(init);
-				if (StringTools.trim(typeHint == null ? "" : typeHint).length == 0 && mapClass.length > 0) {
+				final unhinted = StringTools.trim(typeHint == null ? "" : typeHint).length == 0;
+				final arrowMapType = init == null ? "" : api.arrowMapLiteralCppType(init, scope);
+				if (unhinted && arrowMapType.length > 0) {
+					scope.localTypeOverrides.set(local, arrowMapType);
+					scope.localTypes.set(local, arrowMapType);
+				} else if (unhinted && mapClass.length > 0) {
 					candidates.set(local, mapClass);
 					scope.localTypes.set(local, defaultMapLocalType(mapClass));
 				} else {

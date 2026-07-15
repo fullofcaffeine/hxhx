@@ -6577,3 +6577,79 @@ crossed, and GPT or Oracle review was deliberately skipped because the invalid
 wrapper carrier, exact typed metadata, upstream behavior, and focused
 generic/nongeneric and ordinary-class controls identify a bounded C++
 target-model seam.
+
+## 2026-07-14 Arrow Map Literal Carriers
+
+Follow-up bead `haxe_ocaml-wisp-16g` restores the next strict native compiler
+contract. In plain language, Haxe arrow literals such as `[1 => "one"]` are
+Map values, but C++ local inference previously treated every bracket literal
+as an Array. Generated code therefore declared a vector of key/value pairs and
+then tried to call Map operations such as `get` on that vector.
+
+The documented `CppMapLiteral` module now recognizes only non-empty bracket
+literals whose entries are all arrow expressions. It infers a shared
+`Map<K, V>` carrier and renders construction as a small immediately invoked
+lambda that creates the Map, calls `set` for each entry in order, and returns
+the Map. Mixed or ordinary bracket literals continue through Array inference;
+there is no one-off rewrite of `.get` and no upstream-test special case.
+
+The generic target-owned Map implementation is extracted into the documented
+`CppMapRuntime` module instead of remaining an inline emitter stub. It provides
+the coherent `set`, optional `get`, and key-ordering surface used by integer,
+String, object-identity, and enum-value keys. When an arrow literal is the only
+reason Map is reachable, C++ missing-type support emits this same runtime
+module; the compiler no longer depends on a synthetic fixture declaration to
+make the generated program build.
+
+The original repo-owned upstream oracle covers integer, String, object
+identity and missing-key behavior, enum keys, and an ordinary Array control.
+Upstream Haxe 4.3.7 passes all 13 observations. The focused native C++ program
+builds and runs without injecting a fake Map class, and the full generated C++
+smoke remains green. The parser/preparation guard also pins that ordinary
+arrays and pair-shaped expressions retain their prior carriers.
+
+A fresh final-source compiler build passed its current-source provenance
+validator. With stage0 explicitly forbidden, source-only verification found
+all four expected specialized Map carriers, and a nine-observation runtime
+subset built and ran with exact stdout. The retained evidence is
+`.artifacts/full1/cpp-strict-current/focused-arrow-map-current-source-source-only.log`
+and
+`.artifacts/full1/cpp-strict-current/focused-arrow-map-current-source-runtime.log`.
+The runtime subset intentionally excludes the fixture's reflection-only type
+checks; those pull in an independent direct-fixture Type/enum metadata-ordering
+surface, while the source-only carrier proof and executable Map behavior keep
+this bead's claim bounded.
+
+The exact final-source strict C++ probe rendered all 384 reachable helpers,
+reached the host compiler, and completed expected-red in 390 seconds. The old
+arrow-literal vector/`get` diagnostics are absent. `TestXML.testBasic` rendered
+in 0.481474 seconds, its complete class in 4.349909 seconds, and
+`TestType.testOpArrow` in 0.361472 seconds. These are frontier observations,
+not a broad performance claim. The retained log is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-arrow-map-carrier.log`.
+
+The first remaining native-build error is now generated
+`TestMain.cpp:16562`: an empty `new Map()` passed to a
+`Map<Int, String>` parameter is still constructed as `Map<any, any>`.
+Follow-up `haxe_ocaml-p3k4i` owns that expected-type propagation seam. Later
+abstract operator, map-comprehension, and reflective-abstract diagnostics stay
+separate from both Map-literal and empty-constructor work.
+
+README Goals and North Star progress bars remain unchanged. Strict C++ still
+does not compile or run the complete upstream unit program, so this internal
+frontier move does not change production readiness. `CppTargetCore.hx` remains
+a red mega-file at 26,734 lines, but literal recognition and runtime policy are
+isolated in 85-line and 102-line target-specific modules. The core change is
+bounded dispatch, dependency, and missing-support glue at existing seams;
+broader extraction remains owned by `haxe_ocaml-36ec`. No public example,
+public API, workflow, release contract, or committed bootstrap snapshot
+changed.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+checkout was used only as a behavior oracle, and the permissively licensed
+stdlib Map declarations and C++ Map implementations were read to confirm the
+public API and key semantics before implementation. The committed fixture,
+runtime module, literal policy, and tests are original repo-owned work.
+`thinking:xhigh` was not crossed, and GPT or Oracle review was deliberately
+skipped because the exact wrong carrier, typed arrow shape, upstream behavior,
+and focused Array/enum controls identify a bounded target-owned seam.

@@ -2779,15 +2779,56 @@ class CppTargetCore {
 
 	static function renderMissingTypeSupportClasses(mainClass:HxClassDecl, classLookup:CppClassLookup,
 			reachableHelpers:Array<HxClassDecl>):Array<Array<String>> {
-		if (classLookup.names.exists("Type") || !classesNeedTypeResolverSupport([mainClass].concat(reachableHelpers), classLookup))
-			return [];
 		final out = new Array<Array<String>>();
+		final runtimeClasses = [mainClass].concat(reachableHelpers);
+		if (!classLookup.names.exists("Map") && classesNeedMapRuntime(runtimeClasses, classLookup))
+			out.push(CppMapRuntime.lines(["K", "V"]));
+		if (classLookup.names.exists("Type") || !classesNeedTypeResolverSupport(runtimeClasses, classLookup))
+			return out;
 		if (!classLookup.names.exists("Class"))
 			out.push(CppRuntimeSupport.classMetaSupportLines());
 		if (!classLookup.names.exists("Enum"))
 			out.push(CppRuntimeSupport.enumMetaSupportLines());
 		out.push(renderMissingTypeSupportLines(classLookup));
 		return out;
+	}
+
+	/** Return whether reachable code needs the target Map runtime without a resolved Map declaration. **/
+	static function classesNeedMapRuntime(classes:Array<HxClassDecl>, classLookup:CppClassLookup):Bool {
+		for (cls in classes)
+			if (classNeedsMapRuntime(cls, classLookup))
+				return true;
+		return false;
+	}
+
+	static function classNeedsMapRuntime(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
+		var needed = false;
+		function add(name:String):Void {
+			if (sanitizeTypePath(typeBaseName(name == null ? "" : name)) == "Map")
+				needed = true;
+		}
+		addTypeHintDependencies(baseTypeName(cls), add);
+		for (iface in implementedInterfaceNames(cls, classLookup))
+			addTypeHintDependencies(iface, add);
+		for (field in HxClassDecl.getFields(cls)) {
+			addTypeHintDependencies(HxFieldDecl.getTypeHint(field), add);
+			final init = HxFieldDecl.getInit(field);
+			if (init != null)
+				addExprClassDependencies(init, add);
+			if (needed)
+				return true;
+		}
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final fnScope = renderScope(cls, classLookup, "void");
+			applyFunctionTypeParams(fnScope, fn);
+			addTypeHintDependencies(HxFunctionDecl.getReturnTypeHint(fn), add, fnScope);
+			for (arg in HxFunctionDecl.getArgs(fn))
+				addTypeHintDependencies(HxFunctionArg.getTypeHint(arg), add, fnScope);
+			addStmtClassDependencies(HxFunctionDecl.getBody(fn), add, fnScope);
+			if (needed)
+				return true;
+		}
+		return false;
 	}
 
 	static function renderMissingTypeSupportLines(classLookup:CppClassLookup):Array<String> {
@@ -3406,6 +3447,8 @@ class CppTargetCore {
 				for (arg in args)
 					addExprClassDependencies(arg, add, scope);
 			case EArrayDecl(values):
+				if (CppMapLiteral.isElements(values))
+					add("Map");
 				for (value in values)
 					addExprClassDependencies(value, add, scope);
 			case EArrayAccess(array, index):
@@ -4883,48 +4926,7 @@ class CppTargetCore {
 		var typeParams = genericClassTemplateParams(cls);
 		if (typeParams.length < 2)
 			typeParams = ["K", "V"];
-		final keyType = typeParams[0];
-		final valueType = typeParams[1];
-		return [
-			genericTemplatePrefix(typeParams),
-			"struct Map {",
-			"  std::map<" + keyType + ", " + valueType + "> values;",
-			"  Map() {}",
-			"  void set(" + keyType + " key, " + valueType + " value) {",
-			"    values[key] = value;",
-			"  }",
-			"  " + valueType + " get(" + keyType + " key) {",
-			"    auto found = values.find(key);",
-			"    return found == values.end() ? " + valueType + "() : found->second;",
-			"  }",
-			"  " + valueType + "& operator[](" + keyType + " key) {",
-			"    return values[key];",
-			"  }",
-			"  const " + valueType + "& operator[](" + keyType + " key) const {",
-			"    return values.at(key);",
-			"  }",
-			"  bool exists(" + keyType + " key) {",
-			"    return values.find(key) != values.end();",
-			"  }",
-			"  bool remove(" + keyType + " key) {",
-			"    return values.erase(key) > 0;",
-			"  }",
-			"  std::shared_ptr<__hxhx_iterator<" + keyType + ">> keys() {",
-			"    std::vector<" + keyType + "> out;",
-			"    for (const auto& entry : values) out.push_back(entry.first);",
-			"    return __hxhx_vector_iterator_of(out);",
-			"  }",
-			"  std::string toString() {",
-			"    std::vector<std::pair<" + keyType + ", " + valueType + ">> out;",
-			"    for (const auto& entry : values) out.push_back(std::make_pair(entry.first, entry.second));",
-			"    return __hxhx_map_literal_to_string(out);",
-			"  }",
-			"};",
-			genericTemplatePrefix(typeParams),
-			"std::shared_ptr<Map<" + typeParams.join(", ") + ">> __hxhx_make_shared_Map() {",
-			"  return std::make_shared<Map<" + typeParams.join(", ") + ">>();",
-			"}"
-		];
+		return CppMapRuntime.lines(typeParams);
 	}
 
 	static function renderArrayBackedAbstractClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
@@ -9739,6 +9741,7 @@ class CppTargetCore {
 			isEnumCarrierClassName: isEnumCarrierClassName,
 			hasStaticEnumConstructorMethod: function(owner, constructorName, scope) return classMethodDecl(owner, constructorName, true, scope) != null,
 			hasStaticEnumMetadataField: classHasStaticEnumMetadataField,
+			arrowMapLiteralCppType: arrowMapLiteralCppType,
 			iterableElementType: iterableElementType,
 			keyValueLoopTypes: keyValueLoopTypes,
 			withScopedLocal: withScopedLocal
@@ -12577,6 +12580,9 @@ class CppTargetCore {
 		final macroApiCall = macroApiCallExprForExpected(expr, expectedType, scope);
 		if (macroApiCall != null)
 			return macroApiCall;
+		final arrowMapLiteral = arrowMapLiteralInitExpr(expr, expectedType, scope);
+		if (arrowMapLiteral != null)
+			return arrowMapLiteral;
 		final abstractProjection = abstractToProjectionExprForExpectedType(expr, expectedType, scope);
 		if (abstractProjection != null)
 			return abstractProjection;
@@ -16512,7 +16518,8 @@ class CppTargetCore {
 		final access = isCppReferenceType(receiverCppType) ? "->" : ".";
 		final getExpr = mapLocal + access + "get(" + keyLocal + ")";
 		if (templateArgsFromExpectedClassType("StringMap", receiverCppType).length == 1
-			|| templateArgsFromExpectedClassType("IntMap", receiverCppType).length == 1)
+			|| templateArgsFromExpectedClassType("IntMap", receiverCppType).length == 1
+			|| templateArgsFromExpectedClassType("Map", receiverCppType).length == 2)
 			return getExpr + ".value_or(" + valueType + "{})";
 		return getExpr;
 	}
@@ -21184,6 +21191,8 @@ class CppTargetCore {
 		if (classBackedAbstractString != null)
 			return classBackedAbstractString;
 		final explicitExprType = exprCppType(expr, scope);
+		if (cppOptionalInnerType(explicitExprType).length > 0)
+			return "__hxhx_stringify(" + optionalStorageExpr(expr, scope) + ")";
 		if (isCppEnumCarrierReferenceType(explicitExprType, scope))
 			return "__hxhx_stringify(" + renderExpr(expr, scope) + ")";
 		if (classNameFromCppExprType(explicitExprType, scope) != null)
@@ -23478,29 +23487,23 @@ class CppTargetCore {
 	}
 
 	static function isMapLiteralElements(elements:Array<HxExpr>):Bool {
-		if (elements == null || elements.length == 0)
-			return false;
-		for (element in elements) {
-			switch (element) {
-				case EBinop("=>", _, _):
-				case _:
-					return false;
-			}
-		}
-		return true;
+		return CppMapLiteral.isElements(elements);
 	}
 
 	static function mapLiteralPairCppType(elements:Array<HxExpr>, ?scope:CppRenderScope):String {
-		return switch (elements[0]) {
-			case EBinop("=>", key, value):
-				"std::pair<"
-				+ mapLiteralOperandCppType(key, scope)
-				+ ", "
-				+ mapLiteralOperandCppType(value, scope)
-				+ ">";
-			case _:
-				"std::pair<std::string, std::string>";
-		};
+		return CppMapLiteral.pairCppType(elements, scope, mapLiteralOperandCppType);
+	}
+
+	static function arrowMapLiteralCppType(expr:HxExpr, ?scope:CppRenderScope):String {
+		return CppMapLiteral.cppType(expr, scope, mapLiteralOperandCppType);
+	}
+
+	static function arrowMapLiteralInitExpr(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		final typeArgs = templateArgsFromExpectedClassType("Map", expectedType);
+		if (typeArgs.length != 2)
+			return null;
+		return CppMapLiteral.renderInitExpr(expr, typeArgs[0], typeArgs[1], scope,
+			function(value, typeName, valueScope) return valueExprForExpectedType(value, typeName, valueScope));
 	}
 
 	static function mapLiteralOperandCppType(expr:HxExpr, ?scope:CppRenderScope):String {

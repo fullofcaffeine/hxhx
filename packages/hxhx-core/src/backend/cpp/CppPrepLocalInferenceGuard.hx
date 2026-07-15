@@ -90,6 +90,8 @@ class CppPrepLocalInferenceGuard {
 		if (hasTypeHint(typeHint))
 			return false;
 		return switch (init) {
+			case EArrayDecl(elements):
+				CppMapLiteral.isElements(elements);
 			case ENew(typePath, _):
 				switch (typePathBaseName(typePath)) {
 					case "Map" | "StringMap" | "IntMap":

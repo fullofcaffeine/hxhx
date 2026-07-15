@@ -4414,6 +4414,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function arrowMapLiteralProgram():GenIrProgram {
+		final sourcePath = "test/oracle/cpp_arrow_map_literal_seed/src/Main.hx";
+		final typed = TyperStage.typeModule(ParserStage.parse(File.getContent(sourcePath), sourcePath));
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function mathExternProgram():GenIrProgram {
 		final src = [
 			"extern class Math {",
@@ -4591,6 +4597,47 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(run.code == 0, "C++ abstract conversion smoke executable failed: " + run.stderr);
 			final expected = File.getContent("test/oracle/cpp_abstract_underlying_conversion_seed/expected.stdout");
 			assertTrue(run.stdout == expected, "unexpected C++ abstract conversion smoke stdout: " + run.stdout);
+		}
+		deleteRecursive(root);
+	}
+
+	/**
+		Compile and run unhinted arrow literals through their Map carrier.
+
+		The fixture covers integer, string, object, and enum keys. Its ordinary
+		array pins the negative control so Map recognition cannot reclassify every
+		array literal as target map storage.
+	**/
+	public static function runArrowMapLiteralChecks():Void {
+		BackendRegistry.clearDynamicRegistrations();
+		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_arrow_map_literal"]);
+		deleteRecursive(root);
+		FileSystem.createDirectory(root);
+		final program = arrowMapLiteralProgram();
+		final sourceOnlyDir = Path.join([root, "source-only"]);
+		final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program, context(sourceOnlyDir, true, true));
+		final source = File.getContent(sourceOnly.entryPath);
+		assertContains(source, "struct Map {", "C++ arrow literals should materialize the target Map runtime even without a resolved stdlib Map module");
+		assertContains(source, "__hxhx_make_shared_Map<int, std::string>()", "C++ integer-key arrow literals should construct a typed Map carrier");
+		assertContains(source, "__hxhx_make_shared_Map<std::string, int>()", "C++ string-key arrow literals should construct a typed Map carrier");
+		assertContains(source, "__hxhx_make_shared_Map<std::shared_ptr<ArrowObjectKey>, std::string>()",
+			"C++ object-key arrow literals should preserve the object carrier");
+		assertContains(source, "__hxhx_make_shared_Map<std::shared_ptr<ArrowMarker>, int>()", "C++ enum-key arrow literals should preserve the enum carrier");
+		assertContains(source, "__hxhx_map_literal->set(1, std::string(\"two\"))", "C++ arrow literal entries should initialize Map storage through set");
+		assertContains(source, "ints->get(1)", "C++ arrow literal locals should retain Map member dispatch");
+		assertContains(source, "__hxhx_is_type(ints, \"haxe.ds.IntMap\")", "C++ Map carriers should preserve the observable integer-key specialization");
+		assertContains(source, "__hxhx_is_type(strings, \"haxe.ds.StringMap\")", "C++ Map carriers should preserve the observable string-key specialization");
+		assertContains(source, "std::vector<int> ordinary = std::vector<int>{1, 2, 3};", "C++ ordinary array literals should remain vectors");
+		assertTrue(source.indexOf("std::vector<std::pair<int, std::string>> ints") < 0, "C++ arrow Map locals should not fall back to pair vectors");
+
+		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
+			final buildDir = Path.join([root, "build"]);
+			final built = BackendRegistry.createForTarget("cpp-native").emit(program, context(buildDir, true, false));
+			assertTrue(built.builtExecutable, "C++ arrow map literal smoke should build an executable");
+			final run = commandOutput(built.entryPath, []);
+			assertTrue(run.code == 0, "C++ arrow map literal smoke executable failed: " + run.stderr);
+			final expected = File.getContent("test/oracle/cpp_arrow_map_literal_seed/expected.stdout");
+			assertTrue(run.stdout == expected, "unexpected C++ arrow map literal smoke stdout: " + run.stdout);
 		}
 		deleteRecursive(root);
 	}
@@ -11960,6 +12007,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		runGenericCallArrayLiteralChecks();
 		runConstrainedGenericRelationChecks();
 		runAbstractUnderlyingConversionChecks();
+		runArrowMapLiteralChecks();
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
 		assertTrue(descriptor != null, "missing cpp-native descriptor");
@@ -13983,7 +14031,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	}
 
 	static function main():Void {
-		switch (M14SmokeGroupSelection.selected(["render", "generated", "generic-call-array", "abstract-underlying-conversion"])) {
+		switch (M14SmokeGroupSelection.selected([
+			"render",
+			"generated",
+			"generic-call-array",
+			"abstract-underlying-conversion",
+			"arrow-map-literal"
+		])) {
 			case "all":
 				runRenderChecks();
 				runGeneratedSourceChecks();
@@ -13995,6 +14049,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				runGenericCallArrayLiteralChecks();
 			case "abstract-underlying-conversion":
 				runAbstractUnderlyingConversionChecks();
+			case "arrow-map-literal":
+				runArrowMapLiteralChecks();
 			case _:
 		}
 	}
