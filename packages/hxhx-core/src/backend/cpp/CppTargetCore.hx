@@ -364,12 +364,18 @@ class CppTargetCore {
 		if (!traceCppScopeStmtTimingEnabled(scope))
 			return;
 		final index = scope.traceStmtIndex == null ? -1 : scope.traceStmtIndex;
+		var argCount = 0;
+		if (args != null)
+			argCount = args.length;
+		var paramCount = 0;
+		if (params != null)
+			paramCount = params.length;
 		traceCppTimingPhase("render_helper_forwarded_call_phase_timing owner=" + scope.traceOwnerName + " name=" + sanitizeIdentifier(scope.traceMethodName)
 			+ " index=" + Std.string(index) + " callee=" + exprKind(callee) + " phase=" + phase + " seconds=" + Std.string(elapsed) + " args="
-			+ Std.string(args == null ? 0 : args.length) + " params=" + Std.string(params == null ? 0 : params.length) + " param_index="
-			+ Std.string(paramIndex) + " arg_index=" + Std.string(argIndex) + " param=" + sanitizeIdentifier(paramName) + " arg_kind=" + argKind
-			+ " candidates=" + Std.string(countStringMap(candidates)) + " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides))
-			+ " local_overrides=" + Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes))
+			+ Std.string(argCount) + " params=" + Std.string(paramCount) + " param_index=" + Std.string(paramIndex) + " arg_index=" + Std.string(argIndex)
+			+ " param=" + sanitizeIdentifier(paramName) + " arg_kind=" + argKind + " candidates=" + Std.string(countStringMap(candidates))
+			+ " arg_overrides=" + Std.string(countStringMap(scope.argTypeOverrides)) + " local_overrides="
+			+ Std.string(countStringMap(scope.localTypeOverrides)) + " local_types=" + Std.string(countStringMap(scope.localTypes))
 			+ (detail.length == 0 ? "" : " " + detail));
 	}
 
@@ -15176,6 +15182,9 @@ class CppTargetCore {
 		final inferArgTypesStart = timingEnabled ? Sys.time() : 0.0;
 		final inferredArgTypes = if (supportParamTypes.length > 0) supportParamTypes; else if (fn != null && owner != null) inferredFunctionArgCppTypes(fn,
 			owner, scope.classByName, scope.allClasses); else null;
+		var inferredArgTypeCount = 0;
+		if (inferredArgTypes != null)
+			inferredArgTypeCount = inferredArgTypes.length;
 		if (timingEnabled)
 			traceCppScopeStmtTimingPhase(scope,
 				"direct_call_phase=inferred_arg_types call="
@@ -15185,7 +15194,7 @@ class CppTargetCore {
 				+ " has_fn="
 				+ Std.string(fn != null && owner != null)
 				+ " count="
-				+ Std.string(inferredArgTypes == null ? 0 : inferredArgTypes.length));
+				+ Std.string(inferredArgTypeCount));
 		final genericSpecialization = supportParamTypes.length == 0
 			&& fn != null
 			&& owner != null ? sameOwnerGenericCallSpecialization(fn, owner, args, "", scope, inferredArgTypes) : null;
@@ -24696,14 +24705,14 @@ class CppTargetCore {
 	}
 
 	static function typeEnumConstructorIndexLiteral(expr:HxExpr):Null<Int> {
-		return switch (expr) {
+		switch (expr) {
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
-				typeEnumConstructorIndexLiteral(inner);
+				return typeEnumConstructorIndexLiteral(inner);
 			case EInt(value):
-				value;
+				return value;
 			case _:
-				null;
-		};
+				return null;
+		}
 	}
 
 	static function typeEnumFactoryPayloadArgs(expr:Null<HxExpr>):Null<Array<HxExpr>> {
@@ -26501,26 +26510,31 @@ class CppTargetCore {
 	}
 
 	static function stmtReturnsOnlyNull(stmt:HxStmt):Null<Bool> {
-		return switch (stmt) {
+		switch (stmt) {
 			case SReturn(ENull, _):
-				true;
+				return true;
 			case SBlock(stmts, _):
-				stmtsReturnOnlyNull(stmts);
-			case SIf(_, thenBranch, elseBranch, _): final thenNull = stmtReturnsOnlyNull(thenBranch); final elseNull = elseBranch == null ? false : stmtReturnsOnlyNull(elseBranch); thenNull == true && elseNull == true ? true : null;
+				return stmtsReturnOnlyNull(stmts);
+			case SIf(_, thenBranch, elseBranch, _):
+				final thenNull = stmtReturnsOnlyNull(thenBranch);
+				final elseNull = elseBranch == null ? false : stmtReturnsOnlyNull(elseBranch);
+				return thenNull == true && elseNull == true ? true : null;
 			case STry(tryBody, catches, _):
 				final tryNull = stmtReturnsOnlyNull(tryBody);
-				if (tryNull != true) null; else {
+				if (tryNull != true) {
+					return null;
+				} else {
 					var ok = true;
 					for (c in catches)
 						if (stmtReturnsOnlyNull(c.body) != true)
 							ok = false;
-					ok ? true : null;
+					return ok ? true : null;
 				}
 			case SReturnVoid(_):
-				null;
+				return null;
 			case _:
-				false;
-		};
+				return false;
+		}
 	}
 
 	static function stmtsReturnOnlyNull(stmts:Array<HxStmt>):Null<Bool> {

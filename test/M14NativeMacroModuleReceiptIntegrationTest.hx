@@ -63,6 +63,13 @@ class M14NativeMacroModuleReceiptIntegrationTest {
 		assertEq("bytecode artifact kind", bytecode.artifactKind, NativeMacroModuleReceipt.BYTECODE_ARTIFACT);
 		assertEq("bytecode artifact path", bytecode.artifactPath, FileSystem.fullPath(bytecodePath));
 
+		File.saveContent(receiptPath, "{");
+		expectFailure("invalid JSON", () -> NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT), "invalid JSON");
+		File.saveContent(receiptPath, "true\n");
+		expectFailure("non-object JSON", () -> NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT),
+			"receipt JSON must be an object");
+		writeReceipt(receiptPath, "candidate-ok", nativePath, bytecodePath);
+
 		Sys.putEnv(NativeMacroModuleReceipt.CANDIDATE_ENV, "candidate-other");
 		expectFailure("candidate mismatch", () -> NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT), "candidate mismatch");
 		Sys.putEnv(NativeMacroModuleReceipt.CANDIDATE_ENV, "candidate-ok");

@@ -1,30 +1,21 @@
-package backend.plugin;
+package hxhx;
 
 /**
-	Deterministic JSON parser used by backend plugin manifest loading.
+	Deterministic JSON parser for compiler-owned metadata documents.
 
-	Why
-	- Stage3 native runtime manifest loading must behave consistently across host lanes.
-	- We previously depended on `haxe.Json.parse`, but OCaml bootstrap/runtime lanes can
-	  diverge at EOF handling and reject valid manifest JSON payloads.
-	- Keeping a local parser here makes manifest parsing a stable, testable boundary.
+	Plugin manifests and native macro-module receipts both need consistent decoding across
+	interpreter, bootstrap, and native OCaml lanes. This boundary avoids `haxe.Json.parse`
+	because mixed `Dynamic` values can generate invalid unboxed OCaml when expression
+	preprocessors are disabled.
 
-	What
-	- Parses JSON objects, arrays, strings, numbers, booleans, and null.
-	- Returns `Dynamic` values compatible with existing manifest validation code.
-	- Throws deterministic parse errors with source position.
-
-	How
-	- Single-pass recursive-descent parser with explicit index management.
-	- Object fields are materialized as `haxe.DynamicAccess<Dynamic>`.
-
-	Gotchas
-	- This parser is intentionally narrow: it exists for plugin manifest payloads.
-	- It does not attempt recovery; first syntax violation throws immediately.
+	The parser accepts standard JSON values, boxes heterogeneous values explicitly, and
+	throws the first syntax error with its source position. Callers remain responsible for
+	validating their own document schema and converting the returned `Dynamic` value into
+	typed structures.
 **/
-class ManifestJsonParser {
+class CompilerJsonParser {
 	public static function parse(content:String):Dynamic {
-		return new ManifestJsonParser(content).parseDocument();
+		return new CompilerJsonParser(content).parseDocument();
 	}
 
 	final input:String;
@@ -46,28 +37,28 @@ class ManifestJsonParser {
 		return value.value;
 	}
 
-	function parseValue():ManifestJsonValueBox {
+	function parseValue():CompilerJsonValueBox {
 		if (isEof())
 			fail("unexpected EOF");
 		final code = peekCode();
-		var value = new ManifestJsonValueBox(null);
+		var value = new CompilerJsonValueBox(null);
 		if (code == "{".code) {
-			value = new ManifestJsonValueBox(parseObject());
+			value = new CompilerJsonValueBox(parseObject());
 		} else if (code == "[".code) {
-			value = new ManifestJsonValueBox(parseArray());
+			value = new CompilerJsonValueBox(parseArray());
 		} else if (code == "\"".code) {
-			value = new ManifestJsonValueBox(parseString());
+			value = new CompilerJsonValueBox(parseString());
 		} else if (code == "t".code) {
 			expectKeyword("true");
-			value = new ManifestJsonValueBox(true);
+			value = new CompilerJsonValueBox(true);
 		} else if (code == "f".code) {
 			expectKeyword("false");
-			value = new ManifestJsonValueBox(false);
+			value = new CompilerJsonValueBox(false);
 		} else if (code == "n".code) {
 			expectKeyword("null");
-			value = new ManifestJsonValueBox(null);
+			value = new CompilerJsonValueBox(null);
 		} else if (code == "-".code || (code >= "0".code && code <= "9".code)) {
-			value = new ManifestJsonValueBox(parseNumber());
+			value = new CompilerJsonValueBox(parseNumber());
 		} else {
 			fail("invalid token");
 		}
@@ -97,12 +88,12 @@ class ManifestJsonParser {
 		return object;
 	}
 
-	function parseArray():ManifestJsonArray {
+	function parseArray():CompilerJsonArray {
 		expectCode("[".code);
 		skipWhitespace();
 		final values:Array<Dynamic> = [];
 		if (consumeIf("]".code))
-			return new ManifestJsonArray(values);
+			return new CompilerJsonArray(values);
 
 		while (true) {
 			skipWhitespace();
@@ -110,11 +101,11 @@ class ManifestJsonParser {
 			values.push(value);
 			skipWhitespace();
 			if (consumeIf("]".code))
-				return new ManifestJsonArray(values);
+				return new CompilerJsonArray(values);
 			expectCode(",".code);
 		}
 
-		return new ManifestJsonArray(values);
+		return new CompilerJsonArray(values);
 	}
 
 	function parseString():String {
@@ -269,7 +260,7 @@ class ManifestJsonParser {
 	}
 }
 
-private class ManifestJsonValueBox {
+private class CompilerJsonValueBox {
 	public final value:Dynamic;
 
 	public function new(value:Dynamic) {

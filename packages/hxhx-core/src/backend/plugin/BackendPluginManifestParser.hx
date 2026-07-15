@@ -1,7 +1,8 @@
 package backend.plugin;
 
 import backend.BackendAbi;
-import backend.plugin.ManifestJsonArray;
+import hxhx.CompilerJsonArray;
+import hxhx.CompilerJsonParser;
 
 private typedef JsonObject = haxe.DynamicAccess<Dynamic>;
 
@@ -20,7 +21,7 @@ private typedef JsonObject = haxe.DynamicAccess<Dynamic>;
 	- Run compatibility validation (`BackendAbi`) before returning.
 
 	Gotchas
-	- `haxe.Json.parse` returns untyped values by design.
+	- `CompilerJsonParser` returns untyped values by design.
 	- This parser is the only place where `Dynamic` JSON values are accepted for plugin
 	  manifests; callers should use typed `BackendPluginManifest` values only.
 **/
@@ -40,7 +41,7 @@ class BackendPluginManifestParser {
 		if (value == null)
 			fail(sourceLabel, "missing required object `" + fieldPath + "`");
 		if (Std.isOfType(value, String) || Std.isOfType(value, Bool) || Std.isOfType(value, Int) || Std.isOfType(value, Float)
-			|| Std.isOfType(value, Array) || Std.isOfType(value, ManifestJsonArray)) {
+			|| Std.isOfType(value, Array) || Std.isOfType(value, CompilerJsonArray)) {
 			fail(sourceLabel, "field `" + fieldPath + "` must be an object");
 		}
 		return cast value;
@@ -78,8 +79,8 @@ class BackendPluginManifestParser {
 
 	static function requireStringArray(value:Dynamic, fieldPath:String, sourceLabel:String):Array<String> {
 		var raw:Array<Dynamic>;
-		if (Std.isOfType(value, ManifestJsonArray)) {
-			raw = (cast value : ManifestJsonArray).values;
+		if (Std.isOfType(value, CompilerJsonArray)) {
+			raw = (cast value : CompilerJsonArray).values;
 		} else if (Std.isOfType(value, Array)) {
 			raw = cast value;
 		} else {
@@ -173,7 +174,7 @@ class BackendPluginManifestParser {
 			fail(source, "content is empty");
 
 		final raw:Dynamic = try {
-			ManifestJsonParser.parse(content);
+			CompilerJsonParser.parse(content);
 		} catch (error:Dynamic) {
 			fail(source, "invalid JSON: " + Std.string(error));
 		}

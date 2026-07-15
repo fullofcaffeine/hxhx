@@ -15,6 +15,8 @@ const cp = require('child_process')
 
 const scopePrefixes = [
   'packages/hxhx-core/src/backend/',
+  'packages/hxhx-core/src/hxhx/',
+  'packages/hxhx-core/src/hxhxmacrohost/',
   'packages/hxhx/src/hxhx/',
   'packages/hxhx-macro-host/src/hxhxmacrohost/',
 ]
@@ -29,8 +31,9 @@ const boundaryPrefixAllowlist = [
 
 const boundaryFileAllowlist = new Set([
   'packages/hxhx-core/src/backend/plugin/BackendPluginManifestParser.hx',
-  'packages/hxhx-core/src/backend/plugin/ManifestJsonParser.hx',
-  'packages/hxhx-core/src/backend/plugin/ManifestJsonArray.hx',
+  'packages/hxhx-core/src/hxhx/CompilerJsonParser.hx',
+  'packages/hxhx-core/src/hxhx/CompilerJsonArray.hx',
+  'packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleReceipt.hx',
   'packages/hxhx-core/src/backend/BackendDispatchBoundary.hx',
   'packages/hxhx-core/src/backend/GenIrBoundary.hx',
   'packages/hxhx/src/hxhx/Stage3Compiler.hx',

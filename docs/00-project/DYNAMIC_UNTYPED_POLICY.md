@@ -41,10 +41,11 @@ the default rule here: raw `__ocaml__` remains forbidden by default in app/compi
 
 ### Permanent boundary allowlist
 
-- Plugin manifest JSON parsing boundaries:
-  - `packages/hxhx-core/src/backend/plugin/ManifestJsonParser.hx`
-  - `packages/hxhx-core/src/backend/plugin/ManifestJsonArray.hx`
+- Compiler-owned metadata JSON parsing boundaries:
+  - `packages/hxhx-core/src/hxhx/CompilerJsonParser.hx`
+  - `packages/hxhx-core/src/hxhx/CompilerJsonArray.hx`
   - `packages/hxhx-core/src/backend/plugin/BackendPluginManifestParser.hx`
+  - `packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleReceipt.hx`
 - Backend dispatch boundaries:
   - `packages/hxhx-core/src/backend/BackendDispatchBoundary.hx`
   - `packages/hxhx-core/src/backend/GenIrBoundary.hx`

@@ -2,6 +2,8 @@ package hxhxmacrohost;
 
 import haxe.crypto.Sha256;
 import haxe.io.Path;
+import hxhx.CompilerJsonArray;
+import hxhx.CompilerJsonParser;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -80,11 +82,12 @@ class NativeMacroModuleReceipt {
 	}
 
 	static function decodeExpressions(value:Dynamic):Array<String> {
-		if (value == null)
-			return fail("expressions must be an array");
-		final raw:Array<Dynamic> = try {
-			cast value;
-		} catch (_:Dynamic) {
+		var raw:Array<Dynamic>;
+		if (Std.isOfType(value, CompilerJsonArray)) {
+			raw = (cast value : CompilerJsonArray).values;
+		} else if (Std.isOfType(value, Array)) {
+			raw = cast value;
+		} else {
 			return fail("expressions must be an array");
 		}
 		if (raw.length == 0)
@@ -116,11 +119,17 @@ class NativeMacroModuleReceipt {
 		final receiptPath = Path.normalize(FileSystem.fullPath(selectedPath));
 
 		final decoded:Dynamic = try {
-			haxe.Json.parse(File.getContent(receiptPath));
+			CompilerJsonParser.parse(File.getContent(receiptPath));
 		} catch (error:Dynamic) {
 			return fail("invalid JSON in `" + receiptPath + "`: " + Std.string(error));
 		}
-		if (decoded == null)
+		if (decoded == null
+			|| Std.isOfType(decoded, String)
+			|| Std.isOfType(decoded, Bool)
+			|| Std.isOfType(decoded, Int)
+			|| Std.isOfType(decoded, Float)
+			|| Std.isOfType(decoded, Array)
+			|| Std.isOfType(decoded, CompilerJsonArray))
 			return fail("receipt JSON must be an object");
 
 		final schema = requiredString(requiredField(decoded, "schema"), "schema");

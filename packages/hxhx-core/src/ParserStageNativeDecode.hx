@@ -137,12 +137,19 @@ class ParserStageNativeDecode {
 		final sourceFieldHints = sourceFieldTypeHints(source, className);
 
 		final methodBodyUseCounts:Map<String, Int> = [];
+		function methodBodyUseCount(name:String):Int {
+			final resolved = methodBodyUseCounts.get(name);
+			if (resolved == null)
+				return 0;
+			final count:Int = cast resolved;
+			return count;
+		}
 		for (mp in methodPayloads) {
 			final name = {
 				final parts = mp.split("|");
 				parts.length == 0 ? "" : parts[0];
 			};
-			final bodyIndex = methodBodyUseCounts.exists(name) ? methodBodyUseCounts.get(name) : 0;
+			final bodyIndex = methodBodyUseCount(name);
 			methodBodyUseCounts.set(name, bodyIndex + 1);
 			final bodies = methodBodies.get(name);
 			final starts = methodBodyStarts.get(name);

@@ -3717,7 +3717,14 @@ class HxParser {
 					case SExpr(e, p):
 						SReturn(e, p);
 					case SIf(cond, thenBranch, elseBranch, p):
-						SIf(cond, ensureBranchReturns(thenBranch), elseBranch == null ? SReturnVoid(p) : ensureBranchReturns(elseBranch), p);
+						// Keep nullable enum coercion in assignment form. Inlining the mixed null/enum
+						// branch can emit an unboxed HxStmt in no-prepass OCaml source builds.
+						var rewrittenElse:Null<HxStmt> = null;
+						if (elseBranch == null)
+							rewrittenElse = SReturnVoid(p);
+						else
+							rewrittenElse = ensureBranchReturns(elseBranch);
+						SIf(cond, ensureBranchReturns(thenBranch), rewrittenElse, p);
 					case SBlock(stmts, p):
 						if (stmts.length == 0) {
 							SBlock([SReturnVoid(p)], p);
