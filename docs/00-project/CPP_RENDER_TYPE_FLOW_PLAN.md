@@ -6653,3 +6653,79 @@ runtime module, literal policy, and tests are original repo-owned work.
 `thinking:xhigh` was not crossed, and GPT or Oracle review was deliberately
 skipped because the exact wrong carrier, typed arrow shape, upstream behavior,
 and focused Array/enum controls identify a bounded target-owned seam.
+
+## 2026-07-14 Expected Types for Empty Generic Constructors
+
+Follow-up bead `haxe_ocaml-p3k4i` restores the next strict native compiler
+contract. In plain language, Haxe can infer `new Map()` as `Map<Int, String>`
+when the value is passed directly to a parameter of that type. Generated C++
+previously inferred the zero-argument constructor before considering the call
+parameter, so it created `Map<any, any>` and could not pass the value to the
+specialized function.
+
+The existing generic-factory preparation now propagates an expected type
+backward across one deliberately narrow call shape: a direct call to a method
+on the current or inherited owner, exact argument/parameter arity, and a direct
+identifier argument whose local initializer is an unhinted zero-argument
+generic constructor. The declared parameter's concrete generic arguments are
+then recorded through the same local factory override used by assignment-based
+inference. Optional or reordered arguments, cross-owner data flow, and broad
+expression inference continue to decline this path. `Map` is also registered
+as a target-owned two-parameter generic factory, so the already extracted Map
+runtime remains usable when no typed stdlib Map declaration is reachable.
+
+The original repo-owned upstream oracle covers the inferred empty Map,
+populated and explicitly typed Map controls, an unrelated generic
+`ExpectedBox<String>`, and an ordinary nongeneric constructor. Upstream Haxe
+4.3.7 passes all six output observations. The focused generated C++ test pins
+`Map<int, string>` for the unhinted local, `Map<string, int>` for the populated
+control, `ExpectedBox<string>` for the unrelated generic, and the ordinary
+class path. It builds, runs, and matches the oracle output. The full generated
+C++ smoke, prior arrow-Map regression, and existing generic-constructor oracle
+remain green.
+
+A fresh current-source compiler build completed in 190 seconds and passed its
+provenance validator. With stage0 explicitly forbidden and an unusable
+`HAXE_BIN`, source-only verification resolved 69 modules and emitted the exact
+specialized Map and `ExpectedBox` factories without an erased inferred Map.
+The executable proof then built and printed the same six-line oracle output.
+The retained evidence is
+`.artifacts/full1/cpp-strict-current/empty-map-expected-type-current-source-source.log`
+and
+`.artifacts/full1/cpp-strict-current/empty-map-expected-type-current-source-runtime.log`.
+
+The exact final-source strict C++ probe rendered all 384 reachable helpers,
+reached the host compiler, and completed expected-red in 436 seconds. The old
+`Map<any, any>` to `Map<int, string>` conversion diagnostic at generated line
+16562 is absent; `testAbstractGeneric` now creates
+`__hxhx_make_shared_Map<int, std::string>()`. `TestXML.testBasic` rendered in
+0.556383 seconds, its complete class in 5.153377 seconds,
+`TestType.testAbstractGeneric` in 0.270284 seconds, and the next failing
+`TestType.testAbstractUnop` in 0.185279 seconds. These are frontier
+observations, not a broad performance claim. The retained log is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-empty-map-expected-type.log`.
+
+The first remaining native-build error is now generated
+`TestMain.cpp:16597`: raw unary minus is applied to the shared-pointer carrier
+for a class-backed abstract instead of its declared `@:op(-A)` helper. A later
+primitive-backed abstract in the same test is also erased to `int`, losing its
+unary and increment contracts. Follow-up `haxe_ocaml-ass5p` owns that abstract
+operator seam. Map comprehension and reflective custom array access remain
+later independent frontiers.
+
+README Goals and North Star progress bars remain unchanged. Strict C++ still
+does not compile or run the complete upstream unit program, so this internal
+frontier move does not change production readiness. `CppTargetCore.hx` remains
+a red mega-file at 26,790 lines; this change adds bounded, documented glue at
+the existing generic-factory preparation seam, while broader extraction
+remains owned by `haxe_ocaml-36ec`. No public example, public API, workflow,
+release contract, runtime/stdlib surface, or committed bootstrap snapshot
+changed.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+checkout was read only as a behavior oracle, and the Map stdlib declarations
+were researched before implementation. The committed fixture and tests are
+original repo-owned work. `thinking:xhigh` was not crossed, and GPT or Oracle
+review was deliberately skipped because the exact erased constructor,
+declared parameter type, existing generic-factory override seam, upstream
+behavior, and unrelated generic controls identify a bounded target-owned fix.

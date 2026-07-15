@@ -4420,6 +4420,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function emptyMapExpectedTypeProgram():GenIrProgram {
+		final sourcePath = "test/oracle/cpp_empty_map_expected_type_seed/src/Main.hx";
+		final typed = TyperStage.typeModule(ParserStage.parse(File.getContent(sourcePath), sourcePath));
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function mathExternProgram():GenIrProgram {
 		final src = [
 			"extern class Math {",
@@ -4638,6 +4644,45 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(run.code == 0, "C++ arrow map literal smoke executable failed: " + run.stderr);
 			final expected = File.getContent("test/oracle/cpp_arrow_map_literal_seed/expected.stdout");
 			assertTrue(run.stdout == expected, "unexpected C++ arrow map literal smoke stdout: " + run.stdout);
+		}
+		deleteRecursive(root);
+	}
+
+	/**
+		Compile and run empty generic constructors whose types come from call
+		parameters. Populated and explicit Maps plus an unrelated plain constructor
+		pin the existing inference boundaries.
+	**/
+	public static function runEmptyMapExpectedTypeChecks():Void {
+		BackendRegistry.clearDynamicRegistrations();
+		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_empty_map_expected_type"]);
+		deleteRecursive(root);
+		FileSystem.createDirectory(root);
+		final program = emptyMapExpectedTypeProgram();
+		final sourceOnlyDir = Path.join([root, "source-only"]);
+		final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program, context(sourceOnlyDir, true, true));
+		final source = File.getContent(sourceOnly.entryPath);
+		assertContains(source, "auto inferred = __hxhx_make_shared_Map<int, std::string>();",
+			"C++ empty Map locals should inherit type arguments from an exact call parameter");
+		assertContains(source, "acceptMap(inferred)", "C++ expected Map inference should preserve the original local at the call site");
+		assertTrue(source.indexOf("auto inferred = __hxhx_make_shared_Map<std::any, std::any>();") < 0,
+			"C++ expected Map inference should not freeze the empty constructor at erased template arguments");
+		assertContains(source, "auto populated = __hxhx_make_shared_Map<std::string, int>();",
+			"C++ populated Map inference should retain its existing set-call evidence");
+		assertContains(source, "auto typedMap = __hxhx_make_shared_Map<int, std::string>();",
+			"C++ explicitly typed Map constructors should retain their source type arguments");
+		assertContains(source, "auto box = __hxhx_make_shared_ExpectedBox<std::string>();",
+			"C++ expected call-argument inference should apply to unrelated zero-argument generic constructors");
+		assertContains(source, "std::make_shared<ExpectedPlain>()", "C++ non-generic zero-argument constructors should remain unchanged");
+
+		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
+			final buildDir = Path.join([root, "build"]);
+			final built = BackendRegistry.createForTarget("cpp-native").emit(program, context(buildDir, true, false));
+			assertTrue(built.builtExecutable, "C++ empty Map expected-type smoke should build an executable");
+			final run = commandOutput(built.entryPath, []);
+			assertTrue(run.code == 0, "C++ empty Map expected-type smoke executable failed: " + run.stderr);
+			final expected = File.getContent("test/oracle/cpp_empty_map_expected_type_seed/expected.stdout");
+			assertTrue(run.stdout == expected, "unexpected C++ empty Map expected-type smoke stdout: " + run.stdout);
 		}
 		deleteRecursive(root);
 	}
@@ -12008,6 +12053,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		runConstrainedGenericRelationChecks();
 		runAbstractUnderlyingConversionChecks();
 		runArrowMapLiteralChecks();
+		runEmptyMapExpectedTypeChecks();
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
 		assertTrue(descriptor != null, "missing cpp-native descriptor");
@@ -14036,7 +14082,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"generated",
 			"generic-call-array",
 			"abstract-underlying-conversion",
-			"arrow-map-literal"
+			"arrow-map-literal",
+			"empty-map-expected-type"
 		])) {
 			case "all":
 				runRenderChecks();
@@ -14051,6 +14098,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				runAbstractUnderlyingConversionChecks();
 			case "arrow-map-literal":
 				runArrowMapLiteralChecks();
+			case "empty-map-expected-type":
+				runEmptyMapExpectedTypeChecks();
 			case _:
 		}
 	}

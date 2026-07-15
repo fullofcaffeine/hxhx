@@ -9854,6 +9854,7 @@ class CppTargetCore {
 				collectGenericFactoryLocalTypeOverridesFromExpr(left, scope, candidates, mapped);
 				collectGenericFactoryLocalTypeOverridesFromExpr(right, scope, candidates, mapped);
 			case ECall(callee, args):
+				applyGenericFactoryDirectCallExpectedTypes(callee, args, scope, candidates, mapped);
 				collectGenericFactoryLocalTypeOverridesFromExpr(callee, scope, candidates, mapped);
 				for (arg in args)
 					collectGenericFactoryLocalTypeOverridesFromExpr(arg, scope, candidates, mapped);
@@ -9900,10 +9901,63 @@ class CppTargetCore {
 		return switch (init) {
 			case ENew(typePath, args) if (args.length == 0):
 				final className = sanitizeTypePath(typeBaseName(typePath));
-				genericClassTypeParamsForName(className, scope).length > 0 ? className : "";
+				genericFactoryTypeParamsForName(className, scope).length > 0 ? className : "";
 			case _:
 				"";
 		};
+	}
+
+	/**
+		Apply an exact same-owner call parameter's generic carrier to an earlier
+		unhinted zero-argument constructor local.
+
+		Haxe can infer `var value = new Generic(); accept(value)` from the declared
+		parameter even though the constructor contributes no value evidence. Limit
+		this reverse flow to direct identifiers and exact arity so optional/reordered
+		argument matching remains owned by the normal call renderer.
+	**/
+	static function applyGenericFactoryDirectCallExpectedTypes(callee:HxExpr, args:Array<HxExpr>, scope:CppRenderScope, candidates:haxe.ds.StringMap<String>,
+			mapped:haxe.ds.StringMap<haxe.ds.StringMap<String>>):Void {
+		if (scope == null || args == null || args.length == 0)
+			return;
+		final name = switch (callee) {
+			case EIdent(value):
+				value;
+			case _:
+				return;
+		};
+		final owner = currentOrInheritedOwnerMethodOwner(name, scope);
+		final fn = owner == null ? null : ownerMethodDeclIn(owner, name);
+		if (fn == null)
+			return;
+		final params = HxFunctionDecl.getArgs(fn);
+		if (params.length != args.length)
+			return;
+		for (i in 0...args.length) {
+			final local = switch (args[i]) {
+				case EIdent(localName):
+					localCppName(localName, scope);
+				case _:
+					"";
+			};
+			if (local.length == 0 || !candidates.exists(local))
+				continue;
+			final className = candidates.get(local);
+			final typeParams = genericFactoryTypeParamsForName(className, scope);
+			final expectedType = cppTypeHint(HxFunctionArg.getTypeHint(params[i]), scope);
+			final typeArgs = templateArgsFromExpectedClassType(className, expectedType);
+			if (typeParams.length == 0 || typeArgs.length != typeParams.length)
+				continue;
+			final localMapped = mapped.get(local);
+			for (paramIndex in 0...typeParams.length)
+				setGenericFactoryMappedType(localMapped, typeParams[paramIndex], typeArgs[paramIndex]);
+			setGenericFactoryLocalTypeOverride(scope, local, className, typeParams, localMapped);
+		}
+	}
+
+	static function genericFactoryTypeParamsForName(className:String, scope:CppRenderScope):Array<String> {
+		final declared = genericClassTypeParamsForName(className, scope);
+		return declared.length > 0 ? declared : targetOwnedGenericConstructorTypeParams(className);
 	}
 
 	static function applyGenericFactoryFieldAssignment(scope:CppRenderScope, local:String, field:String, rhs:HxExpr, candidates:haxe.ds.StringMap<String>,
@@ -9926,7 +9980,7 @@ class CppTargetCore {
 	static function applyGenericFactoryArrayAssignment(scope:CppRenderScope, local:String, key:HxExpr, value:HxExpr, candidates:haxe.ds.StringMap<String>,
 			mapped:haxe.ds.StringMap<haxe.ds.StringMap<String>>):Void {
 		final className = candidates.get(local);
-		final params = genericClassTypeParamsForName(className, scope);
+		final params = genericFactoryTypeParamsForName(className, scope);
 		if (params.length < 2)
 			return;
 		final localMapped = mapped.get(local);
@@ -13896,6 +13950,8 @@ class CppTargetCore {
 		return switch (sanitizeTypePath(typeBaseName(className == null ? "" : className))) {
 			case "List" | "StringMap":
 				["T"];
+			case "Map":
+				["K", "V"];
 			case _:
 				[];
 		};
