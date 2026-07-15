@@ -350,6 +350,31 @@ rebuilt semantic module, or the beginning of a general typed expression tree;
 it must name ownership, lifecycle, backend consumption, macro invalidation,
 and the removal/expansion criteria for any intermediate representation.
 
+### Syntax-cutover blast radius: a parser-only change is not a valid slice
+
+A source audit found 26 non-generated Haxe files that inspect `EUnop`,
+including 11 backend files, plus 10 direct test files. The committed bootstrap
+snapshots mirror those matches. The consumers are not uniform:
+
+- `SourceTargetCommon` already recognizes `pre++`/`pre--` in some paths;
+- JS, Neko, C++, and the OCaml bootstrap emitter have explicit postfix paths
+  but would render raw `pre++` text incorrectly or reject it today;
+- typer/local-mutability scans know that postfix forms write their operands but
+  do not treat a preserved prefix form the same way;
+- the runtime parser-to-`haxe.macro.Expr` bridge currently maps every internal
+  `EUnop` as prefix and only recognizes raw `++`/`--`, so its postfix
+  round-trip is already incomplete and must not define the new contract;
+- parser tests explicitly assert the current lossy rewrite of prefix forms to
+  compound assignment.
+
+Therefore syntax preservation can be the first hard-cutover commit only if it
+updates ordinary prefix behavior, macro fixity, assigned-local discovery, all
+active emitters, focused tests, and required bootstrap snapshots together. A
+parser-only commit that leaves invalid tags for downstream consumers is not a
+reviewable intermediate state. This cross-backend cutover is still distinct
+from abstract-helper binding and should not claim that overload semantics are
+complete.
+
 ## Candidate architecture directions to challenge
 
 These are hypotheses, not decisions. Rank, combine, or reject them.
