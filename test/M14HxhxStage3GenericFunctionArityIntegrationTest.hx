@@ -95,6 +95,20 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertTrue(snapshot.indexOf("Sym ('<', _) when !reading_type") >= 0, "bootstrap native parser snapshot must track generic type hint angle depth");
 	}
 
+	static function assertNativeParserKeepsFunctionArrowsInsideGenericConstraints():Void {
+		for (path in [
+			"packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml",
+			"packages/hxhx/bootstrap_out/runtime/HxHxNativeParser.ml"
+		]) {
+			final source = readOptional(path);
+			assertTrue(source != null, "missing native parser implementation at " + path);
+			assertTrue(source.indexOf("Function type arrows inside generic constraints") >= 0,
+				path + " must keep the function arrow inside Constructible<String -> Void> from closing the method generic list");
+			assertTrue(source.indexOf("Sym ('-', _) when token_eq_sym (peek 1) '>'") >= 0,
+				path + " must consume a function arrow without changing generic angle depth");
+		}
+	}
+
 	static function assertBootstrapNativeParserAllowsKeywordPathSegments():Void {
 		final sourcePath = "packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml";
 		final source = readOptional(sourcePath);
@@ -301,6 +315,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 	static function main() {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
 		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
+		assertNativeParserKeepsFunctionArrowsInsideGenericConstraints();
 		assertBootstrapNativeParserAllowsKeywordPathSegments();
 		assertBootstrapNativeParserEscapesStringTokenText();
 		assertNativeDecodeStripsUntypedReturnModifier();

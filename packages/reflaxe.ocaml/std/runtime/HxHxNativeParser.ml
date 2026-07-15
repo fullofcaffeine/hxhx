@@ -812,6 +812,12 @@ let parse_module_from_tokens (src : string) (toks : token array)
       while !depth_a > 0 do
         match cur () with
         | Eof p -> raise (Parse_error (p, "unterminated angle bracket group"))
+        | Sym ('-', _) when token_eq_sym (peek 1) '>' ->
+            (* Function type arrows inside generic constraints, e.g.
+                 Constructible<String -> Void>
+               must not consume the generic depth. *)
+            bump ();
+            bump ()
         | Sym ('<', _) ->
             depth_a := !depth_a + 1;
             bump ()

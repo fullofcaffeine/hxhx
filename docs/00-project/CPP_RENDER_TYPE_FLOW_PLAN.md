@@ -6338,3 +6338,70 @@ is an original repo-owned program. `thinking:xhigh` was not crossed, and GPT or
 Oracle review was deliberately skipped because the invalid generated type, the
 upstream contract, the existing direct-call type-flow seam, and focused
 generic/non-generic controls identify a bounded target-owned fix.
+
+## 2026-07-14 Constrained Generic Parser Arity
+
+Follow-up bead `haxe_ocaml-wisp-707` restores the next strict native compiler
+contract. In plain language, a method declared with a function type inside its
+generic constraints, such as `Constructible<String -> Void>`, lost the rest of
+its signature in current-source builds. Calls still passed two values, but the
+generated `gf3` declaration had no type parameters or arguments and its body
+referred to missing locals.
+
+The canonical OCaml native parser treated the `>` in `->` as the end of the
+generic constraint list. Its committed bootstrap snapshot already carried the
+correct arrow handling through bootstrap finalization, so current-source and
+snapshot parsing had silently diverged. The canonical parser now consumes a
+function arrow without changing generic angle depth. No module-wide name
+recovery, decoder heuristic, C++ runtime helper, emitter stub, or bootstrap
+snapshot change is involved.
+
+An original end-to-end protocol test compiles and runs both parser variants
+against the same Haxe fixture. It pins the two argument names and types, the
+non-empty body, a true zero-argument method, and zero- and one-argument sibling
+constructors. Both canonical source and the committed snapshot report two
+generic arguments, zero control arguments, and one sibling argument. A source
+marker assertion prevents the two parser copies from drifting again. The
+repo-owned upstream oracle covers generic array length and clone behavior plus
+the zero-method and two constructor controls; upstream Haxe 4.3.7 passes all
+five observations.
+
+A fresh current-source compiler build completed in 283 seconds and passed the
+current-binary validator. Its focused stage0-forbidden source-only C++ compile
+resolved 55 modules and emitted matching `template<typename A, typename B>`,
+two-argument declaration and call shapes, body locals, zero-argument control,
+and sibling constructor signatures. The focused parser suite, its inline
+decoder A/B lane, C++ render smoke, upstream oracle, official touched-file
+formatter, package metadata parse, and shell syntax checks pass.
+
+The stage0-forbidden strict C++ probe rendered all 384 reachable helpers and
+reached the host compiler in 461 seconds. The retained source now declares
+`gf3<A, B>(A a, B b)`, calls it with two explicit type arguments and two value
+arguments, and preserves the `clone`, `b.push`, and `return b` body. The prior
+`gf2` concrete array specializations and zero-argument `GenericStack`
+constructor also remain intact. `TestXML.testBasic` rendered in 0.522652
+seconds, its class in 4.409168 seconds, `TestType.testGenericFunction` in
+1.165853 seconds, and `gf3` itself in 0.087842 seconds. These are frontier
+timings, not a broad performance claim.
+
+The expected-red native build now begins at generated `TestMain.cpp:16516`.
+The empty-array call to constrained `gf3` specializes `B` as
+`std::vector<int>` even though `A` is `haxe.Template`, and `new A` plus
+`Array.push` still need consistent target lowering. Follow-up
+`haxe_ocaml-jnj0n` owns that separate `B:Array<A>` semantic frontier. The
+retained evidence is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-constrained-generic-arity.log`.
+
+README Goals and North Star progress bars remain unchanged. Strict C++ still
+does not compile or run the full upstream unit program, so this internal
+frontier move does not change production readiness. The bounded repair lives in
+the canonical 1,600-line native parser runtime rather than adding logic to the
+large Haxe parser or C++ target files; the generated snapshot is unchanged.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite was read only as a behavior oracle, and the permissively licensed
+`haxe.Constraints.Constructible` stdlib declaration was read to confirm its
+public API. The fixture and OCaml protocol runner are original repo-owned work.
+`thinking:xhigh` was not crossed, and GPT or Oracle review was deliberately
+skipped because the source/snapshot diff, exact token-depth failure, and
+focused protocol controls identify a bounded canonical-parser seam.

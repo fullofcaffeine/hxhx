@@ -1,0 +1,5 @@
+constrained-generic-arity-01:length|value|2
+constrained-generic-arity-01:clone|value|copy
+constrained-generic-arity-01:zero|value|0
+constrained-generic-arity-01:zero-ctor|value|7
+constrained-generic-arity-01:arg-ctor|value|arg
