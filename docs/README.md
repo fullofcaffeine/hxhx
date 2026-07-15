@@ -71,6 +71,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
   `docs/00-project/HXHX_HAXE_FAMILY_VARIATION_WORKFLOW.md`
 - Accepted Oracle checkpoint for C++ `TestJson` dynamic/numeric frontier:
   `docs/00-project/ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md`
+- GPT-5.5 Pro review request for abstract-operator syntax, typing, and C++ lowering:
+  `docs/00-project/GPT_5_5_PRO_CPP_ABSTRACT_OPERATOR_REVIEW_PROMPT.md`
 - Source-native runtime packaging strategy: `docs/02-user-guide/SOURCE_NATIVE_RUNTIME_PACKAGING_STRATEGY.md`
 - `.cross.hx` vs `_std` beginner guide: `docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`
 - Reflaxe family cross-override audit: `docs/00-project/REFLAXE_FAMILY_CROSS_OVERRIDE_AUDIT.md`
