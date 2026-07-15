@@ -6200,3 +6200,72 @@ API oracles; committed generated OCaml snapshots were not edited.
 skipped because the exact template error, upstream contract, existing carrier
 classifier, and focused null/non-null controls identify a bounded target-owned
 seam.
+
+## 2026-07-14 Generic Constructor Signature Ownership
+
+Follow-up bead `haxe_ocaml-n80xs` removes the next strict native compiler
+error. In plain language, `new haxe.ds.GenericStack<Int>()` was already emitted
+as a zero-argument call, but source-signature enrichment had given
+`GenericStack.new()` the two parameters from the preceding
+`GenericCell.new(elt, next)` declaration. The generated class and factory
+therefore demanded arguments that belong to a different class.
+
+The native protocol decoder previously treated an explicitly empty argument
+name list as permission to search the entire source module for a same-named
+function. Constructors are all named `new`, so that module-wide fallback could
+cross the class ownership boundary. An empty protocol signature can now recover
+non-empty source arguments only when `methodBodyStart` anchors the exact source
+declaration. Without that anchor, the protocol's zero-argument contract is
+authoritative. This preserves the existing constrained-generic recovery path,
+whose non-empty body anchors its exact declaration, while preventing an empty
+constructor from borrowing a sibling class's parameters. The extracted native
+decoder and the intentional stage0 A/B inline copy carry the same narrow rule.
+
+The repo-owned upstream oracle covers six original observations: empty, first,
+and pushed-value behavior for a zero-argument generic stack; value and null-next
+behavior for a parameterized generic cell; and an unrelated non-generic
+zero-argument constructor. Upstream Haxe 4.3.7 passes all six. The direct native
+protocol regression reproduces the multi-class `new` collision, verifies the
+decoded arities, and pins the C++ constructor plus generic factory declaration
+and definition. The pre-existing constrained-generic decoder regression remains
+green in both extracted and inline-decoder modes.
+
+The focused render smoke, generated native C++ build/run, constrained-generic
+arity suite, inline-decoder A/B suite, upstream oracle, shell syntax check,
+local-declaration benchmark, official touched-file formatter, repo-wide Haxe
+format guard, mega-file gravity guard, and `git diff --check` all pass. The
+250-call benchmark remained bounded: declared 0.01052 seconds, full 0.00283
+seconds, callback full 0.04284 seconds, EReg full 0.00812 seconds, and traced
+0.04592 seconds. A fresh current-source compiler build and current-binary
+validator also pass.
+
+The stage0-forbidden strict Cpp probe rendered all 384 reachable helpers and
+reached the host compiler in 383 seconds. The former `GenericStack<Int>` arity
+error is gone: retained generated source declares `GenericStack()` and matching
+zero-argument generic factory declaration, definition, and call, while
+`GenericCell<T>` retains `elt` and `next`. `TestXML.testBasic` remained healthy
+at 0.481905 seconds, its complete class rendered in 4.324079 seconds, and
+`TestType.testEnumEq` rendered in 1.064223 seconds. The expected-red native build
+now begins at generated `TestMain.cpp:16505`, where concrete flat and nested
+array literals passed to `gf2<A,B>` are incorrectly rendered as
+`std::vector<B>` in the caller. Follow-up `haxe_ocaml-omaaq` owns that first
+call-site specialization frontier. A later diagnostic also shows the real
+strict parser path losing `gf3` arguments despite the focused
+anchored-recovery contract; `haxe_ocaml-wisp-707` tracks that separate
+regression. The retained evidence is
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-generic-constructor-arity.log`.
+
+README Goals and North Star progress bars remain unchanged. Strict Cpp still
+does not compile or run the full unit program, so this internal frontier move
+does not change production readiness. `ParserStage.hx` is 4,573 lines and
+receives only the five-line parity copy required by the stage0 A/B path; the
+owned implementation remains in the 1,535-line `ParserStageNativeDecode.hx`.
+No C++ runtime surface, target stub, fake overload, or generated bootstrap
+snapshot changed.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+checkout and permissively licensed `haxe.ds.GenericStack` stdlib declaration
+were read only as behavior and API oracles. `thinking:xhigh` was not crossed,
+and GPT or Oracle review was deliberately skipped because the exact decoded
+arity mismatch, source ownership boundary, upstream behavior, and focused
+anchored/unanchored controls identify a bounded decoder seam.

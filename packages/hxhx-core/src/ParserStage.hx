@@ -3612,6 +3612,11 @@ class ParserStage {
 		}
 		final anchoredIndex = methodBodyStart > 0 ? source.lastIndexOf(needle, methodBodyStart) : -1;
 		final anchoredHints = hintsAt(anchoredIndex);
+		// A missing native signature can only recover arity from an exact body anchor.
+		// Without one, an empty protocol list is authoritative so a same-named member
+		// elsewhere in the module cannot lend this declaration its arguments.
+		if (argNames != null && argNames.length == 0)
+			return methodBodyStart > 0 ? anchoredHints : [];
 		if (anchoredHints.length > 0 && sourceArgHintsMatchNames(anchoredHints, argNames))
 			return anchoredHints;
 		var first = new Array<{

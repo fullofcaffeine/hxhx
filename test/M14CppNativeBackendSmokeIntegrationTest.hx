@@ -251,6 +251,66 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		throw "native protocol structural Null return fixture should decode getDisplayPos";
 	}
 
+	static function assertNativeProtocolZeroArgConstructorOwnership():Void {
+		final source = [
+			"class GenericCell<T> {",
+			"  public function new(elt:T, next:Null<GenericCell<T>>) {}",
+			"}",
+			"class GenericStack<T> {",
+			"  public function new() {}",
+			"}",
+			"class PlainZero {",
+			"  public function new() {}",
+			"}"
+		].join("\n");
+		function decodeConstructor(className:String, args:String, argTypes:String):HxFunctionDecl {
+			final encoded = [
+				"hxhx_frontend_v=2",
+				protocolLine("class", className),
+				"ast static_main 0",
+				protocolLine("method", "new|public|0|" + args + "|Void|||" + argTypes + "|"),
+				"ok"
+			].join("\n");
+			final functions = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(ParserStageNativeDecode.decodeNativeProtocol(encoded, source)));
+			assertTrue(functions.length == 1, "native protocol constructor fixture should decode one constructor for " + className);
+			return functions[0];
+		}
+
+		final stackCtor = decodeConstructor("GenericStack", "", "");
+		assertTrue(HxFunctionDecl.getArgs(stackCtor).length == 0,
+			"native protocol source enrichment should not borrow GenericCell constructor args for GenericStack.new()");
+		final cellCtor = decodeConstructor("GenericCell", "elt,next", "elt:T,next:Null<GenericCell<T>>");
+		assertTrue(HxFunctionDecl.getArgs(cellCtor).length == 2,
+			"native protocol source enrichment should preserve the parameterized GenericCell constructor control");
+		final plainCtor = decodeConstructor("PlainZero", "", "");
+		assertTrue(HxFunctionDecl.getArgs(plainCtor).length == 0,
+			"native protocol source enrichment should preserve unrelated non-generic zero-argument constructors");
+
+		final stack = new HxClassDecl("GenericStack", false, [stackCtor], [], "", ["__hxhx_type_params=T"]);
+		final cell = new HxClassDecl("GenericCell", false, [cellCtor], [], "", ["__hxhx_type_params=T"]);
+		final plain = new HxClassDecl("PlainZero", false, [plainCtor], []);
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		for (cls in [stack, cell, plain]) {
+			final name = HxClassDecl.getName(cls);
+			names.set(name, true);
+			classes.set(name, cls);
+		}
+		final lookup = {names: names, byName: classes};
+		final stackDecl = @:privateAccess backend.cpp.CppTargetCore.renderGenericClassFactoryDeclaration(stack, lookup).join("\n");
+		final stackLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(stack, lookup).join("\n");
+		final cellLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(cell, lookup).join("\n");
+		final plainLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(plain, lookup).join("\n");
+		assertContains(stackDecl, "std::shared_ptr<GenericStack<T>> __hxhx_make_shared_GenericStack();",
+			"C++ generic factory declarations should preserve the decoded zero-argument constructor contract");
+		assertContains(stackLines, "GenericStack() {", "C++ generic classes should preserve decoded zero-argument constructors");
+		assertContains(stackLines, "std::shared_ptr<GenericStack<T>> __hxhx_make_shared_GenericStack() {",
+			"C++ generic factory definitions should match the zero-argument declaration");
+		assertContains(cellLines, "GenericCell(T elt, std::shared_ptr<GenericCell<T>> next) {",
+			"C++ parameterized generic constructor controls should retain their own arguments");
+		assertContains(plainLines, "PlainZero() {", "C++ non-generic zero-argument constructor controls should remain unchanged");
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -4344,6 +4404,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	public static function runRenderChecks():Void {
 		assertNativeProtocolStructuralArgTypeSplitting();
 		assertNativeProtocolStructuralNullReturnRecovery();
+		assertNativeProtocolZeroArgConstructorOwnership();
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("8")) == "8",
 			"numeric unsupported fragments should render as integer literals");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(EUnsupported("=")) == "0",

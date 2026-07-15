@@ -1,0 +1,6 @@
+generic-ctor-01:zero-empty|value|true
+generic-ctor-01:zero-first-null|value|true
+generic-ctor-01:zero-push-first|value|4
+generic-ctor-01:param-value|value|node
+generic-ctor-01:param-next-null|value|true
+generic-ctor-01:plain-zero|value|7
