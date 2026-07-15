@@ -2,7 +2,7 @@
 
 Prepared: 2026-07-14
 
-Repository baseline: `fullofcaffeine/hxhx` commit
+Failure-diagnosis baseline: `fullofcaffeine/hxhx` commit
 `d33bc427484cece0d3f8196bc9890254f3848fb0`
 
 Owning bead: `haxe_ocaml-ass5p`
@@ -15,9 +15,11 @@ Related strict-C++ beads:
 
 Status: architecture review request, not an implementation decision
 
-Give this file to GPT-5.5 Pro with the repository at the exact commit above.
-The reviewer should inspect the whole repository, then concentrate on the files
-and evidence named below. This file is the controlling prompt.
+Give this file to GPT-5.5 Pro with the exact current review candidate and record
+that candidate SHA in the invocation. The commit above is the historical
+failure-diagnosis baseline; current attached sources take precedence. The
+reviewer should inspect the whole repository, then concentrate on the files and
+evidence named below. This file is the controlling prompt.
 
 ## Read this first: the problem in plain language
 
@@ -73,8 +75,9 @@ The review must decide among, refine, or replace these layers:
 3. **Carrier lowering** - how a backend should keep the Haxe abstract type while
    representing a primitive-backed value as `int`, `double`, or another native
    carrier.
-4. **Mutation lowering** - how prefix/postfix result values and mutation happen
-   exactly once for identifiers, fields, and array-access lvalues.
+4. **Mutation lowering** - how prefix/postfix result values, mutation, and
+   operand evaluation follow measured Haxe 4.3.7 behavior for identifiers,
+   fields, properties, and array-access lvalues.
 5. **Backend emission** - how C++ should invoke static and instance operator
    helpers and convert helper results back to the chosen runtime carrier.
 
@@ -305,6 +308,32 @@ review must distinguish required Haxe 4.3.7 compatibility from a deliberate
 semantic improvement. A backend must not silently choose the latter while
 claiming strict parity.
 
+### Original oracle checkpoint: prefix mutation is helper-defined
+
+A second original temporary fixture isolated three primitive-backed
+`@:op(++x)` shapes. Upstream Haxe 4.3.7 produced the same result through
+`--interp`, generated JavaScript on Node, and generated Neko bytecode:
+
+- a static helper returned `input + 10`, so `++local` produced `11` while the
+  original local remained `1`;
+- an inline instance helper returning `Void` modified abstract `this`, so a
+  local starting at `2` became `22`;
+- an inline instance helper returning the abstract modified `this`, so a local
+  starting at `3` and the expression result both became `33`.
+
+Upstream rejected the two instance variants when they were not `inline`
+because an abstract `this` value may not be modified there. Generated
+JavaScript called the static helper without assigning its result back to the
+operand, while both legal instance variants were expanded structurally into
+the caller's local mutation.
+
+This is again black-box evidence from original source. It rules out a universal
+backend rule such as “prefix means assign the helper result to the lvalue” or
+“pass the operand by reference.” Operator/fixity plus a helper ID is not enough
+for increment/decrement: shared typed lowering must preserve the selected
+helper's call or inline-body semantics, including whether the original lvalue
+changes and what value, if any, the expression yields.
+
 ### Upstream architecture checkpoint: targets do not resolve source overloads
 
 A read-only trace of the local upstream Haxe 4.3.7 checkout established the
@@ -439,8 +468,9 @@ for the current upstream test is not sufficient.
 7. Should class-backed abstract values continue to use wrapper objects in C++,
    or should their underlying carrier be represented directly? What invariants
    decide this per abstract?
-8. How should static and instance operator helpers be normalized for backend
-   calls?
+8. How should static calls and inline instance-helper bodies be represented for
+   backends without inventing a reference-parameter ABI or an implicit lvalue
+   assignment that the selected helper does not specify?
 9. For primitive-backed abstracts, should C++ emit target-native static helper
    functions, inline typed helper bodies, or use another representation?
 10. How should prefix/postfix result, mutation, and lvalue evaluation counts be
@@ -476,13 +506,15 @@ Challenge and refine this draft set:
 - Runtime carrier erasure does not erase the semantic abstract type.
 - Helper invocation and operand evaluation do not duplicate work beyond the
   behavior selected by the shared lowering contract.
+- Operator spelling does not imply a universal lvalue write: helper-defined
+  static-call versus inline-instance semantics are preserved structurally.
 - Lvalue receiver/index evaluation follows measured upstream Haxe 4.3.7
   behavior for the strict compatibility profile; any exactly-once divergence
   is explicit, separately tested, and excluded from an unqualified parity
   claim.
-- Prefix returns the new value and postfix returns the old value when the Haxe
-  operator contract requires a value.
-- Mutation is visible to the original lvalue and does not mutate a temporary.
+- Prefix/postfix result values and mutation follow the selected typed helper
+  lowering; when that lowering mutates the operand, the change reaches the
+  original lvalue rather than a detached temporary.
 - Ordinary numeric operators keep their current behavior.
 - Ordinary classes cannot gain operator behavior from similarly named methods.
 - Unsupported or ambiguous abstract operators fail with a deterministic
