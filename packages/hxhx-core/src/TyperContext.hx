@@ -60,7 +60,7 @@ class TyperContext {
 	public function getClassFullName():String
 		return classFullName;
 
-	public function resolveType(typePath:String):Null<TyClassInfo> {
+	public function resolveType(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;
 		final hit = index.resolveTypePath(typePath, packagePath, imports);
@@ -69,7 +69,7 @@ class TyperContext {
 		return loader == null ? null : loader.ensureTypeAvailable(typePath, packagePath, imports);
 	}
 
-	public function currentClass():Null<TyClassInfo> {
+	public function currentClass():Null<TyNominalInfo> {
 		return classFullName.length == 0 ? null : resolveType(classFullName);
 	}
 }

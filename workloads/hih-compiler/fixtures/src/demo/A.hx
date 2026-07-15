@@ -49,3 +49,24 @@ class A {
 		return p.getX();
 	}
 }
+
+/**
+	Compile-only probe that keeps the stage0-free policy workload exercising the
+	shared abstract declaration catalog through the generated compiler.
+**/
+private abstract AbstractCatalogProbe(Int) {
+	@:op(-a)
+	public static function arbitraryNeg(value:AbstractCatalogProbe):AbstractCatalogProbe
+		return value;
+
+	@:op(!A)
+	public static function genericNot<U:Float>(value:AbstractCatalogProbe):AbstractCatalogProbe
+		return value;
+
+	@:op(a++)
+	public function arbitraryPostfix():Void {}
+
+	@:op([])
+	public function deferredArrayAccess(index:Int):Int
+		return this;
+}

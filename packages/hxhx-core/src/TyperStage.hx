@@ -530,7 +530,7 @@ class TyperStage {
 		return score;
 	}
 
-	static function resolveMethodCallReturnType(c:TyClassInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
+	static function resolveMethodCallReturnType(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
 			pos:HxPos):TyType {
 		final argTypes = new Array<TyType>();
 		for (a in args)

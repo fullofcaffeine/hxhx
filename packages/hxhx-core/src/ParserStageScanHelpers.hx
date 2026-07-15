@@ -844,8 +844,9 @@ class ParserStageScanHelpers {
 		  declarations are not double-counted as regular abstracts.
 
 		Limitations
-		- Parses only the member signature/body subset needed for bring-up stubs.
-		- Ignores advanced abstract semantics.
+		- Parses only the member signature/body subset needed by current semantic
+		  indexing and bring-up emission.
+		- Leaves operator binding and other advanced abstract semantics to the typer.
 	**/
 	public static function scanModuleLocalHelperAbstracts(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
 		final out = new Array<HxClassDecl>();
@@ -921,6 +922,7 @@ class ParserStageScanHelpers {
 
 			final abstractName = nameTok.text;
 			i = nameTok.nextPos;
+			final typeParams = scanTypeParameterNames(source, i);
 			final abstractUnderlying = scanAbstractUnderlyingType(source, i);
 
 			final isMain = mainTypeName != null && abstractName == mainTypeName;
@@ -946,7 +948,7 @@ class ParserStageScanHelpers {
 			}
 
 			if (shouldRecord) {
-				final metadata = ["__hxhx_abstract"];
+				final metadata = ["__hxhx_abstract"].concat(typeParamsMetadata(typeParams.params));
 				if (abstractUnderlying.length > 0)
 					metadata.push("__hxhx_abstract_underlying=" + abstractUnderlying);
 				out.push(new HxClassDecl(abstractName, false, functions, fields, "", metadata));
@@ -1395,6 +1397,7 @@ class ParserStageScanHelpers {
 		var i = start;
 
 		var sawStatic = false;
+		var sawInline = false;
 		var sawMacro = false;
 		var sawOverload = false;
 		var sawDynamic = false;
@@ -1623,6 +1626,7 @@ class ParserStageScanHelpers {
 						if (depth == 1) {
 							// Declarations are terminated; reset modifiers.
 							sawStatic = false;
+							sawInline = false;
 							sawMacro = false;
 							sawOverload = false;
 							sawDynamic = false;
@@ -1648,6 +1652,9 @@ class ParserStageScanHelpers {
 				case "static":
 					noteDeclarationStart(t.startPos);
 					sawStatic = true;
+				case "inline":
+					noteDeclarationStart(t.startPos);
+					sawInline = true;
 				case "macro":
 					noteDeclarationStart(t.startPos);
 					sawMacro = true;
@@ -1657,7 +1664,7 @@ class ParserStageScanHelpers {
 				case "dynamic":
 					noteDeclarationStart(t.startPos);
 					sawDynamic = true;
-				case "inline" | "extern" | "override":
+				case "extern" | "override":
 					// Keep scanning; these can appear between `static` and the declaration keyword.
 					noteDeclarationStart(t.startPos);
 				case "var" | "final":
@@ -1757,6 +1764,7 @@ class ParserStageScanHelpers {
 					}
 
 					sawStatic = false;
+					sawInline = false;
 					sawMacro = false;
 					sawOverload = false;
 					sawDynamic = false;
@@ -1899,6 +1907,8 @@ class ParserStageScanHelpers {
 					if (fnName.length > 0) {
 						final metadata = pendingMetadata.copy()
 							.concat(functionTypeParamsMetadata(source, functionTypeParamsStart, functionTypeParams.nextPos));
+						if (sawInline)
+							metadata.push("inline");
 						if (sawMacro)
 							metadata.push("macro");
 						if (sawOverload)
@@ -1910,6 +1920,7 @@ class ParserStageScanHelpers {
 					}
 
 					sawStatic = false;
+					sawInline = false;
 					sawMacro = false;
 					sawOverload = false;
 					sawDynamic = false;

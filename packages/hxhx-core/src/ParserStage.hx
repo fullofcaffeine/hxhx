@@ -1929,8 +1929,8 @@ class ParserStage {
 
 		What
 		- Scans for top-level `abstract <Name>(...) { ... }` declarations.
-		- Captures static fields/functions from the abstract body using the same
-		  class-body scanner used for helper classes.
+		- Captures the supported field/function surface from the abstract body using
+		  the same class-body scanner used for helper classes.
 
 		How
 		- Token-scans the source at brace depth 0.
@@ -1938,8 +1938,9 @@ class ParserStage {
 		  declarations are not double-counted as regular abstracts.
 
 		Limitations
-		- Parses only static member signatures needed for bring-up stubs.
-		- Ignores non-static members and advanced abstract semantics.
+		- Parses only the member signature/body subset needed by current semantic
+		  indexing and bring-up emission.
+		- Leaves operator binding and other advanced abstract semantics to the typer.
 	**/
 	static function scanModuleLocalHelperAbstracts(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
 		final out = new Array<HxClassDecl>();
@@ -2015,6 +2016,7 @@ class ParserStage {
 
 			final abstractName = nameTok.text;
 			i = nameTok.nextPos;
+			final typeParams = scanTypeParameterNames(source, i);
 			final abstractUnderlying = scanAbstractUnderlyingType(source, i);
 
 			final isMain = mainTypeName != null && abstractName == mainTypeName;
@@ -2040,7 +2042,7 @@ class ParserStage {
 			}
 
 			if (shouldRecord) {
-				final metadata = ["__hxhx_abstract"];
+				final metadata = ["__hxhx_abstract"].concat(typeParamsMetadata(typeParams.params));
 				if (abstractUnderlying.length > 0)
 					metadata.push("__hxhx_abstract_underlying=" + abstractUnderlying);
 				out.push(new HxClassDecl(abstractName, false, functions, fields, "", metadata));
@@ -2486,6 +2488,7 @@ class ParserStage {
 		var i = start;
 
 		var sawStatic = false;
+		var sawInline = false;
 		var sawMacro = false;
 		var pendingMetadata = new Array<String>();
 		var vis:HxVisibility = HxVisibility.Private;
@@ -2546,6 +2549,7 @@ class ParserStage {
 						if (depth == 1) {
 							// Declarations are terminated; reset modifiers.
 							sawStatic = false;
+							sawInline = false;
 							sawMacro = false;
 							pendingMetadata = [];
 							vis = HxVisibility.Private;
@@ -2565,9 +2569,11 @@ class ParserStage {
 					vis = HxVisibility.Private;
 				case "static":
 					sawStatic = true;
+				case "inline":
+					sawInline = true;
 				case "macro":
 					sawMacro = true;
-				case "inline" | "extern" | "override":
+				case "extern" | "override":
 					// Keep scanning; these can appear between `static` and the declaration keyword.
 				case "var" | "final":
 					// `final` can introduce either:
@@ -2664,6 +2670,7 @@ class ParserStage {
 					}
 
 					sawStatic = false;
+					sawInline = false;
 					sawMacro = false;
 					pendingMetadata = [];
 					vis = HxVisibility.Private;
@@ -2778,12 +2785,15 @@ class ParserStage {
 					if (fnName.length > 0) {
 						final metadata = pendingMetadata.copy()
 							.concat(functionTypeParamsMetadata(source, functionTypeParamsStart, functionTypeParams.nextPos));
+						if (sawInline)
+							metadata.push("inline");
 						if (sawMacro)
 							metadata.push("macro");
 						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", body, "", metadata, null, null, bodyText));
 					}
 
 					sawStatic = false;
+					sawInline = false;
 					sawMacro = false;
 					pendingMetadata = [];
 					vis = HxVisibility.Private;

@@ -13,6 +13,7 @@ Owning and follow-up beads:
   consumer;
 - `haxe_ocaml-d5ow7` — add canonical semantic identities and the shared
   abstract-operator catalog;
+- `haxe_ocaml-g7gyg` — retain enum-abstract member semantics in that catalog;
 - `haxe_ocaml-idem2` — carry structural typed function bodies into every
   backend;
 - `haxe_ocaml-ass5p` — bind and lower the proven unary subset, then unblock
@@ -44,7 +45,9 @@ temporaries, and result.
 
 ## Repository validation
 
-The review's central source claims reproduce on current `main`:
+At review intake, the review's central source claims reproduced on candidate
+`a2204f4429a1621d18012729b703a9ebd5880b5a`. The bullets below describe that
+pre-migration baseline, not the repository after the numbered beads land:
 
 - `HxParser` retains postfix increment/decrement as string-tagged `EUnop`
   values but rewrites prefix increment/decrement into compound assignment;
@@ -82,7 +85,7 @@ cross-backend target normalization proves a separate IR is justified.
 
 ## Corrections and refinements
 
-The response is advisory. Five details were corrected or narrowed before
+The response is advisory. Eight details were corrected or narrowed before
 integration.
 
 ### Unary positive is not part of the syntax model
@@ -151,6 +154,35 @@ target, not a substitute for responsibility and behavior evidence. Likewise,
 the exact native helper namespace/container is provisional until focused C++
 ABI and carrier tests select it.
 
+### Reported evaluation counts must be reproduced locally
+
+The review reports that its Haxe `4.3.7` fixtures observed different index
+evaluation counts for ordinary and overloaded indexed increment. That is a
+valuable lowering constraint, but the prose response is not repository proof.
+Before `haxe_ocaml-ass5p` implements place/evaluation lowering, it must rerun a
+repo-owned black-box fixture against the local upstream Haxe `4.3.7` oracle on
+the interpreter, JavaScript, and Neko lanes and record the exact outputs in the
+bead. No reviewed fixture or upstream test source is copied into this repo.
+
+### Operator placeholder names are not semantic identities
+
+The operand expression inside unary `@:op` metadata determines the token and
+fixity, but its identifier spelling is not a binding key. Haxe `4.3.7` stdlib
+declarations use both uppercase forms such as `@:op(-A)` and lowercase forms
+such as `@:op(-a)`. The catalog therefore parses the complete metadata
+expression, records only the structured unary token/fixity, and validates the
+owning abstract through the declaration's semantic signature.
+
+### Enum-abstract coverage is an explicit follow-up
+
+The current frontend already marks enum abstracts as abstracts and retains
+their value fields, but it does not yet retain their complete member-function,
+generic-header, and underlying-type surface. The first catalog bead therefore
+proves regular Haxe abstracts only. `haxe_ocaml-g7gyg` owns the parser/model
+extension needed before the project can claim that all enum-abstract operators
+participate in the shared catalog. This does not block the focused regular-
+abstract unary C++ frontier.
+
 ## Required semantic invariants
 
 - Prefix increment, postfix increment, and source-written compound assignment
@@ -166,8 +198,9 @@ ABI and carrier tests select it.
   carrier temporary.
 - Receiver, index, getter, setter, helper, and operand evaluation occurrences
   required by upstream-compatible lowering are structurally explicit.
-- The strict profile preserves measured upstream Haxe `4.3.7` evaluation
-  counts, including repeated overloaded array-index evaluation where observed.
+- The strict profile preserves locally reproduced upstream Haxe `4.3.7`
+  evaluation counts, including repeated overloaded array-index evaluation if
+  the required black-box revalidation confirms the review's observation.
 - Unsupported, missing, generic, ambiguous, or unrepresentable operator cases
   fail deterministically before native C++ compilation. There is no carrier
   fallback.

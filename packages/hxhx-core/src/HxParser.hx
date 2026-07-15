@@ -245,6 +245,26 @@ class HxParser {
 		return e;
 	}
 
+	/**
+		Parse one expression and require the complete input to belong to it.
+
+		Semantic metadata loaders use this stricter entry point so malformed text
+		cannot be accepted merely because a valid expression prefix was parsed.
+	**/
+	public static function parseCompleteExprText(source:String):HxExpr {
+		final normalized =
+			#if hxhx_stage0_no_source_normalize_extract
+			normalizeDenseEscapedQuotesInline(source);
+			#else
+			HxParserSourceNormalize.normalizeDenseEscapedQuotes(source);
+			#end
+		final parser = new HxParser(normalized);
+		final expression = parser.parseExpr(() -> parser.cur.kind.match(TEof));
+		if (!parser.cur.kind.match(TEof))
+			parser.fail("Unexpected trailing input after expression");
+		return expression;
+	}
+
 	#if hxhx_stage0_no_source_normalize_extract
 	/**
 		Inline fallback for stage0 A/B measurement only.
@@ -4661,14 +4681,9 @@ class HxParser {
 							isStatic = true;
 							keep = true;
 						} else if (acceptKeyword(KInline)) {
-							// Stage3 bring-up: accept `inline` as a modifier, but do not model it yet.
-							//
-							// Why
-							// - Upstream harness code uses `public static inline function ...` heavily for small helpers
-							//   (e.g. `runci.System.getDownloadPath()`).
-							// - Without recognizing `inline`, we would treat it as an identifier, fail to match
-							//   `function`, and skip the entire member, which then breaks wildcard imports
-							//   (`import runci.System.*`) and can cause runtime segfaults in the Stage3 emit-runner.
+							// Keep the declaration fact available to semantic indexing. Inlining is
+							// still a later typer/lowering decision; the parser does not apply it.
+							metadata.push("inline");
 							keep = true;
 						} else if (acceptKeyword(KFinal)) {
 							// Stage3 bring-up: support class-level finals:
@@ -4861,6 +4876,72 @@ class HxParser {
 		final classes = new Array<HxClassDecl>();
 		final moduleFunctions = new Array<HxFunctionDecl>();
 		var pendingTypeMetadata = new Array<String>();
+		/**
+			Skip an abstract declaration that is rebuilt by `ParserStage`'s focused
+			abstract scanner. Consuming the complete declaration prevents its member
+			functions from being mistaken for module-level functions and merged into
+			the next ordinary class.
+		**/
+		function skipScannedAbstractDeclaration():Void {
+			bump(); // `abstract`
+			var bodyDepth = 0;
+			var parenDepth = 0;
+			var bracketDepth = 0;
+			var angleDepth = 0;
+			while (!cur.kind.match(TEof)) {
+				if (bodyDepth > 0) {
+					switch (cur.kind) {
+						case TLBrace:
+							bodyDepth++;
+							bump();
+						case TRBrace:
+							bodyDepth--;
+							bump();
+							if (bodyDepth == 0)
+								return;
+						case _:
+							bump();
+					}
+					continue;
+				}
+
+				switch (cur.kind) {
+					case TLParen:
+						parenDepth++;
+						bump();
+					case TRParen:
+						if (parenDepth > 0)
+							parenDepth--;
+						bump();
+					case TOther(code) if (code == "[".code):
+						bracketDepth++;
+						bump();
+					case TOther(code) if (code == "]".code):
+						if (bracketDepth > 0)
+							bracketDepth--;
+						bump();
+					case TOther(code) if (code == "<".code):
+						angleDepth++;
+						bump();
+					case TOther(code) if (code == ">".code):
+						if (angleDepth > 0)
+							angleDepth--;
+						bump();
+					case TLBrace:
+						if (parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) {
+							bodyDepth = 1;
+							bump();
+						} else {
+							bump();
+						}
+					case TSemicolon:
+						bump();
+						return;
+					case _:
+						bump();
+				}
+			}
+		}
 		function parseModuleField(isFinal:Bool):Void {
 			final fieldStart = cur.getPos();
 			bump();
@@ -4910,7 +4991,10 @@ class HxParser {
 				} else if (acceptKeyword(KPrivate)) {
 					moduleMemberVisibility = Private;
 					keepModuleModifiers = true;
-				} else if (acceptKeyword(KStatic) || acceptKeyword(KInline)) {
+				} else if (acceptKeyword(KStatic)) {
+					keepModuleModifiers = true;
+				} else if (acceptKeyword(KInline)) {
+					moduleFunctionMetadata.push("inline");
 					keepModuleModifiers = true;
 				} else {
 					switch (cur.kind) {
@@ -4984,6 +5068,9 @@ class HxParser {
 
 					classes.push(new HxClassDecl(className, hasStaticMain, functions, fields, extendsPath, classMetadata, isInterface, implementsPaths));
 				// `parseClassMembers` consumes the closing `}`.
+				case TIdent("abstract"):
+					pendingTypeMetadata = [];
+					skipScannedAbstractDeclaration();
 				case TKeyword(KFunction):
 					pendingTypeMetadata = [];
 					// Detect module-level `function main(...)` entrypoint.

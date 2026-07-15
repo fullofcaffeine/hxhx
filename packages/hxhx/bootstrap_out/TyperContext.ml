@@ -103,7 +103,7 @@ let resolveType = fun self (typePath : string) -> try let __fallback_result_23 =
   ignore (if (Obj.magic self : t).index == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   let hit = Obj.magic (TyperIndex.resolveTypePath (Obj.magic ((Obj.magic self : t).index)) (typePath : string) ((Obj.magic self : t).packagePath : string) (Obj.magic ((Obj.magic self : t).imports))) in (
     ignore (if hit != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic hit))) else ());
-    let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyClassInfo.t) in (
+    let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
       ignore (if (Obj.magic self : t).loader == Obj.magic (HxRuntime.hx_null) then let __assign_19 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_19;
         __assign_19
@@ -117,7 +117,7 @@ let resolveType = fun self (typePath : string) -> try let __fallback_result_23 =
 ) in Obj.magic __fallback_result_23 with
   | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
 
-let currentClass = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyClassInfo.t) in (
+let currentClass = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
   ignore (if HxString.length ((Obj.magic self : t).classFullName) = 0 then let __assign_24 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_24;
     __assign_24

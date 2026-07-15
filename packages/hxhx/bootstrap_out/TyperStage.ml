@@ -47,16 +47,16 @@ let typeFromHintInContext = fun hint ctx -> try let __fallback_result_12 = let t
   ignore (match !tempString with
     | "Bool" | "Dynamic" | "Float" | "Int" | "Null" | "String" | "Void" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (TyType.fromHintText (!tempString : string)))))
     | _ -> ignore ());
-  let tempMaybeTyClassInfo = ref (Obj.magic (HxRuntime.hx_null) : TyClassInfo.t) in (
+  let tempMaybeTyNominalInfo = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
     ignore (if ctx == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-      tempMaybeTyClassInfo := __assign_7;
+      tempMaybeTyNominalInfo := __assign_7;
       __assign_7
     ) else let __assign_8 = Obj.magic (Obj.magic (TyperContext.resolveType (Obj.magic ctx) (!tempString : string))) in (
-      tempMaybeTyClassInfo := __assign_8;
+      tempMaybeTyNominalInfo := __assign_8;
       __assign_8
     ));
-    let c = Obj.magic (!tempMaybeTyClassInfo) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-      ignore (if c != Obj.magic (HxRuntime.hx_null) then let __assign_9 = Obj.magic (TyType.fromHintText (TyClassInfo.getFullName (Obj.magic c) () : string)) in (
+    let c = Obj.magic (!tempMaybeTyNominalInfo) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+      ignore (if c != Obj.magic (HxRuntime.hx_null) then let __assign_9 = Obj.magic (TyType.fromHintText ((Obj.magic c : TyNominalInfo.t).getFullName (Obj.magic c) () : string)) in (
         tempResult := __assign_9;
         __assign_9
       ) else let __assign_10 = Obj.magic (TyType.fromHintText (!tempString : string)) in (
@@ -542,7 +542,7 @@ let inferNullCoalesceType = fun left right -> try let __fallback_result_176 = (
 
 let currentStaticMethodReferenceType = fun name ctx -> try let __fallback_result_178 = let c = Obj.magic (TyperContext.currentClass (Obj.magic ctx) ()) in (
   ignore (if c == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
-  let candidates = Obj.magic (TyClassInfo.staticMethodCandidates (Obj.magic c) (name : string)) in (
+  let candidates = Obj.magic ((Obj.magic c : TyNominalInfo.t).staticMethodCandidates (Obj.magic c) (name : string)) in (
     ignore (if HxArray.length candidates <> 1 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
     functionReferenceType (Obj.magic (HxArray.get (Obj.magic candidates) 0))
   )
@@ -558,10 +558,10 @@ let rec resolveMethodCallReturnType = fun c field isStatic args scope ctx pos ->
     HxArray.push argTypes (inferExprType (Obj.magic a) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos))
   )) done);
   let tempArray = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t HxArray.t) in (
-    ignore (if isStatic then let __assign_159 = Obj.magic (TyClassInfo.staticMethodCandidates (Obj.magic c) (field : string)) in (
+    ignore (if isStatic then let __assign_159 = Obj.magic ((Obj.magic c : TyNominalInfo.t).staticMethodCandidates (Obj.magic c) (field : string)) in (
       tempArray := __assign_159;
       __assign_159
-    ) else let __assign_160 = Obj.magic (TyClassInfo.instanceMethodCandidates (Obj.magic c) (field : string)) in (
+    ) else let __assign_160 = Obj.magic ((Obj.magic c : TyNominalInfo.t).instanceMethodCandidates (Obj.magic c) (field : string)) in (
       tempArray := __assign_160;
       __assign_160
     ));
@@ -680,15 +680,15 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_349 = le
       let methodRef = Obj.magic (!tempMaybeTyType) in if methodRef != Obj.magic (HxRuntime.hx_null) then let __assign_191 = Obj.magic methodRef in (
         tempResult := __assign_191;
         __assign_191
-      ) else let tempMaybeTyClassInfo = ref (Obj.magic (HxRuntime.hx_null) : TyClassInfo.t) in (
+      ) else let tempMaybeTyNominalInfo = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
         ignore (if isUpperStartName (name : string) then let __assign_192 = Obj.magic (Obj.magic (TyperContext.resolveType (Obj.magic ctx) (name : string))) in (
-          tempMaybeTyClassInfo := __assign_192;
+          tempMaybeTyNominalInfo := __assign_192;
           __assign_192
         ) else let __assign_193 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-          tempMaybeTyClassInfo := __assign_193;
+          tempMaybeTyNominalInfo := __assign_193;
           __assign_193
         ));
-        let t = Obj.magic (!tempMaybeTyClassInfo) in if t != Obj.magic (HxRuntime.hx_null) then let __assign_194 = Obj.magic (TyType.fromHintText (TyClassInfo.getFullName (Obj.magic t) () : string)) in (
+        let t = Obj.magic (!tempMaybeTyNominalInfo) in if t != Obj.magic (HxRuntime.hx_null) then let __assign_194 = Obj.magic (TyType.fromHintText ((Obj.magic t : TyNominalInfo.t).getFullName (Obj.magic t) () : string)) in (
           tempResult := __assign_194;
           __assign_194
         ) else let __assign_195 = Obj.magic (TyType.unknown ()) in (
@@ -837,7 +837,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_349 = le
             tempString := __assign_201;
             __assign_201
           ));
-          let last = (!tempString : string) in if isUpperStartName (last : string) then ignore (let c = Obj.magic (TyperContext.resolveType (Obj.magic ctx) (dotted : string)) in if c != Obj.magic (HxRuntime.hx_null) then ignore (let ft = Obj.magic (TyClassInfo.fieldType (Obj.magic c) (_field : string)) in (
+          let last = (!tempString : string) in if isUpperStartName (last : string) then ignore (let c = Obj.magic (TyperContext.resolveType (Obj.magic ctx) (dotted : string)) in if c != Obj.magic (HxRuntime.hx_null) then ignore (let ft = Obj.magic ((Obj.magic c : TyNominalInfo.t).fieldType (Obj.magic c) (_field : string)) in (
             ignore (if ft != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic ft))) else ());
             raise (HxRuntime.Hx_return (Obj.repr (TyType.fromHintText ("Dynamic" : string))))
           )) else ()) else ()
@@ -871,7 +871,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_349 = le
           | HxExpr.ERange (_, _) -> 25
           | HxExpr.ECast (_, _) -> 26
           | HxExpr.EUntyped _ -> 27
-          | HxExpr.EUnsupported _ -> 28) = 6 then let c = Obj.magic (TyperContext.currentClass (Obj.magic ctx) ()) in if c != Obj.magic (HxRuntime.hx_null) then let ft = Obj.magic (TyClassInfo.fieldType (Obj.magic c) (_field : string)) in if ft != Obj.magic (HxRuntime.hx_null) then let __assign_202 = Obj.magic ft in (
+          | HxExpr.EUnsupported _ -> 28) = 6 then let c = Obj.magic (TyperContext.currentClass (Obj.magic ctx) ()) in if c != Obj.magic (HxRuntime.hx_null) then let ft = Obj.magic ((Obj.magic c : TyNominalInfo.t).fieldType (Obj.magic c) (_field : string)) in if ft != Obj.magic (HxRuntime.hx_null) then let __assign_202 = Obj.magic ft in (
           tempResult := __assign_202;
           __assign_202
         ) else let tempBool = ref (false : bool) in (
@@ -887,15 +887,15 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_349 = le
         ) else let __assign_205 = Obj.magic (TyType.unknown ()) in (
           tempResult := __assign_205;
           __assign_205
-        ) else let objTy = Obj.magic (inferExprType (Obj.magic obj) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in let idx = Obj.magic (TyperContext.getIndex (Obj.magic ctx) ()) in let tempMaybeTyClassInfo1 = ref (Obj.magic (HxRuntime.hx_null) : TyClassInfo.t) in (
+        ) else let objTy = Obj.magic (inferExprType (Obj.magic obj) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in let idx = Obj.magic (TyperContext.getIndex (Obj.magic ctx) ()) in let tempMaybeTyNominalInfo1 = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
           ignore (if idx == Obj.magic (HxRuntime.hx_null) then let __assign_206 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-            tempMaybeTyClassInfo1 := __assign_206;
+            tempMaybeTyNominalInfo1 := __assign_206;
             __assign_206
           ) else let __assign_207 = Obj.magic (Obj.magic (TyperIndex.getByFullName (Obj.magic idx) (TyType.getDisplay (Obj.magic objTy) () : string))) in (
-            tempMaybeTyClassInfo1 := __assign_207;
+            tempMaybeTyNominalInfo1 := __assign_207;
             __assign_207
           ));
-          let c = Obj.magic (!tempMaybeTyClassInfo1) in if c != Obj.magic (HxRuntime.hx_null) then let ft = Obj.magic (TyClassInfo.fieldType (Obj.magic c) (_field : string)) in if ft != Obj.magic (HxRuntime.hx_null) then let __assign_208 = Obj.magic ft in (
+          let c = Obj.magic (!tempMaybeTyNominalInfo1) in if c != Obj.magic (HxRuntime.hx_null) then let ft = Obj.magic ((Obj.magic c : TyNominalInfo.t).fieldType (Obj.magic c) (_field : string)) in if ft != Obj.magic (HxRuntime.hx_null) then let __assign_208 = Obj.magic ft in (
             tempResult := __assign_208;
             __assign_208
           ) else let tempBool1 = ref (false : bool) in (
@@ -1146,15 +1146,15 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_349 = le
             __assign_245
           )
         )
-        | HxExpr.EIdent _p0 -> let _g4 = (_p0 : string) in let typeName = (_g4 : string) in let tempMaybeTyClassInfo2 = ref (Obj.magic (HxRuntime.hx_null) : TyClassInfo.t) in (
+        | HxExpr.EIdent _p0 -> let _g4 = (_p0 : string) in let typeName = (_g4 : string) in let tempMaybeTyNominalInfo2 = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
           ignore (if isUpperStartName (typeName : string) then let __assign_246 = Obj.magic (Obj.magic (TyperContext.resolveType (Obj.magic ctx) (typeName : string))) in (
-            tempMaybeTyClassInfo2 := __assign_246;
+            tempMaybeTyNominalInfo2 := __assign_246;
             __assign_246
           ) else let __assign_247 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-            tempMaybeTyClassInfo2 := __assign_247;
+            tempMaybeTyNominalInfo2 := __assign_247;
             __assign_247
           ));
-          let c = Obj.magic (!tempMaybeTyClassInfo2) in if c != Obj.magic (HxRuntime.hx_null) then let __assign_248 = Obj.magic (resolveMethodCallReturnType (Obj.magic c) (field : string) true (Obj.magic args) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in (
+          let c = Obj.magic (!tempMaybeTyNominalInfo2) in if c != Obj.magic (HxRuntime.hx_null) then let __assign_248 = Obj.magic (resolveMethodCallReturnType (Obj.magic c) (field : string) true (Obj.magic args) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in (
             tempResult := __assign_248;
             __assign_248
           ) else let objTy = Obj.magic (inferExprType (Obj.magic obj) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in (
@@ -1165,15 +1165,15 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_349 = le
               ));
               inferExprType (Obj.magic a) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)
             )) done);
-            let idx = Obj.magic (TyperContext.getIndex (Obj.magic ctx) ()) in let tempMaybeTyClassInfo3 = ref (Obj.magic (HxRuntime.hx_null) : TyClassInfo.t) in (
+            let idx = Obj.magic (TyperContext.getIndex (Obj.magic ctx) ()) in let tempMaybeTyNominalInfo3 = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
               ignore (if idx == Obj.magic (HxRuntime.hx_null) then let __assign_251 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-                tempMaybeTyClassInfo3 := __assign_251;
+                tempMaybeTyNominalInfo3 := __assign_251;
                 __assign_251
               ) else let __assign_252 = Obj.magic (Obj.magic (TyperIndex.getByFullName (Obj.magic idx) (TyType.getDisplay (Obj.magic objTy) () : string))) in (
-                tempMaybeTyClassInfo3 := __assign_252;
+                tempMaybeTyNominalInfo3 := __assign_252;
                 __assign_252
               ));
-              let c2 = Obj.magic (!tempMaybeTyClassInfo3) in if c2 != Obj.magic (HxRuntime.hx_null) then let __assign_253 = Obj.magic (resolveMethodCallReturnType (Obj.magic c2) (field : string) false (Obj.magic args) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in (
+              let c2 = Obj.magic (!tempMaybeTyNominalInfo3) in if c2 != Obj.magic (HxRuntime.hx_null) then let __assign_253 = Obj.magic (resolveMethodCallReturnType (Obj.magic c2) (field : string) false (Obj.magic args) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in (
                 tempResult := __assign_253;
                 __assign_253
               ) else let __assign_254 = Obj.magic (TyType.unknown ()) in (
@@ -1202,15 +1202,15 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_349 = le
               ));
               inferExprType (Obj.magic a) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)
             )) done);
-            let idx = Obj.magic (TyperContext.getIndex (Obj.magic ctx) ()) in let tempMaybeTyClassInfo4 = ref (Obj.magic (HxRuntime.hx_null) : TyClassInfo.t) in (
+            let idx = Obj.magic (TyperContext.getIndex (Obj.magic ctx) ()) in let tempMaybeTyNominalInfo4 = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
               ignore (if idx == Obj.magic (HxRuntime.hx_null) then let __assign_238 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-                tempMaybeTyClassInfo4 := __assign_238;
+                tempMaybeTyNominalInfo4 := __assign_238;
                 __assign_238
               ) else let __assign_239 = Obj.magic (Obj.magic (TyperIndex.getByFullName (Obj.magic idx) (TyType.getDisplay (Obj.magic objTy) () : string))) in (
-                tempMaybeTyClassInfo4 := __assign_239;
+                tempMaybeTyNominalInfo4 := __assign_239;
                 __assign_239
               ));
-              let c2 = Obj.magic (!tempMaybeTyClassInfo4) in if c2 != Obj.magic (HxRuntime.hx_null) then let __assign_240 = Obj.magic (resolveMethodCallReturnType (Obj.magic c2) (field : string) false (Obj.magic args) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in (
+              let c2 = Obj.magic (!tempMaybeTyNominalInfo4) in if c2 != Obj.magic (HxRuntime.hx_null) then let __assign_240 = Obj.magic (resolveMethodCallReturnType (Obj.magic c2) (field : string) false (Obj.magic args) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)) in (
                 tempResult := __assign_240;
                 __assign_240
               ) else let __assign_241 = Obj.magic (TyType.unknown ()) in (
@@ -1328,7 +1328,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_349 = le
         ));
         inferExprType (Obj.magic a) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos)
       )) done);
-      let c = Obj.magic (TyperContext.resolveType (Obj.magic ctx) (_typePath : string)) in if c != Obj.magic (HxRuntime.hx_null) then let __assign_277 = Obj.magic (TyType.fromHintText (TyClassInfo.getFullName (Obj.magic c) () : string)) in (
+      let c = Obj.magic (TyperContext.resolveType (Obj.magic ctx) (_typePath : string)) in if c != Obj.magic (HxRuntime.hx_null) then let __assign_277 = Obj.magic (TyType.fromHintText ((Obj.magic c : TyNominalInfo.t).getFullName (Obj.magic c) () : string)) in (
         tempResult := __assign_277;
         __assign_277
       ) else let __assign_278 = Obj.magic (TyType.fromHintText (_typePath : string)) in (

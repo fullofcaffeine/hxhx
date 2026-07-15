@@ -21,7 +21,7 @@
 class LazyTypeLoader {
 	public function new() {}
 
-	public function ensureTypeAvailable(typePath:String, packagePath:String, imports:Array<String>):Null<TyClassInfo> {
+	public function ensureTypeAvailable(typePath:String, packagePath:String, imports:Array<String>):Null<TyNominalInfo> {
 		// Default no-op implementation.
 		//
 		// Note (OCaml backend):

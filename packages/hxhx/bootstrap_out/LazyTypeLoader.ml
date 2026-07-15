@@ -4,7 +4,7 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; ensureTypeAvailable : Obj.t -> string -> string -> string HxArray.t -> TyClassInfo.t }
+type t = { __hx_type : Obj.t; ensureTypeAvailable : Obj.t -> string -> string -> string HxArray.t -> TyNominalInfo.t }
 
 let __ctor = fun (self : t) () -> ignore ((
   ignore self;

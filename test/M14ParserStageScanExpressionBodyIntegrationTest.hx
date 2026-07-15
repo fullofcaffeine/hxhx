@@ -8,7 +8,7 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 
 	static function main():Void {
 		final source = [
-			"abstract LocalVector(Array<Int>) from Array<Int> {",
+			"abstract LocalVector<T>(Array<T>) from Array<T> {",
 			"  inline public function fill(value:Int):Void for (i in 0...this.length) this[i] = value;",
 			"}"
 		].join("\n");
@@ -21,6 +21,7 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 			}
 		}
 		assertTrue(localVector != null, "expected helper abstract scanner to discover LocalVector");
+		assertTrue(HxClassDecl.getMetadata(localVector).indexOf("__hxhx_type_params=T") >= 0, "expected helper abstract scanner to retain type parameters");
 
 		var fillFn:Null<HxFunctionDecl> = null;
 		for (fn in HxClassDecl.getFunctions(localVector)) {
@@ -30,6 +31,7 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 			}
 		}
 		assertTrue(fillFn != null, "expected expression-bodied fill method to be retained");
+		assertTrue(HxFunctionDecl.getMetadata(fillFn).indexOf("inline") >= 0, "expected helper abstract scanner to retain the inline modifier");
 		assertTrue(HxFunctionDecl.getBodyText(fillFn) == "for (i in 0...this.length) this[i] = value;",
 			"expected scanner to start the body after the return type hint");
 

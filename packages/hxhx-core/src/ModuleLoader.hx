@@ -36,8 +36,8 @@ private typedef MissingTypeHook = {
 		don’t spuriously pull modules into the compilation.
 
 	Gotchas
-	- Stage3 still does not model full “module has multiple types” semantics. We index only the
-	  main class of each module (consistent with the bootstrap parser/model).
+	- Stage3 indexes every type surfaced by the bootstrap parser/scanners, but it
+	  still does not model the complete upstream module/type-resolution contract.
 **/
 class ModuleLoader extends LazyTypeLoader {
 	final classPaths:Array<String>;
@@ -105,9 +105,9 @@ class ModuleLoader extends LazyTypeLoader {
 		Ensure that a type path can be resolved against the shared `TyperIndex`, loading a module
 		on-demand if needed.
 
-		Returns the resolved `TyClassInfo` or `null` if it still cannot be resolved.
+		Returns the resolved nominal semantic surface or `null` if it still cannot be resolved.
 	**/
-	override public function ensureTypeAvailable(typePath:String, packagePath:String, imports:Array<String>):Null<TyClassInfo> {
+	override public function ensureTypeAvailable(typePath:String, packagePath:String, imports:Array<String>):Null<TyNominalInfo> {
 		if (typePath == null)
 			return null;
 		final raw = StringTools.trim(typePath);
@@ -299,12 +299,8 @@ class ModuleLoader extends LazyTypeLoader {
 		if (trace)
 			Sys.println("loader_load ok module=" + modulePath + " file=" + filePath);
 
-		if (index != null) {
-			for (info in TyperIndexBuild.fromResolvedModule(rm)) {
-				if (info != null)
-					index.addClass(info);
-			}
-		}
+		if (index != null)
+			index.addResolvedModule(rm);
 
 		// Keep lazily loaded modules link-safe by recursively loading their direct dependencies.
 		//
@@ -325,6 +321,11 @@ class ModuleLoader extends LazyTypeLoader {
 					continue;
 				loadModuleByPath(dep);
 			}
+			// Dependency identities may not have existed during the provisional
+			// insertion above. Rebuild this module through the same index path so
+			// lazy signatures match an eager two-pass build.
+			if (index != null)
+				index.addResolvedModule(rm);
 		}
 	}
 
@@ -467,104 +468,5 @@ class ModuleLoader extends LazyTypeLoader {
 		}
 
 		return null;
-	}
-}
-
-/**
-	Small helper to build `TyClassInfo` incrementally (without rebuilding a whole `TyperIndex`).
-
-	Why
-	- `TyperIndex.build(...)` scans a whole resolved module list.
-	- The lazy loader needs to add a single module’s signature into the existing index.
-**/
-class TyperIndexBuild {
-	static function classFullName(pkg:String, cls:String):String {
-		final p = pkg == null ? "" : StringTools.trim(pkg);
-		return (p.length == 0) ? cls : (p + "." + cls);
-	}
-
-	static function expectedModuleNameFromFile(filePath:Null<String>):Null<String> {
-		if (filePath == null || filePath.length == 0)
-			return null;
-		final name = Path.withoutDirectory(filePath);
-		final dot = name.lastIndexOf(".");
-		return dot <= 0 ? name : name.substr(0, dot);
-	}
-
-	static function classFullNameInModule(pkg:String, moduleName:Null<String>, clsName:String):String {
-		final p = pkg == null ? "" : StringTools.trim(pkg);
-		final m0 = moduleName == null ? "" : StringTools.trim(moduleName);
-		final m = (m0.length == 0 || m0 == "Unknown") ? "" : m0;
-		final c = clsName == null ? "" : StringTools.trim(clsName);
-
-		var prefix = p;
-		if (m.length > 0 && c.length > 0 && c != m) {
-			prefix = prefix.length == 0 ? m : (prefix + "." + m);
-		}
-		return prefix.length == 0 ? c : (prefix + "." + c);
-	}
-
-	public static function fromResolvedModule(m:ResolvedModule):Array<TyClassInfo> {
-		final out = new Array<TyClassInfo>();
-		if (m == null)
-			return out;
-		final pm = ResolvedModule.getParsed(m);
-		if (pm == null)
-			return out;
-		final decl = pm.getDecl();
-		final pkg = HxModuleDecl.getPackagePath(decl);
-		final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(m));
-
-		function addMethod(primary:haxe.ds.StringMap<TyFunSig>, all:haxe.ds.StringMap<Array<TyFunSig>>, sig:TyFunSig):Void {
-			final name = sig.getName();
-			final candidates = all.exists(name) ? all.get(name) : [];
-			candidates.push(sig);
-			all.set(name, candidates);
-			if (!primary.exists(name))
-				primary.set(name, sig);
-		}
-
-		for (cls in HxModuleDecl.getClasses(decl)) {
-			final clsName = HxClassDecl.getName(cls);
-			if (clsName == null || clsName.length == 0 || clsName == "Unknown")
-				continue;
-			final full = classFullNameInModule(pkg, moduleName, clsName);
-
-			final fields = new haxe.ds.StringMap<TyType>();
-			for (f in HxClassDecl.getFields(cls)) {
-				fields.set(HxFieldDecl.getName(f), TyType.fromHintText(HxFieldDecl.getTypeHint(f)));
-			}
-
-			final statics = new haxe.ds.StringMap<TyFunSig>();
-			final instances = new haxe.ds.StringMap<TyFunSig>();
-			final staticLists = new haxe.ds.StringMap<Array<TyFunSig>>();
-			final instanceLists = new haxe.ds.StringMap<Array<TyFunSig>>();
-			for (fn in HxClassDecl.getFunctions(cls)) {
-				final fnName = HxFunctionDecl.getName(fn);
-				final isStatic = HxFunctionDecl.getIsStatic(fn);
-				final args = new Array<TyType>();
-				final argNames = new Array<String>();
-				final argOptional = new Array<Bool>();
-				final argRest = new Array<Bool>();
-				for (a in HxFunctionDecl.getArgs(fn)) {
-					argNames.push(HxFunctionArg.getName(a));
-					args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
-					argOptional.push(HxFunctionArg.getIsOptional(a));
-					argRest.push(HxFunctionArg.getIsRest(a));
-				}
-
-				final retHint = HxFunctionDecl.getReturnTypeHint(fn);
-				final ret = (fnName == "new") ? TyType.fromHintText(full) : TyType.fromHintText(retHint);
-				final sig = new TyFunSig(fnName, isStatic, argNames, args, argOptional, argRest, ret, HxFunctionDecl.getPos(fn));
-				if (isStatic)
-					addMethod(statics, staticLists, sig)
-				else
-					addMethod(instances, instanceLists, sig);
-			}
-
-			out.push(new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances, staticLists, instanceLists));
-		}
-
-		return out;
 	}
 }
