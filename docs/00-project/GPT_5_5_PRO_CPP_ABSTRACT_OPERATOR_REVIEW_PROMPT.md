@@ -203,12 +203,33 @@ EBinop(op, parseUnaryExpr(stop), EInt(1));
 This is direct proof that source `++value` cannot be distinguished later from
 source `value += 1` by inspecting `HxExpr` alone.
 
+### Public macro-expression evidence
+
+The permissively licensed Haxe 4.3.7 standard-library declaration for
+`haxe.macro.Expr` represents unary expressions as the operator, a `postFix`
+boolean, and the operand. It therefore preserves `++value` and `value++` as the
+same operator with different fixity instead of translating prefix increment to
+compound assignment. The internal hard cutover must preserve enough syntax to
+round-trip that public macro shape. The review should state the mapping between
+the bootstrap `HxExpr` representation, typer binding, and public macro quoting;
+it must not treat the current raw string tags as the public API contract.
+
 ### Typer evidence
 
 `packages/hxhx-core/src/TyperStage.hx` traverses `EUnop` but does not bind it to
 an abstract operator helper. Unary numeric inference returns the operand's
 numeric type and otherwise remains unknown. There is no typed operator-call
 node carrying owner, helper, operands, result type, or mutation mode.
+
+`packages/hxhx-core/src/TypedModule.hx` is still a bootstrap boundary containing
+the original `ParsedModule` plus a `TyModuleEnv`; it does not own a rewritten
+typed expression tree or stable expression IDs. `MacroExpandedProgram` carries
+those modules forward, and `GenIrProgram` currently aliases that program. A
+recommendation to bind operators in the typer must therefore name how the
+binding is stored or how expressions are rewritten. Do not assume an annotated
+typed AST already exists, and do not recommend an object-identity or traversal-
+order side table without proving its stability across parsing, macro handling,
+bootstrap generation, and backend consumption.
 
 ### C++ target evidence
 
@@ -333,6 +354,8 @@ for the current upstream test is not sufficient.
 1. Which phase should own exact `@:op` overload selection and diagnostics?
 2. What expression/typed-IR shape should distinguish prefix, postfix, compound
    assignment, mutation target, helper declaration, and result type?
+   Explain where that decision lives while `TypedModule` still wraps the parsed
+   tree rather than owning typed expression nodes.
 3. Is preserving `pre++`/`pre--` in `HxExpr` an appropriate first hard cutover,
    or should a structured operator kind replace the current string tags now?
 4. How can the first slice update all affected backends without pretending that
@@ -438,6 +461,8 @@ Inspect the repository as a whole, then trace at least these paths:
 - `packages/hxhx-core/src/ParserStage.hx`
 - `packages/hxhx-core/src/ParserStageScanHelpers.hx`
 - `packages/hxhx-core/src/TyperStage.hx`
+- `packages/hxhx-core/src/TypedModule.hx`
+- `packages/hxhx-core/src/MacroExpandedProgram.hx`
 - `packages/hxhx-core/src/EmitterStage.hx`
 - `packages/hxhx-core/src/backend/cpp/CppRenderScope.hx`
 - `packages/hxhx-core/src/backend/cpp/CppTypeModel.hx`
