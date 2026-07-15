@@ -308,7 +308,7 @@ review must distinguish required Haxe 4.3.7 compatibility from a deliberate
 semantic improvement. A backend must not silently choose the latter while
 claiming strict parity.
 
-### Original oracle checkpoint: prefix mutation is helper-defined
+### Original oracle checkpoint: increment mutation and result are helper-defined
 
 A second original temporary fixture isolated three primitive-backed
 `@:op(++x)` shapes. Upstream Haxe 4.3.7 produced the same result through
@@ -333,6 +333,21 @@ backend rule such as “prefix means assign the helper result to the lvalue” o
 for increment/decrement: shared typed lowering must preserve the selected
 helper's call or inline-body semantics, including whether the original lvalue
 changes and what value, if any, the expression yields.
+
+A third original fixture tested the corresponding `@:op(x++)` shapes. The same
+three upstream routes again agreed:
+
+- a static helper left a local at `4` and returned `44`;
+- an inline instance helper returning the abstract mutated a local from `5` to
+  `55` and returned `55`;
+- an inline instance helper returning `Void` mutated a local from `6` to `66`.
+
+Generated JavaScript again used a plain call for the static declaration and
+structurally expanded the inline instance bodies. Thus overloaded postfix
+syntax does not itself guarantee an old-value result. The old-value result in
+the first oracle fixture existed because that helper explicitly saved and
+returned its prior `this` value. Shared lowering must retain this distinction;
+a generic backend postfix rewrite would change valid Haxe behavior.
 
 ### Upstream architecture checkpoint: targets do not resolve source overloads
 
@@ -378,6 +393,24 @@ a small explicit typed-expression island for bound operators, a structurally
 rebuilt semantic module, or the beginning of a general typed expression tree;
 it must name ownership, lifecycle, backend consumption, macro invalidation,
 and the removal/expansion criteria for any intermediate representation.
+
+### Current semantic-index constraint: operator declarations are discarded
+
+`TyperIndex.build` currently scans each parsed class into `TyClassInfo`, but it
+retains only nominal names, fields, and method signatures. `TyFunSig` carries a
+method name, static flag, argument and return types, and source position; it
+does not carry declaration metadata, a declaration identity, or the body.
+`TyType` is still a string-backed bootstrap descriptor. The abstract markers
+and `@:op` text remain available on the parsed `HxClassDecl` and
+`HxFunctionDecl`, but they are not represented in the shared type index.
+
+Therefore no existing semantic catalog can currently answer “is this nominal
+type an abstract, what is its underlying carrier, and which exact operator
+declaration applies?” The review must decide whether to enrich the shared class
+index or introduce a separate typed abstract/operator catalog, and how the
+selected declaration plus any inline body reaches structural backend input.
+Backend-local rescanning of parsed metadata is not a substitute for that
+decision.
 
 ### Syntax-cutover blast radius: a parser-only change is not a valid slice
 
@@ -431,8 +464,10 @@ fail instead of silently falling back.
 ### Direction C: introduce a dedicated operator expression model
 
 - Replace stringly `EUnop`/selected `EBinop` modes with a structured operator
-  kind containing fixity, mutation, and old/new result semantics.
-- Bind abstract helpers in a later typed phase.
+  kind containing syntax spelling and fixity without guessing mutation or
+  result semantics.
+- Bind abstract helpers in a later typed phase, where the resolved call or
+  inline body supplies mutation and result behavior.
 
 Concern: this may create broad churn across parser, macro-expression quoting,
 source targets, VM targets, tests, and bootstrap snapshots. Determine whether
@@ -450,7 +485,9 @@ for the current upstream test is not sufficient.
 
 ## Questions you must answer
 
-1. Which phase should own exact `@:op` overload selection and diagnostics?
+1. Which phase should own exact `@:op` overload selection and diagnostics, and
+   should its declarations live in an enriched `TyperIndex`/`TyClassInfo` or a
+   separate typed abstract/operator catalog?
 2. What expression/typed-IR shape should distinguish prefix, postfix, compound
    assignment, mutation target, helper declaration, and result type?
    Explain where that decision lives while `TypedModule` still wraps the parsed
@@ -498,8 +535,8 @@ Challenge and refine this draft set:
   operands.
 - Abstract operator selection uses declared `@:op` metadata and semantic types,
   never helper names.
-- The selected declaration, operand conversion, result type, and mutation mode
-  are explicit before target emission.
+- The selected declaration, operand conversions, result type, and structural
+  call/inline lowering are explicit before target emission.
 - Bound operator decisions are carried structurally in backend input; they are
   not keyed by object identity, incidental traversal order, or unavailable
   nested-expression source positions.
@@ -565,6 +602,12 @@ Inspect the repository as a whole, then trace at least these paths:
 - `docs/00-project/CPP_TARGET_RUNTIME_POLICY.md`
 - `docs/00-project/MEGA_FILE_GRAVITY_WATCH.md`
 - `packages/hxhx-core/src/HxExpr.hx`
+- `packages/hxhx-core/src/HxClassDecl.hx`
+- `packages/hxhx-core/src/HxFunctionDecl.hx`
+- `packages/hxhx-core/src/TyType.hx`
+- `packages/hxhx-core/src/TyFunSig.hx`
+- `packages/hxhx-core/src/TyClassInfo.hx`
+- `packages/hxhx-core/src/TyperIndex.hx`
 - `packages/hxhx-core/src/HxParser.hx`
 - `packages/hxhx-core/src/ParserStage.hx`
 - `packages/hxhx-core/src/ParserStageScanHelpers.hx`
