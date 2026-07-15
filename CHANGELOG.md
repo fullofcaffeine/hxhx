@@ -1,3 +1,10 @@
+## [0.15.24](https://github.com/fullofcaffeine/hxhx/compare/v0.15.23...v0.15.24) (2026-07-15)
+
+
+### Bug Fixes
+
+* preserve unary operator fixity ([bb67b7a](https://github.com/fullofcaffeine/hxhx/commit/bb67b7a42c9820941eabaae21c16c31631a78fa3))
+
 ## [0.15.23](https://github.com/fullofcaffeine/hxhx/compare/v0.15.22...v0.15.23) (2026-07-15)
 
 
