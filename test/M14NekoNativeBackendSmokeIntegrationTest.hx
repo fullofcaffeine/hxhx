@@ -1,6 +1,7 @@
 import backend.BackendContext;
 import backend.BackendDispatchBoundary;
 import backend.BackendRegistry;
+import backend.vm.NekoMacroExprLowering;
 import backend.vm.NekoTargetCore;
 import haxe.io.Path;
 import sys.FileSystem;
@@ -438,13 +439,15 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,
-			program('class Main { static function main() { var value = 1; var old = value++; var negOld = -(value--); Sys.println(old + negOld); } }'),
+			program('class Main { static function main() { var value = 1; var old = value++; var pre = ++value; var negOld = -(value--); var preDec = --value; Sys.println(old + pre + negOld + preDec); } }'),
 			context);
 		final postfixSource = File.getContent(sourcePath);
 		assertContains(postfixSource, "var __hxhx_post_old = value;", "expected Neko postfix update to capture the old value");
 		assertContains(postfixSource, "value = (__hxhx_post_old + 1);", "expected Neko postfix increment to update the local");
 		assertContains(postfixSource, "value = (__hxhx_post_old - 1);", "expected Neko postfix decrement to update the local");
 		assertContains(postfixSource, "return __hxhx_post_old;", "expected Neko postfix update to return the old value");
+		assertContains(postfixSource, "var pre = (value += 1);", "expected Neko prefix increment to return the updated value");
+		assertContains(postfixSource, "var preDec = (value -= 1);", "expected Neko prefix decrement to return the updated value");
 		assertNotContains(postfixSource, "post++", "postfix increment token should not leak into Neko source");
 		assertNotContains(postfixSource, "post--", "postfix decrement token should not leak into Neko source");
 
@@ -459,10 +462,22 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			locals: new haxe.ds.StringMap<Bool>(),
 			insideTry: false,
 			breakFlag: null
-		}, EUnop("post++", EThis));
+		}, EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EThis));
 		assertContains(postfixThisSource, "var __hxhx_post_old = __hxhx_self.__hx_value;", "expected Neko postfix this update to read backing value slot");
 		assertContains(postfixThisSource, "__hxhx_self.__hx_value = (__hxhx_post_old + 1);", "expected Neko postfix this update to write backing value slot");
 		assertNotContains(postfixThisSource, "post++", "postfix this increment token should not leak into Neko source");
+
+		final prefixMacro = NekoMacroExprLowering.render(HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Prefix, HxExpr.EIdent("value")), [],
+			function(expr) {
+				return Std.string(expr);
+			});
+		final postfixMacro = NekoMacroExprLowering.render(HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, HxExpr.EIdent("value")), [],
+			function(expr) {
+				return Std.string(expr);
+			});
+		assertContains(prefixMacro, '"OpIncrement"', "Neko macro quote should use the public unary enum constructor");
+		assertContains(prefixMacro, "false", "Neko macro quote should preserve prefix fixity as postFix=false");
+		assertContains(postfixMacro, "true", "Neko macro quote should preserve postfix fixity as postFix=true");
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,

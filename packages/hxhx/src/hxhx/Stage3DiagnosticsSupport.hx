@@ -54,7 +54,7 @@ class Stage3DiagnosticsSupport {
 				for (arg in args)
 					count += countUnsupportedExprsInExpr(arg);
 				count;
-			case EUnop(_op, inner): countUnsupportedExprsInExpr(inner);
+			case EUnop(_op, _fixity, inner): countUnsupportedExprsInExpr(inner);
 			case EBinop(_op, left, right): countUnsupportedExprsInExpr(left) + countUnsupportedExprsInExpr(right);
 			case ETernary(cond, thenExpr, elseExpr):
 				countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInExpr(thenExpr) + countUnsupportedExprsInExpr(elseExpr);
@@ -101,7 +101,7 @@ class Stage3DiagnosticsSupport {
 			case ENew(_typePath, args):
 				for (arg in args)
 					collectUnsupportedExprRawInExpr(arg, out, max);
-			case EUnop(_op, inner):
+			case EUnop(_op, _fixity, inner):
 				collectUnsupportedExprRawInExpr(inner, out, max);
 			case EBinop(_op, left, right):
 				collectUnsupportedExprRawInExpr(left, out, max);

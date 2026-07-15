@@ -202,7 +202,7 @@ class JsTargetCore implements ITargetCore {
 				collectStaticInitClassDeps(scrutinee, deps, byFullName, bySimpleFullName);
 				for (caseExpr in exprs)
 					collectStaticInitClassDeps(caseExpr, deps, byFullName, bySimpleFullName);
-			case EUnop(_, inner):
+			case EUnop(_, _, inner):
 				collectStaticInitClassDeps(inner, deps, byFullName, bySimpleFullName);
 			case EBinop(_, left, right):
 				collectStaticInitClassDeps(left, deps, byFullName, bySimpleFullName);

@@ -59,10 +59,11 @@ class JsExprEmitter {
 				emitMacroExpr(inner, wrappers, scope);
 			case EMacroType(typeText):
 				emitMacroType(typeText);
-			case EUnop(op, inner) if (op == "post++" || op == "post--"):
-				emitPostfixIncDec(op, inner, scope);
-			case EUnop(op, inner):
-				"(" + op + emit(inner, scope) + ")";
+			case EUnop(op, fixity, inner) if (op == Increment || op == Decrement):
+				emitIncDec(op, fixity, inner, scope);
+			case EUnop(op, fixity, inner):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				"(" + HxUnaryOperatorTools.sourceToken(op) + emit(inner, scope) + ")";
 			case EBinop(op, left, right):
 				emitBinop(op, left, right, scope);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -1511,8 +1512,35 @@ class JsExprEmitter {
 			+ " += " + r + "))";
 	}
 
-	static function emitPostfixIncDec(op:String, target:HxExpr, scope:JsEmitScope):String {
-		final delta = op == "post++" ? "1" : "-1";
+	/**
+		Emit an increment/decrement expression without losing Haxe lvalue behavior.
+
+		Indexed updates evaluate the array and index once, use abstract array-access
+		hooks when present, and return the new or old value according to fixity.
+	**/
+	static function emitIncDec(op:HxUnaryOperator, fixity:HxUnaryFixity, target:HxExpr, scope:JsEmitScope):String {
+		HxUnaryOperatorTools.requireValidFixity(op, fixity);
+		final delta = op == HxUnaryOperator.Increment ? "1" : "-1";
+		if (fixity == HxUnaryFixity.Prefix) {
+			final token = HxUnaryOperatorTools.sourceToken(op);
+			return switch (target) {
+				case EThis:
+					"(" + token + "this.__hx_value)";
+				case EArrayAccess(array, index):
+					final arrayJs = emit(array, scope);
+					final indexJs = emit(index, scope);
+					final body = "var __hx_old = (__hx_a != null && typeof __hx_a.__hx_op_read === \"function\") ? __hx_a.__hx_op_read(__hx_i) : __hx_a[__hx_i]; "
+						+ "var __hx_next = (__hx_old + "
+						+ delta
+						+ "); "
+						+ "if (__hx_a != null && typeof __hx_a.__hx_op_write === \"function\") __hx_a.__hx_op_write(__hx_i, __hx_next); "
+						+ "else __hx_a[__hx_i] = __hx_next; return __hx_next;";
+					"(function(__hx_a, __hx_i){ " + body + " })(" + arrayJs + ", " + indexJs + ")";
+				case _:
+					"(" + token + emit(target, scope) + ")";
+			};
+		}
+
 		return switch (target) {
 			case EThis:
 				"(function(__hx_self){ var __hx_old = __hx_self.__hx_value; __hx_self.__hx_value = (__hx_old + " + delta + "); return __hx_old; })(this)";
@@ -1553,7 +1581,7 @@ class JsExprEmitter {
 					+ "else __hx_a[__hx_i] = __hx_next; return __hx_old;";
 				"(function(__hx_a, __hx_i){ " + body + " })(" + arrayJs + ", " + indexJs + ")";
 			case _:
-				unsupported("EUnop", op);
+				unsupported("EUnop", HxUnaryOperatorTools.sourceToken(op));
 		}
 	}
 
@@ -1701,8 +1729,13 @@ class JsExprEmitter {
 				macroEnum("ECall", [emitMacroExpr(callee, [], scope), "[" + loweredArgs.join(", ") + "]"]);
 			case EUntyped(inner):
 				macroEnum("EUntyped", [emitMacroExpr(inner, [], scope)]);
-			case EUnop(op, inner):
-				macroEnum("EUnop", [JsNameMangler.quoteString(op), emitMacroExpr(inner, [], scope)]);
+			case EUnop(op, fixity, inner):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				macroEnum("EUnop", [
+					macroEnum(HxUnaryOperatorTools.macroConstructor(op), []),
+					fixity == HxUnaryFixity.Postfix ? "true" : "false",
+					emitMacroExpr(inner, [], scope)
+				]);
 			case _:
 				macroEnum("EConst", [macroEnum("CIdent", [JsNameMangler.quoteString(emit(expr, scope))])]);
 		}

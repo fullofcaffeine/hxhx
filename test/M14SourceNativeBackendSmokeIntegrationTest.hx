@@ -1,6 +1,7 @@
 import backend.BackendContext;
 import backend.BackendRegistry;
 import backend.GenIrProgram;
+import backend.source.SourceTargetCommon.SourceNativeTarget;
 import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
@@ -6286,8 +6287,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final addCaseFn = new HxFunctionDecl("addCase", HxVisibility.Public, false, [new HxFunctionArg("test", "Dynamic", NoDefault)], "Void",
 			[SExpr(ECall(EIdent("addCaseOld"), [EIdent("test")]), pos)], "");
 		final addCaseOldFn = new HxFunctionDecl("addCaseOld", HxVisibility.Public, false, [new HxFunctionArg("test", "Dynamic", NoDefault)], "Void", [
-			SIf(EUnop("!", ECall(EIdent("isMethod"), [EIdent("test")])), SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("not-method")]), pos), null,
-				pos),
+			SIf(EUnop(HxUnaryOperator.LogicalNot, HxUnaryFixity.Prefix, ECall(EIdent("isMethod"), [EIdent("test")])),
+				SExpr(ECall(EField(EIdent("Sys"), "println"), [EString("not-method")]), pos), null, pos),
 			SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("test")]), pos)
 		], "");
 		final isMethodFn = new HxFunctionDecl("isMethod", HxVisibility.Public, false, [new HxFunctionArg("test", "Dynamic", NoDefault)], "Bool",
@@ -9292,6 +9293,33 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	static function assertUnaryFixityAcrossSourceTargets():Void {
+		final prefix = HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Prefix, HxExpr.EIdent("value"));
+		final postfix = HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, HxExpr.EIdent("value"));
+		final cases = [
+			{target: SourceNativeTarget.Python, prefixNeedle: "value := (value + 1)", postfixNeedle: "hxhx_post_old"},
+			{target: SourceNativeTarget.Java, prefixNeedle: "(++value)", postfixNeedle: "(value++)"},
+			{target: SourceNativeTarget.Cs, prefixNeedle: "(++value)", postfixNeedle: "__hxhx_postUpdateVar(ref value, 1)"},
+			{target: SourceNativeTarget.Php, prefixNeedle: "($value = __hxhx_add($value, 1))", postfixNeedle: "__hxhx_post_update_var($value, 1)"},
+			{target: SourceNativeTarget.Lua, prefixNeedle: "return __next", postfixNeedle: "return __old"}
+		];
+		for (entry in cases) {
+			final prefixSource = @:privateAccess backend.source.SourceTargetCommon.renderExpr(entry.target, prefix);
+			final postfixSource = @:privateAccess backend.source.SourceTargetCommon.renderExpr(entry.target, postfix);
+			assertContains(prefixSource, entry.prefixNeedle, "source backend prefix increment should return the updated value");
+			assertContains(postfixSource, entry.postfixNeedle, "source backend postfix increment should return the old value");
+			assertNotContains(prefixSource, "pre++", "source backend must not print an internal prefix tag");
+			assertNotContains(postfixSource, "post++", "source backend must not print an internal postfix tag");
+		}
+
+		final pythonPrefixMacro = @:privateAccess backend.source.SourceTargetCommon.renderExpr(SourceNativeTarget.Python, EMacroExpr(prefix, []));
+		final phpPostfixMacro = @:privateAccess backend.source.SourceTargetCommon.renderExpr(SourceNativeTarget.Php, EMacroExpr(postfix, []));
+		assertContains(pythonPrefixMacro, '"OpIncrement"', "Python macro quote should use the public unary enum constructor");
+		assertContains(pythonPrefixMacro, "False", "Python macro quote should preserve prefix fixity as postFix=false");
+		assertContains(phpPostfixMacro, '"OpIncrement"', "PHP macro quote should use the public unary enum constructor");
+		assertContains(phpPostfixMacro, "true", "PHP macro quote should preserve postfix fixity as postFix=true");
+	}
+
 	static function assertPostfixStatements():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_postfix_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
@@ -10499,7 +10527,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				assertTrue(fieldNames[0] == "value", "duplicate method body should preserve value field");
 				assertTrue(fieldNames[1] == "key", "duplicate method body should preserve key field");
 				switch (fieldValues[1]) {
-					case EUnop("post++", EIdent("idx")):
+					case EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("idx")):
 					case other:
 						throw "duplicate method body should preserve key post-increment, got " + Std.string(other);
 				}
@@ -12823,7 +12851,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$this->__hx_value = __hxhx_copy_value($i);", "PHP abstract constructor assignments to this should target the backing slot");
 		assertContains(content, "$this->__hx_value = ($this->__hx_value + 1);", "PHP statement-position postfix this updates should target the backing slot");
 		assertContains(content, "return $this->__hx_value;", "PHP abstract-style return this should return the backing value");
-		assertContains(content, "return $this->__hx_value = __hxhx_add($this->__hx_value, 1);",
+		assertContains(content, "return ($this->__hx_value = __hxhx_add($this->__hx_value, 1));",
 			"PHP abstract-style prefix this updates should mutate and return the backing value");
 		assertContains(content, "$mirror = __hxhx_copy_value($counter);", "PHP abstract-style variable copies should not alias the backing slot");
 		assertContains(content, "return __hxhx_post_update_field($this, \"__hx_value\", 1);",
@@ -16143,6 +16171,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertJavaTraceRuntimePrefix();
 		assertJavaLambdaTraceSourcePrefix();
 		assertUnaryOperators();
+		assertUnaryFixityAcrossSourceTargets();
 		assertPostfixStatements();
 		assertTernaryExpression();
 		assertTryCatchStatement();

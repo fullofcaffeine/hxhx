@@ -66,7 +66,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 						fail(sourceLabel + ": ListKeyValueIterator.next value field should return val, got " + Std.string(other));
 				}
 				switch (fieldValues[1]) {
-					case EUnop("post++", EIdent("idx")):
+					case EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("idx")):
 					case other:
 						fail(sourceLabel + ": ListKeyValueIterator.next key field should post-increment idx, got " + Std.string(other));
 				}

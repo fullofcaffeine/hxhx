@@ -62,7 +62,7 @@ class M14CppHelperTypedAsPrepBenchIntegrationTest {
 			case ECall(EIdent(name), args): name == "typedAs" || exprListHasFastEvidence(args);
 			case ECall(callee, args): @:privateAccess backend.cpp.CppPrepLocalInferenceGuard.isHelperTypedAsCallee(callee) || exprHasFastEvidence(callee) || exprListHasFastEvidence(args);
 			case EBinop(_, left, right) | EArrayAccess(left, right): exprHasFastEvidence(left) || exprHasFastEvidence(right);
-			case EField(receiver, _) | EUnop(_, receiver) | ECast(receiver, _) | EUntyped(receiver) | EMacroExpr(receiver, _):
+			case EField(receiver, _) | EUnop(_, _, receiver) | ECast(receiver, _) | EUntyped(receiver) | EMacroExpr(receiver, _):
 				exprHasFastEvidence(receiver);
 			case ETernary(cond, thenExpr, elseExpr): exprHasFastEvidence(cond) || exprHasFastEvidence(thenExpr) || exprHasFastEvidence(elseExpr);
 			case EAnon(_, values) | EArrayDecl(values): exprListHasFastEvidence(values);

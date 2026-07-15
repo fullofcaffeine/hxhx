@@ -1789,7 +1789,7 @@ class CppTargetCore {
 				case EBinop(_, left, right):
 					addExpr(left, scope);
 					addExpr(right, scope);
-				case EUnop(_, inner):
+				case EUnop(_, _, inner):
 					addExpr(inner, scope);
 				case ETernary(cond, thenExpr, elseExpr):
 					addExpr(cond, scope);
@@ -1878,7 +1878,7 @@ class CppTargetCore {
 					exprsMayContributeAnonStruct(values, scope);
 				case EArrayAccess(array, index): exprMayContributeAnonStruct(array, scope) || exprMayContributeAnonStruct(index, scope);
 				case EBinop(_, left, right): exprMayContributeAnonStruct(left, scope) || exprMayContributeAnonStruct(right, scope);
-				case EUnop(_, inner):
+				case EUnop(_, _, inner):
 					exprMayContributeAnonStruct(inner, scope);
 				case ETernary(cond, thenExpr, elseExpr): exprMayContributeAnonStruct(cond,
 						scope) || exprMayContributeAnonStruct(thenExpr, scope) || exprMayContributeAnonStruct(elseExpr, scope);
@@ -2300,7 +2300,7 @@ class CppTargetCore {
 				"std::nullptr_t";
 			case ETernary(_, thenExpr, elseExpr) if (isCppBoolExpr(thenExpr, scope) && isCppBoolExpr(elseExpr, scope)):
 				"bool";
-			case EUnop("post++", _) | EUnop("post--", _):
+			case EUnop(op, _, _) if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement):
 				"int";
 			case EArrayDecl(elements):
 				"std::vector<" + arrayElementType(elements, scope) + ">";
@@ -3471,7 +3471,7 @@ class CppTargetCore {
 			case EBinop(_, left, right):
 				addExprClassDependencies(left, add, scope);
 				addExprClassDependencies(right, add, scope);
-			case EUnop(_, inner) | ELambda(_, inner) | EMacroExpr(inner, _) | EUntyped(inner):
+			case EUnop(_, _, inner) | ELambda(_, inner) | EMacroExpr(inner, _) | EUntyped(inner):
 				addExprClassDependencies(inner, add, scope);
 			case ETernary(cond, thenExpr, elseExpr):
 				addExprClassDependencies(cond, add, scope);
@@ -6203,7 +6203,7 @@ class CppTargetCore {
 				exprForwardsArgToUtestPosition(receiver, argName);
 			case EArrayAccess(array, index) | EBinop(_, array, index): exprForwardsArgToUtestPosition(array,
 					argName) || exprForwardsArgToUtestPosition(index, argName);
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				exprForwardsArgToUtestPosition(inner, argName);
 			case EArrayDecl(elements):
 				exprListForwardsArgToUtestPosition(elements, argName);
@@ -9254,7 +9254,7 @@ class CppTargetCore {
 						collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, guardExpr, scope, matches);
 					collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, yieldExpr, scope, matches);
 				});
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, inner, scope, matches);
 			case EBinop(_, left, right):
 				collectStaticFieldCallableArgTypesFromExpr(owner, field, arity, left, scope, matches);
@@ -9429,7 +9429,7 @@ class CppTargetCore {
 						collectOptionalLambdaLocalCandidatesFromExpr(guardExpr, scope, candidates);
 					collectOptionalLambdaLocalCandidatesFromExpr(yieldExpr, scope, candidates);
 				});
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectOptionalLambdaLocalCandidatesFromExpr(inner, scope, candidates);
 			case EBinop(_, left, right):
 				collectOptionalLambdaLocalCandidatesFromExpr(left, scope, candidates);
@@ -9524,7 +9524,7 @@ class CppTargetCore {
 				if (guardExpr != null)
 					collectOptionalLambdaLocalCallsFromExpr(guardExpr, scope, callShapes);
 				collectOptionalLambdaLocalCallsFromExpr(yieldExpr, scope, callShapes);
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectOptionalLambdaLocalCallsFromExpr(inner, scope, callShapes);
 			case EBinop(_, left, right):
 				collectOptionalLambdaLocalCallsFromExpr(left, scope, callShapes);
@@ -9654,7 +9654,7 @@ class CppTargetCore {
 			case ETernary(EBinop("==", ENull, EIdent(arg)), thenExpr, EIdent(elseArg))
 				if (sanitizeIdentifier(arg) == name && sanitizeIdentifier(elseArg) == name):
 				inferExprCppType(thenExpr, scope);
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				optionalLambdaDefaultValueType(name, inner, scope);
 			case EBinop(_, left, right):
 				final leftType = optionalLambdaDefaultValueType(name, left, scope);
@@ -9879,7 +9879,7 @@ class CppTargetCore {
 						collectGenericFactoryLocalTypeOverridesFromExpr(guardExpr, scope, candidates, mapped);
 					collectGenericFactoryLocalTypeOverridesFromExpr(yieldExpr, scope, candidates, mapped);
 				});
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectGenericFactoryLocalTypeOverridesFromExpr(inner, scope, candidates, mapped);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectGenericFactoryLocalTypeOverridesFromExpr(cond, scope, candidates, mapped);
@@ -10219,7 +10219,7 @@ class CppTargetCore {
 						collectDynamicLocalTypeOverridesFromExprWithCandidates(guardExpr, scope, candidates);
 					collectDynamicLocalTypeOverridesFromExprWithCandidates(yieldExpr, scope, candidates);
 				});
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectDynamicLocalTypeOverridesFromExprWithCandidates(inner, scope, candidates);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectDynamicLocalTypeOverridesFromExprWithCandidates(cond, scope, candidates);
@@ -10473,7 +10473,7 @@ class CppTargetCore {
 				if (guardExpr != null)
 					collectBindCallableEvidenceFromExpr(guardExpr, scope, candidates, evidence, "bool");
 				collectBindCallableEvidenceFromExpr(yieldExpr, scope, candidates, evidence, "");
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectBindCallableEvidenceFromExpr(inner, scope, candidates, evidence, expectedType);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectBindCallableEvidenceFromExpr(cond, scope, candidates, evidence, "bool");
@@ -10735,7 +10735,7 @@ class CppTargetCore {
 						collectHelperTypedAsLocalTypeOverridesFromExpr(guardExpr, scope);
 					collectHelperTypedAsLocalTypeOverridesFromExpr(yieldExpr, scope);
 				});
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectHelperTypedAsLocalTypeOverridesFromExpr(inner, scope);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectHelperTypedAsLocalTypeOverridesFromExpr(cond, scope);
@@ -10955,7 +10955,7 @@ class CppTargetCore {
 						collectAssignedArgTypeOverridesFromExpr(guardExpr, scope, candidates);
 					collectAssignedArgTypeOverridesFromExpr(yieldExpr, scope, candidates);
 				});
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectAssignedArgTypeOverridesFromExpr(inner, scope, candidates);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectAssignedArgTypeOverridesFromExpr(cond, scope, candidates);
@@ -11085,7 +11085,7 @@ class CppTargetCore {
 				final rightExpected = binaryOperandExpectedType(expr, right, left, scope);
 				collectCallableArgTypeOverridesFromExpr(left, scope, candidates, leftExpected);
 				collectCallableArgTypeOverridesFromExpr(right, scope, candidates, rightExpected);
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectCallableArgTypeOverridesFromExpr(inner, scope, candidates, expectedType);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectCallableArgTypeOverridesFromExpr(cond, scope, candidates, "bool");
@@ -11375,7 +11375,7 @@ class CppTargetCore {
 
 	static function helperMacrosTypeErrorProbeArg(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EField(_, _) | EArrayAccess(_, _) | ECall(_, _) | EBinop(_, _, _) | EUnop(_, _) | EAnon(_, _) | EArrayDecl(_) |
+			case EField(_, _) | EArrayAccess(_, _) | ECall(_, _) | EBinop(_, _, _) | EUnop(_, _, _) | EAnon(_, _) | EArrayDecl(_) |
 				EArrayComprehension(_, _, _, _) | ERange(_, _) | ESwitch(_, _, _) | ESwitchRaw(_) | ETryCatchRaw(_) | EUnsupported(_):
 				true;
 			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
@@ -11564,7 +11564,7 @@ class CppTargetCore {
 			case EField(receiver, _):
 				exprReferencesCallableArgCandidate(receiver, candidates);
 			case ECall(callee, args): exprReferencesCallableArgCandidate(callee, candidates) || exprListReferencesCallableArgCandidate(args, candidates);
-			case EMacroExpr(inner, _) | EUnop(_, inner) | ECast(inner, _) | EUntyped(inner):
+			case EMacroExpr(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner):
 				exprReferencesCallableArgCandidate(inner, candidates);
 			case ELambda(args, body): stringListReferencesCallableArgCandidate(args, candidates) || exprReferencesCallableArgCandidate(body, candidates);
 			case ESwitch(scrutinee, _, exprs): exprReferencesCallableArgCandidate(scrutinee,
@@ -11705,7 +11705,7 @@ class CppTargetCore {
 
 	static function callableArgExprType(expr:HxExpr, scope:CppRenderScope):String {
 		return switch (expr) {
-			case EUnop("post++", inner) | EUnop("post--", inner):
+			case EUnop(op, _, inner) if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement):
 				callableArgExprType(inner, scope);
 			case EInt(_):
 				"int";
@@ -13583,16 +13583,11 @@ class CppTargetCore {
 				+ " "
 				+ renderExpr(right, scope)
 				+ ")";
-			case EUnop("-", inner):
-				"(-" + renderExpr(inner, scope) + ")";
-			case EUnop("!", inner):
-				"(!" + renderExpr(inner, scope) + ")";
-			case EUnop("~", inner):
-				"(~" + renderExpr(inner, scope) + ")";
-			case EUnop("post++", inner):
-				"(" + renderExpr(inner, scope) + "++)";
-			case EUnop("post--", inner):
-				"(" + renderExpr(inner, scope) + "--)";
+			case EUnop(op, fixity, inner):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				final token = HxUnaryOperatorTools.sourceToken(op);
+				final rendered = renderExpr(inner, scope);
+				fixity == HxUnaryFixity.Postfix ? "(" + rendered + token + ")" : "(" + token + rendered + ")";
 			case ETernary(cond, thenExpr, elseExpr):
 				"("
 				+ conditionExpr(cond, scope)
@@ -14024,8 +14019,10 @@ class CppTargetCore {
 		for (stmt in HxFunctionDecl.getBody(ctor)) {
 			switch (stmt) {
 				case SExpr(EBinop("=", EThis, _), _):
-				case SExpr(EUnop("post++", EIdent(field)), _) if (isStaticFieldName(cls, field)):
-					out.push(className + "::" + sanitizeIdentifier(field) + "++");
+				case SExpr(EUnop(op, fixity, EIdent(field)), _) if ((op == Increment || op == Decrement) && isStaticFieldName(cls, field)):
+					final token = HxUnaryOperatorTools.sourceToken(op);
+					final renderedField = className + "::" + sanitizeIdentifier(field);
+					out.push(fixity == HxUnaryFixity.Postfix ? renderedField + token : token + renderedField);
 				case _:
 			}
 		}
@@ -14802,7 +14799,7 @@ class CppTargetCore {
 
 	static function jsonValueArgExpr(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
-			case EUnop("-", EFloat(value)) if (value == 0):
+			case EUnop(op, fixity, EFloat(value)) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix && value == 0):
 				"-0.0";
 			case _:
 				renderExpr(expr, scope);
@@ -17179,9 +17176,9 @@ class CppTargetCore {
 		return switch (arg) {
 			case ECast(inner, _) | EUntyped(inner):
 				primitiveLiteralCallArgCppType(inner);
-			case EUnop("-", EInt(_)):
+			case EUnop(op, fixity, EInt(_)) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				"int";
-			case EUnop("-", EFloat(_)):
+			case EUnop(op, fixity, EFloat(_)) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				"double";
 			case EString(_):
 				"std::string";
@@ -17713,7 +17710,7 @@ class CppTargetCore {
 				}
 			case EBinop(op, _, _) if (isBoolBinaryOp(op)):
 				"bool";
-			case EUnop("!", _):
+			case EUnop(op, fixity, _) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
 				"bool";
 			case _:
 				"";
@@ -17838,10 +17835,15 @@ class CppTargetCore {
 				+ " "
 				+ renderExpr(rhs, scope)
 				+ ")";
-			case [SExpr(EUnop("post++", EThis), _)]:
-				"(" + self + "++)";
-			case [SExpr(EUnop("post--", EThis), _)]:
-				"(" + self + "--)";
+			case [SExpr(EUnop(op, fixity, EThis), _)] if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement):
+				final token = HxUnaryOperatorTools.sourceToken(op);
+				fixity == HxUnaryFixity.Postfix ? "("
+					+ self
+					+ token
+					+ ")" : "("
+					+ token
+					+ self
+					+ ")";
 			case [SExpr(EBinop("+=", EThis, rhs), _)]:
 				self + " += " + renderExpr(rhs, scope);
 			case [SExpr(EBinop("-=", EThis, rhs), _)]:
@@ -19286,12 +19288,8 @@ class CppTargetCore {
 				cppVectorElementType(exprCppType(array, scope));
 			case EAnon(fieldNames, fieldValues):
 				anonStruct(fieldNames, fieldValues, scope).name;
-			case EUnop("-", inner):
-				inferExprCppType(inner, scope);
-			case EUnop("post++", inner) | EUnop("post--", inner):
-				inferExprCppType(inner, scope);
-			case EUnop("!", _):
-				"bool";
+			case EUnop(op, _, inner):
+				op == HxUnaryOperator.LogicalNot ? "bool" : inferExprCppType(inner, scope);
 			case EBinop(op, _, _) if (isBoolBinaryOp(op)):
 				"bool";
 			case EBinop(op, left, right) if (isArithmeticBinaryOp(op) && (isCppDoubleExpr(left, scope) || isCppDoubleExpr(right, scope))):
@@ -22084,7 +22082,9 @@ class CppTargetCore {
 					case _:
 						false;
 				}
-			case EUnop("-", inner) | EUnop("neg", inner) | EUnop("post++", inner) | EUnop("post--", inner) | ECast(inner, _) | EUntyped(inner):
+			case EUnop(op, _, inner) if (op != HxUnaryOperator.LogicalNot):
+				isCppInt64Expr(inner, scope);
+			case ECast(inner, _) | EUntyped(inner):
 				isCppInt64Expr(inner, scope);
 			case EField(_, field) if (field == "quotient" || field == "modulus"):
 				true;
@@ -23516,8 +23516,15 @@ class CppTargetCore {
 				"EBinop(OpArrow," + macroExprText(left, []) + "," + macroExprText(right, []) + ")";
 			case EBinop(op, left, right):
 				"EBinop(" + op + "," + macroExprText(left, []) + "," + macroExprText(right, []) + ")";
-			case EUnop(op, inner):
-				"EUnop(" + op + "," + macroExprText(inner, []) + ")";
+			case EUnop(op, fixity, inner):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				"EUnop("
+				+ HxUnaryOperatorTools.macroConstructor(op)
+				+ ","
+				+ (fixity == HxUnaryFixity.Postfix ? "true" : "false")
+				+ ","
+				+ macroExprText(inner, [])
+				+ ")";
 			case ECall(callee, args):
 				"ECall("
 				+ macroExprText(callee, [])
@@ -23908,7 +23915,12 @@ class CppTargetCore {
 			case EArrayAccess(_, _): "EArrayAccess";
 			case ERange(_, _): "ERange";
 			case EAnon(_, _): "EAnon";
-			case EUnop(op, _): "EUnop(" + op + ")";
+			case EUnop(op, fixity, _):
+				"EUnop("
+				+ HxUnaryOperatorTools.sourceToken(op)
+				+ ","
+				+ (fixity == HxUnaryFixity.Postfix ? "postfix" : "prefix")
+				+ ")";
 			case EBinop(op, _, _): "EBinop(" + op + ")";
 			case ETernary(_, _, _): "ETernary";
 			case ESwitchRaw(_): "ESwitchRaw";

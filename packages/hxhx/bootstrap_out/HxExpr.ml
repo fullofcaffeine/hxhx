@@ -21,7 +21,7 @@ type hxexpr =
 | ESwitchRaw of string
 | ESwitch of hxexpr * HxSwitchPattern.hxswitchpattern HxArray.t * hxexpr HxArray.t
 | ENew of string * hxexpr HxArray.t
-| EUnop of string * hxexpr
+| EUnop of HxUnaryOperator.hxunaryoperator * HxUnaryFixity.hxunaryfixity * hxexpr
 | EBinop of string * hxexpr * hxexpr
 | ETernary of hxexpr * hxexpr * hxexpr
 | EAnon of string HxArray.t * hxexpr HxArray.t

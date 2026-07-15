@@ -209,7 +209,7 @@ class CppLocalTypeInference {
 				if (guardExpr != null)
 					collectErasedDynamicArgUsageNamesFromExpr(guardExpr, dynamicArgs, used);
 				collectErasedDynamicArgUsageNamesFromExpr(yieldExpr, dynamicArgs, used);
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectErasedDynamicArgUsageNamesFromExpr(inner, dynamicArgs, used);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectErasedDynamicArgUsageNamesFromExpr(cond, dynamicArgs, used);
@@ -410,7 +410,7 @@ class CppLocalTypeInference {
 				collectClosureVectorEvidenceFromExpr(cond, scope, candidates, pushedValues, callArgTypes);
 				collectClosureVectorEvidenceFromExpr(thenExpr, scope, candidates, pushedValues, callArgTypes);
 				collectClosureVectorEvidenceFromExpr(elseExpr, scope, candidates, pushedValues, callArgTypes);
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, inner) | ELambda(_, inner):
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ELambda(_, inner):
 				collectClosureVectorEvidenceFromExpr(inner, scope, candidates, pushedValues, callArgTypes);
 			case ENew(_, args):
 				for (arg in args)
@@ -517,7 +517,7 @@ class CppLocalTypeInference {
 				collectClosureVectorPushedTypesFromExpr(cond, scope, candidates, callArgTypes, pushedTypes);
 				collectClosureVectorPushedTypesFromExpr(thenExpr, scope, candidates, callArgTypes, pushedTypes);
 				collectClosureVectorPushedTypesFromExpr(elseExpr, scope, candidates, callArgTypes, pushedTypes);
-			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, inner) | ELambda(_, inner):
+			case ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _) | EUnop(_, _, inner) | ELambda(_, inner):
 				collectClosureVectorPushedTypesFromExpr(inner, scope, candidates, callArgTypes, pushedTypes);
 			case ENew(_, args):
 				for (arg in args)
@@ -724,7 +724,7 @@ class CppLocalTypeInference {
 						collectStringMapLocalTypeOverridesFromExpr(guardExpr, scope, candidates);
 					collectStringMapLocalTypeOverridesFromExpr(yieldExpr, scope, candidates);
 				});
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectStringMapLocalTypeOverridesFromExpr(inner, scope, candidates);
 			case ETernary(cond, thenExpr, elseExpr):
 				collectStringMapLocalTypeOverridesFromExpr(cond, scope, candidates);

@@ -19,6 +19,39 @@ class M14RuntimeTypedLambdaIntegrationTest {
 			min: 0,
 			max: 0
 		};
+		final prefixIncrement = RuntimeMacroExprs.parseInlineString("++value", pos);
+		switch (prefixIncrement.expr) {
+			case EUnop(OpIncrement, false, {expr: EConst(CIdent("value"))}):
+			case _:
+				fail("expected prefix increment to preserve postFix=false");
+		}
+		final postfixIncrement = RuntimeMacroExprs.parseInlineString("value++", pos);
+		switch (postfixIncrement.expr) {
+			case EUnop(OpIncrement, true, {expr: EConst(CIdent("value"))}):
+			case _:
+				fail("expected postfix increment to preserve postFix=true");
+		}
+		final typedPrefixIncrement = RuntimeTypedExprs.typeExpr(prefixIncrement);
+		assertTrue(RuntimeTypedExprs.toString(typedPrefixIncrement) == "++value", "expected typed prefix increment text");
+		switch (RuntimeTypedExprs.toExpr(typedPrefixIncrement).expr) {
+			case EUnop(OpIncrement, false, {expr: EConst(CIdent("value"))}):
+			case _:
+				fail("expected typed prefix increment round-trip to preserve postFix=false");
+		}
+		final typedPostfixIncrement = RuntimeTypedExprs.typeExpr(postfixIncrement);
+		assertTrue(RuntimeTypedExprs.toString(typedPostfixIncrement) == "value++", "expected typed postfix increment text");
+		switch (RuntimeTypedExprs.toExpr(typedPostfixIncrement).expr) {
+			case EUnop(OpIncrement, true, {expr: EConst(CIdent("value"))}):
+			case _:
+				fail("expected typed postfix increment round-trip to preserve postFix=true");
+		}
+		final typedPrefixDecrement = RuntimeTypedExprs.typeExpr(RuntimeMacroExprs.parseInlineString("--value", pos));
+		assertTrue(RuntimeTypedExprs.toString(typedPrefixDecrement) == "--value", "expected typed prefix decrement text");
+		switch (RuntimeTypedExprs.toExpr(typedPrefixDecrement).expr) {
+			case EUnop(OpDecrement, false, {expr: EConst(CIdent("value"))}):
+			case _:
+				fail("expected typed prefix decrement round-trip to preserve its operator and postFix=false");
+		}
 		final parsed = RuntimeMacroExprs.parseInlineString("(item) -> item.name", pos);
 		switch (parsed.expr) {
 			case EFunction(FArrow, fn):

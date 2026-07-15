@@ -217,7 +217,7 @@ enum HxExpr {
 	ENew(typePath:String, args:Array<HxExpr>);
 
 	/**
-		Unary operator expression (Stage 3 expansion).
+		Source-level unary operator expression.
 
 		Why
 		- Real-world Haxe code (including upstream tests) uses unary operators in
@@ -226,14 +226,15 @@ enum HxExpr {
 		  stages from mis-interpreting tokens as identifiers/calls.
 
 		What
-		- Represents a prefix unary operation like `!e` or `-e`.
+		- Stores the operator token independently from prefix/postfix placement.
+		- Preserves `++e`, `e++`, and source-written compound assignment as
+		  distinct syntax so later typing can select the correct abstract helper.
 
 		How
-		- Operators are stored as raw strings for now (e.g. `"!"`, `"-"`).
-		- Typing and lowering are future Stage 3/4 work; Stage 3 emitters may
-		  deliberately collapse these to bring-up escape hatches.
+		- This node records syntax, not mutation or result semantics. Later shared
+		  typing/lowering owns those decisions.
 	**/
-	EUnop(op:String, expr:HxExpr);
+	EUnop(op:HxUnaryOperator, fixity:HxUnaryFixity, expr:HxExpr);
 
 	/**
 		Binary operator expression (Stage 3 expansion).

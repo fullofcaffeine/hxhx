@@ -427,8 +427,8 @@ class HxParser {
 				EField(rebaseFunctionBodyExprValue(obj, base), field);
 			case EBinop(op, left, right):
 				EBinop(op, rebaseFunctionBodyExprValue(left, base), rebaseFunctionBodyExprValue(right, base));
-			case EUnop(op, value):
-				EUnop(op, rebaseFunctionBodyExprValue(value, base));
+			case EUnop(op, fixity, value):
+				EUnop(op, fixity, rebaseFunctionBodyExprValue(value, base));
 			case ELambda(args, body):
 				ELambda(args, rebaseFunctionBodyExprValue(body, base));
 			case EArrayDecl(values):
@@ -1730,8 +1730,8 @@ class HxParser {
 			return switch (expr) {
 				case EIdent(name) if (defaultedArgs.exists(name)):
 					ETernary(EBinop("==", EIdent(name), ENull), defaultedArgs.get(name), EIdent(name));
-				case EUnop(op, inner):
-					EUnop(op, applyDefaultedArgs(inner));
+				case EUnop(op, fixity, inner):
+					EUnop(op, fixity, applyDefaultedArgs(inner));
 				case EBinop(op, left, right) if (op == "=" || StringTools.endsWith(op, "=")):
 					EBinop(op, left, applyDefaultedArgs(right));
 				case EBinop(op, left, right):
@@ -1858,8 +1858,8 @@ class HxParser {
 			return switch (expr) {
 				case EIdent(argName) if (defaultedArgs.exists(argName)):
 					ETernary(EBinop("==", EIdent(argName), ENull), defaultedArgs.get(argName), EIdent(argName));
-				case EUnop(op, inner):
-					EUnop(op, applyDefaultedArgs(inner));
+				case EUnop(op, fixity, inner):
+					EUnop(op, fixity, applyDefaultedArgs(inner));
 				case EBinop(op, left, right) if (op == "=" || StringTools.endsWith(op, "=")):
 					EBinop(op, left, applyDefaultedArgs(right));
 				case EBinop(op, left, right):
@@ -2620,10 +2620,10 @@ class HxParser {
 						bump();
 					e = EArrayAccess(e, index);
 				case TOther(c) if ((c == "+".code || c == "-".code) && nextIsAdjacentOther(c)):
-					final op = (c == "+".code) ? "post++" : "post--";
+					final op = (c == "+".code) ? HxUnaryOperator.Increment : HxUnaryOperator.Decrement;
 					bump();
 					bump();
-					e = EUnop(op, e);
+					e = EUnop(op, HxUnaryFixity.Postfix, e);
 				case _:
 					break;
 			}
@@ -2701,19 +2701,21 @@ class HxParser {
 				bump();
 				parsePostfixSuffix(EUntyped(parseUnaryExpr(stop)), stop);
 			case TOther(c) if ((c == "+".code || c == "-".code) && nextIsAdjacentOther(c)):
-				// Bring-up lowering: treat prefix increment/decrement as compound assignment.
-				//
-				// Scope
-				// - This intentionally models loop-style usage (`++i`, `--i`) needed by js-native.
-				// - Expression-level old/new value distinction is deferred.
-				final op = (c == "+".code) ? "+=" : "-=";
+				final op = (c == "+".code) ? HxUnaryOperator.Increment : HxUnaryOperator.Decrement;
 				bump();
 				bump();
-				EBinop(op, parseUnaryExpr(stop), EInt(1));
-			case TOther(c) if (c == "!".code || c == "-".code || c == "+".code || c == "~".code):
-				final op = String.fromCharCode(c);
+				EUnop(op, HxUnaryFixity.Prefix, parseUnaryExpr(stop));
+			case TOther(c) if (c == "!".code || c == "-".code || c == "~".code):
+				final op = switch (c) {
+					case "!".code: HxUnaryOperator.LogicalNot;
+					case "-".code: HxUnaryOperator.Negate;
+					case "~".code: HxUnaryOperator.BitwiseNot;
+					case _: throw "unreachable unary operator";
+				};
 				bump();
-				EUnop(op, parseUnaryExpr(stop));
+				EUnop(op, HxUnaryFixity.Prefix, parseUnaryExpr(stop));
+			case TOther(c) if (c == "+".code):
+				fail("Unexpected unary +");
 			case _:
 				parsePostfixExpr(stop);
 		}
@@ -3246,8 +3248,8 @@ class HxParser {
 		return switch (expr) {
 			case EIdent(name) if (defaultedArgs.exists(name)):
 				ETernary(EBinop("==", EIdent(name), ENull), defaultedArgs.get(name), EIdent(name));
-			case EUnop(op, inner):
-				EUnop(op, applyDefaultedLambdaArgs(inner, defaultedArgs));
+			case EUnop(op, fixity, inner):
+				EUnop(op, fixity, applyDefaultedLambdaArgs(inner, defaultedArgs));
 			case EBinop(op, left, right) if (op == "=" || StringTools.endsWith(op, "=")):
 				EBinop(op, left, applyDefaultedLambdaArgs(right, defaultedArgs));
 			case EBinop(op, left, right):

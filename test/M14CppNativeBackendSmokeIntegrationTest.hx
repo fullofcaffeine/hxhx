@@ -502,6 +502,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"    Sys.println(Std.string(id(6)));",
 			"    var macroQuote = macro (\"macro:value\");",
 			"    Sys.println(macroQuote);",
+			"    var prefixMacroQuote = macro (++skip);",
+			"    var postfixMacroQuote = macro (skip++);",
 			"    var macroExtract = switch (macroQuote.expr) {",
 			"      case EParenthesis({ expr: EConst(CString(s)) }): s;",
 			"      case _: \"none\";",
@@ -5743,7 +5745,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				new HxFunctionArg("value", "Bool", NoDefault, false, false),
 				new HxFunctionArg("msg", "String", NoDefault, true, false),
 				new HxFunctionArg("pos", "PosInfos", NoDefault, true, false)
-			], "Bool", [SReturn(EUnop("!", EIdent("value")), HxPos.unknown())], "")
+			], "Bool", [
+				SReturn(EUnop(HxUnaryOperator.LogicalNot, HxUnaryFixity.Prefix, EIdent("value")), HxPos.unknown())
+			], "")
 		], []);
 		final testBoolWrapper = new HxFunctionDecl("t", Public, false, [
 			new HxFunctionArg("v", "", NoDefault, false, false),
@@ -7703,8 +7707,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				new HxFunctionArg("report", "IReport<T>", NoDefault, false, false),
 				new HxFunctionArg("stats", "ResultStats", NoDefault, false, false),
 				new HxFunctionArg("isOk", "Bool", NoDefault, false, false)
-			], "Bool",
-				[SReturn(EUnop("!", EIdent("isOk")), HxPos.unknown())], "", ["__hxhx_fn_type_params=T"])
+			], "Bool", [
+				SReturn(EUnop(HxUnaryOperator.LogicalNot, HxUnaryFixity.Prefix, EIdent("isOk")), HxPos.unknown())
+			], "", ["__hxhx_fn_type_params=T"])
 		], []);
 		final printReportOwner = new HxClassDecl("PrintReport", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("runner", "Runner", NoDefault, false, false)], "Void",
@@ -8855,7 +8860,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("abc"), EInt(0)), EString("a")]), HxPos.unknown()),
 				SVar("str", "String", EString("abc"), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("str"), EInt(0)), EInt(97)]), HxPos.unknown()),
-				SExpr(ECall(EIdent("eq"), [EArrayAccess(EIdent("str"), EUnop("-", EInt(1))), ENull]), HxPos.unknown()),
+				SExpr(ECall(EIdent("eq"), [
+					EArrayAccess(EIdent("str"), EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EInt(1))),
+					ENull
+				]), HxPos.unknown()),
 				SExpr(ECall(EIdent("eq"), [
 					ECall(EField(EIdent("Std"), "string"), [EArrayDecl([EIdent("str")])]),
 					EBinop("+", EBinop("+", EString("["), EIdent("str")), EString("]"))
@@ -9081,8 +9089,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final primitiveAbstract = new HxClassDecl("Int32", false, [
 			new HxFunctionDecl("get", Public, false, [], "Int", [SReturn(EThis, HxPos.unknown())], ""),
 			new HxFunctionDecl("toInt", Public, false, [], "Int", [SReturn(EThis, HxPos.unknown())], ""),
-			new HxFunctionDecl("incr", Public, false, [], "Void", [SExpr(EUnop("post++", EThis), HxPos.unknown())], ""),
-			new HxFunctionDecl("negate", Public, false, [], "Int32", [SReturn(EUnop("~", EThis), HxPos.unknown())], ""),
+			new HxFunctionDecl("incr", Public, false, [], "Void", [
+				SExpr(EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EThis), HxPos.unknown())
+			], ""),
+			new HxFunctionDecl("negate", Public, false, [], "Int32", [
+				SReturn(EUnop(HxUnaryOperator.BitwiseNot, HxUnaryFixity.Prefix, EThis), HxPos.unknown())
+			], ""),
 			new HxFunctionDecl("ucompare", Public, true, [
 				new HxFunctionArg("a", "Int32", NoDefault, false, false),
 				new HxFunctionArg("b", "Int32", NoDefault, false, false)
@@ -9181,7 +9193,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final counterAbstract = new HxClassDecl("MyAbstractCounter", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "Void", [
 				SExpr(EBinop("=", EThis, EIdent("v")), HxPos.unknown()),
-				SExpr(EUnop("post++", EIdent("counter")), HxPos.unknown())
+				SExpr(EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("counter")), HxPos.unknown())
 			],
 				""),
 			new HxFunctionDecl("fromInt", Public, true, [new HxFunctionArg("v", "Int", NoDefault, false, false)], "MyAbstractCounter",
@@ -10026,12 +10038,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SIf(EBinop(">=", EIdent("pos"), EIdent("length")), SThrow(EString("Invalid object"), HxPos.unknown()), null, HxPos.unknown()),
 				SIf(EBinop("==", ECall(EIdent("get"), [EIdent("pos")]), EString("g")), SBreak(HxPos.unknown()), null, HxPos.unknown()),
 				SVar("k", "Dynamic", ECall(EIdent("unserialize"), []), HxPos.unknown()),
-				SIf(EUnop("!", ECall(EField(EIdent("Std"), "isOfType"), [EIdent("k"), EIdent("String")])),
+				SIf(EUnop(HxUnaryOperator.LogicalNot, HxUnaryFixity.Prefix, ECall(EField(EIdent("Std"), "isOfType"), [EIdent("k"), EIdent("String")])),
 					SThrow(EString("Invalid object key"), HxPos.unknown()), null, HxPos.unknown()),
 				SVar("v", "", ECall(EIdent("unserialize"), []), HxPos.unknown()),
 				SExpr(ECall(EField(EIdent("Reflect"), "setField"), [EIdent("o"), EIdent("k"), EIdent("v")]), HxPos.unknown())
-			], HxPos.unknown()), HxPos.unknown()),
-			SExpr(EUnop("post++", EIdent("pos")), HxPos.unknown())
+			],
+				HxPos.unknown()), HxPos.unknown()),
+			SExpr(EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("pos")), HxPos.unknown())
 		], "");
 		final unserializerInitCodes = new HxFunctionDecl("initCodes", Private, true, [], "", [], "");
 		final unserializerFastLength = new HxFunctionDecl("fastLength", Private, true, [new HxFunctionArg("s", "String", NoDefault, false, false)], "Int", [],
@@ -10354,13 +10367,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionArg("edecl", "Enum<T>", NoDefault, false, false),
 			new HxFunctionArg("tag", "String", NoDefault, false, false)
 		], "T", [
-			SIf(EBinop("!=", ECall(EIdent("get"), [EUnop("post++", EIdent("pos"))]), EString(":")), SThrow(EString("Invalid enum format"), HxPos.unknown()),
-				null, HxPos.unknown()),
+			SIf(EBinop("!=", ECall(EIdent("get"), [EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("pos"))]), EString(":")),
+				SThrow(EString("Invalid enum format"), HxPos.unknown()), null, HxPos.unknown()),
 			SVar("nargs", "", ECall(EIdent("readDigits"), []), HxPos.unknown()),
 			SIf(EBinop("==", EIdent("nargs"), EInt(0)),
 				SReturn(ECall(EField(EIdent("Type"), "createEnum"), [EIdent("edecl"), EIdent("tag")]), HxPos.unknown()), null, HxPos.unknown()),
 			SVar("args", "", EArrayDecl([]), HxPos.unknown()),
-			SWhile(EBinop(">", EUnop("post--", EIdent("nargs")), EInt(0)),
+			SWhile(EBinop(">", EUnop(HxUnaryOperator.Decrement, HxUnaryFixity.Postfix, EIdent("nargs")), EInt(0)),
 				SExpr(ECall(EField(EIdent("args"), "push"), [ECall(EIdent("unserialize"), [])]), HxPos.unknown()), HxPos.unknown()),
 			SReturn(ECall(EField(EIdent("Type"), "createEnum"), [EIdent("edecl"), EIdent("tag"), EIdent("args")]), HxPos.unknown())
 		], "", ["__hxhx_fn_type_params=T"]);
@@ -10482,7 +10495,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				SReturn(EBinop("<", EIdent("offset"), EField(EIdent("s"), "length")), HxPos.unknown())
 			], ""),
 			new HxFunctionDecl("next", Public, false, [], "", [
-				SReturn(ECall(EField(EIdent("StringTools"), "unsafeCodeAt"), [EIdent("s"), EUnop("post++", EIdent("offset"))]), HxPos.unknown())
+				SReturn(ECall(EField(EIdent("StringTools"), "unsafeCodeAt"), [
+					EIdent("s"),
+					EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("offset"))
+				]), HxPos.unknown())
 			], "")
 		], [
 			new HxFieldDecl("offset", Public, false, "", EInt(0)),
@@ -10496,7 +10512,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionDecl("next", Public, false, [], "", [
 				SReturn(EAnon(["key", "value"], [
 					EIdent("offset"),
-					ECall(EField(EIdent("StringTools"), "fastCodeAt"), [EIdent("s"), EUnop("post++", EIdent("offset"))])
+					ECall(EField(EIdent("StringTools"), "fastCodeAt"), [
+						EIdent("s"),
+						EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("offset"))
+					])
 				]), HxPos.unknown())
 			], "")
 		], [
@@ -10665,7 +10684,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			new HxFunctionArg("f", "String", NoDefault, false, false)
 		], "Array<String>", [
 			SVar("i", "Int", EInt(0), HxPos.unknown()),
-			SReturn(EArrayComprehension("x", EIdent("it"), null, ECall(EIdent("f"), [EUnop("post++", EIdent("i")), EIdent("x")])), HxPos.unknown())
+			SReturn(EArrayComprehension("x", EIdent("it"), null, ECall(EIdent("f"), [
+				EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("i")),
+				EIdent("x")
+			])), HxPos.unknown())
 		], "");
 		final erasedMapiLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(erasedMapiMethod, stdArray, stdArrayLookup).join("\n");
 		assertContains(erasedMapiLines,
@@ -10709,9 +10731,11 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			])), [EInt(0)])
 		]);
 		final nestedClosureBody = ECall(ELambda(["tmp"], tmpFillExpr), [ENew("Array", [])]);
-		final accessIncBody = ECall(ELambda(["__hxhx_lambda_seq_1"], ECall(ELambda(["__hxhx_lambda_seq_0"], EIdent("j")), [EUnop("post++", EIdent("j"))])),
+		final accessIncBody = ECall(ELambda(["__hxhx_lambda_seq_1"],
+			ECall(ELambda(["__hxhx_lambda_seq_0"], EIdent("j")), [EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("j"))])),
 			[EBinop("+=", EIdent("sum"), EIdent("j"))]);
-		final accessDecBody = ECall(ELambda(["__hxhx_lambda_seq_1"], ECall(ELambda(["__hxhx_lambda_seq_0"], EIdent("j")), [EUnop("post--", EIdent("j"))])),
+		final accessDecBody = ECall(ELambda(["__hxhx_lambda_seq_1"],
+			ECall(ELambda(["__hxhx_lambda_seq_0"], EIdent("j")), [EUnop(HxUnaryOperator.Decrement, HxUnaryFixity.Postfix, EIdent("j"))])),
 			[EBinop("-=", EIdent("sum"), EIdent("j"))]);
 		final closureVectorOwner = new HxClassDecl("ClosureVectorOwner", false, [
 			new HxFunctionDecl("zeroArg", Public, false, [], "Int", [
@@ -12507,7 +12531,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertTrue(fixturesCppType == "std::vector<std::shared_ptr<TestFixture>>",
 			"C++ owner field type lookup should recover Array<TestFixture> fields, got " + fixturesCppType);
 		final fixtureAccessCppType = @:privateAccess
-			backend.cpp.CppTargetCore.inferExprCppType(EArrayAccess(EIdent("fixtures"), EUnop("post++", EIdent("pos"))), parsedRunnerGenericScope);
+			backend.cpp.CppTargetCore.inferExprCppType(EArrayAccess(EIdent("fixtures"),
+				EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("pos"))), parsedRunnerGenericScope);
 		assertTrue(fixtureAccessCppType == "std::shared_ptr<TestFixture>",
 			"C++ Array<T> access inference should recover reference element type, got " + fixtureAccessCppType);
 		assertContains(parsedRunnerGenericLines, "std::vector<std::shared_ptr<TestFixture>> fixtures = std::vector<std::shared_ptr<TestFixture>>{};",
@@ -12655,8 +12680,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], "");
 		final runnerAddCaseOld = new HxFunctionDecl("addCaseOld", Public, false, runnerCaseArgs, "Void", [
 			SExpr(ECall(EField(EIdent("Reflect"), "isObject"), [EIdent("test")]), HxPos.unknown()),
-			SIf(EUnop("!", ECall(EIdent("isMethod"), [EIdent("test"), EIdent("setup")])), SExpr(EBinop("=", EIdent("setup"), ENull), HxPos.unknown()), null,
-				HxPos.unknown()),
+			SIf(EUnop(HxUnaryOperator.LogicalNot, HxUnaryFixity.Prefix, ECall(EIdent("isMethod"), [EIdent("test"), EIdent("setup")])),
+				SExpr(EBinop("=", EIdent("setup"), ENull), HxPos.unknown()), null, HxPos.unknown()),
 			SExpr(ECall(EIdent("addFixture"), [
 				ENew("TestFixture", [
 					EIdent("test"),
@@ -12679,7 +12704,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		], "");
 		final runnerRunNext = new HxFunctionDecl("runNext", Public, false, [], "Void", [
 			SVar("currentCase", "", ENull, HxPos.unknown()),
-			SVar("fixture", "", EArrayAccess(EIdent("fixtures"), EUnop("post++", EIdent("pos"))), HxPos.unknown()),
+			SVar("fixture", "", EArrayAccess(EIdent("fixtures"), EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("pos"))), HxPos.unknown()),
 			SIf(EBinop("!=", EIdent("currentCase"), EField(EIdent("fixture"), "target")), SBlock([
 				SExpr(EBinop("=", EIdent("currentCase"), EField(EIdent("fixture"), "target")), HxPos.unknown())
 			], HxPos.unknown()), null, HxPos.unknown())
@@ -13142,6 +13167,9 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ parsed EReg.matchedPos field reads should compile against the structural return value");
 		assertContains(source, "auto macroQuote = __hxhx_macro_expr(", "C++ smoke should lower macro quotes to structural macro objects");
 		assertContains(source, "__hxhx_macro_enum(\"EParenthesis\"", "C++ smoke should preserve macro quote wrappers structurally");
+		assertContains(source, "__hxhx_macro_enum(\"OpIncrement\")", "C++ unary macro quotes should use the public unary enum constructor");
+		assertContains(source, "__hxhx_macro_bool(false)", "C++ prefix macro quotes should preserve postFix=false");
+		assertContains(source, "__hxhx_macro_bool(true)", "C++ postfix macro quotes should preserve postFix=true");
 		assertContains(source, "auto macroType = std::string(\"X -> Y\");", "C++ smoke should lower macro type quotes to stable text");
 		assertContains(source, "auto switched = ([&]() -> std::string {", "C++ smoke should lower switch expressions through an explicitly typed IIFE");
 		assertContains(source, "auto __hxhx_switch = 2;", "C++ smoke should bind switch expression scrutinee");

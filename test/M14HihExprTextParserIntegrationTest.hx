@@ -237,7 +237,10 @@ class M14HihExprTextParserIntegrationTest {
 		final bitwiseNotStmts = HxParser.parseFunctionBodyText("int64eq(~a, Int64.make(0xF0000000, 0xFFFFFFFE));");
 		assertTrue(bitwiseNotStmts.length == 1, "expected unary bitwise-not call to parse as one statement");
 		switch (bitwiseNotStmts[0]) {
-			case SExpr(ECall(EIdent("int64eq"), [EUnop("~", EIdent("a")), ECall(EField(EIdent("Int64"), "make"), _)]), _):
+			case SExpr(ECall(EIdent("int64eq"), [
+				EUnop(HxUnaryOperator.BitwiseNot, HxUnaryFixity.Prefix, EIdent("a")),
+				ECall(EField(EIdent("Int64"), "make"), _)
+			]), _):
 			case SExpr(EUnsupported(raw), _):
 				fail("unary bitwise-not statement parsed as unsupported: " + raw);
 			case _:

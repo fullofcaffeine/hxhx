@@ -86,7 +86,7 @@ class ParserStage {
 			case ESwitch(scrutinee, _, exprs): initHasMergedReturnIdentifier(scrutinee) || initListHasMergedReturnIdentifier(exprs);
 			case ENew(_, args):
 				initListHasMergedReturnIdentifier(args);
-			case EUnop(_, inner):
+			case EUnop(_, _, inner):
 				initHasMergedReturnIdentifier(inner);
 			case EBinop(_, left, right): initHasMergedReturnIdentifier(left) || initHasMergedReturnIdentifier(right);
 			case ETernary(cond, thenExpr, elseExpr): initHasMergedReturnIdentifier(cond) || initHasMergedReturnIdentifier(thenExpr) || initHasMergedReturnIdentifier(elseExpr);
@@ -3108,7 +3108,7 @@ class ParserStage {
 		return switch (expr) {
 			case EUnsupported(_):
 				true;
-			case EField(obj, _), EUnop(_, obj), ECast(obj, _), EUntyped(obj):
+			case EField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj):
 				hasUnsupportedExpr(obj);
 			case ECall(obj, args):
 				if (hasUnsupportedExpr(obj)) true; else {

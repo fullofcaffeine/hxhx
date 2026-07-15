@@ -373,7 +373,8 @@ class M14CppDirectCallSupportBenchIntegrationTest {
 			backend.cpp.CppTargetCore.directCallExpr("t", [EBool(true), EIdent("position")], supportFixture.scope);
 		final excSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("exc", [callback], supportFixture.scope);
 		final positiveSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("ownInt", [EInt(1)], supportFixture.scope);
-		final negativeSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("inheritedInt", [EUnop("-", EInt(1))], supportFixture.scope);
+		final negativeSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("inheritedInt",
+			[EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EInt(1))], supportFixture.scope);
 		final freeSample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("ordinaryFree", [EInt(1)], supportFixture.scope);
 		final int64Sample = @:privateAccess backend.cpp.CppTargetCore.directCallExpr("ofInt", [EInt(3)], supportFixture.scope);
 		supportFixture.scope.localNames.set("unspec", "local_unspec");

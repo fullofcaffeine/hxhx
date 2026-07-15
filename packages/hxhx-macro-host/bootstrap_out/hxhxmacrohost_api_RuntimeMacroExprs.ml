@@ -587,29 +587,28 @@ let parseOptionalComplexType = fun typeHint -> let tempString = ref ("" : string
 
 let parseOptionalComplexTypeText = fun typeHint -> parseOptionalComplexType (typeHint : string)
 
-let parseUnop = fun op -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Haxe_macro_Expr.unop) in (
+let macroUnop = fun op -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Haxe_macro_Expr.unop) in (
   ignore (match op with
-    | "!" -> let __assign_363 = Obj.magic (Haxe_macro_Expr.OpNot) in (
+    | HxUnaryOperator.Increment -> let __assign_363 = Obj.magic (Haxe_macro_Expr.OpIncrement) in (
       tempResult := __assign_363;
       __assign_363
     )
-    | "++" -> let __assign_364 = Obj.magic (Haxe_macro_Expr.OpIncrement) in (
+    | HxUnaryOperator.Decrement -> let __assign_364 = Obj.magic (Haxe_macro_Expr.OpDecrement) in (
       tempResult := __assign_364;
       __assign_364
     )
-    | "-" -> let __assign_365 = Obj.magic (Haxe_macro_Expr.OpNeg) in (
+    | HxUnaryOperator.Negate -> let __assign_365 = Obj.magic (Haxe_macro_Expr.OpNeg) in (
       tempResult := __assign_365;
       __assign_365
     )
-    | "--" -> let __assign_366 = Obj.magic (Haxe_macro_Expr.OpDecrement) in (
+    | HxUnaryOperator.LogicalNot -> let __assign_366 = Obj.magic (Haxe_macro_Expr.OpNot) in (
       tempResult := __assign_366;
       __assign_366
     )
-    | "~" -> let __assign_367 = Obj.magic (Haxe_macro_Expr.OpNegBits) in (
+    | HxUnaryOperator.BitwiseNot -> let __assign_367 = Obj.magic (Haxe_macro_Expr.OpNegBits) in (
       tempResult := __assign_367;
       __assign_367
-    )
-    | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("runtime macro parse: unsupported unary operator " ^ HxString.toStdString op)) ["Dynamic"; "String"]);
+    ));
   !tempResult
 )
 
@@ -880,9 +879,12 @@ and convertDef = fun expr pos -> let tempResult = ref (Obj.magic (HxRuntime.hx_n
         __assign_319
       )
     )
-    | HxExpr.EUnop (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let op = (_g : string) in let inner = Obj.magic _g1 in let __assign_320 = Obj.magic (Haxe_macro_Expr.EUnop (Obj.magic (parseUnop (op : string)), false, convert (Obj.magic inner) pos)) in (
-      tempResult := __assign_320;
-      __assign_320
+    | HxExpr.EUnop (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = Obj.magic _g in let fixity = Obj.magic _g1 in let inner = Obj.magic _g2 in (
+      ignore (HxUnaryOperatorTools.requireValidFixity (Obj.magic op) (Obj.magic fixity));
+      let __assign_320 = Obj.magic (Haxe_macro_Expr.EUnop (Obj.magic (macroUnop (Obj.magic op)), fixity = HxUnaryFixity.Postfix, convert (Obj.magic inner) pos)) in (
+        tempResult := __assign_320;
+        __assign_320
+      )
     )
     | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = (_g : string) in let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_321 = Obj.magic (Haxe_macro_Expr.EBinop (Obj.magic (parseBinop (op : string)), convert (Obj.magic left) pos, convert (Obj.magic right) pos)) in (
       tempResult := __assign_321;

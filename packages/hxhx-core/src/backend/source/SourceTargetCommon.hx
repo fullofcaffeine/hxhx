@@ -1189,8 +1189,8 @@ class SourceTargetCommon {
 				}
 			case ESuper:
 				superExpr(target);
-			case EUnop(op, inner):
-				unopExpr(target, op, inner);
+			case EUnop(op, fixity, inner):
+				unopExpr(target, op, fixity, inner);
 			case EIdent(name) if (target == Php && !phpLocalExists(name) && phpBuiltinTypeValueName(name)):
 				phpClassValueExpr(name);
 			case EIdent(name) if (target == Php && !phpLocalExists(name) && phpEnumCtorValueExpr(name) != null):
@@ -1353,7 +1353,7 @@ class SourceTargetCommon {
 			case ESwitchRaw(_): "ESwitchRaw";
 			case ESwitch(_, _, _): "ESwitch";
 			case ENew(_, _): "ENew";
-			case EUnop(_, _): "EUnop";
+			case EUnop(_, _, _): "EUnop";
 			case EBinop(op, _, _): "EBinop(" + op + ")";
 			case ETernary(_, _, _): "ETernary";
 			case EAnon(_, _): "EAnon";
@@ -1618,7 +1618,7 @@ class SourceTargetCommon {
 			renderExpr(Php, receiver);
 		} else {
 			switch (receiver) {
-				case ECall(_, _) | EBinop(_, _, _) | EUnop(_, _) | EMacroExpr(_, _) | EUntyped(_) | ECast(_, _):
+				case ECall(_, _) | EBinop(_, _, _) | EUnop(_, _, _) | EMacroExpr(_, _) | EUntyped(_) | ECast(_, _):
 					final rendered = renderExpr(Php, receiver);
 					if (!phpRenderedInt64ReceiverExpr(rendered))
 						return null;
@@ -1927,35 +1927,30 @@ class SourceTargetCommon {
 		};
 	}
 
-	static function unopExpr(target:SourceNativeTarget, op:String, inner:HxExpr):String {
+	static function unopExpr(target:SourceNativeTarget, op:HxUnaryOperator, fixity:HxUnaryFixity, inner:HxExpr):String {
+		HxUnaryOperatorTools.requireValidFixity(op, fixity);
 		final rendered = renderExpr(target, inner);
-		if (target == Php && op == "-" && !phpExprIsInt64Value(inner)) {
+		if (target == Php && op == HxUnaryOperator.Negate && !phpExprIsInt64Value(inner)) {
 			final operatorCall = phpUnaryMinusOperatorCall(inner);
 			if (operatorCall != null)
 				return operatorCall;
 		}
-		return switch (op) {
-			case "!":
-				if (target == Python || target == Lua) "(not " + rendered + ")"; else "(!" + rendered + ")";
-			case "post++":
-				postIncrementExpr(target, inner, 1);
-			case "post--":
-				postIncrementExpr(target, inner, -1);
-			case "++", "pre++":
-				preIncrementExpr(target, inner, 1);
-			case "--", "pre--":
-				preIncrementExpr(target, inner, -1);
-			case "-" if (target == Php && phpExprIsInt64Value(inner)):
-				"__hxhx_int64_neg(" + rendered + ")";
-			case "-" if (target == Php && phpUnaryMinusNeedsHelper(inner)):
-				"__hxhx_neg(" + rendered + ")";
-			case "~" if (target == Php && phpExprIsInt64Value(inner)):
-				"__hxhx_int64_not(" + rendered + ")";
-			case "-", "+", "~":
-				"(" + op + rendered + ")";
-			default:
-				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + op;
-		};
+		if (op == HxUnaryOperator.LogicalNot)
+			return if (target == Python || target == Lua) "(not " + rendered + ")"; else "(!" + rendered + ")";
+		if (op == HxUnaryOperator.Increment)
+			return fixity == HxUnaryFixity.Postfix ? postIncrementExpr(target, inner, 1) : preIncrementExpr(target, inner, 1);
+		if (op == HxUnaryOperator.Decrement)
+			return fixity == HxUnaryFixity.Postfix ? postIncrementExpr(target, inner, -1) : preIncrementExpr(target, inner, -1);
+		if (op == HxUnaryOperator.Negate) {
+			if (target == Php && phpExprIsInt64Value(inner))
+				return "__hxhx_int64_neg(" + rendered + ")";
+			if (target == Php && phpUnaryMinusNeedsHelper(inner))
+				return "__hxhx_neg(" + rendered + ")";
+			return "(-" + rendered + ")";
+		}
+		if (op == HxUnaryOperator.BitwiseNot)
+			return target == Php && phpExprIsInt64Value(inner) ? "__hxhx_int64_not(" + rendered + ")" : "(~" + rendered + ")";
+		throw targetLabel(target) + " source backend MVP unsupported unary operator: " + HxUnaryOperatorTools.sourceToken(op);
 	}
 
 	static function phpUnaryMinusOperatorCall(expr:HxExpr):Null<String> {
@@ -1984,26 +1979,71 @@ class SourceTargetCommon {
 
 	static function preIncrementExpr(target:SourceNativeTarget, expr:HxExpr, delta:Int):String {
 		return switch (target) {
-			case Php:
-				final targetExpr = switch (expr) {
+			case Python:
+				switch (expr) {
 					case EIdent(name):
-						valueName(target, name);
+						final targetName = valueName(target, name);
+						"("
+						+ targetName
+						+ " := ("
+						+ targetName
+						+ (delta < 0 ? " - " : " + ")
+						+ Std.string(delta < 0 ? -delta : delta)
+						+ "))";
 					case EField(receiver, field):
-						fieldAccessExpr(target, receiver, field);
+						"hxhx_pre_update_attr("
+						+ renderExpr(target, receiver)
+						+ ", "
+						+ quoteString(sanitizeTypeName(field))
+						+ ", "
+						+ Std.string(delta)
+						+ ")";
 					case EArrayAccess(receiver, index):
-						"__hxhx_array_get("
+						"hxhx_pre_update_index("
 						+ renderExpr(target, receiver)
 						+ ", "
 						+ renderExpr(target, index)
+						+ ", "
+						+ Std.string(delta)
 						+ ")";
 					case EThis:
-						phpThisValueExpr();
+						"hxhx_pre_update_attr(self, " + quoteString("__hx_value") + ", " + Std.string(delta) + ")";
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported prefix target: " + exprKind(expr);
-				};
-				"(" + targetExpr + " = " + phpIncrementedValueExpr(targetExpr, delta) + ")";
-			case Python, Java, Cs, Lua:
-				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + (delta < 0 ? "pre--" : "pre++");
+				}
+			case Java:
+				"(" + (delta < 0 ? "--" : "++") + lvalueExpr(target, expr) + ")";
+			case Cs:
+				"(" + (delta < 0 ? "--" : "++") + lvalueExpr(target, expr) + ")";
+			case Php:
+				switch (expr) {
+					case EIdent(name):
+						final targetExpr = valueName(target, name);
+						"(" + targetExpr + " = " + phpIncrementedValueExpr(targetExpr, delta) + ")";
+					case EField(receiver, field):
+						"__hxhx_pre_update_field("
+						+ renderExpr(target, receiver)
+						+ ", "
+						+ quoteString(sanitizeTypeName(field))
+						+ ", "
+						+ Std.string(delta)
+						+ ")";
+					case EArrayAccess(receiver, index):
+						"__hxhx_pre_update_index("
+						+ renderExpr(target, receiver)
+						+ ", "
+						+ renderExpr(target, index)
+						+ ", "
+						+ Std.string(delta)
+						+ ")";
+					case EThis:
+						final targetExpr = phpThisValueExpr();
+						"(" + targetExpr + " = " + phpIncrementedValueExpr(targetExpr, delta) + ")";
+					case _:
+						throw targetLabel(target) + " source backend MVP unsupported prefix target: " + exprKind(expr);
+				}
+			case Lua:
+				luaIncrementExpr(expr, delta, false);
 		};
 	}
 
@@ -2067,15 +2107,65 @@ class SourceTargetCommon {
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 				}
+			case Java:
+				"(" + lvalueExpr(target, expr) + (delta < 0 ? "--" : "++") + ")";
 			case Cs:
 				switch (expr) {
 					case EIdent(name):
 						"__hxhx_postUpdateVar(ref " + valueName(Cs, name) + ", " + Std.string(delta) + ")";
+					case EField(_, _) | EArrayAccess(_, _):
+						"(" + lvalueExpr(target, expr) + (delta < 0 ? "--" : "++") + ")";
 					case _:
 						throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 				}
-			case Java, Lua:
-				throw targetLabel(target) + " source backend MVP unsupported unary operator: " + (delta < 0 ? "post--" : "post++");
+			case Lua:
+				luaIncrementExpr(expr, delta, true);
+		};
+	}
+
+	/** Emits a Lua expression that evaluates the assignable receiver/index once. */
+	static function luaIncrementExpr(expr:HxExpr, delta:Int, returnOld:Bool):String {
+		final resultName = returnOld ? "__old" : "__next";
+		final suffix = delta < 0 ? " - " + Std.string(-delta) : " + " + Std.string(delta);
+		return switch (expr) {
+			case EIdent(name):
+				final targetName = valueName(Lua, name);
+				"(function() local __old = "
+				+ targetName
+				+ "; local __next = __old"
+				+ suffix
+				+ "; "
+				+ targetName
+				+ " = __next; return "
+				+ resultName
+				+ " end)()";
+			case EField(receiver, field):
+				final renderedField = sanitizeTypeName(field);
+				"(function(__obj) local __old = __obj."
+				+ renderedField
+				+ "; local __next = __old"
+				+ suffix
+				+ "; __obj."
+				+ renderedField
+				+ " = __next; return "
+				+ resultName
+				+ " end)("
+				+ renderExpr(Lua, receiver)
+				+ ")";
+			case EArrayAccess(receiver, index):
+				"(function(__obj, __index) local __old = __obj[__index]; local __next = __old"
+				+ suffix
+				+ "; __obj[__index] = __next; return "
+				+ resultName
+				+ " end)("
+				+ renderExpr(Lua, receiver)
+				+ ", "
+				+ renderExpr(Lua, index)
+				+ ")";
+			case EThis:
+				luaIncrementExpr(EField(EThis, "__hx_value"), delta, returnOld);
+			case _:
+				throw "Lua source backend MVP unsupported " + (returnOld ? "postfix" : "prefix") + " target: " + exprKind(expr);
 		};
 	}
 
@@ -3310,7 +3400,7 @@ class SourceTargetCommon {
 		return switch (receiver) {
 			case EInt(_):
 				true;
-			case EUnop("-", EInt(_)):
+			case EUnop(op, fixity, EInt(_)) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				true;
 			case _:
 				false;
@@ -4011,7 +4101,7 @@ class SourceTargetCommon {
 				phpCollectUsedList(exprs, names);
 			case ENew(_, args):
 				phpCollectUsedList(args, names);
-			case EUnop(_, inner):
+			case EUnop(_, _, inner):
 				phpCollectUsedIdents(inner, names);
 			case EBinop(_, left, right):
 				phpCollectUsedIdents(left, names);
@@ -4089,7 +4179,7 @@ class SourceTargetCommon {
 				if (names.indexOf(sanitizeTypeName(name)) < 0)
 					names.push(sanitizeTypeName(name));
 				phpCollectAssignedIdents(right, names);
-			case EUnop(_, EIdent(name)):
+			case EUnop(op, _, EIdent(name)) if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement):
 				if (names.indexOf(sanitizeTypeName(name)) < 0)
 					names.push(sanitizeTypeName(name));
 			case ECall(EField(receiver, field), args):
@@ -4113,7 +4203,7 @@ class SourceTargetCommon {
 				phpCollectAssignedList(exprs, names);
 			case ENew(_, args):
 				phpCollectAssignedList(args, names);
-			case EUnop(_, inner):
+			case EUnop(_, _, inner):
 				phpCollectAssignedIdents(inner, names);
 			case EBinop(_, left, right):
 				phpCollectAssignedIdents(left, names);
@@ -5006,8 +5096,8 @@ class SourceTargetCommon {
 				helperAssignmentTypeError(phpLocalTypeHint(name), value);
 			case EBinop(op, left, right):
 				helperAbstractOverloadTypeError(op, left, right);
-			case EUnop(op, inner):
-				helperAbstractUnaryTypeError(op, inner);
+			case EUnop(op, fixity, inner):
+				helperAbstractUnaryTypeError(op, fixity, inner);
 			case ECall(callee, callArgs):
 				final genericNullResult = helperGenericNullTypeError(callee, callArgs);
 				if (genericNullResult != null)
@@ -5025,15 +5115,11 @@ class SourceTargetCommon {
 		};
 	}
 
-	static function helperAbstractUnaryTypeError(op:String, inner:HxExpr):Null<Bool> {
+	static function helperAbstractUnaryTypeError(op:HxUnaryOperator, fixity:HxUnaryFixity, inner:HxExpr):Null<Bool> {
+		HxUnaryOperatorTools.requireValidFixity(op, fixity);
 		if (!helperExprHasNumericAbstractWrapper(inner))
 			return null;
-		switch (op) {
-			case "!" | "post++" | "post--" | "++" | "pre++" | "--" | "pre--":
-				return true;
-			case _:
-				return null;
-		}
+		return op == HxUnaryOperator.LogicalNot || op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement ? true : null;
 	}
 
 	static function helperAbstractOverloadTypeError(op:String, left:HxExpr, right:HxExpr):Null<Bool> {
@@ -6155,8 +6241,13 @@ class SourceTargetCommon {
 				pythonMacroEnum("ECall", [pythonMacroExpr(callee, []), "[" + loweredArgs.join(", ") + "]"]);
 			case EUntyped(inner):
 				pythonMacroEnum("EUntyped", [pythonMacroExpr(inner, [])]);
-			case EUnop(op, inner):
-				pythonMacroEnum("EUnop", [quoteString(op), pythonMacroExpr(inner, [])]);
+			case EUnop(op, fixity, inner):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				pythonMacroEnum("EUnop", [
+					pythonMacroEnum(HxUnaryOperatorTools.macroConstructor(op), []),
+					fixity == HxUnaryFixity.Postfix ? "True" : "False",
+					pythonMacroExpr(inner, [])
+				]);
 			case _:
 				pythonMacroEnum("EConst", [pythonMacroEnum("CIdent", [quoteString(renderExpr(Python, expr))])]);
 		};
@@ -6545,8 +6636,13 @@ class SourceTargetCommon {
 				phpMacroEnum("ECall", [phpMacroExpr(callee, []), "[" + loweredArgs.join(", ") + "]"]);
 			case EUntyped(inner):
 				phpMacroEnum("EUntyped", [phpMacroExpr(inner, [])]);
-			case EUnop(op, inner):
-				phpMacroEnum("EUnop", [quotePhpString(op), phpMacroExpr(inner, [])]);
+			case EUnop(op, fixity, inner):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				phpMacroEnum("EUnop", [
+					phpMacroEnum(HxUnaryOperatorTools.macroConstructor(op), []),
+					fixity == HxUnaryFixity.Postfix ? "true" : "false",
+					phpMacroExpr(inner, [])
+				]);
 			case _:
 				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quotePhpString(renderExpr(Php, expr))])]);
 		};
@@ -7235,8 +7331,8 @@ class SourceTargetCommon {
 				ESwitch(javaExprWithStmtTraceLine(scrutinee, pos), patterns, [for (value in exprs) javaExprWithStmtTraceLine(value, pos)]);
 			case ENew(typePath, args):
 				ENew(typePath, [for (arg in args) javaExprWithStmtTraceLine(arg, pos)]);
-			case EUnop(op, inner):
-				EUnop(op, javaExprWithStmtTraceLine(inner, pos));
+			case EUnop(op, fixity, inner):
+				EUnop(op, fixity, javaExprWithStmtTraceLine(inner, pos));
 			case EBinop(op, left, right):
 				EBinop(op, javaExprWithStmtTraceLine(left, pos), javaExprWithStmtTraceLine(right, pos));
 			case ETernary(cond, thenExpr, elseExpr):
@@ -7283,11 +7379,25 @@ class SourceTargetCommon {
 			case _:
 				throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 		};
-		final absDeltaValue = delta < 0 ? -delta : delta;
-		final absDelta = Std.string(absDeltaValue);
+		final absDelta = Std.string(delta < 0 ? -delta : delta);
 		final rhs = if (target == Php && phpExprIsInt64Value(expr)) phpIncrementedValueExpr(targetExpr,
 			delta) else if (delta < 0) "(" + targetExpr + " - " + absDelta + ")" else "(" + targetExpr + " + " + absDelta + ")";
 		return exprStmt(target, targetExpr + " = " + rhs);
+	}
+
+	static function preIncrementStmt(target:SourceNativeTarget, expr:HxExpr, delta:Int):String {
+		return switch (target) {
+			case Java:
+				exprStmt(target, (delta < 0 ? "--" : "++") + lvalueExpr(target, expr));
+			case Cs:
+				exprStmt(target, (delta < 0 ? "--" : "++") + lvalueExpr(target, expr));
+			case Python:
+				exprStmt(target, preIncrementExpr(target, expr, delta));
+			case Php:
+				exprStmt(target, preIncrementExpr(target, expr, delta));
+			case Lua:
+				exprStmt(target, preIncrementExpr(target, expr, delta));
+		};
 	}
 
 	static function exprStmt(target:SourceNativeTarget, expr:String):String {
@@ -7310,10 +7420,11 @@ class SourceTargetCommon {
 				[indent + printStmt(target, renderExpr(target, args[0]))];
 			case SExpr(ECall(EIdent("trace"), args), pos) if (args.length >= 1):
 				[indent + traceStmt(target, renderExpr(target, args[0]), pos)];
-			case SExpr(EUnop("post++", inner), _):
-				[indent + postIncrementStmt(target, inner, 1)];
-			case SExpr(EUnop("post--", inner), _):
-				[indent + postIncrementStmt(target, inner, -1)];
+			case SExpr(EUnop(op, fixity, inner), _) if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement):
+				final delta = op == HxUnaryOperator.Increment ? 1 : -1;
+					[
+						indent + (fixity == HxUnaryFixity.Postfix ? postIncrementStmt(target, inner, delta) : preIncrementStmt(target, inner, delta))
+					];
 			case SExpr(expr, pos):
 				final rendered = target == Java ? javaExprWithStmtTraceLine(expr, pos) : expr;
 					[indent + exprStmt(target, renderExpr(target, rendered))];
@@ -8647,7 +8758,7 @@ class SourceTargetCommon {
 				typePath;
 			case EIdent(name):
 				phpLocalTypeHint(name);
-			case EUnop("-", inner):
+			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				inferLocalTypeHint("", inner);
 			case EBinop("??", left, right):
 				phpNullCoalesceTypeHint(left, right);
@@ -8819,7 +8930,8 @@ class SourceTargetCommon {
 			case EBinop("*", left, right), EBinop("+", left, right), EBinop("-", left, right), EBinop("/", left, right), EBinop("%", left, right),
 				EBinop("&", left, right), EBinop("|", left, right), EBinop("^", left, right), EBinop("<<", left, right), EBinop(">>", left, right),
 				EBinop(">>>", left, right): phpExprIsInt64Value(left) || phpExprIsInt64Value(right);
-			case EUnop("-", inner), EUnop("~", inner):
+			case EUnop(op, fixity, inner) if ((op == HxUnaryOperator.Negate || op == HxUnaryOperator.BitwiseNot)
+				&& fixity == HxUnaryFixity.Prefix):
 				phpExprIsInt64Value(inner);
 			case EMacroExpr(inner, _) | EUntyped(inner):
 				phpExprReturnsInt64(inner);
@@ -8832,7 +8944,7 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EIdent(name):
 				isInt64TypeHint(phpLocalTypeHint(name));
-			case ECall(_, _) | EBinop(_, _, _) | EUnop(_, _) | EMacroExpr(_, _) | EUntyped(_):
+			case ECall(_, _) | EBinop(_, _, _) | EUnop(_, _, _) | EMacroExpr(_, _) | EUntyped(_):
 				phpExprReturnsInt64(expr);
 			case _:
 				false;
@@ -9195,7 +9307,7 @@ class SourceTargetCommon {
 				phpCollectDynamicCallFieldsFromExpr(elseExpr, localTypes, fieldsByLocal);
 			case ENew(_, args):
 				phpCollectDynamicCallFieldsFromExprs(args, localTypes, fieldsByLocal);
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				phpCollectDynamicCallFieldsFromExpr(inner, localTypes, fieldsByLocal);
 			case _:
 		}
@@ -10191,8 +10303,11 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case EInt(_):
 				phpInt64TypePath() + "::ofInt(" + rendered + ")";
-			case EUnop("-", EInt(_)):
-				phpInt64TypePath() + "::ofInt(" + rendered + ")";
+			case EUnop(op, fixity, EInt(_)) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
+				phpInt64TypePath()
+				+ "::ofInt("
+				+ rendered
+				+ ")";
 			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]) if (suffix == "i64" || suffix == "u64"):
 				"__hxhx_int64_literal("
 				+ quotePhpString(raw)
@@ -11708,7 +11823,7 @@ class SourceTargetCommon {
 				collectJavaEntryBodyFunctionRefsInExpr(callee, out, true);
 				for (arg in args)
 					collectJavaEntryBodyFunctionRefsInExpr(arg, out, false);
-			case EField(receiver, _), EUnop(_, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
+			case EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
 				collectJavaEntryBodyFunctionRefsInExpr(receiver, out, false);
 			case EBinop(_, left, right):
 				collectJavaEntryBodyFunctionRefsInExpr(left, out, false);
@@ -11955,7 +12070,7 @@ class SourceTargetCommon {
 				collectJavaEntryBodyDirectCallsInExpr(callee, out);
 				for (arg in args)
 					collectJavaEntryBodyDirectCallsInExpr(arg, out);
-			case EField(receiver, _), EUnop(_, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
+			case EField(receiver, _), EUnop(_, _, receiver), ECast(receiver, _), EUntyped(receiver), EMacroExpr(receiver, _):
 				collectJavaEntryBodyDirectCallsInExpr(receiver, out);
 			case EBinop(_, left, right):
 				collectJavaEntryBodyDirectCallsInExpr(left, out);
@@ -12668,7 +12783,7 @@ class SourceTargetCommon {
 			case ENew(_, args) | EArrayDecl(args):
 				for (arg in args)
 					phpRecordReferencedMemberExpr(arg, names);
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner):
 				phpRecordReferencedMemberExpr(inner, names);
 			case EBinop(_, left, right):
 				phpRecordReferencedMemberExpr(left, names);
@@ -15188,7 +15303,7 @@ class SourceTargetCommon {
 				phpCollectGenericStaticSpecializationsFromExpr(receiver, className, genericFns, localTypes, specializations, allowDirectCalls);
 			case EMacroExpr(inner, _) | EUntyped(inner) | ECast(inner, _):
 				phpCollectGenericStaticSpecializationsFromExpr(inner, className, genericFns, localTypes, specializations, allowDirectCalls);
-			case EUnop(_, inner):
+			case EUnop(_, _, inner):
 				phpCollectGenericStaticSpecializationsFromExpr(inner, className, genericFns, localTypes, specializations, allowDirectCalls);
 			case EBinop(_, left, right) | EArrayAccess(left, right) | ERange(left, right):
 				phpCollectGenericStaticSpecializationsFromExpr(left, className, genericFns, localTypes, specializations, allowDirectCalls);
@@ -15336,7 +15451,7 @@ class SourceTargetCommon {
 		return switch (expr) {
 			case ENull | EBool(_) | EString(_) | EInt(_) | EFloat(_):
 				true;
-			case EUnop("-", value):
+			case EUnop(op, fixity, value) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				switch (value) {
 					case EInt(_) | EFloat(_): true;
 					case _: false;
@@ -16221,7 +16336,7 @@ class SourceTargetCommon {
 
 	static function phpExprNeedsThisValueSlot(expr:HxExpr):Bool {
 		return switch (expr) {
-			case EUnop("++" | "pre++" | "post++" | "--" | "pre--" | "post--", EThis):
+			case EUnop(op, _, EThis) if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement):
 				true;
 			case EBinop(op, EThis, _) if (isAssignmentOp(op) || op == "??=" || op == ">>>="):
 				true;
@@ -16239,7 +16354,7 @@ class SourceTargetCommon {
 			case ESwitch(scrutinee, _, exprs): phpExprNeedsThisValueSlot(scrutinee) || phpExprListNeedsThisValueSlot(exprs);
 			case ENew(_, args):
 				phpExprListNeedsThisValueSlot(args);
-			case EUnop(_, inner):
+			case EUnop(_, _, inner):
 				phpExprNeedsThisValueSlot(inner);
 			case EBinop(_, left, right): phpExprNeedsThisValueSlot(left) || phpExprNeedsThisValueSlot(right);
 			case ETernary(cond, thenExpr, elseExpr): phpExprNeedsThisValueSlot(cond) || phpExprNeedsThisValueSlot(thenExpr) || phpExprNeedsThisValueSlot(elseExpr);
@@ -16319,7 +16434,7 @@ class SourceTargetCommon {
 			case ESwitch(scrutinee, _, exprs): phpExprTouchesThis(scrutinee) || phpExprListTouchesThis(exprs);
 			case ENew(_, args):
 				phpExprListTouchesThis(args);
-			case EUnop(_, inner):
+			case EUnop(_, _, inner):
 				phpExprTouchesThis(inner);
 			case EBinop(_, left, right): phpExprTouchesThis(left) || phpExprTouchesThis(right);
 			case ETernary(cond, thenExpr, elseExpr): phpExprTouchesThis(cond) || phpExprTouchesThis(thenExpr) || phpExprTouchesThis(elseExpr);
@@ -16549,7 +16664,7 @@ class SourceTargetCommon {
 			case ESwitch(scrutinee, _, exprs): phpExprHasRefCaptureOfNames(scrutinee, names) || phpExprListHasRefCaptureOfNames(exprs, names);
 			case ENew(_, args):
 				phpExprListHasRefCaptureOfNames(args, names);
-			case EUnop(_, inner):
+			case EUnop(_, _, inner):
 				phpExprHasRefCaptureOfNames(inner, names);
 			case EBinop(_, left, right): phpExprHasRefCaptureOfNames(left, names) || phpExprHasRefCaptureOfNames(right, names);
 			case ETernary(cond, thenExpr, elseExpr): phpExprHasRefCaptureOfNames(cond,
@@ -16849,8 +16964,8 @@ class SourceTargetCommon {
 				ESwitch(phpRenameScopedLocalExpr(scrutinee, env, counters, rewriteRawText), renamedPatterns, renamedExprs);
 			case ENew(typePath, args):
 				ENew(typePath, [for (arg in args) phpRenameScopedLocalExpr(arg, env, counters, rewriteRawText)]);
-			case EUnop(op, inner):
-				EUnop(op, phpRenameScopedLocalExpr(inner, env, counters, rewriteRawText));
+			case EUnop(op, fixity, inner):
+				EUnop(op, fixity, phpRenameScopedLocalExpr(inner, env, counters, rewriteRawText));
 			case EBinop(op, left, right):
 				EBinop(op, phpRenameScopedLocalExpr(left, env, counters, rewriteRawText), phpRenameScopedLocalExpr(right, env, counters, rewriteRawText));
 			case ETernary(cond, thenExpr, elseExpr):
@@ -17069,8 +17184,8 @@ class SourceTargetCommon {
 				EField(EThis, name);
 			case EIdent(name) if (fieldNames.exists(name) && locals.indexOf(name) < 0):
 				EField(EThis, name);
-			case EUnop(op, inner):
-				EUnop(op, pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals));
+			case EUnop(op, fixity, inner):
+				EUnop(op, fixity, pythonRewriteSameClassMemberExpr(inner, methodNames, fieldNames, locals));
 			case EBinop(op, left, right):
 				EBinop(op, pythonRewriteSameClassMemberExpr(left, methodNames, fieldNames, locals),
 					pythonRewriteSameClassMemberExpr(right, methodNames, fieldNames, locals));
@@ -17369,8 +17484,8 @@ class SourceTargetCommon {
 				]);
 			case EIdent(name) if (staticMemberNames.exists(name) && locals.indexOf(name) < 0):
 				EField(EIdent(className), name);
-			case EUnop(op, inner):
-				EUnop(op, csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals));
+			case EUnop(op, fixity, inner):
+				EUnop(op, fixity, csRewriteSameClassStaticMemberExpr(inner, staticMemberNames, className, locals));
 			case EBinop(op, left, right):
 				EBinop(op, csRewriteSameClassStaticMemberExpr(left, staticMemberNames, className, locals),
 					csRewriteSameClassStaticMemberExpr(right, staticMemberNames, className, locals));
@@ -17554,8 +17669,8 @@ class SourceTargetCommon {
 				EField(EThis, name);
 			case EIdent(name) if (staticFieldNames.exists(name) && locals.indexOf(name) < 0):
 				EField(EIdent(className), name);
-			case EUnop(op, inner):
-				EUnop(op, phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, staticFieldNames, className, locals));
+			case EUnop(op, fixity, inner):
+				EUnop(op, fixity, phpRewriteSameClassMemberExpr(inner, methodNames, fieldNames, staticFieldNames, className, locals));
 			case EBinop(op, left, right):
 				EBinop(op, phpRewriteSameClassMemberExpr(left, methodNames, fieldNames, staticFieldNames, className, locals),
 					phpRewriteSameClassMemberExpr(right, methodNames, fieldNames, staticFieldNames, className, locals));
@@ -18099,16 +18214,6 @@ class SourceTargetCommon {
 				appendSourceNativeTemplateLines(lines, "", "php/runtime", "Int64.php");
 				appendSourceNativeTemplateLines(lines, "", "php/runtime", "RuntimeHelpers.php");
 				appendSourceNativeTemplateLines(lines, "", "php/runtime", "StringHelpers.php");
-				lines.push("function __hxhx_post_update_field($obj, $field, $delta) {");
-				lines.push("  $old = $obj->$field;");
-				lines.push("  $obj->$field = __hxhx_is_int64($old) ? __hxhx_int64_add($old, $delta) : $old + $delta;");
-				lines.push("  return $old;");
-				lines.push("}");
-				lines.push("function __hxhx_post_update_index(&$obj, $index, $delta) {");
-				lines.push("  $old = $obj[$index];");
-				lines.push("  $obj[$index] = __hxhx_is_int64($old) ? __hxhx_int64_add($old, $delta) : $old + $delta;");
-				lines.push("  return $old;");
-				lines.push("}");
 				appendSourceNativeTemplateLines(lines, "", "php/runtime", "Math.php");
 				appendSourceNativeTemplateLines(lines, "", "php/runtime", "Std.php");
 				appendSourceNativeTemplateLines(lines, "", "php/runtime", "Type.php");

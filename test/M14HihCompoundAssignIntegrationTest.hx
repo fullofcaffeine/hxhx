@@ -23,9 +23,8 @@ class M14HihCompoundAssignIntegrationTest {
 	}
 
 	static function main() {
-		final src = 'class Main {\n' + '  static function main() {\n' + '    var acc:Int = 1;\n' + '    var a:Int = 1;\n' + '    var b:Int = 2;\n'
-			+ '    var x = a + +b;\n' + '    acc += 5;\n' + '    acc -= 1;\n' + '    acc <<= 1;\n' + '    acc >>>= 1;\n' + '    acc++;\n' + '    ++acc;\n'
-			+ '    acc--;\n' + '    --acc;\n' + '  }\n' + '}\n';
+		final src = 'class Main {\n' + '  static function main() {\n' + '    var acc:Int = 1;\n' + '    acc += 5;\n' + '    acc -= 1;\n'
+			+ '    acc <<= 1;\n' + '    acc >>>= 1;\n' + '    acc++;\n' + '    ++acc;\n' + '    acc--;\n' + '    --acc;\n' + '  }\n' + '}\n';
 
 		final decl = new HxParser(src).parseModule("Main");
 		final cls = HxModuleDecl.getMainClass(decl);
@@ -43,7 +42,8 @@ class M14HihCompoundAssignIntegrationTest {
 		var minusEqCount = 0;
 		var sawShiftLeftEq = false;
 		var sawUnsignedShiftRightEq = false;
-		var sawBinaryPlusUnaryPlus = false;
+		var sawPreInc = false;
+		var sawPreDec = false;
 		var sawPostInc = false;
 		var sawPostDec = false;
 		for (stmt in HxFunctionDecl.getBody(parsedMain)) {
@@ -60,27 +60,60 @@ class M14HihCompoundAssignIntegrationTest {
 							sawUnsignedShiftRightEq = true;
 						case _:
 					}
-				case SExpr(EUnop("post++", EIdent("acc")), _):
+				case SExpr(EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Prefix, EIdent("acc")), _):
+					sawPreInc = true;
+				case SExpr(EUnop(HxUnaryOperator.Decrement, HxUnaryFixity.Prefix, EIdent("acc")), _):
+					sawPreDec = true;
+				case SExpr(EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("acc")), _):
 					sawPostInc = true;
-				case SExpr(EUnop("post--", EIdent("acc")), _):
+				case SExpr(EUnop(HxUnaryOperator.Decrement, HxUnaryFixity.Postfix, EIdent("acc")), _):
 					sawPostDec = true;
-				case SVar("x", _, EBinop("+", EIdent("a"), EUnop("+", EIdent("b"))), _):
-					sawBinaryPlusUnaryPlus = true;
 				case _:
 			}
 		}
 
-		assertTrue(plusEqCount == 2, "parser should lower explicit '+=' and prefix '++' forms to '+='");
-		assertTrue(minusEqCount == 2, "parser should lower explicit '-=' and prefix '--' forms to '-='");
-		assertTrue(sawPostInc, "parser should preserve postfix '++' as an old-value unary form");
-		assertTrue(sawPostDec, "parser should preserve postfix '--' as an old-value unary form");
-		assertTrue(sawBinaryPlusUnaryPlus, "parser should keep 'a + +b' as binary-plus with unary-plus rhs");
+		assertTrue(plusEqCount == 1, "parser should keep only source-written '+=' as compound assignment");
+		assertTrue(minusEqCount == 1, "parser should keep only source-written '-=' as compound assignment");
+		assertTrue(sawPreInc, "parser should preserve prefix '++' with prefix fixity");
+		assertTrue(sawPreDec, "parser should preserve prefix '--' with prefix fixity");
+		assertTrue(sawPostInc, "parser should preserve postfix '++' with postfix fixity");
+		assertTrue(sawPostDec, "parser should preserve postfix '--' with postfix fixity");
 		assertTrue(sawShiftLeftEq, "parser should keep '<<=' as EBinop");
 		assertTrue(sawUnsignedShiftRightEq, "parser should keep '>>>=' as EBinop");
+
+		var rejectedUnaryPositive = false;
+		try {
+			HxParser.parseExprText("+value");
+		} catch (_:HxParseError) {
+			rejectedUnaryPositive = true;
+		}
+		assertTrue(rejectedUnaryPositive, "parser should reject unary positive like upstream Haxe 4.3.7");
+		var rejectedInvalidPostfix = false;
+		try {
+			HxUnaryOperatorTools.requireValidFixity(HxUnaryOperator.Negate, HxUnaryFixity.Postfix);
+		} catch (_:Dynamic) {
+			rejectedInvalidPostfix = true;
+		}
+		assertTrue(rejectedInvalidPostfix, "structured unary syntax should reject postfix-only invalid token/fixity pairs");
 
 		final pm = new ParsedModule(src, decl, "<m14_hih_compound_assign>");
 		final tm = TyperStage.typeModule(pm);
 		final typedMain = findTypedMain(tm);
 		assertTrue(findLocalType(typedMain, "acc") == "Int", "compound assignment keeps local type stable");
+
+		final previousMutableRefs = @:privateAccess EmitterStage.currentMutableLocalRefNames;
+		@:privateAccess EmitterStage.currentMutableLocalRefNames = ["acc"];
+		var prefixOcaml = "";
+		var postfixOcaml = "";
+		try {
+			prefixOcaml = @:privateAccess EmitterStage.exprToOcaml(EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Prefix, EIdent("acc")));
+			postfixOcaml = @:privateAccess EmitterStage.exprToOcaml(EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("acc")));
+		} catch (error:Dynamic) {
+			@:privateAccess EmitterStage.currentMutableLocalRefNames = previousMutableRefs;
+			throw error;
+		}
+		@:privateAccess EmitterStage.currentMutableLocalRefNames = previousMutableRefs;
+		assertTrue(prefixOcaml.indexOf(":= __hx_next; __hx_next") >= 0, "OCaml prefix increment should return the updated value");
+		assertTrue(postfixOcaml.indexOf(":= __hx_next; __hx_old") >= 0, "OCaml postfix increment should return the old value");
 	}
 }

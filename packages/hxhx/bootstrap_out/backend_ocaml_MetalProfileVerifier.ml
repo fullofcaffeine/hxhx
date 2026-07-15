@@ -41,7 +41,7 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.ESwitchRaw _ -> 15
     | HxExpr.ESwitch (_, _, _) -> 16
     | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 18
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
@@ -74,7 +74,7 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.ESwitchRaw _ -> 15
     | HxExpr.ESwitch (_, _, _) -> 16
     | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 18
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
@@ -259,9 +259,10 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
       verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic arg) (Obj.magic violations)
     )) done
   ))
-  | HxExpr.EUnop (_p0, _p1) -> ignore ((
+  | HxExpr.EUnop (_p0, _p1, _p2) -> ignore ((
     ignore _p0;
-    let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
+    ignore _p1;
+    let _g3 = Obj.magic _p2 in let inner = Obj.magic _g3 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
   ))
   | HxExpr.EBinop (_p0, _p1, _p2) -> ignore ((
     ignore _p0;

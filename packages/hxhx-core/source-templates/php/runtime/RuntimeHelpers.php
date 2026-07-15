@@ -70,6 +70,28 @@ function __hxhx_sub($left, $right) {
   if (__hxhx_is_int64($left) || __hxhx_is_int64($right)) return __hxhx_int64_sub($left, $right);
   return $left - $right;
 }
+function __hxhx_post_update_field($obj, $field, $delta) {
+  $old = $obj->$field;
+  $obj->$field = __hxhx_is_int64($old) ? __hxhx_int64_add($old, $delta) : $old + $delta;
+  return $old;
+}
+function __hxhx_pre_update_field($obj, $field, $delta) {
+  $old = $obj->$field;
+  $next = __hxhx_is_int64($old) ? __hxhx_int64_add($old, $delta) : $old + $delta;
+  $obj->$field = $next;
+  return $next;
+}
+function __hxhx_post_update_index(&$obj, $index, $delta) {
+  $old = $obj[$index];
+  $obj[$index] = __hxhx_is_int64($old) ? __hxhx_int64_add($old, $delta) : $old + $delta;
+  return $old;
+}
+function __hxhx_pre_update_index(&$obj, $index, $delta) {
+  $old = $obj[$index];
+  $next = __hxhx_is_int64($old) ? __hxhx_int64_add($old, $delta) : $old + $delta;
+  $obj[$index] = $next;
+  return $next;
+}
 function __hxhx_neg($value) {
   if (__hxhx_is_int64($value)) return __hxhx_int64_neg($value);
   if (__hxhx_is_point3($value)) return __hxhx_mul($value, -1);

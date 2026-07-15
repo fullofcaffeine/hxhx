@@ -1220,11 +1220,31 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final instanceFields = new haxe.ds.StringMap<String>();
 		instanceFields.set("length", "this.length");
 		final exprScope = new JsFunctionScope(new haxe.ds.StringMap<String>(), instanceFields).exprScope();
-		final js = JsExprEmitter.emit(HxExpr.EUnop("post++", HxExpr.EIdent("length")), exprScope);
+		final js = JsExprEmitter.emit(HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, HxExpr.EIdent("length")), exprScope);
 		assertContains(js, "function(__hx_obj)", "postfix update on resolved instance fields should bind the receiver");
 		assertContains(js, "__hx_obj.length", "postfix update should read/write through the bound receiver");
 		assertContains(js, "})(this)", "postfix update on resolved instance fields should pass the lexical receiver explicitly");
 		assertNotContains(js, "var __hx_old = this.length", "postfix update should not dereference this inside an unbound IIFE");
+	}
+
+	static function assertStructuredUnaryFixityAndMacroQuote():Void {
+		final scope = new JsFunctionScope(new haxe.ds.StringMap<String>()).exprScope();
+		final prefix = HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Prefix, HxExpr.EIdent("value"));
+		final postfix = HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, HxExpr.EIdent("value"));
+		assertContains(JsExprEmitter.emit(prefix, scope), "(++value)", "JS prefix increment should preserve prefix placement");
+		assertContains(JsExprEmitter.emit(postfix, scope), "return __hx_old", "JS postfix increment should preserve old-value lowering");
+		final prefixIndex = HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Prefix, HxExpr.EArrayAccess(HxExpr.EIdent("values"), HxExpr.EIdent("index")));
+		final prefixIndexJs = JsExprEmitter.emit(prefixIndex, scope);
+		assertContains(prefixIndexJs, "__hx_op_read", "JS prefix indexed update should read through the array-access contract");
+		assertContains(prefixIndexJs, "__hx_op_write", "JS prefix indexed update should write through the array-access contract");
+		assertContains(prefixIndexJs, "return __hx_next", "JS prefix indexed update should return the updated value");
+		assertNotContains(prefixIndexJs, "++(function", "JS prefix indexed update must not apply ++ to a non-assignable read helper");
+
+		final prefixMacro = JsExprEmitter.emit(HxExpr.EMacroExpr(prefix, []), scope);
+		final postfixMacro = JsExprEmitter.emit(HxExpr.EMacroExpr(postfix, []), scope);
+		assertContains(prefixMacro, '__hx_ctor: "OpIncrement"', "JS macro quote should use the public unary enum constructor");
+		assertContains(prefixMacro, "false", "JS macro quote should preserve prefix fixity as postFix=false");
+		assertContains(postfixMacro, "true", "JS macro quote should preserve postfix fixity as postFix=true");
 	}
 
 	static function main():Void {
@@ -1237,6 +1257,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		assertScannedModuleStaticFields();
 		assertEmptyAnonThisAssignmentJs();
 		assertPostfixResolvedThisFieldBindsReceiver();
+		assertStructuredUnaryFixityAndMacroQuote();
 
 		final tmpRoot = Path.normalize(".tmp/m14_js_target_core_systools_" + Std.string(Date.now().getTime()));
 		final outDir = Path.join([tmpRoot, "out"]);
@@ -1375,6 +1396,8 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 				'    Sys.println("post-field=" + postField.n++ + ":" + postField.n);',
 				'    postValues[1]++;',
 				'    Sys.println("post-array-slot=" + postValues[1]);',
+				'    var preArrayIndex = 0;',
+				'    Sys.println("pre-array-slot=" + ++postValues[preArrayIndex++] + ":" + postValues[0] + ":" + preArrayIndex);',
 				'    var diffEquivs = [];',
 				'    var diffLookup = [];',
 				'    var diffEquivIndex = -1;',
@@ -1851,6 +1874,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertContains(stdout, "post-local=1:2", "postfix local increment should return the old value and then update it");
 			assertContains(stdout, "post-field=3:4", "postfix field increment should return the old value and then update it");
 			assertContains(stdout, "post-array-slot=21", "postfix array slot increment should write the incremented slot value");
+			assertContains(stdout, "pre-array-slot=11:11:1", "prefix array slot increment should write and return the new value after one index evaluation");
 			assertContains(stdout, "diff-equiv=7:0", "semicolonless anonymous object initializers should not drop following assignments");
 			assertContains(stdout, "interp-this=[IV +4]", "interpolated this-field access should execute through the JS this receiver");
 			assertContains(stdout, "abstract-op=7:7:LV:2", "abstract operator slots should execute add/addAssign/read/write methods");

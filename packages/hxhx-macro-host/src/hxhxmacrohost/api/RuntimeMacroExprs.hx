@@ -655,8 +655,9 @@ class RuntimeMacroExprs {
 					expr: convert(body, pos),
 					params: []
 				});
-			case EUnop(op, inner):
-				EUnop(parseUnop(op), false, convert(inner, pos));
+			case EUnop(op, fixity, inner):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				EUnop(macroUnop(op), fixity == HxUnaryFixity.Postfix, convert(inner, pos));
 			case EBinop(op, left, right):
 				EBinop(parseBinop(op), convert(left, pos), convert(right, pos));
 			case EMacroExpr(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) | ERange(_, _) |
@@ -712,14 +713,13 @@ class RuntimeMacroExprs {
 		};
 	}
 
-	static function parseUnop(op:String):Unop {
+	static function macroUnop(op:HxUnaryOperator):Unop {
 		return switch (op) {
-			case "!": OpNot;
-			case "-": OpNeg;
-			case "~": OpNegBits;
-			case "++": OpIncrement;
-			case "--": OpDecrement;
-			case _: throw "runtime macro parse: unsupported unary operator " + op;
+			case LogicalNot: OpNot;
+			case Negate: OpNeg;
+			case BitwiseNot: OpNegBits;
+			case Increment: OpIncrement;
+			case Decrement: OpDecrement;
 		};
 	}
 

@@ -160,9 +160,10 @@ let exprKind = fun e -> let tempResult = ref ("" : string) in (
         __assign_145
       )
     )
-    | HxExpr.EUnop (_p0, _p1) -> (
+    | HxExpr.EUnop (_p0, _p1, _p2) -> (
       ignore _p0;
       ignore _p1;
+      ignore _p2;
       let __assign_146 = ("Unop" : string) in (
         tempResult := __assign_146;
         __assign_146
@@ -416,7 +417,7 @@ let renderSimpleCall = fun callee args -> try let __fallback_result_197 = (
         | HxExpr.ESwitchRaw _ -> 15
         | HxExpr.ESwitch (_, _, _) -> 16
         | HxExpr.ENew (_, _) -> 17
-        | HxExpr.EUnop (_, _) -> 18
+        | HxExpr.EUnop (_, _, _) -> 18
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21
@@ -549,7 +550,7 @@ let rec rewriteExpr = fun e session allowed allowKeys importMap modulePkg trace 
           __assign_97
         )
       )
-      | HxExpr.EUnop (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let op = (_g : string) in let expr = Obj.magic _g1 in let re = Obj.magic (rewriteExpr (Obj.magic expr) session (Obj.magic allowed) (Obj.magic allowKeys) (Obj.magic importMap) (modulePkg : string) trace depth onExpand) in if re <> expr then let __assign_98 = Obj.magic (HxExpr.EUnop ((op : string), Obj.magic re)) in (
+      | HxExpr.EUnop (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = Obj.magic _g in let fixity = Obj.magic _g1 in let expr = Obj.magic _g2 in let re = Obj.magic (rewriteExpr (Obj.magic expr) session (Obj.magic allowed) (Obj.magic allowKeys) (Obj.magic importMap) (modulePkg : string) trace depth onExpand) in if re <> expr then let __assign_98 = Obj.magic (HxExpr.EUnop (Obj.magic op, Obj.magic fixity, Obj.magic re)) in (
         tempResult := __assign_98;
         __assign_98
       ) else let __assign_99 = Obj.magic e in (

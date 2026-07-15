@@ -757,9 +757,9 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final intParam = new HxFunctionArg("value", "Int", NoDefault, false, false);
 		final floatParam = new HxFunctionArg("value", "Float", NoDefault, false, false);
 		final abstractParam = new HxFunctionArg("value", "IntAbstract", NoDefault, false, false);
-		final negativeInt = EUnop("-", EInt(1));
-		final negativeFloat = EUnop("-", EFloat(1.5));
-		final nonLiteral = EUnop("-", EIdent("number"));
+		final negativeInt = EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EInt(1));
+		final negativeFloat = EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EFloat(1.5));
+		final nonLiteral = EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EIdent("number"));
 		resetRendererCaches();
 		final fullStart = Sys.time();
 		var fullSample = "";
@@ -1801,8 +1801,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 			[EIdent("text"), EIdent("dynamicPosition")]), scope);
 		final optionalLengthSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"),
 			[EIdent("text"), EIdent("position"), EIdent("optionalLength")]), scope);
-		final negativeLengthSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"),
-			[EIdent("text"), EIdent("position"), EUnop("-", EInt(1))]), scope);
+		final negativeLengthSample = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matchSub"), [
+			EIdent("text"),
+			EIdent("position"),
+			EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EInt(1))
+		]), scope);
 		assertTrue(typedStringSample == "regex->matchSub(text, position)"
 			&& dynamicStringSample == "regex->matchSub(__hxhx_stringify(dynamicText), position)"
 			&& scalarStringSample == "regex->matchSub(std::to_string(number), position)"
@@ -1993,7 +1996,8 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final conversionSample = [@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matched"), [EIdent("index")]), scope), @:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matched"), [EIdent("dynamicIndex")]), scope), @:privateAccess
-			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matched"), [EUnop("-", EInt(1))]), scope)
+			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("regex"), "matched"), [EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EInt(1))]),
+				scope)
 		].join("\n");
 		final declineSample = [@:privateAccess
 			backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("unknown"), "matched"), matchedArgs), scope), @:privateAccess
@@ -2255,7 +2259,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 		final scope = eRegBenchScope();
 		final intParam = new HxFunctionArg("n", "Int", HxDefaultValue.NoDefault);
 		final stringParam = new HxFunctionArg("s", "String", HxDefaultValue.NoDefault);
-		final unary = EUnop("-", EInt(1));
+		final unary = EUnop(HxUnaryOperator.Negate, HxUnaryFixity.Prefix, EInt(1));
 		final concat = EBinop("+", EString("left"), EString("right"));
 		final localString = EString("{ local } value");
 		resetRendererCaches();
@@ -2679,8 +2683,22 @@ class M14CppHelperRenderBenchIntegrationTest {
 			"untyped helper methods should still allow forwarded-argument override inference");
 	}
 
+	static function assertStructuredUnaryEmission():Void {
+		final prefix = EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Prefix, EIdent("value"));
+		final postfix = EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("value"));
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(prefix) == "(++value)", "C++ prefix increment should preserve prefix placement");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(postfix) == "(value++)", "C++ postfix increment should preserve postfix placement");
+
+		final prefixMacro = backend.cpp.CppMacroExpr.macroExpr(prefix, []);
+		final postfixMacro = backend.cpp.CppMacroExpr.macroExpr(postfix, []);
+		assertContains(prefixMacro, "__hxhx_macro_enum(\"OpIncrement\")", "C++ macro quote should use the public unary enum constructor");
+		assertContains(prefixMacro, "__hxhx_macro_bool(false)", "C++ macro quote should preserve prefix fixity as postFix=false");
+		assertContains(postfixMacro, "__hxhx_macro_bool(true)", "C++ macro quote should preserve postfix fixity as postFix=true");
+	}
+
 	static function main():Void {
 		assertCallableArgOverridePolicy();
+		assertStructuredUnaryEmission();
 		assertCompileTimeMacroApiBodiesStayDeclarationOnly();
 		final extraMethods = envInt("HXHX_CPP_HELPER_RENDER_BENCH_EXTRA_METHODS", DEFAULT_EXTRA_METHODS);
 		final reps = envInt("HXHX_CPP_HELPER_RENDER_BENCH_REPS", DEFAULT_REPS);

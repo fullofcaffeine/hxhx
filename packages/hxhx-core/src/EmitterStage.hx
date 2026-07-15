@@ -1013,8 +1013,11 @@ class EmitterStage {
 			return switch (cond) {
 				case EBool(v):
 					v ? "true" : "false";
-				case EUnop("!", _), EBinop("==", _, _), EBinop("!=", _, _), EBinop("<", _, _), EBinop(">", _, _), EBinop("<=", _, _), EBinop(">=", _, _),
-					EBinop("&&", _, _), EBinop("||", _, _):
+				case EUnop(op, fixity, _) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
+					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+					s == "(Obj.magic 0)" ? "true" : s;
+				case EBinop("==", _, _), EBinop("!=", _, _), EBinop("<", _, _), EBinop(">", _, _), EBinop("<=", _, _), EBinop(">=", _, _), EBinop("&&", _, _),
+					EBinop("||", _, _):
 					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					s == "(Obj.magic 0)" ? "true" : s;
 				case _:
@@ -1745,7 +1748,8 @@ class EmitterStage {
 		return switch (expr) {
 			case EIdent(name):
 				stage3IsInt64TypeName(stage3TyForIdent(name, tyByIdent));
-			case EUnop("!", inner):
+			case EUnop(op, fixity, inner) if ((op == HxUnaryOperator.Negate || op == HxUnaryOperator.BitwiseNot)
+				&& fixity == HxUnaryFixity.Prefix):
 				stage3IsInt64Expr(inner, tyByIdent);
 			case ECall(EField(EIdent(owner), field), _args): (owner == "Int64" || owner == "haxe.Int64") && (field == "make" || field == "ofInt"
 					|| field == "parseString" || field == "add" || field == "sub" || field == "mul" || field == "neg" || field == "div" || field == "mod"
@@ -1851,7 +1855,7 @@ class EmitterStage {
 				true;
 			case EIdent(name):
 				stage3TyForIdent(name, tyByIdent) == "Bool";
-			case EUnop("!", inner):
+			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
 				stage3IsBoolExpr(inner, tyByIdent);
 			case EBinop(op, _, _): op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=" || op == "&&" || op == "||";
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsBoolExpr(thenExpr, tyByIdent) && stage3IsBoolExpr(elseExpr, tyByIdent);
@@ -2017,7 +2021,7 @@ class EmitterStage {
 		return switch (expr) {
 			case EInt(v):
 				"float_of_int " + Std.string(v);
-			case EUnop("-", inner):
+			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				"(-.(" + exprToOcamlAsFloatValueStage3(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee) + "))";
 			case EIdent(name) if (stage3TyForIdent(name, tyByIdent) == "Int"):
@@ -3518,63 +3522,67 @@ class EmitterStage {
 						}
 					}
 				}
-			case EUnop(op, expr):
+			case EUnop(op, fixity, expr):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				// Stage 3 expansion: support a tiny subset of unary ops so simple control-flow
 				// fixtures can become non-trivial.
 				//
 				// Non-goal: correct numeric tower (Int vs Float) or full operator set.
 				// If we can't emit safely, fall back to bring-up poison.
-				switch (op) {
-					case "post++" | "post--":
-						switch (expr) {
-							case EIdent(name) if (isMutableLocalRefIdent(name)):
-								final ident = ocamlValueIdent(name);
-								final binop = op == "post++" ? "HxInt.add" : "HxInt.sub";
-								"(let __hx_old = (!"
-								+ ident
-								+ ") in ("
-								+ ident
-								+ " := "
-								+ binop
-								+ " __hx_old 1; __hx_old))";
-							case _:
-								"(Obj.magic 0)";
-						}
-					case "!":
-						"(not (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
-					case "-":
-						switch (expr) {
-							case _ if (stage3IsPositiveInfinityFieldExpr(expr)):
-								"neg_infinity";
-							case EField(EIdent("Math"), "POSITIVE_INFINITY"):
-								"neg_infinity";
-							case _:
-								// Stage 3 bring-up: some upstream std constants are float-typed even when their
-								// parsed shape isn't reliably inferred as `Float` yet.
-								//
-								// Keep unary minus type-correct for INF/NAN-style constants used in php boot code.
-								final forceFloatUnop = stage3IsInfNanFieldExpr(expr) || switch (expr) {
-									case EField(EIdent("Math"), "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY"):
-										true;
-									case _:
-										false;
-								};
-								// Prefer float unary minus only when the operand is explicitly float-ish.
-								//
-								// Defaulting unknown expressions to float (`-.`) can break integer call sites
-								// (e.g. `addSuccesses(-x)` where `x` is currently lowered through Obj.magic).
-								final renderedExpr = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
-									moduleNameByPkgAndClass);
-								if (forceFloatUnop || stage3IsFloatExpr(expr, tyByIdentRaw)) {
-									"(-.(" + renderedExpr + "))";
-								} else if (stage3IsIntExpr(expr, tyByIdentRaw)) {
-									"(HxInt.neg (" + renderedExpr + "))";
-								} else {
-									"(-(" + renderedExpr + "))";
-								}
-						}
-					case _:
-						"(Obj.magic 0)";
+				if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement) {
+					switch (expr) {
+						case EIdent(name) if (isMutableLocalRefIdent(name)):
+							final ident = ocamlValueIdent(name);
+							final binop = op == HxUnaryOperator.Increment ? "HxInt.add" : "HxInt.sub";
+							final resultName = fixity == HxUnaryFixity.Postfix ? "__hx_old" : "__hx_next";
+							"(let __hx_old = (!"
+							+ ident
+							+ ") in let __hx_next = "
+							+ binop
+							+ " __hx_old 1 in ("
+							+ ident
+							+ " := __hx_next; "
+							+ resultName
+							+ "))";
+						case _:
+							"(Obj.magic 0)";
+					}
+				} else if (op == HxUnaryOperator.LogicalNot) {
+					"(not (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
+				} else if (op == HxUnaryOperator.Negate) {
+					switch (expr) {
+						case _ if (stage3IsPositiveInfinityFieldExpr(expr)):
+							"neg_infinity";
+						case EField(EIdent("Math"), "POSITIVE_INFINITY"):
+							"neg_infinity";
+						case _:
+							// Stage 3 bring-up: some upstream std constants are float-typed even when their
+							// parsed shape isn't reliably inferred as `Float` yet.
+							//
+							// Keep unary minus type-correct for INF/NAN-style constants used in php boot code.
+							final forceFloatUnop = stage3IsInfNanFieldExpr(expr) || switch (expr) {
+								case EField(EIdent("Math"), "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY"):
+									true;
+								case _:
+									false;
+							};
+							// Prefer float unary minus only when the operand is explicitly float-ish.
+							//
+							// Defaulting unknown expressions to float (`-.`) can break integer call sites
+							// (e.g. `addSuccesses(-x)` where `x` is currently lowered through Obj.magic).
+							final renderedExpr = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+							if (forceFloatUnop || stage3IsFloatExpr(expr, tyByIdentRaw)) {
+								"(-.(" + renderedExpr + "))";
+							} else if (stage3IsIntExpr(expr, tyByIdentRaw)) {
+								"(HxInt.neg (" + renderedExpr + "))";
+							} else {
+								"(-(" + renderedExpr + "))";
+							}
+					}
+				} else if (op == HxUnaryOperator.BitwiseNot) {
+					"(HxInt.lognot (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
+				} else {
+					"(Obj.magic 0)";
 				}
 			case EBinop(op, a, b):
 				// Stage 3 expansion: support a small set of binary ops so `if` conditions can
@@ -3590,7 +3598,7 @@ class EmitterStage {
 					return switch (e) {
 						case EInt(v):
 							"float_of_int " + Std.string(v);
-						case EUnop("-", inner):
+						case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 							// Promote negative int literals/expressions to float too.
 							"(-.(" + exprToOcamlAsFloat(inner) + "))";
 						case EIdent(name) if (stage3TyForIdent(name, tyByIdentRaw) == "Int"):
@@ -4104,15 +4112,11 @@ class EmitterStage {
 								poisoned;
 							}
 					}
-				case EUnop(op, inner):
+				case EUnop(op, fixity, inner):
+					HxUnaryOperatorTools.requireValidFixity(op, fixity);
 					// Stage 3: allow a tiny subset of unary operators in return positions so bring-up
 					// programs can become incrementally more semantic.
-					switch (op) {
-						case "!" | "-" | "post++" | "post--":
-							hasBringupPoison(inner);
-						case _:
-							true;
-					}
+					hasBringupPoison(inner);
 				case EBinop(op, a, b):
 					// Stage 3: allow a curated subset of operators in return positions.
 					switch (op) {
@@ -4288,7 +4292,7 @@ class EmitterStage {
 			return switch (expr) {
 				case EInt(_):
 					asFloatValue(expr);
-				case EUnop("-", inner):
+				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 					"(-.(" + asFloatValue(inner) + "))";
 				case _:
 					exprToOcaml(expr, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
@@ -4320,10 +4324,10 @@ class EmitterStage {
 			case EBinop(_op, left, right):
 				collectAssignedNamesInExprRec(left, out);
 				collectAssignedNamesInExprRec(right, out);
-			case EUnop("post++" | "post--", EIdent(name)):
+			case EUnop(op, _, EIdent(name)) if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement):
 				if (name != null && name.length > 0)
 					out.set(name, true);
-			case EUnop(_op, inner):
+			case EUnop(_op, _fixity, inner):
 				collectAssignedNamesInExprRec(inner, out);
 			case ECall(callee, args):
 				collectAssignedNamesInExprRec(callee, out);
@@ -4496,7 +4500,7 @@ class EmitterStage {
 				if (args != null)
 					for (a in args)
 						scanExprForPreludeDepsRec(a, locals, calls, idents);
-			case EUnop(_, expr):
+			case EUnop(_, _, expr):
 				scanExprForPreludeDepsRec(expr, locals, calls, idents);
 			case EBinop(_, left, right):
 				scanExprForPreludeDepsRec(left, locals, calls, idents);
@@ -4999,7 +5003,7 @@ class EmitterStage {
 			return switch (e) {
 				case EBool(v):
 					v ? "true" : "false";
-				case EUnop("!", _):
+				case EUnop(op, fixity, _) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
 					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass, callSigByCallee));
 				case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
@@ -5060,7 +5064,7 @@ class EmitterStage {
 				return switch (expr) {
 					case EInt(v):
 						"float_of_int " + Std.string(v);
-					case EUnop("-", inner):
+					case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 						"(-.(" + localExprToOcamlAsFloatValue(inner) + "))";
 					case EIdent(raw) if (localTyForIdent(raw) == "Int"):
 						"float_of_int " + localReadIdent(raw);
@@ -5190,7 +5194,7 @@ class EmitterStage {
 				return switch (e) {
 					case EIdent(name):
 						name == needle;
-					case EUnop(_, inner):
+					case EUnop(_, _, inner):
 						exprContainsIdent(inner, needle);
 					case EBinop(_, left, right): exprContainsIdent(left, needle) || exprContainsIdent(right, needle);
 					case EField(obj, _):
@@ -5252,7 +5256,7 @@ class EmitterStage {
 							|| op == "-=" || op == "*=" || op == "/=" || op == "%="; (numericOp
 							&& (exprContainsIdent(left,
 								needle) || exprContainsIdent(right, needle))) || exprHintsInt(left, needle) || exprHintsInt(right, needle);
-					case EUnop(_, inner):
+					case EUnop(_, _, inner):
 						exprHintsInt(inner, needle);
 					case EField(obj, _):
 						exprHintsInt(obj, needle);
@@ -7534,7 +7538,7 @@ class EmitterStage {
 									for (a in args)
 										if (a != null)
 											staticInitWorklist.push(a);
-							case EUnop(_, expr):
+							case EUnop(_, _, expr):
 								if (expr != null)
 									staticInitWorklist.push(expr);
 							case EBinop(_, left, right):
@@ -8125,7 +8129,7 @@ class EmitterStage {
 											for (a in args)
 												if (a != null)
 													exprWorklist.push(a);
-									case EUnop(_op, expr):
+									case EUnop(_op, _fixity, expr):
 										if (expr != null)
 											exprWorklist.push(expr);
 									case EBinop(_op, left, right):

@@ -30,7 +30,10 @@ class CppMacroExpr {
 			"  std::vector<__HxMacroExpr> __hx_params;",
 			"  std::shared_ptr<__HxMacroExpr> expr;",
 			"  std::string __hx_value;",
+			"  bool __hx_bool_value = false;",
+			"  bool __hx_has_bool = false;",
 			"  operator std::string() const { return __hx_value; }",
+			"  operator bool() const { return __hx_has_bool ? __hx_bool_value : !__hx_value.empty(); }",
 			"};",
 			"",
 			"static __HxMacroExpr __hxhx_macro_expr(const __HxMacroExpr& expr) {",
@@ -49,6 +52,13 @@ class CppMacroExpr {
 			"static __HxMacroExpr __hxhx_macro_string(const std::string& value) {",
 			"  __HxMacroExpr out;",
 			"  out.__hx_value = value;",
+			"  return out;",
+			"}",
+			"",
+			"static __HxMacroExpr __hxhx_macro_bool(bool value) {",
+			"  __HxMacroExpr out;",
+			"  out.__hx_bool_value = value;",
+			"  out.__hx_has_bool = true;",
 			"  return out;",
 			"}",
 			"",
@@ -112,6 +122,7 @@ class CppMacroExpr {
 			"",
 			"static std::string __hxhx_macro_to_string(const __HxMacroExpr& value) {",
 			"  if (value.expr) return __hxhx_macro_to_string(*value.expr);",
+			"  if (value.__hx_has_bool) return value.__hx_bool_value ? \"true\" : \"false\";",
 			"  if (!value.__hx_value.empty()) return value.__hx_value;",
 			"  if (value.__hx_ctor == \"CString\" && !value.__hx_params.empty()) return std::string(\"CString(\") + __hxhx_macro_to_string(value.__hx_params[0]) + \")\";",
 			"  if ((value.__hx_ctor == \"CInt\" || value.__hx_ctor == \"CFloat\" || value.__hx_ctor == \"CIdent\") && !value.__hx_params.empty()) return value.__hx_ctor + \"(\" + __hxhx_macro_to_string(value.__hx_params[0]) + \")\";",
@@ -180,6 +191,10 @@ class CppMacroExpr {
 		return "__hxhx_macro_string(" + quoteString(value) + ")";
 	}
 
+	static function macroBool(value:Bool):String {
+		return "__hxhx_macro_bool(" + (value ? "true" : "false") + ")";
+	}
+
 	static function macroExprDef(expr:HxExpr):String {
 		return switch (expr) {
 			case EString(value):
@@ -204,8 +219,13 @@ class CppMacroExpr {
 				macroEnum("EBinop", [macroEnum("OpArrow", []), macroExpr(left, []), macroExpr(right, [])]);
 			case EBinop(op, left, right):
 				macroEnum("EBinop", [macroString(op), macroExpr(left, []), macroExpr(right, [])]);
-			case EUnop(op, inner):
-				macroEnum("EUnop", [macroString(op), macroExpr(inner, [])]);
+			case EUnop(op, fixity, inner):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				macroEnum("EUnop", [
+					macroEnum(HxUnaryOperatorTools.macroConstructor(op), []),
+					macroBool(fixity == HxUnaryFixity.Postfix),
+					macroExpr(inner, [])
+				]);
 			case ECall(callee, args):
 				macroEnum("ECall", [macroExpr(callee, [])].concat(args == null ? [] : [for (arg in args) macroExpr(arg, [])]));
 			case EUntyped(inner):
@@ -259,7 +279,12 @@ class CppMacroExpr {
 			case EMacroType(_): "EMacroType";
 			case ELambda(_, _): "ELambda";
 			case EBinop(op, _, _): "EBinop(" + op + ")";
-			case EUnop(op, _): "EUnop(" + op + ")";
+			case EUnop(op, fixity, _):
+				"EUnop("
+				+ HxUnaryOperatorTools.sourceToken(op)
+				+ ","
+				+ (fixity == HxUnaryFixity.Postfix ? "postfix" : "prefix")
+				+ ")";
 			case ETernary(_, _, _): "ETernary";
 			case ESwitchRaw(_): "ESwitchRaw";
 			case ESwitch(_, _, _): "ESwitch";

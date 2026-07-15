@@ -280,9 +280,9 @@ class ExprMacroExpander {
 					out.push(ra);
 				}
 				changed ? ENew(typePath, out) : e;
-			case EUnop(op, expr):
+			case EUnop(op, fixity, expr):
 				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				re != expr ? EUnop(op, re) : e;
+				re != expr ? EUnop(op, fixity, re) : e;
 			case EBinop(op, left, right):
 				final rl = rewriteExpr(left, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				final rr = rewriteExpr(right, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
@@ -369,7 +369,7 @@ class ExprMacroExpander {
 			case ENew(_, _): "New";
 			case EField(_, _): "Field";
 			case ECall(_, _): "Call";
-			case EUnop(_, _): "Unop";
+			case EUnop(_, _, _): "Unop";
 			case EBinop(_, _, _): "Binop";
 			case ETernary(_, _, _): "Ternary";
 			case EAnon(_, _): "Anon";

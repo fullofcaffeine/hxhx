@@ -919,17 +919,20 @@ class TyperStage {
 					inferExprType(a, scope, ctx, pos);
 				final c = ctx.resolveType(_typePath);
 				c != null ? TyType.fromHintText(c.getFullName()) : TyType.fromHintText(_typePath);
-			case EUnop(_op, e):
+			case EUnop(_op, _fixity, e):
 				switch (_op) {
-					case "!":
+					case LogicalNot:
 						inferExprType(e, scope, ctx, pos);
 						TyType.fromHintText("Bool");
-					case "-" | "+":
+					case Negate:
 						final inner = inferExprType(e, scope, ctx, pos);
 						inner.isNumeric() ? inner : TyType.unknown();
-					case _:
+					case Increment:
 						inferExprType(e, scope, ctx, pos);
-						TyType.unknown();
+					case Decrement:
+						inferExprType(e, scope, ctx, pos);
+					case BitwiseNot:
+						inferExprType(e, scope, ctx, pos);
 				}
 			case EBinop(op, a, b):
 				switch (op) {

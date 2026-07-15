@@ -113,8 +113,13 @@ class NekoMacroExprBuilder {
 				macroEnum("ECall", [macroExprObject(macroExprDef(callee)), "$array(" + loweredArgs.join(", ") + ")"]);
 			case EUntyped(inner):
 				macroEnum("EUntyped", [macroExprObject(macroExprDef(inner))]);
-			case EUnop(op, inner):
-				macroEnum("EUnop", [quote(op), macroExprObject(macroExprDef(inner))]);
+			case EUnop(op, fixity, inner):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				macroEnum("EUnop", [
+					macroEnum(HxUnaryOperatorTools.macroConstructor(op), []),
+					fixity == HxUnaryFixity.Postfix ? "true" : "false",
+					macroExprObject(macroExprDef(inner))
+				]);
 			case _:
 				macroEnum("EConst", [macroEnum("CIdent", [quote(fallback(expr))])]);
 		}

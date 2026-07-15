@@ -525,7 +525,7 @@ class NekoTargetCore {
 				collectCallRefs(context, callee, args, addConstructor, addStatic);
 			case EField(obj, _):
 				collectExprRefs(context, obj, addConstructor, addStatic);
-			case EUnop(_, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
+			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectExprRefs(context, inner, addConstructor, addStatic);
 			case EBinop(_, left, right):
 				collectExprRefs(context, left, addConstructor, addStatic);
@@ -1169,16 +1169,19 @@ class NekoTargetCore {
 				"__hxhx_field(" + renderExpr(context, obj) + ", " + quote(field) + ")";
 			case ECall(callee, args):
 				renderCall(context, callee, args);
-			case EUnop("!", inner):
-				"$not(" + renderExpr(context, inner) + ")";
-			case EUnop("~", inner):
-				"(" + renderExpr(context, inner) + " ^ -1)";
-			case EUnop("post++", inner):
-				renderPostfixIncDecExpr(context, inner, 1);
-			case EUnop("post--", inner):
-				renderPostfixIncDecExpr(context, inner, -1);
-			case EUnop(op, inner):
-				"(" + op + renderExpr(context, inner) + ")";
+			case EUnop(op, fixity, inner):
+				HxUnaryOperatorTools.requireValidFixity(op, fixity);
+				if (op == HxUnaryOperator.LogicalNot) {
+					"$not(" + renderExpr(context, inner) + ")";
+				} else if (op == HxUnaryOperator.BitwiseNot) {
+					"(" + renderExpr(context, inner) + " ^ -1)";
+				} else if (op == HxUnaryOperator.Increment) {
+					fixity == HxUnaryFixity.Postfix ? renderPostfixIncDecExpr(context, inner, 1) : renderCompoundAssignExpr(context, "+=", inner, EInt(1));
+				} else if (op == HxUnaryOperator.Decrement) {
+					fixity == HxUnaryFixity.Postfix ? renderPostfixIncDecExpr(context, inner, -1) : renderCompoundAssignExpr(context, "-=", inner, EInt(1));
+				} else {
+					"(" + HxUnaryOperatorTools.sourceToken(op) + renderExpr(context, inner) + ")";
+				}
 			case EBinop("is", left, right):
 				"Std_isOfType(" + renderExpr(context, left) + ", " + renderTypeTestExpr(context, right) + ")";
 			case EBinop("??", left, right):
@@ -1430,7 +1433,12 @@ class NekoTargetCore {
 			case ESwitchRaw(raw): "ESwitchRaw(" + raw + ")";
 			case ESwitch(_, _, _): "ESwitch";
 			case ENew(typePath, _): "ENew(" + typePath + ")";
-			case EUnop(op, _): "EUnop(" + op + ")";
+			case EUnop(op, fixity, _):
+				"EUnop("
+				+ HxUnaryOperatorTools.sourceToken(op)
+				+ ","
+				+ (fixity == HxUnaryFixity.Postfix ? "postfix" : "prefix")
+				+ ")";
 			case EBinop(op, _, _): "EBinop(" + op + ")";
 			case ETernary(_, _, _): "ETernary";
 			case EAnon(_, _): "EAnon";

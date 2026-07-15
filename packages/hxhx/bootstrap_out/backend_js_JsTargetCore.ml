@@ -149,9 +149,10 @@ let rec collectStaticInitClassDeps = fun expr deps byFullName bySimpleFullName -
         collectStaticInitClassDeps (Obj.magic arg) (Obj.magic deps) (Obj.magic byFullName) (Obj.magic bySimpleFullName)
       )) done
     ))
-    | HxExpr.EUnop (_p0, _p1) -> ignore ((
+    | HxExpr.EUnop (_p0, _p1, _p2) -> ignore ((
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in collectStaticInitClassDeps (Obj.magic inner) (Obj.magic deps) (Obj.magic byFullName) (Obj.magic bySimpleFullName)
+      ignore _p1;
+      let _g3 = Obj.magic _p2 in let inner = Obj.magic _g3 in collectStaticInitClassDeps (Obj.magic inner) (Obj.magic deps) (Obj.magic byFullName) (Obj.magic bySimpleFullName)
     ))
     | HxExpr.EBinop (_p0, _p1, _p2) -> ignore ((
       ignore _p0;
@@ -694,7 +695,7 @@ let isSuperConstructorCall = fun stmt -> let tempResult = ref (false : bool) in 
       | HxExpr.ESwitchRaw _ -> 15
       | HxExpr.ESwitch (_, _, _) -> 16
       | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 18
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
@@ -729,7 +730,7 @@ let isSuperConstructorCall = fun stmt -> let tempResult = ref (false : bool) in 
         | HxExpr.ESwitchRaw _ -> 15
         | HxExpr.ESwitch (_, _, _) -> 16
         | HxExpr.ENew (_, _) -> 17
-        | HxExpr.EUnop (_, _) -> 18
+        | HxExpr.EUnop (_, _, _) -> 18
         | HxExpr.EBinop (_, _, _) -> 19
         | HxExpr.ETernary (_, _, _) -> 20
         | HxExpr.EAnon (_, _) -> 21

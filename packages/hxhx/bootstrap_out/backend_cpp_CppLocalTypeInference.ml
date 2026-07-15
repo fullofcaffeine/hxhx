@@ -35,7 +35,7 @@ let markErasedDynamicArgIdent = fun self (expr : HxExpr.hxexpr) (dynamicArgs : b
   | HxExpr.ESwitchRaw _ -> 15
   | HxExpr.ESwitch (_, _, _) -> 16
   | HxExpr.ENew (_, _) -> 17
-  | HxExpr.EUnop (_, _) -> 18
+  | HxExpr.EUnop (_, _, _) -> 18
   | HxExpr.EBinop (_, _, _) -> 19
   | HxExpr.ETernary (_, _, _) -> 20
   | HxExpr.EAnon (_, _) -> 21
@@ -73,7 +73,7 @@ let rec collectErasedDynamicArgUsageNamesFromExpr = fun self (expr : HxExpr.hxex
     | HxExpr.ESwitchRaw _ -> 15
     | HxExpr.ESwitch (_, _, _) -> 16
     | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 18
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
@@ -106,7 +106,7 @@ let rec collectErasedDynamicArgUsageNamesFromExpr = fun self (expr : HxExpr.hxex
     | HxExpr.ESwitchRaw _ -> 15
     | HxExpr.ESwitch (_, _, _) -> 16
     | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 18
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
@@ -226,9 +226,10 @@ let rec collectErasedDynamicArgUsageNamesFromExpr = fun self (expr : HxExpr.hxex
       collectErasedDynamicArgUsageNamesFromExpr (Obj.magic self) (Obj.magic arg) (Obj.magic dynamicArgs) (Obj.magic used)
     )) done
   ))
-  | HxExpr.EUnop (_p0, _p1) -> ignore ((
+  | HxExpr.EUnop (_p0, _p1, _p2) -> ignore ((
     ignore _p0;
-    let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in collectErasedDynamicArgUsageNamesFromExpr (Obj.magic self) (Obj.magic inner) (Obj.magic dynamicArgs) (Obj.magic used)
+    ignore _p1;
+    let _g3 = Obj.magic _p2 in let inner = Obj.magic _g3 in collectErasedDynamicArgUsageNamesFromExpr (Obj.magic self) (Obj.magic inner) (Obj.magic dynamicArgs) (Obj.magic used)
   ))
   | HxExpr.EBinop (_p0, _p1, _p2) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = (_g : string) in let left = Obj.magic _g1 in let right = Obj.magic _g2 in if HxString.equals op "==" || HxString.equals op "!=" then ignore ((
     ignore (markErasedDynamicArgIdent (Obj.magic self) (Obj.magic left) (Obj.magic dynamicArgs) (Obj.magic used));
@@ -421,7 +422,7 @@ let rec collectClosureVectorEvidenceFromExpr = fun self (expr : HxExpr.hxexpr) (
       | HxExpr.ESwitchRaw _ -> 15
       | HxExpr.ESwitch (_, _, _) -> 16
       | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 18
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
@@ -493,7 +494,7 @@ let rec collectClosureVectorEvidenceFromExpr = fun self (expr : HxExpr.hxexpr) (
       | HxExpr.ESwitchRaw _ -> 15
       | HxExpr.ESwitch (_, _, _) -> 16
       | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 18
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
@@ -591,9 +592,10 @@ let rec collectClosureVectorEvidenceFromExpr = fun self (expr : HxExpr.hxexpr) (
       collectClosureVectorEvidenceFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates) (Obj.magic pushedValues) (Obj.magic callArgTypes)
     )) done
   ))
-  | HxExpr.EUnop (_p0, _p1) -> ignore ((
+  | HxExpr.EUnop (_p0, _p1, _p2) -> ignore ((
     ignore _p0;
-    let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in collectClosureVectorEvidenceFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates) (Obj.magic pushedValues) (Obj.magic callArgTypes)
+    ignore _p1;
+    let _g3 = Obj.magic _p2 in let inner = Obj.magic _g3 in collectClosureVectorEvidenceFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates) (Obj.magic pushedValues) (Obj.magic callArgTypes)
   ))
   | HxExpr.EBinop (_p0, _p1, _p2) -> ignore ((
     ignore _p0;
@@ -701,7 +703,7 @@ let closureVectorPushedValueType = fun self (value : HxExpr.hxexpr) (callShapes 
       | HxExpr.ESwitchRaw _ -> 15
       | HxExpr.ESwitch (_, _, _) -> 16
       | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 18
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
@@ -732,7 +734,7 @@ let closureVectorPushedValueType = fun self (value : HxExpr.hxexpr) (callShapes 
       | HxExpr.ESwitchRaw _ -> 15
       | HxExpr.ESwitch (_, _, _) -> 16
       | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 18
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
@@ -765,7 +767,7 @@ let closureVectorPushedValueType = fun self (value : HxExpr.hxexpr) (callShapes 
       | HxExpr.ESwitchRaw _ -> 15
       | HxExpr.ESwitch (_, _, _) -> 16
       | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 18
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
@@ -838,7 +840,7 @@ let rec collectClosureVectorPushedTypesFromExpr = fun self (expr : HxExpr.hxexpr
     | HxExpr.ESwitchRaw _ -> 15
     | HxExpr.ESwitch (_, _, _) -> 16
     | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 18
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
@@ -871,7 +873,7 @@ let rec collectClosureVectorPushedTypesFromExpr = fun self (expr : HxExpr.hxexpr
     | HxExpr.ESwitchRaw _ -> 15
     | HxExpr.ESwitch (_, _, _) -> 16
     | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 18
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
@@ -973,9 +975,10 @@ let rec collectClosureVectorPushedTypesFromExpr = fun self (expr : HxExpr.hxexpr
       collectClosureVectorPushedTypesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates) (Obj.magic callArgTypes) (Obj.magic pushedTypes)
     )) done
   ))
-  | HxExpr.EUnop (_p0, _p1) -> ignore ((
+  | HxExpr.EUnop (_p0, _p1, _p2) -> ignore ((
     ignore _p0;
-    let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in collectClosureVectorPushedTypesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates) (Obj.magic callArgTypes) (Obj.magic pushedTypes)
+    ignore _p1;
+    let _g3 = Obj.magic _p2 in let inner = Obj.magic _g3 in collectClosureVectorPushedTypesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates) (Obj.magic callArgTypes) (Obj.magic pushedTypes)
   ))
   | HxExpr.EBinop (_p0, _p1, _p2) -> ignore ((
     ignore _p0;
@@ -1057,7 +1060,7 @@ let closureVectorElementType = fun self (values : HxExpr.hxexpr HxArray.t) (call
             | HxExpr.ESwitchRaw _ -> 15
             | HxExpr.ESwitch (_, _, _) -> 16
             | HxExpr.ENew (_, _) -> 17
-            | HxExpr.EUnop (_, _) -> 18
+            | HxExpr.EUnop (_, _, _) -> 18
             | HxExpr.EBinop (_, _, _) -> 19
             | HxExpr.ETernary (_, _, _) -> 20
             | HxExpr.EAnon (_, _) -> 21
@@ -1088,7 +1091,7 @@ let closureVectorElementType = fun self (values : HxExpr.hxexpr HxArray.t) (call
             | HxExpr.ESwitchRaw _ -> 15
             | HxExpr.ESwitch (_, _, _) -> 16
             | HxExpr.ENew (_, _) -> 17
-            | HxExpr.EUnop (_, _) -> 18
+            | HxExpr.EUnop (_, _, _) -> 18
             | HxExpr.EBinop (_, _, _) -> 19
             | HxExpr.ETernary (_, _, _) -> 20
             | HxExpr.EAnon (_, _) -> 21
@@ -1121,7 +1124,7 @@ let closureVectorElementType = fun self (values : HxExpr.hxexpr HxArray.t) (call
             | HxExpr.ESwitchRaw _ -> 15
             | HxExpr.ESwitch (_, _, _) -> 16
             | HxExpr.ENew (_, _) -> 17
-            | HxExpr.EUnop (_, _) -> 18
+            | HxExpr.EUnop (_, _, _) -> 18
             | HxExpr.EBinop (_, _, _) -> 19
             | HxExpr.ETernary (_, _, _) -> 20
             | HxExpr.EAnon (_, _) -> 21
@@ -1246,7 +1249,7 @@ let isEmptyArrayExpr = fun self (init : Obj.t) -> (
       | HxExpr.ESwitchRaw _ -> 15
       | HxExpr.ESwitch (_, _, _) -> 16
       | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 18
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
@@ -1416,7 +1419,7 @@ let rec collectClosureVectorLocalCandidatesFromStmt = fun self (stmt : HxStmt.hx
       | HxExpr.ESwitchRaw _ -> 15
       | HxExpr.ESwitch (_, _, _) -> 16
       | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 18
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
@@ -1451,7 +1454,7 @@ let rec collectClosureVectorLocalCandidatesFromStmt = fun self (stmt : HxStmt.hx
       | HxExpr.ESwitchRaw _ -> 15
       | HxExpr.ESwitch (_, _, _) -> 16
       | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 18
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21
@@ -1880,7 +1883,7 @@ let mapClassNameFromNewExpr = fun self (expr : Obj.t) -> let tempResult = ref ("
     | HxExpr.ESwitchRaw _ -> 15
     | HxExpr.ESwitch (_, _, _) -> 16
     | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 18
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
@@ -2053,7 +2056,7 @@ let rec collectStringMapLocalTypeOverridesFromExpr = fun self (expr : HxExpr.hxe
     | HxExpr.ESwitchRaw _ -> 15
     | HxExpr.ESwitch (_, _, _) -> 16
     | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 18
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
@@ -2086,7 +2089,7 @@ let rec collectStringMapLocalTypeOverridesFromExpr = fun self (expr : HxExpr.hxe
     | HxExpr.ESwitchRaw _ -> 15
     | HxExpr.ESwitch (_, _, _) -> 16
     | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 18
     | HxExpr.EBinop (_, _, _) -> 19
     | HxExpr.ETernary (_, _, _) -> 20
     | HxExpr.EAnon (_, _) -> 21
@@ -2165,9 +2168,10 @@ let rec collectStringMapLocalTypeOverridesFromExpr = fun self (expr : HxExpr.hxe
       )) done
     )
   ))
-  | HxExpr.EUnop (_p0, _p1) -> ignore ((
+  | HxExpr.EUnop (_p0, _p1, _p2) -> ignore ((
     ignore _p0;
-    let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates)
+    ignore _p1;
+    let _g3 = Obj.magic _p2 in let inner = Obj.magic _g3 in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates)
   ))
   | HxExpr.EBinop (_p0, _p1, _p2) -> ignore ((
     ignore _p0;
@@ -2478,7 +2482,7 @@ let rec qualifiedEnumCarrierCppTypeImpl = fun expr scope api2 -> let tempResult 
       | HxExpr.ESwitchRaw _ -> 15
       | HxExpr.ESwitch (_, _, _) -> 16
       | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 18
       | HxExpr.EBinop (_, _, _) -> 19
       | HxExpr.ETernary (_, _, _) -> 20
       | HxExpr.EAnon (_, _) -> 21

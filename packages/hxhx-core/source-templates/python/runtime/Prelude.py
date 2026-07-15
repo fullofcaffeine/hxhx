@@ -222,6 +222,11 @@ def hxhx_post_update_attr(obj, field, delta):
     setattr(obj, field, (old + delta))
     return old
 
+def hxhx_pre_update_attr(obj, field, delta):
+    next_value = getattr(obj, field) + delta
+    setattr(obj, field, next_value)
+    return next_value
+
 def hxhx_assign_attr(obj, field, value):
     setattr(obj, field, value)
     return value
@@ -276,6 +281,11 @@ def hxhx_post_update_index(obj, index, delta):
     obj[index] = (old + delta)
     return old
 
+def hxhx_pre_update_index(obj, index, delta):
+    next_value = obj[index] + delta
+    obj[index] = next_value
+    return next_value
+
 def hxhx_key_value_iter(value):
     return value.items() if hasattr(value, "items") else enumerate(value)
 
@@ -306,4 +316,3 @@ def hxhx_is_of_type(value, type_name):
 
 def hxhx_ushr(value, bits):
     return ((value & 0xffffffff) >> (bits & 31))
-
