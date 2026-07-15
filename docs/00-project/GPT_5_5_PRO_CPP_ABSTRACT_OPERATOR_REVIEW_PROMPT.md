@@ -305,6 +305,51 @@ review must distinguish required Haxe 4.3.7 compatibility from a deliberate
 semantic improvement. A backend must not silently choose the latter while
 claiming strict parity.
 
+### Upstream architecture checkpoint: targets do not resolve source overloads
+
+A read-only trace of the local upstream Haxe 4.3.7 checkout established the
+ownership sequence below. This is an architectural observation only; no
+upstream compiler implementation is attached, copied, translated, or proposed
+for transcription.
+
+1. The upstream parser retains a unary operator and an explicit prefix/postfix
+   flag. It does not rewrite prefix increment into compound assignment.
+2. Abstract-field loading validates unary `@:op` declarations and records them
+   as typed entries keyed by operator plus fixity and declaration.
+3. Unary typing selects an entry from that table using the typed operand. For a
+   normal body-bearing helper, the resulting typed expression is a resolved
+   helper call or a larger typed block that already owns lvalue access,
+   temporary values, mutation, and prefix/postfix result behavior. A raw typed
+   unary node remains only when native/no-expression semantics are explicitly
+   declared or when the operation is ordinary.
+4. Target generators therefore consume typed calls, blocks, and ordinary
+   operator nodes. They do not scan source metadata or guess helper names to
+   perform Haxe overload resolution.
+
+This does not require `hxhx` to reproduce upstream implementation structure,
+but it is strong evidence for the same responsibility boundary: parsing owns
+syntax identity, typing owns semantic selection and lvalue lowering, and the
+backend owns carrier representation plus target emission.
+
+### Current hxhx pipeline constraint: there is no structural typed body yet
+
+The current pipeline expands the supported expression macros before typing,
+then runs `TyperStage` over the resulting parsed modules. Standard macro hooks
+run afterward, but `MacroStage.expandProgram` currently only wraps the same
+`TypedModule` values and does not transform their bodies. Every source/VM
+backend inspected still obtains function bodies through
+`typed.getParsed().getDecl()`.
+
+Consequently, a correct recommendation cannot merely say “bind in the typer.”
+It must define a structural output that survives into backend input. The
+current tree has no expression positions or stable expression IDs, so an
+object-identity table, traversal-index table, or source-offset side table is
+not an acceptable default. The review should decide whether the first rung is
+a small explicit typed-expression island for bound operators, a structurally
+rebuilt semantic module, or the beginning of a general typed expression tree;
+it must name ownership, lifecycle, backend consumption, macro invalidation,
+and the removal/expansion criteria for any intermediate representation.
+
 ## Candidate architecture directions to challenge
 
 These are hypotheses, not decisions. Rank, combine, or reject them.
@@ -355,7 +400,10 @@ for the current upstream test is not sufficient.
 2. What expression/typed-IR shape should distinguish prefix, postfix, compound
    assignment, mutation target, helper declaration, and result type?
    Explain where that decision lives while `TypedModule` still wraps the parsed
-   tree rather than owning typed expression nodes.
+   tree rather than owning typed expression nodes. State whether the result is
+   a structurally rebuilt module, a typed-expression island, or a broader typed
+   tree, and why it remains stable across macro expansion and backend/plugin
+   boundaries.
 3. Is preserving `pre++`/`pre--` in `HxExpr` an appropriate first hard cutover,
    or should a structured operator kind replace the current string tags now?
 4. How can the first slice update all affected backends without pretending that
@@ -397,6 +445,9 @@ Challenge and refine this draft set:
   never helper names.
 - The selected declaration, operand conversion, result type, and mutation mode
   are explicit before target emission.
+- Bound operator decisions are carried structurally in backend input; they are
+  not keyed by object identity, incidental traversal order, or unavailable
+  nested-expression source positions.
 - Runtime carrier erasure does not erase the semantic abstract type.
 - Helper invocation and operand evaluation do not duplicate work beyond the
   behavior selected by the shared lowering contract.
@@ -462,8 +513,10 @@ Inspect the repository as a whole, then trace at least these paths:
 - `packages/hxhx-core/src/ParserStageScanHelpers.hx`
 - `packages/hxhx-core/src/TyperStage.hx`
 - `packages/hxhx-core/src/TypedModule.hx`
+- `packages/hxhx-core/src/MacroStage.hx`
 - `packages/hxhx-core/src/MacroExpandedProgram.hx`
 - `packages/hxhx-core/src/EmitterStage.hx`
+- `packages/hxhx/src/hxhx/Stage3Compiler.hx`
 - `packages/hxhx-core/src/backend/cpp/CppRenderScope.hx`
 - `packages/hxhx-core/src/backend/cpp/CppTypeModel.hx`
 - `packages/hxhx-core/src/backend/cpp/CppAbstractProjection.hx`
