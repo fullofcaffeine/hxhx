@@ -6487,3 +6487,93 @@ confirm its API. The committed fixture is an original repo-owned program.
 skipped because the missing constraint metadata, exact `B:Array<A>` relation,
 upstream behavior, and focused populated/empty controls identify a bounded
 parser-metadata and target-type-flow seam.
+
+## 2026-07-14 Abstract Underlying Carrier Projections
+
+Follow-up bead `haxe_ocaml-djqur` restores the next strict native compiler
+contract. In plain language, a generic Haxe abstract such as
+`ProjectedValue<T>(ProjectionBox<T>)` stores a `ProjectionBox<T>` value and may
+offer several implicit `@:to` conversions. Generated C++ instead gave the
+abstract a separate `shared_ptr<ProjectedValue<T>>` shell, making both the
+underlying assignment and the permitted String or Int projection ill-typed.
+
+The dedicated `CppAbstractProjection` module now owns the narrow representation
+and overload-selection policy. It accepts only generic, class-backed Haxe
+abstracts with static fields and methods, no instance state, and at least one
+`@:to` helper. It specializes the underlying carrier from the source type
+arguments and selects exactly one projection whose specialized parameter and
+return C++ carriers match. Primitive-backed, array-backed, stateful,
+nongeneric, and ambiguous shapes decline to the existing renderer. The large
+emitter receives only lookup and dispatch glue at its existing generic-class,
+local-type, and expected-value seams; no wrapper factory is generated for the
+eligible static-only shape.
+
+The repo-owned upstream oracle covers original String and Int projections plus
+an ordinary generic-class control. Upstream Haxe 4.3.7 reports `carrier-text`,
+`42`, and `7`. The focused native C++ test pins specialized
+`ProjectionBox<String>` and `ProjectionBox<Int>` storage, selects the matching
+static projection for each value, rejects a separate abstract wrapper carrier,
+builds the executable, runs it, and compares the same stdout contract. The
+focused render smoke and full generated native C++ smoke remain green.
+
+A fresh final-source compiler build completed in 272 seconds and
+passed its provenance validator. With stage0 explicitly forbidden, that binary
+resolved 55 modules, built the focused C++ executable, ran it, and produced the
+same three-line oracle output. Generated source retains the ordinary
+`ProjectionBox<Int>` shared-pointer control while projecting String and Int
+values through the correctly specialized static helpers.
+
+The strict stage0-forbidden C++ probe rendered all 384 reachable helpers and
+reached the host compiler. Its first run completed in 374 seconds; a second run
+with timing enabled reused the same retained upstream worktree and completed in
+332 seconds. After adding the nongeneric boundary control, an exact final-source
+rerun completed at the same Map frontier in 405 seconds. Generated
+`testAbstractCastConstraints` now stores
+`AbstractZ<String>` and `AbstractZ<Int>` in specialized `AbstractBase`
+carriers, calls `toString` and `toFoo`, and no longer allocates an abstract
+wrapper. The comparable timing rerun measured `TestXML.testBasic` at 0.484482
+seconds, its complete class at 4.515765 seconds, `MyAbstract_AbstractZ` at
+0.077091 seconds, `TestType.testAbstractCastConstraints` at 0.167203 seconds,
+and the next failing `TestType.testOpArrow` method at 0.859736 seconds. The
+final-source run under a different local load measured those same points at
+0.611292, 5.532115, 0.087166, 0.182453, and 1.100132 seconds respectively.
+These are frontier observations, not a broad performance claim. The retained
+logs are
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-abstract-underlying-carrier.log`
+and
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-abstract-underlying-carrier-timing.log`,
+with the final boundary verification in
+`.artifacts/full1/cpp-strict-current/gate3-cpp-unfiltered-after-abstract-underlying-carrier-final.log`.
+
+The expected-red native build now begins at generated
+`TestMain.cpp:16478-16492`. Integer-, String-, and object-key arrow literals are
+declared as `std::vector<std::pair<...>>`, but their typed Map operations call
+`.get`. Follow-up `haxe_ocaml-wisp-16g` owns that independent map-carrier
+frontier, including controls that distinguish Map literals from ordinary pair
+vectors and the earlier enum-key Map fix.
+
+The upstream oracle, focused generated C++ build/run, focused render and full
+native C++ smoke, current-source build and validator, current-source
+stage0-forbidden compile/run, shell syntax check, package metadata parse,
+official touched-file formatter, repo-wide Haxe format guard, C++ type-flow
+plan guard, refreshed mega-file guard, local-declaration benchmark, and
+`git diff --check` all pass. The 250-call benchmark remained bounded: declared
+type 0.008906 seconds, full declaration 0.002912 seconds, callback full
+0.039452 seconds, EReg full 0.007449 seconds, and traced EReg 0.046233 seconds.
+
+README Goals and North Star progress bars remain unchanged. Strict C++ still
+does not compile or run the full upstream unit program, so this internal
+frontier move does not change production readiness. `CppTargetCore.hx` remains
+a red mega-file at 26,731 lines, but the substantive policy is isolated in the
+documented 170-line `CppAbstractProjection` module and the emitter change stays
+at existing seams. Broader C++ render/type-flow extraction remains owned by
+`haxe_ocaml-36ec`. No public example, runtime/stdlib support surface, public
+API, or committed bootstrap snapshot changed.
+
+No upstream compiler source or test fixture was copied. The ignored Haxe 4.3.7
+suite was read only as a behavior oracle; the committed fixture, projection
+policy, and tests are original repo-owned work. `thinking:xhigh` was not
+crossed, and GPT or Oracle review was deliberately skipped because the invalid
+wrapper carrier, exact typed metadata, upstream behavior, and focused
+generic/nongeneric and ordinary-class controls identify a bounded C++
+target-model seam.

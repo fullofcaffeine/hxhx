@@ -4408,6 +4408,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function abstractUnderlyingConversionProgram():GenIrProgram {
+		final sourcePath = "test/oracle/cpp_abstract_underlying_conversion_seed/src/Main.hx";
+		final typed = TyperStage.typeModule(ParserStage.parse(File.getContent(sourcePath), sourcePath));
+		return MacroStage.expandProgram([typed], []);
+	}
+
 	static function mathExternProgram():GenIrProgram {
 		final src = [
 			"extern class Math {",
@@ -4517,6 +4523,74 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(run.code == 0, "C++ constrained-relation smoke executable failed: " + run.stderr);
 			final expected = File.getContent("test/oracle/cpp_constrained_generic_relation_seed/expected.stdout");
 			assertTrue(run.stdout == expected, "unexpected C++ constrained-relation smoke stdout: " + run.stdout);
+		}
+		deleteRecursive(root);
+	}
+
+	/**
+		Compile and run a generic class-backed abstract whose runtime value is its
+		underlying carrier. The source assertions pin both specialized `@:to`
+		projections and keep an ordinary generic class as a non-erasure control.
+	**/
+	public static function runAbstractUnderlyingConversionChecks():Void {
+		BackendRegistry.clearDynamicRegistrations();
+		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_abstract_underlying_conversion"]);
+		deleteRecursive(root);
+		FileSystem.createDirectory(root);
+		final program = abstractUnderlyingConversionProgram();
+		var projectedValue:Null<HxClassDecl> = null;
+		var projectionBox:Null<HxClassDecl> = null;
+		var fixedProjection:Null<HxClassDecl> = null;
+		for (typed in program.getTypedModules())
+			for (cls in HxModuleDecl.getClasses(typed.getParsed().getDecl())) {
+				switch (HxClassDecl.getName(cls)) {
+					case "ProjectedValue":
+						projectedValue = cls;
+					case "ProjectionBox":
+						projectionBox = cls;
+					case "FixedProjection":
+						fixedProjection = cls;
+					case _:
+				}
+			}
+		assertTrue(projectedValue != null, "C++ abstract conversion smoke should retain the parsed abstract declaration");
+		assertTrue(backend.cpp.CppAbstractProjection.isEligible(projectedValue, ["T"]), "C++ generic static-only abstract should use its underlying carrier");
+		assertTrue(projectionBox != null && !backend.cpp.CppAbstractProjection.isEligible(projectionBox, ["T"]),
+			"C++ ordinary generic class should remain outside abstract carrier erasure");
+		assertTrue(fixedProjection != null && !backend.cpp.CppAbstractProjection.isEligible(fixedProjection, []),
+			"C++ nongeneric abstract should remain outside generic carrier erasure");
+		assertTrue(HxClassDecl.getMetadata(projectedValue).indexOf("__hxhx_abstract_underlying=ProjectionBox<T>") >= 0,
+			"C++ abstract conversion smoke should retain the generic underlying carrier hint");
+		var toMetadataCount = 0;
+		for (fn in HxClassDecl.getFunctions(projectedValue))
+			if (backend.cpp.CppAbstractProjection.hasFunctionMetadataMarker(fn, "to"))
+				toMetadataCount++;
+		assertTrue(toMetadataCount == 2, "C++ abstract conversion smoke should retain both @:to declarations; got " + [
+			for (fn in HxClassDecl.getFunctions(projectedValue))
+				HxFunctionDecl.getName(fn) + ":" + HxFunctionDecl.getMetadata(fn).join("|")
+		].join(", "));
+
+		final sourceOnlyDir = Path.join([root, "source-only"]);
+		final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program, context(sourceOnlyDir, true, true));
+		final source = File.getContent(sourceOnly.entryPath);
+		assertContains(source, "std::shared_ptr<ProjectionBox<std::string>> text = __hxhx_make_shared_ProjectionBox<std::string>(\"carrier-text\");",
+			"C++ generic class-backed abstract locals should use their specialized underlying carrier");
+		assertContains(source, "std::string projectedText = ProjectedValue<std::string>::projectString(text);",
+			"C++ String projection should select the matching @:to helper");
+		assertContains(source, "int projectedNumber = ProjectedValue<int>::projectInt(number);", "C++ Int projection should select the matching @:to helper");
+		assertContains(source, "std::shared_ptr<ProjectionBox<int>> ordinary = __hxhx_make_shared_ProjectionBox<int>(7);",
+			"C++ ordinary generic classes should remain shared-pointer carriers");
+		assertTrue(source.indexOf("std::shared_ptr<ProjectedValue<") < 0,
+			"C++ generic class-backed abstract values should not allocate a separate wrapper carrier");
+
+		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
+			final buildDir = Path.join([root, "build"]);
+			final built = BackendRegistry.createForTarget("cpp-native").emit(program, context(buildDir, true, false));
+			assertTrue(built.builtExecutable, "C++ abstract conversion smoke should build an executable");
+			final run = commandOutput(built.entryPath, []);
+			assertTrue(run.code == 0, "C++ abstract conversion smoke executable failed: " + run.stderr);
+			final expected = File.getContent("test/oracle/cpp_abstract_underlying_conversion_seed/expected.stdout");
+			assertTrue(run.stdout == expected, "unexpected C++ abstract conversion smoke stdout: " + run.stdout);
 		}
 		deleteRecursive(root);
 	}
@@ -11885,6 +11959,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	public static function runGeneratedSourceChecks():Void {
 		runGenericCallArrayLiteralChecks();
 		runConstrainedGenericRelationChecks();
+		runAbstractUnderlyingConversionChecks();
 		BackendRegistry.clearDynamicRegistrations();
 		final descriptor = BackendRegistry.descriptorForTarget("cpp-native");
 		assertTrue(descriptor != null, "missing cpp-native descriptor");
@@ -13908,7 +13983,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	}
 
 	static function main():Void {
-		switch (M14SmokeGroupSelection.selected(["render", "generated", "generic-call-array"])) {
+		switch (M14SmokeGroupSelection.selected(["render", "generated", "generic-call-array", "abstract-underlying-conversion"])) {
 			case "all":
 				runRenderChecks();
 				runGeneratedSourceChecks();
@@ -13918,6 +13993,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				runGeneratedSourceChecks();
 			case "generic-call-array":
 				runGenericCallArrayLiteralChecks();
+			case "abstract-underlying-conversion":
+				runAbstractUnderlyingConversionChecks();
 			case _:
 		}
 	}

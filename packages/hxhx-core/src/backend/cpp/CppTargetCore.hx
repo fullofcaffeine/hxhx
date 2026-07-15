@@ -2485,7 +2485,11 @@ class CppTargetCore {
 		final rawName = HxClassDecl.getName(cls);
 		if (rawName == mainName || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName) || isBytesDataTypeName(rawName))
 			return false;
-		if (isPosInfosSupportClass(cls) || isStdVectorHelperClass(cls) || isArrayBackedAbstractClass(cls) || isPrimitiveBackedAbstractClass(cls)
+		if (isPosInfosSupportClass(cls)
+			|| isStdVectorHelperClass(cls)
+			|| isArrayBackedAbstractClass(cls)
+			|| isPrimitiveBackedAbstractClass(cls)
+			|| CppAbstractProjection.isEligible(cls, genericClassTemplateParams(cls))
 			|| isStdArrayHelperClass(cls))
 			return false;
 		return genericClassTemplateParams(cls).length > 0;
@@ -3760,8 +3764,9 @@ class CppTargetCore {
 			traceCppMemberPhase(className, "render_helper_ctor", HxFunctionDecl.getName(ctor), "end");
 		}
 		out.push("};");
-		for (line in renderGenericClassFactory(className, typeParams, ctor, scope))
-			out.push(line);
+		if (!CppAbstractProjection.isEligible(cls, typeParams))
+			for (line in renderGenericClassFactory(className, typeParams, ctor, scope))
+				out.push(line);
 		return out;
 	}
 
@@ -12572,6 +12577,9 @@ class CppTargetCore {
 		final macroApiCall = macroApiCallExprForExpected(expr, expectedType, scope);
 		if (macroApiCall != null)
 			return macroApiCall;
+		final abstractProjection = abstractToProjectionExprForExpectedType(expr, expectedType, scope);
+		if (abstractProjection != null)
+			return abstractProjection;
 		final abstractUnderlying = abstractUnderlyingValueExprForExpectedType(expr, expectedType, scope);
 		if (abstractUnderlying != null)
 			return abstractUnderlying;
@@ -12921,6 +12929,35 @@ class CppTargetCore {
 			case _:
 				null;
 		};
+	}
+
+	/**
+		Apply the unique `@:to` projection compatible with a static-only abstract.
+
+		The source Haxe hint identifies the abstract even after its C++ local type is
+		erased to the underlying carrier. Matching both the specialized parameter
+		and return carriers prevents a `String` projection from being selected for
+		an `Int` instantiation (or vice versa). Ambiguous matches deliberately fall
+		back to the general renderer instead of guessing.
+	**/
+	static function abstractToProjectionExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		if (scope == null || expectedType == null || expectedType.length == 0)
+			return null;
+		final sourceHint = removeTypeHintWhitespace(exprHaxeTypeHint(expr, scope));
+		final lookup = lookupForScope(scope);
+		final cls = lookupClassForTypeHint(sourceHint, scope, lookup);
+		if (cls == null)
+			return null;
+		final projection = CppAbstractProjection.select(cls, sourceHint, genericClassTemplateParams(cls), expectedType,
+			hint -> cppTypeHint(hint, scope, lookup), hint -> cppReturnTypeHint(hint, scope, lookup));
+		if (projection == null)
+			return null;
+		return cppClassTemplateTypeName(sourceHint, scope, lookup)
+			+ "::"
+			+ sanitizeIdentifier(HxFunctionDecl.getName(projection.fn))
+			+ "("
+			+ renderExpr(expr, scope)
+			+ ")";
 	}
 
 	static function abstractUnderlyingValueExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
@@ -21127,6 +21164,9 @@ class CppTargetCore {
 		final enumCtor = enumMetadataCtorStringExpr(expr, scope);
 		if (enumCtor != null)
 			return enumCtor;
+		final abstractProjection = abstractToProjectionExprForExpectedType(expr, "std::string", scope);
+		if (abstractProjection != null)
+			return abstractProjection;
 		switch (expr) {
 			case ECall(_, _) | EField(_, _):
 				final explicitType = exprCppType(expr, scope);
@@ -24040,6 +24080,27 @@ class CppTargetCore {
 		return CppTypeModel.abstractUnderlyingTypeHint(cls);
 	}
 
+	/**
+		Specialize a static-projection abstract's underlying Haxe type hint.
+
+		For `Projected<T>(Carrier<T>)`, a source hint `Projected<String>` maps to
+		`Carrier<String>`. The caller decides whether it needs the Haxe hint or its
+		rendered C++ carrier, which keeps substitution separate from recursive type
+		rendering.
+	**/
+	static function staticProjectionAbstractUnderlyingTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final raw = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final lookup = lookupForScope(scope, classLookup);
+		final cls = lookupClassForTypeHint(raw, scope, lookup);
+		return cls == null ? "" : CppAbstractProjection.specializedUnderlyingTypeHint(cls, raw, genericClassTemplateParams(cls));
+	}
+
+	/** Render the specialized class-backed carrier for a safe static-only abstract. **/
+	static function staticProjectionAbstractCarrierCppType(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):String {
+		final underlying = staticProjectionAbstractUnderlyingTypeHint(typeHint, scope, classLookup);
+		return underlying.length == 0 ? "" : cppTypeHint(underlying, scope, lookupForScope(scope, classLookup));
+	}
+
 	static function scopeOwnerIsHxhxAbstract(scope:CppRenderScope):Bool {
 		if (scope == null || scope.owner == null)
 			return false;
@@ -24199,6 +24260,9 @@ class CppTargetCore {
 		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
 		if (primitiveAbstractType != null)
 			return primitiveAbstractType;
+		final staticProjectionCarrier = staticProjectionAbstractCarrierCppType(hint, scope, classLookup);
+		if (staticProjectionCarrier.length > 0)
+			return staticProjectionCarrier;
 		final abstractName = arrayBackedAbstractNameForTypeHint(hint, scope, classLookup);
 		if (abstractName != null)
 			return abstractName;

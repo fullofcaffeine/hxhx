@@ -13,13 +13,13 @@ MEGA_FILE_GRAVITY_WATCH:PASS
 
 ## Current Hotspots
 
-Measured on July 13, 2026. The guard allows small drift but asks for this table
+Measured on July 14, 2026. The guard allows small drift but asks for this table
 to be refreshed when a watched file moves by more than 250 lines.
 
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,435 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,731 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,031 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -215,6 +215,17 @@ unsupported leaves, other function signatures, and general lambdas decline to
 the canonical scoped path. This is a bounded EReg callback-render refinement,
 not a new runtime/stdlib semantic family; broader extraction remains covered
 by `haxe_ocaml-36ec`.
+
+2026-07-14 checkpoint: `haxe_ocaml-djqur` moved the new generic
+class-backed-abstract representation and `@:to` selection policy into the
+dedicated 170-line `CppAbstractProjection` module. `CppTargetCore` receives
+only the lookup, dispatch, and carrier-rendering glue at existing seams. In
+plain language, the emitter now stores eligible static-only abstracts in their
+real underlying class instead of inventing a second wrapper object. Stateful,
+instance, primitive-backed, array-backed, nongeneric, and ambiguous shapes
+decline to the existing model. This is a bounded target type-flow repair, not a
+new runtime or stdlib family; broader extraction remains covered by
+`haxe_ocaml-36ec`.
 
 ## Upstream Reference Boundary
 
