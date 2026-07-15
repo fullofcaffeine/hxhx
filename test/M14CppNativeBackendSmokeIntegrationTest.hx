@@ -6049,10 +6049,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			names: genericMapNames,
 			byName: genericMapClasses
 		}).join("\n");
+		assertContains(genericMapLines, "template<typename K>\nstruct __hxhx_map_key_less {",
+			"C++ generic Map support should emit the target-owned key comparator");
 		assertContains(genericMapLines, "template<typename K, typename V>\nstruct Map {", "C++ generic Map support should preserve key/value parameters");
-		assertContains(genericMapLines, "std::map<K, V> values;", "C++ generic Map support should own a target map backing store");
+		assertContains(genericMapLines, "std::map<K, V, __hxhx_map_key_less<K>> values;",
+			"C++ generic Map support should use its comparator-backed target map storage");
+		assertContains(genericMapLines, "if constexpr (__hxhx_has_enum_metadata<__hxhx_map_key_type>::value) {",
+			"C++ generic Map support should distinguish enum carriers from reference-identity keys");
+		assertContains(genericMapLines, "if (left->__hxhx_enum_name != right->__hxhx_enum_name) return left->__hxhx_enum_name < right->__hxhx_enum_name;",
+			"C++ generic Map support should order enum keys by stable constructor metadata");
+		assertContains(genericMapLines, "if (left->__hxhx_enum_index != right->__hxhx_enum_index) return left->__hxhx_enum_index < right->__hxhx_enum_index;",
+			"C++ generic Map support should order same-name enum keys by constructor index");
+		assertContains(genericMapLines, "return left->__hxhx_enum_params < right->__hxhx_enum_params;",
+			"C++ generic Map support should order payload enum keys by stable parameter metadata");
+		assertTrue(countOccurrences(genericMapLines, "return std::less<K>{}(left, right);") == 2,
+			"C++ generic Map support should retain strict ordering for reference-identity and scalar keys");
 		assertContains(genericMapLines, "void set(K key, V value)", "C++ generic Map support should expose set for Haxe Map callers");
-		assertContains(genericMapLines, "V get(K key)", "C++ generic Map support should expose concrete get values for Haxe Map callers");
+		assertContains(genericMapLines, "std::optional<V> get(K key)", "C++ generic Map support should expose nullable get values for Haxe Map callers");
+		assertContains(genericMapLines, "return found == values.end() ? std::nullopt : std::optional<V>(found->second);",
+			"C++ generic Map support should return null-equivalent storage for missing keys without losing present values");
 		assertContains(genericMapLines, "V& operator[](K key)", "C++ generic Map support should expose mutable index access for generated Map writes");
 		assertContains(genericMapLines, "bool exists(K key)", "C++ generic Map support should expose exists for Haxe Map callers");
 		assertContains(genericMapLines, "std::shared_ptr<__hxhx_iterator<K>> keys()", "C++ generic Map support should expose keys for Haxe Map iteration");
