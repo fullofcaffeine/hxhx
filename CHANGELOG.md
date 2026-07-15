@@ -1,3 +1,10 @@
+## [0.15.23](https://github.com/fullofcaffeine/hxhx/compare/v0.15.22...v0.15.23) (2026-07-15)
+
+
+### Bug Fixes
+
+* restore no-prepass stage0 source build ([2abcf34](https://github.com/fullofcaffeine/hxhx/commit/2abcf346f2081701dd89e2756b488c4f1417082d))
+
 ## Unreleased
 
 ### Changed
