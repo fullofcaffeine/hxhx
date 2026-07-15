@@ -149,6 +149,32 @@ For architecture and layering:
 
 ---
 
+## Planned M22 — one target core with optional `hxhx` services
+
+M22 plans the next product step, but none of the commands in this section exist
+yet. Keep using Paths A, B, and C above as current truth.
+
+The future “two-in-one” target keeps one host-neutral core and chooses only its
+adapter at the composition root:
+
+- evaluated host-neutral development through upstream Haxe/Reflaxe;
+- native host-neutral execution after compiling the same core through
+  `reflaxe.ocaml`;
+- `hxhx`-integrated native plugin execution with negotiated services;
+- `hxhx`-integrated builtin execution with the same target-core factory.
+
+Native execution does not imply privileged compiler access. Integrated forms
+must request typed/versioned facts or actions, and missing correctness-critical
+facts fail before emission. Host conditionals and native externs stay in
+adapter/transport modules rather than semantic lowering and printers.
+
+The existing `ocaml_profile=portable|metal` switch is a separate output policy,
+not an M22 service-access preset. See
+`docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md` for the planning-only
+contract.
+
+---
+
 ## Recommended validation commands
 
 Backend plugin promotion smoke:

@@ -111,6 +111,27 @@ Rules:
 - Reflaxe-style APIs are welcome here because this seam already sits after
   compiler-core ownership.
 
+### Planned M22 boundary: backend services are not general customization
+
+`haxe_ocaml-bomhr` (M22) owns typed backend/target facts and host actions only
+after the compiler has frozen the backend-facing program. Examples are an
+immutable final reachability snapshot, structured backend diagnostics, or
+artifact/build-plan registration.
+
+`haxe_ocaml-h5jta` continues to own general compiler customization: policy and
+diagnostic hooks, behavior variations, reversibility, conflict handling, and
+baseline-evidence exclusion. The two owners may reuse capability,
+requirement-class, and activation vocabulary, but neither absorbs the other.
+
+In particular, a target request to change parser/resolver/typer behavior,
+macro ordering, DCE roots, or the program before the backend boundary is a
+Stage4/customization/variation design question. It is not smuggled through an
+M22 backend service. Frontend or typer extensions remain variation/research
+unless a separate architecture decision accepts them.
+
+Canonical M22 contract:
+`docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`.
+
 ### 3. Policy and diagnostic customizations
 
 This is the first hxhx-specific customization class to prove. It should be

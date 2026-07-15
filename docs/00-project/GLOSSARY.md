@@ -33,6 +33,33 @@ Use these terms first. They are what users care about.
 - **portable**: compatibility-first output; default profile.
 - **metal**: strict, native-leaning profile; faster when code is metal-safe, with stricter constraints.
 
+## Planned M22 SDK terms
+
+These are planning terms, not current supported functionality. They do not
+rename the existing OCaml output profiles above.
+
+- **Backend host service**: a typed, versioned, capability-limited action that
+  the compiler host provides to backend/target code after the backend-facing
+  program is frozen.
+- **Evaluated host-neutral preset**: the planned upstream Haxe/Reflaxe
+  development form. Early M22 feedback called this the portable profile; the
+  qualified name avoids collision with `ocaml_profile=portable`.
+- **Native host-neutral preset**: the same target core compiled through
+  `reflaxe.ocaml`, while privileged `hxhx` services remain masked. Early M22
+  feedback called this native-portable or accelerated.
+- **`hxhx`-integrated preset**: native plugin or builtin execution with
+  declared `hxhx` facts/services negotiated before target execution. Early M22
+  feedback called this native-integrated.
+- **Required semantic service**: a fact/action whose absence or incompatible
+  version would risk wrong output, so compilation fails before target emission.
+- **Optional optimization service**: a service that may be absent only when a
+  proven semantics-preserving fallback exists.
+- **Phase provider**: a callback capable of changing an earlier compiler phase
+  or the program before the backend boundary. It is not an M22 v1 backend
+  service; Stage4 or the customization/variation architecture owns its design.
+- **Unsafe internal adapter**: an exact-host research bridge that exposes raw or
+  unversioned compiler internals. It cannot satisfy an M22 support claim.
+
 ## CI gates (plain English)
 
 - **Gate 0**: local core checks (repo invariants, smoke coverage).

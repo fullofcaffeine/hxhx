@@ -223,6 +223,37 @@ Generated host-adapter conventions for this promotion pipeline are defined in:
 
 - `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`
 
+### Planned M22 request and host-service boundary
+
+This section is future architecture, not current API behavior. Today backend
+emission remains:
+
+```text
+emit(GenIrProgram, BackendContext)
+```
+
+M22 plans a hard-cut request boundary that keeps these concerns separate:
+
+- frozen invocation configuration;
+- versioned backend program and immutable facts;
+- execution/service-access/activation identity;
+- typed, versioned host services.
+
+`BackendContext` remains configuration-oriented. It does not become a
+`Dynamic` service bag, and implementation must establish deterministic
+copy/freeze behavior for its mutable contained values.
+
+This plan does not authorize a universal target-neutral IR. The current
+`GenIrProgram` alias remains current truth until repeated consumers prove the
+minimum shared envelope or fact. Plugin and builtin adapters continue to share
+one target core. No raw parser/typer records or mutable compiler context cross
+the backend boundary.
+
+M22 also keeps native execution, privileged service access, activation shape,
+and `ocaml_profile=portable|metal` as independent dimensions. See
+`docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md` for the planning
+contract and no-claim rule.
+
 ## Why this helps immediately
 
 - Makes OCaml coupling visible and reviewable.

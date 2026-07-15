@@ -129,6 +129,36 @@ Promotion must keep one target core implementation reusable across both host ada
 
 This keeps promotion as a packaging/load decision, not a backend rewrite.
 
+## Planned M22 service-access presets
+
+This is a future planning contract. Manifest/schema v1 and the commands above
+remain current truth; no service-negotiation v2 API exists yet.
+
+M22 separates three concerns that are easy to conflate:
+
+- execution: evaluated or native;
+- service access: host-neutral or `hxhx`-integrated;
+- activation: upstream adapter, `hxhx` plugin, or `hxhx` builtin.
+
+The intended presets are evaluated host-neutral development, native
+host-neutral execution through `reflaxe.ocaml`, and integrated plugin/builtin
+execution through `hxhx`. Host glue, `#if reflaxe_ocaml`, and native externs
+stay in adapters and composition roots. The shared target core does not branch
+its semantic lowering by host.
+
+For integrated forms, `hxhx` negotiates typed/versioned requirements before
+target execution. Missing required semantic facts fail before emission;
+optional optimization and tooling services use their declared fallback or
+disablement. The stable integrated host is `hxhx`.
+
+The upstream eval adapter remains the portable baseline. Any upstream native
+adapter is a separate, exact-version-pinned experiment, not a stable upstream
+backend ABI. `crossHostBinaryCompatibility=false` remains the rule: a single
+`.cmxs` is not promised to work in upstream Haxe and `hxhx`.
+
+Canonical plan:
+`docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`.
+
 ## Verification checklist
 
 Use this checklist when scaffold generation lands:

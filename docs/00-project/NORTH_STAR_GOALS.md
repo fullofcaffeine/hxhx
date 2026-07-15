@@ -286,6 +286,39 @@ Current planning owners:
 - native Reflaxe artifact-loop latency:
   `docs/00-project/NATIVE_ITERATION_LATENCY_CONTRACT.md`
 
+### Planned M22 Native Reflaxe Compiler SDK
+
+Post-Full1 milestone M22 is owned by `haxe_ocaml-bomhr`. Its purpose is to
+turn the existing promotion proofs into a supported Haxe-first target-authoring
+SDK. `reflaxe.ocaml` supplies native execution for ordinary Haxe-authored target
+code; `hxhx` supplies typed, versioned privileged backend facts and services.
+
+M22 keeps four dimensions separate:
+
+- evaluated versus native target-core execution;
+- host-neutral versus `hxhx`-integrated service access;
+- upstream adapter, `hxhx` plugin, or `hxhx` builtin activation;
+- the existing independent `ocaml_profile=portable|metal` output policy.
+
+Host conditionals and native externs stay in composition roots and adapters.
+They do not spread through semantic lowering or printers. The accepted
+Reflaxe/`hxhx` compiler-core boundary remains unchanged: M22 starts only after
+the supported frontend and macro lifecycle have frozen the backend-facing
+program.
+
+This is distinct from `haxe_ocaml-h5jta`. M22 owns backend/target facts and
+actions after that boundary. `haxe_ocaml-h5jta` owns general compiler policy
+hooks, diagnostics customizations, variations, reversibility, and baseline
+evidence exclusion. A need to influence typing, macros, or reachability before
+the backend program is frozen goes to that owner or Stage4, not into an M22
+service bag.
+
+Canonical planning contract:
+`docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`.
+
+M22 is planning only today. It adds no SDK capability, support statement, or
+readiness change.
+
 ## Operating Rule
 
 When a task changes compatibility scope, plugin architecture, target promotion, release claims, or production-readiness wording, update this page or explicitly record why it remains unchanged. Keep the README `Goals status` table aligned with this document, but keep the README focused on what users can do today.

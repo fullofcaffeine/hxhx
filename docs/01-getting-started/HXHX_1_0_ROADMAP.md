@@ -220,6 +220,46 @@ Cross-check pages:
 - Portable stdlib parity evidence and per-module coverage:
   - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 
+### Current Full1 candidate closure (epic title M17)
+
+- Status: In progress
+- Bead: `haxe.ocaml-f1cl`
+
+Meaning in plain terms:
+
+- This is the current candidate-level proof that the declared Haxe `4.3.7`
+  scope, required targets, macros, performance, and release evidence all agree
+  for one exact commit.
+- It remains the active release priority. Post-Full1 SDK implementation cannot
+  weaken, replace, or count toward this evidence.
+- The epic title uses M17, but historical Beads also used the
+  `milestone:M17` label for the older builtin-backend registry. History is not
+  renumbered or rewritten; this section names the current epic explicitly to
+  avoid treating those records as the same milestone.
+
+### M22. Native Reflaxe Compiler SDK
+
+- Status: Planned; implementation and support claim blocked by Full1 and the
+  release-grade stage0-free `hxhx + reflaxe.ocaml` product
+- Bead: `haxe_ocaml-bomhr`
+- Contract child: `haxe_ocaml-bomhr.1` (complete)
+
+Meaning in plain terms:
+
+- A target author keeps one ordinary-Haxe target core and can eventually run it
+  through evaluated Reflaxe development, native `reflaxe.ocaml`, an `hxhx`
+  plugin, or an `hxhx` builtin.
+- `hxhx` will provide typed, versioned backend facts/services without exposing
+  raw mutable compiler internals.
+- M22.1 contract work was allowed to proceed while Full1 closes and is now
+  complete, but no M22 implementation or support evidence counts toward the
+  Full1 release.
+- M22 is the first unused historical milestone label. M18 through M21 already
+  belong to earlier builtin and Stage2/3/4 work, so those records remain intact.
+
+Canonical plan:
+`docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`.
+
 ## Fast “where are we now?” commands
 
 ```bash

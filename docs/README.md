@@ -29,6 +29,7 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - `reflaxe.ocaml` performance credibility baseline: `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`
 - Reflaxe promotion matrix contract: `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
 - Reflaxe promotion matrix tradeoffs: `docs/00-project/REFLAXE_PROMOTION_MATRIX_TRADEOFFS.md`
+- Planned M22 Native Reflaxe Compiler SDK contract: `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`
 - Public `Scoped 1.0` / `Full 1.0` claim checklist: `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 - North-star product goals and planning owners: `docs/00-project/NORTH_STAR_GOALS.md`
 - Weekly scheduled-gate audit runbook: `docs/00-project/WEEKLY_CI_EVIDENCE.md`
