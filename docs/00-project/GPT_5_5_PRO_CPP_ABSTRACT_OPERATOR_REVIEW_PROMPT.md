@@ -13,7 +13,9 @@ Related strict-C++ beads:
 - `haxe_ocaml-p3k4i` - expected types for empty generic constructors (closed)
 - `haxe_ocaml-36ec` - incremental extraction from the C++ target mega-file
 
-Status: architecture review request, not an implementation decision
+Status: reviewed and integrated with repository-owned corrections on
+2026-07-15. See
+`docs/00-project/CPP_ABSTRACT_OPERATOR_ARCHITECTURE_DECISION_2026_07_15.md`.
 
 Give this file to GPT-5.5 Pro with the exact current review candidate and record
 that candidate SHA in the invocation. The commit above is the historical

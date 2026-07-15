@@ -140,6 +140,13 @@ Cpp Gate3 execution checkpoint:
   emitter path or unclassified runtime support without a helper
   reachability/body-rendering policy, runtime-helper invariants, and
   behavior-oracle evidence where applicable.
+- The current abstract-operator frontier follows the staged core ownership
+  decision in
+  `docs/00-project/CPP_ABSTRACT_OPERATOR_ARCHITECTURE_DECISION_2026_07_15.md`:
+  preserve syntax, index semantic declarations, carry typed function bodies,
+  lower the selected operation in the typer, and leave only representation
+  plus emission to C++. Target-local helper-name or carrier guesses are not an
+  accepted shortcut.
 - Internal Cpp frontier movement does not change README/North Star
   production-readiness bars until strict gates and public usability evidence
   change.
