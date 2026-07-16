@@ -784,7 +784,7 @@ let runOne = fun args -> try let __fallback_result_216 = let tempStruct = ref (O
                                             )) done
                                           )) done);
                                           let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : TypedModule.t HxArray.t) in (
-                                            ignore (try let __assign_138 = Obj.magic (TypedAbstractUnaryLowering.lowerModules (Obj.magic typedModulesForProgram) (Obj.magic typerIndex)) in (
+                                            ignore (try let __assign_138 = Obj.magic (TypedAbstractOperatorLowering.lowerModules (Obj.magic typedModulesForProgram) (Obj.magic typerIndex)) in (
                                               tempArray3 := __assign_138;
                                               __assign_138
                                             ) with
@@ -1003,7 +1003,7 @@ let runOne = fun args -> try let __fallback_result_216 = let tempStruct = ref (O
                                               )) done
                                             )) done);
                                             let tempRight = ref (Obj.magic (HxRuntime.hx_null) : TypedModule.t HxArray.t) in (
-                                              ignore (try let __assign_171 = Obj.magic (TypedAbstractUnaryLowering.lowerModules (Obj.magic typedModules) (Obj.magic typerIndex)) in (
+                                              ignore (try let __assign_171 = Obj.magic (TypedAbstractOperatorLowering.lowerModules (Obj.magic typedModules) (Obj.magic typerIndex)) in (
                                                 tempRight := __assign_171;
                                                 __assign_171
                                               ) with

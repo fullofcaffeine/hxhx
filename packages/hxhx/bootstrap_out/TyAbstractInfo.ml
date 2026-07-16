@@ -4,7 +4,7 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable identity : TyNominalTypeId.t; mutable shortName : string; mutable modulePath : string; mutable fields : TyType.t HxMap.string_map; mutable properties : TyPropertyInfo.t HxMap.string_map; mutable staticMethods : TyFunSig.t HxMap.string_map; mutable instanceMethods : TyFunSig.t HxMap.string_map; mutable staticMethodLists : TyFunSig.t HxArray.t HxMap.string_map; mutable instanceMethodLists : TyFunSig.t HxArray.t HxMap.string_map; mutable declarations : TyDeclarationInfo.t HxArray.t; getIdentity : Obj.t -> unit -> TyNominalTypeId.t; getFullName : Obj.t -> unit -> string; getShortName : Obj.t -> unit -> string; getModulePath : Obj.t -> unit -> string; getDeclarations : Obj.t -> unit -> TyDeclarationInfo.t HxArray.t; declarationForSignature : Obj.t -> TyFunSig.t -> TyDeclarationInfo.t; declarationForSource : Obj.t -> HxFunctionDecl.t -> TyDeclarationInfo.t; hasField : Obj.t -> string -> bool; fieldType : Obj.t -> string -> TyType.t; propertyInfo : Obj.t -> string -> TyPropertyInfo.t; staticMethod : Obj.t -> string -> TyFunSig.t; instanceMethod : Obj.t -> string -> TyFunSig.t; staticMethodCandidates : Obj.t -> string -> TyFunSig.t HxArray.t; instanceMethodCandidates : Obj.t -> string -> TyFunSig.t HxArray.t; mutable underlyingType : TyType.t; mutable typeParameters : string HxArray.t; mutable unaryOperators : TyAbstractOperatorInfo.t HxArray.t HxMap.string_map; getUnderlyingType : Obj.t -> unit -> TyType.t; getTypeParameters : Obj.t -> unit -> string HxArray.t; addUnaryOperator : Obj.t -> TyAbstractOperatorInfo.t -> unit; getUnaryOperators : Obj.t -> HxUnaryOperator.hxunaryoperator -> HxUnaryFixity.hxunaryfixity -> TyAbstractOperatorInfo.t HxArray.t; getAllUnaryOperators : Obj.t -> unit -> TyAbstractOperatorInfo.t HxArray.t }
+type t = { __hx_type : Obj.t; mutable identity : TyNominalTypeId.t; mutable shortName : string; mutable modulePath : string; mutable fields : TyType.t HxMap.string_map; mutable properties : TyPropertyInfo.t HxMap.string_map; mutable staticMethods : TyFunSig.t HxMap.string_map; mutable instanceMethods : TyFunSig.t HxMap.string_map; mutable staticMethodLists : TyFunSig.t HxArray.t HxMap.string_map; mutable instanceMethodLists : TyFunSig.t HxArray.t HxMap.string_map; mutable declarations : TyDeclarationInfo.t HxArray.t; getIdentity : Obj.t -> unit -> TyNominalTypeId.t; getFullName : Obj.t -> unit -> string; getShortName : Obj.t -> unit -> string; getModulePath : Obj.t -> unit -> string; getDeclarations : Obj.t -> unit -> TyDeclarationInfo.t HxArray.t; declarationForSignature : Obj.t -> TyFunSig.t -> TyDeclarationInfo.t; declarationForSource : Obj.t -> HxFunctionDecl.t -> TyDeclarationInfo.t; hasField : Obj.t -> string -> bool; fieldType : Obj.t -> string -> TyType.t; propertyInfo : Obj.t -> string -> TyPropertyInfo.t; staticMethod : Obj.t -> string -> TyFunSig.t; instanceMethod : Obj.t -> string -> TyFunSig.t; staticMethodCandidates : Obj.t -> string -> TyFunSig.t HxArray.t; instanceMethodCandidates : Obj.t -> string -> TyFunSig.t HxArray.t; mutable underlyingType : TyType.t; mutable typeParameters : string HxArray.t; mutable unaryOperators : TyAbstractOperatorInfo.t HxArray.t HxMap.string_map; mutable binaryOperators : TyAbstractBinaryOperatorInfo.t HxArray.t HxMap.string_map; getUnderlyingType : Obj.t -> unit -> TyType.t; getTypeParameters : Obj.t -> unit -> string HxArray.t; addUnaryOperator : Obj.t -> TyAbstractOperatorInfo.t -> unit; getUnaryOperators : Obj.t -> HxUnaryOperator.hxunaryoperator -> HxUnaryFixity.hxunaryfixity -> TyAbstractOperatorInfo.t HxArray.t; getAllUnaryOperators : Obj.t -> unit -> TyAbstractOperatorInfo.t HxArray.t; addBinaryOperator : Obj.t -> TyAbstractBinaryOperatorInfo.t -> unit; getBinaryOperators : Obj.t -> string -> TyAbstractBinaryOperatorInfo.t HxArray.t; getAllBinaryOperators : Obj.t -> unit -> TyAbstractBinaryOperatorInfo.t HxArray.t }
 
 let __ctor = fun (self : t) identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations underlyingType2 typeParameters2 -> ignore (ignore ((
   ignore (TyNominalInfo.__ctor (Obj.magic self) identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations);
@@ -24,9 +24,13 @@ let __ctor = fun (self : t) identity shortName modulePath fields properties stat
       (Obj.magic self : t).typeParameters <- __assign_5;
       __assign_5
     ));
-    let __assign_6 = Obj.magic (HxMap.create_string ()) in (
+    ignore (let __assign_6 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).unaryOperators <- __assign_6;
       __assign_6
+    ));
+    let __assign_7 = Obj.magic (HxMap.create_string ()) in (
+      (Obj.magic self : t).binaryOperators <- __assign_7;
+      __assign_7
     )
   )
 )))
@@ -36,10 +40,44 @@ let getUnderlyingType__impl = fun (self : t) () -> (Obj.magic self : t).underlyi
 let getTypeParameters__impl = fun (self : t) () -> (Obj.magic self : t).typeParameters
 
 let getAllUnaryOperators__impl = fun (self : t) () -> let out = Obj.magic (HxArray.create ()) in let candidates = HxIterator.of_array (HxMap.values_string ((Obj.magic self : t).unaryOperators)) in (
-  ignore (while (let __iter_13 = candidates in fun () -> HxIterator.hasNext (Obj.magic __iter_13)) () do ignore (let candidates2 = Obj.magic ((let __iter_14 = candidates in fun () -> HxIterator.next (Obj.magic __iter_14)) ()) in let _g = ref 0 in while !_g < HxArray.length candidates2 do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates2) (!_g)) in (
-    ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-      ignore (_g := __new_16);
-      __new_16
+  ignore (while (let __iter_14 = candidates in fun () -> HxIterator.hasNext (Obj.magic __iter_14)) () do ignore (let candidates2 = Obj.magic ((let __iter_15 = candidates in fun () -> HxIterator.next (Obj.magic __iter_15)) ()) in let _g = ref 0 in while !_g < HxArray.length candidates2 do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates2) (!_g)) in (
+    ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
+      ignore (_g := __new_17);
+      __new_17
+    ));
+    HxArray.push out candidate
+  )) done) done);
+  out
+)
+
+let addBinaryOperator__impl = fun (self : t) (info : TyAbstractBinaryOperatorInfo.t) -> ignore (ignore (let key = (TyAbstractBinaryOperatorInfo.getOperator (Obj.magic info) () : string) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractBinaryOperatorInfo.t HxArray.t) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).binaryOperators) key then let __assign_18 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).binaryOperators) key)) in (
+    tempMaybeArray := __assign_18;
+    __assign_18
+  ) else let __assign_19 = Obj.magic (Obj.magic (let __arr_20 = HxArray.create () in __arr_20)) in (
+    tempMaybeArray := __assign_19;
+    __assign_19
+  ));
+  ignore (HxArray.push (!tempMaybeArray) info);
+  HxMap.set_string ((Obj.magic self : t).binaryOperators) key (!tempMaybeArray)
+)))
+
+let getBinaryOperators__impl = fun (self : t) (op : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractBinaryOperatorInfo.t HxArray.t) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).binaryOperators) op then let __assign_21 = Obj.magic (HxMap.get_string ((Obj.magic self : t).binaryOperators) op) in (
+    tempResult := __assign_21;
+    __assign_21
+  ) else let __assign_22 = Obj.magic (let __arr_23 = HxArray.create () in __arr_23) in (
+    tempResult := __assign_22;
+    __assign_22
+  ));
+  !tempResult
+)
+
+let getAllBinaryOperators__impl = fun (self : t) () -> let out = Obj.magic (HxArray.create ()) in let candidates = HxIterator.of_array (HxMap.values_string ((Obj.magic self : t).binaryOperators)) in (
+  ignore (while (let __iter_24 = candidates in fun () -> HxIterator.hasNext (Obj.magic __iter_24)) () do ignore (let candidates2 = Obj.magic ((let __iter_25 = candidates in fun () -> HxIterator.next (Obj.magic __iter_25)) ()) in let _g = ref 0 in while !_g < HxArray.length candidates2 do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates2) (!_g)) in (
+    ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
+      ignore (_g := __new_27);
+      __new_27
     ));
     HxArray.push out candidate
   )) done) done);
@@ -47,40 +85,40 @@ let getAllUnaryOperators__impl = fun (self : t) () -> let out = Obj.magic (HxArr
 )
 
 let unaryKey = fun op fixity -> let tempString = ref ("" : string) in (
-  ignore (if fixity = HxUnaryFixity.Prefix then let __assign_17 = ("prefix" : string) in (
-    tempString := __assign_17;
-    __assign_17
-  ) else let __assign_18 = ("postfix" : string) in (
-    tempString := __assign_18;
-    __assign_18
+  ignore (if fixity = HxUnaryFixity.Prefix then let __assign_28 = ("prefix" : string) in (
+    tempString := __assign_28;
+    __assign_28
+  ) else let __assign_29 = ("postfix" : string) in (
+    tempString := __assign_29;
+    __assign_29
   ));
   (HxString.toStdString (HxUnaryOperatorTools.sourceToken (Obj.magic op)) ^ "|") ^ HxString.toStdString (!tempString)
 )
 
 let addUnaryOperator__impl = fun (self : t) (info : TyAbstractOperatorInfo.t) -> ignore (ignore (let key = (unaryKey (Obj.magic (TyAbstractOperatorInfo.getOperator (Obj.magic info) ())) (Obj.magic (TyAbstractOperatorInfo.getFixity (Obj.magic info) ())) : string) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractOperatorInfo.t HxArray.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).unaryOperators) key then let __assign_7 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).unaryOperators) key)) in (
-    tempMaybeArray := __assign_7;
-    __assign_7
-  ) else let __assign_8 = Obj.magic (Obj.magic (let __arr_9 = HxArray.create () in __arr_9)) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).unaryOperators) key then let __assign_8 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).unaryOperators) key)) in (
     tempMaybeArray := __assign_8;
     __assign_8
+  ) else let __assign_9 = Obj.magic (Obj.magic (let __arr_10 = HxArray.create () in __arr_10)) in (
+    tempMaybeArray := __assign_9;
+    __assign_9
   ));
   ignore (HxArray.push (!tempMaybeArray) info);
   HxMap.set_string ((Obj.magic self : t).unaryOperators) key (!tempMaybeArray)
 )))
 
 let getUnaryOperators__impl = fun (self : t) (op : HxUnaryOperator.hxunaryoperator) (fixity : HxUnaryFixity.hxunaryfixity) -> let key = (unaryKey (Obj.magic op) (Obj.magic fixity) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyAbstractOperatorInfo.t HxArray.t) in (
-  ignore (if HxMap.exists_string ((Obj.magic self : t).unaryOperators) key then let __assign_10 = Obj.magic (HxMap.get_string ((Obj.magic self : t).unaryOperators) key) in (
-    tempResult := __assign_10;
-    __assign_10
-  ) else let __assign_11 = Obj.magic (let __arr_12 = HxArray.create () in __arr_12) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).unaryOperators) key then let __assign_11 = Obj.magic (HxMap.get_string ((Obj.magic self : t).unaryOperators) key) in (
     tempResult := __assign_11;
     __assign_11
+  ) else let __assign_12 = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in (
+    tempResult := __assign_12;
+    __assign_12
   ));
   !tempResult
 )
 
-let create = fun identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations underlyingType2 typeParameters2 -> let self = ({ __hx_type = HxType.class_ "TyAbstractInfo"; identity = Obj.magic (HxRuntime.hx_null); shortName = ""; modulePath = ""; fields = Obj.magic (HxRuntime.hx_null); properties = Obj.magic (HxRuntime.hx_null); staticMethods = Obj.magic (HxRuntime.hx_null); instanceMethods = Obj.magic (HxRuntime.hx_null); staticMethodLists = Obj.magic (HxRuntime.hx_null); instanceMethodLists = Obj.magic (HxRuntime.hx_null); declarations = Obj.magic (HxRuntime.hx_null); getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); underlyingType = Obj.magic (HxRuntime.hx_null); typeParameters = Obj.magic (HxRuntime.hx_null); unaryOperators = Obj.magic (HxRuntime.hx_null); getUnderlyingType = (fun o () -> Obj.magic (getUnderlyingType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); addUnaryOperator = (fun o a0 -> Obj.magic (addUnaryOperator__impl (Obj.magic o) (Obj.magic a0))); getUnaryOperators = (fun o a0 a1 -> Obj.magic (getUnaryOperators__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); getAllUnaryOperators = (fun o () -> Obj.magic (getAllUnaryOperators__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
+let create = fun identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations underlyingType2 typeParameters2 -> let self = ({ __hx_type = HxType.class_ "TyAbstractInfo"; identity = Obj.magic (HxRuntime.hx_null); shortName = ""; modulePath = ""; fields = Obj.magic (HxRuntime.hx_null); properties = Obj.magic (HxRuntime.hx_null); staticMethods = Obj.magic (HxRuntime.hx_null); instanceMethods = Obj.magic (HxRuntime.hx_null); staticMethodLists = Obj.magic (HxRuntime.hx_null); instanceMethodLists = Obj.magic (HxRuntime.hx_null); declarations = Obj.magic (HxRuntime.hx_null); getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); underlyingType = Obj.magic (HxRuntime.hx_null); typeParameters = Obj.magic (HxRuntime.hx_null); unaryOperators = Obj.magic (HxRuntime.hx_null); binaryOperators = Obj.magic (HxRuntime.hx_null); getUnderlyingType = (fun o () -> Obj.magic (getUnderlyingType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); addUnaryOperator = (fun o a0 -> Obj.magic (addUnaryOperator__impl (Obj.magic o) (Obj.magic a0))); getUnaryOperators = (fun o a0 a1 -> Obj.magic (getUnaryOperators__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); getAllUnaryOperators = (fun o () -> Obj.magic (getAllUnaryOperators__impl (Obj.magic o) (Obj.magic ()))); addBinaryOperator = (fun o a0 -> Obj.magic (addBinaryOperator__impl (Obj.magic o) (Obj.magic a0))); getBinaryOperators = (fun o a0 -> Obj.magic (getBinaryOperators__impl (Obj.magic o) (Obj.magic a0))); getAllBinaryOperators = (fun o () -> Obj.magic (getAllBinaryOperators__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
   ignore (ignore ((
     ignore (TyNominalInfo.__ctor (Obj.magic self) identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations);
     ignore (let __assign_1 = Obj.magic underlyingType2 in (
@@ -99,13 +137,17 @@ let create = fun identity shortName modulePath fields properties staticMethods i
         (Obj.magic self : t).typeParameters <- __assign_5;
         __assign_5
       ));
-      let __assign_6 = Obj.magic (HxMap.create_string ()) in (
+      ignore (let __assign_6 = Obj.magic (HxMap.create_string ()) in (
         (Obj.magic self : t).unaryOperators <- __assign_6;
         __assign_6
+      ));
+      let __assign_7 = Obj.magic (HxMap.create_string ()) in (
+        (Obj.magic self : t).binaryOperators <- __assign_7;
+        __assign_7
       )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractInfo"; identity = Obj.magic (HxRuntime.hx_null); shortName = ""; modulePath = ""; fields = Obj.magic (HxRuntime.hx_null); properties = Obj.magic (HxRuntime.hx_null); staticMethods = Obj.magic (HxRuntime.hx_null); instanceMethods = Obj.magic (HxRuntime.hx_null); staticMethodLists = Obj.magic (HxRuntime.hx_null); instanceMethodLists = Obj.magic (HxRuntime.hx_null); declarations = Obj.magic (HxRuntime.hx_null); getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); underlyingType = Obj.magic (HxRuntime.hx_null); typeParameters = Obj.magic (HxRuntime.hx_null); unaryOperators = Obj.magic (HxRuntime.hx_null); getUnderlyingType = (fun o () -> Obj.magic (getUnderlyingType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); addUnaryOperator = (fun o a0 -> Obj.magic (addUnaryOperator__impl (Obj.magic o) (Obj.magic a0))); getUnaryOperators = (fun o a0 a1 -> Obj.magic (getUnaryOperators__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); getAllUnaryOperators = (fun o () -> Obj.magic (getAllUnaryOperators__impl (Obj.magic o) (Obj.magic ()))) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractInfo"; identity = Obj.magic (HxRuntime.hx_null); shortName = ""; modulePath = ""; fields = Obj.magic (HxRuntime.hx_null); properties = Obj.magic (HxRuntime.hx_null); staticMethods = Obj.magic (HxRuntime.hx_null); instanceMethods = Obj.magic (HxRuntime.hx_null); staticMethodLists = Obj.magic (HxRuntime.hx_null); instanceMethodLists = Obj.magic (HxRuntime.hx_null); declarations = Obj.magic (HxRuntime.hx_null); getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); underlyingType = Obj.magic (HxRuntime.hx_null); typeParameters = Obj.magic (HxRuntime.hx_null); unaryOperators = Obj.magic (HxRuntime.hx_null); binaryOperators = Obj.magic (HxRuntime.hx_null); getUnderlyingType = (fun o () -> Obj.magic (getUnderlyingType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); addUnaryOperator = (fun o a0 -> Obj.magic (addUnaryOperator__impl (Obj.magic o) (Obj.magic a0))); getUnaryOperators = (fun o a0 a1 -> Obj.magic (getUnaryOperators__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); getAllUnaryOperators = (fun o () -> Obj.magic (getAllUnaryOperators__impl (Obj.magic o) (Obj.magic ()))); addBinaryOperator = (fun o a0 -> Obj.magic (addBinaryOperator__impl (Obj.magic o) (Obj.magic a0))); getBinaryOperators = (fun o a0 -> Obj.magic (getBinaryOperators__impl (Obj.magic o) (Obj.magic a0))); getAllBinaryOperators = (fun o () -> Obj.magic (getAllBinaryOperators__impl (Obj.magic o) (Obj.magic ()))) } : t)

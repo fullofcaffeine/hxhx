@@ -122,17 +122,8 @@ let classBackedCastForExpectedType = fun expr expectedType scope services -> try
 ) in Obj.magic __fallback_result_19 with
   | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
 
-let wrapClassBackedValue = fun className underlyingClass argumentNames valueExpression -> try let __fallback_result_24 = (
-  ignore (if HxString.length underlyingClass = 0 || HxArray.length argumentNames = 0 then raise (HxRuntime.Hx_return (Obj.repr (valueExpression : string))) else ());
-  let temporary = (("__hxhx_" ^ HxString.toStdString className) ^ "_underlying" : string) in let _g = Obj.magic (let __arr_20 = HxArray.create () in __arr_20) in let _g1 = ref 0 in (
-    ignore (while !_g1 < HxArray.length argumentNames do ignore (let argument = (HxArray.get (Obj.magic argumentNames) (!_g1) : string) in (
-      ignore (let __old_21 = !_g1 in let __new_22 = HxInt.add __old_21 1 in (
-        ignore (_g1 := __new_22);
-        __new_22
-      ));
-      HxArray.push _g ((HxString.toStdString temporary ^ "->") ^ HxString.toStdString argument)
-    )) done);
-    ((((((("([&]() { auto " ^ HxString.toStdString temporary) ^ " = ") ^ HxString.toStdString valueExpression) ^ "; return std::make_shared<") ^ HxString.toStdString className) ^ ">(") ^ HxString.toStdString (HxArray.join _g ", " (fun x -> x))) ^ "); })()"
-  )
-) in Obj.magic __fallback_result_24 with
-  | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23
+let wrapClassBackedValue = fun className underlyingClass valueExpression -> try let __fallback_result_21 = (
+  ignore (if HxString.length underlyingClass = 0 then raise (HxRuntime.Hx_return (Obj.repr (valueExpression : string))) else ());
+  ((("std::make_shared<" ^ HxString.toStdString className) ^ ">(") ^ HxString.toStdString valueExpression) ^ ")"
+) in Obj.magic __fallback_result_21 with
+  | HxRuntime.Hx_return __ret_20 -> Obj.obj __ret_20
