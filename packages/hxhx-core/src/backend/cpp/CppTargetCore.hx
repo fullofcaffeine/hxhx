@@ -7,6 +7,7 @@ import backend.GenIrProgram;
 import backend.cpp.CppAbstractHelperEmitter.CppAbstractInstanceHelperServices;
 import backend.cpp.CppAbstractHelperEmitter.CppAbstractMethodCallServices;
 import backend.cpp.CppAbstractRepresentation.CppAbstractRepresentationServices;
+import backend.cpp.CppExactCallEmitter.CppExactCallEmitterServices;
 import haxe.io.Path;
 
 typedef CppAnonStruct = {
@@ -162,6 +163,25 @@ class CppTargetCore {
 			inlineBody: function(receiver, fn, scope) return primitiveBackedAbstractMethodBodyExpr(receiver, fn, scope),
 			sanitizeIdentifier: function(name) return sanitizeIdentifier(name),
 			sanitizeTypePath: function(path) return sanitizeTypePath(path)
+		};
+	}
+
+	static function exactCallEmitterServices():CppExactCallEmitterServices {
+		return {
+			lookupForScope: function(scope) return lookupForScope(scope),
+			ownerForType: function(typeHint, scope, lookup) {
+				final byHint = lookupClassForTypeHint(typeHint, scope, lookup);
+				return byHint == null ? scope.classByName.get(sanitizeTypePath(typeBaseName(typeHint))) : byHint;
+			},
+			cppTypeHint: function(typeHint, scope, lookup) return cppTypeHint(typeHint, scope, lookup),
+			representation: function(owner, lookup) return primitiveAbstractRepresentation(owner, lookup),
+			ordinaryCall: function(receiver, method, arguments, scope) return fieldCallExpr(receiver, method, arguments, scope),
+			method: function(owner, method) return classMethodDeclIn(owner, method, false),
+			isInline: function(method) return hasFunctionMetadata(method, "inline"),
+			inlineBody: function(receiver, method, scope) return primitiveBackedAbstractMethodBodyExpr(receiver, method, scope),
+			valueForExpectedType: function(expression, expectedType, scope) return valueExprForExpectedType(expression, expectedType, scope),
+			renderExpression: function(expression, scope) return renderExpr(expression, scope),
+			sanitizeIdentifier: function(name) return sanitizeIdentifier(name)
 		};
 	}
 
@@ -17786,44 +17806,12 @@ class CppTargetCore {
 		return primitiveBackedAbstractGetterExpr(receiver, getter, underlying, scope);
 	}
 
-	/** Return the target representation of one already-selected typed call. **/
 	static function exactInstanceCallCppType(expression:HxExpr, ?scope:CppRenderScope):String {
-		if (scope == null)
-			return "";
-		final exact = TypedExactCallSource.decodeInstance(expression);
-		return exact == null ? "" : cppTypeHint(exact.resultType, scope, lookupForScope(scope));
+		return CppExactCallEmitter.cppType(expression, scope, exactCallEmitterServices());
 	}
 
-	/**
-		Emit an exact typed instance call through its declared owner.
-
-		Primitive-backed abstracts use the generated static receiver ABI; wrapper and
-		ordinary classes retain target instance dispatch. No metadata, operator token,
-		or helper-name search participates in this decision.
-	**/
 	static function exactInstanceCallExpr(expression:HxExpr, ?scope:CppRenderScope):Null<String> {
-		if (scope == null)
-			return null;
-		final exact = TypedExactCallSource.decodeInstance(expression);
-		if (exact == null)
-			return null;
-		final lookup = lookupForScope(scope);
-		var owner = lookupClassForTypeHint(exact.owner, scope, lookup);
-		if (owner == null)
-			owner = scope.classByName.get(sanitizeTypePath(typeBaseName(exact.owner)));
-		final representation = primitiveAbstractRepresentation(owner, lookup);
-		if (representation == null)
-			return fieldCallExpr(exact.receiver, exact.method, exact.arguments, scope);
-
-		final helper = classMethodDeclIn(owner, exact.method, false);
-		if (helper != null && hasFunctionMetadata(helper, "inline")) {
-			final inlineBody = exact.arguments.length == 0 ? primitiveBackedAbstractMethodBodyExpr(exact.receiver, helper, scope) : null;
-			if (inlineBody != null)
-				return inlineBody;
-		}
-		final receiver = valueExprForExpectedType(exact.receiver, representation.getCarrierCppType(), scope);
-		final arguments = [for (argument in exact.arguments) renderExpr(argument, scope)];
-		return representation.instanceHelperCall(sanitizeIdentifier(exact.method), receiver, arguments);
+		return CppExactCallEmitter.render(expression, scope, exactCallEmitterServices());
 	}
 
 	static function primitiveBackedAbstractMethodCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
