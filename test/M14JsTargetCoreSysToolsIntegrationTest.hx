@@ -38,8 +38,21 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		return TyperStage.typeModule(new ParsedModule(source, decl, filePath));
 	}
 
+	/**
+		Preserve a backend diagnostic reason without presenting it as executable source.
+
+		These synthetic declarations stand in for target-owned implementations. Keeping
+		the reason inside a comment lets fallback assertions inspect it while the typed-body
+		invariant can prove that the opaque payload hides no operator or mutation.
+	**/
+	static function unsupportedDiagnosticExpr(reason:String):HxExpr {
+		if (reason.indexOf("*/") >= 0)
+			throw "unsupported diagnostic reason cannot close its comment payload";
+		return HxExpr.EUnsupported("/*" + reason + "*/");
+	}
+
 	static function unsupportedBody(reason:String):Array<HxStmt> {
-		return [HxStmt.SReturn(HxExpr.EUnsupported(reason), HxPos.unknown())];
+		return [HxStmt.SReturn(unsupportedDiagnosticExpr(reason), HxPos.unknown())];
 	}
 
 	static function sysToolsModule():TypedModule {
@@ -95,7 +108,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 		final dstPathArg = new HxFunctionArg("dstPath", "String", HxDefaultValue.NoDefault);
 		final copyBufLen = new HxFieldDecl("copyBufLen", HxVisibility.Private, true, "Int", HxExpr.EInt(65536));
 		final copyBuf = new HxFieldDecl("copyBuf", HxVisibility.Private, true, "Dynamic",
-			HxExpr.EUnsupported("[js-native:unsupported_expr] kind=EUnsupported detail=js.node.Buffer.alloc(copyBufLen)"));
+			unsupportedDiagnosticExpr("[js-native:unsupported_expr] kind=EUnsupported detail=js.node.Buffer.alloc(copyBufLen)"));
 		final fileClass = new HxClassDecl("File", false, [
 			new HxFunctionDecl("getContent", HxVisibility.Public, true, [pathArg], "String", unsupportedBody("body_parse_error"), ""),
 			new HxFunctionDecl("saveContent", HxVisibility.Public, true, [pathArg, contentArg], "Void", unsupportedBody("body_parse_error"), ""),
@@ -395,7 +408,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 
 	static function utestHtmlReportModule():TypedModule {
 		final platform = new HxFieldDecl("platform", HxVisibility.Private, true, "String",
-			HxExpr.EUnsupported('[js-native:unsupported_expr] kind=EUnsupported detail=if php "php"#elseif cpp "cpp"#elseif js "javascript"#elseif flash "flash"#else "unknown"'));
+			unsupportedDiagnosticExpr('[js-native:unsupported_expr] kind=EUnsupported detail=if php "php"#elseif cpp "cpp"#elseif js "javascript"#elseif flash "flash"#else "unknown"'));
 		final bufArg = new HxFunctionArg("buf", "Dynamic", HxDefaultValue.NoDefault);
 		final resultArg = new HxFunctionArg("result", "Dynamic", HxDefaultValue.NoDefault);
 		final nameArg = new HxFunctionArg("name", "String", HxDefaultValue.NoDefault);
@@ -1595,7 +1608,7 @@ class M14JsTargetCoreSysToolsIntegrationTest {
 			assertNotContains(js, "sys-fileinput-seek", "unused sys.io.FileInput unsupported bodies should not leak into JS");
 			assertContains(js, "__hx_cls_sys_io_FileOutput.prototype.seek = function", "unused sys.io.FileOutput seek should emit a neutral JS body");
 			assertNotContains(js, "sys-fileoutput-seek", "unused sys.io.FileOutput unsupported bodies should not leak into JS");
-			assertContains(js, "try {  return \"try-ok\";", "try expression should lower to a returning IIFE");
+			assertContains(js, 'var __hx_try = function() { return "try-ok"; }; try { return __hx_try(); }', "try expression should lower to a returning IIFE");
 			assertContains(js, "__hx_cls_Macro.stripWhitespaces = function", "compile-time Macro fallback should emit");
 			assertContains(js, "__hx_cls_Macro.extractJs = function", "compile-time Macro extractJs fallback should emit");
 			assertContains(js, "__hx_cls_ReservedParam.call_user_func = function(callback, arguments_)",
