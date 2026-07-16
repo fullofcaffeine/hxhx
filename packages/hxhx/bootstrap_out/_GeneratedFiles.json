@@ -130,6 +130,7 @@
 		"backend_cpp_CppMacroExpr.ml",
 		"backend_cpp_CppLocalTypeInference.ml",
 		"backend_cpp_CppLocalCallScanner.ml",
+		"backend_cpp_CppExactCallEmitter.ml",
 		"backend_cpp_CppAbstractRepresentation.ml",
 		"backend_cpp_CppAbstractProjection.ml",
 		"backend_cpp_CppAbstractHelperEmitter.ml",

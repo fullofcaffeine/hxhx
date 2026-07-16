@@ -578,6 +578,7 @@ let functionOverloadTypeScore = fun exp act -> try let __fallback_result_194 = l
   | HxRuntime.Hx_return __ret_193 -> Obj.obj __ret_193
 
 let rec overloadArgScore = fun expected actual -> try let __fallback_result_200 = (
+  ignore (if expected != Obj.magic (HxRuntime.hx_null) && actual != Obj.magic (HxRuntime.hx_null) && HxString.equals (TyType.getSemanticKey (Obj.magic expected) ()) (TyType.getSemanticKey (Obj.magic actual) ()) then raise (HxRuntime.Hx_return (Obj.repr 4)) else ());
   ignore (if TyType.isFunction (Obj.magic expected) () || TyType.isFunction (Obj.magic actual) () then ignore ((
     ignore (if not (TyType.isFunction (Obj.magic expected) ()) || not (TyType.isFunction (Obj.magic actual) ()) then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
     let expectedArguments = Obj.magic (TyType.getFunctionArguments (Obj.magic expected) ()) in let actualArguments = Obj.magic (TyType.getFunctionArguments (Obj.magic actual) ()) in (
