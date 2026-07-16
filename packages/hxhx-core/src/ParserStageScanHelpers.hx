@@ -2170,12 +2170,16 @@ class ParserStageScanHelpers {
 	} {
 		var i = start;
 		var bodyStart = -1;
+		var returnExprStartsWithBrace = false;
 		var tok = scanNextToken(source, i);
 		while (tok.text.length > 0 && tok.text != "{" && tok.text != ";") {
 			if (tok.isIdent && tok.text == "return" && bodyStart < 0) {
 				bodyStart = tok.nextPos - tok.text.length;
+				returnExprStartsWithBrace = true;
 			} else if (bodyStart < 0 && expressionBodyKeywordStartsWithoutReturn(tok.text)) {
 				bodyStart = tok.nextPos - tok.text.length;
+			} else if (bodyStart >= 0) {
+				returnExprStartsWithBrace = false;
 			}
 			i = tok.nextPos;
 			tok = scanNextToken(source, i);
@@ -2233,6 +2237,39 @@ class ParserStageScanHelpers {
 				nextPos: tok.nextPos,
 				hasBody: true
 			};
+		// `return { ... }` is an expression body, not a braced function body. Keep
+		// the return token and exact source text so a later native-protocol merge can
+		// replace its whitespace-free summary with this structural body.
+		if (returnExprStartsWithBrace && bodyStart >= 0) {
+			final next = scanNextToken(source, block.nextPos);
+			final nextPos = next.text == ";" ? next.nextPos : block.nextPos;
+			if (!capture)
+				return {
+					body: [],
+					bodyText: "",
+					nextPos: nextPos,
+					hasBody: true
+				};
+			final rawExpr = source.substring(bodyStart, block.nextPos);
+			final leading = leadingWhitespaceLength(rawExpr);
+			final bodyText = StringTools.trim(rawExpr) + ";";
+			var body = new Array<HxStmt>();
+			try {
+				body = HxParser.parseFunctionBodyTextAt(bodyText, source, bodyStart + leading);
+				if (hasUnsupportedStmtList(body))
+					body = [];
+			} catch (_:HxParseError) {
+				body = [];
+			} catch (_:String) {
+				body = [];
+			}
+			return {
+				body: body,
+				bodyText: bodyText,
+				nextPos: nextPos,
+				hasBody: true
+			};
+		}
 		if (!capture)
 			return {
 				body: [],

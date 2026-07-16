@@ -46,6 +46,35 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 				throw "expected expression-bodied for assignment to parse into a for-in array-access assignment";
 		}
 
+		final returnedBlockSource = [
+			"class ShapeTools {",
+			"  static function make(info:Dynamic, inputs:Array<Dynamic>):Dynamic",
+			"    return {",
+			"      var owner = info.owner;",
+			"      {",
+			"        owner: owner,",
+			"        label: info.label,",
+			"        params: [for (item in inputs) wrap(item)],",
+			"      }",
+			"    }",
+			"}",
+		].join("\n");
+		final returnedBlockClasses = ParserStageScanHelpers.scanModuleLocalHelperClasses(returnedBlockSource, null);
+		assertTrue(returnedBlockClasses.length == 1, "expected returned-block helper class to be retained");
+		var makeFn:Null<HxFunctionDecl> = null;
+		for (fn in HxClassDecl.getFunctions(returnedBlockClasses[0]))
+			if (HxFunctionDecl.getName(fn) == "make")
+				makeFn = fn;
+		assertTrue(makeFn != null, "expected returned-block function to be retained");
+		assertTrue(StringTools.startsWith(HxFunctionDecl.getBodyText(makeFn), "return {"), "returned block should retain its source-level return boundary");
+		assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(HxFunctionDecl.getBody(makeFn)),
+			"returned block and its array comprehension should remain structural");
+		switch (HxFunctionDecl.getBody(makeFn)) {
+			case [HxStmt.SReturn(_, _)]:
+			case _:
+				throw "expected returned block to remain one return statement";
+		}
+
 		final typedefSource = [
 			"typedef LikeStatus = {",
 			"  var expectedValue:Dynamic;",

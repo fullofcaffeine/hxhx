@@ -175,6 +175,49 @@ class M14HihExprTextParserIntegrationTest {
 				fail("mutable map block should stay opaque for Stage3 poison/stub compatibility");
 		}
 
+		// A value-producing `if` branch may begin with an anonymous object literal.
+		// Keep that value structural when the `if` is the tail of a returned block;
+		// treating the braces as a statement block makes the field colon a parse error.
+		final returnedAnonBranch = HxParser.parseFunctionBodyText('return {
+			function describe(mode:AccessMode, fallback:String):String
+				return {
+					switch (mode) {
+						case Open | Create: "ready";
+						case Hidden: fallback;
+					}
+				}
+			var flags = info.visible ? [Public] : [Private];
+			if (info.locked) flags.push(Final);
+			if (info.parameters.length == 0)
+				{
+					label: info.label,
+					flags: flags,
+					payload: switch ([info.kind, info.value]) {
+						case [Slot(read, write), result]:
+							Build(describe(read, "get"), describe(write, "set"), convert(result), null);
+						case [Action(_), Callback(args, result)]:
+							Wrap({
+								args: [for (arg in args) {
+									label: arg.label,
+									optional: arg.optional,
+									value: convert(arg.value),
+								}],
+								result: convert(result),
+								body: null,
+							});
+						default:
+							throw "invalid payload";
+					},
+					position: info.position,
+					metadata: info.metadata.get(),
+				}
+			else
+				{ throw "invalid"; }
+		};');
+		assertTrue(returnedAnonBranch.length == 1, "expected returned block to parse as one statement");
+		assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(returnedAnonBranch),
+			"returned block with an anonymous-object branch should remain structural");
+
 		// Constructor expressions with dotted type paths should stay as ENew nodes.
 		final newExprRaw = "new js.lib.DataView(new js.lib.ArrayBuffer(8))";
 		final newExpr = HxParser.parseExprText(newExprRaw);

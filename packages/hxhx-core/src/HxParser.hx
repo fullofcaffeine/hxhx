@@ -2471,6 +2471,24 @@ class HxParser {
 		return parseExpr(stop);
 	}
 
+	/**
+		Reports whether the current opening brace starts an anonymous-object value.
+
+		Haxe uses the same braces for statement blocks and anonymous objects. A field
+		name followed by `:` is the structural distinction needed by statement-level
+		branches such as `if (condition) { value: expression } else ...`.
+	**/
+	function braceStartsAnonLiteral():Bool {
+		if (!cur.kind.match(TLBrace))
+			return false;
+		return switch (peekKind()) {
+			case TIdent(_) | TString(_, _):
+				peekKind2().match(TColon);
+			case _:
+				false;
+		};
+	}
+
 	function parseBraceExpr():HxExpr {
 		// Expression-level `{ ... }` has two common shapes in upstream code:
 		// - anonymous object literal: `{ field: value }`
@@ -4124,13 +4142,20 @@ class HxParser {
 
 		return switch (cur.kind) {
 			case TLBrace:
-				bump();
-				final ss = new Array<HxStmt>();
-				while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
-					parseStmtInto(ss, () -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
+				if (braceStartsAnonLiteral()) {
+					final expr = parseExpr(() -> stop() || cur.kind.match(TSemicolon) || cur.kind.match(TKeyword(KElse)));
+					if (cur.kind.match(TSemicolon))
+						bump();
+					SExpr(expr, pos);
+				} else {
+					bump();
+					final ss = new Array<HxStmt>();
+					while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+						parseStmtInto(ss, () -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
+					}
+					expect(TRBrace, "'}'");
+					SBlock(ss, pos);
 				}
-				expect(TRBrace, "'}'");
-				SBlock(ss, pos);
 			case TKeyword(KReturn):
 				bump();
 				parseReturnStmt(pos);

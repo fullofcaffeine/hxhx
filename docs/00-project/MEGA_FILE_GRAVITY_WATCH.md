@@ -13,15 +13,16 @@ MEGA_FILE_GRAVITY_WATCH:PASS
 
 ## Current Hotspots
 
-Measured on July 14, 2026. The guard allows small drift but asks for this table
-to be refreshed when a watched file moves by more than 250 lines.
+Measured on July 14, 2026, with the HxParser baseline refreshed on July 15.
+The guard allows small drift but asks for this table to be refreshed when a
+watched file moves by more than 250 lines.
 
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
 | `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,731 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
-| `packages/hxhx-core/src/HxParser.hx` | 5,031 | Parser behavior is central and easy to destabilize with local workarounds. |
+| `packages/hxhx-core/src/HxParser.hx` | 5,285 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
 | `packages/hxhx/src/hxhx/Stage3Compiler.hx` | 996 | Keep orchestration-only; do not let it become a target/runtime implementation surface. |
 
@@ -226,6 +227,18 @@ instance, primitive-backed, array-backed, nongeneric, and ambiguous shapes
 decline to the existing model. This is a bounded target type-flow repair, not a
 new runtime or stdlib family; broader extraction remains covered by
 `haxe_ocaml-36ec`.
+
+2026-07-15 checkpoint: `haxe_ocaml-idem2` added 25 net lines to `HxParser` to
+distinguish an anonymous-object value from a statement block when braces begin
+an `if` branch. Exact-source recovery for expression-bodied `return { ... }`
+functions lives in the already extracted `ParserStageScanHelpers` module,
+which grew 37 lines. In practical terms, upstream macro helpers now remain
+structural instead of becoming opaque parser text, while the strict typed-body
+invariant stays enabled. This is shared Haxe grammar behavior, not a
+backend-specific workaround, and moving the brace decision away from the
+parser would split ownership of its token state. Original focused parser and
+scanner regressions plus the 163-module upstream macro Gate1 cover the change;
+no additional extraction bead is needed.
 
 ## Upstream Reference Boundary
 
