@@ -1,3 +1,10 @@
+# [0.16.0](https://github.com/fullofcaffeine/hxhx/compare/v0.15.24...v0.16.0) (2026-07-16)
+
+
+### Features
+
+* index abstract operator declarations ([23fea01](https://github.com/fullofcaffeine/hxhx/commit/23fea0169277d845dcdbca54e703e2b935a6e896))
+
 ## [0.15.24](https://github.com/fullofcaffeine/hxhx/compare/v0.15.23...v0.15.24) (2026-07-15)
 
 
