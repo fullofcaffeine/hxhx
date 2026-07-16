@@ -47,6 +47,21 @@ class M14TypedAbstractUnaryIntegrationTest {
 		return false;
 	}
 
+	static function declarationExpression(expression:TypedExpr, name:String):Null<TypedExpr> {
+		final declaration = expression.getDeclaration();
+		if (declaration != null && declaration.getSignature().getName() == name)
+			return expression;
+		for (child in expression.getExpressions()) {
+			final found = declarationExpression(child, name);
+			if (found != null)
+				return found;
+		}
+		return null;
+	}
+
+	static function containsDeclaration(expression:TypedExpr, name:String):Bool
+		return declarationExpression(expression, name) != null;
+
 	static function inlineBlock(expression:TypedExpr):TypedExpr {
 		if (expression.getTag() == TypedExprTag.Cast)
 			return expression.getExpressions()[0];
@@ -117,6 +132,13 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"  @:op(++A) public inline function arbitraryPrefix():PrefixValue { this += 30; return cast this; }",
 			"  @:op(A++) public inline function arbitraryPostfix():PrefixValue { var old = this; this += 1; return cast old; }",
 			"}",
+			"class PropertyHolder {",
+			"  var stored:PrefixValue;",
+			"  public var value(get, set):PrefixValue;",
+			"  public function new(value:Int) stored = new PrefixValue(value);",
+			"  function get_value():PrefixValue return stored;",
+			"  function set_value(value:PrefixValue):PrefixValue return stored = value;",
+			"}",
 			"class Ordinary {",
 			"  public function new() {}",
 			"  public function arbitraryPrimitiveNeg():Ordinary return this;",
@@ -130,6 +152,9 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"    var prefixValue:PrefixValue = new PrefixValue(3);",
 			"    var prefixResult = ++prefixValue;",
 			"    var postfixResult = prefixValue++;",
+			"    var propertyHolder = new PropertyHolder(5);",
+			"    var propertyPrefix:PrefixValue = ++propertyHolder.value;",
+			"    var propertyPostfix:PrefixValue = propertyHolder.value++;",
 			"    var ordinaryNumber = -7;",
 			"    var ordinaryObject = new Ordinary();",
 			"    var ordinaryControl = -ordinaryObject;",
@@ -179,6 +204,28 @@ class M14TypedAbstractUnaryIntegrationTest {
 			&& postfixChildren[2].getTag() == TypedExprTag.Cast,
 			"postfix result was inferred from spelling instead of the helper's saved-old-value body");
 
+		final propertyPrefix = initializer(main, "propertyPrefix");
+		final propertyPrefixBlock = inlineBlock(propertyPrefix);
+		final propertyGetterCall = declarationExpression(propertyPrefix, "get_value");
+		final propertySetterCall = declarationExpression(propertyPrefix, "set_value");
+		assertTrue(propertyPrefixBlock.getTag() == TypedExprTag.Block
+			&& propertyGetterCall != null
+			&& propertyGetterCall.getType().getSemanticKey() == "nominal:Main.PrefixValue"
+			&& propertySetterCall != null
+			&& propertySetterCall.getExpressions()[1].getType().getSemanticKey() == "nominal:Main.PrefixValue"
+			&& !containsDeclaration(propertyPrefix, "arbitraryPrefix")
+			&& !containsTag(propertyPrefix, TypedExprTag.Unary),
+			"property prefix update did not become an explicit getter/setter schedule");
+		final propertyPostfix = initializer(main, "propertyPostfix");
+		final propertyPostfixBlock = inlineBlock(propertyPostfix);
+		assertTrue(propertyPostfixBlock.getTag() == TypedExprTag.Block
+			&& propertyPostfixBlock.getExpressions().length == 4
+			&& containsDeclaration(propertyPostfix, "get_value")
+			&& containsDeclaration(propertyPostfix, "set_value")
+			&& !containsDeclaration(propertyPostfix, "arbitraryPostfix")
+			&& !containsTag(propertyPostfix, TypedExprTag.Unary),
+			"property postfix update selected an abstract helper or lost its saved old value");
+
 		assertTrue(initializer(main, "ordinaryNumber").getTag() == TypedExprTag.Unary,
 			"ordinary numeric unary behavior was routed through the abstract catalog");
 		final ordinaryControl = initializer(main, "ordinaryControl");
@@ -203,6 +250,48 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"}",
 			"class Main { static function main(value:Generic<Int>) { var result = -value; } }",
 		].join("\n"), "Generic abstract unary operator is not supported yet");
+		typingFailure([
+			"abstract TextValue(String) {",
+			"  public inline function new(value:String) this = value;",
+			"  @:op(++A) public static function arbitrary(value:TextValue):TextValue return value;",
+			"}",
+			"class TextHolder {",
+			"  var stored:TextValue;",
+			"  public var value(get, set):TextValue;",
+			"  public function new(value:String) stored = new TextValue(value);",
+			"  function get_value():TextValue return stored;",
+			"  function set_value(value:TextValue):TextValue return stored = value;",
+			"}",
+			"class Main { static function main() { var holder = new TextHolder('x'); var result = ++holder.value; } }",
+		].join("\n"),
+			"Abstract property increment/decrement requires an Int or Float underlying carrier");
+		typingFailure([
+			"abstract ReadOnlyValue(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(++A) public static function mustNotRun(value:ReadOnlyValue):ReadOnlyValue return value;",
+			"}",
+			"class ReadOnlyHolder {",
+			"  var stored:ReadOnlyValue;",
+			"  public var value(get, never):ReadOnlyValue;",
+			"  public function new(value:Int) stored = new ReadOnlyValue(value);",
+			"  function get_value():ReadOnlyValue return stored;",
+			"}",
+			"class Main { static function main() { var holder = new ReadOnlyHolder(1); var result = ++holder.value; } }",
+		].join("\n"),
+			"Abstract property increment/decrement requires explicit get and set accessors");
+		typingFailure([
+			"abstract StaticValue(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(++A) public static function mustNotRun(value:StaticValue):StaticValue return value;",
+			"}",
+			"class StaticHolder {",
+			"  static var stored:StaticValue = new StaticValue(1);",
+			"  public static var value(get, set):StaticValue;",
+			"  static function get_value():StaticValue return stored;",
+			"  static function set_value(value:StaticValue):StaticValue return stored = value;",
+			"}",
+			"class Main { static function main() { var result = ++StaticHolder.value; } }",
+		].join("\n"), "Static abstract property increment/decrement is not supported yet");
 		crossModuleInlineTest();
 	}
 }

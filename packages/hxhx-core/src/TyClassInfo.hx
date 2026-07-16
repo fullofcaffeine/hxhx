@@ -7,8 +7,9 @@
 **/
 class TyClassInfo extends TyNominalInfo {
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyType>,
-			staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>, staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
-			instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, declarations:Array<TyDeclarationInfo>) {
-		super(identity, shortName, modulePath, fields, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations);
+			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
+			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
+			declarations:Array<TyDeclarationInfo>) {
+		super(identity, shortName, modulePath, fields, properties, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations);
 	}
 }

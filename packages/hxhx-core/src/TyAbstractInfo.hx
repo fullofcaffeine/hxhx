@@ -11,10 +11,10 @@ class TyAbstractInfo extends TyNominalInfo {
 	final unaryOperators:haxe.ds.StringMap<Array<TyAbstractOperatorInfo>>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyType>,
-			staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>, staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
-			instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, declarations:Array<TyDeclarationInfo>, underlyingType:TyType,
-			typeParameters:Array<String>) {
-		super(identity, shortName, modulePath, fields, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations);
+			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
+			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
+			declarations:Array<TyDeclarationInfo>, underlyingType:TyType, typeParameters:Array<String>) {
+		super(identity, shortName, modulePath, fields, properties, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations);
 		this.underlyingType = underlyingType;
 		this.typeParameters = typeParameters == null ? [] : typeParameters.copy();
 		this.unaryOperators = new haxe.ds.StringMap();

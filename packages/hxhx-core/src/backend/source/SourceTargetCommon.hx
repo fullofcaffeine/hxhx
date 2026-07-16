@@ -3430,6 +3430,8 @@ class SourceTargetCommon {
 			return "(" + callee + ")(" + rendered + ")";
 		}
 		final callee = lambdaExpr(target, lambdaArgs, lambdaBody);
+		if (target == Python)
+			return "(" + callee + ")(" + rendered + ")";
 		return callee + "(" + rendered + ")";
 	}
 

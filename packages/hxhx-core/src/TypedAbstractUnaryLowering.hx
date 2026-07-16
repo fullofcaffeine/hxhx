@@ -62,6 +62,73 @@ class TypedAbstractUnaryLowering {
 		};
 	}
 
+	static function accessorDeclaration(owner:TyNominalInfo, name:String, arity:Int):Null<TyDeclarationInfo> {
+		var selected:Null<TyDeclarationInfo> = null;
+		for (signature in owner.instanceMethodCandidates(name)) {
+			if (signature.getArgs().length != arity)
+				continue;
+			final declaration = owner.declarationForSignature(signature);
+			if (declaration == null || selected != null)
+				return null;
+			selected = declaration;
+		}
+		return selected;
+	}
+
+	static function propertyPlaceFor(target:TypedExpr, index:TyperIndex, filePath:String, position:HxPos,
+			counter:TypedUnaryLoweringCounter):Null<TypedUnaryPlace> {
+		if (target.getTag() != TypedExprTag.FieldRead)
+			return null;
+		final texts = target.getTexts();
+		final children = target.getExpressions();
+		if (texts.length != 1 || children.length != 1)
+			return null;
+		final receiver = children[0];
+		final receiverIdentity = receiver.getType().getNominalIdentity();
+		final owner = receiverIdentity == null ? null : index.getByFullName(receiverIdentity.getCanonicalName());
+		final property = owner == null ? null : owner.propertyInfo(texts[0]);
+		if (property == null || !property.usesExplicitAccessors())
+			return null;
+		if (property.getIsStatic())
+			throw new TyperError(filePath, position,
+				"Static abstract property increment/decrement is not supported yet: "
+				+ owner.getFullName()
+				+ "."
+				+ texts[0]);
+		if (!property.hasExplicitGetter() || !property.hasExplicitSetter())
+			throw new TyperError(filePath, position,
+				"Abstract property increment/decrement requires explicit get and set accessors: "
+				+ owner.getFullName()
+				+ "."
+				+ texts[0]);
+		final getter = accessorDeclaration(owner, property.getGetterName(), 0);
+		final setter = accessorDeclaration(owner, property.getSetterName(), 1);
+		if (getter == null || setter == null)
+			throw new TyperError(filePath, position,
+				"Property update requires one exact getter and setter declaration: "
+				+ owner.getFullName()
+				+ "."
+				+ texts[0]);
+
+		final temporaryName = freshName("property_receiver", counter);
+		final temporary = TypedExpr.temporary(temporaryName, receiver.getType().getDisplay(), receiver, voidType(), receiver.getPosition());
+		function receiverRead():TypedExpr
+			return TypedExpr.localRead(temporaryName, receiver.getType(), receiver.getPosition());
+		function accessorCall(declaration:TyDeclarationInfo, arguments:Array<TypedExpr>, resultType:TyType):TypedExpr {
+			final callee = TypedExpr.fieldRead(receiverRead(), declaration.getSignature().getName(), TyType.unknown(), target.getPosition());
+			return TypedExpr.call(callee, arguments, declaration, resultType, target.getPosition());
+		}
+		return {
+			prefix: [temporary],
+			read: function(type:TyType) {
+				final call = accessorCall(getter, [], getter.getSignature().getReturnType());
+				return call.getType()
+					.getSemanticKey() == type.getSemanticKey() ? call : TypedExpr.castValue(call, type.getDisplay(), type, call.getPosition());
+			},
+			write: function(value:TypedExpr) return accessorCall(setter, [value], setter.getSignature().getReturnType())
+		};
+	}
+
 	static function placeFor(target:TypedExpr, filePath:String, position:HxPos, counter:TypedUnaryLoweringCounter):TypedUnaryPlace {
 		final tag = target.getTag();
 		if (tag == TypedExprTag.LocalRead || tag == TypedExprTag.NameRead)
@@ -198,6 +265,37 @@ class TypedAbstractUnaryLowering {
 			operand.getPosition());
 	}
 
+	/** Lower Haxe's getter/setter prefix/postfix contract without selecting the value abstract's helper. **/
+	static function propertyUpdate(expression:TypedExpr, operand:TypedExpr, abstractInfo:TyAbstractInfo, place:TypedUnaryPlace, op:HxUnaryOperator,
+			fixity:HxUnaryFixity, counter:TypedUnaryLoweringCounter, filePath:String):TypedExpr {
+		final resultType = operand.getType();
+		final carrierType = abstractInfo.getUnderlyingType();
+		if (!carrierType.isNumeric())
+			throw new TyperError(filePath, expression.getPosition(),
+				"Abstract property increment/decrement requires an Int or Float underlying carrier: " + resultType.getDisplay());
+		final binaryOperator = op == HxUnaryOperator.Increment ? "+" : "-";
+		final one = TypedExpr.intLiteral(1, TyType.fromHintText("Int"), expression.getPosition());
+		final expressions = place.prefix.copy();
+		if (fixity == HxUnaryFixity.Prefix) {
+			final current = place.read(carrierType);
+			final updatedCarrier = TypedExpr.binary(binaryOperator, current, one, carrierType, expression.getPosition());
+			final updated = TypedExpr.castValue(updatedCarrier, resultType.getDisplay(), resultType, expression.getPosition());
+			expressions.push(place.write(updated));
+		} else {
+			final oldName = freshName("property_old", counter);
+			final oldValue = place.read(resultType);
+			expressions.push(TypedExpr.temporary(oldName, resultType.getDisplay(), oldValue, voidType(), expression.getPosition()));
+			final oldRead = TypedExpr.localRead(oldName, resultType, expression.getPosition());
+			final carrierRead = TypedExpr.castValue(oldRead, carrierType.getDisplay(), carrierType, expression.getPosition());
+			final updatedCarrier = TypedExpr.binary(binaryOperator, carrierRead, one, carrierType, expression.getPosition());
+			final updated = TypedExpr.castValue(updatedCarrier, resultType.getDisplay(), resultType, expression.getPosition());
+			expressions.push(place.write(updated));
+			expressions.push(oldRead);
+		}
+		final block = TypedExpr.block(expressions, resultType, expression.getPosition());
+		return TypedExpr.castValue(block, resultType.getDisplay(), resultType, expression.getPosition());
+	}
+
 	static function lowerExpression(expression:TypedExpr, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,
 			counter:TypedUnaryLoweringCounter):TypedExpr {
 		final loweredChildren = [
@@ -212,6 +310,13 @@ class TypedAbstractUnaryLowering {
 		if (op == null || fixity == null || loweredChildren.length != 1)
 			throw "typed unary expression has an invalid structural payload";
 		final operand = loweredChildren[0];
+		final operandIdentity = operand.getType().getNominalIdentity();
+		final abstractInfo = operandIdentity == null ? null : index.getAbstractByFullName(operandIdentity.getCanonicalName());
+		if (abstractInfo != null && (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement)) {
+			final propertyPlace = propertyPlaceFor(operand, index, filePath, rebuilt.getPosition() == null ? HxPos.unknown() : rebuilt.getPosition(), counter);
+			if (propertyPlace != null)
+				return propertyUpdate(rebuilt, operand, abstractInfo, propertyPlace, op, fixity, counter, filePath);
+		}
 		final selected = TyAbstractUnaryBinding.select(index, operand.getType(), op, fixity, filePath,
 			rebuilt.getPosition() == null ? HxPos.unknown() : rebuilt.getPosition());
 		if (selected == null)

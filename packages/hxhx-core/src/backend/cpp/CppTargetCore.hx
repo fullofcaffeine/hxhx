@@ -4,6 +4,9 @@ import backend.BackendContext;
 import backend.EmitArtifact;
 import backend.EmitResult;
 import backend.GenIrProgram;
+import backend.cpp.CppAbstractHelperEmitter.CppAbstractInstanceHelperServices;
+import backend.cpp.CppAbstractHelperEmitter.CppAbstractMethodCallServices;
+import backend.cpp.CppAbstractRepresentation.CppAbstractRepresentationServices;
 import haxe.io.Path;
 
 typedef CppAnonStruct = {
@@ -115,6 +118,53 @@ typedef CppHelperRenderKindCounts = {
 	  before rerunning the upstream-derived Cpp gate.
 **/
 class CppTargetCore {
+	static function abstractRepresentationServices():CppAbstractRepresentationServices {
+		return {
+			primitiveUnderlying: function(cls) return primitiveAbstractUnderlyingCppType(cls),
+			renderedClassName: function(cls, lookup) return renderedClassName(cls, lookup),
+			lookupForScope: function(scope) return lookupForScope(scope),
+			lookupClassForTypeHint: function(typeHint, scope, lookup) return lookupClassForTypeHint(typeHint, scope, lookup),
+			abstractUnderlying: function(cls) return abstractUnderlyingTypeHint(cls),
+			renderExpression: function(expression, scope) return renderExpr(expression, scope),
+			wrapUnderlying: function(cls, value, scope) return classBackedAbstractWrapUnderlyingExpr(cls, value, scope),
+			classNameFromCppType: function(typeName) return classNameFromCppType(typeName),
+			sanitizeTypePath: function(path) return sanitizeTypePath(path),
+			typeBaseName: function(typeHint) return typeBaseName(typeHint)
+		};
+	}
+
+	static function abstractInstanceHelperServices():CppAbstractInstanceHelperServices {
+		return {
+			representation: function(cls, lookup) return primitiveAbstractRepresentation(cls, lookup),
+			returnType: function(fn, owner, lookup) return cppMethodSignatureReturnType(fn, owner, lookup),
+			renderScope: function(owner, lookup, returnType) return renderScope(owner, lookup, returnType),
+			prepareScope: function(scope, fn) prepareFunctionScope(scope, fn),
+			renderArguments: function(args, scope) return renderFunctionArgs(args, scope),
+			renderBody: function(statements, indent, scope) return renderHelperFunctionBody(statements, indent, scope),
+			sanitizeIdentifier: function(name) return sanitizeIdentifier(name)
+		};
+	}
+
+	static function abstractMethodCallServices():CppAbstractMethodCallServices {
+		return {
+			primitiveIntLike: function(receiver, method, scope) return primitiveIntLikeAbstractMethodCallExpr(receiver, method, scope),
+			classForExpression: function(receiver, scope) return primitiveBackedAbstractClassForExpr(receiver, scope),
+			classForReceiverMethod: function(receiver, method, scope) return primitiveBackedAbstractClassForReceiverMethod(receiver, method, scope),
+			classMethod: function(owner, method, isStatic, scope) return classMethodDecl(owner, method, isStatic, scope),
+			primitiveUnderlying: function(cls) return primitiveAbstractUnderlyingCppType(cls),
+			hasMetadata: function(fn, name) return hasFunctionMetadata(fn, name),
+			representation: function(cls, lookup) return primitiveAbstractRepresentation(cls, lookup),
+			lookupForScope: function(scope) return lookupForScope(scope),
+			valueForExpectedType: function(expression, expectedType, scope) return valueExprForExpectedType(expression, expectedType, scope),
+			inferredArgumentTypes: function(fn, owner, classes, allClasses) return inferredFunctionArgCppTypes(fn, owner, classes, allClasses),
+			renderCallArguments: function(parameters, arguments, scope,
+					parameterTypes) return renderFunctionCallArgs(parameters, arguments, scope, parameterTypes),
+			inlineBody: function(receiver, fn, scope) return primitiveBackedAbstractMethodBodyExpr(receiver, fn, scope),
+			sanitizeIdentifier: function(name) return sanitizeIdentifier(name),
+			sanitizeTypePath: function(path) return sanitizeTypePath(path)
+		};
+	}
+
 	static final inferredSignatureStack = new haxe.ds.StringMap<Bool>();
 	static final erasedDynamicReturnStack = new haxe.ds.StringMap<Bool>();
 	static var erasedDynamicReturnCache = new haxe.ds.StringMap<Bool>();
@@ -5119,7 +5169,7 @@ class CppTargetCore {
 			final lines = if (HxFunctionDecl.getIsStatic(fn)) {
 				renderHelperMethod(fn, cls, classLookup);
 			} else if (!hasFunctionMetadata(fn, "inline")) {
-				CppAbstractHelperEmitter.renderInstanceHelper(fn, cls, classLookup);
+				renderPrimitiveBackedAbstractInstanceHelper(fn, cls, classLookup);
 			} else {
 				[];
 			};
@@ -5128,6 +5178,15 @@ class CppTargetCore {
 		}
 		out.push("};");
 		return out;
+	}
+
+	/** Wire target rendering into the extracted, semantics-free abstract helper emitter. **/
+	static function renderPrimitiveBackedAbstractInstanceHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
+		return CppAbstractHelperEmitter.renderPreparedInstanceHelper(fn, owner, classLookup, abstractInstanceHelperServices());
+	}
+
+	static function primitiveAbstractRepresentation(cls:HxClassDecl, classLookup:CppClassLookup):Null<CppAbstractRepresentation> {
+		return CppAbstractRepresentation.forPrimitiveClass(cls, classLookup, abstractRepresentationServices());
 	}
 
 	static function knownStdlibFieldCppType(className:String, fieldName:String, typeHint:String, init:Null<HxExpr>, ?scope:CppRenderScope):String {
@@ -12647,7 +12706,7 @@ class CppTargetCore {
 		final directLambda = directLambdaValueExprForExpectedFunction(expr, expectedType, scope);
 		if (directLambda != null)
 			return directLambda;
-		final exactAbstractCall = CppAbstractRepresentation.classBackedCastForExpectedType(expr, expectedType, scope);
+		final exactAbstractCall = classBackedAbstractCastExprForExpectedType(expr, expectedType, scope);
 		if (exactAbstractCall != null)
 			return exactAbstractCall;
 		final macroApiCall = macroApiCallExprForExpected(expr, expectedType, scope);
@@ -13609,7 +13668,7 @@ class CppTargetCore {
 				+ renderExpr(elseExpr, scope)
 				+ ")";
 			case ECast(inner, typeHint):
-				final represented = CppAbstractRepresentation.classBackedCastExpression(inner, typeHint, scope);
+				final represented = classBackedAbstractCastExpr(inner, typeHint, scope);
 				represented == null ? renderExpr(inner, scope) : represented;
 			case EUntyped(inner):
 				renderExpr(inner, scope);
@@ -17744,7 +17803,7 @@ class CppTargetCore {
 	}
 
 	static function primitiveBackedAbstractMethodCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
-		return CppAbstractHelperEmitter.renderMethodCall(receiver, method, args, scope);
+		return CppAbstractHelperEmitter.renderMethodCall(receiver, method, args, scope, abstractMethodCallServices());
 	}
 
 	static function primitiveBackedAbstractMethodReturnCppType(receiver:HxExpr, method:String, ?scope:CppRenderScope):String {
@@ -17796,19 +17855,7 @@ class CppTargetCore {
 	}
 
 	static function primitiveIntLikeAbstractMethodCallExpr(receiver:HxExpr, method:String, ?scope:CppRenderScope):Null<String> {
-		if (!isCppIntLikeType(exprCppType(receiver, scope)))
-			return null;
-		final self = renderExpr(receiver, scope);
-		return switch (method) {
-			case "toInt":
-				self;
-			case "toFloat":
-				"static_cast<double>(" + self + ")";
-			case "incr":
-				"(" + self + "++)";
-			case _:
-				null;
-		};
+		return CppAbstractHelperEmitter.renderPrimitiveIntLike(method, isCppIntLikeType(exprCppType(receiver, scope)), renderExpr(receiver, scope));
 	}
 
 	static function isCppIntLikeType(typeName:String):Bool {
@@ -17816,36 +17863,7 @@ class CppTargetCore {
 	}
 
 	static function primitiveBackedAbstractMethodBodyExpr(receiver:HxExpr, fn:HxFunctionDecl, ?scope:CppRenderScope):Null<String> {
-		final self = renderExpr(receiver, scope);
-		return switch (HxFunctionDecl.getBody(fn)) {
-			case [SReturn(EThis, _)]:
-				self;
-			case [SReturn(ECast(EThis, _), _)]:
-				self;
-			case [SReturn(EBinop(op, EThis, rhs), _)] if (isPrimitiveAbstractInlineBinaryOp(op)):
-				"("
-				+ self
-				+ " "
-				+ op
-				+ " "
-				+ renderExpr(rhs, scope)
-				+ ")";
-			case [SExpr(EUnop(op, fixity, EThis), _)] if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement):
-				final token = HxUnaryOperatorTools.sourceToken(op);
-				fixity == HxUnaryFixity.Postfix ? "("
-					+ self
-					+ token
-					+ ")" : "("
-					+ token
-					+ self
-					+ ")";
-			case [SExpr(EBinop("+=", EThis, rhs), _)]:
-				self + " += " + renderExpr(rhs, scope);
-			case [SExpr(EBinop("-=", EThis, rhs), _)]:
-				self + " -= " + renderExpr(rhs, scope);
-			case _:
-				null;
-		};
+		return CppAbstractHelperEmitter.renderInlineMethodBody(renderExpr(receiver, scope), fn, function(expression) return renderExpr(expression, scope));
 	}
 
 	static function primitiveBackedAbstractToStringExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
@@ -17885,15 +17903,6 @@ class CppTargetCore {
 		if (fn == null || inferredFunctionReturnCppType(fn, cls, scope.classByName, lookupForScope(scope)) != "std::string")
 			return null;
 		return renderExpr(expr, scope) + "->toString()";
-	}
-
-	static function isPrimitiveAbstractInlineBinaryOp(op:String):Bool {
-		return switch (op) {
-			case "+" | "-" | "*" | "/" | "%":
-				true;
-			case _:
-				false;
-		};
 	}
 
 	static function primitiveBackedAbstractGetterExpr(receiver:HxExpr, getter:HxFunctionDecl, underlying:String, ?scope:CppRenderScope):Null<String> {
@@ -26382,20 +26391,17 @@ class CppTargetCore {
 	static function classBackedAbstractWrapUnderlyingExpr(cls:HxClassDecl, valueExpr:String, scope:CppRenderScope):String {
 		final className = renderedClassName(cls, lookupForScope(scope));
 		final underlyingClass = abstractUnderlyingRenderedClassName(cls, scope);
-		if (underlyingClass.length == 0)
-			return valueExpr;
 		final argNames = classConstructorArgNames(underlyingClass, scope);
-		if (argNames.length == 0)
-			return valueExpr;
-		final tmp = "__hxhx_" + className + "_underlying";
-		return "([&]() { auto "
-			+ tmp
-			+ " = "
-			+ valueExpr
-			+ "; return std::make_shared<"
-			+ className
-			+ ">("
-			+ [for (arg in argNames) tmp + "->" + arg].join(", ") + "); })()";
+		return CppAbstractRepresentation.wrapClassBackedValue(className, underlyingClass, argNames, valueExpr);
+	}
+
+	/** Rewrap an exact call result when C++ currently represents its abstract with a class wrapper. **/
+	static function classBackedAbstractCastExpr(inner:HxExpr, typeHint:String, ?scope:CppRenderScope):Null<String> {
+		return CppAbstractRepresentation.classBackedCastExpression(inner, typeHint, scope, abstractRepresentationServices());
+	}
+
+	static function classBackedAbstractCastExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+		return CppAbstractRepresentation.classBackedCastForExpectedType(expr, expectedType, scope, abstractRepresentationServices());
 	}
 
 	static function classConstructorArgNames(className:String, scope:CppRenderScope):Array<String> {

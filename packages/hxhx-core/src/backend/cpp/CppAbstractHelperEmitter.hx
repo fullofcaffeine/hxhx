@@ -1,68 +1,165 @@
 package backend.cpp;
 
+typedef CppAbstractInstanceHelperServices = {
+	var representation:HxClassDecl->CppClassLookup->Null<CppAbstractRepresentation>;
+	var returnType:HxFunctionDecl->HxClassDecl->CppClassLookup->String;
+	var renderScope:HxClassDecl->CppClassLookup->String->CppRenderScope;
+	var prepareScope:CppRenderScope->HxFunctionDecl->Void;
+	var renderArguments:Array<HxFunctionArg>->CppRenderScope->String;
+	var renderBody:Array<HxStmt>->String->CppRenderScope->Array<String>;
+	var sanitizeIdentifier:String->String;
+};
+
+typedef CppAbstractMethodCallServices = {
+	var primitiveIntLike:HxExpr->String->CppRenderScope->Null<String>;
+	var classForExpression:HxExpr->CppRenderScope->Null<HxClassDecl>;
+	var classForReceiverMethod:HxExpr->String->CppRenderScope->Null<HxClassDecl>;
+	var classMethod:String->String->Bool->CppRenderScope->Null<HxFunctionDecl>;
+	var primitiveUnderlying:HxClassDecl->Null<String>;
+	var hasMetadata:HxFunctionDecl->String->Bool;
+	var representation:HxClassDecl->CppClassLookup->Null<CppAbstractRepresentation>;
+	var lookupForScope:CppRenderScope->CppClassLookup;
+	var valueForExpectedType:HxExpr->String->CppRenderScope->String;
+	var inferredArgumentTypes:HxFunctionDecl->HxClassDecl->haxe.ds.StringMap<HxClassDecl>->Array<HxClassDecl>->Array<String>;
+	var renderCallArguments:Array<HxFunctionArg>->Array<HxExpr>->CppRenderScope->Array<String>->Array<String>;
+	var inlineBody:HxExpr->HxFunctionDecl->CppRenderScope->Null<String>;
+	var sanitizeIdentifier:String->String;
+	var sanitizeTypePath:String->String;
+};
+
 /**
 	Emits callable helpers for direct-carrier abstracts after shared binding.
 
 	This module owns the synthetic receiver ABI. It does not inspect `@:op`, rank
-	candidates, infer mutation, or reinterpret inline operator bodies.
+	candidates, or infer mutation. The legacy ordinary-method entry points at the
+	bottom remain quarantined here until the carrier-cleanup bead removes their
+	method-name and tiny-body recognizers; resolved abstract unary operators do not
+	use those paths.
 **/
 class CppAbstractHelperEmitter {
-	/** Emit one non-inline instance method with its erased receiver made explicit. **/
-	public static function renderInstanceHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final representation = CppAbstractRepresentation.forPrimitiveClass(owner, classLookup);
-		if (representation == null)
-			return [];
-		final returnType = @:privateAccess CppTargetCore.cppMethodSignatureReturnType(fn, owner, classLookup);
-		final scope = @:privateAccess CppTargetCore.renderScope(owner, classLookup, returnType);
+	/** Configure a render scope for the synthetic erased receiver. **/
+	public static function configureReceiver(scope:CppRenderScope, representation:CppAbstractRepresentation, ownerHaxeName:String):Void {
 		scope.erasedAbstractThisName = CppAbstractRepresentation.ERASED_THIS_NAME;
-		@:privateAccess CppTargetCore.prepareFunctionScope(scope, fn);
 		scope.localTypes.set(CppAbstractRepresentation.ERASED_THIS_NAME, representation.getCarrierCppType());
-		scope.localTypeHints.set(CppAbstractRepresentation.ERASED_THIS_NAME, HxClassDecl.getName(owner));
+		scope.localTypeHints.set(CppAbstractRepresentation.ERASED_THIS_NAME, ownerHaxeName);
 		scope.localNames.set(CppAbstractRepresentation.ERASED_THIS_NAME, CppAbstractRepresentation.ERASED_THIS_NAME);
 		scope.localNameCounts.set(CppAbstractRepresentation.ERASED_THIS_NAME, 1);
+	}
+
+	/** Emit one prepared non-inline instance method with its erased receiver explicit. **/
+	public static function renderInstanceHelper(representation:CppAbstractRepresentation, returnType:String, helperName:String, sourceParameters:String,
+			bodyLines:Array<String>):Array<String> {
 		final parameters = [representation.helperReceiverParameter()];
-		final sourceParameters = @:privateAccess CppTargetCore.renderFunctionArgs(HxFunctionDecl.getArgs(fn), scope);
 		if (sourceParameters.length > 0)
 			parameters.push(sourceParameters);
-		final helperName = @:privateAccess CppTargetCore.sanitizeIdentifier(HxFunctionDecl.getName(fn));
 		final out = [
 			"  static " + returnType + " " + helperName + "(" + parameters.join(", ") + ") {"
 		];
-		for (line in @:privateAccess CppTargetCore.renderHelperFunctionBody(HxFunctionDecl.getBody(fn), "    ", scope))
+		for (line in bodyLines)
 			out.push(line);
 		out.push("  }");
 		return out;
 	}
 
-	/** Render an already resolved primitive-abstract method against its direct carrier. **/
-	public static function renderMethodCall(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
-		final intLikeFloat = method == "toFloat" ? @:privateAccess CppTargetCore.primitiveIntLikeAbstractMethodCallExpr(receiver, method, scope) : null;
+	/** Prepare and emit one non-inline instance helper through supplied target services. **/
+	public static function renderPreparedInstanceHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup,
+			services:CppAbstractInstanceHelperServices):Array<String> {
+		final representation = services.representation(owner, classLookup);
+		if (representation == null)
+			return [];
+		final returnType = services.returnType(fn, owner, classLookup);
+		final scope = services.renderScope(owner, classLookup, returnType);
+		configureReceiver(scope, representation, HxClassDecl.getName(owner));
+		services.prepareScope(scope, fn);
+		final parameters = services.renderArguments(HxFunctionDecl.getArgs(fn), scope);
+		final body = services.renderBody(HxFunctionDecl.getBody(fn), "    ", scope);
+		return renderInstanceHelper(representation, returnType, services.sanitizeIdentifier(HxFunctionDecl.getName(fn)), parameters, body);
+	}
+
+	/** Render a legacy primitive-abstract ordinary method against its direct carrier. **/
+	public static function renderMethodCall(receiver:HxExpr, method:String, args:Array<HxExpr>, scope:CppRenderScope,
+			services:CppAbstractMethodCallServices):Null<String> {
+		final intLikeFloat = method == "toFloat" ? services.primitiveIntLike(receiver, method, scope) : null;
 		if (intLikeFloat != null)
 			return intLikeFloat;
-		var cls = @:privateAccess CppTargetCore.primitiveBackedAbstractClassForExpr(receiver, scope);
+		var cls = services.classForExpression(receiver, scope);
 		if (cls == null)
-			cls = @:privateAccess CppTargetCore.primitiveBackedAbstractClassForReceiverMethod(receiver, method, scope);
+			cls = services.classForReceiverMethod(receiver, method, scope);
 		if (cls == null)
-			return @:privateAccess CppTargetCore.primitiveIntLikeAbstractMethodCallExpr(receiver, method, scope);
-		final ownerName = @:privateAccess CppTargetCore.sanitizeTypePath(HxClassDecl.getName(cls));
-		final fn = @:privateAccess CppTargetCore.classMethodDecl(ownerName, method, false, scope);
+			return services.primitiveIntLike(receiver, method, scope);
+		final fn = services.classMethod(services.sanitizeTypePath(HxClassDecl.getName(cls)), method, false, scope);
 		if (fn == null)
 			return null;
-		final underlying = @:privateAccess CppTargetCore.primitiveAbstractUnderlyingCppType(cls);
+		final underlying = services.primitiveUnderlying(cls);
 		if (underlying == null || underlying.length == 0)
 			return null;
-		if (! @:privateAccess CppTargetCore.hasFunctionMetadata(fn, "inline")) {
-			final representation = CppAbstractRepresentation.forPrimitiveClass(cls, @:privateAccess CppTargetCore.lookupForScope(scope));
+		if (!services.hasMetadata(fn, "inline")) {
+			final representation = services.representation(cls, services.lookupForScope(scope));
 			if (representation == null)
 				return null;
-			final renderedReceiver = @:privateAccess CppTargetCore.valueExprForExpectedType(receiver, representation.getCarrierCppType(), scope);
-			final parameterTypes = @:privateAccess CppTargetCore.inferredFunctionArgCppTypes(fn, cls, scope.classByName, scope.allClasses);
-			final renderedArguments = @:privateAccess CppTargetCore.renderFunctionCallArgs(HxFunctionDecl.getArgs(fn), args, scope, parameterTypes);
-			final helperName = @:privateAccess CppTargetCore.sanitizeIdentifier(method);
-			return representation.instanceHelperCall(helperName, renderedReceiver, renderedArguments);
+			final renderedReceiver = services.valueForExpectedType(receiver, representation.getCarrierCppType(), scope);
+			final parameterTypes = services.inferredArgumentTypes(fn, cls, scope.classByName, scope.allClasses);
+			final renderedArguments = services.renderCallArguments(HxFunctionDecl.getArgs(fn), args, scope, parameterTypes);
+			return representation.instanceHelperCall(services.sanitizeIdentifier(method), renderedReceiver, renderedArguments);
 		}
 		if (args.length != 0)
 			return null;
-		return @:privateAccess CppTargetCore.primitiveBackedAbstractMethodBodyExpr(receiver, fn, scope);
+		return services.inlineBody(receiver, fn, scope);
+	}
+
+	/**
+		Render the frozen legacy inline-method subset against a pre-rendered carrier.
+
+		Shared abstract-operator lowering must never enter this compatibility path.
+	**/
+	public static function renderInlineMethodBody(receiver:String, fn:HxFunctionDecl, renderExpression:HxExpr->String):Null<String> {
+		return switch (HxFunctionDecl.getBody(fn)) {
+			case [SReturn(EThis, _)]:
+				receiver;
+			case [SReturn(ECast(EThis, _), _)]:
+				receiver;
+			case [SReturn(EBinop(op, EThis, right), _)] if (isInlineBinaryOperator(op)):
+				"("
+				+ receiver
+				+ " "
+				+ op
+				+ " "
+				+ renderExpression(right)
+				+ ")";
+			case [SExpr(EUnop(op, fixity, EThis), _)] if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement):
+				final token = HxUnaryOperatorTools.sourceToken(op);
+				fixity == HxUnaryFixity.Postfix ? "("
+					+ receiver
+					+ token
+					+ ")" : "("
+					+ token
+					+ receiver
+					+ ")";
+			case [SExpr(EBinop("+=", EThis, right), _)]:
+				receiver + " += " + renderExpression(right);
+			case [SExpr(EBinop("-=", EThis, right), _)]:
+				receiver + " -= " + renderExpression(right);
+			case _:
+				null;
+		};
+	}
+
+	static function isInlineBinaryOperator(op:String):Bool {
+		return switch (op) {
+			case "+" | "-" | "*" | "/" | "%": true;
+			case _: false;
+		};
+	}
+
+	/** Render the frozen primitive method-name compatibility cases pending carrier cleanup. **/
+	public static function renderPrimitiveIntLike(method:String, receiverIsIntLike:Bool, receiver:String):Null<String> {
+		if (!receiverIsIntLike)
+			return null;
+		return switch (method) {
+			case "toInt": receiver;
+			case "toFloat": "static_cast<double>(" + receiver + ")";
+			case "incr": "(" + receiver + "++)";
+			case _: null;
+		};
 	}
 }

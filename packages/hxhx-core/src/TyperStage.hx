@@ -79,6 +79,25 @@ class TyperStage {
 		return identity == null ? index.getByFullName(type.getDisplay()) : index.getByFullName(identity.getCanonicalName());
 	}
 
+	static function accessorPropertyForAccess(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, position:HxPos):Null<TyPropertyInfo> {
+		var receiver:Null<HxExpr> = null;
+		var field = "";
+		switch (expression) {
+			case EField(exactReceiver, exactField):
+				receiver = exactReceiver;
+				field = exactField;
+			case _:
+		}
+		if (receiver == null)
+			return null;
+		final owner = switch (receiver) {
+			case EThis: ctx.currentClass();
+			case _: nominalInfoForType(ctx.getIndex(), inferExprType(receiver, scope, ctx, position));
+		};
+		final property = owner == null ? null : owner.propertyInfo(field);
+		return property != null && property.usesExplicitAccessors() ? property : null;
+	}
+
 	static function currentThisType(ctx:TyperContext):TyType {
 		if (ctx == null)
 			return TyType.unknown();
@@ -1040,7 +1059,15 @@ class TyperStage {
 				c != null ? TyType.nominal(c.getIdentity(), [], c.getFullName()) : TyType.fromHintText(_typePath);
 			case EUnop(_op, _fixity, e):
 				final inner = inferExprType(e, scope, ctx, pos);
-				final bound = TyAbstractUnaryBinding.select(ctx.getIndex(), inner, _op, _fixity, ctx.getFilePath(), pos);
+				final semanticIndex = ctx.getIndex();
+				final isPropertyUpdate = (_op == Increment || _op == Decrement)
+					&& semanticIndex != null
+					&& inner.getNominalIdentity() != null
+					&& semanticIndex.getAbstractByFullName(inner.getNominalIdentity().getCanonicalName()) != null
+					&& accessorPropertyForAccess(e, scope, ctx, pos) != null;
+				// Haxe 4.3.7 updates explicit properties through their getter/setter
+				// contract; it does not select the abstract value's increment helper.
+				final bound = isPropertyUpdate ? null : TyAbstractUnaryBinding.select(semanticIndex, inner, _op, _fixity, ctx.getFilePath(), pos);
 				if (bound != null) {
 					bound.getResultType();
 				} else {

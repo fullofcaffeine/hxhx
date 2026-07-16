@@ -35,15 +35,35 @@ class M14AbstractUnaryCrossBackendIntegrationTest {
 
 	static function main():Void {
 		final source = [
-			"abstract Step(Int) {",
+			"abstract Step(Int) from Int to Int {",
 			"  public inline function new(value:Int) this = value;",
 			"  @:op(-A) public static function arbitraryStaticResult(value:Step):Int return 11;",
+			"  @:op(++A) public static function propertyMustNotCall(value:Step):Step return value;",
+			"  public function get():Int return this;",
+			"}",
+			"class Holder {",
+			"  public var getterCalls:Int = 0;",
+			"  public var setterCalls:Int = 0;",
+			"  var stored:Step;",
+			"  public var step(get, set):Step;",
+			"  public function new(value:Int) stored = value;",
+			"  public function get_step():Step { getterCalls++; return stored; }",
+			"  public function set_step(value:Step):Step { setterCalls++; stored = value; return value; }",
+			"  public function value():Step return stored;",
 			"}",
 			"class Main { static function main() {",
-			"  var step:Step = new Step(1);",
+			"  var step:Step = 1;",
 			"  Sys.println(-step);",
 			"  var ordinary = 3;",
 			"  Sys.println(-ordinary);",
+			"  var holder = new Holder(4);",
+			"  var before:Step = ++holder.step;",
+			"  var after:Step = holder.step++;",
+			"  Sys.println(before);",
+			"  Sys.println(after);",
+			"  Sys.println(holder.value());",
+			"  Sys.println(holder.getterCalls);",
+			"  Sys.println(holder.setterCalls);",
 			"} }",
 		].join("\n");
 		final parsed = ParserStage.parse(source, "Main.hx");
@@ -79,7 +99,8 @@ class M14AbstractUnaryCrossBackendIntegrationTest {
 			assertTrue(generated.indexOf(entry.callText) >= 0, entry.target + " rebound or lost the arbitrary-name helper selected by the shared typer");
 			final executed = run(entry.executable, emitted.entryPath);
 			assertTrue(executed.code == 0, entry.target + " abstract-unary artifact failed: " + executed.stderr);
-			assertTrue(executed.stdout == "11\n-3\n", entry.target + " produced unexpected abstract/ordinary unary output: " + executed.stdout);
+			assertTrue(executed.stdout == "11\n-3\n5\n5\n6\n2\n2\n",
+				entry.target + " produced unexpected abstract/property/ordinary unary output: " + executed.stdout);
 		}
 		deleteRecursive(root);
 	}

@@ -381,8 +381,16 @@ class TyperIndex {
 			final params = typeParameters(classMetadata);
 
 			final fields = new StringMap<TyType>();
-			for (field in HxClassDecl.getFields(classDeclaration))
-				fields.set(HxFieldDecl.getName(field), semanticType(HxFieldDecl.getTypeHint(field), packagePath, moduleName, imports, params));
+			final properties = new StringMap<TyPropertyInfo>();
+			for (field in HxClassDecl.getFields(classDeclaration)) {
+				final fieldType = semanticType(HxFieldDecl.getTypeHint(field), packagePath, moduleName, imports, params);
+				final fieldName = HxFieldDecl.getName(field);
+				fields.set(fieldName, fieldType);
+				final getter = HxFieldDecl.getPropertyGet(field);
+				final setter = HxFieldDecl.getPropertySet(field);
+				if (getter.length > 0 || setter.length > 0)
+					properties.set(fieldName, new TyPropertyInfo(fieldName, fieldType, HxFieldDecl.getIsStatic(field), getter, setter));
+			}
 
 			final statics = new StringMap<TyFunSig>();
 			final instances = new StringMap<TyFunSig>();
@@ -428,12 +436,13 @@ class TyperIndex {
 			if (classMetadata.indexOf("__hxhx_abstract") >= 0) {
 				final underlyingHint = metadataValue(classMetadata, "__hxhx_abstract_underlying");
 				final underlying = semanticType(underlyingHint == null ? "" : underlyingHint, packagePath, moduleName, imports, params);
-				final info = new TyAbstractInfo(identity, shortName, semanticModulePath, fields, statics, instances, staticLists, instanceLists, declarations,
-					underlying, params);
+				final info = new TyAbstractInfo(identity, shortName, semanticModulePath, fields, properties, statics, instances, staticLists, instanceLists,
+					declarations, underlying, params);
 				catalogUnaryOperators(info, ResolvedModule.getFilePath(module));
 				addNominal(info);
 			} else {
-				addNominal(new TyClassInfo(identity, shortName, semanticModulePath, fields, statics, instances, staticLists, instanceLists, declarations));
+				addNominal(new TyClassInfo(identity, shortName, semanticModulePath, fields, properties, statics, instances, staticLists, instanceLists,
+					declarations));
 			}
 		}
 	}

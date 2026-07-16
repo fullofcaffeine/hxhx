@@ -1,5 +1,18 @@
 package backend.cpp;
 
+typedef CppAbstractRepresentationServices = {
+	var primitiveUnderlying:HxClassDecl->Null<String>;
+	var renderedClassName:HxClassDecl->CppClassLookup->String;
+	var lookupForScope:CppRenderScope->CppClassLookup;
+	var lookupClassForTypeHint:String->CppRenderScope->CppClassLookup->Null<HxClassDecl>;
+	var abstractUnderlying:HxClassDecl->Null<String>;
+	var renderExpression:HxExpr->CppRenderScope->String;
+	var wrapUnderlying:HxClassDecl->String->CppRenderScope->String;
+	var classNameFromCppType:String->Null<String>;
+	var sanitizeTypePath:String->String;
+	var typeBaseName:String->String;
+};
+
 /**
 	C++ representation contract for one direct-carrier Haxe abstract.
 
@@ -37,45 +50,60 @@ class CppAbstractRepresentation {
 		return ownerCppName + "::" + methodName + "(" + arguments.join(", ") + ")";
 	}
 
-	/** Derive one direct-carrier descriptor from the already selected Haxe abstract. **/
-	public static function forPrimitiveClass(cls:HxClassDecl, classLookup:CppClassLookup):Null<CppAbstractRepresentation> {
+	public static function forPrimitiveClass(cls:HxClassDecl, classLookup:CppClassLookup,
+			services:CppAbstractRepresentationServices):Null<CppAbstractRepresentation> {
 		if (cls == null)
 			return null;
-		final carrier = @:privateAccess CppTargetCore.primitiveAbstractUnderlyingCppType(cls);
-		return carrier == null ? null : new CppAbstractRepresentation(@:privateAccess CppTargetCore.renderedClassName(cls, classLookup), carrier);
+		final carrier = services.primitiveUnderlying(cls);
+		return carrier == null ? null : new CppAbstractRepresentation(services.renderedClassName(cls, classLookup), carrier);
 	}
 
 	/** Rewrap an exact call result when C++ currently represents its abstract with a class wrapper. **/
-	public static function classBackedCastExpression(inner:HxExpr, typeHint:String, ?scope:CppRenderScope):Null<String> {
+	public static function classBackedCastExpression(inner:HxExpr, typeHint:String, scope:CppRenderScope,
+			services:CppAbstractRepresentationServices):Null<String> {
 		if (scope == null || typeHint == null || typeHint.length == 0)
 			return null;
-		final lookup = @:privateAccess CppTargetCore.lookupForScope(scope);
-		final cls = @:privateAccess CppTargetCore.lookupClassForTypeHint(typeHint, scope, lookup);
-		if (cls == null
-			|| @:privateAccess CppTargetCore.abstractUnderlyingTypeHint(cls) == null
-			|| @:privateAccess CppTargetCore.primitiveAbstractUnderlyingCppType(cls) != null)
+		final lookup = services.lookupForScope(scope);
+		final cls = services.lookupClassForTypeHint(typeHint, scope, lookup);
+		if (cls == null || services.abstractUnderlying(cls) == null || services.primitiveUnderlying(cls) != null)
 			return null;
-		final rendered = @:privateAccess CppTargetCore.renderExpr(inner, scope);
-		return @:privateAccess CppTargetCore.classBackedAbstractWrapUnderlyingExpr(cls, rendered, scope);
+		return services.wrapUnderlying(cls, services.renderExpression(inner, scope), scope);
 	}
 
 	/** Apply wrapper reconstruction only when the caller expects that exact represented class. **/
-	public static function classBackedCastForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
+	public static function classBackedCastForExpectedType(expr:HxExpr, expectedType:String, scope:CppRenderScope,
+			services:CppAbstractRepresentationServices):Null<String> {
 		if (scope == null || expectedType == null || expectedType.length == 0)
 			return null;
 		return switch (expr) {
 			case ECast(inner, typeHint):
-				final lookup = @:privateAccess CppTargetCore.lookupForScope(scope);
-				final cls = @:privateAccess CppTargetCore.lookupClassForTypeHint(typeHint, scope, lookup);
-				final expectedClass = @:privateAccess CppTargetCore.classNameFromCppType(expectedType);
-				if (cls == null || expectedClass == null || @:privateAccess CppTargetCore.renderedClassName(cls,
-					lookup) != @:privateAccess CppTargetCore.sanitizeTypePath(@:privateAccess CppTargetCore.typeBaseName(expectedClass))) {
+				final lookup = services.lookupForScope(scope);
+				final cls = services.lookupClassForTypeHint(typeHint, scope, lookup);
+				final expectedClass = services.classNameFromCppType(expectedType);
+				if (cls == null
+					|| expectedClass == null
+					|| services.renderedClassName(cls, lookup) != services.sanitizeTypePath(services.typeBaseName(expectedClass))) {
 					null;
 				} else {
-					classBackedCastExpression(inner, typeHint, scope);
+					classBackedCastExpression(inner, typeHint, scope, services);
 				}
 			case _:
 				null;
 		};
+	}
+
+	/** Build the temporary wrapper expression from representation facts supplied by C++. **/
+	public static function wrapClassBackedValue(className:String, underlyingClass:String, argumentNames:Array<String>, valueExpression:String):String {
+		if (underlyingClass.length == 0 || argumentNames.length == 0)
+			return valueExpression;
+		final temporary = "__hxhx_" + className + "_underlying";
+		return "([&]() { auto "
+			+ temporary
+			+ " = "
+			+ valueExpression
+			+ "; return std::make_shared<"
+			+ className
+			+ ">("
+			+ [for (argument in argumentNames) temporary + "->" + argument].join(", ") + "); })()";
 	}
 }

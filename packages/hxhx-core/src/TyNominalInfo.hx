@@ -10,6 +10,7 @@ class TyNominalInfo {
 	final shortName:String;
 	final modulePath:String;
 	final fields:haxe.ds.StringMap<TyType>;
+	final properties:haxe.ds.StringMap<TyPropertyInfo>;
 	final staticMethods:haxe.ds.StringMap<TyFunSig>;
 	final instanceMethods:haxe.ds.StringMap<TyFunSig>;
 	final staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>;
@@ -17,14 +18,16 @@ class TyNominalInfo {
 	final declarations:Array<TyDeclarationInfo>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyType>,
-			staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>, staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
-			instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, declarations:Array<TyDeclarationInfo>) {
+			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
+			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
+			declarations:Array<TyDeclarationInfo>) {
 		this.identity = identity;
 		this.shortName = shortName;
 		this.modulePath = modulePath;
 		// Callers intentionally provide concrete empty collections. Avoiding
 		// conditional generic initialization keeps the OCaml bootstrap stable.
 		this.fields = fields;
+		this.properties = properties;
 		this.staticMethods = staticMethods;
 		this.instanceMethods = instanceMethods;
 		this.staticMethodLists = staticMethodLists;
@@ -72,6 +75,9 @@ class TyNominalInfo {
 
 	public function fieldType(name:String):Null<TyType>
 		return fields.exists(name) ? fields.get(name) : null;
+
+	public function propertyInfo(name:String):Null<TyPropertyInfo>
+		return properties.exists(name) ? properties.get(name) : null;
 
 	public function staticMethod(name:String):Null<TyFunSig>
 		return staticMethods.exists(name) ? staticMethods.get(name) : null;

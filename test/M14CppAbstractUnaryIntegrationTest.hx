@@ -65,14 +65,27 @@ class M14CppAbstractUnaryIntegrationTest {
 			"class Counter {",
 			"  public var indexCalls:Int = 0;",
 			"  public var receiverCalls:Int = 0;",
+			"  public var propertyReceiverCalls:Int = 0;",
 			"  public var holder:Holder;",
-			"  public function new() holder = new Holder(5);",
+			"  public var propertyHolder:PropertyHolder;",
+			"  public function new() { holder = new Holder(5); propertyHolder = new PropertyHolder(9); }",
 			"  public function chooseIndex():Int { indexCalls++; return 0; }",
 			"  public function chooseHolder():Holder { receiverCalls++; return holder; }",
+			"  public function choosePropertyHolder():PropertyHolder { propertyReceiverCalls++; return propertyHolder; }",
 			"}",
 			"class Holder {",
 			"  public var step:Step;",
 			"  public function new(value:Int) step = new Step(value);",
+			"}",
+			"class PropertyHolder {",
+			"  public var getterCalls:Int = 0;",
+			"  public var setterCalls:Int = 0;",
+			"  var stored:Step;",
+			"  public var step(get, set):Step;",
+			"  public function new(value:Int) stored = new Step(value);",
+			"  public function get_step():Step { getterCalls++; return stored; }",
+			"  public function set_step(value:Step):Step { setterCalls++; stored = value; return value; }",
+			"  public function value():Step return stored;",
 			"}",
 			"class Main {",
 			"  static function main() {",
@@ -108,6 +121,15 @@ class M14CppAbstractUnaryIntegrationTest {
 			"    Sys.println(fieldPostfix.get());",
 			"    Sys.println(fieldValue.get());",
 			"    Sys.println(counter.receiverCalls);",
+			"    var propertyPrefix:Step = ++counter.choosePropertyHolder().step;",
+			"    var propertyPostfix:Step = counter.choosePropertyHolder().step++;",
+			"    var propertyValue:Step = counter.propertyHolder.value();",
+			"    Sys.println(propertyPrefix.get());",
+			"    Sys.println(propertyPostfix.get());",
+			"    Sys.println(propertyValue.get());",
+			"    Sys.println(counter.propertyReceiverCalls);",
+			"    Sys.println(counter.propertyHolder.getterCalls);",
+			"    Sys.println(counter.propertyHolder.setterCalls);",
 			"    var ordinary = 8;",
 			"    Sys.println(++ordinary);",
 			"    Sys.println(ordinary++);",
@@ -134,6 +156,8 @@ class M14CppAbstractUnaryIntegrationTest {
 		assertContains(generated, "Boxed::turnInsideOut(boxed)", "class-backed unary minus did not call its arbitrary-name helper");
 		assertContains(generated, "Step::reverseSign(step)", "primitive-backed unary minus did not call its arbitrary-name helper");
 		assertContains(generated, "StaticStep::surprising(staticStep)", "static prefix helper was not emitted as a call");
+		assertContains(generated, "get_step()", "property increment did not call the exact getter");
+		assertContains(generated, "set_step(", "property increment did not call the exact setter");
 		assertContains(generated, "Step::get(", "primitive abstract results lost the exact get helper after carrier erasure");
 		assertTrue(generated.indexOf("advanceBefore(") < 0 && generated.indexOf("advanceAfter(") < 0,
 			"inline mutation helpers survived for backend reinterpretation");
@@ -141,7 +165,7 @@ class M14CppAbstractUnaryIntegrationTest {
 
 		final executed = commandOutput(result.entryPath);
 		assertTrue(executed.code == 0, "focused abstract-unary executable failed: " + executed.stderr);
-		final expected = "-7\n-12\n12\n22\n22\n22\n122\n11\n1\n14\n14\n114\n4\n15\n15\n115\n2\n9\n9\n10\n";
+		final expected = "-7\n-12\n12\n22\n22\n22\n122\n11\n1\n14\n14\n114\n4\n15\n15\n115\n2\n10\n10\n11\n2\n2\n2\n9\n9\n10\n";
 		assertTrue(executed.stdout == expected, "unexpected focused abstract-unary stdout:\n" + executed.stdout);
 		deleteRecursive(root);
 	}
