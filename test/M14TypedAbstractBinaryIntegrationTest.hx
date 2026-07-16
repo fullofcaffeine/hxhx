@@ -121,6 +121,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  @:commutative @:op(A + B) public static function chooseDirect(left:DirectTie, right:Dynamic):Int return left;",
 			"}",
 			"abstract W(Int) from Int {}",
+			"class HelperMacros { public static function typeError(value:Dynamic):Bool return false; }",
 			"class Main { static var W:Int = 2; static function main() {",
 			"  var left:Score = new Score(2);",
 			"  var right:Score = new Score(3);",
@@ -144,6 +145,8 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  var nativeText:NativeText = new NativeText('value');",
 			"  var nativeTextResult = nativeText + 4;",
 			"  var typeTestControl = nativeTextResult is String;",
+			"  var invalidNativeProbe = HelperMacros.typeError(nativeText + true);",
+			"  var validNativeProbe = HelperMacros.typeError(nativeText + 4);",
 			"  var count:Slice = new Slice(2);",
 			"  var rightOwned = 'word' / count;",
 			"  var mutable:Mutable = new Mutable(9);",
@@ -199,6 +202,12 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"bodyless String-plus-Int declaration did not preserve its String carrier and abstract result");
 		assertTrue(initializer(main, "typeTestControl").getTag() == TypedExprTag.Binary,
 			"ordinary type-test syntax was mistaken for a surviving abstract operator");
+		assertTrue(initializer(main, "invalidNativeProbe").getTag() == TypedExprTag.BoolValue
+			&& initializer(main, "invalidNativeProbe").getBoolValue(),
+			"typeError did not capture an incompatible bodyless binary result carrier");
+		assertTrue(initializer(main, "validNativeProbe").getTag() == TypedExprTag.BoolValue
+			&& !initializer(main, "validNativeProbe").getBoolValue(),
+			"typeError reported a valid bodyless String-plus-Int declaration as invalid");
 
 		final rightOwned = initializer(main, "rightOwned");
 		assertTrue(declarationExpression(rightOwned, "trimArbitrarily") != null, "operator catalog did not find an abstract owned by the right operand");

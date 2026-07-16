@@ -15,6 +15,13 @@ private typedef TyBinaryCandidateMatch = {
 	base operator and request shared place/writeback lowering.
 **/
 class TyAbstractBinaryBinding {
+	static function validateBodyless(index:TyperIndex, binding:TyBoundAbstractBinaryOperator, filePath:String):TyBoundAbstractBinaryOperator {
+		final info = binding.getOperatorInfo();
+		if (!info.getDeclaration().getHasBody())
+			TyAbstractNativeBinaryOperation.validate(info, index, filePath);
+		return binding;
+	}
+
 	static function containsTypeParameter(type:TyType):Bool {
 		if (type == null)
 			return false;
@@ -178,7 +185,7 @@ class TyAbstractBinaryBinding {
 		final explicitCandidates = collect(index, leftType, rightType, op);
 		final explicit = best(matches(explicitCandidates, leftType, rightType, filePath, position), op, leftType, rightType, filePath, position, false);
 		if (explicit != null)
-			return explicit;
+			return validateBodyless(index, explicit, filePath);
 
 		final baseOperator = HxBinaryOperatorTools.baseOperator(op);
 		if (baseOperator != null) {
@@ -189,7 +196,7 @@ class TyAbstractBinaryBinding {
 			];
 			final fallback = best(baseMatches, op, leftType, rightType, filePath, position, true);
 			if (fallback != null)
-				return fallback;
+				return validateBodyless(index, fallback, filePath);
 			if (explicitCandidates.length > 0)
 				throw noApplicable(op, leftType, rightType, explicitCandidates, filePath, position);
 			if (baseCandidates.length > 0)

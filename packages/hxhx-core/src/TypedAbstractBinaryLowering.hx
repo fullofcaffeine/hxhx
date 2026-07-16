@@ -256,39 +256,13 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function carrierType(type:TyType, index:TyperIndex):TyType {
-		final identity = type == null ? null : type.getNominalIdentity();
-		final info = identity == null ? null : index.getAbstractByFullName(identity.getCanonicalName());
-		return info == null ? type : info.getUnderlyingType();
+		return TyAbstractNativeBinaryOperation.carrierType(type, index);
 	}
 
 	static function carrierValue(expression:TypedExpr, declaredType:TyType, index:TyperIndex):TypedExpr {
 		final carrier = carrierType(declaredType, index);
 		return carrier.getSemanticKey() == expression.getType()
 			.getSemanticKey() ? expression.withType(carrier) : TypedExpr.castValue(expression, carrier.getDisplay(), carrier, expression.getPosition());
-	}
-
-	static function nativeBinaryType(op:String, left:TyType, right:TyType, result:TyType, declaration:TyDeclarationInfo, filePath:String):TyType {
-		if (op == "+" && (left.getDisplay() == "String" || right.getDisplay() == "String"))
-			return TyType.fromHintText("String");
-		if ((op == "+" || op == "-" || op == "*" || op == "/" || op == "%") && left.isNumeric() && right.isNumeric())
-			return left.getDisplay() == "Float"
-				|| right.getDisplay() == "Float" ? TyType.fromHintText("Float") : TyType.fromHintText("Int");
-		if ((op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>" || op == ">>>")
-			&& left.getDisplay() == "Int"
-			&& right.getDisplay() == "Int")
-			return TyType.fromHintText("Int");
-		if ((op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=")
-			&& (left.getSemanticKey() == right.getSemanticKey() || (left.isNumeric() && right.isNumeric())))
-			return TyType.fromHintText("Bool");
-		throw new TyperError(filePath, declaration.getPosition(),
-			"Bodyless abstract binary operator requires compatible primitive carriers: "
-			+ declaration.getIdentity().getCanonicalKey()
-			+ " uses "
-			+ left.getDisplay()
-			+ " and "
-			+ right.getDisplay()
-			+ " for result "
-			+ result.getDisplay());
 	}
 
 	/** Make Haxe string-concatenation conversion explicit before target emission. **/
@@ -306,15 +280,12 @@ class TypedAbstractBinaryLowering {
 			counter:TypedBinaryLoweringCounter):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		if (info.getResultType().isUnknown() || info.getResultType().isVoid())
-			throw new TyperError(filePath, declaration.getPosition(),
-				"Bodyless abstract binary operator requires an explicit value result: " + declaration.getIdentity().getCanonicalKey());
 		final ordered = orderedValues(left, right, counter);
 		final arguments = callArguments(binding, ordered.left, ordered.right, filePath);
 		final carrierLeft = carrierValue(arguments[0], info.getLeftType(), index);
 		final carrierRight = carrierValue(arguments[1], info.getRightType(), index);
 		final resultCarrier = carrierType(info.getResultType(), index);
-		final nativeType = nativeBinaryType(info.getOperator(), carrierLeft.getType(), carrierRight.getType(), resultCarrier, declaration, filePath);
+		final nativeType = TyAbstractNativeBinaryOperation.validate(info, index, filePath);
 		final operation = TypedExpr.binary(info.getOperator(), nativeOperand(carrierLeft, nativeType), nativeOperand(carrierRight, nativeType), nativeType,
 			left.getPosition());
 		final result = semanticResult(convert(operation, resultCarrier, filePath, declaration), info.getResultType());
@@ -375,7 +346,7 @@ class TypedAbstractBinaryLowering {
 		final carrierLeft = carrierValue(callArgs[0], info.getLeftType(), index);
 		final carrierRight = carrierValue(callArgs[1], info.getRightType(), index);
 		final resultCarrier = carrierType(info.getResultType(), index);
-		final nativeType = nativeBinaryType(baseOp, carrierLeft.getType(), carrierRight.getType(), resultCarrier, declaration, filePath);
+		final nativeType = TyAbstractNativeBinaryOperation.validate(info, index, filePath);
 		final operation = TypedExpr.binary(baseOp, nativeOperand(carrierLeft, nativeType), nativeOperand(carrierRight, nativeType), nativeType,
 			left.getPosition());
 		final semanticValue = convert(semanticResult(convert(operation, resultCarrier, filePath, declaration), info.getResultType()), left.getType(),
