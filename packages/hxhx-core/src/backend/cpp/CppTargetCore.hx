@@ -398,7 +398,7 @@ class CppTargetCore {
 		final wanted = context.mainModule == null ? "" : context.mainModule;
 		var fallback:Null<{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}> = null;
 		for (typed in program.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final clsName = HxClassDecl.getName(cls);
@@ -2102,7 +2102,7 @@ class CppTargetCore {
 				collectClass(cls, packagePathForRenderedClass(cls, classLookup));
 		} else {
 			for (typed in program.getTypedModules()) {
-				final decl = typed.getParsed().getDecl();
+				final decl = typed.getBackendDeclaration();
 				final packagePath = HxModuleDecl.getPackagePath(decl);
 				for (cls in HxModuleDecl.getClasses(decl))
 					collectClass(cls, packagePath);
@@ -2431,7 +2431,7 @@ class CppTargetCore {
 			}
 		}
 		for (typed in program.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
 				final renderedName = renderedClassName(cls, classLookup);
@@ -2441,7 +2441,7 @@ class CppTargetCore {
 			}
 		}
 		for (typed in program.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			final packagePath = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final typeParams = genericClassTypeParams(cls);
@@ -2478,7 +2478,7 @@ class CppTargetCore {
 			}
 		}
 		for (typed in program.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				if (shouldEmitGenericClassFactory(cls, mainName))
 					out.push(renderGenericClassFactoryDeclaration(cls, classLookup));
@@ -2565,7 +2565,7 @@ class CppTargetCore {
 		final helperRenderKindByClass = new haxe.ds.ObjectMap<HxClassDecl, String>();
 		final classInfos = new Array<{cls:HxClassDecl, packagePath:String, sourcePath:String}>();
 		for (typed in program.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final shortName = sanitizeTypePath(HxClassDecl.getName(cls));
 				shortNameCounts.set(shortName, shortNameCounts.exists(shortName) ? shortNameCounts.get(shortName) + 1 : 1);
@@ -2573,7 +2573,7 @@ class CppTargetCore {
 		}
 		final renderedNames = new Array<{cls:HxClassDecl, name:String}>();
 		for (typed in program.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			final moduleName = expectedModuleNameFromFile(typed.getParsed().getFilePath());
 			final packagePath = HxModuleDecl.getPackagePath(decl);
 			final sourcePath = typed.getParsed().getFilePath();
@@ -3151,7 +3151,7 @@ class CppTargetCore {
 		final emitted = new haxe.ds.StringMap<Bool>();
 		final mainName = HxClassDecl.getName(mainClass);
 		for (typed in program.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
 				final helperName = renderedClassName(cls, classLookup);
@@ -3203,7 +3203,7 @@ class CppTargetCore {
 		};
 
 		for (typed in program.getTypedModules()) {
-			final classes = HxModuleDecl.getClasses(typed.getParsed().getDecl());
+			final classes = HxModuleDecl.getClasses(typed.getBackendDeclaration());
 			var containsMain = false;
 			for (cls in classes)
 				if (cls == mainClass)
@@ -3230,7 +3230,7 @@ class CppTargetCore {
 		final emitted = new haxe.ds.StringMap<Bool>();
 		final mainName = HxClassDecl.getName(mainClass);
 		for (typed in program.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
 				final helperName = renderedClassName(cls, classLookup);
@@ -9107,6 +9107,8 @@ class CppTargetCore {
 
 	static function inferredCallableValueType(expr:HxExpr, ?scope:CppRenderScope):String {
 		return switch (expr) {
+			case ECast(inner, signature) if (isFunctionTypeHint(signature) && isLocalCallableInit(inner)):
+				cppLocalCallableTypeHint(signature, inner, scope);
 			case ELambda(args, body) if (args.length == 0):
 				zeroArgLambdaCppFunctionType(body, scope);
 			case ELambda(args, body):
@@ -10289,6 +10291,7 @@ class CppTargetCore {
 
 	static function isLocalCallableInit(init:Null<HxExpr>):Bool {
 		return switch (init) {
+			case ECast(inner, signature): isFunctionTypeHint(signature) && isLocalCallableInit(inner);
 			case ELambda(_, _):
 				true;
 			case ECall(EIdent("__hxhx_optional_lambda"), _):
@@ -18828,6 +18831,9 @@ class CppTargetCore {
 		return switch (init) {
 			case ENew(typePath, _) if (isERegTypeName(typePath)):
 				"std::shared_ptr<EReg>";
+			case ECast(inner, signature) if (isFunctionTypeHint(signature) && isLocalCallableInit(inner)):
+				final callable = cppLocalCallableTypeHint(signature, inner, scope);
+				callable.length > 0 ? callable : inferExprCppType(inner, scope);
 			case null:
 				"";
 			case _:
@@ -18881,6 +18887,8 @@ class CppTargetCore {
 
 	static function localCallableLambdaBody(init:HxExpr):Null<HxExpr> {
 		return switch (init) {
+			case ECast(inner, _):
+				localCallableLambdaBody(inner);
 			case ELambda(_, body):
 				body;
 			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(_, body), EArrayDecl(_)]):
@@ -18896,6 +18904,8 @@ class CppTargetCore {
 
 	static function localCallableLambdaShape(init:Null<HxExpr>):Null<{args:Array<String>, body:HxExpr}> {
 		return switch (init) {
+			case ECast(inner, _):
+				localCallableLambdaShape(inner);
 			case ELambda(args, body):
 				{args: args, body: body};
 			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(args, body), EArrayDecl(_)]):
@@ -19648,14 +19658,6 @@ class CppTargetCore {
 			final unknownCatch = "catch (...) { throw std::runtime_error(std::string(" + quoteString("Unable to read file") + ")); }";
 			return "([&]() { try { return " + readExpr + "; } " + stdExceptionCatch + " " + unknownCatch + " })()";
 		}
-		final platformMinPath = parseHxcppAndroidPlatformMinTryRaw(raw);
-		if (platformMinPath != null) {
-			return "([&]() { try { return __hxhx_json_min_field_from_file("
-				+ platformMinPath
-				+ "); } catch (...) { std::cout << "
-				+ quoteString("Unable to determine minimum supported Android platform")
-				+ " << std::endl; return 0; } })()";
-		}
 		final opaqueEnumSwitchProbe = renderOpaqueEnumSwitchProbeRaw(raw);
 		if (opaqueEnumSwitchProbe != null)
 			return opaqueEnumSwitchProbe;
@@ -19782,12 +19784,6 @@ class CppTargetCore {
 	static function parseFileContentContextErrorTryRaw(raw:String):Null<String> {
 		final compact = compactRawText(raw);
 		final pattern = ~/^try\{sys\.io\.File\.getContent\(Context\.resolvePath\(([A-Za-z_][A-Za-z0-9_]*)\)\);\}catch\(e(:[^)]*)?\)\{Context\.error\(Std\.string\(e\),Context\.currentPos\(\)\);\}$/;
-		return pattern.match(compact) ? sanitizeIdentifier(pattern.matched(1)) : null;
-	}
-
-	static function parseHxcppAndroidPlatformMinTryRaw(raw:String):Null<String> {
-		final compact = compactRawText(raw);
-		final pattern = ~/^try\{haxe\.Json\.parse\(sys\.io\.File\.getContent\(([A-Za-z_][A-Za-z0-9_]*)\)\)\.min;\}catch\(e(:[^)]*)?\)\{Log\.warn\("UnabletodetermineminimumsupportedAndroidplatform:"\+e\.toString\(\)\);null;\}$/;
 		return pattern.match(compact) ? sanitizeIdentifier(pattern.matched(1)) : null;
 	}
 
@@ -22420,6 +22416,14 @@ class CppTargetCore {
 		final tryBody = args.length > 0 ? tryExprBody(args[0]) : null;
 		if (tryBody == null)
 			throw "C++ source backend MVP unsupported expression: ECall(__hxhx_try)";
+		final platformMinPath = hxcppAndroidPlatformMinPathExpr(tryBody, scope);
+		if (platformMinPath != null) {
+			return "([&]() { try { return __hxhx_json_min_field_from_file("
+				+ platformMinPath
+				+ "); } catch (...) { std::cout << "
+				+ quoteString("Unable to determine minimum supported Android platform")
+				+ " << std::endl; return 0; } })()";
+		}
 		final catches = args.length > 1 ? tryCatchEntries(args[1]) : [];
 		final resultType = tryExprResultTypeFromArgs(args, scope);
 		final out = ["([&]() -> " + resultType + " {", "  try {"];
@@ -22451,6 +22455,17 @@ class CppTargetCore {
 		out.push("  }");
 		out.push("})()");
 		return out.join("\n");
+	}
+
+	static function hxcppAndroidPlatformMinPathExpr(expr:HxExpr, ?scope:CppRenderScope):Null<String> {
+		return switch (expr) {
+			case EField(ECall(EField(jsonReceiver, "parse"), [ECall(EField(fileReceiver, "getContent"), [path])]), "min")
+				if (isJsonParseStaticReceiver(jsonReceiver)):
+				final filePath = staticReceiverTypePath(fileReceiver);
+				if (filePath != null && sanitizeTypePath(typeBaseName(filePath)) == "File") renderExpr(path, scope); else null;
+			case _:
+				null;
+		};
 	}
 
 	static function tryExprBody(expr:HxExpr):Null<HxExpr> {

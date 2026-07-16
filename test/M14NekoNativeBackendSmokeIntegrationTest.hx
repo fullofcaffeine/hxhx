@@ -103,6 +103,13 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"for-expression recovery fragments should render as neutral null");
 		assertTrue(@:privateAccess NekoTargetCore.renderExpr(cast null, EUnsupported("=")) == "null",
 			"single-token assignment recovery fragments should render as neutral null");
+		final structuralTry = @:privateAccess NekoTargetCore.renderExpr(cast null, ECall(EIdent("__hxhx_try"), [
+			ELambda([], ECall(EIdent("__hxhx_throw"), [EString("boom")])),
+			EArrayDecl([EArrayDecl([EString("e"), EString("Dynamic"), ELambda(["e"], EIdent("e"))])]),
+			ENull
+		]));
+		assertContains(structuralTry, 'try { return $' + 'throw("boom"); } catch e { return e; }',
+			"shared expression-level try/catch should emit from structural branches without raw source parsing");
 		assertFailsContains(() -> @:privateAccess NekoTargetCore.renderExpr(cast null, EUnsupported("not_numeric")), "EUnsupported(not_numeric)");
 		assertTrue(@:privateAccess NekoTargetCore.isNekoNumericLiteralText("1.2e+35"), "scientific float text should be valid Neko numeric text");
 		assertTrue(! @:privateAccess NekoTargetCore.isNekoNumericLiteralText(String.fromCharCode(0xF0) + "bad"),

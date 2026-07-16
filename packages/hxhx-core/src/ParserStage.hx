@@ -3009,7 +3009,7 @@ class ParserStage {
 
 	static function expressionBodyKeywordStartsWithoutReturn(text:String):Bool {
 		return switch (text) {
-			case "for":
+			case "for" | "this":
 				true;
 			case _:
 				false;

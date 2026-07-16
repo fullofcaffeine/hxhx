@@ -4,24 +4,78 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable parsed : ParsedModule.t; mutable env : TyModuleEnv.t }
+type t = { __hx_type : Obj.t; mutable parsed : ParsedModule.t; mutable env : TyModuleEnv.t; mutable typedClasses : TypedClass.t HxArray.t; mutable revision : int; mutable backendDeclaration : HxModuleDecl.t }
 
-let create = fun parsed2 env2 -> let self = ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null) } : t) in (
-  ignore (ignore ((
+let create = fun parsed2 env2 typedClasses2 revision2 -> let self = ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null); typedClasses = Obj.magic (HxRuntime.hx_null); revision = 0; backendDeclaration = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (let revision2 = if Obj.repr revision2 == HxRuntime.hx_null then 1 else revision2 in ignore ((
     ignore (let __assign_1 = Obj.magic parsed2 in (
       (Obj.magic self : t).parsed <- __assign_1;
       __assign_1
     ));
-    let __assign_2 = Obj.magic env2 in (
+    ignore (let __assign_2 = Obj.magic env2 in (
       (Obj.magic self : t).env <- __assign_2;
       __assign_2
+    ));
+    let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TypedClass.t HxArray.t) in (
+      ignore (if typedClasses2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (Obj.magic (TypedBodyBuilder.buildFallbackModule (Obj.magic parsed2) (Obj.magic env2))) in (
+        tempMaybeArray := __assign_3;
+        __assign_3
+      ) else let __assign_4 = Obj.magic (Obj.magic typedClasses2) in (
+        tempMaybeArray := __assign_4;
+        __assign_4
+      ));
+      ignore (let __assign_5 = Obj.magic (HxArray.copy (!tempMaybeArray)) in (
+        (Obj.magic self : t).typedClasses <- __assign_5;
+        __assign_5
+      ));
+      let tempRight = ref (0 : int) in (
+        ignore (if revision2 <= 0 then let __assign_6 = 1 in (
+          tempRight := __assign_6;
+          __assign_6
+        ) else let __assign_7 = revision2 in (
+          tempRight := __assign_7;
+          __assign_7
+        ));
+        ignore (let __assign_8 = !tempRight in (
+          (Obj.magic self : t).revision <- __assign_8;
+          __assign_8
+        ));
+        ignore (TypedBodyInvariant.assertClasses (Obj.magic ((Obj.magic self : t).typedClasses)));
+        let __assign_9 = Obj.magic (TypedBodySource.moduleDeclaration (Obj.magic parsed2) (Obj.magic ((Obj.magic self : t).typedClasses))) in (
+          (Obj.magic self : t).backendDeclaration <- __assign_9;
+          __assign_9
+        )
+      )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null); typedClasses = Obj.magic (HxRuntime.hx_null); revision = 0; backendDeclaration = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getParsed = fun self () -> (Obj.magic self : t).parsed
 
 let getEnv = fun self () -> (Obj.magic self : t).env
+
+let getTypedClasses = fun self () -> HxArray.copy ((Obj.magic self : t).typedClasses)
+
+let getRevision = fun self () -> (Obj.magic self : t).revision
+
+let getBackendDeclaration = fun self () -> (Obj.magic self : t).backendDeclaration
+
+let assertBodyRevisionCurrent = fun self () -> ignore (ignore ((
+  ignore (TypedBodyInvariant.assertClasses (Obj.magic ((Obj.magic self : t).typedClasses)));
+  let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).typedClasses) in while !_g < HxArray.length _g1 do ignore (let typedClass = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (
+      ignore (_g := __new_11);
+      __new_11
+    ));
+    let _g2 = ref 0 in let _g3 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in while !_g2 < HxArray.length _g3 do ignore (let typedFunction = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
+      ignore (let __old_12 = !_g2 in let __new_13 = HxInt.add __old_12 1 in (
+        ignore (_g2 := __new_13);
+        __new_13
+      ));
+      TypedFunction.assertParsedBodyCurrent (Obj.magic typedFunction) ()
+    )) done
+  )) done
+)))

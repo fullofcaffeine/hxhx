@@ -78,3 +78,35 @@ let resolveLocal = fun self (name2 : string) -> let sym = Obj.magic (resolveSymb
   ));
   !tempResult
 )
+
+let copyForInference = fun self () -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : TySymbol.t HxArray.t) in (
+  ignore (let _g = Obj.magic (let __arr_14 = HxArray.create () in __arr_14) in (
+    ignore (let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).params) in while !_g1 < HxArray.length _g2 do ignore (let parameter = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
+      ignore (let __old_15 = !_g1 in let __new_16 = HxInt.add __old_15 1 in (
+        ignore (_g1 := __new_16);
+        __new_16
+      ));
+      HxArray.push _g (TySymbol.create (TySymbol.getName (Obj.magic parameter) () : string) (Obj.magic (TySymbol.getType (Obj.magic parameter) ())))
+    )) done);
+    let __assign_17 = Obj.magic _g in (
+      tempArray := __assign_17;
+      __assign_17
+    )
+  ));
+  let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : TySymbol.t HxArray.t) in (
+    ignore (let _g = Obj.magic (let __arr_18 = HxArray.create () in __arr_18) in (
+      ignore (let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).locals) in while !_g1 < HxArray.length _g2 do ignore (let local = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
+        ignore (let __old_19 = !_g1 in let __new_20 = HxInt.add __old_19 1 in (
+          ignore (_g1 := __new_20);
+          __new_20
+        ));
+        HxArray.push _g (TySymbol.create (TySymbol.getName (Obj.magic local) () : string) (Obj.magic (TySymbol.getType (Obj.magic local) ())))
+      )) done);
+      let __assign_21 = Obj.magic _g in (
+        tempArray1 := __assign_21;
+        __assign_21
+      )
+    ));
+    create ((Obj.magic self : t).name : string) (Obj.magic (!tempArray)) (Obj.magic (!tempArray1)) (Obj.magic ((Obj.magic self : t).returnType)) (Obj.magic ((Obj.magic self : t).returnExprType))
+  )
+)

@@ -385,7 +385,7 @@ let scanToplevelFunctions = fun source expectedMainClass -> try let __fallback_r
               __assign_125
             ));
             let functionStart = !tempNumber in let functionKeywordOffset = HxInt.sub (Obj.obj (HxAnon.get t "startPos")) functionStart in let functionText = ((HxString.toStdString (HxString.substr source functionStart functionKeywordOffset) ^ "static ") ^ HxString.toStdString (HxString.substr source (Obj.obj (HxAnon.get t "startPos")) (HxInt.sub (!hx_end) (Obj.obj (HxAnon.get t "startPos")))) : string) in (
-              ignore (try let synthetic = Obj.magic (HxParser.parseModule (Obj.magic (HxParser.create (("class __HxModule { " ^ HxString.toStdString functionText) ^ " }" : string))) ("__HxModule" : string)) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic (HxModuleDecl.getMainClass (Obj.magic synthetic)))) in while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+              ignore (try let synthetic = Obj.magic (HxParser.parseModule (Obj.magic (HxParser.create (("class __HxModule { " ^ HxString.toStdString functionText) ^ " }" : string) (Obj.magic (HxRuntime.hx_null)))) ("__HxModule" : string)) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic (HxModuleDecl.getMainClass (Obj.magic synthetic)))) in while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
                 ignore (let __old_126 = !_g in let __new_127 = HxInt.add __old_126 1 in (
                   ignore (_g := __new_127);
                   __new_127
@@ -2019,12 +2019,12 @@ let parse = fun source filePath -> let expectedMainClass = (expectedMainClassFro
   )
 ) in Obj.magic __fallback_result_407 with
   | HxRuntime.Hx_return __ret_406 -> Obj.obj __ret_406 in let v = (HxSys.getEnv "HIH_FORCE_HX_PARSER" : string) in (
-  ignore (if HxString.equals v "1" || HxString.equals v "true" || HxString.equals v "yes" then let __assign_408 = Obj.magic (enrichNativeDecl (Obj.magic (HxParser.parseModule (Obj.magic (HxParser.create (source : string))) (expectedMainClass : string)))) in (
+  ignore (if HxString.equals v "1" || HxString.equals v "true" || HxString.equals v "yes" then let __assign_408 = Obj.magic (enrichNativeDecl (Obj.magic (HxParser.parseModule (Obj.magic (HxParser.create (source : string) (Obj.magic (HxRuntime.hx_null)))) (expectedMainClass : string)))) in (
     tempHxModuleDecl := __assign_408;
     __assign_408
   ) else let fallbackAfterNativeFailure = fun nativeError -> try let __fallback_result_414 = let strict = (HxSys.getEnv "HIH_NATIVE_PARSER_STRICT" : string) in (
     ignore (if HxString.equals strict "1" || HxString.equals strict "true" || HxString.equals strict "yes" then ignore (HxType.hx_throw_typed_rtti (Obj.repr nativeError) ["Dynamic"; "String"]) else ());
-    try raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (enrichNativeDecl (Obj.magic (HxParser.parseModule (Obj.magic (HxParser.create (source : string))) (expectedMainClass : string))))))) with
+    try raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (enrichNativeDecl (Obj.magic (HxParser.parseModule (Obj.magic (HxParser.create (source : string) (Obj.magic (HxRuntime.hx_null)))) (expectedMainClass : string))))))) with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
       | HxRuntime.Hx_return __ret_409 -> raise (HxRuntime.Hx_return __ret_409)

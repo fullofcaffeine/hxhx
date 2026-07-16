@@ -93,4 +93,17 @@ class TyFunctionEnv {
 		final sym = resolveSymbol(name);
 		return sym == null ? TyType.unknown() : sym.getType();
 	}
+
+	/**
+		Create an isolated scope for typed-node analysis.
+
+		Expression analysis may refine bootstrap locals while resolving overloads.
+		The typed-body builder uses a deep symbol copy so annotating one node cannot
+		mutate the sealed function environment or affect a sibling node.
+	**/
+	public function copyForInference():TyFunctionEnv {
+		final copiedParams = [for (parameter in params) new TySymbol(parameter.getName(), parameter.getType())];
+		final copiedLocals = [for (local in locals) new TySymbol(local.getName(), local.getType())];
+		return new TyFunctionEnv(name, copiedParams, copiedLocals, returnType, returnExprType);
+	}
 }

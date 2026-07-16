@@ -1,3 +1,13 @@
+private typedef TyMethodCallResolution = {
+	final type:TyType;
+	final declaration:Null<TyDeclarationInfo>;
+};
+
+private typedef TypedClassBuildResult = {
+	final classes:Array<TypedClass>;
+	final mainFunctions:Array<TyFunctionEnv>;
+};
+
 /**
 	Stage 2 typer skeleton.
 
@@ -88,6 +98,46 @@ class TyperStage {
 		}
 	}
 
+	static function buildTypedClasses(parsed:ParsedModule, index:TyperIndex, loader:ModuleLoader, modulePath:String):TypedClassBuildResult {
+		final declaration = parsed.getDecl();
+		final packagePath = HxModuleDecl.getPackagePath(declaration);
+		final imports = HxModuleDecl.getImports(declaration);
+		final mainClass = HxModuleDecl.getMainClass(declaration);
+		final typedClasses = new Array<TypedClass>();
+		var mainFunctions = new Array<TyFunctionEnv>();
+
+		for (classDeclaration in HxModuleDecl.getClasses(declaration)) {
+			final className = HxClassDecl.getName(classDeclaration);
+			final semanticInfo = index == null ? null : index.getForSourceClass(classDeclaration);
+			final classFullName = semanticInfo == null ? ((packagePath == null || packagePath.length == 0) ? className : packagePath
+				+ "."
+				+ className) : semanticInfo.getFullName();
+			final context = new TyperContext(index, parsed.getFilePath(), modulePath, packagePath, imports, classFullName, loader);
+			final typedFunctions = new Array<TypedFunction>();
+			final functionEnvironments = new Array<TyFunctionEnv>();
+			final sourceFunctions = HxClassDecl.getFunctions(classDeclaration);
+			for (functionIndex in 0...sourceFunctions.length) {
+				final sourceFunction = sourceFunctions[functionIndex];
+				final functionEnvironment = typeFunction(sourceFunction, context);
+				functionEnvironments.push(functionEnvironment);
+				final semanticDeclaration = semanticInfo == null ? null : semanticInfo.declarationForSource(sourceFunction);
+				final typeResolver:TypedExprTypeResolver = function(expression, position, lexicalEnvironment) {
+					return inferExprType(expression, lexicalEnvironment.copyForInference(), context, position);
+				};
+				final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment) {
+					return resolveCallDeclaration(callee, arguments, lexicalEnvironment.copyForInference(), context, position);
+				};
+				typedFunctions.push(TypedBodyBuilder.buildFunction(className, functionIndex, sourceFunction, semanticDeclaration, functionEnvironment,
+					typeResolver, callResolver));
+			}
+			if (classDeclaration == mainClass)
+				mainFunctions = functionEnvironments;
+			typedClasses.push(new TypedClass(classDeclaration, semanticInfo, typedFunctions));
+		}
+
+		return {classes: typedClasses, mainFunctions: mainFunctions};
+	}
+
 	/**
 		Type a parsed module into a minimal `TypedModule`.
 
@@ -111,18 +161,10 @@ class TyperStage {
 		final pkg = HxModuleDecl.getPackagePath(decl);
 		final imports = HxModuleDecl.getImports(decl);
 		final cls = HxModuleDecl.getMainClass(decl);
-		final className = HxClassDecl.getName(cls);
-		final classFullName = (pkg == null || pkg.length == 0) ? className : (pkg + "." + className);
-		final ctx = new TyperContext(null, m.getFilePath(), "", pkg, imports, classFullName);
-
-		final typedFns = new Array<TyFunctionEnv>();
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			typedFns.push(typeFunction(fn, ctx));
-		}
-
-		final classEnv = new TyClassEnv(HxClassDecl.getName(cls), typedFns);
+		final built = buildTypedClasses(m, null, null, "");
+		final classEnv = new TyClassEnv(HxClassDecl.getName(cls), built.mainFunctions);
 		final env = new TyModuleEnv(pkg, imports, classEnv);
-		return new TypedModule(m, env);
+		return new TypedModule(m, env, built.classes);
 	}
 
 	/**
@@ -138,16 +180,10 @@ class TyperStage {
 		final pkg = HxModuleDecl.getPackagePath(decl);
 		final imports = HxModuleDecl.getImports(decl);
 		final cls = HxModuleDecl.getMainClass(decl);
-		final className = HxClassDecl.getName(cls);
-		final classFullName = (pkg == null || pkg.length == 0) ? className : (pkg + "." + className);
-		final ctx = new TyperContext(index, pm.getFilePath(), ResolvedModule.getModulePath(m), pkg, imports, classFullName, loader);
-
-		final typedFns = new Array<TyFunctionEnv>();
-		for (fn in HxClassDecl.getFunctions(cls))
-			typedFns.push(typeFunction(fn, ctx));
-		final classEnv = new TyClassEnv(className, typedFns);
+		final built = buildTypedClasses(pm, index, loader, ResolvedModule.getModulePath(m));
+		final classEnv = new TyClassEnv(HxClassDecl.getName(cls), built.mainFunctions);
 		final env = new TyModuleEnv(pkg, imports, classEnv);
-		return new TypedModule(pm, env);
+		return new TypedModule(pm, env, built.classes);
 	}
 
 	static function typeFunction(fn:HxFunctionDecl, ctx:TyperContext):TyFunctionEnv {
@@ -530,15 +566,15 @@ class TyperStage {
 		return score;
 	}
 
-	static function resolveMethodCallReturnType(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
-			pos:HxPos):TyType {
+	static function resolveMethodCall(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
+			pos:HxPos):TyMethodCallResolution {
 		final argTypes = new Array<TyType>();
 		for (a in args)
 			argTypes.push(inferExprType(a, scope, ctx, pos));
 
 		final candidates = isStatic ? c.staticMethodCandidates(field) : c.instanceMethodCandidates(field);
 		if (candidates.length == 0)
-			return TyType.unknown();
+			return {type: TyType.unknown(), declaration: null};
 
 		final arityMatches = new Array<TyFunSig>();
 		var bestScore = -1;
@@ -556,10 +592,14 @@ class TyperStage {
 				}
 			}
 		}
-		if (bestMatches.length == 1 && bestScore > 0)
-			return bestMatches[0].getReturnType();
-		if (bestMatches.length == 1 && arityMatches.length == 1)
-			return bestMatches[0].getReturnType();
+		if (bestMatches.length == 1 && bestScore > 0) {
+			final selected = bestMatches[0];
+			return {type: selected.getReturnType(), declaration: c.declarationForSignature(selected)};
+		}
+		if (bestMatches.length == 1 && arityMatches.length == 1) {
+			final selected = bestMatches[0];
+			return {type: selected.getReturnType(), declaration: c.declarationForSignature(selected)};
+		}
 		if (arityMatches.length > 1) {
 			final range = callRange(ctx.getFilePath(), pos);
 			final lines = [diagnosticFileName(ctx.getFilePath())
@@ -574,10 +614,50 @@ class TyperStage {
 				lines.push(renderOverloadCandidate(ctx.getFilePath(), candidate));
 			throw new TyperError(ctx.getFilePath(), pos, RAW_DIAGNOSTIC_PREFIX + lines.join("\n"));
 		}
-		if (arityMatches.length == 1)
-			return arityMatches[0].getReturnType();
+		if (arityMatches.length == 1) {
+			final selected = arityMatches[0];
+			return {type: selected.getReturnType(), declaration: c.declarationForSignature(selected)};
+		}
 
-		return TyType.unknown();
+		return {type: TyType.unknown(), declaration: null};
+	}
+
+	/** Best-effort exact declaration selection for ordinary call nodes. **/
+	static function resolveCallDeclaration(callee:HxExpr, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<TyDeclarationInfo> {
+		switch (callee) {
+			case EIdent(name):
+				if (scope.resolveSymbol(name) != null)
+					return null;
+				final owner = ctx.currentClass();
+				return owner == null ? null : resolveMethodCall(owner, name, true, args, scope, ctx, pos).declaration;
+			case EField(object, field):
+				switch (object) {
+					case EIdent(typeOrValue):
+						final staticOwner = isUpperStartName(typeOrValue) ? ctx.resolveType(typeOrValue) : null;
+						if (staticOwner != null) return resolveMethodCall(staticOwner, field, true, args, scope, ctx, pos).declaration;
+					case EThis:
+						final owner = ctx.currentClass();
+						return owner == null ? null : resolveMethodCall(owner, field, false, args, scope, ctx, pos).declaration;
+					case _:
+						final dotted = dottedFieldPath(object);
+						if (dotted.length > 0) {
+							final parts = dotted.split(".");
+							final last = parts.length == 0 ? "" : parts[parts.length - 1];
+							if (isUpperStartName(last)) {
+								final staticOwner = ctx.resolveType(dotted);
+								if (staticOwner != null)
+									return resolveMethodCall(staticOwner, field, true, args, scope, ctx, pos).declaration;
+							}
+						}
+				}
+
+				final receiverType = inferExprType(object, scope, ctx, pos);
+				final index = ctx.getIndex();
+				final owner = index == null ? null : index.getByFullName(receiverType.getDisplay());
+				return owner == null ? null : resolveMethodCall(owner, field, false, args, scope, ctx, pos).declaration;
+			case _:
+		}
+		return null;
 	}
 
 	static function functionReferenceType(sig:TyFunSig):TyType {
@@ -800,7 +880,7 @@ class TyperStage {
 							case EIdent(typeName):
 								final c = isUpperStartName(typeName) ? ctx.resolveType(typeName) : null;
 								if (c != null) {
-									resolveMethodCallReturnType(c, field, true, args, scope, ctx, pos);
+									resolveMethodCall(c, field, true, args, scope, ctx, pos).type;
 								} else {
 									// `obj` is a value identifier (local/param), not a type name.
 									final objTy = inferExprType(obj, scope, ctx, pos);
@@ -809,7 +889,7 @@ class TyperStage {
 									final idx = ctx.getIndex();
 									final c2 = idx == null ? null : idx.getByFullName(objTy.getDisplay());
 									if (c2 != null) {
-										resolveMethodCallReturnType(c2, field, false, args, scope, ctx, pos);
+										resolveMethodCall(c2, field, false, args, scope, ctx, pos).type;
 									} else {
 										TyType.unknown();
 									}
@@ -817,7 +897,7 @@ class TyperStage {
 							case EThis:
 								final c = ctx.currentClass();
 								if (c != null) {
-									resolveMethodCallReturnType(c, field, false, args, scope, ctx, pos);
+									resolveMethodCall(c, field, false, args, scope, ctx, pos).type;
 								} else {
 									for (a in args)
 										inferExprType(a, scope, ctx, pos);
@@ -835,7 +915,7 @@ class TyperStage {
 									if (isUpperStartName(last)) {
 										final c = ctx.resolveType(dotted);
 										if (c != null) {
-											return resolveMethodCallReturnType(c, field, true, args, scope, ctx, pos);
+											return resolveMethodCall(c, field, true, args, scope, ctx, pos).type;
 										}
 									}
 								}
@@ -847,7 +927,7 @@ class TyperStage {
 								final idx = ctx.getIndex();
 								final c2 = idx == null ? null : idx.getByFullName(objTy.getDisplay());
 								if (c2 != null) {
-									resolveMethodCallReturnType(c2, field, false, args, scope, ctx, pos);
+									resolveMethodCall(c2, field, false, args, scope, ctx, pos).type;
 								} else {
 									TyType.unknown();
 								}

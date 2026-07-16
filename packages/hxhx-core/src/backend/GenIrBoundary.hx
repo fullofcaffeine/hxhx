@@ -38,6 +38,7 @@ class GenIrBoundary {
 	}
 
 	public static inline function requireProgram(program:GenIrProgram):GenIrProgram {
+		program.assertTypedBodyRevisionsCurrent();
 		return program;
 	}
 }

@@ -19,7 +19,7 @@ let parseGeneratedMembers = fun members -> try let __fallback_result_6 = (
     ignore (HxAnon.set __anon_1 "fields" (Obj.repr (let __arr_3 = HxArray.create () in __arr_3)));
     __anon_1
   )))) else ());
-  let combined = (HxArray.join members "\n" (fun x -> x) : string) in let fake = (("class __HxHxBuildFields {\n" ^ HxString.toStdString combined) ^ "\n}\n" : string) in let parser = Obj.magic (HxParser.create (fake : string)) in let decl = Obj.magic (HxParser.parseModule (Obj.magic parser) (Obj.magic (HxRuntime.hx_null))) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let __anon_4 = HxAnon.create () in (
+  let combined = (HxArray.join members "\n" (fun x -> x) : string) in let fake = (("class __HxHxBuildFields {\n" ^ HxString.toStdString combined) ^ "\n}\n" : string) in let parser = Obj.magic (HxParser.create (fake : string) (Obj.magic (HxRuntime.hx_null))) in let decl = Obj.magic (HxParser.parseModule (Obj.magic parser) (Obj.magic (HxRuntime.hx_null))) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let __anon_4 = HxAnon.create () in (
     ignore (HxAnon.set __anon_4 "functions" (Obj.repr (HxClassDecl.getFunctions (Obj.magic cls))));
     ignore (HxAnon.set __anon_4 "fields" (Obj.repr (HxClassDecl.getFields (Obj.magic cls))));
     __anon_4

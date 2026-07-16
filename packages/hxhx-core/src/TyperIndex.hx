@@ -38,6 +38,28 @@ class TyperIndex {
 		return byShortName.exists(shortName) ? byShortName.get(shortName) : [];
 	}
 
+	/**
+		Find the semantic owner for one parser class while constructing typed bodies.
+
+		Source object association is used only at the parser-to-typed boundary. The
+		returned nodes and calls carry canonical nominal/declaration identities, so
+		backends never depend on allocation identity or traversal position.
+	**/
+	public function getForSourceClass(source:HxClassDecl):Null<TyNominalInfo> {
+		if (source == null)
+			return null;
+		final candidates = getByShortName(HxClassDecl.getName(source));
+		if (candidates.length == 1)
+			return candidates[0];
+		final sourceFunctions = HxClassDecl.getFunctions(source);
+		for (candidate in candidates)
+			for (declaration in candidate.getDeclarations())
+				for (sourceFunction in sourceFunctions)
+					if (declaration.getSourceDeclaration() == sourceFunction)
+						return candidate;
+		return null;
+	}
+
 	public function addNominal(info:TyNominalInfo):Void {
 		if (info == null)
 			return;

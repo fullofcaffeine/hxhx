@@ -87,7 +87,7 @@ class MetalProfileVerifier {
 	static function verifyTypedModule(typedModule:TypedModule, violations:Array<MetalViolation>):Void {
 		final parsed = typedModule.getParsed();
 		final filePath = parsed.getFilePath();
-		final moduleDecl = parsed.getDecl();
+		final moduleDecl = typedModule.getBackendDeclaration();
 		for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 			final className = HxClassDecl.getName(cls);
 			for (field in HxClassDecl.getFields(cls)) {

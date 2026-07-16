@@ -17,4 +17,7 @@ let asBackendProgram = fun program -> program
 
 let fromDynamic = fun program -> Obj.obj program
 
-let requireProgram = fun program -> program
+let requireProgram = fun program -> (
+  ignore (MacroExpandedProgram.assertTypedBodyRevisionsCurrent (Obj.magic program) ());
+  program
+)

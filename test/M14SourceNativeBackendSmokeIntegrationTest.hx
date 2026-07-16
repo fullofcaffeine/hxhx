@@ -5134,7 +5134,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
-	static function phpGenericStaticReflectionTextFallbackProgram():GenIrProgram {
+	static function phpGenericStaticReflectionIgnoresRawBodyProgram():GenIrProgram {
 		final pos = HxPos.unknown();
 		final gf2 = new HxFunctionDecl("gf2", HxVisibility.Public, true, [
 			new HxFunctionArg("label", "A", HxDefaultValue.NoDefault),
@@ -5345,7 +5345,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	static function pythonPlainTextReportSetHandlerProgram():GenIrProgram {
 		final pos = HxPos.unknown();
 		final handlerArg = new HxFunctionArg("handler", "Dynamic", HxDefaultValue.NoDefault);
-		final setHandler = new HxFunctionDecl("setHandler", HxVisibility.Public, false, [handlerArg], "Void", [SExpr(EUnsupported("="), pos)], "");
+		final setHandler = new HxFunctionDecl("setHandler", HxVisibility.Public, false, [handlerArg], "Void",
+			[SExpr(EBinop("=", EField(EThis, "handler"), EIdent("handler")), pos)], "");
 		final reportClass = new HxClassDecl("PlainTextReport", false, [setHandler]);
 		final reportDecl = new HxModuleDecl("utest.ui.text", [], reportClass, [reportClass], false, false);
 		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
@@ -5666,7 +5667,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final localFn = new HxFunctionDecl("label", HxVisibility.Public, false, [], "String", [SReturn(EString("local"), pos)], "");
 		final localClass = new HxClassDecl("LocalSupport", false, [localFn]);
 		final localDecl = new HxModuleDecl("", [], localClass, [localClass], false, false);
-		final stdFn = new HxFunctionDecl("readLine", HxVisibility.Public, false, [], "String", [SExpr(EUnsupported("<eof-stmt>"), pos)], "");
+		final stdFn = new HxFunctionDecl("readLine", HxVisibility.Public, false, [], "String", [SExpr(EUnsupported("eof_stmt"), pos)], "");
 		final stdClass = new HxClassDecl("Input", false, [stdFn]);
 		final stdDecl = new HxModuleDecl("haxe.io", [], stdClass, [stdClass], false, false);
 		final program = MacroStage.expandProgram([
@@ -5809,7 +5810,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final initBaseClass = new HxClassDecl("InitBase", false, [], [staticInit]);
 		final initBaseDecl = new HxModuleDecl("", [], initBaseClass, [initBaseClass], false, false);
 		final stdMinutesFn = new HxFunctionDecl("minutes", HxVisibility.Public, true, [new HxFunctionArg("value", "Float", NoDefault)], "Float",
-			[SExpr(EUnsupported("std-datetools-source-should-not-render"), pos)], "");
+			[SExpr(EUnsupported("std_datetools_source_should_not_render"), pos)], "");
 		final dateToolsClass = new HxClassDecl("DateTools", false, [stdMinutesFn]);
 		final dateToolsDecl = new HxModuleDecl("", [], dateToolsClass, [dateToolsClass], false, false);
 		final program = MacroStage.expandProgram([
@@ -5827,7 +5828,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"Python DateTools support should emit from the repo-owned support template");
 		assertContains(content, "def minutes(n):", "Python std DateTools helper should include minute conversion");
 		assertContains(content, "InitBase.sinline = DateTools.minutes(1)", "Python static initializer should be able to reference std DateTools");
-		assertNotContains(content, "std-datetools-source-should-not-render", "Python DateTools support should not dump the upstream std source body");
+		assertNotContains(content, "std_datetools_source_should_not_render", "Python DateTools support should not dump the upstream std source body");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python std DateTools helper should execute, stderr:\n" + run.stderr);
@@ -5851,7 +5852,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final mainClass = new HxClassDecl("Main", true, [mainFn]);
 		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
 		final stdStampFn = new HxFunctionDecl("stamp", HxVisibility.Public, true, [], "Float",
-			[SExpr(EUnsupported("std-timer-source-should-not-render"), pos)], "");
+			[SExpr(EUnsupported("std_timer_source_should_not_render"), pos)], "");
 		final timerClass = new HxClassDecl("Timer", false, [stdStampFn]);
 		final timerDecl = new HxModuleDecl("", [], timerClass, [timerClass], false, false);
 		final program = MacroStage.expandProgram([
@@ -5866,7 +5867,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Timer:", "Python runtime should provide a small Timer helper for upstream utest handlers");
 		assertContains(content, "def stamp():", "Python Timer helper should expose stamp for upstream utest handlers");
 		assertContains(content, "before = Timer.stamp()", "Python code should preserve Timer.stamp calls against the helper");
-		assertNotContains(content, "std-timer-source-should-not-render", "Python Timer support should not dump the upstream std source body");
+		assertNotContains(content, "std_timer_source_should_not_render", "Python Timer support should not dump the upstream std source body");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python Timer runtime shim should execute, stderr:\n" + run.stderr);
@@ -5932,7 +5933,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new HxFunctionArg("key", "String", NoDefault),
 			new HxFunctionArg("value", "Dynamic", NoDefault)
 		], "Void",
-			[SExpr(EUnsupported("std-string-map-source-should-not-render"), pos)], "");
+			[SExpr(EUnsupported("std_string_map_source_should_not_render"), pos)], "");
 		final stringMapClass = new HxClassDecl("StringMap", false, [stdSetFn]);
 		final stringMapDecl = new HxModuleDecl("haxe.ds", [], stringMapClass, [stringMapClass], false, false);
 		final program = MacroStage.expandProgram([
@@ -5954,7 +5955,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "TestReflect.TYPES = Array([haxe.ds.StringMap])", "Python static initializer should preserve haxe.ds.StringMap references");
 		assertTrue(content.indexOf("haxe.ds.StringMap = StringMap") < content.indexOf("TestReflect.TYPES = Array([haxe.ds.StringMap])"),
 			"Python std namespace aliases should be emitted before deferred static initializers");
-		assertNotContains(content, "std-string-map-source-should-not-render", "Python StringMap support should not dump the upstream std source body");
+		assertNotContains(content, "std_string_map_source_should_not_render", "Python StringMap support should not dump the upstream std source body");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python std StringMap namespace reference should execute, stderr:\n" + run.stderr);
@@ -6025,7 +6026,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final mainClass = new HxClassDecl("Main", true, [mainFn]);
 		final mainDecl = new HxModuleDecl("", [], mainClass, [mainClass], false, false);
 		final unitBuilderFn = new HxFunctionDecl("generateSpec", HxVisibility.Public, true, [new HxFunctionArg("basePath", "String", NoDefault)],
-			"Array<Dynamic>", [SExpr(EUnsupported("unit-builder-macro-source-should-not-render"), pos)], "", ["macro"]);
+			"Array<Dynamic>", [SExpr(EUnsupported("unit_builder_macro_source_should_not_render"), pos)], "", ["macro"]);
 		final unitBuilderClass = new HxClassDecl("UnitBuilder", false, [unitBuilderFn]);
 		final unitBuilderDecl = new HxModuleDecl("unit", [], unitBuilderClass, [unitBuilderClass], false, false);
 		final program = MacroStage.expandProgram([
@@ -6044,7 +6045,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "unit.UnitBuilder = UnitBuilder", "Python support should expose UnitBuilder through the unit namespace");
 		assertContains(content, "print(str(unit.UnitBuilder.generateSpec(\"src/unitstd\")))",
 			"Python main code should preserve package-qualified UnitBuilder.generateSpec calls");
-		assertNotContains(content, "unit-builder-macro-source-should-not-render", "Python UnitBuilder support should not render macro-only source bodies");
+		assertNotContains(content, "unit_builder_macro_source_should_not_render", "Python UnitBuilder support should not render macro-only source bodies");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python UnitBuilder fallback should execute, stderr:\n" + run.stderr);
@@ -6068,7 +6069,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new HxFunctionArg("dir", "String", NoDefault),
 			new HxFunctionArg("pack", "String", NoDefault)
 		], "Void",
-			[SExpr(EUnsupported("test-issues-macro-source-should-not-render"), pos)], "", ["macro"]);
+			[SExpr(EUnsupported("test_issues_macro_source_should_not_render"), pos)], "", ["macro"]);
 		final testIssuesClass = new HxClassDecl("TestIssues", false, [testIssuesFn]);
 		final testIssuesDecl = new HxModuleDecl("unit", [], testIssuesClass, [testIssuesClass], false, false);
 		final program = MacroStage.expandProgram([
@@ -6087,7 +6088,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "unit.TestIssues = TestIssues", "Python support should expose TestIssues through the unit namespace");
 		assertContains(content, "TestIssues.addIssueClasses(\"src/unit/issues\", \"unit.issues\")",
 			"Python main code should preserve imported/bare TestIssues.addIssueClasses calls");
-		assertNotContains(content, "test-issues-macro-source-should-not-render", "Python TestIssues support should not render macro-only source bodies");
+		assertNotContains(content, "test_issues_macro_source_should_not_render", "Python TestIssues support should not render macro-only source bodies");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python TestIssues fallback should execute, stderr:\n" + run.stderr);
@@ -6205,11 +6206,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final pathArg = new HxFunctionArg("path", "String", NoDefault);
 		final compilerClass = new HxClassDecl("Compiler", false, [
 			new HxFunctionDecl("getDefine", HxVisibility.Public, true, [keyArg], "String",
-				[SExpr(EUnsupported("compiler-get-define-std-source-should-not-render"), pos)], ""),
+				[SExpr(EUnsupported("compiler_get_define_std_source_should_not_render"), pos)], ""),
 			new HxFunctionDecl("define", HxVisibility.Public, true, [keyArg, valueArg], "Void",
-				[SExpr(EUnsupported("compiler-define-std-source-should-not-render"), pos)], ""),
+				[SExpr(EUnsupported("compiler_define_std_source_should_not_render"), pos)], ""),
 			new HxFunctionDecl("excludeFile", HxVisibility.Public, true, [pathArg], "Void",
-				[SExpr(EUnsupported("compiler-exclude-file-std-source-should-not-render"), pos)], "")
+				[SExpr(EUnsupported("compiler_exclude_file_std_source_should_not_render"), pos)], "")
 		]);
 		final compilerDecl = new HxModuleDecl("haxe.macro", [], compilerClass, [compilerClass], false, false);
 		final program = MacroStage.expandProgram([
@@ -6226,7 +6227,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"Python macro Compiler fallback should emit from the repo-owned support template");
 		assertContains(content, "def getDefine(key):", "Python Compiler fallback should expose getDefine");
 		assertContains(content, "haxe.macro.Compiler = Compiler", "Python support should expose Compiler through the haxe.macro namespace");
-		assertNotContains(content, "compiler-get-define-std-source-should-not-render", "Python Compiler fallback should not render std source bodies");
+		assertNotContains(content, "compiler_get_define_std_source_should_not_render", "Python Compiler fallback should not render std source bodies");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python Compiler fallback should execute, stderr:\n" + run.stderr);
@@ -6466,7 +6467,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final testDecl = new HxModuleDecl("", [], testClass, [testClass], false, false);
 		final valueArg = new HxFunctionArg("value", "Dynamic", NoDefault);
 		final typeFn = new HxFunctionDecl("getClass", HxVisibility.Public, true, [valueArg], "Dynamic",
-			[SExpr(EUnsupported("std-type-source-should-not-render"), pos)], "");
+			[SExpr(EUnsupported("std_type_source_should_not_render"), pos)], "");
 		final typeClass = new HxClassDecl("Type", false, [typeFn]);
 		final typeDecl = new HxModuleDecl("", [], typeClass, [typeClass], false, false);
 		final program = MacroStage.expandProgram([
@@ -6485,7 +6486,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "def getClassName(cls):", "Python std Type fallback should expose getClassName");
 		assertContains(content, "def getInstanceFields(cls):", "Python std Type fallback should expose getInstanceFields");
 		assertContains(content, "def getClassFields(cls):", "Python std Type fallback should expose getClassFields");
-		assertNotContains(content, "std-type-source-should-not-render", "Python Type support should not dump the skipped std Type source body");
+		assertNotContains(content, "std_type_source_should_not_render", "Python Type support should not dump the skipped std Type source body");
 		if (commandExists("python3")) {
 			final run = commandOutput("python3", [outputPath]);
 			assertTrue(run.code == 0, "generated Python Type fallback should execute, stderr:\n" + run.stderr);
@@ -14016,17 +14017,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
-	static function assertPhpGenericStaticReflectionTextFallback():Void {
+	static function assertPhpGenericStaticReflectionIgnoresRawBody():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_generic_static_text_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("php-native");
-		backend.emit(phpGenericStaticReflectionTextFallbackProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpGenericStaticReflectionIgnoresRawBodyProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final content = File.getContent(Path.join([tmpRoot, "index.php"]));
-		assertContains(content, "public static function gf2_String_Int($label, $values)",
-			"PHP raw-body @:generic reflection should bind Array<T> arguments to item type");
-		assertContains(content, "public static function gf2_String_Array_Int($label, $values)",
-			"PHP raw-body @:generic reflection should bind nested Array<T> arguments to nested item type");
+		assertNotContains(content, "public static function gf2_String_Int($label, $values)",
+			"PHP must not infer @:generic specializations from parsed raw function text");
+		assertNotContains(content, "public static function gf2_String_Array_Int($label, $values)",
+			"PHP must obtain generic calls from the structural typed body");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -14577,7 +14578,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final initBaseClass = new HxClassDecl("InitBase", false, [], [staticInit]);
 		final initBaseDecl = new HxModuleDecl("", [], initBaseClass, [initBaseClass], false, false);
 		final stdMinutesFn = new HxFunctionDecl("minutes", HxVisibility.Public, true, [new HxFunctionArg("value", "Float", NoDefault)], "Float",
-			[SExpr(EUnsupported("std-datetools-source-should-not-render"), pos)], "");
+			[SExpr(EUnsupported("std_datetools_source_should_not_render"), pos)], "");
 		final dateToolsClass = new HxClassDecl("DateTools", false, [stdMinutesFn]);
 		final dateToolsDecl = new HxModuleDecl("", [], dateToolsClass, [dateToolsClass], false, false);
 		final program = MacroStage.expandProgram([
@@ -14595,7 +14596,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class DateTools {", "PHP std support should provide a DateTools helper when std DateTools is skipped");
 		assertContains(content, "public static function minutes($n)", "PHP DateTools helper should include minute conversion");
 		assertContains(content, "InitBase::$sinline = DateTools::minutes(1);", "PHP static initializer should be able to reference std DateTools");
-		assertNotContains(content, "std-datetools-source-should-not-render", "PHP DateTools support should not dump the upstream std source body");
+		assertNotContains(content, "std_datetools_source_should_not_render", "PHP DateTools support should not dump the upstream std source body");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP std DateTools helper should execute, stderr:\n" + run.stderr);
@@ -14658,7 +14659,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new HxFunctionArg("key", "String", NoDefault),
 			new HxFunctionArg("value", "Dynamic", NoDefault)
 		], "Void",
-			[SExpr(EUnsupported("std-string-map-source-should-not-render"), pos)], "");
+			[SExpr(EUnsupported("std_string_map_source_should_not_render"), pos)], "");
 		final stringMapClass = new HxClassDecl("StringMap", false, [stdSetFn]);
 		final stringMapDecl = new HxModuleDecl("haxe.ds", [], stringMapClass, [stringMapClass], false, false);
 		final program = MacroStage.expandProgram([
@@ -14674,7 +14675,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "TestReflect::$TYPES = [__hxhx_class_value(\"haxe.ds.StringMap\")];",
 			"PHP static initializers should preserve std package-qualified class references as tagged values");
 		assertNotContains(content, "haxe\\ds::$StringMap", "PHP package prefixes should not lower as static class-property receivers");
-		assertNotContains(content, "std-string-map-source-should-not-render", "PHP StringMap class references should not dump the upstream std source body");
+		assertNotContains(content, "std_string_map_source_should_not_render", "PHP StringMap class references should not dump the upstream std source body");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP std StringMap class reference should execute, stderr:\n" + run.stderr);
@@ -14931,9 +14932,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "function() use (&$prefix)", "PHP opaque block expressions should capture outer locals");
-		assertContains(content, "$x = __hxhx_to_string_value(__hxhx_add($prefix, \":ok\"));",
-			"PHP opaque block expressions should lower typed local statements");
+		assertContains(content, "(function($x) { return $x; })(__hxhx_to_string_value(__hxhx_add($prefix, \":ok\")))",
+			"PHP typed block expressions should evaluate the outer-local initializer before binding the typed temporary");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP opaque block expression should execute, stderr:\n" + run.stderr);
@@ -15837,8 +15837,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "class PlainTextReport:", "Python utest helper support class should be emitted");
 		assertContains(content, "    def setHandler(self, handler):", "Python utest setHandler helper should be emitted");
-		assertContains(content, "        self.handler = handler", "Python utest setHandler fallback should preserve handler assignment");
-		assertNotContains(content, "EUnsupported", "Python utest setHandler fallback should not leak unsupported assignment placeholders");
+		assertContains(content, "        self.handler = handler", "Python utest setHandler should emit its structural field assignment");
+		assertNotContains(content, "EUnsupported", "Python utest setHandler should not leak unsupported assignment placeholders");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -16311,7 +16311,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertPhpEnumTypeCheck();
 		assertPhpTypeReflection();
 		assertPhpGenericStaticReflection();
-		assertPhpGenericStaticReflectionTextFallback();
+		assertPhpGenericStaticReflectionIgnoresRawBody();
 		assertPhpOverloadDispatch();
 		assertPhpGenericConstructible();
 		assertPhpTypeErrorGenericNull();

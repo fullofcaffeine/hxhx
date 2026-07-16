@@ -27,16 +27,24 @@ class MacroExpandedProgram {
 	public final generatedOcamlModules:Array<MacroExpandedModule.GeneratedOcamlModule>;
 
 	public function new(typedModules:Array<TypedModule>, macroMode:Bool, ?generatedOcamlModules:Array<MacroExpandedModule.GeneratedOcamlModule>) {
-		this.typedModules = typedModules == null ? [] : typedModules;
+		this.typedModules = typedModules == null ? [] : typedModules.copy();
+		for (typedModule in this.typedModules)
+			typedModule.assertBodyRevisionCurrent();
 		this.macroMode = macroMode;
-		this.generatedOcamlModules = generatedOcamlModules == null ? [] : generatedOcamlModules;
+		this.generatedOcamlModules = generatedOcamlModules == null ? [] : generatedOcamlModules.copy();
 	}
 
 	public function getTypedModules():Array<TypedModule> {
-		return typedModules;
+		return typedModules.copy();
+	}
+
+	/** Ensure post-typing hooks have not changed parsed bodies behind this revision. **/
+	public function assertTypedBodyRevisionsCurrent():Void {
+		for (typedModule in typedModules)
+			typedModule.assertBodyRevisionCurrent();
 	}
 
 	public function getGeneratedOcamlModules():Array<MacroExpandedModule.GeneratedOcamlModule> {
-		return generatedOcamlModules;
+		return generatedOcamlModules.copy();
 	}
 }

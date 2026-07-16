@@ -407,7 +407,7 @@ let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (ma
   | HxStmt.SReturn (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic expr) (Obj.magic violations))
   | HxStmt.SExpr (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic expr) (Obj.magic violations)))
 
-let verifyTypedModule = fun typedModule violations -> ignore (let parsed = Obj.magic (TypedModule.getParsed (Obj.magic typedModule) ()) in let filePath = (ParsedModule.getFilePath (Obj.magic parsed) () : string) in let moduleDecl = Obj.magic (ParsedModule.getDecl (Obj.magic parsed) ()) in let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic moduleDecl)) in while !_g < HxArray.length _g1 do ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+let verifyTypedModule = fun typedModule violations -> ignore (let parsed = Obj.magic (TypedModule.getParsed (Obj.magic typedModule) ()) in let filePath = (ParsedModule.getFilePath (Obj.magic parsed) () : string) in let moduleDecl = Obj.magic (TypedModule.getBackendDeclaration (Obj.magic typedModule) ()) in let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic moduleDecl)) in while !_g < HxArray.length _g1 do ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
   ignore (let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
     ignore (_g := __new_7);
     __new_7

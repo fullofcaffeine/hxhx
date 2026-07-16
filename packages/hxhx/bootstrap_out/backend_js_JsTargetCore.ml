@@ -353,7 +353,7 @@ let collectClassUnits = fun program -> let bySimpleName = Obj.magic (HxMap.creat
       ignore (_g := __new_12);
       __new_12
     ));
-    let pm = Obj.magic (TypedModule.getParsed (Obj.magic typed) ()) in let decl = Obj.magic (ParsedModule.getDecl (Obj.magic pm) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let mainClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let mainClassName = (HxClassDecl.getName (Obj.magic mainClass) : string) in let hasToplevelMain = HxModuleDecl.getHasToplevelMain (Obj.magic decl) in let _g2 = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in try while !_g2 < HxArray.length _g1 do try ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g1) (!_g2)) in (
+    let decl = Obj.magic (TypedModule.getBackendDeclaration (Obj.magic typed) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let mainClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let mainClassName = (HxClassDecl.getName (Obj.magic mainClass) : string) in let hasToplevelMain = HxModuleDecl.getHasToplevelMain (Obj.magic decl) in let _g2 = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in try while !_g2 < HxArray.length _g1 do try ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g1) (!_g2)) in (
       ignore (let __old_13 = !_g2 in let __new_14 = HxInt.add __old_13 1 in (
         ignore (_g2 := __new_14);
         __new_14
@@ -3640,6 +3640,7 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
     ));
     let outputDir = (Haxe_io_Path.directory (!tempMaybeString : string) : string) in (
       ignore (if outputDir != Obj.magic (HxRuntime.hx_null) && HxString.length outputDir > 0 then ignore (ensureDirectory (outputDir : string)) else ());
+      ignore (MacroExpandedProgram.assertTypedBodyRevisionsCurrent (Obj.magic program) ());
       let classes = collectClassUnits (Obj.magic program) in let writer = Obj.magic (Backend_js_JsWriter.create (Obj.magic (HxRuntime.hx_null))) in let jsClassic = Backend_BackendContext.hasDefine (Obj.magic context) ("js-classic" : string) in (
         ignore (if not (jsClassic) then ignore ((
           ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("(function () {" : string));

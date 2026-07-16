@@ -47,6 +47,26 @@ class TyNominalInfo {
 	public function getDeclarations():Array<TyDeclarationInfo>
 		return declarations;
 
+	/** Resolve the stable declaration record that owns one indexed signature. **/
+	public function declarationForSignature(signature:TyFunSig):Null<TyDeclarationInfo> {
+		if (signature == null)
+			return null;
+		for (declaration in declarations)
+			if (declaration.getSignature() == signature)
+				return declaration;
+		return null;
+	}
+
+	/** Associate the parser declaration with its already stable semantic record during typing. **/
+	public function declarationForSource(source:HxFunctionDecl):Null<TyDeclarationInfo> {
+		if (source == null)
+			return null;
+		for (declaration in declarations)
+			if (declaration.getSourceDeclaration() == source)
+				return declaration;
+		return null;
+	}
+
 	public function hasField(name:String):Bool
 		return fields.exists(name);
 

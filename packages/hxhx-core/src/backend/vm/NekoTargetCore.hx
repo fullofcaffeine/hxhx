@@ -355,7 +355,7 @@ class NekoTargetCore {
 	static function findMain(modules:Array<TypedModule>, requested:String):Null<{decl:HxModuleDecl, cls:HxClassDecl, fullName:String}> {
 		var fallback:Null<{decl:HxModuleDecl, cls:HxClassDecl, fullName:String}> = null;
 		for (typed in modules) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final className = HxClassDecl.getName(cls);
@@ -377,7 +377,7 @@ class NekoTargetCore {
 	static function buildClassMap(modules:Array<TypedModule>):StringMap<NekoClassInfo> {
 		final classes = new StringMap<NekoClassInfo>();
 		for (typed in modules) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final shortName = HxClassDecl.getName(cls);
@@ -394,7 +394,7 @@ class NekoTargetCore {
 	static function buildRuntimeClassMeta(modules:Array<TypedModule>):Array<NekoRuntimeClassMeta> {
 		final metas = new Array<NekoRuntimeClassMeta>();
 		for (typed in modules) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final shortName = HxClassDecl.getName(cls);
@@ -2273,6 +2273,13 @@ class NekoTargetCore {
 	}
 
 	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>):String {
+		switch (callee) {
+			case EIdent("__hxhx_try"):
+				return renderStructuralTryCatchExpr(context, args);
+			case EIdent("__hxhx_throw"):
+				return "$throw(" + (args.length > 0 ? renderExpr(context, args[0]) : "null") + ")";
+			case _:
+		}
 		final renderedArgs = [for (arg in args) renderExpr(context, arg)];
 		switch (callee) {
 			case EIdent("trace"):
@@ -2360,6 +2367,48 @@ class NekoTargetCore {
 			case _:
 				return renderExpr(context, callee) + "(" + renderedArgs.join(", ") + ")";
 		}
+	}
+
+	/**
+		Emit the shared expression-level try/catch shape as a Neko immediate function.
+
+		The typer has already reconstructed the try body and catch branches, so this
+		method only chooses Neko syntax. It must not reparse source text or decide
+		which catch body applies.
+	**/
+	static function renderStructuralTryCatchExpr(context:NekoEmitContext, args:Array<HxExpr>):String {
+		if (args == null || args.length < 2)
+			return unsupportedExpr("ECall(__hxhx_try)");
+		final tryBody = switch (args[0]) {
+			case ELambda(lambdaArgs, body) if (lambdaArgs.length == 0): body;
+			case _: null;
+		};
+		if (tryBody == null)
+			return unsupportedExpr("ECall(__hxhx_try)");
+
+		final catches = switch (args[1]) {
+			case EArrayDecl(entries): entries;
+			case _: [];
+		};
+		if (catches.length == 0) {
+			return "(function() { try { return " + renderExpr(context, tryBody) + "; } catch __hxhx_e { $throw(__hxhx_e); return null; } })()";
+		}
+
+		return switch (catches[0]) {
+			case EArrayDecl([EString(name), EString(_), ELambda(lambdaArgs, catchBody)]) if (lambdaArgs.length == 1):
+				final sourceName = lambdaArgs[0].length == 0 ? name : lambdaArgs[0];
+				final catchName = safeIdent(sourceName);
+				final catchContext = context == null ? context : withLocal(context, sourceName);
+				"(function() { try { return "
+				+ renderExpr(context, tryBody)
+				+ "; } catch "
+				+ catchName
+				+ " { return "
+				+ renderExpr(catchContext, catchBody)
+				+ "; } })()";
+			case _:
+				unsupportedExpr("ECall(__hxhx_try)");
+		};
 	}
 
 	static function renderEnumCtorCall(name:String, renderedArgs:Array<String>):String {

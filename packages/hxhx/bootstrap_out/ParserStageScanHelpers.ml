@@ -204,13 +204,15 @@ let parseSimpleInitExpr = fun raw -> try let __fallback_result_445 = let tempStr
   | HxRuntime.Hx_return __ret_444 -> Obj.magic __ret_444
 
 let expressionBodyKeywordStartsWithoutReturn = fun text -> let tempResult = ref (false : bool) in (
-  ignore (if HxString.equals text "for" then let __assign_506 = true in (
-    tempResult := __assign_506;
-    __assign_506
-  ) else let __assign_507 = false in (
-    tempResult := __assign_507;
-    __assign_507
-  ));
+  ignore (match text with
+    | "for" | "this" -> let __assign_507 = true in (
+      tempResult := __assign_507;
+      __assign_507
+    )
+    | _ -> let __assign_506 = false in (
+      tempResult := __assign_506;
+      __assign_506
+    ));
   !tempResult
 )
 

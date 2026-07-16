@@ -27,6 +27,7 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
       __assign_2
     ));
     ignore (if !tempBool then ignore (print_endline "stage3_driver=ocaml_target_core_before_require_program") else ());
+    ignore (MacroExpandedProgram.assertTypedBodyRevisionsCurrent (Obj.magic program) ());
     let tempBool1 = ref (false : bool) in (
       ignore (let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in if raw == Obj.magic (HxRuntime.hx_null) then let __assign_3 = false in (
         tempBool1 := __assign_3;

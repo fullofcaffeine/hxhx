@@ -101,6 +101,10 @@ class BackendDispatchBoundary {
 		  directly.
 	**/
 	public static function emit(backend:IBackend, program:GenIrProgram, context:BackendContext):EmitResult {
+		// A post-typing hook may have retained and changed a parsed declaration.
+		// Recheck the shared semantic revision once here so every builtin and plugin
+		// backend receives the same sealed typed bodies.
+		program.assertTypedBodyRevisionsCurrent();
 		#if reflaxe
 		if (traceEnabled())
 			Sys.println("stage3_driver=dispatch_before_asDispatchValue");

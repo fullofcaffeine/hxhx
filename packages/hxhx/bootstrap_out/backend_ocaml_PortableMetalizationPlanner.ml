@@ -107,7 +107,7 @@ let collectFunctionRegions = fun program -> let regions = Obj.magic (HxArray.cre
       ignore (_g := __new_14);
       __new_14
     ));
-    let parsed = Obj.magic (TypedModule.getParsed (Obj.magic typedModule) ()) in let filePath = (normalizeFilePath (ParsedModule.getFilePath (Obj.magic parsed) () : string) : string) in let decl = Obj.magic (ParsedModule.getDecl (Obj.magic parsed) ()) in let _g2 = ref 0 in let _g3 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in while !_g2 < HxArray.length _g3 do ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
+    let parsed = Obj.magic (TypedModule.getParsed (Obj.magic typedModule) ()) in let filePath = (normalizeFilePath (ParsedModule.getFilePath (Obj.magic parsed) () : string) : string) in let decl = Obj.magic (TypedModule.getBackendDeclaration (Obj.magic typedModule) ()) in let _g2 = ref 0 in let _g3 = Obj.magic (HxModuleDecl.getClasses (Obj.magic decl)) in while !_g2 < HxArray.length _g3 do ignore (let cls = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
       ignore (let __old_15 = !_g2 in let __new_16 = HxInt.add __old_15 1 in (
         ignore (_g2 := __new_16);
         __new_16

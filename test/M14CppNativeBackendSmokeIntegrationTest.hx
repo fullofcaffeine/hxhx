@@ -74,6 +74,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return new TypedModule(new ParsedModule("", decl, filePath), env);
 	}
 
+	/** Resolve a synthetic source declaration to the typed projection consumed by backends. **/
+	static function backendClass(program:GenIrProgram, sourceClass:HxClassDecl):HxClassDecl {
+		for (typed in program.getTypedModules()) {
+			final typedClasses = typed.getTypedClasses();
+			final backendClasses = HxModuleDecl.getClasses(typed.getBackendDeclaration());
+			for (index in 0...typedClasses.length)
+				if (typedClasses[index].getSourceDeclaration() == sourceClass)
+					return backendClasses[index];
+		}
+		throw "synthetic source class is missing from the typed backend projection";
+	}
+
 	static function cppModuleLocalInterfaceCollisionProgram():GenIrProgram {
 		final supportMain = new HxClassDecl("SupportOne", false, [], []);
 		final supportPoint = new HxClassDecl("Point", false, [new HxFunctionDecl("new", Public, false, [], "Void", [], "")],
@@ -1653,7 +1665,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		var balancedTree:Null<HxClassDecl> = null;
 		for (typed in treeProgram.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases(HxClassDecl.getName(cls), cls, names, classes);
 				if (HxClassDecl.getName(cls) == "BalancedTree")
@@ -1680,7 +1692,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		var jsonParser:Null<HxClassDecl> = null;
 		for (typed in parserProgram.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases(HxClassDecl.getName(cls), cls, names, classes);
 				if (HxClassDecl.getName(cls) == "JsonParser")
@@ -1707,7 +1719,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		var xmlParser:Null<HxClassDecl> = null;
 		for (typed in parserProgram.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases(HxClassDecl.getName(cls), cls, names, classes);
 				if (HxClassDecl.getName(cls) == "Parser")
@@ -2057,7 +2069,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final decl = new HxModuleDecl("utest", [], assertSupport, [assertSupport], false, false);
 		final program = new GenIrProgram([typedSyntheticModule("utest/Assert.hx", decl)], false);
 		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
-		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup, [assertSupport]);
+		final structs = @:privateAccess backend.cpp.CppTargetCore.collectAnonStructs(program, lookup, [backendClass(program, assertSupport)]);
 		final names = [for (struct in structs) struct.name].join("\n");
 		assertContains(names, "fieldHint", "C++ anonymous collection should preserve runtime-module field signatures");
 		assertContains(names, "argHint", "C++ anonymous collection should preserve runtime-module argument signatures");
@@ -2071,7 +2083,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final program = cppHelperReachabilityProgram();
 		var mainClass:HxClassDecl = null;
 		for (typed in program.getTypedModules())
-			for (cls in HxModuleDecl.getClasses(typed.getParsed().getDecl()))
+			for (cls in HxModuleDecl.getClasses(typed.getBackendDeclaration()))
 				if (HxClassDecl.getName(cls) == "Main")
 					mainClass = cls;
 		assertTrue(mainClass != null, "C++ helper classification fixture should have a Main class");
@@ -2090,7 +2102,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classReflectionProgram = cppClassLiteralReflectionReachabilityProgram();
 		var classReflectionMainClass:HxClassDecl = null;
 		for (typed in classReflectionProgram.getTypedModules())
-			for (cls in HxModuleDecl.getClasses(typed.getParsed().getDecl()))
+			for (cls in HxModuleDecl.getClasses(typed.getBackendDeclaration()))
 				if (HxClassDecl.getName(cls) == "Main")
 					classReflectionMainClass = cls;
 		assertTrue(classReflectionMainClass != null, "C++ class-literal reflection reachability fixture should have a Main class");
@@ -2139,7 +2151,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final runtimeProgram = cppRuntimeModuleBodyDependencyProgram();
 		var runtimeMainClass:HxClassDecl = null;
 		for (typed in runtimeProgram.getTypedModules())
-			for (cls in HxModuleDecl.getClasses(typed.getParsed().getDecl()))
+			for (cls in HxModuleDecl.getClasses(typed.getBackendDeclaration()))
 				if (HxClassDecl.getName(cls) == "Main")
 					runtimeMainClass = cls;
 		assertTrue(runtimeMainClass != null, "C++ runtime-module dependency fixture should have a Main class");
@@ -2422,7 +2434,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(names, "__hxhx_anon_add_std__function_int_int__int__",
 			"C++ anonymous collection should preserve instance method-value function field carriers");
 		assertContains(names, "__hxhx_anon_cos_std__function_double_double__", "C++ anonymous collection should preserve Math function-value field carriers");
-		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(slot, lookup).join("\n");
+		final lines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(backendClass(program, slot), lookup).join("\n");
 		assertContains(lines, "std::function<int(std::optional<int>)> f = nullptr;", "C++ optional function-typed fields should use nullable argument storage");
 		assertContains(lines, "f = [&](std::optional<int> a) -> int {",
 			"C++ optional lambda assignments should render typed nullable C++ lambdas instead of unresolved helper calls");
@@ -2430,14 +2442,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ structural function-field carriers should default-initialize as aggregates");
 		assertContains(lines, "f(std::nullopt)", "C++ calls omitting function-typed optional arguments should pad a nullable default argument");
 		assertTrue(lines.indexOf("__hxhx_optional_lambda") < 0, "C++ optional lambda lowering should not leak the parser helper");
-		final nullableCallableLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(nullableCallableLocal, lookup).join("\n");
+		final nullableCallableLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(backendClass(program, nullableCallableLocal), lookup)
+			.join("\n");
 		assertContains(nullableCallableLines, "std::function<int()> foo = nullptr;",
 			"C++ null-initialized callable locals should spell out std::function storage instead of deducing std::nullptr_t");
 		assertContains(nullableCallableLines, "foo = [&]() -> int { return x; };",
 			"C++ null-initialized callable locals should accept later closure assignments");
 		assertContains(nullableCallableLines, "return static_cast<int>(foo());",
 			"C++ null-initialized callable locals should remain callable after refinement");
-		final optionalLocalLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(optionalLambdaLocal, lookup).join("\n");
+		final optionalLocalLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(backendClass(program, optionalLambdaLocal), lookup).join("\n");
 		assertContains(optionalLocalLines, "std::function<int(int, std::optional<int>)> opt5 = [&](int a, std::optional<int> b) -> int",
 			"C++ unhinted optional lambda locals should infer nullable parameter types from all direct call shapes");
 		assertContains(optionalLocalLines, "opt5(1, std::nullopt)", "C++ omitted optional lambda arguments should render as std::nullopt");
@@ -2460,7 +2473,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		].join("\n"), "LocalBindShadow.hx"));
 		final parsedBindShadowProgram = new GenIrProgram([parsedBindShadowLocal], false);
 		final parsedBindShadowLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(parsedBindShadowProgram);
-		final parsedBindShadowOwner = HxModuleDecl.getMainClass(parsedBindShadowLocal.getParsed().getDecl());
+		final parsedBindShadowOwner = HxModuleDecl.getMainClass(parsedBindShadowLocal.getBackendDeclaration());
 		final parsedBindShadowLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperClass(parsedBindShadowOwner, parsedBindShadowLookup).join("\n");
 		assertContains(parsedBindShadowLines, "std::function<std::string(int, std::optional<PosInfos>)> foo",
@@ -2483,7 +2496,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		].join("\n"), "LocalPosInfos.hx"));
 		final parsedPosInfosProgram = new GenIrProgram([parsedPosInfosLocal], false);
 		final parsedPosInfosLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(parsedPosInfosProgram);
-		final parsedPosInfosOwner = HxModuleDecl.getMainClass(parsedPosInfosLocal.getParsed().getDecl());
+		final parsedPosInfosOwner = HxModuleDecl.getMainClass(parsedPosInfosLocal.getBackendDeclaration());
 		final parsedPosInfosLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperClass(parsedPosInfosOwner, parsedPosInfosLookup).join("\n");
 		assertContains(parsedPosInfosLines, "std::function<std::string(std::string, std::shared_ptr<PosInfos>)> id",
@@ -2513,7 +2526,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		].join("\n"), "LocalDynamicCallable.hx"));
 		final parsedDynamicProgram = new GenIrProgram([parsedDynamicLocal], false);
 		final parsedDynamicLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(parsedDynamicProgram);
-		final parsedDynamicOwner = HxModuleDecl.getMainClass(parsedDynamicLocal.getParsed().getDecl());
+		final parsedDynamicOwner = HxModuleDecl.getMainClass(parsedDynamicLocal.getBackendDeclaration());
 		final parsedDynamicLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperClass(parsedDynamicOwner, parsedDynamicLookup).join("\n");
 		assertContains(parsedDynamicLines, "std::function<void(std::any, std::shared_ptr<PosInfos>)> id",
@@ -2530,7 +2543,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ Dynamic local callable inference should not narrow the signature to the first bool call");
 		assertTrue(parsedDynamicLines.indexOf("__hxhx_stringify(eq(") < 0, "C++ void local callable bodies should not stringify void calls");
 		assertTrue(parsedDynamicLines.indexOf("id(nullptr") < 0, "C++ Dynamic local callable null calls should not pass nullptr to a narrowed bool arg");
-		final duplicateLocalArrayLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(duplicateLocalArrays, lookup).join("\n");
+		final duplicateLocalArrayLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(backendClass(program, duplicateLocalArrays), lookup)
+			.join("\n");
 		assertContains(duplicateLocalArrayLines, "auto arr = std::vector<int>{3};",
 			"C++ dynamic local type overrides should not leak from later same-name locals into earlier numeric arrays");
 		assertContains(duplicateLocalArrayLines, "auto arr_2 = std::vector<__hxhx_anon_v_int_>{__hxhx_anon_v_int_{3}};",
@@ -3116,7 +3130,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		].join("\n"), "DynamicArgPreserve.hx"));
 		final parsedProgram = new GenIrProgram([parsedDynamicArg], false);
 		final parsedLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(parsedProgram);
-		final parsedOwner = HxModuleDecl.getMainClass(parsedDynamicArg.getParsed().getDecl());
+		final parsedOwner = HxModuleDecl.getMainClass(parsedDynamicArg.getBackendDeclaration());
 		final parsedLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(parsedOwner, parsedLookup).join("\n");
 		assertContains(parsedLines, "static bool isTrue(std::any v, std::any t1, std::optional<std::any> t2 = std::nullopt)",
 			"C++ explicit Dynamic helper args should preserve erased std::any signatures across mixed call sites");
@@ -3292,7 +3306,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		var exprTools:Null<HxClassDecl> = null;
 		for (typed in exprToolsProgram.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases(HxClassDecl.getName(cls), cls, names, classes);
 				if (HxClassDecl.getName(cls) == "ExprTools")
@@ -3318,7 +3332,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final classes = new StringMap<HxClassDecl>();
 		var template:Null<HxClassDecl> = null;
 		for (typed in templateProgram.getTypedModules()) {
-			final decl = typed.getParsed().getDecl();
+			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				@:privateAccess backend.cpp.CppTargetCore.addClassLookupAliases(HxClassDecl.getName(cls), cls, names, classes);
 				if (HxClassDecl.getName(cls) == "Template")
@@ -4556,7 +4570,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		var projectionBox:Null<HxClassDecl> = null;
 		var fixedProjection:Null<HxClassDecl> = null;
 		for (typed in program.getTypedModules())
-			for (cls in HxModuleDecl.getClasses(typed.getParsed().getDecl())) {
+			for (cls in HxModuleDecl.getClasses(typed.getBackendDeclaration())) {
 				switch (HxClassDecl.getName(cls)) {
 					case "ProjectedValue":
 						projectedValue = cls;
@@ -6734,15 +6748,17 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			typedSyntheticModule("Other.hx", new HxModuleDecl("", [], otherMain, [otherMain, otherXmlType], false, false))
 		], false, []);
 		final xmlLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(xmlProgram);
-		final xmlScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(xml, xmlLookup, "void");
+		final backendXml = backendClass(xmlProgram, xml);
+		final backendXmlType = backendClass(xmlProgram, xmlType);
+		final xmlScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(backendXml, xmlLookup, "void");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("XmlType", xmlScope, xmlLookup) == "int",
 			"C++ module-local enum abstracts should resolve through the owner module before raw duplicate short-name aliases");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.staticReceiverClassName(EIdent("XmlType"), xmlScope) == "Xml_XmlType",
 			"C++ static receivers should resolve module-local enum abstract short names to the rendered owner-qualified helper");
-		final xmlTypeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(xmlType, xmlLookup).join("\n");
+		final xmlTypeLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(backendXmlType, xmlLookup).join("\n");
 		assertContains(xmlTypeLines, "struct Xml_XmlType {", "C++ module-local enum carriers should render under the module-qualified name");
 		assertContains(xmlTypeLines, "inline static int Element = 0;", "C++ module-local enum abstract statics should preserve literal backing values");
-		final xmlLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(xml, xmlLookup).join("\n");
+		final xmlLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(backendXml, xmlLookup).join("\n");
 		assertContains(xmlLines, "inline static int Element = Xml_XmlType::Element;",
 			"C++ module-local enum abstract aliases should infer the rendered backing type");
 		assertTrue(!new EReg("(^|[^A-Za-z0-9_])XmlType::Element", "").match(xmlLines),
@@ -11917,7 +11933,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			typedSyntheticModule("utest/TimerConsumer.hx", new HxModuleDecl("utest", ["haxe.Timer"], timerConsumer, [timerConsumer], false, false))
 		], false);
 		final timerCollisionLookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(timerCollisionProgram);
-		final timerCollisionScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(timerConsumer, timerCollisionLookup, "void");
+		final timerCollisionScope = @:privateAccess backend.cpp.CppTargetCore.renderScope(backendClass(timerCollisionProgram, timerConsumer),
+			timerCollisionLookup, "void");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EIdent("Timer"), "stamp"), []), timerCollisionScope) == "Timer::stamp()",
 			"C++ imported haxe.Timer calls should not bind to another module's Timer class");
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EField(EIdent("haxe"), "Timer"), "stamp"), []),
@@ -13191,7 +13208,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "auto parent = (*this);", "C++ smoke should lower bare super expressions to the current base-backed object");
 		assertContains(source, "__hxhx_json_min_field_from_file(platformsJson)",
 			"C++ smoke should lower hxcpp Android platform-min try/catch expressions through target runtime support");
-		assertContains(source, "__hxhx_join(words, \",\")", "C++ smoke should lower array join try/catch expressions through target runtime support");
+		assertContains(source, "__hxhx_join(words, std::string(\",\"))",
+			"C++ smoke should lower structural array join try/catch expressions through target runtime support");
 		assertContains(source, "static bool __hxhx_is_type(int, const std::string& type)", "C++ smoke should include Haxe is-expression helper overloads");
 		assertContains(source, "static std::string __hxhx_type_name(int)", "C++ smoke should include Haxe type-name helper overloads");
 		assertContains(source, "auto __hxhx_null_coalesce(std::nullptr_t, F fallback)", "C++ smoke should include Haxe null-coalescing helper overloads");

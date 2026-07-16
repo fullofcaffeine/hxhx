@@ -2171,10 +2171,46 @@ class EmitterStage {
 		return null;
 	}
 
+	/**
+		Lower function literals and the shared expression-level exception sentinels.
+
+		Typed-body construction has already selected and recursively rebuilt every
+		try/catch branch. This emitter only maps that structure to `HxRuntime.hx_try`
+		and `HxRuntime.hx_throw`; it never reparses source text or chooses a branch.
+	**/
 	static function tryExprToOcamlStage3LambdaTryIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
 		switch (e) {
+			case ECall(EIdent("__hxhx_throw"), [value]):
+				return "HxRuntime.hx_throw (Obj.repr ("
+					+ exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ "))";
+			case ECall(EIdent("__hxhx_try"), [ELambda(tryArgs, tryBody), EArrayDecl(catches), _]) if (tryArgs.length == 0):
+				final tryCode = exprToOcaml(tryBody, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee);
+				if (catches.length == 0)
+					return "HxRuntime.hx_try (fun () -> " + tryCode + ") (fun __hxhx_e -> HxRuntime.hx_throw __hxhx_e)";
+				return switch (catches[0]) {
+					case EArrayDecl([EString(sourceName), EString(_), ELambda(catchArgs, catchBody)]) if (catchArgs.length == 1):
+						final name = catchArgs[0].length == 0 ? sourceName : catchArgs[0];
+						final catchTypes = extendTyByIdentManyForStage3(cast tyByIdent, [name], TyType.fromHintText("Dynamic"));
+						final catchCode = exprToOcaml(catchBody, arityByIdent, catchTypes, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							callSigByCallee);
+						"HxRuntime.hx_try (fun () -> "
+						+ tryCode
+						+ ") (fun "
+						+ ocamlValueIdent(name)
+						+ " -> "
+						+ catchCode
+						+ ")";
+					case _:
+						throw "stage3 emitter: malformed structural __hxhx_try catch entry";
+				};
+			case ECall(EIdent("__hxhx_try"), _):
+				throw "stage3 emitter: malformed structural __hxhx_try expression";
+			case ECall(EIdent("__hxhx_throw"), _):
+				throw "stage3 emitter: malformed structural __hxhx_throw expression";
 			case ELambda(args, body):
 				final ocamlArgs = args.map(ocamlValueIdent).join(" ");
 				final ty2 = extendTyByIdentManyForStage3(cast tyByIdent, args, TyType.fromHintText("Dynamic"));
@@ -5813,7 +5849,7 @@ class EmitterStage {
 			return fromFile;
 
 		// Fallback (in-memory modules): use the parsed main class name when available.
-		final decl = tm == null ? null : tm.getParsed().getDecl();
+		final decl = tm == null ? null : tm.getBackendDeclaration();
 		final main = decl == null ? null : HxModuleDecl.getMainClass(decl);
 		final nm0 = main == null ? null : HxClassDecl.getName(main);
 		final nm = nm0 == null ? "" : StringTools.trim(nm0);
@@ -6648,7 +6684,7 @@ class EmitterStage {
 		//   qualify those unqualified references during emission.
 		final moduleNameByPkgAndClass:Map<String, String> = new Map();
 		for (tm in typedModules) {
-			final decl = tm.getParsed().getDecl();
+			final decl = tm.getBackendDeclaration();
 			final moduleTypeName = moduleTypeNameFor(tm);
 			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
 			final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
@@ -6772,7 +6808,7 @@ class EmitterStage {
 			for (k in runtimeModuleNames.keys())
 				existingMods.set(k, true);
 			for (tm in typedModules) {
-				final decl = tm.getParsed().getDecl();
+				final decl = tm.getBackendDeclaration();
 				final moduleTypeName = moduleTypeNameFor(tm);
 				for (cls in HxModuleDecl.getClasses(decl)) {
 					final className = HxClassDecl.getName(cls);
@@ -6935,7 +6971,7 @@ class EmitterStage {
 			}
 		}
 		for (tm in typedModules) {
-			final decl = tm.getParsed().getDecl();
+			final decl = tm.getBackendDeclaration();
 			final moduleTypeName = moduleTypeNameFor(tm);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final className = HxClassDecl.getName(cls);
@@ -7055,7 +7091,7 @@ class EmitterStage {
 			}
 			final moduleEmitBodies = emitFullBodies && allowFullBodiesForFile(tm.getParsed().getFilePath(), isRoot);
 
-			final decl = tm.getParsed().getDecl();
+			final decl = tm.getBackendDeclaration();
 			final mainClass = HxModuleDecl.getMainClass(decl);
 			final parsedMainName = HxClassDecl.getName(mainClass);
 			final moduleTypeName = moduleTypeNameFor(tm);
