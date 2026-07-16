@@ -628,6 +628,8 @@ class TyperStage {
 	}
 
 	static function overloadArgScore(expected:TyType, actual:TyType):Int {
+		if (expected != null && actual != null && expected.getSemanticKey() == actual.getSemanticKey())
+			return 4;
 		if (expected.isFunction() || actual.isFunction()) {
 			if (!expected.isFunction() || !actual.isFunction())
 				return -1;

@@ -60,6 +60,14 @@ class M14TypedAbstractBinaryIntegrationTest {
 		return null;
 	}
 
+	static function namedCallCount(expression:TypedExpr, name:String):Int {
+		final children = expression.getExpressions();
+		var count = expression.getTag() == TypedExprTag.Call && children.length > 0 && children[0].getTexts().indexOf(name) >= 0 ? 1 : 0;
+		for (child in children)
+			count += namedCallCount(child, name);
+		return count;
+	}
+
 	static function typingFailure(source:String, expected:String):Void {
 		var message:Null<String> = null;
 		try {
@@ -120,9 +128,23 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  public inline function new(value:Int) this = value;",
 			"  @:commutative @:op(A + B) public static function chooseDirect(left:DirectTie, right:Dynamic):Int return left;",
 			"}",
+			"class FieldHolder {",
+			"  public var value:Fallback;",
+			"  public function new(value:Fallback) this.value = value;",
+			"}",
+			"class PropertyHolder {",
+			"  var stored:Fallback;",
+			"  public var value(get, set):Fallback;",
+			"  public function new(value:Fallback) stored = value;",
+			"  function get_value():Fallback return stored;",
+			"  function set_value(next:Fallback):Fallback return stored = next;",
+			"}",
 			"abstract W(Int) from Int {}",
 			"class HelperMacros { public static function typeError(value:Dynamic):Bool return false; }",
-			"class Main { static var W:Int = 2; static function main() {",
+			"class Main {",
+			"  static var W:Int = 2;",
+			"  static function makeFieldHolder(value:Fallback):FieldHolder return new FieldHolder(value);",
+			"  static function main() {",
 			"  var left:Score = new Score(2);",
 			"  var right:Score = new Score(3);",
 			"  var direct = left + right;",
@@ -139,6 +161,11 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  var localFunctionReversed = nextText() * left;",
 			"  var fallback:Fallback = new Fallback(5);",
 			"  var fallbackResult:Fallback = (fallback += 6);",
+			"  var fieldHolder = new FieldHolder(new Fallback(7));",
+			"  var fieldResult:Fallback = (fieldHolder.value += 2);",
+			"  var sideEffectFieldResult:Fallback = (makeFieldHolder(new Fallback(8)).value += 3);",
+			"  var propertyHolder = new PropertyHolder(new Fallback(9));",
+			"  var propertyResult:Fallback = (propertyHolder.value += 4);",
 			"  var nativeLeft:NativeSum = new NativeSum(7);",
 			"  var nativeRight:NativeSum = new NativeSum(8);",
 			"  var nativeResult = nativeLeft + nativeRight;",
@@ -188,6 +215,20 @@ class M14TypedAbstractBinaryIntegrationTest {
 		final fallbackResult = initializer(main, "fallbackResult");
 		assertTrue(declarationExpression(fallbackResult, "addArbitrarily") != null && containsTag(fallbackResult, TypedExprTag.Assign),
 			"base-operator compound fallback did not expose its shared writeback schedule");
+
+		final fieldResult = initializer(main, "fieldResult");
+		assertTrue(declarationExpression(fieldResult, "addArbitrarily") != null && containsTag(fieldResult, TypedExprTag.Assign),
+			"field compound fallback did not retain an explicit read/call/write schedule");
+		final sideEffectFieldResult = initializer(main, "sideEffectFieldResult");
+		assertTrue(namedCallCount(sideEffectFieldResult, "makeFieldHolder") == 1
+			&& declarationExpression(sideEffectFieldResult, "addArbitrarily") != null
+			&& containsTag(sideEffectFieldResult, TypedExprTag.Assign),
+			"field compound fallback did not evaluate its side-effecting receiver exactly once");
+		final propertyResult = initializer(main, "propertyResult");
+		assertTrue(declarationExpression(propertyResult, "get_value") != null
+			&& declarationExpression(propertyResult, "addArbitrarily") != null
+			&& declarationExpression(propertyResult, "set_value") != null,
+			"property compound fallback did not expose its getter, exact helper, and setter calls");
 
 		final nativeResult = initializer(main, "nativeResult");
 		assertTrue(nativeResult.getTag() == TypedExprTag.Block
