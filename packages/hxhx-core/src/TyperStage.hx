@@ -79,6 +79,22 @@ class TyperStage {
 		return identity == null ? index.getByFullName(type.getDisplay()) : index.getByFullName(identity.getCanonicalName());
 	}
 
+	/**
+		Resolve a member read without mistaking a declared method for a missing data
+		field. Exact calls keep their declaration identity separately; until the
+		incremental type model grows structural function types, a method value has an
+		explicitly unknown type rather than an "unknown field" error.
+	**/
+	static function declaredMemberReadType(owner:TyNominalInfo, name:String, isStatic:Bool):Null<TyType> {
+		if (owner == null)
+			return null;
+		final fieldType = owner.fieldType(name);
+		if (fieldType != null)
+			return fieldType;
+		final method = isStatic ? owner.staticMethod(name) : owner.instanceMethod(name);
+		return method == null ? null : TyType.unknown();
+	}
+
 	static function accessorPropertyForAccess(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, position:HxPos):Null<TyPropertyInfo> {
 		var receiver:Null<HxExpr> = null;
 		var field = "";
@@ -835,9 +851,9 @@ class TyperStage {
 					if (isUpperStartName(last)) {
 						final c = ctx.resolveType(dotted);
 						if (c != null) {
-							final ft = c.fieldType(_field);
-							if (ft != null)
-								return ft;
+							final memberType = declaredMemberReadType(c, _field, true);
+							if (memberType != null)
+								return memberType;
 							// Bring-up default: static fields without hints are treated as dynamic.
 							return TyType.fromHintText("Dynamic");
 						}
@@ -847,9 +863,9 @@ class TyperStage {
 					case EThis:
 						final c = ctx.currentClass();
 						if (c != null) {
-							final ft = c.fieldType(_field);
-							if (ft != null) {
-								ft;
+							final memberType = declaredMemberReadType(c, _field, false);
+							if (memberType != null) {
+								memberType;
 							} else {
 								if (isStrict()) {
 									throw new TyperError(ctx.getFilePath(), pos, "Unknown field this." + _field);
@@ -865,9 +881,9 @@ class TyperStage {
 						final idx = ctx.getIndex();
 						final c = nominalInfoForType(idx, objTy);
 						if (c != null) {
-							final ft = c.fieldType(_field);
-							if (ft != null) {
-								ft;
+							final memberType = declaredMemberReadType(c, _field, false);
+							if (memberType != null) {
+								memberType;
 							} else {
 								if (isStrict()) {
 									throw new TyperError(ctx.getFilePath(), pos, "Unknown field " + _field + " on " + objTy.getDisplay());

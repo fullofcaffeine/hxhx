@@ -298,6 +298,80 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(!bodyContainsTag(body, TypedExprTag.Opaque), "conditional else-if chain retained an opaque parser recovery node");
 	}
 
+	/** Prove strict body sealing recognizes an exact instance call as a method read, not a missing data field. **/
+	static function assertStrictInstanceMethodCallee():Void {
+		final filePath = "checks/StrictInstanceCall.hx";
+		final parsed = ParserStage.parse([
+			"class StrictInstanceCall {",
+			"  var value:Int;",
+			"  public function new() this.value = 41;",
+			"  function ping():Int return this.value;",
+			"  static function main() {",
+			"    var instance = new StrictInstanceCall();",
+			"    instance.ping();",
+			"  }",
+			"}",
+		].join("\n"), filePath);
+		final resolved = new ResolvedModule("StrictInstanceCall", filePath, parsed);
+		final index = TyperIndex.build([resolved]);
+		final loader = new ModuleLoader(["checks"], new StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready([resolved]);
+
+		final oldStrict = Sys.getEnv("HXHX_TYPER_STRICT");
+		var typed:Null<TypedModule> = null;
+		try {
+			Sys.putEnv("HXHX_TYPER_STRICT", "1");
+			typed = TyperStage.typeResolvedModule(resolved, index, loader);
+		} catch (error:Dynamic) {
+			if (oldStrict == null)
+				Sys.putEnv("HXHX_TYPER_STRICT", "");
+			else
+				Sys.putEnv("HXHX_TYPER_STRICT", oldStrict);
+			throw error;
+		}
+		if (oldStrict == null)
+			Sys.putEnv("HXHX_TYPER_STRICT", "");
+		else
+			Sys.putEnv("HXHX_TYPER_STRICT", oldStrict);
+
+		final body = findFunction(findClass(typed, "StrictInstanceCall"), "main").getBody();
+		final statements = body.getStatements();
+		final call = statements[statements.length - 1].getExpressions()[0];
+		assertTrue(call.getTag() == TypedExprTag.Call, "strict instance method call was not structurally sealed");
+		assertTrue(call.getDeclaration() != null && call.getDeclaration().getSignature().getName() == "ping",
+			"strict instance method call lost its exact declaration identity");
+		final callee = call.getExpressions()[0];
+		assertTrue(callee.getTag() == TypedExprTag.FieldRead && callee.getTexts()[0] == "ping",
+			"strict instance method callee was not retained as a structural member read");
+
+		final missingParsed = ParserStage.parse([
+			"class StrictMissingMember {",
+			"  public function new() {}",
+			"  static function main() {",
+			"    var instance = new StrictMissingMember();",
+			"    var absent = instance.missing;",
+			"  }",
+			"}",
+		].join("\n"), "checks/StrictMissingMember.hx");
+		final missingResolved = new ResolvedModule("StrictMissingMember", "checks/StrictMissingMember.hx", missingParsed);
+		final missingIndex = TyperIndex.build([missingResolved]);
+		final missingLoader = new ModuleLoader(["checks"], new StringMap<String>(), missingIndex, function(_):Bool return false);
+		missingLoader.markResolvedAlready([missingResolved]);
+		var missingFailure:Null<String> = null;
+		try {
+			Sys.putEnv("HXHX_TYPER_STRICT", "1");
+			TyperStage.typeResolvedModule(missingResolved, missingIndex, missingLoader);
+		} catch (error:Dynamic) {
+			missingFailure = Std.string(error);
+		}
+		if (oldStrict == null)
+			Sys.putEnv("HXHX_TYPER_STRICT", "");
+		else
+			Sys.putEnv("HXHX_TYPER_STRICT", oldStrict);
+		assertTrue(missingFailure != null && missingFailure.indexOf("Unknown field missing") >= 0,
+			"recognizing declared method reads weakened strict missing-field diagnostics");
+	}
+
 	static function main():Void {
 		final filePath = "checks/TypedBodyMain.hx";
 		final source = [
@@ -356,6 +430,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertStructuralTerminalReturnBlock();
 		assertStructuralUntypedStatementBlock();
 		assertConditionalElseIfStructure();
+		assertStrictInstanceMethodCallee();
 		assertOpaqueGuard();
 		assertLifecycleGuard(typed, mainFunction);
 	}
