@@ -143,6 +143,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  var nativeResult = nativeLeft + nativeRight;",
 			"  var nativeText:NativeText = new NativeText('value');",
 			"  var nativeTextResult = nativeText + 4;",
+			"  var typeTestControl = nativeTextResult is String;",
 			"  var count:Slice = new Slice(2);",
 			"  var rightOwned = 'word' / count;",
 			"  var mutable:Mutable = new Mutable(9);",
@@ -196,6 +197,8 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& nativeTextResult.getType().getSemanticKey() == "nominal:Main.NativeText"
 			&& containsTag(nativeTextResult, TypedExprTag.Binary),
 			"bodyless String-plus-Int declaration did not preserve its String carrier and abstract result");
+		assertTrue(initializer(main, "typeTestControl").getTag() == TypedExprTag.Binary,
+			"ordinary type-test syntax was mistaken for a surviving abstract operator");
 
 		final rightOwned = initializer(main, "rightOwned");
 		assertTrue(declarationExpression(rightOwned, "trimArbitrarily") != null, "operator catalog did not find an abstract owned by the right operand");
