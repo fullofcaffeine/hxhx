@@ -21918,6 +21918,10 @@ class CppTargetCore {
 				int64CompareExpr(args[0], args[1], false, scope);
 			case "ucompare" if (args.length == 2):
 				int64CompareExpr(args[0], args[1], true, scope);
+			case "eq" if (args.length == 2):
+				"(" + renderExpr(args[0], scope) + " == " + renderExpr(args[1], scope) + ")";
+			case "neq" if (args.length == 2):
+				"(" + renderExpr(args[0], scope) + " != " + renderExpr(args[1], scope) + ")";
 			case "toStr" if (args.length == 1):
 				"std::to_string(" + renderExpr(args[0], scope) + ")";
 			case "parseString" if (args.length == 1):
@@ -22059,6 +22063,8 @@ class CppTargetCore {
 			case "toStr" if (argCount == 1):
 				"std::string";
 			case "isNeg" if (argCount == 1):
+				"bool";
+			case "eq" | "neq" if (argCount == 2):
 				"bool";
 			case "compare" | "ucompare" if (argCount == 2):
 				"int";
