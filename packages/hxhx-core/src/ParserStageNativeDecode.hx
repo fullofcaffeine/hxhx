@@ -1138,7 +1138,7 @@ class ParserStageNativeDecode {
 		#end
 
 		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr, functionMetadata, null, null,
-			methodBodySrc == null ? "" : methodBodySrc);
+			methodBodySrc == null ? "" : methodBodySrc, methodBodySrc != null || outBody.length > 0);
 	}
 
 	static function normalizeMethodReturnTypeHint(typeHint:String):String {

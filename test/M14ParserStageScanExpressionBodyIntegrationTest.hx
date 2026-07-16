@@ -88,5 +88,39 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 		assertTrue(HxFieldDecl.getName(optionalFields[5]) == "targets", "expected @:optional targets field name");
 		for (field in optionalFields)
 			assertTrue(HxFieldDecl.getName(field) != "optional", "metadata name should not become a typedef field name");
+
+		final shiftedInitializerSource = [
+			"abstract ShiftedBits(Int) {",
+			"  private static var mask = (17 >>> 2) | (3 << 4);",
+			"  @:op(~A) private function complement():ShiftedBits;",
+			"  private function intentionallyEmpty():Void {}",
+			"}",
+		].join("\n");
+		final shiftedAbstracts = ParserStageScanHelpers.scanModuleLocalHelperAbstracts(shiftedInitializerSource, null);
+		assertTrue(shiftedAbstracts.length == 1, "expected abstract after shift-heavy static initializer to be retained");
+		var complement:Null<HxFunctionDecl> = null;
+		for (fn in HxClassDecl.getFunctions(shiftedAbstracts[0]))
+			if (HxFunctionDecl.getName(fn) == "complement")
+				complement = fn;
+		assertTrue(complement != null, "bit shifts in a static initializer must not hide a later bodyless function");
+		assertTrue(HxFunctionDecl.getMetadata(complement).indexOf("op(~A)") >= 0,
+			"bodyless operator declaration should retain its metadata after a shift-heavy initializer");
+		assertTrue(!HxFunctionDecl.getHasBody(complement), "semicolon declaration should retain target-native bodyless status");
+		var intentionallyEmpty:Null<HxFunctionDecl> = null;
+		for (fn in HxClassDecl.getFunctions(shiftedAbstracts[0]))
+			if (HxFunctionDecl.getName(fn) == "intentionallyEmpty")
+				intentionallyEmpty = fn;
+		assertTrue(intentionallyEmpty != null && HxFunctionDecl.getHasBody(intentionallyEmpty),
+			"an intentionally empty braced function must not be mistaken for target-native behavior");
+
+		final parsedShiftedModule = ParserStage.parse(shiftedInitializerSource, "ShiftedBits.hx");
+		var parsedComplement:Null<HxFunctionDecl> = null;
+		for (cls in HxModuleDecl.getClasses(parsedShiftedModule.getDecl()))
+			if (HxClassDecl.getName(cls) == "ShiftedBits")
+				for (fn in HxClassDecl.getFunctions(cls))
+					if (HxFunctionDecl.getName(fn) == "complement")
+						parsedComplement = fn;
+		assertTrue(parsedComplement != null, "ParserStage enrichment must retain bodyless declarations after shift-heavy static initializers");
+		assertTrue(!HxFunctionDecl.getHasBody(parsedComplement), "ParserStage enrichment changed bodyless declaration status");
 	}
 }

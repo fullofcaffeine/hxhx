@@ -244,6 +244,38 @@ class TypedAbstractUnaryLowering {
 			.getNominalIdentity() == null ? call : TypedExpr.castValue(call, binding.getResultType().getDisplay(), binding.getResultType(), operand.getPosition());
 	}
 
+	/**
+		Lower an explicitly bodyless abstract declaration to the ordinary carrier
+		operation authorized by that declaration. The semantic abstract remains the
+		outer result type; only this operation's operand/result view uses the primitive
+		carrier. This is deliberately narrower than a carrier fallback: a missing or
+		body-bearing declaration never reaches this path.
+	**/
+	static function nativeBodylessOperation(binding:TyAbstractOperatorInfo, operand:TypedExpr, abstractInfo:TyAbstractInfo, filePath:String):TypedExpr {
+		final declaration = binding.getDeclaration();
+		final carrierType = abstractInfo.getUnderlyingType();
+		final op = binding.getOperator();
+		final supported = if (op == HxUnaryOperator.Negate || op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement) carrierType.isNumeric() else
+			if (op == HxUnaryOperator.LogicalNot) carrierType.getDisplay() == "Bool" else carrierType.getDisplay() == "Int";
+		if (!supported)
+			throw new TyperError(filePath, operand.getPosition(),
+				"Bodyless abstract unary operator requires a compatible primitive carrier: "
+				+ declaration.getIdentity().getCanonicalKey()
+				+ " uses "
+				+ carrierType.getDisplay());
+		final resultType = binding.getResultType();
+		if (resultType.isUnknown() || resultType.isVoid())
+			throw new TyperError(filePath, declaration.getPosition(),
+				"Bodyless abstract unary operator requires an explicit value result: " + declaration.getIdentity().getCanonicalKey());
+
+		final carrierOperand = op == HxUnaryOperator.Increment
+			|| op == HxUnaryOperator.Decrement ? operand.withType(carrierType) : TypedExpr.castValue(operand, carrierType.getDisplay(), carrierType,
+				operand.getPosition());
+		final carrierResult = TypedExpr.unary(op, binding.getFixity(), carrierOperand, carrierType, operand.getPosition());
+		return resultType.getSemanticKey() == carrierType.getSemanticKey() ? carrierResult : TypedExpr.castValue(carrierResult, resultType.getDisplay(),
+			resultType, operand.getPosition());
+	}
+
 	static function inlineCall(binding:TyAbstractOperatorInfo, operand:TypedExpr, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,
 			counter:TypedUnaryLoweringCounter):TypedExpr {
 		final declaration = binding.getDeclaration();
@@ -251,18 +283,28 @@ class TypedAbstractUnaryLowering {
 		if (helper == null)
 			throw new TyperError(filePath, operand.getPosition(),
 				"Inline abstract unary helper body is outside the typed program: " + declaration.getIdentity().getCanonicalKey());
+		var resultType = binding.getResultType();
+		final helperEnvironment = helper.getEnvironment();
+		final inferredResult = helperEnvironment == null ? TyType.unknown() : helperEnvironment.getReturnType();
+		if (resultType.isUnknown()) {
+			if (inferredResult.isUnknown())
+				throw new TyperError(filePath, declaration.getPosition(),
+					"Inline abstract unary helper result could not be inferred: " + declaration.getIdentity().getCanonicalKey());
+			resultType = inferredResult;
+		} else if (!inferredResult.isUnknown() && TyType.unify(resultType, inferredResult) == null) {
+			throw new TyperError(filePath, declaration.getPosition(),
+				"Inline abstract unary helper result conflicts with its declaration: " + declaration.getIdentity().getCanonicalKey());
+		}
 		final place = placeFor(operand, filePath, operand.getPosition(), counter);
 		final state:TypedInlineBodyState = {expressions: place.prefix.copy(), returned: false, returnedValue: false};
 		lowerInlineStatements(helper.getBody().getStatements(), place, new StringMap<String>(), state, helpers, index, filePath, counter, declaration);
-		if (!binding.getResultType().isVoid() && !state.returnedValue)
+		if (!resultType.isVoid() && !state.returnedValue)
 			throw new TyperError(filePath, declaration.getPosition(),
 				"Inline abstract unary helper did not produce its declared result: " + declaration.getIdentity().getCanonicalKey());
 		if (state.expressions.length == 0)
-			state.expressions.push(TypedExpr.nullValue(binding.getResultType(), operand.getPosition()));
-		final block = TypedExpr.block(state.expressions, binding.getResultType(), operand.getPosition());
-		return binding.getResultType()
-			.getNominalIdentity() == null ? block : TypedExpr.castValue(block, binding.getResultType().getDisplay(), binding.getResultType(),
-			operand.getPosition());
+			state.expressions.push(TypedExpr.nullValue(resultType, operand.getPosition()));
+		final block = TypedExpr.block(state.expressions, resultType, operand.getPosition());
+		return resultType.getNominalIdentity() == null ? block : TypedExpr.castValue(block, resultType.getDisplay(), resultType, operand.getPosition());
 	}
 
 	/** Lower Haxe's getter/setter prefix/postfix contract without selecting the value abstract's helper. **/
@@ -322,6 +364,8 @@ class TypedAbstractUnaryLowering {
 		if (selected == null)
 			return rebuilt;
 		final declaration = selected.getDeclaration();
+		if (!declaration.getHasBody())
+			return nativeBodylessOperation(selected, operand, abstractInfo, filePath);
 		if (declaration.getIsStatic())
 			return staticCall(selected, operand, index);
 		if (!declaration.getIsInline())

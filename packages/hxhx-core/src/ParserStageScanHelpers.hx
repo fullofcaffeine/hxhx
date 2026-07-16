@@ -1710,6 +1710,10 @@ class ParserStageScanHelpers {
 					var parenDepth = 0;
 					var bracketDepth = 0;
 					var angleDepth = 0;
+					// Before `=`, angle brackets belong to the field type. In the
+					// initializer they are comparison/shift operators and must not
+					// suppress the declaration's terminating semicolon.
+					var inInitializer = false;
 					var fieldDone = false;
 
 					while (!fieldDone) {
@@ -1734,11 +1738,16 @@ class ParserStageScanHelpers {
 								case "]":
 									if (depth == 1 && bracketDepth > 0) bracketDepth -= 1;
 								case "<":
-									if (depth == 1) angleDepth += 1;
+									if (depth == 1 && !inInitializer) angleDepth += 1;
 								case ">":
-									if (depth == 1 && angleDepth > 0) angleDepth -= 1;
+									if (depth == 1 && !inInitializer && angleDepth > 0) angleDepth -= 1;
+								case "=":
+									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) inInitializer = true;
 								case ",":
-									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) wantName = true;
+									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) {
+										wantName = true;
+										inInitializer = false;
+									}
 								case ";":
 									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) fieldDone = true;
 								case _:
@@ -1916,7 +1925,7 @@ class ParserStageScanHelpers {
 						if (sawDynamic)
 							metadata.push("dynamic");
 						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, returnType, body, "", metadata,
-							posFromIndex(source, declarationStart), posFromIndex(source, i), bodyText));
+							posFromIndex(source, declarationStart), posFromIndex(source, i), bodyText, bodyCapture.hasBody));
 					}
 
 					sawStatic = false;
@@ -2153,7 +2162,12 @@ class ParserStageScanHelpers {
 		}
 	}
 
-	static function scanFunctionBody(source:String, start:Int, capture:Bool = true):{body:Array<HxStmt>, bodyText:String, nextPos:Int} {
+	static function scanFunctionBody(source:String, start:Int, capture:Bool = true):{
+		body:Array<HxStmt>,
+		bodyText:String,
+		nextPos:Int,
+		hasBody:Bool
+	} {
 		var i = start;
 		var bodyStart = -1;
 		var tok = scanNextToken(source, i);
@@ -2167,14 +2181,24 @@ class ParserStageScanHelpers {
 			tok = scanNextToken(source, i);
 		}
 		if (tok.text == ";") {
-			if (!capture)
-				return {body: [], bodyText: "", nextPos: tok.nextPos};
 			final rawStart = bodyStart >= 0 ? bodyStart : start;
 			final rawExpr = source.substring(rawStart, tok.nextPos - 1);
 			final leading = leadingWhitespaceLength(rawExpr);
 			final exprText = StringTools.trim(rawExpr);
+			if (!capture)
+				return {
+					body: [],
+					bodyText: "",
+					nextPos: tok.nextPos,
+					hasBody: exprText.length > 0
+				};
 			if (exprText.length == 0)
-				return {body: [], bodyText: "", nextPos: tok.nextPos};
+				return {
+					body: [],
+					bodyText: "",
+					nextPos: tok.nextPos,
+					hasBody: false
+				};
 			final bodyText = exprText + ";";
 			var body = new Array<HxStmt>();
 			try {
@@ -2186,16 +2210,36 @@ class ParserStageScanHelpers {
 			} catch (_:String) {
 				body = [];
 			}
-			return {body: body, bodyText: bodyText, nextPos: tok.nextPos};
+			return {
+				body: body,
+				bodyText: bodyText,
+				nextPos: tok.nextPos,
+				hasBody: true
+			};
 		}
 		if (tok.text != "{")
-			return {body: [], bodyText: "", nextPos: tok.nextPos};
+			return {
+				body: [],
+				bodyText: "",
+				nextPos: tok.nextPos,
+				hasBody: false
+			};
 
 		final block = scanBalancedBlock(source, tok.nextPos);
 		if (block.nextPos <= tok.nextPos)
-			return {body: [], bodyText: "", nextPos: tok.nextPos};
+			return {
+				body: [],
+				bodyText: "",
+				nextPos: tok.nextPos,
+				hasBody: true
+			};
 		if (!capture)
-			return {body: [], bodyText: "", nextPos: block.nextPos};
+			return {
+				body: [],
+				bodyText: "",
+				nextPos: block.nextPos,
+				hasBody: true
+			};
 
 		var body = new Array<HxStmt>();
 		if (block.bodyText.length > 0) {
@@ -2209,7 +2253,12 @@ class ParserStageScanHelpers {
 				body = [];
 			}
 		}
-		return {body: body, bodyText: block.bodyText, nextPos: block.nextPos};
+		return {
+			body: body,
+			bodyText: block.bodyText,
+			nextPos: block.nextPos,
+			hasBody: true
+		};
 	}
 
 	static function expressionBodyKeywordStartsWithoutReturn(text:String):Bool {

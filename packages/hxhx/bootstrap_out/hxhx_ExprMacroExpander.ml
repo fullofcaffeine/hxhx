@@ -938,7 +938,7 @@ let expandResolvedModules = fun modules session allowlist -> try let __fallback_
                   changed := __assign_26;
                   __assign_26
                 )) else ());
-                HxArray.push newFns (HxFunctionDecl.create (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic (HxFunctionDecl.getVisibility (Obj.magic fn))) (HxFunctionDecl.getIsStatic (Obj.magic fn)) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (Obj.magic newBody) (HxFunctionDecl.getReturnStringLiteral (Obj.magic fn) : string) (Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn))) (Obj.magic (HxFunctionDecl.getPos (Obj.magic fn))) (Obj.magic (HxFunctionDecl.getEndPos (Obj.magic fn))) (HxFunctionDecl.getBodyText (Obj.magic fn) : string))
+                HxArray.push newFns (HxFunctionDecl.create (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic (HxFunctionDecl.getVisibility (Obj.magic fn))) (HxFunctionDecl.getIsStatic (Obj.magic fn)) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (Obj.magic newBody) (HxFunctionDecl.getReturnStringLiteral (Obj.magic fn) : string) (Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn))) (Obj.magic (HxFunctionDecl.getPos (Obj.magic fn))) (Obj.magic (HxFunctionDecl.getEndPos (Obj.magic fn))) (HxFunctionDecl.getBodyText (Obj.magic fn) : string) (HxRuntime.hx_null))
               )
             )) done);
             ignore (if not (!changed) then ignore ((

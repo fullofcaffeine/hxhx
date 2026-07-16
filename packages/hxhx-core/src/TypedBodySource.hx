@@ -145,7 +145,7 @@ class TypedBodySource {
 		return new HxFunctionDecl(HxFunctionDecl.getName(source), HxFunctionDecl.getVisibility(source), HxFunctionDecl.getIsStatic(source),
 			HxFunctionDecl.getArgs(source), HxFunctionDecl.getReturnTypeHint(source), statements(typedFunction.getBody()),
 			HxFunctionDecl.getReturnStringLiteral(source), HxFunctionDecl.getMetadata(source), HxFunctionDecl.getPos(source),
-			HxFunctionDecl.getEndPos(source), "");
+			HxFunctionDecl.getEndPos(source), "", HxFunctionDecl.getHasBody(source));
 	}
 
 	public static function classDeclaration(typedClass:TypedClass):HxClassDecl {

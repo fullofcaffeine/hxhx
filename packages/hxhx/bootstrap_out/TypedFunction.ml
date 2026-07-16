@@ -57,6 +57,8 @@ let getEnvironment = fun self () -> (Obj.magic self : t).environment
 
 let getBody = fun self () -> (Obj.magic self : t).body
 
+let withBody = fun self (loweredBody : TypedFunctionBody.t) -> create ((Obj.magic self : t).ownerName : string) ((Obj.magic self : t).sourceOrdinal) (Obj.magic ((Obj.magic self : t).sourceDeclaration)) (Obj.magic ((Obj.magic self : t).declaration)) (Obj.magic ((Obj.magic self : t).environment)) (Obj.magic loweredBody)
+
 let getStableIdentity = fun self () -> try let __fallback_result_12 = (
   ignore (if (Obj.magic self : t).declaration != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic ((Obj.magic self : t).declaration)) ())) () : string))) else ());
   let tempString = ref ("" : string) in (

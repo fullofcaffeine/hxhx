@@ -11,6 +11,7 @@
 	- Parsed argument list (names + optional type hints/default values).
 	- Optional return type hint text.
 	- Body statements (minimal subset for now).
+	- Whether source used a body or a target-native/extern semicolon declaration.
 
 	How:
 	- Like the rest of the Stage 2/3 AST, this is intentionally smaller than the
@@ -28,9 +29,10 @@ class HxFunctionDecl {
 	public final pos:HxPos;
 	public final endPos:HxPos;
 	public final bodyText:String;
+	public final hasBody:Bool;
 
 	public function new(name:String, visibility:HxVisibility, isStatic:Bool, args:Array<HxFunctionArg>, returnTypeHint:String, body:Array<HxStmt>,
-			returnStringLiteral:String, ?metadata:Array<String>, ?pos:HxPos, ?endPos:HxPos, ?bodyText:String) {
+			returnStringLiteral:String, ?metadata:Array<String>, ?pos:HxPos, ?endPos:HxPos, ?bodyText:String, ?hasBody:Bool) {
 		this.name = name;
 		this.visibility = visibility;
 		this.isStatic = isStatic;
@@ -42,6 +44,7 @@ class HxFunctionDecl {
 		this.pos = pos == null ? HxPos.unknown() : pos;
 		this.endPos = endPos == null ? this.pos : endPos;
 		this.bodyText = bodyText == null ? "" : bodyText;
+		this.hasBody = hasBody == null ? this.body.length > 0 || this.bodyText.length > 0 : hasBody;
 	}
 
 	static function normalizeReturnTypeHint(typeHint:String):String {
@@ -145,4 +148,8 @@ class HxFunctionDecl {
 
 	public static function getBodyText(fn:HxFunctionDecl):String
 		return fn.bodyText;
+
+	/** Distinguishes a native/extern `;` declaration from an intentionally empty `{}` body. */
+	public static function getHasBody(fn:HxFunctionDecl):Bool
+		return fn.hasBody;
 }

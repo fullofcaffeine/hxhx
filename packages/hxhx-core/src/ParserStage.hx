@@ -186,7 +186,8 @@ class ParserStage {
 						final emittedBodyText = hasBracedBody ? bodyText : HxFunctionDecl.getBodyText(fn);
 						out.push(new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), HxFunctionDecl.getIsStatic(fn),
 							HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn), body, HxFunctionDecl.getReturnStringLiteral(fn),
-							HxFunctionDecl.getMetadata(fn), HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), emittedBodyText));
+							HxFunctionDecl.getMetadata(fn), HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn),
+							emittedBodyText, hasBracedBody || HxFunctionDecl.getHasBody(fn)));
 					}
 				}
 			} catch (_:HxParseError) {} catch (_:String) {}
@@ -526,6 +527,8 @@ class ParserStage {
 							final bodyChanged = scannedBody.length > 0 && !scannedHasUnsupported;
 							final body = bodyChanged ? scannedBody : HxFunctionDecl.getBody(fn);
 							final bodyText = bodyChanged ? HxFunctionDecl.getBodyText(scannedFn) : HxFunctionDecl.getBodyText(fn);
+							final hasBody = scannedFn == null ? HxFunctionDecl.getHasBody(fn) : HxFunctionDecl.getHasBody(scannedFn);
+							final hasBodyChanged = hasBody != HxFunctionDecl.getHasBody(fn);
 							if (isStatic != HxFunctionDecl.getIsStatic(fn))
 								changed = true;
 							if (metadataChanged)
@@ -538,6 +541,8 @@ class ParserStage {
 								changed = true;
 							if (bodyChanged)
 								changed = true;
+							if (hasBodyChanged)
+								changed = true;
 							if (fnName != null && fnName.length > 0)
 								existingFnNames.set(fnName, true);
 							patchedFns.push(isStatic == HxFunctionDecl.getIsStatic(fn)
@@ -545,8 +550,9 @@ class ParserStage {
 								&& !argsChanged
 								&& !returnChanged
 								&& !posChanged
-								&& !bodyChanged ? fn : new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), isStatic, args,
-									returnType, body, HxFunctionDecl.getReturnStringLiteral(fn), metadata, pos, endPos, bodyText));
+								&& !bodyChanged
+								&& !hasBodyChanged ? fn : new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), isStatic, args,
+									returnType, body, HxFunctionDecl.getReturnStringLiteral(fn), metadata, pos, endPos, bodyText, hasBody));
 						}
 						for (fn in HxClassDecl.getFunctions(scanned)) {
 							final fnName = HxFunctionDecl.getName(fn);
@@ -981,13 +987,15 @@ class ParserStage {
 				final metadata = mergeMetadata(HxFunctionDecl.getMetadata(fn), HxFunctionDecl.getMetadata(scannedFn));
 				final returnType = HxFunctionDecl.getReturnTypeHint(fn)
 					.length == 0 ? HxFunctionDecl.getReturnTypeHint(scannedFn) : HxFunctionDecl.getReturnTypeHint(fn);
+				final hasBody = HxFunctionDecl.getHasBody(scannedFn);
 				if (isStatic != HxFunctionDecl.getIsStatic(fn)
 					|| metadata.length != HxFunctionDecl.getMetadata(fn).length
-					|| returnType != HxFunctionDecl.getReturnTypeHint(fn))
+					|| returnType != HxFunctionDecl.getReturnTypeHint(fn)
+					|| hasBody != HxFunctionDecl.getHasBody(fn))
 					overlayChanged = true;
 				patchedFns.push(new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), isStatic, HxFunctionDecl.getArgs(fn),
 					returnType, HxFunctionDecl.getBody(fn), HxFunctionDecl.getReturnStringLiteral(fn), metadata, HxFunctionDecl.getPos(fn),
-					HxFunctionDecl.getEndPos(fn), HxFunctionDecl.getBodyText(fn)));
+					HxFunctionDecl.getEndPos(fn), HxFunctionDecl.getBodyText(fn), hasBody));
 				final name = HxFunctionDecl.getName(fn);
 				if (name != null && name.length > 0)
 					existingFns.set(name, true);
@@ -2617,6 +2625,10 @@ class ParserStage {
 					var parenDepth = 0;
 					var bracketDepth = 0;
 					var angleDepth = 0;
+					// Before `=`, angle brackets belong to the field type. In the
+					// initializer they are comparison/shift operators and must not
+					// suppress the declaration's terminating semicolon.
+					var inInitializer = false;
 					var fieldDone = false;
 
 					while (!fieldDone) {
@@ -2641,11 +2653,16 @@ class ParserStage {
 								case "]":
 									if (depth == 1 && bracketDepth > 0) bracketDepth -= 1;
 								case "<":
-									if (depth == 1) angleDepth += 1;
+									if (depth == 1 && !inInitializer) angleDepth += 1;
 								case ">":
-									if (depth == 1 && angleDepth > 0) angleDepth -= 1;
+									if (depth == 1 && !inInitializer && angleDepth > 0) angleDepth -= 1;
+								case "=":
+									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) inInitializer = true;
 								case ",":
-									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) wantName = true;
+									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) {
+										wantName = true;
+										inInitializer = false;
+									}
 								case ";":
 									if (depth == 1 && parenDepth == 0 && bracketDepth == 0 && angleDepth == 0) fieldDone = true;
 								case _:
@@ -2789,7 +2806,8 @@ class ParserStage {
 							metadata.push("inline");
 						if (sawMacro)
 							metadata.push("macro");
-						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", body, "", metadata, null, null, bodyText));
+						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", body, "", metadata, null, null, bodyText,
+							bodyCapture.hasBody));
 					}
 
 					sawStatic = false;
@@ -2948,7 +2966,12 @@ class ParserStage {
 		return null;
 	}
 
-	static function scanFunctionBody(source:String, start:Int, capture:Bool = true):{body:Array<HxStmt>, bodyText:String, nextPos:Int} {
+	static function scanFunctionBody(source:String, start:Int, capture:Bool = true):{
+		body:Array<HxStmt>,
+		bodyText:String,
+		nextPos:Int,
+		hasBody:Bool
+	} {
 		var i = start;
 		var bodyStart = -1;
 		var tok = scanNextToken(source, i);
@@ -2962,14 +2985,24 @@ class ParserStage {
 			tok = scanNextToken(source, i);
 		}
 		if (tok.text == ";") {
-			if (!capture)
-				return {body: [], bodyText: "", nextPos: tok.nextPos};
 			final rawStart = bodyStart >= 0 ? bodyStart : start;
 			final rawExpr = source.substring(rawStart, tok.nextPos - 1);
 			final leading = leadingWhitespaceLength(rawExpr);
 			final exprText = StringTools.trim(rawExpr);
+			if (!capture)
+				return {
+					body: [],
+					bodyText: "",
+					nextPos: tok.nextPos,
+					hasBody: exprText.length > 0
+				};
 			if (exprText.length == 0)
-				return {body: [], bodyText: "", nextPos: tok.nextPos};
+				return {
+					body: [],
+					bodyText: "",
+					nextPos: tok.nextPos,
+					hasBody: false
+				};
 			final bodyText = exprText + ";";
 			var body = new Array<HxStmt>();
 			try {
@@ -2981,16 +3014,36 @@ class ParserStage {
 			} catch (_:String) {
 				body = [];
 			}
-			return {body: body, bodyText: bodyText, nextPos: tok.nextPos};
+			return {
+				body: body,
+				bodyText: bodyText,
+				nextPos: tok.nextPos,
+				hasBody: true
+			};
 		}
 		if (tok.text != "{")
-			return {body: [], bodyText: "", nextPos: tok.nextPos};
+			return {
+				body: [],
+				bodyText: "",
+				nextPos: tok.nextPos,
+				hasBody: false
+			};
 
 		final block = scanBalancedBlock(source, tok.nextPos);
 		if (block.nextPos <= tok.nextPos)
-			return {body: [], bodyText: "", nextPos: tok.nextPos};
+			return {
+				body: [],
+				bodyText: "",
+				nextPos: tok.nextPos,
+				hasBody: true
+			};
 		if (!capture)
-			return {body: [], bodyText: "", nextPos: block.nextPos};
+			return {
+				body: [],
+				bodyText: "",
+				nextPos: block.nextPos,
+				hasBody: true
+			};
 
 		var body = new Array<HxStmt>();
 		if (block.bodyText.length > 0) {
@@ -3004,7 +3057,12 @@ class ParserStage {
 				body = [];
 			}
 		}
-		return {body: body, bodyText: block.bodyText, nextPos: block.nextPos};
+		return {
+			body: body,
+			bodyText: block.bodyText,
+			nextPos: block.nextPos,
+			hasBody: true
+		};
 	}
 
 	static function expressionBodyKeywordStartsWithoutReturn(text:String):Bool {

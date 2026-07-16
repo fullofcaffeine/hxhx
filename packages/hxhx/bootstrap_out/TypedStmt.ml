@@ -137,6 +137,8 @@ let getCatchNames = fun self () -> HxArray.copy ((Obj.magic self : t).catchNames
 
 let getCatchTypeHints = fun self () -> HxArray.copy ((Obj.magic self : t).catchTypeHints)
 
+let withChildren = fun self (newExpressions : TypedExpr.t HxArray.t) (newStatements : t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).tag)) (Obj.magic ((Obj.magic self : t).position)) (Obj.magic ((Obj.magic self : t).names)) (Obj.magic newExpressions) (Obj.magic newStatements) (Obj.magic ((Obj.magic self : t).patterns)) (Obj.magic ((Obj.magic self : t).catchNames)) (Obj.magic ((Obj.magic self : t).catchTypeHints))
+
 let block = fun statements2 position2 -> create (Obj.magic Block) (Obj.magic position2) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic statements2) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))
 
 let variable = fun name typeHint hx_initializer position2 -> let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t HxArray.t) in (

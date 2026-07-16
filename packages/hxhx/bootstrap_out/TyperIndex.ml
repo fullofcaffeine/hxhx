@@ -726,13 +726,16 @@ let indexModule = fun self (hx_module : ResolvedModule.t) -> ignore (ignore (try
     ));
     let shortName = (HxClassDecl.getName (Obj.magic classDeclaration) : string) in (
       ignore (if shortName == Obj.magic (HxRuntime.hx_null) || HxString.length shortName = 0 || HxString.equals shortName "Unknown" then raise (HxRuntime.Hx_continue) else ());
-      let fullName = (classFullNameInModule (packagePath : string) (moduleName : string) (shortName : string) : string) in let identity = Obj.magic (HxMap.get_string ((Obj.magic self : t).identityByFullName) fullName) in let classMetadata = Obj.magic (HxClassDecl.getMetadata (Obj.magic classDeclaration)) in let params = Obj.magic (typeParameters (Obj.magic classMetadata)) in let fields = Obj.magic (HxMap.create_string ()) in (
+      let fullName = (classFullNameInModule (packagePath : string) (moduleName : string) (shortName : string) : string) in let identity = Obj.magic (HxMap.get_string ((Obj.magic self : t).identityByFullName) fullName) in let classMetadata = Obj.magic (HxClassDecl.getMetadata (Obj.magic classDeclaration)) in let params = Obj.magic (typeParameters (Obj.magic classMetadata)) in let fields = Obj.magic (HxMap.create_string ()) in let properties = Obj.magic (HxMap.create_string ()) in (
         ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFields (Obj.magic classDeclaration)) in while !_g2 < HxArray.length _g3 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
           ignore (let __old_78 = !_g2 in let __new_79 = HxInt.add __old_78 1 in (
             ignore (_g2 := __new_79);
             __new_79
           ));
-          HxMap.set_string fields (HxFieldDecl.getName (Obj.magic field)) (semanticType (Obj.magic self) (HxFieldDecl.getTypeHint (Obj.magic field) : string) (packagePath : string) (moduleName : string) (Obj.magic imports) (Obj.magic params))
+          let fieldType = Obj.magic (semanticType (Obj.magic self) (HxFieldDecl.getTypeHint (Obj.magic field) : string) (packagePath : string) (moduleName : string) (Obj.magic imports) (Obj.magic params)) in let fieldName = (HxFieldDecl.getName (Obj.magic field) : string) in (
+            ignore (HxMap.set_string fields fieldName fieldType);
+            let getter = (HxFieldDecl.getPropertyGet (Obj.magic field) : string) in let setter = (HxFieldDecl.getPropertySet (Obj.magic field) : string) in if HxString.length getter > 0 || HxString.length setter > 0 then ignore (HxMap.set_string properties fieldName (TyPropertyInfo.create (fieldName : string) (Obj.magic fieldType) (HxFieldDecl.getIsStatic (Obj.magic field)) (getter : string) (setter : string))) else ()
+          )
         )) done);
         let statics = Obj.magic (HxMap.create_string ()) in let instances = Obj.magic (HxMap.create_string ()) in let staticLists = Obj.magic (HxMap.create_string ()) in let instanceLists = Obj.magic (HxMap.create_string ()) in let declarations = Obj.magic (HxArray.create ()) in let signatureOccurrences = Obj.magic (HxMap.create_string ()) in (
           ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFunctions (Obj.magic classDeclaration)) in while !_g2 < HxArray.length _g3 do ignore (let functionDeclaration = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
@@ -801,11 +804,11 @@ let indexModule = fun self (hx_module : ResolvedModule.t) -> ignore (ignore (try
               tempString := __assign_94;
               __assign_94
             ));
-            let underlying = Obj.magic (semanticType (Obj.magic self) (!tempString : string) (packagePath : string) (moduleName : string) (Obj.magic imports) (Obj.magic params)) in let info = Obj.magic (TyAbstractInfo.create (Obj.magic identity) (shortName : string) (semanticModulePath : string) (Obj.magic fields) (Obj.magic statics) (Obj.magic instances) (Obj.magic staticLists) (Obj.magic instanceLists) (Obj.magic declarations) (Obj.magic underlying) (Obj.magic params)) in (
+            let underlying = Obj.magic (semanticType (Obj.magic self) (!tempString : string) (packagePath : string) (moduleName : string) (Obj.magic imports) (Obj.magic params)) in let info = Obj.magic (TyAbstractInfo.create (Obj.magic identity) (shortName : string) (semanticModulePath : string) (Obj.magic fields) (Obj.magic properties) (Obj.magic statics) (Obj.magic instances) (Obj.magic staticLists) (Obj.magic instanceLists) (Obj.magic declarations) (Obj.magic underlying) (Obj.magic params)) in (
               ignore (catalogUnaryOperators (Obj.magic self) (Obj.magic info) (ResolvedModule.getFilePath (Obj.magic hx_module) : string));
               addNominal (Obj.magic self) (Obj.magic info)
             )
-          )) else ignore (addNominal (Obj.magic self) (Obj.magic (TyClassInfo.create (Obj.magic identity) (shortName : string) (semanticModulePath : string) (Obj.magic fields) (Obj.magic statics) (Obj.magic instances) (Obj.magic staticLists) (Obj.magic instanceLists) (Obj.magic declarations))))
+          )) else ignore (addNominal (Obj.magic self) (Obj.magic (TyClassInfo.create (Obj.magic identity) (shortName : string) (semanticModulePath : string) (Obj.magic fields) (Obj.magic properties) (Obj.magic statics) (Obj.magic instances) (Obj.magic staticLists) (Obj.magic instanceLists) (Obj.magic declarations))))
         )
       )
     )

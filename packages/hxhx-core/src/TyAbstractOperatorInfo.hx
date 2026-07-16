@@ -3,7 +3,9 @@
 
 	This is declaration-catalog data, not a bound expression. Expression typing
 	will later choose one candidate and lower its exact call/body before any
-	backend sees the operation.
+	backend sees the operation. An unannotated inline declaration can retain an
+	Unknown result here; mandatory shared program sealing replaces that placeholder
+	with the helper body's inferred semantic return type before backend emission.
 **/
 class TyAbstractOperatorInfo {
 	final unaryOperator:HxUnaryOperator;

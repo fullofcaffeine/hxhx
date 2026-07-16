@@ -1488,7 +1488,7 @@ let decodeMethodPayload = fun payload methodBodySrc methodBodyStart source -> le
                 tempMaybeString2 := __assign_303;
                 __assign_303
               ));
-              HxFunctionDecl.create (name : string) (Obj.magic vis) isStatic (Obj.magic args) (!returnTypeHint : string) (Obj.magic (!body)) (retStr : string) (Obj.magic functionMetadata) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (!tempMaybeString2 : string)
+              HxFunctionDecl.create (name : string) (Obj.magic vis) isStatic (Obj.magic args) (!returnTypeHint : string) (Obj.magic (!body)) (retStr : string) (Obj.magic functionMetadata) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (!tempMaybeString2 : string) (HxRuntime.box_bool (methodBodySrc != Obj.magic (HxRuntime.hx_null) || HxArray.length (!body) > 0))
             )
           )
         )

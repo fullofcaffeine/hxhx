@@ -4735,10 +4735,12 @@ class HxParser {
 
 		final body = new Array<HxStmt>();
 		var bodyText = "";
+		var hasBody = false;
 		switch (cur.kind) {
 			case TSemicolon:
 				bump();
 			case TLBrace:
+				hasBody = true;
 				bump();
 				final bodyStart = currentIndex();
 				for (s in parseFunctionBodyStatements())
@@ -4749,6 +4751,7 @@ class HxParser {
 					capturedBodyText = StringTools.rtrim(capturedBodyText.substr(0, capturedBodyText.length - 1));
 				bodyText = capturedBodyText;
 			case _:
+				hasBody = true;
 				// Expression-bodied function: `function f() return expr;`
 				if (acceptKeyword(KReturn)) {
 					final bodyStart = currentIndex();
@@ -4765,7 +4768,7 @@ class HxParser {
 		}
 
 		return new HxFunctionDecl(name, visibility, isStatic, args, returnType, body, capturedReturnStringLiteral, metadata.concat(functionTypeMetadata),
-			startPos, cur.getPos(), bodyText);
+			startPos, cur.getPos(), bodyText, hasBody);
 	}
 
 	function parseClassMembers():{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
@@ -5202,7 +5205,7 @@ class HxParser {
 						HxFunctionDecl.getIsStatic(parsedFn), HxFunctionDecl.getArgs(parsedFn), HxFunctionDecl.getReturnTypeHint(parsedFn),
 						offsetFunctionBodyColumns(HxFunctionDecl.getBody(parsedFn), 1), HxFunctionDecl.getReturnStringLiteral(parsedFn),
 						HxFunctionDecl.getMetadata(parsedFn), HxFunctionDecl.getPos(parsedFn), HxFunctionDecl.getEndPos(parsedFn),
-						HxFunctionDecl.getBodyText(parsedFn));
+						HxFunctionDecl.getBodyText(parsedFn), HxFunctionDecl.getHasBody(parsedFn));
 					if (HxFunctionDecl.getName(fn) == "main")
 						hasToplevelMain = true;
 					moduleFunctions.push(fn);

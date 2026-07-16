@@ -96,7 +96,8 @@ class TypedBodyBuilder {
 		return null;
 	}
 
-	static function compileTimeProbe(callee:HxExpr, arguments:Array<HxExpr>, position:Null<HxPos>):Null<TypedExpr> {
+	static function compileTimeProbe(callee:HxExpr, arguments:Array<HxExpr>, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
+			typeResolver:Null<TypedExprTypeResolver>):Null<TypedExpr> {
 		if (arguments == null || arguments.length != 1)
 			return null;
 		final isForProbe = switch (arguments[0]) {
@@ -129,6 +130,16 @@ class TypedBodyBuilder {
 		final recognizedOwner = parts.length == 1 || parts[parts.length - 2] == "HelperMacros";
 		if (!recognizedOwner)
 			return null;
+		if (functionName == "typeError" && typeResolver != null && environment != null) {
+			var failed = false;
+			try {
+				typeResolver(arguments[0], diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition, environment.copyForInference());
+				failed = false;
+			} catch (_:TyperError) {
+				failed = true;
+			}
+			return TypedExpr.boolLiteral(failed, TyType.fromHintText("Bool"), position);
+		}
 		return switch (functionName) {
 			case "typeErrorText" if (isForProbe):
 				TypedExpr.stringLiteral("Int has no field keyValueIterator", TyType.fromHintText("String"), position);
@@ -151,6 +162,148 @@ class TypedBodyBuilder {
 		return body;
 	}
 
+	static function parsedOpaqueBlockStatements(raw:String):Null<Array<HxStmt>> {
+		final body = opaqueBlockBody(raw);
+		if (body == null)
+			return null;
+		final statements = try {
+			HxParser.parseFunctionBodyText(body);
+		} catch (_:HxParseError) {
+			null;
+		} catch (_:String) {
+			null;
+		};
+		if (statements == null || statements.length == 0)
+			return null;
+		if (statements.length == 1)
+			switch (statements[0]) {
+				case SExpr(ETryCatchRaw(nested), _) | SReturn(ETryCatchRaw(nested), _) if (nested == raw):
+					return null;
+				case _:
+			}
+		return statements;
+	}
+
+	static function statementAlwaysExits(statement:HxStmt):Bool {
+		return switch (statement) {
+			case SThrow(_, _) | SReturnVoid(_) | SReturn(_, _):
+				true;
+			case SBlock(statements, _): statements.length > 0 && statementAlwaysExits(statements[statements.length - 1]);
+			case SIf(_, whenTrue, whenFalse, _): whenFalse != null && statementAlwaysExits(whenTrue) && statementAlwaysExits(whenFalse);
+			case STry(body, catches, _):
+				if (!statementAlwaysExits(body) || catches.length == 0) {
+					false;
+				} else {
+					var allExit = true;
+					for (entry in catches)
+						if (!statementAlwaysExits(entry.body))
+							allExit = false;
+					allExit;
+				}
+			case _:
+				false;
+		};
+	}
+
+	static function untypedExpression(expression:HxExpr):HxExpr {
+		return switch (expression) {
+			case EUntyped(_): expression;
+			case _: EUntyped(expression);
+		};
+	}
+
+	static function untypedStatement(statement:HxStmt):HxStmt {
+		return switch (statement) {
+			case SBlock(statements, position):
+				SBlock([for (child in statements) untypedStatement(child)], position);
+			case SVar(name, typeHint, initializer, position):
+				SVar(name, typeHint, initializer == null ? null : untypedExpression(initializer), position);
+			case SIf(condition, whenTrue, whenFalse, position):
+				SIf(untypedExpression(condition), untypedStatement(whenTrue), whenFalse == null ? null : untypedStatement(whenFalse), position);
+			case SForIn(name, iterable, body, position):
+				SForIn(name, untypedExpression(iterable), untypedStatement(body), position);
+			case SForKeyValue(keyName, valueName, iterable, body, position):
+				SForKeyValue(keyName, valueName, untypedExpression(iterable), untypedStatement(body), position);
+			case SWhile(condition, body, position):
+				SWhile(untypedExpression(condition), untypedStatement(body), position);
+			case SDoWhile(body, condition, position):
+				SDoWhile(untypedStatement(body), untypedExpression(condition), position);
+			case SSwitch(scrutinee, patterns, bodies, position):
+				SSwitch(untypedExpression(scrutinee), patterns, [for (body in bodies) untypedStatement(body)], position);
+			case STry(body, catches, position):
+				STry(untypedStatement(body), [
+					for (entry in catches)
+						{name: entry.name, typeHint: entry.typeHint, body: untypedStatement(entry.body)}
+				], position);
+			case SThrow(expression, position):
+				SThrow(untypedExpression(expression), position);
+			case SReturn(expression, position):
+				SReturn(untypedExpression(expression), position);
+			case SExpr(expression, position):
+				SExpr(untypedExpression(expression), position);
+			case _:
+				statement;
+		};
+	}
+
+	static function expandStatement(statement:HxStmt):HxStmt {
+		return switch (statement) {
+			case SBlock(statements, position):
+				SBlock(expandStructuralStatements(statements), position);
+			case SIf(condition, whenTrue, whenFalse, position):
+				SIf(condition, expandStatement(whenTrue), whenFalse == null ? null : expandStatement(whenFalse), position);
+			case SForIn(name, iterable, body, position):
+				SForIn(name, iterable, expandStatement(body), position);
+			case SForKeyValue(keyName, valueName, iterable, body, position):
+				SForKeyValue(keyName, valueName, iterable, expandStatement(body), position);
+			case SWhile(condition, body, position):
+				SWhile(condition, expandStatement(body), position);
+			case SDoWhile(body, condition, position):
+				SDoWhile(expandStatement(body), condition, position);
+			case SSwitch(scrutinee, patterns, bodies, position):
+				SSwitch(scrutinee, patterns, [for (body in bodies) expandStatement(body)], position);
+			case STry(body, catches, position):
+				STry(expandStatement(body), [
+					for (entry in catches)
+						{name: entry.name, typeHint: entry.typeHint, body: expandStatement(entry.body)}
+				], position);
+			case SReturn(EUntyped(ETryCatchRaw(raw)), position):
+				final statements = parsedOpaqueBlockStatements(raw);
+				if (statements != null && statementAlwaysExits(statements[statements.length - 1])) SBlock(expandStructuralStatements([
+					for (child in statements)
+						untypedStatement(child)
+				]), position); else statement;
+			case SReturn(ETryCatchRaw(raw), position):
+				final statements = parsedOpaqueBlockStatements(raw);
+				if (statements != null
+					&& statementAlwaysExits(statements[statements.length - 1])) SBlock(expandStructuralStatements(statements), position); else statement;
+			case SExpr(EUntyped(ETryCatchRaw(raw)), position):
+				final statements = parsedOpaqueBlockStatements(raw);
+				statements == null ? statement : SBlock(expandStructuralStatements([
+					for (child in statements)
+						untypedStatement(child)
+				]), position);
+			case SExpr(ETryCatchRaw(raw), position):
+				final statements = parsedOpaqueBlockStatements(raw);
+				statements == null ? statement : SBlock(expandStructuralStatements(statements), position);
+			case _:
+				statement;
+		};
+	}
+
+	/**
+		Return the non-mutating pre-typing view of statement-position expression blocks.
+
+		A terminal `return { ... }` block is lifted only when its final statement
+		provably returns or throws. The typer and typed-body builder share this exact
+		view, so inner locals and semantic operators cannot disappear into raw text.
+	**/
+	public static function expandStructuralStatements(statements:Array<HxStmt>):Array<HxStmt> {
+		if (statements == null)
+			return [];
+		return [for (statement in statements) expandStatement(statement)];
+	}
+
 	/**
 		Recover the parser's conservative expression-block fallback into typed nodes.
 
@@ -161,10 +314,9 @@ class TypedBodyBuilder {
 	**/
 	static function structuralOpaqueBlock(raw:String, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
 			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>):Null<TypedExpr> {
-		final body = opaqueBlockBody(raw);
-		if (body == null)
+		final statements = parsedOpaqueBlockStatements(raw);
+		if (statements == null)
 			return null;
-		final statements = HxParser.parseFunctionBodyText(body);
 		for (statement in statements)
 			switch (statement) {
 				case SVar(_, _, _, _) | SExpr(_, _):
@@ -261,7 +413,7 @@ class TypedBodyBuilder {
 			case EField(object, field):
 				TypedExpr.fieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver), field, nodeType, position);
 			case ECall(callee, arguments):
-				final loweredProbe = compileTimeProbe(callee, arguments, position);
+				final loweredProbe = compileTimeProbe(callee, arguments, position, diagnosticPosition, environment, typeResolver);
 				if (loweredProbe != null) {
 					loweredProbe;
 				} else {
@@ -407,7 +559,8 @@ class TypedBodyBuilder {
 	public static function buildFunction(ownerName:String, sourceOrdinal:Int, declaration:HxFunctionDecl, semanticDeclaration:Null<TyDeclarationInfo>,
 			environment:Null<TyFunctionEnv>, ?typeResolver:TypedExprTypeResolver, ?callResolver:TypedCallDeclarationResolver):TypedFunction {
 		final sourceBody = HxFunctionDecl.getBody(declaration);
-		final typedBody = new TypedFunctionBody(buildStatements(sourceBody, environment, typeResolver, callResolver),
+		final semanticBody = expandStructuralStatements(sourceBody);
+		final typedBody = new TypedFunctionBody(buildStatements(semanticBody, environment, typeResolver, callResolver),
 			TypedBodyFingerprint.forStatements(sourceBody));
 		return new TypedFunction(ownerName, sourceOrdinal, declaration, semanticDeclaration, environment, typedBody);
 	}

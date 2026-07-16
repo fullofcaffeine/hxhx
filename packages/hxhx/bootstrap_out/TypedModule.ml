@@ -61,6 +61,8 @@ let getTypedClasses = fun self () -> HxArray.copy ((Obj.magic self : t).typedCla
 
 let getRevision = fun self () -> (Obj.magic self : t).revision
 
+let withTypedClasses = fun self (classes : TypedClass.t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).parsed)) (Obj.magic ((Obj.magic self : t).env)) (Obj.magic classes) (HxInt.add ((Obj.magic self : t).revision) 1)
+
 let getBackendDeclaration = fun self () -> (Obj.magic self : t).backendDeclaration
 
 let assertBodyRevisionCurrent = fun self () -> ignore (ignore ((

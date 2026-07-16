@@ -51,6 +51,10 @@ class TyDeclarationInfo {
 	public function getIsInline():Bool
 		return isInline;
 
+	/** Whether the declaration supplies Haxe code instead of target-native `;` behavior. */
+	public function getHasBody():Bool
+		return HxFunctionDecl.getHasBody(sourceDeclaration);
+
 	/** Method-level generic parameters retained for overload diagnostics/binding. **/
 	public function getTypeParameters():Array<String>
 		return HxFunctionTypeParamMetadata.typeParamNames(metadata);

@@ -229,6 +229,56 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(ocaml.indexOf("__hxhx_try") < 0, "OCaml backend leaked the shared structural sentinel into generated source");
 	}
 
+	static function assertStructuralTerminalReturnBlock():Void {
+		final position = new HxPos(0, 1, 1);
+		final raw = [
+			"opaque_block_expr:{",
+			"  if (values.length == 0) throw 'empty';",
+			"  var total = 0;",
+			"  for (i in 0...values.length) {",
+			"    total = total + values[i];",
+			"    if (total < 0) return total;",
+			"  }",
+			"  return total;",
+			"}",
+		].join("\n");
+		final sourceFunction = new HxFunctionDecl("decode", HxVisibility.Public, true, [new HxFunctionArg("values", "Array<Int>", NoDefault)], "Int",
+			[SReturn(ETryCatchRaw(raw), position)], "", [], position);
+		final sourceClass = new HxClassDecl("Main", true, [sourceFunction], []);
+		final parsed = new ParsedModule("", new HxModuleDecl("", [], sourceClass, [sourceClass], false, false), "TypedTerminalReturnBlock.hx");
+		final body = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "decode").getBody();
+		assertTrue(body.getStatements().length == 1 && body.getStatements()[0].getTag() == TypedStmtTag.Block,
+			"terminal return-block expression did not lift into structural statements");
+		assertTrue(bodyContainsTag(body, TypedExprTag.Assign), "terminal return block hid its assignment");
+		assertTrue(bodyContainsTag(body, TypedExprTag.ArrayAccess), "terminal return block hid its indexed read");
+		assertTrue(!bodyContainsTag(body, TypedExprTag.Opaque), "terminal return block retained an opaque source payload");
+	}
+
+	static function assertStructuralUntypedStatementBlock():Void {
+		final position = new HxPos(0, 1, 1);
+		final raw = [
+			"opaque_block_expr:{",
+			"  if (kind(values) != arrayKind) throw 'invalid';",
+			"  for (i in 0...size(values))",
+			"    if (kind(values[i]) != intKind) throw 'invalid';",
+			"  var total:Dynamic = 0;",
+			"  for (i in 0...size(values)) total = total + values[i];",
+			"  return total;",
+			"}",
+		].join("\n");
+		final sourceFunction = new HxFunctionDecl("decodeUntyped", HxVisibility.Public, true, [new HxFunctionArg("values", "Array<Int>", NoDefault)],
+			"Dynamic", [SExpr(EUntyped(ETryCatchRaw(raw)), position)], "", [], position);
+		final sourceClass = new HxClassDecl("Main", true, [sourceFunction], []);
+		final parsed = new ParsedModule("", new HxModuleDecl("", [], sourceClass, [sourceClass], false, false), "TypedUntypedBlock.hx");
+		final body = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "decodeUntyped").getBody();
+		assertTrue(body.getStatements().length == 1 && body.getStatements()[0].getTag() == TypedStmtTag.Block,
+			"untyped statement block did not lift into structural statements");
+		assertTrue(bodyContainsTag(body, TypedExprTag.Assign), "untyped statement block hid its assignment");
+		assertTrue(bodyContainsTag(body, TypedExprTag.ArrayAccess), "untyped statement block hid its indexed read");
+		assertTrue(bodyContainsTag(body, TypedExprTag.Untyped), "untyped statement block lost its explicit typing escape hatch");
+		assertTrue(!bodyContainsTag(body, TypedExprTag.Opaque), "untyped statement block retained an opaque source payload");
+	}
+
 	static function assertConditionalElseIfStructure():Void {
 		final parsed = ParserStage.parse([
 			"class Main {",
@@ -303,6 +353,8 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertStructuralDoWhileExpression();
 		assertAbstractThisAssignment();
 		assertStructuralTryCatchExpression();
+		assertStructuralTerminalReturnBlock();
+		assertStructuralUntypedStatementBlock();
 		assertConditionalElseIfStructure();
 		assertOpaqueGuard();
 		assertLifecycleGuard(typed, mainFunction);

@@ -30868,7 +30868,10 @@ and lambdaCallExpr = fun target lambdaArgs lambdaBody callArgs -> try let __fall
     ignore (if target = Php then ignore (let callee = (phpLambdaExpr (Obj.magic lambdaArgs) (Obj.magic lambdaBody) (Obj.magic (let __arr_1478 = HxArray.create () in __arr_1478)) (Obj.magic (phpAssignedCapturesInList (Obj.magic callArgs) (Obj.magic lambdaArgs))) (Obj.magic (let __arr_1479 = HxArray.create () in __arr_1479)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) : string) in raise (HxRuntime.Hx_return (Obj.repr (((("(" ^ HxString.toStdString callee) ^ ")(") ^ HxString.toStdString rendered) ^ ")")))) else ());
     ignore (if target = Cs then ignore (let callee = (lambdaExpr (Obj.magic Cs) (Obj.magic lambdaArgs) (Obj.magic lambdaBody) : string) in raise (HxRuntime.Hx_return (Obj.repr (((((("((" ^ HxString.toStdString (csLambdaCallDelegateType (HxArray.length lambdaArgs))) ^ ")(") ^ HxString.toStdString callee) ^ "))(") ^ HxString.toStdString rendered) ^ ")")))) else ());
     ignore (if target = Lua then ignore (let callee = (lambdaExpr (Obj.magic Lua) (Obj.magic lambdaArgs) (Obj.magic lambdaBody) : string) in raise (HxRuntime.Hx_return (Obj.repr (((("(" ^ HxString.toStdString callee) ^ ")(") ^ HxString.toStdString rendered) ^ ")")))) else ());
-    let callee = (lambdaExpr (Obj.magic target) (Obj.magic lambdaArgs) (Obj.magic lambdaBody) : string) in ((HxString.toStdString callee ^ "(") ^ HxString.toStdString rendered) ^ ")"
+    let callee = (lambdaExpr (Obj.magic target) (Obj.magic lambdaArgs) (Obj.magic lambdaBody) : string) in (
+      ignore (if target = Python then raise (HxRuntime.Hx_return (Obj.repr (((("(" ^ HxString.toStdString callee) ^ ")(") ^ HxString.toStdString rendered) ^ ")" : string))) else ());
+      ((HxString.toStdString callee ^ "(") ^ HxString.toStdString rendered) ^ ")"
+    )
   )
 ) in Obj.magic __fallback_result_1481 with
   | HxRuntime.Hx_return __ret_1480 -> Obj.obj __ret_1480

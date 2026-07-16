@@ -40,3 +40,5 @@ let getSourceDeclaration = fun self () -> (Obj.magic self : t).sourceDeclaration
 let getSemanticInfo = fun self () -> (Obj.magic self : t).semanticInfo
 
 let getFunctions = fun self () -> HxArray.copy ((Obj.magic self : t).functions)
+
+let withFunctions = fun self (loweredFunctions : TypedFunction.t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).sourceDeclaration)) (Obj.magic ((Obj.magic self : t).semanticInfo)) (Obj.magic loweredFunctions)

@@ -76,6 +76,8 @@ let getIsStatic = fun self () -> TyFunSig.getIsStatic (Obj.magic ((Obj.magic sel
 
 let getIsInline = fun self () -> (Obj.magic self : t).isInline
 
+let getHasBody = fun self () -> HxFunctionDecl.getHasBody (Obj.magic ((Obj.magic self : t).sourceDeclaration))
+
 let getTypeParameters = fun self () -> HxFunctionTypeParamMetadata.typeParamNames (Obj.magic ((Obj.magic self : t).metadata))
 
 let getTypeParameterConstraints = fun self () -> HxFunctionTypeParamMetadata.constraints (Obj.magic ((Obj.magic self : t).metadata))

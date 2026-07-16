@@ -1,5 +1,6 @@
 import haxe.ds.StringMap;
 import TypedExpr.TypedExprTag;
+import TypedStmt.TypedStmtTag;
 
 /** Focused contract for shared exact abstract-unary selection and lowering. **/
 class M14TypedAbstractUnaryIntegrationTest {
@@ -132,6 +133,23 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"  @:op(++A) public inline function arbitraryPrefix():PrefixValue { this += 30; return cast this; }",
 			"  @:op(A++) public inline function arbitraryPostfix():PrefixValue { var old = this; this += 1; return cast old; }",
 			"}",
+			"abstract PrefixOnly(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(++A) public static function prefix(value:PrefixOnly):PrefixOnly return value;",
+			"}",
+			"abstract VoidPrefix(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(++A) public inline function mutateWithoutResult() { ++this; }",
+			"}",
+			"abstract NativeBits(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(~A) private function complement():NativeBits;",
+			"}",
+			"abstract NativeStaticBits(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(~A) private static function complement(value:NativeStaticBits):NativeStaticBits;",
+			"}",
+			"class HelperMacros { public static function typeError(value:Dynamic):Bool return false; }",
 			"class PropertyHolder {",
 			"  var stored:PrefixValue;",
 			"  public var value(get, set):PrefixValue;",
@@ -155,6 +173,16 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"    var propertyHolder = new PropertyHolder(5);",
 			"    var propertyPrefix:PrefixValue = ++propertyHolder.value;",
 			"    var propertyPostfix:PrefixValue = propertyHolder.value++;",
+			"    var probeValue = new PrefixOnly(1);",
+			"    var missingLogicalProbe = HelperMacros.typeError(!probeValue);",
+			"    var wrongFixityProbe = HelperMacros.typeError(probeValue++);",
+			"    var validProbe = HelperMacros.typeError(-7);",
+			"    var voidPrefix = new VoidPrefix(8);",
+			"    ++voidPrefix;",
+			"    var nativeBits = new NativeBits(5);",
+			"    var nativeBitsResult = ~nativeBits;",
+			"    var nativeStaticBits = new NativeStaticBits(6);",
+			"    var nativeStaticBitsResult = ~nativeStaticBits;",
 			"    var ordinaryNumber = -7;",
 			"    var ordinaryObject = new Ordinary();",
 			"    var ordinaryControl = -ordinaryObject;",
@@ -225,6 +253,39 @@ class M14TypedAbstractUnaryIntegrationTest {
 			&& !containsDeclaration(propertyPostfix, "arbitraryPostfix")
 			&& !containsTag(propertyPostfix, TypedExprTag.Unary),
 			"property postfix update selected an abstract helper or lost its saved old value");
+
+		assertTrue(initializer(main, "missingLogicalProbe").getTag() == TypedExprTag.BoolValue
+			&& initializer(main, "missingLogicalProbe").getBoolValue(),
+			"typeError did not capture a missing abstract logical-not operator");
+		assertTrue(initializer(main, "wrongFixityProbe").getTag() == TypedExprTag.BoolValue
+			&& initializer(main, "wrongFixityProbe").getBoolValue(),
+			"typeError did not capture an unsupported abstract postfix fixity");
+		assertTrue(initializer(main, "validProbe").getTag() == TypedExprTag.BoolValue && !initializer(main, "validProbe").getBoolValue(),
+			"typeError reported a valid ordinary unary expression as invalid");
+		var inferredVoidPrefix:Null<TypedExpr> = null;
+		for (statement in main.getBody().getStatements())
+			if (statement.getTag() == TypedStmtTag.Expression && statement.getExpressions().length == 1) {
+				final expression = statement.getExpressions()[0];
+				if (expression.getTag() == TypedExprTag.Block && expression.getType().isVoid())
+					inferredVoidPrefix = expression;
+			}
+		assertTrue(inferredVoidPrefix != null && containsTag(inferredVoidPrefix, TypedExprTag.Unary),
+			"unannotated inline operator did not seal its inferred Void result and explicit mutation body");
+
+		final nativeBitsResult = initializer(main, "nativeBitsResult");
+		final nativeBitsUnary = nativeBitsResult.getExpressions()[0];
+		assertTrue(nativeBitsResult.getTag() == TypedExprTag.Cast
+			&& nativeBitsResult.getType().getSemanticKey() == "nominal:Main.NativeBits"
+			&& nativeBitsUnary.getTag() == TypedExprTag.Unary
+			&& nativeBitsUnary.getUnaryOperator() == HxUnaryOperator.BitwiseNot
+			&& nativeBitsUnary.getExpressions()[0].getType().getSemanticKey() == "primitive:Int"
+			&& !containsTag(nativeBitsResult, TypedExprTag.Call),
+			"bodyless abstract operator did not become an explicitly authorized primitive-carrier unary operation");
+		final nativeStaticBitsResult = initializer(main, "nativeStaticBitsResult");
+		assertTrue(nativeStaticBitsResult.getTag() == TypedExprTag.Cast
+			&& nativeStaticBitsResult.getExpressions()[0].getTag() == TypedExprTag.Unary
+			&& !containsTag(nativeStaticBitsResult, TypedExprTag.Call),
+			"bodyless static operator was emitted as a helper call instead of its authorized carrier unary operation");
 
 		assertTrue(initializer(main, "ordinaryNumber").getTag() == TypedExprTag.Unary,
 			"ordinary numeric unary behavior was routed through the abstract catalog");

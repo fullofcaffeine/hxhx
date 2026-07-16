@@ -259,7 +259,8 @@ class TyperStage {
 		final locals = new Array<TySymbol>();
 		final scope = new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, TyType.unknown(), TyType.unknown());
 
-		final returnExprTy = inferReturnType(fn, scope, ctx);
+		final semanticBody = TypedBodyBuilder.expandStructuralStatements(HxFunctionDecl.getBody(fn));
+		final returnExprTy = inferReturnType(semanticBody, scope, ctx);
 		final retHintText = HxFunctionDecl.getReturnTypeHint(fn);
 		final retTy = if (retHintText != null && retHintText.length > 0) {
 			final hinted = typeFromHintInContext(retHintText, ctx);
@@ -296,7 +297,7 @@ class TyperStage {
 		return new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, retTy, returnExprTy);
 	}
 
-	static function inferReturnType(fn:HxFunctionDecl, scope:TyFunctionEnv, ctx:TyperContext):TyType {
+	static function inferReturnType(statements:Array<HxStmt>, scope:TyFunctionEnv, ctx:TyperContext):TyType {
 		var out:Null<TyType> = null;
 
 		function unifyInto(t:TyType, pos:HxPos):Void {
@@ -418,7 +419,7 @@ class TyperStage {
 			}
 		}
 
-		for (s in HxFunctionDecl.getBody(fn))
+		for (s in statements)
 			typeStmt(s);
 		// If we saw no explicit returns, the true return type depends on surrounding typing rules.
 		// For bootstrap bring-up we return `Unknown` here so `typeFunction` can:
@@ -461,6 +462,11 @@ class TyperStage {
 			return false;
 		final c = name.charCodeAt(0);
 		return c >= "A".code && c <= "Z".code;
+	}
+
+	static function isTypeErrorProbeCallee(callee:HxExpr):Bool {
+		final path = dottedFieldPath(callee);
+		return path == "typeError" || path == "HelperMacros.typeError" || StringTools.endsWith(path, ".HelperMacros.typeError");
 	}
 
 	public static inline var RAW_DIAGNOSTIC_PREFIX:String = "__HXHX_RAW_DIAGNOSTIC__:";
@@ -873,6 +879,12 @@ class TyperStage {
 						}
 				}
 			case ECall(callee, args):
+				if (args.length == 1 && isTypeErrorProbeCallee(callee)) {
+					try {
+						inferExprType(args[0], scope.copyForInference(), ctx, pos);
+					} catch (_:TyperError) {}
+					return TyType.fromHintText("Bool");
+				}
 				switch (callee) {
 					case EIdent("__hxhx_parenthesized") if (args.length == 1):
 						return inferExprType(args[0], scope, ctx, pos);
