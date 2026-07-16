@@ -551,7 +551,7 @@ class TypedAbstractBinaryLowering {
 		final children = expression.getExpressions();
 		if (texts.length != 1 || children.length != 2)
 			throw "lowered typed binary expression has an invalid structural payload in " + owner;
-		if (HxBinaryOperatorTools.permitsOrdinaryAbstractFallback(texts[0]))
+		if (TyAbstractBinaryBinding.permitsOrdinaryFallback(texts[0], children[0].getType(), children[1].getType()))
 			return;
 		for (child in children) {
 			final identity = child.getType().getNominalIdentity();

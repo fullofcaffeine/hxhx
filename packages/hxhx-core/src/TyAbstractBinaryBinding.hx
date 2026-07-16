@@ -153,6 +153,14 @@ class TyAbstractBinaryBinding {
 			+ detail);
 	}
 
+	/** Ordinary Haxe operations that remain legal after overload lookup misses. **/
+	public static function permitsOrdinaryFallback(op:String, leftType:TyType, rightType:TyType):Bool {
+		if (HxBinaryOperatorTools.permitsOrdinaryAbstractFallback(op))
+			return true;
+		return op == "+"
+			&& ((leftType != null && leftType.getDisplay() == "String") || (rightType != null && rightType.getDisplay() == "String"));
+	}
+
 	/** Select an exact declaration, or return null when neither operand is an abstract. **/
 	public static function select(index:TyperIndex, leftType:TyType, rightType:TyType, op:String, filePath:String,
 			position:HxPos):Null<TyBoundAbstractBinaryOperator> {
@@ -182,7 +190,7 @@ class TyAbstractBinaryBinding {
 				throw noApplicable(op, leftType, rightType, baseCandidates, filePath, position);
 		}
 
-		if (HxBinaryOperatorTools.permitsOrdinaryAbstractFallback(op))
+		if (permitsOrdinaryFallback(op, leftType, rightType))
 			return null;
 		throw noApplicable(op, leftType, rightType, explicitCandidates, filePath, position);
 	}

@@ -124,6 +124,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  var explicitResult:Score = (left += 4);",
 			"  var instanceResult = left - 1;",
 			"  var reversedInstance = 'z' / left;",
+			"  var stringFallback = left + '!';",
 			"  var fallback:Fallback = new Fallback(5);",
 			"  var fallbackResult:Fallback = (fallback += 6);",
 			"  var nativeLeft:NativeSum = new NativeSum(7);",
@@ -192,6 +193,12 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& reversedInstanceCall.getExpressions()[0].getExpressions()[0].getType().getSemanticKey() == "nominal:Main.Score"
 			&& reversedInstanceCall.getExpressions()[1].getType().getSemanticKey() == "primitive:String",
 			"commutative instance call did not restore declaration receiver/argument order");
+
+		final stringFallback = initializer(main, "stringFallback");
+		assertTrue(stringFallback.getTag() == TypedExprTag.Binary
+			&& stringFallback.getType().getDisplay() == "String"
+			&& declarationExpression(stringFallback, "mergeArbitrarily") == null,
+			"ordinary String concatenation was mistaken for an unsupported abstract overload");
 
 		final mutable = expressionStatementWithDeclaration(main, "mutateArbitrarily");
 		assertTrue(mutable == null, "inline instance helper survived as a declaration call for backend reinterpretation");
