@@ -103,6 +103,11 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  public inline function new(value:Int) this = value;",
 			"  @:op(A + B) public static function nativeArbitrarily(left:NativeSum, right:NativeSum):NativeSum;",
 			"}",
+			"abstract NativeText(String) from String to String {",
+			"  public inline function new(value:String) this = value;",
+			"  @:op(A + B) public static function appendIntArbitrarily(left:NativeText, right:Int):NativeText;",
+			"  @:op(A + B) public static function rejectBoolArbitrarily(left:NativeText, right:Bool):Bool;",
+			"}",
 			"abstract Slice(Int) from Int to Int {",
 			"  public inline function new(value:Int) this = value;",
 			"  @:op(A / B) public static function trimArbitrarily(text:String, count:Slice):String return text;",
@@ -136,6 +141,8 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  var nativeLeft:NativeSum = new NativeSum(7);",
 			"  var nativeRight:NativeSum = new NativeSum(8);",
 			"  var nativeResult = nativeLeft + nativeRight;",
+			"  var nativeText:NativeText = new NativeText('value');",
+			"  var nativeTextResult = nativeText + 4;",
 			"  var count:Slice = new Slice(2);",
 			"  var rightOwned = 'word' / count;",
 			"  var mutable:Mutable = new Mutable(9);",
@@ -183,6 +190,12 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& containsTag(nativeResult, TypedExprTag.Binary)
 			&& !containsTag(nativeResult, TypedExprTag.Call),
 			"bodyless declaration did not authorize one ordinary carrier operation");
+
+		final nativeTextResult = initializer(main, "nativeTextResult");
+		assertTrue(nativeTextResult.getTag() == TypedExprTag.Block
+			&& nativeTextResult.getType().getSemanticKey() == "nominal:Main.NativeText"
+			&& containsTag(nativeTextResult, TypedExprTag.Binary),
+			"bodyless String-plus-Int declaration did not preserve its String carrier and abstract result");
 
 		final rightOwned = initializer(main, "rightOwned");
 		assertTrue(declarationExpression(rightOwned, "trimArbitrarily") != null, "operator catalog did not find an abstract owned by the right operand");
@@ -242,6 +255,13 @@ class M14TypedAbstractBinaryIntegrationTest {
 		assertTrue(declarationExpression(initializer(main, "directTieResult"), "chooseDirect") != null,
 			"equally ranked direct/commutative matching did not prefer the source orientation");
 
+		typingFailure([
+			"abstract InvalidNativeText(String) from String {",
+			"  public inline function new(value:String) this = value;",
+			"  @:op(A + B) public static function reject(left:InvalidNativeText, right:Bool):Bool;",
+			"}",
+			"class Main { static function main() { var value = new InvalidNativeText('x'); var result = value + true; } }",
+		].join("\n"), "Unsupported abstract binary conversion from String to Bool");
 		typingFailure([
 			"abstract Missing(Int) { public inline function new(value:Int) this = value; }",
 			"class Main { static function main() { var value:Missing = new Missing(1); var result = value * 2; } }",

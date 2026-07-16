@@ -43,6 +43,10 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 			"  @:op(A - B) public inline function differenceArbitrarily(amount:Int):Int return amount + 16;",
 			"  @:commutative @:op(A / B) public function wrapArbitrarily(text:String):String return text + '?';",
 			"}",
+			"abstract NativeText(String) from String to String {",
+			"  public inline function new(value:String) this = value;",
+			"  @:op(A + B) public static function appendIntArbitrarily(left:NativeText, right:Int):NativeText;",
+			"}",
 			"class Main { static function main() {",
 			"  var left:Token = new Token(2);",
 			"  var right:Token = new Token(3);",
@@ -54,6 +58,8 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 			"  Sys.println(left - 1);",
 			"  Sys.println('z' / left);",
 			"  Sys.println(2 + 3);",
+			"  var nativeText:NativeText = 'value';",
+			"  Sys.println(nativeText + 4);",
 			"} }",
 		].join("\n");
 		final parsed = ParserStage.parse(source, "Main.hx");
@@ -81,7 +87,7 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 				callText: "Token.mergeArbitrarily"
 			},
 		];
-		final expected = "15\nx!\n106\n17\nz?\n5\n";
+		final expected = "15\nx!\n106\n17\nz?\n5\nvalue4\n";
 		for (entry in cases) {
 			final outputPath = Path.join([root, entry.fileName]);
 			final context = new BackendContext(Path.join([root, entry.target]), outputPath, "Main", true, false, new StringMap<String>());

@@ -932,6 +932,10 @@ class JsExprEmitter {
 				return "process.chdir(String(" + dir + "))";
 			case EField(EIdent("Sys"), "getCwd"):
 				return "process.cwd()";
+			case EField(EIdent("Std"), "string") if (args.length == 1):
+				// Shared typed lowering uses this call to make Haxe string-concat
+				// coercion explicit even when no Std class module was loaded.
+				return "String(" + emit(args[0], scope) + ")";
 			case EIdent("typeErrorText") | EField(EIdent("HelperMacros"), "typeErrorText") | EField(EField(EIdent("unit"), "HelperMacros"), "typeErrorText"):
 				final diagnostic = helperTypeErrorText(args);
 				if (diagnostic != null)

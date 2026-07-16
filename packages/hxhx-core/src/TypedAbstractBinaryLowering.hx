@@ -268,7 +268,7 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function nativeBinaryType(op:String, left:TyType, right:TyType, result:TyType, declaration:TyDeclarationInfo, filePath:String):TyType {
-		if (op == "+" && left.getDisplay() == "String" && right.getDisplay() == "String")
+		if (op == "+" && (left.getDisplay() == "String" || right.getDisplay() == "String"))
 			return TyType.fromHintText("String");
 		if ((op == "+" || op == "-" || op == "*" || op == "/" || op == "%") && left.isNumeric() && right.isNumeric())
 			return left.getDisplay() == "Float"
@@ -291,6 +291,17 @@ class TypedAbstractBinaryLowering {
 			+ result.getDisplay());
 	}
 
+	/** Make Haxe string-concatenation conversion explicit before target emission. **/
+	static function nativeOperand(expression:TypedExpr, operationType:TyType):TypedExpr {
+		if (operationType.getDisplay() == "String" && expression.getType().getDisplay() != "String") {
+			final stringType = TyType.fromHintText("String");
+			final owner = TypedExpr.nameRead("Std", TyType.fromHintText("Std"), expression.getPosition());
+			final callee = TypedExpr.fieldRead(owner, "string", TyType.unknown(), expression.getPosition());
+			return TypedExpr.call(callee, [expression], null, stringType, expression.getPosition());
+		}
+		return expression;
+	}
+
 	static function nativeBodylessValue(binding:TyBoundAbstractBinaryOperator, left:TypedExpr, right:TypedExpr, index:TyperIndex, filePath:String,
 			counter:TypedBinaryLoweringCounter):TypedExpr {
 		final info = binding.getOperatorInfo();
@@ -304,13 +315,11 @@ class TypedAbstractBinaryLowering {
 		final carrierRight = carrierValue(arguments[1], info.getRightType(), index);
 		final resultCarrier = carrierType(info.getResultType(), index);
 		final nativeType = nativeBinaryType(info.getOperator(), carrierLeft.getType(), carrierRight.getType(), resultCarrier, declaration, filePath);
-		final operation = TypedExpr.binary(info.getOperator(), carrierLeft, carrierRight, nativeType, left.getPosition());
-		final result = resultCarrier.getSemanticKey() == nativeType.getSemanticKey() ? operation : TypedExpr.castValue(operation, resultCarrier.getDisplay(),
-			resultCarrier, left.getPosition());
+		final operation = TypedExpr.binary(info.getOperator(), nativeOperand(carrierLeft, nativeType), nativeOperand(carrierRight, nativeType), nativeType,
+			left.getPosition());
+		final result = semanticResult(convert(operation, resultCarrier, filePath, declaration), info.getResultType());
 		final expressions = ordered.prefix.copy();
-		expressions.push(info.getResultType()
-			.getSemanticKey() == result.getType()
-			.getSemanticKey() ? result : TypedExpr.castValue(result, info.getResultType().getDisplay(), info.getResultType(), left.getPosition()));
+		expressions.push(result);
 		return TypedExpr.block(expressions, info.getResultType(), left.getPosition());
 	}
 
@@ -367,9 +376,10 @@ class TypedAbstractBinaryLowering {
 		final carrierRight = carrierValue(callArgs[1], info.getRightType(), index);
 		final resultCarrier = carrierType(info.getResultType(), index);
 		final nativeType = nativeBinaryType(baseOp, carrierLeft.getType(), carrierRight.getType(), resultCarrier, declaration, filePath);
-		final operation = TypedExpr.binary(baseOp, carrierLeft, carrierRight, nativeType, left.getPosition());
-		final semanticValue = convert(TypedExpr.castValue(operation, info.getResultType().getDisplay(), info.getResultType(), left.getPosition()),
-			left.getType(), filePath, declaration);
+		final operation = TypedExpr.binary(baseOp, nativeOperand(carrierLeft, nativeType), nativeOperand(carrierRight, nativeType), nativeType,
+			left.getPosition());
+		final semanticValue = convert(semanticResult(convert(operation, resultCarrier, filePath, declaration), info.getResultType()), left.getType(),
+			filePath, declaration);
 		final resultName = freshName("native_result", counter);
 		expressions.push(TypedExpr.temporary(resultName, left.getType().getDisplay(), semanticValue, voidType(), left.getPosition()));
 		final resultRead = TypedExpr.localRead(resultName, left.getType(), left.getPosition());
