@@ -1,3 +1,20 @@
+# [0.17.0](https://github.com/fullofcaffeine/hxhx/compare/v0.16.0...v0.17.0) (2026-07-16)
+
+
+### Bug Fixes
+
+* preserve abstract property update semantics ([21ee3dc](https://github.com/fullofcaffeine/hxhx/commit/21ee3dc8a9857d600705565721d7617e2d0f476f))
+* preserve abstract unary semantics through bootstrap ([976730f](https://github.com/fullofcaffeine/hxhx/commit/976730f7707cfc79750513b8f0c4a08220e96090))
+* preserve declared method callees in typed bodies ([f6a7e88](https://github.com/fullofcaffeine/hxhx/commit/f6a7e88130d3a70c22d866d86bf1876402c84616))
+* preserve returned block expressions ([c134b48](https://github.com/fullofcaffeine/hxhx/commit/c134b48b408c1d2a3e38e92ffc2e604778c04af9))
+* refresh typed method lookup bootstrap ([b8f0d9e](https://github.com/fullofcaffeine/hxhx/commit/b8f0d9e5ad881999075891c3a8088b2a22211c84))
+
+
+### Features
+
+* lower abstract unary operators in shared typer ([c95bb27](https://github.com/fullofcaffeine/hxhx/commit/c95bb2706b99db274d52214f915d3edab07f0f16))
+* seal structural typed backend bodies ([8a1fb02](https://github.com/fullofcaffeine/hxhx/commit/8a1fb021982da9a1dc459196ec4b0a25d340b489))
+
 # [0.16.0](https://github.com/fullofcaffeine/hxhx/compare/v0.15.24...v0.16.0) (2026-07-16)
 
 
