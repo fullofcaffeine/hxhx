@@ -1,3 +1,21 @@
+# [0.18.0](https://github.com/fullofcaffeine/hxhx/compare/v0.17.0...v0.18.0) (2026-07-16)
+
+
+### Bug Fixes
+
+* preserve abstract string concatenation ([2145ede](https://github.com/fullofcaffeine/hxhx/commit/2145ede8e96cedb108c367a5e2c25fc5712448f1))
+* **typer:** limit abstract operator invariant ([9c3b9df](https://github.com/fullofcaffeine/hxhx/commit/9c3b9df00cca773ebf5156e5813a69875086b4be))
+* **typer:** lower bodyless string operators safely ([caa8a82](https://github.com/fullofcaffeine/hxhx/commit/caa8a82b451ed1a2bfd93fc5a2a93d5374729c70))
+* **typer:** prefer current fields over type names ([dbe74fb](https://github.com/fullofcaffeine/hxhx/commit/dbe74fbfff7cbc67715bf8a76e67dd308b0c8b36))
+* **typer:** preserve local function result types ([281bd92](https://github.com/fullofcaffeine/hxhx/commit/281bd929f508ab9c37b1461ce636d11c79601186))
+* **typer:** retain types through computed receivers ([62a0ffa](https://github.com/fullofcaffeine/hxhx/commit/62a0ffafcb7c3e0910e3ca8fe0124d33d53be674))
+* **typer:** validate bodyless binary carriers early ([bf7f064](https://github.com/fullofcaffeine/hxhx/commit/bf7f064dca60a642b70f3855e7e6467e976c6732))
+
+
+### Features
+
+* bind abstract binary operators in shared typing ([38a50fe](https://github.com/fullofcaffeine/hxhx/commit/38a50fe3e39dc8712038780a01587df7dd72f757))
+
 # [0.17.0](https://github.com/fullofcaffeine/hxhx/compare/v0.16.0...v0.17.0) (2026-07-16)
 
 
