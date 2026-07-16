@@ -218,6 +218,18 @@ Assume the reader is a Haxe user who wants to understand and contribute to
 - You **must** continue working autonomously towards any known objectives until the user interrupts you.
 - Do **not** end your turn until there is absolutely nothing left to do.
 
+## Commit Messages
+
+- Keep the conventional-commit subject concise, then add a useful commit body for every non-trivial
+  change. Write the body in friendly, beginner-readable language so someone who does not already know
+  the compiler internals can understand what problem was solved.
+- Explain what changed, why it matters, and how it was verified. Call out important behavior or output
+  changes and name any intentionally deferred scope so the commit does not imply broader closure than
+  it provides.
+- Prefer concrete descriptions of the old and new behavior over a list of filenames or internal type
+  names. Technical details are welcome, but introduce them in plain language and make the practical
+  outcome clear first.
+
 ## Commit Cadence
 
 - Commit in small, reviewable slices whenever a bounded seam is green.
