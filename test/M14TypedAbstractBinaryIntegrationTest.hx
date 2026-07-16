@@ -115,7 +115,8 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  public inline function new(value:Int) this = value;",
 			"  @:commutative @:op(A + B) public static function chooseDirect(left:DirectTie, right:Dynamic):Int return left;",
 			"}",
-			"class Main { static function main() {",
+			"abstract W(Int) from Int {}",
+			"class Main { static var W:Int = 2; static function main() {",
 			"  var left:Score = new Score(2);",
 			"  var right:Score = new Score(3);",
 			"  var direct = left + right;",
@@ -125,6 +126,7 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  var instanceResult = left - 1;",
 			"  var reversedInstance = 'z' / left;",
 			"  var stringFallback = left + '!';",
+			"  var uppercaseFieldControl = W + 1;",
 			"  var localFunctionText = '';",
 			"  function nextText() { localFunctionText += 'b'; return localFunctionText; }",
 			"  var localFunctionRight = left * nextText();",
@@ -203,6 +205,13 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& stringFallback.getType().getDisplay() == "String"
 			&& declarationExpression(stringFallback, "mergeArbitrarily") == null,
 			"ordinary String concatenation was mistaken for an unsupported abstract overload");
+
+		final uppercaseFieldControl = initializer(main, "uppercaseFieldControl");
+		assertTrue(uppercaseFieldControl.getTag() == TypedExprTag.Binary && uppercaseFieldControl.getType().getDisplay() == "Int",
+			"an uppercase field in the current class was mistaken for an abstract type name: tag="
+			+ Std.string(uppercaseFieldControl.getTag())
+			+ " type="
+			+ uppercaseFieldControl.getType().getDisplay());
 
 		final localFunctionRight = declarationExpression(initializer(main, "localFunctionRight"), "decorateArbitrarily");
 		final localFunctionReversed = declarationExpression(initializer(main, "localFunctionReversed"), "decorateArbitrarily");

@@ -802,6 +802,12 @@ class TyperStage {
 		return functionReferenceType(candidates[0]);
 	}
 
+	/** Resolve a bare field in the current class before treating an uppercase name as a type. **/
+	static function currentFieldReferenceType(name:String, ctx:TyperContext):Null<TyType> {
+		final current = ctx.currentClass();
+		return current == null ? null : current.fieldType(name);
+	}
+
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
 		return switch (expr) {
 			case ENull:
@@ -828,11 +834,14 @@ class TyperStage {
 				if (sym != null) {
 					sym.getType();
 				} else {
+					final fieldType = currentFieldReferenceType(name, ctx);
 					// Only upper-start simple identifiers can be unqualified Haxe type names in this
 					// Stage3 bootstrap model. Treating every lower-case value name as a potential type
 					// makes lazy loading probe parent/root packages for ordinary locals and receivers.
-					final methodRef = isUpperStartName(name) ? null : currentStaticMethodReferenceType(name, ctx);
-					if (methodRef != null) {
+					final methodRef = fieldType == null && !isUpperStartName(name) ? currentStaticMethodReferenceType(name, ctx) : null;
+					if (fieldType != null) {
+						fieldType;
+					} else if (methodRef != null) {
 						methodRef;
 					} else {
 						final t = isUpperStartName(name) ? ctx.resolveType(name) : null;
