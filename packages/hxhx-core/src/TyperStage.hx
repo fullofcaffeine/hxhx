@@ -64,6 +64,14 @@ class TyperStage {
 			return TyType.unknown();
 		if (type.isNullable())
 			return TyType.nullable(resolveTypeInContext(type.getNullableInner(), ctx), type.getDisplay());
+		if (type.isFunction()) {
+			final result = type.getFunctionReturn();
+			return TyType.functionType([
+				for (argument in type.getFunctionArguments())
+					resolveTypeInContext(argument, ctx)
+			],
+				result == null ? TyType.unknown() : resolveTypeInContext(result, ctx), type.getDisplay());
+		}
 		if (!type.isUnresolved())
 			return type;
 		final arguments = [for (argument in type.getTypeArguments()) resolveTypeInContext(argument, ctx)];
@@ -82,8 +90,8 @@ class TyperStage {
 	/**
 		Resolve a member read without mistaking a declared method for a missing data
 		field. Exact calls keep their declaration identity separately; until the
-		incremental type model grows structural function types, a method value has an
-		explicitly unknown type rather than an "unknown field" error.
+		overloaded method-value selection grows an exact declaration rule, a method
+		value has an explicitly unknown type rather than an "unknown field" error.
 	**/
 	static function declaredMemberReadType(owner:TyNominalInfo, name:String, isStatic:Bool):Null<TyType> {
 		if (owner == null)
@@ -620,6 +628,27 @@ class TyperStage {
 	}
 
 	static function overloadArgScore(expected:TyType, actual:TyType):Int {
+		if (expected.isFunction() || actual.isFunction()) {
+			if (!expected.isFunction() || !actual.isFunction())
+				return -1;
+			final expectedArguments = expected.getFunctionArguments();
+			final actualArguments = actual.getFunctionArguments();
+			if (expectedArguments.length != actualArguments.length)
+				return -1;
+			var score = 0;
+			for (index in 0...expectedArguments.length) {
+				final argumentScore = overloadArgScore(expectedArguments[index], actualArguments[index]);
+				if (argumentScore < 0)
+					return -1;
+				score += argumentScore;
+			}
+			final expectedReturn = expected.getFunctionReturn();
+			final actualReturn = actual.getFunctionReturn();
+			if (expectedReturn == null || actualReturn == null)
+				return -1;
+			final returnScore = overloadArgScore(expectedReturn, actualReturn);
+			return returnScore < 0 ? -1 : score + returnScore;
+		}
 		final exp = normalizeOverloadTypeName(expected);
 		final act = normalizeOverloadTypeName(actual);
 		return functionOverloadTypeScore(exp, act);
@@ -741,7 +770,18 @@ class TyperStage {
 		if (parts.length == 0)
 			parts.push("()");
 		parts.push(normalizeOverloadTypeName(sig.getReturnType()));
-		return TyType.fromHintText(parts.join("->"));
+		return TyType.functionType(sig.getArgs(), sig.getReturnType(), parts.join("->"));
+	}
+
+	/** Infer a call through a local function value without inventing a declaration identity. **/
+	static function inferFunctionValueCall(callee:HxExpr, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
+		final calleeType = inferExprType(callee, scope, ctx, pos);
+		for (argument in args)
+			inferExprType(argument, scope, ctx, pos);
+		if (!calleeType.isFunction())
+			return TyType.unknown();
+		final result = calleeType.getFunctionReturn();
+		return result == null ? TyType.unknown() : result;
 	}
 
 	static function inferNullCoalesceType(left:TyType, right:TyType):TyType {
@@ -960,10 +1000,7 @@ class TyperStage {
 						if (owner != null) {
 							resolveMethodCall(owner, name, true, args, scope, ctx, pos).type;
 						} else {
-							inferExprType(callee, scope, ctx, pos);
-							for (a in args)
-								inferExprType(a, scope, ctx, pos);
-							TyType.unknown();
+							inferFunctionValueCall(callee, args, scope, ctx, pos);
 						}
 					case EField(obj, field):
 						// Static call through a type name (imported or same-package): `Util.ping()`.
@@ -1024,25 +1061,21 @@ class TyperStage {
 								}
 						}
 					case _:
-						inferExprType(callee, scope, ctx, pos);
-						for (a in args)
-							inferExprType(a, scope, ctx, pos);
-						TyType.unknown();
+						inferFunctionValueCall(callee, args, scope, ctx, pos);
 				}
 			case ELambda(argNames, body):
 				// Stage 3 bring-up: type the body in a nested scope that:
 				// - introduces lambda args (shadowing outer locals/params),
 				// - but preserves visibility of outer locals/params for capture.
 				//
-				// We intentionally return `Dynamic` as the lambda value type for now.
 				final lambdaArgs = new Array<TySymbol>();
 				for (n in argNames)
 					lambdaArgs.push(new TySymbol(n, TyType.fromHintText("Dynamic")));
 				final combinedParams = lambdaArgs.concat(scope.getParams().copy());
 				final combinedLocals = scope.getLocals().copy();
 				final nested = new TyFunctionEnv("<lambda>", combinedParams, combinedLocals, TyType.unknown(), TyType.unknown());
-				inferExprType(body, nested, ctx, pos);
-				TyType.fromHintText("Dynamic");
+				final result = inferExprType(body, nested, ctx, pos);
+				TyType.functionType([for (_ in argNames) TyType.fromHintText("Dynamic")], result);
 			case EMacroExpr(inner, _wrappers):
 				inferExprType(inner, scope, ctx, pos);
 				TyType.fromHintText("haxe.macro.Expr");

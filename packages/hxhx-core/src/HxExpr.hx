@@ -120,8 +120,8 @@ enum HxExpr {
 		- Stores the body expression.
 
 		How (bring-up semantics)
-		- Stage 3 typer treats the resulting value as `Dynamic`, but still types the
-		  body with a nested scope that:
+		- Stage 3 typer records a structural function value with best-effort argument
+		  and result types, and types the body with a nested scope that:
 		  - introduces the lambda argument(s),
 		  - and keeps outer locals/params visible for capture.
 		- Stage 3 emitter lowers this to an OCaml `fun ... -> ...` closure.

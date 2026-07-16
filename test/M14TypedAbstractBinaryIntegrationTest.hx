@@ -125,6 +125,10 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  var instanceResult = left - 1;",
 			"  var reversedInstance = 'z' / left;",
 			"  var stringFallback = left + '!';",
+			"  var localFunctionText = '';",
+			"  function nextText() { localFunctionText += 'b'; return localFunctionText; }",
+			"  var localFunctionRight = left * nextText();",
+			"  var localFunctionReversed = nextText() * left;",
 			"  var fallback:Fallback = new Fallback(5);",
 			"  var fallbackResult:Fallback = (fallback += 6);",
 			"  var nativeLeft:NativeSum = new NativeSum(7);",
@@ -199,6 +203,19 @@ class M14TypedAbstractBinaryIntegrationTest {
 			&& stringFallback.getType().getDisplay() == "String"
 			&& declarationExpression(stringFallback, "mergeArbitrarily") == null,
 			"ordinary String concatenation was mistaken for an unsupported abstract overload");
+
+		final localFunctionRight = declarationExpression(initializer(main, "localFunctionRight"), "decorateArbitrarily");
+		final localFunctionReversed = declarationExpression(initializer(main, "localFunctionReversed"), "decorateArbitrarily");
+		final environment = main.getEnvironment();
+		final nextTextType = environment == null ? null : environment.resolveSymbol("nextText").getType();
+		assertTrue(localFunctionRight != null
+			&& localFunctionRight.getExpressions()[2].getType().getDisplay() == "String"
+			&& localFunctionReversed != null
+			&& localFunctionReversed.getExpressions()[2].getType().getDisplay() == "String"
+			&& nextTextType != null
+			&& nextTextType.isFunction()
+			&& nextTextType.getFunctionReturn().getDisplay() == "String",
+			"unannotated local-function calls lost their inferred String result before abstract operator binding");
 
 		final mutable = expressionStatementWithDeclaration(main, "mutateArbitrarily");
 		assertTrue(mutable == null, "inline instance helper survived as a declaration call for backend reinterpretation");

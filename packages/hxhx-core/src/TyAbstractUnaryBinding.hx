@@ -14,6 +14,12 @@ class TyAbstractUnaryBinding {
 			return true;
 		if (type.isNullable())
 			return containsTypeParameter(type.getNullableInner());
+		if (type.isFunction()) {
+			for (argument in type.getFunctionArguments())
+				if (containsTypeParameter(argument))
+					return true;
+			return containsTypeParameter(type.getFunctionReturn());
+		}
 		for (argument in type.getTypeArguments())
 			if (containsTypeParameter(argument))
 				return true;

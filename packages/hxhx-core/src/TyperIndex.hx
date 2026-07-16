@@ -221,6 +221,14 @@ class TyperIndex {
 			final inner = type.getNullableInner();
 			return TyType.nullable(resolveSemanticType(inner, packagePath, moduleName, imports, parameterNames), type.getDisplay());
 		}
+		if (type.isFunction()) {
+			final result = type.getFunctionReturn();
+			return TyType.functionType([
+				for (argument in type.getFunctionArguments())
+					resolveSemanticType(argument, packagePath, moduleName, imports, parameterNames)
+			],
+				result == null ? TyType.unknown() : resolveSemanticType(result, packagePath, moduleName, imports, parameterNames), type.getDisplay());
+		}
 		if (!type.isUnresolved())
 			return type;
 
