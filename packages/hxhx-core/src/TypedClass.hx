@@ -18,4 +18,8 @@ class TypedClass {
 
 	public function getFunctions():Array<TypedFunction>
 		return functions.copy();
+
+	/** Return the same source/semantic class paired with rewritten typed functions. **/
+	public function withFunctions(loweredFunctions:Array<TypedFunction>):TypedClass
+		return new TypedClass(sourceDeclaration, semanticInfo, loweredFunctions);
 }

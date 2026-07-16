@@ -26,6 +26,13 @@ class TyperStage {
 	static function arrayElementType(t:TyType):Null<TyType> {
 		if (t == null)
 			return null;
+		final arguments = t.getTypeArguments();
+		if (arguments.length == 1) {
+			final identity = t.getNominalIdentity();
+			final containerName = identity == null ? t.getUnresolvedPath() : identity.getCanonicalName();
+			if (containerName == "Array" || containerName == "haxe.Array")
+				return arguments[0];
+		}
 		final d = t.getDisplay();
 		if (d == null)
 			return null;
@@ -49,8 +56,38 @@ class TyperStage {
 		}
 
 		// Best-effort: resolve short names against the current module context.
-		final c = ctx == null ? null : ctx.resolveType(raw);
-		return c != null ? TyType.fromHintText(c.getFullName()) : TyType.fromHintText(raw);
+		return resolveTypeInContext(TyType.fromHintText(raw), ctx);
+	}
+
+	static function resolveTypeInContext(type:TyType, ctx:TyperContext):TyType {
+		if (type == null)
+			return TyType.unknown();
+		if (type.isNullable())
+			return TyType.nullable(resolveTypeInContext(type.getNullableInner(), ctx), type.getDisplay());
+		if (!type.isUnresolved())
+			return type;
+		final arguments = [for (argument in type.getTypeArguments()) resolveTypeInContext(argument, ctx)];
+		final nominal = ctx == null ? null : ctx.resolveType(type.getUnresolvedPath());
+		return nominal == null ? TyType.unresolved(type.getUnresolvedPath(), arguments,
+			type.getDisplay()) : TyType.nominal(nominal.getIdentity(), arguments, type.getDisplay());
+	}
+
+	static function nominalInfoForType(index:TyperIndex, type:TyType):Null<TyNominalInfo> {
+		if (index == null || type == null)
+			return null;
+		final identity = type.getNominalIdentity();
+		return identity == null ? index.getByFullName(type.getDisplay()) : index.getByFullName(identity.getCanonicalName());
+	}
+
+	static function currentThisType(ctx:TyperContext):TyType {
+		if (ctx == null)
+			return TyType.unknown();
+		final current = ctx.currentClass();
+		if (current == null)
+			return TyType.unknown();
+		if (Std.isOfType(current, TyAbstractInfo))
+			return (cast current : TyAbstractInfo).getUnderlyingType();
+		return TyType.nominal(current.getIdentity(), [], current.getFullName());
 	}
 
 	static function isAssignmentBinop(op:String):Bool {
@@ -98,7 +135,8 @@ class TyperStage {
 		}
 	}
 
-	static function buildTypedClasses(parsed:ParsedModule, index:TyperIndex, loader:ModuleLoader, modulePath:String):TypedClassBuildResult {
+	static function buildTypedClasses(parsed:ParsedModule, index:TyperIndex, loader:ModuleLoader, modulePath:String,
+			deferProgramLowering:Bool = false):TypedClassBuildResult {
 		final declaration = parsed.getDecl();
 		final packagePath = HxModuleDecl.getPackagePath(declaration);
 		final imports = HxModuleDecl.getImports(declaration);
@@ -135,7 +173,9 @@ class TyperStage {
 			typedClasses.push(new TypedClass(classDeclaration, semanticInfo, typedFunctions));
 		}
 
-		return {classes: typedClasses, mainFunctions: mainFunctions};
+		final loweredClasses = index == null
+			|| deferProgramLowering ? typedClasses : TypedAbstractUnaryLowering.lowerClasses(typedClasses, index, parsed.getFilePath());
+		return {classes: loweredClasses, mainFunctions: mainFunctions};
 	}
 
 	/**
@@ -174,13 +214,13 @@ class TyperStage {
 		- Stage 3.3 needs cross-module knowledge (imports, class fields, statics)
 		  to type `Util.ping()` and `this.x` in upstream-shaped code.
 	**/
-	public static function typeResolvedModule(m:ResolvedModule, index:TyperIndex, ?loader:ModuleLoader):TypedModule {
+	public static function typeResolvedModule(m:ResolvedModule, index:TyperIndex, ?loader:ModuleLoader, deferProgramLowering:Bool = false):TypedModule {
 		final pm = ResolvedModule.getParsed(m);
 		final decl = pm.getDecl();
 		final pkg = HxModuleDecl.getPackagePath(decl);
 		final imports = HxModuleDecl.getImports(decl);
 		final cls = HxModuleDecl.getMainClass(decl);
-		final built = buildTypedClasses(pm, index, loader, ResolvedModule.getModulePath(m));
+		final built = buildTypedClasses(pm, index, loader, ResolvedModule.getModulePath(m), deferProgramLowering);
 		final classEnv = new TyClassEnv(HxClassDecl.getName(cls), built.mainFunctions);
 		final env = new TyModuleEnv(pkg, imports, classEnv);
 		return new TypedModule(pm, env, built.classes);
@@ -329,8 +369,10 @@ class TyperStage {
 								throw new TyperError(ctx.getFilePath(), pos,
 									"initializer type " + initTy + " is not compatible with local " + name + ":" + sym.getType());
 							}
-							// Bring-up default: widen locals to Dynamic when inference disagrees.
-							sym.setType(TyType.fromHintText("Dynamic"));
+							// A written local type remains the semantic contract in permissive
+							// bring-up mode. Conversion typing is incomplete, so replacing that
+							// identity with Dynamic would erase the exact abstract needed by
+							// later operator binding.
 							return;
 						}
 						sym.setType(u);
@@ -653,7 +695,7 @@ class TyperStage {
 
 				final receiverType = inferExprType(object, scope, ctx, pos);
 				final index = ctx.getIndex();
-				final owner = index == null ? null : index.getByFullName(receiverType.getDisplay());
+				final owner = nominalInfoForType(index, receiverType);
 				return owner == null ? null : resolveMethodCall(owner, field, false, args, scope, ctx, pos).declaration;
 			case _:
 		}
@@ -705,10 +747,7 @@ class TyperStage {
 				// without a real enum/abstract runtime.
 				TyType.fromHintText("String");
 			case EThis:
-				{
-					final full = ctx.getClassFullName();
-					full.length == 0 ? TyType.unknown() : TyType.fromHintText(full);
-				}
+				currentThisType(ctx);
 			case ESuper:
 				// Stage 3: `super` typing requires class hierarchy (future stage).
 				TyType.unknown();
@@ -725,7 +764,7 @@ class TyperStage {
 						methodRef;
 					} else {
 						final t = isUpperStartName(name) ? ctx.resolveType(name) : null;
-						t != null ? TyType.fromHintText(t.getFullName()) : TyType.unknown();
+						t != null ? TyType.nominal(t.getIdentity(), [], t.getFullName()) : TyType.unknown();
 					}
 				}
 			case EField(obj, _field):
@@ -799,7 +838,7 @@ class TyperStage {
 						// Best-effort: infer child for locals; actual field typing depends on the index.
 						final objTy = inferExprType(obj, scope, ctx, pos);
 						final idx = ctx.getIndex();
-						final c = idx == null ? null : idx.getByFullName(objTy.getDisplay());
+						final c = nominalInfoForType(idx, objTy);
 						if (c != null) {
 							final ft = c.fieldType(_field);
 							if (ft != null) {
@@ -887,7 +926,7 @@ class TyperStage {
 									for (a in args)
 										inferExprType(a, scope, ctx, pos);
 									final idx = ctx.getIndex();
-									final c2 = idx == null ? null : idx.getByFullName(objTy.getDisplay());
+									final c2 = nominalInfoForType(idx, objTy);
 									if (c2 != null) {
 										resolveMethodCall(c2, field, false, args, scope, ctx, pos).type;
 									} else {
@@ -925,7 +964,7 @@ class TyperStage {
 								for (a in args)
 									inferExprType(a, scope, ctx, pos);
 								final idx = ctx.getIndex();
-								final c2 = idx == null ? null : idx.getByFullName(objTy.getDisplay());
+								final c2 = nominalInfoForType(idx, objTy);
 								if (c2 != null) {
 									resolveMethodCall(c2, field, false, args, scope, ctx, pos).type;
 								} else {
@@ -998,21 +1037,18 @@ class TyperStage {
 				for (a in args)
 					inferExprType(a, scope, ctx, pos);
 				final c = ctx.resolveType(_typePath);
-				c != null ? TyType.fromHintText(c.getFullName()) : TyType.fromHintText(_typePath);
+				c != null ? TyType.nominal(c.getIdentity(), [], c.getFullName()) : TyType.fromHintText(_typePath);
 			case EUnop(_op, _fixity, e):
-				switch (_op) {
-					case LogicalNot:
-						inferExprType(e, scope, ctx, pos);
-						TyType.fromHintText("Bool");
-					case Negate:
-						final inner = inferExprType(e, scope, ctx, pos);
-						inner.isNumeric() ? inner : TyType.unknown();
-					case Increment:
-						inferExprType(e, scope, ctx, pos);
-					case Decrement:
-						inferExprType(e, scope, ctx, pos);
-					case BitwiseNot:
-						inferExprType(e, scope, ctx, pos);
+				final inner = inferExprType(e, scope, ctx, pos);
+				final bound = TyAbstractUnaryBinding.select(ctx.getIndex(), inner, _op, _fixity, ctx.getFilePath(), pos);
+				if (bound != null) {
+					bound.getResultType();
+				} else {
+					switch (_op) {
+						case LogicalNot: TyType.fromHintText("Bool");
+						case Negate: inner.isNumeric() ? inner : TyType.unknown();
+						case Increment | Decrement | BitwiseNot: inner;
+					}
 				}
 			case EBinop(op, a, b):
 				switch (op) {
@@ -1115,10 +1151,12 @@ class TyperStage {
 					elem = TyType.fromHintText("Dynamic");
 				TyType.fromHintText("Array<" + elem.getDisplay() + ">");
 			case EArrayAccess(array, index):
-				inferExprType(array, scope, ctx, pos);
+				final arrayType = inferExprType(array, scope, ctx, pos);
 				inferExprType(index, scope, ctx, pos);
-				// Stage3: indexing semantics depend on the concrete container type (Array/Bytes/String/etc).
-				TyType.fromHintText("Dynamic");
+				final elementType = arrayElementType(arrayType);
+				// Other indexed containers remain explicit Dynamic until their access
+				// contracts are represented in the shared semantic model.
+				elementType == null ? TyType.fromHintText("Dynamic") : elementType;
 			case ERange(start, end):
 				inferExprType(start, scope, ctx, pos);
 				inferExprType(end, scope, ctx, pos);

@@ -667,6 +667,7 @@ class Stage3Compiler {
 		// - Still executes macro hooks (when present) so macro-side failures surface deterministically.
 		if (typeOnly) {
 			var typedCount = 0;
+			final typedModulesForProgram = new Array<TypedModule>();
 			var headerOnlyCount = 0;
 			var parsedMethodsTotal = 0;
 			var unsupportedExprsTotal = 0;
@@ -693,7 +694,8 @@ class Stage3Compiler {
 						headerOnlyCount += 1;
 					}
 					parsedMethodsTotal += Stage3DiagnosticsSupport.parsedMethodCount(pm);
-					final typed = TyperStage.typeResolvedModule(m, typerIndex, moduleLoader);
+					final typed = TyperStage.typeResolvedModule(m, typerIndex, moduleLoader, true);
+					typedModulesForProgram.push(typed);
 					if (ResolvedModule.getFilePath(m) == rootFilePath)
 						rootTyped = typed;
 					typedCount += 1;
@@ -713,6 +715,24 @@ class Stage3Compiler {
 					toType.push(nm);
 				}
 			}
+			final sealedTypedModules = try {
+				TypedAbstractUnaryLowering.lowerModules(typedModulesForProgram, typerIndex);
+			} catch (e:TyperError) {
+				closeMacroSession();
+				final rawDiagnostic = rawTyperDiagnostic(e);
+				if (rawDiagnostic != null)
+					return haxeDiagnosticError(rawDiagnostic);
+				return error("type failed during shared operator lowering: " + formatException(e));
+			} catch (e:String) {
+				closeMacroSession();
+				return error("type failed during shared operator lowering: " + e);
+			}
+			rootTyped = null;
+			for (typed in sealedTypedModules)
+				if (typed.getParsed().getFilePath() == rootFilePath) {
+					rootTyped = typed;
+					break;
+				}
 
 			// Deterministic typer summary for the root module (bring-up diagnostics).
 			if (rootTyped != null)
@@ -760,7 +780,7 @@ class Stage3Compiler {
 		} else {
 			resolvedForTyping.copy();
 		}
-		final typedModules = new Array<TypedModule>();
+		var typedModules = new Array<TypedModule>();
 		// Worklist so the typer can lazily load modules on demand. Newly loaded modules are typed and
 		// included in the emitted program so `dune build` does not fail on missing modules.
 		final toType = initialModulesToType.copy();
@@ -769,7 +789,7 @@ class Stage3Compiler {
 			final m = toType[cursor];
 			cursor += 1;
 			try {
-				typedModules.push(TyperStage.typeResolvedModule(m, typerIndex, moduleLoader));
+				typedModules.push(TyperStage.typeResolvedModule(m, typerIndex, moduleLoader, true));
 			} catch (e:TyperError) {
 				closeMacroSession();
 				final rawDiagnostic = rawTyperDiagnostic(e);
@@ -784,6 +804,18 @@ class Stage3Compiler {
 				resolvedForTyping.push(nm);
 				toType.push(nm);
 			}
+		}
+		typedModules = try {
+			TypedAbstractUnaryLowering.lowerModules(typedModules, typerIndex);
+		} catch (e:TyperError) {
+			closeMacroSession();
+			final rawDiagnostic = rawTyperDiagnostic(e);
+			if (rawDiagnostic != null)
+				return haxeDiagnosticError(rawDiagnostic);
+			return error("type failed during shared operator lowering: " + formatException(e));
+		} catch (e:String) {
+			closeMacroSession();
+			return error("type failed during shared operator lowering: " + e);
 		}
 
 		final hookError = Stage3HookSupport.runStandardMacroHooks(macroSession);

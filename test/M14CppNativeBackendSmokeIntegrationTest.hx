@@ -9133,16 +9133,18 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ primitive-backed abstract helpers should erase abstract argument types to the underlying primitive");
 		assertContains(primitiveLines, "return static_cast<int>((a - b));",
 			"C++ primitive-backed abstract static helper bodies should operate on primitive values");
-		assertTrue(primitiveLines.indexOf("negate(") < 0,
-			"C++ primitive-backed abstract helpers should not emit instance wrapper methods that require abstract this semantics");
+		assertContains(primitiveLines, "static int get(int __hxhx_abstract_this) {",
+			"C++ primitive-backed abstract instance helpers should use an explicit erased receiver ABI");
+		assertContains(primitiveLines, "static int negate(int __hxhx_abstract_this) {",
+			"C++ primitive-backed abstract helper names should remain arbitrary after semantic binding");
 		assertTrue(primitiveLines.indexOf("std::shared_ptr<Int32>") < 0,
 			"C++ primitive-backed abstracts should not leak shared_ptr wrapper types into helper signatures");
 		final primitiveOwnerLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(primitiveOwner)[0], primitiveOwner, primitiveLookup).join("\n");
 		assertContains(primitiveOwnerLines, "static int fromValue(int m) {",
 			"C++ primitive-backed abstract parameters should erase to the underlying primitive type");
-		assertContains(primitiveOwnerLines, "return static_cast<int>(m);",
-			"C++ primitive-backed abstract get() calls should return the already-erased primitive value");
+		assertContains(primitiveOwnerLines, "Int32::get(m)",
+			"C++ primitive-backed abstract calls should invoke the generated exact helper with their erased receiver");
 		assertTrue(primitiveOwnerLines.indexOf("m.get()") < 0, "C++ primitive-backed abstract get() calls should not emit member access on primitive values");
 		final numericAliasOwner = new HxClassDecl("NumericAliasOwner", false, [
 			new HxFunctionDecl("int8ToInt16", Public, true, [new HxFunctionArg("v", "Int8", NoDefault, false, false)], "Int16",
@@ -9191,13 +9193,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		primitiveClasses.set("PrimitiveCaller", primitiveCaller);
 		final primitiveReadLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(primitiveCaller)[0], primitiveCaller, primitiveLookup).join("\n");
-		assertContains(primitiveReadLines, "return static_cast<int>(a);",
-			"C++ primitive-backed abstract locals should lower read helpers against the erased primitive local");
+		assertContains(primitiveReadLines, "return static_cast<int>(Int32::toInt(a));",
+			"C++ primitive-backed abstract locals should invoke their exact helper against the erased primitive local");
 		assertTrue(primitiveReadLines.indexOf("a.toInt()") < 0,
 			"C++ primitive-backed abstract local read helpers should not emit member calls on primitive values");
 		final primitiveMutateLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(primitiveCaller)[1], primitiveCaller, primitiveLookup).join("\n");
-		assertContains(primitiveMutateLines, "(a++);", "C++ primitive-backed abstract local mutation helpers should lower against the erased primitive local");
+		assertContains(primitiveMutateLines, "Int32::incr(a);", "C++ primitive-backed abstract instance calls should use the explicit helper receiver ABI");
 		assertTrue(primitiveMutateLines.indexOf("a.incr()") < 0,
 			"C++ primitive-backed abstract local mutation helpers should not emit member calls on primitive values");
 		final primitiveFloatLines = @:privateAccess
@@ -9239,12 +9241,16 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ primitive-backed abstracts should preserve static fields used by erased constructor side effects");
 		assertContains(counterLines, "return static_cast<int>((MyAbstractCounter::counter++, v));",
 			"C++ primitive-backed abstract @:from helpers should preserve erased constructor side effects");
+		assertContains(counterLines, "static int getValue(int __hxhx_abstract_this) {",
+			"C++ primitive-backed abstract instance helpers should declare their erased receiver explicitly");
+		assertContains(counterLines, "return static_cast<int>((__hxhx_abstract_this + 1));",
+			"C++ primitive-backed abstract helper bodies should operate on the explicit erased receiver");
 		final counterValueLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(counterOwner)[0], counterOwner, primitiveLookup).join("\n");
 		assertContains(counterValueLines, "static int getAbstractValue(int a) {",
 			"C++ primitive-backed abstract instance helper return types should infer from erased primitive method calls");
-		assertContains(counterValueLines, "return static_cast<int>((a + 1));",
-			"C++ primitive-backed abstract instance helpers should lower simple inline this expressions against erased primitive args");
+		assertContains(counterValueLines, "return static_cast<int>(MyAbstractCounter::getValue(a));",
+			"C++ primitive-backed abstract calls should preserve the exact helper boundary after carrier erasure");
 		assertTrue(counterValueLines.indexOf("a.getValue()") < 0,
 			"C++ primitive-backed abstract instance helpers should not emit member calls on erased primitive args");
 		final counterCheckLines = @:privateAccess

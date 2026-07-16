@@ -41,6 +41,10 @@ class TypedFunction {
 	public function getBody():TypedFunctionBody
 		return body;
 
+	/** Return the same declaration revision with a structurally lowered semantic body. **/
+	public function withBody(loweredBody:TypedFunctionBody):TypedFunction
+		return new TypedFunction(ownerName, sourceOrdinal, sourceDeclaration, declaration, environment, loweredBody);
+
 	public function getStableIdentity():String {
 		if (declaration != null)
 			return declaration.getIdentity().getCanonicalKey();

@@ -229,4 +229,14 @@ class TypedExpr {
 
 	public function getOpaqueKind():Null<TypedOpaqueExprKind>
 		return opaqueKind;
+
+	/** Rebuild this immutable node with new children while preserving its exact semantic payload. **/
+	public function withExpressions(children:Array<TypedExpr>):TypedExpr
+		return new TypedExpr(tag, type, position, texts, children, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
+			opaqueKind);
+
+	/** Re-label one structurally identical expression for a shared semantic view such as abstract `this`. **/
+	public function withType(semanticType:TyType):TypedExpr
+		return new TypedExpr(tag, semanticType, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator,
+			unaryFixity, opaqueKind);
 }

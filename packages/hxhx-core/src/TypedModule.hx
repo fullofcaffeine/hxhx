@@ -39,6 +39,11 @@ class TypedModule {
 		return revision;
 	}
 
+	/** Return the next immutable semantic revision after a shared typed-body pass. **/
+	public function withTypedClasses(classes:Array<TypedClass>):TypedModule {
+		return new TypedModule(parsed, env, classes, revision + 1);
+	}
+
 	/**
 		Return the declaration/signature projection whose bodies come exclusively
 		from the structural typed tree.

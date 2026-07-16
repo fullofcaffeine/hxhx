@@ -107,7 +107,13 @@ class TypedBodySource {
 		final statements = typedStatement.getStatements();
 		return switch (typedStatement.getTag()) {
 			case Block: SBlock([for (entry in statements) statement(entry)], position);
-			case Var: SVar(names[0], names[1], expressions.length == 0 ? null : expression(expressions[0]), position);
+			case Var:
+				var typeHint = names[1];
+				if (StringTools.trim(typeHint).length == 0
+					&& expressions.length == 1
+					&& expressions[0].getType().getNominalIdentity() != null)
+					typeHint = expressions[0].getType().getDisplay();
+				SVar(names[0], typeHint, expressions.length == 0 ? null : expression(expressions[0]), position);
 			case If: SIf(expression(expressions[0]), statement(statements[0]), statements.length == 1 ? null : statement(statements[1]), position);
 			case ForIn: SForIn(names[0], expression(expressions[0]), statement(statements[0]), position);
 			case ForKeyValue: SForKeyValue(names[0], names[1], expression(expressions[0]), statement(statements[0]), position);

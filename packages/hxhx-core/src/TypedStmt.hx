@@ -126,4 +126,8 @@ class TypedStmt {
 
 	public function getCatchTypeHints():Array<String>
 		return catchTypeHints.copy();
+
+	/** Rebuild this immutable statement after a shared recursive expression pass. **/
+	public function withChildren(newExpressions:Array<TypedExpr>, newStatements:Array<TypedStmt>):TypedStmt
+		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints);
 }

@@ -5114,9 +5114,16 @@ class CppTargetCore {
 			out.push("  inline static " + typeName + " " + fieldName + " = " + rhs + ";");
 		}
 		for (fn in HxClassDecl.getFunctions(cls)) {
-			if (!HxFunctionDecl.getIsStatic(fn) || HxFunctionDecl.getName(fn) == "new")
+			if (HxFunctionDecl.getName(fn) == "new")
 				continue;
-			for (line in renderHelperMethod(fn, cls, classLookup))
+			final lines = if (HxFunctionDecl.getIsStatic(fn)) {
+				renderHelperMethod(fn, cls, classLookup);
+			} else if (!hasFunctionMetadata(fn, "inline")) {
+				CppAbstractHelperEmitter.renderInstanceHelper(fn, cls, classLookup);
+			} else {
+				[];
+			};
+			for (line in lines)
 				out.push(line);
 		}
 		out.push("};");
@@ -12640,6 +12647,9 @@ class CppTargetCore {
 		final directLambda = directLambdaValueExprForExpectedFunction(expr, expectedType, scope);
 		if (directLambda != null)
 			return directLambda;
+		final exactAbstractCall = CppAbstractRepresentation.classBackedCastForExpectedType(expr, expectedType, scope);
+		if (exactAbstractCall != null)
+			return exactAbstractCall;
 		final macroApiCall = macroApiCallExprForExpected(expr, expectedType, scope);
 		if (macroApiCall != null)
 			return macroApiCall;
@@ -13126,8 +13136,7 @@ class CppTargetCore {
 				Std.string(value);
 			case EIdent("UTF8"):
 				"nullptr";
-			case EThis:
-				"(*this)";
+			case EThis: scope != null && scope.erasedAbstractThisName != null ? scope.erasedAbstractThisName : "(*this)";
 			case ESuper:
 				superExpr(scope);
 			case EIdent(name):
@@ -13599,8 +13608,9 @@ class CppTargetCore {
 				+ " : "
 				+ renderExpr(elseExpr, scope)
 				+ ")";
-			case ECast(inner, _):
-				renderExpr(inner, scope);
+			case ECast(inner, typeHint):
+				final represented = CppAbstractRepresentation.classBackedCastExpression(inner, typeHint, scope);
+				represented == null ? renderExpr(inner, scope) : represented;
 			case EUntyped(inner):
 				renderExpr(inner, scope);
 			case ETryCatchRaw(raw):
@@ -17734,25 +17744,7 @@ class CppTargetCore {
 	}
 
 	static function primitiveBackedAbstractMethodCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
-		if (args.length != 0)
-			return null;
-		final intLikeFloat = method == "toFloat" ? primitiveIntLikeAbstractMethodCallExpr(receiver, method, scope) : null;
-		if (intLikeFloat != null)
-			return intLikeFloat;
-		var cls = primitiveBackedAbstractClassForExpr(receiver, scope);
-		if (cls == null)
-			cls = primitiveBackedAbstractClassForReceiverMethod(receiver, method, scope);
-		if (cls == null) {
-			final intLike = primitiveIntLikeAbstractMethodCallExpr(receiver, method, scope);
-			return intLike;
-		}
-		final fn = classMethodDecl(sanitizeTypePath(HxClassDecl.getName(cls)), method, false, scope);
-		if (fn == null)
-			return null;
-		final underlying = primitiveAbstractUnderlyingCppType(cls);
-		if (underlying == null || underlying.length == 0)
-			return null;
-		return primitiveBackedAbstractMethodBodyExpr(receiver, fn, scope);
+		return CppAbstractHelperEmitter.renderMethodCall(receiver, method, args, scope);
 	}
 
 	static function primitiveBackedAbstractMethodReturnCppType(receiver:HxExpr, method:String, ?scope:CppRenderScope):String {
@@ -17956,7 +17948,9 @@ class CppTargetCore {
 
 	static function exprHaxeTypeHint(expr:HxExpr, scope:CppRenderScope):String {
 		return switch (expr) {
-			case ECast(inner, _) | EUntyped(inner):
+			case ECast(inner, typeHint): final clean = StringTools.trim(typeHint == null ? "" : typeHint); clean.length > 0 && primitiveBackedAbstractCppTypeForTypeHint(clean,
+					scope) != null ? clean : exprHaxeTypeHint(inner, scope);
+			case EUntyped(inner):
 				exprHaxeTypeHint(inner, scope);
 			case EThis:
 				HxClassDecl.getName(scope.owner);
