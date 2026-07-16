@@ -282,6 +282,7 @@
     "test:cpp-constrained-generic-arity-oracle-seed": "bash scripts/hxhx/run-cpp-constrained-generic-arity-oracle-seed.sh",
     "test:cpp-constrained-generic-relation-oracle-seed": "bash scripts/hxhx/run-cpp-constrained-generic-relation-oracle-seed.sh",
     "test:cpp-abstract-underlying-conversion-oracle-seed": "bash scripts/hxhx/run-cpp-abstract-underlying-conversion-oracle-seed.sh",
+    "test:cpp-abstract-binary-operator-oracle-seed": "bash scripts/hxhx/run-cpp-abstract-binary-operator-oracle-seed.sh",
     "test:cpp-arrow-map-literal-oracle-seed": "bash scripts/hxhx/run-cpp-arrow-map-literal-oracle-seed.sh",
     "test:cpp-empty-map-expected-type-oracle-seed": "bash scripts/hxhx/run-cpp-empty-map-expected-type-oracle-seed.sh",
     "test:cpp-testjson-oracle-seed": "bash scripts/hxhx/run-cpp-testjson-dynamic-numeric-oracle-seed.sh",
