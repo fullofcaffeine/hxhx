@@ -1133,6 +1133,9 @@ class SourceTargetCommon {
 	}
 
 	static function renderExpr(target:SourceNativeTarget, expr:HxExpr):String {
+		final exactCall = TypedExactCallSource.decodeInstance(expr);
+		if (exactCall != null)
+			return renderExpr(target, TypedExactCallSource.ordinaryInstanceCall(exactCall));
 		return switch (expr) {
 			case ENull:
 				switch (target) {

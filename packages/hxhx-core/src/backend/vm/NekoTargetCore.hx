@@ -514,6 +514,11 @@ class NekoTargetCore {
 
 	static function collectExprRefs(context:NekoEmitContext, expr:HxExpr, addConstructor:NekoClassInfo->Void,
 			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
+		final exactCall = TypedExactCallSource.decodeInstance(expr);
+		if (exactCall != null) {
+			collectCallRefs(context, EField(exactCall.receiver, exactCall.method), exactCall.arguments, addConstructor, addStatic);
+			return;
+		}
 		switch (expr) {
 			case ENew(typePath, args):
 				final info = lookupClass(context, typePath);
@@ -1135,6 +1140,9 @@ class NekoTargetCore {
 	}
 
 	static function renderExpr(context:NekoEmitContext, expr:HxExpr):String {
+		final exactCall = TypedExactCallSource.decodeInstance(expr);
+		if (exactCall != null)
+			return renderExpr(context, TypedExactCallSource.ordinaryInstanceCall(exactCall));
 		return switch (expr) {
 			case ENull:
 				"null";

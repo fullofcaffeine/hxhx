@@ -31,6 +31,9 @@ class JsExprEmitter {
 	}
 
 	public static function emit(expr:HxExpr, scope:JsEmitScope):String {
+		final exactCall = TypedExactCallSource.decodeInstance(expr);
+		if (exactCall != null)
+			return emit(TypedExactCallSource.ordinaryInstanceCall(exactCall), scope);
 		return switch (expr) {
 			case ENull:
 				"null";
@@ -951,7 +954,13 @@ class JsExprEmitter {
 		}
 		final calleeJs = emit(callee, scope);
 		final argsJs = args.map(a -> emitCallArg(a, scope)).join(", ");
-		return calleeJs + "(" + argsJs + ")";
+		final callable = switch (callee) {
+			case ELambda(_, _) | ECast(ELambda(_, _), _):
+				"(" + calleeJs + ")";
+			case _:
+				calleeJs;
+		};
+		return callable + "(" + argsJs + ")";
 	}
 
 	static function emitCopyCall(subject:HxExpr, scope:JsEmitScope):String {

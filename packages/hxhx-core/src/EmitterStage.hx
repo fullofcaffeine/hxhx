@@ -2590,6 +2590,10 @@ class EmitterStage {
 		final staticImportByIdentRaw = staticImportByIdent;
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
+		final exactCall = TypedExactCallSource.decodeInstance(e);
+		if (exactCall != null)
+			return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
+				currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 
 		final coreIntrinsic = tryExprToOcamlStage3CoreIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 			moduleNameByPkgAndClassRaw, callSigByCalleeRaw);

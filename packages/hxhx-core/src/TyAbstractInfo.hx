@@ -2,13 +2,14 @@
 	Semantic surface for a Haxe abstract declaration.
 
 	The abstract keeps its own nominal identity even when its underlying type is
-	a primitive target carrier. Unary declarations are cataloged by source token
-	and fixity without assigning mutation or prefix/postfix result semantics.
+	a primitive target carrier. Operator declarations are cataloged by source
+	token without assigning mutation, writeback, or target representation rules.
 **/
 class TyAbstractInfo extends TyNominalInfo {
 	final underlyingType:TyType;
 	final typeParameters:Array<String>;
 	final unaryOperators:haxe.ds.StringMap<Array<TyAbstractOperatorInfo>>;
+	final binaryOperators:haxe.ds.StringMap<Array<TyAbstractBinaryOperatorInfo>>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyType>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
@@ -18,6 +19,7 @@ class TyAbstractInfo extends TyNominalInfo {
 		this.underlyingType = underlyingType;
 		this.typeParameters = typeParameters == null ? [] : typeParameters.copy();
 		this.unaryOperators = new haxe.ds.StringMap();
+		this.binaryOperators = new haxe.ds.StringMap();
 	}
 
 	static function unaryKey(op:HxUnaryOperator, fixity:HxUnaryFixity):String {
@@ -45,6 +47,24 @@ class TyAbstractInfo extends TyNominalInfo {
 	public function getAllUnaryOperators():Array<TyAbstractOperatorInfo> {
 		final out = new Array<TyAbstractOperatorInfo>();
 		for (candidates in unaryOperators)
+			for (candidate in candidates)
+				out.push(candidate);
+		return out;
+	}
+
+	public function addBinaryOperator(info:TyAbstractBinaryOperatorInfo):Void {
+		final key = info.getOperator();
+		final candidates = binaryOperators.exists(key) ? binaryOperators.get(key) : [];
+		candidates.push(info);
+		binaryOperators.set(key, candidates);
+	}
+
+	public function getBinaryOperators(op:String):Array<TyAbstractBinaryOperatorInfo>
+		return binaryOperators.exists(op) ? binaryOperators.get(op) : [];
+
+	public function getAllBinaryOperators():Array<TyAbstractBinaryOperatorInfo> {
+		final out = new Array<TyAbstractBinaryOperatorInfo>();
+		for (candidates in binaryOperators)
 			for (candidate in candidates)
 				out.push(candidate);
 		return out;

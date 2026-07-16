@@ -7,6 +7,7 @@
 **/
 class EventLog {
 	public static var value:String = "";
+	public static var indexCalls:Int = 0;
 
 	public static function reset():Void {
 		value = "";
@@ -46,10 +47,7 @@ abstract Ticket(Int) from Int to Int {
 	@:op(A * B)
 	public static function decorateArbitrarily(ticket:Ticket, text:String):String {
 		EventLog.note("H");
-		var result = "";
-		for (_ in 0...ticket.get())
-			result += text;
-		return result;
+		return text + (ticket.get() > 1 ? text : "") + (ticket.get() > 2 ? text : "");
 	}
 
 	@:op(A / B)
@@ -78,7 +76,7 @@ abstract Parcel(ParcelPayload) from ParcelPayload to ParcelPayload {
 		this = value;
 	}
 
-	public function get():ParcelPayload {
+	public inline function get():ParcelPayload {
 		return this;
 	}
 
@@ -117,6 +115,13 @@ abstract Distance(Int) from Int to Int {
 		return new Distance(this - amount);
 	}
 
+	@:commutative
+	@:op(A * B)
+	public function labelArbitrarily(text:String):String {
+		EventLog.note("C");
+		return text;
+	}
+
 	@:op(A += B)
 	public inline function mutateArbitrarily(amount:Int):Void {
 		EventLog.note("V");
@@ -124,9 +129,23 @@ abstract Distance(Int) from Int to Int {
 	}
 }
 
-class Main {
-	static var indexCalls:Int = 0;
+abstract FallbackDistance(Int) from Int to Int {
+	public inline function new(value:Int) {
+		this = value;
+	}
 
+	public function get():Int {
+		return this;
+	}
+
+	@:op(A + B)
+	public static function addArbitrarily(value:FallbackDistance, amount:Int):FallbackDistance {
+		EventLog.note("F");
+		return new FallbackDistance(value.get() + amount);
+	}
+}
+
+class Main {
 	static function ticket(label:String, value:Int):Ticket {
 		EventLog.note(label);
 		return new Ticket(value);
@@ -139,7 +158,7 @@ class Main {
 
 	static function chooseIndex():Int {
 		EventLog.note("I");
-		indexCalls++;
+		EventLog.indexCalls++;
 		return 0;
 	}
 
@@ -174,10 +193,16 @@ class Main {
 		printResult(localResult.get() + ":" + local.get());
 
 		EventLog.reset();
-		indexCalls = 0;
+		EventLog.indexCalls = 0;
 		var values = [new Ticket(4)];
 		var indexedResult:Ticket = (values[chooseIndex()] += EventLog.number("R", 3));
-		printResult(indexedResult.get() + ":" + values[0].get() + ":" + indexCalls);
+		printResult(indexedResult.get() + ":" + values[0].get() + ":" + EventLog.indexCalls);
+
+		EventLog.reset();
+		EventLog.indexCalls = 0;
+		var fallbackValues = [new FallbackDistance(40)];
+		var fallbackResult:FallbackDistance = (fallbackValues[chooseIndex()] += EventLog.number("R", 2));
+		printResult(fallbackResult.get() + ":" + fallbackValues[0].get() + ":" + EventLog.indexCalls);
 
 		EventLog.reset();
 		var united = parcel("L", 4) + parcel("R", 5);
@@ -198,8 +223,18 @@ class Main {
 		printResult(reduced.get() + ":" + distance.get());
 
 		EventLog.reset();
+		var labeled = EventLog.text("L", "z") * new Distance(EventLog.number("R", 20));
+		printResult(labeled);
+
+		EventLog.reset();
 		var mutableDistance = new Distance(8);
 		mutableDistance += EventLog.number("R", 5);
 		printResult(Std.string(mutableDistance.get()));
+
+		EventLog.reset();
+		EventLog.indexCalls = 0;
+		var mutableDistances = [new Distance(8)];
+		mutableDistances[chooseIndex()] += EventLog.number("R", 5);
+		printResult(mutableDistances[0].get() + ":" + EventLog.indexCalls);
 	}
 }

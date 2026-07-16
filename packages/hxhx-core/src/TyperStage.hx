@@ -125,15 +125,6 @@ class TyperStage {
 		return TyType.nominal(current.getIdentity(), [], current.getFullName());
 	}
 
-	static function isAssignmentBinop(op:String):Bool {
-		return switch (op) {
-			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=":
-				true;
-			case _:
-				false;
-		}
-	}
-
 	static function declarePatternBindings(scope:TyFunctionEnv, pattern:HxSwitchPattern, baseTy:TyType):Void {
 		switch (pattern) {
 			case PBind(name):
@@ -209,7 +200,7 @@ class TyperStage {
 		}
 
 		final loweredClasses = index == null
-			|| deferProgramLowering ? typedClasses : TypedAbstractUnaryLowering.lowerClasses(typedClasses, index, parsed.getFilePath());
+			|| deferProgramLowering ? typedClasses : TypedAbstractOperatorLowering.lowerClasses(typedClasses, index, parsed.getFilePath());
 		return {classes: loweredClasses, mainFunctions: mainFunctions};
 	}
 
@@ -960,6 +951,20 @@ class TyperStage {
 
 				// Best-effort: type children for local inference, and use the index when we can.
 				switch (callee) {
+					case EIdent(name):
+						// A bare call inside a class can name one of that class's static
+						// methods. Keep local function values authoritative, then use the
+						// same declaration lookup as the structural typed-call builder so
+						// the expression result retains its nominal semantic type.
+						final owner = scope.resolveSymbol(name) == null ? ctx.currentClass() : null;
+						if (owner != null) {
+							resolveMethodCall(owner, name, true, args, scope, ctx, pos).type;
+						} else {
+							inferExprType(callee, scope, ctx, pos);
+							for (a in args)
+								inferExprType(a, scope, ctx, pos);
+							TyType.unknown();
+						}
 					case EField(obj, field):
 						// Static call through a type name (imported or same-package): `Util.ping()`.
 						switch (obj) {
@@ -1111,7 +1116,7 @@ class TyperStage {
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
 						inferNullCoalesceType(ta, tb);
-					case _ if (isAssignmentBinop(op)):
+					case "=":
 						// Assignment as expression.
 						final rhs = inferExprType(b, scope, ctx, pos);
 						switch (a) {
@@ -1136,10 +1141,30 @@ class TyperStage {
 								inferExprType(a, scope, ctx, pos);
 								rhs;
 						}
+					case _ if (HxBinaryOperatorTools.isCompoundAssignment(op)):
+						final leftType = inferExprType(a, scope, ctx, pos);
+						final rightType = inferExprType(b, scope, ctx, pos);
+						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);
+						if (bound != null) {
+							bound.getRequiresWriteback() ? leftType : bound.getOperatorInfo().getResultType();
+						} else {
+							switch (a) {
+								case EIdent(name):
+									final symbol = scope.resolveSymbol(name);
+									if (symbol != null) {
+										final unified = TyType.unify(symbol.getType(), rightType);
+										if (unified != null)
+											symbol.setType(unified);
+									}
+								case _:
+							}
+							leftType;
+						}
 					case "==" | "!=" | "<" | "<=" | ">" | ">=":
-						inferExprType(a, scope, ctx, pos);
-						inferExprType(b, scope, ctx, pos);
-						TyType.fromHintText("Bool");
+						final leftType = inferExprType(a, scope, ctx, pos);
+						final rightType = inferExprType(b, scope, ctx, pos);
+						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);
+						bound == null ? TyType.fromHintText("Bool") : bound.getOperatorInfo().getResultType();
 					case "&&" | "||":
 						inferExprType(a, scope, ctx, pos);
 						inferExprType(b, scope, ctx, pos);
@@ -1147,20 +1172,32 @@ class TyperStage {
 					case "&" | "|" | "^" | "<<" | ">>" | ">>>":
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
-						// Best-effort: treat as Bool if both operands are Bool; otherwise Int.
-						(ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool") ? TyType.fromHintText("Bool") : TyType.fromHintText("Int");
+						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
+						if (bound != null) bound.getOperatorInfo()
+							.getResultType(); else // Best-effort: treat as Bool if both operands are Bool; otherwise Int.
+							(ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool") ? TyType.fromHintText("Bool") : TyType.fromHintText("Int");
 					case "+":
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
-						if (ta.getDisplay() == "String" || tb.getDisplay() == "String") {
+						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
+						if (bound != null) {
+							bound.getOperatorInfo().getResultType();
+						} else if (ta.getDisplay() == "String" || tb.getDisplay() == "String") {
 							TyType.fromHintText("String");
 						} else {
 							final u = TyType.unify(ta, tb);
 							u != null
 							&& u.isNumeric() ? u : TyType.unknown();
 						}
-					case "-" | "*" | "/" | "%": final ta = inferExprType(a, scope, ctx,
-							pos); final tb = inferExprType(b, scope, ctx, pos); final u = TyType.unify(ta, tb); u != null && u.isNumeric() ? u : TyType.unknown();
+					case "-" | "*" | "/" | "%":
+						final ta = inferExprType(a, scope, ctx, pos);
+						final tb = inferExprType(b, scope, ctx, pos);
+						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
+						if (bound != null) bound.getOperatorInfo().getResultType(); else {
+							final unified = TyType.unify(ta, tb);
+							unified != null
+							&& unified.isNumeric() ? unified : TyType.unknown();
+						}
 					case _:
 						inferExprType(a, scope, ctx, pos);
 						inferExprType(b, scope, ctx, pos);
@@ -1204,7 +1241,11 @@ class TyperStage {
 				}
 				if (!saw)
 					elem = TyType.fromHintText("Dynamic");
-				TyType.fromHintText("Array<" + elem.getDisplay() + ">");
+				// Resolve inferred element identities as eagerly as written local
+				// hints. Keeping `Array<Ticket>`'s argument as a display-only name
+				// would erase the abstract identity at `values[index]` and make an
+				// otherwise exact operator look like an ordinary carrier update.
+				resolveTypeInContext(TyType.fromHintText("Array<" + elem.getDisplay() + ">"), ctx);
 			case EArrayAccess(array, index):
 				final arrayType = inferExprType(array, scope, ctx, pos);
 				inferExprType(index, scope, ctx, pos);

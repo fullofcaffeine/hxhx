@@ -8988,25 +8988,25 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final vectorLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(vectorAbstract, vectorLookup).join("\n");
 		assertContains(vectorLines, "static std::shared_ptr<MyPoint3> add(std::shared_ptr<MyVector> lhs, std::shared_ptr<MyVector> rhs) {",
 			"C++ class-backed abstract static returns should use the underlying class pointer");
-		assertContains(vectorLines, "return std::make_shared<MyPoint3>(((lhs->x) + (rhs->x)), ((lhs->y) + (rhs->y)), ((lhs->z) + (rhs->z)));",
-			"C++ class-backed abstract returns should accept newly constructed underlying values");
+		assertContains(vectorLines,
+			"return std::make_shared<MyPoint3>(((lhs->__hxhx_abstract_value->x) + (rhs->__hxhx_abstract_value->x)), ((lhs->__hxhx_abstract_value->y) + (rhs->__hxhx_abstract_value->y)), ((lhs->__hxhx_abstract_value->z) + (rhs->__hxhx_abstract_value->z)));",
+			"C++ class-backed abstract helpers should read the retained underlying object");
 		assertContains(vectorLines, "static std::shared_ptr<MyPoint3> scalarAssign(std::shared_ptr<MyVector> lhs, double rhs) {",
 			"C++ class-backed abstract mutation helpers should return the underlying class pointer");
-		assertContains(vectorLines, "return std::make_shared<MyPoint3>(lhs->x, lhs->y, lhs->z);",
-			"C++ class-backed abstract locals should convert to the underlying class through constructor fields");
+		assertContains(vectorLines, "return lhs->__hxhx_abstract_value;", "C++ class-backed abstract locals should preserve underlying object identity");
 		assertContains(vectorLines, "std::shared_ptr<MyPoint3> get() {", "C++ class-backed abstract get helpers should preserve underlying returns");
-		assertContains(vectorLines, "return std::make_shared<MyPoint3>(this->x, this->y, this->z);",
-			"C++ class-backed abstract self should convert to the underlying class through constructor fields");
+		assertContains(vectorLines, "return this->__hxhx_abstract_value;", "C++ class-backed abstract self should expose the retained underlying object");
 		assertContains(vectorLines, "double set_x(double x) {", "C++ class-backed abstract setters should infer assignment return types");
-		assertContains(vectorLines, "return this->x = x;", "C++ class-backed abstract setters should assign owned fields directly");
+		assertContains(vectorLines, "return (this->__hxhx_abstract_value->x) = x;",
+			"C++ class-backed abstract setters should mutate the retained underlying object");
 		assertTrue(vectorLines.indexOf("std::to_string((*this).set_x(x))") < 0,
 			"C++ class-backed abstract setters should not stringify recursive setter calls");
 		assertTrue(vectorLines.indexOf("return (*this).set_x(x);") < 0, "C++ class-backed abstract setters should not recursively call themselves");
 		assertTrue(vectorLines.indexOf("static std::shared_ptr<MyVector> add") < 0,
 			"C++ class-backed abstract operators should not require shared_ptr<MyPoint3> to shared_ptr<MyVector> conversion");
 		assertTrue(vectorLines.indexOf("return (*this);") < 0, "C++ class-backed abstract self returns should not emit value-to-shared_ptr conversions");
-		assertContains(vectorLines, "MyVector(double x, double y, double z) : x(x), y(y), z(z) {}",
-			"C++ class-backed abstracts should accept underlying constructor fields for wrapper conversions");
+		assertContains(vectorLines, "MyVector(std::shared_ptr<MyPoint3> value) : __hxhx_abstract_value(value) {}",
+			"C++ class-backed wrappers should store the underlying carrier without field reconstruction");
 		final vectorOwner = new HxClassDecl("VectorOwner", false, [
 			new HxFunctionDecl("check", Public, true, [], "Void", [
 				SVar("v1", "MyVector", ENew("MyPoint3", [EFloat(1), EFloat(1), EFloat(1)]), HxPos.unknown()),
@@ -9022,14 +9022,15 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final vectorOwnerLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(vectorOwner)[0], vectorOwner,
 			vectorLookup)
 			.join("\n");
-		assertContains(vectorOwnerLines, "std::shared_ptr<MyVector> v1 = std::make_shared<MyVector>(1, 1, 1);",
-			"C++ class-backed abstract locals should construct wrappers from underlying constructor calls");
-		assertContains(vectorOwnerLines, "eq(std::string(\"(2,3,4)\"), ([&]() { auto __hxhx_MyVector_underlying = MyVector::add(v1, v2);",
-			"C++ class-backed abstract add operators should dispatch through generated helpers and wrap results");
-		assertContains(vectorOwnerLines, "eq(std::string(\"(2,4,6)\"), ([&]() { auto __hxhx_MyVector_underlying = MyVector::scalar(v2, 2);",
-			"C++ class-backed abstract scalar operators should dispatch through generated helpers and wrap results");
-		assertContains(vectorOwnerLines, "([&]() { MyVector::scalarAssign(v1, 2); return v1; })();",
-			"C++ class-backed abstract compound assignment operators should preserve mutation helper side effects");
+		assertContains(vectorOwnerLines, "std::shared_ptr<MyVector> v1 = std::make_shared<MyVector>(std::make_shared<MyPoint3>(1, 1, 1));",
+			"C++ class-backed abstract locals should wrap the complete underlying constructor result");
+		assertContains(vectorOwnerLines, "eq(std::string(\"(2,3,4)\"), (v1 + v2));",
+			"the raw render helper should leave abstract binary binding to the shared typed-body pass");
+		assertContains(vectorOwnerLines, "v1 *= 2;", "the raw render helper should not invent abstract compound-assignment writeback");
+		assertTrue(vectorOwnerLines.indexOf("MyVector::add(v1, v2)") < 0
+			&& vectorOwnerLines.indexOf("MyVector::scalar(v2, 2)") < 0
+			&& vectorOwnerLines.indexOf("MyVector::scalarAssign(v1, 2)") < 0,
+			"C++ raw rendering must not select abstract operators by helper name");
 		assertContains(vectorOwnerLines, "eq(std::string(\"(2,2,2)\"), v1->toString());",
 			"C++ class-backed abstract values should coerce through toString for string equality");
 		final renderedVectorNames = new StringMap<Bool>();
@@ -9062,23 +9063,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(renderedVectorLines,
 			"static std::shared_ptr<MyAbstract_MyPoint3> scalarAssign(std::shared_ptr<MyAbstract_MyVector> lhs, double rhs) {",
 			"C++ module-local class-backed abstract mutation helpers should use rendered return and arg types");
-		assertContains(renderedVectorLines, "return std::make_shared<MyAbstract_MyPoint3>(lhs->x, lhs->y, lhs->z);",
-			"C++ module-local class-backed abstract returns should convert the wrapper back to the rendered underlying class");
+		assertContains(renderedVectorLines, "return lhs->__hxhx_abstract_value;",
+			"C++ module-local class-backed abstract returns should preserve the rendered underlying object");
 		assertContains(renderedVectorLines, "std::shared_ptr<MyAbstract_MyPoint3> get() {",
 			"C++ module-local class-backed abstract get helpers should preserve rendered underlying returns");
-		assertContains(renderedVectorLines, "return std::make_shared<MyAbstract_MyPoint3>(this->x, this->y, this->z);",
-			"C++ module-local class-backed abstract self returns should convert to the rendered underlying class");
+		assertContains(renderedVectorLines, "return this->__hxhx_abstract_value;",
+			"C++ module-local class-backed abstract self returns should expose the rendered underlying object");
 		assertTrue(renderedVectorLines.indexOf("return lhs;") < 0,
 			"C++ module-local class-backed abstract returns should not leak wrapper shared_ptr values into underlying returns");
 		assertTrue(renderedVectorLines.indexOf("return (*this);") < 0,
 			"C++ module-local class-backed abstract self returns should not emit value-to-shared_ptr conversions");
 		final renderedVectorOwnerLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(vectorOwner)[0], vectorOwner, renderedVectorLookup).join("\n");
-		assertContains(renderedVectorOwnerLines, "std::shared_ptr<MyAbstract_MyVector> v1 = std::make_shared<MyAbstract_MyVector>(1, 1, 1);",
-			"C++ module-local class-backed abstract locals should use rendered wrapper names");
 		assertContains(renderedVectorOwnerLines,
-			"eq(std::string(\"(2,3,4)\"), ([&]() { auto __hxhx_MyAbstract_MyVector_underlying = MyAbstract_MyVector::add(v1, v2);",
-			"C++ module-local class-backed abstract operators should dispatch through rendered helpers");
+			"std::shared_ptr<MyAbstract_MyVector> v1 = std::make_shared<MyAbstract_MyVector>(std::make_shared<MyAbstract_MyPoint3>(1, 1, 1));",
+			"C++ module-local class-backed abstract locals should use rendered wrapper names");
+		assertTrue(renderedVectorOwnerLines.indexOf("MyAbstract_MyVector::add(v1, v2)") < 0,
+			"C++ raw module-local rendering must not select abstract operators by helper name");
 		final stdVector = new HxClassDecl("Vector", false, [
 			new HxFunctionDecl("new", Public, false, [new HxFunctionArg("length", "Int", NoDefault, false, false)], "Void", [], "")
 		], [], "", ["__hxhx_abstract", "__hxhx_abstract_underlying=VectorData<T>"]);
@@ -9370,16 +9371,13 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		myIntClasses.set("MyIntOwner", myIntOwner);
 		final myIntLookup = {names: myIntNames, byName: myIntClasses};
 		final myIntLines = @:privateAccess backend.cpp.CppTargetCore.renderHelperClass(myIntAbstract, myIntLookup).join("\n");
-		assertContains(myIntLines, "for (int i = 0; i < lhs; ++i) out += rhs;",
-			"C++ primitive Int abstract repeat helpers should emit target-owned string repetition");
+		assertContains(myIntLines, "static std::string repeat(int lhs, std::string rhs) {",
+			"C++ should still emit the declared primitive-abstract helper surface");
+		assertTrue(myIntLines.indexOf("for (int i = 0; i < lhs; ++i) out += rhs;") < 0, "C++ must not invent a helper body from the method name `repeat`");
 		final myIntOwnerLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(myIntOwner)[0], myIntOwner, myIntLookup).join("\n");
-		assertContains(myIntOwnerLines, "eq(std::string(\"aaaaa\"), MyInt::repeat(r, std::string(\"a\")));",
-			"C++ MyInt * String should dispatch through the primitive abstract repeat helper");
-		assertContains(myIntOwnerLines, "eq(std::string(\"aaaaa\"), MyInt::repeat(r, std::string(\"a\")));",
-			"C++ commuted String * MyInt should dispatch through the primitive abstract repeat helper");
-		assertContains(myIntOwnerLines, "eq(std::string(\"abcde\"), MyInt::cut(std::string(\"abcdefghijk\"), v));",
-			"C++ String / MyInt should dispatch through the primitive abstract cut helper");
+		assertTrue(myIntOwnerLines.indexOf("MyInt::repeat") < 0 && myIntOwnerLines.indexOf("MyInt::cut") < 0,
+			"C++ raw rendering must not bind unannotated binary helpers by method name");
 		final renderedMyIntNames = new StringMap<Bool>();
 		for (name in ["MyInt", "MyIntOwner", "MyAbstract_MyInt", "MyAbstract_MyIntOwner"])
 			renderedMyIntNames.set(name, true);
@@ -9398,12 +9396,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		};
 		final renderedMyIntOwnerLines = @:privateAccess
 			backend.cpp.CppTargetCore.renderHelperMethod(HxClassDecl.getFunctions(myIntOwner)[0], myIntOwner, renderedMyIntLookup).join("\n");
-		assertContains(renderedMyIntOwnerLines, "eq(std::string(\"aaaaa\"), MyAbstract_MyInt::repeat(r, std::string(\"a\")));",
-			"C++ module-local MyInt * String should dispatch through the rendered primitive abstract helper");
-		assertContains(renderedMyIntOwnerLines, "eq(std::string(\"abcde\"), MyAbstract_MyInt::cut(std::string(\"abcdefghijk\"), v));",
-			"C++ module-local String / MyInt should dispatch through the rendered primitive abstract helper");
-		assertTrue(!new EReg("(^|[^A-Za-z0-9_])MyInt::", "").match(renderedMyIntOwnerLines),
-			"C++ module-local primitive string abstract operators should not leak raw short helper names");
+		assertTrue(renderedMyIntOwnerLines.indexOf("MyAbstract_MyInt::repeat") < 0
+			&& renderedMyIntOwnerLines.indexOf("MyAbstract_MyInt::cut") < 0
+			&& !new EReg("(^|[^A-Za-z0-9_])MyInt::", "").match(renderedMyIntOwnerLines),
+			"C++ module-local raw rendering must not bind primitive binary helpers by short or rendered method name");
 		final primitiveNoMetadataOwner = new HxClassDecl("PrimitiveNoMetadataOwner", false, [
 			new HxFunctionDecl("read", Public, true, [], "Int", [
 				SVar("a", "", EInt(33), HxPos.unknown()),

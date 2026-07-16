@@ -3789,6 +3789,8 @@ class CppTargetCore {
 		out.push("struct " + className + (baseTypes.length == 0 ? "" : " : " + baseTypes.join(", ")) + " {");
 		for (line in classMetadataLines(cls, className))
 			out.push(line);
+		for (line in classBackedAbstractStorageLines(cls, scope))
+			out.push(line);
 		for (line in valueTypeCarrierStorageLines(cls, className))
 			out.push(line);
 		for (line in enumCarrierStorageLines(cls, className, classLookup))
@@ -4157,6 +4159,26 @@ class CppTargetCore {
 		return out;
 	}
 
+	/** Store one class-backed abstract carrier without copying its public fields. **/
+	static function classBackedAbstractStorageLines(cls:HxClassDecl, scope:CppRenderScope):Array<String> {
+		if (cls == null || scope == null)
+			return [];
+		final underlying = abstractUnderlyingTypeHint(cls);
+		if (underlying == null || primitiveAbstractUnderlyingCppType(cls) != null || genericTypeHintArgs(underlying).length > 0)
+			return [];
+		final underlyingName = sanitizeTypePath(typeBaseName(underlying));
+		if (!scope.classByName.exists(underlyingName))
+			return [];
+		final carrierType = cppTypeHint(underlying, scope, lookupForScope(scope));
+		return ["  "
+			+ carrierType
+			+ " "
+			+ CppAbstractRepresentation.CLASS_BACKED_VALUE_FIELD
+			+ " = "
+			+ cppDefaultValue(carrierType, scope)
+			+ ";"];
+	}
+
 	static function renderClassBackedAbstractImplicitConstructors(className:String, scope:CppRenderScope):Null<Array<String>> {
 		if (scope == null || scope.owner == null)
 			return null;
@@ -4169,27 +4191,16 @@ class CppTargetCore {
 		final underlyingName = sanitizeTypePath(typeBaseName(underlying));
 		if (!scope.classByName.exists(underlyingName))
 			return null;
-		final underlyingCtor = findConstructor(scope.classByName.get(underlyingName));
-		if (underlyingCtor == null)
-			return null;
-		final underlyingScope = renderScope(scope.classByName.get(underlyingName), {names: scope.classNames, byName: scope.classByName}, "void");
-		prepareFunctionScope(underlyingScope, underlyingCtor);
-		final args = HxFunctionDecl.getArgs(underlyingCtor);
-		final initializers = [
-			for (arg in args) {
-				final name = sanitizeIdentifier(HxFunctionArg.getName(arg));
-				if (hasInstanceField(cls, name)) name + "(" + name + ")" else null;
-			}
-		].filter(v -> v != null);
-		if (initializers.length == 0)
-			return null;
-		return ["  " + className + "() {}",
+		final carrierType = cppTypeHint(underlying, scope, lookupForScope(scope));
+		return ["  " + className + "() = default;",
 			"  "
 			+ className
 			+ "("
-			+ renderFunctionArgs(args, underlyingScope)
+			+ carrierType
+			+ " value"
 			+ ") : "
-			+ initializers.join(", ")
+			+ CppAbstractRepresentation.CLASS_BACKED_VALUE_FIELD
+			+ "(value)"
 			+ " {}"];
 	}
 
@@ -6902,8 +6913,6 @@ class CppTargetCore {
 			return returnTraced("special_printer_expr_positions", renderPrinterExprPositionsHelper(fn, owner, classLookup));
 		if (isTypeErasedValueHelper(fn, owner))
 			return returnTraced("special_type_erased_value", renderTypeErasedValueHelper(fn, owner, classLookup));
-		if (isPrimitiveStringRepeatHelper(fn, owner))
-			return returnTraced("special_primitive_string_repeat", renderPrimitiveStringRepeatHelper(fn, owner, classLookup));
 		final returnType = cppMethodSignatureReturnType(fn, owner, classLookup);
 		final scope = renderScope(owner, classLookup, returnType);
 		prepareFunctionScope(scope, fn);
@@ -7057,47 +7066,6 @@ class CppTargetCore {
 			+ "("
 			+ forwardedArgs.join(", ")
 			+ ");",
-			"  }"
-		];
-	}
-
-	static function isPrimitiveStringRepeatHelper(fn:HxFunctionDecl, owner:HxClassDecl):Bool {
-		if (fn == null || owner == null || !HxFunctionDecl.getIsStatic(fn))
-			return false;
-		if (sanitizeIdentifier(HxFunctionDecl.getName(fn)) != "repeat")
-			return false;
-		if (primitiveAbstractUnderlyingCppType(owner) != "int")
-			return false;
-		final args = HxFunctionDecl.getArgs(fn);
-		if (args.length != 2)
-			return false;
-		final ownerName = sanitizeTypePath(typeBaseName(HxClassDecl.getName(owner)));
-		return sanitizeTypePath(typeBaseName(HxFunctionArg.getTypeHint(args[0]))) == ownerName
-			&& cppTypeHint(HxFunctionArg.getTypeHint(args[1]), null,
-				{names: new haxe.ds.StringMap<Bool>(), byName: new haxe.ds.StringMap<HxClassDecl>()}) == "std::string"
-			&& cppTypeHint(HxFunctionDecl.getReturnTypeHint(fn), null,
-				{names: new haxe.ds.StringMap<Bool>(), byName: new haxe.ds.StringMap<HxClassDecl>()}) == "std::string";
-	}
-
-	static function renderPrimitiveStringRepeatHelper(fn:HxFunctionDecl, owner:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		final returnType = cppFunctionReturnType(fn, owner, classLookup);
-		final scope = renderScope(owner, classLookup, returnType);
-		prepareFunctionSignatureScope(scope, fn);
-		final args = HxFunctionDecl.getArgs(fn);
-		return ["  static "
-			+ returnType
-			+ " "
-			+ sanitizeIdentifier(HxFunctionDecl.getName(fn))
-			+ "("
-			+ renderFunctionArgs(args, scope)
-			+ ") {",
-			"    std::string out;",
-			"    for (int i = 0; i < "
-			+ sanitizeIdentifier(HxFunctionArg.getName(args[0]))
-			+ "; ++i) out += "
-			+ sanitizeIdentifier(HxFunctionArg.getName(args[1]))
-			+ ";",
-			"    return out;",
 			"  }"
 		];
 	}
@@ -12773,6 +12741,10 @@ class CppTargetCore {
 				if (referenceCast != null)
 					return referenceCast;
 				return valueExprForExpectedType(inner, expectedType, scope);
+			case ECall(ECast(ELambda(lambdaArgs, body), signature), args) if (isFunctionTypeHint(signature)):
+				final typedTemporary = typedImmediateLambdaCallExpr(lambdaArgs, body, signature, args, scope, expectedType);
+				if (typedTemporary != null)
+					return typedTemporary;
 			case ECall(ECast(callee, _), args):
 				final callExpr:HxExpr = ECall(callee, args);
 				final referenceCast = explicitReferenceCastExprForExpectedType(callExpr, expectedType, scope);
@@ -13118,9 +13090,6 @@ class CppTargetCore {
 		final sourceDecl = scope.classByName.get(sourceClass);
 		if (!classAbstractUnderlyingMatches(sourceDecl, expectedClass, scope))
 			return null;
-		final ctorArgs = classConstructorArgNames(expectedClass, scope);
-		if (ctorArgs.length == 0)
-			return null;
 		final receiver = switch (expr) {
 			case EThis:
 				"this";
@@ -13139,7 +13108,7 @@ class CppTargetCore {
 		}
 		if (receiver.length == 0 || access.length == 0)
 			return null;
-		return "std::make_shared<" + expectedClass + ">(" + [for (arg in ctorArgs) receiver + access + arg].join(", ") + ")";
+		return receiver + access + CppAbstractRepresentation.CLASS_BACKED_VALUE_FIELD;
 	}
 
 	static function conditionExpr(expr:HxExpr, ?scope:CppRenderScope):String {
@@ -13169,6 +13138,9 @@ class CppTargetCore {
 	}
 
 	static function renderExpr(expr:HxExpr, ?scope:CppRenderScope):String {
+		final exactInstanceCall = exactInstanceCallExpr(expr, scope);
+		if (exactInstanceCall != null)
+			return exactInstanceCall;
 		final directXmlNamedNext = switch (expr) {
 			case ECall(EField(ECall(EField(EIdent(_), "elementsNamed"), _), "next"), _):
 				directTypedLocalXmlElementsNamedNextExpr(expr, scope);
@@ -13195,7 +13167,13 @@ class CppTargetCore {
 				Std.string(value);
 			case EIdent("UTF8"):
 				"nullptr";
-			case EThis: scope != null && scope.erasedAbstractThisName != null ? scope.erasedAbstractThisName : "(*this)";
+			case EThis:
+				if (scope != null && scope.erasedAbstractThisName != null) {
+					scope.erasedAbstractThisName;
+				} else {
+					final stored = classBackedAbstractThisExpr(scope);
+					stored.length > 0 ? stored : "(*this)";
+				}
 			case ESuper:
 				superExpr(scope);
 			case EIdent(name):
@@ -13203,6 +13181,12 @@ class CppTargetCore {
 				exprHasOptionalType(expr, scope) ? local + ".value()" : local;
 			case EField(EThis, "length") if (scopeOwnerIsArrayBackedAbstract(scope)):
 				"this->__values.size()";
+			case EField(EThis, field) if (classBackedAbstractThisExpr(scope).length > 0):
+				"("
+				+ classBackedAbstractThisExpr(scope)
+				+ "->"
+				+ sanitizeIdentifier(field)
+				+ ")";
 			case EField(ECall(EField(receiver, splitMethod), splitArgs), "length")
 				if (isTypedLocalERegSplitCall(receiver, splitMethod, splitArgs.length, scope)):
 				"("
@@ -13216,6 +13200,8 @@ class CppTargetCore {
 				+ ")";
 			case EField(receiver, field) if (primitiveBackedAbstractPropertyExpr(receiver, field, scope) != null):
 				primitiveBackedAbstractPropertyExpr(receiver, field, scope);
+			case EField(receiver, field) if (classBackedAbstractUnderlyingFieldExpr(receiver, field, scope) != null):
+				classBackedAbstractUnderlyingFieldExpr(receiver, field, scope);
 			case EField(_, _) if (instanceMethodValueExpr(expr, scope) != null):
 				instanceMethodValueExpr(expr, scope);
 			case EField(EThis, field):
@@ -13498,6 +13484,9 @@ class CppTargetCore {
 				EArrayDecl(_)
 			]):
 				lambdaExpr(lambdaArgs, body, scope);
+			case ECall(ECast(ELambda(lambdaArgs, body), signature), args) if (isFunctionTypeHint(signature)):
+				final typedTemporary = typedImmediateLambdaCallExpr(lambdaArgs, body, signature, args, scope);
+				typedTemporary == null ? immediateLambdaCallExpr(lambdaArgs, body, args, scope) : typedTemporary;
 			case ECall(EIdent(name), args) if (dceReflectionHelperCallExpr(name, args, scope) != null):
 				dceReflectionHelperCallExpr(name, args, scope);
 			case ECall(ELambda(lambdaArgs, body), args) if (voidSequenceLambdaCallExpr(lambdaArgs, body, args, scope) != null):
@@ -13596,10 +13585,6 @@ class CppTargetCore {
 				isTypeExpr(left, right, scope);
 			case EBinop("=>", left, right):
 				"std::make_pair(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
-			case EBinop(op, left, right) if (primitiveStringAbstractBinaryOpExpr(op, left, right, scope) != null):
-				primitiveStringAbstractBinaryOpExpr(op, left, right, scope);
-			case EBinop(op, left, right) if (classBackedAbstractBinaryOpExpr(op, left, right, scope) != null):
-				classBackedAbstractBinaryOpExpr(op, left, right, scope);
 			case EBinop("??", left, right):
 				"__hxhx_null_coalesce("
 				+ renderExpr(left, scope)
@@ -13962,7 +13947,7 @@ class CppTargetCore {
 		if (expectedClass != null
 			&& scopeHasClass(scope, expectedClass)
 			&& classAbstractUnderlyingMatches(scope.classByName.get(expectedClass), className, scope))
-			return "std::make_shared<" + expectedClass + ">(" + renderedArgs + ")";
+			return "std::make_shared<" + expectedClass + ">(" + newExpr(typePath, args, scope) + ")";
 		if (scopeHasClass(scope, className) && (classTypeParams.length > 0 || expectedTemplateArgs.length > 0)) {
 			var templateArgs = expectedTemplateArgs.length > 0 ? expectedTemplateArgs : scopedTemplateArgsForParams(classTypeParams, scope);
 			if (templateArgs.length == 0 && args.length == 0)
@@ -17554,6 +17539,9 @@ class CppTargetCore {
 	static function exprCppType(expr:HxExpr, ?scope:CppRenderScope):String {
 		if (scope == null)
 			return "";
+		final exactCallType = exactInstanceCallCppType(expr, scope);
+		if (exactCallType.length > 0)
+			return exactCallType;
 		return switch (expr) {
 			case EIdent(name):
 				final cppLocal = localCppName(name, scope);
@@ -17729,10 +17717,6 @@ class CppTargetCore {
 				assignmentExpectedCppType(left, scope);
 			case EBinop("+", _, _) if (isTypedLocalERegSplitJoinConcatExpr(expr, scope)):
 				"std::string";
-			case EBinop(op, left, right) if (primitiveStringAbstractBinaryOpCppType(op, left, right, scope).length > 0):
-				primitiveStringAbstractBinaryOpCppType(op, left, right, scope);
-			case EBinop(op, left, right) if (classBackedAbstractBinaryOpCppType(op, left, right, scope).length > 0):
-				classBackedAbstractBinaryOpCppType(op, left, right, scope);
 			case EBinop("+", left, right) if (isCppAnyExpr(left, scope) || isCppAnyExpr(right, scope)):
 				"std::any";
 			case EArrayAccess(array, _) if (isCppStringExpr(array, scope)):
@@ -17800,6 +17784,46 @@ class CppTargetCore {
 		if (underlying == null || underlying.length == 0)
 			return null;
 		return primitiveBackedAbstractGetterExpr(receiver, getter, underlying, scope);
+	}
+
+	/** Return the target representation of one already-selected typed call. **/
+	static function exactInstanceCallCppType(expression:HxExpr, ?scope:CppRenderScope):String {
+		if (scope == null)
+			return "";
+		final exact = TypedExactCallSource.decodeInstance(expression);
+		return exact == null ? "" : cppTypeHint(exact.resultType, scope, lookupForScope(scope));
+	}
+
+	/**
+		Emit an exact typed instance call through its declared owner.
+
+		Primitive-backed abstracts use the generated static receiver ABI; wrapper and
+		ordinary classes retain target instance dispatch. No metadata, operator token,
+		or helper-name search participates in this decision.
+	**/
+	static function exactInstanceCallExpr(expression:HxExpr, ?scope:CppRenderScope):Null<String> {
+		if (scope == null)
+			return null;
+		final exact = TypedExactCallSource.decodeInstance(expression);
+		if (exact == null)
+			return null;
+		final lookup = lookupForScope(scope);
+		var owner = lookupClassForTypeHint(exact.owner, scope, lookup);
+		if (owner == null)
+			owner = scope.classByName.get(sanitizeTypePath(typeBaseName(exact.owner)));
+		final representation = primitiveAbstractRepresentation(owner, lookup);
+		if (representation == null)
+			return fieldCallExpr(exact.receiver, exact.method, exact.arguments, scope);
+
+		final helper = classMethodDeclIn(owner, exact.method, false);
+		if (helper != null && hasFunctionMetadata(helper, "inline")) {
+			final inlineBody = exact.arguments.length == 0 ? primitiveBackedAbstractMethodBodyExpr(exact.receiver, helper, scope) : null;
+			if (inlineBody != null)
+				return inlineBody;
+		}
+		final receiver = valueExprForExpectedType(exact.receiver, representation.getCarrierCppType(), scope);
+		final arguments = [for (argument in exact.arguments) renderExpr(argument, scope)];
+		return representation.instanceHelperCall(sanitizeIdentifier(exact.method), receiver, arguments);
 	}
 
 	static function primitiveBackedAbstractMethodCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):Null<String> {
@@ -19075,6 +19099,9 @@ class CppTargetCore {
 	}
 
 	static function inferExprCppType(expr:HxExpr, ?scope:CppRenderScope):String {
+		final exactCallType = exactInstanceCallCppType(expr, scope);
+		if (exactCallType.length > 0)
+			return exactCallType;
 		return switch (expr) {
 			case EIdent(_):
 				exprCppType(expr, scope);
@@ -19271,10 +19298,6 @@ class CppTargetCore {
 				assignmentExpectedCppType(left, scope);
 			case EBinop("+", _, _) if (isTypedLocalERegSplitJoinConcatExpr(expr, scope)):
 				"std::string";
-			case EBinop(op, left, right) if (primitiveStringAbstractBinaryOpCppType(op, left, right, scope).length > 0):
-				primitiveStringAbstractBinaryOpCppType(op, left, right, scope);
-			case EBinop(op, left, right) if (classBackedAbstractBinaryOpCppType(op, left, right, scope).length > 0):
-				classBackedAbstractBinaryOpCppType(op, left, right, scope);
 			case EBinop("+", left, right) if (isCppAnyExpr(left, scope) || isCppAnyExpr(right, scope)):
 				"std::any";
 			case EString(_) | EEnumValue(_) | EMacroType(_):
@@ -22874,10 +22897,11 @@ class CppTargetCore {
 	}
 
 	static function lambdaExprWithArgTypes(args:Array<String>, body:HxExpr, argTypes:Array<String>, ?scope:CppRenderScope, ?expectedReturnType:String,
-			?capture:String):String {
+			?capture:String, ?localArgTypes:Array<String>):String {
 		final timingEnabled = traceCppLambdaPhaseTimingEnabled(scope);
 		final headerStart = timingEnabled ? Sys.time() : 0.0;
 		final names = [for (arg in args) sanitizeIdentifier(arg)];
+		final bodyArgTypes = localArgTypes == null ? argTypes : localArgTypes;
 		final params = [
 			for (i in 0...names.length) {
 				final typeName = i < argTypes.length && argTypes[i].length > 0 ? argTypes[i] : "auto";
@@ -22900,7 +22924,7 @@ class CppTargetCore {
 				+ (explicitReturn ? valueExprForExpectedType(body, returnType, scope) : renderExpr(body, scope))
 				+ "; }";
 		final isolatedBodyStart = timingEnabled ? Sys.time() : 0.0;
-		final isolatedERegStringBody = explicitReturn ? directIsolatedERegStringCallbackBodyExpr(body, names, argTypes, returnType, scope) : null;
+		final isolatedERegStringBody = explicitReturn ? directIsolatedERegStringCallbackBodyExpr(body, names, bodyArgTypes, returnType, scope) : null;
 		if (timingEnabled)
 			traceLambdaRenderPhase(scope, "isolated_ereg_body", Sys.time() - isolatedBodyStart, args.length,
 				"hit=" + Std.string(isolatedERegStringBody != null));
@@ -22917,13 +22941,13 @@ class CppTargetCore {
 		final registerArgsStart = timingEnabled ? Sys.time() : 0.0;
 		for (i in 0...names.length) {
 			scope.localNames.set(names[i], names[i]);
-			if (i < argTypes.length && argTypes[i].length > 0)
-				scope.localTypes.set(names[i], argTypes[i]);
+			if (i < bodyArgTypes.length && bodyArgTypes[i].length > 0)
+				scope.localTypes.set(names[i], bodyArgTypes[i]);
 		}
 		if (timingEnabled)
 			traceLambdaRenderPhase(scope, "register_args", Sys.time() - registerArgsStart, args.length);
 		final directBodyStart = timingEnabled ? Sys.time() : 0.0;
-		final directERegStringBody = explicitReturn ? directERegStringCallbackBodyExpr(body, names, argTypes, returnType, scope) : null;
+		final directERegStringBody = explicitReturn ? directERegStringCallbackBodyExpr(body, names, bodyArgTypes, returnType, scope) : null;
 		if (timingEnabled)
 			traceLambdaRenderPhase(scope, "direct_ereg_body", Sys.time() - directBodyStart, args.length, "hit=" + Std.string(directERegStringBody != null));
 		final renderBodyStart = timingEnabled ? Sys.time() : 0.0;
@@ -24117,6 +24141,42 @@ class CppTargetCore {
 		return "(" + lambda + ")(" + renderedArgs.join(", ") + ")";
 	}
 
+	/**
+		Honor the explicit argument contract carried by structural typed-body
+		temporaries. The adapter uses `Dynamic` only as a continuation return
+		placeholder, so callers supply the actual expected result separately while
+		this seam preserves nominal argument representation for the C++ emitter.
+	**/
+	static function typedImmediateLambdaCallExpr(lambdaArgs:Array<String>, body:HxExpr, signature:String, args:Array<HxExpr>, ?scope:CppRenderScope,
+			?expectedReturnType:String):Null<String> {
+		final parts = splitTopLevelFunctionType(signature);
+		if (parts.length <= 1)
+			return null;
+		final sourceArgTypes = CppTypeModel.functionArgTypeParts(parts.slice(0, parts.length - 1));
+		if (sourceArgTypes.length != lambdaArgs.length || args.length != lambdaArgs.length)
+			return null;
+		final argTypes = [
+			for (sourceType in sourceArgTypes)
+				cppLocalCallableArgTypeHint(sourceType, scope)
+		];
+		for (argType in argTypes)
+			if (argType == null || argType.length == 0)
+				return null;
+		final parameterTypes = argTypes.copy();
+		for (index in 0...sourceArgTypes.length)
+			if (isArrayLikeTypeHint(sourceArgTypes[index]))
+				// A Haxe Array temporary preserves the identity of its evaluated
+				// container. `auto&&` keeps an lvalue or returned vector aliased for
+				// this structural IIFE instead of copying away an indexed write.
+				parameterTypes[index] = "auto&&";
+		final lambda = lambdaExprWithArgTypes(lambdaArgs, body, parameterTypes, scope, expectedReturnType, null, argTypes);
+		final renderedArgs = [
+			for (i in 0...args.length)
+				parameterTypes[i] == "auto&&" ? renderExpr(args[i], scope) : valueExprForExpectedType(args[i], argTypes[i], scope)
+		];
+		return "(" + lambda + ")(" + renderedArgs.join(", ") + ")";
+	}
+
 	static function immediateLambdaRefinedArgTypes(lambdaArgs:Array<String>, body:HxExpr, args:Array<HxExpr>, ?scope:CppRenderScope):Array<String> {
 		if (scope == null || lambdaArgs == null || args == null || lambdaArgs.length == 0)
 			return [];
@@ -24206,6 +24266,19 @@ class CppTargetCore {
 			if (StringTools.trim(meta) == "__hxhx_abstract")
 				return true;
 		return false;
+	}
+
+	/** Return the stored underlying object visible as Haxe abstract `this`. **/
+	static function classBackedAbstractThisExpr(?scope:CppRenderScope):String {
+		if (scope == null || scope.owner == null || !scopeOwnerIsHxhxAbstract(scope))
+			return "";
+		final underlying = abstractUnderlyingTypeHint(scope.owner);
+		if (underlying == null || primitiveAbstractUnderlyingCppType(scope.owner) != null || genericTypeHintArgs(underlying).length > 0)
+			return "";
+		final underlyingName = sanitizeTypePath(typeBaseName(underlying));
+		if (!scope.classByName.exists(underlyingName))
+			return "";
+		return "this->" + CppAbstractRepresentation.CLASS_BACKED_VALUE_FIELD;
 	}
 
 	static function hasInstanceField(cls:HxClassDecl, name:String):Bool {
@@ -26297,42 +26370,6 @@ class CppTargetCore {
 		return underlyingCls == null ? sanitizeTypePath(typeBaseName(underlying)) : renderedClassName(underlyingCls, lookup);
 	}
 
-	static function primitiveStringAbstractBinaryOpCppType(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
-		return primitiveStringAbstractBinaryOpExpr(op, left, right, scope) == null ? "" : "std::string";
-	}
-
-	static function primitiveStringAbstractBinaryOpExpr(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
-		if (scope == null)
-			return null;
-		final leftCls = primitiveBackedAbstractClassForExpr(left, scope);
-		final rightCls = primitiveBackedAbstractClassForExpr(right, scope);
-		if (op == "*") {
-			if (leftCls != null && primitiveStringAbstractStaticMethod(leftCls, "repeat", scope) != null && isCppStringExpr(right, scope))
-				return primitiveStringAbstractCall(leftCls, "repeat", [renderExpr(left, scope), stringExpr(right, scope)], scope);
-			if (rightCls != null && primitiveStringAbstractStaticMethod(rightCls, "repeat", scope) != null && isCppStringExpr(left, scope))
-				return primitiveStringAbstractCall(rightCls, "repeat", [renderExpr(right, scope), stringExpr(left, scope)], scope);
-		}
-		if (op == "/"
-			&& rightCls != null
-			&& primitiveStringAbstractStaticMethod(rightCls, "cut", scope) != null
-			&& isCppStringExpr(left, scope))
-			return primitiveStringAbstractCall(rightCls, "cut", [stringExpr(left, scope), renderExpr(right, scope)], scope);
-		return null;
-	}
-
-	static function primitiveStringAbstractStaticMethod(cls:HxClassDecl, method:String, scope:CppRenderScope):Null<HxFunctionDecl> {
-		if (cls == null || primitiveAbstractUnderlyingCppType(cls) != "int")
-			return null;
-		final fn = classMethodDecl(sanitizeTypePath(HxClassDecl.getName(cls)), method, true, scope);
-		if (fn == null || cppFunctionReturnType(fn, cls, {names: scope.classNames, byName: scope.classByName}) != "std::string")
-			return null;
-		return fn;
-	}
-
-	static function primitiveStringAbstractCall(cls:HxClassDecl, method:String, args:Array<String>, ?scope:CppRenderScope):String {
-		return renderedClassName(cls, lookupForScope(scope)) + "::" + method + "(" + args.join(", ") + ")";
-	}
-
 	static function classBackedAbstractClassForExpr(expr:HxExpr, ?scope:CppRenderScope):Null<HxClassDecl> {
 		if (scope == null)
 			return null;
@@ -26352,47 +26389,23 @@ class CppTargetCore {
 		return scopeHasClass(scope, underlyingClass) ? cls : null;
 	}
 
-	static function classBackedAbstractBinaryOpMethod(op:String, left:HxExpr, right:HxExpr, cls:HxClassDecl, scope:CppRenderScope):String {
-		final className = renderedClassName(cls, lookupForScope(scope));
-		return switch (op) {
-			case "+" if (classMethodDecl(className, "add", true, scope) != null):
-				"add";
-			case "*" if (classMethodDecl(className, "scalar", true, scope) != null):
-				"scalar";
-			case "*=" if (classMethodDecl(className, "scalarAssign", true, scope) != null):
-				"scalarAssign";
-			case _:
-				"";
-		};
-	}
-
-	static function classBackedAbstractBinaryOpCppType(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):String {
-		final cls = classBackedAbstractClassForExpr(left, scope);
-		if (cls == null || scope == null)
-			return "";
-		final method = classBackedAbstractBinaryOpMethod(op, left, right, cls, scope);
-		return method.length == 0 ? "" : "std::shared_ptr<" + renderedClassName(cls, lookupForScope(scope)) + ">";
-	}
-
-	static function classBackedAbstractBinaryOpExpr(op:String, left:HxExpr, right:HxExpr, ?scope:CppRenderScope):Null<String> {
-		final cls = classBackedAbstractClassForExpr(left, scope);
-		if (cls == null || scope == null)
+	/** Read or write a real field through the wrapper's retained underlying object. **/
+	static function classBackedAbstractUnderlyingFieldExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
+		final abstractClass = classBackedAbstractClassForExpr(receiver, scope);
+		if (abstractClass == null || scope == null)
 			return null;
-		final className = renderedClassName(cls, lookupForScope(scope));
-		final method = classBackedAbstractBinaryOpMethod(op, left, right, cls, scope);
-		if (method.length == 0)
+		final underlyingName = abstractUnderlyingRenderedClassName(abstractClass, scope);
+		final underlyingClass = scope.classByName.get(underlyingName);
+		if (underlyingClass == null || !hasInstanceField(underlyingClass, field))
 			return null;
-		final call = className + "::" + method + "(" + renderExpr(left, scope) + ", " + renderExpr(right, scope) + ")";
-		if (op == "*=")
-			return "([&]() { " + call + "; return " + renderExpr(left, scope) + "; })()";
-		return classBackedAbstractWrapUnderlyingExpr(cls, call, scope);
+		return "(" + renderExpr(receiver, scope) + fieldAccessOp(receiver, scope) + CppAbstractRepresentation.CLASS_BACKED_VALUE_FIELD + "->"
+			+ sanitizeIdentifier(field) + ")";
 	}
 
 	static function classBackedAbstractWrapUnderlyingExpr(cls:HxClassDecl, valueExpr:String, scope:CppRenderScope):String {
 		final className = renderedClassName(cls, lookupForScope(scope));
 		final underlyingClass = abstractUnderlyingRenderedClassName(cls, scope);
-		final argNames = classConstructorArgNames(underlyingClass, scope);
-		return CppAbstractRepresentation.wrapClassBackedValue(className, underlyingClass, argNames, valueExpr);
+		return CppAbstractRepresentation.wrapClassBackedValue(className, underlyingClass, valueExpr);
 	}
 
 	/** Rewrap an exact call result when C++ currently represents its abstract with a class wrapper. **/
@@ -26402,21 +26415,6 @@ class CppTargetCore {
 
 	static function classBackedAbstractCastExprForExpectedType(expr:HxExpr, expectedType:String, ?scope:CppRenderScope):Null<String> {
 		return CppAbstractRepresentation.classBackedCastForExpectedType(expr, expectedType, scope, abstractRepresentationServices());
-	}
-
-	static function classConstructorArgNames(className:String, scope:CppRenderScope):Array<String> {
-		if (scope == null || className == null || className.length == 0)
-			return [];
-		final cls = scope.classByName.get(sanitizeTypePath(typeBaseName(className)));
-		if (cls == null)
-			return [];
-		final ctor = findConstructor(cls);
-		if (ctor == null)
-			return [];
-		return [
-			for (arg in HxFunctionDecl.getArgs(ctor))
-				sanitizeIdentifier(HxFunctionArg.getName(arg))
-		];
 	}
 
 	static function inferredFunctionArgCppTypes(fn:HxFunctionDecl, owner:HxClassDecl, classByName:haxe.ds.StringMap<HxClassDecl>,

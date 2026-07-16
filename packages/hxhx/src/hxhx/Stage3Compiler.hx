@@ -716,7 +716,7 @@ class Stage3Compiler {
 				}
 			}
 			final sealedTypedModules = try {
-				TypedAbstractUnaryLowering.lowerModules(typedModulesForProgram, typerIndex);
+				TypedAbstractOperatorLowering.lowerModules(typedModulesForProgram, typerIndex);
 			} catch (e:TyperError) {
 				closeMacroSession();
 				final rawDiagnostic = rawTyperDiagnostic(e);
@@ -806,7 +806,7 @@ class Stage3Compiler {
 			}
 		}
 		typedModules = try {
-			TypedAbstractUnaryLowering.lowerModules(typedModules, typerIndex);
+			TypedAbstractOperatorLowering.lowerModules(typedModules, typerIndex);
 		} catch (e:TyperError) {
 			closeMacroSession();
 			final rawDiagnostic = rawTyperDiagnostic(e);

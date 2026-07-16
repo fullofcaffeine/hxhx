@@ -66,7 +66,21 @@ class TypedBodySource {
 			case LocalRead: EIdent(texts[0]);
 			case NameRead: EIdent(texts[0]);
 			case FieldRead: EField(expression(expressions[0]), texts[0]);
-			case Call: ECall(expression(expressions[0]), expressionTail(expressions, 1));
+			case Call:
+				final callee = expression(expressions[0]);
+				final arguments = expressionTail(expressions, 1);
+				final declaration = typedExpression.getDeclaration();
+				if (declaration == null || declaration.getIsStatic()) {
+					ECall(callee, arguments);
+				} else {
+					switch (callee) {
+						case EField(receiver, method):
+							TypedExactCallSource.encodeInstance(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
+								method, typedExpression.getType().getDisplay(), receiver, arguments);
+						case _:
+							ECall(callee, arguments);
+					}
+				}
 			case MacroExpr: EMacroExpr(expression(expressions[0]), texts.copy());
 			case MacroType: EMacroType(texts[0]);
 			case Lambda: ELambda(texts.copy(), expression(expressions[0]));

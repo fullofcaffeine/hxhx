@@ -1,12 +1,18 @@
 import haxe.ds.StringMap;
 import haxe.io.Path;
 
+private typedef TyParsedAbstractOperatorMetadata = {
+	final unaryOperator:Null<HxUnaryOperator>;
+	final unaryFixity:Null<HxUnaryFixity>;
+	final binaryOperator:Null<String>;
+};
+
 /**
 	Program-level semantic declaration index for Stage3 typing.
 
 	The index assigns canonical nominal and declaration identities, keeps
 	abstracts separate from classes, resolves the supported structural type-hint
-	subset, and parses unary `@:op` metadata once. Eager and lazy loading both use
+	subset, and parses `@:op` metadata once. Eager and lazy loading both use
 	`addResolvedModules`, preventing identity/catalog drift between paths.
 
 	This class catalogs declarations only. It does not select an overload for an
@@ -263,36 +269,35 @@ class TyperIndex {
 		operator declaration against its owning abstract; the placeholder spelling
 		inside metadata is not significant (`A` and `a` both occur in the stdlib).
 	**/
-	static function classifyOperatorExpression(expression:HxExpr, filePath:String, position:HxPos,
-			metadata:String):Null<{op:HxUnaryOperator, fixity:HxUnaryFixity}> {
+	static function classifyOperatorExpression(expression:HxExpr, filePath:String, position:HxPos, metadata:String):TyParsedAbstractOperatorMetadata {
 		return switch (expression) {
 			case EUnop(op, fixity, _):
-				{op: op, fixity: fixity};
+				{unaryOperator: op, unaryFixity: fixity, binaryOperator: null};
+			case EBinop(op, EIdent(_), EIdent(_)) if (HxBinaryOperatorTools.isAbstractOverloadable(op)):
+				{unaryOperator: null, unaryFixity: null, binaryOperator: op};
 			case EBinop(_, _, _):
-				null;
+				throw malformedOperator(filePath, position, metadata);
 			case EField(_, _):
-				null;
+				{unaryOperator: null, unaryFixity: null, binaryOperator: null};
 			case ECall(_, _):
-				null;
+				{unaryOperator: null, unaryFixity: null, binaryOperator: null};
 			case EArrayAccess(_, _):
-				// Valid binary, array-access, and callable operator metadata is
-				// cataloged by later beads; it is not malformed unary metadata.
-				null;
+				{unaryOperator: null, unaryFixity: null, binaryOperator: null};
 			case EArrayDecl(_):
 				// Upstream Haxe represents `@:op([])` as an empty array literal.
-				// Its declaration semantics remain outside this unary-only catalog.
-				null;
+				// Its declaration semantics remain outside this operator slice.
+				{unaryOperator: null, unaryFixity: null, binaryOperator: null};
 			case _:
 				throw malformedOperator(filePath, position, metadata);
 		};
 	}
 
 	/**
-		Parse one `@:op` payload through the shared expression parser. Unary forms
-		return a structured token/fixity; recognized non-unary forms remain for the
-		binary catalog bead, and every other `@:op` shape fails deterministically.
+		Parse one `@:op` payload through the shared expression parser. Unary and
+		binary forms return canonical semantic descriptors; recognized array/call
+		forms remain deferred, and every other shape fails deterministically.
 	**/
-	static function parseUnaryOperatorMetadata(metadata:String, filePath:String, position:HxPos):Null<{op:HxUnaryOperator, fixity:HxUnaryFixity}> {
+	static function parseOperatorMetadata(metadata:String, filePath:String, position:HxPos):Null<TyParsedAbstractOperatorMetadata> {
 		var clean = metadata == null ? "" : StringTools.trim(metadata);
 		while (StringTools.startsWith(clean, "@") || StringTools.startsWith(clean, ":"))
 			clean = clean.substr(1);
@@ -312,50 +317,102 @@ class TyperIndex {
 	}
 
 	/**
-		Validate unary declaration shape and attach canonical catalog entries.
+		Validate operator declaration shapes and attach canonical catalog entries.
 
 		No overload is selected here, and static/instance form does not imply
 		mutation or writeback.
 	**/
-	function catalogUnaryOperators(info:TyAbstractInfo, filePath:String):Void {
+	function catalogOperators(info:TyAbstractInfo, filePath:String):Void {
 		for (declaration in info.getDeclarations()) {
-			final seen = new StringMap<Bool>();
+			final seenUnary = new StringMap<Bool>();
+			final seenBinary = new StringMap<Bool>();
 			for (metadata in declaration.getMetadata()) {
-				final parsed = parseUnaryOperatorMetadata(metadata, filePath, declaration.getPosition());
+				final parsed = parseOperatorMetadata(metadata, filePath, declaration.getPosition());
 				if (parsed == null)
 					continue;
-				final key = HxUnaryOperatorTools.sourceToken(parsed.op) + "|" + (parsed.fixity == HxUnaryFixity.Prefix ? "prefix" : "postfix");
-				if (seen.exists(key))
-					throw new TyperError(filePath, declaration.getPosition(),
-						"Duplicate unary @:op metadata on declaration " + declaration.getIdentity().getCanonicalKey());
-				seen.set(key, true);
+				if (parsed.unaryOperator != null && parsed.unaryFixity != null) {
+					final key = HxUnaryOperatorTools.sourceToken(parsed.unaryOperator)
+						+ "|"
+						+ (parsed.unaryFixity == HxUnaryFixity.Prefix ? "prefix" : "postfix");
+					if (seenUnary.exists(key))
+						throw new TyperError(filePath, declaration.getPosition(),
+							"Duplicate unary @:op metadata on declaration " + declaration.getIdentity().getCanonicalKey());
+					seenUnary.set(key, true);
 
-				final signature = declaration.getSignature();
-				final args = signature.getArgs();
-				var operandType:TyType;
-				if (signature.getIsStatic()) {
-					final optional = signature.getArgOptional();
-					final rest = signature.getArgRest();
-					if (args.length != 1 || (optional.length > 0 && optional[0]) || (rest.length > 0 && rest[0]))
+					final signature = declaration.getSignature();
+					final args = signature.getArgs();
+					var operandType:TyType;
+					if (signature.getIsStatic()) {
+						final optional = signature.getArgOptional();
+						final rest = signature.getArgRest();
+						if (args.length != 1 || (optional.length > 0 && optional[0]) || (rest.length > 0 && rest[0]))
+							throw new TyperError(filePath, declaration.getPosition(),
+								"Unary static @:op declaration requires exactly one explicit argument: " + declaration.getIdentity().getCanonicalKey());
+						operandType = args[0];
+					} else {
+						if (args.length != 0)
+							throw new TyperError(filePath, declaration.getPosition(),
+								"Unary instance @:op declaration requires no explicit arguments: " + declaration.getIdentity().getCanonicalKey());
+						final appliedArgs = [for (name in info.getTypeParameters()) TyType.typeParameter(name)];
+						operandType = TyType.nominal(info.getIdentity(), appliedArgs);
+					}
+
+					final operandIdentity = operandType.getNominalIdentity();
+					if (operandIdentity == null || !operandIdentity.equals(info.getIdentity()))
 						throw new TyperError(filePath, declaration.getPosition(),
-							"Unary static @:op declaration requires exactly one explicit argument: " + declaration.getIdentity().getCanonicalKey());
-					operandType = args[0];
-				} else {
-					if (args.length != 0)
-						throw new TyperError(filePath, declaration.getPosition(),
-							"Unary instance @:op declaration requires no explicit arguments: " + declaration.getIdentity().getCanonicalKey());
-					final appliedArgs = [for (name in info.getTypeParameters()) TyType.typeParameter(name)];
-					operandType = TyType.nominal(info.getIdentity(), appliedArgs);
+							"Unary @:op operand must retain owning abstract type "
+							+ info.getIdentity().getCanonicalName()
+							+ ": "
+							+ declaration.getIdentity().getCanonicalKey());
+					info.addUnaryOperator(new TyAbstractOperatorInfo(parsed.unaryOperator, parsed.unaryFixity, declaration, operandType,
+						signature.getReturnType()));
 				}
 
-				final operandIdentity = operandType.getNominalIdentity();
-				if (operandIdentity == null || !operandIdentity.equals(info.getIdentity()))
-					throw new TyperError(filePath, declaration.getPosition(),
-						"Unary @:op operand must retain owning abstract type "
-						+ info.getIdentity().getCanonicalName()
-						+ ": "
-						+ declaration.getIdentity().getCanonicalKey());
-				info.addUnaryOperator(new TyAbstractOperatorInfo(parsed.op, parsed.fixity, declaration, operandType, signature.getReturnType()));
+				if (parsed.binaryOperator != null) {
+					final op = parsed.binaryOperator;
+					if (seenBinary.exists(op))
+						throw new TyperError(filePath, declaration.getPosition(),
+							"Duplicate binary @:op metadata on declaration " + declaration.getIdentity().getCanonicalKey());
+					seenBinary.set(op, true);
+					final signature = declaration.getSignature();
+					final args = signature.getArgs();
+					final optional = signature.getArgOptional();
+					final rest = signature.getArgRest();
+					for (index in 0...args.length)
+						if ((index < optional.length && optional[index]) || (index < rest.length && rest[index]))
+							throw new TyperError(filePath, declaration.getPosition(),
+								"Binary @:op declaration cannot use optional or rest arguments: " + declaration.getIdentity().getCanonicalKey());
+
+					var leftType:TyType;
+					var rightType:TyType;
+					if (signature.getIsStatic()) {
+						if (args.length != 2)
+							throw new TyperError(filePath, declaration.getPosition(),
+								"Binary static @:op declaration requires exactly two explicit arguments: " + declaration.getIdentity().getCanonicalKey());
+						leftType = args[0];
+						rightType = args[1];
+					} else {
+						if (args.length != 1)
+							throw new TyperError(filePath, declaration.getPosition(),
+								"Binary instance @:op declaration requires exactly one explicit argument: " + declaration.getIdentity().getCanonicalKey());
+						final appliedArgs = [for (name in info.getTypeParameters()) TyType.typeParameter(name)];
+						leftType = TyType.nominal(info.getIdentity(), appliedArgs);
+						rightType = args[0];
+					}
+
+					final leftIdentity = leftType.getNominalIdentity();
+					final rightIdentity = rightType.getNominalIdentity();
+					final ownsLeft = leftIdentity != null && leftIdentity.equals(info.getIdentity());
+					final ownsRight = rightIdentity != null && rightIdentity.equals(info.getIdentity());
+					if (!ownsLeft && !ownsRight)
+						throw new TyperError(filePath, declaration.getPosition(),
+							"Binary @:op declaration must retain owning abstract type "
+							+ info.getIdentity().getCanonicalName()
+							+ " in one operand: "
+							+ declaration.getIdentity().getCanonicalKey());
+					info.addBinaryOperator(new TyAbstractBinaryOperatorInfo(op, declaration, leftType, rightType, signature.getReturnType(),
+						hasMetadata(declaration.getMetadata(), "commutative")));
+				}
 			}
 		}
 	}
@@ -438,7 +495,7 @@ class TyperIndex {
 				final underlying = semanticType(underlyingHint == null ? "" : underlyingHint, packagePath, moduleName, imports, params);
 				final info = new TyAbstractInfo(identity, shortName, semanticModulePath, fields, properties, statics, instances, staticLists, instanceLists,
 					declarations, underlying, params);
-				catalogUnaryOperators(info, ResolvedModule.getFilePath(module));
+				catalogOperators(info, ResolvedModule.getFilePath(module));
 				addNominal(info);
 			} else {
 				addNominal(new TyClassInfo(identity, shortName, semanticModulePath, fields, properties, statics, instances, staticLists, instanceLists,
@@ -476,6 +533,13 @@ class TyperIndex {
 			return [];
 		final info = getAbstractByFullName(identity.getCanonicalName());
 		return info == null ? [] : info.getUnaryOperators(op, fixity);
+	}
+
+	public function getBinaryOperators(identity:TyNominalTypeId, op:String):Array<TyAbstractBinaryOperatorInfo> {
+		if (identity == null)
+			return [];
+		final info = getAbstractByFullName(identity.getCanonicalName());
+		return info == null ? [] : info.getBinaryOperators(op);
 	}
 
 	public function resolveTypePath(typePath:String, packagePath:String, imports:Array<String>):Null<TyNominalInfo> {
@@ -557,6 +621,21 @@ class TyperIndex {
 						+ operatorInfo.getResultType().getSemanticKey()];
 				operatorLines.sort(compareText);
 				for (line in operatorLines)
+					lines.push(line);
+				final binaryOperatorLines = [
+					for (operatorInfo in abstractInfo.getAllBinaryOperators())
+						"  binary "
+						+ operatorInfo.getOperator()
+						+ (operatorInfo.getIsCommutative() ? " commutative " : " ")
+						+ operatorInfo.getDeclaration().getIdentity().getCanonicalKey()
+						+ " left="
+						+ operatorInfo.getLeftType().getSemanticKey()
+						+ " right="
+						+ operatorInfo.getRightType().getSemanticKey()
+						+ " result="
+						+ operatorInfo.getResultType().getSemanticKey()];
+				binaryOperatorLines.sort(compareText);
+				for (line in binaryOperatorLines)
 					lines.push(line);
 			}
 		}

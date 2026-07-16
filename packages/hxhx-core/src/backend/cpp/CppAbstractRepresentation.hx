@@ -24,6 +24,7 @@ typedef CppAbstractRepresentationServices = {
 **/
 class CppAbstractRepresentation {
 	public static inline final ERASED_THIS_NAME = "__hxhx_abstract_this";
+	public static inline final CLASS_BACKED_VALUE_FIELD = "__hxhx_abstract_value";
 
 	final ownerCppName:String;
 	final carrierCppType:String;
@@ -92,18 +93,16 @@ class CppAbstractRepresentation {
 		};
 	}
 
-	/** Build the temporary wrapper expression from representation facts supplied by C++. **/
-	public static function wrapClassBackedValue(className:String, underlyingClass:String, argumentNames:Array<String>, valueExpression:String):String {
-		if (underlyingClass.length == 0 || argumentNames.length == 0)
+	/**
+		Build a wrapper around the exact underlying object.
+
+		The wrapper stores the carrier itself instead of reconstructing a new object
+		from similarly named constructor fields. This preserves underlying identity,
+		aliasing, nullability, and mutations performed by exact helpers.
+	**/
+	public static function wrapClassBackedValue(className:String, underlyingClass:String, valueExpression:String):String {
+		if (underlyingClass.length == 0)
 			return valueExpression;
-		final temporary = "__hxhx_" + className + "_underlying";
-		return "([&]() { auto "
-			+ temporary
-			+ " = "
-			+ valueExpression
-			+ "; return std::make_shared<"
-			+ className
-			+ ">("
-			+ [for (argument in argumentNames) temporary + "->" + argument].join(", ") + "); })()";
+		return "std::make_shared<" + className + ">(" + valueExpression + ")";
 	}
 }
