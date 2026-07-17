@@ -1,0 +1,6 @@
+left-positive:42
+right-negative:13
+negative-left:-13
+zero-minus-min:-9223372036854775808
+negative-one-minus-min:9223372036854775807
+computed:42
