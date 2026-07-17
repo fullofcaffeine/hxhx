@@ -1287,6 +1287,25 @@ class CppRuntimeSupport {
 		];
 	}
 
+	/**
+		Add signed 64-bit carriers with Haxe's modulo-two-to-the-64 behavior.
+
+		C++17 signed overflow is undefined, so arithmetic happens in the matching
+		unsigned range. The upper half is mapped back through a representable
+		subtraction instead of relying on an out-of-range unsigned-to-signed cast.
+	**/
+	public static function int64ArithmeticLines():Array<String> {
+		return [
+			"static long long __hxhx_int64_add(long long left, long long right) {",
+			"  static_assert(std::numeric_limits<unsigned long long>::digits == 64, \"hxhx Int64 requires a 64-bit carrier\");",
+			"  const auto bits = static_cast<unsigned long long>(left) + static_cast<unsigned long long>(right);",
+			"  const auto signedMax = static_cast<unsigned long long>(std::numeric_limits<long long>::max());",
+			"  if (bits <= signedMax) return static_cast<long long>(bits);",
+			"  return -1 - static_cast<long long>(std::numeric_limits<unsigned long long>::max() - bits);",
+			"}"
+		];
+	}
+
 	public static function dateIntrinsicLines():Array<String> {
 		return [
 			"static double __hxhx_utc_date(int year, int month, int day, int hour, int min, int sec) {",

@@ -565,6 +565,9 @@ class CppTargetCore {
 		for (line in CppRuntimeSupport.fpReinterpretLines())
 			out.push(line);
 		out.push("");
+		for (line in CppRuntimeSupport.int64ArithmeticLines())
+			out.push(line);
+		out.push("");
 		for (line in CppRuntimeSupport.dateIntrinsicLines())
 			out.push(line);
 		out.push("");
@@ -21882,8 +21885,12 @@ class CppTargetCore {
 				+ ") << 32) | static_cast<unsigned int>("
 				+ renderExpr(args[1], scope)
 				+ "))";
-			case "add" if (args.length == 2):
-				"(" + renderExpr(args[0], scope) + " + " + renderExpr(args[1], scope) + ")";
+			case "add" | "addInt" if (args.length == 2):
+				"__hxhx_int64_add("
+				+ renderExpr(args[0], scope)
+				+ ", "
+				+ renderExpr(args[1], scope)
+				+ ")";
 			case "sub" if (args.length == 2):
 				"(" + renderExpr(args[0], scope) + " - " + renderExpr(args[1], scope) + ")";
 			case "mul" if (args.length == 2):
@@ -22056,7 +22063,7 @@ class CppTargetCore {
 		return switch (method) {
 			case "ofInt" | "parseString" | "fromFloat" | "neg" if (argCount == 1):
 				"long long";
-			case "make" | "add" | "sub" | "mul" | "div" | "mod" | "and" | "or" | "xor" | "shl" | "shr" | "ushr" if (argCount == 2):
+			case "make" | "add" | "addInt" | "sub" | "mul" | "div" | "mod" | "and" | "or" | "xor" | "shl" | "shr" | "ushr" if (argCount == 2):
 				"long long";
 			case "divMod" if (argCount == 2):
 				int64DivModStruct().name;
