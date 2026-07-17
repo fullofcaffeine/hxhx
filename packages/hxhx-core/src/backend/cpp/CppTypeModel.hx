@@ -259,6 +259,24 @@ class CppTypeModel {
 		return typeBaseName(removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint))) == "Array";
 	}
 
+	/**
+		Resolve a bare standard `Array` hint without inventing a generated wrapper.
+
+		Native body typing can temporarily retain `Array` after the surrounding
+		function has already established an `Array<T>` return carrier. Reuse that
+		vector when available so the local keeps `T`; otherwise preserve the
+		existing conservative string-vector default used by untyped `new Array()`.
+		Explicit `Array<T>` hints continue through the normal generic mapping.
+	**/
+	public static function bareStdArrayCppTypeHint(typeHint:String, ?scope:CppRenderScope):Null<String> {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (!isStdArrayTypePath(hint) || isArrayLikeTypeHint(hint))
+			return null;
+		if (scope != null && isCppVectorType(scope.returnType))
+			return scope.returnType;
+		return "std::vector<std::string>";
+	}
+
 	public static function isIterableTypeHint(typeHint:String):Bool {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		return typeBaseName(hint) == "Iterable" && StringTools.endsWith(hint, ">");
@@ -298,6 +316,9 @@ class CppTypeModel {
 		final primitiveType = primitiveTypeHintCppType(hint);
 		if (primitiveType != null)
 			return primitiveType;
+		final bareStdArrayType = bareStdArrayCppTypeHint(hint, scope);
+		if (bareStdArrayType != null)
+			return bareStdArrayType;
 		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
 		if (primitiveAbstractType != null)
 			return primitiveAbstractType;

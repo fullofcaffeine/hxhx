@@ -24460,6 +24460,9 @@ class CppTargetCore {
 		final primitiveType = primitiveTypeHintCppType(hint);
 		if (primitiveType != null)
 			return primitiveType;
+		final bareStdArrayType = CppTypeModel.bareStdArrayCppTypeHint(hint, scope);
+		if (bareStdArrayType != null)
+			return bareStdArrayType;
 		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
 		if (primitiveAbstractType != null)
 			return primitiveAbstractType;
@@ -24623,6 +24626,9 @@ class CppTargetCore {
 		final hint = CppTypeModel.unwrapNullTypeHint(raw);
 		if (isStructuralTypeHint(hint))
 			return "auto";
+		final bareStdArrayType = CppTypeModel.bareStdArrayCppTypeHint(hint, scope);
+		if (bareStdArrayType != null)
+			return bareStdArrayType;
 		final scopedGenericClass = scopedRawGenericClassTypeName(hint, scope);
 		if (scopedGenericClass != null)
 			return "std::shared_ptr<" + scopedGenericClass + ">";

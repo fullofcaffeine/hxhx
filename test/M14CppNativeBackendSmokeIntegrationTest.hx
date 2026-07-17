@@ -4418,6 +4418,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typed], []);
 	}
 
+	static function genericArrayLocalProgram():GenIrProgram {
+		final mainPath = "test/oracle/cpp_generic_array_local_seed/cpp_src/Main.hx";
+		final helperPath = "test/oracle/cpp_generic_array_local_seed/common/GenericArrayLocal.hx";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(File.getContent(mainPath), mainPath));
+		final typedHelper = TyperStage.typeModule(ParserStage.parse(File.getContent(helperPath), helperPath));
+		return MacroStage.expandProgram([typedMain, typedHelper], []);
+	}
+
 	static function constrainedGenericRelationProgram():GenIrProgram {
 		final sourcePath = "test/oracle/cpp_constrained_generic_relation_seed/src/Main.hx";
 		final typed = TyperStage.typeModule(ParserStage.parse(File.getContent(sourcePath), sourcePath));
@@ -4515,6 +4523,69 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(run.code == 0, "C++ generic-array smoke executable failed: " + run.stderr);
 			final expected = File.getContent("test/oracle/cpp_generic_call_array_seed/expected.stdout");
 			assertTrue(run.stdout == expected, "unexpected C++ generic-array smoke stdout: " + run.stdout);
+		}
+		deleteRecursive(root);
+	}
+
+	/**
+		Keep a generic `new Array()` local on the same vector carrier as its
+		`Array<T>` return type, including the bare hint produced by native typing.
+	**/
+	public static function runGenericArrayLocalChecks():Void {
+		BackendRegistry.clearDynamicRegistrations();
+		final resultPush = function(iterable:String):HxStmt {
+			return SForIn("value", EIdent(iterable), SExpr(ECall(EField(EIdent("result"), "push"), [EIdent("value")]), HxPos.unknown()), HxPos.unknown());
+		};
+		final appendBoth = new HxFunctionDecl("appendBoth", Public, true, [
+			new HxFunctionArg("left", "Iterable<T>", NoDefault, false, false),
+			new HxFunctionArg("right", "Iterable<T>", NoDefault, false, false)
+		], "Array<T>", [
+			SVar("result", "Array", ENew("Array", []), HxPos.unknown()),
+			resultPush("left"),
+			resultPush("right"),
+			SReturn(EIdent("result"), HxPos.unknown())
+		], "", ["__hxhx_fn_type_params=T"]);
+		final owner = new HxClassDecl("GenericArrayLocal", false, [appendBoth], []);
+		final stdArray = new HxClassDecl("Array", false, [], [], "", ["__hxhx_type_params=T"]);
+		final names = new StringMap<Bool>();
+		final classes = new StringMap<HxClassDecl>();
+		for (entry in [{name: "GenericArrayLocal", cls: owner}, {name: "Array", cls: stdArray}]) {
+			names.set(entry.name, true);
+			classes.set(entry.name, entry.cls);
+		}
+		final lowered = @:privateAccess backend.cpp.CppTargetCore.renderHelperMethod(appendBoth, owner, {
+			names: names,
+			byName: classes
+		}).join("\n");
+		assertContains(lowered, "template<typename T>", "C++ generic Array local smoke should preserve the helper type parameter");
+		assertContains(lowered, "static std::vector<T> appendBoth(std::vector<T> left, std::vector<T> right)",
+			"C++ generic Array local smoke should keep the public signature vector-backed");
+		assertContains(lowered, "std::vector<T> result = std::vector<T>{};",
+			"C++ native bare Array local hints should reuse the generic vector return carrier");
+		assertContains(lowered, "result.push_back(value);", "C++ generic Array locals should use vector mutation syntax");
+		assertContains(lowered, "return result;", "C++ generic Array locals should return their vector value directly");
+		assertTrue(lowered.indexOf("std::shared_ptr<Array<T>>") < 0, "C++ generic Array locals should not become class-wrapper pointers");
+		assertTrue(lowered.indexOf("result->push") < 0, "C++ generic Array locals should not use wrapper member access");
+		assertTrue(lowered.indexOf("std::any") < 0, "C++ generic Array locals should not erase their element type");
+
+		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_generic_array_local"]);
+		deleteRecursive(root);
+		FileSystem.createDirectory(root);
+		final program = genericArrayLocalProgram();
+		final sourceOnlyDir = Path.join([root, "source-only"]);
+		final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program, context(sourceOnlyDir, true, true));
+		final source = File.getContent(sourceOnly.entryPath);
+		assertContains(source, "static std::vector<T> appendBoth", "C++ parsed generic Array local smoke should retain its vector return carrier");
+		assertTrue(source.indexOf("std::shared_ptr<Array<T>>") < 0, "C++ parsed generic Array local smoke should not emit a synthetic Array wrapper carrier");
+
+		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
+			final buildDir = Path.join([root, "build"]);
+			final built = BackendRegistry.createForTarget("cpp-native").emit(program, context(buildDir, true, false));
+			assertTrue(built.builtExecutable, "C++ generic Array local smoke should build an executable");
+			final run = commandOutput(built.entryPath, []);
+			assertTrue(run.code == 0, "C++ generic Array local smoke executable failed: " + run.stderr);
+			final expected = File.getContent("test/oracle/cpp_generic_array_local_seed/expected.stdout");
+			assertTrue(run.stdout == expected, "unexpected C++ generic Array local smoke stdout: " + run.stdout);
 		}
 		deleteRecursive(root);
 	}
@@ -12108,6 +12179,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 
 	public static function runGeneratedSourceChecks():Void {
 		runGenericCallArrayLiteralChecks();
+		runGenericArrayLocalChecks();
 		runConstrainedGenericRelationChecks();
 		runAbstractUnderlyingConversionChecks();
 		runArrowMapLiteralChecks();
@@ -13976,6 +14048,12 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				"C++ smoke should not forward-declare method-level generic type params as fake classes");
 			assertContains(vendorLambdaSource, "__hxhx_comp_out.push_back(f((i++), x));",
 				"C++ smoke should keep upstream Lambda.mapi callback invocation callable");
+			assertContains(vendorLambdaSource, "static std::vector<T> concat", "C++ smoke should keep upstream Lambda.concat vector-backed");
+			assertContains(vendorLambdaSource, "auto l = std::vector<T>{};",
+				"C++ direct parsing should infer Lambda.concat's generic local from its vector initializer");
+			assertContains(vendorLambdaSource, "l.push_back(x);", "C++ smoke should lower Lambda.concat local mutation through std::vector");
+			assertTrue(vendorLambdaSource.indexOf("std::shared_ptr<Array<T>> l") < 0,
+				"C++ smoke should not wrap Lambda.concat's generic Array local in a synthetic class");
 		}
 
 		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
@@ -14144,6 +14222,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"render",
 			"generated",
 			"generic-call-array",
+			"generic-array-local",
 			"abstract-underlying-conversion",
 			"arrow-map-literal",
 			"empty-map-expected-type"
@@ -14157,6 +14236,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				runGeneratedSourceChecks();
 			case "generic-call-array":
 				runGenericCallArrayLiteralChecks();
+			case "generic-array-local":
+				runGenericArrayLocalChecks();
 			case "abstract-underlying-conversion":
 				runAbstractUnderlyingConversionChecks();
 			case "arrow-map-literal":
