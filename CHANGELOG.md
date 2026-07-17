@@ -1,3 +1,10 @@
+## [0.18.3](https://github.com/fullofcaffeine/hxhx/compare/v0.18.2...v0.18.3) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** preserve Int64 subInt wraparound ([f5b54d5](https://github.com/fullofcaffeine/hxhx/commit/f5b54d517203cb0c005bee0c45ae54641d99496d))
+
 ## [0.18.2](https://github.com/fullofcaffeine/hxhx/compare/v0.18.1...v0.18.2) (2026-07-17)
 
 
