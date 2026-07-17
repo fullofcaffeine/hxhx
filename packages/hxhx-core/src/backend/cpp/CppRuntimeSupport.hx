@@ -1288,11 +1288,11 @@ class CppRuntimeSupport {
 	}
 
 	/**
-		Add, subtract, and multiply signed 64-bit carriers with Haxe's modulo-two-to-the-64 behavior.
+		Add, subtract, multiply, and divide signed 64-bit carriers with Haxe semantics.
 
-		C++17 signed overflow is undefined, so arithmetic happens in the matching
-		unsigned range. The upper half is mapped back through a representable
-		subtraction instead of relying on an out-of-range unsigned-to-signed cast.
+		C++17 signed overflow is undefined, so wrapping arithmetic happens in the
+		matching unsigned range. Division checks zero and the one overflowing
+		`minimum / -1` pair before using C++'s compatible truncation toward zero.
 	**/
 	public static function int64ArithmeticLines():Array<String> {
 		return [
@@ -1318,6 +1318,13 @@ class CppRuntimeSupport {
 			"  const auto signedMax = static_cast<unsigned long long>(std::numeric_limits<long long>::max());",
 			"  if (bits <= signedMax) return static_cast<long long>(bits);",
 			"  return -1 - static_cast<long long>(std::numeric_limits<unsigned long long>::max() - bits);",
+			"}",
+			"",
+			"static long long __hxhx_int64_div(long long dividend, long long divisor) {",
+			"  static_assert(std::numeric_limits<unsigned long long>::digits == 64, \"hxhx Int64 requires a 64-bit carrier\");",
+			"  if (divisor == 0) throw std::runtime_error(\"divide by zero\");",
+			"  if (dividend == std::numeric_limits<long long>::min() && divisor == -1) return std::numeric_limits<long long>::min();",
+			"  return dividend / divisor;",
 			"}"
 		];
 	}

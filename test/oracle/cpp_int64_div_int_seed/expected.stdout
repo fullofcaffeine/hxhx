@@ -1,0 +1,12 @@
+direct-div:8
+positive-truncation:8
+negative-dividend:-8
+negative-divisor:-8
+both-negative:8
+zero-numerator:0
+computed-truncation:9
+divide-by-zero:divide by zero
+max-div-two:4611686018427387903
+max-div-negative-one:-9223372036854775807
+min-div-two:-4611686018427387904
+min-div-negative-one:-9223372036854775808
