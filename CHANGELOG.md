@@ -1,3 +1,15 @@
+## [0.18.15](https://github.com/fullofcaffeine/hxhx/compare/v0.18.14...v0.18.15) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** represent callable extern carriers ([f84e564](https://github.com/fullofcaffeine/hxhx/commit/f84e564d89aa4901a362b8f0166b4c97808fee6e))
+
+
+### Performance Improvements
+
+* **cpp:** skip irrelevant callable lookups ([4465849](https://github.com/fullofcaffeine/hxhx/commit/446584911c9b23cf829c4378533f6bff10f36b28))
+
 ## [0.18.14](https://github.com/fullofcaffeine/hxhx/compare/v0.18.13...v0.18.14) (2026-07-17)
 
 
