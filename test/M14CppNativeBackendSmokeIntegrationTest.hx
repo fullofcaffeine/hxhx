@@ -13002,8 +13002,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		assertContains(source, "static long long parseStringLike(std::string sParam) {", "C++ smoke should erase Int64 helper returns to primitive values");
 		assertContains(source, "auto base = static_cast<long long>(10);",
 			"C++ smoke should lower Int64.ofInt directly instead of calling an incomplete helper class");
-		assertContains(source, "current = (current + (multiplier * static_cast<long long>(digitInt)));",
-			"C++ smoke should lower Int64 add/mul helper calls as primitive value operations");
+		assertContains(source, "current = __hxhx_int64_add(current, __hxhx_int64_mul(multiplier, static_cast<long long>(digitInt)));",
+			"C++ smoke should route Int64 add/mul through the shared overflow-safe helpers");
 		assertContains(source, "auto noFractions = (f - std::fmod(f, 1));", "C++ smoke should lower Float modulo through std::fmod");
 		assertContains(source, "auto curr = std::fmod(rest, 2);", "C++ smoke should remember double arithmetic locals for later Float modulo");
 		assertContains(source, "__hxhx_mod_assign_target = std::fmod(__hxhx_mod_assign_target, 2); return __hxhx_mod_assign_target; })();",
