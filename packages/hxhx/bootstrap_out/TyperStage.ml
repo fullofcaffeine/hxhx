@@ -800,6 +800,7 @@ let rec accessorPropertyForAccess = fun expression scope ctx position -> try let
   )
 ) in Obj.magic __fallback_result_50 with
   | HxRuntime.Hx_return __ret_49 -> Obj.obj __ret_49
+and typeErrorProbe = fun expression scope ctx position -> ignore (inferExprType (Obj.magic expression) (Obj.magic (TyFunctionEnv.copyForInference (Obj.magic scope) ())) (Obj.magic ctx) (Obj.magic position))
 and resolveMethodCall = fun c field isStatic args scope ctx pos -> try let __fallback_result_227 = let argTypes = Obj.magic (HxArray.create ()) in (
   ignore (let _g = ref 0 in while !_g < HxArray.length args do ignore (let a = Obj.magic (HxArray.get (Obj.magic args) (!_g)) in (
     ignore (let __old_209 = !_g in let __new_210 = HxInt.add __old_209 1 in (
@@ -1200,7 +1201,7 @@ and inferExprType = fun expr scope ctx pos -> try let __fallback_result_435 = le
     )
     | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let callee = Obj.magic _g in let args = Obj.magic _g1 in (
       ignore (if HxArray.length args = 1 && isTypeErrorProbeCallee (Obj.magic callee) then ignore ((
-        ignore (try inferExprType (Obj.magic (HxArray.get (Obj.magic args) 0)) (Obj.magic (TyFunctionEnv.copyForInference (Obj.magic scope) ())) (Obj.magic ctx) (Obj.magic pos) with
+        ignore (try typeErrorProbe (Obj.magic (HxArray.get (Obj.magic args) 0)) (Obj.magic scope) (Obj.magic ctx) (Obj.magic pos) with
           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
           | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
           | HxRuntime.Hx_return __ret_288 -> raise (HxRuntime.Hx_return __ret_288)

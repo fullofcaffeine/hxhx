@@ -29077,23 +29077,23 @@ and preIncrementExpr = fun target expr delta -> let tempResult = ref ("" : strin
         tempResult := __assign_866;
         __assign_866
       )
-      | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let targetName = (valueName (Obj.magic target) (name : string) : string) in let tempString = ref ("" : string) in (
-        ignore (if delta < 0 then let __assign_867 = (" - " : string) in (
-          tempString := __assign_867;
+      | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let targetName = (valueName (Obj.magic target) (name : string) : string) in let tempNumber = ref (0 : int) in (
+        ignore (if delta < 0 then let __assign_867 = HxInt.neg delta in (
+          tempNumber := __assign_867;
           __assign_867
-        ) else let __assign_868 = (" + " : string) in (
-          tempString := __assign_868;
+        ) else let __assign_868 = delta in (
+          tempNumber := __assign_868;
           __assign_868
         ));
-        let tempVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-          ignore (if delta < 0 then let __assign_869 = Obj.magic (Obj.repr (HxInt.neg delta)) in (
-            tempVar := __assign_869;
+        let magnitude = !tempNumber in let tempString = ref ("" : string) in (
+          ignore (if delta < 0 then let __assign_869 = (" - " : string) in (
+            tempString := __assign_869;
             __assign_869
-          ) else let __assign_870 = Obj.magic (Obj.repr delta) in (
-            tempVar := __assign_870;
+          ) else let __assign_870 = (" + " : string) in (
+            tempString := __assign_870;
             __assign_870
           ));
-          let __assign_871 = (((((("(" ^ HxString.toStdString targetName) ^ " := (") ^ HxString.toStdString targetName) ^ HxString.toStdString (!tempString)) ^ HxString.toStdString (HxRuntime.dynamic_toStdString (Obj.magic (!tempVar)))) ^ "))" : string) in (
+          let __assign_871 = (((((("(" ^ HxString.toStdString targetName) ^ " := (") ^ HxString.toStdString targetName) ^ HxString.toStdString (!tempString)) ^ HxString.toStdString (string_of_int magnitude)) ^ "))" : string) in (
             tempResult := __assign_871;
             __assign_871
           )
@@ -35791,15 +35791,15 @@ and postIncrementStmt = fun target expr delta -> try let __fallback_result_3576 
         __assign_3569
       )
       | _ -> HxType.hx_throw_typed_rtti (Obj.repr ((HxString.toStdString (targetLabel (Obj.magic target)) ^ " source backend MVP unsupported postfix target: ") ^ HxString.toStdString (exprKind (Obj.magic expr)))) ["Dynamic"; "String"]);
-    let tempVar = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-      ignore (if delta < 0 then let __assign_3570 = Obj.magic (Obj.repr (HxInt.neg delta)) in (
-        tempVar := __assign_3570;
+    let tempNumber = ref (0 : int) in (
+      ignore (if delta < 0 then let __assign_3570 = HxInt.neg delta in (
+        tempNumber := __assign_3570;
         __assign_3570
-      ) else let __assign_3571 = Obj.magic (Obj.repr delta) in (
-        tempVar := __assign_3571;
+      ) else let __assign_3571 = delta in (
+        tempNumber := __assign_3571;
         __assign_3571
       ));
-      let absDelta = (HxRuntime.dynamic_toStdString (Obj.magic (!tempVar)) : string) in let tempString1 = ref ("" : string) in (
+      let magnitude = !tempNumber in let absDelta = (string_of_int magnitude : string) in let tempString1 = ref ("" : string) in (
         ignore (if target = Php && phpExprIsInt64Value (Obj.magic expr) then let __assign_3572 = (phpIncrementedValueExpr (!tempString : string) delta : string) in (
           tempString1 := __assign_3572;
           __assign_3572
