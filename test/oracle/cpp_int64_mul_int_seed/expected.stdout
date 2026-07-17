@@ -1,0 +1,13 @@
+direct-mul:42
+right-positive:42
+left-positive:42
+right-negative:-42
+left-negative:-42
+right-zero:0
+left-zero:0
+computed-right:42
+computed-left:42
+max-times-two:-2
+two-times-max:-2
+min-times-negative-one:-9223372036854775808
+negative-one-times-min:-9223372036854775808
