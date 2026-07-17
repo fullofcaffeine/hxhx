@@ -1,3 +1,10 @@
+## [0.18.7](https://github.com/fullofcaffeine/hxhx/compare/v0.18.6...v0.18.7) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** define Int64 division semantics ([cacbbf3](https://github.com/fullofcaffeine/hxhx/commit/cacbbf3a49b2592580a23be9186180d17c3677a2))
+
 ## [0.18.6](https://github.com/fullofcaffeine/hxhx/compare/v0.18.5...v0.18.6) (2026-07-17)
 
 
