@@ -1,3 +1,10 @@
+## [0.18.10](https://github.com/fullofcaffeine/hxhx/compare/v0.18.9...v0.18.10) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** preserve Int modulo Int64 ([9cbd187](https://github.com/fullofcaffeine/hxhx/commit/9cbd187946ec3be59c85f21ba90b98286ac96194))
+
 ## [0.18.9](https://github.com/fullofcaffeine/hxhx/compare/v0.18.8...v0.18.9) (2026-07-17)
 
 
