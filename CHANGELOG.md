@@ -1,3 +1,10 @@
+## [0.18.13](https://github.com/fullofcaffeine/hxhx/compare/v0.18.12...v0.18.13) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** lower exact String.indexOf calls ([838d120](https://github.com/fullofcaffeine/hxhx/commit/838d1207c7657a08a9eaa29ab21f109530fea393))
+
 ## [0.18.12](https://github.com/fullofcaffeine/hxhx/compare/v0.18.11...v0.18.12) (2026-07-17)
 
 
