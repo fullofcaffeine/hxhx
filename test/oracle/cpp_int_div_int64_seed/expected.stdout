@@ -1,0 +1,13 @@
+positive-truncation:8
+negative-dividend:-8
+negative-divisor:-8
+both-negative:8
+zero-numerator:0
+computed-truncation:9
+divide-by-zero:divide by zero
+int-min-div-negative-one:2147483648
+int-max-div-one:2147483647
+int-min-div-one:-2147483648
+int-max-div-int64-max:0
+int-min-div-int64-min:0
+int-min-div-int-min:1
