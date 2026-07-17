@@ -277,6 +277,91 @@ class CppTypeModel {
 		return "std::vector<std::string>";
 	}
 
+	/**
+		Recognize hxcpp callable declarations by their real standard-library source.
+
+		These declarations describe target ABI carriers. They are not ordinary Haxe
+		classes that the standalone source backend may rebuild as wrapper structs.
+		Source identity keeps an unrelated user class named `Function` or `Callable`
+		outside this target-only rule.
+	**/
+	public static function isCppCallableExternClass(cls:HxClassDecl, ?classLookup:CppClassLookup):Bool {
+		if (cls == null || classLookup == null)
+			return false;
+		final name = sanitizeTypePath(typeBaseName(HxClassDecl.getName(cls)));
+		final sourceModule = switch (name) {
+			case "Callable" | "CallableData":
+				"Callable";
+			case "Function" | "FunctionData":
+				"Function";
+			case "AutoCast":
+				"AutoCast";
+			case "Abi":
+				"abi/Abi";
+			case _:
+				return false;
+		};
+		final expectedPackage = name == "Abi" ? "cpp.abi" : "cpp";
+		if (classPackagePath(cls, classLookup) != expectedPackage)
+			return false;
+		final sourcePath = classSourcePath(cls, classLookup);
+		if (sourcePath.length == 0)
+			return false;
+		final normalized = StringTools.replace(sourcePath, "\\", "/");
+		return normalized == "std/cpp/" + sourceModule + ".hx" || StringTools.endsWith(normalized, "/std/cpp/" + sourceModule + ".hx");
+	}
+
+	/**
+		Select the standalone C++ carrier for hxcpp callable extern hints.
+
+		Concrete `Function<T, ABI>` and `Callable<T>` values use `T`, which keeps a
+		known Haxe function signature as `std::function`. `AutoCast` and the public
+		Haxe function constraint are intentionally erased because their source
+		contracts do not expose a callable argument list.
+	**/
+	public static function cppCallableExternTypeHint(typeHint:String, ?scope:CppRenderScope, ?classLookup:CppClassLookup):Null<String> {
+		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		if (hint == "haxe.Constraints.Function" || hint == "Constraints.Function" || hint == "StdTypes.Function")
+			return "std::any";
+		final open = hint.indexOf("<");
+		final path = open < 0 ? hint : hint.substr(0, open);
+		final name = sanitizeTypePath(typeBaseName(path));
+		final explicitlyCpp = path == "cpp." + name || (name == "Abi" && path == "cpp.abi.Abi");
+		final cls = lookupClassForTypeHint(hint, scope, classLookup);
+		if (!explicitlyCpp && !isCppCallableExternClass(cls, classLookup))
+			return null;
+		return switch (name) {
+			case "Function" | "FunctionData" | "Callable" | "CallableData":
+				final args = genericTypeHintArgs(hint);
+				args.length == 0 ? "std::any" : cppTypeHint(args[0], scope, classLookup);
+			case "AutoCast" | "Abi":
+				"std::any";
+			case _:
+				null;
+		};
+	}
+
+	static function classSourcePath(cls:HxClassDecl, classLookup:CppClassLookup):String {
+		if (classLookup.sourcePathByClass != null) {
+			final sourcePath = classLookup.sourcePathByClass.get(cls);
+			if (sourcePath != null)
+				return sourcePath;
+		}
+		if (classLookup.classInfos != null)
+			for (entry in classLookup.classInfos)
+				if (entry.cls == cls)
+					return entry.sourcePath == null ? "" : entry.sourcePath;
+		return "";
+	}
+
+	static function classPackagePath(cls:HxClassDecl, classLookup:CppClassLookup):String {
+		if (classLookup.classInfos != null)
+			for (entry in classLookup.classInfos)
+				if (entry.cls == cls)
+					return entry.packagePath == null ? "" : entry.packagePath;
+		return "";
+	}
+
 	public static function isIterableTypeHint(typeHint:String):Bool {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		return typeBaseName(hint) == "Iterable" && StringTools.endsWith(hint, ">");
@@ -319,6 +404,9 @@ class CppTypeModel {
 		final bareStdArrayType = bareStdArrayCppTypeHint(hint, scope);
 		if (bareStdArrayType != null)
 			return bareStdArrayType;
+		final callableExternType = cppCallableExternTypeHint(hint, scope, classLookup);
+		if (callableExternType != null)
+			return callableExternType;
 		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
 		if (primitiveAbstractType != null)
 			return primitiveAbstractType;

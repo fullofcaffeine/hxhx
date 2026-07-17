@@ -2508,7 +2508,11 @@ class CppTargetCore {
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
 				final renderedName = renderedClassName(cls, classLookup);
-				if (rawName == mainName || renderedName == mainRenderedName || emitted.exists(renderedName) || isCppCoreExternClass(rawName))
+				if (rawName == mainName
+					|| renderedName == mainRenderedName
+					|| emitted.exists(renderedName)
+					|| isCppCoreExternClass(rawName)
+					|| CppTypeModel.isCppCallableExternClass(cls, classLookup))
 					continue;
 				emitType(renderedName, forwardDeclarationTypeParams(cls));
 			}
@@ -2553,17 +2557,22 @@ class CppTargetCore {
 		for (typed in program.getTypedModules()) {
 			final decl = typed.getBackendDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
-				if (shouldEmitGenericClassFactory(cls, mainName))
+				if (shouldEmitGenericClassFactory(cls, mainName, classLookup))
 					out.push(renderGenericClassFactoryDeclaration(cls, classLookup));
 			}
 		}
 		return out;
 	}
 
-	static function shouldEmitGenericClassFactory(cls:HxClassDecl, mainName:String):Bool {
+	static function shouldEmitGenericClassFactory(cls:HxClassDecl, mainName:String, classLookup:CppClassLookup):Bool {
 		final rawName = HxClassDecl.getName(cls);
-		if (rawName == mainName || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName) || isBytesDataTypeName(rawName)
-			|| isClassMetaSupportClass(cls) || isEnumMetaSupportClass(cls))
+		if (rawName == mainName
+			|| HxClassDecl.getIsInterface(cls)
+			|| isCppCoreExternClass(rawName)
+			|| CppTypeModel.isCppCallableExternClass(cls, classLookup)
+			|| isBytesDataTypeName(rawName)
+			|| isClassMetaSupportClass(cls)
+			|| isEnumMetaSupportClass(cls))
 			return false;
 		if (isPosInfosSupportClass(cls)
 			|| isStdVectorHelperClass(cls)
@@ -2983,7 +2992,9 @@ class CppTargetCore {
 	static function helperClassWouldRenderDefinition(cls:HxClassDecl, classLookup:CppClassLookup):Bool {
 		if (cls == null)
 			return false;
-		if (isCppCoreExternClass(HxClassDecl.getName(cls)) || isBytesDataTypeName(HxClassDecl.getName(cls)))
+		if (isCppCoreExternClass(HxClassDecl.getName(cls))
+			|| CppTypeModel.isCppCallableExternClass(cls, classLookup)
+			|| isBytesDataTypeName(HxClassDecl.getName(cls)))
 			return false;
 		if (isNativeStackTraceSupportClass(cls))
 			return false;
@@ -3174,7 +3185,7 @@ class CppTargetCore {
 		if (cls == null)
 			return UnsupportedDiagnostic;
 		final rawName = HxClassDecl.getName(cls);
-		if (isCppCoreExternClass(rawName) || isBytesDataTypeName(rawName))
+		if (isCppCoreExternClass(rawName) || CppTypeModel.isCppCallableExternClass(cls, classLookup) || isBytesDataTypeName(rawName))
 			return DeclarationOnly;
 		final className = renderedClassName(cls, classLookup);
 		if (isNativeStackTraceSupportClass(cls))
@@ -3230,7 +3241,11 @@ class CppTargetCore {
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final rawName = HxClassDecl.getName(cls);
 				final helperName = renderedClassName(cls, classLookup);
-				if (cls == mainClass || rawName == mainName || emitted.exists(helperName) || isCppCoreExternClass(rawName))
+				if (cls == mainClass
+					|| rawName == mainName
+					|| emitted.exists(helperName)
+					|| isCppCoreExternClass(rawName)
+					|| CppTypeModel.isCppCallableExternClass(cls, classLookup))
 					continue;
 				if (isTemplateWrapSupportClass(cls))
 					continue;
@@ -3739,7 +3754,7 @@ class CppTargetCore {
 	}
 
 	static function renderHelperClass(cls:HxClassDecl, classLookup:CppClassLookup):Array<String> {
-		if (isCppCoreExternClass(HxClassDecl.getName(cls)))
+		if (isCppCoreExternClass(HxClassDecl.getName(cls)) || CppTypeModel.isCppCallableExternClass(cls, classLookup))
 			return [];
 		if (isBytesDataTypeName(HxClassDecl.getName(cls)))
 			return [];
@@ -14579,6 +14594,13 @@ class CppTargetCore {
 	}
 
 	static function fieldCallExpr(receiver:HxExpr, method:String, args:Array<HxExpr>, ?scope:CppRenderScope):String {
+		final callableExtern = cppCallableExternStaticReceiverName(receiver, scope);
+		if (callableExtern != null) {
+			if ((method == "fromStaticFunction" || method == "fromFunction") && args.length == 1)
+				return renderExpr(args[0], scope);
+			if (method == "getProcAddress" || method == "nativeGetProcAddress")
+				throw "C++ source backend MVP unsupported cpp." + callableExtern + ".getProcAddress";
+		}
 		final receiverTypeName = staticReceiverClassName(receiver, scope);
 		final receiverCppType = constrainedArrayDispatchCppType(exprCppType(receiver, scope), scope);
 		if (sanitizeIdentifier(method) == "bind") {
@@ -17547,7 +17569,7 @@ class CppTargetCore {
 
 	static function exprHasNonNullableValueType(expr:HxExpr, ?scope:CppRenderScope):Bool {
 		final typeName = exprCppType(expr, scope);
-		return typeName.length > 0 && !isCppOptionalType(typeName) && !isCppReferenceType(typeName);
+		return typeName.length > 0 && typeName != "std::any" && !isCppOptionalType(typeName) && !isCppReferenceType(typeName);
 	}
 
 	/**
@@ -18460,6 +18482,27 @@ class CppTargetCore {
 			case _:
 				null;
 		};
+	}
+
+	/**
+		Resolve the real `cpp.Function` or `cpp.Callable` static receiver.
+
+		Qualified syntax is already unambiguous. Imported short names must resolve to
+		the standard-library source declaration so a user class named `Function`
+		never acquires target extern behavior.
+	**/
+	static function cppCallableExternStaticReceiverName(receiver:HxExpr, ?scope:CppRenderScope):Null<String> {
+		final path = staticReceiverTypePath(receiver);
+		if (path == null || path.length == 0)
+			return null;
+		final name = sanitizeTypePath(typeBaseName(path));
+		if (name != "Function" && name != "Callable")
+			return null;
+		if (removeTypeHintWhitespace(path) == "cpp." + name)
+			return name;
+		final lookup = lookupForScope(scope);
+		final cls = lookupClassForTypeHint(path, scope, lookup);
+		return CppTypeModel.isCppCallableExternClass(cls, lookup) ? name : null;
 	}
 
 	static function staticFieldExpr(receiver:HxExpr, field:String, ?scope:CppRenderScope):Null<String> {
@@ -24463,6 +24506,9 @@ class CppTargetCore {
 		final bareStdArrayType = CppTypeModel.bareStdArrayCppTypeHint(hint, scope);
 		if (bareStdArrayType != null)
 			return bareStdArrayType;
+		final callableExternType = CppTypeModel.cppCallableExternTypeHint(hint, scope, lookupForScope(scope, classLookup));
+		if (callableExternType != null)
+			return callableExternType;
 		final primitiveAbstractType = primitiveBackedAbstractCppTypeForTypeHint(hint, scope, classLookup);
 		if (primitiveAbstractType != null)
 			return primitiveAbstractType;

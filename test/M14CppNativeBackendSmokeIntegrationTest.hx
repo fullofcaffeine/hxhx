@@ -4401,6 +4401,23 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedNativeArray], []);
 	}
 
+	static function vendorCppCallableProgramWhenAvailable():Null<GenIrProgram> {
+		final paths = [
+			"vendor/haxe/std/cpp/Callable.hx",
+			"vendor/haxe/std/cpp/Function.hx",
+			"vendor/haxe/std/cpp/AutoCast.hx",
+			"vendor/haxe/std/cpp/abi/Abi.hx"
+		];
+		for (path in paths)
+			if (!FileSystem.exists(path))
+				return null;
+		final typedMain = TyperStage.typeModule(ParserStage.parse("class Main { static function main() {} }", "Main.hx"));
+		final modules = [typedMain];
+		for (path in paths)
+			modules.push(TyperStage.typeModule(ParserStage.parse(File.getContent(path), path)));
+		return MacroStage.expandProgram(modules, []);
+	}
+
 	static function vendorLambdaProgramWhenAvailable():Null<GenIrProgram> {
 		final lambdaPath = "vendor/haxe/std/Lambda.hx";
 		if (!FileSystem.exists(lambdaPath))
@@ -4421,6 +4438,14 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	static function genericArrayLocalProgram():GenIrProgram {
 		final mainPath = "test/oracle/cpp_generic_array_local_seed/cpp_src/Main.hx";
 		final helperPath = "test/oracle/cpp_generic_array_local_seed/common/GenericArrayLocal.hx";
+		final typedMain = TyperStage.typeModule(ParserStage.parse(File.getContent(mainPath), mainPath));
+		final typedHelper = TyperStage.typeModule(ParserStage.parse(File.getContent(helperPath), helperPath));
+		return MacroStage.expandProgram([typedMain, typedHelper], []);
+	}
+
+	static function callableExternProgram():GenIrProgram {
+		final mainPath = "test/oracle/cpp_callable_extern_seed/cpp_src/Main.hx";
+		final helperPath = "test/oracle/cpp_callable_extern_seed/common/CallableExternContract.hx";
 		final typedMain = TyperStage.typeModule(ParserStage.parse(File.getContent(mainPath), mainPath));
 		final typedHelper = TyperStage.typeModule(ParserStage.parse(File.getContent(helperPath), helperPath));
 		return MacroStage.expandProgram([typedMain, typedHelper], []);
@@ -4586,6 +4611,81 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(run.code == 0, "C++ generic Array local smoke executable failed: " + run.stderr);
 			final expected = File.getContent("test/oracle/cpp_generic_array_local_seed/expected.stdout");
 			assertTrue(run.stdout == expected, "unexpected C++ generic Array local smoke stdout: " + run.stdout);
+		}
+		deleteRecursive(root);
+	}
+
+	/**
+		Keep concrete Haxe callbacks typed while representing the deliberately
+		erased function constraint without generating hxcpp wrapper classes.
+	**/
+	public static function runCallableExternChecks():Void {
+		BackendRegistry.clearDynamicRegistrations();
+		final vendorProgram = vendorCppCallableProgramWhenAvailable();
+		if (vendorProgram != null) {
+			final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(vendorProgram);
+			for (name in ["Callable", "CallableData", "Function", "FunctionData", "AutoCast", "Abi"]) {
+				final cls = lookup.byName.get(name);
+				assertTrue(cls != null, "C++ callable extern smoke should load the real " + name + " declaration");
+				assertTrue(backend.cpp.CppTypeModel.isCppCallableExternClass(cls, lookup),
+					"C++ callable extern classification should use the real package/source identity for " + name);
+				final kind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(cls, lookup);
+				assertTrue(@:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(kind) == "declaration_only",
+					"C++ callable extern " + name + " should remain declaration-only");
+				assertTrue(@:privateAccess backend.cpp.CppTargetCore.renderHelperClass(cls, lookup).length == 0,
+					"C++ callable extern " + name + " should not emit a fake helper struct");
+			}
+		}
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("cpp.Function<Int->Int,cpp.abi.Abi>") == "std::function<int(int)>",
+			"C++ cpp.Function should use its concrete callable payload as the carrier");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("cpp.Callable<String->Bool>") == "std::function<bool(std::string)>",
+			"C++ cpp.Callable should preserve a concrete function signature");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("haxe.Constraints.Function") == "std::any",
+			"C++ erased Haxe function constraints should not collide with cpp.Function");
+		assertTrue(@:privateAccess backend.cpp.CppTargetCore.cppTypeHint("cpp.AutoCast") == "std::any",
+			"C++ cpp.AutoCast should stay an erased extern conversion carrier");
+		assertThrowsContains(() -> @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EField(EIdent("cpp"), "Function"), "getProcAddress"),
+			[EString("library"), EString("symbol")])),
+			"unsupported cpp.Function.getProcAddress", "C++ native symbol loading should fail before clang with a capability diagnostic");
+		final staticFunction = @:privateAccess backend.cpp.CppTargetCore.renderExpr(ECall(EField(EField(EIdent("cpp"), "Function"), "fromStaticFunction"),
+			[EIdent("callback")]));
+		assertTrue(staticFunction == "callback", "C++ cpp.Function.fromStaticFunction should preserve an already concrete callback value");
+
+		final userFunction = new HxClassDecl("Function", false, [], []);
+		final userNames = new StringMap<Bool>();
+		userNames.set("Function", true);
+		final userClasses = new StringMap<HxClassDecl>();
+		userClasses.set("Function", userFunction);
+		final userLookup:backend.cpp.CppClassLookup = {
+			names: userNames,
+			byName: userClasses,
+			classInfos: [{cls: userFunction, packagePath: "unit", sourcePath: "unit/Function.hx"}]
+		};
+		assertTrue(!backend.cpp.CppTypeModel.isCppCallableExternClass(userFunction, userLookup),
+			"C++ callable extern classification must not capture an ordinary user Function class");
+
+		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_callable_extern"]);
+		deleteRecursive(root);
+		FileSystem.createDirectory(root);
+		final program = callableExternProgram();
+		final sourceOnlyDir = Path.join([root, "source-only"]);
+		final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program, context(sourceOnlyDir, true, true));
+		final source = File.getContent(sourceOnly.entryPath);
+		assertContains(source, "static std::string describe(std::any value)",
+			"C++ callable extern smoke should give the erased function constraint an explicit target carrier");
+		assertContains(source, "static int apply(std::function<int(int)> value, int input)",
+			"C++ callable extern smoke should preserve the known callback signature");
+		assertTrue(source.indexOf("std::shared_ptr<Function") < 0,
+			"C++ callable extern smoke should not turn the Haxe function constraint into cpp.Function storage");
+
+		if (commandExists("c++") || commandExists("g++") || commandExists("clang++")) {
+			final buildDir = Path.join([root, "build"]);
+			final built = BackendRegistry.createForTarget("cpp-native").emit(program, context(buildDir, true, false));
+			assertTrue(built.builtExecutable, "C++ callable extern smoke should build an executable");
+			final run = commandOutput(built.entryPath, []);
+			assertTrue(run.code == 0, "C++ callable extern smoke executable failed: " + run.stderr);
+			final expected = File.getContent("test/oracle/cpp_callable_extern_seed/expected.stdout");
+			assertTrue(run.stdout == expected, "unexpected C++ callable extern smoke stdout: " + run.stdout);
 		}
 		deleteRecursive(root);
 	}
@@ -12180,6 +12280,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 	public static function runGeneratedSourceChecks():Void {
 		runGenericCallArrayLiteralChecks();
 		runGenericArrayLocalChecks();
+		runCallableExternChecks();
 		runConstrainedGenericRelationChecks();
 		runAbstractUnderlyingConversionChecks();
 		runArrowMapLiteralChecks();
@@ -14223,6 +14324,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"generated",
 			"generic-call-array",
 			"generic-array-local",
+			"callable-extern",
 			"abstract-underlying-conversion",
 			"arrow-map-literal",
 			"empty-map-expected-type"
@@ -14238,6 +14340,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 				runGenericCallArrayLiteralChecks();
 			case "generic-array-local":
 				runGenericArrayLocalChecks();
+			case "callable-extern":
+				runCallableExternChecks();
 			case "abstract-underlying-conversion":
 				runAbstractUnderlyingConversionChecks();
 			case "arrow-map-literal":
