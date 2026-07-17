@@ -217,9 +217,15 @@ class TypedBodyBuilder {
 			case SBlock(statements, position):
 				SBlock([for (child in statements) untypedStatement(child)], position);
 			case SVar(name, typeHint, initializer, position):
-				SVar(name, typeHint, initializer == null ? null : untypedExpression(initializer), position);
+				var untypedInitializer:Null<HxExpr> = null;
+				if (initializer != null)
+					untypedInitializer = untypedExpression(initializer);
+				SVar(name, typeHint, untypedInitializer, position);
 			case SIf(condition, whenTrue, whenFalse, position):
-				SIf(untypedExpression(condition), untypedStatement(whenTrue), whenFalse == null ? null : untypedStatement(whenFalse), position);
+				var untypedWhenFalse:Null<HxStmt> = null;
+				if (whenFalse != null)
+					untypedWhenFalse = untypedStatement(whenFalse);
+				SIf(untypedExpression(condition), untypedStatement(whenTrue), untypedWhenFalse, position);
 			case SForIn(name, iterable, body, position):
 				SForIn(name, untypedExpression(iterable), untypedStatement(body), position);
 			case SForKeyValue(keyName, valueName, iterable, body, position):
@@ -251,7 +257,10 @@ class TypedBodyBuilder {
 			case SBlock(statements, position):
 				SBlock(expandStructuralStatements(statements), position);
 			case SIf(condition, whenTrue, whenFalse, position):
-				SIf(condition, expandStatement(whenTrue), whenFalse == null ? null : expandStatement(whenFalse), position);
+				var expandedWhenFalse:Null<HxStmt> = null;
+				if (whenFalse != null)
+					expandedWhenFalse = expandStatement(whenFalse);
+				SIf(condition, expandStatement(whenTrue), expandedWhenFalse, position);
 			case SForIn(name, iterable, body, position):
 				SForIn(name, iterable, expandStatement(body), position);
 			case SForKeyValue(keyName, valueName, iterable, body, position):

@@ -93,7 +93,9 @@ class TypedBodySource {
 			case Ternary: ETernary(expression(expressions[0]), expression(expressions[1]), expression(expressions[2]));
 			case Anonymous: EAnon(texts.copy(), expressionTail(expressions, 0));
 			case ArrayComprehension:
-				final guard = typedExpression.getBoolValue() ? expression(expressions[1]) : null;
+				var guard:Null<HxExpr> = null;
+				if (typedExpression.getBoolValue())
+					guard = expression(expressions[1]);
 				final valueIndex = typedExpression.getBoolValue() ? 2 : 1;
 				EArrayComprehension(texts[0], expression(expressions[0]), guard, expression(expressions[valueIndex]));
 			case ArrayDecl: EArrayDecl(expressionTail(expressions, 0));
@@ -127,8 +129,15 @@ class TypedBodySource {
 					&& expressions.length == 1
 					&& expressions[0].getType().getNominalIdentity() != null)
 					typeHint = expressions[0].getType().getDisplay();
-				SVar(names[0], typeHint, expressions.length == 0 ? null : expression(expressions[0]), position);
-			case If: SIf(expression(expressions[0]), statement(statements[0]), statements.length == 1 ? null : statement(statements[1]), position);
+				var initializer:Null<HxExpr> = null;
+				if (expressions.length > 0)
+					initializer = expression(expressions[0]);
+				SVar(names[0], typeHint, initializer, position);
+			case If:
+				var whenFalse:Null<HxStmt> = null;
+				if (statements.length > 1)
+					whenFalse = statement(statements[1]);
+				SIf(expression(expressions[0]), statement(statements[0]), whenFalse, position);
 			case ForIn: SForIn(names[0], expression(expressions[0]), statement(statements[0]), position);
 			case ForKeyValue: SForKeyValue(names[0], names[1], expression(expressions[0]), statement(statements[0]), position);
 			case While: SWhile(expression(expressions[0]), statement(statements[0]), position);

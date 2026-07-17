@@ -143,6 +143,34 @@ class M14TypedBodyBoundaryIntegrationTest {
 		TypedBodyInvariant.assertFunction(typedFunction);
 	}
 
+	static function assertNullableSourceProjection():Void {
+		final intType = TyType.fromHintText("Int");
+		final boolType = TyType.fromHintText("Bool");
+		final arrayType = TyType.fromHintText("Array<Int>");
+		final iterable = TypedExpr.range(TypedExpr.intLiteral(0, intType, null), TypedExpr.intLiteral(3, intType, null), arrayType, null);
+		final value = TypedExpr.localRead("entry", intType, null);
+		final guarded = TypedExpr.arrayComprehension("entry", iterable, TypedExpr.boolLiteral(true, boolType, null), value, arrayType, null);
+		final unguarded = TypedExpr.arrayComprehension("entry", iterable, null, value, arrayType, null);
+		assertTrue(switch (TypedBodySource.expression(guarded)) {
+			case EArrayComprehension("entry", ERange(EInt(0), EInt(3)), EBool(true), EIdent("entry")): true;
+			case _: false;
+		}, "guarded typed array comprehension lost its optional source expression");
+		assertTrue(switch (TypedBodySource.expression(unguarded)) {
+			case EArrayComprehension("entry", ERange(EInt(0), EInt(3)), null, EIdent("entry")): true;
+			case _: false;
+		}, "unguarded typed array comprehension fabricated an optional source expression");
+
+		final position = new HxPos(0, 1, 1);
+		assertTrue(switch (TypedBodySource.statement(TypedStmt.variable("present", "Int", TypedExpr.intLiteral(1, intType, null), position))) {
+			case SVar("present", "Int", EInt(1), _): true;
+			case _: false;
+		}, "typed variable projection lost its initializer");
+		assertTrue(switch (TypedBodySource.statement(TypedStmt.variable("missing", "Int", null, position))) {
+			case SVar("missing", "Int", null, _): true;
+			case _: false;
+		}, "typed variable projection fabricated a missing initializer");
+	}
+
 	static function assertStructuralExpressionBlock():Void {
 		final parsed = ParserStage.parse([
 			"class Main {",
@@ -277,6 +305,19 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(bodyContainsTag(body, TypedExprTag.ArrayAccess), "untyped statement block hid its indexed read");
 		assertTrue(bodyContainsTag(body, TypedExprTag.Untyped), "untyped statement block lost its explicit typing escape hatch");
 		assertTrue(!bodyContainsTag(body, TypedExprTag.Opaque), "untyped statement block retained an opaque source payload");
+		final projected = TypedBodySource.statements(body);
+		final projectedStatements = switch (projected[0]) {
+			case SBlock(statements, _): statements;
+			case _: [];
+		};
+		var foundUntypedInitializer = false;
+		for (statement in projectedStatements)
+			switch (statement) {
+				case SVar("total", "Dynamic", EUntyped(EInt(0)), _):
+					foundUntypedInitializer = true;
+				case _:
+			}
+		assertTrue(foundUntypedInitializer, "nullable untyped variable initializer did not survive typed-body source reconstruction");
 	}
 
 	static function assertConditionalElseIfStructure():Void {
@@ -423,6 +464,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(TypedBodyFingerprint.forStatements(TypedBodySource.statements(mainFunction.getBody())) == mainFunction.getBody().getSourceFingerprint(),
 			"typed-body source projection changed ordinary syntax before backend cutover");
 		assertLoweringNodeSet();
+		assertNullableSourceProjection();
 		assertStructuralExpressionBlock();
 		assertStructuralDoWhileExpression();
 		assertAbstractThisAssignment();
