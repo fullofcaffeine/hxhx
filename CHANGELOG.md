@@ -1,3 +1,10 @@
+## [0.18.8](https://github.com/fullofcaffeine/hxhx/compare/v0.18.7...v0.18.8) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** define Int64 remainder semantics ([4700544](https://github.com/fullofcaffeine/hxhx/commit/47005446f46237624c350ba9aa802979a1987e8f))
+
 ## [0.18.7](https://github.com/fullofcaffeine/hxhx/compare/v0.18.6...v0.18.7) (2026-07-17)
 
 
