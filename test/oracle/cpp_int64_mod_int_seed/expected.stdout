@@ -1,0 +1,13 @@
+direct-mod:3
+positive-remainder:3
+negative-dividend:-3
+negative-divisor:3
+both-negative:-3
+zero-numerator:0
+computed-remainder:5
+modulo-by-zero:divide by zero
+max-mod-two:1
+max-mod-negative-one:0
+min-mod-three:-2
+min-mod-negative-one:0
+max-mod-int-min:2147483647

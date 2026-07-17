@@ -1370,6 +1370,13 @@ let int64ArithmeticLines = fun () -> let __arr_71 = HxArray.create () in (
   ignore (HxArray.push __arr_71 "  if (dividend == std::numeric_limits<long long>::min() && divisor == -1) return std::numeric_limits<long long>::min();");
   ignore (HxArray.push __arr_71 "  return dividend / divisor;");
   ignore (HxArray.push __arr_71 "}");
+  ignore (HxArray.push __arr_71 "");
+  ignore (HxArray.push __arr_71 "static long long __hxhx_int64_mod(long long dividend, long long divisor) {");
+  ignore (HxArray.push __arr_71 "  static_assert(std::numeric_limits<unsigned long long>::digits == 64, \"hxhx Int64 requires a 64-bit carrier\");");
+  ignore (HxArray.push __arr_71 "  if (divisor == 0) throw std::runtime_error(\"divide by zero\");");
+  ignore (HxArray.push __arr_71 "  if (dividend == std::numeric_limits<long long>::min() && divisor == -1) return 0;");
+  ignore (HxArray.push __arr_71 "  return dividend % divisor;");
+  ignore (HxArray.push __arr_71 "}");
   __arr_71
 )
 

@@ -9477,7 +9477,7 @@ let int64StaticCallReturnCppType = fun hx_method argCount -> let tempResult = re
       tempResult := __assign_31602;
       __assign_31602
     )
-    | "add" | "addInt" | "and" | "div" | "divInt" | "intSub" | "make" | "mod" | "mul" | "mulInt" | "or" | "shl" | "shr" | "sub" | "subInt" | "ushr" | "xor" -> if argCount = 2 then let __assign_31603 = ("long long" : string) in (
+    | "add" | "addInt" | "and" | "div" | "divInt" | "intSub" | "make" | "mod" | "modInt" | "mul" | "mulInt" | "or" | "shl" | "shr" | "sub" | "subInt" | "ushr" | "xor" -> if argCount = 2 then let __assign_31603 = ("long long" : string) in (
       tempResult := __assign_31603;
       __assign_31603
     ) else let __assign_31604 = ("" : string) in (
@@ -132115,7 +132115,7 @@ and int64StaticCallExpr = fun hx_method args scope -> let tempResult = ref ("" :
       tempResult := __assign_31505;
       __assign_31505
     ) else HxType.hx_throw_typed_rtti (Obj.repr ("C++ source backend MVP unsupported Int64 static call: " ^ HxString.toStdString hx_method)) ["Dynamic"; "String"]
-    | "mod" -> if HxArray.length args = 2 then let __assign_31506 = (((("(" ^ HxString.toStdString (renderExpr (Obj.magic (HxArray.get (Obj.magic args) 0)) scope)) ^ " % ") ^ HxString.toStdString (renderExpr (Obj.magic (HxArray.get (Obj.magic args) 1)) scope)) ^ ")" : string) in (
+    | "mod" | "modInt" -> if HxArray.length args = 2 then let __assign_31506 = (((("__hxhx_int64_mod(" ^ HxString.toStdString (renderExpr (Obj.magic (HxArray.get (Obj.magic args) 0)) scope)) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic (HxArray.get (Obj.magic args) 1)) scope)) ^ ")" : string) in (
       tempResult := __assign_31506;
       __assign_31506
     ) else HxType.hx_throw_typed_rtti (Obj.repr ("C++ source backend MVP unsupported Int64 static call: " ^ HxString.toStdString hx_method)) ["Dynamic"; "String"]
@@ -132236,7 +132236,7 @@ and int64InstanceOrExtensionCallExpr = fun receiver hx_method args scope -> try 
         tempResult := __assign_31537;
         __assign_31537
       )
-      | "mod" -> if HxArray.length args = 1 then let __assign_31538 = Obj.magic (((("(" ^ HxString.toStdString self) ^ " % ") ^ HxString.toStdString (renderExpr (Obj.magic (HxArray.get (Obj.magic args) 0)) scope)) ^ ")" : string) in (
+      | "mod" -> if HxArray.length args = 1 then let __assign_31538 = Obj.magic (((("__hxhx_int64_mod(" ^ HxString.toStdString self) ^ ", ") ^ HxString.toStdString (renderExpr (Obj.magic (HxArray.get (Obj.magic args) 0)) scope)) ^ ")" : string) in (
         tempResult := __assign_31538;
         __assign_31538
       ) else let __assign_31539 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (

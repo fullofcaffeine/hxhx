@@ -21909,8 +21909,12 @@ class CppTargetCore {
 				+ ", "
 				+ renderExpr(args[1], scope)
 				+ ")";
-			case "mod" if (args.length == 2):
-				"(" + renderExpr(args[0], scope) + " % " + renderExpr(args[1], scope) + ")";
+			case "mod" | "modInt" if (args.length == 2):
+				"__hxhx_int64_mod("
+				+ renderExpr(args[0], scope)
+				+ ", "
+				+ renderExpr(args[1], scope)
+				+ ")";
 			case "divMod" if (args.length == 2):
 				int64DivModExpr(args[0], args[1], scope);
 			case "and" if (args.length == 2):
@@ -21988,7 +21992,7 @@ class CppTargetCore {
 			case "div" if (args.length == 1):
 				"__hxhx_int64_div(" + self + ", " + renderExpr(args[0], scope) + ")";
 			case "mod" if (args.length == 1):
-				"(" + self + " % " + renderExpr(args[0], scope) + ")";
+				"__hxhx_int64_mod(" + self + ", " + renderExpr(args[0], scope) + ")";
 			case "divMod" if (args.length == 1):
 				int64DivModExpr(receiver, args[0], scope);
 			case "shl" if (args.length == 1):
@@ -22075,8 +22079,8 @@ class CppTargetCore {
 		return switch (method) {
 			case "ofInt" | "parseString" | "fromFloat" | "neg" if (argCount == 1):
 				"long long";
-			case "make" | "add" | "addInt" | "sub" | "subInt" | "intSub" | "mul" | "mulInt" | "div" | "divInt" | "mod" | "and" | "or" | "xor" | "shl" |
-				"shr" | "ushr" if (argCount == 2):
+			case "make" | "add" | "addInt" | "sub" | "subInt" | "intSub" | "mul" | "mulInt" | "div" | "divInt" | "mod" | "modInt" | "and" | "or" | "xor" |
+				"shl" | "shr" | "ushr" if (argCount == 2):
 				"long long";
 			case "divMod" if (argCount == 2):
 				int64DivModStruct().name;
