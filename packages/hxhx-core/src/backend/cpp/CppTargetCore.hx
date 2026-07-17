@@ -14698,6 +14698,8 @@ class CppTargetCore {
 			return switch (method) {
 				case "raw_ptr" if (args.length == 0):
 					"std::make_shared<RawConstPointer<void>>(" + target + ".c_str())";
+				case "indexOf" if (args.length == 1 || args.length == 2):
+					indexOfExpr(receiver, args, scope);
 				case "replace" if (args.length == 2):
 					"__hxhx_replace("
 					+ target
@@ -19359,7 +19361,7 @@ class CppTargetCore {
 		return switch (method) {
 			case "split":
 				"std::vector<std::string>";
-			case "lastIndexOf":
+			case "indexOf" | "lastIndexOf":
 				"int";
 			case "charCodeAt" | "cca" | "fastCodeAt" | "unsafeCodeAt":
 				"int";

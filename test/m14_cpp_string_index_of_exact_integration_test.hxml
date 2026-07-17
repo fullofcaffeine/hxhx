@@ -1,0 +1,5 @@
+-cp packages/hxhx-core/src
+-cp test
+-main M14CppStringIndexOfExactIntegrationTest
+--interp
+-D analyzer-optimize
