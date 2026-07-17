@@ -1994,13 +1994,8 @@ class SourceTargetCommon {
 				switch (expr) {
 					case EIdent(name):
 						final targetName = valueName(target, name);
-						"("
-						+ targetName
-						+ " := ("
-						+ targetName
-						+ (delta < 0 ? " - " : " + ")
-						+ Std.string(delta < 0 ? -delta : delta)
-						+ "))";
+						final magnitude:Int = delta < 0 ? -delta : delta;
+						"(" + targetName + " := (" + targetName + (delta < 0 ? " - " : " + ") + Std.string(magnitude) + "))";
 					case EField(receiver, field):
 						"hxhx_pre_update_attr("
 						+ renderExpr(target, receiver)
@@ -7442,7 +7437,8 @@ class SourceTargetCommon {
 			case _:
 				throw targetLabel(target) + " source backend MVP unsupported postfix target: " + exprKind(expr);
 		};
-		final absDelta = Std.string(delta < 0 ? -delta : delta);
+		final magnitude:Int = delta < 0 ? -delta : delta;
+		final absDelta = Std.string(magnitude);
 		final rhs = if (target == Php && phpExprIsInt64Value(expr)) phpIncrementedValueExpr(targetExpr,
 			delta) else if (delta < 0) "(" + targetExpr + " - " + absDelta + ")" else "(" + targetExpr + " + " + absDelta + ")";
 		return exprStmt(target, targetExpr + " = " + rhs);

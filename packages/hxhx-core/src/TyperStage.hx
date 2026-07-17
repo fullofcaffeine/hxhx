@@ -484,6 +484,11 @@ class TyperStage {
 		return path == "typeError" || path == "HelperMacros.typeError" || StringTools.endsWith(path, ".HelperMacros.typeError");
 	}
 
+	/** Type a macro diagnostic probe without making its enclosing `try` value-producing. **/
+	static function typeErrorProbe(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, position:HxPos):Void {
+		inferExprType(expression, scope.copyForInference(), ctx, position);
+	}
+
 	public static inline var RAW_DIAGNOSTIC_PREFIX:String = "__HXHX_RAW_DIAGNOSTIC__:";
 
 	public static function extractRawDiagnostic(message:String):Null<String> {
@@ -939,7 +944,7 @@ class TyperStage {
 			case ECall(callee, args):
 				if (args.length == 1 && isTypeErrorProbeCallee(callee)) {
 					try {
-						inferExprType(args[0], scope.copyForInference(), ctx, pos);
+						typeErrorProbe(args[0], scope, ctx, pos);
 					} catch (_:TyperError) {}
 					return TyType.fromHintText("Bool");
 				}

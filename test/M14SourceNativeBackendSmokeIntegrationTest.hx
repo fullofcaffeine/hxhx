@@ -9296,6 +9296,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 	static function assertUnaryFixityAcrossSourceTargets():Void {
 		final prefix = HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Prefix, HxExpr.EIdent("value"));
+		final prefixDecrement = HxExpr.EUnop(HxUnaryOperator.Decrement, HxUnaryFixity.Prefix, HxExpr.EIdent("value"));
 		final postfix = HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, HxExpr.EIdent("value"));
 		final cases = [
 			{target: SourceNativeTarget.Python, prefixNeedle: "value := (value + 1)", postfixNeedle: "hxhx_post_old"},
@@ -9312,6 +9313,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertNotContains(prefixSource, "pre++", "source backend must not print an internal prefix tag");
 			assertNotContains(postfixSource, "post++", "source backend must not print an internal postfix tag");
 		}
+		final pythonPrefixDecrement = @:privateAccess backend.source.SourceTargetCommon.renderExpr(SourceNativeTarget.Python, prefixDecrement);
+		assertContains(pythonPrefixDecrement, "value := (value - 1)", "Python prefix decrement should use the positive magnitude with subtraction");
 
 		final pythonPrefixMacro = @:privateAccess backend.source.SourceTargetCommon.renderExpr(SourceNativeTarget.Python, EMacroExpr(prefix, []));
 		final phpPostfixMacro = @:privateAccess backend.source.SourceTargetCommon.renderExpr(SourceNativeTarget.Php, EMacroExpr(postfix, []));
