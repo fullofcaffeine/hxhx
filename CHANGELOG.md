@@ -1,3 +1,11 @@
+## [0.18.5](https://github.com/fullofcaffeine/hxhx/compare/v0.18.4...v0.18.5) (2026-07-17)
+
+
+### Bug Fixes
+
+* **bootstrap:** make no-prepass values explicit ([3ea7211](https://github.com/fullofcaffeine/hxhx/commit/3ea7211a0af07b6bf0dc7b3ef945660236f57b05))
+* **typing:** stabilize nullable typed-body projection ([24641f9](https://github.com/fullofcaffeine/hxhx/commit/24641f911eecbbb6f2daf378d3da33b98d0d8f43))
+
 ## [0.18.4](https://github.com/fullofcaffeine/hxhx/compare/v0.18.3...v0.18.4) (2026-07-17)
 
 
