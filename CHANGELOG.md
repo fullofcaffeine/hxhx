@@ -1,3 +1,10 @@
+## [0.18.11](https://github.com/fullofcaffeine/hxhx/compare/v0.18.10...v0.18.11) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** preserve Int64 complement ([6206f51](https://github.com/fullofcaffeine/hxhx/commit/6206f516d4409bacc22051eb066aa9c2810c41e0))
+
 ## [0.18.10](https://github.com/fullofcaffeine/hxhx/compare/v0.18.9...v0.18.10) (2026-07-17)
 
 
