@@ -1,0 +1,12 @@
+zero:-1
+one:-2
+negative-one:0
+positive:-43
+negative:41
+computed:-43
+maximum:-9223372036854775808
+minimum:9223372036854775807
+lower-word-boundary:-2147483649
+involution-positive:42
+involution-minimum:-9223372036854775808
+involution-maximum:9223372036854775807

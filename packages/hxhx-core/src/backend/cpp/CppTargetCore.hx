@@ -21933,6 +21933,8 @@ class CppTargetCore {
 				+ ") >> "
 				+ renderExpr(args[1], scope)
 				+ ")";
+			case "complement" if (args.length == 1):
+				"__hxhx_int64_complement(" + renderExpr(args[0], scope) + ")";
 			case "neg" if (args.length == 1):
 				"(-" + renderExpr(args[0], scope) + ")";
 			case "isNeg" if (args.length == 1):
@@ -22077,7 +22079,7 @@ class CppTargetCore {
 
 	static function int64StaticCallReturnCppType(method:String, argCount:Int):String {
 		return switch (method) {
-			case "ofInt" | "parseString" | "fromFloat" | "neg" if (argCount == 1):
+			case "ofInt" | "parseString" | "fromFloat" | "complement" | "neg" if (argCount == 1):
 				"long long";
 			case "make" | "add" | "addInt" | "sub" | "subInt" | "intSub" | "mul" | "mulInt" | "div" | "divInt" | "intDiv" | "mod" | "modInt" | "intMod" |
 				"and" | "or" | "xor" | "shl" | "shr" | "ushr" if (argCount == 2):

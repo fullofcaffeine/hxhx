@@ -1288,11 +1288,13 @@ class CppRuntimeSupport {
 	}
 
 	/**
-		Add, subtract, multiply, and divide signed 64-bit carriers with Haxe semantics.
+		Perform signed 64-bit carrier arithmetic and complement with Haxe semantics.
 
 		C++17 signed overflow is undefined, so wrapping arithmetic happens in the
 		matching unsigned range. Division and remainder check zero and the one
 		overflowing `minimum / -1` pair before using compatible C++ operations.
+		Complement uses the equivalent `-1 - value` identity, whose result is
+		representable for every signed 64-bit input.
 	**/
 	public static function int64ArithmeticLines():Array<String> {
 		return [
@@ -1332,6 +1334,11 @@ class CppRuntimeSupport {
 			"  if (divisor == 0) throw std::runtime_error(\"divide by zero\");",
 			"  if (dividend == std::numeric_limits<long long>::min() && divisor == -1) return 0;",
 			"  return dividend % divisor;",
+			"}",
+			"",
+			"static long long __hxhx_int64_complement(long long value) {",
+			"  static_assert(std::numeric_limits<unsigned long long>::digits == 64, \"hxhx Int64 requires a 64-bit carrier\");",
+			"  return -1 - value;",
 			"}"
 		];
 	}
