@@ -1,3 +1,10 @@
+## [0.18.12](https://github.com/fullofcaffeine/hxhx/compare/v0.18.11...v0.18.12) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** erase metadata carrier parameters ([8f49897](https://github.com/fullofcaffeine/hxhx/commit/8f49897d880829daded5b020ba99e322ca615e6a))
+
 ## [0.18.11](https://github.com/fullofcaffeine/hxhx/compare/v0.18.10...v0.18.11) (2026-07-17)
 
 
