@@ -1,3 +1,10 @@
+## [0.18.9](https://github.com/fullofcaffeine/hxhx/compare/v0.18.8...v0.18.9) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** preserve Int divided by Int64 ([ca0375a](https://github.com/fullofcaffeine/hxhx/commit/ca0375abdadcdeaf0d014f577c9f75189a9efbd0))
+
 ## [0.18.8](https://github.com/fullofcaffeine/hxhx/compare/v0.18.7...v0.18.8) (2026-07-17)
 
 
