@@ -1,3 +1,10 @@
+## [0.18.1](https://github.com/fullofcaffeine/hxhx/compare/v0.18.0...v0.18.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** emit Int64 equality as native comparisons ([43f74b3](https://github.com/fullofcaffeine/hxhx/commit/43f74b37dc93f9a6a3c1e44b25d3a4aa08be4f8f))
+
 # [0.18.0](https://github.com/fullofcaffeine/hxhx/compare/v0.17.0...v0.18.0) (2026-07-16)
 
 
