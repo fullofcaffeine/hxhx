@@ -326,6 +326,11 @@ class CppTypeModel {
 		final open = hint.indexOf("<");
 		final path = open < 0 ? hint : hint.substr(0, open);
 		final name = sanitizeTypePath(typeBaseName(path));
+		switch (name) {
+			case "Function" | "FunctionData" | "Callable" | "CallableData" | "AutoCast" | "Abi":
+			case _:
+				return null;
+		}
 		final explicitlyCpp = path == "cpp." + name || (name == "Abi" && path == "cpp.abi.Abi");
 		final cls = lookupClassForTypeHint(hint, scope, classLookup);
 		if (!explicitlyCpp && !isCppCallableExternClass(cls, classLookup))
