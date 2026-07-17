@@ -1347,6 +1347,14 @@ let int64ArithmeticLines = fun () -> let __arr_71 = HxArray.create () in (
   ignore (HxArray.push __arr_71 "  if (bits <= signedMax) return static_cast<long long>(bits);");
   ignore (HxArray.push __arr_71 "  return -1 - static_cast<long long>(std::numeric_limits<unsigned long long>::max() - bits);");
   ignore (HxArray.push __arr_71 "}");
+  ignore (HxArray.push __arr_71 "");
+  ignore (HxArray.push __arr_71 "static long long __hxhx_int64_sub(long long left, long long right) {");
+  ignore (HxArray.push __arr_71 "  static_assert(std::numeric_limits<unsigned long long>::digits == 64, \"hxhx Int64 requires a 64-bit carrier\");");
+  ignore (HxArray.push __arr_71 "  const auto bits = static_cast<unsigned long long>(left) - static_cast<unsigned long long>(right);");
+  ignore (HxArray.push __arr_71 "  const auto signedMax = static_cast<unsigned long long>(std::numeric_limits<long long>::max());");
+  ignore (HxArray.push __arr_71 "  if (bits <= signedMax) return static_cast<long long>(bits);");
+  ignore (HxArray.push __arr_71 "  return -1 - static_cast<long long>(std::numeric_limits<unsigned long long>::max() - bits);");
+  ignore (HxArray.push __arr_71 "}");
   __arr_71
 )
 
