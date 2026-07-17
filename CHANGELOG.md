@@ -1,3 +1,10 @@
+## [0.18.4](https://github.com/fullofcaffeine/hxhx/compare/v0.18.3...v0.18.4) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** preserve Int64 intSub operand order ([a1fd552](https://github.com/fullofcaffeine/hxhx/commit/a1fd5523f1d9f3eb226b830e71e883e0c600a69c))
+
 ## [0.18.3](https://github.com/fullofcaffeine/hxhx/compare/v0.18.2...v0.18.3) (2026-07-17)
 
 
