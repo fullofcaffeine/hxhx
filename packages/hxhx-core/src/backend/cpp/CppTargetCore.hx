@@ -2562,7 +2562,8 @@ class CppTargetCore {
 
 	static function shouldEmitGenericClassFactory(cls:HxClassDecl, mainName:String):Bool {
 		final rawName = HxClassDecl.getName(cls);
-		if (rawName == mainName || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName) || isBytesDataTypeName(rawName))
+		if (rawName == mainName || HxClassDecl.getIsInterface(cls) || isCppCoreExternClass(rawName) || isBytesDataTypeName(rawName)
+			|| isClassMetaSupportClass(cls) || isEnumMetaSupportClass(cls))
 			return false;
 		if (isPosInfosSupportClass(cls)
 			|| isStdVectorHelperClass(cls)
@@ -2575,7 +2576,8 @@ class CppTargetCore {
 	}
 
 	static function forwardDeclarationTypeParams(cls:HxClassDecl):Array<String> {
-		if (isStdArrayHelperClass(cls) || isStdVectorHelperClass(cls) || isArrayBackedAbstractClass(cls) || isPrimitiveBackedAbstractClass(cls))
+		if (isStdArrayHelperClass(cls) || isStdVectorHelperClass(cls) || isArrayBackedAbstractClass(cls) || isPrimitiveBackedAbstractClass(cls)
+			|| isClassMetaSupportClass(cls) || isEnumMetaSupportClass(cls))
 			return [];
 		return genericClassTemplateParams(cls);
 	}
@@ -6810,6 +6812,9 @@ class CppTargetCore {
 
 	static function cppClassTemplateTypeName(typeHint:String, scope:CppRenderScope, classLookup:CppClassLookup):String {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final erased = CppTypeModel.erasedMetaTypeName(hint);
+		if (erased != null)
+			return erased;
 		final lookup = lookupForScope(scope, classLookup);
 		final cls = lookupClassForTypeHint(hint, scope, lookup);
 		final base = cls == null ? sanitizeTypePath(typeBaseName(hint)) : renderedClassName(cls, lookup);
@@ -6823,6 +6828,9 @@ class CppTargetCore {
 
 	static function genericClassLikeTypeName(typeHint:String, scope:CppRenderScope, classLookup:CppClassLookup):String {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
+		final erased = CppTypeModel.erasedMetaTypeName(hint);
+		if (erased != null)
+			return erased;
 		final base = sanitizeTypePath(typeBaseName(hint));
 		final args = genericTypeHintArgs(hint);
 		return args.length == 0 ? base : base + "<" + [for (arg in args) cppTypeHint(arg, scope, classLookup)].join(", ") + ">";
@@ -8613,6 +8621,8 @@ class CppTargetCore {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		final args = genericTypeHintArgs(hint);
 		if (args.length == 0)
+			return;
+		if (CppTypeModel.erasedMetaTypeName(hint) != null)
 			return;
 		for (arg in args) {
 			if (isDynamicLikeTypeHint(arg))
@@ -24484,6 +24494,9 @@ class CppTargetCore {
 			return cppFunctionTypeHint(hint, scope, classLookup);
 		if (isCppPointerTypeHint(hint))
 			return CppTypeModel.cppTypeHint(hint, scope, classLookup);
+		final erased = CppTypeModel.erasedMetaTypeName(hint);
+		if (erased != null)
+			return "std::shared_ptr<" + erased + ">";
 		final args = genericTypeHintArgs(hint);
 		if (args.length > 0) {
 			final cls = lookupClassForTypeHint(hint, scope, classLookup);
@@ -24573,6 +24586,8 @@ class CppTargetCore {
 		final args = genericTypeHintArgs(hint);
 		if (args.length == 0)
 			return "";
+		if (CppTypeModel.erasedMetaTypeName(hint) != null)
+			return "";
 		if (isArrayLikeTypeHint(hint) || isIterableTypeHint(hint) || CppTypeModel.isIteratorTypeHint(hint))
 			return "";
 		final base = sanitizeTypePath(typeBaseName(hint));
@@ -24624,6 +24639,8 @@ class CppTargetCore {
 	static function scopedRawGenericClassTypeName(typeHint:String, ?scope:CppRenderScope):Null<String> {
 		final hint = removeTypeHintWhitespace(StringTools.trim(typeHint == null ? "" : typeHint));
 		if (hint.length == 0 || hint.indexOf("<") >= 0 || scope == null)
+			return null;
+		if (CppTypeModel.erasedMetaTypeName(hint) != null)
 			return null;
 		final className = sanitizeTypePath(typeBaseName(hint));
 		final templateArgs = scopedTemplateArgsForClass(className, scope);

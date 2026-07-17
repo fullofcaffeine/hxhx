@@ -607,12 +607,28 @@ class CppTypeModel {
 		return hint == "Dynamic" || hint == "Any" || isGenericDynamicLikeTypeHint(hint);
 	}
 
-	static function erasedClassLikeTypeName(typeHint:String):Null<String> {
+	/**
+		Return the non-template C++ runtime carrier for Haxe reflection metadata.
+
+		Callers must keep the original Haxe type for semantic decisions. This name
+		is only the downstream storage and calling representation.
+	**/
+	public static function erasedMetaTypeName(typeHint:String):Null<String> {
 		return switch (sanitizeTypePath(typeBaseName(typeHint))) {
 			case "Class":
 				"Class";
 			case "Enum":
 				"Enum";
+			case _:
+				null;
+		};
+	}
+
+	static function erasedClassLikeTypeName(typeHint:String):Null<String> {
+		final meta = erasedMetaTypeName(typeHint);
+		if (meta != null)
+			return meta;
+		return switch (sanitizeTypePath(typeBaseName(typeHint))) {
 			case "KeyValueIterator":
 				"KeyValueIterator";
 			case _:
