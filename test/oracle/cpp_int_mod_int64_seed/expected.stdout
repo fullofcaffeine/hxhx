@@ -1,0 +1,13 @@
+positive-remainder:3
+negative-dividend:-3
+negative-divisor:3
+both-negative:-3
+zero-numerator:0
+computed-remainder:5
+modulo-by-zero:divide by zero
+int-min-mod-negative-one:0
+int-max-mod-one:0
+int-min-mod-one:0
+int-max-mod-int64-max:2147483647
+int-min-mod-int64-min:-2147483648
+int-min-mod-int-min:0
