@@ -1,3 +1,10 @@
+## [0.18.14](https://github.com/fullofcaffeine/hxhx/compare/v0.18.13...v0.18.14) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** preserve generic Array local carriers ([4a8e820](https://github.com/fullofcaffeine/hxhx/commit/4a8e82092bf8c6ca6d19d0913a58ca7995a46a62))
+
 ## [0.18.13](https://github.com/fullofcaffeine/hxhx/compare/v0.18.12...v0.18.13) (2026-07-17)
 
 
