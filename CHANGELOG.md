@@ -1,3 +1,10 @@
+## [0.18.6](https://github.com/fullofcaffeine/hxhx/compare/v0.18.5...v0.18.6) (2026-07-17)
+
+
+### Bug Fixes
+
+* **cpp:** preserve Int64 multiplication wraparound ([638271e](https://github.com/fullofcaffeine/hxhx/commit/638271ea0f805166267218353e0c474af22fa04a))
+
 ## [0.18.5](https://github.com/fullofcaffeine/hxhx/compare/v0.18.4...v0.18.5) (2026-07-17)
 
 

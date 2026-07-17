@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.18.5-blue)](https://github.com/fullofcaffeine/hxhx/releases)
+[![Version](https://img.shields.io/badge/version-0.18.6-blue)](https://github.com/fullofcaffeine/hxhx/releases)
 
 `hxhx` is a Haxe-in-Haxe compiler stack that is working toward Haxe `4.3.7`
 compatibility. This repo also contains `reflaxe.ocaml`, a Reflaxe target for
