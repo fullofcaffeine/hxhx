@@ -38,6 +38,14 @@ Current planning owners:
   `hxhx` remains a pinned downstream QA/E2E consumer rather than the target's
   sole release gate. See
   `docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md`.
+- native OCaml capability and target-lowering architecture:
+  `haxe_ocaml-1cixm`; decide the typed `ocaml.*`/binding/adapter/raw escape-hatch
+  ladder and whether the current target syntax AST needs narrow validated
+  semantic plans or a broader typed OCaml lowering layer. The local inventory
+  and independent-review request live in
+  `docs/00-project/REFLAXE_OCAML_NATIVE_POWER_IR_LOCAL_AUDIT.md` and
+  `docs/00-project/GPT_5_6_PRO_REFLAXE_OCAML_NATIVE_POWER_IR_REVIEW_PROMPT.md`.
+  This planning work adds no current capability or readiness.
 - public status board: README `Goals status` table
 
 ## Public Progress Tracking

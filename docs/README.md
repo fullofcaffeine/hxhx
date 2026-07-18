@@ -29,6 +29,10 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - `reflaxe.ocaml` performance credibility baseline: `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`
 - `reflaxe.ocaml` repository extraction decision and post-split `hxhx` QA
   contract: `docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md`
+- `reflaxe.ocaml` native-capability and target-lowering inventory:
+  `docs/00-project/REFLAXE_OCAML_NATIVE_POWER_IR_LOCAL_AUDIT.md`
+- GPT-5.6 Pro review request for the OCaml semantic-plan/IR and interop boundary:
+  `docs/00-project/GPT_5_6_PRO_REFLAXE_OCAML_NATIVE_POWER_IR_REVIEW_PROMPT.md`
 - Reflaxe promotion matrix contract: `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
 - Reflaxe promotion matrix tradeoffs: `docs/00-project/REFLAXE_PROMOTION_MATRIX_TRADEOFFS.md`
 - Planned M22 Native Reflaxe Compiler SDK contract: `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`
