@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Guards the one-package-builder, many-platform-consumers workflow boundary. */
+/** Guards the one-package-builder, many-platform-consumers and benchmarks boundary. */
 const fs = require('fs')
 const path = require('path')
 
@@ -33,6 +33,7 @@ function requireIncludes(label, text, needle) {
 const builder = jobSection('package_artifact')
 const consumers = jobSection('package_install')
 const summary = jobSection('package_matrix_summary')
+const performanceSummary = jobSection('package_performance_summary')
 
 for (const needle of [
 	'name: Reflaxe OCaml / Package Artifact Matrix',
@@ -61,9 +62,17 @@ for (const needle of [
 	'name: reflaxe-ocaml-source-package-${{ github.sha }}',
 	'RO_PACKAGE_INSTALL_MANIFEST=',
 	'RO_PACKAGE_INSTALL_ZIP=',
+	'RO_PACKAGE_INSTALL_RETAIN_ROOT=',
+	'RO_PACKAGE_INSTALL_ENV_FILE=',
 	'npm run test:reflaxe-ocaml:package-install',
 	's.package.buildMode !== "supplied"',
-	'RO_PACKAGE_ARTIFACT_CONSUMER:PASS'
+	'RO_PACKAGE_ARTIFACT_CONSUMER:PASS',
+	'RO_PERF_MODE=platform-report',
+	'RO_PERF_ENV_FILE=',
+	'RO_PERF_WORK_ROOT=',
+	'npm run test:reflaxe-ocaml:perf-platform',
+	'RO_TARGET_PERF_PLATFORM:PASS',
+	'name: reflaxe-ocaml-perf-${{ runner.os }}-${{ github.sha }}'
 ]) {
 	requireIncludes('package_install', consumers, needle)
 }
@@ -78,6 +87,15 @@ for (const needle of [
 ]) {
 	requireIncludes('package_matrix_summary', summary, needle)
 }
+for (const needle of [
+	'needs: [package_artifact, package_install]',
+	'pattern: reflaxe-ocaml-perf-*-${{ github.sha }}',
+	'reflaxe-ocaml-perf-matrix-summary.js',
+	'name: reflaxe-ocaml-perf-matrix-${{ github.sha }}'
+]) {
+	requireIncludes('package_performance_summary', performanceSummary, needle)
+}
 
 console.log('[ci:guards] OK: one reflaxe.ocaml package artifact feeds Linux and macOS consumers')
 console.log('RO_PACKAGE_ARTIFACT_MATRIX_CONTRACT:PASS')
+console.log('RO_TARGET_PERF_PLATFORM_MATRIX_CONTRACT:PASS')

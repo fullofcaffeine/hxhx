@@ -10,8 +10,10 @@ on:
       - 'package-lock.json'
       - 'packages/reflaxe.ocaml/**'
       - 'scripts/ci/*reflaxe-ocaml-package*.js'
+      - 'scripts/ci/*reflaxe-ocaml-perf*.js'
       - 'scripts/release/**'
       - 'test/packaging/reflaxe_ocaml_external_app/**'
+      - 'docs/00-project/REFLAXE_OCAML_PERF_BASELINE.json'
   pull_request:
     branches: [main]
     paths:
@@ -21,8 +23,10 @@ on:
       - 'package-lock.json'
       - 'packages/reflaxe.ocaml/**'
       - 'scripts/ci/*reflaxe-ocaml-package*.js'
+      - 'scripts/ci/*reflaxe-ocaml-perf*.js'
       - 'scripts/release/**'
       - 'test/packaging/reflaxe_ocaml_external_app/**'
+      - 'docs/00-project/REFLAXE_OCAML_PERF_BASELINE.json'
   schedule:
     - cron: '41 6 * * 6'
   workflow_dispatch:
@@ -147,18 +151,41 @@ jobs:
           echo "RO_PACKAGE_INSTALL_MANIFEST=${manifest}" >> "$GITHUB_ENV"
           echo "RO_PACKAGE_INSTALL_ZIP=${PWD}/.artifacts/reflaxe-ocaml/package-input/${archive_file}" >> "$GITHUB_ENV"
           echo "RO_PACKAGE_INSTALL_ARTIFACTS=${PWD}/.artifacts/reflaxe-ocaml/package-install" >> "$GITHUB_ENV"
+          echo "RO_PACKAGE_INSTALL_RETAIN_ROOT=${RUNNER_TEMP}/reflaxe-ocaml-package-install" >> "$GITHUB_ENV"
+          echo "RO_PACKAGE_INSTALL_ENV_FILE=${RUNNER_TEMP}/reflaxe-ocaml-package-install/perf-env.json" >> "$GITHUB_ENV"
+          echo "RO_PERF_MODE=platform-report" >> "$GITHUB_ENV"
+          echo "RO_PERF_ENV_FILE=${RUNNER_TEMP}/reflaxe-ocaml-package-install/perf-env.json" >> "$GITHUB_ENV"
+          echo "RO_PERF_ARTIFACT_MANIFEST=${manifest}" >> "$GITHUB_ENV"
+          echo "RO_PERF_PACKAGE_INSTALL_SUMMARY=${PWD}/.artifacts/reflaxe-ocaml/package-install/summary.json" >> "$GITHUB_ENV"
+          echo "RO_PERF_WORK_ROOT=${RUNNER_TEMP}/reflaxe-ocaml-perf-work" >> "$GITHUB_ENV"
+          echo "RO_PERF_ARTIFACTS=${PWD}/.artifacts/reflaxe-ocaml/perf-platform" >> "$GITHUB_ENV"
       - name: Install and run the exact downloaded package
         run: npm run test:reflaxe-ocaml:package-install
       - name: Verify shared-artifact consumer result
         run: |
           set -euo pipefail
           node -e 'const s=require("./.artifacts/reflaxe-ocaml/package-install/summary.json"); if(s.marker !== "RO_PACKAGE_INSTALL_SMOKE:PASS" || s.package.buildMode !== "supplied" || s.package.producerCommit !== process.env.GITHUB_SHA) throw new Error("platform job did not validate the shared package artifact"); console.log(`RO_PACKAGE_ARTIFACT_CONSUMER:PASS os=${process.platform} sha256=${s.package.sha256}`)'
+      - name: Measure the installed package on this host
+        run: npm run test:reflaxe-ocaml:perf-platform
+      - name: Verify host performance receipt
+        run: |
+          set -euo pipefail
+          node -e 'const s=require("./.artifacts/reflaxe-ocaml/perf-platform/summary.json"); if(s.marker !== "RO_TARGET_PERF_PLATFORM:PASS" || !s.provenance.installedPackageProof || s.provenance.implementationCommit !== process.env.GITHUB_SHA) throw new Error("host performance did not measure the shared installed package"); console.log(`${s.marker} os=${s.environment.platform} package=${s.provenance.package.sha256}`)'
       - name: Upload platform package evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: reflaxe-ocaml-package-install-${{ runner.os }}-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/package-install
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Upload host performance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflaxe-ocaml-perf-${{ runner.os }}-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/perf-platform
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30
@@ -198,6 +225,45 @@ jobs:
         with:
           name: reflaxe-ocaml-package-matrix-${{ github.sha }}
           path: .artifacts/reflaxe-ocaml/package-matrix
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+  package_performance_summary:
+    name: Verify Linux and macOS package performance evidence
+    needs: [package_artifact, package_install]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Download canonical package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: reflaxe-ocaml-source-package-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/package-input
+      - name: Download host performance evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: reflaxe-ocaml-perf-*-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/perf-consumers
+          merge-multiple: false
+      - name: Verify shared package identity, method, output, and raw samples
+        run: |
+          set -euo pipefail
+          node scripts/ci/reflaxe-ocaml-perf-matrix-summary.js \
+            --artifact-manifest .artifacts/reflaxe-ocaml/package-input/artifact-manifest.json \
+            --evidence-root .artifacts/reflaxe-ocaml/perf-consumers \
+            --out .artifacts/reflaxe-ocaml/perf-matrix/summary.json
+      - name: Upload verified package performance matrix
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflaxe-ocaml-perf-matrix-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/perf-matrix
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30

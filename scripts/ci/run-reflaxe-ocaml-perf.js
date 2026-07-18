@@ -2,15 +2,25 @@
 const fs = require('fs')
 const path = require('path')
 const cp = require('child_process')
-const os = require('os')
+const crypto = require('crypto')
+
+const {
+  cleanupPerformanceContext,
+  createPerformanceContext,
+  environmentSummary,
+  provenanceSummary,
+  sanitizeText,
+  scenarioDirectory,
+  verifyEvidenceSanitized
+} = require('./reflaxe-ocaml-perf-platform')
 
 const repoRoot = process.cwd()
 const baselinePath = path.join(repoRoot, 'docs/00-project/REFLAXE_OCAML_PERF_BASELINE.json')
-const artifactsDir = path.join(repoRoot, '.artifacts/reflaxe-ocaml/perf')
+const artifactsDir = path.resolve(process.env.RO_PERF_ARTIFACTS || path.join(repoRoot, '.artifacts/reflaxe-ocaml/perf'))
+const mode = process.env.RO_PERF_MODE || 'reference-gate'
 
 function fail(message) {
-  console.error(`[reflaxe-ocaml-perf] ERROR: ${message}`)
-  process.exit(1)
+  throw new Error(message)
 }
 
 function ensureDir(dir) {
@@ -29,10 +39,11 @@ function median(values) {
 
 function stats(values) {
   if (!values.length) {
-    return { reps: 0, avgMs: 0, bestMs: 0, medianMs: 0, worstMs: 0 }
+    return { samplesMs: [], reps: 0, avgMs: 0, bestMs: 0, medianMs: 0, worstMs: 0 }
   }
   const total = values.reduce((sum, value) => sum + value, 0)
   return {
+    samplesMs: [...values],
     reps: values.length,
     avgMs: Math.round(total / values.length),
     bestMs: Math.min(...values),
@@ -47,6 +58,7 @@ function run(command, args, options) {
     cwd: options.cwd,
     env: options.env,
     encoding: 'utf8',
+    maxBuffer: 50 * 1024 * 1024,
     shell: false
   })
   const ended = process.hrtime.bigint()
@@ -63,25 +75,47 @@ function normalized(text) {
   return String(text).replace(/\r\n/g, '\n').trim()
 }
 
-function haxeVersion() {
-  for (const args of [['--version'], ['-version']]) {
-    const result = cp.spawnSync('haxe', args, { encoding: 'utf8' })
-    if (result.status === 0) {
-      const value = normalized(result.stdout || result.stderr)
-      if (value) {
-        return value
-      }
-    }
-  }
-  return 'unknown'
+function sha256Text(value) {
+  return crypto.createHash('sha256').update(value).digest('hex')
 }
 
-function simpleVersion(command, args) {
-  const result = cp.spawnSync(command, args, { encoding: 'utf8' })
-  if (result.status !== 0) {
-    return 'unknown'
+function expectedExampleStdout(exampleDir) {
+  const expectedPath = path.join(exampleDir, 'expected.stdout')
+  if (!fs.existsSync(expectedPath)) {
+    fail(`performance example is missing expected.stdout: ${expectedPath}`)
   }
-  return normalized(result.stdout || result.stderr) || 'unknown'
+  return normalized(fs.readFileSync(expectedPath, 'utf8'))
+}
+
+function verifyBuiltExample(scenario, exampleDir, logDir, context) {
+  const expectedStdout = expectedExampleStdout(exampleDir)
+  const executable = path.resolve(exampleDir, scenario.executableRelativePath)
+  if (!fs.existsSync(executable)) {
+    return {
+      passed: false,
+      runStatus: 1,
+      stdoutMatches: false,
+      expectedStdoutSha256: sha256Text(expectedStdout),
+      actualStdoutSha256: null,
+      failure: 'native executable was not produced'
+    }
+  }
+  const result = run(executable, [], {
+    cwd: exampleDir,
+    env: { ...context.env, HX_TEST_ENV: 'ok' }
+  })
+  writeLogs(logDir, 'verification-run', result, context)
+  fs.writeFileSync(path.join(logDir, 'expected.stdout.log'), expectedStdout + '\n')
+  const actualStdout = normalized(result.stdout)
+  const stdoutMatches = actualStdout === expectedStdout
+  return {
+    passed: result.status === 0 && stdoutMatches,
+    runStatus: result.status,
+    stdoutMatches,
+    expectedStdoutSha256: sha256Text(expectedStdout),
+    actualStdoutSha256: sha256Text(actualStdout),
+    failure: result.status === 0 && stdoutMatches ? null : 'native executable failed or stdout did not match expected.stdout'
+  }
 }
 
 function rmOutputDir(exampleDir, outDirName) {
@@ -187,13 +221,13 @@ function compareMinimum(metricName, measuredValue, baselineMetric) {
   }
 }
 
-function writeLogs(logDir, prefix, result) {
-  fs.writeFileSync(path.join(logDir, `${prefix}.stdout.log`), result.stdout)
-  fs.writeFileSync(path.join(logDir, `${prefix}.stderr.log`), result.stderr)
+function writeLogs(logDir, prefix, result, context) {
+  fs.writeFileSync(path.join(logDir, `${prefix}.stdout.log`), sanitizeText(result.stdout, context))
+  fs.writeFileSync(path.join(logDir, `${prefix}.stderr.log`), sanitizeText(result.stderr, context))
 }
 
-function measureBuildScenario(scenario, baseline, summary) {
-  const exampleDir = path.join(repoRoot, scenario.exampleDir)
+function measureBuildScenario(scenario, baseline, summary, context) {
+  const exampleDir = scenarioDirectory(scenario, context)
   const logDir = path.join(artifactsDir, scenario.id)
   ensureDir(logDir)
 
@@ -203,10 +237,10 @@ function measureBuildScenario(scenario, baseline, summary) {
     rmOutputDir(exampleDir, scenario.outDir)
     lastResult = run('haxe', scenario.compileArgs, {
       cwd: exampleDir,
-      env: { ...process.env }
+      env: context.env
     })
     durations.push(lastResult.durationMs)
-    writeLogs(logDir, `build-rep-${rep + 1}`, lastResult)
+    writeLogs(logDir, `build-rep-${rep + 1}`, lastResult, context)
     if (lastResult.status !== 0) {
       break
     }
@@ -224,6 +258,7 @@ function measureBuildScenario(scenario, baseline, summary) {
   }
 
   const artifactStats = collectBuildArtifacts(exampleDir, scenario.outDir, scenario.executableRelativePath)
+  const verification = verifyBuiltExample(scenario, exampleDir, logDir, context)
   const measured = {
     build: stats(durations),
     generatedMlFileCount: artifactStats.generatedMlFileCount,
@@ -237,22 +272,25 @@ function measureBuildScenario(scenario, baseline, summary) {
     generatedMlBytes: compareMeasured('generatedMlBytes', measured.generatedMlBytes, baseline.thresholds && baseline.thresholds.generatedMlBytes)
   }
 
-  const passed = Object.values(comparisons).every(entry => entry.ok)
+  const referenceComparisonsPassed = Object.values(comparisons).every(entry => entry.ok)
+  const passed = verification.passed && (!context.enforceReferenceThresholds || referenceComparisonsPassed)
   summary.scenarios.push({
     id: scenario.id,
     kind: scenario.kind,
     title: scenario.title,
     exampleDir: scenario.exampleDir,
     compileStatus: lastResult.status,
+    verification,
     measured,
     comparisons,
+    referenceComparisonsEnforced: context.enforceReferenceThresholds,
     passed
   })
   return passed
 }
 
-function measureBenchScenario(scenario, baseline, summary) {
-  const exampleDir = path.join(repoRoot, scenario.exampleDir)
+function measureBenchScenario(scenario, baseline, summary, context) {
+  const exampleDir = scenarioDirectory(scenario, context)
   const logDir = path.join(artifactsDir, scenario.id)
   ensureDir(logDir)
   const expectedStdout = expectedBenchStdout(scenario.iterations)
@@ -263,10 +301,10 @@ function measureBenchScenario(scenario, baseline, summary) {
     rmOutputDir(exampleDir, scenario.outDir)
     lastBuild = run('haxe', scenario.compileArgs, {
       cwd: exampleDir,
-      env: { ...process.env }
+      env: context.env
     })
     buildDurations.push(lastBuild.durationMs)
-    writeLogs(logDir, `build-rep-${rep + 1}`, lastBuild)
+    writeLogs(logDir, `build-rep-${rep + 1}`, lastBuild, context)
     if (lastBuild.status !== 0) {
       break
     }
@@ -288,10 +326,10 @@ function measureBenchScenario(scenario, baseline, summary) {
   for (let rep = 0; rep < scenario.runReps; rep += 1) {
     lastRun = run(scenario.runArgv[0], scenario.runArgv.slice(1), {
       cwd: exampleDir,
-      env: { ...process.env, HXHX_BENCH_ITERS: String(scenario.iterations) }
+      env: { ...context.env, HXHX_BENCH_ITERS: String(scenario.iterations) }
     })
     runDurations.push(lastRun.durationMs)
-    writeLogs(logDir, `run-rep-${rep + 1}`, lastRun)
+    writeLogs(logDir, `run-rep-${rep + 1}`, lastRun, context)
     if (lastRun.status !== 0 || normalized(lastRun.stdout) !== normalized(expectedStdout)) {
       break
     }
@@ -327,7 +365,8 @@ function measureBenchScenario(scenario, baseline, summary) {
     generatedMlBytes: compareMeasured('generatedMlBytes', measured.generatedMlBytes, baseline.thresholds && baseline.thresholds.generatedMlBytes)
   }
 
-  const passed = Object.values(comparisons).every(entry => entry.ok)
+  const referenceComparisonsPassed = Object.values(comparisons).every(entry => entry.ok)
+  const passed = !context.enforceReferenceThresholds || referenceComparisonsPassed
   summary.scenarios.push({
     id: scenario.id,
     kind: scenario.kind,
@@ -335,8 +374,15 @@ function measureBenchScenario(scenario, baseline, summary) {
     exampleDir: scenario.exampleDir,
     compileStatus: lastBuild.status,
     runStatus: lastRun.status,
+    verification: {
+      passed: true,
+      stdoutMatches: true,
+      expectedStdoutSha256: sha256Text(normalized(expectedStdout)),
+      actualStdoutSha256: sha256Text(normalized(lastRun.stdout))
+    },
     measured,
     comparisons,
+    referenceComparisonsEnforced: context.enforceReferenceThresholds,
     passed
   })
   return passed
@@ -347,68 +393,115 @@ function main() {
   if (baseline.marker !== 'RO_TARGET_PERF_CREDIBLE:PASS') {
     fail(`unexpected baseline marker ${baseline.marker}`)
   }
-  ensureDir(artifactsDir)
+  const context = createPerformanceContext({
+    repoRoot,
+    artifactsDir,
+    mode,
+    environmentFile: process.env.RO_PERF_ENV_FILE,
+    artifactManifest: process.env.RO_PERF_ARTIFACT_MANIFEST,
+    packageInstallSummary: process.env.RO_PERF_PACKAGE_INSTALL_SUMMARY,
+    workRoot: process.env.RO_PERF_WORK_ROOT
+  })
+  fs.rmSync(context.artifactsDir, { recursive: true, force: true })
+  ensureDir(context.artifactsDir)
 
-  const summary = {
-    marker: 'RO_TARGET_PERF_CREDIBLE:FAIL',
-    generatedAt: new Date().toISOString(),
-    baselineRef: path.relative(repoRoot, baselinePath),
-    environment: {
-      platform: `${process.platform}-${process.arch}`,
-      cpus: os.cpus().length,
-      haxe: haxeVersion(),
-      dune: simpleVersion('dune', ['--version']),
-      ocamlc: simpleVersion('ocamlc', ['-version'])
-    },
-    scenarios: []
-  }
+  try {
+    const passMarker = mode === 'platform-report'
+      ? 'RO_TARGET_PERF_PLATFORM:PASS'
+      : baseline.marker
+    const failMarker = mode === 'platform-report'
+      ? 'RO_TARGET_PERF_PLATFORM:FAIL'
+      : 'RO_TARGET_PERF_CREDIBLE:FAIL'
+    const summary = {
+      schemaVersion: 1,
+      marker: failMarker,
+      mode,
+      generatedAt: new Date().toISOString(),
+      method: {
+        id: mode === 'platform-report' ? 'installed-package-platform-v1' : 'local-reference-gate-v2',
+        durationUnit: 'milliseconds',
+        rawSamplesRetained: true,
+        outputDirectoryRemovedBeforeEachBuild: true,
+        runtimeVerificationExcludedFromBuildTiming: true,
+        crossHostAbsoluteComparisonAllowed: false,
+        referenceThresholdsEnforced: context.enforceReferenceThresholds
+      },
+      referenceBaseline: {
+        path: path.relative(repoRoot, baselinePath),
+        lastAudited: baseline.lastAudited,
+        host: baseline.baselineHost,
+        comparisonsAreInformational: !context.enforceReferenceThresholds
+      },
+      environment: environmentSummary(context),
+      provenance: provenanceSummary(context),
+      evidence: {
+        machineLocalPathsRedacted: true
+      },
+      scenarios: []
+    }
 
-  let allOk = true
-  for (const scenario of baseline.scenarios) {
-    const scenarioBaseline = scenario
-    const passed = scenario.kind === 'build_native'
-      ? measureBuildScenario(scenario, scenarioBaseline, summary)
-      : measureBenchScenario(scenario, scenarioBaseline, summary)
-    if (!passed) {
+    let allOk = true
+    for (const scenario of baseline.scenarios) {
+      const passed = scenario.kind === 'build_native'
+        ? measureBuildScenario(scenario, scenario, summary, context)
+        : measureBenchScenario(scenario, scenario, summary, context)
+      if (!passed) {
+        allOk = false
+      }
+    }
+
+    const portable = summary.scenarios.find(entry => entry.id === 'ro-perf-05')
+    const metal = summary.scenarios.find(entry => entry.id === 'ro-perf-06')
+    if (portable && metal && portable.measured && metal.measured
+      && portable.measured.run.medianMs > 0 && portable.measured.build.medianMs > 0) {
+      const metalVsPortable = {
+        runMedianPctOfPortable: Math.round((metal.measured.run.medianMs / portable.measured.run.medianMs) * 100),
+        buildMedianPctOfPortable: Math.round((metal.measured.build.medianMs / portable.measured.build.medianMs) * 100)
+      }
+      summary.profileComparison = metalVsPortable
+      const profileThresholds = baseline.profileComparisonThresholds || {}
+      const runCheck = compareMeasured(
+        'metalRunVsPortablePct',
+        metalVsPortable.runMedianPctOfPortable,
+        profileThresholds.runMedianPctOfPortable
+          ? { value: profileThresholds.runMedianPctOfPortable.value, maxRegressionPct: profileThresholds.runMedianPctOfPortable.maxRegressionPct }
+          : null
+      )
+      const buildCheck = compareMeasured(
+        'metalBuildVsPortablePct',
+        metalVsPortable.buildMedianPctOfPortable,
+        profileThresholds.buildMedianPctOfPortable
+          ? { value: profileThresholds.buildMedianPctOfPortable.value, maxRegressionPct: profileThresholds.buildMedianPctOfPortable.maxRegressionPct }
+          : null
+      )
+      summary.profileComparisonChecks = { runCheck, buildCheck }
+      if (context.enforceReferenceThresholds && (!runCheck.ok || !buildCheck.ok)) {
+        allOk = false
+      }
+    } else {
+      summary.profileComparisonError = 'portable and metal measurements must both have positive medians'
       allOk = false
     }
-  }
 
-  const portable = summary.scenarios.find(entry => entry.id === 'ro-perf-05')
-  const metal = summary.scenarios.find(entry => entry.id === 'ro-perf-06')
-  if (portable && metal && portable.measured && metal.measured) {
-    const metalVsPortable = {
-      runMedianPctOfPortable: Math.round((metal.measured.run.medianMs / portable.measured.run.medianMs) * 100),
-      buildMedianPctOfPortable: Math.round((metal.measured.build.medianMs / portable.measured.build.medianMs) * 100)
-    }
-    summary.profileComparison = metalVsPortable
-    const profileThresholds = baseline.profileComparisonThresholds || {}
-    const runCheck = compareMeasured(
-      'metalRunVsPortablePct',
-      metalVsPortable.runMedianPctOfPortable,
-      profileThresholds.runMedianPctOfPortable
-        ? { value: profileThresholds.runMedianPctOfPortable.value, maxRegressionPct: profileThresholds.runMedianPctOfPortable.maxRegressionPct }
-        : null
-    )
-    const buildCheck = compareMeasured(
-      'metalBuildVsPortablePct',
-      metalVsPortable.buildMedianPctOfPortable,
-      profileThresholds.buildMedianPctOfPortable
-        ? { value: profileThresholds.buildMedianPctOfPortable.value, maxRegressionPct: profileThresholds.buildMedianPctOfPortable.maxRegressionPct }
-        : null
-    )
-    summary.profileComparisonChecks = { runCheck, buildCheck }
-    if (!runCheck.ok || !buildCheck.ok) {
-      allOk = false
-    }
+    summary.marker = allOk ? passMarker : failMarker
+    const summaryPath = path.join(context.artifactsDir, 'summary.json')
+    fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2) + '\n')
+    verifyEvidenceSanitized(context)
+    console.log('[reflaxe-ocaml-perf] summary=summary.json')
+    console.log(summary.marker)
+    return allOk
+  } finally {
+    cleanupPerformanceContext(context)
   }
-
-  summary.marker = allOk ? baseline.marker : 'RO_TARGET_PERF_CREDIBLE:FAIL'
-  const summaryPath = path.join(artifactsDir, 'summary.json')
-  fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2) + '\n')
-  console.log(`[reflaxe-ocaml-perf] summary=${summaryPath}`)
-  console.log(summary.marker)
-  process.exit(allOk ? 0 : 1)
 }
 
-main()
+if (require.main === module) {
+  try {
+    process.exitCode = main() ? 0 : 1
+  } catch (error) {
+    console.error(`[reflaxe-ocaml-perf] ERROR: ${error instanceof Error ? error.message : String(error)}`)
+    process.exitCode = 1
+  }
+}
+
+module.exports = { stats }

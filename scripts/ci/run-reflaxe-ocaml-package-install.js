@@ -69,6 +69,16 @@ const summary = {
 let tempRoot = null
 let evidenceReplacements = []
 
+const performanceEnvironmentKeys = [
+	'HAXELIB_PATH',
+	'HAXE_STD_PATH',
+	'HAXEPATH',
+	'NEKOPATH',
+	'DYLD_LIBRARY_PATH',
+	'LD_LIBRARY_PATH',
+	'PATH'
+]
+
 function fail(message) {
 	throw new Error(message)
 }
@@ -167,6 +177,54 @@ function sha256Tree(root, options = {}) {
 function isInside(parent, child) {
 	const relative = path.relative(parent, child)
 	return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
+}
+
+/**
+ * Returns only the path overrides needed to reuse the proven disposable
+ * package installation. Keeping the allowlist explicit prevents CI secrets
+ * from entering the private handoff file used by the performance runner.
+ */
+function performanceEnvironment(env) {
+	const selected = {}
+	for (const key of performanceEnvironmentKeys) {
+		if (typeof env[key] === 'string' && env[key]) {
+			selected[key] = env[key]
+		}
+	}
+	return selected
+}
+
+function prepareTempRoot() {
+	const retainedRoot = process.env.RO_PACKAGE_INSTALL_RETAIN_ROOT
+		? path.resolve(process.env.RO_PACKAGE_INSTALL_RETAIN_ROOT)
+		: null
+	const environmentFile = process.env.RO_PACKAGE_INSTALL_ENV_FILE
+		? path.resolve(process.env.RO_PACKAGE_INSTALL_ENV_FILE)
+		: null
+	if (environmentFile && !retainedRoot) {
+		fail('RO_PACKAGE_INSTALL_ENV_FILE requires RO_PACKAGE_INSTALL_RETAIN_ROOT')
+	}
+	if (retainedRoot && isInside(repoRoot, retainedRoot)) {
+		fail('retained package installation must live outside the repository checkout')
+	}
+	if (environmentFile && isInside(repoRoot, environmentFile)) {
+		fail('private package environment handoff must live outside the repository checkout')
+	}
+	if (retainedRoot) {
+		fs.rmSync(retainedRoot, { recursive: true, force: true })
+		ensureDir(retainedRoot)
+		return retainedRoot
+	}
+	return fs.mkdtempSync(path.join(os.tmpdir(), 'reflaxe-ocaml-package-install-'))
+}
+
+function writePerformanceEnvironment(env) {
+	if (!process.env.RO_PACKAGE_INSTALL_ENV_FILE) {
+		return
+	}
+	const destination = path.resolve(process.env.RO_PACKAGE_INSTALL_ENV_FILE)
+	ensureDir(path.dirname(destination))
+	fs.writeFileSync(destination, JSON.stringify(performanceEnvironment(env), null, 2) + '\n', { mode: 0o600 })
 }
 
 function firstClasspath(output) {
@@ -421,6 +479,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		fs.writeFileSync(path.join(artifactsRoot, 'external-app-runtime.expected.log'), expected)
 		fail('external application stdout did not match expected.stdout')
 	}
+	return env
 }
 
 function writeSummary() {
@@ -446,7 +505,7 @@ function verifyEvidenceLogs() {
 function main() {
 	fs.rmSync(artifactsRoot, { recursive: true, force: true })
 	ensureDir(artifactsRoot)
-	tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'reflaxe-ocaml-package-install-'))
+	tempRoot = prepareTempRoot()
 	addEvidenceReplacement(tempRoot, '<temp>')
 	addEvidenceReplacement(artifactsRoot, '<artifacts>')
 	addEvidenceReplacement(repoRoot, '<repo>')
@@ -457,7 +516,8 @@ function main() {
 		summary.workingTreeDirty = requireSuccess('working-tree-status', runStep('working-tree-status', 'git', ['status', '--porcelain'])).stdout.trim().length > 0
 		const reflaxeRoot = resolveReflaxeRoot()
 		const zipPath = preparePackageArtifact()
-		proveExternalInstall(zipPath, reflaxeRoot)
+		const installedEnvironment = proveExternalInstall(zipPath, reflaxeRoot)
+		writePerformanceEnvironment(installedEnvironment)
 		verifyEvidenceLogs()
 		summary.marker = 'RO_PACKAGE_INSTALL_SMOKE:PASS'
 		writeSummary()
@@ -475,7 +535,7 @@ function main() {
 		}
 		process.exitCode = 1
 	} finally {
-		if (process.env.RO_KEEP_TEMP !== '1') {
+		if (process.env.RO_KEEP_TEMP !== '1' && !process.env.RO_PACKAGE_INSTALL_RETAIN_ROOT) {
 			fs.rmSync(tempRoot, { recursive: true, force: true })
 		}
 	}
@@ -485,4 +545,4 @@ if (require.main === module) {
 	main()
 }
 
-module.exports = { findNekoLibraryDirectories }
+module.exports = { findNekoLibraryDirectories, performanceEnvironment }
