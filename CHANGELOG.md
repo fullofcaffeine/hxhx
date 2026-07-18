@@ -1,3 +1,17 @@
+## [0.18.19](https://github.com/fullofcaffeine/hxhx/compare/v0.18.18...v0.18.19) (2026-07-18)
+
+
+### Bug Fixes
+
+* **ci:** locate versioned Neko libraries ([38743e5](https://github.com/fullofcaffeine/hxhx/commit/38743e5f0851a7ce3ca0acefa25f846d8edb03cc))
+* **dev:** stabilize profiler artifact paths ([f184a6a](https://github.com/fullofcaffeine/hxhx/commit/f184a6a70a6e344313fe56c1b3b0cdd173604b91))
+* **release:** make OCaml package source-only ([3c6f4a0](https://github.com/fullofcaffeine/hxhx/commit/3c6f4a09be84861a4a395b48b6b116799022cae5))
+
+
+### Performance Improvements
+
+* **cpp:** split generated program prelude ([23c3d38](https://github.com/fullofcaffeine/hxhx/commit/23c3d38f23b2bbc1545dc6f587ffe49d4c78a910))
+
 ## [0.18.18](https://github.com/fullofcaffeine/hxhx/compare/v0.18.17...v0.18.18) (2026-07-18)
 
 
