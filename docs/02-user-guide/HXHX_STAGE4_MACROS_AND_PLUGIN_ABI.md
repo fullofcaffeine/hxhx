@@ -189,6 +189,24 @@ We start with **Model A** (RPC macro host), then optionally add **Model B** as a
 2) Expand hook points + display/tooling behaviors to pass Gate 2.
 3) Add dynlink/builtin fast-path only once macro semantics are stable (performance work should not destabilize correctness).
 
+### Planned Haxe-authored native compiler plugins
+
+The Haxe-first SDK plan keeps this rollout and adds a transport-independent
+`compiler-transform` semantic profile. Model A can carry its candidate-bound
+typed snapshots and validated patches over RPC. Model B may later carry the
+same contract in process for lower latency. The transport may change; hook
+ordering, stable identities, rewrite validation, program revisions, and reset
+behavior may not.
+
+This profile is distinct from the M22 `backend-target` profile, which begins
+only after Stage4 has finished and the backend-facing program is frozen. The
+first planned proof is a small Haxe-authored native plugin that loads in stock
+Haxe 4.3.7 and `hxhx`; a Coro-class typed-body transformation is the advanced
+proof. See
+[`HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md`](../00-project/HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md).
+
+This is architecture work, not current CLI or support documentation.
+
 ## What gets compiled/linked (concrete artifact story)
 
 ### Stage 4 with Model A

@@ -30,6 +30,10 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - Reflaxe promotion matrix contract: `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
 - Reflaxe promotion matrix tradeoffs: `docs/00-project/REFLAXE_PROMOTION_MATRIX_TRADEOFFS.md`
 - Planned M22 Native Reflaxe Compiler SDK contract: `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`
+- Planned Haxe-authored native compiler-plugin and target SDK:
+  `docs/00-project/HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md`
+- GPT-5.6 Pro review request for that SDK boundary:
+  `docs/00-project/GPT_5_6_PRO_HAXE_NATIVE_PLUGIN_TARGET_SDK_REVIEW_PROMPT.md`
 - Public `Scoped 1.0` / `Full 1.0` claim checklist: `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 - North-star product goals and planning owners: `docs/00-project/NORTH_STAR_GOALS.md`
 - Weekly scheduled-gate audit runbook: `docs/00-project/WEEKLY_CI_EVIDENCE.md`

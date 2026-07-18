@@ -205,12 +205,24 @@ The preferred model is:
 
 Candidate mechanisms include compiler plugins, native target plugins, macro/runtime hooks, and explicit feature-gated extension points. The exact API surface should be designed under a dedicated architecture bead before being promoted as a public platform.
 
-Current planning owner:
+The current design work distinguishes two native profiles over shared
+artifact/tooling machinery. `compiler-transform` belongs to Stage4 and can
+perform validated typed-program rewrites before optimization. `backend-target`
+belongs to M22 and emits from the frozen backend program. A Coro-class plugin
+is an advanced proof for the former; a promoted Reflaxe compiler is the real
+proof for the latter. Neither profile receives a mutable general compiler
+context.
+
+Current planning owners:
 
 - post-Full1 customization/variation platform: `haxe_ocaml-h5jta`
   (completed architecture/toggle foundation: `haxe.ocaml-vary`)
+- Haxe-authored native compiler-transform SDK review:
+  `haxe_ocaml-h5jta.1`
 - architecture note:
   `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`
+- combined plugin/target SDK review candidate:
+  `docs/00-project/HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md`
 - Haxe-family variation workflow:
   `docs/00-project/HXHX_HAXE_FAMILY_VARIATION_WORKFLOW.md`
 
@@ -343,6 +355,11 @@ service bag.
 
 Canonical planning contract:
 `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`.
+
+Shared artifact, author-tooling, generated-OCaml, and cross-profile terminology
+are coordinated with the separate Stage4 compiler-transform plan in
+`docs/00-project/HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md`. M22 does not
+gain typed-program mutation authority from that shared substrate.
 
 M22 is planning only today. Current stock-Haxe eval-host and `hxhx` native
 plugin artifacts remain host-specific and are not interchangeable. The new

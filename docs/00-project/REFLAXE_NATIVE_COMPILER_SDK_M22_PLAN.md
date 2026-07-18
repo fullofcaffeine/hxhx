@@ -5,7 +5,8 @@
 - Owner: `haxe_ocaml-bomhr`
 - Architecture contract: `haxe_ocaml-bomhr.1`
 - Prerequisites: `haxe.ocaml-f1cl`, `haxe_ocaml-38gsp`
-- Related owners: `haxe_ocaml-h5jta`, `haxe_ocaml-850ii`, `haxe.ocaml-vary.2`
+- Related owners: `haxe_ocaml-h5jta`, `haxe_ocaml-h5jta.1`,
+  `haxe_ocaml-850ii`, `haxe.ocaml-vary.2`
 
 This page is a planning contract. It describes what M22 must prove before the
 repository can call the Native Reflaxe Compiler SDK supported. It does not
@@ -31,6 +32,12 @@ information. M22 adds a narrow, typed, versioned way for `hxhx` to provide
 backend-facing facts and services after the compiler has established the
 backend program. It does not make Reflaxe the owner of parsing, name lookup,
 typing, macros, or baseline compiler behavior.
+
+In stock Haxe 4.3.7, “native plugin” means activation through the official
+eval-VM plugin and macro lifecycle. Haxe 4.3.7 does not provide a stable
+runtime API that adds a new platform to its closed target dispatch. The stock
+M22 adapter may execute the promoted Reflaxe target core from the existing
+Reflaxe macro/eval integration; it must not claim dynamic target registration.
 
 ## 2. The problem: native execution is not compiler capability
 
@@ -71,7 +78,8 @@ rewritten by this plan:
 - `docs/00-project/HXHX_CUSTOMIZATION_AND_VARIATION_ARCHITECTURE.md`;
 - `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`;
 - `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`;
-- `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`.
+- `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`;
+- `docs/00-project/HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md`.
 
 ## 4. Supported dimensions and named presets
 
@@ -307,6 +315,11 @@ Upstream Haxe remains the stable host-neutral development and behavior
 baseline. M22 also requires a native stock-Haxe plugin host for the same ABI and
 payload used by `hxhx`.
 
+The stock-Haxe host uses `eval.vm.Context.loadPlugin` and the real
+macro/Reflaxe lifecycle. It does not register a new Haxe platform. Target
+selection and invocation remain an adapter concern at the existing Reflaxe
+activation seam, while target semantics stay in the shared payload.
+
 - Haxe version, OCaml version, ABI version, and host fingerprint are checked.
 - Handwritten OCaml is limited to host conversion, loading, and transport glue.
 - The Haxe target core and promoted payload remain one implementation.
@@ -443,7 +456,8 @@ M22 does not authorize:
   baseline diagnostics, or core semantics;
 - pre-backend phase providers hidden inside backend services;
 - conditionals scattered through semantic lowering or printers;
-- one `.cmxs` artifact that works in both upstream Haxe and `hxhx`;
+- assuming that one `.cmxs` works in both hosts without the required identical-
+  binary experiment and exact OCaml/Haxe/toolchain compatibility evidence;
 - permanent v1/v2 ABI compatibility;
 - sandboxed untrusted native plugins;
 - a performance claim without controlled evidence;

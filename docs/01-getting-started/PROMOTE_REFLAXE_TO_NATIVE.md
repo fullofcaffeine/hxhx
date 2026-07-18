@@ -1,5 +1,12 @@
 # Promote Reflaxe Backends to Native (Beginner Guide)
 
+> This page covers Reflaxe backend and target promotion. A compiler plugin that
+> runs during typing or macro hooks is a different lifecycle surface. The
+> planned Haxe-authored compiler-plugin workflow and Coro-class proof are
+> documented in
+> [`HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md`](../00-project/HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md).
+> That cross-host workflow is not implemented yet.
+
 This guide explains two common goals from scratch:
 
 1) compile Haxe code (including compiler-like code) to a native OCaml executable with upstream `haxe` + `reflaxe.ocaml`

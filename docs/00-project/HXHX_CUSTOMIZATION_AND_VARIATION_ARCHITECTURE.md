@@ -1,6 +1,6 @@
 # hxhx Customization And Variation Architecture
 
-Last prepared: 2026-07-04
+Last prepared: 2026-07-18
 Status: architecture design for `haxe.ocaml-vary.4`; no production-readiness claim
 
 Related beads:
@@ -10,6 +10,8 @@ Related beads:
 - `haxe.ocaml-vary.6` - documented Haxe-family variation workflow
 - `haxe.ocaml-f1cl` - strict Full 1.0 Haxe `4.3.7` baseline claim
 - `haxe.ocaml-rpmx` - Reflaxe compiler promotion matrix
+- `haxe_ocaml-h5jta.1` - Haxe-authored native compiler-transform SDK and
+  Coro-class proof plan
 
 ## Purpose
 
@@ -85,6 +87,29 @@ Rules:
   [`HXHX_STAGE4_MACROS_AND_PLUGIN_ABI.md`](../02-user-guide/HXHX_STAGE4_MACROS_AND_PLUGIN_ABI.md).
 - Baseline parity evidence must distinguish native macro-host behavior from
   stage0/delegated behavior.
+
+#### Planned Haxe-authored native transform profile
+
+`haxe_ocaml-h5jta.1` extends this Stage4 ownership into a Haxe-first native
+authoring product. Plugin logic is written in Haxe, compiled to native OCaml
+through `reflaxe.ocaml`, and presented to stock Haxe 4.3.7 and `hxhx` through
+one versioned `compiler-transform` contract.
+
+The supported contract must use candidate-bound typed snapshots, stable
+semantic identities, validated all-or-nothing rewrites, explicit program
+revisions, and per-compilation lifecycle/reset rules. It must not pass either
+host's private compiler objects or mutable globals into the plugin.
+
+The first proof is a small Haxe-authored equivalent of the official Haxe
+native-plugin example. A Coro-class state-machine rewrite is the later real
+workload. `../Coro` is not folded into M22: it runs after typing and before
+optimization, while M22 begins only after the backend-facing program is
+frozen.
+
+The full review candidate, developer workflow, generated-OCaml quality bar,
+and validation ladder are in
+[`HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md`](HAXE_AUTHORED_NATIVE_PLUGIN_TARGET_SDK_PLAN.md).
+This is planning only and adds no current plugin capability.
 
 ### 2. Backend and target plugins
 
