@@ -1,3 +1,10 @@
+## [0.18.17](https://github.com/fullofcaffeine/hxhx/compare/v0.18.16...v0.18.17) (2026-07-18)
+
+
+### Bug Fixes
+
+* **cpp:** preserve inferred IntMap constructors ([b08b454](https://github.com/fullofcaffeine/hxhx/commit/b08b454b502b8332ec21b6f4df2017cd83eea7ea))
+
 ## [0.18.16](https://github.com/fullofcaffeine/hxhx/compare/v0.18.15...v0.18.16) (2026-07-18)
 
 
