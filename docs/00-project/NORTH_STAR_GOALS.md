@@ -29,7 +29,9 @@ Current planning owners:
 - standalone upstream-Haxe product: `haxe_ocaml-s7jry`
   (completed foundation/proof: `haxe.ocaml-ro10`; completed isolated package
   and same-ZIP host proofs: `haxe_ocaml-s7jry.1` and `.2`; active installed
-  package performance owner: `haxe_ocaml-s7jry.3`)
+  package performance owner: `haxe_ocaml-s7jry.3`; new release-safety blockers:
+  place/evaluation lowering `haxe_ocaml-9v1va` and semantic fail-closed runtime
+  ownership `haxe_ocaml-0uwin`)
 - `hxhx + reflaxe.ocaml` product route: `haxe_ocaml-38gsp`
   (completed definition foundation: `haxe.ocaml-n5ae`)
 - repository extraction decision: `haxe_ocaml-ipm6h`; keep the monorepo for
@@ -39,12 +41,17 @@ Current planning owners:
   sole release gate. See
   `docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md`.
 - native OCaml capability and target-lowering architecture:
-  `haxe_ocaml-1cixm`; decide the typed `ocaml.*`/binding/adapter/raw escape-hatch
-  ladder and whether the current target syntax AST needs narrow validated
-  semantic plans or a broader typed OCaml lowering layer. The local inventory
-  and independent-review request live in
+  `haxe_ocaml-1cixm`; the accepted design keeps `OcamlExpr` as target syntax and
+  introduces a small typed OCaml-specific lowered model through bounded
+  vertical slices, beginning with place/evaluation/assignment behavior under
+  `haxe_ocaml-9v1va`. It rejects both a C-shaped whole-program CFG and a shared
+  cross-target representation IR. The typed
+  `ocaml.*`/binding/adapter/raw ladder remains target-owned. The local inventory,
+  independent-review request, and accepted checkpoint live in
   `docs/00-project/REFLAXE_OCAML_NATIVE_POWER_IR_LOCAL_AUDIT.md` and
-  `docs/00-project/GPT_5_6_PRO_REFLAXE_OCAML_NATIVE_POWER_IR_REVIEW_PROMPT.md`.
+  `docs/00-project/GPT_5_6_PRO_REFLAXE_OCAML_NATIVE_POWER_IR_REVIEW_PROMPT.md`,
+  and
+  `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`.
   This planning work adds no current capability or readiness.
 - public status board: README `Goals status` table
 

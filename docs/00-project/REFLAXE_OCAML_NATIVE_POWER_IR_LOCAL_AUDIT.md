@@ -1,11 +1,17 @@
 # `reflaxe.ocaml` Native Power And Target-Lowering Audit
 
-Status: local architecture evidence for independent review; not an accepted
-implementation design and not a current capability claim.
+Status: local pre-review evidence. Its Direction B hypothesis was refined by
+the accepted independent checkpoint into a small typed OCaml-lowered model
+entered through Direction B-shaped vertical slices. This remains planning, not
+a current capability claim.
 
 Prepared: 2026-07-18
 
 Owning decision bead: `haxe_ocaml-1cixm`
+
+Accepted review outcome:
+
+- `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`
 
 Related implementation and product owners:
 
@@ -345,6 +351,12 @@ resolve Haxe-specific mutation, identity, null, dynamic, dispatch, and
 representation gaps, but its normalization burden is smaller.
 
 ## Local Hypothesis Before Independent Review
+
+This section records the hypothesis that was sent for review; it is not the
+final decision. The review agreed with the bounded migration method but found
+that the candidate already has enough cross-consumer representation, place,
+call, runtime, and future ABI coupling to justify one explicit small typed
+OCaml-lowered model now. See the accepted checkpoint above.
 
 The smallest credible direction is:
 

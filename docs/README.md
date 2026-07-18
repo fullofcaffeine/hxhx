@@ -33,6 +33,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
   `docs/00-project/REFLAXE_OCAML_NATIVE_POWER_IR_LOCAL_AUDIT.md`
 - GPT-5.6 Pro review request for the OCaml semantic-plan/IR and interop boundary:
   `docs/00-project/GPT_5_6_PRO_REFLAXE_OCAML_NATIVE_POWER_IR_REVIEW_PROMPT.md`
+- Accepted GPT-5.6 Pro checkpoint for the small typed OCaml-lowering boundary:
+  `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`
 - Reflaxe promotion matrix contract: `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
 - Reflaxe promotion matrix tradeoffs: `docs/00-project/REFLAXE_PROMOTION_MATRIX_TRADEOFFS.md`
 - Planned M22 Native Reflaxe Compiler SDK contract: `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`

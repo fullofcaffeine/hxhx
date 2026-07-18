@@ -4,6 +4,20 @@ Last audited: 2026-07-18
 
 This page is the canonical product contract for `reflaxe.ocaml` as a standalone target.
 
+Current release authorization: **no-go**. The existing
+`RO_PRODUCTION_READY:PASS` aggregate proves the historical declared
+example/package/performance bundle. Following the accepted native-power and
+target-lowering review, it is necessary but not sufficient for a 1.0 release:
+`haxe_ocaml-9v1va` must establish the first validated place/evaluation lowering
+slice, `haxe_ocaml-0uwin` must make runtime requirements fail closed, and this
+aggregate must then open that semantic-safety evidence. Existing package,
+matrix, documentation, and performance receipts remain valid within their
+recorded scope; they are not revoked or silently reinterpreted.
+
+Accepted architecture checkpoint:
+
+- `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`
+
 It is deliberately separate from:
 
 - `docs/00-project/FULL_1_0_CONTRACT.md`
@@ -118,9 +132,27 @@ Required marker set:
   - source of truth:
     - `docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md`
 - `RO_PRODUCTION_READY:PASS`
-  - aggregate marker emitted only when the required product-level inputs are satisfied
+  - current aggregate marker for the historical declared product-level inputs;
+    it does not authorize 1.0 until it also opens the semantic-safety
+    prerequisites below
   - local evidence command:
     - `npm run test:reflaxe-ocaml:production-ready`
+
+Required semantic-safety prerequisites before release authorization:
+
+- an upstream-Haxe-oracle-backed place/evaluation/assignment slice is sealed
+  before target syntax, including explicit occurrence counts and deterministic
+  unsupported diagnostics (`haxe_ocaml-9v1va`);
+- runtime requests fail for unknown, missing, stale, modified, or
+  profile-illegal sources, and admitted selective requirements have a semantic
+  reason plus checked closure (`haxe_ocaml-0uwin`);
+- the aggregate checker and retained release receipt open those results rather
+  than relying only on the historical example inventory.
+
+These prerequisites do not make the full future native-power roadmap a 1.0
+blocker. Generated bindings, advanced adapters, curated exported libraries,
+and one upstream-Haxe/`hxhx` target core block only a public scope that claims
+those capabilities.
 
 Supporting evidence:
 
@@ -189,3 +221,11 @@ These are explicitly out of scope for this contract:
   - fix target-level gaps before broadening host/promotion claims
 - `no hidden scope inflation`
   - if a new requirement belongs to promotion or compiler equivalence, track it under the other contract instead of silently expanding this one
+- `semantic safety before plausible output`
+  - behavior inside the declared scope has one validated owner before OCaml
+    syntax, and unsupported behavior fails at the Haxe source boundary rather
+    than becoming unit, null, `Dynamic`, raw source, or an unsafe cast
+- `evidence aggregate is not release authority by name alone`
+  - a historical `RO_PRODUCTION_READY:PASS` receipt remains bounded to the
+    inputs it opened; release authorization waits for every current required
+    prerequisite in this contract

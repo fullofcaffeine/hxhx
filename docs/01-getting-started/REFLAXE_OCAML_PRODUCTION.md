@@ -20,6 +20,14 @@ Aggregate product-readiness marker for the declared standalone target scope:
 
 - `RO_PRODUCTION_READY:PASS`
 
+Release-status clarification (2026-07-18): this existing aggregate proves the
+historical example/package/performance bundle, but it is not currently a 1.0
+authorization. The target remains an advanced preview while
+`haxe_ocaml-9v1va` establishes validated place/evaluation lowering and
+`haxe_ocaml-0uwin` makes runtime requirements fail closed. The canonical
+contract records how the aggregate must be strengthened after those blockers
+land.
+
 ## What this guide is for
 
 Use this guide when all of these are true:
