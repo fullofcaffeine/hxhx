@@ -1,3 +1,28 @@
+# [0.19.0](https://github.com/fullofcaffeine/hxhx/compare/v0.18.19...v0.19.0) (2026-07-18)
+
+
+### Bug Fixes
+
+* **ci:** ignore package proof OCaml switch ([b9d2acc](https://github.com/fullofcaffeine/hxhx/commit/b9d2acc741631e749232861b568c2461b3ab5b88))
+* **ci:** parse mixed haxelib path output ([827efd9](https://github.com/fullofcaffeine/hxhx/commit/827efd913f72969fc78e2d9041f49c2b18155f3b))
+* **dev:** track hook state across local commits ([c9bd637](https://github.com/fullofcaffeine/hxhx/commit/c9bd637c960c92be18736828d3c23a27013430db))
+* **hxhx:** prevent Haxe server leaks ([4e08299](https://github.com/fullofcaffeine/hxhx/commit/4e08299e98b057de51ca13b26b57cec02acc913d))
+* **hxhx:** retain child server ownership ([5c25fab](https://github.com/fullofcaffeine/hxhx/commit/5c25fab890d9e19b77e8e03045b52793bb390d02))
+
+
+### Features
+
+* **ci:** measure installed package by host ([91fed0f](https://github.com/fullofcaffeine/hxhx/commit/91fed0f8564e9fb5709b30052f14501a0c9a2e33))
+* **release:** prove one package across hosts ([20d1bb2](https://github.com/fullofcaffeine/hxhx/commit/20d1bb2a0c39d3af991e57cc1b8cd8e6be06e6c7))
+
+
+### Performance Improvements
+
+* **dev:** diagnose slow Beads storage ([b818c67](https://github.com/fullofcaffeine/hxhx/commit/b818c6792108affe675e70e2dbee8416b22652e9))
+* **dev:** restore safe Git maintenance ([fa70c77](https://github.com/fullofcaffeine/hxhx/commit/fa70c7711bb29a94749911a44a15375772a9a227))
+* **dev:** skip redundant Beads checkout imports ([e6d6fd6](https://github.com/fullofcaffeine/hxhx/commit/e6d6fd66811fc7740344895b9b6659942a80930a))
+* **hxhx:** extract known C++ signatures ([e2ea897](https://github.com/fullofcaffeine/hxhx/commit/e2ea89749f146431a889cda0e917f660eb06fd92))
+
 ## [0.18.19](https://github.com/fullofcaffeine/hxhx/compare/v0.18.18...v0.18.19) (2026-07-18)
 
 
