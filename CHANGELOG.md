@@ -1,3 +1,12 @@
+## [0.18.18](https://github.com/fullofcaffeine/hxhx/compare/v0.18.17...v0.18.18) (2026-07-18)
+
+
+### Performance Improvements
+
+* **dev:** add isolated fast hxhx builds ([67f3be7](https://github.com/fullofcaffeine/hxhx/commit/67f3be7a54ec98ee63ed4c455c74c8a49aedaec1))
+* **dev:** reuse unchanged current-source compilers ([15d5368](https://github.com/fullofcaffeine/hxhx/commit/15d5368649af1924a28e0b8d75087e96d203065d))
+* **dev:** stop saturated Gate 3 runs early ([f39f094](https://github.com/fullofcaffeine/hxhx/commit/f39f09491b6fd8fa2faec8a54ddc4b57c785a191))
+
 ## [0.18.17](https://github.com/fullofcaffeine/hxhx/compare/v0.18.16...v0.18.17) (2026-07-18)
 
 
