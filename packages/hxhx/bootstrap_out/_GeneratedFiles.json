@@ -172,6 +172,7 @@
 		"TyNominalTypeId.ml",
 		"TyNominalInfo.ml",
 		"TyModuleEnv.ml",
+		"TyMethodGenericBinding.ml",
 		"TyFunctionEnv.ml",
 		"TyFunSig.ml",
 		"TyDeclarationInfo.ml",
