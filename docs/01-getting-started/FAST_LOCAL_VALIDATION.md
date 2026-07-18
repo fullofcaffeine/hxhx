@@ -288,6 +288,9 @@ Git/Beads workflow evidence from the same day:
 | --- | --- | ---: |
 | canonical Beads post-checkout | identical 40-character old/new commit IDs, branch flag `1`, 1,907 exported issues (`7,481,949` bytes) | 122.95s |
 | repository identical-branch-and-commit guard | same hook arguments and recorded branch, three samples | 0.06s median |
+| `bd show` before / after local Dolt maintenance | 1,910 issues; removed one verified-empty sibling database | 26.25s / 1.44s |
+| `bd ready --limit 10` before / after maintenance | same active issue data | 37.21s / 0.95s |
+| `bd export --all` before / after maintenance | byte-identical 1,910-record export | 23.53s / 1.48s |
 
 The slow command spent its time in `bd import --quiet .beads/issues.jsonl`, used
 about 2.0 GB maximum resident memory, and re-imported an older staged snapshot
@@ -299,6 +302,16 @@ a changed branch imports its new issue data. See the hook setup in
 [`TESTING.md`](TESTING.md). A companion post-commit hook advances the state after
 local commits, while Git's rebase `head-name` keeps the original branch identity
 visible during the temporary detached-HEAD step of a no-op pull.
+
+The direct-command slowdown was independent of the hook. Embedded Dolt was
+opening a second local database named `beads` on every command even though that
+database exported zero issues. A full-history backup was restored in a
+disposable repository first, and the active export matched SHA-256
+`614ce1d2027f1ad8aebb3f11623251ae26d248db5b5d2de356968299ae1cdada`
+before and after the reviewed drop/purge sequence. Local `.beads` storage fell
+from about 926 MiB to 217 MiB. `npm run doctor:beads-storage` now detects this
+layout without modifying it; the backup-first procedure is in
+[`TESTING.md`](TESTING.md).
 
 The documentation-only reuse row avoids roughly 130 times the wait of that
 fresh build, but only for changes outside the compiler input set. A compiler,

@@ -91,6 +91,65 @@ If another hook installer replaces the guard, rerun `npm run hooks:install`.
 The command is idempotent and preserves the installed Beads delegate. It fails
 instead of overwriting two conflicting custom post-checkout hooks.
 
+## Diagnose slow Beads commands
+
+If `bd show`, `bd ready`, or `bd export` takes more than a few seconds, inspect
+the local embedded database layout before assuming the issue count is the
+problem:
+
+```bash
+npm run doctor:beads-storage
+```
+
+This diagnostic is read-only. It reports the database named by local Beads
+metadata, any visible sibling databases, retained dropped-database storage, and
+approximate disk use. A fresh clone without a local database reports `SKIP`; one
+active database reports `PASS`; sibling or dropped databases report `WARN` and
+exit with status 2. The command never removes or compacts data.
+
+Embedded Dolt opens every visible database in its data directory. In July 2026,
+an old database named `beads` contained zero issues but made a 1,910-issue
+checkout spend 26.25 seconds and about 2.74 GB maximum resident memory on one
+`bd show`. Removing that verified-empty sibling through Dolt's supported
+database lifecycle reduced the same command to 1.44 seconds and about 161 MB.
+The complete export remained byte-for-byte identical.
+
+Treat a warning as data maintenance, not permission to delete a directory. The
+maintainer recovery sequence is:
+
+1. Export all records to a path outside the checkout:
+
+   ```bash
+   bd export --all -o <external-path>/issues-before-maintenance.jsonl
+   ```
+
+2. Create a full-history Dolt backup and sync it:
+
+   ```bash
+   bd backup init <external-path>/beads-full-backup
+   bd backup sync
+   ```
+
+3. Restore that backup into a disposable Git repository with `bd init`, then
+   run `bd backup restore --force <backup-path>`. Export again and compare the
+   complete file and record counts. JSONL alone is not a full-history backup.
+4. Identify the Dolt dependency embedded in the installed Beads binary with
+   `go version -m "$(command -v bd)"`. Use that exact standalone Dolt version
+   against the disposable copy first. Verify each sibling database's contents;
+   a name that merely looks old is not enough evidence.
+5. Only after the backup restore and empty-sibling proof, use the matching Dolt
+   CLI to `DROP DATABASE` for that exact legacy database. Dolt keeps a reversible
+   dropped copy. Re-run the export/hash/count checks and ordinary `bd` commands.
+6. After those checks pass, `CALL dolt_purge_dropped_databases()` reclaims the
+   reversible copies. This last step is permanent, so retain the external backup
+   until the repository has been committed, pushed, and re-verified.
+
+Do not remove `.beads/embeddeddolt` by hand. Do not use `bd gc` as a generic
+storage fix: its default lifecycle includes deleting old closed issues, which is
+not appropriate for this project's retained engineering record. A Beads version
+upgrade is also a separate migration because it can rewrite tracker schema and
+the tracked JSONL representation.
+
 ## Formatting Haxe code
 
 Use the official Haxe formatter through `haxelib`.
