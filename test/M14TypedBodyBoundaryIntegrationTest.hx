@@ -413,6 +413,76 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"recognizing declared method reads weakened strict missing-field diagnostics");
 	}
 
+	/**
+		Keep method-only generic parameters inside the selected call until argument
+		types bind them. A parameter that remains unbound must not escape as a
+		caller-visible nominal type or collide with an unrelated class of the same
+		name.
+	**/
+	static function assertMethodGenericResultSpecialization():Void {
+		final filePath = "checks/GenericMethodResults.hx";
+		final parsed = ParserStage.parse([
+			"class Array<T> {",
+			"  public function new() {}",
+			"}",
+			"class A {}",
+			"class GenericResultOwner {",
+			"  static function identity<T>(value:T):T return value;",
+			"  static function wrap<T>(value:Array<T>):Array<T> return value;",
+			"  static function same<T>(left:T, right:T):T return left;",
+			"  static function constrained<T:Int>(value:T):T return value;",
+			"  static function unbound<A>(value:Dynamic):Array<A> return [];",
+			"  static function main() {",
+			"    var scalar = identity(7);",
+			"    var nested = wrap([\"x\"]);",
+			"    var conflict = same(1, \"x\");",
+			"    var unsupportedConstraint = constrained(1);",
+			"    var unresolved = unbound({});",
+			"  }",
+			"}",
+		].join("\n"), filePath);
+		final resolved = new ResolvedModule("GenericMethodResults", filePath, parsed);
+		final index = TyperIndex.build([resolved]);
+		final loader = new ModuleLoader(["checks"], new StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready([resolved]);
+		final body = findFunction(findClass(TyperStage.typeResolvedModule(resolved, index, loader), "GenericResultOwner"), "main").getBody();
+		final scalar = variableInitializer(body, "scalar");
+		assertTrue(scalar.getType().getSemanticKey() == "primitive:Int", "direct method-generic result did not specialize to the argument type");
+		assertTrue(scalar.getDeclaration() != null && scalar.getDeclaration().getSignature().getName() == "identity",
+			"specializing a direct method-generic result lost the exact declaration");
+
+		final nested = variableInitializer(body, "nested");
+		final nestedArguments = nested.getType().getTypeArguments();
+		assertTrue(nested.getType().getNominalIdentity() != null
+			&& nestedArguments.length == 1
+			&& nestedArguments[0].getSemanticKey() == "primitive:String",
+			"nested method-generic result did not specialize Array<T> to Array<String>");
+
+		final conflict = variableInitializer(body, "conflict");
+		assertTrue(conflict.getType().isUnknown(), "conflicting method-generic arguments produced a false common result");
+		assertTrue(conflict.getDeclaration() == null, "conflicting method-generic arguments selected an inapplicable declaration");
+
+		final unsupportedConstraint = variableInitializer(body, "unsupportedConstraint");
+		assertTrue(unsupportedConstraint.getType().isUnknown(), "unsupported constrained generic inference produced a false concrete result");
+		assertTrue(unsupportedConstraint.getDeclaration() == null,
+			"unsupported constrained generic inference selected a declaration without proving its constraint");
+
+		final unresolved = variableInitializer(body, "unresolved");
+		assertTrue(unresolved.getType().isUnknown(), "unbound method-generic result escaped as a caller-visible nominal type");
+		assertTrue(unresolved.getDeclaration() != null && unresolved.getDeclaration().getSignature().getName() == "unbound",
+			"unknown generic result lost the exact selected declaration");
+		var keptBlankHint = false;
+		for (statement in body.getStatements()) {
+			if (statement.getTag() != TypedStmtTag.Var || statement.getNames()[0] != "unresolved")
+				continue;
+			keptBlankHint = switch (TypedBodySource.statement(statement)) {
+				case SVar("unresolved", "", _, _): true;
+				case _: false;
+			};
+		}
+		assertTrue(keptBlankHint, "unbound method generic became a false source-level local annotation");
+	}
+
 	static function main():Void {
 		final filePath = "checks/TypedBodyMain.hx";
 		final source = [
@@ -473,6 +543,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertStructuralUntypedStatementBlock();
 		assertConditionalElseIfStructure();
 		assertStrictInstanceMethodCallee();
+		assertMethodGenericResultSpecialization();
 		assertOpaqueGuard();
 		assertLifecycleGuard(typed, mainFunction);
 	}

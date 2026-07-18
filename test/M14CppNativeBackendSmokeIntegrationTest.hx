@@ -4443,6 +4443,115 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		return MacroStage.expandProgram([typedMain, typedHelper], []);
 	}
 
+	/** Reproduce the upstream StringMap/IntMap local redeclaration through shared typing. **/
+	static function redeclaredMapKeyProgram():GenIrProgram {
+		final specs = [
+			{
+				modulePath: "Array",
+				filePath: "Array.hx",
+				source: "class Array<T> { public function new() {} }",
+				emit: false
+			},
+			{
+				modulePath: "Iterable",
+				filePath: "Iterable.hx",
+				source: "class Iterable<T> {}",
+				emit: false
+			},
+			{
+				modulePath: "Iterator",
+				filePath: "Iterator.hx",
+				source: "class Iterator<T> {}",
+				emit: false
+			},
+			{
+				modulePath: "A",
+				filePath: "A.hx",
+				source: "class A {}",
+				emit: true
+			},
+			{
+				modulePath: "Lambda",
+				filePath: "Lambda.hx",
+				source: "class Lambda { public static function array<A>(value:Iterable<A>):Array<A> return []; }",
+				emit: false
+			},
+			{
+				modulePath: "haxe.ds.StringMap",
+				filePath: "checks/haxe/ds/StringMap.hx",
+				source: [
+					"package haxe.ds;",
+					"extern class StringMap<T> {",
+					"  public function new():Void;",
+					"  public function set(key:String, value:T):Void;",
+					"  public function iterator():Iterator<T>;",
+					"  public function keys():Iterator<String>;",
+					"}",
+				].join("\n"),
+				emit: false
+			},
+			{
+				modulePath: "haxe.ds.IntMap",
+				filePath: "checks/haxe/ds/IntMap.hx",
+				source: [
+					"package haxe.ds;",
+					"extern class IntMap<T> {",
+					"  public function new():Void;",
+					"  public function set(key:Int, value:T):Void;",
+					"  public function iterator():Iterator<T>;",
+					"  public function keys():Iterator<Int>;",
+					"}",
+				].join("\n"),
+				emit: false
+			},
+			{
+				modulePath: "Main",
+				filePath: "Main.hx",
+				source: [
+					"import haxe.ds.IntMap;",
+					"import haxe.ds.StringMap;",
+					"class Main {",
+					"  static function stringKeys():Int {",
+					"    var h = new StringMap<Int>();",
+					"    h.set(\"x\", 1);",
+					"    var k = Lambda.array(h);",
+					"    var k = Lambda.array({ iterator: h.keys });",
+					"    return k.length;",
+					"  }",
+					"  static function intKeys():Int {",
+					"    var h = new IntMap<Int>();",
+					"    h.set(1, 1);",
+					"    var k = Lambda.array(h);",
+					"    var k = Lambda.array({ iterator: h.keys });",
+					"    return k.length;",
+					"  }",
+					"  static function main() {",
+					"    Sys.println(stringKeys());",
+					"    Sys.println(intKeys());",
+					"  }",
+					"}",
+				].join("\n"),
+				emit: true
+			},
+		];
+		final modules = [
+			for (spec in specs)
+				{
+					resolved: new ResolvedModule(spec.modulePath, spec.filePath, ParserStage.parse(spec.source, spec.filePath)),
+					emit: spec.emit
+				}
+		];
+		final resolved = [for (entry in modules) entry.resolved];
+		final index = TyperIndex.build(resolved);
+		final loader = new ModuleLoader([Sys.getCwd()], new StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready(resolved);
+		final typed = [
+			for (entry in modules)
+				if (entry.emit) TyperStage.typeResolvedModule(entry.resolved, index, loader)
+		];
+		return MacroStage.expandProgram(typed, []);
+	}
+
 	static function callableExternProgram():GenIrProgram {
 		final mainPath = "test/oracle/cpp_callable_extern_seed/cpp_src/Main.hx";
 		final helperPath = "test/oracle/cpp_callable_extern_seed/common/CallableExternContract.hx";
@@ -4613,6 +4722,20 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			assertTrue(run.stdout == expected, "unexpected C++ generic Array local smoke stdout: " + run.stdout);
 		}
 		deleteRecursive(root);
+
+		final mapRoot = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_redeclared_map_keys"]);
+		deleteRecursive(mapRoot);
+		FileSystem.createDirectory(mapRoot);
+		final mapProgram = redeclaredMapKeyProgram();
+		final mapSourceOnlyDir = Path.join([mapRoot, "source-only"]);
+		final mapSourceOnly = BackendRegistry.createForTarget("cpp-native").emit(mapProgram, context(mapSourceOnlyDir, true, true));
+		final mapSource = File.getContent(mapSourceOnly.entryPath);
+		assertTrue(countOccurrences(mapSource, "auto k_2 = __hxhx_iterator_to_vector(h->keys());") == 2,
+			"C++ redeclared StringMap and IntMap key locals should keep source inference instead of a callee-owned generic hint");
+		assertTrue(mapSource.indexOf("std::vector<std::shared_ptr<") < 0,
+			"C++ redeclared map-key locals should not resolve method parameter A as the unrelated class A");
+
+		deleteRecursive(mapRoot);
 	}
 
 	/**

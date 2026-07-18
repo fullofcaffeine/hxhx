@@ -632,9 +632,21 @@ class TyperStage {
 		return score;
 	}
 
-	static function overloadArgScore(expected:TyType, actual:TyType):Int {
+	/**
+		Score method-generic parameters as bounded wildcards while keeping exact
+		concrete overloads more specific. Nested nominal and function shapes are
+		compared structurally so `Array<T>` can accept `Array<String>` without
+		turning the backend carrier into the binding key.
+	**/
+	static function overloadArgScore(expected:TyType, actual:TyType, methodTypeParameters:Array<String>):Int {
+		if (expected == null || actual == null)
+			return -1;
+		if (TyMethodGenericBinding.isInferableParameter(expected, methodTypeParameters))
+			return actual.isUnknown() || actual.isDynamic() ? 0 : 1;
 		if (expected != null && actual != null && expected.getSemanticKey() == actual.getSemanticKey())
 			return 4;
+		if (expected.isNullable() || actual.isNullable())
+			return overloadArgScore(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters);
 		if (expected.isFunction() || actual.isFunction()) {
 			if (!expected.isFunction() || !actual.isFunction())
 				return -1;
@@ -644,7 +656,7 @@ class TyperStage {
 				return -1;
 			var score = 0;
 			for (index in 0...expectedArguments.length) {
-				final argumentScore = overloadArgScore(expectedArguments[index], actualArguments[index]);
+				final argumentScore = overloadArgScore(expectedArguments[index], actualArguments[index], methodTypeParameters);
 				if (argumentScore < 0)
 					return -1;
 				score += argumentScore;
@@ -653,27 +665,48 @@ class TyperStage {
 			final actualReturn = actual.getFunctionReturn();
 			if (expectedReturn == null || actualReturn == null)
 				return -1;
-			final returnScore = overloadArgScore(expectedReturn, actualReturn);
+			final returnScore = overloadArgScore(expectedReturn, actualReturn, methodTypeParameters);
 			return returnScore < 0 ? -1 : score + returnScore;
+		}
+		final expectedArguments = expected.getTypeArguments();
+		final actualArguments = actual.getTypeArguments();
+		if (expectedArguments.length > 0
+			&& expectedArguments.length == actualArguments.length
+			&& TyMethodGenericBinding.sameTypeConstructor(expected, actual)) {
+			var score = 2;
+			for (index in 0...expectedArguments.length) {
+				final argumentScore = overloadArgScore(expectedArguments[index], actualArguments[index], methodTypeParameters);
+				if (argumentScore < 0)
+					return -1;
+				score += argumentScore;
+			}
+			return score;
 		}
 		final exp = normalizeOverloadTypeName(expected);
 		final act = normalizeOverloadTypeName(actual);
 		return functionOverloadTypeScore(exp, act);
 	}
 
-	static function overloadCandidateScore(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int):Int {
+	static function overloadCandidateScore(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<String>):Int {
 		if (!sig.acceptsArity(suppliedArity))
 			return -1;
 		final expected = sig.getArgs();
 		var score = 0;
 		for (i in 0...suppliedArity) {
 			final argScore = overloadArgScore(i < expected.length ? expected[i] : TyType.fromHintText("Dynamic"),
-				i < argTypes.length ? argTypes[i] : TyType.unknown());
+				i < argTypes.length ? argTypes[i] : TyType.unknown(), methodTypeParameters);
 			if (argScore < 0)
 				return -1;
 			score += argScore;
 		}
-		return score;
+		return TyMethodGenericBinding.argumentsAreConsistent(sig, argTypes, suppliedArity, methodTypeParameters) ? score : -1;
+	}
+
+	static function selectedMethodCallResolution(owner:TyNominalInfo, signature:TyFunSig, argTypes:Array<TyType>):TyMethodCallResolution {
+		final declaration = owner.declarationForSignature(signature);
+		if (declaration == null)
+			return {type: signature.getReturnType(), declaration: null};
+		return {type: TyMethodGenericBinding.specializeResult(declaration, signature, argTypes), declaration: declaration};
 	}
 
 	static function resolveMethodCall(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext,
@@ -690,7 +723,9 @@ class TyperStage {
 		var bestScore = -1;
 		final bestMatches = new Array<TyFunSig>();
 		for (candidate in candidates) {
-			final score = overloadCandidateScore(candidate, argTypes, args.length);
+			final declaration = c.declarationForSignature(candidate);
+			final methodTypeParameters = TyMethodGenericBinding.inferableTypeParameters(declaration);
+			final score = overloadCandidateScore(candidate, argTypes, args.length, methodTypeParameters);
 			if (score >= 0) {
 				arityMatches.push(candidate);
 				if (score > bestScore) {
@@ -704,11 +739,11 @@ class TyperStage {
 		}
 		if (bestMatches.length == 1 && bestScore > 0) {
 			final selected = bestMatches[0];
-			return {type: selected.getReturnType(), declaration: c.declarationForSignature(selected)};
+			return selectedMethodCallResolution(c, selected, argTypes);
 		}
 		if (bestMatches.length == 1 && arityMatches.length == 1) {
 			final selected = bestMatches[0];
-			return {type: selected.getReturnType(), declaration: c.declarationForSignature(selected)};
+			return selectedMethodCallResolution(c, selected, argTypes);
 		}
 		if (arityMatches.length > 1) {
 			final range = callRange(ctx.getFilePath(), pos);
@@ -726,7 +761,7 @@ class TyperStage {
 		}
 		if (arityMatches.length == 1) {
 			final selected = arityMatches[0];
-			return {type: selected.getReturnType(), declaration: c.declarationForSignature(selected)};
+			return selectedMethodCallResolution(c, selected, argTypes);
 		}
 
 		return {type: TyType.unknown(), declaration: null};
