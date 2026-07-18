@@ -111,10 +111,15 @@ Prefer these instead:
 
 - inside this repo: use `-lib reflaxe.ocaml` through
   `haxe_libraries/reflaxe.ocaml.hxml`
-- for external pre-release validation: build `dist/reflaxe.ocaml-<version>.zip`
-  with `bash scripts/release/build-haxelib-zip.sh`, then install/test that zip
-  in a disposable haxelib repository or CI job
+- for external pre-release validation: run
+  `npm run test:reflaxe-ocaml:package-install`; it builds the deterministic ZIP,
+  rejects checkout resolution, installs into a disposable haxelib repository,
+  and builds/runs an external application with stock Haxe 4.3.7
 - for normal users: install the released haxelib package
+
+The proof writes `RO_PACKAGE_INSTALL_SMOKE:PASS` evidence under
+`.artifacts/reflaxe-ocaml/package-install`. It records the exact host/toolchain;
+one passing host does not silently become a cross-platform support claim.
 
 ## Common required define
 

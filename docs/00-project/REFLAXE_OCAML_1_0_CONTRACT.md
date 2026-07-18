@@ -1,6 +1,6 @@
 # reflaxe.ocaml 1.0 Contract
 
-Last audited: 2026-03-13
+Last audited: 2026-07-18
 
 This page is the canonical product contract for `reflaxe.ocaml` as a standalone target.
 
@@ -124,6 +124,13 @@ Required marker set:
 
 Supporting evidence:
 
+- `RO_PACKAGE_INSTALL_SMOKE:PASS`
+  - a deterministic, source-only ZIP installs into a disposable haxelib
+    repository and builds/runs an external application with stock Haxe 4.3.7
+  - local evidence command:
+    - `npm run test:reflaxe-ocaml:package-install`
+  - this marker is platform/toolchain-specific until the release owner retains
+    the declared support matrix
 - focused repo-local regressions
 - portable fixtures
 - benchmark snapshots

@@ -116,6 +116,17 @@ jobs:
           fi
       - name: Run guardrails
         run: npm run ci:guards
+      - name: Prove standalone reflaxe.ocaml package install
+        run: npm run test:reflaxe-ocaml:package-install
+      - name: Upload standalone reflaxe.ocaml package evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflaxe-ocaml-package-install-${{ runner.os }}-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/package-install
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
       - name: Validate build-hxhx connect retry smoke
         run: npm run test:hxhx:build-connect-retry-smoke
       - name: Validate hxhx direct-flag CLI contract

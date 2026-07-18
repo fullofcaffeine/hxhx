@@ -148,9 +148,38 @@ Better defaults:
 
 - monorepo development: use the checked-in `haxe_libraries/reflaxe.ocaml.hxml`
   wiring
-- external pre-release validation: build the haxelib zip and test that package
-  shape in an isolated haxelib repository
+- external pre-release validation: run the isolated package proof below
 - production/user installs: consume the released haxelib package
+
+### Verify the installable package
+
+From this repository, run:
+
+```bash
+npm run test:reflaxe-ocaml:package-install
+```
+
+This is stronger than compiling a repo-local example. It:
+
+- builds the versioned haxelib ZIP twice and requires the same SHA-256,
+- stages only tracked source files and rejects host/compiler outputs such as
+  `.cmi`, `.cmo`, and `.cmxs`,
+- proves an external application cannot compile before the target is installed,
+- installs the ZIP into a disposable haxelib repository without resolving the
+  target from this checkout,
+- compiles the original external fixture with stock Haxe 4.3.7,
+- asks Dune to build the generated OCaml natively, runs it, and compares stdout.
+
+The success marker is `RO_PACKAGE_INSTALL_SMOKE:PASS`. Machine-readable evidence
+is written to `.artifacts/reflaxe-ocaml/package-install/summary.json`, including
+the source commit, package and generated-artifact hashes, toolchain versions,
+installed relative path, and runtime result. The marker proves the recorded host
+and toolchain only; it does not declare every operating system supported.
+
+This ZIP is the standalone Haxe target source package. It does not settle the
+future native-plugin loader format: stock Haxe and `hxhx` still aim to share one
+semantic plugin payload, with different thin loader shells allowed only for a
+measured OCaml runtime/compiler/linker incompatibility.
 
 ## Canonical commands
 

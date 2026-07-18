@@ -1,0 +1,453 @@
+#!/usr/bin/env node
+/**
+ * Proves that the release-shaped reflaxe.ocaml ZIP works without checkout
+ * resolution, then records sanitized package, toolchain, and runtime evidence.
+ */
+const cp = require('child_process')
+const crypto = require('crypto')
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+
+const repoRoot = path.resolve(__dirname, '../..')
+const fixtureRoot = path.join(repoRoot, 'test/packaging/reflaxe_ocaml_external_app')
+const artifactsRoot = path.resolve(process.env.RO_PACKAGE_INSTALL_ARTIFACTS || path.join(repoRoot, '.artifacts/reflaxe-ocaml/package-install'))
+const packageMetadata = JSON.parse(fs.readFileSync(path.join(repoRoot, 'packages/reflaxe.ocaml/haxelib.json'), 'utf8'))
+const expectedHaxeVersion = '4.3.7'
+const forbiddenArchiveExtensions = new Set([
+	'.a',
+	'.cma',
+	'.cmi',
+	'.cmo',
+	'.cmx',
+	'.cmxa',
+	'.cmxs',
+	'.dll',
+	'.dylib',
+	'.exe',
+	'.n',
+	'.ndll',
+	'.o',
+	'.obj',
+	'.so'
+])
+const summary = {
+	schemaVersion: 1,
+	marker: 'RO_PACKAGE_INSTALL_SMOKE:FAIL',
+	implementationCommit: null,
+	workingTreeDirty: null,
+	platform: process.platform,
+	architecture: process.arch,
+	toolchain: {},
+	evidence: {
+		machineLocalPathsRedacted: false
+	},
+	package: {
+		name: packageMetadata.name,
+		version: packageMetadata.version,
+		archiveFile: `reflaxe.ocaml-${packageMetadata.version}.zip`,
+		sha256: null,
+		bytes: null,
+		reproducible: false,
+		sourceOnly: false,
+		fileCount: 0
+	},
+	isolation: {
+		missingTargetRejected: false,
+		missingTargetDiagnosticNamedLibrary: false,
+		installedTargetInsideDisposableRepository: false,
+		installedTargetRelativePath: null,
+		resolvedLibraries: []
+	},
+	externalApplication: {
+		compilePassed: false,
+		nativeBuildPassed: false,
+		runtimePassed: false,
+		stdoutMatched: false,
+		emittedSourceSha256: null,
+		executableSha256: null,
+		stdoutSha256: null
+	},
+	timingsMs: {},
+	error: null
+}
+
+let tempRoot = null
+let evidenceReplacements = []
+
+function fail(message) {
+	throw new Error(message)
+}
+
+function ensureDir(directory) {
+	fs.mkdirSync(directory, { recursive: true })
+}
+
+function normalizeOutput(value) {
+	return String(value || '').replace(/\r\n/g, '\n')
+}
+
+function addEvidenceReplacement(value, replacement) {
+	if (!value) {
+		return
+	}
+	const resolved = path.resolve(value)
+	for (const candidate of new Set([resolved, fs.existsSync(resolved) ? fs.realpathSync(resolved) : null].filter(Boolean))) {
+		evidenceReplacements.push([candidate, replacement])
+	}
+}
+
+function sanitizeEvidence(value) {
+	let sanitized = normalizeOutput(value)
+	for (const [localPath, replacement] of evidenceReplacements) {
+		sanitized = sanitized.split(localPath).join(replacement)
+	}
+	return sanitized
+}
+
+function runStep(name, command, args, options = {}) {
+	const startedAt = Date.now()
+	const result = cp.spawnSync(command, args, {
+		cwd: options.cwd || repoRoot,
+		env: options.env || process.env,
+		encoding: 'utf8',
+		maxBuffer: 50 * 1024 * 1024,
+		shell: false
+	})
+	const status = result.status == null ? 1 : result.status
+	const stdout = normalizeOutput(result.stdout)
+	const stderr = normalizeOutput(result.stderr || (result.error ? String(result.error) : ''))
+	fs.writeFileSync(path.join(artifactsRoot, `${name}.stdout.log`), sanitizeEvidence(stdout))
+	fs.writeFileSync(path.join(artifactsRoot, `${name}.stderr.log`), sanitizeEvidence(stderr))
+	summary.timingsMs[name] = Date.now() - startedAt
+	return { status, stdout, stderr }
+}
+
+function requireSuccess(name, result) {
+	if (result.status !== 0) {
+		fail(`${name} failed with exit ${result.status}; see ${name}.stderr.log`)
+	}
+	return result
+}
+
+function sha256File(filePath) {
+	return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')
+}
+
+function walkFiles(root, options = {}) {
+	const files = []
+	function visit(current) {
+		for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+			if (options.skipDirectory && entry.isDirectory() && options.skipDirectory(entry.name)) {
+				continue
+			}
+			const absolute = path.join(current, entry.name)
+			if (entry.isDirectory()) {
+				visit(absolute)
+			} else if (entry.isFile()) {
+				files.push({
+					absolute,
+					relative: path.relative(root, absolute).split(path.sep).join('/')
+				})
+			} else {
+				fail(`unexpected non-file output: ${path.relative(root, absolute)}`)
+			}
+		}
+	}
+	visit(root)
+	files.sort((left, right) => (left.relative < right.relative ? -1 : left.relative > right.relative ? 1 : 0))
+	return files
+}
+
+function sha256Tree(root, options = {}) {
+	const hash = crypto.createHash('sha256')
+	for (const file of walkFiles(root, options)) {
+		const name = Buffer.from(file.relative, 'utf8')
+		const contents = fs.readFileSync(file.absolute)
+		const lengths = Buffer.alloc(16)
+		lengths.writeBigUInt64BE(BigInt(name.length), 0)
+		lengths.writeBigUInt64BE(BigInt(contents.length), 8)
+		hash.update(lengths)
+		hash.update(name)
+		hash.update(contents)
+	}
+	return hash.digest('hex')
+}
+
+function isInside(parent, child) {
+	const relative = path.relative(parent, child)
+	return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
+}
+
+function firstClasspath(output) {
+	return normalizeOutput(output)
+		.split('\n')
+		.map(line => line.trim())
+		.find(line => line && !line.startsWith('-'))
+}
+
+function shellQuote(value) {
+	return `'${String(value).replace(/'/g, `'"'"'`)}'`
+}
+
+function writeHaxelibWrapper(wrapperPath, haxelibPath, nekoRoot) {
+	const contents = `#!/usr/bin/env bash
+set -euo pipefail
+export NEKOPATH=${shellQuote(nekoRoot)}
+export DYLD_LIBRARY_PATH=${shellQuote(nekoRoot)}\${DYLD_LIBRARY_PATH:+:\$DYLD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${shellQuote(nekoRoot)}\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}
+exec ${shellQuote(haxelibPath)} "\$@"
+`
+	fs.writeFileSync(wrapperPath, contents, { mode: 0o755 })
+}
+
+function commandVersion(name, command, args, options = {}) {
+	return requireSuccess(name, runStep(name, command, args, options)).stdout.trim().split('\n')[0]
+}
+
+function resolveReflaxeRoot() {
+	if (process.env.RO_REFLAXE_ROOT) {
+		return path.resolve(process.env.RO_REFLAXE_ROOT)
+	}
+	const resolved = requireSuccess('resolve-reflaxe', runStep('resolve-reflaxe', 'haxelib', ['path', 'reflaxe']))
+	const classpath = firstClasspath(resolved.stdout)
+	if (!classpath) {
+		fail('haxelib path reflaxe did not return a classpath')
+	}
+	let root = path.resolve(classpath)
+	if (path.basename(root) === 'src') {
+		root = path.dirname(root)
+	}
+	if (!fs.existsSync(path.join(root, 'Run.hx'))) {
+		fail('resolved Reflaxe framework root does not contain Run.hx')
+	}
+	return root
+}
+
+function inspectArchive(zipPath) {
+	const listing = requireSuccess('archive-list', runStep('archive-list', 'unzip', ['-Z1', zipPath]))
+	const entries = listing.stdout.split('\n').map(line => line.trim()).filter(Boolean)
+	if (entries.length === 0) {
+		fail('release archive is empty')
+	}
+	for (const entry of entries) {
+		if (path.posix.isAbsolute(entry) || entry.split('/').includes('..')) {
+			fail(`unsafe path in release archive: ${entry}`)
+		}
+		if (forbiddenArchiveExtensions.has(path.extname(entry).toLowerCase())) {
+			fail(`compiler/host-specific artifact leaked into release archive: ${entry}`)
+		}
+	}
+	for (const required of ['haxelib.json', 'extraParams.hxml', 'src/reflaxe/ocaml/OcamlCompiler.hx']) {
+		if (!entries.includes(required)) {
+			fail(`release archive is missing ${required}`)
+		}
+	}
+	summary.package.fileCount = entries.length
+	summary.package.sourceOnly = true
+}
+
+function buildArchives() {
+	const firstDir = path.join(artifactsRoot, 'build-a')
+	const secondDir = path.join(artifactsRoot, 'build-b')
+	const builderTemp = path.join(tempRoot, 'package-builder-tmp')
+	ensureDir(firstDir)
+	ensureDir(secondDir)
+	ensureDir(builderTemp)
+	const buildEnv = { ...process.env, TMPDIR: builderTemp, TEMP: builderTemp, TMP: builderTemp }
+	requireSuccess('build-archive-a', runStep('build-archive-a', 'bash', ['scripts/release/build-haxelib-zip.sh', '--out-dir', firstDir], { env: buildEnv }))
+	requireSuccess('build-archive-b', runStep('build-archive-b', 'bash', ['scripts/release/build-haxelib-zip.sh', '--out-dir', secondDir], { env: buildEnv }))
+	const firstZip = path.join(firstDir, summary.package.archiveFile)
+	const secondZip = path.join(secondDir, summary.package.archiveFile)
+	if (!fs.existsSync(firstZip) || !fs.existsSync(secondZip)) {
+		fail('package builder did not write the declared versioned archive')
+	}
+	const firstHash = sha256File(firstZip)
+	const secondHash = sha256File(secondZip)
+	if (firstHash !== secondHash) {
+		fail(`two package builds produced different SHA-256 values: ${firstHash} != ${secondHash}`)
+	}
+	summary.package.sha256 = firstHash
+	summary.package.bytes = fs.statSync(firstZip).size
+	summary.package.reproducible = true
+	inspectArchive(firstZip)
+	return firstZip
+}
+
+function prepareToolchain(isolatedHaxelib) {
+	const selectedVersion = commandVersion('selected-haxe-version', 'haxe', ['--version'])
+	if (selectedVersion !== expectedHaxeVersion) {
+		fail(`standalone package proof requires Haxe ${expectedHaxeVersion}, received ${selectedVersion}`)
+	}
+
+	const haxeRoot = path.resolve(process.env.HAXE_ROOT || path.join(os.homedir(), 'haxe'))
+	const compilerRoot = path.join(haxeRoot, 'versions', selectedVersion)
+	const haxeBinary = path.resolve(process.env.RO_HAXE_BIN || path.join(compilerRoot, process.platform === 'win32' ? 'haxe.exe' : 'haxe'))
+	const haxelibBinary = path.resolve(process.env.RO_HAXELIB_BIN || path.join(compilerRoot, process.platform === 'win32' ? 'haxelib.exe' : 'haxelib'))
+	const nekoRoot = path.resolve(process.env.RO_NEKO_ROOT || path.join(haxeRoot, 'neko'))
+	for (const [label, file] of [['stock Haxe compiler', haxeBinary], ['stock haxelib client', haxelibBinary]]) {
+		if (!fs.existsSync(file)) {
+			fail(`${label} was not found at ${file}; set the corresponding RO_HAXE_BIN/RO_HAXELIB_BIN override`)
+		}
+	}
+	if (!fs.existsSync(nekoRoot)) {
+		fail(`Neko runtime root was not found; set RO_NEKO_ROOT`)
+	}
+	if (process.platform === 'win32') {
+		fail('the first standalone package proof supports macOS/Linux; Windows clean-install proof remains release-parent scope')
+	}
+
+	const wrapperDir = path.join(tempRoot, 'tool-bin')
+	ensureDir(wrapperDir)
+	writeHaxelibWrapper(path.join(wrapperDir, 'haxelib'), haxelibBinary, nekoRoot)
+	const env = {
+		...process.env,
+		HAXELIB_PATH: isolatedHaxelib,
+		HAXE_STD_PATH: path.join(compilerRoot, 'std'),
+		HAXEPATH: compilerRoot,
+		NEKOPATH: nekoRoot,
+		DYLD_LIBRARY_PATH: [nekoRoot, process.env.DYLD_LIBRARY_PATH].filter(Boolean).join(path.delimiter),
+		LD_LIBRARY_PATH: [nekoRoot, process.env.LD_LIBRARY_PATH].filter(Boolean).join(path.delimiter),
+		PATH: [wrapperDir, compilerRoot, nekoRoot, process.env.PATH].filter(Boolean).join(path.delimiter)
+	}
+
+	summary.toolchain.haxe = commandVersion('stock-haxe-version', haxeBinary, ['--version'], { env })
+	summary.toolchain.haxelib = commandVersion('stock-haxelib-version', haxelibBinary, ['version'], { env })
+	summary.toolchain.ocamlc = commandVersion('ocamlc-version', 'ocamlc', ['-version'], { env })
+	summary.toolchain.dune = commandVersion('dune-version', 'dune', ['--version'], { env })
+	summary.toolchain.node = process.version
+	return { env, haxeBinary, haxelibBinary }
+}
+
+function parseLibraryNames(output) {
+	return output
+		.split('\n')
+		.map(line => line.trim())
+		.filter(Boolean)
+		.map(line => line.split(':')[0])
+		.sort()
+}
+
+function proveExternalInstall(zipPath, reflaxeRoot) {
+	const isolatedHaxelib = path.join(tempRoot, 'haxelib')
+	const appRoot = path.join(tempRoot, 'external-app')
+	ensureDir(isolatedHaxelib)
+	fs.cpSync(fixtureRoot, appRoot, { recursive: true })
+	const { env, haxeBinary, haxelibBinary } = prepareToolchain(isolatedHaxelib)
+
+	requireSuccess('seed-reflaxe-framework', runStep('seed-reflaxe-framework', haxelibBinary, ['dev', 'reflaxe', reflaxeRoot], { env }))
+	const beforeInstall = requireSuccess('libraries-before-install', runStep('libraries-before-install', haxelibBinary, ['list'], { env }))
+	const beforeNames = parseLibraryNames(beforeInstall.stdout)
+	if (beforeNames.join(',') !== 'reflaxe') {
+		fail(`disposable haxelib repository unexpectedly resolved: ${beforeNames.join(', ') || '(none)'}`)
+	}
+
+	const missingTarget = runStep('missing-target-negative', haxeBinary, ['build.hxml'], { cwd: appRoot, env })
+	const missingDiagnostic = `${missingTarget.stdout}\n${missingTarget.stderr}`
+	summary.isolation.missingTargetRejected = missingTarget.status !== 0
+	summary.isolation.missingTargetDiagnosticNamedLibrary = missingDiagnostic.includes('reflaxe.ocaml')
+	if (!summary.isolation.missingTargetRejected || !summary.isolation.missingTargetDiagnosticNamedLibrary) {
+		fail('external compile did not reject the missing reflaxe.ocaml package with a useful diagnostic')
+	}
+
+	requireSuccess('install-package', runStep('install-package', haxelibBinary, ['install', zipPath, '--always', '--skip-dependencies'], { env }))
+	const libraries = requireSuccess('libraries-after-install', runStep('libraries-after-install', haxelibBinary, ['list'], { env }))
+	summary.isolation.resolvedLibraries = parseLibraryNames(libraries.stdout)
+	if (summary.isolation.resolvedLibraries.join(',') !== 'reflaxe,reflaxe.ocaml') {
+		fail(`unexpected libraries in disposable repository: ${summary.isolation.resolvedLibraries.join(', ')}`)
+	}
+
+	const targetPathResult = requireSuccess('installed-target-path', runStep('installed-target-path', haxelibBinary, ['path', 'reflaxe.ocaml'], { env }))
+	const installedClasspath = targetPathResult.stdout
+		.split('\n')
+		.map(line => line.trim())
+		.filter(line => line && !line.startsWith('-'))
+		.map(line => path.resolve(line))
+		.find(line => isInside(isolatedHaxelib, line))
+	if (!installedClasspath) {
+		fail('reflaxe.ocaml did not resolve from inside the disposable haxelib repository')
+	}
+	summary.isolation.installedTargetInsideDisposableRepository = true
+	summary.isolation.installedTargetRelativePath = path.relative(isolatedHaxelib, installedClasspath).split(path.sep).join('/')
+
+	const compile = requireSuccess('external-app-compile', runStep('external-app-compile', haxeBinary, ['build.hxml'], { cwd: appRoot, env }))
+	summary.externalApplication.compilePassed = compile.status === 0
+	const emittedRoot = path.join(appRoot, 'out')
+	const executable = path.join(emittedRoot, '_build/default/out.exe')
+	if (!fs.existsSync(executable)) {
+		fail('native build did not produce out/_build/default/out.exe')
+	}
+	summary.externalApplication.nativeBuildPassed = true
+	summary.externalApplication.emittedSourceSha256 = sha256Tree(emittedRoot, { skipDirectory: name => name === '_build' })
+	summary.externalApplication.executableSha256 = sha256File(executable)
+
+	const runtime = requireSuccess('external-app-runtime', runStep('external-app-runtime', executable, [], { cwd: appRoot, env }))
+	const expected = normalizeOutput(fs.readFileSync(path.join(appRoot, 'expected.stdout'), 'utf8'))
+	summary.externalApplication.runtimePassed = runtime.status === 0
+	summary.externalApplication.stdoutMatched = runtime.stdout === expected
+	summary.externalApplication.stdoutSha256 = crypto.createHash('sha256').update(runtime.stdout).digest('hex')
+	if (!summary.externalApplication.stdoutMatched) {
+		fs.writeFileSync(path.join(artifactsRoot, 'external-app-runtime.expected.log'), expected)
+		fail('external application stdout did not match expected.stdout')
+	}
+}
+
+function writeSummary() {
+	fs.writeFileSync(path.join(artifactsRoot, 'summary.json'), JSON.stringify(summary, null, 2) + '\n')
+}
+
+function verifyEvidenceLogs() {
+	const forbidden = evidenceReplacements.map(([localPath]) => localPath)
+	for (const file of walkFiles(artifactsRoot, { skipDirectory: name => name === 'build-a' || name === 'build-b' })) {
+		if (!file.relative.endsWith('.log')) {
+			continue
+		}
+		const contents = fs.readFileSync(file.absolute, 'utf8')
+		for (const localPath of forbidden) {
+			if (contents.includes(localPath)) {
+				fail(`machine-local path remained in evidence log ${file.relative}`)
+			}
+		}
+	}
+	summary.evidence.machineLocalPathsRedacted = true
+}
+
+function main() {
+	fs.rmSync(artifactsRoot, { recursive: true, force: true })
+	ensureDir(artifactsRoot)
+	tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'reflaxe-ocaml-package-install-'))
+	addEvidenceReplacement(tempRoot, '<temp>')
+	addEvidenceReplacement(artifactsRoot, '<artifacts>')
+	addEvidenceReplacement(repoRoot, '<repo>')
+	addEvidenceReplacement(os.homedir(), '<home>')
+	evidenceReplacements.sort((left, right) => right[0].length - left[0].length)
+	try {
+		summary.implementationCommit = requireSuccess('implementation-commit', runStep('implementation-commit', 'git', ['rev-parse', 'HEAD'])).stdout.trim()
+		summary.workingTreeDirty = requireSuccess('working-tree-status', runStep('working-tree-status', 'git', ['status', '--porcelain'])).stdout.trim().length > 0
+		const reflaxeRoot = resolveReflaxeRoot()
+		const zipPath = buildArchives()
+		proveExternalInstall(zipPath, reflaxeRoot)
+		verifyEvidenceLogs()
+		summary.marker = 'RO_PACKAGE_INSTALL_SMOKE:PASS'
+		writeSummary()
+		console.log(`[reflaxe-ocaml-package-install] archive_sha256=${summary.package.sha256}`)
+		console.log(`[reflaxe-ocaml-package-install] emitted_source_sha256=${summary.externalApplication.emittedSourceSha256}`)
+		console.log(`[reflaxe-ocaml-package-install] executable_sha256=${summary.externalApplication.executableSha256}`)
+		console.log(summary.marker)
+	} catch (error) {
+		summary.error = sanitizeEvidence(error instanceof Error ? error.message : String(error))
+		writeSummary()
+		console.error(`[reflaxe-ocaml-package-install] ERROR: ${summary.error}`)
+		console.error(`[reflaxe-ocaml-package-install] evidence=${path.relative(repoRoot, artifactsRoot)}`)
+		if (process.env.RO_KEEP_TEMP === '1') {
+			console.error(`[reflaxe-ocaml-package-install] retained_temp=${tempRoot}`)
+		}
+		process.exitCode = 1
+	} finally {
+		if (process.env.RO_KEEP_TEMP !== '1') {
+			fs.rmSync(tempRoot, { recursive: true, force: true })
+		}
+	}
+}
+
+main()

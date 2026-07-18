@@ -122,9 +122,23 @@ recommendation:
 The better default is:
 
 - use `haxe_libraries/reflaxe.ocaml.hxml` for monorepo development,
-- use `bash scripts/release/build-haxelib-zip.sh` and test the generated zip for
-  package validation,
+- use `npm run test:reflaxe-ocaml:package-install` for release-package
+  validation,
 - use the released haxelib package for normal external projects.
+
+The package-install proof builds the versioned ZIP twice and requires identical
+SHA-256 values. It stages only Git-tracked source inputs, rejects OCaml compiler
+outputs such as `.cmi`, `.cmo`, and `.cmxs`, installs the target in a disposable
+haxelib repository, then compiles and runs an external application with stock
+Haxe 4.3.7. This prevents a machine-local `haxelib dev` link or a compiler-
+version-specific OCaml binary from making a broken package appear healthy.
+Evidence is written to `.artifacts/reflaxe-ocaml/package-install/summary.json`.
+
+To build only the deterministic archive, use:
+
+```bash
+bash scripts/release/build-haxelib-zip.sh
+```
 
 This changed because `reflaxe.ocaml` originally grew in this monorepo without being bootstrapped from `reflaxe new`. The current layout is intentionally closer to a generated Reflaxe compiler while preserving the established `ocaml_output` define and runtime behavior. See [`docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`](../../docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md).
 
