@@ -39,7 +39,9 @@ for (const needle of [
 	'name: Reflaxe OCaml / Package Artifact Matrix',
 	'workflow_dispatch:',
 	'schedule:',
-	'cancel-in-progress: true'
+	'cancel-in-progress: true',
+	"DUNE_VERSION: '3.24.0'",
+	'opam install -y "dune.${DUNE_VERSION}" ocamlfind'
 ]) {
 	requireIncludes('workflow', workflow, needle)
 }

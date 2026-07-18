@@ -43,6 +43,7 @@ env:
   NODE_VERSION: '20'
   HAXE_VERSION: '4.3.7'
   OCAML_VERSION: '5.2.1'
+  DUNE_VERSION: '3.24.0'
 
 jobs:
   package_artifact:
@@ -113,7 +114,7 @@ jobs:
         run: |
           set -euo pipefail
           eval "$(opam env)"
-          opam install -y dune ocamlfind
+          opam install -y "dune.${DUNE_VERSION}" ocamlfind
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
           dune --version
           ocamlc -version

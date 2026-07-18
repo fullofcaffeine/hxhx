@@ -70,7 +70,9 @@ function receipt(platform, architecture, commit, packageInfo, manifestSha256) {
 			id: 'installed-package-platform-v1',
 			durationUnit: 'milliseconds',
 			rawSamplesRetained: true,
+			sampleOrderPreserved: true,
 			outputDirectoryRemovedBeforeEachBuild: true,
+			sharedToolchainCachesMayRemainWarm: true,
 			runtimeVerificationExcludedFromBuildTiming: true,
 			crossHostAbsoluteComparisonAllowed: false,
 			referenceThresholdsEnforced: false

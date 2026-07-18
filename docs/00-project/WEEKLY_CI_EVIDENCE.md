@@ -130,7 +130,7 @@ passing product or Full1 evidence.
 | Full1 / Plugin Parity | `.github/workflows/full1-plugin-parity.yml` | Weekly schedule | `FULL1_PLUGIN_PARITY:PASS` | Per-proof artifacts `full1-plugin-upstream-to-hxhx-<run_id>-<attempt>`, `full1-plugin-hxhx-to-hxhx-<run_id>-<attempt>`, `full1-plugin-upstream-host-adapter-<run_id>-<attempt>` each contain the receipt and loaded plugin file; aggregate artifact `full1-plugin-parity-summary-<run_id>-<attempt>` records same-candidate verification and checksums. |
 | Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity | `.github/workflows/gate-full1.yml` | Weekly schedule | `FULL1_SUITE_MATRIX:PASS`, `FULL1_MACRO_EVAL_PARITY:PASS`, and `FULL1_PLUGIN_PARITY:PASS` | Artifacts `full1-macro-eval-summary-<run_id>-<attempt>` and `full1-summary-<run_id>-<attempt>` + child proof logs. Gate Full1 opens the combined macro/eval receipt before repeating its marker. |
 | Stdlib / Semantic Diff (nightly expanded job) | `.github/workflows/semantic-diff.yml` | Weekly schedule | `SEMANTIC_DIFF_NIGHTLY:PASS` | Artifact `semantic-diff-nightly-artifacts` |
-| Reflaxe OCaml / Package Artifact Matrix | `.github/workflows/reflaxe-ocaml-package-matrix.yml` | Weekly schedule plus relevant pushes | `RO_PACKAGE_ARTIFACT_MATRIX:PASS` | One `reflaxe-ocaml-source-package-<sha>` producer artifact, Linux/macOS install evidence, and verified `reflaxe-ocaml-package-matrix-<sha>` summary |
+| Reflaxe OCaml / Package Artifact Matrix | `.github/workflows/reflaxe-ocaml-package-matrix.yml` | Weekly schedule plus relevant pushes | `RO_PACKAGE_ARTIFACT_MATRIX:PASS` and `RO_TARGET_PERF_PLATFORM_MATRIX:PASS` | One `reflaxe-ocaml-source-package-<sha>` producer artifact; Linux/macOS install and raw performance receipts; verified `reflaxe-ocaml-package-matrix-<sha>` and `reflaxe-ocaml-perf-matrix-<sha>` summaries |
 | Perf / HXHX KPI (Report Only) | `.github/workflows/hxhx-kpi-report.yml` | Manual weekly dispatch | job completes and emits `report.json` | Artifact `hxhx-kpi-report-<run_id>` (contains `report.json`) |
 
 ## Advisory weekly evidence (non-blocking)
@@ -145,7 +145,7 @@ passing product or Full1 evidence.
 1. Open the latest `CI / Evidence Ownership Audit` report. Fix any unowned,
    stale, or missing row before treating the weekly set as reviewed.
 2. Open GitHub Actions and filter to the weekly evidence workflows above.
-3. Verify latest scheduled runs for Gate 1, Gate 2, Macro Runtime Parity, Gate M7, Gate Full1, semantic-diff, and the reflaxe.ocaml package matrix are green.
+3. Verify latest scheduled runs for Gate 1, Gate 2, Macro Runtime Parity, Gate M7, Gate Full1, semantic-diff, and both aggregates in the reflaxe.ocaml package matrix are green.
 4. Open each run and confirm expected markers appear in logs.
 5. For Macro Runtime Parity, download both mode-tagged artifacts, the project
    macro artifact, and the verified summary. Inspect:

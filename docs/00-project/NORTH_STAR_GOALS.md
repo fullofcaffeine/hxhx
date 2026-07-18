@@ -27,7 +27,9 @@ The short version:
 Current planning owners:
 
 - standalone upstream-Haxe product: `haxe_ocaml-s7jry`
-  (completed foundation/proof: `haxe.ocaml-ro10`)
+  (completed foundation/proof: `haxe.ocaml-ro10`; completed isolated package
+  and same-ZIP host proofs: `haxe_ocaml-s7jry.1` and `.2`; active installed
+  package performance owner: `haxe_ocaml-s7jry.3`)
 - `hxhx + reflaxe.ocaml` product route: `haxe_ocaml-38gsp`
   (completed definition foundation: `haxe.ocaml-n5ae`)
 - public status board: README `Goals status` table

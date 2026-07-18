@@ -164,7 +164,9 @@ function validateConsumer(summary, manifest, manifestSha256) {
 	if (!summary.method
 		|| summary.method.id !== 'installed-package-platform-v1'
 		|| summary.method.rawSamplesRetained !== true
+		|| summary.method.sampleOrderPreserved !== true
 		|| summary.method.outputDirectoryRemovedBeforeEachBuild !== true
+		|| summary.method.sharedToolchainCachesMayRemainWarm !== true
 		|| summary.method.runtimeVerificationExcludedFromBuildTiming !== true
 		|| summary.method.crossHostAbsoluteComparisonAllowed !== false
 		|| summary.method.referenceThresholdsEnforced !== false) {

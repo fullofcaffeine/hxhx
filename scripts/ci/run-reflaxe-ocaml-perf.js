@@ -421,7 +421,9 @@ function main() {
         id: mode === 'platform-report' ? 'installed-package-platform-v1' : 'local-reference-gate-v2',
         durationUnit: 'milliseconds',
         rawSamplesRetained: true,
+        sampleOrderPreserved: true,
         outputDirectoryRemovedBeforeEachBuild: true,
+        sharedToolchainCachesMayRemainWarm: true,
         runtimeVerificationExcludedFromBuildTiming: true,
         crossHostAbsoluteComparisonAllowed: false,
         referenceThresholdsEnforced: context.enforceReferenceThresholds

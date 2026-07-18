@@ -6,6 +6,8 @@ const repoRoot = process.cwd()
 const contractPath = path.join(repoRoot, 'docs/00-project/REFLAXE_OCAML_1_0_CONTRACT.md')
 const perfDocPath = path.join(repoRoot, 'docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md')
 const baselinePath = path.join(repoRoot, 'docs/00-project/REFLAXE_OCAML_PERF_BASELINE.json')
+const workflowPath = path.join(repoRoot, '.github/workflows/reflaxe-ocaml-package-matrix.yml')
+const packagePath = path.join(repoRoot, 'package.json')
 
 function fail(message) {
   console.error(`[reflaxe-ocaml-perf-contract-check] ERROR: ${message}`)
@@ -31,6 +33,8 @@ function main() {
   const contract = readText(contractPath)
   const perfDoc = readText(perfDocPath)
   const baseline = readJson(baselinePath)
+  const workflow = readText(workflowPath)
+  const packageJson = readJson(packagePath)
 
   if (baseline.marker !== 'RO_TARGET_PERF_CREDIBLE:PASS') {
     fail(`unexpected baseline marker ${baseline.marker}`)
@@ -71,6 +75,24 @@ function main() {
   }
   if (!perfDoc.includes('scripts/ci/run-reflaxe-ocaml-perf.js')) {
     fail(`${perfDocPath} must reference the deterministic perf runner`)
+  }
+  for (const marker of ['RO_TARGET_PERF_PLATFORM:PASS', 'RO_TARGET_PERF_PLATFORM_MATRIX:PASS']) {
+    if (!contract.includes(marker) || !perfDoc.includes(marker)) {
+      fail(`contract and performance docs must explain ${marker}`)
+    }
+  }
+  for (const needle of [
+    'RO_PERF_MODE=platform-report',
+    'reflaxe-ocaml-perf-matrix-summary.js',
+    'reflaxe-ocaml-perf-matrix-${{ github.sha }}'
+  ]) {
+    if (!workflow.includes(needle)) {
+      fail(`${workflowPath} must include ${needle}`)
+    }
+  }
+  if (packageJson.scripts['test:reflaxe-ocaml:perf-platform']
+    !== 'RO_PERF_MODE=platform-report node scripts/ci/run-reflaxe-ocaml-perf.js') {
+    fail(`${packagePath} must expose the installed-package performance command`)
   }
 
   console.log('[ci:guards] OK: reflaxe.ocaml perf credibility contract is valid')

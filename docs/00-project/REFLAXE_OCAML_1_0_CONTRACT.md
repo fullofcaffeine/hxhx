@@ -124,6 +124,19 @@ Required marker set:
 
 Supporting evidence:
 
+- `RO_TARGET_PERF_PLATFORM:PASS`
+  - one host measured the exact installed source ZIP outside the checkout with
+    complete raw samples and verified runtime output
+  - this is an input receipt, not a cross-platform result by itself
+- `RO_TARGET_PERF_PLATFORM_MATRIX:PASS`
+  - one clean source ZIP is installed and measured on Linux and macOS with the
+    canonical six-scenario method, complete raw samples, verified behavior,
+    host/toolchain metadata, and an aggregate that opens both receipts
+  - source of truth:
+    - `.github/workflows/reflaxe-ocaml-package-matrix.yml`
+    - `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`
+  - results are per host; this marker does not authorize cross-host absolute
+    timing comparisons or replace `hxhx` compiler/plugin performance evidence
 - `RO_PACKAGE_ARTIFACT_MATRIX:PASS`
   - one clean CI producer builds the deterministic source ZIP and Linux plus
     macOS consumers install, compile, build, and run that exact artifact

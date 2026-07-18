@@ -192,6 +192,21 @@ verified one candidate. It does not silently declare all Linux distributions,
 all macOS/toolchain versions, or Windows supported. The product owner must make
 and maintain that broader support declaration separately.
 
+The same host jobs then measure the installed ZIP instead of the checkout.
+They copy the six canonical examples to external workspaces, retain three raw
+build samples per example and nine raw run samples for each benchmark profile,
+execute every workload, and record host/toolchain/load metadata. A final job
+opens both receipts and emits `RO_TARGET_PERF_PLATFORM_MATRIX:PASS` only when
+the package identity, clean commit, method, samples, output checks, and
+isolation proof agree.
+
+Download `reflaxe-ocaml-perf-matrix-<commit>` from the package workflow for the
+verified per-host report. Read Linux and macOS values separately: hosted
+runners are different machines, so the workflow intentionally refuses to use
+their absolute timing difference as a product comparison. The older local
+reference command remains available as `npm run test:reflaxe-ocaml:perf`; see
+`docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md` for method and limitations.
+
 This ZIP is the standalone Haxe target source package. It does not settle the
 future native-plugin loader format: stock Haxe and `hxhx` still aim to share one
 semantic plugin payload, with different thin loader shells allowed only for a
@@ -399,6 +414,9 @@ Fix:
 - use `node scripts/ci/run-reflaxe-ocaml-perf.js`
 - compare against `docs/00-project/REFLAXE_OCAML_PERF_BASELINE.json`
 - treat the numbers as bounded expectations/regression indicators, not universal guarantees
+- for release-shaped host evidence, open the latest
+  `reflaxe-ocaml-perf-matrix-<commit>` artifact and compare a host only with
+  repeated evidence from the same runner class
 
 ## Evidence lanes to trust
 
@@ -407,6 +425,7 @@ For standalone `reflaxe.ocaml`, trust these product markers:
 - `RO_HAXE_4_3_7_MATRIX:PASS`
 - `RO_RUNTIME_STDLIB_CLOSURE:PASS`
 - `RO_TARGET_PERF_CREDIBLE:PASS`
+- `RO_TARGET_PERF_PLATFORM_MATRIX:PASS`
 - `RO_PRODUCTION_DOCS:PASS`
 - `RO_PRODUCTION_READY:PASS`
 
