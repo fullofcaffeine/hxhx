@@ -144,6 +144,44 @@ The helper:
 - exits `124` on timeout,
 - and terminates the child process group on timeout.
 
+## Heavy-Run Capacity Preflight
+
+Gate 3 checks whether the machine is already saturated before it resolves
+packages, rebuilds `hxhx`, or creates a temporary upstream worktree. This keeps
+an overloaded laptop from spending an entire target timeout producing timing
+that cannot be compared with a normal run.
+
+Run the same check directly:
+
+```bash
+node scripts/hxhx/check-local-capacity.js --label local-diagnostic
+```
+
+The default `auto` policy stops a saturated local run with exit code `75` and
+only warns in CI. The marker is
+`HXHX_LOCAL_CAPACITY:<PASS|WARNING|BLOCKED|OFF>`. Useful overrides are:
+
+```bash
+# Observe saturation without stopping.
+HXHX_HEAVY_RUN_CAPACITY_POLICY=warn npm run test:upstream:runci-targets
+
+# Accept the slowdown deliberately. Correctness rules remain unchanged.
+HXHX_HEAVY_RUN_CAPACITY_POLICY=off npm run test:upstream:runci-targets
+
+# Keep a redacted machine-state report for a timing comparison.
+HXHX_HEAVY_RUN_CAPACITY_REPORT=.artifacts/capacity.json \
+  npm run test:upstream:runci-targets
+```
+
+The report includes load averages and short process facts such as compiler
+kind, PID, CPU use, and elapsed time. Only compiler processes actively
+consuming CPU count as competitors; idle warm compiler servers remain outside
+that count. The report deliberately discards full command lines so flags,
+paths, and credentials cannot leak into evidence. Turning the capacity
+decision off changes only whether the expensive command starts; it does not
+relax target selection, retries, timeouts, stage0 restrictions, or pass
+criteria.
+
 ## Parallelism Policy
 
 Parallelize independent checks when they do not write the same output directory
@@ -170,6 +208,12 @@ Recent local evidence from July 3, 2026:
 | `npm run hxhx:current-source-bin` | valid current-source cache reuse | about 0.4s |
 | C++ syntax-only compile for `cpp-numeric-only` | one generated translation unit | about 1.1s |
 | C++ full compile/link for `cpp-numeric-only` | one generated translation unit | about 1.3s |
+
+On July 18, 2026, an exact current-source strict C++ run reached its 5,400-second
+timeout while the host load was roughly 48. That run is retained as contention
+evidence, not compiler-semantic or performance evidence. The capacity preflight
+now rejects that situation before expensive setup instead of normalizing it as
+an acceptable development-loop duration.
 
 If a local step is much slower than these baselines, treat it as a problem to
 diagnose. Check whether the run rebuilt from scratch, serialized work that could

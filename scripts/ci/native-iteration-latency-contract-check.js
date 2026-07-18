@@ -175,6 +175,9 @@ function main() {
     if (policy.activeEvidenceLoop.stage0FreeBuildReportSchema !== 'hxhx.stage0-free-build.v1') {
       fail('policy.activeEvidenceLoop.stage0FreeBuildReportSchema must be hxhx.stage0-free-build.v1')
     }
+    if (policy.activeEvidenceLoop.localCapacityPreflightSchema !== 'hxhx.local-capacity-preflight.v1') {
+      fail('policy.activeEvidenceLoop.localCapacityPreflightSchema must be hxhx.local-capacity-preflight.v1')
+    }
     for (const field of [
       'full1PhaseTimingReportValidator',
       'm7SharedArtifactReceiptValidator',
@@ -188,7 +191,9 @@ function main() {
       'stage0FreeBuildReportValidator',
       'stage0FreeBuildReportRunner',
       'nativePluginLoopReportValidator',
-      'nativePluginLoopReportRunner'
+      'nativePluginLoopReportRunner',
+      'localCapacityPreflight',
+      'localCapacityPreflightFixture'
     ]) {
       const evidencePath = policy.activeEvidenceLoop[field]
       if (!evidencePath || !fs.existsSync(evidencePath)) {

@@ -39,6 +39,9 @@ if [ -z "$TARGETS_RAW" ]; then
   echo "    Retry defaults: HXHX_GATE3_RETRY_COUNT=1, HXHX_GATE3_RETRY_TARGETS=Js, HXHX_GATE3_RETRY_DELAY_SEC=3" >&2
   echo "    Long-run observability: HXHX_GATE3_TARGET_HEARTBEAT_SEC=20 (set 0 to disable)." >&2
   echo "    Optional per-target timeout: HXHX_GATE3_TARGET_TIMEOUT_SEC=0 (disabled by default)." >&2
+  echo "    Heavy local runs stop before setup when the host is saturated; CI warns." >&2
+  echo "    Override only the capacity decision with HXHX_HEAVY_RUN_CAPACITY_POLICY=off." >&2
+  echo "    Set HXHX_HEAVY_RUN_CAPACITY_REPORT=/path/report.json to retain the preflight state." >&2
   echo "    Set HXHX_GATE3_RETRY_COUNT=0 to disable retries." >&2
   echo "    Set HXHX_GATE3_KEEP_WORKTREE_ON_FAILURE=1 to retain the temporary upstream worktree for debugging failed generated output." >&2
   echo "    Set HXHX_BIN=/path/to/hxhx to reuse a prebuilt stage1 binary." >&2
@@ -309,6 +312,36 @@ if [ ! -d "$UPSTREAM_DIR/tests/runci" ] || [ ! -f "$UPSTREAM_DIR/tests/RunCi.hxm
   echo "Set HAXE_UPSTREAM_DIR to your local Haxe checkout." >&2
   exit 0
 fi
+
+run_heavy_capacity_preflight() {
+  local helper="$ROOT/scripts/hxhx/check-local-capacity.js"
+  local policy="${HXHX_HEAVY_RUN_CAPACITY_POLICY:-auto}"
+  local max_load="${HXHX_HEAVY_RUN_MAX_LOAD_PER_CPU:-}"
+  local report="${HXHX_HEAVY_RUN_CAPACITY_REPORT:-}"
+  local -a args=(--policy "$policy" --label "gate3:${TARGETS_RAW// /,}")
+
+  if ! command -v node >/dev/null 2>&1; then
+    echo "Missing node on PATH (required for the heavyweight-run capacity preflight)." >&2
+    exit 1
+  fi
+  if [ ! -f "$helper" ]; then
+    echo "Missing heavyweight-run capacity helper: $helper" >&2
+    exit 1
+  fi
+  if [ -n "$max_load" ]; then
+    args+=(--max-load-per-cpu "$max_load")
+  fi
+  if [ -n "$report" ]; then
+    args+=(--json-out "$report")
+  fi
+
+  node "$helper" "${args[@]}"
+}
+
+# This runs before package resolution, compiler construction, temporary
+# worktree creation, or target setup. A saturated local machine therefore gets
+# a quick, retryable answer instead of spending the complete target timeout.
+run_heavy_capacity_preflight
 
 if ! command -v "$HAXELIB_BIN" >/dev/null 2>&1; then
   if command -v haxelib >/dev/null 2>&1; then

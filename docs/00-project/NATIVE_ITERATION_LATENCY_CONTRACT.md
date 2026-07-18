@@ -1,6 +1,6 @@
 # Native Iteration Latency Contract
 
-Last audited: 2026-07-14
+Last audited: 2026-07-18
 
 This document defines the project-level latency north star for native
 `hxhx + reflaxe.ocaml` work. It is a measurement contract, not a claim that the
@@ -101,7 +101,10 @@ performance claim must use measured medians from the relevant runner class.
     "stage0FreeBuildReportRunner": "scripts/hxhx/bench-stage0-free-build.sh",
     "nativePluginLoopReportSchema": "hxhx.native-plugin-loop.v1",
     "nativePluginLoopReportValidator": "scripts/ci/native-plugin-loop-benchmark-report.js",
-    "nativePluginLoopReportRunner": "scripts/hxhx/bench-native-plugin-loop.sh"
+    "nativePluginLoopReportRunner": "scripts/hxhx/bench-native-plugin-loop.sh",
+    "localCapacityPreflightSchema": "hxhx.local-capacity-preflight.v1",
+    "localCapacityPreflight": "scripts/hxhx/check-local-capacity.js",
+    "localCapacityPreflightFixture": "scripts/ci/local-capacity-preflight-fixture-test.js"
   },
   "measurementBuckets": [
     {
@@ -158,6 +161,8 @@ performance claim must use measured medians from the relevant runner class.
         ".github/workflows/gate-perf-full1.yml",
         ".github/workflows/gate-m7.yml",
         "scripts/ci/m7-shared-artifacts.js",
+        "scripts/hxhx/check-local-capacity.js",
+        "scripts/ci/local-capacity-preflight-fixture-test.js",
         "docs/00-project/CI_GATES.md"
       ]
     }
@@ -188,6 +193,17 @@ Expected to remain intentionally heavier:
   release claims.
 
 ## Reporting Rule
+
+Before an expensive local Gate 3 run prepares dependencies, rebuilds the
+compiler, or creates an upstream worktree, its capacity preflight records the
+host CPU/load state and a redacted summary of compiler processes actively
+consuming CPU. Idle compiler servers do not count as competing work.
+The default `auto` policy stops a saturated local run with retryable exit code
+`75`; the same policy only warns in CI because CI capacity is controlled by the
+runner platform. An explicit `off` accepts the expected slowdown but does not
+change target selection, retries, timeouts, stage0 rules, or any correctness
+claim. Optional JSON reports use `hxhx.local-capacity-preflight.v1` and never
+retain full process command lines.
 
 Heavy Full1 jobs write `full1-phase-timing-summary.v2`. In plain language, a
 downloaded timing file must say which commit, workflow run, machine, and tool
