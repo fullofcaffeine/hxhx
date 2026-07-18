@@ -81,7 +81,7 @@
     "guard:hx-format": "bash scripts/lint/hx_format_guard.sh",
     "release:preflight": "npm run guard:gitleaks && npm run ci:guards",
     "release:preflight:full": "npm run release:preflight && npm run test:upstream:replacement-ready:strict && HXHX_DIST_FORBID_STAGE0=1 bash scripts/hxhx/build-dist.sh && npm run guard:dist-copyleft",
-    "test:hooks:post-checkout": "bash -n scripts/install-git-hooks.sh scripts/hooks/post-checkout && node --check scripts/ci/post-checkout-hook-fixture-test.js && node scripts/ci/post-checkout-hook-fixture-test.js",
+    "test:hooks:post-checkout": "bash -n scripts/install-git-hooks.sh scripts/hooks/post-checkout scripts/hooks/post-commit && node --check scripts/ci/post-checkout-hook-fixture-test.js && node scripts/ci/post-checkout-hook-fixture-test.js",
     "test:hooks:post-checkout:real": "HXHX_REAL_BD_HOOK_SMOKE=1 npm run test:hooks:post-checkout",
     "hooks:install": "bash scripts/install-git-hooks.sh",
     "clean": "bash scripts/dev/clean-artifacts.sh --safe",

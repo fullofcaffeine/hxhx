@@ -22,6 +22,9 @@ SRC_POST_CHECKOUT="$ROOT_DIR/scripts/hooks/post-checkout"
 DEST_POST_CHECKOUT="$HOOKS_DIR/post-checkout"
 DEST_BD_POST_CHECKOUT="$HOOKS_DIR/post-checkout.bd"
 DEST_USER_POST_CHECKOUT="$HOOKS_DIR/post-checkout.user"
+SRC_POST_COMMIT="$ROOT_DIR/scripts/hooks/post-commit"
+DEST_POST_COMMIT="$HOOKS_DIR/post-commit"
+DEST_USER_POST_COMMIT="$HOOKS_DIR/post-commit.user"
 CHECKOUT_STATE="$(git -C "$ROOT_DIR" rev-parse --git-path hxhx-post-checkout-state)"
 if [[ "$CHECKOUT_STATE" != /* ]]; then
 	CHECKOUT_STATE="$ROOT_DIR/$CHECKOUT_STATE"
@@ -57,6 +60,16 @@ is_bd_post_checkout() {
 	grep -q "^# bd-shim v1$" "$hook_path"
 }
 
+is_repo_post_commit() {
+	local hook_path="$1"
+
+	if [ ! -f "$hook_path" ]; then
+		return 1
+	fi
+
+	grep -q "HXHX_BD_POST_COMMIT_STATE_V1" "$hook_path"
+}
+
 preserve_user_post_checkout() {
 	local hook_path="$1"
 
@@ -69,6 +82,20 @@ preserve_user_post_checkout() {
 	cp "$hook_path" "$DEST_USER_POST_CHECKOUT"
 	chmod +x "$DEST_USER_POST_CHECKOUT"
 	echo "[hooks:install] Preserved user post-checkout hook -> $DEST_USER_POST_CHECKOUT"
+}
+
+preserve_user_post_commit() {
+	local hook_path="$1"
+
+	if [ -f "$DEST_USER_POST_COMMIT" ] && ! cmp -s "$hook_path" "$DEST_USER_POST_COMMIT"; then
+		echo "[hooks:install] ERROR: refusing to replace existing post-commit.user" >&2
+		echo "[hooks:install] Reconcile $hook_path and $DEST_USER_POST_COMMIT manually." >&2
+		exit 1
+	fi
+
+	cp "$hook_path" "$DEST_USER_POST_COMMIT"
+	chmod +x "$DEST_USER_POST_COMMIT"
+	echo "[hooks:install] Preserved user post-commit hook -> $DEST_USER_POST_COMMIT"
 }
 
 record_checkout_identity() {
@@ -116,3 +143,11 @@ cp "$SRC_POST_CHECKOUT" "$DEST_POST_CHECKOUT"
 chmod +x "$DEST_POST_CHECKOUT"
 record_checkout_identity
 echo "[hooks:install] Installed fast Beads post-checkout guard -> $DEST_POST_CHECKOUT"
+
+if [ -f "$DEST_POST_COMMIT" ] && ! is_repo_post_commit "$DEST_POST_COMMIT"; then
+	preserve_user_post_commit "$DEST_POST_COMMIT"
+fi
+
+cp "$SRC_POST_COMMIT" "$DEST_POST_COMMIT"
+chmod +x "$DEST_POST_COMMIT"
+echo "[hooks:install] Installed checkout-state post-commit hook -> $DEST_POST_COMMIT"

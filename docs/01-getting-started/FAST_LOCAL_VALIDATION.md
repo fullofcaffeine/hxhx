@@ -296,7 +296,9 @@ when Git proves the checked-out branch and commit did not change. Disposable
 fixtures still delegate equal-commit branch switches, changed commits, file
 checkouts, malformed calls, and custom hooks; an opt-in real-`bd` fixture proves
 a changed branch imports its new issue data. See the hook setup in
-[`TESTING.md`](TESTING.md).
+[`TESTING.md`](TESTING.md). A companion post-commit hook advances the state after
+local commits, while Git's rebase `head-name` keeps the original branch identity
+visible during the temporary detached-HEAD step of a no-op pull.
 
 The documentation-only reuse row avoids roughly 130 times the wait of that
 fresh build, but only for changes outside the compiler input set. A compiler,

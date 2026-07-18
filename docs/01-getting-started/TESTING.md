@@ -64,6 +64,8 @@ changed, so the guard skips only that redundant Beads import. A different
 branch at the same commit, a changed commit, a file checkout, malformed hook
 arguments, and manual `bd` commands still use the normal Beads path. A
 pre-existing custom post-checkout hook is preserved and runs before the guard.
+The companion post-commit hook records a successful local commit, so the next
+no-op pull stays fast; any existing custom post-commit hook is also preserved.
 
 This does not disable automatic issue synchronization. Continue to export
 tracked issue data before commits as usual:

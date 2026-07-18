@@ -34,6 +34,32 @@ is_git_object_id() {
 	esac
 }
 
+rebase_head_name() {
+	local candidate
+	local candidate_path
+	local branch
+
+	for candidate in rebase-merge/head-name rebase-apply/head-name; do
+		candidate_path="$(git rev-parse --git-path "$candidate")"
+		if [[ "$candidate_path" != /* ]]; then
+			candidate_path="$(git rev-parse --show-toplevel)/$candidate_path"
+		fi
+		if [[ ! -f "$candidate_path" ]]; then
+			continue
+		fi
+
+		IFS= read -r branch <"$candidate_path" || true
+		case "$branch" in
+			refs/heads/*)
+				printf '%s\n' "$branch"
+				return 0
+				;;
+		esac
+	done
+
+	return 1
+}
+
 current_checkout_identity() {
 	local branch
 	local head
@@ -43,6 +69,8 @@ current_checkout_identity() {
 	fi
 
 	if branch="$(git symbolic-ref --quiet HEAD 2>/dev/null)"; then
+		printf 'branch:%s@%s\n' "$branch" "$head"
+	elif branch="$(rebase_head_name)"; then
 		printf 'branch:%s@%s\n' "$branch" "$head"
 	else
 		printf 'detached:%s\n' "$head"

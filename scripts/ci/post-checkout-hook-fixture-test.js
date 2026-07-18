@@ -51,6 +51,7 @@ function makeFixture(name, initialPostCheckout) {
 	fs.copyFileSync(path.join(repositoryRoot, 'scripts/install-git-hooks.sh'), path.join(scriptsDir, 'install-git-hooks.sh'))
 	fs.copyFileSync(path.join(repositoryRoot, 'scripts/hooks/pre-commit'), path.join(hooksSourceDir, 'pre-commit'))
 	fs.copyFileSync(path.join(repositoryRoot, 'scripts/hooks/post-checkout'), path.join(hooksSourceDir, 'post-checkout'))
+	fs.copyFileSync(path.join(repositoryRoot, 'scripts/hooks/post-commit'), path.join(hooksSourceDir, 'post-commit'))
 
 	run('git', ['init', '-q'], { cwd: root })
 	run('git', ['config', 'user.name', 'Hook Fixture'], { cwd: root })
@@ -121,6 +122,7 @@ function testOfficialBeadsShim() {
 
 	const primary = path.join(fixture.hooksDir, 'post-checkout')
 	const delegate = path.join(fixture.hooksDir, 'post-checkout.bd')
+	const postCommit = path.join(fixture.hooksDir, 'post-commit')
 	const checkoutState = path.join(fixture.root, '.git', 'hxhx-post-checkout-state')
 	assert(fs.readFileSync(delegate, 'utf8') === officialShim, 'the exact Beads shim must be preserved')
 	assert(
@@ -128,15 +130,38 @@ function testOfficialBeadsShim() {
 		'the repository fast guard must become the primary hook',
 	)
 	assert((fs.statSync(primary).mode & 0o111) !== 0, 'the primary hook must remain executable')
+	assert(
+		fs.readFileSync(postCommit, 'utf8').includes('HXHX_BD_POST_COMMIT_STATE_V1'),
+		'the repository post-commit state hook must be installed',
+	)
 	const installedState = fs.readFileSync(checkoutState, 'utf8')
 	assert(installedState.startsWith('branch:'), 'the installer must record the current branch identity')
 	assert(installedState.includes(fixture.head), 'the checkout state must include the synchronized HEAD commit')
 
-	const shaA = fixture.head
+	run('git', ['commit', '-q', '--no-verify', '--allow-empty', '-m', 'local commit advances checkout state'], {
+		cwd: fixture.root,
+		env: fixture.env,
+	})
+	const shaA = run('git', ['rev-parse', 'HEAD'], { cwd: fixture.root }).stdout.trim()
+	assert(shaA !== fixture.head, 'the local commit control must advance HEAD')
+	assert(fs.readFileSync(checkoutState, 'utf8').includes(shaA), 'post-commit must advance the synchronized HEAD state')
 	const shaB = 'b'.repeat(40)
 	const same = invoke(fixture, [shaA, shaA, '1'], { trace: true })
 	assert(same.stdout.includes('skipped redundant Beads import'), 'the traced identical-commit path must say what it skipped')
 	assert(logLines(fixture.bdLog).length === 0, 'an identical branch checkout must not invoke Beads')
+
+	const branchRef = run('git', ['symbolic-ref', 'HEAD'], { cwd: fixture.root }).stdout.trim()
+	const branchName = branchRef.replace(/^refs\/heads\//, '')
+	const emptyHooks = path.join(fixture.root, 'empty-hooks')
+	fs.mkdirSync(emptyHooks)
+	run('git', ['-c', `core.hooksPath=${emptyHooks}`, 'switch', '-q', '--detach', shaA], { cwd: fixture.root })
+	const rebaseStateDir = path.join(fixture.root, '.git', 'rebase-merge')
+	fs.mkdirSync(rebaseStateDir)
+	fs.writeFileSync(path.join(rebaseStateDir, 'head-name'), `${branchRef}\n`)
+	invoke(fixture, [shaA, shaA, '1'])
+	assert(logLines(fixture.bdLog).length === 0, 'a no-op rebase must retain its recorded branch while HEAD is detached')
+	fs.rmSync(rebaseStateDir, { recursive: true, force: true })
+	run('git', ['-c', `core.hooksPath=${emptyHooks}`, 'switch', '-q', branchName], { cwd: fixture.root })
 
 	fs.writeFileSync(checkoutState, 'branch:refs/heads/different\n')
 	invoke(fixture, [shaA, shaA, '1'], {
@@ -178,12 +203,26 @@ function testUserHookChaining() {
 	const userHook =
 		'#!/usr/bin/env bash\nset -euo pipefail\nprintf "user:%s\\n" "$*" >> "${HXHX_HOOK_FIXTURE_USER_LOG:?}"\n'
 	const fixture = makeFixture('user-hook', userHook)
+	const userPostCommit =
+		'#!/usr/bin/env bash\nset -euo pipefail\nprintf "commit-user\\n" >> "${HXHX_HOOK_FIXTURE_USER_LOG:?}"\n'
+	writeExecutable(path.join(fixture.hooksDir, 'post-commit'), userPostCommit)
 	install(fixture)
 
 	const preservedUserHook = path.join(fixture.hooksDir, 'post-checkout.user')
+	const preservedUserPostCommit = path.join(fixture.hooksDir, 'post-commit.user')
 	assert(fs.readFileSync(preservedUserHook, 'utf8') === userHook, 'an existing user hook must be preserved exactly')
+	assert(
+		fs.readFileSync(preservedUserPostCommit, 'utf8') === userPostCommit,
+		'an existing user post-commit hook must be preserved exactly',
+	)
 
-	const shaA = fixture.head
+	fs.rmSync(fixture.userLog, { force: true })
+	run('git', ['commit', '-q', '--no-verify', '--allow-empty', '-m', 'user post-commit control'], {
+		cwd: fixture.root,
+		env: fixture.env,
+	})
+	assert(logLines(fixture.userLog)[0] === 'commit-user', 'the preserved user post-commit hook must still run')
+	const shaA = run('git', ['rev-parse', 'HEAD'], { cwd: fixture.root }).stdout.trim()
 	const shaB = 'e'.repeat(40)
 	invoke(fixture, [shaA, shaA, '1'])
 	assert(logLines(fixture.userLog)[0] === `user:${shaA} ${shaA} 1`, 'the user hook must observe identical checkouts')
@@ -195,6 +234,10 @@ function testUserHookChaining() {
 
 	install(fixture)
 	assert(fs.readFileSync(preservedUserHook, 'utf8') === userHook, 'idempotent reinstall must retain the user hook')
+	assert(
+		fs.readFileSync(preservedUserPostCommit, 'utf8') === userPostCommit,
+		'idempotent reinstall must retain the user post-commit hook',
+	)
 }
 
 function testConflictingUserHookFailsClosed() {

@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# HXHX_BD_POST_COMMIT_STATE_V1
+#
+# A successful local commit advances HEAD without running post-checkout. Record
+# that new branch+commit identity so the next no-op pull can take the guarded
+# post-checkout path without weakening retry behavior after a failed import.
+
+HOOKS_DIR="$(git rev-parse --git-path hooks)"
+if [[ "$HOOKS_DIR" != /* ]]; then
+	HOOKS_DIR="$(git rev-parse --show-toplevel)/$HOOKS_DIR"
+fi
+
+USER_HOOK="$HOOKS_DIR/post-commit.user"
+CHECKOUT_STATE="$(git rev-parse --git-path hxhx-post-checkout-state)"
+if [[ "$CHECKOUT_STATE" != /* ]]; then
+	CHECKOUT_STATE="$(git rev-parse --show-toplevel)/$CHECKOUT_STATE"
+fi
+
+rebase_head_name() {
+	local candidate
+	local candidate_path
+	local branch
+
+	for candidate in rebase-merge/head-name rebase-apply/head-name; do
+		candidate_path="$(git rev-parse --git-path "$candidate")"
+		if [[ "$candidate_path" != /* ]]; then
+			candidate_path="$(git rev-parse --show-toplevel)/$candidate_path"
+		fi
+		if [[ ! -f "$candidate_path" ]]; then
+			continue
+		fi
+
+		IFS= read -r branch <"$candidate_path" || true
+		case "$branch" in
+			refs/heads/*)
+				printf '%s\n' "$branch"
+				return 0
+				;;
+		esac
+	done
+
+	return 1
+}
+
+current_checkout_identity() {
+	local branch
+	local head
+
+	if ! head="$(git rev-parse --verify HEAD 2>/dev/null)"; then
+		return 1
+	fi
+
+	if branch="$(git symbolic-ref --quiet HEAD 2>/dev/null)"; then
+		printf 'branch:%s@%s\n' "$branch" "$head"
+	elif branch="$(rebase_head_name)"; then
+		printf 'branch:%s@%s\n' "$branch" "$head"
+	else
+		printf 'detached:%s\n' "$head"
+	fi
+}
+
+record_checkout_identity() {
+	local current
+	local temporary_state
+
+	if ! current="$(current_checkout_identity)"; then
+		return 0
+	fi
+
+	mkdir -p "$(dirname "$CHECKOUT_STATE")"
+	temporary_state="$CHECKOUT_STATE.tmp.$$"
+	printf '%s\n' "$current" >"$temporary_state"
+	mv "$temporary_state" "$CHECKOUT_STATE"
+}
+
+if [[ -x "$USER_HOOK" ]]; then
+	"$USER_HOOK" "$@"
+fi
+
+record_checkout_identity
