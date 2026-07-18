@@ -111,6 +111,14 @@ encoding with immutable snapshots, stable IDs, bounded opaque handles, and
 coarse calls. A direct in-process representation is an optimization only after
 it proves identical behavior and reset semantics against that contract.
 
+This artifact model must also survive a future repository split. The shared
+ABI, target core, and payload have one versioned source of truth; `hxhx` must be
+able to validate an immutable `reflaxe.ocaml` candidate without reading a
+sibling source directory. The extraction timing, candidate/pin protocol, and
+tiered downstream QA contract are defined in
+`docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md`. Repository
+extraction does not authorize duplicate target semantics or a second ABI owner.
+
 ## 4. Compiler-transform snapshot and rewrite model
 
 The smallest credible cross-host transform API is a batch protocol, not a set

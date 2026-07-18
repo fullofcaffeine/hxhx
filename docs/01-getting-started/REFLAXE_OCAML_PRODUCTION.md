@@ -46,6 +46,13 @@ It does not mean:
 - plugin/promotion proof through every host shape,
 - or non-delegating `hxhx` macro/runtime guarantees.
 
+The package's repository location is not part of the 1.0 product claim.
+`reflaxe.ocaml` remains in this monorepo today, but its release-shaped evidence
+must already work without resolving target source from the checkout. The
+future extraction gate and the continuing downstream `hxhx` QA relationship
+are defined in
+`docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md`.
+
 ## Prerequisites
 
 Required:

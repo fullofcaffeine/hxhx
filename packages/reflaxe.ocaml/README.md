@@ -214,6 +214,7 @@ Without `ocaml_output`, OCaml target output is not selected.
 - [`docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`](../../docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md)
 - [`docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md`](../../docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md)
 - [`docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`](../../docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md)
+- [`docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md`](../../docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md)
 - [`docs/01-getting-started/TESTING.md`](../../docs/01-getting-started/TESTING.md)
 - [`docs/02-user-guide/HXHX_BACKEND_LAYERING.md`](../../docs/02-user-guide/HXHX_BACKEND_LAYERING.md)
 - [`docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`](../../docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md)

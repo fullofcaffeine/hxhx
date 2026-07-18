@@ -139,6 +139,10 @@ Meaning in plain terms:
 
 - Keep monorepo, but make product boundaries clearer (`hxhx` vs backend internals vs examples/tools).
 - This improves contributor onboarding and future split options.
+- The later extraction decision is now explicit in
+  `docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md`: retain the
+  monorepo today, prepare artifact-mode boundaries, and split only when both
+  the readiness gates and a measured product/maintenance trigger pass.
 
 ### M6. Gate3 stability hardening (real-world CI behavior)
 

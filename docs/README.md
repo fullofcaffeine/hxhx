@@ -27,6 +27,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - `reflaxe.ocaml` upstream-Haxe validation matrix: `docs/00-project/REFLAXE_OCAML_HAXE_4_3_7_MATRIX.md`
 - `reflaxe.ocaml` runtime/stdlib closure audit: `docs/00-project/REFLAXE_OCAML_RUNTIME_STDLIB_CLOSURE_AUDIT.md`
 - `reflaxe.ocaml` performance credibility baseline: `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`
+- `reflaxe.ocaml` repository extraction decision and post-split `hxhx` QA
+  contract: `docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md`
 - Reflaxe promotion matrix contract: `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
 - Reflaxe promotion matrix tradeoffs: `docs/00-project/REFLAXE_PROMOTION_MATRIX_TRADEOFFS.md`
 - Planned M22 Native Reflaxe Compiler SDK contract: `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`

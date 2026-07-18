@@ -32,6 +32,12 @@ Current planning owners:
   package performance owner: `haxe_ocaml-s7jry.3`)
 - `hxhx + reflaxe.ocaml` product route: `haxe_ocaml-38gsp`
   (completed definition foundation: `haxe.ocaml-n5ae`)
+- repository extraction decision: `haxe_ocaml-ipm6h`; keep the monorepo for
+  now, prepare an artifact-based boundary, and split only after the technical
+  gates and a measured product/maintenance trigger pass. After a split,
+  `hxhx` remains a pinned downstream QA/E2E consumer rather than the target's
+  sole release gate. See
+  `docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md`.
 - public status board: README `Goals status` table
 
 ## Public Progress Tracking

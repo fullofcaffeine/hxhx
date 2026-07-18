@@ -43,5 +43,13 @@ This monorepo contains multiple packages, but one product direction:
 
 ## Repo split policy
 
-- Keep monorepo until gate acceptance says packages are independently stable.
-- Re-evaluate repository rename/split after replacement-readiness gates, not before.
+- Keep the monorepo today while making `reflaxe.ocaml` independently
+  buildable, testable, packageable, and releasable.
+- Do not split on a date or version milestone alone. Require the technical
+  extraction gates plus a measured ownership, release, or maintenance benefit.
+- After a future split, keep `hxhx` as a pinned downstream compatibility and
+  end-to-end workload for `reflaxe.ocaml`, without making it the target's only
+  correctness or release gate.
+- The controlling decision, coupling inventory, migration sequence, and
+  post-split QA tiers are in
+  `docs/00-project/REFLAXE_OCAML_REPOSITORY_EXTRACTION_GATE.md`.
