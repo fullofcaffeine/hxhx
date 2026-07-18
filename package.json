@@ -323,7 +323,7 @@
     "test:full1:plugin:evidence": "node scripts/ci/full1-plugin-parity-evidence-fixture-test.js",
     "test:reflaxe-ocaml:haxe-matrix": "node scripts/ci/run-reflaxe-ocaml-haxe-matrix.js",
     "build:reflaxe-ocaml:package-artifact": "node scripts/ci/build-reflaxe-ocaml-package-artifact.js",
-    "test:reflaxe-ocaml:package-archive": "node scripts/release/prepare-haxelib-archive-fixture-test.js && node scripts/release/reflaxe-ocaml-package-artifact-fixture-test.js && node scripts/ci/reflaxe-ocaml-package-install-fixture-test.js && node scripts/ci/reflaxe-ocaml-package-matrix-summary-fixture-test.js && node scripts/ci/reflaxe-ocaml-perf-matrix-summary-fixture-test.js",
+    "test:reflaxe-ocaml:package-archive": "node scripts/release/prepare-haxelib-archive-fixture-test.js && node scripts/release/reflaxe-ocaml-package-artifact-fixture-test.js && node scripts/ci/reflaxe-ocaml-package-install-fixture-test.js && node scripts/ci/reflaxe-ocaml-package-matrix-summary-fixture-test.js && node scripts/ci/reflaxe-ocaml-perf-platform-fixture-test.js && node scripts/ci/reflaxe-ocaml-perf-matrix-summary-fixture-test.js",
     "test:reflaxe-ocaml:package-install": "node scripts/ci/run-reflaxe-ocaml-package-install.js",
     "test:reflaxe-ocaml:perf": "node scripts/ci/run-reflaxe-ocaml-perf.js",
     "test:reflaxe-ocaml:perf-platform": "RO_PERF_MODE=platform-report node scripts/ci/run-reflaxe-ocaml-perf.js",

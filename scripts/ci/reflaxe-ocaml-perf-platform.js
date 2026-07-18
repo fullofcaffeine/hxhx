@@ -94,6 +94,15 @@ function loadExecutionEnvironment(environmentFile) {
 	return env
 }
 
+/** Keeps only real library directories from haxelib's mixed path/options output. */
+function resolvedLibraryPaths(output, cwd) {
+	return String(output || '')
+		.split(/\r?\n/)
+		.map(line => line.trim())
+		.filter(line => line && fs.existsSync(path.resolve(cwd, line)))
+		.map(line => fs.realpathSync(path.resolve(cwd, line)))
+}
+
 /**
  * Validates that platform-report mode measures the exact clean package already
  * proven by the isolated installer. Target resolution must remain outside the
@@ -162,11 +171,7 @@ function loadPlatformProof(options, env, repoState) {
 	if (resolution.status !== 0) {
 		fail(`installed reflaxe.ocaml target did not resolve: ${normalized(resolution.stderr)}`)
 	}
-	const resolvedPaths = String(resolution.stdout || '')
-		.split(/\r?\n/)
-		.map(line => line.trim())
-		.filter(line => line && !line.startsWith('-D '))
-		.map(line => fs.realpathSync(path.resolve(line)))
+	const resolvedPaths = resolvedLibraryPaths(resolution.stdout, path.dirname(workRoot))
 	const expectedTargetPath = fs.realpathSync(installedTargetPath)
 	if (!resolvedPaths.includes(expectedTargetPath) || resolvedPaths.some(resolvedPath => isInside(options.repoRoot, resolvedPath))) {
 		fail('haxelib resolved reflaxe.ocaml from somewhere other than the proven disposable installation')
@@ -335,6 +340,7 @@ module.exports = {
 	createPerformanceContext,
 	environmentSummary,
 	provenanceSummary,
+	resolvedLibraryPaths,
 	sanitizeText,
 	scenarioDirectory,
 	verifyEvidenceSanitized
