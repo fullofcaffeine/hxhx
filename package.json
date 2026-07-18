@@ -322,7 +322,7 @@
     "test:full1:plugin:upstream-host-adapter": "bash scripts/ci/run-full1-plugin-upstream-host-adapter-proof.sh",
     "test:full1:plugin:evidence": "node scripts/ci/full1-plugin-parity-evidence-fixture-test.js",
     "test:reflaxe-ocaml:haxe-matrix": "node scripts/ci/run-reflaxe-ocaml-haxe-matrix.js",
-    "test:reflaxe-ocaml:package-archive": "node scripts/release/prepare-haxelib-archive-fixture-test.js",
+    "test:reflaxe-ocaml:package-archive": "node scripts/release/prepare-haxelib-archive-fixture-test.js && node scripts/ci/reflaxe-ocaml-package-install-fixture-test.js",
     "test:reflaxe-ocaml:package-install": "node scripts/ci/run-reflaxe-ocaml-package-install.js",
     "test:reflaxe-ocaml:perf": "node scripts/ci/run-reflaxe-ocaml-perf.js",
     "test:reflaxe-ocaml:production-ready": "node scripts/ci/reflaxe-ocaml-production-ready-check.js",

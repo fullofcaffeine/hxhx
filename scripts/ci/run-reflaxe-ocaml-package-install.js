@@ -190,15 +190,47 @@ function shellQuote(value) {
 	return `'${String(value).replace(/'/g, `'"'"'`)}'`
 }
 
-function writeHaxelibWrapper(wrapperPath, haxelibPath, nekoRoot) {
+function writeHaxelibWrapper(wrapperPath, haxelibPath, nekoRoot, nekoLibraryDirectories) {
+	const libraryPath = nekoLibraryDirectories.join(path.delimiter)
 	const contents = `#!/usr/bin/env bash
 set -euo pipefail
 export NEKOPATH=${shellQuote(nekoRoot)}
-export DYLD_LIBRARY_PATH=${shellQuote(nekoRoot)}\${DYLD_LIBRARY_PATH:+:\$DYLD_LIBRARY_PATH}
-export LD_LIBRARY_PATH=${shellQuote(nekoRoot)}\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}
+export DYLD_LIBRARY_PATH=${shellQuote(libraryPath)}\${DYLD_LIBRARY_PATH:+:\$DYLD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${shellQuote(libraryPath)}\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}
 exec ${shellQuote(haxelibPath)} "\$@"
 `
 	fs.writeFileSync(wrapperPath, contents, { mode: 0o755 })
+}
+
+/**
+ * Finds every directory that can satisfy the stock haxelib client's dynamic
+ * libneko dependency. Lix exposes the active Neko files at the package root on
+ * some hosts and keeps them below a version directory on others.
+ */
+function findNekoLibraryDirectories(nekoRoot) {
+	const directories = [path.resolve(nekoRoot)]
+	const seen = new Set(directories)
+	function visit(directory, depth) {
+		if (depth > 3) {
+			return
+		}
+		const entries = fs.readdirSync(directory, { withFileTypes: true })
+		entries.sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
+		for (const entry of entries) {
+			const absolute = path.join(directory, entry.name)
+			if (entry.isDirectory()) {
+				visit(absolute, depth + 1)
+			} else if ((entry.isFile() || entry.isSymbolicLink()) && /^libneko(?:\.|$)/.test(entry.name)) {
+				const parent = path.dirname(absolute)
+				if (!seen.has(parent)) {
+					seen.add(parent)
+					directories.push(parent)
+				}
+			}
+		}
+	}
+	visit(path.resolve(nekoRoot), 0)
+	return directories
 }
 
 function commandVersion(name, command, args, options = {}) {
@@ -299,18 +331,24 @@ function prepareToolchain(isolatedHaxelib) {
 
 	const wrapperDir = path.join(tempRoot, 'tool-bin')
 	ensureDir(wrapperDir)
-	writeHaxelibWrapper(path.join(wrapperDir, 'haxelib'), haxelibBinary, nekoRoot)
+	const nekoLibraryDirectories = findNekoLibraryDirectories(nekoRoot)
+	const nekoLibraryPath = nekoLibraryDirectories.join(path.delimiter)
+	writeHaxelibWrapper(path.join(wrapperDir, 'haxelib'), haxelibBinary, nekoRoot, nekoLibraryDirectories)
 	const env = {
 		...process.env,
 		HAXELIB_PATH: isolatedHaxelib,
 		HAXE_STD_PATH: path.join(compilerRoot, 'std'),
 		HAXEPATH: compilerRoot,
 		NEKOPATH: nekoRoot,
-		DYLD_LIBRARY_PATH: [nekoRoot, process.env.DYLD_LIBRARY_PATH].filter(Boolean).join(path.delimiter),
-		LD_LIBRARY_PATH: [nekoRoot, process.env.LD_LIBRARY_PATH].filter(Boolean).join(path.delimiter),
+		DYLD_LIBRARY_PATH: [nekoLibraryPath, process.env.DYLD_LIBRARY_PATH].filter(Boolean).join(path.delimiter),
+		LD_LIBRARY_PATH: [nekoLibraryPath, process.env.LD_LIBRARY_PATH].filter(Boolean).join(path.delimiter),
 		PATH: [wrapperDir, compilerRoot, nekoRoot, process.env.PATH].filter(Boolean).join(path.delimiter)
 	}
 
+	summary.toolchain.nekoLibraryDirectories = nekoLibraryDirectories.map(directory => {
+		const relative = path.relative(nekoRoot, directory).split(path.sep).join('/')
+		return relative || '.'
+	})
 	summary.toolchain.haxe = commandVersion('stock-haxe-version', haxeBinary, ['--version'], { env })
 	summary.toolchain.haxelib = commandVersion('stock-haxelib-version', haxelibBinary, ['version'], { env })
 	summary.toolchain.ocamlc = commandVersion('ocamlc-version', 'ocamlc', ['-version'], { env })
@@ -450,4 +488,8 @@ function main() {
 	}
 }
 
-main()
+if (require.main === module) {
+	main()
+}
+
+module.exports = { findNekoLibraryDirectories }
