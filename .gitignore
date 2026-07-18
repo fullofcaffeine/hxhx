@@ -44,6 +44,7 @@ tools/**/bootstrap_out/_build/
 tools/**/bootstrap_out/*.install
 
 # OCaml build artifacts (local dev/debug)
+/_opam/
 *.cmi
 *.cmo
 *.cmx

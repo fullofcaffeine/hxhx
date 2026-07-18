@@ -6,6 +6,7 @@ const path = require('path')
 const repoRoot = path.resolve(__dirname, '../..')
 const workflowPath = path.join(repoRoot, '.github/workflows/reflaxe-ocaml-package-matrix.yml')
 const workflow = fs.readFileSync(workflowPath, 'utf8')
+const gitignore = fs.readFileSync(path.join(repoRoot, '.gitignore'), 'utf8')
 
 function fail(message) {
 	console.error(`[reflaxe-ocaml-package-matrix-workflow-check] ERROR: ${message}`)
@@ -41,6 +42,9 @@ for (const needle of [
 ]) {
 	requireIncludes('workflow', workflow, needle)
 }
+// setup-ocaml creates this disposable local switch before the consumer records
+// source provenance. It must not make an otherwise clean checkout look dirty.
+requireIncludes('gitignore', gitignore, '/_opam/')
 for (const needle of [
 	'npm run build:reflaxe-ocaml:package-artifact',
 	'name: reflaxe-ocaml-source-package-${{ github.sha }}',
