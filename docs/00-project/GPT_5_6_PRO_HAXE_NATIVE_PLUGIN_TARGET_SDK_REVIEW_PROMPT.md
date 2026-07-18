@@ -220,8 +220,8 @@ The local audit covered:
   several large concentrated modules;
 - `haxe.rust`: AST-first emission, runtime austerity, warning/format quality,
   and strict target-native expectations, with a very large compiler module;
-- `haxe.go`: small target AST/printer plus a large compiler and selective
-  runtime/reporting policy;
+- `haxe.go`: small target AST/printer plus a roughly 10,491-line compiler and
+  1,720-line Reflaxe entry, with selective runtime/reporting policy;
 - `haxe.ruby`: direct idiomatic output and a compact semantic runtime, again
   with concentrated compiler logic.
 
