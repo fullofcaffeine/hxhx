@@ -212,6 +212,12 @@ Artifacts are written to `.hxhx/profile/stage0-regen/<timestamp>/`:
 - `progress_summary.json` (machine-readable class/checkpoint aggregate)
 - `summary.txt` (report line + top class contributors + checkpoint lines + heartbeat summary; includes `peak_rss_source=report|stdout_fallback`, `peak_tree_rss_mb`, and the heartbeat trace path)
 
+An explicit `--out-dir` may be relative to the caller or absolute. The profiling
+wrapper resolves it before the regeneration driver changes directories. A
+successful regeneration without a non-empty progress log or machine-readable
+progress summary is rejected as incomplete evidence instead of being reported
+as a valid profile.
+
 You can summarize any existing progress log directly:
 
 ```bash

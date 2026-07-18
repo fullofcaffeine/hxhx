@@ -155,10 +155,11 @@ Telemetry artifact hashes:
 
 This is a strong bounded A/B for the extraction seam, not a universal machine
 benchmark. A first profiler attempt also showed that a relative `--out-dir`
-can lose the requested per-class progress log when the inner build changes
-directories. The measurement was rerun with an absolute path; normalizing and
-validating profiler output paths is intentionally deferred to runner follow-up
-work rather than mixed into the generator extraction.
+could lose the requested per-class progress log when the inner build changed
+directories. The measurement was rerun with an absolute path. Follow-up
+`haxe_ocaml-850ii.8.3` now resolves either path form before launching the nested
+build and rejects successful runs whose required progress telemetry is absent;
+fixture coverage proves both path forms without repeating the expensive build.
 
 ## Rejected Dune-cache shortcut
 

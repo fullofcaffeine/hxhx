@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-REGEN_SCRIPT="$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh"
+REGEN_SCRIPT="${HXHX_STAGE0_PROFILE_REGEN_SCRIPT:-$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh}"
 PROGRESS_SUMMARY_SCRIPT="$ROOT/scripts/hxhx/summarize-stage0-progress.js"
 HEARTBEAT_SUMMARY_SCRIPT="$ROOT/scripts/hxhx/summarize-stage0-heartbeat-trace.js"
 
@@ -244,7 +244,19 @@ if [ ! -x "$REGEN_SCRIPT" ]; then
 	exit 2
 fi
 
-mkdir -p "$OUT_DIR"
+if [ -z "$OUT_DIR" ]; then
+	echo "Invalid --out-dir: expected a non-empty path." >&2
+	exit 2
+fi
+
+# The regeneration driver changes directories internally. Resolve the artifact
+# root once so every child process writes to the caller-visible location.
+case "$OUT_DIR" in
+	/*) ;;
+	*) OUT_DIR="$PWD/$OUT_DIR" ;;
+esac
+mkdir -p -- "$OUT_DIR"
+OUT_DIR="$(cd -- "$OUT_DIR" && pwd -P)"
 REPORT_JSON="$OUT_DIR/regen_report.json"
 PROGRESS_LOG="$OUT_DIR/reflaxe_ocaml_progress.log"
 HEARTBEAT_TRACE="$OUT_DIR/stage0_heartbeat_trace.jsonl"
@@ -394,6 +406,27 @@ echo "heartbeat_summary_json=$HEARTBEAT_SUMMARY_JSON" | tee -a "$SUMMARY_FILE"
 
 if [ "$run_code" != "0" ]; then
 	echo "Profile run exited non-zero (code=$run_code). Summary artifacts are still available." | tee -a "$SUMMARY_FILE"
+fi
+
+artifact_error=0
+if [ "$run_code" = "0" ]; then
+	if [ ! -s "$REPORT_JSON" ]; then
+		echo "Profile run completed but the required regeneration report is missing or empty: $REPORT_JSON" | tee -a "$SUMMARY_FILE" >&2
+		artifact_error=1
+	fi
+	if [ ! -s "$PROGRESS_LOG" ]; then
+		echo "Profile run completed but required progress telemetry is missing or empty: $PROGRESS_LOG" | tee -a "$SUMMARY_FILE" >&2
+		artifact_error=1
+	fi
+	if [ ! -s "$PROGRESS_SUMMARY_JSON" ]; then
+		echo "Profile run completed but the required progress summary is missing or empty: $PROGRESS_SUMMARY_JSON" | tee -a "$SUMMARY_FILE" >&2
+		artifact_error=1
+	fi
+fi
+
+if [ "$artifact_error" = "1" ]; then
+	echo "Profile evidence is incomplete; rerun after correcting the artifact path or telemetry setup." | tee -a "$SUMMARY_FILE" >&2
+	exit 3
 fi
 
 exit 0
