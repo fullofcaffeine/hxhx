@@ -124,6 +124,13 @@ Required marker set:
 
 Supporting evidence:
 
+- `RO_PACKAGE_ARTIFACT_MATRIX:PASS`
+  - one clean CI producer builds the deterministic source ZIP and Linux plus
+    macOS consumers install, compile, build, and run that exact artifact
+  - source of truth:
+    - `.github/workflows/reflaxe-ocaml-package-matrix.yml`
+  - this is verified-host evidence, not a blanket operating-system support
+    declaration; Windows remains unclaimed until it has its own clean proof
 - `RO_PACKAGE_INSTALL_SMOKE:PASS`
   - a deterministic, source-only ZIP installs into a disposable haxelib
     repository and builds/runs an external application with stock Haxe 4.3.7

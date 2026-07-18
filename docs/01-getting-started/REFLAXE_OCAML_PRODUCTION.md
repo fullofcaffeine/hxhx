@@ -176,6 +176,22 @@ the source commit, package and generated-artifact hashes, toolchain versions,
 installed relative path, and runtime result. The marker proves the recorded host
 and toolchain only; it does not declare every operating system supported.
 
+The maintained cross-host evidence lane is:
+
+- `.github/workflows/reflaxe-ocaml-package-matrix.yml`
+
+It builds the source ZIP once, uploads its clean commit/version/SHA manifest,
+then gives that same downloaded artifact to Ubuntu and macOS jobs. Neither host
+job may rebuild it. Both perform the disposable haxelib install and external
+native application proof above. A final job opens both receipts, rejects mixed
+package hashes or dirty provenance, and emits
+`RO_PACKAGE_ARTIFACT_MATRIX:PASS`.
+
+That marker is verified-host evidence: the recorded Linux and macOS hosts
+verified one candidate. It does not silently declare all Linux distributions,
+all macOS/toolchain versions, or Windows supported. The product owner must make
+and maintain that broader support declaration separately.
+
 This ZIP is the standalone Haxe target source package. It does not settle the
 future native-plugin loader format: stock Haxe and `hxhx` still aim to share one
 semantic plugin payload, with different thin loader shells allowed only for a

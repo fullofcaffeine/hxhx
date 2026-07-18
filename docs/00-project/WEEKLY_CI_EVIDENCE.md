@@ -1,6 +1,6 @@
 # Weekly CI Evidence Runbook
 
-Last audited: 2026-07-14
+Last audited: 2026-07-18
 
 This runbook defines how maintainers audit scheduled CI health each week and what to do when a gate regresses.
 
@@ -130,6 +130,7 @@ passing product or Full1 evidence.
 | Full1 / Plugin Parity | `.github/workflows/full1-plugin-parity.yml` | Weekly schedule | `FULL1_PLUGIN_PARITY:PASS` | Per-proof artifacts `full1-plugin-upstream-to-hxhx-<run_id>-<attempt>`, `full1-plugin-hxhx-to-hxhx-<run_id>-<attempt>`, `full1-plugin-upstream-host-adapter-<run_id>-<attempt>` each contain the receipt and loaded plugin file; aggregate artifact `full1-plugin-parity-summary-<run_id>-<attempt>` records same-candidate verification and checksums. |
 | Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity | `.github/workflows/gate-full1.yml` | Weekly schedule | `FULL1_SUITE_MATRIX:PASS`, `FULL1_MACRO_EVAL_PARITY:PASS`, and `FULL1_PLUGIN_PARITY:PASS` | Artifacts `full1-macro-eval-summary-<run_id>-<attempt>` and `full1-summary-<run_id>-<attempt>` + child proof logs. Gate Full1 opens the combined macro/eval receipt before repeating its marker. |
 | Stdlib / Semantic Diff (nightly expanded job) | `.github/workflows/semantic-diff.yml` | Weekly schedule | `SEMANTIC_DIFF_NIGHTLY:PASS` | Artifact `semantic-diff-nightly-artifacts` |
+| Reflaxe OCaml / Package Artifact Matrix | `.github/workflows/reflaxe-ocaml-package-matrix.yml` | Weekly schedule plus relevant pushes | `RO_PACKAGE_ARTIFACT_MATRIX:PASS` | One `reflaxe-ocaml-source-package-<sha>` producer artifact, Linux/macOS install evidence, and verified `reflaxe-ocaml-package-matrix-<sha>` summary |
 | Perf / HXHX KPI (Report Only) | `.github/workflows/hxhx-kpi-report.yml` | Manual weekly dispatch | job completes and emits `report.json` | Artifact `hxhx-kpi-report-<run_id>` (contains `report.json`) |
 
 ## Advisory weekly evidence (non-blocking)
@@ -144,7 +145,7 @@ passing product or Full1 evidence.
 1. Open the latest `CI / Evidence Ownership Audit` report. Fix any unowned,
    stale, or missing row before treating the weekly set as reviewed.
 2. Open GitHub Actions and filter to the weekly evidence workflows above.
-3. Verify latest scheduled runs for Gate 1, Gate 2, Macro Runtime Parity, Gate M7, Gate Full1, and semantic-diff are green.
+3. Verify latest scheduled runs for Gate 1, Gate 2, Macro Runtime Parity, Gate M7, Gate Full1, semantic-diff, and the reflaxe.ocaml package matrix are green.
 4. Open each run and confirm expected markers appear in logs.
 5. For Macro Runtime Parity, download both mode-tagged artifacts, the project
    macro artifact, and the verified summary. Inspect:
@@ -155,7 +156,7 @@ passing product or Full1 evidence.
    - suite logs (`unit`, `runci`, `display/protocol`)
    - `summary.json`, whose schema must be `macro-runtime-parity-summary.v4`
      and whose three proof records must belong to the same commit/run attempt
-6. For Gate M7, Gate Full1, and semantic-diff, download artifacts and confirm expected files are present.
+6. For Gate M7, Gate Full1, semantic-diff, and the reflaxe.ocaml package matrix, download artifacts and confirm expected files are present. For the package matrix, require one producer manifest, two host receipts with the same package SHA, and the aggregate `RO_PACKAGE_ARTIFACT_MATRIX:PASS` summary.
 7. For Gate Full1, inspect `full1-macro-eval.summary.json` and confirm all three
    aggregate markers appear:
    - `FULL1_SUITE_MATRIX:PASS`
@@ -193,6 +194,7 @@ node scripts/ci/hxhx-kpi-report-validator.js --report <artifact>/report.json
 | Macro runtime parity weekly failure (either mode) | On-duty macro/runtime maintainer | Inspect mode-tagged artifacts, identify whether failure is `external-host` only, `inproc` only, or both; file/update blocker bead with mode marker lines | Escalate to compiler owners if parity remains red for two consecutive weekly runs |
 | Gate M7 scheduled failure or missing strict marker | On-duty release maintainer | Re-run Gate M7 with strict defaults; attach `gate-m7-logs-<run_id>` and marker lines to regression bead | Treat as release blocker until resolved |
 | Semantic-diff nightly failure or missing artifact | On-duty stdlib maintainer | Re-run workflow, inspect comparator/lane logs, and attach `semantic-diff-nightly-artifacts` to bead | Escalate to stdlib/runtime owners if unresolved in 24h |
+| reflaxe.ocaml package matrix failure or mixed SHA | Standalone target release maintainer | Inspect the producer manifest and both host receipts; do not rebuild inside a consumer or declare the failed host supported | Treat as standalone target release evidence blocker until one exact artifact passes both hosts |
 | KPI workflow emits no report or exceeds threshold budget | On-duty performance maintainer | Re-run KPI once; compare `report.json` with threshold file and classify expected vs regression | Escalate to release maintainer when regression exceeds thresholds on two consecutive weekly runs |
 | Full1 source-build probe emits `FULL1_SOURCE_BUILD_PROBE:WARN` | On-duty Full1 maintainer | Download `full1-source-probe-*` artifact, identify whether failure is build path, macro-host path, or suite parity, and update/open a blocker bead with run URL + summary JSON | Escalate to compiler owners if WARN repeats for two consecutive weekly runs on the same suite |
 | Full1 bootstrap-source reconciliation emits `FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:WARN` | On-duty Full1 maintainer | Download `full1-bootstrap-source-reconcile-*` artifact, verify both lane summaries exist for `server` + `optimization`, and rerun if classification is incomplete | Escalate if WARN repeats for two consecutive weekly runs or blocker classification remains unknown |
@@ -221,6 +223,10 @@ bash scripts/test-stdlib-semantic-diff-lane.sh
 
 # KPI report generation
 HXHX_KPI_REPS=2 HXHX_KPI_RUN_MACRO_LANE=1 npm run hxhx:bench:kpi
+
+# Local package producer and single-host consumer proof
+npm run build:reflaxe-ocaml:package-artifact
+npm run test:reflaxe-ocaml:package-install
 
 # Full1 source-build probe (non-blocking diagnostic lane)
 npm run -s test:full1:source-probe

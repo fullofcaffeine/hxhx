@@ -20,6 +20,7 @@ on:
       - Gate M7 / Replacement Bundle
       - Full1 / Plugin Parity
       - Gate Full1 / Strict Matrix + Macro Eval + Plugin Parity
+      - Reflaxe OCaml / Package Artifact Matrix
       - Perf / HXHX KPI (Report Only)
     types: [completed]
 

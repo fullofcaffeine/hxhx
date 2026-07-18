@@ -35,6 +35,8 @@ function main() {
   requireIncludes(contract, 'RO_PRODUCTION_READY:PASS', contractPath)
   requireIncludes(contract, 'test:reflaxe-ocaml:production-ready', contractPath)
   requireIncludes(contract, 'test:reflaxe-ocaml:package-install', contractPath)
+  requireIncludes(contract, 'RO_PACKAGE_ARTIFACT_MATRIX:PASS', contractPath)
+  requireIncludes(contract, 'reflaxe-ocaml-package-matrix.yml', contractPath)
   requireIncludes(contract, 'REFLAXE_OCAML_PRODUCTION.md', contractPath)
 
   requireIncludes(guide, 'RO_PRODUCTION_DOCS:PASS', guidePath)
@@ -48,12 +50,17 @@ function main() {
   requireIncludes(guide, 'dune / ocamlc not found', guidePath)
   requireIncludes(guide, 'Choosing between upstream `haxe + reflaxe.ocaml` and `hxhx`', guidePath)
   requireIncludes(guide, 'test:reflaxe-ocaml:package-install', guidePath)
+  requireIncludes(guide, 'RO_PACKAGE_ARTIFACT_MATRIX:PASS', guidePath)
+  requireIncludes(guide, 'verified-host evidence', guidePath)
+  requireIncludes(guide, 'thin loader shells', guidePath)
 
   requireIncludes(upstreamGuide, 'REFLAXE_OCAML_PRODUCTION.md', upstreamGuidePath)
   requireIncludes(upstreamGuide, 'test:reflaxe-ocaml:package-install', upstreamGuidePath)
+  requireIncludes(upstreamGuide, 'RO_PACKAGE_ARTIFACT_MATRIX:PASS', upstreamGuidePath)
   requireIncludes(startHere, 'REFLAXE_OCAML_PRODUCTION.md', startHerePath)
   requireIncludes(packageReadme, 'REFLAXE_OCAML_PRODUCTION.md', packageReadmePath)
   requireIncludes(packageReadme, 'test:reflaxe-ocaml:package-install', packageReadmePath)
+  requireIncludes(packageReadme, 'RO_PACKAGE_ARTIFACT_MATRIX:PASS', packageReadmePath)
 
   console.log('[ci:guards] OK: reflaxe.ocaml production docs are present and wired to contract/evidence')
   console.log('RO_PRODUCTION_DOCS:PASS')

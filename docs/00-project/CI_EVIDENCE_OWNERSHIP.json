@@ -140,6 +140,14 @@
       "freshnessHours": 192
     },
     {
+      "id": "reflaxe-ocaml-package-weekly",
+      "name": "Reflaxe OCaml / Package Artifact Matrix",
+      "workflow": ".github/workflows/reflaxe-ocaml-package-matrix.yml",
+      "kind": "release-evidence",
+      "events": ["push", "schedule", "workflow_dispatch"],
+      "freshnessHours": 192
+    },
+    {
       "id": "kpi-manual-weekly",
       "name": "Perf / HXHX KPI (Report Only)",
       "workflow": ".github/workflows/hxhx-kpi-report.yml",

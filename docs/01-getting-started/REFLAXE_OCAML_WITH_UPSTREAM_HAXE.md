@@ -121,6 +121,14 @@ The proof writes `RO_PACKAGE_INSTALL_SMOKE:PASS` evidence under
 `.artifacts/reflaxe-ocaml/package-install`. It records the exact host/toolchain;
 one passing host does not silently become a cross-platform support claim.
 
+CI additionally builds one immutable source ZIP and passes that exact download
+to Ubuntu and macOS through
+`.github/workflows/reflaxe-ocaml-package-matrix.yml`. Its aggregate
+`RO_PACKAGE_ARTIFACT_MATRIX:PASS` marker is stronger than two independent
+rebuilds because both host receipts must name the producer's commit and package
+SHA. It records verified hosts only; Windows and a broader support policy remain
+explicit follow-up work.
+
 ## Common required define
 
 `reflaxe.ocaml` expects:

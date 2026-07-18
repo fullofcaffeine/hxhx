@@ -134,6 +134,12 @@ Haxe 4.3.7. This prevents a machine-local `haxelib dev` link or a compiler-
 version-specific OCaml binary from making a broken package appear healthy.
 Evidence is written to `.artifacts/reflaxe-ocaml/package-install/summary.json`.
 
+The CI package matrix builds that source ZIP once and gives the exact artifact
+and manifest to clean Ubuntu and macOS consumers. The aggregate marker
+`RO_PACKAGE_ARTIFACT_MATRIX:PASS` is emitted only when both consumers install,
+compile, build, and run the same package SHA. This is verified-host evidence,
+not yet a blanket Linux/macOS/Windows support declaration.
+
 To build only the deterministic archive, use:
 
 ```bash
