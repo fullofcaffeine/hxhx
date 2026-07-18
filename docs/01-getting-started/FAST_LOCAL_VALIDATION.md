@@ -282,6 +282,22 @@ Current cache evidence from July 18, 2026:
 | `hxhx:build-current-source:fast` | input fingerprint + isolated emit + Dune bytecode build | 185s |
 | `hxhx:current-source-bin:fast` | valid no-prepass developer cache reuse | 2.18s |
 
+Git/Beads workflow evidence from the same day:
+
+| Check | Scope | Time |
+| --- | --- | ---: |
+| canonical Beads post-checkout | identical 40-character old/new commit IDs, branch flag `1`, 1,907 exported issues (`7,481,949` bytes) | 122.95s |
+| repository identical-branch-and-commit guard | same hook arguments and recorded branch, three samples | 0.06s median |
+
+The slow command spent its time in `bd import --quiet .beads/issues.jsonl`, used
+about 2.0 GB maximum resident memory, and re-imported an older staged snapshot
+over a newer local bead claim. The argument-level guard avoids both costs only
+when Git proves the checked-out branch and commit did not change. Disposable
+fixtures still delegate equal-commit branch switches, changed commits, file
+checkouts, malformed calls, and custom hooks; an opt-in real-`bd` fixture proves
+a changed branch imports its new issue data. See the hook setup in
+[`TESTING.md`](TESTING.md).
+
 The documentation-only reuse row avoids roughly 130 times the wait of that
 fresh build, but only for changes outside the compiler input set. A compiler,
 runtime, template,

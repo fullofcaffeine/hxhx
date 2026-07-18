@@ -49,6 +49,46 @@ Use the full profile when you need full compiler-shaped coverage:
 npm run test:acceptance:full
 ```
 
+## Install the repository Git hooks
+
+Run this once after cloning, and again after upgrading or reinstalling `bd`:
+
+```bash
+npm run hooks:install
+```
+
+The installer keeps the repository pre-commit checks and adds a narrow speed
+guard in front of the Beads post-checkout hook. Git sometimes reports the same
+branch and commit before and after a no-op rebase. No tracked checkout content
+changed, so the guard skips only that redundant Beads import. A different
+branch at the same commit, a changed commit, a file checkout, malformed hook
+arguments, and manual `bd` commands still use the normal Beads path. A
+pre-existing custom post-checkout hook is preserved and runs before the guard.
+
+This does not disable automatic issue synchronization. Continue to export
+tracked issue data before commits as usual:
+
+```bash
+bd export -o .beads/issues.jsonl
+```
+
+To verify the installer and argument boundary with disposable fake hooks:
+
+```bash
+npm run test:hooks:post-checkout
+```
+
+Maintainers with `bd` installed can also prove a real changed checkout imports
+new branch issue data in a temporary repository:
+
+```bash
+npm run test:hooks:post-checkout:real
+```
+
+If another hook installer replaces the guard, rerun `npm run hooks:install`.
+The command is idempotent and preserves the installed Beads delegate. It fails
+instead of overwriting two conflicting custom post-checkout hooks.
+
 ## Formatting Haxe code
 
 Use the official Haxe formatter through `haxelib`.
