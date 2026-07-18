@@ -95,6 +95,58 @@ distribution, every macOS release, or Windows is supported. A runner-image or
 architecture change becomes visible in the next receipt and must be reviewed
 before results are compared with an older run.
 
+## Latest exact hosted evidence
+
+[Workflow run 29643502308](https://github.com/fullofcaffeine/hxhx/actions/runs/29643502308)
+passed on clean commit
+`f23aa3c41031cc8911d8e2d13d725e33e39cc2cb`. Both hosts installed the same
+source-only `reflaxe.ocaml` `0.18.19` ZIP outside the checkout:
+
+- package SHA-256: `3cc9d4c875bea61bde0dd4b2d729f56997f1a00d1a1aaf430b3652231c59ce18`
+- package manifest SHA-256: `e21c267c6e5285e8876272ddc57509f0c468d38142d26a733f1d5cfc5a830466`
+- package size and inventory: `310420` bytes and `138` files
+- aggregate artifact: `8429363676`
+- Linux receipt artifact: `8429359574`
+- macOS receipt artifact: `8429361387`
+
+The Linux receipt came from an Ubuntu 24 x64 runner with four virtual
+AMD EPYC 7763 CPUs. Its medians were:
+
+| ID | Scenario | Median build | Median run |
+| --- | --- | ---: | ---: |
+| `ro-perf-01` | `build-macro` | `2258ms` | n/a |
+| `ro-perf-02` | `file-io` | `2458ms` | n/a |
+| `ro-perf-03` | `ocaml-native-collections` | `2440ms` | n/a |
+| `ro-perf-04` | `loop-control` | `2311ms` | n/a |
+| `ro-perf-05` | portable benchmark | `2329ms` | `19ms` |
+| `ro-perf-06` | metal benchmark | `2118ms` | `19ms` |
+
+On that host, the metal build median was `91%` of portable and its runtime
+median was `100%` of portable.
+
+The macOS receipt came from a macOS 26 arm64 runner with three virtual Apple M1
+CPUs. Its medians were:
+
+| ID | Scenario | Median build | Median run |
+| --- | --- | ---: | ---: |
+| `ro-perf-01` | `build-macro` | `2994ms` | n/a |
+| `ro-perf-02` | `file-io` | `3493ms` | n/a |
+| `ro-perf-03` | `ocaml-native-collections` | `3882ms` | n/a |
+| `ro-perf-04` | `loop-control` | `3242ms` | n/a |
+| `ro-perf-05` | portable benchmark | `3435ms` | `17ms` |
+| `ro-perf-06` | metal benchmark | `2566ms` | `16ms` |
+
+On that host, the metal build median was `75%` of portable and its runtime
+median was `94%` of portable.
+
+Both receipts used Haxe `4.3.7`, OCaml `5.2.1`, Dune `3.24.0`, and Node
+`20.20.2`. All six scenarios passed on both hosts, including expected-output
+checks. The artifacts retain the raw samples, generated-source sizes, native
+executable sizes, host load, memory, runner image, and output hashes. These are
+per-host observations; the Linux and macOS absolute times must not be ranked
+against each other. The hosted comparisons against the local reference table
+remain informational and are not threshold-enforced.
+
 Reference host used for the current baseline:
 
 - platform: `darwin-arm64`
