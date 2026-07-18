@@ -10,6 +10,26 @@ class TypedBodySource {
 	static function sourcePosition(position:Null<HxPos>):HxPos
 		return position == null ? HxPos.unknown() : position;
 
+	/**
+		Preserve whether a local type was actually written in source.
+
+		A constructor keeps its semantic nominal type on the typed expression, but
+		its omitted generic arguments may be refined by later uses. Projecting that
+		nominal display as a source annotation would turn inference into an explicit
+		bare type and prevent a backend from using that later evidence. Other nominal
+		results retain the existing migration hint until every backend consumes their
+		semantic representation directly.
+	**/
+	static function variableTypeHint(sourceHint:String, initializer:Null<TypedExpr>):String {
+		final typeHint = sourceHint == null ? "" : sourceHint;
+		if (StringTools.trim(typeHint).length > 0 || initializer == null || initializer.getType().getNominalIdentity() == null)
+			return typeHint;
+		return switch (initializer.getTag()) {
+			case NewValue: typeHint;
+			case _: initializer.getType().getDisplay();
+		};
+	}
+
 	static function expressionTail(expressions:Array<TypedExpr>, start:Int):Array<HxExpr> {
 		final out = new Array<HxExpr>();
 		for (index in start...expressions.length)
@@ -124,11 +144,8 @@ class TypedBodySource {
 		return switch (typedStatement.getTag()) {
 			case Block: SBlock([for (entry in statements) statement(entry)], position);
 			case Var:
-				var typeHint = names[1];
-				if (StringTools.trim(typeHint).length == 0
-					&& expressions.length == 1
-					&& expressions[0].getType().getNominalIdentity() != null)
-					typeHint = expressions[0].getType().getDisplay();
+				final typedInitializer = expressions.length == 1 ? expressions[0] : null;
+				final typeHint = variableTypeHint(names[1], typedInitializer);
 				var initializer:Null<HxExpr> = null;
 				if (expressions.length > 0)
 					initializer = expression(expressions[0]);

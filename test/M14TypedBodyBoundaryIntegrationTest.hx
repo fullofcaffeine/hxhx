@@ -171,6 +171,31 @@ class M14TypedBodyBoundaryIntegrationTest {
 		}, "typed variable projection fabricated a missing initializer");
 	}
 
+	/** Keep source-inferred constructors distinct from explicit local annotations. **/
+	static function assertInferredConstructorSourceProjection():Void {
+		final position = new HxPos(0, 1, 1);
+		final identity = new TyNominalTypeId("haxe.ds.IntMap");
+		final declarations = [
+			TypedStmt.variable("h", "IntMap<Int>",
+				TypedExpr.newValue("IntMap<Int>", [], TyType.nominal(identity, [TyType.fromHintText("Int")], "IntMap<Int>"), position), position),
+			TypedStmt.variable("h", "", TypedExpr.newValue("IntMap", [], TyType.nominal(identity, [], "IntMap"), position), position),
+		];
+		assertTrue(declarations.length == 2, "same-named constructor locals did not remain separate typed statements");
+		assertTrue(declarations[0].getNames()[1] == "IntMap<Int>", "explicit constructor local lost its source annotation");
+		assertTrue(declarations[1].getNames()[1] == "", "inferred constructor local gained an annotation before source projection");
+		final inferred = declarations[1].getExpressions()[0];
+		assertTrue(inferred.getTag() == TypedExprTag.NewValue && inferred.getType().getNominalIdentity() != null,
+			"inferred constructor lost its nominal semantic type");
+		assertTrue(switch (TypedBodySource.statement(declarations[0])) {
+			case SVar("h", "IntMap<Int>", ENew("IntMap<Int>", []), _): true;
+			case _: false;
+		}, "explicit constructor annotation did not survive typed-body projection");
+		assertTrue(switch (TypedBodySource.statement(declarations[1])) {
+			case SVar("h", "", ENew("IntMap", []), _): true;
+			case _: false;
+		}, "source inference became a false bare constructor annotation");
+	}
+
 	static function assertStructuralExpressionBlock():Void {
 		final parsed = ParserStage.parse([
 			"class Main {",
@@ -535,6 +560,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"typed-body source projection changed ordinary syntax before backend cutover");
 		assertLoweringNodeSet();
 		assertNullableSourceProjection();
+		assertInferredConstructorSourceProjection();
 		assertStructuralExpressionBlock();
 		assertStructuralDoWhileExpression();
 		assertAbstractThisAssignment();

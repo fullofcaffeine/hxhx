@@ -36,7 +36,9 @@ typedef CppLocalTypeInferenceApi = {
 
 	`CppTargetCore` owns emission. This module owns focused pre-render inference
 	traversals that refine local type overrides without writing C++ source. This
-	includes key/value carriers already present in arrow-map literals. Keep
+	includes key/value carriers already present in arrow-map literals. Exact typed
+	calls are only unwrapped to their ordinary structural shape; this pass never
+	selects or rebinds their declarations. Keep
 	new local/arg/return flow passes here when they are reusable analysis over
 	`HxStmt`/`HxExpr`; leave target-specific rendering decisions in
 	`CppTargetCore`.
@@ -693,6 +695,11 @@ class CppLocalTypeInference {
 	}
 
 	function collectStringMapLocalTypeOverridesFromExpr(expr:HxExpr, scope:CppRenderScope, candidates:StringMap<String>):Void {
+		final exact = TypedExactCallSource.decodeInstance(expr);
+		if (exact != null) {
+			collectStringMapLocalTypeOverridesFromExpr(TypedExactCallSource.ordinaryInstanceCall(exact), scope, candidates);
+			return;
+		}
 		switch (expr) {
 			case ECall(EField(EIdent(name), "set"), [key, value]) if (candidates.exists(localCppName(name, scope))):
 				collectStringMapLocalTypeOverridesFromExpr(key, scope, candidates);

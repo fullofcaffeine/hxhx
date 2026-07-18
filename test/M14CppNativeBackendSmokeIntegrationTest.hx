@@ -4502,7 +4502,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 					"  public function keys():Iterator<Int>;",
 					"}",
 				].join("\n"),
-				emit: false
+				emit: true
 			},
 			{
 				modulePath: "Main",
@@ -4523,6 +4523,8 @@ class M14CppNativeBackendSmokeIntegrationTest {
 					"    h.set(1, 1);",
 					"    var k = Lambda.array(h);",
 					"    var k = Lambda.array({ iterator: h.keys });",
+					"    var h = new IntMap();",
+					"    h.set(2, [\"a\", \"b\"]);",
 					"    return k.length;",
 					"  }",
 					"  static function main() {",
@@ -4734,6 +4736,10 @@ class M14CppNativeBackendSmokeIntegrationTest {
 			"C++ redeclared StringMap and IntMap key locals should keep source inference instead of a callee-owned generic hint");
 		assertTrue(mapSource.indexOf("std::vector<std::shared_ptr<") < 0,
 			"C++ redeclared map-key locals should not resolve method parameter A as the unrelated class A");
+		assertContains(mapSource, "auto h_2 = __hxhx_make_shared_IntMap<std::vector<std::string>>();",
+			"C++ inferred redeclared IntMap local should use the later String-array value evidence");
+		assertTrue(mapSource.indexOf("std::shared_ptr<IntMap> h_2") < 0, "C++ inferred redeclared IntMap local should not gain a false bare source annotation");
+		assertTrue(mapSource.indexOf("__hxhx_make_shared_IntMap<std::any>()") < 0, "C++ inferred redeclared IntMap local should not erase its value type");
 
 		deleteRecursive(mapRoot);
 	}
