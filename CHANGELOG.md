@@ -1,3 +1,10 @@
+## [0.18.16](https://github.com/fullofcaffeine/hxhx/compare/v0.18.15...v0.18.16) (2026-07-18)
+
+
+### Bug Fixes
+
+* **typer:** contain method generic results ([e9a5f23](https://github.com/fullofcaffeine/hxhx/commit/e9a5f23e64b931c303131ec9c3d2db1bbf7e809e))
+
 ## [0.18.15](https://github.com/fullofcaffeine/hxhx/compare/v0.18.14...v0.18.15) (2026-07-17)
 
 
