@@ -500,7 +500,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
   - Optional repo-owned server reuse:
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --use-repo-server --keep-repo-server --incremental --no-verify`
     - Direct helper: `bash scripts/hxhx/haxe-server.sh start|status|stop`
-    - The helper records the launcher and its descendants after readiness. `stop`, failed startup, and interrupted startup terminate the complete recorded tree, including a real native Haxe child spawned by a Node/Lix wrapper.
+    - The helper records the launcher and descendants with stable process-start identities. `stop`, failed startup, launcher exit, and interrupted startup terminate the complete recorded tree, including a native Haxe child whose Node/Lix wrapper used a different internal port.
   - Optional skip-if-unchanged:
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
   - Faster local iteration (reuse previous emit output + skip verify):

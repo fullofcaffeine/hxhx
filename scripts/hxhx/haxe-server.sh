@@ -114,15 +114,42 @@ pid_looks_like_haxe_wait() {
 	'
 }
 
+pid_looks_like_any_haxe_wait() {
+	local pid="$1"
+	local cmd
+	cmd="$(ps -o command= -p "$pid" 2>/dev/null || true)"
+	if [ -z "$cmd" ]; then
+		return 1
+	fi
+	printf '%s\n' "$cmd" | awk '
+		index(tolower($0), "haxe") == 0 { exit 1 }
+		{
+			for (i = 1; i < NF; i++) {
+				if ($i == "--wait")
+					exit 0
+			}
+			exit 1
+		}
+	'
+}
+
+process_start_identity() {
+	local pid="$1"
+	ps -o lstart= -p "$pid" 2>/dev/null | awk '{$1 = $1; print}'
+}
+
+read_recorded_processes() {
+	if [ -s "$PIDS_FILE" ]; then
+		cat "$PIDS_FILE"
+		return
+	fi
+	if [ -s "$PID_FILE" ]; then
+		awk '/^[0-9]+$/ { print $1 }' "$PID_FILE"
+	fi
+}
+
 read_recorded_pids() {
-	{
-		if [ -s "$PID_FILE" ]; then
-			cat "$PID_FILE"
-		fi
-		if [ -s "$PIDS_FILE" ]; then
-			cat "$PIDS_FILE"
-		fi
-	} | awk '/^[0-9]+$/ && !seen[$1]++ { print $1 }'
+	read_recorded_processes | awk -F '\t' '$1 ~ /^[0-9]+$/ && !seen[$1]++ { print $1 }'
 }
 
 collect_process_tree_pids() {
@@ -157,20 +184,47 @@ collect_process_tree_pids() {
 record_server_processes() {
 	local root_pid="$1"
 	local temporary="$PIDS_FILE.tmp.$$"
-	collect_process_tree_pids "$root_pid" >"$temporary"
+	local pid=""
+	local start_identity=""
+	while IFS= read -r pid; do
+		[ -n "$pid" ] || continue
+		start_identity="$(process_start_identity "$pid")"
+		printf '%s\t%s\n' "$pid" "$start_identity"
+	done < <(collect_process_tree_pids "$root_pid") >"$temporary"
 	mv "$temporary" "$PIDS_FILE"
+}
+
+recorded_process_is_owned() {
+	local pid="$1"
+	local expected_start_identity="$2"
+	local port="$3"
+	if ! is_pid_alive "$pid"; then
+		return 1
+	fi
+	if [ -z "$expected_start_identity" ]; then
+		# Legacy numeric-only state may identify only the public launcher. Keep
+		# that fallback restricted to the exact requested port.
+		pid_looks_like_haxe_wait "$pid" "$port"
+		return
+	fi
+	local current_start_identity
+	current_start_identity="$(process_start_identity "$pid")"
+	[ -n "$current_start_identity" ] \
+		&& [ "$current_start_identity" = "$expected_start_identity" ] \
+		&& pid_looks_like_any_haxe_wait "$pid"
 }
 
 collect_owned_process_pids() {
 	local port="$1"
 	local pid=""
+	local expected_start_identity=""
 	local collected=""
-	while IFS= read -r pid; do
-		if ! is_pid_alive "$pid" || ! pid_looks_like_haxe_wait "$pid" "$port"; then
+	while IFS=$'\t' read -r pid expected_start_identity; do
+		if ! recorded_process_is_owned "$pid" "$expected_start_identity" "$port"; then
 			continue
 		fi
 		collected="${collected}$(collect_process_tree_pids "$pid")"$'\n'
-	done < <(read_recorded_pids)
+	done < <(read_recorded_processes)
 	printf '%s' "$collected" | awk '/^[0-9]+$/ && !seen[$1]++ { print $1 }'
 }
 
@@ -246,9 +300,9 @@ start_server() {
 	nohup "$HAXE_BIN" --wait "$port" >"$LOG_FILE" 2>&1 &
 	local pid="$!"
 	printf '%s\n' "$pid" >"$PID_FILE"
-	printf '%s\n' "$pid" >"$PIDS_FILE"
 	printf '%s\n' "$requested_identity" >"$BIN_FILE"
 	START_IN_PROGRESS=1
+	record_server_processes "$pid"
 
 	if ! wait_for_server_ready "$port"; then
 		echo "haxe-server: failed to become ready at port=$port (pid=$pid)." >&2

@@ -68,7 +68,7 @@ cat >"$TMP_DIR/fake-haxe-b" <<'FAKE_HAXE_WRAPPER'
 #!/usr/bin/env bash
 set -euo pipefail
 if [ "${1:-}" = "--wait" ]; then
-	"${FAKE_HAXE_CHILD:?}" "$@" &
+	"${FAKE_HAXE_CHILD:?}" --wait "${FAKE_HAXE_CHILD_PORT:?}" &
 	child_pid="$!"
 	printf '%s\n' "$child_pid" >"${FAKE_HAXE_CHILD_PID_CAPTURE:?}"
 	# Deliberately model a launcher that exits without forwarding TERM. The
@@ -101,6 +101,7 @@ run_helper() {
 	shift
 	FAKE_HAXE_CHILD="$TMP_DIR/fake-haxe-child" \
 	FAKE_HAXE_CHILD_PID_CAPTURE="$CHILD_PID_CAPTURE" \
+	FAKE_HAXE_CHILD_PORT="$((PORT + 1000))" \
 	HXHX_STATE_DIR="$STATE_DIR" HXHX_HAXE_SERVER_PORT="$PORT" HAXE_BIN="$haxe_bin" \
 		bash "$SERVER_HELPER" "$@"
 }
@@ -139,6 +140,22 @@ case "$status" in
 		;;
 esac
 
+# Model a launcher crash after readiness. The child uses a different internal
+# wait port, just like the real Lix wrapper, so cleanup must trust the recorded
+# process identity rather than rediscovering it from the public port.
+kill -TERM "$replacement_pid"
+for _attempt in 1 2 3 4 5 6 7 8 9 10; do
+	if ! kill -0 "$replacement_pid" >/dev/null 2>&1; then
+		break
+	fi
+	sleep 0.1
+done
+if kill -0 "$replacement_pid" >/dev/null 2>&1; then
+	fail "wrapper did not exit during launcher-crash fixture"
+fi
+kill -0 "$replacement_child_pid" >/dev/null 2>&1 \
+	|| fail "launcher crash unexpectedly stopped its native child"
+
 run_helper "$TMP_DIR/fake-haxe-b" stop >/dev/null
 [ ! -e "$STATE_DIR/haxe-server.pid" ] || fail "stop left the PID file behind"
 [ ! -e "$STATE_DIR/haxe-server.pids" ] || fail "stop left the process-tree file behind"
@@ -154,6 +171,7 @@ fi
 rm -f "$CHILD_PID_CAPTURE"
 FAKE_HAXE_CHILD="$TMP_DIR/fake-haxe-child" \
 FAKE_HAXE_CHILD_PID_CAPTURE="$CHILD_PID_CAPTURE" \
+FAKE_HAXE_CHILD_PORT="$((PORT + 1000))" \
 FAKE_HAXE_CONNECT_FAIL=1 \
 HXHX_STATE_DIR="$STATE_DIR" HXHX_HAXE_SERVER_PORT="$PORT" HAXE_BIN="$TMP_DIR/fake-haxe-b" \
 	bash "$SERVER_HELPER" start >"$TMP_DIR/interrupted-start.log" 2>&1 &

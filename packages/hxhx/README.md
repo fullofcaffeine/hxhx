@@ -96,7 +96,7 @@ Notes:
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
   - Repo-owned server helper:
     - `bash scripts/hxhx/haxe-server.sh start|status|stop`
-    - The helper records wrapper descendants and stops the whole owned process tree, so a Node/Lix launcher cannot leave its native `haxe --wait` child behind after stop or interruption.
+    - The helper records wrapper descendants with process-start identities and stops the whole owned tree, so a Node/Lix launcher cannot leave its native `haxe --wait` child behind after stop, interruption, or launcher exit—even when the child uses a different internal port.
 - For progress logs from `reflaxe.ocaml`, set `HXHX_STAGE0_PROGRESS=1` (emits periodic `Context.warning(...)` markers during the stage0 build).
 - For more detailed progress (per-class begin markers in the log file), set `HXHX_STAGE0_TELEMETRY=1` (adds `-D reflaxe_ocaml_telemetry`).
 - For profiling, set `HXHX_BOOTSTRAP_DEBUG=1` to print `--times` output.
