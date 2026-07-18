@@ -256,6 +256,16 @@ changes outside the compiler input set. A compiler, runtime, template,
 configuration, or toolchain change still rebuilds. This is a developer-loop
 improvement, not evidence that fresh compiler generation itself is fast enough.
 
+A follow-up isolated profile explains the remaining fresh-build cost. Upstream
+Haxe typed 473 module types in about 2 seconds, while Reflaxe spent 106.535
+seconds generating the 12.2 MB OCaml module for the 26,920-line
+`CppTargetCore`. The complete emit took 211 seconds. A private Dune-cache A/B
+changed a clean native build from 38.397 seconds to 37.704 seconds, which is too
+small to justify shared-cache workflow state. See
+[`HXHX_FRESH_BUILD_HOTSPOTS_2026_07_18.md`](../benchmarks/HXHX_FRESH_BUILD_HOTSPOTS_2026_07_18.md)
+for the exact candidate, capacity facts, artifact hashes, and optimization
+decision.
+
 On July 18, 2026, an exact current-source strict C++ run reached its 5,400-second
 timeout while the host load was roughly 48. That run is retained as contention
 evidence, not compiler-semantic or performance evidence. The capacity preflight
