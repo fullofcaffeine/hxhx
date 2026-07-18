@@ -150,6 +150,67 @@ not appropriate for this project's retained engineering record. A Beads version
 upgrade is also a separate migration because it can rewrite tracker schema and
 the tracked JSONL representation.
 
+## Diagnose slow or noisy Git maintenance
+
+If ordinary Git commands print an automatic-cleanup warning, or `.git` has grown
+unexpectedly, inspect the local object store first:
+
+```bash
+npm run doctor:git-storage
+```
+
+This diagnostic is read-only. It reports loose objects, pack count and size,
+the configured automatic-maintenance thresholds, cruft-pack policy, and any
+retained `.git/gc.log`. A non-repository directory reports `SKIP`; a healthy
+checkout reports `PASS`; a failed maintenance log, disabled automatic cleanup,
+too many loose objects or packs, or Git-reported garbage reports `WARN` and
+exits with status 2. It never runs `gc`, `repack`, `prune`, or `git config`.
+
+Large snapshot rewrites and rebases can create many valid but unreachable Git
+objects. Git 2.40.1 normally starts automatic maintenance at about 6,700 loose
+objects. In July 2026, this checkout had 15,462 loose objects using 1.41 GiB.
+A full object scan found 15,713 objects unreachable even from reflogs, while
+`.git/gc.log` showed that automatic cleanup had stopped. Commits and pulls then
+repeatedly printed the same warning.
+
+The reviewed recovery used **cruft packs**. They compress unreachable objects
+into a separate pack with their original modification times, so recent recovery
+data does not have to remain as thousands of loose files. The standard two-week
+prune grace remained in place; `--prune=now` was not used.
+
+Use this backup-first sequence only when no other Git process is writing to the
+checkout:
+
+1. Require a clean status. Record `HEAD`, refs, reflogs, stashes, and worktrees;
+   create an all-refs `git bundle`; and make a raw copy-on-write clone or full
+   copy of `.git` outside the checkout. `git bundle` alone does not contain
+   reflogs or unreachable recovery objects.
+2. Verify the bundle with `git bundle verify`. Compare the copied refs and
+   reflogs with the checkout and run `git fsck --full --no-dangling` against the
+   raw copy.
+3. Trial the exact maintenance command against another disposable copy first.
+   Confirm refs, reflogs, reachable objects, index, worktrees, stashes, and
+   working-tree status are unchanged.
+4. Enable cruft packs for this checkout and preserve every reflog entry during
+   the one-time repair:
+
+   ```bash
+   git config --local gc.cruftPacks true
+   git -c gc.reflogExpire=never -c gc.reflogExpireUnreachable=never \
+     gc --cruft --prune=2.weeks.ago
+   ```
+
+5. Re-run the semantic comparisons and a full `git fsck`. Verify
+   `git gc --auto` is now a quiet no-op and `.git/gc.log` is absent. Keep the raw
+   backup until the repository changes, tracker export, pull, and push are all
+   verified.
+
+Do not delete files below `.git/objects` by hand. Do not use immediate pruning
+(`git prune --expire=now`), and do not use `git gc --aggressive` for routine
+recovery. The installed Git manual warns that immediate pruning raises
+corruption risk when a writer is concurrent, while aggressive repacking costs
+much more and is usually the wrong tradeoff without dedicated benchmarks.
+
 ## Formatting Haxe code
 
 Use the official Haxe formatter through `haxelib`.

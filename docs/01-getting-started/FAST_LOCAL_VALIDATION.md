@@ -291,6 +291,9 @@ Git/Beads workflow evidence from the same day:
 | `bd show` before / after local Dolt maintenance | 1,910 issues; removed one verified-empty sibling database | 26.25s / 1.44s |
 | `bd ready --limit 10` before / after maintenance | same active issue data | 37.21s / 0.95s |
 | `bd export --all` before / after maintenance | byte-identical 1,910-record export | 23.53s / 1.48s |
+| Git object storage before / after cruft-pack maintenance | identical refs, reflogs, reachable objects, index, worktrees, stashes, and Beads export | 1.7 GiB / 196 MiB |
+| `git status --short` before / after maintenance | clean synchronized checkout | 0.05s / 0.07s |
+| no-op `git pull --rebase` before / after maintenance | post-checkout fast path used | 0.76s / 0.61s |
 
 The slow command spent its time in `bd import --quiet .beads/issues.jsonl`, used
 about 2.0 GB maximum resident memory, and re-imported an older staged snapshot
@@ -311,6 +314,17 @@ disposable repository first, and the active export matched SHA-256
 before and after the reviewed drop/purge sequence. Local `.beads` storage fell
 from about 926 MiB to 217 MiB. `npm run doctor:beads-storage` now detects this
 layout without modifying it; the backup-first procedure is in
+[`TESTING.md`](TESTING.md).
+
+Git object maintenance was a separate local-store problem. A verified raw Git
+backup and all-refs bundle were trialed before changing the checkout. Enabling
+cruft packs with Git's standard two-week prune grace reduced 15,462 loose
+objects to zero and consolidated 38 packs into two. A full object scan passed;
+all 10,190 reflog entries and the complete Beads export remained byte-identical.
+The status and pull timings above are within normal measurement noise, so the
+claim is reclaimed disk and restored automatic-maintenance health rather than a
+proven speedup for already-fast Git reads. `npm run doctor:git-storage` detects
+recurrence without modifying the repository; the recovery procedure is in
 [`TESTING.md`](TESTING.md).
 
 The documentation-only reuse row avoids roughly 130 times the wait of that
