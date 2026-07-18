@@ -11,8 +11,10 @@ HAXE_BIN="${HAXE_BIN:-haxe}"
 HXHX_HAXE_SERVER_PORT="${HXHX_HAXE_SERVER_PORT:-}"
 PORT_FILE="$STATE_DIR/haxe-server.port"
 PID_FILE="$STATE_DIR/haxe-server.pid"
+PIDS_FILE="$STATE_DIR/haxe-server.pids"
 BIN_FILE="$STATE_DIR/haxe-server.bin"
 LOG_FILE="$STATE_DIR/haxe-server.log"
+START_IN_PROGRESS=0
 
 usage() {
 	cat <<'USAGE'
@@ -94,39 +96,114 @@ save_port() {
 
 pid_looks_like_haxe_wait() {
 	local pid="$1"
+	local port="$2"
 	local cmd
 	cmd="$(ps -o command= -p "$pid" 2>/dev/null || true)"
 	if [ -z "$cmd" ]; then
 		return 1
 	fi
-	case "$cmd" in
-		*haxe*--wait*)
-			return 0
-			;;
-		*)
-			return 1
-			;;
-	esac
+	printf '%s\n' "$cmd" | awk -v expected_port="$port" '
+		index(tolower($0), "haxe") == 0 { exit 1 }
+		{
+			for (i = 1; i < NF; i++) {
+				if ($i == "--wait" && $(i + 1) == expected_port)
+					exit 0
+			}
+			exit 1
+		}
+	'
+}
+
+read_recorded_pids() {
+	{
+		if [ -s "$PID_FILE" ]; then
+			cat "$PID_FILE"
+		fi
+		if [ -s "$PIDS_FILE" ]; then
+			cat "$PIDS_FILE"
+		fi
+	} | awk '/^[0-9]+$/ && !seen[$1]++ { print $1 }'
+}
+
+collect_process_tree_pids() {
+	local root_pid="$1"
+	local frontier="$root_pid"
+	local seen=" $root_pid "
+	local collected="$root_pid"
+	local parent_pid=""
+	local child_pids=""
+	local child_pid=""
+	local next_frontier=""
+
+	while [ -n "$frontier" ]; do
+		next_frontier=""
+		for parent_pid in $frontier; do
+			child_pids="$(pgrep -P "$parent_pid" 2>/dev/null || true)"
+			for child_pid in $child_pids; do
+				if [[ "$seen" == *" $child_pid "* ]]; then
+					continue
+				fi
+				seen="${seen}${child_pid} "
+				collected="${collected} ${child_pid}"
+				next_frontier="${next_frontier} ${child_pid}"
+			done
+		done
+		frontier="$(printf '%s\n' "$next_frontier" | xargs 2>/dev/null || true)"
+	done
+
+	printf '%s\n' "$collected" | tr ' ' '\n' | awk '/^[0-9]+$/ && !seen[$1]++ { print $1 }'
+}
+
+record_server_processes() {
+	local root_pid="$1"
+	local temporary="$PIDS_FILE.tmp.$$"
+	collect_process_tree_pids "$root_pid" >"$temporary"
+	mv "$temporary" "$PIDS_FILE"
+}
+
+collect_owned_process_pids() {
+	local port="$1"
+	local pid=""
+	local collected=""
+	while IFS= read -r pid; do
+		if ! is_pid_alive "$pid" || ! pid_looks_like_haxe_wait "$pid" "$port"; then
+			continue
+		fi
+		collected="${collected}$(collect_process_tree_pids "$pid")"$'\n'
+	done < <(read_recorded_pids)
+	printf '%s' "$collected" | awk '/^[0-9]+$/ && !seen[$1]++ { print $1 }'
 }
 
 read_running_pid() {
-	if [ ! -f "$PID_FILE" ]; then
-		return 1
-	fi
-	local pid
-	pid="$(cat "$PID_FILE")"
-	case "$pid" in
-		''|*[!0-9]*)
-			return 1
-			;;
-	esac
-	if ! is_pid_alive "$pid"; then
-		return 1
-	fi
-	if ! pid_looks_like_haxe_wait "$pid"; then
-		return 1
-	fi
-	printf '%s\n' "$pid"
+	local port="$1"
+	local pid=""
+	while IFS= read -r pid; do
+		if is_pid_alive "$pid" && pid_looks_like_haxe_wait "$pid" "$port"; then
+			printf '%s\n' "$pid"
+			return 0
+		fi
+	done < <(read_recorded_pids)
+	return 1
+}
+
+signal_processes() {
+	local signal="$1"
+	local pids="$2"
+	local pid=""
+	printf '%s\n' "$pids" | awk 'NF { rows[++count] = $1 } END { for (i = count; i >= 1; i--) print rows[i] }' |
+		while IFS= read -r pid; do
+			kill "$signal" "$pid" >/dev/null 2>&1 || true
+		done
+}
+
+living_pids() {
+	local pids="$1"
+	local pid=""
+	while IFS= read -r pid; do
+		if [ -n "$pid" ] && is_pid_alive "$pid"; then
+			printf '%s\n' "$pid"
+		fi
+	done <<<"$pids"
 }
 
 wait_for_server_ready() {
@@ -149,10 +226,10 @@ start_server() {
 	ensure_state_dir
 
 	local existing_pid
-	existing_pid="$(read_running_pid || true)"
 	local port
 	port="$(resolve_port)"
 	save_port "$port"
+	existing_pid="$(read_running_pid "$port" || true)"
 
 	if [ -n "$existing_pid" ]; then
 		local existing_identity
@@ -169,42 +246,55 @@ start_server() {
 	nohup "$HAXE_BIN" --wait "$port" >"$LOG_FILE" 2>&1 &
 	local pid="$!"
 	printf '%s\n' "$pid" >"$PID_FILE"
+	printf '%s\n' "$pid" >"$PIDS_FILE"
 	printf '%s\n' "$requested_identity" >"$BIN_FILE"
+	START_IN_PROGRESS=1
 
 	if ! wait_for_server_ready "$port"; then
 		echo "haxe-server: failed to become ready at port=$port (pid=$pid)." >&2
-		kill "$pid" >/dev/null 2>&1 || true
-		sleep 0.2
-		kill -9 "$pid" >/dev/null 2>&1 || true
-		rm -f "$PID_FILE" "$BIN_FILE"
 		exit 1
 	fi
 
+	record_server_processes "$pid"
+	START_IN_PROGRESS=0
 	echo "haxe-server: ready pid=$pid port=$port haxe_bin=$requested_identity" >&2
 }
 
 stop_server() {
-	local pid
-	pid="$(read_running_pid || true)"
-	if [ -z "$pid" ]; then
-		rm -f "$PID_FILE" "$BIN_FILE"
+	local port
+	port="$(resolve_port)"
+	local pids
+	pids="$(collect_owned_process_pids "$port")"
+	if [ -z "$pids" ]; then
+		rm -f "$PID_FILE" "$PIDS_FILE" "$BIN_FILE"
 		echo "haxe-server: not-running" >&2
 		return 0
 	fi
+	local pid
+	pid="$(printf '%s\n' "$pids" | head -n 1)"
 	echo "haxe-server: stopping pid=$pid" >&2
-	kill "$pid" >/dev/null 2>&1 || true
-	sleep 0.5
-	if is_pid_alive "$pid"; then
-		kill -9 "$pid" >/dev/null 2>&1 || true
+	signal_processes -TERM "$pids"
+	local remaining="$pids"
+	local attempt=0
+	while [ "$attempt" -lt 10 ]; do
+		remaining="$(living_pids "$remaining")"
+		if [ -z "$remaining" ]; then
+			break
+		fi
+		attempt=$((attempt + 1))
+		sleep 0.1
+	done
+	if [ -n "$remaining" ]; then
+		signal_processes -KILL "$remaining"
 	fi
-	rm -f "$PID_FILE" "$BIN_FILE"
+	rm -f "$PID_FILE" "$PIDS_FILE" "$BIN_FILE"
 }
 
 status_server() {
 	local endpoint
 	endpoint="$(resolve_port)"
 	local pid
-	pid="$(read_running_pid || true)"
+	pid="$(read_running_pid "$endpoint" || true)"
 	if [ -n "$pid" ]; then
 		local identity
 		identity="$(read_server_identity || true)"
@@ -224,6 +314,20 @@ print_connect_arg() {
 	endpoint="$(print_port)"
 	echo "--connect $endpoint"
 }
+
+on_exit() {
+	local code="$?"
+	if [ "$START_IN_PROGRESS" = "1" ]; then
+		START_IN_PROGRESS=0
+		stop_server >/dev/null 2>&1 || true
+	fi
+	return "$code"
+}
+
+trap on_exit EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 if [ $# -eq 0 ]; then
 	usage

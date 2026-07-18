@@ -205,6 +205,7 @@ npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-opt --no-
 
 Artifacts are written to `.hxhx/profile/stage0-regen/<timestamp>/`:
 
+- `capacity_report.json` (pre-run host load decision and redacted competing-compiler summary)
 - `regen_report.json` (policy/mode/peak RSS)
 - `reflaxe_ocaml_progress.log` (telemetry stream)
 - `stage0_heartbeat_trace.jsonl` (compact driver-side samples: elapsed time, focus-process RSS, process-tree RSS, CPU/state, log bytes)

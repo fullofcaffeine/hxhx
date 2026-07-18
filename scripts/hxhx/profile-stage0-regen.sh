@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REGEN_SCRIPT="${HXHX_STAGE0_PROFILE_REGEN_SCRIPT:-$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh}"
 PROGRESS_SUMMARY_SCRIPT="$ROOT/scripts/hxhx/summarize-stage0-progress.js"
 HEARTBEAT_SUMMARY_SCRIPT="$ROOT/scripts/hxhx/summarize-stage0-heartbeat-trace.js"
+CAPACITY_SCRIPT="$ROOT/scripts/hxhx/check-local-capacity.js"
 
 POLICY="${HXHX_STAGE0_PROFILE_POLICY:-prefer-native}"
 FAILFAST_SECS="${HXHX_STAGE0_PROFILE_FAILFAST_SECS:-120}"
@@ -29,6 +30,11 @@ SCENARIO_ARGS="${HXHX_STAGE0_PROFILE_SCENARIO_ARGS:---incremental --no-verify --
 TELEMETRY_DETAIL="${HXHX_STAGE0_PROFILE_TELEMETRY_DETAIL:-0}"
 TELEMETRY_CLASS="${HXHX_STAGE0_PROFILE_TELEMETRY_CLASS:-}"
 OUT_DIR="${HXHX_STAGE0_PROFILE_OUT_DIR:-$ROOT/.hxhx/profile/stage0-regen/$(date +%Y%m%d-%H%M%S)}"
+CAPACITY_POLICY="${HXHX_STAGE0_PROFILE_CAPACITY_POLICY:-${HXHX_HEAVY_RUN_CAPACITY_POLICY:-auto}}"
+CAPACITY_MAX_LOAD_PER_CPU="${HXHX_STAGE0_PROFILE_CAPACITY_MAX_LOAD_PER_CPU:-${HXHX_HEAVY_RUN_MAX_LOAD_PER_CPU:-}}"
+# Deterministic host input for the repository fixture; ordinary runs inspect
+# the real host and never need to set this.
+CAPACITY_FIXTURE="${HXHX_STAGE0_PROFILE_CAPACITY_FIXTURE:-}"
 
 usage() {
 	cat <<'USAGE'
@@ -60,10 +66,13 @@ Options:
   --telemetry-detail                             Enable detailed builder telemetry
   --telemetry-class <TypeName>                   Restrict detail telemetry to one class
   --scenario-args "<args>"                       Regen args string (default: --incremental --no-verify --force)
+  --capacity-policy <auto|require|warn|off>      Stop or annotate saturated-host runs (default: auto)
+  --capacity-max-load-per-cpu <number>           Override the normalized sustained-load limit
   --out-dir <dir>                                Output directory for artifacts/summary
   -h, --help                                     Show this help
 
 Outputs:
+  <out-dir>/capacity_report.json
   <out-dir>/regen_report.json
   <out-dir>/reflaxe_ocaml_progress.log
   <out-dir>/stage0_heartbeat_trace.jsonl
@@ -189,6 +198,14 @@ while [ "$#" -gt 0 ]; do
 			SCENARIO_ARGS="${2:-}"
 			shift 2
 			;;
+		--capacity-policy)
+			CAPACITY_POLICY="${2:-}"
+			shift 2
+			;;
+		--capacity-max-load-per-cpu)
+			CAPACITY_MAX_LOAD_PER_CPU="${2:-}"
+			shift 2
+			;;
 		--out-dir)
 			OUT_DIR="${2:-}"
 			shift 2
@@ -210,6 +227,15 @@ case "$POLICY" in
 		;;
 	*)
 		echo "Invalid --policy: $POLICY (expected warn|prefer-native|require-native)." >&2
+		exit 2
+		;;
+esac
+
+case "$CAPACITY_POLICY" in
+	auto|require|warn|off)
+		;;
+	*)
+		echo "Invalid --capacity-policy: $CAPACITY_POLICY (expected auto|require|warn|off)." >&2
 		exit 2
 		;;
 esac
@@ -265,6 +291,34 @@ PROGRESS_SUMMARY_JSON="$OUT_DIR/progress_summary.json"
 HEARTBEAT_SUMMARY_JSON="$OUT_DIR/heartbeat_summary.json"
 RUN_STDOUT="$OUT_DIR/run.stdout.log"
 RUN_STDERR="$OUT_DIR/run.stderr.log"
+CAPACITY_REPORT="$OUT_DIR/capacity_report.json"
+
+run_capacity_preflight() {
+	if ! command -v node >/dev/null 2>&1; then
+		echo "Missing node on PATH (required for the stage0 profile capacity preflight)." >&2
+		exit 2
+	fi
+	if [ ! -f "$CAPACITY_SCRIPT" ]; then
+		echo "Missing stage0 profile capacity helper: $CAPACITY_SCRIPT" >&2
+		exit 2
+	fi
+	local -a args=(
+		--policy "$CAPACITY_POLICY"
+		--label "stage0-regeneration-profile"
+		--json-out "$CAPACITY_REPORT"
+	)
+	if [ -n "$CAPACITY_MAX_LOAD_PER_CPU" ]; then
+		args+=(--max-load-per-cpu "$CAPACITY_MAX_LOAD_PER_CPU")
+	fi
+	if [ -n "$CAPACITY_FIXTURE" ]; then
+		args+=(--fixture "$CAPACITY_FIXTURE")
+	fi
+	node "$CAPACITY_SCRIPT" "${args[@]}"
+}
+
+# Capacity is checked before regeneration starts, so an overloaded workstation
+# returns a retryable answer without spending minutes on invalid timing data.
+run_capacity_preflight
 
 echo "== Stage0 regen profile run"
 echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE no_native_parser=$STAGE0_NO_NATIVE_PARSER no_hx_parser=$STAGE0_NO_HX_PARSER no_expr_macros=$STAGE0_NO_EXPR_MACROS no_external_macro_host=$STAGE0_NO_EXTERNAL_MACRO_HOST no_stage3=$STAGE0_NO_STAGE3 no_internal_tools=$STAGE0_NO_INTERNAL_TOOLS no_display=$STAGE0_NO_DISPLAY no_source_normalize_extract=$STAGE0_NO_SOURCE_NORMALIZE_EXTRACT no_native_decode_extract=$STAGE0_NO_NATIVE_DECODE_EXTRACT no_parser_scan_extract=$STAGE0_NO_PARSER_SCAN_EXTRACT disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY no_line_directives=$STAGE0_NO_LINE_DIRECTIVES ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
@@ -403,6 +457,7 @@ echo "report_json=$REPORT_JSON" | tee -a "$SUMMARY_FILE"
 echo "progress_log=$PROGRESS_LOG" | tee -a "$SUMMARY_FILE"
 echo "progress_summary_json=$PROGRESS_SUMMARY_JSON" | tee -a "$SUMMARY_FILE"
 echo "heartbeat_summary_json=$HEARTBEAT_SUMMARY_JSON" | tee -a "$SUMMARY_FILE"
+echo "capacity_report_json=$CAPACITY_REPORT" | tee -a "$SUMMARY_FILE"
 
 if [ "$run_code" != "0" ]; then
 	echo "Profile run exited non-zero (code=$run_code). Summary artifacts are still available." | tee -a "$SUMMARY_FILE"

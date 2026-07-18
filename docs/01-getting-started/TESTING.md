@@ -458,6 +458,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
       `docs/benchmarks/STAGE0_MEMORY_KNOB_MATRIX_2026_03_05.md`
   - Stage0 contributor profiling helper (telemetry + summary):
     - `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20`
+    - Before regeneration begins, the profiler runs the same local-capacity preflight as other heavyweight gates. Saturated local runs stop with retryable exit code `75`; use `--capacity-policy warn` to retain a warning-only sample or `--capacity-policy off` only when deliberately accepting contaminated timing conditions.
     - optional OCaml runtime tuning: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --ocamlrunparam s=4M`
     - optional native-parser bypass: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-native-parser`
     - optional pure-Haxe parser fallback trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-hx-parser`
@@ -487,6 +488,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - emits `.hxhx/profile/stage0-regen/<timestamp>/stage0_heartbeat_trace.jsonl` with compact driver-side samples for runs that do not reach Reflaxe progress hooks.
     - emits `.hxhx/profile/stage0-regen/<timestamp>/heartbeat_summary.json` with sample count, invalid lines, elapsed/log growth, peak focus RSS, peak process-tree RSS, and top samples from the heartbeat trace.
     - emits `.hxhx/profile/stage0-regen/<timestamp>/progress_summary.json` for deterministic class/checkpoint aggregation.
+    - emits `.hxhx/profile/stage0-regen/<timestamp>/capacity_report.json` so every timing sample records whether host capacity passed, warned, or was explicitly disabled.
     - `--out-dir` accepts relative or absolute paths. The runner resolves the path before its nested build changes directories and rejects a successful run when the required progress telemetry is missing, so an incomplete measurement cannot look green.
     - summarize any existing progress log: `node scripts/hxhx/summarize-stage0-progress.js --input <reflaxe_ocaml_progress.log> --top 15 --json-out <out.json>`
     - summarize any existing heartbeat trace: `npm run hxhx:profile:stage0-heartbeat-summary -- --input <stage0_heartbeat_trace.jsonl> --top 10 --json-out <out.json>`
@@ -498,6 +500,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
   - Optional repo-owned server reuse:
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --use-repo-server --keep-repo-server --incremental --no-verify`
     - Direct helper: `bash scripts/hxhx/haxe-server.sh start|status|stop`
+    - The helper records the launcher and its descendants after readiness. `stop`, failed startup, and interrupted startup terminate the complete recorded tree, including a real native Haxe child spawned by a Node/Lix wrapper.
   - Optional skip-if-unchanged:
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
   - Faster local iteration (reuse previous emit output + skip verify):

@@ -96,9 +96,11 @@ Notes:
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
   - Repo-owned server helper:
     - `bash scripts/hxhx/haxe-server.sh start|status|stop`
+    - The helper records wrapper descendants and stops the whole owned process tree, so a Node/Lix launcher cannot leave its native `haxe --wait` child behind after stop or interruption.
 - For progress logs from `reflaxe.ocaml`, set `HXHX_STAGE0_PROGRESS=1` (emits periodic `Context.warning(...)` markers during the stage0 build).
 - For more detailed progress (per-class begin markers in the log file), set `HXHX_STAGE0_TELEMETRY=1` (adds `-D reflaxe_ocaml_telemetry`).
 - For profiling, set `HXHX_BOOTSTRAP_DEBUG=1` to print `--times` output.
+- `npm run hxhx:profile:stage0-regen` checks local capacity before starting expensive regeneration and retains `capacity_report.json`; use `--capacity-policy warn|off` only when a deliberately overloaded sample is still useful.
 - For very verbose stage0 compiler logs (including typing/module loading), set `HXHX_STAGE0_VERBOSE=1` (passes `-v` to stage0 `haxe`).
 - If your terminal/CI truncates logs, you can also capture progress markers to a file by setting `REFLAXE_OCAML_PROGRESS_FILE=/path/to/log.txt`.
 - If you suspect stage0 performance issues are caused by output-shaping prepasses, you can try `HXHX_STAGE0_DISABLE_PREPASSES=1` (disables reflaxe.ocaml expression preprocessors for this stage0 run).

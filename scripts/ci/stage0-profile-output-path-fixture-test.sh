@@ -11,6 +11,9 @@ fail() {
 }
 
 if [ "${HXHX_STAGE0_PROFILE_FIXTURE_REGEN:-0}" = "1" ]; then
+	if [ -n "${HXHX_STAGE0_PROFILE_FIXTURE_REGEN_CAPTURE:-}" ]; then
+		printf 'regen\n' >>"$HXHX_STAGE0_PROFILE_FIXTURE_REGEN_CAPTURE"
+	fi
 	report_json=""
 	while [ "$#" -gt 0 ]; do
 		case "$1" in
@@ -50,13 +53,21 @@ trap cleanup EXIT
 caller_dir="$fixture_root/caller"
 nested_dir="$fixture_root/nested-build"
 mkdir -p "$caller_dir" "$nested_dir"
+regen_capture="$fixture_root/regen-invocations.log"
+idle_capacity_fixture="$fixture_root/capacity-idle.json"
+saturated_capacity_fixture="$fixture_root/capacity-saturated.json"
+printf '%s\n' '{"cpuCount":8,"loadavg":[2,1.5,1],"processes":[]}' >"$idle_capacity_fixture"
+printf '%s\n' '{"cpuCount":8,"loadavg":[20,18,10],"processes":[{"pid":101,"parentPid":1,"cpuPercent":98,"elapsed":"04:00","command":"/tool/haxe build"}]}' >"$saturated_capacity_fixture"
 
 run_profile() {
 	local out_dir="$1"
 	shift
+	local capacity_fixture="${HXHX_STAGE0_PROFILE_FIXTURE_CAPACITY_PATH:-$idle_capacity_fixture}"
 	HXHX_STAGE0_PROFILE_REGEN_SCRIPT="$FIXTURE_SCRIPT" \
 		HXHX_STAGE0_PROFILE_FIXTURE_REGEN=1 \
 		HXHX_STAGE0_PROFILE_FIXTURE_NESTED_DIR="$nested_dir" \
+		HXHX_STAGE0_PROFILE_FIXTURE_REGEN_CAPTURE="$regen_capture" \
+		HXHX_STAGE0_PROFILE_CAPACITY_FIXTURE="$capacity_fixture" \
 		bash "$PROFILE_SCRIPT" \
 		--policy require-native \
 		--failfast 1 \
@@ -70,6 +81,7 @@ cd "$caller_dir"
 relative_out="relative artifacts"
 run_profile "$relative_out" >"$fixture_root/relative.log" 2>&1
 [ -s "$caller_dir/$relative_out/regen_report.json" ] || fail "relative report was not retained under the caller directory"
+[ -s "$caller_dir/$relative_out/capacity_report.json" ] || fail "capacity evidence was not retained with the profile"
 [ -s "$caller_dir/$relative_out/reflaxe_ocaml_progress.log" ] || fail "relative progress log was not retained under the caller directory"
 [ -s "$caller_dir/$relative_out/progress_summary.json" ] || fail "relative progress summary was not retained under the caller directory"
 [ ! -e "$nested_dir/$relative_out" ] || fail "relative artifacts leaked into the nested build directory"
@@ -92,5 +104,25 @@ fi
 if ! grep -F "Profile evidence is incomplete" "$fixture_root/missing.log" >/dev/null; then
 	fail "missing telemetry did not explain that evidence is incomplete"
 fi
+
+blocked_out="$fixture_root/blocked-capacity"
+before_regen_count="$(wc -l <"$regen_capture" | tr -d ' ')"
+set +e
+HXHX_STAGE0_PROFILE_FIXTURE_CAPACITY_PATH="$saturated_capacity_fixture" \
+	run_profile "$blocked_out" >"$fixture_root/blocked.log" 2>&1
+blocked_code="$?"
+set -e
+[ "$blocked_code" = "75" ] || fail "saturated capacity returned $blocked_code instead of retryable exit 75"
+after_regen_count="$(wc -l <"$regen_capture" | tr -d ' ')"
+[ "$after_regen_count" = "$before_regen_count" ] || fail "saturated capacity invoked expensive regeneration"
+[ -s "$blocked_out/capacity_report.json" ] || fail "blocked profile did not retain its capacity report"
+[ ! -e "$blocked_out/regen_report.json" ] || fail "blocked profile unexpectedly produced a regeneration report"
+node -e '
+const fs = require("fs")
+const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"))
+if (report.status !== "blocked" || report.exitCode !== 75) process.exit(1)
+' "$blocked_out/capacity_report.json" || fail "blocked capacity report did not preserve the decision"
+grep -F "HXHX_LOCAL_CAPACITY:BLOCKED" "$fixture_root/blocked.log" >/dev/null \
+	|| fail "blocked profile did not explain why work stopped"
 
 echo "STAGE0_PROFILE_OUTPUT_PATH_FIXTURE:PASS"
