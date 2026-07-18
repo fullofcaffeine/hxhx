@@ -1,0 +1,203 @@
+name: Reflaxe OCaml / Package Artifact Matrix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/reflaxe-ocaml-package-matrix.yml'
+      - 'haxelib.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'packages/reflaxe.ocaml/**'
+      - 'scripts/ci/*reflaxe-ocaml-package*.js'
+      - 'scripts/release/**'
+      - 'test/packaging/reflaxe_ocaml_external_app/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/reflaxe-ocaml-package-matrix.yml'
+      - 'haxelib.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'packages/reflaxe.ocaml/**'
+      - 'scripts/ci/*reflaxe-ocaml-package*.js'
+      - 'scripts/release/**'
+      - 'test/packaging/reflaxe_ocaml_external_app/**'
+  schedule:
+    - cron: '41 6 * * 6'
+  workflow_dispatch:
+
+concurrency:
+  group: reflaxe-ocaml-package-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  NODE_VERSION: '20'
+  HAXE_VERSION: '4.3.7'
+  OCAML_VERSION: '5.2.1'
+
+jobs:
+  package_artifact:
+    name: Build immutable source package
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Haxe and Reflaxe dependencies
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${HAXE_VERSION}"
+          npx lix use haxe "${HAXE_VERSION}"
+          echo "${PWD}/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Build canonical package artifact
+        run: npm run build:reflaxe-ocaml:package-artifact
+      - name: Verify clean package provenance
+        run: |
+          set -euo pipefail
+          node -e 'const m=require("./.artifacts/reflaxe-ocaml/package-artifact/artifact-manifest.json"); if(m.workingTreeDirty || m.implementationCommit !== process.env.GITHUB_SHA) throw new Error("package artifact is not tied to the clean workflow checkout"); console.log(`${m.marker} sha256=${m.package.sha256}`)'
+      - name: Upload canonical package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflaxe-ocaml-source-package-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/package-artifact
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+  package_install:
+    name: Install exact package (${{ matrix.os }})
+    needs: package_artifact
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup OCaml toolchain (OCaml ${{ env.OCAML_VERSION }})
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: ${{ env.OCAML_VERSION }}
+          dune-cache: true
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+          dune --version
+          ocamlc -version
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Haxe and Reflaxe dependencies
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${HAXE_VERSION}"
+          npx lix use haxe "${HAXE_VERSION}"
+          echo "${PWD}/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Download canonical package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: reflaxe-ocaml-source-package-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/package-input
+      - name: Select downloaded package paths
+        run: |
+          set -euo pipefail
+          manifest="${PWD}/.artifacts/reflaxe-ocaml/package-input/artifact-manifest.json"
+          archive_file="$(node -p 'require(process.argv[1]).package.archiveFile' "$manifest")"
+          echo "RO_PACKAGE_INSTALL_MANIFEST=${manifest}" >> "$GITHUB_ENV"
+          echo "RO_PACKAGE_INSTALL_ZIP=${PWD}/.artifacts/reflaxe-ocaml/package-input/${archive_file}" >> "$GITHUB_ENV"
+          echo "RO_PACKAGE_INSTALL_ARTIFACTS=${PWD}/.artifacts/reflaxe-ocaml/package-install" >> "$GITHUB_ENV"
+      - name: Install and run the exact downloaded package
+        run: npm run test:reflaxe-ocaml:package-install
+      - name: Verify shared-artifact consumer result
+        run: |
+          set -euo pipefail
+          node -e 'const s=require("./.artifacts/reflaxe-ocaml/package-install/summary.json"); if(s.marker !== "RO_PACKAGE_INSTALL_SMOKE:PASS" || s.package.buildMode !== "supplied" || s.package.producerCommit !== process.env.GITHUB_SHA) throw new Error("platform job did not validate the shared package artifact"); console.log(`RO_PACKAGE_ARTIFACT_CONSUMER:PASS os=${process.platform} sha256=${s.package.sha256}`)'
+      - name: Upload platform package evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflaxe-ocaml-package-install-${{ runner.os }}-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/package-install
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+
+  package_matrix_summary:
+    name: Verify Linux and macOS package matrix
+    needs: [package_artifact, package_install]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Download canonical package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: reflaxe-ocaml-source-package-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/package-input
+      - name: Download platform package evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: reflaxe-ocaml-package-install-*-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/package-consumers
+          merge-multiple: false
+      - name: Verify shared package identity and both hosts
+        run: |
+          set -euo pipefail
+          node scripts/ci/reflaxe-ocaml-package-matrix-summary.js \
+            --artifact-manifest .artifacts/reflaxe-ocaml/package-input/artifact-manifest.json \
+            --evidence-root .artifacts/reflaxe-ocaml/package-consumers \
+            --out .artifacts/reflaxe-ocaml/package-matrix/summary.json
+      - name: Upload verified package matrix
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflaxe-ocaml-package-matrix-${{ github.sha }}
+          path: .artifacts/reflaxe-ocaml/package-matrix
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30

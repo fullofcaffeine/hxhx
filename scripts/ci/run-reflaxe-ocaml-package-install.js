@@ -9,28 +9,18 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 
+const {
+	inspectPackageArchive,
+	loadArtifactManifest,
+	sha256File,
+	validateArtifactManifest
+} = require('../release/reflaxe-ocaml-package-artifact')
+
 const repoRoot = path.resolve(__dirname, '../..')
 const fixtureRoot = path.join(repoRoot, 'test/packaging/reflaxe_ocaml_external_app')
 const artifactsRoot = path.resolve(process.env.RO_PACKAGE_INSTALL_ARTIFACTS || path.join(repoRoot, '.artifacts/reflaxe-ocaml/package-install'))
 const packageMetadata = JSON.parse(fs.readFileSync(path.join(repoRoot, 'packages/reflaxe.ocaml/haxelib.json'), 'utf8'))
 const expectedHaxeVersion = '4.3.7'
-const forbiddenArchiveExtensions = new Set([
-	'.a',
-	'.cma',
-	'.cmi',
-	'.cmo',
-	'.cmx',
-	'.cmxa',
-	'.cmxs',
-	'.dll',
-	'.dylib',
-	'.exe',
-	'.n',
-	'.ndll',
-	'.o',
-	'.obj',
-	'.so'
-])
 const summary = {
 	schemaVersion: 1,
 	marker: 'RO_PACKAGE_INSTALL_SMOKE:FAIL',
@@ -50,7 +40,11 @@ const summary = {
 		bytes: null,
 		reproducible: false,
 		sourceOnly: false,
-		fileCount: 0
+		fileCount: 0,
+		buildMode: null,
+		producerCommit: null,
+		producerWorkingTreeDirty: null,
+		artifactManifestSha256: null
 	},
 	isolation: {
 		missingTargetRejected: false,
@@ -128,10 +122,6 @@ function requireSuccess(name, result) {
 		fail(`${name} failed with exit ${result.status}; see ${name}.stderr.log`)
 	}
 	return result
-}
-
-function sha256File(filePath) {
-	return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')
 }
 
 function walkFiles(root, options = {}) {
@@ -256,54 +246,57 @@ function resolveReflaxeRoot() {
 	return root
 }
 
-function inspectArchive(zipPath) {
-	const listing = requireSuccess('archive-list', runStep('archive-list', 'unzip', ['-Z1', zipPath]))
-	const entries = listing.stdout.split('\n').map(line => line.trim()).filter(Boolean)
-	if (entries.length === 0) {
-		fail('release archive is empty')
-	}
-	for (const entry of entries) {
-		if (path.posix.isAbsolute(entry) || entry.split('/').includes('..')) {
-			fail(`unsafe path in release archive: ${entry}`)
-		}
-		if (forbiddenArchiveExtensions.has(path.extname(entry).toLowerCase())) {
-			fail(`compiler/host-specific artifact leaked into release archive: ${entry}`)
-		}
-	}
-	for (const required of ['haxelib.json', 'extraParams.hxml', 'src/reflaxe/ocaml/OcamlCompiler.hx']) {
-		if (!entries.includes(required)) {
-			fail(`release archive is missing ${required}`)
-		}
-	}
-	summary.package.fileCount = entries.length
-	summary.package.sourceOnly = true
+function validatePackageArtifact(zipPath, manifestPath, buildMode) {
+	const startedAt = Date.now()
+	addEvidenceReplacement(path.dirname(zipPath), '<package-input>')
+	addEvidenceReplacement(path.dirname(manifestPath), '<package-input>')
+	evidenceReplacements.sort((left, right) => right[0].length - left[0].length)
+	const packageInfo = inspectPackageArchive(zipPath, packageMetadata)
+	const manifest = validateArtifactManifest(
+		loadArtifactManifest(manifestPath),
+		packageInfo,
+		summary.implementationCommit
+	)
+	Object.assign(summary.package, packageInfo, {
+		reproducible: manifest.package.reproducible,
+		buildMode,
+		producerCommit: manifest.implementationCommit,
+		producerWorkingTreeDirty: manifest.workingTreeDirty,
+		artifactManifestSha256: sha256File(manifestPath)
+	})
+	summary.timingsMs['package-artifact-validate'] = Date.now() - startedAt
+	return zipPath
 }
 
-function buildArchives() {
-	const firstDir = path.join(artifactsRoot, 'build-a')
-	const secondDir = path.join(artifactsRoot, 'build-b')
+function preparePackageArtifact() {
+	const suppliedZip = process.env.RO_PACKAGE_INSTALL_ZIP
+	const suppliedManifest = process.env.RO_PACKAGE_INSTALL_MANIFEST
+	if (Boolean(suppliedZip) !== Boolean(suppliedManifest)) {
+		fail('RO_PACKAGE_INSTALL_ZIP and RO_PACKAGE_INSTALL_MANIFEST must be provided together')
+	}
+	if (suppliedZip) {
+		return validatePackageArtifact(path.resolve(suppliedZip), path.resolve(suppliedManifest), 'supplied')
+	}
+
+	const packageArtifacts = path.join(artifactsRoot, 'package-artifact')
 	const builderTemp = path.join(tempRoot, 'package-builder-tmp')
-	ensureDir(firstDir)
-	ensureDir(secondDir)
 	ensureDir(builderTemp)
-	const buildEnv = { ...process.env, TMPDIR: builderTemp, TEMP: builderTemp, TMP: builderTemp }
-	requireSuccess('build-archive-a', runStep('build-archive-a', 'bash', ['scripts/release/build-haxelib-zip.sh', '--out-dir', firstDir], { env: buildEnv }))
-	requireSuccess('build-archive-b', runStep('build-archive-b', 'bash', ['scripts/release/build-haxelib-zip.sh', '--out-dir', secondDir], { env: buildEnv }))
-	const firstZip = path.join(firstDir, summary.package.archiveFile)
-	const secondZip = path.join(secondDir, summary.package.archiveFile)
-	if (!fs.existsSync(firstZip) || !fs.existsSync(secondZip)) {
-		fail('package builder did not write the declared versioned archive')
+	const buildEnv = {
+		...process.env,
+		RO_PACKAGE_ARTIFACTS: packageArtifacts,
+		TMPDIR: builderTemp,
+		TEMP: builderTemp,
+		TMP: builderTemp
 	}
-	const firstHash = sha256File(firstZip)
-	const secondHash = sha256File(secondZip)
-	if (firstHash !== secondHash) {
-		fail(`two package builds produced different SHA-256 values: ${firstHash} != ${secondHash}`)
-	}
-	summary.package.sha256 = firstHash
-	summary.package.bytes = fs.statSync(firstZip).size
-	summary.package.reproducible = true
-	inspectArchive(firstZip)
-	return firstZip
+	requireSuccess(
+		'build-package-artifact',
+		runStep('build-package-artifact', process.execPath, ['scripts/ci/build-reflaxe-ocaml-package-artifact.js'], { env: buildEnv })
+	)
+	return validatePackageArtifact(
+		path.join(packageArtifacts, summary.package.archiveFile),
+		path.join(packageArtifacts, 'artifact-manifest.json'),
+		'local-builder'
+	)
 }
 
 function prepareToolchain(isolatedHaxelib) {
@@ -463,7 +456,7 @@ function main() {
 		summary.implementationCommit = requireSuccess('implementation-commit', runStep('implementation-commit', 'git', ['rev-parse', 'HEAD'])).stdout.trim()
 		summary.workingTreeDirty = requireSuccess('working-tree-status', runStep('working-tree-status', 'git', ['status', '--porcelain'])).stdout.trim().length > 0
 		const reflaxeRoot = resolveReflaxeRoot()
-		const zipPath = buildArchives()
+		const zipPath = preparePackageArtifact()
 		proveExternalInstall(zipPath, reflaxeRoot)
 		verifyEvidenceLogs()
 		summary.marker = 'RO_PACKAGE_INSTALL_SMOKE:PASS'
