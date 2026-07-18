@@ -21,7 +21,7 @@ but asks for this table to be refreshed when a watched file moves by more than
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,753 | Fixed prelude assembly now lives in `CppProgramPrelude`; rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support still make this a red hotspot. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,251 | Fixed prelude assembly lives in `CppProgramPrelude`, and known standard-library carrier signatures live in `CppKnownStdlibSignatures`; rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support still make this a red hotspot. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,285 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -74,6 +74,7 @@ Pause for an extraction note or follow-up bead when a change would:
 ## Existing Follow-Ups
 
 - `haxe_ocaml-8b0o`: mega-file gravity watch wiring/guard.
+- `haxe_ocaml-850ii.13`: extract known C++ signature tables for faster native rebuilds.
 - `haxe_ocaml-36ec`: Cpp render/type-flow cache extraction.
 - `haxe_ocaml-crsq`: Cpp imported stdlib static calls and helper reachability.
 - `haxe_ocaml-ejja`: Cpp compact primitive helper oracle freeze.
@@ -82,6 +83,16 @@ Pause for an extraction note or follow-up bead when a change would:
 
 Source/native target-family extraction should be filed before adding more broad
 target-specific runtime/API support to `SourceTargetCommon.hx`.
+
+2026-07-18 checkpoint: `haxe_ocaml-850ii.13` moves the existing known
+standard-library method argument and return carrier tables out of
+`CppTargetCore` into the documented target-owned
+`CppKnownStdlibSignatures`. The main emitter still selects declarations and
+supplies its existing scope-aware type services; the extracted module only
+answers the same already-classified C++ signature questions. This reduces the
+red hotspot by 502 lines without adding runtime behavior or another semantic
+owner. Focused behavior and before/after build telemetry remain the closure
+gate for this in-progress checkpoint.
 
 2026-07-18 checkpoint: `haxe_ocaml-850ii.8.1` moved the fixed 1,168-line C++
 support prelude out of `CppTargetCore` into the documented target-owned

@@ -12,6 +12,7 @@ const planPath = 'docs/00-project/CPP_RENDER_TYPE_FLOW_PLAN.md'
 const docsReadmePath = 'docs/README.md'
 const packageJsonPath = 'package.json'
 const cppCorePath = 'packages/hxhx-core/src/backend/cpp/CppTargetCore.hx'
+const knownSignaturesPath = 'packages/hxhx-core/src/backend/cpp/CppKnownStdlibSignatures.hx'
 
 function fail(message) {
   console.error(`[cpp-render-type-flow-plan-check] ERROR: ${message}`)
@@ -37,6 +38,7 @@ function main() {
   const docsReadme = readText(docsReadmePath)
   const packageJson = readText(packageJsonPath)
   const cppCore = readText(cppCorePath)
+  const knownSignatures = readText(knownSignaturesPath)
 
   for (const snippet of [
     'CPP_RENDER_TYPE_FLOW_PLAN:PASS',
@@ -67,8 +69,21 @@ function main() {
     'functionScopePrepCache',
     'functionArgTypesCache',
     'functionReturnTypesCache',
+    'knownStdlibSignatures().methodReturnCppType',
+    'knownStdlibSignatures().methodParamCppTypes',
   ]) {
     requireIncludes(cppCorePath, cppCore, snippet)
+  }
+
+  for (const snippet of [
+    'class CppKnownStdlibSignatures',
+    'does not select Haxe declarations',
+    'public function methodReturnCppType',
+    'public function methodParamCppTypes',
+    'public function preludeMethodReturnType',
+    'public function preludeMethodParamTypes',
+  ]) {
+    requireIncludes(knownSignaturesPath, knownSignatures, snippet)
   }
 
   requireIncludes(docsReadmePath, docsReadme, 'CPP_RENDER_TYPE_FLOW_PLAN.md')
