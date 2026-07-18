@@ -54,8 +54,39 @@ Fast reuse path:
 npm run hxhx:current-source-bin
 ```
 
-This validates the existing `packages/hxhx/out/hxhx-current-source.env` metadata
-and reuses the previous current-source binary when both are true:
+This first validates the exact commit and tracked worktree recorded in
+`packages/hxhx/out/hxhx-current-source.env`. If that exact check fails, the
+developer-only fallback can still reuse the binary when the complete compiler
+input fingerprint is unchanged. In practical terms, documentation, test, and
+Beads-only commits no longer force a multi-minute compiler rebuild.
+
+Developer reuse prints:
+
+```text
+HXHX_DEVELOPER_CURRENT_SOURCE_CACHE:REUSE
+```
+
+The fingerprint invalidates when any consumed input changes, including:
+
+- `hxhx` compiler/backend source;
+- Reflaxe compiler source, OCaml runtime, shims, or target templates;
+- HXML and library configuration;
+- the resolved upstream Haxe standard library or external Reflaxe source;
+- the resolved Haxe, Dune, or OCaml compiler executable;
+- build-affecting Stage0, OCaml, Dune, or C/C++ environment configuration.
+
+A fresh build hashes these inputs before and after compilation. If they differ,
+the build refuses to record a reusable cache entry. The component report lives
+next to the local metadata as
+`packages/hxhx/out/hxhx-current-source.inputs.json`.
+Committed bootstrap snapshots are not inputs to this cache because this command
+forces a Stage0 source build. Snapshot-driven, stage0-forbidden builds keep
+their separate snapshot and exact-candidate receipts.
+
+This fast fallback is intentionally not release evidence. Gate 2, Gate 3, and
+same-candidate proof runners call
+`scripts/hxhx/validate-current-source-hxhx-bin.sh` directly; that strict
+validator still requires both:
 
 - `HEAD` is unchanged since the build.
 - The tracked worktree content hash is unchanged since the build, even if the
@@ -70,14 +101,16 @@ npm run hxhx:build-current-source
 Use the fresh rebuild path when you intentionally need to rebuild even if a
 valid current-source binary already exists.
 
-For diagnosis-only reuse after a harmless tracked-content change:
+For diagnosis-only reuse that deliberately bypasses both safeguards:
 
 ```bash
 HXHX_CURRENT_SOURCE_ALLOW_STALE=1 npm run hxhx:current-source-bin
 ```
 
-Do not use stale reuse as final proof for a code change. Rebuild before closing a
-bead that depends on current-source compiler behavior.
+Prefer the input-fingerprinted selector. `HXHX_CURRENT_SOURCE_ALLOW_STALE=1`
+exists only for manual diagnosis and can accept a real compiler-source change;
+never use it as final proof. Rebuild before closing a bead that depends on
+current-source compiler behavior.
 
 ## Focused Native-Backend Smoke Groups
 
@@ -206,8 +239,22 @@ Recent local evidence from July 3, 2026:
 | `npm run guard:hx-format` | 597 tracked Haxe files, 4 jobs | about 44.6s |
 | `npm run hxhx:build-current-source` | fresh current-source build after cleanup | about 111s |
 | `npm run hxhx:current-source-bin` | valid current-source cache reuse | about 0.4s |
+| current-source complete-input fingerprint | 5,000+ repo/toolchain input entries, including OCaml libraries | about 1.6s |
 | C++ syntax-only compile for `cpp-numeric-only` | one generated translation unit | about 1.1s |
 | C++ full compile/link for `cpp-numeric-only` | one generated translation unit | about 1.3s |
+
+Current cache evidence from July 18, 2026:
+
+| Check | Scope | Time |
+| --- | --- | --- |
+| fresh input-fingerprinted current-source build | capacity preflight passed; Stage0 generation reached Dune at about 211s | 254.5s |
+| exact same-worktree selector reuse | strict commit/tree validator | 0.34s |
+| documentation-only edit selector reuse | strict validator rejected; complete-input developer fallback passed | 1.95s |
+
+The last row avoids roughly 130 times the wait of that fresh build, but only for
+changes outside the compiler input set. A compiler, runtime, template,
+configuration, or toolchain change still rebuilds. This is a developer-loop
+improvement, not evidence that fresh compiler generation itself is fast enough.
 
 On July 18, 2026, an exact current-source strict C++ run reached its 5,400-second
 timeout while the host load was roughly 48. That run is retained as contention

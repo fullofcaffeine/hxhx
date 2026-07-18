@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="${HXHX_CURRENT_SOURCE_ROOT:-$SCRIPT_ROOT}"
 META_PATH="${HXHX_CURRENT_SOURCE_META:-$ROOT/packages/hxhx/out/hxhx-current-source.env}"
+INPUT_REPORT_PATH="${HXHX_CURRENT_SOURCE_INPUT_REPORT:-${META_PATH%.env}.inputs.json}"
+INPUT_FINGERPRINT_TOOL="${HXHX_CURRENT_SOURCE_INPUT_FINGERPRINT_TOOL:-$SCRIPT_ROOT/scripts/hxhx/current-source-input-fingerprint.js}"
+BUILD_DRIVER="${HXHX_CURRENT_SOURCE_BUILD_DRIVER:-$ROOT/scripts/hxhx/build-hxhx.sh}"
 
 # This script intentionally rebuilds hxhx from the current checkout and records
 # provenance metadata for later validation. For a faster local loop that reuses
@@ -21,7 +25,41 @@ status_sha256() {
   shasum -a 256 | awk '{print $1}'
 }
 
+file_sha256() {
+  local file="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+    return
+  fi
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+    return
+  fi
+  echo "build-current-source-hxhx: missing SHA-256 tool (need sha256sum or shasum)" >&2
+  exit 1
+}
+
 mkdir -p "$(dirname "$META_PATH")"
+[ -f "$INPUT_FINGERPRINT_TOOL" ] || {
+  echo "build-current-source-hxhx: missing compiler-input fingerprint tool: $INPUT_FINGERPRINT_TOOL" >&2
+  exit 1
+}
+command -v node >/dev/null 2>&1 || {
+  echo "build-current-source-hxhx: missing node on PATH" >&2
+  exit 1
+}
+[ -f "$BUILD_DRIVER" ] || {
+  echo "build-current-source-hxhx: missing build driver: $BUILD_DRIVER" >&2
+  exit 1
+}
+
+before_input_report="$(mktemp "${TMPDIR:-/tmp}/hxhx-current-source-inputs-before.json.XXXXXX")"
+cleanup_before_input_report() {
+  rm -f "$before_input_report" >/dev/null 2>&1 || true
+}
+trap cleanup_before_input_report EXIT
+
+input_sha256_before="$(node "$INPUT_FINGERPRINT_TOOL" --root "$ROOT" --json-out "$before_input_report")"
 
 source_head="$(git -C "$ROOT" rev-parse HEAD)"
 source_branch="$(git -C "$ROOT" branch --show-current 2>/dev/null || true)"
@@ -37,11 +75,18 @@ build_start_epoch="$(date +%s)"
 echo "== Building current-source hxhx (HXHX_FORCE_STAGE0=1)" >&2
 echo "== Source head: $source_head dirty=$source_dirty" >&2
 
-hxhx_bin="$(HXHX_FORCE_STAGE0=1 bash "$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+hxhx_bin="$(HXHX_FORCE_STAGE0=1 bash "$BUILD_DRIVER" | tail -n 1)"
 if [ -z "$hxhx_bin" ] || { [ ! -x "$hxhx_bin" ] && [[ "$hxhx_bin" != *.bc ]]; }; then
   echo "build-current-source-hxhx: build did not produce an executable/bytecode hxhx path: $hxhx_bin" >&2
   exit 1
 fi
+
+input_sha256_after="$(node "$INPUT_FINGERPRINT_TOOL" --root "$ROOT" --json-out "$INPUT_REPORT_PATH")"
+if [ "$input_sha256_before" != "$input_sha256_after" ]; then
+  echo "build-current-source-hxhx: compiler inputs changed while the build was running; refusing to record a reusable artifact" >&2
+  exit 1
+fi
+artifact_sha256="$(file_sha256 "$hxhx_bin")"
 
 build_end_epoch="$(date +%s)"
 cat >"$META_PATH" <<META
@@ -53,9 +98,17 @@ HXHX_BIN_SOURCE_BRANCH=$source_branch
 HXHX_BIN_SOURCE_DIRTY=$source_dirty
 HXHX_BIN_SOURCE_STATUS_SHA256=$source_status_sha256
 HXHX_BIN_SOURCE_TREE_SHA256=$source_tree_sha256
+HXHX_BIN_INPUT_FINGERPRINT_SCHEMA=hxhx.current-source-inputs.v1
+HXHX_BIN_INPUT_SHA256=$input_sha256_after
+HXHX_BIN_INPUT_REPORT=$INPUT_REPORT_PATH
+HXHX_BIN_ARTIFACT_SHA256=$artifact_sha256
 HXHX_BIN_BUILT_AT_EPOCH=$build_end_epoch
 HXHX_BIN_BUILD_SECONDS=$((build_end_epoch - build_start_epoch))
 META
 
+cleanup_before_input_report
+trap - EXIT
 echo "hxhx_current_source_meta=$META_PATH" >&2
+echo "hxhx_current_source_input_sha256=$input_sha256_after" >&2
+echo "hxhx_current_source_input_report=$INPUT_REPORT_PATH" >&2
 echo "$hxhx_bin"

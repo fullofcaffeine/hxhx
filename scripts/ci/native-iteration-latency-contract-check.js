@@ -178,6 +178,9 @@ function main() {
     if (policy.activeEvidenceLoop.localCapacityPreflightSchema !== 'hxhx.local-capacity-preflight.v1') {
       fail('policy.activeEvidenceLoop.localCapacityPreflightSchema must be hxhx.local-capacity-preflight.v1')
     }
+    if (policy.activeEvidenceLoop.developerCurrentSourceInputSchema !== 'hxhx.current-source-inputs.v1') {
+      fail('policy.activeEvidenceLoop.developerCurrentSourceInputSchema must be hxhx.current-source-inputs.v1')
+    }
     for (const field of [
       'full1PhaseTimingReportValidator',
       'm7SharedArtifactReceiptValidator',
@@ -193,7 +196,9 @@ function main() {
       'nativePluginLoopReportValidator',
       'nativePluginLoopReportRunner',
       'localCapacityPreflight',
-      'localCapacityPreflightFixture'
+      'localCapacityPreflightFixture',
+      'developerCurrentSourceInputFingerprint',
+      'developerCurrentSourceCacheFixture'
     ]) {
       const evidencePath = policy.activeEvidenceLoop[field]
       if (!evidencePath || !fs.existsSync(evidencePath)) {

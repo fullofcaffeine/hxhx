@@ -104,7 +104,10 @@ performance claim must use measured medians from the relevant runner class.
     "nativePluginLoopReportRunner": "scripts/hxhx/bench-native-plugin-loop.sh",
     "localCapacityPreflightSchema": "hxhx.local-capacity-preflight.v1",
     "localCapacityPreflight": "scripts/hxhx/check-local-capacity.js",
-    "localCapacityPreflightFixture": "scripts/ci/local-capacity-preflight-fixture-test.js"
+    "localCapacityPreflightFixture": "scripts/ci/local-capacity-preflight-fixture-test.js",
+    "developerCurrentSourceInputSchema": "hxhx.current-source-inputs.v1",
+    "developerCurrentSourceInputFingerprint": "scripts/hxhx/current-source-input-fingerprint.js",
+    "developerCurrentSourceCacheFixture": "scripts/ci/developer-current-source-cache-fixture-test.js"
   },
   "measurementBuckets": [
     {
@@ -113,7 +116,9 @@ performance claim must use measured medians from the relevant runner class.
       "target": "Median runtime should stay comfortably below the matching broad gate; warn if local p50 grows beyond 30s for a previously focused smoke.",
       "evidence": [
         "package.json",
-        "scripts/ci/full1-phase-timing.js"
+        "scripts/ci/full1-phase-timing.js",
+        "scripts/hxhx/current-source-input-fingerprint.js",
+        "scripts/ci/developer-current-source-cache-fixture-test.js"
       ]
     },
     {
@@ -204,6 +209,17 @@ runner platform. An explicit `off` accepts the expected slowdown but does not
 change target selection, retries, timeouts, stage0 rules, or any correctness
 claim. Optional JSON reports use `hxhx.local-capacity-preflight.v1` and never
 retain full process command lines.
+
+The fast current-source selector first asks the strict validator for an exact
+commit/worktree match. If that fails, its developer-only fallback may reuse the
+same compiler across documentation, test, or Beads changes only when the
+`hxhx.current-source-inputs.v1` digest still matches. That digest covers the
+compiler and backend sources, runtime/templates, build configuration, external
+Reflaxe source, upstream Haxe standard library, resolved Haxe/OCaml/Dune tools,
+and build-affecting environment. A fresh build fingerprints before and after
+compilation and refuses reusable metadata if they differ. Release, Gate 2, and
+Gate 3 proof paths continue to call the exact-commit validator directly and
+cannot accept the developer shortcut.
 
 Heavy Full1 jobs write `full1-phase-timing-summary.v2`. In plain language, a
 downloaded timing file must say which commit, workflow run, machine, and tool
