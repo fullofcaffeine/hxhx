@@ -48,7 +48,32 @@ HX_FORMAT_JOBS=8 npm run guard:hx-format   # explicit parallel chunk count
 
 Some diagnostics need an `hxhx` binary built from the current checkout.
 
-Fast reuse path:
+For ordinary edit-build-test work, use the isolated fast compiler:
+
+```bash
+npm run hxhx:current-source-bin:fast
+```
+
+This builds once with Reflaxe's expression preprocessors disabled, then reuses
+the result while the complete compiler-input fingerprint remains unchanged. A
+comparable isolated emit fell from 211 seconds to 150 seconds. The resulting
+compiler passed focused native OCaml, JavaScript, C++ source, plugin-runtime,
+and macro-host checks.
+
+Its receipt and generated files live under
+`packages/hxhx/out_tmp_current_source_fast`, separate from the full compiler.
+The receipt says `HXHX_BIN_BUILD_PROFILE=no-prepass-dev`; strict validation
+rejects that profile. Use this compiler to iterate, then recheck the behavior
+with the full profile before treating the result as parity, release, or closure
+evidence.
+
+Force a fresh fast-profile rebuild with:
+
+```bash
+npm run hxhx:build-current-source:fast
+```
+
+Full-profile reuse path:
 
 ```bash
 npm run hxhx:current-source-bin
@@ -92,14 +117,16 @@ validator still requires both:
 - The tracked worktree content hash is unchanged since the build, even if the
   same files were already dirty.
 
-Fresh rebuild path:
+Fresh full-profile rebuild path:
 
 ```bash
 npm run hxhx:build-current-source
 ```
 
 Use the fresh rebuild path when you intentionally need to rebuild even if a
-valid current-source binary already exists.
+valid full current-source binary already exists. The full receipt says
+`HXHX_BIN_BUILD_PROFILE=full`; Gate 2, Gate 3, parity, and release workflows
+continue to require that profile directly.
 
 For diagnosis-only reuse that deliberately bypasses both safeguards:
 
@@ -250,9 +277,14 @@ Current cache evidence from July 18, 2026:
 | fresh input-fingerprinted current-source build | capacity preflight passed; Stage0 generation reached Dune at about 211s | 254.5s |
 | exact same-worktree selector reuse | strict commit/tree validator | 0.34s |
 | documentation-only edit selector reuse | strict validator rejected; complete-input developer fallback passed | 1.95s |
+| isolated full Stage0 emit | 473 typed modules; all expression preprocessors enabled | 211s |
+| isolated no-prepass developer emit | same 473 typed modules; focused cross-target validation | 150s |
+| `hxhx:build-current-source:fast` | input fingerprint + isolated emit + Dune bytecode build | 185s |
+| `hxhx:current-source-bin:fast` | valid no-prepass developer cache reuse | 2.18s |
 
-The last row avoids roughly 130 times the wait of that fresh build, but only for
-changes outside the compiler input set. A compiler, runtime, template,
+The documentation-only reuse row avoids roughly 130 times the wait of that
+fresh build, but only for changes outside the compiler input set. A compiler,
+runtime, template,
 configuration, or toolchain change still rebuilds. This is a developer-loop
 improvement, not evidence that fresh compiler generation itself is fast enough.
 

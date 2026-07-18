@@ -79,7 +79,9 @@ What this loop guarantees:
   built from the current source tree rather than the committed bootstrap
   snapshot.
 - `packages/hxhx/out/hxhx-current-source.env` records the binary path, git HEAD,
-  dirty/clean state, tracked status/content hashes, and build duration.
+  dirty/clean state, tracked status/content hashes, full build profile, and
+  build duration. Strict suite runners reject the separate `no-prepass-dev`
+  profile used for fast local iteration.
 - `HXHX_REQUIRE_CURRENT_SOURCE_BIN=1` makes Gate2/Gate3 local repro runners fail
   fast if `HXHX_BIN` is missing provenance metadata, points at a different
   binary, or was built from a different tracked checkout state.

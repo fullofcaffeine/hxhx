@@ -10,6 +10,7 @@ ROOT="${HXHX_CURRENT_SOURCE_ROOT:-$SCRIPT_ROOT}"
 requested_bin="${1:-${HXHX_BIN:-}}"
 meta_path="${HXHX_CURRENT_SOURCE_META:-$ROOT/packages/hxhx/out/hxhx-current-source.env}"
 fingerprint_tool="$SCRIPT_ROOT/scripts/hxhx/current-source-input-fingerprint.js"
+expected_profile="${HXHX_CURRENT_SOURCE_EXPECTED_PROFILE:-full}"
 
 fail() {
   echo "validate-developer-current-source-hxhx-bin: $*" >&2
@@ -48,6 +49,7 @@ command -v node >/dev/null 2>&1 || fail "missing node on PATH"
 . "$meta_path"
 
 [ "${HXHX_BIN_PROVENANCE:-}" = "current-source-stage0" ] || fail "unexpected HXHX_BIN_PROVENANCE=${HXHX_BIN_PROVENANCE:-missing}"
+[ "${HXHX_BIN_BUILD_PROFILE:-}" = "$expected_profile" ] || fail "expected HXHX_BIN_BUILD_PROFILE=$expected_profile, got ${HXHX_BIN_BUILD_PROFILE:-missing}"
 [ "${HXHX_BIN:-}" = "$requested_bin" ] || fail "metadata HXHX_BIN ($HXHX_BIN) does not match requested path ($requested_bin)"
 [ "${HXHX_BIN_INPUT_FINGERPRINT_SCHEMA:-}" = "hxhx.current-source-inputs.v1" ] || fail "missing current developer-cache fingerprint metadata; run scripts/hxhx/build-current-source-hxhx.sh once"
 [ -n "${HXHX_BIN_INPUT_SHA256:-}" ] || fail "missing compiler input SHA-256"
@@ -60,5 +62,5 @@ current_input_sha256="$(node "$fingerprint_tool" --root "$ROOT")"
 [ "$current_input_sha256" = "$HXHX_BIN_INPUT_SHA256" ] || fail "compiler input fingerprint changed; a fresh current-source build is required"
 
 current_head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
-echo "HXHX_DEVELOPER_CURRENT_SOURCE_CACHE:REUSE input_sha256=$current_input_sha256 built_head=${HXHX_BIN_SOURCE_HEAD:-unknown} current_head=$current_head" >&2
+echo "HXHX_DEVELOPER_CURRENT_SOURCE_CACHE:REUSE profile=$expected_profile input_sha256=$current_input_sha256 built_head=${HXHX_BIN_SOURCE_HEAD:-unknown} current_head=$current_head" >&2
 echo "$requested_bin"

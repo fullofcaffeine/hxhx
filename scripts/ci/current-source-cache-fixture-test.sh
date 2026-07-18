@@ -53,6 +53,7 @@ write_meta() {
 # fixture metadata
 HXHX_BIN=$fake_bin
 HXHX_BIN_PROVENANCE=current-source-stage0
+HXHX_BIN_BUILD_PROFILE=full
 HXHX_BIN_SOURCE_HEAD=$head
 HXHX_BIN_SOURCE_BRANCH=main
 HXHX_BIN_SOURCE_DIRTY=$dirty

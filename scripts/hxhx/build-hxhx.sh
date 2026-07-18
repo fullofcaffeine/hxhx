@@ -48,6 +48,52 @@ HXHX_BOOTSTRAP_BUILD_PRUNE_ONLY="${HXHX_BOOTSTRAP_BUILD_PRUNE_ONLY:-0}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
 BOOTSTRAP_DIR="$HXHX_DIR/bootstrap_out"
+DEFAULT_STAGE0_OUT_DIR="$HXHX_DIR/out"
+STAGE0_OUT_DIR_RAW="${HXHX_STAGE0_OUTPUT_DIR:-$DEFAULT_STAGE0_OUT_DIR}"
+case "$STAGE0_OUT_DIR_RAW" in
+  /*) STAGE0_OUT_DIR="$STAGE0_OUT_DIR_RAW" ;;
+  *) STAGE0_OUT_DIR="$ROOT/$STAGE0_OUT_DIR_RAW" ;;
+esac
+mkdir -p "$STAGE0_OUT_DIR"
+STAGE0_OUT_DIR="$(cd "$STAGE0_OUT_DIR" && pwd -P)"
+
+# Stage0 generation replaces its complete output directory. Refuse locations
+# that contain tracked repository inputs so an incorrect development override
+# cannot delete source, configuration, or committed bootstrap snapshots.
+case "$STAGE0_OUT_DIR" in
+  /|"$ROOT"|"$HXHX_DIR"|"$BOOTSTRAP_DIR")
+    echo "Unsafe HXHX_STAGE0_OUTPUT_DIR: $STAGE0_OUT_DIR" >&2
+    exit 2
+    ;;
+esac
+if [[ "$STAGE0_OUT_DIR" == "$ROOT/"* ]]; then
+  stage0_out_repo_relative="${STAGE0_OUT_DIR#"$ROOT/"}"
+  if git -C "$ROOT" ls-files -- "$stage0_out_repo_relative" | grep -q .; then
+    echo "Unsafe HXHX_STAGE0_OUTPUT_DIR contains tracked files: $STAGE0_OUT_DIR" >&2
+    exit 2
+  fi
+fi
+
+stage0_executable_name() {
+  local dune_file="$STAGE0_OUT_DIR/dune"
+  local name=""
+  if [ -f "$dune_file" ]; then
+    name="$(sed -nE 's/^[[:space:]]*\(name[[:space:]]+([A-Za-z0-9_]+)\).*/\1/p' "$dune_file" | head -n 1)"
+  fi
+  if [ -z "$name" ]; then
+    name="$(basename "$STAGE0_OUT_DIR" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]/_/g')"
+    case "$name" in
+      [0-9]*) name="_$name" ;;
+    esac
+  fi
+  case "$name" in
+    ''|*[!A-Za-z0-9_]*)
+      echo "Cannot resolve a safe generated executable name from $dune_file" >&2
+      return 1
+      ;;
+  esac
+  printf '%s\n' "$name"
+}
 BOOTSTRAP_BUILD_DIR="${HXHX_BOOTSTRAP_BUILD_DIR:-}"
 BOOTSTRAP_BUILD_DIR_AUTOCREATED=0
 HAXE_SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
@@ -737,8 +783,8 @@ resolve_stage0_connect
     build_mode="native"
   fi
 
-  rm -rf out
-  mkdir -p out
+  rm -rf "$STAGE0_OUT_DIR"
+  mkdir -p "$STAGE0_OUT_DIR"
 
   haxe_args=()
   stage0_connect_stall_code=86
@@ -800,6 +846,9 @@ resolve_stage0_connect
       )
     else
       haxe_args=(build.hxml -D ocaml_emit_only)
+    fi
+    if [ "$STAGE0_OUT_DIR" != "$DEFAULT_STAGE0_OUT_DIR" ]; then
+      haxe_args+=(-D "ocaml_output=$STAGE0_OUT_DIR")
     fi
     if [ "$HXHX_STAGE0_VERBOSE" = "1" ]; then
       haxe_args+=(-v)
@@ -1094,11 +1143,9 @@ resolve_stage0_connect
   }
 
   run_stage0_source_lane() {
-    local target="./out.bc"
+    local executable_name=""
+    local target=""
     local code=0
-    if [ "$build_mode" = "native" ]; then
-      target="./out.exe"
-    fi
 
     set +e
     run_stage0_build_with_connect_retry
@@ -1107,9 +1154,14 @@ resolve_stage0_connect
     if [ "$code" != "0" ]; then
       return "$code"
     fi
-    sanitize_stage0_emit_dir "$HXHX_DIR/out"
+    sanitize_stage0_emit_dir "$STAGE0_OUT_DIR"
+    executable_name="$(stage0_executable_name)"
+    target="./${executable_name}.bc"
+    if [ "$build_mode" = "native" ]; then
+      target="./${executable_name}.exe"
+    fi
     (
-      cd "$HXHX_DIR/out"
+      cd "$STAGE0_OUT_DIR"
       if [ "$HXHX_BOOTSTRAP_HEARTBEAT" != "0" ] || [ "$HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS" != "0" ]; then
         echo "== Stage0 dune watch: heartbeat=${HXHX_BOOTSTRAP_HEARTBEAT}s timeout=${HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS}s target=${target}" >&2
       fi
@@ -1139,8 +1191,8 @@ resolve_stage0_connect
     if [ "$build_mode" = "native" ]; then
       echo "hxhx stage0 build: native failed; retrying bytecode (expected on some platforms; set HXHX_STAGE0_OCAML_BUILD=byte to skip native attempts)." >&2
       build_mode="byte"
-      rm -rf out
-      mkdir -p out
+      rm -rf "$STAGE0_OUT_DIR"
+      mkdir -p "$STAGE0_OUT_DIR"
       populate_haxe_args "$build_mode"
       run_stage0_source_lane
     else
@@ -1149,8 +1201,9 @@ resolve_stage0_connect
   fi
 )
 
-BIN_EXE="$HXHX_DIR/out/_build/default/out.exe"
-BIN_BC="$HXHX_DIR/out/_build/default/out.bc"
+STAGE0_EXECUTABLE_NAME="$(stage0_executable_name)"
+BIN_EXE="$STAGE0_OUT_DIR/_build/default/${STAGE0_EXECUTABLE_NAME}.exe"
+BIN_BC="$STAGE0_OUT_DIR/_build/default/${STAGE0_EXECUTABLE_NAME}.bc"
 if [ -f "$BIN_EXE" ]; then
   echo "$BIN_EXE"
   exit 0

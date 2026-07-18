@@ -41,6 +41,7 @@ fi
 . "$meta_path"
 
 [ "${HXHX_BIN_PROVENANCE:-}" = "current-source-stage0" ] || fail "unexpected HXHX_BIN_PROVENANCE=${HXHX_BIN_PROVENANCE:-missing}"
+[ "${HXHX_BIN_BUILD_PROFILE:-}" = "full" ] || fail "strict current-source proof requires HXHX_BIN_BUILD_PROFILE=full, got ${HXHX_BIN_BUILD_PROFILE:-missing}"
 [ "${HXHX_BIN:-}" = "$requested_bin" ] || fail "metadata HXHX_BIN ($HXHX_BIN) does not match requested path ($requested_bin)"
 
 current_head="$(git -C "$ROOT" rev-parse HEAD)"
