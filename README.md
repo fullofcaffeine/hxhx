@@ -18,6 +18,12 @@ The practical user story today is:
 - package Reflaxe targets as native artifacts for `hxhx`,
 - embed `hxhx` as a compiler subprocess behind a stable command boundary.
 
+The planned native-plugin product goes further: one promoted Reflaxe plugin ABI
+and payload should work in both stock Haxe and `hxhx`. That shared plugin is not
+available today. The identical binary is the design target; thin host loader
+shells are allowed only if measured OCaml runtime or compiler constraints make
+them necessary, and the shells may not contain target behavior.
+
 `hxhx` is not yet a production replacement for upstream Haxe. The first Full1
 promise covers an explicit target/generator scope rather than every upstream
 output; its remaining work is tracked in the technical roadmap and release
@@ -44,6 +50,7 @@ Overall north-star readiness: `[####------]` (coarse; not additive).
 | `reflaxe.ocaml` with upstream `haxe` | `[#######---]` | **Advanced preview.** It is the most usable route here, and a production candidate only for the declared example/runtime matrix after validating your own application. | Use upstream Haxe `4.3.7` plus `-lib reflaxe.ocaml`. Start with `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`. | Active product owner `haxe_ocaml-s7jry` must add clean package/install, supported-platform, nontrivial-app, same-SHA artifact, and sustained performance evidence. The completed foundation is `haxe.ocaml-ro10`. |
 | `reflaxe.ocaml` with `hxhx` | `[###-------]` | **Experimental.** Useful for validating the native compiler route, not the default production route. | Use this when testing `hxhx` compatibility or native compiler work. Start with `docs/01-getting-started/REFLAXE_OCAML_WITH_HXHX.md` and keep upstream Haxe available as the practical fallback. | Active product owner `haxe_ocaml-38gsp` depends on Full1 frontend evidence and the standalone target product. The completed definition foundation is `haxe.ocaml-n5ae`. |
 | `reflaxe.ocaml` as a native `hxhx` plugin | `[###-------]` | **Experimental promotion path.** ABI, registry, promotion workflow, plugin-safe output, and a same-candidate three-route workload proof exist; broad supported packaging does not. | Reflaxe target authors can use the promotion docs to build and validate native plugin artifacts. | The Full1 workload outcome is complete under `haxe_ocaml-gskz9`. M22 owner `haxe_ocaml-bomhr` plans the future typed host-service SDK and still needs package/install, support/versioning, repeated real-target evidence, and release-grade artifact provenance. |
+| One native Reflaxe plugin for stock Haxe and `hxhx` | `[#---------]` | **Planning contract only.** Stock Haxe currently has an eval-host adapter and `hxhx` has its own experimental native loader; they do not yet load one shared payload through one supported ABI. | Use the existing host-specific experimental lanes only. Do not assume their current `.cmxs`/`.cma` artifacts are interchangeable. | P0 M22 owner `haxe_ocaml-c4czv` must define and prove one versioned cross-host ABI, the same payload and behavior in both hosts, and install/upgrade/rollback evidence. Identical packaging is the default goal. A different thin loader shell is acceptable only after an exact OCaml runtime/compiler/linker incompatibility is recorded; semantic forks are forbidden. |
 | `reflaxe.ocaml` as a builtin/native `hxhx` target | `[##--------]` | **Architecture proof.** The target-core/adapter design supports a builtin host shape, but it is not productized. | Use the promotion matrix docs to understand plugin versus builtin packaging. | M22 owner `haxe_ocaml-bomhr` must prove one semantic target core across host-neutral, plugin, and builtin forms, including typed service negotiation and real artifact evidence. Completed foundations: `haxe.ocaml-rpmx` and `haxe.ocaml-anoy`. |
 | `hxhx` as a MIT Haxe replacement | `[###-------]` | **Not production-ready.** A fresh strict/full, stage0-forbidden replacement bundle is green for its bounded Macro/JavaScript/Neko and plugin scope. Macro/eval also has a same-commit proof that checks the uploaded evidence files before passing. The larger goal remains Haxe `4.3.7` compatibility for the declared Full1 target/generator scope, with credible compiler performance and practical edit-compile-test latency. It is not an all-target claim. | Use `hxhx` for scoped native lanes, experiments, and subprocess embedding where the supported scope matches your use case. Read `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md` before evaluating it for a project. | M7 run `29321576340` and macro/eval run `29353274632` are current green evidence, not a Full1 release candidate. `haxe.ocaml-f1cl` still owns same-candidate strict suites, the full required target matrix, performance, and release evidence. C++/Cppia and both HashLink forms remain required. The candidate-bound release handoff has correctly produced only a no-go receipt because real Full1 evidence is incomplete. |
 | `hxhx` as a hackable Haxe-in-Haxe compiler | `[####------]` | **Active design principle.** The package/phase/backend seams are real, while concentrated implementation and test responsibilities still limit routine reviewability. | Use repo docs, focused tests, and beads to make changes through bounded seams. Keep behavior-driven tests ahead of large rewrites. | The temporary bridge inventory/guard (`haxe_ocaml-slobw`) and grouped source/C++ smoke retries (`haxe_ocaml-o2udb`) are complete foundations. Broader extraction remains profile/recurrence-triggered, with no compiler-wide rewrite or speculative neutral IR planned. |
@@ -101,14 +108,21 @@ example compiles a JS entry point with upstream-Haxe fallback disabled:
 HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --js out/main.js -cp src -main Main --hxhx-no-run
 ```
 
+`HXHX_FORBID_STAGE0=1` does not mean the upstream compiler may never be used to
+build `hxhx`. It means this compiler-under-test invocation must fail instead of
+quietly asking the installed upstream `haxe` binary to do its work. That makes
+the result evidence about `hxhx`, not about a hidden fallback.
+
 Start here:
 - `docs/01-getting-started/QUICKSTART_NATIVE.md`
 - `docs/01-getting-started/WHAT_WORKS_TODAY.md`
 
-### Package Reflaxe targets for native hxhx hosting
+### Package Reflaxe targets for native hosting
 
 Use the promotion workflow when you are a Reflaxe target author and want to
-build native plugin or builtin-host artifacts for `hxhx`:
+build native plugin or builtin-host artifacts. The commands currently exercise
+the `hxhx` loader. M22 plans a shared plugin ABI and payload for stock Haxe and
+`hxhx`; that future product must not require two target implementations:
 
 - `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
 - `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
@@ -174,6 +188,13 @@ of the public quickstart:
 
 Current direction: keep target-core logic reusable so promotion is packaging/load choice, not backend rewrite.
 
+The M22 product contract requires stock Haxe and `hxhx` to expose one versioned
+plugin ABI and load one promoted payload. Prefer one identical native binary.
+If OCaml host-runtime or compiler identity prevents that packaging, generated
+host loader shells may differ only as thin ABI adapters around the same payload
+or reproducibly derived native core. Current manifest v1 artifacts predate that
+contract and remain host-specific until the hard cutover is implemented.
+
 For upstream `haxe` + `reflaxe.ocaml` plugin packaging, `-D ocaml_plugin_mode=1` now enables plugin-safe output defaults and can be combined with:
 - `-D ocaml_module_prefix=<Prefix_>`
 - `-D ocaml_emit_exclude_packages=<csv>`
@@ -185,6 +206,8 @@ Those filters apply at emitted-artifact time so plugin packaging can omit host-p
 ## Current status
 
 - `reflaxe.ocaml` with upstream Haxe is the practical OCaml output path today.
+- A single native Reflaxe plugin payload for stock Haxe and `hxhx` is planned,
+  not currently supported; present host-adapter artifacts are not interchangeable.
 - Native `hxhx` is usable for scoped compiler experiments and selected lanes, not
   yet as a universal Haxe replacement.
 - Native JS output has a documented scope:

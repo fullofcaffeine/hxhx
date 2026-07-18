@@ -1,8 +1,10 @@
 # reflaxe.ocaml Upstream Haxe Native Plugin Integration Decision
 
-Last reviewed: 2026-04-03
+Last reviewed: 2026-07-18
 
-This note records the post-1.0 decision for how `reflaxe.ocaml` should integrate with mainstream upstream Haxe when users want plugin-shaped native artifacts.
+This note records what the current manifest-v1 integration actually supports.
+It also identifies the planned M22 hard cutover; current evidence must not be
+mistaken for the future shared native-plugin product.
 
 ## Decision
 
@@ -18,6 +20,22 @@ In short:
 
 - upstream Haxe support means `haxe + reflaxe.ocaml + explicit eval-host adapter`
 - it does **not** mean `haxe + reflaxe.ocaml + true native compiler-target plugin`
+
+## Future M22 product decision
+
+M22 requires stock Haxe and `hxhx` to expose one versioned native plugin ABI
+and load the same promoted Reflaxe payload. The identical native binary is the
+default design and must be attempted on the supported reference toolchain.
+
+OCaml compiler and runtime identity can constrain dynlink packaging. If an
+experiment proves that one container cannot load in both hosts, M22 may use
+different thin host loader shells around the same payload or reproducibly
+derived native core. That is a packaging fallback, not permission to keep two
+ABIs, two target implementations, or host-specific target semantics.
+
+This future contract does not make the capability available today. Until its
+hard cutover and conformance evidence land, the current eval-host adapter below
+remains the only supported stock-Haxe plugin-shaped lane.
 
 ## Why this decision is correct
 
@@ -45,13 +63,14 @@ That proof builds a real Reflaxe workload through upstream Haxe and `reflaxe.oca
 
 ### 3. It keeps the repo honest about ABI and packaging
 
-The upstream host-adapter lane is intentionally Level-1 compatible only:
+The current upstream host-adapter lane is intentionally Level-1 compatible only:
 
 - workflow/contract compatibility
 - no shared cross-host binary ABI claim
-- no promise that one `.cmxs` works unchanged across `hxhx` and upstream eval hosts
+- no present promise that one `.cmxs` works unchanged across `hxhx` and upstream eval hosts
 
-That boundary is already documented and should remain explicit.
+That remains an honest statement about manifest v1. It is not the M22
+architecture target.
 
 ### 4. It preserves MIT clean-room discipline
 
@@ -73,7 +92,8 @@ The supported upstream-host packaging shape is the eval-host adapter lane:
 - generated upstream-host manifest is `eval-plugin.json`
 - manifest kind is `haxe-eval`
 - manifest load API is `eval.vm.Context.loadPlugin`
-- `crossHostBinaryCompatibility` must remain `false`
+- `crossHostBinaryCompatibility` must remain `false` for the current v1
+  manifest; M22 replaces this contract rather than relabeling the artifact
 
 Operational constraints:
 
@@ -87,7 +107,8 @@ Operational constraints:
 These are explicitly out of scope for the upstream-Haxe path today:
 
 - claiming that upstream Haxe has a first-class backend-target plugin ABI
-- claiming that one native plugin binary is portable across both upstream Haxe and `hxhx`
+- claiming that the current v1 native artifacts are portable across both
+  upstream Haxe and `hxhx`
 - documenting or advertising a new upstream CLI/backend flag that does not exist
 - adding semantics or extension behavior that upstream Haxe `4.3.7` does not define
 - blurring the supported eval-host adapter lane into a broader “upstream native target plugin” promise
@@ -163,21 +184,30 @@ Keep improving the supported eval-host adapter path until:
 - ABI-sensitive environments fail clearly instead of ambiguously
 - recommendation docs separate upstream-host plugin support from `hxhx` native plugin support
 
-### Phase 2: keep the true compiler-target path as research only
+### Phase 2: implement the M22 shared ABI behind explicit evidence
 
-Do not claim support until research proves that upstream Haxe exposes:
+Do not claim support until M22 proves:
 
-- a real extension seam for backend/target registration or substitution
-- a packaging model that does not depend on undocumented compiler patching
-- a testable host/plugin ABI contract
+- a real, maintainable stock-Haxe extension seam for backend invocation;
+- the same versioned ABI, payload, and target-core identity in stock Haxe and
+  `hxhx`;
+- identical binary packaging on the reference toolchain, or an exact recorded
+  incompatibility plus thin loader-shell fallback;
+- same-fixture diagnostics, emitted artifacts, and runtime behavior;
+- a packaging model that does not depend on undocumented compiler patching.
 
-Until then, the true compiler-target path remains a non-goal, not a hidden beta.
+Until then, the true compiler-target path remains planned work, not a hidden
+beta.
 
 ## Follow-up tasks
 
 Supported eval-host adapter lane:
 
 1. `haxe.ocaml-f1cl.8.4` (`P1`)
+
+Shared stock-Haxe/`hxhx` native plugin product:
+
+1. `haxe_ocaml-c4czv` (`P0`, thinking:xhigh)
    - Explicit upstream Haxe host-adapter proof for reflaxe.ocaml artifacts
    - dependencies already tracked under `haxe.ocaml-f1cl.8`
 2. `haxe.ocaml-rpmx.2a` (`P2`)

@@ -17,12 +17,19 @@ If you need deeper architectural details, use:
 | `hxhx` native OCaml lane | `hxhx --ocaml ...` | Working (scoped native lane) | Non-delegating runtime lane; use `HXHX_FORBID_STAGE0=1` for strict checks. |
 | `hxhx` native JS lane | `hxhx --js out.js ...` | Working (scoped MVP) | Scope is intentionally bounded; see `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`. |
 | Native backend plugin loading | `-D hxhx_backend_plugin_manifest=...` | Working | Uses `ocaml-dynlink` manifest kind (`.cmxs` / `.cma`). |
+| One native Reflaxe plugin for stock Haxe and `hxhx` | Planned M22 ABI | Not implemented | Current stock-Haxe eval-host and `hxhx` artifacts are host-specific. M22 requires one payload and prefers one identical binary; evidence-gated thin loader shells are the only packaging fallback. |
 | Native macro module loading | `macro.loadNativeModule` / `macro.runNativeExpr` | Working (promoted-module rung) | ABI/version validation is enforced before registration. |
 
 A useful milestone, but not the finish line: strict/full M7 run `29321576340`
 proved that the bounded Macro, JavaScript, Neko, and plugin bundle works without
 delegating to stage0 at commit `30a0b371`. It does **not** yet prove the complete
 Full1 suite/target matrix or stage0-free bootstrap regeneration.
+
+“Stage0-forbidden” applies to the compiler-under-test after `hxhx` has been
+built: the workload must fail instead of quietly delegating to the installed
+upstream `haxe`. Stage0 may still be the starter compiler used to build the
+first binary, and downstream tools such as Node, Neko, dune, or clang remain
+normal parts of their target lanes.
 
 The two selected macro runtime modes pass together in exact-commit run
 `29334023225`. A newer exact-commit run, `29349360051`, also proves the first

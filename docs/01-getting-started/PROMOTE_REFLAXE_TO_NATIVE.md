@@ -5,6 +5,9 @@ This guide explains two common goals from scratch:
 1) compile Haxe code (including compiler-like code) to a native OCaml executable with upstream `haxe` + `reflaxe.ocaml`
 2) promote a Reflaxe backend/provider to a native runtime-loaded plugin for `hxhx`
 
+It also explains the planned product direction: the promoted native plugin
+should eventually use one ABI and payload in both stock Haxe and `hxhx`.
+
 Use this page when you are new to the repo and need a clear “which path should I take?” answer.
 
 Canonical promotion contract:
@@ -18,12 +21,15 @@ Canonical promotion contract:
 | I want a native executable from Haxe sources | Upstream `haxe` + `reflaxe.ocaml` | Native OCaml executable (via dune) |
 | I want `hxhx` to load a backend at runtime | `hxhx` native promotion lane | Native plugin artifact (`.cmxs` or `.cma`) + manifest |
 | I want backend logic shipped inside `hxhx` binary | Builtin backend lane | No runtime plugin load; backend linked into dist build |
+| I want one native plugin for stock Haxe and `hxhx` | Planned M22 shared-plugin lane | Not available today; one ABI/payload is the required design |
 
 Important:
 
 - A **plugin artifact** is not the same as a builtin backend.
 - Plugin flow is best for iteration and external distribution.
 - Builtin flow is best when you control `hxhx` distribution itself.
+- Current upstream eval-host and `hxhx` native artifacts are host-specific.
+  Do not copy one current `.cmxs`/`.cma` between hosts and assume compatibility.
 
 ## Prerequisites
 
@@ -149,24 +155,33 @@ For architecture and layering:
 
 ---
 
-## Planned M22 — one target core with optional `hxhx` services
+## Planned M22 — one plugin payload for stock Haxe and `hxhx`
 
 M22 plans the next product step, but none of the commands in this section exist
 yet. Keep using Paths A, B, and C above as current truth.
 
-The future “two-in-one” target keeps one host-neutral core and chooses only its
-adapter at the composition root:
+The future product keeps one host-neutral core, one versioned plugin ABI, and
+one promoted payload:
 
 - evaluated host-neutral development through upstream Haxe/Reflaxe;
-- native host-neutral execution after compiling the same core through
-  `reflaxe.ocaml`;
-- `hxhx`-integrated native plugin execution with negotiated services;
+- stock-Haxe native plugin execution;
+- `hxhx` native plugin execution using the same payload;
 - `hxhx`-integrated builtin execution with the same target-core factory.
 
-Native execution does not imply privileged compiler access. Integrated forms
-must request typed/versioned facts or actions, and missing correctness-critical
-facts fail before emission. Host conditionals and native externs stay in
-adapter/transport modules rather than semantic lowering and printers.
+The first packaging attempt must use one identical native binary for both
+plugin hosts. OCaml compiler/runtime identity may make that impossible on a
+particular supported toolchain. Only then may packaging use thin generated host
+loader shells around the same payload or reproducibly derived native core. A
+loader shell may translate the ABI or satisfy the host loader; it may not own
+target lowering, printing, mutation, or result behavior.
+
+Native execution does not imply privileged compiler access. Both hosts use the
+same typed/versioned capability negotiation. `hxhx` may expose more advanced
+compiler facts and actions. If the plugin requires one that stock Haxe cannot
+provide, stock Haxe must fail before execution instead of loading another
+implementation or approximating the answer. Host conditionals and native
+externs stay in adapter/transport modules rather than semantic lowering and
+printers.
 
 The existing `ocaml_profile=portable|metal` switch is a separate output policy,
 not an M22 service-access preset. See

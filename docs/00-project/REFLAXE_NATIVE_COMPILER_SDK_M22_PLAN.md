@@ -1,7 +1,7 @@
 # M22 Native Reflaxe Compiler SDK Plan
 
 - Status: accepted planning contract; no SDK capability or support claim
-- Date: 2026-07-15
+- Date: 2026-07-15; shared-host ABI amendment accepted 2026-07-18
 - Owner: `haxe_ocaml-bomhr`
 - Architecture contract: `haxe_ocaml-bomhr.1`
 - Prerequisites: `haxe.ocaml-f1cl`, `haxe_ocaml-38gsp`
@@ -16,7 +16,15 @@ release claim, or increase any README readiness bar.
 
 A target author should be able to start with normal Haxe and portable Reflaxe,
 keep one target implementation, compile that implementation to native OCaml
-with `reflaxe.ocaml`, and run it inside `hxhx` as either a plugin or a builtin.
+with `reflaxe.ocaml`, and run one promoted plugin payload inside either stock
+Haxe or `hxhx`. The same target core can also run inside `hxhx` as a builtin.
+
+The default packaging goal is one identical native plugin binary for both
+hosts. If an experiment proves that OCaml compiler, runtime, linker, or loader
+identity makes one container impossible, M22 may generate thin host-specific
+loader shells around one shared payload or reproducibly derived native core.
+The shells may adapt loading and ABI transport only; they cannot own target
+semantics.
 
 Native execution alone does not give target code privileged compiler
 information. M22 adds a narrow, typed, versioned way for `hxhx` to provide
@@ -54,6 +62,7 @@ compiler-context object.
 | `packages/hxhx-core/src/backend/BackendDispatchBoundary.hx` | Quarantined typed/reflective bootstrap bridge. | Do not expand it into a general dynamic service API. Temporary changes need inventory and exit proof. |
 | `packages/hxhx-core/src/backend/plugin/BackendPluginManifest.hx`, `packages/hxhx-core/src/backend/plugin/BackendPluginManifestParser.hx`, `docs/02-user-guide/compat/hxhx-backend-plugin-manifest-v1.schema.json` | Manifest v1 carries ABI, GenIR, macro API, entry, and target IDs. | No service API, requirement class, service-access preset, target-core identity, or host/toolchain fingerprint. |
 | `packages/hxhx/src/hxhx/NativeBackendPluginHost.hx`, `packages/hxhx/src/hxhx/NativeBackendPluginDynlink.hx`, `packages/hxhx/src/hxhx/NativeBackendPluginHostAbi.hx` | Narrow `#if reflaxe_ocaml` runtime seams and typed Haxe validation over an encoded snapshot. | Reuse this boundary style; do not assume arbitrary Haxe object identity survives OCaml dynlink. |
+| Current upstream eval-host manifest and `hxhx` backend manifest | Separate v1 host contracts explicitly record that their native artifacts are not cross-host compatible. | Hard-cut to one M22 ABI and payload contract. Preserve current-v1 statements only as honest descriptions of what works before that cutover. |
 
 The existing boundary contracts remain controlling inputs rather than being
 rewritten by this plan:
@@ -81,14 +90,16 @@ would hide important compatibility differences.
 
 - **host-neutral**: only data and behavior valid in the portable contract are
   visible;
-- **hxhx-integrated**: declared, negotiated `hxhx` facts/services are visible.
+- **capability-integrated**: declared, negotiated host facts/services are
+  visible. `hxhx` may provide more services than stock Haxe, but both hosts use
+  the same catalog and negotiation protocol.
 
 ### Activation and packaging
 
-- upstream Haxe/Reflaxe adapter;
-- `hxhx` native plugin;
+- stock-Haxe native plugin;
+- `hxhx` native plugin using the same payload;
 - `hxhx` builtin;
-- optional exact-version-pinned upstream native adapter.
+- evaluated upstream Haxe/Reflaxe development adapter.
 
 ### OCaml output profile
 
@@ -101,26 +112,27 @@ The supported named presets are therefore combinations:
 | --- | --- | --- | --- |
 | `evaluated-host-neutral` | evaluated | host-neutral | upstream Reflaxe adapter |
 | `native-host-neutral` | native | host-neutral | native artifact without privileged services |
-| `hxhx-integrated-plugin` | native | hxhx-integrated | `hxhx` plugin |
-| `hxhx-integrated-builtin` | native | hxhx-integrated | `hxhx` builtin |
+| `stock-haxe-plugin` | native | host-neutral or negotiated supported capabilities | stock-Haxe plugin |
+| `hxhx-integrated-plugin` | native | capability-integrated | `hxhx` plugin using the same payload |
+| `hxhx-integrated-builtin` | native | capability-integrated | `hxhx` builtin |
 | `unsafe-exact-host` | native | unversioned/internal research only | quarantined adapter |
 
-The first four presets are intended product forms once their evidence exists.
+The first five presets are intended product forms once their evidence exists.
 The unsafe preset is not a supported SDK surface.
 
 ## 5. Conceptual pipeline
 
 ```text
-portable upstream Haxe/Reflaxe adapter ─┐
-                                        ├─> one Haxe TargetCore ─> artifacts/build plan
-hxhx GenIR/facts + host services ───────┘
+stock Haxe program/facts + services ────┐
+                                        ├─> one native plugin payload ─> one Haxe TargetCore
+hxhx program/facts + services ──────────┘                              └─> artifacts/build plan
 
 same TargetCore execution forms:
 - evaluated host-neutral development
 - native host-neutral via reflaxe.ocaml
-- hxhx native plugin
+- stock-Haxe native plugin
+- hxhx native plugin using the same payload
 - hxhx builtin
-- optional pinned upstream native adapter
 ```
 
 Host adapters normalize their source data into the target-core input. They do
@@ -182,8 +194,8 @@ BackendRequest
   program            versioned backend program envelope
   facts              immutable, versioned snapshot catalog
   execution          evaluated | native
-  serviceAccess      host-neutral | hxhx-integrated
-  activation         upstream-adapter | plugin | builtin
+  serviceAccess      host-neutral | capability-integrated
+  activation         evaluated-adapter | stock-haxe-plugin | hxhx-plugin | builtin
   targetCore         stable ID + version
   services           negotiated opaque host handle/catalog
 ```
@@ -281,28 +293,38 @@ Preflight identity includes:
 - macro API and host-service API versions;
 - service requirements and service-access preset;
 - target-core ID/version;
-- `hxhx` host version/commit and artifact fingerprint;
+- host kind, version/commit, and artifact fingerprint;
 - OS, architecture, OCaml version, artifact kind, source digest, and profile;
-- plugin and emitted artifact digests plus provenance.
+- shared plugin payload, optional loader shell, and emitted artifact digests
+  plus provenance.
 
 Source-distributed native rebuild/cache keys include every compatibility input
 above. A cache hit cannot cross an unproven host/toolchain identity.
 
-## 11. Upstream-Haxe adapter policy
+## 11. Stock-Haxe plugin and packaging policy
 
-Upstream Haxe remains the stable host-neutral development baseline. A native
-OCaml adapter into upstream compiler internals may be explored only as an
-exact-version-pinned integration:
+Upstream Haxe remains the stable host-neutral development and behavior
+baseline. M22 also requires a native stock-Haxe plugin host for the same ABI and
+payload used by `hxhx`.
 
-- Haxe version, OCaml version, adapter version, and host fingerprint all match;
-- handwritten OCaml is host conversion/glue only;
-- the Haxe target core remains the same implementation;
-- the artifact is distinct from the `hxhx` plugin artifact;
-- `crossHostBinaryCompatibility=false` remains true;
-- no stable upstream backend-registry or backend-ABI claim is made.
+- Haxe version, OCaml version, ABI version, and host fingerprint are checked.
+- Handwritten OCaml is limited to host conversion, loading, and transport glue.
+- The Haxe target core and promoted payload remain one implementation.
+- The supported reference toolchain must first attempt to load one identical
+  plugin binary in both hosts.
+- A different loader shell is allowed only after an evidence record identifies
+  the exact OCaml compiler, runtime, linker, or loader incompatibility.
+- Any loader shell must open the same payload digest or a reproducibly derived
+  native core digest and must pass the same conformance fixtures.
+- Private upstream-Haxe AST values and private `hxhx` objects never cross the
+  ABI.
+- If stock Haxe lacks a required negotiated capability, loading fails before
+  target execution; the plugin cannot substitute a second implementation.
 
-The optional upstream adapter does not block the core M22 support marker unless
-a later xhigh architecture decision explicitly changes scope.
+Current manifest v1 and eval-host artifacts still record
+`crossHostBinaryCompatibility=false`. That remains an accurate current-state
+statement, not the M22 product design. M22 performs a hard cutover once the new
+ABI and loader exist; it does not relabel the old artifacts as compatible.
 
 ## 12. Workstreams
 
@@ -317,11 +339,11 @@ The IDs below are the canonical Beads owners for M22 implementation and proof.
 | M22.5 Host-neutral and integrated adapters | `haxe_ocaml-seg17` | P1 | M22.4 |
 | M22.6 Prove one privileged semantic fact | `haxe_ocaml-u6q8k` | P1 | M22.3, M22.4, M22.5 |
 | M22.7 Manifest/service negotiation v2 | `haxe_ocaml-le0ox` | P1 | M22.2, M22.4 |
-| M22.8 Pinned upstream native adapter research | `haxe_ocaml-c4czv` | P2 | M22.5, M22.6, M22.7; optional |
+| M22.8 Shared stock-Haxe/`hxhx` native plugin ABI | `haxe_ocaml-c4czv` | P0 | M22.5, M22.6, M22.7; required |
 | M22.9 Real Haxe-authored compiler proof | `haxe_ocaml-bxwut` | P1 | M22.5, M22.6, M22.7 |
 | M22.10 Author-loop measurement | `haxe_ocaml-i69n4` | P2 | M22.9 |
 | M22.11 Scaffolding, migration, and support matrix | `haxe_ocaml-zof2e` | P1 | M22.7, M22.9 |
-| M22.12 Evidence aggregate and support decision | `haxe_ocaml-157t1` | P0 | M22.6, M22.9, M22.10, M22.11, `haxe_ocaml-38gsp` |
+| M22.12 Evidence aggregate and support decision | `haxe_ocaml-157t1` | P0 | M22.6, M22.8, M22.9, M22.10, M22.11, `haxe_ocaml-38gsp` |
 
 M22.2 through M22.12 are implementation/evidence contracts derived from this
 accepted M22.1 boundary. Their detailed acceptance criteria remain changeable
@@ -336,10 +358,10 @@ M22.1 + Full1 --> M22.3
 M22.2 + M22.3 --> M22.4 --> M22.5
 M22.3 + M22.4 + M22.5 --> M22.6
 M22.2 + M22.4 --> M22.7
-M22.5 + M22.6 + M22.7 --> M22.8 (optional research)
+M22.5 + M22.6 + M22.7 --> M22.8
 M22.5 + M22.6 + M22.7 --> M22.9 --> M22.10
 M22.7 + M22.9 --> M22.11
-M22.6 + M22.9 + M22.10 + M22.11 + haxe_ocaml-38gsp --> M22.12
+M22.6 + M22.8 + M22.9 + M22.10 + M22.11 + haxe_ocaml-38gsp --> M22.12
 ```
 
 Beads representation note: the installed CLI does not allow task
@@ -354,6 +376,8 @@ to that prerequisite, while the enforceable blocking edge is
 | One target core | Source/core identity plus guard showing no host imports or semantic conditionals. |
 | Evaluated vs native host-neutral parity | Same fixture and target-core version; byte equality where deterministic, otherwise a declared deterministic normalizer plus runtime equality. |
 | Plugin vs builtin parity | Same request/facts/service catalog and target core; normalized artifact and runtime equality. |
+| Stock Haxe vs `hxhx` plugin parity | Same ABI, payload digest, target-core identity, declaration decisions, diagnostics, normalized emitted artifacts, and runtime behavior. |
+| Loader-shell fallback | Failed identical-binary experiment plus exact incompatibility, shell digests, shared payload or reproducible-core digest, and proof that shells contain no target semantics. |
 | Required semantic service | Positive negotiated case and pre-execution failures for missing, stale, malformed, and wrong-version data. |
 | Optional services | Proven semantics-preserving fallback or tooling-only disablement. |
 | Real target | Pinned external or repo-owned nontrivial compiler family; no toy-only closure. |
@@ -362,8 +386,9 @@ to that prerequisite, while the enforceable blocking edge is
 
 Every proof summary records candidate commit, run/attempt, execution form,
 service access, activation, stage0 policy, host fingerprint, service catalog
-digest, ABI versions, target-core identity, native artifact digest, emitted
-artifact digest, and runtime result.
+digest, ABI versions, target-core identity, shared plugin payload digest,
+loader-shell digest where applicable, emitted artifact digest, and runtime
+result.
 
 ## 15. Performance method
 

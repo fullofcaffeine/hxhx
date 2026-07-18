@@ -10,9 +10,12 @@ Scope:
 
 Compatibility target:
 
-- workflow/contract compatibility (Level 1)
-- **not** shared cross-host binary compatibility (a single `.cmxs` is not expected to run in both hosts)
-- generated eval adapter manifests must keep `crossHostBinaryCompatibility=false`
+- current manifest v1: workflow/contract compatibility (Level 1)
+- current manifest v1 does **not** provide shared cross-host binary
+  compatibility; generated eval adapter manifests must keep
+  `crossHostBinaryCompatibility=false`
+- planned M22 hard cutover: one versioned ABI and promoted plugin payload for
+  stock Haxe and `hxhx`, with identical binary packaging attempted first
 
 Scaffold entrypoint:
 
@@ -129,32 +132,41 @@ Promotion must keep one target core implementation reusable across both host ada
 
 This keeps promotion as a packaging/load decision, not a backend rewrite.
 
-## Planned M22 service-access presets
+## Planned M22 shared ABI and service-access presets
 
 This is a future planning contract. Manifest/schema v1 and the commands above
 remain current truth; no service-negotiation v2 API exists yet.
 
-M22 separates three concerns that are easy to conflate:
+M22 requires stock Haxe and `hxhx` to implement one versioned native plugin ABI
+and load one promoted Reflaxe payload. It separates three concerns that are easy
+to conflate:
 
 - execution: evaluated or native;
-- service access: host-neutral or `hxhx`-integrated;
-- activation: upstream adapter, `hxhx` plugin, or `hxhx` builtin.
+- service access: host-neutral or capability-integrated;
+- activation: stock-Haxe plugin, `hxhx` plugin, or `hxhx` builtin.
 
-The intended presets are evaluated host-neutral development, native
-host-neutral execution through `reflaxe.ocaml`, and integrated plugin/builtin
-execution through `hxhx`. Host glue, `#if reflaxe_ocaml`, and native externs
-stay in adapters and composition roots. The shared target core does not branch
-its semantic lowering by host.
+The intended presets are evaluated host-neutral development, stock-Haxe native
+plugin execution, `hxhx` native plugin execution, and integrated builtin
+execution through `hxhx`. The two plugin forms use the same payload and target
+core. Host glue, `#if reflaxe_ocaml`, and native externs stay in adapters and
+composition roots. The shared target core does not branch its semantic lowering
+by host.
 
-For integrated forms, `hxhx` negotiates typed/versioned requirements before
-target execution. Missing required semantic facts fail before emission;
-optional optimization and tooling services use their declared fallback or
-disablement. The stable integrated host is `hxhx`.
+Both plugin hosts implement the same typed/versioned capability negotiation.
+`hxhx` may advertise additional privileged services. Missing required semantic
+facts fail before target execution; optional optimization and tooling services
+use their declared fallback or disablement. A missing stock-Haxe capability
+does not authorize a different target implementation.
 
-The upstream eval adapter remains the portable baseline. Any upstream native
-adapter is a separate, exact-version-pinned experiment, not a stable upstream
-backend ABI. `crossHostBinaryCompatibility=false` remains the rule: a single
-`.cmxs` is not promised to work in upstream Haxe and `hxhx`.
+The identical plugin binary is the required design target on the supported
+reference toolchain. If a measured OCaml compiler, runtime, linker, or loader
+constraint makes one container impossible, only thin host loader shells may
+differ. They must open the same payload digest or reproducibly derived native
+core, and they may not contain lowering, printer, mutation, or result behavior.
+
+The current upstream eval adapter remains the portable baseline until this hard
+cutover lands. Its `crossHostBinaryCompatibility=false` field describes current
+v1 artifacts only; it must not be interpreted as the future architecture.
 
 Canonical plan:
 `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`.

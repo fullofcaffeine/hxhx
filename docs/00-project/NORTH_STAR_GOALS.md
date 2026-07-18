@@ -13,7 +13,9 @@ The short version:
 3. Make Haxe easier to hack by implementing the compiler in Haxe: the compiler should be readable, editable, testable, and approachable to Haxe developers.
 4. Make Haxe easy to bend without breaking Haxe: extensions should be pluggable, removable, and isolated from the baseline compiler contract.
 5. Make it practical to create full Haxe-family compiler variations in Haxe when a project needs a real fork or dialect.
-6. Make Reflaxe compilers easy to prototype as Reflaxe targets and then promote into native plugin or builtin target forms for upstream Haxe and/or `hxhx`.
+6. Make Reflaxe compilers easy to prototype as Reflaxe targets and then promote
+   into one native plugin ABI and payload usable by both upstream Haxe and
+   `hxhx`, or into a builtin `hxhx` target without rewriting the target core.
 
 ## Goal 1: Stable `reflaxe.ocaml`
 
@@ -236,10 +238,18 @@ Current planning owner:
 
 Reflaxe should stay the fast prototyping layer for compiler targets. Once a target is stable, there should be a clear path to promote it into native forms:
 
-- an upstream Haxe plugin or host-adapter path where supported,
-- an `hxhx` native plugin path,
+- one shared native plugin ABI and promoted payload for stock Haxe and `hxhx`,
 - an `hxhx` builtin target path,
-- eventually a reusable target core that can be packaged in more than one host shape without rewriting the backend.
+- a reusable target core that can be packaged in more than one host shape
+  without rewriting the backend.
+
+The packaging goal is one identical plugin binary on the supported reference
+toolchain. This is a requirement to attempt and prove, not an assumption that
+OCaml dynlink identity is portable. If a measured OCaml compiler, runtime,
+linker, or loader constraint makes one container impossible, stock Haxe and
+`hxhx` may use different thin loader shells around the same versioned payload
+or reproducibly derived native core. Those shells are packaging adapters only:
+they must not contain target lowering, printing, mutation, or result semantics.
 
 The product bet is Haxe-first compiler authoring with native deployment. A
 target author should be able to write compiler/backend logic in Haxe, keep the
@@ -298,14 +308,23 @@ Current planning owners:
 Post-Full1 milestone M22 is owned by `haxe_ocaml-bomhr`. Its purpose is to
 turn the existing promotion proofs into a supported Haxe-first target-authoring
 SDK. `reflaxe.ocaml` supplies native execution for ordinary Haxe-authored target
-code; `hxhx` supplies typed, versioned privileged backend facts and services.
+code. Stock Haxe and `hxhx` must expose one versioned plugin ABI and load the
+same promoted payload. `hxhx` may additionally advertise typed, versioned
+privileged backend facts and services through capability negotiation on that
+same ABI.
 
 M22 keeps four dimensions separate:
 
 - evaluated versus native target-core execution;
-- host-neutral versus `hxhx`-integrated service access;
-- upstream adapter, `hxhx` plugin, or `hxhx` builtin activation;
+- host-neutral versus capability-integrated service access;
+- stock-Haxe plugin, `hxhx` plugin, or `hxhx` builtin activation;
 - the existing independent `ocaml_profile=portable|metal` output policy.
+
+Both plugin hosts provide the host-neutral baseline. A target that requires an
+additional service which one host does not provide must fail before execution;
+it must not select a different target implementation. Identical plugin
+packaging is the default product goal. Evidence-gated loader-shell differences
+are the only fallback and do not relax payload, ABI, or behavior parity.
 
 Host conditionals and native externs stay in composition roots and adapters.
 They do not spread through semantic lowering or printers. The accepted
@@ -323,8 +342,9 @@ service bag.
 Canonical planning contract:
 `docs/00-project/REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md`.
 
-M22 is planning only today. It adds no SDK capability, support statement, or
-readiness change.
+M22 is planning only today. Current stock-Haxe eval-host and `hxhx` native
+plugin artifacts remain host-specific and are not interchangeable. The new
+shared ABI requirement adds no present SDK capability or support statement.
 
 ## Operating Rule
 

@@ -1,6 +1,6 @@
 # Reflaxe Promotion Matrix Contract
 
-Last audited: 2026-07-03
+Last audited: 2026-07-18
 
 This page is the canonical contract for building Reflaxe compilers to native OCaml through `reflaxe.ocaml`.
 
@@ -31,11 +31,18 @@ Promotion evidence should therefore stay focused on native plugin/builtin
 artifacts, target-core reuse, activation parity, and native artifact latency;
 it should not imply Reflaxe owns `hxhx` compiler-core semantics.
 
-The supported paths are:
+The required product paths are:
 
-1. `haxe + reflaxe.ocaml -> plugin`
-2. `hxhx + reflaxe.ocaml -> built-in target`
-3. `hxhx + reflaxe.ocaml -> plugin`
+1. `one promoted reflaxe.ocaml plugin payload -> stock Haxe`
+2. `the same promoted reflaxe.ocaml plugin payload -> hxhx`
+3. `the same target core -> built-in hxhx target`
+
+The current repository has an upstream eval-host adapter and a separate
+experimental `hxhx` native plugin loader. Those are predecessor evidence, not
+the final shared product. M22 requires one versioned plugin ABI across both
+hosts and attempts identical binary packaging first. Only a demonstrated OCaml
+compiler, runtime, linker, or loader incompatibility can justify different thin
+host loader shells around the same payload or reproducibly derived native core.
 
 This contract owns:
 
@@ -50,22 +57,39 @@ This contract owns:
 
 - multi-host promotion proofs for real Reflaxe compiler workloads,
 - the host/path comparison,
+- the shared stock-Haxe/`hxhx` plugin ABI and payload identity requirement,
+- the evidence-gated loader-shell fallback,
 - canonical recommendation docs for choosing between promotion paths.
 
 This contract does not own:
 
 - standalone `reflaxe.ocaml` target-product readiness
 - strict `hxhx Full 1.0` equivalence claims
-- pretending all hosts share one binary ABI
 - adding semantics that upstream `haxe 4.3.7` does not support
 
 ## Canonical terms
 
-### `haxe + reflaxe.ocaml -> plugin`
+### Shared native Reflaxe plugin (planned M22 product)
+
+- Host compilers: stock upstream Haxe `4.3.7` and `hxhx`
+- ABI expectation: one versioned backend-facing ABI with the same immutable
+  program/facts schema, lifecycle, diagnostics, resources, outputs, and
+  capability negotiation
+- Payload expectation: one promoted Reflaxe plugin payload with one target-core
+  identity and digest
+- Packaging expectation: one identical native binary first; thin host loader
+  shells only after an exact OCaml compatibility failure is measured
+- Semantic rule: loaders adapt host ABI and packaging only; target behavior
+  cannot fork by host
+
+### Current upstream-Haxe eval-host adapter
 
 - Host compiler: upstream `haxe 4.3.7`
-- `reflaxe.ocaml` role: build the compiler artifact through the supported upstream host-adapter/plugin path
-- Output expectation: a plugin-capable artifact produced through the documented upstream-host path
+- `reflaxe.ocaml` role: build a plugin-shaped artifact for
+  `eval.vm.Context.loadPlugin`
+- Output expectation: a host-specific current-v1 artifact and manifest
+- Status: useful predecessor path, but not the future stock-Haxe native target
+  plugin ABI and not interchangeable with the current `hxhx` artifact
 
 ### `hxhx + reflaxe.ocaml -> built-in target`
 
@@ -73,11 +97,12 @@ This contract does not own:
 - `reflaxe.ocaml` role: built-in target path inside `hxhx`
 - Output expectation: the resulting compiler logic is shipped through the built-in target mode, not as a runtime dynlink plugin
 
-### `hxhx + reflaxe.ocaml -> plugin`
+### Current `hxhx + reflaxe.ocaml -> plugin`
 
 - Host compiler: `hxhx`
 - `reflaxe.ocaml` role: part of the build chain for a runtime-loadable plugin path
 - Output expectation: plugin artifact plus manifest, loaded through the supported `hxhx` host path
+- Status: experimental current-v1 path that must migrate to the shared M22 ABI
 
 ## Built-in vs plugin
 
@@ -113,6 +138,12 @@ Required aggregate marker:
 
 - `RO_PROMOTION_MATRIX:PASS`
 
+These existing markers describe the current promotion matrix. They do not
+authorize the future shared-ABI claim. M22 additionally requires
+`M22_REFLAXE_NATIVE_COMPILER_SDK:PASS`, whose aggregate opens both host proofs,
+compares plugin payload and any loader-shell digests, and rejects unjustified
+packaging divergence.
+
 The aggregate marker is valid only when:
 
 1. the matrix contract is explicit,
@@ -134,6 +165,8 @@ The comparison must cover:
 - deployment complexity
 - host coupling
 - plugin/binary ABI exposure
+- payload identity and loader-shell identity
+- the exact OCaml runtime/compiler/linker reason for any packaging divergence
 - when to choose each path
 
 ## Host-adapter references
@@ -160,7 +193,10 @@ This contract sits above those docs and decides what must be proven, not how eve
 
 These are explicitly out of scope for this contract:
 
-- shared cross-host binary compatibility for one artifact
+- assuming binary compatibility without building and loading the artifact in
+  both reference hosts
+- separate stock-Haxe and `hxhx` target implementations or semantic forks
+- using host loader shells to hide different target behavior
 - supporting every possible Reflaxe compiler before proving one real workload
 - redefining `reflaxe.ocaml` standalone target readiness
 - redefining `hxhx` Full 1.0 release criteria

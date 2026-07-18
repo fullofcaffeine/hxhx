@@ -10,6 +10,34 @@ The policy goal is simple:
 - Runtime behavior should be stage0-free for native lanes.
 - Stage0 is allowed only for explicit bootstrap maintenance tasks.
 
+## Why strict proofs forbid stage0
+
+The first native `hxhx` binary has to come from somewhere. Today, the installed
+upstream Haxe compiler can compile the Haxe-authored `hxhx` sources through
+`reflaxe.ocaml`; this starter compiler is called stage0. Using it for that
+bootstrap step is expected and does not make the resulting binary invalid.
+
+The proof boundary starts after the `hxhx` binary exists. When
+`HXHX_FORBID_STAGE0=1` is set, that compiler invocation must not quietly launch
+upstream `haxe` to parse, type, run macros, or generate the user workload. If it
+tries, the run fails immediately. Otherwise a green test could show only that
+the fallback compiler worked, while making unfinished `hxhx` behavior look
+complete.
+
+The flag does not prohibit independent tools that are outside the compiler
+fallback boundary:
+
+- an earlier, explicit stage0 bootstrap build;
+- an upstream Haxe invocation run separately as a behavior oracle;
+- package resolvers such as Lix or haxelib;
+- target toolchains such as dune, Node, Neko, clang, hxcpp, or HashLink;
+- reading an untracked upstream Haxe checkout for behavior comparison.
+
+A strict result therefore means “this declared workload was compiled by
+`hxhx` without upstream-compiler delegation.” It does not mean every artifact
+in the toolchain was built without upstream Haxe, and it does not turn a
+focused lane into a full compatibility claim.
+
 Full 1.0 performance parity uses the same boundary:
 
 - measured Full 1.0 compiler performance evidence must compare stage0-free
