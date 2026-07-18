@@ -11,6 +11,7 @@ module CppMapLiteral = Backend_cpp_CppMapLiteral
 module CppMapRuntime = Backend_cpp_CppMapRuntime
 module CppNativeBackend = Backend_cpp_CppNativeBackend
 module CppPrepLocalInferenceGuard = Backend_cpp_CppPrepLocalInferenceGuard
+module CppProgramPrelude = Backend_cpp_CppProgramPrelude
 module CppRuntimeSupport = Backend_cpp_CppRuntimeSupport
 module CppTargetCore = Backend_cpp_CppTargetCore
 module CppTypeModel = Backend_cpp_CppTypeModel

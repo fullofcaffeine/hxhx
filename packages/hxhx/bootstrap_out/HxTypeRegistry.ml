@@ -111,6 +111,7 @@ let init () : unit =
   ignore (HxType.class_ "backend.cpp.CppMapRuntime");
   ignore (HxType.class_ "backend.cpp.CppNativeBackend");
   ignore (HxType.class_ "backend.cpp.CppPrepLocalInferenceGuard");
+  ignore (HxType.class_ "backend.cpp.CppProgramPrelude");
   ignore (HxType.class_ "backend.cpp.CppRuntimeSupport");
   ignore (HxType.class_ "backend.cpp.CppTargetCore");
   ignore (HxType.class_ "backend.cpp.CppTypeModel");
@@ -1705,6 +1706,9 @@ let init () : unit =
   HxType.register_class_ctor "backend.cpp.CppPrepLocalInferenceGuard" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_cpp_CppPrepLocalInferenceGuard.create ())
   );
+  HxType.register_class_ctor "backend.cpp.CppProgramPrelude" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_cpp_CppProgramPrelude.create ())
+  );
   HxType.register_class_ctor "backend.cpp.CppRuntimeSupport" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_cpp_CppRuntimeSupport.create ())
   );
@@ -2236,6 +2240,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "backend.cpp.CppMapRuntime" (fun () -> Obj.repr (Backend_cpp_CppMapRuntime.__empty ()));
   HxType.register_class_empty_ctor "backend.cpp.CppNativeBackend" (fun () -> Obj.repr (Backend_cpp_CppNativeBackend.__empty ()));
   HxType.register_class_empty_ctor "backend.cpp.CppPrepLocalInferenceGuard" (fun () -> Obj.repr (Backend_cpp_CppPrepLocalInferenceGuard.__empty ()));
+  HxType.register_class_empty_ctor "backend.cpp.CppProgramPrelude" (fun () -> Obj.repr (Backend_cpp_CppProgramPrelude.__empty ()));
   HxType.register_class_empty_ctor "backend.cpp.CppRuntimeSupport" (fun () -> Obj.repr (Backend_cpp_CppRuntimeSupport.__empty ()));
   HxType.register_class_empty_ctor "backend.cpp.CppTargetCore" (fun () -> Obj.repr (Backend_cpp_CppTargetCore.__empty ()));
   HxType.register_class_empty_ctor "backend.cpp.CppTypeModel" (fun () -> Obj.repr (Backend_cpp_CppTypeModel.__empty ()));
@@ -2475,7 +2480,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TypedBodyInvariant" [];
   HxType.register_class_static_fields "TypedBodyInvariant" [ "assertClasses"; "assertExpr"; "assertFunction"; "assertStmt"; "opaqueContainsSemanticSyntax"; "scrubQuotedAndCommentText" ];
   HxType.register_class_instance_fields "TypedBodySource" [];
-  HxType.register_class_static_fields "TypedBodySource" [ "blockExpression"; "classDeclaration"; "expression"; "expressionTail"; "functionDeclaration"; "moduleDeclaration"; "sourcePosition"; "statement"; "statements" ];
+  HxType.register_class_static_fields "TypedBodySource" [ "blockExpression"; "classDeclaration"; "expression"; "expressionTail"; "functionDeclaration"; "moduleDeclaration"; "sourcePosition"; "statement"; "statements"; "variableTypeHint" ];
   HxType.register_class_instance_fields "TypedClass" [ "functions"; "getFunctions"; "getSemanticInfo"; "getSourceDeclaration"; "semanticInfo"; "sourceDeclaration"; "withFunctions" ];
   HxType.register_class_static_fields "TypedClass" [];
   HxType.register_class_instance_fields "TypedExactCallSource" [];
@@ -2562,6 +2567,8 @@ let init () : unit =
   HxType.register_class_static_fields "backend.cpp.CppNativeBackend" [ "capabilities"; "descriptor"; "registration" ];
   HxType.register_class_instance_fields "backend.cpp.CppPrepLocalInferenceGuard" [];
   HxType.register_class_static_fields "backend.cpp.CppPrepLocalInferenceGuard" [ "exprHasBindCallableEvidence"; "exprHasHelperTypedAsEvidence"; "exprListHasBindCallableEvidence"; "exprListHasHelperTypedAsEvidence"; "functionHasBindCallableEvidence"; "functionHasDynamicLocalInferenceEvidence"; "functionHasGenericFactoryLocalInferenceEvidence"; "functionHasHelperTypedAsLocalInferenceEvidence"; "functionHasLocalDeclEvidence"; "functionHasOptionalLambdaLocalInferenceEvidence"; "functionHasStringMapLocalInferenceEvidence"; "hasTypeHint"; "isEmptyArrayExpr"; "isHelperTypedAsCallee"; "isLocalCallableInit"; "isNullExpr"; "isOptionalLambdaLocalInit"; "isReflectStaticReceiver"; "localDeclHasDynamicLocalInferenceEvidence"; "localDeclHasGenericFactoryLocalInferenceEvidence"; "localDeclHasOptionalLambdaLocalInferenceEvidence"; "localDeclHasStringMapLocalInferenceEvidence"; "stmtHasBindCallableEvidence"; "stmtHasHelperTypedAsEvidence"; "stmtHasLocalDeclEvidence"; "stmtListHasBindCallableEvidence"; "stmtListHasHelperTypedAsEvidence"; "stmtListHasLocalDeclEvidence"; "typePathBaseName" ];
+  HxType.register_class_instance_fields "backend.cpp.CppProgramPrelude" [];
+  HxType.register_class_static_fields "backend.cpp.CppProgramPrelude" [ "lines" ];
   HxType.register_class_instance_fields "backend.cpp.CppRuntimeSupport" [];
   HxType.register_class_static_fields "backend.cpp.CppRuntimeSupport" [ "anyIsTypeLines"; "anySupportLines"; "baseCodeLines"; "borrowedSharedPtrExpr"; "borrowedSharedPtrLines"; "byteVectorLiteral"; "bytesBufferSupportLines"; "bytesSupportLines"; "classMetaSupportLines"; "compareLines"; "dateIntrinsicLines"; "eRegSupportLines"; "enumMetaSupportLines"; "enumValueDynamicLines"; "enumValueTypeLines"; "fpReinterpretLines"; "inputSupportLines"; "int64ArithmeticLines"; "jsonSupportLines"; "listSupportLines"; "missingDeclarationLines"; "missingMethodReturnType"; "missingTypeSupportLines"; "outputSupportLines"; "quoteCppString"; "resourceLines"; "rttiMetaLines"; "serializerEnumSupportLines"; "sha1Lines"; "stdIntrinsicLines"; "stringBufSupportLines"; "sysEventLoopLines"; "vectorSupportLines" ];
   HxType.register_class_instance_fields "backend.cpp.CppTargetCore" [];
@@ -2906,6 +2913,7 @@ let init () : unit =
   HxType.register_class_tags "backend.cpp.CppMapRuntime" [ "backend.cpp.CppMapRuntime" ];
   HxType.register_class_tags "backend.cpp.CppNativeBackend" [ "backend.cpp.CppNativeBackend" ];
   HxType.register_class_tags "backend.cpp.CppPrepLocalInferenceGuard" [ "backend.cpp.CppPrepLocalInferenceGuard" ];
+  HxType.register_class_tags "backend.cpp.CppProgramPrelude" [ "backend.cpp.CppProgramPrelude" ];
   HxType.register_class_tags "backend.cpp.CppRuntimeSupport" [ "backend.cpp.CppRuntimeSupport" ];
   HxType.register_class_tags "backend.cpp.CppTargetCore" [ "backend.cpp.CppTargetCore" ];
   HxType.register_class_tags "backend.cpp.CppTypeModel" [ "backend.cpp.CppTypeModel" ];

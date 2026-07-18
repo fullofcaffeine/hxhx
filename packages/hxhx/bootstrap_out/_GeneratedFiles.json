@@ -123,6 +123,7 @@
 		"backend_cpp_CppTypeModel.ml",
 		"backend_cpp_CppTargetCore.ml",
 		"backend_cpp_CppRuntimeSupport.ml",
+		"backend_cpp_CppProgramPrelude.ml",
 		"backend_cpp_CppPrepLocalInferenceGuard.ml",
 		"backend_cpp_CppNativeBackend.ml",
 		"backend_cpp_CppMapRuntime.ml",

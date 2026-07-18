@@ -2,8 +2,8 @@
 
 This note is the runtime-helper invariant and default-stub audit for
 `haxe_ocaml-moz7`. It blocks new broad Cpp runtime or stdlib semantics from
-being added to `CppTargetCore.hx` or `CppRuntimeSupport.hx` as ordinary helper
-burn-down work.
+being added to `CppTargetCore.hx`, `CppProgramPrelude.hx`, or
+`CppRuntimeSupport.hx` as ordinary helper burn-down work.
 
 Strict Cpp Gate3 remains red. Runtime helper work is internal blocker burn-down
 unless upstream-derived strict gates and public usability evidence change.
@@ -37,7 +37,7 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 - It does not silently return default values for missing behavior unless that is
   the documented Haxe behavior for the supported scope.
 - It does not move broad semantics from `CppTargetCore.hx` into
-  `CppRuntimeSupport.hx` without classification.
+  `CppProgramPrelude.hx` or `CppRuntimeSupport.hx` without classification.
 - It uses declaration-only surfaces, target runtime modules, templates, or
   intrinsic lowering instead of fake generated classes when those are the real
   boundary.
@@ -73,11 +73,11 @@ All new or expanded Cpp runtime/helper support must satisfy these invariants:
 | `enumValueDynamicLines` | `bounded_bringup_support`, `review_required` | Dynamic enum helpers and `std::any` conversions return defaults for unsupported values; Float conversion catches parse errors and returns `0.0`. |
 | `compareLines` | `review_required` | Comparison touches Dynamic, enums, strings, numbers, NaN, and signed zero. Use [`FLOAT_NUMERIC_REVIEW_GATE.md`](FLOAT_NUMERIC_REVIEW_GATE.md) before expansion. |
 
-## CppTargetCore Runtime Helper Audit
+## C++ Prelude and CppTargetCore Runtime Helper Audit
 
 | Surface | Current classification | Audit note |
 | --- | --- | --- |
-| Cpp prelude/string/vector/base64/basecode/hash/resource lowering | `bounded_bringup_support` | Compact target-owned primitives are acceptable when edge-case oracle coverage exists. Do not broaden them without behavior specs. |
+| `CppProgramPrelude` fixed prelude plus string/vector/base64/basecode/hash/resource lowering | `bounded_bringup_support` | The extracted module preserves the established output order; compact target-owned primitives are acceptable when edge-case oracle coverage exists. Do not broaden them without behavior specs. |
 | `renderMissingInterfaceDeclaration` and missing declarations | `declaration_only_support` | Signature/declaration boundary only. Avoid fake generated classes for runtime behavior. |
 | `renderRttiMetaHelper` and `rttiMetaLines` callers | `bounded_bringup_support`, `review_required` | Empty/default metadata results must not count as strict Reflect/RTTI parity. |
 | `renderDceReflectionHelperStringOverload` | `bounded_bringup_support` | Narrow string overload support for current DCE/reflection helper shapes. Expansion needs behavior cases. |

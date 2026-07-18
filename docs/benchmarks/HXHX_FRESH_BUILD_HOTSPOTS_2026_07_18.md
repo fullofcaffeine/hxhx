@@ -94,6 +94,72 @@ Raw artifact hashes, retained here so cleanup does not erase identity:
 | `reflaxe-progress.log` | `681a8a12b76397da27efea76e3598ad840d528fd8a95c7db9b2ba8c2a8d6482d` |
 | `progress-summary.json` | `99792dceed7406aaacfff2b49e682b0b100064eaf22e1fada63e0f486d1fc2b7` |
 
+## First extraction measurement: CppProgramPrelude
+
+The first `haxe_ocaml-850ii.8.1` slice moved the fixed C++ support prelude
+from `CppTargetCore` into a documented `CppProgramPrelude` module. The main
+emitter still owns cache reset, class discovery, semantic rendering, and output
+ordering. The new module only returns the same prelude line sequence.
+
+The extraction candidate was based on `1dcd8acb`. Its required full bootstrap
+regeneration ran after a capacity preflight passed with 12 logical CPUs,
+normalized load `0.821`, and no active compiler competitor. It completed in
+`216s`: `187s` stage0 emission, `3s` snapshot sharding, and `22s` verified Dune
+build.
+
+A separate full-profile telemetry run used the same native Haxe `4.3.7`
+compiler and an absolute artifact directory:
+
+```bash
+bash scripts/hxhx/profile-stage0-regen.sh \
+  --policy require-native \
+  --failfast 300 \
+  --heartbeat 20 \
+  --out-dir <absolute-artifact-dir>
+```
+
+That run's capacity preflight passed with normalized load `0.990` and no active
+compiler competitor. It retained the exact per-class progress log and produced
+these comparable full-profile results:
+
+| Full-profile measurement | Before | After | Change |
+| --- | ---: | ---: | ---: |
+| Stage0 emit | `211s` | `161s` | `-50s` (`-24%`) |
+| `CppTargetCore` generation | `106,535ms` | `78,886ms` | `-27,649ms` (`-26%`) |
+| Extracted `CppProgramPrelude` generation | included above | `58ms` | new owner |
+| Combined C++ core + prelude generation | `106,535ms` | `78,944ms` | `-27,591ms` (`-26%`) |
+| Combined generated OCaml characters | `12,198,594` | `12,193,561` | effectively unchanged |
+
+The character count matters: moving about 83 KB of fixed output text reduced
+generation by roughly 27.6 seconds even though the combined generated OCaml
+size barely changed. The practical cost came from keeping that work inside one
+enormous generated class/method boundary, not from the text payload alone.
+
+The source line sequence before and after the move has the same SHA-256,
+`d7f145f2d1ad7ef8f335c0de496db9b9e3d8d0f3682b3040822e648c220db152`.
+The focused render, generated-source, executable C++ suite, String.indexOf
+regression, architecture guards, and full bootstrap verification passed.
+Three regeneration passes produced the same tracked snapshot diff SHA-256,
+`07f19863798c23019813e1d01b7a0eae36b8dc0f1caf89dabe15c9b9b2d50835`,
+and the new prelude snapshot SHA-256 remained
+`5047aacd9151ca92a960a6cbffc0c11f14d7694b4f4c7295943ce2e3aeed7953`.
+
+Telemetry artifact hashes:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `regen_report.json` | `d39738c08a602650ed3d6ebeab8748ce03b6093c6dffc0283561fd202eadddec` |
+| `reflaxe_ocaml_progress.log` | `3c03ed9bb6753e412d72ea23fbd53bad92b3ff7a850d371b02b24918c52a9eaf` |
+| `progress_summary.json` | `e17c92868187503d710d39e918c48b3f02c27767233832375c66154effcdbd3f` |
+| verified bootstrap `regen_report.json` | `86644d0175646ca79b5c699590ffbc6f716e5f4c8afbf321adb38abfa71bd2ce` |
+
+This is a strong bounded A/B for the extraction seam, not a universal machine
+benchmark. A first profiler attempt also showed that a relative `--out-dir`
+can lose the requested per-class progress log when the inner build changes
+directories. The measurement was rerun with an absolute path; normalizing and
+validating profiler output paths is intentionally deferred to runner follow-up
+work rather than mixed into the generator extraction.
+
 ## Rejected Dune-cache shortcut
 
 A separate native, stage0-free A/B used a private Dune cache, one unrecorded

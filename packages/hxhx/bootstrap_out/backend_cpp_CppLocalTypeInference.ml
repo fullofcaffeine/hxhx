@@ -1797,61 +1797,61 @@ let inferClosureVectorLocalTypeOverridesImpl = fun self (scope : Obj.t) (stmts :
 let restoreStringMap = fun self (target : string HxMap.string_map) (saved : string HxMap.string_map) -> ignore ((
   ignore self;
   ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-    ignore (let _g = Obj.magic (let __arr_255 = HxArray.create () in __arr_255) in (
-      ignore (let key = HxIterator.of_array (HxMap.keys_string target) in while (let __iter_256 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_256)) () do ignore (let key2 = ((let __iter_257 = key in fun () -> HxIterator.next (Obj.magic __iter_257)) () : string) in if not (HxMap.exists_string saved key2) then ignore (HxArray.push _g key2) else ()) done);
-      let __assign_258 = Obj.magic _g in (
-        tempArray := __assign_258;
-        __assign_258
+    ignore (let _g = Obj.magic (let __arr_256 = HxArray.create () in __arr_256) in (
+      ignore (let key = HxIterator.of_array (HxMap.keys_string target) in while (let __iter_257 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_257)) () do ignore (let key2 = ((let __iter_258 = key in fun () -> HxIterator.next (Obj.magic __iter_258)) () : string) in if not (HxMap.exists_string saved key2) then ignore (HxArray.push _g key2) else ()) done);
+      let __assign_259 = Obj.magic _g in (
+        tempArray := __assign_259;
+        __assign_259
       )
     ));
     ignore (let _g = ref 0 in while !_g < HxArray.length (!tempArray) do ignore (let key = (HxArray.get (Obj.magic (!tempArray)) (!_g) : string) in (
-      ignore (let __old_259 = !_g in let __new_260 = HxInt.add __old_259 1 in (
-        ignore (_g := __new_260);
-        __new_260
+      ignore (let __old_260 = !_g in let __new_261 = HxInt.add __old_260 1 in (
+        ignore (_g := __new_261);
+        __new_261
       ));
       HxMap.remove_string target key
     )) done);
-    let key = HxIterator.of_array (HxMap.keys_string saved) in while (let __iter_261 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_261)) () do ignore (let key2 = ((let __iter_262 = key in fun () -> HxIterator.next (Obj.magic __iter_262)) () : string) in HxMap.set_string target key2 (HxMap.get_string saved key2)) done
+    let key = HxIterator.of_array (HxMap.keys_string saved) in while (let __iter_262 = key in fun () -> HxIterator.hasNext (Obj.magic __iter_262)) () do ignore (let key2 = ((let __iter_263 = key in fun () -> HxIterator.next (Obj.magic __iter_263)) () : string) in HxMap.set_string target key2 (HxMap.get_string saved key2)) done
   ))
 ))
 
 let withStringMapInferenceScope = fun self (scope : Obj.t) (candidates : string HxMap.string_map) (fn : unit -> unit) -> ignore (ignore (let tempStringMap = ref (Obj.magic (HxRuntime.hx_null) : string HxMap.string_map) in (
-  ignore (let map = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in let __assign_247 = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "copyStringMap") (Obj.magic map)) in (
-    tempStringMap := __assign_247;
-    __assign_247
+  ignore (let map = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in let __assign_248 = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "copyStringMap") (Obj.magic map)) in (
+    tempStringMap := __assign_248;
+    __assign_248
   ));
   let tempStringMap1 = ref (Obj.magic (HxRuntime.hx_null) : string HxMap.string_map) in (
-    ignore (let map = Obj.magic (Obj.obj (HxAnon.get scope "localTypeOverrides")) in let __assign_248 = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "copyStringMap") (Obj.magic map)) in (
-      tempStringMap1 := __assign_248;
-      __assign_248
+    ignore (let map = Obj.magic (Obj.obj (HxAnon.get scope "localTypeOverrides")) in let __assign_249 = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "copyStringMap") (Obj.magic map)) in (
+      tempStringMap1 := __assign_249;
+      __assign_249
     ));
     let tempStringMap2 = ref (Obj.magic (HxRuntime.hx_null) : string HxMap.string_map) in (
-      ignore (let map = Obj.magic (Obj.obj (HxAnon.get scope "localNames")) in let __assign_249 = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "copyStringMap") (Obj.magic map)) in (
-        tempStringMap2 := __assign_249;
-        __assign_249
+      ignore (let map = Obj.magic (Obj.obj (HxAnon.get scope "localNames")) in let __assign_250 = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "copyStringMap") (Obj.magic map)) in (
+        tempStringMap2 := __assign_250;
+        __assign_250
       ));
       let tempStringMap3 = ref (Obj.magic (HxRuntime.hx_null) : int HxMap.string_map) in (
-        ignore (let map = Obj.magic (Obj.obj (HxAnon.get scope "localNameCounts")) in let __assign_250 = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "copyIntMap") (Obj.magic map)) in (
-          tempStringMap3 := __assign_250;
-          __assign_250
+        ignore (let map = Obj.magic (Obj.obj (HxAnon.get scope "localNameCounts")) in let __assign_251 = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "copyIntMap") (Obj.magic map)) in (
+          tempStringMap3 := __assign_251;
+          __assign_251
         ));
         let savedCandidates = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "copyStringMap") (Obj.magic candidates)) in (
           ignore (fn ());
-          ignore (let __assign_251 = Obj.magic (!tempStringMap) in (
-            HxAnon.set scope "localTypes" (Obj.repr __assign_251);
-            __assign_251
-          ));
-          ignore (let __assign_252 = Obj.magic (!tempStringMap1) in (
-            HxAnon.set scope "localTypeOverrides" (Obj.repr __assign_252);
+          ignore (let __assign_252 = Obj.magic (!tempStringMap) in (
+            HxAnon.set scope "localTypes" (Obj.repr __assign_252);
             __assign_252
           ));
-          ignore (let __assign_253 = Obj.magic (!tempStringMap2) in (
-            HxAnon.set scope "localNames" (Obj.repr __assign_253);
+          ignore (let __assign_253 = Obj.magic (!tempStringMap1) in (
+            HxAnon.set scope "localTypeOverrides" (Obj.repr __assign_253);
             __assign_253
           ));
-          ignore (let __assign_254 = Obj.magic (!tempStringMap3) in (
-            HxAnon.set scope "localNameCounts" (Obj.repr __assign_254);
+          ignore (let __assign_254 = Obj.magic (!tempStringMap2) in (
+            HxAnon.set scope "localNames" (Obj.repr __assign_254);
             __assign_254
+          ));
+          ignore (let __assign_255 = Obj.magic (!tempStringMap3) in (
+            HxAnon.set scope "localNameCounts" (Obj.repr __assign_255);
+            __assign_255
           ));
           restoreStringMap (Obj.magic self) (Obj.magic candidates) (Obj.magic savedCandidates)
         )
@@ -1861,10 +1861,10 @@ let withStringMapInferenceScope = fun self (scope : Obj.t) (candidates : string 
 )))
 
 let mapClassNameFromNewExpr = fun self (expr : Obj.t) -> let tempResult = ref ("" : string) in (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_263 = ("" : string) in (
-    tempResult := __assign_263;
-    __assign_263
-  ) else if (let __enum_idx_264 = expr in if __enum_idx_264 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_264 with
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_264 = ("" : string) in (
+    tempResult := __assign_264;
+    __assign_264
+  ) else if (let __enum_idx_265 = expr in if __enum_idx_265 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_265 with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
     | HxExpr.EString _ -> 2
@@ -1893,133 +1893,133 @@ let mapClassNameFromNewExpr = fun self (expr : Obj.t) -> let tempResult = ref ("
     | HxExpr.ERange (_, _) -> 25
     | HxExpr.ECast (_, _) -> 26
     | HxExpr.EUntyped _ -> 27
-    | HxExpr.EUnsupported _ -> 28) = 17 then let _g = (let __enum_param_266 = expr in if __enum_param_266 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_266 with
-    | HxExpr.ENew (__enum_param_265, _) -> __enum_param_265
+    | HxExpr.EUnsupported _ -> 28) = 17 then let _g = (let __enum_param_267 = expr in if __enum_param_267 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_267 with
+    | HxExpr.ENew (__enum_param_266, _) -> __enum_param_266
     | _ -> failwith "Unexpected enum parameter" : string) in (
-    ignore (let __enum_param_268 = expr in if __enum_param_268 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_268 with
-      | HxExpr.ENew (_, __enum_param_267) -> __enum_param_267
+    ignore (let __enum_param_269 = expr in if __enum_param_269 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_269 with
+      | HxExpr.ENew (_, __enum_param_268) -> __enum_param_268
       | _ -> failwith "Unexpected enum parameter");
-    let typePath = (_g : string) in let path = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "typeBaseName") (typePath : string) : string) in let tempString = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeTypePath") (path : string) : string) in let className = (tempString : string) in if Obj.obj (HxAnon.get ((Obj.magic self : t).api) "isInferredMapClassName") (className : string) then let __assign_269 = (className : string) in (
-      tempResult := __assign_269;
-      __assign_269
-    ) else let __assign_270 = ("" : string) in (
+    let typePath = (_g : string) in let path = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "typeBaseName") (typePath : string) : string) in let tempString = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeTypePath") (path : string) : string) in let className = (tempString : string) in if Obj.obj (HxAnon.get ((Obj.magic self : t).api) "isInferredMapClassName") (className : string) then let __assign_270 = (className : string) in (
       tempResult := __assign_270;
       __assign_270
+    ) else let __assign_271 = ("" : string) in (
+      tempResult := __assign_271;
+      __assign_271
     )
-  ) else let __assign_271 = ("" : string) in (
-    tempResult := __assign_271;
-    __assign_271
+  ) else let __assign_272 = ("" : string) in (
+    tempResult := __assign_272;
+    __assign_272
   ));
   !tempResult
 )
 
 let defaultMapLocalType = fun self (mapClass : string) -> let path = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "typeBaseName") (mapClass : string) : string) in let tempString = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeTypePath") (path : string) : string) in let tempResult = ref ("" : string) in (
-  ignore (if HxString.equals tempString "Map" then let __assign_272 = ("std::shared_ptr<Map<std::string, std::string>>" : string) in (
-    tempResult := __assign_272;
-    __assign_272
-  ) else let __assign_273 = (("std::shared_ptr<" ^ HxString.toStdString tempString) ^ "<std::string>>" : string) in (
+  ignore (if HxString.equals tempString "Map" then let __assign_273 = ("std::shared_ptr<Map<std::string, std::string>>" : string) in (
     tempResult := __assign_273;
     __assign_273
+  ) else let __assign_274 = (("std::shared_ptr<" ^ HxString.toStdString tempString) ^ "<std::string>>" : string) in (
+    tempResult := __assign_274;
+    __assign_274
   ));
   !tempResult
 )
 
-let mapKeyTypeFromExpr = fun self (expr : HxExpr.hxexpr) (scope : Obj.t) -> try let __fallback_result_277 = let explicit = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "exprCppType") (Obj.magic expr) scope : string) in (
+let mapKeyTypeFromExpr = fun self (expr : HxExpr.hxexpr) (scope : Obj.t) -> try let __fallback_result_278 = let explicit = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "exprCppType") (Obj.magic expr) scope : string) in (
   ignore (if HxString.length explicit > 0 then raise (HxRuntime.Hx_return (Obj.repr (explicit : string))) else ());
   let inferred = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "inferExprCppType") (Obj.magic expr) scope : string) in (
     ignore (if HxString.length inferred > 0 then raise (HxRuntime.Hx_return (Obj.repr (inferred : string))) else ());
     let tempResult = ref ("" : string) in (
-      ignore (if Obj.obj (HxAnon.get ((Obj.magic self : t).api) "isStringLike") (Obj.magic expr) then let __assign_274 = ("std::string" : string) in (
-        tempResult := __assign_274;
-        __assign_274
-      ) else let __assign_275 = ("int" : string) in (
+      ignore (if Obj.obj (HxAnon.get ((Obj.magic self : t).api) "isStringLike") (Obj.magic expr) then let __assign_275 = ("std::string" : string) in (
         tempResult := __assign_275;
         __assign_275
+      ) else let __assign_276 = ("int" : string) in (
+        tempResult := __assign_276;
+        __assign_276
       ));
       !tempResult
     )
   )
-) in Obj.magic __fallback_result_277 with
-  | HxRuntime.Hx_return __ret_276 -> Obj.obj __ret_276
+) in Obj.magic __fallback_result_278 with
+  | HxRuntime.Hx_return __ret_277 -> Obj.obj __ret_277
 
-let stringMapValueTypeFromExpr = fun self (expr : HxExpr.hxexpr) (scope : Obj.t) -> try let __fallback_result_281 = let explicit = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "exprCppType") (Obj.magic expr) scope : string) in (
+let stringMapValueTypeFromExpr = fun self (expr : HxExpr.hxexpr) (scope : Obj.t) -> try let __fallback_result_282 = let explicit = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "exprCppType") (Obj.magic expr) scope : string) in (
   ignore (if HxString.length explicit > 0 then raise (HxRuntime.Hx_return (Obj.repr (explicit : string))) else ());
   let inferred = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "inferExprCppType") (Obj.magic expr) scope : string) in let tempResult = ref ("" : string) in (
-    ignore (if HxString.length inferred > 0 then let __assign_278 = (inferred : string) in (
-      tempResult := __assign_278;
-      __assign_278
-    ) else let __assign_279 = ("std::string" : string) in (
+    ignore (if HxString.length inferred > 0 then let __assign_279 = (inferred : string) in (
       tempResult := __assign_279;
       __assign_279
+    ) else let __assign_280 = ("std::string" : string) in (
+      tempResult := __assign_280;
+      __assign_280
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_281 with
-  | HxRuntime.Hx_return __ret_280 -> Obj.obj __ret_280
+) in Obj.magic __fallback_result_282 with
+  | HxRuntime.Hx_return __ret_281 -> Obj.obj __ret_281
 
 let mapLocalType = fun self (mapClass : string) (keyType : string) (valueType : string) -> let tempString1 = ref ("" : string) in (
-  ignore (if mapClass == Obj.magic (HxRuntime.hx_null) then let __assign_285 = ("" : string) in (
-    tempString1 := __assign_285;
-    __assign_285
-  ) else let __assign_286 = (mapClass : string) in (
+  ignore (if mapClass == Obj.magic (HxRuntime.hx_null) then let __assign_286 = ("" : string) in (
     tempString1 := __assign_286;
     __assign_286
+  ) else let __assign_287 = (mapClass : string) in (
+    tempString1 := __assign_287;
+    __assign_287
   ));
   let path = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "typeBaseName") (!tempString1 : string) : string) in let tempString = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeTypePath") (path : string) : string) in let tempResult = ref ("" : string) in (
     ignore (if HxString.equals tempString "Map" then let tempString2 = ref ("" : string) in (
-      ignore (if keyType == Obj.magic (HxRuntime.hx_null) || HxString.length keyType = 0 then let __assign_287 = ("std::string" : string) in (
-        tempString2 := __assign_287;
-        __assign_287
-      ) else let __assign_288 = (keyType : string) in (
+      ignore (if keyType == Obj.magic (HxRuntime.hx_null) || HxString.length keyType = 0 then let __assign_288 = ("std::string" : string) in (
         tempString2 := __assign_288;
         __assign_288
-      ));
-      let __assign_289 = (((("std::shared_ptr<Map<" ^ HxString.toStdString (!tempString2)) ^ ", ") ^ HxString.toStdString valueType) ^ ">>" : string) in (
-        tempResult := __assign_289;
+      ) else let __assign_289 = (keyType : string) in (
+        tempString2 := __assign_289;
         __assign_289
+      ));
+      let __assign_290 = (((("std::shared_ptr<Map<" ^ HxString.toStdString (!tempString2)) ^ ", ") ^ HxString.toStdString valueType) ^ ">>" : string) in (
+        tempResult := __assign_290;
+        __assign_290
       )
-    ) else let __assign_290 = (((("std::shared_ptr<" ^ HxString.toStdString tempString) ^ "<") ^ HxString.toStdString valueType) ^ ">>" : string) in (
-      tempResult := __assign_290;
-      __assign_290
+    ) else let __assign_291 = (((("std::shared_ptr<" ^ HxString.toStdString tempString) ^ "<") ^ HxString.toStdString valueType) ^ ">>" : string) in (
+      tempResult := __assign_291;
+      __assign_291
     ));
     !tempResult
   )
 )
 
-let mapClassNameFromCppMapType = fun self (typeName : string) -> try let __fallback_result_296 = (
+let mapClassNameFromCppMapType = fun self (typeName : string) -> try let __fallback_result_297 = (
   ignore (if typeName == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   let prefix = ("std::shared_ptr<" : string) in (
     ignore (if not (StringTools.startsWith (typeName : string) (prefix : string)) || not (StringTools.endsWith (typeName : string) (">" : string)) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
     let inner = (HxString.substr typeName (HxString.length prefix) (HxInt.sub (HxInt.sub (HxString.length typeName) (HxString.length prefix)) 1) : string) in let genericStart = HxString.indexOf inner "<" 0 in let tempString = ref ("" : string) in (
-      ignore (if genericStart >= 0 then let __assign_291 = (HxString.substr inner 0 genericStart : string) in (
-        tempString := __assign_291;
-        __assign_291
-      ) else let __assign_292 = (inner : string) in (
+      ignore (if genericStart >= 0 then let __assign_292 = (HxString.substr inner 0 genericStart : string) in (
         tempString := __assign_292;
         __assign_292
+      ) else let __assign_293 = (inner : string) in (
+        tempString := __assign_293;
+        __assign_293
       ));
       let tempResult = ref ("" : string) in (
-        ignore (if Obj.obj (HxAnon.get ((Obj.magic self : t).api) "isInferredMapClassName") (!tempString : string) then let path = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "typeBaseName") (!tempString : string) : string) in let __assign_293 = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeTypePath") (path : string) : string) in (
-          tempResult := __assign_293;
-          __assign_293
-        ) else let __assign_294 = ("" : string) in (
+        ignore (if Obj.obj (HxAnon.get ((Obj.magic self : t).api) "isInferredMapClassName") (!tempString : string) then let path = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "typeBaseName") (!tempString : string) : string) in let __assign_294 = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeTypePath") (path : string) : string) in (
           tempResult := __assign_294;
           __assign_294
+        ) else let __assign_295 = ("" : string) in (
+          tempResult := __assign_295;
+          __assign_295
         ));
         !tempResult
       )
     )
   )
-) in Obj.magic __fallback_result_296 with
-  | HxRuntime.Hx_return __ret_295 -> Obj.obj __ret_295
+) in Obj.magic __fallback_result_297 with
+  | HxRuntime.Hx_return __ret_296 -> Obj.obj __ret_296
 
 let setStringMapLocalTypeOverride = fun self (scope : Obj.t) (local : string) (mapClass : string) (keyType : string) (valueType : string) -> ignore (ignore (try let tempString1 = ref ("" : string) in (
-  ignore (if mapClass == Obj.magic (HxRuntime.hx_null) then let __assign_282 = ("" : string) in (
-    tempString1 := __assign_282;
-    __assign_282
-  ) else let __assign_283 = (mapClass : string) in (
+  ignore (if mapClass == Obj.magic (HxRuntime.hx_null) then let __assign_283 = ("" : string) in (
     tempString1 := __assign_283;
     __assign_283
+  ) else let __assign_284 = (mapClass : string) in (
+    tempString1 := __assign_284;
+    __assign_284
   ));
   let path = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "typeBaseName") (!tempString1 : string) : string) in let tempString = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeTypePath") (path : string) : string) in (
     ignore (if HxString.length tempString = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
@@ -2030,195 +2030,202 @@ let setStringMapLocalTypeOverride = fun self (scope : Obj.t) (local : string) (m
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_284 -> Obj.obj __ret_284))
+  | HxRuntime.Hx_return __ret_285 -> Obj.obj __ret_285))
 
-let rec collectStringMapLocalTypeOverridesFromExpr = fun self (expr : HxExpr.hxexpr) (scope : Obj.t) (candidates : string HxMap.string_map) -> ignore (ignore (let _gthis = Obj.magic self in match expr with
-  | HxExpr.EField (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
-    ignore _p1;
-    let receiver = Obj.magic _g in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic receiver) scope (Obj.magic candidates)
-  ))
-  | HxExpr.ECall (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in if (match _g with
-    | HxExpr.ENull -> 0
-    | HxExpr.EBool _ -> 1
-    | HxExpr.EString _ -> 2
-    | HxExpr.EInt _ -> 3
-    | HxExpr.EFloat _ -> 4
-    | HxExpr.EEnumValue _ -> 5
-    | HxExpr.EThis -> 6
-    | HxExpr.ESuper -> 7
-    | HxExpr.EIdent _ -> 8
-    | HxExpr.EField (_, _) -> 9
-    | HxExpr.ECall (_, _) -> 10
-    | HxExpr.EMacroExpr (_, _) -> 11
-    | HxExpr.EMacroType _ -> 12
-    | HxExpr.ELambda (_, _) -> 13
-    | HxExpr.ETryCatchRaw _ -> 14
-    | HxExpr.ESwitchRaw _ -> 15
-    | HxExpr.ESwitch (_, _, _) -> 16
-    | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _, _) -> 18
-    | HxExpr.EBinop (_, _, _) -> 19
-    | HxExpr.ETernary (_, _, _) -> 20
-    | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-    | HxExpr.EArrayDecl _ -> 23
-    | HxExpr.EArrayAccess (_, _) -> 24
-    | HxExpr.ERange (_, _) -> 25
-    | HxExpr.ECast (_, _) -> 26
-    | HxExpr.EUntyped _ -> 27
-    | HxExpr.EUnsupported _ -> 28) = 9 then ignore (let _g2 = Obj.magic (match _g with
-    | HxExpr.EField (__enum_param_228, _) -> __enum_param_228
-    | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
-    | HxExpr.EField (_, __enum_param_229) -> __enum_param_229
-    | _ -> failwith "Unexpected enum parameter" : string) in if (match _g2 with
-    | HxExpr.ENull -> 0
-    | HxExpr.EBool _ -> 1
-    | HxExpr.EString _ -> 2
-    | HxExpr.EInt _ -> 3
-    | HxExpr.EFloat _ -> 4
-    | HxExpr.EEnumValue _ -> 5
-    | HxExpr.EThis -> 6
-    | HxExpr.ESuper -> 7
-    | HxExpr.EIdent _ -> 8
-    | HxExpr.EField (_, _) -> 9
-    | HxExpr.ECall (_, _) -> 10
-    | HxExpr.EMacroExpr (_, _) -> 11
-    | HxExpr.EMacroType _ -> 12
-    | HxExpr.ELambda (_, _) -> 13
-    | HxExpr.ETryCatchRaw _ -> 14
-    | HxExpr.ESwitchRaw _ -> 15
-    | HxExpr.ESwitch (_, _, _) -> 16
-    | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _, _) -> 18
-    | HxExpr.EBinop (_, _, _) -> 19
-    | HxExpr.ETernary (_, _, _) -> 20
-    | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-    | HxExpr.EArrayDecl _ -> 23
-    | HxExpr.EArrayAccess (_, _) -> 24
-    | HxExpr.ERange (_, _) -> 25
-    | HxExpr.ECast (_, _) -> 26
-    | HxExpr.EUntyped _ -> 27
-    | HxExpr.EUnsupported _ -> 28) = 8 then ignore (let _g4 = (match _g2 with
-    | HxExpr.EIdent __enum_param_230 -> __enum_param_230
-    | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g3 "set" then ignore (if HxArray.length _g1 = 2 then ignore (let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g6 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in let key = Obj.magic _g5 in let value = Obj.magic _g6 in let name = (_g4 : string) in if HxMap.exists_string candidates (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "localCppName") (name : string) scope) then ignore ((
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic key) scope (Obj.magic candidates));
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic value) scope (Obj.magic candidates));
-    let local = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "localCppName") (name : string) scope : string) in let keyType = (mapKeyTypeFromExpr (Obj.magic self) (Obj.magic key) scope : string) in let valueType = (stringMapValueTypeFromExpr (Obj.magic self) (Obj.magic value) scope : string) in if HxString.length valueType > 0 then ignore (setStringMapLocalTypeOverride (Obj.magic self) scope (local : string) (HxMap.get_string candidates local : string) (keyType : string) (valueType : string)) else ()
-  )) else ignore (let callee = Obj.magic _g in let args = Obj.magic _g1 in (
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic callee) scope (Obj.magic candidates));
-    let _g7 = ref 0 in while !_g7 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g7)) in (
-      ignore (let __old_231 = !_g7 in let __new_232 = HxInt.add __old_231 1 in (
-        ignore (_g7 := __new_232);
-        __new_232
-      ));
-      collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates)
-    )) done
-  ))) else ignore (let callee = Obj.magic _g in let args = Obj.magic _g1 in (
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic callee) scope (Obj.magic candidates));
-    let _g5 = ref 0 in while !_g5 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g5)) in (
-      ignore (let __old_233 = !_g5 in let __new_234 = HxInt.add __old_233 1 in (
-        ignore (_g5 := __new_234);
-        __new_234
-      ));
-      collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates)
-    )) done
-  ))) else ignore (let callee = Obj.magic _g in let args = Obj.magic _g1 in (
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic callee) scope (Obj.magic candidates));
-    let _g5 = ref 0 in while !_g5 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g5)) in (
-      ignore (let __old_235 = !_g5 in let __new_236 = HxInt.add __old_235 1 in (
-        ignore (_g5 := __new_236);
-        __new_236
-      ));
-      collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates)
-    )) done
-  ))) else ignore (let callee = Obj.magic _g in let args = Obj.magic _g1 in (
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic callee) scope (Obj.magic candidates));
-    let _g4 = ref 0 in while !_g4 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g4)) in (
-      ignore (let __old_237 = !_g4 in let __new_238 = HxInt.add __old_237 1 in (
-        ignore (_g4 := __new_238);
-        __new_238
-      ));
-      collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates)
-    )) done
-  ))) else ignore (let callee = Obj.magic _g in let args = Obj.magic _g1 in (
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic callee) scope (Obj.magic candidates));
-    let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g2)) in (
-      ignore (let __old_239 = !_g2 in let __new_240 = HxInt.add __old_239 1 in (
-        ignore (_g2 := __new_240);
-        __new_240
-      ));
-      collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates)
-    )) done
-  )))
-  | HxExpr.EMacroExpr (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
-    ignore _p1;
-    let inner = Obj.magic _g in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates)
-  ))
-  | HxExpr.ESwitch (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in (
-    ignore _p1;
-    let _g2 = Obj.magic _p2 in let scrutinee = Obj.magic _g in let exprs = Obj.magic _g2 in (
-      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic scrutinee) scope (Obj.magic candidates));
-      let _g3 = ref 0 in while !_g3 < HxArray.length exprs do ignore (let caseExpr = Obj.magic (HxArray.get (Obj.magic exprs) (!_g3)) in (
-        ignore (let __old_241 = !_g3 in let __new_242 = HxInt.add __old_241 1 in (
-          ignore (_g3 := __new_242);
-          __new_242
+let rec collectStringMapLocalTypeOverridesFromExpr = fun self (expr : HxExpr.hxexpr) (scope : Obj.t) (candidates : string HxMap.string_map) -> ignore (ignore (try let _gthis = Obj.magic self in let exact = TypedExactCallSource.decodeInstance (Obj.magic expr) in (
+  ignore (if exact != Obj.magic (HxRuntime.hx_null) then ignore ((
+    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic (TypedExactCallSource.ordinaryInstanceCall exact)) scope (Obj.magic candidates));
+    raise (HxRuntime.Hx_return (Obj.repr ()))
+  )) else ());
+  match expr with
+    | HxExpr.EField (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let receiver = Obj.magic _g in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic receiver) scope (Obj.magic candidates)
+    ))
+    | HxExpr.ECall (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in if (match _g with
+      | HxExpr.ENull -> 0
+      | HxExpr.EBool _ -> 1
+      | HxExpr.EString _ -> 2
+      | HxExpr.EInt _ -> 3
+      | HxExpr.EFloat _ -> 4
+      | HxExpr.EEnumValue _ -> 5
+      | HxExpr.EThis -> 6
+      | HxExpr.ESuper -> 7
+      | HxExpr.EIdent _ -> 8
+      | HxExpr.EField (_, _) -> 9
+      | HxExpr.ECall (_, _) -> 10
+      | HxExpr.EMacroExpr (_, _) -> 11
+      | HxExpr.EMacroType _ -> 12
+      | HxExpr.ELambda (_, _) -> 13
+      | HxExpr.ETryCatchRaw _ -> 14
+      | HxExpr.ESwitchRaw _ -> 15
+      | HxExpr.ESwitch (_, _, _) -> 16
+      | HxExpr.ENew (_, _) -> 17
+      | HxExpr.EUnop (_, _, _) -> 18
+      | HxExpr.EBinop (_, _, _) -> 19
+      | HxExpr.ETernary (_, _, _) -> 20
+      | HxExpr.EAnon (_, _) -> 21
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
+      | HxExpr.EArrayDecl _ -> 23
+      | HxExpr.EArrayAccess (_, _) -> 24
+      | HxExpr.ERange (_, _) -> 25
+      | HxExpr.ECast (_, _) -> 26
+      | HxExpr.EUntyped _ -> 27
+      | HxExpr.EUnsupported _ -> 28) = 9 then ignore (let _g2 = Obj.magic (match _g with
+      | HxExpr.EField (__enum_param_228, _) -> __enum_param_228
+      | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
+      | HxExpr.EField (_, __enum_param_229) -> __enum_param_229
+      | _ -> failwith "Unexpected enum parameter" : string) in if (match _g2 with
+      | HxExpr.ENull -> 0
+      | HxExpr.EBool _ -> 1
+      | HxExpr.EString _ -> 2
+      | HxExpr.EInt _ -> 3
+      | HxExpr.EFloat _ -> 4
+      | HxExpr.EEnumValue _ -> 5
+      | HxExpr.EThis -> 6
+      | HxExpr.ESuper -> 7
+      | HxExpr.EIdent _ -> 8
+      | HxExpr.EField (_, _) -> 9
+      | HxExpr.ECall (_, _) -> 10
+      | HxExpr.EMacroExpr (_, _) -> 11
+      | HxExpr.EMacroType _ -> 12
+      | HxExpr.ELambda (_, _) -> 13
+      | HxExpr.ETryCatchRaw _ -> 14
+      | HxExpr.ESwitchRaw _ -> 15
+      | HxExpr.ESwitch (_, _, _) -> 16
+      | HxExpr.ENew (_, _) -> 17
+      | HxExpr.EUnop (_, _, _) -> 18
+      | HxExpr.EBinop (_, _, _) -> 19
+      | HxExpr.ETernary (_, _, _) -> 20
+      | HxExpr.EAnon (_, _) -> 21
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
+      | HxExpr.EArrayDecl _ -> 23
+      | HxExpr.EArrayAccess (_, _) -> 24
+      | HxExpr.ERange (_, _) -> 25
+      | HxExpr.ECast (_, _) -> 26
+      | HxExpr.EUntyped _ -> 27
+      | HxExpr.EUnsupported _ -> 28) = 8 then ignore (let _g4 = (match _g2 with
+      | HxExpr.EIdent __enum_param_230 -> __enum_param_230
+      | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g3 "set" then ignore (if HxArray.length _g1 = 2 then ignore (let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g6 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in let key = Obj.magic _g5 in let value = Obj.magic _g6 in let name = (_g4 : string) in if HxMap.exists_string candidates (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "localCppName") (name : string) scope) then ignore ((
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic key) scope (Obj.magic candidates));
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic value) scope (Obj.magic candidates));
+      let local = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "localCppName") (name : string) scope : string) in let keyType = (mapKeyTypeFromExpr (Obj.magic self) (Obj.magic key) scope : string) in let valueType = (stringMapValueTypeFromExpr (Obj.magic self) (Obj.magic value) scope : string) in if HxString.length valueType > 0 then ignore (setStringMapLocalTypeOverride (Obj.magic self) scope (local : string) (HxMap.get_string candidates local : string) (keyType : string) (valueType : string)) else ()
+    )) else ignore (let callee = Obj.magic _g in let args = Obj.magic _g1 in (
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic callee) scope (Obj.magic candidates));
+      let _g7 = ref 0 in while !_g7 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g7)) in (
+        ignore (let __old_231 = !_g7 in let __new_232 = HxInt.add __old_231 1 in (
+          ignore (_g7 := __new_232);
+          __new_232
         ));
-        collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic caseExpr) scope (Obj.magic candidates)
+        collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates)
       )) done
-    )
-  ))
-  | HxExpr.EUnop (_p0, _p1, _p2) -> ignore ((
-    ignore _p0;
-    ignore _p1;
-    let _g3 = Obj.magic _p2 in let inner = Obj.magic _g3 in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates)
-  ))
-  | HxExpr.EBinop (_p0, _p1, _p2) -> ignore ((
-    ignore _p0;
-    let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let left = Obj.magic _g2 in let right = Obj.magic _g1 in (
-      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic left) scope (Obj.magic candidates));
-      collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic right) scope (Obj.magic candidates)
-    )
-  ))
-  | HxExpr.ETernary (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in (
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic cond) scope (Obj.magic candidates));
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic thenExpr) scope (Obj.magic candidates));
-    collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic elseExpr) scope (Obj.magic candidates)
-  ))
-  | HxExpr.EAnon (_p0, _p1) -> ignore ((
-    ignore _p0;
-    let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length fieldValues do ignore (let value = Obj.magic (HxArray.get (Obj.magic fieldValues) (!_g3)) in (
-      ignore (let __old_243 = !_g3 in let __new_244 = HxInt.add __old_243 1 in (
-        ignore (_g3 := __new_244);
-        __new_244
-      ));
-      collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic value) scope (Obj.magic candidates)
-    )) done
-  ))
-  | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let yieldExpr = Obj.magic _g3 in (
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic iterable) scope (Obj.magic candidates));
-    let name2 = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string) : string) in let typeName = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "iterableElementType") (Obj.magic iterable) scope : string) in Obj.obj (HxAnon.get ((Obj.magic self : t).api) "withScopedLocal") scope (name2 : string) (typeName : string) (fun () -> ignore ((
-      ignore (if guardExpr != Obj.magic (HxRuntime.hx_null) then ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic _gthis) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) scope (Obj.magic candidates)) else ());
-      collectStringMapLocalTypeOverridesFromExpr (Obj.magic _gthis) (Obj.magic yieldExpr) scope (Obj.magic candidates)
+    ))) else ignore (let callee = Obj.magic _g in let args = Obj.magic _g1 in (
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic callee) scope (Obj.magic candidates));
+      let _g5 = ref 0 in while !_g5 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g5)) in (
+        ignore (let __old_233 = !_g5 in let __new_234 = HxInt.add __old_233 1 in (
+          ignore (_g5 := __new_234);
+          __new_234
+        ));
+        collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates)
+      )) done
+    ))) else ignore (let callee = Obj.magic _g in let args = Obj.magic _g1 in (
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic callee) scope (Obj.magic candidates));
+      let _g5 = ref 0 in while !_g5 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g5)) in (
+        ignore (let __old_235 = !_g5 in let __new_236 = HxInt.add __old_235 1 in (
+          ignore (_g5 := __new_236);
+          __new_236
+        ));
+        collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates)
+      )) done
+    ))) else ignore (let callee = Obj.magic _g in let args = Obj.magic _g1 in (
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic callee) scope (Obj.magic candidates));
+      let _g4 = ref 0 in while !_g4 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g4)) in (
+        ignore (let __old_237 = !_g4 in let __new_238 = HxInt.add __old_237 1 in (
+          ignore (_g4 := __new_238);
+          __new_238
+        ));
+        collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates)
+      )) done
+    ))) else ignore (let callee = Obj.magic _g in let args = Obj.magic _g1 in (
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic callee) scope (Obj.magic candidates));
+      let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let arg = Obj.magic (HxArray.get (Obj.magic args) (!_g2)) in (
+        ignore (let __old_239 = !_g2 in let __new_240 = HxInt.add __old_239 1 in (
+          ignore (_g2 := __new_240);
+          __new_240
+        ));
+        collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic arg) scope (Obj.magic candidates)
+      )) done
     )))
-  ))
-  | HxExpr.EArrayDecl _p0 -> ignore (let _g = Obj.magic _p0 in let elements = Obj.magic _g in let _g2 = ref 0 in while !_g2 < HxArray.length elements do ignore (let element = Obj.magic (HxArray.get (Obj.magic elements) (!_g2)) in (
-    ignore (let __old_245 = !_g2 in let __new_246 = HxInt.add __old_245 1 in (
-      ignore (_g2 := __new_246);
-      __new_246
-    ));
-    collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic element) scope (Obj.magic candidates)
-  )) done)
-  | HxExpr.EArrayAccess (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let array = Obj.magic _g in let index = Obj.magic _g1 in (
-    ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic array) scope (Obj.magic candidates));
-    collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic index) scope (Obj.magic candidates)
-  ))
-  | HxExpr.ECast (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
-    ignore _p1;
-    let inner = Obj.magic _g in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates)
-  ))
-  | HxExpr.EUntyped _p0 -> ignore (let _g = Obj.magic _p0 in let inner = Obj.magic _g in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates))
-  | _ -> ignore ()))
+    | HxExpr.EMacroExpr (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let inner = Obj.magic _g in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates)
+    ))
+    | HxExpr.ESwitch (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let _g2 = Obj.magic _p2 in let scrutinee = Obj.magic _g in let exprs = Obj.magic _g2 in (
+        ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic scrutinee) scope (Obj.magic candidates));
+        let _g3 = ref 0 in while !_g3 < HxArray.length exprs do ignore (let caseExpr = Obj.magic (HxArray.get (Obj.magic exprs) (!_g3)) in (
+          ignore (let __old_241 = !_g3 in let __new_242 = HxInt.add __old_241 1 in (
+            ignore (_g3 := __new_242);
+            __new_242
+          ));
+          collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic caseExpr) scope (Obj.magic candidates)
+        )) done
+      )
+    ))
+    | HxExpr.EUnop (_p0, _p1, _p2) -> ignore ((
+      ignore _p0;
+      ignore _p1;
+      let _g3 = Obj.magic _p2 in let inner = Obj.magic _g3 in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates)
+    ))
+    | HxExpr.EBinop (_p0, _p1, _p2) -> ignore ((
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let left = Obj.magic _g2 in let right = Obj.magic _g1 in (
+        ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic left) scope (Obj.magic candidates));
+        collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic right) scope (Obj.magic candidates)
+      )
+    ))
+    | HxExpr.ETernary (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in (
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic cond) scope (Obj.magic candidates));
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic thenExpr) scope (Obj.magic candidates));
+      collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic elseExpr) scope (Obj.magic candidates)
+    ))
+    | HxExpr.EAnon (_p0, _p1) -> ignore ((
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length fieldValues do ignore (let value = Obj.magic (HxArray.get (Obj.magic fieldValues) (!_g3)) in (
+        ignore (let __old_243 = !_g3 in let __new_244 = HxInt.add __old_243 1 in (
+          ignore (_g3 := __new_244);
+          __new_244
+        ));
+        collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic value) scope (Obj.magic candidates)
+      )) done
+    ))
+    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let yieldExpr = Obj.magic _g3 in (
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic iterable) scope (Obj.magic candidates));
+      let name2 = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string) : string) in let typeName = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "iterableElementType") (Obj.magic iterable) scope : string) in Obj.obj (HxAnon.get ((Obj.magic self : t).api) "withScopedLocal") scope (name2 : string) (typeName : string) (fun () -> ignore ((
+        ignore (if guardExpr != Obj.magic (HxRuntime.hx_null) then ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic _gthis) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) scope (Obj.magic candidates)) else ());
+        collectStringMapLocalTypeOverridesFromExpr (Obj.magic _gthis) (Obj.magic yieldExpr) scope (Obj.magic candidates)
+      )))
+    ))
+    | HxExpr.EArrayDecl _p0 -> ignore (let _g = Obj.magic _p0 in let elements = Obj.magic _g in let _g2 = ref 0 in while !_g2 < HxArray.length elements do ignore (let element = Obj.magic (HxArray.get (Obj.magic elements) (!_g2)) in (
+      ignore (let __old_245 = !_g2 in let __new_246 = HxInt.add __old_245 1 in (
+        ignore (_g2 := __new_246);
+        __new_246
+      ));
+      collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic element) scope (Obj.magic candidates)
+    )) done)
+    | HxExpr.EArrayAccess (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let array = Obj.magic _g in let index = Obj.magic _g1 in (
+      ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic array) scope (Obj.magic candidates));
+      collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic index) scope (Obj.magic candidates)
+    ))
+    | HxExpr.ECast (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let inner = Obj.magic _g in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates)
+    ))
+    | HxExpr.EUntyped _p0 -> ignore (let _g = Obj.magic _p0 in let inner = Obj.magic _g in collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic inner) scope (Obj.magic candidates))
+    | _ -> ignore ()
+) with
+  | HxRuntime.Hx_return __ret_247 -> Obj.obj __ret_247))
 
 let rec collectStringMapLocalTypeOverridesFromStmt = fun self (stmt : HxStmt.hxstmt) (scope : Obj.t) (candidates : string HxMap.string_map) -> ignore (ignore (let _gthis = Obj.magic self in match stmt with
   | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
@@ -2434,34 +2441,34 @@ let inferStringMapLocalTypeOverrides = fun scope fn api2 -> ignore (try (
   ignore (if scope == Obj.magic (HxRuntime.hx_null) || fn == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   inferStringMapLocalTypeOverridesFromStmtsImpl (Obj.magic (create api2)) scope (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)))
 ) with
-  | HxRuntime.Hx_return __ret_297 -> Obj.obj __ret_297)
+  | HxRuntime.Hx_return __ret_298 -> Obj.obj __ret_298)
 
 let inferStringMapLocalTypeOverridesFromStmts = fun scope stmts api2 -> ignore (try (
   ignore (if scope == Obj.magic (HxRuntime.hx_null) || stmts == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   inferStringMapLocalTypeOverridesFromStmtsImpl (Obj.magic (create api2)) scope (Obj.magic stmts)
 ) with
-  | HxRuntime.Hx_return __ret_298 -> Obj.obj __ret_298)
+  | HxRuntime.Hx_return __ret_299 -> Obj.obj __ret_299)
 
 let inferClosureVectorLocalTypeOverrides = fun scope fn api2 -> ignore (try (
   ignore (if scope == Obj.magic (HxRuntime.hx_null) || fn == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   inferClosureVectorLocalTypeOverridesImpl (Obj.magic (create api2)) scope (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)))
 ) with
-  | HxRuntime.Hx_return __ret_299 -> Obj.obj __ret_299)
+  | HxRuntime.Hx_return __ret_300 -> Obj.obj __ret_300)
 
-let closureVectorTypeForLambdaArg = fun local body scope api2 -> try let __fallback_result_301 = (
+let closureVectorTypeForLambdaArg = fun local body scope api2 -> try let __fallback_result_302 = (
   ignore (if scope == Obj.magic (HxRuntime.hx_null) || local == Obj.magic (HxRuntime.hx_null) || HxString.length local = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   closureVectorTypeForLambdaArgImpl (Obj.magic (create api2)) (local : string) (Obj.magic body) scope
-) in Obj.magic __fallback_result_301 with
-  | HxRuntime.Hx_return __ret_300 -> Obj.obj __ret_300
+) in Obj.magic __fallback_result_302 with
+  | HxRuntime.Hx_return __ret_301 -> Obj.obj __ret_301
 
 let rec qualifiedEnumCarrierCppTypeImpl = fun expr scope api2 -> let tempResult = ref ("" : string) in (
   ignore (match expr with
-    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let constructorName = (_g1 : string) in let owner = (Obj.obj (HxAnon.get api2 "staticReceiverClassName") (Obj.magic receiver) scope : string) in if owner != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get api2 "isEnumCarrierClassName") (owner : string) scope && Obj.obj (HxAnon.get api2 "hasStaticEnumMetadataField") (owner : string) (constructorName : string) scope then let __assign_305 = (Obj.obj (HxAnon.get api2 "cppTypeHint") (owner : string) scope : string) in (
-      tempResult := __assign_305;
-      __assign_305
-    ) else let __assign_306 = ("" : string) in (
+    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let constructorName = (_g1 : string) in let owner = (Obj.obj (HxAnon.get api2 "staticReceiverClassName") (Obj.magic receiver) scope : string) in if owner != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get api2 "isEnumCarrierClassName") (owner : string) scope && Obj.obj (HxAnon.get api2 "hasStaticEnumMetadataField") (owner : string) (constructorName : string) scope then let __assign_306 = (Obj.obj (HxAnon.get api2 "cppTypeHint") (owner : string) scope : string) in (
       tempResult := __assign_306;
       __assign_306
+    ) else let __assign_307 = ("" : string) in (
+      tempResult := __assign_307;
+      __assign_307
     )
     | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in if (match _g with
       | HxExpr.ENull -> 0
@@ -2493,13 +2500,10 @@ let rec qualifiedEnumCarrierCppTypeImpl = fun expr scope api2 -> let tempResult 
       | HxExpr.ECast (_, _) -> 26
       | HxExpr.EUntyped _ -> 27
       | HxExpr.EUnsupported _ -> 28) = 9 then let _g2 = Obj.magic (match _g with
-      | HxExpr.EField (__enum_param_307, _) -> __enum_param_307
+      | HxExpr.EField (__enum_param_308, _) -> __enum_param_308
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
-      | HxExpr.EField (_, __enum_param_308) -> __enum_param_308
-      | _ -> failwith "Unexpected enum parameter" : string) in let receiver = Obj.magic _g2 in let constructorName = (_g3 : string) in let args = Obj.magic _g1 in if args != Obj.magic (HxRuntime.hx_null) && HxArray.length args > 0 then let owner = (Obj.obj (HxAnon.get api2 "staticReceiverClassName") (Obj.magic receiver) scope : string) in if owner != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get api2 "isEnumCarrierClassName") (owner : string) scope && Obj.obj (HxAnon.get api2 "hasStaticEnumConstructorMethod") (owner : string) (constructorName : string) scope then let __assign_309 = (Obj.obj (HxAnon.get api2 "cppTypeHint") (owner : string) scope : string) in (
-      tempResult := __assign_309;
-      __assign_309
-    ) else let __assign_310 = ("" : string) in (
+      | HxExpr.EField (_, __enum_param_309) -> __enum_param_309
+      | _ -> failwith "Unexpected enum parameter" : string) in let receiver = Obj.magic _g2 in let constructorName = (_g3 : string) in let args = Obj.magic _g1 in if args != Obj.magic (HxRuntime.hx_null) && HxArray.length args > 0 then let owner = (Obj.obj (HxAnon.get api2 "staticReceiverClassName") (Obj.magic receiver) scope : string) in if owner != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get api2 "isEnumCarrierClassName") (owner : string) scope && Obj.obj (HxAnon.get api2 "hasStaticEnumConstructorMethod") (owner : string) (constructorName : string) scope then let __assign_310 = (Obj.obj (HxAnon.get api2 "cppTypeHint") (owner : string) scope : string) in (
       tempResult := __assign_310;
       __assign_310
     ) else let __assign_311 = ("" : string) in (
@@ -2508,36 +2512,39 @@ let rec qualifiedEnumCarrierCppTypeImpl = fun expr scope api2 -> let tempResult 
     ) else let __assign_312 = ("" : string) in (
       tempResult := __assign_312;
       __assign_312
+    ) else let __assign_313 = ("" : string) in (
+      tempResult := __assign_313;
+      __assign_313
     )
     | HxExpr.EMacroExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
-      ignore _p1;
-      let inner = Obj.magic _g in let __assign_313 = (qualifiedEnumCarrierCppTypeImpl (Obj.magic inner) scope api2 : string) in (
-        tempResult := __assign_313;
-        __assign_313
-      )
-    )
-    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
       let inner = Obj.magic _g in let __assign_314 = (qualifiedEnumCarrierCppTypeImpl (Obj.magic inner) scope api2 : string) in (
         tempResult := __assign_314;
         __assign_314
       )
     )
-    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_315 = (qualifiedEnumCarrierCppTypeImpl (Obj.magic inner) scope api2 : string) in (
-      tempResult := __assign_315;
-      __assign_315
+    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let inner = Obj.magic _g in let __assign_315 = (qualifiedEnumCarrierCppTypeImpl (Obj.magic inner) scope api2 : string) in (
+        tempResult := __assign_315;
+        __assign_315
+      )
     )
-    | _ -> let __assign_304 = ("" : string) in (
-      tempResult := __assign_304;
-      __assign_304
+    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_316 = (qualifiedEnumCarrierCppTypeImpl (Obj.magic inner) scope api2 : string) in (
+      tempResult := __assign_316;
+      __assign_316
+    )
+    | _ -> let __assign_305 = ("" : string) in (
+      tempResult := __assign_305;
+      __assign_305
     ));
   !tempResult
 )
 
-let qualifiedEnumCarrierCppType = fun expr scope api2 -> try let __fallback_result_303 = (
+let qualifiedEnumCarrierCppType = fun expr scope api2 -> try let __fallback_result_304 = (
   ignore (if expr == Obj.magic (HxRuntime.hx_null) || scope == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   qualifiedEnumCarrierCppTypeImpl (Obj.obj (HxEnum.unbox_or_obj "HxExpr" expr)) scope api2
-) in Obj.magic __fallback_result_303 with
-  | HxRuntime.Hx_return __ret_302 -> Obj.obj __ret_302
+) in Obj.magic __fallback_result_304 with
+  | HxRuntime.Hx_return __ret_303 -> Obj.obj __ret_303
 
 let erasedDynamicArgUsageNames = fun args body candidates api2 -> erasedDynamicArgUsageNamesImpl (Obj.magic (create api2)) (Obj.magic args) (Obj.magic body) (Obj.magic candidates)

@@ -13,14 +13,15 @@ MEGA_FILE_GRAVITY_WATCH:PASS
 
 ## Current Hotspots
 
-Measured on July 14, 2026, with the HxParser baseline refreshed on July 15.
-The guard allows small drift but asks for this table to be refreshed when a
-watched file moves by more than 250 lines.
+Measured on July 14, 2026, with the HxParser baseline refreshed on July 15 and
+the CppTargetCore baseline refreshed on July 18. The guard allows small drift
+but asks for this table to be refreshed when a watched file moves by more than
+250 lines.
 
 | File | Lines | Risk |
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 26,731 | Cpp rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support can accumulate in one emitter. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,753 | Fixed prelude assembly now lives in `CppProgramPrelude`; rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support still make this a red hotspot. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 5,285 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
@@ -81,6 +82,18 @@ Pause for an extraction note or follow-up bead when a change would:
 
 Source/native target-family extraction should be filed before adding more broad
 target-specific runtime/API support to `SourceTargetCommon.hx`.
+
+2026-07-18 checkpoint: `haxe_ocaml-850ii.8.1` moved the fixed 1,168-line C++
+support prelude out of `CppTargetCore` into the documented target-owned
+`CppProgramPrelude`. In plain language, the main emitter still decides when the
+prelude is emitted and retains all class discovery and semantic work; the new
+module only assembles the already-classified support lines in their established
+order. This is a mechanical responsibility extraction, not new runtime
+behavior. The moved source line sequence remained byte-identical, the full
+focused C++ suite and verified bootstrap regeneration passed, and full-profile
+telemetry reduced `CppTargetCore` generation from `106,535ms` to `78,886ms`;
+the extracted module cost `58ms`. The broader render/type-flow extraction
+remains open.
 
 2026-07-13 checkpoint: `haxe_ocaml-qa5jq` added an exact render/type shortcut
 for `typedXml.elementsNamed(...).next()`. In plain language, it stops the Cpp
