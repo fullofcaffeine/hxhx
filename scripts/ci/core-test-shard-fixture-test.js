@@ -135,29 +135,76 @@ function main() {
     'aggregate did not reject a missing required job'
   )
 
+  const intentionalSkipNeeds = structuredClone(successNeeds)
+  intentionalSkipNeeds['test-shards'].result = 'skipped'
+  assert(
+    evaluateAggregateResults(plan.manifest.aggregateJobs, intentionalSkipNeeds, {
+      allowSkipped: ['test-shards']
+    }).length === 0,
+    'aggregate rejected an explicitly authorized skipped job'
+  )
+
+  const alwaysNeeds = {
+    route: { result: 'success' },
+    'secret-scan': { result: 'success' }
+  }
   const aggregatePass = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
-    CORE_TEST_NEEDS_JSON: JSON.stringify(successNeeds)
+    CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...successNeeds }),
+    CORE_TEST_QA_TIER: 'Q2'
   })
   assert(aggregatePass.status === 0, `aggregate CLI failed its pass case\n${aggregatePass.stderr}`)
   assert(aggregatePass.stdout.includes('CORE_TESTS_AGGREGATE:PASS'), 'aggregate pass marker is missing')
   const aggregateFailure = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
-    CORE_TEST_NEEDS_JSON: JSON.stringify(missingNeeds)
+    CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...missingNeeds }),
+    CORE_TEST_QA_TIER: 'Q2'
   })
   assert(aggregateFailure.status !== 0, 'aggregate CLI accepted a missing shard result')
 
+  const q0Needs = Object.fromEntries(plan.manifest.aggregateJobs.map(job => [job, { result: 'skipped' }]))
+  const aggregateQ0 = runScript('scripts/ci/core-test-aggregate.js', [], {
+    ...process.env,
+    CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...q0Needs }),
+    CORE_TEST_QA_TIER: 'Q0'
+  })
+  assert(aggregateQ0.status === 0, `aggregate CLI rejected policy-authorized Q0 skips\n${aggregateQ0.stderr}`)
+  assert(aggregateQ0.stdout.includes('tier=Q0'), 'aggregate Q0 receipt omits the tier')
+
+  const q1Needs = structuredClone(q0Needs)
+  q1Needs.guards.result = 'success'
+  const aggregateQ1 = runScript('scripts/ci/core-test-aggregate.js', [], {
+    ...process.env,
+    CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...q1Needs }),
+    CORE_TEST_QA_TIER: 'Q1'
+  })
+  assert(aggregateQ1.status === 0, `aggregate CLI rejected policy-authorized Q1 skips\n${aggregateQ1.stderr}`)
+
+  const failedRouteNeeds = { ...alwaysNeeds, ...q0Needs, route: { result: 'failure' } }
+  const failedRoute = runScript('scripts/ci/core-test-aggregate.js', [], {
+    ...process.env,
+    CORE_TEST_NEEDS_JSON: JSON.stringify(failedRouteNeeds),
+    CORE_TEST_QA_TIER: 'Q0'
+  })
+  assert(failedRoute.status !== 0, 'aggregate CLI accepted a failed route job')
+
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8')
+  requireIncludes(workflow, '  route:\n    name: QA risk route', 'Core workflow')
   requireIncludes(workflow, '  test-shards:', 'Core workflow')
-  requireIncludes(workflow, '    needs: [guards]', 'Core test shards')
+  requireIncludes(workflow, '    needs: [route, guards]', 'Core test shards')
   requireIncludes(workflow, '      fail-fast: false', 'Core test shard matrix')
   requireIncludes(workflow, 'npm run test:ci:shard -- --shard "${{ matrix.shard }}"', 'Core test shard runner')
   for (const shard of plan.shards) {
     requireIncludes(workflow, `shard: ${shard.id}`, 'Core test shard matrix')
   }
   requireIncludes(workflow, '  test:\n    name: Tests\n    if: ${{ always() }}', 'stable Tests aggregate')
-  requireIncludes(workflow, `    needs: [${expectedAggregateJobs.join(', ')}]`, 'Tests aggregate prerequisites')
+  requireIncludes(
+    workflow,
+    `    needs: [route, secret-scan, ${expectedAggregateJobs.join(', ')}]`,
+    'Tests aggregate prerequisites'
+  )
   requireIncludes(workflow, 'CORE_TEST_NEEDS_JSON: ${{ toJSON(needs) }}', 'Tests aggregate inputs')
+  requireIncludes(workflow, 'CORE_TEST_QA_TIER: ${{ needs.route.outputs.tier }}', 'Tests aggregate tier input')
   requireIncludes(workflow, 'node scripts/ci/core-test-aggregate.js', 'Tests aggregate command')
 
   const ciList = childProcess.spawnSync('npm', ['run', 'test:ci:shard', '--', '--shard', 'hxhx-targets', '--list'], {

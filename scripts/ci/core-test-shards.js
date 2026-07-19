@@ -93,10 +93,12 @@ function loadPlan(repoRoot = process.cwd()) {
   return { aggregateCommands, manifest, manifestPath, shards }
 }
 
-function evaluateAggregateResults(requiredJobs, needs) {
+function evaluateAggregateResults(requiredJobs, needs, options = {}) {
+  const allowSkipped = new Set(options.allowSkipped || [])
   const failures = []
   for (const job of requiredJobs) {
     const result = needs && needs[job] && needs[job].result
+    if (result === 'skipped' && allowSkipped.has(job)) continue
     if (result !== 'success') failures.push({ job, result: result || 'missing' })
   }
   return failures
