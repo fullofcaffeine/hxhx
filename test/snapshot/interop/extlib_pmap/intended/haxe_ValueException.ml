@@ -19,9 +19,9 @@ let __ctor = fun (self : t) value2 previous native -> ignore (ignore (let tempSt
     (Obj.magic self : t).value <- __assign_3;
     __assign_3
   ));
-  let __obj_4 = self in let __old_5 = (Obj.magic __obj_4 : Haxe_Exception.t).__skipStack in let __new_6 = HxInt.add __old_5 1 in (
-    ignore ((Obj.magic __obj_4 : Haxe_Exception.t).__skipStack <- __new_6);
-    __old_5
+  let __place_receiver_4 = self in let __place_old_5 = (__place_receiver_4 : t).__skipStack in let __place_new_6 = HxInt.add __place_old_5 1 in (
+    (__place_receiver_4 : t).__skipStack <- __place_new_6;
+    __place_old_5
   )
 )))
 
@@ -41,9 +41,9 @@ let create = fun value2 previous native -> let self = ({ __hx_type = HxType.clas
       (Obj.magic self : t).value <- __assign_3;
       __assign_3
     ));
-    let __obj_4 = self in let __old_5 = (Obj.magic __obj_4 : Haxe_Exception.t).__skipStack in let __new_6 = HxInt.add __old_5 1 in (
-      ignore ((Obj.magic __obj_4 : Haxe_Exception.t).__skipStack <- __new_6);
-      __old_5
+    let __place_receiver_4 = self in let __place_old_5 = (__place_receiver_4 : t).__skipStack in let __place_new_6 = HxInt.add __place_old_5 1 in (
+      (__place_receiver_4 : t).__skipStack <- __place_new_6;
+      __place_old_5
     )
   )));
   self

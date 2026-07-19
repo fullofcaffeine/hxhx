@@ -8,13 +8,13 @@ type t = { __hx_type : Obj.t; mutable x : int; mutable y : int }
 
 let create = fun x2 y2 -> let self = ({ __hx_type = HxType.class_ "Point"; x = 0; y = 0 } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = x2 in (
-      (Obj.magic self : t).x <- __assign_1;
-      __assign_1
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = x2 in (
+      (__place_receiver_1 : t).x <- __place_rhs_2;
+      __place_rhs_2
     ));
-    let __assign_2 = y2 in (
-      (Obj.magic self : t).y <- __assign_2;
-      __assign_2
+    let __place_receiver_3 = self in let __place_rhs_4 = y2 in (
+      (__place_receiver_3 : t).y <- __place_rhs_4;
+      __place_rhs_4
     )
   )));
   self
@@ -22,19 +22,19 @@ let create = fun x2 y2 -> let self = ({ __hx_type = HxType.class_ "Point"; x = 0
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Point"; x = 0; y = 0 } : t)
 
-let incX = fun self () -> ignore (ignore (let __assign_3 = HxInt.add ((Obj.magic self : t).x) 1 in (
-  (Obj.magic self : t).x <- __assign_3;
-  __assign_3
+let incX = fun self () -> ignore (ignore (let __place_receiver_5 = self in let __place_rhs_6 = HxInt.add ((Obj.magic self : t).x) 1 in (
+  (__place_receiver_5 : t).x <- __place_rhs_6;
+  __place_rhs_6
 )))
 
 let add = fun self (dx : int) (dy : int) -> ignore (ignore ((
-  ignore (let __assign_4 = HxInt.add ((Obj.magic self : t).x) dx in (
-    (Obj.magic self : t).x <- __assign_4;
-    __assign_4
+  ignore (let __place_receiver_7 = self in let __place_rhs_8 = HxInt.add ((Obj.magic self : t).x) dx in (
+    (__place_receiver_7 : t).x <- __place_rhs_8;
+    __place_rhs_8
   ));
-  let __assign_5 = HxInt.add ((Obj.magic self : t).y) dy in (
-    (Obj.magic self : t).y <- __assign_5;
-    __assign_5
+  let __place_receiver_9 = self in let __place_rhs_10 = HxInt.add ((Obj.magic self : t).y) dy in (
+    (__place_receiver_9 : t).y <- __place_rhs_10;
+    __place_rhs_10
   )
 )))
 
