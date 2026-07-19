@@ -23,8 +23,25 @@ class Main {
 		final result = receiver()[index()] += rhsMutatingArray();
 		Sys.println("result=" + result + " final=" + values[1] + " events=" + events.join(","));
 
+		events.resize(0);
+		final postfixResult = receiver()[index()]++;
+		Sys.println("postfix=" + postfixResult + " final=" + values[1] + " events=" + events.join(","));
+
+		events.resize(0);
+		final prefixResult = ++receiver()[index()];
+		Sys.println("prefix=" + prefixResult + " final=" + values[1] + " events=" + events.join(","));
+
+		events.resize(0);
+		final postfixDecrementResult = receiver()[index()]--;
+		Sys.println("postfix_decrement=" + postfixDecrementResult + " final=" + values[1] + " events=" + events.join(","));
+
+		events.resize(0);
+		final prefixDecrementResult = --receiver()[index()];
+		Sys.println("prefix_decrement=" + prefixDecrementResult + " final=" + values[1] + " events=" + events.join(","));
+
 		final floats:Array<Float> = [1.5];
-		final floatResult = floats[0] += 0.5;
-		Sys.println("float=" + floatResult + " final=" + floats[0]);
+		final floatCompoundResult = floats[0] += 0.5;
+		final floatPostfixResult = floats[0]++;
+		Sys.println("float=" + floatCompoundResult + "/" + floatPostfixResult + " final=" + floats[0]);
 	}
 }

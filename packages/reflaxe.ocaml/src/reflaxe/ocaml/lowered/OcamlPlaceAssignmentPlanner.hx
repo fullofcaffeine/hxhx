@@ -10,6 +10,7 @@ import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlAssignmentResultKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayElementPlace;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArraySimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredConversionKind;
@@ -27,7 +28,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrence;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrenceRole;
 
-/** Builds the typed semantic plan for the first admitted assignment family. */
+/** Builds typed semantic plans for the place-operation families admitted so far. */
 class OcamlPlaceAssignmentPlanner {
 	final context:CompilationContext;
 
@@ -298,6 +299,66 @@ class OcamlPlaceAssignmentPlanner {
 				occurrence(originId, 4, OcamlPlaceOccurrenceRole.Operator, newValueId, "new_value", [OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
 				occurrence(originId, 5, OcamlPlaceOccurrenceRole.Store, placeId, null, [OcamlLoweredEffect.Write, OcamlLoweredEffect.Throw]),
 				occurrence(originId, 6, OcamlPlaceOccurrenceRole.Result, newValueId, "new_value", [])
+			],
+			effects: [
+				OcamlLoweredEffect.Read,
+				OcamlLoweredEffect.Call,
+				OcamlLoweredEffect.Throw,
+				OcamlLoweredEffect.Write
+			],
+			runtimeRequirementIds: [
+				"haxe-array-element-get",
+				originId + ":runtime:haxe-int32-add",
+				"haxe-array-element-set"
+			]
+		};
+	}
+
+	/** Plans exact primitive-Int array update without leaving fixity to emission. */
+	public function planArrayIntUpdate(metadata:MetadataEntry, expression:TypedExpr, operation:Unop, postFix:Bool,
+			operand:TypedExpr):Null<OcamlLoweredArrayIntUpdate> {
+		if (!OcamlPlaceInputPolicy.admitsIntUpdateArrayElement(operation, operand))
+			return null;
+		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
+		if (originId == null)
+			return null;
+		final target = planArrayElement(originId, operand);
+		if (target == null)
+			return null;
+		if (operation != OpIncrement && operation != OpDecrement)
+			return null;
+		final placeId = target.place.id;
+		final oldValueId = originId + ":old-value";
+		final newValueId = originId + ":new-value";
+		final fixity = postFix ? OcamlLoweredUpdateFixity.Postfix : OcamlLoweredUpdateFixity.Prefix;
+		final result = postFix ? OcamlAssignmentResultKind.OldValue : OcamlAssignmentResultKind.ComputedValue;
+		final isIncrement = operation == OpIncrement;
+		final sourceOperator = isIncrement ? OcamlLoweredUpdateOperator.Increment : OcamlLoweredUpdateOperator.Decrement;
+		final delta = isIncrement ? 1 : -1;
+		return {
+			id: originId + ":array-int-" + sourceOperator,
+			originId: originId,
+			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			semanticTypeId: "Int",
+			carrierTypeId: "int",
+			place: target.place,
+			receiver: target.receiver,
+			index: target.index,
+			sourceOperator: sourceOperator,
+			fixity: fixity,
+			operation: OcamlLoweredIntOperator.Add,
+			delta: delta,
+			conversion: OcamlLoweredConversionKind.Identity,
+			result: result,
+			schedule: [
+				occurrence(originId, 0, OcamlPlaceOccurrenceRole.Receiver, originId + ":receiver", "receiver",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 1, OcamlPlaceOccurrenceRole.Index, originId + ":index", "index",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 2, OcamlPlaceOccurrenceRole.Load, placeId, "old_value", [OcamlLoweredEffect.Read, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 3, OcamlPlaceOccurrenceRole.Operator, newValueId, "new_value", [OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 4, OcamlPlaceOccurrenceRole.Store, placeId, null, [OcamlLoweredEffect.Write, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 5, OcamlPlaceOccurrenceRole.Result, postFix ? oldValueId : newValueId, postFix ? "old_value" : "new_value", [])
 			],
 			effects: [
 				OcamlLoweredEffect.Read,

@@ -20,7 +20,7 @@ enum OcamlPlaceAssignmentLoweringResult {
 
 /**
 	Owns planning, validation, inspection, and syntax construction for admitted
-	place assignments.
+	place operations.
 
 	The legacy expression builder supplies recursive child construction and
 	temporary-name allocation, but it does not inspect or reconstruct any of the
@@ -141,8 +141,13 @@ class OcamlPlaceAssignmentLowerer {
 					arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArrayCompound(arrayPlan);
 				}
 			case TUnop(operation = (OpIncrement | OpDecrement), postFix, operand):
-				final plan = planner.planIntUpdate(metadata, expression, operation, postFix, operand);
-				plan == null ? null : OcamlLoweredPlaceOperation.Update(plan);
+				final instancePlan = planner.planIntUpdate(metadata, expression, operation, postFix, operand);
+				if (instancePlan != null) {
+					OcamlLoweredPlaceOperation.Update(instancePlan);
+				} else {
+					final arrayPlan = planner.planArrayIntUpdate(metadata, expression, operation, postFix, operand);
+					arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArrayUpdate(arrayPlan);
+				}
 			case _: null;
 		}
 		if (planned == null)
@@ -236,6 +241,33 @@ class OcamlPlaceAssignmentLowerer {
 						});
 					}
 					Lowered(OcamlPlaceAssignmentEmitter.emitArrayCompoundIntAdd(plan, buildExpr, freshTemporary));
+				}
+			case ArrayUpdate(plan):
+				final errors = OcamlPlaceAssignmentValidator.validateArrayIntUpdate(plan);
+				if (errors.length > 0) invalid(errors, plan.originId); else {
+					context.markRuntimeModule("HxArray");
+					context.markRuntimeModule("HxInt");
+					if (shouldRecord(plan.source)) {
+						context.recordLoweredPlaceReport({
+							id: plan.id,
+							originId: plan.originId,
+							source: plan.source,
+							nodeKind: "array-int-update",
+							semanticTypeId: plan.semanticTypeId,
+							carrierTypeId: plan.carrierTypeId,
+							place: arrayPlaceReport(plan.place),
+							operation: plan.operation,
+							sourceOperator: plan.sourceOperator,
+							fixity: plan.fixity,
+							delta: plan.delta,
+							conversion: plan.conversion,
+							result: plan.result,
+							schedule: plan.schedule,
+							effects: plan.effects,
+							runtimeRequirementIds: plan.runtimeRequirementIds
+						});
+					}
+					Lowered(OcamlPlaceAssignmentEmitter.emitArrayIntUpdate(plan, buildExpr, freshTemporary));
 				}
 			case Compound(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateCompoundIntAdd(plan);

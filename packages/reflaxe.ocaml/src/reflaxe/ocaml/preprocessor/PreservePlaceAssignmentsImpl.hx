@@ -42,7 +42,8 @@ class PreservePlaceAssignmentsImpl extends BasePreprocessor {
 					currentTypeName) || OcamlPlaceInputPolicy.admitsSimpleArrayElement(left, right);
 			case TBinop(OpAssignOp(operation), left, right): OcamlPlaceInputPolicy.admitsCompoundIntAddInstanceField(operation, left,
 					right) || OcamlPlaceInputPolicy.admitsCompoundIntAddArrayElement(operation, left, right);
-			case TUnop(operation, _, operand): OcamlPlaceInputPolicy.admitsIntUpdateInstanceField(operation, operand);
+			case TUnop(operation, _, operand): OcamlPlaceInputPolicy.admitsIntUpdateInstanceField(operation,
+					operand) || OcamlPlaceInputPolicy.admitsIntUpdateArrayElement(operation, operand);
 			case _: false;
 		}
 

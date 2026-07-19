@@ -132,6 +132,11 @@ class OcamlPlaceInputPolicy {
 		return operation == OpAdd && admitsExactIntArrayElementPlace(left) && isExactInt(right.t);
 	}
 
+	/** Admits both fixities of ordinary `Int` array-element increment/decrement. */
+	public static function admitsIntUpdateArrayElement(operation:Unop, operand:TypedExpr):Bool {
+		return (operation == OpIncrement || operation == OpDecrement) && admitsExactIntArrayElementPlace(operand);
+	}
+
 	/** Admits ordinary `Int` fields with an exact `Int` RHS for `+=`. */
 	public static function admitsCompoundIntAddInstanceField(operation:Binop, left:TypedExpr, right:TypedExpr):Bool {
 		return operation == OpAdd && admitsExactIntInstanceFieldPlace(left) && isExactInt(right.t);

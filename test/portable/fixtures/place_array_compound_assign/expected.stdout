@@ -1,2 +1,6 @@
 result=23 final=23 events=array,index,rhs_mutates_array
-float=2. final=2.
+postfix=23 final=24 events=array,index
+prefix=25 final=25 events=array,index
+postfix_decrement=25 final=24 events=array,index
+prefix_decrement=23 final=23 events=array,index
+float=2./2. final=3.

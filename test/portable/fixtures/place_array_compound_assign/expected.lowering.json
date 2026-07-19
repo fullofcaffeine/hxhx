@@ -1,9 +1,130 @@
 {
   "model": "typed-ocaml-lowered-place",
   "schemaVersion": 4,
-  "admittedInputRevision": "sha256:91cb27ae9f0c83cfe6097dd47771a70910a6ba60e71009c88a125ffb880f47aa",
-  "planCount": 2,
+  "admittedInputRevision": "sha256:173c63daa7d41c925fd4fe10b115a23f31da49d8585bda27e39e0cfd275930fd",
+  "planCount": 6,
   "plans": [
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "haxe-array-element-get",
+        "place:26936672489892da53906b17:runtime:haxe-int32-add",
+        "haxe-array-element-set"
+      ],
+      "fixity": "prefix",
+      "sourceOperator": "increment",
+      "place": {
+        "carrierTypeId": "int",
+        "indexCarrierTypeId": "int",
+        "targetLoadName": "get",
+        "receiverDisplayType": "Array<Int>",
+        "targetStoreName": "set",
+        "ownerTypeName": "Array",
+        "targetSymbolId": "runtime::HxArray::element",
+        "indexDisplayType": "Int",
+        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "ownerModuleId": "Array",
+        "indexRepresentationReason": "exact Haxe Int index uses the direct OCaml int carrier",
+        "id": "place:26936672489892da53906b17:place",
+        "semanticTypeId": "Int",
+        "indexSemanticTypeId": "Int",
+        "kind": "array-element",
+        "representationReason": "exact Array<Int> elements use the direct OCaml int carrier inside HxArray",
+        "indexRepresentationId": "place:26936672489892da53906b17:representation:array-index",
+        "receiverSemanticTypeId": "Array<Int>",
+        "targetModuleName": "HxArray",
+        "receiverRepresentationId": "place:26936672489892da53906b17:representation:array-receiver",
+        "fieldName": "[]",
+        "receiverCarrierTypeId": "int HxArray.t",
+        "representationId": "place:26936672489892da53906b17:representation:array-element"
+      },
+      "delta": 1,
+      "originId": "place:26936672489892da53906b17",
+      "id": "place:26936672489892da53906b17:array-int-increment",
+      "source": {
+        "min": 835,
+        "max": 856,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "array-int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:26936672489892da53906b17:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:26936672489892da53906b17:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "index",
+          "role": "index",
+          "id": "place:26936672489892da53906b17:occurrence:1",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:26936672489892da53906b17:index"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:26936672489892da53906b17:occurrence:2",
+          "effects": [
+            "read",
+            "throw"
+          ],
+          "sourceId": "place:26936672489892da53906b17:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:26936672489892da53906b17:occurrence:3",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:26936672489892da53906b17:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:26936672489892da53906b17:occurrence:4",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:26936672489892da53906b17:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "result",
+          "id": "place:26936672489892da53906b17:occurrence:5",
+          "effects": [],
+          "sourceId": "place:26936672489892da53906b17:new-value"
+        }
+      ],
+      "result": "computed-value"
+    },
     {
       "carrierTypeId": "int",
       "runtimeRequirementIds": [
@@ -108,6 +229,369 @@
         }
       ],
       "result": "assigned-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "haxe-array-element-get",
+        "place:36bc418166682b513996dfdf:runtime:haxe-int32-add",
+        "haxe-array-element-set"
+      ],
+      "fixity": "prefix",
+      "sourceOperator": "decrement",
+      "place": {
+        "carrierTypeId": "int",
+        "indexCarrierTypeId": "int",
+        "targetLoadName": "get",
+        "receiverDisplayType": "Array<Int>",
+        "targetStoreName": "set",
+        "ownerTypeName": "Array",
+        "targetSymbolId": "runtime::HxArray::element",
+        "indexDisplayType": "Int",
+        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "ownerModuleId": "Array",
+        "indexRepresentationReason": "exact Haxe Int index uses the direct OCaml int carrier",
+        "id": "place:36bc418166682b513996dfdf:place",
+        "semanticTypeId": "Int",
+        "indexSemanticTypeId": "Int",
+        "kind": "array-element",
+        "representationReason": "exact Array<Int> elements use the direct OCaml int carrier inside HxArray",
+        "indexRepresentationId": "place:36bc418166682b513996dfdf:representation:array-index",
+        "receiverSemanticTypeId": "Array<Int>",
+        "targetModuleName": "HxArray",
+        "receiverRepresentationId": "place:36bc418166682b513996dfdf:representation:array-receiver",
+        "fieldName": "[]",
+        "receiverCarrierTypeId": "int HxArray.t",
+        "representationId": "place:36bc418166682b513996dfdf:representation:array-element"
+      },
+      "delta": -1,
+      "originId": "place:36bc418166682b513996dfdf",
+      "id": "place:36bc418166682b513996dfdf:array-int-decrement",
+      "source": {
+        "min": 1203,
+        "max": 1224,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "array-int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:36bc418166682b513996dfdf:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:36bc418166682b513996dfdf:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "index",
+          "role": "index",
+          "id": "place:36bc418166682b513996dfdf:occurrence:1",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:36bc418166682b513996dfdf:index"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:36bc418166682b513996dfdf:occurrence:2",
+          "effects": [
+            "read",
+            "throw"
+          ],
+          "sourceId": "place:36bc418166682b513996dfdf:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:36bc418166682b513996dfdf:occurrence:3",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:36bc418166682b513996dfdf:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:36bc418166682b513996dfdf:occurrence:4",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:36bc418166682b513996dfdf:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "result",
+          "id": "place:36bc418166682b513996dfdf:occurrence:5",
+          "effects": [],
+          "sourceId": "place:36bc418166682b513996dfdf:new-value"
+        }
+      ],
+      "result": "computed-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "haxe-array-element-get",
+        "place:3963f22ddd71db98dee27add:runtime:haxe-int32-add",
+        "haxe-array-element-set"
+      ],
+      "fixity": "postfix",
+      "sourceOperator": "increment",
+      "place": {
+        "carrierTypeId": "int",
+        "indexCarrierTypeId": "int",
+        "targetLoadName": "get",
+        "receiverDisplayType": "Array<Int>",
+        "targetStoreName": "set",
+        "ownerTypeName": "Array",
+        "targetSymbolId": "runtime::HxArray::element",
+        "indexDisplayType": "Int",
+        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "ownerModuleId": "Array",
+        "indexRepresentationReason": "exact Haxe Int index uses the direct OCaml int carrier",
+        "id": "place:3963f22ddd71db98dee27add:place",
+        "semanticTypeId": "Int",
+        "indexSemanticTypeId": "Int",
+        "kind": "array-element",
+        "representationReason": "exact Array<Int> elements use the direct OCaml int carrier inside HxArray",
+        "indexRepresentationId": "place:3963f22ddd71db98dee27add:representation:array-index",
+        "receiverSemanticTypeId": "Array<Int>",
+        "targetModuleName": "HxArray",
+        "receiverRepresentationId": "place:3963f22ddd71db98dee27add:representation:array-receiver",
+        "fieldName": "[]",
+        "receiverCarrierTypeId": "int HxArray.t",
+        "representationId": "place:3963f22ddd71db98dee27add:representation:array-element"
+      },
+      "delta": 1,
+      "originId": "place:3963f22ddd71db98dee27add",
+      "id": "place:3963f22ddd71db98dee27add:array-int-increment",
+      "source": {
+        "min": 669,
+        "max": 690,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "array-int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:3963f22ddd71db98dee27add:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:3963f22ddd71db98dee27add:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "index",
+          "role": "index",
+          "id": "place:3963f22ddd71db98dee27add:occurrence:1",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:3963f22ddd71db98dee27add:index"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:3963f22ddd71db98dee27add:occurrence:2",
+          "effects": [
+            "read",
+            "throw"
+          ],
+          "sourceId": "place:3963f22ddd71db98dee27add:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:3963f22ddd71db98dee27add:occurrence:3",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:3963f22ddd71db98dee27add:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:3963f22ddd71db98dee27add:occurrence:4",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:3963f22ddd71db98dee27add:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "result",
+          "id": "place:3963f22ddd71db98dee27add:occurrence:5",
+          "effects": [],
+          "sourceId": "place:3963f22ddd71db98dee27add:old-value"
+        }
+      ],
+      "result": "old-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "haxe-array-element-get",
+        "place:9654346e457c58c35a14177a:runtime:haxe-int32-add",
+        "haxe-array-element-set"
+      ],
+      "fixity": "postfix",
+      "sourceOperator": "decrement",
+      "place": {
+        "carrierTypeId": "int",
+        "indexCarrierTypeId": "int",
+        "targetLoadName": "get",
+        "receiverDisplayType": "Array<Int>",
+        "targetStoreName": "set",
+        "ownerTypeName": "Array",
+        "targetSymbolId": "runtime::HxArray::element",
+        "indexDisplayType": "Int",
+        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "ownerModuleId": "Array",
+        "indexRepresentationReason": "exact Haxe Int index uses the direct OCaml int carrier",
+        "id": "place:9654346e457c58c35a14177a:place",
+        "semanticTypeId": "Int",
+        "indexSemanticTypeId": "Int",
+        "kind": "array-element",
+        "representationReason": "exact Array<Int> elements use the direct OCaml int carrier inside HxArray",
+        "indexRepresentationId": "place:9654346e457c58c35a14177a:representation:array-index",
+        "receiverSemanticTypeId": "Array<Int>",
+        "targetModuleName": "HxArray",
+        "receiverRepresentationId": "place:9654346e457c58c35a14177a:representation:array-receiver",
+        "fieldName": "[]",
+        "receiverCarrierTypeId": "int HxArray.t",
+        "representationId": "place:9654346e457c58c35a14177a:representation:array-element"
+      },
+      "delta": -1,
+      "originId": "place:9654346e457c58c35a14177a",
+      "id": "place:9654346e457c58c35a14177a:array-int-decrement",
+      "source": {
+        "min": 1009,
+        "max": 1030,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "array-int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:9654346e457c58c35a14177a:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:9654346e457c58c35a14177a:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "index",
+          "role": "index",
+          "id": "place:9654346e457c58c35a14177a:occurrence:1",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:9654346e457c58c35a14177a:index"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:9654346e457c58c35a14177a:occurrence:2",
+          "effects": [
+            "read",
+            "throw"
+          ],
+          "sourceId": "place:9654346e457c58c35a14177a:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:9654346e457c58c35a14177a:occurrence:3",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:9654346e457c58c35a14177a:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:9654346e457c58c35a14177a:occurrence:4",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:9654346e457c58c35a14177a:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "result",
+          "id": "place:9654346e457c58c35a14177a:occurrence:5",
+          "effects": [],
+          "sourceId": "place:9654346e457c58c35a14177a:old-value"
+        }
+      ],
+      "result": "old-value"
     },
     {
       "carrierTypeId": "int",

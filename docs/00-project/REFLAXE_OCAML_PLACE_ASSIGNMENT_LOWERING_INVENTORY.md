@@ -32,8 +32,11 @@ index, RHS, store, and shared RHS result in source order. It uses the direct
 `haxe-array-element-set` runtime requirement before syntax construction.
 Exact primitive-`Int` `+=` on that same array place additionally seals the old
 element load before the RHS, Haxe `Int` addition, one store, and the computed
-result. This remains an exact nominal carrier cut; other array-like abstracts
-are not reclassified as `Array<Int>`.
+result. Prefix and postfix `++` and `--` now use the same array place: each
+evaluates the receiver and index once, loads once, performs the signed Haxe
+`Int` addition, stores once, and returns the fixity-selected new or old value.
+This remains an exact nominal carrier cut; `Array<Float>` and other array-like
+abstracts are not reclassified as `Array<Int>`.
 
 Other assignment and update behavior is still selected while `OcamlBuilder` is
 constructing OCaml syntax, with related storage and carrier choices split
@@ -46,13 +49,14 @@ typed tree, nor a shared cross-target representation IR.
 
 | Decision | Current owner | Evidence and risk |
 | --- | --- | --- |
-| Assignment used as a value | Target preservation for admitted forms; Reflaxe `EverythingIsExprSanitizer.standardizeAssignValue` for the remainder | The generic pass inserts an assignment as a separate statement and returns a copied left-hand side. Target metadata now protects the admitted simple and `+=` forms; other forms still carry the original risk until migrated. |
+| Assignment used as a value | Target preservation for admitted forms; Reflaxe `EverythingIsExprSanitizer.standardizeAssignValue` for the remainder | The generic pass inserts an assignment as a separate statement and returns a copied left-hand side. Target metadata now protects the admitted assignment and update forms; other forms still carry the original risk until migrated. |
 | Exact `Int` instance-field simple assignment | `OcamlPlaceAssignmentPlanner`, validator, and emitter before `OcamlExpr` construction | One admitted family has a stable origin, representation facts, occurrence schedule, result contract, and fail-closed invariant. Its old instance-field branch is guarded against use. |
 | Exact primitive-`Int` instance-field `+=` | The same typed place model before `OcamlExpr` construction | The plan records receiver, old-value load, RHS, `int-add`, store, computed result, and the semantic `haxe-int32-add` runtime requirement. The legacy branch is guarded against use. |
 | Exact primitive-`Int` instance-field `++` / `--` | The same typed place model before `OcamlExpr` construction | Source token, signed delta, and prefix/postfix fixity are separate facts. Every schedule records one receiver, load, Haxe `int-add`, store, and the fixity-selected old or computed result. |
 | Exact `Int` static simple assignment | The same typed place model before `OcamlExpr` construction | Current-type and cross-module mutable ref cells record stable symbol, representation, local/qualified access, RHS, store, and assigned result without inventing a receiver occurrence. |
 | Exact nominal `Array<Int>` simple assignment | The same typed place model before `OcamlExpr` construction | The plan records canonical array/element/index identities, diagnostic display types, the direct typed HxArray carrier, receiver/index/RHS order, one store, the assigned result, and its runtime capability. Typedef- or abstract-backed array syntax is deliberately not inferred to have the same carrier. |
 | Exact primitive-`Int` `Array<Int>` `+=` | The same typed place model before `OcamlExpr` construction | Receiver and index setup feed one old-element load, the RHS, Haxe `Int` addition, one store, and the shared computed result. `HxArray` get/set and `HxInt` addition requirements are recorded before syntax. |
+| Exact primitive-`Int` `Array<Int>` `++` / `--` | The same typed place model before `OcamlExpr` construction | Source token, signed delta, and fixity are sealed with receiver/index setup, one load, Haxe `Int` addition, one store, and the old/new result. The legacy array-update branch is guarded against use. |
 | Other simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, same-module cross-type static, anonymous/dynamic, bytes, non-Int or non-nominal array, and deliberately unadmitted instance-field cases still construct target syntax directly. Several unhandled states return OCaml `unit`. |
 | Other compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Other operators and place kinds still repeat operator selection, receiver sharing, load, arithmetic, store, and result. Ref, field, and static stores can still return OCaml `unit` in expression position. |
 | Other prefix/postfix update | `OcamlBuilder.buildUnop`, approximately lines 5377-5707 | Other place kinds, Float, nullable, Dynamic, and abstract handling still combine numeric classification, representation, place mutation, and old/new result selection. Unsupported states can return `unit`. |
@@ -63,10 +67,10 @@ typed tree, nor a shared cross-target representation IR.
 | Unsupported behavior | `guardrailError` plus `CUnit` branches | Errors are suppressed while compiling the current Haxe standard library. Bootstrap continuity must not become the release failure policy for an admitted place form. |
 
 At the baseline inventory, `OcamlBuilder.hx` was 7,688 physical lines and
-`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,642 and 3,561
+`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,646 and 3,561
 lines respectively. Place planning, validation, reporting, and emission live in
 focused `lowered/` modules. Existing source-position caching also moved out of
-the builder, so the semantic cutovers reduced the mega-file by 46 lines overall
+the builder, so the semantic cutovers reduced the mega-file by 42 lines overall
 instead of adding another responsibility to it.
 
 ## Place coverage already attempted by the emitter
@@ -77,7 +81,7 @@ instead of adding another responsibility to it.
 | Static field | Mutable ref cell | Mutable ref cell | Mutable ref cell | Invalid/immutable cases can diagnose and still produce `unit`. |
 | Instance field | Mutable record field | Mutable record field | Mutable record field | Receiver and result behavior are constructed independently in each branch. |
 | Property | Usually host-resolved accessor call | Usually host-resolved getter/operator/setter calls | Usually host-resolved getter/setter calls | Setter return value is semantically significant and must remain explicit. |
-| Array element | Typed place path for exact nominal `Array<Int>`; `HxArray.set` otherwise | Typed place path for exact primitive-`Int` `+=`; builder-local `get`, operation, `set` otherwise | `get`, operation, `set` | Other compound operators, update, and non-direct carriers still rely on builder-local scheduling. |
+| Array element | Typed place path for exact nominal `Array<Int>`; `HxArray.set` otherwise | Typed place path for exact primitive-`Int` `+=`; builder-local `get`, operation, `set` otherwise | Typed place path for exact primitive-`Int` `++` / `--`; builder-local otherwise | Other compound operators and non-direct carriers still rely on builder-local scheduling. |
 | Bytes element | `HxBytes.set` | `get`, operation, `set` | `get`, operation, `set` | Setter result differs from ordinary array helper conventions. |
 | Anonymous field | `HxAnon.set` | No complete dedicated path | No ordinary typed path | Some named shapes intentionally return `unit`. |
 | Dynamic field | `HxAnon.set` through `Obj.repr` | No complete dedicated path | Dynamic numeric path | Dynamic tagging, place semantics, and unsafe carrier operations are coupled. |
@@ -199,11 +203,15 @@ The current hard cuts admit only:
 - exact primitive-`Int` `+=` through direct nominal `Array<Int>`, with receiver,
   index, old-element load, RHS, `int-add`, store, and reused computed result in
   Oracle-proven order;
+- exact primitive-`Int` prefix and postfix increment/decrement through direct
+  nominal `Array<Int>`, with receiver, index, old-element load, signed
+  `int-add`, store, and fixity-selected old or computed result;
 - no compatibility-runtime requirement for field/static simple assignment,
   one `haxe-int32-add` requirement mapped to `HxInt` for `+=` and updates, and
   one `haxe-array-element-set` requirement mapped to `HxArray` for the admitted
-  simple array store. Array `+=` records get, Haxe `Int` addition, and set as
-  separate semantic requirements and selects both `HxArray` and `HxInt`.
+  simple array store. Array `+=` and array updates record get, Haxe `Int`
+  addition, and set as separate semantic requirements and select both `HxArray`
+  and `HxInt`.
 
 It deliberately does not follow Haxe abstracts to their underlying `Int`, and
 it does not admit nullable or `Dynamic` right-hand sides. Those require explicit
@@ -216,7 +224,8 @@ facts rather than asking emission to rediscover storage.
 Schema version 4 adds the array-element place, an explicit index occurrence,
 canonical receiver/index identities alongside diagnostic display spellings,
 selected `HxArray` get/set symbols, and semantic runtime requirements. The
-array compound plan uses that existing closed shape and adds no schema version.
+array compound and update plans use that existing closed shape and update
+fields, so they add no schema version.
 Lowered identities use function identity plus structural ordinal; source paths
 and byte offsets remain diagnostic provenance and do not determine semantic
 identity.
@@ -280,10 +289,13 @@ policy admits only a nominal Array carrier and adds no `Obj.magic`.
 setup followed by an old-element load before an RHS that temporarily stores
 `100`. The sealed operation still computes, stores, and returns `23`, and the
 report records the `HxArray` get/set plus `HxInt` addition requirements. The RHS
-simple store is itself an admitted nested plan, so the two-plan report also
-proves structural recursive lowering and repeat-build determinism. A native
-`Array<Float>` `+=` control executes through the existing path without adding a
-third plan, keeping the admission boundary exact.
+simple store is itself an admitted nested plan, so the combined report also
+proves structural recursive lowering. The same fixture now proves postfix
+`23/24`, prefix `25/25`, postfix decrement `25/24`, and prefix decrement
+`23/23`, with one receiver and index event for each operation. Its six-plan
+report is byte-identical across repeat builds. Native `Array<Float>` `+=` and
+postfix `++` controls execute through the existing path without adding plans,
+keeping the admission boundary exact.
 
 Upstream Haxe's typed dump shows that complex compound lvalues arrive with
 compiler-generated `base` and `index` setup locals. The place plan consumes
@@ -297,7 +309,8 @@ registry, not to a second representation rule in the place emitter.
 
 The following are deliberately deferred:
 
-- other place/update forms;
+- other place/update forms, including arrays whose semantic element or carrier
+  is not exact direct `Int`;
 - same-module cross-type mutable statics and static compound/update lowering
   until `haxe_ocaml-stthl` plans ref-cell declarations before type emission;
 - full capture and local-storage unification (`haxe_ocaml-9bome`);

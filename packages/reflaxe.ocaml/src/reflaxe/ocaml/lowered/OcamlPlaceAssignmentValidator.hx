@@ -6,6 +6,7 @@ import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlAssignmentResultKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayElementPlace;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArraySimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredConversionKind;
@@ -63,6 +64,9 @@ class OcamlPlaceAssignmentValidator {
 					found = true;
 					return;
 				case TUnop(operation, _, operand) if (OcamlPlaceInputPolicy.admitsIntUpdateInstanceField(operation, operand)):
+					found = true;
+					return;
+				case TUnop(operation, _, operand) if (OcamlPlaceInputPolicy.admitsIntUpdateArrayElement(operation, operand)):
 					found = true;
 					return;
 				case _:
@@ -310,6 +314,69 @@ class OcamlPlaceAssignmentValidator {
 			|| containsUnsealedAdmittedPlace(plan.index)
 			|| containsUnsealedAdmittedPlace(plan.rightHandSide))
 			errors.push("an admitted nested assignment is hidden inside an unsealed array-compound child");
+		return errors;
+	}
+
+	/** Validates exact array update order, fixity, and semantic runtime intent. */
+	public static function validateArrayIntUpdate(plan:OcamlLoweredArrayIntUpdate):Array<String> {
+		final errors = validateArrayIdentityAndPlace(plan);
+		final expectedDelta = if (plan.sourceOperator == OcamlLoweredUpdateOperator.Increment) {
+			1;
+		} else if (plan.sourceOperator == OcamlLoweredUpdateOperator.Decrement) {
+			-1;
+		} else {
+			errors.push("ordinary primitive-Int array updates require an increment or decrement source token");
+			0;
+		}
+		if (plan.operation != OcamlLoweredIntOperator.Add || plan.delta != expectedDelta)
+			errors.push("ordinary primitive-Int array updates require Haxe Int addition with the token-selected delta");
+		final expectedResult = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? OcamlAssignmentResultKind.OldValue : OcamlAssignmentResultKind.ComputedValue;
+		if (plan.result != expectedResult)
+			errors.push("postfix array update must return the old value and prefix array update the computed value");
+
+		final expected = [
+			OcamlPlaceOccurrenceRole.Receiver,
+			OcamlPlaceOccurrenceRole.Index,
+			OcamlPlaceOccurrenceRole.Load,
+			OcamlPlaceOccurrenceRole.Operator,
+			OcamlPlaceOccurrenceRole.Store,
+			OcamlPlaceOccurrenceRole.Result
+		];
+		if (plan.schedule.length != expected.length) {
+			errors.push("array update requires receiver, index, load, operator, store, and result occurrences");
+		} else {
+			final resultSharing = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? "old_value" : "new_value";
+			final expectedSharing = ["receiver", "index", "old_value", "new_value", null, resultSharing];
+			for (index in 0...expected.length) {
+				final occurrence = plan.schedule[index];
+				if (occurrence.role != expected[index])
+					errors.push("occurrence " + index + " has the wrong array-update evaluation role");
+				if (occurrence.occurrenceCount != 1)
+					errors.push("occurrence " + index + " must execute exactly once in the admitted array-update family");
+				if (occurrence.sharedAs != expectedSharing[index])
+					errors.push("occurrence " + index + " has the wrong array-update sharing identity");
+			}
+			if (plan.schedule[2].sourceId != plan.schedule[4].sourceId)
+				errors.push("array update load and store must refer to the same original element place");
+			final expectedResultSource = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? plan.originId + ":old-value" : plan.schedule[3].sourceId;
+			if (plan.schedule[5].sourceId != expectedResultSource)
+				errors.push("array update result must reuse the fixity-selected old or computed value");
+		}
+		final expectedRuntimeIds = [
+			"haxe-array-element-get",
+			plan.originId + ":runtime:haxe-int32-add",
+			"haxe-array-element-set"
+		];
+		if (plan.runtimeRequirementIds.length != expectedRuntimeIds.length) {
+			errors.push("array Int update requires get, Haxe Int addition, and set runtime capabilities");
+		} else {
+			for (index in 0...expectedRuntimeIds.length) {
+				if (plan.runtimeRequirementIds[index] != expectedRuntimeIds[index])
+					errors.push("array update runtime requirement " + index + " is not the sealed semantic capability");
+			}
+		}
+		if (containsUnsealedAdmittedPlace(plan.receiver) || containsUnsealedAdmittedPlace(plan.index))
+			errors.push("an admitted nested assignment or update is hidden inside an unsealed array-update child");
 		return errors;
 	}
 

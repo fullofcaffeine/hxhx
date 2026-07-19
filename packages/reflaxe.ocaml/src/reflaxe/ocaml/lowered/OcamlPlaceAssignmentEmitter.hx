@@ -6,17 +6,26 @@ import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlAssignmentResultKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayCompoundAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArraySimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignment;
-import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 
 /** Mechanically converts a validated place plan into OCaml target syntax. */
 class OcamlPlaceAssignmentEmitter {
+	static function updateResultName(result:OcamlAssignmentResultKind, oldValueName:String, newValueName:String):String {
+		return switch (result) {
+			case OldValue: oldValueName;
+			case ComputedValue: newValueName;
+			case AssignedValue: throw "validated update cannot use the assigned-value result contract";
+		}
+	}
+
 	public static function emitSimple(plan:OcamlLoweredSimpleAssignment, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
 		final receiverName = freshTemporary("place_receiver");
 		final rightHandSideName = freshTemporary("place_rhs");
@@ -79,6 +88,27 @@ class OcamlPlaceAssignmentEmitter {
 					]), false), false), false), false), false);
 	}
 
+	/** Emits a validated array update from its explicit old/new result contract. */
+	public static function emitArrayIntUpdate(plan:OcamlLoweredArrayIntUpdate, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
+		final receiverName = freshTemporary("place_array");
+		final indexName = freshTemporary("place_index");
+		final oldValueName = freshTemporary("place_old");
+		final newValueName = freshTemporary("place_new");
+		final typedReceiver = OcamlExpr.EAnnot(OcamlExpr.EIdent(receiverName), OcamlTypeExpr.TIdent(plan.place.receiverCarrierTypeId));
+		final typedIndex = OcamlExpr.EAnnot(OcamlExpr.EIdent(indexName), OcamlTypeExpr.TIdent(plan.place.indexCarrierTypeId));
+		final load = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(plan.place.targetModuleName), plan.place.targetLoadName), [typedReceiver, typedIndex]);
+		final operation = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"),
+			[OcamlExpr.EIdent(oldValueName), OcamlExpr.EConst(OcamlConst.CInt(plan.delta))]);
+		final store = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(plan.place.targetModuleName), plan.place.targetStoreName),
+			[typedReceiver, typedIndex, OcamlExpr.EIdent(newValueName)]);
+		final resultName = updateResultName(plan.result, oldValueName, newValueName);
+		return OcamlExpr.ELet(receiverName, buildExpr(plan.receiver),
+			OcamlExpr.ELet(indexName, buildExpr(plan.index), OcamlExpr.ELet(oldValueName, load, OcamlExpr.ELet(newValueName, operation, OcamlExpr.ESeq([
+				OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [store]),
+				OcamlExpr.EIdent(resultName)
+			]), false), false), false), false);
+	}
+
 	/** Emits the sealed load-before-RHS schedule for exact primitive-Int `+=`. */
 	public static function emitCompoundIntAdd(plan:OcamlLoweredCompoundAssignment, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
 		final receiverName = freshTemporary("place_receiver");
@@ -97,7 +127,7 @@ class OcamlPlaceAssignmentEmitter {
 				]), false), false), false), false);
 	}
 
-	/** Emits the sealed ordinary-Int update schedule without reinterpreting token or fixity. */
+	/** Emits the sealed ordinary-Int update from its explicit result contract. */
 	public static function emitIntUpdate(plan:OcamlLoweredIntUpdate, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
 		final receiverName = freshTemporary("place_receiver");
 		final oldValueName = freshTemporary("place_old");
@@ -106,7 +136,7 @@ class OcamlPlaceAssignmentEmitter {
 		final target = OcamlExpr.EField(typedReceiver, plan.place.targetFieldName);
 		final operation = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"),
 			[OcamlExpr.EIdent(oldValueName), OcamlExpr.EConst(OcamlConst.CInt(plan.delta))]);
-		final resultName = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? oldValueName : newValueName;
+		final resultName = updateResultName(plan.result, oldValueName, newValueName);
 		return OcamlExpr.ELet(receiverName, buildExpr(plan.receiver),
 			OcamlExpr.ELet(oldValueName, target, OcamlExpr.ELet(newValueName, operation, OcamlExpr.ESeq([
 				OcamlExpr.EAssign(OcamlAssignOp.FieldSet, target, OcamlExpr.EIdent(newValueName)),

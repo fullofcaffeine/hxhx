@@ -5522,6 +5522,8 @@ class OcamlBuilder {
 									(newVal) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"), [recvObj, fieldName, newVal])),
 								false);
 						case TArray(arr, idx):
+							if (OcamlPlaceInputPolicy.admitsIntUpdateArrayElement(op, e))
+								return placeLoweringInvariant("admitted array-element update reached the legacy syntax branch without a stable origin", e.pos);
 							final arrName = freshTmp("arr");
 							final idxName = freshTmp("idx");
 							final useBytesOps = isStdBytesType(arr.t);
@@ -5638,6 +5640,8 @@ class OcamlBuilder {
 									OcamlExpr.EConst(OcamlConst.CUnit);
 							}
 						case TArray(arr, idx):
+							if (OcamlPlaceInputPolicy.admitsIntUpdateArrayElement(op, e))
+								return placeLoweringInvariant("admitted array-element update reached the legacy syntax branch without a stable origin", e.pos);
 							final arrName = freshTmp("arr");
 							final idxName = freshTmp("idx");
 							final useBytesOps = isStdBytesType(arr.t);

@@ -36,14 +36,14 @@ enum abstract OcamlPlaceOccurrenceRole(String) from String to String {
 	final Result = "result";
 }
 
-/** How the assignment expression obtains its Haxe result. */
+/** How the place operation obtains its Haxe result. */
 enum abstract OcamlAssignmentResultKind(String) from String to String {
 	final AssignedValue = "assigned-value";
 	final ComputedValue = "computed-value";
 	final OldValue = "old-value";
 }
 
-/** Source operator selected for the first ordinary compound-assignment slice. */
+/** Target-independent integer operation selected before OCaml syntax exists. */
 enum abstract OcamlLoweredIntOperator(String) from String to String {
 	final Add = "int-add";
 }
@@ -209,6 +209,27 @@ typedef OcamlLoweredArrayCompoundAssignment = {
 	final runtimeRequirementIds:Array<String>;
 }
 
+/** A typed ordinary Int array update with explicit fixity and result. */
+typedef OcamlLoweredArrayIntUpdate = {
+	final id:String;
+	final originId:String;
+	final source:OcamlLoweredSourceSpan;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final place:OcamlLoweredArrayElementPlace;
+	final receiver:TypedExpr;
+	final index:TypedExpr;
+	final sourceOperator:OcamlLoweredUpdateOperator;
+	final fixity:OcamlLoweredUpdateFixity;
+	final operation:OcamlLoweredIntOperator;
+	final delta:Int;
+	final conversion:OcamlLoweredConversionKind;
+	final result:OcamlAssignmentResultKind;
+	final schedule:Array<OcamlPlaceOccurrence>;
+	final effects:Array<OcamlLoweredEffect>;
+	final runtimeRequirementIds:Array<String>;
+}
+
 /** A typed ordinary Int compound assignment with an explicit old-value load. */
 typedef OcamlLoweredCompoundAssignment = {
 	final id:String;
@@ -253,6 +274,7 @@ enum OcamlLoweredPlaceOperation {
 	StaticSimple(plan:OcamlLoweredStaticSimpleAssignment);
 	ArraySimple(plan:OcamlLoweredArraySimpleAssignment);
 	ArrayCompound(plan:OcamlLoweredArrayCompoundAssignment);
+	ArrayUpdate(plan:OcamlLoweredArrayIntUpdate);
 	Compound(plan:OcamlLoweredCompoundAssignment);
 	Update(plan:OcamlLoweredIntUpdate);
 }
