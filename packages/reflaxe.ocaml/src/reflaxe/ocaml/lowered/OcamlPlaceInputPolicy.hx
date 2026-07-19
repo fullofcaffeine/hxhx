@@ -101,6 +101,16 @@ class OcamlPlaceInputPolicy {
 		}
 	}
 
+	/** Admits only static cells whose mutable OCaml declaration is already guaranteed. */
+	static function admitsVisibleExactIntStaticFieldPlace(expression:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>):Bool {
+		if (!admitsExactIntStaticFieldPlace(expression) || currentModuleId == null || currentTypeName == null)
+			return false;
+		return switch (expression.expr) {
+			case TField(_, FStatic(classRef, _)): final target = classRef.get(); target.module != currentModuleId || target.name == currentTypeName;
+			case _: false;
+		}
+	}
+
 	/** Admits ordinary `Int` fields with an exact `Int` RHS for simple assignment. */
 	public static function admitsSimpleInstanceField(left:TypedExpr, right:TypedExpr):Bool {
 		return admitsExactIntInstanceFieldPlace(left) && isExactInt(right.t);
@@ -114,12 +124,13 @@ class OcamlPlaceInputPolicy {
 		its declaration-order owner lands.
 	**/
 	public static function admitsSimpleStaticField(left:TypedExpr, right:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>):Bool {
-		if (!admitsExactIntStaticFieldPlace(left) || !isExactInt(right.t) || currentModuleId == null || currentTypeName == null)
-			return false;
-		return switch (left.expr) {
-			case TField(_, FStatic(classRef, _)): final target = classRef.get(); target.module != currentModuleId || target.name == currentTypeName;
-			case _: false;
-		}
+		return admitsVisibleExactIntStaticFieldPlace(left, currentModuleId, currentTypeName) && isExactInt(right.t);
+	}
+
+	/** Admits exact primitive-Int `+=` on an already-visible mutable static. */
+	public static function admitsCompoundIntAddStaticField(operation:Binop, left:TypedExpr, right:TypedExpr, currentModuleId:Null<String>,
+			currentTypeName:Null<String>):Bool {
+		return operation == OpAdd && admitsVisibleExactIntStaticFieldPlace(left, currentModuleId, currentTypeName) && isExactInt(right.t);
 	}
 
 	/** Admits exact `Array<Int>` element assignment with an exact `Int` index and RHS. */

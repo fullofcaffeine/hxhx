@@ -4248,6 +4248,9 @@ class OcamlBuilder {
 						}
 						OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), rhs);
 					case TField(_, FStatic(clsRef, cfRef)):
+						if (OcamlPlaceInputPolicy.admitsCompoundIntAddStaticField(inner, e1, e2, ctx.currentModuleId, ctx.currentTypeName))
+							return placeLoweringInvariant("admitted static-field compound assignment reached the legacy syntax branch without a stable origin",
+								e1.pos);
 						final cls = clsRef.get();
 						final cf = cfRef.get();
 						final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");

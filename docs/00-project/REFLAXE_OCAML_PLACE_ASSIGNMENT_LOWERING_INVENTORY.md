@@ -26,6 +26,10 @@ Value-producing simple assignment to an exact-`Int` mutable static is also
 sealed before syntax when the cell belongs to the current type or another OCaml
 module. Its receiver-free schedule is RHS, ref-cell store, then the shared RHS
 result; the plan selects local versus qualified target access explicitly.
+Exact primitive-`Int` `+=` on those same visible static cells now saves the old
+ref value before the RHS, performs Haxe `Int` addition, stores once, and returns
+the computed value. Same-Haxe-module cross-type cells remain excluded until
+their declarations can be planned before type emission.
 Exact nominal `Array<Int>` simple assignment now also seals the array receiver,
 index, RHS, store, and shared RHS result in source order. It uses the direct
 `int HxArray.t` carrier without an `Obj.magic` cast and records the semantic
@@ -54,11 +58,12 @@ typed tree, nor a shared cross-target representation IR.
 | Exact primitive-`Int` instance-field `+=` | The same typed place model before `OcamlExpr` construction | The plan records receiver, old-value load, RHS, `int-add`, store, computed result, and the semantic `haxe-int32-add` runtime requirement. The legacy branch is guarded against use. |
 | Exact primitive-`Int` instance-field `++` / `--` | The same typed place model before `OcamlExpr` construction | Source token, signed delta, and prefix/postfix fixity are separate facts. Every schedule records one receiver, load, Haxe `int-add`, store, and the fixity-selected old or computed result. |
 | Exact `Int` static simple assignment | The same typed place model before `OcamlExpr` construction | Current-type and cross-module mutable ref cells record stable symbol, representation, local/qualified access, RHS, store, and assigned result without inventing a receiver occurrence. |
+| Exact primitive-`Int` static `+=` | The same typed place model before `OcamlExpr` construction | Already-visible local and qualified ref cells record old-value load, RHS, Haxe `Int` addition, store, and computed result. Same-module cross-type cells remain unadmitted. |
 | Exact nominal `Array<Int>` simple assignment | The same typed place model before `OcamlExpr` construction | The plan records canonical array/element/index identities, diagnostic display types, the direct typed HxArray carrier, receiver/index/RHS order, one store, the assigned result, and its runtime capability. Typedef- or abstract-backed array syntax is deliberately not inferred to have the same carrier. |
 | Exact primitive-`Int` `Array<Int>` `+=` | The same typed place model before `OcamlExpr` construction | Receiver and index setup feed one old-element load, the RHS, Haxe `Int` addition, one store, and the shared computed result. `HxArray` get/set and `HxInt` addition requirements are recorded before syntax. |
 | Exact primitive-`Int` `Array<Int>` `++` / `--` | The same typed place model before `OcamlExpr` construction | Source token, signed delta, and fixity are sealed with receiver/index setup, one load, Haxe `Int` addition, one store, and the old/new result. The legacy array-update branch is guarded against use. |
 | Other simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, same-module cross-type static, anonymous/dynamic, bytes, non-Int or non-nominal array, and deliberately unadmitted instance-field cases still construct target syntax directly. Several unhandled states return OCaml `unit`. |
-| Other compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Other operators and place kinds still repeat operator selection, receiver sharing, load, arithmetic, store, and result. Ref, field, and static stores can still return OCaml `unit` in expression position. |
+| Other compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Other operators and place kinds still repeat operator selection, receiver sharing, load, arithmetic, store, and result. Ref, unadmitted field/static, and other stores can still return OCaml `unit` in expression position. |
 | Other prefix/postfix update | `OcamlBuilder.buildUnop`, approximately lines 5377-5707 | Other place kinds, Float, nullable, Dynamic, and abstract handling still combine numeric classification, representation, place mutation, and old/new result selection. Unsupported states can return `unit`. |
 | Straight-line local assignment | `OcamlBuilder.buildBlockFromIndex`, from approximately line 5832 | A second path rewrites non-ref local assignment as OCaml `let` shadowing, so local storage and expression lowering do not share one durable plan. |
 | Local mutation and capture | `collectMutatedLocalIds*` and `collectRefLocalIds*`, from approximately line 6309 | Correctness facts live in mutable traversal maps and are consumed later by syntax construction. This is follow-up Bead `haxe_ocaml-9bome`, but the first place model must leave it a stable home. |
@@ -67,10 +72,10 @@ typed tree, nor a shared cross-target representation IR.
 | Unsupported behavior | `guardrailError` plus `CUnit` branches | Errors are suppressed while compiling the current Haxe standard library. Bootstrap continuity must not become the release failure policy for an admitted place form. |
 
 At the baseline inventory, `OcamlBuilder.hx` was 7,688 physical lines and
-`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,646 and 3,561
+`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,649 and 3,561
 lines respectively. Place planning, validation, reporting, and emission live in
 focused `lowered/` modules. Existing source-position caching also moved out of
-the builder, so the semantic cutovers reduced the mega-file by 42 lines overall
+the builder, so the semantic cutovers reduced the mega-file by 39 lines overall
 instead of adding another responsibility to it.
 
 ## Place coverage already attempted by the emitter
@@ -78,7 +83,7 @@ instead of adding another responsibility to it.
 | Place kind | Simple assignment | Compound assignment | Ordinary update | Important current limitation |
 | --- | --- | --- | --- | --- |
 | Local | Ref-cell path plus separate block-shadowing path | Ref-cell path | Ref-cell path | Storage classification and lowering are split. |
-| Static field | Mutable ref cell | Mutable ref cell | Mutable ref cell | Invalid/immutable cases can diagnose and still produce `unit`. |
+| Static field | Typed place path for exact visible `Int` cells | Typed place path for exact visible primitive-`Int` `+=`; builder-local otherwise | Mutable ref cell | Same-module cross-type storage still needs the earlier declaration plan; other operators and updates remain builder-local. |
 | Instance field | Mutable record field | Mutable record field | Mutable record field | Receiver and result behavior are constructed independently in each branch. |
 | Property | Usually host-resolved accessor call | Usually host-resolved getter/operator/setter calls | Usually host-resolved getter/setter calls | Setter return value is semantically significant and must remain explicit. |
 | Array element | Typed place path for exact nominal `Array<Int>`; `HxArray.set` otherwise | Typed place path for exact primitive-`Int` `+=`; builder-local `get`, operation, `set` otherwise | Typed place path for exact primitive-`Int` `++` / `--`; builder-local otherwise | Other compound operators and non-direct carriers still rely on builder-local scheduling. |
@@ -94,7 +99,7 @@ or structurally lowered inline body.
 ## Frozen Haxe 4.3.7 behavior
 
 The fixture at
-`test/oracle/reflaxe_ocaml_place_evaluation_seed` runs 26 cases through
+`test/oracle/reflaxe_ocaml_place_evaluation_seed` runs 27 cases through
 interpreter, JavaScript/Node, and Neko. Run it with:
 
 ```bash
@@ -125,6 +130,9 @@ local fallback.
 - Plain local, static, field, array, and dynamic assignment returns the assigned
   right-hand-side value.
 - Compound assignment returns the computed value after the operator.
+- Ordinary static compound assignment loads the old ref-cell value before its
+  RHS. An RHS write to the same cell is overwritten by the operator result
+  derived from that saved value.
 - Ordinary instance-field compound assignment loads the old field value before
   evaluating its right-hand side. If that right-hand side mutates the same
   field, the operator still uses the saved old value and the final store
@@ -197,6 +205,9 @@ The current hard cuts admit only:
 - exact primitive-`Int` simple assignment to a directly writable static on the
   current type or in another module, with no receiver occurrence and an
   explicit local/qualified OCaml ref-cell access decision;
+- exact primitive-`Int` `+=` on those same already-visible static cells, with
+  old-value load, RHS, `int-add`, store, and computed result in Oracle-proven
+  order;
 - exact primitive-`Int` simple assignment through direct nominal `Array<Int>`,
   with receiver, index, RHS, store, and reused RHS result occurrences in that
   order and no target cast;
@@ -211,7 +222,8 @@ The current hard cuts admit only:
   one `haxe-array-element-set` requirement mapped to `HxArray` for the admitted
   simple array store. Array `+=` and array updates record get, Haxe `Int`
   addition, and set as separate semantic requirements and select both `HxArray`
-  and `HxInt`.
+  and `HxInt`. Static `+=` records its Haxe `Int` addition separately while
+  using the already-selected ref-cell representation.
 
 It deliberately does not follow Haxe abstracts to their underlying `Int`, and
 it does not admit nullable or `Dynamic` right-hand sides. Those require explicit
@@ -224,8 +236,8 @@ facts rather than asking emission to rediscover storage.
 Schema version 4 adds the array-element place, an explicit index occurrence,
 canonical receiver/index identities alongside diagnostic display spellings,
 selected `HxArray` get/set symbols, and semantic runtime requirements. The
-array compound and update plans use that existing closed shape and update
-fields, so they add no schema version.
+array compound and update plans, plus static compound plans, use those existing
+closed place/operation fields, so they add no schema version.
 Lowered identities use function identity plus structural ordinal; source paths
 and byte offsets remain diagnostic provenance and do not determine semantic
 identity.
@@ -264,13 +276,18 @@ unchanged.
 
 The focused executable fixture
 `test/portable/fixtures/place_static_field_assign` separately proves current-
-type local access and cross-module qualified access. Both plans contain only
-RHS, store, and assigned-result occurrences, compile twice to byte-identical
-reports, and execute with exactly one RHS event. An attempted same-module
+type local access and cross-module qualified access. Both top-level simple
+plans contain only RHS, store, and assigned-result occurrences and execute with
+exactly one RHS event. An attempted same-module
 cross-type case exposed an existing ordering flaw: the current late
 `requestForwardMutableStatic` request is discovered after the owning type may
 already have emitted its initializer. That case remains unadmitted, and
 `haxe_ocaml-stthl` owns a program/module-level two-phase static storage plan.
+The same fixture now also proves local `7 + 3 = 10` and qualified `9 + 3 = 12`
+when each RHS temporarily overwrites its cell with `100`. Its six-plan report
+includes the nested simple writes and the two surrounding compound operations,
+which proves recursive typed lowering and repeat-build determinism. A static
+`Float +=` statement remains on the legacy path and adds no plan.
 
 The focused executable fixture
 `test/portable/fixtures/place_array_simple_assign` proves the accepted
@@ -311,8 +328,9 @@ The following are deliberately deferred:
 
 - other place/update forms, including arrays whose semantic element or carrier
   is not exact direct `Int`;
-- same-module cross-type mutable statics and static compound/update lowering
+- same-module cross-type mutable statics and their compound/update lowering
   until `haxe_ocaml-stthl` plans ref-cell declarations before type emission;
+- static update lowering and non-`+=` static compound operators;
 - full capture and local-storage unification (`haxe_ocaml-9bome`);
 - the shared representation registry and removal of broad `Obj.magic` use;
 - general call/conversion lowering (`haxe_ocaml-taef5`);

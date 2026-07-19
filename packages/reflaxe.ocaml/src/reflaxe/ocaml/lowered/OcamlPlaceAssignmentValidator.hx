@@ -16,6 +16,8 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticCompoundAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
@@ -36,6 +38,15 @@ private typedef OcamlArrayPlaceValidationFacts = {
 	final semanticTypeId:String;
 	final carrierTypeId:String;
 	final place:OcamlLoweredArrayElementPlace;
+	final conversion:OcamlLoweredConversionKind;
+}
+
+private typedef OcamlStaticPlaceValidationFacts = {
+	final id:String;
+	final originId:String;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final place:OcamlLoweredStaticFieldPlace;
 	final conversion:OcamlLoweredConversionKind;
 }
 
@@ -132,6 +143,33 @@ class OcamlPlaceAssignmentValidator {
 		return errors;
 	}
 
+	static function validateStaticIdentityAndPlace(plan:OcamlStaticPlaceValidationFacts):Array<String> {
+		final errors:Array<String> = [];
+		if (plan.id.length == 0 || plan.originId.length == 0 || plan.place.id.length == 0)
+			errors.push("stable node, origin, and static-place identities are required");
+		if (plan.semanticTypeId != "Int" || plan.carrierTypeId != "int")
+			errors.push("the first static slice only admits semantic Int on the OCaml int carrier");
+		if (plan.place.semanticTypeId != plan.semanticTypeId || plan.place.carrierTypeId != plan.carrierTypeId)
+			errors.push("static place and expression semantic/carrier types must agree");
+		if (plan.place.kind != OcamlLoweredPlaceKind.StaticField)
+			errors.push("the static assignment slice requires a static-field place");
+		if (plan.place.targetSymbolId.length == 0
+			|| plan.place.targetModuleName.length == 0
+			|| plan.place.targetValueName.length == 0
+			|| plan.place.representationId.length == 0)
+			errors.push("static symbol and representation decisions require stable names and identities");
+		if (plan.place.representationReason.length == 0)
+			errors.push("the static representation decision requires a maintenance-readable reason");
+		if (plan.place.staticAccess != OcamlLoweredStaticFieldAccess.Local
+			&& plan.place.staticAccess != OcamlLoweredStaticFieldAccess.Qualified)
+			errors.push("static access must be selected as local or qualified before syntax construction");
+		if (plan.place.forwardDeclarationRequired)
+			errors.push("same-module cross-type static storage requires the program-level declaration plan before this family can be admitted");
+		if (plan.conversion != OcamlLoweredConversionKind.Identity)
+			errors.push("the first static slice requires an identity assignment conversion");
+		return errors;
+	}
+
 	public static function validateSimple(plan:OcamlLoweredSimpleAssignment):Array<String> {
 		final errors = validateIdentityAndPlace(plan);
 		if (plan.result != OcamlAssignmentResultKind.AssignedValue)
@@ -166,29 +204,7 @@ class OcamlPlaceAssignmentValidator {
 
 	/** Validates a receiver-free static ref assignment and its selected symbol access. */
 	public static function validateStaticSimple(plan:OcamlLoweredStaticSimpleAssignment):Array<String> {
-		final errors:Array<String> = [];
-		if (plan.id.length == 0 || plan.originId.length == 0 || plan.place.id.length == 0)
-			errors.push("stable node, origin, and static-place identities are required");
-		if (plan.semanticTypeId != "Int" || plan.carrierTypeId != "int")
-			errors.push("the first static slice only admits semantic Int on the OCaml int carrier");
-		if (plan.place.semanticTypeId != plan.semanticTypeId || plan.place.carrierTypeId != plan.carrierTypeId)
-			errors.push("static place and expression semantic/carrier types must agree");
-		if (plan.place.kind != OcamlLoweredPlaceKind.StaticField)
-			errors.push("the static assignment slice requires a static-field place");
-		if (plan.place.targetSymbolId.length == 0
-			|| plan.place.targetModuleName.length == 0
-			|| plan.place.targetValueName.length == 0
-			|| plan.place.representationId.length == 0)
-			errors.push("static symbol and representation decisions require stable names and identities");
-		if (plan.place.representationReason.length == 0)
-			errors.push("the static representation decision requires a maintenance-readable reason");
-		if (plan.place.staticAccess != OcamlLoweredStaticFieldAccess.Local
-			&& plan.place.staticAccess != OcamlLoweredStaticFieldAccess.Qualified)
-			errors.push("static access must be selected as local or qualified before syntax construction");
-		if (plan.place.forwardDeclarationRequired)
-			errors.push("same-module cross-type static storage requires the program-level declaration plan before this family can be admitted");
-		if (plan.conversion != OcamlLoweredConversionKind.Identity)
-			errors.push("the first static slice requires an identity assignment conversion");
+		final errors = validateStaticIdentityAndPlace(plan);
 		if (plan.result != OcamlAssignmentResultKind.AssignedValue)
 			errors.push("static simple assignment must return its assigned value");
 
@@ -219,6 +235,47 @@ class OcamlPlaceAssignmentValidator {
 			errors.push("direct Int static ref assignment must not require compatibility runtime support");
 		if (containsUnsealedAdmittedPlace(plan.rightHandSide))
 			errors.push("an admitted nested assignment is hidden inside an unsealed static-assignment RHS");
+		return errors;
+	}
+
+	/** Validates receiver-free static `+=` and its load-before-RHS contract. */
+	public static function validateStaticCompoundIntAdd(plan:OcamlLoweredStaticCompoundAssignment):Array<String> {
+		final errors = validateStaticIdentityAndPlace(plan);
+		if (plan.operation != OcamlLoweredIntOperator.Add)
+			errors.push("the first static compound slice only admits ordinary primitive-Int addition");
+		if (plan.result != OcamlAssignmentResultKind.ComputedValue)
+			errors.push("static compound assignment must return its computed and stored value");
+
+		final expected = [
+			OcamlPlaceOccurrenceRole.Load,
+			OcamlPlaceOccurrenceRole.RightHandSide,
+			OcamlPlaceOccurrenceRole.Operator,
+			OcamlPlaceOccurrenceRole.Store,
+			OcamlPlaceOccurrenceRole.Result
+		];
+		if (plan.schedule.length != expected.length) {
+			errors.push("static compound assignment requires load, rhs, operator, store, and result occurrences without a receiver");
+		} else {
+			final expectedSharing = ["old_value", "rhs", "new_value", null, "new_value"];
+			for (index in 0...expected.length) {
+				final occurrence = plan.schedule[index];
+				if (occurrence.role != expected[index])
+					errors.push("occurrence " + index + " has the wrong static-compound evaluation role");
+				if (occurrence.occurrenceCount != 1)
+					errors.push("occurrence " + index + " must execute exactly once in the static compound family");
+				if (occurrence.sharedAs != expectedSharing[index])
+					errors.push("occurrence " + index + " has the wrong static-compound sharing identity");
+			}
+			if (plan.schedule[0].sourceId != plan.schedule[3].sourceId)
+				errors.push("static compound load and store must refer to the same sealed static place");
+			if (plan.schedule[2].sourceId != plan.schedule[4].sourceId)
+				errors.push("static compound result must reuse the computed operator value");
+		}
+		final expectedRuntimeId = plan.originId + ":runtime:haxe-int32-add";
+		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != expectedRuntimeId)
+			errors.push("primitive-Int static += must record its Haxe Int addition runtime requirement");
+		if (containsUnsealedAdmittedPlace(plan.rightHandSide))
+			errors.push("an admitted nested assignment is hidden inside an unsealed static-compound RHS");
 		return errors;
 	}
 

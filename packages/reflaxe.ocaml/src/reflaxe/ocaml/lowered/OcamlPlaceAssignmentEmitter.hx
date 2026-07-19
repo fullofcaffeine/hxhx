@@ -6,6 +6,7 @@ import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlAssignmentResultKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayIntUpdate;
@@ -14,10 +15,18 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignment;
 
 /** Mechanically converts a validated place plan into OCaml target syntax. */
 class OcamlPlaceAssignmentEmitter {
+	static function staticTarget(place:OcamlLoweredStaticFieldPlace):OcamlExpr {
+		if (place.staticAccess == OcamlLoweredStaticFieldAccess.Local)
+			return OcamlExpr.EIdent(place.targetValueName);
+		return OcamlExpr.EField(OcamlExpr.EIdent(place.targetModuleName), place.targetValueName);
+	}
+
 	static function updateResultName(result:OcamlAssignmentResultKind, oldValueName:String, newValueName:String):String {
 		return switch (result) {
 			case OldValue: oldValueName;
@@ -40,12 +49,27 @@ class OcamlPlaceAssignmentEmitter {
 	/** Emits a validated static-ref assignment without inventing a receiver occurrence. */
 	public static function emitStaticSimple(plan:OcamlLoweredStaticSimpleAssignment, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
 		final rightHandSideName = freshTemporary("place_rhs");
-		final target = plan.place.staticAccess == OcamlLoweredStaticFieldAccess.Local ? OcamlExpr.EIdent(plan.place.targetValueName) : OcamlExpr.EField(OcamlExpr.EIdent(plan.place.targetModuleName),
-			plan.place.targetValueName);
+		final target = staticTarget(plan.place);
 		return OcamlExpr.ELet(rightHandSideName, buildExpr(plan.rightHandSide), OcamlExpr.ESeq([
 			OcamlExpr.EAssign(OcamlAssignOp.RefSet, target, OcamlExpr.EIdent(rightHandSideName)),
 			OcamlExpr.EIdent(rightHandSideName)
 		]), false);
+	}
+
+	/** Emits a validated static load-before-RHS compound assignment. */
+	public static function emitStaticCompoundIntAdd(plan:OcamlLoweredStaticCompoundAssignment, buildExpr:TypedExpr->OcamlExpr,
+			freshTemporary:String->String):OcamlExpr {
+		final oldValueName = freshTemporary("place_old");
+		final rightHandSideName = freshTemporary("place_rhs");
+		final newValueName = freshTemporary("place_new");
+		final target = staticTarget(plan.place);
+		final operation = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"),
+			[OcamlExpr.EIdent(oldValueName), OcamlExpr.EIdent(rightHandSideName)]);
+		return OcamlExpr.ELet(oldValueName, OcamlExpr.EUnop(OcamlUnop.Deref, target),
+			OcamlExpr.ELet(rightHandSideName, buildExpr(plan.rightHandSide), OcamlExpr.ELet(newValueName, operation, OcamlExpr.ESeq([
+				OcamlExpr.EAssign(OcamlAssignOp.RefSet, target, OcamlExpr.EIdent(newValueName)),
+				OcamlExpr.EIdent(newValueName)
+			]), false), false), false);
 	}
 
 	/** Emits the sealed array, index, RHS, store, and assigned-result schedule. */

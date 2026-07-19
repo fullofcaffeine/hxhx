@@ -137,8 +137,13 @@ class OcamlPlaceAssignmentLowerer {
 				if (instancePlan != null) {
 					OcamlLoweredPlaceOperation.Compound(instancePlan);
 				} else {
-					final arrayPlan = planner.planArrayCompoundIntAdd(metadata, expression, left, right);
-					arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArrayCompound(arrayPlan);
+					final staticPlan = planner.planStaticCompoundIntAdd(metadata, expression, left, right);
+					if (staticPlan != null) {
+						OcamlLoweredPlaceOperation.StaticCompound(staticPlan);
+					} else {
+						final arrayPlan = planner.planArrayCompoundIntAdd(metadata, expression, left, right);
+						arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArrayCompound(arrayPlan);
+					}
 				}
 			case TUnop(operation = (OpIncrement | OpDecrement), postFix, operand):
 				final instancePlan = planner.planIntUpdate(metadata, expression, operation, postFix, operand);
@@ -195,6 +200,29 @@ class OcamlPlaceAssignmentLowerer {
 						});
 					}
 					Lowered(OcamlPlaceAssignmentEmitter.emitStaticSimple(plan, buildExpr, freshTemporary));
+				}
+			case StaticCompound(plan):
+				final errors = OcamlPlaceAssignmentValidator.validateStaticCompoundIntAdd(plan);
+				if (errors.length > 0) invalid(errors, plan.originId); else {
+					context.markRuntimeModule("HxInt");
+					if (shouldRecord(plan.source)) {
+						context.recordLoweredPlaceReport({
+							id: plan.id,
+							originId: plan.originId,
+							source: plan.source,
+							nodeKind: "static-compound-assignment",
+							semanticTypeId: plan.semanticTypeId,
+							carrierTypeId: plan.carrierTypeId,
+							place: staticPlaceReport(plan.place),
+							operation: plan.operation,
+							conversion: plan.conversion,
+							result: plan.result,
+							schedule: plan.schedule,
+							effects: plan.effects,
+							runtimeRequirementIds: plan.runtimeRequirementIds
+						});
+					}
+					Lowered(OcamlPlaceAssignmentEmitter.emitStaticCompoundIntAdd(plan, buildExpr, freshTemporary));
 				}
 			case ArraySimple(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateArraySimple(plan);

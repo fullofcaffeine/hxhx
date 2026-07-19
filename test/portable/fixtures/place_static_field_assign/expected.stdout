@@ -1,2 +1,5 @@
 local=7 final=7 events=rhs_local
+local_compound=10 final=10 events=rhs_mutates_local
 qualified=9 final=9 events=rhs_qualified
+qualified_compound=12 final=12 events=rhs_mutates_qualified
+float=2.

@@ -22,6 +22,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
@@ -216,6 +217,47 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Write
 			],
 			runtimeRequirementIds: []
+		};
+	}
+
+	/** Plans an already-visible exact-Int static `+=` and its load-before-RHS order. */
+	public function planStaticCompoundIntAdd(metadata:MetadataEntry, expression:TypedExpr, left:TypedExpr,
+			right:TypedExpr):Null<OcamlLoweredStaticCompoundAssignment> {
+		if (!OcamlPlaceInputPolicy.admitsCompoundIntAddStaticField(OpAdd, left, right, context.currentModuleId, context.currentTypeName))
+			return null;
+		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
+		if (originId == null)
+			return null;
+		final place = planStaticField(originId, left);
+		if (place == null)
+			return null;
+		final newValueId = originId + ":new-value";
+		return {
+			id: originId + ":static-compound-assignment",
+			originId: originId,
+			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			semanticTypeId: "Int",
+			carrierTypeId: "int",
+			place: place,
+			rightHandSide: right,
+			operation: OcamlLoweredIntOperator.Add,
+			conversion: OcamlLoweredConversionKind.Identity,
+			result: OcamlAssignmentResultKind.ComputedValue,
+			schedule: [
+				occurrence(originId, 0, OcamlPlaceOccurrenceRole.Load, place.id, "old_value", [OcamlLoweredEffect.Read]),
+				occurrence(originId, 1, OcamlPlaceOccurrenceRole.RightHandSide, originId + ":rhs", "rhs",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 2, OcamlPlaceOccurrenceRole.Operator, newValueId, "new_value", [OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 3, OcamlPlaceOccurrenceRole.Store, place.id, null, [OcamlLoweredEffect.Write]),
+				occurrence(originId, 4, OcamlPlaceOccurrenceRole.Result, newValueId, "new_value", [])
+			],
+			effects: [
+				OcamlLoweredEffect.Read,
+				OcamlLoweredEffect.Call,
+				OcamlLoweredEffect.Throw,
+				OcamlLoweredEffect.Write
+			],
+			runtimeRequirementIds: [originId + ":runtime:haxe-int32-add"]
 		};
 	}
 

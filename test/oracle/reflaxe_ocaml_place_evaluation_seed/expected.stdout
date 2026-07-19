@@ -4,6 +4,7 @@ local_postfix result=10 final=11 events=
 local_prefix result=11 final=11 events=
 static_assign result=7 final=7 events=rhs
 static_compound result=13 final=13 events=rhs
+static_compound_rhs_mutates result=13 final=13 events=rhs_mutates_static
 static_postfix result=10 final=11 events=
 static_prefix result=11 final=11 events=
 field_assign result=7 final=7 events=receiver,rhs

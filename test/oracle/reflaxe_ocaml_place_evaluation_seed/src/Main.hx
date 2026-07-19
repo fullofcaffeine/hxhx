@@ -47,6 +47,12 @@ class Main {
 		return value;
 	}
 
+	static function rhsMutatingStatic(value:Int):Int {
+		EventLog.record("rhs_mutates_static");
+		staticValue = 100;
+		return value;
+	}
+
 	static function rhsMutatingArray(value:Int):Int {
 		EventLog.record("rhs_mutates_array");
 		values[1] = 100;
@@ -99,6 +105,10 @@ class Main {
 		reset();
 		final compoundResult = staticValue += rhs(3);
 		show("static_compound", compoundResult, staticValue);
+
+		reset();
+		final mutatingRhsResult = staticValue += rhsMutatingStatic(3);
+		show("static_compound_rhs_mutates", mutatingRhsResult, staticValue);
 
 		reset();
 		final postfixResult = staticValue++;
