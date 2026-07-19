@@ -6,7 +6,7 @@ import haxe.macro.Type.TypedExpr;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
-import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 
 /** Outcome of attempting the target-owned assignment lowering path. */
 enum OcamlPlaceAssignmentLoweringResult {
@@ -44,20 +44,23 @@ class OcamlPlaceAssignmentLowerer {
 		return (!context.currentIsHaxeStd && !OcamlLoweredOrigin.isTargetLibrarySource(source)) || includeStandardLibrary;
 	}
 
-	/** Lowers one metadata-marked assignment or returns a deterministic invariant failure. */
+	/** Lowers one metadata-marked place operation or returns an invariant failure. */
 	public function lower(metadata:MetadataEntry, expression:TypedExpr, buildExpr:TypedExpr->OcamlExpr,
 			freshTemporary:String->String):OcamlPlaceAssignmentLoweringResult {
-		final planned:Null<OcamlLoweredPlaceAssignment> = switch (expression.expr) {
+		final planned:Null<OcamlLoweredPlaceOperation> = switch (expression.expr) {
 			case TBinop(OpAssign, left, right):
 				final plan = planner.planSimpleAssignment(metadata, expression, left, right);
-				plan == null ? null : OcamlLoweredPlaceAssignment.Simple(plan);
+				plan == null ? null : OcamlLoweredPlaceOperation.Simple(plan);
 			case TBinop(OpAssignOp(OpAdd), left, right):
 				final plan = planner.planCompoundIntAdd(metadata, expression, left, right);
-				plan == null ? null : OcamlLoweredPlaceAssignment.Compound(plan);
+				plan == null ? null : OcamlLoweredPlaceOperation.Compound(plan);
+			case TUnop(OpIncrement, postFix, operand):
+				final plan = planner.planIntIncrement(metadata, expression, OpIncrement, postFix, operand);
+				plan == null ? null : OcamlLoweredPlaceOperation.Update(plan);
 			case _: null;
 		}
 		if (planned == null)
-			return Invalid("target-owned place metadata reached an unsupported expression shape");
+			return Invalid("target-owned place metadata reached an unsupported operation shape");
 
 		return switch (planned) {
 			case Simple(plan):
@@ -103,6 +106,32 @@ class OcamlPlaceAssignmentLowerer {
 						});
 					}
 					Lowered(OcamlPlaceAssignmentEmitter.emitCompoundIntAdd(plan, buildExpr, freshTemporary));
+				}
+			case Update(plan):
+				final errors = OcamlPlaceAssignmentValidator.validateIntIncrement(plan);
+				if (errors.length > 0) invalid(errors, plan.originId); else {
+					context.markRuntimeModule("HxInt");
+					if (shouldRecord(plan.source)) {
+						context.recordLoweredPlaceReport({
+							id: plan.id,
+							originId: plan.originId,
+							source: plan.source,
+							nodeKind: "int-update",
+							semanticTypeId: plan.semanticTypeId,
+							carrierTypeId: plan.carrierTypeId,
+							place: plan.place,
+							operation: plan.operation,
+							sourceOperator: plan.sourceOperator,
+							fixity: plan.fixity,
+							delta: plan.delta,
+							conversion: plan.conversion,
+							result: plan.result,
+							schedule: plan.schedule,
+							effects: plan.effects,
+							runtimeRequirementIds: plan.runtimeRequirementIds
+						});
+					}
+					Lowered(OcamlPlaceAssignmentEmitter.emitIntIncrement(plan, buildExpr, freshTemporary));
 				}
 		}
 	}

@@ -111,8 +111,8 @@ class OcamlBuilder {
 		throw diagnostic;
 	}
 
-	/** Builds the one admitted assignment family from a sealed semantic plan. */
-	function buildPreservedPlaceAssignment(metadata:haxe.macro.Expr.MetadataEntry, expression:TypedExpr):OcamlExpr {
+	/** Builds one admitted place operation from a sealed semantic plan. */
+	function buildPreservedPlaceOperation(metadata:haxe.macro.Expr.MetadataEntry, expression:TypedExpr):OcamlExpr {
 		return switch (placeAssignmentLowerer.lower(metadata, expression, buildExpr, freshTmp)) {
 			case Lowered(lowered): lowered;
 			case Invalid(message): placeLoweringInvariant(message, expression.pos);
@@ -2935,7 +2935,7 @@ class OcamlBuilder {
 			case TField(obj, fa):
 				buildField(obj, fa, e.pos);
 			case TMeta(metadata, e1):
-				OcamlLoweredOrigin.readPlaceId(metadata) != null ? buildPreservedPlaceAssignment(metadata, e1) : buildExpr(e1);
+				OcamlLoweredOrigin.readPlaceId(metadata) != null ? buildPreservedPlaceOperation(metadata, e1) : buildExpr(e1);
 			case TCast(e1, _):
 				// Haxe uses casts for nullable primitive flows (boxing/unboxing + flow typing).
 				//
@@ -5608,6 +5608,9 @@ class OcamlBuilder {
 								incDec(OcamlExpr.EUnop(OcamlUnop.Deref, lhsCell), (newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, newVal));
 							}
 						case TField(obj, FInstance(clsRef, _, cfRef)):
+							if (OcamlPlaceInputPolicy.admitsIntIncrementInstanceField(op, e))
+								return placeLoweringInvariant("admitted instance-field increment reached the legacy syntax branch without a stable origin",
+									e.pos);
 							final cf = cfRef.get();
 							switch (cf.kind) {
 								case FVar(_, _):

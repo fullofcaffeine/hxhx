@@ -8,8 +8,11 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredConversionKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredInstanceFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntOperator;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrenceRole;
 
 private typedef OcamlPlaceValidationFacts = {
@@ -37,6 +40,9 @@ class OcamlPlaceAssignmentValidator {
 					found = true;
 					return;
 				case TBinop(OpAssignOp(operation), left, right) if (OcamlPlaceInputPolicy.admitsCompoundIntAddInstanceField(operation, left, right)):
+					found = true;
+					return;
+				case TUnop(operation, _, operand) if (OcamlPlaceInputPolicy.admitsIntIncrementInstanceField(operation, operand)):
 					found = true;
 					return;
 				case _:
@@ -141,6 +147,52 @@ class OcamlPlaceAssignmentValidator {
 			errors.push("primitive-Int += must record its Haxe Int addition runtime requirement");
 		if (containsUnsealedAdmittedPlace(plan.receiver) || containsUnsealedAdmittedPlace(plan.rightHandSide))
 			errors.push("an admitted nested assignment is hidden inside an unsealed source-shaped child");
+		return errors;
+	}
+
+	/** Validates exact increment token/fixity, mutation order, and old/new result choice. */
+	public static function validateIntIncrement(plan:OcamlLoweredIntUpdate):Array<String> {
+		final errors = validateIdentityAndPlace(plan);
+		if (plan.sourceOperator != OcamlLoweredUpdateOperator.Increment
+			|| plan.operation != OcamlLoweredIntOperator.Add
+			|| plan.delta != 1)
+			errors.push("the first update slice only admits ordinary primitive-Int increment by one");
+		final expectedResult = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? OcamlAssignmentResultKind.OldValue : OcamlAssignmentResultKind.ComputedValue;
+		if (plan.result != expectedResult)
+			errors.push("postfix increment must return the old value and prefix increment the computed value");
+
+		final expected = [
+			OcamlPlaceOccurrenceRole.Receiver,
+			OcamlPlaceOccurrenceRole.Load,
+			OcamlPlaceOccurrenceRole.Operator,
+			OcamlPlaceOccurrenceRole.Store,
+			OcamlPlaceOccurrenceRole.Result
+		];
+		if (plan.schedule.length != expected.length) {
+			errors.push("field increment requires receiver, load, operator, store, and result occurrences");
+		} else {
+			final resultSharing = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? "old_value" : "new_value";
+			final expectedSharing = ["receiver", "old_value", "new_value", null, resultSharing];
+			for (index in 0...expected.length) {
+				final occurrence = plan.schedule[index];
+				if (occurrence.role != expected[index])
+					errors.push("occurrence " + index + " has the wrong update evaluation role");
+				if (occurrence.occurrenceCount != 1)
+					errors.push("occurrence " + index + " must execute exactly once in this admitted family");
+				if (occurrence.sharedAs != expectedSharing[index])
+					errors.push("occurrence " + index + " has the wrong update sharing identity");
+			}
+			if (plan.schedule[1].sourceId != plan.schedule[3].sourceId)
+				errors.push("increment load and store must refer to the same original place");
+			final expectedResultSource = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? plan.originId + ":old-value" : plan.schedule[2].sourceId;
+			if (plan.schedule[4].sourceId != expectedResultSource)
+				errors.push("increment result must reuse the fixity-selected old or computed value");
+		}
+		final expectedRuntimeId = plan.originId + ":runtime:haxe-int32-add";
+		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != expectedRuntimeId)
+			errors.push("primitive-Int increment must record its Haxe Int addition runtime requirement");
+		if (containsUnsealedAdmittedPlace(plan.receiver))
+			errors.push("an admitted nested assignment or update is hidden inside an unsealed source-shaped child");
 		return errors;
 	}
 }

@@ -10,7 +10,7 @@ import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
 import reflaxe.preprocessors.BasePreprocessor;
 
 /**
-	Preserves admitted assignment nodes until the OCaml semantic lowerer sees them.
+	Preserves admitted place operations until the OCaml semantic lowerer sees them.
 
 	Reflaxe's generic Everything-Is-An-Expression sanitizer normally turns an
 	assignment used as a value into a write followed by a copied left-hand-side
@@ -35,6 +35,7 @@ class PreservePlaceAssignmentsImpl extends BasePreprocessor {
 		final admitted = switch (expression.expr) {
 			case TBinop(OpAssign, left, right): OcamlPlaceInputPolicy.admitsSimpleInstanceField(left, right);
 			case TBinop(OpAssignOp(operation), left, right): OcamlPlaceInputPolicy.admitsCompoundIntAddInstanceField(operation, left, right);
+			case TUnop(operation, _, operand): OcamlPlaceInputPolicy.admitsIntIncrementInstanceField(operation, operand);
 			case _: false;
 		}
 

@@ -3,6 +3,7 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Type;
 import haxe.macro.Expr.Binop;
+import haxe.macro.Expr.Unop;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 
@@ -47,14 +48,21 @@ class OcamlPlaceInputPolicy {
 		}
 	}
 
-	static function admitsExactIntInstanceField(left:TypedExpr, right:TypedExpr):Bool {
-		if (!isExactInt(left.t) || !isExactInt(right.t))
+	/**
+		Accepts a direct record-backed receiver while keeping inherited field
+		declaration identity separate from the receiver representation.
+	**/
+	static function admitsExactIntInstanceFieldPlace(expression:TypedExpr):Bool {
+		if (!isExactInt(expression.t))
 			return false;
-		return switch (left.expr) {
-			case TField(_, FInstance(classRef, _, fieldRef)): final classType = classRef.get(); final field = fieldRef.get(); final ordinaryField = switch (field.kind) {
+		return switch (expression.expr) {
+			case TField(receiver, FInstance(classRef, _, fieldRef)): final classType = classRef.get(); final field = fieldRef.get(); final ordinaryField = switch (field.kind) {
 					case FVar(_, _): true;
 					case _: false;
-				} final isArrayLength = classType.pack.length == 0 && classType.name == "Array" && field.name == "length"; ordinaryField && !classType.isExtern && !classType.isInterface && !isArrayLength;
+				} final receiverIsRecordClass = switch (receiver.t) {
+					case TInst(receiverClassRef, _): final receiverClass = receiverClassRef.get(); !receiverClass.isExtern && !receiverClass.isInterface;
+					case _: false;
+				} final isArrayLength = classType.pack.length == 0 && classType.name == "Array" && field.name == "length"; ordinaryField && receiverIsRecordClass && !classType.isExtern && !classType.isInterface && !isArrayLength;
 			case _:
 				false;
 		}
@@ -62,12 +70,17 @@ class OcamlPlaceInputPolicy {
 
 	/** Admits ordinary `Int` fields with an exact `Int` RHS for simple assignment. */
 	public static function admitsSimpleInstanceField(left:TypedExpr, right:TypedExpr):Bool {
-		return admitsExactIntInstanceField(left, right);
+		return admitsExactIntInstanceFieldPlace(left) && isExactInt(right.t);
 	}
 
 	/** Admits ordinary `Int` fields with an exact `Int` RHS for `+=`. */
 	public static function admitsCompoundIntAddInstanceField(operation:Binop, left:TypedExpr, right:TypedExpr):Bool {
-		return operation == OpAdd && admitsExactIntInstanceField(left, right);
+		return operation == OpAdd && admitsExactIntInstanceFieldPlace(left) && isExactInt(right.t);
+	}
+
+	/** Admits both fixities of ordinary `Int` instance-field increment. */
+	public static function admitsIntIncrementInstanceField(operation:Unop, operand:TypedExpr):Bool {
+		return operation == OpIncrement && admitsExactIntInstanceFieldPlace(operand);
 	}
 }
 #end

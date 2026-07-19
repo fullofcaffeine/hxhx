@@ -1,9 +1,108 @@
 {
   "model": "typed-ocaml-lowered-place",
-  "schemaVersion": 1,
-  "admittedInputRevision": "sha256:6584715215d7e922e3510a9c34656d3a97dba629a428ce55c783956b5835efac",
-  "planCount": 3,
+  "schemaVersion": 2,
+  "admittedInputRevision": "sha256:67481e079527ab0a4e8483e0ef389e96f83aa2295cc52ffef33f45d8d99df968",
+  "planCount": 5,
   "plans": [
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "place:26936672489892da53906b17:runtime:haxe-int32-add"
+      ],
+      "fixity": "postfix",
+      "sourceOperator": "increment",
+      "place": {
+        "carrierTypeId": "int",
+        "targetFieldName": "value",
+        "ownerTypeName": "Holder",
+        "targetSymbolId": "Main::Holder::field::value",
+        "receiverRepresentationReason": "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
+        "ownerModuleId": "Main",
+        "id": "place:26936672489892da53906b17:place",
+        "semanticTypeId": "Int",
+        "kind": "instance-field",
+        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "receiverSemanticTypeId": "Holder",
+        "receiverRepresentationId": "place:26936672489892da53906b17:representation:receiver",
+        "fieldName": "value",
+        "receiverCarrierTypeId": "holder_t",
+        "representationId": "place:26936672489892da53906b17:representation:field"
+      },
+      "delta": 1,
+      "originId": "place:26936672489892da53906b17",
+      "id": "place:26936672489892da53906b17:int-increment",
+      "source": {
+        "min": 756,
+        "max": 774,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:26936672489892da53906b17:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:26936672489892da53906b17:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:26936672489892da53906b17:occurrence:1",
+          "effects": [
+            "read",
+            "throw"
+          ],
+          "sourceId": "place:26936672489892da53906b17:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:26936672489892da53906b17:occurrence:2",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:26936672489892da53906b17:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:26936672489892da53906b17:occurrence:3",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:26936672489892da53906b17:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "result",
+          "id": "place:26936672489892da53906b17:occurrence:4",
+          "effects": [],
+          "sourceId": "place:26936672489892da53906b17:old-value"
+        }
+      ],
+      "result": "old-value"
+    },
     {
       "carrierTypeId": "int",
       "runtimeRequirementIds": [
@@ -14,7 +113,7 @@
         "targetFieldName": "value",
         "ownerTypeName": "Holder",
         "targetSymbolId": "Main::Holder::field::value",
-        "receiverRepresentationReason": "record-backed class receiver selected by the current OCaml representation policy",
+        "receiverRepresentationReason": "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
         "ownerModuleId": "Main",
         "id": "place:3963f22ddd71db98dee27add:place",
         "semanticTypeId": "Int",
@@ -120,7 +219,7 @@
         "targetFieldName": "value",
         "ownerTypeName": "Holder",
         "targetSymbolId": "Main::Holder::field::value",
-        "receiverRepresentationReason": "record-backed class receiver selected by the current OCaml representation policy",
+        "receiverRepresentationReason": "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
         "ownerModuleId": "Main",
         "id": "place:4edb5594811180ac656281e8:place",
         "semanticTypeId": "Int",
@@ -135,8 +234,8 @@
       "originId": "place:4edb5594811180ac656281e8",
       "id": "place:4edb5594811180ac656281e8:simple-assignment",
       "source": {
-        "min": 984,
-        "max": 1002,
+        "min": 1315,
+        "max": 1333,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -197,13 +296,112 @@
     },
     {
       "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "place:9654346e457c58c35a14177a:runtime:haxe-int32-add"
+      ],
+      "fixity": "prefix",
+      "sourceOperator": "increment",
+      "place": {
+        "carrierTypeId": "int",
+        "targetFieldName": "value",
+        "ownerTypeName": "Holder",
+        "targetSymbolId": "Main::Holder::field::value",
+        "receiverRepresentationReason": "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
+        "ownerModuleId": "Main",
+        "id": "place:9654346e457c58c35a14177a:place",
+        "semanticTypeId": "Int",
+        "kind": "instance-field",
+        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "receiverSemanticTypeId": "Holder",
+        "receiverRepresentationId": "place:9654346e457c58c35a14177a:representation:receiver",
+        "fieldName": "value",
+        "receiverCarrierTypeId": "holder_t",
+        "representationId": "place:9654346e457c58c35a14177a:representation:field"
+      },
+      "delta": 1,
+      "originId": "place:9654346e457c58c35a14177a",
+      "id": "place:9654346e457c58c35a14177a:int-increment",
+      "source": {
+        "min": 922,
+        "max": 940,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:9654346e457c58c35a14177a:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:9654346e457c58c35a14177a:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:9654346e457c58c35a14177a:occurrence:1",
+          "effects": [
+            "read",
+            "throw"
+          ],
+          "sourceId": "place:9654346e457c58c35a14177a:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:9654346e457c58c35a14177a:occurrence:2",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:9654346e457c58c35a14177a:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:9654346e457c58c35a14177a:occurrence:3",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:9654346e457c58c35a14177a:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "result",
+          "id": "place:9654346e457c58c35a14177a:occurrence:4",
+          "effects": [],
+          "sourceId": "place:9654346e457c58c35a14177a:new-value"
+        }
+      ],
+      "result": "computed-value"
+    },
+    {
+      "carrierTypeId": "int",
       "runtimeRequirementIds": [],
       "place": {
         "carrierTypeId": "int",
         "targetFieldName": "value",
         "ownerTypeName": "Holder",
         "targetSymbolId": "Main::Holder::field::value",
-        "receiverRepresentationReason": "record-backed class receiver selected by the current OCaml representation policy",
+        "receiverRepresentationReason": "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
         "ownerModuleId": "Main",
         "id": "place:ebd9e06b24f2d78b3880868b:place",
         "semanticTypeId": "Int",

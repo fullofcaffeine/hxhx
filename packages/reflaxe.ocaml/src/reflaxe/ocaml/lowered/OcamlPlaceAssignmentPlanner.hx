@@ -3,6 +3,7 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.MetadataEntry;
 import haxe.macro.Expr.Binop;
+import haxe.macro.Expr.Unop;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 import reflaxe.ocaml.CompilationContext;
@@ -12,8 +13,11 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredConversionKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredEffect;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredInstanceFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntOperator;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrence;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrenceRole;
 
@@ -30,9 +34,15 @@ class OcamlPlaceAssignmentPlanner {
 			case TField(receiver, FInstance(classRef, _, fieldRef)):
 				final classType = classRef.get();
 				final field = fieldRef.get();
-				final moduleName = context.ocamlModuleNameForModuleId(classType.module);
+				final receiverClass = switch (receiver.t) {
+					case TInst(receiverClassRef, _): receiverClassRef.get();
+					case _: null;
+				}
+				if (receiverClass == null)
+					return null;
+				final moduleName = context.ocamlModuleNameForModuleId(receiverClass.module);
 				final currentModuleName = context.currentModuleId == null ? null : context.ocamlModuleNameForModuleId(context.currentModuleId);
-				final scopedType = context.scopedInstanceTypeName(classType.module, classType.name);
+				final scopedType = context.scopedInstanceTypeName(receiverClass.module, receiverClass.name);
 				final receiverCarrier = currentModuleName == moduleName ? scopedType : moduleName + "." + scopedType;
 				{
 					place: {
@@ -44,7 +54,7 @@ class OcamlPlaceAssignmentPlanner {
 						receiverSemanticTypeId: TypeTools.toString(receiver.t),
 						receiverCarrierTypeId: receiverCarrier,
 						receiverRepresentationId: originId + ":representation:receiver",
-						receiverRepresentationReason: "record-backed class receiver selected by the current OCaml representation policy",
+						receiverRepresentationReason: "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
 						fieldName: field.name,
 						targetFieldName: context.ocamlRecordLabel(field.name),
 						semanticTypeId: TypeTools.toString(left.t),
@@ -131,6 +141,54 @@ class OcamlPlaceAssignmentPlanner {
 				occurrence(originId, 3, OcamlPlaceOccurrenceRole.Operator, newValueId, "new_value", [OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
 				occurrence(originId, 4, OcamlPlaceOccurrenceRole.Store, placeId, null, [OcamlLoweredEffect.Write, OcamlLoweredEffect.Throw]),
 				occurrence(originId, 5, OcamlPlaceOccurrenceRole.Result, newValueId, "new_value", [])
+			],
+			effects: [
+				OcamlLoweredEffect.Read,
+				OcamlLoweredEffect.Call,
+				OcamlLoweredEffect.Throw,
+				OcamlLoweredEffect.Write
+			],
+			runtimeRequirementIds: [originId + ":runtime:haxe-int32-add"]
+		};
+	}
+
+	/** Plans exact primitive-Int increment without deriving result semantics in the emitter. */
+	public function planIntIncrement(metadata:MetadataEntry, expression:TypedExpr, operation:Unop, postFix:Bool,
+			operand:TypedExpr):Null<OcamlLoweredIntUpdate> {
+		if (!OcamlPlaceInputPolicy.admitsIntIncrementInstanceField(operation, operand))
+			return null;
+		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
+		if (originId == null)
+			return null;
+		final target = planInstanceField(originId, operand);
+		if (target == null)
+			return null;
+		final placeId = target.place.id;
+		final oldValueId = originId + ":old-value";
+		final newValueId = originId + ":new-value";
+		final fixity = postFix ? OcamlLoweredUpdateFixity.Postfix : OcamlLoweredUpdateFixity.Prefix;
+		final result = postFix ? OcamlAssignmentResultKind.OldValue : OcamlAssignmentResultKind.ComputedValue;
+		return {
+			id: originId + ":int-increment",
+			originId: originId,
+			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			semanticTypeId: TypeTools.toString(expression.t),
+			carrierTypeId: "int",
+			place: target.place,
+			receiver: target.receiver,
+			sourceOperator: OcamlLoweredUpdateOperator.Increment,
+			fixity: fixity,
+			operation: OcamlLoweredIntOperator.Add,
+			delta: 1,
+			conversion: OcamlLoweredConversionKind.Identity,
+			result: result,
+			schedule: [
+				occurrence(originId, 0, OcamlPlaceOccurrenceRole.Receiver, originId + ":receiver", "receiver",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 1, OcamlPlaceOccurrenceRole.Load, placeId, "old_value", [OcamlLoweredEffect.Read, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 2, OcamlPlaceOccurrenceRole.Operator, newValueId, "new_value", [OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 3, OcamlPlaceOccurrenceRole.Store, placeId, null, [OcamlLoweredEffect.Write, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 4, OcamlPlaceOccurrenceRole.Result, postFix ? oldValueId : newValueId, postFix ? "old_value" : "new_value", [])
 			],
 			effects: [
 				OcamlLoweredEffect.Read,

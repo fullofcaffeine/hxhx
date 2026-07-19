@@ -3,10 +3,13 @@ package reflaxe.ocaml.lowered;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Type.TypedExpr;
 import reflaxe.ocaml.ast.OcamlAssignOp;
+import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 
 /** Mechanically converts a validated place plan into OCaml target syntax. */
 class OcamlPlaceAssignmentEmitter {
@@ -37,6 +40,23 @@ class OcamlPlaceAssignmentEmitter {
 					OcamlExpr.EAssign(OcamlAssignOp.FieldSet, target, OcamlExpr.EIdent(newValueName)),
 					OcamlExpr.EIdent(newValueName)
 				]), false), false), false), false);
+	}
+
+	/** Emits the sealed ordinary-Int increment schedule without reinterpreting fixity. */
+	public static function emitIntIncrement(plan:OcamlLoweredIntUpdate, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
+		final receiverName = freshTemporary("place_receiver");
+		final oldValueName = freshTemporary("place_old");
+		final newValueName = freshTemporary("place_new");
+		final typedReceiver = OcamlExpr.EAnnot(OcamlExpr.EIdent(receiverName), OcamlTypeExpr.TIdent(plan.place.receiverCarrierTypeId));
+		final target = OcamlExpr.EField(typedReceiver, plan.place.targetFieldName);
+		final operation = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"),
+			[OcamlExpr.EIdent(oldValueName), OcamlExpr.EConst(OcamlConst.CInt(plan.delta))]);
+		final resultName = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? oldValueName : newValueName;
+		return OcamlExpr.ELet(receiverName, buildExpr(plan.receiver),
+			OcamlExpr.ELet(oldValueName, target, OcamlExpr.ELet(newValueName, operation, OcamlExpr.ESeq([
+				OcamlExpr.EAssign(OcamlAssignOp.FieldSet, target, OcamlExpr.EIdent(newValueName)),
+				OcamlExpr.EIdent(resultName)
+			]), false), false), false);
 	}
 }
 #end

@@ -14,7 +14,7 @@ class OcamlLoweringReportWriter {
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
 		final canonicalPlans = haxe.Json.stringify(sorted);
 		final report = {
-			schemaVersion: 1,
+			schemaVersion: 2,
 			model: "typed-ocaml-lowered-place",
 			admittedInputRevision: "sha256:" + Sha256.encode(canonicalPlans),
 			planCount: sorted.length,

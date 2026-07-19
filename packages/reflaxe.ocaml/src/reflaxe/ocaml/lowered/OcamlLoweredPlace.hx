@@ -31,11 +31,23 @@ enum abstract OcamlPlaceOccurrenceRole(String) from String to String {
 enum abstract OcamlAssignmentResultKind(String) from String to String {
 	final AssignedValue = "assigned-value";
 	final ComputedValue = "computed-value";
+	final OldValue = "old-value";
 }
 
 /** Source operator selected for the first ordinary compound-assignment slice. */
 enum abstract OcamlLoweredIntOperator(String) from String to String {
 	final Add = "int-add";
+}
+
+/** Source update token retained independently from its numeric operation. */
+enum abstract OcamlLoweredUpdateOperator(String) from String to String {
+	final Increment = "increment";
+}
+
+/** Prefix/postfix syntax retained independently from update result semantics. */
+enum abstract OcamlLoweredUpdateFixity(String) from String to String {
+	final Prefix = "prefix";
+	final Postfix = "postfix";
 }
 
 /** The selected conversion between an input value and a place carrier. */
@@ -107,10 +119,31 @@ typedef OcamlLoweredCompoundAssignment = {
 	final runtimeRequirementIds:Array<String>;
 }
 
-/** Closed typed place-assignment families currently admitted by the target. */
-enum OcamlLoweredPlaceAssignment {
+/** A typed ordinary Int update with explicit fixity, mutation, and result. */
+typedef OcamlLoweredIntUpdate = {
+	final id:String;
+	final originId:String;
+	final source:OcamlLoweredSourceSpan;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final place:OcamlLoweredInstanceFieldPlace;
+	final receiver:TypedExpr;
+	final sourceOperator:OcamlLoweredUpdateOperator;
+	final fixity:OcamlLoweredUpdateFixity;
+	final operation:OcamlLoweredIntOperator;
+	final delta:Int;
+	final conversion:OcamlLoweredConversionKind;
+	final result:OcamlAssignmentResultKind;
+	final schedule:Array<OcamlPlaceOccurrence>;
+	final effects:Array<OcamlLoweredEffect>;
+	final runtimeRequirementIds:Array<String>;
+}
+
+/** Closed typed place-operation families currently admitted by the target. */
+enum OcamlLoweredPlaceOperation {
 	Simple(plan:OcamlLoweredSimpleAssignment);
 	Compound(plan:OcamlLoweredCompoundAssignment);
+	Update(plan:OcamlLoweredIntUpdate);
 }
 
 /** Serializable form retained after target syntax has been constructed. */
@@ -123,6 +156,9 @@ typedef OcamlLoweredPlaceReportEntry = {
 	final carrierTypeId:String;
 	final place:OcamlLoweredInstanceFieldPlace;
 	final ?operation:OcamlLoweredIntOperator;
+	final ?sourceOperator:OcamlLoweredUpdateOperator;
+	final ?fixity:OcamlLoweredUpdateFixity;
+	final ?delta:Int;
 	final conversion:OcamlLoweredConversionKind;
 	final result:OcamlAssignmentResultKind;
 	final schedule:Array<OcamlPlaceOccurrence>;

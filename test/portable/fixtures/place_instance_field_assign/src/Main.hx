@@ -20,6 +20,14 @@ class Main {
 		events.resize(0);
 		final compoundResult = receiver().value += rhsMutating();
 		Sys.println("compound=" + compoundResult + " final=" + holder.value + " events=" + events.join(","));
+
+		events.resize(0);
+		final postfixResult = receiver().value++;
+		Sys.println("postfix=" + postfixResult + " final=" + holder.value + " events=" + events.join(","));
+
+		events.resize(0);
+		final prefixResult = ++receiver().value;
+		Sys.println("prefix=" + prefixResult + " final=" + holder.value + " events=" + events.join(","));
 	}
 
 	static function abstractControl():String {
