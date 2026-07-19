@@ -1,3 +1,11 @@
+## [0.20.1](https://github.com/fullofcaffeine/hxhx/compare/v0.20.0...v0.20.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **ci:** keep license notes guard-safe ([3c1648f](https://github.com/fullofcaffeine/hxhx/commit/3c1648f81ae6cbea8cf84f51b923a49d63db6264))
+* **ci:** reject partial stage0 profiles ([f688e05](https://github.com/fullofcaffeine/hxhx/commit/f688e0580bcd2c9db785026e1dab30f42e4f1371))
+
 # [0.20.0](https://github.com/fullofcaffeine/hxhx/compare/v0.19.0...v0.20.0) (2026-07-19)
 
 
