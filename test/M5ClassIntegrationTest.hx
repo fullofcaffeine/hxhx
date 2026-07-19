@@ -55,21 +55,22 @@ class M5ClassIntegrationTest {
 			throw "create fn: expected to find 'let create = fun <x> <y> ->'";
 		final xArg = createRe.matched(1);
 		final yArg = createRe.matched(2);
-		// Codegen may introduce a temp assignment to preserve Haxe assignment-expression semantics.
-		assertMatchesEither(pointMl, [
-			new EReg("(?:self|\\(Obj\\.magic self : t\\))\\.x <- " + xArg, ""),
-			new EReg("let __assign_[0-9]+ = " + xArg + " in \\(\\s*(?:self|\\(Obj\\.magic self : t\\))\\.x <- __assign_[0-9]+;", "")
-		], "ctor assigns x");
-		assertMatchesEither(pointMl, [
-			new EReg("(?:self|\\(Obj\\.magic self : t\\))\\.y <- " + yArg, ""),
-			new EReg("let __assign_[0-9]+ = " + yArg + " in \\(\\s*(?:self|\\(Obj\\.magic self : t\\))\\.y <- __assign_[0-9]+;", "")
-		], "ctor assigns y");
+		// The typed place plan makes receiver-before-RHS order explicit even when both are pure.
+		assertMatches(pointMl,
+			new EReg("let __place_receiver_[0-9]+ = self in let __place_rhs_[0-9]+ = "
+				+ xArg
+				+ " in \\(\\s*\\(__place_receiver_[0-9]+ : t\\)\\.x <- __place_rhs_[0-9]+;\\s*__place_rhs_[0-9]+",
+				""),
+			"ctor assigns x through typed place plan");
+		assertMatches(pointMl,
+			new EReg("let __place_receiver_[0-9]+ = self in let __place_rhs_[0-9]+ = "
+				+ yArg
+				+ " in \\(\\s*\\(__place_receiver_[0-9]+ : t\\)\\.y <- __place_rhs_[0-9]+;\\s*__place_rhs_[0-9]+",
+				""),
+			"ctor assigns y through typed place plan");
 		assertContains(pointMl, "incX = fun self () ->", "instance method incX");
-		assertMatchesEither(pointMl, [
-			new EReg("(?:self|\\(Obj\\.magic self : t\\))\\.x <- HxInt\\.add \\((?:self|\\(Obj\\.magic self : t\\))\\.x\\) 1", ""),
-			new EReg("let __assign_[0-9]+ = HxInt\\.add \\((?:self|\\(Obj\\.magic self : t\\))\\.x\\) 1 in \\(\\s*(?:self|\\(Obj\\.magic self : t\\))\\.x <- __assign_[0-9]+;",
-				"")
-		], "incX updates field");
+		assertMatches(pointMl, ~/let __place_receiver_[0-9]+ = self in let __place_rhs_[0-9]+ = HxInt\.add \(\(Obj\.magic self : t\)\.x\) 1 in/,
+			"incX plans receiver before rhs");
 
 		final mainPath = outDir + "/ClassMain.ml";
 		if (!sys.FileSystem.exists(mainPath))

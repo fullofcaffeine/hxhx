@@ -5,6 +5,7 @@ import haxe.macro.Context;
 #end
 import haxe.macro.Type;
 import reflaxe.ocaml.OcamlNameTools;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 
 typedef ForwardMutableStaticDecl = {
 	final moduleId:String;
@@ -422,6 +423,29 @@ class CompilationContext {
 		- Runtime selection then consumes this map to decide which runtime units to link.
 	**/
 	public final runtimeModuleUsage:Map<String, Bool> = [];
+
+	/** Sealed semantic place decisions retained for deterministic inspection. */
+	final loweredPlaceReportById:Map<String, OcamlLoweredPlaceReportEntry> = [];
+
+	/** Records one lowered place node and rejects contradictory duplicate identities. */
+	public function recordLoweredPlaceReport(entry:OcamlLoweredPlaceReportEntry):Void {
+		final existing = loweredPlaceReportById.get(entry.id);
+		if (existing != null) {
+			if (haxe.Json.stringify(existing) != haxe.Json.stringify(entry))
+				throw "reflaxe.ocaml internal lowering invariant: place identity reused with different facts: " + entry.id;
+			return;
+		}
+		loweredPlaceReportById.set(entry.id, entry);
+	}
+
+	/** Returns lowered place reports in stable identity order. */
+	public function loweredPlaceReportsSorted():Array<OcamlLoweredPlaceReportEntry> {
+		final reports:Array<OcamlLoweredPlaceReportEntry> = [];
+		for (entry in loweredPlaceReportById)
+			reports.push(entry);
+		reports.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
+		return reports;
+	}
 
 	public function markRuntimeModule(moduleName:String):Void {
 		if (moduleName == null || moduleName.length == 0)

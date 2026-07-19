@@ -23,16 +23,23 @@ import reflaxe.ocaml.ast.OcamlApplyArg;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
+import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
-import reflaxe.ocaml.ast.OcamlDebugPos;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
+import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
+import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
 
 /**
- * Milestone 2: minimal TypedExpr -> OcamlExpr lowering for expressions and function bodies.
- *
- * Notes:
- * - This pass is intentionally conservative: unsupported constructs emit `()` with a comment where possible.
- * - Local vars declared with `TVar` are treated as `ref` (mutable-by-default) for now; M3 will infer mutability.
- */
+	Legacy TypedExpr-to-OcamlExpr traversal and target-syntax assembly.
+
+	Behavior-sensitive families move through focused typed OCaml lowering modules
+	before this class constructs syntax. The first hard-cut family is ordinary
+	value-producing instance-field assignment. New representation, scheduling,
+	mutation, runtime, or ABI decisions do not belong in this already-large
+	builder; legacy `unit` fallbacks remain migration debt, not the contract for a
+	newly admitted family.
+**/
 class OcamlBuilder {
 	static final injectionPrinter = new OcamlASTPrinter();
 
@@ -40,94 +47,7 @@ class OcamlBuilder {
 	public final typeExprFromHaxeType:Type->OcamlTypeExpr;
 	public final emitSourceMap:Bool;
 
-	#if macro
-	static var sourceContentByFile:Map<String, String> = [];
-	static var lineStartsByFile:Map<String, Array<Int>> = [];
-	static var normalizedFileByFile:Map<String, String> = [];
-
-	static function normalizeHaxeFilePath(file:String):String {
-		if (file == null)
-			return "";
-		var s = StringTools.replace(file, "\\", "/");
-		final cwd = StringTools.replace(Sys.getCwd(), "\\", "/");
-		if (StringTools.startsWith(s, cwd)) {
-			s = s.substr(cwd.length);
-			if (StringTools.startsWith(s, "/"))
-				s = s.substr(1);
-		}
-		return s;
-	}
-
-	static function ensureLineStarts(file:String):Array<Int> {
-		final cached = lineStartsByFile.get(file);
-		if (cached != null)
-			return cached;
-
-		final content = try {
-			final c = sourceContentByFile.get(file);
-			if (c != null)
-				c
-			else {
-				final loaded = sys.io.File.getContent(file);
-				sourceContentByFile.set(file, loaded);
-				loaded;
-			}
-		} catch (_:Dynamic) {
-			"";
-		}
-
-		final starts:Array<Int> = [0];
-		for (i in 0...content.length) {
-			if (content.charCodeAt(i) == "\n".code)
-				starts.push(i + 1);
-		}
-		lineStartsByFile.set(file, starts);
-		return starts;
-	}
-
-	static function debugPosFromHaxePos(pos:Position):Null<OcamlDebugPos> {
-		final info = Context.getPosInfos(pos);
-		if (info == null || info.file == null || info.file.length == 0)
-			return null;
-
-		final file = info.file;
-		final starts = ensureLineStarts(file);
-		final min = info.min;
-		if (min == null || min < 0)
-			return null;
-
-		// Binary search: last lineStart <= min
-		var lo = 0;
-		var hi = starts.length - 1;
-		while (lo < hi) {
-			final mid = Std.int((lo + hi + 1) / 2);
-			if (starts[mid] <= min)
-				lo = mid
-			else
-				hi = mid - 1;
-		}
-		final lineIdx = lo; // 0-based
-		final line = lineIdx + 1;
-		final col = (min - starts[lineIdx]) + 1;
-
-		var norm = normalizedFileByFile.get(file);
-		if (norm == null) {
-			norm = normalizeHaxeFilePath(file);
-			normalizedFileByFile.set(file, norm);
-		}
-
-		return {file: norm, line: line, col: col};
-	}
-
-	static inline function shouldWrapPos(e:TypedExpr):Bool {
-		return switch (e.expr) {
-			case TConst(_), TLocal(_), TTypeExpr(_):
-				false;
-			case _:
-				true;
-		}
-	}
-	#end
+	final placeAssignmentLowerer:OcamlPlaceAssignmentLowerer;
 
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
@@ -175,11 +95,28 @@ class OcamlBuilder {
 		this.ctx = ctx;
 		this.typeExprFromHaxeType = typeExprFromHaxeType;
 		this.emitSourceMap = emitSourceMap;
+		this.placeAssignmentLowerer = new OcamlPlaceAssignmentLowerer(ctx);
 	}
 
 	inline function freshTmp(prefix:String):String {
 		tmpId += 1;
 		return "__" + prefix + "_" + tmpId;
+	}
+
+	function placeLoweringInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-lowering:place-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
+	/** Builds the one admitted assignment family from a sealed semantic plan. */
+	function buildPreservedPlaceAssignment(metadata:haxe.macro.Expr.MetadataEntry, expression:TypedExpr):OcamlExpr {
+		return switch (placeAssignmentLowerer.lower(metadata, expression, buildExpr, freshTmp)) {
+			case Lowered(lowered): lowered;
+			case Invalid(message): placeLoweringInvariant(message, expression.pos);
+		}
 	}
 
 	static function renderInjectionExpr(expr:OcamlExpr):String {
@@ -2997,8 +2934,8 @@ class OcamlBuilder {
 				}
 			case TField(obj, fa):
 				buildField(obj, fa, e.pos);
-			case TMeta(_, e1):
-				buildExpr(e1);
+			case TMeta(metadata, e1):
+				OcamlLoweredOrigin.readPlaceId(metadata) != null ? buildPreservedPlaceAssignment(metadata, e1) : buildExpr(e1);
 			case TCast(e1, _):
 				// Haxe uses casts for nullable primitive flows (boxing/unboxing + flow typing).
 				//
@@ -3623,8 +3560,8 @@ class OcamlBuilder {
 		};
 
 		#if macro
-		if (emitSourceMap && shouldWrapPos(e)) {
-			final dp = debugPosFromHaxePos(e.pos);
+		if (emitSourceMap && OcamlSourcePositionMapper.shouldWrap(e)) {
+			final dp = OcamlSourcePositionMapper.debugPosition(e.pos);
 			return dp != null ? OcamlExpr.EPos(dp, built) : built;
 		}
 		#end
@@ -4126,6 +4063,9 @@ class OcamlBuilder {
 							OcamlExpr.EIdent(tmp)
 						]), false);
 					case TField(obj, FInstance(clsRef, _, cfRef)):
+						if (OcamlPlaceInputPolicy.admitsSimpleInstanceField(e1, e2))
+							return placeLoweringInvariant("admitted instance-field assignment reached the legacy syntax branch without a stable origin",
+								e1.pos);
 						final cls = clsRef.get();
 						final cf = cfRef.get();
 						switch (cf.kind) {

@@ -9,26 +9,28 @@
 
 ## Practical outcome
 
-Assignment and update behavior is not yet owned by one validated target model.
-It is selected while `OcamlBuilder` is already constructing OCaml syntax, with
-related storage and carrier choices split between that file and
-`OcamlCompiler`. Before either component runs, Reflaxe's default
-`EverythingIsExprSanitizer` also rewrites assignment expressions into an
-assignment statement followed by another read of the left-hand side. The
-upstream oracle added for this Bead exposes why that generic rewrite is not
-semantics-preserving for effectful places.
+The first hard-cut family now owns value-producing simple assignment to an
+ordinary record-backed `Int` instance field when the right-hand side is also an
+exact semantic `Int`. It preserves the atomic typed assignment before
+Reflaxe's generic `EverythingIsExprSanitizer`, seals a typed place and ordered
+occurrence schedule, validates it, and only then constructs `OcamlExpr`.
+`receiver().field = rhs()` now evaluates the receiver and right-hand side once,
+stores once, and returns the assigned value without rereading the place.
 
-The first implementation slice will therefore introduce one small typed
-place/evaluation family before `OcamlExpr` construction. It will not introduce
-a broad control-flow graph, mirror the Haxe typed tree, or create a shared
-cross-target representation IR.
+Other assignment and update behavior is still selected while `OcamlBuilder` is
+constructing OCaml syntax, with related storage and carrier choices split
+between that file and `OcamlCompiler`. Those forms remain migration debt, not
+evidence that the first typed family is broad enough to infer their semantics.
+This slice introduces neither a broad control-flow graph, a mirror of the Haxe
+typed tree, nor a shared cross-target representation IR.
 
 ## Current ownership
 
 | Decision | Current owner | Evidence and risk |
 | --- | --- | --- |
 | Assignment used as a value | Reflaxe `EverythingIsExprSanitizer.standardizeAssignValue` before target compilation | The generic pass inserts the assignment as a separate statement and returns a copied left-hand side. For `receiver().field = rhs`, that causes a second receiver evaluation. The OCaml target currently enables this pass through `ExpressionPreprocessorHelper.defaults()`. |
-| Simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, instance, static, anonymous/dynamic, array, and bytes cases each construct target syntax directly. Several unhandled states return OCaml `unit`. |
+| Exact `Int` instance-field simple assignment | `OcamlPlaceAssignmentPlanner`, validator, and emitter before `OcamlExpr` construction | One admitted family has a stable origin, representation facts, occurrence schedule, result contract, and fail-closed invariant. Its old instance-field branch is guarded against use. |
+| Other simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, static, anonymous/dynamic, array, bytes, and deliberately unadmitted instance-field cases still construct target syntax directly. Several unhandled states return OCaml `unit`. |
 | Compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Operator selection, receiver sharing, load, arithmetic, store, and result are repeated per place kind. Ref, field, and static stores currently return OCaml `unit` in expression position. |
 | Prefix/postfix update | `OcamlBuilder.buildUnop`, approximately lines 5377-5707 | Numeric classification, nullable/Dynamic representation, place handling, store, and old/new result selection are intertwined. Unsupported states return `unit`. |
 | Straight-line local assignment | `OcamlBuilder.buildBlockFromIndex`, from approximately line 5832 | A second path rewrites non-ref local assignment as OCaml `let` shadowing, so local storage and expression lowering do not share one durable plan. |
@@ -37,10 +39,12 @@ cross-target representation IR.
 | Runtime need | `RuntimeUsageCollector` and `RuntimeCopier` after syntax construction | The structured scan is useful as a consistency check, but it cannot be the semantic source of truth and cannot see through opaque raw fragments. |
 | Unsupported behavior | `guardrailError` plus `CUnit` branches | Errors are suppressed while compiling the current Haxe standard library. Bootstrap continuity must not become the release failure policy for an admitted place form. |
 
-At the time of this inventory, `OcamlBuilder.hx` is 7,688 physical lines and
-`OcamlCompiler.hx` is 3,555. New place, schedule, identity, and validation logic
-must live in focused modules; the cutover should make the builder smaller rather
-than create another semantic subsystem inside it.
+At the baseline inventory, `OcamlBuilder.hx` was 7,688 physical lines and
+`OcamlCompiler.hx` was 3,555. After the first cutover, they are 7,628 and 3,561
+lines respectively. Place planning, validation, reporting, and emission live in
+focused `lowered/` modules. Existing source-position caching also moved out of
+the builder, so the semantic cutover reduced the mega-file by 60 lines overall
+instead of adding another responsibility to it.
 
 ## Place coverage already attempted by the emitter
 
@@ -123,7 +127,7 @@ known red implementation frontier, not an expected-output update.
 
 ## First admitted semantic family
 
-The first model must be small but reusable. It will represent:
+The first model is deliberately small but reusable. It represents:
 
 1. a stable source origin and place occurrence identity;
 2. the Haxe semantic value type separately from the selected OCaml carrier;
@@ -134,29 +138,50 @@ The first model must be small but reusable. It will represent:
 6. conservative effects and semantic runtime-requirement identifiers;
 7. a deterministic unsupported-state diagnostic.
 
-Before report-only lowering can be trusted, the target adapter must preserve an
-assignment/update occurrence as one semantic input node. It must not ask the
-lowerer to infer that two already-separated expressions were formerly one
-assignment. The bounded integration choices are:
+The target adapter now preserves each admitted occurrence with target-owned
+metadata before the destructive generic rewrite. It does not pattern-match or
+recombine the already-split output. The preservation policy and planner share
+the same admission predicate, while a legacy-branch guard fails if an admitted
+shape ever arrives without its stable origin.
 
-- add an explicit Reflaxe sanitizer option that preserves assignment values and
-  consume a pinned framework version containing it; or
-- replace that one generic pass with a focused target-owned normalizer that
-  preserves assignment/update nodes while retaining only the block-like
-  rewrites the current target still needs.
+The initial hard cut admits only:
 
-Wrapping, pattern-matching, or recombining the already-split expressions in the
-backend is rejected: receiver effects and stable expression identity have
-already been lost at that point. Disabling every preprocessor in one step is
-also outside this slice because unrelated target behavior currently depends on
-the remaining normalization passes.
+- simple assignment to an ordinary, non-extern, non-interface, record-backed
+  instance field;
+- exact primitive Haxe `Int` on both the field and right-hand side;
+- the current direct OCaml `int` field carrier and record receiver carrier;
+- receiver, right-hand-side, store, and assigned-result occurrences in that
+  order, each with an explicit count of one;
+- no compatibility-runtime requirement.
 
-The report-only step will classify the fixture without changing emission. The
-first hard cut will then admit ordinary numeric simple/compound/update forms
-whose full place schedule is represented and validated. Properties remain
-host-resolved calls rather than being guessed from field spelling. Abstract
-operators remain exact host-selected calls/bodies rather than being treated as
-ordinary numeric updates.
+It deliberately does not follow Haxe abstracts to their underlying `Int`, and
+it does not admit nullable or `Dynamic` right-hand sides. Those require explicit
+representation or conversion facts rather than an `Obj.magic`-backed guess.
+The inspection artifact is deterministic: fixtures with
+`expected.lowering.json` compile twice and must produce byte-identical reports.
+
+The next cutovers will extend this same node family to the remaining oracle-
+proven simple, compound, and update cases only when each full schedule and
+result rule is represented and validated. Properties remain host-resolved calls
+rather than being guessed from field spelling. Abstract operators remain exact
+host-selected calls or bodies rather than being treated as ordinary numeric
+updates.
+
+### First-cut validation checkpoint
+
+The focused executable fixture
+`test/portable/fixtures/place_instance_field_assign` proves the event order,
+mutation, assigned result, generated target shape, exact lowered report, and
+repeat-build determinism. The final admitted policy also passed every portable
+fixture: the broad run first exposed an accidentally admitted nullable/Dynamic
+right-hand side in `haxe_io_bucket01_basic`; narrowing the policy to exact
+semantic `Int` fixed that modeling error, and the complete corpus then passed.
+
+The checkpoint also passes the Haxe 4.3.7 three-route Oracle, M3, M4 native,
+M5 class, M6 array, M6 bytes, source-map integration, official Haxe formatting,
+and the mega-file-gravity guard. The report and implementation are internal
+correctness evidence, so the README Goals and North Star progress bars remain
+unchanged.
 
 The following are deliberately deferred:
 

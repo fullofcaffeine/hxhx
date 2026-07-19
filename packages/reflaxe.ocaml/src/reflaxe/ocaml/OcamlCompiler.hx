@@ -38,6 +38,7 @@ import reflaxe.ocaml.runtimegen.OcamlNativeFunctorEmitter;
 import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
+import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.GenericCompiler;
 import reflaxe.output.DataAndFileInfo;
 import reflaxe.ocaml.OcamlNameTools;
@@ -1715,6 +1716,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 		#end
 		final outDir = output.outputDir;
+		#if macro
+		if (Context.defined("ocaml_lowering_report")) {
+			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted());
+		}
+		#end
 		final useLineDirectives = #if macro !Context.defined("ocaml_no_line_directives") #else false #end;
 		final pluginModeValue = haxe.macro.Context.definedValue("ocaml_plugin_mode");
 		final pluginModeEnabled = haxe.macro.Context.defined("ocaml_plugin_mode")

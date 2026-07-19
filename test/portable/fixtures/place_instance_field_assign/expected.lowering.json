@@ -1,0 +1,91 @@
+{
+  "model": "typed-ocaml-lowered-place",
+  "schemaVersion": 1,
+  "admittedInputRevision": "sha256:6457e166492a4c03becf78c1f0a6c8ed4743dff1560bf9fa397e153c9df68ed9",
+  "planCount": 1,
+  "plans": [
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [],
+      "place": {
+        "carrierTypeId": "int",
+        "targetFieldName": "value",
+        "ownerTypeName": "Holder",
+        "targetSymbolId": "Main::Holder::field::value",
+        "receiverRepresentationReason": "record-backed class receiver selected by the current OCaml representation policy",
+        "ownerModuleId": "Main",
+        "id": "place:e1140668bde071930c4e07e3:place",
+        "semanticTypeId": "Int",
+        "kind": "instance-field",
+        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "receiverSemanticTypeId": "Holder",
+        "receiverRepresentationId": "place:e1140668bde071930c4e07e3:representation:receiver",
+        "fieldName": "value",
+        "receiverCarrierTypeId": "holder_t",
+        "representationId": "place:e1140668bde071930c4e07e3:representation:field"
+      },
+      "originId": "place:e1140668bde071930c4e07e3",
+      "id": "place:e1140668bde071930c4e07e3:simple-assignment",
+      "source": {
+        "min": 371,
+        "max": 395,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "simple-assignment",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:e1140668bde071930c4e07e3:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:e1140668bde071930c4e07e3:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "right-hand-side",
+          "id": "place:e1140668bde071930c4e07e3:occurrence:1",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:e1140668bde071930c4e07e3:rhs"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:e1140668bde071930c4e07e3:occurrence:2",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:e1140668bde071930c4e07e3:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "result",
+          "id": "place:e1140668bde071930c4e07e3:occurrence:3",
+          "effects": [],
+          "sourceId": "place:e1140668bde071930c4e07e3:rhs"
+        }
+      ],
+      "result": "assigned-value"
+    }
+  ]
+}
