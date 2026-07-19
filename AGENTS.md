@@ -12,6 +12,19 @@ bd close <id>         # Complete work
 bd export -o .beads/issues.jsonl  # Refresh tracked bead data before committing
 ```
 
+## Shell-Safe Issue and Pull-Request Text
+
+- Do not embed Markdown-rich prose directly in an `exec_command` shell string. Backticks,
+  `$()` expressions, quotes, globs, and multiline text can be interpreted by the shell before
+  `bd`, `gh`, or another CLI receives them, leaving a command stuck or executing unintended work.
+- For Beads comments/notes, GitHub pull-request bodies, release notes, and similar prose, put the
+  content in a safely created file and use the CLI's `--file`, `--body-file`, or stdin interface.
+  Short literal arguments are fine only when they contain no shell-active syntax.
+- Treat an unexpectedly slow metadata command as a process-safety problem. Keep its attached
+  session, inspect the exact child process after a bounded checkpoint, and do not abandon a
+  spinning shell in the background. Never terminate another agent's process without its owner or
+  explicit user authority.
+
 ## Thinking Levels (Bead Labels)
 
 Use a `thinking:*` label on active beads so execution effort matches task risk.
