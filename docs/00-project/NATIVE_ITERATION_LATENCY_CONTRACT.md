@@ -112,6 +112,7 @@ performance claim must use measured medians from the relevant runner class.
     "cooperativeHeavyRunLeaseSchema": "haxe-family.heavy-run-lease.v1",
     "cooperativeHeavyRunLease": "scripts/hxhx/local-heavy-run-lease.js",
     "cooperativeHeavyRunLeaseFixture": "scripts/ci/local-heavy-run-lease-fixture-test.js",
+    "cooperativeHeavyRunLeaseCrossRepositoryFixture": "scripts/ci/cross-repository-heavy-run-lease-fixture-test.js",
     "developerCurrentSourceInputSchema": "hxhx.current-source-inputs.v1",
     "developerCurrentSourceInputFingerprint": "scripts/hxhx/current-source-input-fingerprint.js",
     "developerCurrentSourceCacheFixture": "scripts/ci/developer-current-source-cache-fixture-test.js"
@@ -228,6 +229,30 @@ owning shell by PID plus process start time, has a heartbeat and stale-owner
 recovery, supports nested handoff, and never sends signals to competing work.
 The final capacity report records admission or timeout and total queue time.
 CI remains under runner scheduling and never acquires the local lease.
+
+Participating Reflaxe repositories may keep a small local adapter while the
+protocol has only a few consumers. Compatibility is defined by the shared
+schema, default user-scoped path, PID-plus-start-time owner identity, heartbeat,
+fail-closed schema handling, stale recovery without signaling another process,
+and inherited owner handoff. A local entry point must remain opt-in and bounded;
+it must wrap the repository's existing command without changing test selection,
+timeouts, retries, or release claims.
+
+Before adopting or upgrading an adapter, run the executable two-way proof
+against a peer checkout:
+
+```bash
+npm run test:hxhx:cross-repository-heavy-run-lease -- \
+  --peer-root ../haxe.ruby
+```
+
+The peer must expose `scripts/ci/with-heavy-run-lease.js`. The fixture proves
+that each independent implementation blocks the other and that nested work
+reuses, but does not release, its outer owner's lease. A wire-format change gets
+a new schema name and coordinated repository updates; an unknown schema remains
+an error rather than a candidate for stale deletion. Reconsider a shared
+package when a third implementation would otherwise copy the complete protocol
+core or when coordinated upgrades become the dominant maintenance cost.
 
 Capacity reports also distinguish raw free pages from a reviewed available-
 memory signal. macOS uses `memory_pressure -Q`, Linux uses `MemAvailable`, and
