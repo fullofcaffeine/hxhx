@@ -5472,6 +5472,9 @@ class OcamlBuilder {
 						case TLocal(v) if (isRefLocalId(v.id)):
 							incDecDynamic(buildLocal(v), (newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), newVal));
 						case TField(obj, FStatic(clsRef, cfRef)):
+							if (OcamlPlaceInputPolicy.admitsIntUpdateStaticField(op, e, ctx.currentModuleId, ctx.currentTypeName))
+								return placeLoweringInvariant("admitted static-field update reached the legacy dynamic syntax branch without a stable origin",
+									e.pos);
 							final cls = clsRef.get();
 							final cf = cfRef.get();
 							final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
@@ -5596,6 +5599,8 @@ class OcamlBuilder {
 						case TLocal(v) if (isRefLocalId(v.id)):
 							incDec(buildLocal(v), (newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), newVal));
 						case TField(_, FStatic(clsRef, cfRef)):
+							if (OcamlPlaceInputPolicy.admitsIntUpdateStaticField(op, e, ctx.currentModuleId, ctx.currentTypeName))
+								return placeLoweringInvariant("admitted static-field update reached the legacy syntax branch without a stable origin", e.pos);
 							final cls = clsRef.get();
 							final cf = cfRef.get();
 							final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");

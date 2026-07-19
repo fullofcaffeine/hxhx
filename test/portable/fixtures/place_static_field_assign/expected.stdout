@@ -1,5 +1,14 @@
 local=7 final=7 events=rhs_local
 local_compound=10 final=10 events=rhs_mutates_local
+local_postfix=10 final=11 events=
+local_prefix=12 final=12 events=
+local_postfix_decrement=12 final=11 events=
+local_prefix_decrement=10 final=10 events=
 qualified=9 final=9 events=rhs_qualified
 qualified_compound=12 final=12 events=rhs_mutates_qualified
+qualified_postfix=12 final=13 events=
+qualified_prefix=14 final=14 events=
+qualified_postfix_decrement=14 final=13 events=
+qualified_prefix_decrement=12 final=12 events=
 float=2.
+float_postfix=2. final=3.

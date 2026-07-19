@@ -133,6 +133,12 @@ class OcamlPlaceInputPolicy {
 		return operation == OpAdd && admitsVisibleExactIntStaticFieldPlace(left, currentModuleId, currentTypeName) && isExactInt(right.t);
 	}
 
+	/** Admits primitive-Int increment/decrement on an already-visible static. */
+	public static function admitsIntUpdateStaticField(operation:Unop, operand:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>):Bool {
+		return (operation == OpIncrement || operation == OpDecrement)
+			&& admitsVisibleExactIntStaticFieldPlace(operand, currentModuleId, currentTypeName);
+	}
+
 	/** Admits exact `Array<Int>` element assignment with an exact `Int` index and RHS. */
 	public static function admitsSimpleArrayElement(left:TypedExpr, right:TypedExpr):Bool {
 		return admitsExactIntArrayElementPlace(left) && isExactInt(right.t);

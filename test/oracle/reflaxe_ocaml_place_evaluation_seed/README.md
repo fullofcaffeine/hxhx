@@ -11,7 +11,7 @@ Run the three upstream routes with:
 npm run test:reflaxe-ocaml:place-oracle
 ```
 
-The interpreter and JavaScript routes agree on all 27 cases. Neko agrees on 26
+The interpreter and JavaScript routes agree on all 29 cases. Neko agrees on 28
 cases, but evaluates the index before the receiver for a simple array
 assignment. The accepted OCaml contract follows the interpreter and JavaScript
 source order for that one disputed case. `expected.neko.stdout` preserves the
@@ -44,6 +44,10 @@ overwrite the intervening mutation.
 `static_compound_rhs_mutates` proves the same load-before-RHS contract for a
 mutable static cell. The target must save the original ref-cell value before
 the RHS temporarily overwrites that cell.
+
+The static increment/decrement cases prove both signed update directions and
+both result contracts: postfix returns the saved old value, while prefix
+returns the computed value after the same ref-cell store.
 
 `array_compound_rhs_mutates` proves the same load-before-RHS contract for an
 array element after the receiver and index have been established. The final

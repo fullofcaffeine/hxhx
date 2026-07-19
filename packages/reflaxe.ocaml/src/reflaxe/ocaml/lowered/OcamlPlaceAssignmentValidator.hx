@@ -18,6 +18,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
@@ -279,6 +280,57 @@ class OcamlPlaceAssignmentValidator {
 		return errors;
 	}
 
+	/** Validates receiver-free static update token, fixity, mutation, and result. */
+	public static function validateStaticIntUpdate(plan:OcamlLoweredStaticIntUpdate):Array<String> {
+		final errors = validateStaticIdentityAndPlace(plan);
+		if (plan.fixity != OcamlLoweredUpdateFixity.Prefix && plan.fixity != OcamlLoweredUpdateFixity.Postfix)
+			errors.push("ordinary primitive-Int static updates require prefix or postfix fixity");
+		final expectedDelta = if (plan.sourceOperator == OcamlLoweredUpdateOperator.Increment) {
+			1;
+		} else if (plan.sourceOperator == OcamlLoweredUpdateOperator.Decrement) {
+			-1;
+		} else {
+			errors.push("ordinary primitive-Int static updates require an increment or decrement source token");
+			0;
+		}
+		if (plan.operation != OcamlLoweredIntOperator.Add || plan.delta != expectedDelta)
+			errors.push("ordinary primitive-Int static updates require Haxe Int addition with the token-selected delta");
+		final expectedResult = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? OcamlAssignmentResultKind.OldValue : OcamlAssignmentResultKind.ComputedValue;
+		if (plan.result != expectedResult)
+			errors.push("postfix static update must return the old value and prefix static update the computed value");
+
+		final expected = [
+			OcamlPlaceOccurrenceRole.Load,
+			OcamlPlaceOccurrenceRole.Operator,
+			OcamlPlaceOccurrenceRole.Store,
+			OcamlPlaceOccurrenceRole.Result
+		];
+		if (plan.schedule.length != expected.length) {
+			errors.push("static update requires load, operator, store, and result occurrences without a receiver");
+		} else {
+			final resultSharing = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? "old_value" : "new_value";
+			final expectedSharing = ["old_value", "new_value", null, resultSharing];
+			for (index in 0...expected.length) {
+				final occurrence = plan.schedule[index];
+				if (occurrence.role != expected[index])
+					errors.push("occurrence " + index + " has the wrong static-update evaluation role");
+				if (occurrence.occurrenceCount != 1)
+					errors.push("occurrence " + index + " must execute exactly once in the static update family");
+				if (occurrence.sharedAs != expectedSharing[index])
+					errors.push("occurrence " + index + " has the wrong static-update sharing identity");
+			}
+			if (plan.schedule[0].sourceId != plan.schedule[2].sourceId)
+				errors.push("static update load and store must refer to the same sealed static place");
+			final expectedResultSource = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? plan.originId + ":old-value" : plan.schedule[1].sourceId;
+			if (plan.schedule[3].sourceId != expectedResultSource)
+				errors.push("static update result must reuse the fixity-selected old or computed value");
+		}
+		final expectedRuntimeId = plan.originId + ":runtime:haxe-int32-add";
+		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != expectedRuntimeId)
+			errors.push("primitive-Int static update must record its Haxe Int addition runtime requirement");
+		return errors;
+	}
+
 	/** Validates exact Array<Int> simple assignment before target syntax exists. */
 	public static function validateArraySimple(plan:OcamlLoweredArraySimpleAssignment):Array<String> {
 		final errors = validateArrayIdentityAndPlace(plan);
@@ -377,6 +429,8 @@ class OcamlPlaceAssignmentValidator {
 	/** Validates exact array update order, fixity, and semantic runtime intent. */
 	public static function validateArrayIntUpdate(plan:OcamlLoweredArrayIntUpdate):Array<String> {
 		final errors = validateArrayIdentityAndPlace(plan);
+		if (plan.fixity != OcamlLoweredUpdateFixity.Prefix && plan.fixity != OcamlLoweredUpdateFixity.Postfix)
+			errors.push("ordinary primitive-Int array updates require prefix or postfix fixity");
 		final expectedDelta = if (plan.sourceOperator == OcamlLoweredUpdateOperator.Increment) {
 			1;
 		} else if (plan.sourceOperator == OcamlLoweredUpdateOperator.Decrement) {
@@ -482,6 +536,8 @@ class OcamlPlaceAssignmentValidator {
 	/** Validates exact update token/fixity, mutation order, and old/new result choice. */
 	public static function validateIntUpdate(plan:OcamlLoweredIntUpdate):Array<String> {
 		final errors = validateIdentityAndPlace(plan);
+		if (plan.fixity != OcamlLoweredUpdateFixity.Prefix && plan.fixity != OcamlLoweredUpdateFixity.Postfix)
+			errors.push("ordinary primitive-Int field updates require prefix or postfix fixity");
 		final expectedDelta = if (plan.sourceOperator == OcamlLoweredUpdateOperator.Increment) {
 			1;
 		} else if (plan.sourceOperator == OcamlLoweredUpdateOperator.Decrement) {

@@ -189,6 +189,25 @@ typedef OcamlLoweredStaticCompoundAssignment = {
 	final runtimeRequirementIds:Array<String>;
 }
 
+/** A typed ordinary Int static update with explicit fixity and result. */
+typedef OcamlLoweredStaticIntUpdate = {
+	final id:String;
+	final originId:String;
+	final source:OcamlLoweredSourceSpan;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final place:OcamlLoweredStaticFieldPlace;
+	final sourceOperator:OcamlLoweredUpdateOperator;
+	final fixity:OcamlLoweredUpdateFixity;
+	final operation:OcamlLoweredIntOperator;
+	final delta:Int;
+	final conversion:OcamlLoweredConversionKind;
+	final result:OcamlAssignmentResultKind;
+	final schedule:Array<OcamlPlaceOccurrence>;
+	final effects:Array<OcamlLoweredEffect>;
+	final runtimeRequirementIds:Array<String>;
+}
+
 /** A value-producing assignment to one exact `Array<Int>` element. */
 typedef OcamlLoweredArraySimpleAssignment = {
 	final id:String;
@@ -290,6 +309,7 @@ enum OcamlLoweredPlaceOperation {
 	Simple(plan:OcamlLoweredSimpleAssignment);
 	StaticSimple(plan:OcamlLoweredStaticSimpleAssignment);
 	StaticCompound(plan:OcamlLoweredStaticCompoundAssignment);
+	StaticUpdate(plan:OcamlLoweredStaticIntUpdate);
 	ArraySimple(plan:OcamlLoweredArraySimpleAssignment);
 	ArrayCompound(plan:OcamlLoweredArrayCompoundAssignment);
 	ArrayUpdate(plan:OcamlLoweredArrayIntUpdate);

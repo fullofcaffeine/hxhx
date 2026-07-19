@@ -17,6 +17,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticCompoundAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignment;
 
 /** Mechanically converts a validated place plan into OCaml target syntax. */
@@ -70,6 +71,20 @@ class OcamlPlaceAssignmentEmitter {
 				OcamlExpr.EAssign(OcamlAssignOp.RefSet, target, OcamlExpr.EIdent(newValueName)),
 				OcamlExpr.EIdent(newValueName)
 			]), false), false), false);
+	}
+
+	/** Emits a validated static update from its explicit old/new result contract. */
+	public static function emitStaticIntUpdate(plan:OcamlLoweredStaticIntUpdate, freshTemporary:String->String):OcamlExpr {
+		final oldValueName = freshTemporary("place_old");
+		final newValueName = freshTemporary("place_new");
+		final target = staticTarget(plan.place);
+		final operation = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"),
+			[OcamlExpr.EIdent(oldValueName), OcamlExpr.EConst(OcamlConst.CInt(plan.delta))]);
+		final resultName = updateResultName(plan.result, oldValueName, newValueName);
+		return OcamlExpr.ELet(oldValueName, OcamlExpr.EUnop(OcamlUnop.Deref, target), OcamlExpr.ELet(newValueName, operation, OcamlExpr.ESeq([
+			OcamlExpr.EAssign(OcamlAssignOp.RefSet, target, OcamlExpr.EIdent(newValueName)),
+			OcamlExpr.EIdent(resultName)
+		]), false), false);
 	}
 
 	/** Emits the sealed array, index, RHS, store, and assigned-result schedule. */

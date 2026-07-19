@@ -7,6 +7,8 @@ static_compound result=13 final=13 events=rhs
 static_compound_rhs_mutates result=13 final=13 events=rhs_mutates_static
 static_postfix result=10 final=11 events=
 static_prefix result=11 final=11 events=
+static_postfix_decrement result=10 final=9 events=
+static_prefix_decrement result=9 final=9 events=
 field_assign result=7 final=7 events=receiver,rhs
 field_compound result=13 final=13 events=receiver,rhs
 field_compound_rhs_mutates result=13 final=13 events=receiver,rhs_mutates

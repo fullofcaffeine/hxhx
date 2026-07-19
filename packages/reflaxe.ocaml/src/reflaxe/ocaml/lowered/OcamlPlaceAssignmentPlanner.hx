@@ -23,6 +23,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticCompoundAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
@@ -250,6 +251,55 @@ class OcamlPlaceAssignmentPlanner {
 				occurrence(originId, 2, OcamlPlaceOccurrenceRole.Operator, newValueId, "new_value", [OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
 				occurrence(originId, 3, OcamlPlaceOccurrenceRole.Store, place.id, null, [OcamlLoweredEffect.Write]),
 				occurrence(originId, 4, OcamlPlaceOccurrenceRole.Result, newValueId, "new_value", [])
+			],
+			effects: [
+				OcamlLoweredEffect.Read,
+				OcamlLoweredEffect.Call,
+				OcamlLoweredEffect.Throw,
+				OcamlLoweredEffect.Write
+			],
+			runtimeRequirementIds: [originId + ":runtime:haxe-int32-add"]
+		};
+	}
+
+	/** Plans an already-visible exact-Int static update and its old/new result. */
+	public function planStaticIntUpdate(metadata:MetadataEntry, expression:TypedExpr, operation:Unop, postFix:Bool,
+			operand:TypedExpr):Null<OcamlLoweredStaticIntUpdate> {
+		if (!OcamlPlaceInputPolicy.admitsIntUpdateStaticField(operation, operand, context.currentModuleId, context.currentTypeName))
+			return null;
+		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
+		if (originId == null)
+			return null;
+		final place = planStaticField(originId, operand);
+		if (place == null)
+			return null;
+		if (operation != OpIncrement && operation != OpDecrement)
+			return null;
+		final oldValueId = originId + ":old-value";
+		final newValueId = originId + ":new-value";
+		final fixity = postFix ? OcamlLoweredUpdateFixity.Postfix : OcamlLoweredUpdateFixity.Prefix;
+		final result = postFix ? OcamlAssignmentResultKind.OldValue : OcamlAssignmentResultKind.ComputedValue;
+		final isIncrement = operation == OpIncrement;
+		final sourceOperator = isIncrement ? OcamlLoweredUpdateOperator.Increment : OcamlLoweredUpdateOperator.Decrement;
+		final delta = isIncrement ? 1 : -1;
+		return {
+			id: originId + ":static-int-" + sourceOperator,
+			originId: originId,
+			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			semanticTypeId: "Int",
+			carrierTypeId: "int",
+			place: place,
+			sourceOperator: sourceOperator,
+			fixity: fixity,
+			operation: OcamlLoweredIntOperator.Add,
+			delta: delta,
+			conversion: OcamlLoweredConversionKind.Identity,
+			result: result,
+			schedule: [
+				occurrence(originId, 0, OcamlPlaceOccurrenceRole.Load, place.id, "old_value", [OcamlLoweredEffect.Read]),
+				occurrence(originId, 1, OcamlPlaceOccurrenceRole.Operator, newValueId, "new_value", [OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 2, OcamlPlaceOccurrenceRole.Store, place.id, null, [OcamlLoweredEffect.Write]),
+				occurrence(originId, 3, OcamlPlaceOccurrenceRole.Result, postFix ? oldValueId : newValueId, postFix ? "old_value" : "new_value", [])
 			],
 			effects: [
 				OcamlLoweredEffect.Read,

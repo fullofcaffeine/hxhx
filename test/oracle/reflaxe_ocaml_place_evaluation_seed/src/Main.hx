@@ -117,6 +117,14 @@ class Main {
 		reset();
 		final prefixResult = ++staticValue;
 		show("static_prefix", prefixResult, staticValue);
+
+		reset();
+		final postfixDecrementResult = staticValue--;
+		show("static_postfix_decrement", postfixDecrementResult, staticValue);
+
+		reset();
+		final prefixDecrementResult = --staticValue;
+		show("static_prefix_decrement", prefixDecrementResult, staticValue);
 	}
 
 	static function fieldCases():Void {

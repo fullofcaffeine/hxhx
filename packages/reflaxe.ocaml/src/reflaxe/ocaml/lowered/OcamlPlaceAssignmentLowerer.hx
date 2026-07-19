@@ -150,8 +150,13 @@ class OcamlPlaceAssignmentLowerer {
 				if (instancePlan != null) {
 					OcamlLoweredPlaceOperation.Update(instancePlan);
 				} else {
-					final arrayPlan = planner.planArrayIntUpdate(metadata, expression, operation, postFix, operand);
-					arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArrayUpdate(arrayPlan);
+					final staticPlan = planner.planStaticIntUpdate(metadata, expression, operation, postFix, operand);
+					if (staticPlan != null) {
+						OcamlLoweredPlaceOperation.StaticUpdate(staticPlan);
+					} else {
+						final arrayPlan = planner.planArrayIntUpdate(metadata, expression, operation, postFix, operand);
+						arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArrayUpdate(arrayPlan);
+					}
 				}
 			case _: null;
 		}
@@ -223,6 +228,32 @@ class OcamlPlaceAssignmentLowerer {
 						});
 					}
 					Lowered(OcamlPlaceAssignmentEmitter.emitStaticCompoundIntAdd(plan, buildExpr, freshTemporary));
+				}
+			case StaticUpdate(plan):
+				final errors = OcamlPlaceAssignmentValidator.validateStaticIntUpdate(plan);
+				if (errors.length > 0) invalid(errors, plan.originId); else {
+					context.markRuntimeModule("HxInt");
+					if (shouldRecord(plan.source)) {
+						context.recordLoweredPlaceReport({
+							id: plan.id,
+							originId: plan.originId,
+							source: plan.source,
+							nodeKind: "static-int-update",
+							semanticTypeId: plan.semanticTypeId,
+							carrierTypeId: plan.carrierTypeId,
+							place: staticPlaceReport(plan.place),
+							operation: plan.operation,
+							sourceOperator: plan.sourceOperator,
+							fixity: plan.fixity,
+							delta: plan.delta,
+							conversion: plan.conversion,
+							result: plan.result,
+							schedule: plan.schedule,
+							effects: plan.effects,
+							runtimeRequirementIds: plan.runtimeRequirementIds
+						});
+					}
+					Lowered(OcamlPlaceAssignmentEmitter.emitStaticIntUpdate(plan, freshTemporary));
 				}
 			case ArraySimple(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateArraySimple(plan);
