@@ -30,6 +30,10 @@ Exact nominal `Array<Int>` simple assignment now also seals the array receiver,
 index, RHS, store, and shared RHS result in source order. It uses the direct
 `int HxArray.t` carrier without an `Obj.magic` cast and records the semantic
 `haxe-array-element-set` runtime requirement before syntax construction.
+Exact primitive-`Int` `+=` on that same array place additionally seals the old
+element load before the RHS, Haxe `Int` addition, one store, and the computed
+result. This remains an exact nominal carrier cut; other array-like abstracts
+are not reclassified as `Array<Int>`.
 
 Other assignment and update behavior is still selected while `OcamlBuilder` is
 constructing OCaml syntax, with related storage and carrier choices split
@@ -48,6 +52,7 @@ typed tree, nor a shared cross-target representation IR.
 | Exact primitive-`Int` instance-field `++` / `--` | The same typed place model before `OcamlExpr` construction | Source token, signed delta, and prefix/postfix fixity are separate facts. Every schedule records one receiver, load, Haxe `int-add`, store, and the fixity-selected old or computed result. |
 | Exact `Int` static simple assignment | The same typed place model before `OcamlExpr` construction | Current-type and cross-module mutable ref cells record stable symbol, representation, local/qualified access, RHS, store, and assigned result without inventing a receiver occurrence. |
 | Exact nominal `Array<Int>` simple assignment | The same typed place model before `OcamlExpr` construction | The plan records canonical array/element/index identities, diagnostic display types, the direct typed HxArray carrier, receiver/index/RHS order, one store, the assigned result, and its runtime capability. Typedef- or abstract-backed array syntax is deliberately not inferred to have the same carrier. |
+| Exact primitive-`Int` `Array<Int>` `+=` | The same typed place model before `OcamlExpr` construction | Receiver and index setup feed one old-element load, the RHS, Haxe `Int` addition, one store, and the shared computed result. `HxArray` get/set and `HxInt` addition requirements are recorded before syntax. |
 | Other simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, same-module cross-type static, anonymous/dynamic, bytes, non-Int or non-nominal array, and deliberately unadmitted instance-field cases still construct target syntax directly. Several unhandled states return OCaml `unit`. |
 | Other compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Other operators and place kinds still repeat operator selection, receiver sharing, load, arithmetic, store, and result. Ref, field, and static stores can still return OCaml `unit` in expression position. |
 | Other prefix/postfix update | `OcamlBuilder.buildUnop`, approximately lines 5377-5707 | Other place kinds, Float, nullable, Dynamic, and abstract handling still combine numeric classification, representation, place mutation, and old/new result selection. Unsupported states can return `unit`. |
@@ -58,10 +63,10 @@ typed tree, nor a shared cross-target representation IR.
 | Unsupported behavior | `guardrailError` plus `CUnit` branches | Errors are suppressed while compiling the current Haxe standard library. Bootstrap continuity must not become the release failure policy for an admitted place form. |
 
 At the baseline inventory, `OcamlBuilder.hx` was 7,688 physical lines and
-`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,638 and 3,561
+`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,642 and 3,561
 lines respectively. Place planning, validation, reporting, and emission live in
 focused `lowered/` modules. Existing source-position caching also moved out of
-the builder, so the semantic cutovers reduced the mega-file by 50 lines overall
+the builder, so the semantic cutovers reduced the mega-file by 46 lines overall
 instead of adding another responsibility to it.
 
 ## Place coverage already attempted by the emitter
@@ -72,7 +77,7 @@ instead of adding another responsibility to it.
 | Static field | Mutable ref cell | Mutable ref cell | Mutable ref cell | Invalid/immutable cases can diagnose and still produce `unit`. |
 | Instance field | Mutable record field | Mutable record field | Mutable record field | Receiver and result behavior are constructed independently in each branch. |
 | Property | Usually host-resolved accessor call | Usually host-resolved getter/operator/setter calls | Usually host-resolved getter/setter calls | Setter return value is semantically significant and must remain explicit. |
-| Array element | Typed place path for exact nominal `Array<Int>`; `HxArray.set` otherwise | `get`, operation, `set` | `get`, operation, `set` | Compound/update and non-direct carriers still rely on builder-local scheduling. |
+| Array element | Typed place path for exact nominal `Array<Int>`; `HxArray.set` otherwise | Typed place path for exact primitive-`Int` `+=`; builder-local `get`, operation, `set` otherwise | `get`, operation, `set` | Other compound operators, update, and non-direct carriers still rely on builder-local scheduling. |
 | Bytes element | `HxBytes.set` | `get`, operation, `set` | `get`, operation, `set` | Setter result differs from ordinary array helper conventions. |
 | Anonymous field | `HxAnon.set` | No complete dedicated path | No ordinary typed path | Some named shapes intentionally return `unit`. |
 | Dynamic field | `HxAnon.set` through `Obj.repr` | No complete dedicated path | Dynamic numeric path | Dynamic tagging, place semantics, and unsafe carrier operations are coupled. |
@@ -85,7 +90,7 @@ or structurally lowered inline body.
 ## Frozen Haxe 4.3.7 behavior
 
 The fixture at
-`test/oracle/reflaxe_ocaml_place_evaluation_seed` runs 25 cases through
+`test/oracle/reflaxe_ocaml_place_evaluation_seed` runs 26 cases through
 interpreter, JavaScript/Node, and Neko. Run it with:
 
 ```bash
@@ -120,6 +125,10 @@ local fallback.
   evaluating its right-hand side. If that right-hand side mutates the same
   field, the operator still uses the saved old value and the final store
   overwrites the intervening mutation.
+- Ordinary array compound assignment establishes the receiver and index, then
+  loads the old element before evaluating the RHS. An RHS mutation of that same
+  element is likewise overwritten by the operator result derived from the saved
+  old value.
 - Ordinary prefix update returns the new value; ordinary postfix update returns
   the old value.
 - A property setter may return a value different from both the value passed to
@@ -144,9 +153,10 @@ __assign_16 has type unit but int was expected
 Inspection also showed simple field assignment followed by a second receiver
 evaluation to recover the expression result. That would turn one upstream
 `receiver` event into two if native compilation were allowed to continue.
-The exact primitive-`Int` instance-field `+=` cutover now closes this failure.
-Other compound operators and place kinds remain separate frontiers and must not
-be inferred from this result.
+The exact primitive-`Int` instance-field `+=` cutover now closes this failure,
+and the exact nominal `Array<Int>` `+=` cutover closes the corresponding array
+schedule. Other compound operators and place kinds remain separate frontiers
+and must not be inferred from these results.
 
 ## First admitted semantic family
 
@@ -186,10 +196,14 @@ The current hard cuts admit only:
 - exact primitive-`Int` simple assignment through direct nominal `Array<Int>`,
   with receiver, index, RHS, store, and reused RHS result occurrences in that
   order and no target cast;
+- exact primitive-`Int` `+=` through direct nominal `Array<Int>`, with receiver,
+  index, old-element load, RHS, `int-add`, store, and reused computed result in
+  Oracle-proven order;
 - no compatibility-runtime requirement for field/static simple assignment,
   one `haxe-int32-add` requirement mapped to `HxInt` for `+=` and updates, and
   one `haxe-array-element-set` requirement mapped to `HxArray` for the admitted
-  array store.
+  simple array store. Array `+=` records get, Haxe `Int` addition, and set as
+  separate semantic requirements and selects both `HxArray` and `HxInt`.
 
 It deliberately does not follow Haxe abstracts to their underlying `Int`, and
 it does not admit nullable or `Dynamic` right-hand sides. Those require explicit
@@ -201,13 +215,14 @@ closed static-field report shape with symbol access and forward-declaration
 facts rather than asking emission to rediscover storage.
 Schema version 4 adds the array-element place, an explicit index occurrence,
 canonical receiver/index identities alongside diagnostic display spellings,
-selected `HxArray` get/set symbols, and the semantic runtime requirement.
+selected `HxArray` get/set symbols, and semantic runtime requirements. The
+array compound plan uses that existing closed shape and adds no schema version.
 Lowered identities use function identity plus structural ordinal; source paths
 and byte offsets remain diagnostic provenance and do not determine semantic
 identity.
 
 The next cutovers will extend this same node family to the remaining oracle-
-proven simple, remaining compound operators/place kinds, and update cases only
+proven simple and compound place/operator combinations, plus update cases, only
 when each full schedule and result rule is represented and validated.
 Properties remain host-resolved calls rather than being guessed from field
 spelling. Abstract operators remain exact host-selected calls or bodies rather
@@ -260,6 +275,25 @@ existing `Obj.t HxArray.t` carrier but contributes no typed array-place plan.
 The complete portable corpus caught that distinction when an early alias-
 following policy tried to classify Vector as direct `Array<Int>`; the final
 policy admits only a nominal Array carrier and adds no `Obj.magic`.
+
+`test/portable/fixtures/place_array_compound_assign` proves receiver and index
+setup followed by an old-element load before an RHS that temporarily stores
+`100`. The sealed operation still computes, stores, and returns `23`, and the
+report records the `HxArray` get/set plus `HxInt` addition requirements. The RHS
+simple store is itself an admitted nested plan, so the two-plan report also
+proves structural recursive lowering and repeat-build determinism. A native
+`Array<Float>` `+=` control executes through the existing path without adding a
+third plan, keeping the admission boundary exact.
+
+Upstream Haxe's typed dump shows that complex compound lvalues arrive with
+compiler-generated `base` and `index` setup locals. The place plan consumes
+those normalized local reads; their original receiver/index calls remain
+ordered immediately before the plan in the host typed body. The current local
+storage path still initializes the generated `base` through an outer
+`Obj.magic`, while the admitted array operation itself consumes the direct
+`int HxArray.t` carrier and adds no further cast. Removing that earlier unsafe
+local-storage conversion belongs to `haxe_ocaml-9bome`'s shared representation
+registry, not to a second representation rule in the place emitter.
 
 The following are deliberately deferred:
 

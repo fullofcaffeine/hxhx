@@ -17,6 +17,7 @@ property_postfix result=10 final=111 events=receiver,get,set:11
 property_prefix result=1011 final=111 events=receiver,get,set:11
 array_assign result=7 final=7 events=array,index,rhs
 array_compound result=23 final=23 events=array,index,rhs
+array_compound_rhs_mutates result=23 final=23 events=array,index,rhs_mutates_array
 array_postfix result=20 final=21 events=array,index
 array_prefix result=21 final=21 events=array,index
 dynamic_assign result=7 final=7 events=dynamic,rhs

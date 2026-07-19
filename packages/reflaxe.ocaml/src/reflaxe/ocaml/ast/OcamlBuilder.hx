@@ -4385,6 +4385,10 @@ class OcamlBuilder {
 								OcamlExpr.EConst(OcamlConst.CUnit);
 						}
 					case TArray(arr, idx):
+						if (OcamlPlaceInputPolicy.admitsCompoundIntAddArrayElement(inner, e1, e2))
+							return
+								placeLoweringInvariant("admitted array-element compound assignment reached the legacy syntax branch without a stable origin",
+									e1.pos);
 						// a[i] += v  ->  set a i ((get a i) + v)
 						final arrExpr = buildExpr(arr);
 						final idxExpr = buildExpr(idx);

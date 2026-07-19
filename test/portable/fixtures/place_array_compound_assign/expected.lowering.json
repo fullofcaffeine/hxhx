@@ -1,0 +1,243 @@
+{
+  "model": "typed-ocaml-lowered-place",
+  "schemaVersion": 4,
+  "admittedInputRevision": "sha256:91cb27ae9f0c83cfe6097dd47771a70910a6ba60e71009c88a125ffb880f47aa",
+  "planCount": 2,
+  "plans": [
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "haxe-array-element-set"
+      ],
+      "place": {
+        "carrierTypeId": "int",
+        "indexCarrierTypeId": "int",
+        "targetLoadName": "get",
+        "receiverDisplayType": "Array<Int>",
+        "targetStoreName": "set",
+        "ownerTypeName": "Array",
+        "targetSymbolId": "runtime::HxArray::element",
+        "indexDisplayType": "Int",
+        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "ownerModuleId": "Array",
+        "indexRepresentationReason": "exact Haxe Int index uses the direct OCaml int carrier",
+        "id": "place:2d3a066344737b67051eaeb9:place",
+        "semanticTypeId": "Int",
+        "indexSemanticTypeId": "Int",
+        "kind": "array-element",
+        "representationReason": "exact Array<Int> elements use the direct OCaml int carrier inside HxArray",
+        "indexRepresentationId": "place:2d3a066344737b67051eaeb9:representation:array-index",
+        "receiverSemanticTypeId": "Array<Int>",
+        "targetModuleName": "HxArray",
+        "receiverRepresentationId": "place:2d3a066344737b67051eaeb9:representation:array-receiver",
+        "fieldName": "[]",
+        "receiverCarrierTypeId": "int HxArray.t",
+        "representationId": "place:2d3a066344737b67051eaeb9:representation:array-element"
+      },
+      "originId": "place:2d3a066344737b67051eaeb9",
+      "id": "place:2d3a066344737b67051eaeb9:array-simple-assignment",
+      "source": {
+        "min": 409,
+        "max": 424,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "array-simple-assignment",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:2d3a066344737b67051eaeb9:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:2d3a066344737b67051eaeb9:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "index",
+          "role": "index",
+          "id": "place:2d3a066344737b67051eaeb9:occurrence:1",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:2d3a066344737b67051eaeb9:index"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "right-hand-side",
+          "id": "place:2d3a066344737b67051eaeb9:occurrence:2",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:2d3a066344737b67051eaeb9:rhs"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:2d3a066344737b67051eaeb9:occurrence:3",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:2d3a066344737b67051eaeb9:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "result",
+          "id": "place:2d3a066344737b67051eaeb9:occurrence:4",
+          "effects": [],
+          "sourceId": "place:2d3a066344737b67051eaeb9:rhs"
+        }
+      ],
+      "result": "assigned-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "haxe-array-element-get",
+        "place:ebd9e06b24f2d78b3880868b:runtime:haxe-int32-add",
+        "haxe-array-element-set"
+      ],
+      "place": {
+        "carrierTypeId": "int",
+        "indexCarrierTypeId": "int",
+        "targetLoadName": "get",
+        "receiverDisplayType": "Array<Int>",
+        "targetStoreName": "set",
+        "ownerTypeName": "Array",
+        "targetSymbolId": "runtime::HxArray::element",
+        "indexDisplayType": "Int",
+        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
+        "ownerModuleId": "Array",
+        "indexRepresentationReason": "exact Haxe Int index uses the direct OCaml int carrier",
+        "id": "place:ebd9e06b24f2d78b3880868b:place",
+        "semanticTypeId": "Int",
+        "indexSemanticTypeId": "Int",
+        "kind": "array-element",
+        "representationReason": "exact Array<Int> elements use the direct OCaml int carrier inside HxArray",
+        "indexRepresentationId": "place:ebd9e06b24f2d78b3880868b:representation:array-index",
+        "receiverSemanticTypeId": "Array<Int>",
+        "targetModuleName": "HxArray",
+        "receiverRepresentationId": "place:ebd9e06b24f2d78b3880868b:representation:array-receiver",
+        "fieldName": "[]",
+        "receiverCarrierTypeId": "int HxArray.t",
+        "representationId": "place:ebd9e06b24f2d78b3880868b:representation:array-element"
+      },
+      "originId": "place:ebd9e06b24f2d78b3880868b",
+      "id": "place:ebd9e06b24f2d78b3880868b:array-compound-assignment",
+      "source": {
+        "min": 490,
+        "max": 531,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "array-compound-assignment",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "index",
+          "role": "index",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:1",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:index"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:2",
+          "effects": [
+            "read",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "right-hand-side",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:3",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:rhs"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:4",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:5",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "result",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:6",
+          "effects": [],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:new-value"
+        }
+      ],
+      "result": "computed-value"
+    }
+  ]
+}

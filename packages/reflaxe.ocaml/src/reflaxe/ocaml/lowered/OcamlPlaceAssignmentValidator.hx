@@ -4,6 +4,8 @@ package reflaxe.ocaml.lowered;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlAssignmentResultKind;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayCompoundAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayElementPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArraySimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredConversionKind;
@@ -27,6 +29,15 @@ private typedef OcamlPlaceValidationFacts = {
 	final conversion:OcamlLoweredConversionKind;
 }
 
+private typedef OcamlArrayPlaceValidationFacts = {
+	final id:String;
+	final originId:String;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final place:OcamlLoweredArrayElementPlace;
+	final conversion:OcamlLoweredConversionKind;
+}
+
 /** Checks semantic completeness before an admitted plan reaches target syntax. */
 class OcamlPlaceAssignmentValidator {
 	static function containsUnsealedAdmittedPlace(expression:TypedExpr):Bool {
@@ -46,6 +57,9 @@ class OcamlPlaceAssignmentValidator {
 					found = true;
 					return;
 				case TBinop(OpAssignOp(operation), left, right) if (OcamlPlaceInputPolicy.admitsCompoundIntAddInstanceField(operation, left, right)):
+					found = true;
+					return;
+				case TBinop(OpAssignOp(operation), left, right) if (OcamlPlaceInputPolicy.admitsCompoundIntAddArrayElement(operation, left, right)):
 					found = true;
 					return;
 				case TUnop(operation, _, operand) if (OcamlPlaceInputPolicy.admitsIntUpdateInstanceField(operation, operand)):
@@ -79,6 +93,38 @@ class OcamlPlaceAssignmentValidator {
 			errors.push("receiver semantic and carrier types are required");
 		if (plan.conversion != OcamlLoweredConversionKind.Identity)
 			errors.push("the first slice requires an identity assignment conversion");
+		return errors;
+	}
+
+	static function validateArrayIdentityAndPlace(plan:OcamlArrayPlaceValidationFacts):Array<String> {
+		final errors:Array<String> = [];
+		if (plan.id.length == 0 || plan.originId.length == 0 || plan.place.id.length == 0)
+			errors.push("stable node, origin, and array-place identities are required");
+		if (plan.semanticTypeId != "Int" || plan.carrierTypeId != "int")
+			errors.push("the first array slice only admits semantic Int on the OCaml int carrier");
+		if (plan.place.semanticTypeId != plan.semanticTypeId || plan.place.carrierTypeId != plan.carrierTypeId)
+			errors.push("array element and expression semantic/carrier types must agree");
+		if (plan.place.kind != OcamlLoweredPlaceKind.ArrayElement)
+			errors.push("the array assignment slice requires an array-element place");
+		if (plan.place.ownerModuleId != "Array" || plan.place.ownerTypeName != "Array" || plan.place.fieldName != "[]")
+			errors.push("the first array slice must retain the exact Haxe Array element identity");
+		if (plan.place.receiverSemanticTypeId != "Array<Int>" || plan.place.receiverCarrierTypeId != "int HxArray.t")
+			errors.push("the first array slice requires exact Array<Int> on the direct typed HxArray carrier");
+		if (plan.place.indexSemanticTypeId != "Int" || plan.place.indexCarrierTypeId != "int")
+			errors.push("the first array slice requires an exact Int index on the OCaml int carrier");
+		if (plan.place.targetSymbolId.length == 0
+			|| plan.place.receiverRepresentationId.length == 0
+			|| plan.place.indexRepresentationId.length == 0
+			|| plan.place.representationId.length == 0)
+			errors.push("array symbol and representation decisions require stable identities");
+		if (plan.place.receiverRepresentationReason.length == 0
+			|| plan.place.indexRepresentationReason.length == 0
+			|| plan.place.representationReason.length == 0)
+			errors.push("array representation decisions require maintenance-readable reasons");
+		if (plan.place.targetModuleName != "HxArray" || plan.place.targetLoadName != "get" || plan.place.targetStoreName != "set")
+			errors.push("the first array slice requires the selected HxArray get/set contract");
+		if (plan.conversion != OcamlLoweredConversionKind.Identity)
+			errors.push("the first array slice requires an identity element assignment conversion");
 		return errors;
 	}
 
@@ -174,34 +220,7 @@ class OcamlPlaceAssignmentValidator {
 
 	/** Validates exact Array<Int> simple assignment before target syntax exists. */
 	public static function validateArraySimple(plan:OcamlLoweredArraySimpleAssignment):Array<String> {
-		final errors:Array<String> = [];
-		if (plan.id.length == 0 || plan.originId.length == 0 || plan.place.id.length == 0)
-			errors.push("stable node, origin, and array-place identities are required");
-		if (plan.semanticTypeId != "Int" || plan.carrierTypeId != "int")
-			errors.push("the first array slice only admits semantic Int on the OCaml int carrier");
-		if (plan.place.semanticTypeId != plan.semanticTypeId || plan.place.carrierTypeId != plan.carrierTypeId)
-			errors.push("array element and expression semantic/carrier types must agree");
-		if (plan.place.kind != OcamlLoweredPlaceKind.ArrayElement)
-			errors.push("the array assignment slice requires an array-element place");
-		if (plan.place.ownerModuleId != "Array" || plan.place.ownerTypeName != "Array" || plan.place.fieldName != "[]")
-			errors.push("the first array slice must retain the exact Haxe Array element identity");
-		if (plan.place.receiverSemanticTypeId != "Array<Int>" || plan.place.receiverCarrierTypeId != "int HxArray.t")
-			errors.push("the first array slice requires exact Array<Int> on the direct typed HxArray carrier");
-		if (plan.place.indexSemanticTypeId != "Int" || plan.place.indexCarrierTypeId != "int")
-			errors.push("the first array slice requires an exact Int index on the OCaml int carrier");
-		if (plan.place.targetSymbolId.length == 0
-			|| plan.place.receiverRepresentationId.length == 0
-			|| plan.place.indexRepresentationId.length == 0
-			|| plan.place.representationId.length == 0)
-			errors.push("array symbol and representation decisions require stable identities");
-		if (plan.place.receiverRepresentationReason.length == 0
-			|| plan.place.indexRepresentationReason.length == 0
-			|| plan.place.representationReason.length == 0)
-			errors.push("array representation decisions require maintenance-readable reasons");
-		if (plan.place.targetModuleName != "HxArray" || plan.place.targetLoadName != "get" || plan.place.targetStoreName != "set")
-			errors.push("the first array slice requires the selected HxArray get/set contract");
-		if (plan.conversion != OcamlLoweredConversionKind.Identity)
-			errors.push("the first array slice requires an identity element assignment conversion");
+		final errors = validateArrayIdentityAndPlace(plan);
 		if (plan.result != OcamlAssignmentResultKind.AssignedValue)
 			errors.push("array simple assignment must return its assigned value");
 
@@ -236,6 +255,61 @@ class OcamlPlaceAssignmentValidator {
 			|| containsUnsealedAdmittedPlace(plan.index)
 			|| containsUnsealedAdmittedPlace(plan.rightHandSide))
 			errors.push("an admitted nested assignment is hidden inside an unsealed array-assignment child");
+		return errors;
+	}
+
+	/** Validates exact Array<Int> `+=`, including load-before-RHS behavior. */
+	public static function validateArrayCompoundIntAdd(plan:OcamlLoweredArrayCompoundAssignment):Array<String> {
+		final errors = validateArrayIdentityAndPlace(plan);
+		if (plan.operation != OcamlLoweredIntOperator.Add)
+			errors.push("the first array compound slice only admits ordinary primitive-Int addition");
+		if (plan.result != OcamlAssignmentResultKind.ComputedValue)
+			errors.push("array compound assignment must return its computed and stored value");
+
+		final expected = [
+			OcamlPlaceOccurrenceRole.Receiver,
+			OcamlPlaceOccurrenceRole.Index,
+			OcamlPlaceOccurrenceRole.Load,
+			OcamlPlaceOccurrenceRole.RightHandSide,
+			OcamlPlaceOccurrenceRole.Operator,
+			OcamlPlaceOccurrenceRole.Store,
+			OcamlPlaceOccurrenceRole.Result
+		];
+		if (plan.schedule.length != expected.length) {
+			errors.push("array compound assignment requires receiver, index, load, rhs, operator, store, and result occurrences");
+		} else {
+			final expectedSharing = ["receiver", "index", "old_value", "rhs", "new_value", null, "new_value"];
+			for (index in 0...expected.length) {
+				final occurrence = plan.schedule[index];
+				if (occurrence.role != expected[index])
+					errors.push("occurrence " + index + " has the wrong array compound evaluation role");
+				if (occurrence.occurrenceCount != 1)
+					errors.push("occurrence " + index + " must execute exactly once in the admitted array compound family");
+				if (occurrence.sharedAs != expectedSharing[index])
+					errors.push("occurrence " + index + " has the wrong array compound sharing identity");
+			}
+			if (plan.schedule[2].sourceId != plan.schedule[5].sourceId)
+				errors.push("array compound load and store must refer to the same original element place");
+			if (plan.schedule[4].sourceId != plan.schedule[6].sourceId)
+				errors.push("array compound result must reuse the computed operator value");
+		}
+		final expectedRuntimeIds = [
+			"haxe-array-element-get",
+			plan.originId + ":runtime:haxe-int32-add",
+			"haxe-array-element-set"
+		];
+		if (plan.runtimeRequirementIds.length != expectedRuntimeIds.length) {
+			errors.push("array Int += requires get, Haxe Int addition, and set runtime capabilities");
+		} else {
+			for (index in 0...expectedRuntimeIds.length) {
+				if (plan.runtimeRequirementIds[index] != expectedRuntimeIds[index])
+					errors.push("array compound runtime requirement " + index + " is not the sealed semantic capability");
+			}
+		}
+		if (containsUnsealedAdmittedPlace(plan.receiver)
+			|| containsUnsealedAdmittedPlace(plan.index)
+			|| containsUnsealedAdmittedPlace(plan.rightHandSide))
+			errors.push("an admitted nested assignment is hidden inside an unsealed array-compound child");
 		return errors;
 	}
 

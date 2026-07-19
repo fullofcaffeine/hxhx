@@ -11,7 +11,7 @@ Run the three upstream routes with:
 npm run test:reflaxe-ocaml:place-oracle
 ```
 
-The interpreter and JavaScript routes agree on all 25 cases. Neko agrees on 24
+The interpreter and JavaScript routes agree on all 26 cases. Neko agrees on 25
 cases, but evaluates the index before the receiver for a simple array
 assignment. The accepted OCaml contract follows the interpreter and JavaScript
 source order for that one disputed case. `expected.neko.stdout` preserves the
@@ -40,3 +40,7 @@ command is expected and must not be converted into an accepted snapshot.
 loads the old field value before evaluating a right-hand side that mutates the
 same field. The final addition and store therefore use the original value and
 overwrite the intervening mutation.
+
+`array_compound_rhs_mutates` proves the same load-before-RHS contract for an
+array element after the receiver and index have been established. The final
+addition uses the original element value and overwrites the RHS mutation.

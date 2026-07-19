@@ -190,6 +190,25 @@ typedef OcamlLoweredArraySimpleAssignment = {
 	final runtimeRequirementIds:Array<String>;
 }
 
+/** A typed exact-Int array `+=` with an explicit old-element load. */
+typedef OcamlLoweredArrayCompoundAssignment = {
+	final id:String;
+	final originId:String;
+	final source:OcamlLoweredSourceSpan;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final place:OcamlLoweredArrayElementPlace;
+	final receiver:TypedExpr;
+	final index:TypedExpr;
+	final rightHandSide:TypedExpr;
+	final operation:OcamlLoweredIntOperator;
+	final conversion:OcamlLoweredConversionKind;
+	final result:OcamlAssignmentResultKind;
+	final schedule:Array<OcamlPlaceOccurrence>;
+	final effects:Array<OcamlLoweredEffect>;
+	final runtimeRequirementIds:Array<String>;
+}
+
 /** A typed ordinary Int compound assignment with an explicit old-value load. */
 typedef OcamlLoweredCompoundAssignment = {
 	final id:String;
@@ -233,6 +252,7 @@ enum OcamlLoweredPlaceOperation {
 	Simple(plan:OcamlLoweredSimpleAssignment);
 	StaticSimple(plan:OcamlLoweredStaticSimpleAssignment);
 	ArraySimple(plan:OcamlLoweredArraySimpleAssignment);
+	ArrayCompound(plan:OcamlLoweredArrayCompoundAssignment);
 	Compound(plan:OcamlLoweredCompoundAssignment);
 	Update(plan:OcamlLoweredIntUpdate);
 }

@@ -47,6 +47,12 @@ class Main {
 		return value;
 	}
 
+	static function rhsMutatingArray(value:Int):Int {
+		EventLog.record("rhs_mutates_array");
+		values[1] = 100;
+		return value;
+	}
+
 	static function printLine(value:String):Void {
 		#if js
 		js.Syntax.code("console.log({0})", value);
@@ -151,6 +157,10 @@ class Main {
 		reset();
 		final compoundResult = arrayReceiver()[index()] += rhs(3);
 		show("array_compound", compoundResult, values[1]);
+
+		reset();
+		final mutatingRhsResult = arrayReceiver()[index()] += rhsMutatingArray(3);
+		show("array_compound_rhs_mutates", mutatingRhsResult, values[1]);
 
 		reset();
 		final postfixResult = arrayReceiver()[index()]++;

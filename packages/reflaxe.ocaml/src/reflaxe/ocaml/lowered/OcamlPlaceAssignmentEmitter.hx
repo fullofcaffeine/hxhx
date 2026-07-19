@@ -6,6 +6,7 @@ import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArraySimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
@@ -43,16 +44,39 @@ class OcamlPlaceAssignmentEmitter {
 		final receiverName = freshTemporary("place_array");
 		final indexName = freshTemporary("place_index");
 		final rightHandSideName = freshTemporary("place_rhs");
-		final store = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(plan.place.targetModuleName), plan.place.targetStoreName), [
-			OcamlExpr.EIdent(receiverName),
-			OcamlExpr.EIdent(indexName),
-			OcamlExpr.EIdent(rightHandSideName)
-		]);
+		final typedReceiver = OcamlExpr.EAnnot(OcamlExpr.EIdent(receiverName), OcamlTypeExpr.TIdent(plan.place.receiverCarrierTypeId));
+		final typedIndex = OcamlExpr.EAnnot(OcamlExpr.EIdent(indexName), OcamlTypeExpr.TIdent(plan.place.indexCarrierTypeId));
+		final store = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(plan.place.targetModuleName), plan.place.targetStoreName),
+			[typedReceiver, typedIndex, OcamlExpr.EIdent(rightHandSideName)]);
 		return OcamlExpr.ELet(receiverName, buildExpr(plan.receiver),
 			OcamlExpr.ELet(indexName, buildExpr(plan.index), OcamlExpr.ELet(rightHandSideName, buildExpr(plan.rightHandSide), OcamlExpr.ESeq([
 				OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [store]),
 				OcamlExpr.EIdent(rightHandSideName)
 			]), false), false), false);
+	}
+
+	/** Emits the sealed array/index/load-before-RHS schedule for exact Int `+=`. */
+	public static function emitArrayCompoundIntAdd(plan:OcamlLoweredArrayCompoundAssignment, buildExpr:TypedExpr->OcamlExpr,
+			freshTemporary:String->String):OcamlExpr {
+		final receiverName = freshTemporary("place_array");
+		final indexName = freshTemporary("place_index");
+		final oldValueName = freshTemporary("place_old");
+		final rightHandSideName = freshTemporary("place_rhs");
+		final newValueName = freshTemporary("place_new");
+		final typedReceiver = OcamlExpr.EAnnot(OcamlExpr.EIdent(receiverName), OcamlTypeExpr.TIdent(plan.place.receiverCarrierTypeId));
+		final typedIndex = OcamlExpr.EAnnot(OcamlExpr.EIdent(indexName), OcamlTypeExpr.TIdent(plan.place.indexCarrierTypeId));
+		final load = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(plan.place.targetModuleName), plan.place.targetLoadName), [typedReceiver, typedIndex]);
+		final operation = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"),
+			[OcamlExpr.EIdent(oldValueName), OcamlExpr.EIdent(rightHandSideName)]);
+		final store = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(plan.place.targetModuleName), plan.place.targetStoreName),
+			[typedReceiver, typedIndex, OcamlExpr.EIdent(newValueName)]);
+		return OcamlExpr.ELet(receiverName, buildExpr(plan.receiver),
+			OcamlExpr.ELet(indexName, buildExpr(plan.index),
+				OcamlExpr.ELet(oldValueName, load,
+					OcamlExpr.ELet(rightHandSideName, buildExpr(plan.rightHandSide), OcamlExpr.ELet(newValueName, operation, OcamlExpr.ESeq([
+						OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [store]),
+						OcamlExpr.EIdent(newValueName)
+					]), false), false), false), false), false);
 	}
 
 	/** Emits the sealed load-before-RHS schedule for exact primitive-Int `+=`. */

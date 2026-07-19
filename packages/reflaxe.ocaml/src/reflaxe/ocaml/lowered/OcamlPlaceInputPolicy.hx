@@ -57,6 +57,16 @@ class OcamlPlaceInputPolicy {
 		}
 	}
 
+	/** Recognizes an exact `Int` element place on a direct nominal `Array<Int>`. */
+	static function admitsExactIntArrayElementPlace(left:TypedExpr):Bool {
+		if (!isExactInt(left.t))
+			return false;
+		return switch (left.expr) {
+			case TArray(receiver, index): isExactIntArray(receiver.t) && isExactInt(index.t);
+			case _: false;
+		}
+	}
+
 	/**
 		Accepts a direct record-backed receiver while keeping inherited field
 		declaration identity separate from the receiver representation.
@@ -114,12 +124,12 @@ class OcamlPlaceInputPolicy {
 
 	/** Admits exact `Array<Int>` element assignment with an exact `Int` index and RHS. */
 	public static function admitsSimpleArrayElement(left:TypedExpr, right:TypedExpr):Bool {
-		if (!isExactInt(left.t) || !isExactInt(right.t))
-			return false;
-		return switch (left.expr) {
-			case TArray(receiver, index): isExactIntArray(receiver.t) && isExactInt(index.t);
-			case _: false;
-		}
+		return admitsExactIntArrayElementPlace(left) && isExactInt(right.t);
+	}
+
+	/** Admits only exact primitive-Int `+=` on direct nominal `Array<Int>`. */
+	public static function admitsCompoundIntAddArrayElement(operation:Binop, left:TypedExpr, right:TypedExpr):Bool {
+		return operation == OpAdd && admitsExactIntArrayElementPlace(left) && isExactInt(right.t);
 	}
 
 	/** Admits ordinary `Int` fields with an exact `Int` RHS for `+=`. */

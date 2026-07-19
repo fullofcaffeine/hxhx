@@ -8,6 +8,7 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlAssignmentResultKind;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayElementPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArraySimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
@@ -118,7 +119,7 @@ class OcamlPlaceAssignmentPlanner {
 						receiverDisplayType: TypeTools.toString(receiver.t),
 						receiverCarrierTypeId: "int HxArray.t",
 						receiverRepresentationId: originId + ":representation:array-receiver",
-						receiverRepresentationReason: "exact Array<Int> uses the direct typed HxArray carrier without a target cast",
+						receiverRepresentationReason: "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
 						indexSemanticTypeId: "Int",
 						indexDisplayType: TypeTools.toString(index.t),
 						indexCarrierTypeId: "int",
@@ -257,6 +258,58 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Write
 			],
 			runtimeRequirementIds: ["haxe-array-element-set"]
+		};
+	}
+
+	/** Plans exact primitive-Int array `+=` with the Oracle-proven load order. */
+	public function planArrayCompoundIntAdd(metadata:MetadataEntry, expression:TypedExpr, left:TypedExpr,
+			right:TypedExpr):Null<OcamlLoweredArrayCompoundAssignment> {
+		if (!OcamlPlaceInputPolicy.admitsCompoundIntAddArrayElement(OpAdd, left, right))
+			return null;
+		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
+		if (originId == null)
+			return null;
+		final target = planArrayElement(originId, left);
+		if (target == null)
+			return null;
+		final placeId = target.place.id;
+		final newValueId = originId + ":new-value";
+		return {
+			id: originId + ":array-compound-assignment",
+			originId: originId,
+			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			semanticTypeId: "Int",
+			carrierTypeId: "int",
+			place: target.place,
+			receiver: target.receiver,
+			index: target.index,
+			rightHandSide: right,
+			operation: OcamlLoweredIntOperator.Add,
+			conversion: OcamlLoweredConversionKind.Identity,
+			result: OcamlAssignmentResultKind.ComputedValue,
+			schedule: [
+				occurrence(originId, 0, OcamlPlaceOccurrenceRole.Receiver, originId + ":receiver", "receiver",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 1, OcamlPlaceOccurrenceRole.Index, originId + ":index", "index",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 2, OcamlPlaceOccurrenceRole.Load, placeId, "old_value", [OcamlLoweredEffect.Read, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 3, OcamlPlaceOccurrenceRole.RightHandSide, originId + ":rhs", "rhs",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 4, OcamlPlaceOccurrenceRole.Operator, newValueId, "new_value", [OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 5, OcamlPlaceOccurrenceRole.Store, placeId, null, [OcamlLoweredEffect.Write, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 6, OcamlPlaceOccurrenceRole.Result, newValueId, "new_value", [])
+			],
+			effects: [
+				OcamlLoweredEffect.Read,
+				OcamlLoweredEffect.Call,
+				OcamlLoweredEffect.Throw,
+				OcamlLoweredEffect.Write
+			],
+			runtimeRequirementIds: [
+				"haxe-array-element-get",
+				originId + ":runtime:haxe-int32-add",
+				"haxe-array-element-set"
+			]
 		};
 	}
 

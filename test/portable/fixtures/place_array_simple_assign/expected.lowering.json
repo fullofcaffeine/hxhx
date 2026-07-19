@@ -1,7 +1,7 @@
 {
   "model": "typed-ocaml-lowered-place",
   "schemaVersion": 4,
-  "admittedInputRevision": "sha256:b0084007cbb7244c0396d63111d11ed4cd148a1d37d653c154706e3096409aed",
+  "admittedInputRevision": "sha256:a965e042257f045ff0352b05a2a979868b9a5dc62b9115180d33bdcc345b37a8",
   "planCount": 1,
   "plans": [
     {
@@ -18,7 +18,7 @@
         "ownerTypeName": "Array",
         "targetSymbolId": "runtime::HxArray::element",
         "indexDisplayType": "Int",
-        "receiverRepresentationReason": "exact Array<Int> uses the direct typed HxArray carrier without a target cast",
+        "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
         "ownerModuleId": "Array",
         "indexRepresentationReason": "exact Haxe Int index uses the direct OCaml int carrier",
         "id": "place:ebd9e06b24f2d78b3880868b:place",
