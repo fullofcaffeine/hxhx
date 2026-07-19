@@ -4108,6 +4108,8 @@ class OcamlBuilder {
 								OcamlExpr.EConst(OcamlConst.CUnit);
 						}
 					case TField(_, FStatic(clsRef, cfRef)):
+						if (OcamlPlaceInputPolicy.admitsSimpleStaticField(e1, e2, ctx.currentModuleId, ctx.currentTypeName))
+							return placeLoweringInvariant("admitted static-field assignment reached the legacy syntax branch without a stable origin", e1.pos);
 						final cls = clsRef.get();
 						final cf = cfRef.get();
 						final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");

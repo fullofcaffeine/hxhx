@@ -1,6 +1,6 @@
 {
   "model": "typed-ocaml-lowered-place",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "admittedInputRevision": "sha256:5e941be2b0f02a02900555d8e7e05caf9c7a8cea12cf47ba5d8345ffb0195953",
   "planCount": 7,
   "plans": [

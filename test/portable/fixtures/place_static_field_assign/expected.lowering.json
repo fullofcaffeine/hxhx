@@ -1,0 +1,146 @@
+{
+  "model": "typed-ocaml-lowered-place",
+  "schemaVersion": 3,
+  "admittedInputRevision": "sha256:57af0432ed55103c2754940e96bc943ec45b70601e2aaf7814cfad53b8bd22c7",
+  "planCount": 2,
+  "plans": [
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [],
+      "place": {
+        "carrierTypeId": "int",
+        "targetValueName": "value",
+        "ownerTypeName": "ExternalHolder",
+        "targetSymbolId": "ExternalHolder::ExternalHolder::value",
+        "ownerModuleId": "ExternalHolder",
+        "forwardDeclarationRequired": false,
+        "id": "place:3963f22ddd71db98dee27add:place",
+        "semanticTypeId": "Int",
+        "kind": "static-field",
+        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "targetModuleName": "ExternalHolder",
+        "fieldName": "value",
+        "staticAccess": "qualified",
+        "representationId": "place:3963f22ddd71db98dee27add:representation:static-field"
+      },
+      "originId": "place:3963f22ddd71db98dee27add",
+      "id": "place:3963f22ddd71db98dee27add:static-simple-assignment",
+      "source": {
+        "min": 491,
+        "max": 537,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "static-simple-assignment",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "right-hand-side",
+          "id": "place:3963f22ddd71db98dee27add:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:3963f22ddd71db98dee27add:rhs"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:3963f22ddd71db98dee27add:occurrence:1",
+          "effects": [
+            "write"
+          ],
+          "sourceId": "place:3963f22ddd71db98dee27add:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "result",
+          "id": "place:3963f22ddd71db98dee27add:occurrence:2",
+          "effects": [],
+          "sourceId": "place:3963f22ddd71db98dee27add:rhs"
+        }
+      ],
+      "result": "assigned-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [],
+      "place": {
+        "carrierTypeId": "int",
+        "targetValueName": "localValue",
+        "ownerTypeName": "Main",
+        "targetSymbolId": "Main::Main::localValue",
+        "ownerModuleId": "Main",
+        "forwardDeclarationRequired": false,
+        "id": "place:ebd9e06b24f2d78b3880868b:place",
+        "semanticTypeId": "Int",
+        "kind": "static-field",
+        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "targetModuleName": "Main",
+        "fieldName": "localValue",
+        "staticAccess": "local",
+        "representationId": "place:ebd9e06b24f2d78b3880868b:representation:static-field"
+      },
+      "originId": "place:ebd9e06b24f2d78b3880868b",
+      "id": "place:ebd9e06b24f2d78b3880868b:static-simple-assignment",
+      "source": {
+        "min": 314,
+        "max": 346,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "static-simple-assignment",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "right-hand-side",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:rhs"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:1",
+          "effects": [
+            "write"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "result",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:2",
+          "effects": [],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:rhs"
+        }
+      ],
+      "result": "assigned-value"
+    }
+  ]
+}

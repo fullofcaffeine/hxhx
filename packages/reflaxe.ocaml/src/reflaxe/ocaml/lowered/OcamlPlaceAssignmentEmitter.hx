@@ -9,6 +9,8 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 
 /** Mechanically converts a validated place plan into OCaml target syntax. */
@@ -22,6 +24,17 @@ class OcamlPlaceAssignmentEmitter {
 			OcamlExpr.EAssign(OcamlAssignOp.FieldSet, target, OcamlExpr.EIdent(rightHandSideName)),
 			OcamlExpr.EIdent(rightHandSideName)
 		]), false), false);
+	}
+
+	/** Emits a validated static-ref assignment without inventing a receiver occurrence. */
+	public static function emitStaticSimple(plan:OcamlLoweredStaticSimpleAssignment, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
+		final rightHandSideName = freshTemporary("place_rhs");
+		final target = plan.place.staticAccess == OcamlLoweredStaticFieldAccess.Local ? OcamlExpr.EIdent(plan.place.targetValueName) : OcamlExpr.EField(OcamlExpr.EIdent(plan.place.targetModuleName),
+			plan.place.targetValueName);
+		return OcamlExpr.ELet(rightHandSideName, buildExpr(plan.rightHandSide), OcamlExpr.ESeq([
+			OcamlExpr.EAssign(OcamlAssignOp.RefSet, target, OcamlExpr.EIdent(rightHandSideName)),
+			OcamlExpr.EIdent(rightHandSideName)
+		]), false);
 	}
 
 	/** Emits the sealed load-before-RHS schedule for exact primitive-Int `+=`. */

@@ -6,7 +6,10 @@ import haxe.macro.Type.TypedExpr;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredInstanceFieldPlace;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReport;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
 
 /** Outcome of attempting the target-owned assignment lowering path. */
 enum OcamlPlaceAssignmentLoweringResult {
@@ -35,6 +38,45 @@ class OcamlPlaceAssignmentLowerer {
 		return Invalid(errors.join("; ") + " (origin " + originId + ")");
 	}
 
+	static function instancePlaceReport(place:OcamlLoweredInstanceFieldPlace):OcamlLoweredPlaceReport {
+		return {
+			id: place.id,
+			kind: place.kind,
+			ownerModuleId: place.ownerModuleId,
+			ownerTypeName: place.ownerTypeName,
+			targetSymbolId: place.targetSymbolId,
+			fieldName: place.fieldName,
+			targetFieldName: place.targetFieldName,
+			receiverSemanticTypeId: place.receiverSemanticTypeId,
+			receiverCarrierTypeId: place.receiverCarrierTypeId,
+			receiverRepresentationId: place.receiverRepresentationId,
+			receiverRepresentationReason: place.receiverRepresentationReason,
+			semanticTypeId: place.semanticTypeId,
+			carrierTypeId: place.carrierTypeId,
+			representationId: place.representationId,
+			representationReason: place.representationReason
+		};
+	}
+
+	static function staticPlaceReport(place:OcamlLoweredStaticFieldPlace):OcamlLoweredPlaceReport {
+		return {
+			id: place.id,
+			kind: place.kind,
+			ownerModuleId: place.ownerModuleId,
+			ownerTypeName: place.ownerTypeName,
+			targetSymbolId: place.targetSymbolId,
+			fieldName: place.fieldName,
+			targetModuleName: place.targetModuleName,
+			targetValueName: place.targetValueName,
+			staticAccess: place.staticAccess,
+			forwardDeclarationRequired: place.forwardDeclarationRequired,
+			semanticTypeId: place.semanticTypeId,
+			carrierTypeId: place.carrierTypeId,
+			representationId: place.representationId,
+			representationReason: place.representationReason
+		};
+	}
+
 	function shouldRecord(source:OcamlLoweredSourceSpan):Bool {
 		#if macro
 		final includeStandardLibrary = haxe.macro.Context.defined("ocaml_lowering_report_include_std");
@@ -49,8 +91,13 @@ class OcamlPlaceAssignmentLowerer {
 			freshTemporary:String->String):OcamlPlaceAssignmentLoweringResult {
 		final planned:Null<OcamlLoweredPlaceOperation> = switch (expression.expr) {
 			case TBinop(OpAssign, left, right):
-				final plan = planner.planSimpleAssignment(metadata, expression, left, right);
-				plan == null ? null : OcamlLoweredPlaceOperation.Simple(plan);
+				final instancePlan = planner.planSimpleAssignment(metadata, expression, left, right);
+				if (instancePlan != null) {
+					OcamlLoweredPlaceOperation.Simple(instancePlan);
+				} else {
+					final staticPlan = planner.planStaticSimpleAssignment(metadata, expression, left, right);
+					staticPlan == null ? null : OcamlLoweredPlaceOperation.StaticSimple(staticPlan);
+				}
 			case TBinop(OpAssignOp(OpAdd), left, right):
 				final plan = planner.planCompoundIntAdd(metadata, expression, left, right);
 				plan == null ? null : OcamlLoweredPlaceOperation.Compound(plan);
@@ -74,7 +121,7 @@ class OcamlPlaceAssignmentLowerer {
 							nodeKind: "simple-assignment",
 							semanticTypeId: plan.semanticTypeId,
 							carrierTypeId: plan.carrierTypeId,
-							place: plan.place,
+							place: instancePlaceReport(plan.place),
 							conversion: plan.conversion,
 							result: plan.result,
 							schedule: plan.schedule,
@@ -83,6 +130,27 @@ class OcamlPlaceAssignmentLowerer {
 						});
 					}
 					Lowered(OcamlPlaceAssignmentEmitter.emitSimple(plan, buildExpr, freshTemporary));
+				}
+			case StaticSimple(plan):
+				final errors = OcamlPlaceAssignmentValidator.validateStaticSimple(plan);
+				if (errors.length > 0) invalid(errors, plan.originId); else {
+					if (shouldRecord(plan.source)) {
+						context.recordLoweredPlaceReport({
+							id: plan.id,
+							originId: plan.originId,
+							source: plan.source,
+							nodeKind: "static-simple-assignment",
+							semanticTypeId: plan.semanticTypeId,
+							carrierTypeId: plan.carrierTypeId,
+							place: staticPlaceReport(plan.place),
+							conversion: plan.conversion,
+							result: plan.result,
+							schedule: plan.schedule,
+							effects: plan.effects,
+							runtimeRequirementIds: plan.runtimeRequirementIds
+						});
+					}
+					Lowered(OcamlPlaceAssignmentEmitter.emitStaticSimple(plan, buildExpr, freshTemporary));
 				}
 			case Compound(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateCompoundIntAdd(plan);
@@ -96,7 +164,7 @@ class OcamlPlaceAssignmentLowerer {
 							nodeKind: "compound-assignment",
 							semanticTypeId: plan.semanticTypeId,
 							carrierTypeId: plan.carrierTypeId,
-							place: plan.place,
+							place: instancePlaceReport(plan.place),
 							operation: plan.operation,
 							conversion: plan.conversion,
 							result: plan.result,
@@ -119,7 +187,7 @@ class OcamlPlaceAssignmentLowerer {
 							nodeKind: "int-update",
 							semanticTypeId: plan.semanticTypeId,
 							carrierTypeId: plan.carrierTypeId,
-							place: plan.place,
+							place: instancePlaceReport(plan.place),
 							operation: plan.operation,
 							sourceOperator: plan.sourceOperator,
 							fixity: plan.fixity,

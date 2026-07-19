@@ -20,6 +20,8 @@ import reflaxe.preprocessors.BasePreprocessor;
 class PreservePlaceAssignmentsImpl extends BasePreprocessor {
 	var functionId:String = "";
 	var ordinal:Int = 0;
+	var currentModuleId:String = "";
+	var currentTypeName:String = "";
 
 	public function new() {}
 
@@ -28,12 +30,15 @@ class PreservePlaceAssignmentsImpl extends BasePreprocessor {
 			return;
 		functionId = data.id;
 		ordinal = 0;
+		currentModuleId = data.classType.module;
+		currentTypeName = data.classType.name;
 		data.setExpr(transform(data.expr));
 	}
 
 	function transform(expression:TypedExpr):TypedExpr {
 		final admitted = switch (expression.expr) {
-			case TBinop(OpAssign, left, right): OcamlPlaceInputPolicy.admitsSimpleInstanceField(left, right);
+			case TBinop(OpAssign, left, right): OcamlPlaceInputPolicy.admitsSimpleInstanceField(left,
+					right) || OcamlPlaceInputPolicy.admitsSimpleStaticField(left, right, currentModuleId, currentTypeName);
 			case TBinop(OpAssignOp(operation), left, right): OcamlPlaceInputPolicy.admitsCompoundIntAddInstanceField(operation, left, right);
 			case TUnop(operation, _, operand): OcamlPlaceInputPolicy.admitsIntUpdateInstanceField(operation, operand);
 			case _: false;

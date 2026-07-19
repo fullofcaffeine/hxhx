@@ -68,9 +68,39 @@ class OcamlPlaceInputPolicy {
 		}
 	}
 
+	/** Admits a directly writable, non-extern `Int` static backed by an OCaml ref. */
+	static function admitsExactIntStaticFieldPlace(expression:TypedExpr):Bool {
+		if (!isExactInt(expression.t))
+			return false;
+		return switch (expression.expr) {
+			case TField(_, FStatic(classRef, fieldRef)): final classType = classRef.get(); final field = fieldRef.get(); final directlyWritable = switch (field.kind) {
+					case FVar(_, AccNormal): !field.isFinal;
+					case _: false;
+				} directlyWritable && !classType.isExtern && !classType.isInterface && isExactInt(field.type);
+			case _:
+				false;
+		}
+	}
+
 	/** Admits ordinary `Int` fields with an exact `Int` RHS for simple assignment. */
 	public static function admitsSimpleInstanceField(left:TypedExpr, right:TypedExpr):Bool {
 		return admitsExactIntInstanceFieldPlace(left) && isExactInt(right.t);
+	}
+
+	/**
+		Admits mutable static `Int` ref cells whose declaration is already visible.
+
+		A different type in the same Haxe module needs a program-level two-phase
+		static declaration plan. That broader shape remains on the legacy path until
+		its declaration-order owner lands.
+	**/
+	public static function admitsSimpleStaticField(left:TypedExpr, right:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>):Bool {
+		if (!admitsExactIntStaticFieldPlace(left) || !isExactInt(right.t) || currentModuleId == null || currentTypeName == null)
+			return false;
+		return switch (left.expr) {
+			case TField(_, FStatic(classRef, _)): final target = classRef.get(); target.module != currentModuleId || target.name == currentTypeName;
+			case _: false;
+		}
 	}
 
 	/** Admits ordinary `Int` fields with an exact `Int` RHS for `+=`. */

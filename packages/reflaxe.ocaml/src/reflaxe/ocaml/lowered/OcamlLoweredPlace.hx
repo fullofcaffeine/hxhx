@@ -7,6 +7,13 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 /** Place forms currently understood by the typed OCaml lowering model. */
 enum abstract OcamlLoweredPlaceKind(String) from String to String {
 	final InstanceField = "instance-field";
+	final StaticField = "static-field";
+}
+
+/** How a static ref cell is named from the currently emitted OCaml module. */
+enum abstract OcamlLoweredStaticFieldAccess(String) from String to String {
+	final Local = "local";
+	final Qualified = "qualified";
 }
 
 /** Observable or conservative effects recorded before target syntax exists. */
@@ -85,6 +92,24 @@ typedef OcamlLoweredInstanceFieldPlace = {
 	final representationReason:String;
 }
 
+/** Target-owned facts for a mutable static field represented by an OCaml ref. */
+typedef OcamlLoweredStaticFieldPlace = {
+	final id:String;
+	final kind:OcamlLoweredPlaceKind;
+	final ownerModuleId:String;
+	final ownerTypeName:String;
+	final targetSymbolId:String;
+	final fieldName:String;
+	final targetModuleName:String;
+	final targetValueName:String;
+	final staticAccess:OcamlLoweredStaticFieldAccess;
+	final forwardDeclarationRequired:Bool;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final representationId:String;
+	final representationReason:String;
+}
+
 /** First typed lowered node: a value-producing simple field assignment. */
 typedef OcamlLoweredSimpleAssignment = {
 	final id:String;
@@ -94,6 +119,22 @@ typedef OcamlLoweredSimpleAssignment = {
 	final carrierTypeId:String;
 	final place:OcamlLoweredInstanceFieldPlace;
 	final receiver:TypedExpr;
+	final rightHandSide:TypedExpr;
+	final conversion:OcamlLoweredConversionKind;
+	final result:OcamlAssignmentResultKind;
+	final schedule:Array<OcamlPlaceOccurrence>;
+	final effects:Array<OcamlLoweredEffect>;
+	final runtimeRequirementIds:Array<String>;
+}
+
+/** A value-producing assignment to a mutable static OCaml ref cell. */
+typedef OcamlLoweredStaticSimpleAssignment = {
+	final id:String;
+	final originId:String;
+	final source:OcamlLoweredSourceSpan;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final place:OcamlLoweredStaticFieldPlace;
 	final rightHandSide:TypedExpr;
 	final conversion:OcamlLoweredConversionKind;
 	final result:OcamlAssignmentResultKind;
@@ -143,8 +184,32 @@ typedef OcamlLoweredIntUpdate = {
 /** Closed typed place-operation families currently admitted by the target. */
 enum OcamlLoweredPlaceOperation {
 	Simple(plan:OcamlLoweredSimpleAssignment);
+	StaticSimple(plan:OcamlLoweredStaticSimpleAssignment);
 	Compound(plan:OcamlLoweredCompoundAssignment);
 	Update(plan:OcamlLoweredIntUpdate);
+}
+
+/** Stable human-readable projection of every currently admitted place kind. */
+typedef OcamlLoweredPlaceReport = {
+	final id:String;
+	final kind:OcamlLoweredPlaceKind;
+	final ownerModuleId:String;
+	final ownerTypeName:String;
+	final targetSymbolId:String;
+	final fieldName:String;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final representationId:String;
+	final representationReason:String;
+	final ?targetFieldName:String;
+	final ?receiverSemanticTypeId:String;
+	final ?receiverCarrierTypeId:String;
+	final ?receiverRepresentationId:String;
+	final ?receiverRepresentationReason:String;
+	final ?targetModuleName:String;
+	final ?targetValueName:String;
+	final ?staticAccess:OcamlLoweredStaticFieldAccess;
+	final ?forwardDeclarationRequired:Bool;
 }
 
 /** Serializable form retained after target syntax has been constructed. */
@@ -155,7 +220,7 @@ typedef OcamlLoweredPlaceReportEntry = {
 	final nodeKind:String;
 	final semanticTypeId:String;
 	final carrierTypeId:String;
-	final place:OcamlLoweredInstanceFieldPlace;
+	final place:OcamlLoweredPlaceReport;
 	final ?operation:OcamlLoweredIntOperator;
 	final ?sourceOperator:OcamlLoweredUpdateOperator;
 	final ?fixity:OcamlLoweredUpdateFixity;

@@ -16,6 +16,9 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrence;
@@ -68,6 +71,37 @@ class OcamlPlaceAssignmentPlanner {
 		}
 	}
 
+	function planStaticField(originId:String, left:TypedExpr):Null<OcamlLoweredStaticFieldPlace> {
+		return switch (left.expr) {
+			case TField(_, FStatic(classRef, fieldRef)):
+				final classType = classRef.get();
+				final field = fieldRef.get();
+				final targetModuleName = context.ocamlModuleNameForModuleId(classType.module);
+				final staticAccess = context.currentModuleId == classType.module ? OcamlLoweredStaticFieldAccess.Local : OcamlLoweredStaticFieldAccess.Qualified;
+				final forwardDeclarationRequired = context.currentModuleId != null
+					&& context.currentModuleId == classType.module
+					&& context.currentTypeName != null
+					&& context.currentTypeName != classType.name;
+				{
+					id: originId + ":place",
+					kind: OcamlLoweredPlaceKind.StaticField,
+					ownerModuleId: classType.module,
+					ownerTypeName: classType.name,
+					targetSymbolId: context.staticFieldKey(classType.module, classType.name, field.name),
+					fieldName: field.name,
+					targetModuleName: targetModuleName,
+					targetValueName: context.scopedValueName(classType.module, classType.name, field.name),
+					staticAccess: staticAccess,
+					forwardDeclarationRequired: forwardDeclarationRequired,
+					semanticTypeId: TypeTools.toString(left.t),
+					carrierTypeId: "int",
+					representationId: originId + ":representation:static-field",
+					representationReason: "mutable exact Haxe Int static uses an OCaml int ref cell"
+				};
+			case _: null;
+		}
+	}
+
 	/** Returns `null` when a simple assignment is outside the admitted slice. */
 	public function planSimpleAssignment(metadata:MetadataEntry, expression:TypedExpr, left:TypedExpr, right:TypedExpr):Null<OcamlLoweredSimpleAssignment> {
 		if (!OcamlPlaceInputPolicy.admitsSimpleInstanceField(left, right))
@@ -97,6 +131,43 @@ class OcamlPlaceAssignmentPlanner {
 					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
 				occurrence(originId, 2, OcamlPlaceOccurrenceRole.Store, placeId, null, [OcamlLoweredEffect.Write, OcamlLoweredEffect.Throw]),
 				occurrence(originId, 3, OcamlPlaceOccurrenceRole.Result, originId + ":rhs", "rhs", [])
+			],
+			effects: [
+				OcamlLoweredEffect.Read,
+				OcamlLoweredEffect.Call,
+				OcamlLoweredEffect.Throw,
+				OcamlLoweredEffect.Write
+			],
+			runtimeRequirementIds: []
+		};
+	}
+
+	/** Returns `null` when a static simple assignment is outside the admitted slice. */
+	public function planStaticSimpleAssignment(metadata:MetadataEntry, expression:TypedExpr, left:TypedExpr,
+			right:TypedExpr):Null<OcamlLoweredStaticSimpleAssignment> {
+		if (!OcamlPlaceInputPolicy.admitsSimpleStaticField(left, right, context.currentModuleId, context.currentTypeName))
+			return null;
+		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
+		if (originId == null)
+			return null;
+		final place = planStaticField(originId, left);
+		if (place == null)
+			return null;
+		return {
+			id: originId + ":static-simple-assignment",
+			originId: originId,
+			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			semanticTypeId: TypeTools.toString(expression.t),
+			carrierTypeId: "int",
+			place: place,
+			rightHandSide: right,
+			conversion: OcamlLoweredConversionKind.Identity,
+			result: OcamlAssignmentResultKind.AssignedValue,
+			schedule: [
+				occurrence(originId, 0, OcamlPlaceOccurrenceRole.RightHandSide, originId + ":rhs", "rhs",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 1, OcamlPlaceOccurrenceRole.Store, place.id, null, [OcamlLoweredEffect.Write]),
+				occurrence(originId, 2, OcamlPlaceOccurrenceRole.Result, originId + ":rhs", "rhs", [])
 			],
 			effects: [
 				OcamlLoweredEffect.Read,

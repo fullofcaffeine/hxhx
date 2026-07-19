@@ -22,6 +22,10 @@ performs Haxe `Int` addition, stores once, and returns the computed value.
 `receiver().field++` returns the saved old value after the store, while
 `++receiver().field` returns the computed value.
 Decrement follows the same fixity contract with an explicit delta of minus one.
+Value-producing simple assignment to an exact-`Int` mutable static is also
+sealed before syntax when the cell belongs to the current type or another OCaml
+module. Its receiver-free schedule is RHS, ref-cell store, then the shared RHS
+result; the plan selects local versus qualified target access explicitly.
 
 Other assignment and update behavior is still selected while `OcamlBuilder` is
 constructing OCaml syntax, with related storage and carrier choices split
@@ -38,7 +42,8 @@ typed tree, nor a shared cross-target representation IR.
 | Exact `Int` instance-field simple assignment | `OcamlPlaceAssignmentPlanner`, validator, and emitter before `OcamlExpr` construction | One admitted family has a stable origin, representation facts, occurrence schedule, result contract, and fail-closed invariant. Its old instance-field branch is guarded against use. |
 | Exact primitive-`Int` instance-field `+=` | The same typed place model before `OcamlExpr` construction | The plan records receiver, old-value load, RHS, `int-add`, store, computed result, and the semantic `haxe-int32-add` runtime requirement. The legacy branch is guarded against use. |
 | Exact primitive-`Int` instance-field `++` / `--` | The same typed place model before `OcamlExpr` construction | Source token, signed delta, and prefix/postfix fixity are separate facts. Every schedule records one receiver, load, Haxe `int-add`, store, and the fixity-selected old or computed result. |
-| Other simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, static, anonymous/dynamic, array, bytes, and deliberately unadmitted instance-field cases still construct target syntax directly. Several unhandled states return OCaml `unit`. |
+| Exact `Int` static simple assignment | The same typed place model before `OcamlExpr` construction | Current-type and cross-module mutable ref cells record stable symbol, representation, local/qualified access, RHS, store, and assigned result without inventing a receiver occurrence. |
+| Other simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, same-module cross-type static, anonymous/dynamic, array, bytes, and deliberately unadmitted instance-field cases still construct target syntax directly. Several unhandled states return OCaml `unit`. |
 | Other compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Other operators and place kinds still repeat operator selection, receiver sharing, load, arithmetic, store, and result. Ref, field, and static stores can still return OCaml `unit` in expression position. |
 | Other prefix/postfix update | `OcamlBuilder.buildUnop`, approximately lines 5377-5707 | Other place kinds, Float, nullable, Dynamic, and abstract handling still combine numeric classification, representation, place mutation, and old/new result selection. Unsupported states can return `unit`. |
 | Straight-line local assignment | `OcamlBuilder.buildBlockFromIndex`, from approximately line 5832 | A second path rewrites non-ref local assignment as OCaml `let` shadowing, so local storage and expression lowering do not share one durable plan. |
@@ -48,10 +53,10 @@ typed tree, nor a shared cross-target representation IR.
 | Unsupported behavior | `guardrailError` plus `CUnit` branches | Errors are suppressed while compiling the current Haxe standard library. Bootstrap continuity must not become the release failure policy for an admitted place form. |
 
 At the baseline inventory, `OcamlBuilder.hx` was 7,688 physical lines and
-`OcamlCompiler.hx` was 3,555. After the three cutovers, they are 7,635 and 3,561
+`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,636 and 3,561
 lines respectively. Place planning, validation, reporting, and emission live in
 focused `lowered/` modules. Existing source-position caching also moved out of
-the builder, so the semantic cutovers reduced the mega-file by 53 lines overall
+the builder, so the semantic cutovers reduced the mega-file by 52 lines overall
 instead of adding another responsibility to it.
 
 ## Place coverage already attempted by the emitter
@@ -170,6 +175,9 @@ The current hard cuts admit only:
 - exact primitive-`Int` prefix and postfix increment/decrement on that place,
   with source token, signed delta, and fixity retained independently from the
   explicit load, `int-add`, store, and old/computed result choice;
+- exact primitive-`Int` simple assignment to a directly writable static on the
+  current type or in another module, with no receiver occurrence and an
+  explicit local/qualified OCaml ref-cell access decision;
 - no compatibility-runtime requirement for simple assignment, and one named
   `haxe-int32-add` requirement mapped to `HxInt` for `+=` and updates.
 
@@ -178,8 +186,9 @@ it does not admit nullable or `Dynamic` right-hand sides. Those require explicit
 representation or conversion facts rather than an `Obj.magic`-backed guess.
 The inspection artifact is deterministic: fixtures with
 `expected.lowering.json` compile twice and must produce byte-identical reports.
-Schema version 2 adds structured source update token, fixity, delta, and result
-facts rather than asking syntax emission to infer postfix behavior.
+Schema version 3 retains the structured update facts from version 2 and adds a
+closed static-field report shape with symbol access and forward-declaration
+facts rather than asking emission to rediscover storage.
 Lowered identities use function identity plus structural ordinal; source paths
 and byte offsets remain diagnostic provenance and do not determine semantic
 identity.
@@ -216,9 +225,21 @@ and the mega-file-gravity guard. The report and implementation are internal
 correctness evidence, so the README Goals and North Star progress bars remain
 unchanged.
 
+The focused executable fixture
+`test/portable/fixtures/place_static_field_assign` separately proves current-
+type local access and cross-module qualified access. Both plans contain only
+RHS, store, and assigned-result occurrences, compile twice to byte-identical
+reports, and execute with exactly one RHS event. An attempted same-module
+cross-type case exposed an existing ordering flaw: the current late
+`requestForwardMutableStatic` request is discovered after the owning type may
+already have emitted its initializer. That case remains unadmitted, and
+`haxe_ocaml-stthl` owns a program/module-level two-phase static storage plan.
+
 The following are deliberately deferred:
 
 - other place/update forms;
+- same-module cross-type mutable statics and static compound/update lowering
+  until `haxe_ocaml-stthl` plans ref-cell declarations before type emission;
 - full capture and local-storage unification (`haxe_ocaml-9bome`);
 - the shared representation registry and removal of broad `Obj.magic` use;
 - general call/conversion lowering (`haxe_ocaml-taef5`);
