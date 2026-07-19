@@ -5608,9 +5608,8 @@ class OcamlBuilder {
 								incDec(OcamlExpr.EUnop(OcamlUnop.Deref, lhsCell), (newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, newVal));
 							}
 						case TField(obj, FInstance(clsRef, _, cfRef)):
-							if (OcamlPlaceInputPolicy.admitsIntIncrementInstanceField(op, e))
-								return placeLoweringInvariant("admitted instance-field increment reached the legacy syntax branch without a stable origin",
-									e.pos);
+							if (OcamlPlaceInputPolicy.admitsIntUpdateInstanceField(op, e))
+								return placeLoweringInvariant("admitted instance-field update reached the legacy syntax branch without a stable origin", e.pos);
 							final cf = cfRef.get();
 							switch (cf.kind) {
 								case FVar(_, _):

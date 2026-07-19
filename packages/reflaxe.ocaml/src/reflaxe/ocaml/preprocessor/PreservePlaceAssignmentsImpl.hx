@@ -35,7 +35,7 @@ class PreservePlaceAssignmentsImpl extends BasePreprocessor {
 		final admitted = switch (expression.expr) {
 			case TBinop(OpAssign, left, right): OcamlPlaceInputPolicy.admitsSimpleInstanceField(left, right);
 			case TBinop(OpAssignOp(operation), left, right): OcamlPlaceInputPolicy.admitsCompoundIntAddInstanceField(operation, left, right);
-			case TUnop(operation, _, operand): OcamlPlaceInputPolicy.admitsIntIncrementInstanceField(operation, operand);
+			case TUnop(operation, _, operand): OcamlPlaceInputPolicy.admitsIntUpdateInstanceField(operation, operand);
 			case _: false;
 		}
 

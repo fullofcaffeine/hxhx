@@ -28,6 +28,14 @@ class Main {
 		events.resize(0);
 		final prefixResult = ++receiver().value;
 		Sys.println("prefix=" + prefixResult + " final=" + holder.value + " events=" + events.join(","));
+
+		events.resize(0);
+		final postfixDecrementResult = receiver().value--;
+		Sys.println("postfix_decrement=" + postfixDecrementResult + " final=" + holder.value + " events=" + events.join(","));
+
+		events.resize(0);
+		final prefixDecrementResult = --receiver().value;
+		Sys.println("prefix_decrement=" + prefixDecrementResult + " final=" + holder.value + " events=" + events.join(","));
 	}
 
 	static function abstractControl():String {

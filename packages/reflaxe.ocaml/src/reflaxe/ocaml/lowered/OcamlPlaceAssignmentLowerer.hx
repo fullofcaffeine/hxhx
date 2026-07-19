@@ -54,8 +54,8 @@ class OcamlPlaceAssignmentLowerer {
 			case TBinop(OpAssignOp(OpAdd), left, right):
 				final plan = planner.planCompoundIntAdd(metadata, expression, left, right);
 				plan == null ? null : OcamlLoweredPlaceOperation.Compound(plan);
-			case TUnop(OpIncrement, postFix, operand):
-				final plan = planner.planIntIncrement(metadata, expression, OpIncrement, postFix, operand);
+			case TUnop(operation = (OpIncrement | OpDecrement), postFix, operand):
+				final plan = planner.planIntUpdate(metadata, expression, operation, postFix, operand);
 				plan == null ? null : OcamlLoweredPlaceOperation.Update(plan);
 			case _: null;
 		}
@@ -108,7 +108,7 @@ class OcamlPlaceAssignmentLowerer {
 					Lowered(OcamlPlaceAssignmentEmitter.emitCompoundIntAdd(plan, buildExpr, freshTemporary));
 				}
 			case Update(plan):
-				final errors = OcamlPlaceAssignmentValidator.validateIntIncrement(plan);
+				final errors = OcamlPlaceAssignmentValidator.validateIntUpdate(plan);
 				if (errors.length > 0) invalid(errors, plan.originId); else {
 					context.markRuntimeModule("HxInt");
 					if (shouldRecord(plan.source)) {
@@ -131,7 +131,7 @@ class OcamlPlaceAssignmentLowerer {
 							runtimeRequirementIds: plan.runtimeRequirementIds
 						});
 					}
-					Lowered(OcamlPlaceAssignmentEmitter.emitIntIncrement(plan, buildExpr, freshTemporary));
+					Lowered(OcamlPlaceAssignmentEmitter.emitIntUpdate(plan, buildExpr, freshTemporary));
 				}
 		}
 	}

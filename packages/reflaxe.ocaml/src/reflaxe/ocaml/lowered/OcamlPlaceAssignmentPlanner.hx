@@ -152,10 +152,9 @@ class OcamlPlaceAssignmentPlanner {
 		};
 	}
 
-	/** Plans exact primitive-Int increment without deriving result semantics in the emitter. */
-	public function planIntIncrement(metadata:MetadataEntry, expression:TypedExpr, operation:Unop, postFix:Bool,
-			operand:TypedExpr):Null<OcamlLoweredIntUpdate> {
-		if (!OcamlPlaceInputPolicy.admitsIntIncrementInstanceField(operation, operand))
+	/** Plans exact primitive-Int update without deriving result semantics in the emitter. */
+	public function planIntUpdate(metadata:MetadataEntry, expression:TypedExpr, operation:Unop, postFix:Bool, operand:TypedExpr):Null<OcamlLoweredIntUpdate> {
+		if (!OcamlPlaceInputPolicy.admitsIntUpdateInstanceField(operation, operand))
 			return null;
 		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
 		if (originId == null)
@@ -168,18 +167,23 @@ class OcamlPlaceAssignmentPlanner {
 		final newValueId = originId + ":new-value";
 		final fixity = postFix ? OcamlLoweredUpdateFixity.Postfix : OcamlLoweredUpdateFixity.Prefix;
 		final result = postFix ? OcamlAssignmentResultKind.OldValue : OcamlAssignmentResultKind.ComputedValue;
+		if (operation != OpIncrement && operation != OpDecrement)
+			return null;
+		final isIncrement = operation == OpIncrement;
+		final sourceOperator = isIncrement ? OcamlLoweredUpdateOperator.Increment : OcamlLoweredUpdateOperator.Decrement;
+		final delta = isIncrement ? 1 : -1;
 		return {
-			id: originId + ":int-increment",
+			id: originId + ":int-" + sourceOperator,
 			originId: originId,
 			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
 			semanticTypeId: TypeTools.toString(expression.t),
 			carrierTypeId: "int",
 			place: target.place,
 			receiver: target.receiver,
-			sourceOperator: OcamlLoweredUpdateOperator.Increment,
+			sourceOperator: sourceOperator,
 			fixity: fixity,
 			operation: OcamlLoweredIntOperator.Add,
-			delta: 1,
+			delta: delta,
 			conversion: OcamlLoweredConversionKind.Identity,
 			result: result,
 			schedule: [

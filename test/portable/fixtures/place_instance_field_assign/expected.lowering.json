@@ -1,8 +1,8 @@
 {
   "model": "typed-ocaml-lowered-place",
   "schemaVersion": 2,
-  "admittedInputRevision": "sha256:67481e079527ab0a4e8483e0ef389e96f83aa2295cc52ffef33f45d8d99df968",
-  "planCount": 5,
+  "admittedInputRevision": "sha256:5e941be2b0f02a02900555d8e7e05caf9c7a8cea12cf47ba5d8345ffb0195953",
+  "planCount": 7,
   "plans": [
     {
       "carrierTypeId": "int",
@@ -99,6 +99,105 @@
           "id": "place:26936672489892da53906b17:occurrence:4",
           "effects": [],
           "sourceId": "place:26936672489892da53906b17:old-value"
+        }
+      ],
+      "result": "old-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "place:36bc418166682b513996dfdf:runtime:haxe-int32-add"
+      ],
+      "fixity": "postfix",
+      "sourceOperator": "decrement",
+      "place": {
+        "carrierTypeId": "int",
+        "targetFieldName": "value",
+        "ownerTypeName": "Holder",
+        "targetSymbolId": "Main::Holder::field::value",
+        "receiverRepresentationReason": "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
+        "ownerModuleId": "Main",
+        "id": "place:36bc418166682b513996dfdf:place",
+        "semanticTypeId": "Int",
+        "kind": "instance-field",
+        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "receiverSemanticTypeId": "Holder",
+        "receiverRepresentationId": "place:36bc418166682b513996dfdf:representation:receiver",
+        "fieldName": "value",
+        "receiverCarrierTypeId": "holder_t",
+        "representationId": "place:36bc418166682b513996dfdf:representation:field"
+      },
+      "delta": -1,
+      "originId": "place:36bc418166682b513996dfdf",
+      "id": "place:36bc418166682b513996dfdf:int-decrement",
+      "source": {
+        "min": 1096,
+        "max": 1114,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:36bc418166682b513996dfdf:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:36bc418166682b513996dfdf:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:36bc418166682b513996dfdf:occurrence:1",
+          "effects": [
+            "read",
+            "throw"
+          ],
+          "sourceId": "place:36bc418166682b513996dfdf:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:36bc418166682b513996dfdf:occurrence:2",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:36bc418166682b513996dfdf:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:36bc418166682b513996dfdf:occurrence:3",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:36bc418166682b513996dfdf:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "result",
+          "id": "place:36bc418166682b513996dfdf:occurrence:4",
+          "effects": [],
+          "sourceId": "place:36bc418166682b513996dfdf:old-value"
         }
       ],
       "result": "old-value"
@@ -234,8 +333,8 @@
       "originId": "place:4edb5594811180ac656281e8",
       "id": "place:4edb5594811180ac656281e8:simple-assignment",
       "source": {
-        "min": 1315,
-        "max": 1333,
+        "min": 1702,
+        "max": 1720,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -389,6 +488,105 @@
           "id": "place:9654346e457c58c35a14177a:occurrence:4",
           "effects": [],
           "sourceId": "place:9654346e457c58c35a14177a:new-value"
+        }
+      ],
+      "result": "computed-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "place:a886611e03219dab3ab1f98b:runtime:haxe-int32-add"
+      ],
+      "fixity": "prefix",
+      "sourceOperator": "decrement",
+      "place": {
+        "carrierTypeId": "int",
+        "targetFieldName": "value",
+        "ownerTypeName": "Holder",
+        "targetSymbolId": "Main::Holder::field::value",
+        "receiverRepresentationReason": "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
+        "ownerModuleId": "Main",
+        "id": "place:a886611e03219dab3ab1f98b:place",
+        "semanticTypeId": "Int",
+        "kind": "instance-field",
+        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "receiverSemanticTypeId": "Holder",
+        "receiverRepresentationId": "place:a886611e03219dab3ab1f98b:representation:receiver",
+        "fieldName": "value",
+        "receiverCarrierTypeId": "holder_t",
+        "representationId": "place:a886611e03219dab3ab1f98b:representation:field"
+      },
+      "delta": -1,
+      "originId": "place:a886611e03219dab3ab1f98b",
+      "id": "place:a886611e03219dab3ab1f98b:int-decrement",
+      "source": {
+        "min": 1290,
+        "max": 1308,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:a886611e03219dab3ab1f98b:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:a886611e03219dab3ab1f98b:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:a886611e03219dab3ab1f98b:occurrence:1",
+          "effects": [
+            "read",
+            "throw"
+          ],
+          "sourceId": "place:a886611e03219dab3ab1f98b:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:a886611e03219dab3ab1f98b:occurrence:2",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:a886611e03219dab3ab1f98b:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:a886611e03219dab3ab1f98b:occurrence:3",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:a886611e03219dab3ab1f98b:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "result",
+          "id": "place:a886611e03219dab3ab1f98b:occurrence:4",
+          "effects": [],
+          "sourceId": "place:a886611e03219dab3ab1f98b:new-value"
         }
       ],
       "result": "computed-value"

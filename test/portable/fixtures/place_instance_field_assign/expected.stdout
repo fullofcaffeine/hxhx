@@ -2,3 +2,5 @@ result=7 final=7 events=receiver,rhs abstract=9/9
 compound=14 final=14 events=receiver,rhs_mutates
 postfix=14 final=15 events=receiver
 prefix=16 final=16 events=receiver
+postfix_decrement=16 final=15 events=receiver
+prefix_decrement=14 final=14 events=receiver

@@ -42,7 +42,7 @@ class OcamlPlaceAssignmentValidator {
 				case TBinop(OpAssignOp(operation), left, right) if (OcamlPlaceInputPolicy.admitsCompoundIntAddInstanceField(operation, left, right)):
 					found = true;
 					return;
-				case TUnop(operation, _, operand) if (OcamlPlaceInputPolicy.admitsIntIncrementInstanceField(operation, operand)):
+				case TUnop(operation, _, operand) if (OcamlPlaceInputPolicy.admitsIntUpdateInstanceField(operation, operand)):
 					found = true;
 					return;
 				case _:
@@ -150,16 +150,22 @@ class OcamlPlaceAssignmentValidator {
 		return errors;
 	}
 
-	/** Validates exact increment token/fixity, mutation order, and old/new result choice. */
-	public static function validateIntIncrement(plan:OcamlLoweredIntUpdate):Array<String> {
+	/** Validates exact update token/fixity, mutation order, and old/new result choice. */
+	public static function validateIntUpdate(plan:OcamlLoweredIntUpdate):Array<String> {
 		final errors = validateIdentityAndPlace(plan);
-		if (plan.sourceOperator != OcamlLoweredUpdateOperator.Increment
-			|| plan.operation != OcamlLoweredIntOperator.Add
-			|| plan.delta != 1)
-			errors.push("the first update slice only admits ordinary primitive-Int increment by one");
+		final expectedDelta = if (plan.sourceOperator == OcamlLoweredUpdateOperator.Increment) {
+			1;
+		} else if (plan.sourceOperator == OcamlLoweredUpdateOperator.Decrement) {
+			-1;
+		} else {
+			errors.push("ordinary primitive-Int updates require an increment or decrement source token");
+			0;
+		}
+		if (plan.operation != OcamlLoweredIntOperator.Add || plan.delta != expectedDelta)
+			errors.push("ordinary primitive-Int updates require Haxe Int addition with the token-selected delta");
 		final expectedResult = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? OcamlAssignmentResultKind.OldValue : OcamlAssignmentResultKind.ComputedValue;
 		if (plan.result != expectedResult)
-			errors.push("postfix increment must return the old value and prefix increment the computed value");
+			errors.push("postfix update must return the old value and prefix update the computed value");
 
 		final expected = [
 			OcamlPlaceOccurrenceRole.Receiver,
@@ -169,7 +175,7 @@ class OcamlPlaceAssignmentValidator {
 			OcamlPlaceOccurrenceRole.Result
 		];
 		if (plan.schedule.length != expected.length) {
-			errors.push("field increment requires receiver, load, operator, store, and result occurrences");
+			errors.push("field update requires receiver, load, operator, store, and result occurrences");
 		} else {
 			final resultSharing = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? "old_value" : "new_value";
 			final expectedSharing = ["receiver", "old_value", "new_value", null, resultSharing];
@@ -183,14 +189,14 @@ class OcamlPlaceAssignmentValidator {
 					errors.push("occurrence " + index + " has the wrong update sharing identity");
 			}
 			if (plan.schedule[1].sourceId != plan.schedule[3].sourceId)
-				errors.push("increment load and store must refer to the same original place");
+				errors.push("update load and store must refer to the same original place");
 			final expectedResultSource = plan.fixity == OcamlLoweredUpdateFixity.Postfix ? plan.originId + ":old-value" : plan.schedule[2].sourceId;
 			if (plan.schedule[4].sourceId != expectedResultSource)
-				errors.push("increment result must reuse the fixity-selected old or computed value");
+				errors.push("update result must reuse the fixity-selected old or computed value");
 		}
 		final expectedRuntimeId = plan.originId + ":runtime:haxe-int32-add";
 		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != expectedRuntimeId)
-			errors.push("primitive-Int increment must record its Haxe Int addition runtime requirement");
+			errors.push("primitive-Int update must record its Haxe Int addition runtime requirement");
 		if (containsUnsealedAdmittedPlace(plan.receiver))
 			errors.push("an admitted nested assignment or update is hidden inside an unsealed source-shaped child");
 		return errors;

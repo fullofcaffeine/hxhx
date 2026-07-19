@@ -78,9 +78,9 @@ class OcamlPlaceInputPolicy {
 		return operation == OpAdd && admitsExactIntInstanceFieldPlace(left) && isExactInt(right.t);
 	}
 
-	/** Admits both fixities of ordinary `Int` instance-field increment. */
-	public static function admitsIntIncrementInstanceField(operation:Unop, operand:TypedExpr):Bool {
-		return operation == OpIncrement && admitsExactIntInstanceFieldPlace(operand);
+	/** Admits both fixities of ordinary `Int` instance-field increment/decrement. */
+	public static function admitsIntUpdateInstanceField(operation:Unop, operand:TypedExpr):Bool {
+		return (operation == OpIncrement || operation == OpDecrement) && admitsExactIntInstanceFieldPlace(operand);
 	}
 }
 #end

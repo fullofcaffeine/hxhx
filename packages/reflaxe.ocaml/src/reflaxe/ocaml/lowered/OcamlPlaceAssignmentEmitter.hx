@@ -42,8 +42,8 @@ class OcamlPlaceAssignmentEmitter {
 				]), false), false), false), false);
 	}
 
-	/** Emits the sealed ordinary-Int increment schedule without reinterpreting fixity. */
-	public static function emitIntIncrement(plan:OcamlLoweredIntUpdate, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
+	/** Emits the sealed ordinary-Int update schedule without reinterpreting token or fixity. */
+	public static function emitIntUpdate(plan:OcamlLoweredIntUpdate, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
 		final receiverName = freshTemporary("place_receiver");
 		final oldValueName = freshTemporary("place_old");
 		final newValueName = freshTemporary("place_new");

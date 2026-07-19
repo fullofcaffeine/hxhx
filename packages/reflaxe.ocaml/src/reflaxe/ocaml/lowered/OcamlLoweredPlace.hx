@@ -42,6 +42,7 @@ enum abstract OcamlLoweredIntOperator(String) from String to String {
 /** Source update token retained independently from its numeric operation. */
 enum abstract OcamlLoweredUpdateOperator(String) from String to String {
 	final Increment = "increment";
+	final Decrement = "decrement";
 }
 
 /** Prefix/postfix syntax retained independently from update result semantics. */
