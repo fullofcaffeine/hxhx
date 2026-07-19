@@ -2,6 +2,7 @@ package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
 import haxe.macro.Type;
+import haxe.macro.Expr.Binop;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 
@@ -46,8 +47,7 @@ class OcamlPlaceInputPolicy {
 		}
 	}
 
-	/** Admits ordinary `Int` fields with an exact `Int` RHS for the first slice. */
-	public static function admitsSimpleInstanceField(left:TypedExpr, right:TypedExpr):Bool {
+	static function admitsExactIntInstanceField(left:TypedExpr, right:TypedExpr):Bool {
 		if (!isExactInt(left.t) || !isExactInt(right.t))
 			return false;
 		return switch (left.expr) {
@@ -58,6 +58,16 @@ class OcamlPlaceInputPolicy {
 			case _:
 				false;
 		}
+	}
+
+	/** Admits ordinary `Int` fields with an exact `Int` RHS for simple assignment. */
+	public static function admitsSimpleInstanceField(left:TypedExpr, right:TypedExpr):Bool {
+		return admitsExactIntInstanceField(left, right);
+	}
+
+	/** Admits ordinary `Int` fields with an exact `Int` RHS for `+=`. */
+	public static function admitsCompoundIntAddInstanceField(operation:Binop, left:TypedExpr, right:TypedExpr):Bool {
+		return operation == OpAdd && admitsExactIntInstanceField(left, right);
 	}
 }
 #end

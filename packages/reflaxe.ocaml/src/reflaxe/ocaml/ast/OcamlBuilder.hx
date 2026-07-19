@@ -4306,6 +4306,10 @@ class OcamlBuilder {
 							OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, rhs);
 						}
 					case TField(obj, FInstance(_, _, cfRef)):
+						if (OcamlPlaceInputPolicy.admitsCompoundIntAddInstanceField(inner, e1, e2))
+							return
+								placeLoweringInvariant("admitted instance-field compound assignment reached the legacy syntax branch without a stable origin",
+									e1.pos);
 						final cf = cfRef.get();
 						switch (cf.kind) {
 							case FVar(_, _):

@@ -16,12 +16,22 @@ class Main {
 	static function main():Void {
 		final result = receiver().value = rhs();
 		Sys.println("result=" + result + " final=" + holder.value + " events=" + events.join(",") + " abstract=" + abstractControl());
+
+		events.resize(0);
+		final compoundResult = receiver().value += rhsMutating();
+		Sys.println("compound=" + compoundResult + " final=" + holder.value + " events=" + events.join(","));
 	}
 
 	static function abstractControl():String {
 		final abstractHolder = new AbstractHolder();
 		final result = abstractHolder.value = 9;
 		return (result : Int) + "/" + (abstractHolder.value : Int);
+	}
+
+	static function rhsMutating():Int {
+		events.push("rhs_mutates");
+		holder.value = 100;
+		return 7;
 	}
 }
 

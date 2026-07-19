@@ -20,7 +20,9 @@ enum abstract OcamlLoweredEffect(String) from String to String {
 /** Ordered roles in a value-producing assignment schedule. */
 enum abstract OcamlPlaceOccurrenceRole(String) from String to String {
 	final Receiver = "receiver";
+	final Load = "load";
 	final RightHandSide = "right-hand-side";
+	final Operator = "operator";
 	final Store = "store";
 	final Result = "result";
 }
@@ -28,6 +30,12 @@ enum abstract OcamlPlaceOccurrenceRole(String) from String to String {
 /** How the assignment expression obtains its Haxe result. */
 enum abstract OcamlAssignmentResultKind(String) from String to String {
 	final AssignedValue = "assigned-value";
+	final ComputedValue = "computed-value";
+}
+
+/** Source operator selected for the first ordinary compound-assignment slice. */
+enum abstract OcamlLoweredIntOperator(String) from String to String {
+	final Add = "int-add";
 }
 
 /** The selected conversion between an input value and a place carrier. */
@@ -81,6 +89,30 @@ typedef OcamlLoweredSimpleAssignment = {
 	final runtimeRequirementIds:Array<String>;
 }
 
+/** A typed ordinary Int compound assignment with an explicit old-value load. */
+typedef OcamlLoweredCompoundAssignment = {
+	final id:String;
+	final originId:String;
+	final source:OcamlLoweredSourceSpan;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final place:OcamlLoweredInstanceFieldPlace;
+	final receiver:TypedExpr;
+	final rightHandSide:TypedExpr;
+	final operation:OcamlLoweredIntOperator;
+	final conversion:OcamlLoweredConversionKind;
+	final result:OcamlAssignmentResultKind;
+	final schedule:Array<OcamlPlaceOccurrence>;
+	final effects:Array<OcamlLoweredEffect>;
+	final runtimeRequirementIds:Array<String>;
+}
+
+/** Closed typed place-assignment families currently admitted by the target. */
+enum OcamlLoweredPlaceAssignment {
+	Simple(plan:OcamlLoweredSimpleAssignment);
+	Compound(plan:OcamlLoweredCompoundAssignment);
+}
+
 /** Serializable form retained after target syntax has been constructed. */
 typedef OcamlLoweredPlaceReportEntry = {
 	final id:String;
@@ -90,6 +122,7 @@ typedef OcamlLoweredPlaceReportEntry = {
 	final semanticTypeId:String;
 	final carrierTypeId:String;
 	final place:OcamlLoweredInstanceFieldPlace;
+	final ?operation:OcamlLoweredIntOperator;
 	final conversion:OcamlLoweredConversionKind;
 	final result:OcamlAssignmentResultKind;
 	final schedule:Array<OcamlPlaceOccurrence>;

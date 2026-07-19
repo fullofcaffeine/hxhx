@@ -69,10 +69,14 @@ class OcamlLoweredOrigin {
 			|| span.file.indexOf("/std/ocaml/_std/") >= 0;
 	}
 
-	/** Builds a deterministic identity within one normalized function body. */
-	public static function placeId(functionId:String, ordinal:Int, position:Position):String {
-		final span = sourceSpan(position);
-		final seed = functionId + "|" + ordinal + "|" + span.file + "|" + span.min + "|" + span.max;
+	/**
+		Builds a deterministic structural identity within one normalized function.
+
+		Source offsets are intentionally excluded: they remain diagnostic origin
+		data and must not change semantic identity after an unrelated earlier edit.
+	**/
+	public static function placeId(functionId:String, ordinal:Int):String {
+		final seed = functionId + "|" + ordinal;
 		return "place:" + Sha256.encode(seed).substr(0, 24);
 	}
 

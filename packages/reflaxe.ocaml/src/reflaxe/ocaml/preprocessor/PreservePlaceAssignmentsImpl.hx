@@ -34,12 +34,13 @@ class PreservePlaceAssignmentsImpl extends BasePreprocessor {
 	function transform(expression:TypedExpr):TypedExpr {
 		final admitted = switch (expression.expr) {
 			case TBinop(OpAssign, left, right): OcamlPlaceInputPolicy.admitsSimpleInstanceField(left, right);
+			case TBinop(OpAssignOp(operation), left, right): OcamlPlaceInputPolicy.admitsCompoundIntAddInstanceField(operation, left, right);
 			case _: false;
 		}
 
 		var id:Null<String> = null;
 		if (admitted) {
-			id = OcamlLoweredOrigin.placeId(functionId, ordinal, expression.pos);
+			id = OcamlLoweredOrigin.placeId(functionId, ordinal);
 			ordinal += 1;
 		}
 

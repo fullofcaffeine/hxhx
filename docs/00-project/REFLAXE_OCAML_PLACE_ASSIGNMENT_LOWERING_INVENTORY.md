@@ -9,13 +9,15 @@
 
 ## Practical outcome
 
-The first hard-cut family now owns value-producing simple assignment to an
-ordinary record-backed `Int` instance field when the right-hand side is also an
-exact semantic `Int`. It preserves the atomic typed assignment before
+The first hard-cut family now owns value-producing simple assignment and `+=`
+for an ordinary record-backed `Int` instance field when the right-hand side is
+also an exact semantic `Int`. It preserves the atomic typed operation before
 Reflaxe's generic `EverythingIsExprSanitizer`, seals a typed place and ordered
 occurrence schedule, validates it, and only then constructs `OcamlExpr`.
-`receiver().field = rhs()` now evaluates the receiver and right-hand side once,
-stores once, and returns the assigned value without rereading the place.
+`receiver().field = rhs()` evaluates the receiver and right-hand side once,
+stores once, and returns the assigned value without rereading the place. For
+`receiver().field += rhs()`, the plan saves the old field value before the RHS,
+performs Haxe `Int` addition, stores once, and returns the computed value.
 
 Other assignment and update behavior is still selected while `OcamlBuilder` is
 constructing OCaml syntax, with related storage and carrier choices split
@@ -28,10 +30,11 @@ typed tree, nor a shared cross-target representation IR.
 
 | Decision | Current owner | Evidence and risk |
 | --- | --- | --- |
-| Assignment used as a value | Reflaxe `EverythingIsExprSanitizer.standardizeAssignValue` before target compilation | The generic pass inserts the assignment as a separate statement and returns a copied left-hand side. For `receiver().field = rhs`, that causes a second receiver evaluation. The OCaml target currently enables this pass through `ExpressionPreprocessorHelper.defaults()`. |
+| Assignment used as a value | Target preservation for admitted forms; Reflaxe `EverythingIsExprSanitizer.standardizeAssignValue` for the remainder | The generic pass inserts an assignment as a separate statement and returns a copied left-hand side. Target metadata now protects the admitted simple and `+=` forms; other forms still carry the original risk until migrated. |
 | Exact `Int` instance-field simple assignment | `OcamlPlaceAssignmentPlanner`, validator, and emitter before `OcamlExpr` construction | One admitted family has a stable origin, representation facts, occurrence schedule, result contract, and fail-closed invariant. Its old instance-field branch is guarded against use. |
+| Exact primitive-`Int` instance-field `+=` | The same typed place model before `OcamlExpr` construction | The plan records receiver, old-value load, RHS, `int-add`, store, computed result, and the semantic `haxe-int32-add` runtime requirement. The legacy branch is guarded against use. |
 | Other simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, static, anonymous/dynamic, array, bytes, and deliberately unadmitted instance-field cases still construct target syntax directly. Several unhandled states return OCaml `unit`. |
-| Compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Operator selection, receiver sharing, load, arithmetic, store, and result are repeated per place kind. Ref, field, and static stores currently return OCaml `unit` in expression position. |
+| Other compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Other operators and place kinds still repeat operator selection, receiver sharing, load, arithmetic, store, and result. Ref, field, and static stores can still return OCaml `unit` in expression position. |
 | Prefix/postfix update | `OcamlBuilder.buildUnop`, approximately lines 5377-5707 | Numeric classification, nullable/Dynamic representation, place handling, store, and old/new result selection are intertwined. Unsupported states return `unit`. |
 | Straight-line local assignment | `OcamlBuilder.buildBlockFromIndex`, from approximately line 5832 | A second path rewrites non-ref local assignment as OCaml `let` shadowing, so local storage and expression lowering do not share one durable plan. |
 | Local mutation and capture | `collectMutatedLocalIds*` and `collectRefLocalIds*`, from approximately line 6309 | Correctness facts live in mutable traversal maps and are consumed later by syntax construction. This is follow-up Bead `haxe_ocaml-9bome`, but the first place model must leave it a stable home. |
@@ -40,10 +43,10 @@ typed tree, nor a shared cross-target representation IR.
 | Unsupported behavior | `guardrailError` plus `CUnit` branches | Errors are suppressed while compiling the current Haxe standard library. Bootstrap continuity must not become the release failure policy for an admitted place form. |
 
 At the baseline inventory, `OcamlBuilder.hx` was 7,688 physical lines and
-`OcamlCompiler.hx` was 3,555. After the first cutover, they are 7,628 and 3,561
+`OcamlCompiler.hx` was 3,555. After the two cutovers, they are 7,632 and 3,561
 lines respectively. Place planning, validation, reporting, and emission live in
 focused `lowered/` modules. Existing source-position caching also moved out of
-the builder, so the semantic cutover reduced the mega-file by 60 lines overall
+the builder, so the semantic cutovers reduced the mega-file by 56 lines overall
 instead of adding another responsibility to it.
 
 ## Place coverage already attempted by the emitter
@@ -112,7 +115,7 @@ local fallback.
 These facts prohibit reconstructing an assignment result by rereading the place
 after the store.
 
-## Reproduced current target failure
+## Baseline target failure closed by the first compound cutover
 
 Before this inventory was written, the same fixture was compiled through the
 current target. Generated OCaml failed to typecheck because an instance-field
@@ -126,8 +129,9 @@ __assign_16 has type unit but int was expected
 Inspection also showed simple field assignment followed by a second receiver
 evaluation to recover the expression result. That would turn one upstream
 `receiver` event into two if native compilation were allowed to continue.
-The reproducible target command is documented in the fixture README. This is a
-known red implementation frontier, not an expected-output update.
+The exact primitive-`Int` instance-field `+=` cutover now closes this failure.
+Other compound operators and place kinds remain separate frontiers and must not
+be inferred from this result.
 
 ## First admitted semantic family
 
@@ -148,7 +152,7 @@ recombine the already-split output. The preservation policy and planner share
 the same admission predicate, while a legacy-branch guard fails if an admitted
 shape ever arrives without its stable origin.
 
-The initial hard cut admits only:
+The current hard cuts admit only:
 
 - simple assignment to an ordinary, non-extern, non-interface, record-backed
   instance field;
@@ -156,30 +160,39 @@ The initial hard cut admits only:
 - the current direct OCaml `int` field carrier and record receiver carrier;
 - receiver, right-hand-side, store, and assigned-result occurrences in that
   order, each with an explicit count of one;
-- no compatibility-runtime requirement.
+- exact primitive-`Int` `+=` on that same place, with receiver, old-value load,
+  RHS, `int-add`, store, and computed result in Oracle-proven order;
+- no compatibility-runtime requirement for simple assignment, and one named
+  `haxe-int32-add` requirement mapped to `HxInt` for `+=`.
 
 It deliberately does not follow Haxe abstracts to their underlying `Int`, and
 it does not admit nullable or `Dynamic` right-hand sides. Those require explicit
 representation or conversion facts rather than an `Obj.magic`-backed guess.
 The inspection artifact is deterministic: fixtures with
 `expected.lowering.json` compile twice and must produce byte-identical reports.
+Lowered identities use function identity plus structural ordinal; source paths
+and byte offsets remain diagnostic provenance and do not determine semantic
+identity.
 
 The next cutovers will extend this same node family to the remaining oracle-
-proven simple, compound, and update cases only when each full schedule and
-result rule is represented and validated. Properties remain host-resolved calls
-rather than being guessed from field spelling. Abstract operators remain exact
-host-selected calls or bodies rather than being treated as ordinary numeric
-updates.
+proven simple, remaining compound operators/place kinds, and update cases only
+when each full schedule and result rule is represented and validated.
+Properties remain host-resolved calls rather than being guessed from field
+spelling. Abstract operators remain exact host-selected calls or bodies rather
+than being treated as ordinary numeric updates.
 
 ### First-cut validation checkpoint
 
 The focused executable fixture
 `test/portable/fixtures/place_instance_field_assign` proves the event order,
 mutation, assigned result, generated target shape, exact lowered report, and
-repeat-build determinism. The final admitted policy also passed every portable
-fixture: the broad run first exposed an accidentally admitted nullable/Dynamic
-right-hand side in `haxe_io_bucket01_basic`; narrowing the policy to exact
-semantic `Int` fixed that modeling error, and the complete corpus then passed.
+repeat-build determinism. Its compound RHS temporarily writes `100` to the same
+field; the lowered old-value load still produces and stores `14`, proving the
+load happens before the RHS. Selective-runtime mode includes `HxInt` from the
+recorded runtime intent. The final admitted policy also passes every portable
+fixture. During development, that broad sweep caught both an over-broad
+nullable/Dynamic RHS policy and an operator guard that initially treated `-=`
+as admitted `+=`; both were narrowed at the shared input-policy boundary.
 
 The checkpoint also passes the Haxe 4.3.7 three-route Oracle, M3, M4 native,
 M5 class, M6 array, M6 bytes, source-map integration, official Haxe formatting,
