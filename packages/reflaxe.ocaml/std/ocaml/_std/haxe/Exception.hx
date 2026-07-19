@@ -32,7 +32,10 @@ class Exception {
 	@:noCompletion var __exceptionMessage:String;
 	@:noCompletion var __exceptionStack:Null<CallStack>;
 	@:noCompletion var __nativeStack:Any;
-	@:noCompletion @:ifFeature("haxe.Exception.get_stack") var __skipStack:Int = 0;
+	// Keep the default implicit. Haxe initializes Int fields to zero, while an
+	// explicit feature-gated initializer can be materialized after the target's
+	// place-analysis pass and would no longer have a stable assignment origin.
+	@:noCompletion @:ifFeature("haxe.Exception.get_stack") var __skipStack:Int;
 	@:noCompletion var __nativeException:Any;
 	@:noCompletion var __previousException:Null<Exception>;
 

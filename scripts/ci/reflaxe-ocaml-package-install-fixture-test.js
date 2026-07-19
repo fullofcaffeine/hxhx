@@ -11,6 +11,8 @@ try {
 	// Haxe injects this helper into derived exception constructors after Reflaxe
 	// preprocessing. Keeping it non-inline prevents a late field update from
 	// bypassing the target-owned place-lowering origin on platform-only paths.
+	// The feature-gated skip field likewise relies on Haxe's normal Int default:
+	// spelling `= 0` can create another late synthetic assignment on macOS.
 	const exceptionSource = fs.readFileSync(path.join(
 		__dirname,
 		'../../packages/reflaxe.ocaml/std/ocaml/_std/haxe/Exception.hx'
@@ -18,6 +20,8 @@ try {
 	assert.match(exceptionSource, /\n\tfunction __shiftStack\(\):Void \{/)
 	assert.match(exceptionSource, /\n\tfunction __unshiftStack\(\):Void \{/)
 	assert.doesNotMatch(exceptionSource, /inline function __(?:un)?shiftStack/)
+	assert.match(exceptionSource, /var __skipStack:Int;/)
+	assert.doesNotMatch(exceptionSource, /var __skipStack:Int\s*=/)
 
 	const versionRoot = path.join(root, 'versions/2.4.0-linux64')
 	fs.mkdirSync(versionRoot, { recursive: true })
