@@ -280,7 +280,7 @@ not protocol design, is the remaining blocker:
 
 - this repository is still private and its root npm package is intentionally
   non-publishable;
-- the current public adapter-owning target repositories are GPL-licensed target
+- the current public adapter-owning target repositories are copyleft-licensed target
   owners, not a neutral MIT home for Haxe-family developer tooling;
 - no immutable public package, release key, provenance workflow, or long-term
   maintainer currently owns this cross-target protocol; and
@@ -303,7 +303,7 @@ decisions. The package must then provide:
 
 - a neutral public MIT-licensed repository with named maintainers;
 - source provenance traced to the repo-owned `hxhx` implementation, without
-  silently relicensing changes made only in a GPL target repository;
+  silently relicensing changes made only in a copyleft target repository;
 - an exact, lockfile-pinned package version with provenance and immutable
   release artifacts;
 - a dependency-free CommonJS API and CLI that pass on Node 20 and the declared
