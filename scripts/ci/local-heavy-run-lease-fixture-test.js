@@ -44,6 +44,7 @@ function sleepSync(milliseconds) {
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'haxe-heavy-lease-fixture-'))
 const leasePath = path.join(temp, 'shared.lease.json')
 const capacityScript = path.resolve(__dirname, '../hxhx/check-local-capacity.js')
+const wrapperScript = path.resolve(__dirname, '../hxhx/with-heavy-run-lease.js')
 
 try {
   const active = new Map([
@@ -282,6 +283,48 @@ try {
     sleepSync(20)
   }
   assert.strictEqual(readLeaseSnapshot(abandonedLease).status, 'missing')
+
+  const nestedLease = path.join(temp, 'nested-wrapper.lease.json')
+  const nestedWrapper = spawnSync(
+    process.execPath,
+    [
+      wrapperScript,
+      '--wait-seconds',
+      '0',
+      '--lease-file',
+      nestedLease,
+      '--label',
+      'outer-wrapper-fixture',
+      '--',
+      process.execPath,
+      wrapperScript,
+      '--wait-seconds',
+      '0',
+      '--lease-file',
+      nestedLease,
+      '--label',
+      'inner-wrapper-fixture',
+      '--',
+      process.execPath,
+      '-e',
+      'console.log("NESTED_WRAPPER_CHILD:PASS")',
+    ],
+    {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        CI: '',
+        HAXE_FAMILY_HEAVY_RUN_LEASE_OWNER_PID: '',
+        HXHX_HEAVY_RUN_LEASE_OWNER_PID: '',
+      },
+    }
+  )
+  assert.strictEqual(nestedWrapper.status, 0, nestedWrapper.stderr)
+  assert.match(nestedWrapper.stdout, /HAXE_FAMILY_HEAVY_RUN:ACQUIRED/)
+  assert.match(nestedWrapper.stdout, /HAXE_FAMILY_HEAVY_RUN:REENTRANT/)
+  assert.match(nestedWrapper.stdout, /NESTED_WRAPPER_CHILD:PASS/)
+  assert.match(nestedWrapper.stdout, /HAXE_FAMILY_HEAVY_RUN:LEASE_RELEASED/)
+  assert.strictEqual(readLeaseSnapshot(nestedLease).status, 'missing')
 
   console.log('LOCAL_HEAVY_RUN_LEASE_FIXTURE:PASS')
 } finally {

@@ -121,11 +121,22 @@ Repo-local focused regressions and bridge tests are supporting evidence for diag
 
 PR-required baseline is: **guardrails + core tests + scoped smokes** (`ci.yml`, gate-lite workflows, builtin smoke, JS oracle, stdlib tier1, semantic diff smoke).
 
+The Core workflow runs the complete 106-command `npm test` inventory as four
+clean-runner shards after Guardrails: focused compiler regressions, macro-host
+integration, portable/snapshot/example coverage, and the hxhx target
+end-to-end lane. The historical check name `Tests` is a fail-closed aggregate;
+it succeeds only when every shard plus the Stage0-free, JS-native, plugin, and
+Guardrails prerequisites succeeded. A failed, cancelled, skipped, or missing
+result fails the aggregate. Local `npm test` remains the canonical serialized
+command. The measured baseline and shard rationale are recorded in
+`docs/benchmarks/HXHX_CORE_TEST_CRITICAL_PATH_2026_07_18.md`.
+
 Stable success markers used by required lanes:
 
 - `STAGE0_FREE_SMOKE:PASS` (`ci.yml` job `stage0-free-smoke`)
 - `JS_NATIVE_SMOKE:PASS` (`ci.yml` job `js-native-smoke`)
 - `PLUGIN_MATRIX_STRICT:PASS` (`ci.yml` job `plugin-matrix`)
+- `CORE_TESTS_AGGREGATE:PASS` (`ci.yml` job `Tests`)
 - `GATE1_LITE:PASS` (`gate1-lite.yml`)
 - `GATE2_LITE:PASS` (`gate2-lite.yml`)
 - `SEMANTIC_DIFF_LITE_SCOPE:RUN` or `SEMANTIC_DIFF_LITE_SCOPE:SKIP_NO_RELEVANT_CHANGES` (`semantic-diff.yml` job `Semantic diff (PR smoke)`)

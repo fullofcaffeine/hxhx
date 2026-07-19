@@ -360,13 +360,26 @@ jobs:
       - name: Emit plugin matrix marker
         run: echo "PLUGIN_MATRIX_STRICT:PASS"
 
-  test:
-    name: Tests
+  test-shards:
+    name: Tests / ${{ matrix.label }}
     runs-on: ubuntu-latest
-    needs: [guards, stage0-free-smoke, js-native-smoke, plugin-matrix]
-    # The complete suite currently needs about 45 minutes on hosted runners.
-    # Keep a bounded margin for normal setup and runner-speed variation.
-    timeout-minutes: 60
+    needs: [guards]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: compiler
+            label: Compiler and focused regressions
+          - shard: macro-host-integration
+            label: Macro-host integration
+          - shard: target-packages
+            label: Portable, snapshots, and examples
+          - shard: hxhx-targets
+            label: hxhx target end-to-end
+    # The slowest measured shard has a roughly 20-minute test body. Keep room
+    # for toolchain setup and normal hosted-runner variation without restoring
+    # the former 60-minute serialized lane.
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -417,9 +430,23 @@ jobs:
           haxe -version
       - name: Download Haxe libraries (lix)
         run: npx lix download
-      - name: Run tests
+      - name: Run test shard
         env:
           HXHX_FORCE_STAGE0: "0"
           HXHX_STAGE0_HEARTBEAT: "30"
           HXHX_STAGE0_FAILFAST_SECS: "7200"
-        run: npm test
+        run: npm run test:ci:shard -- --shard "${{ matrix.shard }}"
+
+  test:
+    name: Tests
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: [guards, stage0-free-smoke, js-native-smoke, plugin-matrix, test-shards]
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify every Core Tests prerequisite
+        env:
+          CORE_TEST_NEEDS_JSON: ${{ toJSON(needs) }}
+        run: node scripts/ci/core-test-aggregate.js

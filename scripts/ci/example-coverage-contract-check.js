@@ -119,8 +119,13 @@ function validateWiring() {
   requireIncludes(scripts.test || '', 'npm run test:examples', 'package.json scripts.test')
   requireIncludes(scripts['ci:guards'] || '', 'example-coverage-contract-check.js', 'package.json scripts.ci:guards')
 
+  const shardManifest = JSON.parse(read('scripts/ci/core-test-shards.json'))
+  if (!shardManifest.assignments || !shardManifest.assignments['test:examples']) {
+    fail('Core Tests shard manifest must assign test:examples to a required shard')
+  }
   const ci = read('.github/workflows/ci.yml')
-  requireIncludes(ci, 'run: npm test', '.github/workflows/ci.yml')
+  requireIncludes(ci, 'npm run test:ci:shard', '.github/workflows/ci.yml')
+  requireIncludes(ci, 'node scripts/ci/core-test-aggregate.js', '.github/workflows/ci.yml')
 
   const exampleRunner = read('scripts/test-examples.sh')
   requireIncludes(exampleRunner, 'run_example_tests', 'scripts/test-examples.sh')

@@ -207,6 +207,7 @@ function main() {
       'localMemoryCapacity',
       'localMemoryCapacityFixture',
       'cooperativeHeavyRunLease',
+      'cooperativeHeavyRunLeaseWrapper',
       'cooperativeHeavyRunLeaseFixture',
       'cooperativeHeavyRunLeaseCrossRepositoryFixture',
       'developerCurrentSourceInputFingerprint',

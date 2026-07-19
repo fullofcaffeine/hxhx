@@ -4,7 +4,8 @@ This repo’s tests are intentionally split into **fast compiler checks** and **
 
 The goal is to:
 
-- keep `npm test` fast enough for tight iteration
+- keep focused test commands fast enough for tight iteration while retaining
+  one canonical complete `npm test` aggregate
 - still have realistic “this actually builds and runs under dune” coverage
 - provide at least one **compiler-shaped acceptance workload** (not just unit tests / golden output)
 
@@ -15,6 +16,22 @@ From the repo root:
 ```bash
 npm test
 ```
+
+`npm test` is the complete serialized regression inventory, not the command to
+rerun after every small edit. The required Core CI workflow runs the same
+inventory in four isolated shards and then reports one fail-closed `Tests`
+result. To reproduce one family locally without changing coverage ownership:
+
+```bash
+npm run test:ci:shard -- --shard compiler
+npm run test:ci:shard -- --shard macro-host-integration
+npm run test:ci:shard -- --shard target-packages
+npm run test:ci:shard -- --shard hxhx-targets
+```
+
+For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
+that owns the behavior you changed, then broaden to its shard and finally to
+`npm test` when the change is ready for complete local evidence.
 
 The default `npm test` loop intentionally excludes a small number of unusually heavy single-regression
 compiler checks when they materially slow iteration. Run those targeted heavy checks separately:

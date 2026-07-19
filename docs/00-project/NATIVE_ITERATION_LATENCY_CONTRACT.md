@@ -111,6 +111,7 @@ performance claim must use measured medians from the relevant runner class.
     "localMemoryCapacityFixture": "scripts/ci/local-memory-capacity-fixture-test.js",
     "cooperativeHeavyRunLeaseSchema": "haxe-family.heavy-run-lease.v1",
     "cooperativeHeavyRunLease": "scripts/hxhx/local-heavy-run-lease.js",
+    "cooperativeHeavyRunLeaseWrapper": "scripts/hxhx/with-heavy-run-lease.js",
     "cooperativeHeavyRunLeaseFixture": "scripts/ci/local-heavy-run-lease-fixture-test.js",
     "cooperativeHeavyRunLeaseCrossRepositoryFixture": "scripts/ci/cross-repository-heavy-run-lease-fixture-test.js",
     "developerCurrentSourceInputSchema": "hxhx.current-source-inputs.v1",
