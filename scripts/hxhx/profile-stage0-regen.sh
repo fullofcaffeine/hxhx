@@ -6,6 +6,22 @@ REGEN_SCRIPT="${HXHX_STAGE0_PROFILE_REGEN_SCRIPT:-$ROOT/scripts/hxhx/regenerate-
 PROGRESS_SUMMARY_SCRIPT="$ROOT/scripts/hxhx/summarize-stage0-progress.js"
 HEARTBEAT_SUMMARY_SCRIPT="$ROOT/scripts/hxhx/summarize-stage0-heartbeat-trace.js"
 CAPACITY_SCRIPT="$ROOT/scripts/hxhx/check-local-capacity.js"
+CAPACITY_LEASE_OWNER_PID="${HXHX_HEAVY_RUN_LEASE_OWNER_PID:-$$}"
+CAPACITY_LEASE_PRIMARY_OWNER=0
+CAPACITY_LEASE_ACTIVE=0
+if [ -z "${HXHX_HEAVY_RUN_LEASE_OWNER_PID:-}" ]; then
+	CAPACITY_LEASE_PRIMARY_OWNER=1
+	export HXHX_HEAVY_RUN_LEASE_OWNER_PID="$CAPACITY_LEASE_OWNER_PID"
+fi
+
+release_capacity_lease() {
+	if [ "$CAPACITY_LEASE_PRIMARY_OWNER" = "1" ] && [ "$CAPACITY_LEASE_ACTIVE" = "1" ]; then
+		node "$CAPACITY_SCRIPT" \
+			--release-lease \
+			--lease-owner-pid "$CAPACITY_LEASE_OWNER_PID" >/dev/null 2>&1 || true
+	fi
+}
+trap release_capacity_lease EXIT
 
 POLICY="${HXHX_STAGE0_PROFILE_POLICY:-prefer-native}"
 FAILFAST_SECS="${HXHX_STAGE0_PROFILE_FAILFAST_SECS:-120}"
@@ -305,6 +321,7 @@ run_capacity_preflight() {
 	local -a args=(
 		--policy "$CAPACITY_POLICY"
 		--label "stage0-regeneration-profile"
+		--lease-owner-pid "$CAPACITY_LEASE_OWNER_PID"
 		--json-out "$CAPACITY_REPORT"
 	)
 	if [ -n "$CAPACITY_MAX_LOAD_PER_CPU" ]; then
@@ -314,6 +331,9 @@ run_capacity_preflight() {
 		args+=(--fixture "$CAPACITY_FIXTURE")
 	fi
 	node "$CAPACITY_SCRIPT" "${args[@]}"
+	if [ "${HXHX_HEAVY_RUN_WAIT_SECONDS:-0}" != "0" ]; then
+		CAPACITY_LEASE_ACTIVE=1
+	fi
 }
 
 # Capacity is checked before regeneration starts, so an overloaded workstation

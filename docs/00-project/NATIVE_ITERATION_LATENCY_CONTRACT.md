@@ -105,6 +105,11 @@ performance claim must use measured medians from the relevant runner class.
     "localCapacityPreflightSchema": "hxhx.local-capacity-preflight.v1",
     "localCapacityPreflight": "scripts/hxhx/check-local-capacity.js",
     "localCapacityPreflightFixture": "scripts/ci/local-capacity-preflight-fixture-test.js",
+    "localCapacityQueue": "scripts/hxhx/local-capacity-queue.js",
+    "localCapacityQueueFixture": "scripts/ci/local-capacity-queue-fixture-test.js",
+    "cooperativeHeavyRunLeaseSchema": "haxe-family.heavy-run-lease.v1",
+    "cooperativeHeavyRunLease": "scripts/hxhx/local-heavy-run-lease.js",
+    "cooperativeHeavyRunLeaseFixture": "scripts/ci/local-heavy-run-lease-fixture-test.js",
     "developerCurrentSourceInputSchema": "hxhx.current-source-inputs.v1",
     "developerCurrentSourceInputFingerprint": "scripts/hxhx/current-source-input-fingerprint.js",
     "developerCurrentSourceCacheFixture": "scripts/ci/developer-current-source-cache-fixture-test.js"
@@ -168,6 +173,8 @@ performance claim must use measured medians from the relevant runner class.
         "scripts/ci/m7-shared-artifacts.js",
         "scripts/hxhx/check-local-capacity.js",
         "scripts/ci/local-capacity-preflight-fixture-test.js",
+        "scripts/hxhx/local-capacity-queue.js",
+        "scripts/hxhx/local-heavy-run-lease.js",
         "docs/00-project/CI_GATES.md"
       ]
     }
@@ -209,6 +216,15 @@ runner platform. An explicit `off` accepts the expected slowdown but does not
 change target selection, retries, timeouts, stage0 rules, or any correctness
 claim. Optional JSON reports use `hxhx.local-capacity-preflight.v1` and never
 retain full process command lines.
+
+Local maintainers may set `HXHX_HEAVY_RUN_WAIT_SECONDS` to replace manual
+retry polling with one bounded, attached queue. Participating repositories then
+share the `haxe-family.heavy-run-lease.v1` user-scoped lease. Admission requires
+both the existing host decision and lease ownership. The lease identifies its
+owning shell by PID plus process start time, has a heartbeat and stale-owner
+recovery, supports nested handoff, and never sends signals to competing work.
+The final capacity report records admission or timeout and total queue time.
+CI remains under runner scheduling and never acquires the local lease.
 
 The fast current-source selector first asks the strict validator for an exact
 commit/worktree match. If that fails, its developer-only fallback may reuse the

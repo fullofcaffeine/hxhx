@@ -231,7 +231,25 @@ HXHX_HEAVY_RUN_CAPACITY_POLICY=off npm run test:upstream:runci-targets
 # Keep a redacted machine-state report for a timing comparison.
 HXHX_HEAVY_RUN_CAPACITY_REPORT=.artifacts/capacity.json \
   npm run test:upstream:runci-targets
+
+# Wait for up to 15 minutes instead of polling by hand.
+HXHX_HEAVY_RUN_WAIT_SECONDS=900 npm run test:upstream:runci-targets
 ```
+
+When bounded waiting is enabled, the attached command prints
+`HXHX_LOCAL_CAPACITY:WAITING` only when the blocking reason changes. It starts
+the expensive setup after both the host-capacity check and the cooperative
+local lease pass, or exits `75` when the deadline expires. The final JSON
+report records the total queue time and outcome.
+
+The lease is shared by participating Haxe-family repositories for the current
+OS user. It records an owning shell PID and process start identity, keeps a
+heartbeat while the gate runs, and safely recovers a stale or reused-PID owner
+without killing any process. Nested participating gates inherit the same
+owner, so they do not deadlock themselves. CI never acquires this local lease.
+`HXHX_HEAVY_RUN_POLL_SECONDS` changes the default 10-second resample interval;
+`HXHX_HEAVY_RUN_LEASE_FILE` exists for deterministic tooling tests and unusual
+multi-workspace setups and normally should not be set.
 
 The report includes load averages and short process facts such as compiler
 kind, PID, CPU use, and elapsed time. Only compiler processes actively

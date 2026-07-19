@@ -5,6 +5,13 @@ HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXELIB_BIN="${HAXELIB_BIN:-haxelib}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+CAPACITY_LEASE_OWNER_PID="${HXHX_HEAVY_RUN_LEASE_OWNER_PID:-$$}"
+CAPACITY_LEASE_PRIMARY_OWNER=0
+CAPACITY_LEASE_ACTIVE=0
+if [ -z "${HXHX_HEAVY_RUN_LEASE_OWNER_PID:-}" ]; then
+  CAPACITY_LEASE_PRIMARY_OWNER=1
+  export HXHX_HEAVY_RUN_LEASE_OWNER_PID="$CAPACITY_LEASE_OWNER_PID"
+fi
 
 DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
@@ -42,6 +49,7 @@ if [ -z "$TARGETS_RAW" ]; then
   echo "    Heavy local runs stop before setup when the host is saturated; CI warns." >&2
   echo "    Override only the capacity decision with HXHX_HEAVY_RUN_CAPACITY_POLICY=off." >&2
   echo "    Set HXHX_HEAVY_RUN_CAPACITY_REPORT=/path/report.json to retain the preflight state." >&2
+  echo "    Set HXHX_HEAVY_RUN_WAIT_SECONDS=900 to queue locally for up to 15 minutes." >&2
   echo "    Set HXHX_GATE3_RETRY_COUNT=0 to disable retries." >&2
   echo "    Set HXHX_GATE3_KEEP_WORKTREE_ON_FAILURE=1 to retain the temporary upstream worktree for debugging failed generated output." >&2
   echo "    Set HXHX_BIN=/path/to/hxhx to reuse a prebuilt stage1 binary." >&2
@@ -59,6 +67,11 @@ WRAP_DIR=""
 
 cleanup() {
   local status=$?
+  if [ "$CAPACITY_LEASE_PRIMARY_OWNER" = "1" ] && [ "$CAPACITY_LEASE_ACTIVE" = "1" ]; then
+    node "$ROOT/scripts/hxhx/check-local-capacity.js" \
+      --release-lease \
+      --lease-owner-pid "$CAPACITY_LEASE_OWNER_PID" >/dev/null 2>&1 || true
+  fi
   if [ -n "$WRAP_DIR" ] && [ -d "$WRAP_DIR" ]; then
     rm -rf "$WRAP_DIR" >/dev/null 2>&1 || true
   fi
@@ -318,7 +331,11 @@ run_heavy_capacity_preflight() {
   local policy="${HXHX_HEAVY_RUN_CAPACITY_POLICY:-auto}"
   local max_load="${HXHX_HEAVY_RUN_MAX_LOAD_PER_CPU:-}"
   local report="${HXHX_HEAVY_RUN_CAPACITY_REPORT:-}"
-  local -a args=(--policy "$policy" --label "gate3:${TARGETS_RAW// /,}")
+  local -a args=(
+    --policy "$policy"
+    --label "gate3:${TARGETS_RAW// /,}"
+    --lease-owner-pid "$CAPACITY_LEASE_OWNER_PID"
+  )
 
   if ! command -v node >/dev/null 2>&1; then
     echo "Missing node on PATH (required for the heavyweight-run capacity preflight)." >&2
@@ -336,6 +353,9 @@ run_heavy_capacity_preflight() {
   fi
 
   node "$helper" "${args[@]}"
+  if [ "${HXHX_HEAVY_RUN_WAIT_SECONDS:-0}" != "0" ]; then
+    CAPACITY_LEASE_ACTIVE=1
+  fi
 }
 
 # This runs before package resolution, compiler construction, temporary

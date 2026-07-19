@@ -25,6 +25,8 @@ function blockingSignature(report) {
   return JSON.stringify({
     observations: report.observations || [],
     policy: report.resolvedPolicy,
+    leaseOwnerPid: report.lease ? report.lease.ownerPid : null,
+    leaseOwnerStartedAt: report.lease ? report.lease.ownerStartedAt : '',
   })
 }
 
@@ -49,7 +51,7 @@ async function waitForCapacity({
     throw new Error('pollIntervalMs must be positive')
   }
 
-  const startedAtMs = now()
+  let waitStartedAtMs = null
   let samples = 0
   let lastBlockingSignature = ''
 
@@ -58,7 +60,7 @@ async function waitForCapacity({
 
     const report = await readReport()
     samples += 1
-    const waitedMs = Math.max(0, now() - startedAtMs)
+    const waitedMs = waitStartedAtMs === null ? 0 : Math.max(0, now() - waitStartedAtMs)
 
     if (report.status !== 'blocked') {
       return {
@@ -73,17 +75,20 @@ async function waitForCapacity({
       return { report, outcome: 'blocked_immediately', waitedMs, samples }
     }
 
+    if (waitStartedAtMs === null) waitStartedAtMs = now()
+    const currentWaitedMs = Math.max(0, now() - waitStartedAtMs)
+
     const signature = blockingSignature(report)
     if (signature !== lastBlockingSignature) {
-      onWaiting({ report, waitedMs, samples })
+      onWaiting({ report, waitedMs: currentWaitedMs, samples })
       lastBlockingSignature = signature
     }
 
-    if (waitedMs >= maxWaitMs) {
-      return { report, outcome: 'timed_out', waitedMs, samples }
+    if (currentWaitedMs >= maxWaitMs) {
+      return { report, outcome: 'timed_out', waitedMs: currentWaitedMs, samples }
     }
 
-    const remainingMs = maxWaitMs - waitedMs
+    const remainingMs = maxWaitMs - currentWaitedMs
     await sleep(Math.min(pollIntervalMs, remainingMs), signal)
   }
 }

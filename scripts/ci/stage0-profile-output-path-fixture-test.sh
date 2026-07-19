@@ -14,6 +14,21 @@ if [ "${HXHX_STAGE0_PROFILE_FIXTURE_REGEN:-0}" = "1" ]; then
 	if [ -n "${HXHX_STAGE0_PROFILE_FIXTURE_REGEN_CAPTURE:-}" ]; then
 		printf 'regen\n' >>"$HXHX_STAGE0_PROFILE_FIXTURE_REGEN_CAPTURE"
 	fi
+	if [ "${HXHX_STAGE0_PROFILE_FIXTURE_NESTED_CAPACITY:-0}" = "1" ]; then
+		node "$ROOT/scripts/hxhx/check-local-capacity.js" \
+			--policy require \
+			--wait-seconds 1 \
+			--fixture "${HXHX_STAGE0_PROFILE_CAPACITY_FIXTURE:?missing capacity fixture}" \
+			--lease-owner-pid "${HXHX_HEAVY_RUN_LEASE_OWNER_PID:?missing inherited lease owner}" \
+			--label nested-profile-fixture >"${HXHX_STAGE0_PROFILE_FIXTURE_NESTED_CAPACITY_LOG:?missing nested log}"
+	fi
+	if [ "${HXHX_STAGE0_PROFILE_FIXTURE_HOLD:-0}" = "1" ]; then
+		printf '%s\n' "$$" >"${HXHX_STAGE0_PROFILE_FIXTURE_HOLD_READY:?missing hold-ready path}"
+		trap 'exit 143' TERM INT
+		while :; do
+			sleep 0.1
+		done
+	fi
 	report_json=""
 	while [ "$#" -gt 0 ]; do
 		case "$1" in
@@ -92,12 +107,36 @@ run_profile "$absolute_out" >"$fixture_root/absolute.log" 2>&1
 [ -s "$absolute_out/reflaxe_ocaml_progress.log" ] || fail "absolute progress log is missing"
 [ -s "$absolute_out/progress_summary.json" ] || fail "absolute progress summary is missing"
 
+queued_out="$fixture_root/queued-artifacts"
+queued_lease="$fixture_root/shared-heavy-run.lease.json"
+queued_nested_log="$fixture_root/nested-capacity.log"
+HXHX_HEAVY_RUN_WAIT_SECONDS=1 \
+	HXHX_HEAVY_RUN_POLL_SECONDS=0.01 \
+	HXHX_HEAVY_RUN_LEASE_FILE="$queued_lease" \
+	HXHX_STAGE0_PROFILE_FIXTURE_NESTED_CAPACITY=1 \
+	HXHX_STAGE0_PROFILE_FIXTURE_NESTED_CAPACITY_LOG="$queued_nested_log" \
+	run_profile "$queued_out" >"$fixture_root/queued.log" 2>&1
+[ ! -e "$queued_lease" ] || fail "successful queued profile did not release its cooperative lease"
+grep -F "HXHX_LOCAL_CAPACITY:PASS" "$queued_nested_log" >/dev/null \
+	|| fail "nested profile capacity check did not reuse the outer lease"
+node -e '
+const fs = require("fs")
+const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"))
+if (report.queue.outcome !== "admitted_immediately" || report.lease.status !== "acquired") process.exit(1)
+' "$queued_out/capacity_report.json" || fail "queued profile report did not record lease admission"
+
 missing_out="$fixture_root/missing-progress"
+missing_lease="$fixture_root/missing-progress.lease.json"
 set +e
-HXHX_STAGE0_PROFILE_FIXTURE_OMIT_PROGRESS=1 run_profile "$missing_out" >"$fixture_root/missing.log" 2>&1
+HXHX_HEAVY_RUN_WAIT_SECONDS=1 \
+	HXHX_HEAVY_RUN_POLL_SECONDS=0.01 \
+	HXHX_HEAVY_RUN_LEASE_FILE="$missing_lease" \
+	HXHX_STAGE0_PROFILE_FIXTURE_OMIT_PROGRESS=1 \
+	run_profile "$missing_out" >"$fixture_root/missing.log" 2>&1
 missing_code="$?"
 set -e
 [ "$missing_code" = "3" ] || fail "missing progress telemetry returned $missing_code instead of evidence-error exit 3"
+[ ! -e "$missing_lease" ] || fail "failed queued profile did not release its cooperative lease"
 if ! grep -F "required progress telemetry is missing or empty" "$fixture_root/missing.log" >/dev/null; then
 	fail "missing telemetry diagnostic was not actionable"
 fi
@@ -124,5 +163,39 @@ if (report.status !== "blocked" || report.exitCode !== 75) process.exit(1)
 ' "$blocked_out/capacity_report.json" || fail "blocked capacity report did not preserve the decision"
 grep -F "HXHX_LOCAL_CAPACITY:BLOCKED" "$fixture_root/blocked.log" >/dev/null \
 	|| fail "blocked profile did not explain why work stopped"
+
+cancelled_out="$fixture_root/cancelled-profile"
+cancelled_lease="$fixture_root/cancelled-profile.lease.json"
+cancelled_ready="$fixture_root/cancelled-profile.ready"
+HXHX_HEAVY_RUN_WAIT_SECONDS=1 \
+	HXHX_HEAVY_RUN_POLL_SECONDS=0.01 \
+	HXHX_HEAVY_RUN_LEASE_FILE="$cancelled_lease" \
+	HXHX_STAGE0_PROFILE_REGEN_SCRIPT="$FIXTURE_SCRIPT" \
+	HXHX_STAGE0_PROFILE_FIXTURE_REGEN=1 \
+	HXHX_STAGE0_PROFILE_FIXTURE_NESTED_DIR="$nested_dir" \
+	HXHX_STAGE0_PROFILE_FIXTURE_REGEN_CAPTURE="$regen_capture" \
+	HXHX_STAGE0_PROFILE_CAPACITY_FIXTURE="$idle_capacity_fixture" \
+	HXHX_STAGE0_PROFILE_FIXTURE_HOLD=1 \
+	HXHX_STAGE0_PROFILE_FIXTURE_HOLD_READY="$cancelled_ready" \
+	bash "$PROFILE_SCRIPT" \
+		--policy require-native \
+		--failfast 1 \
+		--heartbeat 1 \
+		--scenario-args "" \
+		--out-dir "$cancelled_out" >"$fixture_root/cancelled.log" 2>&1 &
+cancelled_profile_pid="$!"
+for _attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+	if [ -s "$cancelled_ready" ] && [ -s "$cancelled_lease" ]; then
+		break
+	fi
+	sleep 0.05
+done
+[ -s "$cancelled_ready" ] || fail "cancelled profile fixture never entered its held child"
+[ -s "$cancelled_lease" ] || fail "cancelled profile fixture never acquired its lease"
+cancelled_child_pid="$(cat "$cancelled_ready")"
+kill -TERM "$cancelled_profile_pid" 2>/dev/null || true
+kill -TERM "$cancelled_child_pid" 2>/dev/null || true
+wait "$cancelled_profile_pid" 2>/dev/null || true
+[ ! -e "$cancelled_lease" ] || fail "cancelled profile did not release its cooperative lease"
 
 echo "STAGE0_PROFILE_OUTPUT_PATH_FIXTURE:PASS"

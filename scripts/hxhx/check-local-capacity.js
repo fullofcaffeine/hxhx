@@ -14,8 +14,15 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { execFileSync } = require('child_process')
+const { execFileSync, spawn } = require('child_process')
 const { CapacityQueueCancelledError, waitForCapacity } = require('./local-capacity-queue.js')
+const {
+  DEFAULT_HEARTBEAT_INTERVAL_MS,
+  acquireLease,
+  defaultLeasePath,
+  leaseSummary,
+  releaseLease,
+} = require('./local-heavy-run-lease.js')
 
 const DEFAULT_MAX_LOAD_PER_CPU = 1.5
 const MIN_COMPETING_CPU_PERCENT = 0.1
@@ -32,6 +39,9 @@ Options:
   --max-load-per-cpu <number>       Sustained normalized load limit (default: 1.5)
   --wait-seconds <number>           Wait this long for local capacity (default: 0)
   --poll-seconds <number>           Capacity resample interval (default: 10)
+  --lease-owner-pid <pid>           Share the local heavy-run lease while waiting
+  --lease-file <path>               Override the user-scoped shared lease path
+  --release-lease                   Release a lease owned by --lease-owner-pid
   --json-out <path>                 Write the complete preflight report atomically
   --fixture <path>                  Read deterministic host state for fixture tests
   -h, --help                        Show this help
@@ -41,6 +51,7 @@ Environment equivalents:
   HXHX_HEAVY_RUN_MAX_LOAD_PER_CPU
   HXHX_HEAVY_RUN_WAIT_SECONDS
   HXHX_HEAVY_RUN_POLL_SECONDS
+  HXHX_HEAVY_RUN_LEASE_FILE
   HXHX_HEAVY_RUN_CAPACITY_REPORT`)
 }
 
@@ -60,6 +71,9 @@ function parseArgs(argv, env = process.env) {
     maxLoadPerCpu: env.HXHX_HEAVY_RUN_MAX_LOAD_PER_CPU || String(DEFAULT_MAX_LOAD_PER_CPU),
     waitSeconds: env.HXHX_HEAVY_RUN_WAIT_SECONDS || '0',
     pollSeconds: env.HXHX_HEAVY_RUN_POLL_SECONDS || '10',
+    leaseOwnerPid: '',
+    leaseFile: defaultLeasePath(env),
+    releaseLease: false,
     jsonOut: env.HXHX_HEAVY_RUN_CAPACITY_REPORT || '',
     fixture: '',
   }
@@ -95,6 +109,20 @@ function parseArgs(argv, env = process.env) {
       i += 1
       continue
     }
+    if (arg === '--lease-owner-pid') {
+      options.leaseOwnerPid = readValue(argv, i, arg)
+      i += 1
+      continue
+    }
+    if (arg === '--lease-file') {
+      options.leaseFile = path.resolve(readValue(argv, i, arg))
+      i += 1
+      continue
+    }
+    if (arg === '--release-lease') {
+      options.releaseLease = true
+      continue
+    }
     if (arg === '--json-out') {
       options.jsonOut = readValue(argv, i, arg)
       i += 1
@@ -122,6 +150,17 @@ function parseArgs(argv, env = process.env) {
   options.pollSeconds = Number(options.pollSeconds)
   if (!Number.isFinite(options.pollSeconds) || options.pollSeconds <= 0) {
     fail(`poll seconds must be a positive number, received ${options.pollSeconds}`)
+  }
+  if (options.leaseOwnerPid !== '') {
+    options.leaseOwnerPid = Number(options.leaseOwnerPid)
+    if (!Number.isInteger(options.leaseOwnerPid) || options.leaseOwnerPid <= 0) {
+      fail(`lease owner PID must be a positive integer, received ${options.leaseOwnerPid}`)
+    }
+  } else {
+    options.leaseOwnerPid = 0
+  }
+  if (options.releaseLease && options.leaseOwnerPid === 0) {
+    fail('--release-lease requires --lease-owner-pid')
   }
   return options
 }
@@ -204,24 +243,23 @@ function normalizeFixtureProcess(row) {
   }
 }
 
-function readHostState(options) {
-  if (options.fixture) {
-    const fixture = JSON.parse(fs.readFileSync(options.fixture, 'utf8'))
-    return {
-      source: 'fixture',
-      timestamp: fixture.timestamp || '2000-01-01T00:00:00.000Z',
-      cpuCount: Number(fixture.cpuCount),
-      loadavg: fixture.loadavg.map(Number),
-      totalMemoryBytes: Number(fixture.totalMemoryBytes || 0),
-      freeMemoryBytes: Number(fixture.freeMemoryBytes || 0),
-      ci: Boolean(fixture.ci),
-      competitors: (fixture.processes || [])
-        .map(normalizeFixtureProcess)
-        .filter(row => row && row.cpuPercent >= MIN_COMPETING_CPU_PERCENT),
-      collectionErrors: fixture.collectionErrors || [],
-    }
+function normalizeFixtureState(fixture) {
+  return {
+    source: 'fixture',
+    timestamp: fixture.timestamp || '2000-01-01T00:00:00.000Z',
+    cpuCount: Number(fixture.cpuCount),
+    loadavg: fixture.loadavg.map(Number),
+    totalMemoryBytes: Number(fixture.totalMemoryBytes || 0),
+    freeMemoryBytes: Number(fixture.freeMemoryBytes || 0),
+    ci: Boolean(fixture.ci),
+    competitors: (fixture.processes || [])
+      .map(normalizeFixtureProcess)
+      .filter(row => row && row.cpuPercent >= MIN_COMPETING_CPU_PERCENT),
+    collectionErrors: fixture.collectionErrors || [],
   }
+}
 
+function readLiveHostState() {
   const processCollection = collectCompilerProcesses()
   return {
     source: 'host',
@@ -233,6 +271,18 @@ function readHostState(options) {
     ci: isCiEnvironment(),
     competitors: processCollection.processes,
     collectionErrors: processCollection.error ? [processCollection.error] : [],
+  }
+}
+
+function createHostStateReader(options) {
+  if (!options.fixture) return readLiveHostState
+  const fixture = JSON.parse(fs.readFileSync(options.fixture, 'utf8'))
+  const samples = Array.isArray(fixture.samples) && fixture.samples.length > 0 ? fixture.samples : [fixture]
+  let sampleIndex = 0
+  return () => {
+    const sample = samples[Math.min(sampleIndex, samples.length - 1)]
+    sampleIndex += 1
+    return normalizeFixtureState({ ...fixture, ...sample, samples: undefined })
   }
 }
 
@@ -357,8 +407,45 @@ function printWaitingTransition({ report, waitedMs }) {
   console.log(
     `HXHX_LOCAL_CAPACITY:WAITING label=${JSON.stringify(report.label)} ` +
       `observations=${report.observations.join(',')} waited_ms=${waitedMs} ` +
-      `competitors=${report.competingCompilerProcessCount}`
+      `competitors=${report.competingCompilerProcessCount}` +
+      (report.lease && report.lease.ownerPid
+        ? ` lease_owner_pid=${report.lease.ownerPid} lease_owner=${JSON.stringify(report.lease.ownerLabel)}`
+        : '')
   )
+}
+
+function startLeaseWatchdog(options, leaseRecord) {
+  const watcher = path.join(__dirname, 'local-heavy-run-lease-watch.js')
+  const requestedInterval = Number(process.env.HXHX_HEAVY_RUN_LEASE_HEARTBEAT_MS || 0)
+  const heartbeatIntervalMs =
+    Number.isFinite(requestedInterval) && requestedInterval > 0
+      ? requestedInterval
+      : DEFAULT_HEARTBEAT_INTERVAL_MS
+  const child = spawn(process.execPath, [watcher], {
+    detached: true,
+    stdio: 'ignore',
+    env: {
+      ...process.env,
+      HXHX_HEAVY_RUN_WATCH_LEASE_FILE: options.leaseFile,
+      HXHX_HEAVY_RUN_WATCH_OWNER_PID: String(leaseRecord.owner.pid),
+      HXHX_HEAVY_RUN_WATCH_OWNER_STARTED_AT: leaseRecord.owner.startedAt,
+      HXHX_HEAVY_RUN_WATCH_OWNER_TOKEN: leaseRecord.owner.token,
+      HXHX_HEAVY_RUN_WATCH_INTERVAL_MS: String(heartbeatIntervalMs),
+    },
+  })
+  child.unref()
+}
+
+function repositoryIdentity() {
+  return path.basename(path.resolve(__dirname, '../..'))
+}
+
+function releaseOwnedLease(options) {
+  const released = releaseLease({
+    leasePath: options.leaseFile,
+    ownerPid: options.leaseOwnerPid,
+  })
+  console.log(`HXHX_LOCAL_CAPACITY:LEASE_${released.status.toUpperCase()}`)
 }
 
 async function main() {
@@ -368,12 +455,51 @@ async function main() {
       usage()
       return
     }
+    if (options.releaseLease) {
+      releaseOwnedLease(options)
+      return
+    }
+
+    let acquiredLease = null
+    const leaseEnabled = options.waitSeconds > 0 && options.leaseOwnerPid > 0
+    const readHostState = createHostStateReader(options)
     const queued = await waitForCapacity({
-      readReport: () => evaluateCapacity(readHostState(options), options),
+      readReport: () => {
+        const state = readHostState(options)
+        const report = evaluateCapacity(state, options)
+        if (
+          !leaseEnabled ||
+          state.ci ||
+          report.resolvedPolicy !== 'require' ||
+          report.status !== 'pass'
+        ) {
+          return report
+        }
+
+        const lease = acquireLease({
+          leasePath: options.leaseFile,
+          ownerPid: options.leaseOwnerPid,
+          label: options.label,
+          repository: repositoryIdentity(),
+        })
+        const summary = leaseSummary(lease)
+        if (lease.status === 'acquired' || lease.status === 'reentrant') {
+          acquiredLease = lease.status === 'acquired' ? lease.record : null
+          return { ...report, lease: summary }
+        }
+        return {
+          ...report,
+          status: 'blocked',
+          exitCode: BLOCKED_EXIT_CODE,
+          observations: ['cooperative_lease'],
+          lease: summary,
+        }
+      },
       maxWaitMs: options.waitSeconds * 1000,
       pollIntervalMs: options.pollSeconds * 1000,
       onWaiting: printWaitingTransition,
     })
+    if (acquiredLease) startLeaseWatchdog(options, acquiredLease)
     const report = {
       ...queued.report,
       queue: {
@@ -382,6 +508,7 @@ async function main() {
         waitedMs: queued.waitedMs,
         samples: queued.samples,
       },
+      lease: queued.report.lease || { enabled: leaseEnabled, status: leaseEnabled ? 'not_acquired' : 'off' },
     }
     const jsonOut = options.jsonOut ? writeJsonAtomic(options.jsonOut, report) : ''
     printReport(report, jsonOut)

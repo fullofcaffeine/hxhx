@@ -178,6 +178,11 @@ function main() {
     if (policy.activeEvidenceLoop.localCapacityPreflightSchema !== 'hxhx.local-capacity-preflight.v1') {
       fail('policy.activeEvidenceLoop.localCapacityPreflightSchema must be hxhx.local-capacity-preflight.v1')
     }
+    if (policy.activeEvidenceLoop.cooperativeHeavyRunLeaseSchema !== 'haxe-family.heavy-run-lease.v1') {
+      fail(
+        'policy.activeEvidenceLoop.cooperativeHeavyRunLeaseSchema must be haxe-family.heavy-run-lease.v1'
+      )
+    }
     if (policy.activeEvidenceLoop.developerCurrentSourceInputSchema !== 'hxhx.current-source-inputs.v1') {
       fail('policy.activeEvidenceLoop.developerCurrentSourceInputSchema must be hxhx.current-source-inputs.v1')
     }
@@ -197,6 +202,10 @@ function main() {
       'nativePluginLoopReportRunner',
       'localCapacityPreflight',
       'localCapacityPreflightFixture',
+      'localCapacityQueue',
+      'localCapacityQueueFixture',
+      'cooperativeHeavyRunLease',
+      'cooperativeHeavyRunLeaseFixture',
       'developerCurrentSourceInputFingerprint',
       'developerCurrentSourceCacheFixture'
     ]) {
