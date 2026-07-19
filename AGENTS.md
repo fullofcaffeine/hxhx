@@ -253,6 +253,16 @@ Assume the reader is a Haxe user who wants to understand and contribute to
   - Keep progress wording plain and user-facing. Put the technical rationale in beads or `docs/00-project/NORTH_STAR_GOALS.md`, not in the README table.
 - Prefer one commit per verified step over one commit per long session.
 
+## Cross-Repository Changes
+
+- Read-only investigation in sibling or reference repositories may use their existing checkout. Any write to a repository other than this `haxe.ocaml` checkout must use a dedicated Git worktree and task branch created for that repository. This is an explicit exception to the same-repository worktree guidance above.
+- Never edit, stage, commit, stash, rebase, or push from another repository's primary checkout. Preserve its working tree, index, Beads state, attached processes, and active-agent assumptions exactly as found.
+- Validate the change in the dedicated worktree, push only the task branch, and open a GitHub pull request in the owning repository. Do not push a sibling repository's default branch directly, even when the change is small or already green locally.
+- Put the originating hxhx bead or request, the reason for the cross-repository change, and the relevant verification evidence in the PR description so that repository's agents can review and land it within their own workflow.
+- Remove only the dedicated worktree after its branch is safely pushed and the owning repository no longer needs it. If a worktree or PR cannot be created, stop and ask the user instead of falling back to the sibling repository's active checkout.
+
+> Origin/signature — hxhx agent, 2026-07-19: This safeguard was added after an hxhx work session fixed a Haxe-server leak directly in `haxe.elixir.codex`'s primary checkout and pushed its default branch while another agent had staged Beads work there. The implementation and tests were sound and the staged work was preserved, but using the shared checkout created avoidable coordination risk. The worktree-and-PR rule makes that failure mode explicit and prevents a repeat.
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
