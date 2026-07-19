@@ -5,8 +5,10 @@ This page records the long-term product direction for this repository. It is a p
 The short version:
 
 1. Make `reflaxe.ocaml` a stable OCaml target that works well with both upstream
-   Haxe and `hxhx`, and make Haxe the best practical compiler-authoring choice
-   for developers who want OCaml as their runtime and ecosystem.
+   Haxe and `hxhx`, gives ordinary Haxe applications, libraries, tools, and
+   plugins a source-preserving path to native OCaml, and makes Haxe the best
+   practical compiler-authoring choice for developers who want OCaml as their
+   runtime and ecosystem.
 2. Make `hxhx` a stable, MIT-licensed Haxe-in-Haxe compiler with strict Haxe
    `4.3.7` compatibility for an explicit public scope, or better where
    compatibility allows, including compiler performance and developer
@@ -56,6 +58,48 @@ Current planning owners:
   `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`.
   This planning work adds no current capability or readiness.
 - public status board: README `Goals status` table
+
+### AI-assisted native promotion for any Haxe software
+
+The broader product thesis is not limited to compilers. A Haxe application,
+library, command-line tool, server, plugin, or compiler should be able to keep
+its ordinary Haxe sources and tests as the source of truth while a mature
+Reflaxe target supplies most of the native implementation mechanically. An AI
+agent then works on the smaller target-specific remainder: closing a missing
+language or standard-library lowering, adding a typed native binding or
+adapter, fixing packaging, and tuning measured hot paths. Generated target
+files remain disposable output; durable fixes belong in the Haxe program, the
+Reflaxe compiler/runtime, or a checked native boundary.
+
+This changes the economics of a native port. A ground-up rewrite has to
+re-express and revalidate nearly every program decision in the target language,
+then maintain a second implementation. Source-preserving promotion lets Haxe
+carry the program structure, types, reusable libraries, and tests, while an
+agent concentrates on the gaps that Haxe and the selected target cannot yet
+cover. A reusable target fix can then benefit the rest of the codebase and
+later projects instead of paying the same translation cost again. Compilers are
+the demanding proof case because they stress typed trees, control flow,
+plugins, native libraries, performance, and incremental builds; they are not
+the limit of the model.
+
+The informal idea that “Haxe does most of the work” is a design objective, not
+an unmeasured percentage or a portability guarantee. Each promotion pilot
+should report:
+
+- how much application source stayed target-neutral Haxe;
+- how much target-specific Haxe, handwritten native adapter code, and raw
+  escape-hatch code was required;
+- which gaps were fixed once in the compiler/runtime rather than locally in the
+  application;
+- behavior parity, generated-code quality, native performance, build latency,
+  and ongoing maintenance cost compared with a credible rewrite baseline.
+
+Future mature Haxe-to-Go, Haxe-to-Rust, or Haxe-to-C routes could provide the
+same source-preserving leverage for their ecosystems. Each target still needs
+its own semantic, runtime, interop, packaging, and performance evidence. AI
+does not remove those proof obligations; it makes the bounded adaptation and
+validation work more feasible and helps improvements compound around one typed
+Haxe codebase.
 
 ### Compiler-authoring product contract
 

@@ -61,6 +61,31 @@ invariant, not copy the shape of another compiler for appearance. The final
 experience must be judged against a carefully designed native compiler, not
 against the lower bar of successful source generation.
 
+### Why this proof matters beyond compilers
+
+The SDK is a compiler-focused stress test of a more general Haxe advantage.
+For any Haxe-authored application, library, tool, server, or plugin, native
+promotion should preserve the Haxe implementation and let the selected Reflaxe
+target perform the broad translation. AI-assisted development should focus on
+the bounded remainder—missing target semantics, typed ecosystem adapters,
+packaging, diagnostics, and measured performance gaps—instead of translating
+the complete program into a second language and maintaining a fork.
+
+That leverage is credible only when the fixes are durable. Agents must change
+the Haxe source, a reusable compiler/runtime owner, or a checked native adapter;
+they must not patch generated OCaml. A migration receipt should report retained
+Haxe source, target-specific Haxe and native code, reusable target gaps closed,
+escape-hatch inventory, behavior parity, build/iteration cost, and native
+quality against a credible rewrite baseline. “Haxe does most of the work” is
+the intended outcome, not a fixed percentage before those receipts exist.
+
+Compilers are useful here precisely because they are difficult. If this stack
+can promote a real compiler while preserving typed-tree semantics, plugin and
+native-library access, incremental iteration, readable output, and competitive
+performance, simpler Haxe software should benefit from the same underlying
+model. Future Reflaxe targets for Go, Rust, or C may extend that model, but each
+must independently earn its semantic and performance claims.
+
 ## 1. Current truth
 
 Stock Haxe 4.3.7 can load native OCaml plugin modules through
