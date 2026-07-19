@@ -83,7 +83,7 @@ jobs:
           retry_apt sudo apt-get install -y ocaml ocaml-findlib "${dune_pkg}"
           dune --version
           ocamlc -version
-          ocamlfind printconf version
+          ocamlfind ocamlc -version
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
