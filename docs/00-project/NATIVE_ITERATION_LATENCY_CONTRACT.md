@@ -255,6 +255,70 @@ an error rather than a candidate for stale deletion. Reconsider a shared
 package when a third implementation would otherwise copy the complete protocol
 core or when coordinated upgrades become the dominant maintenance cost.
 
+### Shared-Package Decision (2026-07-19)
+
+The third peer adapter triggered that review. The current Reflaxe.Elixir,
+Reflaxe.Ruby, and Reflaxe.Rust review branches have a byte-identical 287-line
+protocol core. Their wrappers and fixtures differ only where the owning
+repository supplies its command, label, and documentation. The integrated
+`hxhx` implementation has the same wire behavior, and all four fixture suites
+also pass on Node 20.8.1. A shared implementation is therefore technically
+feasible and would reduce coordinated bug-fix work.
+
+| Consumer | Current constraint | Package consequence |
+| --- | --- | --- |
+| `hxhx` | Private npm root; lease participates in a larger capacity/reporting flow | Keep capacity policy local and import only the protocol/CLI boundary. |
+| Reflaxe.Elixir | Node 22 npm project; local adapter is under owner review | Exact package version may replace the core after publication. |
+| Reflaxe.Ruby | Node 22/npm 10 project; local adapter is under owner review | Exact package version must preserve its pinned-toolchain install. |
+| Reflaxe.Rust | Node 22 npm project; local adapter is under owner review | Exact package version must not change the canonical full harness. |
+| Reflaxe.C | Node 20 npm project; no adapter yet | Node 20 support is a package gate; do not add a fifth core copy. |
+| Genes | Yarn 1 MIT project; no adapter yet | The package needs a locked Yarn installation proof before adoption. |
+
+The decision is to retain the local `v1` adapters for the current rollout, but
+not to copy the complete core into another repository. Distribution ownership,
+not protocol design, is the remaining blocker:
+
+- this repository is still private and its root npm package is intentionally
+  non-publishable;
+- the current public adapter-owning target repositories are GPL-licensed target
+  owners, not a neutral MIT home for Haxe-family developer tooling;
+- no immutable public package, release key, provenance workflow, or long-term
+  maintainer currently owns this cross-target protocol; and
+- the zero-dependency local adapter works with Node before `npm install`, while
+  a registry package would add a new cache/network failure to the command that
+  is supposed to recover an overloaded development machine.
+
+Relative workspace dependencies, a moving sibling checkout, a private Git URL,
+and an unpublished tarball are rejected substitutes. They would make an
+apparently shared implementation less reproducible than the reviewed local
+files. The two-way fixture remains the compatibility authority for existing
+adapters.
+
+Package extraction becomes mandatory before the next repository (for example
+Reflaxe.C or Genes) copies the complete core, before a `v2` wire schema is
+introduced, or after another protocol-core repair has to be coordinated across
+the existing adapters, whichever happens first. The package must then provide:
+
+- a neutral public MIT-licensed repository with named maintainers;
+- source provenance traced to the repo-owned `hxhx` implementation, without
+  silently relicensing changes made only in a GPL target repository;
+- an exact, lockfile-pinned package version with provenance and immutable
+  release artifacts;
+- a dependency-free CommonJS API and CLI that pass on Node 20 and the declared
+  Node 22 consumer floors, without requiring `hxhx` or another source checkout;
+- deterministic clean-install, cached-offline-install, missing-package, and
+  checksum/tamper tests for npm and the supported Yarn consumer;
+- the same local fixture plus two-way tests against one still-local `v1`
+  adapter before any consumer cuts over; and
+- one hard-cut implementation per consumer, with the repository-specific
+  command and labels remaining in a thin local wrapper.
+
+Schema upgrades remain coordinated and fail closed. An older client must never
+delete an unknown newer lease. Rollback pins the previous package version; if a
+new-schema lease file remains, a maintainer must first prove that its recorded
+owner is no longer active before removing it explicitly. No automatic cleanup
+may guess across schema versions.
+
 Capacity reports also distinguish raw free pages from a reviewed available-
 memory signal. macOS uses `memory_pressure -Q`, Linux uses `MemAvailable`, and
 Windows uses available physical memory. An unreviewed fallback is reported as
