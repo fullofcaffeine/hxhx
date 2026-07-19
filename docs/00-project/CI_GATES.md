@@ -119,16 +119,54 @@ Repo-local focused regressions and bridge tests are supporting evidence for diag
 | `Stdlib Portable / Tier1` | `.github/workflows/stdlib-portable-lite.yml` | Tier1 portable stdlib conformance checks. | **PR required** | `push`, `pull_request` |
 | `Stdlib / Semantic Diff` | `.github/workflows/semantic-diff.yml` | Scoped semantic-diff-lite canary for stdlib/runtimegen-sensitive PRs, plus nightly expanded lane. | **PR required** (+scheduled/manual) | `push`, `pull_request`, weekly schedule, manual |
 
-PR-required baseline is: **guardrails + core tests + scoped smokes** (`ci.yml`, gate-lite workflows, builtin smoke, JS oracle, stdlib tier1, semantic diff smoke).
+PR-required baseline is: **guardrails + core tests + scoped smokes** (`ci.yml`, gate-lite workflows, builtin smoke, JS oracle, stdlib tier1, semantic diff smoke) when the changed surface can affect those contracts. Documentation and tracking-only changes use the cheap aggregate described below instead of starting compiler toolchains.
 
-The Core workflow runs the complete 106-command `npm test` inventory as four
-clean-runner shards after Guardrails: focused compiler regressions, macro-host
-integration, portable/snapshot/example coverage, and the hxhx target
-end-to-end lane. The historical check name `Tests` is a fail-closed aggregate;
-it succeeds only when every shard plus the Stage0-free, JS-native, plugin, and
-Guardrails prerequisites succeeded. A failed, cancelled, skipped, or missing
-result fails the aggregate. Local `npm test` remains the canonical serialized
-command. The measured baseline and shard rationale are recorded in
+### Risk-routed PR cost
+
+`scripts/ci/qa-risk-policy.json` is the machine-readable Q0-Q4 policy, and
+`scripts/ci/qa-risk-classifier.js` classifies the exact push or pull-request
+diff. The result is uploaded as `qa-risk-route-<commit>` and records the
+producer commit, policy digest, changed paths, selected tier, reasons, and the
+requested workloads.
+
+- **Q0:** documentation, repository guidance, and Beads-only changes run the
+  Core route, cheap documentation guards, full-history secret scan, and stable
+  `Tests` aggregate. They do not install an OCaml/Haxe toolchain or build
+  `hxhx`.
+- **Q1:** standalone `reflaxe.ocaml` examples, package consumers, and authoring
+  tools add Guardrails and the installed-package compile/build/run proof.
+- **Q2:** target/compiler changes add the bounded Stage0-free, JS-native,
+  plugin, and Core test-shard canaries.
+- **Q3:** central representation/runtime, bootstrap, plugin ABI, workflow, and
+  toolchain changes are marked for the large `hxhx` consumer and authentic
+  compiler-promotion evidence at their owning workflow boundaries. Core
+  already runs its full compiler canaries for this tier. The retained
+  authentic compiler workload remains owned by `haxe_ocaml-bxwut`; until that
+  Bead lands, its scheduled/manual pilot is precursor evidence rather than a
+  per-change ABI proof.
+- **Q4:** release evidence remains explicit and is never inferred from an
+  ordinary documentation or source change.
+
+Unknown code paths fail safe to Q2. A push or pull request whose immutable
+change inventory cannot be established escalates to Q3. Schedules and ordinary
+manual requests also require at least Q3; a manual Q4 request is explicit.
+
+Core CI is the cheap always-present aggregate. The other broad automatic
+workflows ignore the exact Q0 documentation/tracking pattern set, which is
+checked by `scripts/ci/qa-risk-workflow-contract-check.js`. If branch
+protection is enabled, require the stable Core `Tests` aggregate; do not require
+a conditional workflow name whose trigger is intentionally absent at Q0.
+Scheduled, manual, and release gates are not weakened by Q0 path routing.
+
+For Q2 and above, the Core workflow runs the complete 106-command `npm test`
+inventory as four clean-runner shards after Guardrails: focused compiler
+regressions, macro-host integration, portable/snapshot/example coverage, and
+the hxhx target end-to-end lane. The historical check name `Tests` is a
+fail-closed aggregate. It accepts a skipped prerequisite only when the exact
+Q0/Q1 route authorizes that skip; a failed route, secret scan, required job,
+cancelled job, unexpected skip, or missing result fails the aggregate. Local
+`npm test` remains the canonical serialized command. The measured baseline and
+shard rationale are recorded in
 `docs/benchmarks/HXHX_CORE_TEST_CRITICAL_PATH_2026_07_18.md`.
 
 Stable success markers used by required lanes:

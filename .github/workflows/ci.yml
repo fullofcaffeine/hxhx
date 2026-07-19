@@ -42,6 +42,7 @@ jobs:
           set -euo pipefail
           node --check scripts/ci/qa-risk-classifier.js
           node scripts/ci/qa-risk-classifier-fixture-test.js
+          node scripts/ci/qa-risk-workflow-contract-check.js
           node scripts/ci/no-legacy-target-docs-check.js
           node scripts/ci/promotion-matrix-docs-check.js
           node scripts/ci/native-iteration-latency-contract-check.js

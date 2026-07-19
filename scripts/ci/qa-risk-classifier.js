@@ -42,6 +42,10 @@ function loadPolicy(policyPath = POLICY_PATH) {
   invariant(policy.schema === 'hxhx.qa-risk-policy.v1', `unexpected policy schema: ${policy.schema}`)
   tierIndex(policy.defaultUnknownTier)
   invariant(policy.eventMinimums && typeof policy.eventMinimums === 'object', 'eventMinimums must be an object')
+  invariant(
+    Array.isArray(policy.q0WorkflowIgnorePatterns) && policy.q0WorkflowIgnorePatterns.length > 0,
+    'q0WorkflowIgnorePatterns must be a non-empty array'
+  )
   invariant(Array.isArray(policy.rules) && policy.rules.length > 0, 'rules must be a non-empty array')
 
   const ids = new Set()

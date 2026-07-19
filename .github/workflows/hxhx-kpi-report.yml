@@ -3,8 +3,20 @@ name: Perf / HXHX KPI (Report Only)
 on:
   push:
     branches: [ master, main ]
+    paths-ignore:
+      - '.beads/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - 'docs/**'
+      - '*.md'
+      - '**/*.md'
   pull_request:
     branches: [ master, main ]
+    paths-ignore:
+      - '.beads/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - 'docs/**'
+      - '*.md'
+      - '**/*.md'
   workflow_dispatch:
     inputs:
       compare_native:
