@@ -11,7 +11,7 @@ Run the three upstream routes with:
 npm run test:reflaxe-ocaml:place-oracle
 ```
 
-The interpreter and JavaScript routes agree on all 24 cases. Neko agrees on 23
+The interpreter and JavaScript routes agree on all 25 cases. Neko agrees on 24
 cases, but evaluates the index before the receiver for a simple array
 assignment. The accepted OCaml contract follows the interpreter and JavaScript
 source order for that one disputed case. `expected.neko.stdout` preserves the
@@ -33,5 +33,10 @@ haxe reflaxe.hxml
 dune build --root out
 ```
 
-Until the first typed place/evaluation slice lands, a failure from that command
-is expected and must not be converted into an accepted snapshot.
+Until the remaining compound/update place slices land, a failure from that
+command is expected and must not be converted into an accepted snapshot.
+
+`field_compound_rhs_mutates` also proves that an ordinary compound assignment
+loads the old field value before evaluating a right-hand side that mutates the
+same field. The final addition and store therefore use the original value and
+overwrite the intervening mutation.

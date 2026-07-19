@@ -41,6 +41,12 @@ class Main {
 		return value;
 	}
 
+	static function rhsMutatingField(value:Int):Int {
+		EventLog.record("rhs_mutates");
+		holder.field = 100;
+		return value;
+	}
+
 	static function printLine(value:String):Void {
 		#if js
 		js.Syntax.code("console.log({0})", value);
@@ -105,6 +111,10 @@ class Main {
 		reset();
 		final compoundResult = receiver().field += rhs(3);
 		show("field_compound", compoundResult, holder.field);
+
+		reset();
+		final mutatingRhsResult = receiver().field += rhsMutatingField(3);
+		show("field_compound_rhs_mutates", mutatingRhsResult, holder.field);
 
 		reset();
 		final postfixResult = receiver().field++;

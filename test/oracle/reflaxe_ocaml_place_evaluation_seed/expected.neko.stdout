@@ -8,6 +8,7 @@ static_postfix result=10 final=11 events=
 static_prefix result=11 final=11 events=
 field_assign result=7 final=7 events=receiver,rhs
 field_compound result=13 final=13 events=receiver,rhs
+field_compound_rhs_mutates result=13 final=13 events=receiver,rhs_mutates
 field_postfix result=10 final=11 events=receiver
 field_prefix result=11 final=11 events=receiver
 property_assign result=1007 final=107 events=receiver,rhs,set:7

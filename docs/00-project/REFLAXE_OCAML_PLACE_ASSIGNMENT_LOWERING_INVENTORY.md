@@ -67,7 +67,7 @@ or structurally lowered inline body.
 ## Frozen Haxe 4.3.7 behavior
 
 The fixture at
-`test/oracle/reflaxe_ocaml_place_evaluation_seed` runs 24 cases through
+`test/oracle/reflaxe_ocaml_place_evaluation_seed` runs 25 cases through
 interpreter, JavaScript/Node, and Neko. Run it with:
 
 ```bash
@@ -98,6 +98,10 @@ local fallback.
 - Plain local, static, field, array, and dynamic assignment returns the assigned
   right-hand-side value.
 - Compound assignment returns the computed value after the operator.
+- Ordinary instance-field compound assignment loads the old field value before
+  evaluating its right-hand side. If that right-hand side mutates the same
+  field, the operator still uses the saved old value and the final store
+  overwrites the intervening mutation.
 - Ordinary prefix update returns the new value; ordinary postfix update returns
   the old value.
 - A property setter may return a value different from both the value passed to
