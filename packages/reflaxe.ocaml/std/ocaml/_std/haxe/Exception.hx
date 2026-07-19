@@ -91,13 +91,16 @@ class Exception {
 
 	@:noCompletion
 	@:ifFeature("haxe.Exception.get_stack")
-	inline function __shiftStack():Void {
+	// Keep both stack helpers as real calls. Haxe injects them into derived
+	// constructors after Reflaxe's semantic prepasses; inlining would move the
+	// field update past the pass that assigns its stable place-lowering origin.
+	function __shiftStack():Void {
 		__skipStack++;
 	}
 
 	@:noCompletion
 	@:ifFeature("haxe.Exception.get_stack")
-	inline function __unshiftStack():Void {
+	function __unshiftStack():Void {
 		__skipStack--;
 	}
 
