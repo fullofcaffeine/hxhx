@@ -1,8 +1,8 @@
 package reflaxe.ocaml.runtimegen;
 
+import reflaxe.ocaml.ast.OcamlASTTraversal;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlLetBinding;
-import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlTypeDecl;
@@ -50,125 +50,24 @@ class RuntimeUsageCollector {
 	}
 
 	static function collectTypeExpr(typ:OcamlTypeExpr, markModule:String->Void):Void {
-		switch (typ) {
-			case TIdent(name):
-				markQualifiedName(name, markModule);
-			case TApp(name, params):
-				markQualifiedName(name, markModule);
-				for (param in params)
-					collectTypeExpr(param, markModule);
-			case TArrow(from, to):
-				collectTypeExpr(from, markModule);
-				collectTypeExpr(to, markModule);
-			case TTuple(items):
-				for (item in items)
-					collectTypeExpr(item, markModule);
-			case TVar(_):
-			case TRecord(fields):
-				for (field in fields)
-					collectTypeExpr(field.typ, markModule);
-		}
-	}
-
-	static function collectPattern(pat:OcamlPat, markModule:String->Void):Void {
-		switch (pat) {
-			case PAny:
-			case PVar(_):
-			case PConst(_):
-			case PTuple(items):
-				for (item in items)
-					collectPattern(item, markModule);
-			case POr(items):
-				for (item in items)
-					collectPattern(item, markModule);
-			case PConstructor(name, args):
-				markQualifiedName(name, markModule);
-				for (arg in args)
-					collectPattern(arg, markModule);
-			case PRecord(fields):
-				for (field in fields)
-					collectPattern(field.pat, markModule);
-			case PAnnot(inner, typ):
-				collectPattern(inner, markModule);
-				collectTypeExpr(typ, markModule);
-		}
-	}
-
-	static function collectMatchCase(matchCase:OcamlMatchCase, markModule:String->Void):Void {
-		collectPattern(matchCase.pat, markModule);
-		if (matchCase.guard != null)
-			collectExpr(matchCase.guard, markModule);
-		collectExpr(matchCase.expr, markModule);
+		OcamlASTTraversal.walkTypePre(typ, current -> switch (current) {
+			case TIdent(name), TApp(name, _): markQualifiedName(name, markModule);
+			case TArrow(_, _), TTuple(_), TVar(_), TRecord(_):
+		});
 	}
 
 	static function collectExpr(expr:OcamlExpr, markModule:String->Void):Void {
-		switch (expr) {
-			case EConst(_):
-			case EIdent(name):
-				markQualifiedName(name, markModule);
-			case ERaw(_):
-				// Raw snippets are intentionally ignored; debug fallback in RuntimeCopier can
-				// be enabled explicitly when investigating raw-emission paths.
-			case EPos(_, inner):
-				collectExpr(inner, markModule);
-			case ERaise(exn):
-				collectExpr(exn, markModule);
-			case ELet(_, value, body, _):
-				collectExpr(value, markModule);
-				collectExpr(body, markModule);
-			case EFun(params, body):
-				for (param in params)
-					collectPattern(param, markModule);
-				collectExpr(body, markModule);
-			case EApp(fn, args):
-				collectExpr(fn, markModule);
-				for (arg in args)
-					collectExpr(arg, markModule);
-			case EAppArgs(fn, args):
-				collectExpr(fn, markModule);
-				for (arg in args)
-					collectExpr(arg.expr, markModule);
-			case EBinop(_, left, right):
-				collectExpr(left, markModule);
-				collectExpr(right, markModule);
-			case EUnop(_, inner):
-				collectExpr(inner, markModule);
-			case EIf(cond, thenExpr, elseExpr):
-				collectExpr(cond, markModule);
-				collectExpr(thenExpr, markModule);
-				collectExpr(elseExpr, markModule);
-			case EMatch(scrutinee, cases):
-				collectExpr(scrutinee, markModule);
-				for (matchCase in cases)
-					collectMatchCase(matchCase, markModule);
-			case ETry(body, cases):
-				collectExpr(body, markModule);
-				for (matchCase in cases)
-					collectMatchCase(matchCase, markModule);
-			case ESeq(exprs):
-				for (item in exprs)
-					collectExpr(item, markModule);
-			case EWhile(cond, body):
-				collectExpr(cond, markModule);
-				collectExpr(body, markModule);
-			case EList(items):
-				for (item in items)
-					collectExpr(item, markModule);
-			case ERecord(fields):
-				for (field in fields)
-					collectExpr(field.value, markModule);
-			case EField(target, _):
-				collectExpr(target, markModule);
-			case EAssign(_, lhs, rhs):
-				collectExpr(lhs, markModule);
-				collectExpr(rhs, markModule);
-			case ETuple(items):
-				for (item in items)
-					collectExpr(item, markModule);
-			case EAnnot(inner, typ):
-				collectExpr(inner, markModule);
-				collectTypeExpr(typ, markModule);
-		}
+		OcamlASTTraversal.walkExprPre(expr, current -> switch (current) {
+			case EIdent(name): markQualifiedName(name, markModule);
+			case EConst(_), ERaw(_), EPos(_, _), ERaise(_), ELet(_, _, _, _), EFun(_, _), EApp(_, _), EAppArgs(_, _), EBinop(_, _, _), EUnop(_, _),
+				EIf(_, _, _), EMatch(_, _), ETry(_, _), ESeq(_), EWhile(_, _), EList(_), ERecord(_), EField(_, _), EAssign(_, _, _), ETuple(_), EAnnot(_, _):
+		}, current -> switch (current) {
+			case PConstructor(name, _): markQualifiedName(name, markModule);
+			case PAny, PVar(_), PConst(_), PTuple(_), POr(_), PRecord(_), PAnnot(_, _):
+		}, current -> switch (current) {
+			case TIdent(name), TApp(name, _): markQualifiedName(name, markModule);
+			case TArrow(_, _), TTuple(_), TVar(_), TRecord(_):
+		});
 	}
 
 	static function collectTypeDecl(decl:OcamlTypeDecl, markModule:String->Void):Void {

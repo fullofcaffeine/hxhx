@@ -14,6 +14,7 @@ class OcamlASTPrinterTest {
 	}
 
 	static function main() {
+		OcamlASTTraversalTest.run();
 		final p = new OcamlASTPrinter();
 
 		// const + escaping
