@@ -8,6 +8,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 enum abstract OcamlLoweredPlaceKind(String) from String to String {
 	final InstanceField = "instance-field";
 	final StaticField = "static-field";
+	final ArrayElement = "array-element";
 }
 
 /** How a static ref cell is named from the currently emitted OCaml module. */
@@ -27,6 +28,7 @@ enum abstract OcamlLoweredEffect(String) from String to String {
 /** Ordered roles in a value-producing assignment schedule. */
 enum abstract OcamlPlaceOccurrenceRole(String) from String to String {
 	final Receiver = "receiver";
+	final Index = "index";
 	final Load = "load";
 	final RightHandSide = "right-hand-side";
 	final Operator = "operator";
@@ -110,6 +112,33 @@ typedef OcamlLoweredStaticFieldPlace = {
 	final representationReason:String;
 }
 
+/** Target-owned facts for one exact `Array<Int>` element place. */
+typedef OcamlLoweredArrayElementPlace = {
+	final id:String;
+	final kind:OcamlLoweredPlaceKind;
+	final ownerModuleId:String;
+	final ownerTypeName:String;
+	final targetSymbolId:String;
+	final receiverSemanticTypeId:String;
+	final receiverDisplayType:String;
+	final receiverCarrierTypeId:String;
+	final receiverRepresentationId:String;
+	final receiverRepresentationReason:String;
+	final indexSemanticTypeId:String;
+	final indexDisplayType:String;
+	final indexCarrierTypeId:String;
+	final indexRepresentationId:String;
+	final indexRepresentationReason:String;
+	final fieldName:String;
+	final targetModuleName:String;
+	final targetLoadName:String;
+	final targetStoreName:String;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final representationId:String;
+	final representationReason:String;
+}
+
 /** First typed lowered node: a value-producing simple field assignment. */
 typedef OcamlLoweredSimpleAssignment = {
 	final id:String;
@@ -135,6 +164,24 @@ typedef OcamlLoweredStaticSimpleAssignment = {
 	final semanticTypeId:String;
 	final carrierTypeId:String;
 	final place:OcamlLoweredStaticFieldPlace;
+	final rightHandSide:TypedExpr;
+	final conversion:OcamlLoweredConversionKind;
+	final result:OcamlAssignmentResultKind;
+	final schedule:Array<OcamlPlaceOccurrence>;
+	final effects:Array<OcamlLoweredEffect>;
+	final runtimeRequirementIds:Array<String>;
+}
+
+/** A value-producing assignment to one exact `Array<Int>` element. */
+typedef OcamlLoweredArraySimpleAssignment = {
+	final id:String;
+	final originId:String;
+	final source:OcamlLoweredSourceSpan;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final place:OcamlLoweredArrayElementPlace;
+	final receiver:TypedExpr;
+	final index:TypedExpr;
 	final rightHandSide:TypedExpr;
 	final conversion:OcamlLoweredConversionKind;
 	final result:OcamlAssignmentResultKind;
@@ -185,6 +232,7 @@ typedef OcamlLoweredIntUpdate = {
 enum OcamlLoweredPlaceOperation {
 	Simple(plan:OcamlLoweredSimpleAssignment);
 	StaticSimple(plan:OcamlLoweredStaticSimpleAssignment);
+	ArraySimple(plan:OcamlLoweredArraySimpleAssignment);
 	Compound(plan:OcamlLoweredCompoundAssignment);
 	Update(plan:OcamlLoweredIntUpdate);
 }
@@ -203,11 +251,19 @@ typedef OcamlLoweredPlaceReport = {
 	final representationReason:String;
 	final ?targetFieldName:String;
 	final ?receiverSemanticTypeId:String;
+	final ?receiverDisplayType:String;
 	final ?receiverCarrierTypeId:String;
 	final ?receiverRepresentationId:String;
 	final ?receiverRepresentationReason:String;
+	final ?indexSemanticTypeId:String;
+	final ?indexDisplayType:String;
+	final ?indexCarrierTypeId:String;
+	final ?indexRepresentationId:String;
+	final ?indexRepresentationReason:String;
 	final ?targetModuleName:String;
 	final ?targetValueName:String;
+	final ?targetLoadName:String;
+	final ?targetStoreName:String;
 	final ?staticAccess:OcamlLoweredStaticFieldAccess;
 	final ?forwardDeclarationRequired:Bool;
 }

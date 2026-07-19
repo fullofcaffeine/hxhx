@@ -48,6 +48,15 @@ class OcamlPlaceInputPolicy {
 		}
 	}
 
+	/** Recognizes only a direct nominal `Array<Int>` carrier. */
+	static function isExactIntArray(type:Type):Bool {
+		return switch (type) {
+			case TInst(classRef, [elementType]): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "Array" && isExactInt(elementType);
+			case _:
+				false;
+		}
+	}
+
 	/**
 		Accepts a direct record-backed receiver while keeping inherited field
 		declaration identity separate from the receiver representation.
@@ -99,6 +108,16 @@ class OcamlPlaceInputPolicy {
 			return false;
 		return switch (left.expr) {
 			case TField(_, FStatic(classRef, _)): final target = classRef.get(); target.module != currentModuleId || target.name == currentTypeName;
+			case _: false;
+		}
+	}
+
+	/** Admits exact `Array<Int>` element assignment with an exact `Int` index and RHS. */
+	public static function admitsSimpleArrayElement(left:TypedExpr, right:TypedExpr):Bool {
+		if (!isExactInt(left.t) || !isExactInt(right.t))
+			return false;
+		return switch (left.expr) {
+			case TArray(receiver, index): isExactIntArray(receiver.t) && isExactInt(index.t);
 			case _: false;
 		}
 	}

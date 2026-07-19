@@ -4172,6 +4172,8 @@ class OcamlBuilder {
 							OcamlExpr.EIdent(tmp)
 						]), false);
 					case TArray(arr, idx):
+						if (OcamlPlaceInputPolicy.admitsSimpleArrayElement(e1, e2))
+							return placeLoweringInvariant("admitted array-element assignment reached the legacy syntax branch without a stable origin", e1.pos);
 						final tmp = freshTmp("assign");
 						final rhs = coerceForAssignment(e1.t, e2);
 						final arrExpr = buildExpr(arr);

@@ -6,6 +6,7 @@ import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArraySimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
@@ -35,6 +36,23 @@ class OcamlPlaceAssignmentEmitter {
 			OcamlExpr.EAssign(OcamlAssignOp.RefSet, target, OcamlExpr.EIdent(rightHandSideName)),
 			OcamlExpr.EIdent(rightHandSideName)
 		]), false);
+	}
+
+	/** Emits the sealed array, index, RHS, store, and assigned-result schedule. */
+	public static function emitArraySimple(plan:OcamlLoweredArraySimpleAssignment, buildExpr:TypedExpr->OcamlExpr, freshTemporary:String->String):OcamlExpr {
+		final receiverName = freshTemporary("place_array");
+		final indexName = freshTemporary("place_index");
+		final rightHandSideName = freshTemporary("place_rhs");
+		final store = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(plan.place.targetModuleName), plan.place.targetStoreName), [
+			OcamlExpr.EIdent(receiverName),
+			OcamlExpr.EIdent(indexName),
+			OcamlExpr.EIdent(rightHandSideName)
+		]);
+		return OcamlExpr.ELet(receiverName, buildExpr(plan.receiver),
+			OcamlExpr.ELet(indexName, buildExpr(plan.index), OcamlExpr.ELet(rightHandSideName, buildExpr(plan.rightHandSide), OcamlExpr.ESeq([
+				OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [store]),
+				OcamlExpr.EIdent(rightHandSideName)
+			]), false), false), false);
 	}
 
 	/** Emits the sealed load-before-RHS schedule for exact primitive-Int `+=`. */

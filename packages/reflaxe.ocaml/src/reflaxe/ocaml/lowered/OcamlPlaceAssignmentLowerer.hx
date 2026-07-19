@@ -6,6 +6,7 @@ import haxe.macro.Type.TypedExpr;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayElementPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredInstanceFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReport;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
@@ -77,6 +78,34 @@ class OcamlPlaceAssignmentLowerer {
 		};
 	}
 
+	static function arrayPlaceReport(place:OcamlLoweredArrayElementPlace):OcamlLoweredPlaceReport {
+		return {
+			id: place.id,
+			kind: place.kind,
+			ownerModuleId: place.ownerModuleId,
+			ownerTypeName: place.ownerTypeName,
+			targetSymbolId: place.targetSymbolId,
+			fieldName: place.fieldName,
+			receiverSemanticTypeId: place.receiverSemanticTypeId,
+			receiverDisplayType: place.receiverDisplayType,
+			receiverCarrierTypeId: place.receiverCarrierTypeId,
+			receiverRepresentationId: place.receiverRepresentationId,
+			receiverRepresentationReason: place.receiverRepresentationReason,
+			indexSemanticTypeId: place.indexSemanticTypeId,
+			indexDisplayType: place.indexDisplayType,
+			indexCarrierTypeId: place.indexCarrierTypeId,
+			indexRepresentationId: place.indexRepresentationId,
+			indexRepresentationReason: place.indexRepresentationReason,
+			targetModuleName: place.targetModuleName,
+			targetLoadName: place.targetLoadName,
+			targetStoreName: place.targetStoreName,
+			semanticTypeId: place.semanticTypeId,
+			carrierTypeId: place.carrierTypeId,
+			representationId: place.representationId,
+			representationReason: place.representationReason
+		};
+	}
+
 	function shouldRecord(source:OcamlLoweredSourceSpan):Bool {
 		#if macro
 		final includeStandardLibrary = haxe.macro.Context.defined("ocaml_lowering_report_include_std");
@@ -96,7 +125,12 @@ class OcamlPlaceAssignmentLowerer {
 					OcamlLoweredPlaceOperation.Simple(instancePlan);
 				} else {
 					final staticPlan = planner.planStaticSimpleAssignment(metadata, expression, left, right);
-					staticPlan == null ? null : OcamlLoweredPlaceOperation.StaticSimple(staticPlan);
+					if (staticPlan != null) {
+						OcamlLoweredPlaceOperation.StaticSimple(staticPlan);
+					} else {
+						final arrayPlan = planner.planArraySimpleAssignment(metadata, expression, left, right);
+						arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArraySimple(arrayPlan);
+					}
 				}
 			case TBinop(OpAssignOp(OpAdd), left, right):
 				final plan = planner.planCompoundIntAdd(metadata, expression, left, right);
@@ -151,6 +185,28 @@ class OcamlPlaceAssignmentLowerer {
 						});
 					}
 					Lowered(OcamlPlaceAssignmentEmitter.emitStaticSimple(plan, buildExpr, freshTemporary));
+				}
+			case ArraySimple(plan):
+				final errors = OcamlPlaceAssignmentValidator.validateArraySimple(plan);
+				if (errors.length > 0) invalid(errors, plan.originId); else {
+					context.markRuntimeModule("HxArray");
+					if (shouldRecord(plan.source)) {
+						context.recordLoweredPlaceReport({
+							id: plan.id,
+							originId: plan.originId,
+							source: plan.source,
+							nodeKind: "array-simple-assignment",
+							semanticTypeId: plan.semanticTypeId,
+							carrierTypeId: plan.carrierTypeId,
+							place: arrayPlaceReport(plan.place),
+							conversion: plan.conversion,
+							result: plan.result,
+							schedule: plan.schedule,
+							effects: plan.effects,
+							runtimeRequirementIds: plan.runtimeRequirementIds
+						});
+					}
+					Lowered(OcamlPlaceAssignmentEmitter.emitArraySimple(plan, buildExpr, freshTemporary));
 				}
 			case Compound(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateCompoundIntAdd(plan);

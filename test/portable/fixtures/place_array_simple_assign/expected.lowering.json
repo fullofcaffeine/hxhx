@@ -1,0 +1,113 @@
+{
+  "model": "typed-ocaml-lowered-place",
+  "schemaVersion": 4,
+  "admittedInputRevision": "sha256:b0084007cbb7244c0396d63111d11ed4cd148a1d37d653c154706e3096409aed",
+  "planCount": 1,
+  "plans": [
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "haxe-array-element-set"
+      ],
+      "place": {
+        "carrierTypeId": "int",
+        "indexCarrierTypeId": "int",
+        "targetLoadName": "get",
+        "receiverDisplayType": "Array<Int>",
+        "targetStoreName": "set",
+        "ownerTypeName": "Array",
+        "targetSymbolId": "runtime::HxArray::element",
+        "indexDisplayType": "Int",
+        "receiverRepresentationReason": "exact Array<Int> uses the direct typed HxArray carrier without a target cast",
+        "ownerModuleId": "Array",
+        "indexRepresentationReason": "exact Haxe Int index uses the direct OCaml int carrier",
+        "id": "place:ebd9e06b24f2d78b3880868b:place",
+        "semanticTypeId": "Int",
+        "indexSemanticTypeId": "Int",
+        "kind": "array-element",
+        "representationReason": "exact Array<Int> elements use the direct OCaml int carrier inside HxArray",
+        "indexRepresentationId": "place:ebd9e06b24f2d78b3880868b:representation:array-index",
+        "receiverSemanticTypeId": "Array<Int>",
+        "targetModuleName": "HxArray",
+        "receiverRepresentationId": "place:ebd9e06b24f2d78b3880868b:representation:array-receiver",
+        "fieldName": "[]",
+        "receiverCarrierTypeId": "int HxArray.t",
+        "representationId": "place:ebd9e06b24f2d78b3880868b:representation:array-element"
+      },
+      "originId": "place:ebd9e06b24f2d78b3880868b",
+      "id": "place:ebd9e06b24f2d78b3880868b:array-simple-assignment",
+      "source": {
+        "min": 451,
+        "max": 478,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "array-simple-assignment",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "index",
+          "role": "index",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:1",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:index"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "right-hand-side",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:2",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:rhs"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:3",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "result",
+          "id": "place:ebd9e06b24f2d78b3880868b:occurrence:4",
+          "effects": [],
+          "sourceId": "place:ebd9e06b24f2d78b3880868b:rhs"
+        }
+      ],
+      "result": "assigned-value"
+    }
+  ]
+}

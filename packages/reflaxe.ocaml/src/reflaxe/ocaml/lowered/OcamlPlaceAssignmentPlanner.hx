@@ -8,6 +8,8 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlAssignmentResultKind;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArrayElementPlace;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredArraySimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredCompoundAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredConversionKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredEffect;
@@ -102,6 +104,42 @@ class OcamlPlaceAssignmentPlanner {
 		}
 	}
 
+	function planArrayElement(originId:String, left:TypedExpr):Null<{place:OcamlLoweredArrayElementPlace, receiver:TypedExpr, index:TypedExpr}> {
+		return switch (left.expr) {
+			case TArray(receiver, index):
+				{
+					place: {
+						id: originId + ":place",
+						kind: OcamlLoweredPlaceKind.ArrayElement,
+						ownerModuleId: "Array",
+						ownerTypeName: "Array",
+						targetSymbolId: "runtime::HxArray::element",
+						receiverSemanticTypeId: "Array<Int>",
+						receiverDisplayType: TypeTools.toString(receiver.t),
+						receiverCarrierTypeId: "int HxArray.t",
+						receiverRepresentationId: originId + ":representation:array-receiver",
+						receiverRepresentationReason: "exact Array<Int> uses the direct typed HxArray carrier without a target cast",
+						indexSemanticTypeId: "Int",
+						indexDisplayType: TypeTools.toString(index.t),
+						indexCarrierTypeId: "int",
+						indexRepresentationId: originId + ":representation:array-index",
+						indexRepresentationReason: "exact Haxe Int index uses the direct OCaml int carrier",
+						fieldName: "[]",
+						targetModuleName: "HxArray",
+						targetLoadName: "get",
+						targetStoreName: "set",
+						semanticTypeId: "Int",
+						carrierTypeId: "int",
+						representationId: originId + ":representation:array-element",
+						representationReason: "exact Array<Int> elements use the direct OCaml int carrier inside HxArray"
+					},
+					receiver: receiver,
+					index: index
+				};
+			case _: null;
+		}
+	}
+
 	/** Returns `null` when a simple assignment is outside the admitted slice. */
 	public function planSimpleAssignment(metadata:MetadataEntry, expression:TypedExpr, left:TypedExpr, right:TypedExpr):Null<OcamlLoweredSimpleAssignment> {
 		if (!OcamlPlaceInputPolicy.admitsSimpleInstanceField(left, right))
@@ -176,6 +214,49 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Write
 			],
 			runtimeRequirementIds: []
+		};
+	}
+
+	/** Returns `null` when an array simple assignment is outside the admitted slice. */
+	public function planArraySimpleAssignment(metadata:MetadataEntry, expression:TypedExpr, left:TypedExpr,
+			right:TypedExpr):Null<OcamlLoweredArraySimpleAssignment> {
+		if (!OcamlPlaceInputPolicy.admitsSimpleArrayElement(left, right))
+			return null;
+		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
+		if (originId == null)
+			return null;
+		final target = planArrayElement(originId, left);
+		if (target == null)
+			return null;
+		return {
+			id: originId + ":array-simple-assignment",
+			originId: originId,
+			source: OcamlLoweredOrigin.sourceSpan(expression.pos),
+			semanticTypeId: "Int",
+			carrierTypeId: "int",
+			place: target.place,
+			receiver: target.receiver,
+			index: target.index,
+			rightHandSide: right,
+			conversion: OcamlLoweredConversionKind.Identity,
+			result: OcamlAssignmentResultKind.AssignedValue,
+			schedule: [
+				occurrence(originId, 0, OcamlPlaceOccurrenceRole.Receiver, originId + ":receiver", "receiver",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 1, OcamlPlaceOccurrenceRole.Index, originId + ":index", "index",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 2, OcamlPlaceOccurrenceRole.RightHandSide, originId + ":rhs", "rhs",
+					[OcamlLoweredEffect.Read, OcamlLoweredEffect.Call, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 3, OcamlPlaceOccurrenceRole.Store, target.place.id, null, [OcamlLoweredEffect.Write, OcamlLoweredEffect.Throw]),
+				occurrence(originId, 4, OcamlPlaceOccurrenceRole.Result, originId + ":rhs", "rhs", [])
+			],
+			effects: [
+				OcamlLoweredEffect.Read,
+				OcamlLoweredEffect.Call,
+				OcamlLoweredEffect.Throw,
+				OcamlLoweredEffect.Write
+			],
+			runtimeRequirementIds: ["haxe-array-element-set"]
 		};
 	}
 
