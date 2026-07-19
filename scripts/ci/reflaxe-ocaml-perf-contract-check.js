@@ -43,6 +43,24 @@ function main() {
     fail('baseline must define exactly 6 scenarios')
   }
 
+  const iteration = baseline.iterationScenario
+  if (!iteration || iteration.id !== 'ro-iteration-01'
+    || iteration.kind !== 'authoring_iteration'
+    || iteration.exampleDir !== 'packages/reflaxe.ocaml/examples/build-macro'
+    || iteration.outDir !== 'out'
+    || iteration.executableRelativePath !== 'out/_build/default/out.exe'
+    || iteration.warmupCycles !== 1
+    || iteration.measuredCycles !== 3
+    || JSON.stringify(iteration.stateOrder) !== JSON.stringify(['cold-output', 'warm-unchanged', 'one-file-change'])
+    || JSON.stringify(iteration.compileArgs) !== JSON.stringify(['build.hxml', '-D', 'ocaml_build=native', '-D', 'ocaml_build_timing_report'])
+    || iteration.sourceChange?.relativePath !== 'src/BuildMacro.hx'
+    || iteration.sourceChange?.before !== '"from_build_macro"'
+    || iteration.sourceChange?.after !== '"from_build_macro_changed"'
+    || iteration.expectedOutputChange?.before !== 'from_build_macro'
+    || iteration.expectedOutputChange?.after !== 'from_build_macro_changed') {
+    fail('baseline standalone iteration scenario changed its controlled measurement contract')
+  }
+
   for (const scenario of baseline.scenarios) {
     if (!scenario.id || !scenario.kind || !scenario.title) {
       fail('each perf scenario must include id, kind, and title')
@@ -64,8 +82,10 @@ function main() {
   requireMetric(baseline.profileComparisonThresholds, 'runMedianPctOfPortable')
   requireMetric(baseline.profileComparisonThresholds, 'buildMedianPctOfPortable')
 
-  if (!contract.includes('RO_TARGET_PERF_CREDIBLE:PASS')) {
-    fail(`${contractPath} must reference RO_TARGET_PERF_CREDIBLE:PASS`)
+  for (const marker of ['RO_TARGET_PERF_CREDIBLE:PASS', 'RO_TARGET_ITERATION_REPORT:PASS']) {
+    if (!contract.includes(marker)) {
+      fail(`${contractPath} must reference ${marker}`)
+    }
   }
   if (!contract.includes('REFLAXE_OCAML_PERF_CREDIBILITY.md')) {
     fail(`${contractPath} must reference the perf credibility doc`)
@@ -73,8 +93,19 @@ function main() {
   if (!perfDoc.includes('RO_TARGET_PERF_CREDIBLE:PASS')) {
     fail(`${perfDocPath} must include RO_TARGET_PERF_CREDIBLE:PASS`)
   }
-  if (!perfDoc.includes('scripts/ci/run-reflaxe-ocaml-perf.js')) {
-    fail(`${perfDocPath} must reference the deterministic perf runner`)
+  for (const needle of [
+    'scripts/ci/run-reflaxe-ocaml-perf.js',
+    'scripts/ci/run-reflaxe-ocaml-iteration-perf.js',
+    'RO_TARGET_ITERATION_REPORT:PASS',
+    'installed-package-platform-v2',
+    'cold-output',
+    'warm-unchanged',
+    'one-file-change',
+    'report-only-until-stable-hosted-trend'
+  ]) {
+    if (!perfDoc.includes(needle)) {
+      fail(`${perfDocPath} must include ${needle}`)
+    }
   }
   for (const marker of ['RO_TARGET_PERF_PLATFORM:PASS', 'RO_TARGET_PERF_PLATFORM_MATRIX:PASS']) {
     if (!contract.includes(marker) || !perfDoc.includes(marker)) {
@@ -83,6 +114,9 @@ function main() {
   }
   for (const needle of [
     'RO_PERF_MODE=platform-report',
+    's.schemaVersion !== 2',
+    's.method?.id !== "installed-package-platform-v2"',
+    's.iteration?.passed !== true',
     'reflaxe-ocaml-perf-matrix-summary.js',
     'reflaxe-ocaml-perf-matrix-${{ github.sha }}'
   ]) {
@@ -93,6 +127,10 @@ function main() {
   if (packageJson.scripts['test:reflaxe-ocaml:perf-platform']
     !== 'RO_PERF_MODE=platform-report node scripts/ci/run-reflaxe-ocaml-perf.js') {
     fail(`${packagePath} must expose the installed-package performance command`)
+  }
+  if (packageJson.scripts['test:reflaxe-ocaml:iteration-perf']
+    !== 'node scripts/ci/run-reflaxe-ocaml-iteration-perf.js') {
+    fail(`${packagePath} must expose the focused standalone iteration command`)
   }
 
   console.log('[ci:guards] OK: reflaxe.ocaml perf credibility contract is valid')

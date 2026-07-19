@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const cp = require('child_process')
 const crypto = require('crypto')
+const { measureIterationScenario } = require('./reflaxe-ocaml-iteration-perf')
 
 const {
   cleanupPerformanceContext,
@@ -413,18 +414,22 @@ function main() {
       ? 'RO_TARGET_PERF_PLATFORM:FAIL'
       : 'RO_TARGET_PERF_CREDIBLE:FAIL'
     const summary = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       marker: failMarker,
       mode,
       generatedAt: new Date().toISOString(),
       method: {
-        id: mode === 'platform-report' ? 'installed-package-platform-v1' : 'local-reference-gate-v2',
+        id: mode === 'platform-report' ? 'installed-package-platform-v2' : 'local-reference-gate-v3',
         durationUnit: 'milliseconds',
         rawSamplesRetained: true,
         sampleOrderPreserved: true,
         outputDirectoryRemovedBeforeEachBuild: true,
         sharedToolchainCachesMayRemainWarm: true,
         runtimeVerificationExcludedFromBuildTiming: true,
+        iterationStateOrder: ['cold-output', 'warm-unchanged', 'one-file-change'],
+        iterationWarmupCycles: baseline.iterationScenario.warmupCycles,
+        iterationMeasuredCycles: baseline.iterationScenario.measuredCycles,
+        iterationThresholdMode: 'report-only-until-stable-hosted-trend',
         crossHostAbsoluteComparisonAllowed: false,
         referenceThresholdsEnforced: context.enforceReferenceThresholds
       },
@@ -450,6 +455,11 @@ function main() {
       if (!passed) {
         allOk = false
       }
+    }
+
+    summary.iteration = measureIterationScenario(baseline.iterationScenario, context, stats, context.artifactsDir)
+    if (!summary.iteration.passed) {
+      allOk = false
     }
 
     const portable = summary.scenarios.find(entry => entry.id === 'ro-perf-05')

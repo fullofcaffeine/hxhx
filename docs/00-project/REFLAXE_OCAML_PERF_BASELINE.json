@@ -111,6 +111,27 @@
       }
     }
   ],
+  "iterationScenario": {
+    "id": "ro-iteration-01",
+    "kind": "authoring_iteration",
+    "title": "standalone target cold, warm, and one-file loop",
+    "exampleDir": "packages/reflaxe.ocaml/examples/build-macro",
+    "outDir": "out",
+    "executableRelativePath": "out/_build/default/out.exe",
+    "warmupCycles": 1,
+    "measuredCycles": 3,
+    "stateOrder": ["cold-output", "warm-unchanged", "one-file-change"],
+    "compileArgs": ["build.hxml", "-D", "ocaml_build=native", "-D", "ocaml_build_timing_report"],
+    "sourceChange": {
+      "relativePath": "src/BuildMacro.hx",
+      "before": "\"from_build_macro\"",
+      "after": "\"from_build_macro_changed\""
+    },
+    "expectedOutputChange": {
+      "before": "from_build_macro",
+      "after": "from_build_macro_changed"
+    }
+  },
   "profileComparisonThresholds": {
     "runMedianPctOfPortable": { "value": 107, "maxRegressionPct": 35 },
     "buildMedianPctOfPortable": { "value": 90, "maxRegressionPct": 35 }

@@ -54,6 +54,108 @@ function scenario(id, kind) {
 	}
 }
 
+function iterationSample(cycle, warmup, state) {
+	const stateIndex = ['cold-output', 'warm-unchanged', 'one-file-change'].indexOf(state)
+	const duneMilliseconds = 10 + stateIndex
+	const targetMilliseconds = duneMilliseconds + 1
+	const fullMilliseconds = 100 + (cycle * 10) + stateIndex
+	const outputHash = (state === 'one-file-change' ? 'e' : 'd').repeat(64)
+	return {
+		cycle,
+		warmup,
+		state,
+		outputState: state === 'cold-output' ? 'removed-before-build' : 'preserved-from-prior-state',
+		sourceFilesChanged: state === 'one-file-change' ? ['src/BuildMacro.hx'] : [],
+		generatedCodeChangedFiles: state === 'warm-unchanged' ? [] : ['Main.ml'],
+		generatedCodeFileCount: 4,
+		generatedFilesReceiptId: (warmup ? 0 : 100) + (cycle * 3) + stateIndex,
+		compileStatus: 0,
+		timingReportValidationPassed: true,
+		verificationStatus: 0,
+		fullHaxeChildMilliseconds: fullMilliseconds,
+		targetSubprocessMilliseconds: targetMilliseconds,
+		outsideTargetSubprocessMilliseconds: fullMilliseconds - targetMilliseconds,
+		duneBuildMilliseconds: duneMilliseconds,
+		interfaceMilliseconds: 0,
+		targetRunMilliseconds: null,
+		externalVerificationMilliseconds: 2,
+		timingPhases: [
+			{id: 'native_toolchain_probe', elapsedMilliseconds: 1, exitCode: 0},
+			{id: 'dune_build', elapsedMilliseconds: duneMilliseconds, exitCode: 0}
+		],
+		duneBuildIncludes: ['typecheck', 'compile', 'link'],
+		duneCacheHitsMeasured: false,
+		loadSeparated: false,
+		startupSeparated: false,
+		workloadRuntimeSeparated: false,
+		expectedStdoutSha256: outputHash,
+		actualStdoutSha256: outputHash
+	}
+}
+
+function iteration() {
+	const warmupSamples = ['cold-output', 'warm-unchanged', 'one-file-change'].map(state => iterationSample(1, true, state))
+	const samples = []
+	for (let cycle = 1; cycle <= 3; cycle += 1) {
+		for (const state of ['cold-output', 'warm-unchanged', 'one-file-change']) {
+			samples.push(iterationSample(cycle, false, state))
+		}
+	}
+	const metricFields = {
+		fullHaxeChild: 'fullHaxeChildMilliseconds',
+		targetSubprocess: 'targetSubprocessMilliseconds',
+		outsideTargetSubprocess: 'outsideTargetSubprocessMilliseconds',
+		duneBuild: 'duneBuildMilliseconds',
+		interface: 'interfaceMilliseconds',
+		externalVerification: 'externalVerificationMilliseconds'
+	}
+	const measurements = {}
+	for (const [key, state] of [['cold', 'cold-output'], ['warm', 'warm-unchanged'], ['oneFile', 'one-file-change']]) {
+		const selected = samples.filter(sample => sample.state === state)
+		measurements[key] = {}
+		for (const [metric, field] of Object.entries(metricFields)) {
+			measurements[key][metric] = stats(selected.map(sample => sample[field]))
+		}
+	}
+	return {
+		id: 'ro-iteration-01',
+		kind: 'authoring_iteration',
+		owner: {
+			measurementBead: 'haxe_ocaml-850ii.21',
+			workflowBead: 'haxe_ocaml-1hd2w'
+		},
+		method: {
+			stateOrder: ['cold-output', 'warm-unchanged', 'one-file-change'],
+			warmupCycles: 1,
+			measuredCycles: 3,
+			thresholdMode: 'report-only-until-stable-hosted-trend',
+			outputDirectoryRemovedOnlyBeforeCold: true,
+			sharedToolchainCachesMayRemainWarm: true,
+			cacheHitsInferred: false,
+			trackedSourcesMutated: false,
+			fullHaxeChildIncludes: ['startup', 'typing', 'generation', 'orchestration', 'target-owned-subprocesses'],
+			duneBuildIncludes: ['typecheck', 'compile', 'link'],
+			loadSeparated: false,
+			startupSeparated: false,
+			workloadRuntimeSeparated: false
+		},
+		command: {
+			executable: 'haxe',
+			args: ['build.hxml', '-D', 'ocaml_build=native', '-D', 'ocaml_build_timing_report']
+		},
+		fixture: {
+			exampleDir: 'packages/reflaxe.ocaml/examples/build-macro',
+			sourceFile: 'src/BuildMacro.hx',
+			sourceFilesChangedPerOneFileState: 1,
+			sourceRestored: true
+		},
+		warmupSamples,
+		samples,
+		measurements,
+		passed: true
+	}
+}
+
 function receipt(platform, architecture, commit, packageInfo, manifestSha256) {
 	const toolchain = {
 		haxe: '4.3.7',
@@ -63,17 +165,21 @@ function receipt(platform, architecture, commit, packageInfo, manifestSha256) {
 		node: 'v20.20.2'
 	}
 	return {
-		schemaVersion: 1,
+		schemaVersion: 2,
 		marker: 'RO_TARGET_PERF_PLATFORM:PASS',
 		mode: 'platform-report',
 		method: {
-			id: 'installed-package-platform-v1',
+			id: 'installed-package-platform-v2',
 			durationUnit: 'milliseconds',
 			rawSamplesRetained: true,
 			sampleOrderPreserved: true,
 			outputDirectoryRemovedBeforeEachBuild: true,
 			sharedToolchainCachesMayRemainWarm: true,
 			runtimeVerificationExcludedFromBuildTiming: true,
+			iterationStateOrder: ['cold-output', 'warm-unchanged', 'one-file-change'],
+			iterationWarmupCycles: 1,
+			iterationMeasuredCycles: 3,
+			iterationThresholdMode: 'report-only-until-stable-hosted-trend',
 			crossHostAbsoluteComparisonAllowed: false,
 			referenceThresholdsEnforced: false
 		},
@@ -112,6 +218,7 @@ function receipt(platform, architecture, commit, packageInfo, manifestSha256) {
 			scenario('ro-perf-05', 'runtime_bench'),
 			scenario('ro-perf-06', 'runtime_bench')
 		],
+		iteration: iteration(),
 		profileComparison: {
 			runMedianPctOfPortable: 100,
 			buildMedianPctOfPortable: 100
@@ -194,6 +301,22 @@ try {
 	expectRejected(baseReceipts, 'missing raw sample', receipts => {
 		receipts[0].scenarios[0].measured.build.samplesMs.pop()
 	}, /retain exactly 3 raw samples/)
+	expectRejected(baseReceipts, 'legacy performance receipt', receipts => {
+		receipts[0].schemaVersion = 1
+		receipts[0].method.id = 'installed-package-platform-v1'
+	}, /did not pass/)
+	expectRejected(baseReceipts, 'missing iteration sample', receipts => {
+		receipts[0].iteration.samples.pop()
+	}, /retain 9 measured samples/)
+	expectRejected(baseReceipts, 'warm iteration rewrote generated source', receipts => {
+		receipts[0].iteration.samples.find(sample => sample.state === 'warm-unchanged').generatedCodeChangedFiles.push('Main.ml')
+	}, /invalid generated-code change inventory/)
+	expectRejected(baseReceipts, 'iteration inferred a cache hit', receipts => {
+		receipts[0].iteration.method.cacheHitsInferred = true
+	}, /overstates its timing authority/)
+	expectRejected(baseReceipts, 'iteration phase summary drifted', receipts => {
+		receipts[0].iteration.samples[0].duneBuildMilliseconds += 1
+	}, /summary disagrees with its target phases/)
 	expectRejected(baseReceipts, 'wrong output', receipts => {
 		receipts[0].scenarios[0].verification.stdoutMatches = false
 	}, /did not verify runtime output/)

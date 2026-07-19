@@ -1,6 +1,6 @@
 # reflaxe.ocaml Target Performance Credibility
 
-Last audited: 2026-07-18
+Last audited: 2026-07-19
 
 This page defines the target-level performance evidence lane for `reflaxe.ocaml` as a standalone OCaml target.
 
@@ -15,17 +15,20 @@ Machine-readable baseline:
 Deterministic runner and hosted workflow:
 
 - `scripts/ci/run-reflaxe-ocaml-perf.js`
+- `scripts/ci/run-reflaxe-ocaml-iteration-perf.js`
 - `.github/workflows/reflaxe-ocaml-package-matrix.yml`
 
 Success markers:
 
 - `RO_TARGET_PERF_CREDIBLE:PASS`: local reference-host regression gate
+- `RO_TARGET_ITERATION_REPORT:PASS`: focused cold/warm/one-file report
 - `RO_TARGET_PERF_PLATFORM:PASS`: one installed-package host receipt
 - `RO_TARGET_PERF_PLATFORM_MATRIX:PASS`: artifact-opened Linux and macOS aggregate
 
 Primary artifacts:
 
 - `.artifacts/reflaxe-ocaml/perf/summary.json`
+- `.artifacts/reflaxe-ocaml/iteration-perf/summary.json`
 - CI artifact `reflaxe-ocaml-perf-<host>-<commit>` for each host receipt
 - CI artifact `reflaxe-ocaml-perf-matrix-<commit>` for the verified aggregate
 
@@ -34,6 +37,8 @@ Primary artifacts:
 Show that `reflaxe.ocaml` has a credible target-level performance story on its own:
 
 - upstream `haxe 4.3.7` can drive native OCaml builds in a stable time envelope,
+- a copied project records the standalone target's cold-output, unchanged-warm,
+  and one-Haxe-file authoring loops without modifying tracked source,
 - emitted OCaml/native artifacts stay in a bounded size envelope for representative workloads,
 - the `metal` profile does not collapse into an obviously worse runtime lane than `portable` on a simple hot-loop benchmark,
 - and the release-shaped ZIP is measured after an isolated install on the same Linux and macOS hosts that prove package behavior.
@@ -70,13 +75,62 @@ Method details:
 - all four normal examples execute and match their checked `expected.stdout`
 - benchmark output is verified against a deterministic computed result for every accepted runtime sample
 
+### Standalone authoring-iteration method
+
+The focused command is:
+
+```bash
+node scripts/ci/run-reflaxe-ocaml-iteration-perf.js
+```
+
+It copies `packages/reflaxe.ocaml/examples/build-macro` into an isolated
+workspace and measures this exact ordered state family:
+
+1. `cold-output`: remove only the copied `out/` directory, then compile and run.
+2. `warm-unchanged`: preserve the copied source and output directory, compile
+   again, and require zero generated `.ml`/`.mli` content changes.
+3. `one-file-change`: replace one exact token in the copied
+   `src/BuildMacro.hx`, compile again, require changed generated OCaml, and
+   verify the alternate executable output.
+
+One complete state cycle warms the measurement path. The receipt retains that
+warmup, but excludes it from the statistics. Three further cycles are retained
+in execution order and summarized. The copied Haxe source is restored even if
+measurement fails; the checked-in example is never edited.
+
+The names describe output and source state, not the whole machine's cache
+state. Shared Haxe, Dune, OCaml, filesystem, and operating-system caches may
+remain warm. The method never infers cache hits. It records these boundaries
+separately:
+
+- full `haxe` child time, including startup, typing, generation,
+  orchestration, and target-owned subprocesses;
+- summed target-owned subprocess time from the linked timing receipt;
+- time outside those target-owned subprocesses;
+- aggregate Dune build time, which includes typechecking, compilation, and
+  linking;
+- interface-specific target subprocess time; and
+- external executable verification time.
+
+It does not claim separate target load, process startup, or workload-runtime
+measurements. Those fields remain explicitly false/null until a future method
+measures them. Iteration timing uses
+`report-only-until-stable-hosted-trend`: it must pass provenance, state,
+generated-change, timing-receipt, and executable-behavior checks, but it has no
+latency threshold yet.
+
 The hosted lane adds stronger package isolation:
 
 1. One Ubuntu producer builds the deterministic source ZIP and records its clean commit and SHA-256.
 2. Ubuntu and macOS consumers install that exact downloaded ZIP into disposable haxelib repositories; they do not rebuild it.
 3. The performance runner copies each example to a workspace outside the checkout and proves `haxelib path reflaxe.ocaml` resolves only from the disposable installation.
-4. Each host receipt records raw samples, output hashes, file sizes, CPU/load/memory facts, runner image metadata, toolchain versions, and package provenance without machine-local paths.
-5. The aggregate opens the producer manifest and both receipts. It rejects mixed commits, packages, hosts, methods, missing samples, bad output, malformed metrics, checkout fallback, or absolute-path leakage before emitting `RO_TARGET_PERF_PLATFORM_MATRIX:PASS`.
+4. Each host runs the six clean-build scenarios plus the copied authoring
+   iteration workload and records raw samples, output hashes, generated-change
+   inventories, file sizes, CPU/load/memory facts, runner image metadata,
+   toolchain versions, and package provenance without machine-local paths.
+5. The `installed-package-platform-v2` receipt requires the iteration workload.
+   A v1 receipt cannot be accepted as new iteration evidence.
+6. The aggregate opens the producer manifest and both receipts. It rejects mixed commits, packages, hosts, methods, missing samples, bad output, malformed metrics, checkout fallback, or absolute-path leakage before emitting `RO_TARGET_PERF_PLATFORM_MATRIX:PASS`.
 
 The workflow runs for relevant pushes and pull requests, on a weekly schedule,
 and by manual dispatch. The evidence-ownership freshness window is 192 hours.
@@ -95,12 +149,16 @@ distribution, every macOS release, or Windows is supported. A runner-image or
 architecture change becomes visible in the next receipt and must be reviewed
 before results are compared with an older run.
 
-## Latest exact hosted evidence
+## Historical exact hosted evidence (pre-iteration v1)
 
 [Workflow run 29643502308](https://github.com/fullofcaffeine/hxhx/actions/runs/29643502308)
 passed on clean commit
 `f23aa3c41031cc8911d8e2d13d725e33e39cc2cb`. Both hosts installed the same
 source-only `reflaxe.ocaml` `0.18.19` ZIP outside the checkout:
+
+This run predates `installed-package-platform-v2`. It is retained as exact
+six-scenario host history, but it does **not** satisfy the cold/warm/one-file
+iteration contract and must not be cited as v2 iteration evidence.
 
 - package SHA-256: `3cc9d4c875bea61bde0dd4b2d729f56997f1a00d1a1aaf430b3652231c59ce18`
 - package manifest SHA-256: `e21c267c6e5285e8876272ddc57509f0c468d38142d26a733f1d5cfc5a830466`
@@ -223,10 +281,19 @@ successful builds, verified behavior, complete raw samples, and valid metrics.
 Several repeated runs on a stable hosted machine class are required before a
 reviewed hosted threshold can replace report-only evidence.
 
+The authoring-iteration workload is also report-only. Do not derive a threshold
+from a busy local run or reinterpret the established clean-build limits as
+iteration limits. A future threshold needs repeated, same-method hosted trends
+and a reviewed update to the machine-readable contract.
+
 ## Known tradeoffs
 
 - The March table is a local reference-host baseline, not a cross-platform guarantee.
 - Hosted runner timing can move when GitHub changes hardware, images, load, or cache state; the receipt records those facts instead of hiding them.
+- `cold-output` is not a cold machine or cold toolchain claim; it means only
+  that the isolated output directory was removed.
+- The current iteration method does not split load, startup, and workload
+  runtime, and it never guesses cache hits from elapsed time.
 - Linux and macOS numbers must be interpreted per host, not ranked against each other.
 - Runtime microbench numbers are small enough that OS noise exists; that is why the runtime window is looser than build-size windows.
 - The standalone target perf story is intentionally separate from:

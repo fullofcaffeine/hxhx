@@ -40,6 +40,7 @@ for (const needle of [
 	'workflow_dispatch:',
 	'schedule:',
 	'cancel-in-progress: true',
+	"'scripts/ci/*reflaxe-ocaml-*perf*.js'",
 	"DUNE_VERSION: '3.24.0'",
 	'opam install -y "dune.${DUNE_VERSION}" ocamlfind'
 ]) {
@@ -74,6 +75,9 @@ for (const needle of [
 	'RO_PERF_WORK_ROOT=',
 	'npm run test:reflaxe-ocaml:perf-platform',
 	'RO_TARGET_PERF_PLATFORM:PASS',
+	's.schemaVersion !== 2',
+	's.method?.id !== "installed-package-platform-v2"',
+	's.iteration?.passed !== true',
 	'name: reflaxe-ocaml-perf-${{ runner.os }}-${{ github.sha }}'
 ]) {
 	requireIncludes('package_install', consumers, needle)

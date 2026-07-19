@@ -304,9 +304,11 @@ and maintain that broader support declaration separately.
 The same host jobs then measure the installed ZIP instead of the checkout.
 They copy the six canonical examples to external workspaces, retain three raw
 build samples per example and nine raw run samples for each benchmark profile,
-execute every workload, and record host/toolchain/load metadata. A final job
-opens both receipts and emits `RO_TARGET_PERF_PLATFORM_MATRIX:PASS` only when
-the package identity, clean commit, method, samples, output checks, and
+then run the separate copied cold-output, unchanged-warm, and one-file-change
+authoring workload. Every workload executes, and each receipt records
+host/toolchain/load metadata. A final job opens both receipts and emits
+`RO_TARGET_PERF_PLATFORM_MATRIX:PASS` only when the package identity, clean
+commit, v2 method, samples, output checks, generated-change inventory, and
 isolation proof agree.
 
 Download `reflaxe-ocaml-perf-matrix-<commit>` from the package workflow for the
@@ -315,6 +317,8 @@ runners are different machines, so the workflow intentionally refuses to use
 their absolute timing difference as a product comparison. The older local
 reference command remains available as `npm run test:reflaxe-ocaml:perf`; see
 `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md` for method and limitations.
+Use `npm run test:reflaxe-ocaml:iteration-perf` for the focused authoring-loop
+report. Its timings are intentionally report-only.
 
 This ZIP is the standalone Haxe target source package. It does not settle the
 future native-plugin loader format: stock Haxe and `hxhx` still aim to share one
@@ -534,6 +538,7 @@ For standalone `reflaxe.ocaml`, trust these product markers:
 - `RO_HAXE_4_3_7_MATRIX:PASS`
 - `RO_RUNTIME_STDLIB_CLOSURE:PASS`
 - `RO_TARGET_PERF_CREDIBLE:PASS`
+- `RO_TARGET_ITERATION_REPORT:PASS`
 - `RO_TARGET_PERF_PLATFORM_MATRIX:PASS`
 - `RO_PRODUCTION_DOCS:PASS`
 - `RO_PRODUCTION_READY:PASS`
@@ -553,7 +558,9 @@ Before calling the upstream-Haxe `reflaxe.ocaml` path production-ready for your 
 3. Run the canonical native build command on your project.
 4. Confirm the output shape in `out/` looks normal.
 5. Compare your workload class to the declared validation matrix.
-6. If performance matters, run the standalone perf lane locally.
+6. If performance matters, run the standalone perf lane locally. Use
+   `npm run test:reflaxe-ocaml:iteration-perf` when diagnosing the
+   cold-output/warm-unchanged/one-file-change authoring loop.
 7. Before a release-facing claim, run the aggregate product-readiness check:
    `npm run test:reflaxe-ocaml:production-ready`.
 

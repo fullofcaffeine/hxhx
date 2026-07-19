@@ -215,8 +215,37 @@ function createPerformanceContext(options) {
 		workRoot,
 		platformProof,
 		enforceReferenceThresholds: options.mode === 'reference-gate',
-		replacements
+		replacements,
+		temporaryRoots: []
 	}
+}
+
+/**
+ * Copies one scenario into disposable storage for benchmarks that must edit it.
+ * The directory is registered for both evidence sanitization and final cleanup.
+ */
+function isolatedScenarioDirectory(scenario, context) {
+	const source = path.join(context.repoRoot, scenario.exampleDir)
+	let root
+	if (context.workRoot) {
+		root = context.workRoot
+	} else {
+		// Local Lix metadata is discovered by walking up to the checkout's
+		// haxe_libraries directory, so keep the disposable copy under the repo.
+		// Hosted package runs still use the external proven workRoot above.
+		const localTemp = path.join(context.repoRoot, '.tmp')
+		fs.mkdirSync(localTemp, { recursive: true })
+		root = fs.mkdtempSync(path.join(localTemp, 'reflaxe-ocaml-perf-'))
+		context.temporaryRoots.push(root)
+		for (const replacement of new Set([path.resolve(root), fs.realpathSync(root)])) {
+			context.replacements.push(replacement)
+		}
+		context.replacements.sort((left, right) => right.length - left.length)
+	}
+	const destination = path.join(root, scenario.id)
+	fs.rmSync(destination, { recursive: true, force: true })
+	fs.cpSync(source, destination, { recursive: true })
+	return destination
 }
 
 function environmentSummary(context) {
@@ -330,6 +359,9 @@ function verifyEvidenceSanitized(context) {
 
 /** Removes only the external scenario workspace, never the installed package. */
 function cleanupPerformanceContext(context) {
+	for (const root of context.temporaryRoots || []) {
+		fs.rmSync(root, { recursive: true, force: true })
+	}
 	if (context.workRoot && process.env.RO_PERF_KEEP_WORK !== '1') {
 		fs.rmSync(context.workRoot, { recursive: true, force: true })
 	}
@@ -339,6 +371,7 @@ module.exports = {
 	cleanupPerformanceContext,
 	createPerformanceContext,
 	environmentSummary,
+	isolatedScenarioDirectory,
 	provenanceSummary,
 	resolvedLibraryPaths,
 	sanitizeText,

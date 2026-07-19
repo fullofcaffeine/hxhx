@@ -66,10 +66,18 @@ function main() {
   if (!Array.isArray(closure.entries) || closure.entries.length === 0) fail('closure audit entries must be non-empty')
 
   if (perf.marker !== 'RO_TARGET_PERF_CREDIBLE:PASS') fail(`unexpected perf marker ${perf.marker}`)
+  if (perf.schemaVersion !== 2 || perf.mode !== 'reference-gate'
+    || perf.method?.id !== 'local-reference-gate-v3') {
+    fail('perf summary must use the local reference v3 method')
+  }
   if (!perf.environment || perf.environment.haxe !== '4.3.7') {
     fail(`perf summary must record haxe 4.3.7, got ${perf.environment && perf.environment.haxe}`)
   }
   requireAllPassed(perf.scenarios, 'perf.scenarios')
+  if (perf.iteration?.id !== 'ro-iteration-01' || perf.iteration.passed !== true
+    || perf.iteration.method?.thresholdMode !== 'report-only-until-stable-hosted-trend') {
+    fail('perf summary must include the passing report-only standalone iteration workload')
+  }
 
   const summaryOut = process.env.RO_PRODUCTION_READY_SUMMARY_OUT
   if (summaryOut) {

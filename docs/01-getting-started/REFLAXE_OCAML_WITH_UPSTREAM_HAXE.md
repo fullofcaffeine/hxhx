@@ -224,8 +224,9 @@ rebuilds because both host receipts must name the producer's commit and package
 SHA. It records verified hosts only; Windows and a broader support policy remain
 explicit follow-up work.
 
-Those same installed-package jobs also run the six-scenario target performance
-method and upload raw per-host receipts. The aggregate
+Those same installed-package jobs also run the six clean-build scenarios plus
+the copied cold-output, unchanged-warm, and one-file-change authoring workload,
+then upload raw per-host receipts. The aggregate
 `RO_TARGET_PERF_PLATFORM_MATRIX:PASS` marker proves both hosts measured the
 same clean ZIP outside the checkout, completed every raw sample, and matched
 expected behavior. It does not compare Linux and macOS absolute speed because

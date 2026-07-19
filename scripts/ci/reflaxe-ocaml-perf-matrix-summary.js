@@ -19,6 +19,15 @@ const scenarioContract = new Map([
 	['ro-perf-05', { kind: 'runtime_bench', buildReps: 3, runReps: 9 }],
 	['ro-perf-06', { kind: 'runtime_bench', buildReps: 3, runReps: 9 }]
 ])
+const iterationStateOrder = ['cold-output', 'warm-unchanged', 'one-file-change']
+const iterationMetricFields = {
+	fullHaxeChild: 'fullHaxeChildMilliseconds',
+	targetSubprocess: 'targetSubprocessMilliseconds',
+	outsideTargetSubprocess: 'outsideTargetSubprocessMilliseconds',
+	duneBuild: 'duneBuildMilliseconds',
+	interface: 'interfaceMilliseconds',
+	externalVerification: 'externalVerificationMilliseconds'
+}
 
 function fail(message) {
 	throw new Error(message)
@@ -155,19 +164,143 @@ function validateScenario(scenario, platform) {
 	}
 }
 
+function validateIterationSamples(samples, expectedCycles, warmup, platform, sourceFile) {
+	if (!Array.isArray(samples) || samples.length !== expectedCycles * iterationStateOrder.length) {
+		fail(`${platform} iteration receipt must retain ${expectedCycles * iterationStateOrder.length} ${warmup ? 'warmup' : 'measured'} samples`)
+	}
+	for (const [index, sample] of samples.entries()) {
+		const expectedState = iterationStateOrder[index % iterationStateOrder.length]
+		const expectedCycle = Math.floor(index / iterationStateOrder.length) + 1
+		const expectedOutputState = expectedState === 'cold-output' ? 'removed-before-build' : 'preserved-from-prior-state'
+		if (sample.state !== expectedState || sample.outputState !== expectedOutputState
+			|| sample.cycle !== expectedCycle || sample.warmup !== warmup) {
+			fail(`${platform} iteration sample order or cycle identity changed`)
+		}
+		if (sample.compileStatus !== 0 || sample.timingReportValidationPassed !== true || sample.verificationStatus !== 0) {
+			fail(`${platform} iteration ${expectedCycle}/${expectedState} did not pass build, timing validation, and execution`)
+		}
+		const expectedSourceChanges = expectedState === 'one-file-change' ? [sourceFile] : []
+		if (JSON.stringify(sample.sourceFilesChanged) !== JSON.stringify(expectedSourceChanges)) {
+			fail(`${platform} iteration ${expectedCycle}/${expectedState} changed the wrong Haxe source set`)
+		}
+		if (!Array.isArray(sample.generatedCodeChangedFiles)
+			|| (expectedState === 'warm-unchanged' && sample.generatedCodeChangedFiles.length !== 0)
+			|| (expectedState !== 'warm-unchanged' && sample.generatedCodeChangedFiles.length === 0)) {
+			fail(`${platform} iteration ${expectedCycle}/${expectedState} has an invalid generated-code change inventory`)
+		}
+		if (!Number.isInteger(sample.generatedCodeFileCount) || sample.generatedCodeFileCount <= 0
+			|| !Number.isInteger(sample.generatedFilesReceiptId) || sample.generatedFilesReceiptId < 0) {
+			fail(`${platform} iteration ${expectedCycle}/${expectedState} has incomplete generated-output identity`)
+		}
+		for (const field of Object.values(iterationMetricFields)) {
+			requireFiniteNumber(sample[field], `${platform}.iteration.${expectedCycle}.${expectedState}.${field}`, 0)
+		}
+		if (sample.targetRunMilliseconds !== null
+			|| JSON.stringify(sample.duneBuildIncludes) !== JSON.stringify(['typecheck', 'compile', 'link'])
+			|| sample.duneCacheHitsMeasured !== false || sample.loadSeparated !== false
+			|| sample.startupSeparated !== false || sample.workloadRuntimeSeparated !== false) {
+			fail(`${platform} iteration ${expectedCycle}/${expectedState} overstates an unmeasured timing boundary`)
+		}
+		if (!Array.isArray(sample.timingPhases) || sample.timingPhases.length === 0) {
+			fail(`${platform} iteration ${expectedCycle}/${expectedState} has no target phase samples`)
+		}
+		let targetTotal = 0
+		let duneTotal = 0
+		let interfaceTotal = 0
+		const phaseIds = new Set()
+		for (const phase of sample.timingPhases) {
+			if (typeof phase.id !== 'string' || phaseIds.has(phase.id) || phase.exitCode !== 0) {
+				fail(`${platform} iteration ${expectedCycle}/${expectedState} has an invalid target phase`)
+			}
+			phaseIds.add(phase.id)
+			requireFiniteNumber(phase.elapsedMilliseconds, `${platform}.iteration.${expectedCycle}.${expectedState}.${phase.id}`, 0)
+			targetTotal += phase.elapsedMilliseconds
+			if (phase.id === 'dune_build' || phase.id === 'mli_rebuild') {
+				duneTotal += phase.elapsedMilliseconds
+			} else if (phase.id.startsWith('mli_')) {
+				interfaceTotal += phase.elapsedMilliseconds
+			}
+		}
+		if (sample.targetSubprocessMilliseconds > sample.fullHaxeChildMilliseconds
+			|| sample.targetSubprocessMilliseconds !== targetTotal || sample.duneBuildMilliseconds !== duneTotal
+			|| sample.interfaceMilliseconds !== interfaceTotal
+			|| sample.outsideTargetSubprocessMilliseconds !== sample.fullHaxeChildMilliseconds - targetTotal) {
+			fail(`${platform} iteration ${expectedCycle}/${expectedState} summary disagrees with its target phases`)
+		}
+		for (const field of ['expectedStdoutSha256', 'actualStdoutSha256']) {
+			if (!/^[0-9a-f]{64}$/.test(sample[field] || '')) {
+				fail(`${platform} iteration ${expectedCycle}/${expectedState} has invalid ${field}`)
+			}
+		}
+		if (sample.expectedStdoutSha256 !== sample.actualStdoutSha256) {
+			fail(`${platform} iteration ${expectedCycle}/${expectedState} did not match expected runtime output`)
+		}
+	}
+}
+
+function validateIteration(iteration, platform) {
+	if (!iteration || iteration.id !== 'ro-iteration-01' || iteration.kind !== 'authoring_iteration' || iteration.passed !== true
+		|| iteration.owner?.measurementBead !== 'haxe_ocaml-850ii.21' || iteration.owner?.workflowBead !== 'haxe_ocaml-1hd2w') {
+		fail(`${platform} is missing the owned standalone iteration workload`)
+	}
+	const method = iteration.method
+	if (!method || JSON.stringify(method.stateOrder) !== JSON.stringify(iterationStateOrder)
+		|| method.warmupCycles !== 1 || method.measuredCycles !== 3
+		|| method.thresholdMode !== 'report-only-until-stable-hosted-trend'
+		|| method.outputDirectoryRemovedOnlyBeforeCold !== true || method.sharedToolchainCachesMayRemainWarm !== true
+		|| method.cacheHitsInferred !== false || method.trackedSourcesMutated !== false
+		|| JSON.stringify(method.fullHaxeChildIncludes) !== JSON.stringify(['startup', 'typing', 'generation', 'orchestration', 'target-owned-subprocesses'])
+		|| JSON.stringify(method.duneBuildIncludes) !== JSON.stringify(['typecheck', 'compile', 'link'])
+		|| method.loadSeparated !== false || method.startupSeparated !== false || method.workloadRuntimeSeparated !== false) {
+		fail(`${platform} standalone iteration method changed or overstates its timing authority`)
+	}
+	if (iteration.command?.executable !== 'haxe'
+		|| JSON.stringify(iteration.command.args) !== JSON.stringify(['build.hxml', '-D', 'ocaml_build=native', '-D', 'ocaml_build_timing_report'])) {
+		fail(`${platform} standalone iteration command changed`)
+	}
+	if (iteration.fixture?.exampleDir !== 'packages/reflaxe.ocaml/examples/build-macro'
+		|| iteration.fixture?.sourceFile !== 'src/BuildMacro.hx'
+		|| iteration.fixture?.sourceFilesChangedPerOneFileState !== 1 || iteration.fixture?.sourceRestored !== true) {
+		fail(`${platform} standalone iteration fixture ownership changed`)
+	}
+	validateIterationSamples(iteration.warmupSamples, method.warmupCycles, true, platform, iteration.fixture.sourceFile)
+	validateIterationSamples(iteration.samples, method.measuredCycles, false, platform, iteration.fixture.sourceFile)
+	const allSamples = [...iteration.warmupSamples, ...iteration.samples]
+	const beforeHashes = new Set(allSamples.filter(sample => sample.state !== 'one-file-change').map(sample => sample.actualStdoutSha256))
+	const changedHashes = new Set(allSamples.filter(sample => sample.state === 'one-file-change').map(sample => sample.actualStdoutSha256))
+	if (beforeHashes.size !== 1 || changedHashes.size !== 1 || [...beforeHashes][0] === [...changedHashes][0]) {
+		fail(`${platform} standalone iteration did not prove stable before/after executable behavior`)
+	}
+	for (const [measurementKey, sampleState] of [['cold', 'cold-output'], ['warm', 'warm-unchanged'], ['oneFile', 'one-file-change']]) {
+		const selected = iteration.samples.filter(sample => sample.state === sampleState)
+		for (const [metricKey, sampleField] of Object.entries(iterationMetricFields)) {
+			const measurement = iteration.measurements?.[measurementKey]?.[metricKey]
+			validateStats(measurement, method.measuredCycles, `${platform}.iteration.${measurementKey}.${metricKey}`)
+			if (JSON.stringify(measurement.samplesMs) !== JSON.stringify(selected.map(sample => sample[sampleField]))) {
+				fail(`${platform} iteration ${measurementKey}.${metricKey} does not summarize its ordered raw samples`)
+			}
+		}
+	}
+	return iteration
+}
+
 function validateConsumer(summary, manifest, manifestSha256) {
 	assertNoAbsolutePaths(summary)
 	const platform = summary.environment && summary.environment.platform
-	if (summary.schemaVersion !== 1 || summary.marker !== 'RO_TARGET_PERF_PLATFORM:PASS' || summary.mode !== 'platform-report') {
+	if (summary.schemaVersion !== 2 || summary.marker !== 'RO_TARGET_PERF_PLATFORM:PASS' || summary.mode !== 'platform-report') {
 		fail(`performance receipt on ${platform || '(unknown)'} did not pass`)
 	}
 	if (!summary.method
-		|| summary.method.id !== 'installed-package-platform-v1'
+		|| summary.method.id !== 'installed-package-platform-v2'
 		|| summary.method.rawSamplesRetained !== true
 		|| summary.method.sampleOrderPreserved !== true
 		|| summary.method.outputDirectoryRemovedBeforeEachBuild !== true
 		|| summary.method.sharedToolchainCachesMayRemainWarm !== true
 		|| summary.method.runtimeVerificationExcludedFromBuildTiming !== true
+		|| JSON.stringify(summary.method.iterationStateOrder) !== JSON.stringify(iterationStateOrder)
+		|| summary.method.iterationWarmupCycles !== 1
+		|| summary.method.iterationMeasuredCycles !== 3
+		|| summary.method.iterationThresholdMode !== 'report-only-until-stable-hosted-trend'
 		|| summary.method.crossHostAbsoluteComparisonAllowed !== false
 		|| summary.method.referenceThresholdsEnforced !== false) {
 		fail(`performance receipt on ${platform} used a different measurement method`)
@@ -213,6 +346,7 @@ function validateConsumer(summary, manifest, manifestSha256) {
 		fail(`performance receipt on ${platform} has an incomplete or duplicate scenario set`)
 	}
 	const scenarios = summary.scenarios.map(scenario => validateScenario(scenario, platform))
+	const iteration = validateIteration(summary.iteration, platform)
 	const portable = scenarios.find(scenario => scenario.id === 'ro-perf-05')
 	const metal = scenarios.find(scenario => scenario.id === 'ro-perf-06')
 	const expectedProfile = {
@@ -230,6 +364,7 @@ function validateConsumer(summary, manifest, manifestSha256) {
 		environment: summary.environment,
 		provenance,
 		scenarios,
+		iteration,
 		profileComparison: summary.profileComparison
 	}
 }
@@ -252,7 +387,7 @@ function main() {
 		fail(`expected darwin and linux performance hosts, received ${hosts.map(host => host.platform).join(',')}`)
 	}
 	const result = {
-		schemaVersion: 1,
+		schemaVersion: 2,
 		marker: 'RO_TARGET_PERF_PLATFORM_MATRIX:PASS',
 		implementationCommit: manifest.implementationCommit,
 		artifactManifestSha256: manifestSha256,

@@ -10,7 +10,7 @@ on:
       - 'package-lock.json'
       - 'packages/reflaxe.ocaml/**'
       - 'scripts/ci/*reflaxe-ocaml-package*.js'
-      - 'scripts/ci/*reflaxe-ocaml-perf*.js'
+      - 'scripts/ci/*reflaxe-ocaml-*perf*.js'
       - 'scripts/release/**'
       - 'test/packaging/reflaxe_ocaml_external_app/**'
       - 'docs/00-project/REFLAXE_OCAML_PERF_BASELINE.json'
@@ -23,7 +23,7 @@ on:
       - 'package-lock.json'
       - 'packages/reflaxe.ocaml/**'
       - 'scripts/ci/*reflaxe-ocaml-package*.js'
-      - 'scripts/ci/*reflaxe-ocaml-perf*.js'
+      - 'scripts/ci/*reflaxe-ocaml-*perf*.js'
       - 'scripts/release/**'
       - 'test/packaging/reflaxe_ocaml_external_app/**'
       - 'docs/00-project/REFLAXE_OCAML_PERF_BASELINE.json'
@@ -171,7 +171,7 @@ jobs:
       - name: Verify host performance receipt
         run: |
           set -euo pipefail
-          node -e 'const s=require("./.artifacts/reflaxe-ocaml/perf-platform/summary.json"); if(s.marker !== "RO_TARGET_PERF_PLATFORM:PASS" || !s.provenance.installedPackageProof || s.provenance.implementationCommit !== process.env.GITHUB_SHA) throw new Error("host performance did not measure the shared installed package"); console.log(`${s.marker} os=${s.environment.platform} package=${s.provenance.package.sha256}`)'
+          node -e 'const s=require("./.artifacts/reflaxe-ocaml/perf-platform/summary.json"); if(s.schemaVersion !== 2 || s.marker !== "RO_TARGET_PERF_PLATFORM:PASS" || s.method?.id !== "installed-package-platform-v2" || s.iteration?.passed !== true || !s.provenance.installedPackageProof || s.provenance.implementationCommit !== process.env.GITHUB_SHA) throw new Error("host performance did not measure the shared installed package with the v2 iteration method"); console.log(`${s.marker} os=${s.environment.platform} package=${s.provenance.package.sha256}`)'
       - name: Upload platform package evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -127,6 +127,11 @@ Required marker set:
   - source of truth:
     - `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`
     - `docs/00-project/REFLAXE_OCAML_PERF_BASELINE.json`
+- `RO_TARGET_ITERATION_REPORT:PASS`
+  - a copied standalone project completed the declared cold-output,
+    unchanged-warm, and one-file-change method without mutating tracked source
+  - timings remain report-only until stable hosted trends justify a reviewed
+    threshold; this marker proves method and behavior, not a speed budget
 - `RO_PRODUCTION_DOCS:PASS`
   - operator-facing install/use/troubleshooting docs exist and match reality
   - source of truth:
@@ -162,8 +167,9 @@ Supporting evidence:
   - this is an input receipt, not a cross-platform result by itself
 - `RO_TARGET_PERF_PLATFORM_MATRIX:PASS`
   - one clean source ZIP is installed and measured on Linux and macOS with the
-    canonical six-scenario method, complete raw samples, verified behavior,
-    host/toolchain metadata, and an aggregate that opens both receipts
+    canonical six clean-build scenarios plus the standalone authoring-iteration
+    workload, complete raw samples, verified behavior, host/toolchain metadata,
+    and an aggregate that opens both receipts
   - source of truth:
     - `.github/workflows/reflaxe-ocaml-package-matrix.yml`
     - `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`
