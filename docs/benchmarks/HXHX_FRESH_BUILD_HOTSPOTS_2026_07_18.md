@@ -161,6 +161,68 @@ directories. The measurement was rerun with an absolute path. Follow-up
 build and rejects successful runs whose required progress telemetry is absent;
 fixture coverage proves both path forms without repeating the expensive build.
 
+## Second extraction measurement: CppKnownStdlibSignatures
+
+The `haxe_ocaml-850ii.13` slice moved the existing standard-library argument
+and return carrier tables into `CppKnownStdlibSignatures`. It did not add a new
+signature policy: `CppTargetCore` still supplies the call-specific scope and
+class lookup services, while the extracted module answers the same closed
+owner-and-method questions. The hotspot fell from 25,753 to 25,251 source lines;
+the new documented module is 576 lines.
+
+The first local adjacent measurements were invalid for a speed claim because
+the capacity checker found sustained host load at 2.298 per CPU, above the 1.5
+limit. A direct-parent GitHub A/B was therefore run on two fresh
+`ubuntu-latest` jobs with the same OCaml 5.2.1 and Haxe 4.3.7 setup:
+
+- before compiler source: `1da5aec0ccbf139f49f38623368f22df9d188856`;
+- after compiler source: `e2ea89749f146431a889cda0e917f660eb06fd92`;
+- before workflow run: `29697983028` at measurement commit `572e34ba9`;
+- after workflow run: `29698381284` at measurement commit `2083a52d2`.
+
+The two temporary measurement commits changed only the quiet-progress timeout,
+added a report-completeness check, and applied the extraction itself. They were
+marked to skip ordinary push CI, manually dispatched, and deleted with their
+remote branches and local worktrees after the artifacts were retained. Both
+workflows, profile checks, source builds, and stage0-forbidden smoke checks
+passed.
+
+| Direct-parent measurement | Before | After | Change |
+| --- | ---: | ---: | ---: |
+| Stage0 emit | `156s` | `151s` | `-5s` (`-3.21%`) |
+| Stage0 profile total | `163s` | `157s` | `-6s` (`-3.68%`) |
+| `CppTargetCore` generation | `61,608ms` | `58,131ms` | `-3,477ms` (`-5.64%`) |
+| Extracted signature generation | included above | `113ms` | new owner |
+| Combined core + signature generation | `61,608ms` | `58,244ms` | `-3,364ms` (`-5.46%`) |
+| Combined generated OCaml characters | `12,110,411` | `12,116,267` | `+5,856` (`+0.05%`) |
+| Profile workflow step | `164s` | `158s` | `-6s` (`-3.66%`) |
+| Independent source-build smoke step | `170s` | `170s` | no change |
+| Profile peak RSS | `3,573MB` | `3,991MB` | `+418MB` (`+11.70%`) |
+
+This single pair supports the narrower claim that splitting the table shortened
+Reflaxe generation of the hotspot. It does not show a native build-time or
+memory improvement; those rows were flat and worse respectively, and need
+repeated samples before any stronger conclusion. The older profiler did not
+yet write a capacity report, so the fresh dedicated runner and successful
+profile are the before-run host controls rather than a normalized-load sample.
+
+The current-main proof is recorded separately because later `reflaxe.ocaml`
+lowering changes would confound the extraction A/B. Run `29697597999` on
+`f688e0580` passed its new fail-closed workflow contract with a capacity report:
+sustained load was 0.173 per CPU, no competing compiler process was present,
+and 14.376 GiB was available. That current profile took 128 seconds to emit and
+132 seconds total; `CppTargetCore` took 49,185ms and
+`CppKnownStdlibSignatures` took 95ms. These are useful current-state numbers,
+not numbers attributed only to this extraction.
+
+Retained artifact hashes:
+
+| Artifact | Before SHA-256 | After SHA-256 | Current-main SHA-256 |
+| --- | --- | --- | --- |
+| `regen_report.json` | `d45d9f55438ce801063883a68d55e3e2ee07e3811aff60a9ce702855b715366c` | `c024ad21d4d0a464aa1a413a274fda4220b86d6bc61881b4f502b37307300d98` | `00f6cb9b3e14f551ca3d08256b2ed09e13cfcd94a8ce6e1e2f9c4fc32f5500ce` |
+| `reflaxe_ocaml_progress.log` | `c777969a4bb8bc87f59a418816003fbf775092bf5c6509dcf5d725f4bb129cad` | `3cbf09ef408e54d28a0423614e5e8212cb530eb7a0b1079781c010c45a352117` | `8f0bf1c21e40b14bd305d7f6438cb9fc7df37efa95e98054f7ffd78939f56a2b` |
+| `progress_summary.json` | `197041fe01c804c2dcea847724bf1b0d6a8a9aab939b9df49830c06e9c6ccd8b` | `89ff7985050834b0b7442a7f4284b6f34962c262320967883630e2d3fd0ded82` | `6b53d882c997a4ee2d03c32b06a123e08f6cd12a46144e6726716333fb8bdf3c` |
+
 ## Rejected Dune-cache shortcut
 
 A separate native, stage0-free A/B used a private Dune cache, one unrecorded
