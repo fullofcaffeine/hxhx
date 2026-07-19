@@ -83,20 +83,45 @@ was pushed:
 These local timings prove command ownership and standalone execution, not the
 hosted-runner performance claim. The last shard ran during a different host
 load window and was slower than the retained exact GitHub baseline, so it is
-not substituted into the remote prediction below.
+not substituted into the hosted-runner result below.
 
 ## Expected and measured outcome
 
-Before the first exact pushed run, the measured command bodies predict a
-critical test body of about 19m45s instead of 42m58s. Allowing roughly the same
-2m09s setup per clean runner predicts a slowest shard around 22 minutes.
+Before the first exact pushed run, the measured command bodies predicted a
+slowest shard around 22 minutes and about 49m25s of total Tests runner time.
+The prediction was directionally correct, but clean-runner setup and ordinary
+hosted-runner variance made the exact compute cost higher.
 
-The four shard bodies preserve the original 42m58s of test work. Repeating the
-2m09s setup four times predicts roughly 49m25s of total Tests runner time,
-about 9.5% more than the former 45m10s job in exchange for cutting its wall
-clock by roughly half. The exact pushed run must replace these predictions
-with observed shard, aggregate, full-workflow, and runner-minute measurements
-before the bead closes.
+The first pushed run used candidate
+`56310df380f5094d9e4eac664ec2f03c5de52c90` and passed as Core workflow
+`29686414970`. The exact shard results were:
+
+| Shard | Job | Job wall time | Test-step time |
+| --- | ---: | ---: | ---: |
+| Compiler and focused regressions | `88191637270` | 5m35s | 3m41s |
+| Macro-host integration | `88191637241` | 16m32s | 14m09s |
+| Portable, snapshots, and examples | `88191637240` | 7m52s | 5m42s |
+| hxhx target end-to-end | `88191637232` | 23m08s | 21m11s |
+| Fail-closed `Tests` aggregate | `88193644992` | 7s | not applicable |
+
+All four shards, all independent prerequisite jobs, and the aggregate passed.
+The earliest shard began at `2026-07-19T12:11:48Z`; the aggregate completed at
+`2026-07-19T12:35:09Z`. The workflow itself ran from
+`2026-07-19T12:07:51Z` through `2026-07-19T12:35:09Z`.
+
+| Measure | Monolithic baseline | Sharded run | Change |
+| --- | ---: | ---: | ---: |
+| Summed test-command time | 42m57s | 44m43s | +1m46s (+4.1%) |
+| Total Tests runner time | 45m10s | 53m14s | +8m04s (+17.9%) |
+| Required Tests critical path | 45m10s | 23m21s | -21m49s (-48.3%) |
+| Complete Core workflow | 58m36s | 27m18s | -31m18s (-53.4%) |
+
+The summed command-time difference is normal hosted-runner variance; the
+manifest still assigns every one of the same 106 commands exactly once. The
+17.9% runner-time increase is the measured cost of isolated checkouts and
+toolchain setup. It is accepted because it removes 21m49s from the required
+test critical path and 31m18s from the complete workflow without sharing
+mutable build artifacts, weakening Stage0 rules, or hiding a failed lane.
 
 ## Local workflow
 
