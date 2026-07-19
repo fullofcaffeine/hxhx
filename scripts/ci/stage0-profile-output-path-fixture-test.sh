@@ -11,6 +11,11 @@ fail() {
 }
 
 if [ "${HXHX_STAGE0_PROFILE_FIXTURE_REGEN:-0}" = "1" ]; then
+	fixture_exit_code="${HXHX_STAGE0_PROFILE_FIXTURE_EXIT_CODE:-0}"
+	fixture_status="ok"
+	if [ "$fixture_exit_code" != "0" ]; then
+		fixture_status="error"
+	fi
 	if [ -n "${HXHX_STAGE0_PROFILE_FIXTURE_REGEN_CAPTURE:-}" ]; then
 		printf 'regen\n' >>"$HXHX_STAGE0_PROFILE_FIXTURE_REGEN_CAPTURE"
 	fi
@@ -45,7 +50,8 @@ if [ "${HXHX_STAGE0_PROFILE_FIXTURE_REGEN:-0}" = "1" ]; then
 	[ -n "$report_json" ] || fail "fake regeneration did not receive --report-json"
 	cd "${HXHX_STAGE0_PROFILE_FIXTURE_NESTED_DIR:?missing nested fixture directory}"
 	mkdir -p -- "$(dirname "$report_json")"
-	printf '%s\n' '{"status":"pass","exit_code":0,"haxe_bin_mode":"native","haxe_bin_policy":"require-native","phase_seconds":{"emit":1,"total":1},"stage0_observability":{"heartbeat_samples":1,"heartbeat_peak_rss_mb":12,"heartbeat_peak_tree_rss_mb":14}}' >"$report_json"
+	printf '{"status":"%s","exit_code":%s,"haxe_bin_mode":"native","haxe_bin_policy":"require-native","phase_seconds":{"emit":1,"total":1},"stage0_observability":{"heartbeat_samples":1,"heartbeat_peak_rss_mb":12,"heartbeat_peak_tree_rss_mb":14}}\n' \
+		"$fixture_status" "$fixture_exit_code" >"$report_json"
 
 	if [ "${HXHX_STAGE0_PROFILE_FIXTURE_OMIT_PROGRESS:-0}" != "1" ]; then
 		mkdir -p -- "$(dirname "$REFLAXE_OCAML_PROGRESS_FILE")"
@@ -54,7 +60,7 @@ if [ "${HXHX_STAGE0_PROFILE_FIXTURE_REGEN:-0}" = "1" ]; then
 
 	mkdir -p -- "$(dirname "$HXHX_STAGE0_HEARTBEAT_TRACE_FILE")"
 	printf '%s\n' '{"elapsed_s":1,"pid":1,"focus_pid":1,"rss_mb":12,"tree_rss_mb":14,"cpu_pct":50,"state":"R","log_bytes":64}' >"$HXHX_STAGE0_HEARTBEAT_TRACE_FILE"
-	exit 0
+	exit "$fixture_exit_code"
 fi
 
 [ -x "$PROFILE_SCRIPT" ] || fail "missing profile script"
@@ -108,6 +114,18 @@ run_profile "$absolute_out" >"$fixture_root/absolute.log" 2>&1
 [ -s "$absolute_out/regen_report.json" ] || fail "absolute report is missing"
 [ -s "$absolute_out/reflaxe_ocaml_progress.log" ] || fail "absolute progress log is missing"
 [ -s "$absolute_out/progress_summary.json" ] || fail "absolute progress summary is missing"
+
+failed_out="$fixture_root/failed-regeneration"
+set +e
+HXHX_STAGE0_PROFILE_FIXTURE_EXIT_CODE=17 \
+	run_profile "$failed_out" >"$fixture_root/failed.log" 2>&1
+failed_code="$?"
+set -e
+[ "$failed_code" = "17" ] || fail "failed regeneration returned $failed_code instead of its real exit code 17"
+[ -s "$failed_out/regen_report.json" ] || fail "failed regeneration did not retain its report"
+[ -s "$failed_out/progress_summary.json" ] || fail "failed regeneration did not retain its progress summary"
+grep -F "Summary artifacts are still available" "$fixture_root/failed.log" >/dev/null \
+	|| fail "failed regeneration did not explain that diagnostics were retained"
 
 queued_out="$fixture_root/queued-artifacts"
 queued_lease="$fixture_root/shared-heavy-run.lease.json"

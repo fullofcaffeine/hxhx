@@ -504,4 +504,8 @@ if [ "$artifact_error" = "1" ]; then
 	exit 3
 fi
 
+if [ "$run_code" != "0" ]; then
+	exit "$run_code"
+fi
+
 exit 0

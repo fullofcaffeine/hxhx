@@ -100,7 +100,12 @@ jobs:
           set -euo pipefail
           PROFILE_DIR="$RUNNER_TEMP/stage0_profile_regen"
           echo "dir=$PROFILE_DIR" >> "$GITHUB_OUTPUT"
-          npm run -s hxhx:profile:stage0-regen -- --policy prefer-native --failfast 65 --heartbeat 20 --out-dir "$PROFILE_DIR"
+          npm run -s hxhx:profile:stage0-regen -- --policy prefer-native --failfast 300 --heartbeat 20 --out-dir "$PROFILE_DIR"
+          node scripts/ci/stage0-profile-evidence-check.js \
+            --report "$PROFILE_DIR/regen_report.json" \
+            --progress-summary "$PROFILE_DIR/progress_summary.json" \
+            --require-class backend.cpp.CppTargetCore \
+            --require-class backend.cpp.CppKnownStdlibSignatures
       - name: Compare stage0 hotspot baseline
         id: hotspot
         env:
