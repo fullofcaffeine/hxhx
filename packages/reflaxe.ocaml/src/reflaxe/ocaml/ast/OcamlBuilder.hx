@@ -3568,17 +3568,18 @@ class OcamlBuilder {
 		return built;
 	}
 
+	/** Inspects unwrapped syntax but evaluates the original expression so semantic metadata remains authoritative. */
 	function buildStdString(inner:TypedExpr):OcamlExpr {
 		final e = unwrap(inner);
 		// Best-effort `Std.string` for `Dynamic` / structural values carried as `Obj.t`.
 		// Avoid applying this to typedef-backed anonymous structures that we represent as real OCaml records.
 		switch (followNoAbstracts(e.t)) {
 			case TDynamic(_):
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [buildExpr(e)]);
+				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [buildExpr(inner)]);
 			case TAbstract(_, _) if (isStdAnyAbstract(e.t)):
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [buildExpr(e)]);
+				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [buildExpr(inner)]);
 			case TAnonymous(_) if (shouldAnonUseHxAnon(e.t)):
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [buildExpr(e)]);
+				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [buildExpr(inner)]);
 			case _:
 		}
 
@@ -3587,12 +3588,12 @@ class OcamlBuilder {
 				return OcamlExpr.EConst(OcamlConst.CString("null"));
 			case TConst(TString(_)):
 				// String literals are never `null`; avoid redundant runtime wrapping.
-				return buildExpr(e);
+				return buildExpr(inner);
 			case TBinop(OpAdd, _, _) if (isStringType(e.t)):
 				// String concatenation always produces a real OCaml string (never hx_null),
 				// because we convert nullable operands via `HxString.toStdString` before `^`.
 				// Avoid re-wrapping the result (this prevents `HxString.toStdString (...)` nesting).
-				return buildExpr(e);
+				return buildExpr(inner);
 			case _:
 		}
 
@@ -3605,22 +3606,22 @@ class OcamlBuilder {
 				final a = aRef.get();
 				switch (a.name) {
 					case "Int":
-						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [buildExpr(e)]);
+						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [buildExpr(inner)]);
 					case "Float":
-						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_float"), [buildExpr(e)]);
+						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_float"), [buildExpr(inner)]);
 					case "Bool":
-						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_bool"), [buildExpr(e)]);
+						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_bool"), [buildExpr(inner)]);
 					case "Null":
 						if (params != null && params.length == 1) {
-							final inner = params[0];
-							if (isStringType(inner)) {
-								toStdString(buildExpr(e));
-							} else if (isIntType(inner)) {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_toStdString"), [buildExpr(e)]);
-							} else if (isFloatType(inner)) {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_float_toStdString"), [buildExpr(e)]);
-							} else if (isBoolType(inner)) {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_bool_toStdString"), [buildExpr(e)]);
+							final innerType = params[0];
+							if (isStringType(innerType)) {
+								toStdString(buildExpr(inner));
+							} else if (isIntType(innerType)) {
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_toStdString"), [buildExpr(inner)]);
+							} else if (isFloatType(innerType)) {
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_float_toStdString"), [buildExpr(inner)]);
+							} else if (isBoolType(innerType)) {
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_bool_toStdString"), [buildExpr(inner)]);
 							} else {
 								OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
 							}
@@ -3633,7 +3634,7 @@ class OcamlBuilder {
 			case TInst(cRef, _):
 				final c = cRef.get();
 				if (isStdStringClass(c)) {
-					toStdString(buildExpr(e));
+					toStdString(buildExpr(inner));
 				} else {
 					var hasToString = false;
 					try {
@@ -3650,11 +3651,11 @@ class OcamlBuilder {
 						final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
 						final callFn = (selfMod != null && selfMod == modName) ? OcamlExpr.EIdent("toString") : OcamlExpr.EField(OcamlExpr.EIdent(modName),
 							"toString");
-						OcamlExpr.EApp(callFn, [buildExpr(e), OcamlExpr.EConst(OcamlConst.CUnit)]);
+						OcamlExpr.EApp(callFn, [buildExpr(inner), OcamlExpr.EConst(OcamlConst.CUnit)]);
 					} else {
 						// Still evaluate the value (important under `-warn-error` where unused
 						// parameters become hard errors in the OCaml build).
-						final built = buildExpr(e);
+						final built = buildExpr(inner);
 						final mappedType = typeExprFromHaxeType(e.t);
 						final asObj:OcamlExpr = switch (mappedType) {
 							case TIdent(name):
@@ -3681,7 +3682,7 @@ class OcamlBuilder {
 				// Note: this is not perfect for OCaml immediates (bool vs int), but it preserves
 				// the key invariants: the value is used (avoids unused-var under -warn-error),
 				// and the output is stable enough for debugging and early bootstrap workloads.
-				final built = buildExpr(e);
+				final built = buildExpr(inner);
 				final mappedType = typeExprFromHaxeType(e.t);
 				final isObjMappedType = switch (mappedType) {
 					case TIdent(name):

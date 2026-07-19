@@ -36,6 +36,9 @@ class Main {
 		events.resize(0);
 		final prefixDecrementResult = --receiver().value;
 		Sys.println("prefix_decrement=" + prefixDecrementResult + " final=" + holder.value + " events=" + events.join(","));
+
+		final concatCounter = new ConcatCounter();
+		Sys.println(concatCounter.nextLabel());
 	}
 
 	static function abstractControl():String {
@@ -56,6 +59,17 @@ class Holder {
 	public var value:Int;
 
 	public function new() {}
+}
+
+/** Regression control for a field update nested inside string concatenation. */
+class ConcatCounter {
+	var nextId:Int = 0;
+
+	public function new() {}
+
+	public function nextLabel():String {
+		return "concat=" + nextId++;
+	}
 }
 
 /** Int-backed abstract used to prove the first policy does not erase semantic identity. */

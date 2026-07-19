@@ -1,9 +1,92 @@
 {
   "model": "typed-ocaml-lowered-place",
   "schemaVersion": 4,
-  "admittedInputRevision": "sha256:5e941be2b0f02a02900555d8e7e05caf9c7a8cea12cf47ba5d8345ffb0195953",
-  "planCount": 7,
+  "admittedInputRevision": "sha256:37a6efb597dcef67f800b6faefc82fdc8704be97e301a2685dda10cbb7ee6089",
+  "planCount": 9,
   "plans": [
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [],
+      "place": {
+        "carrierTypeId": "int",
+        "targetFieldName": "nextId",
+        "ownerTypeName": "ConcatCounter",
+        "targetSymbolId": "Main::ConcatCounter::field::nextId",
+        "receiverRepresentationReason": "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
+        "ownerModuleId": "Main",
+        "id": "place:214f2b6d50aa86df0ac0ef01:place",
+        "semanticTypeId": "Int",
+        "kind": "instance-field",
+        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "receiverSemanticTypeId": "ConcatCounter",
+        "receiverRepresentationId": "place:214f2b6d50aa86df0ac0ef01:representation:receiver",
+        "fieldName": "nextId",
+        "receiverCarrierTypeId": "concatcounter_t",
+        "representationId": "place:214f2b6d50aa86df0ac0ef01:representation:field"
+      },
+      "originId": "place:214f2b6d50aa86df0ac0ef01",
+      "id": "place:214f2b6d50aa86df0ac0ef01:simple-assignment",
+      "source": {
+        "min": 2090,
+        "max": 2091,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "simple-assignment",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:214f2b6d50aa86df0ac0ef01:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:214f2b6d50aa86df0ac0ef01:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "right-hand-side",
+          "id": "place:214f2b6d50aa86df0ac0ef01:occurrence:1",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:214f2b6d50aa86df0ac0ef01:rhs"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:214f2b6d50aa86df0ac0ef01:occurrence:2",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:214f2b6d50aa86df0ac0ef01:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "result",
+          "id": "place:214f2b6d50aa86df0ac0ef01:occurrence:3",
+          "effects": [],
+          "sourceId": "place:214f2b6d50aa86df0ac0ef01:rhs"
+        }
+      ],
+      "result": "assigned-value"
+    },
     {
       "carrierTypeId": "int",
       "runtimeRequirementIds": [
@@ -333,8 +416,8 @@
       "originId": "place:4edb5594811180ac656281e8",
       "id": "place:4edb5594811180ac656281e8:simple-assignment",
       "source": {
-        "min": 1702,
-        "max": 1720,
+        "min": 1790,
+        "max": 1808,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -673,6 +756,105 @@
         }
       ],
       "result": "assigned-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "place:f5313d30360f82a1f365fbd0:runtime:haxe-int32-add"
+      ],
+      "fixity": "postfix",
+      "sourceOperator": "increment",
+      "place": {
+        "carrierTypeId": "int",
+        "targetFieldName": "nextId",
+        "ownerTypeName": "ConcatCounter",
+        "targetSymbolId": "Main::ConcatCounter::field::nextId",
+        "receiverRepresentationReason": "record-backed carrier selected from the semantic receiver type; inherited field ownership remains separate",
+        "ownerModuleId": "Main",
+        "id": "place:f5313d30360f82a1f365fbd0:place",
+        "semanticTypeId": "Int",
+        "kind": "instance-field",
+        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "receiverSemanticTypeId": "ConcatCounter",
+        "receiverRepresentationId": "place:f5313d30360f82a1f365fbd0:representation:receiver",
+        "fieldName": "nextId",
+        "receiverCarrierTypeId": "concatcounter_t",
+        "representationId": "place:f5313d30360f82a1f365fbd0:representation:field"
+      },
+      "delta": 1,
+      "originId": "place:f5313d30360f82a1f365fbd0",
+      "id": "place:f5313d30360f82a1f365fbd0:int-increment",
+      "source": {
+        "min": 2180,
+        "max": 2188,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "receiver",
+          "role": "receiver",
+          "id": "place:f5313d30360f82a1f365fbd0:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:f5313d30360f82a1f365fbd0:receiver"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:f5313d30360f82a1f365fbd0:occurrence:1",
+          "effects": [
+            "read",
+            "throw"
+          ],
+          "sourceId": "place:f5313d30360f82a1f365fbd0:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:f5313d30360f82a1f365fbd0:occurrence:2",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:f5313d30360f82a1f365fbd0:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:f5313d30360f82a1f365fbd0:occurrence:3",
+          "effects": [
+            "write",
+            "throw"
+          ],
+          "sourceId": "place:f5313d30360f82a1f365fbd0:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "result",
+          "id": "place:f5313d30360f82a1f365fbd0:occurrence:4",
+          "effects": [],
+          "sourceId": "place:f5313d30360f82a1f365fbd0:old-value"
+        }
+      ],
+      "result": "old-value"
     }
   ]
 }
