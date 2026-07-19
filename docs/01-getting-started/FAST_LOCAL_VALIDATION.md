@@ -254,11 +254,30 @@ multi-workspace setups and normally should not be set.
 The report includes load averages and short process facts such as compiler
 kind, PID, CPU use, and elapsed time. Only compiler processes actively
 consuming CPU count as competitors; idle warm compiler servers remain outside
-that count. The report deliberately discards full command lines so flags,
-paths, and credentials cannot leak into evidence. Turning the capacity
-decision off changes only whether the expensive command starts; it does not
-relax target selection, retries, timeouts, stage0 restrictions, or pass
-criteria.
+that count.
+
+Memory admission uses an operating-system estimate of memory that can actually
+be reclaimed: macOS `memory_pressure -Q`, Linux `MemAvailable`, or Windows
+available physical memory. Raw free pages remain in the report for diagnosis
+but are not trusted as the decision on macOS. By default, a local heavy run
+keeps the larger of 4 GiB or 10% of total memory available. This covers the
+roughly 1.6–3.5 GiB native compiler peaks measured so far while avoiding the
+false block observed when macOS reported about 100 MiB of raw free pages but
+more than 10 GiB available through inactive/compressed memory. The older
+wrapper path has reached about 7.2 GiB and remains a reason to inspect the
+report before overriding the check.
+
+For a controlled measurement, the thresholds can be changed with
+`HXHX_HEAVY_RUN_MIN_AVAILABLE_MEMORY_GIB` and
+`HXHX_HEAVY_RUN_MIN_AVAILABLE_MEMORY_FRACTION`. Normally, let the already
+running work finish or use the bounded queue. `warn` and `off` remain explicit
+choices when the timing contamination is understood; they do not relax the
+compiler gate itself.
+
+The report deliberately discards full command lines so flags, paths, and
+credentials cannot leak into evidence. Turning the capacity decision off
+changes only whether the expensive command starts; it does not relax target
+selection, retries, timeouts, stage0 restrictions, or pass criteria.
 
 ## Parallelism Policy
 

@@ -175,8 +175,8 @@ function main() {
     if (policy.activeEvidenceLoop.stage0FreeBuildReportSchema !== 'hxhx.stage0-free-build.v1') {
       fail('policy.activeEvidenceLoop.stage0FreeBuildReportSchema must be hxhx.stage0-free-build.v1')
     }
-    if (policy.activeEvidenceLoop.localCapacityPreflightSchema !== 'hxhx.local-capacity-preflight.v1') {
-      fail('policy.activeEvidenceLoop.localCapacityPreflightSchema must be hxhx.local-capacity-preflight.v1')
+    if (policy.activeEvidenceLoop.localCapacityPreflightSchema !== 'hxhx.local-capacity-preflight.v2') {
+      fail('policy.activeEvidenceLoop.localCapacityPreflightSchema must be hxhx.local-capacity-preflight.v2')
     }
     if (policy.activeEvidenceLoop.cooperativeHeavyRunLeaseSchema !== 'haxe-family.heavy-run-lease.v1') {
       fail(
@@ -204,6 +204,8 @@ function main() {
       'localCapacityPreflightFixture',
       'localCapacityQueue',
       'localCapacityQueueFixture',
+      'localMemoryCapacity',
+      'localMemoryCapacityFixture',
       'cooperativeHeavyRunLease',
       'cooperativeHeavyRunLeaseFixture',
       'developerCurrentSourceInputFingerprint',

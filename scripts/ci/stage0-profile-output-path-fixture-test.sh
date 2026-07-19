@@ -71,8 +71,10 @@ mkdir -p "$caller_dir" "$nested_dir"
 regen_capture="$fixture_root/regen-invocations.log"
 idle_capacity_fixture="$fixture_root/capacity-idle.json"
 saturated_capacity_fixture="$fixture_root/capacity-saturated.json"
-printf '%s\n' '{"cpuCount":8,"loadavg":[2,1.5,1],"processes":[]}' >"$idle_capacity_fixture"
-printf '%s\n' '{"cpuCount":8,"loadavg":[20,18,10],"processes":[{"pid":101,"parentPid":1,"cpuPercent":98,"elapsed":"04:00","command":"/tool/haxe build"}]}' >"$saturated_capacity_fixture"
+memory_capacity_fixture="$fixture_root/capacity-memory-pressure.json"
+printf '%s\n' '{"cpuCount":8,"loadavg":[2,1.5,1],"totalMemoryBytes":17179869184,"freeMemoryBytes":104857600,"availableMemoryBytes":8589934592,"availableMemoryProvenance":"fixture_available","availableMemoryReliable":true,"processes":[]}' >"$idle_capacity_fixture"
+printf '%s\n' '{"cpuCount":8,"loadavg":[20,18,10],"totalMemoryBytes":17179869184,"freeMemoryBytes":104857600,"availableMemoryBytes":8589934592,"availableMemoryProvenance":"fixture_available","availableMemoryReliable":true,"processes":[{"pid":101,"parentPid":1,"cpuPercent":98,"elapsed":"04:00","command":"/tool/haxe build"}]}' >"$saturated_capacity_fixture"
+printf '%s\n' '{"cpuCount":8,"loadavg":[2,1.5,1],"totalMemoryBytes":17179869184,"freeMemoryBytes":104857600,"availableMemoryBytes":2147483648,"availableMemoryProvenance":"fixture_available","availableMemoryReliable":true,"processes":[]}' >"$memory_capacity_fixture"
 
 run_profile() {
 	local out_dir="$1"
@@ -163,6 +165,21 @@ if (report.status !== "blocked" || report.exitCode !== 75) process.exit(1)
 ' "$blocked_out/capacity_report.json" || fail "blocked capacity report did not preserve the decision"
 grep -F "HXHX_LOCAL_CAPACITY:BLOCKED" "$fixture_root/blocked.log" >/dev/null \
 	|| fail "blocked profile did not explain why work stopped"
+
+memory_blocked_out="$fixture_root/blocked-memory-capacity"
+before_memory_regen_count="$(wc -l <"$regen_capture" | tr -d ' ')"
+set +e
+HXHX_STAGE0_PROFILE_FIXTURE_CAPACITY_PATH="$memory_capacity_fixture" \
+	run_profile "$memory_blocked_out" >"$fixture_root/blocked-memory.log" 2>&1
+memory_blocked_code="$?"
+set -e
+[ "$memory_blocked_code" = "75" ] \
+	|| fail "memory-only capacity pressure returned $memory_blocked_code instead of retryable exit 75"
+after_memory_regen_count="$(wc -l <"$regen_capture" | tr -d ' ')"
+[ "$after_memory_regen_count" = "$before_memory_regen_count" ] \
+	|| fail "memory-only capacity pressure invoked expensive regeneration"
+grep -F "observations=available_memory" "$fixture_root/blocked-memory.log" >/dev/null \
+	|| fail "memory-only block did not identify available-memory pressure"
 
 cancelled_out="$fixture_root/cancelled-profile"
 cancelled_lease="$fixture_root/cancelled-profile.lease.json"

@@ -34,6 +34,9 @@ function state(overrides = {}) {
     loadavg: [2, 1.5, 1],
     totalMemoryBytes: 16 * 1024 * 1024 * 1024,
     freeMemoryBytes: 8 * 1024 * 1024 * 1024,
+    availableMemoryBytes: 8 * 1024 * 1024 * 1024,
+    availableMemoryProvenance: 'fixture_available',
+    availableMemoryReliable: true,
     ci: false,
     competitors: [],
     collectionErrors: [],
@@ -74,6 +77,53 @@ const spike = evaluateCapacity(state({ loadavg: [31, 4, 3] }), options())
 assert.strictEqual(spike.status, 'blocked')
 assert.deepStrictEqual(spike.observations, ['load_spike'])
 
+const memoryOnly = evaluateCapacity(
+  state({
+    freeMemoryBytes: 100 * 1024 * 1024,
+    availableMemoryBytes: 2 * 1024 * 1024 * 1024,
+  }),
+  options()
+)
+assert.strictEqual(memoryOnly.status, 'blocked')
+assert.deepStrictEqual(memoryOnly.observations, ['available_memory'])
+assert.strictEqual(memoryOnly.memory.provenance, 'fixture_available')
+assert.strictEqual(memoryOnly.memory.thresholdGiB, 4)
+
+const cpuAndMemory = evaluateCapacity(
+  { ...saturatedState, availableMemoryBytes: 2 * 1024 * 1024 * 1024 },
+  options()
+)
+assert.deepStrictEqual(cpuAndMemory.observations, ['sustained_load', 'load_spike', 'available_memory'])
+
+const reclaimableMacLike = evaluateCapacity(
+  state({
+    freeMemoryBytes: 100 * 1024 * 1024,
+    availableMemoryBytes: 7 * 1024 * 1024 * 1024,
+    availableMemoryProvenance: 'macos_memory_pressure',
+  }),
+  options()
+)
+assert.strictEqual(reclaimableMacLike.status, 'pass')
+
+const unavailableMemory = evaluateCapacity(
+  state({ availableMemoryBytes: Number.NaN, availableMemoryReliable: false }),
+  options()
+)
+assert.strictEqual(unavailableMemory.status, 'pass')
+assert.strictEqual(unavailableMemory.memory.status, 'unavailable')
+
+const ciMemoryWarning = evaluateCapacity(
+  state({ ci: true, availableMemoryBytes: 2 * 1024 * 1024 * 1024 }),
+  options('auto')
+)
+assert.strictEqual(ciMemoryWarning.status, 'warning')
+
+const disabledMemory = evaluateCapacity(
+  state({ availableMemoryBytes: 2 * 1024 * 1024 * 1024 }),
+  options('off')
+)
+assert.strictEqual(disabledMemory.status, 'off')
+
 const parsedProcesses = parseProcessTable(
   [
     '101 1 97.5 00:10 /tool/haxe --token never-report-this',
@@ -97,6 +147,11 @@ try {
     JSON.stringify({
       cpuCount: 8,
       loadavg: [20, 18, 10],
+      totalMemoryBytes: 16 * 1024 * 1024 * 1024,
+      freeMemoryBytes: 100 * 1024 * 1024,
+      availableMemoryBytes: 8 * 1024 * 1024 * 1024,
+      availableMemoryProvenance: 'fixture_available',
+      availableMemoryReliable: true,
       processes: [
         {
           pid: 101,
@@ -120,6 +175,7 @@ try {
   assert.match(local.stdout, /HXHX_LOCAL_CAPACITY:BLOCKED/)
   const stored = fs.readFileSync(reportPath, 'utf8')
   assert.ok(!stored.includes('never-report-this'))
+  assert.strictEqual(JSON.parse(stored).schema, 'hxhx.local-capacity-preflight.v2')
   assert.strictEqual(JSON.parse(stored).status, 'blocked')
 
   const ci = spawnSync(process.execPath, [script, '--policy', 'auto', '--fixture', fixturePath], {
@@ -139,6 +195,37 @@ try {
   })
   assert.strictEqual(ciWarning.status, 0, ciWarning.stderr)
   assert.match(ciWarning.stdout, /HXHX_LOCAL_CAPACITY:WARNING/)
+
+  const memoryFixturePath = path.join(temp, 'memory-pressure.json')
+  fs.writeFileSync(
+    memoryFixturePath,
+    JSON.stringify({
+      cpuCount: 8,
+      loadavg: [2, 1.5, 1],
+      totalMemoryBytes: 16 * 1024 * 1024 * 1024,
+      freeMemoryBytes: 100 * 1024 * 1024,
+      availableMemoryBytes: 2 * 1024 * 1024 * 1024,
+      availableMemoryProvenance: 'fixture_available',
+      availableMemoryReliable: true,
+      processes: [],
+    })
+  )
+  const memoryBlocked = spawnSync(
+    process.execPath,
+    [script, '--policy', 'auto', '--fixture', memoryFixturePath],
+    { cwd: root, env: localEnv, encoding: 'utf8' }
+  )
+  assert.strictEqual(memoryBlocked.status, BLOCKED_EXIT_CODE, memoryBlocked.stderr)
+  assert.match(memoryBlocked.stdout, /memory=pressured/)
+  assert.match(memoryBlocked.stderr, /observations=available_memory/)
+
+  const memoryOff = spawnSync(
+    process.execPath,
+    [script, '--policy', 'off', '--fixture', memoryFixturePath],
+    { cwd: root, env: localEnv, encoding: 'utf8' }
+  )
+  assert.strictEqual(memoryOff.status, 0, memoryOff.stderr)
+  assert.match(memoryOff.stdout, /HXHX_LOCAL_CAPACITY:OFF/)
 
   const invalid = spawnSync(process.execPath, [script, '--policy', 'surprise'], {
     cwd: root,

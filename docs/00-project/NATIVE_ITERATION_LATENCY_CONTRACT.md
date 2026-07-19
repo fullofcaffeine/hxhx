@@ -102,11 +102,13 @@ performance claim must use measured medians from the relevant runner class.
     "nativePluginLoopReportSchema": "hxhx.native-plugin-loop.v1",
     "nativePluginLoopReportValidator": "scripts/ci/native-plugin-loop-benchmark-report.js",
     "nativePluginLoopReportRunner": "scripts/hxhx/bench-native-plugin-loop.sh",
-    "localCapacityPreflightSchema": "hxhx.local-capacity-preflight.v1",
+    "localCapacityPreflightSchema": "hxhx.local-capacity-preflight.v2",
     "localCapacityPreflight": "scripts/hxhx/check-local-capacity.js",
     "localCapacityPreflightFixture": "scripts/ci/local-capacity-preflight-fixture-test.js",
     "localCapacityQueue": "scripts/hxhx/local-capacity-queue.js",
     "localCapacityQueueFixture": "scripts/ci/local-capacity-queue-fixture-test.js",
+    "localMemoryCapacity": "scripts/hxhx/local-memory-capacity.js",
+    "localMemoryCapacityFixture": "scripts/ci/local-memory-capacity-fixture-test.js",
     "cooperativeHeavyRunLeaseSchema": "haxe-family.heavy-run-lease.v1",
     "cooperativeHeavyRunLease": "scripts/hxhx/local-heavy-run-lease.js",
     "cooperativeHeavyRunLeaseFixture": "scripts/ci/local-heavy-run-lease-fixture-test.js",
@@ -174,6 +176,7 @@ performance claim must use measured medians from the relevant runner class.
         "scripts/hxhx/check-local-capacity.js",
         "scripts/ci/local-capacity-preflight-fixture-test.js",
         "scripts/hxhx/local-capacity-queue.js",
+        "scripts/hxhx/local-memory-capacity.js",
         "scripts/hxhx/local-heavy-run-lease.js",
         "docs/00-project/CI_GATES.md"
       ]
@@ -214,7 +217,7 @@ The default `auto` policy stops a saturated local run with retryable exit code
 `75`; the same policy only warns in CI because CI capacity is controlled by the
 runner platform. An explicit `off` accepts the expected slowdown but does not
 change target selection, retries, timeouts, stage0 rules, or any correctness
-claim. Optional JSON reports use `hxhx.local-capacity-preflight.v1` and never
+claim. Optional JSON reports use `hxhx.local-capacity-preflight.v2` and never
 retain full process command lines.
 
 Local maintainers may set `HXHX_HEAVY_RUN_WAIT_SECONDS` to replace manual
@@ -225,6 +228,15 @@ owning shell by PID plus process start time, has a heartbeat and stale-owner
 recovery, supports nested handoff, and never sends signals to competing work.
 The final capacity report records admission or timeout and total queue time.
 CI remains under runner scheduling and never acquires the local lease.
+
+Capacity reports also distinguish raw free pages from a reviewed available-
+memory signal. macOS uses `memory_pressure -Q`, Linux uses `MemAvailable`, and
+Windows uses available physical memory. An unreviewed fallback is reported as
+unavailable and does not fabricate a block. Local admission reserves the larger
+of 4 GiB and 10% of total memory: native compiler evidence is roughly 1.6–3.5
+GiB, while the 7.2 GiB historical wrapper peak remains visible context rather
+than a universal requirement. Threshold overrides are evidence controls, not
+compiler-correctness controls.
 
 The fast current-source selector first asks the strict validator for an exact
 commit/worktree match. If that fails, its developer-only fallback may reuse the

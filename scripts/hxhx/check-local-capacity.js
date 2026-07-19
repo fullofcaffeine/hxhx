@@ -23,6 +23,12 @@ const {
   leaseSummary,
   releaseLease,
 } = require('./local-heavy-run-lease.js')
+const {
+  DEFAULT_MIN_AVAILABLE_FRACTION,
+  DEFAULT_MIN_AVAILABLE_GIB,
+  assessMemoryCapacity,
+  collectAvailableMemory,
+} = require('./local-memory-capacity.js')
 
 const DEFAULT_MAX_LOAD_PER_CPU = 1.5
 const MIN_COMPETING_CPU_PERCENT = 0.1
@@ -37,6 +43,8 @@ Options:
   --policy <auto|require|warn|off>  Local auto=stop, CI auto=warn (default: auto)
   --label <text>                    Human-readable command/workload label
   --max-load-per-cpu <number>       Sustained normalized load limit (default: 1.5)
+  --min-available-memory-gib <n>    Absolute available-memory reserve (default: 4)
+  --min-available-memory-fraction <n>  Proportional reserve (default: 0.1)
   --wait-seconds <number>           Wait this long for local capacity (default: 0)
   --poll-seconds <number>           Capacity resample interval (default: 10)
   --lease-owner-pid <pid>           Share the local heavy-run lease while waiting
@@ -49,6 +57,8 @@ Options:
 Environment equivalents:
   HXHX_HEAVY_RUN_CAPACITY_POLICY
   HXHX_HEAVY_RUN_MAX_LOAD_PER_CPU
+  HXHX_HEAVY_RUN_MIN_AVAILABLE_MEMORY_GIB
+  HXHX_HEAVY_RUN_MIN_AVAILABLE_MEMORY_FRACTION
   HXHX_HEAVY_RUN_WAIT_SECONDS
   HXHX_HEAVY_RUN_POLL_SECONDS
   HXHX_HEAVY_RUN_LEASE_FILE
@@ -69,6 +79,10 @@ function parseArgs(argv, env = process.env) {
     policy: env.HXHX_HEAVY_RUN_CAPACITY_POLICY || 'auto',
     label: 'heavy-local-run',
     maxLoadPerCpu: env.HXHX_HEAVY_RUN_MAX_LOAD_PER_CPU || String(DEFAULT_MAX_LOAD_PER_CPU),
+    minAvailableMemoryGiB:
+      env.HXHX_HEAVY_RUN_MIN_AVAILABLE_MEMORY_GIB || String(DEFAULT_MIN_AVAILABLE_GIB),
+    minAvailableMemoryFraction:
+      env.HXHX_HEAVY_RUN_MIN_AVAILABLE_MEMORY_FRACTION || String(DEFAULT_MIN_AVAILABLE_FRACTION),
     waitSeconds: env.HXHX_HEAVY_RUN_WAIT_SECONDS || '0',
     pollSeconds: env.HXHX_HEAVY_RUN_POLL_SECONDS || '10',
     leaseOwnerPid: '',
@@ -96,6 +110,16 @@ function parseArgs(argv, env = process.env) {
     }
     if (arg === '--max-load-per-cpu') {
       options.maxLoadPerCpu = readValue(argv, i, arg)
+      i += 1
+      continue
+    }
+    if (arg === '--min-available-memory-gib') {
+      options.minAvailableMemoryGiB = readValue(argv, i, arg)
+      i += 1
+      continue
+    }
+    if (arg === '--min-available-memory-fraction') {
+      options.minAvailableMemoryFraction = readValue(argv, i, arg)
       i += 1
       continue
     }
@@ -142,6 +166,20 @@ function parseArgs(argv, env = process.env) {
   options.maxLoadPerCpu = Number(options.maxLoadPerCpu)
   if (!Number.isFinite(options.maxLoadPerCpu) || options.maxLoadPerCpu <= 0) {
     fail(`max load per CPU must be a positive number, received ${options.maxLoadPerCpu}`)
+  }
+  options.minAvailableMemoryGiB = Number(options.minAvailableMemoryGiB)
+  if (!Number.isFinite(options.minAvailableMemoryGiB) || options.minAvailableMemoryGiB <= 0) {
+    fail(`minimum available-memory GiB must be positive, received ${options.minAvailableMemoryGiB}`)
+  }
+  options.minAvailableMemoryFraction = Number(options.minAvailableMemoryFraction)
+  if (
+    !Number.isFinite(options.minAvailableMemoryFraction) ||
+    options.minAvailableMemoryFraction <= 0 ||
+    options.minAvailableMemoryFraction > 1
+  ) {
+    fail(
+      `minimum available-memory fraction must be within (0, 1], received ${options.minAvailableMemoryFraction}`
+    )
   }
   options.waitSeconds = Number(options.waitSeconds)
   if (!Number.isFinite(options.waitSeconds) || options.waitSeconds < 0) {
@@ -244,6 +282,11 @@ function normalizeFixtureProcess(row) {
 }
 
 function normalizeFixtureState(fixture) {
+  const availableMemoryBytes = Number(fixture.availableMemoryBytes)
+  const availableMemoryReliable =
+    fixture.availableMemoryReliable === undefined
+      ? Number.isFinite(availableMemoryBytes) && availableMemoryBytes >= 0
+      : Boolean(fixture.availableMemoryReliable)
   return {
     source: 'fixture',
     timestamp: fixture.timestamp || '2000-01-01T00:00:00.000Z',
@@ -251,6 +294,9 @@ function normalizeFixtureState(fixture) {
     loadavg: fixture.loadavg.map(Number),
     totalMemoryBytes: Number(fixture.totalMemoryBytes || 0),
     freeMemoryBytes: Number(fixture.freeMemoryBytes || 0),
+    availableMemoryBytes,
+    availableMemoryProvenance: String(fixture.availableMemoryProvenance || 'fixture'),
+    availableMemoryReliable,
     ci: Boolean(fixture.ci),
     competitors: (fixture.processes || [])
       .map(normalizeFixtureProcess)
@@ -261,16 +307,21 @@ function normalizeFixtureState(fixture) {
 
 function readLiveHostState() {
   const processCollection = collectCompilerProcesses()
+  const totalMemoryBytes = os.totalmem()
+  const memory = collectAvailableMemory(process.platform, totalMemoryBytes)
   return {
     source: 'host',
     timestamp: new Date().toISOString(),
     cpuCount: typeof os.availableParallelism === 'function' ? os.availableParallelism() : os.cpus().length,
     loadavg: os.loadavg(),
-    totalMemoryBytes: os.totalmem(),
+    totalMemoryBytes,
     freeMemoryBytes: os.freemem(),
+    availableMemoryBytes: memory.availableMemoryBytes,
+    availableMemoryProvenance: memory.provenance,
+    availableMemoryReliable: memory.reliable,
     ci: isCiEnvironment(),
     competitors: processCollection.processes,
-    collectionErrors: processCollection.error ? [processCollection.error] : [],
+    collectionErrors: [processCollection.error, memory.error].filter(Boolean),
   }
 }
 
@@ -299,6 +350,7 @@ function evaluateCapacity(state, options) {
   const normalized = state.loadavg.slice(0, 3).map(value => value / state.cpuCount)
   const sustainedLoadPerCpu = Math.min(normalized[0], normalized[1])
   const spikeLimit = options.maxLoadPerCpu * 1.5
+  const memory = assessMemoryCapacity(state, options)
   const observations = []
   if (sustainedLoadPerCpu >= options.maxLoadPerCpu) {
     observations.push('sustained_load')
@@ -306,6 +358,7 @@ function evaluateCapacity(state, options) {
   if (normalized[0] >= spikeLimit) {
     observations.push('load_spike')
   }
+  if (memory.status === 'pressured') observations.push('available_memory')
 
   const requestedPolicy = options.policy
   const resolvedPolicy = resolvePolicy(requestedPolicy, state.ci)
@@ -322,7 +375,7 @@ function evaluateCapacity(state, options) {
   }
 
   return {
-    schema: 'hxhx.local-capacity-preflight.v1',
+    schema: 'hxhx.local-capacity-preflight.v2',
     label: options.label,
     timestamp: state.timestamp,
     source: state.source,
@@ -334,6 +387,9 @@ function evaluateCapacity(state, options) {
     thresholds: {
       maxSustainedLoadPerCpu: options.maxLoadPerCpu,
       maxSpikeLoadPerCpu: spikeLimit,
+      minAvailableMemoryBytes: memory.thresholdBytes,
+      minAvailableMemoryGiB: memory.thresholdGiB,
+      minAvailableMemoryFraction: memory.minimumFraction,
     },
     host: {
       ci: state.ci,
@@ -348,6 +404,7 @@ function evaluateCapacity(state, options) {
       totalMemoryBytes: state.totalMemoryBytes,
       freeMemoryBytes: state.freeMemoryBytes,
     },
+    memory,
     competingCompilerProcessCount: state.competitors.length,
     competingCompilerProcesses: state.competitors.slice(0, 12),
     collectionErrors: state.collectionErrors,
@@ -373,6 +430,7 @@ function printReport(report, jsonOut) {
     `HXHX_LOCAL_CAPACITY:${marker} label=${JSON.stringify(report.label)} policy=${report.resolvedPolicy} ` +
       `cpus=${report.host.cpuCount} load1=${report.host.load1} load5=${report.host.load5} ` +
       `load1_per_cpu=${report.host.load1PerCpu} sustained_per_cpu=${report.host.sustainedLoadPerCpu} ` +
+      `available_gib=${report.memory.availableMemoryGiB} memory=${report.memory.status} ` +
       `competitors=${report.competingCompilerProcessCount} queue=${report.queue.outcome} ` +
       `wait_ms=${report.queue.waitedMs}`
   )
@@ -386,7 +444,8 @@ function printReport(report, jsonOut) {
           : 'continuing with a warning'
     console.error(
       `Heavy-run capacity ${action}: observations=${report.observations.join(',')} ` +
-        `limit=${report.thresholds.maxSustainedLoadPerCpu} load-per-CPU.`
+        `load_limit=${report.thresholds.maxSustainedLoadPerCpu} load-per-CPU ` +
+        `memory_reserve=${report.memory.thresholdGiB}GiB source=${report.memory.provenance}.`
     )
     for (const row of report.competingCompilerProcesses.slice(0, 8)) {
       console.error(
