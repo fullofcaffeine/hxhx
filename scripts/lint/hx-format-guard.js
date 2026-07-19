@@ -12,10 +12,10 @@ const { spawn, spawnSync } = require('child_process')
  *
  * Haxe Formatter 1.18.0 does not expose an internal jobs flag, and one repo-wide
  * formatter invocation is one of the slower local guards. This helper keeps the
- * formatter as the source of truth, but shards the same tracked file list into
- * deterministic, line-balanced chunks and runs independent `haxelib run formatter
- * --check` processes in parallel. Set HX_FORMAT_JOBS=1 for serial debugging or a
- * positive integer to override the default auto cap.
+ * formatter as the source of truth, but isolates oversized files from ordinary
+ * line-balanced chunks and runs those deterministic tasks through a bounded work
+ * queue. Set HX_FORMAT_JOBS=1 for serial debugging or a positive integer to
+ * override the default auto cap.
  */
 
 function fail(message) {
@@ -97,6 +97,34 @@ function balancedBuckets(files, jobs) {
   return buckets.filter(bucket => bucket.files.length > 0)
 }
 
+/**
+ * Builds deterministic formatter tasks without pretending that line count is a
+ * precise cost model. Files large enough to dominate a worker become singleton
+ * tasks; the rest stay line-balanced. The bounded runner can then reuse workers
+ * as quick tasks finish instead of making one slow file own unrelated work.
+ */
+function buildFormatterBuckets(files, jobs) {
+  const totalLines = files.reduce((sum, file) => sum + file.lines, 0)
+  const oversizedThreshold = Math.max(1, Math.ceil(totalLines / (jobs * 4)))
+  const oversized = []
+  const ordinary = []
+
+  for (const file of files) {
+    if (jobs > 1 && file.lines >= oversizedThreshold) {
+      oversized.push({ files: [file.path], lines: file.lines })
+    } else {
+      ordinary.push(file)
+    }
+  }
+
+  const ordinaryBuckets = ordinary.length > 0 ? balancedBuckets(ordinary, Math.min(jobs, ordinary.length)) : []
+  return {
+    buckets: oversized.concat(ordinaryBuckets),
+    oversizedThreshold,
+    isolatedFileCount: oversized.length
+  }
+}
+
 function runFormatter(root, bucket, index, total) {
   return new Promise(resolve => {
     const args = ['run', 'formatter']
@@ -127,9 +155,14 @@ function printFormatterOutput(result) {
   if (output) console.error(output)
 }
 
-async function runFormatCheck(root, buckets) {
+/**
+ * Executes the complete formatter plan and reports results in stable task order.
+ * Failures include the exact owning file list, while worker summaries expose the
+ * effective load balance without making completion order part of correctness.
+ */
+async function runFormatCheck(root, buckets, jobs) {
   const started = Date.now()
-  const results = await Promise.all(buckets.map((bucket, index) => runFormatter(root, bucket, index + 1, buckets.length)))
+  const results = await runFormatterQueue(root, buckets, Math.min(buckets.length, jobs))
   let failed = false
   for (const result of results) {
     const seconds = (result.elapsedMs / 1000).toFixed(3)
@@ -139,12 +172,50 @@ async function runFormatCheck(root, buckets) {
     )
     if (result.error || result.code !== 0) {
       failed = true
+      console.error(`[guard:hx-format] chunk ${result.index}/${result.total} files:\n${result.bucket.files.join('\n')}`)
       if (result.error) console.error(`[guard:hx-format] ERROR: ${result.error.message}`)
       printFormatterOutput(result)
     }
   }
+  const workerTotals = new Map()
+  for (const result of results) {
+    const current = workerTotals.get(result.worker) || { elapsedMs: 0, tasks: 0, files: 0, lines: 0 }
+    current.elapsedMs += result.elapsedMs
+    current.tasks += 1
+    current.files += result.bucket.files.length
+    current.lines += result.bucket.lines
+    workerTotals.set(result.worker, current)
+  }
+  for (const [worker, summary] of [...workerTotals.entries()].sort((left, right) => left[0] - right[0])) {
+    console.log(
+      `[guard:hx-format] worker ${worker}/${workerTotals.size} tasks=${summary.tasks} files=${summary.files} lines=${summary.lines} elapsed=${(summary.elapsedMs / 1000).toFixed(3)}s`
+    )
+  }
   if (failed) process.exit(1)
   return Date.now() - started
+}
+
+/**
+ * Runs deterministic formatter tasks with at most `jobs` child processes. Task
+ * membership and diagnostics stay stable even though a free worker may begin the
+ * next task as soon as its previous formatter process exits.
+ */
+async function runFormatterQueue(root, buckets, jobs, runner = runFormatter) {
+  const results = new Array(buckets.length)
+  let nextIndex = 0
+
+  async function work(worker) {
+    while (nextIndex < buckets.length) {
+      const index = nextIndex
+      nextIndex += 1
+      const result = await runner(root, buckets[index], index + 1, buckets.length)
+      results[index] = { ...result, worker }
+    }
+  }
+
+  const workerCount = Math.min(jobs, buckets.length)
+  await Promise.all(Array.from({ length: workerCount }, (_unused, index) => work(index + 1)))
+  return results
 }
 
 function hashFile(file) {
@@ -194,12 +265,22 @@ async function main() {
     .sort((a, b) => b.lines - a.lines || a.path.localeCompare(b.path))
   const totalLines = files.reduce((sum, file) => sum + file.lines, 0)
   const jobs = parseJobs(process.env.HX_FORMAT_JOBS || 'auto', files.length)
-  const buckets = balancedBuckets(files, jobs)
+  const plan = buildFormatterBuckets(files, jobs)
 
-  console.log(`[guard:hx-format] Checking Haxe formatting with jobs=${buckets.length} files=${files.length} lines=${totalLines}...`)
-  const elapsedMs = await runFormatCheck(root, buckets)
+  console.log(
+    `[guard:hx-format] Checking Haxe formatting with jobs=${jobs} tasks=${plan.buckets.length} isolated=${plan.isolatedFileCount} isolate_at_lines=${plan.oversizedThreshold} files=${files.length} lines=${totalLines}...`
+  )
+  const elapsedMs = await runFormatCheck(root, plan.buckets, jobs)
   checkSentinelDeterminism(root)
   console.log(`[guard:hx-format] OK: Haxe formatting is clean. elapsed=${(elapsedMs / 1000).toFixed(3)}s`)
 }
 
-main().catch(error => fail(error && error.stack ? error.stack : String(error)))
+if (require.main === module) {
+  main().catch(error => fail(error && error.stack ? error.stack : String(error)))
+}
+
+module.exports = {
+  balancedBuckets,
+  buildFormatterBuckets,
+  runFormatterQueue
+}

@@ -34,14 +34,16 @@ only a stable npm/CI entrypoint. It moves to the repo root and calls
 `scripts/lint/hx-format-guard.js`.
 
 `hx-format-guard.js` still delegates to `haxelib run formatter --check`. It is
-faster than one huge formatter process because it splits tracked `.hx` files into
-deterministic, line-balanced chunks and checks those chunks in parallel.
+faster than one huge formatter process because it isolates oversized files,
+line-balances the remainder, and feeds those deterministic tasks to a bounded
+worker queue. A worker that finishes a quick task can continue immediately, and
+the official formatter still checks every tracked Haxe file exactly once.
 
 Useful knobs:
 
 ```bash
 HX_FORMAT_JOBS=1 npm run guard:hx-format   # serial, easier to debug
-HX_FORMAT_JOBS=8 npm run guard:hx-format   # explicit parallel chunk count
+HX_FORMAT_JOBS=8 npm run guard:hx-format   # explicit concurrent-process limit
 ```
 
 ## Current-Source hxhx Builds

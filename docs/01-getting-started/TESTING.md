@@ -233,11 +233,14 @@ script is only the stable npm/CI entrypoint: it moves to the repo root and calls
 `scripts/lint/hx-format-guard.js`.
 
 The Node helper does not define its own style rules. It still delegates to
-`haxelib run formatter --check`; it just splits tracked `.hx` files into
-deterministic, line-balanced chunks and checks those chunks in parallel because
-Haxe Formatter does not provide a built-in jobs flag. The default `auto` mode caps
-at four jobs. Use `HX_FORMAT_JOBS=1 npm run guard:hx-format` when you want serial
-debug output, or set `HX_FORMAT_JOBS=<n>` to choose a specific chunk count.
+`haxelib run formatter --check`. It isolates files large enough to dominate one
+formatter process, line-balances the remaining files, and feeds those deterministic
+tasks to a bounded worker queue because Haxe Formatter does not provide a built-in
+jobs flag. A free worker can start the next task without waiting for the slowest
+file, while every tracked Haxe file is still checked exactly once. The default
+`auto` mode caps at four concurrent formatter processes. Use
+`HX_FORMAT_JOBS=1 npm run guard:hx-format` when you want serial debug output, or set
+`HX_FORMAT_JOBS=<n>` to choose a specific concurrency limit.
 
 For the fast-vs-full validation map, current-source `hxhx` build reuse, and
 timeout helper policy, see:
