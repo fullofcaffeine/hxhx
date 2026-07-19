@@ -1,3 +1,35 @@
+# [0.20.0](https://github.com/fullofcaffeine/hxhx/compare/v0.19.0...v0.20.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* **ocaml:** preserve typed-place metadata in strings ([e9cdf1f](https://github.com/fullofcaffeine/hxhx/commit/e9cdf1f1272836790c9f37730d54aefc6bc2faf3))
+* **tooling:** classify Haxe servers safely ([a8f4437](https://github.com/fullofcaffeine/hxhx/commit/a8f4437fa917180fcab8dd76f3da7a846a2901fc))
+
+
+### Features
+
+* **ocaml:** lower array updates through typed places ([2ec5fa6](https://github.com/fullofcaffeine/hxhx/commit/2ec5fa62f25b1df441aa1a82f4eb4a9c52e25f76))
+* **ocaml:** lower compound field addition through places ([659f37e](https://github.com/fullofcaffeine/hxhx/commit/659f37ec0a0443a790d7d265a3ff00fd9e87aafe))
+* **ocaml:** lower field assignments through typed places ([db5f43d](https://github.com/fullofcaffeine/hxhx/commit/db5f43dd393add6703157994e93900e0c428d34f))
+* **ocaml:** lower field decrement through typed places ([c841428](https://github.com/fullofcaffeine/hxhx/commit/c841428927d7147ac37ca5e36ee653227b38a072))
+* **ocaml:** lower field increment through typed places ([92915b9](https://github.com/fullofcaffeine/hxhx/commit/92915b993cfa1ddbd21e2773ef25f9135a46fe47))
+* **ocaml:** lower static addition through typed places ([117e555](https://github.com/fullofcaffeine/hxhx/commit/117e5552f9e3809d0e33af65dba1569a0ef27000))
+* **ocaml:** lower static field assignment through typed places ([004f0a8](https://github.com/fullofcaffeine/hxhx/commit/004f0a819d706bdf3693d8075589b0c09ff4faad))
+* **ocaml:** lower static updates through typed places ([81054a9](https://github.com/fullofcaffeine/hxhx/commit/81054a9ea3d29c15a4edf98be5907e28508bb0d9))
+* **ocaml:** preserve array assignment order ([86d2caa](https://github.com/fullofcaffeine/hxhx/commit/86d2caa2d79d678410330a6ba34408ef44140456))
+* **ocaml:** preserve array compound order ([b587c97](https://github.com/fullofcaffeine/hxhx/commit/b587c978b65edb85ef393b9c427a1d2043f411aa))
+* **tooling:** block memory-pressured heavy gates ([f2756ac](https://github.com/fullofcaffeine/hxhx/commit/f2756ac9b33d9365b0e25cce586784f8f0418477))
+* **tooling:** coordinate queued compiler gates ([41fe774](https://github.com/fullofcaffeine/hxhx/commit/41fe774f4e5cc8f2f6251056dd8d9b154b326510))
+* **tooling:** prove cross-repository gate leases ([9f069f2](https://github.com/fullofcaffeine/hxhx/commit/9f069f26feab400ef1aa3e9bec6f8b46a7010e1c))
+* **tooling:** queue saturated local gates ([d5c70eb](https://github.com/fullofcaffeine/hxhx/commit/d5c70eb5be7e1889585baf60dd8e7fa732641ccd))
+
+
+### Performance Improvements
+
+* **ci:** shard core tests across clean runners ([56310df](https://github.com/fullofcaffeine/hxhx/commit/56310df380f5094d9e4eac664ec2f03c5de52c90))
+* **tooling:** keep formatter workers busy ([12307bc](https://github.com/fullofcaffeine/hxhx/commit/12307bcdfc11cdb50058ff317643b7b75e4bf381))
+
 # [0.19.0](https://github.com/fullofcaffeine/hxhx/compare/v0.18.19...v0.19.0) (2026-07-18)
 
 
