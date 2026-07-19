@@ -58,6 +58,27 @@ lane. `SKIP` is informational, such as an optional hxhx host or a future
 manifest that the current package does not claim to ship. The doctor never
 installs packages or changes project files.
 
+## Create a starter project
+
+The installed package includes tested application and library templates:
+
+```bash
+haxelib run reflaxe.ocaml new app my-app --name "My App"
+haxelib run reflaxe.ocaml new library my-library --name "My Library"
+```
+
+The destination must have an existing parent and must not already exist. The
+command renders the complete project in a sibling staging directory and renames
+it into place only after every file is written, so it never merges with or
+overwrites user files.
+
+The application template builds and runs a native executable. The library
+template contains a Haxe-facing package and builds a library-only Dune project;
+it does not present inferred `.mli` files as a stable public OCaml ABI. Binding,
+native-adapter, plugin, and target scaffolds remain unavailable until their
+typed manifests and shared SDK contracts land, and requests for them fail
+without creating a directory.
+
 ## Fast build and watch loop
 
 For an installed package, run the project's normal `build.hxml` through the

@@ -2511,6 +2511,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#end
 
 		final noDune = haxe.macro.Context.defined("ocaml_no_dune");
+		final duneLayoutValue = haxe.macro.Context.definedValue("ocaml_dune_layout");
 		if (!noDune) {
 			final resolvedMainModuleId = resolveMainModuleIdForDune();
 			final duneLibsValue = haxe.macro.Context.definedValue("ocaml_dune_libraries");
@@ -2518,7 +2519,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 				.map(s -> StringTools.trim(s))
 				.filter(s -> s.length > 0);
 
-			final duneLayoutValue = haxe.macro.Context.definedValue("ocaml_dune_layout");
 			final pluginRunMainValue = haxe.macro.Context.definedValue("ocaml_plugin_run_main");
 			final pluginRunsMain = haxe.macro.Context.defined("ocaml_plugin_run_main")
 				&& (pluginRunMainValue == null || StringTools.trim(pluginRunMainValue) != "0");
@@ -2649,6 +2649,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			outDir: outDir,
 			exeName: exeName,
 			mode: mode,
+			duneLayout: duneLayoutValue,
 			run: shouldRun,
 			strict: strictAny,
 			mli: mliMode,

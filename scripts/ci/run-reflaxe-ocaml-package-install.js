@@ -58,6 +58,9 @@ const summary = {
 		doctorSchemaVersion: null,
 		sourceGenerationReady: false,
 		nativeBuildReady: false,
+		scaffoldCommandPassed: false,
+		scaffoldApplicationPassed: false,
+		scaffoldLibraryPassed: false,
 		buildCommandPassed: false
 	},
 	externalApplication: {
@@ -498,6 +501,57 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		fail('installed reflaxe.ocaml doctor did not return valid JSON')
 	}
 	Object.assign(summary.tooling, validateInstalledDoctor(doctor, packageMetadata.version))
+
+	const scaffoldRoot = path.join(tempRoot, 'scaffold-app')
+	const scaffold = requireSuccess('installed-scaffold-app', runStep(
+		'installed-scaffold-app',
+		haxelibBinary,
+		['run', 'reflaxe.ocaml', 'new', 'app', scaffoldRoot, '--name', 'Installed Scaffold'],
+		{cwd: appRoot, env}
+	))
+	if (!scaffold.stdout.includes('REFLAXE_OCAML_SCAFFOLD:PASS kind=app')) {
+		fail('installed reflaxe.ocaml scaffold command did not emit its success marker')
+	}
+	summary.tooling.scaffoldCommandPassed = true
+	const scaffoldBuild = requireSuccess('installed-scaffold-build', runStep(
+		'installed-scaffold-build',
+		haxelibBinary,
+		[
+			'run', 'reflaxe.ocaml', 'build', '--project', scaffoldRoot,
+			'--run', 'out/_build/default/out.exe'
+		],
+		{cwd: appRoot, env}
+	))
+	if (!scaffoldBuild.stdout.includes('Hello from Installed Scaffold via reflaxe.ocaml!')
+		|| !scaffoldBuild.stdout.includes('REFLAXE_OCAML_RUN:PASS')) {
+		fail('installed scaffold did not build and execute with its documented output')
+	}
+	summary.tooling.scaffoldApplicationPassed = true
+
+	const scaffoldLibraryRoot = path.join(tempRoot, 'scaffold-library')
+	const scaffoldLibrary = requireSuccess('installed-scaffold-library', runStep(
+		'installed-scaffold-library',
+		haxelibBinary,
+		['run', 'reflaxe.ocaml', 'new', 'library', scaffoldLibraryRoot, '--name', 'Installed Library'],
+		{cwd: appRoot, env}
+	))
+	if (!scaffoldLibrary.stdout.includes('REFLAXE_OCAML_SCAFFOLD:PASS kind=library')) {
+		fail('installed reflaxe.ocaml library scaffold did not emit its success marker')
+	}
+	const scaffoldLibraryBuild = requireSuccess('installed-scaffold-library-build', runStep(
+		'installed-scaffold-library-build',
+		haxelibBinary,
+		['run', 'reflaxe.ocaml', 'build', '--project', scaffoldLibraryRoot],
+		{cwd: appRoot, env}
+	))
+	const scaffoldLibraryDune = fs.readFileSync(path.join(scaffoldLibraryRoot, 'out/dune'), 'utf8')
+	if (!scaffoldLibraryBuild.stdout.includes('REFLAXE_OCAML_BUILD:PASS')
+		|| !scaffoldLibraryDune.includes('(library')
+		|| scaffoldLibraryDune.includes('(executable')
+		|| !fs.existsSync(path.join(scaffoldLibraryRoot, 'out/_build/default/out.cmxa'))) {
+		fail('installed library scaffold did not produce a library-only native Dune build')
+	}
+	summary.tooling.scaffoldLibraryPassed = true
 
 	const compile = requireSuccess('external-app-compile', runStep(
 		'external-app-compile',

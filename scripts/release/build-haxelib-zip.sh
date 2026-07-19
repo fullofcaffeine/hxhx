@@ -95,6 +95,14 @@ fi
   haxe -cp "$REFLAXE_ROOT" --run Run build _Build --deleteOldFolder "$WORK_DIR"
 )
 
+# Reflaxe packages the Haxe classpath and std roots. Project scaffolds are
+# package-owned data, so copy their tracked source tree into the source ZIP.
+if [ ! -d "$WORK_DIR/templates" ]; then
+  echo "Missing reflaxe.ocaml scaffold templates at $WORK_DIR/templates." >&2
+  exit 1
+fi
+cp -R "$WORK_DIR/templates" "$BUILD_DIR/templates"
+
 # Reflaxe copies LICENSE/README/extraParams/haxelib metadata into _Build.
 # Keep this repo's changelog in the distributable package as release context.
 cp "$WORK_DIR/CHANGELOG.md" "$BUILD_DIR/CHANGELOG.md"

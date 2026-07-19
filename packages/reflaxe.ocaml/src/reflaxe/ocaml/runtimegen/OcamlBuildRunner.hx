@@ -12,6 +12,7 @@ typedef BuildRunConfig = {
 	final outDir:String;
 	final exeName:String;
 	final mode:String; // "native" | "byte"
+	final duneLayout:Null<String>;
 	final run:Bool;
 	final strict:Bool;
 
@@ -59,7 +60,14 @@ class OcamlBuildRunner {
 		}
 	}
 
-	static function duneTarget(exeName:String, mode:String):String {
+	static function isLibraryLayout(duneLayout:Null<String>):Bool {
+		return duneLayout == "lib" || duneLayout == "library";
+	}
+
+	static function duneTarget(exeName:String, mode:String, duneLayout:Null<String>):String {
+		if (isLibraryLayout(duneLayout)) {
+			return "@all";
+		}
 		final ext = (mode == "byte" || mode == "bytecode") ? "bc" : "exe";
 		return "./" + exeName + "." + ext;
 	}
@@ -109,6 +117,11 @@ class OcamlBuildRunner {
 	public static function tryBuildAndMaybeRun(cfg:BuildRunConfig):BuildResult {
 		final mode = cfg.mode == null ? "native" : cfg.mode;
 		final outDir = cfg.outDir;
+		final libraryLayout = isLibraryLayout(cfg.duneLayout);
+		if (libraryLayout && cfg.run) {
+			return
+				Err("ocaml_run cannot execute a library-only Dune layout. Build the library without -D ocaml_run, then consume it from an OCaml executable.");
+		}
 
 		if (!hasCommand("dune") || !hasCommand("ocamlc")) {
 			return cfg.strict ? Err("dune/ocamlc not found on PATH (required by ocaml_build/ocaml_mli).") : Ok(null);
@@ -122,7 +135,7 @@ class OcamlBuildRunner {
 		final outDirAbs = Sys.getCwd();
 		final notes:Array<String> = [];
 		try {
-			final target = duneTarget(cfg.exeName, mode);
+			final target = duneTarget(cfg.exeName, mode, cfg.duneLayout);
 			// IMPORTANT:
 			// When the OCaml output directory lives *inside* another dune workspace (e.g. inside the
 			// upstream Haxe repo, which contains its own `dune-project` / `dune-workspace.*`),
@@ -158,7 +171,9 @@ class OcamlBuildRunner {
 									return cfg.mliStrict ? Err(msg) : Ok(msg + " (skipping)");
 							}
 						case "all":
-							final ensureRes = OcamlMliGenerator.tryEnsureAllCmiBuilt({
+							// A library @all build already compiles every library module. The
+							// executable layout needs its historical explicit CMI closure.
+							final ensureRes = libraryLayout ? Ok(null) : OcamlMliGenerator.tryEnsureAllCmiBuilt({
 								outDir: outDirAbs,
 								exeName: cfg.exeName,
 								mode: mode

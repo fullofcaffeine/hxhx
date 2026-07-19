@@ -55,6 +55,25 @@ Use `--require compiler` when the project needs `compiler-libs`, or `--json`
 when CI or an editor needs the stable schema. An absent hxhx executable does
 not break the upstream-Haxe workflow.
 
+## Create an application or library
+
+An installed package can create either tested starter layout:
+
+```bash
+haxelib run reflaxe.ocaml new app my-app --name "My App"
+haxelib run reflaxe.ocaml new library my-library --name "My Library"
+```
+
+The command refuses an existing destination and commits a newly rendered
+directory only after every template file is ready. The app produces a native
+executable. The library produces a Haxe package and a library-only Dune build,
+without claiming that current inferred `.mli` files are a curated public ABI.
+
+Binding and handwritten-adapter scaffolds are intentionally withheld until the
+typed OCaml interface, native-source ownership, and dependency manifests exist.
+Plugin/target scaffolding remains with the shared stock-Haxe/hxhx plugin SDK.
+Those unsupported kinds fail before creating files.
+
 ## Daily build and watch workflow
 
 From an installed-package project that has a `build.hxml`, use:

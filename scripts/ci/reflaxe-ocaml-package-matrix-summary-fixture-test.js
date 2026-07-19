@@ -53,7 +53,12 @@ try {
 			architecture: 'x64',
 			toolchain: { haxe: '4.3.7' },
 			evidence: { machineLocalPathsRedacted: true },
-			tooling: { buildCommandPassed: true },
+			tooling: {
+				scaffoldCommandPassed: true,
+				scaffoldApplicationPassed: true,
+				scaffoldLibraryPassed: true,
+				buildCommandPassed: true
+			},
 			package: {
 				...packageInfo,
 				buildMode: 'supplied',
@@ -81,6 +86,13 @@ try {
 
 	const darwinPath = path.join(tempRoot, 'consumers/darwin/summary.json')
 	const darwin = JSON.parse(fs.readFileSync(darwinPath, 'utf8'))
+	darwin.tooling.scaffoldCommandPassed = false
+	fs.writeFileSync(darwinPath, JSON.stringify(darwin, null, 2) + '\n')
+	const missingScaffold = run()
+	assert.notStrictEqual(missingScaffold.status, 0)
+	assert.match(missingScaffold.stderr, /tooling\.scaffoldCommandPassed/)
+
+	darwin.tooling.scaffoldCommandPassed = true
 	darwin.package.sha256 = '0'.repeat(64)
 	fs.writeFileSync(darwinPath, JSON.stringify(darwin, null, 2) + '\n')
 	const rejected = run()

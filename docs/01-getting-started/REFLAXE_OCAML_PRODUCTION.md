@@ -117,6 +117,27 @@ Compatible newer local OCaml/Dune versions are reported as warnings rather
 than mislabeled as hosted evidence. Use `--json` when retaining the result in a
 CI artifact.
 
+## Create a starter project
+
+The installed source package carries the same tested templates used by package
+validation:
+
+```bash
+haxelib run reflaxe.ocaml new app my-app --name "My App"
+haxelib run reflaxe.ocaml new library my-library --name "My Library"
+```
+
+Scaffolding is transactional and non-destructive: the destination parent must
+exist, the destination itself must not exist, and no existing files are merged
+or overwritten. The application template builds and runs a native executable.
+The library template builds a library-only Dune project and keeps the current
+inferred-interface feature clearly separate from a future curated export ABI.
+
+The command does not fabricate binding, native-adapter, plugin, or target
+projects before their typed manifest and shared SDK contracts exist. Requests
+for those kinds fail before creating a directory and explain the missing safe
+boundary.
+
 ## Daily build and watch workflow
 
 An installed package provides a project-oriented runner for the normal edit,

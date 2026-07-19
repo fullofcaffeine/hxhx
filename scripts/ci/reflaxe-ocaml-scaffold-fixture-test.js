@@ -1,0 +1,85 @@
+#!/usr/bin/env node
+/** Proves generated app/library projects are safe, complete, and natively buildable. */
+const assert = require('assert')
+const cp = require('child_process')
+const fs = require('fs')
+const path = require('path')
+
+const repoRoot = path.resolve(__dirname, '../..')
+const tempParent = path.join(repoRoot, '.tmp')
+fs.mkdirSync(tempParent, {recursive: true})
+const tempRoot = fs.mkdtempSync(path.join(tempParent, 'reflaxe-ocaml-scaffold-'))
+const haxeArgs = [
+	'-cp', 'packages/reflaxe.ocaml/src',
+	'--macro', 'nullSafety("reflaxe.ocaml")',
+	'--run', 'reflaxe.ocaml.tooling.ReflaxeOcamlRun'
+]
+
+function runCli(args) {
+	return cp.spawnSync('haxe', haxeArgs.concat(args), {
+		cwd: repoRoot,
+		env: process.env,
+		encoding: 'utf8',
+		maxBuffer: 50 * 1024 * 1024,
+		shell: false
+	})
+}
+
+try {
+	const appRoot = path.join(tempRoot, 'fixture-app')
+	const createdApp = runCli(['new', 'app', appRoot, '--name', 'Fixture App'])
+	assert.strictEqual(createdApp.status, 0, createdApp.stderr || createdApp.stdout)
+	assert(createdApp.stdout.includes('REFLAXE_OCAML_SCAFFOLD:PASS kind=app'))
+	assert(fs.readFileSync(path.join(appRoot, 'src/Main.hx'), 'utf8').includes('Hello from Fixture App via reflaxe.ocaml!'))
+
+	const editedMain = fs.readFileSync(path.join(appRoot, 'src/Main.hx'), 'utf8') + '// user edit\n'
+	fs.writeFileSync(path.join(appRoot, 'src/Main.hx'), editedMain)
+	const refusedOverwrite = runCli(['new', 'app', appRoot])
+	assert.strictEqual(refusedOverwrite.status, 2)
+	assert(refusedOverwrite.stderr.includes('Destination already exists'))
+	assert.strictEqual(fs.readFileSync(path.join(appRoot, 'src/Main.hx'), 'utf8'), editedMain)
+
+	const invalidNameRoot = path.join(tempRoot, 'invalid-name')
+	const invalidName = runCli(['new', 'app', invalidNameRoot, '--name', '9 invalid'])
+	assert.strictEqual(invalidName.status, 2)
+	assert(invalidName.stderr.includes('Project names must start with a letter'))
+	assert(!fs.existsSync(invalidNameRoot))
+
+	const packageDestination = path.join(repoRoot, 'packages/reflaxe.ocaml/scaffold-must-not-exist')
+	const refusedPackageMutation = runCli(['new', 'app', packageDestination, '--name', 'Unsafe Destination'])
+	assert.strictEqual(refusedPackageMutation.status, 2)
+	assert(refusedPackageMutation.stderr.includes('inside the installed reflaxe.ocaml package'))
+	assert(!fs.existsSync(packageDestination))
+
+	const appBuild = runCli([
+		'build', '--project', appRoot,
+		'--run', 'out/_build/default/out.exe'
+	])
+	assert.strictEqual(appBuild.status, 0, appBuild.stderr || appBuild.stdout)
+	assert(appBuild.stdout.includes('Hello from Fixture App via reflaxe.ocaml!'))
+	assert(appBuild.stdout.includes('REFLAXE_OCAML_BUILD:PASS'))
+	assert(appBuild.stdout.includes('REFLAXE_OCAML_RUN:PASS'))
+
+	const libraryRoot = path.join(tempRoot, 'fixture-library')
+	const createdLibrary = runCli(['new', 'library', libraryRoot, '--name', 'Fixture Library'])
+	assert.strictEqual(createdLibrary.status, 0, createdLibrary.stderr || createdLibrary.stdout)
+	assert(createdLibrary.stdout.includes('REFLAXE_OCAML_SCAFFOLD:PASS kind=library'))
+	assert.strictEqual(JSON.parse(fs.readFileSync(path.join(libraryRoot, 'haxelib.json'), 'utf8')).name, 'fixture-library')
+
+	const libraryBuild = runCli(['build', '--project', libraryRoot])
+	assert.strictEqual(libraryBuild.status, 0, libraryBuild.stderr || libraryBuild.stdout)
+	const dune = fs.readFileSync(path.join(libraryRoot, 'out/dune'), 'utf8')
+	assert(dune.includes('(library'))
+	assert(!dune.includes('(executable'))
+	assert(fs.existsSync(path.join(libraryRoot, 'out/_build/default/out.cmxa')))
+
+	const bindingRoot = path.join(tempRoot, 'fixture-binding')
+	const refusedBinding = runCli(['new', 'binding', bindingRoot])
+	assert.strictEqual(refusedBinding.status, 2)
+	assert(refusedBinding.stderr.includes('typed .mli import manifests'))
+	assert(!fs.existsSync(bindingRoot))
+
+	console.log('REFLAXE_OCAML_SCAFFOLD_FIXTURE:PASS')
+} finally {
+	fs.rmSync(tempRoot, {recursive: true, force: true})
+}

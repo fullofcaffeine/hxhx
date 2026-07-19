@@ -22,6 +22,7 @@ class ReflaxeOcamlCli {
 		final command = args.shift();
 		return switch (command) {
 			case "doctor": runDoctor(args, packageRoot, invocationRoot);
+			case "new": ReflaxeOcamlScaffoldCli.run(args, packageRoot, invocationRoot);
 			case "build": runAuthoring(args, invocationRoot, false);
 			case "watch": runAuthoring(args, invocationRoot, true);
 			case "version", "--version", "-v":
@@ -239,12 +240,13 @@ class ReflaxeOcamlCli {
 			"",
 			"Commands:",
 			"  doctor    Diagnose source, native, compiler-authoring, and hxhx readiness",
+			"  new       Create a runnable application or library starter project",
 			"  build     Run one fresh Haxe-to-OCaml project build, optionally followed by an executable",
 			"  watch     Rebuild after stable source changes without reusing a Haxe server",
 			"  version   Print the reflaxe.ocaml package version",
 			"  help      Show this help",
 			"",
-			"Run `haxelib run reflaxe.ocaml doctor --help` for doctor options.",
+			"Run a command with --help for its options.",
 			""
 		].join("\n");
 	}

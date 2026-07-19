@@ -22,6 +22,10 @@ function createArchive(root, embeddedMetadata = metadata, extraFiles = {}) {
 	fs.mkdirSync(path.join(source, 'src/reflaxe/ocaml/tooling'), { recursive: true })
 	fs.writeFileSync(path.join(source, 'src/reflaxe/ocaml/tooling/ReflaxeOcamlRun.hx'), 'class ReflaxeOcamlRun {}\n')
 	fs.writeFileSync(path.join(source, 'src/reflaxe/ocaml/OcamlCompiler.hx'), 'class OcamlCompiler {}\n')
+	fs.mkdirSync(path.join(source, 'templates/scaffold/app'), { recursive: true })
+	fs.mkdirSync(path.join(source, 'templates/scaffold/library'), { recursive: true })
+	fs.writeFileSync(path.join(source, 'templates/scaffold/app/build.hxml'), '-main Main\n')
+	fs.writeFileSync(path.join(source, 'templates/scaffold/library/build.hxml'), '-main LibraryBuild\n')
 	for (const [relative, contents] of Object.entries(extraFiles)) {
 		const destination = path.join(source, relative)
 		fs.mkdirSync(path.dirname(destination), { recursive: true })

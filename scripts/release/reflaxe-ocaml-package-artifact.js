@@ -14,7 +14,14 @@ const repoRoot = path.resolve(__dirname, '../..')
 const defaultEpochSeconds = 315532800
 const defaultPackageMetadata = JSON.parse(fs.readFileSync(path.join(repoRoot, 'packages/reflaxe.ocaml/haxelib.json'), 'utf8'))
 const packageRunner = 'reflaxe.ocaml.tooling.ReflaxeOcamlRun'
-const requiredArchiveFiles = ['haxelib.json', 'extraParams.hxml', 'src/reflaxe/ocaml/tooling/ReflaxeOcamlRun.hx', 'src/reflaxe/ocaml/OcamlCompiler.hx']
+const requiredArchiveFiles = [
+	'haxelib.json',
+	'extraParams.hxml',
+	'src/reflaxe/ocaml/tooling/ReflaxeOcamlRun.hx',
+	'src/reflaxe/ocaml/OcamlCompiler.hx',
+	'templates/scaffold/app/build.hxml',
+	'templates/scaffold/library/build.hxml'
+]
 const forbiddenArchiveExtensions = new Set([
 	'.a',
 	'.cma',

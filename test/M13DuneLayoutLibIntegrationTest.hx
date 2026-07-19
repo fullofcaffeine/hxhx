@@ -21,7 +21,7 @@ class M13DuneLayoutLibIntegrationTest {
 			"-D",
 			"no_traces",
 			"-D",
-			"ocaml_no_build",
+			"ocaml_build=native",
 			"-D",
 			"ocaml_output=" + outDir,
 			"-D",
@@ -56,5 +56,21 @@ class M13DuneLayoutLibIntegrationTest {
 		}
 		if (foundEntry)
 			throw "unexpected entry module in lib layout";
+
+		final runOutDir = outDir + "_run_rejected";
+		final runArgs = args.copy();
+		final outputDefineIndex = runArgs.indexOf("ocaml_output=" + outDir);
+		if (outputDefineIndex < 0)
+			throw "test setup could not find OCaml output define";
+		runArgs[outputDefineIndex] = "ocaml_output=" + runOutDir;
+		runArgs.push("-D");
+		runArgs.push("ocaml_run");
+		final rejectedRun = new sys.io.Process("haxe", runArgs);
+		final rejectedOutput = rejectedRun.stdout.readAll().toString() + rejectedRun.stderr.readAll().toString();
+		final rejectedExit = rejectedRun.exitCode();
+		rejectedRun.close();
+		if (rejectedExit == 0)
+			throw "ocaml_run unexpectedly accepted a library-only layout";
+		assertContains(rejectedOutput, "ocaml_run cannot execute a library-only Dune layout", "library run diagnostic");
 	}
 }

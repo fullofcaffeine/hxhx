@@ -1,0 +1,13 @@
+{
+  "name": "{{PROJECT_SLUG}}",
+  "url": "",
+  "license": "Other",
+  "tags": [
+    "ocaml"
+  ],
+  "description": "{{PROJECT_NAME}}, authored in Haxe and compiled with reflaxe.ocaml.",
+  "version": "0.1.0",
+  "classPath": "src/",
+  "releasenote": "Initial scaffold.",
+  "contributors": []
+}
