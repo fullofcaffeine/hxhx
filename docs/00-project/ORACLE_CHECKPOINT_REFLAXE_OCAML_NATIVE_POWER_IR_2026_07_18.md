@@ -29,6 +29,21 @@ The product goal is accepted, but it must be described precisely:
 > Haxe, typed target APIs, generated bindings, and small typed adapters. The
 > compiler must reject boundaries that Haxe cannot represent faithfully.
 
+The broader product ambition is to make Haxe the best practical language for
+authoring compilers that use OCaml as their runtime and ecosystem. That requires
+all three of these properties together:
+
+- a quick, approachable Haxe/Reflaxe development loop;
+- typed access to OCaml libraries and appropriate compiler internals, with
+  checked native adapters and deliberate lower-level escape hatches;
+- idiomatic native OCaml artifacts whose behavior, generated-code quality, and
+  performance can compete with well-designed direct OCaml, Go, or Rust compiler
+  implementations on equivalent workloads.
+
+A successful native build proves none of those properties by itself. They need
+separate author-loop, interop, generated-shape, runtime, memory, and workload
+evidence, followed by a combined product proof.
+
 This is not a claim that Haxe acquires OCaml's module or type system, that every
 OCaml interface can become a Haxe extern, or that arbitrary raw OCaml is an
 ordinary supported workflow.
@@ -212,6 +227,17 @@ validated schedule directly. If future control families require dominance,
 edge arguments, liveness, or shared cleanup edges, the architecture expands at
 that evidence boundary. The architecture is deliberately expandable, not
 capped.
+
+The compiler-authoring goal also sets the meaning of "modern" for this target.
+The target core should use immutable semantic artifacts, stable identities,
+request-local state, explicit phase ownership, deterministic diagnostics,
+incremental caching, exhaustive structural traversal, and pass/analysis
+invalidation contracts wherever the real compiler workload needs them. Those
+mechanisms are admitted because they improve correctness, iteration,
+extensibility, or performance—not because a direct OCaml, Go, or Rust compiler
+happens to use similarly named machinery. Haxe authors should not receive a
+less capable compiler architecture merely because the implementation began as
+a Reflaxe backend.
 
 The whole-repository review found that representation, storage, calls,
 mutation, runtime requirements, native boundaries, and future exports already
@@ -487,6 +513,15 @@ Broad parity and packaging gates remain release evidence, not the default inner
 loop. Latency reports must separate Haxe-to-OCaml generation, OCaml
 parse/typecheck/compile, link, plugin load, startup, and program execution so
 the slow phase has a clear owner.
+
+The combined compiler-authoring proof must eventually put one authentic
+Haxe-authored compiler or target through that workflow, consume a nontrivial
+OCaml ecosystem or compiler-libs surface through the typed ladder, and compare
+correct native behavior against carefully scoped direct implementations. A
+direct-OCaml comparison is the primary representation and runtime baseline;
+Go or Rust comparisons are useful only where the same workload and behavior
+can be stated precisely. Microbenchmarks remain diagnostic evidence and cannot
+authorize a whole-compiler superiority claim.
 
 ## CFG And Shared-IR Thresholds
 

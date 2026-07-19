@@ -5,7 +5,10 @@
 - Compiler-transform owner: `haxe_ocaml-h5jta.1`
 - Backend/target owner: `haxe_ocaml-bomhr` (M22)
 - OCaml lowering-quality owner: `haxe_ocaml-9v1va`
+- OCaml ecosystem/interoperability owner: `haxe_ocaml-v8a9b`
+- Authoring-workflow owner: `haxe_ocaml-1hd2w`
 - Iteration-latency owner: `haxe_ocaml-850ii`
+- Native compiler comparison owner: `haxe_ocaml-i69n4`
 
 This plan turns one product goal into two precise developer experiences:
 
@@ -24,6 +27,39 @@ emit artifacts.
 
 This is a planning contract. It does not mean that either cross-host native
 profile is available today, and it does not move a README readiness bar.
+
+## Product promise
+
+The intended product is more powerful than a convenient transpiler or plugin
+packager. Haxe plus `reflaxe.ocaml` and `hxhx` should become the best practical
+compiler-authoring stack for developers who want OCaml as the deployment
+runtime and ecosystem:
+
+- **iterate quickly:** author the compiler in approachable, typed Haxe; use the
+  evaluated Reflaxe lane for rapid experiments; rebuild only affected OCaml
+  units and focused native artifacts as the implementation stabilizes;
+- **use the OCaml ecosystem deeply:** consume ordinary libraries through typed
+  facades and generated bindings, reach compiler-libs and advanced facilities
+  through checked adapters when necessary, and retain explicit low-level escape
+  hatches without making raw OCaml the default API;
+- **ship like a native implementation:** generate readable, idiomatic OCaml,
+  use compatibility runtime code only for named Haxe semantic requirements,
+  compile with the native OCaml toolchain, and compete with well-designed direct
+  OCaml, Go, or Rust compilers on equivalent behavior and workloads.
+
+These legs are inseparable. Fast prototyping followed by a hand rewrite in
+OCaml fails the promotion goal. Native output that cannot use the OCaml
+ecosystem fails the interop goal. A loadable binary with unexplained boxing,
+runtime calls, unsafe casts, poor code shape, or uncompetitive performance fails
+the native-quality goal.
+
+The architecture should therefore be as powerful as the real workload needs:
+one typed target core, stable identities, explicit lowering and validation,
+deterministic passes and analyses, incremental caches, and inspected target
+artifacts. It should add those mechanisms when they establish a concrete
+invariant, not copy the shape of another compiler for appearance. The final
+experience must be judged against a carefully designed native compiler, not
+against the lower bar of successful source generation.
 
 ## 1. Current truth
 

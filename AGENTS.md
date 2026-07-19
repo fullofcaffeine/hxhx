@@ -387,6 +387,13 @@ Keep these aligned with beads whenever scope changes. The current long-term goal
 For Reflaxe-to-native promotion, preserve the product bet explicitly:
 developers should be able to write compiler/target logic in Haxe, promote it to native plugin or builtin forms,
 and aim for the same performance class as a hand-written OCaml compiler implementation, or better when `hxhx`/Reflaxe specialization can safely optimize the generated artifact.
+That bet has three inseparable advantages:
+
+1) quick, approachable compiler iteration in Haxe and Reflaxe,
+2) typed access to the OCaml ecosystem and appropriate OCaml/compiler internals through facades, generated bindings, and checked adapters, with lower-level escape hatches when necessary, and
+3) idiomatic native OCaml artifacts whose code quality and performance can compete with well-designed direct OCaml, Go, or Rust compiler implementations on equivalent workloads.
+
+The ambition is to make Haxe the best practical authoring choice for compiler developers who want OCaml as their runtime and ecosystem. Architecture, tooling, interop, generated-code quality, and performance work must serve all three advantages; a fast prototype that cannot use the ecosystem or a native binary with poor generated code does not satisfy the goal.
 Do not describe `hxhx` as authored in Reflaxe; it is authored in Haxe and can use `reflaxe.ocaml` as one native compilation/bootstrap route for those Haxe sources.
 Using Reflaxe to create native `hxhx` artifacts is in scope; making the `hxhx` compiler core depend on Reflaxe-specific target/plugin APIs is not the default architecture and needs an explicit design bead.
 Treat "use Reflaxe for hxhx" as three separate questions:

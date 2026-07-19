@@ -4,7 +4,9 @@ This page records the long-term product direction for this repository. It is a p
 
 The short version:
 
-1. Make `reflaxe.ocaml` a stable OCaml target that works well with both upstream Haxe and `hxhx`.
+1. Make `reflaxe.ocaml` a stable OCaml target that works well with both upstream
+   Haxe and `hxhx`, and make Haxe the best practical compiler-authoring choice
+   for developers who want OCaml as their runtime and ecosystem.
 2. Make `hxhx` a stable, MIT-licensed Haxe-in-Haxe compiler with strict Haxe
    `4.3.7` compatibility for an explicit public scope, or better where
    compatibility allows, including compiler performance and developer
@@ -54,6 +56,46 @@ Current planning owners:
   `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`.
   This planning work adds no current capability or readiness.
 - public status board: README `Goals status` table
+
+### Compiler-authoring product contract
+
+The intended advantage is the combination of three capabilities, not any one
+of them in isolation:
+
+1. **Quick Haxe/Reflaxe iteration.** Compiler and target authors work in Haxe
+   with completion-friendly typed APIs, focused tests, incremental generation,
+   and warm native rebuilds. An ordinary edit must not require a full `hxhx`
+   rebuild, bootstrap regeneration, or every-backend gate.
+2. **First-class access to the OCaml ecosystem.** Ordinary OCaml modules and
+   packages are exposed through typed `ocaml.*` facades and generated bindings.
+   Advanced compiler-libs or OCaml type-system surfaces use small checked
+   `.ml`/`.mli` adapters when Haxe cannot express the boundary faithfully.
+   Scoped low-level escape hatches remain available, but are explicit,
+   inspectable, and never a silent fallback.
+3. **Native, direct-implementation-class output.** `reflaxe.ocaml` should emit
+   readable, idiomatic, efficient OCaml and compile it to native artifacts with
+   runtime support only where Haxe semantics require it. On equivalent compiler
+   workloads, those artifacts should compete with well-designed direct OCaml,
+   Go, or Rust implementations in the dimensions that are actually comparable.
+
+The compiler architecture must be as powerful as these goals require. It may
+grow typed lowering, stable program identities, explicit pass and analysis
+contracts, incremental caches, validators, and low-level target facilities when
+they establish a real correctness, interop, performance, or tooling invariant.
+"Modern" does not mean copying another compiler's pass count or IR; it means the
+result has the semantic ownership, observability, determinism, extensibility,
+and performance expected from a carefully designed native compiler.
+
+This remains a planning contract. Proof requires an authentic compiler or
+target workload, typed use of a nontrivial OCaml package or compiler-libs
+surface, cold/warm/one-file author-loop measurements, generated-code and runtime
+inventories, and behavior-correct native comparisons. The owning work is split
+deliberately: `haxe_ocaml-1hd2w` and `haxe_ocaml-850ii` own iteration;
+`haxe_ocaml-taef5` and `haxe_ocaml-v8a9b` own typed interop;
+`haxe_ocaml-9bome`, `haxe_ocaml-h5jta.1`, and `haxe_ocaml-i69n4` own generated
+representation/quality and comparable native evidence; `haxe_ocaml-bxwut`
+owns an authentic promoted compiler workload. Goal 6 and M22 own the shared
+stock-Haxe/`hxhx` plugin and builtin delivery paths.
 
 ## Public Progress Tracking
 
@@ -296,6 +338,11 @@ not authored in Reflaxe, but its Haxe sources should be able to leverage
 "create `hxhx` with Reflaxe," not "author `hxhx` in Reflaxe": Reflaxe-specific
 APIs belong naturally at target/backend/plugin seams unless an explicit
 architecture decision moves them into compiler-core code.
+
+Promotion is therefore more than a packaging feature. It is the point where
+the quick Haxe/Reflaxe authoring loop, typed OCaml ecosystem access, and native
+direct-implementation-class output meet in one workflow. Losing any of those
+properties would weaken the product rather than merely defer an optimization.
 
 There are three distinct levels of Reflaxe usage for `hxhx`:
 
