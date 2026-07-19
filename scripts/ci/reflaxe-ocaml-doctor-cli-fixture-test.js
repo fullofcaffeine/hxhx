@@ -58,4 +58,17 @@ const version = run(['version'])
 assert.strictEqual(version.status, 0)
 assert(/^reflaxe\.ocaml \d+\.\d+\.\d+/.test(version.stdout.trim()))
 
+const watchHelp = run(['watch', '--help'])
+assert.strictEqual(watchHelp.status, 0)
+assert(watchHelp.stdout.includes('Watch and rebuild a reflaxe.ocaml project'))
+assert(watchHelp.stdout.includes('--watch-path <path>'))
+
+const partialPollInterval = run(['watch', '--poll-ms', '10ms'])
+assert.strictEqual(partialPollInterval.status, 2)
+assert(partialPollInterval.stderr.includes('--poll-ms needs a positive integer'))
+
+const oneShotBuildLimit = run(['build', '--max-builds', '2'])
+assert.strictEqual(oneShotBuildLimit.status, 2)
+assert(oneShotBuildLimit.stderr.includes('--max-builds is only meaningful'))
+
 console.log('REFLAXE_OCAML_DOCTOR_CLI_FIXTURE:PASS')

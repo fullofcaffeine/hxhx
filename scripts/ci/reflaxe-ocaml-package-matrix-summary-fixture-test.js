@@ -53,6 +53,7 @@ try {
 			architecture: 'x64',
 			toolchain: { haxe: '4.3.7' },
 			evidence: { machineLocalPathsRedacted: true },
+			tooling: { buildCommandPassed: true },
 			package: {
 				...packageInfo,
 				buildMode: 'supplied',

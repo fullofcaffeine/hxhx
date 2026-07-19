@@ -117,6 +117,29 @@ Compatible newer local OCaml/Dune versions are reported as warnings rather
 than mislabeled as hosted evidence. Use `--json` when retaining the result in a
 CI artifact.
 
+## Daily build and watch workflow
+
+An installed package provides a project-oriented runner for the normal edit,
+compile, and execute loop:
+
+```bash
+haxelib run reflaxe.ocaml build
+haxelib run reflaxe.ocaml build --run out/_build/default/out.exe
+haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe
+```
+
+Both commands run the project's `build.hxml` by default. `watch` discovers Haxe
+classpaths and included HXML files, supports additional repeated
+`--watch-path <path>` inputs, waits for a stable edit batch, and runs the native
+artifact only after a successful build. `--project` and `--hxml` select another
+project or build file; `--max-builds` gives automation a bounded stopping point.
+
+Every batch uses a fresh Haxe process because current Reflaxe evidence found an
+incomplete-output failure when a persistent Haxe server was reused. The safe
+speedup comes from content-stable generated OCaml and Dune's incremental cache.
+Output and common cache/build directories are excluded, and a post-build input
+snapshot prevents generated files from causing a feedback loop.
+
 ## Installation modes
 
 ### Mode A: repo-internal `haxe_libraries` wiring

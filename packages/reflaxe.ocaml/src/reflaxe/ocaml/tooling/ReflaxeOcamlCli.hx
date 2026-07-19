@@ -22,6 +22,8 @@ class ReflaxeOcamlCli {
 		final command = args.shift();
 		return switch (command) {
 			case "doctor": runDoctor(args, packageRoot, invocationRoot);
+			case "build": runAuthoring(args, invocationRoot, false);
+			case "watch": runAuthoring(args, invocationRoot, true);
 			case "version", "--version", "-v":
 				Sys.println('reflaxe.ocaml ${readPackageVersion(packageRoot)}');
 				0;
@@ -56,7 +58,7 @@ class ReflaxeOcamlCli {
 					if (index >= args.length) {
 						return usageError("--project needs a directory path.");
 					}
-					projectRoot = FileSystem.absolutePath(args[index]);
+					projectRoot = resolveFrom(invocationRoot, args[index]);
 				case "--help", "-h":
 					Sys.print(doctorHelp());
 					return 0;
@@ -76,6 +78,110 @@ class ReflaxeOcamlCli {
 		final report = ReflaxeOcamlDoctor.inspect(new SystemDoctorProbe(), packageRoot, projectRoot, readPackageVersion(packageRoot), requiredCapability);
 		Sys.print(json ? ReflaxeOcamlDoctor.renderJson(report) : ReflaxeOcamlDoctor.renderHuman(report));
 		return report.summary.exitCode;
+	}
+
+	static function runAuthoring(args:Array<String>, invocationRoot:String, watchCommand:Bool):Int {
+		var projectRoot = invocationRoot;
+		var hxmlPath = "build.hxml";
+		var watch = watchCommand;
+		final watchPaths = new Array<String>();
+		var pollMilliseconds = 250;
+		var debounceMilliseconds = 100;
+		var maxBuilds:Null<Int> = null;
+		var runArtifact:Null<String> = null;
+		final runArguments = new Array<String>();
+		var index = 0;
+		while (index < args.length) {
+			final option = args[index];
+			switch (option) {
+				case "--project":
+					index++;
+					if (index >= args.length) {
+						return authoringUsageError("--project needs a directory path.", watchCommand);
+					}
+					projectRoot = resolveFrom(invocationRoot, args[index]);
+				case "--hxml":
+					index++;
+					if (index >= args.length) {
+						return authoringUsageError("--hxml needs a project-relative file path.", watchCommand);
+					}
+					hxmlPath = args[index];
+				case "--watch":
+					watch = true;
+				case "--watch-path":
+					index++;
+					if (index >= args.length) {
+						return authoringUsageError("--watch-path needs a file or directory.", watchCommand);
+					}
+					watchPaths.push(args[index]);
+				case "--poll-ms":
+					index++;
+					if (index >= args.length) {
+						return authoringUsageError("--poll-ms needs a positive integer.", watchCommand);
+					}
+					final parsed = positiveInteger(args[index]);
+					if (parsed == null) {
+						return authoringUsageError("--poll-ms needs a positive integer.", watchCommand);
+					}
+					pollMilliseconds = parsed;
+				case "--debounce-ms":
+					index++;
+					if (index >= args.length) {
+						return authoringUsageError("--debounce-ms needs a positive integer.", watchCommand);
+					}
+					final parsed = positiveInteger(args[index]);
+					if (parsed == null) {
+						return authoringUsageError("--debounce-ms needs a positive integer.", watchCommand);
+					}
+					debounceMilliseconds = parsed;
+				case "--max-builds":
+					index++;
+					if (index >= args.length) {
+						return authoringUsageError("--max-builds needs a positive integer.", watchCommand);
+					}
+					maxBuilds = positiveInteger(args[index]);
+					if (maxBuilds == null) {
+						return authoringUsageError("--max-builds needs a positive integer.", watchCommand);
+					}
+				case "--run":
+					index++;
+					if (index >= args.length) {
+						return authoringUsageError("--run needs an executable path.", watchCommand);
+					}
+					runArtifact = args[index];
+				case "--run-arg":
+					index++;
+					if (index >= args.length) {
+						return authoringUsageError("--run-arg needs one argument value.", watchCommand);
+					}
+					runArguments.push(args[index]);
+				case "--help", "-h":
+					Sys.print(authoringHelp(watchCommand));
+					return 0;
+				case _:
+					return authoringUsageError('Unknown ${watchCommand ? "watch" : "build"} option: $option', watchCommand);
+			}
+			index++;
+		}
+
+		if (!watch && maxBuilds != null) {
+			return authoringUsageError("--max-builds is only meaningful with watch or build --watch.", watchCommand);
+		}
+		if (runArtifact == null && runArguments.length > 0) {
+			return authoringUsageError("--run-arg requires --run <executable>.", watchCommand);
+		}
+
+		final options:AuthoringBuildOptions = {
+			hxmlPath: hxmlPath,
+			watch: watch,
+			watchPaths: watchPaths,
+			pollMilliseconds: pollMilliseconds,
+			debounceMilliseconds: debounceMilliseconds,
+			maxBuilds: maxBuilds,
+			runArtifact: runArtifact,
+			runArguments: runArguments
+		};
+		return ReflaxeOcamlAuthoring.run(new SystemAuthoringHost(), projectRoot, options);
 	}
 
 	static function readPackageVersion(packageRoot:String):String {
@@ -106,6 +212,24 @@ class ReflaxeOcamlCli {
 		return 2;
 	}
 
+	static function authoringUsageError(message:String, watchCommand:Bool):Int {
+		Sys.stderr().writeString(message + "\n\n");
+		Sys.stderr().writeString(authoringHelp(watchCommand));
+		return 2;
+	}
+
+	static function positiveInteger(value:String):Null<Int> {
+		if (!~/^[1-9][0-9]*$/.match(value)) {
+			return null;
+		}
+		final parsed = Std.parseInt(value);
+		return parsed != null ? parsed : null;
+	}
+
+	static function resolveFrom(base:String, path:String):String {
+		return FileSystem.absolutePath(Path.isAbsolute(path) ? path : Path.join([base, path]));
+	}
+
 	static function help():String {
 		return [
 			"reflaxe.ocaml - Haxe to OCaml authoring tools",
@@ -115,10 +239,40 @@ class ReflaxeOcamlCli {
 			"",
 			"Commands:",
 			"  doctor    Diagnose source, native, compiler-authoring, and hxhx readiness",
+			"  build     Run one fresh Haxe-to-OCaml project build, optionally followed by an executable",
+			"  watch     Rebuild after stable source changes without reusing a Haxe server",
 			"  version   Print the reflaxe.ocaml package version",
 			"  help      Show this help",
 			"",
 			"Run `haxelib run reflaxe.ocaml doctor --help` for doctor options.",
+			""
+		].join("\n");
+	}
+
+	static function authoringHelp(watchCommand:Bool):String {
+		final command = watchCommand ? "watch" : "build";
+		return [
+			'${watchCommand ? "Watch and rebuild" : "Build"} a reflaxe.ocaml project',
+			"",
+			"Usage:",
+			'  haxelib run reflaxe.ocaml $command [options]',
+			"",
+			"Options:",
+			"  --project <directory>          Project working directory (default: current project)",
+			"  --hxml <file>                  HXML to run (default: build.hxml)",
+			"  --watch                        Keep rebuilding after edits (build command only)",
+			"  --watch-path <path>            Add an input file/directory; repeat as needed",
+			"  --poll-ms <milliseconds>       Poll interval (default: 250)",
+			"  --debounce-ms <milliseconds>   Required stable interval (default: 100)",
+			"  --max-builds <count>           Stop after this many attempts (watch/testing)",
+			"  --run <executable>             Run this project-relative artifact after each success",
+			"  --run-arg <value>              Add one artifact argument; repeat as needed",
+			"  --help                         Show this help",
+			"",
+			"Examples:",
+			"  haxelib run reflaxe.ocaml build",
+			"  haxelib run reflaxe.ocaml build --run out/_build/default/out.exe",
+			"  haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe",
 			""
 		].join("\n");
 	}

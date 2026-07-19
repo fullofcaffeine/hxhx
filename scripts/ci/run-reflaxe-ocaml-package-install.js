@@ -57,7 +57,8 @@ const summary = {
 		doctorPassed: false,
 		doctorSchemaVersion: null,
 		sourceGenerationReady: false,
-		nativeBuildReady: false
+		nativeBuildReady: false,
+		buildCommandPassed: false
 	},
 	externalApplication: {
 		compilePassed: false,
@@ -498,7 +499,16 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	}
 	Object.assign(summary.tooling, validateInstalledDoctor(doctor, packageMetadata.version))
 
-	const compile = requireSuccess('external-app-compile', runStep('external-app-compile', haxeBinary, ['build.hxml'], { cwd: appRoot, env }))
+	const compile = requireSuccess('external-app-compile', runStep(
+		'external-app-compile',
+		haxelibBinary,
+		['run', 'reflaxe.ocaml', 'build', '--hxml', 'build.hxml'],
+		{cwd: appRoot, env}
+	))
+	if (!compile.stdout.includes('REFLAXE_OCAML_BUILD:PASS')) {
+		fail('installed reflaxe.ocaml build command did not emit its success marker')
+	}
+	summary.tooling.buildCommandPassed = true
 	summary.externalApplication.compilePassed = compile.status === 0
 	const emittedRoot = path.join(appRoot, 'out')
 	const executable = path.join(emittedRoot, '_build/default/out.exe')

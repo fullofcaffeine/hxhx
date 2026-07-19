@@ -58,6 +58,30 @@ lane. `SKIP` is informational, such as an optional hxhx host or a future
 manifest that the current package does not claim to ship. The doctor never
 installs packages or changes project files.
 
+## Fast build and watch loop
+
+For an installed package, run the project's normal `build.hxml` through the
+package command:
+
+```bash
+haxelib run reflaxe.ocaml build
+haxelib run reflaxe.ocaml build --run out/_build/default/out.exe
+haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe
+```
+
+`watch` discovers classpaths and included HXML files, waits for an edit batch to
+settle, then rebuilds and optionally runs the native artifact. Use repeated
+`--watch-path` options for inputs outside those discovered roots. Generated
+output and common build/cache directories are excluded, and the post-build
+input snapshot prevents compiler output from triggering another build.
+
+Each batch starts a fresh Haxe process. Persistent Haxe-server reuse is not used
+because current Reflaxe evidence found an incomplete-output failure on that
+route. Iteration still benefits from content-stable generated files and Dune's
+incremental native build cache. `--max-builds` provides a deterministic stopping
+point for tests and automation; run `haxelib run reflaxe.ocaml watch --help` for
+all options.
+
 ## Quickstart (inside this monorepo)
 
 From repo root:

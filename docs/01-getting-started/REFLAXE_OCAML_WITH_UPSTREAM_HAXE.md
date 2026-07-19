@@ -55,6 +55,28 @@ Use `--require compiler` when the project needs `compiler-libs`, or `--json`
 when CI or an editor needs the stable schema. An absent hxhx executable does
 not break the upstream-Haxe workflow.
 
+## Daily build and watch workflow
+
+From an installed-package project that has a `build.hxml`, use:
+
+```bash
+haxelib run reflaxe.ocaml build
+haxelib run reflaxe.ocaml build --run out/_build/default/out.exe
+haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe
+```
+
+The one-shot command runs the HXML in the project directory. The watch command
+discovers classpaths and included HXML files, groups rapid edits into one stable
+batch, rebuilds, and runs the artifact only after a successful build. Add
+`--watch-path <path>` for native adapters or other inputs outside the discovered
+roots.
+
+The watcher deliberately starts a fresh Haxe process for each batch. Current
+Reflaxe evidence found that persistent Haxe-server reuse could leave generated
+output incomplete. Fast native iteration instead comes from Reflaxe avoiding
+unchanged file rewrites and Dune reusing its incremental build cache. Generated
+output and normal cache/build directories do not trigger rebuild loops.
+
 ## Option A: use repo-local wiring in this monorepo
 
 Inside this repo, `haxe_libraries/reflaxe.ocaml.hxml` already points to the

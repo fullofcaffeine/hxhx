@@ -64,6 +64,9 @@ function validateConsumer(summary, manifest, manifestSha256) {
 	if (!summary.evidence || summary.evidence.machineLocalPathsRedacted !== true) {
 		fail(`package consumer on ${summary.platform} did not sanitize evidence`)
 	}
+	if (!summary.tooling || summary.tooling.buildCommandPassed !== true) {
+		fail(`package consumer on ${summary.platform} did not prove the installed build command`)
+	}
 	for (const field of ['compilePassed', 'nativeBuildPassed', 'runtimePassed', 'stdoutMatched']) {
 		if (!summary.externalApplication || summary.externalApplication[field] !== true) {
 			fail(`package consumer on ${summary.platform} did not prove ${field}`)
