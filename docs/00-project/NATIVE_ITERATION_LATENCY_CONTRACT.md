@@ -297,7 +297,9 @@ adapters.
 Package extraction becomes mandatory before the next repository (for example
 Reflaxe.C or Genes) copies the complete core, before a `v2` wire schema is
 introduced, or after another protocol-core repair has to be coordinated across
-the existing adapters, whichever happens first. The package must then provide:
+the existing adapters, whichever happens first. Bead
+`haxe_ocaml-850ii.20.6` owns that extraction and its required human product
+decisions. The package must then provide:
 
 - a neutral public MIT-licensed repository with named maintainers;
 - source provenance traced to the repo-owned `hxhx` implementation, without
