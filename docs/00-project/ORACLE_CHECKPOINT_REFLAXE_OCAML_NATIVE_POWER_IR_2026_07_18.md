@@ -180,7 +180,81 @@ runtime requirements, native dependencies, bindings, exports, and validators.
 The lowered nodes reference immutable program-wide records by stable identity
 instead of copying them or rediscovering them.
 
-### Minimum Durable Identities
+### Relationship To The Modern Reflaxe Template
+
+The governing rule is: **the compiler must be as powerful as needed to meet the
+product goals, while avoiding complexity that has no demonstrated job**. In
+architecture terms, that means using a sufficient target-owned model that makes
+measured semantic gaps explicit and independently validatable, then expanding
+it whenever new correctness, interop, performance, or tooling requirements
+demand more power. This constrains unjustified machinery, not user capability,
+target access, generated-code quality, performance ambition, or future growth.
+Its Pattern B discipline describes how this migration proceeds. However, the
+generic project note that labels `reflaxe.ocaml` as a durable
+target-AST-plus-plans compiler is not the final decision for this repository.
+
+This distinction is a product invariant, not wordplay:
+
+| Maximize for users and generated programs | Minimize inside the compiler |
+| --- | --- |
+| Haxe language coverage and practical OCaml access | Duplicate representations of the same semantic fact |
+| Typed native APIs, adapters, and deliberate low-level escape hatches | Competing lowerers and target-side retyping |
+| Idiomatic, readable, efficient OCaml | Passes, graph machinery, and node kinds without a proven invariant |
+| Correctness, diagnostics, inspection, and reproducibility | Unsafe fallback, raw repair, and speculative abstraction |
+| Ability to grow when new evidence requires it | Up-front complexity that slows current development without proving more behavior |
+
+The place bug is the concrete example. Direct construction of `OcamlExpr` was
+not sufficient because it could not independently preserve and validate the
+receiver, old-value load, RHS, store, and result. The compiler therefore grew a
+typed lowered place family. A whole SSA/CFG layer would not currently prove
+more for that operation: ordered OCaml `let` expressions already represent its
+validated schedule directly. If future control families require dominance,
+edge arguments, liveness, or shared cleanup edges, the architecture expands at
+that evidence boundary. The architecture is deliberately expandable, not
+capped.
+
+The whole-repository review found that representation, storage, calls,
+mutation, runtime requirements, native boundaries, and future exports already
+share identities and invariants across `OcamlCompiler`, `OcamlBuilder`, layout,
+and packaging. Permanent disconnected plans would reconstruct an implicit
+lowered program. That evidence crosses the template's own escalation threshold.
+The resulting synthesis is therefore:
+
+- **destination:** the small typed OCaml-specific lowered model documented
+  here (C-lite, without SSA or a broad CFG);
+- **migration method:** Pattern-B-shaped vertical slices, each with one closed
+  family, one owner, one validator, and a hard cutover;
+- **syntax boundary:** `OcamlExpr` remains structural OCaml syntax and never
+  absorbs Haxe semantic ownership;
+- **non-goal:** no universal Reflaxe IR, generic pass framework, or whole-
+  compiler rewrite.
+
+Every new lowered family must state the source fact that target syntax would
+lose, its typed closed payload, producer, one consumption owner, legal lifetime,
+validator, deterministic failure, and executable parity evidence. Its current
+phase contract is:
+
+```text
+normalized host input
+  -> construct and seal one typed lowered family
+  -> validate its semantic and profile invariants
+  -> mechanically construct OcamlExpr
+  -> reject any surviving semantic family before printing
+```
+
+Source-shaped atomic children are temporary migration payloads only when an
+invariant scan proves they hide no admitted place, mutation, or bindable
+operator. A stored fact must support validation, mechanical lowering, a shared
+registry, or a deterministic inspection contract; otherwise it should be
+removed instead of becoming a debug-only flag cloud.
+
+The template also exposed an independent infrastructure gap: `OcamlExpr`
+consumers currently repeat constructor traversal. Bead `haxe_ocaml-i9bnd`
+tracks one exhaustive immediate-child schema, raw-node policy, and constructor-
+coverage tests. That work is deliberately separate from semantic cutovers and
+does not replace the lowered model.
+
+### Required Durable Identities
 
 The model needs deterministic identities for at least:
 
@@ -443,6 +517,7 @@ target-independent validation. Similar node names are not evidence.
 | 7 | `haxe_ocaml-7sgtj` | Generate curated public OCaml export ABIs |
 | 8 | `haxe_ocaml-bomhr` and `haxe_ocaml-fa0zh` | Put upstream Haxe and `hxhx` behind one target core without a shared target IR |
 | 9 | `haxe_ocaml-1hd2w`, `haxe_ocaml-zof2e`, and `haxe_ocaml-850ii` | Productize the fast workflow, SDK docs, and latency evidence |
+| Cross-cutting infrastructure | `haxe_ocaml-i9bnd` | Make every `OcamlExpr` child visible through one exhaustive traversal contract without changing target semantics |
 | Release | `haxe_ocaml-s7jry` | Gate only the declared standalone product scope with honest dependencies |
 
 Each implementation Bead must recheck its own `thinking:xhigh` threshold and
