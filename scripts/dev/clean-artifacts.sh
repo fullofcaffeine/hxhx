@@ -234,6 +234,13 @@ collect_safe_candidates() {
       -print >>"$CANDIDATES" 2>/dev/null || true
   fi
 
+  if [[ -d "$ROOT/test" ]]; then
+    find "$ROOT/test" \
+      \( -path "$ROOT/test/snapshot" -o -path "$ROOT/test/portable" \) -prune -o \
+      -type d \( -name out -o -name 'out_tmp*' -o -name 'out_stage*' \) \
+      -print >>"$CANDIDATES" 2>/dev/null || true
+  fi
+
   if [[ -d "$ROOT/test/portable" ]]; then
     find "$ROOT/test/portable" -type d -name out -print >>"$CANDIDATES" 2>/dev/null || true
     find "$ROOT/test/portable" -type f \
