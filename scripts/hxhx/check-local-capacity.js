@@ -15,10 +15,12 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const { execFileSync } = require('child_process')
+const { CapacityQueueCancelledError, waitForCapacity } = require('./local-capacity-queue.js')
 
 const DEFAULT_MAX_LOAD_PER_CPU = 1.5
 const MIN_COMPETING_CPU_PERCENT = 0.1
 const BLOCKED_EXIT_CODE = 75
+const CANCELLED_EXIT_CODE = 130
 const VALID_POLICIES = new Set(['auto', 'require', 'warn', 'off'])
 
 function usage() {
@@ -28,6 +30,8 @@ Options:
   --policy <auto|require|warn|off>  Local auto=stop, CI auto=warn (default: auto)
   --label <text>                    Human-readable command/workload label
   --max-load-per-cpu <number>       Sustained normalized load limit (default: 1.5)
+  --wait-seconds <number>           Wait this long for local capacity (default: 0)
+  --poll-seconds <number>           Capacity resample interval (default: 10)
   --json-out <path>                 Write the complete preflight report atomically
   --fixture <path>                  Read deterministic host state for fixture tests
   -h, --help                        Show this help
@@ -35,6 +39,8 @@ Options:
 Environment equivalents:
   HXHX_HEAVY_RUN_CAPACITY_POLICY
   HXHX_HEAVY_RUN_MAX_LOAD_PER_CPU
+  HXHX_HEAVY_RUN_WAIT_SECONDS
+  HXHX_HEAVY_RUN_POLL_SECONDS
   HXHX_HEAVY_RUN_CAPACITY_REPORT`)
 }
 
@@ -52,6 +58,8 @@ function parseArgs(argv, env = process.env) {
     policy: env.HXHX_HEAVY_RUN_CAPACITY_POLICY || 'auto',
     label: 'heavy-local-run',
     maxLoadPerCpu: env.HXHX_HEAVY_RUN_MAX_LOAD_PER_CPU || String(DEFAULT_MAX_LOAD_PER_CPU),
+    waitSeconds: env.HXHX_HEAVY_RUN_WAIT_SECONDS || '0',
+    pollSeconds: env.HXHX_HEAVY_RUN_POLL_SECONDS || '10',
     jsonOut: env.HXHX_HEAVY_RUN_CAPACITY_REPORT || '',
     fixture: '',
   }
@@ -77,6 +85,16 @@ function parseArgs(argv, env = process.env) {
       i += 1
       continue
     }
+    if (arg === '--wait-seconds') {
+      options.waitSeconds = readValue(argv, i, arg)
+      i += 1
+      continue
+    }
+    if (arg === '--poll-seconds') {
+      options.pollSeconds = readValue(argv, i, arg)
+      i += 1
+      continue
+    }
     if (arg === '--json-out') {
       options.jsonOut = readValue(argv, i, arg)
       i += 1
@@ -96,6 +114,14 @@ function parseArgs(argv, env = process.env) {
   options.maxLoadPerCpu = Number(options.maxLoadPerCpu)
   if (!Number.isFinite(options.maxLoadPerCpu) || options.maxLoadPerCpu <= 0) {
     fail(`max load per CPU must be a positive number, received ${options.maxLoadPerCpu}`)
+  }
+  options.waitSeconds = Number(options.waitSeconds)
+  if (!Number.isFinite(options.waitSeconds) || options.waitSeconds < 0) {
+    fail(`wait seconds must be a non-negative number, received ${options.waitSeconds}`)
+  }
+  options.pollSeconds = Number(options.pollSeconds)
+  if (!Number.isFinite(options.pollSeconds) || options.pollSeconds <= 0) {
+    fail(`poll seconds must be a positive number, received ${options.pollSeconds}`)
   }
   return options
 }
@@ -297,11 +323,17 @@ function printReport(report, jsonOut) {
     `HXHX_LOCAL_CAPACITY:${marker} label=${JSON.stringify(report.label)} policy=${report.resolvedPolicy} ` +
       `cpus=${report.host.cpuCount} load1=${report.host.load1} load5=${report.host.load5} ` +
       `load1_per_cpu=${report.host.load1PerCpu} sustained_per_cpu=${report.host.sustainedLoadPerCpu} ` +
-      `competitors=${report.competingCompilerProcessCount}`
+      `competitors=${report.competingCompilerProcessCount} queue=${report.queue.outcome} ` +
+      `wait_ms=${report.queue.waitedMs}`
   )
 
   if (report.status === 'warning' || report.status === 'blocked') {
-    const action = report.status === 'blocked' ? 'stopped before expensive setup' : 'continuing with a warning'
+    const action =
+      report.status === 'blocked' && report.queue.outcome === 'timed_out'
+        ? `timed out after ${report.queue.waitedMs}ms before expensive setup`
+        : report.status === 'blocked'
+          ? 'stopped before expensive setup'
+          : 'continuing with a warning'
     console.error(
       `Heavy-run capacity ${action}: observations=${report.observations.join(',')} ` +
         `limit=${report.thresholds.maxSustainedLoadPerCpu} load-per-CPU.`
@@ -321,28 +353,55 @@ function printReport(report, jsonOut) {
   if (jsonOut) console.log(`hxhx_capacity_report=${jsonOut}`)
 }
 
-function main() {
+function printWaitingTransition({ report, waitedMs }) {
+  console.log(
+    `HXHX_LOCAL_CAPACITY:WAITING label=${JSON.stringify(report.label)} ` +
+      `observations=${report.observations.join(',')} waited_ms=${waitedMs} ` +
+      `competitors=${report.competingCompilerProcessCount}`
+  )
+}
+
+async function main() {
   try {
     const options = parseArgs(process.argv.slice(2))
     if (options.help) {
       usage()
       return
     }
-    const state = readHostState(options)
-    const report = evaluateCapacity(state, options)
+    const queued = await waitForCapacity({
+      readReport: () => evaluateCapacity(readHostState(options), options),
+      maxWaitMs: options.waitSeconds * 1000,
+      pollIntervalMs: options.pollSeconds * 1000,
+      onWaiting: printWaitingTransition,
+    })
+    const report = {
+      ...queued.report,
+      queue: {
+        enabled: options.waitSeconds > 0,
+        outcome: queued.outcome,
+        waitedMs: queued.waitedMs,
+        samples: queued.samples,
+      },
+    }
     const jsonOut = options.jsonOut ? writeJsonAtomic(options.jsonOut, report) : ''
     printReport(report, jsonOut)
     process.exitCode = report.exitCode
   } catch (error) {
+    if (error instanceof CapacityQueueCancelledError) {
+      console.error('check-local-capacity: capacity wait cancelled')
+      process.exitCode = CANCELLED_EXIT_CODE
+      return
+    }
     console.error(`check-local-capacity: ${error.message}`)
     process.exitCode = 2
   }
 }
 
-if (require.main === module) main()
+if (require.main === module) void main()
 
 module.exports = {
   BLOCKED_EXIT_CODE,
+  CANCELLED_EXIT_CODE,
   classifyCompilerCommand,
   evaluateCapacity,
   isCiEnvironment,
