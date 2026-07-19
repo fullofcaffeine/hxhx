@@ -235,6 +235,53 @@ edit behind the largest suite.
 | Q3: full `hxhx` consumer E2E | scheduled, relevant high-risk changes, and release candidates | Large self-compile/bootstrap, native target, plugin/builtin, macro-host, cleanup, and performance workload remains healthy. |
 | Q4: `hxhx` Full1/release suites | `hxhx` repository | Proves `hxhx` compatibility and release claims. It may expose a `reflaxe.ocaml` regression, but it is not automatically a gate for every target release. |
 
+### Cost and trigger policy
+
+The tiers are also a CI-cost boundary. They must not collapse into one workflow
+that runs the largest `hxhx` suite for every commit:
+
+- Q0 runs for every relevant target/compiler/runtime change and remains the
+  normal pull-request feedback loop.
+- Q1 runs when the standalone package, target, runtime, examples, supported
+  toolchain, or release inputs can change.
+- Q2 runs when target lowering, runtime, bootstrap inputs, shared schemas,
+  plugin/host contracts, or an immutable candidate pin can affect `hxhx`.
+- Q3 runs on a schedule, for release candidates, by explicit manual request,
+  and for changes classified as high risk to representation, runtime, native
+  ABI, macro/plugin lifecycle, or bootstrap behavior.
+- Q4 follows `hxhx` release policy and is never inherited as the ordinary
+  `reflaxe.ocaml` pull-request gate.
+
+Documentation-only, Beads-only, and unrelated application changes must finish
+through a cheap required aggregate without building `hxhx`. Unknown paths in a
+compiler, runtime, ABI, or workflow ownership area escalate to the safer tier
+until they are classified. The aggregate records why each expensive tier ran
+or skipped, so a path filter cannot leave a required check pending or silently
+turn missing evidence into success. A manual force-all option remains available
+for investigation and release rehearsal.
+
+Expensive jobs should consume one immutable `reflaxe.ocaml` candidate and
+reuse one verified `hxhx` build artifact where the workflow boundary permits
+it. Receipts record setup, target build, `hxhx` build, plugin build/load,
+downstream execution, cache result, and runner time separately. Repeating the
+same bootstrap in several jobs is a measured defect, not free assurance.
+
+Two different E2E workloads are retained because they catch different bugs:
+
+1. Building and exercising `hxhx` through `reflaxe.ocaml` treats the compiler
+   as a large Haxe application and stresses lowering, runtime, bootstrap,
+   macro-host, cleanup, and performance behavior.
+2. Promoting one nontrivial Haxe-authored Reflaxe compiler into the shared
+   stock-Haxe/`hxhx` native plugin payload, and also exercising the `hxhx`
+   builtin form, tests the authoring SDK, ABI, adapters, packaging, service
+   negotiation, and one-target-core promise.
+
+The second workload needs both a bounded repo-owned capability canary for
+relevant SDK changes and an authentic compiler workload for scheduled,
+high-risk, and release-candidate proof. A hello plugin or toy emitter cannot
+replace the authentic compiler. Neither workload makes `hxhx` the standalone
+target's semantic authority.
+
 Q2 and Q3 use the exact candidate artifact, never an unrecorded branch checkout.
 Failures name the producer source SHA, artifact digest, consumer SHA, contract
 versions, toolchain, and failing tier.

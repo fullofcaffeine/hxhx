@@ -480,6 +480,33 @@ Stage4/customization owner, related to M22 only through shared tooling.
 
 ## 10. Validation matrix
 
+### Retained QA cadence
+
+The SDK needs a fast canary and a real workload, but it must not make every Haxe
+or `reflaxe.ocaml` edit pay for a complete `hxhx` bootstrap and cross-host
+plugin matrix.
+
+| Workload | Cadence | Purpose |
+| --- | --- | --- |
+| Focused target and ABI fixtures | Every relevant SDK, target-core, schema, or host-adapter change | Give fast deterministic feedback without compiling all of `hxhx`. |
+| Repo-owned Reflaxe compiler canary | Relevant target-core/plugin-contract changes and candidate promotion | Exercise meaningful analysis, target AST/pass work, emission, package identity, and the supported activation forms in a bounded workload. |
+| Authentic Reflaxe compiler promotion | Scheduled, manual, classified high-risk, and release-candidate runs | Compile a nontrivial application through one pinned real compiler core across evaluated, stock-Haxe plugin, `hxhx` plugin, and `hxhx` builtin forms. Toy-only success cannot authorize support. |
+| `hxhx` large-consumer E2E | Scheduled, classified high-risk, and release-candidate runs | Treat `hxhx` as a demanding Haxe application and stress native lowering, runtime, bootstrap, macro host, cleanup, and performance independently of the compiler-plugin canary. |
+
+All four forms of the authentic compiler proof consume the same semantic target
+core and immutable candidate. They compare target-core and plugin payload
+identity, declared loader-shell differences, diagnostics, normalized generated
+artifacts, and runtime behavior. Build the candidate and `hxhx` once per
+compatible matrix where possible; verify digests before reuse instead of
+silently rebuilding different inputs.
+
+The existing scheduled Reflaxe.Elixir promotion pilot is useful precursor
+evidence, but it does not by itself prove the future shared stock-Haxe/`hxhx`
+plugin ABI. M22.9 owns the retained authentic-compiler workload, M22.12 owns its
+same-candidate release aggregate, and `haxe_ocaml-850ii.23` owns the trigger and
+cost-routing policy. Ordinary standalone target correctness remains owned by
+stock Haxe, focused tests, the package matrix, and upstream behavior oracles.
+
 | Surface | Required proof |
 | --- | --- |
 | Source identity | One Haxe semantic core digest; no host branches in transform or target semantics |
