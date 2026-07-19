@@ -12,13 +12,15 @@ const {
 	validateArtifactManifest
 } = require('./reflaxe-ocaml-package-artifact')
 
-const metadata = { name: 'reflaxe.ocaml', version: '1.2.3' }
+const metadata = { name: 'reflaxe.ocaml', version: '1.2.3', main: 'reflaxe.ocaml.tooling.ReflaxeOcamlRun' }
 
 function createArchive(root, embeddedMetadata = metadata, extraFiles = {}) {
 	const source = path.join(root, 'source')
 	fs.mkdirSync(path.join(source, 'src/reflaxe/ocaml'), { recursive: true })
 	fs.writeFileSync(path.join(source, 'haxelib.json'), JSON.stringify(embeddedMetadata))
 	fs.writeFileSync(path.join(source, 'extraParams.hxml'), '-D ocaml\n')
+	fs.mkdirSync(path.join(source, 'src/reflaxe/ocaml/tooling'), { recursive: true })
+	fs.writeFileSync(path.join(source, 'src/reflaxe/ocaml/tooling/ReflaxeOcamlRun.hx'), 'class ReflaxeOcamlRun {}\n')
 	fs.writeFileSync(path.join(source, 'src/reflaxe/ocaml/OcamlCompiler.hx'), 'class OcamlCompiler {}\n')
 	for (const [relative, contents] of Object.entries(extraFiles)) {
 		const destination = path.join(source, relative)

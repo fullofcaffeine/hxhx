@@ -53,6 +53,12 @@ const summary = {
 		installedTargetRelativePath: null,
 		resolvedLibraries: []
 	},
+	tooling: {
+		doctorPassed: false,
+		doctorSchemaVersion: null,
+		sourceGenerationReady: false,
+		nativeBuildReady: false
+	},
 	externalApplication: {
 		compilePassed: false,
 		nativeBuildPassed: false,
@@ -417,6 +423,25 @@ function parseLibraryNames(output) {
 		.sort()
 }
 
+/** Validates the package runner before the external application can mask it. */
+function validateInstalledDoctor(doctor, expectedVersion) {
+	if (doctor.schemaVersion !== 1 || doctor.packageName !== 'reflaxe.ocaml' || doctor.packageVersion !== expectedVersion) {
+		fail('installed reflaxe.ocaml doctor returned an unexpected package/schema identity')
+	}
+	if (doctor.summary?.requestedCapability !== 'native' || doctor.summary?.ready !== true || doctor.summary?.exitCode !== 0) {
+		fail('installed reflaxe.ocaml doctor did not confirm native capability')
+	}
+	if (doctor.capabilities?.sourceGeneration !== true || doctor.capabilities?.nativeBuild !== true) {
+		fail('installed reflaxe.ocaml doctor capability report was incomplete')
+	}
+	return {
+		doctorPassed: true,
+		doctorSchemaVersion: doctor.schemaVersion,
+		sourceGenerationReady: doctor.capabilities.sourceGeneration,
+		nativeBuildReady: doctor.capabilities.nativeBuild
+	}
+}
+
 function proveExternalInstall(zipPath, reflaxeRoot) {
 	const isolatedHaxelib = path.join(tempRoot, 'haxelib')
 	const appRoot = path.join(tempRoot, 'external-app')
@@ -458,6 +483,20 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	}
 	summary.isolation.installedTargetInsideDisposableRepository = true
 	summary.isolation.installedTargetRelativePath = path.relative(isolatedHaxelib, installedClasspath).split(path.sep).join('/')
+
+	const doctorResult = requireSuccess('installed-doctor', runStep(
+		'installed-doctor',
+		haxelibBinary,
+		['run', 'reflaxe.ocaml', 'doctor', '--json', '--require', 'native'],
+		{cwd: appRoot, env}
+	))
+	let doctor
+	try {
+		doctor = JSON.parse(doctorResult.stdout)
+	} catch (_) {
+		fail('installed reflaxe.ocaml doctor did not return valid JSON')
+	}
+	Object.assign(summary.tooling, validateInstalledDoctor(doctor, packageMetadata.version))
 
 	const compile = requireSuccess('external-app-compile', runStep('external-app-compile', haxeBinary, ['build.hxml'], { cwd: appRoot, env }))
 	summary.externalApplication.compilePassed = compile.status === 0
@@ -545,4 +584,4 @@ if (require.main === module) {
 	main()
 }
 
-module.exports = { findNekoLibraryDirectories, performanceEnvironment }
+module.exports = { findNekoLibraryDirectories, performanceEnvironment, validateInstalledDoctor }

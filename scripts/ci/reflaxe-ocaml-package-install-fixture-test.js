@@ -4,7 +4,7 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 
-const { findNekoLibraryDirectories, performanceEnvironment } = require('./run-reflaxe-ocaml-package-install')
+const { findNekoLibraryDirectories, performanceEnvironment, validateInstalledDoctor } = require('./run-reflaxe-ocaml-package-install')
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'reflaxe-ocaml-package-install-fixture-'))
 try {
@@ -24,6 +24,25 @@ try {
 		HAXE_STD_PATH: '/compiler/std',
 		PATH: '/compiler/bin'
 	})
+	assert.deepStrictEqual(validateInstalledDoctor({
+		schemaVersion: 1,
+		packageName: 'reflaxe.ocaml',
+		packageVersion: '1.2.3',
+		summary: {requestedCapability: 'native', ready: true, exitCode: 0},
+		capabilities: {sourceGeneration: true, nativeBuild: true}
+	}, '1.2.3'), {
+		doctorPassed: true,
+		doctorSchemaVersion: 1,
+		sourceGenerationReady: true,
+		nativeBuildReady: true
+	})
+	assert.throws(() => validateInstalledDoctor({
+		schemaVersion: 1,
+		packageName: 'reflaxe.ocaml',
+		packageVersion: '1.2.3',
+		summary: {requestedCapability: 'native', ready: false, exitCode: 1},
+		capabilities: {sourceGeneration: true, nativeBuild: false}
+	}, '1.2.3'), /did not confirm native capability/)
 	console.log('REFLAXE_OCAML_PACKAGE_INSTALL_FIXTURE:PASS')
 } finally {
 	fs.rmSync(root, { recursive: true, force: true })

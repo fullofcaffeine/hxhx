@@ -18,6 +18,46 @@ This package is developed in the `hxhx` monorepo and is also usable with mainstr
 - Reflaxe `4.x`
 - OCaml + dune + ocaml-findlib (for native build/run)
 
+## Check your development environment
+
+After installing the package, ask the target to diagnose the current project:
+
+```bash
+haxelib run reflaxe.ocaml doctor
+```
+
+The report separates four useful capability levels:
+
+- `source`: stock Haxe can resolve the target and emit OCaml;
+- `native`: OCaml, Dune, and findlib can build that output;
+- `compiler`: compiler-libs is also available for advanced compiler tooling;
+- `hxhx`: an `hxhx` executable is available as an additional host.
+
+Use `--require` when a script needs one level to fail closed, and `--json` for a
+stable machine-readable report:
+
+```bash
+haxelib run reflaxe.ocaml doctor --require native
+haxelib run reflaxe.ocaml doctor --json --require compiler
+```
+
+Inside this monorepo, use the source-checkout command instead:
+
+```bash
+npm run doctor:reflaxe-ocaml -- --require native
+```
+
+The contributor command deliberately compiles only the host-side diagnostic
+tool. The checkout's target `_std` classpaths are broader than the flattened
+installed package, so using the direct command avoids pretending that the
+doctor itself is an OCaml-target application.
+
+`PASS` means the named check worked. `WARN` means the tool is usable or missing
+only for an optional capability, but differs from the exact hosted evidence
+lane. `SKIP` is informational, such as an optional hxhx host or a future
+manifest that the current package does not claim to ship. The doctor never
+installs packages or changes project files.
+
 ## Quickstart (inside this monorepo)
 
 From repo root:

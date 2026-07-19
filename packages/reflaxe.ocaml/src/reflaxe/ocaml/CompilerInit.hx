@@ -17,6 +17,13 @@ import reflaxe.ocaml.preprocessor.PreservePlaceAssignmentsImpl;
 class CompilerInit {
 	public static function Start():Void {
 		#if macro
+		// `haxelib run reflaxe.ocaml` compiles the package's host-side Run class
+		// with this library on the command line. That tooling process must not
+		// register the OCaml target or rewrite its own typed expressions.
+		if (Sys.getEnv("HAXELIB_RUN") == "1" && Sys.getEnv("HAXELIB_RUN_NAME") == "reflaxe.ocaml") {
+			return;
+		}
+
 		if (haxe.macro.Context.defined("reflaxe_ocaml_debug_init")) {
 			haxe.macro.Context.warning("reflaxe.ocaml CompilerInit.Start()", haxe.macro.Context.currentPos());
 		}

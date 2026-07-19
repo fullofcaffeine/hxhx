@@ -94,14 +94,28 @@ sudo apt-get install -y ocaml dune ocaml-findlib
 Sanity-check the toolchain:
 
 ```bash
-haxe --version
-ocamlc -version
-dune --version
+haxelib run reflaxe.ocaml doctor --require native
+```
+
+This checks more than three version commands: it verifies Haxe and Reflaxe
+package resolution, the current runtime-source layout, OCaml, Dune, findlib,
+Opam, compiler-libs, optional hxhx availability, project lock presence, and
+whether the versions match the exact hosted evidence lane. It is read-only.
+
+Inside this monorepo, run the equivalent source-checkout command:
+
+```bash
+npm run doctor:reflaxe-ocaml -- --require native
 ```
 
 Expected product baseline:
 
 - `haxe --version` should report `4.3.7`
+- hosted package receipts currently use OCaml `5.2.1` and Dune `3.24.0`
+
+Compatible newer local OCaml/Dune versions are reported as warnings rather
+than mislabeled as hosted evidence. Use `--json` when retaining the result in a
+CI artifact.
 
 ## Installation modes
 

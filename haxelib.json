@@ -19,7 +19,7 @@
   "dependencies": {
     "reflaxe": "^4.0.0"
   },
-  "main": "reflaxe.ocaml.OcamlCompiler",
+  "main": "reflaxe.ocaml.tooling.ReflaxeOcamlRun",
   "reflaxe": {
     "name": "OCaml",
     "abbv": "ocaml",

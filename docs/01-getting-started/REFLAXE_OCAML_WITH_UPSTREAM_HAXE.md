@@ -42,6 +42,19 @@ sudo apt-get update
 sudo apt-get install -y ocaml dune ocaml-findlib
 ```
 
+After installing `reflaxe.ocaml`, check the whole path from Haxe resolution to
+native OCaml tools:
+
+```bash
+haxelib run reflaxe.ocaml doctor --require native
+```
+
+The default requirement is only `source`, so a machine that intentionally
+emits OCaml for another builder can still receive an honest successful report.
+Use `--require compiler` when the project needs `compiler-libs`, or `--json`
+when CI or an editor needs the stable schema. An absent hxhx executable does
+not break the upstream-Haxe workflow.
+
 ## Option A: use repo-local wiring in this monorepo
 
 Inside this repo, `haxe_libraries/reflaxe.ocaml.hxml` already points to the
@@ -54,6 +67,16 @@ source layout used during development:
 
 That means local examples/tests can use `-lib reflaxe.ocaml` directly. No
 `haxelib dev` step is needed for normal monorepo work.
+
+The matching source-checkout diagnostic command is:
+
+```bash
+npm run doctor:reflaxe-ocaml -- --require native
+```
+
+Use that command in the monorepo rather than `haxelib run`: the source checkout
+intentionally exposes target `_std` roots directly, while a published package
+contains their flattened `.cross.hx` form.
 
 Compile with:
 

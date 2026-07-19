@@ -13,7 +13,8 @@ const path = require('path')
 const repoRoot = path.resolve(__dirname, '../..')
 const defaultEpochSeconds = 315532800
 const defaultPackageMetadata = JSON.parse(fs.readFileSync(path.join(repoRoot, 'packages/reflaxe.ocaml/haxelib.json'), 'utf8'))
-const requiredArchiveFiles = ['haxelib.json', 'extraParams.hxml', 'src/reflaxe/ocaml/OcamlCompiler.hx']
+const packageRunner = 'reflaxe.ocaml.tooling.ReflaxeOcamlRun'
+const requiredArchiveFiles = ['haxelib.json', 'extraParams.hxml', 'src/reflaxe/ocaml/tooling/ReflaxeOcamlRun.hx', 'src/reflaxe/ocaml/OcamlCompiler.hx']
 const forbiddenArchiveExtensions = new Set([
 	'.a',
 	'.cma',
@@ -106,6 +107,9 @@ function inspectPackageArchive(zipPath, expectedMetadata = defaultPackageMetadat
 		throw new Error(
 			`embedded package identity must be ${expectedMetadata.name} ${expectedMetadata.version}, received ${embedded.name || '(missing)'} ${embedded.version || '(missing)'}`
 		)
+	}
+	if (embedded.main !== packageRunner) {
+		throw new Error(`embedded package runner must be ${packageRunner}, received ${embedded.main || '(missing)'}`)
 	}
 	return {
 		name: expectedMetadata.name,
