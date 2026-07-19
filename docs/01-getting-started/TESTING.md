@@ -495,6 +495,8 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - compare multiple run summaries: `npm run hxhx:profile:stage0-compare -- --summary-dir <run1> --summary-dir <run2> --summary-dir <run3> --min-presence 2 --sort median --json-out <compare.json>`
     - print baseline-vs-latest regression table from latest N summaries: `npm run hxhx:profile:stage0-hotspot-baseline -- --root .hxhx/profile/stage0-regen --samples 5 --min-presence 2 --sort median --json-out .hxhx/profile/stage0-regen/compare.latest.json`
   - Script preflight checks for stale `haxe --wait` / `--server-connect` processes before emit.
+    - Detection checks the process executable as well as its arguments. A shell or test command that merely
+      mentions `haxe --wait` is not treated as a server and is never signalled by global cleanup.
     - Opt-in safe cleanup (repo-owned only): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-repo-server`
     - Opt-in global cleanup (unsafe): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-all-haxe-servers`
   - Optional repo-owned server reuse:

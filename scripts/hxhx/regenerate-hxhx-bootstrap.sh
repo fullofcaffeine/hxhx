@@ -477,6 +477,7 @@ BOOTSTRAP_VERIFY_DIR="${HXHX_BOOTSTRAP_VERIFY_DIR:-$PKG_DIR/bootstrap_verify}"
 STATE_DIR="${HXHX_STATE_DIR:-$ROOT/.hxhx/state}"
 FINGERPRINT_FILE="$STATE_DIR/bootstrap_regen_fingerprint.v1"
 HAXE_SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
+HAXE_SERVER_PROCESS_CLASSIFIER="$ROOT/scripts/hxhx/haxe-server-processes.awk"
 
 phase_preflight_sec=0
 phase_emit_sec=0
@@ -565,15 +566,11 @@ collect_process_tree_pids() {
 }
 
 list_haxe_server_pids() {
-	ps -axo pid=,command= | awk '
-		{
-			pid = $1
-			$1 = ""
-			cmd = substr($0, 2)
-			if (cmd ~ /haxe/ && (cmd ~ /--wait([[:space:]]|$)/ || cmd ~ /--server-connect([[:space:]]|$)/))
-				print pid
-		}
-	' | sort -u
+	if [ ! -f "$HAXE_SERVER_PROCESS_CLASSIFIER" ]; then
+		echo "Missing Haxe server process classifier: $HAXE_SERVER_PROCESS_CLASSIFIER" >&2
+		return 1
+	fi
+	ps -axo pid=,comm=,command= | awk -f "$HAXE_SERVER_PROCESS_CLASSIFIER" | sort -u
 }
 
 print_haxe_server_processes() {
