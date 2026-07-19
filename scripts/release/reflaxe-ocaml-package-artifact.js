@@ -18,6 +18,8 @@ const requiredArchiveFiles = [
 	'haxelib.json',
 	'extraParams.hxml',
 	'src/reflaxe/ocaml/tooling/ReflaxeOcamlRun.hx',
+	'src/reflaxe/ocaml/tooling/ReflaxeOcamlInspection.hx',
+	'src/reflaxe/ocaml/tooling/InspectionReport.hx',
 	'src/reflaxe/ocaml/OcamlCompiler.hx',
 	'templates/scaffold/app/build.hxml',
 	'templates/scaffold/library/build.hxml'

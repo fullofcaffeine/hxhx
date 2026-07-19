@@ -161,6 +161,34 @@ speedup comes from content-stable generated OCaml and Dune's incremental cache.
 Output and common cache/build directories are excluded, and a post-build input
 snapshot prevents generated files from causing a feedback loop.
 
+## Inspect compiler-owned build artifacts
+
+After a successful build, retain a human-readable explanation or a stable JSON
+receipt:
+
+```bash
+haxelib run reflaxe.ocaml inspect
+haxelib run reflaxe.ocaml inspect --require-lowering
+haxelib run reflaxe.ocaml inspect --json
+```
+
+The command validates the exact current schemas for Reflaxe's generated-file
+receipt, the compile profile, and the runtime module-selection report. With
+`-D ocaml_lowering_report` (already present in the starter templates), it also
+summarizes the migrated typed assignment/update plans: source location,
+semantic and carrier types, representation reason, observable effect schedule,
+and runtime requirement IDs. Use `--output <directory>` when the HXML does not
+emit to `out`.
+
+Inspection is deliberately read-only and fail-closed. Missing or stale required
+reports fail; typed place lowering is optional unless `--require-lowering` is
+selected. It does not parse generated OCaml or Dune text to reconstruct compiler
+semantics. The current runtime selection is explicitly not the future locked,
+source-rooted semantic manifest, and the place report covers one migrated
+semantic family rather than a whole-program IR. Program-wide representation,
+native dependency, raw/unsafe, binding, and curated export-ABI inspection stay
+marked unavailable until their owning typed manifests exist.
+
 ## Installation modes
 
 ### Mode A: repo-internal `haxe_libraries` wiring

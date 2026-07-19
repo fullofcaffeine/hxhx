@@ -25,6 +25,7 @@ class ReflaxeOcamlCli {
 			case "new": ReflaxeOcamlScaffoldCli.run(args, packageRoot, invocationRoot);
 			case "build": runAuthoring(args, invocationRoot, false);
 			case "watch": runAuthoring(args, invocationRoot, true);
+			case "inspect": runInspection(args, invocationRoot);
 			case "version", "--version", "-v":
 				Sys.println('reflaxe.ocaml ${readPackageVersion(packageRoot)}');
 				0;
@@ -36,6 +37,48 @@ class ReflaxeOcamlCli {
 				Sys.stderr().writeString(help());
 				2;
 		};
+	}
+
+	static function runInspection(args:Array<String>, invocationRoot:String):Int {
+		var projectRoot = invocationRoot;
+		var outputPath = "out";
+		var json = false;
+		var requireLowering = false;
+		var index = 0;
+		while (index < args.length) {
+			final option = args[index];
+			switch (option) {
+				case "--project":
+					index++;
+					if (index >= args.length) {
+						return inspectionUsageError("--project needs a directory path.");
+					}
+					projectRoot = resolveFrom(invocationRoot, args[index]);
+				case "--output":
+					index++;
+					if (index >= args.length) {
+						return inspectionUsageError("--output needs a project-relative directory path.");
+					}
+					outputPath = args[index];
+				case "--json":
+					json = true;
+				case "--require-lowering":
+					requireLowering = true;
+				case "--help", "-h":
+					Sys.print(inspectionHelp());
+					return 0;
+				case _:
+					return inspectionUsageError('Unknown inspect option: $option');
+			}
+			index++;
+		}
+		if (!FileSystem.exists(projectRoot) || !FileSystem.isDirectory(projectRoot)) {
+			return inspectionUsageError('Project directory does not exist: $projectRoot');
+		}
+		final outputDirectory = resolveFrom(projectRoot, outputPath);
+		final report = ReflaxeOcamlInspection.inspect(projectRoot, outputDirectory, requireLowering);
+		Sys.print(json ? ReflaxeOcamlInspection.renderJson(report) : ReflaxeOcamlInspection.renderHuman(report));
+		return report.summary.exitCode;
 	}
 
 	static function runDoctor(args:Array<String>, packageRoot:String, invocationRoot:String):Int {
@@ -219,6 +262,12 @@ class ReflaxeOcamlCli {
 		return 2;
 	}
 
+	static function inspectionUsageError(message:String):Int {
+		Sys.stderr().writeString(message + "\n\n");
+		Sys.stderr().writeString(inspectionHelp());
+		return 2;
+	}
+
 	static function positiveInteger(value:String):Null<Int> {
 		if (!~/^[1-9][0-9]*$/.match(value)) {
 			return null;
@@ -243,10 +292,31 @@ class ReflaxeOcamlCli {
 			"  new       Create a runnable application or library starter project",
 			"  build     Run one fresh Haxe-to-OCaml project build, optionally followed by an executable",
 			"  watch     Rebuild after stable source changes without reusing a Haxe server",
+			"  inspect   Explain the compiler-owned artifacts from one completed build",
 			"  version   Print the reflaxe.ocaml package version",
 			"  help      Show this help",
 			"",
 			"Run a command with --help for its options.",
+			""
+		].join("\n");
+	}
+
+	static function inspectionHelp():String {
+		return [
+			"Inspect a completed reflaxe.ocaml build",
+			"",
+			"Usage:",
+			"  haxelib run reflaxe.ocaml inspect [options]",
+			"",
+			"Options:",
+			"  --project <directory>          Project working directory (default: current project)",
+			"  --output <directory>           OCaml output; relative paths use the project (default: out)",
+			"  --json                         Print the stable machine-readable report",
+			"  --require-lowering             Fail unless typed place-lowering data is present",
+			"  --help                         Show this help",
+			"",
+			"Run a successful build before inspection. Add -D ocaml_lowering_report to the HXML",
+			"to inspect the migrated assignment/update lowering family.",
 			""
 		].join("\n");
 	}

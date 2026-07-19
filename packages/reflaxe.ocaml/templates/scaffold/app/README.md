@@ -21,6 +21,12 @@ Rebuild and run after each stable source edit:
 haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe
 ```
 
+Inspect the active profile, runtime selection, and typed place operations:
+
+```bash
+haxelib run reflaxe.ocaml inspect --require-lowering
+```
+
 The watcher starts a fresh Haxe process for each edit batch. Reflaxe leaves
 unchanged generated OCaml files untouched, so Dune can reuse its native build
 cache safely.

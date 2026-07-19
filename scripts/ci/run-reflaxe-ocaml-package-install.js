@@ -61,6 +61,7 @@ const summary = {
 		scaffoldCommandPassed: false,
 		scaffoldApplicationPassed: false,
 		scaffoldLibraryPassed: false,
+		inspectCommandPassed: false,
 		buildCommandPassed: false
 	},
 	externalApplication: {
@@ -527,6 +528,31 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		fail('installed scaffold did not build and execute with its documented output')
 	}
 	summary.tooling.scaffoldApplicationPassed = true
+	const scaffoldInspection = requireSuccess('installed-scaffold-inspect', runStep(
+		'installed-scaffold-inspect',
+		haxelibBinary,
+		[
+			'run', 'reflaxe.ocaml', 'inspect', '--project', scaffoldRoot,
+			'--output', 'out', '--require-lowering', '--json'
+		],
+		{cwd: appRoot, env}
+	))
+	let scaffoldInspectionReport
+	try {
+		scaffoldInspectionReport = JSON.parse(scaffoldInspection.stdout)
+	} catch (error) {
+		fail(`installed inspect command did not emit valid JSON: ${error instanceof Error ? error.message : String(error)}`)
+	}
+	if (scaffoldInspectionReport.schemaVersion !== 1
+		|| scaffoldInspectionReport.summary?.valid !== true
+		|| scaffoldInspectionReport.generatedFiles?.status !== 'present'
+		|| scaffoldInspectionReport.profile?.status !== 'present'
+		|| scaffoldInspectionReport.runtime?.semanticManifest !== false
+		|| scaffoldInspectionReport.lowering?.status !== 'present'
+		|| !scaffoldInspectionReport.unavailable?.some(capability => capability.id === 'export-abi')) {
+		fail('installed inspect command did not preserve its compiler-owned authority and deferral contract')
+	}
+	summary.tooling.inspectCommandPassed = true
 
 	const scaffoldLibraryRoot = path.join(tempRoot, 'scaffold-library')
 	const scaffoldLibrary = requireSuccess('installed-scaffold-library', runStep(

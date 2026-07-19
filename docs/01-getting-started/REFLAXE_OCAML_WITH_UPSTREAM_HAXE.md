@@ -96,6 +96,29 @@ output incomplete. Fast native iteration instead comes from Reflaxe avoiding
 unchanged file rewrites and Dune reusing its incremental build cache. Generated
 output and normal cache/build directories do not trigger rebuild loops.
 
+## Inspect what the build decided
+
+Run inspection after a successful build:
+
+```bash
+haxelib run reflaxe.ocaml inspect
+haxelib run reflaxe.ocaml inspect --require-lowering
+haxelib run reflaxe.ocaml inspect --json
+```
+
+It validates the generated-file receipt, compile profile, and current runtime
+module selection. Add `-D ocaml_lowering_report` to a custom HXML to expose the
+migrated typed place assignment/update plans; the starter templates already do
+this. Those entries explain source positions, semantic-to-carrier types,
+representation reasons, effect schedules, and runtime requirements.
+
+The authority boundary is part of the output. Today's runtime report is not
+presented as the future source-rooted semantic manifest, and the typed place
+report is not presented as a whole-program IR. Representation registries,
+native dependencies, raw/unsafe proofs, bindings, and curated export ABIs stay
+marked unavailable until their typed owners land. Inspection is read-only and
+does not infer semantics by scanning generated OCaml or Dune files.
+
 ## Option A: use repo-local wiring in this monorepo
 
 Inside this repo, `haxe_libraries/reflaxe.ocaml.hxml` already points to the

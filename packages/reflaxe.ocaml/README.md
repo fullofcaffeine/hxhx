@@ -103,6 +103,32 @@ incremental native build cache. `--max-builds` provides a deterministic stopping
 point for tests and automation; run `haxelib run reflaxe.ocaml watch --help` for
 all options.
 
+## Inspect a completed build
+
+After `build`, explain the artifacts and decisions the current compiler owns:
+
+```bash
+haxelib run reflaxe.ocaml inspect
+haxelib run reflaxe.ocaml inspect --require-lowering
+haxelib run reflaxe.ocaml inspect --json
+```
+
+The report validates Reflaxe's generated-file receipt, the active OCaml profile,
+and the current runtime-selection report. When the HXML contains
+`-D ocaml_lowering_report` (included in the starter templates), it also shows
+the source location, semantic and carrier types, representation reason, effect
+order, and runtime requirements for assignment/update operations already on the
+typed place-lowering path. `--output` selects a non-default project-relative
+output directory.
+
+This is intentionally honest inspection, not generated-code guesswork. The
+runtime selection report is labeled as the current compiler/runtime report,
+not the future source-rooted semantic runtime manifest. Program-wide
+representation, native dependency, raw/unsafe, typed binding, and curated
+export-ABI inspection remain visibly unavailable until their owning typed
+manifests land. The command never scans emitted OCaml or Dune text to fabricate
+those answers.
+
 ## Quickstart (inside this monorepo)
 
 From repo root:

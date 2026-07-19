@@ -30,7 +30,9 @@ try {
 	const createdApp = runCli(['new', 'app', appRoot, '--name', 'Fixture App'])
 	assert.strictEqual(createdApp.status, 0, createdApp.stderr || createdApp.stdout)
 	assert(createdApp.stdout.includes('REFLAXE_OCAML_SCAFFOLD:PASS kind=app'))
+	assert(createdApp.stdout.includes('inspect --require-lowering'))
 	assert(fs.readFileSync(path.join(appRoot, 'src/Main.hx'), 'utf8').includes('Hello from Fixture App via reflaxe.ocaml!'))
+	assert(fs.readFileSync(path.join(appRoot, 'README.md'), 'utf8').includes('inspect --require-lowering'))
 
 	const editedMain = fs.readFileSync(path.join(appRoot, 'src/Main.hx'), 'utf8') + '// user edit\n'
 	fs.writeFileSync(path.join(appRoot, 'src/Main.hx'), editedMain)
@@ -59,6 +61,12 @@ try {
 	assert(appBuild.stdout.includes('Hello from Fixture App via reflaxe.ocaml!'))
 	assert(appBuild.stdout.includes('REFLAXE_OCAML_BUILD:PASS'))
 	assert(appBuild.stdout.includes('REFLAXE_OCAML_RUN:PASS'))
+	const appInspect = runCli(['inspect', '--project', appRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(appInspect.status, 0, appInspect.stderr || appInspect.stdout)
+	const appInspection = JSON.parse(appInspect.stdout)
+	assert.strictEqual(appInspection.summary.valid, true)
+	assert.strictEqual(appInspection.lowering.status, 'present')
+	assert.strictEqual(appInspection.runtime.semanticManifest, false)
 
 	const libraryRoot = path.join(tempRoot, 'fixture-library')
 	const createdLibrary = runCli(['new', 'library', libraryRoot, '--name', 'Fixture Library'])

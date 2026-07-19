@@ -16,6 +16,12 @@ For the edit loop:
 haxelib run reflaxe.ocaml watch
 ```
 
+Inspect the active profile, runtime selection, and typed place operations:
+
+```bash
+haxelib run reflaxe.ocaml inspect --require-lowering
+```
+
 The generated Dune project lives in `out/` and builds as a library, not an
 executable. `haxelib.json` describes the Haxe-facing package. Select and document
 your project license before publishing it.

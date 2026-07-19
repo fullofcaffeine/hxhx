@@ -47,6 +47,7 @@ class ReflaxeOcamlScaffoldCli {
 					Sys.println("  haxelib run reflaxe.ocaml build");
 					Sys.println("  haxelib run reflaxe.ocaml watch");
 				}
+				Sys.println("  haxelib run reflaxe.ocaml inspect --require-lowering");
 				Sys.println('REFLAXE_OCAML_SCAFFOLD:PASS kind=${summary.kind} files=${summary.files.length}');
 				0;
 			case Rejected(message):

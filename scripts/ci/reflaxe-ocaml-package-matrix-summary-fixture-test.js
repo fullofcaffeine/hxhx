@@ -57,6 +57,7 @@ try {
 				scaffoldCommandPassed: true,
 				scaffoldApplicationPassed: true,
 				scaffoldLibraryPassed: true,
+				inspectCommandPassed: true,
 				buildCommandPassed: true
 			},
 			package: {
@@ -93,6 +94,13 @@ try {
 	assert.match(missingScaffold.stderr, /tooling\.scaffoldCommandPassed/)
 
 	darwin.tooling.scaffoldCommandPassed = true
+	darwin.tooling.inspectCommandPassed = false
+	fs.writeFileSync(darwinPath, JSON.stringify(darwin, null, 2) + '\n')
+	const missingInspect = run()
+	assert.notStrictEqual(missingInspect.status, 0)
+	assert.match(missingInspect.stderr, /tooling\.inspectCommandPassed/)
+
+	darwin.tooling.inspectCommandPassed = true
 	darwin.package.sha256 = '0'.repeat(64)
 	fs.writeFileSync(darwinPath, JSON.stringify(darwin, null, 2) + '\n')
 	const rejected = run()

@@ -64,7 +64,7 @@ function validateConsumer(summary, manifest, manifestSha256) {
 	if (!summary.evidence || summary.evidence.machineLocalPathsRedacted !== true) {
 		fail(`package consumer on ${summary.platform} did not sanitize evidence`)
 	}
-	for (const field of ['scaffoldCommandPassed', 'scaffoldApplicationPassed', 'scaffoldLibraryPassed', 'buildCommandPassed']) {
+	for (const field of ['scaffoldCommandPassed', 'scaffoldApplicationPassed', 'scaffoldLibraryPassed', 'inspectCommandPassed', 'buildCommandPassed']) {
 		if (!summary.tooling || summary.tooling[field] !== true) {
 			fail(`package consumer on ${summary.platform} did not prove tooling.${field}`)
 		}
