@@ -30,3 +30,7 @@ haxelib run reflaxe.ocaml inspect --require-lowering
 The watcher starts a fresh Haxe process for each edit batch. Reflaxe leaves
 unchanged generated OCaml files untouched, so Dune can reuse its native build
 cache safely.
+
+Build output separates total Haxe-child time from the target-owned Dune phase.
+Dune typechecking, compilation, and linking are one measured phase; cache hits,
+program loading, startup, and workload runtime are not guessed.

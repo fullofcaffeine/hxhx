@@ -64,15 +64,21 @@ function validateConsumer(summary, manifest, manifestSha256) {
 	if (!summary.evidence || summary.evidence.machineLocalPathsRedacted !== true) {
 		fail(`package consumer on ${summary.platform} did not sanitize evidence`)
 	}
-	for (const field of ['scaffoldCommandPassed', 'scaffoldApplicationPassed', 'scaffoldLibraryPassed', 'inspectCommandPassed', 'buildCommandPassed']) {
+	for (const field of ['scaffoldCommandPassed', 'scaffoldApplicationPassed', 'scaffoldLibraryPassed', 'inspectCommandPassed', 'timingReportPassed', 'buildCommandPassed']) {
 		if (!summary.tooling || summary.tooling[field] !== true) {
 			fail(`package consumer on ${summary.platform} did not prove tooling.${field}`)
 		}
+	}
+	if (!Number.isInteger(summary.tooling.nativeDuneBuildMilliseconds) || summary.tooling.nativeDuneBuildMilliseconds < 0) {
+		fail(`package consumer on ${summary.platform} did not retain native Dune timing`)
 	}
 	for (const field of ['compilePassed', 'nativeBuildPassed', 'runtimePassed', 'stdoutMatched']) {
 		if (!summary.externalApplication || summary.externalApplication[field] !== true) {
 			fail(`package consumer on ${summary.platform} did not prove ${field}`)
 		}
+	}
+	if (JSON.stringify(summary.externalApplication.emittedSourceExcludedFiles) !== JSON.stringify(['ocaml_build_timing_report.json'])) {
+		fail(`package consumer on ${summary.platform} did not separate volatile timing evidence from emitted source`)
 	}
 	return {
 		platform: summary.platform,
@@ -80,8 +86,10 @@ function validateConsumer(summary, manifest, manifestSha256) {
 		toolchain: summary.toolchain,
 		installedTargetRelativePath: summary.isolation.installedTargetRelativePath,
 		emittedSourceSha256: summary.externalApplication.emittedSourceSha256,
+		emittedSourceExcludedFiles: summary.externalApplication.emittedSourceExcludedFiles,
 		executableSha256: summary.externalApplication.executableSha256,
 		stdoutSha256: summary.externalApplication.stdoutSha256,
+		nativeDuneBuildMilliseconds: summary.tooling.nativeDuneBuildMilliseconds,
 		timingsMs: summary.timingsMs
 	}
 }

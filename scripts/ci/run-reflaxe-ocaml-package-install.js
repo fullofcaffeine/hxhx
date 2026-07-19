@@ -62,6 +62,8 @@ const summary = {
 		scaffoldApplicationPassed: false,
 		scaffoldLibraryPassed: false,
 		inspectCommandPassed: false,
+		timingReportPassed: false,
+		nativeDuneBuildMilliseconds: null,
 		buildCommandPassed: false
 	},
 	externalApplication: {
@@ -69,6 +71,7 @@ const summary = {
 		nativeBuildPassed: false,
 		runtimePassed: false,
 		stdoutMatched: false,
+		emittedSourceExcludedFiles: ['ocaml_build_timing_report.json'],
 		emittedSourceSha256: null,
 		executableSha256: null,
 		stdoutSha256: null
@@ -156,9 +159,13 @@ function walkFiles(root, options = {}) {
 			if (entry.isDirectory()) {
 				visit(absolute)
 			} else if (entry.isFile()) {
+				const relative = path.relative(root, absolute).split(path.sep).join('/')
+				if (options.skipFile && options.skipFile(relative)) {
+					continue
+				}
 				files.push({
 					absolute,
-					relative: path.relative(root, absolute).split(path.sep).join('/')
+					relative
 				})
 			} else {
 				fail(`unexpected non-file output: ${path.relative(root, absolute)}`)
@@ -543,9 +550,13 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	} catch (error) {
 		fail(`installed inspect command did not emit valid JSON: ${error instanceof Error ? error.message : String(error)}`)
 	}
-	if (scaffoldInspectionReport.schemaVersion !== 1
+	if (scaffoldInspectionReport.schemaVersion !== 2
 		|| scaffoldInspectionReport.summary?.valid !== true
 		|| scaffoldInspectionReport.generatedFiles?.status !== 'present'
+		|| scaffoldInspectionReport.buildTiming?.status !== 'present'
+		|| scaffoldInspectionReport.buildTiming?.nativeBuildRan !== true
+		|| !Number.isInteger(scaffoldInspectionReport.buildTiming?.duneBuildMilliseconds)
+		|| scaffoldInspectionReport.buildTiming?.duneCacheHitsMeasured !== false
 		|| scaffoldInspectionReport.profile?.status !== 'present'
 		|| scaffoldInspectionReport.runtime?.semanticManifest !== false
 		|| scaffoldInspectionReport.lowering?.status !== 'present'
@@ -553,6 +564,8 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		fail('installed inspect command did not preserve its compiler-owned authority and deferral contract')
 	}
 	summary.tooling.inspectCommandPassed = true
+	summary.tooling.timingReportPassed = true
+	summary.tooling.nativeDuneBuildMilliseconds = scaffoldInspectionReport.buildTiming.duneBuildMilliseconds
 
 	const scaffoldLibraryRoot = path.join(tempRoot, 'scaffold-library')
 	const scaffoldLibrary = requireSuccess('installed-scaffold-library', runStep(
@@ -596,7 +609,11 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		fail('native build did not produce out/_build/default/out.exe')
 	}
 	summary.externalApplication.nativeBuildPassed = true
-	summary.externalApplication.emittedSourceSha256 = sha256Tree(emittedRoot, { skipDirectory: name => name === '_build' })
+	summary.externalApplication.emittedSourceSha256 = sha256Tree(emittedRoot, {
+		skipDirectory: name => name === '_build',
+		// Elapsed milliseconds are evidence about this run, not emitted source.
+		skipFile: relative => summary.externalApplication.emittedSourceExcludedFiles.includes(relative)
+	})
 	summary.externalApplication.executableSha256 = sha256File(executable)
 
 	const runtime = requireSuccess('external-app-runtime', runStep('external-app-runtime', executable, [], { cwd: appRoot, env }))

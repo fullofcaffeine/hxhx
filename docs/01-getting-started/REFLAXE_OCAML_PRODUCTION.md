@@ -161,6 +161,13 @@ speedup comes from content-stable generated OCaml and Dune's incremental cache.
 Output and common cache/build directories are excluded, and a post-build input
 snapshot prevents generated files from causing a feedback loop.
 
+The authoring command requests a receipt-linked timing report and prints total
+Haxe-child time, measured target subprocess time, and the native Dune duration.
+Dune typechecking, compilation, and linking are currently one combined phase.
+The report does not infer cache hits or claim to separate loading, startup, and
+workload runtime. Use `--output <directory>` when the HXML does not emit to
+`out/`.
+
 ## Inspect compiler-owned build artifacts
 
 After a successful build, retain a human-readable explanation or a stable JSON
@@ -173,7 +180,8 @@ haxelib run reflaxe.ocaml inspect --json
 ```
 
 The command validates the exact current schemas for Reflaxe's generated-file
-receipt, the compile profile, and the runtime module-selection report. With
+receipt, optional native timing tied to the same receipt, the compile profile,
+and the runtime module-selection report. With
 `-D ocaml_lowering_report` (already present in the starter templates), it also
 summarizes the migrated typed assignment/update plans: source location,
 semantic and carrier types, representation reason, observable effect schedule,

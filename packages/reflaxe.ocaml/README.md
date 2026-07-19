@@ -103,6 +103,13 @@ incremental native build cache. `--max-builds` provides a deterministic stopping
 point for tests and automation; run `haxelib run reflaxe.ocaml watch --help` for
 all options.
 
+The command requests `ocaml_build_timing_report.json` and reports three honest
+boundaries: total Haxe-child time, target-owned subprocess time, and the Dune
+build duration. Dune currently combines OCaml typechecking, compilation, and
+linking; the report does not guess cache hits or claim separate load, startup,
+or workload-runtime timing. Use `--output <directory>` when the project does not
+emit to `out/`.
+
 ## Inspect a completed build
 
 After `build`, explain the artifacts and decisions the current compiler owns:
@@ -113,8 +120,9 @@ haxelib run reflaxe.ocaml inspect --require-lowering
 haxelib run reflaxe.ocaml inspect --json
 ```
 
-The report validates Reflaxe's generated-file receipt, the active OCaml profile,
-and the current runtime-selection report. When the HXML contains
+The report validates Reflaxe's generated-file receipt, optional native Dune
+timing tied to that receipt, the active OCaml profile, and the current
+runtime-selection report. When the HXML contains
 `-D ocaml_lowering_report` (included in the starter templates), it also shows
 the source location, semantic and carrier types, representation reason, effect
 order, and runtime requirements for assignment/update operations already on the
@@ -296,6 +304,7 @@ Without `ocaml_output`, OCaml target output is not selected.
 ## Common defines
 
 - `-D ocaml_build=native|byte`: run dune build after emit.
+- `-D ocaml_build_timing_report`: write receipt-linked target-owned Dune phase timings (the package `build` and `watch` commands request this automatically).
 - `-D ocaml_run`: run emitted executable via dune after emit.
 - `-D ocaml_no_dune`: disable dune scaffolding emission.
 - `-D ocaml_dune_layout=exe|lib|plugin`: choose dune layout.

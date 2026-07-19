@@ -11,8 +11,48 @@ typedef InspectionGeneratedFiles = {
 	final status:String;
 	final path:String;
 	final schemaVersion:Null<Int>;
+	final receiptId:Null<Int>;
 	final files:Array<String>;
 	final wasCached:Null<Bool>;
+	final message:String;
+}
+
+/** One measured target-owned native build step. **/
+typedef InspectionBuildTimingPhase = {
+	final id:String;
+	final elapsedMilliseconds:Int;
+	final exitCode:Int;
+}
+
+/**
+	Optional target-owned Dune timing tied to the current generated-file receipt.
+
+	Dune typechecking, compilation, and linking remain one measured build phase;
+	cache hits, executable loading, startup, and workload runtime are not inferred.
+**/
+typedef InspectionBuildTiming = {
+	final status:String;
+	final path:String;
+	final schemaVersion:Null<Int>;
+	final generatedFilesReceiptId:Null<Int>;
+	final mode:Null<String>;
+	final duneLayout:Null<String>;
+	final target:Null<String>;
+	final strict:Null<Bool>;
+	final requestedRun:Null<Bool>;
+	final mliMode:Null<String>;
+	final phases:Array<InspectionBuildTimingPhase>;
+	final buildStatus:Null<String>;
+	final buildExitCode:Null<Int>;
+	final nativeBuildRan:Null<Bool>;
+	final duneBuildMilliseconds:Null<Int>;
+	final interfaceMilliseconds:Null<Int>;
+	final targetRunMilliseconds:Null<Int>;
+	final duneBuildIncludes:Array<String>;
+	final duneCacheHitsMeasured:Bool;
+	final loadSeparated:Bool;
+	final startupSeparated:Bool;
+	final workloadRuntimeSeparated:Bool;
 	final message:String;
 }
 
@@ -116,6 +156,7 @@ typedef InspectionReport = {
 	final projectRoot:String;
 	final outputDirectory:String;
 	final generatedFiles:InspectionGeneratedFiles;
+	final buildTiming:InspectionBuildTiming;
 	final profile:InspectionProfile;
 	final runtime:InspectionRuntime;
 	final lowering:InspectionLowering;

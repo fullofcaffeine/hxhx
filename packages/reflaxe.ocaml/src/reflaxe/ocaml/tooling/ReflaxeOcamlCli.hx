@@ -127,6 +127,7 @@ class ReflaxeOcamlCli {
 	static function runAuthoring(args:Array<String>, invocationRoot:String, watchCommand:Bool):Int {
 		var projectRoot = invocationRoot;
 		var hxmlPath = "build.hxml";
+		var outputPath = "out";
 		var watch = watchCommand;
 		final watchPaths = new Array<String>();
 		var pollMilliseconds = 250;
@@ -150,6 +151,12 @@ class ReflaxeOcamlCli {
 						return authoringUsageError("--hxml needs a project-relative file path.", watchCommand);
 					}
 					hxmlPath = args[index];
+				case "--output":
+					index++;
+					if (index >= args.length) {
+						return authoringUsageError("--output needs a project-relative directory path.", watchCommand);
+					}
+					outputPath = args[index];
 				case "--watch":
 					watch = true;
 				case "--watch-path":
@@ -217,6 +224,7 @@ class ReflaxeOcamlCli {
 
 		final options:AuthoringBuildOptions = {
 			hxmlPath: hxmlPath,
+			outputPath: outputPath,
 			watch: watch,
 			watchPaths: watchPaths,
 			pollMilliseconds: pollMilliseconds,
@@ -316,7 +324,8 @@ class ReflaxeOcamlCli {
 			"  --help                         Show this help",
 			"",
 			"Run a successful build before inspection. Add -D ocaml_lowering_report to the HXML",
-			"to inspect the migrated assignment/update lowering family.",
+			"to inspect the migrated assignment/update lowering family. Native timing appears when",
+			"the build used -D ocaml_build_timing_report (build/watch request it automatically).",
 			""
 		].join("\n");
 	}
@@ -332,6 +341,7 @@ class ReflaxeOcamlCli {
 			"Options:",
 			"  --project <directory>          Project working directory (default: current project)",
 			"  --hxml <file>                  HXML to run (default: build.hxml)",
+			"  --output <directory>           OCaml output used for native timing (default: out)",
 			"  --watch                        Keep rebuilding after edits (build command only)",
 			"  --watch-path <path>            Add an input file/directory; repeat as needed",
 			"  --poll-ms <milliseconds>       Poll interval (default: 250)",
@@ -345,6 +355,9 @@ class ReflaxeOcamlCli {
 			"  haxelib run reflaxe.ocaml build",
 			"  haxelib run reflaxe.ocaml build --run out/_build/default/out.exe",
 			"  haxelib run reflaxe.ocaml watch --run out/_build/default/out.exe",
+			"",
+			"The command requests receipt-linked native timing. Dune typecheck, compile, and link",
+			"remain one measured phase; cache hits, loading, startup, and runtime are not inferred.",
 			""
 		].join("\n");
 	}

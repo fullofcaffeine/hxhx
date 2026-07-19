@@ -75,7 +75,7 @@ class ReflaxeOcamlAuthoring {
 		final displayedHxml = displayPath(projectRoot, hxmlPath);
 		host.writeStdout('[reflaxe.ocaml] build #$buildNumber: haxe $displayedHxml\n');
 		final started = host.nowMilliseconds();
-		final haxeExitCode = host.run("haxe", [hxmlPath], projectRoot);
+		final haxeExitCode = host.run("haxe", [hxmlPath, "-D", "ocaml_build_timing_report"], projectRoot);
 		final elapsed = elapsedMilliseconds(host, started);
 		if (haxeExitCode != 0) {
 			host.writeStderr('[reflaxe.ocaml] build #$buildNumber failed (exit $haxeExitCode, ${elapsed}ms). Waiting for the next edit is safe in watch mode.\n');
@@ -83,8 +83,12 @@ class ReflaxeOcamlAuthoring {
 			return haxeExitCode;
 		}
 
-		host.writeStdout('[reflaxe.ocaml] build #$buildNumber passed in ${elapsed}ms.\n');
+		host.writeStdout('[reflaxe.ocaml] build #$buildNumber passed in ${elapsed}ms total Haxe-child time (typing, generation, and target-owned native work).\n');
 		host.writeStdout('REFLAXE_OCAML_BUILD:PASS builds=$buildNumber elapsed_ms=$elapsed\n');
+		final timingExitCode = reportNativeTiming(host, projectRoot, options.outputPath, elapsed);
+		if (timingExitCode != 0) {
+			return timingExitCode;
+		}
 		if (options.runArtifact == null) {
 			return 0;
 		}
@@ -105,6 +109,35 @@ class ReflaxeOcamlAuthoring {
 		host.writeStdout('[reflaxe.ocaml] run passed in ${runElapsed}ms.\n');
 		host.writeStdout('REFLAXE_OCAML_RUN:PASS elapsed_ms=$runElapsed\n');
 		return 0;
+	}
+
+	static function reportNativeTiming(host:AuthoringHost, projectRoot:String, outputPath:String, haxeProcessMilliseconds:Int):Int {
+		final outputDirectory = resolvePath(host, projectRoot, outputPath);
+		final timing = OcamlBuildTimingInspection.inspectOutput(outputDirectory);
+		return switch (timing.status) {
+			case "present":
+				var targetSubprocessMilliseconds = 0;
+				for (phase in timing.phases) {
+					targetSubprocessMilliseconds += phase.elapsedMilliseconds;
+				}
+				final outsideTargetSubprocessMilliseconds = Std.int(Math.max(0, haxeProcessMilliseconds - targetSubprocessMilliseconds));
+				if (timing.nativeBuildRan == true) {
+					host.writeStdout('[reflaxe.ocaml] native Dune phase: ${timing.duneBuildMilliseconds}ms (typecheck + compile + link combined; cache hits not inferred).\n');
+				} else {
+					host.writeStdout('[reflaxe.ocaml] no native Dune build ran; timing status=${timing.buildStatus} exit=${timing.buildExitCode}.\n');
+				}
+				host.writeStdout('[reflaxe.ocaml] Haxe child outside measured target subprocesses: ${outsideTargetSubprocessMilliseconds}ms (startup, typing, generation, and orchestration remain combined).\n');
+				host.writeStdout('REFLAXE_OCAML_NATIVE_TIMING:PRESENT status=${timing.buildStatus} haxe_process_ms=$haxeProcessMilliseconds target_subprocess_ms=$targetSubprocessMilliseconds outside_target_subprocess_ms=$outsideTargetSubprocessMilliseconds dune_build_ms=${timing.duneBuildMilliseconds == null ? "none" : Std.string(timing.duneBuildMilliseconds)}\n');
+				0;
+			case "invalid":
+				host.writeStderr('[reflaxe.ocaml] native timing report is invalid: ${timing.message}\n');
+				host.writeStdout("REFLAXE_OCAML_NATIVE_TIMING:FAIL\n");
+				1;
+			case _:
+				host.writeStdout('[reflaxe.ocaml] native phase timing unavailable: ${timing.message}\n');
+				host.writeStdout("REFLAXE_OCAML_NATIVE_TIMING:SKIP\n");
+				0;
+		};
 	}
 
 	static function discoverWatchRoots(host:AuthoringHost, projectRoot:String, hxmlPath:String, explicitPaths:Array<String>):Array<String> {

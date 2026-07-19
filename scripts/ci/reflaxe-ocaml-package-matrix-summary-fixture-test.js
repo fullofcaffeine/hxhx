@@ -58,6 +58,8 @@ try {
 				scaffoldApplicationPassed: true,
 				scaffoldLibraryPassed: true,
 				inspectCommandPassed: true,
+				timingReportPassed: true,
+				nativeDuneBuildMilliseconds: 12,
 				buildCommandPassed: true
 			},
 			package: {
@@ -73,6 +75,7 @@ try {
 				nativeBuildPassed: true,
 				runtimePassed: true,
 				stdoutMatched: true,
+				emittedSourceExcludedFiles: ['ocaml_build_timing_report.json'],
 				emittedSourceSha256: 'd'.repeat(64),
 				executableSha256: 'e'.repeat(64),
 				stdoutSha256: 'f'.repeat(64)
@@ -101,6 +104,13 @@ try {
 	assert.match(missingInspect.stderr, /tooling\.inspectCommandPassed/)
 
 	darwin.tooling.inspectCommandPassed = true
+	darwin.tooling.timingReportPassed = false
+	fs.writeFileSync(darwinPath, JSON.stringify(darwin, null, 2) + '\n')
+	const missingTiming = run()
+	assert.notStrictEqual(missingTiming.status, 0)
+	assert.match(missingTiming.stderr, /tooling\.timingReportPassed/)
+
+	darwin.tooling.timingReportPassed = true
 	darwin.package.sha256 = '0'.repeat(64)
 	fs.writeFileSync(darwinPath, JSON.stringify(darwin, null, 2) + '\n')
 	const rejected = run()

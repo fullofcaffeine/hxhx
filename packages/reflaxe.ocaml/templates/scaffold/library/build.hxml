@@ -6,5 +6,6 @@
 -D no_traces
 -D ocaml_output=out
 -D ocaml_lowering_report
+-D ocaml_build_timing_report
 -D ocaml_build=native
 -D ocaml_dune_layout=lib

@@ -42,13 +42,14 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 1)
+	assert.strictEqual(report.schemaVersion, 2)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.runtimeModuleCount > 0)
 	assert.strictEqual(report.summary.loweredPlanCount, 14)
 	assert.strictEqual(report.runtime.authority, 'current-compiler-runtime-selection-report')
 	assert.strictEqual(report.runtime.semanticManifest, false)
+	assert.strictEqual(report.buildTiming.status, 'not-enabled')
 	assert(report.runtime.inclusionReasons.some(reason => reason.module === 'HxRuntime'))
 	assert.strictEqual(report.lowering.scope, 'typed-place-assignment-and-update-family')
 	assert(report.lowering.message.includes('not a whole-program IR'))
@@ -68,9 +69,64 @@ try {
 	assert.strictEqual(human.status, 0, human.stderr || human.stdout)
 	assert(human.stdout.includes('reflaxe.ocaml output inspection: VALID'))
 	assert(human.stdout.includes('current report, not semantic manifest'))
+	assert(human.stdout.includes('[SKIP] Native Dune timing'))
 	assert(human.stdout.includes('HxRuntime:'))
 	assert(human.stdout.includes('assignment/update family only'))
 	assert(human.stdout.includes('REFLAXE_OCAML_INSPECT:PASS'))
+
+	const generatedPath = path.join(tempRoot, 'out/_GeneratedFiles.json')
+	const generated = JSON.parse(fs.readFileSync(generatedPath, 'utf8'))
+	const timingPath = path.join(tempRoot, 'out/ocaml_build_timing_report.json')
+	const timing = {
+		schemaVersion: 1,
+		generatedFilesReceiptId: generated.id,
+		mode: 'native',
+		duneLayout: 'executable',
+		target: './out.exe',
+		strict: true,
+		requestedRun: false,
+		mliMode: 'infer',
+		phases: [
+			{id: 'native_toolchain_probe', elapsedMilliseconds: 2, exitCode: 0},
+			{id: 'mli_toolchain_probe', elapsedMilliseconds: 1, exitCode: 0},
+			{id: 'dune_build', elapsedMilliseconds: 12, exitCode: 0},
+			{id: 'mli_infer', elapsedMilliseconds: 3, exitCode: 0},
+			{id: 'mli_rebuild', elapsedMilliseconds: 4, exitCode: 0}
+		],
+		boundaries: {
+			duneBuildIncludes: ['typecheck', 'compile', 'link'],
+			duneCacheHitsMeasured: false,
+			loadSeparated: false,
+			startupSeparated: false,
+			workloadRuntimeSeparated: false
+		},
+		summary: {
+			status: 'passed',
+			exitCode: 0,
+			nativeBuildRan: true,
+			duneBuildMilliseconds: 16,
+			interfaceMilliseconds: 4,
+			targetRunMilliseconds: null
+		}
+	}
+	fs.writeFileSync(timingPath, JSON.stringify(timing, null, 2) + '\n')
+	const timedInspection = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--json'])
+	assert.strictEqual(timedInspection.status, 0, timedInspection.stderr || timedInspection.stdout)
+	assert.strictEqual(JSON.parse(timedInspection.stdout).buildTiming.duneBuildMilliseconds, 16)
+	const timedHuman = runCli(['inspect', '--project', tempRoot, '--output', 'out'])
+	assert.strictEqual(timedHuman.status, 0, timedHuman.stderr || timedHuman.stdout)
+	assert(timedHuman.stdout.includes('16ms for typecheck + compile + link combined'))
+	timing.generatedFilesReceiptId += 1
+	fs.writeFileSync(timingPath, JSON.stringify(timing, null, 2) + '\n')
+	const staleTiming = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--json'])
+	assert.strictEqual(staleTiming.status, 1)
+	assert(JSON.parse(staleTiming.stdout).buildTiming.message.includes('current receipt'))
+	fs.rmSync(timingPath)
+	fs.mkdirSync(timingPath)
+	const timingDirectory = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--json'])
+	assert.strictEqual(timingDirectory.status, 1)
+	assert(JSON.parse(timingDirectory.stdout).buildTiming.message.includes('found a directory'))
+	fs.rmdirSync(timingPath)
 
 	const loweringPath = path.join(tempRoot, 'out/ocaml_lowering_report.json')
 	fs.rmSync(loweringPath)
@@ -93,8 +149,6 @@ try {
 	profile.normalizedProfile = report.profile.profile
 	fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2) + '\n')
 
-	const generatedPath = path.join(tempRoot, 'out/_GeneratedFiles.json')
-	const generated = JSON.parse(fs.readFileSync(generatedPath, 'utf8'))
 	generated.filesGenerated.push('../escape.ml')
 	fs.writeFileSync(generatedPath, JSON.stringify(generated, null, 2) + '\n')
 	const unsafeGenerated = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--json'])
@@ -128,6 +182,19 @@ try {
 	const badOption = runCli(['inspect', '--unknown'])
 	assert.strictEqual(badOption.status, 2)
 	assert(badOption.stderr.includes('Unknown inspect option'))
+
+	const currentGenerated = JSON.parse(fs.readFileSync(generatedPath, 'utf8'))
+	timing.generatedFilesReceiptId = currentGenerated.id
+	fs.writeFileSync(timingPath, JSON.stringify(timing, null, 2) + '\n')
+	const rebuiltWithoutTiming = cp.spawnSync('haxe', ['build.hxml'], {
+		cwd: tempRoot,
+		env: process.env,
+		encoding: 'utf8',
+		maxBuffer: 50 * 1024 * 1024,
+		shell: false
+	})
+	assert.strictEqual(rebuiltWithoutTiming.status, 0, rebuiltWithoutTiming.stderr || rebuiltWithoutTiming.stdout)
+	assert(!fs.existsSync(timingPath), 'a build without timing retained a stale report')
 
 	console.log('REFLAXE_OCAML_INSPECT_FIXTURE:PASS')
 } finally {

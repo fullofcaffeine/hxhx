@@ -34,6 +34,7 @@ import reflaxe.ocaml.ast.OcamlTypeRecordField;
 import reflaxe.ocaml.ast.OcamlVariantConstructor;
 import reflaxe.ocaml.runtimegen.DuneProjectEmitter;
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner;
+import reflaxe.ocaml.runtimegen.OcamlBuildTimingReport.OcamlBuildTimingReportWriter;
 import reflaxe.ocaml.runtimegen.OcamlNativeFunctorEmitter;
 import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
@@ -1716,6 +1717,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 		#end
 		final outDir = output.outputDir;
+		// A timing report is tied to one generated-file receipt. Clear the prior
+		// revision even when this build will not run Dune or request new timing.
+		OcamlBuildTimingReportWriter.clear(outDir);
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
 			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted());
@@ -2653,7 +2657,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			run: shouldRun,
 			strict: strictAny,
 			mli: mliMode,
-			mliStrict: mliStrict
+			mliStrict: mliStrict,
+			timingReport: haxe.macro.Context.defined("ocaml_build_timing_report")
 		});
 
 		switch (result) {

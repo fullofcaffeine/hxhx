@@ -26,6 +26,10 @@ The generated Dune project lives in `out/` and builds as a library, not an
 executable. `haxelib.json` describes the Haxe-facing package. Select and document
 your project license before publishing it.
 
+Build output separates total Haxe-child time from the target-owned Dune phase.
+Dune typechecking, compilation, and linking are one measured phase; cache hits
+are not inferred from elapsed time.
+
 Important: inferred `.mli` files in the current target are inspection aids, not
 a curated stable OCaml export ABI. Keep the generated OCaml library private to
 your build until the explicit export-ABI workflow is available.

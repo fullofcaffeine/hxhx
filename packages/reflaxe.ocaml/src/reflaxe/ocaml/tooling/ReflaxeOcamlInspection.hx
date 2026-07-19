@@ -37,6 +37,7 @@ class ReflaxeOcamlInspection {
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
 		final generated = inspectGenerated(Path.join([outputDirectory, GENERATED_FILES]));
+		final buildTiming = OcamlBuildTimingInspection.inspect(Path.join([outputDirectory, OcamlBuildTimingInspection.FILE_NAME]), generated.receiptId);
 		final profile = inspectProfile(Path.join([outputDirectory, PROFILE_REPORT]));
 		final runtime = inspectRuntime(Path.join([outputDirectory, RUNTIME_REPORT]));
 		final lowering = inspectLowering(Path.join([outputDirectory, LOWERING_REPORT]), requireLowering);
@@ -50,13 +51,17 @@ class ReflaxeOcamlInspection {
 		if (lowering.status == "invalid" || (requireLowering && lowering.status != "present")) {
 			errorCount++;
 		}
+		if (buildTiming.status == "invalid") {
+			errorCount++;
+		}
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 1,
+			schemaVersion: 2,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
+			buildTiming: buildTiming,
 			profile: profile,
 			runtime: runtime,
 			lowering: lowering,
@@ -81,6 +86,7 @@ class ReflaxeOcamlInspection {
 		lines.push('Output: ${report.outputDirectory}');
 		lines.push("");
 		lines.push(renderGenerated(report.generatedFiles));
+		lines.push(OcamlBuildTimingInspection.renderHuman(report.buildTiming));
 		lines.push(renderProfile(report.profile));
 		lines.push(renderRuntime(report.runtime));
 		if (report.runtime.status == "present") {
@@ -136,6 +142,10 @@ class ReflaxeOcamlInspection {
 					if (version != 1) {
 						throw 'Unsupported generated-file receipt schema $version; expected 1.';
 					}
+					final receiptId = requiredInt(value, "id");
+					if (receiptId < 0) {
+						throw "Generated-file receipt id must be non-negative.";
+					}
 					final files = requiredStringArray(value, "filesGenerated");
 					files.sort(compareStrings);
 					validateGeneratedFiles(path, files);
@@ -143,6 +153,7 @@ class ReflaxeOcamlInspection {
 						status: "present",
 						path: path,
 						schemaVersion: version,
+						receiptId: receiptId,
 						files: files,
 						wasCached: requiredBool(value, "wasCached"),
 						message: 'Reflaxe recorded ${files.length} generated OCaml source file${files.length == 1 ? "" : "s"}.'
@@ -514,6 +525,7 @@ class ReflaxeOcamlInspection {
 			status: status,
 			path: path,
 			schemaVersion: null,
+			receiptId: null,
 			files: [],
 			wasCached: null,
 			message: message

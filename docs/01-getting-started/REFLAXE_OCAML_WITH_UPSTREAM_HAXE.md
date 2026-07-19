@@ -96,6 +96,13 @@ output incomplete. Fast native iteration instead comes from Reflaxe avoiding
 unchanged file rewrites and Dune reusing its incremental build cache. Generated
 output and normal cache/build directories do not trigger rebuild loops.
 
+Each authoring build requests a receipt-linked native timing report. Console
+output separates the total Haxe child from measured target subprocesses and the
+Dune build itself. Dune typechecking, compilation, and linking remain one
+combined phase; cache hits, loading, startup, and workload runtime are not
+guessed. Pass `--output <directory>` when the HXML emits somewhere other than
+`out/`.
+
 ## Inspect what the build decided
 
 Run inspection after a successful build:
@@ -106,8 +113,9 @@ haxelib run reflaxe.ocaml inspect --require-lowering
 haxelib run reflaxe.ocaml inspect --json
 ```
 
-It validates the generated-file receipt, compile profile, and current runtime
-module selection. Add `-D ocaml_lowering_report` to a custom HXML to expose the
+It validates the generated-file receipt, optional native timing tied to the
+same receipt, compile profile, and current runtime module selection. Add
+`-D ocaml_lowering_report` to a custom HXML to expose the
 migrated typed place assignment/update plans; the starter templates already do
 this. Those entries explain source positions, semantic-to-carrier types,
 representation reasons, effect schedules, and runtime requirements.
