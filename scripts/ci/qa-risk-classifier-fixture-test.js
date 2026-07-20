@@ -104,6 +104,17 @@ expectTier('plugin ABI', {
   authenticCompilerPromotion: true
 })
 
+expectTier('CI evidence and shard enforcement', {
+  event: 'push',
+  changedPaths: [
+    'scripts/ci/ci-evidence-ownership.js',
+    'scripts/ci/core-test-shards.json'
+  ]
+}, 'Q3', {
+  largeHxhxConsumer: true,
+  authenticCompilerPromotion: true
+})
+
 const unknown = expectTier('unknown code path', {
   event: 'push',
   changedPaths: ['new-compiler-layer/Thing.hx']

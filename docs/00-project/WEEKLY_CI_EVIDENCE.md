@@ -1,6 +1,6 @@
 # Weekly CI Evidence Runbook
 
-Last audited: 2026-07-18
+Last audited: 2026-07-20
 
 This runbook defines how maintainers audit scheduled CI health each week and what to do when a gate regresses.
 
@@ -23,6 +23,16 @@ problem, classification, and the remote evidence needed for closure. A local
 pass is useful diagnosis, but it does not close a required remote failure.
 A clean audit prints `CI_EVIDENCE_OWNERSHIP:PASS`; that means every problem is
 owned, not that the owned checks themselves are green.
+
+The live audit gives GitHub's read-only API a short recovery window for network
+errors, rate limits, and temporary `502`/`503`/`504` responses. It tries each
+read at most four times, uses capped backoff, and honors `Retry-After` up to the
+documented eight-second cap. A final error includes the endpoint and complete
+attempt history without exposing the token. Ordinary `4xx` responses and all
+missing, stale, wrong-commit, failed-run, or ownership findings still fail
+immediately. This is transport resilience, not a semantic-test retry policy;
+the workflow also retains its ten-minute timeout and cancel-superseded
+concurrency bound.
 
 ### Two labels, for two different questions
 

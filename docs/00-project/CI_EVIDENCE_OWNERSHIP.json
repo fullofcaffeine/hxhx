@@ -303,6 +303,27 @@
       }
     },
     {
+      "id": "m7-failure-29683132615",
+      "checkId": "m7-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "unknown",
+      "bead": "haxe_ocaml-d516o",
+      "recordedAt": "2026-07-20T01:55:00Z",
+      "run": {
+        "id": 29683132615,
+        "attempt": 1,
+        "headSha": "875baaf5aea395ab526bac9b33e34273734010e2",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-07-19T10:19:08Z",
+        "updatedAt": "2026-07-19T12:12:01Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29683132615"
+      },
+      "reproductionOrEvidence": "Artifact 8442233112 records that shared native artifacts, strict stage0 policy, display, builtin smoke, and plugins passed, while ci:guards, Gate1 unit-macro, Gate2 runci Macro, and Gate3 targets failed. The independent causes still require classification.",
+      "closureGate": "Classify and repair every independent failure, then require one complete M7 successor with both strict PASS markers and validated artifacts."
+    },
+    {
       "id": "full1-plugin-29158896644",
       "checkId": "full1-plugin-weekly",
       "state": "resolved",
@@ -334,7 +355,7 @@
     {
       "id": "full1-aggregate-29151698264",
       "checkId": "full1-aggregate-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "failure-current",
       "failureClass": "expected-no-go",
       "bead": "haxe.ocaml-f1cl",
@@ -350,7 +371,57 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29151698264"
       },
       "reproductionOrEvidence": "The Full1 aggregate correctly remains no-go while required suite, target, macro, and plugin child evidence is not all green.",
-      "closureGate": "One candidate SHA must provide authentic passing child evidence and the aggregate must derive its pass from those artifacts."
+      "closureGate": "One candidate SHA must provide authentic passing child evidence and the aggregate must derive its pass from those artifacts.",
+      "supersededBy": {
+        "runId": 29643317922,
+        "runAttempt": 1,
+        "headSha": "827efd913f72969fc78e2d9041f49c2b18155f3b",
+        "conclusion": "failure",
+        "updatedAt": "2026-07-18T12:09:47Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29643317922"
+      }
+    },
+    {
+      "id": "full1-aggregate-29643317922",
+      "checkId": "full1-aggregate-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "expected-no-go",
+      "bead": "haxe.ocaml-f1cl",
+      "recordedAt": "2026-07-20T01:55:00Z",
+      "run": {
+        "id": 29643317922,
+        "attempt": 1,
+        "headSha": "827efd913f72969fc78e2d9041f49c2b18155f3b",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-07-18T11:52:44Z",
+        "updatedAt": "2026-07-18T12:09:47Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29643317922"
+      },
+      "reproductionOrEvidence": "The newest scheduled aggregate remained an expected no-go: the extended target and strict suite lanes failed and macro/eval evidence was unavailable, while plugin parity passed.",
+      "closureGate": "One candidate SHA must provide authentic passing suite, target, macro/eval, plugin, and performance artifacts, and the aggregate must derive its pass from them."
+    },
+    {
+      "id": "reflaxe-package-macos-29708386355",
+      "checkId": "reflaxe-ocaml-package-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-s7jry.4",
+      "recordedAt": "2026-07-20T01:55:00Z",
+      "run": {
+        "id": 29708386355,
+        "attempt": 1,
+        "headSha": "e336cc70792f8eb0a1e525211cd5944fb7e16187",
+        "event": "push",
+        "conclusion": "failure",
+        "createdAt": "2026-07-19T23:43:45Z",
+        "updatedAt": "2026-07-19T23:48:00Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29708386355"
+      },
+      "reproductionOrEvidence": "Linux installed and ran source package artifact 8448528949, but macOS evidence artifact 8448543176 reports that haxe/Exception.cross.hx reached the legacy instance-field update branch without a stable place origin.",
+      "closureGate": "Repair the shared semantic place boundary without suppressing its invariant, then require one exact ZIP to pass the complete Linux and macOS package matrix."
     },
     {
       "id": "kpi-manual-missing-20260713",

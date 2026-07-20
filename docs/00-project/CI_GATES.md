@@ -68,6 +68,16 @@ an owner. That marker means the failure queue is accountable; it does **not**
 mean the owned compiler, target, macro, plugin, performance, or Full1 failures
 have passed.
 
+The live collector retries only safe GitHub API reads after a network failure,
+rate limit, or temporary `502`/`503`/`504` response. It makes at most four
+attempts, honors `Retry-After` up to an eight-second per-wait cap, and records
+the endpoint, response class, attempt history, and elapsed retry time if GitHub
+does not recover. Authentication, permission, missing-resource, malformed-data,
+and evidence-policy failures are never retried or softened. The workflow's
+ten-minute timeout and cancel-superseded concurrency rule remain the outer
+bound. This transport retry keeps a brief GitHub outage from impersonating a
+compiler failure; it is not permission to retry a semantic gate until it passes.
+
 ## Temporary bridge guard
 
 `npm run guard:bridge-boundaries` protects four small native/bootstrap adapters

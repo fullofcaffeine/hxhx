@@ -58,7 +58,7 @@
     "test:full1:rc-gate": "node scripts/ci/full1-rc-gate-fixture-test.js",
     "test:full1:rc-artifact-collector": "node scripts/ci/full1-rc-artifact-collector-fixture-test.js",
     "test:full1:rc-release-handoff": "node scripts/release/download-full1-rc-artifact-fixture-test.js",
-    "guard:ci-evidence-ownership": "node scripts/ci/ci-evidence-ownership-fixture-test.js",
+    "guard:ci-evidence-ownership": "node scripts/ci/ci-evidence-ownership-fixture-test.js && node scripts/ci/github-api-json-fixture-test.js",
     "test:full1:perf:eval-evidence:check": "node --check scripts/ci/full1-eval-evidence.js",
     "test:full1:perf:suite-evidence:check": "node --check scripts/ci/full1-suite-evidence.js",
     "test:full1:suites:strict-runner:check": "node --check scripts/ci/run-full1-suites-strict.js",

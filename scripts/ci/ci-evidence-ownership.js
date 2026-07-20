@@ -10,6 +10,7 @@
 
 const fs = require('fs')
 const path = require('path')
+const { githubJson } = require('./github-api-json')
 
 const defaultManifestPath = 'docs/00-project/CI_EVIDENCE_OWNERSHIP.json'
 const defaultBeadsPath = '.beads/issues.jsonl'
@@ -146,9 +147,13 @@ function validateManifest(manifest, issues, manifestPath = defaultManifestPath) 
     || !auditWorkflow.includes('--live')) {
     errors.push(`${auditWorkflowPath} must run the live CI evidence ownership audit`)
   }
+  if (!auditWorkflow.includes('timeout-minutes: 10')
+    || !auditWorkflow.includes('cancel-in-progress: true')) {
+    errors.push(`${auditWorkflowPath} must keep the live audit bounded and cancel superseded runs`)
+  }
   if (!packageJson || !packageJson.scripts
     || packageJson.scripts['guard:ci-evidence-ownership']
-      !== 'node scripts/ci/ci-evidence-ownership-fixture-test.js') {
+      !== 'node scripts/ci/ci-evidence-ownership-fixture-test.js && node scripts/ci/github-api-json-fixture-test.js') {
     errors.push(`${packagePath} must expose guard:ci-evidence-ownership`)
   }
   const checks = new Map()
@@ -427,19 +432,6 @@ function evaluate(manifest, snapshot, nowValue) {
     },
     errors
   }
-}
-
-async function githubJson(url, token) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${token}`,
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'hxhx-ci-evidence-ownership'
-    }
-  })
-  if (!response.ok) throw new Error(`GitHub API ${response.status}: ${url}`)
-  return response.json()
 }
 
 async function collectLiveSnapshot(manifest, args) {
