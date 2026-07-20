@@ -10,16 +10,16 @@ import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
 import reflaxe.preprocessors.BasePreprocessor;
 
 /**
-	Preserves admitted place operations until the OCaml semantic lowerer sees them.
+	Protects admitted place operations while generic Reflaxe rewrites run.
 
 	Reflaxe's generic Everything-Is-An-Expression sanitizer normally turns an
 	assignment used as a value into a write followed by a copied left-hand-side
-	read. That is unsound for effectful receivers. This pass adds target-owned
-	metadata only to source shapes that have a complete lowered model.
+	read. That is unsound for effectful receivers. This early pass adds a transient
+	target-owned envelope only to source shapes that have a complete lowered model.
+	A distinct final pass removes the envelope and assigns stable origins on the
+	exact post-rewrite body.
 **/
 class PreservePlaceAssignmentsImpl extends BasePreprocessor {
-	var functionId:String = "";
-	var ordinal:Int = 0;
 	var currentModuleId:String = "";
 	var currentTypeName:String = "";
 
@@ -28,38 +28,18 @@ class PreservePlaceAssignmentsImpl extends BasePreprocessor {
 	public function process(data:ClassFuncData, compiler:BaseCompiler):Void {
 		if (data.expr == null)
 			return;
-		functionId = data.id;
-		ordinal = 0;
 		currentModuleId = data.classType.module;
 		currentTypeName = data.classType.name;
 		data.setExpr(transform(data.expr));
 	}
 
 	function transform(expression:TypedExpr):TypedExpr {
-		final admitted = switch (expression.expr) {
-			case TBinop(OpAssign, left, right): OcamlPlaceInputPolicy.admitsSimpleInstanceField(left,
-					right) || OcamlPlaceInputPolicy.admitsSimpleStaticField(left, right, currentModuleId,
-					currentTypeName) || OcamlPlaceInputPolicy.admitsSimpleArrayElement(left, right);
-			case TBinop(OpAssignOp(operation), left, right): OcamlPlaceInputPolicy.admitsCompoundIntAddInstanceField(operation, left,
-					right) || OcamlPlaceInputPolicy.admitsCompoundIntAddStaticField(operation, left, right, currentModuleId,
-					currentTypeName) || OcamlPlaceInputPolicy.admitsCompoundIntAddArrayElement(operation, left, right);
-			case TUnop(operation, _, operand): OcamlPlaceInputPolicy.admitsIntUpdateInstanceField(operation,
-					operand) || OcamlPlaceInputPolicy.admitsIntUpdateStaticField(operation, operand, currentModuleId,
-					currentTypeName) || OcamlPlaceInputPolicy.admitsIntUpdateArrayElement(operation, operand);
-			case _: false;
-		}
-
-		var id:Null<String> = null;
-		if (admitted) {
-			id = OcamlLoweredOrigin.placeId(functionId, ordinal);
-			ordinal += 1;
-		}
-
+		final admitted = OcamlPlaceInputPolicy.admitsExpression(expression, currentModuleId, currentTypeName);
 		final mapped = TypedExprTools.map(expression, transform);
-		if (id == null)
+		if (!admitted)
 			return mapped;
 		return {
-			expr: TMeta(OcamlLoweredOrigin.metadata(id, expression.pos), mapped),
+			expr: TMeta(OcamlLoweredOrigin.protection(expression.pos), mapped),
 			pos: expression.pos,
 			t: expression.t
 		};

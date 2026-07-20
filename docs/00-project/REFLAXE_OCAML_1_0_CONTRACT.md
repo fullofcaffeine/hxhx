@@ -1,6 +1,6 @@
 # reflaxe.ocaml 1.0 Contract
 
-Last audited: 2026-07-18
+Last audited: 2026-07-19
 
 This page is the canonical product contract for `reflaxe.ocaml` as a standalone target.
 
@@ -17,6 +17,7 @@ recorded scope; they are not revoked or silently reinterpreted.
 Accepted architecture checkpoint:
 
 - `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`
+- `docs/00-project/ORACLE_CHECKPOINT_FEATURE_GATED_TYPED_BODY_LIFECYCLE_2026_07_19.md`
 
 It is deliberately separate from:
 

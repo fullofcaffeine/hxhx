@@ -7,6 +7,13 @@
 **Architecture authority:**
 [`ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`](ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md)
 
+**Lifecycle correction:**
+[`ORACLE_CHECKPOINT_FEATURE_GATED_TYPED_BODY_LIFECYCLE_2026_07_19.md`](ORACLE_CHECKPOINT_FEATURE_GATED_TYPED_BODY_LIFECYCLE_2026_07_19.md)
+
+The lowering model below remains the semantic owner. The lifecycle checkpoint
+corrects how its early protection and final sealed plans must survive Reflaxe's
+preprocessor sequence; it does not return assignment semantics to the builder.
+
 ## Practical outcome
 
 The first hard-cut family now owns value-producing simple assignment, `+=`, and

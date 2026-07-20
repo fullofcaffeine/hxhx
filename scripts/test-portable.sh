@@ -4,10 +4,27 @@ set -euo pipefail
 HAXE_BIN="${HAXE_BIN:-haxe}"
 PORTABLE_NATIVE_SURFACE_STRICT="${PORTABLE_NATIVE_SURFACE_STRICT:-0}"
 PORTABLE_FIXTURE_ALLOWLIST="${PORTABLE_FIXTURE_ALLOWLIST:-}"
+REFLAXE_SOURCE_ROOT="${REFLAXE_SOURCE_ROOT:-}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FIXTURE_ROOT="$ROOT/test/portable/fixtures"
 PORTABLE_FIXTURE_ALLOWLIST_NORM=""
+
+if [ -n "$REFLAXE_SOURCE_ROOT" ]; then
+  REFLAXE_SOURCE_ROOT="$(cd "$REFLAXE_SOURCE_ROOT" && pwd)"
+  if [ ! -f "$REFLAXE_SOURCE_ROOT/src/reflaxe/ReflectCompiler.hx" ]; then
+    echo "REFLAXE_SOURCE_ROOT does not contain src/reflaxe/ReflectCompiler.hx: $REFLAXE_SOURCE_ROOT" >&2
+    exit 2
+  fi
+fi
+
+run_haxe_build() {
+  if [ -n "$REFLAXE_SOURCE_ROOT" ]; then
+    "$HAXE_BIN" build.hxml -cp "$REFLAXE_SOURCE_ROOT/src" "$@"
+  else
+    "$HAXE_BIN" build.hxml "$@"
+  fi
+}
 
 sha256_file() {
   local file="$1"
@@ -62,9 +79,9 @@ for dir in "$FIXTURE_ROOT"/*/; do
     rm -rf out
     mkdir -p out
     if [ "$PORTABLE_NATIVE_SURFACE_STRICT" = "1" ]; then
-      "$HAXE_BIN" build.hxml -D ocaml_build=native -D ocaml_portable_native_surface=error
+      run_haxe_build -D ocaml_build=native -D ocaml_portable_native_surface=error
     else
-      "$HAXE_BIN" build.hxml -D ocaml_build=native
+      run_haxe_build -D ocaml_build=native
     fi
   )
 
@@ -79,9 +96,9 @@ for dir in "$FIXTURE_ROOT"/*/; do
     (
       cd "$dir"
       if [ "$PORTABLE_NATIVE_SURFACE_STRICT" = "1" ]; then
-        "$HAXE_BIN" build.hxml -D ocaml_build=native -D ocaml_portable_native_surface=error
+        run_haxe_build -D ocaml_build=native -D ocaml_portable_native_surface=error
       else
-        "$HAXE_BIN" build.hxml -D ocaml_build=native
+        run_haxe_build -D ocaml_build=native
       fi
     )
     second_lowering_checksum="$(sha256_file "$lowering_report")"

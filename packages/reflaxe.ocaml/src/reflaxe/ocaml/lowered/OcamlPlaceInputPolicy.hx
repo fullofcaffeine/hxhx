@@ -163,5 +163,21 @@ class OcamlPlaceInputPolicy {
 	public static function admitsIntUpdateInstanceField(operation:Unop, operand:TypedExpr):Bool {
 		return (operation == OpIncrement || operation == OpDecrement) && admitsExactIntInstanceFieldPlace(operand);
 	}
+
+	/** Applies the complete first-slice admission policy to one typed operation. */
+	public static function admitsExpression(expression:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>):Bool {
+		return switch (expression.expr) {
+			case TBinop(OpAssign, left, right): admitsSimpleInstanceField(left,
+					right) || admitsSimpleStaticField(left, right, currentModuleId, currentTypeName) || admitsSimpleArrayElement(left, right);
+			case TBinop(OpAssignOp(operation), left, right): admitsCompoundIntAddInstanceField(operation, left,
+					right) || admitsCompoundIntAddStaticField(operation, left, right, currentModuleId,
+					currentTypeName) || admitsCompoundIntAddArrayElement(operation, left, right);
+			case TUnop(operation, _, operand): admitsIntUpdateInstanceField(operation,
+					operand) || admitsIntUpdateStaticField(operation, operand, currentModuleId,
+					currentTypeName) || admitsIntUpdateArrayElement(operation, operand);
+			case _:
+				false;
+		}
+	}
 }
 #end

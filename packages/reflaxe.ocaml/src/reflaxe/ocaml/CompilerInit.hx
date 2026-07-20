@@ -5,6 +5,7 @@ import reflaxe.ReflectCompiler;
 import reflaxe.preprocessors.ExpressionPreprocessor;
 import reflaxe.preprocessors.ExpressionPreprocessor.ExpressionPreprocessorHelper;
 import reflaxe.ocaml.macros.StrictModeEnforcer;
+import reflaxe.ocaml.preprocessor.FinalizePlaceAssignmentsImpl;
 import reflaxe.ocaml.preprocessor.InlineSwitchTempImpl;
 import reflaxe.ocaml.preprocessor.PreservePlaceAssignmentsImpl;
 
@@ -92,11 +93,16 @@ class CompilerInit {
 			prepasses.unshift(ExpressionPreprocessor.Custom(new InlineSwitchTempImpl()));
 		}
 
-		// Preserve only source shapes that the typed OCaml place lowerer fully owns.
+		// Protect only source shapes that the typed OCaml place lowerer fully owns.
 		// This remains active in the bring-up lane: otherwise disabling generic
 		// preprocessors would silently select a second semantic assignment path.
 		final preserveIndex = prepasses.length > 0 ? 1 : 0;
 		prepasses.insert(preserveIndex, ExpressionPreprocessor.Custom(new PreservePlaceAssignmentsImpl()));
+
+		// This must be the final expression preprocessor. It consumes transient
+		// protection, recomputes admission on the exact rewritten body, and assigns
+		// the stable origins accepted by the semantic place lowerer.
+		prepasses.push(ExpressionPreprocessor.Custom(new FinalizePlaceAssignmentsImpl()));
 
 		ReflectCompiler.AddCompiler(new OcamlCompiler(), {
 			fileOutputExtension: ".ml",

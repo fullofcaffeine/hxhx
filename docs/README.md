@@ -35,6 +35,9 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
   `docs/00-project/GPT_5_6_PRO_REFLAXE_OCAML_NATIVE_POWER_IR_REVIEW_PROMPT.md`
 - Accepted GPT-5.6 Pro checkpoint for the small typed OCaml-lowering boundary:
   `docs/00-project/ORACLE_CHECKPOINT_REFLAXE_OCAML_NATIVE_POWER_IR_2026_07_18.md`
+- Accepted GPT-5.6 Pro diagnosis and migration boundary for feature-gated
+  typed-body lifecycle ownership:
+  `docs/00-project/ORACLE_CHECKPOINT_FEATURE_GATED_TYPED_BODY_LIFECYCLE_2026_07_19.md`
 - First place/assignment lowering inventory and upstream evaluation oracle:
   `docs/00-project/REFLAXE_OCAML_PLACE_ASSIGNMENT_LOWERING_INVENTORY.md`
 - Reflaxe promotion matrix contract: `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`

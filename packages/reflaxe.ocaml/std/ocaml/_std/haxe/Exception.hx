@@ -32,9 +32,10 @@ class Exception {
 	@:noCompletion var __exceptionMessage:String;
 	@:noCompletion var __exceptionStack:Null<CallStack>;
 	@:noCompletion var __nativeStack:Any;
-	// Keep the default implicit. Haxe initializes Int fields to zero, while an
-	// explicit feature-gated initializer can be materialized after the target's
-	// place-analysis pass and would no longer have a stable assignment origin.
+	// Keep the default implicit while the typed-body lifecycle repair is in
+	// progress. This source shape moved an earlier failure but does not fix the
+	// actual defect: a later Reflaxe cleanup can discard the target-owned origin
+	// while retaining the feature-gated assignment or update itself.
 	@:noCompletion @:ifFeature("haxe.Exception.get_stack") var __skipStack:Int;
 	@:noCompletion var __nativeException:Any;
 	@:noCompletion var __previousException:Null<Exception>;
@@ -94,9 +95,11 @@ class Exception {
 
 	@:noCompletion
 	@:ifFeature("haxe.Exception.get_stack")
-	// Keep both stack helpers as real calls. Haxe injects them into derived
-	// constructors after Reflaxe's semantic prepasses; inlining would move the
-	// field update past the pass that assigns its stable place-lowering origin.
+	// Keep both stack helpers as real calls while the typed-body lifecycle repair
+	// is in progress. This source shape moved an earlier failure, but Haxe's
+	// built-in post-DCE constructor work completes before Reflaxe preprocessing.
+	// The remaining defect is loss of the target-owned origin inside that
+	// preprocessing lifecycle, not late Haxe inlining.
 	function __shiftStack():Void {
 		__skipStack++;
 	}

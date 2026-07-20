@@ -26,6 +26,7 @@ typedef OcamlLoweredSourceSpan = {
 **/
 class OcamlLoweredOrigin {
 	public static inline final PLACE_META = ":reflaxeOcamlPlaceOrigin";
+	public static inline final PLACE_PROTECTION_META = ":reflaxeOcamlPlaceProtection";
 
 	static function normalizePath(path:String):String {
 		if (path == null)
@@ -84,6 +85,16 @@ class OcamlLoweredOrigin {
 	public static function metadata(id:String, position:Position):MetadataEntry {
 		final value:Expr = {expr: EConst(CString(id)), pos: position};
 		return {name: PLACE_META, params: [value], pos: position};
+	}
+
+	/** Wraps an admitted operation while generic Reflaxe value rewrites run. */
+	public static function protection(position:Position):MetadataEntry {
+		return {name: PLACE_PROTECTION_META, params: [], pos: position};
+	}
+
+	/** Whether this metadata is the transient OCaml place-protection envelope. */
+	public static function isPlaceProtection(entry:MetadataEntry):Bool {
+		return entry.name == PLACE_PROTECTION_META;
 	}
 
 	/** Reads the stable identity from target-owned place metadata. */
