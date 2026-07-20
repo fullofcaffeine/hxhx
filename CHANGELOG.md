@@ -1,3 +1,10 @@
+## [0.21.2](https://github.com/fullofcaffeine/hxhx/compare/v0.21.1...v0.21.2) (2026-07-20)
+
+
+### Bug Fixes
+
+* **ocaml:** pin verified Reflaxe framework ([1618943](https://github.com/fullofcaffeine/hxhx/commit/16189437fb18ae4de07f929bd4b875dec61af870))
+
 ## [0.21.1](https://github.com/fullofcaffeine/hxhx/compare/v0.21.0...v0.21.1) (2026-07-20)
 
 
