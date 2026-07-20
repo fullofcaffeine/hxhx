@@ -1,3 +1,25 @@
+# [0.21.0](https://github.com/fullofcaffeine/hxhx/compare/v0.20.1...v0.21.0) (2026-07-20)
+
+
+### Bug Fixes
+
+* **ci:** install findlib for native package proof ([e8f2c0d](https://github.com/fullofcaffeine/hxhx/commit/e8f2c0d7dae5419dfd27377ce779e5871f9c4206))
+* **ci:** use portable findlib check ([16e60b5](https://github.com/fullofcaffeine/hxhx/commit/16e60b5a736e827b9986af472441b1d5074710d6))
+* **ocaml:** keep exception stack updates owned ([8222339](https://github.com/fullofcaffeine/hxhx/commit/82223398aa40b17d18f7ca7c3aaa90f92e24d162))
+* **ocaml:** keep stack default out of late lowering ([e5457f0](https://github.com/fullofcaffeine/hxhx/commit/e5457f043d81e056f1dad727a33186ff43d1cea0))
+* **tooling:** clean test build outputs ([afff192](https://github.com/fullofcaffeine/hxhx/commit/afff192b992f8ad9ed6856542f41d7284a398186))
+
+
+### Features
+
+* **ci:** classify QA cost by change risk ([de865a7](https://github.com/fullofcaffeine/hxhx/commit/de865a7c15d8202a4f606853f82e58639a7b4b20))
+* **ocaml:** add environment doctor ([945a0a2](https://github.com/fullofcaffeine/hxhx/commit/945a0a2896fa8cc2e47b1a375df319d4acce32d8))
+* **ocaml:** add runnable project scaffolds ([2503957](https://github.com/fullofcaffeine/hxhx/commit/2503957c7bdb455715cd5c275e1f0bbd2f23e376))
+* **ocaml:** add safe build and watch loop ([b8f0afb](https://github.com/fullofcaffeine/hxhx/commit/b8f0afbb3fd66aed56a724f0a4e790a5e58a57fd))
+* **ocaml:** inspect compiler-owned output ([6dc2ef9](https://github.com/fullofcaffeine/hxhx/commit/6dc2ef97aec309fe7e251b485a12f57cb1b6da85))
+* **ocaml:** measure standalone edit-loop states ([f9b6f87](https://github.com/fullofcaffeine/hxhx/commit/f9b6f879dd4b65a25e374433bfa0cdea5a7fba82))
+* **ocaml:** report native build timing ([3a569ae](https://github.com/fullofcaffeine/hxhx/commit/3a569ae653dbda342580f7a6a751e2c0bf6270b0))
+
 ## [0.20.1](https://github.com/fullofcaffeine/hxhx/compare/v0.20.0...v0.20.1) (2026-07-19)
 
 
