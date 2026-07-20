@@ -1,3 +1,11 @@
+## [0.23.1](https://github.com/fullofcaffeine/hxhx/compare/v0.23.0...v0.23.1) (2026-07-20)
+
+
+### Bug Fixes
+
+* **ocaml:** distinguish program modules from runtime ([88b767e](https://github.com/fullofcaffeine/hxhx/commit/88b767eb568c5aa2f18a53cf0ec3a097153cde46))
+* **tooling:** isolate macro-host build state ([2c10446](https://github.com/fullofcaffeine/hxhx/commit/2c10446d6b7fdda3cab479beeb7ae3c1b5b8e1c1))
+
 # [0.23.0](https://github.com/fullofcaffeine/hxhx/compare/v0.22.0...v0.23.0) (2026-07-20)
 
 
