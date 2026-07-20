@@ -46,6 +46,38 @@ expectTier('standalone example', {
   hxhxCanary: false
 })
 
+expectTier('documentation nested under target source', {
+  event: 'push',
+  changedPaths: ['packages/reflaxe.ocaml/src/reflaxe/ocaml/README.md']
+}, 'Q0', {
+  standalonePackage: false,
+  hxhxCanary: false
+})
+
+expectTier('hxhx-specific target example', {
+  event: 'pull_request',
+  changedPaths: ['packages/reflaxe.ocaml/examples/hxhx-target-ocaml/Main.hx']
+}, 'Q2', {
+  standalonePackage: true,
+  hxhxCanary: true
+})
+
+expectTier('root hxhx application example', {
+  event: 'push',
+  changedPaths: ['examples/hxhx-js-todoapp/src/Main.hx']
+}, 'Q2', {
+  standalonePackage: true,
+  hxhxCanary: true
+})
+
+expectTier('standalone benchmark workload', {
+  event: 'push',
+  changedPaths: ['workloads/regex/build.hxml']
+}, 'Q1', {
+  standalonePackage: true,
+  hxhxCanary: false
+})
+
 expectTier('ordinary target module', {
   event: 'push',
   changedPaths: ['packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlExpr.hx']

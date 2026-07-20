@@ -9,6 +9,19 @@ on:
       - 'docs/**'
       - '*.md'
       - '**/*.md'
+      - 'bench/**'
+      - 'packages/reflaxe.ocaml/examples/build-macro/**'
+      - 'packages/reflaxe.ocaml/examples/extlib-pmap/**'
+      - 'packages/reflaxe.ocaml/examples/file-io/**'
+      - 'packages/reflaxe.ocaml/examples/loop-control/**'
+      - 'packages/reflaxe.ocaml/examples/mini-compiler/**'
+      - 'packages/reflaxe.ocaml/examples/ocaml-native-collections/**'
+      - 'scripts/bench/**'
+      - 'scripts/reflaxe-ocaml/**'
+      - 'test/packaging/reflaxe_ocaml_external_app/**'
+      - 'test/portable/**'
+      - 'test/reflaxe_ocaml_tooling_*/**'
+      - 'workloads/**'
   pull_request:
     branches: [ master, main ]
     paths-ignore:
@@ -17,6 +30,19 @@ on:
       - 'docs/**'
       - '*.md'
       - '**/*.md'
+      - 'bench/**'
+      - 'packages/reflaxe.ocaml/examples/build-macro/**'
+      - 'packages/reflaxe.ocaml/examples/extlib-pmap/**'
+      - 'packages/reflaxe.ocaml/examples/file-io/**'
+      - 'packages/reflaxe.ocaml/examples/loop-control/**'
+      - 'packages/reflaxe.ocaml/examples/mini-compiler/**'
+      - 'packages/reflaxe.ocaml/examples/ocaml-native-collections/**'
+      - 'scripts/bench/**'
+      - 'scripts/reflaxe-ocaml/**'
+      - 'test/packaging/reflaxe_ocaml_external_app/**'
+      - 'test/portable/**'
+      - 'test/reflaxe_ocaml_tooling_*/**'
+      - 'workloads/**'
   workflow_dispatch:
     inputs:
       reps:

@@ -46,6 +46,10 @@ function loadPolicy(policyPath = POLICY_PATH) {
     Array.isArray(policy.q0WorkflowIgnorePatterns) && policy.q0WorkflowIgnorePatterns.length > 0,
     'q0WorkflowIgnorePatterns must be a non-empty array'
   )
+  invariant(
+    Array.isArray(policy.q1HxhxWorkflowIgnorePatterns) && policy.q1HxhxWorkflowIgnorePatterns.length > 0,
+    'q1HxhxWorkflowIgnorePatterns must be a non-empty array'
+  )
   invariant(Array.isArray(policy.rules) && policy.rules.length > 0, 'rules must be a non-empty array')
 
   const ids = new Set()
@@ -54,6 +58,10 @@ function loadPolicy(policyPath = POLICY_PATH) {
     invariant(!ids.has(rule.id), `duplicate rule id: ${rule.id}`)
     ids.add(rule.id)
     tierIndex(rule.tier)
+    invariant(
+      rule.terminal === undefined || typeof rule.terminal === 'boolean',
+      `rule ${rule.id} terminal must be boolean when present`
+    )
     invariant(typeof rule.description === 'string' && rule.description !== '', `rule ${rule.id} needs a description`)
     const matchers = ['exact', 'prefixes', 'suffixes']
       .flatMap(field => Array.isArray(rule[field]) ? rule[field] : [])
@@ -94,12 +102,16 @@ function classify(options, loaded = loadPolicy()) {
       pathTier = maxTier(pathTier, loaded.policy.defaultUnknownTier)
       continue
     }
-    const matchedTier = matchedRules.reduce((tier, rule) => maxTier(tier, rule.tier), 'Q0')
+    // A terminal rule owns the complete path classification. Documentation is
+    // therefore Q0 even when its README lives below a compiler/source prefix.
+    const terminalRules = matchedRules.filter(rule => rule.terminal === true)
+    const effectiveRules = terminalRules.length > 0 ? terminalRules : matchedRules
+    const matchedTier = effectiveRules.reduce((tier, rule) => maxTier(tier, rule.tier), 'Q0')
     pathTier = maxTier(pathTier, matchedTier)
     matches.push({
       path: changedPath,
       tier: matchedTier,
-      rules: matchedRules.map(rule => rule.id).sort()
+      rules: effectiveRules.map(rule => rule.id).sort()
     })
   }
 

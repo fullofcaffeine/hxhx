@@ -13,10 +13,26 @@
     "*.md",
     "**/*.md"
   ],
+  "q1HxhxWorkflowIgnorePatterns": [
+    "bench/**",
+    "packages/reflaxe.ocaml/examples/build-macro/**",
+    "packages/reflaxe.ocaml/examples/extlib-pmap/**",
+    "packages/reflaxe.ocaml/examples/file-io/**",
+    "packages/reflaxe.ocaml/examples/loop-control/**",
+    "packages/reflaxe.ocaml/examples/mini-compiler/**",
+    "packages/reflaxe.ocaml/examples/ocaml-native-collections/**",
+    "scripts/bench/**",
+    "scripts/reflaxe-ocaml/**",
+    "test/packaging/reflaxe_ocaml_external_app/**",
+    "test/portable/**",
+    "test/reflaxe_ocaml_tooling_*/**",
+    "workloads/**"
+  ],
   "rules": [
     {
       "id": "documentation-and-tracking",
       "tier": "Q0",
+      "terminal": true,
       "description": "Documentation, repository guidance, and Beads records do not need a compiler build.",
       "exact": [
         "AGENTS.md",
@@ -42,12 +58,15 @@
       "tier": "Q1",
       "description": "Standalone examples, package consumers, and authoring tools exercise reflaxe.ocaml without a large hxhx consumer.",
       "prefixes": [
+        "bench/",
         "examples/",
         "packages/reflaxe.ocaml/examples/",
+        "scripts/bench/",
         "scripts/reflaxe-ocaml/",
         "test/packaging/reflaxe_ocaml_external_app/",
         "test/portable/",
-        "test/reflaxe_ocaml_tooling_"
+        "test/reflaxe_ocaml_tooling_",
+        "workloads/"
       ]
     },
     {
@@ -61,9 +80,11 @@
         "hxformat.json"
       ],
       "prefixes": [
+        "examples/hxhx-",
         "haxe_libraries/",
         "packages/hxhx-core/src/",
         "packages/hxhx/src/",
+        "packages/reflaxe.ocaml/examples/hxhx-",
         "packages/reflaxe.ocaml/src/",
         "packages/reflaxe.ocaml/std/",
         "packages/reflaxe.ocaml/templates/",

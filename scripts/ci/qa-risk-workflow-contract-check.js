@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * Keeps cheap Q0 routing consistent across automatic GitHub workflows.
+ * Keeps cheap Q0/Q1 routing consistent across automatic GitHub workflows.
  *
  * Core CI intentionally remains present for every push and pull request so its
  * stable aggregate can explain the route. Other broad automatic workflows must
- * ignore the exact documentation/tracking patterns owned by the QA policy.
+ * ignore the exact documentation/tracking patterns owned by the QA policy, and
+ * hxhx-only workflows must also ignore standalone reflaxe.ocaml Q1 surfaces.
  */
 
 const fs = require('fs')
@@ -22,6 +23,12 @@ const q0IgnoredWorkflows = new Set([
   'm14-perf-report.yml',
   'semantic-diff.yml',
   'stdlib-portable-lite.yml'
+])
+const q1HxhxIgnoredWorkflows = new Set([
+  'gate1-lite.yml',
+  'gate3-builtin.yml',
+  'hxhx-kpi-report.yml',
+  'js-oracle-smoke.yml'
 ])
 
 function fail(message) {
@@ -45,10 +52,20 @@ function hasPathFilter(block) {
 function main() {
   const policy = JSON.parse(fs.readFileSync('scripts/ci/qa-risk-policy.json', 'utf8'))
   const ciGates = fs.readFileSync('docs/00-project/CI_GATES.md', 'utf8')
-  const patterns = policy.q0WorkflowIgnorePatterns
-  if (!Array.isArray(patterns) || patterns.length === 0) {
+  const q0Patterns = policy.q0WorkflowIgnorePatterns
+  const q1HxhxPatterns = policy.q1HxhxWorkflowIgnorePatterns
+  if (!Array.isArray(q0Patterns) || q0Patterns.length === 0) {
     fail('policy.q0WorkflowIgnorePatterns must be a non-empty array')
     return
+  }
+  if (!Array.isArray(q1HxhxPatterns) || q1HxhxPatterns.length === 0) {
+    fail('policy.q1HxhxWorkflowIgnorePatterns must be a non-empty array')
+    return
+  }
+  for (const unsafeBroadPattern of ['examples/**', 'packages/reflaxe.ocaml/examples/**']) {
+    if (q1HxhxPatterns.includes(unsafeBroadPattern)) {
+      fail(`Q1 hxhx ignore patterns must not hide hxhx-specific examples via ${unsafeBroadPattern}`)
+    }
   }
   for (const snippet of [
     '### Risk-routed PR cost',
@@ -67,6 +84,9 @@ function main() {
       continue
     }
     const text = fs.readFileSync(path.join(workflowRoot, workflow), 'utf8')
+    const patterns = q1HxhxIgnoredWorkflows.has(workflow)
+      ? [...q0Patterns, ...q1HxhxPatterns]
+      : q0Patterns
     for (const event of ['push', 'pull_request']) {
       const block = eventBlock(text, event)
       if (!block) {
@@ -101,7 +121,7 @@ function main() {
 
   if (process.exitCode) return
   console.log(
-    `QA_RISK_WORKFLOW_CONTRACT:PASS q0_ignored=${q0IgnoredWorkflows.size} patterns=${patterns.length}`
+    `QA_RISK_WORKFLOW_CONTRACT:PASS q0_ignored=${q0IgnoredWorkflows.size} q1_hxhx_ignored=${q1HxhxIgnoredWorkflows.size} q0_patterns=${q0Patterns.length} q1_patterns=${q1HxhxPatterns.length}`
   )
 }
 

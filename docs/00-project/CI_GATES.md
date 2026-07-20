@@ -134,7 +134,10 @@ requested workloads.
   `Tests` aggregate. They do not install an OCaml/Haxe toolchain or build
   `hxhx`.
 - **Q1:** standalone `reflaxe.ocaml` examples, package consumers, and authoring
-  tools add Guardrails and the installed-package compile/build/run proof.
+  tools add Guardrails and the installed-package compile/build/run proof. The
+  hxhx-only Gate 1, Gate 3, JS-oracle, and KPI workflows stay asleep; standalone
+  OCaml workload, stdlib, semantic-diff, performance, and security checks keep
+  their own normal trigger contracts.
 - **Q2:** target/compiler changes add the bounded Stage0-free, JS-native,
   plugin, and Core test-shard canaries.
 - **Q3:** central representation/runtime, bootstrap, plugin ABI, workflow, and
@@ -157,6 +160,9 @@ checked by `scripts/ci/qa-risk-workflow-contract-check.js`. If branch
 protection is enabled, require the stable Core `Tests` aggregate; do not require
 a conditional workflow name whose trigger is intentionally absent at Q0.
 Scheduled, manual, and release gates are not weakened by Q0 path routing.
+The same guard owns a narrower Q1 ignore list for workflows whose only purpose
+is exercising `hxhx`; mixed changes and hxhx-specific examples still escalate
+to Q2 and wake those consumers.
 
 For Q2 and above, the Core workflow runs the complete 106-command `npm test`
 inventory as four clean-runner shards after Guardrails: focused compiler
