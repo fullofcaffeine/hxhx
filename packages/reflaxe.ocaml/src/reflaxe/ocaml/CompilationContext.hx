@@ -302,6 +302,28 @@ class CompilationContext {
 		return isLower ? (String.fromCharCode(first - 32) + fileId.substr(1)) : fileId;
 	}
 
+	/**
+		Returns the OCaml units owned by the current generated Haxe program.
+
+		Runtime planning uses this list to distinguish a normal program reference such as
+		`HxClassDecl.getName` from a reference to reflaxe.ocaml's compatibility runtime.
+	**/
+	public function emittedOcamlModuleNamesSorted():Array<String> {
+		final moduleIds:Array<String> = [];
+		for (moduleId => _ in emittedHaxeModules)
+			moduleIds.push(moduleId);
+		moduleIds.sort((left, right) -> left < right ? -1 : (left > right ? 1 : 0));
+
+		final names:Map<String, Bool> = [];
+		for (moduleId in moduleIds)
+			names.set(ocamlModuleNameForModuleId(moduleId), true);
+		final out:Array<String> = [];
+		for (name in names.keys())
+			out.push(name);
+		out.sort((left, right) -> left < right ? -1 : (left > right ? 1 : 0));
+		return out;
+	}
+
 	public function staticFieldKey(moduleId:String, typeName:String, fieldName:String):String {
 		return moduleId + "::" + typeName + "::" + fieldName;
 	}

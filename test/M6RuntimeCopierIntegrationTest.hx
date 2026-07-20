@@ -1,3 +1,5 @@
+import reflaxe.ocaml.runtimegen.RuntimeModuleOwnership;
+
 private typedef ProfileReportVerifier = {
 	final mode:String;
 	final enabled:Bool;
@@ -109,6 +111,18 @@ class M6RuntimeCopierIntegrationTest {
 			if (expected[i] != actual[i])
 				throw label + ": mismatch at index " + Std.string(i) + " expected=" + expected[i] + " actual=" + actual[i];
 		}
+	}
+
+	static function captureFailure(run:Void->Void, label:String):String {
+		var failure:Null<String> = null;
+		try {
+			run();
+		} catch (error:Dynamic) {
+			failure = Std.string(error);
+		}
+		if (failure == null)
+			throw label + ": expected failure";
+		return failure;
 	}
 
 	static function reasonsForModule(report:RuntimePlanReport, moduleName:String):Array<String> {
@@ -237,6 +251,21 @@ class M6RuntimeCopierIntegrationTest {
 	}
 
 	static function main() {
+		final ownershipPartition = RuntimeModuleOwnership.partitionCompilerObservations(["HxRuntime", "HxProgramOwned", "HxRuntime"], ["HxProgramOwned"],
+			["HxRuntime", "HxArray"]);
+		assertArrayEquals(["HxRuntime"], ownershipPartition.runtimeModules, "runtime observation ownership");
+		assertArrayEquals(["HxProgramOwned"], ownershipPartition.programModules, "program observation ownership");
+		final unknownObservedModuleFailure = captureFailure(() -> RuntimeModuleOwnership.partitionCompilerObservations(["HxTypo"], ["HxProgramOwned"],
+			["HxRuntime"]),
+			"unknown compiler-observed runtime module");
+		assertContains(unknownObservedModuleFailure, "Unknown OCaml runtime module \"HxTypo\"",
+			"unknown compiler-observed runtime module should remain a hard failure");
+		final ownershipCollisionFailure = captureFailure(() -> RuntimeModuleOwnership.assertNoSelectedRuntimeCollisions(["HxArray", "HxProgramOwned"],
+			["HxRuntime", "HxArray"]),
+			"program/runtime module ownership collision");
+		assertContains(ownershipCollisionFailure, "OCaml module ownership collision", "module collision should explain the ownership problem");
+		assertContains(ownershipCollisionFailure, "HxArray", "module collision should identify the conflicting OCaml unit");
+
 		final rootOutDir = "out_ocaml_m6_runtime_" + Std.string(Std.int(Date.now().getTime()));
 		final portableOutDir = rootOutDir + "/portable";
 		final metalOutDir = rootOutDir + "/metal";
@@ -255,6 +284,7 @@ class M6RuntimeCopierIntegrationTest {
 		final invalidRuntimeModeOutDir = rootOutDir + "/invalid_runtime_mode";
 		final noneRuntimeModeOutDir = rootOutDir + "/none_runtime_mode";
 		final unknownRuntimeModuleOutDir = rootOutDir + "/unknown_runtime_module";
+		final programOwnedModuleOutDir = rootOutDir + "/program_owned_hx_module";
 		sys.FileSystem.createDirectory(rootOutDir);
 
 		final portableCompile = compileRuntimeFixture(portableOutDir, null);
@@ -348,6 +378,14 @@ class M6RuntimeCopierIntegrationTest {
 		final unknownRuntimeModuleOutput = unknownRuntimeModuleCompile.stderr + "\n" + unknownRuntimeModuleCompile.stdout;
 		assertContains(unknownRuntimeModuleOutput, "Unknown OCaml runtime module \"DoesNotExist\"", "unknown runtime module should identify the invalid name");
 		assertContains(unknownRuntimeModuleOutput, "ocaml_runtime_modules", "unknown manual runtime module should identify the defining command-line option");
+		final programOwnedModuleCompile = compileRuntimeFixture(programOwnedModuleOutDir, "metal", "test/fixtures/m6_runtime_program_module/src", "Main");
+		assertTrue(programOwnedModuleCompile.exitCode == 0,
+			"a generated Hx-prefixed program module should not be requested from the runtime manifest: " + programOwnedModuleCompile.stderr);
+		assertTrue(sys.FileSystem.exists(programOwnedModuleOutDir + "/HxProgramOwned.ml"),
+			"the Hx-prefixed program module should remain normal generated output");
+		final programOwnedRequirementReport = readRuntimeRequirementReport(programOwnedModuleOutDir);
+		assertNotContains("\n" + programOwnedRequirementReport.compilerObservedModules.join("\n") + "\n", "\nHxProgramOwned\n",
+			"program-owned modules should not appear as compatibility-runtime requirements");
 
 		final runtimePath = portableOutDir + "/runtime/HxRuntime.ml";
 		if (!sys.FileSystem.exists(runtimePath))

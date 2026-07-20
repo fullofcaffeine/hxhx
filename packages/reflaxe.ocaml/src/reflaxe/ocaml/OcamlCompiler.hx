@@ -2706,7 +2706,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final noRuntime = haxe.macro.Context.defined("ocaml_no_runtime");
 		if (!noRuntime) {
 			ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.CORE_RUNTIME);
-			RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted(), ctx.runtimeRequirementsSorted(), ctx.runtimeRequirementRevision());
+			RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted(), ctx.emittedOcamlModuleNamesSorted(), ctx.runtimeRequirementsSorted(),
+				ctx.runtimeRequirementRevision());
 		}
 
 		// OCaml-native (M12): emit functor-instantiated modules when requested by interop surfaces.

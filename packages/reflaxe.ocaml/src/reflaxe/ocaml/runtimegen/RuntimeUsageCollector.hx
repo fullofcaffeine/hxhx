@@ -24,7 +24,8 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 	  `HxArray.length`, `HxType.class_`, `HxRuntime.hx_null`).
 	- These observations are a consistency check and migration fallback. Explicit
 	  requirement records are becoming the source of truth one compiler family at a time.
-	- Selection remains filtered by available runtime modules in `RuntimeCopier`.
+	- `RuntimeCopier` resolves each candidate against explicit generated-program and runtime
+	  ownership lists before selecting runtime modules.
 **/
 class RuntimeUsageCollector {
 	static function isUpperAscii(code:Int):Bool {

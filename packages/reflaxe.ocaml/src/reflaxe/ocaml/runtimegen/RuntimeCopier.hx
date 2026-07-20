@@ -353,7 +353,8 @@ class RuntimeCopier {
 	}
 
 	public static function copy(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, destSubdir:String = "runtime",
-			compilerObservedModules:Array<String>, requirements:Array<OcamlRuntimeRequirement>, requirementRevision:String):Void {
+			compilerObservedModules:Array<String>, programOwnedModules:Array<String>, requirements:Array<OcamlRuntimeRequirement>,
+			requirementRevision:String):Void {
 		final stdDir = tryResolveStdDir();
 		if (stdDir == null)
 			throw "Cannot locate the reflaxe.ocaml standard library, so the checked OCaml runtime cannot be packaged.";
@@ -381,8 +382,9 @@ class RuntimeCopier {
 				if (entry.profiles.contains(profile)
 					&& (allowHxHxRuntime || entry.scope != RuntimeSourceManifest.TOOLING_SCOPE)) entry.module
 		];
-		final compilerObservedModulesAll = validatedRootsSorted(compilerObservedModules != null ? compilerObservedModules : [], sourceManifest,
-			"compiler-observed generated output");
+		final runtimeCatalogModules = [for (entry in sourceManifest.modules) entry.module];
+		final observationPartition = RuntimeModuleOwnership.partitionCompilerObservations(compilerObservedModules, programOwnedModules, runtimeCatalogModules);
+		final compilerObservedModulesAll = validatedRootsSorted(observationPartition.runtimeModules, sourceManifest, "compiler-observed generated output");
 		if (compilerObservedModulesAll.length > 0)
 			RuntimeSourceManifest.resolveClosure(sourceManifest, compilerObservedModulesAll, profile, allowHxHxRuntime);
 		final enabledCompilerObservedModules = buildContext.runtimeMode == Selective
@@ -430,6 +432,7 @@ class RuntimeCopier {
 		if (buildContext.runtimeMode == Selective)
 			addDependencyReasons(inclusionReasonMap, selectedEntries);
 		final selectedModuleList = [for (entry in selectedEntries) entry.module];
+		RuntimeModuleOwnership.assertNoSelectedRuntimeCollisions(programOwnedModules, selectedModuleList);
 		final inclusionReasons = inclusionReasonsSorted(inclusionReasonMap, selectedModuleList);
 		writeProfileReport(output, artifacts, rawRequestedProfile, buildContext);
 		writeRuntimePlanReport(output, artifacts, buildContext, selectionMode, availableModules.copy(), enabledCompilerObservedModules, manualModules,
