@@ -258,8 +258,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 4) {
-						throw 'Unsupported lowering report schema $version; expected 4.';
+					if (version != 5) {
+						throw 'Unsupported lowering report schema $version; expected 5.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -272,6 +272,7 @@ class ReflaxeOcamlInspection {
 					}
 					final plans = [for (plan in rawPlans) loweredPlan(plan)];
 					plans.sort((left, right) -> compareStrings(left.id, right.id));
+					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans);
 					{
 						status: "present",
 						required: required,
@@ -281,7 +282,7 @@ class ReflaxeOcamlInspection {
 						admittedInputRevision: requiredSha256Revision(value, "admittedInputRevision"),
 						plans: plans,
 						scope: "typed-place-assignment-and-update-family",
-						message: 'Typed place report contains ${plans.length} sealed operation${plans.length == 1 ? "" : "s"}; it is not a whole-program IR.'
+						message: 'Typed place report contains ${plans.length} sealed operation${plans.length == 1 ? "" : "s"} and $runtimeRequirementCount source-rooted runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -314,6 +315,56 @@ class ReflaxeOcamlInspection {
 			schedule: schedule,
 			runtimeRequirementIds: requiredStringArray(value, "runtimeRequirementIds")
 		};
+	}
+
+	static function validateLoweredRuntimeRequirements(value:Dynamic, plans:Array<InspectionLoweredPlan>):Int {
+		requiredSha256Revision(value, "runtimeRequirementRevision");
+		final requirementValues = requiredArray(value, "runtimeRequirements");
+		final expectedCount = requiredInt(value, "runtimeRequirementCount");
+		if (requirementValues.length != expectedCount) {
+			throw 'Lowering report runtimeRequirementCount is $expectedCount but runtimeRequirements contains ${requirementValues.length} entries.';
+		}
+		final requirements:Map<String, Bool> = [];
+		for (requirement in requirementValues) {
+			final id = requiredString(requirement, "id");
+			if (requirements.exists(id))
+				throw 'Lowering report contains duplicate runtime requirement "$id".';
+			requirements.set(id, true);
+			requiredString(requirement, "sourceKind");
+			requiredString(requirement, "sourceId");
+			final source = requiredObject(requirement, "source");
+			requiredString(source, "file");
+			final sourceMin = requiredInt(source, "min");
+			final sourceMax = requiredInt(source, "max");
+			if (sourceMin < 0 || sourceMax < sourceMin)
+				throw 'Lowering report runtime requirement "$id" has an invalid source span.';
+			requiredString(requirement, "semanticCapability");
+			requiredString(requirement, "cause");
+			requiredString(requirement, "decisionId");
+			requiredString(requirement, "subjectTypeId");
+			requiredString(requirement, "implementationFeature");
+			requiredString(requirement, "explanation");
+			final roots = requiredStringArray(requirement, "rootModules");
+			if (roots.length == 0)
+				throw 'Lowering report runtime requirement "$id" has no implementation root.';
+			for (root in roots)
+				if (!~/^[A-Za-z][A-Za-z0-9_]*$/.match(root))
+					throw 'Lowering report runtime requirement "$id" has invalid root module "$root".';
+			if (requiredStringArray(requirement, "profileEligibility").length == 0)
+				throw 'Lowering report runtime requirement "$id" has no eligible profile.';
+		}
+		final referenced:Map<String, Bool> = [];
+		for (plan in plans) {
+			for (requirementId in plan.runtimeRequirementIds) {
+				if (!requirements.exists(requirementId))
+					throw 'Lowered plan "${plan.id}" refers to missing runtime requirement "$requirementId".';
+				referenced.set(requirementId, true);
+			}
+		}
+		for (requirementId in requirements.keys())
+			if (!referenced.exists(requirementId))
+				throw 'Lowering report contains unreferenced runtime requirement "$requirementId".';
+		return expectedCount;
 	}
 
 	static function runtimeReasons(value:Dynamic):Array<InspectionRuntimeReason> {

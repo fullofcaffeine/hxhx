@@ -234,6 +234,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	override public function beginProgramRevision(revision:ProgramRevision):Void {
 		super.beginProgramRevision(revision);
 		placePlanRegistry.beginProgram(revision.id);
+		ctx.beginRuntimeRequirementProgram(revision.id);
 	}
 
 	/** Builds and validates all admitted place plans for one final typed body. */
@@ -1802,7 +1803,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		OcamlBuildTimingReportWriter.clear(outDir);
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
-			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), artifacts);
+			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)

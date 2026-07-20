@@ -162,6 +162,18 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `selectedModules`
   - `selectedFeatures`
   - `inclusionReasons` (deterministic per-module reason list)
+- `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
+  - `schemaVersion` (current: `5`)
+  - the sealed assignment/update plans and their source locations
+  - `runtimeRequirementRevision` and `runtimeRequirementCount`
+  - `runtimeRequirements`, where every admitted `HxInt`/`HxArray` need explains
+    the Haxe behavior, target decision, implementation feature, eligible
+    profiles, and checked runtime root that caused it
+
+The lowering report is complete for its stated assignment/update family, not
+for the whole program. The separate runtime selection report still includes
+syntax-observed roots while the remaining expression families migrate to the
+same source-rooted model.
 
 `hxhx` Stage3 OCaml emission also emits:
 

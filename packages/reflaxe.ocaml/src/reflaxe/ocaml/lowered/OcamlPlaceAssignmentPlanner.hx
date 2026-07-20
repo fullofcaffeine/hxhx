@@ -399,7 +399,7 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Throw,
 				OcamlLoweredEffect.Write
 			],
-			runtimeRequirementIds: ["haxe-array-element-set"]
+			runtimeRequirementIds: [originId + ":runtime:haxe-array-element-set"]
 		};
 	}
 
@@ -448,9 +448,9 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Write
 			],
 			runtimeRequirementIds: [
-				"haxe-array-element-get",
+				originId + ":runtime:haxe-array-element-get",
 				originId + ":runtime:haxe-int32-add",
-				"haxe-array-element-set"
+				originId + ":runtime:haxe-array-element-set"
 			]
 		};
 	}
@@ -508,9 +508,9 @@ class OcamlPlaceAssignmentPlanner {
 				OcamlLoweredEffect.Write
 			],
 			runtimeRequirementIds: [
-				"haxe-array-element-get",
+				originId + ":runtime:haxe-array-element-get",
 				originId + ":runtime:haxe-int32-add",
-				"haxe-array-element-set"
+				originId + ":runtime:haxe-array-element-set"
 			]
 		};
 	}

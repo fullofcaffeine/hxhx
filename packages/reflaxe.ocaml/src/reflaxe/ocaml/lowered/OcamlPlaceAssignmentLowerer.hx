@@ -172,7 +172,6 @@ class OcamlPlaceAssignmentLowerer {
 			case StaticCompound(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateStaticCompoundIntAdd(plan);
 				if (errors.length > 0) invalid(errors, plan.originId); else {
-					context.markRuntimeModule("HxInt");
 					if (shouldRecord(plan.source)) {
 						context.recordLoweredPlaceReport({
 							id: plan.id,
@@ -195,7 +194,6 @@ class OcamlPlaceAssignmentLowerer {
 			case StaticUpdate(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateStaticIntUpdate(plan);
 				if (errors.length > 0) invalid(errors, plan.originId); else {
-					context.markRuntimeModule("HxInt");
 					if (shouldRecord(plan.source)) {
 						context.recordLoweredPlaceReport({
 							id: plan.id,
@@ -221,7 +219,6 @@ class OcamlPlaceAssignmentLowerer {
 			case ArraySimple(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateArraySimple(plan);
 				if (errors.length > 0) invalid(errors, plan.originId); else {
-					context.markRuntimeModule("HxArray");
 					if (shouldRecord(plan.source)) {
 						context.recordLoweredPlaceReport({
 							id: plan.id,
@@ -243,8 +240,6 @@ class OcamlPlaceAssignmentLowerer {
 			case ArrayCompound(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateArrayCompoundIntAdd(plan);
 				if (errors.length > 0) invalid(errors, plan.originId); else {
-					context.markRuntimeModule("HxArray");
-					context.markRuntimeModule("HxInt");
 					if (shouldRecord(plan.source)) {
 						context.recordLoweredPlaceReport({
 							id: plan.id,
@@ -267,8 +262,6 @@ class OcamlPlaceAssignmentLowerer {
 			case ArrayUpdate(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateArrayIntUpdate(plan);
 				if (errors.length > 0) invalid(errors, plan.originId); else {
-					context.markRuntimeModule("HxArray");
-					context.markRuntimeModule("HxInt");
 					if (shouldRecord(plan.source)) {
 						context.recordLoweredPlaceReport({
 							id: plan.id,
@@ -294,7 +287,6 @@ class OcamlPlaceAssignmentLowerer {
 			case Compound(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateCompoundIntAdd(plan);
 				if (errors.length > 0) invalid(errors, plan.originId); else {
-					context.markRuntimeModule("HxInt");
 					if (shouldRecord(plan.source)) {
 						context.recordLoweredPlaceReport({
 							id: plan.id,
@@ -317,7 +309,6 @@ class OcamlPlaceAssignmentLowerer {
 			case Update(plan):
 				final errors = OcamlPlaceAssignmentValidator.validateIntUpdate(plan);
 				if (errors.length > 0) invalid(errors, plan.originId); else {
-					context.markRuntimeModule("HxInt");
 					if (shouldRecord(plan.source)) {
 						context.recordLoweredPlaceReport({
 							id: plan.id,

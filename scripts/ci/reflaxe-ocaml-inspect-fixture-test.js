@@ -148,6 +148,17 @@ try {
 	fs.rmdirSync(timingPath)
 
 	const loweringPath = path.join(tempRoot, 'out/ocaml_lowering_report.json')
+	const loweringBytes = fs.readFileSync(loweringPath, 'utf8')
+	const lowering = JSON.parse(loweringBytes)
+	const removedRequirement = lowering.runtimeRequirements.pop()
+	lowering.runtimeRequirementCount -= 1
+	fs.writeFileSync(loweringPath, JSON.stringify(lowering, null, 2) + '\n')
+	const missingRequirement = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(missingRequirement.status, 1)
+	const missingRequirementReport = JSON.parse(missingRequirement.stdout)
+	assert.strictEqual(missingRequirementReport.lowering.status, 'invalid')
+	assert(missingRequirementReport.lowering.message.includes(`refers to missing runtime requirement "${removedRequirement.id}"`))
+	fs.writeFileSync(loweringPath, loweringBytes)
 	fs.rmSync(loweringPath)
 	const optionalLowering = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--json'])
 	assert.strictEqual(optionalLowering.status, 1)

@@ -19,7 +19,17 @@ The compiler's compatibility runtime is a set of OCaml source modules copied int
 
 Validation stops before copying if a declared file is missing or modified, an unlisted OCaml source appears, a dependency is unknown, or a requested module is not legal for that profile. This prevents an incomplete or locally modified runtime from quietly entering generated output.
 
-This catalog answers “which reviewed source files implement this module?” It does **not** yet answer “which Haxe operation required this module?” The source-rooted semantic requirement ledger that will provide that explanation remains tracked by `haxe_ocaml-0uwin`; until it lands, the generated artifact manifest correctly reports runtime ownership as incomplete.
+This catalog answers “which reviewed source files implement this module?” The
+typed assignment/update path now also answers “which Haxe expression required
+`HxInt` or `HxArray`, and why?” in `ocaml_lowering_report.json` when
+`-D ocaml_lowering_report` is enabled. Each explanation names the source
+expression, Haxe behavior, target decision, implementation feature, eligible
+profiles, and checked root module.
+
+That explanation currently covers only the admitted assignment/update family.
+Other compiler paths still discover runtime names from generated OCaml
+structure, so the whole-program runtime authority and generated artifact
+manifest correctly remain incomplete under `haxe_ocaml-0uwin`.
 
 ## Legend
 

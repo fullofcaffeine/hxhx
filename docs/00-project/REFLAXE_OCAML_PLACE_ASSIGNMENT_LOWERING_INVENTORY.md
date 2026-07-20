@@ -42,8 +42,10 @@ receiver-free typed schedule as well: load the ref once, add the token-selected
 signed delta, store once, and return the sealed old or computed result.
 Exact nominal `Array<Int>` simple assignment now also seals the array receiver,
 index, RHS, store, and shared RHS result in source order. It uses the direct
-`int HxArray.t` carrier without an `Obj.magic` cast and records the semantic
-`haxe-array-element-set` runtime requirement before syntax construction.
+`int HxArray.t` carrier without an `Obj.magic` cast. Before syntax construction,
+the compiler records a separate explanation for that source expression: Haxe
+array write behavior needs the `haxe-array-element-access-v1` implementation,
+whose checked runtime root is `HxArray`.
 Exact primitive-`Int` `+=` on that same array place additionally seals the old
 element load before the RHS, Haxe `Int` addition, one store, and the computed
 result. Prefix and postfix `++` and `--` now use the same array place: each
@@ -79,7 +81,8 @@ typed tree, nor a shared cross-target representation IR.
 | Straight-line local assignment | `OcamlBuilder.buildBlockFromIndex`, from approximately line 5832 | A second path rewrites non-ref local assignment as OCaml `let` shadowing, so local storage and expression lowering do not share one durable plan. |
 | Local mutation and capture | `collectMutatedLocalIds*` and `collectRefLocalIds*`, from approximately line 6309 | Correctness facts live in mutable traversal maps and are consumed later by syntax construction. This is follow-up Bead `haxe_ocaml-9bome`, but the first place model must leave it a stable home. |
 | Field layout and carrier type | `OcamlCompiler` plus `OcamlBuilder` helpers | Record layout, `Obj.t`, null, default, receiver cast, and conversion choices are selected in more than one component. The place slice records references to the selected facts; it does not attempt the full representation migration. |
-| Runtime need | `RuntimeUsageCollector` and `RuntimeCopier` after syntax construction | The structured scan is useful as a consistency check, but it cannot be the semantic source of truth and cannot see through opaque raw fragments. |
+| Runtime need for the admitted place family | `OcamlPlacePlanSealer` and `OcamlRuntimeRequirementLedger` before syntax construction | Every `Int` addition and array read/write receives its own source identity, explanation, implementation feature, checked root module, profile eligibility, and deterministic revision. The lowering report verifies that every plan ID resolves to one of these records. |
+| Other runtime needs | `RuntimeUsageCollector` and `RuntimeCopier` after syntax construction | These families still choose roots from generated OCaml structure. The scan is useful as a consistency check, but it cannot be the semantic source of truth and cannot see through opaque raw fragments. Whole-program runtime authority therefore remains incomplete. |
 | Unsupported behavior | `guardrailError` plus `CUnit` branches | Errors are suppressed while compiling the current Haxe standard library. Bootstrap continuity must not become the release failure policy for an admitted place form. |
 
 At the baseline inventory, `OcamlBuilder.hx` was 7,688 physical lines and
@@ -232,12 +235,14 @@ The current hard cuts admit only:
   nominal `Array<Int>`, with receiver, index, old-element load, signed
   `int-add`, store, and fixity-selected old or computed result;
 - no compatibility-runtime requirement for field/static simple assignment,
-  one `haxe-int32-add` requirement mapped to `HxInt` for `+=` and updates, and
-  one `haxe-array-element-set` requirement mapped to `HxArray` for the admitted
+  one source-scoped `haxe-int32-add` requirement mapped to the
+  `haxe-int32-arithmetic-v1` feature and `HxInt` root for every `+=` or update,
+  and one source-scoped `haxe-array-element-set` requirement mapped to the
+  `haxe-array-element-access-v1` feature and `HxArray` root for every admitted
   simple array store. Array `+=` and array updates record get, Haxe `Int`
-  addition, and set as separate semantic requirements and select both `HxArray`
-  and `HxInt`. Static `+=` and updates record their Haxe `Int` addition
-  separately while using the already-selected ref-cell representation.
+  addition, and set as separate per-expression requirements. Static `+=` and
+  updates record their Haxe `Int` addition separately while using the
+  already-selected ref-cell representation.
 
 It deliberately does not follow Haxe abstracts to their underlying `Int`, and
 it does not admit nullable or `Dynamic` right-hand sides. Those require explicit
@@ -252,6 +257,10 @@ canonical receiver/index identities alongside diagnostic display spellings,
 selected `HxArray` get/set symbols, and semantic runtime requirements. The
 array compound/update plans and static compound/update plans use those existing
 closed place/operation fields, so they add no schema version.
+Schema version 5 expands those short requirement IDs into complete,
+source-rooted explanations and adds a deterministic requirement revision. The
+report writer fails if a plan names an explanation that the final typed-body
+sealer did not record.
 Lowered identities use function identity plus structural ordinal; source paths
 and byte offsets remain diagnostic provenance and do not determine semantic
 identity.

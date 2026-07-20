@@ -378,7 +378,8 @@ class OcamlPlaceAssignmentValidator {
 			if (plan.schedule[2].sourceId != plan.schedule[4].sourceId)
 				errors.push("the array assignment result must reuse the evaluated RHS");
 		}
-		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != "haxe-array-element-set")
+		final expectedRuntimeId = plan.originId + ":runtime:haxe-array-element-set";
+		if (plan.runtimeRequirementIds.length != 1 || plan.runtimeRequirementIds[0] != expectedRuntimeId)
 			errors.push("array element assignment requires exactly the semantic haxe-array-element-set runtime capability");
 		if (containsUnsealedAdmittedPlace(plan.receiver)
 			|| containsUnsealedAdmittedPlace(plan.index)
@@ -423,9 +424,9 @@ class OcamlPlaceAssignmentValidator {
 				errors.push("array compound result must reuse the computed operator value");
 		}
 		final expectedRuntimeIds = [
-			"haxe-array-element-get",
+			plan.originId + ":runtime:haxe-array-element-get",
 			plan.originId + ":runtime:haxe-int32-add",
-			"haxe-array-element-set"
+			plan.originId + ":runtime:haxe-array-element-set"
 		];
 		if (plan.runtimeRequirementIds.length != expectedRuntimeIds.length) {
 			errors.push("array Int += requires get, Haxe Int addition, and set runtime capabilities");
@@ -490,9 +491,9 @@ class OcamlPlaceAssignmentValidator {
 				errors.push("array update result must reuse the fixity-selected old or computed value");
 		}
 		final expectedRuntimeIds = [
-			"haxe-array-element-get",
+			plan.originId + ":runtime:haxe-array-element-get",
 			plan.originId + ":runtime:haxe-int32-add",
-			"haxe-array-element-set"
+			plan.originId + ":runtime:haxe-array-element-set"
 		];
 		if (plan.runtimeRequirementIds.length != expectedRuntimeIds.length) {
 			errors.push("array Int update requires get, Haxe Int addition, and set runtime capabilities");

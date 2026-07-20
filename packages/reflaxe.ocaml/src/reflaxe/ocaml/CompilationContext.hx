@@ -6,6 +6,11 @@ import haxe.macro.Context;
 import haxe.macro.Type;
 import reflaxe.ocaml.OcamlNameTools;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
+#if (macro || reflaxe_runtime || eval)
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
+#end
 
 typedef ForwardMutableStaticDecl = {
 	final moduleId:String;
@@ -421,14 +426,18 @@ class CompilationContext {
 	public var needsOcamlNativeMapSet:Bool = false;
 
 	/**
-		Compiler-tracked runtime module usage (`Hx*` modules).
+		Runtime module names observed while constructing or scanning generated OCaml syntax.
 
-		Why:
-		- Metal profile runtime slicing must be driven by compiler intent, not free-form text scans.
-		- Emission/lowering phases register runtime modules as they are referenced in generated OCaml AST.
-		- Runtime selection then consumes this map to decide which runtime units to link.
+		This remains a migration-time consistency signal and selection fallback. New
+		semantic lowering code records complete explanations in `runtimeRequirements`
+		instead of treating a generated module name as proof of why it is needed.
 	**/
 	public final runtimeModuleUsage:Map<String, Bool> = [];
+
+	#if (macro || reflaxe_runtime || eval)
+	/** Source-rooted explanations recorded where OCaml compatibility support is chosen. **/
+	public final runtimeRequirements = new OcamlRuntimeRequirementLedger();
+	#end
 
 	/** Sealed semantic place decisions retained for deterministic inspection. */
 	final loweredPlaceReportById:Map<String, OcamlLoweredPlaceReportEntry> = [];
@@ -466,6 +475,34 @@ class CompilationContext {
 		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 		return out;
 	}
+
+	#if (macro || reflaxe_runtime || eval)
+	/** Starts a fresh runtime-requirement ledger for one normalized program revision. **/
+	public function beginRuntimeRequirementProgram(programRevision:String):Void {
+		runtimeRequirements.beginProgram(programRevision);
+	}
+
+	/** Records the runtime capabilities already sealed into one place-lowering plan. **/
+	public function recordPlaceRuntimeRequirements(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, subjectTypeId:String,
+			requirementIds:Array<String>):Void {
+		runtimeRequirements.recordPlacePlan(decisionId, originId, source, subjectTypeId, requirementIds);
+	}
+
+	/** Returns source-rooted runtime explanations in stable identity order. **/
+	public function runtimeRequirementsSorted():Array<OcamlRuntimeRequirement> {
+		return runtimeRequirements.requirementsSorted();
+	}
+
+	/** Returns runtime roots selected by semantic requirements, before dependency closure. **/
+	public function runtimeRequirementRootsSorted():Array<String> {
+		return runtimeRequirements.rootModulesSorted();
+	}
+
+	/** Returns a deterministic digest of the current semantic runtime ledger. **/
+	public function runtimeRequirementRevision():String {
+		return runtimeRequirements.revision();
+	}
+	#end
 
 	public function isPrimaryTypeInModule(moduleId:String, typeName:String):Bool {
 		final primary = primaryTypeNameByModule.get(moduleId);

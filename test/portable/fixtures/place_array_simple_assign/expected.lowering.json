@@ -1,13 +1,40 @@
 {
   "model": "typed-ocaml-lowered-place",
-  "schemaVersion": 4,
-  "admittedInputRevision": "sha256:62f3c04704f4f0df555721096bda678f8aff7c875a325dce46595b85042fc4da",
+  "runtimeRequirementCount": 1,
+  "schemaVersion": 5,
+  "admittedInputRevision": "sha256:e5b5d597eb031f4c7857dde8151f73a02eb0dbec9f9d05706f4c06e3217efb3a",
+  "runtimeRequirementRevision": "sha256:cc5ed105dbcf7e3255376c52045e666df74447f9840b537486fe59c66a36339e",
   "planCount": 1,
+  "runtimeRequirements": [
+    {
+      "implementationFeature": "haxe-array-element-access-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array-element-set",
+      "explanation": "Writing a Haxe array element must update the original growable Haxe array using its checked storage contract.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "place:2ec87ed9e163efbae5e983b6:runtime:haxe-array-element-set",
+      "source": {
+        "min": 451,
+        "max": 478,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:2ec87ed9e163efbae5e983b6",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:2ec87ed9e163efbae5e983b6:array-simple-assignment",
+      "sourceKind": "haxe-expression"
+    }
+  ],
   "plans": [
     {
       "carrierTypeId": "int",
       "runtimeRequirementIds": [
-        "haxe-array-element-set"
+        "place:2ec87ed9e163efbae5e983b6:runtime:haxe-array-element-set"
       ],
       "place": {
         "carrierTypeId": "int",

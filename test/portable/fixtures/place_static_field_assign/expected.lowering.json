@@ -1,8 +1,242 @@
 {
   "model": "typed-ocaml-lowered-place",
-  "schemaVersion": 4,
+  "runtimeRequirementCount": 10,
+  "schemaVersion": 5,
   "admittedInputRevision": "sha256:4bc9041f6dd06e22e1ed1d59699bf977328f12c3af3180f549f80af391a28b11",
+  "runtimeRequirementRevision": "sha256:e77c6d984c9345db3fced2747582c2ece3dba2e4f425bbb20f4256bfb5b19fc0",
   "planCount": 14,
+  "runtimeRequirements": [
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:12e3e65eaf20f1d04cdff365:runtime:haxe-int32-add",
+      "source": {
+        "min": 1288,
+        "max": 1300,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:12e3e65eaf20f1d04cdff365",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:12e3e65eaf20f1d04cdff365:static-int-decrement",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:22d3492059498e4ae276242a:runtime:haxe-int32-add",
+      "source": {
+        "min": 2293,
+        "max": 2315,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:22d3492059498e4ae276242a",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:22d3492059498e4ae276242a:static-int-increment",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:263574102dfcaced5621652f:runtime:haxe-int32-add",
+      "source": {
+        "min": 2486,
+        "max": 2508,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:263574102dfcaced5621652f",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:263574102dfcaced5621652f:static-int-decrement",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:265173b365928b1048573384:runtime:haxe-int32-add",
+      "source": {
+        "min": 777,
+        "max": 809,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:265173b365928b1048573384",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:265173b365928b1048573384:static-compound-assignment",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:2b570095e1b3b1a7d5fc4da7:runtime:haxe-int32-add",
+      "source": {
+        "min": 974,
+        "max": 986,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:2b570095e1b3b1a7d5fc4da7",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:2b570095e1b3b1a7d5fc4da7:static-int-increment",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:2feaa3cd957be1c759bea747:runtime:haxe-int32-add",
+      "source": {
+        "min": 2714,
+        "max": 2736,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:2feaa3cd957be1c759bea747",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:2feaa3cd957be1c759bea747:static-int-decrement",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:4cb4b564fead7c106c0e97f9:runtime:haxe-int32-add",
+      "source": {
+        "min": 1127,
+        "max": 1139,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:4cb4b564fead7c106c0e97f9",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:4cb4b564fead7c106c0e97f9:static-int-increment",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:5c02137610b61ef126589230:runtime:haxe-int32-add",
+      "source": {
+        "min": 1469,
+        "max": 1481,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:5c02137610b61ef126589230",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:5c02137610b61ef126589230:static-int-decrement",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:741a8ac8bb0e0c2651f99db8:runtime:haxe-int32-add",
+      "source": {
+        "min": 1875,
+        "max": 1921,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:741a8ac8bb0e0c2651f99db8",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:741a8ac8bb0e0c2651f99db8:static-compound-assignment",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:a4d49d6592f775344117bb7a:runtime:haxe-int32-add",
+      "source": {
+        "min": 2108,
+        "max": 2130,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:a4d49d6592f775344117bb7a",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "subjectTypeId": "Int",
+      "decisionId": "place:a4d49d6592f775344117bb7a:static-int-increment",
+      "sourceKind": "haxe-expression"
+    }
+  ],
   "plans": [
     {
       "carrierTypeId": "int",
