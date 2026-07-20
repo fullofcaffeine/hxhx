@@ -12,6 +12,11 @@ This package is developed in the `hxhx` monorepo and is also usable with mainstr
 - Optional post-emit native build/run helpers.
 - Optional OCaml-native surface (`ocaml.*` types like `Option`, `Result`, `List`, `Hashtbl`, `Seq`, `Bytes`, `Buffer`).
 
+The current native surface is deliberately smaller than the complete OCaml
+ecosystem. The checked plan for external packages, generated bindings, typed
+adapters, and Haxe-friendly wrappers is documented in
+[`OCAML_ECOSYSTEM_FROM_HAXE.md`](../../docs/02-user-guide/OCAML_ECOSYSTEM_FROM_HAXE.md).
+
 ## Requirements
 
 - Haxe `4.3.7`

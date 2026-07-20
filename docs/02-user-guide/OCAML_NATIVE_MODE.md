@@ -12,6 +12,10 @@ This doc explains:
 - how target-runtime facade authors declare checked compatibility support,
 - and the key caveats.
 
+For the broader plan—external opam packages, generated typed bindings, small
+`.ml`/`.mli` adapters, Haxe-friendly wrappers, and the tooling needed to add a
+new library safely—see [Using The OCaml Ecosystem From Haxe](OCAML_ECOSYSTEM_FROM_HAXE.md).
+
 ## When to use `ocaml.*`
 
 Use the OCaml-native surface when:
