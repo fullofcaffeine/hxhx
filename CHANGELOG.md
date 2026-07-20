@@ -1,3 +1,11 @@
+## [0.21.4](https://github.com/fullofcaffeine/hxhx/compare/v0.21.3...v0.21.4) (2026-07-20)
+
+
+### Bug Fixes
+
+* **ocaml:** keep unused defaults warning-clean ([7326225](https://github.com/fullofcaffeine/hxhx/commit/7326225840c69d83d4eb25e4250764a712849ab0))
+* **ocaml:** restore exception stack source shape ([025c0dd](https://github.com/fullofcaffeine/hxhx/commit/025c0dd1cd8ecabc48a83e7bd546fb52cb79b1e1))
+
 ## [0.21.3](https://github.com/fullofcaffeine/hxhx/compare/v0.21.2...v0.21.3) (2026-07-20)
 
 
