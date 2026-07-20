@@ -257,7 +257,7 @@ let readInt32__impl = fun (self : t) () -> let ch1 = (Obj.magic self : t).readBy
 )
 
 let readString__impl = fun (self : t) (len : int) (encoding : Obj.t) -> (
-  ignore (if encoding != Obj.magic (HxRuntime.hx_null) then ignore () else ());
+  ignore encoding;
   let b = Obj.magic (HxBytes.alloc len) in (
     ignore ((Obj.magic self : t).readFullBytes (Obj.magic self) (Obj.magic b) 0 len);
     HxBytes.getString b 0 len ()

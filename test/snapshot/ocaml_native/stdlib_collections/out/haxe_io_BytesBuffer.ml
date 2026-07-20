@@ -25,13 +25,13 @@ let add = fun self (src : HxBytes.t) -> ignore (ignore (let _g = ref 0 in let _g
   __old_3
 ) in HxArray.push ((Obj.magic self : t).b) (HxBytes.get src i)) done))
 
-let addString = fun self (v : string) (encoding : Obj.t) -> ignore (ignore ((
-  ignore (if encoding != Obj.magic (HxRuntime.hx_null) then ignore () else ());
-  let src = Obj.magic (HxBytes.ofString v ()) in let _g = ref 0 in let _g1 = HxBytes.length src in while !_g < _g1 do ignore (let i = let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
+let addString = fun self (v : string) (encoding : Obj.t) -> ignore ((
+  ignore encoding;
+  ignore (let src = Obj.magic (HxBytes.ofString v ()) in let _g = ref 0 in let _g1 = HxBytes.length src in while !_g < _g1 do ignore (let i = let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
     ignore (_g := __new_6);
     __old_5
-  ) in HxArray.push ((Obj.magic self : t).b) (HxBytes.get src i)) done
-)))
+  ) in HxArray.push ((Obj.magic self : t).b) (HxBytes.get src i)) done)
+))
 
 let addInt32 = fun self (v : int) -> ignore (ignore ((
   ignore (HxArray.push ((Obj.magic self : t).b) (HxInt.logand v 255));

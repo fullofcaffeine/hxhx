@@ -83,12 +83,14 @@ let ocamlstdiooutput_writeBytes__impl = fun (self : ocamlstdiooutput_t) (buf : H
 ) in Obj.magic __fallback_result_6 with
   | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
 
-let ocamlstdiooutput_writeString__impl = fun (self : ocamlstdiooutput_t) (s : string) (encoding : Obj.t) -> ignore (ignore (try (
-  ignore (if encoding != Obj.magic (HxRuntime.hx_null) then ignore () else ());
-  ignore (if s == Obj.magic (HxRuntime.hx_null) || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  HxStdio.write_string ((Obj.magic self : ocamlstdiooutput_t).stream) (s : string)
-) with
-  | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7))
+let ocamlstdiooutput_writeString__impl = fun (self : ocamlstdiooutput_t) (s : string) (encoding : Obj.t) -> ignore ((
+  ignore encoding;
+  ignore (try (
+    ignore (if s == Obj.magic (HxRuntime.hx_null) || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+    HxStdio.write_string ((Obj.magic self : ocamlstdiooutput_t).stream) (s : string)
+  ) with
+    | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7)
+))
 
 let ocamlstdiooutput_flush__impl = fun (self : ocamlstdiooutput_t) () -> ignore (ignore (HxStdio.flush ((Obj.magic self : ocamlstdiooutput_t).stream)))
 

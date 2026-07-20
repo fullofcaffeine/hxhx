@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 let array_impl___new = fun v -> v
 
-let array_impl__make = fun len init -> Stdlib.Array.make len init
+let array_impl__make = fun len init__local -> Stdlib.Array.make len init__local
 
 let array_impl__init = fun len f -> Stdlib.Array.init len f
 
@@ -20,4 +20,4 @@ let array_impl__map = fun f a -> Stdlib.Array.map f a
 
 let array_impl__iter = fun f a -> ignore (Stdlib.Array.iter f a)
 
-let array_impl__fold_left = fun f init a -> Stdlib.Array.fold_left f init a
+let array_impl__fold_left = fun f init__local a -> Stdlib.Array.fold_left f init__local a

@@ -38,8 +38,8 @@ let main = fun () -> ignore (let a = Stdlib.Array.make 3 1 in (
         let bytes = Stdlib.Bytes.of_string ("hi" : string) in let fill = Stdlib.Char.chr 97 in let tempBytes = Stdlib.Bytes.make 3 fill in let len = Stdlib.Bytes.length bytes in (
           ignore (Stdlib.Bytes.sub tempBytes 0 len);
           ignore (Stdlib.Bytes.to_string bytes);
-          let a2 = Stdlib.Seq.return 1 in let b2 = Stdlib.Seq.return 2 in let tempSeq = Stdlib.Seq.append a2 b2 in (
-            ignore (let xs = Stdlib.Seq.map (fun x -> HxInt.add x 1) tempSeq in Stdlib.Seq.iter (fun x -> (
+          let a2 = Stdlib.Seq.return 1 in let b2 = Stdlib.Seq.return 2 in let tempSeq = Stdlib.Seq.append a2 b2 in let xs = Stdlib.Seq.map (fun x -> HxInt.add x 1) tempSeq in (
+            ignore (Stdlib.Seq.iter (fun x -> (
               ignore x;
               ignore ()
             )) xs);

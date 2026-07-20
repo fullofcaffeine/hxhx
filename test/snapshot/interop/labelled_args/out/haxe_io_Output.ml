@@ -21,16 +21,16 @@ let set_bigEndian__impl = fun (self : t) (b : bool) -> (
 
 let writeByte__impl = fun (self : t) (c : int) -> ignore ((
   ignore self;
-  ignore ((
-    ignore (if c = -1 then ignore () else ());
-    HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (Obj.magic (HxRuntime.hx_null)) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (let __anon_2 = HxAnon.create () in (
+  (
+    ignore c;
+    ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (Obj.magic (HxRuntime.hx_null)) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (let __anon_2 = HxAnon.create () in (
       ignore (HxAnon.set __anon_2 "fileName" (Obj.repr "haxe/io/Output.hx"));
       ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 41));
       ignore (HxAnon.set __anon_2 "className" (Obj.repr "haxe.io.Output"));
       ignore (HxAnon.set __anon_2 "methodName" (Obj.repr "writeByte"));
       __anon_2
-    )))) ["Dynamic"; "haxe.exceptions.NotImplementedException"; "haxe.exceptions.PosException"; "haxe.Exception"]
-  ))
+    )))) ["Dynamic"; "haxe.exceptions.NotImplementedException"; "haxe.exceptions.PosException"; "haxe.Exception"])
+  )
 ))
 
 let writeBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) -> let pos = ref pos in (
@@ -105,10 +105,10 @@ let writeInput__impl = fun (self : t) (i : Haxe_io_Input.t) (bufsize : Obj.t) ->
     ) else raise (__exn_13)
 )))
 
-let writeString__impl = fun (self : t) (s : string) (encoding : Obj.t) -> ignore (ignore ((
-  ignore (if encoding != Obj.magic (HxRuntime.hx_null) then ignore () else ());
-  let b = Obj.magic (HxBytes.ofString s ()) in (Obj.magic self : t).writeFullBytes (Obj.magic self) (Obj.magic b) 0 (HxBytes.length b)
-)))
+let writeString__impl = fun (self : t) (s : string) (encoding : Obj.t) -> ignore ((
+  ignore encoding;
+  ignore (let b = Obj.magic (HxBytes.ofString s ()) in (Obj.magic self : t).writeFullBytes (Obj.magic self) (Obj.magic b) 0 (HxBytes.length b))
+))
 
 let writeFloat__impl = fun (self : t) (x : float) -> ignore (ignore ((Obj.magic self : t).writeInt32 (Obj.magic self) (Haxe_io_FPHelper.floatToI32 x)))
 

@@ -147,8 +147,8 @@ let _urlEncodeOcaml = fun s -> let bytes = Obj.magic (HxBytes.ofString s ()) in 
     __old_39
   ) in let code = HxBytes.get bytes index in if code >= 65 && code <= 90 || code >= 97 && code <= 122 || code >= 48 && code <= 57 || code = 45 || code = 95 || code = 46 || code = 126 then ignore (HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) code) else ignore ((
     ignore (HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) 37);
-    let tempNumber = ref (0 : int) in (
-      ignore (let value = HxInt.logand (HxInt.shr code 4) 15 in if value < 10 then let __assign_41 = HxInt.add 48 value in (
+    let tempNumber = ref (0 : int) in let value = HxInt.logand (HxInt.shr code 4) 15 in (
+      ignore (if value < 10 then let __assign_41 = HxInt.add 48 value in (
         tempNumber := __assign_41;
         __assign_41
       ) else let __assign_42 = HxInt.add 65 (HxInt.sub value 10) in (
@@ -156,8 +156,8 @@ let _urlEncodeOcaml = fun s -> let bytes = Obj.magic (HxBytes.ofString s ()) in 
         __assign_42
       ));
       ignore (HxArray.push ((Obj.magic out : Haxe_io_BytesBuffer.t).b) (!tempNumber));
-      let tempNumber1 = ref (0 : int) in (
-        ignore (let value = HxInt.logand code 15 in if value < 10 then let __assign_43 = HxInt.add 48 value in (
+      let tempNumber1 = ref (0 : int) in let value = HxInt.logand code 15 in (
+        ignore (if value < 10 then let __assign_43 = HxInt.add 48 value in (
           tempNumber1 := __assign_43;
           __assign_43
         ) else let __assign_44 = HxInt.add 65 (HxInt.sub value 10) in (
@@ -183,8 +183,8 @@ let _urlDecodeOcaml = fun s -> let bytes = Obj.magic (HxBytes.ofString s ()) in 
       ));
       raise (HxRuntime.Hx_continue)
     )) else ());
-    ignore (if code = 37 && HxInt.add (!index) 2 < HxBytes.length bytes then ignore (let tempNumber = ref (0 : int) in (
-      ignore (let code2 = HxBytes.get bytes (HxInt.add (!index) 1) in if code2 >= 48 && code2 <= 57 then let __assign_47 = HxInt.sub code2 48 in (
+    ignore (if code = 37 && HxInt.add (!index) 2 < HxBytes.length bytes then ignore (let tempNumber = ref (0 : int) in let code2 = HxBytes.get bytes (HxInt.add (!index) 1) in (
+      ignore (if code2 >= 48 && code2 <= 57 then let __assign_47 = HxInt.sub code2 48 in (
         tempNumber := __assign_47;
         __assign_47
       ) else if code2 >= 65 && code2 <= 70 then let __assign_48 = HxInt.add 10 (HxInt.sub code2 65) in (
@@ -197,8 +197,8 @@ let _urlDecodeOcaml = fun s -> let bytes = Obj.magic (HxBytes.ofString s ()) in 
         tempNumber := __assign_50;
         __assign_50
       ));
-      let hi = !tempNumber in let tempNumber1 = ref (0 : int) in (
-        ignore (let code2 = HxBytes.get bytes (HxInt.add (!index) 2) in if code2 >= 48 && code2 <= 57 then let __assign_51 = HxInt.sub code2 48 in (
+      let hi = !tempNumber in let tempNumber1 = ref (0 : int) in let code2 = HxBytes.get bytes (HxInt.add (!index) 2) in (
+        ignore (if code2 >= 48 && code2 <= 57 then let __assign_51 = HxInt.sub code2 48 in (
           tempNumber1 := __assign_51;
           __assign_51
         ) else if code2 >= 65 && code2 <= 70 then let __assign_52 = HxInt.add 10 (HxInt.sub code2 65) in (
