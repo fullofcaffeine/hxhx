@@ -1,7 +1,6 @@
 import haxe.io.Path;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroState;
-import sys.io.Process;
 
 class M14MacroHostRuntimeApiIntegrationTest {
 	static function fail(message:String):Void {
@@ -17,74 +16,6 @@ class M14MacroHostRuntimeApiIntegrationTest {
 		if (actual.indexOf(expected) >= 0)
 			return;
 		fail(label + ': expected "' + expected + '" in "' + actual + '"');
-	}
-
-	static function runShell(command:String):{code:Int, stdout:String, stderr:String} {
-		final process = new Process("sh", ["-lc", command]);
-		final stdout = process.stdout.readAll().toString();
-		final stderr = process.stderr.readAll().toString();
-		final code = process.exitCode();
-		process.close();
-		return {code: code, stdout: stdout, stderr: stderr};
-	}
-
-	static function lastNonEmptyLine(text:String):String {
-		if (text == null)
-			return "";
-		final lines = text.split("\n");
-		var i = lines.length - 1;
-		while (i >= 0) {
-			final trimmed = StringTools.trim(lines[i]);
-			if (trimmed.length > 0)
-				return trimmed;
-			i -= 1;
-		}
-		return "";
-	}
-
-	static function buildMacroHostWithProbe():String {
-		final exprs = [
-			"hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()",
-			"hxhxmacros.RuntimeContextApiMacros.probeAfterInitMacros()",
-			"hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()",
-			"hxhxmacros.RuntimeContextApiMacros.probeTypeParameterSubstitution()",
-			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()",
-			"hxhxmacros.RuntimeContextApiMacros.probeCallArguments()",
-			"hxhxmacros.RuntimeContextApiMacros.probeLocalImports()",
-			"hxhxmacros.RuntimeContextApiMacros.probeLocalUsing()",
-			"hxhxmacros.RuntimeContextApiMacros.probeLocalTVars()",
-			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
-			"hxhxmacros.RuntimeContextApiMacros.probeModuleFieldCarrier()",
-			"hxhxmacros.RuntimeContextApiMacros.probeSyntheticTypeStatics()",
-			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
-			"hxhxmacros.RuntimeContextApiMacros.probeTypedVarExprPlumbing()",
-			"hxhxmacros.RuntimeContextApiMacros.probeMainExpr()",
-			"hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()",
-			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
-			"hxhxmacros.RuntimeContextApiMacros.probeCompilerMetadataRegistration()",
-			"hxhxmacros.RuntimeContextApiMacros.probeOnTypeNotFoundRegistration()",
-			"hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()",
-			"hxhxmacros.RuntimeContextApiMacros.probeDefineType()",
-			"hxhxmacros.RuntimeContextApiMacros.probeDefineModule()",
-			"hxhxmacros.RuntimeContextApiMacros.probeResources()",
-			"hxhxmacros.RuntimeContextApiMacros.probeMessages()",
-			"hxhxmacros.RuntimeContextApiMacros.probeParse()",
-			"hxhxmacros.RuntimeContextApiMacros.probeMakeExprAndSignature()",
-			"hxhxmacros.RuntimeContextApiMacros.probeTimer()"
-		];
-		final command = [
-			'HXHX_MACRO_HOST_FORCE_STAGE0=1',
-			'HXHX_MACRO_HOST_ENTRYPOINTS=\'${exprs.join(";")}\'',
-			'HXHX_MACRO_HOST_EXTRA_CP=\'test/fixtures/hxhx-macros/src\'',
-			'bash scripts/hxhx/build-hxhx-macro-host.sh 2>&1'
-		].join(" ");
-		final result = runShell(command);
-		if (result.code != 0)
-			fail("macro host build failed: " + result.stdout + result.stderr);
-		final exe = lastNonEmptyLine(result.stdout);
-		if (exe.length == 0)
-			fail("macro host build produced no executable path: " + result.stdout);
-		return exe;
 	}
 
 	static function main():Void {
@@ -134,8 +65,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 
 		var failure = "";
 		try {
-			final exe = buildMacroHostWithProbe();
-			assertContains("macro host build dir", exe, ".tmp/hxhx-macro-host-build.");
+			final exe = MacroHostTestArtifact.resolve("test:m14:macro-host-runtime-api");
+			assertTrue(sys.FileSystem.exists(exe), "expected authenticated macro host executable");
 			Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
 
 			final output = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()");

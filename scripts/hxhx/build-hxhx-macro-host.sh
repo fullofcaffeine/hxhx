@@ -10,6 +10,19 @@ TOOL_DIR="$ROOT/packages/hxhx-macro-host"
 BOOTSTRAP_DIR="$TOOL_DIR/bootstrap_out"
 DEFAULT_OUT_DIR="$TOOL_DIR/out"
 MACRO_HOST_OUT_DIR="${HXHX_MACRO_HOST_OUT_DIR:-}"
+MACRO_HOST_BUILD_PID_FILE=".hxhx-macro-host-build.pid"
+MACRO_HOST_LEASE_PID="${HXHX_MACRO_HOST_LEASE_PID:-$$}"
+
+case "$MACRO_HOST_LEASE_PID" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_MACRO_HOST_LEASE_PID: $MACRO_HOST_LEASE_PID (expected a live process id)." >&2
+    exit 2
+    ;;
+esac
+if ! kill -0 "$MACRO_HOST_LEASE_PID" >/dev/null 2>&1; then
+  echo "Invalid HXHX_MACRO_HOST_LEASE_PID: process $MACRO_HOST_LEASE_PID is not running." >&2
+  exit 2
+fi
 
 # Stage4 / Gate bring-up note:
 #
@@ -196,6 +209,9 @@ trim_ws() {
   cd "$TOOL_DIR"
   rm -rf "$OUT_DIR"
   mkdir -p "$OUT_DIR"
+  if [[ "$OUT_DIR" == "$ROOT/.tmp/"* ]]; then
+    printf '%s\n' "$MACRO_HOST_LEASE_PID" >"$OUT_DIR/$MACRO_HOST_BUILD_PID_FILE"
+  fi
   echo "== Macro host build dir: $OUT_DIR" >&2
   extra=()
   gen_cp=""

@@ -1,0 +1,44 @@
+{
+  "schema": "hxhx.macro-host-integration-plan.v1",
+  "shardId": "macro-host-integration",
+  "extraClassPaths": [
+    "test/fixtures/hxhx-macros/src"
+  ],
+  "consumers": {
+    "test:m14:macro-host-runtime-api": [
+      "hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()",
+      "hxhxmacros.RuntimeContextApiMacros.probeAfterInitMacros()",
+      "hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()",
+      "hxhxmacros.RuntimeContextApiMacros.probeTypeParameterSubstitution()",
+      "hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()",
+      "hxhxmacros.RuntimeContextApiMacros.probeCallArguments()",
+      "hxhxmacros.RuntimeContextApiMacros.probeLocalImports()",
+      "hxhxmacros.RuntimeContextApiMacros.probeLocalUsing()",
+      "hxhxmacros.RuntimeContextApiMacros.probeLocalTVars()",
+      "hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
+      "hxhxmacros.RuntimeContextApiMacros.probeModuleFieldCarrier()",
+      "hxhxmacros.RuntimeContextApiMacros.probeSyntheticTypeStatics()",
+      "hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
+      "hxhxmacros.RuntimeContextApiMacros.probeTypedVarExprPlumbing()",
+      "hxhxmacros.RuntimeContextApiMacros.probeMainExpr()",
+      "hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()",
+      "hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
+      "hxhxmacros.RuntimeContextApiMacros.probeCompilerMetadataRegistration()",
+      "hxhxmacros.RuntimeContextApiMacros.probeOnTypeNotFoundRegistration()",
+      "hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()",
+      "hxhxmacros.RuntimeContextApiMacros.probeDefineType()",
+      "hxhxmacros.RuntimeContextApiMacros.probeDefineModule()",
+      "hxhxmacros.RuntimeContextApiMacros.probeResources()",
+      "hxhxmacros.RuntimeContextApiMacros.probeMessages()",
+      "hxhxmacros.RuntimeContextApiMacros.probeParse()",
+      "hxhxmacros.RuntimeContextApiMacros.probeMakeExprAndSignature()",
+      "hxhxmacros.RuntimeContextApiMacros.probeTimer()"
+    ],
+    "test:m14:runtime-build-fields": [
+      "hxhxmacros.RuntimeContextApiMacros.probeBuildFieldsSnapshot()"
+    ],
+    "test:m14:stage3-on-type-not-found": [
+      "hxhxmacros.RuntimeContextApiMacros.registerOnTypeNotFoundDefineType()"
+    ]
+  }
+}

@@ -49,6 +49,7 @@ These are committed bootstrap snapshots used for stage0-free builds.
   - `**/out_tmp*/`
   - `**/out_stage*/`
   - portable fixture runtime outputs (`stdout.txt`, `stderr.txt`)
+- inactive dynamic macro-host workdirs under `.tmp/hxhx-macro-host-build.*`
 - stage0 temp logs in OS temp dirs:
   - `hxhx-stage0-emit*.log*`
   - `hxhx-stage0-build*.log*`
@@ -67,6 +68,12 @@ directories and skips any workspace whose owner PID is still alive.
 snapshot build workspace. That automatic build-time pruning keeps the newest inactive
 outputs by default (`HXHX_BOOTSTRAP_BUILD_RETAIN=2`). Set `HXHX_BOOTSTRAP_BUILD_PRUNE=0`
 only when deliberately preserving multiple historical build outputs for debugging.
+
+Normal `npm run clean` removes dynamic macro-host workdirs after their owning
+test or shard process exits. Macro-host builders write a small PID lease into
+the workdir, so cleanup skips a host that is still being compiled or exercised.
+Callers that retain a dynamic host beyond the build script itself must pass
+their live process ID through `HXHX_MACRO_HOST_LEASE_PID`.
 
 ## Log retention knobs
 

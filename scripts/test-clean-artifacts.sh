@@ -13,6 +13,9 @@ PACKAGE_TEST_FILE="$PACKAGE_TEST_OUT/.clean-artifacts-regression.tmp"
 BOOTSTRAP_INACTIVE_DIR="$ROOT/.tmp/hxhx-bootstrap-build.clean-regression-inactive"
 BOOTSTRAP_ACTIVE_DIR="$ROOT/.tmp/hxhx-bootstrap-build.clean-regression-active"
 BOOTSTRAP_PID_FILE=".hxhx-bootstrap-build.pid"
+MACRO_HOST_INACTIVE_DIR="$ROOT/.tmp/hxhx-macro-host-build.clean-regression-inactive"
+MACRO_HOST_ACTIVE_DIR="$ROOT/.tmp/hxhx-macro-host-build.clean-regression-active"
+MACRO_HOST_PID_FILE=".hxhx-macro-host-build.pid"
 PLACEHOLDER_REL="${PLACEHOLDER#"$ROOT/"}"
 
 if [[ ! -f "$PLACEHOLDER" ]]; then
@@ -31,6 +34,8 @@ cleanup() {
   rm -rf "$PACKAGE_TEST_OUT"
   rm -rf "$BOOTSTRAP_INACTIVE_DIR"
   rm -rf "$BOOTSTRAP_ACTIVE_DIR"
+  rm -rf "$MACRO_HOST_INACTIVE_DIR"
+  rm -rf "$MACRO_HOST_ACTIVE_DIR"
 }
 trap cleanup EXIT
 
@@ -39,6 +44,22 @@ printf 'temp\n' >"$TEMP_FILE"
 printf 'temp\n' >"$TEMP_SUBFILE"
 mkdir -p "$PACKAGE_TEST_OUT"
 printf 'temp\n' >"$PACKAGE_TEST_FILE"
+
+mkdir -p "$MACRO_HOST_INACTIVE_DIR" "$MACRO_HOST_ACTIVE_DIR"
+printf 'stale\n' >"$MACRO_HOST_INACTIVE_DIR/artifact.txt"
+printf 'active\n' >"$MACRO_HOST_ACTIVE_DIR/artifact.txt"
+printf '%s\n' "99999999" >"$MACRO_HOST_INACTIVE_DIR/$MACRO_HOST_PID_FILE"
+printf '%s\n' "$$" >"$MACRO_HOST_ACTIVE_DIR/$MACRO_HOST_PID_FILE"
+
+safe_preview="$(bash "$CLEAN_SCRIPT" --safe --dry-run --verbose)"
+if [[ "$safe_preview" != *"$MACRO_HOST_INACTIVE_DIR"* ]]; then
+  echo "Safe cleanup dry-run did not report inactive macro-host build dir." >&2
+  exit 1
+fi
+if [[ "$safe_preview" == *"$MACRO_HOST_ACTIVE_DIR"* ]]; then
+  echo "Safe cleanup dry-run reported active macro-host build dir." >&2
+  exit 1
+fi
 
 bash "$CLEAN_SCRIPT" --safe >/dev/null
 
@@ -63,6 +84,14 @@ if [[ -e "$TEMP_FILE" || -e "$TEMP_SUBDIR" ]]; then
 fi
 if [[ -e "$PACKAGE_TEST_OUT" ]]; then
   echo "Cleanup failed to remove an untracked packaging-test output directory." >&2
+  exit 1
+fi
+if [[ -e "$MACRO_HOST_INACTIVE_DIR" ]]; then
+  echo "Safe cleanup failed to remove inactive macro-host build dir." >&2
+  exit 1
+fi
+if [[ ! -d "$MACRO_HOST_ACTIVE_DIR" ]]; then
+  echo "Safe cleanup removed active macro-host build dir." >&2
   exit 1
 fi
 

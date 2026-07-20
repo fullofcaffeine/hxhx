@@ -125,6 +125,7 @@ fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BOOTSTRAP_BUILD_PID_FILE=".hxhx-bootstrap-build.pid"
+MACRO_HOST_BUILD_PID_FILE=".hxhx-macro-host-build.pid"
 CANDIDATES="$(mktemp -t hxhx-clean-candidates.XXXXXX)"
 UNIQUE_CANDIDATES="$(mktemp -t hxhx-clean-candidates-uniq.XXXXXX)"
 SIZE_REPORT="$(mktemp -t hxhx-clean-size-report.XXXXXX)"
@@ -174,15 +175,16 @@ add_path_if_exists() {
   fi
 }
 
-bootstrap_build_dir_is_active() {
+build_dir_is_active() {
   local dir="${1:-}"
+  local pid_file_name="${2:-}"
   local pid_file=""
   local owner_pid=""
 
   if [[ -z "$dir" || ! -d "$dir" ]]; then
     return 1
   fi
-  pid_file="$dir/$BOOTSTRAP_BUILD_PID_FILE"
+  pid_file="$dir/$pid_file_name"
   if [[ ! -f "$pid_file" ]]; then
     return 1
   fi
@@ -195,6 +197,14 @@ bootstrap_build_dir_is_active() {
   kill -0 "$owner_pid" >/dev/null 2>&1
 }
 
+bootstrap_build_dir_is_active() {
+  build_dir_is_active "${1:-}" "$BOOTSTRAP_BUILD_PID_FILE"
+}
+
+macro_host_build_dir_is_active() {
+  build_dir_is_active "${1:-}" "$MACRO_HOST_BUILD_PID_FILE"
+}
+
 collect_safe_candidates() {
   add_path_if_exists "$ROOT/out"
   add_path_if_exists "$ROOT/tmp_stat_portable.txt"
@@ -203,6 +213,14 @@ collect_safe_candidates() {
   add_path_if_exists "$ROOT/packages/hxhx/bootstrap_work"
   add_path_if_exists "$ROOT/packages/hxhx/bootstrap_verify"
   add_path_if_exists "$ROOT/packages/hxhx-macro-host/out"
+
+  if [[ -d "$ROOT/.tmp" ]]; then
+    while IFS= read -r path; do
+      if [[ -d "$path" ]] && ! macro_host_build_dir_is_active "$path"; then
+        printf '%s\n' "$path" >>"$CANDIDATES"
+      fi
+    done < <(find "$ROOT/.tmp" -mindepth 1 -maxdepth 1 -type d -name 'hxhx-macro-host-build.*' -print 2>/dev/null || true)
+  fi
 
   if [[ -d "$ROOT" ]]; then
     find "$ROOT" -mindepth 1 -maxdepth 1 -type d \

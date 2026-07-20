@@ -181,6 +181,14 @@ JS-native, and strict plugin canaries remain required at that tier. Q3 adds the
 single `test:hxhx-targets` shard, whose large application/bootstrap workload
 measured about 24 runner minutes. Q4 inherits the complete Q3 set.
 
+The macro-host integration shard compiles one request-local test host containing
+the reviewed union of its three consumers' entrypoints. Every consumer checks
+the candidate commit, plan digest, executable path, SHA-256 digest, byte count,
+and its own required entrypoints before running; the shard records each outcome
+and then removes the executable. Running any of those npm tests directly still
+builds its own narrow host. This removes duplicate native compilation without
+introducing a global cache or making standalone developer tests depend on CI.
+
 The historical check name `Tests` is a fail-closed aggregate. Its versioned
 manifest records the minimum tier for every prerequisite, so only a skip
 authorized by the exact route is accepted. A failed route, secret scan,

@@ -519,6 +519,14 @@ jobs:
           HXHX_STAGE0_HEARTBEAT: "30"
           HXHX_STAGE0_FAILFAST_SECS: "7200"
         run: npm run test:ci:shard -- --shard "${{ matrix.shard }}"
+      - name: Upload shared macro-host evidence
+        if: ${{ always() && matrix.shard == 'macro-host-integration' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-macro-host-reuse-evidence-${{ github.sha }}
+          path: .artifacts/core-test/macro-host-integration
+          if-no-files-found: error
+          retention-days: 14
 
   hxhx-e2e:
     name: Tests / hxhx target end-to-end

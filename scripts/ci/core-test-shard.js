@@ -3,10 +3,10 @@
 
 const childProcess = require('child_process')
 const { loadPlan } = require('./core-test-shards')
+const { maybePrepareSharedArtifact } = require('./macro-host-test-artifact')
 
 function fail(message) {
-  console.error(`[core-test-shard] ERROR: ${message}`)
-  process.exit(1)
+  throw new Error(message)
 }
 
 function parseArgs(argv) {
@@ -45,25 +45,63 @@ function main() {
   }
 
   const shardStartedAt = Date.now()
-  console.log(`[core-test-shard] START shard=${shard.id} commands=${shard.commands.length}`)
-  for (let index = 0; index < shard.commands.length; index++) {
-    const command = shard.commands[index]
-    const commandStartedAt = Date.now()
-    console.log(`[core-test-shard] COMMAND ${index + 1}/${shard.commands.length} START ${command}`)
-    const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-    const result = childProcess.spawnSync(npm, ['run', command], {
-      cwd: process.cwd(),
-      env: process.env,
-      stdio: 'inherit'
-    })
-    const elapsedSeconds = ((Date.now() - commandStartedAt) / 1000).toFixed(3)
-    if (result.error) fail(`${command} could not start: ${result.error.message}`)
-    if (result.status !== 0) {
-      fail(`${command} failed with ${result.signal ? `signal ${result.signal}` : `exit ${result.status}`} after ${elapsedSeconds}s`)
+  let sharedArtifact = null
+  let failure = null
+  try {
+    console.log(`[core-test-shard] START shard=${shard.id} commands=${shard.commands.length}`)
+    sharedArtifact = maybePrepareSharedArtifact(process.cwd(), shard)
+    if (sharedArtifact) console.log('[core-test-shard] SHARED_ARTIFACT macro-host PASS build_count=1')
+    const commandEnv = sharedArtifact ? { ...process.env, ...sharedArtifact.environment } : process.env
+    for (let index = 0; index < shard.commands.length; index++) {
+      const command = shard.commands[index]
+      const commandStartedAt = Date.now()
+      console.log(`[core-test-shard] COMMAND ${index + 1}/${shard.commands.length} START ${command}`)
+      if (sharedArtifact) {
+        try {
+          sharedArtifact.verify(command)
+        } catch (error) {
+          sharedArtifact.failConsumer(command, 0, `preflight: ${error.message}`)
+          throw error
+        }
+      }
+      const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+      const result = childProcess.spawnSync(npm, ['run', command], {
+        cwd: process.cwd(),
+        env: commandEnv,
+        stdio: 'inherit'
+      })
+      const elapsedSeconds = (Date.now() - commandStartedAt) / 1000
+      if (result.error) {
+        if (sharedArtifact) sharedArtifact.failConsumer(command, elapsedSeconds, result.error.message)
+        fail(`${command} could not start: ${result.error.message}`)
+      }
+      if (result.status !== 0) {
+        const outcome = result.signal ? `signal ${result.signal}` : `exit ${result.status}`
+        if (sharedArtifact) sharedArtifact.failConsumer(command, elapsedSeconds, outcome)
+        fail(`${command} failed with ${outcome} after ${elapsedSeconds.toFixed(3)}s`)
+      }
+      if (sharedArtifact) {
+        try {
+          sharedArtifact.passConsumer(command, elapsedSeconds)
+        } catch (error) {
+          sharedArtifact.failConsumer(command, elapsedSeconds, `postflight: ${error.message}`)
+          throw error
+        }
+      }
+      console.log(`[core-test-shard] COMMAND ${index + 1}/${shard.commands.length} PASS ${command} elapsed=${elapsedSeconds.toFixed(3)}s`)
     }
-    console.log(`[core-test-shard] COMMAND ${index + 1}/${shard.commands.length} PASS ${command} elapsed=${elapsedSeconds}s`)
+    console.log(`[core-test-shard] PASS shard=${shard.id} elapsed=${((Date.now() - shardStartedAt) / 1000).toFixed(3)}s`)
+  } catch (error) {
+    failure = error
+    throw error
+  } finally {
+    if (sharedArtifact) sharedArtifact.finish(failure ? 'failed' : 'passed', failure && failure.message)
   }
-  console.log(`[core-test-shard] PASS shard=${shard.id} elapsed=${((Date.now() - shardStartedAt) / 1000).toFixed(3)}s`)
 }
 
-main()
+try {
+  main()
+} catch (error) {
+  console.error(`[core-test-shard] ERROR: ${error.message}`)
+  process.exitCode = 1
+}

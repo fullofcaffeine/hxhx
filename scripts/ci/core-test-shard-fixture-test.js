@@ -11,6 +11,7 @@ const {
   parseAggregateCommands,
   validateManifest
 } = require('./core-test-shards')
+const { loadPlan: loadMacroHostPlan } = require('./macro-host-test-artifact')
 
 const repoRoot = process.cwd()
 
@@ -100,6 +101,17 @@ function main() {
       `${shard.id} list order differs from npm test order`
     )
   }
+  const macroShard = plan.shards.find(shard => shard.id === 'macro-host-integration')
+  const macroHostPlan = loadMacroHostPlan(repoRoot)
+  assert(macroShard.preparation.kind === 'shared-macro-host', 'macro-host shard must prepare one shared host')
+  assert(
+    macroShard.preparation.plan === 'scripts/ci/macro-host-integration-plan.json',
+    'macro-host shard must reference the reviewed entrypoint plan'
+  )
+  assert(
+    JSON.stringify(macroShard.commands) === JSON.stringify(macroHostPlan.value.consumerIds),
+    'macro-host shard commands differ from the shared-artifact consumers'
+  )
 
   const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'))
   assert(
@@ -107,6 +119,10 @@ function main() {
     'package.json test:ci:shard must use the cooperative local lease wrapper'
   )
   requireIncludes(packageJson.scripts['ci:guards'], 'guard:core-test-shards', 'package.json scripts.ci:guards')
+
+  const workflowSource = fs.readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8')
+  requireIncludes(workflowSource, 'Upload shared macro-host evidence', '.github/workflows/ci.yml')
+  requireIncludes(workflowSource, '.artifacts/core-test/macro-host-integration', '.github/workflows/ci.yml')
 
   const invalidAggregate = structuredClone(packageJson)
   invalidAggregate.scripts.test = 'npm run one && echo hidden'
@@ -154,6 +170,17 @@ function main() {
     () => validateManifest(invalidShardTier, plan.aggregateCommands),
     'minimumTier must be Q2 or higher',
     'invalid shard tier'
+  )
+
+  const misplacedPreparation = structuredClone(plan.manifest)
+  misplacedPreparation.shards.find(shard => shard.id === 'compiler').preparation = {
+    kind: 'shared-macro-host',
+    plan: 'scripts/ci/macro-host-integration-plan.json'
+  }
+  expectThrow(
+    () => validateManifest(misplacedPreparation, plan.aggregateCommands),
+    'only the macro-host-integration shard',
+    'misplaced shared macro-host preparation'
   )
 
   assert(

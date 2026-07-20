@@ -1,5 +1,5 @@
 {
-  "schema": "hxhx.core-test-shards.v2",
+  "schema": "hxhx.core-test-shards.v3",
   "aggregateScript": "test",
   "shards": [
     {
@@ -12,7 +12,11 @@
       "id": "macro-host-integration",
       "label": "Macro-host integration",
       "minimumTier": "Q2",
-      "baselineSeconds": 805.742
+      "baselineSeconds": 805.742,
+      "preparation": {
+        "kind": "shared-macro-host",
+        "plan": "scripts/ci/macro-host-integration-plan.json"
+      }
     },
     {
       "id": "target-packages",

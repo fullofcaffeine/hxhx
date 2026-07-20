@@ -12,7 +12,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const SCHEMA = 'hxhx.core-test-shards.v2'
+const SCHEMA = 'hxhx.core-test-shards.v3'
 const QA_TIERS = ['Q0', 'Q1', 'Q2', 'Q3', 'Q4']
 const manifestRelativePath = 'scripts/ci/core-test-shards.json'
 
@@ -62,6 +62,15 @@ function validateManifest(manifest, aggregateCommands) {
       Number.isFinite(shard.baselineSeconds) && shard.baselineSeconds > 0,
       `shard ${shard.id} needs a positive baselineSeconds value`
     )
+    if (shard.preparation != null) {
+      invariant(shard.preparation && typeof shard.preparation === 'object', `shard ${shard.id} preparation must be an object`)
+      invariant(shard.preparation.kind === 'shared-macro-host', `shard ${shard.id} has an unknown preparation kind`)
+      invariant(shard.id === 'macro-host-integration', 'only the macro-host-integration shard may prepare a shared macro host')
+      invariant(
+        shard.preparation.plan === 'scripts/ci/macro-host-integration-plan.json',
+        `shard ${shard.id} shared macro-host preparation references the wrong plan`
+      )
+    }
     shardIds.add(shard.id)
   }
 
