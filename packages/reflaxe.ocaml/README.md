@@ -138,7 +138,8 @@ artifact inventory is valid today, but it reports source-bundle packaging as
 blocked until every runtime need and native dependency has an explicit, locked
 explanation. Runtime-enabled builds now write
 `ocaml_runtime_requirement_report.json`: it traces typed assignments and
-updates, the compiler-generated type registry, and the core packaging rule to
+updates, the compiler-generated type registry, declared static native runtime
+boundaries such as `HxStdio`, and the core packaging rule to
 the exact checked runtime files that were packaged. The report labels itself
 `partial` and lists runtime references from unmigrated compiler paths as
 unexplained. The existing runtime selection report therefore remains the

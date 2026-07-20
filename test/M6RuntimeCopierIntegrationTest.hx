@@ -49,6 +49,8 @@ private typedef RuntimeRequirementSubject = {
 private typedef RuntimeRequirementEntry = {
 	final id:String;
 	final sourceKind:String;
+	final semanticCapability:String;
+	final cause:String;
 	final subject:RuntimeRequirementSubject;
 	final rootModules:Array<String>;
 }
@@ -121,6 +123,13 @@ class M6RuntimeCopierIntegrationTest {
 			if (requirement.id == id)
 				return requirement;
 		throw 'Missing runtime requirement "$id".';
+	}
+
+	static function requirementByCapability(report:RuntimeRequirementReport, capability:String):RuntimeRequirementEntry {
+		for (requirement in report.requirements)
+			if (requirement.semanticCapability == capability)
+				return requirement;
+		throw 'Missing runtime capability "$capability".';
 	}
 
 	static function shellQuote(value:String):String {
@@ -226,6 +235,8 @@ class M6RuntimeCopierIntegrationTest {
 		final portableManualOutDir = rootOutDir + "/portable_manual_selective";
 		final portableIncompleteManualOutDir = rootOutDir + "/portable_incomplete_manual_selective";
 		final typeRegistryOutDir = rootOutDir + "/type_registry_runtime_requirements";
+		final invalidNativeBoundaryOutDir = rootOutDir + "/invalid_native_runtime_boundary";
+		final mismatchedNativeBoundaryOutDir = rootOutDir + "/mismatched_native_runtime_boundary";
 		final metalTokenNoiseOutDir = rootOutDir + "/metal_token_noise";
 		final metalTokenFallbackNoDebugOutDir = rootOutDir + "/metal_token_fallback_no_debug";
 		final metalTokenFallbackDebugOutDir = rootOutDir + "/metal_token_fallback_debug";
@@ -265,6 +276,24 @@ class M6RuntimeCopierIntegrationTest {
 			"manual runtime failure should name the option that can supply the missing roots");
 		final typeRegistryCompile = compileRuntimeFixture(typeRegistryOutDir, "portable", "test/fixtures/m6_runtime_type_registry/src", "Main");
 		assertTrue(typeRegistryCompile.exitCode == 0, "type-registry runtime requirement compile failed: " + typeRegistryCompile.stderr);
+		final invalidNativeBoundaryCompile = compileRuntimeFixture(invalidNativeBoundaryOutDir, "portable",
+			"test/fixtures/m6_runtime_invalid_native_boundary/src", "Main");
+		assertTrue(invalidNativeBoundaryCompile.exitCode != 0, "an unknown native runtime capability should fail before OCaml output");
+		final invalidNativeBoundaryOutput = invalidNativeBoundaryCompile.stderr + "\n" + invalidNativeBoundaryCompile.stdout;
+		assertContains(invalidNativeBoundaryOutput, "ocaml-runtime:native-boundary",
+			"invalid native runtime metadata should identify the failing compiler boundary");
+		assertContains(invalidNativeBoundaryOutput, "Unknown native runtime capability \"not-a-runtime-capability\"",
+			"invalid native runtime metadata should identify the unknown capability");
+		final mismatchedNativeBoundaryCompile = compileRuntimeFixture(mismatchedNativeBoundaryOutDir, "portable",
+			"test/fixtures/m6_runtime_mismatched_native_boundary/src", "Main");
+		assertTrue(mismatchedNativeBoundaryCompile.exitCode != 0, "a native runtime capability targeting the wrong module should fail before OCaml output");
+		final mismatchedNativeBoundaryOutput = mismatchedNativeBoundaryCompile.stderr + "\n" + mismatchedNativeBoundaryCompile.stdout;
+		assertContains(mismatchedNativeBoundaryOutput, "ocaml-runtime:native-boundary",
+			"mismatched native runtime metadata should identify the failing compiler boundary");
+		assertContains(mismatchedNativeBoundaryOutput, "requires \"HxStdio\"",
+			"mismatched native runtime metadata should identify the required implementation");
+		assertContains(mismatchedNativeBoundaryOutput, "resolves to \"OtherRuntime.touch\"",
+			"mismatched native runtime metadata should identify the actual target symbol");
 		final portableManifest = OcamlArtifactManifestTestHelper.validate(portableOutDir, "portable");
 		OcamlArtifactManifestTestHelper.assertEntry(portableManifest, "runtime/HxRuntime.ml", "runtime-copier", "runtime-source", true);
 		OcamlArtifactManifestTestHelper.validate(metalOutDir, "metal");
@@ -440,6 +469,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertArrayEquals([
 			"compiler-core-runtime",
 			"compiler-type-registry",
+			"declared-static-native-runtime-boundary",
 			"typed-place-assignment-and-update"
 		], portableRequirementReport.coveredFamilies,
 			"portable requirement report covered families");
@@ -455,6 +485,14 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(registryRequirement.subject.kind == "generated-module" && registryRequirement.subject.id == "HxTypeRegistry",
 			"type-registry support should identify the generated module that uses it");
 		assertContains("\n" + registryRequirement.rootModules.join("\n") + "\n", "\nHxType\n", "type-registry requirement should select HxType");
+		final stdioRequirement = requirementByCapability(portableRequirementReport, "haxe-standard-io");
+		assertTrue(stdioRequirement.sourceKind == "native-boundary" && stdioRequirement.cause == "native-boundary",
+			"standard I/O support should identify a declared native boundary");
+		assertTrue(stdioRequirement.subject.kind == "native-boundary"
+			&& stdioRequirement.subject.id == "sys.io.Stdio::sys.io._Stdio.NativeHxStdio.flush -> HxStdio.flush",
+			"standard I/O support should retain the Haxe extern identity and the resolved HxStdio symbol");
+		assertContains("\n" + stdioRequirement.rootModules.join("\n") + "\n", "\nHxStdio\n",
+			"standard I/O support should select the HxStdio implementation root");
 		final boolUnboxRequirement = requirementById(typeRegistryRequirementReport, "compiler:generated:HxTypeRegistry:runtime-unbox");
 		assertTrue(boolUnboxRequirement.subject.kind == "generated-module" && boolUnboxRequirement.subject.id == "HxTypeRegistry",
 			"Boolean reflection conversion should identify the generated type registry");
@@ -484,6 +522,12 @@ class M6RuntimeCopierIntegrationTest {
 			"migrated runtime requirements should still agree with compiler observations for this fixture");
 		assertContains("\n" + metalRequirementReport.explainedCompilerObservedModules.join("\n") + "\n", "\nHxType\n",
 			"compiler-observed HxType use should be explained by the generated type registry");
+		assertContains("\n" + metalRequirementReport.explainedCompilerObservedModules.join("\n") + "\n", "\nHxStdio\n",
+			"compiler-observed HxStdio use should be explained by its declared typed extern boundary");
+		assertNotContains("\n" + metalRequirementReport.unexplainedCompilerObservedModules.join("\n") + "\n", "\nHxStdio\n",
+			"declared HxStdio use should not remain unexplained");
+		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxStdio").join("\n") + "\n", "\nrecorded_requirement\n",
+			"selective packaging should retain HxStdio because of the declared native boundary");
 		assertTrue(metalRequirementReport.unexplainedCompilerObservedModules.length > 0,
 			"partial coverage should keep compiler-observed modules from unmigrated families visible");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalRequirementReport.selectedModules,

@@ -8,6 +8,7 @@ enum abstract OcamlRuntimeRequirementSourceKind(String) from String to String {
 	final HaxeExpression = "haxe-expression";
 	final CompilerInfrastructure = "compiler-infrastructure";
 	final Configuration = "configuration";
+	final NativeBoundary = "native-boundary";
 	final RawBoundary = "raw-boundary";
 }
 
@@ -17,6 +18,7 @@ enum abstract OcamlRuntimeRequirementCause(String) from String to String {
 	final RepresentationDecision = "representation-decision";
 	final CompilerInfrastructure = "compiler-infrastructure";
 	final ExplicitConfiguration = "explicit-configuration";
+	final NativeBoundary = "native-boundary";
 	final RawBoundary = "raw-boundary";
 }
 

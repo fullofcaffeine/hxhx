@@ -31,6 +31,7 @@ import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLow
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
 import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
 import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry.OcamlPlaceFunctionBinding;
+import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 
 /**
 	Legacy TypedExpr-to-OcamlExpr traversal and target-syntax assembly.
@@ -6976,6 +6977,7 @@ class OcamlBuilder {
 					}
 
 					final resolved = resolveNativeStaticPath(moduleIdToOcamlModuleName(cls.module), cf.name, nativeClassPath, nativeFieldPath);
+					OcamlNativeRuntimeBoundary.recordUsedStaticExtern(ctx, cls, cf, resolved.modulePath + "." + resolved.fieldName);
 
 					return OcamlExpr.EField(resolved.moduleExpr, resolved.fieldName);
 				} else {
@@ -7432,7 +7434,7 @@ class OcamlBuilder {
 		 * - If no native metadata exists, falls back to `<defaultModuleName>.<defaultFieldName>`.
 		 */
 	static function resolveNativeStaticPath(defaultModuleName:String, defaultFieldName:String, nativeClassPath:Null<String>,
-			nativeFieldPath:Null<String>):{moduleExpr:OcamlExpr, fieldName:String} {
+			nativeFieldPath:Null<String>):{moduleExpr:OcamlExpr, modulePath:String, fieldName:String} {
 		var modulePath:Null<String> = nativeClassPath;
 		var fieldName:String = defaultFieldName;
 
@@ -7446,14 +7448,15 @@ class OcamlBuilder {
 			}
 		}
 
+		final resolvedModulePath = modulePath != null ? modulePath : defaultModuleName;
 		final moduleExpr = if (modulePath != null) {
-			final expr = buildOcamlModulePathExpr(modulePath);
+			final expr = buildOcamlModulePathExpr(resolvedModulePath);
 			expr == null ? OcamlExpr.EIdent(defaultModuleName) : expr;
 		} else {
 			OcamlExpr.EIdent(defaultModuleName);
 		}
 
-		return {moduleExpr: moduleExpr, fieldName: fieldName};
+		return {moduleExpr: moduleExpr, modulePath: resolvedModulePath, fieldName: fieldName};
 	}
 
 	/**

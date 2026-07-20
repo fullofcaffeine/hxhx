@@ -87,6 +87,7 @@ try {
 	assert.deepStrictEqual(runtimeRequirements.coveredFamilies, [
 		'compiler-core-runtime',
 		'compiler-type-registry',
+		'declared-static-native-runtime-boundary',
 		'typed-place-assignment-and-update'
 	])
 	assert.strictEqual(runtimeRequirements.selectionAuthority, 'explicit-full-with-recorded-requirement-audit-v2')
@@ -130,6 +131,14 @@ try {
 	assert(registryRequirement)
 	assert.deepStrictEqual(registryRequirement.subject, {kind: 'generated-module', id: 'HxTypeRegistry'})
 	assert.deepStrictEqual(registryRequirement.rootModules, ['HxType'])
+	const stdioRequirement = runtimeRequirements.requirements.find(
+		requirement => requirement.semanticCapability === 'haxe-standard-io')
+	assert(stdioRequirement)
+	assert.strictEqual(stdioRequirement.sourceKind, 'native-boundary')
+	assert.strictEqual(stdioRequirement.cause, 'native-boundary')
+	assert.strictEqual(stdioRequirement.subject.kind, 'native-boundary')
+	assert.strictEqual(stdioRequirement.subject.id, 'sys.io.Stdio::sys.io._Stdio.NativeHxStdio.flush -> HxStdio.flush')
+	assert.deepStrictEqual(stdioRequirement.rootModules, ['HxStdio'])
 	assert.strictEqual(runtimeRequirements.requirementChains.length, runtimeRequirements.requirementCount)
 	for (const chain of runtimeRequirements.requirementChains) {
 		assert(requirementIds.has(chain.requirementId), `runtime chain refers to missing requirement ${chain.requirementId}`)

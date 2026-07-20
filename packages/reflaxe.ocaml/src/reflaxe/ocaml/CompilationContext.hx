@@ -493,6 +493,11 @@ class CompilationContext {
 		runtimeRequirements.recordCompilerInfrastructure(capability);
 	}
 
+	/** Records a runtime need declared by one emitted typed native extern. **/
+	public function recordNativeRuntimeBoundary(capability:String, boundaryId:String, source:OcamlLoweredSourceSpan, nativeSymbol:String):Void {
+		runtimeRequirements.recordNativeBoundary(capability, boundaryId, source, nativeSymbol);
+	}
+
 	/** Returns decision-point runtime explanations in stable identity order. **/
 	public function runtimeRequirementsSorted():Array<OcamlRuntimeRequirement> {
 		return runtimeRequirements.requirementsSorted();

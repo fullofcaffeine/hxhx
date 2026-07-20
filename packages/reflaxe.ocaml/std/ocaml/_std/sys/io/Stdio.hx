@@ -122,6 +122,7 @@ private class OcamlStdioOutput extends Output {
 	}
 }
 
+@:ocamlRuntime("haxe-standard-io")
 @:native("HxStdio")
 private extern class NativeHxStdio {
 	static function read_byte(stream:Int):Int;

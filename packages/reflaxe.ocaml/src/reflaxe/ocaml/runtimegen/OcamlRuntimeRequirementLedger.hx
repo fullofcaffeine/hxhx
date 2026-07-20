@@ -28,6 +28,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final TYPE_REGISTRY_DYNAMIC_ARGS = "compiler-type-registry-dynamic-args";
 	public static inline final TYPE_REGISTRY_OPTIONAL_NULL = "compiler-type-registry-optional-null";
 	public static inline final TYPE_REGISTRY_RUNTIME_UNBOX = "compiler-type-registry-runtime-unbox";
+	public static inline final HAXE_STANDARD_IO = "haxe-standard-io";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -101,6 +102,40 @@ class OcamlRuntimeRequirementLedger {
 			subject: {
 				kind: implementation.subjectKind,
 				id: implementation.subjectId
+			},
+			implementationFeature: implementation.feature,
+			rootModules: [implementation.module],
+			profileEligibility: ["metal", "portable"],
+			explanation: implementation.explanation
+		});
+	}
+
+	/**
+		Records one checked compatibility-runtime need declared by a typed native
+		extern boundary.
+
+		The capability selects the runtime implementation. The resolved native
+		symbol is checked independently so a misleading declaration cannot make the
+		report name a helper that the generated call does not use.
+	**/
+	public function recordNativeBoundary(capability:String, boundaryId:String, source:OcamlLoweredSourceSpan, nativeSymbol:String):Void {
+		final implementation = nativeBoundaryImplementation(capability);
+		final stableBoundaryId = required(boundaryId, "native boundary identity");
+		final stableNativeSymbol = required(nativeSymbol, 'native symbol for boundary "$stableBoundaryId"');
+		final nativeRoot = stableNativeSymbol.split(".")[0];
+		if (nativeRoot != implementation.module)
+			throw 'Native runtime capability "$capability" requires "${implementation.module}", but boundary "$stableBoundaryId" resolves to "$stableNativeSymbol".';
+		record({
+			id: "native:" + stableBoundaryId + ":runtime:" + capability,
+			sourceKind: OcamlRuntimeRequirementSourceKind.NativeBoundary,
+			sourceId: "haxe-declaration:" + stableBoundaryId,
+			source: source,
+			semanticCapability: capability,
+			cause: OcamlRuntimeRequirementCause.NativeBoundary,
+			decisionId: "native-boundary:" + stableBoundaryId,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.NativeBoundary,
+				id: stableBoundaryId + " -> " + stableNativeSymbol
 			},
 			implementationFeature: implementation.feature,
 			rootModules: [implementation.module],
@@ -286,13 +321,27 @@ class OcamlRuntimeRequirementLedger {
 		}
 	}
 
+	static function nativeBoundaryImplementation(capability:String):{feature:String, module:String, explanation:String} {
+		return switch (capability) {
+			case HAXE_STANDARD_IO:
+				{
+					feature: "haxe-standard-io-v1",
+					module: "HxStdio",
+					explanation: "The typed OCaml standard-I/O facade uses HxStdio to preserve Haxe stream reads, writes, end-of-file behavior, and flushing."
+				};
+			case _:
+				throw 'Unknown native runtime capability "$capability".';
+		}
+	}
+
 	static function validatedSubjectKind(kind:OcamlRuntimeRequirementSubjectKind, sourceKind:OcamlRuntimeRequirementSourceKind,
 			id:String):OcamlRuntimeRequirementSubjectKind {
 		final valid = switch (sourceKind) {
 			case HaxeExpression: kind == OcamlRuntimeRequirementSubjectKind.HaxeType;
 			case CompilerInfrastructure: kind == OcamlRuntimeRequirementSubjectKind.GeneratedModule || kind == OcamlRuntimeRequirementSubjectKind.CompilerPolicy;
 			case Configuration: kind == OcamlRuntimeRequirementSubjectKind.CompilerPolicy;
-			case RawBoundary: kind == OcamlRuntimeRequirementSubjectKind.RawBoundary || kind == OcamlRuntimeRequirementSubjectKind.NativeBoundary;
+			case NativeBoundary: kind == OcamlRuntimeRequirementSubjectKind.NativeBoundary;
+			case RawBoundary: kind == OcamlRuntimeRequirementSubjectKind.RawBoundary;
 		};
 		if (!valid)
 			throw 'OCaml runtime requirement "$id" has subject kind "$kind" that does not match source kind "$sourceKind".';

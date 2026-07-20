@@ -118,6 +118,7 @@ class OcamlRuntimeRequirementReportWriter {
 			coveredFamilies: [
 				"compiler-core-runtime",
 				"compiler-type-registry",
+				"declared-static-native-runtime-boundary",
 				"typed-place-assignment-and-update"
 			],
 			selectionAuthority: selectionAuthority,
@@ -137,7 +138,7 @@ class OcamlRuntimeRequirementReportWriter {
 			requirementRootsNotCompilerObserved: requirementRootsNotCompilerObserved,
 			selectedModules: selectedModules,
 			runtimeSources: runtimeSources,
-			message: "Recorded runtime explanations cover core packaging, the compiler-generated type registry, and typed assignment/update lowering. Other compiler paths still need their own explanations."
+			message: "Recorded runtime explanations cover core packaging, the compiler-generated type registry, declared static native runtime boundaries, and typed assignment/update lowering. Other compiler paths still need their own explanations."
 		};
 		final report = {
 			schemaVersion: payload.schemaVersion,

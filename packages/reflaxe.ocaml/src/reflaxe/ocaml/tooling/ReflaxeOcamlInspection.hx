@@ -231,7 +231,7 @@ class ReflaxeOcamlInspection {
 						tokenScanFallbackEnabled: requiredBool(value, "tokenScanFallbackEnabled"),
 						authority: "current-compiler-runtime-selection-report",
 						semanticManifest: false,
-						message: "Current compiler/runtime selection report; the separate requirement report explains core packaging, the generated type registry, and typed assignments/updates, but not the whole program."
+						message: "Current compiler/runtime selection report; the separate requirement report explains core packaging, the generated type registry, declared static native boundaries, and typed assignments/updates, but not the whole program."
 					};
 				} catch (error:Dynamic) {
 					runtimeFailure("invalid", path, Std.string(error));
@@ -460,7 +460,7 @@ class ReflaxeOcamlInspection {
 		return [
 			unavailable("program-representation", "Program-wide representation registry", "The typed OCaml representation registry has not landed."),
 			unavailable("semantic-runtime-manifest", "Whole-program runtime requirement ledger",
-				"A checked partial report now covers core packaging, the generated type registry, and typed assignments/updates; other compiler paths still need explicit explanations."),
+				"A checked partial report now covers core packaging, the generated type registry, declared static native boundaries, and typed assignments/updates; other compiler paths still need explicit explanations."),
 			unavailable("native-dependencies", "Native package and source dependencies", "Structured Dune/opam/native-source ownership has not landed."),
 			unavailable("raw-unsafe", "Raw and unsafe operation inventory", "The compiler does not yet emit an owned raw/Obj.magic proof inventory."),
 			unavailable("bindings", "Typed imported OCaml bindings", "The typed .mli binding manifest has not landed."),

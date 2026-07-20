@@ -264,14 +264,15 @@ lowering step did not record.
 Schema version 6 replaces the place-only `subjectTypeId` field with a structured
 `subject` containing `kind` and `id`. A place operation uses
 `{ "kind": "haxe-type", "id": "Int" }`; the same runtime requirement model can
-now describe compiler-generated modules and packaging rules without pretending
-they are Haxe types.
+now describe compiler-generated modules, compiler rules, and declared native
+boundaries without pretending they are Haxe types.
 Every runtime-enabled build also writes
 `ocaml_runtime_requirement_report.json`. It resolves those explanations through
 the locked runtime-source catalog and records the exact dependency closure,
 source hashes, Dune libraries, profiles, and licenses that were selected. The
-same report now also explains the core packaging rule and the generated
-`HxTypeRegistry` module. It keeps modules from unmigrated compiler families in
+same report now also explains the core packaging rule, the generated
+`HxTypeRegistry` module, and the typed `HxStdio` extern boundary. It keeps
+modules from unmigrated compiler families in
 an explicit `unexplainedCompilerObservedModules` list; it therefore proves the
 migrated families without implying that every runtime file in the whole program
 has an explicit explanation. Source locations are normalized to

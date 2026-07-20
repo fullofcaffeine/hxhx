@@ -9,6 +9,7 @@ This doc explains:
 - when to use the OCaml-native surface (and when not to),
 - the “native” types we currently expose,
 - how extern interop works (`@:native`, `@:ocamlLabel`),
+- how target-runtime facade authors declare checked compatibility support,
 - and the key caveats.
 
 ## When to use `ocaml.*`
@@ -76,6 +77,39 @@ extern class StdListNative {
 ```
 
 Callsites emit `Stdlib.List.map ...` in OCaml.
+
+### `@:ocamlRuntime` (checked target-runtime requirement)
+
+Most externs point to OCaml itself or to an external library. They do not use
+this metadata. Authors of the reflaxe.ocaml compatibility layer use
+`@:ocamlRuntime("capability")` when a typed extern calls one of the checked
+`Hx*` runtime modules:
+
+```haxe
+@:ocamlRuntime("haxe-standard-io")
+@:native("HxStdio")
+private extern class NativeHxStdio {
+  static function flush(stream:Int):Void;
+}
+```
+
+The two metadata entries answer different questions:
+
+- `@:native("HxStdio")` says which OCaml module receives the call.
+- `@:ocamlRuntime("haxe-standard-io")` says why Haxe behavior needs a
+  compatibility helper.
+
+The capability name is not an arbitrary module name. The compiler owns a closed
+mapping from supported capabilities to reviewed runtime sources, verifies that
+the resolved native call uses the expected module, and records the reason in
+`ocaml_runtime_requirement_report.json`. An unknown capability or a mismatch
+such as declaring standard I/O while targeting another module stops compilation
+before OCaml output is packaged.
+
+The current first slice supports declarations on a static extern class or
+static extern field. This is an advanced target/runtime-authoring contract, not
+a way to declare opam libraries; external native dependencies need their own
+structured package manifest.
 
 ### `@:ocamlLabel` (labelled + optional labelled args)
 

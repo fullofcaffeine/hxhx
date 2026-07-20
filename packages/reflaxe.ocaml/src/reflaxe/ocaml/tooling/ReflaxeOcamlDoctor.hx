@@ -100,7 +100,7 @@ class ReflaxeOcamlDoctor {
 			runtimeOkay ? null : "Reinstall the source package or repair the local haxelib override.", null, runtimeDirectory));
 
 		checks.push(check("runtime-manifest", "Whole-program runtime explanations", DoctorStatus.Skip, false,
-			"Builds now explain runtime support used by core packaging, the generated type registry, and typed assignments/updates, but other compiler paths are not covered yet.",
+			"Builds now explain runtime support used by core packaging, the generated type registry, declared static native boundaries, and typed assignments/updates, but other compiler paths are not covered yet.",
 			"ocaml_runtime_requirement_report.json labels this coverage partial and keeps unexplained runtime references visible.",
 			"No action is required for current builds; the runtime-ledger architecture work will migrate the remaining compiler families.", null, null));
 

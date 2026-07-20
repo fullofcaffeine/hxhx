@@ -22,27 +22,37 @@ Validation stops before copying if a declared file is missing or modified, an un
 This catalog answers “which reviewed source files implement this module?” The
 runtime requirement ledger also answers questions such as “which Haxe
 expression required `HxInt` or `HxArray`?”, “why did the compiler-generated
-`HxTypeRegistry` require `HxType`?”, and “why is the core runtime packaged?” in
+`HxTypeRegistry` require `HxType`?”, “why does the typed standard-I/O facade
+require `HxStdio`?”, and “why is the core runtime packaged?” in
 `ocaml_runtime_requirement_report.json` on every runtime-enabled build. Each
-explanation names the supported Haxe type, generated module, or compiler rule;
-the decision that required support; the implementation feature; the eligible
-profiles; and the checked root module. The report then follows that root through
-the catalog to the exact source hashes, dependencies, Dune libraries, profiles,
-and licenses that were packaged.
+explanation names the supported Haxe type, generated module, compiler rule, or
+typed native boundary; the decision that required support; the implementation
+feature; the eligible profiles; and the checked root module. The report then
+follows that root through the catalog to the exact source hashes, dependencies,
+Dune libraries, profiles, and licenses that were packaged.
 
 When `-D ocaml_lowering_report` is enabled, `ocaml_lowering_report.json` shows
 the same requirement identities next to the typed assignment/update plans that
 caused them. This makes it possible to trace one source operation through the
 compiler decision and into the packaged OCaml files without searching generated
-source text.
+source text. Native-boundary explanations additionally name the typed extern
+declaration that made the checked target-runtime call.
 
 Those explanations currently cover core packaging, the compiler-generated type
-registry, and the admitted assignment/update family. Other compiler paths still
+registry, explicitly declared static native runtime boundaries, and the
+admitted assignment/update family. Other compiler paths still
 discover runtime names from generated OCaml structure or explicitly declare
 them while building string/template output. The requirement report lists those
 names under `unexplainedCompilerObservedModules`, so the whole-program runtime
 authority and generated artifact manifest correctly remain incomplete under
 `haxe_ocaml-0uwin`.
+
+Typed target-runtime externs declare their need by capability rather than by
+copying a module name into the packaging plan. For example,
+`@:ocamlRuntime("haxe-standard-io")` selects the checked `HxStdio`
+implementation and is validated against the resolved `@:native` target. See
+`OCAML_NATIVE_MODE.md` for the target-authoring contract. This metadata is not
+used for ordinary external OCaml libraries.
 
 ## Legend
 

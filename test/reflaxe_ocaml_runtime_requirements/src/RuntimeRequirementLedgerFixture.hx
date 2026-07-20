@@ -66,8 +66,10 @@ class RuntimeRequirementLedgerFixture {
 		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS);
 		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_NULL);
 		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_RUNTIME_UNBOX);
+		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_STANDARD_IO, "sys.io.Stdio::sys.io._Stdio.NativeHxStdio.read_byte", source,
+			"HxStdio.read_byte");
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == 9, "each lowering and compiler decision should retain its own runtime explanation");
+		assertTrue(requirements.length == 10, "each lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
 		assertTrue(requirements[0].id == "compiler:generated:HxTypeRegistry:dynamic-arguments", "requirements should be sorted by stable identity");
 		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
 		assertTrue(placeRequirement.sourceId == "place:a", "the requirement should retain its Haxe-expression identity");
@@ -86,7 +88,13 @@ class RuntimeRequirementLedgerFixture {
 		assertTrue(coreRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.CompilerPolicy
 			&& coreRequirement.subject.id == "runtime-packaging",
 			"the runtime core should name the compiler policy that requires it");
-		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxInt,HxRuntime,HxType", "root modules should be deduplicated and sorted");
+		final stdioRequirement = requirementById(requirements, "native:sys.io.Stdio::sys.io._Stdio.NativeHxStdio.read_byte:runtime:haxe-standard-io");
+		assertTrue(stdioRequirement.sourceKind == OcamlRuntimeRequirementSourceKind.NativeBoundary
+			&& stdioRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.NativeBoundary,
+			"a typed extern should identify its native boundary as the runtime source and subject");
+		assertTrue(stdioRequirement.subject.id.indexOf("HxStdio.read_byte") >= 0, "the native-boundary subject should name the checked target symbol");
+		assertTrue(stdioRequirement.rootModules[0] == "HxStdio", "Haxe standard I/O should select the HxStdio implementation root");
+		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxInt,HxRuntime,HxStdio,HxType", "root modules should be deduplicated and sorted");
 		final firstRevision = ledger.revision();
 		ledger.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);
 		assertTrue(ledger.revision() == firstRevision, "recording the same facts twice should be deterministic");
@@ -97,6 +105,10 @@ class RuntimeRequirementLedgerFixture {
 			() -> ledger.recordPlacePlan("place:c:update", "place:c", source, "Int", ["place:c:runtime:not-supported"]));
 		expectFailure("unknown compiler capability", "Unknown compiler runtime capability",
 			() -> ledger.recordCompilerInfrastructure("compiler-not-supported"));
+		expectFailure("unknown native capability", "Unknown native runtime capability",
+			() -> ledger.recordNativeBoundary("native-not-supported", "fixture.Native.call", source, "HxStdio.call"));
+		expectFailure("native module mismatch", "requires \"HxStdio\"",
+			() -> ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_STANDARD_IO, "fixture.Native.call", source, "OtherRuntime.call"));
 		expectFailure("subject/source mismatch", "does not match source kind", () -> ledger.record({
 			id: "invalid:subject",
 			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,

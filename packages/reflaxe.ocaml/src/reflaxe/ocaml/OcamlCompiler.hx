@@ -1790,7 +1790,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
 				model: "recorded-runtime-requirements-partial-v2",
 				revision: ctx.runtimeRequirementRevision(),
-				message: "The compiler records why typed assignments, updates, its generated type registry, and core packaging need runtime support, then checks those needs against packaged sources. Other compiler paths still rely on observed generated modules, so whole-program runtime ownership is incomplete."
+				message: "The compiler records why typed assignments, updates, declared static native boundaries, its generated type registry, and core packaging need runtime support, then checks those needs against packaged sources. Other compiler paths still rely on observed generated modules, so whole-program runtime ownership is incomplete."
 			}, {
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
 				model: "free-form-dune-libraries-v1",

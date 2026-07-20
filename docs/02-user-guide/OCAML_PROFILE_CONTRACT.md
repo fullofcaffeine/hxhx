@@ -189,16 +189,20 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
 - `ocaml_runtime_requirement_report.json`
   - `schemaVersion` (current: `2`)
   - `authorityStatus` (currently `partial`, because core packaging, the
-    generated type registry, and typed assignment/update operations are
-    covered, while other compiler paths still rely on observations)
+    generated type registry, declared static native runtime boundaries, and
+    typed assignment/update operations are covered, while other compiler paths
+    still rely on observations)
   - `runtimeMode` and `selectionMode`
   - `requirementRevision` and `runtimeSourceRevision`
   - `requirements`, where each entry explains what needs compatibility
     support, the compiler decision that caused it, and its runtime root module
   - `subject`, which separates the kind and stable identity of the thing being
     supported; examples are `haxe-type:Int`,
-    `generated-module:HxTypeRegistry`, and
-    `compiler-policy:runtime-packaging`
+    `generated-module:HxTypeRegistry`,
+    `compiler-policy:runtime-packaging`, and
+    `native-boundary:sys.io.Stdio::sys.io._Stdio.NativeHxStdio.flush -> HxStdio.flush`
+    (`_Stdio` is Haxe's canonical namespace for a private extra type declared
+    in `Stdio.hx`, not an OCaml module users must write)
   - `requirementChains`, which resolve each explanation through the locked
     runtime dependency catalog
   - `requirementRootModules`, `requirementClosureModules`, and `runtimeSources`,
@@ -221,8 +225,9 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     profiles, and checked runtime root that caused it
 
 The lowering report is complete for its stated assignment/update family. The
-runtime-requirement report additionally covers core packaging and the generated
-type registry, but it is still not complete for the whole program. Runtime
+runtime-requirement report additionally covers core packaging, the generated
+type registry, and declared static native runtime boundaries, but it is still
+not complete for the whole program. Runtime
 packaging checks that every recorded requirement resolves to selected,
 hash-verified source. The separate runtime selection report still includes
 compiler-observed roots while the remaining compiler families migrate to the

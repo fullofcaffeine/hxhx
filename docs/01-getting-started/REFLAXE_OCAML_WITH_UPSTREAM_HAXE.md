@@ -128,7 +128,8 @@ The authority boundary is part of the output. The generated-file inventory is
 valid, but it explicitly says source-bundle packaging is blocked until every
 runtime need and native dependency has a locked explanation. Runtime-enabled
 builds now explain runtime support used by typed assignments and updates, the
-compiler-generated type registry, and core packaging in
+compiler-generated type registry, the declared `HxStdio` extern boundary, and
+core packaging in
 `ocaml_runtime_requirement_report.json`; other compiler paths remain visibly
 unexplained. Today's runtime report is therefore not presented as a
 complete whole-program explanation, and the typed place report covers only
