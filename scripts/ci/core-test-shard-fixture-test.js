@@ -6,6 +6,7 @@ const fs = require('fs')
 const path = require('path')
 const {
   evaluateAggregateResults,
+  jobsRequiredAtTier,
   loadPlan,
   parseAggregateCommands,
   validateManifest
@@ -54,7 +55,8 @@ function main() {
     'stage0-free-smoke',
     'js-native-smoke',
     'plugin-matrix',
-    'test-shards'
+    'test-shards',
+    'hxhx-e2e'
   ]
   assert(
     JSON.stringify(plan.manifest.aggregateJobs) === JSON.stringify(expectedAggregateJobs),
@@ -67,8 +69,30 @@ function main() {
     'target-packages': 3,
     'hxhx-targets': 1
   }
+  const expectedShardMinimumTiers = {
+    compiler: 'Q2',
+    'macro-host-integration': 'Q2',
+    'target-packages': 'Q2',
+    'hxhx-targets': 'Q3'
+  }
+  const expectedJobMinimumTiers = {
+    guards: 'Q1',
+    'stage0-free-smoke': 'Q2',
+    'js-native-smoke': 'Q2',
+    'plugin-matrix': 'Q2',
+    'test-shards': 'Q2',
+    'hxhx-e2e': 'Q3'
+  }
+  assert(
+    JSON.stringify(plan.manifest.aggregateJobMinimumTiers) === JSON.stringify(expectedJobMinimumTiers),
+    `aggregate job tier ownership changed: ${JSON.stringify(plan.manifest.aggregateJobMinimumTiers)}`
+  )
   for (const shard of plan.shards) {
     assert(shard.commands.length === expectedCounts[shard.id], `unexpected command count for ${shard.id}`)
+    assert(
+      shard.minimumTier === expectedShardMinimumTiers[shard.id],
+      `unexpected minimum tier for ${shard.id}: ${shard.minimumTier}`
+    )
     const listed = runScript('scripts/ci/core-test-shard.js', ['--shard', shard.id, '--list'])
     assert(listed.status === 0, `${shard.id} list command failed\n${listed.stderr}`)
     assert(
@@ -116,6 +140,36 @@ function main() {
     'extra shard assignment'
   )
 
+  const missingJobTier = structuredClone(plan.manifest)
+  delete missingJobTier.aggregateJobMinimumTiers['hxhx-e2e']
+  expectThrow(
+    () => validateManifest(missingJobTier, plan.aggregateCommands),
+    'aggregate job hxhx-e2e needs a valid minimum tier',
+    'missing aggregate job tier'
+  )
+
+  const invalidShardTier = structuredClone(plan.manifest)
+  invalidShardTier.shards.find(shard => shard.id === 'hxhx-targets').minimumTier = 'Q1'
+  expectThrow(
+    () => validateManifest(invalidShardTier, plan.aggregateCommands),
+    'minimumTier must be Q2 or higher',
+    'invalid shard tier'
+  )
+
+  assert(
+    JSON.stringify(jobsRequiredAtTier(plan.manifest, 'Q0')) === '[]',
+    'Q0 unexpectedly requires a compiler job'
+  )
+  assert(
+    JSON.stringify(jobsRequiredAtTier(plan.manifest, 'Q2')) ===
+      JSON.stringify(['guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'test-shards']),
+    'Q2 job boundary changed'
+  )
+  assert(
+    JSON.stringify(jobsRequiredAtTier(plan.manifest, 'Q3')) === JSON.stringify(expectedAggregateJobs),
+    'Q3 does not require the complete Core job set'
+  )
+
   const successNeeds = Object.fromEntries(plan.manifest.aggregateJobs.map(job => [job, { result: 'success' }]))
   assert(evaluateAggregateResults(plan.manifest.aggregateJobs, successNeeds).length === 0, 'all-success aggregate failed')
   for (const badResult of ['failure', 'cancelled', 'skipped']) {
@@ -151,7 +205,7 @@ function main() {
   const aggregatePass = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
     CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...successNeeds }),
-    CORE_TEST_QA_TIER: 'Q2'
+    CORE_TEST_QA_TIER: 'Q3'
   })
   assert(aggregatePass.status === 0, `aggregate CLI failed its pass case\n${aggregatePass.stderr}`)
   assert(aggregatePass.stdout.includes('CORE_TESTS_AGGREGATE:PASS'), 'aggregate pass marker is missing')
@@ -161,6 +215,23 @@ function main() {
     CORE_TEST_QA_TIER: 'Q2'
   })
   assert(aggregateFailure.status !== 0, 'aggregate CLI accepted a missing shard result')
+
+  const q2Needs = structuredClone(successNeeds)
+  q2Needs['hxhx-e2e'].result = 'skipped'
+  const aggregateQ2 = runScript('scripts/ci/core-test-aggregate.js', [], {
+    ...process.env,
+    CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...q2Needs }),
+    CORE_TEST_QA_TIER: 'Q2'
+  })
+  assert(aggregateQ2.status === 0, `aggregate CLI rejected the policy-authorized Q2 hxhx skip\n${aggregateQ2.stderr}`)
+  assert(aggregateQ2.stdout.includes('required=5 skipped=1'), 'aggregate Q2 receipt omits its required/skip counts')
+
+  const aggregateQ3MissingHxhx = runScript('scripts/ci/core-test-aggregate.js', [], {
+    ...process.env,
+    CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...q2Needs }),
+    CORE_TEST_QA_TIER: 'Q3'
+  })
+  assert(aggregateQ3MissingHxhx.status !== 0, 'aggregate CLI accepted a skipped hxhx E2E at Q3')
 
   const q0Needs = Object.fromEntries(plan.manifest.aggregateJobs.map(job => [job, { result: 'skipped' }]))
   const aggregateQ0 = runScript('scripts/ci/core-test-aggregate.js', [], {
@@ -194,9 +265,19 @@ function main() {
   requireIncludes(workflow, '    needs: [route, guards]', 'Core test shards')
   requireIncludes(workflow, '      fail-fast: false', 'Core test shard matrix')
   requireIncludes(workflow, 'npm run test:ci:shard -- --shard "${{ matrix.shard }}"', 'Core test shard runner')
-  for (const shard of plan.shards) {
+  for (const shard of plan.shards.filter(shard => shard.minimumTier === 'Q2')) {
     requireIncludes(workflow, `shard: ${shard.id}`, 'Core test shard matrix')
   }
+  const q2MatrixStart = workflow.indexOf('  test-shards:')
+  const q3HxhxStart = workflow.indexOf('  hxhx-e2e:')
+  assert(q2MatrixStart >= 0 && q3HxhxStart > q2MatrixStart, 'Core workflow does not separate Q2 and Q3 shards')
+  assert(
+    !workflow.slice(q2MatrixStart, q3HxhxStart).includes('shard: hxhx-targets'),
+    'Q2 matrix still contains the large hxhx target shard'
+  )
+  requireIncludes(workflow, '  hxhx-e2e:\n    name: Tests / hxhx target end-to-end', 'Q3 hxhx E2E job')
+  requireIncludes(workflow, "needs.route.outputs.run_q3 == 'true'", 'Q3 hxhx E2E condition')
+  requireIncludes(workflow, 'npm run test:ci:shard -- --shard hxhx-targets', 'Q3 hxhx E2E runner')
   requireIncludes(workflow, '  test:\n    name: Tests\n    if: ${{ always() }}', 'stable Tests aggregate')
   requireIncludes(
     workflow,

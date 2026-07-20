@@ -1,25 +1,29 @@
 {
-  "schema": "hxhx.core-test-shards.v1",
+  "schema": "hxhx.core-test-shards.v2",
   "aggregateScript": "test",
   "shards": [
     {
       "id": "compiler",
       "label": "Compiler and focused regressions",
+      "minimumTier": "Q2",
       "baselineSeconds": 278.097
     },
     {
       "id": "macro-host-integration",
       "label": "Macro-host integration",
+      "minimumTier": "Q2",
       "baselineSeconds": 805.742
     },
     {
       "id": "target-packages",
       "label": "Portable, snapshots, and examples",
+      "minimumTier": "Q2",
       "baselineSeconds": 309.205
     },
     {
       "id": "hxhx-targets",
       "label": "hxhx target end-to-end",
+      "minimumTier": "Q3",
       "baselineSeconds": 1184.522
     }
   ],
@@ -28,8 +32,17 @@
     "stage0-free-smoke",
     "js-native-smoke",
     "plugin-matrix",
-    "test-shards"
+    "test-shards",
+    "hxhx-e2e"
   ],
+  "aggregateJobMinimumTiers": {
+    "guards": "Q1",
+    "stage0-free-smoke": "Q2",
+    "js-native-smoke": "Q2",
+    "plugin-matrix": "Q2",
+    "test-shards": "Q2",
+    "hxhx-e2e": "Q3"
+  },
   "assignments": {
     "test:printer": "compiler",
     "test:m2": "compiler",

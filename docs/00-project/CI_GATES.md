@@ -164,15 +164,19 @@ The same guard owns a narrower Q1 ignore list for workflows whose only purpose
 is exercising `hxhx`; mixed changes and hxhx-specific examples still escalate
 to Q2 and wake those consumers.
 
-For Q2 and above, the Core workflow runs the complete 106-command `npm test`
-inventory as four clean-runner shards after Guardrails: focused compiler
-regressions, macro-host integration, portable/snapshot/example coverage, and
-the hxhx target end-to-end lane. The historical check name `Tests` is a
-fail-closed aggregate. It accepts a skipped prerequisite only when the exact
-Q0/Q1 route authorizes that skip; a failed route, secret scan, required job,
-cancelled job, unexpected skip, or missing result fails the aggregate. Local
-`npm test` remains the canonical serialized command. The measured baseline and
-shard rationale are recorded in
+At Q2, the Core workflow runs 105 of the 106 canonical `npm test` commands as
+three clean-runner shards after Guardrails: focused compiler regressions,
+macro-host integration, and portable/snapshot/example coverage. Stage0-free,
+JS-native, and strict plugin canaries remain required at that tier. Q3 adds the
+single `test:hxhx-targets` shard, whose large application/bootstrap workload
+measured about 24 runner minutes. Q4 inherits the complete Q3 set.
+
+The historical check name `Tests` is a fail-closed aggregate. Its versioned
+manifest records the minimum tier for every prerequisite, so only a skip
+authorized by the exact route is accepted. A failed route, secret scan,
+required job, cancelled job, unexpected skip, or missing result fails the
+aggregate. Local `npm test` remains the canonical complete serialized command
+with all 106 entries. The measured baseline and shard rationale are recorded in
 `docs/benchmarks/HXHX_CORE_TEST_CRITICAL_PATH_2026_07_18.md`.
 
 Stable success markers used by required lanes:

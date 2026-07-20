@@ -123,6 +123,12 @@ toolchain setup. It is accepted because it removes 21m49s from the required
 test critical path and 31m18s from the complete workflow without sharing
 mutable build artifacts, weakening Stage0 rules, or hiding a failed lane.
 
+Risk routing now avoids paying that full cost for every change. Q2 runs the
+three bounded compiler/target shards (105 commands) and the focused native and
+plugin canaries. Q3 adds the one-command `hxhx-targets` shard measured here.
+The complete local `npm test` inventory and Q3/Q4 evidence still contain all
+106 commands; this changes cadence, not ownership or release coverage.
+
 ## Local workflow
 
 `npm test` remains the canonical complete local command and retains its exact
@@ -139,4 +145,5 @@ npm run test:ci:shard -- --shard hxhx-targets
 wiring, and fail-closed aggregate behavior without running the test bodies.
 The local shard command also holds the shared Haxe-family heavy-run lease for
 up to 30 minutes before starting; CI bypasses that user-scoped scheduler so its
-four clean runners remain parallel.
+three Q2 runners remain parallel and Q3 adds the isolated large-consumer
+runner.

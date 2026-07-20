@@ -460,11 +460,8 @@ jobs:
             label: Macro-host integration
           - shard: target-packages
             label: Portable, snapshots, and examples
-          - shard: hxhx-targets
-            label: hxhx target end-to-end
-    # The slowest measured shard has a roughly 20-minute test body. Keep room
-    # for toolchain setup and normal hosted-runner variation without restoring
-    # the former 60-minute serialized lane.
+    # Q2 keeps the three bounded compiler/target families. The large hxhx
+    # application workload has its own Q3 job below.
     timeout-minutes: 40
     steps:
       - name: Checkout
@@ -523,11 +520,75 @@ jobs:
           HXHX_STAGE0_FAILFAST_SECS: "7200"
         run: npm run test:ci:shard -- --shard "${{ matrix.shard }}"
 
+  hxhx-e2e:
+    name: Tests / hxhx target end-to-end
+    runs-on: ubuntu-latest
+    needs: [route, guards]
+    if: ${{ needs.route.outputs.run_q3 == 'true' && needs.guards.result == 'success' }}
+    # This one serialized application workload measured about 24 minutes on a
+    # hosted runner. Reserve it for Q3 while retaining normal setup headroom.
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+      - name: Run hxhx target end-to-end shard
+        env:
+          HXHX_FORCE_STAGE0: "0"
+          HXHX_STAGE0_HEARTBEAT: "30"
+          HXHX_STAGE0_FAILFAST_SECS: "7200"
+        run: npm run test:ci:shard -- --shard hxhx-targets
+
   test:
     name: Tests
     if: ${{ always() }}
     runs-on: ubuntu-latest
-    needs: [route, secret-scan, guards, stage0-free-smoke, js-native-smoke, plugin-matrix, test-shards]
+    needs: [route, secret-scan, guards, stage0-free-smoke, js-native-smoke, plugin-matrix, test-shards, hxhx-e2e]
     timeout-minutes: 5
     steps:
       - name: Checkout

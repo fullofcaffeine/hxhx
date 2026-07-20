@@ -18,9 +18,13 @@ npm test
 ```
 
 `npm test` is the complete serialized regression inventory, not the command to
-rerun after every small edit. The required Core CI workflow runs the same
-inventory in four isolated shards and then reports one fail-closed `Tests`
-result. To reproduce one family locally without changing coverage ownership:
+rerun after every small edit. Core CI routes that inventory by change risk and
+then reports one fail-closed `Tests` result. Q2 target/compiler changes run the
+first 105 commands in three isolated shards plus bounded native/plugin
+canaries. Q3 high-risk, scheduled, manual, and release work adds the fourth
+`hxhx-targets` shard, which treats the compiler as a large application and
+usually takes about 20–25 runner minutes. To reproduce any family locally
+without changing coverage ownership:
 
 ```bash
 npm run test:ci:shard -- --shard compiler

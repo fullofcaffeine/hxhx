@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Keeps the historical `Tests` check fail-closed after its work is sharded.
- * GitHub supplies every prerequisite result through the `needs` context.
+ * Keeps the historical `Tests` check fail-closed after its work is sharded and
+ * risk-routed. GitHub supplies every prerequisite result through the `needs`
+ * context; the shard manifest is the only authority for tier-approved skips.
  */
 
-const { evaluateAggregateResults, loadPlan } = require('./core-test-shards')
+const { QA_TIERS, evaluateAggregateResults, jobsRequiredAtTier, loadPlan } = require('./core-test-shards')
 
-const QA_TIERS = ['Q0', 'Q1', 'Q2', 'Q3', 'Q4']
 const alwaysRequiredJobs = ['route', 'secret-scan']
 
 function fail(message) {
@@ -27,11 +27,8 @@ function main() {
     fail(error.message)
   }
 
-  const allowSkipped = tier === 'Q0'
-    ? plan.manifest.aggregateJobs
-    : tier === 'Q1'
-      ? plan.manifest.aggregateJobs.filter(job => job !== 'guards')
-      : []
+  const requiredJobs = new Set(jobsRequiredAtTier(plan.manifest, tier))
+  const allowSkipped = plan.manifest.aggregateJobs.filter(job => !requiredJobs.has(job))
   const failures = [
     ...evaluateAggregateResults(alwaysRequiredJobs, needs),
     ...evaluateAggregateResults(plan.manifest.aggregateJobs, needs, { allowSkipped })
@@ -44,7 +41,7 @@ function main() {
   }
 
   console.log(
-    `[core-test-aggregate] PASS tier=${tier} always=${alwaysRequiredJobs.length} jobs=${plan.manifest.aggregateJobs.length} skipped=${allowSkipped.length} commands=${plan.aggregateCommands.length}`
+    `[core-test-aggregate] PASS tier=${tier} always=${alwaysRequiredJobs.length} jobs=${plan.manifest.aggregateJobs.length} required=${requiredJobs.size} skipped=${allowSkipped.length} commands=${plan.aggregateCommands.length}`
   )
   console.log('CORE_TESTS_AGGREGATE:PASS')
 }
