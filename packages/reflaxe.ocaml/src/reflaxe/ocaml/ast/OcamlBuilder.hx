@@ -540,6 +540,15 @@ class OcamlBuilder {
 		return isDynamicLike(t) || nullablePrimitiveKind(t) != null || isTypeParameterType(t) || isNullableEnumType(t) != null;
 	}
 
+	/**
+		Normalizes Haxe default arguments while keeping the OCaml binding intentional.
+
+		Generic typed cleanup can remove the last source read of an optional
+		argument. We still retain its default-value normalization so the function's
+		carrier type and callable shape do not change. When the resulting OCaml body
+		does not read that normalized value, an explicit `ignore` documents the
+		discard and prevents warning 26 from becoming a native build error.
+	**/
 	function wrapFunctionArgDefaults(body:OcamlExpr, args:Array<{name:String, t:Type, value:Null<TypedExpr>}>):OcamlExpr {
 		var out = body;
 		final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
@@ -557,7 +566,7 @@ class OcamlBuilder {
 			final isMissing = OcamlExpr.EBinop(OcamlBinop.PhysEq,
 				paramUsesDirectNullSentinelCompare(a.t) ? paramExpr : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [paramExpr]), hxNull);
 			final normalized = OcamlExpr.EIf(isMissing, coerceForAssignment(a.t, a.value), paramExpr);
-			out = OcamlExpr.ELet(name, normalized, out, false);
+			out = OcamlExpr.ELet(name, normalized, ensureParamUsage(out, [OcamlPat.PVar(name)]), false);
 		}
 		return out;
 	}
