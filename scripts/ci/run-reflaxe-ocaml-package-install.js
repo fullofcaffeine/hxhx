@@ -179,24 +179,39 @@ function walkFiles(root, options = {}) {
 	return files
 }
 
-function sha256Tree(root, options = {}) {
-	const hash = crypto.createHash('sha256')
-	for (const file of walkFiles(root, options)) {
-		const name = Buffer.from(file.relative, 'utf8')
-		const contents = fs.readFileSync(file.absolute)
-		const lengths = Buffer.alloc(16)
-		lengths.writeBigUInt64BE(BigInt(name.length), 0)
-		lengths.writeBigUInt64BE(BigInt(contents.length), 8)
-		hash.update(lengths)
-		hash.update(name)
-		hash.update(contents)
-	}
-	return hash.digest('hex')
-}
-
 function isInside(parent, child) {
 	const relative = path.relative(parent, child)
 	return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
+}
+
+/**
+ * Reads the compiler-owned source revision instead of hashing volatile reports.
+ * The manifest itself inventories timing evidence, but its source-bundle view
+ * deliberately excludes that evidence from reproducible source identity.
+ */
+function generatedSourceRevision(outputDirectory) {
+	const manifestPath = path.join(outputDirectory, 'ocaml_artifact_manifest.json')
+	if (!fs.existsSync(manifestPath)) {
+		fail('generated OCaml output is missing ocaml_artifact_manifest.json')
+	}
+	const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+	if (manifest.schemaVersion !== 1 || manifest.model !== 'reflaxe-ocaml-artifact-manifest') {
+		fail('generated OCaml output has an unsupported artifact manifest')
+	}
+	if (manifest.summary?.completeForSourceBundle !== false
+		|| !Array.isArray(manifest.summary?.blockers)
+		|| manifest.summary.blockers.length !== 2) {
+		fail('generated artifact manifest did not preserve the current runtime/dependency packaging blockers')
+	}
+	const timing = manifest.entries?.find(entry => entry.path === 'ocaml_build_timing_report.json')
+	if (!timing || timing.stability !== 'volatile' || timing.includeInSourceBundle !== false) {
+		fail('generated artifact manifest did not separate volatile timing from source-bundle identity')
+	}
+	const revision = manifest.summary?.sourceBundleRevision
+	if (typeof revision !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(revision)) {
+		fail('generated artifact manifest has an invalid source-bundle revision')
+	}
+	return revision.slice('sha256:'.length)
 }
 
 /**
@@ -614,9 +629,12 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	} catch (error) {
 		fail(`installed inspect command did not emit valid JSON: ${error instanceof Error ? error.message : String(error)}`)
 	}
-	if (scaffoldInspectionReport.schemaVersion !== 2
+	if (scaffoldInspectionReport.schemaVersion !== 3
 		|| scaffoldInspectionReport.summary?.valid !== true
 		|| scaffoldInspectionReport.generatedFiles?.status !== 'present'
+		|| scaffoldInspectionReport.artifactManifest?.status !== 'present'
+		|| scaffoldInspectionReport.artifactManifest?.completeForSourceBundle !== false
+		|| scaffoldInspectionReport.artifactManifest?.blockers?.length !== 2
 		|| scaffoldInspectionReport.buildTiming?.status !== 'present'
 		|| scaffoldInspectionReport.buildTiming?.nativeBuildRan !== true
 		|| !Number.isInteger(scaffoldInspectionReport.buildTiming?.duneBuildMilliseconds)
@@ -673,11 +691,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		fail('native build did not produce out/_build/default/out.exe')
 	}
 	summary.externalApplication.nativeBuildPassed = true
-	summary.externalApplication.emittedSourceSha256 = sha256Tree(emittedRoot, {
-		skipDirectory: name => name === '_build',
-		// Elapsed milliseconds are evidence about this run, not emitted source.
-		skipFile: relative => summary.externalApplication.emittedSourceExcludedFiles.includes(relative)
-	})
+	summary.externalApplication.emittedSourceSha256 = generatedSourceRevision(emittedRoot)
 	summary.externalApplication.executableSha256 = sha256File(executable)
 
 	const runtime = requireSuccess('external-app-runtime', runStep('external-app-runtime', executable, [], { cwd: appRoot, env }))

@@ -113,19 +113,30 @@ haxelib run reflaxe.ocaml inspect --require-lowering
 haxelib run reflaxe.ocaml inspect --json
 ```
 
-It validates the generated-file receipt, optional native timing tied to the
-same receipt, compile profile, and current runtime module selection. Add
+Each successful build writes `ocaml_artifact_manifest.json`, which covers every
+compiler-owned non-cache file with its producer, role, byte count, SHA-256
+digest, and source-bundle status. Inspection validates that complete inventory
+as well as the narrower generated-module receipt, optional native timing,
+compile profile, and current runtime module selection. A missing, changed, or
+unattributed output file fails validation. Add
 `-D ocaml_lowering_report` to a custom HXML to expose the
 migrated typed place assignment/update plans; the starter templates already do
 this. Those entries explain source positions, semantic-to-carrier types,
 representation reasons, effect schedules, and runtime requirements.
 
-The authority boundary is part of the output. Today's runtime report is not
-presented as the future source-rooted semantic manifest, and the typed place
+The authority boundary is part of the output. The generated-file inventory is
+valid, but it explicitly says source-bundle packaging is blocked until semantic
+runtime requirements and native dependencies have locked inventories. Today's
+runtime report is not presented as the future source-rooted semantic manifest, and the typed place
 report is not presented as a whole-program IR. Representation registries,
 native dependencies, raw/unsafe proofs, bindings, and curated export ABIs stay
 marked unavailable until their typed owners land. Inspection is read-only and
 does not infer semantics by scanning generated OCaml or Dune files.
+
+The output directory is compiler-owned. Keep handwritten OCaml sources outside
+it for now; otherwise the build rejects them as unattributed rather than letting
+them silently enter a package. The planned adapter/dependency workflow will
+provide the explicit supported path for those files.
 
 ## Option A: use repo-local wiring in this monorepo
 

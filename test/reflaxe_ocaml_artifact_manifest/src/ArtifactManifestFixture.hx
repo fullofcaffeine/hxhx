@@ -2,6 +2,7 @@ import haxe.Json;
 import haxe.crypto.Sha256;
 import haxe.io.Path;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
+import reflaxe.ocaml.artifacts.OcamlArtifactConfigurationRevision;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactAuthority;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
@@ -113,8 +114,8 @@ class ArtifactManifestFixture {
 		write(Path.join([root, "ocaml_build_timing_report.json"]), timingContents);
 		final builder = new OcamlArtifactManifestBuilder(root, PROGRAM_REVISION, CONFIGURATION_REVISION, "portable");
 		builder.recordFrameworkModules();
-		recordGenerated(builder, "dune-project", OcamlArtifactKind.DuneProject, OcamlArtifactOwner.DuneProjectEmitter);
-		recordGenerated(builder, "ocaml_build_timing_report.json", OcamlArtifactKind.CompilerReport, OcamlArtifactOwner.BuildTimingReportWriter, false,
+		recordGenerated(builder, "dune-project", OcamlArtifactKind.DuneProject, OcamlArtifactOwner.DuneScaffold);
+		recordGenerated(builder, "ocaml_build_timing_report.json", OcamlArtifactKind.CompilerReport, OcamlArtifactOwner.BuildTimingReport, false,
 			OcamlArtifactStability.Volatile);
 		return builder.seal(incompleteAuthority("semantic-runtime-requirements-v0", "Semantic runtime ownership is not complete."),
 			incompleteAuthority("native-dependency-manifest-v0", "Native dependency ownership is not complete."));
@@ -154,7 +155,7 @@ class ArtifactManifestFixture {
 		prepareOutput(unsafeOutput, []);
 		final unsafeBuilder = new OcamlArtifactManifestBuilder(unsafeOutput, PROGRAM_REVISION, CONFIGURATION_REVISION, "portable");
 		expectFailure("unsafe path", "not a safe output-relative path",
-			() -> recordGenerated(unsafeBuilder, "../escape.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.OcamlCompiler));
+			() -> recordGenerated(unsafeBuilder, "../escape.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.CompilerCore));
 
 		final ownerOutput = Path.join([root, "owner"]);
 		prepareOutput(ownerOutput, []);
@@ -167,14 +168,14 @@ class ArtifactManifestFixture {
 		prepareOutput(duplicateOutput, []);
 		write(Path.join([duplicateOutput, "Main.ml"]), "let value = 1\n");
 		final duplicateBuilder = new OcamlArtifactManifestBuilder(duplicateOutput, PROGRAM_REVISION, CONFIGURATION_REVISION, "portable");
-		recordGenerated(duplicateBuilder, "Main.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.OcamlCompiler);
+		recordGenerated(duplicateBuilder, "Main.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.CompilerCore);
 		expectFailure("duplicate claim", "registered more than once",
-			() -> recordGenerated(duplicateBuilder, "Main.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.OcamlCompiler));
+			() -> recordGenerated(duplicateBuilder, "Main.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.CompilerCore));
 
 		final missingOutput = Path.join([root, "missing"]);
 		prepareOutput(missingOutput, []);
 		final missingBuilder = new OcamlArtifactManifestBuilder(missingOutput, PROGRAM_REVISION, CONFIGURATION_REVISION, "portable");
-		recordGenerated(missingBuilder, "Missing.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.OcamlCompiler);
+		recordGenerated(missingBuilder, "Missing.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.CompilerCore);
 		expectFailure("missing file", "is missing or is not a file",
 			() -> missingBuilder.seal(incompleteAuthority("runtime-v0", "runtime incomplete"),
 				incompleteAuthority("dependencies-v0", "dependencies incomplete")));
@@ -195,7 +196,7 @@ class ArtifactManifestFixture {
 		write(Path.join([cleanOutput, "old/Generated.ml"]), "let old = true\n");
 		var builder = new OcamlArtifactManifestBuilder(cleanOutput, PROGRAM_REVISION, CONFIGURATION_REVISION, "portable");
 		builder.recordFrameworkModules();
-		recordGenerated(builder, "old/Generated.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.OcamlCompiler);
+		recordGenerated(builder, "old/Generated.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.CompilerCore);
 		builder.seal(incompleteAuthority("runtime-v0", "runtime incomplete"), incompleteAuthority("dependencies-v0", "dependencies incomplete"));
 		builder = new OcamlArtifactManifestBuilder(cleanOutput, PROGRAM_REVISION, CONFIGURATION_REVISION, "portable");
 		builder.recordFrameworkModules();
@@ -208,7 +209,7 @@ class ArtifactManifestFixture {
 		write(Path.join([modifiedOutput, "old/Generated.ml"]), "let old = true\n");
 		builder = new OcamlArtifactManifestBuilder(modifiedOutput, PROGRAM_REVISION, CONFIGURATION_REVISION, "portable");
 		builder.recordFrameworkModules();
-		recordGenerated(builder, "old/Generated.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.OcamlCompiler);
+		recordGenerated(builder, "old/Generated.ml", OcamlArtifactKind.EntrySource, OcamlArtifactOwner.CompilerCore);
 		builder.seal(incompleteAuthority("runtime-v0", "runtime incomplete"), incompleteAuthority("dependencies-v0", "dependencies incomplete"));
 		write(Path.join([modifiedOutput, "old/Generated.ml"]), "let user_edit = true\n");
 		builder = new OcamlArtifactManifestBuilder(modifiedOutput, PROGRAM_REVISION, CONFIGURATION_REVISION, "portable");
@@ -229,6 +230,45 @@ class ArtifactManifestFixture {
 			() -> OcamlArtifactManifestSchema.loadAndValidate(output, PROGRAM_REVISION, CONFIGURATION_REVISION));
 	}
 
+	static function testWorkingDirectoryIndependence(root:String):Void {
+		final output = Path.join([root, "working-directory"]);
+		prepareOutput(output, []);
+		write(Path.join([output, "Generated.mli"]), "val answer : int\n");
+		var builder = new OcamlArtifactManifestBuilder(output, PROGRAM_REVISION, CONFIGURATION_REVISION, "portable");
+		builder.recordFrameworkModules();
+		recordGenerated(builder, "Generated.mli", OcamlArtifactKind.InferredInterface, OcamlArtifactOwner.MliInference);
+		builder.seal(incompleteAuthority("runtime-v0", "runtime incomplete"), incompleteAuthority("dependencies-v0", "dependencies incomplete"));
+
+		builder = new OcamlArtifactManifestBuilder(output, PROGRAM_REVISION, CONFIGURATION_REVISION, "portable");
+		final previousDirectory = Sys.getCwd();
+		try {
+			Sys.setCwd(output);
+			assertTrue(builder.isUnchangedPrevious("Generated.mli"),
+				"prior generated files should remain identifiable while a build tool changes the working directory");
+		} catch (error:Dynamic) {
+			Sys.setCwd(previousDirectory);
+			throw error;
+		}
+		Sys.setCwd(previousDirectory);
+	}
+
+	static function testConfigurationRevision():Void {
+		final left:Map<String, String> = [
+			"ocaml_profile" => "Portable",
+			"ocaml_runtime_modules" => "HxString,HxRuntime,HxString"
+		];
+		final right:Map<String, String> = ["ocaml_runtime_modules" => "HxRuntime, HxString", "ocaml_profile" => "portable"];
+		final leftRevision = OcamlArtifactConfigurationRevision.fromValues("target-pipeline-v1", "example_project", left);
+		final rightRevision = OcamlArtifactConfigurationRevision.fromValues("target-pipeline-v1", "example_project", right);
+		assertTrue(leftRevision == rightRevision, "equivalent normalized source settings should have one configuration revision");
+		assertTrue(leftRevision != OcamlArtifactConfigurationRevision.fromValues("target-pipeline-v2", "example_project", right),
+			"a target-pipeline change should invalidate the source configuration");
+		assertTrue(leftRevision != OcamlArtifactConfigurationRevision.fromValues("target-pipeline-v1", "other_project", right),
+			"a generated Dune project-name change should invalidate the source configuration");
+		expectFailure("unknown source setting", "Unknown OCaml source-configuration setting",
+			() -> OcamlArtifactConfigurationRevision.fromValues("target-pipeline-v1", "example_project", ["ocaml_build_timing_report" => "1"]));
+	}
+
 	static function main():Void {
 		final root = ".tmp/reflaxe_ocaml_artifact_manifest_"
 			+ Std.string(Std.int(Date.now().getTime()))
@@ -241,6 +281,8 @@ class ArtifactManifestFixture {
 			testRegistrationFailures(root);
 			testStaleCleanup(root);
 			testSealedValidation(root);
+			testWorkingDirectoryIndependence(root);
+			testConfigurationRevision();
 		} catch (error:Dynamic) {
 			removeTree(root);
 			throw error;

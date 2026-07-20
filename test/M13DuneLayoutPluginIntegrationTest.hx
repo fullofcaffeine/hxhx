@@ -97,6 +97,8 @@ class M13DuneLayoutPluginIntegrationTest {
 		assertContains(entryContent, "let () = ()", "plugin entry should be a no-op");
 		if (entryContent.indexOf("Pkg_M13MliMain.main") >= 0)
 			throw "plugin entry should not call the main module";
+		final pluginManifest = OcamlArtifactManifestTestHelper.validate(outDir, "portable");
+		OcamlArtifactManifestTestHelper.assertEntry(pluginManifest, exeName + ".ml", "dune-project-emitter", "entry-source", true);
 
 		final pluginRunMainOutDir = "out_ocaml_m13_dune_plugin_run_main_" + Std.string(Std.int(Date.now().getTime()));
 		sys.FileSystem.createDirectory(pluginRunMainOutDir);
@@ -185,6 +187,8 @@ class M13DuneLayoutPluginIntegrationTest {
 			throw "expected excluded path output to be pruned (HxTypeRegistry.ml)";
 		final filteredExeName = exeNameFromOutDir(filteredOutDir);
 		assertExists(filteredOutDir + "/" + filteredExeName + ".ml", "filtered plugin entry module");
+		final filteredManifest = OcamlArtifactManifestTestHelper.validate(filteredOutDir, "portable");
+		OcamlArtifactManifestTestHelper.assertEntry(filteredManifest, filteredExeName + ".ml", "dune-project-emitter", "entry-source", true);
 		if (Sys.command("sh", ["-c", "command -v dune >/dev/null 2>&1 && command -v ocamlc >/dev/null 2>&1"]) == 0) {
 			final prev = Sys.getCwd();
 			Sys.setCwd(filteredOutDir);

@@ -3,6 +3,11 @@ package reflaxe.ocaml.runtimegen;
 #if (macro || reflaxe_runtime)
 import haxe.io.Path;
 import reflaxe.output.OutputManager;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 import reflaxe.ocaml.OcamlBuildContext;
 import reflaxe.ocaml.OcamlAtomicSemantics;
 import reflaxe.ocaml.OcamlProfileContract;
@@ -297,7 +302,7 @@ class RuntimeCopier {
 		return out;
 	}
 
-	static function writeProfileReport(output:OutputManager, requested:Null<String>, context:OcamlBuildContext):Void {
+	static function writeProfileReport(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, requested:Null<String>, context:OcamlBuildContext):Void {
 		#if macro
 		final strictSnapshot = StrictModeEnforcer.snapshot();
 		#else
@@ -331,10 +336,12 @@ class RuntimeCopier {
 			}
 		};
 		output.saveFile(PROFILE_REPORT_FILE, haxe.Json.stringify(report, null, "  ") + "\n");
+		recordReport(artifacts, PROFILE_REPORT_FILE);
 	}
 
-	static function writeRuntimePlanReport(output:OutputManager, context:OcamlBuildContext, selectionMode:String, availableModules:Array<String>,
-			trackedModules:Array<String>, manualModules:Array<String>, selectedModules:Array<String>, inclusionReasons:Array<RuntimePlanInclusionReason>):Void {
+	static function writeRuntimePlanReport(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, context:OcamlBuildContext, selectionMode:String,
+			availableModules:Array<String>, trackedModules:Array<String>, manualModules:Array<String>, selectedModules:Array<String>,
+			inclusionReasons:Array<RuntimePlanInclusionReason>):Void {
 		final report:RuntimePlanReport = {
 			schemaVersion: 2,
 			profile: OcamlProfileContract.toDefineValue(context.profile),
@@ -351,9 +358,25 @@ class RuntimeCopier {
 			inclusionReasons: inclusionReasons
 		};
 		output.saveFile(RUNTIME_PLAN_REPORT_FILE, haxe.Json.stringify(report, null, "  ") + "\n");
+		recordReport(artifacts, RUNTIME_PLAN_REPORT_FILE);
 	}
 
-	public static function copy(output:OutputManager, destSubdir:String = "runtime", compilerTrackedModules:Array<String>):Void {
+	static function recordReport(artifacts:OcamlArtifactManifestBuilder, path:String):Void {
+		artifacts.record({
+			path: path,
+			kind: OcamlArtifactKind.CompilerReport,
+			owner: OcamlArtifactOwner.RuntimePackaging,
+			sourceKind: OcamlArtifactSourceKind.Generated,
+			sourcePath: null,
+			license: "generated-output",
+			profileEligibility: ["portable", "metal"],
+			stability: OcamlArtifactStability.Stable,
+			includeInSourceBundle: false
+		});
+	}
+
+	public static function copy(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, destSubdir:String = "runtime",
+			compilerTrackedModules:Array<String>):Void {
 		final stdDir = tryResolveStdDir();
 		if (stdDir == null)
 			return;
@@ -410,8 +433,8 @@ class RuntimeCopier {
 		}
 		final selectedModuleList = mapKeysSorted(selectedModules);
 		final inclusionReasons = inclusionReasonsSorted(inclusionReasonMap, selectedModuleList);
-		writeProfileReport(output, rawRequestedProfile, buildContext);
-		writeRuntimePlanReport(output, buildContext, selectionMode, availableModules.copy(), trackedModules, manualModules, selectedModuleList,
+		writeProfileReport(output, artifacts, rawRequestedProfile, buildContext);
+		writeRuntimePlanReport(output, artifacts, buildContext, selectionMode, availableModules.copy(), trackedModules, manualModules, selectedModuleList,
 			inclusionReasons);
 
 		for (name in runtimeFiles) {
@@ -424,6 +447,17 @@ class RuntimeCopier {
 			final rel = destSubdir + "/" + name;
 			final content = sys.io.File.getContent(src);
 			output.saveFile(rel, content);
+			artifacts.record({
+				path: rel,
+				kind: OcamlArtifactKind.RuntimeSource,
+				owner: OcamlArtifactOwner.RuntimePackaging,
+				sourceKind: OcamlArtifactSourceKind.CopiedRuntime,
+				sourcePath: "std/runtime/" + name,
+				license: "MIT",
+				profileEligibility: ["portable", "metal"],
+				stability: OcamlArtifactStability.Stable,
+				includeInSourceBundle: true
+			});
 		}
 	}
 }

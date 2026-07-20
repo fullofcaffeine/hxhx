@@ -1,6 +1,11 @@
 package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 import reflaxe.output.OutputManager;
 
 /**
@@ -71,7 +76,8 @@ class PackageAliasEmitter {
 		return name;
 	}
 
-	public static function emit(output:OutputManager, haxeModules:Array<String>, ?ocamlModuleNameForHaxeModuleId:(String) -> String):Void {
+	public static function emit(output:OutputManager, haxeModules:Array<String>, artifacts:OcamlArtifactManifestBuilder,
+			?ocamlModuleNameForHaxeModuleId:(String) -> String):Void {
 		if (output == null || output.outputDir == null)
 			return;
 
@@ -188,6 +194,17 @@ class PackageAliasEmitter {
 
 			lines.push("");
 			output.saveFile(fileName, lines.join("\n"));
+			artifacts.record({
+				path: fileName,
+				kind: OcamlArtifactKind.PackageAliasSource,
+				owner: OcamlArtifactOwner.PackageAliasGeneration,
+				sourceKind: OcamlArtifactSourceKind.Generated,
+				sourcePath: null,
+				license: "generated-output",
+				profileEligibility: ["portable", "metal"],
+				stability: OcamlArtifactStability.Stable,
+				includeInSourceBundle: true
+			});
 		}
 	}
 }

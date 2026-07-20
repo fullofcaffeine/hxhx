@@ -62,5 +62,39 @@ class M5GuardrailsIntegrationTest {
 		final out4 = baseOut + "/type_reflection";
 		sys.FileSystem.createDirectory(out4);
 		assertOk(common.concat(["-main", "TypeReflectionMain", "-D", "ocaml_output=" + out4]), "Type.* reflection supported (minimal)");
+
+		final cleanupOut = baseOut + "/manifest_cleanup";
+		sys.FileSystem.createDirectory(cleanupOut);
+		final withScaffold = common.slice(0, common.length - 2);
+		assertOk(withScaffold.concat(["-main", "InheritanceMain", "-D", "ocaml_output=" + cleanupOut]), "artifact cleanup setup");
+		final firstManifest = OcamlArtifactManifestTestHelper.validate(cleanupOut, "portable");
+		OcamlArtifactManifestTestHelper.assertEntry(firstManifest, "dune", "dune-project-emitter", "dune-stanza", true);
+		OcamlArtifactManifestTestHelper.assertEntry(firstManifest, "runtime/HxRuntime.ml", "runtime-copier", "runtime-source", true);
+		assertOk(common.concat([
+			"-main",
+			"InheritanceMain",
+			"-D",
+			"ocaml_no_runtime",
+			"-D",
+			"ocaml_output=" + cleanupOut
+		]), "artifact cleanup without Dune/runtime");
+		final cleanedManifest = OcamlArtifactManifestTestHelper.validate(cleanupOut, "portable");
+		OcamlArtifactManifestTestHelper.assertMissingEntry(cleanedManifest, "dune");
+		OcamlArtifactManifestTestHelper.assertMissingEntry(cleanedManifest, "runtime/HxRuntime.ml");
+		if (sys.FileSystem.exists(cleanupOut + "/dune") || sys.FileSystem.exists(cleanupOut + "/runtime/HxRuntime.ml"))
+			throw "obsolete compiler-owned Dune/runtime files survived the manifest cleanup cutover";
+
+		final manualPath = cleanupOut + "/ManualAdapter.ml";
+		sys.io.File.saveContent(manualPath, "let manual_value = 1\n");
+		assertFail(common.concat([
+			"-main",
+			"InheritanceMain",
+			"-D",
+			"ocaml_no_runtime",
+			"-D",
+			"ocaml_output=" + cleanupOut
+		]), "unregistered non-cache file", "unattributed output file");
+		if (!sys.FileSystem.exists(manualPath))
+			throw "artifact validation deleted an unattributed user file";
 	}
 }

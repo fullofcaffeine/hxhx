@@ -2,6 +2,7 @@ package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
 import haxe.io.Path;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
 import reflaxe.ocaml.runtimegen.OcamlBuildTimingReport.OcamlBuildTimingPhase;
 import reflaxe.ocaml.runtimegen.OcamlBuildTimingReport.OcamlBuildTimingReportWriter;
 
@@ -37,6 +38,9 @@ typedef BuildRunConfig = {
 
 	/** Writes target-owned Dune phase timings tied to the current generated receipt. **/
 	final timingReport:Bool;
+
+	/** Current output transaction, used by post-build interface and report writers. **/
+	final artifacts:OcamlArtifactManifestBuilder;
 }
 
 class OcamlBuildRunner {
@@ -167,7 +171,7 @@ class OcamlBuildRunner {
 					duneBuildMilliseconds: nativeBuildRan ? duneBuildMilliseconds : null,
 					interfaceMilliseconds: interfaceMilliseconds,
 					targetRunMilliseconds: targetRunMilliseconds
-				});
+				}, cfg.artifacts);
 				return result;
 			} catch (error:Dynamic) {
 				final reportError = "Could not write OCaml native timing report: " + Std.string(error);
@@ -228,7 +232,7 @@ class OcamlBuildRunner {
 					switch (cfg.mli) {
 						case "infer":
 							final inferStarted = haxe.Timer.stamp();
-							final mliRes = OcamlMliGenerator.tryInferFromBuild(outDirAbs);
+							final mliRes = OcamlMliGenerator.tryInferFromBuild(outDirAbs, cfg.artifacts);
 							addPhase("mli_infer", elapsedMilliseconds(inferStarted), switch (mliRes) {
 								case Ok(_): 0;
 								case Err(_): 1;
@@ -273,7 +277,7 @@ class OcamlBuildRunner {
 							switch (ensureRes) {
 								case Ok(_):
 									final inferStarted = haxe.Timer.stamp();
-									final mliRes = OcamlMliGenerator.tryInferFromBuild(outDirAbs);
+									final mliRes = OcamlMliGenerator.tryInferFromBuild(outDirAbs, cfg.artifacts);
 									addPhase("mli_infer", elapsedMilliseconds(inferStarted), switch (mliRes) {
 										case Ok(_): 0;
 										case Err(_): 1;

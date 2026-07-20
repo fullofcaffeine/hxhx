@@ -120,9 +120,13 @@ haxelib run reflaxe.ocaml inspect --require-lowering
 haxelib run reflaxe.ocaml inspect --json
 ```
 
-The report validates Reflaxe's generated-file receipt, optional native Dune
-timing tied to that receipt, the active OCaml profile, and the current
-runtime-selection report. When the HXML contains
+Every successful compilation now writes `ocaml_artifact_manifest.json`. It
+names every compiler-owned non-cache file—not only Haxe modules—along with the
+component that produced it, its role, byte count, SHA-256 digest, and whether it
+belongs in a reproducible source bundle. `inspect` rechecks those files and
+fails if one is missing, modified, duplicated, or unknown. It also validates
+Reflaxe's narrower generated-module receipt, optional native Dune timing, the
+active OCaml profile, and the current runtime-selection report. When the HXML contains
 `-D ocaml_lowering_report` (included in the starter templates), it also shows
 the source location, semantic and carrier types, representation reason, effect
 order, and runtime requirements for assignment/update operations already on the
@@ -130,12 +134,19 @@ typed place-lowering path. `--output` selects a non-default project-relative
 output directory.
 
 This is intentionally honest inspection, not generated-code guesswork. The
-runtime selection report is labeled as the current compiler/runtime report,
-not the future source-rooted semantic runtime manifest. Program-wide
+artifact inventory is valid today, but it reports source-bundle packaging as
+blocked until the runtime reasons and native dependencies have their own locked
+inventories. The runtime selection report is labeled as the current
+compiler/runtime report, not the future source-rooted semantic runtime manifest. Program-wide
 representation, native dependency, raw/unsafe, typed binding, and curated
 export-ABI inspection remain visibly unavailable until their owning typed
 manifests land. The command never scans emitted OCaml or Dune text to fabricate
 those answers.
+
+Treat `ocaml_output` as compiler-owned. Do not place handwritten `.ml`, `.mli`,
+or project files inside it: an unattributed file now stops the build instead of
+silently entering a later package. Keep native sources outside the generated
+directory until the structured adapter/dependency workflow is available.
 
 ## Quickstart (inside this monorepo)
 

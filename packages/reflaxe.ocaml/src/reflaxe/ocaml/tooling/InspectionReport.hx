@@ -17,6 +17,49 @@ typedef InspectionGeneratedFiles = {
 	final message:String;
 }
 
+/** One category and its number of files in the generated-artifact inventory. **/
+typedef InspectionArtifactCount = {
+	final id:String;
+	final count:Int;
+}
+
+/** One prerequisite whose own inventory contributes to packaging trust. **/
+typedef InspectionArtifactAuthority = {
+	final status:String;
+	final model:String;
+	final revision:Null<String>;
+	final message:String;
+}
+
+/**
+	The verified ownership and digest summary for every generated OCaml file.
+
+	A present manifest can still report `completeForSourceBundle = false`. That
+	means the file inventory itself is sound, while another required inventory—
+	such as semantic runtime reasons or locked native dependencies—is unfinished.
+**/
+typedef InspectionArtifactManifest = {
+	final status:String;
+	final path:String;
+	final schemaVersion:Null<Int>;
+	final model:Null<String>;
+	final programRevision:Null<String>;
+	final configurationRevision:Null<String>;
+	final profile:Null<String>;
+	final entryCount:Int;
+	final sourceBundleEntryCount:Int;
+	final volatileEvidenceEntryCount:Int;
+	final sourceBundleRevision:Null<String>;
+	final artifactSetRevision:Null<String>;
+	final completeForSourceBundle:Null<Bool>;
+	final semanticRuntime:Null<InspectionArtifactAuthority>;
+	final nativeDependencies:Null<InspectionArtifactAuthority>;
+	final ownerCounts:Array<InspectionArtifactCount>;
+	final kindCounts:Array<InspectionArtifactCount>;
+	final blockers:Array<String>;
+	final message:String;
+}
+
 /** One measured target-owned native build step. **/
 typedef InspectionBuildTimingPhase = {
 	final id:String;
@@ -140,6 +183,7 @@ typedef InspectionSummary = {
 	final exitCode:Int;
 	final errorCount:Int;
 	final generatedFileCount:Int;
+	final artifactEntryCount:Int;
 	final runtimeModuleCount:Int;
 	final loweredPlanCount:Int;
 }
@@ -156,6 +200,7 @@ typedef InspectionReport = {
 	final projectRoot:String;
 	final outputDirectory:String;
 	final generatedFiles:InspectionGeneratedFiles;
+	final artifactManifest:InspectionArtifactManifest;
 	final buildTiming:InspectionBuildTiming;
 	final profile:InspectionProfile;
 	final runtime:InspectionRuntime;

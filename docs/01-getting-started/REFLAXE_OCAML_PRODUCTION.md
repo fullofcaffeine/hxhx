@@ -179,23 +179,33 @@ haxelib run reflaxe.ocaml inspect --require-lowering
 haxelib run reflaxe.ocaml inspect --json
 ```
 
-The command validates the exact current schemas for Reflaxe's generated-file
-receipt, optional native timing tied to the same receipt, the compile profile,
-and the runtime module-selection report. With
+Every successful build writes `ocaml_artifact_manifest.json`. It records every
+compiler-owned non-cache file, the component that produced it, its role, byte
+count, SHA-256 digest, and whether it belongs in the reproducible source bundle.
+The command rechecks that inventory and also validates Reflaxe's narrower
+generated-module receipt, optional native timing, the compile profile, and the
+runtime module-selection report. With
 `-D ocaml_lowering_report` (already present in the starter templates), it also
 summarizes the migrated typed assignment/update plans: source location,
 semantic and carrier types, representation reason, observable effect schedule,
 and runtime requirement IDs. Use `--output <directory>` when the HXML does not
 emit to `out`.
 
-Inspection is deliberately read-only and fail-closed. Missing or stale required
-reports fail; typed place lowering is optional unless `--require-lowering` is
-selected. It does not parse generated OCaml or Dune text to reconstruct compiler
-semantics. The current runtime selection is explicitly not the future locked,
-source-rooted semantic manifest, and the place report covers one migrated
+Inspection is deliberately read-only and fail-closed. Missing, stale, modified,
+or unattributed generated files fail; typed place lowering is optional unless
+`--require-lowering` is selected. It does not parse generated OCaml or Dune text
+to reconstruct compiler semantics. A valid artifact inventory still reports
+source-bundle packaging as blocked because the semantic runtime and structured
+native-dependency inventories have not landed. The current runtime selection is
+explicitly not the future locked, source-rooted semantic manifest, and the place report covers one migrated
 semantic family rather than a whole-program IR. Program-wide representation,
 native dependency, raw/unsafe, binding, and curated export-ABI inspection stay
 marked unavailable until their owning typed manifests exist.
+
+`ocaml_output` is a compiler-owned directory. Do not mix handwritten OCaml or
+project files into it: the build now rejects unknown non-cache files so they
+cannot silently enter a release bundle. Keep those sources separate until the
+structured adapter and native-dependency workflow provides an explicit owner.
 
 ## Installation modes
 

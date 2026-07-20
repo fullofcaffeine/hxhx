@@ -1,6 +1,6 @@
 package reflaxe.ocaml.artifacts;
 
-#if (macro || reflaxe_runtime)
+#if (macro || reflaxe_runtime || eval)
 import haxe.Json;
 import haxe.crypto.Sha256;
 import haxe.io.Path;
@@ -119,27 +119,44 @@ class OcamlArtifactManifestSchema {
 		return "sha256:" + Sha256.encode(Json.stringify(canonical));
 	}
 
+	/** Loads and fully validates the manifest currently sealed in an output directory. **/
+	public static function loadAndValidateCurrent(outputDirectory:String):OcamlArtifactManifestReport {
+		final value = readManifest(outputDirectory);
+		return validateManifest(outputDirectory, value, null, null);
+	}
+
 	/**
-		Loads a sealed manifest and proves that it still describes the expected
-		program/configuration and the bytes currently present on disk.
+		Loads a sealed manifest and additionally proves that it describes the
+		expected program and source-affecting configuration.
 	**/
 	public static function loadAndValidate(outputDirectory:String, expectedProgramRevision:String,
 			expectedConfigurationRevision:String):OcamlArtifactManifestReport {
+		final value = readManifest(outputDirectory);
+		return validateManifest(outputDirectory, value, expectedProgramRevision, expectedConfigurationRevision);
+	}
+
+	static function readManifest(outputDirectory:String):Dynamic {
 		final path = Path.join([outputDirectory, FILE_NAME]);
 		if (!FileSystem.exists(path) || FileSystem.isDirectory(path))
 			throw 'OCaml artifact manifest "$path" is missing.';
-		final value:Dynamic = try {
+		return try {
 			Json.parse(File.getContent(path));
 		} catch (error:Dynamic) {
 			throw 'OCaml artifact manifest "$path" is invalid JSON: ${Std.string(error)}';
 		}
+	}
+
+	static function validateManifest(outputDirectory:String, value:Dynamic, expectedProgramRevision:Null<String>,
+			expectedConfigurationRevision:Null<String>):OcamlArtifactManifestReport {
+		final path = Path.join([outputDirectory, FILE_NAME]);
 		if (requiredInt(value, "schemaVersion") != SCHEMA_VERSION || requiredString(value, "model") != MODEL)
 			throw 'OCaml artifact manifest "$path" uses an unsupported schema or model.';
 		final programRevision = normalizeRevision(requiredString(value, "programRevision"), "program revision");
 		final configurationRevision = normalizeRevision(requiredString(value, "configurationRevision"), "configuration revision");
-		if (programRevision != normalizeRevision(expectedProgramRevision, "expected program revision"))
+		if (expectedProgramRevision != null && programRevision != normalizeRevision(expectedProgramRevision, "expected program revision"))
 			throw 'OCaml artifact manifest belongs to stale program revision $programRevision.';
-		if (configurationRevision != normalizeRevision(expectedConfigurationRevision, "expected configuration revision"))
+		if (expectedConfigurationRevision != null
+			&& configurationRevision != normalizeRevision(expectedConfigurationRevision, "expected configuration revision"))
 			throw 'OCaml artifact manifest belongs to stale configuration revision $configurationRevision.';
 		final profile = validatedProfile(requiredString(value, "profile"));
 		if (requiredString(value, "frameworkReceipt") != FRAMEWORK_RECEIPT)
@@ -385,19 +402,19 @@ class OcamlArtifactManifestSchema {
 
 	static function validatedOwner(value:String, path:String):OcamlArtifactOwner {
 		return switch requireToken(value, 'owner for "$path"') {
-			case "reflaxe-framework": OcamlArtifactOwner.ReflaxeFramework;
-			case "ocaml-compiler": OcamlArtifactOwner.OcamlCompiler;
-			case "dune-project-emitter": OcamlArtifactOwner.DuneProjectEmitter;
-			case "runtime-copier": OcamlArtifactOwner.RuntimeCopier;
-			case "native-functor-emitter": OcamlArtifactOwner.NativeFunctorEmitter;
-			case "package-alias-emitter": OcamlArtifactOwner.PackageAliasEmitter;
-			case "lowering-report-writer": OcamlArtifactOwner.LoweringReportWriter;
-			case "lifecycle-trace-writer": OcamlArtifactOwner.LifecycleTraceWriter;
-			case "mli-generator": OcamlArtifactOwner.MliGenerator;
-			case "build-timing-report-writer": OcamlArtifactOwner.BuildTimingReportWriter;
-			case "binding-emitter": OcamlArtifactOwner.BindingEmitter;
-			case "native-adapter-emitter": OcamlArtifactOwner.NativeAdapterEmitter;
-			case "export-wrapper-emitter": OcamlArtifactOwner.ExportWrapperEmitter;
+			case "reflaxe-framework": OcamlArtifactOwner.Framework;
+			case "ocaml-compiler": OcamlArtifactOwner.CompilerCore;
+			case "dune-project-emitter": OcamlArtifactOwner.DuneScaffold;
+			case "runtime-copier": OcamlArtifactOwner.RuntimePackaging;
+			case "native-functor-emitter": OcamlArtifactOwner.NativeFunctorGeneration;
+			case "package-alias-emitter": OcamlArtifactOwner.PackageAliasGeneration;
+			case "lowering-report-writer": OcamlArtifactOwner.LoweringReport;
+			case "lifecycle-trace-writer": OcamlArtifactOwner.LifecycleTrace;
+			case "mli-generator": OcamlArtifactOwner.MliInference;
+			case "build-timing-report-writer": OcamlArtifactOwner.BuildTimingReport;
+			case "binding-emitter": OcamlArtifactOwner.BindingGeneration;
+			case "native-adapter-emitter": OcamlArtifactOwner.NativeAdapter;
+			case "export-wrapper-emitter": OcamlArtifactOwner.ExportWrapper;
 			case unknown: throw 'OCaml artifact "$path" has unknown owner "$unknown".';
 		};
 	}

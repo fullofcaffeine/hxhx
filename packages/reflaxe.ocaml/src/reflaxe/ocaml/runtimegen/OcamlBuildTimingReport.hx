@@ -3,6 +3,11 @@ package reflaxe.ocaml.runtimegen;
 #if (macro || reflaxe_runtime)
 import haxe.Json;
 import haxe.io.Path;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -76,7 +81,7 @@ class OcamlBuildTimingReportWriter {
 		changing ID, inspection could accidentally present timing from an older build.
 	**/
 	public static function write(outputDirectory:String, mode:String, duneLayout:String, target:String, strict:Bool, requestedRun:Bool, mliMode:Null<String>,
-			phases:Array<OcamlBuildTimingPhase>, summary:OcamlBuildTimingSummary):Void {
+			phases:Array<OcamlBuildTimingPhase>, summary:OcamlBuildTimingSummary, artifacts:OcamlArtifactManifestBuilder):Void {
 		final report:OcamlBuildTimingReport = {
 			schemaVersion: 1,
 			generatedFilesReceiptId: readGeneratedFilesReceiptId(outputDirectory),
@@ -97,6 +102,17 @@ class OcamlBuildTimingReportWriter {
 			summary: summary
 		};
 		writeAtomically(Path.join([outputDirectory, FILE_NAME]), Json.stringify(report, null, "  ") + "\n");
+		artifacts.record({
+			path: FILE_NAME,
+			kind: OcamlArtifactKind.CompilerReport,
+			owner: OcamlArtifactOwner.BuildTimingReport,
+			sourceKind: OcamlArtifactSourceKind.Generated,
+			sourcePath: null,
+			license: "generated-output",
+			profileEligibility: ["portable", "metal"],
+			stability: OcamlArtifactStability.Volatile,
+			includeInSourceBundle: false
+		});
 	}
 
 	static function readGeneratedFilesReceiptId(outputDirectory:String):Int {

@@ -1,6 +1,6 @@
 package reflaxe.ocaml.artifacts;
 
-#if (macro || reflaxe_runtime)
+#if (macro || reflaxe_runtime || eval)
 import haxe.Json;
 import haxe.io.Path;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactAuthority;
@@ -39,13 +39,14 @@ class OcamlArtifactManifestBuilder {
 	public function new(outputDirectory:String, programRevision:String, configurationRevision:String, profile:String) {
 		if (outputDirectory == null || outputDirectory.length == 0)
 			throw "OCaml artifact manifest requires an output directory.";
-		if (!FileSystem.exists(outputDirectory) || !FileSystem.isDirectory(outputDirectory))
+		final absoluteOutputDirectory = Path.normalize(FileSystem.absolutePath(outputDirectory));
+		if (!FileSystem.exists(absoluteOutputDirectory) || !FileSystem.isDirectory(absoluteOutputDirectory))
 			throw 'OCaml artifact manifest output directory "$outputDirectory" is missing.';
-		this.outputDirectory = outputDirectory;
+		this.outputDirectory = absoluteOutputDirectory;
 		this.programRevision = OcamlArtifactManifestSchema.normalizeRevision(programRevision, "program revision");
 		this.configurationRevision = OcamlArtifactManifestSchema.normalizeRevision(configurationRevision, "configuration revision");
 		this.profile = OcamlArtifactManifestSchema.validatedProfile(profile);
-		previousEntries = OcamlArtifactManifestSchema.readPreviousEntries(outputDirectory);
+		previousEntries = OcamlArtifactManifestSchema.readPreviousEntries(absoluteOutputDirectory);
 		clearPriorManifest();
 	}
 
@@ -55,6 +56,41 @@ class OcamlArtifactManifestBuilder {
 		if (claims.exists(normalized.path))
 			throw 'OCaml artifact path "${normalized.path}" was registered more than once.';
 		claims.set(normalized.path, normalized);
+	}
+
+	/** Returns whether the current output transaction owns this relative path. **/
+	public function isRecorded(path:String):Bool {
+		return claims.exists(OcamlArtifactManifestSchema.normalizeRelativePath(path));
+	}
+
+	/**
+		Removes a current claim after an explicit output filter deletes that file.
+
+		This does not delete bytes. The caller must perform the deletion first so an
+		unclaimed surviving file is still caught by the final consistency check.
+	**/
+	public function discardRecorded(path:String):Void {
+		claims.remove(OcamlArtifactManifestSchema.normalizeRelativePath(path));
+	}
+
+	/**
+		Returns whether an existing file is unchanged compiler output from the prior
+		manifest. A changed prior file fails instead of being silently re-adopted.
+	**/
+	public function isUnchangedPrevious(path:String):Bool {
+		final normalized = OcamlArtifactManifestSchema.normalizeRelativePath(path);
+		for (entry in previousEntries) {
+			if (entry.path != normalized)
+				continue;
+			final absolute = absolutePath(normalized);
+			if (!FileSystem.exists(absolute) || FileSystem.isDirectory(absolute))
+				return false;
+			final actual = OcamlArtifactManifestSchema.digestFile(absolute).sha256;
+			if (actual != entry.sha256)
+				throw 'Refusing to reuse modified OCaml artifact "$normalized"; expected ${entry.sha256}, found $actual.';
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -96,7 +132,7 @@ class OcamlArtifactManifestBuilder {
 			record({
 				path: path,
 				kind: OcamlArtifactKind.HaxeModuleSource,
-				owner: OcamlArtifactOwner.ReflaxeFramework,
+				owner: OcamlArtifactOwner.Framework,
 				sourceKind: OcamlArtifactSourceKind.Generated,
 				sourcePath: null,
 				license: "generated-output",

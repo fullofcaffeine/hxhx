@@ -56,6 +56,8 @@ class M13DuneLayoutLibIntegrationTest {
 		}
 		if (foundEntry)
 			throw "unexpected entry module in lib layout";
+		final manifest = OcamlArtifactManifestTestHelper.validate(outDir, "portable");
+		OcamlArtifactManifestTestHelper.assertEntry(manifest, "dune", "dune-project-emitter", "dune-stanza", true);
 
 		final runOutDir = outDir + "_run_rejected";
 		final runArgs = args.copy();

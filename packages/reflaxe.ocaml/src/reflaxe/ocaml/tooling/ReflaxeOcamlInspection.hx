@@ -5,6 +5,7 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionGeneratedFiles;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionArtifactManifest;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLowering;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionProfile;
@@ -37,16 +38,20 @@ class ReflaxeOcamlInspection {
 	/** Inspects one output directory without modifying or rebuilding the project. **/
 	public static function inspect(projectRoot:String, outputDirectory:String, requireLowering:Bool):InspectionReport {
 		final generated = inspectGenerated(Path.join([outputDirectory, GENERATED_FILES]));
+		final artifactManifest = OcamlArtifactManifestInspection.inspect(outputDirectory);
 		final buildTiming = OcamlBuildTimingInspection.inspect(Path.join([outputDirectory, OcamlBuildTimingInspection.FILE_NAME]), generated.receiptId);
 		final profile = inspectProfile(Path.join([outputDirectory, PROFILE_REPORT]));
 		final runtime = inspectRuntime(Path.join([outputDirectory, RUNTIME_REPORT]));
 		final lowering = inspectLowering(Path.join([outputDirectory, LOWERING_REPORT]), requireLowering);
-		final consistencyErrors = artifactConsistencyErrors(profile, runtime);
+		final consistencyErrors = artifactConsistencyErrors(profile, runtime, artifactManifest);
 		var errorCount = 0;
 		for (status in [generated.status, profile.status, runtime.status]) {
 			if (status != "present") {
 				errorCount++;
 			}
+		}
+		if (artifactManifest.status != "present") {
+			errorCount++;
 		}
 		if (lowering.status == "invalid" || (requireLowering && lowering.status != "present")) {
 			errorCount++;
@@ -57,10 +62,11 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 2,
+			schemaVersion: 3,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
+			artifactManifest: artifactManifest,
 			buildTiming: buildTiming,
 			profile: profile,
 			runtime: runtime,
@@ -72,6 +78,7 @@ class ReflaxeOcamlInspection {
 				exitCode: errorCount == 0 ? 0 : 1,
 				errorCount: errorCount,
 				generatedFileCount: generated.files.length,
+				artifactEntryCount: artifactManifest.entryCount,
 				runtimeModuleCount: runtime.selectedModules.length,
 				loweredPlanCount: lowering.plans.length
 			}
@@ -86,6 +93,7 @@ class ReflaxeOcamlInspection {
 		lines.push('Output: ${report.outputDirectory}');
 		lines.push("");
 		lines.push(renderGenerated(report.generatedFiles));
+		lines.push(OcamlArtifactManifestInspection.renderHuman(report.artifactManifest));
 		lines.push(OcamlBuildTimingInspection.renderHuman(report.buildTiming));
 		lines.push(renderProfile(report.profile));
 		lines.push(renderRuntime(report.runtime));
@@ -121,7 +129,7 @@ class ReflaxeOcamlInspection {
 			lines.push('  - ${capability.label}: ${capability.reason}');
 		}
 		lines.push("");
-		lines.push(report.summary.valid ? 'REFLAXE_OCAML_INSPECT:PASS generated_files=${report.summary.generatedFileCount} runtime_modules=${report.summary.runtimeModuleCount} lowered_plans=${report.summary.loweredPlanCount}' : 'REFLAXE_OCAML_INSPECT:FAIL errors=${report.summary.errorCount}');
+		lines.push(report.summary.valid ? 'REFLAXE_OCAML_INSPECT:PASS generated_files=${report.summary.generatedFileCount} artifacts=${report.summary.artifactEntryCount} runtime_modules=${report.summary.runtimeModuleCount} lowered_plans=${report.summary.loweredPlanCount}' : 'REFLAXE_OCAML_INSPECT:FAIL errors=${report.summary.errorCount}');
 		return lines.join("\n") + "\n";
 	}
 
@@ -319,7 +327,7 @@ class ReflaxeOcamlInspection {
 		return result;
 	}
 
-	static function artifactConsistencyErrors(profile:InspectionProfile, runtime:InspectionRuntime):Array<String> {
+	static function artifactConsistencyErrors(profile:InspectionProfile, runtime:InspectionRuntime, artifactManifest:InspectionArtifactManifest):Array<String> {
 		final errors = new Array<String>();
 		if (profile.status != "present" || runtime.status != "present") {
 			return errors;
@@ -329,6 +337,9 @@ class ReflaxeOcamlInspection {
 		}
 		if (profile.runtimeMode != runtime.runtimeMode) {
 			errors.push('Profile report says runtime mode "${profile.runtimeMode}" while runtime selection says "${runtime.runtimeMode}". Rebuild from a clean output directory.');
+		}
+		if (artifactManifest.status == "present" && artifactManifest.profile != profile.profile) {
+			errors.push('Artifact manifest says profile "${artifactManifest.profile}" while the compile profile says "${profile.profile}". Rebuild from a clean output directory.');
 		}
 		return errors;
 	}

@@ -2,6 +2,11 @@ package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
 import haxe.io.Path;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner.BuildResult;
 
 /**
@@ -256,7 +261,7 @@ class OcamlMliGenerator {
 		- The caller already ran `dune build` in `outDir` so that `_build/default`
 		  exists and contains `*.cmi` files.
 	**/
-	public static function tryInferFromBuild(outDir:String):BuildResult {
+	public static function tryInferFromBuild(outDir:String, artifacts:OcamlArtifactManifestBuilder):BuildResult {
 		final buildDefault = Path.join([outDir, BUILD_DIR, "default"]);
 		if (!sys.FileSystem.exists(buildDefault) || !sys.FileSystem.isDirectory(buildDefault)) {
 			return Err("ocaml_mli=infer requested but no dune build artifacts found at " + buildDefault);
@@ -283,8 +288,13 @@ class OcamlMliGenerator {
 			final abs = Path.join([outDir, rel]);
 			final mliRel = rel.substr(0, rel.length - 3) + ".mli";
 			final mliAbs = Path.join([outDir, mliRel]);
-			if (sys.FileSystem.exists(mliAbs))
+			if (sys.FileSystem.exists(mliAbs)) {
+				final unchangedPrevious = artifacts.isUnchangedPrevious(mliRel);
+				if (unchangedPrevious) {
+					recordInferredInterface(artifacts, mliRel, rel);
+				}
 				continue;
+			}
 
 			final args:Array<String> = [];
 			if (dunePkgs.length > 0) {
@@ -316,9 +326,24 @@ class OcamlMliGenerator {
 				""
 			].join("\n");
 			sys.io.File.saveContent(mliAbs, header + res.out);
+			recordInferredInterface(artifacts, mliRel, rel);
 		}
 
 		return Ok(null);
+	}
+
+	static function recordInferredInterface(artifacts:OcamlArtifactManifestBuilder, mliPath:String, sourcePath:String):Void {
+		artifacts.record({
+			path: mliPath,
+			kind: OcamlArtifactKind.InferredInterface,
+			owner: OcamlArtifactOwner.MliInference,
+			sourceKind: OcamlArtifactSourceKind.Inferred,
+			sourcePath: sourcePath,
+			license: "generated-output",
+			profileEligibility: ["portable", "metal"],
+			stability: OcamlArtifactStability.Stable,
+			includeInSourceBundle: true
+		});
 	}
 }
 #end

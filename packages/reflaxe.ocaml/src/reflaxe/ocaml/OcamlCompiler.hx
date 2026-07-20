@@ -18,6 +18,13 @@ import reflaxe.data.ClassFuncData;
 import reflaxe.data.ClassVarData;
 import reflaxe.data.EnumOptionData;
 import reflaxe.ocaml.CompilationContext;
+import reflaxe.ocaml.artifacts.OcamlArtifactConfigurationRevision;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestSchema;
 import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlBuilder;
 import reflaxe.ocaml.ast.OcamlExpr;
@@ -1768,18 +1775,39 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 		#end
 		final outDir = output.outputDir;
+		final revision = programRevision;
+		if (revision == null)
+			throw "reflaxe.ocaml: cannot seal generated artifacts without a program revision";
+		final artifactConfigurationRevision = OcamlArtifactConfigurationRevision.fromMacroContext(OcamlPlacePlanRegistry.PIPELINE_REVISION,
+			DuneProjectEmitter.defaultProjectName(outDir));
+		final artifactProfile = OcamlProfileContract.toDefineValue(OcamlProfileContract.fromDefineValue(haxe.macro.Context.definedValue("ocaml_profile")));
+		final artifacts = new OcamlArtifactManifestBuilder(outDir, revision.id, artifactConfigurationRevision, artifactProfile);
+
+		function sealArtifacts():Void {
+			artifacts.seal({
+				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
+				model: "syntax-derived-runtime-plan-v2",
+				revision: null,
+				message: "Runtime files are inventoried, but runtime selection is still inferred after syntax generation instead of from sealed semantic requirements."
+			}, {
+				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
+				model: "free-form-dune-libraries-v1",
+				revision: null,
+				message: "Native libraries and source units are not yet backed by a locked, structured dependency manifest."
+			});
+		}
+
 		// A timing report is tied to one generated-file receipt. Clear the prior
 		// revision even when this build will not run Dune or request new timing.
 		OcamlBuildTimingReportWriter.clear(outDir);
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
-			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted());
+			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
-			final revision = programRevision;
-			if (revision == null || semanticLifecycle == null)
+			if (semanticLifecycle == null)
 				throw "reflaxe.ocaml: semantic lifecycle tracing was requested without a sealed program/lifecycle";
-			OcamlSemanticLifecycleTraceWriter.write(outDir, revision.id, semanticLifecycle.pipelineRevision, getSemanticLifecycleTrace(),
+			OcamlSemanticLifecycleTraceWriter.write(outDir, revision.id, semanticLifecycle.pipelineRevision, getSemanticLifecycleTrace(), artifacts,
 				Context.definedValue("reflaxe_ocaml_semantic_lifecycle_trace_function"));
 		}
 		#end
@@ -1908,6 +1936,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		function collectOutputFilesRecursive(absDir:String, relBase:String, out:Array<String>):Void {
 			for (entry in sys.FileSystem.readDirectory(absDir)) {
 				final relPath = relBase.length == 0 ? entry : relBase + "/" + entry;
+				if (relPath == "_build" || StringTools.startsWith(relPath, "_build/"))
+					continue;
 				final absPath = haxe.io.Path.join([absDir, entry]);
 				if (sys.FileSystem.isDirectory(absPath)) {
 					collectOutputFilesRecursive(absPath, relPath, out);
@@ -2289,6 +2319,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		reorderMlSegmentsByLocalTypeDeps("haxe.io.ArrayBufferView");
 
 		final excludedModuleIds:Map<String, Bool> = [];
+		final excludedFrameworkPaths:Map<String, Bool> = [];
 		for (moduleId => _ in ctx.emittedHaxeModules) {
 			if (!shouldExcludeModuleOutput(moduleId))
 				continue;
@@ -2296,7 +2327,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 		for (moduleId => _ in excludedModuleIds) {
 			ctx.emittedHaxeModules.remove(moduleId);
-			final modulePath = haxe.io.Path.join([outDir, ctx.fileIdForModuleId(moduleId) + ".ml"]);
+			final moduleRelativePath = ctx.fileIdForModuleId(moduleId) + ".ml";
+			excludedFrameworkPaths.set(moduleRelativePath, true);
+			final modulePath = haxe.io.Path.join([outDir, moduleRelativePath]);
 			if (sys.FileSystem.exists(modulePath) && !sys.FileSystem.isDirectory(modulePath))
 				sys.FileSystem.deleteFile(modulePath);
 		}
@@ -2561,6 +2594,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 			lines.push("");
 
 			output.saveFile("HxTypeRegistry.ml", lines.join("\n"));
+			artifacts.record({
+				path: "HxTypeRegistry.ml",
+				kind: OcamlArtifactKind.TypeRegistrySource,
+				owner: OcamlArtifactOwner.CompilerCore,
+				sourceKind: OcamlArtifactSourceKind.Generated,
+				sourcePath: null,
+				license: "generated-output",
+				profileEligibility: ["portable", "metal"],
+				stability: OcamlArtifactStability.Stable,
+				includeInSourceBundle: true
+			});
 		}
 
 		#if macro
@@ -2635,17 +2679,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 				duneLibraries: duneLibs,
 				duneLayout: duneLayoutValue,
 				executables: executables
-			});
+			}, artifacts);
 		}
 
 		final noRuntime = haxe.macro.Context.defined("ocaml_no_runtime");
 		if (!noRuntime) {
-			RuntimeCopier.copy(output, "runtime", ctx.runtimeModulesSorted());
+			RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted());
 		}
 
 		// OCaml-native (M12): emit functor-instantiated modules when requested by interop surfaces.
 		if (ctx.needsOcamlNativeMapSet) {
-			OcamlNativeFunctorEmitter.emitMapSet(output);
+			OcamlNativeFunctorEmitter.emitMapSet(output, artifacts);
 		}
 
 		// Package alias modules (M8): generate dot-path access helpers unless disabled.
@@ -2655,8 +2699,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final modules:Array<String> = [];
 			for (m => _ in ctx.emittedHaxeModules)
 				modules.push(m);
-			PackageAliasEmitter.emit(output, modules, (m) -> ctx.ocamlModuleNameForModuleId(m));
+			PackageAliasEmitter.emit(output, modules, artifacts, (m) -> ctx.ocamlModuleNameForModuleId(m));
 		}
+
+		artifacts.recordFrameworkModules(excludedFrameworkPaths);
 
 		if (emitExcludePathPrefixes.length > 0) {
 			final outputFiles:Array<String> = [];
@@ -2664,9 +2710,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 			for (relPath in outputFiles) {
 				if (!shouldExcludeOutputPath(relPath))
 					continue;
+				if (relPath == OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT) {
+					haxe.macro.Context.error("ocaml_emit_exclude_paths cannot remove Reflaxe's generated-file receipt; choose a source-module prefix instead.",
+						haxe.macro.Context.currentPos());
+				}
+				if (!artifacts.isRecorded(relPath))
+					continue;
 				final absPath = haxe.io.Path.join([outDir, relPath]);
-				if (sys.FileSystem.exists(absPath) && !sys.FileSystem.isDirectory(absPath))
+				if (sys.FileSystem.exists(absPath) && !sys.FileSystem.isDirectory(absPath)) {
 					sys.FileSystem.deleteFile(absPath);
+					artifacts.discardRecorded(relPath);
+				}
 			}
 			pruneEmptyDirectoriesRecursive(outDir);
 		}
@@ -2701,8 +2755,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final strictBuild = buildMode != null;
 		final strictAny = strictBuild || (wantsMli && mliStrict);
 
-		if (!shouldBuild && !shouldRun && buildMode == null && !wantsMli)
+		if (!shouldBuild && !shouldRun && buildMode == null && !wantsMli) {
+			sealArtifacts();
 			return;
+		}
 
 		final exeName = DuneProjectEmitter.defaultExeName(outDir);
 		final mode = buildMode != null ? buildMode : "native";
@@ -2716,7 +2772,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			strict: strictAny,
 			mli: mliMode,
 			mliStrict: mliStrict,
-			timingReport: haxe.macro.Context.defined("ocaml_build_timing_report")
+			timingReport: haxe.macro.Context.defined("ocaml_build_timing_report"),
+			artifacts: artifacts
 		});
 
 		switch (result) {
@@ -2727,6 +2784,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				// Strict mode (ocaml_build=...) should stop compilation if build fails.
 				haxe.macro.Context.error(msg, haxe.macro.Context.currentPos());
 		}
+		sealArtifacts();
 		#if macro
 		if (profileEnabled) {
 			final now = profileNowS();

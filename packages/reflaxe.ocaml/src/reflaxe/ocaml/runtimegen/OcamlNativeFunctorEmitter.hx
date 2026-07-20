@@ -1,6 +1,11 @@
 package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 import reflaxe.output.OutputManager;
 
 /**
@@ -31,15 +36,15 @@ class OcamlNativeFunctorEmitter {
 		#end
 	}
 
-	public static function emitMapSet(output:OutputManager):Void {
-		emitMap(output, "OcamlNativeStringMap", "string");
-		emitMap(output, "OcamlNativeIntMap", "int");
+	public static function emitMapSet(output:OutputManager, artifacts:OcamlArtifactManifestBuilder):Void {
+		emitMap(output, artifacts, "OcamlNativeStringMap", "string");
+		emitMap(output, artifacts, "OcamlNativeIntMap", "int");
 
-		emitSet(output, "OcamlNativeStringSet", "string");
-		emitSet(output, "OcamlNativeIntSet", "int");
+		emitSet(output, artifacts, "OcamlNativeStringSet", "string");
+		emitSet(output, artifacts, "OcamlNativeIntSet", "int");
 	}
 
-	static function emitMap(output:OutputManager, moduleName:String, keyType:String):Void {
+	static function emitMap(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, moduleName:String, keyType:String):Void {
 		// Use Stdlib.compare to avoid relying on `Stdlib.Int` / `Stdlib.String` module availability
 		// across OCaml versions, while still producing a lawful ordering for `int`/`string`.
 		final fileName = moduleName + ".ml";
@@ -56,10 +61,10 @@ class OcamlNativeFunctorEmitter {
 			""
 		];
 		lines.remove(null);
-		output.saveFile(fileName, lines.join("\n"));
+		saveGenerated(output, artifacts, fileName, lines.join("\n"));
 	}
 
-	static function emitSet(output:OutputManager, moduleName:String, keyType:String):Void {
+	static function emitSet(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, moduleName:String, keyType:String):Void {
 		final fileName = moduleName + ".ml";
 		final lines = [
 			maybeLineDirective(fileName),
@@ -74,7 +79,22 @@ class OcamlNativeFunctorEmitter {
 			""
 		];
 		lines.remove(null);
-		output.saveFile(fileName, lines.join("\n"));
+		saveGenerated(output, artifacts, fileName, lines.join("\n"));
+	}
+
+	static function saveGenerated(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, path:String, contents:String):Void {
+		output.saveFile(path, contents);
+		artifacts.record({
+			path: path,
+			kind: OcamlArtifactKind.NativeFunctorSource,
+			owner: OcamlArtifactOwner.NativeFunctorGeneration,
+			sourceKind: OcamlArtifactSourceKind.Generated,
+			sourcePath: null,
+			license: "generated-output",
+			profileEligibility: ["portable", "metal"],
+			stability: OcamlArtifactStability.Stable,
+			includeInSourceBundle: true
+		});
 	}
 }
 #end

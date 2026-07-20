@@ -1,21 +1,21 @@
 package reflaxe.ocaml.artifacts;
 
-#if (macro || reflaxe_runtime)
+#if (macro || reflaxe_runtime || eval)
 /** Closed set of components currently allowed to claim generated OCaml files. **/
 enum abstract OcamlArtifactOwner(String) from String to String {
-	var ReflaxeFramework = "reflaxe-framework";
-	var OcamlCompiler = "ocaml-compiler";
-	var DuneProjectEmitter = "dune-project-emitter";
-	var RuntimeCopier = "runtime-copier";
-	var NativeFunctorEmitter = "native-functor-emitter";
-	var PackageAliasEmitter = "package-alias-emitter";
-	var LoweringReportWriter = "lowering-report-writer";
-	var LifecycleTraceWriter = "lifecycle-trace-writer";
-	var MliGenerator = "mli-generator";
-	var BuildTimingReportWriter = "build-timing-report-writer";
-	var BindingEmitter = "binding-emitter";
-	var NativeAdapterEmitter = "native-adapter-emitter";
-	var ExportWrapperEmitter = "export-wrapper-emitter";
+	var Framework = "reflaxe-framework";
+	var CompilerCore = "ocaml-compiler";
+	var DuneScaffold = "dune-project-emitter";
+	var RuntimePackaging = "runtime-copier";
+	var NativeFunctorGeneration = "native-functor-emitter";
+	var PackageAliasGeneration = "package-alias-emitter";
+	var LoweringReport = "lowering-report-writer";
+	var LifecycleTrace = "lifecycle-trace-writer";
+	var MliInference = "mli-generator";
+	var BuildTimingReport = "build-timing-report-writer";
+	var BindingGeneration = "binding-emitter";
+	var NativeAdapter = "native-adapter-emitter";
+	var ExportWrapper = "export-wrapper-emitter";
 }
 
 /** Closed file roles used by packaging and inspection. **/

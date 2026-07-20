@@ -203,6 +203,11 @@ class M6RuntimeCopierIntegrationTest {
 			"ocaml_runtime_modules=HxRuntime"
 		]);
 		assertTrue(portableManualCompile.exitCode == 0, "portable manual selective compile failed: " + portableManualCompile.stderr);
+		final portableManifest = OcamlArtifactManifestTestHelper.validate(portableOutDir, "portable");
+		OcamlArtifactManifestTestHelper.assertEntry(portableManifest, "runtime/HxRuntime.ml", "runtime-copier", "runtime-source", true);
+		OcamlArtifactManifestTestHelper.validate(metalOutDir, "metal");
+		final selectiveManifest = OcamlArtifactManifestTestHelper.validate(portableManualOutDir, "portable");
+		OcamlArtifactManifestTestHelper.assertEntry(selectiveManifest, "runtime/HxRuntime.ml", "runtime-copier", "runtime-source", true);
 		final metalTokenNoiseCompile = compileRuntimeFixture(metalTokenNoiseOutDir, "metal", "test/fixtures/m6_runtime_token_noise/src", "Main");
 		assertTrue(metalTokenNoiseCompile.exitCode == 0, "metal token-noise compile failed: " + metalTokenNoiseCompile.stderr);
 		final metalTokenFallbackNoDebugCompile = compileRuntimeFixture(metalTokenFallbackNoDebugOutDir, "metal", "test", "Main",

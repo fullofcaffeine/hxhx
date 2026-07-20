@@ -51,5 +51,8 @@ class M13DuneMultiExeIntegrationTest {
 		final bar = sys.io.File.getContent(barPath);
 		assertContains(foo, "ignore (Pkg_M13MliMain.main ())", "foo calls main");
 		assertContains(bar, "ignore (Pkg_M13MliMain.main ())", "bar calls main");
+		final manifest = OcamlArtifactManifestTestHelper.validate(outDir, "portable");
+		OcamlArtifactManifestTestHelper.assertEntry(manifest, "foo.ml", "dune-project-emitter", "entry-source", true);
+		OcamlArtifactManifestTestHelper.assertEntry(manifest, "bar.ml", "dune-project-emitter", "entry-source", true);
 	}
 }

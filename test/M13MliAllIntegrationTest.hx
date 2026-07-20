@@ -32,5 +32,7 @@ class M13MliAllIntegrationTest {
 		final callStackMli = outDir + "/haxe_CallStack.mli";
 		if (!sys.FileSystem.exists(callStackMli))
 			throw "missing inferred .mli: " + callStackMli;
+		final manifest = OcamlArtifactManifestTestHelper.validate(outDir, "portable");
+		OcamlArtifactManifestTestHelper.assertEntry(manifest, "haxe_CallStack.mli", "mli-generator", "inferred-interface", true);
 	}
 }

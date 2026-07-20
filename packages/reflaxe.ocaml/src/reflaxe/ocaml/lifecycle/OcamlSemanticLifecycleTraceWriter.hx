@@ -4,6 +4,11 @@ package reflaxe.ocaml.lifecycle;
 import haxe.crypto.Sha256;
 import haxe.io.Path;
 import reflaxe.lifecycle.SemanticLifecycleTraceEvent;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
 
 /** Writes bounded, path-free evidence for place operations that crossed preprocessing. */
 class OcamlSemanticLifecycleTraceWriter {
@@ -11,7 +16,7 @@ class OcamlSemanticLifecycleTraceWriter {
 
 	/** Writes only boundaries where the OCaml place family actually existed. */
 	public static function write(outputDirectory:String, programRevision:String, pipelineRevision:String, events:Array<SemanticLifecycleTraceEvent>,
-			functionFilter:Null<String> = null):Void {
+			artifacts:OcamlArtifactManifestBuilder, functionFilter:Null<String> = null):Void {
 		final active = events.filter(event -> event.artifactIds.length > 0
 			&& (functionFilter == null || functionFilter.length == 0 || event.functionId.indexOf(functionFilter) >= 0))
 			.map(event -> ({
@@ -42,6 +47,17 @@ class OcamlSemanticLifecycleTraceWriter {
 			events: active
 		};
 		sys.io.File.saveContent(Path.join([outputDirectory, FILE_NAME]), haxe.Json.stringify(report, null, "  ") + "\n");
+		artifacts.record({
+			path: FILE_NAME,
+			kind: OcamlArtifactKind.CompilerReport,
+			owner: OcamlArtifactOwner.LifecycleTrace,
+			sourceKind: OcamlArtifactSourceKind.Generated,
+			sourcePath: null,
+			license: "generated-output",
+			profileEligibility: ["portable", "metal"],
+			stability: OcamlArtifactStability.Stable,
+			includeInSourceBundle: false
+		});
 	}
 }
 #end
