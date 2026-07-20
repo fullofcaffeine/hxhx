@@ -1,3 +1,10 @@
+# [0.22.0](https://github.com/fullofcaffeine/hxhx/compare/v0.21.5...v0.22.0) (2026-07-20)
+
+
+### Features
+
+* **ocaml:** define generated artifact ownership ([662fc9a](https://github.com/fullofcaffeine/hxhx/commit/662fc9a5c2e56eb4155850ac15ff4717fa3e8892))
+
 ## [0.21.5](https://github.com/fullofcaffeine/hxhx/compare/v0.21.4...v0.21.5) (2026-07-20)
 
 
