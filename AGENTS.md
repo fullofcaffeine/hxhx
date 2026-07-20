@@ -278,6 +278,34 @@ Assume the reader is a Haxe user who wants to understand and contribute to
 
 > Origin/signature — hxhx agent, 2026-07-19: This safeguard was added after an hxhx work session fixed a Haxe-server leak directly in `haxe.elixir.codex`'s primary checkout and pushed its default branch while another agent had staged Beads work there. The implementation and tests were sound and the staged work was preserved, but using the shared checkout created avoidable coordination risk. A follow-up isolated Reflaxe.Elixir commit then exposed that its shared Beads hook could still export metadata into the primary checkout from a linked worktree; that unintended task-commit entry was caught and removed before push. The worktree, PR, hook-locality, and state-fingerprint rules make both failure modes explicit.
 
+## Reflaxe Integration Fork
+
+- `fullofcaffeine/reflaxe` is this project's maintained Reflaxe integration fork. For now, create
+  Reflaxe pull requests only in that fork; do not open or update pull requests in
+  `SomeRanDev/reflaxe` unless the user changes this policy.
+- Synchronize the fork with upstream before starting fork work and check upstream periodically, at
+  least weekly and before every fork release, dependency-pin advance, or substantial framework PR.
+  Integrate upstream changes through a reviewed fork PR with compatibility evidence; never assume
+  that a clean Git merge proves behavioral compatibility.
+- Every fork change requires its own detailed PR with explicit **Why**, **What**, and **How**
+  sections. Explain the user-visible problem, triggering context, old and new behavior, design
+  choice, relationship to upstream, compatibility risks, verification, deferred scope, and
+  rollback. Include the originating `hxhx` bead/request and the required `hxhx-agent` provenance
+  signature.
+- Every behavior-changing fork PR must include a minimal Haxe snippet that reproduces the issue and
+  before/after snippets in each relevant generated target language. Label simplified snippets as
+  such. If the old compiler stops before target source exists, say that explicitly and show the
+  exact diagnostic or pipeline boundary instead of inventing generated output.
+- The fork may evolve beyond upstream, but framework changes must remain target-neutral and useful
+  to the Reflaxe compiler family. A `reflaxe.ocaml` or `hxhx` incident may motivate and test a
+  change; OCaml-specific types, policies, helper names, or semantic assumptions must not enter the
+  generic framework.
+- Pin consumers to an immutable fork commit plus a verified content digest. Advance that pin only
+  after the Reflaxe suite and the risk-routed compatibility canaries pass. Missing CI is not passing
+  CI.
+- Follow `docs/00-project/REFLAXE_INTEGRATION_FORK_POLICY.md` for the full PR, sync, CI, delta, and
+  rollback contract.
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.

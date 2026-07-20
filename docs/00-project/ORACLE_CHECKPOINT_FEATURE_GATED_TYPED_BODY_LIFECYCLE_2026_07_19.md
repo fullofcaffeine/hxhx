@@ -166,10 +166,12 @@ This is not authority for a universal Reflaxe IR, a broad pass manager, a
 cross-target semantic model, or OCaml-specific logic in Reflaxe.
 
 Any Reflaxe implementation must be prepared in a separate clean worktree and
-landed through its own repository pull request. Its commit and pull-request body
-must state that it is an `hxhx-agent` change prompted by this typed-body
-lifecycle incident and link the target-side evidence. The shared reference
-checkout must remain untouched.
+landed through a pull request in the maintained `fullofcaffeine/reflaxe` fork.
+Its commit and pull-request body must state that it is an `hxhx-agent` change
+prompted by this typed-body lifecycle incident and link the target-side
+evidence. The framework change must remain useful to the Reflaxe family and
+contain no OCaml-specific semantics. The shared reference checkout must remain
+untouched. Full governance is in `REFLAXE_INTEGRATION_FORK_POLICY.md`.
 
 ## Qualified Findings
 
@@ -226,8 +228,9 @@ documented semantic, generated-code, or performance reason.
    standalone update, plus a per-pass test locating the first loss boundary.
 3. Add a small feature-gated fixture independent of `haxe.Exception` and an
    output-inert, bounded lifecycle trace.
-4. Land the narrow Reflaxe contract in its own worktree and repository PR, with
-   independent framework tests and the required `hxhx-agent` signature.
+4. Land the narrow Reflaxe contract in its own worktree and fork PR, with
+   independent framework tests, family-neutral design, and the required
+   `hxhx-agent` signature.
 5. Hard-cut the OCaml place family to early protection, final revision-bound
    planning, sealing, and one mechanical syntax path.
 6. Prove local arm64 macOS, hosted arm64 macOS, and hosted Linux against the
