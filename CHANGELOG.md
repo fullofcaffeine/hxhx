@@ -1,3 +1,25 @@
+# [0.23.0](https://github.com/fullofcaffeine/hxhx/compare/v0.22.0...v0.23.0) (2026-07-20)
+
+
+### Bug Fixes
+
+* **ocaml:** avoid overstating runtime evidence ([872e073](https://github.com/fullofcaffeine/hxhx/commit/872e0731b26f874ab7b2d8eb0e5e9539ff58d884))
+* **ocaml:** preserve nested local rebinding ([ede7a3c](https://github.com/fullofcaffeine/hxhx/commit/ede7a3c3624f07189cccacdaa6223528ffed6e1a))
+* **tooling:** bound heavy formatter work ([5eb905f](https://github.com/fullofcaffeine/hxhx/commit/5eb905f7dd3236e2d3f1c3b1fe16132139771548))
+* **tooling:** ignore deleted Haxe format paths ([d6a59c2](https://github.com/fullofcaffeine/hxhx/commit/d6a59c26e1630b0956bfad07c591dafe45515bd4))
+
+
+### Features
+
+* **ocaml:** centralize exact Int representation ([df8540e](https://github.com/fullofcaffeine/hxhx/commit/df8540e00e6016707412dff624f333bb42b4effe))
+* **ocaml:** declare native runtime needs ([ab76142](https://github.com/fullofcaffeine/hxhx/commit/ab761426ac29d2cbeb5f63902acbbcbca130fd28))
+* **ocaml:** explain compiler runtime support ([40fe524](https://github.com/fullofcaffeine/hxhx/commit/40fe52417b1ceb2b95b015f0a987fadd77976777))
+* **ocaml:** explain float bit runtime needs ([68edee8](https://github.com/fullofcaffeine/hxhx/commit/68edee8460ae6d781d26be799b97d65b7ae627f2))
+* **ocaml:** explain place runtime requirements ([98ad4cd](https://github.com/fullofcaffeine/hxhx/commit/98ad4cdbb0a833862e7affa20b79ed7b656439e6))
+* **ocaml:** inventory generated artifacts ([c501d3f](https://github.com/fullofcaffeine/hxhx/commit/c501d3fd030c53424176deef123d94c619ee8262))
+* **ocaml:** lock runtime source catalog ([c550da5](https://github.com/fullofcaffeine/hxhx/commit/c550da51c2b7f60478485645c02a1b0eaff2af2d))
+* **ocaml:** trace runtime needs to packaged sources ([558b27b](https://github.com/fullofcaffeine/hxhx/commit/558b27b7b4fef2922739fc7fc51fb7de44caa24a))
+
 # [0.22.0](https://github.com/fullofcaffeine/hxhx/compare/v0.21.5...v0.22.0) (2026-07-20)
 
 
