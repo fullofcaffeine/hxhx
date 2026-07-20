@@ -69,7 +69,7 @@ This catalog answers “which reviewed source files implement this module?” It
 
 ## Policy notes
 
-- Metal mode links runtime modules **on-demand** from emitted references plus transitive runtime dependencies.
+- Metal mode currently chooses runtime roots from compiler-tracked target syntax. The locked source manifest, rather than an OCaml text scan, supplies and validates every transitive runtime dependency.
 - Runtime planning can be overridden in Stage0 with:
   - `-D ocaml_runtime_mode=full|selective`
   - `-D ocaml_runtime_modules=<comma-separated module list>`

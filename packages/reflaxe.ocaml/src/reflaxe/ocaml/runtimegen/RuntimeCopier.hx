@@ -13,6 +13,8 @@ import reflaxe.ocaml.OcamlAtomicSemantics;
 import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.OcamlPortableNativeSurfacePolicy;
 import reflaxe.ocaml.OcamlRuntimeMode;
+import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceManifestSnapshot;
+import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceModule;
 #if macro
 import reflaxe.ocaml.macros.StrictModeEnforcer;
 #end
@@ -60,8 +62,15 @@ private typedef RuntimePlanReport = {
 	final inclusionReasons:Array<RuntimePlanInclusionReason>;
 }
 
+/**
+	Copies the checked runtime dependency closure into generated OCaml projects.
+
+	The source manifest owns file integrity and module-to-module dependencies. This
+	class only combines requested roots, resolves their checked closure, writes the
+	reports, and copies the selected bytes. It does not infer dependencies by reading
+	OCaml source text.
+**/
 class RuntimeCopier {
-	static inline final HXHX_RUNTIME_PREFIX = "HxHx";
 	static inline final RUNTIME_CORE_MODULE = "HxRuntime";
 	static inline final PROFILE_REPORT_FILE = "ocaml_profile_report.json";
 	static inline final RUNTIME_PLAN_REPORT_FILE = "ocaml_runtime_plan_report.json";
@@ -88,14 +97,6 @@ class RuntimeCopier {
 		#else
 		return null;
 		#end
-	}
-
-	static function moduleNameFromRuntimeFile(fileName:String):Null<String> {
-		if (StringTools.endsWith(fileName, ".mli"))
-			return fileName.substr(0, fileName.length - 4);
-		if (StringTools.endsWith(fileName, ".ml"))
-			return fileName.substr(0, fileName.length - 3);
-		return null;
 	}
 
 	static function isIdentifierChar(code:Int):Bool {
@@ -167,54 +168,16 @@ class RuntimeCopier {
 		}
 	}
 
-	static function addReferencedModules(content:String, availableModules:Array<String>, selectedModules:Map<String, Bool>, enqueue:Array<String>,
-			reasonMap:Map<String, Map<String, Bool>>, reason:String):Void {
+	static function addReferencedModules(content:String, availableModules:Array<String>, selectedModules:Map<String, Bool>):Void {
 		for (moduleName in availableModules) {
-			if (selectedModules.exists(moduleName))
-				continue;
-			if (containsModuleToken(content, moduleName)) {
+			if (containsModuleToken(content, moduleName))
 				selectedModules.set(moduleName, true);
-				enqueue.push(moduleName);
-				addInclusionReason(reasonMap, moduleName, reason);
-			}
 		}
 	}
 
-	static function enqueueModule(moduleName:String, availableModuleSet:Map<String, Bool>, selectedModules:Map<String, Bool>, enqueue:Array<String>,
-			reasonMap:Map<String, Map<String, Bool>>, reason:String):Void {
-		if (moduleName == null || moduleName.length == 0)
-			return;
-		if (!availableModuleSet.exists(moduleName))
-			return;
-		if (selectedModules.exists(moduleName))
-			return;
-		selectedModules.set(moduleName, true);
-		enqueue.push(moduleName);
-		addInclusionReason(reasonMap, moduleName, reason);
-	}
-
-	static function availableModuleSet(availableModules:Array<String>):Map<String, Bool> {
-		final out:Map<String, Bool> = [];
-		for (moduleName in availableModules)
-			out.set(moduleName, true);
-		return out;
-	}
-
-	static function collectSelectiveRuntimeModules(runtimeDir:String, availableModules:Array<String>, trackedSeedModules:Array<String>,
-			manualSeedModules:Array<String>, outputDir:Null<String>, destSubdir:String, tokenScanFallbackEnabled:Bool,
-			inclusionReasonMap:Map<String, Map<String, Bool>>):Map<String, Bool> {
-		final moduleSet = availableModuleSet(availableModules);
+	static function collectTokenScanRoots(availableModules:Array<String>, outputDir:Null<String>, destSubdir:String):Array<String> {
 		final selectedModules:Map<String, Bool> = [];
-		final queue:Array<String> = [];
-		enqueueModule(RUNTIME_CORE_MODULE, moduleSet, selectedModules, queue, inclusionReasonMap, "core_runtime");
-		for (moduleName in trackedSeedModules) {
-			enqueueModule(moduleName, moduleSet, selectedModules, queue, inclusionReasonMap, "compiler_tracked");
-		}
-		for (moduleName in manualSeedModules) {
-			enqueueModule(moduleName, moduleSet, selectedModules, queue, inclusionReasonMap, "manual_seed");
-		}
-
-		if (tokenScanFallbackEnabled && outputDir != null && outputDir.length > 0) {
+		if (outputDir != null && outputDir.length > 0) {
 			final outputFiles:Array<String> = [];
 			collectOutputFilesRecursive(outputDir, outputFiles);
 			outputFiles.sort(compareStrings);
@@ -227,27 +190,10 @@ class RuntimeCopier {
 				if (!StringTools.endsWith(normalizedPathValue, ".ml") && !StringTools.endsWith(normalizedPathValue, ".mli"))
 					continue;
 				final content = sys.io.File.getContent(path);
-				addReferencedModules(content, availableModules, selectedModules, queue, inclusionReasonMap, "token_scan");
+				addReferencedModules(content, availableModules, selectedModules);
 			}
 		}
-
-		while (queue.length > 0) {
-			final moduleName = queue.pop();
-			if (moduleName == null)
-				continue;
-			final mlPath = Path.join([runtimeDir, moduleName + ".ml"]);
-			if (sys.FileSystem.exists(mlPath) && !sys.FileSystem.isDirectory(mlPath)) {
-				final content = sys.io.File.getContent(mlPath);
-				addReferencedModules(content, availableModules, selectedModules, queue, inclusionReasonMap, "transitive:" + moduleName);
-			}
-			final mliPath = Path.join([runtimeDir, moduleName + ".mli"]);
-			if (sys.FileSystem.exists(mliPath) && !sys.FileSystem.isDirectory(mliPath)) {
-				final content = sys.io.File.getContent(mliPath);
-				addReferencedModules(content, availableModules, selectedModules, queue, inclusionReasonMap, "transitive:" + moduleName);
-			}
-		}
-
-		return selectedModules;
+		return mapKeysSorted(selectedModules);
 	}
 
 	static function mapKeysSorted(values:Map<String, Bool>):Array<String> {
@@ -258,17 +204,30 @@ class RuntimeCopier {
 		return out;
 	}
 
-	static function trackedModulesSorted(trackedModules:Array<String>, availableModules:Array<String>):Array<String> {
-		final availableSet = availableModuleSet(availableModules);
+	static function validatedRootsSorted(requestedModules:Array<String>, snapshot:RuntimeSourceManifestSnapshot, label:String):Array<String> {
+		final availableSet:Map<String, Bool> = [for (entry in snapshot.modules) entry.module => true];
 		final selected:Map<String, Bool> = [];
-		for (moduleName in trackedModules) {
+		for (moduleName in requestedModules) {
 			if (moduleName == null || moduleName.length == 0)
 				continue;
 			if (!availableSet.exists(moduleName))
-				continue;
+				throw 'Unknown OCaml runtime module "$moduleName" requested by $label.';
 			selected.set(moduleName, true);
 		}
 		return mapKeysSorted(selected);
+	}
+
+	static function addRootReasons(inclusionReasonMap:Map<String, Map<String, Bool>>, modules:Array<String>, reason:String):Void {
+		for (moduleName in modules)
+			addInclusionReason(inclusionReasonMap, moduleName, reason);
+	}
+
+	static function addDependencyReasons(inclusionReasonMap:Map<String, Map<String, Bool>>, selectedModules:Array<RuntimeSourceModule>):Void {
+		final selected:Map<String, Bool> = [for (entry in selectedModules) entry.module => true];
+		for (entry in selectedModules)
+			for (dependency in entry.dependencies)
+				if (selected.exists(dependency))
+					addInclusionReason(inclusionReasonMap, dependency, "transitive:" + entry.module);
 	}
 
 	static function runtimeSelectionModeLabel(context:OcamlBuildContext, compilerTrackedModules:Array<String>, manualModules:Array<String>):String {
@@ -379,11 +338,11 @@ class RuntimeCopier {
 			compilerTrackedModules:Array<String>):Void {
 		final stdDir = tryResolveStdDir();
 		if (stdDir == null)
-			return;
+			throw "Cannot locate the reflaxe.ocaml standard library, so the checked OCaml runtime cannot be packaged.";
 
 		final runtimeDir = Path.join([stdDir, "runtime"]);
 		if (!sys.FileSystem.exists(runtimeDir) || !sys.FileSystem.isDirectory(runtimeDir))
-			return;
+			throw 'The reflaxe.ocaml runtime source directory "$runtimeDir" is missing.';
 
 		#if macro
 		final allowHxHxRuntime = enabledDefine("hih_native_parser")
@@ -395,70 +354,71 @@ class RuntimeCopier {
 		final allowHxHxRuntime = false;
 		#end
 
-		final runtimeFiles = sys.FileSystem.readDirectory(runtimeDir);
-		runtimeFiles.sort(compareStrings);
-
-		final availableModules:Array<String> = [];
-		final availableModuleSet:Map<String, Bool> = [];
-		for (name in runtimeFiles) {
-			final moduleName = moduleNameFromRuntimeFile(name);
-			if (moduleName == null)
-				continue;
-			if (!allowHxHxRuntime && StringTools.startsWith(moduleName, HXHX_RUNTIME_PREFIX))
-				continue;
-			if (!availableModuleSet.exists(moduleName)) {
-				availableModuleSet.set(moduleName, true);
-				availableModules.push(moduleName);
-			}
-		}
-		availableModules.sort(compareStrings);
-		final trackedModulesAll = trackedModulesSorted(compilerTrackedModules != null ? compilerTrackedModules : [], availableModules);
 		final rawRequestedProfile = requestedProfile();
 		final buildContext = OcamlBuildContext.resolve();
+		final profile = OcamlProfileContract.toDefineValue(buildContext.profile);
+		final sourceManifest = RuntimeSourceManifest.load(runtimeDir);
+		final availableModules = [
+			for (entry in sourceManifest.modules)
+				if (entry.profiles.contains(profile)
+					&& (allowHxHxRuntime || entry.scope != RuntimeSourceManifest.TOOLING_SCOPE)) entry.module
+		];
+		final trackedModulesAll = validatedRootsSorted(compilerTrackedModules != null ? compilerTrackedModules : [], sourceManifest,
+			"compiler-tracked target syntax");
+		if (trackedModulesAll.length > 0)
+			RuntimeSourceManifest.resolveClosure(sourceManifest, trackedModulesAll, profile, allowHxHxRuntime);
 		final trackedModules = buildContext.runtimeMode == Selective && !buildContext.runtimeInferenceDisabled ? trackedModulesAll : [];
-		final manualModules = trackedModulesSorted(buildContext.runtimeManualModules, availableModules);
+		final manualModules = validatedRootsSorted(buildContext.runtimeManualModules, sourceManifest, "-D ocaml_runtime_modules");
 		final selectionMode = runtimeSelectionModeLabel(buildContext, trackedModules, manualModules);
 		final inclusionReasonMap:Map<String, Map<String, Bool>> = [];
-		final selectedModules:Map<String, Bool> = switch (buildContext.runtimeMode) {
+		final selectedEntries:Array<RuntimeSourceModule> = switch (buildContext.runtimeMode) {
 			case Selective:
-				collectSelectiveRuntimeModules(runtimeDir, availableModules, trackedModules, manualModules, output.outputDir, destSubdir,
-					buildContext.runtimeTokenScanFallbackEnabled, inclusionReasonMap);
-			case Full:
-				final all:Map<String, Bool> = [];
-				for (moduleName in availableModules) {
-					all.set(moduleName, true);
-					addInclusionReason(inclusionReasonMap, moduleName, "full_runtime_mode");
+				final rootSet:Map<String, Bool> = [];
+				rootSet.set(RUNTIME_CORE_MODULE, true);
+				addInclusionReason(inclusionReasonMap, RUNTIME_CORE_MODULE, "core_runtime");
+				for (moduleName in trackedModules)
+					rootSet.set(moduleName, true);
+				addRootReasons(inclusionReasonMap, trackedModules, "compiler_tracked");
+				for (moduleName in manualModules)
+					rootSet.set(moduleName, true);
+				addRootReasons(inclusionReasonMap, manualModules, "manual_seed");
+				if (buildContext.runtimeTokenScanFallbackEnabled) {
+					final tokenRoots = collectTokenScanRoots(availableModules, output.outputDir, destSubdir);
+					for (moduleName in tokenRoots)
+						rootSet.set(moduleName, true);
+					addRootReasons(inclusionReasonMap, tokenRoots, "token_scan");
 				}
-				all;
+				RuntimeSourceManifest.resolveClosure(sourceManifest, mapKeysSorted(rootSet), profile, allowHxHxRuntime);
+			case Full:
+				final roots = RuntimeSourceManifest.fullRoots(sourceManifest, profile, allowHxHxRuntime);
+				addRootReasons(inclusionReasonMap, roots, "full_runtime_mode");
+				RuntimeSourceManifest.resolveClosure(sourceManifest, roots, profile, allowHxHxRuntime);
 		}
-		final selectedModuleList = mapKeysSorted(selectedModules);
+		if (buildContext.runtimeMode == Selective)
+			addDependencyReasons(inclusionReasonMap, selectedEntries);
+		final selectedModuleList = [for (entry in selectedEntries) entry.module];
 		final inclusionReasons = inclusionReasonsSorted(inclusionReasonMap, selectedModuleList);
 		writeProfileReport(output, artifacts, rawRequestedProfile, buildContext);
 		writeRuntimePlanReport(output, artifacts, buildContext, selectionMode, availableModules.copy(), trackedModules, manualModules, selectedModuleList,
 			inclusionReasons);
 
-		for (name in runtimeFiles) {
-			final moduleName = moduleNameFromRuntimeFile(name);
-			if (moduleName == null || !selectedModules.exists(moduleName))
-				continue;
-			final src = Path.join([runtimeDir, name]);
-			if (!sys.FileSystem.exists(src) || sys.FileSystem.isDirectory(src))
-				continue;
-			final rel = destSubdir + "/" + name;
-			final content = sys.io.File.getContent(src);
-			output.saveFile(rel, content);
-			artifacts.record({
-				path: rel,
-				kind: OcamlArtifactKind.RuntimeSource,
-				owner: OcamlArtifactOwner.RuntimePackaging,
-				sourceKind: OcamlArtifactSourceKind.CopiedRuntime,
-				sourcePath: "std/runtime/" + name,
-				license: "MIT",
-				profileEligibility: ["portable", "metal"],
-				stability: OcamlArtifactStability.Stable,
-				includeInSourceBundle: true
-			});
-		}
+		for (entry in selectedEntries)
+			for (file in entry.files) {
+				final src = Path.join([runtimeDir, file.path]);
+				final rel = destSubdir + "/" + file.path;
+				output.saveFile(rel, sys.io.File.getContent(src));
+				artifacts.record({
+					path: rel,
+					kind: OcamlArtifactKind.RuntimeSource,
+					owner: OcamlArtifactOwner.RuntimePackaging,
+					sourceKind: OcamlArtifactSourceKind.CopiedRuntime,
+					sourcePath: "std/runtime/" + file.path,
+					license: entry.license,
+					profileEligibility: entry.profiles.copy(),
+					stability: OcamlArtifactStability.Stable,
+					includeInSourceBundle: true
+				});
+			}
 	}
 }
 #end

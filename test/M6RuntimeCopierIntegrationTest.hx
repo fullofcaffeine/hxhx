@@ -187,6 +187,7 @@ class M6RuntimeCopierIntegrationTest {
 		final invalidAtomicSemanticsOutDir = rootOutDir + "/invalid_atomic_semantics";
 		final invalidRuntimeModeOutDir = rootOutDir + "/invalid_runtime_mode";
 		final noneRuntimeModeOutDir = rootOutDir + "/none_runtime_mode";
+		final unknownRuntimeModuleOutDir = rootOutDir + "/unknown_runtime_module";
 		sys.FileSystem.createDirectory(rootOutDir);
 
 		final portableCompile = compileRuntimeFixture(portableOutDir, null);
@@ -238,6 +239,15 @@ class M6RuntimeCopierIntegrationTest {
 		final noneRuntimeModeOutput = noneRuntimeModeCompile.stderr + "\n" + noneRuntimeModeCompile.stdout;
 		assertContains(noneRuntimeModeOutput, "ocaml_runtime_mode", "none runtime mode should mention define");
 		assertContains(noneRuntimeModeOutput, "none is not supported", "none runtime mode should use actionable error");
+		final unknownRuntimeModuleCompile = compileRuntimeFixture(unknownRuntimeModuleOutDir, "portable", "test", "Main", [
+			"ocaml_runtime_mode=selective",
+			"ocaml_runtime_no_infer",
+			"ocaml_runtime_modules=DoesNotExist"
+		]);
+		assertTrue(unknownRuntimeModuleCompile.exitCode != 0, "an unknown requested runtime module should fail before OCaml output");
+		final unknownRuntimeModuleOutput = unknownRuntimeModuleCompile.stderr + "\n" + unknownRuntimeModuleCompile.stdout;
+		assertContains(unknownRuntimeModuleOutput, "Unknown OCaml runtime module \"DoesNotExist\"", "unknown runtime module should identify the invalid name");
+		assertContains(unknownRuntimeModuleOutput, "ocaml_runtime_modules", "unknown manual runtime module should identify the defining command-line option");
 
 		final runtimePath = portableOutDir + "/runtime/HxRuntime.ml";
 		if (!sys.FileSystem.exists(runtimePath))
