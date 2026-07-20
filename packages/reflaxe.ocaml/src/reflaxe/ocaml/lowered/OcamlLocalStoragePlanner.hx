@@ -28,6 +28,7 @@ class OcamlLocalStoragePlanner {
 		final mutatedAny:Map<Int, Bool> = [];
 		final needsRef:Map<Int, Bool> = [];
 		final captured:Map<Int, Bool> = [];
+		final declaredScopeByLocal:Map<Int, Int> = [];
 		final reasonsByLocal:Map<Int, Array<OcamlLocalStorageReason>> = [];
 
 		function addReason(localId:Int, reason:OcamlLocalStorageReason):Void {
@@ -90,46 +91,53 @@ class OcamlLocalStoragePlanner {
 			return outer;
 		}
 
-		function addContextReasons(localId:Int, depth:Int, inLoop:Bool, inFunction:Bool, isStatement:Bool):Void {
+		function addContextReasons(localId:Int, crossesDeclaringScope:Bool, inLoop:Bool, inFunction:Bool, isStatement:Bool):Void {
 			if (inLoop)
 				addReason(localId, OcamlLocalStorageReason.LoopMutation);
 			if (inFunction)
 				addReason(localId, OcamlLocalStorageReason.NestedFunctionMutation);
-			if (isStatement && depth > 0)
+			if (isStatement && crossesDeclaringScope)
 				addReason(localId, OcamlLocalStorageReason.NestedBlockMutation);
 			if (!isStatement)
 				addReason(localId, OcamlLocalStorageReason.ExpressionPositionMutation);
 		}
 
-		function markSimpleAssignment(localId:Int, depth:Int, inLoop:Bool, inFunction:Bool, isStatement:Bool):Void {
+		function markSimpleAssignment(localId:Int, scopeDepth:Int, inLoop:Bool, inFunction:Bool, isStatement:Bool):Void {
 			mutatedAny.set(localId, true);
-			final canUseImmutableRebinding = isStatement && depth == 0 && !inLoop && !inFunction;
+			final declarationScope = declaredScopeByLocal.get(localId) ?? 0;
+			final crossesDeclaringScope = declarationScope != scopeDepth;
+			final canUseImmutableRebinding = isStatement && !crossesDeclaringScope && !inLoop && !inFunction;
 			if (canUseImmutableRebinding) {
 				addReason(localId, OcamlLocalStorageReason.StraightLineAssignment);
 				return;
 			}
 			needsRef.set(localId, true);
-			addContextReasons(localId, depth, inLoop, inFunction, isStatement);
+			addContextReasons(localId, crossesDeclaringScope, inLoop, inFunction, isStatement);
 		}
 
-		function markCellMutation(localId:Int, reason:OcamlLocalStorageReason, depth:Int, inLoop:Bool, inFunction:Bool, isStatement:Bool):Void {
+		function markCellMutation(localId:Int, reason:OcamlLocalStorageReason, scopeDepth:Int, inLoop:Bool, inFunction:Bool, isStatement:Bool):Void {
 			mutatedAny.set(localId, true);
 			needsRef.set(localId, true);
 			addReason(localId, reason);
-			addContextReasons(localId, depth, inLoop, inFunction, isStatement);
+			final declarationScope = declaredScopeByLocal.get(localId) ?? 0;
+			addContextReasons(localId, declarationScope != scopeDepth, inLoop, inFunction, isStatement);
 		}
 
-		function visit(expression:TypedExpr, depth:Int, inLoop:Bool, ownedLocals:Null<Map<Int, Bool>>, isStatement:Bool):Void {
+		function visit(expression:TypedExpr, scopeDepth:Int, inLoop:Bool, ownedLocals:Null<Map<Int, Bool>>, isStatement:Bool):Void {
 			switch (expression.expr) {
+				case TVar(local, _):
+					declaredScopeByLocal.set(local.id, scopeDepth);
 				case TFunction(functionExpression):
 					final functionCaptures = capturedOuterLocalsForFunction(functionExpression);
 					for (localId in functionCaptures.keys())
 						captured.set(localId, true);
 					// The sealed plan covers the complete function tree, but each nested
-					// function still has its own straight-line block. Reset the depth and
-					// loop context so its own locals retain the same storage choice they
+					// function still has its own straight-line block. Reset the lexical
+					// scope and loop context so its own locals retain the storage choice they
 					// received when the legacy builder rescanned that function alone.
 					final functionLocals = declaredLocalsForFunction(functionExpression);
+					for (argument in functionExpression.args)
+						declaredScopeByLocal.set(argument.v.id, 0);
 					switch (functionExpression.expr.expr) {
 						case TBlock(items):
 							for (item in items)
@@ -139,12 +147,12 @@ class OcamlLocalStoragePlanner {
 					}
 					return;
 				case TWhile(condition, body, _):
-					visit(condition, depth + 1, true, ownedLocals, false);
-					visit(body, depth + 1, true, ownedLocals, false);
+					visit(condition, scopeDepth, true, ownedLocals, false);
+					visit(body, scopeDepth, true, ownedLocals, false);
 					return;
 				case TBlock(items):
 					for (item in items)
-						visit(item, depth + 1, inLoop, ownedLocals, true);
+						visit(item, scopeDepth + 1, inLoop, ownedLocals, true);
 					return;
 				case _:
 			}
@@ -154,27 +162,27 @@ class OcamlLocalStoragePlanner {
 					switch (left.expr) {
 						case TLocal(local):
 							final mutatesCapturedOuter = ownedLocals != null && !ownedLocals.exists(local.id);
-							markSimpleAssignment(local.id, depth, inLoop, mutatesCapturedOuter, isStatement);
+							markSimpleAssignment(local.id, scopeDepth, inLoop, mutatesCapturedOuter, isStatement);
 						case _:
 					}
 				case TBinop(OpAssignOp(_), left, _):
 					switch (left.expr) {
 						case TLocal(local):
 							final mutatesCapturedOuter = ownedLocals != null && !ownedLocals.exists(local.id);
-							markCellMutation(local.id, OcamlLocalStorageReason.CompoundAssignment, depth, inLoop, mutatesCapturedOuter, isStatement);
+							markCellMutation(local.id, OcamlLocalStorageReason.CompoundAssignment, scopeDepth, inLoop, mutatesCapturedOuter, isStatement);
 						case _:
 					}
 				case TUnop(OpIncrement, _, operand) | TUnop(OpDecrement, _, operand):
 					switch (operand.expr) {
 						case TLocal(local):
 							final mutatesCapturedOuter = ownedLocals != null && !ownedLocals.exists(local.id);
-							markCellMutation(local.id, OcamlLocalStorageReason.IncrementOrDecrement, depth, inLoop, mutatesCapturedOuter, isStatement);
+							markCellMutation(local.id, OcamlLocalStorageReason.IncrementOrDecrement, scopeDepth, inLoop, mutatesCapturedOuter, isStatement);
 						case _:
 					}
 				case _:
 			}
 
-			TypedExprTools.iter(expression, child -> visit(child, depth + 1, inLoop, ownedLocals, false));
+			TypedExprTools.iter(expression, child -> visit(child, scopeDepth, inLoop, ownedLocals, false));
 		}
 
 		for (expression in expressions)

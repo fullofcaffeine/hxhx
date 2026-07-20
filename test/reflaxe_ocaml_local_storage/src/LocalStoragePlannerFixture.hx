@@ -93,6 +93,25 @@ class LocalStoragePlannerFixture {
 		}, OcamlLocalStorageKind.RefCell,
 			["loop-mutation", "nested-block-mutation"], "loop assignment");
 
+		final nestedBlock = plan(macro {
+			var outer = 0;
+			{
+				var inner = 0;
+				inner = 1;
+				outer = 2;
+				inner;
+			}
+			outer;
+		});
+		final nestedBlockDecisions = nestedBlock.decisions();
+		assertTrue(nestedBlockDecisions.length == 2, "a nested block should plan its own local and the mutated outer local once each");
+		final sameScopeNested = nestedBlockDecisions.filter(decision -> decision.storage == OcamlLocalStorageKind.ImmutableRebinding);
+		final crossingNested = nestedBlockDecisions.filter(decision -> decision.storage == OcamlLocalStorageKind.RefCell);
+		assertTrue(sameScopeNested.length == 1 && reasonIds(sameScopeNested[0]).join(",") == "straight-line-assignment",
+			"a straight-line local declared inside a nested block should remain an immutable rebinding");
+		assertTrue(crossingNested.length == 1 && reasonIds(crossingNested[0]).join(",") == "nested-block-mutation",
+			"a nested-block write to an outer local should use the shared cell");
+
 		assertDecision(macro {
 			var value = 0;
 			var read = function() return value;
