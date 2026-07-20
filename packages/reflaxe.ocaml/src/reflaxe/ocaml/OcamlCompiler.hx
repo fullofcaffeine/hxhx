@@ -314,6 +314,40 @@ class OcamlCompiler extends DirectToStringCompiler {
 				ctx.primaryTypeNameByModule.set(moduleId, primary);
 		}
 
+		// Reserve every Haxe class binding that can become a module-level OCaml
+		// value. Generic Haxe/Reflaxe rewrites may introduce locals named `index`,
+		// `create`, or another member name; target local allocation must keep those
+		// temporaries from hiding later calls in the same OCaml module.
+		for (t in types) {
+			switch (t) {
+				case TClassDecl(cRef):
+					final c = cRef.get();
+					final fullName = fullNameOf(c);
+					ctx.reserveModuleValueName(c.module, "__reflaxe_ocaml__");
+					if (!c.isInterface && !c.isExtern) {
+						ctx.reserveModuleValueName(c.module, ctx.scopedValueName(c.module, c.name, "create"));
+						ctx.reserveModuleValueName(c.module, ctx.scopedValueName(c.module, c.name, "__empty"));
+						ctx.reserveModuleValueName(c.module, ctx.scopedValueName(c.module, c.name, "__ctor"));
+					}
+					final usesDispatch = !c.isInterface && ctx.dispatchTypes.exists(fullName);
+					for (field in c.fields.get()) {
+						switch (field.kind) {
+							case FMethod(_) if (field.name != "new"):
+								final memberName = usesDispatch ? field.name + "__impl" : field.name;
+								ctx.reserveModuleValueName(c.module, ctx.scopedValueName(c.module, c.name, memberName));
+							case _:
+						}
+					}
+					for (field in c.statics.get()) {
+						switch (field.kind) {
+							case FMethod(_) | FVar(_, _):
+								ctx.reserveModuleValueName(c.module, ctx.scopedValueName(c.module, c.name, field.name));
+						}
+					}
+				case _:
+			}
+		}
+
 		// Mutable static field inference (M6+/bd: haxe.ocaml-xgv.3.7).
 		//
 		// Why
@@ -704,7 +738,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		ctx.emittedHaxeModules.set(classType.module, true);
 		ctx.currentModuleId = classType.module;
 		ctx.currentTypeName = classType.name;
-		ctx.variableRenameMap.clear();
+		ctx.resetLocalValueNames();
 		ctx.assignedVars.clear();
 		// Avoid OS filename limits for `@:generic` specializations by hashing long module ids.
 		// Only apply the override when needed so we don't accidentally diverge from Reflaxe's

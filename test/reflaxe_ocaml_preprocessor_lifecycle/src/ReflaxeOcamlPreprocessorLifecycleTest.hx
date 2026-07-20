@@ -5,10 +5,10 @@ import haxe.macro.Type.TypedExpr;
 import reflaxe.preprocessors.implementations.RemovePureExpressionsImpl;
 #end
 
-/** Focused executable probe for the generic Reflaxe metadata-loss boundary. */
+/** Focused executable probe for the generic Reflaxe metadata-preservation boundary. */
 class ReflaxeOcamlPreprocessorLifecycleTest {
 	#if macro
-	public static function verifyMarkerLoss():Void {
+	public static function verifyMarkerPreservation():Void {
 		final position = Context.currentPos();
 		final intType = Context.getType("Int");
 		final operand:TypedExpr = {
@@ -34,10 +34,10 @@ class ReflaxeOcamlPreprocessorLifecycleTest {
 
 		final processed = RemovePureExpressionsImpl.process([marked]);
 		switch (processed) {
+			case [{expr: TMeta(result, {expr: TUnop(OpIncrement, true, _)})}] if (result.name == metadata.name):
+				Sys.println("REFLAXE_REMOVE_PURE_MARKER_PRESERVATION:CONFIRMED");
 			case [{expr: TUnop(OpIncrement, true, _)}]:
-				Sys.println("REFLAXE_REMOVE_PURE_MARKER_LOSS:CONFIRMED");
-			case [{expr: TMeta(_, _)}]:
-				Context.fatalError("expected the reviewed Reflaxe cleanup to consume the standalone metadata envelope", position);
+				Context.fatalError("Reflaxe cleanup removed the target-owned standalone-update envelope", position);
 			case _:
 				Context.fatalError("unexpected standalone-update shape after Reflaxe pure-expression cleanup", position);
 		}

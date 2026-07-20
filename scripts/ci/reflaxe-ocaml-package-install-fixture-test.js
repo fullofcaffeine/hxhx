@@ -4,15 +4,15 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 
-const { findNekoLibraryDirectories, performanceEnvironment, validateInstalledDoctor } = require('./run-reflaxe-ocaml-package-install')
+const { findNekoLibraryDirectories, performanceEnvironment, sha256Directory, validateInstalledDoctor } = require('./run-reflaxe-ocaml-package-install')
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'reflaxe-ocaml-package-install-fixture-'))
 try {
-	// Haxe injects this helper into derived exception constructors after Reflaxe
-	// preprocessing. Keeping it non-inline prevents a late field update from
-	// bypassing the target-owned place-lowering origin on platform-only paths.
-	// The feature-gated skip field likewise relies on Haxe's normal Int default:
-	// spelling `= 0` can create another late synthetic assignment on macOS.
+	// These two source-shape changes are provisional controls, not the lifecycle
+	// fix. Haxe finishes its constructor and field-initializer work before Reflaxe
+	// preprocessing; the actual defect was loss of target-owned metadata inside
+	// that preprocessing sequence. Keep the controls stable until each is restored
+	// and tested independently after the lifecycle/package route is closed.
 	const exceptionSource = fs.readFileSync(path.join(
 		__dirname,
 		'../../packages/reflaxe.ocaml/std/ocaml/_std/haxe/Exception.hx'
@@ -28,6 +28,19 @@ try {
 	fs.writeFileSync(path.join(versionRoot, 'libneko.so.2'), '')
 
 	assert.deepStrictEqual(findNekoLibraryDirectories(root), [root, versionRoot])
+
+	const digestRootA = path.join(root, 'digest-a')
+	const digestRootB = path.join(root, 'digest-b')
+	fs.mkdirSync(path.join(digestRootA, 'src'), { recursive: true })
+	fs.mkdirSync(path.join(digestRootB, 'src'), { recursive: true })
+	fs.writeFileSync(path.join(digestRootA, 'Run.hx'), 'class Run {}\n')
+	fs.writeFileSync(path.join(digestRootA, 'src/Value.hx'), 'class Value {}\n')
+	fs.writeFileSync(path.join(digestRootB, 'src/Value.hx'), 'class Value {}\n')
+	fs.writeFileSync(path.join(digestRootB, 'Run.hx'), 'class Run {}\n')
+	assert.strictEqual(sha256Directory(digestRootA), sha256Directory(digestRootB))
+	fs.appendFileSync(path.join(digestRootB, 'Run.hx'), '// changed\n')
+	assert.notStrictEqual(sha256Directory(digestRootA), sha256Directory(digestRootB))
+
 	assert.deepStrictEqual(performanceEnvironment({
 		HAXELIB_PATH: '/isolated/haxelib',
 		HAXE_STD_PATH: '/compiler/std',

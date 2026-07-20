@@ -8,19 +8,17 @@ REFLAXE_SOURCE_ROOT="${REFLAXE_SOURCE_ROOT:-}"
 if [ -z "$REFLAXE_SOURCE_ROOT" ]; then
   reflaxe_hxml="$ROOT/haxe_libraries/reflaxe.hxml"
   reflaxe_classpath="$(awk '$1 == "-cp" { print $2; exit }' "$reflaxe_hxml")"
-  if [ -n "$reflaxe_classpath" ]; then
-    haxe_libcache="${HAXE_LIBCACHE:-${HOME}/haxe/haxe_libraries}"
-    reflaxe_classpath="${reflaxe_classpath//'${HAXE_LIBCACHE}'/$haxe_libcache}"
-    if [ -d "$reflaxe_classpath" ]; then
-      REFLAXE_SOURCE_ROOT="$(cd "$reflaxe_classpath/.." && pwd)"
-    fi
+  if [ -z "$reflaxe_classpath" ]; then
+    echo "Committed haxe_libraries/reflaxe.hxml does not declare a classpath." >&2
+    exit 2
   fi
-fi
-
-if [ -z "$REFLAXE_SOURCE_ROOT" ]; then
-  reflaxe_classpath="$(haxelib path reflaxe 2>/dev/null | awk 'NF && $1 !~ /^-/ { print; exit }')"
-  if [ -n "$reflaxe_classpath" ] && [ -d "$reflaxe_classpath" ]; then
+  haxe_libcache="${HAXE_LIBCACHE:-${HOME}/haxe/haxe_libraries}"
+  reflaxe_classpath="${reflaxe_classpath//'${HAXE_LIBCACHE}'/$haxe_libcache}"
+  if [ -d "$reflaxe_classpath" ]; then
     REFLAXE_SOURCE_ROOT="$(cd "$reflaxe_classpath/.." && pwd)"
+  else
+    echo "Pinned Reflaxe framework is not downloaded at $reflaxe_classpath; run npx lix download." >&2
+    exit 2
   fi
 fi
 
@@ -31,19 +29,19 @@ fi
 
 if [ ! -f "$REFLAXE_SOURCE_ROOT/src/reflaxe/preprocessors/implementations/RemovePureExpressionsImpl.hx" ]; then
   echo "Resolved Reflaxe does not contain RemovePureExpressionsImpl." >&2
-  echo "Set REFLAXE_SOURCE_ROOT to the reviewed framework checkout instead of relying on a same-version stale cache." >&2
+  echo "Use the committed immutable Reflaxe mapping or set REFLAXE_SOURCE_ROOT explicitly." >&2
   exit 2
 fi
 
 macro_output="$($HAXE_BIN \
   -cp "$REFLAXE_SOURCE_ROOT/src" \
   -cp "$ROOT/test/reflaxe_ocaml_preprocessor_lifecycle/src" \
-  --macro 'ReflaxeOcamlPreprocessorLifecycleTest.verifyMarkerLoss()' \
+  --macro 'ReflaxeOcamlPreprocessorLifecycleTest.verifyMarkerPreservation()' \
   -main ReflaxeOcamlPreprocessorLifecycleTest \
   --interp)"
 
-if [ "$macro_output" != "REFLAXE_REMOVE_PURE_MARKER_LOSS:CONFIRMED" ]; then
-  echo "Unexpected Reflaxe marker-loss probe output: $macro_output" >&2
+if [ "$macro_output" != "REFLAXE_REMOVE_PURE_MARKER_PRESERVATION:CONFIRMED" ]; then
+  echo "Unexpected Reflaxe marker-preservation probe output: $macro_output" >&2
   exit 1
 fi
 

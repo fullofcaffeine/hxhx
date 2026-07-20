@@ -39,6 +39,12 @@ class CompilationContext {
 	/** Tracks renames applied to Haxe locals to avoid collisions and keep output stable. */
 	public final variableRenameMap:Map<String, String> = [];
 
+	/** Target-level module bindings that function-local names must not shadow. */
+	final reservedModuleValueNames:Map<String, Bool> = [];
+
+	/** Target names already allocated to locals in the current class compilation. */
+	final allocatedLocalValueNames:Map<String, Bool> = [];
+
 	/** Tracks variables that are assigned after initialization (mutability inference hook). */
 	public final assignedVars:Map<String, Bool> = [];
 
@@ -473,6 +479,47 @@ class CompilationContext {
 	public function scopedValueName(moduleId:String, typeName:String, memberName:String):String {
 		final base = isPrimaryTypeInModule(moduleId, typeName) ? memberName : (OcamlNameTools.typePrefix(typeName) + "_" + memberName);
 		return OcamlNameTools.normalizeValueIdentifier(base);
+	}
+
+	static inline function moduleValueNameKey(moduleId:String, valueName:String):String {
+		return moduleId + "::" + valueName;
+	}
+
+	/** Records one emitted module-level value so local allocation cannot hide it. */
+	public function reserveModuleValueName(moduleId:String, valueName:String):Void {
+		reservedModuleValueNames.set(moduleValueNameKey(moduleId, valueName), true);
+	}
+
+	/** Starts deterministic local-name allocation for one class compilation. */
+	public function resetLocalValueNames():Void {
+		variableRenameMap.clear();
+		allocatedLocalValueNames.clear();
+	}
+
+	/**
+		Returns a stable OCaml local name without shadowing a module-level value.
+
+		OCaml local bindings remain in scope for the rest of a nested expression. A
+		Haxe temporary named like a static method can therefore hide later calls to
+		that method unless target allocation treats module bindings as reserved.
+	**/
+	public function localValueName(sourceName:String):String {
+		final existing = variableRenameMap.get(sourceName);
+		if (existing != null)
+			return existing;
+
+		final base = sourceName == "_" ? "_hx" : OcamlNameTools.normalizeValueIdentifier(sourceName);
+		var candidate = base;
+		var suffix = 1;
+		while (reservedModuleValueNames.exists(moduleValueNameKey(currentModuleId ?? "", candidate))
+			|| allocatedLocalValueNames.exists(candidate)) {
+			candidate = base + "__local" + (suffix == 1 ? "" : Std.string(suffix));
+			suffix += 1;
+		}
+
+		variableRenameMap.set(sourceName, candidate);
+		allocatedLocalValueNames.set(candidate, true);
+		return candidate;
 	}
 
 	/**

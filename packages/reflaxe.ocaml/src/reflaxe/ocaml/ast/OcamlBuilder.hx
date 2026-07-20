@@ -3761,24 +3761,7 @@ class OcamlBuilder {
 	}
 
 	function renameVar(name:String):String {
-		final existing = ctx.variableRenameMap.get(name);
-		if (existing != null)
-			return existing;
-
-		// `_` is a valid Haxe identifier, but in OCaml it is a wildcard (not a real binding).
-		// If we emitted `_` as a value identifier, it would be unreferencable and could
-		// also trigger confusing “unbound value” errors when Haxe code legitimately uses it.
-		if (name == "_") {
-			ctx.variableRenameMap.set(name, "_hx");
-			return "_hx";
-		}
-
-		// Keep locals valid as OCaml value identifiers:
-		// - prefix reserved keywords (`match` -> `hx_match`)
-		// - prefix constructor-like uppercase names (`K` -> `hx_K`)
-		final renamed = OcamlNameTools.normalizeValueIdentifier(name);
-		ctx.variableRenameMap.set(name, renamed);
-		return renamed;
+		return ctx.localValueName(name);
 	}
 
 	function buildVarDecl(v:TVar, init:Null<TypedExpr>):OcamlExpr {

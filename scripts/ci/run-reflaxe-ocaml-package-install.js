@@ -21,6 +21,8 @@ const fixtureRoot = path.join(repoRoot, 'test/packaging/reflaxe_ocaml_external_a
 const artifactsRoot = path.resolve(process.env.RO_PACKAGE_INSTALL_ARTIFACTS || path.join(repoRoot, '.artifacts/reflaxe-ocaml/package-install'))
 const packageMetadata = JSON.parse(fs.readFileSync(path.join(repoRoot, 'packages/reflaxe.ocaml/haxelib.json'), 'utf8'))
 const expectedHaxeVersion = '4.3.7'
+const expectedReflaxeCommit = 'bfadffb8926e378a4ce8be4b5f66e53b2a9af216'
+const expectedReflaxeContentSha256 = 'c8c6e9ee2eaa5e4df27a0bd5d3a4e0190befb36677b3a5390470bb8c14368a44'
 const summary = {
 	schemaVersion: 1,
 	marker: 'RO_PACKAGE_INSTALL_SMOKE:FAIL',
@@ -303,23 +305,85 @@ function commandVersion(name, command, args, options = {}) {
 	return requireSuccess(name, runStep(name, command, args, options)).stdout.trim().split('\n')[0]
 }
 
-function resolveReflaxeRoot() {
-	if (process.env.RO_REFLAXE_ROOT) {
-		return path.resolve(process.env.RO_REFLAXE_ROOT)
+/** Resolves the immutable framework classpath declared by this checkout. */
+function resolvePinnedLixReflaxeRoot() {
+	const hxmlPath = path.join(repoRoot, 'haxe_libraries/reflaxe.hxml')
+	if (!fs.existsSync(hxmlPath)) {
+		fail('committed haxe_libraries/reflaxe.hxml is missing')
 	}
-	const resolved = requireSuccess('resolve-reflaxe', runStep('resolve-reflaxe', 'haxelib', ['path', 'reflaxe']))
-	const classpath = firstClasspath(resolved.stdout)
-	if (!classpath) {
-		fail('haxelib path reflaxe did not return a classpath')
+	const hxml = fs.readFileSync(hxmlPath, 'utf8')
+	if (!hxml.includes(expectedReflaxeCommit)) {
+		fail(`committed Reflaxe mapping does not name expected commit ${expectedReflaxeCommit}`)
 	}
+	if (!hxml.includes(expectedReflaxeContentSha256)) {
+		fail(`committed Reflaxe mapping does not name expected content digest ${expectedReflaxeContentSha256}`)
+	}
+	const classpathLine = hxml.split(/\r?\n/).find(line => line.trim().startsWith('-cp '))
+	if (!classpathLine) {
+		fail('committed Reflaxe mapping has no classpath')
+	}
+	const cacheRoot = process.env.HAXE_LIBCACHE || path.join(os.homedir(), 'haxe', 'haxe_libraries')
+	const classpath = classpathLine.trim().slice(4).trim().replaceAll('${HAXE_LIBCACHE}', cacheRoot)
 	let root = path.resolve(classpath)
 	if (path.basename(root) === 'src') {
 		root = path.dirname(root)
 	}
 	if (!fs.existsSync(path.join(root, 'Run.hx'))) {
-		fail('resolved Reflaxe framework root does not contain Run.hx')
+		fail(`pinned Reflaxe framework is not downloaded at ${root}; run npx lix download`)
 	}
 	return root
+}
+
+/** Creates a path-independent digest for an exact framework source tree. */
+function sha256Directory(root) {
+	const entries = []
+	function visit(directory) {
+		for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0)) {
+			if (entry.name === '.git') {
+				continue
+			}
+			const absolute = path.join(directory, entry.name)
+			if (entry.isDirectory()) {
+				visit(absolute)
+			} else if (entry.isFile()) {
+				entries.push(absolute)
+			}
+		}
+	}
+	visit(root)
+	const digest = crypto.createHash('sha256')
+	for (const absolute of entries) {
+		const relative = path.relative(root, absolute).split(path.sep).join('/')
+		digest.update(relative)
+		digest.update('\0')
+		digest.update(fs.readFileSync(absolute))
+		digest.update('\0')
+	}
+	return digest.digest('hex')
+}
+
+/** Rejects version-label matches whose actual Reflaxe source bytes differ. */
+function validateReflaxeFramework(root) {
+	const contentSha256 = sha256Directory(root)
+	const hasRemovePureExpressions = fs.existsSync(path.join(root, 'src/reflaxe/preprocessors/implementations/RemovePureExpressionsImpl.hx'))
+	summary.toolchain.reflaxe = {
+		commit: expectedReflaxeCommit,
+		contentSha256,
+		hasRemovePureExpressions
+	}
+	if (contentSha256 !== expectedReflaxeContentSha256) {
+		fail(`Reflaxe framework content mismatch: expected ${expectedReflaxeContentSha256}, got ${contentSha256}`)
+	}
+	if (!hasRemovePureExpressions) {
+		fail('pinned Reflaxe framework lacks RemovePureExpressionsImpl')
+	}
+}
+
+function resolveReflaxeRoot() {
+	if (process.env.RO_REFLAXE_ROOT) {
+		return path.resolve(process.env.RO_REFLAXE_ROOT)
+	}
+	return resolvePinnedLixReflaxeRoot()
 }
 
 function validatePackageArtifact(zipPath, manifestPath, buildMode) {
@@ -661,6 +725,7 @@ function main() {
 		summary.implementationCommit = requireSuccess('implementation-commit', runStep('implementation-commit', 'git', ['rev-parse', 'HEAD'])).stdout.trim()
 		summary.workingTreeDirty = requireSuccess('working-tree-status', runStep('working-tree-status', 'git', ['status', '--porcelain'])).stdout.trim().length > 0
 		const reflaxeRoot = resolveReflaxeRoot()
+		validateReflaxeFramework(reflaxeRoot)
 		const zipPath = preparePackageArtifact()
 		const installedEnvironment = proveExternalInstall(zipPath, reflaxeRoot)
 		writePerformanceEnvironment(installedEnvironment)
@@ -691,4 +756,4 @@ if (require.main === module) {
 	main()
 }
 
-module.exports = { findNekoLibraryDirectories, performanceEnvironment, validateInstalledDoctor }
+module.exports = { findNekoLibraryDirectories, performanceEnvironment, sha256Directory, validateInstalledDoctor }
