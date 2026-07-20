@@ -7,9 +7,12 @@ import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlanner;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 
 private typedef OcamlPlaceRuntimeFacts = {
 	final decisionId:String;
@@ -30,10 +33,12 @@ private typedef OcamlPlaceRuntimeFacts = {
 class OcamlFunctionPlanSealer {
 	final context:CompilationContext;
 	final registry:OcamlFunctionPlanRegistry;
+	final representations:OcamlRepresentationRegistry;
 
-	public function new(context:CompilationContext, registry:OcamlFunctionPlanRegistry) {
+	public function new(context:CompilationContext, registry:OcamlFunctionPlanRegistry, representations:OcamlRepresentationRegistry) {
 		this.context = context;
 		this.registry = registry;
+		this.representations = representations;
 	}
 
 	static function fail(message:String, position:Position):Dynamic {
@@ -73,14 +78,15 @@ class OcamlFunctionPlanSealer {
 	public function seal(data:ClassFuncData):Void {
 		final binding = registry.planningBindingFor(data);
 		if (data.expr == null) {
-			registry.sealFunction(binding, OcamlLocalStoragePlanner.planExpressions([]));
+			registry.sealFunction(binding, OcamlLocalStoragePlanner.planExpressions([]), new OcamlLocalRepresentationPlan([]));
 			return;
 		}
 		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr);
+		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(data.expr, localStorage, representations);
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
-		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName);
+		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations);
 		final seen:Map<String, Bool> = [];
 		final markerOriginIds:Array<String> = [];
 
@@ -99,6 +105,7 @@ class OcamlFunctionPlanSealer {
 					final errors = OcamlPlaceAssignmentValidator.validate(operation);
 					if (errors.length > 0)
 						fail(errors.join("; ") + ' (origin "$originId")', child.pos);
+					validateRepresentationReferences(operation, binding.programRevision, child.pos);
 					final runtime = runtimeFacts(operation);
 					context.recordPlaceRuntimeRequirements(runtime.decisionId, runtime.originId, runtime.source, runtime.semanticTypeId,
 						runtime.requirementIds);
@@ -116,10 +123,77 @@ class OcamlFunctionPlanSealer {
 		}
 
 		visit(data.expr);
-		registry.sealFunction(binding, localStorage);
+		validateLocalRepresentationReferences(localRepresentations, binding.programRevision, data.expr.pos);
+		registry.sealFunction(binding, localStorage, localRepresentations);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
+	}
+
+	function validateLocalRepresentationReferences(plan:OcamlLocalRepresentationPlan, programRevision:String, position:Position):Void {
+		for (reference in plan.references()) {
+			final decision = try {
+				representations.require(reference.representationId, programRevision);
+			} catch (error:Dynamic) {
+				fail(Std.string(error), position);
+			}
+			if (decision.semanticTypeId != reference.semanticTypeId || decision.domain != reference.domain) {
+				fail('local ${reference.localId} expects ${reference.semanticTypeId} in representation domain ${reference.domain}, but ${decision.id} selects ${decision.semanticTypeId} in ${decision.domain}',
+					position);
+			}
+		}
+	}
+
+	function validateRepresentationReferences(operation:OcamlLoweredPlaceOperation, programRevision:String, position:Position):Void {
+		switch (operation) {
+			case Simple(plan):
+				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					OcamlRepresentationDomain.InstanceField, programRevision, position);
+			case StaticSimple(plan):
+				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					OcamlRepresentationDomain.StaticField, programRevision, position);
+			case ArraySimple(plan):
+				validateArrayRepresentationReferences(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					plan.place.indexRepresentationId, plan.place.indexSemanticTypeId, plan.place.indexCarrierTypeId, programRevision, position);
+			case Compound(plan):
+				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					OcamlRepresentationDomain.InstanceField, programRevision, position);
+			case StaticCompound(plan):
+				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					OcamlRepresentationDomain.StaticField, programRevision, position);
+			case ArrayCompound(plan):
+				validateArrayRepresentationReferences(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					plan.place.indexRepresentationId, plan.place.indexSemanticTypeId, plan.place.indexCarrierTypeId, programRevision, position);
+			case Update(plan):
+				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					OcamlRepresentationDomain.InstanceField, programRevision, position);
+			case StaticUpdate(plan):
+				validateRepresentationReference(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					OcamlRepresentationDomain.StaticField, programRevision, position);
+			case ArrayUpdate(plan):
+				validateArrayRepresentationReferences(plan.place.representationId, plan.place.semanticTypeId, plan.place.carrierTypeId,
+					plan.place.indexRepresentationId, plan.place.indexSemanticTypeId, plan.place.indexCarrierTypeId, programRevision, position);
+		}
+	}
+
+	function validateArrayRepresentationReferences(representationId:String, semanticTypeId:String, carrierTypeId:String, indexRepresentationId:String,
+			indexSemanticTypeId:String, indexCarrierTypeId:String, programRevision:String, position:Position):Void {
+		validateRepresentationReference(representationId, semanticTypeId, carrierTypeId, OcamlRepresentationDomain.ArrayElement, programRevision, position);
+		validateRepresentationReference(indexRepresentationId, indexSemanticTypeId, indexCarrierTypeId, OcamlRepresentationDomain.InternalValue,
+			programRevision, position);
+	}
+
+	function validateRepresentationReference(representationId:String, semanticTypeId:String, carrierTypeId:String, domain:OcamlRepresentationDomain,
+			programRevision:String, position:Position):Void {
+		final decision = try {
+			representations.require(representationId, programRevision);
+		} catch (error:Dynamic) {
+			fail(Std.string(error), position);
+		}
+		if (decision.semanticTypeId != semanticTypeId || decision.carrierTypeId != carrierTypeId || decision.domain != domain) {
+			fail('representation ${decision.id} selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} in ${decision.domain}, but the place plan expects $semanticTypeId -> $carrierTypeId in $domain',
+				position);
+		}
 	}
 }
 #end

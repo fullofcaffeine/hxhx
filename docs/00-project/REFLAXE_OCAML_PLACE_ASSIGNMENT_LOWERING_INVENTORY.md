@@ -1,6 +1,6 @@
 # `reflaxe.ocaml` Place And Assignment Lowering Inventory
 
-**Status:** implementation baseline for `haxe_ocaml-9v1va`
+**Status:** implementation baseline for `haxe_ocaml-9v1va` and the active representation work in `haxe_ocaml-9bome`
 
 **Date:** 2026-07-18
 
@@ -54,6 +54,24 @@ evaluates the receiver and index once, loads once, performs the signed Haxe
 This remains an exact nominal carrier cut; `Array<Float>` and other array-like
 abstracts are not reclassified as `Array<Int>`.
 
+The first program-wide representation registry now owns one deliberately small
+carrier family: exact, non-null Haxe `Int`. It records separate decisions for
+ordinary values, mutable and captured local storage, instance fields, static
+fields, and array elements. Every decision says that the OCaml carrier is
+`int`, explains which surrounding object owns mutation, records null, identity,
+aliasing, and boxing policy, and names the proof contract and eligible profiles.
+Sealed local-storage and place plans reference those shared decisions. The
+function plan gives every mutated local an explicit answer: either use a named
+program decision or remain deliberately on the older type mapper for this
+slice. The builder follows that answer; it does not ask whether the Haxe type is
+`Int` or choose the storage domain a second time. The direct `int` proof is
+limited to storing and passing valid signed 32-bit values on the currently
+tested 64-bit OCaml hosts. Overflow-sensitive and bit-pattern-sensitive
+operations still use `HxInt`, and this proof does not admit a 32-bit OCaml
+target. `reflaxe.ocaml inspect` reports this scope as
+`exact-non-null-int-v1`, which is intentionally narrower than a complete
+program representation model.
+
 Other assignment and update behavior is still selected while `OcamlBuilder` is
 constructing OCaml syntax, with related storage and carrier choices split
 between that file and `OcamlCompiler`. Those forms remain migration debt, not
@@ -66,7 +84,7 @@ typed tree, nor a shared cross-target representation IR.
 | Decision | Current owner | Evidence and risk |
 | --- | --- | --- |
 | Assignment used as a value | Target preservation for admitted forms; Reflaxe `EverythingIsExprSanitizer.standardizeAssignValue` for the remainder | The generic pass inserts an assignment as a separate statement and returns a copied left-hand side. Target metadata now protects the admitted assignment and update forms; other forms still carry the original risk until migrated. |
-| Exact `Int` instance-field simple assignment | `OcamlPlaceAssignmentPlanner`, validator, and emitter before `OcamlExpr` construction | One admitted family has a stable origin, representation facts, occurrence schedule, result contract, and fail-closed invariant. Its old instance-field branch is guarded against use. |
+| Exact `Int` instance-field simple assignment | `OcamlPlaceAssignmentPlanner`, the program representation registry, validator, and emitter before `OcamlExpr` construction | One admitted family has a stable origin, a shared `Int` carrier decision, occurrence schedule, result contract, and fail-closed invariant. Its old instance-field branch is guarded against use. |
 | Exact primitive-`Int` instance-field `+=` | The same typed place model before `OcamlExpr` construction | The plan records receiver, old-value load, RHS, `int-add`, store, computed result, and the semantic `haxe-int32-add` runtime requirement. The legacy branch is guarded against use. |
 | Exact primitive-`Int` instance-field `++` / `--` | The same typed place model before `OcamlExpr` construction | Source token, signed delta, and prefix/postfix fixity are separate facts. Every schedule records one receiver, load, Haxe `int-add`, store, and the fixity-selected old or computed result. |
 | Exact `Int` static simple assignment | The same typed place model before `OcamlExpr` construction | Current-type and cross-module mutable ref cells record stable symbol, representation, local/qualified access, RHS, store, and assigned result without inventing a receiver occurrence. |
@@ -78,19 +96,20 @@ typed tree, nor a shared cross-target representation IR.
 | Other simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, same-module cross-type static, anonymous/dynamic, bytes, non-Int or non-nominal array, and deliberately unadmitted instance-field cases still construct target syntax directly. Several unhandled states return OCaml `unit`. |
 | Other compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Other operators and place kinds still repeat operator selection, receiver sharing, load, arithmetic, store, and result. Ref, unadmitted field/static, and other stores can still return OCaml `unit` in expression position. |
 | Other prefix/postfix update | `OcamlBuilder.buildUnop`, approximately lines 5377-5707 | Other place kinds, Float, nullable, Dynamic, and abstract handling still combine numeric classification, representation, place mutation, and old/new result selection. Unsupported states can return `unit`. |
-| Straight-line local assignment | `OcamlLocalStoragePlanner` before syntax construction; `OcamlBuilder.buildBlockFromIndex` consumes the sealed choice | The planner records when a top-level write can introduce a newer immutable `let` binding. The builder still owns the mechanical target expression, but it no longer reclassifies the local. |
-| Local mutation and capture | `OcamlLocalStoragePlanner` plus the revision-bound `OcamlFunctionPlanRegistry` | Loops, nested blocks/functions, expression-position writes, compound updates, increment/decrement, and captured mutation select one shared `ref` cell with deterministic reasons. The final preprocessor seals this plan to the same exact body revision as place operations, and late mutation fails before source output. Carrier, weak-polymorphism, and `Obj.t` slot choices remain follow-up scope in `haxe_ocaml-9bome`. |
-| Field layout and carrier type | `OcamlCompiler` plus `OcamlBuilder` helpers | Record layout, `Obj.t`, null, default, receiver cast, and conversion choices are selected in more than one component. The place slice records references to the selected facts; it does not attempt the full representation migration. |
+| Straight-line local assignment | `OcamlLocalStoragePlanner` and the revision-bound function plan; `OcamlBuilder.buildBlockFromIndex` consumes the sealed choice | The planner records when a top-level write can introduce a newer immutable `let` binding. A mutated exact `Int` also references the program's internal-value decision. The builder still owns the mechanical target expression, but it no longer reclassifies that admitted local. |
+| Local mutation and capture | `OcamlLocalStoragePlanner`, `OcamlLocalRepresentationPlanner`, and the revision-bound `OcamlFunctionPlanRegistry` | Loops, nested blocks/functions, expression-position writes, compound updates, increment/decrement, and captured mutation select one shared `ref` cell with deterministic reasons. Every mutated local has a sealed representation choice. Exact non-null `Int` cells resolve their carrier through the program registry; other semantic types carry an explicit `Unmigrated` choice and retain the older mapper. Weak-polymorphism and `Obj.t` slot choices remain follow-up scope in `haxe_ocaml-9bome`. |
+| Field layout and carrier type | Program representation registry for exact non-null `Int`; `OcamlCompiler` plus `OcamlBuilder` helpers for the remainder | Exact-`Int` place plans share one carrier decision per storage domain. Record layout, other semantic types, `Obj.t`, null, defaults, receiver casts, and conversions are still selected in more than one component and remain migration debt. |
 | Runtime need for the admitted place family | `OcamlFunctionPlanSealer` and `OcamlRuntimeRequirementLedger` before syntax construction | Every `Int` addition and array read/write receives its own source identity, explanation, implementation feature, checked root module, profile eligibility, and deterministic revision. The lowering report verifies that every plan ID resolves to one of these records. |
 | Other runtime needs | `RuntimeUsageCollector` and `RuntimeCopier` after syntax construction | These families still choose roots from generated OCaml structure. The scan is useful as a consistency check, but it cannot be the semantic source of truth and cannot see through opaque raw fragments. Whole-program runtime authority therefore remains incomplete. |
 | Unsupported behavior | `guardrailError` plus `CUnit` branches | Errors are suppressed while compiling the current Haxe standard library. Bootstrap continuity must not become the release failure policy for an admitted place form. |
 
 At the baseline inventory, `OcamlBuilder.hx` was 7,688 physical lines and
-`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,465 and 3,701
-lines respectively. Place and local-storage planning, validation, reporting,
-and revision sealing live in focused `lowered/` modules. The builder is now 223
-lines smaller than the baseline even as the broader target gained other
-features; the compiler's intervening growth remains separate mega-file debt.
+`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,514 and
+3,705 lines respectively. Place, local-storage, representation, validation,
+reporting, and revision-sealing behavior lives in focused `lowered/` modules.
+The builder is still 174 lines smaller than the baseline; this slice added only
+registry lookup and invariant plumbing there. The compiler's intervening growth
+remains separate mega-file debt.
 
 ## Place coverage already attempted by the emitter
 
@@ -379,9 +398,10 @@ those normalized local reads; their original receiver/index calls remain
 ordered immediately before the plan in the host typed body. The current local
 storage path still initializes the generated `base` through an outer
 `Obj.magic`, while the admitted array operation itself consumes the direct
-`int HxArray.t` carrier and adds no further cast. Removing that earlier unsafe
-local-storage conversion belongs to `haxe_ocaml-9bome`'s shared representation
-registry, not to a second representation rule in the place emitter.
+`int HxArray.t` carrier and adds no further cast. The first registry slice
+covers exact `Int`, not `Array<Int>`, so removing that earlier unsafe array
+conversion remains work for `haxe_ocaml-9bome`; it does not belong in a second
+representation rule in the place emitter.
 
 The following are deliberately deferred:
 
@@ -390,8 +410,11 @@ The following are deliberately deferred:
 - same-module cross-type mutable statics and their compound/update lowering
   until `haxe_ocaml-stthl` plans ref-cell declarations before type emission;
 - non-`+=` static compound operators;
-- full capture and local-storage unification (`haxe_ocaml-9bome`);
-- the shared representation registry and removal of broad `Obj.magic` use;
+- representation decisions for types and domains beyond exact non-null `Int`,
+  including arrays, nullable values, `Dynamic`, classes, interfaces, generics,
+  imports, exports, and runtime payloads (`haxe_ocaml-9bome`);
+- weak-polymorphism, remaining `Obj.t` storage, explicit cross-domain
+  conversions, and removal or proof-inventorying of broad `Obj.magic` use;
 - general call/conversion lowering (`haxe_ocaml-taef5`);
 - control effects and any evidence-based function-local block form;
 - typed OCaml imports, adapters, and stable exports;

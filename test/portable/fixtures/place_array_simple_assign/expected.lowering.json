@@ -1,10 +1,108 @@
 {
   "model": "typed-ocaml-lowered-place",
+  "representationRevision": "sha256:28f0d34e998f58d3a0b082c4a9a9716802e38d26b61a9cf4920d62c94021560b",
   "runtimeRequirementCount": 1,
-  "schemaVersion": 6,
-  "admittedInputRevision": "sha256:e5b5d597eb031f4c7857dde8151f73a02eb0dbec9f9d05706f4c06e3217efb3a",
+  "schemaVersion": 7,
+  "representationCount": 4,
+  "representations": [
+    {
+      "carrierTypeId": "int",
+      "proof": {
+        "id": "direct-exact-int-storage-64-v1",
+        "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+      },
+      "reason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing Haxe array owns element mutation.",
+      "id": "representation:Int:array-element",
+      "semanticTypeId": "Int",
+      "aliasingPolicy": "no-value-alias",
+      "nullPolicy": "non-null",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "6c14e91b3a932762fa2d9d08044cdea221a772b90436052d8329b2c41e119068",
+      "identityPolicy": "primitive-value",
+      "key": "Int|array-element",
+      "domain": "array-element",
+      "revision": "sha256:b9ca3cf7a6a270e1e412b1bdbd4e3475196911c2f663d1f9266acbc74f4b71b5",
+      "mutationPolicy": "array-owner",
+      "boxingPolicy": "direct-unboxed"
+    },
+    {
+      "carrierTypeId": "int",
+      "proof": {
+        "id": "direct-exact-int-storage-64-v1",
+        "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+      },
+      "reason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
+      "id": "representation:Int:instance-field",
+      "semanticTypeId": "Int",
+      "aliasingPolicy": "no-value-alias",
+      "nullPolicy": "non-null",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "6c14e91b3a932762fa2d9d08044cdea221a772b90436052d8329b2c41e119068",
+      "identityPolicy": "primitive-value",
+      "key": "Int|instance-field",
+      "domain": "instance-field",
+      "revision": "sha256:93cb6bad4576a53bab79cb31d16b3192b2a88d0da091f174270a22a5ca8987fe",
+      "mutationPolicy": "instance-field-owner",
+      "boxingPolicy": "direct-unboxed"
+    },
+    {
+      "carrierTypeId": "int",
+      "proof": {
+        "id": "direct-exact-int-storage-64-v1",
+        "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+      },
+      "reason": "An exact, non-null Haxe Int uses OCaml int directly; a later value is represented by a newer immutable binding.",
+      "id": "representation:Int:internal-value",
+      "semanticTypeId": "Int",
+      "aliasingPolicy": "no-value-alias",
+      "nullPolicy": "non-null",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "6c14e91b3a932762fa2d9d08044cdea221a772b90436052d8329b2c41e119068",
+      "identityPolicy": "primitive-value",
+      "key": "Int|internal-value",
+      "domain": "internal-value",
+      "revision": "sha256:49d7f5238d4ed2a2d712db45d6ac7bfba6504a958a9c696c8d20a64e05679340",
+      "mutationPolicy": "immutable-value",
+      "boxingPolicy": "direct-unboxed"
+    },
+    {
+      "carrierTypeId": "int",
+      "proof": {
+        "id": "direct-exact-int-storage-64-v1",
+        "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+      },
+      "reason": "An exact, non-null Haxe Int uses OCaml int directly inside the mutable local cell selected by the function plan.",
+      "id": "representation:Int:mutable-local-storage",
+      "semanticTypeId": "Int",
+      "aliasingPolicy": "no-value-alias",
+      "nullPolicy": "non-null",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "6c14e91b3a932762fa2d9d08044cdea221a772b90436052d8329b2c41e119068",
+      "identityPolicy": "primitive-value",
+      "key": "Int|mutable-local-storage",
+      "domain": "mutable-local-storage",
+      "revision": "sha256:a11ca91ec836369e29784bf7827f503c038a3fc8fdd9d6c92cdf0c8d22d784cc",
+      "mutationPolicy": "shared-local-cell",
+      "boxingPolicy": "direct-unboxed"
+    }
+  ],
+  "representationScope": "exact-non-null-int-v1",
+  "admittedInputRevision": "sha256:a05c918ff109f48601f5bb96ea9098900846d1332b98bd2bea96d5a6ea8de49e",
   "runtimeRequirementRevision": "sha256:e21f8f14321de229bdaea6db434b89695f382d64f403551f4e978347211413f2",
   "planCount": 1,
+  "representationModel": "typed-ocaml-program-representation",
   "runtimeRequirements": [
     {
       "implementationFeature": "haxe-array-element-access-v1",
@@ -50,19 +148,19 @@
         "indexDisplayType": "Int",
         "receiverRepresentationReason": "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
         "ownerModuleId": "Array",
-        "indexRepresentationReason": "exact Haxe Int index uses the direct OCaml int carrier",
+        "indexRepresentationReason": "An exact, non-null Haxe Int uses OCaml int directly; a later value is represented by a newer immutable binding.",
         "id": "place:2ec87ed9e163efbae5e983b6:place",
         "semanticTypeId": "Int",
         "indexSemanticTypeId": "Int",
         "kind": "array-element",
-        "representationReason": "exact Array<Int> elements use the direct OCaml int carrier inside HxArray",
-        "indexRepresentationId": "place:2ec87ed9e163efbae5e983b6:representation:array-index",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing Haxe array owns element mutation.",
+        "indexRepresentationId": "representation:Int:internal-value",
         "receiverSemanticTypeId": "Array<Int>",
         "targetModuleName": "HxArray",
         "receiverRepresentationId": "place:2ec87ed9e163efbae5e983b6:representation:array-receiver",
         "fieldName": "[]",
         "receiverCarrierTypeId": "int HxArray.t",
-        "representationId": "place:2ec87ed9e163efbae5e983b6:representation:array-element"
+        "representationId": "representation:Int:array-element"
       },
       "originId": "place:2ec87ed9e163efbae5e983b6",
       "id": "place:2ec87ed9e163efbae5e983b6:array-simple-assignment",

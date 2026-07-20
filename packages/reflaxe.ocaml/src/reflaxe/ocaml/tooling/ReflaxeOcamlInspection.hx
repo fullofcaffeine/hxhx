@@ -8,6 +8,8 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionGeneratedFiles;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionArtifactManifest;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLoweredPlan;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionLowering;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentation;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentationDecision;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionProfile;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntime;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntimeReason;
@@ -43,6 +45,7 @@ class ReflaxeOcamlInspection {
 		final profile = inspectProfile(Path.join([outputDirectory, PROFILE_REPORT]));
 		final runtime = inspectRuntime(Path.join([outputDirectory, RUNTIME_REPORT]));
 		final lowering = inspectLowering(Path.join([outputDirectory, LOWERING_REPORT]), requireLowering);
+		final representation = lowering.representation;
 		final consistencyErrors = artifactConsistencyErrors(profile, runtime, artifactManifest);
 		var errorCount = 0;
 		for (status in [generated.status, profile.status, runtime.status]) {
@@ -62,7 +65,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 3,
+			schemaVersion: 4,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -71,6 +74,7 @@ class ReflaxeOcamlInspection {
 			profile: profile,
 			runtime: runtime,
 			lowering: lowering,
+			representation: representation,
 			consistencyErrors: consistencyErrors,
 			unavailable: unavailableCapabilities(),
 			summary: {
@@ -80,7 +84,8 @@ class ReflaxeOcamlInspection {
 				generatedFileCount: generated.files.length,
 				artifactEntryCount: artifactManifest.entryCount,
 				runtimeModuleCount: runtime.selectedModules.length,
-				loweredPlanCount: lowering.plans.length
+				loweredPlanCount: lowering.plans.length,
+				representationDecisionCount: representation.decisions.length
 			}
 		};
 	}
@@ -114,6 +119,13 @@ class ReflaxeOcamlInspection {
 				if (plan.runtimeRequirementIds.length > 0) {
 					lines.push('    runtime requirements: ${plan.runtimeRequirementIds.join(", ")}');
 				}
+			}
+		}
+		lines.push(renderRepresentation(report.representation));
+		if (report.representation.status == "present") {
+			for (decision in report.representation.decisions) {
+				lines.push('  - ${decision.semanticTypeId} in ${decision.domain}: ${decision.carrierTypeId}');
+				lines.push('    reason: ${decision.reason}');
 			}
 		}
 		if (report.consistencyErrors.length == 0) {
@@ -250,6 +262,8 @@ class ReflaxeOcamlInspection {
 					model: null,
 					admittedInputRevision: null,
 					plans: [],
+					representation: representationFailure("not-enabled", path,
+						"The representation registry is reported with typed lowering. Add -D ocaml_lowering_report and rebuild."),
 					scope: "typed-place-assignment-and-update-family",
 					message: "Typed place lowering was not requested. Add -D ocaml_lowering_report to the project HXML and rebuild."
 				};
@@ -258,8 +272,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 6) {
-						throw 'Unsupported lowering report schema $version; expected 6.';
+					if (version != 7) {
+						throw 'Unsupported lowering report schema $version; expected 7.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -272,6 +286,7 @@ class ReflaxeOcamlInspection {
 					}
 					final plans = [for (plan in rawPlans) loweredPlan(plan)];
 					plans.sort((left, right) -> compareStrings(left.id, right.id));
+					final representation = inspectRepresentations(value, path, version, plans);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans);
 					{
 						status: "present",
@@ -281,12 +296,101 @@ class ReflaxeOcamlInspection {
 						model: model,
 						admittedInputRevision: requiredSha256Revision(value, "admittedInputRevision"),
 						plans: plans,
+						representation: representation,
 						scope: "typed-place-assignment-and-update-family",
 						message: 'Typed place report contains ${plans.length} sealed operation${plans.length == 1 ? "" : "s"} and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"} tied to those Haxe operations; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
 				}
+		};
+	}
+
+	static function inspectRepresentations(value:Dynamic, path:String, schemaVersion:Int, plans:Array<InspectionLoweredPlan>):InspectionRepresentation {
+		final model = requiredString(value, "representationModel");
+		if (model != "typed-ocaml-program-representation")
+			throw 'Unsupported representation report model "$model".';
+		final scope = requiredString(value, "representationScope");
+		if (scope != "exact-non-null-int-v1")
+			throw 'Unsupported representation report scope "$scope".';
+		final rawDecisions = requiredArray(value, "representations");
+		final expectedCount = requiredInt(value, "representationCount");
+		if (rawDecisions.length != expectedCount)
+			throw 'Representation report representationCount is $expectedCount but representations contains ${rawDecisions.length} entries.';
+		final decisions = [for (decision in rawDecisions) representationDecision(decision)];
+		decisions.sort((left, right) -> compareStrings(left.id, right.id));
+		final byId:Map<String, InspectionRepresentationDecision> = [];
+		final byKey:Map<String, Bool> = [];
+		for (decision in decisions) {
+			if (byId.exists(decision.id))
+				throw 'Representation report contains duplicate identity "${decision.id}".';
+			if (byKey.exists(decision.key))
+				throw 'Representation report contains duplicate key "${decision.key}".';
+			byId.set(decision.id, decision);
+			byKey.set(decision.key, true);
+		}
+		for (plan in plans) {
+			final representationId = plan.representationId;
+			if (representationId == null || !byId.exists(representationId))
+				throw 'Typed place plan "${plan.id}" refers to missing program representation "$representationId".';
+			final decision:InspectionRepresentationDecision = cast byId.get(representationId);
+			final expectedDomain = switch (plan.placeKind) {
+				case "instance-field": "instance-field";
+				case "static-field": "static-field";
+				case "array-element": "array-element";
+				case other: throw 'Typed place plan "${plan.id}" has unsupported place kind "$other".';
+			}
+			if (decision.semanticTypeId != plan.semanticTypeId
+				|| decision.carrierTypeId != plan.carrierTypeId
+				|| decision.domain != expectedDomain) {
+				throw 'Typed place plan "${plan.id}" expects ${plan.semanticTypeId} -> ${plan.carrierTypeId} in $expectedDomain, but representation ${decision.id} selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} in ${decision.domain}.';
+			}
+			final indexRepresentationId = plan.indexRepresentationId;
+			if (indexRepresentationId != null) {
+				if (!byId.exists(indexRepresentationId))
+					throw 'Typed place plan "${plan.id}" refers to missing index representation "$indexRepresentationId".';
+				final indexDecision:InspectionRepresentationDecision = cast byId.get(indexRepresentationId);
+				if (indexDecision.semanticTypeId != plan.indexSemanticTypeId
+					|| indexDecision.carrierTypeId != plan.indexCarrierTypeId
+					|| indexDecision.domain != "internal-value") {
+					throw 'Typed place plan "${plan.id}" index expects ${plan.indexSemanticTypeId} -> ${plan.indexCarrierTypeId} in internal-value, but representation ${indexDecision.id} selects ${indexDecision.semanticTypeId} -> ${indexDecision.carrierTypeId} in ${indexDecision.domain}.';
+				}
+			}
+		}
+		return {
+			status: "present",
+			path: path,
+			schemaVersion: schemaVersion,
+			model: model,
+			revision: requiredSha256Revision(value, "representationRevision"),
+			decisions: decisions,
+			scope: scope,
+			message: 'The compiler reported ${decisions.length} program-owned exact-Int carrier decision${decisions.length == 1 ? "" : "s"}; other Haxe types and boundary domains remain outside this first slice.'
+		};
+	}
+
+	static function representationDecision(value:Dynamic):InspectionRepresentationDecision {
+		final proof = requiredObject(value, "proof");
+		final profiles = requiredStringArray(value, "profileEligibility");
+		if (profiles.length == 0)
+			throw 'Representation decision "${requiredString(value, "id")}" has no eligible profile.';
+		return {
+			id: requiredString(value, "id"),
+			key: requiredString(value, "key"),
+			programRevision: requiredString(value, "programRevision"),
+			revision: requiredSha256Revision(value, "revision"),
+			semanticTypeId: requiredString(value, "semanticTypeId"),
+			domain: requiredString(value, "domain"),
+			carrierTypeId: requiredString(value, "carrierTypeId"),
+			nullPolicy: requiredString(value, "nullPolicy"),
+			identityPolicy: requiredString(value, "identityPolicy"),
+			aliasingPolicy: requiredString(value, "aliasingPolicy"),
+			mutationPolicy: requiredString(value, "mutationPolicy"),
+			boxingPolicy: requiredString(value, "boxingPolicy"),
+			reason: requiredString(value, "reason"),
+			proofId: requiredString(proof, "id"),
+			proofClaim: requiredString(proof, "claim"),
+			profileEligibility: profiles
 		};
 	}
 
@@ -307,6 +411,9 @@ class ReflaxeOcamlInspection {
 			carrierTypeId: requiredString(value, "carrierTypeId"),
 			representationId: requiredString(place, "representationId"),
 			representationReason: requiredString(place, "representationReason"),
+			indexSemanticTypeId: optionalString(place, "indexSemanticTypeId"),
+			indexCarrierTypeId: optionalString(place, "indexCarrierTypeId"),
+			indexRepresentationId: optionalString(place, "indexRepresentationId"),
 			sourceOperator: optionalString(value, "sourceOperator"),
 			fixity: optionalString(value, "fixity"),
 			conversion: optionalString(value, "conversion"),
@@ -458,7 +565,6 @@ class ReflaxeOcamlInspection {
 
 	static function unavailableCapabilities():Array<InspectionUnavailableCapability> {
 		return [
-			unavailable("program-representation", "Program-wide representation registry", "The typed OCaml representation registry has not landed."),
 			unavailable("semantic-runtime-manifest", "Whole-program runtime requirement ledger",
 				"A checked partial report now covers core packaging, the generated type registry, declared static native boundaries, and typed assignments/updates; other compiler paths still need explicit explanations."),
 			unavailable("native-dependencies", "Native package and source dependencies", "Structured Dune/opam/native-source ownership has not landed."),
@@ -501,6 +607,17 @@ class ReflaxeOcamlInspection {
 			case _:
 				'[FAIL] Typed place lowering: ${value.message}';
 		};
+	}
+
+	static function renderRepresentation(value:InspectionRepresentation):String {
+		return switch (value.status) {
+			case "present":
+				'[PASS] Program representation registry: ${value.decisions.length} decision${value.decisions.length == 1 ? "" : "s"} (${value.scope}).';
+			case "not-enabled":
+				'[SKIP] Program representation registry: ${value.message}';
+			case _:
+				'[FAIL] Program representation registry: ${value.message}';
+		}
 	}
 
 	static function readJson(path:String):InspectionJsonResult {
@@ -637,7 +754,21 @@ class ReflaxeOcamlInspection {
 			model: null,
 			admittedInputRevision: null,
 			plans: [],
+			representation: representationFailure("invalid", path, message),
 			scope: "typed-place-assignment-and-update-family",
+			message: message
+		};
+	}
+
+	static function representationFailure(status:String, path:String, message:String):InspectionRepresentation {
+		return {
+			status: status,
+			path: path,
+			schemaVersion: null,
+			model: null,
+			revision: null,
+			decisions: [],
+			scope: "exact-non-null-int-v1",
 			message: message
 		};
 	}

@@ -5,7 +5,6 @@ import haxe.macro.Type;
 import haxe.macro.Expr.Binop;
 import haxe.macro.Expr.Unop;
 import haxe.macro.Type.TypedExpr;
-import haxe.macro.TypeTools;
 
 /**
 	Defines the exact source shapes admitted to the new place-lowering path.
@@ -16,36 +15,7 @@ import haxe.macro.TypeTools;
 **/
 class OcamlPlaceInputPolicy {
 	static function isExactInt(type:Type):Bool {
-		var current = type;
-		var following = true;
-		var depth = 0;
-		while (following && depth < 32) {
-			depth += 1;
-			current = switch (current) {
-				case TLazy(resolve): resolve();
-				case TMono(reference):
-					final resolved = reference.get();
-					if (resolved == null) {
-						following = false;
-						current;
-					} else {
-						resolved;
-					}
-				case TType(typeRef, parameters):
-					final typedefType = typeRef.get();
-					TypeTools.applyTypeParameters(typedefType.type, typedefType.params, parameters);
-				case _:
-					following = false;
-					current;
-			}
-		}
-		if (following)
-			return false;
-		return switch (current) {
-			case TAbstract(abstractRef, _): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Int";
-			case _:
-				false;
-		}
+		return OcamlRepresentationRegistry.isExactInt(type);
 	}
 
 	/** Recognizes only a direct nominal `Array<Int>` carrier. */

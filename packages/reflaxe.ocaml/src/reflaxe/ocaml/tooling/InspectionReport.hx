@@ -149,6 +149,9 @@ typedef InspectionLoweredPlan = {
 	final carrierTypeId:String;
 	final representationId:Null<String>;
 	final representationReason:Null<String>;
+	final indexSemanticTypeId:Null<String>;
+	final indexCarrierTypeId:Null<String>;
+	final indexRepresentationId:Null<String>;
 	final sourceOperator:Null<String>;
 	final fixity:Null<String>;
 	final conversion:Null<String>;
@@ -156,6 +159,38 @@ typedef InspectionLoweredPlan = {
 	final effects:Array<String>;
 	final schedule:Array<String>;
 	final runtimeRequirementIds:Array<String>;
+}
+
+/** One program-owned Haxe-type to OCaml-carrier choice. **/
+typedef InspectionRepresentationDecision = {
+	final id:String;
+	final key:String;
+	final programRevision:String;
+	final revision:String;
+	final semanticTypeId:String;
+	final domain:String;
+	final carrierTypeId:String;
+	final nullPolicy:String;
+	final identityPolicy:String;
+	final aliasingPolicy:String;
+	final mutationPolicy:String;
+	final boxingPolicy:String;
+	final reason:String;
+	final proofId:String;
+	final proofClaim:String;
+	final profileEligibility:Array<String>;
+}
+
+/** The admitted portion of the program-wide representation registry. **/
+typedef InspectionRepresentation = {
+	final status:String;
+	final path:String;
+	final schemaVersion:Null<Int>;
+	final model:Null<String>;
+	final revision:Null<String>;
+	final decisions:Array<InspectionRepresentationDecision>;
+	final scope:String;
+	final message:String;
 }
 
 /** Optional report for the assignment/update family already on typed lowering. **/
@@ -167,6 +202,7 @@ typedef InspectionLowering = {
 	final model:Null<String>;
 	final admittedInputRevision:Null<String>;
 	final plans:Array<InspectionLoweredPlan>;
+	final representation:InspectionRepresentation;
 	final scope:String;
 	final message:String;
 }
@@ -188,6 +224,7 @@ typedef InspectionSummary = {
 	final artifactEntryCount:Int;
 	final runtimeModuleCount:Int;
 	final loweredPlanCount:Int;
+	final representationDecisionCount:Int;
 }
 
 /**
@@ -207,6 +244,7 @@ typedef InspectionReport = {
 	final profile:InspectionProfile;
 	final runtime:InspectionRuntime;
 	final lowering:InspectionLowering;
+	final representation:InspectionRepresentation;
 	final consistencyErrors:Array<String>;
 	final unavailable:Array<InspectionUnavailableCapability>;
 	final summary:InspectionSummary;

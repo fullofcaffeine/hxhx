@@ -51,6 +51,7 @@ import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lifecycle.OcamlSemanticLifecycleTraceWriter;
 import reflaxe.GenericCompiler;
 import reflaxe.lifecycle.ProgramRevision;
@@ -70,6 +71,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	public static var instance:OcamlCompiler;
 
 	public final functionPlanRegistry:OcamlFunctionPlanRegistry = new OcamlFunctionPlanRegistry();
+	public final representationRegistry:OcamlRepresentationRegistry = new OcamlRepresentationRegistry();
 
 	final ctx:CompilationContext = new CompilationContext();
 	final printer:OcamlASTPrinter = new OcamlASTPrinter();
@@ -236,12 +238,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 	override public function beginProgramRevision(revision:ProgramRevision):Void {
 		super.beginProgramRevision(revision);
 		functionPlanRegistry.beginProgram(revision.id);
+		representationRegistry.beginProgram(revision.id);
 		ctx.beginRuntimeRequirementProgram(revision.id);
 	}
 
 	/** Builds and validates every admitted plan for one final typed function body. */
 	public function sealFunctionPlans(data:ClassFuncData):Void {
-		new OcamlFunctionPlanSealer(ctx, functionPlanRegistry).seal(data);
+		new OcamlFunctionPlanSealer(ctx, functionPlanRegistry, representationRegistry).seal(data);
 	}
 
 	#if macro
@@ -912,7 +915,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#else
 		final emitSourceMap = false;
 		#end
-		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, emitSourceMap);
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, emitSourceMap);
 
 		// Header marker as a no-op binding to keep output non-empty and debuggable.
 		items.push(OcamlModuleItem.ILet([
@@ -1808,7 +1811,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		OcamlBuildTimingReportWriter.clear(outDir);
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
-			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), artifacts);
+			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationRegistry.decisions(),
+				artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)
@@ -2925,7 +2929,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#else
 		final emitSourceMap = false;
 		#end
-		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, emitSourceMap);
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, emitSourceMap);
 		final e = builder.buildStandaloneExpr(expr, OcamlLocalStoragePlanner.planExpression(expr));
 		return printer.printExpr(e);
 	}

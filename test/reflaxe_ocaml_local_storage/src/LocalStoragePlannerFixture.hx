@@ -1,11 +1,16 @@
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageDecision;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageKind;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan.OcamlLocalStorageReason;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlanner;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 
 /** Focused executable checks for local-storage decisions and explanations. */
 class LocalStoragePlannerFixture {
@@ -190,7 +195,54 @@ class LocalStoragePlannerFixture {
 		]);
 		assertTrue(canonicalA.revision == canonicalB.revision, "equivalent storage reasons should have one revision regardless of input order");
 
+		final representedInput = Context.typeExpr(macro {
+			var straight = 0;
+			straight = 1;
+			var mutable = 0;
+			mutable++;
+			var captured = 0;
+			var readCaptured = function() return captured;
+			captured = 1;
+			var floating = 0.0;
+			floating += 1.0;
+			straight + mutable + readCaptured() + Std.int(floating);
+		});
+		final representedStorage = OcamlLocalStoragePlanner.planExpression(representedInput);
+		final representations = new OcamlRepresentationRegistry();
+		representations.beginProgram("program:local-storage-fixture");
+		final localRepresentations = OcamlLocalRepresentationPlanner.planExpression(representedInput, representedStorage, representations);
+		final references = localRepresentations.references();
+		assertTrue(localRepresentations.count == 4 && localRepresentations.admittedCount == 3,
+			"every mutated local should have an explicit representation choice, while only exact Int is admitted in this slice");
+		assertTrue(references.length == 3, "all three mutated exact-Int locals should reference the program representation registry");
+		assertTrue(references.filter(reference -> reference.domain == OcamlRepresentationDomain.InternalValue).length == 1,
+			"straight-line Int rebinding should use the internal-value representation domain");
+		assertTrue(references.filter(reference -> reference.domain == OcamlRepresentationDomain.MutableLocalStorage).length == 1,
+			"an incremented Int should use the mutable-local-storage representation domain");
+		assertTrue(references.filter(reference -> reference.domain == OcamlRepresentationDomain.CapturedLocalStorage).length == 1,
+			"an Int shared with a nested function should use the captured-local-storage representation domain");
+		assertTrue(representations.decisions()
+			.length == 3, "the program registry should retain one exact-Int decision for each selected local-storage domain");
+		var unmigratedFloatCount = 0;
+		for (storageDecision in representedStorage.decisions()) {
+			switch (localRepresentations.choiceFor(storageDecision.localId)) {
+				case Unmigrated("Float"):
+					unmigratedFloatCount += 1;
+				case _:
+			}
+		}
+		assertTrue(unmigratedFloatCount == 1,
+			"the mutated Float local should be explicitly marked as unmigrated instead of being silently reclassified during syntax construction");
+		final returnedReference = references[0];
+		Reflect.setField(returnedReference, "representationId", "changed-by-caller");
+		assertTrue(localRepresentations.referenceFor(returnedReference.localId).representationId != "changed-by-caller",
+			"mutating a returned local reference must not change the sealed function plan");
+
 		expectFailure("duplicate local", "planned more than once", () -> new OcamlLocalStoragePlan([straightLine, straightLine]));
+		expectFailure("duplicate local representation choice", "more than one representation choice", () -> new OcamlLocalRepresentationPlan([
+			{localId: 7, choice: OcamlLocalRepresentationChoice.Unmigrated("Float")},
+			{localId: 7, choice: OcamlLocalRepresentationChoice.Unmigrated("Float")}
+		]));
 		Sys.println("REFLAXE_OCAML_LOCAL_STORAGE_PLANNER_FIXTURE:PASS");
 	}
 }

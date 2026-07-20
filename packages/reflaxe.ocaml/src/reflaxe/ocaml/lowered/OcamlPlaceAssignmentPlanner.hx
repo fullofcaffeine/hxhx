@@ -30,17 +30,20 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateFixity;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredUpdateOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrence;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrenceRole;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 
 /** Builds typed semantic plans for the place-operation families admitted so far. */
 class OcamlPlaceAssignmentPlanner {
 	final context:CompilationContext;
 	final currentModuleId:String;
 	final currentTypeName:String;
+	final representations:OcamlRepresentationRegistry;
 
-	public function new(context:CompilationContext, currentModuleId:String, currentTypeName:String) {
+	public function new(context:CompilationContext, currentModuleId:String, currentTypeName:String, representations:OcamlRepresentationRegistry) {
 		this.context = context;
 		this.currentModuleId = currentModuleId;
 		this.currentTypeName = currentTypeName;
+		this.representations = representations;
 	}
 
 	/** Selects one complete place plan from a final origin-bearing operation. */
@@ -105,6 +108,7 @@ class OcamlPlaceAssignmentPlanner {
 				final currentModuleName = context.ocamlModuleNameForModuleId(currentModuleId);
 				final scopedType = context.scopedInstanceTypeName(receiverClass.module, receiverClass.name);
 				final receiverCarrier = currentModuleName == moduleName ? scopedType : moduleName + "." + scopedType;
+				final valueRepresentation = representations.selectExactInt(OcamlRepresentationDomain.InstanceField);
 				{
 					place: {
 						id: originId + ":place",
@@ -119,9 +123,9 @@ class OcamlPlaceAssignmentPlanner {
 						fieldName: field.name,
 						targetFieldName: context.ocamlRecordLabel(field.name),
 						semanticTypeId: TypeTools.toString(left.t),
-						carrierTypeId: "int",
-						representationId: originId + ":representation:field",
-						representationReason: "exact Haxe Int field uses the direct OCaml int carrier"
+						carrierTypeId: valueRepresentation.carrierTypeId,
+						representationId: valueRepresentation.id,
+						representationReason: valueRepresentation.reason
 					},
 					receiver: receiver
 				};
@@ -137,6 +141,7 @@ class OcamlPlaceAssignmentPlanner {
 				final targetModuleName = context.ocamlModuleNameForModuleId(classType.module);
 				final staticAccess = currentModuleId == classType.module ? OcamlLoweredStaticFieldAccess.Local : OcamlLoweredStaticFieldAccess.Qualified;
 				final forwardDeclarationRequired = currentModuleId == classType.module && currentTypeName != classType.name;
+				final valueRepresentation = representations.selectExactInt(OcamlRepresentationDomain.StaticField);
 				{
 					id: originId + ":place",
 					kind: OcamlLoweredPlaceKind.StaticField,
@@ -149,9 +154,9 @@ class OcamlPlaceAssignmentPlanner {
 					staticAccess: staticAccess,
 					forwardDeclarationRequired: forwardDeclarationRequired,
 					semanticTypeId: TypeTools.toString(left.t),
-					carrierTypeId: "int",
-					representationId: originId + ":representation:static-field",
-					representationReason: "mutable exact Haxe Int static uses an OCaml int ref cell"
+					carrierTypeId: valueRepresentation.carrierTypeId,
+					representationId: valueRepresentation.id,
+					representationReason: valueRepresentation.reason
 				};
 			case _: null;
 		}
@@ -160,6 +165,8 @@ class OcamlPlaceAssignmentPlanner {
 	function planArrayElement(originId:String, left:TypedExpr):Null<{place:OcamlLoweredArrayElementPlace, receiver:TypedExpr, index:TypedExpr}> {
 		return switch (left.expr) {
 			case TArray(receiver, index):
+				final indexRepresentation = representations.selectExactInt(OcamlRepresentationDomain.InternalValue);
+				final valueRepresentation = representations.selectExactInt(OcamlRepresentationDomain.ArrayElement);
 				{
 					place: {
 						id: originId + ":place",
@@ -174,17 +181,17 @@ class OcamlPlaceAssignmentPlanner {
 						receiverRepresentationReason: "exact Array<Int> element operations consume the direct typed HxArray carrier inside place lowering",
 						indexSemanticTypeId: "Int",
 						indexDisplayType: TypeTools.toString(index.t),
-						indexCarrierTypeId: "int",
-						indexRepresentationId: originId + ":representation:array-index",
-						indexRepresentationReason: "exact Haxe Int index uses the direct OCaml int carrier",
+						indexCarrierTypeId: indexRepresentation.carrierTypeId,
+						indexRepresentationId: indexRepresentation.id,
+						indexRepresentationReason: indexRepresentation.reason,
 						fieldName: "[]",
 						targetModuleName: "HxArray",
 						targetLoadName: "get",
 						targetStoreName: "set",
 						semanticTypeId: "Int",
-						carrierTypeId: "int",
-						representationId: originId + ":representation:array-element",
-						representationReason: "exact Array<Int> elements use the direct OCaml int carrier inside HxArray"
+						carrierTypeId: valueRepresentation.carrierTypeId,
+						representationId: valueRepresentation.id,
+						representationReason: valueRepresentation.reason
 					},
 					receiver: receiver,
 					index: index

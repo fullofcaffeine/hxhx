@@ -43,12 +43,13 @@ try {
 	const inspected = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(inspected.status, 0, inspected.stderr || inspected.stdout)
 	const report = JSON.parse(inspected.stdout)
-	assert.strictEqual(report.schemaVersion, 3)
+	assert.strictEqual(report.schemaVersion, 4)
 	assert.strictEqual(report.summary.valid, true)
 	assert(report.summary.generatedFileCount > 0)
 	assert(report.summary.artifactEntryCount > report.summary.generatedFileCount)
 	assert(report.summary.runtimeModuleCount > 0)
 	assert.strictEqual(report.summary.loweredPlanCount, 14)
+	assert(report.summary.representationDecisionCount > 0)
 	assert.strictEqual(report.artifactManifest.status, 'present')
 	assert.strictEqual(report.artifactManifest.entryCount, report.summary.artifactEntryCount)
 	assert.strictEqual(report.artifactManifest.completeForSourceBundle, false)
@@ -70,12 +71,19 @@ try {
 	assert(report.runtime.inclusionReasons.some(reason => reason.module === 'HxRuntime'))
 	assert.strictEqual(report.lowering.scope, 'typed-place-assignment-and-update-family')
 	assert(report.lowering.message.includes('not a whole-program IR'))
+	assert.strictEqual(report.representation.status, 'present')
+	assert.strictEqual(report.representation.scope, 'exact-non-null-int-v1')
+	assert.strictEqual(report.representation.decisions.length, report.summary.representationDecisionCount)
+	assert(report.representation.decisions.some(decision => decision.id === 'representation:Int:static-field'
+		&& decision.carrierTypeId === 'int'
+		&& decision.nullPolicy === 'non-null'
+		&& decision.boxingPolicy === 'direct-unboxed'))
 	const update = report.lowering.plans.find(plan => plan.nodeKind === 'static-int-update')
 	assert(update)
 	assert.strictEqual(update.semanticTypeId, 'Int')
 	assert.strictEqual(update.carrierTypeId, 'int')
 	assert.strictEqual(update.sourceOffsetUnit, 'byte-offset')
-	assert(update.representationReason.includes('OCaml int ref cell'))
+	assert(update.representationReason.includes("static field's OCaml ref cell"))
 	assert.deepStrictEqual(update.schedule, ['load', 'operator', 'store', 'result'])
 	assert(update.runtimeRequirementIds.some(id => id.includes('haxe-int32-add')))
 
@@ -204,9 +212,10 @@ try {
 			assert(file.bytes > 0)
 		}
 	}
-	for (const id of ['program-representation', 'semantic-runtime-manifest', 'native-dependencies', 'raw-unsafe', 'bindings', 'export-abi']) {
+	for (const id of ['semantic-runtime-manifest', 'native-dependencies', 'raw-unsafe', 'bindings', 'export-abi']) {
 		assert(report.unavailable.some(capability => capability.id === id && capability.status === 'unavailable'))
 	}
+	assert(!report.unavailable.some(capability => capability.id === 'program-representation'))
 
 	const human = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering'])
 	assert.strictEqual(human.status, 0, human.stderr || human.stdout)
@@ -217,6 +226,7 @@ try {
 	assert(human.stdout.includes('[SKIP] Native Dune timing'))
 	assert(human.stdout.includes('HxRuntime:'))
 	assert(human.stdout.includes('assignment/update family only'))
+	assert(human.stdout.includes('[PASS] Program representation registry:'))
 	assert(human.stdout.includes('REFLAXE_OCAML_INSPECT:PASS'))
 
 	const generatedPath = path.join(tempRoot, 'out/_GeneratedFiles.json')
@@ -288,11 +298,36 @@ try {
 	assert.strictEqual(missingRequirementReport.lowering.status, 'invalid')
 	assert(missingRequirementReport.lowering.message.includes(`refers to missing runtime requirement "${removedRequirement.id}"`))
 	fs.writeFileSync(loweringPath, loweringBytes)
+	const missingRepresentationValue = JSON.parse(loweringBytes)
+	const removedRepresentation = missingRepresentationValue.representations.pop()
+	missingRepresentationValue.representationCount -= 1
+	fs.writeFileSync(loweringPath, JSON.stringify(missingRepresentationValue, null, 2) + '\n')
+	const missingRepresentation = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(missingRepresentation.status, 1)
+	const missingRepresentationReport = JSON.parse(missingRepresentation.stdout)
+	assert.strictEqual(missingRepresentationReport.representation.status, 'invalid')
+	assert(missingRepresentationReport.representation.message.includes(`missing program representation`)
+		|| missingRepresentationReport.representation.message.includes(removedRepresentation.id))
+	fs.writeFileSync(loweringPath, loweringBytes)
+	const wrongDomainValue = JSON.parse(loweringBytes)
+	const staticRepresentation = wrongDomainValue.representations.find(
+		representation => representation.id === 'representation:Int:static-field')
+	assert(staticRepresentation)
+	staticRepresentation.domain = 'array-element'
+	fs.writeFileSync(loweringPath, JSON.stringify(wrongDomainValue, null, 2) + '\n')
+	const wrongDomain = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering', '--json'])
+	assert.strictEqual(wrongDomain.status, 1)
+	const wrongDomainReport = JSON.parse(wrongDomain.stdout)
+	assert.strictEqual(wrongDomainReport.representation.status, 'invalid')
+	assert(wrongDomainReport.representation.message.includes('static-field')
+		&& wrongDomainReport.representation.message.includes('array-element'))
+	fs.writeFileSync(loweringPath, loweringBytes)
 	fs.rmSync(loweringPath)
 	const optionalLowering = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--json'])
 	assert.strictEqual(optionalLowering.status, 1)
 	const optionalLoweringReport = JSON.parse(optionalLowering.stdout)
 	assert.strictEqual(optionalLoweringReport.lowering.status, 'not-enabled')
+	assert.strictEqual(optionalLoweringReport.representation.status, 'not-enabled')
 	assert.strictEqual(optionalLoweringReport.artifactManifest.status, 'invalid')
 	assert(optionalLoweringReport.artifactManifest.message.includes('is missing'))
 	const requiredLowering = runCli(['inspect', '--project', tempRoot, '--output', 'out', '--require-lowering'])

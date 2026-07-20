@@ -28,11 +28,14 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlFunctionPlanBinding;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan.OcamlLocalRepresentationChoice;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 
 /**
@@ -53,6 +56,7 @@ class OcamlBuilder {
 	public final emitSourceMap:Bool;
 
 	final placeAssignmentLowerer:OcamlPlaceAssignmentLowerer;
+	final representationRegistry:OcamlRepresentationRegistry;
 	var currentFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
 
 	// Track locals introduced by TVar that we currently represent as `ref`.
@@ -72,6 +76,7 @@ class OcamlBuilder {
 	// Set while compiling a function body so declarations consume the selected
 	// shared-cell versus immutable-rebinding decision.
 	var currentLocalStoragePlan:Null<OcamlLocalStoragePlan> = null;
+	var currentLocalRepresentationPlan:Null<OcamlLocalRepresentationPlan> = null;
 	// Current function return type while lowering a function body.
 	var currentFunctionReturnType:Null<Type> = null;
 
@@ -99,9 +104,10 @@ class OcamlBuilder {
 	}
 
 	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr, functionPlanRegistry:OcamlFunctionPlanRegistry,
-			emitSourceMap:Bool = false) {
+			representationRegistry:OcamlRepresentationRegistry, emitSourceMap:Bool = false) {
 		this.ctx = ctx;
 		this.typeExprFromHaxeType = typeExprFromHaxeType;
+		this.representationRegistry = representationRegistry;
 		this.emitSourceMap = emitSourceMap;
 		this.placeAssignmentLowerer = new OcamlPlaceAssignmentLowerer(ctx, functionPlanRegistry);
 	}
@@ -125,6 +131,39 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	/** Resolves an admitted local carrier without repeating target type policy. */
+	function localCarrierType(localId:Int, type:Type, position:Position):OcamlTypeExpr {
+		final binding = currentFunctionPlanBinding;
+		final storagePlan = currentLocalStoragePlan;
+		if (binding == null || storagePlan == null)
+			return typeExprFromHaxeType(type);
+		final storage = storagePlan.decisionFor(localId);
+		if (storage == null)
+			return typeExprFromHaxeType(type);
+		final localRepresentations = currentLocalRepresentationPlan;
+		if (localRepresentations == null)
+			return localStorageInvariant('local $localId reached syntax construction without a sealed representation plan', position);
+		final choice = localRepresentations.choiceFor(localId);
+		if (choice == null)
+			return localStorageInvariant('local $localId has storage decision ${storage.storage}, but no sealed representation choice', position);
+		return switch (choice) {
+			case Unmigrated(_):
+				typeExprFromHaxeType(type);
+			case ProgramDecision(representationId, semanticTypeId, domain):
+				final decision = try {
+					representationRegistry.require(representationId, binding.programRevision);
+				} catch (error:Dynamic) {
+					return localStorageInvariant(Std.string(error), position);
+				}
+				if (decision.semanticTypeId != semanticTypeId || decision.domain != domain) {
+					return
+						localStorageInvariant('local $localId expects $semanticTypeId in representation domain $domain, but ${decision.id} selects ${decision.semanticTypeId} in ${decision.domain}',
+						position);
+				}
+				OcamlTypeExpr.TIdent(decision.carrierTypeId);
+		}
 	}
 
 	/** Builds one admitted place operation from a sealed semantic plan. */
@@ -3799,13 +3838,14 @@ class OcamlBuilder {
 		// Kept for compatibility when TVar occurs outside of a block (rare in typed output).
 		// Prefer `buildBlock` handling for correct scoping.
 		final initExprRaw = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
+		final localType = init == null ? typeExprFromHaxeType(v.t) : localCarrierType(v.id, v.t, init.pos);
 		final initExpr = switch (init) {
 			case null:
-				OcamlExpr.EAnnot(initExprRaw, typeExprFromHaxeType(v.t));
+				OcamlExpr.EAnnot(initExprRaw, localType);
 			case _:
 				switch (unwrap(init).expr) {
 					case TConst(TNull):
-						OcamlExpr.EAnnot(initExprRaw, typeExprFromHaxeType(v.t));
+						OcamlExpr.EAnnot(initExprRaw, localType);
 					case _:
 						initExprRaw;
 				}
@@ -3823,7 +3863,7 @@ class OcamlBuilder {
 					}
 			};
 			weakRefLocals.set(v.id, hasNullInit && isFunctionType(v.t));
-			final slotType = typeExprFromHaxeType(v.t);
+			final slotType = localType;
 			final isObjSlot = switch (slotType) {
 				case TIdent(name):
 					name == "Obj.t";
@@ -5757,7 +5797,8 @@ class OcamlBuilder {
 						}
 					} else {
 						final initExprRaw = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
-						final initExpr = (init == null || isNullInitializer(init)) ? OcamlExpr.EAnnot(initExprRaw, typeExprFromHaxeType(v.t)) : initExprRaw;
+						final localType = localCarrierType(v.id, v.t, e.pos);
+						final initExpr = (init == null || isNullInitializer(init)) ? OcamlExpr.EAnnot(initExprRaw, localType) : initExprRaw;
 						final isMutable = currentLocalStoragePlan != null && currentLocalStoragePlan.requiresRef(v.id);
 
 						if (!isMutable) {
@@ -5779,7 +5820,7 @@ class OcamlBuilder {
 						} else {
 							refLocals.set(v.id, true);
 							weakRefLocals.set(v.id, (init == null || isNullInitializer(init)) && isFunctionType(v.t));
-							final slotType = typeExprFromHaxeType(v.t);
+							final slotType = localType;
 							final isObjSlot = switch (slotType) {
 								case TIdent(name):
 									name == "Obj.t";
@@ -6100,6 +6141,7 @@ class OcamlBuilder {
 		final t0 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
 		final storagePlan = functionPlan.localStorage;
+		final localRepresentationPlan = functionPlan.localRepresentations;
 		final previousFunctionPlanBinding = currentFunctionPlanBinding;
 		currentFunctionPlanBinding = functionPlan.binding;
 		#if macro
@@ -6111,8 +6153,12 @@ class OcamlBuilder {
 		final params = args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
 
 		final previousStoragePlan = currentLocalStoragePlan;
+		final previousLocalRepresentationPlan = currentLocalRepresentationPlan;
 		currentLocalStoragePlan = storagePlan;
+		currentLocalRepresentationPlan = localRepresentationPlan;
 		for (a in args) {
+			if (storagePlan.decisionFor(a.id) != null)
+				localCarrierType(a.id, a.t, bodyExpr.pos);
 			if (storagePlan.requiresRef(a.id)) {
 				refLocals.set(a.id, true);
 			}
@@ -6178,6 +6224,7 @@ class OcamlBuilder {
 		body = ensureParamUsage(body, params);
 
 		currentLocalStoragePlan = previousStoragePlan;
+		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		#if macro
@@ -6197,6 +6244,8 @@ class OcamlBuilder {
 		final params = tfunc.args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : tfunc.args.map(a -> OcamlPat.PVar(renameVar(a.v.name)));
 
 		for (a in tfunc.args) {
+			if (storagePlan.decisionFor(a.v.id) != null)
+				localCarrierType(a.v.id, a.v.t, tfunc.expr.pos);
 			if (storagePlan.requiresRef(a.v.id)) {
 				refLocals.set(a.v.id, true);
 			}

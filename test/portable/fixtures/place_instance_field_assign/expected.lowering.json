@@ -1,10 +1,62 @@
 {
   "model": "typed-ocaml-lowered-place",
+  "representationRevision": "sha256:b4eba2b37c524f8b1c72e65f49ead7addf15662116afd5c2bd65c6c9c15b6dd1",
   "runtimeRequirementCount": 6,
-  "schemaVersion": 6,
-  "admittedInputRevision": "sha256:66b805a53b2f286ce1b5e1118730fdd696bb862f092b4fb1f953e98a40e80084",
+  "schemaVersion": 7,
+  "representationCount": 2,
+  "representations": [
+    {
+      "carrierTypeId": "int",
+      "proof": {
+        "id": "direct-exact-int-storage-64-v1",
+        "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+      },
+      "reason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
+      "id": "representation:Int:instance-field",
+      "semanticTypeId": "Int",
+      "aliasingPolicy": "no-value-alias",
+      "nullPolicy": "non-null",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "712de87f86f39550ee23c2a02b02c223990b18c055942d793d9d86ff7ac8c39a",
+      "identityPolicy": "primitive-value",
+      "key": "Int|instance-field",
+      "domain": "instance-field",
+      "revision": "sha256:93cb6bad4576a53bab79cb31d16b3192b2a88d0da091f174270a22a5ca8987fe",
+      "mutationPolicy": "instance-field-owner",
+      "boxingPolicy": "direct-unboxed"
+    },
+    {
+      "carrierTypeId": "int",
+      "proof": {
+        "id": "direct-exact-int-storage-64-v1",
+        "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+      },
+      "reason": "An exact, non-null Haxe Int uses OCaml int directly inside the mutable local cell selected by the function plan.",
+      "id": "representation:Int:mutable-local-storage",
+      "semanticTypeId": "Int",
+      "aliasingPolicy": "no-value-alias",
+      "nullPolicy": "non-null",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "712de87f86f39550ee23c2a02b02c223990b18c055942d793d9d86ff7ac8c39a",
+      "identityPolicy": "primitive-value",
+      "key": "Int|mutable-local-storage",
+      "domain": "mutable-local-storage",
+      "revision": "sha256:a11ca91ec836369e29784bf7827f503c038a3fc8fdd9d6c92cdf0c8d22d784cc",
+      "mutationPolicy": "shared-local-cell",
+      "boxingPolicy": "direct-unboxed"
+    }
+  ],
+  "representationScope": "exact-non-null-int-v1",
+  "admittedInputRevision": "sha256:16203348867cdada00723aeb22c693ff95bd601f2c453ae668bb0fe9f64004af",
   "runtimeRequirementRevision": "sha256:503590d2df750895a8897a1a542c3c7c1c07535c173a4be7d2399cce72d69f76",
   "planCount": 9,
+  "representationModel": "typed-ocaml-program-representation",
   "runtimeRequirements": [
     {
       "implementationFeature": "haxe-int32-arithmetic-v1",
@@ -177,12 +229,12 @@
         "id": "place:12dbd182131a4e17e078fc11:place",
         "semanticTypeId": "Int",
         "kind": "instance-field",
-        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
         "receiverSemanticTypeId": "ConcatCounter",
         "receiverRepresentationId": "place:12dbd182131a4e17e078fc11:representation:receiver",
         "fieldName": "nextId",
         "receiverCarrierTypeId": "concatcounter_t",
-        "representationId": "place:12dbd182131a4e17e078fc11:representation:field"
+        "representationId": "representation:Int:instance-field"
       },
       "originId": "place:12dbd182131a4e17e078fc11",
       "id": "place:12dbd182131a4e17e078fc11:simple-assignment",
@@ -264,12 +316,12 @@
         "id": "place:12e3e65eaf20f1d04cdff365:place",
         "semanticTypeId": "Int",
         "kind": "instance-field",
-        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
         "receiverSemanticTypeId": "Holder",
         "receiverRepresentationId": "place:12e3e65eaf20f1d04cdff365:representation:receiver",
         "fieldName": "value",
         "receiverCarrierTypeId": "holder_t",
-        "representationId": "place:12e3e65eaf20f1d04cdff365:representation:field"
+        "representationId": "representation:Int:instance-field"
       },
       "delta": -1,
       "originId": "place:12e3e65eaf20f1d04cdff365",
@@ -361,12 +413,12 @@
         "id": "place:265173b365928b1048573384:place",
         "semanticTypeId": "Int",
         "kind": "instance-field",
-        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
         "receiverSemanticTypeId": "Holder",
         "receiverRepresentationId": "place:265173b365928b1048573384:representation:receiver",
         "fieldName": "value",
         "receiverCarrierTypeId": "holder_t",
-        "representationId": "place:265173b365928b1048573384:representation:field"
+        "representationId": "representation:Int:instance-field"
       },
       "originId": "place:265173b365928b1048573384",
       "id": "place:265173b365928b1048573384:compound-assignment",
@@ -467,12 +519,12 @@
         "id": "place:27dc2fc619a7d33dbd12ef01:place",
         "semanticTypeId": "Int",
         "kind": "instance-field",
-        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
         "receiverSemanticTypeId": "Holder",
         "receiverRepresentationId": "place:27dc2fc619a7d33dbd12ef01:representation:receiver",
         "fieldName": "value",
         "receiverCarrierTypeId": "holder_t",
-        "representationId": "place:27dc2fc619a7d33dbd12ef01:representation:field"
+        "representationId": "representation:Int:instance-field"
       },
       "originId": "place:27dc2fc619a7d33dbd12ef01",
       "id": "place:27dc2fc619a7d33dbd12ef01:simple-assignment",
@@ -554,12 +606,12 @@
         "id": "place:2b570095e1b3b1a7d5fc4da7:place",
         "semanticTypeId": "Int",
         "kind": "instance-field",
-        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
         "receiverSemanticTypeId": "Holder",
         "receiverRepresentationId": "place:2b570095e1b3b1a7d5fc4da7:representation:receiver",
         "fieldName": "value",
         "receiverCarrierTypeId": "holder_t",
-        "representationId": "place:2b570095e1b3b1a7d5fc4da7:representation:field"
+        "representationId": "representation:Int:instance-field"
       },
       "delta": 1,
       "originId": "place:2b570095e1b3b1a7d5fc4da7",
@@ -649,12 +701,12 @@
         "id": "place:2ec87ed9e163efbae5e983b6:place",
         "semanticTypeId": "Int",
         "kind": "instance-field",
-        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
         "receiverSemanticTypeId": "Holder",
         "receiverRepresentationId": "place:2ec87ed9e163efbae5e983b6:representation:receiver",
         "fieldName": "value",
         "receiverCarrierTypeId": "holder_t",
-        "representationId": "place:2ec87ed9e163efbae5e983b6:representation:field"
+        "representationId": "representation:Int:instance-field"
       },
       "originId": "place:2ec87ed9e163efbae5e983b6",
       "id": "place:2ec87ed9e163efbae5e983b6:simple-assignment",
@@ -736,12 +788,12 @@
         "id": "place:4cb4b564fead7c106c0e97f9:place",
         "semanticTypeId": "Int",
         "kind": "instance-field",
-        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
         "receiverSemanticTypeId": "Holder",
         "receiverRepresentationId": "place:4cb4b564fead7c106c0e97f9:representation:receiver",
         "fieldName": "value",
         "receiverCarrierTypeId": "holder_t",
-        "representationId": "place:4cb4b564fead7c106c0e97f9:representation:field"
+        "representationId": "representation:Int:instance-field"
       },
       "delta": 1,
       "originId": "place:4cb4b564fead7c106c0e97f9",
@@ -835,12 +887,12 @@
         "id": "place:5c02137610b61ef126589230:place",
         "semanticTypeId": "Int",
         "kind": "instance-field",
-        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
         "receiverSemanticTypeId": "Holder",
         "receiverRepresentationId": "place:5c02137610b61ef126589230:representation:receiver",
         "fieldName": "value",
         "receiverCarrierTypeId": "holder_t",
-        "representationId": "place:5c02137610b61ef126589230:representation:field"
+        "representationId": "representation:Int:instance-field"
       },
       "delta": -1,
       "originId": "place:5c02137610b61ef126589230",
@@ -934,12 +986,12 @@
         "id": "place:bcf1fbb9637f08be2193d9d6:place",
         "semanticTypeId": "Int",
         "kind": "instance-field",
-        "representationReason": "exact Haxe Int field uses the direct OCaml int carrier",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
         "receiverSemanticTypeId": "ConcatCounter",
         "receiverRepresentationId": "place:bcf1fbb9637f08be2193d9d6:representation:receiver",
         "fieldName": "nextId",
         "receiverCarrierTypeId": "concatcounter_t",
-        "representationId": "place:bcf1fbb9637f08be2193d9d6:representation:field"
+        "representationId": "representation:Int:instance-field"
       },
       "delta": 1,
       "originId": "place:bcf1fbb9637f08be2193d9d6",

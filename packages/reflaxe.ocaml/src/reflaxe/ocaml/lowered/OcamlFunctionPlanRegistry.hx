@@ -4,6 +4,7 @@ package reflaxe.ocaml.lowered;
 import haxe.crypto.Sha256;
 import haxe.ds.StringMap;
 import reflaxe.data.ClassFuncData;
+import reflaxe.ocaml.lowered.OcamlLocalRepresentationPlan;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 
@@ -28,6 +29,7 @@ typedef OcamlSealedPlacePlan = {
 typedef OcamlSealedFunctionPlan = {
 	final binding:OcamlFunctionPlanBinding;
 	final localStorage:OcamlLocalStoragePlan;
+	final localRepresentations:OcamlLocalRepresentationPlan;
 }
 
 private typedef OcamlSealedFunctionRecord = {
@@ -44,7 +46,7 @@ private typedef OcamlSealedFunctionRecord = {
 	never a request to reconstruct source semantics during emission.
 **/
 class OcamlFunctionPlanRegistry {
-	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v2";
+	public static inline final PIPELINE_REVISION = "ocaml-function-plans-v3";
 
 	var currentProgramRevision:Null<String> = null;
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -184,7 +186,7 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	/** Prevents later planning from silently changing one function's inventory. */
-	public function sealFunction(binding:OcamlFunctionPlanBinding, localStorage:OcamlLocalStoragePlan):Void {
+	public function sealFunction(binding:OcamlFunctionPlanBinding, localStorage:OcamlLocalStoragePlan, localRepresentations:OcamlLocalRepresentationPlan):Void {
 		if (sealedFunctions.exists(binding.functionId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
 		final originIds = (originsByFunction.get(binding.functionId) ?? []).copy();
@@ -192,7 +194,8 @@ class OcamlFunctionPlanRegistry {
 		sealedFunctions.set(binding.functionId, {
 			plan: {
 				binding: binding,
-				localStorage: localStorage
+				localStorage: localStorage,
+				localRepresentations: localRepresentations
 			},
 			originIds: originIds
 		});

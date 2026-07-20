@@ -1,10 +1,85 @@
 {
   "model": "typed-ocaml-lowered-place",
+  "representationRevision": "sha256:86ecf71dccdb5004a271d2bd1d937fe28e86124e1e3741a889052b46043ff103",
   "runtimeRequirementCount": 10,
-  "schemaVersion": 6,
-  "admittedInputRevision": "sha256:4bc9041f6dd06e22e1ed1d59699bf977328f12c3af3180f549f80af391a28b11",
+  "schemaVersion": 7,
+  "representationCount": 3,
+  "representations": [
+    {
+      "carrierTypeId": "int",
+      "proof": {
+        "id": "direct-exact-int-storage-64-v1",
+        "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+      },
+      "reason": "An exact, non-null Haxe Int uses OCaml int directly; the enclosing instance field owns mutation.",
+      "id": "representation:Int:instance-field",
+      "semanticTypeId": "Int",
+      "aliasingPolicy": "no-value-alias",
+      "nullPolicy": "non-null",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "37920e555569926e5e470cb7e101a1bc6da3516e70407018dab6a3c02a860510",
+      "identityPolicy": "primitive-value",
+      "key": "Int|instance-field",
+      "domain": "instance-field",
+      "revision": "sha256:93cb6bad4576a53bab79cb31d16b3192b2a88d0da091f174270a22a5ca8987fe",
+      "mutationPolicy": "instance-field-owner",
+      "boxingPolicy": "direct-unboxed"
+    },
+    {
+      "carrierTypeId": "int",
+      "proof": {
+        "id": "direct-exact-int-storage-64-v1",
+        "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+      },
+      "reason": "An exact, non-null Haxe Int uses OCaml int directly inside the mutable local cell selected by the function plan.",
+      "id": "representation:Int:mutable-local-storage",
+      "semanticTypeId": "Int",
+      "aliasingPolicy": "no-value-alias",
+      "nullPolicy": "non-null",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "37920e555569926e5e470cb7e101a1bc6da3516e70407018dab6a3c02a860510",
+      "identityPolicy": "primitive-value",
+      "key": "Int|mutable-local-storage",
+      "domain": "mutable-local-storage",
+      "revision": "sha256:a11ca91ec836369e29784bf7827f503c038a3fc8fdd9d6c92cdf0c8d22d784cc",
+      "mutationPolicy": "shared-local-cell",
+      "boxingPolicy": "direct-unboxed"
+    },
+    {
+      "carrierTypeId": "int",
+      "proof": {
+        "id": "direct-exact-int-storage-64-v1",
+        "claim": "On the currently tested 64-bit OCaml hosts, every signed 32-bit Haxe Int value fits exactly in OCaml int. This proves storage and pass-through only: overflow-sensitive and bit-pattern-sensitive operations still require HxInt, and this proof does not admit a 32-bit OCaml target."
+      },
+      "reason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
+      "id": "representation:Int:static-field",
+      "semanticTypeId": "Int",
+      "aliasingPolicy": "no-value-alias",
+      "nullPolicy": "non-null",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "37920e555569926e5e470cb7e101a1bc6da3516e70407018dab6a3c02a860510",
+      "identityPolicy": "primitive-value",
+      "key": "Int|static-field",
+      "domain": "static-field",
+      "revision": "sha256:7ae3791a21d655293394acd01ab79414800705138706b084f38f402b7ee6fa84",
+      "mutationPolicy": "static-field-owner",
+      "boxingPolicy": "direct-unboxed"
+    }
+  ],
+  "representationScope": "exact-non-null-int-v1",
+  "admittedInputRevision": "sha256:a45f32bbd947d1b22b147d38808dda8001997f02d81a4eaea0e51f937fa6ae67",
   "runtimeRequirementRevision": "sha256:4a2c6305c7e31a6b03495ca61b9c43707851e2ac742493a4ad079168cf513621",
   "planCount": 14,
+  "representationModel": "typed-ocaml-program-representation",
   "runtimeRequirements": [
     {
       "implementationFeature": "haxe-int32-arithmetic-v1",
@@ -285,11 +360,11 @@
         "id": "place:12e3e65eaf20f1d04cdff365:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "Main",
         "fieldName": "localValue",
         "staticAccess": "local",
-        "representationId": "place:12e3e65eaf20f1d04cdff365:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "delta": -1,
       "originId": "place:12e3e65eaf20f1d04cdff365",
@@ -369,11 +444,11 @@
         "id": "place:22d3492059498e4ae276242a:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "ExternalHolder",
         "fieldName": "value",
         "staticAccess": "qualified",
-        "representationId": "place:22d3492059498e4ae276242a:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "delta": 1,
       "originId": "place:22d3492059498e4ae276242a",
@@ -453,11 +528,11 @@
         "id": "place:263574102dfcaced5621652f:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "ExternalHolder",
         "fieldName": "value",
         "staticAccess": "qualified",
-        "representationId": "place:263574102dfcaced5621652f:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "delta": -1,
       "originId": "place:263574102dfcaced5621652f",
@@ -535,11 +610,11 @@
         "id": "place:265173b365928b1048573384:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "Main",
         "fieldName": "localValue",
         "staticAccess": "local",
-        "representationId": "place:265173b365928b1048573384:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "originId": "place:265173b365928b1048573384",
       "id": "place:265173b365928b1048573384:static-compound-assignment",
@@ -630,11 +705,11 @@
         "id": "place:2b570095e1b3b1a7d5fc4da7:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "Main",
         "fieldName": "localValue",
         "staticAccess": "local",
-        "representationId": "place:2b570095e1b3b1a7d5fc4da7:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "delta": 1,
       "originId": "place:2b570095e1b3b1a7d5fc4da7",
@@ -710,11 +785,11 @@
         "id": "place:2ec87ed9e163efbae5e983b6:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "Main",
         "fieldName": "localValue",
         "staticAccess": "local",
-        "representationId": "place:2ec87ed9e163efbae5e983b6:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "originId": "place:2ec87ed9e163efbae5e983b6",
       "id": "place:2ec87ed9e163efbae5e983b6:static-simple-assignment",
@@ -783,11 +858,11 @@
         "id": "place:2feaa3cd957be1c759bea747:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "ExternalHolder",
         "fieldName": "value",
         "staticAccess": "qualified",
-        "representationId": "place:2feaa3cd957be1c759bea747:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "delta": -1,
       "originId": "place:2feaa3cd957be1c759bea747",
@@ -867,11 +942,11 @@
         "id": "place:4cb4b564fead7c106c0e97f9:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "Main",
         "fieldName": "localValue",
         "staticAccess": "local",
-        "representationId": "place:4cb4b564fead7c106c0e97f9:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "delta": 1,
       "originId": "place:4cb4b564fead7c106c0e97f9",
@@ -951,11 +1026,11 @@
         "id": "place:5c02137610b61ef126589230:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "Main",
         "fieldName": "localValue",
         "staticAccess": "local",
-        "representationId": "place:5c02137610b61ef126589230:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "delta": -1,
       "originId": "place:5c02137610b61ef126589230",
@@ -1033,11 +1108,11 @@
         "id": "place:741a8ac8bb0e0c2651f99db8:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "ExternalHolder",
         "fieldName": "value",
         "staticAccess": "qualified",
-        "representationId": "place:741a8ac8bb0e0c2651f99db8:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "originId": "place:741a8ac8bb0e0c2651f99db8",
       "id": "place:741a8ac8bb0e0c2651f99db8:static-compound-assignment",
@@ -1128,11 +1203,11 @@
         "id": "place:a4d49d6592f775344117bb7a:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "ExternalHolder",
         "fieldName": "value",
         "staticAccess": "qualified",
-        "representationId": "place:a4d49d6592f775344117bb7a:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "delta": 1,
       "originId": "place:a4d49d6592f775344117bb7a",
@@ -1208,11 +1283,11 @@
         "id": "place:b321f2eff67073ec3a755756:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "ExternalHolder",
         "fieldName": "value",
         "staticAccess": "qualified",
-        "representationId": "place:b321f2eff67073ec3a755756:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "originId": "place:b321f2eff67073ec3a755756",
       "id": "place:b321f2eff67073ec3a755756:static-simple-assignment",
@@ -1277,11 +1352,11 @@
         "id": "place:c9fa66036f9e84f4b6d7f6e6:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "ExternalHolder",
         "fieldName": "value",
         "staticAccess": "qualified",
-        "representationId": "place:c9fa66036f9e84f4b6d7f6e6:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "originId": "place:c9fa66036f9e84f4b6d7f6e6",
       "id": "place:c9fa66036f9e84f4b6d7f6e6:static-simple-assignment",
@@ -1346,11 +1421,11 @@
         "id": "place:f189a1ffc6c42e9f7d51c095:place",
         "semanticTypeId": "Int",
         "kind": "static-field",
-        "representationReason": "mutable exact Haxe Int static uses an OCaml int ref cell",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
         "targetModuleName": "Main",
         "fieldName": "localValue",
         "staticAccess": "local",
-        "representationId": "place:f189a1ffc6c42e9f7d51c095:representation:static-field"
+        "representationId": "representation:Int:static-field"
       },
       "originId": "place:f189a1ffc6c42e9f7d51c095",
       "id": "place:f189a1ffc6c42e9f7d51c095:static-simple-assignment",
