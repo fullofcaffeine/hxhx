@@ -106,6 +106,8 @@
     "test:reflaxe-ocaml:representation-registry": "haxe -cp packages/reflaxe.ocaml/src -cp test/reflaxe_ocaml_representation/src --macro 'nullSafety(\"reflaxe.ocaml\")' --macro 'RepresentationRegistryFixture.run()' --no-output",
     "clean": "bash scripts/dev/clean-artifacts.sh --safe",
     "clean:deep": "bash scripts/dev/clean-artifacts.sh --deep --yes",
+    "clean:emergency": "bash scripts/dev/clean-artifacts.sh --emergency",
+    "clean:emergency:dry-run": "bash scripts/dev/clean-artifacts.sh --emergency --dry-run --verbose",
     "clean:tmp": "bash scripts/dev/clean-artifacts.sh --tmp-only",
     "clean:dry-run": "bash scripts/dev/clean-artifacts.sh --safe --dry-run",
     "clean:verbose": "bash scripts/dev/clean-artifacts.sh --safe --verbose",

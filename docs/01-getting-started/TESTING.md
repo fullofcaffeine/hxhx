@@ -301,6 +301,8 @@ From repo root:
 ```bash
 npm run clean:dry-run
 npm run clean
+npm run clean:emergency:dry-run
+npm run clean:emergency
 npm run clean:tmp
 npm run clean:deep
 ```
@@ -308,6 +310,11 @@ npm run clean:deep
 Bootstrap smoke failures now bundle compact diagnostics into `.artifacts/bootstrap-smoke-failures/`
 by default instead of retaining the full `.tmp` build root. Set `HXHX_KEEP_TMP_ON_FAIL=1`
 only when you explicitly need the entire failing temp tree.
+
+If the disk is so full that normal cleanup cannot create its candidate list,
+the emergency command can reclaim only stale, unprotected `.artifacts`
+evidence without allocating that list. It explains recent, explicitly retained,
+and live-PID-owned evidence before leaving it untouched.
 
 Details and retention knobs (`HXHX_KEEP_LOGS`, `HXHX_LOG_DIR`) are documented in:
 `docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md`

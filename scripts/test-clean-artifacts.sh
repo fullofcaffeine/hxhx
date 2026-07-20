@@ -23,6 +23,15 @@ MACRO_HOST_ACTIVE_PID_FILE="${MACRO_HOST_ACTIVE_DIR}${MACRO_HOST_PID_SUFFIX}"
 MACRO_HOST_PENDING_PID_FILE="${MACRO_HOST_PENDING_DIR}${MACRO_HOST_PID_SUFFIX}"
 MACRO_HOST_INACTIVE_INPUT_DIR="${MACRO_HOST_INACTIVE_DIR}${MACRO_HOST_GENERATED_INPUT_SUFFIX}"
 MACRO_HOST_ACTIVE_INPUT_DIR="${MACRO_HOST_ACTIVE_DIR}${MACRO_HOST_GENERATED_INPUT_SUFFIX}"
+SAFE_STALE_DIR="$ROOT/.artifacts/cleanup-regression-safe-stale"
+EMERGENCY_STALE_DIR="$ROOT/.artifacts/cleanup-regression-stale"
+EMERGENCY_RETAINED_DIR="$ROOT/.artifacts/cleanup-regression-retained"
+EMERGENCY_ACTIVE_DIR="$ROOT/.artifacts/cleanup-regression-active"
+EMERGENCY_DEAD_OWNER_DIR="$ROOT/.artifacts/cleanup-regression-dead-owner"
+EMERGENCY_RECENT_DIR="$ROOT/.artifacts/cleanup-regression-recent"
+EMERGENCY_RETAIN_MARKER=".hxhx-clean-retain"
+EMERGENCY_ACTIVE_PID_MARKER=".hxhx-clean-active.pid"
+BROKEN_TMPDIR="$ROOT/.tmp/clean-artifacts-regression-not-a-directory"
 PLACEHOLDER_REL="${PLACEHOLDER#"$ROOT/"}"
 
 if [[ ! -f "$PLACEHOLDER" ]]; then
@@ -49,6 +58,13 @@ cleanup() {
   rm -f "$MACRO_HOST_PENDING_PID_FILE"
   rm -rf "$MACRO_HOST_INACTIVE_INPUT_DIR"
   rm -rf "$MACRO_HOST_ACTIVE_INPUT_DIR"
+  rm -rf "$SAFE_STALE_DIR"
+  rm -rf "$EMERGENCY_STALE_DIR"
+  rm -rf "$EMERGENCY_RETAINED_DIR"
+  rm -rf "$EMERGENCY_ACTIVE_DIR"
+  rm -rf "$EMERGENCY_DEAD_OWNER_DIR"
+  rm -rf "$EMERGENCY_RECENT_DIR"
+  rm -f "$BROKEN_TMPDIR"
 }
 trap cleanup EXIT
 
@@ -69,8 +85,18 @@ printf 'active input\n' >"$MACRO_HOST_ACTIVE_INPUT_DIR/EntryPointsGen.hx"
 # A builder writes its lease before recreating the output directory. Cleanup
 # must respect that short interval instead of deleting the lease as orphaned.
 printf '%s\n' "$$" >"$MACRO_HOST_PENDING_PID_FILE"
+mkdir -p "$SAFE_STALE_DIR"
+printf 'expired evidence\n' >"$SAFE_STALE_DIR/evidence.txt"
+touch -t 199001010000 "$SAFE_STALE_DIR/evidence.txt" "$SAFE_STALE_DIR"
 
-safe_preview="$(bash "$CLEAN_SCRIPT" --safe --dry-run --verbose)"
+# The deliberately ancient threshold selects only this fixture. Running the
+# cleanup regression must never age out unrelated evidence in a developer's
+# checkout.
+safe_preview="$(bash "$CLEAN_SCRIPT" --safe --artifacts-older-than 10000d --dry-run --verbose)"
+if [[ "$safe_preview" != *"$SAFE_STALE_DIR"* ]]; then
+  echo "Safe cleanup dry-run did not report stale evidence." >&2
+  exit 1
+fi
 if [[ "$safe_preview" != *"$MACRO_HOST_INACTIVE_DIR"* ]]; then
   echo "Safe cleanup dry-run did not report inactive macro-host build dir." >&2
   exit 1
@@ -84,7 +110,7 @@ if [[ "$safe_preview" == *"$MACRO_HOST_PENDING_PID_FILE"* ]]; then
   exit 1
 fi
 
-bash "$CLEAN_SCRIPT" --safe >/dev/null
+bash "$CLEAN_SCRIPT" --safe --artifacts-older-than 10000d >/dev/null
 
 if [[ ! -f "$PLACEHOLDER" ]]; then
   echo "Cleanup removed tracked placeholder: $PLACEHOLDER_REL" >&2
@@ -121,6 +147,10 @@ if [[ -e "$MACRO_HOST_INACTIVE_INPUT_DIR" ]]; then
   echo "Safe cleanup failed to remove inactive macro-host generated inputs." >&2
   exit 1
 fi
+if [[ -e "$SAFE_STALE_DIR" ]]; then
+  echo "Safe cleanup failed to remove stale evidence." >&2
+  exit 1
+fi
 if [[ ! -d "$MACRO_HOST_ACTIVE_DIR" ]]; then
   echo "Safe cleanup removed active macro-host build dir." >&2
   exit 1
@@ -143,7 +173,7 @@ printf 'stale\n' >"$BOOTSTRAP_INACTIVE_DIR/artifact.txt"
 printf 'active\n' >"$BOOTSTRAP_ACTIVE_DIR/artifact.txt"
 printf '%s\n' "$$" >"$BOOTSTRAP_ACTIVE_DIR/$BOOTSTRAP_PID_FILE"
 
-deep_preview="$(bash "$CLEAN_SCRIPT" --deep --yes --dry-run --verbose)"
+deep_preview="$(bash "$CLEAN_SCRIPT" --deep --yes --artifacts-older-than 10000d --dry-run --verbose)"
 if [[ "$deep_preview" != *"$BOOTSTRAP_INACTIVE_DIR"* ]]; then
   echo "Deep cleanup dry-run did not report inactive bootstrap build dir." >&2
   exit 1
@@ -153,7 +183,7 @@ if [[ "$deep_preview" == *"$BOOTSTRAP_ACTIVE_DIR"* ]]; then
   exit 1
 fi
 
-bash "$CLEAN_SCRIPT" --deep --yes >/dev/null
+bash "$CLEAN_SCRIPT" --deep --yes --artifacts-older-than 10000d >/dev/null
 
 if [[ -e "$BOOTSTRAP_INACTIVE_DIR" ]]; then
   echo "Deep cleanup failed to remove inactive bootstrap build dir." >&2
@@ -161,6 +191,78 @@ if [[ -e "$BOOTSTRAP_INACTIVE_DIR" ]]; then
 fi
 if [[ ! -d "$BOOTSTRAP_ACTIVE_DIR" ]]; then
   echo "Deep cleanup removed active bootstrap build dir." >&2
+  exit 1
+fi
+
+mkdir -p "$EMERGENCY_STALE_DIR" "$EMERGENCY_RETAINED_DIR" "$EMERGENCY_ACTIVE_DIR" "$EMERGENCY_DEAD_OWNER_DIR" "$EMERGENCY_RECENT_DIR"
+dd if=/dev/zero of="$EMERGENCY_STALE_DIR/evidence.txt" bs=1024 count=64 >/dev/null 2>&1
+printf 'retained evidence\n' >"$EMERGENCY_RETAINED_DIR/evidence.txt"
+printf 'keep this proof\n' >"$EMERGENCY_RETAINED_DIR/$EMERGENCY_RETAIN_MARKER"
+printf 'active evidence\n' >"$EMERGENCY_ACTIVE_DIR/evidence.txt"
+printf '%s\n' "$$" >"$EMERGENCY_ACTIVE_DIR/$EMERGENCY_ACTIVE_PID_MARKER"
+printf 'expired owner evidence\n' >"$EMERGENCY_DEAD_OWNER_DIR/evidence.txt"
+printf '%s\n' "99999999" >"$EMERGENCY_DEAD_OWNER_DIR/$EMERGENCY_ACTIVE_PID_MARKER"
+printf 'recent evidence\n' >"$EMERGENCY_RECENT_DIR/evidence.txt"
+touch -t 199001010000 \
+  "$EMERGENCY_STALE_DIR/evidence.txt" "$EMERGENCY_STALE_DIR" \
+  "$EMERGENCY_RETAINED_DIR/evidence.txt" "$EMERGENCY_RETAINED_DIR/$EMERGENCY_RETAIN_MARKER" "$EMERGENCY_RETAINED_DIR" \
+  "$EMERGENCY_ACTIVE_DIR/evidence.txt" "$EMERGENCY_ACTIVE_DIR/$EMERGENCY_ACTIVE_PID_MARKER" "$EMERGENCY_ACTIVE_DIR" \
+  "$EMERGENCY_DEAD_OWNER_DIR/evidence.txt" "$EMERGENCY_DEAD_OWNER_DIR/$EMERGENCY_ACTIVE_PID_MARKER" "$EMERGENCY_DEAD_OWNER_DIR" \
+  "$EMERGENCY_RECENT_DIR"
+printf 'not a directory\n' >"$BROKEN_TMPDIR"
+
+if normal_failure="$(TMPDIR="$BROKEN_TMPDIR" bash "$CLEAN_SCRIPT" --safe --dry-run 2>&1)"; then
+  echo "Normal cleanup unexpectedly allocated inventory files through an invalid TMPDIR." >&2
+  exit 1
+fi
+if [[ "$normal_failure" != *"npm run clean:emergency"* ]]; then
+  echo "Low-space allocation failure did not point to emergency cleanup." >&2
+  exit 1
+fi
+
+emergency_preview="$(
+  TMPDIR="$BROKEN_TMPDIR" bash "$CLEAN_SCRIPT" \
+    --emergency --artifacts-older-than 10000d --dry-run --verbose
+)"
+if [[ "$emergency_preview" != *"Would delete stale artifact:"*"$EMERGENCY_STALE_DIR"* ]]; then
+  echo "Emergency cleanup did not report the stale ignored artifact." >&2
+  exit 1
+fi
+if [[ "$emergency_preview" != *"$EMERGENCY_RETAINED_DIR (explicit retain marker"* ]]; then
+  echo "Emergency cleanup did not explain why retained proof evidence was protected." >&2
+  exit 1
+fi
+if [[ "$emergency_preview" != *"$EMERGENCY_ACTIVE_DIR (live owner PID"* ]]; then
+  echo "Emergency cleanup did not explain why active evidence was protected." >&2
+  exit 1
+fi
+if [[ "$emergency_preview" != *"$EMERGENCY_RECENT_DIR (contains evidence newer than 10000d)"* ]]; then
+  echo "Emergency cleanup did not explain why recent evidence was protected." >&2
+  exit 1
+fi
+if [[ "$emergency_preview" != *"Eligible stale artifact evidence:"* || "$emergency_preview" != *"Protected artifact evidence:"* ]]; then
+  echo "Emergency cleanup did not summarize reclaimable and protected evidence sizes." >&2
+  exit 1
+fi
+
+emergency_result="$(
+  TMPDIR="$BROKEN_TMPDIR" bash "$CLEAN_SCRIPT" \
+    --emergency --artifacts-older-than 10000d
+)"
+if [[ -e "$EMERGENCY_STALE_DIR" ]]; then
+  echo "Emergency cleanup failed to remove stale ignored evidence." >&2
+  exit 1
+fi
+if [[ -e "$EMERGENCY_DEAD_OWNER_DIR" ]]; then
+  echo "Emergency cleanup treated a dead producer PID as active." >&2
+  exit 1
+fi
+if [[ "$emergency_result" != *"Actual reclaimed:"* || "$emergency_result" == *"Actual reclaimed: 0KB"* ]]; then
+  echo "Emergency cleanup did not report a positive measured reclaim." >&2
+  exit 1
+fi
+if [[ ! -d "$EMERGENCY_RETAINED_DIR" || ! -d "$EMERGENCY_ACTIVE_DIR" || ! -d "$EMERGENCY_RECENT_DIR" ]]; then
+  echo "Emergency cleanup removed retained, active, or recent evidence." >&2
   exit 1
 fi
 

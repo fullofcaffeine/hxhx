@@ -3,16 +3,19 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: bash scripts/dev/clean-artifacts.sh [--safe|--deep|--tmp-only] [--dry-run] [--older-than <duration>] [--yes] [--verbose] [--max-sample <n>]
+Usage: bash scripts/dev/clean-artifacts.sh [--safe|--deep|--tmp-only|--emergency] [--dry-run] [--older-than <duration>] [--artifacts-older-than <duration>] [--yes] [--verbose] [--max-sample <n>]
 
 Modes:
   --safe       Remove repo-local transient build/test artifacts (default).
   --deep       Includes heavy bootstrap build caches (requires --yes in non-interactive shells).
   --tmp-only   Remove stale stage0 temp logs from OS temp directories.
+  --emergency  Reclaim only stale, unprotected .artifacts entries without allocating inventory files.
 
 Flags:
   --dry-run            Print candidates and estimated reclaim size without deleting.
   --older-than <dur>   Age threshold for temp-log cleanup (default: 24h). Formats: 90m, 12h, 7d.
+  --artifacts-older-than <dur>
+                       Age threshold for ignored .artifacts entries (default: 7d).
   --yes                Skip interactive confirmation for deep mode.
   --verbose            Print all candidates (largest first) and per-delete progress.
   --max-sample <n>     Number of candidates to preview when not verbose (default: 20).
@@ -66,6 +69,7 @@ MODE="safe"
 DRY_RUN=0
 YES=0
 OLDER_THAN="24h"
+ARTIFACTS_OLDER_THAN="7d"
 VERBOSE=0
 MAX_SAMPLE=20
 
@@ -80,6 +84,9 @@ while [[ $# -gt 0 ]]; do
     --tmp-only)
       MODE="tmp-only"
       ;;
+    --emergency)
+      MODE="emergency"
+      ;;
     --dry-run)
       DRY_RUN=1
       ;;
@@ -89,6 +96,14 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       OLDER_THAN="$2"
+      shift
+      ;;
+    --artifacts-older-than)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --artifacts-older-than" >&2
+        exit 1
+      fi
+      ARTIFACTS_OLDER_THAN="$2"
       shift
       ;;
     --yes)
@@ -127,10 +142,26 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BOOTSTRAP_BUILD_PID_FILE=".hxhx-bootstrap-build.pid"
 MACRO_HOST_BUILD_PID_SUFFIX=".hxhx-macro-host-build.pid"
 MACRO_HOST_GENERATED_INPUT_SUFFIX=".hxhx-macro-host-input"
-CANDIDATES="$(mktemp -t hxhx-clean-candidates.XXXXXX)"
-UNIQUE_CANDIDATES="$(mktemp -t hxhx-clean-candidates-uniq.XXXXXX)"
-SIZE_REPORT="$(mktemp -t hxhx-clean-size-report.XXXXXX)"
-trap 'rm -f "$CANDIDATES" "$UNIQUE_CANDIDATES" "$SIZE_REPORT"' EXIT
+ARTIFACT_RETAIN_MARKER=".hxhx-clean-retain"
+ARTIFACT_ACTIVE_PID_MARKER=".hxhx-clean-active.pid"
+ARTIFACTS_ROOT="$ROOT/.artifacts"
+ARTIFACT_THRESHOLD_MINUTES="$(duration_to_minutes "$ARTIFACTS_OLDER_THAN")" || {
+  echo "Invalid --artifacts-older-than value: $ARTIFACTS_OLDER_THAN (expected like 90m, 12h, 7d)" >&2
+  exit 1
+}
+CANDIDATES=""
+UNIQUE_CANDIDATES=""
+SIZE_REPORT=""
+
+cleanup_inventory_files() {
+  local file=""
+  for file in "$CANDIDATES" "$UNIQUE_CANDIDATES" "$SIZE_REPORT"; do
+    if [[ -n "$file" && -e "$file" ]]; then
+      rm -f "$file"
+    fi
+  done
+}
+trap cleanup_inventory_files EXIT
 GIT_AVAILABLE=0
 if git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   GIT_AVAILABLE=1
@@ -214,6 +245,170 @@ macro_host_build_dir_is_active() {
   build_pid_file_is_active "${dir}${MACRO_HOST_BUILD_PID_SUFFIX}"
 }
 
+# Returns success and a plain-language reason when an evidence tree must stay.
+# A stale tree is removable only when every descendant is old and neither a
+# reviewer retention marker nor a live producer PID owns it.
+artifact_protection_reason() {
+  local path="${1:-}"
+  local marker=""
+  local mtime=""
+  local entry_mtime=""
+  local now_epoch=""
+  local age_minutes=""
+  local entry_age_minutes=""
+
+  if [[ -z "$path" || ! -e "$path" ]]; then
+    echo "missing path"
+    return 0
+  fi
+
+  mtime="$(mtime_epoch "$path" 2>/dev/null || true)"
+  if [[ -z "$mtime" ]]; then
+    echo "timestamp unavailable"
+    return 0
+  fi
+  now_epoch="$(date +%s)"
+  age_minutes=$(( (now_epoch - mtime) / 60 ))
+  if [[ "$age_minutes" -lt "$ARTIFACT_THRESHOLD_MINUTES" ]]; then
+    echo "newer than $ARTIFACTS_OLDER_THAN"
+    return 0
+  fi
+
+  if ! find "$path" -mindepth 1 -print >/dev/null 2>&1; then
+    echo "evidence tree cannot be inspected safely"
+    return 0
+  fi
+  while IFS= read -r marker; do
+    entry_mtime="$(mtime_epoch "$marker" 2>/dev/null || true)"
+    if [[ -z "$entry_mtime" ]]; then
+      echo "descendant timestamp unavailable at $marker"
+      return 0
+    fi
+    entry_age_minutes=$(( (now_epoch - entry_mtime) / 60 ))
+    if [[ "$entry_age_minutes" -lt "$ARTIFACT_THRESHOLD_MINUTES" ]]; then
+      echo "contains evidence newer than $ARTIFACTS_OLDER_THAN"
+      return 0
+    fi
+  done < <(find "$path" -mindepth 1 -print 2>/dev/null || true)
+
+  marker="$(find "$path" -name "$ARTIFACT_RETAIN_MARKER" -print -quit 2>/dev/null || true)"
+  if [[ -n "$marker" ]]; then
+    echo "explicit retain marker at $marker"
+    return 0
+  fi
+
+  while IFS= read -r marker; do
+    if build_pid_file_is_active "$marker"; then
+      echo "live owner PID in $marker"
+      return 0
+    fi
+  done < <(find "$path" -type f -name "$ARTIFACT_ACTIVE_PID_MARKER" -print 2>/dev/null || true)
+  return 1
+}
+
+# Adds only stale, unowned top-level evidence trees to normal cleanup. Keeping
+# the unit at the top-level directory makes review packages and their manifests
+# expire together instead of leaving partial evidence behind.
+collect_artifact_candidates() {
+  local path=""
+  local reason=""
+  local path_kb=0
+  local eligible_count=0
+  local eligible_kb=0
+  local protected_count=0
+  local protected_kb=0
+  if [[ ! -d "$ARTIFACTS_ROOT" ]]; then
+    return 0
+  fi
+  while IFS= read -r path; do
+    path_kb="$(du -sk "$path" 2>/dev/null | awk '{print $1}')"
+    if [[ -z "$path_kb" ]]; then
+      path_kb=0
+    fi
+    if reason="$(artifact_protection_reason "$path")"; then
+      protected_count=$((protected_count + 1))
+      protected_kb=$((protected_kb + path_kb))
+      if [[ "$VERBOSE" -eq 1 ]]; then
+        echo "Protected artifact: $(human_from_kb "$path_kb")  $path ($reason)"
+      fi
+      continue
+    fi
+    eligible_count=$((eligible_count + 1))
+    eligible_kb=$((eligible_kb + path_kb))
+    printf '%s\n' "$path" >>"$CANDIDATES"
+  done < <(find "$ARTIFACTS_ROOT" -mindepth 1 -maxdepth 1 -print 2>/dev/null || true)
+  echo "Artifact evidence eligible for cleanup: $eligible_count ($(human_from_kb "$eligible_kb"))"
+  echo "Artifact evidence protected: $protected_count ($(human_from_kb "$protected_kb"))"
+}
+
+# Provides a deliberately narrow recovery path when mktemp cannot allocate the
+# normal sorted inventory. It never leaves this repository's .artifacts root
+# and repeats the same age/ownership checks immediately before each deletion.
+run_emergency_cleanup() {
+  local path=""
+  local reason=""
+  local path_kb=0
+  local candidates=0
+  local candidate_kb=0
+  local deleted=0
+  local protected=0
+  local protected_kb=0
+  local reclaimed_kb=0
+
+  echo "Cleanup mode: emergency"
+  echo "Scope: stale, unprotected top-level entries under $ARTIFACTS_ROOT"
+  echo "Age threshold: $ARTIFACTS_OLDER_THAN"
+  if [[ ! -d "$ARTIFACTS_ROOT" ]]; then
+    echo "No emergency cleanup candidates found."
+    return 0
+  fi
+
+  while IFS= read -r path; do
+    path_kb="$(du -sk "$path" 2>/dev/null | awk '{print $1}')"
+    if [[ -z "$path_kb" ]]; then
+      path_kb=0
+    fi
+    if reason="$(artifact_protection_reason "$path")"; then
+      protected=$((protected + 1))
+      protected_kb=$((protected_kb + path_kb))
+      if [[ "$VERBOSE" -eq 1 ]]; then
+        echo "Protected artifact: $(human_from_kb "$path_kb")  $path ($reason)"
+      fi
+      continue
+    fi
+    if is_tracked_path "$path" || { [[ -d "$path" ]] && dir_has_tracked_entries "$path"; }; then
+      echo "Protected artifact: $path (tracked repository content)"
+      protected=$((protected + 1))
+      protected_kb=$((protected_kb + path_kb))
+      continue
+    fi
+    candidates=$((candidates + 1))
+    candidate_kb=$((candidate_kb + path_kb))
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      echo "Would delete stale artifact: $(human_from_kb "$path_kb")  $path"
+      continue
+    fi
+    if reason="$(artifact_protection_reason "$path")"; then
+      echo "Protected artifact before deletion: $path ($reason)"
+      continue
+    fi
+    echo "Deleting stale artifact: $(human_from_kb "$path_kb")  $path"
+    rm -rf "$path"
+    deleted=$((deleted + 1))
+    reclaimed_kb=$((reclaimed_kb + path_kb))
+  done < <(find "$ARTIFACTS_ROOT" -mindepth 1 -maxdepth 1 -print 2>/dev/null || true)
+
+  echo "Eligible stale artifact evidence: $candidates ($(human_from_kb "$candidate_kb"))"
+  echo "Protected artifact evidence: $protected ($(human_from_kb "$protected_kb"))"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "Dry-run only; no files deleted."
+  else
+    echo "Deleted: $deleted"
+    echo "Actual reclaimed: $(human_from_kb "$reclaimed_kb")"
+  fi
+  echo "Emergency cleanup complete."
+}
+
 collect_safe_candidates() {
   local build_dir=""
 
@@ -289,6 +484,8 @@ collect_safe_candidates() {
       \( -name stdout.txt -o -name stderr.txt \) \
       -print >>"$CANDIDATES" 2>/dev/null || true
   fi
+
+  collect_artifact_candidates
 }
 
 collect_deep_candidates() {
@@ -353,6 +550,29 @@ collect_tmp_candidates() {
     )
   done
 }
+
+if [[ "$MODE" == "emergency" ]]; then
+  run_emergency_cleanup
+  exit 0
+fi
+
+INVENTORY_TMP_ROOT="${TMPDIR:-/tmp}"
+INVENTORY_TMP_ROOT="${INVENTORY_TMP_ROOT%/}"
+if ! CANDIDATES="$(mktemp "$INVENTORY_TMP_ROOT/hxhx-clean-candidates.XXXXXX")"; then
+  echo "Cleanup could not allocate its candidate inventory." >&2
+  echo "Run 'npm run clean:emergency' to reclaim stale .artifacts entries without temporary inventory files." >&2
+  exit 1
+fi
+if ! UNIQUE_CANDIDATES="$(mktemp "$INVENTORY_TMP_ROOT/hxhx-clean-candidates-uniq.XXXXXX")"; then
+  echo "Cleanup could not allocate its deduplicated candidate inventory." >&2
+  echo "Run 'npm run clean:emergency' to reclaim stale .artifacts entries without temporary inventory files." >&2
+  exit 1
+fi
+if ! SIZE_REPORT="$(mktemp "$INVENTORY_TMP_ROOT/hxhx-clean-size-report.XXXXXX")"; then
+  echo "Cleanup could not allocate its size report." >&2
+  echo "Run 'npm run clean:emergency' to reclaim stale .artifacts entries without temporary inventory files." >&2
+  exit 1
+fi
 
 case "$MODE" in
   safe)
@@ -442,8 +662,16 @@ fi
 deleted=0
 deleted_kb=0
 skipped_tracked=0
+skipped_protected=0
 while IFS= read -r path; do
   if [[ -e "$path" ]]; then
+    if [[ "$path" == "$ARTIFACTS_ROOT/"* ]]; then
+      if reason="$(artifact_protection_reason "$path")"; then
+        echo "Protected artifact before deletion: $path ($reason)"
+        skipped_protected=$((skipped_protected + 1))
+        continue
+      fi
+    fi
     path_kb="$(du -sk "$path" 2>/dev/null | awk '{print $1}')"
     if [[ -z "$path_kb" ]]; then
       path_kb=0
@@ -456,6 +684,11 @@ while IFS= read -r path; do
       rel_path="$(to_repo_relative "$path")"
       if [[ "$VERBOSE" -eq 1 ]]; then
         echo "  preserving tracked contents via git clean: $path"
+      fi
+      if [[ "$path" == "$ARTIFACTS_ROOT/"* ]] && reason="$(artifact_protection_reason "$path")"; then
+        echo "Protected artifact before deletion: $path ($reason)"
+        skipped_protected=$((skipped_protected + 1))
+        continue
       fi
       git -C "$ROOT" clean -fdx -- "$rel_path" >/dev/null 2>&1 || true
       after_kb="$(du -sk "$path" 2>/dev/null | awk '{print $1}')"
@@ -481,6 +714,11 @@ while IFS= read -r path; do
       continue
     fi
 
+    if [[ "$path" == "$ARTIFACTS_ROOT/"* ]] && reason="$(artifact_protection_reason "$path")"; then
+      echo "Protected artifact before deletion: $path ($reason)"
+      skipped_protected=$((skipped_protected + 1))
+      continue
+    fi
     rm -rf "$path"
     deleted=$((deleted + 1))
     deleted_kb=$((deleted_kb + path_kb))
@@ -490,6 +728,9 @@ done <"$UNIQUE_CANDIDATES"
 echo "Deleted: $deleted"
 if [[ "$skipped_tracked" -gt 0 ]]; then
   echo "Skipped tracked paths: $skipped_tracked"
+fi
+if [[ "$skipped_protected" -gt 0 ]]; then
+  echo "Skipped newly protected artifacts: $skipped_protected"
 fi
 echo "Actual reclaimed: $(human_from_kb "$deleted_kb")"
 echo "Cleanup complete."

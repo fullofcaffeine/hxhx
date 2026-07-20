@@ -410,11 +410,18 @@ This repo generates large transient artifacts during bootstrap/gate workflows. K
    npm run clean:tmp:verbose
    npm run clean:verbose
    ```
-4. **At end of coding session** (if code changed), run:
+4. **If critical disk pressure prevents normal cleanup from allocating its own inventory**, use the bounded repo-local recovery path:
+   ```bash
+   npm run clean:emergency:dry-run
+   npm run clean:emergency
+   ```
+   This only removes stale, unprotected top-level evidence under this repository's `.artifacts/`; it must not clean another repository's files.
+   Compare the reported eligible bytes with the actual space shortage. A cleanup command that finds only a few kilobytes has not solved a multi-gigabyte disk problem. Diagnose Git and Beads storage separately with `npm run doctor:git-storage` and `npm run doctor:beads-storage`, and report large files owned by other repositories without deleting them implicitly.
+5. **At end of coding session** (if code changed), run:
    ```bash
    npm run clean
    ```
-5. **If disk pressure remains high** (or after repeated bootstrap regen), run:
+6. **If disk pressure remains high** (or after repeated bootstrap regen), run:
    ```bash
    npm run clean:deep
    ```
