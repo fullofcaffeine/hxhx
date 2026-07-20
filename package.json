@@ -266,7 +266,7 @@
     "test:stdlib:semantic-diff:generator": "bash scripts/test-stdlib-semantic-diff-generator.sh",
     "test:stdlib:semantic-diff:minimizer": "bash scripts/test-stdlib-semantic-diff-minimizer.sh",
     "test:stdlib:semantic-diff:seed": "bash scripts/test-stdlib-semantic-diff-seed.sh",
-    "test:portable": "bash scripts/test-portable.sh",
+    "test:portable": "node scripts/ci/portable-fixture-pool-fixture-test.js && bash scripts/test-portable.sh",
     "test:snapshot": "bash scripts/test-snapshots.sh",
     "test:examples": "bash scripts/test-examples.sh",
     "test:workloads": "bash scripts/test-workloads.sh",

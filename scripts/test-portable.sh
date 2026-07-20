@@ -4,6 +4,8 @@ set -euo pipefail
 HAXE_BIN="${HAXE_BIN:-haxe}"
 PORTABLE_NATIVE_SURFACE_STRICT="${PORTABLE_NATIVE_SURFACE_STRICT:-0}"
 PORTABLE_FIXTURE_ALLOWLIST="${PORTABLE_FIXTURE_ALLOWLIST:-}"
+PORTABLE_JOBS="${PORTABLE_JOBS:-2}"
+PORTABLE_PARALLEL_WORKER="${PORTABLE_PARALLEL_WORKER:-0}"
 REFLAXE_SOURCE_ROOT="${REFLAXE_SOURCE_ROOT:-}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -62,6 +64,22 @@ fi
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
   echo "Skipping portable conformance: dune/ocamlc not found on PATH."
   exit 0
+fi
+
+if ! [[ "$PORTABLE_JOBS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "PORTABLE_JOBS must be a positive integer, got: $PORTABLE_JOBS" >&2
+  exit 2
+fi
+
+# Each fixture owns its output directory and compiler process, so the complete
+# corpus can use a bounded worker pool safely. A worker re-enters this script
+# with one fixture selected and parallel dispatch disabled.
+if [ "$PORTABLE_PARALLEL_WORKER" != "1" ] && [ "$PORTABLE_JOBS" -gt 1 ]; then
+  if ! command -v node >/dev/null 2>&1; then
+    echo "PORTABLE_JOBS=$PORTABLE_JOBS requires Node.js for bounded fixture scheduling." >&2
+    exit 2
+  fi
+  exec node "$ROOT/scripts/ci/run-portable-fixtures.js" --jobs "$PORTABLE_JOBS"
 fi
 
 run_count=0
@@ -171,4 +189,6 @@ if [ -n "$PORTABLE_FIXTURE_ALLOWLIST_NORM" ] && [ "$run_count" -eq 0 ]; then
   exit 2
 fi
 
-echo "✓ Portable conformance OK"
+if [ "$PORTABLE_PARALLEL_WORKER" != "1" ]; then
+  echo "✓ Portable conformance OK"
+fi

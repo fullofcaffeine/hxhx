@@ -46,6 +46,38 @@ HX_FORMAT_JOBS=1 npm run guard:hx-format   # serial, easier to debug
 HX_FORMAT_JOBS=8 npm run guard:hx-format   # explicit concurrent-process limit
 ```
 
+## Portable OCaml Fixtures
+
+Run the complete Haxe-to-OCaml compile, native-build, and behavior corpus with:
+
+```bash
+npm run test:portable
+```
+
+The runner uses two fixture workers by default. Each fixture has its own Haxe
+process and `out/` directory, so workers do not share mutable compiler state or
+generated files. Detailed logs are buffered per fixture and replayed in fixture
+name order; a failed worker still names the exact fixture and makes the complete
+command fail.
+
+Use a single worker when debugging one live process or comparing serial timing:
+
+```bash
+PORTABLE_JOBS=1 npm run test:portable
+```
+
+Use the existing allowlist for a narrow edit loop; independent selected fixtures
+still use the configured worker limit:
+
+```bash
+PORTABLE_FIXTURE_ALLOWLIST=hello,inc_dec npm run test:portable
+PORTABLE_JOBS=1 PORTABLE_FIXTURE_ALLOWLIST=hello npm run test:portable
+```
+
+The two-worker default was measured on the same 75-fixture checkout after the
+Reflaxe lifecycle fix: serial execution took 373.08 seconds and two workers took
+187.85 seconds. The fixture inventory and assertions were unchanged.
+
 ## Current-Source hxhx Builds
 
 Some diagnostics need an `hxhx` binary built from the current checkout.
