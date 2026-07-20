@@ -1,3 +1,11 @@
+## [0.23.3](https://github.com/fullofcaffeine/hxhx/compare/v0.23.2...v0.23.3) (2026-07-20)
+
+
+### Bug Fixes
+
+* **tooling:** recover cleanup under low disk space ([b020806](https://github.com/fullofcaffeine/hxhx/commit/b020806143f07266235a42dfca39cb5880a61814))
+* **tooling:** warn on byte-heavy Git objects ([c81eb5e](https://github.com/fullofcaffeine/hxhx/commit/c81eb5eed54e9ba895235aaf6fad19f5099bf92a))
+
 ## [0.23.2](https://github.com/fullofcaffeine/hxhx/compare/v0.23.1...v0.23.2) (2026-07-20)
 
 
