@@ -518,6 +518,22 @@ class M6RuntimeCopierIntegrationTest {
 			"native:haxe.NativeStackTrace::haxe._NativeStackTrace.NativeHxBacktrace.exceptionstack_lines:runtime:haxe-stack-traces"
 		],
 			requirementIdsForCapability(portableRequirementReport, "haxe-stack-traces"), "both typed stack facades should explain both HxBacktrace calls");
+		final floatBitsRequirement = requirementByCapability(portableRequirementReport, "haxe-float-bit-conversions");
+		assertTrue(floatBitsRequirement.sourceKind == "native-boundary" && floatBitsRequirement.cause == "native-boundary",
+			"floating-point bit conversion support should identify a declared native boundary");
+		assertTrue(floatBitsRequirement.subject.kind == "native-boundary"
+			&& floatBitsRequirement.subject.id == "haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.doubleToI64Parts -> HxFPHelper.doubleToI64Parts",
+			"floating-point bit conversion support should retain the Haxe extern identity and resolved HxFPHelper symbol");
+		assertArrayEquals([
+			"native:haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.doubleToI64Parts:runtime:haxe-float-bit-conversions",
+			"native:haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.floatToI32:runtime:haxe-float-bit-conversions",
+			"native:haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.i32ToFloat:runtime:haxe-float-bit-conversions",
+			"native:haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.i64ToDouble:runtime:haxe-float-bit-conversions"
+		],
+			requirementIdsForCapability(portableRequirementReport, "haxe-float-bit-conversions"),
+			"the typed floating-point facade should explain all four HxFPHelper calls");
+		assertContains("\n" + floatBitsRequirement.rootModules.join("\n") + "\n", "\nHxFPHelper\n",
+			"floating-point bit conversions should select the HxFPHelper implementation root");
 		final boolUnboxRequirement = requirementById(typeRegistryRequirementReport, "compiler:generated:HxTypeRegistry:runtime-unbox");
 		assertTrue(boolUnboxRequirement.subject.kind == "generated-module" && boolUnboxRequirement.subject.id == "HxTypeRegistry",
 			"Boolean reflection conversion should identify the generated type registry");
@@ -555,14 +571,18 @@ class M6RuntimeCopierIntegrationTest {
 			"compiler-observed HxStdio should overlap its declared typed extern requirement root");
 		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxBacktrace\n",
 			"compiler-observed HxBacktrace should overlap its declared typed extern requirement root");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxFPHelper\n",
+			"compiler-observed HxFPHelper should overlap its declared typed extern requirement root");
 		assertNotContains("\n" + metalRequirementReport.compilerObservedModulesWithoutRequirementRoots.join("\n") + "\n", "\nHxStdio\n",
 			"declared HxStdio should not remain in the no-requirement-root set");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxStdio").join("\n") + "\n", "\nrecorded_requirement\n",
 			"selective packaging should retain HxStdio because of the declared native boundary");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxBacktrace").join("\n") + "\n", "\nrecorded_requirement\n",
 			"selective packaging should retain HxBacktrace because of the declared native boundary");
-		assertTrue(metalRequirementReport.compilerObservedModulesWithoutRequirementRoots.length > 0,
-			"partial coverage should keep compiler-observed modules with no recorded root visible");
+		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxFPHelper").join("\n") + "\n", "\nrecorded_requirement\n",
+			"selective packaging should retain HxFPHelper because of the declared native boundary");
+		assertArrayEquals(["HxAnon", "HxBytes", "HxEnum", "HxString"], metalRequirementReport.compilerObservedModulesWithoutRequirementRoots,
+			"partial coverage should keep the four compiler-observed modules with no recorded root visible");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalRequirementReport.selectedModules,
 			"metal requirement and selection reports should name the same packaged modules");
 

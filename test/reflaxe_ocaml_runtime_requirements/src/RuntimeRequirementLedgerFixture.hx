@@ -70,8 +70,10 @@ class RuntimeRequirementLedgerFixture {
 			"HxStdio.read_byte");
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_STACK_TRACES, "haxe.CallStack::haxe._CallStack.NativeHxBacktrace.callstack_lines",
 			source, "HxBacktrace.callstack_lines");
+		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_FLOAT_BIT_CONVERSIONS, "haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.i32ToFloat",
+			source, "HxFPHelper.i32ToFloat");
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == 11, "each lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
+		assertTrue(requirements.length == 12, "each lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
 		assertTrue(requirements[0].id == "compiler:generated:HxTypeRegistry:dynamic-arguments", "requirements should be sorted by stable identity");
 		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
 		assertTrue(placeRequirement.sourceId == "place:a", "the requirement should retain its Haxe-expression identity");
@@ -100,7 +102,12 @@ class RuntimeRequirementLedgerFixture {
 			"native:haxe.CallStack::haxe._CallStack.NativeHxBacktrace.callstack_lines:runtime:haxe-stack-traces");
 		assertTrue(stackRequirement.subject.id.indexOf("HxBacktrace.callstack_lines") >= 0, "the stack-trace boundary should name the checked target symbol");
 		assertTrue(stackRequirement.rootModules[0] == "HxBacktrace", "Haxe stack traces should select the HxBacktrace implementation root");
-		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxBacktrace,HxInt,HxRuntime,HxStdio,HxType",
+		final floatBitsRequirement = requirementById(requirements,
+			"native:haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.i32ToFloat:runtime:haxe-float-bit-conversions");
+		assertTrue(floatBitsRequirement.subject.id.indexOf("HxFPHelper.i32ToFloat") >= 0,
+			"the floating-point bit-conversion boundary should name the checked target symbol");
+		assertTrue(floatBitsRequirement.rootModules[0] == "HxFPHelper", "Haxe floating-point bit conversions should select the HxFPHelper implementation root");
+		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxBacktrace,HxFPHelper,HxInt,HxRuntime,HxStdio,HxType",
 			"root modules should be deduplicated and sorted");
 		final firstRevision = ledger.revision();
 		ledger.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);

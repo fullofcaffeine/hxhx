@@ -30,6 +30,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final TYPE_REGISTRY_RUNTIME_UNBOX = "compiler-type-registry-runtime-unbox";
 	public static inline final HAXE_STANDARD_IO = "haxe-standard-io";
 	public static inline final HAXE_STACK_TRACES = "haxe-stack-traces";
+	public static inline final HAXE_FLOAT_BIT_CONVERSIONS = "haxe-float-bit-conversions";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -335,6 +336,12 @@ class OcamlRuntimeRequirementLedger {
 					feature: "haxe-stack-traces-v1",
 					module: "HxBacktrace",
 					explanation: "The typed Haxe stack-trace facades use HxBacktrace to capture OCaml call and exception frames as Haxe arrays of strings."
+				};
+			case HAXE_FLOAT_BIT_CONVERSIONS:
+				{
+					feature: "haxe-float-bit-conversions-v1",
+					module: "HxFPHelper",
+					explanation: "The typed Haxe floating-point facade uses HxFPHelper to convert Float values to and from their exact 32-bit or 64-bit representations."
 				};
 			case _:
 				throw 'Unknown native runtime capability "$capability".';

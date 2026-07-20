@@ -25,8 +25,9 @@ expression required `HxInt` or `HxArray`?”, “why did the compiler-generated
 `HxTypeRegistry` require `HxType`?", “why do the typed standard-I/O and
 stack-trace facades require `HxStdio` and `HxBacktrace`?", and “why is the core
 runtime packaged?” in `ocaml_runtime_requirement_report.json` on every runtime-
-enabled build. Each explanation names the supported Haxe type, generated
-module, compiler rule, or typed native boundary; the decision that required
+enabled build. The same report explains why typed binary Float conversion uses
+`HxFPHelper`. Each explanation names the supported Haxe type, generated module,
+compiler rule, or typed native boundary; the decision that required
 support; the implementation
 feature; the eligible profiles; and the checked root module. The report then
 follows that root through the catalog to the exact source hashes, dependencies,
@@ -78,7 +79,7 @@ used for ordinary external OCaml libraries.
 | `HxBacktrace` | yes | `metal-supported` | Stack capture reached through checked `haxe-stack-traces` typed externs. |
 | `HxBytes` | yes | `metal-supported` | Typed bytes APIs. |
 | `HxEnum` | yes | `metal-supported` | Enum helpers for typed enum flows. |
-| `HxFPHelper` | yes | `metal-supported` | Float helper utilities. |
+| `HxFPHelper` | yes | `metal-supported` | Converting Float values to and from exact bit patterns, reached through the checked `haxe-float-bit-conversions` typed extern. |
 | `HxFile` | yes | `metal-supported` | File I/O helper module; linked only when needed. |
 | `HxFileStream` | yes | `metal-supported` | Stream/file descriptor helpers; linked only when needed. |
 | `HxFileSystem` | yes | `metal-supported` | Filesystem helpers; linked only when needed. |

@@ -110,7 +110,8 @@ The current first slice supports declarations on a static extern class or
 static extern field. This is an advanced target/runtime-authoring contract, not
 a way to declare opam libraries; external native dependencies need their own
 structured package manifest. Current checked capabilities include
-`haxe-standard-io` for `HxStdio` and `haxe-stack-traces` for `HxBacktrace`.
+`haxe-standard-io` for `HxStdio`, `haxe-stack-traces` for `HxBacktrace`, and
+`haxe-float-bit-conversions` for `HxFPHelper`.
 
 ### `@:ocamlLabel` (labelled + optional labelled args)
 

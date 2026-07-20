@@ -52,6 +52,7 @@ class FPHelper {
 
 	See `std/runtime/HxFPHelper.ml` for the implementation.
 **/
+@:ocamlRuntime("haxe-float-bit-conversions")
 @:native("HxFPHelper")
 private extern class NativeFPHelper {
 	public static function i32ToFloat(i:Int):Float;

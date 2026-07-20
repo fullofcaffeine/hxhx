@@ -105,6 +105,7 @@ try {
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxInt'))
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxType'))
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxBacktrace'))
+	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxFPHelper'))
 	assert.strictEqual(runtimeRequirements.explainedCompilerObservedModules, undefined)
 	assert.strictEqual(runtimeRequirements.unexplainedCompilerObservedModules, undefined)
 	assert.deepStrictEqual([
@@ -112,8 +113,8 @@ try {
 		...runtimeRequirements.compilerObservedModulesWithoutRequirementRoots
 	].sort(), runtimeRequirements.compilerObservedModules)
 	assert.deepStrictEqual(runtimeRequirements.requirementRootsNotCompilerObserved, [])
-	assert(runtimeRequirements.compilerObservedModulesWithoutRequirementRoots.length > 0,
-		'partial coverage should keep compiler-observed modules with no requirement root visible')
+	assert.deepStrictEqual(runtimeRequirements.compilerObservedModulesWithoutRequirementRoots,
+		['HxAnon', 'HxBytes', 'HxEnum', 'HxString'])
 	const requirementIds = new Set()
 	for (const requirement of runtimeRequirements.requirements) {
 		assert(!requirementIds.has(requirement.id), `duplicate runtime requirement ${requirement.id}`)
@@ -164,6 +165,24 @@ try {
 			'native:haxe.CallStack::haxe._CallStack.NativeHxBacktrace.exceptionstack_lines:runtime:haxe-stack-traces',
 			'native:haxe.NativeStackTrace::haxe._NativeStackTrace.NativeHxBacktrace.callstack_lines:runtime:haxe-stack-traces',
 			'native:haxe.NativeStackTrace::haxe._NativeStackTrace.NativeHxBacktrace.exceptionstack_lines:runtime:haxe-stack-traces'
+		])
+	const floatBitsRequirement = runtimeRequirements.requirements.find(
+		requirement => requirement.semanticCapability === 'haxe-float-bit-conversions')
+	assert(floatBitsRequirement)
+	assert.strictEqual(floatBitsRequirement.sourceKind, 'native-boundary')
+	assert.strictEqual(floatBitsRequirement.cause, 'native-boundary')
+	assert.strictEqual(floatBitsRequirement.subject.kind, 'native-boundary')
+	assert.strictEqual(floatBitsRequirement.subject.id,
+		'haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.doubleToI64Parts -> HxFPHelper.doubleToI64Parts')
+	assert.deepStrictEqual(floatBitsRequirement.rootModules, ['HxFPHelper'])
+	assert.deepStrictEqual(runtimeRequirements.requirements
+		.filter(requirement => requirement.semanticCapability === 'haxe-float-bit-conversions')
+		.map(requirement => requirement.id)
+		.sort(), [
+			'native:haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.doubleToI64Parts:runtime:haxe-float-bit-conversions',
+			'native:haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.floatToI32:runtime:haxe-float-bit-conversions',
+			'native:haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.i32ToFloat:runtime:haxe-float-bit-conversions',
+			'native:haxe.io.FPHelper::haxe.io._FPHelper.NativeFPHelper.i64ToDouble:runtime:haxe-float-bit-conversions'
 		])
 	assert.strictEqual(runtimeRequirements.requirementChains.length, runtimeRequirements.requirementCount)
 	for (const chain of runtimeRequirements.requirementChains) {
