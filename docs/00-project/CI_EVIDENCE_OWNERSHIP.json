@@ -513,10 +513,10 @@
     {
       "id": "portable-storage-carrier-29764683800",
       "checkId": "portable-tier1-pr",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
       "failureClass": "semantic",
-      "bead": "haxe_ocaml-9bome",
+      "bead": "haxe_ocaml-9bome.1",
       "recordedAt": "2026-07-20T17:52:08Z",
       "run": {
         "id": 29764683800,
@@ -529,7 +529,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29764683800"
       },
       "reproductionOrEvidence": "The sealed local-storage change makes two portable fixtures declare a mutable rest-array temporary as Obj.t HxArray.t and later assign an int HxArray.t value, which OCaml rejects.",
-      "closureGate": "Repair the shared local storage and carrier decision without a broad cast, pass both focused fixtures and the full portable Tier 1 suite, then require an exact-head successor run."
+      "closureGate": "Repair the shared local storage and carrier decision without a broad cast, pass both focused fixtures and the full portable Tier 1 suite, then require an exact-head successor run.",
+      "resolution": {
+        "runId": 29766894489,
+        "runAttempt": 1,
+        "headSha": "ede7a3c3624f07189cccacdaa6223528ffed6e1a",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-20T18:21:54Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29766894489"
+      }
     },
     {
       "id": "gate2-nullfloat-compound-29739402762",
