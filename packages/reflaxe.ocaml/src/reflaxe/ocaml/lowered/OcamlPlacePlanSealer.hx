@@ -34,8 +34,9 @@ class OcamlPlacePlanSealer {
 
 	/** Plans, validates, and seals one exact function-body revision. */
 	public function seal(data:ClassFuncData):Void {
+		final binding = registry.planningBindingFor(data);
 		if (data.expr == null) {
-			registry.sealFunction(data);
+			registry.sealFunction(binding);
 			return;
 		}
 
@@ -60,7 +61,7 @@ class OcamlPlacePlanSealer {
 					final errors = OcamlPlaceAssignmentValidator.validate(operation);
 					if (errors.length > 0)
 						fail(errors.join("; ") + ' (origin "$originId")', child.pos);
-					registry.register(data, operation);
+					registry.register(binding, operation);
 					markerOriginIds.push(originId);
 					// The wrapper owns this operation. Continue with its children so a
 					// nested origin receives its own independently sealed plan.
@@ -74,8 +75,8 @@ class OcamlPlacePlanSealer {
 		}
 
 		visit(data.expr);
-		registry.sealFunction(data);
-		final finalError = registry.validateFunction(data, markerOriginIds);
+		registry.sealFunction(binding);
+		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);
 	}

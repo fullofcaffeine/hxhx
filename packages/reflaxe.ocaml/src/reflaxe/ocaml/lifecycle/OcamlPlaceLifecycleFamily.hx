@@ -121,7 +121,7 @@ class OcamlPlaceLifecycleFamily extends SemanticArtifactFamily {
 			if (artifact.fingerprint == "missing-final-plan")
 				return 'function "${data.id}" origin "${artifact.id}" has no sealed final plan';
 		}
-		return registry.validateFunction(data, [for (artifact in artifacts) artifact.id]);
+		return registry.validateObservedFunction(data, [for (artifact in artifacts) artifact.id]);
 	}
 }
 #end

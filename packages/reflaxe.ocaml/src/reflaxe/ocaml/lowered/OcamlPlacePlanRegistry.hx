@@ -73,6 +73,18 @@ class OcamlPlacePlanRegistry {
 	/** Builds the exact lookup key shared by planning and syntax consumption. */
 	public function bindingFor(data:ClassFuncData):OcamlPlaceFunctionBinding {
 		data.synchronizeBodyRevision();
+		return planningBindingFor(data);
+	}
+
+	/**
+		Captures one binding for a target-owned function-planning session.
+
+		The caller must run inside Reflaxe's revisioned lifecycle, which observes
+		the complete body again when the final preprocessor returns. Reusing this
+		binding lets one read-only tree walk register every operation without
+		re-rendering and hashing the same function once per operation.
+	 */
+	public function planningBindingFor(data:ClassFuncData):OcamlPlaceFunctionBinding {
 		final programRevision = data.programRevision;
 		if (programRevision == null || programRevision.length == 0)
 			throw 'reflaxe.ocaml [ocaml-lowering:missing-program-revision]: function "${data.id}" has no program revision';
@@ -135,10 +147,9 @@ class OcamlPlacePlanRegistry {
 	}
 
 	/** Adds one already-validated plan to the current function revision. */
-	public function register(data:ClassFuncData, operation:OcamlLoweredPlaceOperation):OcamlSealedPlacePlan {
-		if (sealedFunctions.exists(data.id))
-			throw 'reflaxe.ocaml [ocaml-lowering:sealed-function-mutation]: function "${data.id}" received a plan after it was sealed';
-		final binding = bindingFor(data);
+	public function register(binding:OcamlPlaceFunctionBinding, operation:OcamlLoweredPlaceOperation):OcamlSealedPlacePlan {
+		if (sealedFunctions.exists(binding.functionId))
+			throw 'reflaxe.ocaml [ocaml-lowering:sealed-function-mutation]: function "${binding.functionId}" received a plan after it was sealed';
 		final originId = originId(operation);
 		if (plansByOrigin.exists(originId))
 			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-origin]: place origin "$originId" was planned more than once';
@@ -159,20 +170,19 @@ class OcamlPlacePlanRegistry {
 			operation: operation
 		};
 		plansByOrigin.set(originId, sealed);
-		final origins = originsByFunction.get(data.id) ?? [];
+		final origins = originsByFunction.get(binding.functionId) ?? [];
 		origins.push(originId);
-		originsByFunction.set(data.id, origins);
+		originsByFunction.set(binding.functionId, origins);
 		return sealed;
 	}
 
 	/** Prevents later planning from silently changing one function's inventory. */
-	public function sealFunction(data:ClassFuncData):Void {
-		if (sealedFunctions.exists(data.id))
-			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${data.id}" was sealed more than once';
-		final binding = bindingFor(data);
-		final originIds = (originsByFunction.get(data.id) ?? []).copy();
+	public function sealFunction(binding:OcamlPlaceFunctionBinding):Void {
+		if (sealedFunctions.exists(binding.functionId))
+			throw 'reflaxe.ocaml [ocaml-lowering:duplicate-function-seal]: function "${binding.functionId}" was sealed more than once';
+		final originIds = (originsByFunction.get(binding.functionId) ?? []).copy();
 		originIds.sort(Reflect.compare);
-		sealedFunctions.set(data.id, {binding: binding, originIds: originIds});
+		sealedFunctions.set(binding.functionId, {binding: binding, originIds: originIds});
 	}
 
 	/** Returns a function's plans in deterministic origin order. */
@@ -199,21 +209,36 @@ class OcamlPlacePlanRegistry {
 
 	/** Verifies the final marker inventory against the sealed function registry. */
 	public function validateFunction(data:ClassFuncData, markerOriginIds:Array<String>):Null<String> {
-		final sealed = sealedFunctions.get(data.id);
+		return validateBinding(bindingFor(data), markerOriginIds);
+	}
+
+	/**
+		Validates against the body revision most recently observed by the lifecycle.
+
+		This avoids immediately hashing the same body again at the final lifecycle
+		callback. Syntax construction still performs a fresh observation so a later
+		mutation cannot reuse the sealed plan.
+	 */
+	public function validateObservedFunction(data:ClassFuncData, markerOriginIds:Array<String>):Null<String> {
+		return validateBinding(planningBindingFor(data), markerOriginIds);
+	}
+
+	/** Compares one already-captured binding and marker inventory with the seal. */
+	public function validateBinding(expected:OcamlPlaceFunctionBinding, markerOriginIds:Array<String>):Null<String> {
+		final sealed = sealedFunctions.get(expected.functionId);
 		if (sealed == null)
-			return 'function "${data.id}" has no sealed place-plan inventory';
-		final expected = bindingFor(data);
+			return 'function "${expected.functionId}" has no sealed place-plan inventory';
 		if (!sameBinding(sealed.binding, expected)) {
 			return
-				'[reflaxe:planned-body-revision-mismatch] function "${data.id}" was sealed for body ${sealed.binding.bodyRevision}, but validation received ${expected.bodyRevision}';
+				'[reflaxe:planned-body-revision-mismatch] function "${expected.functionId}" was sealed for body ${sealed.binding.bodyRevision}, but validation received ${expected.bodyRevision}';
 		}
 		final actualIds = markerOriginIds.copy();
 		actualIds.sort(Reflect.compare);
 		if (actualIds.length != sealed.originIds.length)
-			return 'function "${data.id}" has ${actualIds.length} final origin marker(s), but ${sealed.originIds.length} plan(s) were sealed';
+			return 'function "${expected.functionId}" has ${actualIds.length} final origin marker(s), but ${sealed.originIds.length} plan(s) were sealed';
 		for (index in 0...actualIds.length) {
 			if (actualIds[index] != sealed.originIds[index])
-				return 'function "${data.id}" final origin "${actualIds[index]}" does not match sealed plan "${sealed.originIds[index]}"';
+				return 'function "${expected.functionId}" final origin "${actualIds[index]}" does not match sealed plan "${sealed.originIds[index]}"';
 		}
 		return null;
 	}
