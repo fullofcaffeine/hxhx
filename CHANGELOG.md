@@ -1,3 +1,12 @@
+## [0.21.5](https://github.com/fullofcaffeine/hxhx/compare/v0.21.4...v0.21.5) (2026-07-20)
+
+
+### Performance Improvements
+
+* **deps:** pin faster Reflaxe lifecycle ([b85e928](https://github.com/fullofcaffeine/hxhx/commit/b85e92840a1bb4a8ddd6a84a10de0a7378cee88e)), closes [#10](https://github.com/fullofcaffeine/hxhx/issues/10)
+* **ocaml:** reuse one place-plan body binding ([de9846d](https://github.com/fullofcaffeine/hxhx/commit/de9846db7b7a3b416a320fcd42082a5576f5b042))
+* **test:** run portable fixtures in bounded pool ([5b6d8a1](https://github.com/fullofcaffeine/hxhx/commit/5b6d8a166d2a0bee8c75d5b68cf9221ac947876c))
+
 ## [0.21.4](https://github.com/fullofcaffeine/hxhx/compare/v0.21.3...v0.21.4) (2026-07-20)
 
 
