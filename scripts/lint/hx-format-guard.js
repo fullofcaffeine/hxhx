@@ -58,10 +58,22 @@ function formatterHelp(root) {
 }
 
 function trackedHaxeFiles(root) {
-  return commandOutput('git', ['ls-files', '*.hx'], { cwd: root })
+  const tracked = commandOutput('git', ['ls-files', '*.hx'], { cwd: root })
     .split(/\r?\n/)
     .filter(Boolean)
     .filter(file => !/(^|\/)(deps|out|bootstrap_work|bootstrap_verify)\//.test(file))
+  return existingFiles(root, tracked)
+}
+
+/**
+ * Removes tracked paths that were deleted in the working tree.
+ *
+ * `git ls-files` keeps reporting a deleted file until its deletion is staged.
+ * A rename should therefore skip the old path instead of crashing while trying
+ * to count lines before the official formatter starts.
+ */
+function existingFiles(root, files, exists = fs.existsSync) {
+  return files.filter(file => exists(path.join(root, file)))
 }
 
 function countLines(root, file) {
@@ -282,5 +294,6 @@ if (require.main === module) {
 module.exports = {
   balancedBuckets,
   buildFormatterBuckets,
+  existingFiles,
   runFormatterQueue
 }

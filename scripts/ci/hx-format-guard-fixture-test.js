@@ -2,7 +2,7 @@
 'use strict'
 
 const assert = require('assert')
-const { buildFormatterBuckets, runFormatterQueue } = require('../lint/hx-format-guard.js')
+const { buildFormatterBuckets, existingFiles, runFormatterQueue } = require('../lint/hx-format-guard.js')
 
 function fixtureFiles() {
   return [
@@ -39,6 +39,12 @@ async function measureConcurrency(buckets, jobs, delayFor = () => 5) {
 }
 
 async function main() {
+  const present = new Set(['/repo/Keep.hx', '/repo/Nested/AlsoKeep.hx'])
+  assert.deepStrictEqual(
+    existingFiles('/repo', ['Keep.hx', 'Deleted.hx', 'Nested/AlsoKeep.hx'], candidate => present.has(candidate)),
+    ['Keep.hx', 'Nested/AlsoKeep.hx']
+  )
+
   const files = fixtureFiles()
   const first = buildFormatterBuckets(files, 4)
   const second = buildFormatterBuckets(files, 4)
