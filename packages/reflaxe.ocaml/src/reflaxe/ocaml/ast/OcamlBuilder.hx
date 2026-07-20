@@ -26,6 +26,8 @@ import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
+import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
+import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
@@ -67,8 +69,9 @@ class OcamlBuilder {
 	// Tracks nesting of loops while building expressions (used for break/continue).
 	var loopDepth:Int = 0;
 
-	// Set while compiling a function body to decide whether TVar locals become `ref` or immutable `let`.
-	var currentMutatedLocalIds:Null<Map<Int, Bool>> = null;
+	// Set while compiling a function body so declarations consume the selected
+	// shared-cell versus immutable-rebinding decision.
+	var currentLocalStoragePlan:Null<OcamlLocalStoragePlan> = null;
 	// Current function return type while lowering a function body.
 	var currentFunctionReturnType:Null<Type> = null;
 
@@ -3799,9 +3802,7 @@ class OcamlBuilder {
 						initExprRaw;
 				}
 		};
-		final isMutable = currentMutatedLocalIds != null
-			&& currentMutatedLocalIds.exists(v.id)
-			&& currentMutatedLocalIds.get(v.id) == true;
+		final isMutable = currentLocalStoragePlan != null && currentLocalStoragePlan.requiresRef(v.id);
 		if (isMutable) {
 			refLocals.set(v.id, true);
 			final hasNullInit = switch (init) {
@@ -5680,14 +5681,14 @@ class OcamlBuilder {
 	function buildBlock(exprs:Array<TypedExpr>):OcamlExpr {
 		// Mutability inference: decide which locals become `ref` (as opposed to `let`-shadowed)
 		// by scanning for assignments and closure-capture requirements.
-		final refIds = collectRefLocalIdsFromExprs(exprs);
-		final prev = currentMutatedLocalIds;
-		currentMutatedLocalIds = refIds;
+		final storagePlan = OcamlLocalStoragePlanner.planExpressions(exprs);
+		final previousStoragePlan = currentLocalStoragePlan;
+		currentLocalStoragePlan = storagePlan;
 		final usedIds = collectUsedLocalIdsFromExprs(exprs);
 		final prevUsed = currentUsedLocalIds;
 		currentUsedLocalIds = usedIds;
 		final result = buildBlockFromIndex(exprs, 0, false);
-		currentMutatedLocalIds = prev;
+		currentLocalStoragePlan = previousStoragePlan;
 		currentUsedLocalIds = prevUsed;
 		return result;
 	}
@@ -5755,9 +5756,7 @@ class OcamlBuilder {
 					} else {
 						final initExprRaw = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
 						final initExpr = (init == null || isNullInitializer(init)) ? OcamlExpr.EAnnot(initExprRaw, typeExprFromHaxeType(v.t)) : initExprRaw;
-						final isMutable = currentMutatedLocalIds != null
-							&& currentMutatedLocalIds.exists(v.id)
-							&& currentMutatedLocalIds.get(v.id) == true;
+						final isMutable = currentLocalStoragePlan != null && currentLocalStoragePlan.requiresRef(v.id);
 
 						if (!isMutable) {
 							final shouldBind = isLocalReadBeforeNextWrite(exprs, i + 1, v.id);
@@ -5876,12 +5875,12 @@ class OcamlBuilder {
 			&& ctx.currentTypeFullName == profClass;
 		final t0 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
-		final refIds = collectRefLocalIdsFromExprs(exprs);
+		final storagePlan = OcamlLocalStoragePlanner.planExpressions(exprs);
 		#if macro
 		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
-		final prev = currentMutatedLocalIds;
-		currentMutatedLocalIds = refIds;
+		final previousStoragePlan = currentLocalStoragePlan;
+		currentLocalStoragePlan = storagePlan;
 		#if macro
 		if (profMatch)
 			log("reflaxe.ocaml: builder_block_refs dt_ms="
@@ -5913,7 +5912,7 @@ class OcamlBuilder {
 				+ " stmts="
 				+ Std.string(exprs.length));
 		#end
-		currentMutatedLocalIds = prev;
+		currentLocalStoragePlan = previousStoragePlan;
 		currentUsedLocalIds = prevUsed;
 		return result;
 	}
@@ -6102,7 +6101,7 @@ class OcamlBuilder {
 			&& ctx.currentTypeFullName == profClass;
 		final t0 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
-		final refIds = collectRefLocalIds(bodyExpr);
+		final storagePlan = OcamlLocalStoragePlanner.planExpression(bodyExpr);
 		final previousPlaceFunctionBinding = currentPlaceFunctionBinding;
 		currentPlaceFunctionBinding = placeFunctionBinding;
 		#if macro
@@ -6113,10 +6112,10 @@ class OcamlBuilder {
 
 		final params = args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
 
-		final prev = currentMutatedLocalIds;
-		currentMutatedLocalIds = refIds;
+		final previousStoragePlan = currentLocalStoragePlan;
+		currentLocalStoragePlan = storagePlan;
 		for (a in args) {
-			if (refIds.exists(a.id) && refIds.get(a.id) == true) {
+			if (storagePlan.requiresRef(a.id)) {
 				refLocals.set(a.id, true);
 			}
 		}
@@ -6172,7 +6171,7 @@ class OcamlBuilder {
 		}
 
 		for (a in args) {
-			if (refIds.exists(a.id) && refIds.get(a.id) == true) {
+			if (storagePlan.requiresRef(a.id)) {
 				final n = renameVar(a.name);
 				body = OcamlExpr.ELet(n, OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EIdent(n)]), body, false);
 			}
@@ -6180,7 +6179,7 @@ class OcamlBuilder {
 		body = wrapFunctionArgDefaults(body, args.map(a -> ({name: a.name, t: a.t, value: a.value})));
 		body = ensureParamUsage(body, params);
 
-		currentMutatedLocalIds = prev;
+		currentLocalStoragePlan = previousStoragePlan;
 		currentFunctionReturnType = prevFunctionReturnType;
 		currentPlaceFunctionBinding = previousPlaceFunctionBinding;
 		#if macro
@@ -6192,15 +6191,15 @@ class OcamlBuilder {
 	}
 
 	public function buildFunction(tfunc:haxe.macro.Type.TFunc):OcamlExpr {
-		final refIds = collectRefLocalIds(tfunc.expr);
+		final storagePlan = OcamlLocalStoragePlanner.planExpression(tfunc.expr);
 
 		// Determine parameters and wrap mutated parameters as refs inside the body.
 		final params = tfunc.args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : tfunc.args.map(a -> OcamlPat.PVar(renameVar(a.v.name)));
 
-		final prev = currentMutatedLocalIds;
-		currentMutatedLocalIds = refIds;
+		final previousStoragePlan = currentLocalStoragePlan;
+		currentLocalStoragePlan = storagePlan;
 		for (a in tfunc.args) {
-			if (refIds.exists(a.v.id) && refIds.get(a.v.id) == true) {
+			if (storagePlan.requiresRef(a.v.id)) {
 				refLocals.set(a.v.id, true);
 			}
 		}
@@ -6244,7 +6243,7 @@ class OcamlBuilder {
 
 		// Shadow mutated params as refs (`let x = ref x in ...`).
 		for (a in tfunc.args) {
-			if (refIds.exists(a.v.id) && refIds.get(a.v.id) == true) {
+			if (storagePlan.requiresRef(a.v.id)) {
 				final n = renameVar(a.v.name);
 				body = OcamlExpr.ELet(n, OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EIdent(n)]), body, false);
 			}
@@ -6252,7 +6251,7 @@ class OcamlBuilder {
 		body = wrapFunctionArgDefaults(body, tfunc.args.map(a -> {name: a.v.name, t: a.v.t, value: a.value}));
 		body = ensureParamUsage(body, params);
 
-		currentMutatedLocalIds = prev;
+		currentLocalStoragePlan = previousStoragePlan;
 		currentFunctionReturnType = prevFunctionReturnType;
 		return OcamlExpr.EFun(params, body);
 	}
@@ -6305,151 +6304,6 @@ class OcamlBuilder {
 		}
 
 		visit(e);
-	}
-
-	/**
-		 * Collects the set of local ids that must be represented as `ref`.
-		 *
-		 * Why:
-		 * - Haxe is imperative; the typed AST frequently uses assignment even for straight-line
-		 *   control flow (temporary variables, compiler-lowered patterns, etc).
-		 * - Emitting `ref` for every mutated local is correct but unnecessarily slow and unidiomatic.
-		 *
-		 * What:
-		 * - Returns a set of local ids that require **cell semantics** in OCaml.
-		 * - Locals not in this set can be updated via **`let`-shadowing** in straight-line blocks.
-		 *
-		 * How (conservative rules):
-		 * - Any mutation (assignment / assign-op / ++/--) that occurs:
-		 *   - inside a loop,
-		 *   - inside a nested function,
-		 *   - inside a nested block (relative to the current block),
-		 *   - or in a non-statement expression position,
-		 *   requires `ref`.
-		 * - Additionally, if a local is **captured by a nested function** and is mutated anywhere
-		 *   in the current block, it requires `ref` so closures observe updates (Haxe semantics).
-		 *
-		 * This intentionally leaves more-advanced SSA-style rewrites for later milestones; the goal
-		 * is a simple, predictable win for common straight-line assignment patterns.
-		 */
-	static function collectRefLocalIdsFromExprs(exprs:Array<TypedExpr>):Map<Int, Bool> {
-		final mutatedAny:Map<Int, Bool> = [];
-		final needsRef:Map<Int, Bool> = [];
-
-		final captured:Map<Int, Bool> = [];
-
-		function collectDeclaredLocalIdsShallow(e:TypedExpr, declared:Map<Int, Bool>):Void {
-			switch (e.expr) {
-				case TVar(v, _):
-					declared.set(v.id, true);
-				case TFunction(_):
-					// Stop: nested function defines its own scope.
-				case _:
-					TypedExprTools.iter(e, (x) -> collectDeclaredLocalIdsShallow(x, declared));
-			}
-		}
-
-		function collectUsedLocalIdsShallow(e:TypedExpr, used:Map<Int, Bool>):Void {
-			switch (e.expr) {
-				case TLocal(v):
-					used.set(v.id, true);
-				case TFunction(_):
-					// Stop: nested function defines its own scope.
-				case _:
-					TypedExprTools.iter(e, (x) -> collectUsedLocalIdsShallow(x, used));
-			}
-		}
-
-		function capturedOuterLocalsForFunction(tfunc:haxe.macro.Type.TFunc):Map<Int, Bool> {
-			final declared:Map<Int, Bool> = [];
-			final used:Map<Int, Bool> = [];
-			for (a in tfunc.args)
-				declared.set(a.v.id, true);
-			collectDeclaredLocalIdsShallow(tfunc.expr, declared);
-			collectUsedLocalIdsShallow(tfunc.expr, used);
-
-			final out:Map<Int, Bool> = [];
-			for (id in used.keys()) {
-				if (!declared.exists(id))
-					out.set(id, true);
-			}
-			return out;
-		}
-
-		function markMutated(id:Int, isShadowableStmt:Bool):Void {
-			mutatedAny.set(id, true);
-			if (!isShadowableStmt)
-				needsRef.set(id, true);
-		}
-
-		function visit(e:TypedExpr, depth:Int, inLoop:Bool, inFn:Bool, isStmt:Bool):Void {
-			switch (e.expr) {
-				case TFunction(tfunc):
-					final cap = capturedOuterLocalsForFunction(tfunc);
-					for (id in cap.keys())
-						captured.set(id, true);
-					// Any mutations inside nested functions require refs for the mutated locals.
-					visit(tfunc.expr, depth + 1, inLoop, true, false);
-					return;
-				case TWhile(cond, body, _):
-					visit(cond, depth + 1, true, inFn, false);
-					visit(body, depth + 1, true, inFn, false);
-					return;
-				case TBlock(items):
-					// Nested blocks (relative to this block) are treated conservatively: mutations in them
-					// require refs for the mutated locals, since `let`-shadowing would not propagate out.
-					for (x in items)
-						visit(x, depth + 1, inLoop, inFn, true);
-					return;
-				case _:
-			}
-
-			switch (e.expr) {
-				case TBinop(OpAssign, lhs, _):
-					switch (lhs.expr) {
-						case TLocal(v):
-							final shadowable = isStmt && depth == 0 && !inLoop && !inFn;
-							markMutated(v.id, shadowable);
-						case _:
-					}
-				case TBinop(OpAssignOp(_), lhs, _):
-					switch (lhs.expr) {
-						case TLocal(v):
-							markMutated(v.id, false);
-						case _:
-					}
-				case TUnop(OpIncrement, _, inner) | TUnop(OpDecrement, _, inner):
-					switch (inner.expr) {
-						case TLocal(v):
-							markMutated(v.id, false);
-						case _:
-					}
-				case _:
-			}
-
-			TypedExprTools.iter(e, (x) -> visit(x, depth + 1, inLoop, inFn, false));
-		}
-
-		for (e in exprs)
-			visit(e, 0, false, false, true);
-
-		// Closure semantics: if a local is captured by any nested function and is mutated anywhere
-		// in this block, it must be a ref so closures observe updates.
-		for (id in captured.keys()) {
-			if (mutatedAny.exists(id) && mutatedAny.get(id) == true)
-				needsRef.set(id, true);
-		}
-
-		return needsRef;
-	}
-
-	static function collectRefLocalIds(e:TypedExpr):Map<Int, Bool> {
-		return switch (e.expr) {
-			case TBlock(exprs):
-				collectRefLocalIdsFromExprs(exprs);
-			case _:
-				collectRefLocalIdsFromExprs([e]);
-		}
 	}
 
 	function collectUsedLocalIdsFromExprs(exprs:Array<TypedExpr>):Map<Int, Bool> {
