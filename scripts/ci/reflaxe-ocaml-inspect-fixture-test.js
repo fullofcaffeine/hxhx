@@ -104,6 +104,7 @@ try {
 	assert.strictEqual(runtimeRequirements.compilerObservationGranularity, 'module-name-only')
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxInt'))
 	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxType'))
+	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxBacktrace'))
 	assert.strictEqual(runtimeRequirements.explainedCompilerObservedModules, undefined)
 	assert.strictEqual(runtimeRequirements.unexplainedCompilerObservedModules, undefined)
 	assert.deepStrictEqual([
@@ -146,6 +147,24 @@ try {
 	assert.strictEqual(stdioRequirement.subject.kind, 'native-boundary')
 	assert.strictEqual(stdioRequirement.subject.id, 'sys.io.Stdio::sys.io._Stdio.NativeHxStdio.flush -> HxStdio.flush')
 	assert.deepStrictEqual(stdioRequirement.rootModules, ['HxStdio'])
+	const stackRequirement = runtimeRequirements.requirements.find(
+		requirement => requirement.semanticCapability === 'haxe-stack-traces')
+	assert(stackRequirement)
+	assert.strictEqual(stackRequirement.sourceKind, 'native-boundary')
+	assert.strictEqual(stackRequirement.cause, 'native-boundary')
+	assert.strictEqual(stackRequirement.subject.kind, 'native-boundary')
+	assert.strictEqual(stackRequirement.subject.id,
+		'haxe.CallStack::haxe._CallStack.NativeHxBacktrace.callstack_lines -> HxBacktrace.callstack_lines')
+	assert.deepStrictEqual(stackRequirement.rootModules, ['HxBacktrace'])
+	assert.deepStrictEqual(runtimeRequirements.requirements
+		.filter(requirement => requirement.semanticCapability === 'haxe-stack-traces')
+		.map(requirement => requirement.id)
+		.sort(), [
+			'native:haxe.CallStack::haxe._CallStack.NativeHxBacktrace.callstack_lines:runtime:haxe-stack-traces',
+			'native:haxe.CallStack::haxe._CallStack.NativeHxBacktrace.exceptionstack_lines:runtime:haxe-stack-traces',
+			'native:haxe.NativeStackTrace::haxe._NativeStackTrace.NativeHxBacktrace.callstack_lines:runtime:haxe-stack-traces',
+			'native:haxe.NativeStackTrace::haxe._NativeStackTrace.NativeHxBacktrace.exceptionstack_lines:runtime:haxe-stack-traces'
+		])
 	assert.strictEqual(runtimeRequirements.requirementChains.length, runtimeRequirements.requirementCount)
 	for (const chain of runtimeRequirements.requirementChains) {
 		assert(requirementIds.has(chain.requirementId), `runtime chain refers to missing requirement ${chain.requirementId}`)

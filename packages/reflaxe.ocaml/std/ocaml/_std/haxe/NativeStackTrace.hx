@@ -27,6 +27,12 @@ private typedef NativeTrace = {
 	  package.
 	- The internal `#if ocaml_output` keeps the real implementation target-gated
 	  even in flattened packages where `.cross.hx` is visible to custom targets.
+
+	HOW NATIVE CAPTURE IS CALLED
+	- A private typed extern maps the two capture functions to `HxBacktrace`.
+	- `@:ocamlRuntime("haxe-stack-traces")` lets the compiler validate that target
+	  module and explain why its checked runtime source is packaged.
+	- No raw OCaml injection is needed for this typed boundary.
 **/
 @:dox(hide)
 @:noCompletion
@@ -44,14 +50,14 @@ class NativeStackTrace {
 	static public inline function callStack():NativeTrace {
 		return {
 			skip: 1,
-			stack: untyped __ocaml__("(HxBacktrace.callstack_lines 64)")
+			stack: NativeHxBacktrace.callstack_lines(64)
 		};
 	}
 
 	static public inline function exceptionStack():NativeTrace {
 		return {
 			skip: 0,
-			stack: untyped __ocaml__("(HxBacktrace.exceptionstack_lines ())")
+			stack: NativeHxBacktrace.exceptionstack_lines()
 		};
 	}
 
@@ -110,6 +116,13 @@ class NativeStackTrace {
 		}
 		return out;
 	}
+}
+
+@:ocamlRuntime("haxe-stack-traces")
+@:native("HxBacktrace")
+private extern class NativeHxBacktrace {
+	static function callstack_lines(depth:Int):Array<String>;
+	static function exceptionstack_lines():Array<String>;
 }
 #else
 

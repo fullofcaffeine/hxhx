@@ -22,11 +22,12 @@ Validation stops before copying if a declared file is missing or modified, an un
 This catalog answers “which reviewed source files implement this module?” The
 runtime requirement ledger also answers questions such as “which Haxe
 expression required `HxInt` or `HxArray`?”, “why did the compiler-generated
-`HxTypeRegistry` require `HxType`?”, “why does the typed standard-I/O facade
-require `HxStdio`?”, and “why is the core runtime packaged?” in
-`ocaml_runtime_requirement_report.json` on every runtime-enabled build. Each
-explanation names the supported Haxe type, generated module, compiler rule, or
-typed native boundary; the decision that required support; the implementation
+`HxTypeRegistry` require `HxType`?", “why do the typed standard-I/O and
+stack-trace facades require `HxStdio` and `HxBacktrace`?", and “why is the core
+runtime packaged?” in `ocaml_runtime_requirement_report.json` on every runtime-
+enabled build. Each explanation names the supported Haxe type, generated
+module, compiler rule, or typed native boundary; the decision that required
+support; the implementation
 feature; the eligible profiles; and the checked root module. The report then
 follows that root through the catalog to the exact source hashes, dependencies,
 Dune libraries, profiles, and licenses that were packaged.
@@ -74,7 +75,7 @@ used for ordinary external OCaml libraries.
 | `EReg` | yes | `metal-supported` | Regex support is allowed; keep typed call sites. |
 | `HxAnon` | yes | `metal-forbidden (current)` | Dynamic anonymous-object reflection path (portable uses shape/slot runtime with explicit presence tracking + repeated-field cache); migrate to typed records/classes for metal. |
 | `HxArray` | yes | `metal-supported` | Arrays are supported; future metal specialization may reduce runtime dependence. |
-| `HxBacktrace` | yes | `metal-supported` | Runtime stack/backtrace helpers. |
+| `HxBacktrace` | yes | `metal-supported` | Stack capture reached through checked `haxe-stack-traces` typed externs. |
 | `HxBytes` | yes | `metal-supported` | Typed bytes APIs. |
 | `HxEnum` | yes | `metal-supported` | Enum helpers for typed enum flows. |
 | `HxFPHelper` | yes | `metal-supported` | Float helper utilities. |

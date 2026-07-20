@@ -133,6 +133,15 @@ class M6RuntimeCopierIntegrationTest {
 		throw 'Missing runtime capability "$capability".';
 	}
 
+	static function requirementIdsForCapability(report:RuntimeRequirementReport, capability:String):Array<String> {
+		final ids = [
+			for (requirement in report.requirements)
+				if (requirement.semanticCapability == capability) requirement.id
+		];
+		ids.sort(compareStrings);
+		return ids;
+	}
+
 	static function shellQuote(value:String):String {
 		return "'" + StringTools.replace(value, "'", "'\"'\"'") + "'";
 	}
@@ -494,6 +503,21 @@ class M6RuntimeCopierIntegrationTest {
 			"standard I/O support should retain the Haxe extern identity and the resolved HxStdio symbol");
 		assertContains("\n" + stdioRequirement.rootModules.join("\n") + "\n", "\nHxStdio\n",
 			"standard I/O support should select the HxStdio implementation root");
+		final stackRequirement = requirementByCapability(portableRequirementReport, "haxe-stack-traces");
+		assertTrue(stackRequirement.sourceKind == "native-boundary" && stackRequirement.cause == "native-boundary",
+			"stack-trace support should identify a declared native boundary");
+		assertTrue(stackRequirement.subject.kind == "native-boundary"
+			&& stackRequirement.subject.id == "haxe.CallStack::haxe._CallStack.NativeHxBacktrace.callstack_lines -> HxBacktrace.callstack_lines",
+			"stack-trace support should retain the Haxe extern identity and the resolved HxBacktrace symbol");
+		assertContains("\n" + stackRequirement.rootModules.join("\n") + "\n", "\nHxBacktrace\n",
+			"stack-trace support should select the HxBacktrace implementation root");
+		assertArrayEquals([
+			"native:haxe.CallStack::haxe._CallStack.NativeHxBacktrace.callstack_lines:runtime:haxe-stack-traces",
+			"native:haxe.CallStack::haxe._CallStack.NativeHxBacktrace.exceptionstack_lines:runtime:haxe-stack-traces",
+			"native:haxe.NativeStackTrace::haxe._NativeStackTrace.NativeHxBacktrace.callstack_lines:runtime:haxe-stack-traces",
+			"native:haxe.NativeStackTrace::haxe._NativeStackTrace.NativeHxBacktrace.exceptionstack_lines:runtime:haxe-stack-traces"
+		],
+			requirementIdsForCapability(portableRequirementReport, "haxe-stack-traces"), "both typed stack facades should explain both HxBacktrace calls");
 		final boolUnboxRequirement = requirementById(typeRegistryRequirementReport, "compiler:generated:HxTypeRegistry:runtime-unbox");
 		assertTrue(boolUnboxRequirement.subject.kind == "generated-module" && boolUnboxRequirement.subject.id == "HxTypeRegistry",
 			"Boolean reflection conversion should identify the generated type registry");
@@ -529,10 +553,14 @@ class M6RuntimeCopierIntegrationTest {
 			"compiler-observed HxArray should report root overlap without claiming all HxArray use sites are explained");
 		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxStdio\n",
 			"compiler-observed HxStdio should overlap its declared typed extern requirement root");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxBacktrace\n",
+			"compiler-observed HxBacktrace should overlap its declared typed extern requirement root");
 		assertNotContains("\n" + metalRequirementReport.compilerObservedModulesWithoutRequirementRoots.join("\n") + "\n", "\nHxStdio\n",
 			"declared HxStdio should not remain in the no-requirement-root set");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxStdio").join("\n") + "\n", "\nrecorded_requirement\n",
 			"selective packaging should retain HxStdio because of the declared native boundary");
+		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxBacktrace").join("\n") + "\n", "\nrecorded_requirement\n",
+			"selective packaging should retain HxBacktrace because of the declared native boundary");
 		assertTrue(metalRequirementReport.compilerObservedModulesWithoutRequirementRoots.length > 0,
 			"partial coverage should keep compiler-observed modules with no recorded root visible");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalRequirementReport.selectedModules,

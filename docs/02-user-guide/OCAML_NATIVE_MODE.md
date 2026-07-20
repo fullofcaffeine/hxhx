@@ -109,7 +109,8 @@ before OCaml output is packaged.
 The current first slice supports declarations on a static extern class or
 static extern field. This is an advanced target/runtime-authoring contract, not
 a way to declare opam libraries; external native dependencies need their own
-structured package manifest.
+structured package manifest. Current checked capabilities include
+`haxe-standard-io` for `HxStdio` and `haxe-stack-traces` for `HxBacktrace`.
 
 ### `@:ocamlLabel` (labelled + optional labelled args)
 

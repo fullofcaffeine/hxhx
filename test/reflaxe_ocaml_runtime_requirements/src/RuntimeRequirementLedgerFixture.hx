@@ -68,8 +68,10 @@ class RuntimeRequirementLedgerFixture {
 		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_RUNTIME_UNBOX);
 		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_STANDARD_IO, "sys.io.Stdio::sys.io._Stdio.NativeHxStdio.read_byte", source,
 			"HxStdio.read_byte");
+		ledger.recordNativeBoundary(OcamlRuntimeRequirementLedger.HAXE_STACK_TRACES, "haxe.CallStack::haxe._CallStack.NativeHxBacktrace.callstack_lines",
+			source, "HxBacktrace.callstack_lines");
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == 10, "each lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
+		assertTrue(requirements.length == 11, "each lowering, compiler, and declared native-boundary decision should retain its own runtime explanation");
 		assertTrue(requirements[0].id == "compiler:generated:HxTypeRegistry:dynamic-arguments", "requirements should be sorted by stable identity");
 		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
 		assertTrue(placeRequirement.sourceId == "place:a", "the requirement should retain its Haxe-expression identity");
@@ -94,7 +96,12 @@ class RuntimeRequirementLedgerFixture {
 			"a typed extern should identify its native boundary as the runtime source and subject");
 		assertTrue(stdioRequirement.subject.id.indexOf("HxStdio.read_byte") >= 0, "the native-boundary subject should name the checked target symbol");
 		assertTrue(stdioRequirement.rootModules[0] == "HxStdio", "Haxe standard I/O should select the HxStdio implementation root");
-		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxInt,HxRuntime,HxStdio,HxType", "root modules should be deduplicated and sorted");
+		final stackRequirement = requirementById(requirements,
+			"native:haxe.CallStack::haxe._CallStack.NativeHxBacktrace.callstack_lines:runtime:haxe-stack-traces");
+		assertTrue(stackRequirement.subject.id.indexOf("HxBacktrace.callstack_lines") >= 0, "the stack-trace boundary should name the checked target symbol");
+		assertTrue(stackRequirement.rootModules[0] == "HxBacktrace", "Haxe stack traces should select the HxBacktrace implementation root");
+		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxBacktrace,HxInt,HxRuntime,HxStdio,HxType",
+			"root modules should be deduplicated and sorted");
 		final firstRevision = ledger.revision();
 		ledger.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);
 		assertTrue(ledger.revision() == firstRevision, "recording the same facts twice should be deterministic");

@@ -271,7 +271,8 @@ Every runtime-enabled build also writes
 the locked runtime-source catalog and records the exact dependency closure,
 source hashes, Dune libraries, profiles, and licenses that were selected. The
 same report now also explains the core packaging rule, the generated
-`HxTypeRegistry` module, and the typed `HxStdio` extern boundary. It keeps
+`HxTypeRegistry` module, and the typed `HxStdio` and `HxBacktrace` extern
+boundaries. It keeps
 modules directly named by a recorded compiler reason and modules only observed
 after generation in separate lists. Because compiler observation is not yet
 occurrence-level, overlap does not imply that every use of a runtime module is

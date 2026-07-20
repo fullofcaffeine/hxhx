@@ -99,6 +99,15 @@ class M14RuntimeCallStackIntegrationTest {
 		final ml = File.getContent(callStackMl);
 		assertContains(ml, "HxBacktrace.callstack_lines", "generated CallStack should use HxBacktrace directly");
 		assertTrue(ml.indexOf("Haxe_NativeStackTrace") < 0, "generated CallStack should not depend on Haxe_NativeStackTrace");
+		final nativeStackTraceMl = haxe.io.Path.join([outDir, 'haxe_NativeStackTrace.ml']);
+		assertTrue(FileSystem.exists(nativeStackTraceMl), "missing generated haxe_NativeStackTrace.ml");
+		final nativeStackTraceOutput = File.getContent(nativeStackTraceMl);
+		assertContains(nativeStackTraceOutput, "HxBacktrace.callstack_lines", "generated NativeStackTrace should use the typed HxBacktrace boundary");
+		assertContains(nativeStackTraceOutput, "HxBacktrace.exceptionstack_lines",
+			"generated NativeStackTrace should use the typed HxBacktrace exception boundary");
+		final nativeStackTraceSource = File.getContent("packages/reflaxe.ocaml/std/ocaml/_std/haxe/NativeStackTrace.hx");
+		assertTrue(nativeStackTraceSource.indexOf("untyped __ocaml__") < 0,
+			"NativeStackTrace should not regain raw OCaml injection for the typed HxBacktrace API");
 
 		if (hasCommand("dune") && hasCommand("ocamlc")) {
 			final prev = Sys.getCwd();

@@ -212,6 +212,7 @@ abstract CallStack(Array<StackItem>) from Array<StackItem> {
 	}
 }
 
+@:ocamlRuntime("haxe-stack-traces")
 @:native("HxBacktrace")
 private extern class NativeHxBacktrace {
 	static function callstack_lines(depth:Int):Array<String>;

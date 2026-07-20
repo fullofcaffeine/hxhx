@@ -29,6 +29,7 @@ class OcamlRuntimeRequirementLedger {
 	public static inline final TYPE_REGISTRY_OPTIONAL_NULL = "compiler-type-registry-optional-null";
 	public static inline final TYPE_REGISTRY_RUNTIME_UNBOX = "compiler-type-registry-runtime-unbox";
 	public static inline final HAXE_STANDARD_IO = "haxe-standard-io";
+	public static inline final HAXE_STACK_TRACES = "haxe-stack-traces";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -328,6 +329,12 @@ class OcamlRuntimeRequirementLedger {
 					feature: "haxe-standard-io-v1",
 					module: "HxStdio",
 					explanation: "The typed OCaml standard-I/O facade uses HxStdio to preserve Haxe stream reads, writes, end-of-file behavior, and flushing."
+				};
+			case HAXE_STACK_TRACES:
+				{
+					feature: "haxe-stack-traces-v1",
+					module: "HxBacktrace",
+					explanation: "The typed Haxe stack-trace facades use HxBacktrace to capture OCaml call and exception frames as Haxe arrays of strings."
 				};
 			case _:
 				throw 'Unknown native runtime capability "$capability".';
