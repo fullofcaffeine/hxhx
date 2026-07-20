@@ -18,6 +18,8 @@ const ARTIFACT_SCHEMA = 'hxhx.macro-host-test-artifact.v1'
 const PLAN_SCHEMA = 'hxhx.macro-host-integration-plan.v1'
 const PLAN_RELATIVE_PATH = 'scripts/ci/macro-host-integration-plan.json'
 const EVIDENCE_RELATIVE_PATH = '.artifacts/core-test/macro-host-integration'
+const BUILD_LEASE_SUFFIX = '.hxhx-macro-host-build.pid'
+const GENERATED_INPUT_SUFFIX = '.hxhx-macro-host-input'
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message)
@@ -29,6 +31,16 @@ function sha256(value) {
 
 function sha256File(filePath) {
   return sha256(fs.readFileSync(filePath))
+}
+
+/** Returns the orchestration lease beside, rather than inside, compiler output. */
+function macroHostBuildLeasePath(buildRoot) {
+  return `${path.resolve(buildRoot)}${BUILD_LEASE_SUFFIX}`
+}
+
+/** Returns the temporary Haxe build-input directory beside compiler output. */
+function macroHostGeneratedInputPath(buildRoot) {
+  return `${path.resolve(buildRoot)}${GENERATED_INPUT_SUFFIX}`
 }
 
 function readJson(filePath, label) {
@@ -187,8 +199,12 @@ function prepareSharedMacroHost(repoRoot, shard) {
   const manifestPath = path.join(evidenceRoot, 'manifest.json')
   const reportPath = path.join(evidenceRoot, 'report.json')
   const buildRoot = path.join(repoRoot, '.tmp', `hxhx-macro-host-build.core-test-${process.pid}`)
+  const buildLeasePath = macroHostBuildLeasePath(buildRoot)
+  const generatedInputPath = macroHostGeneratedInputPath(buildRoot)
   fs.rmSync(evidenceRoot, { recursive: true, force: true })
   fs.rmSync(buildRoot, { recursive: true, force: true })
+  fs.rmSync(buildLeasePath, { force: true })
+  fs.rmSync(generatedInputPath, { recursive: true, force: true })
   fs.mkdirSync(evidenceRoot, { recursive: true })
 
   const candidate = candidateIdentity(repoRoot)
@@ -233,6 +249,8 @@ function prepareSharedMacroHost(repoRoot, shard) {
       build: { ...baseReport.build, elapsedSeconds: (Date.now() - startedMs) / 1000 }
     })
     fs.rmSync(buildRoot, { recursive: true, force: true })
+    fs.rmSync(buildLeasePath, { force: true })
+    fs.rmSync(generatedInputPath, { recursive: true, force: true })
     throw error
   }
 
@@ -317,6 +335,8 @@ function prepareSharedMacroHost(repoRoot, shard) {
       if (failure) report.failure = failure
       report.artifactRetained = false
       fs.rmSync(buildRoot, { recursive: true, force: true })
+      fs.rmSync(buildLeasePath, { force: true })
+      fs.rmSync(generatedInputPath, { recursive: true, force: true })
       writeJson(reportPath, report)
     }
   }
@@ -335,6 +355,8 @@ module.exports = {
   PLAN_RELATIVE_PATH,
   PLAN_SCHEMA,
   loadPlan,
+  macroHostBuildLeasePath,
+  macroHostGeneratedInputPath,
   maybePrepareSharedArtifact,
   prepareSharedMacroHost,
   sha256File,

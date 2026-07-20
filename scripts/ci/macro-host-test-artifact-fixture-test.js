@@ -9,6 +9,8 @@ const path = require('path')
 const {
   ARTIFACT_SCHEMA,
   PLAN_SCHEMA,
+  macroHostBuildLeasePath,
+  macroHostGeneratedInputPath,
   validateArtifactManifest,
   validatePlan
 } = require('./macro-host-test-artifact')
@@ -38,6 +40,13 @@ function expectFailure(label, snippet, callback) {
 function main() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hxhx-macro-host-artifact-'))
   try {
+    const buildRoot = path.join(tempRoot, 'generated-output')
+    const buildLease = macroHostBuildLeasePath(buildRoot)
+    const generatedInput = macroHostGeneratedInputPath(buildRoot)
+    assert.strictEqual(path.relative(buildRoot, buildLease).startsWith('..'), true, 'build lease must remain outside generated compiler output')
+    assert.strictEqual(path.relative(buildRoot, generatedInput).startsWith('..'), true,
+      'generated Haxe inputs must remain outside generated compiler output')
+
     const executable = path.join(tempRoot, 'macro-host.exe')
     const manifestPath = path.join(tempRoot, 'manifest.json')
     const executableBody = Buffer.from('fixture macro host\n')

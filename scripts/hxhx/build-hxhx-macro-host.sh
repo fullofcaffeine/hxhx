@@ -10,7 +10,8 @@ TOOL_DIR="$ROOT/packages/hxhx-macro-host"
 BOOTSTRAP_DIR="$TOOL_DIR/bootstrap_out"
 DEFAULT_OUT_DIR="$TOOL_DIR/out"
 MACRO_HOST_OUT_DIR="${HXHX_MACRO_HOST_OUT_DIR:-}"
-MACRO_HOST_BUILD_PID_FILE=".hxhx-macro-host-build.pid"
+MACRO_HOST_BUILD_PID_SUFFIX=".hxhx-macro-host-build.pid"
+MACRO_HOST_GENERATED_INPUT_SUFFIX=".hxhx-macro-host-input"
 MACRO_HOST_LEASE_PID="${HXHX_MACRO_HOST_LEASE_PID:-$$}"
 
 case "$MACRO_HOST_LEASE_PID" in
@@ -174,6 +175,22 @@ resolve_out_dir() {
 }
 
 OUT_DIR="$(resolve_out_dir)"
+MACRO_HOST_BUILD_LEASE_FILE=""
+MACRO_HOST_GENERATED_INPUT_DIR="${OUT_DIR}${MACRO_HOST_GENERATED_INPUT_SUFFIX}"
+
+cleanup_generated_input() {
+  rm -rf "$MACRO_HOST_GENERATED_INPUT_DIR"
+}
+trap cleanup_generated_input EXIT
+
+# Keep build coordination beside the generated tree. The OCaml artifact
+# manifest intentionally rejects files that were not produced by the compiler,
+# so a live-process lease must never be mixed into that output.
+if [[ "$OUT_DIR" == "$ROOT/.tmp/"* ]]; then
+  mkdir -p "$(dirname "$OUT_DIR")"
+  MACRO_HOST_BUILD_LEASE_FILE="${OUT_DIR}${MACRO_HOST_BUILD_PID_SUFFIX}"
+  printf '%s\n' "$MACRO_HOST_LEASE_PID" >"$MACRO_HOST_BUILD_LEASE_FILE"
+fi
 
 resolve_std_root() {
   # Stage3 compilation needs a real Haxe std root (macro host imports `haxe.macro.*`).
@@ -209,14 +226,12 @@ trim_ws() {
   cd "$TOOL_DIR"
   rm -rf "$OUT_DIR"
   mkdir -p "$OUT_DIR"
-  if [[ "$OUT_DIR" == "$ROOT/.tmp/"* ]]; then
-    printf '%s\n' "$MACRO_HOST_LEASE_PID" >"$OUT_DIR/$MACRO_HOST_BUILD_PID_FILE"
-  fi
   echo "== Macro host build dir: $OUT_DIR" >&2
   extra=()
   gen_cp=""
   if [ -n "${HXHX_MACRO_HOST_ENTRYPOINTS:-}" ]; then
-    gen_cp="$OUT_DIR/_gen_hx"
+    gen_cp="$MACRO_HOST_GENERATED_INPUT_DIR"
+    rm -rf "$gen_cp"
     mkdir -p "$gen_cp/hxhxmacrohost"
     gen_file="$gen_cp/hxhxmacrohost/EntryPointsGen.hx"
 

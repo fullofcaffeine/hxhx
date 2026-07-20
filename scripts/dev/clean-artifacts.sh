@@ -125,7 +125,8 @@ fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BOOTSTRAP_BUILD_PID_FILE=".hxhx-bootstrap-build.pid"
-MACRO_HOST_BUILD_PID_FILE=".hxhx-macro-host-build.pid"
+MACRO_HOST_BUILD_PID_SUFFIX=".hxhx-macro-host-build.pid"
+MACRO_HOST_GENERATED_INPUT_SUFFIX=".hxhx-macro-host-input"
 CANDIDATES="$(mktemp -t hxhx-clean-candidates.XXXXXX)"
 UNIQUE_CANDIDATES="$(mktemp -t hxhx-clean-candidates-uniq.XXXXXX)"
 SIZE_REPORT="$(mktemp -t hxhx-clean-size-report.XXXXXX)"
@@ -175,17 +176,11 @@ add_path_if_exists() {
   fi
 }
 
-build_dir_is_active() {
-  local dir="${1:-}"
-  local pid_file_name="${2:-}"
-  local pid_file=""
+build_pid_file_is_active() {
+  local pid_file="${1:-}"
   local owner_pid=""
 
-  if [[ -z "$dir" || ! -d "$dir" ]]; then
-    return 1
-  fi
-  pid_file="$dir/$pid_file_name"
-  if [[ ! -f "$pid_file" ]]; then
+  if [[ -z "$pid_file" || ! -f "$pid_file" ]]; then
     return 1
   fi
   owner_pid="$(head -n 1 "$pid_file" 2>/dev/null | tr -d '[:space:]' || true)"
@@ -197,15 +192,31 @@ build_dir_is_active() {
   kill -0 "$owner_pid" >/dev/null 2>&1
 }
 
+build_dir_is_active() {
+  local dir="${1:-}"
+  local pid_file_name="${2:-}"
+
+  if [[ -z "$dir" || ! -d "$dir" ]]; then
+    return 1
+  fi
+  build_pid_file_is_active "$dir/$pid_file_name"
+}
+
 bootstrap_build_dir_is_active() {
   build_dir_is_active "${1:-}" "$BOOTSTRAP_BUILD_PID_FILE"
 }
 
 macro_host_build_dir_is_active() {
-  build_dir_is_active "${1:-}" "$MACRO_HOST_BUILD_PID_FILE"
+  local dir="${1:-}"
+  if [[ -z "$dir" ]]; then
+    return 1
+  fi
+  build_pid_file_is_active "${dir}${MACRO_HOST_BUILD_PID_SUFFIX}"
 }
 
 collect_safe_candidates() {
+  local build_dir=""
+
   add_path_if_exists "$ROOT/out"
   add_path_if_exists "$ROOT/tmp_stat_portable.txt"
   add_path_if_exists "$ROOT/test/upstream_min_repro"
@@ -218,8 +229,21 @@ collect_safe_candidates() {
     while IFS= read -r path; do
       if [[ -d "$path" ]] && ! macro_host_build_dir_is_active "$path"; then
         printf '%s\n' "$path" >>"$CANDIDATES"
+        add_path_if_exists "${path}${MACRO_HOST_BUILD_PID_SUFFIX}"
       fi
-    done < <(find "$ROOT/.tmp" -mindepth 1 -maxdepth 1 -type d -name 'hxhx-macro-host-build.*' -print 2>/dev/null || true)
+    done < <(find "$ROOT/.tmp" -mindepth 1 -maxdepth 1 -type d -name 'hxhx-macro-host-build.*' ! -name "*${MACRO_HOST_GENERATED_INPUT_SUFFIX}" -print 2>/dev/null || true)
+    while IFS= read -r path; do
+      build_dir="${path%"$MACRO_HOST_GENERATED_INPUT_SUFFIX"}"
+      if ! macro_host_build_dir_is_active "$build_dir"; then
+        printf '%s\n' "$path" >>"$CANDIDATES"
+      fi
+    done < <(find "$ROOT/.tmp" -mindepth 1 -maxdepth 1 -type d -name "hxhx-macro-host-build.*${MACRO_HOST_GENERATED_INPUT_SUFFIX}" -print 2>/dev/null || true)
+    while IFS= read -r path; do
+      build_dir="${path%"$MACRO_HOST_BUILD_PID_SUFFIX"}"
+      if ! macro_host_build_dir_is_active "$build_dir"; then
+        printf '%s\n' "$path" >>"$CANDIDATES"
+      fi
+    done < <(find "$ROOT/.tmp" -mindepth 1 -maxdepth 1 -type f -name "hxhx-macro-host-build.*${MACRO_HOST_BUILD_PID_SUFFIX}" -print 2>/dev/null || true)
   fi
 
   if [[ -d "$ROOT" ]]; then

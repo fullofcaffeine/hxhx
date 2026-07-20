@@ -15,7 +15,14 @@ BOOTSTRAP_ACTIVE_DIR="$ROOT/.tmp/hxhx-bootstrap-build.clean-regression-active"
 BOOTSTRAP_PID_FILE=".hxhx-bootstrap-build.pid"
 MACRO_HOST_INACTIVE_DIR="$ROOT/.tmp/hxhx-macro-host-build.clean-regression-inactive"
 MACRO_HOST_ACTIVE_DIR="$ROOT/.tmp/hxhx-macro-host-build.clean-regression-active"
-MACRO_HOST_PID_FILE=".hxhx-macro-host-build.pid"
+MACRO_HOST_PENDING_DIR="$ROOT/.tmp/hxhx-macro-host-build.clean-regression-pending"
+MACRO_HOST_PID_SUFFIX=".hxhx-macro-host-build.pid"
+MACRO_HOST_GENERATED_INPUT_SUFFIX=".hxhx-macro-host-input"
+MACRO_HOST_INACTIVE_PID_FILE="${MACRO_HOST_INACTIVE_DIR}${MACRO_HOST_PID_SUFFIX}"
+MACRO_HOST_ACTIVE_PID_FILE="${MACRO_HOST_ACTIVE_DIR}${MACRO_HOST_PID_SUFFIX}"
+MACRO_HOST_PENDING_PID_FILE="${MACRO_HOST_PENDING_DIR}${MACRO_HOST_PID_SUFFIX}"
+MACRO_HOST_INACTIVE_INPUT_DIR="${MACRO_HOST_INACTIVE_DIR}${MACRO_HOST_GENERATED_INPUT_SUFFIX}"
+MACRO_HOST_ACTIVE_INPUT_DIR="${MACRO_HOST_ACTIVE_DIR}${MACRO_HOST_GENERATED_INPUT_SUFFIX}"
 PLACEHOLDER_REL="${PLACEHOLDER#"$ROOT/"}"
 
 if [[ ! -f "$PLACEHOLDER" ]]; then
@@ -36,6 +43,12 @@ cleanup() {
   rm -rf "$BOOTSTRAP_ACTIVE_DIR"
   rm -rf "$MACRO_HOST_INACTIVE_DIR"
   rm -rf "$MACRO_HOST_ACTIVE_DIR"
+  rm -rf "$MACRO_HOST_PENDING_DIR"
+  rm -f "$MACRO_HOST_INACTIVE_PID_FILE"
+  rm -f "$MACRO_HOST_ACTIVE_PID_FILE"
+  rm -f "$MACRO_HOST_PENDING_PID_FILE"
+  rm -rf "$MACRO_HOST_INACTIVE_INPUT_DIR"
+  rm -rf "$MACRO_HOST_ACTIVE_INPUT_DIR"
 }
 trap cleanup EXIT
 
@@ -48,8 +61,14 @@ printf 'temp\n' >"$PACKAGE_TEST_FILE"
 mkdir -p "$MACRO_HOST_INACTIVE_DIR" "$MACRO_HOST_ACTIVE_DIR"
 printf 'stale\n' >"$MACRO_HOST_INACTIVE_DIR/artifact.txt"
 printf 'active\n' >"$MACRO_HOST_ACTIVE_DIR/artifact.txt"
-printf '%s\n' "99999999" >"$MACRO_HOST_INACTIVE_DIR/$MACRO_HOST_PID_FILE"
-printf '%s\n' "$$" >"$MACRO_HOST_ACTIVE_DIR/$MACRO_HOST_PID_FILE"
+printf '%s\n' "99999999" >"$MACRO_HOST_INACTIVE_PID_FILE"
+printf '%s\n' "$$" >"$MACRO_HOST_ACTIVE_PID_FILE"
+mkdir -p "$MACRO_HOST_INACTIVE_INPUT_DIR" "$MACRO_HOST_ACTIVE_INPUT_DIR"
+printf 'stale input\n' >"$MACRO_HOST_INACTIVE_INPUT_DIR/EntryPointsGen.hx"
+printf 'active input\n' >"$MACRO_HOST_ACTIVE_INPUT_DIR/EntryPointsGen.hx"
+# A builder writes its lease before recreating the output directory. Cleanup
+# must respect that short interval instead of deleting the lease as orphaned.
+printf '%s\n' "$$" >"$MACRO_HOST_PENDING_PID_FILE"
 
 safe_preview="$(bash "$CLEAN_SCRIPT" --safe --dry-run --verbose)"
 if [[ "$safe_preview" != *"$MACRO_HOST_INACTIVE_DIR"* ]]; then
@@ -58,6 +77,10 @@ if [[ "$safe_preview" != *"$MACRO_HOST_INACTIVE_DIR"* ]]; then
 fi
 if [[ "$safe_preview" == *"$MACRO_HOST_ACTIVE_DIR"* ]]; then
   echo "Safe cleanup dry-run reported active macro-host build dir." >&2
+  exit 1
+fi
+if [[ "$safe_preview" == *"$MACRO_HOST_PENDING_PID_FILE"* ]]; then
+  echo "Safe cleanup dry-run reported a live macro-host lease before its build directory existed." >&2
   exit 1
 fi
 
@@ -90,8 +113,28 @@ if [[ -e "$MACRO_HOST_INACTIVE_DIR" ]]; then
   echo "Safe cleanup failed to remove inactive macro-host build dir." >&2
   exit 1
 fi
+if [[ -e "$MACRO_HOST_INACTIVE_PID_FILE" ]]; then
+  echo "Safe cleanup failed to remove an inactive macro-host build lease." >&2
+  exit 1
+fi
+if [[ -e "$MACRO_HOST_INACTIVE_INPUT_DIR" ]]; then
+  echo "Safe cleanup failed to remove inactive macro-host generated inputs." >&2
+  exit 1
+fi
 if [[ ! -d "$MACRO_HOST_ACTIVE_DIR" ]]; then
   echo "Safe cleanup removed active macro-host build dir." >&2
+  exit 1
+fi
+if [[ ! -f "$MACRO_HOST_ACTIVE_PID_FILE" ]]; then
+  echo "Safe cleanup removed an active macro-host build lease." >&2
+  exit 1
+fi
+if [[ ! -d "$MACRO_HOST_ACTIVE_INPUT_DIR" ]]; then
+  echo "Safe cleanup removed active macro-host generated inputs." >&2
+  exit 1
+fi
+if [[ ! -f "$MACRO_HOST_PENDING_PID_FILE" ]]; then
+  echo "Safe cleanup removed a live macro-host lease before its build directory existed." >&2
   exit 1
 fi
 
