@@ -1,3 +1,11 @@
+## [0.21.3](https://github.com/fullofcaffeine/hxhx/compare/v0.21.2...v0.21.3) (2026-07-20)
+
+
+### Bug Fixes
+
+* **ci:** align the Reflaxe content checksum ([47048af](https://github.com/fullofcaffeine/hxhx/commit/47048afe1591da286ebcf40fcd877e6e1db9839d))
+* **ocaml:** seal place plans before emission ([8a80f2f](https://github.com/fullofcaffeine/hxhx/commit/8a80f2fba139eca3337974340d47931c4e2fce75))
+
 ## [0.21.2](https://github.com/fullofcaffeine/hxhx/compare/v0.21.1...v0.21.2) (2026-07-20)
 
 
