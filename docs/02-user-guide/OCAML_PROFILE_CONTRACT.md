@@ -39,7 +39,10 @@ Any other value is invalid and fails fast.
     planner report (current lowered hotspots include typed `Array.map` and typed `Array<String>.join`).
 - `metal`:
   - native-oriented runtime layering mode.
-  - links only runtime modules observed in structured target syntax plus dependencies from the locked runtime-source manifest.
+  - always links any helper module recorded while translating a specific Haxe
+    operation, then uses structured target-syntax observations for compiler
+    families that have not migrated yet; the locked runtime-source manifest
+    supplies dependencies for both.
   - runs `MetalProfileVerifier` before OCaml emit and fails fast on dynamic/reflection-heavy constructs.
   - enables numeric-specialization fallback in Stage3 expression lowering for arithmetic hot paths (reduces `(Obj.magic 0)` poison for mixed numeric forms while keeping explicit verifier guardrails).
   - enables array/string specialization for typed hot paths (`Array.map` and `Array<String>.join`) and fails fast for unsupported non-metal-safe semantics (for example mixed-type array literals or non-`Array<String>` join receivers).
@@ -60,7 +63,11 @@ Any other value is invalid and fails fast.
   - manual runtime module seed list for selective mode
   - unknown, tooling-only, or profile-incompatible names fail before OCaml output instead of being ignored
 - `-D ocaml_runtime_no_infer`
-  - disables compiler-tracked runtime inference in selective mode
+  - disables syntax-observed runtime discovery in selective mode
+  - does not remove a helper module that the compiler already recorded while
+    translating a specific Haxe operation
+  - still checks generated target syntax; compilation fails before packaging is
+    accepted if the manual list omits an observed runtime module
   - useful for explicit/manual runtime planning experiments
 - `-D ocaml_runtime_token_scan_fallback`
   - debug-only selective fallback for token scan merge
@@ -99,7 +106,9 @@ Invalid values fail with an actionable message:
 - `invalid -D ocaml_profile=<value> (expected portable|metal)`
 - `invalid -D ocaml_atomic_semantics=<value> (only emulated is currently supported; true thread-level atomic mode is not available yet)`
 - `invalid -D ocaml_runtime_mode=<value> (expected full|selective)`
-- `invalid -D ocaml_runtime_mode=none (none is not supported; use selective + ocaml_runtime_no_infer + optional ocaml_runtime_modules)`
+- `invalid -D ocaml_runtime_mode=none` explains how to use selective mode,
+  disable automatic syntax discovery, and supply every module named by the
+  fail-closed runtime validation
 
 Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
 
@@ -148,13 +157,26 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `runtimeMode` (`full` or `selective`)
   - `selectionMode`
     - `full` (all runtime modules)
-    - `compiler_tracked` (metal default selective)
-    - `compiler_tracked_plus_manual` (selective with tracked + manual seeds)
-    - `manual_only` (selective, inference disabled with manual seeds)
-    - `minimal_core` (selective, no tracked/manual seeds; core runtime only)
+    - `source_required` (only helpers recorded for specific translated Haxe
+      operations, plus the core runtime)
+    - `source_required_plus_syntax_observed` (those recorded helpers plus
+      references found in structured target syntax; the metal default while
+      other compiler families migrate)
+    - `source_required_plus_manual` (recorded helpers plus explicit manual
+      seeds, with automatic syntax-based selection disabled)
+    - `source_required_plus_syntax_observed_plus_manual` (recorded helpers,
+      syntax observations, and manual seeds)
+    - `compiler_tracked` (temporary selective fallback when no migrated
+      source-level requirement exists)
+    - `compiler_tracked_plus_manual` (that fallback plus manual seeds)
+    - `manual_only` (legacy/unmigrated-only case with manual seeds and no
+      source-level requirement)
+    - `minimal_core` (no source requirement, observed root, or manual seed;
+      core runtime only)
     - each selective mode may end with `_plus_token_scan_fallback` when debug fallback is enabled
   - `availableModules`
-  - `trackedModules` (compiler-tracked runtime module references)
+  - `trackedModules` (runtime module references observed in structured target
+    syntax)
   - `manualModules` (manual selective seeds)
   - `runtimeInferenceDisabled`
   - `runtimeDebugLaneEnabled`
@@ -162,6 +184,25 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `selectedModules`
   - `selectedFeatures`
   - `inclusionReasons` (deterministic per-module reason list)
+- `ocaml_runtime_requirement_report.json`
+  - `schemaVersion` (current: `1`)
+  - `authorityStatus` (currently `partial`, because only the typed
+    assignment/update family supplies source-level explanations)
+  - `runtimeMode` and `selectionMode`
+  - `requirementRevision` and `runtimeSourceRevision`
+  - `requirements`, where each entry explains the Haxe behavior that needs
+    compatibility support, the compiler decision that caused it, and its
+    runtime root module
+  - `requirementChains`, which resolve each explanation through the locked
+    runtime dependency catalog
+  - `semanticRootModules`, `semanticClosureModules`, and `runtimeSources`,
+    including exact source hashes, Dune libraries, eligible profiles, and
+    licenses
+  - `syntaxObservedModules`, split into `explainedSyntaxModules` and
+    `unexplainedSyntaxModules`, so unfinished compiler families remain visible
+    instead of being presented as covered
+  - source locations use project-relative or stable library labels; generated
+    reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
   - `schemaVersion` (current: `5`)
   - the sealed assignment/update plans and their source locations
@@ -170,10 +211,12 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     the Haxe behavior, target decision, implementation feature, eligible
     profiles, and checked runtime root that caused it
 
-The lowering report is complete for its stated assignment/update family, not
-for the whole program. The separate runtime selection report still includes
-syntax-observed roots while the remaining expression families migrate to the
-same source-rooted model.
+The lowering and runtime-requirement reports are complete for their stated
+assignment/update family, not for the whole program. Runtime packaging checks
+that every requirement in that family resolves to selected, hash-verified
+source. The separate runtime selection report still includes syntax-observed
+roots while the remaining expression families migrate to the same
+source-rooted model.
 
 `hxhx` Stage3 OCaml emission also emits:
 
@@ -191,7 +234,8 @@ same source-rooted model.
 Debug fallback define (non-default, diagnostics only):
 
 - `-D ocaml_runtime_token_scan_fallback`
-  - Keeps compiler-tracked selection as the primary source of truth.
+  - Keeps source-required roots mandatory and structured target-syntax
+    observations as the normal migration path.
   - Adds legacy output token scanning as a temporary merge source for investigations.
   - The token scan can add a debug root, but it no longer discovers dependencies by searching runtime source text; the checked source manifest owns dependency closure in every mode.
   - Requires `-D ocaml_runtime_debug_lane`; otherwise it is ignored with a warning.

@@ -4,6 +4,7 @@ package reflaxe.ocaml.runtimegen;
 import haxe.Json;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSourceKind;
@@ -155,7 +156,7 @@ class OcamlRuntimeRequirementLedger {
 			sourceKind: requirement.sourceKind,
 			sourceId: sourceId,
 			source: {
-				file: requirement.source.file == null ? "" : requirement.source.file,
+				file: OcamlLoweredOrigin.normalizeSourcePath(requirement.source.file),
 				min: requirement.source.min,
 				max: requirement.source.max
 			},

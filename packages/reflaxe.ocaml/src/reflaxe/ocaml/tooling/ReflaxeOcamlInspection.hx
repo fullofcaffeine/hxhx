@@ -231,7 +231,7 @@ class ReflaxeOcamlInspection {
 						tokenScanFallbackEnabled: requiredBool(value, "tokenScanFallbackEnabled"),
 						authority: "current-compiler-runtime-selection-report",
 						semanticManifest: false,
-						message: "Current compiler/runtime selection report; this is not the future source-rooted semantic runtime manifest."
+						message: "Current compiler/runtime selection report; the separate source-rooted report covers only typed assignments and updates, not the whole program."
 					};
 				} catch (error:Dynamic) {
 					runtimeFailure("invalid", path, Std.string(error));
@@ -458,7 +458,7 @@ class ReflaxeOcamlInspection {
 		return [
 			unavailable("program-representation", "Program-wide representation registry", "The typed OCaml representation registry has not landed."),
 			unavailable("semantic-runtime-manifest", "Source-rooted runtime requirement ledger",
-				"The current selection report is not the future locked semantic manifest."),
+				"A checked partial report now covers typed assignments and updates; whole-program source-rooted runtime ownership has not landed."),
 			unavailable("native-dependencies", "Native package and source dependencies", "Structured Dune/opam/native-source ownership has not landed."),
 			unavailable("raw-unsafe", "Raw and unsafe operation inventory", "The compiler does not yet emit an owned raw/Obj.magic proof inventory."),
 			unavailable("bindings", "Typed imported OCaml bindings", "The typed .mli binding manifest has not landed."),
@@ -487,7 +487,7 @@ class ReflaxeOcamlInspection {
 
 	static function renderRuntime(value:InspectionRuntime):String {
 		return
-			value.status == "present" ? '[PASS] Runtime selection: ${value.selectionMode}; ${value.selectedModules.length} module${value.selectedModules.length == 1 ? "" : "s"}; current report, not semantic manifest.' : '[FAIL] Runtime selection: ${value.message}';
+			value.status == "present" ? '[PASS] Runtime selection: ${value.selectionMode}; ${value.selectedModules.length} module${value.selectedModules.length == 1 ? "" : "s"}; source-rooted coverage is still partial.' : '[FAIL] Runtime selection: ${value.message}';
 	}
 
 	static function renderLowering(value:InspectionLowering):String {

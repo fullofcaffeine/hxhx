@@ -13,6 +13,7 @@ import reflaxe.ocaml.OcamlAtomicSemantics;
 import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.OcamlPortableNativeSurfacePolicy;
 import reflaxe.ocaml.OcamlRuntimeMode;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceManifestSnapshot;
 import reflaxe.ocaml.runtimegen.RuntimeSourceManifestModel.RuntimeSourceModule;
 #if macro
@@ -230,15 +231,32 @@ class RuntimeCopier {
 					addInclusionReason(inclusionReasonMap, dependency, "transitive:" + entry.module);
 	}
 
-	static function runtimeSelectionModeLabel(context:OcamlBuildContext, compilerTrackedModules:Array<String>, manualModules:Array<String>):String {
+	static function runtimeSelectionModeLabel(context:OcamlBuildContext, sourceRequiredModules:Array<String>, compilerTrackedModules:Array<String>,
+			manualModules:Array<String>):String {
 		return switch (context.runtimeMode) {
 			case Full:
 				"full";
 			case Selective:
+				final hasSourceRequired = sourceRequiredModules.length > 0;
 				final hasTracked = compilerTrackedModules.length > 0;
 				final hasManual = manualModules.length > 0;
-				final base = if (hasTracked && hasManual) "compiler_tracked_plus_manual" else if (hasTracked) "compiler_tracked" else if (hasManual)
-					"manual_only" else "minimal_core";
+				final base = if (hasSourceRequired && hasTracked && hasManual) {
+					"source_required_plus_syntax_observed_plus_manual";
+				} else if (hasSourceRequired && hasTracked) {
+					"source_required_plus_syntax_observed";
+				} else if (hasSourceRequired && hasManual) {
+					"source_required_plus_manual";
+				} else if (hasSourceRequired) {
+					"source_required";
+				} else if (hasTracked && hasManual) {
+					"compiler_tracked_plus_manual";
+				} else if (hasTracked) {
+					"compiler_tracked";
+				} else if (hasManual) {
+					"manual_only";
+				} else {
+					"minimal_core";
+				}
 				context.runtimeTokenScanFallbackEnabled ? (base + "_plus_token_scan_fallback") : base;
 		}
 	}
@@ -335,7 +353,7 @@ class RuntimeCopier {
 	}
 
 	public static function copy(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, destSubdir:String = "runtime",
-			compilerTrackedModules:Array<String>):Void {
+			compilerTrackedModules:Array<String>, semanticRequirements:Array<OcamlRuntimeRequirement>, semanticRequirementRevision:String):Void {
 		final stdDir = tryResolveStdDir();
 		if (stdDir == null)
 			throw "Cannot locate the reflaxe.ocaml standard library, so the checked OCaml runtime cannot be packaged.";
@@ -369,13 +387,27 @@ class RuntimeCopier {
 			RuntimeSourceManifest.resolveClosure(sourceManifest, trackedModulesAll, profile, allowHxHxRuntime);
 		final trackedModules = buildContext.runtimeMode == Selective && !buildContext.runtimeInferenceDisabled ? trackedModulesAll : [];
 		final manualModules = validatedRootsSorted(buildContext.runtimeManualModules, sourceManifest, "-D ocaml_runtime_modules");
-		final selectionMode = runtimeSelectionModeLabel(buildContext, trackedModules, manualModules);
+		final resolvedSemanticRequirements = semanticRequirements != null ? semanticRequirements : [];
+		final sourceRequiredSet:Map<String, Bool> = [];
+		for (requirement in resolvedSemanticRequirements) {
+			if (!requirement.profileEligibility.contains(profile))
+				throw 'Source-rooted OCaml runtime requirement "${requirement.id}" is not eligible for the "$profile" profile.';
+			for (moduleName in requirement.rootModules)
+				sourceRequiredSet.set(moduleName, true);
+		}
+		final sourceRequiredModules = validatedRootsSorted(mapKeysSorted(sourceRequiredSet), sourceManifest, "source-rooted runtime requirements");
+		if (sourceRequiredModules.length > 0)
+			RuntimeSourceManifest.resolveClosure(sourceManifest, sourceRequiredModules, profile, allowHxHxRuntime);
+		final selectionMode = runtimeSelectionModeLabel(buildContext, sourceRequiredModules, trackedModules, manualModules);
 		final inclusionReasonMap:Map<String, Map<String, Bool>> = [];
 		final selectedEntries:Array<RuntimeSourceModule> = switch (buildContext.runtimeMode) {
 			case Selective:
 				final rootSet:Map<String, Bool> = [];
 				rootSet.set(RUNTIME_CORE_MODULE, true);
 				addInclusionReason(inclusionReasonMap, RUNTIME_CORE_MODULE, "core_runtime");
+				for (moduleName in sourceRequiredModules)
+					rootSet.set(moduleName, true);
+				addRootReasons(inclusionReasonMap, sourceRequiredModules, "source_required");
 				for (moduleName in trackedModules)
 					rootSet.set(moduleName, true);
 				addRootReasons(inclusionReasonMap, trackedModules, "compiler_tracked");
@@ -401,6 +433,8 @@ class RuntimeCopier {
 		writeProfileReport(output, artifacts, rawRequestedProfile, buildContext);
 		writeRuntimePlanReport(output, artifacts, buildContext, selectionMode, availableModules.copy(), trackedModules, manualModules, selectedModuleList,
 			inclusionReasons);
+		OcamlRuntimeRequirementReportWriter.write(output, artifacts, profile, allowHxHxRuntime, buildContext.runtimeMode, selectionMode, sourceManifest,
+			resolvedSemanticRequirements, semanticRequirementRevision, trackedModulesAll, selectedEntries);
 
 		for (entry in selectedEntries)
 			for (file in entry.files) {

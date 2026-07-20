@@ -28,13 +28,20 @@ class OcamlLoweredOrigin {
 	public static inline final PLACE_META = ":reflaxeOcamlPlaceOrigin";
 	public static inline final PLACE_PROTECTION_META = ":reflaxeOcamlPlaceProtection";
 
-	static function normalizePath(path:String):String {
+	/** Removes machine-local prefixes while keeping useful diagnostic context. **/
+	public static function normalizeSourcePath(path:String):String {
 		if (path == null)
 			return "";
 		var normalized = StringTools.replace(path, "\\", "/");
-		#if macro
-		final cwd = StringTools.replace(Sys.getCwd(), "\\", "/");
-		if (StringTools.startsWith(normalized, cwd)) {
+		while (normalized.indexOf("//") >= 0)
+			normalized = StringTools.replace(normalized, "//", "/");
+		var cwd = StringTools.replace(Sys.getCwd(), "\\", "/");
+		while (cwd.length > 1 && StringTools.endsWith(cwd, "/"))
+			cwd = cwd.substr(0, cwd.length - 1);
+		if (normalized == cwd) {
+			return ".";
+		}
+		if (StringTools.startsWith(normalized, cwd + "/")) {
 			normalized = normalized.substr(cwd.length);
 			if (StringTools.startsWith(normalized, "/"))
 				normalized = normalized.substr(1);
@@ -45,7 +52,24 @@ class OcamlLoweredOrigin {
 			if (markerIndex >= 0)
 				return normalized.substr(markerIndex + 1);
 		}
-		#end
+		final absolute = StringTools.startsWith(normalized, "/") || ~/^[A-Za-z]:\//.match(normalized);
+		if (absolute) {
+			final stdMarker = "/std/";
+			final stdIndex = normalized.lastIndexOf(stdMarker);
+			if (stdIndex >= 0)
+				return "haxe-stdlib/" + normalized.substr(stdIndex + stdMarker.length);
+			final sourceMarker = "/src/";
+			final sourceIndex = normalized.lastIndexOf(sourceMarker);
+			if (sourceIndex >= 0)
+				return "external-source/" + normalized.substr(sourceIndex + sourceMarker.length);
+			final parts = normalized.split("/").filter(part -> part.length > 0);
+			return "external-source/" + parts.slice(parts.length > 1 ? parts.length - 2 : 0).join("/");
+		}
+		final relativeParts = normalized.split("/");
+		if (relativeParts.contains("..")) {
+			final usefulParts = relativeParts.filter(part -> part.length > 0 && part != "." && part != "..");
+			return "external-source/" + usefulParts.slice(usefulParts.length > 1 ? usefulParts.length - 2 : 0).join("/");
+		}
 		return normalized;
 	}
 
@@ -54,7 +78,7 @@ class OcamlLoweredOrigin {
 		#if macro
 		final info = Context.getPosInfos(position);
 		return {
-			file: normalizePath(info.file),
+			file: normalizeSourcePath(info.file),
 			min: info.min,
 			max: info.max
 		};

@@ -1787,9 +1787,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		function sealArtifacts():Void {
 			artifacts.seal({
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
-				model: "syntax-derived-runtime-plan-v2",
-				revision: null,
-				message: "Runtime files are inventoried, but runtime selection is still inferred after syntax generation instead of from sealed semantic requirements."
+				model: "source-rooted-runtime-requirements-partial-v1",
+				revision: ctx.runtimeRequirementRevision(),
+				message: "Typed assignment and update lowering now records source-rooted runtime requirements and checks them against packaged sources. Other compiler families still rely on generated-syntax observations, so whole-program runtime ownership is incomplete."
 			}, {
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
 				model: "free-form-dune-libraries-v1",
@@ -2685,7 +2685,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		final noRuntime = haxe.macro.Context.defined("ocaml_no_runtime");
 		if (!noRuntime) {
-			RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted());
+			RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted(), ctx.runtimeRequirementsSorted(), ctx.runtimeRequirementRevision());
 		}
 
 		// OCaml-native (M12): emit functor-instantiated modules when requested by interop surfaces.

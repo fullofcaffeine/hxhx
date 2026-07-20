@@ -37,9 +37,13 @@ compile_one() {
   # The artifact manifest hashes the generated tree and has its own semantic
   # validator. Snapshotting it here would duplicate every source diff and make
   # the snapshot contain a digest of the other golden files.
+  # The source-to-runtime report likewise has focused semantic, catalog, and
+  # repeat-build checks; copying it into every syntax fixture would mostly
+  # duplicate target-stdlib requirements rather than test target code shape.
   diff -ru \
     --exclude '_GeneratedFiles.json' \
     --exclude 'ocaml_artifact_manifest.json' \
+    --exclude 'ocaml_runtime_requirement_report.json' \
     "$test_dir/intended" "$test_dir/out"
 
   if [ -f "$test_dir/intended/_GeneratedFiles.json" ] && [ -f "$test_dir/out/_GeneratedFiles.json" ]; then

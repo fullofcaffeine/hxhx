@@ -19,7 +19,7 @@ enum abstract OcamlRuntimeMode(String) from String to String {
 			case "selective": Selective;
 			case "none":
 				throw "invalid -D ocaml_runtime_mode=none (none is not supported; use selective + -D ocaml_runtime_no_infer"
-					+ " and optional -D ocaml_runtime_modules=... for minimal runtime planning)";
+					+ " and provide every module named by the runtime validation in -D ocaml_runtime_modules=...)";
 			case _:
 				throw "invalid -D ocaml_runtime_mode=" + raw + " (expected full|selective)";
 		}

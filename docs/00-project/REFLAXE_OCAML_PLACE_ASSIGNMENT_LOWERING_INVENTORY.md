@@ -261,6 +261,17 @@ Schema version 5 expands those short requirement IDs into complete,
 source-rooted explanations and adds a deterministic requirement revision. The
 report writer fails if a plan names an explanation that the final typed-body
 sealer did not record.
+Every runtime-enabled build also writes
+`ocaml_runtime_requirement_report.json`. It resolves those explanations through
+the locked runtime-source catalog and records the exact dependency closure,
+source hashes, Dune libraries, profiles, and licenses that were selected. The
+same report keeps syntax-observed modules from unmigrated compiler families in
+an explicit `unexplainedSyntaxModules` list; it therefore proves this place
+family without implying that every runtime file in the whole program has a
+source-operation explanation. Source locations are normalized to
+project-relative or stable library labels so reports are
+reproducible across machines and do not expose developer home-directory or
+tool-cache prefixes.
 Lowered identities use function identity plus structural ordinal; source paths
 and byte offsets remain diagnostic provenance and do not determine semantic
 identity.

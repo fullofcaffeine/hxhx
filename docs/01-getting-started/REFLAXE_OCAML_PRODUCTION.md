@@ -195,12 +195,17 @@ Inspection is deliberately read-only and fail-closed. Missing, stale, modified,
 or unattributed generated files fail; typed place lowering is optional unless
 `--require-lowering` is selected. It does not parse generated OCaml or Dune text
 to reconstruct compiler semantics. A valid artifact inventory still reports
-source-bundle packaging as blocked because the semantic runtime and structured
-native-dependency inventories have not landed. The current runtime selection is
-explicitly not the future locked, source-rooted semantic manifest, and the place report covers one migrated
-semantic family rather than a whole-program IR. Program-wide representation,
-native dependency, raw/unsafe, binding, and curated export-ABI inspection stay
-marked unavailable until their owning typed manifests exist.
+source-bundle packaging as blocked because not every runtime file has a
+source-operation explanation yet, and the structured native-dependency
+inventory has not landed. Runtime-enabled builds now write
+`ocaml_runtime_requirement_report.json`, which traces typed
+assignments and updates to their checked runtime source files. It explicitly
+lists runtime references from other compiler paths as unexplained, so the
+current runtime selection is not presented as a whole-program semantic
+manifest. The place report likewise covers one migrated semantic family rather
+than a whole-program IR. Program-wide representation, native dependency,
+raw/unsafe, binding, and curated export-ABI inspection stay marked unavailable
+until their owning typed manifests exist.
 
 `ocaml_output` is a compiler-owned directory. Do not mix handwritten OCaml or
 project files into it: the build now rejects unknown non-cache files so they

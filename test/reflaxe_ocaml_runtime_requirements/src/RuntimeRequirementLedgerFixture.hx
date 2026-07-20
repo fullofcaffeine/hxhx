@@ -1,4 +1,5 @@
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
+import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 
 using StringTools;
@@ -25,7 +26,18 @@ class RuntimeRequirementLedgerFixture {
 	}
 
 	static function main():Void {
-		final source:OcamlLoweredSourceSpan = {file: "src/Main.hx", min: 10, max: 18};
+		final macHaxePath = ["", "Users", "alice", "haxe", "versions", "4.3.7", "std", "haxe", "Exception.hx"].join("/");
+		assertTrue(OcamlLoweredOrigin.normalizeSourcePath(macHaxePath) == "haxe-stdlib/haxe/Exception.hx",
+			"upstream Haxe paths should not retain a home-directory prefix");
+		assertTrue(OcamlLoweredOrigin.normalizeSourcePath("C:\\HaxeToolkit\\haxe\\std\\haxe\\Exception.hx") == "haxe-stdlib/haxe/Exception.hx",
+			"Windows Haxe paths should use the same stable standard-library identity");
+		assertTrue(OcamlLoweredOrigin.normalizeSourcePath("/opt/cache/acme/src/acme/Thing.hx") == "external-source/acme/Thing.hx",
+			"external libraries should keep useful package context without a machine-local prefix");
+		assertTrue(OcamlLoweredOrigin.normalizeSourcePath(Sys.getCwd() + "/src/Main.hx") == "src/Main.hx",
+			"project source should retain its repository-relative path");
+		assertTrue(OcamlLoweredOrigin.normalizeSourcePath("../../private/acme/Thing.hx") == "external-source/acme/Thing.hx",
+			"parent-directory segments should not leak a path outside the project");
+		final source:OcamlLoweredSourceSpan = {file: "../../private/acme/Thing.hx", min: 10, max: 18};
 		expectFailure("record before program", "before the program revision begins", () -> {
 			final unbound = new OcamlRuntimeRequirementLedger();
 			unbound.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);
@@ -42,6 +54,8 @@ class RuntimeRequirementLedgerFixture {
 		assertTrue(requirements.length == 4, "each lowering decision should retain its own runtime explanation");
 		assertTrue(requirements[0].id == "place:a:runtime:haxe-int32-add", "requirements should be sorted by stable identity");
 		assertTrue(requirements[0].sourceId == "place:a", "the requirement should retain its Haxe-expression identity");
+		assertTrue(requirements[0].source.file == "external-source/acme/Thing.hx",
+			"the ledger should remove machine-local parent paths before retaining a source location");
 		assertTrue(requirements[0].decisionId == "place:a:int-update", "the requirement should name the lowering decision that caused it");
 		assertTrue(requirements[0].rootModules[0] == "HxInt", "Haxe Int addition should select the HxInt implementation root");
 		assertTrue(requirements[1].rootModules[0] == "HxArray", "Haxe array access should select the HxArray implementation root");

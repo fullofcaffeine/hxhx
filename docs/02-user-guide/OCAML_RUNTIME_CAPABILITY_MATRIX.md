@@ -21,15 +21,24 @@ Validation stops before copying if a declared file is missing or modified, an un
 
 This catalog answers “which reviewed source files implement this module?” The
 typed assignment/update path now also answers “which Haxe expression required
-`HxInt` or `HxArray`, and why?” in `ocaml_lowering_report.json` when
-`-D ocaml_lowering_report` is enabled. Each explanation names the source
-expression, Haxe behavior, target decision, implementation feature, eligible
-profiles, and checked root module.
+`HxInt` or `HxArray`, and why?” in
+`ocaml_runtime_requirement_report.json` on every runtime-enabled build. Each
+explanation names the source expression, Haxe behavior, target decision,
+implementation feature, eligible profiles, and checked root module. The report
+then follows that root through the catalog to the exact source hashes,
+dependencies, Dune libraries, profiles, and licenses that were packaged.
+
+When `-D ocaml_lowering_report` is enabled, `ocaml_lowering_report.json` shows
+the same requirement identities next to the typed assignment/update plans that
+caused them. This makes it possible to trace one source operation through the
+compiler decision and into the packaged OCaml files without searching generated
+source text.
 
 That explanation currently covers only the admitted assignment/update family.
 Other compiler paths still discover runtime names from generated OCaml
-structure, so the whole-program runtime authority and generated artifact
-manifest correctly remain incomplete under `haxe_ocaml-0uwin`.
+structure. The requirement report lists those names under
+`unexplainedSyntaxModules`, so the whole-program runtime authority and generated
+artifact manifest correctly remain incomplete under `haxe_ocaml-0uwin`.
 
 ## Legend
 
@@ -79,11 +88,19 @@ manifest correctly remain incomplete under `haxe_ocaml-0uwin`.
 
 ## Policy notes
 
-- Metal mode currently chooses runtime roots from compiler-tracked target syntax. The locked source manifest, rather than an OCaml text scan, supplies and validates every transitive runtime dependency.
+- Metal mode always includes helper modules recorded while translating a
+  specific Haxe operation. Structured target-syntax observations temporarily
+  supply roots for the remaining compiler families. The locked source manifest,
+  rather than an OCaml text scan, supplies and validates every transitive
+  runtime dependency.
 - Runtime planning can be overridden in Stage0 with:
   - `-D ocaml_runtime_mode=full|selective`
   - `-D ocaml_runtime_modules=<comma-separated module list>`
   - `-D ocaml_runtime_no_infer`
+    - disables syntax-observed discovery, but never removes a module already
+      recorded as necessary while translating a specific Haxe operation
+    - remains fail-closed: manual seeds must include every runtime module still
+      observed from an unmigrated compiler family
 - Metal mode currently forbids dynamic/reflection-heavy constructs via `MetalProfileVerifier`:
   - `untyped`
   - `Reflect.*` and `Type.*`

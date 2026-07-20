@@ -135,13 +135,17 @@ output directory.
 
 This is intentionally honest inspection, not generated-code guesswork. The
 artifact inventory is valid today, but it reports source-bundle packaging as
-blocked until the runtime reasons and native dependencies have their own locked
-inventories. The runtime selection report is labeled as the current
-compiler/runtime report, not the future source-rooted semantic runtime manifest. Program-wide
-representation, native dependency, raw/unsafe, typed binding, and curated
-export-ABI inspection remain visibly unavailable until their owning typed
-manifests land. The command never scans emitted OCaml or Dune text to fabricate
-those answers.
+blocked until every runtime need and native dependency has a source-owned,
+locked explanation. Runtime-enabled builds now write
+`ocaml_runtime_requirement_report.json`: it traces typed assignments and
+updates from their Haxe source operation to the exact checked runtime files that
+were packaged. The report labels itself `partial` and lists runtime references
+from unmigrated compiler paths as unexplained. The existing runtime selection
+report therefore remains the current compiler/runtime report, not a
+whole-program semantic manifest. Program-wide representation, native
+dependency, raw/unsafe, typed binding, and curated export-ABI inspection remain
+visibly unavailable until their owning typed manifests land. The command never
+scans emitted OCaml or Dune text to fabricate those answers.
 
 Treat `ocaml_output` as compiler-owned. Do not place handwritten `.ml`, `.mli`,
 or project files inside it: an unattributed file now stops the build instead of

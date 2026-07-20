@@ -99,9 +99,10 @@ class ReflaxeOcamlDoctor {
 			"The current package requires HxRuntime.ml and HxArray.ml in its source or flattened runtime directory.",
 			runtimeOkay ? null : "Reinstall the source package or repair the local haxelib override.", null, runtimeDirectory));
 
-		checks.push(check("runtime-manifest", "Semantic runtime manifest", DoctorStatus.Skip, false, "A locked semantic runtime manifest is not shipped yet.",
-			"Current builds emit ocaml_runtime_plan_report.json, but syntax-derived reports are not presented as the future semantic manifest.",
-			"No action is required for current builds; manifest validation is deferred to the runtime-ledger architecture bead.", null, null));
+		checks.push(check("runtime-manifest", "Whole-program runtime explanations", DoctorStatus.Skip, false,
+			"Builds now trace typed assignments and updates to checked runtime sources, but other compiler paths are not covered yet.",
+			"ocaml_runtime_requirement_report.json labels this coverage partial and keeps unexplained runtime references visible.",
+			"No action is required for current builds; the runtime-ledger architecture work will migrate the remaining compiler families.", null, null));
 
 		final ocamlResult = probe.run("ocamlc", ["-version"]);
 		final ocamlVersion = successfulVersion(ocamlResult);

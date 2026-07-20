@@ -116,8 +116,9 @@ typedef InspectionProfile = {
 /**
 	The runtime modules selected by today's compiler/runtime report.
 
-	`semanticManifest` remains false until the locked, source-rooted runtime
-	ledger described by the architecture plan is implemented.
+	`semanticManifest` remains false while only the typed assignment/update family
+	has a locked, source-rooted explanation. The separate partial report must not
+	be mistaken for whole-program runtime ownership.
 **/
 typedef InspectionRuntime = {
 	final status:String;
