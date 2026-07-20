@@ -15,7 +15,13 @@ import reflaxe.BaseCompiler;
  * Current focus (M2): `var _g = expr; switch(_g) ...` -> `switch(expr) ...`
  */
 class InlineSwitchTempImpl extends BasePreprocessor {
+	public static inline final ID = "reflaxe.ocaml.inline-switch-temporary";
+
 	public function new() {}
+
+	override public function semanticLifecycleId():String {
+		return ID;
+	}
 
 	public function process(data:ClassFuncData, compiler:BaseCompiler):Void {
 		if (data.expr == null)

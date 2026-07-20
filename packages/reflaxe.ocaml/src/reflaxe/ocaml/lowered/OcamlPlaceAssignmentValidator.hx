@@ -14,6 +14,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredInstanceFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticCompoundAssignment;
@@ -53,6 +54,21 @@ private typedef OcamlStaticPlaceValidationFacts = {
 
 /** Checks semantic completeness before an admitted plan reaches target syntax. */
 class OcamlPlaceAssignmentValidator {
+	/** Validates any admitted place-plan variant through one sealed boundary. */
+	public static function validate(operation:OcamlLoweredPlaceOperation):Array<String> {
+		return switch (operation) {
+			case Simple(plan): validateSimple(plan);
+			case StaticSimple(plan): validateStaticSimple(plan);
+			case ArraySimple(plan): validateArraySimple(plan);
+			case Compound(plan): validateCompoundIntAdd(plan);
+			case StaticCompound(plan): validateStaticCompoundIntAdd(plan);
+			case ArrayCompound(plan): validateArrayCompoundIntAdd(plan);
+			case Update(plan): validateIntUpdate(plan);
+			case StaticUpdate(plan): validateStaticIntUpdate(plan);
+			case ArrayUpdate(plan): validateArrayIntUpdate(plan);
+		}
+	}
+
 	static function containsUnsealedAdmittedPlace(expression:TypedExpr):Bool {
 		var found = false;
 		function visit(current:TypedExpr):Void {

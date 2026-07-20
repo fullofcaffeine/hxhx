@@ -5,8 +5,10 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.BaseCompiler;
 import reflaxe.data.ClassFuncData;
+import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
+import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
 import reflaxe.preprocessors.BasePreprocessor;
 
 /**
@@ -18,6 +20,8 @@ import reflaxe.preprocessors.BasePreprocessor;
 	by semantic place lowering. No expression preprocessor may follow this pass.
 **/
 class FinalizePlaceAssignmentsImpl extends BasePreprocessor {
+	public static inline final ID = "reflaxe.ocaml.finalize-place-assignments";
+
 	var functionId:String = "";
 	var ordinal:Int = 0;
 	var currentModuleId:String = "";
@@ -26,40 +30,52 @@ class FinalizePlaceAssignmentsImpl extends BasePreprocessor {
 	public function new() {}
 
 	public function process(data:ClassFuncData, compiler:BaseCompiler):Void {
-		if (data.expr == null)
+		final ocamlCompiler:OcamlCompiler = cast compiler;
+		if (data.expr == null) {
+			ocamlCompiler.sealPlacePlans(data);
 			return;
+		}
 		functionId = data.id;
 		ordinal = 0;
 		currentModuleId = data.classType.module;
 		currentTypeName = data.classType.name;
-		data.setExpr(assignOrigins(consumeProtection(data.expr)));
+		data.setExpr(finalizeProtection(data.expr, ocamlCompiler.placePlanRegistry));
+		ocamlCompiler.sealPlacePlans(data);
 	}
 
-	function consumeProtection(expression:TypedExpr):TypedExpr {
+	override public function semanticLifecycleId():String {
+		return ID;
+	}
+
+	function finalizeProtection(expression:TypedExpr, registry:OcamlPlacePlanRegistry):TypedExpr {
 		return switch (expression.expr) {
 			case TMeta(metadata, child) if (OcamlLoweredOrigin.isPlaceProtection(metadata)):
-				consumeProtection(child);
+				final protectionId = OcamlLoweredOrigin.readProtectionId(metadata);
+				if (protectionId == null)
+					fail("an early place-protection marker has no valid stable identity", expression);
+				final originId = OcamlLoweredOrigin.placeId(functionId, ordinal++);
+				registry.recordProtectionReplacement(protectionId, originId);
+				final mappedChild = TypedExprTools.map(child, candidate -> finalizeProtection(candidate, registry));
+				if (!OcamlPlaceInputPolicy.admitsExpression(mappedChild, currentModuleId, currentTypeName))
+					fail('early protection "$protectionId" no longer wraps an operation supported by the final place planner', mappedChild);
+				{
+					expr: TMeta(OcamlLoweredOrigin.metadata(originId, expression.pos), mappedChild),
+					pos: expression.pos,
+					t: expression.t
+				};
+			case TMeta(metadata, _) if (metadata.name == OcamlLoweredOrigin.PLACE_META):
+				fail("a final place origin existed before the final planning boundary", expression);
 			case _:
-				TypedExprTools.map(expression, consumeProtection);
-		}
+				TypedExprTools.map(expression, candidate -> finalizeProtection(candidate, registry));
+		};
 	}
 
-	function assignOrigins(expression:TypedExpr):TypedExpr {
-		final admitted = OcamlPlaceInputPolicy.admitsExpression(expression, currentModuleId, currentTypeName);
-		var id:Null<String> = null;
-		if (admitted) {
-			id = OcamlLoweredOrigin.placeId(functionId, ordinal);
-			ordinal += 1;
-		}
-
-		final mapped = TypedExprTools.map(expression, assignOrigins);
-		if (id == null)
-			return mapped;
-		return {
-			expr: TMeta(OcamlLoweredOrigin.metadata(id, expression.pos), mapped),
-			pos: expression.pos,
-			t: expression.t
-		};
+	static function fail(message:String, expression:TypedExpr):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-lowering:place-finalization]: " + message;
+		#if macro
+		haxe.macro.Context.error(diagnostic, expression.pos);
+		#end
+		throw diagnostic;
 	}
 }
 #end

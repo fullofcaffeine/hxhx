@@ -2,8 +2,11 @@ package reflaxe.ocaml;
 
 #if (macro || reflaxe_runtime)
 import reflaxe.ReflectCompiler;
+import reflaxe.lifecycle.SemanticLifecycleOptions;
 import reflaxe.preprocessors.ExpressionPreprocessor;
 import reflaxe.preprocessors.ExpressionPreprocessor.ExpressionPreprocessorHelper;
+import reflaxe.ocaml.lifecycle.OcamlPlaceLifecycleFamily;
+import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
 import reflaxe.ocaml.macros.StrictModeEnforcer;
 import reflaxe.ocaml.preprocessor.FinalizePlaceAssignmentsImpl;
 import reflaxe.ocaml.preprocessor.InlineSwitchTempImpl;
@@ -104,7 +107,9 @@ class CompilerInit {
 		// the stable origins accepted by the semantic place lowerer.
 		prepasses.push(ExpressionPreprocessor.Custom(new FinalizePlaceAssignmentsImpl()));
 
-		ReflectCompiler.AddCompiler(new OcamlCompiler(), {
+		final compiler = new OcamlCompiler();
+		final captureLifecycleTrace = #if macro haxe.macro.Context.defined("reflaxe_ocaml_semantic_lifecycle_trace") #else false #end;
+		ReflectCompiler.AddCompiler(compiler, {
 			fileOutputExtension: ".ml",
 			outputDirDefineName: "ocaml_output",
 			fileOutputType: FilePerModule,
@@ -170,7 +175,9 @@ class CompilerInit {
 			targetCodeInjectionName: "__ocaml__",
 			ignoreBodilessFunctions: false,
 			ignoreExterns: true,
-			expressionPreprocessors: prepasses
+			expressionPreprocessors: prepasses,
+			semanticLifecycle: new SemanticLifecycleOptions([new OcamlPlaceLifecycleFamily(compiler.placePlanRegistry)],
+				OcamlPlacePlanRegistry.PIPELINE_REVISION, captureLifecycleTrace)
 		});
 	}
 }

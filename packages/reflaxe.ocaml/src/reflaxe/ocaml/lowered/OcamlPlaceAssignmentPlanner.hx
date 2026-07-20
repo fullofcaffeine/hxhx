@@ -19,6 +19,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredInstanceFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntOperator;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredIntUpdate;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
+import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredSimpleAssignment;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldAccess;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
@@ -33,9 +34,60 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlPlaceOccurrenceRole;
 /** Builds typed semantic plans for the place-operation families admitted so far. */
 class OcamlPlaceAssignmentPlanner {
 	final context:CompilationContext;
+	final currentModuleId:String;
+	final currentTypeName:String;
 
-	public function new(context:CompilationContext) {
+	public function new(context:CompilationContext, currentModuleId:String, currentTypeName:String) {
 		this.context = context;
+		this.currentModuleId = currentModuleId;
+		this.currentTypeName = currentTypeName;
+	}
+
+	/** Selects one complete place plan from a final origin-bearing operation. */
+	public function plan(metadata:MetadataEntry, expression:TypedExpr):Null<OcamlLoweredPlaceOperation> {
+		return switch (expression.expr) {
+			case TBinop(OpAssign, left, right):
+				final instancePlan = planSimpleAssignment(metadata, expression, left, right);
+				if (instancePlan != null) {
+					OcamlLoweredPlaceOperation.Simple(instancePlan);
+				} else {
+					final staticPlan = planStaticSimpleAssignment(metadata, expression, left, right);
+					if (staticPlan != null) {
+						OcamlLoweredPlaceOperation.StaticSimple(staticPlan);
+					} else {
+						final arrayPlan = planArraySimpleAssignment(metadata, expression, left, right);
+						arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArraySimple(arrayPlan);
+					}
+				}
+			case TBinop(OpAssignOp(OpAdd), left, right):
+				final instancePlan = planCompoundIntAdd(metadata, expression, left, right);
+				if (instancePlan != null) {
+					OcamlLoweredPlaceOperation.Compound(instancePlan);
+				} else {
+					final staticPlan = planStaticCompoundIntAdd(metadata, expression, left, right);
+					if (staticPlan != null) {
+						OcamlLoweredPlaceOperation.StaticCompound(staticPlan);
+					} else {
+						final arrayPlan = planArrayCompoundIntAdd(metadata, expression, left, right);
+						arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArrayCompound(arrayPlan);
+					}
+				}
+			case TUnop(operation = (OpIncrement | OpDecrement), postFix, operand):
+				final instancePlan = planIntUpdate(metadata, expression, operation, postFix, operand);
+				if (instancePlan != null) {
+					OcamlLoweredPlaceOperation.Update(instancePlan);
+				} else {
+					final staticPlan = planStaticIntUpdate(metadata, expression, operation, postFix, operand);
+					if (staticPlan != null) {
+						OcamlLoweredPlaceOperation.StaticUpdate(staticPlan);
+					} else {
+						final arrayPlan = planArrayIntUpdate(metadata, expression, operation, postFix, operand);
+						arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArrayUpdate(arrayPlan);
+					}
+				}
+			case _:
+				null;
+		}
 	}
 
 	function planInstanceField(originId:String, left:TypedExpr):Null<{place:OcamlLoweredInstanceFieldPlace, receiver:TypedExpr}> {
@@ -50,7 +102,7 @@ class OcamlPlaceAssignmentPlanner {
 				if (receiverClass == null)
 					return null;
 				final moduleName = context.ocamlModuleNameForModuleId(receiverClass.module);
-				final currentModuleName = context.currentModuleId == null ? null : context.ocamlModuleNameForModuleId(context.currentModuleId);
+				final currentModuleName = context.ocamlModuleNameForModuleId(currentModuleId);
 				final scopedType = context.scopedInstanceTypeName(receiverClass.module, receiverClass.name);
 				final receiverCarrier = currentModuleName == moduleName ? scopedType : moduleName + "." + scopedType;
 				{
@@ -83,11 +135,8 @@ class OcamlPlaceAssignmentPlanner {
 				final classType = classRef.get();
 				final field = fieldRef.get();
 				final targetModuleName = context.ocamlModuleNameForModuleId(classType.module);
-				final staticAccess = context.currentModuleId == classType.module ? OcamlLoweredStaticFieldAccess.Local : OcamlLoweredStaticFieldAccess.Qualified;
-				final forwardDeclarationRequired = context.currentModuleId != null
-					&& context.currentModuleId == classType.module
-					&& context.currentTypeName != null
-					&& context.currentTypeName != classType.name;
+				final staticAccess = currentModuleId == classType.module ? OcamlLoweredStaticFieldAccess.Local : OcamlLoweredStaticFieldAccess.Qualified;
+				final forwardDeclarationRequired = currentModuleId == classType.module && currentTypeName != classType.name;
 				{
 					id: originId + ":place",
 					kind: OcamlLoweredPlaceKind.StaticField,
@@ -187,7 +236,7 @@ class OcamlPlaceAssignmentPlanner {
 	/** Returns `null` when a static simple assignment is outside the admitted slice. */
 	public function planStaticSimpleAssignment(metadata:MetadataEntry, expression:TypedExpr, left:TypedExpr,
 			right:TypedExpr):Null<OcamlLoweredStaticSimpleAssignment> {
-		if (!OcamlPlaceInputPolicy.admitsSimpleStaticField(left, right, context.currentModuleId, context.currentTypeName))
+		if (!OcamlPlaceInputPolicy.admitsSimpleStaticField(left, right, currentModuleId, currentTypeName))
 			return null;
 		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
 		if (originId == null)
@@ -224,7 +273,7 @@ class OcamlPlaceAssignmentPlanner {
 	/** Plans an already-visible exact-Int static `+=` and its load-before-RHS order. */
 	public function planStaticCompoundIntAdd(metadata:MetadataEntry, expression:TypedExpr, left:TypedExpr,
 			right:TypedExpr):Null<OcamlLoweredStaticCompoundAssignment> {
-		if (!OcamlPlaceInputPolicy.admitsCompoundIntAddStaticField(OpAdd, left, right, context.currentModuleId, context.currentTypeName))
+		if (!OcamlPlaceInputPolicy.admitsCompoundIntAddStaticField(OpAdd, left, right, currentModuleId, currentTypeName))
 			return null;
 		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
 		if (originId == null)
@@ -265,7 +314,7 @@ class OcamlPlaceAssignmentPlanner {
 	/** Plans an already-visible exact-Int static update and its old/new result. */
 	public function planStaticIntUpdate(metadata:MetadataEntry, expression:TypedExpr, operation:Unop, postFix:Bool,
 			operand:TypedExpr):Null<OcamlLoweredStaticIntUpdate> {
-		if (!OcamlPlaceInputPolicy.admitsIntUpdateStaticField(operation, operand, context.currentModuleId, context.currentTypeName))
+		if (!OcamlPlaceInputPolicy.admitsIntUpdateStaticField(operation, operand, currentModuleId, currentTypeName))
 			return null;
 		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
 		if (originId == null)

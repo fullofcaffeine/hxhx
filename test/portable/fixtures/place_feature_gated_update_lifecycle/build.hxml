@@ -2,8 +2,9 @@
 -main Main
 --no-output
 -lib reflaxe.ocaml
+-dce full
 -D no-traces
 -D no_traces
 -D ocaml_output=out
 -D reflaxe_ocaml_semantic_lifecycle_trace
--D reflaxe_ocaml_semantic_lifecycle_trace_function=Counter|instance|function|increment
+-D reflaxe_ocaml_semantic_lifecycle_trace_function=FeatureGate|instance|function|gatedUpdate

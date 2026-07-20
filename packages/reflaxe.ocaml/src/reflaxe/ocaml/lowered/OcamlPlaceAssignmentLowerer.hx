@@ -1,7 +1,6 @@
 package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
-import haxe.macro.Expr.MetadataEntry;
 import haxe.macro.Type.TypedExpr;
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.ast.OcamlExpr;
@@ -11,6 +10,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredInstanceFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReport;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
+import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry.OcamlPlaceFunctionBinding;
 
 /** Outcome of attempting the target-owned assignment lowering path. */
 enum OcamlPlaceAssignmentLoweringResult {
@@ -19,20 +19,20 @@ enum OcamlPlaceAssignmentLoweringResult {
 }
 
 /**
-	Owns planning, validation, inspection, and syntax construction for admitted
-	place operations.
+	Consumes sealed place plans and constructs their target syntax.
 
-	The legacy expression builder supplies recursive child construction and
-	temporary-name allocation, but it does not inspect or reconstruct any of the
-	semantic place facts sealed here.
+	Planning and primary validation finish before this component runs. The legacy
+	expression builder supplies recursive child construction and temporary-name
+	allocation, but neither component inspects the typed operation to choose its
+	place, evaluation schedule, conversion, writeback, or result behavior.
 **/
 class OcamlPlaceAssignmentLowerer {
 	final context:CompilationContext;
-	final planner:OcamlPlaceAssignmentPlanner;
+	final registry:OcamlPlacePlanRegistry;
 
-	public function new(context:CompilationContext) {
+	public function new(context:CompilationContext, registry:OcamlPlacePlanRegistry) {
 		this.context = context;
-		this.planner = new OcamlPlaceAssignmentPlanner(context);
+		this.registry = registry;
 	}
 
 	static function invalid(errors:Array<String>, originId:String):OcamlPlaceAssignmentLoweringResult {
@@ -115,53 +115,16 @@ class OcamlPlaceAssignmentLowerer {
 		return (!context.currentIsHaxeStd && !OcamlLoweredOrigin.isTargetLibrarySource(source)) || includeStandardLibrary;
 	}
 
-	/** Lowers one metadata-marked place operation or returns an invariant failure. */
-	public function lower(metadata:MetadataEntry, expression:TypedExpr, buildExpr:TypedExpr->OcamlExpr,
+	/** Looks up and emits one plan that was validated before syntax construction. */
+	public function lower(originId:String, binding:OcamlPlaceFunctionBinding, buildExpr:TypedExpr->OcamlExpr,
 			freshTemporary:String->String):OcamlPlaceAssignmentLoweringResult {
-		final planned:Null<OcamlLoweredPlaceOperation> = switch (expression.expr) {
-			case TBinop(OpAssign, left, right):
-				final instancePlan = planner.planSimpleAssignment(metadata, expression, left, right);
-				if (instancePlan != null) {
-					OcamlLoweredPlaceOperation.Simple(instancePlan);
-				} else {
-					final staticPlan = planner.planStaticSimpleAssignment(metadata, expression, left, right);
-					if (staticPlan != null) {
-						OcamlLoweredPlaceOperation.StaticSimple(staticPlan);
-					} else {
-						final arrayPlan = planner.planArraySimpleAssignment(metadata, expression, left, right);
-						arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArraySimple(arrayPlan);
-					}
-				}
-			case TBinop(OpAssignOp(OpAdd), left, right):
-				final instancePlan = planner.planCompoundIntAdd(metadata, expression, left, right);
-				if (instancePlan != null) {
-					OcamlLoweredPlaceOperation.Compound(instancePlan);
-				} else {
-					final staticPlan = planner.planStaticCompoundIntAdd(metadata, expression, left, right);
-					if (staticPlan != null) {
-						OcamlLoweredPlaceOperation.StaticCompound(staticPlan);
-					} else {
-						final arrayPlan = planner.planArrayCompoundIntAdd(metadata, expression, left, right);
-						arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArrayCompound(arrayPlan);
-					}
-				}
-			case TUnop(operation = (OpIncrement | OpDecrement), postFix, operand):
-				final instancePlan = planner.planIntUpdate(metadata, expression, operation, postFix, operand);
-				if (instancePlan != null) {
-					OcamlLoweredPlaceOperation.Update(instancePlan);
-				} else {
-					final staticPlan = planner.planStaticIntUpdate(metadata, expression, operation, postFix, operand);
-					if (staticPlan != null) {
-						OcamlLoweredPlaceOperation.StaticUpdate(staticPlan);
-					} else {
-						final arrayPlan = planner.planArrayIntUpdate(metadata, expression, operation, postFix, operand);
-						arrayPlan == null ? null : OcamlLoweredPlaceOperation.ArrayUpdate(arrayPlan);
-					}
-				}
-			case _: null;
-		}
-		if (planned == null)
-			return Invalid("target-owned place metadata reached an unsupported operation shape");
+		final resolution = registry.resolve(originId, binding);
+		if (resolution.error != null)
+			return Invalid(resolution.error);
+		final sealed = resolution.plan;
+		if (sealed == null)
+			return Invalid('sealed plan lookup for origin "$originId" returned no plan');
+		final planned:OcamlLoweredPlaceOperation = sealed.operation;
 
 		return switch (planned) {
 			case Simple(plan):

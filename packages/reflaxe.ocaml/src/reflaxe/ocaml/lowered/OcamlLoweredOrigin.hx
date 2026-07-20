@@ -88,13 +88,24 @@ class OcamlLoweredOrigin {
 	}
 
 	/** Wraps an admitted operation while generic Reflaxe value rewrites run. */
-	public static function protection(position:Position):MetadataEntry {
-		return {name: PLACE_PROTECTION_META, params: [], pos: position};
+	public static function protection(id:String, position:Position):MetadataEntry {
+		final value:Expr = {expr: EConst(CString(id)), pos: position};
+		return {name: PLACE_PROTECTION_META, params: [value], pos: position};
 	}
 
 	/** Whether this metadata is the transient OCaml place-protection envelope. */
 	public static function isPlaceProtection(entry:MetadataEntry):Bool {
 		return entry.name == PLACE_PROTECTION_META;
+	}
+
+	/** Reads the stable identity carried by an early protection envelope. */
+	public static function readProtectionId(entry:MetadataEntry):Null<String> {
+		if (!isPlaceProtection(entry))
+			return null;
+		return switch (entry.params) {
+			case [{expr: EConst(CString(value, _))}]: value;
+			case _: null;
+		}
 	}
 
 	/** Reads the stable identity from target-owned place metadata. */

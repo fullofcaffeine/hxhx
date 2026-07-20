@@ -20,6 +20,10 @@ import reflaxe.preprocessors.BasePreprocessor;
 	exact post-rewrite body.
 **/
 class PreservePlaceAssignmentsImpl extends BasePreprocessor {
+	public static inline final ID = "reflaxe.ocaml.preserve-place-assignments";
+
+	var functionId:String = "";
+	var ordinal:Int = 0;
 	var currentModuleId:String = "";
 	var currentTypeName:String = "";
 
@@ -28,18 +32,25 @@ class PreservePlaceAssignmentsImpl extends BasePreprocessor {
 	public function process(data:ClassFuncData, compiler:BaseCompiler):Void {
 		if (data.expr == null)
 			return;
+		functionId = data.id;
+		ordinal = 0;
 		currentModuleId = data.classType.module;
 		currentTypeName = data.classType.name;
 		data.setExpr(transform(data.expr));
 	}
 
+	override public function semanticLifecycleId():String {
+		return ID;
+	}
+
 	function transform(expression:TypedExpr):TypedExpr {
 		final admitted = OcamlPlaceInputPolicy.admitsExpression(expression, currentModuleId, currentTypeName);
+		final id = admitted ? OcamlLoweredOrigin.placeId(functionId, ordinal++) : null;
 		final mapped = TypedExprTools.map(expression, transform);
-		if (!admitted)
+		if (id == null)
 			return mapped;
 		return {
-			expr: TMeta(OcamlLoweredOrigin.protection(expression.pos), mapped),
+			expr: TMeta(OcamlLoweredOrigin.protection(id, expression.pos), mapped),
 			pos: expression.pos,
 			t: expression.t
 		};

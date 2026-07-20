@@ -40,7 +40,11 @@ import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
+import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
+import reflaxe.ocaml.lowered.OcamlPlacePlanSealer;
+import reflaxe.ocaml.lifecycle.OcamlSemanticLifecycleTraceWriter;
 import reflaxe.GenericCompiler;
+import reflaxe.lifecycle.ProgramRevision;
 import reflaxe.output.DataAndFileInfo;
 import reflaxe.ocaml.OcamlNameTools;
 
@@ -55,6 +59,8 @@ using reflaxe.helpers.BaseTypeHelper;
  */
 class OcamlCompiler extends DirectToStringCompiler {
 	public static var instance:OcamlCompiler;
+
+	public final placePlanRegistry:OcamlPlacePlanRegistry = new OcamlPlacePlanRegistry();
 
 	final ctx:CompilationContext = new CompilationContext();
 	final printer:OcamlASTPrinter = new OcamlASTPrinter();
@@ -215,6 +221,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 			profileInit();
 		ctx.profileLogLine = profileEnabled ? ((msg:String) -> profileLogLine(msg)) : null;
 		#end
+	}
+
+	/** Starts a fresh, revision-keyed target-plan registry for this request. */
+	override public function beginProgramRevision(revision:ProgramRevision):Void {
+		super.beginProgramRevision(revision);
+		placePlanRegistry.beginProgram(revision.id);
+	}
+
+	/** Builds and validates all admitted place plans for one final typed body. */
+	public function sealPlacePlans(data:ClassFuncData):Void {
+		new OcamlPlacePlanSealer(ctx, placePlanRegistry).seal(data);
 	}
 
 	#if macro
@@ -885,7 +902,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#else
 		final emitSourceMap = false;
 		#end
-		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, emitSourceMap);
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, placePlanRegistry, emitSourceMap);
 
 		// Header marker as a no-op binding to keep output non-empty and debuggable.
 		items.push(OcamlModuleItem.ILet([
@@ -1335,7 +1352,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case TFun(_, ret): ret;
 					case _: ctorFunc.expr.t;
 				};
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, ctorReturnType)) {
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, placePlanRegistry.sealedBindingFor(ctorFunc), ctorReturnType)) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
 						ctorBody = body;
@@ -1513,7 +1530,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case TFun(_, ret): ret;
 						case _: f.expr.t;
 					};
-					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, methodReturnType)) {
+					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, placePlanRegistry.sealedBindingFor(f), methodReturnType)) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
 								final out:Array<OcamlPat> = [];
@@ -1607,7 +1624,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case TFun(_, ret): ret;
 				case _: f.expr.t;
 			};
-			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, staticReturnType);
+			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, placePlanRegistry.sealedBindingFor(f), staticReturnType);
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
 				if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == f.field.name) {
@@ -1757,6 +1774,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
 			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted());
+		}
+		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
+			final revision = programRevision;
+			if (revision == null || semanticLifecycle == null)
+				throw "reflaxe.ocaml: semantic lifecycle tracing was requested without a sealed program/lifecycle";
+			OcamlSemanticLifecycleTraceWriter.write(outDir, revision.id, semanticLifecycle.pipelineRevision, getSemanticLifecycleTrace(),
+				Context.definedValue("reflaxe_ocaml_semantic_lifecycle_trace_function"));
 		}
 		#end
 		final useLineDirectives = #if macro !Context.defined("ocaml_no_line_directives") #else false #end;
@@ -2825,7 +2849,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#else
 		final emitSourceMap = false;
 		#end
-		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, emitSourceMap);
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, placePlanRegistry, emitSourceMap);
 		final e = builder.buildExpr(expr);
 		return printer.printExpr(e);
 	}

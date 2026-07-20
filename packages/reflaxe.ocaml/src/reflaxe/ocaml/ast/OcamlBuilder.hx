@@ -29,6 +29,8 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
+import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
+import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry.OcamlPlaceFunctionBinding;
 
 /**
 	Legacy TypedExpr-to-OcamlExpr traversal and target-syntax assembly.
@@ -48,6 +50,7 @@ class OcamlBuilder {
 	public final emitSourceMap:Bool;
 
 	final placeAssignmentLowerer:OcamlPlaceAssignmentLowerer;
+	var currentPlaceFunctionBinding:Null<OcamlPlaceFunctionBinding> = null;
 
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
@@ -91,11 +94,12 @@ class OcamlBuilder {
 		}
 	}
 
-	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr, emitSourceMap:Bool = false) {
+	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr, placePlanRegistry:OcamlPlacePlanRegistry,
+			emitSourceMap:Bool = false) {
 		this.ctx = ctx;
 		this.typeExprFromHaxeType = typeExprFromHaxeType;
 		this.emitSourceMap = emitSourceMap;
-		this.placeAssignmentLowerer = new OcamlPlaceAssignmentLowerer(ctx);
+		this.placeAssignmentLowerer = new OcamlPlaceAssignmentLowerer(ctx, placePlanRegistry);
 	}
 
 	inline function freshTmp(prefix:String):String {
@@ -113,7 +117,13 @@ class OcamlBuilder {
 
 	/** Builds one admitted place operation from a sealed semantic plan. */
 	function buildPreservedPlaceOperation(metadata:haxe.macro.Expr.MetadataEntry, expression:TypedExpr):OcamlExpr {
-		return switch (placeAssignmentLowerer.lower(metadata, expression, buildExpr, freshTmp)) {
+		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
+		if (originId == null)
+			return placeLoweringInvariant("a final place marker has no stable origin identity", expression.pos);
+		final binding = currentPlaceFunctionBinding;
+		if (binding == null)
+			return placeLoweringInvariant('origin "$originId" reached syntax construction outside a sealed function body', expression.pos);
+		return switch (placeAssignmentLowerer.lower(originId, binding, buildExpr, freshTmp)) {
 			case Lowered(lowered): lowered;
 			case Invalid(message): placeLoweringInvariant(message, expression.pos);
 		}
@@ -6070,7 +6080,8 @@ class OcamlBuilder {
 		name:String,
 		t:Type,
 		value:Null<TypedExpr>
-	}>, bodyExpr:TypedExpr, ?expectedReturnType:Null<Type>):OcamlExpr {
+	}>, bodyExpr:TypedExpr,
+			placeFunctionBinding:OcamlPlaceFunctionBinding, ?expectedReturnType:Null<Type>):OcamlExpr {
 		#if macro
 		final log = ctx.profileLogLine;
 		final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
@@ -6082,6 +6093,8 @@ class OcamlBuilder {
 		final t0 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
 		final refIds = collectRefLocalIds(bodyExpr);
+		final previousPlaceFunctionBinding = currentPlaceFunctionBinding;
+		currentPlaceFunctionBinding = placeFunctionBinding;
 		#if macro
 		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
@@ -6159,6 +6172,7 @@ class OcamlBuilder {
 
 		currentMutatedLocalIds = prev;
 		currentFunctionReturnType = prevFunctionReturnType;
+		currentPlaceFunctionBinding = previousPlaceFunctionBinding;
 		#if macro
 		final t6 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
