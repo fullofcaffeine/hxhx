@@ -41,6 +41,26 @@ For any `Full 1.0` or `>=1.0.0` candidate, also use:
 - `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 - `docs/00-project/FULL1_RELEASE_GO_NO_GO.md`
 
+For every published version, the release workflow must verify the exact Core QA
+route artifact for the candidate commit. That proof covers the complete change
+range since the preceding release tag, so a small documentation or expected-
+output follow-up cannot make an earlier compiler/runtime change look cheap. The
+focused local contract is:
+
+```bash
+npm run test:release:core-qa-proof
+```
+
+Manual publication additionally requires the successful Core workflow run ID
+and attempt. A provenance-only dry run does not publish and may omit them.
+
+This rule fixes a concrete release-process defect. `v0.23.1` was published
+after its final report-only commit passed the inexpensive Q1 checks, while
+earlier unreleased runtime and macro-host changes in the same candidate had not
+yet completed their required Q3 run. The published tag remains part of the
+project history; the cumulative proof prevents a later inexpensive commit from
+hiding unfinished validation in future releases.
+
 The semantic-release publication path blocks candidate versions `>=1.0.0`
 through `scripts/release/full1-release-enforcement.js` unless
 `FULL1_RELEASE_GO_MARKER=FULL1_RELEASE_GO:PASS` and

@@ -99,6 +99,16 @@ Full1 compatibility has passed.
   - `M7_STRICT_STAGE0:PASS`
   - `M7_REPLACEMENT_READY:PASS`
 
+Every publishing run also downloads the `qa-risk-route-<commit>` artifact from
+the exact successful `CI / Core PR Checks` run and attempt. The release job
+recomputes the changed paths from the previous release tag, checks the policy
+digest and required Q tier, and verifies the exact successful `Tests` aggregate
+(the final CI job that checks every job required by that tier). It refuses
+stale, skipped, cancelled, lower-tier, or different-commit evidence before
+invoking semantic-release. A manual
+publishing run must name `core_run_id` and `core_run_attempt`; a non-publishing
+Full1 provenance dry run remains allowed without them.
+
 For Full 1.0 claims, use the strict Full contract and markers in:
 
 - `docs/00-project/FULL_1_0_CONTRACT.md`
@@ -134,10 +144,17 @@ PR-required baseline is: **guardrails + core tests + scoped smokes** (`ci.yml`, 
 ### Risk-routed PR cost
 
 `scripts/ci/qa-risk-policy.json` is the machine-readable Q0-Q4 policy, and
-`scripts/ci/qa-risk-classifier.js` classifies the exact push or pull-request
-diff. The result is uploaded as `qa-risk-route-<commit>` and records the
-producer commit, policy digest, changed paths, selected tier, reasons, and the
-requested workloads.
+`scripts/ci/qa-risk-classifier.js` classifies an immutable changed-path
+inventory. Pull requests use their exact proposed diff. A default-branch push
+uses every change since the latest reachable `vMAJOR.MINOR.PATCH` release tag,
+so a documentation or snapshot follow-up cannot hide an earlier unreleased
+compiler/runtime change whose expensive proof was cancelled. A version-looking
+tag resets this range only when its commit has both the matching automated
+release message and the matching package version. The result is
+uploaded as `qa-risk-route-<commit>` and records the producer commit, release
+base, inventory digest, policy digest, changed paths, selected tier, reasons,
+and requested workloads. If the required Git history or release boundary is
+unavailable, routing fails safe to Q3.
 
 - **Q0:** documentation, repository guidance, and Beads-only changes run the
   Core route, cheap documentation guards, full-history secret scan, and stable

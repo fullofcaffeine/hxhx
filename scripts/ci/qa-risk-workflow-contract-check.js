@@ -53,6 +53,7 @@ function main() {
   const policy = JSON.parse(fs.readFileSync('scripts/ci/qa-risk-policy.json', 'utf8'))
   const ciGates = fs.readFileSync('docs/00-project/CI_GATES.md', 'utf8')
   const coreText = fs.readFileSync(path.join(workflowRoot, coreWorkflow), 'utf8')
+  const releaseText = fs.readFileSync(path.join(workflowRoot, 'release.yml'), 'utf8')
   const q0Patterns = policy.q0WorkflowIgnorePatterns
   const q1HxhxPatterns = policy.q1HxhxWorkflowIgnorePatterns
   if (!Array.isArray(q0Patterns) || q0Patterns.length === 0) {
@@ -93,6 +94,33 @@ function main() {
   }
   if (!coreText.includes('--requested-tier "$QA_REQUESTED_TIER"')) {
     fail(`${coreWorkflow} must classify the requested minimum QA tier`)
+  }
+  for (const snippet of [
+    'core_run_id:',
+    "github.event.workflow_run.event == 'push'",
+    "github.event.workflow_run.head_branch == 'main'",
+    'name: qa-risk-route-${{ steps.candidate.outputs.sha }}',
+    'run-id: ${{ steps.core.outputs.run_id }}',
+    'node scripts/release/verify-core-qa-proof.js',
+    '--run-json "${RUNNER_TEMP}/core-qa-proof/workflow-run.json"',
+    '--jobs-json "${RUNNER_TEMP}/core-qa-proof/workflow-jobs.json"',
+    '--expected-run-attempt "${{ steps.core.outputs.run_attempt }}"'
+  ]) {
+    if (!releaseText.includes(snippet)) {
+      fail(`release.yml must bind semantic publication to exact Core QA proof via ${snippet}`)
+    }
+  }
+  for (const snippet of [
+    'node scripts/ci/qa-risk-change-inventory-fixture-test.js',
+    'node scripts/ci/qa-risk-change-inventory.js',
+    '--metadata-output .artifacts/qa-routing/change-inventory.json',
+    '--inventory-file .artifacts/qa-routing/change-inventory.json',
+    '--run-id "$QA_RUN_ID"',
+    '--run-attempt "$QA_RUN_ATTEMPT"'
+  ]) {
+    if (!coreText.includes(snippet)) {
+      fail(`${coreWorkflow} must retain cumulative release-candidate inventory via ${snippet}`)
+    }
   }
 
   const workflowFiles = fs.readdirSync(workflowRoot).filter(file => file.endsWith('.yml')).sort()

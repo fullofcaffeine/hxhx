@@ -7,6 +7,15 @@ on:
     branches: [master, main]
   workflow_dispatch:
     inputs:
+      core_run_id:
+        description: "Exact successful Core QA run ID (required when publishing manually)"
+        required: false
+        type: string
+      core_run_attempt:
+        description: "Exact attempt of the selected Core QA run"
+        required: false
+        type: string
+        default: "1"
       full1_rc_run_id:
         description: "Prepublication Full1 RC workflow run ID (required for a Full1 release or handoff dry run)"
         required: false
@@ -42,6 +51,10 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
+       (github.event.workflow_run.event == 'push' ||
+        github.event.workflow_run.event == 'workflow_dispatch') &&
+       (github.event.workflow_run.head_branch == 'main' ||
+        github.event.workflow_run.head_branch == 'master') &&
        !contains(github.event.workflow_run.head_commit.message, 'chore(release):'))
     permissions:
       actions: read
@@ -100,6 +113,72 @@ jobs:
       - name: Record checked-out candidate
         id: candidate
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Select the exact Core QA proof
+        id: core
+        if: ${{ !inputs.provenance_dry_run }}
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_CORE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          EVENT_CORE_RUN_ID: ${{ github.event.workflow_run.id }}
+          INPUT_CORE_RUN_ATTEMPT: ${{ inputs.core_run_attempt }}
+          INPUT_CORE_RUN_ID: ${{ inputs.core_run_id }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            run_id="$EVENT_CORE_RUN_ID"
+            run_attempt="$EVENT_CORE_RUN_ATTEMPT"
+          else
+            run_id="$INPUT_CORE_RUN_ID"
+            run_attempt="$INPUT_CORE_RUN_ATTEMPT"
+          fi
+          if ! printf '%s' "$run_id" | grep -Eq '^[1-9][0-9]*$'; then
+            echo "Manual publication requires a positive core_run_id." >&2
+            exit 1
+          fi
+          if ! printf '%s' "$run_attempt" | grep -Eq '^[1-9][0-9]*$'; then
+            echo "Core QA proof requires a positive run attempt." >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "run_attempt=$run_attempt" >> "$GITHUB_OUTPUT"
+
+      - name: Download the exact Core QA route
+        if: ${{ !inputs.provenance_dry_run }}
+        uses: actions/download-artifact@v4
+        with:
+          name: qa-risk-route-${{ steps.candidate.outputs.sha }}
+          path: ${{ runner.temp }}/core-qa-proof
+          github-token: ${{ secrets.RELEASE_TOKEN || github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.core.outputs.run_id }}
+
+      - name: Read the exact Core QA run metadata
+        if: ${{ !inputs.provenance_dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          CORE_RUN_ATTEMPT: ${{ steps.core.outputs.run_attempt }}
+          CORE_RUN_ID: ${{ steps.core.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${{ github.repository }}/actions/runs/$CORE_RUN_ID" \
+            > "${RUNNER_TEMP}/core-qa-proof/workflow-run.json"
+          gh api "repos/${{ github.repository }}/actions/runs/$CORE_RUN_ID/attempts/$CORE_RUN_ATTEMPT/jobs?per_page=100" \
+            > "${RUNNER_TEMP}/core-qa-proof/workflow-jobs.json"
+
+      - name: Verify cumulative Core QA proof
+        if: ${{ !inputs.provenance_dry_run }}
+        run: |
+          set -euo pipefail
+          node scripts/release/verify-core-qa-proof.js \
+            --receipt "${RUNNER_TEMP}/core-qa-proof/classification.json" \
+            --inventory "${RUNNER_TEMP}/core-qa-proof/change-inventory.json" \
+            --paths "${RUNNER_TEMP}/core-qa-proof/changed-files.txt" \
+            --run-json "${RUNNER_TEMP}/core-qa-proof/workflow-run.json" \
+            --jobs-json "${RUNNER_TEMP}/core-qa-proof/workflow-jobs.json" \
+            --candidate-sha "${{ steps.candidate.outputs.sha }}" \
+            --expected-run-attempt "${{ steps.core.outputs.run_attempt }}" \
+            --repository-root "$GITHUB_WORKSPACE"
 
       - name: Install npm dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
