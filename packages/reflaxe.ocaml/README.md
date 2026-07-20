@@ -141,10 +141,11 @@ explanation. Runtime-enabled builds now write
 updates, the compiler-generated type registry, declared static native runtime
 boundaries such as `HxStdio`, and the core packaging rule to
 the exact checked runtime files that were packaged. The report labels itself
-`partial` and lists runtime references from unmigrated compiler paths as
-unexplained. The existing runtime selection report therefore remains the
-current compiler/runtime report, not a complete explanation for the whole
-program.
+`partial`, lists which observed module names are directly selected by at least
+one recorded compiler reason, and lists which are not. This name overlap does
+not mean every use site is explained. The existing runtime selection report
+therefore remains the current compiler/runtime report, not a complete
+explanation for the whole program.
 Program-wide representation, native dependency, raw/unsafe, typed binding, and
 curated export-ABI inspection remain visibly unavailable until their owning
 checked records land. The command never scans emitted OCaml or Dune text to

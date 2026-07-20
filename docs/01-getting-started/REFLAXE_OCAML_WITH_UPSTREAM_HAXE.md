@@ -130,10 +130,12 @@ runtime need and native dependency has a locked explanation. Runtime-enabled
 builds now explain runtime support used by typed assignments and updates, the
 compiler-generated type registry, the declared `HxStdio` extern boundary, and
 core packaging in
-`ocaml_runtime_requirement_report.json`; other compiler paths remain visibly
-unexplained. Today's runtime report is therefore not presented as a
-complete whole-program explanation, and the typed place report covers only
-assignments and updates rather than every compiler operation. Representation
+`ocaml_runtime_requirement_report.json`. The report shows which observed module
+names are directly selected by at least one recorded compiler reason and which
+are not, without treating name overlap as proof that every use site is
+explained. It is therefore not presented as a complete whole-program
+explanation, and the typed place report covers only assignments and updates
+rather than every compiler operation. Representation
 registries, native dependencies, raw/unsafe proofs, bindings, and curated export
 ABIs stay marked unavailable until their typed owners land. Inspection is
 read-only and does not guess behavior by scanning generated OCaml or Dune files.

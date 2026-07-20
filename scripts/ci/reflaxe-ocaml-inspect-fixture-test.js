@@ -56,7 +56,7 @@ try {
 	assert.match(report.artifactManifest.sourceBundleRevision, /^sha256:[0-9a-f]{64}$/)
 	assert.match(report.artifactManifest.artifactSetRevision, /^sha256:[0-9a-f]{64}$/)
 	assert.strictEqual(report.artifactManifest.semanticRuntime.status, 'incomplete')
-	assert.strictEqual(report.artifactManifest.semanticRuntime.model, 'recorded-runtime-requirements-partial-v2')
+	assert.strictEqual(report.artifactManifest.semanticRuntime.model, 'recorded-runtime-requirements-partial-v3')
 	assert.match(report.artifactManifest.semanticRuntime.revision, sha256Revision)
 	assert.strictEqual(report.artifactManifest.nativeDependencies.status, 'incomplete')
 	assert(report.artifactManifest.ownerCounts.some(owner => owner.id === 'reflaxe-framework' && owner.count > 0))
@@ -81,7 +81,7 @@ try {
 
 	const runtimeRequirementPath = path.join(tempRoot, 'out/ocaml_runtime_requirement_report.json')
 	const runtimeRequirements = JSON.parse(fs.readFileSync(runtimeRequirementPath, 'utf8'))
-	assert.strictEqual(runtimeRequirements.schemaVersion, 2)
+	assert.strictEqual(runtimeRequirements.schemaVersion, 3)
 	assert.strictEqual(runtimeRequirements.model, 'recorded-ocaml-runtime-requirements')
 	assert.strictEqual(runtimeRequirements.authorityStatus, 'partial')
 	assert.deepStrictEqual(runtimeRequirements.coveredFamilies, [
@@ -101,11 +101,18 @@ try {
 	assert(runtimeRequirements.requirementCount > 0)
 	assert(runtimeRequirements.requirementRootModules.includes('HxInt'))
 	assert(runtimeRequirements.requirementClosureModules.includes('HxInt'))
-	assert(runtimeRequirements.explainedCompilerObservedModules.includes('HxInt'))
-	assert(runtimeRequirements.explainedCompilerObservedModules.includes('HxType'))
+	assert.strictEqual(runtimeRequirements.compilerObservationGranularity, 'module-name-only')
+	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxInt'))
+	assert(runtimeRequirements.compilerObservedModulesWithRequirementRoots.includes('HxType'))
+	assert.strictEqual(runtimeRequirements.explainedCompilerObservedModules, undefined)
+	assert.strictEqual(runtimeRequirements.unexplainedCompilerObservedModules, undefined)
+	assert.deepStrictEqual([
+		...runtimeRequirements.compilerObservedModulesWithRequirementRoots,
+		...runtimeRequirements.compilerObservedModulesWithoutRequirementRoots
+	].sort(), runtimeRequirements.compilerObservedModules)
 	assert.deepStrictEqual(runtimeRequirements.requirementRootsNotCompilerObserved, [])
-	assert(runtimeRequirements.unexplainedCompilerObservedModules.length > 0,
-		'partial coverage should keep compiler-observed modules from unmigrated families visible')
+	assert(runtimeRequirements.compilerObservedModulesWithoutRequirementRoots.length > 0,
+		'partial coverage should keep compiler-observed modules with no requirement root visible')
 	const requirementIds = new Set()
 	for (const requirement of runtimeRequirements.requirements) {
 		assert(!requirementIds.has(requirement.id), `duplicate runtime requirement ${requirement.id}`)

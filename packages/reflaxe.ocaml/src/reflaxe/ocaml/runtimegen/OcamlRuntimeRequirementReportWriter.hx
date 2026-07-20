@@ -35,9 +35,10 @@ private typedef OcamlRuntimeRequirementReportPayload = {
 	final requirementChains:Array<OcamlRuntimeRequirementChain>;
 	final requirementRootModules:Array<String>;
 	final requirementClosureModules:Array<String>;
+	final compilerObservationGranularity:String;
 	final compilerObservedModules:Array<String>;
-	final explainedCompilerObservedModules:Array<String>;
-	final unexplainedCompilerObservedModules:Array<String>;
+	final compilerObservedModulesWithRequirementRoots:Array<String>;
+	final compilerObservedModulesWithoutRequirementRoots:Array<String>;
 	final requirementRootsNotCompilerObserved:Array<String>;
 	final selectedModules:Array<String>;
 	final runtimeSources:Array<RuntimeSourceModule>;
@@ -55,7 +56,7 @@ private typedef OcamlRuntimeRequirementReportPayload = {
 class OcamlRuntimeRequirementReportWriter {
 	public static inline final FILE_NAME = "ocaml_runtime_requirement_report.json";
 	public static inline final MODEL = "recorded-ocaml-runtime-requirements";
-	public static inline final SCHEMA_VERSION = 2;
+	public static inline final SCHEMA_VERSION = 3;
 
 	/** Resolves, cross-checks, and writes the current partial requirement ledger. **/
 	public static function write(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, profile:String, allowTooling:Bool,
@@ -97,8 +98,8 @@ class OcamlRuntimeRequirementReportWriter {
 			final omittedLabel = omittedObservedModules.join(", ");
 			throw 'Runtime packaging omitted compiler-observed module${omittedObservedModules.length == 1 ? "" : "s"}: $omittedLabel. Enable automatic runtime discovery or add every named module to -D ocaml_runtime_modules.';
 		}
-		final explainedCompilerObservedModules = [for (moduleName in observed) if (requirementRoots.exists(moduleName)) moduleName];
-		final unexplainedCompilerObservedModules = [
+		final compilerObservedModulesWithRequirementRoots = [for (moduleName in observed) if (requirementRoots.exists(moduleName)) moduleName];
+		final compilerObservedModulesWithoutRequirementRoots = [
 			for (moduleName in observed)
 				if (!requirementRoots.exists(moduleName)) moduleName
 		];
@@ -132,13 +133,14 @@ class OcamlRuntimeRequirementReportWriter {
 			requirementChains: chains,
 			requirementRootModules: requirementRootModules,
 			requirementClosureModules: requirementClosureModules,
+			compilerObservationGranularity: "module-name-only",
 			compilerObservedModules: observed,
-			explainedCompilerObservedModules: explainedCompilerObservedModules,
-			unexplainedCompilerObservedModules: unexplainedCompilerObservedModules,
+			compilerObservedModulesWithRequirementRoots: compilerObservedModulesWithRequirementRoots,
+			compilerObservedModulesWithoutRequirementRoots: compilerObservedModulesWithoutRequirementRoots,
 			requirementRootsNotCompilerObserved: requirementRootsNotCompilerObserved,
 			selectedModules: selectedModules,
 			runtimeSources: runtimeSources,
-			message: "Recorded runtime explanations cover core packaging, the compiler-generated type registry, declared static native runtime boundaries, and typed assignment/update lowering. Other compiler paths still need their own explanations."
+			message: "Recorded runtime explanations cover core packaging, the compiler-generated type registry, declared static native runtime boundaries, and typed assignment/update lowering. Compiler observations contain module names rather than individual use sites, so overlap with a recorded root does not prove that every use of that module is explained."
 		};
 		final report = {
 			schemaVersion: payload.schemaVersion,
@@ -158,9 +160,10 @@ class OcamlRuntimeRequirementReportWriter {
 			requirementChains: payload.requirementChains,
 			requirementRootModules: payload.requirementRootModules,
 			requirementClosureModules: payload.requirementClosureModules,
+			compilerObservationGranularity: payload.compilerObservationGranularity,
 			compilerObservedModules: payload.compilerObservedModules,
-			explainedCompilerObservedModules: payload.explainedCompilerObservedModules,
-			unexplainedCompilerObservedModules: payload.unexplainedCompilerObservedModules,
+			compilerObservedModulesWithRequirementRoots: payload.compilerObservedModulesWithRequirementRoots,
+			compilerObservedModulesWithoutRequirementRoots: payload.compilerObservedModulesWithoutRequirementRoots,
 			requirementRootsNotCompilerObserved: payload.requirementRootsNotCompilerObserved,
 			selectedModules: payload.selectedModules,
 			runtimeSources: payload.runtimeSources,

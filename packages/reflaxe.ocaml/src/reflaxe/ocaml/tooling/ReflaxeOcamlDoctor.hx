@@ -101,7 +101,7 @@ class ReflaxeOcamlDoctor {
 
 		checks.push(check("runtime-manifest", "Whole-program runtime explanations", DoctorStatus.Skip, false,
 			"Builds now explain runtime support used by core packaging, the generated type registry, declared static native boundaries, and typed assignments/updates, but other compiler paths are not covered yet.",
-			"ocaml_runtime_requirement_report.json labels this coverage partial and keeps unexplained runtime references visible.",
+			"ocaml_runtime_requirement_report.json labels this coverage partial and distinguishes modules directly selected by a recorded compiler reason from modules that are only observed after generation.",
 			"No action is required for current builds; the runtime-ledger architecture work will migrate the remaining compiler families.", null, null));
 
 		final ocamlResult = probe.run("ocamlc", ["-version"]);

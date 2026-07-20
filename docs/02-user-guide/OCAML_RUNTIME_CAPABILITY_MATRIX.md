@@ -43,8 +43,12 @@ registry, explicitly declared static native runtime boundaries, and the
 admitted assignment/update family. Other compiler paths still
 discover runtime names from generated OCaml structure or explicitly declare
 them while building string/template output. The requirement report lists those
-names under `unexplainedCompilerObservedModules`, so the whole-program runtime
-authority and generated artifact manifest correctly remain incomplete under
+names under `compilerObservedModulesWithoutRequirementRoots`. It separately
+lists module-name overlap under `compilerObservedModulesWithRequirementRoots`;
+a requirement root is the first helper module directly selected by a recorded
+compiler reason. That overlap does not claim that every generated call to the
+module has its own explanation. Whole-program runtime authority and the
+generated artifact manifest therefore correctly remain incomplete under
 `haxe_ocaml-0uwin`.
 
 Typed target-runtime externs declare their need by capability rather than by

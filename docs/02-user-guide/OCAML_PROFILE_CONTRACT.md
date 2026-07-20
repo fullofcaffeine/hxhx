@@ -187,7 +187,7 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `selectedFeatures`
   - `inclusionReasons` (deterministic per-module reason list)
 - `ocaml_runtime_requirement_report.json`
-  - `schemaVersion` (current: `2`)
+  - `schemaVersion` (current: `3`)
   - `authorityStatus` (currently `partial`, because core packaging, the
     generated type registry, declared static native runtime boundaries, and
     typed assignment/update operations are covered, while other compiler paths
@@ -205,13 +205,17 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
     in `Stdio.hx`, not an OCaml module users must write)
   - `requirementChains`, which resolve each explanation through the locked
     runtime dependency catalog
-  - `requirementRootModules`, `requirementClosureModules`, and `runtimeSources`,
-    including exact source hashes, Dune libraries, eligible profiles, and
-    licenses
-  - `compilerObservedModules`, split into
-    `explainedCompilerObservedModules` and
-    `unexplainedCompilerObservedModules`, so unfinished compiler families
-    remain visible instead of being presented as covered
+  - `requirementRootModules`; a root is the first compatibility helper directly
+    selected by a recorded compiler decision
+  - `requirementClosureModules` and `runtimeSources`, which follow those roots
+    through dependencies and include exact source hashes, Dune libraries,
+    eligible profiles, and licenses
+  - `compilerObservationGranularity` (currently `module-name-only`) and
+    `compilerObservedModules`
+  - `compilerObservedModulesWithRequirementRoots` and
+    `compilerObservedModulesWithoutRequirementRoots`; these report module-name
+    overlap only and do not claim that every generated use of an overlapping
+    module has its own explanation
   - `requirementRootsNotCompilerObserved`, which keeps deliberate packaging
     requirements visible even when no generated expression refers to them
   - source locations use project-relative or stable library labels; generated

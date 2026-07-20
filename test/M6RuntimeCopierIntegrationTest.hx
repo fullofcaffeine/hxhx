@@ -66,9 +66,10 @@ private typedef RuntimeRequirementReport = {
 	final requirements:Array<RuntimeRequirementEntry>;
 	final requirementRootModules:Array<String>;
 	final requirementClosureModules:Array<String>;
+	final compilerObservationGranularity:String;
 	final compilerObservedModules:Array<String>;
-	final explainedCompilerObservedModules:Array<String>;
-	final unexplainedCompilerObservedModules:Array<String>;
+	final compilerObservedModulesWithRequirementRoots:Array<String>;
+	final compilerObservedModulesWithoutRequirementRoots:Array<String>;
 	final requirementRootsNotCompilerObserved:Array<String>;
 	final selectedModules:Array<String>;
 }
@@ -463,7 +464,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains("\n" + portableRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "portable report includes HxRuntime");
 		assertContains("\n" + reasonsForModule(portableRuntimeReport, "HxRuntime").join("\n") + "\n", "\nfull_runtime_mode\n",
 			"portable report includes full-runtime reason");
-		assertTrue(portableRequirementReport.schemaVersion == 2, "portable requirement report schema version");
+		assertTrue(portableRequirementReport.schemaVersion == 3, "portable requirement report schema version");
 		assertTrue(portableRequirementReport.model == "recorded-ocaml-runtime-requirements", "portable requirement report model");
 		assertTrue(portableRequirementReport.authorityStatus == "partial", "portable requirement report authority status");
 		assertArrayEquals([
@@ -520,16 +521,20 @@ class M6RuntimeCopierIntegrationTest {
 			"metal requirement report should retain the recorded Haxe Int root");
 		assertTrue(metalRequirementReport.requirementRootsNotCompilerObserved.length == 0,
 			"migrated runtime requirements should still agree with compiler observations for this fixture");
-		assertContains("\n" + metalRequirementReport.explainedCompilerObservedModules.join("\n") + "\n", "\nHxType\n",
-			"compiler-observed HxType use should be explained by the generated type registry");
-		assertContains("\n" + metalRequirementReport.explainedCompilerObservedModules.join("\n") + "\n", "\nHxStdio\n",
-			"compiler-observed HxStdio use should be explained by its declared typed extern boundary");
-		assertNotContains("\n" + metalRequirementReport.unexplainedCompilerObservedModules.join("\n") + "\n", "\nHxStdio\n",
-			"declared HxStdio use should not remain unexplained");
+		assertTrue(metalRequirementReport.compilerObservationGranularity == "module-name-only",
+			"compiler observation should not claim individual runtime-use coverage");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxType\n",
+			"compiler-observed HxType should overlap the generated type-registry requirement root");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxArray\n",
+			"compiler-observed HxArray should report root overlap without claiming all HxArray use sites are explained");
+		assertContains("\n" + metalRequirementReport.compilerObservedModulesWithRequirementRoots.join("\n") + "\n", "\nHxStdio\n",
+			"compiler-observed HxStdio should overlap its declared typed extern requirement root");
+		assertNotContains("\n" + metalRequirementReport.compilerObservedModulesWithoutRequirementRoots.join("\n") + "\n", "\nHxStdio\n",
+			"declared HxStdio should not remain in the no-requirement-root set");
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxStdio").join("\n") + "\n", "\nrecorded_requirement\n",
 			"selective packaging should retain HxStdio because of the declared native boundary");
-		assertTrue(metalRequirementReport.unexplainedCompilerObservedModules.length > 0,
-			"partial coverage should keep compiler-observed modules from unmigrated families visible");
+		assertTrue(metalRequirementReport.compilerObservedModulesWithoutRequirementRoots.length > 0,
+			"partial coverage should keep compiler-observed modules with no recorded root visible");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalRequirementReport.selectedModules,
 			"metal requirement and selection reports should name the same packaged modules");
 

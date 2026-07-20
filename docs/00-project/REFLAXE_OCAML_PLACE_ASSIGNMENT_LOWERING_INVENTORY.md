@@ -272,11 +272,12 @@ the locked runtime-source catalog and records the exact dependency closure,
 source hashes, Dune libraries, profiles, and licenses that were selected. The
 same report now also explains the core packaging rule, the generated
 `HxTypeRegistry` module, and the typed `HxStdio` extern boundary. It keeps
-modules from unmigrated compiler families in
-an explicit `unexplainedCompilerObservedModules` list; it therefore proves the
-migrated families without implying that every runtime file in the whole program
-has an explicit explanation. Source locations are normalized to
-project-relative or stable library labels so reports are
+modules directly named by a recorded compiler reason and modules only observed
+after generation in separate lists. Because compiler observation is not yet
+occurrence-level, overlap does not imply that every use of a runtime module is
+explained. The report therefore proves the migrated families without claiming
+whole-program ownership. Source locations are normalized to project-relative or
+stable library labels so reports are
 reproducible across machines and do not expose developer home-directory or
 tool-cache prefixes.
 Lowered identities use function identity plus structural ordinal; source paths
