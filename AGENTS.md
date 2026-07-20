@@ -201,6 +201,11 @@ hxhx --ocaml -main Main -cp src --hxhx-no-emit
 Assume the reader is a Haxe user who wants to understand and contribute to
 `hxhx`, but is not yet a compiler or `hxhx` expert.
 
+Use the globally installed `$explain-technical-work` skill when drafting or
+revising substantial PR bodies, commit bodies, issue descriptions,
+architecture documents, status reports, or hand-offs. The rules below remain
+the repository-local minimum when that skill is unavailable.
+
 - Lead progress updates, task descriptions, bead notes, plans, and hand-offs
   with the practical outcome: what now works, what is still broken, why it
   matters to a user, and what happens next.
@@ -208,6 +213,31 @@ Assume the reader is a Haxe user who wants to understand and contribute to
   For example, say "the required automated checks are failing" before
   referring to a "red required lane", and say what a stage or gate actually
   does before using its short name.
+- Treat familiar words as jargon when this project gives them a narrower
+  compiler meaning. Words such as "semantic", "artifact", "plan", "place",
+  "revision", "lifecycle", "lowering", "sealed", "atomic", and "native" need
+  a one-sentence definition the first time they appear. For example, a
+  **semantic decision** is a choice about how the source program behaves, such
+  as whether `items[nextIndex()]++` calls `nextIndex()` once and whether the
+  expression returns the old or new value. A **semantic artifact** is simply a
+  stored record of such a choice, such as a marker attached to the expression
+  or a plan consumed by code generation.
+- Do not compress several operations into an unexplained compound label such
+  as "atomic early-protection/final-plan cutover". Expand it into the actual
+  sequence in plain language: mark the expression before generic rewrites,
+  build and validate the final plan afterward, switch code generation to that
+  plan, and remove the older competing path in the same change. The internal
+  short name may follow once the sequence is clear.
+- Use a small **before → problem → after** example for architecture changes.
+  Include Haxe source and generated target code when code exists; if compilation
+  stops earlier, show the real diagnostic and say that no target code was
+  produced. Link the relevant glossary, API documentation, source contract, or
+  architecture note so a beginner can continue learning without guessing.
+- Apply a first-read test to PR bodies, commit bodies, Beads, documentation,
+  and hand-offs: a capable Haxe developer who has never seen this repository
+  should understand the practical problem and outcome before encountering
+  internal class names or phase labels. If the explanation only becomes clear
+  after reading the implementation, rewrite it.
 - Keep bead titles, descriptions, and acceptance criteria understandable on a
   first read. Precise marker names, workflow IDs, compiler phases, and target
   internals can follow as supporting evidence instead of carrying the main
@@ -292,6 +322,11 @@ Assume the reader is a Haxe user who wants to understand and contribute to
   choice, relationship to upstream, compatibility risks, verification, deferred scope, and
   rollback. Include the originating `hxhx` bead/request and the required `hxhx-agent` provenance
   signature.
+- Write those sections for a Reflaxe user who has not worked on compiler internals. Define every
+  compiler-specific term on first use, including ordinary words used in a special way. Avoid
+  compressed phrases that combine multiple phases or invariants; spell out the ordered steps and
+  then give the internal API name. Add links to the relevant public API, framework source contract,
+  or architecture note for readers who want the deeper model.
 - Every behavior-changing fork PR must include a minimal Haxe snippet that reproduces the issue and
   before/after snippets in each relevant generated target language. Label simplified snippets as
   such. If the old compiler stops before target source exists, say that explicitly and show the

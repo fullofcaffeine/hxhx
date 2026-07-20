@@ -96,6 +96,37 @@ hxhx-agent created this because <plain-language incident and reason>.
 Do not use a PR description that is only a filename list. The practical old
 and new behavior comes first; internal names support that explanation.
 
+### Plain-language review contract
+
+Write for a Haxe developer who understands ordinary application code but has
+not studied Reflaxe's internals. A technically correct phrase is not sufficient
+when its meaning depends on local context.
+
+- Define compiler-specific terms on first use, even when the individual words
+  look familiar. For example, a **semantic decision** is a decision about what
+  the Haxe program does, such as evaluation order or the value returned by
+  postfix `++`. A **semantic artifact** is a stored record of that decision,
+  such as metadata on a typed expression or a validated lowering plan.
+- Explain a **preprocessor** as a compiler step that rewrites already
+  type-checked Haxe expressions before target code is generated. Explain a
+  **body revision** as an identity for one exact version of a function body,
+  used to reject a plan built for older code.
+- Expand compound shorthand into ordered actions. Do not write phrases such as
+  "atomic early-protection/final-plan cutover" without saying that the target
+  first marks the vulnerable expression, lets declared generic rewrites run,
+  builds and validates the final target plan, switches generation to that plan,
+  and removes the previous competing route in the same reviewed change.
+- Use a before/problem/after example and connect Haxe source to real generated
+  target code or to the real pre-emission diagnostic. Do not invent target code
+  when compilation stopped earlier.
+- Link a useful reference: the relevant public Haxe API, the Reflaxe source
+  contract, an architecture document, or a focused test. Internal type and pass
+  names belong after the plain-language model, not in place of it.
+
+The first-read test is simple: a capable Haxe developer new to this repository
+must understand why the change matters and what will behave differently before
+they need to follow an internal symbol link.
+
 ## Framework Neutrality
 
 Fork changes may introduce stronger lifecycle, identity, traversal, plugin,
