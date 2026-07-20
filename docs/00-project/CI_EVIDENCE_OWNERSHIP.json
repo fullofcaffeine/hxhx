@@ -405,7 +405,7 @@
     {
       "id": "reflaxe-package-macos-29708386355",
       "checkId": "reflaxe-ocaml-package-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "failure-current",
       "failureClass": "semantic",
       "bead": "haxe_ocaml-s7jry.4",
@@ -421,6 +421,35 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29708386355"
       },
       "reproductionOrEvidence": "Linux installed and ran source package artifact 8448528949, but macOS evidence artifact 8448543176 reports that haxe/Exception.cross.hx reached the legacy instance-field update branch without a stable place origin.",
+      "closureGate": "Repair the shared semantic place boundary without suppressing its invariant, then require one exact ZIP to pass the complete Linux and macOS package matrix.",
+      "supersededBy": {
+        "runId": 29711791018,
+        "runAttempt": 1,
+        "headSha": "8b6a36b3f541ef73b6e8d9fd06e5d0d210e7907e",
+        "conclusion": "failure",
+        "updatedAt": "2026-07-20T02:05:09Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29711791018"
+      }
+    },
+    {
+      "id": "reflaxe-package-macos-29711791018",
+      "checkId": "reflaxe-ocaml-package-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-s7jry.4",
+      "recordedAt": "2026-07-20T02:08:00Z",
+      "run": {
+        "id": 29711791018,
+        "attempt": 1,
+        "headSha": "8b6a36b3f541ef73b6e8d9fd06e5d0d210e7907e",
+        "event": "push",
+        "conclusion": "failure",
+        "createdAt": "2026-07-20T02:00:56Z",
+        "updatedAt": "2026-07-20T02:05:09Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29711791018"
+      },
+      "reproductionOrEvidence": "Linux installed and ran source package artifact 8449096435, while macOS evidence artifact 8449108325 reproduced the same haxe/Exception.cross.hx place-invariant failure. Linux evidence is artifact 8449110550.",
       "closureGate": "Repair the shared semantic place boundary without suppressing its invariant, then require one exact ZIP to pass the complete Linux and macOS package matrix."
     },
     {
