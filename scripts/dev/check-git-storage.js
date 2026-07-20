@@ -17,6 +17,11 @@ const { spawnSync } = require('child_process')
 
 const DEFAULT_GC_AUTO = 6700
 const DEFAULT_GC_AUTO_PACK_LIMIT = 50
+// Git starts automatic maintenance from an object-count estimate. Large
+// generated files can consume substantial disk space before that count is
+// reached, so the project also owns a byte-based review threshold.
+const LOOSE_SIZE_REVIEW_KIB = 256 * 1024
+const MIN_MAINTENANCE_HEADROOM_KIB = 1024 * 1024
 const WARNING_EXIT_CODE = 2
 
 function usage() {
@@ -118,6 +123,24 @@ function formatMiB(kib) {
   return `${(kib / 1024).toFixed(1)} MiB`
 }
 
+/**
+ * Report available space without making it a correctness dependency.
+ *
+ * A storage doctor should still explain Git's object state when the host does
+ * not expose filesystem statistics, so collection failure is represented as
+ * unavailable instead of turning the whole diagnostic into an error.
+ */
+function readAvailableFilesystemKiB(root) {
+  try {
+    const stats = fs.statfsSync(root)
+    const bytes = Number(stats.bavail) * Number(stats.bsize)
+    if (!Number.isFinite(bytes) || bytes < 0) return null
+    return Math.floor(bytes / 1024)
+  } catch (_error) {
+    return null
+  }
+}
+
 function inspect(options) {
   const version = readGitVersion(options.root)
   const gitDirResult = runGit(options.root, ['rev-parse', '--absolute-git-dir'])
@@ -144,11 +167,16 @@ function inspect(options) {
   const gcLogPath = path.join(gitDir, 'gc.log')
   const gcLogPresent = fs.existsSync(gcLogPath) && fs.statSync(gcLogPath).size > 0
   const gcLog = gcLogPresent ? fs.readFileSync(gcLogPath, 'utf8').trim() : ''
+  const filesystemAvailableKiB = readAvailableFilesystemKiB(options.root)
+  const maintenanceHeadroomKiB = Math.max(MIN_MAINTENANCE_HEADROOM_KIB, objects.looseSizeKiB * 2)
+  const maintenanceHeadroomSufficient =
+    filesystemAvailableKiB === null ? null : filesystemAvailableKiB >= maintenanceHeadroomKiB
   const reasons = []
 
   if (gcLogPresent) reasons.push('gc_log')
   if (gcAuto === 0) reasons.push('automatic_gc_disabled')
   else if (objects.looseObjects > gcAuto) reasons.push('loose_object_threshold')
+  if (objects.looseSizeKiB >= LOOSE_SIZE_REVIEW_KIB) reasons.push('loose_object_bytes')
   if (gcAutoPackLimit > 0 && objects.packs > gcAutoPackLimit) reasons.push('pack_threshold')
   if (objects.garbageFiles > 0 || objects.garbageSizeKiB > 0) reasons.push('garbage_files')
 
@@ -162,9 +190,13 @@ function inspect(options) {
     ...objects,
     gcAuto,
     gcAutoPackLimit,
+    looseSizeReviewKiB: LOOSE_SIZE_REVIEW_KIB,
     cruftPacks,
     gcLogPresent,
     gcLog,
+    filesystemAvailableKiB,
+    maintenanceHeadroomKiB,
+    maintenanceHeadroomSufficient,
   }
 }
 
@@ -180,9 +212,16 @@ function printHuman(report) {
   console.log(`  loose objects: ${report.looseObjects} (${formatMiB(report.looseSizeKiB)})`)
   console.log(`  packs: ${report.packs} (${formatMiB(report.packedSizeKiB)})`)
   console.log(`  automatic loose-object threshold: ${report.gcAuto}`)
+  console.log(`  project loose-object size threshold: ${formatMiB(report.looseSizeReviewKiB)}`)
   console.log(`  automatic pack threshold: ${report.gcAutoPackLimit}`)
   console.log(`  cruft packs: ${report.cruftPacks ? 'enabled' : 'disabled'}`)
   console.log(`  gc.log: ${report.gcLogPresent ? 'present' : 'absent'}`)
+  console.log(
+    `  filesystem space available: ${report.filesystemAvailableKiB === null ? 'unavailable' : formatMiB(report.filesystemAvailableKiB)}`,
+  )
+  console.log(
+    `  conservative maintenance headroom: ${formatMiB(report.maintenanceHeadroomKiB)} (${report.maintenanceHeadroomSufficient === null ? 'unknown' : report.maintenanceHeadroomSufficient ? 'available' : 'not currently available'})`,
+  )
 
   if (report.status === 'pass') {
     console.log(
@@ -194,9 +233,17 @@ function printHuman(report) {
   console.error(
     'Git storage needs review. This command will not prune or repack anything; follow the backup-first procedure in TESTING.md.',
   )
+  if (report.reasons.includes('loose_object_bytes')) {
+    console.error(
+      '  Git has accumulated large unpacked file-history objects even though their count may still be below Git\'s automatic-cleanup threshold.',
+    )
+  }
+  if (report.maintenanceHeadroomSufficient === false) {
+    console.error('  Free additional disk space before attempting backup or Git maintenance in this checkout.')
+  }
   if (report.gcLog) console.error(`  gc.log: ${report.gcLog.split(/\r?\n/, 1)[0]}`)
   console.error(
-    `GIT_STORAGE_CHECK:WARN reasons=${report.reasons.join(',')} loose_objects=${report.looseObjects} packs=${report.packs}`,
+    `GIT_STORAGE_CHECK:WARN reasons=${report.reasons.join(',')} loose_objects=${report.looseObjects} loose_kib=${report.looseSizeKiB} packs=${report.packs}`,
   )
 }
 

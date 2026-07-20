@@ -81,6 +81,14 @@ try {
   assert(healthyReport.status === 'pass', 'the JSON report should identify a healthy repository')
   assert(healthyReport.cruftPacks === true, 'the JSON report should expose the local cruft-pack policy')
   assert(
+    healthyReport.looseSizeReviewKiB === 256 * 1024,
+    'the JSON report should expose the project byte-based review threshold',
+  )
+  assert(
+    healthyReport.filesystemAvailableKiB === null || healthyReport.filesystemAvailableKiB >= 0,
+    'the JSON report should expose available filesystem space when the host provides it',
+  )
+  assert(
     fingerprintTree(path.join(healthyRoot, '.git')) === healthyBefore,
     'the diagnostic must not change a healthy Git directory',
   )
@@ -109,6 +117,44 @@ try {
   assert(
     fingerprintTree(path.join(looseRoot, '.git')) === looseBefore,
     'the diagnostic must not repack or prune loose objects',
+  )
+
+  const byteHeavyRoot = makeFixture('byte-heavy')
+  const byteHeavyGit = path.join(byteHeavyRoot, 'fake-git.js')
+  fs.writeFileSync(
+    byteHeavyGit,
+    `#!/usr/bin/env node
+const args = process.argv.slice(2)
+if (args.includes('--version')) console.log('git version fixture')
+else if (args.includes('--absolute-git-dir')) console.log(process.env.HXHX_FAKE_GIT_DIR)
+else if (args.includes('count-objects')) console.log([
+  'count: 2',
+  'size: 300000',
+  'in-pack: 0',
+  'packs: 0',
+  'size-pack: 0',
+  'prune-packable: 0',
+  'garbage: 0',
+  'size-garbage: 0',
+].join('\\n'))
+else if (args.includes('config')) process.exitCode = 1
+else process.exitCode = 1
+`,
+  )
+  fs.chmodSync(byteHeavyGit, 0o755)
+  const byteHeavyBefore = fingerprintTree(path.join(byteHeavyRoot, '.git'))
+  const byteHeavy = run(byteHeavyRoot, [], {
+    HXHX_GIT_STORAGE_GIT_BIN: byteHeavyGit,
+    HXHX_FAKE_GIT_DIR: path.join(byteHeavyRoot, '.git'),
+  })
+  assert(byteHeavy.status === 2, 'a few byte-heavy loose objects should require review')
+  assert(
+    byteHeavy.stderr.includes('loose_object_bytes'),
+    'the warning should explain that loose-object bytes exceeded the project limit',
+  )
+  assert(
+    fingerprintTree(path.join(byteHeavyRoot, '.git')) === byteHeavyBefore,
+    'the byte-based warning must not repack or prune loose objects',
   )
 
   const disabledRoot = makeFixture('disabled')

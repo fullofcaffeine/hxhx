@@ -184,8 +184,17 @@ This diagnostic is read-only. It reports loose objects, pack count and size,
 the configured automatic-maintenance thresholds, cruft-pack policy, and any
 retained `.git/gc.log`. A non-repository directory reports `SKIP`; a healthy
 checkout reports `PASS`; a failed maintenance log, disabled automatic cleanup,
-too many loose objects or packs, or Git-reported garbage reports `WARN` and
-exits with status 2. It never runs `gc`, `repack`, `prune`, or `git config`.
+too many loose objects or packs, more than 256 MiB of loose objects, or
+Git-reported garbage reports `WARN` and exits with status 2. It never runs
+`gc`, `repack`, `prune`, or `git config`.
+
+Git normally decides when to pack new history by estimating the **number** of
+loose objects. That can miss a smaller number of very large generated-file
+versions. The project therefore adds the byte-based review threshold above and
+reports a conservative amount of free working space for backup and packing.
+When the report says that headroom is unavailable, free space through a
+different owner before attempting Git maintenance; do not delete files from
+`.git/objects` by hand.
 
 Large snapshot rewrites and rebases can create many valid but unreachable Git
 objects. Git 2.40.1 normally starts automatic maintenance at about 6,700 loose
