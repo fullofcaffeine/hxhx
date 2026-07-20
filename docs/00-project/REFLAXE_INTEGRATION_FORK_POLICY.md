@@ -163,14 +163,31 @@ On 2026-07-20, upstream and fork `main` were first synchronized at
 - fork PR #2: sound side-effect, `continue`, and semantic-envelope preservation
   in pure-expression cleanup.
 
-The fork then merged PR #3 to preserve nested block results. Fork `main`
-became `bfadffb8926e378a4ce8be4b5f66e53b2a9af216`.
-The complete `reflaxe.ocaml` portable conformance corpus passed on that exact
-fork commit. PRs #1 through #3 also carry the required Why/What/How record and
-source-to-target examples.
-GitHub reported Actions and workflows enabled but scheduled no PR or `main`
-push runs. That is an open CI defect under `haxe_ocaml-7201t.3`, not passing
-evidence.
+The fork then merged PR #3 to preserve nested block results. The hxhx consumer
+remains intentionally pinned to that behavior baseline,
+`bfadffb8926e378a4ce8be4b5f66e53b2a9af216`, with content digest
+`c8c6e9ee2eaa5e4df27a0bd5d3a4e0190befb36677b3a5390470bb8c14368a44`.
+The complete `reflaxe.ocaml` portable corpus and hosted Linux/macOS package
+matrix passed on those exact framework bytes.
+
+Fork governance then advanced independently:
+
+- PR #4 restored PR/main/manual test evidence, made generated-project jobs test
+  the checked-out fork, and made typed optimizer assertions legal on both old
+  and latest Haxe;
+- PR #5 made Haxelib publication manual and explicitly confirmed;
+- PR #6 made the not-yet-enabled fork Pages deployment manual and explicitly
+  confirmed;
+- PR #7 added the fork-native evidence template required for future PRs.
+
+Fork `main` is now `8784f97259a293a07302588a2d00eff80bca91f4` while the
+consumer pin stays on the last behavior-bearing framework commit. Pull-request
+and final `main` runs pass the Haxe 4.3.0/latest core matrix, runtime compile,
+direct/intermediate scaffolding, and CLI new/test/build routes. Manual core run
+`29719038645` also passes. Ordinary pushes schedule no Haxelib publication or
+Pages deployment. The exact reason older fork events produced no runs remains
+unproven; the current event, source-selection, and recovery contracts are now
+executable and green.
 
 This policy changes dependency governance, not product readiness. README Goals
 and North Star progress remain unchanged until supported behavior and release
