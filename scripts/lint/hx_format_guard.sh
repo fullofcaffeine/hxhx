@@ -15,4 +15,7 @@ cd "$ROOT_DIR"
 #   worker queue.
 #
 # HX_FORMAT_JOBS controls the concurrent process limit; default "auto" caps at four jobs.
+# Oversized files use at most two lanes while ordinary chunks remain parallel.
+# HX_FORMAT_OVERSIZED_JOBS can lower the heavy-task cap on a constrained host.
+# HX_FORMAT_TIMEOUT_SECONDS bounds one formatter task; the default is four minutes.
 exec node scripts/lint/hx-format-guard.js

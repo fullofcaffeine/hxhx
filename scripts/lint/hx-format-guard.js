@@ -7,6 +7,9 @@ const os = require('os')
 const path = require('path')
 const { spawn, spawnSync } = require('child_process')
 
+const DEFAULT_FORMATTER_TIMEOUT_MS = 4 * 60 * 1000
+const DEFAULT_OVERSIZED_JOBS = 2
+
 /**
  * Checks all tracked Haxe files with the official haxelib formatter.
  *
@@ -14,8 +17,11 @@ const { spawn, spawnSync } = require('child_process')
  * formatter invocation is one of the slower local guards. This helper keeps the
  * formatter as the source of truth, but isolates oversized files from ordinary
  * line-balanced chunks and runs those deterministic tasks through a bounded work
- * queue. Set HX_FORMAT_JOBS=1 for serial debugging or a positive integer to
- * override the default auto cap.
+ * queue. Oversized files use at most two lanes, instead of occupying every
+ * worker, while ordinary chunks continue in parallel. Set HX_FORMAT_JOBS=1 for
+ * serial debugging or a positive integer to override the default auto cap.
+ * HX_FORMAT_OVERSIZED_JOBS can lower the heavy-task cap for a constrained host,
+ * and HX_FORMAT_TIMEOUT_SECONDS bounds one formatter task.
  */
 
 function fail(message) {
@@ -94,6 +100,22 @@ function parseJobs(value, fileCount) {
   return Math.min(parsed, fileCount)
 }
 
+function parseFormatterTimeoutMs(value) {
+  if (!value) return DEFAULT_FORMATTER_TIMEOUT_MS
+  const seconds = Number(value)
+  if (!Number.isFinite(seconds) || seconds <= 0) fail(`HX_FORMAT_TIMEOUT_SECONDS must be a positive number, got ${value}`)
+  return Math.ceil(seconds * 1000)
+}
+
+function parseOversizedJobs(value, jobs) {
+  if (!value) return Math.min(DEFAULT_OVERSIZED_JOBS, jobs)
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    fail(`HX_FORMAT_OVERSIZED_JOBS must be a positive integer, got ${value}`)
+  }
+  return Math.min(parsed, jobs)
+}
+
 function balancedBuckets(files, jobs) {
   const buckets = Array.from({ length: jobs }, () => ({ files: [], lines: 0 }))
   for (const file of files) {
@@ -123,13 +145,14 @@ function buildFormatterBuckets(files, jobs) {
 
   for (const file of files) {
     if (jobs > 1 && file.lines >= oversizedThreshold) {
-      oversized.push({ files: [file.path], lines: file.lines })
+      oversized.push({ files: [file.path], lines: file.lines, oversized: true })
     } else {
       ordinary.push(file)
     }
   }
 
-  const ordinaryBuckets = ordinary.length > 0 ? balancedBuckets(ordinary, Math.min(jobs, ordinary.length)) : []
+  const ordinaryBuckets =
+    ordinary.length > 0 ? balancedBuckets(ordinary, Math.min(jobs, ordinary.length)).map(bucket => ({ ...bucket, oversized: false })) : []
   return {
     buckets: oversized.concat(ordinaryBuckets),
     oversizedThreshold,
@@ -137,15 +160,56 @@ function buildFormatterBuckets(files, jobs) {
   }
 }
 
-function runFormatter(root, bucket, index, total) {
+function killProcessTree(child) {
+  try {
+    if (process.platform !== 'win32' && child.pid) {
+      process.kill(-child.pid, 'SIGKILL')
+    } else {
+      child.kill('SIGKILL')
+    }
+  } catch (error) {
+    if (!error || error.code !== 'ESRCH') throw error
+  }
+}
+
+/**
+ * Runs one child process with captured output and a hard deadline.
+ *
+ * Formatter wrappers can create grandchildren. On POSIX we therefore give the
+ * command its own process group and terminate the complete group on timeout,
+ * preventing an abandoned formatter or Neko process from leaking into later
+ * developer commands.
+ */
+function runCommandWithTimeout(command, args, options = {}) {
   return new Promise(resolve => {
-    const args = ['run', 'formatter']
-    for (const file of bucket.files) args.push('-s', file)
-    args.push('--check')
     const started = Date.now()
-    const child = spawn('haxelib', args, { cwd: root, env: process.env })
+    const timeoutMs = options.timeoutMs || DEFAULT_FORMATTER_TIMEOUT_MS
+    const child = spawn(command, args, {
+      cwd: options.cwd || process.cwd(),
+      env: options.env || process.env,
+      detached: process.platform !== 'win32',
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
     let stdout = ''
     let stderr = ''
+    let finished = false
+    let timedOut = false
+    let timer = null
+
+    function finish(result) {
+      if (finished) return
+      finished = true
+      if (timer) clearTimeout(timer)
+      resolve({
+        ...result,
+        pid: child.pid,
+        timedOut,
+        timeoutMs,
+        elapsedMs: Date.now() - started,
+        stdout,
+        stderr
+      })
+    }
 
     child.stdout.on('data', chunk => {
       stdout += chunk
@@ -153,13 +217,26 @@ function runFormatter(root, bucket, index, total) {
     child.stderr.on('data', chunk => {
       stderr += chunk
     })
-    child.on('error', error => {
-      resolve({ index, total, bucket, elapsedMs: Date.now() - started, error, stdout, stderr })
-    })
-    child.on('close', (code, signal) => {
-      resolve({ index, total, bucket, elapsedMs: Date.now() - started, code, signal, stdout, stderr })
-    })
+    child.on('error', error => finish({ error }))
+    child.on('close', (code, signal) => finish({ code, signal }))
+
+    timer = setTimeout(() => {
+      timedOut = true
+      killProcessTree(child)
+    }, timeoutMs)
   })
+}
+
+async function runFormatter(root, bucket, index, total) {
+  const args = ['run', 'formatter']
+  for (const file of bucket.files) args.push('-s', file)
+  args.push('--check')
+  const result = await runCommandWithTimeout('haxelib', args, {
+    cwd: root,
+    env: process.env,
+    timeoutMs: parseFormatterTimeoutMs(process.env.HX_FORMAT_TIMEOUT_SECONDS)
+  })
+  return { index, total, bucket, ...result }
 }
 
 function printFormatterOutput(result) {
@@ -172,19 +249,28 @@ function printFormatterOutput(result) {
  * Failures include the exact owning file list, while worker summaries expose the
  * effective load balance without making completion order part of correctness.
  */
-async function runFormatCheck(root, buckets, jobs) {
+async function runFormatCheck(root, buckets, jobs, oversizedJobs) {
   const started = Date.now()
-  const results = await runFormatterQueue(root, buckets, Math.min(buckets.length, jobs))
+  const results = await runFormatterQueue(root, buckets, Math.min(buckets.length, jobs), runFormatter, oversizedJobs)
   let failed = false
   for (const result of results) {
     const seconds = (result.elapsedMs / 1000).toFixed(3)
-    const status = result.error ? 'error' : result.code === 0 ? 'ok' : `exit=${result.code}${result.signal ? ` signal=${result.signal}` : ''}`
+    const status = result.timedOut
+      ? `timeout=${(result.timeoutMs / 1000).toFixed(0)}s`
+      : result.error
+        ? 'error'
+        : result.code === 0
+          ? 'ok'
+          : `exit=${result.code}${result.signal ? ` signal=${result.signal}` : ''}`
     console.log(
       `[guard:hx-format] chunk ${result.index}/${result.total} ${status} files=${result.bucket.files.length} lines=${result.bucket.lines} elapsed=${seconds}s`
     )
     if (result.error || result.code !== 0) {
       failed = true
       console.error(`[guard:hx-format] chunk ${result.index}/${result.total} files:\n${result.bucket.files.join('\n')}`)
+      if (result.timedOut) {
+        console.error(`[guard:hx-format] ERROR: formatter task exceeded its ${(result.timeoutMs / 1000).toFixed(0)}s deadline.`)
+      }
       if (result.error) console.error(`[guard:hx-format] ERROR: ${result.error.message}`)
       printFormatterOutput(result)
     }
@@ -208,25 +294,67 @@ async function runFormatCheck(root, buckets, jobs) {
 }
 
 /**
- * Runs deterministic formatter tasks with at most `jobs` child processes. Task
- * membership and diagnostics stay stable even though a free worker may begin the
- * next task as soon as its previous formatter process exits.
+ * Runs deterministic formatter tasks with at most `jobs` child processes.
+ *
+ * When oversized singleton files exist, a small bounded group processes them.
+ * At least one worker remains available for ordinary chunks, and heavy workers
+ * help ordinary work after their own queue finishes. This avoids both failure
+ * modes: every worker cannot be consumed by mega-files, and normal files do not
+ * wait behind the complete heavy queue.
  */
-async function runFormatterQueue(root, buckets, jobs, runner = runFormatter) {
+async function runFormatterQueue(root, buckets, jobs, runner = runFormatter, oversizedJobs = DEFAULT_OVERSIZED_JOBS) {
   const results = new Array(buckets.length)
-  let nextIndex = 0
 
-  async function work(worker) {
-    while (nextIndex < buckets.length) {
-      const index = nextIndex
-      nextIndex += 1
-      const result = await runner(root, buckets[index], index + 1, buckets.length)
-      results[index] = { ...result, worker }
+  async function runIndex(index, worker) {
+    const result = await runner(root, buckets[index], index + 1, buckets.length)
+    results[index] = { ...result, worker }
+  }
+
+  if (jobs === 1) {
+    for (let index = 0; index < buckets.length; index += 1) await runIndex(index, 1)
+    return results
+  }
+
+  const oversizedIndexes = []
+  const ordinaryIndexes = []
+  for (let index = 0; index < buckets.length; index += 1) {
+    ;(buckets[index].oversized ? oversizedIndexes : ordinaryIndexes).push(index)
+  }
+
+  let nextOrdinary = 0
+  async function workOrdinary(worker) {
+    while (nextOrdinary < ordinaryIndexes.length) {
+      const ordinaryIndex = nextOrdinary
+      nextOrdinary += 1
+      await runIndex(ordinaryIndexes[ordinaryIndex], worker)
     }
   }
 
-  const workerCount = Math.min(jobs, buckets.length)
-  await Promise.all(Array.from({ length: workerCount }, (_unused, index) => work(index + 1)))
+  if (oversizedIndexes.length === 0) {
+    const workerCount = Math.min(jobs, ordinaryIndexes.length)
+    await Promise.all(Array.from({ length: workerCount }, (_unused, index) => workOrdinary(index + 1)))
+    return results
+  }
+
+  let nextOversized = 0
+  async function workOversizedThenHelp(worker) {
+    while (nextOversized < oversizedIndexes.length) {
+      const oversizedIndex = nextOversized
+      nextOversized += 1
+      await runIndex(oversizedIndexes[oversizedIndex], worker)
+    }
+    await workOrdinary(worker)
+  }
+
+  const maximumOversizedWorkers = ordinaryIndexes.length > 0 ? jobs - 1 : jobs
+  const oversizedWorkerCount = Math.min(oversizedJobs, maximumOversizedWorkers, oversizedIndexes.length)
+  const active = []
+  for (let index = 0; index < oversizedWorkerCount; index += 1) active.push(workOversizedThenHelp(index + 1))
+  const ordinaryWorkerCount = Math.min(jobs - oversizedWorkerCount, ordinaryIndexes.length)
+  for (let index = 0; index < ordinaryWorkerCount; index += 1) {
+    active.push(workOrdinary(oversizedWorkerCount + index + 1))
+  }
+  await Promise.all(active)
   return results
 }
 
@@ -277,12 +405,14 @@ async function main() {
     .sort((a, b) => b.lines - a.lines || a.path.localeCompare(b.path))
   const totalLines = files.reduce((sum, file) => sum + file.lines, 0)
   const jobs = parseJobs(process.env.HX_FORMAT_JOBS || 'auto', files.length)
+  const oversizedJobs = parseOversizedJobs(process.env.HX_FORMAT_OVERSIZED_JOBS, jobs)
+  const timeoutMs = parseFormatterTimeoutMs(process.env.HX_FORMAT_TIMEOUT_SECONDS)
   const plan = buildFormatterBuckets(files, jobs)
 
   console.log(
-    `[guard:hx-format] Checking Haxe formatting with jobs=${jobs} tasks=${plan.buckets.length} isolated=${plan.isolatedFileCount} isolate_at_lines=${plan.oversizedThreshold} files=${files.length} lines=${totalLines}...`
+    `[guard:hx-format] Checking Haxe formatting with jobs=${jobs} tasks=${plan.buckets.length} isolated=${plan.isolatedFileCount} oversized_jobs=${oversizedJobs} timeout=${(timeoutMs / 1000).toFixed(0)}s isolate_at_lines=${plan.oversizedThreshold} files=${files.length} lines=${totalLines}...`
   )
-  const elapsedMs = await runFormatCheck(root, plan.buckets, jobs)
+  const elapsedMs = await runFormatCheck(root, plan.buckets, jobs, oversizedJobs)
   checkSentinelDeterminism(root)
   console.log(`[guard:hx-format] OK: Haxe formatting is clean. elapsed=${(elapsedMs / 1000).toFixed(3)}s`)
 }
@@ -295,5 +425,6 @@ module.exports = {
   balancedBuckets,
   buildFormatterBuckets,
   existingFiles,
+  runCommandWithTimeout,
   runFormatterQueue
 }

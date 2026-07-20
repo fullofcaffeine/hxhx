@@ -136,6 +136,32 @@ Verification should prove the next engineering claim without wasting hours on av
 - For the repo formatting guard, use `npm run guard:hx-format`. It delegates to the official `haxelib run formatter --check` and only parallelizes deterministic file chunks; do not replace it with ad hoc formatting rules.
 - When a gate cannot be parallelized safely, say why in the work log so the next maintainer knows the serialization is intentional.
 
+## Tooling And Performance Are Product Features
+
+Fast, dependable developer tooling is one of the main reasons this project exists. `hxhx` and
+`reflaxe.ocaml` should make compiler, plugin, target, and ordinary Haxe development approach native-tool
+iteration speed while preserving correctness, customizability, and embeddability.
+
+- Treat cold, warm, incremental, one-file, build, test, link, plugin-load, and compiler-server latency as
+  product behavior. Measure the relevant path before and after a tooling or architecture change instead of
+  assuming that "native" or "parallel" means fast.
+- A slow serial fallback is useful for diagnosis, but it is not a durable fix for a parallelism, cache,
+  scheduling, process-leak, or artifact-ownership defect. Repair the normal fast path or file a concrete
+  performance/tooling bead with measurements, ownership, and an acceptance budget.
+- Keep the ordinary edit/test loop focused and incremental. Broad bootstrap, cross-host, package, and
+  release gates remain necessary evidence, but they must not become the default response to every local
+  source change.
+- Parallelize only independent work. Bound expensive singleton tasks, prevent competing mega-file or
+  native-build jobs from starving each other, and give long-running children explicit timeouts and cleanup
+  ownership so a failed command cannot leak into later work.
+- Cache only artifacts with a complete identity and invalidation contract. A fast stale result is a
+  correctness bug; a correct cache that routinely rebuilds unrelated work is a performance bug.
+- Prefer native promoted compiler/target/plugin artifacts where they provide measured iteration or runtime
+  wins. Compare them with delegated stage0 and direct-native baselines, and keep the Haxe-authored workflow
+  at least as easy to inspect, debug, package, and reproduce.
+- Do not normalize unexplained latency regressions. Record the bottleneck, the exact command and workload,
+  the expected fast path, and the follow-up owner before moving on.
+
 ## Example Coverage Policy
 
 - Treat public examples as compatibility contracts, not disposable demos.
