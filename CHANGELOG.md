@@ -1,3 +1,11 @@
+## [0.23.2](https://github.com/fullofcaffeine/hxhx/compare/v0.23.1...v0.23.2) (2026-07-20)
+
+
+### Bug Fixes
+
+* **ci:** retain unreleased QA risk ([60638d1](https://github.com/fullofcaffeine/hxhx/commit/60638d128471fcdceadcc06ca98e8aeede423903))
+* **release:** verify exact Core QA proof ([76b8ebd](https://github.com/fullofcaffeine/hxhx/commit/76b8ebd27989702b9bc0380c4cc1878ab2894352))
+
 ## [0.23.1](https://github.com/fullofcaffeine/hxhx/compare/v0.23.0...v0.23.1) (2026-07-20)
 
 
