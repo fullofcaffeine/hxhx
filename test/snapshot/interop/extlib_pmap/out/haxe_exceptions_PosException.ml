@@ -21,7 +21,10 @@ let __ctor = fun (self : t) message previous pos -> ignore (ignore ((
     (Obj.magic self : t).posInfos <- __assign_3;
     __assign_3
   )));
-  (Obj.magic self : Haxe_Exception.t).__shiftStack (Obj.magic self) ()
+  let __place_receiver_4 = self in let __place_old_5 = (__place_receiver_4 : t).__skipStack in let __place_new_6 = HxInt.add __place_old_5 1 in (
+    (__place_receiver_4 : t).__skipStack <- __place_new_6;
+    __place_old_5
+  )
 )))
 
 let toString__impl = fun (self : t) () -> (((((((("" ^ HxString.toStdString (Haxe_Exception.toString__impl (Obj.magic self) ())) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get ((Obj.magic self : t).posInfos) "className"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get ((Obj.magic self : t).posInfos) "methodName"))) ^ " at ") ^ HxString.toStdString (Obj.obj (HxAnon.get ((Obj.magic self : t).posInfos) "fileName"))) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get ((Obj.magic self : t).posInfos) "lineNumber"))
@@ -42,7 +45,10 @@ let create = fun message previous pos -> let self = ({ __hx_type = HxType.class_
       (Obj.magic self : t).posInfos <- __assign_3;
       __assign_3
     )));
-    (Obj.magic self : Haxe_Exception.t).__shiftStack (Obj.magic self) ()
+    let __place_receiver_4 = self in let __place_old_5 = (__place_receiver_4 : t).__skipStack in let __place_new_6 = HxInt.add __place_old_5 1 in (
+      (__place_receiver_4 : t).__skipStack <- __place_new_6;
+      __place_old_5
+    )
   )));
   self
 )

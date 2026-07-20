@@ -32,11 +32,7 @@ class Exception {
 	@:noCompletion var __exceptionMessage:String;
 	@:noCompletion var __exceptionStack:Null<CallStack>;
 	@:noCompletion var __nativeStack:Any;
-	// Keep the default implicit while the typed-body lifecycle repair is in
-	// progress. This source shape moved an earlier failure but does not fix the
-	// actual defect: a later Reflaxe cleanup can discard the target-owned origin
-	// while retaining the feature-gated assignment or update itself.
-	@:noCompletion @:ifFeature("haxe.Exception.get_stack") var __skipStack:Int;
+	@:noCompletion @:ifFeature("haxe.Exception.get_stack") var __skipStack:Int = 0;
 	@:noCompletion var __nativeException:Any;
 	@:noCompletion var __previousException:Null<Exception>;
 
@@ -95,18 +91,13 @@ class Exception {
 
 	@:noCompletion
 	@:ifFeature("haxe.Exception.get_stack")
-	// Keep both stack helpers as real calls while the typed-body lifecycle repair
-	// is in progress. This source shape moved an earlier failure, but Haxe's
-	// built-in post-DCE constructor work completes before Reflaxe preprocessing.
-	// The remaining defect is loss of the target-owned origin inside that
-	// preprocessing lifecycle, not late Haxe inlining.
-	function __shiftStack():Void {
+	inline function __shiftStack():Void {
 		__skipStack++;
 	}
 
 	@:noCompletion
 	@:ifFeature("haxe.Exception.get_stack")
-	function __unshiftStack():Void {
+	inline function __unshiftStack():Void {
 		__skipStack--;
 	}
 

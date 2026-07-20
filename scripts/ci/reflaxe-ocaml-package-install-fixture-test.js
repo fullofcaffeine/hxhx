@@ -8,21 +8,6 @@ const { findNekoLibraryDirectories, performanceEnvironment, sha256Directory, val
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'reflaxe-ocaml-package-install-fixture-'))
 try {
-	// These two source-shape changes are provisional controls, not the lifecycle
-	// fix. Haxe finishes its constructor and field-initializer work before Reflaxe
-	// preprocessing; the actual defect was loss of target-owned metadata inside
-	// that preprocessing sequence. Keep the controls stable until each is restored
-	// and tested independently after the lifecycle/package route is closed.
-	const exceptionSource = fs.readFileSync(path.join(
-		__dirname,
-		'../../packages/reflaxe.ocaml/std/ocaml/_std/haxe/Exception.hx'
-	), 'utf8')
-	assert.match(exceptionSource, /\n\tfunction __shiftStack\(\):Void \{/)
-	assert.match(exceptionSource, /\n\tfunction __unshiftStack\(\):Void \{/)
-	assert.doesNotMatch(exceptionSource, /inline function __(?:un)?shiftStack/)
-	assert.match(exceptionSource, /var __skipStack:Int;/)
-	assert.doesNotMatch(exceptionSource, /var __skipStack:Int\s*=/)
-
 	const versionRoot = path.join(root, 'versions/2.4.0-linux64')
 	fs.mkdirSync(versionRoot, { recursive: true })
 	fs.writeFileSync(path.join(versionRoot, 'libneko.so.2'), '')
