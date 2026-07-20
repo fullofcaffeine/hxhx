@@ -46,5 +46,6 @@ class M3IntegrationTest {
 
 		// Ensure closure itself isn't forced into a ref by default.
 		assertNotContains(content, "let bump = ref", "closure binding not ref");
+		assertNotContains(content, "let increment = ref", "straight-line local inside closure not ref");
 	}
 }

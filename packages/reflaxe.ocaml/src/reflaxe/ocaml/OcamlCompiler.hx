@@ -48,8 +48,9 @@ import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
-import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
-import reflaxe.ocaml.lowered.OcamlPlacePlanSealer;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
+import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lifecycle.OcamlSemanticLifecycleTraceWriter;
 import reflaxe.GenericCompiler;
 import reflaxe.lifecycle.ProgramRevision;
@@ -68,7 +69,7 @@ using reflaxe.helpers.BaseTypeHelper;
 class OcamlCompiler extends DirectToStringCompiler {
 	public static var instance:OcamlCompiler;
 
-	public final placePlanRegistry:OcamlPlacePlanRegistry = new OcamlPlacePlanRegistry();
+	public final functionPlanRegistry:OcamlFunctionPlanRegistry = new OcamlFunctionPlanRegistry();
 
 	final ctx:CompilationContext = new CompilationContext();
 	final printer:OcamlASTPrinter = new OcamlASTPrinter();
@@ -234,13 +235,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 	/** Starts a fresh, revision-keyed target-plan registry for this request. */
 	override public function beginProgramRevision(revision:ProgramRevision):Void {
 		super.beginProgramRevision(revision);
-		placePlanRegistry.beginProgram(revision.id);
+		functionPlanRegistry.beginProgram(revision.id);
 		ctx.beginRuntimeRequirementProgram(revision.id);
 	}
 
-	/** Builds and validates all admitted place plans for one final typed body. */
-	public function sealPlacePlans(data:ClassFuncData):Void {
-		new OcamlPlacePlanSealer(ctx, placePlanRegistry).seal(data);
+	/** Builds and validates every admitted plan for one final typed function body. */
+	public function sealFunctionPlans(data:ClassFuncData):Void {
+		new OcamlFunctionPlanSealer(ctx, functionPlanRegistry).seal(data);
 	}
 
 	#if macro
@@ -911,7 +912,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#else
 		final emitSourceMap = false;
 		#end
-		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, placePlanRegistry, emitSourceMap);
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, emitSourceMap);
 
 		// Header marker as a no-op binding to keep output non-empty and debuggable.
 		items.push(OcamlModuleItem.ILet([
@@ -1361,7 +1362,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case TFun(_, ret): ret;
 					case _: ctorFunc.expr.t;
 				};
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, placePlanRegistry.sealedBindingFor(ctorFunc), ctorReturnType)) {
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, functionPlanRegistry.sealedFunctionPlanFor(ctorFunc), ctorReturnType)) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
 						ctorBody = body;
@@ -1407,7 +1408,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						switch (entry.kind) {
 							case "var":
 								final init = localVarInitByName.exists(entry.name) ? localVarInitByName.get(entry.name) : null;
-								final value = init != null ? builder.buildExpr(init) : defaultValueForType(entry.field.type);
+								final value = init != null ? builder.buildStandaloneExpr(init,
+									OcamlLocalStoragePlanner.planExpression(init)) : defaultValueForType(entry.field.type);
 								fields.push({name: ctx.ocamlRecordLabel(entry.name), value: value});
 							case "method":
 								final info = dispatchMethodDecl.get(entry.name);
@@ -1423,7 +1425,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				} else {
 					for (v in instanceVarsLocal) {
 						final init = v.findDefaultExpr();
-						final value = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
+						final value = init != null ? builder.buildStandaloneExpr(init,
+							OcamlLocalStoragePlanner.planExpression(init)) : defaultValueForType(v.field.type);
 						fields.push({name: ctx.ocamlRecordLabel(v.field.name), value: value});
 					}
 					if (isDispatchInstance) {
@@ -1539,7 +1542,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case TFun(_, ret): ret;
 						case _: f.expr.t;
 					};
-					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, placePlanRegistry.sealedBindingFor(f), methodReturnType)) {
+					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, functionPlanRegistry.sealedFunctionPlanFor(f), methodReturnType)) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
 								final out:Array<OcamlPat> = [];
@@ -1633,7 +1636,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case TFun(_, ret): ret;
 				case _: f.expr.t;
 			};
-			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, placePlanRegistry.sealedBindingFor(f), staticReturnType);
+			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, functionPlanRegistry.sealedFunctionPlanFor(f), staticReturnType);
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
 				if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == f.field.name) {
@@ -1695,7 +1698,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			// that `ClassVarData.findDefaultExpr()` uses for instance vars).
 			final init = v.field.expr();
 			final initT = ocamlTypeExprFromHaxeType(v.field.type);
-			final compiledInitFromFieldType = init != null ? builder.buildExprForAssignment(v.field.type, init) : defaultValueForType(v.field.type);
+			final compiledInitFromFieldType = init != null ? builder.buildStandaloneExprForAssignment(v.field.type, init,
+				OcamlLocalStoragePlanner.planExpression(init)) : defaultValueForType(v.field.type);
 			final compiledInit = switch (initT) {
 				case OcamlTypeExpr.TIdent("Obj.t"):
 					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [compiledInitFromFieldType]);
@@ -1780,7 +1784,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final revision = programRevision;
 		if (revision == null)
 			throw "reflaxe.ocaml: cannot seal generated artifacts without a program revision";
-		final artifactConfigurationRevision = OcamlArtifactConfigurationRevision.fromMacroContext(OcamlPlacePlanRegistry.PIPELINE_REVISION,
+		final artifactConfigurationRevision = OcamlArtifactConfigurationRevision.fromMacroContext(OcamlFunctionPlanRegistry.PIPELINE_REVISION,
 			DuneProjectEmitter.defaultProjectName(outDir));
 		final artifactProfile = OcamlProfileContract.toDefineValue(OcamlProfileContract.fromDefineValue(haxe.macro.Context.definedValue("ocaml_profile")));
 		final artifacts = new OcamlArtifactManifestBuilder(outDir, revision.id, artifactConfigurationRevision, artifactProfile);
@@ -2921,8 +2925,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#else
 		final emitSourceMap = false;
 		#end
-		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, placePlanRegistry, emitSourceMap);
-		final e = builder.buildExpr(expr);
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, emitSourceMap);
+		final e = builder.buildStandaloneExpr(expr, OcamlLocalStoragePlanner.planExpression(expr));
 		return printer.printExpr(e);
 	}
 

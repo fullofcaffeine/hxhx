@@ -78,19 +78,19 @@ typed tree, nor a shared cross-target representation IR.
 | Other simple assignment | `OcamlBuilder.buildBinop`, approximately lines 4106-4250 | Local, same-module cross-type static, anonymous/dynamic, bytes, non-Int or non-nominal array, and deliberately unadmitted instance-field cases still construct target syntax directly. Several unhandled states return OCaml `unit`. |
 | Other compound assignment | `OcamlBuilder.buildBinop`, approximately lines 4251-4590 | Other operators and place kinds still repeat operator selection, receiver sharing, load, arithmetic, store, and result. Ref, unadmitted field/static, and other stores can still return OCaml `unit` in expression position. |
 | Other prefix/postfix update | `OcamlBuilder.buildUnop`, approximately lines 5377-5707 | Other place kinds, Float, nullable, Dynamic, and abstract handling still combine numeric classification, representation, place mutation, and old/new result selection. Unsupported states can return `unit`. |
-| Straight-line local assignment | `OcamlBuilder.buildBlockFromIndex`, from approximately line 5832 | A second path rewrites non-ref local assignment as OCaml `let` shadowing, so local storage and expression lowering do not share one durable plan. |
-| Local mutation and capture | `collectMutatedLocalIds*` and `collectRefLocalIds*`, from approximately line 6309 | Correctness facts live in mutable traversal maps and are consumed later by syntax construction. This is follow-up Bead `haxe_ocaml-9bome`, but the first place model must leave it a stable home. |
+| Straight-line local assignment | `OcamlLocalStoragePlanner` before syntax construction; `OcamlBuilder.buildBlockFromIndex` consumes the sealed choice | The planner records when a top-level write can introduce a newer immutable `let` binding. The builder still owns the mechanical target expression, but it no longer reclassifies the local. |
+| Local mutation and capture | `OcamlLocalStoragePlanner` plus the revision-bound `OcamlFunctionPlanRegistry` | Loops, nested blocks/functions, expression-position writes, compound updates, increment/decrement, and captured mutation select one shared `ref` cell with deterministic reasons. The final preprocessor seals this plan to the same exact body revision as place operations, and late mutation fails before source output. Carrier, weak-polymorphism, and `Obj.t` slot choices remain follow-up scope in `haxe_ocaml-9bome`. |
 | Field layout and carrier type | `OcamlCompiler` plus `OcamlBuilder` helpers | Record layout, `Obj.t`, null, default, receiver cast, and conversion choices are selected in more than one component. The place slice records references to the selected facts; it does not attempt the full representation migration. |
-| Runtime need for the admitted place family | `OcamlPlacePlanSealer` and `OcamlRuntimeRequirementLedger` before syntax construction | Every `Int` addition and array read/write receives its own source identity, explanation, implementation feature, checked root module, profile eligibility, and deterministic revision. The lowering report verifies that every plan ID resolves to one of these records. |
+| Runtime need for the admitted place family | `OcamlFunctionPlanSealer` and `OcamlRuntimeRequirementLedger` before syntax construction | Every `Int` addition and array read/write receives its own source identity, explanation, implementation feature, checked root module, profile eligibility, and deterministic revision. The lowering report verifies that every plan ID resolves to one of these records. |
 | Other runtime needs | `RuntimeUsageCollector` and `RuntimeCopier` after syntax construction | These families still choose roots from generated OCaml structure. The scan is useful as a consistency check, but it cannot be the semantic source of truth and cannot see through opaque raw fragments. Whole-program runtime authority therefore remains incomplete. |
 | Unsupported behavior | `guardrailError` plus `CUnit` branches | Errors are suppressed while compiling the current Haxe standard library. Bootstrap continuity must not become the release failure policy for an admitted place form. |
 
 At the baseline inventory, `OcamlBuilder.hx` was 7,688 physical lines and
-`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,654 and 3,561
-lines respectively. Place planning, validation, reporting, and emission live in
-focused `lowered/` modules. Existing source-position caching also moved out of
-the builder, so the semantic cutovers reduced the mega-file by 34 lines overall
-instead of adding another responsibility to it.
+`OcamlCompiler.hx` was 3,555. After the current cutovers, they are 7,465 and 3,701
+lines respectively. Place and local-storage planning, validation, reporting,
+and revision sealing live in focused `lowered/` modules. The builder is now 223
+lines smaller than the baseline even as the broader target gained other
+features; the compiler's intervening growth remains separate mega-file debt.
 
 ## Place coverage already attempted by the emitter
 

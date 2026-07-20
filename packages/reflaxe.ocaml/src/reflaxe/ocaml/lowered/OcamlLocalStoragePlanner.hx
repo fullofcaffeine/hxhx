@@ -47,8 +47,10 @@ class OcamlLocalStoragePlanner {
 
 		function collectDeclaredLocalIdsShallow(expression:TypedExpr, declared:Map<Int, Bool>):Void {
 			switch (expression.expr) {
-				case TVar(local, _):
+				case TVar(local, initializer):
 					declared.set(local.id, true);
+					if (initializer != null)
+						collectDeclaredLocalIdsShallow(initializer, declared);
 				case TFunction(_):
 					// A nested function defines its own scope.
 				case _:
@@ -67,12 +69,17 @@ class OcamlLocalStoragePlanner {
 			}
 		}
 
-		function capturedOuterLocalsForFunction(functionExpression:TFunc):Map<Int, Bool> {
+		function declaredLocalsForFunction(functionExpression:TFunc):Map<Int, Bool> {
 			final declared:Map<Int, Bool> = [];
-			final used:Map<Int, Bool> = [];
 			for (argument in functionExpression.args)
 				declared.set(argument.v.id, true);
 			collectDeclaredLocalIdsShallow(functionExpression.expr, declared);
+			return declared;
+		}
+
+		function capturedOuterLocalsForFunction(functionExpression:TFunc):Map<Int, Bool> {
+			final declared = declaredLocalsForFunction(functionExpression);
+			final used:Map<Int, Bool> = [];
 			collectUsedLocalIdsShallow(functionExpression.expr, used);
 
 			final outer:Map<Int, Bool> = [];
@@ -112,21 +119,32 @@ class OcamlLocalStoragePlanner {
 			addContextReasons(localId, depth, inLoop, inFunction, isStatement);
 		}
 
-		function visit(expression:TypedExpr, depth:Int, inLoop:Bool, inFunction:Bool, isStatement:Bool):Void {
+		function visit(expression:TypedExpr, depth:Int, inLoop:Bool, ownedLocals:Null<Map<Int, Bool>>, isStatement:Bool):Void {
 			switch (expression.expr) {
 				case TFunction(functionExpression):
 					final functionCaptures = capturedOuterLocalsForFunction(functionExpression);
 					for (localId in functionCaptures.keys())
 						captured.set(localId, true);
-					visit(functionExpression.expr, depth + 1, inLoop, true, false);
+					// The sealed plan covers the complete function tree, but each nested
+					// function still has its own straight-line block. Reset the depth and
+					// loop context so its own locals retain the same storage choice they
+					// received when the legacy builder rescanned that function alone.
+					final functionLocals = declaredLocalsForFunction(functionExpression);
+					switch (functionExpression.expr.expr) {
+						case TBlock(items):
+							for (item in items)
+								visit(item, 0, false, functionLocals, true);
+						case _:
+							visit(functionExpression.expr, 0, false, functionLocals, true);
+					}
 					return;
 				case TWhile(condition, body, _):
-					visit(condition, depth + 1, true, inFunction, false);
-					visit(body, depth + 1, true, inFunction, false);
+					visit(condition, depth + 1, true, ownedLocals, false);
+					visit(body, depth + 1, true, ownedLocals, false);
 					return;
 				case TBlock(items):
 					for (item in items)
-						visit(item, depth + 1, inLoop, inFunction, true);
+						visit(item, depth + 1, inLoop, ownedLocals, true);
 					return;
 				case _:
 			}
@@ -135,29 +153,32 @@ class OcamlLocalStoragePlanner {
 				case TBinop(OpAssign, left, _):
 					switch (left.expr) {
 						case TLocal(local):
-							markSimpleAssignment(local.id, depth, inLoop, inFunction, isStatement);
+							final mutatesCapturedOuter = ownedLocals != null && !ownedLocals.exists(local.id);
+							markSimpleAssignment(local.id, depth, inLoop, mutatesCapturedOuter, isStatement);
 						case _:
 					}
 				case TBinop(OpAssignOp(_), left, _):
 					switch (left.expr) {
 						case TLocal(local):
-							markCellMutation(local.id, OcamlLocalStorageReason.CompoundAssignment, depth, inLoop, inFunction, isStatement);
+							final mutatesCapturedOuter = ownedLocals != null && !ownedLocals.exists(local.id);
+							markCellMutation(local.id, OcamlLocalStorageReason.CompoundAssignment, depth, inLoop, mutatesCapturedOuter, isStatement);
 						case _:
 					}
 				case TUnop(OpIncrement, _, operand) | TUnop(OpDecrement, _, operand):
 					switch (operand.expr) {
 						case TLocal(local):
-							markCellMutation(local.id, OcamlLocalStorageReason.IncrementOrDecrement, depth, inLoop, inFunction, isStatement);
+							final mutatesCapturedOuter = ownedLocals != null && !ownedLocals.exists(local.id);
+							markCellMutation(local.id, OcamlLocalStorageReason.IncrementOrDecrement, depth, inLoop, mutatesCapturedOuter, isStatement);
 						case _:
 					}
 				case _:
 			}
 
-			TypedExprTools.iter(expression, child -> visit(child, depth + 1, inLoop, inFunction, false));
+			TypedExprTools.iter(expression, child -> visit(child, depth + 1, inLoop, ownedLocals, false));
 		}
 
 		for (expression in expressions)
-			visit(expression, 0, false, false, true);
+			visit(expression, 0, false, null, true);
 
 		for (localId in captured.keys()) {
 			if (mutatedAny.exists(localId) && mutatedAny.get(localId) == true) {

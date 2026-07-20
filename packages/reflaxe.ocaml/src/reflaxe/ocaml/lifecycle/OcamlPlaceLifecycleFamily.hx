@@ -10,7 +10,7 @@ import reflaxe.lifecycle.SemanticArtifactReplacement;
 import reflaxe.lifecycle.SemanticArtifactSnapshot;
 import reflaxe.lifecycle.SemanticPreprocessorAction;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
-import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.preprocessor.FinalizePlaceAssignmentsImpl;
 import reflaxe.ocaml.preprocessor.InlineSwitchTempImpl;
 import reflaxe.ocaml.preprocessor.PreservePlaceAssignmentsImpl;
@@ -26,9 +26,9 @@ class OcamlPlaceLifecycleFamily extends SemanticArtifactFamily {
 	public static inline final ID = "reflaxe.ocaml.place-plans";
 	static inline final PROTECTION_FINGERPRINT = "early-protection";
 
-	final registry:OcamlPlacePlanRegistry;
+	final registry:OcamlFunctionPlanRegistry;
 
-	public function new(registry:OcamlPlacePlanRegistry) {
+	public function new(registry:OcamlFunctionPlanRegistry) {
 		super(ID, SemanticArtifactBinding.StructuralEnvelope);
 		this.registry = registry;
 	}

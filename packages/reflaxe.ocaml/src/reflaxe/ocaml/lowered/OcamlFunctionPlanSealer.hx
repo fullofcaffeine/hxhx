@@ -6,6 +6,8 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
 import reflaxe.ocaml.CompilationContext;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 
@@ -18,18 +20,18 @@ private typedef OcamlPlaceRuntimeFacts = {
 }
 
 /**
-	Builds every admitted place plan from the final preprocessed function body.
+	Builds every admitted lowered plan from the final preprocessed function body.
 
-	This is the last source-semantic step for the admitted family. It requires a
-	stable origin marker, selects and validates the complete plan, registers that
-	plan against the exact function-body revision, and rejects an admitted
-	operation that reached this boundary without early protection.
+	This is the last source-semantic step for admitted place operations and local
+	storage. It plans both from the same body revision, rejects an admitted
+	operation that lost early protection, and seals one function record before
+	syntax construction begins.
 **/
-class OcamlPlacePlanSealer {
+class OcamlFunctionPlanSealer {
 	final context:CompilationContext;
-	final registry:OcamlPlacePlanRegistry;
+	final registry:OcamlFunctionPlanRegistry;
 
-	public function new(context:CompilationContext, registry:OcamlPlacePlanRegistry) {
+	public function new(context:CompilationContext, registry:OcamlFunctionPlanRegistry) {
 		this.context = context;
 		this.registry = registry;
 	}
@@ -71,9 +73,10 @@ class OcamlPlacePlanSealer {
 	public function seal(data:ClassFuncData):Void {
 		final binding = registry.planningBindingFor(data);
 		if (data.expr == null) {
-			registry.sealFunction(binding);
+			registry.sealFunction(binding, OcamlLocalStoragePlanner.planExpressions([]));
 			return;
 		}
+		final localStorage = OcamlLocalStoragePlanner.planExpression(data.expr);
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
@@ -113,7 +116,7 @@ class OcamlPlacePlanSealer {
 		}
 
 		visit(data.expr);
-		registry.sealFunction(binding);
+		registry.sealFunction(binding, localStorage);
 		final finalError = registry.validateBinding(binding, markerOriginIds);
 		if (finalError != null)
 			fail(finalError, data.expr.pos);

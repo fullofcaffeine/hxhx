@@ -8,7 +8,7 @@ import reflaxe.data.ClassFuncData;
 import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
-import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.preprocessors.BasePreprocessor;
 
 /**
@@ -32,22 +32,22 @@ class FinalizePlaceAssignmentsImpl extends BasePreprocessor {
 	public function process(data:ClassFuncData, compiler:BaseCompiler):Void {
 		final ocamlCompiler:OcamlCompiler = cast compiler;
 		if (data.expr == null) {
-			ocamlCompiler.sealPlacePlans(data);
+			ocamlCompiler.sealFunctionPlans(data);
 			return;
 		}
 		functionId = data.id;
 		ordinal = 0;
 		currentModuleId = data.classType.module;
 		currentTypeName = data.classType.name;
-		data.setExpr(finalizeProtection(data.expr, ocamlCompiler.placePlanRegistry));
-		ocamlCompiler.sealPlacePlans(data);
+		data.setExpr(finalizeProtection(data.expr, ocamlCompiler.functionPlanRegistry));
+		ocamlCompiler.sealFunctionPlans(data);
 	}
 
 	override public function semanticLifecycleId():String {
 		return ID;
 	}
 
-	function finalizeProtection(expression:TypedExpr, registry:OcamlPlacePlanRegistry):TypedExpr {
+	function finalizeProtection(expression:TypedExpr, registry:OcamlFunctionPlanRegistry):TypedExpr {
 		return switch (expression.expr) {
 			case TMeta(metadata, child) if (OcamlLoweredOrigin.isPlaceProtection(metadata)):
 				final protectionId = OcamlLoweredOrigin.readProtectionId(metadata);

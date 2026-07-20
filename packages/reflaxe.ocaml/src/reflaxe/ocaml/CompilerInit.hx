@@ -6,7 +6,7 @@ import reflaxe.lifecycle.SemanticLifecycleOptions;
 import reflaxe.preprocessors.ExpressionPreprocessor;
 import reflaxe.preprocessors.ExpressionPreprocessor.ExpressionPreprocessorHelper;
 import reflaxe.ocaml.lifecycle.OcamlPlaceLifecycleFamily;
-import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.macros.StrictModeEnforcer;
 import reflaxe.ocaml.preprocessor.FinalizePlaceAssignmentsImpl;
 import reflaxe.ocaml.preprocessor.InlineSwitchTempImpl;
@@ -176,8 +176,8 @@ class CompilerInit {
 			ignoreBodilessFunctions: false,
 			ignoreExterns: true,
 			expressionPreprocessors: prepasses,
-			semanticLifecycle: new SemanticLifecycleOptions([new OcamlPlaceLifecycleFamily(compiler.placePlanRegistry)],
-				OcamlPlacePlanRegistry.PIPELINE_REVISION, captureLifecycleTrace)
+			semanticLifecycle: new SemanticLifecycleOptions([new OcamlPlaceLifecycleFamily(compiler.functionPlanRegistry)],
+				OcamlFunctionPlanRegistry.PIPELINE_REVISION, captureLifecycleTrace)
 		});
 	}
 }

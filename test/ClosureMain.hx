@@ -3,7 +3,9 @@ class ClosureMain {
 		var x = 0;
 
 		var bump = function() {
-			x += 1;
+			var increment = 0;
+			increment = 1;
+			x += increment;
 		};
 
 		bump();

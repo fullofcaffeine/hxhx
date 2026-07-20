@@ -25,25 +25,25 @@ import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlFunctionPlanBinding;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlan;
-import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
-import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
-import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry.OcamlPlaceFunctionBinding;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 
 /**
 	Legacy TypedExpr-to-OcamlExpr traversal and target-syntax assembly.
 
 	Behavior-sensitive families move through focused typed OCaml lowering modules
-	before this class constructs syntax. The first hard-cut family is ordinary
-	value-producing instance-field assignment. New representation, scheduling,
-	mutation, runtime, or ABI decisions do not belong in this already-large
-	builder; legacy `unit` fallbacks remain migration debt, not the contract for a
-	newly admitted family.
+	before this class constructs syntax. Admitted place operations and local
+	mutable-storage choices now arrive in one revision-sealed function plan. New
+	representation, scheduling, mutation, runtime, or ABI decisions do not belong
+	in this already-large builder; legacy `unit` fallbacks remain migration debt,
+	not the contract for a newly admitted family.
 **/
 class OcamlBuilder {
 	static final injectionPrinter = new OcamlASTPrinter();
@@ -53,7 +53,7 @@ class OcamlBuilder {
 	public final emitSourceMap:Bool;
 
 	final placeAssignmentLowerer:OcamlPlaceAssignmentLowerer;
-	var currentPlaceFunctionBinding:Null<OcamlPlaceFunctionBinding> = null;
+	var currentFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
 
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
@@ -98,12 +98,12 @@ class OcamlBuilder {
 		}
 	}
 
-	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr, placePlanRegistry:OcamlPlacePlanRegistry,
+	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr, functionPlanRegistry:OcamlFunctionPlanRegistry,
 			emitSourceMap:Bool = false) {
 		this.ctx = ctx;
 		this.typeExprFromHaxeType = typeExprFromHaxeType;
 		this.emitSourceMap = emitSourceMap;
-		this.placeAssignmentLowerer = new OcamlPlaceAssignmentLowerer(ctx, placePlanRegistry);
+		this.placeAssignmentLowerer = new OcamlPlaceAssignmentLowerer(ctx, functionPlanRegistry);
 	}
 
 	inline function freshTmp(prefix:String):String {
@@ -119,12 +119,20 @@ class OcamlBuilder {
 		throw diagnostic;
 	}
 
+	function localStorageInvariant(message:String, position:Position):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-lowering:local-storage-invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, position);
+		#end
+		throw diagnostic;
+	}
+
 	/** Builds one admitted place operation from a sealed semantic plan. */
 	function buildPreservedPlaceOperation(metadata:haxe.macro.Expr.MetadataEntry, expression:TypedExpr):OcamlExpr {
 		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
 		if (originId == null)
 			return placeLoweringInvariant("a final place marker has no stable origin identity", expression.pos);
-		final binding = currentPlaceFunctionBinding;
+		final binding = currentFunctionPlanBinding;
 		if (binding == null)
 			return placeLoweringInvariant('origin "$originId" reached syntax construction outside a sealed function body', expression.pos);
 		return switch (placeAssignmentLowerer.lower(originId, binding, buildExpr, freshTmp)) {
@@ -5679,16 +5687,10 @@ class OcamlBuilder {
 	}
 
 	function buildBlock(exprs:Array<TypedExpr>):OcamlExpr {
-		// Mutability inference: decide which locals become `ref` (as opposed to `let`-shadowed)
-		// by scanning for assignments and closure-capture requirements.
-		final storagePlan = OcamlLocalStoragePlanner.planExpressions(exprs);
-		final previousStoragePlan = currentLocalStoragePlan;
-		currentLocalStoragePlan = storagePlan;
 		final usedIds = collectUsedLocalIdsFromExprs(exprs);
 		final prevUsed = currentUsedLocalIds;
 		currentUsedLocalIds = usedIds;
 		final result = buildBlockFromIndex(exprs, 0, false);
-		currentLocalStoragePlan = previousStoragePlan;
 		currentUsedLocalIds = prevUsed;
 		return result;
 	}
@@ -5875,53 +5877,49 @@ class OcamlBuilder {
 			&& ctx.currentTypeFullName == profClass;
 		final t0 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
-		final storagePlan = OcamlLocalStoragePlanner.planExpressions(exprs);
-		#if macro
-		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
-		#end
-		final previousStoragePlan = currentLocalStoragePlan;
-		currentLocalStoragePlan = storagePlan;
-		#if macro
-		if (profMatch)
-			log("reflaxe.ocaml: builder_block_refs dt_ms="
-				+ Std.string(Std.int((t1 - t0) * 1000))
-				+ " stmts="
-				+ Std.string(exprs.length));
-		final t2 = profMatch ? haxe.Timer.stamp() : 0.0;
-		#end
 		final usedIds = collectUsedLocalIdsFromExprs(exprs);
 		#if macro
-		final t3 = profMatch ? haxe.Timer.stamp() : 0.0;
+		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
 		final prevUsed = currentUsedLocalIds;
 		currentUsedLocalIds = usedIds;
 		#if macro
 		if (profMatch)
 			log("reflaxe.ocaml: builder_block_used dt_ms="
-				+ Std.string(Std.int((t3 - t2) * 1000))
+				+ Std.string(Std.int((t1 - t0) * 1000))
 				+ " stmts="
 				+ Std.string(exprs.length));
-		final t4 = profMatch ? haxe.Timer.stamp() : 0.0;
+		final t2 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
 		final result = buildBlockFromIndex(exprs, 0, true);
 		#if macro
-		final t5 = profMatch ? haxe.Timer.stamp() : 0.0;
+		final t3 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
 			log("reflaxe.ocaml: builder_block_build dt_ms="
-				+ Std.string(Std.int((t5 - t4) * 1000))
+				+ Std.string(Std.int((t3 - t2) * 1000))
 				+ " stmts="
 				+ Std.string(exprs.length));
 		#end
-		currentLocalStoragePlan = previousStoragePlan;
 		currentUsedLocalIds = prevUsed;
 		return result;
 	}
 
-	// Build RHS as if it were assigned to an LHS of `lhsType`.
-	// Some callsites (notably static initializers) need assignment-time coercions
-	// even outside direct `TVar`/`OpAssign` lowering.
-	public function buildExprForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
-		return coerceForAssignment(lhsType, rhs);
+	/** Builds one non-function root with an already-selected storage plan. */
+	public function buildStandaloneExpr(expression:TypedExpr, storagePlan:OcamlLocalStoragePlan):OcamlExpr {
+		final previousStoragePlan = currentLocalStoragePlan;
+		currentLocalStoragePlan = storagePlan;
+		final result = buildExpr(expression);
+		currentLocalStoragePlan = previousStoragePlan;
+		return result;
+	}
+
+	/** Applies assignment coercion to a non-function root with a selected plan. */
+	public function buildStandaloneExprForAssignment(lhsType:Type, rhs:TypedExpr, storagePlan:OcamlLocalStoragePlan):OcamlExpr {
+		final previousStoragePlan = currentLocalStoragePlan;
+		currentLocalStoragePlan = storagePlan;
+		final result = coerceForAssignment(lhsType, rhs);
+		currentLocalStoragePlan = previousStoragePlan;
+		return result;
 	}
 
 	static function containsNestedReturnInFunctionBody(bodyExpr:TypedExpr):Bool {
@@ -6089,8 +6087,8 @@ class OcamlBuilder {
 		name:String,
 		t:Type,
 		value:Null<TypedExpr>
-	}>, bodyExpr:TypedExpr,
-			placeFunctionBinding:OcamlPlaceFunctionBinding, ?expectedReturnType:Null<Type>):OcamlExpr {
+	}>, bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan,
+			?expectedReturnType:Null<Type>):OcamlExpr {
 		#if macro
 		final log = ctx.profileLogLine;
 		final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
@@ -6101,13 +6099,13 @@ class OcamlBuilder {
 			&& ctx.currentTypeFullName == profClass;
 		final t0 = profMatch ? haxe.Timer.stamp() : 0.0;
 		#end
-		final storagePlan = OcamlLocalStoragePlanner.planExpression(bodyExpr);
-		final previousPlaceFunctionBinding = currentPlaceFunctionBinding;
-		currentPlaceFunctionBinding = placeFunctionBinding;
+		final storagePlan = functionPlan.localStorage;
+		final previousFunctionPlanBinding = currentFunctionPlanBinding;
+		currentFunctionPlanBinding = functionPlan.binding;
 		#if macro
 		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
-			log("reflaxe.ocaml: builder_fn_refs dt_ms=" + Std.string(Std.int((t1 - t0) * 1000)));
+			log("reflaxe.ocaml: builder_fn_plan_bind dt_ms=" + Std.string(Std.int((t1 - t0) * 1000)));
 		#end
 
 		final params = args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
@@ -6181,7 +6179,7 @@ class OcamlBuilder {
 
 		currentLocalStoragePlan = previousStoragePlan;
 		currentFunctionReturnType = prevFunctionReturnType;
-		currentPlaceFunctionBinding = previousPlaceFunctionBinding;
+		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		#if macro
 		final t6 = profMatch ? haxe.Timer.stamp() : 0.0;
 		if (profMatch)
@@ -6191,13 +6189,13 @@ class OcamlBuilder {
 	}
 
 	public function buildFunction(tfunc:haxe.macro.Type.TFunc):OcamlExpr {
-		final storagePlan = OcamlLocalStoragePlanner.planExpression(tfunc.expr);
+		final storagePlan = currentLocalStoragePlan;
+		if (storagePlan == null)
+			return localStorageInvariant("a function expression reached syntax construction without a selected local-storage plan", tfunc.expr.pos);
 
 		// Determine parameters and wrap mutated parameters as refs inside the body.
 		final params = tfunc.args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : tfunc.args.map(a -> OcamlPat.PVar(renameVar(a.v.name)));
 
-		final previousStoragePlan = currentLocalStoragePlan;
-		currentLocalStoragePlan = storagePlan;
 		for (a in tfunc.args) {
 			if (storagePlan.requiresRef(a.v.id)) {
 				refLocals.set(a.v.id, true);
@@ -6251,59 +6249,8 @@ class OcamlBuilder {
 		body = wrapFunctionArgDefaults(body, tfunc.args.map(a -> {name: a.v.name, t: a.v.t, value: a.value}));
 		body = ensureParamUsage(body, params);
 
-		currentLocalStoragePlan = previousStoragePlan;
 		currentFunctionReturnType = prevFunctionReturnType;
 		return OcamlExpr.EFun(params, body);
-	}
-
-	static function collectMutatedLocalIdsFromExprs(exprs:Array<TypedExpr>):Map<Int, Bool> {
-		final mutated:Map<Int, Bool> = [];
-		for (e in exprs) {
-			collectMutatedLocalIdsInto(e, mutated);
-		}
-		return mutated;
-	}
-
-	static function collectMutatedLocalIds(e:TypedExpr):Map<Int, Bool> {
-		final mutated:Map<Int, Bool> = [];
-		collectMutatedLocalIdsInto(e, mutated);
-		return mutated;
-	}
-
-	static function collectMutatedLocalIdsInto(e:TypedExpr, mutated:Map<Int, Bool>):Void {
-		final visited = new haxe.ds.ObjectMap<TypedExpr, Bool>();
-
-		function visit(e:TypedExpr):Void {
-			if (visited.exists(e))
-				return;
-			visited.set(e, true);
-
-			switch (e.expr) {
-				case TBinop(OpAssign, lhs, _):
-					switch (lhs.expr) {
-						case TLocal(v):
-							mutated.set(v.id, true);
-						case _:
-					}
-				case TBinop(OpAssignOp(_), lhs, _):
-					switch (lhs.expr) {
-						case TLocal(v):
-							mutated.set(v.id, true);
-						case _:
-					}
-				case TUnop(OpIncrement, _, inner) | TUnop(OpDecrement, _, inner):
-					switch (inner.expr) {
-						case TLocal(v):
-							mutated.set(v.id, true);
-						case _:
-					}
-				case _:
-			}
-
-			TypedExprTools.iter(e, visit);
-		}
-
-		visit(e);
 	}
 
 	function collectUsedLocalIdsFromExprs(exprs:Array<TypedExpr>):Map<Int, Bool> {

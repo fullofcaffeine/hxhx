@@ -101,6 +101,26 @@ class LocalStoragePlannerFixture {
 		}, OcamlLocalStorageKind.RefCell,
 			["captured-and-mutated", "straight-line-assignment"], "captured mutation");
 
+		final nestedFunction = plan(macro {
+			var outer = 0;
+			var mutate = function() {
+				var inner = 0;
+				inner = 1;
+				outer = 2;
+				return inner;
+			};
+			mutate();
+			outer;
+		});
+		final nestedDecisions = nestedFunction.decisions();
+		assertTrue(nestedDecisions.length == 2, "a nested function should plan its own local and its captured outer local once each");
+		final immutableNested = nestedDecisions.filter(decision -> decision.storage == OcamlLocalStorageKind.ImmutableRebinding);
+		final capturedNested = nestedDecisions.filter(decision -> decision.storage == OcamlLocalStorageKind.RefCell);
+		assertTrue(immutableNested.length == 1 && reasonIds(immutableNested[0]).join(",") == "straight-line-assignment",
+			"a straight-line local declared inside a nested function should remain an immutable rebinding");
+		assertTrue(capturedNested.length == 1 && reasonIds(capturedNested[0]).join(",") == "captured-and-mutated,nested-function-mutation",
+			"a nested function write to an outer local should use the captured shared cell");
+
 		final copy = plan(macro {
 			var value = 0;
 			value = 1;
@@ -119,12 +139,37 @@ class LocalStoragePlannerFixture {
 			first += 1;
 			first + second;
 		});
-		final firstPass = OcamlLocalStoragePlanner.planExpression(deterministicInput).decisions();
-		final secondPass = OcamlLocalStoragePlanner.planExpression(deterministicInput).decisions();
+		final firstPlan = OcamlLocalStoragePlanner.planExpression(deterministicInput);
+		final secondPlan = OcamlLocalStoragePlanner.planExpression(deterministicInput);
+		final firstPass = firstPlan.decisions();
+		final secondPass = secondPlan.decisions();
 		assertTrue(firstPass.length == 2
 			&& firstPass[0].localId < firstPass[1].localId, "multiple storage decisions should use deterministic local-id order");
 		assertTrue(firstPass.map(decision -> decision.localId).join(",") == secondPass.map(decision -> decision.localId).join(","),
 			"planning the same typed body twice should preserve decision identities and order");
+		assertTrue(firstPlan.revision == secondPlan.revision && StringTools.startsWith(firstPlan.revision, "sha256:"),
+			"the same typed body should produce one stable content revision");
+		final canonicalA = new OcamlLocalStoragePlan([
+			{
+				localId: 7,
+				storage: OcamlLocalStorageKind.RefCell,
+				reasons: [
+					OcamlLocalStorageReason.NestedBlockMutation,
+					OcamlLocalStorageReason.LoopMutation
+				]
+			}
+		]);
+		final canonicalB = new OcamlLocalStoragePlan([
+			{
+				localId: 7,
+				storage: OcamlLocalStorageKind.RefCell,
+				reasons: [
+					OcamlLocalStorageReason.LoopMutation,
+					OcamlLocalStorageReason.NestedBlockMutation
+				]
+			}
+		]);
+		assertTrue(canonicalA.revision == canonicalB.revision, "equivalent storage reasons should have one revision regardless of input order");
 
 		expectFailure("duplicate local", "planned more than once", () -> new OcamlLocalStoragePlan([straightLine, straightLine]));
 		Sys.println("REFLAXE_OCAML_LOCAL_STORAGE_PLANNER_FIXTURE:PASS");

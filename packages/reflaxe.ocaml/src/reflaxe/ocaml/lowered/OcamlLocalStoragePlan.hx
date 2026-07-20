@@ -1,6 +1,8 @@
 package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
+import haxe.crypto.Sha256;
+
 /** The OCaml storage shape selected for one mutated Haxe local. */
 enum abstract OcamlLocalStorageKind(String) to String {
 	/** Each straight-line write introduces a newer immutable `let` binding. */
@@ -58,6 +60,9 @@ class OcamlLocalStoragePlan {
 
 	public final count:Int;
 
+	/** Deterministic digest of the selected local-storage decisions. */
+	public final revision:String;
+
 	public function new(decisions:Array<OcamlLocalStorageDecision>) {
 		orderedDecisions = decisions.map(copyDecision);
 		orderedDecisions.sort((left, right) -> left.localId - right.localId);
@@ -67,6 +72,7 @@ class OcamlLocalStoragePlan {
 			decisionsByLocalId.set(decision.localId, decision);
 		}
 		count = orderedDecisions.length;
+		revision = "sha256:" + Sha256.encode(orderedDecisions.map(decisionFingerprint).join("\n"));
 	}
 
 	/** Returns whether the local needs one shared mutable cell. */
@@ -90,8 +96,28 @@ class OcamlLocalStoragePlan {
 		return {
 			localId: decision.localId,
 			storage: decision.storage,
-			reasons: decision.reasons.copy()
+			reasons: canonicalReasons(decision.reasons)
 		};
+	}
+
+	static function canonicalReasons(reasons:Array<OcamlLocalStorageReason>):Array<OcamlLocalStorageReason> {
+		final byId:Map<String, OcamlLocalStorageReason> = [];
+		for (reason in reasons) {
+			final reasonId:String = reason;
+			byId.set(reasonId, reason);
+		}
+		final reasonIds = [for (reasonId in byId.keys()) reasonId];
+		reasonIds.sort(Reflect.compare);
+		return [for (reasonId in reasonIds) cast byId.get(reasonId)];
+	}
+
+	static function decisionFingerprint(decision:OcamlLocalStorageDecision):String {
+		final storageId:String = decision.storage;
+		final reasonIds = decision.reasons.map(reason -> {
+			final reasonId:String = reason;
+			return reasonId;
+		});
+		return '${decision.localId}|$storageId|${reasonIds.join(",")}';
 	}
 }
 #end

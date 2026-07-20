@@ -10,7 +10,8 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredInstanceFieldPlace;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReport;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceOperation;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredStaticFieldPlace;
-import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry.OcamlPlaceFunctionBinding;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
+import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlFunctionPlanBinding;
 
 /** Outcome of attempting the target-owned assignment lowering path. */
 enum OcamlPlaceAssignmentLoweringResult {
@@ -28,9 +29,9 @@ enum OcamlPlaceAssignmentLoweringResult {
 **/
 class OcamlPlaceAssignmentLowerer {
 	final context:CompilationContext;
-	final registry:OcamlPlacePlanRegistry;
+	final registry:OcamlFunctionPlanRegistry;
 
-	public function new(context:CompilationContext, registry:OcamlPlacePlanRegistry) {
+	public function new(context:CompilationContext, registry:OcamlFunctionPlanRegistry) {
 		this.context = context;
 		this.registry = registry;
 	}
@@ -116,7 +117,7 @@ class OcamlPlaceAssignmentLowerer {
 	}
 
 	/** Looks up and emits one plan that was validated before syntax construction. */
-	public function lower(originId:String, binding:OcamlPlaceFunctionBinding, buildExpr:TypedExpr->OcamlExpr,
+	public function lower(originId:String, binding:OcamlFunctionPlanBinding, buildExpr:TypedExpr->OcamlExpr,
 			freshTemporary:String->String):OcamlPlaceAssignmentLoweringResult {
 		final resolution = registry.resolve(originId, binding);
 		if (resolution.error != null)
