@@ -629,7 +629,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	} catch (error) {
 		fail(`installed inspect command did not emit valid JSON: ${error instanceof Error ? error.message : String(error)}`)
 	}
-	if (scaffoldInspectionReport.schemaVersion !== 3
+	if (scaffoldInspectionReport.schemaVersion !== 4
 		|| scaffoldInspectionReport.summary?.valid !== true
 		|| scaffoldInspectionReport.generatedFiles?.status !== 'present'
 		|| scaffoldInspectionReport.artifactManifest?.status !== 'present'
@@ -642,6 +642,11 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		|| scaffoldInspectionReport.profile?.status !== 'present'
 		|| scaffoldInspectionReport.runtime?.semanticManifest !== false
 		|| scaffoldInspectionReport.lowering?.status !== 'present'
+		|| scaffoldInspectionReport.representation?.status !== 'present'
+		|| scaffoldInspectionReport.representation?.scope !== 'exact-non-null-int-v1'
+		|| !Number.isInteger(scaffoldInspectionReport.summary?.representationDecisionCount)
+		|| scaffoldInspectionReport.summary.representationDecisionCount < 1
+		|| scaffoldInspectionReport.unavailable?.some(capability => capability.id === 'program-representation')
 		|| !scaffoldInspectionReport.unavailable?.some(capability => capability.id === 'export-abi')) {
 		fail('installed inspect command did not preserve its compiler-owned authority and deferral contract')
 	}
