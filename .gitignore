@@ -60,6 +60,9 @@ dist/
 test/portable/**/out/
 test/portable/**/stdout.txt
 test/portable/**/stderr.txt
+# Snapshot output keeps reviewable source files, but the whole-tree artifact
+# inventory is validated separately and intentionally has no golden copy.
+test/snapshot/**/out/ocaml_artifact_manifest.json
 tmp_stat_portable.txt
 .tmp/
 

@@ -34,7 +34,13 @@ compile_one() {
     exit 1
   fi
 
-  diff -ru --exclude '_GeneratedFiles.json' "$test_dir/intended" "$test_dir/out"
+  # The artifact manifest hashes the generated tree and has its own semantic
+  # validator. Snapshotting it here would duplicate every source diff and make
+  # the snapshot contain a digest of the other golden files.
+  diff -ru \
+    --exclude '_GeneratedFiles.json' \
+    --exclude 'ocaml_artifact_manifest.json' \
+    "$test_dir/intended" "$test_dir/out"
 
   if [ -f "$test_dir/intended/_GeneratedFiles.json" ] && [ -f "$test_dir/out/_GeneratedFiles.json" ]; then
     diff -u \
