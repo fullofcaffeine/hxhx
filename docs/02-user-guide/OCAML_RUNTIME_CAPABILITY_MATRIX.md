@@ -5,6 +5,22 @@ This matrix documents runtime module status for:
 - `-D ocaml_profile=portable` (full compatibility-oriented runtime surface)
 - `-D ocaml_profile=metal` (minimal native-oriented runtime layering + verifier constraints)
 
+## How runtime source is checked
+
+The compiler's compatibility runtime is a set of OCaml source modules copied into generated projects when Haxe behavior needs them. For example, a growable Haxe array can require `HxArray.ml`; that module in turn uses the core support in `HxRuntime.ml`.
+
+[`runtime-manifest.json`](../../packages/reflaxe.ocaml/std/runtime/runtime-manifest.json) is the locked catalog for those source files. It records, for every module:
+
+- the exact source-file SHA-256 digest;
+- its direct dependencies on other runtime modules;
+- required Dune libraries such as `unix` or `str`;
+- whether it belongs to application output or compiler tooling;
+- eligible build profiles and the source license.
+
+Validation stops before copying if a declared file is missing or modified, an unlisted OCaml source appears, a dependency is unknown, or a requested module is not legal for that profile. This prevents an incomplete or locally modified runtime from quietly entering generated output.
+
+This catalog answers “which reviewed source files implement this module?” It does **not** yet answer “which Haxe operation required this module?” The source-rooted semantic requirement ledger that will provide that explanation remains tracked by `haxe_ocaml-0uwin`; until it lands, the generated artifact manifest correctly reports runtime ownership as incomplete.
+
 ## Legend
 
 - `portable`: module is part of the portable runtime surface.
@@ -28,7 +44,11 @@ This matrix documents runtime module status for:
 | `HxFile` | yes | `metal-supported` | File I/O helper module; linked only when needed. |
 | `HxFileStream` | yes | `metal-supported` | Stream/file descriptor helpers; linked only when needed. |
 | `HxFileSystem` | yes | `metal-supported` | Filesystem helpers; linked only when needed. |
+| `HxHxBackendPluginDynlink` | yes | `tooling-only` | Loads native backend plugins for `hxhx`; never an application runtime module. |
+| `HxHxBackendPluginHost` | yes | `tooling-only` | Defines the native backend-plugin host boundary used by `hxhx`. |
 | `HxHxCompilerServer` | yes | `tooling-only` | hxhx compiler server support module. |
+| `HxHxMacroModuleDynlink` | yes | `tooling-only` | Loads native macro modules for `hxhx`; never an application runtime module. |
+| `HxHxMacroModuleHost` | yes | `tooling-only` | Defines the native macro-module host boundary used by `hxhx`. |
 | `HxHxMacroRpc` | yes | `tooling-only` | hxhx macro-host RPC support module. |
 | `HxHxNativeLexer` | yes | `tooling-only` | hxhx native frontend support module. |
 | `HxHxNativeParser` | yes | `tooling-only` | hxhx native frontend support module. |
