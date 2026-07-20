@@ -1,3 +1,10 @@
+## [0.21.1](https://github.com/fullofcaffeine/hxhx/compare/v0.21.0...v0.21.1) (2026-07-20)
+
+
+### Bug Fixes
+
+* **ocaml:** preserve place ownership through preprocessors ([683eaa4](https://github.com/fullofcaffeine/hxhx/commit/683eaa4044dbb40059444fd29ee4908bded43e27))
+
 # [0.21.0](https://github.com/fullofcaffeine/hxhx/compare/v0.20.1...v0.21.0) (2026-07-20)
 
 
