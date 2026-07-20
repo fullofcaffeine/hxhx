@@ -52,6 +52,7 @@ function hasPathFilter(block) {
 function main() {
   const policy = JSON.parse(fs.readFileSync('scripts/ci/qa-risk-policy.json', 'utf8'))
   const ciGates = fs.readFileSync('docs/00-project/CI_GATES.md', 'utf8')
+  const coreText = fs.readFileSync(path.join(workflowRoot, coreWorkflow), 'utf8')
   const q0Patterns = policy.q0WorkflowIgnorePatterns
   const q1HxhxPatterns = policy.q1HxhxWorkflowIgnorePatterns
   if (!Array.isArray(q0Patterns) || q0Patterns.length === 0) {
@@ -75,6 +76,23 @@ function main() {
     'haxe_ocaml-bxwut'
   ]) {
     if (!ciGates.includes(snippet)) fail(`docs/00-project/CI_GATES.md must include ${snippet}`)
+  }
+
+  const manualBlock = eventBlock(coreText, 'workflow_dispatch')
+  if (!manualBlock) {
+    fail(`${coreWorkflow} must expose its manual exact-commit QA route`)
+  } else {
+    for (const snippet of ['      qa_tier:', '        default: Q3', '          - Q3', '          - Q4']) {
+      if (!manualBlock.includes(snippet)) {
+        fail(`${coreWorkflow} workflow_dispatch is missing ${snippet.trim()}`)
+      }
+    }
+  }
+  if (!coreText.includes("QA_REQUESTED_TIER: ${{ inputs.qa_tier || 'auto' }}")) {
+    fail(`${coreWorkflow} must pass the deliberate manual tier to the classifier`)
+  }
+  if (!coreText.includes('--requested-tier "$QA_REQUESTED_TIER"')) {
+    fail(`${coreWorkflow} must classify the requested minimum QA tier`)
   }
 
   const workflowFiles = fs.readdirSync(workflowRoot).filter(file => file.endsWith('.yml')).sort()

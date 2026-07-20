@@ -120,7 +120,7 @@ Repo-local focused regressions and bridge tests are supporting evidence for diag
 
 | Workflow | File | Purpose | Trigger class | Triggers |
 | --- | --- | --- | --- |
-| `CI / Core PR Checks` | `.github/workflows/ci.yml` | Core guardrails, tests, and scoped smokes for baseline safety. | **PR required** | `push`, `pull_request` |
+| `CI / Core PR Checks` | `.github/workflows/ci.yml` | Core guardrails, tests, and scoped smokes for baseline safety. | **PR required** (+manual exact-commit proof) | `push`, `pull_request`, manual |
 | `Security / CodeQL` | `.github/workflows/codeql.yml` | Static security analysis for JS/TS surfaces. | **PR required** (+scheduled) | `push`, `pull_request`, weekly schedule |
 | `Gate 1 Lite / Upstream Macro Unit Smoke` | `.github/workflows/gate1-lite.yml` | Fast upstream unit macro compatibility smoke. | **PR required** | `push`, `pull_request` |
 | `Gate 2 Lite / Workloads Smoke` | `.github/workflows/gate2-lite.yml` | Fast workload/macro compatibility smoke. | **PR required** | `push`, `pull_request` |
@@ -163,6 +163,14 @@ requested workloads.
 Unknown code paths fail safe to Q2. A push or pull request whose immutable
 change inventory cannot be established escalates to Q3. Schedules and ordinary
 manual requests also require at least Q3; a manual Q4 request is explicit.
+
+To validate an exact commit at the high-risk boundary, run `CI / Core PR Checks`
+manually and select `Q3` (the default). Select `Q4` only when release evidence is
+actually required. From the command line, the equivalent is
+`gh workflow run ci.yml --ref <branch-or-commit> -f qa_tier=Q3`. The selected
+tier is a minimum: a manual request cannot downgrade the policy, and its receipt
+still records the exact commit and reason. This route is preferable to creating
+a no-op source change merely to wake expensive checks.
 
 Core CI is the cheap always-present aggregate. The other broad automatic
 workflows ignore the exact Q0 documentation/tracking pattern set, which is

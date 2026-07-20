@@ -5,6 +5,16 @@ on:
     branches: [ master, main ]
   pull_request:
     branches: [ master, main ]
+  workflow_dispatch:
+    inputs:
+      qa_tier:
+        description: Minimum QA tier to run for this exact commit
+        required: true
+        default: Q3
+        type: choice
+        options:
+          - Q3
+          - Q4
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -72,12 +82,13 @@ jobs:
         env:
           QA_EVENT_NAME: ${{ github.event_name }}
           QA_PRODUCER_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          QA_REQUESTED_TIER: ${{ inputs.qa_tier || 'auto' }}
         run: |
           set -euo pipefail
           node scripts/ci/qa-risk-classifier.js \
             --event "$QA_EVENT_NAME" \
             --paths-file .artifacts/qa-routing/changed-files.txt \
-            --requested-tier auto \
+            --requested-tier "$QA_REQUESTED_TIER" \
             --producer-sha "$QA_PRODUCER_SHA" \
             --output .artifacts/qa-routing/classification.json \
             --github-output "$GITHUB_OUTPUT"

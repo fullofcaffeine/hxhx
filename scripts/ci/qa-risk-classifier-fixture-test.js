@@ -138,6 +138,15 @@ expectTier('scheduled proof', {
   authenticCompilerPromotion: true
 })
 
+expectTier('manual exact-commit proof', {
+  event: 'workflow_dispatch',
+  requestedTier: 'Q3',
+  changedPaths: []
+}, 'Q3', {
+  largeHxhxConsumer: true,
+  authenticCompilerPromotion: true
+})
+
 expectTier('manual release proof', {
   event: 'workflow_dispatch',
   requestedTier: 'Q4',
