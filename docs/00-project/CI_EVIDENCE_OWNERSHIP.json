@@ -463,7 +463,7 @@
     {
       "id": "reflaxe-package-macos-29714028568",
       "checkId": "reflaxe-ocaml-package-weekly",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
       "failureClass": "semantic",
       "bead": "haxe_ocaml-s7jry.4",
@@ -479,7 +479,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29714028568"
       },
       "reproductionOrEvidence": "Linux installed and ran source package artifact 8449821284, while macOS evidence artifact 8449883379 reproduced the same haxe/Exception.cross.hx place-invariant failure. Linux evidence is artifact 8449891237.",
-      "closureGate": "Repair the shared semantic place boundary without suppressing its invariant, then require one exact ZIP to pass the complete Linux and macOS package matrix."
+      "closureGate": "Repair the shared semantic place boundary without suppressing its invariant, then require one exact ZIP to pass the complete Linux and macOS package matrix.",
+      "resolution": {
+        "runId": 29725483013,
+        "runAttempt": 1,
+        "headSha": "47048afe1591da286ebcf40fcd877e6e1db9839d",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-20T07:52:21Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29725483013"
+      }
     },
     {
       "id": "kpi-manual-missing-20260713",
