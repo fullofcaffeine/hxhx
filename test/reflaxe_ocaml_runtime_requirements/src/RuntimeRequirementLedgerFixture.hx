@@ -1,10 +1,14 @@
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSourceKind;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSubjectKind;
 
 using StringTools;
 
-/** Focused checks for source-rooted runtime explanations. **/
+/** Focused checks for runtime explanations recorded at compiler decision points. **/
 class RuntimeRequirementLedgerFixture {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -23,6 +27,13 @@ class RuntimeRequirementLedgerFixture {
 		}
 		if (!failed)
 			throw '$label should have failed.';
+	}
+
+	static function requirementById(requirements:Array<OcamlRuntimeRequirement>, id:String):OcamlRuntimeRequirement {
+		for (requirement in requirements)
+			if (requirement.id == id)
+				return requirement;
+		throw 'Missing runtime requirement "$id".';
 	}
 
 	static function main():Void {
@@ -50,16 +61,32 @@ class RuntimeRequirementLedgerFixture {
 			"place:b:runtime:haxe-int32-add",
 			"place:b:runtime:haxe-array-element-set"
 		]);
+		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.CORE_RUNTIME);
+		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
+		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS);
+		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_NULL);
+		ledger.recordCompilerInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_RUNTIME_UNBOX);
 		final requirements = ledger.requirementsSorted();
-		assertTrue(requirements.length == 4, "each lowering decision should retain its own runtime explanation");
-		assertTrue(requirements[0].id == "place:a:runtime:haxe-int32-add", "requirements should be sorted by stable identity");
-		assertTrue(requirements[0].sourceId == "place:a", "the requirement should retain its Haxe-expression identity");
-		assertTrue(requirements[0].source.file == "external-source/acme/Thing.hx",
+		assertTrue(requirements.length == 9, "each lowering and compiler decision should retain its own runtime explanation");
+		assertTrue(requirements[0].id == "compiler:generated:HxTypeRegistry:dynamic-arguments", "requirements should be sorted by stable identity");
+		final placeRequirement = requirementById(requirements, "place:a:runtime:haxe-int32-add");
+		assertTrue(placeRequirement.sourceId == "place:a", "the requirement should retain its Haxe-expression identity");
+		assertTrue(placeRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.HaxeType && placeRequirement.subject.id == "Int",
+			"a Haxe operation should identify the semantic type it supports");
+		assertTrue(placeRequirement.source.file == "external-source/acme/Thing.hx",
 			"the ledger should remove machine-local parent paths before retaining a source location");
-		assertTrue(requirements[0].decisionId == "place:a:int-update", "the requirement should name the lowering decision that caused it");
-		assertTrue(requirements[0].rootModules[0] == "HxInt", "Haxe Int addition should select the HxInt implementation root");
-		assertTrue(requirements[1].rootModules[0] == "HxArray", "Haxe array access should select the HxArray implementation root");
-		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxInt", "root modules should be deduplicated and sorted");
+		assertTrue(placeRequirement.decisionId == "place:a:int-update", "the requirement should name the lowering decision that caused it");
+		assertTrue(placeRequirement.rootModules[0] == "HxInt", "Haxe Int addition should select the HxInt implementation root");
+		final registryRequirement = requirementById(requirements, "compiler:generated:HxTypeRegistry:type-registry");
+		assertTrue(registryRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.GeneratedModule
+			&& registryRequirement.subject.id == "HxTypeRegistry",
+			"compiler-generated output should identify the module it supports");
+		assertTrue(registryRequirement.rootModules[0] == "HxType", "the generated type registry should select the HxType implementation root");
+		final coreRequirement = requirementById(requirements, "compiler:runtime-packaging:core");
+		assertTrue(coreRequirement.subject.kind == OcamlRuntimeRequirementSubjectKind.CompilerPolicy
+			&& coreRequirement.subject.id == "runtime-packaging",
+			"the runtime core should name the compiler policy that requires it");
+		assertTrue(ledger.rootModulesSorted().join(",") == "HxArray,HxInt,HxRuntime,HxType", "root modules should be deduplicated and sorted");
 		final firstRevision = ledger.revision();
 		ledger.recordPlacePlan("place:a:int-update", "place:a", source, "Int", ["place:a:runtime:haxe-int32-add"]);
 		assertTrue(ledger.revision() == firstRevision, "recording the same facts twice should be deterministic");
@@ -68,6 +95,25 @@ class RuntimeRequirementLedgerFixture {
 			() -> ledger.recordPlacePlan("place:c:update", "place:c", source, "Int", ["haxe-int32-add"]));
 		expectFailure("unknown capability", "Unknown place runtime capability",
 			() -> ledger.recordPlacePlan("place:c:update", "place:c", source, "Int", ["place:c:runtime:not-supported"]));
+		expectFailure("unknown compiler capability", "Unknown compiler runtime capability",
+			() -> ledger.recordCompilerInfrastructure("compiler-not-supported"));
+		expectFailure("subject/source mismatch", "does not match source kind", () -> ledger.record({
+			id: "invalid:subject",
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: "place:invalid",
+			source: source,
+			semanticCapability: "invalid-subject-fixture",
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: "fixture:invalid-subject",
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.GeneratedModule,
+				id: "WrongOwner"
+			},
+			implementationFeature: "invalid-fixture-v1",
+			rootModules: ["HxRuntime"],
+			profileEligibility: ["portable"],
+			explanation: "This intentionally invalid record proves subject ownership is checked."
+		}));
 		ledger.beginProgram("program:fixture-b");
 		assertTrue(ledger.requirementsSorted().length == 0, "a new program must not inherit requirements from the previous compile");
 		assertTrue(ledger.revision() != firstRevision, "the requirement revision must identify its normalized program");

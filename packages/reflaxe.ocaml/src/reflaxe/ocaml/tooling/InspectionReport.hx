@@ -116,9 +116,10 @@ typedef InspectionProfile = {
 /**
 	The runtime modules selected by today's compiler/runtime report.
 
-	`semanticManifest` remains false while only the typed assignment/update family
-	has a locked, source-rooted explanation. The separate partial report must not
-	be mistaken for whole-program runtime ownership.
+	`semanticManifest` remains false while only core packaging, the generated type
+	registry, and typed assignment/update operations explain why they need runtime
+	support. The separate partial report must not be mistaken for whole-program
+	runtime ownership.
 **/
 typedef InspectionRuntime = {
 	final status:String;

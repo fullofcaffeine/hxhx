@@ -63,9 +63,9 @@ Any other value is invalid and fails fast.
   - manual runtime module seed list for selective mode
   - unknown, tooling-only, or profile-incompatible names fail before OCaml output instead of being ignored
 - `-D ocaml_runtime_no_infer`
-  - disables syntax-observed runtime discovery in selective mode
-  - does not remove a helper module that the compiler already recorded while
-    translating a specific Haxe operation
+  - disables compiler-observed runtime discovery in selective mode
+  - does not remove a helper module that the compiler already recorded as
+    necessary for a Haxe operation, generated module, or packaging rule
   - still checks generated target syntax; compilation fails before packaging is
     accepted if the manual list omits an observed runtime module
   - useful for explicit/manual runtime planning experiments
@@ -157,26 +157,28 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `runtimeMode` (`full` or `selective`)
   - `selectionMode`
     - `full` (all runtime modules)
-    - `source_required` (only helpers recorded for specific translated Haxe
-      operations, plus the core runtime)
-    - `source_required_plus_syntax_observed` (those recorded helpers plus
-      references found in structured target syntax; the metal default while
-      other compiler families migrate)
-    - `source_required_plus_manual` (recorded helpers plus explicit manual
-      seeds, with automatic syntax-based selection disabled)
-    - `source_required_plus_syntax_observed_plus_manual` (recorded helpers,
-      syntax observations, and manual seeds)
-    - `compiler_tracked` (temporary selective fallback when no migrated
-      source-level requirement exists)
-    - `compiler_tracked_plus_manual` (that fallback plus manual seeds)
+    - `requirements` (only helpers backed by explicit compiler requirement
+      records, plus the core runtime)
+    - `requirements_plus_compiler_observed` (those recorded helpers plus
+      runtime references found in structured target syntax or explicitly
+      declared by compiler-generated modules; the metal default while other
+      compiler families migrate)
+    - `requirements_plus_manual` (recorded helpers plus explicit manual
+      seeds, with automatic compiler-observed selection disabled)
+    - `requirements_plus_compiler_observed_plus_manual` (recorded helpers,
+      compiler observations, and manual seeds)
+    - `compiler_observed` (temporary selective fallback when no explicit
+      requirement exists)
+    - `compiler_observed_plus_manual` (that fallback plus manual seeds)
     - `manual_only` (legacy/unmigrated-only case with manual seeds and no
-      source-level requirement)
-    - `minimal_core` (no source requirement, observed root, or manual seed;
+      explicit requirement)
+    - `minimal_core` (no requirement, observed root, or manual seed;
       core runtime only)
     - each selective mode may end with `_plus_token_scan_fallback` when debug fallback is enabled
   - `availableModules`
-  - `trackedModules` (runtime module references observed in structured target
-    syntax)
+  - `trackedModules` (the schema-2 name for compiler-observed runtime modules;
+    these come from structured target syntax and explicit declarations made
+    by compiler-generated string/template modules)
   - `manualModules` (manual selective seeds)
   - `runtimeInferenceDisabled`
   - `runtimeDebugLaneEnabled`
@@ -185,38 +187,46 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `selectedFeatures`
   - `inclusionReasons` (deterministic per-module reason list)
 - `ocaml_runtime_requirement_report.json`
-  - `schemaVersion` (current: `1`)
-  - `authorityStatus` (currently `partial`, because only the typed
-    assignment/update family supplies source-level explanations)
+  - `schemaVersion` (current: `2`)
+  - `authorityStatus` (currently `partial`, because core packaging, the
+    generated type registry, and typed assignment/update operations are
+    covered, while other compiler paths still rely on observations)
   - `runtimeMode` and `selectionMode`
   - `requirementRevision` and `runtimeSourceRevision`
-  - `requirements`, where each entry explains the Haxe behavior that needs
-    compatibility support, the compiler decision that caused it, and its
-    runtime root module
+  - `requirements`, where each entry explains what needs compatibility
+    support, the compiler decision that caused it, and its runtime root module
+  - `subject`, which separates the kind and stable identity of the thing being
+    supported; examples are `haxe-type:Int`,
+    `generated-module:HxTypeRegistry`, and
+    `compiler-policy:runtime-packaging`
   - `requirementChains`, which resolve each explanation through the locked
     runtime dependency catalog
-  - `semanticRootModules`, `semanticClosureModules`, and `runtimeSources`,
+  - `requirementRootModules`, `requirementClosureModules`, and `runtimeSources`,
     including exact source hashes, Dune libraries, eligible profiles, and
     licenses
-  - `syntaxObservedModules`, split into `explainedSyntaxModules` and
-    `unexplainedSyntaxModules`, so unfinished compiler families remain visible
-    instead of being presented as covered
+  - `compilerObservedModules`, split into
+    `explainedCompilerObservedModules` and
+    `unexplainedCompilerObservedModules`, so unfinished compiler families
+    remain visible instead of being presented as covered
+  - `requirementRootsNotCompilerObserved`, which keeps deliberate packaging
+    requirements visible even when no generated expression refers to them
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
-  - `schemaVersion` (current: `5`)
+  - `schemaVersion` (current: `6`)
   - the sealed assignment/update plans and their source locations
   - `runtimeRequirementRevision` and `runtimeRequirementCount`
   - `runtimeRequirements`, where every admitted `HxInt`/`HxArray` need explains
     the Haxe behavior, target decision, implementation feature, eligible
     profiles, and checked runtime root that caused it
 
-The lowering and runtime-requirement reports are complete for their stated
-assignment/update family, not for the whole program. Runtime packaging checks
-that every requirement in that family resolves to selected, hash-verified
-source. The separate runtime selection report still includes syntax-observed
-roots while the remaining expression families migrate to the same
-source-rooted model.
+The lowering report is complete for its stated assignment/update family. The
+runtime-requirement report additionally covers core packaging and the generated
+type registry, but it is still not complete for the whole program. Runtime
+packaging checks that every recorded requirement resolves to selected,
+hash-verified source. The separate runtime selection report still includes
+compiler-observed roots while the remaining compiler families migrate to the
+same explicit model.
 
 `hxhx` Stage3 OCaml emission also emits:
 
@@ -234,7 +244,7 @@ source-rooted model.
 Debug fallback define (non-default, diagnostics only):
 
 - `-D ocaml_runtime_token_scan_fallback`
-  - Keeps source-required roots mandatory and structured target-syntax
+  - Keeps roots from recorded runtime requirements mandatory and uses compiler
     observations as the normal migration path.
   - Adds legacy output token scanning as a temporary merge source for investigations.
   - The token scan can add a debug root, but it no longer discovers dependencies by searching runtime source text; the checked source manifest owns dependency closure in every mode.

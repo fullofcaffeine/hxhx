@@ -231,7 +231,7 @@ class ReflaxeOcamlInspection {
 						tokenScanFallbackEnabled: requiredBool(value, "tokenScanFallbackEnabled"),
 						authority: "current-compiler-runtime-selection-report",
 						semanticManifest: false,
-						message: "Current compiler/runtime selection report; the separate source-rooted report covers only typed assignments and updates, not the whole program."
+						message: "Current compiler/runtime selection report; the separate requirement report explains core packaging, the generated type registry, and typed assignments/updates, but not the whole program."
 					};
 				} catch (error:Dynamic) {
 					runtimeFailure("invalid", path, Std.string(error));
@@ -258,8 +258,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 5) {
-						throw 'Unsupported lowering report schema $version; expected 5.';
+					if (version != 6) {
+						throw 'Unsupported lowering report schema $version; expected 6.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -282,7 +282,7 @@ class ReflaxeOcamlInspection {
 						admittedInputRevision: requiredSha256Revision(value, "admittedInputRevision"),
 						plans: plans,
 						scope: "typed-place-assignment-and-update-family",
-						message: 'Typed place report contains ${plans.length} sealed operation${plans.length == 1 ? "" : "s"} and $runtimeRequirementCount source-rooted runtime explanation${runtimeRequirementCount == 1 ? "" : "s"}; it is not a whole-program IR.'
+						message: 'Typed place report contains ${plans.length} sealed operation${plans.length == 1 ? "" : "s"} and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"} tied to those Haxe operations; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
@@ -341,7 +341,9 @@ class ReflaxeOcamlInspection {
 			requiredString(requirement, "semanticCapability");
 			requiredString(requirement, "cause");
 			requiredString(requirement, "decisionId");
-			requiredString(requirement, "subjectTypeId");
+			final subject = requiredObject(requirement, "subject");
+			requiredString(subject, "kind");
+			requiredString(subject, "id");
 			requiredString(requirement, "implementationFeature");
 			requiredString(requirement, "explanation");
 			final roots = requiredStringArray(requirement, "rootModules");
@@ -457,8 +459,8 @@ class ReflaxeOcamlInspection {
 	static function unavailableCapabilities():Array<InspectionUnavailableCapability> {
 		return [
 			unavailable("program-representation", "Program-wide representation registry", "The typed OCaml representation registry has not landed."),
-			unavailable("semantic-runtime-manifest", "Source-rooted runtime requirement ledger",
-				"A checked partial report now covers typed assignments and updates; whole-program source-rooted runtime ownership has not landed."),
+			unavailable("semantic-runtime-manifest", "Whole-program runtime requirement ledger",
+				"A checked partial report now covers core packaging, the generated type registry, and typed assignments/updates; other compiler paths still need explicit explanations."),
 			unavailable("native-dependencies", "Native package and source dependencies", "Structured Dune/opam/native-source ownership has not landed."),
 			unavailable("raw-unsafe", "Raw and unsafe operation inventory", "The compiler does not yet emit an owned raw/Obj.magic proof inventory."),
 			unavailable("bindings", "Typed imported OCaml bindings", "The typed .mli binding manifest has not landed."),
@@ -487,7 +489,7 @@ class ReflaxeOcamlInspection {
 
 	static function renderRuntime(value:InspectionRuntime):String {
 		return
-			value.status == "present" ? '[PASS] Runtime selection: ${value.selectionMode}; ${value.selectedModules.length} module${value.selectedModules.length == 1 ? "" : "s"}; source-rooted coverage is still partial.' : '[FAIL] Runtime selection: ${value.message}';
+			value.status == "present" ? '[PASS] Runtime selection: ${value.selectionMode}; ${value.selectedModules.length} module${value.selectedModules.length == 1 ? "" : "s"}; explicit requirement coverage is still partial.' : '[FAIL] Runtime selection: ${value.message}';
 	}
 
 	static function renderLowering(value:InspectionLowering):String {

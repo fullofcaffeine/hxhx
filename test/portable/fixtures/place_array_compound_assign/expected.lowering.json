@@ -1,13 +1,17 @@
 {
   "model": "typed-ocaml-lowered-place",
   "runtimeRequirementCount": 16,
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "admittedInputRevision": "sha256:b9fb28894461c456cbe15ffb07c5d3415dd5646de086216cf5eb4dbb923e5018",
-  "runtimeRequirementRevision": "sha256:1ce59f7fdc1d3ef8032ccf7a7e096d84682f3915c7ac5f4107420cafd65ce93c",
+  "runtimeRequirementRevision": "sha256:47089d2d9415444956ab17f1372e17ff44abac28925498639e6e4cbc3476d1e3",
   "planCount": 6,
   "runtimeRequirements": [
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-get",
       "explanation": "Reading a Haxe array element must preserve Haxe array bounds, storage, and identity behavior.",
@@ -25,12 +29,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:12e3e65eaf20f1d04cdff365:array-int-decrement",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-set",
       "explanation": "Writing a Haxe array element must update the original growable Haxe array using its checked storage contract.",
@@ -48,12 +55,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:12e3e65eaf20f1d04cdff365:array-int-decrement",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-int32-arithmetic-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-int32-add",
       "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
@@ -71,12 +81,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:12e3e65eaf20f1d04cdff365:array-int-decrement",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-get",
       "explanation": "Reading a Haxe array element must preserve Haxe array bounds, storage, and identity behavior.",
@@ -94,12 +107,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:265173b365928b1048573384:array-int-increment",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-set",
       "explanation": "Writing a Haxe array element must update the original growable Haxe array using its checked storage contract.",
@@ -117,12 +133,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:265173b365928b1048573384:array-int-increment",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-int32-arithmetic-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-int32-add",
       "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
@@ -140,12 +159,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:265173b365928b1048573384:array-int-increment",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-get",
       "explanation": "Reading a Haxe array element must preserve Haxe array bounds, storage, and identity behavior.",
@@ -163,12 +185,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:2b570095e1b3b1a7d5fc4da7:array-int-increment",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-set",
       "explanation": "Writing a Haxe array element must update the original growable Haxe array using its checked storage contract.",
@@ -186,12 +211,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:2b570095e1b3b1a7d5fc4da7:array-int-increment",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-int32-arithmetic-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-int32-add",
       "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
@@ -209,12 +237,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:2b570095e1b3b1a7d5fc4da7:array-int-increment",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-get",
       "explanation": "Reading a Haxe array element must preserve Haxe array bounds, storage, and identity behavior.",
@@ -232,12 +263,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:2ec87ed9e163efbae5e983b6:array-compound-assignment",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-set",
       "explanation": "Writing a Haxe array element must update the original growable Haxe array using its checked storage contract.",
@@ -255,12 +289,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:2ec87ed9e163efbae5e983b6:array-compound-assignment",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-int32-arithmetic-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-int32-add",
       "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
@@ -278,12 +315,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:2ec87ed9e163efbae5e983b6:array-compound-assignment",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-get",
       "explanation": "Reading a Haxe array element must preserve Haxe array bounds, storage, and identity behavior.",
@@ -301,12 +341,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:4cb4b564fead7c106c0e97f9:array-int-decrement",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-set",
       "explanation": "Writing a Haxe array element must update the original growable Haxe array using its checked storage contract.",
@@ -324,12 +367,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:4cb4b564fead7c106c0e97f9:array-int-decrement",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-int32-arithmetic-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-int32-add",
       "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
@@ -347,12 +393,15 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:4cb4b564fead7c106c0e97f9:array-int-decrement",
       "sourceKind": "haxe-expression"
     },
     {
       "implementationFeature": "haxe-array-element-access-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-array-element-set",
       "explanation": "Writing a Haxe array element must update the original growable Haxe array using its checked storage contract.",
@@ -370,7 +419,6 @@
         "metal",
         "portable"
       ],
-      "subjectTypeId": "Int",
       "decisionId": "place:efbd5666941b9bf547a79075:array-simple-assignment",
       "sourceKind": "haxe-expression"
     }

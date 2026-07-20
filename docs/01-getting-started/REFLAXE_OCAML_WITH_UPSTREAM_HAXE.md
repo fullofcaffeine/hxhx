@@ -127,14 +127,15 @@ representation reasons, effect schedules, and runtime requirements.
 The authority boundary is part of the output. The generated-file inventory is
 valid, but it explicitly says source-bundle packaging is blocked until every
 runtime need and native dependency has a locked explanation. Runtime-enabled
-builds now trace typed assignments and updates to checked runtime sources in
+builds now explain runtime support used by typed assignments and updates, the
+compiler-generated type registry, and core packaging in
 `ocaml_runtime_requirement_report.json`; other compiler paths remain visibly
 unexplained. Today's runtime report is therefore not presented as a
-whole-program semantic manifest, and the typed place report is not presented as
-a whole-program IR. Representation registries, native dependencies, raw/unsafe
-proofs, bindings, and curated export ABIs stay marked unavailable until their
-typed owners land. Inspection is read-only and does not infer semantics by
-scanning generated OCaml or Dune files.
+complete whole-program explanation, and the typed place report covers only
+assignments and updates rather than every compiler operation. Representation
+registries, native dependencies, raw/unsafe proofs, bindings, and curated export
+ABIs stay marked unavailable until their typed owners land. Inspection is
+read-only and does not guess behavior by scanning generated OCaml or Dune files.
 
 The output directory is compiler-owned. Keep handwritten OCaml sources outside
 it for now; otherwise the build rejects them as unattributed rather than letting

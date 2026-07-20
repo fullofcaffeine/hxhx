@@ -56,7 +56,7 @@ try {
 	assert.match(report.artifactManifest.sourceBundleRevision, /^sha256:[0-9a-f]{64}$/)
 	assert.match(report.artifactManifest.artifactSetRevision, /^sha256:[0-9a-f]{64}$/)
 	assert.strictEqual(report.artifactManifest.semanticRuntime.status, 'incomplete')
-	assert.strictEqual(report.artifactManifest.semanticRuntime.model, 'source-rooted-runtime-requirements-partial-v1')
+	assert.strictEqual(report.artifactManifest.semanticRuntime.model, 'recorded-runtime-requirements-partial-v2')
 	assert.match(report.artifactManifest.semanticRuntime.revision, sha256Revision)
 	assert.strictEqual(report.artifactManifest.nativeDependencies.status, 'incomplete')
 	assert(report.artifactManifest.ownerCounts.some(owner => owner.id === 'reflaxe-framework' && owner.count > 0))
@@ -81,11 +81,15 @@ try {
 
 	const runtimeRequirementPath = path.join(tempRoot, 'out/ocaml_runtime_requirement_report.json')
 	const runtimeRequirements = JSON.parse(fs.readFileSync(runtimeRequirementPath, 'utf8'))
-	assert.strictEqual(runtimeRequirements.schemaVersion, 1)
-	assert.strictEqual(runtimeRequirements.model, 'source-rooted-ocaml-runtime-requirements')
+	assert.strictEqual(runtimeRequirements.schemaVersion, 2)
+	assert.strictEqual(runtimeRequirements.model, 'recorded-ocaml-runtime-requirements')
 	assert.strictEqual(runtimeRequirements.authorityStatus, 'partial')
-	assert.deepStrictEqual(runtimeRequirements.coveredFamilies, ['typed-place-assignment-and-update'])
-	assert.strictEqual(runtimeRequirements.selectionAuthority, 'explicit-full-with-source-requirement-audit-v1')
+	assert.deepStrictEqual(runtimeRequirements.coveredFamilies, [
+		'compiler-core-runtime',
+		'compiler-type-registry',
+		'typed-place-assignment-and-update'
+	])
+	assert.strictEqual(runtimeRequirements.selectionAuthority, 'explicit-full-with-recorded-requirement-audit-v2')
 	assert.strictEqual(runtimeRequirements.runtimeMode, 'full')
 	assert.strictEqual(runtimeRequirements.selectionMode, 'full')
 	assert.match(runtimeRequirements.reportRevision, sha256Revision)
@@ -94,14 +98,16 @@ try {
 	assert.strictEqual(runtimeRequirements.requirementRevision, report.artifactManifest.semanticRuntime.revision)
 	assert.strictEqual(runtimeRequirements.requirementCount, runtimeRequirements.requirements.length)
 	assert(runtimeRequirements.requirementCount > 0)
-	assert(runtimeRequirements.semanticRootModules.includes('HxInt'))
-	assert(runtimeRequirements.semanticClosureModules.includes('HxInt'))
-	assert(runtimeRequirements.explainedSyntaxModules.includes('HxInt'))
-	assert.deepStrictEqual(runtimeRequirements.semanticRootsMissingFromSyntax, [])
-	assert(runtimeRequirements.unexplainedSyntaxModules.length > 0, 'partial coverage should keep unexplained syntax-observed modules visible')
+	assert(runtimeRequirements.requirementRootModules.includes('HxInt'))
+	assert(runtimeRequirements.requirementClosureModules.includes('HxInt'))
+	assert(runtimeRequirements.explainedCompilerObservedModules.includes('HxInt'))
+	assert(runtimeRequirements.explainedCompilerObservedModules.includes('HxType'))
+	assert.deepStrictEqual(runtimeRequirements.requirementRootsNotCompilerObserved, [])
+	assert(runtimeRequirements.unexplainedCompilerObservedModules.length > 0,
+		'partial coverage should keep compiler-observed modules from unmigrated families visible')
 	const requirementIds = new Set()
 	for (const requirement of runtimeRequirements.requirements) {
-		assert(!requirementIds.has(requirement.id), `duplicate semantic runtime requirement ${requirement.id}`)
+		assert(!requirementIds.has(requirement.id), `duplicate runtime requirement ${requirement.id}`)
 		requirementIds.add(requirement.id)
 		assert(requirement.source.file.length > 0)
 		assert(!path.isAbsolute(requirement.source.file), `runtime report leaked an absolute source path: ${requirement.source.file}`)
@@ -109,15 +115,27 @@ try {
 		assert(!requirement.source.file.split('/').includes('..'), `runtime report leaked parent traversal: ${requirement.source.file}`)
 		assert(requirement.source.min >= 0)
 		assert(requirement.source.max >= requirement.source.min)
+		assert(['haxe-type', 'generated-module', 'compiler-policy', 'native-boundary', 'raw-boundary'].includes(requirement.subject.kind))
+		assert(requirement.subject.id.length > 0)
 		assert(requirement.rootModules.length > 0)
 		assert(requirement.profileEligibility.includes(runtimeRequirements.profile))
 	}
+	const coreRequirement = runtimeRequirements.requirements.find(requirement => requirement.id === 'compiler:runtime-packaging:core')
+	assert(coreRequirement)
+	assert.strictEqual(coreRequirement.sourceKind, 'compiler-infrastructure')
+	assert.deepStrictEqual(coreRequirement.subject, {kind: 'compiler-policy', id: 'runtime-packaging'})
+	assert.deepStrictEqual(coreRequirement.rootModules, ['HxRuntime'])
+	const registryRequirement = runtimeRequirements.requirements.find(
+		requirement => requirement.id === 'compiler:generated:HxTypeRegistry:type-registry')
+	assert(registryRequirement)
+	assert.deepStrictEqual(registryRequirement.subject, {kind: 'generated-module', id: 'HxTypeRegistry'})
+	assert.deepStrictEqual(registryRequirement.rootModules, ['HxType'])
 	assert.strictEqual(runtimeRequirements.requirementChains.length, runtimeRequirements.requirementCount)
 	for (const chain of runtimeRequirements.requirementChains) {
 		assert(requirementIds.has(chain.requirementId), `runtime chain refers to missing requirement ${chain.requirementId}`)
 		assert(chain.resolvedModules.length > 0)
 		for (const moduleName of chain.resolvedModules)
-			assert(runtimeRequirements.semanticClosureModules.includes(moduleName))
+			assert(runtimeRequirements.requirementClosureModules.includes(moduleName))
 	}
 	const runtimeSourcesByModule = new Map(runtimeRequirements.runtimeSources.map(source => [source.module, source]))
 	const intRuntimeSource = runtimeSourcesByModule.get('HxInt')
@@ -126,7 +144,7 @@ try {
 	assert(intRuntimeSource.profiles.includes(runtimeRequirements.profile))
 	assert(intRuntimeSource.files.length > 0)
 	for (const source of runtimeRequirements.runtimeSources) {
-		assert(runtimeRequirements.semanticClosureModules.includes(source.module))
+		assert(runtimeRequirements.requirementClosureModules.includes(source.module))
 		for (const file of source.files) {
 			assert.match(file.sha256, sha256Revision)
 			assert(file.bytes > 0)
@@ -141,7 +159,7 @@ try {
 	assert(human.stdout.includes('reflaxe.ocaml output inspection: VALID'))
 	assert(human.stdout.includes('[PASS] Generated artifact ownership:'))
 	assert(human.stdout.includes('[BLOCKED] Source-bundle packaging:'))
-	assert(human.stdout.includes('source-rooted coverage is still partial'))
+	assert(human.stdout.includes('explicit requirement coverage is still partial'))
 	assert(human.stdout.includes('[SKIP] Native Dune timing'))
 	assert(human.stdout.includes('HxRuntime:'))
 	assert(human.stdout.includes('assignment/update family only'))

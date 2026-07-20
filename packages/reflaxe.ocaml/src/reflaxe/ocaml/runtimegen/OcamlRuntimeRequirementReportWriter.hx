@@ -33,41 +33,41 @@ private typedef OcamlRuntimeRequirementReportPayload = {
 	final runtimeSourceRevision:String;
 	final requirements:Array<OcamlRuntimeRequirement>;
 	final requirementChains:Array<OcamlRuntimeRequirementChain>;
-	final semanticRootModules:Array<String>;
-	final semanticClosureModules:Array<String>;
-	final syntaxObservedModules:Array<String>;
-	final explainedSyntaxModules:Array<String>;
-	final unexplainedSyntaxModules:Array<String>;
-	final semanticRootsMissingFromSyntax:Array<String>;
+	final requirementRootModules:Array<String>;
+	final requirementClosureModules:Array<String>;
+	final compilerObservedModules:Array<String>;
+	final explainedCompilerObservedModules:Array<String>;
+	final unexplainedCompilerObservedModules:Array<String>;
+	final requirementRootsNotCompilerObserved:Array<String>;
 	final selectedModules:Array<String>;
 	final runtimeSources:Array<RuntimeSourceModule>;
 	final message:String;
 }
 
 /**
-	Writes the source-to-runtime explanation chain for migrated semantic families.
+	Writes the compiler-decision-to-runtime explanation chain for migrated families.
 
 	The report is intentionally explicit about partial coverage. It proves that
 	each recorded need resolves through the checked runtime catalog, while keeping
-	generated-syntax observations visible until every compiler family records its
-	own source-level reason.
+	compiler observations visible until every compiler family records why it needs
+	each runtime helper.
 **/
 class OcamlRuntimeRequirementReportWriter {
 	public static inline final FILE_NAME = "ocaml_runtime_requirement_report.json";
-	public static inline final MODEL = "source-rooted-ocaml-runtime-requirements";
-	public static inline final SCHEMA_VERSION = 1;
+	public static inline final MODEL = "recorded-ocaml-runtime-requirements";
+	public static inline final SCHEMA_VERSION = 2;
 
-	/** Resolves, cross-checks, and writes the current partial semantic ledger. **/
+	/** Resolves, cross-checks, and writes the current partial requirement ledger. **/
 	public static function write(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, profile:String, allowTooling:Bool,
 			runtimeMode:OcamlRuntimeMode, selectionMode:String, sourceManifest:RuntimeSourceManifestSnapshot, requirements:Array<OcamlRuntimeRequirement>,
-			requirementRevision:String, syntaxObservedModules:Array<String>, selectedEntries:Array<RuntimeSourceModule>):Void {
+			requirementRevision:String, compilerObservedModules:Array<String>, selectedEntries:Array<RuntimeSourceModule>):Void {
 		if (!~/^sha256:[0-9a-f]{64}$/.match(requirementRevision))
 			throw "OCaml runtime requirement report received an invalid requirement revision.";
 		final sortedRequirements = requirements.copy();
 		sortedRequirements.sort((left, right) -> compareStrings(left.id, right.id));
 		final seenRequirements:Map<String, Bool> = [];
-		final semanticRoots:Map<String, Bool> = [];
-		final semanticClosure:Map<String, Bool> = [];
+		final requirementRoots:Map<String, Bool> = [];
+		final requirementClosure:Map<String, Bool> = [];
 		final chains = new Array<OcamlRuntimeRequirementChain>();
 		for (requirement in sortedRequirements) {
 			if (seenRequirements.exists(requirement.id))
@@ -76,43 +76,50 @@ class OcamlRuntimeRequirementReportWriter {
 			if (!requirement.profileEligibility.contains(profile))
 				throw 'OCaml runtime requirement "${requirement.id}" is not eligible for the "$profile" profile.';
 			for (root in requirement.rootModules)
-				semanticRoots.set(root, true);
+				requirementRoots.set(root, true);
 			final closure = RuntimeSourceManifest.resolveClosure(sourceManifest, requirement.rootModules, profile, allowTooling);
 			final resolvedModules = [for (entry in closure) entry.module];
 			for (moduleName in resolvedModules)
-				semanticClosure.set(moduleName, true);
+				requirementClosure.set(moduleName, true);
 			chains.push({requirementId: requirement.id, resolvedModules: resolvedModules});
 		}
-		final semanticRootModules = mapKeysSorted(semanticRoots);
-		final semanticClosureModules = mapKeysSorted(semanticClosure);
-		final observed = uniqueSorted(syntaxObservedModules, "syntax-observed runtime modules");
+		final requirementRootModules = mapKeysSorted(requirementRoots);
+		final requirementClosureModules = mapKeysSorted(requirementClosure);
+		final observed = uniqueSorted(compilerObservedModules, "compiler-observed runtime modules");
 		final observedSet:Map<String, Bool> = [for (moduleName in observed) moduleName => true];
 		final selectedModules = [for (entry in selectedEntries) entry.module];
 		final selectedSet:Map<String, Bool> = [for (moduleName in selectedModules) moduleName => true];
-		for (moduleName in semanticClosureModules)
+		for (moduleName in requirementClosureModules)
 			if (!selectedSet.exists(moduleName))
-				throw 'Semantic runtime requirement closure contains "$moduleName", but runtime packaging did not select it.';
+				throw 'Recorded runtime requirement closure contains "$moduleName", but runtime packaging did not select it.';
 		final omittedObservedModules = [for (moduleName in observed) if (!selectedSet.exists(moduleName)) moduleName];
 		if (omittedObservedModules.length > 0) {
 			final omittedLabel = omittedObservedModules.join(", ");
-			throw 'Runtime packaging omitted syntax-observed module${omittedObservedModules.length == 1 ? "" : "s"}: $omittedLabel. Enable automatic runtime discovery or add every named module to -D ocaml_runtime_modules.';
+			throw 'Runtime packaging omitted compiler-observed module${omittedObservedModules.length == 1 ? "" : "s"}: $omittedLabel. Enable automatic runtime discovery or add every named module to -D ocaml_runtime_modules.';
 		}
-		final explainedSyntaxModules = [for (moduleName in observed) if (semanticRoots.exists(moduleName)) moduleName];
-		final unexplainedSyntaxModules = [for (moduleName in observed) if (!semanticRoots.exists(moduleName)) moduleName];
-		final semanticRootsMissingFromSyntax = [
-			for (moduleName in semanticRootModules)
+		final explainedCompilerObservedModules = [for (moduleName in observed) if (requirementRoots.exists(moduleName)) moduleName];
+		final unexplainedCompilerObservedModules = [
+			for (moduleName in observed)
+				if (!requirementRoots.exists(moduleName)) moduleName
+		];
+		final requirementRootsNotCompilerObserved = [
+			for (moduleName in requirementRootModules)
 				if (!observedSet.exists(moduleName)) moduleName
 		];
 		final runtimeSources = [
 			for (entry in sourceManifest.modules)
-				if (semanticClosure.exists(entry.module)) entry
+				if (requirementClosure.exists(entry.module)) entry
 		];
-		final selectionAuthority = runtimeMode == OcamlRuntimeMode.Full ? "explicit-full-with-source-requirement-audit-v1" : "source-required-with-syntax-consistency-check-v1";
+		final selectionAuthority = runtimeMode == OcamlRuntimeMode.Full ? "explicit-full-with-recorded-requirement-audit-v2" : "recorded-requirements-with-compiler-observation-check-v2";
 		final payload:OcamlRuntimeRequirementReportPayload = {
 			schemaVersion: SCHEMA_VERSION,
 			model: MODEL,
 			authorityStatus: "partial",
-			coveredFamilies: ["typed-place-assignment-and-update"],
+			coveredFamilies: [
+				"compiler-core-runtime",
+				"compiler-type-registry",
+				"typed-place-assignment-and-update"
+			],
 			selectionAuthority: selectionAuthority,
 			profile: profile,
 			runtimeMode: OcamlRuntimeMode.toDefineValue(runtimeMode),
@@ -122,15 +129,15 @@ class OcamlRuntimeRequirementReportWriter {
 			runtimeSourceRevision: sourceManifest.revision,
 			requirements: sortedRequirements,
 			requirementChains: chains,
-			semanticRootModules: semanticRootModules,
-			semanticClosureModules: semanticClosureModules,
-			syntaxObservedModules: observed,
-			explainedSyntaxModules: explainedSyntaxModules,
-			unexplainedSyntaxModules: unexplainedSyntaxModules,
-			semanticRootsMissingFromSyntax: semanticRootsMissingFromSyntax,
+			requirementRootModules: requirementRootModules,
+			requirementClosureModules: requirementClosureModules,
+			compilerObservedModules: observed,
+			explainedCompilerObservedModules: explainedCompilerObservedModules,
+			unexplainedCompilerObservedModules: unexplainedCompilerObservedModules,
+			requirementRootsNotCompilerObserved: requirementRootsNotCompilerObserved,
 			selectedModules: selectedModules,
 			runtimeSources: runtimeSources,
-			message: "Source-rooted runtime explanations currently cover typed assignment and update lowering. Other generated runtime references remain migration debt."
+			message: "Recorded runtime explanations cover core packaging, the compiler-generated type registry, and typed assignment/update lowering. Other compiler paths still need their own explanations."
 		};
 		final report = {
 			schemaVersion: payload.schemaVersion,
@@ -148,12 +155,12 @@ class OcamlRuntimeRequirementReportWriter {
 			requirementCount: payload.requirements.length,
 			requirements: payload.requirements,
 			requirementChains: payload.requirementChains,
-			semanticRootModules: payload.semanticRootModules,
-			semanticClosureModules: payload.semanticClosureModules,
-			syntaxObservedModules: payload.syntaxObservedModules,
-			explainedSyntaxModules: payload.explainedSyntaxModules,
-			unexplainedSyntaxModules: payload.unexplainedSyntaxModules,
-			semanticRootsMissingFromSyntax: payload.semanticRootsMissingFromSyntax,
+			requirementRootModules: payload.requirementRootModules,
+			requirementClosureModules: payload.requirementClosureModules,
+			compilerObservedModules: payload.compilerObservedModules,
+			explainedCompilerObservedModules: payload.explainedCompilerObservedModules,
+			unexplainedCompilerObservedModules: payload.unexplainedCompilerObservedModules,
+			requirementRootsNotCompilerObserved: payload.requirementRootsNotCompilerObserved,
 			selectedModules: payload.selectedModules,
 			runtimeSources: payload.runtimeSources,
 			message: payload.message

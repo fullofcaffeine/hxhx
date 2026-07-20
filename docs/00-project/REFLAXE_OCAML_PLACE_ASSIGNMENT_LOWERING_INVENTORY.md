@@ -257,18 +257,24 @@ canonical receiver/index identities alongside diagnostic display spellings,
 selected `HxArray` get/set symbols, and semantic runtime requirements. The
 array compound/update plans and static compound/update plans use those existing
 closed place/operation fields, so they add no schema version.
-Schema version 5 expands those short requirement IDs into complete,
-source-rooted explanations and adds a deterministic requirement revision. The
-report writer fails if a plan names an explanation that the final typed-body
-sealer did not record.
+Schema version 5 expands those short requirement IDs into complete explanations
+tied to Haxe source operations and adds a deterministic requirement revision.
+The report writer fails if a plan names an explanation that the final typed
+lowering step did not record.
+Schema version 6 replaces the place-only `subjectTypeId` field with a structured
+`subject` containing `kind` and `id`. A place operation uses
+`{ "kind": "haxe-type", "id": "Int" }`; the same runtime requirement model can
+now describe compiler-generated modules and packaging rules without pretending
+they are Haxe types.
 Every runtime-enabled build also writes
 `ocaml_runtime_requirement_report.json`. It resolves those explanations through
 the locked runtime-source catalog and records the exact dependency closure,
 source hashes, Dune libraries, profiles, and licenses that were selected. The
-same report keeps syntax-observed modules from unmigrated compiler families in
-an explicit `unexplainedSyntaxModules` list; it therefore proves this place
-family without implying that every runtime file in the whole program has a
-source-operation explanation. Source locations are normalized to
+same report now also explains the core packaging rule and the generated
+`HxTypeRegistry` module. It keeps modules from unmigrated compiler families in
+an explicit `unexplainedCompilerObservedModules` list; it therefore proves the
+migrated families without implying that every runtime file in the whole program
+has an explicit explanation. Source locations are normalized to
 project-relative or stable library labels so reports are
 reproducible across machines and do not expose developer home-directory or
 tool-cache prefixes.
@@ -282,6 +288,19 @@ is represented and validated.
 Properties remain host-resolved calls rather than being guessed from field
 spelling. Abstract operators remain exact host-selected calls or bodies rather
 than being treated as ordinary numeric updates.
+
+When an intentional schema change affects the four checked lowering reports,
+regenerate them through the test runner rather than editing JSON by hand:
+
+```bash
+PORTABLE_FIXTURE_ALLOWLIST=place_instance_field_assign,place_static_field_assign,place_array_simple_assign,place_array_compound_assign \
+PORTABLE_UPDATE_LOWERING_GOLDENS=1 bash scripts/test-portable.sh
+```
+
+Update mode runs sequentially, compiles every selected fixture twice, and writes
+an expected file only after both generated reports have the same SHA-256 digest.
+Run the same command again without `PORTABLE_UPDATE_LOWERING_GOLDENS=1` to prove
+the checked files and normal validation path agree.
 
 ### First-cut validation checkpoint
 

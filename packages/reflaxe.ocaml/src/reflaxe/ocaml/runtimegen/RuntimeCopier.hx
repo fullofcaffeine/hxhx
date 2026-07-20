@@ -231,27 +231,27 @@ class RuntimeCopier {
 					addInclusionReason(inclusionReasonMap, dependency, "transitive:" + entry.module);
 	}
 
-	static function runtimeSelectionModeLabel(context:OcamlBuildContext, sourceRequiredModules:Array<String>, compilerTrackedModules:Array<String>,
+	static function runtimeSelectionModeLabel(context:OcamlBuildContext, requiredModules:Array<String>, compilerObservedModules:Array<String>,
 			manualModules:Array<String>):String {
 		return switch (context.runtimeMode) {
 			case Full:
 				"full";
 			case Selective:
-				final hasSourceRequired = sourceRequiredModules.length > 0;
-				final hasTracked = compilerTrackedModules.length > 0;
+				final hasRequirements = requiredModules.length > 0;
+				final hasObserved = compilerObservedModules.length > 0;
 				final hasManual = manualModules.length > 0;
-				final base = if (hasSourceRequired && hasTracked && hasManual) {
-					"source_required_plus_syntax_observed_plus_manual";
-				} else if (hasSourceRequired && hasTracked) {
-					"source_required_plus_syntax_observed";
-				} else if (hasSourceRequired && hasManual) {
-					"source_required_plus_manual";
-				} else if (hasSourceRequired) {
-					"source_required";
-				} else if (hasTracked && hasManual) {
-					"compiler_tracked_plus_manual";
-				} else if (hasTracked) {
-					"compiler_tracked";
+				final base = if (hasRequirements && hasObserved && hasManual) {
+					"requirements_plus_compiler_observed_plus_manual";
+				} else if (hasRequirements && hasObserved) {
+					"requirements_plus_compiler_observed";
+				} else if (hasRequirements && hasManual) {
+					"requirements_plus_manual";
+				} else if (hasRequirements) {
+					"requirements";
+				} else if (hasObserved && hasManual) {
+					"compiler_observed_plus_manual";
+				} else if (hasObserved) {
+					"compiler_observed";
 				} else if (hasManual) {
 					"manual_only";
 				} else {
@@ -353,7 +353,7 @@ class RuntimeCopier {
 	}
 
 	public static function copy(output:OutputManager, artifacts:OcamlArtifactManifestBuilder, destSubdir:String = "runtime",
-			compilerTrackedModules:Array<String>, semanticRequirements:Array<OcamlRuntimeRequirement>, semanticRequirementRevision:String):Void {
+			compilerObservedModules:Array<String>, requirements:Array<OcamlRuntimeRequirement>, requirementRevision:String):Void {
 		final stdDir = tryResolveStdDir();
 		if (stdDir == null)
 			throw "Cannot locate the reflaxe.ocaml standard library, so the checked OCaml runtime cannot be packaged.";
@@ -381,36 +381,37 @@ class RuntimeCopier {
 				if (entry.profiles.contains(profile)
 					&& (allowHxHxRuntime || entry.scope != RuntimeSourceManifest.TOOLING_SCOPE)) entry.module
 		];
-		final trackedModulesAll = validatedRootsSorted(compilerTrackedModules != null ? compilerTrackedModules : [], sourceManifest,
-			"compiler-tracked target syntax");
-		if (trackedModulesAll.length > 0)
-			RuntimeSourceManifest.resolveClosure(sourceManifest, trackedModulesAll, profile, allowHxHxRuntime);
-		final trackedModules = buildContext.runtimeMode == Selective && !buildContext.runtimeInferenceDisabled ? trackedModulesAll : [];
+		final compilerObservedModulesAll = validatedRootsSorted(compilerObservedModules != null ? compilerObservedModules : [], sourceManifest,
+			"compiler-observed generated output");
+		if (compilerObservedModulesAll.length > 0)
+			RuntimeSourceManifest.resolveClosure(sourceManifest, compilerObservedModulesAll, profile, allowHxHxRuntime);
+		final enabledCompilerObservedModules = buildContext.runtimeMode == Selective
+			&& !buildContext.runtimeInferenceDisabled ? compilerObservedModulesAll : [];
 		final manualModules = validatedRootsSorted(buildContext.runtimeManualModules, sourceManifest, "-D ocaml_runtime_modules");
-		final resolvedSemanticRequirements = semanticRequirements != null ? semanticRequirements : [];
-		final sourceRequiredSet:Map<String, Bool> = [];
-		for (requirement in resolvedSemanticRequirements) {
+		final recordedRequirements = requirements != null ? requirements : [];
+		final requiredSet:Map<String, Bool> = [];
+		for (requirement in recordedRequirements) {
 			if (!requirement.profileEligibility.contains(profile))
-				throw 'Source-rooted OCaml runtime requirement "${requirement.id}" is not eligible for the "$profile" profile.';
+				throw 'Recorded OCaml runtime requirement "${requirement.id}" is not eligible for the "$profile" profile.';
 			for (moduleName in requirement.rootModules)
-				sourceRequiredSet.set(moduleName, true);
+				requiredSet.set(moduleName, true);
 		}
-		final sourceRequiredModules = validatedRootsSorted(mapKeysSorted(sourceRequiredSet), sourceManifest, "source-rooted runtime requirements");
-		if (sourceRequiredModules.length > 0)
-			RuntimeSourceManifest.resolveClosure(sourceManifest, sourceRequiredModules, profile, allowHxHxRuntime);
-		final selectionMode = runtimeSelectionModeLabel(buildContext, sourceRequiredModules, trackedModules, manualModules);
+		final requiredModules = validatedRootsSorted(mapKeysSorted(requiredSet), sourceManifest, "recorded runtime requirements");
+		if (requiredModules.length > 0)
+			RuntimeSourceManifest.resolveClosure(sourceManifest, requiredModules, profile, allowHxHxRuntime);
+		final selectionMode = runtimeSelectionModeLabel(buildContext, requiredModules, enabledCompilerObservedModules, manualModules);
 		final inclusionReasonMap:Map<String, Map<String, Bool>> = [];
 		final selectedEntries:Array<RuntimeSourceModule> = switch (buildContext.runtimeMode) {
 			case Selective:
 				final rootSet:Map<String, Bool> = [];
 				rootSet.set(RUNTIME_CORE_MODULE, true);
 				addInclusionReason(inclusionReasonMap, RUNTIME_CORE_MODULE, "core_runtime");
-				for (moduleName in sourceRequiredModules)
+				for (moduleName in requiredModules)
 					rootSet.set(moduleName, true);
-				addRootReasons(inclusionReasonMap, sourceRequiredModules, "source_required");
-				for (moduleName in trackedModules)
+				addRootReasons(inclusionReasonMap, requiredModules, "recorded_requirement");
+				for (moduleName in enabledCompilerObservedModules)
 					rootSet.set(moduleName, true);
-				addRootReasons(inclusionReasonMap, trackedModules, "compiler_tracked");
+				addRootReasons(inclusionReasonMap, enabledCompilerObservedModules, "compiler_observed");
 				for (moduleName in manualModules)
 					rootSet.set(moduleName, true);
 				addRootReasons(inclusionReasonMap, manualModules, "manual_seed");
@@ -431,10 +432,10 @@ class RuntimeCopier {
 		final selectedModuleList = [for (entry in selectedEntries) entry.module];
 		final inclusionReasons = inclusionReasonsSorted(inclusionReasonMap, selectedModuleList);
 		writeProfileReport(output, artifacts, rawRequestedProfile, buildContext);
-		writeRuntimePlanReport(output, artifacts, buildContext, selectionMode, availableModules.copy(), trackedModules, manualModules, selectedModuleList,
-			inclusionReasons);
+		writeRuntimePlanReport(output, artifacts, buildContext, selectionMode, availableModules.copy(), enabledCompilerObservedModules, manualModules,
+			selectedModuleList, inclusionReasons);
 		OcamlRuntimeRequirementReportWriter.write(output, artifacts, profile, allowHxHxRuntime, buildContext.runtimeMode, selectionMode, sourceManifest,
-			resolvedSemanticRequirements, semanticRequirementRevision, trackedModulesAll, selectedEntries);
+			recordedRequirements, requirementRevision, compilerObservedModulesAll, selectedEntries);
 
 		for (entry in selectedEntries)
 			for (file in entry.files) {

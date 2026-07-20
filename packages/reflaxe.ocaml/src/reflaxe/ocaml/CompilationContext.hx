@@ -483,22 +483,27 @@ class CompilationContext {
 	}
 
 	/** Records the runtime capabilities already sealed into one place-lowering plan. **/
-	public function recordPlaceRuntimeRequirements(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, subjectTypeId:String,
+	public function recordPlaceRuntimeRequirements(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, semanticTypeId:String,
 			requirementIds:Array<String>):Void {
-		runtimeRequirements.recordPlacePlan(decisionId, originId, source, subjectTypeId, requirementIds);
+		runtimeRequirements.recordPlacePlan(decisionId, originId, source, semanticTypeId, requirementIds);
 	}
 
-	/** Returns source-rooted runtime explanations in stable identity order. **/
+	/** Records one runtime helper required by compiler-generated output or policy. **/
+	public function recordRuntimeInfrastructure(capability:String):Void {
+		runtimeRequirements.recordCompilerInfrastructure(capability);
+	}
+
+	/** Returns decision-point runtime explanations in stable identity order. **/
 	public function runtimeRequirementsSorted():Array<OcamlRuntimeRequirement> {
 		return runtimeRequirements.requirementsSorted();
 	}
 
-	/** Returns runtime roots selected by semantic requirements, before dependency closure. **/
+	/** Returns roots from recorded runtime requirements, before dependency closure. **/
 	public function runtimeRequirementRootsSorted():Array<String> {
 		return runtimeRequirements.rootModulesSorted();
 	}
 
-	/** Returns a deterministic digest of the current semantic runtime ledger. **/
+	/** Returns a deterministic digest of the current runtime requirement ledger. **/
 	public function runtimeRequirementRevision():String {
 		return runtimeRequirements.revision();
 	}

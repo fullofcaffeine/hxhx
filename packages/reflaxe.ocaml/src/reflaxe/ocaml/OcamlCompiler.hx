@@ -45,6 +45,7 @@ import reflaxe.ocaml.runtimegen.OcamlBuildTimingReport.OcamlBuildTimingReportWri
 import reflaxe.ocaml.runtimegen.OcamlNativeFunctorEmitter;
 import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
 import reflaxe.ocaml.runtimegen.RuntimeUsageCollector;
 import reflaxe.ocaml.lowered.OcamlLoweringReportWriter;
 import reflaxe.ocaml.lowered.OcamlPlacePlanRegistry;
@@ -1787,9 +1788,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		function sealArtifacts():Void {
 			artifacts.seal({
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
-				model: "source-rooted-runtime-requirements-partial-v1",
+				model: "recorded-runtime-requirements-partial-v2",
 				revision: ctx.runtimeRequirementRevision(),
-				message: "Typed assignment and update lowering now records source-rooted runtime requirements and checks them against packaged sources. Other compiler families still rely on generated-syntax observations, so whole-program runtime ownership is incomplete."
+				message: "The compiler records why typed assignments, updates, its generated type registry, and core packaging need runtime support, then checks those needs against packaged sources. Other compiler paths still rely on observed generated modules, so whole-program runtime ownership is incomplete."
 			}, {
 				status: OcamlArtifactManifestSchema.AUTHORITY_INCOMPLETE,
 				model: "free-form-dune-libraries-v1",
@@ -2377,6 +2378,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 				classTagNames.push(k);
 			}
 			classTagNames.sort(Reflect.compare);
+			var usesDynamicArgArrays = false;
+			var usesOptionalNullPadding = false;
+			var usesRuntimeUnbox = false;
 
 			function ocamlStringLiteral(s:String):String {
 				return "\"" + escapeOcamlString(s) + "\"";
@@ -2423,6 +2427,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case OcamlTypeExpr.TIdent("Obj.t"):
 						objExpr;
 					case OcamlTypeExpr.TIdent("bool"):
+						usesRuntimeUnbox = true;
 						"HxRuntime.unbox_bool_or_obj (" + objExpr + ")";
 					case OcamlTypeExpr.TIdent("int") | OcamlTypeExpr.TIdent("float") | OcamlTypeExpr.TIdent("string") | OcamlTypeExpr.TIdent("bytes") | OcamlTypeExpr.TIdent("char"):
 						"Obj.obj ("
@@ -2451,13 +2456,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 				"let init () : unit ="
 			];
 			lines.remove(null);
-			var usesDynamicArgArrays = false;
-			var usesOptionalNullPadding = false;
-			ctx.markRuntimeModule("HxType");
 
 			if (classNames.length == 0 && enumNames.length == 0 && classTagNames.length == 0) {
 				lines.push("  ()");
 			} else {
+				ctx.markRuntimeModule("HxType");
+				ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
 				for (n in classNames) {
 					lines.push("  ignore (HxType.class_ " + ocamlStringLiteral(n) + ");");
 				}
@@ -2586,10 +2590,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 					sortedTags.sort(Reflect.compare);
 					lines.push("  HxType.register_class_tags " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(sortedTags) + ";");
 				}
-				if (usesDynamicArgArrays)
+				if (usesDynamicArgArrays) {
 					ctx.markRuntimeModule("HxArray");
-				if (usesOptionalNullPadding)
+					ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS);
+				}
+				if (usesOptionalNullPadding) {
 					ctx.markRuntimeModule("HxRuntime");
+					ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_OPTIONAL_NULL);
+				}
+				if (usesRuntimeUnbox) {
+					ctx.markRuntimeModule("HxRuntime");
+					ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.TYPE_REGISTRY_RUNTIME_UNBOX);
+				}
 				lines.push("  ()");
 			}
 			lines.push("");
@@ -2685,6 +2697,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		final noRuntime = haxe.macro.Context.defined("ocaml_no_runtime");
 		if (!noRuntime) {
+			ctx.recordRuntimeInfrastructure(OcamlRuntimeRequirementLedger.CORE_RUNTIME);
 			RuntimeCopier.copy(output, artifacts, "runtime", ctx.runtimeModulesSorted(), ctx.runtimeRequirementsSorted(), ctx.runtimeRequirementRevision());
 		}
 

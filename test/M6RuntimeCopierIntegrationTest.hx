@@ -41,15 +41,33 @@ private typedef RuntimePlanReport = {
 	final inclusionReasons:Array<RuntimePlanInclusionReason>;
 }
 
+private typedef RuntimeRequirementSubject = {
+	final kind:String;
+	final id:String;
+}
+
+private typedef RuntimeRequirementEntry = {
+	final id:String;
+	final sourceKind:String;
+	final subject:RuntimeRequirementSubject;
+	final rootModules:Array<String>;
+}
+
 private typedef RuntimeRequirementReport = {
 	final schemaVersion:Int;
+	final model:String;
 	final authorityStatus:String;
+	final coveredFamilies:Array<String>;
 	final selectionAuthority:String;
 	final runtimeMode:String;
 	final selectionMode:String;
-	final semanticRootModules:Array<String>;
-	final semanticClosureModules:Array<String>;
-	final semanticRootsMissingFromSyntax:Array<String>;
+	final requirements:Array<RuntimeRequirementEntry>;
+	final requirementRootModules:Array<String>;
+	final requirementClosureModules:Array<String>;
+	final compilerObservedModules:Array<String>;
+	final explainedCompilerObservedModules:Array<String>;
+	final unexplainedCompilerObservedModules:Array<String>;
+	final requirementRootsNotCompilerObserved:Array<String>;
 	final selectedModules:Array<String>;
 }
 
@@ -96,6 +114,13 @@ class M6RuntimeCopierIntegrationTest {
 				return entry.reasons.copy();
 		}
 		return [];
+	}
+
+	static function requirementById(report:RuntimeRequirementReport, id:String):RuntimeRequirementEntry {
+		for (requirement in report.requirements)
+			if (requirement.id == id)
+				return requirement;
+		throw 'Missing runtime requirement "$id".';
 	}
 
 	static function shellQuote(value:String):String {
@@ -200,6 +225,7 @@ class M6RuntimeCopierIntegrationTest {
 		final emptyProfileOutDir = rootOutDir + "/portable_empty";
 		final portableManualOutDir = rootOutDir + "/portable_manual_selective";
 		final portableIncompleteManualOutDir = rootOutDir + "/portable_incomplete_manual_selective";
+		final typeRegistryOutDir = rootOutDir + "/type_registry_runtime_requirements";
 		final metalTokenNoiseOutDir = rootOutDir + "/metal_token_noise";
 		final metalTokenFallbackNoDebugOutDir = rootOutDir + "/metal_token_fallback_no_debug";
 		final metalTokenFallbackDebugOutDir = rootOutDir + "/metal_token_fallback_debug";
@@ -219,7 +245,7 @@ class M6RuntimeCopierIntegrationTest {
 		final emptyProfileCompile = compileRuntimeFixture(emptyProfileOutDir, "");
 		assertTrue(emptyProfileCompile.exitCode == 0, "empty-profile compile failed: " + emptyProfileCompile.stderr);
 		final observedRuntimeRoots = readRuntimePlanReport(metalOutDir).trackedModules;
-		assertTrue(observedRuntimeRoots.length > 0, "metal baseline should expose syntax-observed roots for the manual-mode fixture");
+		assertTrue(observedRuntimeRoots.length > 0, "metal baseline should expose compiler-observed roots for the manual-mode fixture");
 		final portableManualCompile = compileRuntimeFixture(portableManualOutDir, "portable", "test", "Main", [
 			"ocaml_runtime_mode=selective",
 			"ocaml_runtime_no_infer",
@@ -233,10 +259,12 @@ class M6RuntimeCopierIntegrationTest {
 		]);
 		assertTrue(portableIncompleteManualCompile.exitCode != 0, "manual runtime selection should reject omitted generated-code requirements");
 		final portableIncompleteManualOutput = portableIncompleteManualCompile.stderr + "\n" + portableIncompleteManualCompile.stdout;
-		assertContains(portableIncompleteManualOutput, "Runtime packaging omitted syntax-observed modules",
+		assertContains(portableIncompleteManualOutput, "Runtime packaging omitted compiler-observed modules",
 			"manual runtime failure should explain what evidence was omitted");
 		assertContains(portableIncompleteManualOutput, "ocaml_runtime_modules",
 			"manual runtime failure should name the option that can supply the missing roots");
+		final typeRegistryCompile = compileRuntimeFixture(typeRegistryOutDir, "portable", "test/fixtures/m6_runtime_type_registry/src", "Main");
+		assertTrue(typeRegistryCompile.exitCode == 0, "type-registry runtime requirement compile failed: " + typeRegistryCompile.stderr);
 		final portableManifest = OcamlArtifactManifestTestHelper.validate(portableOutDir, "portable");
 		OcamlArtifactManifestTestHelper.assertEntry(portableManifest, "runtime/HxRuntime.ml", "runtime-copier", "runtime-source", true);
 		OcamlArtifactManifestTestHelper.validate(metalOutDir, "metal");
@@ -341,6 +369,7 @@ class M6RuntimeCopierIntegrationTest {
 		final portableRequirementReport = readRuntimeRequirementReport(portableOutDir);
 		final metalRequirementReport = readRuntimeRequirementReport(metalOutDir);
 		final portableManualRequirementReport = readRuntimeRequirementReport(portableManualOutDir);
+		final typeRegistryRequirementReport = readRuntimeRequirementReport(typeRegistryOutDir);
 
 		assertTrue(portableModules.length > 0, "portable runtime should include modules");
 		assertTrue(metalModules.length > 0, "metal runtime should include modules");
@@ -405,17 +434,36 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains("\n" + portableRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "portable report includes HxRuntime");
 		assertContains("\n" + reasonsForModule(portableRuntimeReport, "HxRuntime").join("\n") + "\n", "\nfull_runtime_mode\n",
 			"portable report includes full-runtime reason");
-		assertTrue(portableRequirementReport.schemaVersion == 1, "portable requirement report schema version");
+		assertTrue(portableRequirementReport.schemaVersion == 2, "portable requirement report schema version");
+		assertTrue(portableRequirementReport.model == "recorded-ocaml-runtime-requirements", "portable requirement report model");
 		assertTrue(portableRequirementReport.authorityStatus == "partial", "portable requirement report authority status");
-		assertTrue(portableRequirementReport.selectionAuthority == "explicit-full-with-source-requirement-audit-v1",
-			"portable full mode should audit source requirements without claiming selective ownership");
+		assertArrayEquals([
+			"compiler-core-runtime",
+			"compiler-type-registry",
+			"typed-place-assignment-and-update"
+		], portableRequirementReport.coveredFamilies,
+			"portable requirement report covered families");
+		assertTrue(portableRequirementReport.selectionAuthority == "explicit-full-with-recorded-requirement-audit-v2",
+			"portable full mode should audit recorded requirements without claiming selective ownership");
 		assertTrue(portableRequirementReport.runtimeMode == "full", "portable requirement report runtime mode");
 		assertTrue(portableRequirementReport.selectionMode == "full", "portable requirement report selection mode");
+		final coreRequirement = requirementById(portableRequirementReport, "compiler:runtime-packaging:core");
+		assertTrue(coreRequirement.sourceKind == "compiler-infrastructure", "runtime core should identify compiler infrastructure as its source");
+		assertTrue(coreRequirement.subject.kind == "compiler-policy" && coreRequirement.subject.id == "runtime-packaging",
+			"runtime core should identify the packaging policy it supports");
+		final registryRequirement = requirementById(portableRequirementReport, "compiler:generated:HxTypeRegistry:type-registry");
+		assertTrue(registryRequirement.subject.kind == "generated-module" && registryRequirement.subject.id == "HxTypeRegistry",
+			"type-registry support should identify the generated module that uses it");
+		assertContains("\n" + registryRequirement.rootModules.join("\n") + "\n", "\nHxType\n", "type-registry requirement should select HxType");
+		final boolUnboxRequirement = requirementById(typeRegistryRequirementReport, "compiler:generated:HxTypeRegistry:runtime-unbox");
+		assertTrue(boolUnboxRequirement.subject.kind == "generated-module" && boolUnboxRequirement.subject.id == "HxTypeRegistry",
+			"Boolean reflection conversion should identify the generated type registry");
+		assertContains("\n" + boolUnboxRequirement.rootModules.join("\n") + "\n", "\nHxRuntime\n", "Boolean reflection conversion should select HxRuntime");
 
 		assertTrue(metalRuntimeReport.schemaVersion == 2, "metal runtime report schema version");
 		assertTrue(metalRuntimeReport.profile == "metal", "metal runtime report profile");
 		assertTrue(metalRuntimeReport.runtimeMode == "selective", "metal runtime mode should default to selective");
-		assertTrue(metalRuntimeReport.selectionMode == "source_required_plus_syntax_observed", "metal runtime report mode");
+		assertTrue(metalRuntimeReport.selectionMode == "requirements_plus_compiler_observed", "metal runtime report mode");
 		assertTrue(metalRuntimeReport.runtimeDebugLaneEnabled == false, "metal runtime report debug-lane flag");
 		assertTrue(metalRuntimeReport.tokenScanFallbackEnabled == false, "metal runtime report token-scan fallback flag");
 		assertTrue(metalRuntimeReport.selectedModules.length == metalRuntimeReport.selectedFeatures.length, "metal selected modules/features size");
@@ -425,15 +473,19 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxRuntime").join("\n") + "\n", "\ncore_runtime\n",
 			"metal report includes core-runtime reason");
 		assertNotContains("\n" + metalRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n", "metal report omits HxFile");
-		assertTrue(metalRequirementReport.selectionAuthority == "source-required-with-syntax-consistency-check-v1",
-			"metal selective mode should make recorded source requirements mandatory");
+		assertTrue(metalRequirementReport.selectionAuthority == "recorded-requirements-with-compiler-observation-check-v2",
+			"metal selective mode should make recorded runtime requirements mandatory");
 		assertTrue(metalRequirementReport.runtimeMode == "selective", "metal requirement report runtime mode");
 		assertTrue(metalRequirementReport.selectionMode == metalRuntimeReport.selectionMode,
 			"metal requirement and selection reports should describe the same mode");
-		assertContains("\n" + metalRequirementReport.semanticRootModules.join("\n") + "\n", "\nHxInt\n",
-			"metal requirement report should retain the source-required Haxe Int root");
-		assertTrue(metalRequirementReport.semanticRootsMissingFromSyntax.length == 0,
-			"migrated source requirements should still be observed in generated target syntax");
+		assertContains("\n" + metalRequirementReport.requirementRootModules.join("\n") + "\n", "\nHxInt\n",
+			"metal requirement report should retain the recorded Haxe Int root");
+		assertTrue(metalRequirementReport.requirementRootsNotCompilerObserved.length == 0,
+			"migrated runtime requirements should still agree with compiler observations for this fixture");
+		assertContains("\n" + metalRequirementReport.explainedCompilerObservedModules.join("\n") + "\n", "\nHxType\n",
+			"compiler-observed HxType use should be explained by the generated type registry");
+		assertTrue(metalRequirementReport.unexplainedCompilerObservedModules.length > 0,
+			"partial coverage should keep compiler-observed modules from unmigrated families visible");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalRequirementReport.selectedModules,
 			"metal requirement and selection reports should name the same packaged modules");
 
@@ -451,17 +503,17 @@ class M6RuntimeCopierIntegrationTest {
 
 		assertTrue(portableManualRuntimeReport.profile == "portable", "portable manual runtime report profile");
 		assertTrue(portableManualRuntimeReport.runtimeMode == "selective", "portable manual runtime mode");
-		assertTrue(portableManualRuntimeReport.selectionMode == "source_required_plus_manual", "portable manual runtime selection mode");
+		assertTrue(portableManualRuntimeReport.selectionMode == "requirements_plus_manual", "portable manual runtime selection mode");
 		assertTrue(portableManualRuntimeReport.runtimeInferenceDisabled == true, "portable manual runtime should disable inference");
 		assertTrue(portableManualRuntimeReport.runtimeDebugLaneEnabled == false, "portable manual runtime report debug-lane flag");
 		assertContains("\n" + portableManualRuntimeReport.manualModules.join("\n") + "\n", "\nHxRuntime\n", "portable manual report includes manual modules");
 		assertTrue(portableManualRuntimeReport.trackedModules.length == 0, "portable manual runtime should suppress tracked modules");
 		assertContains("\n" + portableManualRuntimeReport.selectedModules.join("\n") + "\n", "\nHxInt\n",
-			"portable manual runtime should retain the source-required Haxe Int helper");
-		assertContains("\n" + reasonsForModule(portableManualRuntimeReport, "HxInt").join("\n") + "\n", "\nsource_required\n",
+			"portable manual runtime should retain the recorded Haxe Int helper");
+		assertContains("\n" + reasonsForModule(portableManualRuntimeReport, "HxInt").join("\n") + "\n", "\nrecorded_requirement\n",
 			"portable manual runtime should explain the mandatory Haxe Int helper");
-		assertTrue(portableManualRequirementReport.selectionAuthority == "source-required-with-syntax-consistency-check-v1",
-			"manual selective mode must not disable recorded source requirements");
+		assertTrue(portableManualRequirementReport.selectionAuthority == "recorded-requirements-with-compiler-observation-check-v2",
+			"manual selective mode must not disable recorded runtime requirements");
 		assertTrue(portableManualRequirementReport.selectionMode == portableManualRuntimeReport.selectionMode,
 			"manual requirement and selection reports should describe the same mode");
 		assertArrayEquals(portableManualRuntimeReport.selectedModules, portableManualRequirementReport.selectedModules,
@@ -470,7 +522,7 @@ class M6RuntimeCopierIntegrationTest {
 
 		assertTrue(metalTokenNoiseRuntimeReport.profile == "metal", "token noise report profile");
 		assertTrue(metalTokenNoiseRuntimeReport.runtimeMode == "selective", "token noise runtime mode");
-		assertTrue(metalTokenNoiseRuntimeReport.selectionMode == "source_required_plus_syntax_observed", "token noise report mode");
+		assertTrue(metalTokenNoiseRuntimeReport.selectionMode == "requirements_plus_compiler_observed", "token noise report mode");
 		assertTrue(metalTokenNoiseRuntimeReport.runtimeDebugLaneEnabled == false, "token noise runtime report debug-lane flag");
 		assertNotContains("\n" + metalTokenNoiseRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n",
 			"token noise report omits HxFile despite HxFile string tokens");
@@ -481,8 +533,8 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(metalTokenFallbackNoDebugRuntimeReport.runtimeMode == "selective", "fallback-no-debug runtime mode");
 		assertTrue(metalTokenFallbackNoDebugRuntimeReport.runtimeDebugLaneEnabled == false, "fallback-no-debug should keep debug lane disabled");
 		assertTrue(metalTokenFallbackNoDebugRuntimeReport.tokenScanFallbackEnabled == false, "fallback-no-debug should remain disabled");
-		assertTrue(metalTokenFallbackNoDebugRuntimeReport.selectionMode == "source_required_plus_syntax_observed",
-			"fallback-no-debug should keep source-required and syntax-observed selection");
+		assertTrue(metalTokenFallbackNoDebugRuntimeReport.selectionMode == "requirements_plus_compiler_observed",
+			"fallback-no-debug should keep recorded-requirement and compiler-observed selection");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalTokenFallbackNoDebugRuntimeReport.selectedModules,
 			"fallback-no-debug runtime plan should match baseline metal plan");
 

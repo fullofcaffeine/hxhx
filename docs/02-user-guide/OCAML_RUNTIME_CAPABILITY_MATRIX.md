@@ -20,13 +20,15 @@ The compiler's compatibility runtime is a set of OCaml source modules copied int
 Validation stops before copying if a declared file is missing or modified, an unlisted OCaml source appears, a dependency is unknown, or a requested module is not legal for that profile. This prevents an incomplete or locally modified runtime from quietly entering generated output.
 
 This catalog answers “which reviewed source files implement this module?” The
-typed assignment/update path now also answers “which Haxe expression required
-`HxInt` or `HxArray`, and why?” in
+runtime requirement ledger also answers questions such as “which Haxe
+expression required `HxInt` or `HxArray`?”, “why did the compiler-generated
+`HxTypeRegistry` require `HxType`?”, and “why is the core runtime packaged?” in
 `ocaml_runtime_requirement_report.json` on every runtime-enabled build. Each
-explanation names the source expression, Haxe behavior, target decision,
-implementation feature, eligible profiles, and checked root module. The report
-then follows that root through the catalog to the exact source hashes,
-dependencies, Dune libraries, profiles, and licenses that were packaged.
+explanation names the supported Haxe type, generated module, or compiler rule;
+the decision that required support; the implementation feature; the eligible
+profiles; and the checked root module. The report then follows that root through
+the catalog to the exact source hashes, dependencies, Dune libraries, profiles,
+and licenses that were packaged.
 
 When `-D ocaml_lowering_report` is enabled, `ocaml_lowering_report.json` shows
 the same requirement identities next to the typed assignment/update plans that
@@ -34,11 +36,13 @@ caused them. This makes it possible to trace one source operation through the
 compiler decision and into the packaged OCaml files without searching generated
 source text.
 
-That explanation currently covers only the admitted assignment/update family.
-Other compiler paths still discover runtime names from generated OCaml
-structure. The requirement report lists those names under
-`unexplainedSyntaxModules`, so the whole-program runtime authority and generated
-artifact manifest correctly remain incomplete under `haxe_ocaml-0uwin`.
+Those explanations currently cover core packaging, the compiler-generated type
+registry, and the admitted assignment/update family. Other compiler paths still
+discover runtime names from generated OCaml structure or explicitly declare
+them while building string/template output. The requirement report lists those
+names under `unexplainedCompilerObservedModules`, so the whole-program runtime
+authority and generated artifact manifest correctly remain incomplete under
+`haxe_ocaml-0uwin`.
 
 ## Legend
 
@@ -88,17 +92,17 @@ artifact manifest correctly remain incomplete under `haxe_ocaml-0uwin`.
 
 ## Policy notes
 
-- Metal mode always includes helper modules recorded while translating a
-  specific Haxe operation. Structured target-syntax observations temporarily
-  supply roots for the remaining compiler families. The locked source manifest,
-  rather than an OCaml text scan, supplies and validates every transitive
-  runtime dependency.
+- Metal mode always includes helper modules backed by an explicit runtime
+  requirement. Compiler observations temporarily supply roots for the remaining
+  families. The locked source manifest, rather than an OCaml text scan, supplies
+  and validates every transitive runtime dependency.
 - Runtime planning can be overridden in Stage0 with:
   - `-D ocaml_runtime_mode=full|selective`
   - `-D ocaml_runtime_modules=<comma-separated module list>`
   - `-D ocaml_runtime_no_infer`
-    - disables syntax-observed discovery, but never removes a module already
-      recorded as necessary while translating a specific Haxe operation
+    - disables compiler-observed discovery, but never removes a module already
+      recorded as necessary for a Haxe operation, generated module, or
+      packaging rule
     - remains fail-closed: manual seeds must include every runtime module still
       observed from an unmigrated compiler family
 - Metal mode currently forbids dynamic/reflection-heavy constructs via `MetalProfileVerifier`:

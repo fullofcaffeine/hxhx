@@ -8,6 +8,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementCause;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSourceKind;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirementSubjectKind;
 
 using StringTools;
 
@@ -15,12 +16,18 @@ using StringTools;
 	Collects immutable explanations for compatibility-runtime use in one compile.
 
 	Entries are recorded where a target decision is made. Later packaging may read
-	the sorted records, but it must not invent or reinterpret their Haxe semantics.
+	the sorted records, but it must not invent or reinterpret why the support is
+	needed.
 **/
 class OcamlRuntimeRequirementLedger {
 	public static inline final INT32_ADD = "haxe-int32-add";
 	public static inline final ARRAY_ELEMENT_GET = "haxe-array-element-get";
 	public static inline final ARRAY_ELEMENT_SET = "haxe-array-element-set";
+	public static inline final CORE_RUNTIME = "compiler-core-runtime";
+	public static inline final TYPE_REGISTRY = "compiler-type-registry";
+	public static inline final TYPE_REGISTRY_DYNAMIC_ARGS = "compiler-type-registry-dynamic-args";
+	public static inline final TYPE_REGISTRY_OPTIONAL_NULL = "compiler-type-registry-optional-null";
+	public static inline final TYPE_REGISTRY_RUNTIME_UNBOX = "compiler-type-registry-runtime-unbox";
 
 	var currentProgramRevision:Null<String> = null;
 	final byId:Map<String, OcamlRuntimeRequirement> = [];
@@ -50,9 +57,9 @@ class OcamlRuntimeRequirementLedger {
 
 	/**
 		Expands the closed capability IDs on one sealed place plan into complete
-		source-rooted runtime requirements.
+		Haxe-expression runtime requirements.
 	**/
-	public function recordPlacePlan(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, subjectTypeId:String,
+	public function recordPlacePlan(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, semanticTypeId:String,
 			requirementIds:Array<String>):Void {
 		for (requirementId in requirementIds) {
 			final expectedPrefix = originId + ":runtime:";
@@ -68,13 +75,38 @@ class OcamlRuntimeRequirementLedger {
 				semanticCapability: capability,
 				cause: OcamlRuntimeRequirementCause.LoweringDecision,
 				decisionId: decisionId,
-				subjectTypeId: subjectTypeId,
+				subject: {
+					kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+					id: semanticTypeId
+				},
 				implementationFeature: implementation.feature,
 				rootModules: [implementation.module],
 				profileEligibility: ["metal", "portable"],
 				explanation: implementation.explanation
 			});
 		}
+	}
+
+	/** Records one helper required by compiler-generated output or packaging policy. **/
+	public function recordCompilerInfrastructure(capability:String):Void {
+		final implementation = compilerInfrastructureImplementation(capability);
+		record({
+			id: implementation.id,
+			sourceKind: OcamlRuntimeRequirementSourceKind.CompilerInfrastructure,
+			sourceId: implementation.sourceId,
+			source: {file: implementation.sourceFile, min: 0, max: 0},
+			semanticCapability: capability,
+			cause: OcamlRuntimeRequirementCause.CompilerInfrastructure,
+			decisionId: implementation.decisionId,
+			subject: {
+				kind: implementation.subjectKind,
+				id: implementation.subjectId
+			},
+			implementationFeature: implementation.feature,
+			rootModules: [implementation.module],
+			profileEligibility: ["metal", "portable"],
+			explanation: implementation.explanation
+		});
 	}
 
 	/** Returns immutable records in stable identity order. **/
@@ -134,7 +166,10 @@ class OcamlRuntimeRequirementLedger {
 		final sourceId = required(requirement.sourceId, 'source identity for "$id"');
 		final decisionId = required(requirement.decisionId, 'decision identity for "$id"');
 		final semanticCapability = required(requirement.semanticCapability, 'semantic capability for "$id"');
-		final subjectTypeId = required(requirement.subjectTypeId, 'subject type for "$id"');
+		if (requirement.subject == null)
+			throw 'OCaml runtime requirement "$id" must name its subject.';
+		final subjectKind = validatedSubjectKind(requirement.subject.kind, requirement.sourceKind, id);
+		final subjectId = required(requirement.subject.id, 'subject identity for "$id"');
 		final implementationFeature = required(requirement.implementationFeature, 'implementation feature for "$id"');
 		final explanation = required(requirement.explanation, 'explanation for "$id"');
 		if (requirement.source == null || requirement.source.min < 0 || requirement.source.max < requirement.source.min)
@@ -163,12 +198,105 @@ class OcamlRuntimeRequirementLedger {
 			semanticCapability: semanticCapability,
 			cause: requirement.cause,
 			decisionId: decisionId,
-			subjectTypeId: subjectTypeId,
+			subject: {
+				kind: subjectKind,
+				id: subjectId
+			},
 			implementationFeature: implementationFeature,
 			rootModules: rootModules,
 			profileEligibility: profiles,
 			explanation: explanation
 		};
+	}
+
+	static function compilerInfrastructureImplementation(capability:String):{
+		id:String,
+		sourceId:String,
+		sourceFile:String,
+		decisionId:String,
+		subjectKind:OcamlRuntimeRequirementSubjectKind,
+		subjectId:String,
+		feature:String,
+		module:String,
+		explanation:String
+	} {
+		return switch (capability) {
+			case CORE_RUNTIME:
+				{
+					id: "compiler:runtime-packaging:core",
+					sourceId: "compiler-policy:runtime-packaging",
+					sourceFile: "compiler-policy/runtime-packaging",
+					decisionId: "compiler-runtime:select-core",
+					subjectKind: OcamlRuntimeRequirementSubjectKind.CompilerPolicy,
+					subjectId: "runtime-packaging",
+					feature: "haxe-runtime-core-v1",
+					module: "HxRuntime",
+					explanation: "Every runtime-enabled project uses HxRuntime as the shared base for compatibility helpers and compiler control values."
+				};
+			case TYPE_REGISTRY:
+				{
+					id: "compiler:generated:HxTypeRegistry:type-registry",
+					sourceId: "compiler-generated:HxTypeRegistry",
+					sourceFile: "compiler-generated/HxTypeRegistry.ml",
+					decisionId: "compiler-runtime:emit-type-registry",
+					subjectKind: OcamlRuntimeRequirementSubjectKind.GeneratedModule,
+					subjectId: "HxTypeRegistry",
+					feature: "haxe-type-reflection-registry-v1",
+					module: "HxType",
+					explanation: "The compiler-generated type registry uses HxType to register classes, enums, constructors, inheritance, and typed-catch identities."
+				};
+			case TYPE_REGISTRY_DYNAMIC_ARGS:
+				{
+					id: "compiler:generated:HxTypeRegistry:dynamic-arguments",
+					sourceId: "compiler-generated:HxTypeRegistry",
+					sourceFile: "compiler-generated/HxTypeRegistry.ml",
+					decisionId: "compiler-runtime:emit-reflection-constructor-arguments",
+					subjectKind: OcamlRuntimeRequirementSubjectKind.GeneratedModule,
+					subjectId: "HxTypeRegistry",
+					feature: "haxe-reflection-constructor-arguments-v1",
+					module: "HxArray",
+					explanation: "Reflection constructors receive Haxe argument arrays, so the generated type registry uses the checked HxArray access contract."
+				};
+			case TYPE_REGISTRY_OPTIONAL_NULL:
+				{
+					id: "compiler:generated:HxTypeRegistry:optional-null",
+					sourceId: "compiler-generated:HxTypeRegistry",
+					sourceFile: "compiler-generated/HxTypeRegistry.ml",
+					decisionId: "compiler-runtime:emit-reflection-optional-null",
+					subjectKind: OcamlRuntimeRequirementSubjectKind.GeneratedModule,
+					subjectId: "HxTypeRegistry",
+					feature: "haxe-reflection-optional-arguments-v1",
+					module: "HxRuntime",
+					explanation: "Missing optional reflection arguments use the target runtime representation of Haxe null."
+				};
+			case TYPE_REGISTRY_RUNTIME_UNBOX:
+				{
+					id: "compiler:generated:HxTypeRegistry:runtime-unbox",
+					sourceId: "compiler-generated:HxTypeRegistry",
+					sourceFile: "compiler-generated/HxTypeRegistry.ml",
+					decisionId: "compiler-runtime:emit-reflection-boolean-unbox",
+					subjectKind: OcamlRuntimeRequirementSubjectKind.GeneratedModule,
+					subjectId: "HxTypeRegistry",
+					feature: "haxe-reflection-boolean-argument-unboxing-v1",
+					module: "HxRuntime",
+					explanation: "Reflection constructors use the checked runtime conversion when a dynamically supplied argument must become a Haxe Bool."
+				};
+			case _:
+				throw 'Unknown compiler runtime capability "$capability".';
+		}
+	}
+
+	static function validatedSubjectKind(kind:OcamlRuntimeRequirementSubjectKind, sourceKind:OcamlRuntimeRequirementSourceKind,
+			id:String):OcamlRuntimeRequirementSubjectKind {
+		final valid = switch (sourceKind) {
+			case HaxeExpression: kind == OcamlRuntimeRequirementSubjectKind.HaxeType;
+			case CompilerInfrastructure: kind == OcamlRuntimeRequirementSubjectKind.GeneratedModule || kind == OcamlRuntimeRequirementSubjectKind.CompilerPolicy;
+			case Configuration: kind == OcamlRuntimeRequirementSubjectKind.CompilerPolicy;
+			case RawBoundary: kind == OcamlRuntimeRequirementSubjectKind.RawBoundary || kind == OcamlRuntimeRequirementSubjectKind.NativeBoundary;
+		};
+		if (!valid)
+			throw 'OCaml runtime requirement "$id" has subject kind "$kind" that does not match source kind "$sourceKind".';
+		return kind;
 	}
 
 	static function normalizedTokens(values:Array<String>, label:String):Array<String> {

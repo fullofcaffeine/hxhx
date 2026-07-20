@@ -6,6 +6,7 @@ PORTABLE_NATIVE_SURFACE_STRICT="${PORTABLE_NATIVE_SURFACE_STRICT:-0}"
 PORTABLE_FIXTURE_ALLOWLIST="${PORTABLE_FIXTURE_ALLOWLIST:-}"
 PORTABLE_JOBS="${PORTABLE_JOBS:-2}"
 PORTABLE_PARALLEL_WORKER="${PORTABLE_PARALLEL_WORKER:-0}"
+PORTABLE_UPDATE_LOWERING_GOLDENS="${PORTABLE_UPDATE_LOWERING_GOLDENS:-0}"
 REFLAXE_SOURCE_ROOT="${REFLAXE_SOURCE_ROOT:-}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -71,6 +72,18 @@ if ! [[ "$PORTABLE_JOBS" =~ ^[1-9][0-9]*$ ]]; then
   exit 2
 fi
 
+if [ "$PORTABLE_UPDATE_LOWERING_GOLDENS" != "0" ] && [ "$PORTABLE_UPDATE_LOWERING_GOLDENS" != "1" ]; then
+  echo "PORTABLE_UPDATE_LOWERING_GOLDENS must be 0 or 1, got: $PORTABLE_UPDATE_LOWERING_GOLDENS" >&2
+  exit 2
+fi
+
+# Golden updates are deliberately sequential. Each replacement is written only
+# after two compiler runs produced byte-identical semantic reports.
+if [ "$PORTABLE_UPDATE_LOWERING_GOLDENS" = "1" ] && [ "$PORTABLE_PARALLEL_WORKER" != "1" ] && [ "$PORTABLE_JOBS" -gt 1 ]; then
+  echo "Lowering-golden update mode is running fixtures sequentially."
+  PORTABLE_JOBS=1
+fi
+
 # Each fixture owns its output directory and compiler process, so the complete
 # corpus can use a bounded worker pool safely. A worker re-enters this script
 # with one fixture selected and parallel dispatch disabled.
@@ -109,7 +122,9 @@ for dir in "$FIXTURE_ROOT"/*/; do
       echo "Missing lowered semantic report: $lowering_report" >&2
       exit 1
     fi
-    diff -u "${dir}expected.lowering.json" "$lowering_report"
+    if [ "$PORTABLE_UPDATE_LOWERING_GOLDENS" != "1" ]; then
+      diff -u "${dir}expected.lowering.json" "$lowering_report"
+    fi
     first_lowering_checksum="$(sha256_file "$lowering_report")"
     (
       cd "$dir"
@@ -123,6 +138,10 @@ for dir in "$FIXTURE_ROOT"/*/; do
     if [ "$first_lowering_checksum" != "$second_lowering_checksum" ]; then
       echo "Lowered semantic report is not deterministic for ${dir#"$ROOT/"}: $first_lowering_checksum != $second_lowering_checksum" >&2
       exit 1
+    fi
+    if [ "$PORTABLE_UPDATE_LOWERING_GOLDENS" = "1" ]; then
+      cp "$lowering_report" "${dir}expected.lowering.json"
+      echo "Updated deterministic lowering golden: ${dir#"$ROOT/"}expected.lowering.json"
     fi
     diff -u "${dir}expected.lowering.json" "$lowering_report"
   fi

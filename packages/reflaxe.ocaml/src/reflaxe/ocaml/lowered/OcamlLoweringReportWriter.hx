@@ -41,7 +41,7 @@ class OcamlLoweringReportWriter {
 		final canonicalPlans = haxe.Json.stringify(sorted);
 		final canonicalRequirements = haxe.Json.stringify(includedRequirements);
 		final report = {
-			schemaVersion: 5,
+			schemaVersion: 6,
 			model: "typed-ocaml-lowered-place",
 			admittedInputRevision: "sha256:" + Sha256.encode(canonicalPlans),
 			planCount: sorted.length,

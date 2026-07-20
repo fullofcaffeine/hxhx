@@ -10,16 +10,20 @@ import reflaxe.ocaml.ast.OcamlTypeDeclKind;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 
 /**
-	Collects compiler-tracked runtime-module usage from generated OCaml AST.
+	Collects one kind of compiler-observed runtime use from structured OCaml syntax.
 
 	Why:
 	- Metal runtime slicing must not depend on free-form output token scanning.
 	- The compiler already has structured OCaml AST; this collector extracts `Hx*` module
 	  references from that structure and records them for runtime planning.
+	- Compiler-generated string/template modules record their observations directly,
+	  because opaque text is intentionally outside this structural traversal.
 
 	Scope:
 	- Captures module roots used by emitted expressions/types/patterns (for example:
 	  `HxArray.length`, `HxType.class_`, `HxRuntime.hx_null`).
+	- These observations are a consistency check and migration fallback. Explicit
+	  requirement records are becoming the source of truth one compiler family at a time.
 	- Selection remains filtered by available runtime modules in `RuntimeCopier`.
 **/
 class RuntimeUsageCollector {
