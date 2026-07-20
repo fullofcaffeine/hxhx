@@ -13,7 +13,7 @@ const fs = require('fs')
 const path = require('path')
 
 const POLICY_PATH = path.join(__dirname, 'qa-risk-policy.json')
-const RESULT_SCHEMA = 'hxhx.qa-risk-classification.v1'
+const RESULT_SCHEMA = 'hxhx.qa-risk-classification.v2'
 const TIERS = ['Q0', 'Q1', 'Q2', 'Q3', 'Q4']
 
 function invariant(condition, message) {
@@ -165,11 +165,40 @@ function parseArgs(argv) {
     else if (argument === '--paths-file') options.pathsFile = next()
     else if (argument === '--requested-tier') options.requestedTier = next()
     else if (argument === '--producer-sha') options.producerSha = next()
+    else if (argument === '--inventory-file') options.inventoryFile = next()
+    else if (argument === '--repository') options.repository = next()
+    else if (argument === '--workflow') options.workflow = next()
+    else if (argument === '--run-id') options.runId = next()
+    else if (argument === '--run-attempt') options.runAttempt = next()
     else if (argument === '--output') options.output = next()
     else if (argument === '--github-output') options.githubOutput = next()
     else throw new Error(`unknown argument: ${argument}`)
   }
   return options
+}
+
+function loadInventory(filePath, changedPaths, producerSha) {
+  if (!filePath) return null
+  const inventory = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+  invariant(inventory.schema === 'hxhx.qa-risk-change-inventory.v1', `unexpected inventory schema: ${inventory.schema}`)
+  invariant(inventory.headSha === producerSha, 'inventory head does not match the QA producer')
+  const normalized = [...new Set(changedPaths.map(normalizeChangedPath).filter(Boolean))].sort()
+  const rendered = normalized.length === 0 ? '' : `${normalized.join('\n')}\n`
+  const digest = crypto.createHash('sha256').update(rendered).digest('hex')
+  invariant(inventory.changedPathCount === normalized.length, 'inventory changed-path count does not match its path file')
+  invariant(inventory.changedPathsSha256 === digest, 'inventory changed-path digest does not match its path file')
+  return inventory
+}
+
+function sourceIdentity(options) {
+  if (!options.repository && !options.workflow && !options.runId && !options.runAttempt) return null
+  const runId = Number(options.runId)
+  const runAttempt = Number(options.runAttempt)
+  invariant(options.repository, '--repository is required with a source identity')
+  invariant(options.workflow, '--workflow is required with a source identity')
+  invariant(Number.isInteger(runId) && runId > 0, '--run-id must be a positive integer')
+  invariant(Number.isInteger(runAttempt) && runAttempt > 0, '--run-attempt must be a positive integer')
+  return { repository: options.repository, workflow: options.workflow, runId, runAttempt }
 }
 
 function writeGithubOutput(filePath, result) {
@@ -192,6 +221,8 @@ function main() {
     ? fs.readFileSync(options.pathsFile, 'utf8').split(/\r?\n/)
     : []
   const result = classify({ ...options, changedPaths })
+  result.inventory = loadInventory(options.inventoryFile, changedPaths, result.producerSha)
+  result.source = sourceIdentity(options)
   const rendered = `${JSON.stringify(result, null, 2)}\n`
   if (options.output) {
     fs.mkdirSync(path.dirname(options.output), { recursive: true })
@@ -215,11 +246,13 @@ module.exports = {
   RESULT_SCHEMA,
   TIERS,
   classify,
+  loadInventory,
   loadPolicy,
   maxTier,
   normalizeChangedPath,
   parseArgs,
   ruleMatches,
+  sourceIdentity,
   tierIndex,
   writeGithubOutput
 }

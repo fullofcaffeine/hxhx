@@ -4,6 +4,7 @@
  */
 
 const assert = require('assert')
+const crypto = require('crypto')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
@@ -172,20 +173,45 @@ try {
   const pathsFile = path.join(tempRoot, 'changed.txt')
   const outputFile = path.join(tempRoot, 'classification.json')
   const githubOutput = path.join(tempRoot, 'github-output.txt')
-  fs.writeFileSync(pathsFile, 'docs/README.md\npackages/hxhx-core/src/CompilerDriver.hx\n')
+  const inventoryFile = path.join(tempRoot, 'change-inventory.json')
+  const producerSha = '0123456789abcdef0123456789abcdef01234567'
+  const renderedPaths = 'docs/README.md\npackages/hxhx-core/src/CompilerDriver.hx\n'
+  fs.writeFileSync(pathsFile, renderedPaths)
+  fs.writeFileSync(inventoryFile, `${JSON.stringify({
+    schema: 'hxhx.qa-risk-change-inventory.v1',
+    event: 'pull_request',
+    complete: true,
+    headSha: producerSha,
+    eventBaseSha: 'f'.repeat(40),
+    base: { kind: 'pull_request_merge_base', sha: 'f'.repeat(40), tag: null },
+    changedPathCount: 2,
+    changedPathsSha256: crypto.createHash('sha256').update(renderedPaths).digest('hex')
+  }, null, 2)}\n`)
   execFileSync(process.execPath, [
     path.join(__dirname, 'qa-risk-classifier.js'),
     '--event', 'pull_request',
     '--paths-file', pathsFile,
     '--requested-tier', 'auto',
-    '--producer-sha', '0123456789abcdef',
+    '--producer-sha', producerSha,
+    '--inventory-file', inventoryFile,
+    '--repository', 'fullofcaffeine/hxhx',
+    '--workflow', 'CI / Core PR Checks',
+    '--run-id', '12345',
+    '--run-attempt', '2',
     '--output', outputFile,
     '--github-output', githubOutput
   ], { stdio: ['ignore', 'pipe', 'inherit'] })
 
   const receipt = JSON.parse(fs.readFileSync(outputFile, 'utf8'))
   assert.strictEqual(receipt.tier, 'Q2')
-  assert.strictEqual(receipt.producerSha, '0123456789abcdef')
+  assert.strictEqual(receipt.producerSha, producerSha)
+  assert.strictEqual(receipt.inventory.changedPathsSha256, crypto.createHash('sha256').update(renderedPaths).digest('hex'))
+  assert.deepStrictEqual(receipt.source, {
+    repository: 'fullofcaffeine/hxhx',
+    workflow: 'CI / Core PR Checks',
+    runId: 12345,
+    runAttempt: 2
+  })
   assert.match(fs.readFileSync(githubOutput, 'utf8'), /^run_q2=true$/m)
   assert.match(fs.readFileSync(githubOutput, 'utf8'), /^run_q3=false$/m)
   assert.match(fs.readFileSync(githubOutput, 'utf8'), /^policy_sha256=[a-f0-9]{64}$/m)
