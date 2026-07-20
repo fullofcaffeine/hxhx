@@ -1,0 +1,243 @@
+package reflaxe.ocaml.artifacts;
+
+#if (macro || reflaxe_runtime)
+import haxe.Json;
+import haxe.io.Path;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactAuthority;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactClaim;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactEntry;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactManifestReport;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactOwner;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactSourceKind;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactStability;
+import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlPreviousArtifactEntry;
+import sys.FileSystem;
+import sys.io.File;
+
+/**
+	Builds and seals one target-owned OCaml artifact inventory.
+
+	Producer claims are the source of truth. The final directory walk is only a
+	fail-closed consistency check: an unknown file is rejected instead of being
+	automatically assigned an owner.
+**/
+class OcamlArtifactManifestBuilder {
+	final outputDirectory:String;
+	final programRevision:String;
+	final configurationRevision:String;
+	final profile:String;
+	final claims:Map<String, OcamlArtifactClaim> = [];
+	final previousEntries:Array<OcamlPreviousArtifactEntry>;
+
+	/**
+		Starts one output transaction and invalidates the previous manifest.
+
+		The previous inventory is retained in memory only so obsolete target-owned
+		files can be removed safely after the new producer set is known.
+	**/
+	public function new(outputDirectory:String, programRevision:String, configurationRevision:String, profile:String) {
+		if (outputDirectory == null || outputDirectory.length == 0)
+			throw "OCaml artifact manifest requires an output directory.";
+		if (!FileSystem.exists(outputDirectory) || !FileSystem.isDirectory(outputDirectory))
+			throw 'OCaml artifact manifest output directory "$outputDirectory" is missing.';
+		this.outputDirectory = outputDirectory;
+		this.programRevision = OcamlArtifactManifestSchema.normalizeRevision(programRevision, "program revision");
+		this.configurationRevision = OcamlArtifactManifestSchema.normalizeRevision(configurationRevision, "configuration revision");
+		this.profile = OcamlArtifactManifestSchema.validatedProfile(profile);
+		previousEntries = OcamlArtifactManifestSchema.readPreviousEntries(outputDirectory);
+		clearPriorManifest();
+	}
+
+	/** Records one file from the component that owns why it was emitted. **/
+	public function record(claim:OcamlArtifactClaim):Void {
+		final normalized = OcamlArtifactManifestSchema.normalizeClaim(claim, profile);
+		if (claims.exists(normalized.path))
+			throw 'OCaml artifact path "${normalized.path}" was registered more than once.';
+		claims.set(normalized.path, normalized);
+	}
+
+	/**
+		Imports the Haxe-module paths already written by Reflaxe.
+
+		The receipt remains framework cache bookkeeping and is not itself a source
+		bundle input. Explicitly excluded paths are accepted only when the target's
+		output filter already removed them.
+	**/
+	public function recordFrameworkModules(?excludedPaths:Map<String, Bool>):Void {
+		final receiptPath = absolutePath(OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT);
+		if (!FileSystem.exists(receiptPath) || FileSystem.isDirectory(receiptPath))
+			throw 'Cannot seal OCaml artifacts because ${OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT} is missing.';
+		final value:Dynamic = try {
+			Json.parse(File.getContent(receiptPath));
+		} catch (error:Dynamic) {
+			throw 'Cannot seal OCaml artifacts because ${OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT} is invalid: ${Std.string(error)}';
+		}
+		final version:Dynamic = Reflect.field(value, "version");
+		if (!Std.isOfType(version, Int) || version != 1)
+			throw 'Cannot seal OCaml artifacts from unsupported ${OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT} schema ${Std.string(version)}.';
+		final rawFiles:Dynamic = Reflect.field(value, "filesGenerated");
+		if (!Std.isOfType(rawFiles, Array))
+			throw '${OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT} filesGenerated must be an array.';
+		final seen:Map<String, Bool> = [];
+		for (raw in (cast rawFiles : Array<Dynamic>)) {
+			if (!Std.isOfType(raw, String))
+				throw '${OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT} filesGenerated must contain only strings.';
+			final path = OcamlArtifactManifestSchema.normalizeRelativePath(cast raw);
+			if (seen.exists(path))
+				throw '${OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT} contains duplicate path "$path".';
+			seen.set(path, true);
+			final absolute = absolutePath(path);
+			if (!FileSystem.exists(absolute) || FileSystem.isDirectory(absolute)) {
+				if (excludedPaths != null && excludedPaths.exists(path))
+					continue;
+				throw '${OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT} names missing generated module "$path".';
+			}
+			record({
+				path: path,
+				kind: OcamlArtifactKind.HaxeModuleSource,
+				owner: OcamlArtifactOwner.ReflaxeFramework,
+				sourceKind: OcamlArtifactSourceKind.Generated,
+				sourcePath: null,
+				license: "generated-output",
+				profileEligibility: [profile],
+				stability: OcamlArtifactStability.Stable,
+				includeInSourceBundle: true
+			});
+		}
+	}
+
+	/**
+		Verifies, cleans, and atomically writes the completed manifest.
+
+		Obsolete files from a previous valid manifest are removed only when their
+		current bytes still match the previous digest. A modified file is treated as
+		user data and causes a deterministic error instead of being deleted.
+	**/
+	public function seal(semanticRuntime:OcamlArtifactAuthority, nativeDependencies:OcamlArtifactAuthority):OcamlArtifactManifestReport {
+		final checkedRuntime = OcamlArtifactManifestSchema.validatedAuthority(semanticRuntime, "semantic runtime");
+		final checkedDependencies = OcamlArtifactManifestSchema.validatedAuthority(nativeDependencies, "native dependencies");
+		final entries = materializeEntries();
+		removeObsoletePreviousEntries();
+		OcamlArtifactManifestSchema.validateRegisteredPaths(outputDirectory, [for (path in claims.keys()) path => true]);
+
+		final bundleEntries = entries.filter(entry -> entry.includeInSourceBundle);
+		final volatileEntries = entries.filter(entry -> entry.stability == "volatile");
+		final sourceBundleRevision = OcamlArtifactManifestSchema.calculateArtifactRevision(programRevision, configurationRevision, profile, bundleEntries,
+			checkedRuntime, checkedDependencies, "source-bundle");
+		final artifactSetRevision = OcamlArtifactManifestSchema.calculateArtifactRevision(programRevision, configurationRevision, profile, entries,
+			checkedRuntime, checkedDependencies, "artifact-set");
+		final completeForSourceBundle = checkedRuntime.status == OcamlArtifactManifestSchema.AUTHORITY_COMPLETE
+			&& checkedDependencies.status == OcamlArtifactManifestSchema.AUTHORITY_COMPLETE;
+		final blockers = new Array<String>();
+		if (checkedRuntime.status != OcamlArtifactManifestSchema.AUTHORITY_COMPLETE)
+			blockers.push(checkedRuntime.message);
+		if (checkedDependencies.status != OcamlArtifactManifestSchema.AUTHORITY_COMPLETE)
+			blockers.push(checkedDependencies.message);
+		final report:OcamlArtifactManifestReport = {
+			schemaVersion: OcamlArtifactManifestSchema.SCHEMA_VERSION,
+			model: OcamlArtifactManifestSchema.MODEL,
+			programRevision: programRevision,
+			configurationRevision: configurationRevision,
+			profile: profile,
+			frameworkReceipt: OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT,
+			entries: entries,
+			authorities: {
+				semanticRuntime: checkedRuntime,
+				nativeDependencies: checkedDependencies
+			},
+			summary: {
+				entryCount: entries.length,
+				sourceBundleEntryCount: bundleEntries.length,
+				volatileEvidenceEntryCount: volatileEntries.length,
+				sourceBundleRevision: sourceBundleRevision,
+				artifactSetRevision: artifactSetRevision,
+				completeForSourceBundle: completeForSourceBundle,
+				blockers: blockers
+			},
+			excludedBuildProducts: [
+				"_build/** (Dune cache and compiled products)",
+				"*.install (Dune package build product)",
+				OcamlArtifactManifestSchema.FRAMEWORK_RECEIPT + " (Reflaxe cache bookkeeping)",
+				OcamlArtifactManifestSchema.FILE_NAME + " (this inventory root)"
+			]
+		};
+		OcamlArtifactManifestSchema.writeAtomically(absolutePath(OcamlArtifactManifestSchema.FILE_NAME), Json.stringify(report, null, "  ") + "\n");
+		return report;
+	}
+
+	function materializeEntries():Array<OcamlArtifactEntry> {
+		final paths = [for (path in claims.keys()) path];
+		paths.sort(compareStrings);
+		final entries = new Array<OcamlArtifactEntry>();
+		for (path in paths) {
+			final claim = claims.get(path);
+			if (claim == null)
+				continue;
+			final digest = OcamlArtifactManifestSchema.digestFile(absolutePath(path));
+			entries.push({
+				path: claim.path,
+				kind: claim.kind,
+				owner: claim.owner,
+				sourceKind: claim.sourceKind,
+				sourcePath: claim.sourcePath,
+				license: claim.license,
+				profileEligibility: claim.profileEligibility.copy(),
+				stability: claim.stability,
+				includeInSourceBundle: claim.includeInSourceBundle,
+				sha256: digest.sha256,
+				bytes: digest.bytes
+			});
+		}
+		return entries;
+	}
+
+	function removeObsoletePreviousEntries():Void {
+		for (entry in previousEntries) {
+			if (claims.exists(entry.path))
+				continue;
+			final absolute = absolutePath(entry.path);
+			if (!FileSystem.exists(absolute))
+				continue;
+			if (FileSystem.isDirectory(absolute))
+				throw 'Previously owned OCaml artifact "${entry.path}" became a directory.';
+			final actual = OcamlArtifactManifestSchema.digestFile(absolute).sha256;
+			if (actual != entry.sha256)
+				throw 'Refusing to delete modified obsolete OCaml artifact "${entry.path}"; expected ${entry.sha256}, found $actual.';
+			FileSystem.deleteFile(absolute);
+			pruneEmptyParents(Path.directory(absolute));
+		}
+	}
+
+	function clearPriorManifest():Void {
+		final path = absolutePath(OcamlArtifactManifestSchema.FILE_NAME);
+		if (FileSystem.exists(path))
+			FileSystem.deleteFile(path);
+		final temporary = path + ".tmp";
+		if (FileSystem.exists(temporary)) {
+			if (FileSystem.isDirectory(temporary))
+				throw 'Cannot clear OCaml artifact manifest temporary path because "$temporary" is a directory.';
+			FileSystem.deleteFile(temporary);
+		}
+	}
+
+	function pruneEmptyParents(directory:String):Void {
+		var current = directory;
+		final root = Path.normalize(outputDirectory);
+		while (current != null && current.length > 0 && Path.normalize(current) != root) {
+			if (!FileSystem.exists(current) || !FileSystem.isDirectory(current) || FileSystem.readDirectory(current).length > 0)
+				return;
+			FileSystem.deleteDirectory(current);
+			current = Path.directory(current);
+		}
+	}
+
+	inline function absolutePath(relative:String):String {
+		return Path.join([outputDirectory, relative]);
+	}
+
+	static function compareStrings(left:String, right:String):Int {
+		return left < right ? -1 : (left > right ? 1 : 0);
+	}
+}
+#end
