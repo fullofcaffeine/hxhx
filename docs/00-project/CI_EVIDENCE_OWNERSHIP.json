@@ -434,7 +434,7 @@
     {
       "id": "reflaxe-package-macos-29711791018",
       "checkId": "reflaxe-ocaml-package-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "failure-current",
       "failureClass": "semantic",
       "bead": "haxe_ocaml-s7jry.4",
@@ -450,6 +450,35 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29711791018"
       },
       "reproductionOrEvidence": "Linux installed and ran source package artifact 8449096435, while macOS evidence artifact 8449108325 reproduced the same haxe/Exception.cross.hx place-invariant failure. Linux evidence is artifact 8449110550.",
+      "closureGate": "Repair the shared semantic place boundary without suppressing its invariant, then require one exact ZIP to pass the complete Linux and macOS package matrix.",
+      "supersededBy": {
+        "runId": 29714028568,
+        "runAttempt": 1,
+        "headSha": "ce6d0f7c0c0fb2d733e9e540f94d6d5dabcdecfb",
+        "conclusion": "failure",
+        "updatedAt": "2026-07-20T03:14:19Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29714028568"
+      }
+    },
+    {
+      "id": "reflaxe-package-macos-29714028568",
+      "checkId": "reflaxe-ocaml-package-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-s7jry.4",
+      "recordedAt": "2026-07-20T03:29:00Z",
+      "run": {
+        "id": 29714028568,
+        "attempt": 1,
+        "headSha": "ce6d0f7c0c0fb2d733e9e540f94d6d5dabcdecfb",
+        "event": "push",
+        "conclusion": "failure",
+        "createdAt": "2026-07-20T03:09:32Z",
+        "updatedAt": "2026-07-20T03:14:19Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29714028568"
+      },
+      "reproductionOrEvidence": "Linux installed and ran source package artifact 8449821284, while macOS evidence artifact 8449883379 reproduced the same haxe/Exception.cross.hx place-invariant failure. Linux evidence is artifact 8449891237.",
       "closureGate": "Repair the shared semantic place boundary without suppressing its invariant, then require one exact ZIP to pass the complete Linux and macOS package matrix."
     },
     {
