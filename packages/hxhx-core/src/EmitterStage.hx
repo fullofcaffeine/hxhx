@@ -3661,8 +3661,9 @@ class EmitterStage {
 						case EIdent(name) if (isMutableLocalRefIdent(name)):
 							final ident = ocamlValueIdent(name);
 							final isInt64 = stage3IsInt64Expr(expr, tyByIdentRaw);
-							final binop = isInt64 ? (op == HxUnaryOperator.Increment ? "Haxe_Int64.add" : "Haxe_Int64.sub") : (op == HxUnaryOperator.Increment ? "HxInt.add" : "HxInt.sub");
-							final one = isInt64 ? "(Haxe_Int64.ofInt (1))" : "1";
+							final binop = op == HxUnaryOperator.Increment ? EmitterNumericUpdate.operation(isInt64,
+								true) : EmitterNumericUpdate.operation(isInt64, false);
+							final one = EmitterNumericUpdate.one(isInt64);
 							final resultName = fixity == HxUnaryFixity.Postfix ? "__hx_old" : "__hx_next";
 							"(let __hx_old = (!"
 							+ ident
