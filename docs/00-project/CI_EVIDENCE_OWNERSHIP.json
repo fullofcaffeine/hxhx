@@ -521,7 +521,7 @@
     {
       "id": "core-ledger-closed-gate1-29864744716",
       "checkId": "core-pr",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
       "failureClass": "repository-policy",
       "bead": "haxe_ocaml-gcgma",
@@ -537,7 +537,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29864744716"
       },
       "reproductionOrEvidence": "Core guardrails reject the production ownership ledger because the Gate 1 incident remains open after its owning Bead was correctly closed against a successful hosted successor.",
-      "closureGate": "Resolve the Gate 1 ledger entry against run 29863821133, preserve the still-open M7 parent, pass the production ownership fixture, and require one successful exact-head Core PR Checks successor."
+      "closureGate": "Resolve the Gate 1 ledger entry against run 29863821133, preserve the still-open M7 parent, pass the production ownership fixture, and require one successful exact-head Core PR Checks successor.",
+      "resolution": {
+        "runId": 29865191260,
+        "runAttempt": 1,
+        "headSha": "360f0833f45fb1e807d882985d5dfb4d934c7687",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-21T20:41:12Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29865191260"
+      }
     },
     {
       "id": "portable-storage-carrier-29764683800",
