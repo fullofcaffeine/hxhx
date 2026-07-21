@@ -3,6 +3,7 @@
 
 'use strict'
 
+const crypto = require('crypto')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
@@ -35,12 +36,37 @@ function addDatabase(fixture, name, contents = 'fixture database\n') {
   fs.writeFileSync(path.join(directory, 'chunk'), contents)
 }
 
-function run(root) {
-  return spawnSync(process.execPath, [checker, '--root', root], {
+function run(root, extraArgs = [], extraEnv = {}) {
+  return spawnSync(process.execPath, [checker, '--root', root, ...extraArgs], {
     cwd: repositoryRoot,
     encoding: 'utf8',
-    env: { ...process.env, HXHX_BEADS_STORAGE_BD_BIN: '/definitely/not/bd' },
+    env: {
+      ...process.env,
+      HXHX_BEADS_STORAGE_BD_BIN: '/definitely/not/bd',
+      ...extraEnv,
+    },
   })
+}
+
+function fingerprintTree(root) {
+  const hash = crypto.createHash('sha256')
+
+  function visit(directory, prefix) {
+    const entries = fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) =>
+      left.name.localeCompare(right.name),
+    )
+    for (const entry of entries) {
+      const relative = path.join(prefix, entry.name)
+      const absolute = path.join(directory, entry.name)
+      hash.update(`${entry.isDirectory() ? 'd' : entry.isSymbolicLink() ? 'l' : 'f'}\0${relative}\0`)
+      if (entry.isDirectory()) visit(absolute, relative)
+      else if (entry.isSymbolicLink()) hash.update(fs.readlinkSync(absolute))
+      else hash.update(fs.readFileSync(absolute))
+    }
+  }
+
+  visit(root, '')
+  return hash.digest('hex')
 }
 
 try {
@@ -56,6 +82,51 @@ try {
   assert(healthy.status === 0, `a single active database should pass: ${healthy.stderr}`)
   assert(healthy.stdout.includes('BEADS_STORAGE_CHECK:PASS'), 'a healthy store should emit the pass marker')
   assert(healthy.stdout.includes('active_database=haxe_ocaml'), 'the pass marker should name the active database')
+
+  const historyHeavyFixture = makeFixture('history-heavy')
+  addDatabase(historyHeavyFixture, 'haxe_ocaml')
+  const fakeDu = path.join(historyHeavyFixture.root, 'fake-du.js')
+  fs.writeFileSync(
+    fakeDu,
+    `#!/usr/bin/env node
+const target = process.argv.at(-1).replaceAll('\\\\', '/')
+if (target.endsWith('/embeddeddolt/haxe_ocaml')) console.log('300000\\t' + target)
+else if (target.endsWith('/.beads')) console.log('600000\\t' + target)
+else if (target.endsWith('/backup')) console.log('120000\\t' + target)
+else console.log('0\\t' + target)
+`,
+  )
+  fs.chmodSync(fakeDu, 0o755)
+  const historyHeavyBefore = fingerprintTree(historyHeavyFixture.beadsDir)
+  const historyHeavy = run(historyHeavyFixture.root, [], { HXHX_BEADS_STORAGE_DU_BIN: fakeDu })
+  assert(historyHeavy.status === 2, 'large active history should require review without a sibling database')
+  assert(
+    historyHeavy.stderr.includes('active_database_storage'),
+    'the warning should identify oversized active history',
+  )
+  assert(
+    historyHeavy.stderr.includes('total_beads_storage'),
+    'the warning should also identify excessive total local Beads storage',
+  )
+  assert(
+    historyHeavy.stderr.includes('large local change history'),
+    'the warning should explain the practical problem before relying on Dolt terminology',
+  )
+  assert(
+    fingerprintTree(historyHeavyFixture.beadsDir) === historyHeavyBefore,
+    'the history-size warning must not compact or rewrite the active database',
+  )
+  const historyHeavyJson = run(historyHeavyFixture.root, ['--json'], {
+    HXHX_BEADS_STORAGE_DU_BIN: fakeDu,
+  })
+  assert(historyHeavyJson.status === 2, 'the JSON report should retain warning status')
+  const historyHeavyReport = JSON.parse(historyHeavyJson.stdout)
+  assert(historyHeavyReport.activeDatabaseReviewKiB === 256 * 1024, 'the report should expose the active threshold')
+  assert(historyHeavyReport.totalBeadsReviewKiB === 512 * 1024, 'the report should expose the total threshold')
+  assert(
+    historyHeavyReport.filesystemAvailableKiB === null || historyHeavyReport.filesystemAvailableKiB >= 0,
+    'the report should expose available filesystem space when the host provides it',
+  )
 
   const siblingFixture = makeFixture('sibling')
   addDatabase(siblingFixture, 'haxe_ocaml')

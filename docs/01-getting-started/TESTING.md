@@ -123,10 +123,21 @@ npm run doctor:beads-storage
 ```
 
 This diagnostic is read-only. It reports the database named by local Beads
-metadata, any visible sibling databases, retained dropped-database storage, and
-approximate disk use. A fresh clone without a local database reports `SKIP`; one
-active database reports `PASS`; sibling or dropped databases report `WARN` and
-exit with status 2. The command never removes or compacts data.
+metadata, any visible sibling databases, retained dropped-database and backup
+storage, approximate disk use, filesystem space, and conservative maintenance
+headroom. A fresh clone without a local database reports `SKIP`. A normal-sized
+active database reports `PASS`; sibling/dropped storage, an active database at
+or above 256 MiB, or total local Beads storage at or above 512 MiB reports
+`WARN` and exits with status 2. The command never removes or compacts data.
+
+Beads keeps local version history for issue changes. This can grow quickly even
+when there is only one active database: the July 2026 checkout grew from about
+67 MiB of active database storage after reviewed maintenance to more than 550
+MiB, while the old duplicate-database-only check still reported `PASS`. Treat
+the size warning as time to inspect `bd compact --dry-run`, verify a restorable
+backup, and make enough working space—not as permission to delete database
+files. The displayed headroom is deliberately conservative because compaction
+rewrites history before old storage can be reclaimed.
 
 Embedded Dolt opens every visible database in its data directory. In July 2026,
 an old database named `beads` contained zero issues but made a 1,910-issue
@@ -192,6 +203,9 @@ Git normally decides when to pack new history by estimating the **number** of
 loose objects. That can miss a smaller number of very large generated-file
 versions. The project therefore adds the byte-based review threshold above and
 reports a conservative amount of free working space for backup and packing.
+The 256 MiB threshold is intentionally below the observed recurrence: after a
+reviewed cleanup the complete Git store was about 196 MiB, while the later
+count-based false `PASS` retained more than 500 MiB of loose objects by itself.
 When the report says that headroom is unavailable, free space through a
 different owner before attempting Git maintenance; do not delete files from
 `.git/objects` by hand.

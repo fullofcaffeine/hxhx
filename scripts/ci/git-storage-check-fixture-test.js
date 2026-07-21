@@ -153,6 +153,10 @@ else process.exitCode = 1
     'the warning should explain that loose-object bytes exceeded the project limit',
   )
   assert(
+    byteHeavy.stderr.includes('large unpacked file-history objects'),
+    'the warning should explain the practical problem before relying on Git terminology',
+  )
+  assert(
     fingerprintTree(path.join(byteHeavyRoot, '.git')) === byteHeavyBefore,
     'the byte-based warning must not repack or prune loose objects',
   )
