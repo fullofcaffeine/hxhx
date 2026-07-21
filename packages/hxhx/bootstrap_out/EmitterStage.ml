@@ -1036,7 +1036,7 @@ let stage3ArityFor = fun name arityByIdent -> try let __fallback_result_280 = le
 ) in Obj.magic __fallback_result_280 with
   | HxRuntime.Hx_return __ret_279 -> Obj.obj __ret_279
 
-let callSigForStage3 = fun callee callSigByCallee -> let resolved = mapGetRaw (Obj.repr callSigByCallee) (callee : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+let callSigForStage3 = fun callee callSigByCallee -> let resolved = EmitterCallSigIndex.get (Obj.repr callSigByCallee) (callee : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (if resolved == Obj.magic (HxRuntime.hx_null) then let __assign_281 = Obj.magic (HxRuntime.hx_null) in (
     tempResult := __assign_281;
     __assign_281
