@@ -1810,9 +1810,8 @@ class EmitterStage {
 			case EUnop(op, fixity, inner) if ((op == HxUnaryOperator.Negate || op == HxUnaryOperator.BitwiseNot)
 				&& fixity == HxUnaryFixity.Prefix):
 				stage3IsInt64Expr(inner, tyByIdent);
-			case ECall(EField(EIdent(owner), field), _args): (owner == "Int64" || owner == "haxe.Int64") && (field == "make" || field == "ofInt"
-					|| field == "parseString" || field == "add" || field == "sub" || field == "mul" || field == "neg" || field == "div" || field == "mod"
-					|| field == "divMod");
+			case ECall(EField(owner, field), _args): stage3IsInt64StaticOwner(owner) && (field == "make" || field == "ofInt" || field == "parseString"
+					|| field == "add" || field == "sub" || field == "mul" || field == "neg" || field == "div" || field == "mod" || field == "divMod");
 			case EField(inner, field): stage3IsInt64Expr(inner, tyByIdent) && (field == "high" || field == "low" || field == "quotient" || field == "modulus");
 			case EBinop(op, a, b)
 				if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>"
@@ -4850,8 +4849,8 @@ class EmitterStage {
 					TyType.fromHintText("String");
 				case ECall(EField(_obj, "toString"), []):
 					TyType.fromHintText("String");
-				case ECall(EField(EIdent(owner), field), _args):
-					if ((owner == "Int64" || owner == "haxe.Int64")
+				case ECall(EField(owner, field), _args):
+					if (stage3IsInt64StaticOwner(owner)
 						&& (field == "make" || field == "ofInt" || field == "parseString" || field == "add" || field == "sub" || field == "mul"
 							|| field == "neg" || field == "div" || field == "mod" || field == "divMod")) TyType.fromHintText("haxe.Int64"); else
 						TyType.unknown();
@@ -8882,5 +8881,19 @@ class EmitterStage {
 	static function stage3ImportedSignatureModulePath(rawImport:String):String {
 		final trimmed = StringTools.trim(rawImport == null ? "" : rawImport);
 		return StringTools.endsWith(trimmed, ".*") ? trimmed.substr(0, trimmed.length - 2) : trimmed;
+	}
+
+	/**
+		Recognize the two source spellings for the standard Haxe Int64 provider.
+
+		The parser stores `haxe.Int64` as nested field access (`haxe` then `Int64`),
+		not as one identifier containing a dot. Matching the structural path lets
+		an unannotated local such as `var value = haxe.Int64.make(...)` retain its
+		inferred Int64 type during native Stage3 emission.
+	**/
+	static function stage3IsInt64StaticOwner(owner:HxExpr):Bool {
+		final parts = tryExtractTypePathPartsFromExpr(owner);
+		return parts != null
+			&& ((parts.length == 1 && parts[0] == "Int64") || (parts.length == 2 && parts[0] == "haxe" && parts[1] == "Int64"));
 	}
 }
