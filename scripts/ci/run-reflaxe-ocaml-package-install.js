@@ -629,7 +629,7 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 	} catch (error) {
 		fail(`installed inspect command did not emit valid JSON: ${error instanceof Error ? error.message : String(error)}`)
 	}
-	if (scaffoldInspectionReport.schemaVersion !== 4
+	if (scaffoldInspectionReport.schemaVersion !== 5
 		|| scaffoldInspectionReport.summary?.valid !== true
 		|| scaffoldInspectionReport.generatedFiles?.status !== 'present'
 		|| scaffoldInspectionReport.artifactManifest?.status !== 'present'
@@ -646,6 +646,11 @@ function proveExternalInstall(zipPath, reflaxeRoot) {
 		|| scaffoldInspectionReport.representation?.scope !== 'exact-non-null-int-v1'
 		|| !Number.isInteger(scaffoldInspectionReport.summary?.representationDecisionCount)
 		|| scaffoldInspectionReport.summary.representationDecisionCount < 1
+		|| !Number.isInteger(scaffoldInspectionReport.summary?.staticStorageCount)
+		|| scaffoldInspectionReport.summary.staticStorageCount < 1
+		|| !Array.isArray(scaffoldInspectionReport.lowering?.staticStorage)
+		|| scaffoldInspectionReport.lowering.staticStorage.length !== scaffoldInspectionReport.summary.staticStorageCount
+		|| typeof scaffoldInspectionReport.lowering?.staticStorageRevision !== 'string'
 		|| scaffoldInspectionReport.unavailable?.some(capability => capability.id === 'program-representation')
 		|| !scaffoldInspectionReport.unavailable?.some(capability => capability.id === 'export-abi')) {
 		fail('installed inspect command did not preserve its compiler-owned authority and deferral contract')
