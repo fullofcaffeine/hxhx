@@ -22,7 +22,20 @@
 @:native("HxMap")
 private extern class EmitterCallSigNativeMap {
 	@:native("get_string")
-	public static function getString(index:Dynamic, key:String):Dynamic;
+	public static function getString(index:Map<String, EmitterCallSig>, key:String):Null<EmitterCallSig>;
+}
+
+/**
+	Exposes OCaml's typed unpacking operation at the one reviewed Dynamic boundary.
+
+	The caller always supplies the `Map<String, EmitterCallSig>` created by Stage3.
+	The value is hidden as `Dynamic` only while it crosses the large emitter, so
+	revealing that same map type here does not reinterpret user-program data.
+**/
+@:native("Obj")
+private extern class EmitterCallSigNativeObject {
+	@:native("obj")
+	public static function reveal<T>(value:Dynamic):T;
 }
 #end
 
@@ -39,7 +52,8 @@ class EmitterCallSigIndex {
 		if (index == null || callee == null)
 			return null;
 		#if ocaml
-		return cast EmitterCallSigNativeMap.getString(index, callee);
+		final signatures:Map<String, EmitterCallSig> = EmitterCallSigNativeObject.reveal(index);
+		return EmitterCallSigNativeMap.getString(signatures, callee);
 		#else
 		final signatures:Map<String, EmitterCallSig> = cast index;
 		return signatures.get(callee);
