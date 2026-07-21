@@ -1221,12 +1221,12 @@ class EmitterStage {
 		return lastUnderscore < 0 ? moduleName : moduleName.substr(lastUnderscore + 1);
 	}
 
-	static function extendTyByIdentForStage3<TTy>(ty:TTy, name:String, t:TyType):Map<String, TyType> {
+	/** Copies one expression type scope and adds a locally bound name. **/
+	static function extendTyByIdentForStage3(ty:Map<String, TyType>, name:String, t:TyType):Map<String, TyType> {
 		final out = new Map<String, TyType>();
-		final keys = mapKeysRaw(ty);
-		if (keys != null)
-			for (k in keys) {
-				final existing = mapGetRaw(ty, k);
+		if (ty != null)
+			for (k in ty.keys()) {
+				final existing = ty.get(k);
 				if (existing != null)
 					out.set(k, existing);
 			}
@@ -1234,12 +1234,12 @@ class EmitterStage {
 		return out;
 	}
 
-	static function extendTyByIdentManyForStage3<TTy>(ty:TTy, names:Array<String>, t:TyType):Map<String, TyType> {
+	/** Copies one expression type scope and adds several locally bound names. **/
+	static function extendTyByIdentManyForStage3(ty:Map<String, TyType>, names:Array<String>, t:TyType):Map<String, TyType> {
 		final out = new Map<String, TyType>();
-		final keys = mapKeysRaw(ty);
-		if (keys != null)
-			for (k in keys) {
-				final existing = mapGetRaw(ty, k);
+		if (ty != null)
+			for (k in ty.keys()) {
+				final existing = ty.get(k);
 				if (existing != null)
 					out.set(k, existing);
 			}
