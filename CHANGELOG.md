@@ -1,3 +1,15 @@
+## [0.23.5](https://github.com/fullofcaffeine/hxhx/compare/v0.23.4...v0.23.5) (2026-07-21)
+
+
+### Bug Fixes
+
+* **ocaml:** make large AST scans stack-safe ([4f9a6d3](https://github.com/fullofcaffeine/hxhx/commit/4f9a6d32d8a431196c0fee6ffd08dca97f975a9b))
+* **ocaml:** plan mutable static storage before emission ([0a6036c](https://github.com/fullofcaffeine/hxhx/commit/0a6036cc463552437f8967232df3c9df102a822d))
+* **ocaml:** reject impossible static carrier order ([fede760](https://github.com/fullofcaffeine/hxhx/commit/fede7609100e6b2c1fc3a990fe0ee8658db0e97d))
+* **ocaml:** validate static initializer dependencies ([e018290](https://github.com/fullofcaffeine/hxhx/commit/e018290705493fc516b02fc09dd7f4159bbdd313))
+* **parser:** preserve null-safe field access ([adae08d](https://github.com/fullofcaffeine/hxhx/commit/adae08d88eeff6223a391e66e4f8e88d9b0feb37))
+* **tooling:** quiet repeated heavy-run waits ([9a5bd94](https://github.com/fullofcaffeine/hxhx/commit/9a5bd94c34bb902173e1a2da6cfe876a0aa1ae3b))
+
 ## [0.23.4](https://github.com/fullofcaffeine/hxhx/compare/v0.23.3...v0.23.4) (2026-07-21)
 
 
