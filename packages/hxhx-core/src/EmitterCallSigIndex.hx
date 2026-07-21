@@ -7,6 +7,25 @@
 	OCaml, while expanding the concrete operation inside the mega-file makes the
 	full bootstrap compilation materially slower and more memory-intensive.
 **/
+#if ocaml
+/**
+	Typed declaration for the native map lookup used by an OCaml-built hxhx.
+
+	`EmitterStage` deliberately passes its optional context tables as `Dynamic`.
+	This avoids generating many specialized copies of its already-large recursive
+	expression functions. In generated OCaml, that `Dynamic` value is represented
+	as `Obj.t`, meaning “a value whose concrete OCaml type is intentionally hidden.”
+	Declaring the runtime function explicitly keeps that type hidden until `HxMap`
+	performs the lookup, instead of asking OCaml to treat the caller's `Obj.t` value
+	as an already-specialized hash table.
+**/
+@:native("HxMap")
+private extern class EmitterCallSigNativeMap {
+	@:native("get_string")
+	public static function getString(index:Dynamic, key:String):Dynamic;
+}
+#end
+
 class EmitterCallSigIndex {
 	/**
 		Return the recorded declaration for `callee`, or `null` when none exists.
@@ -19,7 +38,11 @@ class EmitterCallSigIndex {
 	public static function get(index:Dynamic, callee:Null<String>):Null<EmitterCallSig> {
 		if (index == null || callee == null)
 			return null;
+		#if ocaml
+		return cast EmitterCallSigNativeMap.getString(index, callee);
+		#else
 		final signatures:Map<String, EmitterCallSig> = cast index;
 		return signatures.get(callee);
+		#end
 	}
 }
