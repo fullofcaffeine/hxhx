@@ -383,6 +383,13 @@ interpreter and Neko fail—so the portable OCaml target now reports
 `ocaml-static-storage:initializer-cycle` before generating or compiling OCaml
 instead of silently selecting a fourth behavior.
 
+The plan also rejects a class-valued cell when its OCaml storage type is
+declared by a later type in the same Haxe module. Declaring the cell with its
+owner would use an OCaml type that does not exist yet, while moving the cell and
+initializer later would change Haxe startup order. The compiler now reports
+`ocaml-static-storage:representation-order-incompatible` at the Haxe-to-OCaml
+planning boundary instead of letting Dune report an unbound OCaml type.
+
 The focused executable fixture
 `test/portable/fixtures/place_array_simple_assign` proves the accepted
 `array,index,rhs` order, one store, the assigned result, direct typed HxArray

@@ -193,8 +193,11 @@ for every mutable static field: the generated cell name, its Haxe and OCaml
 types, where the cell is declared, where initialization occurs, and which other
 mutable static initializers it reads directly. A dependency cycle stops with a
 source-level `ocaml-static-storage:initializer-cycle` error before Dune or the
-OCaml compiler runs. Use `--output <directory>` when the HXML does not emit to
-`out`.
+OCaml compiler runs. A static cell whose OCaml storage type would only become
+available after that cell's Haxe initialization point similarly stops with
+`ocaml-static-storage:representation-order-incompatible`; the target does not
+silently reorder startup behavior to make the generated file compile. Use
+`--output <directory>` when the HXML does not emit to `out`.
 
 Inspection is deliberately read-only and fail-closed. Missing, stale, modified,
 or unattributed generated files fail; typed place lowering is optional unless

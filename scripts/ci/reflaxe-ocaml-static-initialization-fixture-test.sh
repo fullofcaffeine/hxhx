@@ -110,9 +110,25 @@ if [ "$cycle_ocaml_status" -eq 0 ] || ! grep -Fq "ocaml-static-storage:initializ
   exit 1
 fi
 if grep -Fq "dune build failed" "$WORK_ROOT/cycle-ocaml.log"; then
-  echo "Static-initializer cycle reached Dune instead of failing in the target planner" >&2
-  cat "$WORK_ROOT/cycle-ocaml.log" >&2
-  exit 1
+	echo "Static-initializer cycle reached Dune instead of failing in the target planner" >&2
+	cat "$WORK_ROOT/cycle-ocaml.log" >&2
+	exit 1
+fi
+
+mkdir -p "$WORK_ROOT/ocaml-incompatible"
+set +e
+haxe -cp "$SOURCE_ROOT" -main IncompatibleMain --no-output -lib reflaxe.ocaml -D "ocaml_output=$WORK_RELATIVE/ocaml-incompatible/out" -D ocaml_build=native >"$WORK_ROOT/incompatible-ocaml.log" 2>&1
+incompatible_ocaml_status=$?
+set -e
+if [ "$incompatible_ocaml_status" -eq 0 ] || ! grep -Fq "ocaml-static-storage:representation-order-incompatible" "$WORK_ROOT/incompatible-ocaml.log"; then
+	echo "reflaxe.ocaml should reject a static carrier that depends on a later same-module type" >&2
+	cat "$WORK_ROOT/incompatible-ocaml.log" >&2
+	exit 1
+fi
+if grep -Fq "dune build failed" "$WORK_ROOT/incompatible-ocaml.log"; then
+	echo "Static carrier-order incompatibility reached Dune instead of failing in the target planner" >&2
+	cat "$WORK_ROOT/incompatible-ocaml.log" >&2
+	exit 1
 fi
 
 echo "REFLAXE_OCAML_STATIC_INITIALIZATION_PARITY:PASS"

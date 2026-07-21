@@ -141,7 +141,9 @@ where its Haxe initializer runs. It also records direct dependencies between
 initializers. This makes cross-type and cross-module ordering reviewable
 without reconstructing it from generated source, and lets the compiler reject
 an initializer cycle with a Haxe-facing diagnostic before invoking the OCaml
-build. `--output` selects a non-default project-relative output directory.
+build. It also rejects a same-module storage type that cannot be declared in
+Haxe initialization order, rather than emitting an unbound OCaml type. `--output`
+selects a non-default project-relative output directory.
 
 This is intentionally honest inspection, not generated-code guesswork. The
 artifact inventory is valid today, but it reports source-bundle packaging as

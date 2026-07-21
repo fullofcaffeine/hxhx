@@ -516,6 +516,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 						&& concrete.length > 1
 						&& OcamlRepresentationRegistry.isExactInt(field.type);
 					final latestCarrierDependency = latestCarrierTypeOrder(carrierType);
+					if (!useModulePrelude && latestCarrierDependency > typeOrder) {
+						final dependencyTypeName = ordered[latestCarrierDependency].classType.name;
+						throw 'reflaxe.ocaml [ocaml-static-storage:representation-order-incompatible]: mutable static "$moduleId::${classType.name}::${field.name}" uses OCaml carrier "${printer.printType(carrierType)}", which depends on later type "$dependencyTypeName"; its storage cannot be declared before use without changing Haxe initialization order';
+					}
 					final useTypePrelude = !useModulePrelude && concrete.length > 1 && latestCarrierDependency <= typeOrder;
 					final declarationTypeOrder = useTypePrelude ? Std.int(Math.max(0, latestCarrierDependency)) : -1;
 					final declarationTypeName = useTypePrelude ? ordered[declarationTypeOrder].classType.name : null;
