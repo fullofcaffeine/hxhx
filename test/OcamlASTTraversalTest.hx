@@ -250,12 +250,29 @@ class OcamlASTTraversalTest {
 		assertTrue(!modules.exists("HxRaw"), "raw OCaml text must remain opaque to structural runtime collection");
 	}
 
+	static function verifyDeepWalkIsStackSafe():Void {
+		var expression:OcamlExpr = OcamlExpr.EIdent("HxDeep.value");
+		final nestingDepth = 50000;
+		for (_ in 0...nestingDepth)
+			expression = OcamlExpr.EUnop(OcamlUnop.Not, expression);
+
+		var visitedExpressions = 0;
+		OcamlASTTraversal.walkExprPre(expression, _ -> visitedExpressions++, _ -> {}, _ -> {});
+		assertTrue(visitedExpressions == nestingDepth + 1, "deep expression walk must visit every node without using the Haxe process call stack");
+
+		final modules:Map<String, Bool> = [];
+		RuntimeUsageCollector.collectFromModuleItems([OcamlModuleItem.ILet([{name: "deep", expr: expression}], false)],
+			moduleName -> modules.set(moduleName, true));
+		assertTrue(modules.exists("HxDeep"), "runtime usage collection must reach the leaf of a deeply nested expression");
+	}
+
 	public static function run():Void {
 		final root = allExpressionConstructors();
 		verifyConstructorCoverage(root);
 		verifyEveryExpressionChild(root);
 		verifyIdentityAndWalkFoldOrder(root);
 		verifyRuntimeUsageMigration();
+		verifyDeepWalkIsStackSafe();
 		Sys.println("OCAML_AST_TRAVERSAL:PASS");
 	}
 }

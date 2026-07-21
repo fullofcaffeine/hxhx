@@ -5,6 +5,12 @@ import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 
+private enum OcamlASTWalkItem {
+	Expression(expression:OcamlExpr);
+	Pattern(pattern:OcamlPat);
+	TypeExpression(type:OcamlTypeExpr);
+}
+
 /**
 	Defines the authoritative structural child contract for the OCaml target AST.
 
@@ -139,40 +145,26 @@ class OcamlASTTraversal {
 		return visitExpression(expression);
 	}
 
-	/** Walks expressions, patterns, and types in deterministic pre-order. */
+	/**
+		Walks expressions, patterns, and types in deterministic pre-order.
+
+		The walk keeps pending children in an explicit work stack instead of using
+		the Haxe process call stack. Generated compiler functions can contain tens
+		of thousands of nested target expressions, so ordinary recursive walking
+		would otherwise fail even though the target tree is valid.
+	**/
 	public static function walkExprPre(expression:OcamlExpr, visitExpression:OcamlExpr->Void, visitPattern:OcamlPat->Void, visitType:OcamlTypeExpr->Void):Void {
-		visitExpression(expression);
-		mapExprImmediate(expression, child -> {
-			walkExprPre(child, visitExpression, visitPattern, visitType);
-			return child;
-		}, child -> {
-			walkPatternPre(child, visitPattern, visitType);
-			return child;
-		}, child -> {
-			walkTypePre(child, visitType);
-			return child;
-		});
+		walkPre([Expression(expression)], visitExpression, visitPattern, visitType);
 	}
 
 	/** Walks a pattern subtree and any type annotations in deterministic pre-order. */
 	public static function walkPatternPre(pattern:OcamlPat, visitPattern:OcamlPat->Void, visitType:OcamlTypeExpr->Void):Void {
-		visitPattern(pattern);
-		mapPatternImmediate(pattern, child -> {
-			walkPatternPre(child, visitPattern, visitType);
-			return child;
-		}, child -> {
-			walkTypePre(child, visitType);
-			return child;
-		});
+		walkPre([Pattern(pattern)], _ -> {}, visitPattern, visitType);
 	}
 
 	/** Walks a type-expression subtree in deterministic pre-order. */
 	public static function walkTypePre(type:OcamlTypeExpr, visitType:OcamlTypeExpr->Void):Void {
-		visitType(type);
-		mapTypeImmediate(type, child -> {
-			walkTypePre(child, visitType);
-			return child;
-		});
+		walkPre([TypeExpression(type)], _ -> {}, _ -> {}, visitType);
 	}
 
 	/** Folds the same deterministic event stream produced by `walkExprPre`. */
@@ -182,6 +174,48 @@ class OcamlASTTraversal {
 		walkExprPre(expression, current -> result = foldExpression(result, current), current -> result = foldPattern(result, current),
 			current -> result = foldType(result, current));
 		return result;
+	}
+
+	static function walkPre(work:Array<OcamlASTWalkItem>, visitExpression:OcamlExpr->Void, visitPattern:OcamlPat->Void, visitType:OcamlTypeExpr->Void):Void {
+		final children:Array<OcamlASTWalkItem> = [];
+		while (work.length > 0) {
+			final current = work.pop();
+			children.resize(0);
+			switch (current) {
+				case Expression(expression):
+					visitExpression(expression);
+					mapExprImmediate(expression, child -> {
+						children.push(Expression(child));
+						return child;
+					}, child -> {
+						children.push(Pattern(child));
+						return child;
+					}, child -> {
+						children.push(TypeExpression(child));
+						return child;
+					});
+				case Pattern(pattern):
+					visitPattern(pattern);
+					mapPatternImmediate(pattern, child -> {
+						children.push(Pattern(child));
+						return child;
+					}, child -> {
+						children.push(TypeExpression(child));
+						return child;
+					});
+				case TypeExpression(type):
+					visitType(type);
+					mapTypeImmediate(type, child -> {
+						children.push(TypeExpression(child));
+						return child;
+					});
+			}
+			var index = children.length;
+			while (index > 0) {
+				index--;
+				work.push(children[index]);
+			}
+		}
 	}
 
 	static inline function mapLet(original:OcamlExpr, name:String, value:OcamlExpr, body:OcamlExpr, isRec:Bool, mapExpression:OcamlExpr->OcamlExpr):OcamlExpr {
