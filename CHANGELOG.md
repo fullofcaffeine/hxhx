@@ -1,3 +1,10 @@
+## [0.23.4](https://github.com/fullofcaffeine/hxhx/compare/v0.23.3...v0.23.4) (2026-07-21)
+
+
+### Bug Fixes
+
+* **tooling:** warn on oversized Beads history ([f200964](https://github.com/fullofcaffeine/hxhx/commit/f20096441ced9edc9fde9bfcb51942a94ae9785a))
+
 ## [0.23.3](https://github.com/fullofcaffeine/hxhx/compare/v0.23.2...v0.23.3) (2026-07-20)
 
 
