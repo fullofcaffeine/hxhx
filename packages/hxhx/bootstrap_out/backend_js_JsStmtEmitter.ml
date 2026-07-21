@@ -122,15 +122,17 @@ and emitStmt = fun writer stmt scope -> ignore (match stmt with
     let stmts = Obj.magic _g in (
       ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("{" : string));
       ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
-      ignore (let _g2 = ref 0 in while !_g2 < HxArray.length stmts do ignore (let s = Obj.magic (HxArray.get (Obj.magic stmts) (!_g2)) in (
-        ignore (let __old_7 = !_g2 in let __new_8 = HxInt.add __old_7 1 in (
-          ignore (_g2 := __new_8);
-          __new_8
-        ));
-        emitStmt (Obj.magic writer) (Obj.magic s) (Obj.magic scope)
-      )) done);
-      ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
-      Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string)
+      let _g2 = ref 0 in (
+        ignore (while !_g2 < HxArray.length stmts do ignore (let s = Obj.magic (HxArray.get (Obj.magic stmts) (!_g2)) in (
+          ignore (let __old_7 = !_g2 in let __new_8 = HxInt.add __old_7 1 in (
+            ignore (_g2 := __new_8);
+            __new_8
+          ));
+          emitStmt (Obj.magic writer) (Obj.magic s) (Obj.magic scope)
+        )) done);
+        ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
+        Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string)
+      )
     )
   ))
   | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
@@ -225,25 +227,26 @@ and emitStmt = fun writer stmt scope -> ignore (match stmt with
       | HxExpr.ESuper -> 7
       | HxExpr.EIdent _ -> 8
       | HxExpr.EField (_, _) -> 9
-      | HxExpr.ECall (_, _) -> 10
-      | HxExpr.EMacroExpr (_, _) -> 11
-      | HxExpr.EMacroType _ -> 12
-      | HxExpr.ELambda (_, _) -> 13
-      | HxExpr.ETryCatchRaw _ -> 14
-      | HxExpr.ESwitchRaw _ -> 15
-      | HxExpr.ESwitch (_, _, _) -> 16
-      | HxExpr.ENew (_, _) -> 17
-      | HxExpr.EUnop (_, _, _) -> 18
-      | HxExpr.EBinop (_, _, _) -> 19
-      | HxExpr.ETernary (_, _, _) -> 20
-      | HxExpr.EAnon (_, _) -> 21
-      | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-      | HxExpr.EArrayDecl _ -> 23
-      | HxExpr.EArrayAccess (_, _) -> 24
-      | HxExpr.ERange (_, _) -> 25
-      | HxExpr.ECast (_, _) -> 26
-      | HxExpr.EUntyped _ -> 27
-      | HxExpr.EUnsupported _ -> 28) = 10 then ignore (let _g2 = Obj.magic (match _g with
+      | HxExpr.ENullSafeField (_, _) -> 10
+      | HxExpr.ECall (_, _) -> 11
+      | HxExpr.EMacroExpr (_, _) -> 12
+      | HxExpr.EMacroType _ -> 13
+      | HxExpr.ELambda (_, _) -> 14
+      | HxExpr.ETryCatchRaw _ -> 15
+      | HxExpr.ESwitchRaw _ -> 16
+      | HxExpr.ESwitch (_, _, _) -> 17
+      | HxExpr.ENew (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 19
+      | HxExpr.EBinop (_, _, _) -> 20
+      | HxExpr.ETernary (_, _, _) -> 21
+      | HxExpr.EAnon (_, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 23
+      | HxExpr.EArrayDecl _ -> 24
+      | HxExpr.EArrayAccess (_, _) -> 25
+      | HxExpr.ERange (_, _) -> 26
+      | HxExpr.ECast (_, _) -> 27
+      | HxExpr.EUntyped _ -> 28
+      | HxExpr.EUnsupported _ -> 29) = 11 then ignore (let _g2 = Obj.magic (match _g with
       | HxExpr.ECall (__enum_param_9, _) -> __enum_param_9
       | _ -> failwith "Unexpected enum parameter") in (
       ignore (match _g with
@@ -260,25 +263,26 @@ and emitStmt = fun writer stmt scope -> ignore (match stmt with
         | HxExpr.ESuper -> 7
         | HxExpr.EIdent _ -> 8
         | HxExpr.EField (_, _) -> 9
-        | HxExpr.ECall (_, _) -> 10
-        | HxExpr.EMacroExpr (_, _) -> 11
-        | HxExpr.EMacroType _ -> 12
-        | HxExpr.ELambda (_, _) -> 13
-        | HxExpr.ETryCatchRaw _ -> 14
-        | HxExpr.ESwitchRaw _ -> 15
-        | HxExpr.ESwitch (_, _, _) -> 16
-        | HxExpr.ENew (_, _) -> 17
-        | HxExpr.EUnop (_, _, _) -> 18
-        | HxExpr.EBinop (_, _, _) -> 19
-        | HxExpr.ETernary (_, _, _) -> 20
-        | HxExpr.EAnon (_, _) -> 21
-        | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-        | HxExpr.EArrayDecl _ -> 23
-        | HxExpr.EArrayAccess (_, _) -> 24
-        | HxExpr.ERange (_, _) -> 25
-        | HxExpr.ECast (_, _) -> 26
-        | HxExpr.EUntyped _ -> 27
-        | HxExpr.EUnsupported _ -> 28) = 7 then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("/* base constructor call omitted */" : string)) else ignore (let expr = Obj.magic _g in Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.magic expr) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) ())) ^ ";" : string))
+        | HxExpr.ENullSafeField (_, _) -> 10
+        | HxExpr.ECall (_, _) -> 11
+        | HxExpr.EMacroExpr (_, _) -> 12
+        | HxExpr.EMacroType _ -> 13
+        | HxExpr.ELambda (_, _) -> 14
+        | HxExpr.ETryCatchRaw _ -> 15
+        | HxExpr.ESwitchRaw _ -> 16
+        | HxExpr.ESwitch (_, _, _) -> 17
+        | HxExpr.ENew (_, _) -> 18
+        | HxExpr.EUnop (_, _, _) -> 19
+        | HxExpr.EBinop (_, _, _) -> 20
+        | HxExpr.ETernary (_, _, _) -> 21
+        | HxExpr.EAnon (_, _) -> 22
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 23
+        | HxExpr.EArrayDecl _ -> 24
+        | HxExpr.EArrayAccess (_, _) -> 25
+        | HxExpr.ERange (_, _) -> 26
+        | HxExpr.ECast (_, _) -> 27
+        | HxExpr.EUntyped _ -> 28
+        | HxExpr.EUnsupported _ -> 29) = 7 then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("/* base constructor call omitted */" : string)) else ignore (let expr = Obj.magic _g in Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.magic expr) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) ())) ^ ";" : string))
     )) else ignore (let expr = Obj.magic _g in Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.magic expr) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) ())) ^ ";" : string))
   )))
 and emitTry = fun writer tryBody catches scope -> ignore ((
@@ -331,25 +335,26 @@ and emitForIn = fun writer name iterable body scope -> ignore (if (match iterabl
   | HxExpr.ESuper -> 7
   | HxExpr.EIdent _ -> 8
   | HxExpr.EField (_, _) -> 9
-  | HxExpr.ECall (_, _) -> 10
-  | HxExpr.EMacroExpr (_, _) -> 11
-  | HxExpr.EMacroType _ -> 12
-  | HxExpr.ELambda (_, _) -> 13
-  | HxExpr.ETryCatchRaw _ -> 14
-  | HxExpr.ESwitchRaw _ -> 15
-  | HxExpr.ESwitch (_, _, _) -> 16
-  | HxExpr.ENew (_, _) -> 17
-  | HxExpr.EUnop (_, _, _) -> 18
-  | HxExpr.EBinop (_, _, _) -> 19
-  | HxExpr.ETernary (_, _, _) -> 20
-  | HxExpr.EAnon (_, _) -> 21
-  | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-  | HxExpr.EArrayDecl _ -> 23
-  | HxExpr.EArrayAccess (_, _) -> 24
-  | HxExpr.ERange (_, _) -> 25
-  | HxExpr.ECast (_, _) -> 26
-  | HxExpr.EUntyped _ -> 27
-  | HxExpr.EUnsupported _ -> 28) = 25 then ignore (let _g = Obj.magic (match iterable with
+  | HxExpr.ENullSafeField (_, _) -> 10
+  | HxExpr.ECall (_, _) -> 11
+  | HxExpr.EMacroExpr (_, _) -> 12
+  | HxExpr.EMacroType _ -> 13
+  | HxExpr.ELambda (_, _) -> 14
+  | HxExpr.ETryCatchRaw _ -> 15
+  | HxExpr.ESwitchRaw _ -> 16
+  | HxExpr.ESwitch (_, _, _) -> 17
+  | HxExpr.ENew (_, _) -> 18
+  | HxExpr.EUnop (_, _, _) -> 19
+  | HxExpr.EBinop (_, _, _) -> 20
+  | HxExpr.ETernary (_, _, _) -> 21
+  | HxExpr.EAnon (_, _) -> 22
+  | HxExpr.EArrayComprehension (_, _, _, _) -> 23
+  | HxExpr.EArrayDecl _ -> 24
+  | HxExpr.EArrayAccess (_, _) -> 25
+  | HxExpr.ERange (_, _) -> 26
+  | HxExpr.ECast (_, _) -> 27
+  | HxExpr.EUntyped _ -> 28
+  | HxExpr.EUnsupported _ -> 29) = 26 then ignore (let _g = Obj.magic (match iterable with
   | HxExpr.ERange (__enum_param_33, _) -> __enum_param_33
   | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match iterable with
   | HxExpr.ERange (_, __enum_param_34) -> __enum_param_34

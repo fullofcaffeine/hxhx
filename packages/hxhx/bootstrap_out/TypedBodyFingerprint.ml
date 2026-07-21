@@ -14,10 +14,13 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedBodyFingerp
 let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBodyFingerprint" } : t)
 
 let addInt = fun state value -> ignore ((
-  ignore (let __assign_1 = HxInt.add (HxInt.mul (HxArray.get (Obj.magic state) 0) 31) value in HxArray.set (Obj.magic state) 0 __assign_1);
-  let __arr_2 = Obj.magic state in let __idx_3 = 1 in let __old_4 = HxArray.get __arr_2 __idx_3 in let __new_5 = HxInt.add __old_4 1 in (
-    ignore (HxArray.set __arr_2 __idx_3 __new_5);
-    __old_4
+  ignore (let __place_array_1 = state in let __place_index_2 = 0 in let __place_rhs_3 = HxInt.add (HxInt.mul (HxArray.get (Obj.magic state) 0) 31) value in (
+    ignore (HxArray.set (__place_array_1 : int HxArray.t) (__place_index_2 : int) __place_rhs_3);
+    __place_rhs_3
+  ));
+  let __place_array_4 = state in let __place_index_5 = 1 in let __place_old_6 = HxArray.get (__place_array_4 : int HxArray.t) (__place_index_5 : int) in let __place_new_7 = HxInt.add __place_old_6 1 in (
+    ignore (HxArray.set (__place_array_4 : int HxArray.t) (__place_index_5 : int) __place_new_7);
+    __place_old_6
   )
 ))
 
@@ -27,12 +30,12 @@ let addString = fun state value -> ignore (try (
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
   ignore (addInt (Obj.magic state) (HxString.length value));
-  let _g = ref 0 in let _g1 = HxString.length value in while !_g < _g1 do ignore (let index = let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
-    ignore (_g := __new_7);
-    __old_6
-  ) in addInt (Obj.magic state) (let __nullable_int_8 = HxString.charCodeAt value index in if __nullable_int_8 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_8)) done
+  let _g = ref 0 in let _g1 = HxString.length value in while !_g < _g1 do ignore (let index = let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
+    ignore (_g := __new_9);
+    __old_8
+  ) in addInt (Obj.magic state) (let __nullable_int_10 = HxString.charCodeAt value index in if __nullable_int_10 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_10)) done
 ) with
-  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9)
+  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11)
 
 let addPosition = fun state position -> ignore (try (
   ignore (if position == Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -43,21 +46,21 @@ let addPosition = fun state position -> ignore (try (
   ignore (addInt (Obj.magic state) (HxPos.getLine (Obj.magic position) ()));
   addInt (Obj.magic state) (HxPos.getColumn (Obj.magic position) ())
 ) with
-  | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10)
+  | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12)
 
 let addStrings = fun state values -> ignore (let tempNumber = ref (0 : int) in (
-  ignore (if values == Obj.magic (HxRuntime.hx_null) then let __assign_11 = -1 in (
-    tempNumber := __assign_11;
-    __assign_11
-  ) else let __assign_12 = HxArray.length values in (
-    tempNumber := __assign_12;
-    __assign_12
+  ignore (if values == Obj.magic (HxRuntime.hx_null) then let __assign_13 = -1 in (
+    tempNumber := __assign_13;
+    __assign_13
+  ) else let __assign_14 = HxArray.length values in (
+    tempNumber := __assign_14;
+    __assign_14
   ));
   ignore (addInt (Obj.magic state) (!tempNumber));
   if values != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length values do ignore (let value = (HxArray.get (Obj.magic values) (!_g) : string) in (
-    ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
-      ignore (_g := __new_14);
-      __new_14
+    ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
+      ignore (_g := __new_16);
+      __new_16
     ));
     addString (Obj.magic state) (value : string)
   )) done) else ()
@@ -65,55 +68,55 @@ let addStrings = fun state values -> ignore (let tempNumber = ref (0 : int) in (
 
 let addUnaryOperator = fun state op -> ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match op with
-    | HxUnaryOperator.Increment -> let __assign_15 = Obj.magic ("increment" : string) in (
-      tempMaybeString := __assign_15;
-      __assign_15
-    )
-    | HxUnaryOperator.Decrement -> let __assign_16 = Obj.magic ("decrement" : string) in (
-      tempMaybeString := __assign_16;
-      __assign_16
-    )
-    | HxUnaryOperator.Negate -> let __assign_17 = Obj.magic ("negate" : string) in (
+    | HxUnaryOperator.Increment -> let __assign_17 = Obj.magic ("increment" : string) in (
       tempMaybeString := __assign_17;
       __assign_17
     )
-    | HxUnaryOperator.LogicalNot -> let __assign_18 = Obj.magic ("logical-not" : string) in (
+    | HxUnaryOperator.Decrement -> let __assign_18 = Obj.magic ("decrement" : string) in (
       tempMaybeString := __assign_18;
       __assign_18
     )
-    | HxUnaryOperator.BitwiseNot -> let __assign_19 = Obj.magic ("bitwise-not" : string) in (
+    | HxUnaryOperator.Negate -> let __assign_19 = Obj.magic ("negate" : string) in (
       tempMaybeString := __assign_19;
       __assign_19
-    ));
-  addString (Obj.magic state) (!tempMaybeString : string)
-))
-
-let addUnaryFixity = fun state fixity -> ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (match fixity with
-    | HxUnaryFixity.Prefix -> let __assign_20 = Obj.magic ("prefix" : string) in (
+    )
+    | HxUnaryOperator.LogicalNot -> let __assign_20 = Obj.magic ("logical-not" : string) in (
       tempMaybeString := __assign_20;
       __assign_20
     )
-    | HxUnaryFixity.Postfix -> let __assign_21 = Obj.magic ("postfix" : string) in (
+    | HxUnaryOperator.BitwiseNot -> let __assign_21 = Obj.magic ("bitwise-not" : string) in (
       tempMaybeString := __assign_21;
       __assign_21
     ));
   addString (Obj.magic state) (!tempMaybeString : string)
 ))
 
+let addUnaryFixity = fun state fixity -> ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (match fixity with
+    | HxUnaryFixity.Prefix -> let __assign_22 = Obj.magic ("prefix" : string) in (
+      tempMaybeString := __assign_22;
+      __assign_22
+    )
+    | HxUnaryFixity.Postfix -> let __assign_23 = Obj.magic ("postfix" : string) in (
+      tempMaybeString := __assign_23;
+      __assign_23
+    ));
+  addString (Obj.magic state) (!tempMaybeString : string)
+))
+
 let rec addPatterns = fun state patterns -> ignore (let tempNumber = ref (0 : int) in (
-  ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_22 = -1 in (
-    tempNumber := __assign_22;
-    __assign_22
-  ) else let __assign_23 = HxArray.length patterns in (
-    tempNumber := __assign_23;
-    __assign_23
+  ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_24 = -1 in (
+    tempNumber := __assign_24;
+    __assign_24
+  ) else let __assign_25 = HxArray.length patterns in (
+    tempNumber := __assign_25;
+    __assign_25
   ));
   ignore (addInt (Obj.magic state) (!tempNumber));
   if patterns != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (HxArray.get (Obj.magic patterns) (!_g)) in (
-    ignore (let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
-      ignore (_g := __new_25);
-      __new_25
+    ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
+      ignore (_g := __new_27);
+      __new_27
     ));
     addPattern (Obj.magic state) (Obj.magic pattern)
   )) done) else ()
@@ -124,12 +127,12 @@ and addPattern = fun state pattern -> ignore (match pattern with
   | HxSwitchPattern.PBool _p0 -> ignore (let _g = _p0 in let value = _g in (
     ignore (addString (Obj.magic state) ("pattern-bool" : string));
     let tempNumber = ref (0 : int) in (
-      ignore (if value then let __assign_26 = 1 in (
-        tempNumber := __assign_26;
-        __assign_26
-      ) else let __assign_27 = 0 in (
-        tempNumber := __assign_27;
-        __assign_27
+      ignore (if value then let __assign_28 = 1 in (
+        tempNumber := __assign_28;
+        __assign_28
+      ) else let __assign_29 = 0 in (
+        tempNumber := __assign_29;
+        __assign_29
       ));
       addInt (Obj.magic state) (!tempNumber)
     )
@@ -216,18 +219,18 @@ and addPattern = fun state pattern -> ignore (match pattern with
   )))
 
 let rec addExpressions = fun state expressions -> ignore (let tempNumber = ref (0 : int) in (
-  ignore (if expressions == Obj.magic (HxRuntime.hx_null) then let __assign_28 = -1 in (
-    tempNumber := __assign_28;
-    __assign_28
-  ) else let __assign_29 = HxArray.length expressions in (
-    tempNumber := __assign_29;
-    __assign_29
+  ignore (if expressions == Obj.magic (HxRuntime.hx_null) then let __assign_30 = -1 in (
+    tempNumber := __assign_30;
+    __assign_30
+  ) else let __assign_31 = HxArray.length expressions in (
+    tempNumber := __assign_31;
+    __assign_31
   ));
   ignore (addInt (Obj.magic state) (!tempNumber));
   if expressions != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length expressions do ignore (let expression = Obj.magic (HxArray.get (Obj.magic expressions) (!_g)) in (
-    ignore (let __old_30 = !_g in let __new_31 = HxInt.add __old_30 1 in (
-      ignore (_g := __new_31);
-      __new_31
+    ignore (let __old_32 = !_g in let __new_33 = HxInt.add __old_32 1 in (
+      ignore (_g := __new_33);
+      __new_33
     ));
     addExpression (Obj.magic state) (Obj.magic expression)
   )) done) else ()
@@ -237,12 +240,12 @@ and addExpression = fun state expression -> ignore (match expression with
   | HxExpr.EBool _p0 -> ignore (let _g = _p0 in let value = _g in (
     ignore (addString (Obj.magic state) ("expr-bool" : string));
     let tempNumber = ref (0 : int) in (
-      ignore (if value then let __assign_32 = 1 in (
-        tempNumber := __assign_32;
-        __assign_32
-      ) else let __assign_33 = 0 in (
-        tempNumber := __assign_33;
-        __assign_33
+      ignore (if value then let __assign_34 = 1 in (
+        tempNumber := __assign_34;
+        __assign_34
+      ) else let __assign_35 = 0 in (
+        tempNumber := __assign_35;
+        __assign_35
       ));
       addInt (Obj.magic state) (!tempNumber)
     )
@@ -271,6 +274,11 @@ and addExpression = fun state expression -> ignore (match expression with
   ))
   | HxExpr.EField (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let hx_object = Obj.magic _g in let field = (_g1 : string) in (
     ignore (addString (Obj.magic state) ("expr-field" : string));
+    ignore (addExpression (Obj.magic state) (Obj.magic hx_object));
+    addString (Obj.magic state) (field : string)
+  ))
+  | HxExpr.ENullSafeField (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let hx_object = Obj.magic _g in let field = (_g1 : string) in (
+    ignore (addString (Obj.magic state) ("expr-null-safe-field" : string));
     ignore (addExpression (Obj.magic state) (Obj.magic hx_object));
     addString (Obj.magic state) (field : string)
   ))
@@ -340,12 +348,12 @@ and addExpression = fun state expression -> ignore (match expression with
     ignore (addString (Obj.magic state) (name : string));
     ignore (addExpression (Obj.magic state) (Obj.magic iterable));
     let tempNumber1 = ref (0 : int) in (
-      ignore (if guard == Obj.magic (HxRuntime.hx_null) then let __assign_34 = 0 in (
-        tempNumber1 := __assign_34;
-        __assign_34
-      ) else let __assign_35 = 1 in (
-        tempNumber1 := __assign_35;
-        __assign_35
+      ignore (if guard == Obj.magic (HxRuntime.hx_null) then let __assign_36 = 0 in (
+        tempNumber1 := __assign_36;
+        __assign_36
+      ) else let __assign_37 = 1 in (
+        tempNumber1 := __assign_37;
+        __assign_37
       ));
       ignore (addInt (Obj.magic state) (!tempNumber1));
       ignore (if guard != Obj.magic (HxRuntime.hx_null) then ignore (addExpression (Obj.magic state) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guard))) else ());
@@ -381,18 +389,18 @@ and addExpression = fun state expression -> ignore (match expression with
   )))
 
 let rec addStatements = fun state statements -> ignore (let tempNumber = ref (0 : int) in (
-  ignore (if statements == Obj.magic (HxRuntime.hx_null) then let __assign_36 = -1 in (
-    tempNumber := __assign_36;
-    __assign_36
-  ) else let __assign_37 = HxArray.length statements in (
-    tempNumber := __assign_37;
-    __assign_37
+  ignore (if statements == Obj.magic (HxRuntime.hx_null) then let __assign_38 = -1 in (
+    tempNumber := __assign_38;
+    __assign_38
+  ) else let __assign_39 = HxArray.length statements in (
+    tempNumber := __assign_39;
+    __assign_39
   ));
   ignore (addInt (Obj.magic state) (!tempNumber));
   if statements != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length statements do ignore (let statement = Obj.magic (HxArray.get (Obj.magic statements) (!_g)) in (
-    ignore (let __old_38 = !_g in let __new_39 = HxInt.add __old_38 1 in (
-      ignore (_g := __new_39);
-      __new_39
+    ignore (let __old_40 = !_g in let __new_41 = HxInt.add __old_40 1 in (
+      ignore (_g := __new_41);
+      __new_41
     ));
     addStatement (Obj.magic state) (Obj.magic statement)
   )) done) else ()
@@ -408,12 +416,12 @@ and addStatement = fun state statement -> ignore (match statement with
     ignore (addString (Obj.magic state) (name : string));
     ignore (addString (Obj.magic state) (typeHint : string));
     let tempNumber = ref (0 : int) in (
-      ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then let __assign_40 = 0 in (
-        tempNumber := __assign_40;
-        __assign_40
-      ) else let __assign_41 = 1 in (
-        tempNumber := __assign_41;
-        __assign_41
+      ignore (if hx_initializer == Obj.magic (HxRuntime.hx_null) then let __assign_42 = 0 in (
+        tempNumber := __assign_42;
+        __assign_42
+      ) else let __assign_43 = 1 in (
+        tempNumber := __assign_43;
+        __assign_43
       ));
       ignore (addInt (Obj.magic state) (!tempNumber));
       ignore (if hx_initializer != Obj.magic (HxRuntime.hx_null) then ignore (addExpression (Obj.magic state) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer))) else ());
@@ -425,12 +433,12 @@ and addStatement = fun state statement -> ignore (match statement with
     ignore (addExpression (Obj.magic state) (Obj.magic condition));
     ignore (addStatement (Obj.magic state) (Obj.magic whenTrue));
     let tempNumber1 = ref (0 : int) in (
-      ignore (if whenFalse == Obj.magic (HxRuntime.hx_null) then let __assign_42 = 0 in (
-        tempNumber1 := __assign_42;
-        __assign_42
-      ) else let __assign_43 = 1 in (
-        tempNumber1 := __assign_43;
-        __assign_43
+      ignore (if whenFalse == Obj.magic (HxRuntime.hx_null) then let __assign_44 = 0 in (
+        tempNumber1 := __assign_44;
+        __assign_44
+      ) else let __assign_45 = 1 in (
+        tempNumber1 := __assign_45;
+        __assign_45
       ));
       ignore (addInt (Obj.magic state) (!tempNumber1));
       ignore (if whenFalse != Obj.magic (HxRuntime.hx_null) then ignore (addStatement (Obj.magic state) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" whenFalse))) else ());
@@ -475,18 +483,18 @@ and addStatement = fun state statement -> ignore (match statement with
     ignore (addString (Obj.magic state) ("stmt-try" : string));
     ignore (addStatement (Obj.magic state) (Obj.magic body));
     let tempNumber2 = ref (0 : int) in (
-      ignore (if catches == Obj.magic (HxRuntime.hx_null) then let __assign_44 = -1 in (
-        tempNumber2 := __assign_44;
-        __assign_44
-      ) else let __assign_45 = HxArray.length catches in (
-        tempNumber2 := __assign_45;
-        __assign_45
+      ignore (if catches == Obj.magic (HxRuntime.hx_null) then let __assign_46 = -1 in (
+        tempNumber2 := __assign_46;
+        __assign_46
+      ) else let __assign_47 = HxArray.length catches in (
+        tempNumber2 := __assign_47;
+        __assign_47
       ));
       ignore (addInt (Obj.magic state) (!tempNumber2));
       ignore (if catches != Obj.magic (HxRuntime.hx_null) then ignore (let _g3 = ref 0 in while !_g3 < HxArray.length catches do ignore (let entry = HxArray.get (Obj.magic catches) (!_g3) in (
-        ignore (let __old_46 = !_g3 in let __new_47 = HxInt.add __old_46 1 in (
-          ignore (_g3 := __new_47);
-          __new_47
+        ignore (let __old_48 = !_g3 in let __new_49 = HxInt.add __old_48 1 in (
+          ignore (_g3 := __new_49);
+          __new_49
         ));
         ignore (addString (Obj.magic state) (Obj.obj (HxAnon.get entry "name") : string));
         ignore (addString (Obj.magic state) (Obj.obj (HxAnon.get entry "typeHint") : string));
@@ -523,10 +531,10 @@ and addStatement = fun state statement -> ignore (match statement with
     addPosition (Obj.magic state) (Obj.magic position)
   )))
 
-let forStatements = fun statements -> let state = Obj.magic (let __arr_48 = HxArray.create () in (
-  ignore (HxArray.push __arr_48 17);
-  ignore (HxArray.push __arr_48 0);
-  __arr_48
+let forStatements = fun statements -> let state = Obj.magic (let __arr_50 = HxArray.create () in (
+  ignore (HxArray.push __arr_50 17);
+  ignore (HxArray.push __arr_50 0);
+  __arr_50
 )) in (
   ignore (addStatements (Obj.magic state) (Obj.magic statements));
   (string_of_int (HxArray.get (Obj.magic state) 1) ^ ":") ^ string_of_int (HxArray.get (Obj.magic state) 0)

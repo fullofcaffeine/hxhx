@@ -33,25 +33,26 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.ESuper -> 7
     | HxExpr.EIdent _ -> 8
     | HxExpr.EField (_, _) -> 9
-    | HxExpr.ECall (_, _) -> 10
-    | HxExpr.EMacroExpr (_, _) -> 11
-    | HxExpr.EMacroType _ -> 12
-    | HxExpr.ELambda (_, _) -> 13
-    | HxExpr.ETryCatchRaw _ -> 14
-    | HxExpr.ESwitchRaw _ -> 15
-    | HxExpr.ESwitch (_, _, _) -> 16
-    | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _, _) -> 18
-    | HxExpr.EBinop (_, _, _) -> 19
-    | HxExpr.ETernary (_, _, _) -> 20
-    | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-    | HxExpr.EArrayDecl _ -> 23
-    | HxExpr.EArrayAccess (_, _) -> 24
-    | HxExpr.ERange (_, _) -> 25
-    | HxExpr.ECast (_, _) -> 26
-    | HxExpr.EUntyped _ -> 27
-    | HxExpr.EUnsupported _ -> 28) = 9 then let _g = Obj.magic (match callee with
+    | HxExpr.ENullSafeField (_, _) -> 10
+    | HxExpr.ECall (_, _) -> 11
+    | HxExpr.EMacroExpr (_, _) -> 12
+    | HxExpr.EMacroType _ -> 13
+    | HxExpr.ELambda (_, _) -> 14
+    | HxExpr.ETryCatchRaw _ -> 15
+    | HxExpr.ESwitchRaw _ -> 16
+    | HxExpr.ESwitch (_, _, _) -> 17
+    | HxExpr.ENew (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 19
+    | HxExpr.EBinop (_, _, _) -> 20
+    | HxExpr.ETernary (_, _, _) -> 21
+    | HxExpr.EAnon (_, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 23
+    | HxExpr.EArrayDecl _ -> 24
+    | HxExpr.EArrayAccess (_, _) -> 25
+    | HxExpr.ERange (_, _) -> 26
+    | HxExpr.ECast (_, _) -> 27
+    | HxExpr.EUntyped _ -> 28
+    | HxExpr.EUnsupported _ -> 29) = 9 then let _g = Obj.magic (match callee with
     | HxExpr.EField (__enum_param_35, _) -> __enum_param_35
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
     | HxExpr.EField (_, __enum_param_36) -> __enum_param_36
@@ -66,25 +67,26 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.ESuper -> 7
     | HxExpr.EIdent _ -> 8
     | HxExpr.EField (_, _) -> 9
-    | HxExpr.ECall (_, _) -> 10
-    | HxExpr.EMacroExpr (_, _) -> 11
-    | HxExpr.EMacroType _ -> 12
-    | HxExpr.ELambda (_, _) -> 13
-    | HxExpr.ETryCatchRaw _ -> 14
-    | HxExpr.ESwitchRaw _ -> 15
-    | HxExpr.ESwitch (_, _, _) -> 16
-    | HxExpr.ENew (_, _) -> 17
-    | HxExpr.EUnop (_, _, _) -> 18
-    | HxExpr.EBinop (_, _, _) -> 19
-    | HxExpr.ETernary (_, _, _) -> 20
-    | HxExpr.EAnon (_, _) -> 21
-    | HxExpr.EArrayComprehension (_, _, _, _) -> 22
-    | HxExpr.EArrayDecl _ -> 23
-    | HxExpr.EArrayAccess (_, _) -> 24
-    | HxExpr.ERange (_, _) -> 25
-    | HxExpr.ECast (_, _) -> 26
-    | HxExpr.EUntyped _ -> 27
-    | HxExpr.EUnsupported _ -> 28) = 8 then let _g2 = (match _g with
+    | HxExpr.ENullSafeField (_, _) -> 10
+    | HxExpr.ECall (_, _) -> 11
+    | HxExpr.EMacroExpr (_, _) -> 12
+    | HxExpr.EMacroType _ -> 13
+    | HxExpr.ELambda (_, _) -> 14
+    | HxExpr.ETryCatchRaw _ -> 15
+    | HxExpr.ESwitchRaw _ -> 16
+    | HxExpr.ESwitch (_, _, _) -> 17
+    | HxExpr.ENew (_, _) -> 18
+    | HxExpr.EUnop (_, _, _) -> 19
+    | HxExpr.EBinop (_, _, _) -> 20
+    | HxExpr.ETernary (_, _, _) -> 21
+    | HxExpr.EAnon (_, _) -> 22
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 23
+    | HxExpr.EArrayDecl _ -> 24
+    | HxExpr.EArrayAccess (_, _) -> 25
+    | HxExpr.ERange (_, _) -> 26
+    | HxExpr.ECast (_, _) -> 27
+    | HxExpr.EUntyped _ -> 28
+    | HxExpr.EUnsupported _ -> 29) = 8 then let _g2 = (match _g with
     | HxExpr.EIdent __enum_param_37 -> __enum_param_37
     | _ -> failwith "Unexpected enum parameter" : string) in match _g2 with
     | "Reflect" -> let field = (_g1 : string) in let __assign_39 = Obj.magic ("Reflect." ^ HxString.toStdString field : string) in (
@@ -208,6 +210,10 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
     ()
   ))
   | HxExpr.EField (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+    ignore _p1;
+    let obj = Obj.magic _g in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic obj) (Obj.magic violations)
+  ))
+  | HxExpr.ENullSafeField (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
     ignore _p1;
     let obj = Obj.magic _g in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic obj) (Obj.magic violations)
   ))
@@ -412,8 +418,8 @@ let verifyTypedModule = fun typedModule violations -> ignore (let parsed = Obj.m
     ignore (_g := __new_7);
     __new_7
   ));
-  let className = (HxClassDecl.getName (Obj.magic cls) : string) in (
-    ignore (let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g2 < HxArray.length _g3 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
+  let className = (HxClassDecl.getName (Obj.magic cls) : string) in let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in (
+    ignore (while !_g2 < HxArray.length _g3 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
       ignore (let __old_8 = !_g2 in let __new_9 = HxInt.add __old_8 1 in (
         ignore (_g2 := __new_9);
         __new_9
@@ -430,20 +436,22 @@ let verifyTypedModule = fun typedModule violations -> ignore (let parsed = Obj.m
       ));
       let fnName = (HxFunctionDecl.getName (Obj.magic fn) : string) in (
         ignore (verifyExplicitDynamicTypeHint (filePath : string) (className : string) (fnName : string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) ("return type" : string) (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (Obj.magic violations));
-        ignore (let _g4 = ref 0 in let _g5 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in while !_g4 < HxArray.length _g5 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g5) (!_g4)) in (
-          ignore (let __old_12 = !_g4 in let __new_13 = HxInt.add __old_12 1 in (
-            ignore (_g4 := __new_13);
-            __new_13
-          ));
-          let argName = (HxFunctionArg.getName (Obj.magic arg) : string) in verifyExplicitDynamicTypeHint (filePath : string) (className : string) (fnName : string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (("argument `" ^ HxString.toStdString argName) ^ "` type" : string) (HxFunctionArg.getTypeHint (Obj.magic arg) : string) (Obj.magic violations)
-        )) done);
-        let _g4 = ref 0 in let _g5 = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in while !_g4 < HxArray.length _g5 do ignore (let stmt = Obj.magic (HxArray.get (Obj.magic _g5) (!_g4)) in (
-          ignore (let __old_14 = !_g4 in let __new_15 = HxInt.add __old_14 1 in (
-            ignore (_g4 := __new_15);
-            __new_15
-          ));
-          verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic stmt) (Obj.magic violations)
-        )) done
+        let _g4 = ref 0 in let _g5 = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in (
+          ignore (while !_g4 < HxArray.length _g5 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g5) (!_g4)) in (
+            ignore (let __old_12 = !_g4 in let __new_13 = HxInt.add __old_12 1 in (
+              ignore (_g4 := __new_13);
+              __new_13
+            ));
+            let argName = (HxFunctionArg.getName (Obj.magic arg) : string) in verifyExplicitDynamicTypeHint (filePath : string) (className : string) (fnName : string) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (("argument `" ^ HxString.toStdString argName) ^ "` type" : string) (HxFunctionArg.getTypeHint (Obj.magic arg) : string) (Obj.magic violations)
+          )) done);
+          let _g4 = ref 0 in let _g5 = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in while !_g4 < HxArray.length _g5 do ignore (let stmt = Obj.magic (HxArray.get (Obj.magic _g5) (!_g4)) in (
+            ignore (let __old_14 = !_g4 in let __new_15 = HxInt.add __old_14 1 in (
+              ignore (_g4 := __new_15);
+              __new_15
+            ));
+            verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic stmt) (Obj.magic violations)
+          )) done
+        )
       )
     )) done
   )
