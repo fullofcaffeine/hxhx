@@ -492,7 +492,7 @@
     {
       "id": "gate1-int64-addint-29734527801",
       "checkId": "gate1-weekly",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
       "failureClass": "semantic",
       "bead": "haxe_ocaml-0473p",
@@ -508,7 +508,36 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29734527801"
       },
       "reproductionOrEvidence": "The upstream unit program reaches native OCaml compilation, where Unit_TestInt64.ml calls Haxe_Int64.addInt but that generated module exposes no addInt value.",
-      "closureGate": "A focused helper-retention regression and one current Gate 1 schedule or manual-equivalent successor must pass without weakening native compilation or the upstream workload."
+      "closureGate": "A focused helper-retention regression and one current Gate 1 schedule or manual-equivalent successor must pass without weakening native compilation or the upstream workload.",
+      "resolution": {
+        "runId": 29863821133,
+        "runAttempt": 1,
+        "headSha": "56d64193d91284fc80ea4597bb7f6afc9055f405",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-21T20:05:06Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29863821133"
+      }
+    },
+    {
+      "id": "core-ledger-closed-gate1-29864744716",
+      "checkId": "core-pr",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "repository-policy",
+      "bead": "haxe_ocaml-gcgma",
+      "recordedAt": "2026-07-21T20:16:26Z",
+      "run": {
+        "id": 29864744716,
+        "attempt": 1,
+        "headSha": "d82510f1c31490ba5ca676d67b9a76a2114ef19e",
+        "event": "push",
+        "conclusion": "failure",
+        "createdAt": "2026-07-21T20:12:08Z",
+        "updatedAt": "2026-07-21T20:15:33Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29864744716"
+      },
+      "reproductionOrEvidence": "Core guardrails reject the production ownership ledger because the Gate 1 incident remains open after its owning Bead was correctly closed against a successful hosted successor.",
+      "closureGate": "Resolve the Gate 1 ledger entry against run 29863821133, preserve the still-open M7 parent, pass the production ownership fixture, and require one successful exact-head Core PR Checks successor."
     },
     {
       "id": "portable-storage-carrier-29764683800",
