@@ -131,6 +131,33 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"opaque typed-body leaf accepted hidden increment syntax");
 	}
 
+	static function assertReturnMacroArgumentStructure():Void {
+		final filePath = "checks/ReturnMacroArgument.hx";
+		final source = [
+			"class ReturnMacroArgument {",
+			"  function get_str():String {",
+			"    shouldFail(return (null : Null<String>));",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(source, filePath);
+		final resolved = new ResolvedModule("ReturnMacroArgument", filePath, parsed);
+		final index = TyperIndex.build([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index);
+		final body = findFunction(findClass(typed, "ReturnMacroArgument"), "get_str").getBody();
+		final statement = body.getStatements()[0];
+		assertTrue(statement.getTag() == TypedStmtTag.Expression, "macro call should remain an expression before macro expansion");
+		final call = statement.getExpressions()[0];
+		assertTrue(call.getTag() == TypedExprTag.Call, "shouldFail call was not kept as a structural typed call");
+		final returnExpression = call.getExpressions()[1];
+		assertTrue(returnExpression.getTag() == TypedExprTag.ReturnExpr, "return macro argument lost its typed return node");
+		final typedCast = returnExpression.getExpressions()[0];
+		assertTrue(typedCast.getTag() == TypedExprTag.Cast && typedCast.getType().getDisplay() == "Null<String>",
+			"return macro argument lost its Null<String> cast");
+		assertTrue(typedCast.getExpressions()[0].getTag() == TypedExprTag.NullValue, "typed return cast lost its null child");
+		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
+	}
+
 	static function assertLoweringNodeSet():Void {
 		final position = new HxPos(0, 1, 1);
 		final intType = TyType.fromHintText("Int");
@@ -597,6 +624,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertStrictInstanceMethodCallee();
 		assertMethodGenericResultSpecialization();
 		assertOpaqueGuard();
+		assertReturnMacroArgumentStructure();
 		assertLifecycleGuard(typed, mainFunction);
 	}
 }

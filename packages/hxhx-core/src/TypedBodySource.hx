@@ -102,6 +102,7 @@ class TypedBodySource {
 							ECall(callee, arguments);
 					}
 				}
+			case ReturnExpr: EReturn(expressions.length == 0 ? null : expression(expressions[0]));
 			case MacroExpr: EMacroExpr(expression(expressions[0]), texts.copy());
 			case MacroType: EMacroType(texts[0]);
 			case Lambda: ELambda(texts.copy(), expression(expressions[0]));

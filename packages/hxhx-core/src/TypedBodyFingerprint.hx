@@ -184,6 +184,11 @@ class TypedBodyFingerprint {
 				addString(state, "expr-call");
 				addExpression(state, callee);
 				addExpressions(state, arguments);
+			case EReturn(value):
+				addString(state, "expr-return");
+				addInt(state, value == null ? 0 : 1);
+				if (value != null)
+					addExpression(state, value);
 			case EMacroExpr(inner, wrappers):
 				addString(state, "expr-macro");
 				addExpression(state, inner);

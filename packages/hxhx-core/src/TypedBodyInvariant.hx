@@ -94,6 +94,8 @@ class TypedBodyInvariant {
 			if (expression.getTexts().length != 2 || expression.getExpressions().length != 1)
 				throw "typed temporary has an invalid structural payload in " + owner;
 		}
+		if (expression.getTag() == ReturnExpr && expression.getExpressions().length > 1)
+			throw "typed return expression has more than one value in " + owner;
 		if (expression.getTag() == Opaque) {
 			final texts = expression.getTexts();
 			final raw = texts.length == 0 ? "" : texts[0];

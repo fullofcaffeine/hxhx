@@ -60,6 +60,8 @@ class JsExprEmitter {
 				emitNullSafeField(obj, field, scope);
 			case ECall(callee, args):
 				emitCall(callee, args, scope);
+			case EReturn(_):
+				unsupported("EReturn", "expression-position return must be consumed by macro expansion before JS emission");
 			case EMacroExpr(inner, wrappers):
 				emitMacroExpr(inner, wrappers, scope);
 			case EMacroType(typeText):

@@ -468,6 +468,8 @@ class HxParser {
 				ECall(EIdent("__hxhx_trace_at_" + Std.string(rebased)), [for (arg in args) rebaseFunctionBodyExprValue(arg, base)]);
 			case ECall(callee, args):
 				ECall(rebaseFunctionBodyExprValue(callee, base), [for (arg in args) rebaseFunctionBodyExprValue(arg, base)]);
+			case EReturn(value):
+				EReturn(value == null ? null : rebaseFunctionBodyExprValue(value, base));
 			case EField(obj, field):
 				EField(rebaseFunctionBodyExprValue(obj, base), field);
 			case ENullSafeField(obj, field):
@@ -1550,6 +1552,15 @@ class HxParser {
 					ESuper;
 				} else if (k == KFunction) {
 					parseFunctionExpr();
+				} else if (k == KReturn) {
+					// Macro arguments are source expressions, so valid Haxe can contain shapes
+					// such as `expectError(return (null : Null<String>))`. Preserve the return
+					// and its value structurally; the outer call still owns its closing `)`.
+					bump();
+					final value = if (cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace)
+						|| cur.kind.match(TEof)) null; else parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TSemicolon)
+						|| cur.kind.match(TRBrace) || cur.kind.match(TEof));
+					EReturn(value);
 				} else if (k == KInline) {
 					bump();
 					parsePrimaryExpr();
@@ -1822,6 +1833,8 @@ class HxParser {
 					ETernary(applyDefaultedArgs(cond), applyDefaultedArgs(thenExpr), applyDefaultedArgs(elseExpr));
 				case ECall(callee, callArgs):
 					ECall(applyDefaultedArgs(callee), [for (arg in callArgs) applyDefaultedArgs(arg)]);
+				case EReturn(value):
+					EReturn(value == null ? null : applyDefaultedArgs(value));
 				case EField(receiver, field):
 					EField(applyDefaultedArgs(receiver), field);
 				case ENullSafeField(receiver, field):
@@ -1957,6 +1970,8 @@ class HxParser {
 					ETernary(applyDefaultedArgs(cond), applyDefaultedArgs(thenExpr), applyDefaultedArgs(elseExpr));
 				case ECall(callee, callArgs):
 					ECall(applyDefaultedArgs(callee), [for (arg in callArgs) applyDefaultedArgs(arg)]);
+				case EReturn(value):
+					EReturn(value == null ? null : applyDefaultedArgs(value));
 				case EField(receiver, field):
 					EField(applyDefaultedArgs(receiver), field);
 				case ENullSafeField(receiver, field):
@@ -3375,6 +3390,8 @@ class HxParser {
 					applyDefaultedLambdaArgs(elseExpr, defaultedArgs));
 			case ECall(callee, callArgs):
 				ECall(applyDefaultedLambdaArgs(callee, defaultedArgs), [for (arg in callArgs) applyDefaultedLambdaArgs(arg, defaultedArgs)]);
+			case EReturn(value):
+				EReturn(value == null ? null : applyDefaultedLambdaArgs(value, defaultedArgs));
 			case EField(receiver, field):
 				EField(applyDefaultedLambdaArgs(receiver, defaultedArgs), field);
 			case ENullSafeField(receiver, field):

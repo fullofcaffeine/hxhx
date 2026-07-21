@@ -27,6 +27,7 @@ class TypedBodyBuilder {
 			case EArrayDecl(_): TyType.fromHintText("Array<Dynamic>");
 			case EMacroExpr(_, _): TyType.fromHintText("haxe.macro.Expr");
 			case EMacroType(_): TyType.fromHintText("haxe.macro.ComplexType");
+			case EReturn(_): TyType.fromHintText("Void");
 			case _: TyType.unknown();
 		};
 	}
@@ -433,6 +434,9 @@ class TypedBodyBuilder {
 					TypedExpr.call(buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver),
 						buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver), declaration, nodeType, position);
 				}
+			case EReturn(inner):
+				TypedExpr.returnExpr(inner == null ? null : buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType,
+					position);
 			case EMacroExpr(inner, wrappers):
 				TypedExpr.macroExpr(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver),
 					wrappers == null ? [] : wrappers.copy(), nodeType, position);

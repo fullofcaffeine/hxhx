@@ -79,6 +79,7 @@ class ParserStage {
 			case EField(obj, _) | ENullSafeField(obj, _):
 				initHasMergedReturnIdentifier(obj);
 			case ECall(callee, args): initHasMergedReturnIdentifier(callee) || initListHasMergedReturnIdentifier(args);
+			case EReturn(value): initHasMergedReturnIdentifier(value);
 			case EMacroExpr(inner, _):
 				initHasMergedReturnIdentifier(inner);
 			case ELambda(_, body):
@@ -3248,7 +3249,7 @@ class ParserStage {
 		return switch (expr) {
 			case EUnsupported(_):
 				true;
-			case EField(obj, _), ENullSafeField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj):
+			case EField(obj, _), ENullSafeField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj), EReturn(obj):
 				hasUnsupportedExpr(obj);
 			case ECall(obj, args):
 				if (hasUnsupportedExpr(obj)) true; else {

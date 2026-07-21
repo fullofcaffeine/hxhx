@@ -1327,6 +1327,8 @@ class SourceTargetCommon {
 							callExpr(target, renderExpr(target, other), args);
 					}
 				}
+			case EReturn(_):
+				throw targetLabel(target) + " source backend: expression-position return must be consumed by macro expansion before emission";
 			case EArrayDecl(items):
 				arrayLiteral(target, items);
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
@@ -1358,6 +1360,7 @@ class SourceTargetCommon {
 			case EField(_, _): "EField";
 			case ENullSafeField(_, _): "ENullSafeField";
 			case ECall(_, _): "ECall";
+			case EReturn(_): "EReturn";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(_): "EMacroType";
 			case ELambda(_, _): "ELambda";
@@ -12853,6 +12856,9 @@ class SourceTargetCommon {
 				phpRecordReferencedMemberExpr(callee, names);
 				for (arg in args)
 					phpRecordReferencedMemberExpr(arg, names);
+			case EReturn(value):
+				if (value != null)
+					phpRecordReferencedMemberExpr(value, names);
 			case EMacroExpr(inner, _):
 				phpRecordReferencedMemberExpr(inner, names);
 			case ELambda(_, body):

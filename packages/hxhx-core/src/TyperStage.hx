@@ -1120,6 +1120,10 @@ class TyperStage {
 					case _:
 						inferFunctionValueCall(callee, args, scope, ctx, pos);
 				}
+			case EReturn(value):
+				if (value != null)
+					inferExprType(value, scope, ctx, pos);
+				TyType.fromHintText("Void");
 			case ELambda(argNames, body):
 				// Stage 3 bring-up: type the body in a nested scope that:
 				// - introduces lambda args (shadowing outer locals/params),

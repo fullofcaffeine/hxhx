@@ -337,6 +337,23 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertEqInt(HxFunctionDecl.getArgs(readBytesFn).length, 3, "native decode should still recover the readBytes arg list");
 	}
 
+	static function assertNativeDecodePreservesReturnMacroArgument():Void {
+		final source = [
+			"class TestStrict {",
+			"  function get_str():String {",
+			"    shouldFail(return (null : Null<String>));",
+			"  }",
+			"}",
+		].join("\n");
+		final body = "shouldFail(return (null : Null<String>));";
+		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("get_str|private|0||String||||", body, source.indexOf(body), source);
+		switch (HxFunctionDecl.getBody(fn)) {
+			case [SExpr(ECall(EIdent("shouldFail"), [EReturn(ECast(ENull, "Null<String>"))]), _)]:
+			case body:
+				fail("native decode lost the return, cast, or null inside the macro argument: " + Std.string(body));
+		}
+	}
+
 	static function main() {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
 		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
@@ -349,6 +366,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertNativeDecodeRecoversSourceFunctionHintFromStringFallback();
 		assertNativeDecodeRecoversConstrainedGenericArgsFromSource();
 		assertNativeDecodeDoesNotBorrowArgsFromPrefixNamedFunction();
+		assertNativeDecodePreservesReturnMacroArgument();
 		assertScannedGenericNamedFunctionArg();
 		assertScannedHelpersPreserveConstrainedGenericRelations();
 

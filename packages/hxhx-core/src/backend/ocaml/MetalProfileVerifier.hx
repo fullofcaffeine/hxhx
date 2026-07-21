@@ -190,6 +190,12 @@ class MetalProfileVerifier {
 				verifyExpr(filePath, className, fnName, stmtPos, callee, violations);
 				for (arg in args)
 					verifyExpr(filePath, className, fnName, stmtPos, arg, violations);
+			case EReturn(value):
+				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "expression-position return",
+					"a return nested inside another expression must be handled by macro expansion before metal emission",
+					"expand the macro or move the return to statement position before selecting metal profile");
+				if (value != null)
+					verifyExpr(filePath, className, fnName, stmtPos, value, violations);
 			case EMacroExpr(inner, _wrappers):
 				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);
 			case EMacroType(_):

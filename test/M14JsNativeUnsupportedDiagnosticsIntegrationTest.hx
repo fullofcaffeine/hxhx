@@ -37,5 +37,10 @@ class M14JsNativeUnsupportedDiagnosticsIntegrationTest {
 		assertContains(opaqueError, "[js-native:unsupported_expr]", "unsupported payload prefix");
 		assertContains(opaqueError, "kind=EUnsupported", "unsupported payload kind");
 		assertContains(opaqueError, "detail=opaque_payload", "unsupported payload detail");
+
+		final returnError = captureUnsupported(EReturn(ECast(ENull, "Null<String>")));
+		assertContains(returnError, "[js-native:unsupported_expr]", "unexpanded return prefix");
+		assertContains(returnError, "kind=EReturn", "unexpanded return kind");
+		assertContains(returnError, "macro expansion", "unexpanded return guidance");
 	}
 }

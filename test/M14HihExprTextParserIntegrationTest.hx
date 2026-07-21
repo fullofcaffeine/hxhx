@@ -39,6 +39,27 @@ class M14HihExprTextParserIntegrationTest {
 		assertTrue(nullSafeCopyBody.length == 2, "Flash.readUntil copy setup should parse as two statements");
 		assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(nullSafeCopyBody),
 			"Flash.readUntil copy setup should not hide the null-safe call in parser recovery text");
+
+		final returnMacroArgument = HxParser.parseFunctionBodyText("shouldFail(return (null : Null<String>));");
+		switch (returnMacroArgument) {
+			case [SExpr(ECall(EIdent("shouldFail"), [EReturn(ECast(ENull, "Null<String>"))]), _)]:
+			case [SExpr(EUnsupported(raw), _)]:
+				fail("return macro argument stayed opaque: " + raw);
+			case _:
+				fail("return macro argument lost its return, cast, or null structure");
+		}
+		final standaloneTypedNullReturn = HxParser.parseFunctionBodyText("return (null : Null<String>);");
+		switch (standaloneTypedNullReturn) {
+			case [SReturn(ECast(ENull, "Null<String>"), _)]:
+			case _:
+				fail("standalone typed-null return no longer parses as a return statement");
+		}
+		final valueLessReturnMacroArgument = HxParser.parseFunctionBodyText("shouldFail(return);");
+		switch (valueLessReturnMacroArgument) {
+			case [SExpr(ECall(EIdent("shouldFail"), [EReturn(null)]), _)]:
+			case _:
+				fail("value-less return macro argument lost its structural return node");
+		}
 		var spacedQuestionDotFailure:Null<String> = null;
 		try {
 			HxParser.parseExprText("unexpectedStrings ? .copy()");

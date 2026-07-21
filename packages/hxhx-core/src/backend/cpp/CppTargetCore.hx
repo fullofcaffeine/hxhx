@@ -22358,6 +22358,7 @@ class CppTargetCore {
 			case EField(receiver, field): "EField(" + exprKind(receiver) + "." + field + ")";
 			case ENullSafeField(receiver, field): "ENullSafeField(" + exprKind(receiver) + "?." + field + ")";
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
+			case EReturn(_): "EReturn";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(_): "EMacroType";
 			case ELambda(_, _): "ELambda";

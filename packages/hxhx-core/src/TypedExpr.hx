@@ -19,6 +19,7 @@ enum TypedExprTag {
 	FieldRead;
 	NullSafeFieldRead;
 	Call;
+	ReturnExpr;
 	MacroExpr;
 	MacroType;
 	Lambda;
@@ -126,6 +127,10 @@ class TypedExpr {
 
 	public static function call(callee:TypedExpr, arguments:Array<TypedExpr>, declaration:Null<TyDeclarationInfo>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(Call, type, position, null, [callee].concat(arguments == null ? [] : arguments), null, false, 0, 0.0, declaration);
+
+	/** Preserve a nested source return until macro expansion consumes it or emission rejects it. **/
+	public static function returnExpr(expression:Null<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(ReturnExpr, type, position, null, expression == null ? [] : [expression]);
 
 	public static function macroExpr(expression:TypedExpr, wrappers:Array<String>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(MacroExpr, type, position, wrappers, [expression]);

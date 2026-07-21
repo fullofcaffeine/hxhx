@@ -528,6 +528,9 @@ class NekoTargetCore {
 					collectExprRefs(context, arg, addConstructor, addStatic);
 			case ECall(callee, args):
 				collectCallRefs(context, callee, args, addConstructor, addStatic);
+			case EReturn(value):
+				if (value != null)
+					collectExprRefs(context, value, addConstructor, addStatic);
 			case EField(obj, _) | ENullSafeField(obj, _):
 				collectExprRefs(context, obj, addConstructor, addStatic);
 			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
@@ -1179,6 +1182,8 @@ class NekoTargetCore {
 				unsupportedExpr("null-safe field access requires shared evaluation lowering");
 			case ECall(callee, args):
 				renderCall(context, callee, args);
+			case EReturn(_):
+				unsupportedExpr("expression-position return must be consumed by macro expansion before Neko emission");
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				if (op == HxUnaryOperator.LogicalNot) {
@@ -1437,6 +1442,7 @@ class NekoTargetCore {
 			case EField(_, _): "EField";
 			case ENullSafeField(_, _): "ENullSafeField";
 			case ECall(_, _): "ECall";
+			case EReturn(_): "EReturn";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(typeText): "EMacroType(" + typeText + ")";
 			case ELambda(_, _): "ELambda";

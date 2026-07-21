@@ -2691,6 +2691,8 @@ class EmitterStage {
 			case ELambda(_, _), EMacroExpr(_, _), EMacroType(_), ETryCatchRaw(_):
 				// Exhaustiveness fallback; normal handling returns from the pre-switch intrinsic helper.
 				"(Obj.magic 0)";
+			case EReturn(_):
+				throw "stage3 emitter: expression-position return must be consumed by macro expansion before OCaml emission";
 
 			case EBool(v): v ? "true" : "false";
 			case EInt(v): Std.string(v);
