@@ -232,8 +232,51 @@ function main() {
 
     const gate1 = manifest.checks.find(check => check.id === 'gate1-weekly')
     assert(gate1, 'production manifest is missing gate1-weekly')
+    assert(
+      gate1.events.includes('schedule') && gate1.events.includes('workflow_dispatch'),
+      'Gate 1 evidence must accept both its scheduled and enabled manual routes'
+    )
+    const manualGate1Success = structuredClone(baseSnapshot)
+    manualGate1Success.runs[gate1.id] = [
+      syntheticRun(gate1, 99100000006, {
+        event: 'schedule',
+        conclusion: 'failure',
+        createdAt: '2026-07-13T05:00:00Z',
+        updatedAt: '2026-07-13T05:10:00Z'
+      }),
+      syntheticRun(gate1, 99100000007, {
+        event: 'workflow_dispatch',
+        createdAt: '2026-07-13T06:00:00Z',
+        updatedAt: '2026-07-13T06:10:00Z'
+      })
+    ]
+    const manualGate1SuccessPath = path.join(tmpDir, 'manual-gate1-success.snapshot.json')
+    writeJson(manualGate1SuccessPath, manualGate1Success)
+    const manualGate1SuccessResult = runEvaluator(
+      productionManifestPath,
+      productionBeadsPath,
+      manualGate1SuccessPath
+    )
+    assert(
+      manualGate1SuccessResult.status === 0,
+      `newer successful manual Gate 1 run did not supersede the scheduled failure\n${manualGate1SuccessResult.stderr}`
+    )
+
+    const skippedManualGate1 = structuredClone(baseSnapshot)
+    skippedManualGate1.runs[gate1.id] = [syntheticRun(gate1, 99100000008, {
+      event: 'workflow_dispatch',
+      conclusion: 'skipped'
+    })]
+    const skippedManualGate1Path = path.join(tmpDir, 'skipped-manual-gate1.snapshot.json')
+    writeJson(skippedManualGate1Path, skippedManualGate1)
+    expectFailure(
+      runEvaluator(productionManifestPath, productionBeadsPath, skippedManualGate1Path),
+      'failure-current',
+      'skipped manual Gate 1 run'
+    )
+
     const stale = structuredClone(baseSnapshot)
-    stale.runs[gate1.id] = [syntheticRun(gate1, 99100000006, {
+    stale.runs[gate1.id] = [syntheticRun(gate1, 99100000009, {
       createdAt: '2026-06-20T06:00:00Z',
       updatedAt: '2026-06-20T06:10:00Z'
     })]
@@ -247,7 +290,7 @@ function main() {
 
     const crossSha = structuredClone(baseSnapshot)
     crossSha.headCreatedAt = '2026-07-13T01:00:00Z'
-    crossSha.runs[core.id] = [syntheticRun(core, 99100000007, {
+    crossSha.runs[core.id] = [syntheticRun(core, 99100000010, {
       headSha: 'cccccccccccccccccccccccccccccccccccccccc'
     })]
     const crossShaPath = path.join(tmpDir, 'cross-sha.snapshot.json')

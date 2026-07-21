@@ -88,7 +88,7 @@
       "name": "Gate 1 / Upstream Macro Unit Compatibility",
       "workflow": ".github/workflows/gate1.yml",
       "kind": "release-evidence",
-      "events": ["schedule"],
+      "events": ["schedule", "workflow_dispatch"],
       "freshnessHours": 192
     },
     {
