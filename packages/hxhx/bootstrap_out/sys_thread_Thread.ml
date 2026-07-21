@@ -7,9 +7,9 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable handle : int }
 
 let create = fun handle2 -> let self = ({ __hx_type = HxType.class_ "sys.thread.Thread"; handle = 0 } : t) in (
-  ignore (ignore (let __assign_1 = handle2 in (
-    (Obj.magic self : t).handle <- __assign_1;
-    __assign_1
+  ignore (ignore (let __place_receiver_1 = self in let __place_rhs_2 = handle2 in (
+    (__place_receiver_1 : t).handle <- __place_rhs_2;
+    __place_rhs_2
   )));
   self
 )
@@ -39,7 +39,7 @@ let runWithEventLoop = fun job -> ignore (try let thread = Obj.magic (current ()
     HxThread.thread_set_events ((Obj.magic thread : t).handle) (HxRuntime.hx_null)
   )
 ) with
-  | HxRuntime.Hx_return __ret_2 -> Obj.obj __ret_2)
+  | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3)
 
 let createWithEventLoop = fun job -> spawn (fun () -> ignore (runWithEventLoop job))
 

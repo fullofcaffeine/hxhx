@@ -710,8 +710,8 @@ let main = fun () -> ignore (try let args = Obj.magic (HxSys.args ()) in (
             ignore (printHxhxHelp ());
             raise (HxRuntime.Hx_return (Obj.repr ()))
           )) else ());
-          ignore (if HxArray.length (!tempArray) = 1 && HxString.equals (HxArray.get (Obj.magic (!tempArray)) 0) "--hxhx-list-targets" then ignore ((
-            ignore (let _g = ref 0 in let _g1 = Obj.magic (Hxhx_CliRouting.listLaneSelectors ()) in while !_g < HxArray.length _g1 do ignore (let lane = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+          ignore (if HxArray.length (!tempArray) = 1 && HxString.equals (HxArray.get (Obj.magic (!tempArray)) 0) "--hxhx-list-targets" then ignore (let _g = ref 0 in let _g1 = Obj.magic (Hxhx_CliRouting.listLaneSelectors ()) in (
+            ignore (while !_g < HxArray.length _g1 do ignore (let lane = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
               ignore (let __old_144 = !_g in let __new_145 = HxInt.add __old_144 1 in (
                 ignore (_g := __new_145);
                 __new_145

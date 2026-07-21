@@ -17,8 +17,8 @@ let rec containsTypeParameter = fun hx_type -> try let __fallback_result_6 = (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   ignore (if TyType.isTypeParameter (Obj.magic hx_type) () then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if TyType.isNullable (Obj.magic hx_type) () then raise (HxRuntime.Hx_return (Obj.repr (containsTypeParameter (Obj.magic (TyType.getNullableInner (Obj.magic hx_type) ()))))) else ());
-  ignore (if TyType.isFunction (Obj.magic hx_type) () then ignore ((
-    ignore (let _g = ref 0 in let _g1 = Obj.magic (TyType.getFunctionArguments (Obj.magic hx_type) ()) in while !_g < HxArray.length _g1 do ignore (let argument = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+  ignore (if TyType.isFunction (Obj.magic hx_type) () then ignore (let _g = ref 0 in let _g1 = Obj.magic (TyType.getFunctionArguments (Obj.magic hx_type) ()) in (
+    ignore (while !_g < HxArray.length _g1 do ignore (let argument = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
       ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
         ignore (_g := __new_2);
         __new_2
@@ -27,14 +27,16 @@ let rec containsTypeParameter = fun hx_type -> try let __fallback_result_6 = (
     )) done);
     raise (HxRuntime.Hx_return (Obj.repr (containsTypeParameter (Obj.magic (TyType.getFunctionReturn (Obj.magic hx_type) ())))))
   )) else ());
-  ignore (let _g = ref 0 in let _g1 = Obj.magic (TyType.getTypeArguments (Obj.magic hx_type) ()) in while !_g < HxArray.length _g1 do ignore (let argument = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
-      ignore (_g := __new_4);
-      __new_4
-    ));
-    if containsTypeParameter (Obj.magic argument) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
-  )) done);
-  false
+  let _g = ref 0 in let _g1 = Obj.magic (TyType.getTypeArguments (Obj.magic hx_type) ()) in (
+    ignore (while !_g < HxArray.length _g1 do ignore (let argument = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+      ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
+        ignore (_g := __new_4);
+        __new_4
+      ));
+      if containsTypeParameter (Obj.magic argument) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+    )) done);
+    false
+  )
 ) in Obj.magic __fallback_result_6 with
   | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
 
@@ -51,7 +53,7 @@ let operatorLabel = fun op fixity -> let tempString = ref ("" : string) in (
 
 let unsupportedGeneric = fun filePath position operandType declaration -> TyperError.create (filePath : string) (Obj.magic position) ((("Generic abstract unary operator is not supported yet for " ^ HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ())) ^ ": ") ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) : string)
 
-let select = fun index operandType op fixity filePath position -> try let __fallback_result_16 = (
+let select = fun index operandType op fixity filePath position -> try let __fallback_result_15 = (
   ignore (if index == Obj.magic (HxRuntime.hx_null) || operandType == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic operandType) ()) in (
     ignore (if identity == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
@@ -59,8 +61,8 @@ let select = fun index operandType op fixity filePath position -> try let __fall
       ignore (if abstractInfo == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
       let candidates = Obj.magic ((Obj.magic abstractInfo : TyAbstractInfo.t).getUnaryOperators (Obj.magic abstractInfo) (Obj.magic op) (Obj.magic fixity)) in (
         ignore (if HxArray.length candidates = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) ((("No applicable abstract unary operator " ^ HxString.toStdString (operatorLabel (Obj.magic op) (Obj.magic fixity))) ^ " for ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ()) : string))) ["Dynamic"; "TyperError"]) else ());
-        let applicable = Obj.magic (HxArray.create ()) in (
-          ignore (let _g = ref 0 in while !_g < HxArray.length candidates do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates) (!_g)) in (
+        let applicable = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+          ignore (while !_g < HxArray.length candidates do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic candidates) (!_g)) in (
             ignore (let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
               ignore (_g := __new_10);
               __new_10
@@ -71,26 +73,20 @@ let select = fun index operandType op fixity filePath position -> try let __fall
             )
           )) done);
           ignore (if HxArray.length applicable = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) ((("No applicable abstract unary operator " ^ HxString.toStdString (operatorLabel (Obj.magic op) (Obj.magic fixity))) ^ " for ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ()) : string))) ["Dynamic"; "TyperError"]) else ());
-          ignore (if HxArray.length applicable > 1 then ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-            ignore (let _g = Obj.magic (let __arr_11 = HxArray.create () in __arr_11) in (
-              ignore (let _g1 = ref 0 in while !_g1 < HxArray.length applicable do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic applicable) (!_g1)) in (
-                ignore (let __old_12 = !_g1 in let __new_13 = HxInt.add __old_12 1 in (
-                  ignore (_g1 := __new_13);
-                  __new_13
-                ));
-                HxArray.push _g (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic (TyAbstractOperatorInfo.getDeclaration (Obj.magic candidate) ())) ())) ())
-              )) done);
-              let __assign_14 = Obj.magic _g in (
-                tempArray := __assign_14;
-                __assign_14
-              )
-            ));
-            let identities = Obj.magic (!tempArray) in HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) ((((("Ambiguous abstract unary operator " ^ HxString.toStdString (operatorLabel (Obj.magic op) (Obj.magic fixity))) ^ " for ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ())) ^ "; candidates: ") ^ HxString.toStdString (HxArray.join identities ", " (fun x -> x)) : string))) ["Dynamic"; "TyperError"]
+          ignore (if HxArray.length applicable > 1 then ignore (let _g = Obj.magic (let __arr_11 = HxArray.create () in __arr_11) in let _g1 = ref 0 in (
+            ignore (while !_g1 < HxArray.length applicable do ignore (let candidate = Obj.magic (HxArray.get (Obj.magic applicable) (!_g1)) in (
+              ignore (let __old_12 = !_g1 in let __new_13 = HxInt.add __old_12 1 in (
+                ignore (_g1 := __new_13);
+                __new_13
+              ));
+              HxArray.push _g (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic (TyAbstractOperatorInfo.getDeclaration (Obj.magic candidate) ())) ())) ())
+            )) done);
+            let tempArray = Obj.magic _g in let identities = Obj.magic tempArray in HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) ((((("Ambiguous abstract unary operator " ^ HxString.toStdString (operatorLabel (Obj.magic op) (Obj.magic fixity))) ^ " for ") ^ HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ())) ^ "; candidates: ") ^ HxString.toStdString (HxArray.join identities ", " (fun x -> x)) : string))) ["Dynamic"; "TyperError"]
           )) else ());
           HxArray.get (Obj.magic applicable) 0
         )
       )
     )
   )
-) in Obj.magic __fallback_result_16 with
-  | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
+) in Obj.magic __fallback_result_15 with
+  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14

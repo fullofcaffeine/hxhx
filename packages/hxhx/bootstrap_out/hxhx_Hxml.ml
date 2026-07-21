@@ -336,8 +336,8 @@ let rec parseFileRec = fun path seen depth allowNext -> try let __fallback_resul
             tempString := __assign_46;
             __assign_46
           ));
-          let tokens = Obj.magic (HxArray.create ()) in let lines = Obj.magic (HxString.split content "\n") in (
-            ignore (let _g = ref 0 in while !_g < HxArray.length lines do ignore (let ln = (HxArray.get (Obj.magic lines) (!_g) : string) in (
+          let tokens = Obj.magic (HxArray.create ()) in let lines = Obj.magic (HxString.split content "\n") in let _g = ref 0 in (
+            ignore (while !_g < HxArray.length lines do ignore (let ln = (HxArray.get (Obj.magic lines) (!_g) : string) in (
               ignore (let __old_47 = !_g in let __new_48 = HxInt.add __old_47 1 in (
                 ignore (_g := __new_48);
                 __new_48
@@ -375,8 +375,8 @@ let rec parseFileRec = fun path seen depth allowNext -> try let __fallback_resul
                   i := HxInt.add (!i) 2
                 ))
                 | _ -> ignore (i := HxInt.add (!i) 1)) done);
-              let out = Obj.magic (HxArray.create ()) in (
-                ignore (let _g = ref 0 in try while !_g < HxArray.length tokens do try ignore (let t = (HxArray.get (Obj.magic tokens) (!_g) : string) in (
+              let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+                ignore (try while !_g < HxArray.length tokens do try ignore (let t = (HxArray.get (Obj.magic tokens) (!_g) : string) in (
                   ignore (let __old_55 = !_g in let __new_56 = HxInt.add __old_55 1 in (
                     ignore (_g := __new_56);
                     __new_56
@@ -411,14 +411,16 @@ let rec parseFileRec = fun path seen depth allowNext -> try let __fallback_resul
                         ignore (HxMap.remove_string seen norm);
                         raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
                       )) else ());
-                      ignore (let _g2 = ref 0 in while !_g2 < HxArray.length expanded do ignore (let x = (HxArray.get (Obj.magic expanded) (!_g2) : string) in (
-                        ignore (let __old_62 = !_g2 in let __new_63 = HxInt.add __old_62 1 in (
-                          ignore (_g2 := __new_63);
-                          __new_63
-                        ));
-                        HxArray.push out x
-                      )) done);
-                      raise (HxRuntime.Hx_continue)
+                      let _g2 = ref 0 in (
+                        ignore (while !_g2 < HxArray.length expanded do ignore (let x = (HxArray.get (Obj.magic expanded) (!_g2) : string) in (
+                          ignore (let __old_62 = !_g2 in let __new_63 = HxInt.add __old_62 1 in (
+                            ignore (_g2 := __new_63);
+                            __new_63
+                          ));
+                          HxArray.push out x
+                        )) done);
+                        raise (HxRuntime.Hx_continue)
+                      )
                     )
                   )) else ());
                   HxArray.push out t

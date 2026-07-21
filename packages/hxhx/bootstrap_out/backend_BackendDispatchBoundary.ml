@@ -38,8 +38,8 @@ let emitReflective = fun backend program context -> let emitFn = Obj.obj (HxAnon
 
 let emit = fun backend program context -> try let __fallback_result_17 = (
   ignore (MacroExpandedProgram.assertTypedBodyRevisionsCurrent (Obj.magic program) ());
-  let tempBool = ref (false : bool) in (
-    ignore (let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in if raw == Obj.magic (HxRuntime.hx_null) then let __assign_4 = false in (
+  let tempBool = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
+    ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_4 = false in (
       tempBool := __assign_4;
       __assign_4
     ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_5 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
@@ -47,8 +47,8 @@ let emit = fun backend program context -> try let __fallback_result_17 = (
       __assign_5
     ));
     ignore (if !tempBool then ignore (print_endline "stage3_driver=dispatch_before_asDispatchValue") else ());
-    let dispatchValue = backend in let tempBool1 = ref (false : bool) in (
-      ignore (let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in if raw == Obj.magic (HxRuntime.hx_null) then let __assign_6 = false in (
+    let dispatchValue = backend in let tempBool1 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
+      ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_6 = false in (
         tempBool1 := __assign_6;
         __assign_6
       ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_7 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
@@ -56,8 +56,8 @@ let emit = fun backend program context -> try let __fallback_result_17 = (
         __assign_7
       ));
       ignore (if !tempBool1 then ignore (print_endline "stage3_driver=dispatch_after_asDispatchValue") else ());
-      ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.js.JsBackend") then ignore (let tempBool2 = ref (false : bool) in (
-        ignore (let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in if raw == Obj.magic (HxRuntime.hx_null) then let __assign_8 = false in (
+      ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.js.JsBackend") then ignore (let tempBool2 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
+        ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_8 = false in (
           tempBool2 := __assign_8;
           __assign_8
         ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_9 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
@@ -67,8 +67,8 @@ let emit = fun backend program context -> try let __fallback_result_17 = (
         ignore (if !tempBool2 then ignore (print_endline "stage3_driver=dispatch_branch_js") else ());
         let jsBackend = Obj.magic (Obj.obj dispatchValue) in raise (HxRuntime.Hx_return (Obj.repr (Backend_js_JsBackend.emitBridge (Obj.magic jsBackend) (Obj.magic program) (Obj.magic context))))
       )) else ());
-      ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.ocaml.OcamlStage3Backend") then ignore (let tempBool3 = ref (false : bool) in (
-        ignore (let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in if raw == Obj.magic (HxRuntime.hx_null) then let __assign_10 = false in (
+      ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.ocaml.OcamlStage3Backend") then ignore (let tempBool3 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
+        ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_10 = false in (
           tempBool3 := __assign_10;
           __assign_10
         ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_11 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
@@ -78,8 +78,8 @@ let emit = fun backend program context -> try let __fallback_result_17 = (
         ignore (if !tempBool3 then ignore (print_endline "stage3_driver=dispatch_branch_ocaml") else ());
         let ocamlBackend = Obj.magic (Obj.obj dispatchValue) in raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_OcamlStage3Backend.emitBridge (Obj.magic ocamlBackend) (Obj.magic program) (Obj.magic context))))
       )) else ());
-      ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.TargetCoreBackend") then ignore (let tempBool4 = ref (false : bool) in (
-        ignore (let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in if raw == Obj.magic (HxRuntime.hx_null) then let __assign_12 = false in (
+      ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.TargetCoreBackend") then ignore (let tempBool4 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
+        ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_12 = false in (
           tempBool4 := __assign_12;
           __assign_12
         ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_13 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (
@@ -89,8 +89,8 @@ let emit = fun backend program context -> try let __fallback_result_17 = (
         ignore (if !tempBool4 then ignore (print_endline "stage3_driver=dispatch_branch_target_core") else ());
         let targetCoreBackend = Obj.magic (Obj.obj dispatchValue) in raise (HxRuntime.Hx_return (Obj.repr (Backend_TargetCoreBackend.emitBridge (Obj.magic targetCoreBackend) (Obj.magic program) (Obj.magic context))))
       )) else ());
-      let tempBool5 = ref (false : bool) in (
-        ignore (let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in if raw == Obj.magic (HxRuntime.hx_null) then let __assign_14 = false in (
+      let tempBool5 = ref (false : bool) in let raw = (HxSys.getEnv "HXHX_TRACE_STAGE3_DRIVER" : string) in (
+        ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_14 = false in (
           tempBool5 := __assign_14;
           __assign_14
         ) else let s = (HxString.toLowerCase (StringTools.trim (raw : string)) () : string) in let __assign_15 = HxString.equals s "1" || HxString.equals s "true" || HxString.equals s "yes" || HxString.equals s "on" in (

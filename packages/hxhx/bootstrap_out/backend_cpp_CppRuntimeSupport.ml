@@ -82,8 +82,8 @@ let resourceLines = fun resources -> let entries = Obj.magic (HxArray.create ())
     ignore (HxArray.push __arr_12 "static const std::vector<__hxhx_resource_entry>& __hxhx_resources() {");
     ignore (HxArray.push __arr_12 "  static const std::vector<__hxhx_resource_entry> entries = {");
     __arr_12
-  )) in (
-    ignore (let _g = ref 0 in let _g1 = HxArray.length entries in while !_g < _g1 do ignore (let i = let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
+  )) in let _g = ref 0 in let _g1 = HxArray.length entries in (
+    ignore (while !_g < _g1 do ignore (let i = let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
       ignore (_g := __new_14);
       __old_13
     ) in let tempString = ref ("" : string) in (

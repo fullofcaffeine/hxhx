@@ -85,8 +85,8 @@ let hasDefineFlag = fun args name -> try let __fallback_result_8 = let i = ref 0
 ) in Obj.magic __fallback_result_8 with
   | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
 
-let decodeWaitStdioRequest = fun frame -> let sep = ref (-1) in (
-  ignore (let _g = ref 0 in let _g1 = HxBytes.length frame in try while !_g < _g1 do try ignore (let i = let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
+let decodeWaitStdioRequest = fun frame -> let sep = ref (-1) in let _g = ref 0 in let _g1 = HxBytes.length frame in (
+  ignore (try while !_g < _g1 do try ignore (let i = let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
     ignore (_g := __new_10);
     __old_9
   ) in if HxBytes.get frame i = 1 then ignore ((
@@ -114,8 +114,8 @@ let decodeWaitStdioRequest = fun frame -> let sep = ref (-1) in (
         tempMaybeBytes := __assign_15;
         __assign_15
       ));
-      let stdinBytes = Obj.magic (!tempMaybeBytes) in let rawArgs = (HxBytes.getString (!tempBytes) 0 (HxBytes.length (!tempBytes)) () : string) in let args = Obj.magic (HxArray.create ()) in (
-        ignore (let _g = ref 0 in let _g1 = Obj.magic (HxString.split rawArgs "\n") in try while !_g < HxArray.length _g1 do try ignore (let line0 = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+      let stdinBytes = Obj.magic (!tempMaybeBytes) in let rawArgs = (HxBytes.getString (!tempBytes) 0 (HxBytes.length (!tempBytes)) () : string) in let args = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxString.split rawArgs "\n") in (
+        ignore (try while !_g < HxArray.length _g1 do try ignore (let line0 = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
           ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
             ignore (_g := __new_17);
             __new_17

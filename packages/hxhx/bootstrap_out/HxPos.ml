@@ -8,17 +8,17 @@ type t = { __hx_type : Obj.t; mutable index : int; mutable line : int; mutable c
 
 let create = fun index2 line2 column2 -> let self = ({ __hx_type = HxType.class_ "HxPos"; index = 0; line = 0; column = 0 } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = index2 in (
-      (Obj.magic self : t).index <- __assign_1;
-      __assign_1
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = index2 in (
+      (__place_receiver_1 : t).index <- __place_rhs_2;
+      __place_rhs_2
     ));
-    ignore (let __assign_2 = line2 in (
-      (Obj.magic self : t).line <- __assign_2;
-      __assign_2
+    ignore (let __place_receiver_3 = self in let __place_rhs_4 = line2 in (
+      (__place_receiver_3 : t).line <- __place_rhs_4;
+      __place_rhs_4
     ));
-    let __assign_3 = column2 in (
-      (Obj.magic self : t).column <- __assign_3;
-      __assign_3
+    let __place_receiver_5 = self in let __place_rhs_6 = column2 in (
+      (__place_receiver_5 : t).column <- __place_rhs_6;
+      __place_rhs_6
     )
   )));
   self

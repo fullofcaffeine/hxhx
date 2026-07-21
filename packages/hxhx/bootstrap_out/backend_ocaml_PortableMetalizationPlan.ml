@@ -131,14 +131,14 @@ let sortedCountKeys = fun map -> try let __fallback_result_50 = let keys = Obj.m
 ) in Obj.magic __fallback_result_50 with
   | HxRuntime.Hx_return __ret_49 -> Obj.obj __ret_49
 
-let toReport = fun self () -> let regions = Obj.magic (HxArray.create ()) in let excludedCodeCounts = Obj.magic (HxMap.create_string ()) in let autoMetalizedCount = ref 0 in let excludedCount = ref 0 in let usedMetalStyleCount = ref 0 in (
-  ignore (let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).orderedSeeds) in while !_g < HxArray.length _g1 do ignore (let seed = HxArray.get (Obj.magic _g1) (!_g) in (
+let toReport = fun self () -> let regions = Obj.magic (HxArray.create ()) in let excludedCodeCounts = Obj.magic (HxMap.create_string ()) in let autoMetalizedCount = ref 0 in let excludedCount = ref 0 in let usedMetalStyleCount = ref 0 in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).orderedSeeds) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let seed = HxArray.get (Obj.magic _g1) (!_g) in (
     ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
       ignore (_g := __new_17);
       __new_17
     ));
-    let tempBool = ref (false : bool) in (
-      ignore (let regionKey = (Obj.obj (HxAnon.get seed "regionKey") : string) in let __assign_18 = (Obj.magic self : t).plannerEnabled && regionKey != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string ((Obj.magic self : t).autoMetalizedRegionKeys) regionKey in (
+    let tempBool = ref (false : bool) in let regionKey = (Obj.obj (HxAnon.get seed "regionKey") : string) in (
+      ignore (let __assign_18 = (Obj.magic self : t).plannerEnabled && regionKey != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string ((Obj.magic self : t).autoMetalizedRegionKeys) regionKey in (
         tempBool := __assign_18;
         __assign_18
       ));
@@ -202,8 +202,8 @@ let toReport = fun self () -> let regions = Obj.magic (HxArray.create ()) in let
       )
     )
   )) done);
-  let excludedByCode = Obj.magic (HxArray.create ()) in let sortedCodes = Obj.magic (sortedCountKeys (Obj.magic excludedCodeCounts)) in (
-    ignore (let _g = ref 0 in while !_g < HxArray.length sortedCodes do ignore (let code = (HxArray.get (Obj.magic sortedCodes) (!_g) : string) in (
+  let excludedByCode = Obj.magic (HxArray.create ()) in let sortedCodes = Obj.magic (sortedCountKeys (Obj.magic excludedCodeCounts)) in let _g = ref 0 in (
+    ignore (while !_g < HxArray.length sortedCodes do ignore (let code = (HxArray.get (Obj.magic sortedCodes) (!_g) : string) in (
       ignore (let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
         ignore (_g := __new_30);
         __new_30

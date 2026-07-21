@@ -36,14 +36,14 @@ let create = fun parsed2 env2 typedClasses2 revision2 -> let self = ({ __hx_type
           tempRight := __assign_7;
           __assign_7
         ));
-        ignore (let __assign_8 = !tempRight in (
-          (Obj.magic self : t).revision <- __assign_8;
-          __assign_8
+        ignore (let __place_receiver_8 = self in let __place_rhs_9 = !tempRight in (
+          (__place_receiver_8 : t).revision <- __place_rhs_9;
+          __place_rhs_9
         ));
         ignore (TypedBodyInvariant.assertClasses (Obj.magic ((Obj.magic self : t).typedClasses)));
-        let __assign_9 = Obj.magic (TypedBodySource.moduleDeclaration (Obj.magic parsed2) (Obj.magic ((Obj.magic self : t).typedClasses))) in (
-          (Obj.magic self : t).backendDeclaration <- __assign_9;
-          __assign_9
+        let __assign_10 = Obj.magic (TypedBodySource.moduleDeclaration (Obj.magic parsed2) (Obj.magic ((Obj.magic self : t).typedClasses))) in (
+          (Obj.magic self : t).backendDeclaration <- __assign_10;
+          __assign_10
         )
       )
     )
@@ -68,14 +68,14 @@ let getBackendDeclaration = fun self () -> (Obj.magic self : t).backendDeclarati
 let assertBodyRevisionCurrent = fun self () -> ignore (ignore ((
   ignore (TypedBodyInvariant.assertClasses (Obj.magic ((Obj.magic self : t).typedClasses)));
   let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).typedClasses) in while !_g < HxArray.length _g1 do ignore (let typedClass = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (
-      ignore (_g := __new_11);
-      __new_11
+    ignore (let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
+      ignore (_g := __new_12);
+      __new_12
     ));
     let _g2 = ref 0 in let _g3 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in while !_g2 < HxArray.length _g3 do ignore (let typedFunction = Obj.magic (HxArray.get (Obj.magic _g3) (!_g2)) in (
-      ignore (let __old_12 = !_g2 in let __new_13 = HxInt.add __old_12 1 in (
-        ignore (_g2 := __new_13);
-        __new_13
+      ignore (let __old_13 = !_g2 in let __new_14 = HxInt.add __old_13 1 in (
+        ignore (_g2 := __new_14);
+        __new_14
       ));
       TypedFunction.assertParsedBodyCurrent (Obj.magic typedFunction) ()
     )) done

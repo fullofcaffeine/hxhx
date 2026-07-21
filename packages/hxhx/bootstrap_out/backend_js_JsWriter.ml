@@ -8,25 +8,25 @@ type t = { __hx_type : Obj.t; mutable out : StringBuf.t; mutable indent : int; m
 
 let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.js.JsWriter"; out = StringBuf.create (); indent = 0; unit = "" } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = 0 in (
-      (Obj.magic self : t).indent <- __assign_1;
-      __assign_1
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
+      (__place_receiver_1 : t).indent <- __place_rhs_2;
+      __place_rhs_2
     ));
-    ignore (let __assign_2 = Obj.magic (StringBuf.create ()) in (
-      (Obj.magic self : t).out <- __assign_2;
-      __assign_2
+    ignore (let __assign_3 = Obj.magic (StringBuf.create ()) in (
+      (Obj.magic self : t).out <- __assign_3;
+      __assign_3
     ));
     let tempRight = ref ("" : string) in (
-      ignore (if indentUnit == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("  " : string) in (
-        tempRight := __assign_3;
-        __assign_3
-      ) else let __assign_4 = (indentUnit : string) in (
+      ignore (if indentUnit == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("  " : string) in (
         tempRight := __assign_4;
         __assign_4
-      ));
-      let __assign_5 = (!tempRight : string) in (
-        (Obj.magic self : t).unit <- __assign_5;
+      ) else let __assign_5 = (indentUnit : string) in (
+        tempRight := __assign_5;
         __assign_5
+      ));
+      let __assign_6 = (!tempRight : string) in (
+        (Obj.magic self : t).unit <- __assign_6;
+        __assign_6
       )
     )
   )));
@@ -35,25 +35,28 @@ let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsWriter"; out = StringBuf.create (); indent = 0; unit = "" } : t)
 
-let pushIndent = fun self () -> ignore (ignore (let __recv_6 = self in let __recv_typed_7 = (Obj.magic __recv_6 : t) in __recv_typed_7.indent <- HxInt.add (__recv_typed_7.indent) 1))
+let pushIndent = fun self () -> ignore (ignore (let __place_receiver_7 = self in let __place_old_8 = (__place_receiver_7 : t).indent in let __place_rhs_9 = 1 in let __place_new_10 = HxInt.add __place_old_8 __place_rhs_9 in (
+  (__place_receiver_7 : t).indent <- __place_new_10;
+  __place_new_10
+)))
 
-let popIndent = fun self () -> ignore (ignore (if (Obj.magic self : t).indent > 0 then ignore (let __recv_8 = self in let __recv_typed_9 = (Obj.magic __recv_8 : t) in __recv_typed_9.indent <- HxInt.sub (__recv_typed_9.indent) 1) else ()))
+let popIndent = fun self () -> ignore (ignore (if (Obj.magic self : t).indent > 0 then ignore (let __recv_11 = self in let __recv_typed_12 = (Obj.magic __recv_11 : t) in __recv_typed_12.indent <- HxInt.sub (__recv_typed_12.indent) 1) else ()))
 
 let writeln = fun self (line : string) -> ignore (ignore (let _g = ref 0 in let _g1 = (Obj.magic self : t).indent in (
   ignore (while !_g < _g1 do ignore ((
-    ignore (let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (
-      ignore (_g := __new_11);
-      __old_10
+    ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
+      ignore (_g := __new_14);
+      __old_13
     ));
     StringBuf.add (Obj.magic ((Obj.magic self : t).out)) (Obj.repr ((Obj.magic self : t).unit))
   )) done);
   let tempString = ref ("" : string) in (
-    ignore (if line == Obj.magic (HxRuntime.hx_null) then let __assign_12 = ("" : string) in (
-      tempString := __assign_12;
-      __assign_12
-    ) else let __assign_13 = (line : string) in (
-      tempString := __assign_13;
-      __assign_13
+    ignore (if line == Obj.magic (HxRuntime.hx_null) then let __assign_15 = ("" : string) in (
+      tempString := __assign_15;
+      __assign_15
+    ) else let __assign_16 = (line : string) in (
+      tempString := __assign_16;
+      __assign_16
     ));
     ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).out)) (Obj.repr (!tempString)));
     StringBuf.add (Obj.magic ((Obj.magic self : t).out)) (Obj.repr "\n")

@@ -110,35 +110,87 @@ let scrubQuotedAndCommentText = fun raw -> try let __fallback_result_22 = (
 ) in Obj.magic __fallback_result_22 with
   | HxRuntime.Hx_return __ret_21 -> Obj.obj __ret_21
 
-let opaqueContainsSemanticSyntax = fun raw -> try let __fallback_result_24 = let clean = (scrubQuotedAndCommentText (raw : string) : string) in (
-  ignore (let token = ("++" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = ("--" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = ("+=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = ("-=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = ("*=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = ("/=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = ("%=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = ("&=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = ("|=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = ("^=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = ("<<=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = (">>=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let token = (">>>=" : string) in if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("+" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("-" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("*" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("/" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("%" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("!" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("~" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("=" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("<" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = (">" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("&" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("|" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("^" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  ignore (let op = ("[" : string) in if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-  false
+let opaqueContainsSemanticSyntax = fun raw -> try let __fallback_result_24 = let clean = (scrubQuotedAndCommentText (raw : string) : string) in let token = ("++" : string) in (
+  ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  let token = ("--" : string) in (
+    ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+    let token = ("+=" : string) in (
+      ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+      let token = ("-=" : string) in (
+        ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+        let token = ("*=" : string) in (
+          ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+          let token = ("/=" : string) in (
+            ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+            let token = ("%=" : string) in (
+              ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+              let token = ("&=" : string) in (
+                ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                let token = ("|=" : string) in (
+                  ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                  let token = ("^=" : string) in (
+                    ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                    let token = ("<<=" : string) in (
+                      ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                      let token = (">>=" : string) in (
+                        ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                        let token = (">>>=" : string) in (
+                          ignore (if HxString.indexOf clean token 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                          let op = ("+" : string) in (
+                            ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                            let op = ("-" : string) in (
+                              ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                              let op = ("*" : string) in (
+                                ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                let op = ("/" : string) in (
+                                  ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                  let op = ("%" : string) in (
+                                    ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                    let op = ("!" : string) in (
+                                      ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                      let op = ("~" : string) in (
+                                        ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                        let op = ("=" : string) in (
+                                          ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                          let op = ("<" : string) in (
+                                            ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                            let op = (">" : string) in (
+                                              ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                              let op = ("&" : string) in (
+                                                ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                                let op = ("|" : string) in (
+                                                  ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                                  let op = ("^" : string) in (
+                                                    ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                                    let op = ("[" : string) in (
+                                                      ignore (if HxString.indexOf clean op 0 >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+                                                      false
+                                                    )
+                                                  )
+                                                )
+                                              )
+                                            )
+                                          )
+                                        )
+                                      )
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
 ) in Obj.magic __fallback_result_24 with
   | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23
 
@@ -169,20 +221,22 @@ let rec assertExpr = fun expression owner -> ignore ((
 
 let rec assertStmt = fun statement owner -> ignore ((
   ignore (if statement == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("typed body contains a null statement in " ^ HxString.toStdString owner)) ["Dynamic"; "String"]) else ());
-  ignore (let _g = ref 0 in let _g1 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in while !_g < HxArray.length _g1 do ignore (let expression = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
-      ignore (_g := __new_30);
-      __new_30
-    ));
-    assertExpr (Obj.magic expression) (owner : string)
-  )) done);
-  let _g = ref 0 in let _g1 = Obj.magic (TypedStmt.getStatements (Obj.magic statement) ()) in while !_g < HxArray.length _g1 do ignore (let child = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-    ignore (let __old_31 = !_g in let __new_32 = HxInt.add __old_31 1 in (
-      ignore (_g := __new_32);
-      __new_32
-    ));
-    assertStmt (Obj.magic child) (owner : string)
-  )) done
+  let _g = ref 0 in let _g1 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
+    ignore (while !_g < HxArray.length _g1 do ignore (let expression = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+      ignore (let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
+        ignore (_g := __new_30);
+        __new_30
+      ));
+      assertExpr (Obj.magic expression) (owner : string)
+    )) done);
+    let _g = ref 0 in let _g1 = Obj.magic (TypedStmt.getStatements (Obj.magic statement) ()) in while !_g < HxArray.length _g1 do ignore (let child = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+      ignore (let __old_31 = !_g in let __new_32 = HxInt.add __old_31 1 in (
+        ignore (_g := __new_32);
+        __new_32
+      ));
+      assertStmt (Obj.magic child) (owner : string)
+    )) done
+  )
 ))
 
 let assertFunction = fun typedFunction -> ignore (let owner = (TypedFunction.getStableIdentity (Obj.magic typedFunction) () : string) in let _g = ref 0 in let _g1 = Obj.magic (TypedFunctionBody.getStatements (Obj.magic (TypedFunction.getBody (Obj.magic typedFunction) ())) ()) in while !_g < HxArray.length _g1 do ignore (let statement = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (

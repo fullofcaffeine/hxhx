@@ -9,9 +9,9 @@ type t = { __hx_type : Obj.t; mutable message : string; mutable stack : Haxe_Cal
 let create = fun message previous -> let self = ({ __hx_type = HxType.class_ "sys.thread.NoEventLoopException"; message = ""; stack = Obj.magic (HxRuntime.hx_null); previous = Obj.magic (HxRuntime.hx_null); native = Obj.magic (HxRuntime.hx_null); __exceptionMessage = ""; __exceptionStack = Obj.magic (HxRuntime.hx_null); __nativeStack = Obj.magic (HxRuntime.hx_null); __skipStack = 0; __nativeException = Obj.magic (HxRuntime.hx_null); __previousException = Obj.magic (HxRuntime.hx_null); unwrap = (fun o () -> Obj.magic (Haxe_Exception.unwrap__impl (Obj.magic o) (Obj.magic ()))); toString = (fun o () -> Obj.magic (Haxe_Exception.toString__impl (Obj.magic o) (Obj.magic ()))); details = (fun o () -> Obj.magic (Haxe_Exception.details__impl (Obj.magic o) (Obj.magic ()))); __shiftStack = (fun o () -> Obj.magic (Haxe_Exception.__shiftStack__impl (Obj.magic o) (Obj.magic ()))); __unshiftStack = (fun o () -> Obj.magic (Haxe_Exception.__unshiftStack__impl (Obj.magic o) (Obj.magic ()))); get_message = (fun o () -> Obj.magic (Haxe_Exception.get_message__impl (Obj.magic o) (Obj.magic ()))); get_previous = (fun o () -> Obj.magic (Haxe_Exception.get_previous__impl (Obj.magic o) (Obj.magic ()))); get_native = (fun o () -> Obj.magic (Haxe_Exception.get_native__impl (Obj.magic o) (Obj.magic ()))); get_stack = (fun o () -> Obj.magic (Haxe_Exception.get_stack__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
   ignore (let message = if Obj.repr message == HxRuntime.hx_null then ("Event loop is not available for this thread." : string) else message in ignore ((
     ignore (Haxe_Exception.__ctor (Obj.magic self) message previous (Obj.magic (HxRuntime.hx_null)));
-    let __obj_1 = self in let __old_2 = (Obj.magic __obj_1 : Haxe_Exception.t).__skipStack in let __new_3 = HxInt.add __old_2 1 in (
-      ignore ((Obj.magic __obj_1 : Haxe_Exception.t).__skipStack <- __new_3);
-      __old_2
+    let __place_receiver_1 = self in let __place_old_2 = (__place_receiver_1 : t).__skipStack in let __place_new_3 = HxInt.add __place_old_2 1 in (
+      (__place_receiver_1 : t).__skipStack <- __place_new_3;
+      __place_old_2
     )
   )));
   self
@@ -21,8 +21,8 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.thread.NoEventLoopExce
 
 let __ctor = fun (self : t) message previous -> ignore (let message = if Obj.repr message == HxRuntime.hx_null then ("Event loop is not available for this thread." : string) else message in ignore ((
   ignore (Haxe_Exception.__ctor (Obj.magic self) message previous (Obj.magic (HxRuntime.hx_null)));
-  let __obj_1 = self in let __old_2 = (Obj.magic __obj_1 : Haxe_Exception.t).__skipStack in let __new_3 = HxInt.add __old_2 1 in (
-    ignore ((Obj.magic __obj_1 : Haxe_Exception.t).__skipStack <- __new_3);
-    __old_2
+  let __place_receiver_1 = self in let __place_old_2 = (__place_receiver_1 : t).__skipStack in let __place_new_3 = HxInt.add __place_old_2 1 in (
+    (__place_receiver_1 : t).__skipStack <- __place_new_3;
+    __place_old_2
   )
 )))

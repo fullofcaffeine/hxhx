@@ -859,8 +859,8 @@ let stage1resolver_resolveMain = fun classPaths main cwd -> try let __fallback_r
     ignore (print_endline ("hxhx(stage1): invalid -main: " ^ HxString.toStdString main));
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
   )) else ());
-  let className = (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string) in let pkgParts = Obj.magic (HxArray.slice parts 0 (HxInt.sub (HxArray.length parts) 1)) in let pkg = (HxArray.join pkgParts "." (fun x -> x) : string) in (
-    ignore (let _g = ref 0 in while !_g < HxArray.length classPaths do ignore (let cp = (HxArray.get (Obj.magic classPaths) (!_g) : string) in (
+  let className = (HxArray.get (Obj.magic parts) (HxInt.sub (HxArray.length parts) 1) : string) in let pkgParts = Obj.magic (HxArray.slice parts 0 (HxInt.sub (HxArray.length parts) 1)) in let pkg = (HxArray.join pkgParts "." (fun x -> x) : string) in let _g = ref 0 in (
+    ignore (while !_g < HxArray.length classPaths do ignore (let cp = (HxArray.get (Obj.magic classPaths) (!_g) : string) in (
       ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
         ignore (_g := __new_9);
         __new_9
@@ -879,14 +879,16 @@ let stage1resolver_resolveMain = fun classPaths main cwd -> try let __fallback_r
       )))) else ()
     )) done);
     ignore (print_endline ("hxhx(stage1): could not find main module for -main " ^ HxString.toStdString main));
-    ignore (let _g = ref 0 in while !_g < HxArray.length classPaths do ignore (let cp = (HxArray.get (Obj.magic classPaths) (!_g) : string) in (
-      ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
-        ignore (_g := __new_14);
-        __new_14
-      ));
-      print_endline ("  searched: " ^ HxString.toStdString (stage1resolver_resolveClassPath (cwd : string) (cp : string)))
-    )) done);
-    Obj.magic (HxRuntime.hx_null)
+    let _g = ref 0 in (
+      ignore (while !_g < HxArray.length classPaths do ignore (let cp = (HxArray.get (Obj.magic classPaths) (!_g) : string) in (
+        ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
+          ignore (_g := __new_14);
+          __new_14
+        ));
+        print_endline ("  searched: " ^ HxString.toStdString (stage1resolver_resolveClassPath (cwd : string) (cp : string)))
+      )) done);
+      Obj.magic (HxRuntime.hx_null)
+    )
   )
 ) in Obj.magic __fallback_result_16 with
   | HxRuntime.Hx_return __ret_15 -> Obj.magic __ret_15
@@ -899,14 +901,14 @@ let stage1resolver_resolveModule = fun classPaths modulePath cwd -> try let __fa
         ignore (_g := __new_18);
         __new_18
       ));
-      let base = (stage1resolver_resolveClassPath (cwd : string) (cp : string) : string) in (
-        ignore (let pkgParts = Obj.magic (HxArray.slice parts 0 (HxInt.sub (HxArray.length parts) 1)) in let pkg = (HxArray.join pkgParts "." (fun x -> x) : string) in let candidate = (Haxe_io_Path.join (Obj.magic (HxArray.concat (HxArray.concat (let __arr_19 = HxArray.create () in (
-          ignore (HxArray.push __arr_19 base);
-          __arr_19
-        )) pkgParts) (let __arr_20 = HxArray.create () in (
-          ignore (HxArray.push __arr_20 (HxString.toStdString leafName ^ ".hx"));
-          __arr_20
-        )))) : string) in if HxFileSystem.exists candidate && not (HxFileSystem.isDirectory candidate) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_21 = HxAnon.create () in (
+      let base = (stage1resolver_resolveClassPath (cwd : string) (cp : string) : string) in let pkgParts = Obj.magic (HxArray.slice parts 0 (HxInt.sub (HxArray.length parts) 1)) in let pkg = (HxArray.join pkgParts "." (fun x -> x) : string) in let candidate = (Haxe_io_Path.join (Obj.magic (HxArray.concat (HxArray.concat (let __arr_19 = HxArray.create () in (
+        ignore (HxArray.push __arr_19 base);
+        __arr_19
+      )) pkgParts) (let __arr_20 = HxArray.create () in (
+        ignore (HxArray.push __arr_20 (HxString.toStdString leafName ^ ".hx"));
+        __arr_20
+      )))) : string) in (
+        ignore (if HxFileSystem.exists candidate && not (HxFileSystem.isDirectory candidate) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_21 = HxAnon.create () in (
           ignore (HxAnon.set __anon_21 "path" (Obj.repr candidate));
           ignore (HxAnon.set __anon_21 "packagePath" (Obj.repr pkg));
           ignore (HxAnon.set __anon_21 "className" (Obj.repr leafName));
@@ -954,8 +956,8 @@ let resolveLibraryPaths = fun lib cwd -> let seen = HxMap.create_string () in Ob
 
 let formatParseError = fun e -> HxParseError.toString (Obj.magic e) ()
 
-let run = fun args -> try let __fallback_result_53 = let permissive = ref false in let filtered = Obj.magic (HxArray.create ()) in (
-  ignore (let _g = ref 0 in try while !_g < HxArray.length args do try ignore (let a = (HxArray.get (Obj.magic args) (!_g) : string) in (
+let run = fun args -> try let __fallback_result_53 = let permissive = ref false in let filtered = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+  ignore (try while !_g < HxArray.length args do try ignore (let a = (HxArray.get (Obj.magic args) (!_g) : string) in (
     ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
       ignore (_g := __new_2);
       __new_2
@@ -1086,8 +1088,8 @@ let run = fun args -> try let __fallback_result_53 = let permissive = ref false 
                       ignore (if not (HxString.equals ((Obj.magic ((Obj.magic decl : HxModuleDecl.t).mainClass) : HxClassDecl.t).name) (Obj.obj (HxAnon.get resolved "className"))) then raise (HxRuntime.Hx_return (Obj.repr (error ((((("expected main class \"" ^ HxString.toStdString (Obj.obj (HxAnon.get resolved "className"))) ^ "\" but parsed \"") ^ HxString.toStdString ((Obj.magic ((Obj.magic decl : HxModuleDecl.t).mainClass) : HxClassDecl.t).name)) ^ "\" in ") ^ HxString.toStdString (Obj.obj (HxAnon.get resolved "path")) : string)))) else ());
                       if not ((Obj.magic ((Obj.magic decl : HxModuleDecl.t).mainClass) : HxClassDecl.t).hasStaticMain) then raise (HxRuntime.Hx_return (Obj.repr (error (("missing entrypoint main for " ^ HxString.toStdString ((Obj.magic parsed : stage1args_t).main)) ^ " (expected static function main or toplevel function main)" : string)))) else ()
                     )) else ());
-                    let queue = Obj.magic (HxArray.create ()) in (
-                      ignore (let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic decl : HxModuleDecl.t).imports) in while !_g < HxArray.length _g1 do ignore (let imp = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+                    let queue = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic decl : HxModuleDecl.t).imports) in (
+                      ignore (while !_g < HxArray.length _g1 do ignore (let imp = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
                         ignore (let __old_30 = !_g in let __new_31 = HxInt.add __old_30 1 in (
                           ignore (_g := __new_31);
                           __new_31

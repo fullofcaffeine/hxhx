@@ -19,25 +19,25 @@ let create = fun ownerName2 sourceOrdinal2 sourceDeclaration2 declaration2 envir
       (Obj.magic self : t).ownerName <- __assign_3;
       __assign_3
     ));
-    ignore (let __assign_4 = sourceOrdinal2 in (
-      (Obj.magic self : t).sourceOrdinal <- __assign_4;
-      __assign_4
+    ignore (let __place_receiver_4 = self in let __place_rhs_5 = sourceOrdinal2 in (
+      (__place_receiver_4 : t).sourceOrdinal <- __place_rhs_5;
+      __place_rhs_5
     ));
-    ignore (let __assign_5 = Obj.magic sourceDeclaration2 in (
-      (Obj.magic self : t).sourceDeclaration <- __assign_5;
-      __assign_5
-    ));
-    ignore (let __assign_6 = Obj.magic declaration2 in (
-      (Obj.magic self : t).declaration <- __assign_6;
+    ignore (let __assign_6 = Obj.magic sourceDeclaration2 in (
+      (Obj.magic self : t).sourceDeclaration <- __assign_6;
       __assign_6
     ));
-    ignore (let __assign_7 = Obj.magic environment2 in (
-      (Obj.magic self : t).environment <- __assign_7;
+    ignore (let __assign_7 = Obj.magic declaration2 in (
+      (Obj.magic self : t).declaration <- __assign_7;
       __assign_7
     ));
-    let __assign_8 = Obj.magic body2 in (
-      (Obj.magic self : t).body <- __assign_8;
+    ignore (let __assign_8 = Obj.magic environment2 in (
+      (Obj.magic self : t).environment <- __assign_8;
       __assign_8
+    ));
+    let __assign_9 = Obj.magic body2 in (
+      (Obj.magic self : t).body <- __assign_9;
+      __assign_9
     )
   )));
   self
@@ -59,19 +59,19 @@ let getBody = fun self () -> (Obj.magic self : t).body
 
 let withBody = fun self (loweredBody : TypedFunctionBody.t) -> create ((Obj.magic self : t).ownerName : string) ((Obj.magic self : t).sourceOrdinal) (Obj.magic ((Obj.magic self : t).sourceDeclaration)) (Obj.magic ((Obj.magic self : t).declaration)) (Obj.magic ((Obj.magic self : t).environment)) (Obj.magic loweredBody)
 
-let getStableIdentity = fun self () -> try let __fallback_result_12 = (
+let getStableIdentity = fun self () -> try let __fallback_result_13 = (
   ignore (if (Obj.magic self : t).declaration != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic ((Obj.magic self : t).declaration)) ())) () : string))) else ());
   let tempString = ref ("" : string) in (
-    ignore (if HxFunctionDecl.getIsStatic (Obj.magic ((Obj.magic self : t).sourceDeclaration)) then let __assign_9 = ("static:" : string) in (
-      tempString := __assign_9;
-      __assign_9
-    ) else let __assign_10 = ("instance:" : string) in (
+    ignore (if HxFunctionDecl.getIsStatic (Obj.magic ((Obj.magic self : t).sourceDeclaration)) then let __assign_10 = ("static:" : string) in (
       tempString := __assign_10;
       __assign_10
+    ) else let __assign_11 = ("instance:" : string) in (
+      tempString := __assign_11;
+      __assign_11
     ));
     ((((HxString.toStdString ((Obj.magic self : t).ownerName) ^ "#") ^ HxString.toStdString (!tempString)) ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic ((Obj.magic self : t).sourceDeclaration)))) ^ "#") ^ string_of_int ((Obj.magic self : t).sourceOrdinal)
   )
-) in Obj.magic __fallback_result_12 with
-  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
+) in Obj.magic __fallback_result_13 with
+  | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12
 
 let assertParsedBodyCurrent = fun self () -> ignore (ignore (let current = (TypedBodyFingerprint.forStatements (Obj.magic (HxFunctionDecl.getBody (Obj.magic ((Obj.magic self : t).sourceDeclaration)))) : string) in if not (HxString.equals current (TypedFunctionBody.getSourceFingerprint (Obj.magic ((Obj.magic self : t).body)) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("typed body revision mismatch for " ^ HxString.toStdString (getStableIdentity (Obj.magic self) ())) ^ "; retype the changed declaration before backend emission")) ["Dynamic"; "String"]) else ()))

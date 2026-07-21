@@ -77,8 +77,8 @@ let sourceLabel = fun source -> let tempResult = ref ("" : string) in (
 
 let normalizeRequest = fun request index -> (
   ignore (if request == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("invalid plugin load request at index " ^ string_of_int index) ^ ": request is required")) ["Dynamic"; "String"]) else ());
-  let tempString = ref ("" : string) in (
-    ignore (let value = (Obj.obj (HxAnon.get request "providerType") : string) in if value == Obj.magic (HxRuntime.hx_null) then let __assign_12 = ("" : string) in (
+  let tempString = ref ("" : string) in let value = (Obj.obj (HxAnon.get request "providerType") : string) in (
+    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_12 = ("" : string) in (
       tempString := __assign_12;
       __assign_12
     ) else let __assign_13 = (StringTools.trim (value : string) : string) in (
@@ -86,8 +86,8 @@ let normalizeRequest = fun request index -> (
       __assign_13
     ));
     ignore (if HxString.length (!tempString) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("invalid plugin load request at index " ^ string_of_int index) ^ ": providerType is required")) ["Dynamic"; "String"]) else ());
-    let tempString1 = ref ("" : string) in (
-      ignore (let value = (Obj.obj (HxAnon.get request "origin") : string) in if value == Obj.magic (HxRuntime.hx_null) then let __assign_14 = ("" : string) in (
+    let tempString1 = ref ("" : string) in let value = (Obj.obj (HxAnon.get request "origin") : string) in (
+      ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_14 = ("" : string) in (
         tempString1 := __assign_14;
         __assign_14
       ) else let __assign_15 = (StringTools.trim (value : string) : string) in (

@@ -7,9 +7,9 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable handle : int }
 
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "sys.thread.Mutex"; handle = 0 } : t) in (
-  ignore (ignore (let __assign_1 = HxThread.mutex_create () in (
-    (Obj.magic self : t).handle <- __assign_1;
-    __assign_1
+  ignore (ignore (let __place_receiver_1 = self in let __place_rhs_2 = HxThread.mutex_create () in (
+    (__place_receiver_1 : t).handle <- __place_rhs_2;
+    __place_rhs_2
   )));
   self
 )

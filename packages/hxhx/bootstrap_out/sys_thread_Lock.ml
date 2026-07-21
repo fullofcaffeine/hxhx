@@ -7,9 +7,9 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable handle : int }
 
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "sys.thread.Lock"; handle = 0 } : t) in (
-  ignore (ignore (let __assign_1 = HxThread.lock_create () in (
-    (Obj.magic self : t).handle <- __assign_1;
-    __assign_1
+  ignore (ignore (let __place_receiver_1 = self in let __place_rhs_2 = HxThread.lock_create () in (
+    (__place_receiver_1 : t).handle <- __place_rhs_2;
+    __place_rhs_2
   )));
   self
 )
@@ -17,12 +17,12 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "sys.thread.Lock"
 let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.thread.Lock"; handle = 0 } : t)
 
 let wait = fun self (timeout : Obj.t) -> let tempResult = ref (false : bool) in (
-  ignore (if timeout == HxRuntime.hx_null then let __assign_2 = HxThread.lock_wait ((Obj.magic self : t).handle) in (
-    tempResult := __assign_2;
-    __assign_2
-  ) else let __assign_3 = HxThread.lock_wait_timeout ((Obj.magic self : t).handle) (let __nullable_float_4 = timeout in if __nullable_float_4 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_4) in (
+  ignore (if timeout == HxRuntime.hx_null then let __assign_3 = HxThread.lock_wait ((Obj.magic self : t).handle) in (
     tempResult := __assign_3;
     __assign_3
+  ) else let __assign_4 = HxThread.lock_wait_timeout ((Obj.magic self : t).handle) (let __nullable_float_5 = timeout in if __nullable_float_5 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_5) in (
+    tempResult := __assign_4;
+    __assign_4
   ));
   !tempResult
 )

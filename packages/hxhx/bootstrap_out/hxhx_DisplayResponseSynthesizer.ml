@@ -194,15 +194,15 @@ let tokenizeDisplaySource = fun source -> try let __fallback_result_61 = let out
         )));
         raise (HxRuntime.Hx_continue)
       )) else ());
-      let tempBool = ref (false : bool) in (
-        ignore (let code2 = let __nullable_int_53 = code in if __nullable_int_53 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_53 in let __assign_54 = code2 >= 65 && code2 <= 90 || code2 >= 97 && code2 <= 122 || code2 = 95 in (
+      let tempBool = ref (false : bool) in let code2 = let __nullable_int_53 = code in if __nullable_int_53 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_53 in (
+        ignore (let __assign_54 = code2 >= 65 && code2 <= 90 || code2 >= 97 && code2 <= 122 || code2 = 95 in (
           tempBool := __assign_54;
           __assign_54
         ));
         ignore (if !tempBool then ignore (let start = !index in (
           ignore (index := HxInt.add (!index) 1);
-          ignore (try while true do try ignore (let tempRight = ref (false : bool) in (
-            ignore (let code2 = let __nullable_int_55 = HxString.charCodeAt source (!index) in if __nullable_int_55 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_55 in let __assign_56 = code2 >= 65 && code2 <= 90 || code2 >= 97 && code2 <= 122 || code2 = 95 || code2 >= 48 && code2 <= 57 in (
+          ignore (try while true do try ignore (let tempRight = ref (false : bool) in let code2 = let __nullable_int_55 = HxString.charCodeAt source (!index) in if __nullable_int_55 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_55 in (
+            ignore (let __assign_56 = code2 >= 65 && code2 <= 90 || code2 >= 97 && code2 <= 122 || code2 = 95 || code2 >= 48 && code2 <= 57 in (
               tempRight := __assign_56;
               __assign_56
             ));
@@ -282,8 +282,8 @@ let findCallNameBeforeParen = fun tokens openParenIndex -> try let __fallback_re
 
 let extractArgTypeHintFromSegment = fun source tokens segmentStart segmentEnd -> try let __fallback_result_77 = (
   ignore (if segmentStart >= segmentEnd then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-  let depthParenOuter = ref 0 in let depthBraceOuter = ref 0 in let depthBracketOuter = ref 0 in let depthAngleOuter = ref 0 in let colonIndex = ref (-1) in (
-    ignore (let _g = ref segmentStart in let _g1 = segmentEnd in try while !_g < _g1 do try ignore (let tokenIndex = let __old_70 = !_g in let __new_71 = HxInt.add __old_70 1 in (
+  let depthParenOuter = ref 0 in let depthBraceOuter = ref 0 in let depthBracketOuter = ref 0 in let depthAngleOuter = ref 0 in let colonIndex = ref (-1) in let _g = ref segmentStart in let _g1 = segmentEnd in (
+    ignore (try while !_g < _g1 do try ignore (let tokenIndex = let __old_70 = !_g in let __new_71 = HxInt.add __old_70 1 in (
       ignore (_g := __new_71);
       __old_70
     ) in let token = HxArray.get (Obj.magic tokens) tokenIndex in (
@@ -309,8 +309,8 @@ let extractArgTypeHintFromSegment = fun source tokens segmentStart segmentEnd ->
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
     ignore (if !colonIndex < 0 || HxInt.add (!colonIndex) 1 >= segmentEnd then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-    let typeStartIndex = HxInt.add (!colonIndex) 1 in let depthParenInner = ref 0 in let depthBraceInner = ref 0 in let depthBracketInner = ref 0 in let depthAngleInner = ref 0 in let typeEndIndex = ref segmentEnd in (
-      ignore (let _g = ref typeStartIndex in let _g1 = segmentEnd in try while !_g < _g1 do try ignore (let tokenIndex = let __old_73 = !_g in let __new_74 = HxInt.add __old_73 1 in (
+    let typeStartIndex = HxInt.add (!colonIndex) 1 in let depthParenInner = ref 0 in let depthBraceInner = ref 0 in let depthBracketInner = ref 0 in let depthAngleInner = ref 0 in let typeEndIndex = ref segmentEnd in let _g = ref typeStartIndex in let _g1 = segmentEnd in (
+      ignore (try while !_g < _g1 do try ignore (let tokenIndex = let __old_73 = !_g in let __new_74 = HxInt.add __old_73 1 in (
         ignore (_g := __new_74);
         __old_73
       ) in let token = HxArray.get (Obj.magic tokens) tokenIndex in (
@@ -462,13 +462,13 @@ let parseStructFieldNames = fun structBody -> try let __fallback_result_106 = le
     ignore (while !tokenIndex < HxArray.length tokens do ignore (let token = HxArray.get (Obj.magic tokens) (!tokenIndex) in let atTopLevel = !depthParen = 0 && !depthBrace = 0 && !depthBracket = 0 && !depthAngle = 0 in (
       ignore (if atTopLevel then ignore (let nameIndex = ref (!tokenIndex) in (
         ignore (if HxString.equals (Obj.obj (HxAnon.get token "text")) "?" then ignore (nameIndex := HxInt.add (!nameIndex) 1) else ());
-        if !nameIndex < HxArray.length tokens && HxRuntime.unbox_bool_or_obj (HxAnon.get (HxArray.get (Obj.magic tokens) (!nameIndex)) "isIdent") then ignore (let nameToken = HxArray.get (Obj.magic tokens) (!nameIndex) in let colonIndex = HxInt.add (!nameIndex) 1 in let tempBool = ref (false : bool) in (
-          ignore (let key = (Obj.obj (HxAnon.get nameToken "text") : string) in let __assign_104 = HxMap.exists_string seen key in (
+        if !nameIndex < HxArray.length tokens && HxRuntime.unbox_bool_or_obj (HxAnon.get (HxArray.get (Obj.magic tokens) (!nameIndex)) "isIdent") then ignore (let nameToken = HxArray.get (Obj.magic tokens) (!nameIndex) in let colonIndex = HxInt.add (!nameIndex) 1 in let tempBool = ref (false : bool) in let key = (Obj.obj (HxAnon.get nameToken "text") : string) in (
+          ignore (let __assign_104 = HxMap.exists_string seen key in (
             tempBool := __assign_104;
             __assign_104
           ));
-          if colonIndex < HxArray.length tokens && HxString.equals (Obj.obj (HxAnon.get (HxArray.get (Obj.magic tokens) colonIndex) "text")) ":" && not (!tempBool) then ignore ((
-            ignore (let key = (Obj.obj (HxAnon.get nameToken "text") : string) in HxMap.set_string seen key true);
+          if colonIndex < HxArray.length tokens && HxString.equals (Obj.obj (HxAnon.get (HxArray.get (Obj.magic tokens) colonIndex) "text")) ":" && not (!tempBool) then ignore (let key = (Obj.obj (HxAnon.get nameToken "text") : string) in (
+            ignore (HxMap.set_string seen key true);
             HxArray.push fields (Obj.obj (HxAnon.get nameToken "text"))
           )) else ()
         )) else ()
@@ -588,8 +588,8 @@ let synthesizeExprOfStructCompletion = fun displayRequest displaySource -> try l
       ignore (if HxString.length (!tempString1) = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
       let tokens = Obj.magic (tokenizeDisplaySource (!tempString1 : string)) in (
         ignore (if HxArray.length tokens = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
-        let stack = Obj.magic (HxArray.create ()) in (
-          ignore (let _g = ref 0 in let _g1 = HxArray.length tokens in try while !_g < _g1 do try ignore (let tokenIndex = let __old_125 = !_g in let __new_126 = HxInt.add __old_125 1 in (
+        let stack = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = HxArray.length tokens in (
+          ignore (try while !_g < _g1 do try ignore (let tokenIndex = let __old_125 = !_g in let __new_126 = HxInt.add __old_125 1 in (
             ignore (_g := __new_126);
             __old_125
           ) in let token = HxArray.get (Obj.magic tokens) tokenIndex in (
@@ -607,8 +607,8 @@ let synthesizeExprOfStructCompletion = fun displayRequest displaySource -> try l
           )) with
             | HxRuntime.Hx_continue -> () done with
             | HxRuntime.Hx_break -> ());
-          let braceTokenIndex = ref (-1) in let parenTokenIndex = ref (-1) in (
-            ignore (let _g = ref 0 in let _g1 = HxArray.length stack in try while !_g < _g1 do try ignore (let stackIndex = let __old_128 = !_g in let __new_129 = HxInt.add __old_128 1 in (
+          let braceTokenIndex = ref (-1) in let parenTokenIndex = ref (-1) in let _g = ref 0 in let _g1 = HxArray.length stack in (
+            ignore (try while !_g < _g1 do try ignore (let stackIndex = let __old_128 = !_g in let __new_129 = HxInt.add __old_128 1 in (
               ignore (_g := __new_129);
               __old_128
             ) in let frame = HxArray.get (Obj.magic stack) (HxInt.sub (HxInt.sub (HxArray.length stack) 1) stackIndex) in (

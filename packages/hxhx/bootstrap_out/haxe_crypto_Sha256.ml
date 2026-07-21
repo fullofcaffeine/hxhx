@@ -92,211 +92,247 @@ let doEncode = fun self (m : int HxArray.t) (l : int) -> (
     ignore (HxArray.push __arr_2 1541459225);
     __arr_2
   )) in let hx_W = Obj.magic (HxArray.create ()) in (
-    ignore (let __assign_3 = 0 in HxArray.set (Obj.magic hx_W) 64 __assign_3);
+    ignore (let __place_array_3 = hx_W in let __place_index_4 = 64 in let __place_rhs_5 = 0 in (
+      ignore (HxArray.set (__place_array_3 : int HxArray.t) (__place_index_4 : int) __place_rhs_5);
+      __place_rhs_5
+    ));
     let a = ref (0 : int) in let b = ref (0 : int) in let c = ref (0 : int) in let d = ref (0 : int) in let e = ref (0 : int) in let f = ref (0 : int) in let g = ref (0 : int) in let h = ref (0 : int) in let hx_T1 = ref (0 : int) in let hx_T2 = ref (0 : int) in let index = HxInt.shr l 5 in (
-      ignore (let __arr_4 = Obj.magic m in let __idx_5 = index in HxArray.set __arr_4 __idx_5 (HxInt.logor (HxArray.get __arr_4 __idx_5) (HxInt.shl 128 (HxInt.sub 24 (HxInt.rem l 32)))));
-      ignore (let __assign_6 = l in HxArray.set (Obj.magic m) (HxInt.add (HxInt.shl (HxInt.shr (HxInt.add l 64) 9) 4) 15) __assign_6);
+      ignore (let __arr_6 = Obj.magic m in let __idx_7 = index in HxArray.set __arr_6 __idx_7 (HxInt.logor (HxArray.get __arr_6 __idx_7) (HxInt.shl 128 (HxInt.sub 24 (HxInt.rem l 32)))));
+      ignore (let __place_array_8 = m in let __place_index_9 = HxInt.add (HxInt.shl (HxInt.shr (HxInt.add l 64) 9) 4) 15 in let __place_rhs_10 = l in (
+        ignore (HxArray.set (__place_array_8 : int HxArray.t) (__place_index_9 : int) __place_rhs_10);
+        __place_rhs_10
+      ));
       let i = ref 0 in (
         ignore (while !i < HxArray.length m do ignore ((
-          ignore (let __assign_7 = HxArray.get (Obj.magic hx_HASH) 0 in (
-            a := __assign_7;
-            __assign_7
-          ));
-          ignore (let __assign_8 = HxArray.get (Obj.magic hx_HASH) 1 in (
-            b := __assign_8;
-            __assign_8
-          ));
-          ignore (let __assign_9 = HxArray.get (Obj.magic hx_HASH) 2 in (
-            c := __assign_9;
-            __assign_9
-          ));
-          ignore (let __assign_10 = HxArray.get (Obj.magic hx_HASH) 3 in (
-            d := __assign_10;
-            __assign_10
-          ));
-          ignore (let __assign_11 = HxArray.get (Obj.magic hx_HASH) 4 in (
-            e := __assign_11;
+          ignore (let __assign_11 = HxArray.get (Obj.magic hx_HASH) 0 in (
+            a := __assign_11;
             __assign_11
           ));
-          ignore (let __assign_12 = HxArray.get (Obj.magic hx_HASH) 5 in (
-            f := __assign_12;
+          ignore (let __assign_12 = HxArray.get (Obj.magic hx_HASH) 1 in (
+            b := __assign_12;
             __assign_12
           ));
-          ignore (let __assign_13 = HxArray.get (Obj.magic hx_HASH) 6 in (
-            g := __assign_13;
+          ignore (let __assign_13 = HxArray.get (Obj.magic hx_HASH) 2 in (
+            c := __assign_13;
             __assign_13
           ));
-          ignore (let __assign_14 = HxArray.get (Obj.magic hx_HASH) 7 in (
-            h := __assign_14;
+          ignore (let __assign_14 = HxArray.get (Obj.magic hx_HASH) 3 in (
+            d := __assign_14;
             __assign_14
           ));
+          ignore (let __assign_15 = HxArray.get (Obj.magic hx_HASH) 4 in (
+            e := __assign_15;
+            __assign_15
+          ));
+          ignore (let __assign_16 = HxArray.get (Obj.magic hx_HASH) 5 in (
+            f := __assign_16;
+            __assign_16
+          ));
+          ignore (let __assign_17 = HxArray.get (Obj.magic hx_HASH) 6 in (
+            g := __assign_17;
+            __assign_17
+          ));
+          ignore (let __assign_18 = HxArray.get (Obj.magic hx_HASH) 7 in (
+            h := __assign_18;
+            __assign_18
+          ));
           let _g = ref 0 in (
-            ignore (while !_g < 64 do ignore (let j = let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-              ignore (_g := __new_16);
-              __old_15
+            ignore (while !_g < 64 do ignore (let j = let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
+              ignore (_g := __new_20);
+              __old_19
             ) in (
-              ignore (if j < 16 then ignore (let __assign_17 = HxArray.get (Obj.magic m) (HxInt.add j (!i)) in HxArray.set (Obj.magic hx_W) j __assign_17) else ignore (let tempRight = ref (0 : int) in (
-                ignore (let tempNumber = ref (0 : int) in (
-                  ignore (let tempNumber1 = ref (0 : int) in (
-                    ignore (let tempNumber2 = ref (0 : int) in (
-                      ignore (let x = HxArray.get (Obj.magic hx_W) (HxInt.sub j 2) in let __assign_18 = HxInt.logxor (HxInt.logxor (HxInt.logor (HxInt.ushr x 17) (HxInt.shl x 15)) (HxInt.logor (HxInt.ushr x 19) (HxInt.shl x 13))) (HxInt.ushr x 10) in (
-                        tempNumber2 := __assign_18;
-                        __assign_18
-                      ));
-                      let x = !tempNumber2 in let y = HxArray.get (Obj.magic hx_W) (HxInt.sub j 7) in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_19 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                        tempNumber1 := __assign_19;
-                        __assign_19
-                      )
-                    ));
-                    let x = !tempNumber1 in let tempNumber3 = ref (0 : int) in (
-                      ignore (let x2 = HxArray.get (Obj.magic hx_W) (HxInt.sub j 15) in let __assign_20 = HxInt.logxor (HxInt.logxor (HxInt.logor (HxInt.ushr x2 7) (HxInt.shl x2 25)) (HxInt.logor (HxInt.ushr x2 18) (HxInt.shl x2 14))) (HxInt.ushr x2 3) in (
-                        tempNumber3 := __assign_20;
-                        __assign_20
-                      ));
-                      let y = !tempNumber3 in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_21 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                        tempNumber := __assign_21;
-                        __assign_21
-                      )
-                    )
-                  ));
-                  let x = !tempNumber in let y = HxArray.get (Obj.magic hx_W) (HxInt.sub j 16) in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_22 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                    tempRight := __assign_22;
-                    __assign_22
-                  )
+              ignore (if j < 16 then ignore (let __place_array_21 = hx_W in let __place_index_22 = j in let __place_rhs_23 = HxArray.get (Obj.magic m) (HxInt.add j (!i)) in (
+                ignore (HxArray.set (__place_array_21 : int HxArray.t) (__place_index_22 : int) __place_rhs_23);
+                __place_rhs_23
+              )) else ignore (let tempRight = ref (0 : int) in let tempNumber = ref (0 : int) in let tempNumber1 = ref (0 : int) in let tempNumber2 = ref (0 : int) in let x = HxArray.get (Obj.magic hx_W) (HxInt.sub j 2) in (
+                ignore (let __assign_24 = HxInt.logxor (HxInt.logxor (HxInt.logor (HxInt.ushr x 17) (HxInt.shl x 15)) (HxInt.logor (HxInt.ushr x 19) (HxInt.shl x 13))) (HxInt.ushr x 10) in (
+                  tempNumber2 := __assign_24;
+                  __assign_24
                 ));
-                let __assign_23 = !tempRight in HxArray.set (Obj.magic hx_W) j __assign_23
-              )));
-              let tempRight1 = ref (0 : int) in (
-                ignore (let tempNumber4 = ref (0 : int) in (
-                  ignore (let tempNumber5 = ref (0 : int) in (
-                    ignore (let tempNumber6 = ref (0 : int) in (
-                      ignore (let y = HxInt.logxor (HxInt.logxor (HxInt.logor (HxInt.ushr (!e) 6) (HxInt.shl (!e) 26)) (HxInt.logor (HxInt.ushr (!e) 11) (HxInt.shl (!e) 21))) (HxInt.logor (HxInt.ushr (!e) 25) (HxInt.shl (!e) 7)) in let lsw = HxInt.add (HxInt.logand (!h) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!h) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_24 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                        tempNumber6 := __assign_24;
-                        __assign_24
-                      ));
-                      let x = !tempNumber6 in let y = HxInt.logxor (HxInt.logand (!e) (!f)) (HxInt.logand (HxInt.lognot (!e)) (!g)) in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_25 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                        tempNumber5 := __assign_25;
-                        __assign_25
-                      )
-                    ));
-                    let x = !tempNumber5 in let y = HxArray.get (Obj.magic hx_K) j in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_26 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                      tempNumber4 := __assign_26;
+                let x = !tempNumber2 in let y = HxArray.get (Obj.magic hx_W) (HxInt.sub j 7) in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                  ignore (let __assign_25 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                    tempNumber1 := __assign_25;
+                    __assign_25
+                  ));
+                  let x = !tempNumber1 in let tempNumber3 = ref (0 : int) in let x2 = HxArray.get (Obj.magic hx_W) (HxInt.sub j 15) in (
+                    ignore (let __assign_26 = HxInt.logxor (HxInt.logxor (HxInt.logor (HxInt.ushr x2 7) (HxInt.shl x2 25)) (HxInt.logor (HxInt.ushr x2 18) (HxInt.shl x2 14))) (HxInt.ushr x2 3) in (
+                      tempNumber3 := __assign_26;
                       __assign_26
+                    ));
+                    let y = !tempNumber3 in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                      ignore (let __assign_27 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                        tempNumber := __assign_27;
+                        __assign_27
+                      ));
+                      let x = !tempNumber in let y = HxArray.get (Obj.magic hx_W) (HxInt.sub j 16) in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                        ignore (let __assign_28 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                          tempRight := __assign_28;
+                          __assign_28
+                        ));
+                        let __place_array_29 = hx_W in let __place_index_30 = j in let __place_rhs_31 = !tempRight in (
+                          ignore (HxArray.set (__place_array_29 : int HxArray.t) (__place_index_30 : int) __place_rhs_31);
+                          __place_rhs_31
+                        )
+                      )
                     )
-                  ));
-                  let x = !tempNumber4 in let y = HxArray.get (Obj.magic hx_W) j in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_27 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                    tempRight1 := __assign_27;
-                    __assign_27
                   )
+                )
+              )));
+              let tempRight1 = ref (0 : int) in let tempNumber4 = ref (0 : int) in let tempNumber5 = ref (0 : int) in let tempNumber6 = ref (0 : int) in let y = HxInt.logxor (HxInt.logxor (HxInt.logor (HxInt.ushr (!e) 6) (HxInt.shl (!e) 26)) (HxInt.logor (HxInt.ushr (!e) 11) (HxInt.shl (!e) 21))) (HxInt.logor (HxInt.ushr (!e) 25) (HxInt.shl (!e) 7)) in let lsw = HxInt.add (HxInt.logand (!h) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!h) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                ignore (let __assign_32 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                  tempNumber6 := __assign_32;
+                  __assign_32
                 ));
-                ignore (let __assign_28 = !tempRight1 in (
-                  hx_T1 := __assign_28;
-                  __assign_28
-                ));
-                let tempRight2 = ref (0 : int) in (
-                  ignore (let x = HxInt.logxor (HxInt.logxor (HxInt.logor (HxInt.ushr (!a) 2) (HxInt.shl (!a) 30)) (HxInt.logor (HxInt.ushr (!a) 13) (HxInt.shl (!a) 19))) (HxInt.logor (HxInt.ushr (!a) 22) (HxInt.shl (!a) 10)) in let y = HxInt.logxor (HxInt.logxor (HxInt.logand (!a) (!b)) (HxInt.logand (!a) (!c))) (HxInt.logand (!b) (!c)) in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_29 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                    tempRight2 := __assign_29;
-                    __assign_29
-                  ));
-                  ignore (let __assign_30 = !tempRight2 in (
-                    hx_T2 := __assign_30;
-                    __assign_30
-                  ));
-                  ignore (let __assign_31 = !g in (
-                    h := __assign_31;
-                    __assign_31
-                  ));
-                  ignore (let __assign_32 = !f in (
-                    g := __assign_32;
-                    __assign_32
-                  ));
-                  ignore (let __assign_33 = !e in (
-                    f := __assign_33;
+                let x = !tempNumber6 in let y = HxInt.logxor (HxInt.logand (!e) (!f)) (HxInt.logand (HxInt.lognot (!e)) (!g)) in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                  ignore (let __assign_33 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                    tempNumber5 := __assign_33;
                     __assign_33
                   ));
-                  let tempRight3 = ref (0 : int) in (
-                    ignore (let lsw = HxInt.add (HxInt.logand (!d) 65535) (HxInt.logand (!hx_T1) 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!d) 16) (HxInt.shr (!hx_T1) 16)) (HxInt.shr lsw 16) in let __assign_34 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                      tempRight3 := __assign_34;
+                  let x = !tempNumber5 in let y = HxArray.get (Obj.magic hx_K) j in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                    ignore (let __assign_34 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                      tempNumber4 := __assign_34;
                       __assign_34
                     ));
-                    ignore (let __assign_35 = !tempRight3 in (
-                      e := __assign_35;
-                      __assign_35
-                    ));
-                    ignore (let __assign_36 = !c in (
-                      d := __assign_36;
-                      __assign_36
-                    ));
-                    ignore (let __assign_37 = !b in (
-                      c := __assign_37;
-                      __assign_37
-                    ));
-                    ignore (let __assign_38 = !a in (
-                      b := __assign_38;
-                      __assign_38
-                    ));
-                    let tempRight4 = ref (0 : int) in (
-                      ignore (let lsw = HxInt.add (HxInt.logand (!hx_T1) 65535) (HxInt.logand (!hx_T2) 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!hx_T1) 16) (HxInt.shr (!hx_T2) 16)) (HxInt.shr lsw 16) in let __assign_39 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                        tempRight4 := __assign_39;
-                        __assign_39
+                    let x = !tempNumber4 in let y = HxArray.get (Obj.magic hx_W) j in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                      ignore (let __assign_35 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                        tempRight1 := __assign_35;
+                        __assign_35
                       ));
-                      let __assign_40 = !tempRight4 in (
-                        a := __assign_40;
-                        __assign_40
+                      ignore (let __assign_36 = !tempRight1 in (
+                        hx_T1 := __assign_36;
+                        __assign_36
+                      ));
+                      let tempRight2 = ref (0 : int) in let x = HxInt.logxor (HxInt.logxor (HxInt.logor (HxInt.ushr (!a) 2) (HxInt.shl (!a) 30)) (HxInt.logor (HxInt.ushr (!a) 13) (HxInt.shl (!a) 19))) (HxInt.logor (HxInt.ushr (!a) 22) (HxInt.shl (!a) 10)) in let y = HxInt.logxor (HxInt.logxor (HxInt.logand (!a) (!b)) (HxInt.logand (!a) (!c))) (HxInt.logand (!b) (!c)) in let lsw = HxInt.add (HxInt.logand x 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr x 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                        ignore (let __assign_37 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                          tempRight2 := __assign_37;
+                          __assign_37
+                        ));
+                        ignore (let __assign_38 = !tempRight2 in (
+                          hx_T2 := __assign_38;
+                          __assign_38
+                        ));
+                        ignore (let __assign_39 = !g in (
+                          h := __assign_39;
+                          __assign_39
+                        ));
+                        ignore (let __assign_40 = !f in (
+                          g := __assign_40;
+                          __assign_40
+                        ));
+                        ignore (let __assign_41 = !e in (
+                          f := __assign_41;
+                          __assign_41
+                        ));
+                        let tempRight3 = ref (0 : int) in let lsw = HxInt.add (HxInt.logand (!d) 65535) (HxInt.logand (!hx_T1) 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!d) 16) (HxInt.shr (!hx_T1) 16)) (HxInt.shr lsw 16) in (
+                          ignore (let __assign_42 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                            tempRight3 := __assign_42;
+                            __assign_42
+                          ));
+                          ignore (let __assign_43 = !tempRight3 in (
+                            e := __assign_43;
+                            __assign_43
+                          ));
+                          ignore (let __assign_44 = !c in (
+                            d := __assign_44;
+                            __assign_44
+                          ));
+                          ignore (let __assign_45 = !b in (
+                            c := __assign_45;
+                            __assign_45
+                          ));
+                          ignore (let __assign_46 = !a in (
+                            b := __assign_46;
+                            __assign_46
+                          ));
+                          let tempRight4 = ref (0 : int) in let lsw = HxInt.add (HxInt.logand (!hx_T1) 65535) (HxInt.logand (!hx_T2) 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!hx_T1) 16) (HxInt.shr (!hx_T2) 16)) (HxInt.shr lsw 16) in (
+                            ignore (let __assign_47 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                              tempRight4 := __assign_47;
+                              __assign_47
+                            ));
+                            let __assign_48 = !tempRight4 in (
+                              a := __assign_48;
+                              __assign_48
+                            )
+                          )
+                        )
                       )
                     )
                   )
                 )
               )
             )) done);
-            let tempRight5 = ref (0 : int) in (
-              ignore (let y = HxArray.get (Obj.magic hx_HASH) 0 in let lsw = HxInt.add (HxInt.logand (!a) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!a) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_41 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                tempRight5 := __assign_41;
-                __assign_41
+            let tempRight5 = ref (0 : int) in let y = HxArray.get (Obj.magic hx_HASH) 0 in let lsw = HxInt.add (HxInt.logand (!a) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!a) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+              ignore (let __assign_49 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                tempRight5 := __assign_49;
+                __assign_49
               ));
-              ignore (let __assign_42 = !tempRight5 in HxArray.set (Obj.magic hx_HASH) 0 __assign_42);
-              let tempRight6 = ref (0 : int) in (
-                ignore (let y = HxArray.get (Obj.magic hx_HASH) 1 in let lsw = HxInt.add (HxInt.logand (!b) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!b) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_43 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                  tempRight6 := __assign_43;
-                  __assign_43
+              ignore (let __place_array_50 = hx_HASH in let __place_index_51 = 0 in let __place_rhs_52 = !tempRight5 in (
+                ignore (HxArray.set (__place_array_50 : int HxArray.t) (__place_index_51 : int) __place_rhs_52);
+                __place_rhs_52
+              ));
+              let tempRight6 = ref (0 : int) in let y = HxArray.get (Obj.magic hx_HASH) 1 in let lsw = HxInt.add (HxInt.logand (!b) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!b) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                ignore (let __assign_53 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                  tempRight6 := __assign_53;
+                  __assign_53
                 ));
-                ignore (let __assign_44 = !tempRight6 in HxArray.set (Obj.magic hx_HASH) 1 __assign_44);
-                let tempRight7 = ref (0 : int) in (
-                  ignore (let y = HxArray.get (Obj.magic hx_HASH) 2 in let lsw = HxInt.add (HxInt.logand (!c) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!c) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_45 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                    tempRight7 := __assign_45;
-                    __assign_45
+                ignore (let __place_array_54 = hx_HASH in let __place_index_55 = 1 in let __place_rhs_56 = !tempRight6 in (
+                  ignore (HxArray.set (__place_array_54 : int HxArray.t) (__place_index_55 : int) __place_rhs_56);
+                  __place_rhs_56
+                ));
+                let tempRight7 = ref (0 : int) in let y = HxArray.get (Obj.magic hx_HASH) 2 in let lsw = HxInt.add (HxInt.logand (!c) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!c) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                  ignore (let __assign_57 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                    tempRight7 := __assign_57;
+                    __assign_57
                   ));
-                  ignore (let __assign_46 = !tempRight7 in HxArray.set (Obj.magic hx_HASH) 2 __assign_46);
-                  let tempRight8 = ref (0 : int) in (
-                    ignore (let y = HxArray.get (Obj.magic hx_HASH) 3 in let lsw = HxInt.add (HxInt.logand (!d) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!d) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_47 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                      tempRight8 := __assign_47;
-                      __assign_47
+                  ignore (let __place_array_58 = hx_HASH in let __place_index_59 = 2 in let __place_rhs_60 = !tempRight7 in (
+                    ignore (HxArray.set (__place_array_58 : int HxArray.t) (__place_index_59 : int) __place_rhs_60);
+                    __place_rhs_60
+                  ));
+                  let tempRight8 = ref (0 : int) in let y = HxArray.get (Obj.magic hx_HASH) 3 in let lsw = HxInt.add (HxInt.logand (!d) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!d) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                    ignore (let __assign_61 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                      tempRight8 := __assign_61;
+                      __assign_61
                     ));
-                    ignore (let __assign_48 = !tempRight8 in HxArray.set (Obj.magic hx_HASH) 3 __assign_48);
-                    let tempRight9 = ref (0 : int) in (
-                      ignore (let y = HxArray.get (Obj.magic hx_HASH) 4 in let lsw = HxInt.add (HxInt.logand (!e) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!e) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_49 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                        tempRight9 := __assign_49;
-                        __assign_49
+                    ignore (let __place_array_62 = hx_HASH in let __place_index_63 = 3 in let __place_rhs_64 = !tempRight8 in (
+                      ignore (HxArray.set (__place_array_62 : int HxArray.t) (__place_index_63 : int) __place_rhs_64);
+                      __place_rhs_64
+                    ));
+                    let tempRight9 = ref (0 : int) in let y = HxArray.get (Obj.magic hx_HASH) 4 in let lsw = HxInt.add (HxInt.logand (!e) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!e) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                      ignore (let __assign_65 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                        tempRight9 := __assign_65;
+                        __assign_65
                       ));
-                      ignore (let __assign_50 = !tempRight9 in HxArray.set (Obj.magic hx_HASH) 4 __assign_50);
-                      let tempRight10 = ref (0 : int) in (
-                        ignore (let y = HxArray.get (Obj.magic hx_HASH) 5 in let lsw = HxInt.add (HxInt.logand (!f) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!f) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_51 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                          tempRight10 := __assign_51;
-                          __assign_51
+                      ignore (let __place_array_66 = hx_HASH in let __place_index_67 = 4 in let __place_rhs_68 = !tempRight9 in (
+                        ignore (HxArray.set (__place_array_66 : int HxArray.t) (__place_index_67 : int) __place_rhs_68);
+                        __place_rhs_68
+                      ));
+                      let tempRight10 = ref (0 : int) in let y = HxArray.get (Obj.magic hx_HASH) 5 in let lsw = HxInt.add (HxInt.logand (!f) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!f) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                        ignore (let __assign_69 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                          tempRight10 := __assign_69;
+                          __assign_69
                         ));
-                        ignore (let __assign_52 = !tempRight10 in HxArray.set (Obj.magic hx_HASH) 5 __assign_52);
-                        let tempRight11 = ref (0 : int) in (
-                          ignore (let y = HxArray.get (Obj.magic hx_HASH) 6 in let lsw = HxInt.add (HxInt.logand (!g) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!g) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_53 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                            tempRight11 := __assign_53;
-                            __assign_53
+                        ignore (let __place_array_70 = hx_HASH in let __place_index_71 = 5 in let __place_rhs_72 = !tempRight10 in (
+                          ignore (HxArray.set (__place_array_70 : int HxArray.t) (__place_index_71 : int) __place_rhs_72);
+                          __place_rhs_72
+                        ));
+                        let tempRight11 = ref (0 : int) in let y = HxArray.get (Obj.magic hx_HASH) 6 in let lsw = HxInt.add (HxInt.logand (!g) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!g) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                          ignore (let __assign_73 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                            tempRight11 := __assign_73;
+                            __assign_73
                           ));
-                          ignore (let __assign_54 = !tempRight11 in HxArray.set (Obj.magic hx_HASH) 6 __assign_54);
-                          let tempRight12 = ref (0 : int) in (
-                            ignore (let y = HxArray.get (Obj.magic hx_HASH) 7 in let lsw = HxInt.add (HxInt.logand (!h) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!h) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in let __assign_55 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
-                              tempRight12 := __assign_55;
-                              __assign_55
+                          ignore (let __place_array_74 = hx_HASH in let __place_index_75 = 6 in let __place_rhs_76 = !tempRight11 in (
+                            ignore (HxArray.set (__place_array_74 : int HxArray.t) (__place_index_75 : int) __place_rhs_76);
+                            __place_rhs_76
+                          ));
+                          let tempRight12 = ref (0 : int) in let y = HxArray.get (Obj.magic hx_HASH) 7 in let lsw = HxInt.add (HxInt.logand (!h) 65535) (HxInt.logand y 65535) in let msw = HxInt.add (HxInt.add (HxInt.shr (!h) 16) (HxInt.shr y 16)) (HxInt.shr lsw 16) in (
+                            ignore (let __assign_77 = HxInt.logor (HxInt.shl msw 16) (HxInt.logand lsw 65535) in (
+                              tempRight12 := __assign_77;
+                              __assign_77
                             ));
-                            ignore (let __assign_56 = !tempRight12 in HxArray.set (Obj.magic hx_HASH) 7 __assign_56);
+                            ignore (let __place_array_78 = hx_HASH in let __place_index_79 = 7 in let __place_rhs_80 = !tempRight12 in (
+                              ignore (HxArray.set (__place_array_78 : int HxArray.t) (__place_index_79 : int) __place_rhs_80);
+                              __place_rhs_80
+                            ));
                             i := HxInt.add (!i) 16
                           )
                         )
@@ -314,42 +350,50 @@ let doEncode = fun self (m : int HxArray.t) (l : int) -> (
   )
 )
 
-let bytes2blks = fun b -> let nblk = HxInt.add (HxInt.shr (HxInt.add (HxBytes.length b) 8) 6) 1 in let blks = Obj.magic (HxArray.create ()) in (
-  ignore (let _g = ref 0 in let _g1 = HxInt.mul nblk 16 in while !_g < _g1 do ignore (let i = let __old_67 = !_g in let __new_68 = HxInt.add __old_67 1 in (
-    ignore (_g := __new_68);
-    __old_67
-  ) in let __assign_69 = 0 in HxArray.set (Obj.magic blks) i __assign_69) done);
-  ignore (let _g = ref 0 in let _g1 = HxBytes.length b in while !_g < _g1 do ignore (let i = let __old_70 = !_g in let __new_71 = HxInt.add __old_70 1 in (
-    ignore (_g := __new_71);
-    __old_70
-  ) in let p = HxInt.shr i 2 in let __arr_72 = Obj.magic blks in let __idx_73 = p in HxArray.set __arr_72 __idx_73 (HxInt.logor (HxArray.get __arr_72 __idx_73) (HxInt.shl (HxBytes.get b i) (HxInt.sub 24 (HxInt.shl (HxInt.logand i 3) 3))))) done);
-  let i = HxBytes.length b in let p = HxInt.shr i 2 in (
-    ignore (let __arr_74 = Obj.magic blks in let __idx_75 = p in HxArray.set __arr_74 __idx_75 (HxInt.logor (HxArray.get __arr_74 __idx_75) (HxInt.shl 128 (HxInt.sub 24 (HxInt.shl (HxInt.logand i 3) 3)))));
-    ignore (let __assign_76 = HxInt.mul (HxBytes.length b) 8 in HxArray.set (Obj.magic blks) (HxInt.sub (HxInt.mul nblk 16) 1) __assign_76);
-    blks
+let bytes2blks = fun b -> let nblk = HxInt.add (HxInt.shr (HxInt.add (HxBytes.length b) 8) 6) 1 in let blks = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = HxInt.mul nblk 16 in (
+  ignore (while !_g < _g1 do ignore (let i = let __old_91 = !_g in let __new_92 = HxInt.add __old_91 1 in (
+    ignore (_g := __new_92);
+    __old_91
+  ) in let __place_array_93 = blks in let __place_index_94 = i in let __place_rhs_95 = 0 in (
+    ignore (HxArray.set (__place_array_93 : int HxArray.t) (__place_index_94 : int) __place_rhs_95);
+    __place_rhs_95
+  )) done);
+  let _g = ref 0 in let _g1 = HxBytes.length b in (
+    ignore (while !_g < _g1 do ignore (let i = let __old_96 = !_g in let __new_97 = HxInt.add __old_96 1 in (
+      ignore (_g := __new_97);
+      __old_96
+    ) in let p = HxInt.shr i 2 in let __arr_98 = Obj.magic blks in let __idx_99 = p in HxArray.set __arr_98 __idx_99 (HxInt.logor (HxArray.get __arr_98 __idx_99) (HxInt.shl (HxBytes.get b i) (HxInt.sub 24 (HxInt.shl (HxInt.logand i 3) 3))))) done);
+    let i = HxBytes.length b in let p = HxInt.shr i 2 in (
+      ignore (let __arr_100 = Obj.magic blks in let __idx_101 = p in HxArray.set __arr_100 __idx_101 (HxInt.logor (HxArray.get __arr_100 __idx_101) (HxInt.shl 128 (HxInt.sub 24 (HxInt.shl (HxInt.logand i 3) 3)))));
+      ignore (let __place_array_102 = blks in let __place_index_103 = HxInt.sub (HxInt.mul nblk 16) 1 in let __place_rhs_104 = HxInt.mul (HxBytes.length b) 8 in (
+        ignore (HxArray.set (__place_array_102 : int HxArray.t) (__place_index_103 : int) __place_rhs_104);
+        __place_rhs_104
+      ));
+      blks
+    )
   )
 )
 
 let make = fun b -> let h = Obj.magic (doEncode (Obj.magic (create ())) (Obj.magic (bytes2blks (Obj.magic b))) (HxInt.mul (HxBytes.length b) 8)) in let out = Obj.magic (HxBytes.alloc 32) in let p = ref 0 in let _g = ref 0 in (
-  ignore (while !_g < 8 do ignore (let i = let __old_57 = !_g in let __new_58 = HxInt.add __old_57 1 in (
-    ignore (_g := __new_58);
-    __old_57
+  ignore (while !_g < 8 do ignore (let i = let __old_81 = !_g in let __new_82 = HxInt.add __old_81 1 in (
+    ignore (_g := __new_82);
+    __old_81
   ) in (
-    ignore (HxBytes.set out (let __old_59 = !p in let __new_60 = HxInt.add __old_59 1 in (
-      ignore (p := __new_60);
-      __old_59
+    ignore (HxBytes.set out (let __old_83 = !p in let __new_84 = HxInt.add __old_83 1 in (
+      ignore (p := __new_84);
+      __old_83
     )) (HxInt.ushr (HxArray.get (Obj.magic h) i) 24));
-    ignore (HxBytes.set out (let __old_61 = !p in let __new_62 = HxInt.add __old_61 1 in (
-      ignore (p := __new_62);
-      __old_61
+    ignore (HxBytes.set out (let __old_85 = !p in let __new_86 = HxInt.add __old_85 1 in (
+      ignore (p := __new_86);
+      __old_85
     )) (HxInt.logand (HxInt.shr (HxArray.get (Obj.magic h) i) 16) 255));
-    ignore (HxBytes.set out (let __old_63 = !p in let __new_64 = HxInt.add __old_63 1 in (
-      ignore (p := __new_64);
-      __old_63
+    ignore (HxBytes.set out (let __old_87 = !p in let __new_88 = HxInt.add __old_87 1 in (
+      ignore (p := __new_88);
+      __old_87
     )) (HxInt.logand (HxInt.shr (HxArray.get (Obj.magic h) i) 8) 255));
-    HxBytes.set out (let __old_65 = !p in let __new_66 = HxInt.add __old_65 1 in (
-      ignore (p := __new_66);
-      __old_65
+    HxBytes.set out (let __old_89 = !p in let __new_90 = HxInt.add __old_89 1 in (
+      ignore (p := __new_90);
+      __old_89
     )) (HxInt.logand (HxArray.get (Obj.magic h) i) 255)
   )) done);
   out

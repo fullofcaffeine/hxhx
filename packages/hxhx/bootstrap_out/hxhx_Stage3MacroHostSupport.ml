@@ -104,22 +104,24 @@ let isBuiltinExprMacro = fun expr -> let tempString = ref ("" : string) in let t
   HxArray.indexOf (builtinExprMacros ()) (!tempString) 0 <> -1
 )
 
-let exprMacroAllowlistFromEnv = fun () -> let out = Obj.magic (HxArray.create ()) in (
-  ignore (let _g = ref 0 in let _g1 = Obj.magic (builtinExprMacros ()) in while !_g < HxArray.length _g1 do ignore (let expr = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+let exprMacroAllowlistFromEnv = fun () -> let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (builtinExprMacros ()) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let expr = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
     ignore (let __old_21 = !_g in let __new_22 = HxInt.add __old_21 1 in (
       ignore (_g := __new_22);
       __new_22
     ));
     if HxArray.indexOf out expr 0 = -1 then ignore (HxArray.push out expr) else ()
   )) done);
-  ignore (let _g = ref 0 in let _g1 = Obj.magic (parseDelimitedList (HxSys.getEnv "HXHX_EXPR_MACROS" : string)) in while !_g < HxArray.length _g1 do ignore (let expr = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-    ignore (let __old_23 = !_g in let __new_24 = HxInt.add __old_23 1 in (
-      ignore (_g := __new_24);
-      __new_24
-    ));
-    if expr != Obj.magic (HxRuntime.hx_null) && HxString.length expr > 0 && HxArray.indexOf out expr 0 = -1 then ignore (HxArray.push out expr) else ()
-  )) done);
-  out
+  let _g = ref 0 in let _g1 = Obj.magic (parseDelimitedList (HxSys.getEnv "HXHX_EXPR_MACROS" : string)) in (
+    ignore (while !_g < HxArray.length _g1 do ignore (let expr = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+      ignore (let __old_23 = !_g in let __new_24 = HxInt.add __old_23 1 in (
+        ignore (_g := __new_24);
+        __new_24
+      ));
+      if expr != Obj.magic (HxRuntime.hx_null) && HxString.length expr > 0 && HxArray.indexOf out expr 0 = -1 then ignore (HxArray.push out expr) else ()
+    )) done);
+    out
+  )
 )
 
 let isBuiltinMacroExpr = fun expr -> let tempString = ref ("" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
@@ -155,25 +157,23 @@ let anyNonBuiltinMacro = fun exprs -> try let __fallback_result_33 = let _g = re
 ) in Obj.magic __fallback_result_33 with
   | HxRuntime.Hx_return __ret_32 -> Obj.obj __ret_32
 
-let shouldAutoBuildMacroHost = fun () -> let tempString = ref ("" : string) in (
-  ignore (let value = (HxSys.getEnv "HXHX_MACRO_HOST_AUTO_BUILD" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_34 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_34;
-      __assign_34
-    ) else if HxString.isNull (value : string) then let __assign_35 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_35;
-      __assign_35
-    ) else let __assign_36 = Obj.magic (value : string) in (
-      tempMaybeString := __assign_36;
-      __assign_36
-    ));
-    if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_37 = ("" : string) in (
-      tempString := __assign_37;
-      __assign_37
-    ) else let __assign_38 = (StringTools.trim (!tempMaybeString : string) : string) in (
-      tempString := __assign_38;
-      __assign_38
-    )
+let shouldAutoBuildMacroHost = fun () -> let tempString = ref ("" : string) in let value = (HxSys.getEnv "HXHX_MACRO_HOST_AUTO_BUILD" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_34 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_34;
+    __assign_34
+  ) else if HxString.isNull (value : string) then let __assign_35 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_35;
+    __assign_35
+  ) else let __assign_36 = Obj.magic (value : string) in (
+    tempMaybeString := __assign_36;
+    __assign_36
+  ));
+  ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_37 = ("" : string) in (
+    tempString := __assign_37;
+    __assign_37
+  ) else let __assign_38 = (StringTools.trim (!tempMaybeString : string) : string) in (
+    tempString := __assign_38;
+    __assign_38
   ));
   HxString.equals (!tempString) "1" || HxString.equals (!tempString) "true" || HxString.equals (!tempString) "yes"
 )
@@ -186,21 +186,25 @@ let macroHostEntrypoints = fun parsedMacros exprMacros runHaxelibMacros libMacro
     ));
     if not (isBuiltinMacroExpr (expr : string)) && HxArray.indexOf entrypoints expr 0 = -1 then ignore (HxArray.push entrypoints expr) else ()
   )) done) else ());
-  ignore (let _g = ref 0 in while !_g < HxArray.length parsedMacros do ignore (let expr = (HxArray.get (Obj.magic parsedMacros) (!_g) : string) in (
-    ignore (let __old_41 = !_g in let __new_42 = HxInt.add __old_41 1 in (
-      ignore (_g := __new_42);
-      __new_42
-    ));
-    if not (isBuiltinMacroExpr (expr : string)) && HxArray.indexOf entrypoints expr 0 = -1 then ignore (HxArray.push entrypoints expr) else ()
-  )) done);
-  ignore (let _g = ref 0 in while !_g < HxArray.length exprMacros do ignore (let expr = (HxArray.get (Obj.magic exprMacros) (!_g) : string) in (
-    ignore (let __old_43 = !_g in let __new_44 = HxInt.add __old_43 1 in (
-      ignore (_g := __new_44);
-      __new_44
-    ));
-    if not (isBuiltinExprMacro (expr : string)) && HxArray.indexOf entrypoints expr 0 = -1 then ignore (HxArray.push entrypoints expr) else ()
-  )) done);
-  entrypoints
+  let _g = ref 0 in (
+    ignore (while !_g < HxArray.length parsedMacros do ignore (let expr = (HxArray.get (Obj.magic parsedMacros) (!_g) : string) in (
+      ignore (let __old_41 = !_g in let __new_42 = HxInt.add __old_41 1 in (
+        ignore (_g := __new_42);
+        __new_42
+      ));
+      if not (isBuiltinMacroExpr (expr : string)) && HxArray.indexOf entrypoints expr 0 = -1 then ignore (HxArray.push entrypoints expr) else ()
+    )) done);
+    let _g = ref 0 in (
+      ignore (while !_g < HxArray.length exprMacros do ignore (let expr = (HxArray.get (Obj.magic exprMacros) (!_g) : string) in (
+        ignore (let __old_43 = !_g in let __new_44 = HxInt.add __old_43 1 in (
+          ignore (_g := __new_44);
+          __new_44
+        ));
+        if not (isBuiltinExprMacro (expr : string)) && HxArray.indexOf entrypoints expr 0 = -1 then ignore (HxArray.push entrypoints expr) else ()
+      )) done);
+      entrypoints
+    )
+  )
 )
 
 let buildMacroHostExe = fun repoRoot extraCp entrypoints -> let script = (Haxe_io_Path.join (Obj.magic (let __arr_45 = HxArray.create () in (
@@ -343,13 +347,15 @@ let runCliMacrosIfNeeded = fun macroRuntimeMode typeOnly hasConfiguredExternalMa
         ignore (_g := __new_75);
         __old_74
       ) in print_endline ((("lib_macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (Obj.obj (HxAnon.get macroSession "run") (HxArray.get (Obj.magic libMacros) i : string)))) done) else ());
-      ignore (let _g = ref 0 in let _g1 = HxArray.length parsedMacros in while !_g < _g1 do ignore (let i = let __old_76 = !_g in let __new_77 = HxInt.add __old_76 1 in (
-        ignore (_g := __new_77);
-        __old_76
-      ) in print_endline ((("macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (Obj.obj (HxAnon.get macroSession "run") (HxArray.get (Obj.magic parsedMacros) i : string)))) done);
-      let __assign_78 = Obj.magic macroSession in (
-        tempMacroRuntimeSession := __assign_78;
-        __assign_78
+      let _g = ref 0 in let _g1 = HxArray.length parsedMacros in (
+        ignore (while !_g < _g1 do ignore (let i = let __old_76 = !_g in let __new_77 = HxInt.add __old_76 1 in (
+          ignore (_g := __new_77);
+          __old_76
+        ) in print_endline ((("macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (Obj.obj (HxAnon.get macroSession "run") (HxArray.get (Obj.magic parsedMacros) i : string)))) done);
+        let __assign_78 = Obj.magic macroSession in (
+          tempMacroRuntimeSession := __assign_78;
+          __assign_78
+        )
       )
     ) with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)

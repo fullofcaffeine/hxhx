@@ -82,8 +82,8 @@ let implicitSamePackageDeps = fun source modulePath decl -> let pkg = (HxModuleD
     ignore (addMatches (Obj.magic (EReg.create ("\\b([A-Z][A-Za-z0-9_]*)\\s*\\." : string) ("g" : string))));
     ignore (addMatches (Obj.magic (EReg.create ("\\bextends\\s+([A-Z][A-Za-z0-9_]*)\\b" : string) ("g" : string))));
     ignore (addTypeListMatches (Obj.magic (EReg.create ("\\bimplements\\s+([A-Z][A-Za-z0-9_]*(?:\\s*,\\s*[A-Z][A-Za-z0-9_]*)*)" : string) ("g" : string))));
-    let names = Obj.magic (HxArray.create ()) in (
-      ignore (let name = HxIterator.of_array (HxMap.keys_string candidates) in while (let __iter_18 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_18)) () do ignore (let name2 = ((let __iter_19 = name in fun () -> HxIterator.next (Obj.magic __iter_19)) () : string) in HxArray.push names name2) done);
+    let names = Obj.magic (HxArray.create ()) in let name = HxIterator.of_array (HxMap.keys_string candidates) in (
+      ignore (while (let __iter_18 = name in fun () -> HxIterator.hasNext (Obj.magic __iter_18)) () do ignore (let name2 = ((let __iter_19 = name in fun () -> HxIterator.next (Obj.magic __iter_19)) () : string) in HxArray.push names name2) done);
       ignore (HxArray.sort names (fun a b -> let tempResult = ref (0 : int) in (
         ignore (if a < b then let __assign_20 = -1 in (
           tempResult := __assign_20;
@@ -97,8 +97,8 @@ let implicitSamePackageDeps = fun source modulePath decl -> let pkg = (HxModuleD
         ));
         !tempResult
       )));
-      let outSet = HxMap.create_string () in (
-        ignore (let _g = ref 0 in try while !_g < HxArray.length names do try ignore (let name = (HxArray.get (Obj.magic names) (!_g) : string) in (
+      let outSet = HxMap.create_string () in let _g = ref 0 in (
+        ignore (try while !_g < HxArray.length names do try ignore (let name = (HxArray.get (Obj.magic names) (!_g) : string) in (
           ignore (let __old_23 = !_g in let __new_24 = HxInt.add __old_23 1 in (
             ignore (_g := __new_24);
             __new_24
@@ -178,8 +178,8 @@ let implicitQualifiedTypeDeps = fun source defines -> try let __fallback_result_
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
-    let out = Obj.magic (HxArray.create ()) in (
-      ignore (let dep = HxIterator.of_array (HxMap.keys_string candidates) in while (let __iter_39 = dep in fun () -> HxIterator.hasNext (Obj.magic __iter_39)) () do ignore (let dep2 = ((let __iter_40 = dep in fun () -> HxIterator.next (Obj.magic __iter_40)) () : string) in HxArray.push out dep2) done);
+    let out = Obj.magic (HxArray.create ()) in let dep = HxIterator.of_array (HxMap.keys_string candidates) in (
+      ignore (while (let __iter_39 = dep in fun () -> HxIterator.hasNext (Obj.magic __iter_39)) () do ignore (let dep2 = ((let __iter_40 = dep in fun () -> HxIterator.next (Obj.magic __iter_40)) () : string) in HxArray.push out dep2) done);
       ignore (HxArray.sort out (fun a b -> let tempResult = ref (0 : int) in (
         ignore (if a < b then let __assign_41 = -1 in (
           tempResult := __assign_41;
@@ -326,8 +326,8 @@ let resolveModuleFile = fun classPaths modulePath -> try let __fallback_result_1
 ) in Obj.magic __fallback_result_153 with
   | HxRuntime.Hx_return __ret_152 -> Obj.obj __ret_152 in let parts = Obj.magic (HxString.split modulePath ".") in (
   ignore (if HxArray.length parts = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let direct = (HxString.toStdString (HxArray.join parts "/" (fun x -> x)) ^ ".hx" : string) in (
-    ignore (let _g = ref 0 in while !_g < HxArray.length classPaths do ignore (let cp = (HxArray.get (Obj.magic classPaths) (!_g) : string) in (
+  let direct = (HxString.toStdString (HxArray.join parts "/" (fun x -> x)) ^ ".hx" : string) in let _g = ref 0 in (
+    ignore (while !_g < HxArray.length classPaths do ignore (let cp = (HxArray.get (Obj.magic classPaths) (!_g) : string) in (
       ignore (let __old_154 = !_g in let __new_155 = HxInt.add __old_154 1 in (
         ignore (_g := __new_155);
         __new_155
@@ -588,8 +588,8 @@ let parseProjectRoots = fun classPaths roots defines -> let out = Obj.magic (HxA
                   ) else raise (__exn_116));
                 let parsed = Obj.magic (!tempParsedModule) in (
                   ignore (HxArray.push out (ResolvedModule.create (modulePath : string) (filePath : string) (Obj.magic parsed)));
-                  let decl = Obj.magic (ParsedModule.getDecl (Obj.magic parsed) ()) in let modulePkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let deps = Obj.magic (HxArray.create ()) in (
-                    ignore (let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getImports (Obj.magic decl)) in try while !_g < HxArray.length _g1 do try ignore (let rawImport = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+                  let decl = Obj.magic (ParsedModule.getDecl (Obj.magic parsed) ()) in let modulePkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let deps = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getImports (Obj.magic decl)) in (
+                    ignore (try while !_g < HxArray.length _g1 do try ignore (let rawImport = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
                       ignore (let __old_117 = !_g in let __new_118 = HxInt.add __old_117 1 in (
                         ignore (_g := __new_118);
                         __new_118
@@ -660,48 +660,52 @@ let parseProjectRoots = fun classPaths roots defines -> let out = Obj.magic (HxA
                           if exists then ignore (HxArray.push deps dep) else ()
                         )
                       )) done) else ());
-                      ignore (let _g = ref 0 in let _g1 = Obj.magic (implicitQualifiedTypeDeps (filteredSource : string) (Obj.magic effectiveDefines)) in while !_g < HxArray.length _g1 do ignore (let dep = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-                        ignore (let __old_134 = !_g in let __new_135 = HxInt.add __old_134 1 in (
-                          ignore (_g := __new_135);
-                          __new_135
-                        ));
-                        let exists = resolveModuleFile (Obj.magic classPaths) (dep : string) != Obj.magic (HxRuntime.hx_null) in (
-                          ignore (if traceDeps then ignore (let tempString3 = ref ("" : string) in (
-                            ignore (if exists then let __assign_136 = ("1" : string) in (
-                              tempString3 := __assign_136;
-                              __assign_136
-                            ) else let __assign_137 = ("0" : string) in (
-                              tempString3 := __assign_137;
-                              __assign_137
+                      let _g = ref 0 in let _g1 = Obj.magic (implicitQualifiedTypeDeps (filteredSource : string) (Obj.magic effectiveDefines)) in (
+                        ignore (while !_g < HxArray.length _g1 do ignore (let dep = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+                          ignore (let __old_134 = !_g in let __new_135 = HxInt.add __old_134 1 in (
+                            ignore (_g := __new_135);
+                            __new_135
+                          ));
+                          let exists = resolveModuleFile (Obj.magic classPaths) (dep : string) != Obj.magic (HxRuntime.hx_null) in (
+                            ignore (if traceDeps then ignore (let tempString3 = ref ("" : string) in (
+                              ignore (if exists then let __assign_136 = ("1" : string) in (
+                                tempString3 := __assign_136;
+                                __assign_136
+                              ) else let __assign_137 = ("0" : string) in (
+                                tempString3 := __assign_137;
+                                __assign_137
+                              ));
+                              print_endline ((((("resolver_qualified_dep module=" ^ HxString.toStdString modulePath) ^ " dep=") ^ HxString.toStdString dep) ^ " exists=") ^ HxString.toStdString (!tempString3))
+                            )) else ());
+                            if exists then ignore (HxArray.push deps dep) else ()
+                          )
+                        )) done);
+                        let _g = ref 0 in let _g1 = Obj.magic (implicitUtestAddCasesDeps (filteredSource : string) (Obj.magic classPaths)) in (
+                          ignore (while !_g < HxArray.length _g1 do ignore (let dep = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+                            ignore (let __old_138 = !_g in let __new_139 = HxInt.add __old_138 1 in (
+                              ignore (_g := __new_139);
+                              __new_139
                             ));
-                            print_endline ((((("resolver_qualified_dep module=" ^ HxString.toStdString modulePath) ^ " dep=") ^ HxString.toStdString dep) ^ " exists=") ^ HxString.toStdString (!tempString3))
-                          )) else ());
-                          if exists then ignore (HxArray.push deps dep) else ()
+                            let exists = resolveModuleFile (Obj.magic classPaths) (dep : string) != Obj.magic (HxRuntime.hx_null) in (
+                              ignore (if traceDeps then ignore (let tempString4 = ref ("" : string) in (
+                                ignore (if exists then let __assign_140 = ("1" : string) in (
+                                  tempString4 := __assign_140;
+                                  __assign_140
+                                ) else let __assign_141 = ("0" : string) in (
+                                  tempString4 := __assign_141;
+                                  __assign_141
+                                ));
+                                print_endline ((((("resolver_utest_addcases_dep module=" ^ HxString.toStdString modulePath) ^ " dep=") ^ HxString.toStdString dep) ^ " exists=") ^ HxString.toStdString (!tempString4))
+                              )) else ());
+                              if exists then ignore (HxArray.push deps dep) else ()
+                            )
+                          )) done);
+                          let i = ref (HxInt.sub (HxArray.length deps) 1) in while !i >= 0 do ignore (let dep = (HxArray.get (Obj.magic deps) (!i) : string) in (
+                            ignore (if dep != Obj.magic (HxRuntime.hx_null) && HxString.length dep > 0 && not (HxMap.exists_string visited dep) then ignore (HxArray.push stack dep) else ());
+                            i := HxInt.sub (!i) 1
+                          )) done
                         )
-                      )) done);
-                      ignore (let _g = ref 0 in let _g1 = Obj.magic (implicitUtestAddCasesDeps (filteredSource : string) (Obj.magic classPaths)) in while !_g < HxArray.length _g1 do ignore (let dep = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
-                        ignore (let __old_138 = !_g in let __new_139 = HxInt.add __old_138 1 in (
-                          ignore (_g := __new_139);
-                          __new_139
-                        ));
-                        let exists = resolveModuleFile (Obj.magic classPaths) (dep : string) != Obj.magic (HxRuntime.hx_null) in (
-                          ignore (if traceDeps then ignore (let tempString4 = ref ("" : string) in (
-                            ignore (if exists then let __assign_140 = ("1" : string) in (
-                              tempString4 := __assign_140;
-                              __assign_140
-                            ) else let __assign_141 = ("0" : string) in (
-                              tempString4 := __assign_141;
-                              __assign_141
-                            ));
-                            print_endline ((((("resolver_utest_addcases_dep module=" ^ HxString.toStdString modulePath) ^ " dep=") ^ HxString.toStdString dep) ^ " exists=") ^ HxString.toStdString (!tempString4))
-                          )) else ());
-                          if exists then ignore (HxArray.push deps dep) else ()
-                        )
-                      )) done);
-                      let i = ref (HxInt.sub (HxArray.length deps) 1) in while !i >= 0 do ignore (let dep = (HxArray.get (Obj.magic deps) (!i) : string) in (
-                        ignore (if dep != Obj.magic (HxRuntime.hx_null) && HxString.length dep > 0 && not (HxMap.exists_string visited dep) then ignore (HxArray.push stack dep) else ());
-                        i := HxInt.sub (!i) 1
-                      )) done
+                      )
                     )
                   )
                 )

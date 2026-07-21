@@ -58,26 +58,28 @@ let isEligible = fun cls typeParams -> try let __fallback_result_7 = (
     ignore (if rawUnderlying == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let underlying = (Backend_cpp_CppTypeModel.removeTypeHintWhitespace (rawUnderlying : string) : string) in (
       ignore (if HxString.length underlying = 0 || HxArray.length (Backend_cpp_CppTypeModel.genericTypeHintArgs (underlying : string)) = 0 || not (Backend_cpp_CppTypeModel.isClassLikeTypeHint (underlying : string)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-      ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-        ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
-          ignore (_g := __new_2);
-          __new_2
-        ));
-        if not (HxFieldDecl.getIsStatic (Obj.magic field)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ()
-      )) done);
-      let hasProjection = ref false in (
-        ignore (let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-          ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
-            ignore (_g := __new_4);
-            __new_4
+      let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in (
+        ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+          ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
+            ignore (_g := __new_2);
+            __new_2
           ));
-          ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-          if hasFunctionMetadataMarker (Obj.magic fn) ("to" : string) then ignore (let __assign_5 = true in (
-            hasProjection := __assign_5;
-            __assign_5
-          )) else ()
+          if not (HxFieldDecl.getIsStatic (Obj.magic field)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ()
         )) done);
-        !hasProjection
+        let hasProjection = ref false in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
+          ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+            ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
+              ignore (_g := __new_4);
+              __new_4
+            ));
+            ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+            if hasFunctionMetadataMarker (Obj.magic fn) ("to" : string) then ignore (let __assign_5 = true in (
+              hasProjection := __assign_5;
+              __assign_5
+            )) else ()
+          )) done);
+          !hasProjection
+        )
       )
     )
   )

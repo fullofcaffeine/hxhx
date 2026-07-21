@@ -181,8 +181,8 @@ let appendUsingMetadataDiagnostics = fun parsed diagnostics -> ignore (try (
 
 let diagnosticForResolved = fun resolved -> try let __fallback_result_8 = (
   ignore (if resolved == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let diagnostics = Obj.magic (HxArray.create ()) in (
-    ignore (let _g = ref 0 in try while !_g < HxArray.length resolved do try ignore (let hx_module = Obj.magic (HxArray.get (Obj.magic resolved) (!_g)) in (
+  let diagnostics = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+    ignore (try while !_g < HxArray.length resolved do try ignore (let hx_module = Obj.magic (HxArray.get (Obj.magic resolved) (!_g)) in (
       ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
         ignore (_g := __new_2);
         __new_2
@@ -193,25 +193,27 @@ let diagnosticForResolved = fun resolved -> try let __fallback_result_8 = (
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
-    ignore (let _g = ref 0 in try while !_g < HxArray.length resolved do try ignore (let hx_module = Obj.magic (HxArray.get (Obj.magic resolved) (!_g)) in (
-      ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
-        ignore (_g := __new_4);
-        __new_4
-      ));
-      ignore (if hx_module == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
-      appendIncompatibleConstraintDiagnostics (Obj.magic (ResolvedModule.getParsed (Obj.magic hx_module))) (Obj.magic diagnostics)
-    )) with
-      | HxRuntime.Hx_continue -> () done with
-      | HxRuntime.Hx_break -> ());
-    let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-      ignore (if HxArray.length diagnostics = 0 then let __assign_5 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempResult := __assign_5;
-        __assign_5
-      ) else let __assign_6 = Obj.magic (HxArray.join diagnostics "\n" (fun x -> x) : string) in (
-        tempResult := __assign_6;
-        __assign_6
-      ));
-      !tempResult
+    let _g = ref 0 in (
+      ignore (try while !_g < HxArray.length resolved do try ignore (let hx_module = Obj.magic (HxArray.get (Obj.magic resolved) (!_g)) in (
+        ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
+          ignore (_g := __new_4);
+          __new_4
+        ));
+        ignore (if hx_module == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
+        appendIncompatibleConstraintDiagnostics (Obj.magic (ResolvedModule.getParsed (Obj.magic hx_module))) (Obj.magic diagnostics)
+      )) with
+        | HxRuntime.Hx_continue -> () done with
+        | HxRuntime.Hx_break -> ());
+      let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+        ignore (if HxArray.length diagnostics = 0 then let __assign_5 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempResult := __assign_5;
+          __assign_5
+        ) else let __assign_6 = Obj.magic (HxArray.join diagnostics "\n" (fun x -> x) : string) in (
+          tempResult := __assign_6;
+          __assign_6
+        ));
+        !tempResult
+      )
     )
   )
 ) in Obj.magic __fallback_result_8 with

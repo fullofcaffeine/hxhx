@@ -161,14 +161,14 @@ let appendExclusion = fun exclusions code reason -> ignore (try let normalizedCo
 
 let buildPlan = fun program profile -> try let __fallback_result_9 = let regionSeeds = Obj.magic (collectFunctionRegions (Obj.magic program)) in let plannerEnabled = HxString.equals profile "portable" in (
   ignore (if not (plannerEnabled) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Backend_ocaml_PortableMetalizationPlan.create (profile : string) false (Obj.magic regionSeeds) (Obj.magic (HxMap.create_string ())) (Obj.magic (HxMap.create_string ())))))) else ());
-  let exclusionsByRegionKey = Obj.magic (HxMap.create_string ()) in let summaries = Obj.magic (Backend_ocaml_MetalProfileVerifier.collectViolationSummaries (Obj.magic program)) in (
-    ignore (let _g = ref 0 in try while !_g < HxArray.length summaries do try ignore (let summary = HxArray.get (Obj.magic summaries) (!_g) in (
+  let exclusionsByRegionKey = Obj.magic (HxMap.create_string ()) in let summaries = Obj.magic (Backend_ocaml_MetalProfileVerifier.collectViolationSummaries (Obj.magic program)) in let _g = ref 0 in (
+    ignore (try while !_g < HxArray.length summaries do try ignore (let summary = HxArray.get (Obj.magic summaries) (!_g) in (
       ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
         ignore (_g := __new_2);
         __new_2
       ));
-      let tempBool = ref (false : bool) in (
-        ignore (let context = (Obj.obj (HxAnon.get summary "context") : string) in let __assign_3 = context != Obj.magic (HxRuntime.hx_null) && HxString.indexOf context "." 0 > 0 in (
+      let tempBool = ref (false : bool) in let context = (Obj.obj (HxAnon.get summary "context") : string) in (
+        ignore (let __assign_3 = context != Obj.magic (HxRuntime.hx_null) && HxString.indexOf context "." 0 > 0 in (
           tempBool := __assign_3;
           __assign_3
         ));
@@ -187,8 +187,8 @@ let buildPlan = fun program profile -> try let __fallback_result_9 = let regionS
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
-    let autoMetalizedRegionKeys = Obj.magic (HxMap.create_string ()) in (
-      ignore (let _g = ref 0 in while !_g < HxArray.length regionSeeds do ignore (let seed = HxArray.get (Obj.magic regionSeeds) (!_g) in (
+    let autoMetalizedRegionKeys = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in (
+      ignore (while !_g < HxArray.length regionSeeds do ignore (let seed = HxArray.get (Obj.magic regionSeeds) (!_g) in (
         ignore (let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
           ignore (_g := __new_7);
           __new_7

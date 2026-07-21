@@ -65,25 +65,25 @@ type t = { __hx_type : Obj.t; mutable mutex : Sys_thread_Mutex.t; mutable wakeLo
 
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "sys.thread.EventLoop"; mutex = Sys_thread_Mutex.create (); wakeLock = Sys_thread_Lock.create (); oneTimeEvents = Obj.magic (HxRuntime.hx_null); regularEvents = Obj.magic (HxRuntime.hx_null); promisedEvents = 0 } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = 0 in (
-      (Obj.magic self : t).promisedEvents <- __assign_1;
-      __assign_1
+    ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
+      (__place_receiver_1 : t).promisedEvents <- __place_rhs_2;
+      __place_rhs_2
     ));
-    ignore (let __assign_2 = Obj.magic (Sys_thread_Lock.create ()) in (
-      (Obj.magic self : t).wakeLock <- __assign_2;
-      __assign_2
-    ));
-    ignore (let __assign_3 = Obj.magic (Sys_thread_Mutex.create ()) in (
-      (Obj.magic self : t).mutex <- __assign_3;
+    ignore (let __assign_3 = Obj.magic (Sys_thread_Lock.create ()) in (
+      (Obj.magic self : t).wakeLock <- __assign_3;
       __assign_3
     ));
-    ignore (let __assign_4 = Obj.magic (let __arr_5 = HxArray.create () in __arr_5) in (
-      (Obj.magic self : t).oneTimeEvents <- __assign_4;
+    ignore (let __assign_4 = Obj.magic (Sys_thread_Mutex.create ()) in (
+      (Obj.magic self : t).mutex <- __assign_4;
       __assign_4
     ));
-    let __assign_6 = Obj.magic (let __arr_7 = HxArray.create () in __arr_7) in (
-      (Obj.magic self : t).regularEvents <- __assign_6;
-      __assign_6
+    ignore (let __assign_5 = Obj.magic (let __arr_6 = HxArray.create () in __arr_6) in (
+      (Obj.magic self : t).oneTimeEvents <- __assign_5;
+      __assign_5
+    ));
+    let __assign_7 = Obj.magic (let __arr_8 = HxArray.create () in __arr_8) in (
+      (Obj.magic self : t).regularEvents <- __assign_7;
+      __assign_7
     )
   )));
   self
@@ -92,12 +92,12 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "sys.thread.Event
 let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.thread.EventLoop"; mutex = Sys_thread_Mutex.create (); wakeLock = Sys_thread_Lock.create (); oneTimeEvents = Obj.magic (HxRuntime.hx_null); regularEvents = Obj.magic (HxRuntime.hx_null); promisedEvents = 0 } : t)
 
 let repeat = fun self (event : unit -> unit) (intervalMs : int) -> let tempNumber = ref (0. : float) in (
-  ignore (if intervalMs <= 0 then let __assign_8 = 0.001 in (
-    tempNumber := __assign_8;
-    __assign_8
-  ) else let __assign_9 = float_of_int intervalMs /. 1000.0 in (
+  ignore (if intervalMs <= 0 then let __assign_9 = 0.001 in (
     tempNumber := __assign_9;
     __assign_9
+  ) else let __assign_10 = float_of_int intervalMs /. 1000.0 in (
+    tempNumber := __assign_10;
+    __assign_10
   ));
   let intervalSeconds = !tempNumber in let regular = Obj.magic (regularevent_create event (HxSys.time () +. intervalSeconds) intervalSeconds) in (
     ignore (Sys_thread_Mutex.acquire (Obj.magic ((Obj.magic self : t).mutex)) ());
@@ -109,18 +109,18 @@ let repeat = fun self (event : unit -> unit) (intervalMs : int) -> let tempNumbe
 )
 
 let cancel = fun self (eventHandler : eventhandler_t) -> ignore (ignore (let regular = Obj.magic ((Obj.magic eventHandler : eventhandler_t).regular) in (
-  ignore (let __assign_10 = true in (
-    (Obj.magic regular : regularevent_t).cancelled <- __assign_10;
-    __assign_10
+  ignore (let __assign_11 = true in (
+    (Obj.magic regular : regularevent_t).cancelled <- __assign_11;
+    __assign_11
   ));
   Sys_thread_Lock.release (Obj.magic ((Obj.magic self : t).wakeLock)) ()
 )))
 
 let promise = fun self () -> ignore (ignore ((
   ignore (Sys_thread_Mutex.acquire (Obj.magic ((Obj.magic self : t).mutex)) ());
-  ignore (let __obj_11 = self in let __old_12 = (Obj.magic __obj_11 : t).promisedEvents in let __new_13 = HxInt.add __old_12 1 in (
-    ignore ((Obj.magic __obj_11 : t).promisedEvents <- __new_13);
-    __old_12
+  ignore (let __place_receiver_12 = self in let __place_old_13 = (__place_receiver_12 : t).promisedEvents in let __place_new_14 = HxInt.add __place_old_13 1 in (
+    (__place_receiver_12 : t).promisedEvents <- __place_new_14;
+    __place_old_13
   ));
   ignore (Sys_thread_Mutex.release (Obj.magic ((Obj.magic self : t).mutex)) ());
   Sys_thread_Lock.release (Obj.magic ((Obj.magic self : t).wakeLock)) ()
@@ -135,9 +135,9 @@ let run = fun self (event : unit -> unit) -> ignore (ignore ((
 
 let runPromised = fun self (event : unit -> unit) -> ignore (ignore ((
   ignore (Sys_thread_Mutex.acquire (Obj.magic ((Obj.magic self : t).mutex)) ());
-  ignore (if (Obj.magic self : t).promisedEvents > 0 then ignore (let __obj_14 = self in let __old_15 = (Obj.magic __obj_14 : t).promisedEvents in let __new_16 = HxInt.add __old_15 (-1) in (
-    ignore ((Obj.magic __obj_14 : t).promisedEvents <- __new_16);
-    __old_15
+  ignore (if (Obj.magic self : t).promisedEvents > 0 then ignore (let __place_receiver_15 = self in let __place_old_16 = (__place_receiver_15 : t).promisedEvents in let __place_new_17 = HxInt.add __place_old_16 (-1) in (
+    (__place_receiver_15 : t).promisedEvents <- __place_new_17;
+    __place_old_16
   )) else ());
   ignore (HxArray.push ((Obj.magic self : t).oneTimeEvents) event);
   ignore (Sys_thread_Mutex.release (Obj.magic ((Obj.magic self : t).mutex)) ());
@@ -147,73 +147,75 @@ let runPromised = fun self (event : unit -> unit) -> ignore (ignore ((
 let waitForNext = fun self (next : nexteventtime) (timeout : Obj.t) -> ignore (ignore (match next with
   | Now -> ignore ()
   | Never -> ignore ()
-  | AnyTime _p0 -> ignore (let _g = _p0 in let nextTime = _g in if timeout == HxRuntime.hx_null then ignore (if nextTime == HxRuntime.hx_null then ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (HxRuntime.hx_null)) else ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (Obj.repr (Math.max 0.0 ((let __nullable_float_34 = nextTime in if __nullable_float_34 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_34) -. HxSys.time ()))))) else ignore (if nextTime == HxRuntime.hx_null then ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (Obj.repr (Math.max 0.0 (let __nullable_float_35 = timeout in if __nullable_float_35 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_35)))) else ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (Obj.repr (Math.min (Math.max 0.0 (let __nullable_float_36 = timeout in if __nullable_float_36 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_36)) (Math.max 0.0 ((let __nullable_float_37 = nextTime in if __nullable_float_37 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_37) -. HxSys.time ())))))))
-  | At _p0 -> ignore (let _g = _p0 in let nextTime = _g in let delay = Math.max 0.0 (nextTime -. HxSys.time ()) in if timeout == HxRuntime.hx_null then ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (Obj.repr delay)) else ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (Obj.repr (Math.min delay (Math.max 0.0 (let __nullable_float_38 = timeout in if __nullable_float_38 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_38))))))))
+  | AnyTime _p0 -> ignore (let _g = _p0 in let nextTime = _g in if timeout == HxRuntime.hx_null then ignore (if nextTime == HxRuntime.hx_null then ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (HxRuntime.hx_null)) else ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (Obj.repr (Math.max 0.0 ((let __nullable_float_35 = nextTime in if __nullable_float_35 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_35) -. HxSys.time ()))))) else ignore (if nextTime == HxRuntime.hx_null then ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (Obj.repr (Math.max 0.0 (let __nullable_float_36 = timeout in if __nullable_float_36 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_36)))) else ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (Obj.repr (Math.min (Math.max 0.0 (let __nullable_float_37 = timeout in if __nullable_float_37 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_37)) (Math.max 0.0 ((let __nullable_float_38 = nextTime in if __nullable_float_38 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_38) -. HxSys.time ())))))))
+  | At _p0 -> ignore (let _g = _p0 in let nextTime = _g in let delay = Math.max 0.0 (nextTime -. HxSys.time ()) in if timeout == HxRuntime.hx_null then ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (Obj.repr delay)) else ignore (Sys_thread_Lock.wait (Obj.magic ((Obj.magic self : t).wakeLock)) (Obj.repr (Math.min delay (Math.max 0.0 (let __nullable_float_39 = timeout in if __nullable_float_39 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_39))))))))
 
-let invokeCallback = fun callback -> ignore (Obj.obj (HxReflect.callMethod (Obj.magic (HxRuntime.hx_null)) (Obj.repr callback) (let __arr_46 = HxArray.create () in __arr_46)))
+let invokeCallback = fun callback -> ignore (Obj.obj (HxReflect.callMethod (Obj.magic (HxRuntime.hx_null)) (Obj.repr callback) (let __arr_47 = HxArray.create () in __arr_47)))
 
-let progress = fun self () -> try let __fallback_result_33 = let ready = Obj.magic (let __arr_17 = HxArray.create () in __arr_17) in let hasAnyTime = ref false in let nextAt = ref (HxRuntime.hx_null : Obj.t) in (
+let progress = fun self () -> try let __fallback_result_34 = let ready = Obj.magic (let __arr_18 = HxArray.create () in __arr_18) in let hasAnyTime = ref false in let nextAt = ref (HxRuntime.hx_null : Obj.t) in (
   ignore (Sys_thread_Mutex.acquire (Obj.magic ((Obj.magic self : t).mutex)) ());
   ignore (while HxArray.length ((Obj.magic self : t).oneTimeEvents) > 0 do ignore (let event = HxArray.shift ((Obj.magic self : t).oneTimeEvents) () in if event != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push ready event) else ()) done);
-  let now = HxSys.time () in (
-    ignore (let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).regularEvents) in try while !_g < HxArray.length _g1 do try ignore (let regular = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
-      ignore (let __old_18 = !_g in let __new_19 = HxInt.add __old_18 1 in (
-        ignore (_g := __new_19);
-        __new_19
+  let now = HxSys.time () in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).regularEvents) in (
+    ignore (try while !_g < HxArray.length _g1 do try ignore (let regular = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+      ignore (let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
+        ignore (_g := __new_20);
+        __new_20
       ));
       ignore (if regular == Obj.magic (HxRuntime.hx_null) || (Obj.magic regular : regularevent_t).cancelled then raise (HxRuntime.Hx_continue) else ());
       ignore (if (Obj.magic regular : regularevent_t).nextRunAt <= now then ignore ((
         ignore (HxArray.push ready ((Obj.magic regular : regularevent_t).callback));
-        let __assign_20 = now +. (Obj.magic regular : regularevent_t).intervalSeconds in (
-          (Obj.magic regular : regularevent_t).nextRunAt <- __assign_20;
-          __assign_20
+        let __assign_21 = now +. (Obj.magic regular : regularevent_t).intervalSeconds in (
+          (Obj.magic regular : regularevent_t).nextRunAt <- __assign_21;
+          __assign_21
         )
       )) else ());
-      if Obj.magic (!nextAt) == HxRuntime.hx_null || (let __nullable_21 = (Obj.magic regular : regularevent_t).nextRunAt in let __nullable_22 = Obj.magic (!nextAt) in if __nullable_22 == HxRuntime.hx_null then false else __nullable_21 < Obj.obj __nullable_22) then ignore (let __assign_23 = Obj.magic (Obj.repr ((Obj.magic regular : regularevent_t).nextRunAt)) in (
-        nextAt := __assign_23;
-        __assign_23
+      if Obj.magic (!nextAt) == HxRuntime.hx_null || (let __nullable_22 = (Obj.magic regular : regularevent_t).nextRunAt in let __nullable_23 = Obj.magic (!nextAt) in if __nullable_23 == HxRuntime.hx_null then false else __nullable_22 < Obj.obj __nullable_23) then ignore (let __assign_24 = Obj.magic (Obj.repr ((Obj.magic regular : regularevent_t).nextRunAt)) in (
+        nextAt := __assign_24;
+        __assign_24
       )) else ()
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
-    ignore (if (Obj.magic self : t).promisedEvents > 0 then ignore (let __assign_24 = true in (
-      hasAnyTime := __assign_24;
-      __assign_24
+    ignore (if (Obj.magic self : t).promisedEvents > 0 then ignore (let __assign_25 = true in (
+      hasAnyTime := __assign_25;
+      __assign_25
     )) else ());
     ignore (Sys_thread_Mutex.release (Obj.magic ((Obj.magic self : t).mutex)) ());
-    ignore (let _g = ref 0 in while !_g < HxArray.length ready do ignore (let event = HxArray.get (Obj.magic ready) (!_g) in (
-      ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
-        ignore (_g := __new_26);
-        __new_26
-      ));
-      invokeCallback event
-    )) done);
-    ignore (if HxArray.length ready > 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic Now))) else ());
-    ignore (if Obj.magic (!nextAt) == HxRuntime.hx_null then ignore (let tempResult = ref (Obj.magic (HxRuntime.hx_null) : nexteventtime) in (
-      ignore (if !hasAnyTime then let __assign_27 = Obj.magic (AnyTime (HxRuntime.hx_null)) in (
-        tempResult := __assign_27;
-        __assign_27
-      ) else let __assign_28 = Obj.magic Never in (
-        tempResult := __assign_28;
-        __assign_28
-      ));
-      raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
-    )) else ());
-    let tempResult1 = ref (Obj.magic (HxRuntime.hx_null) : nexteventtime) in (
-      ignore (if !hasAnyTime then let __assign_29 = Obj.magic (AnyTime (Obj.magic (!nextAt))) in (
-        tempResult1 := __assign_29;
-        __assign_29
-      ) else let __assign_30 = Obj.magic (At (let __nullable_float_31 = Obj.magic (!nextAt) in if __nullable_float_31 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_31)) in (
-        tempResult1 := __assign_30;
-        __assign_30
-      ));
-      !tempResult1
+    let _g = ref 0 in (
+      ignore (while !_g < HxArray.length ready do ignore (let event = HxArray.get (Obj.magic ready) (!_g) in (
+        ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
+          ignore (_g := __new_27);
+          __new_27
+        ));
+        invokeCallback event
+      )) done);
+      ignore (if HxArray.length ready > 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic Now))) else ());
+      ignore (if Obj.magic (!nextAt) == HxRuntime.hx_null then ignore (let tempResult = ref (Obj.magic (HxRuntime.hx_null) : nexteventtime) in (
+        ignore (if !hasAnyTime then let __assign_28 = Obj.magic (AnyTime (HxRuntime.hx_null)) in (
+          tempResult := __assign_28;
+          __assign_28
+        ) else let __assign_29 = Obj.magic Never in (
+          tempResult := __assign_29;
+          __assign_29
+        ));
+        raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
+      )) else ());
+      let tempResult1 = ref (Obj.magic (HxRuntime.hx_null) : nexteventtime) in (
+        ignore (if !hasAnyTime then let __assign_30 = Obj.magic (AnyTime (Obj.magic (!nextAt))) in (
+          tempResult1 := __assign_30;
+          __assign_30
+        ) else let __assign_31 = Obj.magic (At (let __nullable_float_32 = Obj.magic (!nextAt) in if __nullable_float_32 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_32)) in (
+          tempResult1 := __assign_31;
+          __assign_31
+        ));
+        !tempResult1
+      )
     )
   )
-) in Obj.magic __fallback_result_33 with
-  | HxRuntime.Hx_return __ret_32 -> Obj.obj __ret_32
+) in Obj.magic __fallback_result_34 with
+  | HxRuntime.Hx_return __ret_33 -> Obj.obj __ret_33
 
-let wait = fun self (timeout : Obj.t) -> try let __fallback_result_44 = let next = Obj.magic (progress (Obj.magic self) ()) in match next with
+let wait = fun self (timeout : Obj.t) -> try let __fallback_result_45 = let next = Obj.magic (progress (Obj.magic self) ()) in match next with
   | Now -> raise (HxRuntime.Hx_return (Obj.repr true))
   | Never -> raise (HxRuntime.Hx_return (Obj.repr false))
   | AnyTime _p0 -> ignore ((
@@ -224,12 +226,12 @@ let wait = fun self (timeout : Obj.t) -> try let __fallback_result_44 = let next
         | Now -> 0
         | Never -> 1
         | AnyTime _ -> 2
-        | At _ -> 3) = 1 then let __assign_39 = false in (
-        tempResult := __assign_39;
-        __assign_39
-      ) else let __assign_40 = true in (
+        | At _ -> 3) = 1 then let __assign_40 = false in (
         tempResult := __assign_40;
         __assign_40
+      ) else let __assign_41 = true in (
+        tempResult := __assign_41;
+        __assign_41
       ));
       raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
     )
@@ -242,17 +244,17 @@ let wait = fun self (timeout : Obj.t) -> try let __fallback_result_44 = let next
         | Now -> 0
         | Never -> 1
         | AnyTime _ -> 2
-        | At _ -> 3) = 1 then let __assign_41 = false in (
-        tempResult1 := __assign_41;
-        __assign_41
-      ) else let __assign_42 = true in (
+        | At _ -> 3) = 1 then let __assign_42 = false in (
         tempResult1 := __assign_42;
         __assign_42
+      ) else let __assign_43 = true in (
+        tempResult1 := __assign_43;
+        __assign_43
       ));
       raise (HxRuntime.Hx_return (Obj.repr (!tempResult1)))
     )
-  )) in Obj.magic __fallback_result_44 with
-  | HxRuntime.Hx_return __ret_43 -> Obj.obj __ret_43
+  )) in Obj.magic __fallback_result_45 with
+  | HxRuntime.Hx_return __ret_44 -> Obj.obj __ret_44
 
 let loop = fun self () -> ignore (ignore (try while true do ignore (let next = Obj.magic (progress (Obj.magic self) ()) in match next with
   | Now -> ignore ()
@@ -265,4 +267,4 @@ let loop = fun self () -> ignore (ignore (try while true do ignore (let next = O
     ignore _p0;
     waitForNext (Obj.magic self) (Obj.magic next) (HxRuntime.hx_null)
   ))) done with
-  | HxRuntime.Hx_return __ret_45 -> Obj.obj __ret_45))
+  | HxRuntime.Hx_return __ret_46 -> Obj.obj __ret_46))

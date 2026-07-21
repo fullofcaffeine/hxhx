@@ -34,25 +34,23 @@ let trim = fun value -> let tempResult = ref ("" : string) in let tempMaybeStrin
   !tempResult
 )
 
-let isTrueEnv = fun name -> let tempString = ref ("" : string) in (
-  ignore (let value = (HxSys.getEnv name : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_6;
-      __assign_6
-    ) else if HxString.isNull (value : string) then let __assign_7 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_7;
-      __assign_7
-    ) else let __assign_8 = Obj.magic (value : string) in (
-      tempMaybeString := __assign_8;
-      __assign_8
-    ));
-    if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_9 = ("" : string) in (
-      tempString := __assign_9;
-      __assign_9
-    ) else let __assign_10 = (StringTools.trim (!tempMaybeString : string) : string) in (
-      tempString := __assign_10;
-      __assign_10
-    )
+let isTrueEnv = fun name -> let tempString = ref ("" : string) in let value = (HxSys.getEnv name : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_6;
+    __assign_6
+  ) else if HxString.isNull (value : string) then let __assign_7 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_7;
+    __assign_7
+  ) else let __assign_8 = Obj.magic (value : string) in (
+    tempMaybeString := __assign_8;
+    __assign_8
+  ));
+  ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_9 = ("" : string) in (
+    tempString := __assign_9;
+    __assign_9
+  ) else let __assign_10 = (StringTools.trim (!tempMaybeString : string) : string) in (
+    tempString := __assign_10;
+    __assign_10
   ));
   HxString.equals (!tempString) "1" || HxString.equals (!tempString) "true" || HxString.equals (!tempString) "yes"
 )
@@ -108,32 +106,30 @@ let collectDeclarationValues = fun rawDefines envName defineNames -> try let __f
         ignore (_g := __new_21);
         __new_21
       ));
-      let tempString = ref ("" : string) in (
-        ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-          ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_22 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempMaybeString := __assign_22;
-            __assign_22
-          ) else if HxString.isNull (raw : string) then let __assign_23 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempMaybeString := __assign_23;
-            __assign_23
-          ) else let __assign_24 = Obj.magic (raw : string) in (
-            tempMaybeString := __assign_24;
-            __assign_24
-          ));
-          let normalized = (!tempMaybeString : string) in if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_25 = ("" : string) in (
+      let tempString = ref ("" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+        ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_22 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeString := __assign_22;
+          __assign_22
+        ) else if HxString.isNull (raw : string) then let __assign_23 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeString := __assign_23;
+          __assign_23
+        ) else let __assign_24 = Obj.magic (raw : string) in (
+          tempMaybeString := __assign_24;
+          __assign_24
+        ));
+        let normalized = (!tempMaybeString : string) in (
+          ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_25 = ("" : string) in (
             tempString := __assign_25;
             __assign_25
           ) else let __assign_26 = (StringTools.trim (normalized : string) : string) in (
             tempString := __assign_26;
             __assign_26
-          )
-        ));
-        let define = (!tempString : string) in (
-          ignore (if HxString.length define = 0 then raise (HxRuntime.Hx_continue) else ());
-          let eq = HxString.indexOf define "=" 0 in (
-            ignore (if eq = -1 || HxInt.add eq 1 >= HxString.length define then raise (HxRuntime.Hx_continue) else ());
-            let tempString1 = ref ("" : string) in (
-              ignore (let value = (HxString.substr define 0 eq : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+          ));
+          let define = (!tempString : string) in (
+            ignore (if HxString.length define = 0 then raise (HxRuntime.Hx_continue) else ());
+            let eq = HxString.indexOf define "=" 0 in (
+              ignore (if eq = -1 || HxInt.add eq 1 >= HxString.length define then raise (HxRuntime.Hx_continue) else ());
+              let tempString1 = ref ("" : string) in let value = (HxString.substr define 0 eq : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
                 ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_27 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
                   tempMaybeString1 := __assign_27;
                   __assign_27
@@ -144,23 +140,25 @@ let collectDeclarationValues = fun rawDefines envName defineNames -> try let __f
                   tempMaybeString1 := __assign_29;
                   __assign_29
                 ));
-                let normalized = (!tempMaybeString1 : string) in if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_30 = ("" : string) in (
-                  tempString1 := __assign_30;
-                  __assign_30
-                ) else let __assign_31 = (StringTools.trim (normalized : string) : string) in (
-                  tempString1 := __assign_31;
-                  __assign_31
-                )
-              ));
-              let name = (!tempString1 : string) in (
-                ignore (if HxArray.indexOf defineNames name 0 = -1 then raise (HxRuntime.Hx_continue) else ());
-                let values = Obj.magic (parseDelimitedList (HxString.substr define (HxInt.add eq 1) (-1) : string)) in let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let value = (HxArray.get (Obj.magic values) (!_g2) : string) in (
-                  ignore (let __old_32 = !_g2 in let __new_33 = HxInt.add __old_32 1 in (
-                    ignore (_g2 := __new_33);
-                    __new_33
+                let normalized = (!tempMaybeString1 : string) in (
+                  ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_30 = ("" : string) in (
+                    tempString1 := __assign_30;
+                    __assign_30
+                  ) else let __assign_31 = (StringTools.trim (normalized : string) : string) in (
+                    tempString1 := __assign_31;
+                    __assign_31
                   ));
-                  if HxArray.indexOf out value 0 = -1 then ignore (HxArray.push out value) else ()
-                )) done
+                  let name = (!tempString1 : string) in (
+                    ignore (if HxArray.indexOf defineNames name 0 = -1 then raise (HxRuntime.Hx_continue) else ());
+                    let values = Obj.magic (parseDelimitedList (HxString.substr define (HxInt.add eq 1) (-1) : string)) in let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let value = (HxArray.get (Obj.magic values) (!_g2) : string) in (
+                      ignore (let __old_32 = !_g2 in let __new_33 = HxInt.add __old_32 1 in (
+                        ignore (_g2 := __new_33);
+                        __new_33
+                      ));
+                      if HxArray.indexOf out value 0 = -1 then ignore (HxArray.push out value) else ()
+                    )) done
+                  )
+                )
               )
             )
           )
@@ -202,46 +200,42 @@ let collectBundledBackendPluginManifestPaths = fun rawDefines -> collectDeclarat
   __arr_39
 )))
 
-let appendPluginLoadRequest = fun out source providerType origin -> ignore (try let tempString = ref ("" : string) in (
-  ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if providerType == Obj.magic (HxRuntime.hx_null) then let __assign_40 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_40;
-      __assign_40
-    ) else if HxString.isNull (providerType : string) then let __assign_41 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_41;
-      __assign_41
-    ) else let __assign_42 = Obj.magic (providerType : string) in (
-      tempMaybeString := __assign_42;
-      __assign_42
-    ));
-    if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_43 = ("" : string) in (
-      tempString := __assign_43;
-      __assign_43
-    ) else let __assign_44 = (StringTools.trim (!tempMaybeString : string) : string) in (
-      tempString := __assign_44;
-      __assign_44
-    )
+let appendPluginLoadRequest = fun out source providerType origin -> ignore (try let tempString = ref ("" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if providerType == Obj.magic (HxRuntime.hx_null) then let __assign_40 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_40;
+    __assign_40
+  ) else if HxString.isNull (providerType : string) then let __assign_41 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_41;
+    __assign_41
+  ) else let __assign_42 = Obj.magic (providerType : string) in (
+    tempMaybeString := __assign_42;
+    __assign_42
+  ));
+  ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then let __assign_43 = ("" : string) in (
+    tempString := __assign_43;
+    __assign_43
+  ) else let __assign_44 = (StringTools.trim (!tempMaybeString : string) : string) in (
+    tempString := __assign_44;
+    __assign_44
   ));
   ignore (if HxString.length (!tempString) = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let tempString1 = ref ("" : string) in (
-    ignore (let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-      ignore (if origin == Obj.magic (HxRuntime.hx_null) then let __assign_45 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempMaybeString1 := __assign_45;
-        __assign_45
-      ) else if HxString.isNull (origin : string) then let __assign_46 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempMaybeString1 := __assign_46;
-        __assign_46
-      ) else let __assign_47 = Obj.magic (origin : string) in (
-        tempMaybeString1 := __assign_47;
-        __assign_47
-      ));
-      if !tempMaybeString1 == Obj.magic (HxRuntime.hx_null) then let __assign_48 = ("" : string) in (
-        tempString1 := __assign_48;
-        __assign_48
-      ) else let __assign_49 = (StringTools.trim (!tempMaybeString1 : string) : string) in (
-        tempString1 := __assign_49;
-        __assign_49
-      )
+  let tempString1 = ref ("" : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if origin == Obj.magic (HxRuntime.hx_null) then let __assign_45 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString1 := __assign_45;
+      __assign_45
+    ) else if HxString.isNull (origin : string) then let __assign_46 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString1 := __assign_46;
+      __assign_46
+    ) else let __assign_47 = Obj.magic (origin : string) in (
+      tempMaybeString1 := __assign_47;
+      __assign_47
+    ));
+    ignore (if !tempMaybeString1 == Obj.magic (HxRuntime.hx_null) then let __assign_48 = ("" : string) in (
+      tempString1 := __assign_48;
+      __assign_48
+    ) else let __assign_49 = (StringTools.trim (!tempMaybeString1 : string) : string) in (
+      tempString1 := __assign_49;
+      __assign_49
     ));
     let _g = ref 0 in (
       ignore (while !_g < HxArray.length out do ignore (let existing = HxArray.get (Obj.magic out) (!_g) in (

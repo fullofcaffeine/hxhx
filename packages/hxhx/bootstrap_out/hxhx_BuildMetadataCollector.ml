@@ -247,8 +247,8 @@ let matchesMetadataPathFilter = fun modulePath pathFilter recursive -> try let _
 ) in Obj.magic __fallback_result_36 with
   | HxRuntime.Hx_return __ret_35 -> Obj.obj __ret_35
 
-let collectBuildMacroExprs = fun source modulePath -> let out = Obj.magic (HxArray.create ()) in let seen = HxMap.create_string () in (
-  ignore (let _g = ref 0 in let _g1 = Obj.magic (findBuildMacroExprs (source : string)) in while !_g < HxArray.length _g1 do ignore (let expr = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+let collectBuildMacroExprs = fun source modulePath -> let out = Obj.magic (HxArray.create ()) in let seen = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (findBuildMacroExprs (source : string)) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let expr = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
     ignore (let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
       ignore (_g := __new_20);
       __new_20
@@ -267,36 +267,38 @@ let collectBuildMacroExprs = fun source modulePath -> let out = Obj.magic (HxArr
       ))
     ))
   )) done);
-  ignore (let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listGlobalMetadataRules ()) in try while !_g < HxArray.length _g1 do try ignore (let rule = HxArray.get (Obj.magic _g1) (!_g) in (
-    ignore (let __old_23 = !_g in let __new_24 = HxInt.add __old_23 1 in (
-      ignore (_g := __new_24);
-      __new_24
-    ));
-    ignore (if not (HxRuntime.unbox_bool_or_obj (HxAnon.get rule "toTypes")) then raise (HxRuntime.Hx_continue) else ());
-    ignore (if not (matchesMetadataPathFilter (modulePath : string) (Obj.obj (HxAnon.get rule "pathFilter") : string) (HxRuntime.unbox_bool_or_obj (HxAnon.get rule "recursive"))) then raise (HxRuntime.Hx_continue) else ());
-    let _g2 = ref 0 in let _g3 = Obj.magic (findBuildMacroExprs (Obj.obj (HxAnon.get rule "metadata") : string)) in while !_g2 < HxArray.length _g3 do ignore (let expr = (HxArray.get (Obj.magic _g3) (!_g2) : string) in (
-      ignore (let __old_25 = !_g2 in let __new_26 = HxInt.add __old_25 1 in (
-        ignore (_g2 := __new_26);
-        __new_26
+  let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listGlobalMetadataRules ()) in (
+    ignore (try while !_g < HxArray.length _g1 do try ignore (let rule = HxArray.get (Obj.magic _g1) (!_g) in (
+      ignore (let __old_23 = !_g in let __new_24 = HxInt.add __old_23 1 in (
+        ignore (_g := __new_24);
+        __new_24
       ));
-      if expr == Obj.magic (HxRuntime.hx_null) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let tempString1 = ref ("" : string) in (
-        ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_27 = ("" : string) in (
-          tempString1 := __assign_27;
-          __assign_27
-        ) else let __assign_28 = (StringTools.trim (expr : string) : string) in (
-          tempString1 := __assign_28;
-          __assign_28
+      ignore (if not (HxRuntime.unbox_bool_or_obj (HxAnon.get rule "toTypes")) then raise (HxRuntime.Hx_continue) else ());
+      ignore (if not (matchesMetadataPathFilter (modulePath : string) (Obj.obj (HxAnon.get rule "pathFilter") : string) (HxRuntime.unbox_bool_or_obj (HxAnon.get rule "recursive"))) then raise (HxRuntime.Hx_continue) else ());
+      let _g2 = ref 0 in let _g3 = Obj.magic (findBuildMacroExprs (Obj.obj (HxAnon.get rule "metadata") : string)) in while !_g2 < HxArray.length _g3 do ignore (let expr = (HxArray.get (Obj.magic _g3) (!_g2) : string) in (
+        ignore (let __old_25 = !_g2 in let __new_26 = HxInt.add __old_25 1 in (
+          ignore (_g2 := __new_26);
+          __new_26
         ));
-        let normalized = (!tempString1 : string) in if HxString.length normalized = 0 || HxMap.exists_string seen normalized then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
-          ignore (HxMap.set_string seen normalized true);
-          HxArray.push out normalized
+        if expr == Obj.magic (HxRuntime.hx_null) then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (let tempString1 = ref ("" : string) in (
+          ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_27 = ("" : string) in (
+            tempString1 := __assign_27;
+            __assign_27
+          ) else let __assign_28 = (StringTools.trim (expr : string) : string) in (
+            tempString1 := __assign_28;
+            __assign_28
+          ));
+          let normalized = (!tempString1 : string) in if HxString.length normalized = 0 || HxMap.exists_string seen normalized then ignore (Obj.magic (HxRuntime.hx_null)) else ignore ((
+            ignore (HxMap.set_string seen normalized true);
+            HxArray.push out normalized
+          ))
         ))
-      ))
-    )) done
-  )) with
-    | HxRuntime.Hx_continue -> () done with
-    | HxRuntime.Hx_break -> ());
-  out
+      )) done
+    )) with
+      | HxRuntime.Hx_continue -> () done with
+      | HxRuntime.Hx_break -> ());
+    out
+  )
 )
 
 let trim = fun value -> let tempResult = ref ("" : string) in (
