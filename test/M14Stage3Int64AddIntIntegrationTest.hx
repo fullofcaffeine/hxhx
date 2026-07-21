@@ -124,7 +124,8 @@ class M14Stage3Int64AddIntIntegrationTest {
 		FileSystem.createDirectory(assignmentInt64Dir);
 		final assignmentSourcePath = Path.join([assignmentSourceDir, "Main.hx"]);
 		final assignmentSource = [
-			"import haxe.Int64;",
+			"import haxe.Int64.*;",
+			"using haxe.Int64;",
 			"class Main {",
 			"  static function main():Void {",
 			"    var value:Int64;",

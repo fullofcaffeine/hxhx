@@ -7124,8 +7124,8 @@ class EmitterStage {
 			for (rawImport in tm.getEnv().getImports()) {
 				if (rawImport == null)
 					continue;
-				final imp = StringTools.trim(rawImport);
-				if (imp.length == 0 || StringTools.endsWith(imp, ".*") || importedSigModulesSeen.exists(imp))
+				final imp = stage3ImportedSignatureModulePath(rawImport);
+				if (imp.length == 0 || importedSigModulesSeen.exists(imp))
 					continue;
 				final resolvedImportFile = resolveImportedModuleFileFromContext(tmFilePath, imp);
 				if (resolvedImportFile == null || !sys.FileSystem.exists(resolvedImportFile))
@@ -8876,5 +8876,17 @@ class EmitterStage {
 				false;
 		};
 		return isInt ? "Haxe_Int64.ofInt (" + rendered + ")" : rendered;
+	}
+
+	/**
+		Return the module whose declared function parameters apply to an import.
+
+		A static wildcard import such as `import haxe.Int64.*` still imports members
+		from the haxe.Int64 module. Removing only the trailing wildcard lets call
+		signature indexing read that module exactly as it does for `import haxe.Int64`.
+	**/
+	static function stage3ImportedSignatureModulePath(rawImport:String):String {
+		final trimmed = StringTools.trim(rawImport == null ? "" : rawImport);
+		return StringTools.endsWith(trimmed, ".*") ? trimmed.substr(0, trimmed.length - 2) : trimmed;
 	}
 }
