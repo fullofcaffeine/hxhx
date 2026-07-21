@@ -1810,8 +1810,9 @@ class EmitterStage {
 			case EUnop(op, fixity, inner) if ((op == HxUnaryOperator.Negate || op == HxUnaryOperator.BitwiseNot)
 				&& fixity == HxUnaryFixity.Prefix):
 				stage3IsInt64Expr(inner, tyByIdent);
-			case ECall(EField(owner, field), _args): stage3IsInt64StaticOwner(owner) && (field == "make" || field == "ofInt" || field == "parseString"
-					|| field == "add" || field == "sub" || field == "mul" || field == "neg" || field == "div" || field == "mod" || field == "divMod");
+			case ECall(EField(EIdent(owner), field), _args): (owner == "Int64" || owner == "haxe.Int64") && (field == "make" || field == "ofInt"
+					|| field == "parseString" || field == "add" || field == "sub" || field == "mul" || field == "neg" || field == "div" || field == "mod"
+					|| field == "divMod");
 			case EField(inner, field): stage3IsInt64Expr(inner, tyByIdent) && (field == "high" || field == "low" || field == "quotient" || field == "modulus");
 			case EBinop(op, a, b)
 				if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>"
@@ -8884,12 +8885,13 @@ class EmitterStage {
 	}
 
 	/**
-		Recognize the two source spellings for the standard Haxe Int64 provider.
+		Recognize the two source spellings used to seed an unannotated Int64 local.
 
 		The parser stores `haxe.Int64` as nested field access (`haxe` then `Int64`),
-		not as one identifier containing a dot. Matching the structural path lets
-		an unannotated local such as `var value = haxe.Int64.make(...)` retain its
-		inferred Int64 type during native Stage3 emission.
+		not as one identifier containing a dot. This is a bounded bootstrap bridge for
+		the existing initializer-based local-hint pass. It deliberately does not make
+		all expression typing recognize an Int64 merely from its source spelling;
+		declaration-scoped semantic local types are tracked by haxe_ocaml-i7d5a.
 	**/
 	static function stage3IsInt64StaticOwner(owner:HxExpr):Bool {
 		final parts = tryExtractTypePathPartsFromExpr(owner);
