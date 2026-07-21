@@ -1,3 +1,19 @@
+## [0.23.9](https://github.com/fullofcaffeine/hxhx/compare/v0.23.8...v0.23.9) (2026-07-21)
+
+
+### Bug Fixes
+
+* **ci:** resolve the closed Gate 1 incident ([360f083](https://github.com/fullofcaffeine/hxhx/commit/360f0833f45fb1e807d882985d5dfb4d934c7687))
+* **stage3:** convert Int values stored in Int64 locals ([120f2f3](https://github.com/fullofcaffeine/hxhx/commit/120f2f3f1bd15341ede4711948387fc0c30e46cd))
+* **stage3:** convert Int64 call arguments ([7c1ee9e](https://github.com/fullofcaffeine/hxhx/commit/7c1ee9e1d787a83ed095fa3ec7d498333f932b5a))
+* **stage3:** cross the erased signature boundary explicitly ([816f122](https://github.com/fullofcaffeine/hxhx/commit/816f122cf510098bee98a1e3dece26ff7d9c29ca))
+* **stage3:** emit Int64 local updates ([b9307db](https://github.com/fullofcaffeine/hxhx/commit/b9307db0851bc73454d9a0894cfdb2d93af32dea))
+* **stage3:** infer qualified Int64 locals ([2878e71](https://github.com/fullofcaffeine/hxhx/commit/2878e71aa04ad3f1c443a55d401d5fa885727574))
+* **stage3:** preserve erased signature map lookup ([e20ed77](https://github.com/fullofcaffeine/hxhx/commit/e20ed772b8d435d29b8c0b39011b1e883b24e39a))
+* **stage3:** retain signatures from wildcard imports ([5012da7](https://github.com/fullofcaffeine/hxhx/commit/5012da7dfe66e6eef7a05fa96baf6c96a0ac8c60))
+* **stage3:** unpack the native signature map once ([a0198cc](https://github.com/fullofcaffeine/hxhx/commit/a0198cc05b8e255936bb287c5888901705e662d5))
+* **stage3:** use typed call signature lookup ([ca66022](https://github.com/fullofcaffeine/hxhx/commit/ca66022f5fc1c1f15b298c0d408b0bf79c2cd640))
+
 ## [0.23.8](https://github.com/fullofcaffeine/hxhx/compare/v0.23.7...v0.23.8) (2026-07-21)
 
 
