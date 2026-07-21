@@ -4513,6 +4513,61 @@ let patchStage3MacroContextLoadShimForStage3 = fun outAbs -> ignore (try let shi
 ) with
   | HxRuntime.Hx_return __ret_2352 -> Obj.obj __ret_2352)
 
+let stage3Int64AssignmentRhs = fun lhsType rhs rendered tyByIdent -> try let __fallback_result_3301 = (
+  ignore (if not (stage3IsInt64TypeName (lhsType : string)) then raise (HxRuntime.Hx_return (Obj.repr (rendered : string))) else ());
+  let tempBool = ref (false : bool) in (
+    ignore (match rhs with
+      | HxExpr.EInt _p0 -> (
+        ignore _p0;
+        let __assign_3291 = true in (
+          tempBool := __assign_3291;
+          __assign_3291
+        )
+      )
+      | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_3292 = HxString.equals (stage3TyForIdent (name : string) (Obj.repr tyByIdent)) "Int" in (
+        tempBool := __assign_3292;
+        __assign_3292
+      )
+      | HxExpr.EUnop (_p0, _p1, _p2) -> (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in match _g2 with
+        | HxExpr.EInt _p0 -> (
+          ignore _p0;
+          let fixity = Obj.magic _g1 in let op = Obj.magic _g in if op = HxUnaryOperator.Negate && fixity = HxUnaryFixity.Prefix then let __assign_3294 = true in (
+            tempBool := __assign_3294;
+            __assign_3294
+          ) else let __assign_3295 = false in (
+            tempBool := __assign_3295;
+            __assign_3295
+          )
+        )
+        | HxExpr.EIdent _p0 -> let _g3 = (_p0 : string) in let name = (_g3 : string) in let fixity = Obj.magic _g1 in let op = Obj.magic _g in if op = HxUnaryOperator.Negate && fixity = HxUnaryFixity.Prefix then let __assign_3296 = HxString.equals (stage3TyForIdent (name : string) (Obj.repr tyByIdent)) "Int" in (
+          tempBool := __assign_3296;
+          __assign_3296
+        ) else let __assign_3297 = false in (
+          tempBool := __assign_3297;
+          __assign_3297
+        )
+        | _ -> let __assign_3293 = false in (
+          tempBool := __assign_3293;
+          __assign_3293
+        ))
+      | _ -> let __assign_3290 = false in (
+        tempBool := __assign_3290;
+        __assign_3290
+      ));
+    let isInt = !tempBool in let tempResult = ref ("" : string) in (
+      ignore (if isInt then let __assign_3298 = (("Haxe_Int64.ofInt (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+        tempResult := __assign_3298;
+        __assign_3298
+      ) else let __assign_3299 = (rendered : string) in (
+        tempResult := __assign_3299;
+        __assign_3299
+      ));
+      !tempResult
+    )
+  )
+) in Obj.magic __fallback_result_3301 with
+  | HxRuntime.Hx_return __ret_3300 -> Obj.obj __ret_3300
+
 let __init_moduleInitTrace = moduleInitTrace := traceModuleInit ()
 
 let __init_currentOcamlModuleName = currentOcamlModuleName := Obj.magic (HxRuntime.hx_null)
@@ -4523,13 +4578,13 @@ let __init_currentFunctionName = currentFunctionName := Obj.magic (HxRuntime.hx_
 
 let __init_currentFunctionLocalTypeHints = currentFunctionLocalTypeHints := Obj.magic (HxRuntime.hx_null)
 
-let __init_currentStmtTyEntries = currentStmtTyEntries := Obj.magic (let __arr_3290 = HxArray.create () in __arr_3290)
+let __init_currentStmtTyEntries = currentStmtTyEntries := Obj.magic (let __arr_3302 = HxArray.create () in __arr_3302)
 
 let __init_currentLocalCallSigCache = currentLocalCallSigCache := Obj.magic (HxRuntime.hx_null)
 
 let __init_currentImportInt64 = currentImportInt64 := Obj.magic (HxRuntime.hx_null)
 
-let __init_currentModuleNameEntries = currentModuleNameEntries := Obj.magic (let __arr_3291 = HxArray.create () in __arr_3291)
+let __init_currentModuleNameEntries = currentModuleNameEntries := Obj.magic (let __arr_3303 = HxArray.create () in __arr_3303)
 
 let __init_currentKnownModuleNames = currentKnownModuleNames := HxMap.create_string ()
 
@@ -4539,7 +4594,7 @@ let __init_currentInstanceFieldsByTypePath = currentInstanceFieldsByTypePath := 
 
 let __init_currentInstanceMethodsByTypePath = currentInstanceMethodsByTypePath := Obj.magic (Obj.magic (HxRuntime.hx_null))
 
-let __init_currentMutableLocalRefNames = currentMutableLocalRefNames := Obj.magic (let __arr_3292 = HxArray.create () in __arr_3292)
+let __init_currentMutableLocalRefNames = currentMutableLocalRefNames := Obj.magic (let __arr_3304 = HxArray.create () in __arr_3304)
 
 let currentAllowedValueIdentNames = ref (Obj.magic (HxRuntime.hx_null) : bool HxMap.string_map)
 
@@ -14599,7 +14654,7 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                               tempMaybeString2 := __assign_1973;
                               __assign_1973
                             )
-                            | "=" -> let __assign_1974 = Obj.magic (returnExprToOcaml (Obj.magic rhs) allowedValueIdents (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.repr arityByIdent) (Obj.repr erasedReturnTyCtx) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
+                            | "=" -> let __assign_1974 = Obj.magic (stage3Int64AssignmentRhs (lhsTy : string) (Obj.magic rhs) (returnExprToOcaml (Obj.magic rhs) allowedValueIdents (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.repr arityByIdent) (Obj.repr erasedReturnTyCtx) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) (Obj.repr tyCtx) : string) in (
                               tempMaybeString2 := __assign_1974;
                               __assign_1974
                             )
