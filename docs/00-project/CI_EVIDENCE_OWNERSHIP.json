@@ -563,7 +563,7 @@
     {
       "id": "macro-runtime-flash-copy-29735161816",
       "checkId": "macro-runtime-weekly",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
       "failureClass": "semantic",
       "bead": "haxe_ocaml-1x4rr",
@@ -579,7 +579,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29735161816"
       },
       "reproductionOrEvidence": "Both native macro modes pass the upstream unit stage, then the runci workload reports Expected ':' while parsing the copy call in runci.targets.Flash.readUntil.",
-      "closureGate": "A focused parser and typed-body regression must pass, followed by one weekly or manual-equivalent successor that completes runci in both native macro modes."
+      "closureGate": "A focused parser and typed-body regression must pass, followed by one weekly or manual-equivalent successor that completes runci in both native macro modes.",
+      "resolution": {
+        "runId": 29811411674,
+        "runAttempt": 1,
+        "headSha": "d691e8bb80beeb3fe81a5a476859a79fbf54a871",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-21T07:48:17Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29811411674"
+      }
     },
     {
       "id": "kpi-manual-missing-20260713",
