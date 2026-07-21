@@ -19,7 +19,6 @@ enum TypedExprTag {
 	FieldRead;
 	NullSafeFieldRead;
 	Call;
-	ReturnExpr;
 	MacroExpr;
 	MacroType;
 	Lambda;
@@ -40,6 +39,9 @@ enum TypedExprTag {
 	Opaque;
 	Block;
 	Temporary;
+	ReturnExpr;
+	VariableDeclarations;
+	VariableDeclaration;
 }
 
 /**
@@ -132,6 +134,16 @@ class TypedExpr {
 	public static function returnExpr(expression:Null<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(ReturnExpr, type, position, null, expression == null ? [] : [expression]);
 
+	/** Preserve a source-level declaration as a structural child of an expression-level declaration list. **/
+	public static function variableDeclaration(name:String, typeHint:String, initializer:Null<TypedExpr>, isFinal:Bool, isStatic:Bool, type:TyType,
+			position:Null<HxPos>):TypedExpr
+		return new TypedExpr(VariableDeclaration, type, position, [name == null ? "" : name, typeHint == null ? "" : typeHint],
+			initializer == null ? [] : [initializer], null, isFinal, isStatic ? 1 : 0);
+
+	/** Preserve the ordered declarations from one expression-level `var` or `final` form. **/
+	public static function variableDeclarations(declarations:Array<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(VariableDeclarations, type, position, null, declarations);
+
 	public static function macroExpr(expression:TypedExpr, wrappers:Array<String>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(MacroExpr, type, position, wrappers, [expression]);
 
@@ -221,6 +233,14 @@ class TypedExpr {
 
 	public function getBoolValue():Bool
 		return boolValue;
+
+	/** Whether a `VariableDeclaration` was written with `final`. **/
+	public function getVariableIsFinal():Bool
+		return boolValue;
+
+	/** Whether a `VariableDeclaration` was written with `static`. **/
+	public function getVariableIsStatic():Bool
+		return intValue != 0;
 
 	public function getIntValue():Int
 		return intValue;

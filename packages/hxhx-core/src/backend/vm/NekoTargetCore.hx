@@ -531,6 +531,12 @@ class NekoTargetCore {
 			case EReturn(value):
 				if (value != null)
 					collectExprRefs(context, value, addConstructor, addStatic);
+			case EVars(declarations):
+				for (declaration in declarations) {
+					final initializer = declaration.getInitializer();
+					if (initializer != null)
+						collectExprRefs(context, initializer, addConstructor, addStatic);
+				}
 			case EField(obj, _) | ENullSafeField(obj, _):
 				collectExprRefs(context, obj, addConstructor, addStatic);
 			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
@@ -1184,6 +1190,8 @@ class NekoTargetCore {
 				renderCall(context, callee, args);
 			case EReturn(_):
 				unsupportedExpr("expression-position return must be consumed by macro expansion before Neko emission");
+			case EVars(_):
+				unsupportedExpr("expression-position variable declarations must be consumed by macro expansion before Neko emission");
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				if (op == HxUnaryOperator.LogicalNot) {
@@ -1443,6 +1451,7 @@ class NekoTargetCore {
 			case ENullSafeField(_, _): "ENullSafeField";
 			case ECall(_, _): "ECall";
 			case EReturn(_): "EReturn";
+			case EVars(_): "EVars";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(typeText): "EMacroType(" + typeText + ")";
 			case ELambda(_, _): "ELambda";

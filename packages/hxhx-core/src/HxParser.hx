@@ -414,7 +414,7 @@ class HxParser {
 					shifted.push(rebaseFunctionBodyStmt(s, base, bodyStartIndex));
 				SBlock(shifted, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SVar(name, typeHint, init, pos):
-				SVar(name, typeHint, rebaseFunctionBodyExpr(init, base), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SVar(name, typeHint, rebaseFunctionBodyExpr(init, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SIf(cond, thenBranch, elseBranch, pos):
 				var shiftedElse:Null<HxStmt> = null;
 				if (elseBranch != null)
@@ -444,50 +444,57 @@ class HxParser {
 			case SContinue(pos):
 				SContinue(rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SThrow(expr, pos):
-				SThrow(rebaseFunctionBodyExpr(expr, base), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SThrow(rebaseFunctionBodyExpr(expr, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SReturnVoid(pos):
 				SReturnVoid(rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SReturn(expr, pos):
-				SReturn(rebaseFunctionBodyExpr(expr, base), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SReturn(rebaseFunctionBodyExpr(expr, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SExpr(expr, pos):
-				SExpr(rebaseFunctionBodyExpr(expr, base), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SExpr(rebaseFunctionBodyExpr(expr, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 		}
 	}
 
-	static function rebaseFunctionBodyExpr(expr:Null<HxExpr>, base:HxPos):Null<HxExpr> {
+	static function rebaseFunctionBodyExpr(expr:Null<HxExpr>, base:HxPos, bodyStartIndex:Int):Null<HxExpr> {
 		if (expr == null)
 			return null;
-		return rebaseFunctionBodyExprValue(expr, base);
+		return rebaseFunctionBodyExprValue(expr, base, bodyStartIndex);
 	}
 
-	static function rebaseFunctionBodyExprValue(expr:HxExpr, base:HxPos):HxExpr {
+	static function rebaseFunctionBodyExprValue(expr:HxExpr, base:HxPos, bodyStartIndex:Int):HxExpr {
 		return switch (expr) {
 			case ECall(EIdent(name), args) if (StringTools.startsWith(name, "__hxhx_trace_at_")):
 				final line = Std.parseInt(name.substr("__hxhx_trace_at_".length));
 				final rebased = line == null ? 0 : base.getLine() + line - 2;
-				ECall(EIdent("__hxhx_trace_at_" + Std.string(rebased)), [for (arg in args) rebaseFunctionBodyExprValue(arg, base)]);
+				ECall(EIdent("__hxhx_trace_at_" + Std.string(rebased)), [for (arg in args) rebaseFunctionBodyExprValue(arg, base, bodyStartIndex)]);
 			case ECall(callee, args):
-				ECall(rebaseFunctionBodyExprValue(callee, base), [for (arg in args) rebaseFunctionBodyExprValue(arg, base)]);
+				ECall(rebaseFunctionBodyExprValue(callee, base, bodyStartIndex), [for (arg in args) rebaseFunctionBodyExprValue(arg, base, bodyStartIndex)]);
 			case EReturn(value):
-				EReturn(value == null ? null : rebaseFunctionBodyExprValue(value, base));
+				EReturn(value == null ? null : rebaseFunctionBodyExprValue(value, base, bodyStartIndex));
+			case EVars(declarations):
+				EVars([
+					for (declaration in declarations)
+						new HxExprVarDecl(declaration.getName(), declaration.getTypeHint(),
+							declaration.getInitializer() == null ? null : rebaseFunctionBodyExprValue(declaration.getInitializer(), base, bodyStartIndex),
+							rebaseFunctionBodyPos(declaration.getPosition(), base, bodyStartIndex), declaration.getIsFinal(), declaration.getIsStatic())
+				]);
 			case EField(obj, field):
-				EField(rebaseFunctionBodyExprValue(obj, base), field);
+				EField(rebaseFunctionBodyExprValue(obj, base, bodyStartIndex), field);
 			case ENullSafeField(obj, field):
-				ENullSafeField(rebaseFunctionBodyExprValue(obj, base), field);
+				ENullSafeField(rebaseFunctionBodyExprValue(obj, base, bodyStartIndex), field);
 			case EBinop(op, left, right):
-				EBinop(op, rebaseFunctionBodyExprValue(left, base), rebaseFunctionBodyExprValue(right, base));
+				EBinop(op, rebaseFunctionBodyExprValue(left, base, bodyStartIndex), rebaseFunctionBodyExprValue(right, base, bodyStartIndex));
 			case EUnop(op, fixity, value):
-				EUnop(op, fixity, rebaseFunctionBodyExprValue(value, base));
+				EUnop(op, fixity, rebaseFunctionBodyExprValue(value, base, bodyStartIndex));
 			case ELambda(args, body):
-				ELambda(args, rebaseFunctionBodyExprValue(body, base));
+				ELambda(args, rebaseFunctionBodyExprValue(body, base, bodyStartIndex));
 			case EArrayDecl(values):
-				EArrayDecl([for (value in values) rebaseFunctionBodyExprValue(value, base)]);
+				EArrayDecl([for (value in values) rebaseFunctionBodyExprValue(value, base, bodyStartIndex)]);
 			case EArrayAccess(left, right):
-				EArrayAccess(rebaseFunctionBodyExprValue(left, base), rebaseFunctionBodyExprValue(right, base));
+				EArrayAccess(rebaseFunctionBodyExprValue(left, base, bodyStartIndex), rebaseFunctionBodyExprValue(right, base, bodyStartIndex));
 			case ECast(inner, hint):
-				ECast(rebaseFunctionBodyExprValue(inner, base), hint);
+				ECast(rebaseFunctionBodyExprValue(inner, base, bodyStartIndex), hint);
 			case EUntyped(inner):
-				EUntyped(rebaseFunctionBodyExprValue(inner, base));
+				EUntyped(rebaseFunctionBodyExprValue(inner, base, bodyStartIndex));
 			case _:
 				expr;
 		};
@@ -508,6 +515,60 @@ class HxParser {
 		return new HxPos(pos.getIndex(), pos.getLine(), pos.getColumn() + delta);
 	}
 
+	static function offsetFunctionBodyExprColumns(expr:Null<HxExpr>, delta:Int):Null<HxExpr> {
+		if (expr == null)
+			return null;
+		return switch (expr) {
+			case ECall(callee, args):
+				ECall(offsetFunctionBodyExprColumns(callee, delta), [for (arg in args) offsetFunctionBodyExprColumns(arg, delta)]);
+			case EReturn(value):
+				EReturn(offsetFunctionBodyExprColumns(value, delta));
+			case EVars(declarations):
+				EVars([
+					for (declaration in declarations)
+						new HxExprVarDecl(declaration.getName(), declaration.getTypeHint(),
+							offsetFunctionBodyExprColumns(declaration.getInitializer(), delta), offsetFunctionBodyPosColumn(declaration.getPosition(), delta),
+							declaration.getIsFinal(), declaration.getIsStatic())
+				]);
+			case EField(object, field):
+				EField(offsetFunctionBodyExprColumns(object, delta), field);
+			case ENullSafeField(object, field):
+				ENullSafeField(offsetFunctionBodyExprColumns(object, delta), field);
+			case EMacroExpr(inner, wrappers):
+				EMacroExpr(offsetFunctionBodyExprColumns(inner, delta), wrappers);
+			case ELambda(arguments, body):
+				ELambda(arguments, offsetFunctionBodyExprColumns(body, delta));
+			case ESwitch(scrutinee, patterns, expressions):
+				ESwitch(offsetFunctionBodyExprColumns(scrutinee, delta), patterns, [for (branch in expressions) offsetFunctionBodyExprColumns(branch, delta)]);
+			case ENew(typePath, arguments):
+				ENew(typePath, [for (argument in arguments) offsetFunctionBodyExprColumns(argument, delta)]);
+			case EUnop(op, fixity, inner):
+				EUnop(op, fixity, offsetFunctionBodyExprColumns(inner, delta));
+			case EBinop(op, left, right):
+				EBinop(op, offsetFunctionBodyExprColumns(left, delta), offsetFunctionBodyExprColumns(right, delta));
+			case ETernary(condition, whenTrue, whenFalse):
+				ETernary(offsetFunctionBodyExprColumns(condition, delta), offsetFunctionBodyExprColumns(whenTrue, delta),
+					offsetFunctionBodyExprColumns(whenFalse, delta));
+			case EAnon(fieldNames, values):
+				EAnon(fieldNames, [for (value in values) offsetFunctionBodyExprColumns(value, delta)]);
+			case EArrayComprehension(name, iterable, guard, value):
+				EArrayComprehension(name, offsetFunctionBodyExprColumns(iterable, delta), offsetFunctionBodyExprColumns(guard, delta),
+					offsetFunctionBodyExprColumns(value, delta));
+			case EArrayDecl(values):
+				EArrayDecl([for (value in values) offsetFunctionBodyExprColumns(value, delta)]);
+			case EArrayAccess(array, index):
+				EArrayAccess(offsetFunctionBodyExprColumns(array, delta), offsetFunctionBodyExprColumns(index, delta));
+			case ERange(start, end):
+				ERange(offsetFunctionBodyExprColumns(start, delta), offsetFunctionBodyExprColumns(end, delta));
+			case ECast(inner, typeHint):
+				ECast(offsetFunctionBodyExprColumns(inner, delta), typeHint);
+			case EUntyped(inner):
+				EUntyped(offsetFunctionBodyExprColumns(inner, delta));
+			case _:
+				expr;
+		};
+	}
+
 	static function offsetFunctionBodyStmtColumns(stmt:HxStmt, delta:Int):HxStmt {
 		return switch (stmt) {
 			case SBlock(stmts, pos):
@@ -516,25 +577,28 @@ class HxParser {
 					shifted.push(offsetFunctionBodyStmtColumns(s, delta));
 				SBlock(shifted, offsetFunctionBodyPosColumn(pos, delta));
 			case SVar(name, typeHint, init, pos):
-				SVar(name, typeHint, init, offsetFunctionBodyPosColumn(pos, delta));
+				SVar(name, typeHint, offsetFunctionBodyExprColumns(init, delta), offsetFunctionBodyPosColumn(pos, delta));
 			case SIf(cond, thenBranch, elseBranch, pos):
 				var shiftedElse:Null<HxStmt> = null;
 				if (elseBranch != null)
 					shiftedElse = offsetFunctionBodyStmtColumns(elseBranch, delta);
-				SIf(cond, offsetFunctionBodyStmtColumns(thenBranch, delta), shiftedElse, offsetFunctionBodyPosColumn(pos, delta));
+				SIf(offsetFunctionBodyExprColumns(cond, delta), offsetFunctionBodyStmtColumns(thenBranch, delta), shiftedElse,
+					offsetFunctionBodyPosColumn(pos, delta));
 			case SForIn(name, iterable, body, pos):
-				SForIn(name, iterable, offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyPosColumn(pos, delta));
+				SForIn(name, offsetFunctionBodyExprColumns(iterable, delta), offsetFunctionBodyStmtColumns(body, delta),
+					offsetFunctionBodyPosColumn(pos, delta));
 			case SForKeyValue(keyName, valueName, iterable, body, pos):
-				SForKeyValue(keyName, valueName, iterable, offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyPosColumn(pos, delta));
+				SForKeyValue(keyName, valueName, offsetFunctionBodyExprColumns(iterable, delta), offsetFunctionBodyStmtColumns(body, delta),
+					offsetFunctionBodyPosColumn(pos, delta));
 			case SWhile(cond, body, pos):
-				SWhile(cond, offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyPosColumn(pos, delta));
+				SWhile(offsetFunctionBodyExprColumns(cond, delta), offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyPosColumn(pos, delta));
 			case SDoWhile(body, cond, pos):
-				SDoWhile(offsetFunctionBodyStmtColumns(body, delta), cond, offsetFunctionBodyPosColumn(pos, delta));
+				SDoWhile(offsetFunctionBodyStmtColumns(body, delta), offsetFunctionBodyExprColumns(cond, delta), offsetFunctionBodyPosColumn(pos, delta));
 			case SSwitch(scrutinee, patterns, bodies, pos):
 				final shiftedBodies = new Array<HxStmt>();
 				for (body in bodies)
 					shiftedBodies.push(offsetFunctionBodyStmtColumns(body, delta));
-				SSwitch(scrutinee, patterns, shiftedBodies, offsetFunctionBodyPosColumn(pos, delta));
+				SSwitch(offsetFunctionBodyExprColumns(scrutinee, delta), patterns, shiftedBodies, offsetFunctionBodyPosColumn(pos, delta));
 			case STry(tryBody, catches, pos):
 				final shiftedCatches = new Array<{name:String, typeHint:String, body:HxStmt}>();
 				for (c in catches)
@@ -545,13 +609,13 @@ class HxParser {
 			case SContinue(pos):
 				SContinue(offsetFunctionBodyPosColumn(pos, delta));
 			case SThrow(expr, pos):
-				SThrow(expr, offsetFunctionBodyPosColumn(pos, delta));
+				SThrow(offsetFunctionBodyExprColumns(expr, delta), offsetFunctionBodyPosColumn(pos, delta));
 			case SReturnVoid(pos):
 				SReturnVoid(offsetFunctionBodyPosColumn(pos, delta));
 			case SReturn(expr, pos):
-				SReturn(expr, offsetFunctionBodyPosColumn(pos, delta));
+				SReturn(offsetFunctionBodyExprColumns(expr, delta), offsetFunctionBodyPosColumn(pos, delta));
 			case SExpr(expr, pos):
-				SExpr(expr, offsetFunctionBodyPosColumn(pos, delta));
+				SExpr(offsetFunctionBodyExprColumns(expr, delta), offsetFunctionBodyPosColumn(pos, delta));
 		}
 	}
 
@@ -1535,7 +1599,11 @@ class HxParser {
 			case TLBrace:
 				parseBraceExpr();
 			case TKeyword(k):
-				if (k == KNull) {
+				if (k == KVar
+					|| k == KFinal
+					|| (k == KStatic && (peekKind().match(TKeyword(KVar)) || peekKind().match(TKeyword(KFinal))))) {
+					parseExpressionVariableDeclarations();
+				} else if (k == KNull) {
 					bump();
 					ENull;
 				} else if (k == KTrue) {
@@ -1835,6 +1903,13 @@ class HxParser {
 					ECall(applyDefaultedArgs(callee), [for (arg in callArgs) applyDefaultedArgs(arg)]);
 				case EReturn(value):
 					EReturn(value == null ? null : applyDefaultedArgs(value));
+				case EVars(declarations):
+					EVars([
+						for (declaration in declarations)
+							new HxExprVarDecl(declaration.getName(), declaration.getTypeHint(),
+								declaration.getInitializer() == null ? null : applyDefaultedArgs(declaration.getInitializer()), declaration.getPosition(),
+								declaration.getIsFinal(), declaration.getIsStatic())
+					]);
 				case EField(receiver, field):
 					EField(applyDefaultedArgs(receiver), field);
 				case ENullSafeField(receiver, field):
@@ -1972,6 +2047,13 @@ class HxParser {
 					ECall(applyDefaultedArgs(callee), [for (arg in callArgs) applyDefaultedArgs(arg)]);
 				case EReturn(value):
 					EReturn(value == null ? null : applyDefaultedArgs(value));
+				case EVars(declarations):
+					EVars([
+						for (declaration in declarations)
+							new HxExprVarDecl(declaration.getName(), declaration.getTypeHint(),
+								declaration.getInitializer() == null ? null : applyDefaultedArgs(declaration.getInitializer()), declaration.getPosition(),
+								declaration.getIsFinal(), declaration.getIsStatic())
+					]);
 				case EField(receiver, field):
 					EField(applyDefaultedArgs(receiver), field);
 				case ENullSafeField(receiver, field):
@@ -2513,6 +2595,45 @@ class HxParser {
 			case _:
 				false;
 		};
+	}
+
+	/**
+		Parse declarations passed to a macro as source syntax.
+
+		The outer call still owns its closing parenthesis. A comma followed by another
+		identifier belongs to the same Haxe `EVars` expression; malformed input fails
+		here instead of being reinterpreted as an unrelated runtime argument.
+	**/
+	function parseExpressionVariableDeclarations():HxExpr {
+		var isStatic = false;
+		if (cur.kind.match(TKeyword(KStatic))) {
+			isStatic = true;
+			bump();
+		}
+		final isFinal = cur.kind.match(TKeyword(KFinal));
+		if (!acceptKeyword(KVar) && !acceptKeyword(KFinal))
+			fail("Expected 'var' or 'final'");
+
+		final declarations = new Array<HxExprVarDecl>();
+		while (true) {
+			final position = cur.getPos();
+			final name = readIdent("variable name");
+			var typeHint = "";
+			if (cur.kind.match(TColon)) {
+				bump();
+				typeHint = readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TSemicolon) || cur.kind.match(TEof)
+					|| isOtherChar("="));
+			}
+			var initializer:Null<HxExpr> = null;
+			if (acceptOtherChar("="))
+				initializer = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace)
+					|| cur.kind.match(TEof));
+			declarations.push(new HxExprVarDecl(name, typeHint, initializer, position, isFinal, isStatic));
+			if (!cur.kind.match(TComma))
+				break;
+			bump();
+		}
+		return EVars(declarations);
 	}
 
 	function parseBraceExpr():HxExpr {

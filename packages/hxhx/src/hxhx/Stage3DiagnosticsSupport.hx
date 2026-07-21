@@ -45,6 +45,11 @@ class Stage3DiagnosticsSupport {
 				for (arg in args)
 					count += countUnsupportedExprsInExpr(arg);
 				count;
+			case EVars(declarations):
+				var count = 0;
+				for (declaration in declarations)
+					count += countUnsupportedExprsInExpr(declaration.getInitializer());
+				count;
 			case ELambda(_args, body):
 				countUnsupportedExprsInExpr(body);
 			case ETryCatchRaw(_raw):
@@ -95,6 +100,9 @@ class Stage3DiagnosticsSupport {
 				collectUnsupportedExprRawInExpr(callee, out, max);
 				for (arg in args)
 					collectUnsupportedExprRawInExpr(arg, out, max);
+			case EVars(declarations):
+				for (declaration in declarations)
+					collectUnsupportedExprRawInExpr(declaration.getInitializer(), out, max);
 			case ELambda(_args, body):
 				collectUnsupportedExprRawInExpr(body, out, max);
 			case ETryCatchRaw(_raw):

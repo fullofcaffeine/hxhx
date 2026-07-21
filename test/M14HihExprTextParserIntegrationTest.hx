@@ -60,6 +60,51 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("value-less return macro argument lost its structural return node");
 		}
+		final variableDeclarationMacroArguments = HxParser.parseFunctionBodyText([
+			"var nullable:Null<String> = null;",
+			"shouldFail(var value:String = nullable);",
+			"shouldFail(var value:String = null);"
+		].join("\n"));
+		assertTrue(variableDeclarationMacroArguments.length == 3, "variable declaration macro fixture should remain three statements");
+		switch (variableDeclarationMacroArguments[0]) {
+			case SVar("nullable", "Null<String>", ENull, _):
+			case _:
+				fail("ordinary variable declaration no longer uses the statement representation");
+		}
+		switch (variableDeclarationMacroArguments[1]) {
+			case SExpr(ECall(EIdent("shouldFail"), [EVars([declaration])]), _):
+				assertTrue(declaration.getName() == "value", "macro declaration lost its name");
+				assertTrue(declaration.getTypeHint() == "String", "macro declaration lost its written type");
+				assertTrue(declaration.getPosition().getLine() == 3,
+					"macro declaration lost its wrapped body source line: " + declaration.getPosition().getLine());
+				switch (declaration.getInitializer()) {
+					case EIdent("nullable"):
+					case _:
+						fail("macro declaration lost its identifier initializer");
+				}
+			case _:
+				fail("variable declaration macro argument was not preserved structurally");
+		}
+		switch (variableDeclarationMacroArguments[2]) {
+			case SExpr(ECall(EIdent("shouldFail"), [EVars([declaration])]), _):
+				switch (declaration.getInitializer()) {
+					case ENull:
+					case _:
+						fail("macro declaration lost its null initializer");
+				}
+			case _:
+				fail("second variable declaration macro argument was not preserved structurally");
+		}
+		final groupedFinalDeclarations = HxParser.parseFunctionBodyText("shouldFail(final first:Int = 1, second:String = \"two\");");
+		switch (groupedFinalDeclarations) {
+			case [SExpr(ECall(EIdent("shouldFail"), [EVars(declarations)]), _)]:
+				assertTrue(declarations.length == 2, "grouped macro declarations lost a trailing declaration");
+				assertTrue(declarations[0].getIsFinal() && declarations[1].getIsFinal(), "grouped final declarations lost their modifier");
+				assertTrue(declarations[1].getName() == "second" && declarations[1].getTypeHint() == "String",
+					"grouped macro declaration lost its name or type");
+			case _:
+				fail("grouped final declarations were not preserved as one expression");
+		}
 		var spacedQuestionDotFailure:Null<String> = null;
 		try {
 			HxParser.parseExprText("unexpectedStrings ? .copy()");

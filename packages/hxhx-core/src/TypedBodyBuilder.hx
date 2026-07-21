@@ -3,8 +3,9 @@
 
 	The builder owns the one syntax-to-typed-tree conversion. TyperStage supplies
 	type and exact-call resolvers; synthetic test modules may use the conservative
-	fallback resolver. Nested source positions stay null because `HxExpr` does not
-	yet retain exact positions.
+	fallback resolver. Most nested `HxExpr` nodes do not yet retain exact positions;
+	expression-level variable declarations are an explicit exception because macro
+	diagnostics need their declaration location.
 **/
 class TypedBodyBuilder {
 	static function exactPosition(position:HxPos):Null<HxPos> {
@@ -28,6 +29,7 @@ class TypedBodyBuilder {
 			case EMacroExpr(_, _): TyType.fromHintText("haxe.macro.Expr");
 			case EMacroType(_): TyType.fromHintText("haxe.macro.ComplexType");
 			case EReturn(_): TyType.fromHintText("Void");
+			case EVars(_): TyType.fromHintText("Void");
 			case _: TyType.unknown();
 		};
 	}
@@ -437,6 +439,19 @@ class TypedBodyBuilder {
 			case EReturn(inner):
 				TypedExpr.returnExpr(inner == null ? null : buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType,
 					position);
+			case EVars(declarations):
+				final typedDeclarations = new Array<TypedExpr>();
+				for (declaration in declarations) {
+					final declarationPosition = exactPosition(declaration.getPosition());
+					final initializer = declaration.getInitializer();
+					final typedInitializer = initializer == null ? null : buildExpr(initializer, null, declaration.getPosition(), environment, typeResolver,
+						callResolver);
+					final writtenType = StringTools.trim(declaration.getTypeHint());
+					final declarationType = writtenType.length > 0 ? TyType.fromHintText(writtenType) : (typedInitializer == null ? TyType.unknown() : typedInitializer.getType());
+					typedDeclarations.push(TypedExpr.variableDeclaration(declaration.getName(), declaration.getTypeHint(), typedInitializer,
+						declaration.getIsFinal(), declaration.getIsStatic(), declarationType, declarationPosition));
+				}
+				TypedExpr.variableDeclarations(typedDeclarations, nodeType, position);
 			case EMacroExpr(inner, wrappers):
 				TypedExpr.macroExpr(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver),
 					wrappers == null ? [] : wrappers.copy(), nodeType, position);

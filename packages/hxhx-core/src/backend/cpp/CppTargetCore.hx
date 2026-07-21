@@ -11832,6 +11832,10 @@ class CppTargetCore {
 				CppMacroExpr.macroExpr(inner, wrappers);
 			case EMacroType(typeText):
 				macroTypeExpr(typeText);
+			case EReturn(_):
+				throw "C++ backend: expression-position return must be consumed by macro expansion before emission";
+			case EVars(_):
+				throw "C++ backend: expression-position variable declarations must be consumed by macro expansion before emission";
 			case ESwitch(scrutinee, patterns, exprs):
 				switchExpr(scrutinee, patterns, exprs, scope);
 			case ELambda(args, body):
@@ -22359,6 +22363,7 @@ class CppTargetCore {
 			case ENullSafeField(receiver, field): "ENullSafeField(" + exprKind(receiver) + "?." + field + ")";
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
 			case EReturn(_): "EReturn";
+			case EVars(_): "EVars";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(_): "EMacroType";
 			case ELambda(_, _): "ELambda";

@@ -354,6 +354,36 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		}
 	}
 
+	static function assertNativeDecodePreservesVariableDeclarationMacroArgument():Void {
+		final source = [
+			"class TestStrict {",
+			"  function check():Void {",
+			"    shouldFail(var value:String = nullable);",
+			"  }",
+			"}",
+		].join("\n");
+		final body = "shouldFail(var value:String = nullable);";
+		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("check|private|0||Void||||", body, source.indexOf(body), source);
+		switch (HxFunctionDecl.getBody(fn)) {
+			case [SExpr(ECall(EIdent("shouldFail"), [EVars([declaration])]), _)]:
+				if (declaration.getName() != "value"
+					|| declaration.getTypeHint() != "String"
+					|| declaration.getPosition().getLine() != 3
+					|| declaration.getPosition().getColumn() != 20)
+					fail("native decode changed the variable declaration fields or source position: "
+						+ declaration.getPosition().getLine()
+						+ ":"
+						+ declaration.getPosition().getColumn());
+				switch (declaration.getInitializer()) {
+					case EIdent("nullable"):
+					case _:
+						fail("native decode lost the variable declaration initializer");
+				}
+			case body:
+				fail("native decode lost the variable declaration inside the macro argument: " + Std.string(body));
+		}
+	}
+
 	static function main() {
 		assertBootstrapSnapshotCarriesGenericMethodRepair();
 		assertBootstrapNativeParserKeepsNestedTypeHintCommas();
@@ -367,6 +397,7 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		assertNativeDecodeRecoversConstrainedGenericArgsFromSource();
 		assertNativeDecodeDoesNotBorrowArgsFromPrefixNamedFunction();
 		assertNativeDecodePreservesReturnMacroArgument();
+		assertNativeDecodePreservesVariableDeclarationMacroArgument();
 		assertScannedGenericNamedFunctionArg();
 		assertScannedHelpersPreserveConstrainedGenericRelations();
 

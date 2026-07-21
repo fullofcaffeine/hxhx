@@ -1124,6 +1124,13 @@ class TyperStage {
 				if (value != null)
 					inferExprType(value, scope, ctx, pos);
 				TyType.fromHintText("Void");
+			case EVars(declarations):
+				for (declaration in declarations) {
+					final initializer = declaration.getInitializer();
+					if (initializer != null)
+						inferExprType(initializer, scope, ctx, declaration.getPosition());
+				}
+				TyType.fromHintText("Void");
 			case ELambda(argNames, body):
 				// Stage 3 bring-up: type the body in a nested scope that:
 				// - introduces lambda args (shadowing outer locals/params),

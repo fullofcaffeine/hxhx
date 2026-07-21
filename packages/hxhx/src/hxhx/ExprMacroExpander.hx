@@ -240,6 +240,19 @@ class ExprMacroExpander {
 					final rewritten = rewriteExpr(value, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 					rewritten != value ? EReturn(rewritten) : e;
 				}
+			case EVars(declarations):
+				var changed = false;
+				final rewrittenDeclarations = new Array<HxExprVarDecl>();
+				for (declaration in declarations) {
+					final initializer = declaration.getInitializer();
+					final rewritten = initializer == null ? null : rewriteExpr(initializer, session, allowed, allowKeys, importMap, modulePkg, trace, depth,
+						onExpand);
+					if (rewritten != initializer)
+						changed = true;
+					rewrittenDeclarations.push(new HxExprVarDecl(declaration.getName(), declaration.getTypeHint(), rewritten, declaration.getPosition(),
+						declaration.getIsFinal(), declaration.getIsStatic()));
+				}
+				changed ? EVars(rewrittenDeclarations) : e;
 			case EField(obj, field):
 				final ro = rewriteExpr(obj, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				ro != obj ? EField(ro, field) : e;
@@ -381,6 +394,7 @@ class ExprMacroExpander {
 			case ENullSafeField(_, _): "NullSafeField";
 			case ECall(_, _): "Call";
 			case EReturn(_): "Return";
+			case EVars(_): "Vars";
 			case EUnop(_, _, _): "Unop";
 			case EBinop(_, _, _): "Binop";
 			case ETernary(_, _, _): "Ternary";

@@ -158,6 +158,42 @@ class M14TypedBodyBoundaryIntegrationTest {
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
 	}
 
+	static function assertVariableDeclarationMacroArgumentStructure():Void {
+		final filePath = "checks/VariableDeclarationMacroArgument.hx";
+		final source = [
+			"class VariableDeclarationMacroArgument {",
+			"  function check(nullable:Null<String>):Void {",
+			"    shouldFail(var value:String = nullable);",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(source, filePath);
+		final resolved = new ResolvedModule("VariableDeclarationMacroArgument", filePath, parsed);
+		final index = TyperIndex.build([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index);
+		final body = findFunction(findClass(typed, "VariableDeclarationMacroArgument"), "check").getBody();
+		final call = body.getStatements()[0].getExpressions()[0];
+		assertTrue(call.getTag() == TypedExprTag.Call, "shouldFail declaration call was not kept as a structural typed call");
+		final declarationList = call.getExpressions()[1];
+		assertTrue(declarationList.getTag() == TypedExprTag.VariableDeclarations, "variable declaration macro argument lost its typed declaration list");
+		final declaration = declarationList.getExpressions()[0];
+		assertTrue(declaration.getTag() == TypedExprTag.VariableDeclaration, "typed declaration list lost its declaration child");
+		assertTrue(declaration.getTexts()[0] == "value"
+			&& declaration.getTexts()[1] == "String", "typed variable declaration lost its name or written type");
+		assertTrue(declaration.getType().getDisplay() == "String", "typed variable declaration lost its declared semantic type");
+		assertTrue(declaration.getPosition() != null
+			&& declaration.getPosition().getLine() == 3, "typed variable declaration lost its exact source line");
+		assertTrue(declaration.getExpressions()[0].getTag() == TypedExprTag.LocalRead, "typed variable declaration lost its recursive initializer child");
+		switch (TypedBodySource.expression(declarationList)) {
+			case EVars([projected]):
+				assertTrue(projected.getName() == "value" && projected.getTypeHint() == "String",
+					"typed-body source projection changed the variable declaration");
+			case _:
+				throw "typed-body source projection lost the expression-level declaration list";
+		}
+		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
+	}
+
 	static function assertLoweringNodeSet():Void {
 		final position = new HxPos(0, 1, 1);
 		final intType = TyType.fromHintText("Int");
@@ -625,6 +661,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertMethodGenericResultSpecialization();
 		assertOpaqueGuard();
 		assertReturnMacroArgumentStructure();
+		assertVariableDeclarationMacroArgumentStructure();
 		assertLifecycleGuard(typed, mainFunction);
 	}
 }

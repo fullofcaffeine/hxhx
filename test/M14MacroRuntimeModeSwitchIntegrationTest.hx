@@ -143,6 +143,28 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 			case body:
 				fail("expression macro expansion lost the return wrapper around its expanded child: " + Std.string(body));
 		}
+		final nestedVariableSource = [
+			"class NestedVariableMacroArgument {",
+			"  function run():Void {",
+			"    shouldFail(var value:String = hxhxmacros.ExprMacroShim.hello());",
+			"  }",
+			"}",
+		].join("\n");
+		final nestedVariableParsed = ParserStage.parse(nestedVariableSource, "NestedVariableMacroArgument.hx");
+		final nestedVariableResolved = new ResolvedModule("NestedVariableMacroArgument", "NestedVariableMacroArgument.hx", nestedVariableParsed);
+		final nestedVariableExpansion = ExprMacroExpander.expandResolvedModules([nestedVariableResolved], generated, ["hxhxmacros.ExprMacroShim.hello()"]);
+		assertIntEq("nested variable initializer macro expansion count", nestedVariableExpansion.expandedCount, 1);
+		final nestedVariableClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(nestedVariableExpansion.modules[0]).getDecl());
+		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(nestedVariableClass)[0])) {
+			case [SExpr(ECall(EIdent("shouldFail"), [EVars([declaration])]), _)]:
+				switch (declaration.getInitializer()) {
+					case EString("HELLO"):
+					case _:
+						fail("expression macro expansion did not rewrite the declaration initializer");
+				}
+			case body:
+				fail("expression macro expansion lost the declaration wrapper around its expanded child: " + Std.string(body));
+		}
 		assertEq("args entrypoint", generated.run('hxhxmacros.ArgsMacros.setArg("ok")'), "ok");
 		assertEq("arg define", MacroState.definedValue("HXHX_ARG"), "ok");
 		assertEq("external entrypoint", generated.run("hxhxmacros.ExternalMacros.external()"), "external=ok");

@@ -96,6 +96,12 @@ class TypedBodyInvariant {
 		}
 		if (expression.getTag() == ReturnExpr && expression.getExpressions().length > 1)
 			throw "typed return expression has more than one value in " + owner;
+		if (expression.getTag() == VariableDeclarations)
+			for (declaration in expression.getExpressions())
+				if (declaration.getTag() != VariableDeclaration)
+					throw "typed variable declaration list contains a non-declaration child in " + owner;
+		if (expression.getTag() == VariableDeclaration && (expression.getTexts().length != 2 || expression.getExpressions().length > 1))
+			throw "typed variable declaration has an invalid structural payload in " + owner;
 		if (expression.getTag() == Opaque) {
 			final texts = expression.getTexts();
 			final raw = texts.length == 0 ? "" : texts[0];
