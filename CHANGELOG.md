@@ -1,3 +1,10 @@
+## [0.23.10](https://github.com/fullofcaffeine/hxhx/compare/v0.23.9...v0.23.10) (2026-07-21)
+
+
+### Bug Fixes
+
+* **ci:** resolve the closed Gate 1 incident ([083d49b](https://github.com/fullofcaffeine/hxhx/commit/083d49b177742d9f4c728e71b162dd683d007132))
+
 ## [0.23.9](https://github.com/fullofcaffeine/hxhx/compare/v0.23.8...v0.23.9) (2026-07-21)
 
 
