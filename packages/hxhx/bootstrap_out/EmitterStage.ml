@@ -4513,10 +4513,10 @@ let patchStage3MacroContextLoadShimForStage3 = fun outAbs -> ignore (try let shi
 ) with
   | HxRuntime.Hx_return __ret_2352 -> Obj.obj __ret_2352)
 
-let stage3Int64AssignmentRhs = fun lhsType rhs rendered tyByIdent -> try let __fallback_result_3301 = (
-  ignore (if not (stage3IsInt64TypeName (lhsType : string)) then raise (HxRuntime.Hx_return (Obj.repr (rendered : string))) else ());
+let stage3Int64CarrierValue = fun expectedType expression rendered tyByIdent -> try let __fallback_result_3301 = (
+  ignore (if not (stage3IsInt64TypeName (expectedType : string)) then raise (HxRuntime.Hx_return (Obj.repr (rendered : string))) else ());
   let tempBool = ref (false : bool) in (
-    ignore (match rhs with
+    ignore (match expression with
       | HxExpr.EInt _p0 -> (
         ignore _p0;
         let __assign_3291 = true in (
@@ -7727,7 +7727,7 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                 ) else if stage3IsFloatParamHint (hint : string) then let __assign_819 = (exprToOcamlAsFloatValueStage3 (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
                                   tempResult2 := __assign_819;
                                   __assign_819
-                                ) else let __assign_820 = (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
+                                ) else let __assign_820 = (stage3Int64CarrierValue (hint : string) (Obj.magic arg) (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) (Obj.repr tyByIdent) : string) in (
                                   tempResult2 := __assign_820;
                                   __assign_820
                                 ));
@@ -9417,7 +9417,7 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                 ) else if stage3IsFloatParamHint (hint : string) then let __assign_1013 = (exprToOcamlAsFloatValueStage3 (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
                                   tempResult4 := __assign_1013;
                                   __assign_1013
-                                ) else let __assign_1014 = (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
+                                ) else let __assign_1014 = (stage3Int64CarrierValue (hint : string) (Obj.magic arg) (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) (Obj.repr tyByIdent) : string) in (
                                   tempResult4 := __assign_1014;
                                   __assign_1014
                                 ));
@@ -11107,7 +11107,7 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                 ) else if stage3IsFloatParamHint (hint : string) then let __assign_1207 = (exprToOcamlAsFloatValueStage3 (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
                                   tempResult6 := __assign_1207;
                                   __assign_1207
-                                ) else let __assign_1208 = (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
+                                ) else let __assign_1208 = (stage3Int64CarrierValue (hint : string) (Obj.magic arg) (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) (Obj.repr tyByIdent) : string) in (
                                   tempResult6 := __assign_1208;
                                   __assign_1208
                                 ));
@@ -14654,7 +14654,7 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                               tempMaybeString2 := __assign_1973;
                               __assign_1973
                             )
-                            | "=" -> let __assign_1974 = Obj.magic (stage3Int64AssignmentRhs (lhsTy : string) (Obj.magic rhs) (returnExprToOcaml (Obj.magic rhs) allowedValueIdents (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.repr arityByIdent) (Obj.repr erasedReturnTyCtx) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) (Obj.repr tyCtx) : string) in (
+                            | "=" -> let __assign_1974 = Obj.magic (stage3Int64CarrierValue (lhsTy : string) (Obj.magic rhs) (returnExprToOcaml (Obj.magic rhs) allowedValueIdents (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.repr arityByIdent) (Obj.repr erasedReturnTyCtx) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) (Obj.repr tyCtx) : string) in (
                               tempMaybeString2 := __assign_1974;
                               __assign_1974
                             )
