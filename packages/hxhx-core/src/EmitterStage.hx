@@ -1250,18 +1250,40 @@ class EmitterStage {
 	}
 
 	/**
-		Lowers one nested expression while its generated local names are visible.
+		Return the declared parameter types from an explicitly typed function value.
+
+		Typed-body projection represents a compiler-created temporary as an immediately
+		called function and attaches the temporary's Haxe type to that function. Native
+		Stage3 may use those explicit types when its older optional map argument is not
+		readable. An ordinary untyped function is deliberately excluded: guessing that
+		all function parameters have one OCaml representation can make a Haxe `Dynamic`
+		value incorrectly behave like both an OCaml `bool` and an OCaml `int`.
+	**/
+	static function stage3TypedLambdaArgumentTypes(typeHint:String, argumentCount:Int):Null<Array<TyType>> {
+		final functionType = TyType.fromHintText(typeHint);
+		if (!functionType.isFunction())
+			return null;
+		final arguments = functionType.getFunctionArguments();
+		if (arguments.length != argumentCount)
+			return null;
+		for (argument in arguments)
+			if (argument == null || argument.isUnknown() || argument.isDynamic())
+				return null;
+		return arguments;
+	}
+
+	/**
+		Lower one explicitly typed nested function while its parameters are visible.
 
 		Native Stage3 currently receives some optional map arguments through an erased
-		OCaml boundary. Statement-local entries are the stable fallback already used
-		by identifier lookup, so generated lambda and catch names are added there for
-		the duration of the recursive lowering call. The previous scope is restored on
-		both success and failure so compiler-server requests cannot leak names.
+		OCaml boundary. Statement-local entries are the stable fallback already used by
+		identifier lookup, so parameters whose concrete types came from the function's
+		type ascription are added for the recursive lowering call. The previous scope
+		is restored on success or failure so compiler-server requests cannot leak names.
 	**/
-	static function withStage3TemporaryTypeEntries(names:Array<String>, t:TyType, render:Void->String):String {
+	static function withStage3TemporaryTypeEntries(names:Array<String>, types:Array<TyType>, render:Void->String):String {
 		final previous = currentStmtTyEntries;
 		final next = new Array<_LocalTyEntry>();
-		final typeText = t == null ? "Dynamic" : t.toString();
 		function containsName(name:String):Bool {
 			for (entry in next)
 				if (entry.name == name)
@@ -1269,9 +1291,12 @@ class EmitterStage {
 			return false;
 		}
 		if (names != null)
-			for (name in names)
-				if (name != null && name.length > 0 && name != "_" && !containsName(name))
-					next.push(new _LocalTyEntry(name, typeText));
+			for (index in 0...names.length) {
+				final name = names[index];
+				final type = types != null && index < types.length ? types[index] : null;
+				if (name != null && name.length > 0 && name != "_" && type != null && !containsName(name))
+					next.push(new _LocalTyEntry(name, type.toString()));
+			}
 		if (previous != null)
 			for (entry in previous)
 				if (entry != null && !containsName(entry.name))
@@ -2239,9 +2264,9 @@ class EmitterStage {
 				return switch (catches[0]) {
 					case EArrayDecl([EString(sourceName), EString(_), ELambda(catchArgs, catchBody)]) if (catchArgs.length == 1):
 						final name = catchArgs[0].length == 0 ? sourceName : catchArgs[0];
-						final catchCode = withStage3TemporaryTypeEntries([name], TyType.fromHintText("Dynamic"),
-							() -> exprToOcaml(catchBody, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee));
+						final catchTypes = extendTyByIdentManyForStage3(tyByIdent, [name], TyType.fromHintText("Dynamic"));
+						final catchCode = exprToOcaml(catchBody, arityByIdent, catchTypes, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							callSigByCallee);
 						"HxRuntime.hx_try (fun () -> "
 						+ tryCode
 						+ ") (fun "
@@ -2256,11 +2281,25 @@ class EmitterStage {
 				throw "stage3 emitter: malformed structural __hxhx_try expression";
 			case ECall(EIdent("__hxhx_throw"), _):
 				throw "stage3 emitter: malformed structural __hxhx_throw expression";
+			case ECast(ELambda(args, body), typeHint):
+				final argumentTypes = stage3TypedLambdaArgumentTypes(typeHint, args.length);
+				if (argumentTypes != null) {
+					final ocamlArgs = args.map(ocamlValueIdent).join(" ");
+					final ty2 = extendTyByIdentManyForStage3(tyByIdent, args, TyType.fromHintText("Dynamic"));
+					for (index in 0...args.length)
+						ty2.set(args[index], argumentTypes[index]);
+					final bodyCode = withStage3TemporaryTypeEntries(args, argumentTypes,
+						() -> exprToOcaml(body, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+					return "(fun " + (ocamlArgs.length == 0 ? "_" : ocamlArgs) + " -> " + bodyCode + ")";
+				}
 			case ELambda(args, body):
 				final ocamlArgs = args.map(ocamlValueIdent).join(" ");
-				final bodyCode = withStage3TemporaryTypeEntries(args, TyType.fromHintText("Dynamic"),
-					() -> exprToOcaml(body, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
-				return "(fun " + (ocamlArgs.length == 0 ? "_" : ocamlArgs) + " -> " + bodyCode + ")";
+				final ty2 = extendTyByIdentManyForStage3(tyByIdent, args, TyType.fromHintText("Dynamic"));
+				return "(fun "
+					+ (ocamlArgs.length == 0 ? "_" : ocamlArgs)
+					+ " -> "
+					+ exprToOcaml(body, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ")";
 			case ETryCatchRaw(_raw):
 				return "(Obj.magic 0)";
 			case _:

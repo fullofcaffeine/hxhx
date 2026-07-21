@@ -40,6 +40,14 @@ class M14Stage3Int64AddIntIntegrationTest {
 	}
 
 	static function main():Void {
+		final typedTemporaryArguments = @:privateAccess EmitterStage.stage3TypedLambdaArgumentTypes("(haxe.Int64, Int)->Dynamic", 2);
+		assertTrue(typedTemporaryArguments != null && typedTemporaryArguments.length == 2,
+			"Stage3 did not recover the concrete parameter types carried by a typed temporary function.");
+		assertTrue(typedTemporaryArguments[0].toString() == "haxe.Int64" && typedTemporaryArguments[1].toString() == "Int",
+			"Stage3 changed the declared types of a typed temporary function.");
+		assertTrue(@:privateAccess EmitterStage.stage3TypedLambdaArgumentTypes("(Dynamic)->Dynamic", 1) == null,
+			"Stage3 must not guess one native representation for an ordinary Dynamic function parameter.");
+
 		final sourcePath = "test/oracle/cpp_int64_add_int_seed/src/Main.hx";
 		final source = HxConditionalCompilation.filterSource(File.getContent(sourcePath), new StringMap<String>());
 		final int64Source = [
