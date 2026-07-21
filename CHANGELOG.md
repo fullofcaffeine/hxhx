@@ -1,3 +1,14 @@
+## [0.23.7](https://github.com/fullofcaffeine/hxhx/compare/v0.23.6...v0.23.7) (2026-07-21)
+
+
+### Bug Fixes
+
+* **bootstrap:** align server with selected Haxe ([5503f89](https://github.com/fullofcaffeine/hxhx/commit/5503f891bd5a2d223a16d68b61bcc97e8a4ae180))
+* **bootstrap:** exclude local report receipts ([743ef98](https://github.com/fullofcaffeine/hxhx/commit/743ef98434dcb3a2592acdf0476fe99d8864d016))
+* **stage3:** keep intrinsic dispatch typed ([cdb41c5](https://github.com/fullofcaffeine/hxhx/commit/cdb41c52ec5a6fbbfb3b124da37fbdeae5a0028a))
+* **stage3:** preserve native temporary type scopes ([d56cda7](https://github.com/fullofcaffeine/hxhx/commit/d56cda70c5a4a47d3aa47361466af2ae97fc8d7f))
+* **stage3:** scope generated lambda names explicitly ([7dcdee3](https://github.com/fullofcaffeine/hxhx/commit/7dcdee3dc65d1367a929aeb72e9704a9d0681a94))
+
 ## [0.23.6](https://github.com/fullofcaffeine/hxhx/compare/v0.23.5...v0.23.6) (2026-07-21)
 
 
