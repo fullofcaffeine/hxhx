@@ -1169,9 +1169,19 @@ class EmitterStage {
 		return arity;
 	}
 
+	/**
+		Look up the declared parameters for one emitted call target.
+
+		This boundary deliberately uses the typed `Map` API. The generic reflection
+		helper used by older bring-up paths cannot discover `Map.get` after hxhx itself
+		has been compiled to native OCaml, even though the key is present. A direct lookup
+		therefore keeps the same signature available in both the development compiler and
+		the stage0-free native compiler.
+	**/
 	static function callSigForStage3(callee:String, ?callSigByCallee:Map<String, EmitterCallSig>):Null<EmitterCallSig> {
-		final resolved = mapGetRaw(callSigByCallee, callee);
-		return resolved == null ? null : cast resolved;
+		if (callSigByCallee == null || callee == null)
+			return null;
+		return callSigByCallee.get(callee);
 	}
 
 	static function resolveQualifiedModuleCallSigByEmittedModuleNameForStage3(moduleName:String, field:String, loweredField:String,
