@@ -45,6 +45,7 @@ class StaticStoragePlanFixture {
 			declarationOrder: order,
 			initializationOrder: order,
 			hasInitializer: true,
+			initializerDependencyKeys: [],
 			representationId: declarationSite == OcamlStaticStorageDeclarationSite.ModulePrelude ? "representation:Int:static-field" : null
 		});
 	}
@@ -67,6 +68,7 @@ class StaticStoragePlanFixture {
 			declarationOrder: 2,
 			initializationOrder: 2,
 			hasInitializer: false,
+			initializerDependencyKeys: [],
 			representationId: null
 		});
 	}
@@ -121,6 +123,52 @@ class StaticStoragePlanFixture {
 		unavailable.seal();
 		assertTrue(!unavailable.isVisibleFrom("Main", "Main", "late", "Main", "Worker"),
 			"a cell declared with a later owner must not be admitted from an earlier type");
+
+		final cycle = new OcamlStaticStoragePlan();
+		cycle.beginProgram("program:static-storage-cycle");
+		cycle.registerTypeOrder("A", "A", 0);
+		cycle.registerTypeOrder("B", "B", 0);
+		cycle.register({
+			moduleId: "A",
+			ownerTypeName: "A",
+			fieldName: "value",
+			targetValueName: "value",
+			semanticTypeId: "Int",
+			carrierTypeId: "int",
+			fieldType: Context.typeof(macro(0 : Int)),
+			carrierType: OcamlTypeExpr.TIdent("int"),
+			kind: OcamlStaticStorageKind.Variable,
+			declarationSite: OcamlStaticStorageDeclarationSite.OwnerBinding,
+			declarationTypeName: null,
+			declarationTypeOrder: -1,
+			ownerTypeOrder: 0,
+			declarationOrder: 0,
+			initializationOrder: 0,
+			hasInitializer: true,
+			initializerDependencyKeys: [OcamlStaticStoragePlan.key("B", "B", "value")],
+			representationId: null
+		});
+		cycle.register({
+			moduleId: "B",
+			ownerTypeName: "B",
+			fieldName: "value",
+			targetValueName: "value",
+			semanticTypeId: "Int",
+			carrierTypeId: "int",
+			fieldType: Context.typeof(macro(0 : Int)),
+			carrierType: OcamlTypeExpr.TIdent("int"),
+			kind: OcamlStaticStorageKind.Variable,
+			declarationSite: OcamlStaticStorageDeclarationSite.OwnerBinding,
+			declarationTypeName: null,
+			declarationTypeOrder: -1,
+			ownerTypeOrder: 0,
+			declarationOrder: 0,
+			initializationOrder: 0,
+			hasInitializer: true,
+			initializerDependencyKeys: [OcamlStaticStoragePlan.key("A", "A", "value")],
+			representationId: null
+		});
+		expectFailure("initializer cycle", "initializer-cycle", () -> cycle.seal());
 
 		final repeated = new OcamlStaticStoragePlan();
 		repeated.beginProgram("program:static-storage-fixture");

@@ -66,7 +66,7 @@ try {
 	const appInspect = runCli(['inspect', '--project', appRoot, '--output', 'out', '--require-lowering', '--json'])
 	assert.strictEqual(appInspect.status, 0, appInspect.stderr || appInspect.stdout)
 	const appInspection = JSON.parse(appInspect.stdout)
-	assert.strictEqual(appInspection.schemaVersion, 4)
+	assert.strictEqual(appInspection.schemaVersion, 5)
 	assert.strictEqual(appInspection.summary.valid, true)
 	assert.strictEqual(appInspection.artifactManifest.status, 'present')
 	assert.strictEqual(appInspection.artifactManifest.completeForSourceBundle, false)
@@ -81,6 +81,7 @@ try {
 	assert.strictEqual(appInspection.representation.status, 'present')
 	assert.strictEqual(appInspection.representation.scope, 'exact-non-null-int-v1')
 	assert(appInspection.summary.representationDecisionCount > 0)
+	assert.strictEqual(appInspection.lowering.staticStorage.length, appInspection.summary.staticStorageCount)
 	assert(!appInspection.unavailable.some(capability => capability.id === 'program-representation'))
 	assert.strictEqual(appInspection.runtime.semanticManifest, false)
 

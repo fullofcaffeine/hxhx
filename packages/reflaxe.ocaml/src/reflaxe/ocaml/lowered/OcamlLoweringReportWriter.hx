@@ -87,7 +87,7 @@ class OcamlLoweringReportWriter {
 		final canonicalRequirements = haxe.Json.stringify(includedRequirements);
 		final canonicalRepresentations = haxe.Json.stringify(sortedRepresentations);
 		final report = {
-			schemaVersion: 8,
+			schemaVersion: 9,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
 			representationScope: "exact-non-null-int-v1",

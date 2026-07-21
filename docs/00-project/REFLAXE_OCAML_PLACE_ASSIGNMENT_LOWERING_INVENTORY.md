@@ -373,6 +373,16 @@ repeat builds. Static `Float +=` and postfix `++` controls remain on the legacy
 expression path and add no typed operation plans, but their shared cell still
 comes from the pre-emission static-storage inventory.
 
+The storage inventory also records direct reads of other mutable statics from
+each initializer. A cross-module oracle fixture proves that Haxe 4.3.7's
+interpreter, JavaScript, and Neko routes all initialize the dependency first;
+the generated native OCaml program produces the same events. If an initializer
+throws, both the interpreter and native OCaml abort before `main`. Cycles do not
+have one portable upstream result—JavaScript produces `NaN`, while the
+interpreter and Neko fail—so the portable OCaml target now reports
+`ocaml-static-storage:initializer-cycle` before generating or compiling OCaml
+instead of silently selecting a fourth behavior.
+
 The focused executable fixture
 `test/portable/fixtures/place_array_simple_assign` proves the accepted
 `array,index,rhs` order, one store, the assigned result, direct typed HxArray

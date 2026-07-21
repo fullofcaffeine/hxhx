@@ -42,6 +42,7 @@ typedef OcamlStaticStorageSelection = {
 	final declarationOrder:Int;
 	final initializationOrder:Int;
 	final hasInitializer:Bool;
+	final initializerDependencyKeys:Array<String>;
 	final representationId:Null<String>;
 }
 
@@ -76,6 +77,7 @@ typedef OcamlStaticStorageReportEntry = {
 	final declarationOrder:Int;
 	final initializationOrder:Int;
 	final hasInitializer:Bool;
+	final initializerDependencyKeys:Array<String>;
 	final representationId:Null<String>;
 }
 
@@ -90,7 +92,7 @@ typedef OcamlStaticStorageReportEntry = {
 	late forward declaration.
 **/
 class OcamlStaticStoragePlan {
-	public static inline final MODEL_REVISION = "ocaml-static-storage-v1";
+	public static inline final MODEL_REVISION = "ocaml-static-storage-v2";
 
 	var currentProgramRevision:Null<String> = null;
 	var sealed:Bool = false;
@@ -152,7 +154,8 @@ class OcamlStaticStoragePlan {
 		if (existingTargetOwner != null && existingTargetOwner != entryKey) {
 			throw 'reflaxe.ocaml [ocaml-static-storage:target-name-collision]: "$targetSymbol" is selected by both "$existingTargetOwner" and "$entryKey"';
 		}
-		final revision = "sha256:" + Sha256.encode(selectionFingerprint(selection));
+		final initializerDependencyKeys = normalizeDependencyKeys(selection.initializerDependencyKeys);
+		final revision = "sha256:" + Sha256.encode(selectionFingerprint(selection, initializerDependencyKeys));
 		final candidate:OcamlStaticStorageEntry = {
 			id: "static-storage:" + entryKey,
 			key: entryKey,
@@ -175,6 +178,7 @@ class OcamlStaticStoragePlan {
 			declarationOrder: selection.declarationOrder,
 			initializationOrder: selection.initializationOrder,
 			hasInitializer: selection.hasInitializer,
+			initializerDependencyKeys: initializerDependencyKeys,
 			representationId: selection.representationId
 		};
 		final existing = entriesByKey.get(entryKey);
@@ -209,6 +213,7 @@ class OcamlStaticStoragePlan {
 				throw 'reflaxe.ocaml [ocaml-static-storage:duplicate-initialization-order]: "$previousInitialization" and "${entry.key}" both use ${entry.initializationOrder} in ${entry.moduleId}';
 			initializationOwners.set(initializationKey, entry.key);
 		}
+		validateInitializerDependencyGraph();
 		sealed = true;
 	}
 
@@ -302,6 +307,7 @@ class OcamlStaticStoragePlan {
 					declarationOrder: entry.declarationOrder,
 					initializationOrder: entry.initializationOrder,
 					hasInitializer: entry.hasInitializer,
+					initializerDependencyKeys: entry.initializerDependencyKeys.copy(),
 					representationId: entry.representationId
 				}
 		];
@@ -345,7 +351,7 @@ class OcamlStaticStoragePlan {
 		}
 	}
 
-	static function selectionFingerprint(selection:OcamlStaticStorageSelection):String {
+	static function selectionFingerprint(selection:OcamlStaticStorageSelection, initializerDependencyKeys:Array<String>):String {
 		return [
 			MODEL_REVISION,
 			selection.moduleId,
@@ -362,6 +368,7 @@ class OcamlStaticStoragePlan {
 			Std.string(selection.declarationOrder),
 			Std.string(selection.initializationOrder),
 			Std.string(selection.hasInitializer),
+			initializerDependencyKeys.join(","),
 			selection.representationId == null ? "" : selection.representationId
 		].join("|");
 	}
@@ -389,8 +396,56 @@ class OcamlStaticStoragePlan {
 			declarationOrder: entry.declarationOrder,
 			initializationOrder: entry.initializationOrder,
 			hasInitializer: entry.hasInitializer,
+			initializerDependencyKeys: entry.initializerDependencyKeys.copy(),
 			representationId: entry.representationId
 		};
+	}
+
+	static function normalizeDependencyKeys(keys:Array<String>):Array<String> {
+		final unique:StringMap<Bool> = new StringMap();
+		for (key in keys) {
+			if (key.length == 0)
+				throw "reflaxe.ocaml [ocaml-static-storage:invalid-initializer-dependency]: initializer dependency keys must be non-empty";
+			unique.set(key, true);
+		}
+		final normalized = [for (key in unique.keys()) key];
+		normalized.sort(Reflect.compare);
+		return normalized;
+	}
+
+	/** Rejects cycles whose runtime result differs between Haxe target platforms. */
+	function validateInitializerDependencyGraph():Void {
+		final states:StringMap<Int> = new StringMap();
+		final stack:Array<String> = [];
+		var visit:String->Void = null;
+		visit = entryKey -> {
+			states.set(entryKey, 1);
+			stack.push(entryKey);
+			final entry = entriesByKey.get(entryKey);
+			if (entry == null)
+				throw 'reflaxe.ocaml [ocaml-static-storage:missing-entry]: dependency traversal lost "$entryKey"';
+			final dependencies = entry.initializerDependencyKeys.filter(entriesByKey.exists);
+			dependencies.sort(Reflect.compare);
+			for (dependencyKey in dependencies) {
+				final state = states.get(dependencyKey);
+				if (state == 1) {
+					final cycleStart = stack.indexOf(dependencyKey);
+					final cycle = stack.slice(cycleStart).concat([dependencyKey]);
+					throw 'reflaxe.ocaml [ocaml-static-storage:initializer-cycle]: mutable static initializers form a dependency cycle: ${cycle.join(" -> ")}';
+				}
+				if (state == null)
+					visit(dependencyKey);
+			}
+			stack.pop();
+			states.set(entryKey, 2);
+		};
+
+		final keys = [for (entryKey in entriesByKey.keys()) entryKey];
+		keys.sort(Reflect.compare);
+		for (entryKey in keys) {
+			if (!states.exists(entryKey))
+				visit(entryKey);
+		}
 	}
 
 	static function cloneCarrierType(type:OcamlTypeExpr):OcamlTypeExpr {

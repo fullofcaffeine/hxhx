@@ -7,6 +7,7 @@
       "carrierTypeId": "int",
       "declarationSite": "owner-binding",
       "targetValueName": "value",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "ExternalHolder",
       "hasInitializer": true,
       "initializationOrder": 0,
@@ -22,13 +23,14 @@
       "key": "ExternalHolder::ExternalHolder::value",
       "fieldName": "value",
       "declarationTypeOrder": -1,
-      "revision": "sha256:f5e962d7d8a272410c47636f1319b2916c163192fdd03ac08f9c23216fef096a",
+      "revision": "sha256:7c55722cf8727073c051ddf334d31e38ff70535fb60929c340f00a985a7000ba",
       "representationId": null
     },
     {
       "carrierTypeId": "float",
       "declarationSite": "type-prelude",
       "targetValueName": "floatValue",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "Main",
       "hasInitializer": true,
       "initializationOrder": 1,
@@ -44,13 +46,14 @@
       "key": "Main::Main::floatValue",
       "fieldName": "floatValue",
       "declarationTypeOrder": 0,
-      "revision": "sha256:079b4948dc1112683dab2f1197a76626cb240e2abfef54e313f32f596745491d",
+      "revision": "sha256:a501d5770a39596301031fc8c111f113ec634dfdc63b8ff6491139d86291c6ea",
       "representationId": null
     },
     {
       "carrierTypeId": "int",
       "declarationSite": "module-prelude",
       "targetValueName": "localValue",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "Main",
       "hasInitializer": true,
       "initializationOrder": 0,
@@ -66,13 +69,14 @@
       "key": "Main::Main::localValue",
       "fieldName": "localValue",
       "declarationTypeOrder": -1,
-      "revision": "sha256:ff71aa0002dd9dfd2127191b9d0f59e6929599282837e31153a38eb014e0992d",
+      "revision": "sha256:c1368169531c42ad9226fa4c7b6507311bf545c1dd1448f59a52c447991eb5f5",
       "representationId": "representation:Int:static-field"
     },
     {
       "carrierTypeId": "samemoduleworker_t",
       "declarationSite": "type-prelude",
       "targetValueName": "sameModuleObject",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "Main",
       "hasInitializer": false,
       "initializationOrder": 3,
@@ -88,13 +92,14 @@
       "key": "Main::Main::sameModuleObject",
       "fieldName": "sameModuleObject",
       "declarationTypeOrder": 0,
-      "revision": "sha256:da829e4e218bcba800648db4a508671fa2735c19dc6febbb0524d864e5cc4bbf",
+      "revision": "sha256:1afdc8cac25867fd23299ee66413b4e3fcbe8f338d164cebfff488a8209eaa96",
       "representationId": null
     },
     {
       "carrierTypeId": "int",
       "declarationSite": "module-prelude",
       "targetValueName": "sameModuleValue",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "Main",
       "hasInitializer": true,
       "initializationOrder": 2,
@@ -110,13 +115,14 @@
       "key": "Main::Main::sameModuleValue",
       "fieldName": "sameModuleValue",
       "declarationTypeOrder": -1,
-      "revision": "sha256:2b09cf08fbec76db96f91d297578376803ffc8a8c066b62b08b16cf29fd7c980",
+      "revision": "sha256:cb89a2becd733aed8e873ee77a7cff43309340bd3373ddcb6942c81030491c83",
       "representationId": "representation:Int:static-field"
     },
     {
       "carrierTypeId": "int",
       "declarationSite": "owner-binding",
       "targetValueName": "hx_MIN_SURROGATE_CODE_POINT",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "StringTools",
       "hasInitializer": true,
       "initializationOrder": 1,
@@ -132,13 +138,14 @@
       "key": "StringTools::StringTools::MIN_SURROGATE_CODE_POINT",
       "fieldName": "MIN_SURROGATE_CODE_POINT",
       "declarationTypeOrder": -1,
-      "revision": "sha256:ef6dee8d3f974eca936e29799485e3ebfc9d4cc2d8a1593366910b04949c21a1",
+      "revision": "sha256:cd6a3674d4eabdfdac4b6e8459febd53a33164789866574af6feef1d71cc6afe",
       "representationId": null
     },
     {
       "carrierTypeId": "int HxArray.t",
       "declarationSite": "owner-binding",
       "targetValueName": "winMetaCharacters",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "StringTools",
       "hasInitializer": true,
       "initializationOrder": 0,
@@ -154,13 +161,14 @@
       "key": "StringTools::StringTools::winMetaCharacters",
       "fieldName": "winMetaCharacters",
       "declarationTypeOrder": -1,
-      "revision": "sha256:80c4bb4dba9de3fcd60b82d09623dec9d859cd5f89a47ce658969b9fdfa4e90f",
+      "revision": "sha256:8d6adea2e3796cdaa7df26499a880701bc497897852bdd2e7911a9df8ab050ab",
       "representationId": null
     },
     {
       "carrierTypeId": "int",
       "declarationSite": "owner-binding",
       "targetValueName": "length",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "CallStack_Impl_",
       "hasInitializer": false,
       "initializationOrder": 0,
@@ -176,14 +184,14 @@
       "key": "haxe.CallStack::CallStack_Impl_::length",
       "fieldName": "length",
       "declarationTypeOrder": -1,
-      "revision": "sha256:36added8917135bb14a10fd4ac5b0b941e4c956aadba61a8220d990436c0cfd1",
+      "revision": "sha256:2be43ba0a859889ad5bab9031e3ea83c2b37b0e981d33d8df99a2bf2126e644d",
       "representationId": null
     }
   ],
   "runtimeRequirementCount": 13,
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "representationCount": 3,
-  "staticStorageRevision": "sha256:f7b879e564a124847544853c836ff83a103d2950caaa71e299d9b7bf544bce31",
+  "staticStorageRevision": "sha256:834a1b6c67a848ea662cac3ec5811eba72b4564857e9872dfdc68d4c6f70090a",
   "representations": [
     {
       "carrierTypeId": "int",

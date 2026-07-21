@@ -193,6 +193,31 @@ typedef InspectionRepresentation = {
 	final message:String;
 }
 
+/** One mutable static cell selected before generated type values are emitted. **/
+typedef InspectionStaticStorageEntry = {
+	final id:String;
+	final key:String;
+	final initializationId:String;
+	final programRevision:String;
+	final revision:String;
+	final moduleId:String;
+	final ownerTypeName:String;
+	final fieldName:String;
+	final targetValueName:String;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final kind:String;
+	final declarationSite:String;
+	final declarationTypeName:Null<String>;
+	final declarationTypeOrder:Int;
+	final ownerTypeOrder:Int;
+	final declarationOrder:Int;
+	final initializationOrder:Int;
+	final hasInitializer:Bool;
+	final initializerDependencyKeys:Array<String>;
+	final representationId:Null<String>;
+}
+
 /** Optional report for the assignment/update family already on typed lowering. **/
 typedef InspectionLowering = {
 	final status:String;
@@ -203,6 +228,8 @@ typedef InspectionLowering = {
 	final admittedInputRevision:Null<String>;
 	final plans:Array<InspectionLoweredPlan>;
 	final representation:InspectionRepresentation;
+	final staticStorageRevision:Null<String>;
+	final staticStorage:Array<InspectionStaticStorageEntry>;
 	final scope:String;
 	final message:String;
 }
@@ -225,6 +252,7 @@ typedef InspectionSummary = {
 	final runtimeModuleCount:Int;
 	final loweredPlanCount:Int;
 	final representationDecisionCount:Int;
+	final staticStorageCount:Int;
 }
 
 /**

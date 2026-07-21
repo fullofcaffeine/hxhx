@@ -13,6 +13,7 @@ import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentationDecision;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionProfile;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntime;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRuntimeReason;
+import reflaxe.ocaml.tooling.InspectionReport.InspectionStaticStorageEntry;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionUnavailableCapability;
 
 using StringTools;
@@ -65,7 +66,7 @@ class ReflaxeOcamlInspection {
 		errorCount += consistencyErrors.length;
 
 		return {
-			schemaVersion: 4,
+			schemaVersion: 5,
 			projectRoot: projectRoot,
 			outputDirectory: outputDirectory,
 			generatedFiles: generated,
@@ -85,7 +86,8 @@ class ReflaxeOcamlInspection {
 				artifactEntryCount: artifactManifest.entryCount,
 				runtimeModuleCount: runtime.selectedModules.length,
 				loweredPlanCount: lowering.plans.length,
-				representationDecisionCount: representation.decisions.length
+				representationDecisionCount: representation.decisions.length,
+				staticStorageCount: lowering.staticStorage.length
 			}
 		};
 	}
@@ -119,6 +121,12 @@ class ReflaxeOcamlInspection {
 				if (plan.runtimeRequirementIds.length > 0) {
 					lines.push('    runtime requirements: ${plan.runtimeRequirementIds.join(", ")}');
 				}
+			}
+			lines.push('[PASS] Mutable static storage: ${report.lowering.staticStorage.length} cell${report.lowering.staticStorage.length == 1 ? "" : "s"} planned before type emission.');
+			for (entry in report.lowering.staticStorage) {
+				lines.push('  - ${entry.moduleId}.${entry.ownerTypeName}.${entry.fieldName}: ${entry.semanticTypeId} -> ${entry.carrierTypeId} (${entry.declarationSite})');
+				if (entry.initializerDependencyKeys.length > 0)
+					lines.push('    initializer dependencies: ${entry.initializerDependencyKeys.join(", ")}');
 			}
 		}
 		lines.push(renderRepresentation(report.representation));
@@ -264,6 +272,8 @@ class ReflaxeOcamlInspection {
 					plans: [],
 					representation: representationFailure("not-enabled", path,
 						"The representation registry is reported with typed lowering. Add -D ocaml_lowering_report and rebuild."),
+					staticStorageRevision: null,
+					staticStorage: [],
 					scope: "typed-place-assignment-and-update-family",
 					message: "Typed place lowering was not requested. Add -D ocaml_lowering_report to the project HXML and rebuild."
 				};
@@ -272,8 +282,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 7) {
-						throw 'Unsupported lowering report schema $version; expected 7.';
+					if (version != 9) {
+						throw 'Unsupported lowering report schema $version; expected 9.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -287,6 +297,7 @@ class ReflaxeOcamlInspection {
 					final plans = [for (plan in rawPlans) loweredPlan(plan)];
 					plans.sort((left, right) -> compareStrings(left.id, right.id));
 					final representation = inspectRepresentations(value, path, version, plans);
+					final staticStorage = inspectStaticStorage(value, representation);
 					final runtimeRequirementCount = validateLoweredRuntimeRequirements(value, plans);
 					{
 						status: "present",
@@ -297,12 +308,82 @@ class ReflaxeOcamlInspection {
 						admittedInputRevision: requiredSha256Revision(value, "admittedInputRevision"),
 						plans: plans,
 						representation: representation,
+						staticStorageRevision: requiredSha256Revision(value, "staticStorageRevision"),
+						staticStorage: staticStorage,
 						scope: "typed-place-assignment-and-update-family",
-						message: 'Typed place report contains ${plans.length} sealed operation${plans.length == 1 ? "" : "s"} and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"} tied to those Haxe operations; it is not a whole-program IR.'
+						message: 'Typed place report contains ${plans.length} sealed operation${plans.length == 1 ? "" : "s"}, ${staticStorage.length} pre-emission static cell${staticStorage.length == 1 ? "" : "s"}, and $runtimeRequirementCount runtime explanation${runtimeRequirementCount == 1 ? "" : "s"} tied to those Haxe operations; it is not a whole-program IR.'
 					};
 				} catch (error:Dynamic) {
 					loweringFailure(path, Std.string(error), required);
 				}
+		};
+	}
+
+	static function inspectStaticStorage(value:Dynamic, representation:InspectionRepresentation):Array<InspectionStaticStorageEntry> {
+		final model = requiredString(value, "staticStorageModel");
+		if (model != "typed-ocaml-static-storage")
+			throw 'Unsupported static storage report model "$model".';
+		final rawEntries = requiredArray(value, "staticStorage");
+		final expectedCount = requiredInt(value, "staticStorageCount");
+		if (rawEntries.length != expectedCount)
+			throw 'Static storage report staticStorageCount is $expectedCount but staticStorage contains ${rawEntries.length} entries.';
+		final representationById:Map<String, InspectionRepresentationDecision> = [];
+		for (decision in representation.decisions)
+			representationById.set(decision.id, decision);
+		final seenIds:Map<String, Bool> = [];
+		final seenKeys:Map<String, Bool> = [];
+		final entries = [
+			for (rawEntry in rawEntries) {
+				final entry = staticStorageEntry(rawEntry);
+				if (seenIds.exists(entry.id)) throw 'Static storage report contains duplicate identity "${entry.id}".';
+				if (seenKeys.exists(entry.key)) throw 'Static storage report contains duplicate key "${entry.key}".';
+				seenIds.set(entry.id, true);
+				seenKeys.set(entry.key, true);
+				if (entry.representationId != null) {
+					final decision = representationById.get(entry.representationId);
+					if (decision == null)
+						throw 'Static storage entry "${entry.id}" refers to missing program representation "${entry.representationId}".';
+					if (decision.semanticTypeId != entry.semanticTypeId
+						|| decision.carrierTypeId != entry.carrierTypeId
+						|| decision.domain != "static-field")
+						throw 'Static storage entry "${entry.id}" expects ${entry.semanticTypeId} -> ${entry.carrierTypeId} in static-field, but representation ${decision.id} selects ${decision.semanticTypeId} -> ${decision.carrierTypeId} in ${decision.domain}.';
+				}
+				entry;
+			}
+		];
+		entries.sort((left, right) -> compareStrings(left.key, right.key));
+		return entries;
+	}
+
+	static function staticStorageEntry(value:Dynamic):InspectionStaticStorageEntry {
+		final declarationSite = requiredString(value, "declarationSite");
+		if (declarationSite != "owner-binding" && declarationSite != "module-prelude" && declarationSite != "type-prelude")
+			throw 'Unsupported static storage declaration site "$declarationSite".';
+		final kind = requiredString(value, "kind");
+		if (kind != "variable" && kind != "dynamic-method")
+			throw 'Unsupported static storage kind "$kind".';
+		return {
+			id: requiredString(value, "id"),
+			key: requiredString(value, "key"),
+			initializationId: requiredString(value, "initializationId"),
+			programRevision: requiredString(value, "programRevision"),
+			revision: requiredSha256Revision(value, "revision"),
+			moduleId: requiredString(value, "moduleId"),
+			ownerTypeName: requiredString(value, "ownerTypeName"),
+			fieldName: requiredString(value, "fieldName"),
+			targetValueName: requiredString(value, "targetValueName"),
+			semanticTypeId: requiredString(value, "semanticTypeId"),
+			carrierTypeId: requiredString(value, "carrierTypeId"),
+			kind: kind,
+			declarationSite: declarationSite,
+			declarationTypeName: optionalString(value, "declarationTypeName"),
+			declarationTypeOrder: requiredInt(value, "declarationTypeOrder"),
+			ownerTypeOrder: requiredInt(value, "ownerTypeOrder"),
+			declarationOrder: requiredInt(value, "declarationOrder"),
+			initializationOrder: requiredInt(value, "initializationOrder"),
+			hasInitializer: requiredBool(value, "hasInitializer"),
+			initializerDependencyKeys: requiredStringArray(value, "initializerDependencyKeys"),
+			representationId: optionalString(value, "representationId")
 		};
 	}
 
@@ -755,6 +836,8 @@ class ReflaxeOcamlInspection {
 			admittedInputRevision: null,
 			plans: [],
 			representation: representationFailure("invalid", path, message),
+			staticStorageRevision: null,
+			staticStorage: [],
 			scope: "typed-place-assignment-and-update-family",
 			message: message
 		};

@@ -250,7 +250,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		staticStoragePlan.beginProgram(revision.id);
 		ctx.beginRuntimeRequirementProgram(revision.id);
 		#if macro
-		planMutableStaticStorage(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule);
+		try {
+			planMutableStaticStorage(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule);
+		} catch (error:Dynamic) {
+			Context.error(Std.string(error), Context.currentPos());
+		}
 		#end
 	}
 
@@ -409,6 +413,34 @@ class OcamlCompiler extends DirectToStringCompiler {
 		with its owner when no earlier type-safe declaration point exists.
 	**/
 	function planMutableStaticStorage(moduleOrder:Array<String>, moduleToClasses:Map<String, Array<ClassType>>):Void {
+		function initializerDependencyKeys(initializer:Null<TypedExpr>):Array<String> {
+			if (initializer == null)
+				return [];
+			final dependencies:Map<String, Bool> = [];
+			function scan(expression:TypedExpr):Void {
+				switch (expression.expr) {
+					case TFunction(_):
+						return;
+					case TField(_, FStatic(classReference, fieldReference)):
+						final dependencyClass = classReference.get();
+						final dependencyField = fieldReference.get();
+						final isMutableStorage = switch (dependencyField.kind) {
+							case FVar(_, _): !dependencyField.isFinal;
+							case FMethod(MethDynamic): true;
+							case _: false;
+						};
+						if (isMutableStorage)
+							dependencies.set(OcamlStaticStoragePlan.key(dependencyClass.module, dependencyClass.name, dependencyField.name), true);
+					case _:
+				}
+				haxe.macro.TypedExprTools.iter(expression, scan);
+			}
+			scan(initializer);
+			final out = [for (key in dependencies.keys()) key];
+			out.sort(Reflect.compare);
+			return out;
+		}
+
 		for (moduleId in moduleOrder) {
 			final classes = moduleToClasses.get(moduleId);
 			if (classes == null)
@@ -505,6 +537,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						declarationOrder: order,
 						initializationOrder: order,
 						hasInitializer: field.expr() != null,
+						initializerDependencyKeys: initializerDependencyKeys(field.expr()),
 						representationId: representation == null ? null : representation.id
 					});
 					order += 1;

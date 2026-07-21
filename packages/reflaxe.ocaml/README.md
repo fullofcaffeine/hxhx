@@ -137,9 +137,11 @@ the source location, semantic and carrier types, representation reason, effect
 order, and runtime requirements for assignment/update operations already on the
 typed place-lowering path. The same report inventories mutable static fields
 before code generation, including where each OCaml `ref` cell is declared and
-where its Haxe initializer runs. This makes same-module cross-type ordering
-reviewable without reconstructing it from generated source. `--output` selects
-a non-default project-relative output directory.
+where its Haxe initializer runs. It also records direct dependencies between
+initializers. This makes cross-type and cross-module ordering reviewable
+without reconstructing it from generated source, and lets the compiler reject
+an initializer cycle with a Haxe-facing diagnostic before invoking the OCaml
+build. `--output` selects a non-default project-relative output directory.
 
 This is intentionally honest inspection, not generated-code guesswork. The
 artifact inventory is valid today, but it reports source-bundle packaging as

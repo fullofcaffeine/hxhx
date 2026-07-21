@@ -7,6 +7,7 @@
       "carrierTypeId": "int",
       "declarationSite": "owner-binding",
       "targetValueName": "hx_MIN_SURROGATE_CODE_POINT",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "StringTools",
       "hasInitializer": true,
       "initializationOrder": 1,
@@ -22,13 +23,14 @@
       "key": "StringTools::StringTools::MIN_SURROGATE_CODE_POINT",
       "fieldName": "MIN_SURROGATE_CODE_POINT",
       "declarationTypeOrder": -1,
-      "revision": "sha256:ef6dee8d3f974eca936e29799485e3ebfc9d4cc2d8a1593366910b04949c21a1",
+      "revision": "sha256:cd6a3674d4eabdfdac4b6e8459febd53a33164789866574af6feef1d71cc6afe",
       "representationId": null
     },
     {
       "carrierTypeId": "int HxArray.t",
       "declarationSite": "owner-binding",
       "targetValueName": "winMetaCharacters",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "StringTools",
       "hasInitializer": true,
       "initializationOrder": 0,
@@ -44,13 +46,14 @@
       "key": "StringTools::StringTools::winMetaCharacters",
       "fieldName": "winMetaCharacters",
       "declarationTypeOrder": -1,
-      "revision": "sha256:80c4bb4dba9de3fcd60b82d09623dec9d859cd5f89a47ce658969b9fdfa4e90f",
+      "revision": "sha256:8d6adea2e3796cdaa7df26499a880701bc497897852bdd2e7911a9df8ab050ab",
       "representationId": null
     },
     {
       "carrierTypeId": "int",
       "declarationSite": "owner-binding",
       "targetValueName": "length",
+      "initializerDependencyKeys": [],
       "ownerTypeName": "CallStack_Impl_",
       "hasInitializer": false,
       "initializationOrder": 0,
@@ -66,14 +69,14 @@
       "key": "haxe.CallStack::CallStack_Impl_::length",
       "fieldName": "length",
       "declarationTypeOrder": -1,
-      "revision": "sha256:36added8917135bb14a10fd4ac5b0b941e4c956aadba61a8220d990436c0cfd1",
+      "revision": "sha256:2be43ba0a859889ad5bab9031e3ea83c2b37b0e981d33d8df99a2bf2126e644d",
       "representationId": null
     }
   ],
   "runtimeRequirementCount": 16,
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "representationCount": 4,
-  "staticStorageRevision": "sha256:fcfa2474fdb9a9e5db60208ddb2842c3cfdfdb5b11457a0ce5a029d0f66accf5",
+  "staticStorageRevision": "sha256:0bca8b5ac052cfc6d31fa8355842d1c884680f617b641b810bf5f6b940682de3",
   "representations": [
     {
       "carrierTypeId": "int",
