@@ -133,7 +133,14 @@ class M14Stage3Int64AddIntIntegrationTest {
 			"    value = -10;",
 			"    value = Int64.ofInt(5);",
 			"    value = Int64.mul(value, 2);",
+			"    Sys.println(Int64.toStr(value++));",
+			"    Sys.println(Int64.toStr(++value));",
+			"    value--;",
+			"    --value;",
 			"    Sys.println(Int64.toStr(value));",
+			"    var ordinary:Int = 1;",
+			"    Sys.println(ordinary++);",
+			"    Sys.println(++ordinary);",
 			"  }",
 			"}",
 		].join("\n");
@@ -149,10 +156,15 @@ class M14Stage3Int64AddIntIntegrationTest {
 				"Stage3 converted an expression that was already represented as Int64.");
 			assertTrue(generatedMain.indexOf("Haxe_Int64.mul ((!value)) (Haxe_Int64.ofInt (2))") >= 0,
 				"Stage3 did not convert an Int supplied to an Int64 function parameter.");
+			assertTrue(generatedMain.indexOf("Haxe_Int64.add __hx_old (Haxe_Int64.ofInt (1))") >= 0,
+				"Stage3 used ordinary Int addition for an Int64 increment.");
+			assertTrue(generatedMain.indexOf("Haxe_Int64.sub __hx_old (Haxe_Int64.ofInt (1))") >= 0,
+				"Stage3 used ordinary Int subtraction for an Int64 decrement.");
+			assertTrue(generatedMain.indexOf("HxInt.add __hx_old 1") >= 0, "Stage3 changed ordinary Int increment lowering while repairing Int64 updates.");
 
 			final executed = commandOutput(executable);
 			assertTrue(executed.code == 0, "focused Stage3 Int-to-Int64 assignment executable failed: " + executed.stderr);
-			assertTrue(executed.stdout == "10\n", "unexpected focused Stage3 Int-to-Int64 assignment stdout:\n" + executed.stdout);
+			assertTrue(executed.stdout == "10\n12\n10\n1\n3\n", "unexpected focused Stage3 Int-to-Int64 assignment/update stdout:\n" + executed.stdout);
 		} catch (error:Dynamic) {
 			Sys.println("debug_out=" + assignmentRoot);
 			throw error;
