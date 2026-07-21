@@ -13,37 +13,98 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "EmitterNumericUp
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "EmitterNumericUpdate" } : t)
 
-let operation = fun isInt64 increment -> try let __fallback_result_6 = (
-  ignore (if isInt64 then ignore (let tempResult = ref ("" : string) in (
-    ignore (if increment then let __assign_1 = ("Haxe_Int64.add" : string) in (
-      tempResult := __assign_1;
-      __assign_1
-    ) else let __assign_2 = ("Haxe_Int64.sub" : string) in (
+let isStandardInt64Provider = fun owner -> let tempResult = ref (false : bool) in (
+  ignore (match owner with
+    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in if HxString.equals _g "Int64" then let __assign_2 = true in (
       tempResult := __assign_2;
       __assign_2
+    ) else let __assign_3 = false in (
+      tempResult := __assign_3;
+      __assign_3
+    )
+    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in if (match _g with
+      | HxExpr.ENull -> 0
+      | HxExpr.EBool _ -> 1
+      | HxExpr.EString _ -> 2
+      | HxExpr.EInt _ -> 3
+      | HxExpr.EFloat _ -> 4
+      | HxExpr.EEnumValue _ -> 5
+      | HxExpr.EThis -> 6
+      | HxExpr.ESuper -> 7
+      | HxExpr.EIdent _ -> 8
+      | HxExpr.EField (_, _) -> 9
+      | HxExpr.ENullSafeField (_, _) -> 10
+      | HxExpr.ECall (_, _) -> 11
+      | HxExpr.EMacroExpr (_, _) -> 12
+      | HxExpr.EMacroType _ -> 13
+      | HxExpr.ELambda (_, _) -> 14
+      | HxExpr.ETryCatchRaw _ -> 15
+      | HxExpr.ESwitchRaw _ -> 16
+      | HxExpr.ESwitch (_, _, _) -> 17
+      | HxExpr.ENew (_, _) -> 18
+      | HxExpr.EUnop (_, _, _) -> 19
+      | HxExpr.EBinop (_, _, _) -> 20
+      | HxExpr.ETernary (_, _, _) -> 21
+      | HxExpr.EAnon (_, _) -> 22
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 23
+      | HxExpr.EArrayDecl _ -> 24
+      | HxExpr.EArrayAccess (_, _) -> 25
+      | HxExpr.ERange (_, _) -> 26
+      | HxExpr.ECast (_, _) -> 27
+      | HxExpr.EUntyped _ -> 28
+      | HxExpr.EUnsupported _ -> 29) = 8 then let _g2 = (match _g with
+      | HxExpr.EIdent __enum_param_4 -> __enum_param_4
+      | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "haxe" then if HxString.equals _g1 "Int64" then let __assign_5 = true in (
+      tempResult := __assign_5;
+      __assign_5
+    ) else let __assign_6 = false in (
+      tempResult := __assign_6;
+      __assign_6
+    ) else let __assign_7 = false in (
+      tempResult := __assign_7;
+      __assign_7
+    ) else let __assign_8 = false in (
+      tempResult := __assign_8;
+      __assign_8
+    )
+    | _ -> let __assign_1 = false in (
+      tempResult := __assign_1;
+      __assign_1
+    ));
+  !tempResult
+)
+
+let operation = fun isInt64 increment -> try let __fallback_result_14 = (
+  ignore (if isInt64 then ignore (let tempResult = ref ("" : string) in (
+    ignore (if increment then let __assign_9 = ("Haxe_Int64.add" : string) in (
+      tempResult := __assign_9;
+      __assign_9
+    ) else let __assign_10 = ("Haxe_Int64.sub" : string) in (
+      tempResult := __assign_10;
+      __assign_10
     ));
     raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
   )) else ());
   let tempResult1 = ref ("" : string) in (
-    ignore (if increment then let __assign_3 = ("HxInt.add" : string) in (
-      tempResult1 := __assign_3;
-      __assign_3
-    ) else let __assign_4 = ("HxInt.sub" : string) in (
-      tempResult1 := __assign_4;
-      __assign_4
+    ignore (if increment then let __assign_11 = ("HxInt.add" : string) in (
+      tempResult1 := __assign_11;
+      __assign_11
+    ) else let __assign_12 = ("HxInt.sub" : string) in (
+      tempResult1 := __assign_12;
+      __assign_12
     ));
     !tempResult1
   )
-) in Obj.magic __fallback_result_6 with
-  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
+) in Obj.magic __fallback_result_14 with
+  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13
 
 let one = fun isInt64 -> let tempResult = ref ("" : string) in (
-  ignore (if isInt64 then let __assign_7 = ("(Haxe_Int64.ofInt (1))" : string) in (
-    tempResult := __assign_7;
-    __assign_7
-  ) else let __assign_8 = ("1" : string) in (
-    tempResult := __assign_8;
-    __assign_8
+  ignore (if isInt64 then let __assign_15 = ("(Haxe_Int64.ofInt (1))" : string) in (
+    tempResult := __assign_15;
+    __assign_15
+  ) else let __assign_16 = ("1" : string) in (
+    tempResult := __assign_16;
+    __assign_16
   ));
   !tempResult
 )
