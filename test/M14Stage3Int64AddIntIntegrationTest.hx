@@ -65,10 +65,10 @@ class M14Stage3Int64AddIntIntegrationTest {
 		final assignmentTypes:Map<String, TyType> = new Map();
 		assignmentTypes.set("amount", TyType.fromHintText("Int"));
 		assignmentTypes.set("unknown", TyType.fromHintText("Dynamic"));
-		assertTrue(@:privateAccess EmitterStage.stage3Int64AssignmentRhs("haxe.Int64", EIdent("amount"), "amount",
+		assertTrue(@:privateAccess EmitterStage.stage3Int64CarrierValue("haxe.Int64", EIdent("amount"), "amount",
 			assignmentTypes) == "Haxe_Int64.ofInt (amount)",
 			"Stage3 did not recognize a typed Int local at the Int64 carrier boundary.");
-		assertTrue(@:privateAccess EmitterStage.stage3Int64AssignmentRhs("haxe.Int64", EIdent("unknown"), "unknown", assignmentTypes) == "unknown",
+		assertTrue(@:privateAccess EmitterStage.stage3Int64CarrierValue("haxe.Int64", EIdent("unknown"), "unknown", assignmentTypes) == "unknown",
 			"Stage3 must not guess that a Dynamic local uses the Int carrier.");
 
 		final sourcePath = "test/oracle/cpp_int64_add_int_seed/src/Main.hx";
@@ -80,6 +80,7 @@ class M14Stage3Int64AddIntIntegrationTest {
 			"  public static function make(high:Int, low:Int):Int64 return cast low;",
 			"  public static function toStr(value:Int64):String return '';",
 			"  public static function add(left:Int64, right:Int64):Int64 return left;",
+			"  public static function mul(left:Int64, right:Int64):Int64 return left;",
 			"  @:op(A + B) @:commutative private static inline function addInt(value:Int64, amount:Int):Int64 return value;",
 			"}",
 		].join("\n");
@@ -114,7 +115,14 @@ class M14Stage3Int64AddIntIntegrationTest {
 		}
 		deleteRecursive(root);
 
-		final assignmentSourcePath = "test/oracle/stage3_int64_assignment/Main.hx";
+		final assignmentRoot = Path.join([Sys.getCwd(), ".tmp", "m14_stage3_int64_assignment"]);
+		deleteRecursive(assignmentRoot);
+		final assignmentSourceDir = Path.join([assignmentRoot, "source"]);
+		final assignmentInt64Dir = Path.join([assignmentSourceDir, "haxe"]);
+		FileSystem.createDirectory(assignmentRoot);
+		FileSystem.createDirectory(assignmentSourceDir);
+		FileSystem.createDirectory(assignmentInt64Dir);
+		final assignmentSourcePath = Path.join([assignmentSourceDir, "Main.hx"]);
 		final assignmentSource = [
 			"import haxe.Int64;",
 			"class Main {",
@@ -123,13 +131,13 @@ class M14Stage3Int64AddIntIntegrationTest {
 			"    value = 1;",
 			"    value = -10;",
 			"    value = Int64.ofInt(5);",
+			"    value = Int64.mul(value, 2);",
 			"    Sys.println(Int64.toStr(value));",
 			"  }",
 			"}",
 		].join("\n");
-		final assignmentRoot = Path.join([Sys.getCwd(), ".tmp", "m14_stage3_int64_assignment"]);
-		deleteRecursive(assignmentRoot);
-		FileSystem.createDirectory(assignmentRoot);
+		File.saveContent(assignmentSourcePath, assignmentSource);
+		File.saveContent(Path.join([assignmentInt64Dir, "Int64.hx"]), int64Source);
 		try {
 			final executable = EmitterStage.emitToDir(typedProgram(assignmentSource, assignmentSourcePath, int64Source), assignmentRoot, true);
 			final generatedMain = File.getContent(Path.join([assignmentRoot, "Main.ml"]));
@@ -138,10 +146,12 @@ class M14Stage3Int64AddIntIntegrationTest {
 				"Stage3 did not convert a negative Int before storing it in an Int64 local.");
 			assertTrue(generatedMain.indexOf("Haxe_Int64.ofInt (Haxe_Int64.ofInt (5))") < 0,
 				"Stage3 converted an expression that was already represented as Int64.");
+			assertTrue(generatedMain.indexOf("Haxe_Int64.mul ((!value)) (Haxe_Int64.ofInt (2))") >= 0,
+				"Stage3 did not convert an Int supplied to an Int64 function parameter.");
 
 			final executed = commandOutput(executable);
 			assertTrue(executed.code == 0, "focused Stage3 Int-to-Int64 assignment executable failed: " + executed.stderr);
-			assertTrue(executed.stdout == "5\n", "unexpected focused Stage3 Int-to-Int64 assignment stdout:\n" + executed.stdout);
+			assertTrue(executed.stdout == "10\n", "unexpected focused Stage3 Int-to-Int64 assignment stdout:\n" + executed.stdout);
 		} catch (error:Dynamic) {
 			Sys.println("debug_out=" + assignmentRoot);
 			throw error;
