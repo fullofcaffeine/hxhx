@@ -1,3 +1,10 @@
+## [0.23.8](https://github.com/fullofcaffeine/hxhx/compare/v0.23.7...v0.23.8) (2026-07-21)
+
+
+### Bug Fixes
+
+* **stage3:** limit native lambda type fallback ([59f7c5d](https://github.com/fullofcaffeine/hxhx/commit/59f7c5d7a5f32e844613da3c736e12cad11b3f79))
+
 ## [0.23.7](https://github.com/fullofcaffeine/hxhx/compare/v0.23.6...v0.23.7) (2026-07-21)
 
 
