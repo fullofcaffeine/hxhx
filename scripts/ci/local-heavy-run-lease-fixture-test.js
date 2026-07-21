@@ -45,6 +45,7 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'haxe-heavy-lease-fixture-'))
 const leasePath = path.join(temp, 'shared.lease.json')
 const capacityScript = path.resolve(__dirname, '../hxhx/check-local-capacity.js')
 const wrapperScript = path.resolve(__dirname, '../hxhx/with-heavy-run-lease.js')
+const { waitingStateSignature } = require(wrapperScript)
 
 try {
   const active = new Map([
@@ -65,6 +66,26 @@ try {
   })
   assert.strictEqual(blocked.status, 'busy')
   assert.strictEqual(blocked.inspection.reason, 'owner_active')
+
+  const stableWait = {
+    status: 'busy',
+    reason: 'owner_active',
+    ownerPid: owner.pid,
+    ownerStartedAt: owner.startedAt,
+    ownerLabel: 'fixture-gate',
+    ownerRepository: 'fixture-repository',
+    heartbeatAgeMs: 10
+  }
+  assert.strictEqual(
+    waitingStateSignature(stableWait),
+    waitingStateSignature({ ...stableWait, heartbeatAgeMs: 900 }),
+    'heartbeat age alone must not repeat the waiting message'
+  )
+  assert.notStrictEqual(
+    waitingStateSignature(stableWait),
+    waitingStateSignature({ ...stableWait, ownerPid: competitor.pid }),
+    'a different owner must produce a new waiting state'
+  )
 
   const notOwned = releaseLease({
     leasePath,
@@ -243,6 +264,40 @@ try {
     assert.match(timedOut.stdout, /queue=timed_out/)
     process.kill(competingOwner.pid, 0)
     assert.strictEqual(readLeaseSnapshot(competingLease).record.owner.pid, competingOwner.pid)
+
+    const wrapperTimedOut = spawnSync(
+      process.execPath,
+      [
+        wrapperScript,
+        '--wait-seconds',
+        '0.05',
+        '--poll-seconds',
+        '0.01',
+        '--lease-file',
+        competingLease,
+        '--label',
+        'waiting-wrapper-gate',
+        '--',
+        process.execPath,
+        '-e',
+        'process.exit(0)'
+      ],
+      {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          CI: '',
+          HAXE_FAMILY_HEAVY_RUN_LEASE_OWNER_PID: '',
+          HXHX_HEAVY_RUN_LEASE_OWNER_PID: ''
+        }
+      }
+    )
+    assert.strictEqual(wrapperTimedOut.status, 75, wrapperTimedOut.stderr)
+    assert.strictEqual(
+      (wrapperTimedOut.stdout.match(/HAXE_FAMILY_HEAVY_RUN:WAITING/g) || []).length,
+      1,
+      wrapperTimedOut.stdout
+    )
     releaseLease({ leasePath: competingLease, ownerPid: competingOwner.pid, ownerToken: '9'.repeat(32) })
   } finally {
     competingOwner.kill('SIGTERM')

@@ -129,6 +129,24 @@ function delay(milliseconds, cancellation) {
   })
 }
 
+/**
+ * Identifies changes that a waiting user needs to see.
+ *
+ * The heartbeat age changes on every poll even when the same command still owns
+ * the lease. It remains available in `leaseSummary` for diagnostics, but is not
+ * part of this signature so one quiet wait does not flood the terminal.
+ */
+function waitingStateSignature(summary) {
+  return JSON.stringify({
+    status: summary.status,
+    reason: summary.reason,
+    ownerPid: summary.ownerPid,
+    ownerStartedAt: summary.ownerStartedAt,
+    ownerLabel: summary.ownerLabel,
+    ownerRepository: summary.ownerRepository
+  })
+}
+
 async function waitForLease(options, ownerPid, cancellation) {
   const deadline = Date.now() + options.waitSeconds * 1000
   let lastSignature = ''
@@ -146,7 +164,7 @@ async function waitForLease(options, ownerPid, cancellation) {
     }
 
     const summary = leaseSummary(result)
-    const signature = JSON.stringify(summary)
+    const signature = waitingStateSignature(summary)
     if (signature !== lastSignature) {
       console.log(
         `HAXE_FAMILY_HEAVY_RUN:WAITING label=${JSON.stringify(options.label)} ` +
@@ -278,5 +296,6 @@ module.exports = {
   inheritedOwnerPid,
   isCiEnvironment,
   main,
-  parseArgs
+  parseArgs,
+  waitingStateSignature
 }
