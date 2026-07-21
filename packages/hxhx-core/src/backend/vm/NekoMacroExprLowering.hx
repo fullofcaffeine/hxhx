@@ -73,6 +73,8 @@ class NekoMacroExprBuilder {
 				macroEnum("EConst", [macroEnum("CIdent", [quote(name)])]);
 			case EField(receiver, field):
 				macroEnum("EField", [macroExprObject(macroExprDef(receiver)), quote(field)]);
+			case ENullSafeField(receiver, field):
+				macroEnum("EField", [macroExprObject(macroExprDef(receiver)), quote(field), macroEnum("Safe", [])]);
 			case EArrayAccess(receiver, index):
 				macroEnum("EArray", [macroExprObject(macroExprDef(receiver)), macroExprObject(macroExprDef(index))]);
 			case EArrayDecl(values):

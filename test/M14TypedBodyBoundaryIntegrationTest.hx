@@ -246,6 +246,31 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(!containsTag(run, TypedExprTag.Opaque), "expression-position do/while retained an opaque source payload");
 	}
 
+	/** Keep `?.` distinct from an unconditional field read throughout body sealing. **/
+	static function assertNullSafeCallStructure():Void {
+		final parsed = ParserStage.parse([
+			"class FlashLike {",
+			"  static function readUntil(expected:String, ?unexpectedStrings:Map<String, ()->Void>) {",
+			"    final possibleStrings = unexpectedStrings?.copy() ?? [];",
+			"    possibleStrings[expected] = function() {};",
+			"  }",
+			"}",
+		].join("\n"), "FlashLike.hx");
+		final readUntil = findFunction(findClass(TyperStage.typeModule(parsed), "FlashLike"), "readUntil");
+		final initializer = variableInitializer(readUntil.getBody(), "possibleStrings");
+		assertTrue(initializer.getTag() == TypedExprTag.Binary && initializer.getTexts()[0] == "??",
+			"null-safe copy fallback was not retained as a typed null-coalescing expression");
+		final copyCall = initializer.getExpressions()[0];
+		assertTrue(copyCall.getTag() == TypedExprTag.Call, "null-safe copy invocation was not retained as a typed call");
+		assertTrue(copyCall.getType().isNullable(), "null-safe copy invocation did not retain a nullable result type");
+		final callee = copyCall.getExpressions()[0];
+		assertTrue(callee.getTag() == TypedExprTag.NullSafeFieldRead && callee.getTexts()[0] == "copy",
+			"null-safe copy invocation became an unconditional field read");
+		assertTrue(callee.getExpressions()[0].getTag() == TypedExprTag.LocalRead, "null-safe copy receiver was not retained as a structural typed child");
+		assertTrue(!containsTag(initializer, TypedExprTag.Opaque), "null-safe copy invocation remained hidden in an opaque typed leaf");
+		TypedBodyInvariant.assertFunction(readUntil);
+	}
+
 	static function assertAbstractThisAssignment():Void {
 		final parsed = ParserStage.parse([
 			"abstract RestLike<T>(Array<T>) {",
@@ -563,6 +588,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertInferredConstructorSourceProjection();
 		assertStructuralExpressionBlock();
 		assertStructuralDoWhileExpression();
+		assertNullSafeCallStructure();
 		assertAbstractThisAssignment();
 		assertStructuralTryCatchExpression();
 		assertStructuralTerminalReturnBlock();

@@ -482,9 +482,13 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			function(expr) {
 				return Std.string(expr);
 			});
+		final nullSafeMacro = NekoMacroExprLowering.render(HxExpr.ENullSafeField(HxExpr.EIdent("value"), "field"), [], function(expr) {
+			return Std.string(expr);
+		});
 		assertContains(prefixMacro, '"OpIncrement"', "Neko macro quote should use the public unary enum constructor");
 		assertContains(prefixMacro, "false", "Neko macro quote should preserve prefix fixity as postFix=false");
 		assertContains(postfixMacro, "true", "Neko macro quote should preserve postfix fixity as postFix=true");
+		assertContains(nullSafeMacro, '"Safe"', "Neko macro quote should preserve null-safe field access");
 
 		FileSystem.createDirectory(outDir);
 		BackendDispatchBoundary.emit(backend,

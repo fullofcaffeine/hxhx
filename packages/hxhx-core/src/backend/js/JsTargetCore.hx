@@ -184,7 +184,7 @@ class JsTargetCore implements ITargetCore {
 					deps.push(dep);
 				for (arg in args)
 					collectStaticInitClassDeps(arg, deps, byFullName, bySimpleFullName);
-			case EField(obj, _):
+			case EField(obj, _) | ENullSafeField(obj, _):
 				final dep = resolveStaticInitValuePath(obj, byFullName, bySimpleFullName);
 				if (dep != null)
 					deps.push(dep);

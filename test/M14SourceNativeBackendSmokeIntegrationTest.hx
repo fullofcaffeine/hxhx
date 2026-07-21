@@ -9318,10 +9318,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 
 		final pythonPrefixMacro = @:privateAccess backend.source.SourceTargetCommon.renderExpr(SourceNativeTarget.Python, EMacroExpr(prefix, []));
 		final phpPostfixMacro = @:privateAccess backend.source.SourceTargetCommon.renderExpr(SourceNativeTarget.Php, EMacroExpr(postfix, []));
+		final pythonNullSafeMacro = @:privateAccess backend.source.SourceTargetCommon.renderExpr(SourceNativeTarget.Python,
+			EMacroExpr(ENullSafeField(EIdent("value"), "field"), []));
+		final phpNullSafeMacro = @:privateAccess backend.source.SourceTargetCommon.renderExpr(SourceNativeTarget.Php,
+			EMacroExpr(ENullSafeField(EIdent("value"), "field"), []));
 		assertContains(pythonPrefixMacro, '"OpIncrement"', "Python macro quote should use the public unary enum constructor");
 		assertContains(pythonPrefixMacro, "False", "Python macro quote should preserve prefix fixity as postFix=false");
 		assertContains(phpPostfixMacro, '"OpIncrement"', "PHP macro quote should use the public unary enum constructor");
 		assertContains(phpPostfixMacro, "true", "PHP macro quote should preserve postfix fixity as postFix=true");
+		assertContains(pythonNullSafeMacro, '"Safe"', "Python macro quote should preserve null-safe field access");
+		assertContains(phpNullSafeMacro, '"Safe"', "PHP macro quote should preserve null-safe field access");
 	}
 
 	static function assertPostfixStatements():Void {

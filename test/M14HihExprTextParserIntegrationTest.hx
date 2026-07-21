@@ -27,6 +27,26 @@ class M14HihExprTextParserIntegrationTest {
 		assertTrue(ParserStageScanHelpers.hasUnsupportedStmtList([SExpr(ECall(EIdent("f"), [EUnsupported("<eof-stmt>")]), HxPos.unknown())]),
 			"unsupported scanner must inspect call arguments");
 
+		final nullSafeCopy = HxParser.parseExprText("unexpectedStrings?.copy() ?? []");
+		switch (nullSafeCopy) {
+			case EBinop("??", ECall(ENullSafeField(EIdent("unexpectedStrings"), "copy"), []), EArrayDecl([])):
+			case EUnsupported(raw):
+				fail("null-safe copy call parsed as unsupported: " + raw);
+			case _:
+				fail("null-safe copy call lost its field-access, call, or fallback structure");
+		}
+		final nullSafeCopyBody = HxParser.parseFunctionBodyText("final possibleStrings = unexpectedStrings?.copy() ?? []; possibleStrings[expected] = function() {};");
+		assertTrue(nullSafeCopyBody.length == 2, "Flash.readUntil copy setup should parse as two statements");
+		assertTrue(!ParserStageScanHelpers.hasUnsupportedStmtList(nullSafeCopyBody),
+			"Flash.readUntil copy setup should not hide the null-safe call in parser recovery text");
+		var spacedQuestionDotFailure:Null<String> = null;
+		try {
+			HxParser.parseExprText("unexpectedStrings ? .copy()");
+		} catch (error:haxe.Exception) {
+			spacedQuestionDotFailure = error.message;
+		}
+		assertTrue(spacedQuestionDotFailure != null, "separated `? .` tokens must not be accepted as null-safe access");
+
 		final malformedBodyStmts = HxParser.parseFunctionBodyText("foo.; after();");
 		assertTrue(malformedBodyStmts.length >= 1, "expected malformed body to produce a recovery statement");
 		switch (malformedBodyStmts[0]) {

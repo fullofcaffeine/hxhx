@@ -2691,9 +2691,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 
 		final prefixMacro = backend.cpp.CppMacroExpr.macroExpr(prefix, []);
 		final postfixMacro = backend.cpp.CppMacroExpr.macroExpr(postfix, []);
+		final nullSafeMacro = backend.cpp.CppMacroExpr.macroExpr(ENullSafeField(EIdent("value"), "field"), []);
 		assertContains(prefixMacro, "__hxhx_macro_enum(\"OpIncrement\")", "C++ macro quote should use the public unary enum constructor");
 		assertContains(prefixMacro, "__hxhx_macro_bool(false)", "C++ macro quote should preserve prefix fixity as postFix=false");
 		assertContains(postfixMacro, "__hxhx_macro_bool(true)", "C++ macro quote should preserve postfix fixity as postFix=true");
+		assertContains(nullSafeMacro, "__hxhx_macro_enum(\"Safe\")", "C++ macro quote should preserve null-safe field access");
 	}
 
 	static function main():Void {

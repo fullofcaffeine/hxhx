@@ -39,7 +39,7 @@ class Stage3DiagnosticsSupport {
 			return 0;
 		return switch (expr) {
 			case EUnsupported(_): 1;
-			case EField(obj, _): countUnsupportedExprsInExpr(obj);
+			case EField(obj, _) | ENullSafeField(obj, _): countUnsupportedExprsInExpr(obj);
 			case ECall(callee, args):
 				var count = countUnsupportedExprsInExpr(callee);
 				for (arg in args)
@@ -89,7 +89,7 @@ class Stage3DiagnosticsSupport {
 			case EUnsupported(raw):
 				if (out.length < max)
 					out.push(raw);
-			case EField(obj, _):
+			case EField(obj, _) | ENullSafeField(obj, _):
 				collectUnsupportedExprRawInExpr(obj, out, max);
 			case ECall(callee, args):
 				collectUnsupportedExprRawInExpr(callee, out, max);

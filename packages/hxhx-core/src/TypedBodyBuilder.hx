@@ -421,6 +421,8 @@ class TypedBodyBuilder {
 					position) else TypedExpr.nameRead(name, nodeType, position);
 			case EField(object, field):
 				TypedExpr.fieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver), field, nodeType, position);
+			case ENullSafeField(object, field):
+				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver), field, nodeType, position);
 			case ECall(callee, arguments):
 				final loweredProbe = compileTimeProbe(callee, arguments, position, diagnosticPosition, environment, typeResolver);
 				if (loweredProbe != null) {

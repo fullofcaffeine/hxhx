@@ -2640,6 +2640,8 @@ class EmitterStage {
 			case EField(obj, field):
 				exprToOcamlStage3FieldAccess(obj, field, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+			case ENullSafeField(_, _):
+				throw "stage3 emitter: null-safe field access requires shared evaluation lowering before OCaml emission";
 			case ECall(EIdent("__ocaml__"), [arg]):
 				// Stage 3 bring-up escape hatch: embed raw OCaml expression text.
 				//

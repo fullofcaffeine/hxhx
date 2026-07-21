@@ -1356,6 +1356,7 @@ class SourceTargetCommon {
 			case ESuper: "ESuper";
 			case EIdent(_): "EIdent";
 			case EField(_, _): "EField";
+			case ENullSafeField(_, _): "ENullSafeField";
 			case ECall(_, _): "ECall";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(_): "EMacroType";
@@ -6264,6 +6265,8 @@ class SourceTargetCommon {
 				pythonMacroEnum("EConst", [pythonMacroEnum("CIdent", [quoteString(name)])]);
 			case EField(receiver, field):
 				pythonMacroEnum("EField", [pythonMacroExpr(receiver, []), quoteString(field)]);
+			case ENullSafeField(receiver, field):
+				pythonMacroEnum("EField", [pythonMacroExpr(receiver, []), quoteString(field), pythonMacroEnum("Safe", [])]);
 			case EArrayAccess(receiver, index):
 				pythonMacroEnum("EArray", [pythonMacroExpr(receiver, []), pythonMacroExpr(index, [])]);
 			case EArrayDecl(values):
@@ -6666,6 +6669,8 @@ class SourceTargetCommon {
 				phpMacroEnum("EConst", [phpMacroEnum("CIdent", [quotePhpString(name)])]);
 			case EField(receiver, field):
 				phpMacroEnum("EField", [phpMacroExpr(receiver, []), quotePhpString(field)]);
+			case ENullSafeField(receiver, field):
+				phpMacroEnum("EField", [phpMacroExpr(receiver, []), quotePhpString(field), phpMacroEnum("Safe", [])]);
 			case EArrayAccess(receiver, index):
 				phpMacroEnum("EArray", [phpMacroExpr(receiver, []), phpMacroExpr(index, [])]);
 			case EArrayDecl(values):
@@ -12841,7 +12846,7 @@ class SourceTargetCommon {
 		switch (expr) {
 			case EIdent(name) | EEnumValue(name):
 				record(name);
-			case EField(obj, field):
+			case EField(obj, field) | ENullSafeField(obj, field):
 				phpRecordReferencedMemberExpr(obj, names);
 				record(field);
 			case ECall(callee, args):

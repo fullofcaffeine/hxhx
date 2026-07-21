@@ -56,6 +56,8 @@ class JsExprEmitter {
 				resolveIdent(name, scope);
 			case EField(obj, field):
 				emitField(obj, field, scope);
+			case ENullSafeField(obj, field):
+				emitNullSafeField(obj, field, scope);
 			case ECall(callee, args):
 				emitCall(callee, args, scope);
 			case EMacroExpr(inner, wrappers):
@@ -891,6 +893,12 @@ class JsExprEmitter {
 		return receiver + JsNameMangler.propertySuffix(field);
 	}
 
+	/** Use JavaScript optional chaining without duplicating the Haxe receiver expression. **/
+	static function emitNullSafeField(obj:HxExpr, field:String, scope:JsEmitScope):String {
+		final suffix = JsNameMangler.propertySuffix(field);
+		return "(" + emit(obj, scope) + ")" + (StringTools.startsWith(suffix, ".") ? "?" + suffix : "?." + suffix);
+	}
+
 	static function emitCall(callee:HxExpr, args:Array<HxExpr>, scope:JsEmitScope):String {
 		switch (callee) {
 			case EField(ESuper, field):
@@ -1709,6 +1717,12 @@ class JsExprEmitter {
 				macroEnum("EConst", [macroEnum("CIdent", [JsNameMangler.quoteString(name)])]);
 			case EField(obj, field):
 				macroEnum("EField", [emitMacroExpr(obj, [], scope), JsNameMangler.quoteString(field)]);
+			case ENullSafeField(obj, field):
+				macroEnum("EField", [
+					emitMacroExpr(obj, [], scope),
+					JsNameMangler.quoteString(field),
+					macroEnum("Safe", [])
+				]);
 			case EArrayAccess(array, index):
 				macroEnum("EArray", [emitMacroExpr(array, [], scope), emitMacroExpr(index, [], scope)]);
 			case EArrayDecl(values):

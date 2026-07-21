@@ -176,6 +176,10 @@ class TypedBodyFingerprint {
 				addString(state, "expr-field");
 				addExpression(state, object);
 				addString(state, field);
+			case ENullSafeField(object, field):
+				addString(state, "expr-null-safe-field");
+				addExpression(state, object);
+				addString(state, field);
 			case ECall(callee, arguments):
 				addString(state, "expr-call");
 				addExpression(state, callee);

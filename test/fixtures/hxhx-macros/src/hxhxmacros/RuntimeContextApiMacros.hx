@@ -1375,6 +1375,7 @@ class RuntimeContextApiMacros {
 		final pos = Context.currentPos();
 		final parsed = Context.parse("demo.call(1 + 2, new js.lib.ArrayBuffer(8), cast value, [1, 2], { ok: true })", pos);
 		final inlineParsed = Context.parseInlineString("items[0] ? \"yes\" : \"no\"", pos);
+		final nullSafeParsed = Context.parse("unexpectedStrings?.copy() ?? []", pos);
 
 		switch (parsed.expr) {
 			case ECall(target, args):
@@ -1452,6 +1453,27 @@ class RuntimeContextApiMacros {
 				}
 			case _:
 				Context.fatalError("runtime macro parse probe: expected inline ternary", pos);
+		}
+
+		switch (nullSafeParsed.expr) {
+			case EBinop(OpNullCoal, left, _):
+				switch (left.expr) {
+					case ECall(target, []):
+						switch (target.expr) {
+							case EField(owner, "copy", Safe):
+								switch (owner.expr) {
+									case EConst(CIdent("unexpectedStrings")):
+									case _:
+										Context.fatalError("runtime macro parse probe: expected null-safe receiver", pos);
+								}
+							case _:
+								Context.fatalError("runtime macro parse probe: expected safe field kind", pos);
+						}
+					case _:
+						Context.fatalError("runtime macro parse probe: expected null-safe copy call", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro parse probe: expected null-coalescing expression", pos);
 		}
 
 		Compiler.define("HXHX_RUNTIME_PARSE", "call+inline");

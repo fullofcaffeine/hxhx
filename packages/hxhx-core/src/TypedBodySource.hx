@@ -86,6 +86,7 @@ class TypedBodySource {
 			case LocalRead: EIdent(texts[0]);
 			case NameRead: EIdent(texts[0]);
 			case FieldRead: EField(expression(expressions[0]), texts[0]);
+			case NullSafeFieldRead: ENullSafeField(expression(expressions[0]), texts[0]);
 			case Call:
 				final callee = expression(expressions[0]);
 				final arguments = expressionTail(expressions, 1);

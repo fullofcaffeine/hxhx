@@ -528,7 +528,7 @@ class NekoTargetCore {
 					collectExprRefs(context, arg, addConstructor, addStatic);
 			case ECall(callee, args):
 				collectCallRefs(context, callee, args, addConstructor, addStatic);
-			case EField(obj, _):
+			case EField(obj, _) | ENullSafeField(obj, _):
 				collectExprRefs(context, obj, addConstructor, addStatic);
 			case EUnop(_, _, inner) | ECast(inner, _) | EUntyped(inner) | EMacroExpr(inner, _):
 				collectExprRefs(context, inner, addConstructor, addStatic);
@@ -1175,6 +1175,8 @@ class NekoTargetCore {
 				+ ")";
 			case EField(obj, field):
 				"__hxhx_field(" + renderExpr(context, obj) + ", " + quote(field) + ")";
+			case ENullSafeField(_, _):
+				unsupportedExpr("null-safe field access requires shared evaluation lowering");
 			case ECall(callee, args):
 				renderCall(context, callee, args);
 			case EUnop(op, fixity, inner):
@@ -1433,6 +1435,7 @@ class NekoTargetCore {
 			case ESuper: "ESuper";
 			case EIdent(_): "EIdent";
 			case EField(_, _): "EField";
+			case ENullSafeField(_, _): "ENullSafeField";
 			case ECall(_, _): "ECall";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(typeText): "EMacroType(" + typeText + ")";

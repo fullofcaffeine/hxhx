@@ -17,6 +17,7 @@ enum TypedExprTag {
 	LocalRead;
 	NameRead;
 	FieldRead;
+	NullSafeFieldRead;
 	Call;
 	MacroExpr;
 	MacroType;
@@ -118,6 +119,10 @@ class TypedExpr {
 
 	public static function fieldRead(object:TypedExpr, field:String, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(FieldRead, type, position, [field], [object]);
+
+	/** Preserve a null-safe field read until shared target lowering selects its evaluation schedule. **/
+	public static function nullSafeFieldRead(object:TypedExpr, field:String, type:TyType, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(NullSafeFieldRead, type, position, [field], [object]);
 
 	public static function call(callee:TypedExpr, arguments:Array<TypedExpr>, declaration:Null<TyDeclarationInfo>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(Call, type, position, null, [callee].concat(arguments == null ? [] : arguments), null, false, 0, 0.0, declaration);

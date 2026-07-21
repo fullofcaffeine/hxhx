@@ -21954,6 +21954,8 @@ class CppTargetCore {
 				"EConst(CIdent(" + name + "))";
 			case EField(receiver, field):
 				"EField(" + macroExprText(receiver, []) + "," + field + ")";
+			case ENullSafeField(receiver, field):
+				"EField(" + macroExprText(receiver, []) + "," + field + ",Safe)";
 			case EArrayAccess(receiver, index):
 				"EArray(" + macroExprText(receiver, []) + "," + macroExprText(index, []) + ")";
 			case EArrayDecl(values):
@@ -22354,6 +22356,7 @@ class CppTargetCore {
 			case ESuper: "ESuper";
 			case EIdent(name): "EIdent(" + name + ")";
 			case EField(receiver, field): "EField(" + exprKind(receiver) + "." + field + ")";
+			case ENullSafeField(receiver, field): "ENullSafeField(" + exprKind(receiver) + "?." + field + ")";
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(_): "EMacroType";

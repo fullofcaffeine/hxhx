@@ -209,6 +209,8 @@ class CppMacroExpr {
 				macroEnum("EConst", [macroEnum("CIdent", [macroString(name)])]);
 			case EField(receiver, field):
 				macroEnum("EField", [macroExpr(receiver, []), macroString(field)]);
+			case ENullSafeField(receiver, field):
+				macroEnum("EField", [macroExpr(receiver, []), macroString(field), macroEnum("Safe", [])]);
 			case EArrayAccess(receiver, index):
 				macroEnum("EArray", [macroExpr(receiver, []), macroExpr(index, [])]);
 			case EArrayDecl(values):
@@ -274,6 +276,7 @@ class CppMacroExpr {
 			case ESuper: "ESuper";
 			case EIdent(name): "EIdent(" + name + ")";
 			case EField(receiver, field): "EField(" + exprKind(receiver) + "." + field + ")";
+			case ENullSafeField(receiver, field): "ENullSafeField(" + exprKind(receiver) + "?." + field + ")";
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(_): "EMacroType";

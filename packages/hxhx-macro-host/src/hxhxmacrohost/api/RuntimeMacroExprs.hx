@@ -21,7 +21,7 @@ import haxe.macro.Expr;
 	- Supported today:
 	  - literals (`null`, booleans, strings, ints, floats)
 	  - identifiers / bare enum-like values / `this` / `super`
-	  - field access and call chains
+	  - ordinary and null-safe field access and call chains
 	  - narrow arrow lambdas (`(arg0, arg1) -> expr`)
 	  - unary / binary / ternary expressions
 	  - `new TypePath(...)`
@@ -614,6 +614,8 @@ class RuntimeMacroExprs {
 				EConst(CIdent(name));
 			case EField(obj, field):
 				EField(convert(obj, pos), field);
+			case ENullSafeField(obj, field):
+				EField(convert(obj, pos), field, Safe);
 			case ECall(callee, args):
 				ECall(convert(callee, pos), [for (arg in args) convert(arg, pos)]);
 			case ETernary(cond, thenExpr, elseExpr):

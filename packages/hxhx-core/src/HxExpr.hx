@@ -69,6 +69,16 @@ enum HxExpr {
 
 	EIdent(name:String);
 	EField(obj:HxExpr, field:String);
+
+	/**
+		Null-safe field access: `value?.field`.
+
+		Unlike an ordinary dot, this access returns `null` instead of reading the
+		field when `value` is null. Keeping that distinction in the shared syntax
+		tree prevents a backend from accidentally emitting an unconditional read.
+	**/
+	ENullSafeField(obj:HxExpr, field:String);
+
 	ECall(callee:HxExpr, args:Array<HxExpr>);
 
 	/**

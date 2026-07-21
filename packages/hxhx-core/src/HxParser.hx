@@ -470,6 +470,8 @@ class HxParser {
 				ECall(rebaseFunctionBodyExprValue(callee, base), [for (arg in args) rebaseFunctionBodyExprValue(arg, base)]);
 			case EField(obj, field):
 				EField(rebaseFunctionBodyExprValue(obj, base), field);
+			case ENullSafeField(obj, field):
+				ENullSafeField(rebaseFunctionBodyExprValue(obj, base), field);
 			case EBinop(op, left, right):
 				EBinop(op, rebaseFunctionBodyExprValue(left, base), rebaseFunctionBodyExprValue(right, base));
 			case EUnop(op, fixity, value):
@@ -1095,6 +1097,11 @@ class HxParser {
 			case _:
 				false;
 		}
+	}
+
+	inline function nextIsAdjacentDot():Bool {
+		final next = peek();
+		return next.kind.match(TDot) && next.pos.getIndex() == cur.pos.getIndex() + 1;
 	}
 
 	function fail<T>(message:String):T {
@@ -1817,6 +1824,8 @@ class HxParser {
 					ECall(applyDefaultedArgs(callee), [for (arg in callArgs) applyDefaultedArgs(arg)]);
 				case EField(receiver, field):
 					EField(applyDefaultedArgs(receiver), field);
+				case ENullSafeField(receiver, field):
+					ENullSafeField(applyDefaultedArgs(receiver), field);
 				case EArrayAccess(receiver, index):
 					EArrayAccess(applyDefaultedArgs(receiver), applyDefaultedArgs(index));
 				case EArrayDecl(items):
@@ -1950,6 +1959,8 @@ class HxParser {
 					ECall(applyDefaultedArgs(callee), [for (arg in callArgs) applyDefaultedArgs(arg)]);
 				case EField(receiver, field):
 					EField(applyDefaultedArgs(receiver), field);
+				case ENullSafeField(receiver, field):
+					ENullSafeField(applyDefaultedArgs(receiver), field);
 				case EArrayAccess(receiver, index):
 					EArrayAccess(applyDefaultedArgs(receiver), applyDefaultedArgs(index));
 				case EArrayDecl(items):
@@ -2686,6 +2697,13 @@ class HxParser {
 					bump();
 					final field = readPostfixFieldName();
 					e = EField(e, field);
+				case TOther(c) if (c == "?".code && nextIsAdjacentDot()):
+					// Null-safe access is one postfix operation. If `?` is left for
+					// `parseExpr`, it is misread as the start of a ternary expression.
+					bump();
+					bump();
+					final field = readPostfixFieldName();
+					e = ENullSafeField(e, field);
 				case TLParen:
 					bump();
 					final args = new Array<HxExpr>();
@@ -3359,6 +3377,8 @@ class HxParser {
 				ECall(applyDefaultedLambdaArgs(callee, defaultedArgs), [for (arg in callArgs) applyDefaultedLambdaArgs(arg, defaultedArgs)]);
 			case EField(receiver, field):
 				EField(applyDefaultedLambdaArgs(receiver, defaultedArgs), field);
+			case ENullSafeField(receiver, field):
+				ENullSafeField(applyDefaultedLambdaArgs(receiver, defaultedArgs), field);
 			case EArrayAccess(receiver, index):
 				EArrayAccess(applyDefaultedLambdaArgs(receiver, defaultedArgs), applyDefaultedLambdaArgs(index, defaultedArgs));
 			case EArrayDecl(items):

@@ -775,7 +775,7 @@ class TyperStage {
 					return null;
 				final owner = ctx.currentClass();
 				return owner == null ? null : resolveMethodCall(owner, name, true, args, scope, ctx, pos).declaration;
-			case EField(object, field):
+			case EField(object, field) | ENullSafeField(object, field):
 				switch (object) {
 					case EIdent(typeOrValue):
 						final staticOwner = isUpperStartName(typeOrValue) ? ctx.resolveType(typeOrValue) : null;
@@ -976,6 +976,9 @@ class TyperStage {
 							TyType.unknown();
 						}
 				}
+			case ENullSafeField(obj, field):
+				final fieldType = inferExprType(EField(obj, field), scope, ctx, pos);
+				fieldType.isNullable() ? fieldType : TyType.nullable(fieldType);
 			case ECall(callee, args):
 				if (args.length == 1 && isTypeErrorProbeCallee(callee)) {
 					try {
@@ -986,6 +989,9 @@ class TyperStage {
 				switch (callee) {
 					case EIdent("__hxhx_parenthesized") if (args.length == 1):
 						return inferExprType(args[0], scope, ctx, pos);
+					case ENullSafeField(obj, field):
+						final result = inferExprType(ECall(EField(obj, field), args), scope, ctx, pos);
+						return result.isNullable() ? result : TyType.nullable(result);
 					case _:
 				}
 

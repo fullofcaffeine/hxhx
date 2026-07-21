@@ -76,7 +76,7 @@ class ParserStage {
 			return false;
 		return switch (expr) {
 			case EIdent(name): final text = name == null ? "" : name; text.length > "return".length && StringTools.startsWith(text, "return");
-			case EField(obj, _):
+			case EField(obj, _) | ENullSafeField(obj, _):
 				initHasMergedReturnIdentifier(obj);
 			case ECall(callee, args): initHasMergedReturnIdentifier(callee) || initListHasMergedReturnIdentifier(args);
 			case EMacroExpr(inner, _):
@@ -3176,7 +3176,7 @@ class ParserStage {
 		return switch (expr) {
 			case EUnsupported(_):
 				true;
-			case EField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj):
+			case EField(obj, _), ENullSafeField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj):
 				hasUnsupportedExpr(obj);
 			case ECall(obj, args):
 				if (hasUnsupportedExpr(obj)) true; else {

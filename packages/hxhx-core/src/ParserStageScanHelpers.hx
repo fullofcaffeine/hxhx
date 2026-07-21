@@ -2409,7 +2409,7 @@ class ParserStageScanHelpers {
 		return switch (expr) {
 			case EUnsupported(_):
 				true;
-			case EField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj):
+			case EField(obj, _), ENullSafeField(obj, _), EUnop(_, _, obj), ECast(obj, _), EUntyped(obj):
 				hasUnsupportedExpr(obj);
 			case ECall(obj, args):
 				if (hasUnsupportedExpr(obj)) true; else {
