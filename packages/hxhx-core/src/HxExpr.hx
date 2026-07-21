@@ -82,19 +82,6 @@ enum HxExpr {
 	ECall(callee:HxExpr, args:Array<HxExpr>);
 
 	/**
-		Return syntax used where Haxe expects an expression.
-
-		Haxe macros receive source syntax before ordinary typing. A macro argument can
-		therefore be `return value`, even though an ordinary runtime function argument
-		cannot be a return. Keeping the optional value as a child lets macro expansion,
-		typing diagnostics, and safety checks inspect it without relying on raw text.
-
-		A top-level function-body return remains `HxStmt.SReturn`; this node is only for
-		the expression form nested inside another expression.
-	**/
-	EReturn(expr:Null<HxExpr>);
-
-	/**
 		Expression-position macro quote: `macro expr`.
 
 		Why
@@ -421,4 +408,18 @@ enum HxExpr {
 		still allowing downstream stages to detect “unknown” shapes explicitly.
 	**/
 	EUnsupported(raw:String);
+
+	/**
+		Return syntax used where Haxe expects an expression.
+
+		Haxe macros receive source syntax before ordinary typing. A macro argument can
+		therefore be `return value`, even though an ordinary runtime function argument
+		cannot be a return. Keeping the optional value as a child lets macro expansion,
+		typing diagnostics, and safety checks inspect it without relying on raw text.
+
+		A top-level function-body return remains `HxStmt.SReturn`; this node is only for
+		the expression form nested inside another expression. It is appended after older
+		constructors so adding it does not renumber their generated identities.
+	**/
+	EReturn(expr:Null<HxExpr>);
 }
