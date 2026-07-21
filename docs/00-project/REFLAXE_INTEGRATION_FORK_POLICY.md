@@ -211,14 +211,29 @@ Fork governance then advanced independently:
   confirmed;
 - PR #7 added the fork-native evidence template required for future PRs.
 
-Fork `main` is now `8784f97259a293a07302588a2d00eff80bca91f4` while the
-consumer pin stays on the last behavior-bearing framework commit. Pull-request
-and final `main` runs pass the Haxe 4.3.0/latest core matrix, runtime compile,
-direct/intermediate scaffolding, and CLI new/test/build routes. Manual core run
-`29719038645` also passes. Ordinary pushes schedule no Haxelib publication or
-Pages deployment. The exact reason older fork events produced no runs remains
-unproven; the current event, source-selection, and recovery contracts are now
-executable and green.
+The fork then added target-neutral lifecycle and scalability repairs:
+
+- PR #8 introduced revisioned function-body input and explicit contracts for
+  compiler steps that preserve, replace, or invalidate target-owned analysis;
+- PR #9 rewrote the fork's change-record guidance for capable newcomers;
+- PR #10 avoided recalculating complete function-body fingerprints after every
+  compiler step when the body had not changed;
+- PR #12 kept those fingerprints stable when unrelated compiler work changed
+  process-wide local-variable numbers; and
+- PR #13 made pure-expression cleanup use an explicit work list, so a generated
+  function with tens of thousands of sequential expressions no longer exhausts
+  the host call stack.
+
+As of 2026-07-21, upstream `SomeRanDev/reflaxe` remains at
+`73a983112e039daad46b37912ab238df6bf0cf53` and fork `main` is
+`6922422448a5a0c1f8249f0682ecd4b239ebf325`. The hxhx consumer pins that exact
+fork commit with path-independent content digest
+`3c3c18c393af08f7e60c467a459d992a9b913f0cf2ff6cf9cd235b4c1a8648e6`.
+Each fork change landed through its own reviewed pull request. PR #13's six
+required checks passed, and the pinned framework was then used for a successful
+current-source hxhx build and its focused stage0-forbidden upstream macro
+workload. Ordinary fork pushes still schedule no Haxelib publication or Pages
+deployment.
 
 This policy changes dependency governance, not product readiness. README Goals
 and North Star progress remain unchanged until supported behavior and release
