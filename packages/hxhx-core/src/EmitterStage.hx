@@ -1159,7 +1159,8 @@ class EmitterStage {
 		the stage0-free native compiler.
 	**/
 	static function callSigForStage3(callee:String, ?callSigByCallee:Map<String, EmitterCallSig>):Null<EmitterCallSig> {
-		return EmitterCallSigIndex.get(callSigByCallee, callee);
+		final resolved = EmitterCallSigIndex.get(callSigByCallee, callee);
+		return resolved == null ? null : cast resolved;
 	}
 
 	static function resolveQualifiedModuleCallSigByEmittedModuleNameForStage3(moduleName:String, field:String, loweredField:String,
