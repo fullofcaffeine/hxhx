@@ -113,6 +113,7 @@
     "test:m14:typed-abstract-binary": "compiler",
     "test:m14:abstract-unary-cross-backend": "compiler",
     "test:m14:abstract-binary-cross-backend": "compiler",
+    "test:m14:stage3-int64-add-int": "compiler",
     "test:m14:cpp-abstract-unary": "compiler",
     "test:m14:cpp-abstract-binary": "compiler",
     "test:m14:cpp-int64-equality": "compiler",

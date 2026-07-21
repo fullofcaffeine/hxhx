@@ -199,7 +199,7 @@ The same guard owns a narrower Q1 ignore list for workflows whose only purpose
 is exercising `hxhx`; mixed changes and hxhx-specific examples still escalate
 to Q2 and wake those consumers.
 
-At Q2, the Core workflow runs 105 of the 106 canonical `npm test` commands as
+At Q2, the Core workflow runs 106 of the 107 canonical `npm test` commands as
 three clean-runner shards after Guardrails: focused compiler regressions,
 macro-host integration, and portable/snapshot/example coverage. Stage0-free,
 JS-native, and strict plugin canaries remain required at that tier. Q3 adds the
@@ -219,7 +219,7 @@ manifest records the minimum tier for every prerequisite, so only a skip
 authorized by the exact route is accepted. A failed route, secret scan,
 required job, cancelled job, unexpected skip, or missing result fails the
 aggregate. Local `npm test` remains the canonical complete serialized command
-with all 106 entries. The measured baseline and shard rationale are recorded in
+with all 107 entries. The measured baseline and shard rationale are recorded in
 `docs/benchmarks/HXHX_CORE_TEST_CRITICAL_PATH_2026_07_18.md`.
 
 Stable success markers used by required lanes:

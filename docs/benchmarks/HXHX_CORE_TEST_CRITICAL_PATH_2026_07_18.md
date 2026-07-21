@@ -117,22 +117,28 @@ The earliest shard began at `2026-07-19T12:11:48Z`; the aggregate completed at
 | Complete Core workflow | 58m36s | 27m18s | -31m18s (-53.4%) |
 
 The summed command-time difference is normal hosted-runner variance; the
-manifest still assigns every one of the same 106 commands exactly once. The
+manifest assigned every one of the same 106 baseline commands exactly once. The
 17.9% runner-time increase is the measured cost of isolated checkouts and
 toolchain setup. It is accepted because it removes 21m49s from the required
 test critical path and 31m18s from the complete workflow without sharing
 mutable build artifacts, weakening Stage0 rules, or hiding a failed lane.
 
-Risk routing now avoids paying that full cost for every change. Q2 runs the
-three bounded compiler/target shards (105 commands) and the focused native and
-plugin canaries. Q3 adds the one-command `hxhx-targets` shard measured here.
-The complete local `npm test` inventory and Q3/Q4 evidence still contain all
-106 commands; this changes cadence, not ownership or release coverage.
+Risk routing now avoids paying that full cost for every change. At this
+baseline, Q2 ran the three bounded compiler/target shards (105 commands) and
+the focused native and plugin canaries. Q3 added the one-command `hxhx-targets`
+shard measured here. The complete local `npm test` inventory and Q3/Q4 evidence
+contained all 106 baseline commands; this changed cadence, not ownership or
+release coverage.
+
+The live manifest now contains 107 commands. The additional focused Stage3
+`Int64 + Int` regression belongs to the compiler shard; this historical timing
+table remains the 106-command baseline until a successor hosted measurement is
+recorded.
 
 ## Local workflow
 
-`npm test` remains the canonical complete local command and retains its exact
-106-command order. For a focused reproduction of one CI family, use:
+`npm test` remains the canonical complete local command. For a focused
+reproduction of one CI family, use:
 
 ```bash
 npm run test:ci:shard -- --shard compiler

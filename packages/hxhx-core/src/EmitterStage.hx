@@ -6167,33 +6167,7 @@ class EmitterStage {
 			+ "  customParams : Obj.t;\n"
 			+ "}\n"));
 
-		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Haxe_Int64",
-			"(* hxhx(stage3) bootstrap shim: haxe.Int64 (bring-up only) *)\n"
-			+ "\n"
-			+ "(*\n"
-			+ "  This is intentionally not a correct implementation of Haxe Int64 semantics.\n"
-			+ "  It exists so upstream-shaped code can typecheck and link during Stage3.\n"
-			+ "*)\n"
-			+ "\n"
-			+ "type t = int\n"
-			+ "\n"
-			+ "type divmod = { quotient : t; modulus : t }\n"
-			+ "\n"
-			+ "let make (_high : int) (low : int) : t = low\n"
-			+ "let ofInt (i : int) : t = i\n"
-			+ "let fromFloat (_f : _) : _ = Obj.repr 0\n"
-			+ "let parseString (_s : string) : t = 0\n"
-			+ "let toInt (v : t) : int = v\n"
-			+ "let toStr (v : t) : string = string_of_int v\n"
-			+ "let add (a : t) (b : t) : t = a + b\n"
-			+ "let sub (a : t) (b : t) : t = a - b\n"
-			+ "let mul (a : t) (b : t) : t = a * b\n"
-			+ "let neg (a : t) : t = (-a)\n"
-			+ "let eq (_a : _) (_b : _) : bool = true\n"
-			+ "let compare (a : t) (b : t) : int = Stdlib.compare a b\n"
-			+ "let divMod (a : t) (b : t) : divmod =\n"
-			+ "  if b = 0 then { quotient = 0; modulus = 0 } else { quotient = a / b; modulus = a mod b }\n"
-			+ "let isInt64 (_ : Obj.t) : bool = true\n"));
+		generatedPaths.push(writeStage3TemplateShimIfMissing(outAbs, "Haxe_Int64"));
 
 		return generatedPaths;
 	}
