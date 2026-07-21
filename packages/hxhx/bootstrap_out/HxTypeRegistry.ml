@@ -6,6 +6,7 @@ let init () : unit =
   ignore (HxType.class_ "CSharpNoEmitDiagnostics");
   ignore (HxType.class_ "CompilerDriver");
   ignore (HxType.class_ "EmitterCallSigIndex");
+  ignore (HxType.class_ "EmitterNumericUpdate");
   ignore (HxType.class_ "EmitterStage");
   ignore (HxType.class_ "EmitterStageBuildSupport");
   ignore (HxType.class_ "EmitterStageDebug");
@@ -1117,6 +1118,9 @@ let init () : unit =
   HxType.register_class_ctor "EmitterCallSigIndex" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (EmitterCallSigIndex.create ())
   );
+  HxType.register_class_ctor "EmitterNumericUpdate" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (EmitterNumericUpdate.create ())
+  );
   HxType.register_class_ctor "EmitterStage" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (EmitterStage.create ())
   );
@@ -2158,6 +2162,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "CSharpNoEmitDiagnostics" (fun () -> Obj.repr (CSharpNoEmitDiagnostics.__empty ()));
   HxType.register_class_empty_ctor "CompilerDriver" (fun () -> Obj.repr (CompilerDriver.__empty ()));
   HxType.register_class_empty_ctor "EmitterCallSigIndex" (fun () -> Obj.repr (EmitterCallSigIndex.__empty ()));
+  HxType.register_class_empty_ctor "EmitterNumericUpdate" (fun () -> Obj.repr (EmitterNumericUpdate.__empty ()));
   HxType.register_class_empty_ctor "EmitterStage" (fun () -> Obj.repr (EmitterStage.__empty ()));
   HxType.register_class_empty_ctor "EmitterStageBuildSupport" (fun () -> Obj.repr (EmitterStageBuildSupport.__empty ()));
   HxType.register_class_empty_ctor "EmitterStageDebug" (fun () -> Obj.repr (EmitterStageDebug.__empty ()));
@@ -2378,6 +2383,8 @@ let init () : unit =
   HxType.register_class_static_fields "CompilerDriver" [ "run" ];
   HxType.register_class_instance_fields "EmitterCallSigIndex" [];
   HxType.register_class_static_fields "EmitterCallSigIndex" [ "get" ];
+  HxType.register_class_instance_fields "EmitterNumericUpdate" [];
+  HxType.register_class_static_fields "EmitterNumericUpdate" [ "one"; "operation" ];
   HxType.register_class_instance_fields "EmitterStage" [];
   HxType.register_class_static_fields "EmitterStage" [ "backendDialect"; "baseModuleName"; "callSigForStage3"; "callSigFromFunction"; "callSigParamTypeHints"; "collectAssignedNamesInExprRec"; "collectAssignedNamesInStmtRec"; "collectLocalsForPreludeFromStmtRec"; "collectStage3PatternBindingNames"; "constFoldString"; "copyStage3RuntimeForStage3"; "currentFunctionLocalTypeHints"; "currentFunctionName"; "currentGlobalImportAliasByIdent"; "currentImportInt64"; "currentInstanceFieldsByTypePath"; "currentInstanceFieldsFor"; "currentInstanceMethodsByTypePath"; "currentInstanceMethodsFor"; "currentKnownModuleNames"; "currentLocalCallSigCache"; "currentModuleFilePath"; "currentModuleNameEntries"; "currentModuleShortNameForStage3"; "currentMutableLocalRefNames"; "currentOcamlModuleName"; "currentOcamlProfile"; "currentPortableMetalizationPlan"; "currentPortableMetalizationRegionKey"; "currentStmtTyEntries"; "emit"; "emitGeneratedOcamlModulesForStage3"; "emitPluginDuneLayoutIfRequestedForStage3"; "emitStage3BootstrapShimsForStage3"; "emitToDir"; "emitToDirWithPortableMetalizationPlan"; "emitUnknownLengthStage3"; "ensureEmitToDirOutDir"; "eraseBoundary"; "escapeOcamlIdentPart"; "escapeOcamlString"; "escapeOcamlStringLiteralForStage3"; "expectedMainClassFromFile"; "expectedMainClassFromFilePath"; "exprToOcaml"; "exprToOcamlArrayComprehension"; "exprToOcamlAsFloatValueStage3"; "exprToOcamlForConcatStage3"; "exprToOcamlIdentStage3"; "exprToOcamlNewStage3"; "exprToOcamlNullableIntStage3"; "exprToOcamlStage3FieldAccess"; "exprToOcamlString"; "extendTyByIdentForStage3"; "extendTyByIdentManyForStage3"; "hasCurrentInstanceField"; "hasCurrentInstanceMethod"; "hasMethodName"; "hxhxMainShouldRouteStandardJsToNativeStage3OcamlBody"; "hxhxStage3ReadConnectDisplayStdinStage3OcamlBody"; "hxhxStage3RunWaitStdioStage3OcamlBody"; "hxhxStage3WriteWaitStdioReplyStage3OcamlBody"; "inferRepoRootForStage3Shims"; "installEmitToDirProfile"; "installPortableMetalizationPlan"; "intBinopCallStage3"; "isAssignmentOpToken"; "isKnownModuleNameForStage3"; "isMetalProfileActive"; "isMutableLocalRefIdent"; "isOcamlKeyword"; "isPortableAutoMetalizedRegionActive"; "isRestLikeArg"; "isRootSysReceiverExpr"; "isSimpleHaxePathForStage3"; "isStage3StdArrayCtorTypePath"; "isStage3StringToolsPlaceholder"; "isTypePathExpr"; "isUnknownTypeName"; "isUpperStart"; "lowerFirst"; "macroContextLoadShimSourceForStage3"; "mapGetRaw"; "mapHasRaw"; "mapKeysRaw"; "markPortableAutoMetalizedLoweringUse"; "moduleInitTrace"; "moduleNameForScannedDecl"; "moduleNameForStage3Key"; "moduleTypeNameFor"; "moduleTypeNameForStage3OcamlBody"; "ocamlModuleNameFromTypePath"; "ocamlModuleNameFromTypePathParts"; "ocamlProfileBootstrapShimSourceForStage3"; "ocamlReadValueIdent"; "ocamlTypeFromTy"; "ocamlValueIdent"; "patchStage3MacroContextLoadShimForStage3"; "patchStage3OcamlProfileShimForStage3"; "patchStage3StringToolsShimForStage3"; "pluginRegistrationEntrySourceForStage3"; "readStage3ShimTemplate"; "requireEmitToDirOutAbs"; "resolveImportedModuleFileFromContext"; "resolveQualifiedModuleCallSig"; "resolveQualifiedModuleCallSigByEmittedModuleNameForStage3"; "resolveQualifiedModuleFileFromContext"; "restorePortableMetalizationPlan"; "returnExprToOcaml"; "runtimeModuleNameFromPath"; "runtimeModuleNamesForStage3"; "scanExprForPreludeDepsRec"; "scanStmtForPreludeDepsRec"; "shouldEmitParsedStaticFields"; "stage3ArityFor"; "stage3BootstrapDefineValue"; "stage3BootstrapWantsPluginDuneLayout"; "stage3DateToolsDurationBody"; "stage3HasArity"; "stage3HasLocalValueIdent"; "stage3HasStmtValueIdent"; "stage3HasThisBinding"; "stage3HasTyIdent"; "stage3ImportedSignatureModulePath"; "stage3Int64CarrierValue"; "stage3IsBoolExpr"; "stage3IsFloatExpr"; "stage3IsFloatParamHint"; "stage3IsInfNanFieldExpr"; "stage3IsInt64Expr"; "stage3IsInt64TypeName"; "stage3IsIntExpr"; "stage3IsLikelyArrayExpr"; "stage3IsLikelyStringArrayExpr"; "stage3IsNullableIntExpr"; "stage3IsPositiveInfinityFieldExpr"; "stage3IsStringArrayTypeText"; "stage3IsStringExpr"; "stage3IsSysIoProcessExpr"; "stage3IsUnknownNumericIdent"; "stage3LocalHintLookup"; "stage3MetalArrayLiteralCategory"; "stage3OcamlCall1"; "stage3OcamlCall2"; "stage3OcamlCall3"; "stage3PatternBindingLets"; "stage3ResolveTyIdentName"; "stage3ReturnTypeNeedsObjBranches"; "stage3ReturnTypeOverride"; "stage3RootCallArgs"; "stage3RootField"; "stage3StmtTyLookup"; "stage3ThisFieldAssign"; "stage3ThisFieldRead"; "stage3TyForIdent"; "stage3TyLookup"; "stage3TypedLambdaArgumentTypes"; "staticImportModuleForStage3"; "stmtListToOcaml"; "stringToolsBootstrapShimSourceForStage3"; "traceEmitToDirEntry"; "traceModuleInit"; "tryExprToOcamlStage3CoreIntrinsic"; "tryExprToOcamlStage3FsPrintIntrinsic"; "tryExprToOcamlStage3Int64Intrinsic"; "tryExprToOcamlStage3LambdaTryIntrinsic"; "tryExprToOcamlStage3MathCallIntrinsic"; "tryExprToOcamlStage3MathFieldIntrinsic"; "tryExprToOcamlStage3MathIntrinsic"; "tryExprToOcamlStage3NumericStringIntrinsic"; "tryExprToOcamlStage3ReflectTypeIntrinsic"; "tryExprToOcamlStage3RuntimeIntrinsic"; "tryExprToOcamlStage3StaticField"; "tryExprToOcamlStage3StdStringIntrinsic"; "tryExprToOcamlStage3StringCallIntrinsic"; "tryExtractTypePathPartsFromExpr"; "upperFirst"; "withStage3TemporaryTypeEntries"; "writeStage3Shim"; "writeStage3ShimIfMissing"; "writeStage3TemplateShimIfMissing" ];
   HxType.register_class_instance_fields "EmitterStageBuildSupport" [];
@@ -2830,6 +2837,7 @@ let init () : unit =
   HxType.register_class_tags "CSharpNoEmitDiagnostics" [ "CSharpNoEmitDiagnostics" ];
   HxType.register_class_tags "CompilerDriver" [ "CompilerDriver" ];
   HxType.register_class_tags "EmitterCallSigIndex" [ "EmitterCallSigIndex" ];
+  HxType.register_class_tags "EmitterNumericUpdate" [ "EmitterNumericUpdate" ];
   HxType.register_class_tags "EmitterStage" [ "EmitterStage" ];
   HxType.register_class_tags "EmitterStageBuildSupport" [ "EmitterStageBuildSupport" ];
   HxType.register_class_tags "EmitterStageDebug" [ "EmitterStageDebug" ];

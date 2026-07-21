@@ -12052,15 +12052,15 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
               | HxExpr.EUntyped _ -> 28
               | HxExpr.EUnsupported _ -> 29) = 8 then let _g3 = (match expr with
               | HxExpr.EIdent __enum_param_1337 -> __enum_param_1337
-              | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in if isMutableLocalRefIdent (name : string) then let ident = (ocamlValueIdent (name : string) : string) in let tempString25 = ref ("" : string) in (
-              ignore (if op = HxUnaryOperator.Increment then let __assign_1338 = ("HxInt.add" : string) in (
+              | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in if isMutableLocalRefIdent (name : string) then let ident = (ocamlValueIdent (name : string) : string) in let isInt64 = stage3IsInt64Expr (Obj.magic expr) (Obj.repr tyByIdent) in let tempString25 = ref ("" : string) in (
+              ignore (if op = HxUnaryOperator.Increment then let __assign_1338 = (EmitterNumericUpdate.operation isInt64 true : string) in (
                 tempString25 := __assign_1338;
                 __assign_1338
-              ) else let __assign_1339 = ("HxInt.sub" : string) in (
+              ) else let __assign_1339 = (EmitterNumericUpdate.operation isInt64 false : string) in (
                 tempString25 := __assign_1339;
                 __assign_1339
               ));
-              let binop = (!tempString25 : string) in let tempString26 = ref ("" : string) in (
+              let binop = (!tempString25 : string) in let one = (EmitterNumericUpdate.one isInt64 : string) in let tempString26 = ref ("" : string) in (
                 ignore (if fixity = HxUnaryFixity.Postfix then let __assign_1340 = ("__hx_old" : string) in (
                   tempString26 := __assign_1340;
                   __assign_1340
@@ -12068,7 +12068,7 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                   tempString26 := __assign_1341;
                   __assign_1341
                 ));
-                let resultName = (!tempString26 : string) in let __assign_1342 = (((((((("(let __hx_old = (!" ^ HxString.toStdString ident) ^ ") in let __hx_next = ") ^ HxString.toStdString binop) ^ " __hx_old 1 in (") ^ HxString.toStdString ident) ^ " := __hx_next; ") ^ HxString.toStdString resultName) ^ "))" : string) in (
+                let resultName = (!tempString26 : string) in let __assign_1342 = (((((((((("(let __hx_old = (!" ^ HxString.toStdString ident) ^ ") in let __hx_next = ") ^ HxString.toStdString binop) ^ " __hx_old ") ^ HxString.toStdString one) ^ " in (") ^ HxString.toStdString ident) ^ " := __hx_next; ") ^ HxString.toStdString resultName) ^ "))" : string) in (
                   tempResult := __assign_1342;
                   __assign_1342
                 )
