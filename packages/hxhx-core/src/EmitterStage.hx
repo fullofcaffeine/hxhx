@@ -1488,7 +1488,7 @@ class EmitterStage {
 			case _:
 				TyType.fromHintText("Dynamic");
 		};
-		final ty2 = extendTyByIdentForStage3(cast tyByIdent, name, loopTy);
+		final ty2 = extendTyByIdentForStage3(tyByIdent, name, loopTy);
 		final guard = guardExpr == null ? null : exprToOcaml(guardExpr, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 		final body = exprToOcaml(yieldExpr, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 		final pushExpr = guard == null ? "ignore (HxBootArray.push " + out + " (" + body + "))" : "(if ("
@@ -2194,7 +2194,7 @@ class EmitterStage {
 				return switch (catches[0]) {
 					case EArrayDecl([EString(sourceName), EString(_), ELambda(catchArgs, catchBody)]) if (catchArgs.length == 1):
 						final name = catchArgs[0].length == 0 ? sourceName : catchArgs[0];
-						final catchTypes = extendTyByIdentManyForStage3(cast tyByIdent, [name], TyType.fromHintText("Dynamic"));
+						final catchTypes = extendTyByIdentManyForStage3(tyByIdent, [name], TyType.fromHintText("Dynamic"));
 						final catchCode = exprToOcaml(catchBody, arityByIdent, catchTypes, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 							callSigByCallee);
 						"HxRuntime.hx_try (fun () -> "
@@ -2213,7 +2213,7 @@ class EmitterStage {
 				throw "stage3 emitter: malformed structural __hxhx_throw expression";
 			case ELambda(args, body):
 				final ocamlArgs = args.map(ocamlValueIdent).join(" ");
-				final ty2 = extendTyByIdentManyForStage3(cast tyByIdent, args, TyType.fromHintText("Dynamic"));
+				final ty2 = extendTyByIdentManyForStage3(tyByIdent, args, TyType.fromHintText("Dynamic"));
 				return "(fun "
 					+ (ocamlArgs.length == 0 ? "_" : ocamlArgs)
 					+ " -> "
@@ -2351,18 +2351,30 @@ class EmitterStage {
 	static function tryExprToOcamlStage3CoreIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
-		for (tryIntrinsic in [
-			tryExprToOcamlStage3MathIntrinsic,
-			tryExprToOcamlStage3Int64Intrinsic,
-			tryExprToOcamlStage3LambdaTryIntrinsic,
-			tryExprToOcamlStage3ReflectTypeIntrinsic,
-			tryExprToOcamlStage3StdStringIntrinsic,
-			tryExprToOcamlStage3FsPrintIntrinsic,
-		]) {
-			final code = tryIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-			if (code != null)
-				return code;
-		}
+		var code = tryExprToOcamlStage3MathIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+			callSigByCallee);
+		if (code != null)
+			return code;
+		code = tryExprToOcamlStage3Int64Intrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+			callSigByCallee);
+		if (code != null)
+			return code;
+		code = tryExprToOcamlStage3LambdaTryIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+			callSigByCallee);
+		if (code != null)
+			return code;
+		code = tryExprToOcamlStage3ReflectTypeIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+			callSigByCallee);
+		if (code != null)
+			return code;
+		code = tryExprToOcamlStage3StdStringIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+			callSigByCallee);
+		if (code != null)
+			return code;
+		code = tryExprToOcamlStage3FsPrintIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+			callSigByCallee);
+		if (code != null)
+			return code;
 		return null;
 	}
 
@@ -3918,22 +3930,22 @@ class EmitterStage {
 						final branchExpr = exprs[idx];
 						final localTy = switch (pattern) {
 							case PBind(name):
-								extendTyByIdentForStage3(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
+								extendTyByIdentForStage3(tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case PCapture(name, _inner):
-								extendTyByIdentForStage3(cast tyByIdent, name, TyType.fromHintText("Dynamic"));
+								extendTyByIdentForStage3(tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case PArray(_items):
-								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PIntCompareGuard(_, _, _, _),
 								PParsedIntSwitchGuard(_, _, _, _), PUnsupportedGuard(_):
-								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case PEnumExtract(_name, _args):
-								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case PObject(_fieldNames, _fieldPatterns):
-								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case POr(_):
-								extendTyByIdentManyForStage3(cast tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case _:
-								extendTyByIdentManyForStage3(cast tyByIdent, null, TyType.fromHintText("Dynamic"));
+								extendTyByIdentManyForStage3(tyByIdent, null, TyType.fromHintText("Dynamic"));
 						};
 						final body = exprToOcaml(branchExpr, arityByIdent, localTy, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 							callSigByCallee);
@@ -5460,16 +5472,16 @@ class EmitterStage {
 								case PCapture(name, _inner):
 									extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
 								case PArray(_items):
-									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _),
 									PIntCompareGuard(_, _, _, _), PParsedIntSwitchGuard(_, _, _, _), PUnsupportedGuard(_):
-									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case PEnumExtract(_name, _args):
-									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case PObject(_fieldNames, _fieldPatterns):
-									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case POr(_):
-									extendTyByIdentManyForStage3(cast tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
+									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case _:
 									cloneTyCtxLocal(tyCtx);
 							};
