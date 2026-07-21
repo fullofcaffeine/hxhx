@@ -3435,13 +3435,11 @@ class EmitterStage {
 							case _ if (stage3IsFloatParamHint(hint)):
 								exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 									callSigByCallee);
-							case _ if (stage3IsInt64TypeName(hint)):
+							case _:
 								stage3Int64CarrierValue(hint, arg,
 									exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 										callSigByCallee),
 									tyByIdentRaw);
-							case _:
-								exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 						}
 					}
 
