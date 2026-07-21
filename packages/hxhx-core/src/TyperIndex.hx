@@ -123,6 +123,16 @@ class TyperIndex {
 		return null;
 	}
 
+	static function metadataValues(metadata:Array<String>, name:String):Array<String> {
+		if (metadata == null)
+			return [];
+		final prefix = name + "=";
+		return [
+			for (entry in metadata)
+				if (entry != null && StringTools.startsWith(entry, prefix)) entry.substr(prefix.length)
+		];
+	}
+
 	static function hasMetadata(metadata:Array<String>, name:String):Bool {
 		if (metadata == null)
 			return false;
@@ -501,8 +511,16 @@ class TyperIndex {
 			if (classMetadata.indexOf("__hxhx_abstract") >= 0) {
 				final underlyingHint = metadataValue(classMetadata, "__hxhx_abstract_underlying");
 				final underlying = semanticType(underlyingHint == null ? "" : underlyingHint, packagePath, moduleName, imports, params);
+				final implicitFromTypes = [
+					for (hint in metadataValues(classMetadata, "__hxhx_abstract_from"))
+						semanticType(hint, packagePath, moduleName, imports, params)
+				];
+				final implicitToTypes = [
+					for (hint in metadataValues(classMetadata, "__hxhx_abstract_to"))
+						semanticType(hint, packagePath, moduleName, imports, params)
+				];
 				final info = new TyAbstractInfo(identity, shortName, semanticModulePath, fields, properties, statics, instances, staticLists, instanceLists,
-					declarations, underlying, params);
+					declarations, underlying, params, implicitFromTypes, implicitToTypes);
 				catalogOperators(info, ResolvedModule.getFilePath(module));
 				addNominal(info);
 			} else {
@@ -605,6 +623,13 @@ class TyperIndex {
 				final abstractInfo:TyAbstractInfo = cast info;
 				lines.push("  underlying " + abstractInfo.getUnderlyingType().getSemanticKey());
 				lines.push("  type-params " + abstractInfo.getTypeParameters().join(","));
+				final conversionLines = [
+					for (type in abstractInfo.getImplicitFromTypes())
+						"  from " + type.getSemanticKey()
+				].concat([for (type in abstractInfo.getImplicitToTypes()) "  to " + type.getSemanticKey()]);
+				conversionLines.sort(compareText);
+				for (line in conversionLines)
+					lines.push(line);
 			}
 			final declarationLines = [
 				for (declaration in info.getDeclarations())

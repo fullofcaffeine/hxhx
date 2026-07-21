@@ -88,6 +88,7 @@ class M14TyperAbstractCatalogIntegrationTest {
 			"  @:optional",
 			"  public static function operatorPrefixMetadataControl():Void;",
 			"}",
+			"abstract NullableNumber(Null<Float>) from Null<Float> to Null<Float> {}",
 			"class Ordinary {",
 			"  @:op(-A)",
 			"  public static function misleading(value:Ordinary):Ordinary return value;",
@@ -118,6 +119,14 @@ class M14TyperAbstractCatalogIntegrationTest {
 		assertEquals(scalar.getUnderlyingType().getSemanticKey(), "primitive:Int", "primitive carrier must not replace abstract identity");
 		assertEquals(scalar.getTypeParameters().join(","), "T", "abstract type parameters were not retained");
 		assertTrue(scalar.getAllUnaryOperators().length == 5, "non-operator metadata beginning with 'op' was misclassified as @:op");
+		final nullableNumber = eager.getAbstractByFullName("demo.Catalog.NullableNumber");
+		assertTrue(nullableNumber != null, "expected nullable conversion control to be indexed as an abstract");
+		assertTrue(nullableNumber.getImplicitFromTypes().length == 1, "abstract header should retain exactly one from-type");
+		assertTrue(nullableNumber.getImplicitToTypes().length == 1, "abstract header should retain exactly one to-type");
+		assertEquals(nullableNumber.getImplicitFromTypes()[0].getSemanticKey(), "nullable:primitive:Float",
+			"abstract header from-type was not retained as a semantic conversion");
+		assertEquals(nullableNumber.getImplicitToTypes()[0].getSemanticKey(), "nullable:primitive:Float",
+			"abstract header to-type was not retained as a semantic conversion");
 
 		final neg = findUnary(scalar, HxUnaryOperator.Negate, HxUnaryFixity.Prefix);
 		assertEquals(neg.getDeclaration().getSignature().getName(), "arbitraryNeg", "operator catalog selected by helper name");

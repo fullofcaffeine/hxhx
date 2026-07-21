@@ -33,6 +33,16 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 		return {code: code, stdout: stdout, stderr: stderr};
 	}
 
+	static function typeProgram(source:String):MacroExpandedProgram {
+		final parsed = ParserStage.parse(source, "Main.hx");
+		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
+		final index = TyperIndex.build([resolved]);
+		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
+		return new MacroExpandedProgram([typed], false);
+	}
+
 	static function main():Void {
 		final source = [
 			"abstract Token(Int) from Int to Int {",
@@ -62,13 +72,7 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 			"  Sys.println(nativeText + 4);",
 			"} }",
 		].join("\n");
-		final parsed = ParserStage.parse(source, "Main.hx");
-		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
-		loader.markResolvedAlready([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
-		final program = new MacroExpandedProgram([typed], false);
+		final program = typeProgram(source);
 
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_abstract_binary_cross_backend"]);
 		deleteRecursive(root);
@@ -97,6 +101,32 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 			final executed = run(entry.executable, emitted.entryPath);
 			assertTrue(executed.code == 0, entry.target + " abstract-binary artifact failed: " + executed.stderr);
 			assertTrue(executed.stdout == expected, entry.target + " produced unexpected shared binary output: " + executed.stdout);
+		}
+
+		final nullableProgram = typeProgram([
+			"abstract NullFloat(Null<Float>) from Null<Float> to Null<Float> {",
+			"  @:op(A + B) public static inline function addNullable(left:NullFloat, right:Float):Float return right + 2.5;",
+			"}",
+			"class Main { static function main() {",
+			"  var value:NullFloat = 2.5;",
+			"  value += value;",
+			"  Sys.println(value == 5 ? 'nullable-ok' : 'nullable-bad');",
+			"} }",
+		].join("\n"));
+		final nullableCases = [
+			{target: "js-native", executable: "node", fileName: "nullable.js"},
+			{target: "php-native", executable: "php", fileName: "nullable.php"},
+		];
+		for (entry in nullableCases) {
+			final outputPath = Path.join([root, entry.fileName]);
+			final context = new BackendContext(Path.join([root, entry.target + "-nullable"]), outputPath, "Main", true, false, new StringMap<String>());
+			final emitted = BackendRegistry.createForTarget(entry.target).emit(nullableProgram, context);
+			final generated = File.getContent(emitted.entryPath);
+			assertTrue(generated.indexOf("addNullable") >= 0,
+				entry.target + " rebound or lost the nullable helper and conversions selected by the shared typer");
+			final executed = run(entry.executable, emitted.entryPath);
+			assertTrue(executed.code == 0, entry.target + " nullable abstract-binary artifact failed: " + executed.stderr);
+			assertTrue(executed.stdout == "nullable-ok\n", entry.target + " produced unexpected nullable binary output: " + executed.stdout);
 		}
 		deleteRecursive(root);
 	}

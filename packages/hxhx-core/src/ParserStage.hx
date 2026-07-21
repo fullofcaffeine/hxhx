@@ -2026,6 +2026,7 @@ class ParserStage {
 			i = nameTok.nextPos;
 			final typeParams = scanTypeParameterNames(source, i);
 			final abstractUnderlying = scanAbstractUnderlyingType(source, i);
+			final abstractConversions = scanAbstractHeaderConversions(source, i);
 
 			final isMain = mainTypeName != null && abstractName == mainTypeName;
 			final alreadySeen = seen.exists(abstractName);
@@ -2053,6 +2054,10 @@ class ParserStage {
 				final metadata = ["__hxhx_abstract"].concat(typeParamsMetadata(typeParams.params));
 				if (abstractUnderlying.length > 0)
 					metadata.push("__hxhx_abstract_underlying=" + abstractUnderlying);
+				for (fromType in abstractConversions.fromTypes)
+					metadata.push("__hxhx_abstract_from=" + fromType);
+				for (toType in abstractConversions.toTypes)
+					metadata.push("__hxhx_abstract_to=" + toType);
 				out.push(new HxClassDecl(abstractName, false, functions, fields, "", metadata));
 			}
 		}
@@ -2097,6 +2102,73 @@ class ParserStage {
 			parts.push(tok.text);
 		}
 		return StringTools.trim(parts.join(""));
+	}
+
+	/** Retain the explicit `from` and `to` types written in an abstract header. **/
+	static function scanAbstractHeaderConversions(source:String, start:Int):{fromTypes:Array<String>, toTypes:Array<String>} {
+		final fromTypes = new Array<String>();
+		final toTypes = new Array<String>();
+		var active = "";
+		var parts = new Array<String>();
+		var parenDepth = 0;
+		var angleDepth = 0;
+		var bracketDepth = 0;
+		var i = start;
+
+		function flush():Void {
+			if (active.length == 0)
+				return;
+			final type = StringTools.trim(parts.join(""));
+			if (type.length > 0) {
+				if (active == "from")
+					fromTypes.push(type);
+				else
+					toTypes.push(type);
+			}
+			active = "";
+			parts = [];
+		}
+
+		while (true) {
+			final tok = scanNextToken(source, i);
+			if (tok.text.length == 0) {
+				flush();
+				break;
+			}
+			final atTop = parenDepth == 0 && angleDepth == 0 && bracketDepth == 0;
+			if (atTop && (tok.text == "{" || tok.text == ";")) {
+				flush();
+				break;
+			}
+			if (atTop && (tok.text == "from" || tok.text == "to")) {
+				flush();
+				active = tok.text;
+				i = tok.nextPos;
+				continue;
+			}
+			if (active.length > 0)
+				parts.push(tok.text);
+			switch (tok.text) {
+				case "(":
+					parenDepth++;
+				case ")":
+					if (parenDepth > 0)
+						parenDepth--;
+				case "<":
+					angleDepth++;
+				case ">":
+					if (angleDepth > 0)
+						angleDepth--;
+				case "[":
+					bracketDepth++;
+				case "]":
+					if (bracketDepth > 0)
+						bracketDepth--;
+				case _:
+			}
+			i = tok.nextPos;
+		}
+		return {fromTypes: fromTypes, toTypes: toTypes};
 	}
 
 	static function scanEnumBodyForCtors(source:String,

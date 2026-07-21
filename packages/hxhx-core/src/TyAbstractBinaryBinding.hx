@@ -2,17 +2,21 @@ private typedef TyBinaryCandidateMatch = {
 	final info:TyAbstractBinaryOperatorInfo;
 	final reverseArguments:Bool;
 	final score:Int;
+	final sourceLeftConversion:TyImplicitConversionPlan;
+	final sourceRightConversion:TyImplicitConversionPlan;
+	final resultConversion:Null<TyImplicitConversionPlan>;
 };
 
 /**
 	Selects one exact abstract binary declaration in the shared typer.
 
-	Ranking currently supports exact semantic identity, declared `Dynamic`, and
-	the Haxe numeric widening from `Int` to `Float`. Unsupported conversion search
-	fails here with declaration identities in the diagnostic; it never falls back
-	to target carriers. Explicit compound declarations are calls without invented
-	writeback. Only a missing explicit compound declaration may reuse the matching
-	base operator and request shared place/writeback lowering.
+	Ranking supports exact semantic identity, numeric widening, declared abstract
+	header conversions, and `Dynamic`. The selected operand and compound-result
+	conversion plans travel with the binding, so shared lowering does not repeat
+	overload logic and backends never infer conversions from target carriers.
+	Explicit compound declarations are calls without invented writeback. Only a
+	missing explicit compound declaration may reuse the matching base operator and
+	request shared place/writeback lowering.
 **/
 class TyAbstractBinaryBinding {
 	static function validateBodyless(index:TyperIndex, binding:TyBoundAbstractBinaryOperator, filePath:String):TyBoundAbstractBinaryOperator {
@@ -39,18 +43,6 @@ class TyAbstractBinaryBinding {
 			if (containsTypeParameter(argument))
 				return true;
 		return false;
-	}
-
-	static function conversionScore(expected:TyType, actual:TyType):Int {
-		if (expected == null || actual == null || expected.isUnknown() || actual.isUnknown())
-			return -1;
-		if (expected.getSemanticKey() == actual.getSemanticKey())
-			return 4;
-		if (expected.getSemanticKey() == "dynamic")
-			return 1;
-		if (expected.getDisplay() == "Float" && actual.getDisplay() == "Int")
-			return 3;
-		return -1;
 	}
 
 	static function collect(index:TyperIndex, leftType:TyType, rightType:TyType, op:String):Array<TyAbstractBinaryOperatorInfo> {
@@ -95,22 +87,36 @@ class TyAbstractBinaryBinding {
 				+ declaration.getIdentity().getCanonicalKey());
 	}
 
-	static function matches(candidates:Array<TyAbstractBinaryOperatorInfo>, leftType:TyType, rightType:TyType, filePath:String,
+	static function matches(index:TyperIndex, candidates:Array<TyAbstractBinaryOperatorInfo>, leftType:TyType, rightType:TyType, filePath:String,
 			position:HxPos):Array<TyBinaryCandidateMatch> {
 		final out = new Array<TyBinaryCandidateMatch>();
 		for (candidate in candidates) {
 			ensureNonGeneric(candidate, filePath, position);
-			final directLeft = conversionScore(candidate.getLeftType(), leftType);
-			final directRight = conversionScore(candidate.getRightType(), rightType);
-			if (directLeft >= 0 && directRight >= 0)
-				out.push({info: candidate, reverseArguments: false, score: directLeft + directRight});
+			final directLeft = TyImplicitConversionPlan.select(index, candidate.getLeftType(), leftType);
+			final directRight = TyImplicitConversionPlan.select(index, candidate.getRightType(), rightType);
+			if (directLeft != null && directRight != null)
+				out.push({
+					info: candidate,
+					reverseArguments: false,
+					score: directLeft.getScore() + directRight.getScore(),
+					sourceLeftConversion: directLeft,
+					sourceRightConversion: directRight,
+					resultConversion: null
+				});
 			if (candidate.getIsCommutative()) {
-				final reverseLeft = conversionScore(candidate.getRightType(), leftType);
-				final reverseRight = conversionScore(candidate.getLeftType(), rightType);
-				final directScore = directLeft + directRight;
-				final reverseScore = reverseLeft + reverseRight;
-				if (reverseLeft >= 0 && reverseRight >= 0 && (!(directLeft >= 0 && directRight >= 0) || reverseScore > directScore))
-					out.push({info: candidate, reverseArguments: true, score: reverseScore});
+				final reverseLeft = TyImplicitConversionPlan.select(index, candidate.getRightType(), leftType);
+				final reverseRight = TyImplicitConversionPlan.select(index, candidate.getLeftType(), rightType);
+				final directScore = directLeft == null || directRight == null ? -1 : directLeft.getScore() + directRight.getScore();
+				final reverseScore = reverseLeft == null || reverseRight == null ? -1 : reverseLeft.getScore() + reverseRight.getScore();
+				if (reverseLeft != null && reverseRight != null && (directScore < 0 || reverseScore > directScore))
+					out.push({
+						info: candidate,
+						reverseArguments: true,
+						score: reverseScore,
+						sourceLeftConversion: reverseLeft,
+						sourceRightConversion: reverseRight,
+						resultConversion: null
+					});
 			}
 		}
 		return out;
@@ -141,7 +147,8 @@ class TyAbstractBinaryBinding {
 				+ identities.join(", "));
 		}
 		final winner = winners[0];
-		return new TyBoundAbstractBinaryOperator(op, winner.info, winner.reverseArguments, requiresWriteback);
+		return new TyBoundAbstractBinaryOperator(op, winner.info, winner.reverseArguments, requiresWriteback, winner.sourceLeftConversion,
+			winner.sourceRightConversion, winner.resultConversion);
 	}
 
 	static function noApplicable(op:String, leftType:TyType, rightType:TyType, candidates:Array<TyAbstractBinaryOperatorInfo>, filePath:String,
@@ -183,17 +190,26 @@ class TyAbstractBinaryBinding {
 			return null;
 
 		final explicitCandidates = collect(index, leftType, rightType, op);
-		final explicit = best(matches(explicitCandidates, leftType, rightType, filePath, position), op, leftType, rightType, filePath, position, false);
+		final explicit = best(matches(index, explicitCandidates, leftType, rightType, filePath, position), op, leftType, rightType, filePath, position, false);
 		if (explicit != null)
 			return validateBodyless(index, explicit, filePath);
 
 		final baseOperator = HxBinaryOperatorTools.baseOperator(op);
 		if (baseOperator != null) {
 			final baseCandidates = collect(index, leftType, rightType, baseOperator);
-			final baseMatches = [
-				for (match in matches(baseCandidates, leftType, rightType, filePath, position))
-					if (conversionScore(leftType, match.info.getResultType()) >= 0) match
-			];
+			final baseMatches = new Array<TyBinaryCandidateMatch>();
+			for (match in matches(index, baseCandidates, leftType, rightType, filePath, position)) {
+				final resultConversion = TyImplicitConversionPlan.select(index, leftType, match.info.getResultType());
+				if (resultConversion != null)
+					baseMatches.push({
+						info: match.info,
+						reverseArguments: match.reverseArguments,
+						score: match.score,
+						sourceLeftConversion: match.sourceLeftConversion,
+						sourceRightConversion: match.sourceRightConversion,
+						resultConversion: resultConversion
+					});
+			}
 			final fallback = best(baseMatches, op, leftType, rightType, filePath, position, true);
 			if (fallback != null)
 				return validateBodyless(index, fallback, filePath);

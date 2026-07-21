@@ -1,23 +1,31 @@
 /**
 	Semantic surface for a Haxe abstract declaration.
 
-	The abstract keeps its own nominal identity even when its underlying type is
-	a primitive target carrier. Operator declarations are cataloged by source
-	token without assigning mutation, writeback, or target representation rules.
+	An abstract remains its own Haxe type even when the generated program stores
+	its values as a simpler type such as `Int`. This record keeps that distinction,
+	plus the conversions declared in headers such as `from Int to Float`, so the
+	shared typer can decide which operations are legal before a backend chooses a
+	target-language representation. Operator declarations are cataloged by source
+	token without assigning mutation or writeback rules.
 **/
 class TyAbstractInfo extends TyNominalInfo {
 	final underlyingType:TyType;
 	final typeParameters:Array<String>;
+	final implicitFromTypes:Array<TyType>;
+	final implicitToTypes:Array<TyType>;
 	final unaryOperators:haxe.ds.StringMap<Array<TyAbstractOperatorInfo>>;
 	final binaryOperators:haxe.ds.StringMap<Array<TyAbstractBinaryOperatorInfo>>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyType>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
-			declarations:Array<TyDeclarationInfo>, underlyingType:TyType, typeParameters:Array<String>) {
+			declarations:Array<TyDeclarationInfo>, underlyingType:TyType, typeParameters:Array<String>, implicitFromTypes:Array<TyType>,
+			implicitToTypes:Array<TyType>) {
 		super(identity, shortName, modulePath, fields, properties, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations);
 		this.underlyingType = underlyingType;
 		this.typeParameters = typeParameters == null ? [] : typeParameters.copy();
+		this.implicitFromTypes = implicitFromTypes == null ? [] : implicitFromTypes.copy();
+		this.implicitToTypes = implicitToTypes == null ? [] : implicitToTypes.copy();
 		this.unaryOperators = new haxe.ds.StringMap();
 		this.binaryOperators = new haxe.ds.StringMap();
 	}
@@ -31,6 +39,14 @@ class TyAbstractInfo extends TyNominalInfo {
 
 	public function getTypeParameters():Array<String>
 		return typeParameters;
+
+	/** Types that Haxe may convert into this abstract through its header `from` declarations. **/
+	public function getImplicitFromTypes():Array<TyType>
+		return implicitFromTypes.copy();
+
+	/** Types that Haxe may obtain from this abstract through its header `to` declarations. **/
+	public function getImplicitToTypes():Array<TyType>
+		return implicitToTypes.copy();
 
 	public function addUnaryOperator(info:TyAbstractOperatorInfo):Void {
 		final key = unaryKey(info.getOperator(), info.getFixity());

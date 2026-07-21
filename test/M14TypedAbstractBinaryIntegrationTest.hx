@@ -68,6 +68,13 @@ class M14TypedAbstractBinaryIntegrationTest {
 		return count;
 	}
 
+	static function castCountTo(expression:TypedExpr, semanticKey:String):Int {
+		var count = expression.getTag() == TypedExprTag.Cast && expression.getType().getSemanticKey() == semanticKey ? 1 : 0;
+		for (child in expression.getExpressions())
+			count += castCountTo(child, semanticKey);
+		return count;
+	}
+
 	static function typingFailure(source:String, expected:String):Void {
 		var message:Null<String> = null;
 		try {
@@ -106,6 +113,9 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"abstract Fallback(Int) from Int to Int {",
 			"  public inline function new(value:Int) this = value;",
 			"  @:op(A + B) public static function addArbitrarily(value:Fallback, amount:Int):Fallback return new Fallback(value + amount);",
+			"}",
+			"abstract NullFloat(Null<Float>) from Null<Float> to Null<Float> {",
+			"  @:op(A + B) public static inline function addNullable(left:NullFloat, right:Float):Float return right;",
 			"}",
 			"abstract NativeSum(Int) from Int to Int {",
 			"  public inline function new(value:Int) this = value;",
@@ -161,6 +171,8 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"  var localFunctionReversed = nextText() * left;",
 			"  var fallback:Fallback = new Fallback(5);",
 			"  var fallbackResult:Fallback = (fallback += 6);",
+			"  var nullable:NullFloat = null;",
+			"  var nullableResult:NullFloat = (nullable += nullable);",
 			"  var fieldHolder = new FieldHolder(new Fallback(7));",
 			"  var fieldResult:Fallback = (fieldHolder.value += 2);",
 			"  var sideEffectFieldResult:Fallback = (makeFieldHolder(new Fallback(8)).value += 3);",
@@ -215,6 +227,15 @@ class M14TypedAbstractBinaryIntegrationTest {
 		final fallbackResult = initializer(main, "fallbackResult");
 		assertTrue(declarationExpression(fallbackResult, "addArbitrarily") != null && containsTag(fallbackResult, TypedExprTag.Assign),
 			"base-operator compound fallback did not expose its shared writeback schedule");
+		final nullableResult = initializer(main, "nullableResult");
+		final nullableCall = declarationExpression(nullableResult, "addNullable");
+		assertTrue(nullableCall != null
+			&& nullableCall.getExpressions().length == 3
+			&& nullableCall.getExpressions()[2].getTag() == TypedExprTag.Cast
+			&& nullableCall.getExpressions()[2].getType().getSemanticKey() == "primitive:Float",
+			"declared abstract-to conversion did not adapt the compound right operand");
+		assertTrue(containsTag(nullableResult, TypedExprTag.Assign) && castCountTo(nullableResult, "nominal:Main.NullFloat") == 1,
+			"declared abstract-from conversion did not adapt the helper result before shared writeback");
 
 		final fieldResult = initializer(main, "fieldResult");
 		assertTrue(declarationExpression(fieldResult, "addArbitrarily") != null && containsTag(fieldResult, TypedExprTag.Assign),
@@ -334,6 +355,18 @@ class M14TypedAbstractBinaryIntegrationTest {
 			"}",
 			"class Main { static function main() { var value:Convert = new Convert(1); var result = value * 'bad'; } }",
 		].join("\n"), "requires Convert and Float");
+		typingFailure([
+			"abstract NoTo(Null<Float>) from Null<Float> {",
+			"  @:op(A + B) public static function add(left:NoTo, right:Float):Float return right;",
+			"}",
+			"class Main { static function main() { var value:NoTo = null; value += value; } }",
+		].join("\n"), "No applicable abstract binary operator");
+		typingFailure([
+			"abstract NoFrom(Null<Float>) to Null<Float> {",
+			"  @:op(A + B) public static function add(left:NoFrom, right:Float):Float return right;",
+			"}",
+			"class Main { static function main() { var value:NoFrom = cast null; value += value; } }",
+		].join("\n"), "No applicable abstract binary operator");
 		typingFailure([
 			"abstract Generic<T>(Int) { @:op(A + B) public static function add(left:Generic<T>, right:Generic<T>):Generic<T> return left; }",
 			"class Main { static function main(left:Generic<Int>, right:Generic<Int>) { var result = left + right; } }",
