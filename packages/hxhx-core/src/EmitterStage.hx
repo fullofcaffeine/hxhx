@@ -30,26 +30,6 @@
 	- Full Haxe semantics (nullability, classes, enums, etc.).
 	- Defining the cross-target backend contract used by non-Stage3 lanes.
 **/
-private typedef EmitterCallSig = {
-	/** Total OCaml parameters after lowering (includes the rest-array parameter when present). */
-	final expected:Int;
-
-	/** Required OCaml parameters after lowering (receiver + non-optional params). */
-	final required:Int;
-
-	/** Number of fixed (non-rest) parameters. */
-	final fixed:Int;
-
-	/** Whether the final parameter is a lowered rest-args array. */
-	final hasRest:Bool;
-
-	/** Whether this lowered call expects a synthetic receiver parameter. */
-	final needsReceiver:Bool;
-
-	/** Parameter type hints after lowering, aligned with emitted OCaml arguments. */
-	final paramTypeHints:Array<String>;
-}
-
 private class _PortableMetalizationScope {
 	public final previousPlan:Null<backend.ocaml.PortableMetalizationPlan>;
 	public final previousRegionKey:String;
@@ -1179,9 +1159,7 @@ class EmitterStage {
 		the stage0-free native compiler.
 	**/
 	static function callSigForStage3(callee:String, ?callSigByCallee:Map<String, EmitterCallSig>):Null<EmitterCallSig> {
-		if (callSigByCallee == null || callee == null)
-			return null;
-		return callSigByCallee.get(callee);
+		return EmitterCallSigIndex.get(callSigByCallee, callee);
 	}
 
 	static function resolveQualifiedModuleCallSigByEmittedModuleNameForStage3(moduleName:String, field:String, loweredField:String,
