@@ -1,4 +1,5 @@
 import haxe.io.Path;
+import hxhx.ExprMacroExpander;
 import hxhx.Stage3MacroHostSupport;
 import hxhx.macro.MacroRuntimeMode;
 import hxhx.macro.MacroState;
@@ -125,6 +126,23 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 
 		final generated = MacroRuntimeMode.openSession(MacroRuntimeMode.INPROC);
 		assertEq("expr macro expansion", generated.expandExpr("hxhxmacros.ExprMacroShim.hello()"), "\"HELLO\"");
+		final nestedReturnSource = [
+			"class NestedReturnMacroArgument {",
+			"  function run():String {",
+			"    shouldFail(return hxhxmacros.ExprMacroShim.hello());",
+			"  }",
+			"}",
+		].join("\n");
+		final nestedReturnParsed = ParserStage.parse(nestedReturnSource, "NestedReturnMacroArgument.hx");
+		final nestedReturnResolved = new ResolvedModule("NestedReturnMacroArgument", "NestedReturnMacroArgument.hx", nestedReturnParsed);
+		final nestedReturnExpansion = ExprMacroExpander.expandResolvedModules([nestedReturnResolved], generated, ["hxhxmacros.ExprMacroShim.hello()"]);
+		assertIntEq("nested return macro expansion count", nestedReturnExpansion.expandedCount, 1);
+		final nestedReturnClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(nestedReturnExpansion.modules[0]).getDecl());
+		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(nestedReturnClass)[0])) {
+			case [SExpr(ECall(EIdent("shouldFail"), [EReturn(EString("HELLO"))]), _)]:
+			case body:
+				fail("expression macro expansion lost the return wrapper around its expanded child: " + Std.string(body));
+		}
 		assertEq("args entrypoint", generated.run('hxhxmacros.ArgsMacros.setArg("ok")'), "ok");
 		assertEq("arg define", MacroState.definedValue("HXHX_ARG"), "ok");
 		assertEq("external entrypoint", generated.run("hxhxmacros.ExternalMacros.external()"), "external=ok");

@@ -233,6 +233,13 @@ class ExprMacroExpander {
 			return e; // prevent runaway recursion in bring-up
 
 		return switch (e) {
+			case EReturn(value):
+				if (value == null) {
+					e;
+				} else {
+					final rewritten = rewriteExpr(value, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					rewritten != value ? EReturn(rewritten) : e;
+				}
 			case EField(obj, field):
 				final ro = rewriteExpr(obj, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				ro != obj ? EField(ro, field) : e;
@@ -373,6 +380,7 @@ class ExprMacroExpander {
 			case EField(_, _): "Field";
 			case ENullSafeField(_, _): "NullSafeField";
 			case ECall(_, _): "Call";
+			case EReturn(_): "Return";
 			case EUnop(_, _, _): "Unop";
 			case EBinop(_, _, _): "Binop";
 			case ETernary(_, _, _): "Ternary";
