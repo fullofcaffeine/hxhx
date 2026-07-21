@@ -5265,8 +5265,10 @@ class EmitterStage {
 			}
 			var rhsCode:Null<String> = switch (op) {
 				case "=":
-					returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee);
+					stage3Int64AssignmentRhs(lhsTy, rhs,
+						returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
+							moduleNameByPkgAndClass, callSigByCallee),
+						cast tyCtx);
 				case "+=":
 					returnExprToOcaml(EBinop("+", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
 						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -8844,5 +8846,31 @@ class EmitterStage {
 		if (!buildExecutable)
 			return exePath;
 		return EmitterStageBuildSupport.buildNativeExecutable(outAbs, runtimePaths, generatedPaths, emittedModulePaths, rootMainPath);
+	}
+
+	/**
+		Preserve Haxe's implicit Int-to-Int64 assignment at the OCaml carrier boundary.
+
+		The source typer has already established the local's Haxe type. This helper
+		only answers whether the right-hand expression is definitely an Int in the
+		currently supported Stage3 shapes; unknown and Dynamic expressions remain
+		untouched instead of being guessed into an Int representation.
+	**/
+	static function stage3Int64AssignmentRhs(lhsType:String, rhs:HxExpr, rendered:String, ?tyByIdent:Map<String, TyType>):String {
+		if (!stage3IsInt64TypeName(lhsType))
+			return rendered;
+		final isInt = switch (rhs) {
+			case EInt(_):
+				true;
+			case EIdent(name):
+				stage3TyForIdent(name, tyByIdent) == "Int";
+			case EUnop(op, fixity, EInt(_)) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
+				true;
+			case EUnop(op, fixity, EIdent(name)) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
+				stage3TyForIdent(name, tyByIdent) == "Int";
+			case _:
+				false;
+		};
+		return isInt ? "Haxe_Int64.ofInt (" + rendered + ")" : rendered;
 	}
 }
