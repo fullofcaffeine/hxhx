@@ -11,6 +11,7 @@ TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/hxhx-bootstrap-server-lifecycle.XXXXXX")"
 STATE_DIR="$TMP_DIR/state"
 FAKE_BIN_DIR="$TMP_DIR/bin"
 FAKE_HAXE="$FAKE_BIN_DIR/fake-haxe"
+REQUESTED_HAXE="$FAKE_BIN_DIR/requested-haxe-wrapper"
 SERVER_PID_CAPTURE="$TMP_DIR/server.pid"
 COMPILE_ARGS_CAPTURE="$TMP_DIR/compile-args.txt"
 PORT=31874
@@ -50,6 +51,18 @@ exit 23
 FAKE_HAXE_SCRIPT
 chmod +x "$FAKE_HAXE"
 
+cat >"$REQUESTED_HAXE" <<'REQUESTED_HAXE_SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${1:-}" = "--version" ] || [ "${1:-}" = "-version" ]; then
+	echo "4.3.7"
+	exit 0
+fi
+echo "requested wrapper must not run the server or compile after native selection: $*" >&2
+exit 97
+REQUESTED_HAXE_SCRIPT
+chmod +x "$REQUESTED_HAXE"
+
 for tool in dune ocamlc; do
 	cat >"$FAKE_BIN_DIR/$tool" <<'FAKE_TOOL'
 #!/usr/bin/env bash
@@ -69,8 +82,9 @@ run_failing_regen() {
 	HXHX_HAXE_SERVER_PORT="$PORT" \
 	HXHX_HAXE_SERVER_PREFLIGHT=0 \
 	HXHX_STAGE0_HEARTBEAT=0 \
-	HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=warn \
-	HAXE_BIN="$FAKE_HAXE" \
+	HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native \
+	HXHX_STAGE0_NATIVE_HAXE_BIN="$FAKE_HAXE" \
+	HAXE_BIN="$REQUESTED_HAXE" \
 		bash "$REGEN_SCRIPT" --incremental --use-repo-server --no-verify --force \
 		--report-json "$report_path" "$@" >"$TMP_DIR/regen.log" 2>&1
 	local code="$?"
@@ -105,6 +119,10 @@ run_failing_regen "$kept_report" --keep-repo-server
 assert_failure_report "$kept_report"
 kept_server_pid="$(cat "$STATE_DIR/haxe-server.pid")"
 kill -0 "$kept_server_pid" >/dev/null 2>&1 || fail "--keep-repo-server did not keep the server alive"
+expected_server_identity="$(cd "$(dirname "$FAKE_HAXE")" && pwd -P)/$(basename "$FAKE_HAXE")"
+actual_server_identity="$(cat "$STATE_DIR/haxe-server.bin")"
+[ "$actual_server_identity" = "$expected_server_identity" ] \
+	|| fail "repo server used $actual_server_identity instead of selected Haxe $expected_server_identity"
 
 HXHX_STATE_DIR="$STATE_DIR" HXHX_HAXE_SERVER_PORT="$PORT" HAXE_BIN="$FAKE_HAXE" \
 	bash "$SERVER_HELPER" stop >/dev/null

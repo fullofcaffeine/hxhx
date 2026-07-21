@@ -688,7 +688,10 @@ resolve_connect_arg() {
 	else
 		repo_server_was_running=0
 	fi
-	"$HAXE_SERVER_HELPER" start >/dev/null
+	# The client may have been upgraded from a PATH wrapper to an explicitly
+	# selected native Haxe binary. Start or reuse the server with that same
+	# resolved executable so the reported toolchain is the one doing the work.
+	HAXE_BIN="$stage0_haxe_resolved" "$HAXE_SERVER_HELPER" start >/dev/null
 	if [ "$repo_server_was_running" = "0" ]; then
 		repo_server_started_here=1
 	fi
