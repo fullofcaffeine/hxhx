@@ -12,6 +12,26 @@ bd close <id>         # Complete work
 bd export -o .beads/issues.jsonl  # Refresh tracked bead data before committing
 ```
 
+## Documentation Must Teach the Reader
+
+- Use the globally installed `$explain-technical-work` skill whenever writing or substantially
+  revising user guides, contributor guides, architecture documents, PR bodies, issue descriptions,
+  status reports, or hand-offs.
+- Write for a capable Haxe developer who is new to this repository. Lead with what the reader can
+  do, what previously failed, what now happens, and what remains unfinished. Then introduce the
+  exact compiler terms and owning modules needed for deeper work.
+- Prefer a small input → behavior → output example over textbook-style summaries. Define overloaded
+  words and local labels before relying on them, and expand compressed phrases into the concrete
+  actions they represent.
+- Avoid the Dunning–Kruger trap in both directions: do not assume that familiar-looking words make
+  an explanation clear, and do not remove precise technical details merely because they need a
+  beginner-friendly introduction. A newcomer should understand the practical claim on the first
+  read, while an expert should still be able to find the exact invariant, test, limitation, and
+  source reference.
+
+The detailed repository rules under **Beginner-Friendly Communication** remain the minimum quality
+contract and provide project-specific examples.
+
 ## Shell-Safe Issue and Pull-Request Text
 
 - Do not embed Markdown-rich prose directly in an `exec_command` shell string. Backticks,
