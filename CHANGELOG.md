@@ -1,3 +1,10 @@
+## [0.23.11](https://github.com/fullofcaffeine/hxhx/compare/v0.23.10...v0.23.11) (2026-07-21)
+
+
+### Bug Fixes
+
+* **ci:** accept verified manual Gate 1 runs ([b313854](https://github.com/fullofcaffeine/hxhx/commit/b31385403ce56fdf6268ecc1413fbd741c0cdaa1))
+
 ## [0.23.10](https://github.com/fullofcaffeine/hxhx/compare/v0.23.9...v0.23.10) (2026-07-21)
 
 
