@@ -4568,6 +4568,26 @@ let stage3Int64CarrierValue = fun expectedType expression rendered tyByIdent -> 
 ) in Obj.magic __fallback_result_3301 with
   | HxRuntime.Hx_return __ret_3300 -> Obj.obj __ret_3300
 
+let stage3ImportedSignatureModulePath = fun rawImport -> let tempString = ref ("" : string) in (
+  ignore (if rawImport == Obj.magic (HxRuntime.hx_null) then let __assign_3302 = ("" : string) in (
+    tempString := __assign_3302;
+    __assign_3302
+  ) else let __assign_3303 = (rawImport : string) in (
+    tempString := __assign_3303;
+    __assign_3303
+  ));
+  let trimmed = (StringTools.trim (!tempString : string) : string) in let tempResult = ref ("" : string) in (
+    ignore (if StringTools.endsWith (trimmed : string) (".*" : string) then let __assign_3304 = (HxString.substr trimmed 0 (HxInt.sub (HxString.length trimmed) 2) : string) in (
+      tempResult := __assign_3304;
+      __assign_3304
+    ) else let __assign_3305 = (trimmed : string) in (
+      tempResult := __assign_3305;
+      __assign_3305
+    ));
+    !tempResult
+  )
+)
+
 let __init_moduleInitTrace = moduleInitTrace := traceModuleInit ()
 
 let __init_currentOcamlModuleName = currentOcamlModuleName := Obj.magic (HxRuntime.hx_null)
@@ -4578,13 +4598,13 @@ let __init_currentFunctionName = currentFunctionName := Obj.magic (HxRuntime.hx_
 
 let __init_currentFunctionLocalTypeHints = currentFunctionLocalTypeHints := Obj.magic (HxRuntime.hx_null)
 
-let __init_currentStmtTyEntries = currentStmtTyEntries := Obj.magic (let __arr_3302 = HxArray.create () in __arr_3302)
+let __init_currentStmtTyEntries = currentStmtTyEntries := Obj.magic (let __arr_3306 = HxArray.create () in __arr_3306)
 
 let __init_currentLocalCallSigCache = currentLocalCallSigCache := Obj.magic (HxRuntime.hx_null)
 
 let __init_currentImportInt64 = currentImportInt64 := Obj.magic (HxRuntime.hx_null)
 
-let __init_currentModuleNameEntries = currentModuleNameEntries := Obj.magic (let __arr_3303 = HxArray.create () in __arr_3303)
+let __init_currentModuleNameEntries = currentModuleNameEntries := Obj.magic (let __arr_3307 = HxArray.create () in __arr_3307)
 
 let __init_currentKnownModuleNames = currentKnownModuleNames := HxMap.create_string ()
 
@@ -4594,7 +4614,7 @@ let __init_currentInstanceFieldsByTypePath = currentInstanceFieldsByTypePath := 
 
 let __init_currentInstanceMethodsByTypePath = currentInstanceMethodsByTypePath := Obj.magic (Obj.magic (HxRuntime.hx_null))
 
-let __init_currentMutableLocalRefNames = currentMutableLocalRefNames := Obj.magic (let __arr_3304 = HxArray.create () in __arr_3304)
+let __init_currentMutableLocalRefNames = currentMutableLocalRefNames := Obj.magic (let __arr_3308 = HxArray.create () in __arr_3308)
 
 let currentAllowedValueIdentNames = ref (Obj.magic (HxRuntime.hx_null) : bool HxMap.string_map)
 
@@ -16728,8 +16748,8 @@ let emitToDir = fun p outDir emitFullBodies buildExecutable ocamlProfile -> let 
                                                                                                       __new_2467
                                                                                                     ));
                                                                                                     ignore (if rawImport == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
-                                                                                                    let imp = (StringTools.trim (rawImport : string) : string) in (
-                                                                                                      ignore (if HxString.length imp = 0 || StringTools.endsWith (imp : string) (".*" : string) || HxMap.exists_string importedSigModulesSeen imp then raise (HxRuntime.Hx_continue) else ());
+                                                                                                    let imp = (stage3ImportedSignatureModulePath (rawImport : string) : string) in (
+                                                                                                      ignore (if HxString.length imp = 0 || HxMap.exists_string importedSigModulesSeen imp then raise (HxRuntime.Hx_continue) else ());
                                                                                                       let resolvedImportFile = (resolveImportedModuleFileFromContext (tmFilePath : string) (imp : string) : string) in (
                                                                                                         ignore (if resolvedImportFile == Obj.magic (HxRuntime.hx_null) || not (HxFileSystem.exists resolvedImportFile) then raise (HxRuntime.Hx_continue) else ());
                                                                                                         ignore (HxMap.set_string importedSigModulesSeen imp true);
