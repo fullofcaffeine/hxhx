@@ -27,7 +27,8 @@ fi
 (cd "$source_dir" && tar \
 	--exclude='_build' \
 	--exclude='_gen_hx' \
-	--exclude='ocaml_profile_report.json' \
-	--exclude='ocaml_runtime_plan_report.json' \
+	--exclude='ocaml_*_report.json' \
+	--exclude='ocaml_artifact_manifest.json' \
+	--exclude='ocaml_semantic_lifecycle_trace.json' \
 	--exclude='hxhx-current-source.env' \
 	-cf - .) | (cd "$snapshot_dir" && tar -xf -)

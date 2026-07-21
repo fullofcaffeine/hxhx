@@ -21,6 +21,11 @@ printf '%s\n' 'temporary object' >"$generated/_build/out.o"
 printf '%s\n' 'temporary generator source' >"$generated/_gen_hx/Main.hx"
 printf '%s\n' '{"profile":true}' >"$generated/ocaml_profile_report.json"
 printf '%s\n' '{"runtime":true}' >"$generated/ocaml_runtime_plan_report.json"
+printf '%s\n' '{"requirements":true}' >"$generated/ocaml_runtime_requirement_report.json"
+printf '%s\n' '{"lowering":true}' >"$generated/ocaml_lowering_report.json"
+printf '%s\n' '{"timing":true}' >"$generated/ocaml_build_timing_report.json"
+printf '%s\n' '{"artifacts":[]}' >"$generated/ocaml_artifact_manifest.json"
+printf '%s\n' '{"events":[]}' >"$generated/ocaml_semantic_lifecycle_trace.json"
 printf '%s\n' 'HXHX_BIN=/temporary/current-source/out.bc' >"$generated/hxhx-current-source.env"
 
 bash "$COPY_SCRIPT" "$generated" "$snapshot"
@@ -32,7 +37,17 @@ for required in Main.ml dune runtime/Runtime.ml _GeneratedFiles.json; do
 	fi
 done
 
-for excluded in _build/out.o _gen_hx/Main.hx ocaml_profile_report.json ocaml_runtime_plan_report.json hxhx-current-source.env; do
+for excluded in \
+	_build/out.o \
+	_gen_hx/Main.hx \
+	ocaml_profile_report.json \
+	ocaml_runtime_plan_report.json \
+	ocaml_runtime_requirement_report.json \
+	ocaml_lowering_report.json \
+	ocaml_build_timing_report.json \
+	ocaml_artifact_manifest.json \
+	ocaml_semantic_lifecycle_trace.json \
+	hxhx-current-source.env; do
 	if [ -e "$snapshot/$excluded" ]; then
 		echo "[bootstrap-snapshot-copy-fixture-test] copied temporary build file: $excluded" >&2
 		exit 1
