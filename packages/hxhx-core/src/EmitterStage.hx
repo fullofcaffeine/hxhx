@@ -4851,7 +4851,7 @@ class EmitterStage {
 				case ECall(EField(_obj, "toString"), []):
 					TyType.fromHintText("String");
 				case ECall(EField(owner, field), _args):
-					if (stage3IsInt64StaticOwner(owner)
+					if (EmitterNumericUpdate.isStandardInt64Provider(owner)
 						&& (field == "make" || field == "ofInt" || field == "parseString" || field == "add" || field == "sub" || field == "mul"
 							|| field == "neg" || field == "div" || field == "mod" || field == "divMod")) TyType.fromHintText("haxe.Int64"); else
 						TyType.unknown();
@@ -8882,20 +8882,5 @@ class EmitterStage {
 	static function stage3ImportedSignatureModulePath(rawImport:String):String {
 		final trimmed = StringTools.trim(rawImport == null ? "" : rawImport);
 		return StringTools.endsWith(trimmed, ".*") ? trimmed.substr(0, trimmed.length - 2) : trimmed;
-	}
-
-	/**
-		Recognize the two source spellings used to seed an unannotated Int64 local.
-
-		The parser stores `haxe.Int64` as nested field access (`haxe` then `Int64`),
-		not as one identifier containing a dot. This is a bounded bootstrap bridge for
-		the existing initializer-based local-hint pass. It deliberately does not make
-		all expression typing recognize an Int64 merely from its source spelling;
-		declaration-scoped semantic local types are tracked by haxe_ocaml-i7d5a.
-	**/
-	static function stage3IsInt64StaticOwner(owner:HxExpr):Bool {
-		final parts = tryExtractTypePathPartsFromExpr(owner);
-		return parts != null
-			&& ((parts.length == 1 && parts[0] == "Int64") || (parts.length == 2 && parts[0] == "haxe" && parts[1] == "Int64"));
 	}
 }
