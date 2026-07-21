@@ -1,3 +1,10 @@
+## [0.23.6](https://github.com/fullofcaffeine/hxhx/compare/v0.23.5...v0.23.6) (2026-07-21)
+
+
+### Bug Fixes
+
+* **stage3:** provide selected Int64 helpers ([23c1444](https://github.com/fullofcaffeine/hxhx/commit/23c1444efd05c030e6557662881761caa7c11346))
+
 ## [0.23.5](https://github.com/fullofcaffeine/hxhx/compare/v0.23.4...v0.23.5) (2026-07-21)
 
 
