@@ -351,21 +351,27 @@ unchanged.
 
 The focused executable fixture
 `test/portable/fixtures/place_static_field_assign` separately proves current-
-type local access and cross-module qualified access. Both top-level simple
-plans contain only RHS, store, and assigned-result occurrences and execute with
-exactly one RHS event. An attempted same-module
-cross-type case exposed an existing ordering flaw: the current late
-`requestForwardMutableStatic` request is discovered after the owning type may
-already have emitted its initializer. That case remains unadmitted, and
-`haxe_ocaml-stthl` owns a program/module-level two-phase static storage plan.
+type local access, cross-module qualified access, and access from a non-primary
+type to storage owned by the later primary type in the same Haxe module. The
+compiler now inventories mutable statics before emitting either type. An exact
+`Int` cell can be declared at the start of the generated OCaml module; a
+class-valued cell is declared only after its generated OCaml type exists. The
+owner then runs the Haxe initializer exactly once, so earlier methods and later
+initialization share one cell instead of accidentally capturing two different
+`ref` values. A generated-source check enforces those declaration boundaries.
+
 The same fixture also proves local `7 + 3 = 10` and qualified `9 + 3 = 12`
 when each RHS temporarily overwrites its cell with `100`. Four simple plans,
 including the nested writes, and two surrounding compound plans prove
 recursive typed lowering. Eight additional plans prove local and qualified
 prefix/postfix increment/decrement, including signed deltas and the
-old-versus-computed result contract. The resulting fourteen-plan report is
-byte-identical across repeat builds. Static `Float +=` and postfix `++` controls
-remain on the legacy path and add no plans.
+old-versus-computed result contract. The same-module `Int` assignment,
+compound assignment, postfix increment, and prefix increment bring the report
+to eighteen plans. Its static-storage section independently records primitive,
+class-valued, and existing standard-library cells and is byte-identical across
+repeat builds. Static `Float +=` and postfix `++` controls remain on the legacy
+expression path and add no typed operation plans, but their shared cell still
+comes from the pre-emission static-storage inventory.
 
 The focused executable fixture
 `test/portable/fixtures/place_array_simple_assign` proves the accepted

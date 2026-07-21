@@ -200,6 +200,13 @@ for dir in "$FIXTURE_ROOT"/*/; do
     fi
   fi
 
+  if [ -f "${dir}test.sh" ]; then
+    (
+      cd "$dir"
+      bash test.sh
+    )
+  fi
+
   rm -f "$out_tmp" "$err_tmp"
 done
 

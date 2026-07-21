@@ -72,11 +72,15 @@ class OcamlPlaceInputPolicy {
 	}
 
 	/** Admits only static cells whose mutable OCaml declaration is already guaranteed. */
-	static function admitsVisibleExactIntStaticFieldPlace(expression:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>):Bool {
+	static function admitsVisibleExactIntStaticFieldPlace(expression:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>,
+			staticStorage:OcamlStaticStoragePlan):Bool {
 		if (!admitsExactIntStaticFieldPlace(expression) || currentModuleId == null || currentTypeName == null)
 			return false;
 		return switch (expression.expr) {
-			case TField(_, FStatic(classRef, _)): final target = classRef.get(); target.module != currentModuleId || target.name == currentTypeName;
+			case TField(_, FStatic(classRef, fieldRef)):
+				final target = classRef.get();
+				final field = fieldRef.get();
+				staticStorage.isVisibleFrom(target.module, target.name, field.name, currentModuleId, currentTypeName);
 			case _: false;
 		}
 	}
@@ -89,24 +93,28 @@ class OcamlPlaceInputPolicy {
 	/**
 		Admits mutable static `Int` ref cells whose declaration is already visible.
 
-		A different type in the same Haxe module needs a program-level two-phase
-		static declaration plan. That broader shape remains on the legacy path until
-		its declaration-order owner lands.
+		For a different type in the same Haxe module, visibility comes from the sealed
+		program-level storage plan: the cell is either declared in an earlier type
+		fragment or in a prelude before the referencing value bindings.
 	**/
-	public static function admitsSimpleStaticField(left:TypedExpr, right:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>):Bool {
-		return admitsVisibleExactIntStaticFieldPlace(left, currentModuleId, currentTypeName) && isExactInt(right.t);
+	public static function admitsSimpleStaticField(left:TypedExpr, right:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>,
+			staticStorage:OcamlStaticStoragePlan):Bool {
+		return admitsVisibleExactIntStaticFieldPlace(left, currentModuleId, currentTypeName, staticStorage) && isExactInt(right.t);
 	}
 
 	/** Admits exact primitive-Int `+=` on an already-visible mutable static. */
 	public static function admitsCompoundIntAddStaticField(operation:Binop, left:TypedExpr, right:TypedExpr, currentModuleId:Null<String>,
-			currentTypeName:Null<String>):Bool {
-		return operation == OpAdd && admitsVisibleExactIntStaticFieldPlace(left, currentModuleId, currentTypeName) && isExactInt(right.t);
+			currentTypeName:Null<String>, staticStorage:OcamlStaticStoragePlan):Bool {
+		return operation == OpAdd
+			&& admitsVisibleExactIntStaticFieldPlace(left, currentModuleId, currentTypeName, staticStorage)
+			&& isExactInt(right.t);
 	}
 
 	/** Admits primitive-Int increment/decrement on an already-visible static. */
-	public static function admitsIntUpdateStaticField(operation:Unop, operand:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>):Bool {
+	public static function admitsIntUpdateStaticField(operation:Unop, operand:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>,
+			staticStorage:OcamlStaticStoragePlan):Bool {
 		return (operation == OpIncrement || operation == OpDecrement)
-			&& admitsVisibleExactIntStaticFieldPlace(operand, currentModuleId, currentTypeName);
+			&& admitsVisibleExactIntStaticFieldPlace(operand, currentModuleId, currentTypeName, staticStorage);
 	}
 
 	/** Admits exact `Array<Int>` element assignment with an exact `Int` index and RHS. */
@@ -135,16 +143,17 @@ class OcamlPlaceInputPolicy {
 	}
 
 	/** Applies the complete first-slice admission policy to one typed operation. */
-	public static function admitsExpression(expression:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>):Bool {
+	public static function admitsExpression(expression:TypedExpr, currentModuleId:Null<String>, currentTypeName:Null<String>,
+			staticStorage:OcamlStaticStoragePlan):Bool {
 		return switch (expression.expr) {
 			case TBinop(OpAssign, left, right): admitsSimpleInstanceField(left,
-					right) || admitsSimpleStaticField(left, right, currentModuleId, currentTypeName) || admitsSimpleArrayElement(left, right);
+					right) || admitsSimpleStaticField(left, right, currentModuleId, currentTypeName, staticStorage) || admitsSimpleArrayElement(left, right);
 			case TBinop(OpAssignOp(operation), left, right): admitsCompoundIntAddInstanceField(operation, left,
-					right) || admitsCompoundIntAddStaticField(operation, left, right, currentModuleId,
-					currentTypeName) || admitsCompoundIntAddArrayElement(operation, left, right);
+					right) || admitsCompoundIntAddStaticField(operation, left, right, currentModuleId, currentTypeName,
+					staticStorage) || admitsCompoundIntAddArrayElement(operation, left, right);
 			case TUnop(operation, _, operand): admitsIntUpdateInstanceField(operation,
-					operand) || admitsIntUpdateStaticField(operation, operand, currentModuleId,
-					currentTypeName) || admitsIntUpdateArrayElement(operation, operand);
+					operand) || admitsIntUpdateStaticField(operation, operand, currentModuleId, currentTypeName,
+					staticStorage) || admitsIntUpdateArrayElement(operation, operand);
 			case _:
 				false;
 		}

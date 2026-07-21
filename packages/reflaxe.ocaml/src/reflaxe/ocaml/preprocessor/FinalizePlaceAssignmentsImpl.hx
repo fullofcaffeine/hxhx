@@ -39,7 +39,7 @@ class FinalizePlaceAssignmentsImpl extends BasePreprocessor {
 		ordinal = 0;
 		currentModuleId = data.classType.module;
 		currentTypeName = data.classType.name;
-		data.setExpr(finalizeProtection(data.expr, ocamlCompiler.functionPlanRegistry));
+		data.setExpr(finalizeProtection(data.expr, ocamlCompiler.functionPlanRegistry, ocamlCompiler.staticStoragePlan));
 		ocamlCompiler.sealFunctionPlans(data);
 	}
 
@@ -47,7 +47,8 @@ class FinalizePlaceAssignmentsImpl extends BasePreprocessor {
 		return ID;
 	}
 
-	function finalizeProtection(expression:TypedExpr, registry:OcamlFunctionPlanRegistry):TypedExpr {
+	function finalizeProtection(expression:TypedExpr, registry:OcamlFunctionPlanRegistry,
+			staticStorage:reflaxe.ocaml.lowered.OcamlStaticStoragePlan):TypedExpr {
 		return switch (expression.expr) {
 			case TMeta(metadata, child) if (OcamlLoweredOrigin.isPlaceProtection(metadata)):
 				final protectionId = OcamlLoweredOrigin.readProtectionId(metadata);
@@ -55,8 +56,8 @@ class FinalizePlaceAssignmentsImpl extends BasePreprocessor {
 					fail("an early place-protection marker has no valid stable identity", expression);
 				final originId = OcamlLoweredOrigin.placeId(functionId, ordinal++);
 				registry.recordProtectionReplacement(protectionId, originId);
-				final mappedChild = TypedExprTools.map(child, candidate -> finalizeProtection(candidate, registry));
-				if (!OcamlPlaceInputPolicy.admitsExpression(mappedChild, currentModuleId, currentTypeName))
+				final mappedChild = TypedExprTools.map(child, candidate -> finalizeProtection(candidate, registry, staticStorage));
+				if (!OcamlPlaceInputPolicy.admitsExpression(mappedChild, currentModuleId, currentTypeName, staticStorage))
 					fail('early protection "$protectionId" no longer wraps an operation supported by the final place planner', mappedChild);
 				{
 					expr: TMeta(OcamlLoweredOrigin.metadata(originId, expression.pos), mappedChild),
@@ -66,7 +67,7 @@ class FinalizePlaceAssignmentsImpl extends BasePreprocessor {
 			case TMeta(metadata, _) if (metadata.name == OcamlLoweredOrigin.PLACE_META):
 				fail("a final place origin existed before the final planning boundary", expression);
 			case _:
-				TypedExprTools.map(expression, candidate -> finalizeProtection(candidate, registry));
+				TypedExprTools.map(expression, candidate -> finalizeProtection(candidate, registry, staticStorage));
 		};
 	}
 

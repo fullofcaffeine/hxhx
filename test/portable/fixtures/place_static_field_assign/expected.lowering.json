@@ -1,9 +1,189 @@
 {
+  "staticStorageModel": "typed-ocaml-static-storage",
   "model": "typed-ocaml-lowered-place",
-  "representationRevision": "sha256:7a99431486d56cbbe09d6c2f92232e85324dc1a34c83dbd68d3d1bcbae4c377e",
-  "runtimeRequirementCount": 10,
-  "schemaVersion": 7,
+  "representationRevision": "sha256:de663d0cc6459eb72b60ccd64d45f4f427ddb0f8a87e381c472b673008d2c100",
+  "staticStorage": [
+    {
+      "carrierTypeId": "int",
+      "declarationSite": "owner-binding",
+      "targetValueName": "value",
+      "ownerTypeName": "ExternalHolder",
+      "hasInitializer": true,
+      "initializationOrder": 0,
+      "declarationOrder": 0,
+      "initializationId": "static-initialization:ExternalHolder::ExternalHolder::value",
+      "id": "static-storage:ExternalHolder::ExternalHolder::value",
+      "semanticTypeId": "Int",
+      "ownerTypeOrder": 0,
+      "kind": "variable",
+      "moduleId": "ExternalHolder",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
+      "declarationTypeName": null,
+      "key": "ExternalHolder::ExternalHolder::value",
+      "fieldName": "value",
+      "declarationTypeOrder": -1,
+      "revision": "sha256:f5e962d7d8a272410c47636f1319b2916c163192fdd03ac08f9c23216fef096a",
+      "representationId": null
+    },
+    {
+      "carrierTypeId": "float",
+      "declarationSite": "type-prelude",
+      "targetValueName": "floatValue",
+      "ownerTypeName": "Main",
+      "hasInitializer": true,
+      "initializationOrder": 1,
+      "declarationOrder": 1,
+      "initializationId": "static-initialization:Main::Main::floatValue",
+      "id": "static-storage:Main::Main::floatValue",
+      "semanticTypeId": "Float",
+      "ownerTypeOrder": 1,
+      "kind": "variable",
+      "moduleId": "Main",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
+      "declarationTypeName": "SameModuleWorker",
+      "key": "Main::Main::floatValue",
+      "fieldName": "floatValue",
+      "declarationTypeOrder": 0,
+      "revision": "sha256:079b4948dc1112683dab2f1197a76626cb240e2abfef54e313f32f596745491d",
+      "representationId": null
+    },
+    {
+      "carrierTypeId": "int",
+      "declarationSite": "module-prelude",
+      "targetValueName": "localValue",
+      "ownerTypeName": "Main",
+      "hasInitializer": true,
+      "initializationOrder": 0,
+      "declarationOrder": 0,
+      "initializationId": "static-initialization:Main::Main::localValue",
+      "id": "static-storage:Main::Main::localValue",
+      "semanticTypeId": "Int",
+      "ownerTypeOrder": 1,
+      "kind": "variable",
+      "moduleId": "Main",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
+      "declarationTypeName": null,
+      "key": "Main::Main::localValue",
+      "fieldName": "localValue",
+      "declarationTypeOrder": -1,
+      "revision": "sha256:ff71aa0002dd9dfd2127191b9d0f59e6929599282837e31153a38eb014e0992d",
+      "representationId": "representation:Int:static-field"
+    },
+    {
+      "carrierTypeId": "samemoduleworker_t",
+      "declarationSite": "type-prelude",
+      "targetValueName": "sameModuleObject",
+      "ownerTypeName": "Main",
+      "hasInitializer": false,
+      "initializationOrder": 3,
+      "declarationOrder": 3,
+      "initializationId": "static-initialization:Main::Main::sameModuleObject",
+      "id": "static-storage:Main::Main::sameModuleObject",
+      "semanticTypeId": "SameModuleWorker",
+      "ownerTypeOrder": 1,
+      "kind": "variable",
+      "moduleId": "Main",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
+      "declarationTypeName": "SameModuleWorker",
+      "key": "Main::Main::sameModuleObject",
+      "fieldName": "sameModuleObject",
+      "declarationTypeOrder": 0,
+      "revision": "sha256:da829e4e218bcba800648db4a508671fa2735c19dc6febbb0524d864e5cc4bbf",
+      "representationId": null
+    },
+    {
+      "carrierTypeId": "int",
+      "declarationSite": "module-prelude",
+      "targetValueName": "sameModuleValue",
+      "ownerTypeName": "Main",
+      "hasInitializer": true,
+      "initializationOrder": 2,
+      "declarationOrder": 2,
+      "initializationId": "static-initialization:Main::Main::sameModuleValue",
+      "id": "static-storage:Main::Main::sameModuleValue",
+      "semanticTypeId": "Int",
+      "ownerTypeOrder": 1,
+      "kind": "variable",
+      "moduleId": "Main",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
+      "declarationTypeName": null,
+      "key": "Main::Main::sameModuleValue",
+      "fieldName": "sameModuleValue",
+      "declarationTypeOrder": -1,
+      "revision": "sha256:2b09cf08fbec76db96f91d297578376803ffc8a8c066b62b08b16cf29fd7c980",
+      "representationId": "representation:Int:static-field"
+    },
+    {
+      "carrierTypeId": "int",
+      "declarationSite": "owner-binding",
+      "targetValueName": "hx_MIN_SURROGATE_CODE_POINT",
+      "ownerTypeName": "StringTools",
+      "hasInitializer": true,
+      "initializationOrder": 1,
+      "declarationOrder": 1,
+      "initializationId": "static-initialization:StringTools::StringTools::MIN_SURROGATE_CODE_POINT",
+      "id": "static-storage:StringTools::StringTools::MIN_SURROGATE_CODE_POINT",
+      "semanticTypeId": "Int",
+      "ownerTypeOrder": 0,
+      "kind": "variable",
+      "moduleId": "StringTools",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
+      "declarationTypeName": null,
+      "key": "StringTools::StringTools::MIN_SURROGATE_CODE_POINT",
+      "fieldName": "MIN_SURROGATE_CODE_POINT",
+      "declarationTypeOrder": -1,
+      "revision": "sha256:ef6dee8d3f974eca936e29799485e3ebfc9d4cc2d8a1593366910b04949c21a1",
+      "representationId": null
+    },
+    {
+      "carrierTypeId": "int HxArray.t",
+      "declarationSite": "owner-binding",
+      "targetValueName": "winMetaCharacters",
+      "ownerTypeName": "StringTools",
+      "hasInitializer": true,
+      "initializationOrder": 0,
+      "declarationOrder": 0,
+      "initializationId": "static-initialization:StringTools::StringTools::winMetaCharacters",
+      "id": "static-storage:StringTools::StringTools::winMetaCharacters",
+      "semanticTypeId": "Array<Int>",
+      "ownerTypeOrder": 0,
+      "kind": "variable",
+      "moduleId": "StringTools",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
+      "declarationTypeName": null,
+      "key": "StringTools::StringTools::winMetaCharacters",
+      "fieldName": "winMetaCharacters",
+      "declarationTypeOrder": -1,
+      "revision": "sha256:80c4bb4dba9de3fcd60b82d09623dec9d859cd5f89a47ce658969b9fdfa4e90f",
+      "representationId": null
+    },
+    {
+      "carrierTypeId": "int",
+      "declarationSite": "owner-binding",
+      "targetValueName": "length",
+      "ownerTypeName": "CallStack_Impl_",
+      "hasInitializer": false,
+      "initializationOrder": 0,
+      "declarationOrder": 0,
+      "initializationId": "static-initialization:haxe.CallStack::CallStack_Impl_::length",
+      "id": "static-storage:haxe.CallStack::CallStack_Impl_::length",
+      "semanticTypeId": "Int",
+      "ownerTypeOrder": 0,
+      "kind": "variable",
+      "moduleId": "haxe.CallStack",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
+      "declarationTypeName": null,
+      "key": "haxe.CallStack::CallStack_Impl_::length",
+      "fieldName": "length",
+      "declarationTypeOrder": -1,
+      "revision": "sha256:36added8917135bb14a10fd4ac5b0b941e4c956aadba61a8220d990436c0cfd1",
+      "representationId": null
+    }
+  ],
+  "runtimeRequirementCount": 13,
+  "schemaVersion": 8,
   "representationCount": 3,
+  "staticStorageRevision": "sha256:f7b879e564a124847544853c836ff83a103d2950caaa71e299d9b7bf544bce31",
   "representations": [
     {
       "carrierTypeId": "int",
@@ -20,7 +200,7 @@
         "metal",
         "portable"
       ],
-      "programRevision": "cb28521c651385678f5902df0be2da39e2217d920f0a050293b7876a67e6b3ec",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
       "identityPolicy": "primitive-value",
       "key": "Int|instance-field",
       "domain": "instance-field",
@@ -43,7 +223,7 @@
         "metal",
         "portable"
       ],
-      "programRevision": "cb28521c651385678f5902df0be2da39e2217d920f0a050293b7876a67e6b3ec",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
       "identityPolicy": "primitive-value",
       "key": "Int|mutable-local-storage",
       "domain": "mutable-local-storage",
@@ -66,7 +246,7 @@
         "metal",
         "portable"
       ],
-      "programRevision": "cb28521c651385678f5902df0be2da39e2217d920f0a050293b7876a67e6b3ec",
+      "programRevision": "12843a7a1dafcfea448cc113ea14b94ce9bcc078253a5d6a97d0d0d5d0fe1cb0",
       "identityPolicy": "primitive-value",
       "key": "Int|static-field",
       "domain": "static-field",
@@ -75,10 +255,11 @@
       "boxingPolicy": "direct-unboxed"
     }
   ],
+  "staticStorageCount": 8,
   "representationScope": "exact-non-null-int-v1",
-  "admittedInputRevision": "sha256:a45f32bbd947d1b22b147d38808dda8001997f02d81a4eaea0e51f937fa6ae67",
-  "runtimeRequirementRevision": "sha256:4a2c6305c7e31a6b03495ca61b9c43707851e2ac742493a4ad079168cf513621",
-  "planCount": 14,
+  "admittedInputRevision": "sha256:23af8b5b1112fcd874679146341dc2a6bb9bffce86ce4473d0fdcb9c52997e6a",
+  "runtimeRequirementRevision": "sha256:02e84f92731e93c19a186816c0f8546af4ad52357536d3ebc30a7ab224f02efc",
+  "planCount": 18,
   "representationModel": "typed-ocaml-program-representation",
   "runtimeRequirements": [
     {
@@ -95,8 +276,8 @@
       ],
       "id": "place:12e3e65eaf20f1d04cdff365:runtime:haxe-int32-add",
       "source": {
-        "min": 1288,
-        "max": 1300,
+        "min": 1427,
+        "max": 1439,
         "file": "src/Main.hx"
       },
       "sourceId": "place:12e3e65eaf20f1d04cdff365",
@@ -121,8 +302,8 @@
       ],
       "id": "place:22d3492059498e4ae276242a:runtime:haxe-int32-add",
       "source": {
-        "min": 2293,
-        "max": 2315,
+        "min": 2432,
+        "max": 2454,
         "file": "src/Main.hx"
       },
       "sourceId": "place:22d3492059498e4ae276242a",
@@ -147,8 +328,8 @@
       ],
       "id": "place:263574102dfcaced5621652f:runtime:haxe-int32-add",
       "source": {
-        "min": 2486,
-        "max": 2508,
+        "min": 2625,
+        "max": 2647,
         "file": "src/Main.hx"
       },
       "sourceId": "place:263574102dfcaced5621652f",
@@ -173,8 +354,8 @@
       ],
       "id": "place:265173b365928b1048573384:runtime:haxe-int32-add",
       "source": {
-        "min": 777,
-        "max": 809,
+        "min": 916,
+        "max": 948,
         "file": "src/Main.hx"
       },
       "sourceId": "place:265173b365928b1048573384",
@@ -199,8 +380,8 @@
       ],
       "id": "place:2b570095e1b3b1a7d5fc4da7:runtime:haxe-int32-add",
       "source": {
-        "min": 974,
-        "max": 986,
+        "min": 1113,
+        "max": 1125,
         "file": "src/Main.hx"
       },
       "sourceId": "place:2b570095e1b3b1a7d5fc4da7",
@@ -225,8 +406,8 @@
       ],
       "id": "place:2feaa3cd957be1c759bea747:runtime:haxe-int32-add",
       "source": {
-        "min": 2714,
-        "max": 2736,
+        "min": 2853,
+        "max": 2875,
         "file": "src/Main.hx"
       },
       "sourceId": "place:2feaa3cd957be1c759bea747",
@@ -251,8 +432,8 @@
       ],
       "id": "place:4cb4b564fead7c106c0e97f9:runtime:haxe-int32-add",
       "source": {
-        "min": 1127,
-        "max": 1139,
+        "min": 1266,
+        "max": 1278,
         "file": "src/Main.hx"
       },
       "sourceId": "place:4cb4b564fead7c106c0e97f9",
@@ -277,8 +458,8 @@
       ],
       "id": "place:5c02137610b61ef126589230:runtime:haxe-int32-add",
       "source": {
-        "min": 1469,
-        "max": 1481,
+        "min": 1608,
+        "max": 1620,
         "file": "src/Main.hx"
       },
       "sourceId": "place:5c02137610b61ef126589230",
@@ -301,10 +482,88 @@
       "rootModules": [
         "HxInt"
       ],
+      "id": "place:5e6f730b9b6602f641549cf4:runtime:haxe-int32-add",
+      "source": {
+        "min": 3710,
+        "max": 3732,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:5e6f730b9b6602f641549cf4",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "place:5e6f730b9b6602f641549cf4:static-int-increment",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:71cca5c4eec9d9a19af037be:runtime:haxe-int32-add",
+      "source": {
+        "min": 3624,
+        "max": 3649,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:71cca5c4eec9d9a19af037be",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "place:71cca5c4eec9d9a19af037be:static-compound-assignment",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
+      "id": "place:7278c4c26b0c4ee6b49a5513:runtime:haxe-int32-add",
+      "source": {
+        "min": 3669,
+        "max": 3691,
+        "file": "src/Main.hx"
+      },
+      "sourceId": "place:7278c4c26b0c4ee6b49a5513",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "place:7278c4c26b0c4ee6b49a5513:static-int-increment",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-int32-arithmetic-v1",
+      "subject": {
+        "id": "Int",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-int32-add",
+      "explanation": "Haxe Int addition has defined 32-bit overflow behavior, so generated OCaml uses the checked HxInt operation.",
+      "rootModules": [
+        "HxInt"
+      ],
       "id": "place:741a8ac8bb0e0c2651f99db8:runtime:haxe-int32-add",
       "source": {
-        "min": 1875,
-        "max": 1921,
+        "min": 2014,
+        "max": 2060,
         "file": "src/Main.hx"
       },
       "sourceId": "place:741a8ac8bb0e0c2651f99db8",
@@ -329,8 +588,8 @@
       ],
       "id": "place:a4d49d6592f775344117bb7a:runtime:haxe-int32-add",
       "source": {
-        "min": 2108,
-        "max": 2130,
+        "min": 2247,
+        "max": 2269,
         "file": "src/Main.hx"
       },
       "sourceId": "place:a4d49d6592f775344117bb7a",
@@ -370,8 +629,8 @@
       "originId": "place:12e3e65eaf20f1d04cdff365",
       "id": "place:12e3e65eaf20f1d04cdff365:static-int-decrement",
       "source": {
-        "min": 1288,
-        "max": 1300,
+        "min": 1427,
+        "max": 1439,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -454,8 +713,8 @@
       "originId": "place:22d3492059498e4ae276242a",
       "id": "place:22d3492059498e4ae276242a:static-int-increment",
       "source": {
-        "min": 2293,
-        "max": 2315,
+        "min": 2432,
+        "max": 2454,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -538,8 +797,8 @@
       "originId": "place:263574102dfcaced5621652f",
       "id": "place:263574102dfcaced5621652f:static-int-decrement",
       "source": {
-        "min": 2486,
-        "max": 2508,
+        "min": 2625,
+        "max": 2647,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -619,8 +878,8 @@
       "originId": "place:265173b365928b1048573384",
       "id": "place:265173b365928b1048573384:static-compound-assignment",
       "source": {
-        "min": 777,
-        "max": 809,
+        "min": 916,
+        "max": 948,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -715,8 +974,8 @@
       "originId": "place:2b570095e1b3b1a7d5fc4da7",
       "id": "place:2b570095e1b3b1a7d5fc4da7:static-int-increment",
       "source": {
-        "min": 974,
-        "max": 986,
+        "min": 1113,
+        "max": 1125,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -794,8 +1053,8 @@
       "originId": "place:2ec87ed9e163efbae5e983b6",
       "id": "place:2ec87ed9e163efbae5e983b6:static-simple-assignment",
       "source": {
-        "min": 596,
-        "max": 628,
+        "min": 735,
+        "max": 767,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -868,8 +1127,8 @@
       "originId": "place:2feaa3cd957be1c759bea747",
       "id": "place:2feaa3cd957be1c759bea747:static-int-decrement",
       "source": {
-        "min": 2714,
-        "max": 2736,
+        "min": 2853,
+        "max": 2875,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -952,8 +1211,8 @@
       "originId": "place:4cb4b564fead7c106c0e97f9",
       "id": "place:4cb4b564fead7c106c0e97f9:static-int-increment",
       "source": {
-        "min": 1127,
-        "max": 1139,
+        "min": 1266,
+        "max": 1278,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -1036,8 +1295,8 @@
       "originId": "place:5c02137610b61ef126589230",
       "id": "place:5c02137610b61ef126589230:static-int-decrement",
       "source": {
-        "min": 1469,
-        "max": 1481,
+        "min": 1608,
+        "max": 1620,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -1096,6 +1355,336 @@
     {
       "carrierTypeId": "int",
       "runtimeRequirementIds": [
+        "place:5e6f730b9b6602f641549cf4:runtime:haxe-int32-add"
+      ],
+      "fixity": "prefix",
+      "sourceOperator": "increment",
+      "place": {
+        "carrierTypeId": "int",
+        "targetValueName": "sameModuleValue",
+        "ownerTypeName": "Main",
+        "targetSymbolId": "Main::Main::sameModuleValue",
+        "ownerModuleId": "Main",
+        "forwardDeclarationRequired": false,
+        "id": "place:5e6f730b9b6602f641549cf4:place",
+        "semanticTypeId": "Int",
+        "kind": "static-field",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
+        "targetModuleName": "Main",
+        "fieldName": "sameModuleValue",
+        "staticAccess": "local",
+        "representationId": "representation:Int:static-field"
+      },
+      "delta": 1,
+      "originId": "place:5e6f730b9b6602f641549cf4",
+      "id": "place:5e6f730b9b6602f641549cf4:static-int-increment",
+      "source": {
+        "min": 3710,
+        "max": 3732,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "static-int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:5e6f730b9b6602f641549cf4:occurrence:0",
+          "effects": [
+            "read"
+          ],
+          "sourceId": "place:5e6f730b9b6602f641549cf4:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:5e6f730b9b6602f641549cf4:occurrence:1",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:5e6f730b9b6602f641549cf4:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:5e6f730b9b6602f641549cf4:occurrence:2",
+          "effects": [
+            "write"
+          ],
+          "sourceId": "place:5e6f730b9b6602f641549cf4:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "result",
+          "id": "place:5e6f730b9b6602f641549cf4:occurrence:3",
+          "effects": [],
+          "sourceId": "place:5e6f730b9b6602f641549cf4:new-value"
+        }
+      ],
+      "result": "computed-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [],
+      "place": {
+        "carrierTypeId": "int",
+        "targetValueName": "sameModuleValue",
+        "ownerTypeName": "Main",
+        "targetSymbolId": "Main::Main::sameModuleValue",
+        "ownerModuleId": "Main",
+        "forwardDeclarationRequired": false,
+        "id": "place:684570c92b3323736f9d73f6:place",
+        "semanticTypeId": "Int",
+        "kind": "static-field",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
+        "targetModuleName": "Main",
+        "fieldName": "sameModuleValue",
+        "staticAccess": "local",
+        "representationId": "representation:Int:static-field"
+      },
+      "originId": "place:684570c92b3323736f9d73f6",
+      "id": "place:684570c92b3323736f9d73f6:static-simple-assignment",
+      "source": {
+        "min": 3578,
+        "max": 3603,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "static-simple-assignment",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "right-hand-side",
+          "id": "place:684570c92b3323736f9d73f6:occurrence:0",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:684570c92b3323736f9d73f6:rhs"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:684570c92b3323736f9d73f6:occurrence:1",
+          "effects": [
+            "write"
+          ],
+          "sourceId": "place:684570c92b3323736f9d73f6:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "result",
+          "id": "place:684570c92b3323736f9d73f6:occurrence:2",
+          "effects": [],
+          "sourceId": "place:684570c92b3323736f9d73f6:rhs"
+        }
+      ],
+      "result": "assigned-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "place:71cca5c4eec9d9a19af037be:runtime:haxe-int32-add"
+      ],
+      "place": {
+        "carrierTypeId": "int",
+        "targetValueName": "sameModuleValue",
+        "ownerTypeName": "Main",
+        "targetSymbolId": "Main::Main::sameModuleValue",
+        "ownerModuleId": "Main",
+        "forwardDeclarationRequired": false,
+        "id": "place:71cca5c4eec9d9a19af037be:place",
+        "semanticTypeId": "Int",
+        "kind": "static-field",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
+        "targetModuleName": "Main",
+        "fieldName": "sameModuleValue",
+        "staticAccess": "local",
+        "representationId": "representation:Int:static-field"
+      },
+      "originId": "place:71cca5c4eec9d9a19af037be",
+      "id": "place:71cca5c4eec9d9a19af037be:static-compound-assignment",
+      "source": {
+        "min": 3624,
+        "max": 3649,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "static-compound-assignment",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:71cca5c4eec9d9a19af037be:occurrence:0",
+          "effects": [
+            "read"
+          ],
+          "sourceId": "place:71cca5c4eec9d9a19af037be:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "rhs",
+          "role": "right-hand-side",
+          "id": "place:71cca5c4eec9d9a19af037be:occurrence:1",
+          "effects": [
+            "read",
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:71cca5c4eec9d9a19af037be:rhs"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:71cca5c4eec9d9a19af037be:occurrence:2",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:71cca5c4eec9d9a19af037be:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:71cca5c4eec9d9a19af037be:occurrence:3",
+          "effects": [
+            "write"
+          ],
+          "sourceId": "place:71cca5c4eec9d9a19af037be:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "result",
+          "id": "place:71cca5c4eec9d9a19af037be:occurrence:4",
+          "effects": [],
+          "sourceId": "place:71cca5c4eec9d9a19af037be:new-value"
+        }
+      ],
+      "result": "computed-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
+        "place:7278c4c26b0c4ee6b49a5513:runtime:haxe-int32-add"
+      ],
+      "fixity": "postfix",
+      "sourceOperator": "increment",
+      "place": {
+        "carrierTypeId": "int",
+        "targetValueName": "sameModuleValue",
+        "ownerTypeName": "Main",
+        "targetSymbolId": "Main::Main::sameModuleValue",
+        "ownerModuleId": "Main",
+        "forwardDeclarationRequired": false,
+        "id": "place:7278c4c26b0c4ee6b49a5513:place",
+        "semanticTypeId": "Int",
+        "kind": "static-field",
+        "representationReason": "An exact, non-null Haxe Int uses OCaml int directly inside the static field's OCaml ref cell.",
+        "targetModuleName": "Main",
+        "fieldName": "sameModuleValue",
+        "staticAccess": "local",
+        "representationId": "representation:Int:static-field"
+      },
+      "delta": 1,
+      "originId": "place:7278c4c26b0c4ee6b49a5513",
+      "id": "place:7278c4c26b0c4ee6b49a5513:static-int-increment",
+      "source": {
+        "min": 3669,
+        "max": 3691,
+        "file": "src/Main.hx"
+      },
+      "semanticTypeId": "Int",
+      "effects": [
+        "read",
+        "call",
+        "throw",
+        "write"
+      ],
+      "nodeKind": "static-int-update",
+      "operation": "int-add",
+      "conversion": "identity",
+      "schedule": [
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "load",
+          "id": "place:7278c4c26b0c4ee6b49a5513:occurrence:0",
+          "effects": [
+            "read"
+          ],
+          "sourceId": "place:7278c4c26b0c4ee6b49a5513:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "new_value",
+          "role": "operator",
+          "id": "place:7278c4c26b0c4ee6b49a5513:occurrence:1",
+          "effects": [
+            "call",
+            "throw"
+          ],
+          "sourceId": "place:7278c4c26b0c4ee6b49a5513:new-value"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": null,
+          "role": "store",
+          "id": "place:7278c4c26b0c4ee6b49a5513:occurrence:2",
+          "effects": [
+            "write"
+          ],
+          "sourceId": "place:7278c4c26b0c4ee6b49a5513:place"
+        },
+        {
+          "occurrenceCount": 1,
+          "sharedAs": "old_value",
+          "role": "result",
+          "id": "place:7278c4c26b0c4ee6b49a5513:occurrence:3",
+          "effects": [],
+          "sourceId": "place:7278c4c26b0c4ee6b49a5513:old-value"
+        }
+      ],
+      "result": "old-value"
+    },
+    {
+      "carrierTypeId": "int",
+      "runtimeRequirementIds": [
         "place:741a8ac8bb0e0c2651f99db8:runtime:haxe-int32-add"
       ],
       "place": {
@@ -1117,8 +1706,8 @@
       "originId": "place:741a8ac8bb0e0c2651f99db8",
       "id": "place:741a8ac8bb0e0c2651f99db8:static-compound-assignment",
       "source": {
-        "min": 1875,
-        "max": 1921,
+        "min": 2014,
+        "max": 2060,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -1213,8 +1802,8 @@
       "originId": "place:a4d49d6592f775344117bb7a",
       "id": "place:a4d49d6592f775344117bb7a:static-int-increment",
       "source": {
-        "min": 2108,
-        "max": 2130,
+        "min": 2247,
+        "max": 2269,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -1292,8 +1881,8 @@
       "originId": "place:b321f2eff67073ec3a755756",
       "id": "place:b321f2eff67073ec3a755756:static-simple-assignment",
       "source": {
-        "min": 499,
-        "max": 525,
+        "min": 598,
+        "max": 624,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -1361,8 +1950,8 @@
       "originId": "place:c9fa66036f9e84f4b6d7f6e6",
       "id": "place:c9fa66036f9e84f4b6d7f6e6:static-simple-assignment",
       "source": {
-        "min": 1658,
-        "max": 1704,
+        "min": 1797,
+        "max": 1843,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",
@@ -1430,8 +2019,8 @@
       "originId": "place:f189a1ffc6c42e9f7d51c095",
       "id": "place:f189a1ffc6c42e9f7d51c095:static-simple-assignment",
       "source": {
-        "min": 377,
-        "max": 393,
+        "min": 476,
+        "max": 492,
         "file": "src/Main.hx"
       },
       "semanticTypeId": "Int",

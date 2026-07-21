@@ -5,8 +5,10 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypedExprTools;
 import reflaxe.BaseCompiler;
 import reflaxe.data.ClassFuncData;
+import reflaxe.ocaml.OcamlCompiler;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
+import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
 import reflaxe.preprocessors.BasePreprocessor;
 
 /**
@@ -26,16 +28,19 @@ class PreservePlaceAssignmentsImpl extends BasePreprocessor {
 	var ordinal:Int = 0;
 	var currentModuleId:String = "";
 	var currentTypeName:String = "";
+	var staticStorage:Null<OcamlStaticStoragePlan> = null;
 
 	public function new() {}
 
 	public function process(data:ClassFuncData, compiler:BaseCompiler):Void {
 		if (data.expr == null)
 			return;
+		final ocamlCompiler:OcamlCompiler = cast compiler;
 		functionId = data.id;
 		ordinal = 0;
 		currentModuleId = data.classType.module;
 		currentTypeName = data.classType.name;
+		staticStorage = ocamlCompiler.staticStoragePlan;
 		data.setExpr(transform(data.expr));
 	}
 
@@ -44,7 +49,9 @@ class PreservePlaceAssignmentsImpl extends BasePreprocessor {
 	}
 
 	function transform(expression:TypedExpr):TypedExpr {
-		final admitted = OcamlPlaceInputPolicy.admitsExpression(expression, currentModuleId, currentTypeName);
+		if (staticStorage == null)
+			throw "reflaxe.ocaml [ocaml-static-storage:not-available]: place preservation started before the static storage plan was installed";
+		final admitted = OcamlPlaceInputPolicy.admitsExpression(expression, currentModuleId, currentTypeName, staticStorage);
 		final id = admitted ? OcamlLoweredOrigin.placeId(functionId, ordinal++) : null;
 		final mapped = TypedExprTools.map(expression, transform);
 		if (id == null)

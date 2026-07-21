@@ -34,11 +34,14 @@ class OcamlFunctionPlanSealer {
 	final context:CompilationContext;
 	final registry:OcamlFunctionPlanRegistry;
 	final representations:OcamlRepresentationRegistry;
+	final staticStorage:OcamlStaticStoragePlan;
 
-	public function new(context:CompilationContext, registry:OcamlFunctionPlanRegistry, representations:OcamlRepresentationRegistry) {
+	public function new(context:CompilationContext, registry:OcamlFunctionPlanRegistry, representations:OcamlRepresentationRegistry,
+			staticStorage:OcamlStaticStoragePlan) {
 		this.context = context;
 		this.registry = registry;
 		this.representations = representations;
+		this.staticStorage = staticStorage;
 	}
 
 	static function fail(message:String, position:Position):Dynamic {
@@ -86,7 +89,7 @@ class OcamlFunctionPlanSealer {
 
 		final moduleId = data.classType.module;
 		final typeName = data.classType.name;
-		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations);
+		final planner = new OcamlPlaceAssignmentPlanner(context, moduleId, typeName, representations, staticStorage);
 		final seen:Map<String, Bool> = [];
 		final markerOriginIds:Array<String> = [];
 
@@ -115,7 +118,7 @@ class OcamlFunctionPlanSealer {
 					// nested origin receives its own independently sealed plan.
 					TypedExprTools.iter(child, visit);
 				case _:
-					if (OcamlPlaceInputPolicy.admitsExpression(expression, moduleId, typeName)) {
+					if (OcamlPlaceInputPolicy.admitsExpression(expression, moduleId, typeName, staticStorage)) {
 						fail("an admitted assignment or update reached final planning without its early protection marker", expression.pos);
 					}
 					TypedExprTools.iter(expression, visit);

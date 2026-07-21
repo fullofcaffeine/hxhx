@@ -36,6 +36,9 @@ import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer;
 import reflaxe.ocaml.lowered.OcamlPlaceAssignmentLowerer.OcamlPlaceAssignmentLoweringResult;
 import reflaxe.ocaml.lowered.OcamlPlaceInputPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
+import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
+import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
 import reflaxe.ocaml.runtimegen.OcamlNativeRuntimeBoundary;
 
 /**
@@ -57,6 +60,7 @@ class OcamlBuilder {
 
 	final placeAssignmentLowerer:OcamlPlaceAssignmentLowerer;
 	final representationRegistry:OcamlRepresentationRegistry;
+	final staticStoragePlan:OcamlStaticStoragePlan;
 	var currentFunctionPlanBinding:Null<OcamlFunctionPlanBinding> = null;
 
 	// Track locals introduced by TVar that we currently represent as `ref`.
@@ -104,10 +108,11 @@ class OcamlBuilder {
 	}
 
 	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr, functionPlanRegistry:OcamlFunctionPlanRegistry,
-			representationRegistry:OcamlRepresentationRegistry, emitSourceMap:Bool = false) {
+			representationRegistry:OcamlRepresentationRegistry, staticStoragePlan:OcamlStaticStoragePlan, emitSourceMap:Bool = false) {
 		this.ctx = ctx;
 		this.typeExprFromHaxeType = typeExprFromHaxeType;
 		this.representationRegistry = representationRegistry;
+		this.staticStoragePlan = staticStoragePlan;
 		this.emitSourceMap = emitSourceMap;
 		this.placeAssignmentLowerer = new OcamlPlaceAssignmentLowerer(ctx, functionPlanRegistry);
 	}
@@ -131,6 +136,23 @@ class OcamlBuilder {
 		Context.error(diagnostic, position);
 		#end
 		throw diagnostic;
+	}
+
+	/** Resolves one pre-emission static cell and rejects an unsafe late cross-type reference. */
+	function requireStaticStorage(classType:ClassType, field:ClassField, position:Position):OcamlStaticStorageEntry {
+		final storage = try {
+			staticStoragePlan.require(classType.module, classType.name, field.name);
+		} catch (error:Dynamic) {
+			return placeLoweringInvariant(Std.string(error), position);
+		}
+		if (ctx.currentModuleId == classType.module
+			&& ctx.currentTypeName != null
+			&& ctx.currentTypeName != classType.name
+			&& !staticStoragePlan.isVisibleFrom(classType.module, classType.name, field.name, ctx.currentModuleId, ctx.currentTypeName)) {
+			return placeLoweringInvariant('same-module access to "${storage.key}" requires a carrier proven safe for declaration before both type fragments',
+				position);
+		}
+		return storage;
 	}
 
 	/** Resolves an admitted local carrier without repeating target type policy. */
@@ -4161,7 +4183,7 @@ class OcamlBuilder {
 								OcamlExpr.EConst(OcamlConst.CUnit);
 						}
 					case TField(_, FStatic(clsRef, cfRef)):
-						if (OcamlPlaceInputPolicy.admitsSimpleStaticField(e1, e2, ctx.currentModuleId, ctx.currentTypeName))
+						if (OcamlPlaceInputPolicy.admitsSimpleStaticField(e1, e2, ctx.currentModuleId, ctx.currentTypeName, staticStoragePlan))
 							return placeLoweringInvariant("admitted static-field assignment reached the legacy syntax branch without a stable origin", e1.pos);
 						final cls = clsRef.get();
 						final cf = cfRef.get();
@@ -4177,13 +4199,10 @@ class OcamlBuilder {
 							#end
 							OcamlExpr.EConst(OcamlConst.CUnit);
 						} else {
-							if (ctx.currentModuleId != null && ctx.currentModuleId == cls.module && ctx.currentTypeName != null
-								&& ctx.currentTypeName != cls.name) {
-								ctx.requestForwardMutableStatic(cls.module, cls.name, cf.name, cf.type);
-							}
+							final storage = requireStaticStorage(cls, cf, e1.pos);
 							final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
 							final modName = moduleIdToOcamlModuleName(cls.module);
-							final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+							final scoped = storage.targetValueName;
 							final lhsCell = (selfMod != null && selfMod == modName) ? OcamlExpr.EIdent(scoped) : OcamlExpr.EField(OcamlExpr.EIdent(modName),
 								scoped);
 							final tmp = freshTmp("assign");
@@ -4301,7 +4320,7 @@ class OcamlBuilder {
 						}
 						OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), rhs);
 					case TField(_, FStatic(clsRef, cfRef)):
-						if (OcamlPlaceInputPolicy.admitsCompoundIntAddStaticField(inner, e1, e2, ctx.currentModuleId, ctx.currentTypeName))
+						if (OcamlPlaceInputPolicy.admitsCompoundIntAddStaticField(inner, e1, e2, ctx.currentModuleId, ctx.currentTypeName, staticStoragePlan))
 							return placeLoweringInvariant("admitted static-field compound assignment reached the legacy syntax branch without a stable origin",
 								e1.pos);
 						final cls = clsRef.get();
@@ -4317,13 +4336,10 @@ class OcamlBuilder {
 							#end
 							OcamlExpr.EConst(OcamlConst.CUnit);
 						} else {
-							if (ctx.currentModuleId != null && ctx.currentModuleId == cls.module && ctx.currentTypeName != null
-								&& ctx.currentTypeName != cls.name) {
-								ctx.requestForwardMutableStatic(cls.module, cls.name, cf.name, cf.type);
-							}
+							final storage = requireStaticStorage(cls, cf, e1.pos);
 							final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
 							final modName = moduleIdToOcamlModuleName(cls.module);
-							final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+							final scoped = storage.targetValueName;
 							final lhsCell = (selfMod != null && selfMod == modName) ? OcamlExpr.EIdent(scoped) : OcamlExpr.EField(OcamlExpr.EIdent(modName),
 								scoped);
 							final lhs = OcamlExpr.EUnop(OcamlUnop.Deref, lhsCell);
@@ -5525,7 +5541,7 @@ class OcamlBuilder {
 						case TLocal(v) if (isRefLocalId(v.id)):
 							incDecDynamic(buildLocal(v), (newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), newVal));
 						case TField(obj, FStatic(clsRef, cfRef)):
-							if (OcamlPlaceInputPolicy.admitsIntUpdateStaticField(op, e, ctx.currentModuleId, ctx.currentTypeName))
+							if (OcamlPlaceInputPolicy.admitsIntUpdateStaticField(op, e, ctx.currentModuleId, ctx.currentTypeName, staticStoragePlan))
 								return placeLoweringInvariant("admitted static-field update reached the legacy dynamic syntax branch without a stable origin",
 									e.pos);
 							final cls = clsRef.get();
@@ -5541,13 +5557,10 @@ class OcamlBuilder {
 								#end
 								OcamlExpr.EConst(OcamlConst.CUnit);
 							} else {
-								if (ctx.currentModuleId != null && ctx.currentModuleId == cls.module && ctx.currentTypeName != null
-									&& ctx.currentTypeName != cls.name) {
-									ctx.requestForwardMutableStatic(cls.module, cls.name, cf.name, cf.type);
-								}
+								final storage = requireStaticStorage(cls, cf, e.pos);
 								final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
 								final modName = moduleIdToOcamlModuleName(cls.module);
-								final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+								final scoped = storage.targetValueName;
 								final lhsCell = (selfMod != null && selfMod == modName) ? OcamlExpr.EIdent(scoped) : OcamlExpr.EField(OcamlExpr.EIdent(modName),
 									scoped);
 								incDecDynamic(OcamlExpr.EUnop(OcamlUnop.Deref, lhsCell), (newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, newVal));
@@ -5652,7 +5665,7 @@ class OcamlBuilder {
 						case TLocal(v) if (isRefLocalId(v.id)):
 							incDec(buildLocal(v), (newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), newVal));
 						case TField(_, FStatic(clsRef, cfRef)):
-							if (OcamlPlaceInputPolicy.admitsIntUpdateStaticField(op, e, ctx.currentModuleId, ctx.currentTypeName))
+							if (OcamlPlaceInputPolicy.admitsIntUpdateStaticField(op, e, ctx.currentModuleId, ctx.currentTypeName, staticStoragePlan))
 								return placeLoweringInvariant("admitted static-field update reached the legacy syntax branch without a stable origin", e.pos);
 							final cls = clsRef.get();
 							final cf = cfRef.get();
@@ -5667,13 +5680,10 @@ class OcamlBuilder {
 								#end
 								OcamlExpr.EConst(OcamlConst.CUnit);
 							} else {
-								if (ctx.currentModuleId != null && ctx.currentModuleId == cls.module && ctx.currentTypeName != null
-									&& ctx.currentTypeName != cls.name) {
-									ctx.requestForwardMutableStatic(cls.module, cls.name, cf.name, cf.type);
-								}
+								final storage = requireStaticStorage(cls, cf, e.pos);
 								final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
 								final modName = moduleIdToOcamlModuleName(cls.module);
-								final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+								final scoped = storage.targetValueName;
 								final lhsCell = (selfMod != null && selfMod == modName) ? OcamlExpr.EIdent(scoped) : OcamlExpr.EField(OcamlExpr.EIdent(modName),
 									scoped);
 								incDec(OcamlExpr.EUnop(OcamlUnop.Deref, lhsCell), (newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, newVal));
@@ -6832,17 +6842,14 @@ class OcamlBuilder {
 					return OcamlExpr.EField(resolved.moduleExpr, resolved.fieldName);
 				} else {
 					final modName = moduleIdToOcamlModuleName(cls.module);
-					final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
-					final baseExpr = (selfMod != null && selfMod == modName) ? OcamlExpr.EIdent(scoped) : OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
 					final isMutableStatic = switch (cf.kind) {
 						case FVar(_, _): !cf.isFinal;
 						case FMethod(MethDynamic): true;
 						case _: false;
 					}
-					if (isMutableStatic && ctx.currentModuleId != null && ctx.currentModuleId == cls.module && ctx.currentTypeName != null
-						&& ctx.currentTypeName != cls.name) {
-						ctx.requestForwardMutableStatic(cls.module, cls.name, cf.name, cf.type);
-					}
+					final storage = isMutableStatic ? requireStaticStorage(cls, cf, pos) : null;
+					final scoped = storage == null ? ctx.scopedValueName(cls.module, cls.name, cf.name) : storage.targetValueName;
+					final baseExpr = (selfMod != null && selfMod == modName) ? OcamlExpr.EIdent(scoped) : OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
 					return isMutableStatic ? OcamlExpr.EUnop(OcamlUnop.Deref, baseExpr) : baseExpr;
 				}
 			case FInstance(clsRef, _, cfRef):

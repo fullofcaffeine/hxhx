@@ -12,6 +12,7 @@ import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceKind;
 import reflaxe.ocaml.lowered.OcamlLoweredPlace.OcamlLoweredPlaceReportEntry;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDecision;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageReportEntry;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequirement;
 
 /** Writes the deterministic inspection artifact for sealed lowered place nodes. */
@@ -29,7 +30,8 @@ class OcamlLoweringReportWriter {
 	}
 
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
-			representations:Array<OcamlRepresentationDecision>, artifacts:OcamlArtifactManifestBuilder):Void {
+			representations:Array<OcamlRepresentationDecision>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
+			artifacts:OcamlArtifactManifestBuilder):Void {
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
 		final sortedRepresentations = representations.copy();
@@ -52,6 +54,14 @@ class OcamlLoweringReportWriter {
 			if (indexRepresentationId != null) {
 				requireRepresentation(representationById, indexRepresentationId, entry.place.indexSemanticTypeId, entry.place.indexCarrierTypeId,
 					OcamlRepresentationDomain.InternalValue, 'Lowered place plan "${entry.id}" index');
+			}
+		}
+		final sortedStaticStorage = staticStorage.copy();
+		sortedStaticStorage.sort((left, right) -> Reflect.compare(left.key, right.key));
+		for (entry in sortedStaticStorage) {
+			if (entry.representationId != null) {
+				requireRepresentation(representationById, entry.representationId, entry.semanticTypeId, entry.carrierTypeId,
+					OcamlRepresentationDomain.StaticField, 'Static storage plan "${entry.id}"');
 			}
 		}
 		final requirementById:Map<String, OcamlRuntimeRequirement> = [];
@@ -77,13 +87,17 @@ class OcamlLoweringReportWriter {
 		final canonicalRequirements = haxe.Json.stringify(includedRequirements);
 		final canonicalRepresentations = haxe.Json.stringify(sortedRepresentations);
 		final report = {
-			schemaVersion: 7,
+			schemaVersion: 8,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
 			representationScope: "exact-non-null-int-v1",
 			representationRevision: "sha256:" + Sha256.encode(canonicalRepresentations),
 			representationCount: sortedRepresentations.length,
 			representations: sortedRepresentations,
+			staticStorageModel: "typed-ocaml-static-storage",
+			staticStorageRevision: staticStorageRevision,
+			staticStorageCount: sortedStaticStorage.length,
+			staticStorage: sortedStaticStorage,
 			admittedInputRevision: "sha256:" + Sha256.encode(canonicalPlans),
 			planCount: sorted.length,
 			plans: sorted,

@@ -188,8 +188,10 @@ runtime module-selection report. With
 `-D ocaml_lowering_report` (already present in the starter templates), it also
 summarizes the migrated typed assignment/update plans: source location,
 semantic and carrier types, representation reason, observable effect schedule,
-and runtime requirement IDs. Use `--output <directory>` when the HXML does not
-emit to `out`.
+and runtime requirement IDs. It also lists the pre-emission storage decision
+for every mutable static field: the generated cell name, its Haxe and OCaml
+types, where the cell is declared, and where initialization occurs. Use
+`--output <directory>` when the HXML does not emit to `out`.
 
 Inspection is deliberately read-only and fail-closed. Missing, stale, modified,
 or unattributed generated files fail; typed place lowering is optional unless

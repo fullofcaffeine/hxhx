@@ -38,12 +38,15 @@ class OcamlPlaceAssignmentPlanner {
 	final currentModuleId:String;
 	final currentTypeName:String;
 	final representations:OcamlRepresentationRegistry;
+	final staticStorage:OcamlStaticStoragePlan;
 
-	public function new(context:CompilationContext, currentModuleId:String, currentTypeName:String, representations:OcamlRepresentationRegistry) {
+	public function new(context:CompilationContext, currentModuleId:String, currentTypeName:String, representations:OcamlRepresentationRegistry,
+			staticStorage:OcamlStaticStoragePlan) {
 		this.context = context;
 		this.currentModuleId = currentModuleId;
 		this.currentTypeName = currentTypeName;
 		this.representations = representations;
+		this.staticStorage = staticStorage;
 	}
 
 	/** Selects one complete place plan from a final origin-bearing operation. */
@@ -140,19 +143,21 @@ class OcamlPlaceAssignmentPlanner {
 				final field = fieldRef.get();
 				final targetModuleName = context.ocamlModuleNameForModuleId(classType.module);
 				final staticAccess = currentModuleId == classType.module ? OcamlLoweredStaticFieldAccess.Local : OcamlLoweredStaticFieldAccess.Qualified;
-				final forwardDeclarationRequired = currentModuleId == classType.module && currentTypeName != classType.name;
+				final storage = staticStorage.require(classType.module, classType.name, field.name);
 				final valueRepresentation = representations.selectExactInt(OcamlRepresentationDomain.StaticField);
+				if (storage.representationId != null && storage.representationId != valueRepresentation.id)
+					throw 'reflaxe.ocaml [ocaml-static-storage:representation-mismatch]: "${storage.key}" uses ${storage.representationId}, but place lowering selected ${valueRepresentation.id}';
 				{
 					id: originId + ":place",
 					kind: OcamlLoweredPlaceKind.StaticField,
 					ownerModuleId: classType.module,
 					ownerTypeName: classType.name,
-					targetSymbolId: context.staticFieldKey(classType.module, classType.name, field.name),
+					targetSymbolId: storage.key,
 					fieldName: field.name,
 					targetModuleName: targetModuleName,
-					targetValueName: context.scopedValueName(classType.module, classType.name, field.name),
+					targetValueName: storage.targetValueName,
 					staticAccess: staticAccess,
-					forwardDeclarationRequired: forwardDeclarationRequired,
+					forwardDeclarationRequired: false,
 					semanticTypeId: TypeTools.toString(left.t),
 					carrierTypeId: valueRepresentation.carrierTypeId,
 					representationId: valueRepresentation.id,
@@ -243,7 +248,7 @@ class OcamlPlaceAssignmentPlanner {
 	/** Returns `null` when a static simple assignment is outside the admitted slice. */
 	public function planStaticSimpleAssignment(metadata:MetadataEntry, expression:TypedExpr, left:TypedExpr,
 			right:TypedExpr):Null<OcamlLoweredStaticSimpleAssignment> {
-		if (!OcamlPlaceInputPolicy.admitsSimpleStaticField(left, right, currentModuleId, currentTypeName))
+		if (!OcamlPlaceInputPolicy.admitsSimpleStaticField(left, right, currentModuleId, currentTypeName, staticStorage))
 			return null;
 		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
 		if (originId == null)
@@ -280,7 +285,7 @@ class OcamlPlaceAssignmentPlanner {
 	/** Plans an already-visible exact-Int static `+=` and its load-before-RHS order. */
 	public function planStaticCompoundIntAdd(metadata:MetadataEntry, expression:TypedExpr, left:TypedExpr,
 			right:TypedExpr):Null<OcamlLoweredStaticCompoundAssignment> {
-		if (!OcamlPlaceInputPolicy.admitsCompoundIntAddStaticField(OpAdd, left, right, currentModuleId, currentTypeName))
+		if (!OcamlPlaceInputPolicy.admitsCompoundIntAddStaticField(OpAdd, left, right, currentModuleId, currentTypeName, staticStorage))
 			return null;
 		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
 		if (originId == null)
@@ -321,7 +326,7 @@ class OcamlPlaceAssignmentPlanner {
 	/** Plans an already-visible exact-Int static update and its old/new result. */
 	public function planStaticIntUpdate(metadata:MetadataEntry, expression:TypedExpr, operation:Unop, postFix:Bool,
 			operand:TypedExpr):Null<OcamlLoweredStaticIntUpdate> {
-		if (!OcamlPlaceInputPolicy.admitsIntUpdateStaticField(operation, operand, currentModuleId, currentTypeName))
+		if (!OcamlPlaceInputPolicy.admitsIntUpdateStaticField(operation, operand, currentModuleId, currentTypeName, staticStorage))
 			return null;
 		final originId = OcamlLoweredOrigin.readPlaceId(metadata);
 		if (originId == null)

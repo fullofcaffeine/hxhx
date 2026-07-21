@@ -221,8 +221,12 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - source locations use project-relative or stable library labels; generated
     reports do not retain a developer's home-directory or tool-cache prefix
 - `ocaml_lowering_report.json` when `-D ocaml_lowering_report` is enabled
-  - `schemaVersion` (current: `6`)
+  - `schemaVersion` (current: `8`)
   - the sealed assignment/update plans and their source locations
+  - `staticStorageRevision`, `staticStorageCount`, and `staticStorage`, which
+    record each mutable static cell before type emission, including its owner,
+    generated name, Haxe meaning, OCaml storage type, declaration point, and
+    initialization order
   - `runtimeRequirementRevision` and `runtimeRequirementCount`
   - `runtimeRequirements`, where every admitted `HxInt`/`HxArray` need explains
     the Haxe behavior, target decision, implementation feature, eligible

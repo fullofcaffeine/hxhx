@@ -52,6 +52,11 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanSealer;
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlStaticStoragePlan;
+import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageDeclarationSite;
+import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageEntry;
+import reflaxe.ocaml.lowered.OcamlStaticStoragePlan.OcamlStaticStorageKind;
 import reflaxe.ocaml.lifecycle.OcamlSemanticLifecycleTraceWriter;
 import reflaxe.GenericCompiler;
 import reflaxe.lifecycle.ProgramRevision;
@@ -72,6 +77,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	public final functionPlanRegistry:OcamlFunctionPlanRegistry = new OcamlFunctionPlanRegistry();
 	public final representationRegistry:OcamlRepresentationRegistry = new OcamlRepresentationRegistry();
+	public final staticStoragePlan:OcamlStaticStoragePlan = new OcamlStaticStoragePlan();
 
 	final ctx:CompilationContext = new CompilationContext();
 	final printer:OcamlASTPrinter = new OcamlASTPrinter();
@@ -109,6 +115,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var profileClassFilter:Null<String> = null;
 	var profileFieldFilter:Null<String> = null;
 	var profileDetail:Bool = false;
+	var pendingStaticStorageModuleOrder:Array<String> = [];
+	var pendingStaticStorageClassesByModule:Map<String, Array<ClassType>> = [];
 
 	static var profileLog:Null<FileOutput> = null;
 	static var profileLogPath:Null<String> = null;
@@ -239,12 +247,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 		super.beginProgramRevision(revision);
 		functionPlanRegistry.beginProgram(revision.id);
 		representationRegistry.beginProgram(revision.id);
+		staticStoragePlan.beginProgram(revision.id);
 		ctx.beginRuntimeRequirementProgram(revision.id);
+		#if macro
+		planMutableStaticStorage(pendingStaticStorageModuleOrder, pendingStaticStorageClassesByModule);
+		#end
 	}
 
 	/** Builds and validates every admitted plan for one final typed function body. */
 	public function sealFunctionPlans(data:ClassFuncData):Void {
-		new OcamlFunctionPlanSealer(ctx, functionPlanRegistry, representationRegistry).seal(data);
+		new OcamlFunctionPlanSealer(ctx, functionPlanRegistry, representationRegistry, staticStoragePlan).seal(data);
 	}
 
 	#if macro
@@ -259,7 +271,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		  `filterTypes(moduleTypes)` call.
 
 		What:
-		- Preserves the previous virtual dispatch, primary type, and mutable static inference.
+		- Preserves virtual-dispatch and primary-type discovery, and retains the typed
+		  classes needed to build the static-storage plan once Reflaxe assigns the final
+		  program revision.
 		- Returns the input unchanged so Reflaxe's filtering semantics are untouched.
 	**/
 	public override function filterTypes(moduleTypes:Array<haxe.macro.Type.ModuleType>):Array<haxe.macro.Type.ModuleType> {
@@ -288,6 +302,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// Primary-type mapping (naming): keep historical short names stable when a module
 		// only contains a single type, even if that type name differs from the file/module name.
 		final moduleToClasses:Map<String, Array<ClassType>> = [];
+		final moduleOrder:Array<String> = [];
 
 		inline function fullNameOf(c:ClassType):String {
 			return (c.pack ?? []).concat([c.name]).join(".");
@@ -308,8 +323,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case TClassDecl(cRef):
 					final c = cRef.get();
 
-					if (!moduleToClasses.exists(c.module))
+					if (!moduleToClasses.exists(c.module)) {
 						moduleToClasses.set(c.module, []);
+						moduleOrder.push(c.module);
+					}
 					final list = moduleToClasses.get(c.module);
 					if (list != null)
 						list.push(c);
@@ -378,75 +395,149 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 
-		// Mutable static field inference (M6+/bd: haxe.ocaml-xgv.3.7).
-		//
-		// Why
-		// - OCaml `let` bindings are immutable, but Haxe `static var` fields can be reassigned.
-		// - We need to know which static fields are written anywhere in the program so we can:
-		//   - emit them as `ref` cells (`let x = ref <init>`)
-		//   - lower reads/writes to `!x` and `x := v`.
-		//
-		// This is a whole-program decision: `MyClass.x = 1` may appear in a different module
-		// than `MyClass` itself.
-		ctx.mutableStaticFields.clear();
+		pendingStaticStorageModuleOrder = moduleOrder.copy();
+		pendingStaticStorageClassesByModule = moduleToClasses;
+	}
 
-		inline function staticKey(c:ClassType, fieldName:String):String {
-			return (c.pack ?? []).concat([c.name, fieldName]).join(".");
-		}
+	/**
+		Inventories mutable static cells while the complete typed program is available.
 
-		function markStaticLValue(lhs:TypedExpr):Void {
-			switch (lhs.expr) {
-				case TField(_, FStatic(cRef, cfRef)):
-					final c = cRef.get();
-					final cf = cfRef.get();
-					switch (cf.kind) {
-						case FVar(_, _):
-							ctx.mutableStaticFields.set(staticKey(c, cf.name), true);
-						case _:
+		Exact `Int` cells may be declared at the start of a module because their
+		carrier is independently proven not to depend on generated class types. Other
+		cells are declared immediately after the last generated class type required by
+		their carrier, when that still precedes their owner initialization. A cell stays
+		with its owner when no earlier type-safe declaration point exists.
+	**/
+	function planMutableStaticStorage(moduleOrder:Array<String>, moduleToClasses:Map<String, Array<ClassType>>):Void {
+		for (moduleId in moduleOrder) {
+			final classes = moduleToClasses.get(moduleId);
+			if (classes == null)
+				continue;
+			final concrete = classes.filter(classType -> !classType.isExtern && !classType.isInterface);
+			final primary = ctx.primaryTypeNameByModule.get(moduleId);
+			final ordered = [for (index in 0...concrete.length) {classType: concrete[index], index: index}];
+			ordered.sort((left, right) -> {
+				final leftPrimary = left.classType.name == primary ? 1 : 0;
+				final rightPrimary = right.classType.name == primary ? 1 : 0;
+				if (leftPrimary != rightPrimary)
+					return leftPrimary - rightPrimary;
+				return left.index - right.index;
+			});
+			final targetTypeOrderByName:Map<String, Int> = [];
+			for (typeOrder in 0...ordered.length) {
+				final orderedType = ordered[typeOrder].classType;
+				targetTypeOrderByName.set(ctx.scopedInstanceTypeName(moduleId, orderedType.name), typeOrder);
+			}
+
+			function latestCarrierTypeOrder(type:OcamlTypeExpr):Int {
+				return switch (type) {
+					case TIdent(name):
+						final selected = targetTypeOrderByName.get(name);
+						selected == null ? -1 : selected;
+					case TApp(name, parameters):
+						var latest = targetTypeOrderByName.exists(name) ? targetTypeOrderByName.get(name) : -1;
+						for (parameter in parameters)
+							latest = Std.int(Math.max(latest, latestCarrierTypeOrder(parameter)));
+						latest;
+					case TArrow(from, to): Std.int(Math.max(latestCarrierTypeOrder(from), latestCarrierTypeOrder(to)));
+					case TTuple(items):
+						var latest = -1;
+						for (item in items)
+							latest = Std.int(Math.max(latest, latestCarrierTypeOrder(item)));
+						latest;
+					case TVar(_): -1;
+					case TRecord(fields):
+						var latest = -1;
+						for (field in fields)
+							latest = Std.int(Math.max(latest, latestCarrierTypeOrder(field.typ)));
+						latest;
+				}
+			}
+
+			var order = 0;
+			for (typeOrder in 0...ordered.length) {
+				final orderedClass = ordered[typeOrder];
+				final classType = orderedClass.classType;
+				staticStoragePlan.registerTypeOrder(moduleId, classType.name, typeOrder);
+				final fields = classType.statics.get();
+				final orderedFields = fields.filter(field -> switch (field.kind) {
+					case FMethod(MethDynamic): true;
+					case _: false;
+				}).concat(fields.filter(field -> switch (field.kind) {
+					case FVar(_, _): !field.isFinal;
+					case _: false;
+				}));
+				for (field in orderedFields) {
+					final kind = switch (field.kind) {
+						case FMethod(MethDynamic): OcamlStaticStorageKind.DynamicMethod;
+						case FVar(_, _): OcamlStaticStorageKind.Variable;
+						case _: continue;
 					}
-				case _:
+					final previousModuleId = ctx.currentModuleId;
+					final previousTypeName = ctx.currentTypeName;
+					ctx.currentModuleId = moduleId;
+					ctx.currentTypeName = classType.name;
+					final carrierType = ocamlTypeExprFromHaxeType(field.type);
+					ctx.currentModuleId = previousModuleId;
+					ctx.currentTypeName = previousTypeName;
+					final useModulePrelude = kind == OcamlStaticStorageKind.Variable
+						&& concrete.length > 1
+						&& OcamlRepresentationRegistry.isExactInt(field.type);
+					final latestCarrierDependency = latestCarrierTypeOrder(carrierType);
+					final useTypePrelude = !useModulePrelude && concrete.length > 1 && latestCarrierDependency <= typeOrder;
+					final declarationTypeOrder = useTypePrelude ? Std.int(Math.max(0, latestCarrierDependency)) : -1;
+					final declarationTypeName = useTypePrelude ? ordered[declarationTypeOrder].classType.name : null;
+					final representation = useModulePrelude ? representationRegistry.selectExactInt(OcamlRepresentationDomain.StaticField) : null;
+					staticStoragePlan.register({
+						moduleId: moduleId,
+						ownerTypeName: classType.name,
+						fieldName: field.name,
+						targetValueName: ctx.scopedValueName(moduleId, classType.name, field.name),
+						semanticTypeId: TypeTools.toString(field.type),
+						carrierTypeId: representation != null ? representation.carrierTypeId : printer.printType(carrierType),
+						fieldType: field.type,
+						carrierType: carrierType,
+						kind: kind,
+						declarationSite: useModulePrelude ? OcamlStaticStorageDeclarationSite.ModulePrelude : (useTypePrelude ? OcamlStaticStorageDeclarationSite.TypePrelude : OcamlStaticStorageDeclarationSite.OwnerBinding),
+						declarationTypeName: declarationTypeName,
+						declarationTypeOrder: declarationTypeOrder,
+						ownerTypeOrder: typeOrder,
+						declarationOrder: order,
+						initializationOrder: order,
+						hasInitializer: field.expr() != null,
+						representationId: representation == null ? null : representation.id
+					});
+					order += 1;
+				}
 			}
 		}
-
-		function scan(e:TypedExpr):Void {
-			switch (e.expr) {
-				// TypedExprTools.iter does not descend into function bodies, so we must
-				// explicitly traverse them here. Otherwise, assignments like:
-				//   class C { static var x; function new() x = 1; }
-				// would never be seen and we'd incorrectly emit `let x = <init>` (immutable)
-				// instead of `let x = ref <init>` (mutable). (bd: haxe.ocaml-xgv.3.7)
-				case TFunction(fn):
-					scan(fn.expr);
-				case TBinop(OpAssign, lhs, _):
-					markStaticLValue(lhs);
-				case TBinop(OpAssignOp(_), lhs, _):
-					markStaticLValue(lhs);
-				case TUnop(OpIncrement, _, inner) | TUnop(OpDecrement, _, inner):
-					markStaticLValue(inner);
-				case _:
-			}
-			haxe.macro.TypedExprTools.iter(e, scan);
-		}
-
-		for (t in types) {
-			switch (t) {
-				case TClassDecl(cRef):
-					final c = cRef.get();
-					for (f in c.fields.get()) {
-						final e = f.expr();
-						if (e != null)
-							scan(e);
-					}
-					for (f in c.statics.get()) {
-						final e = f.expr();
-						if (e != null)
-							scan(e);
-					}
-				case _:
-			}
-		}
+		staticStoragePlan.seal();
 	}
 	#end
+
+	/** Emits only cells whose proven carrier may safely precede generated class types. */
+	function staticStoragePrelude(moduleId:String, emittedOwnerTypes:Map<String, Bool>):String {
+		final items:Array<OcamlModuleItem> = [];
+		for (entry in staticStoragePlan.entriesForModule(moduleId)) {
+			if (entry.declarationSite != OcamlStaticStorageDeclarationSite.ModulePrelude || !emittedOwnerTypes.exists(entry.ownerTypeName))
+				continue;
+			if (entry.representationId == null)
+				staticStorageInvariant('module-prelude cell "${entry.key}" has no representation decision');
+			final representation = representationRegistry.require(entry.representationId, entry.programRevision);
+			if (representation.semanticTypeId != entry.semanticTypeId || representation.carrierTypeId != entry.carrierTypeId) {
+				staticStorageInvariant('module-prelude cell "${entry.key}" expects ${entry.semanticTypeId} on ${entry.carrierTypeId}, but ${representation.id} selects ${representation.semanticTypeId} on ${representation.carrierTypeId}');
+			}
+			final initialValue = OcamlExpr.EAnnot(defaultValueForType(entry.fieldType), entry.carrierType);
+			items.push(OcamlModuleItem.ILet([
+				{
+					name: entry.targetValueName,
+					expr: OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initialValue])
+				}
+			], false));
+		}
+		RuntimeUsageCollector.collectFromModuleItems(items, moduleName -> ctx.markRuntimeModule(moduleName));
+		return printer.printModule(items);
+	}
 
 	public override function generateOutputIterator():Iterator<DataAndFileInfo<reflaxe.output.StringOrBytes>> {
 		// Ensure type declarations (enums/typedefs/abstracts) appear before value
@@ -519,7 +610,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final useLineDirectives = #if macro !Context.defined("ocaml_no_line_directives") #else false #end;
 		final ext = options.fileOutputExtension != null ? options.fileOutputExtension : "";
 
-		final buckets:Map<String, {rep:DataAndFileInfo<String>, parts:Array<String>}> = [];
+		final buckets:Map<String, {rep:DataAndFileInfo<String>, parts:Array<String>, ownerTypeNames:Map<String, Bool>}> = [];
 		final fileOrder:Array<String> = [];
 
 		inline function outputKey(info:DataAndFileInfo<String>):String {
@@ -530,12 +621,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 		for (info in all) {
 			final key = outputKey(info);
 			if (!buckets.exists(key)) {
-				buckets.set(key, {rep: info, parts: []});
+				buckets.set(key, {rep: info, parts: [], ownerTypeNames: []});
 				fileOrder.push(key);
 			}
 			final b = buckets.get(key);
-			if (b != null)
+			if (b != null) {
 				b.parts.push(info.data);
+				b.ownerTypeNames.set(info.baseType.name, true);
+			}
 		}
 
 		var index = 0;
@@ -546,7 +639,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final bucket = buckets.get(key);
 				if (bucket == null)
 					throw "Missing output bucket for: " + key;
-				final joined = bucket.parts.join("\n\n");
+				final staticPrelude = staticStoragePrelude(bucket.rep.baseType.module, bucket.ownerTypeNames);
+				final joined = (staticPrelude.length == 0 ? [] : [staticPrelude]).concat(bucket.parts).join("\n\n");
 
 				final out = if (!useLineDirectives || joined.length == 0) {
 					joined;
@@ -755,6 +849,28 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return null;
 	}
 
+	function staticStorageInvariant(message:String):Dynamic {
+		final diagnostic = "reflaxe.ocaml [ocaml-static-storage:invariant]: " + message;
+		#if macro
+		Context.error(diagnostic, Context.currentPos());
+		#end
+		throw diagnostic;
+	}
+
+	function requireStaticStorage(classType:ClassType, field:ClassField, expectedKind:OcamlStaticStorageKind):OcamlStaticStorageEntry {
+		final entry = try {
+			staticStoragePlan.require(classType.module, classType.name, field.name);
+		} catch (error:Dynamic) {
+			return staticStorageInvariant(Std.string(error));
+		}
+		if (entry.kind != expectedKind)
+			return staticStorageInvariant('"${entry.key}" was planned as ${entry.kind}, but type emission requires $expectedKind');
+		final actualCarrier = printer.printType(ocamlTypeExprFromHaxeType(field.type));
+		if (entry.carrierTypeId != actualCarrier)
+			return staticStorageInvariant('"${entry.key}" was planned with carrier ${entry.carrierTypeId}, but type emission selected $actualCarrier');
+		return entry;
+	}
+
 	public function compileClassImpl(classType:ClassType, varFields:Array<ClassVarData>, funcFields:Array<ClassFuncData>):Null<String> {
 		#if macro
 		final profClassStartS = profileEnabled ? profileNowS() : 0.0;
@@ -915,7 +1031,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#else
 		final emitSourceMap = false;
 		#end
-		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, emitSourceMap);
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, staticStoragePlan, emitSourceMap);
 
 		// Header marker as a no-op binding to keep output non-empty and debuggable.
 		items.push(OcamlModuleItem.ILet([
@@ -1658,13 +1774,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case FMethod(MethDynamic): true;
 				case _: false;
 			};
-			final expr = if (isDynamicMethod) {
+			final storage = isDynamicMethod ? requireStaticStorage(classType, f.field, OcamlStaticStorageKind.DynamicMethod) : null;
+			final expr = if (storage != null && storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding) {
+				OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(storage.targetValueName), compiled);
+			} else if (isDynamicMethod) {
 				final t = ocamlTypeExprFromHaxeType(f.field.type);
 				OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EAnnot(compiled, t)]);
 			} else {
 				compiled;
 			};
-			lets.push({name: name, expr: expr});
+			final bindingName = storage != null
+				&& storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding ? OcamlNameTools.normalizeValueIdentifier("__init_" + name) : name;
+			lets.push({name: bindingName, expr: expr});
 		}
 
 		// Static vars (M6+)
@@ -1697,6 +1818,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			// analysis over the same typed tree we codegen from, we keep the semantics
 			// correct by treating all static vars as mutable. (bd: haxe.ocaml-xgv.3.7)
 			final isMutableStatic = !v.field.isFinal;
+			final storage = isMutableStatic ? requireStaticStorage(classType, v.field, OcamlStaticStorageKind.Variable) : null;
 			// Static var initializers are stored on the field itself (not in the constructor pre-assignments
 			// that `ClassVarData.findDefaultExpr()` uses for instance vars).
 			final init = v.field.expr();
@@ -1710,8 +1832,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 					compiledInitFromFieldType;
 			}
 			final compiled = if (isMutableStatic) {
-				if (ctx.hasForwardMutableStatic(classType.module, classType.name, v.field.name)) {
-					OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(name), compiledInit);
+				if (storage != null && storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding) {
+					OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(storage.targetValueName), compiledInit);
 				} else {
 					// OCaml value restriction: `ref (HxArray.create ())` yields a weak type variable
 					// unless we pin the element type. We do that by annotating the initializer with
@@ -1724,22 +1846,21 @@ class OcamlCompiler extends DirectToStringCompiler {
 			} else {
 				compiledInit;
 			}
-			final bindingName = (isMutableStatic
-				&& ctx.hasForwardMutableStatic(classType.module, classType.name,
-					v.field.name)) ? OcamlNameTools.normalizeValueIdentifier("__init_" + name) : name;
+			final bindingName = (storage != null
+				&& storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding) ? OcamlNameTools.normalizeValueIdentifier("__init_" +
+					name) : name;
 			lets.push({name: bindingName, expr: compiled});
 		}
-		final forwardStatics = ctx.forwardMutableStaticDeclsForModule(classType.module);
-		for (decl in forwardStatics) {
-			final initT = ocamlTypeExprFromHaxeType(decl.fieldType);
-			final predeclInit = OcamlExpr.EAnnot(defaultValueForType(decl.fieldType), initT);
+		for (entry in staticStoragePlan.entriesForModule(classType.module)) {
+			if (entry.declarationSite != OcamlStaticStorageDeclarationSite.TypePrelude || entry.declarationTypeName != classType.name)
+				continue;
+			final initialValue = OcamlExpr.EAnnot(defaultValueForType(entry.fieldType), entry.carrierType);
 			items.push(OcamlModuleItem.ILet([
 				{
-					name: decl.ocamlName,
-					expr: OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [predeclInit])
+					name: entry.targetValueName,
+					expr: OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initialValue])
 				}
 			], false));
-			ctx.emittedForwardMutableStaticDeclByKey.set(decl.key, true);
 		}
 
 		if (lets.length > 0) {
@@ -1812,7 +1933,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		if (Context.defined("ocaml_lowering_report")) {
 			OcamlLoweringReportWriter.write(outDir, ctx.loweredPlaceReportsSorted(), ctx.runtimeRequirementsSorted(), representationRegistry.decisions(),
-				artifacts);
+				staticStoragePlan.reportEntries(), staticStoragePlan.revision(), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)
@@ -2930,7 +3051,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#else
 		final emitSourceMap = false;
 		#end
-		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, emitSourceMap);
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, functionPlanRegistry, representationRegistry, staticStoragePlan, emitSourceMap);
 		final e = builder.buildStandaloneExpr(expr, OcamlLocalStoragePlanner.planExpression(expr));
 		return printer.printExpr(e);
 	}
