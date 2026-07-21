@@ -56,6 +56,7 @@ let init () : unit =
   ignore (HxType.class_ "TyDeclarationInfo");
   ignore (HxType.class_ "TyFunSig");
   ignore (HxType.class_ "TyFunctionEnv");
+  ignore (HxType.class_ "TyImplicitConversionPlan");
   ignore (HxType.class_ "TyMethodGenericBinding");
   ignore (HxType.class_ "TyModuleEnv");
   ignore (HxType.class_ "TyNominalInfo");
@@ -1347,7 +1348,9 @@ let init () : unit =
     let a9 = if len > 9 then Obj.magic ((HxArray.get args 9)) else failwith "Type.createInstance: missing ctor arg 'declarations' for TyAbstractInfo" in
     let a10 = if len > 10 then Obj.magic ((HxArray.get args 10)) else failwith "Type.createInstance: missing ctor arg 'underlyingType' for TyAbstractInfo" in
     let a11 = if len > 11 then Obj.magic ((HxArray.get args 11)) else failwith "Type.createInstance: missing ctor arg 'typeParameters' for TyAbstractInfo" in
-    Obj.repr (TyAbstractInfo.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
+    let a12 = if len > 12 then Obj.magic ((HxArray.get args 12)) else failwith "Type.createInstance: missing ctor arg 'implicitFromTypes' for TyAbstractInfo" in
+    let a13 = if len > 13 then Obj.magic ((HxArray.get args 13)) else failwith "Type.createInstance: missing ctor arg 'implicitToTypes' for TyAbstractInfo" in
+    Obj.repr (TyAbstractInfo.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13)
   );
   HxType.register_class_ctor "TyAbstractNativeBinaryOperation" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TyAbstractNativeBinaryOperation.create ())
@@ -1370,7 +1373,10 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'operatorInfo' for TyBoundAbstractBinaryOperator" in
     let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'reverseArguments' for TyBoundAbstractBinaryOperator" in
     let a3 = if len > 3 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'requiresWriteback' for TyBoundAbstractBinaryOperator" in
-    Obj.repr (TyBoundAbstractBinaryOperator.create a0 a1 a2 a3)
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'sourceLeftConversion' for TyBoundAbstractBinaryOperator" in
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'sourceRightConversion' for TyBoundAbstractBinaryOperator" in
+    let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'resultConversion' for TyBoundAbstractBinaryOperator" in
+    Obj.repr (TyBoundAbstractBinaryOperator.create a0 a1 a2 a3 a4 a5 a6)
   );
   HxType.register_class_ctor "TyClassEnv" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -1428,6 +1434,15 @@ let init () : unit =
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'returnType' for TyFunctionEnv" in
     let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'returnExprType' for TyFunctionEnv" in
     Obj.repr (TyFunctionEnv.create a0 a1 a2 a3 a4)
+  );
+  HxType.register_class_ctor "TyImplicitConversionPlan" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'kind' for TyImplicitConversionPlan" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'actualType' for TyImplicitConversionPlan" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'expectedType' for TyImplicitConversionPlan" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'viaType' for TyImplicitConversionPlan" in
+    let a4 = if len > 4 then Obj.obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'score' for TyImplicitConversionPlan" in
+    Obj.repr (TyImplicitConversionPlan.create a0 a1 a2 a3 a4)
   );
   HxType.register_class_ctor "TyMethodGenericBinding" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TyMethodGenericBinding.create ())
@@ -2211,6 +2226,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "TyDeclarationInfo" (fun () -> Obj.repr (TyDeclarationInfo.__empty ()));
   HxType.register_class_empty_ctor "TyFunSig" (fun () -> Obj.repr (TyFunSig.__empty ()));
   HxType.register_class_empty_ctor "TyFunctionEnv" (fun () -> Obj.repr (TyFunctionEnv.__empty ()));
+  HxType.register_class_empty_ctor "TyImplicitConversionPlan" (fun () -> Obj.repr (TyImplicitConversionPlan.__empty ()));
   HxType.register_class_empty_ctor "TyMethodGenericBinding" (fun () -> Obj.repr (TyMethodGenericBinding.__empty ()));
   HxType.register_class_empty_ctor "TyModuleEnv" (fun () -> Obj.repr (TyModuleEnv.__empty ()));
   HxType.register_class_empty_ctor "TyNominalInfo" (fun () -> Obj.repr (TyNominalInfo.__empty ()));
@@ -2448,7 +2464,7 @@ let init () : unit =
   HxType.register_class_instance_fields "ParserStageNativeDecode" [];
   HxType.register_class_static_fields "ParserStageNativeDecode" [ "balancedSwitchEnd"; "compactTypeHint"; "decodeFieldPayload"; "decodeLenPayload"; "decodeMethodPayload"; "decodeNativeProtocol"; "decodeStaticFinalPayload"; "defaultValueFromText"; "expectedTypeName"; "fieldHintKey"; "findFieldTypeHintEnd"; "findFunctionBodyStart"; "findMatchingParen"; "findTopLevelEquals"; "isErasedFunctionTypeHintText"; "isErasedStructuralFallbackTypeHint"; "isFunctionTypeHintText"; "isGenericTypeVariableHintText"; "isKnownConcreteTypeHintText"; "isStructuralTypeHintText"; "looksLikeSwitchCaseFragment"; "normalizeCompactedFunctionReturnExpr"; "normalizeMethodReturnTypeHint"; "parseDecInt"; "parseRegexLiteral"; "parseReturnExprIdentPart"; "parseReturnExprText"; "parseSourceSignatureArgs"; "protocolArgNames"; "readSourceReturnHint"; "scanClassFieldTypeHints"; "scanFieldTypeHintAfterVar"; "scanSourceFieldTypeHints"; "scanUntilToken"; "skipQuotedSource"; "skipToFieldBoundary"; "sourceArgHintByName"; "sourceArgHintsMatchNames"; "sourceArgTypeHintIsMoreSpecific"; "sourceFieldTypeHintByName"; "sourceFieldTypeHints"; "sourceFunctionNameMatches"; "sourceFunctionTypeMetadata"; "sourceIdentifierPart"; "sourceSignatureArgHints"; "sourceSignatureReturnHint"; "sourceTypeHintIsMoreSpecific"; "splitN"; "splitTopLevelComma"; "stripNewTypeParams"; "throwFromErrLine"; "trimCapturedFieldInitializer"; "unescapePayload" ];
   HxType.register_class_instance_fields "ParserStageScanHelpers" [];
-  HxType.register_class_static_fields "ParserStageScanHelpers" [ "expressionBodyKeywordStartsWithoutReturn"; "functionTypeParamsMetadata"; "hasUnsupportedExpr"; "hasUnsupportedStmt"; "hasUnsupportedStmtList"; "isTypedefFieldModifier"; "leadingWhitespaceLength"; "parseModuleStaticInitExpr"; "parseSimpleInitExpr"; "posFromIndex"; "scanAbstractUnderlyingType"; "scanAnonymousTypedefFields"; "scanBalancedBlock"; "scanClassBodyForStatics"; "scanClassHeader"; "scanEnumAbstractBodyForValues"; "scanEnumBodyForCtors"; "scanFieldDeclarationEnd"; "scanFieldInitializer"; "scanFieldPropertyAccessors"; "scanFieldTypeHint"; "scanFunctionBody"; "scanModuleLocalHelperAbstracts"; "scanModuleLocalHelperClasses"; "scanModuleLocalHelperEnums"; "scanModuleLocalHelperTypedefs"; "scanModuleStaticFields"; "scanNextFieldNameToken"; "scanNextToken"; "scanTypeParameterNames"; "scanTypedefRhsShape"; "scanTypedefShape"; "scannedStaticBodyIsSafe"; "skipMetadataPayload"; "skipQuotedSource"; "skipTypedefDeclaration"; "skipTypedefField"; "typeParamsMetadata" ];
+  HxType.register_class_static_fields "ParserStageScanHelpers" [ "expressionBodyKeywordStartsWithoutReturn"; "functionTypeParamsMetadata"; "hasUnsupportedExpr"; "hasUnsupportedStmt"; "hasUnsupportedStmtList"; "isTypedefFieldModifier"; "leadingWhitespaceLength"; "parseModuleStaticInitExpr"; "parseSimpleInitExpr"; "posFromIndex"; "scanAbstractHeaderConversions"; "scanAbstractUnderlyingType"; "scanAnonymousTypedefFields"; "scanBalancedBlock"; "scanClassBodyForStatics"; "scanClassHeader"; "scanEnumAbstractBodyForValues"; "scanEnumBodyForCtors"; "scanFieldDeclarationEnd"; "scanFieldInitializer"; "scanFieldPropertyAccessors"; "scanFieldTypeHint"; "scanFunctionBody"; "scanModuleLocalHelperAbstracts"; "scanModuleLocalHelperClasses"; "scanModuleLocalHelperEnums"; "scanModuleLocalHelperTypedefs"; "scanModuleStaticFields"; "scanNextFieldNameToken"; "scanNextToken"; "scanTypeParameterNames"; "scanTypedefRhsShape"; "scanTypedefShape"; "scannedStaticBodyIsSafe"; "skipMetadataPayload"; "skipQuotedSource"; "skipTypedefDeclaration"; "skipTypedefField"; "typeParamsMetadata" ];
   HxType.register_class_instance_fields "ResolvedModule" [ "filePath"; "modulePath"; "parsed" ];
   HxType.register_class_static_fields "ResolvedModule" [ "getFilePath"; "getModulePath"; "getParsed" ];
   HxType.register_class_instance_fields "ResolverStage" [];
@@ -2458,10 +2474,10 @@ let init () : unit =
   HxType.register_class_instance_fields "StringTools" [];
   HxType.register_class_static_fields "StringTools" [ "_hexUpper"; "_hexValue"; "_isUrlUnreserved"; "_quoteUnixArgOcaml"; "_quoteWinArgOcaml"; "_urlDecodeOcaml"; "_urlEncodeOcaml"; "_winMetaCharactersOcaml"; "contains"; "endsWith"; "fastCodeAt"; "hex"; "htmlEscape"; "htmlUnescape"; "isEof"; "isSpace"; "iterator"; "keyValueIterator"; "lpad"; "ltrim"; "quoteUnixArg"; "quoteWinArg"; "replace"; "rpad"; "rtrim"; "startsWith"; "trim"; "unsafeCodeAt"; "urlDecode"; "urlEncode"; "utf16CodePointAt"; "winMetaCharacters" ];
   HxType.register_class_instance_fields "TyAbstractBinaryBinding" [];
-  HxType.register_class_static_fields "TyAbstractBinaryBinding" [ "best"; "collect"; "containsTypeParameter"; "conversionScore"; "ensureNonGeneric"; "hasAbstractOperand"; "matches"; "noApplicable"; "permitsOrdinaryFallback"; "select"; "validateBodyless" ];
+  HxType.register_class_static_fields "TyAbstractBinaryBinding" [ "best"; "collect"; "containsTypeParameter"; "ensureNonGeneric"; "hasAbstractOperand"; "matches"; "noApplicable"; "permitsOrdinaryFallback"; "select"; "validateBodyless" ];
   HxType.register_class_instance_fields "TyAbstractBinaryOperatorInfo" [ "commutative"; "declaration"; "getDeclaration"; "getIsCommutative"; "getLeftType"; "getOperator"; "getResultType"; "getRightType"; "leftType"; "op"; "resultType"; "rightType" ];
   HxType.register_class_static_fields "TyAbstractBinaryOperatorInfo" [];
-  HxType.register_class_instance_fields "TyAbstractInfo" [ "addBinaryOperator"; "addUnaryOperator"; "binaryOperators"; "declarationForSignature"; "declarationForSource"; "declarations"; "fieldType"; "fields"; "getAllBinaryOperators"; "getAllUnaryOperators"; "getBinaryOperators"; "getDeclarations"; "getFullName"; "getIdentity"; "getModulePath"; "getShortName"; "getTypeParameters"; "getUnaryOperators"; "getUnderlyingType"; "hasField"; "identity"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "modulePath"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods"; "typeParameters"; "unaryOperators"; "underlyingType" ];
+  HxType.register_class_instance_fields "TyAbstractInfo" [ "addBinaryOperator"; "addUnaryOperator"; "binaryOperators"; "declarationForSignature"; "declarationForSource"; "declarations"; "fieldType"; "fields"; "getAllBinaryOperators"; "getAllUnaryOperators"; "getBinaryOperators"; "getDeclarations"; "getFullName"; "getIdentity"; "getImplicitFromTypes"; "getImplicitToTypes"; "getModulePath"; "getShortName"; "getTypeParameters"; "getUnaryOperators"; "getUnderlyingType"; "hasField"; "identity"; "implicitFromTypes"; "implicitToTypes"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "modulePath"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods"; "typeParameters"; "unaryOperators"; "underlyingType" ];
   HxType.register_class_static_fields "TyAbstractInfo" [ "unaryKey" ];
   HxType.register_class_instance_fields "TyAbstractNativeBinaryOperation" [];
   HxType.register_class_static_fields "TyAbstractNativeBinaryOperation" [ "carrierType"; "operationType"; "permitsResultConversion"; "validate" ];
@@ -2469,7 +2485,7 @@ let init () : unit =
   HxType.register_class_static_fields "TyAbstractOperatorInfo" [];
   HxType.register_class_instance_fields "TyAbstractUnaryBinding" [];
   HxType.register_class_static_fields "TyAbstractUnaryBinding" [ "containsTypeParameter"; "operatorLabel"; "select"; "unsupportedGeneric" ];
-  HxType.register_class_instance_fields "TyBoundAbstractBinaryOperator" [ "getOperatorInfo"; "getRequiresWriteback"; "getReverseArguments"; "getSourceLeftParameterType"; "getSourceOperator"; "getSourceRightParameterType"; "operatorInfo"; "requiresWriteback"; "reverseArguments"; "sourceOperator" ];
+  HxType.register_class_instance_fields "TyBoundAbstractBinaryOperator" [ "getOperatorInfo"; "getRequiresWriteback"; "getResultConversion"; "getReverseArguments"; "getSourceLeftConversion"; "getSourceLeftParameterType"; "getSourceOperator"; "getSourceRightConversion"; "getSourceRightParameterType"; "operatorInfo"; "requiresWriteback"; "resultConversion"; "reverseArguments"; "sourceLeftConversion"; "sourceOperator"; "sourceRightConversion" ];
   HxType.register_class_static_fields "TyBoundAbstractBinaryOperator" [];
   HxType.register_class_instance_fields "TyClassEnv" [ "functions"; "getFunctions"; "getName"; "name" ];
   HxType.register_class_static_fields "TyClassEnv" [];
@@ -2483,6 +2499,8 @@ let init () : unit =
   HxType.register_class_static_fields "TyFunSig" [];
   HxType.register_class_instance_fields "TyFunctionEnv" [ "copyForInference"; "declareLocal"; "getLocals"; "getName"; "getParams"; "getReturnExprType"; "getReturnType"; "locals"; "name"; "params"; "resolveLocal"; "resolveSymbol"; "returnExprType"; "returnType" ];
   HxType.register_class_static_fields "TyFunctionEnv" [];
+  HxType.register_class_instance_fields "TyImplicitConversionPlan" [ "actualType"; "apply"; "expectedType"; "getActualType"; "getExpectedType"; "getKind"; "getScore"; "getViaType"; "kind"; "score"; "viaType" ];
+  HxType.register_class_static_fields "TyImplicitConversionPlan" [ "nullableCompatible"; "select"; "uniqueCompatible" ];
   HxType.register_class_instance_fields "TyMethodGenericBinding" [];
   HxType.register_class_static_fields "TyMethodGenericBinding" [ "argumentsAreConsistent"; "bindings"; "collect"; "hasUnbound"; "inferableTypeParameters"; "isInferableParameter"; "parameterName"; "sameTypeConstructor"; "specializeResult"; "substitute"; "substitutedGenericDisplay" ];
   HxType.register_class_instance_fields "TyModuleEnv" [ "getImports"; "getMainClass"; "getPackagePath"; "imports"; "mainClass"; "packagePath" ];
@@ -2530,7 +2548,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TyperError" [ "filePath"; "getFilePath"; "getMessage"; "getPos"; "message"; "pos"; "toString" ];
   HxType.register_class_static_fields "TyperError" [];
   HxType.register_class_instance_fields "TyperIndex" [ "addNominal"; "addResolvedModule"; "addResolvedModules"; "byFullName"; "byShortName"; "catalogOperators"; "getAbstractByFullName"; "getBinaryOperators"; "getByFullName"; "getByShortName"; "getForSourceClass"; "getUnaryOperators"; "identityByFullName"; "identityByShortName"; "indexModule"; "registerIdentity"; "registerModuleIdentities"; "resolveIdentity"; "resolveSemanticType"; "resolveTypePath"; "semanticDump"; "semanticType" ];
-  HxType.register_class_static_fields "TyperIndex" [ "addMethod"; "build"; "canonicalModulePath"; "classFullNameInModule"; "classifyOperatorExpression"; "compareText"; "declarationSignatureKey"; "expectedModuleNameFromFile"; "hasMetadata"; "malformedOperator"; "metadataValue"; "parseOperatorMetadata"; "typeParameters" ];
+  HxType.register_class_static_fields "TyperIndex" [ "addMethod"; "build"; "canonicalModulePath"; "classFullNameInModule"; "classifyOperatorExpression"; "compareText"; "declarationSignatureKey"; "expectedModuleNameFromFile"; "hasMetadata"; "malformedOperator"; "metadataValue"; "metadataValues"; "parseOperatorMetadata"; "typeParameters" ];
   HxType.register_class_instance_fields "TyperStage" [];
   HxType.register_class_static_fields "TyperStage" [ "accessorPropertyForAccess"; "arrayElementType"; "buildTypedClasses"; "callRange"; "currentFieldReferenceType"; "currentStaticMethodReferenceType"; "currentThisType"; "declarationLineRange"; "declarePatternBindings"; "declaredMemberReadType"; "diagnosticFileName"; "dottedFieldPath"; "extractRawDiagnostic"; "flatOverloadTypeScore"; "functionNameRange"; "functionOverloadTypeScore"; "functionReferenceType"; "functionTypeSegments"; "inferExprType"; "inferFunctionValueCall"; "inferNullCoalesceType"; "inferReturnType"; "isRangeIdentCode"; "isStrict"; "isTypeErrorProbeCallee"; "isUpperStartName"; "nominalInfoForType"; "normalizeFunctionTypeSegment"; "normalizeOverloadTypeName"; "overloadArgScore"; "overloadCandidateScore"; "renderArgType"; "renderOverloadCandidate"; "resolveCallDeclaration"; "resolveMethodCall"; "resolveTypeInContext"; "selectedMethodCallResolution"; "sourceLine"; "typeErrorProbe"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
   HxType.register_class_instance_fields "_EmitterStage._InstanceFieldEntry" [ "fields"; "key" ];
@@ -2888,6 +2906,7 @@ let init () : unit =
   HxType.register_class_tags "TyDeclarationInfo" [ "TyDeclarationInfo" ];
   HxType.register_class_tags "TyFunSig" [ "TyFunSig" ];
   HxType.register_class_tags "TyFunctionEnv" [ "TyFunctionEnv" ];
+  HxType.register_class_tags "TyImplicitConversionPlan" [ "TyImplicitConversionPlan" ];
   HxType.register_class_tags "TyMethodGenericBinding" [ "TyMethodGenericBinding" ];
   HxType.register_class_tags "TyModuleEnv" [ "TyModuleEnv" ];
   HxType.register_class_tags "TyNominalInfo" [ "TyNominalInfo" ];

@@ -175,6 +175,7 @@
 		"TyNominalInfo.ml",
 		"TyModuleEnv.ml",
 		"TyMethodGenericBinding.ml",
+		"TyImplicitConversionPlan.ml",
 		"TyFunctionEnv.ml",
 		"TyFunSig.ml",
 		"TyDeclarationInfo.ml",

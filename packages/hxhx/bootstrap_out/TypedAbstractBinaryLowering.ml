@@ -203,7 +203,7 @@ let placeFor = fun target index filePath position counter -> try let __fallback_
 ) in Obj.magic __fallback_result_35 with
   | HxRuntime.Hx_return __ret_34 -> Obj.magic __ret_34
 
-let callArguments = fun binding sourceLeft sourceRight filePath -> let info = Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic binding) ()) in let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ()) in let convertedLeft = Obj.magic (convert (Obj.magic sourceLeft) (Obj.magic (TyBoundAbstractBinaryOperator.getSourceLeftParameterType (Obj.magic binding) ())) (filePath : string) (Obj.magic declaration)) in let convertedRight = Obj.magic (convert (Obj.magic sourceRight) (Obj.magic (TyBoundAbstractBinaryOperator.getSourceRightParameterType (Obj.magic binding) ())) (filePath : string) (Obj.magic declaration)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t HxArray.t) in (
+let callArguments = fun binding sourceLeft sourceRight -> let convertedLeft = Obj.magic (TyImplicitConversionPlan.apply (Obj.magic (TyBoundAbstractBinaryOperator.getSourceLeftConversion (Obj.magic binding) ())) (Obj.magic sourceLeft)) in let convertedRight = Obj.magic (TyImplicitConversionPlan.apply (Obj.magic (TyBoundAbstractBinaryOperator.getSourceRightConversion (Obj.magic binding) ())) (Obj.magic sourceRight)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t HxArray.t) in (
   ignore (if TyBoundAbstractBinaryOperator.getReverseArguments (Obj.magic binding) () then let __assign_36 = Obj.magic (let __arr_37 = HxArray.create () in (
     ignore (HxArray.push __arr_37 convertedRight);
     ignore (HxArray.push __arr_37 convertedLeft);
@@ -222,26 +222,32 @@ let callArguments = fun binding sourceLeft sourceRight filePath -> let info = Ob
   !tempResult
 )
 
-let staticCall = fun binding left right index filePath counter -> let info = Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic binding) ()) in let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ()) in let ordered = orderedValues (Obj.magic left) (Obj.magic right) (Obj.magic counter) in let owner = Obj.magic (TyperIndex.getByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string)) in let tempString = ref ("" : string) in (
-  ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_40 = (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string) in (
-    tempString := __assign_40;
-    __assign_40
-  ) else let __assign_41 = ((Obj.magic owner : TyNominalInfo.t).getShortName (Obj.magic owner) () : string) in (
-    tempString := __assign_41;
-    __assign_41
-  ));
-  let calleeOwner = Obj.magic (TypedExpr.nameRead (!tempString : string) (Obj.magic (TyType.nominal (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) (Obj.magic (let __arr_42 = HxArray.create () in __arr_42)) (!tempString : string))) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let callee = Obj.magic (TypedExpr.fieldRead (Obj.magic calleeOwner) (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) (Obj.magic (TyType.unknown ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let call = Obj.magic (TypedExpr.call (Obj.magic callee) (Obj.magic (callArguments (Obj.magic binding) (Obj.magic (Obj.obj (HxAnon.get ordered "left"))) (Obj.magic (Obj.obj (HxAnon.get ordered "right"))) (filePath : string))) (Obj.magic declaration) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let expressions = Obj.magic (HxArray.copy (Obj.obj (HxAnon.get ordered "prefix"))) in (
-    ignore (HxArray.push expressions (semanticResult (Obj.magic call) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ()))));
-    TypedExpr.block (Obj.magic expressions) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))
+let staticCall = fun binding left right index filePath counter -> (
+  ignore filePath;
+  let info = Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic binding) ()) in let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ()) in let ordered = orderedValues (Obj.magic left) (Obj.magic right) (Obj.magic counter) in let owner = Obj.magic (TyperIndex.getByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string)) in let tempString = ref ("" : string) in (
+    ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_40 = (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string) in (
+      tempString := __assign_40;
+      __assign_40
+    ) else let __assign_41 = ((Obj.magic owner : TyNominalInfo.t).getShortName (Obj.magic owner) () : string) in (
+      tempString := __assign_41;
+      __assign_41
+    ));
+    let calleeOwner = Obj.magic (TypedExpr.nameRead (!tempString : string) (Obj.magic (TyType.nominal (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) (Obj.magic (let __arr_42 = HxArray.create () in __arr_42)) (!tempString : string))) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let callee = Obj.magic (TypedExpr.fieldRead (Obj.magic calleeOwner) (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) (Obj.magic (TyType.unknown ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let call = Obj.magic (TypedExpr.call (Obj.magic callee) (Obj.magic (callArguments (Obj.magic binding) (Obj.magic (Obj.obj (HxAnon.get ordered "left"))) (Obj.magic (Obj.obj (HxAnon.get ordered "right"))))) (Obj.magic declaration) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let expressions = Obj.magic (HxArray.copy (Obj.obj (HxAnon.get ordered "prefix"))) in (
+      ignore (HxArray.push expressions (semanticResult (Obj.magic call) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ()))));
+      TypedExpr.block (Obj.magic expressions) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))
+    )
   )
 )
 
-let instanceCall = fun binding left right filePath counter -> let info = Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic binding) ()) in let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ()) in let ordered = orderedValues (Obj.magic left) (Obj.magic right) (Obj.magic counter) in let callArgs = Obj.magic (callArguments (Obj.magic binding) (Obj.magic (Obj.obj (HxAnon.get ordered "left"))) (Obj.magic (Obj.obj (HxAnon.get ordered "right"))) (filePath : string)) in let receiver = Obj.magic (HxArray.get (Obj.magic callArgs) 0) in let argument = Obj.magic (HxArray.get (Obj.magic callArgs) 1) in let callee = Obj.magic (TypedExpr.fieldRead (Obj.magic receiver) (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) (Obj.magic (TyType.unknown ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let call = Obj.magic (TypedExpr.call (Obj.magic callee) (Obj.magic (let __arr_43 = HxArray.create () in (
-  ignore (HxArray.push __arr_43 argument);
-  __arr_43
-))) (Obj.magic declaration) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let expressions = Obj.magic (HxArray.copy (Obj.obj (HxAnon.get ordered "prefix"))) in (
-  ignore (HxArray.push expressions (semanticResult (Obj.magic call) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ()))));
-  TypedExpr.block (Obj.magic expressions) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))
+let instanceCall = fun binding left right filePath counter -> (
+  ignore filePath;
+  let info = Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic binding) ()) in let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ()) in let ordered = orderedValues (Obj.magic left) (Obj.magic right) (Obj.magic counter) in let callArgs = Obj.magic (callArguments (Obj.magic binding) (Obj.magic (Obj.obj (HxAnon.get ordered "left"))) (Obj.magic (Obj.obj (HxAnon.get ordered "right")))) in let receiver = Obj.magic (HxArray.get (Obj.magic callArgs) 0) in let argument = Obj.magic (HxArray.get (Obj.magic callArgs) 1) in let callee = Obj.magic (TypedExpr.fieldRead (Obj.magic receiver) (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) (Obj.magic (TyType.unknown ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let call = Obj.magic (TypedExpr.call (Obj.magic callee) (Obj.magic (let __arr_43 = HxArray.create () in (
+    ignore (HxArray.push __arr_43 argument);
+    __arr_43
+  ))) (Obj.magic declaration) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let expressions = Obj.magic (HxArray.copy (Obj.obj (HxAnon.get ordered "prefix"))) in (
+    ignore (HxArray.push expressions (semanticResult (Obj.magic call) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ()))));
+    TypedExpr.block (Obj.magic expressions) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))
+  )
 )
 
 let carrierType = fun hx_type index -> TyAbstractNativeBinaryOperation.carrierType (Obj.magic hx_type) (Obj.magic index)
@@ -266,7 +272,7 @@ let nativeOperand = fun expression operationType -> try let __fallback_result_48
 ) in Obj.magic __fallback_result_48 with
   | HxRuntime.Hx_return __ret_47 -> Obj.obj __ret_47
 
-let nativeBodylessValue = fun binding left right index filePath counter -> let info = Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic binding) ()) in let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ()) in let ordered = orderedValues (Obj.magic left) (Obj.magic right) (Obj.magic counter) in let arguments = Obj.magic (callArguments (Obj.magic binding) (Obj.magic (Obj.obj (HxAnon.get ordered "left"))) (Obj.magic (Obj.obj (HxAnon.get ordered "right"))) (filePath : string)) in let carrierLeft = Obj.magic (carrierValue (Obj.magic (HxArray.get (Obj.magic arguments) 0)) (Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic info) ())) (Obj.magic index)) in let carrierRight = Obj.magic (carrierValue (Obj.magic (HxArray.get (Obj.magic arguments) 1)) (Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic info) ())) (Obj.magic index)) in let resultCarrier = Obj.magic (carrierType (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic index)) in let nativeType = Obj.magic (TyAbstractNativeBinaryOperation.validate (Obj.magic info) (Obj.magic index) (filePath : string)) in let operation = Obj.magic (TypedExpr.binary (TyAbstractBinaryOperatorInfo.getOperator (Obj.magic info) () : string) (Obj.magic (nativeOperand (Obj.magic carrierLeft) (Obj.magic nativeType))) (Obj.magic (nativeOperand (Obj.magic carrierRight) (Obj.magic nativeType))) (Obj.magic nativeType) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let result = Obj.magic (semanticResult (Obj.magic (convert (Obj.magic operation) (Obj.magic resultCarrier) (filePath : string) (Obj.magic declaration))) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ()))) in let expressions = Obj.magic (HxArray.copy (Obj.obj (HxAnon.get ordered "prefix"))) in (
+let nativeBodylessValue = fun binding left right index filePath counter -> let info = Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic binding) ()) in let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ()) in let ordered = orderedValues (Obj.magic left) (Obj.magic right) (Obj.magic counter) in let arguments = Obj.magic (callArguments (Obj.magic binding) (Obj.magic (Obj.obj (HxAnon.get ordered "left"))) (Obj.magic (Obj.obj (HxAnon.get ordered "right")))) in let carrierLeft = Obj.magic (carrierValue (Obj.magic (HxArray.get (Obj.magic arguments) 0)) (Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic info) ())) (Obj.magic index)) in let carrierRight = Obj.magic (carrierValue (Obj.magic (HxArray.get (Obj.magic arguments) 1)) (Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic info) ())) (Obj.magic index)) in let resultCarrier = Obj.magic (carrierType (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic index)) in let nativeType = Obj.magic (TyAbstractNativeBinaryOperation.validate (Obj.magic info) (Obj.magic index) (filePath : string)) in let operation = Obj.magic (TypedExpr.binary (TyAbstractBinaryOperatorInfo.getOperator (Obj.magic info) () : string) (Obj.magic (nativeOperand (Obj.magic carrierLeft) (Obj.magic nativeType))) (Obj.magic (nativeOperand (Obj.magic carrierRight) (Obj.magic nativeType))) (Obj.magic nativeType) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let result = Obj.magic (semanticResult (Obj.magic (convert (Obj.magic operation) (Obj.magic resultCarrier) (filePath : string) (Obj.magic declaration))) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ()))) in let expressions = Obj.magic (HxArray.copy (Obj.obj (HxAnon.get ordered "prefix"))) in (
   ignore (HxArray.push expressions result);
   TypedExpr.block (Obj.magic expressions) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))
 )
@@ -291,7 +297,7 @@ let fallbackWriteback = fun binding left right index filePath counter -> let inf
           tempString := __assign_52;
           __assign_52
         ));
-        let callArgs = Obj.magic (callArguments (Obj.magic binding) (Obj.magic currentRead) (Obj.magic rightRead) (filePath : string)) in let tempTypedExpr = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
+        let callArgs = Obj.magic (callArguments (Obj.magic binding) (Obj.magic currentRead) (Obj.magic rightRead)) in let tempTypedExpr = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
           ignore (if TyDeclarationInfo.getIsStatic (Obj.magic declaration) () then let calleeOwner = Obj.magic (TypedExpr.nameRead (!tempString : string) (Obj.magic (TyType.nominal (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) (Obj.magic (let __arr_53 = HxArray.create () in __arr_53)) (!tempString : string))) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let callee = Obj.magic (TypedExpr.fieldRead (Obj.magic calleeOwner) (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) (Obj.magic (TyType.unknown ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let __assign_54 = Obj.magic (TypedExpr.call (Obj.magic callee) (Obj.magic callArgs) (Obj.magic declaration) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in (
             tempTypedExpr := __assign_54;
             __assign_54
@@ -302,12 +308,15 @@ let fallbackWriteback = fun binding left right index filePath counter -> let inf
             tempTypedExpr := __assign_55;
             __assign_55
           ));
-          let resultName = (freshName ("result" : string) (Obj.magic counter) : string) in let resultValue = Obj.magic (convert (Obj.magic (semanticResult (Obj.magic (!tempTypedExpr)) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())))) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (filePath : string) (Obj.magic declaration)) in (
-            ignore (HxArray.push expressions (TypedExpr.temporary (resultName : string) (TyType.getDisplay (Obj.magic (TypedExpr.getType (Obj.magic left) ())) () : string) (Obj.magic resultValue) (Obj.magic (voidType ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))));
-            let resultRead = Obj.magic (TypedExpr.localRead (resultName : string) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in (
-              ignore (HxArray.push expressions (Obj.obj (HxAnon.get place "write") (Obj.magic resultRead)));
-              ignore (HxArray.push expressions resultRead);
-              TypedExpr.block (Obj.magic expressions) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))
+          let resultName = (freshName ("result" : string) (Obj.magic counter) : string) in let resultConversion = Obj.magic (TyBoundAbstractBinaryOperator.getResultConversion (Obj.magic binding) ()) in (
+            ignore (if resultConversion == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "abstract compound fallback lost its selected result conversion") ["Dynamic"; "String"]) else ());
+            let resultValue = Obj.magic (TyImplicitConversionPlan.apply (Obj.magic resultConversion) (Obj.magic (semanticResult (Obj.magic (!tempTypedExpr)) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ()))))) in (
+              ignore (HxArray.push expressions (TypedExpr.temporary (resultName : string) (TyType.getDisplay (Obj.magic (TypedExpr.getType (Obj.magic left) ())) () : string) (Obj.magic resultValue) (Obj.magic (voidType ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))));
+              let resultRead = Obj.magic (TypedExpr.localRead (resultName : string) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in (
+                ignore (HxArray.push expressions (Obj.obj (HxAnon.get place "write") (Obj.magic resultRead)));
+                ignore (HxArray.push expressions resultRead);
+                TypedExpr.block (Obj.magic expressions) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))
+              )
             )
           )
         )
@@ -330,12 +339,15 @@ let nativeBodylessCompound = fun binding left right index filePath counter -> tr
       ignore (HxArray.push expressions (TypedExpr.temporary (currentName : string) (TyType.getDisplay (Obj.magic (TypedExpr.getType (Obj.magic left) ())) () : string) (Obj.magic (Obj.obj (HxAnon.get place "read") (Obj.magic (TypedExpr.getType (Obj.magic left) ())))) (Obj.magic (voidType ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))));
       let rightName = (freshName ("native_right" : string) (Obj.magic counter) : string) in (
         ignore (HxArray.push expressions (TypedExpr.temporary (rightName : string) (TyType.getDisplay (Obj.magic (TypedExpr.getType (Obj.magic right) ())) () : string) (Obj.magic right) (Obj.magic (voidType ())) (Obj.magic (TypedExpr.getPosition (Obj.magic right) ()))));
-        let callArgs = Obj.magic (callArguments (Obj.magic binding) (Obj.magic (TypedExpr.localRead (currentName : string) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ())))) (Obj.magic (TypedExpr.localRead (rightName : string) (Obj.magic (TypedExpr.getType (Obj.magic right) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic right) ())))) (filePath : string)) in let carrierLeft = Obj.magic (carrierValue (Obj.magic (HxArray.get (Obj.magic callArgs) 0)) (Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic info) ())) (Obj.magic index)) in let carrierRight = Obj.magic (carrierValue (Obj.magic (HxArray.get (Obj.magic callArgs) 1)) (Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic info) ())) (Obj.magic index)) in let resultCarrier = Obj.magic (carrierType (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic index)) in let nativeType = Obj.magic (TyAbstractNativeBinaryOperation.validate (Obj.magic info) (Obj.magic index) (filePath : string)) in let operation = Obj.magic (TypedExpr.binary (baseOp : string) (Obj.magic (nativeOperand (Obj.magic carrierLeft) (Obj.magic nativeType))) (Obj.magic (nativeOperand (Obj.magic carrierRight) (Obj.magic nativeType))) (Obj.magic nativeType) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let semanticValue = Obj.magic (convert (Obj.magic (semanticResult (Obj.magic (convert (Obj.magic operation) (Obj.magic resultCarrier) (filePath : string) (Obj.magic declaration))) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())))) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (filePath : string) (Obj.magic declaration)) in let resultName = (freshName ("native_result" : string) (Obj.magic counter) : string) in (
-          ignore (HxArray.push expressions (TypedExpr.temporary (resultName : string) (TyType.getDisplay (Obj.magic (TypedExpr.getType (Obj.magic left) ())) () : string) (Obj.magic semanticValue) (Obj.magic (voidType ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))));
-          let resultRead = Obj.magic (TypedExpr.localRead (resultName : string) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in (
-            ignore (HxArray.push expressions (Obj.obj (HxAnon.get place "write") (Obj.magic resultRead)));
-            ignore (HxArray.push expressions resultRead);
-            TypedExpr.block (Obj.magic expressions) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))
+        let callArgs = Obj.magic (callArguments (Obj.magic binding) (Obj.magic (TypedExpr.localRead (currentName : string) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ())))) (Obj.magic (TypedExpr.localRead (rightName : string) (Obj.magic (TypedExpr.getType (Obj.magic right) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic right) ()))))) in let carrierLeft = Obj.magic (carrierValue (Obj.magic (HxArray.get (Obj.magic callArgs) 0)) (Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic info) ())) (Obj.magic index)) in let carrierRight = Obj.magic (carrierValue (Obj.magic (HxArray.get (Obj.magic callArgs) 1)) (Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic info) ())) (Obj.magic index)) in let resultCarrier = Obj.magic (carrierType (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ())) (Obj.magic index)) in let nativeType = Obj.magic (TyAbstractNativeBinaryOperation.validate (Obj.magic info) (Obj.magic index) (filePath : string)) in let operation = Obj.magic (TypedExpr.binary (baseOp : string) (Obj.magic (nativeOperand (Obj.magic carrierLeft) (Obj.magic nativeType))) (Obj.magic (nativeOperand (Obj.magic carrierRight) (Obj.magic nativeType))) (Obj.magic nativeType) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in let resultConversion = Obj.magic (TyBoundAbstractBinaryOperator.getResultConversion (Obj.magic binding) ()) in (
+          ignore (if resultConversion == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "bodyless abstract compound fallback lost its selected result conversion") ["Dynamic"; "String"]) else ());
+          let semanticValue = Obj.magic (TyImplicitConversionPlan.apply (Obj.magic resultConversion) (Obj.magic (semanticResult (Obj.magic (convert (Obj.magic operation) (Obj.magic resultCarrier) (filePath : string) (Obj.magic declaration))) (Obj.magic (TyAbstractBinaryOperatorInfo.getResultType (Obj.magic info) ()))))) in let resultName = (freshName ("native_result" : string) (Obj.magic counter) : string) in (
+            ignore (HxArray.push expressions (TypedExpr.temporary (resultName : string) (TyType.getDisplay (Obj.magic (TypedExpr.getType (Obj.magic left) ())) () : string) (Obj.magic semanticValue) (Obj.magic (voidType ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))));
+            let resultRead = Obj.magic (TypedExpr.localRead (resultName : string) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))) in (
+              ignore (HxArray.push expressions (Obj.obj (HxAnon.get place "write") (Obj.magic resultRead)));
+              ignore (HxArray.push expressions resultRead);
+              TypedExpr.block (Obj.magic expressions) (Obj.magic (TypedExpr.getType (Obj.magic left) ())) (Obj.magic (TypedExpr.getPosition (Obj.magic left) ()))
+            )
           )
         )
       )
@@ -507,17 +519,17 @@ and inlineCall = fun binding left right helpers index filePath counter -> let in
             tempHxPos1 := __assign_99;
             __assign_99
           ));
-          let place = placeFor (Obj.magic (!tempTypedExpr)) (Obj.magic index) (filePath : string) (Obj.magic (!tempHxPos1)) (Obj.magic counter) in let prefix = Obj.magic (HxArray.create ()) in let argumentName = (freshName ("argument" : string) (Obj.magic counter) : string) in let tempTyType1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-            ignore (if TyBoundAbstractBinaryOperator.getReverseArguments (Obj.magic binding) () then let __assign_100 = Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic info) ()) in (
-              tempTyType1 := __assign_100;
+          let place = placeFor (Obj.magic (!tempTypedExpr)) (Obj.magic index) (filePath : string) (Obj.magic (!tempHxPos1)) (Obj.magic counter) in let prefix = Obj.magic (HxArray.create ()) in let argumentName = (freshName ("argument" : string) (Obj.magic counter) : string) in let tempTyImplicitConversionPlan = ref (Obj.magic (HxRuntime.hx_null) : TyImplicitConversionPlan.t) in (
+            ignore (if TyBoundAbstractBinaryOperator.getReverseArguments (Obj.magic binding) () then let __assign_100 = Obj.magic (TyBoundAbstractBinaryOperator.getSourceLeftConversion (Obj.magic binding) ()) in (
+              tempTyImplicitConversionPlan := __assign_100;
               __assign_100
-            ) else let __assign_101 = Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic info) ()) in (
-              tempTyType1 := __assign_101;
+            ) else let __assign_101 = Obj.magic (TyBoundAbstractBinaryOperator.getSourceRightConversion (Obj.magic binding) ()) in (
+              tempTyImplicitConversionPlan := __assign_101;
               __assign_101
             ));
-            let convertedArgument = Obj.magic (convert (Obj.magic (!tempTypedExpr1)) (Obj.magic (!tempTyType1)) (filePath : string) (Obj.magic declaration)) in (
+            let expectedArgumentType = Obj.magic (TyImplicitConversionPlan.getExpectedType (Obj.magic (!tempTyImplicitConversionPlan)) ()) in let convertedArgument = Obj.magic (TyImplicitConversionPlan.apply (Obj.magic (!tempTyImplicitConversionPlan)) (Obj.magic (!tempTypedExpr1))) in (
               ignore (if TyBoundAbstractBinaryOperator.getReverseArguments (Obj.magic binding) () then ignore ((
-                ignore (HxArray.push prefix (TypedExpr.temporary (argumentName : string) (TyType.getDisplay (Obj.magic (!tempTyType1)) () : string) (Obj.magic convertedArgument) (Obj.magic (voidType ())) (Obj.magic (TypedExpr.getPosition (Obj.magic (!tempTypedExpr1)) ()))));
+                ignore (HxArray.push prefix (TypedExpr.temporary (argumentName : string) (TyType.getDisplay (Obj.magic expectedArgumentType) () : string) (Obj.magic convertedArgument) (Obj.magic (voidType ())) (Obj.magic (TypedExpr.getPosition (Obj.magic (!tempTypedExpr1)) ()))));
                 let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get place "prefix")) in while !_g < HxArray.length _g1 do ignore (let entry = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
                   ignore (let __old_102 = !_g in let __new_103 = HxInt.add __old_102 1 in (
                     ignore (_g := __new_103);
@@ -533,12 +545,12 @@ and inlineCall = fun binding left right helpers index filePath counter -> let in
                   ));
                   HxArray.push prefix entry
                 )) done);
-                HxArray.push prefix (TypedExpr.temporary (argumentName : string) (TyType.getDisplay (Obj.magic (!tempTyType1)) () : string) (Obj.magic convertedArgument) (Obj.magic (voidType ())) (Obj.magic (TypedExpr.getPosition (Obj.magic (!tempTypedExpr1)) ())))
+                HxArray.push prefix (TypedExpr.temporary (argumentName : string) (TyType.getDisplay (Obj.magic expectedArgumentType) () : string) (Obj.magic convertedArgument) (Obj.magic (voidType ())) (Obj.magic (TypedExpr.getPosition (Obj.magic (!tempTypedExpr1)) ())))
               )));
               let parameterNames = Obj.magic (TyFunSig.getArgNames (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) ()) in (
                 ignore (if HxArray.length parameterNames <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic (TyDeclarationInfo.getPosition (Obj.magic declaration) ())) ("Inline abstract binary helper lost its explicit parameter: " ^ HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) : string))) ["Dynamic"; "TyperError"]) else ());
                 let parameters = Obj.magic (HxMap.create_string ()) in (
-                  ignore (HxMap.set_string parameters (HxArray.get (Obj.magic parameterNames) 0) (TypedExpr.localRead (argumentName : string) (Obj.magic (!tempTyType1)) (Obj.magic (TypedExpr.getPosition (Obj.magic (!tempTypedExpr1)) ()))));
+                  ignore (HxMap.set_string parameters (HxArray.get (Obj.magic parameterNames) 0) (TypedExpr.localRead (argumentName : string) (Obj.magic expectedArgumentType) (Obj.magic (TypedExpr.getPosition (Obj.magic (!tempTypedExpr1)) ()))));
                   let state = let __anon_106 = HxAnon.create () in (
                     ignore (HxAnon.set __anon_106 "expressions" (Obj.repr prefix));
                     ignore (HxAnon.set __anon_106 "returned" (HxRuntime.box_bool false));

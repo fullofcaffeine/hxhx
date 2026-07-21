@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable sourceOperator : string; mutable operatorInfo : TyAbstractBinaryOperatorInfo.t; mutable reverseArguments : bool; mutable requiresWriteback : bool }
+type t = { __hx_type : Obj.t; mutable sourceOperator : string; mutable operatorInfo : TyAbstractBinaryOperatorInfo.t; mutable reverseArguments : bool; mutable requiresWriteback : bool; mutable sourceLeftConversion : TyImplicitConversionPlan.t; mutable sourceRightConversion : TyImplicitConversionPlan.t; mutable resultConversion : TyImplicitConversionPlan.t }
 
-let create = fun sourceOperator2 operatorInfo2 reverseArguments2 requiresWriteback2 -> let self = ({ __hx_type = HxType.class_ "TyBoundAbstractBinaryOperator"; sourceOperator = ""; operatorInfo = Obj.magic (HxRuntime.hx_null); reverseArguments = false; requiresWriteback = false } : t) in (
+let create = fun sourceOperator2 operatorInfo2 reverseArguments2 requiresWriteback2 sourceLeftConversion2 sourceRightConversion2 resultConversion2 -> let self = ({ __hx_type = HxType.class_ "TyBoundAbstractBinaryOperator"; sourceOperator = ""; operatorInfo = Obj.magic (HxRuntime.hx_null); reverseArguments = false; requiresWriteback = false; sourceLeftConversion = Obj.magic (HxRuntime.hx_null); sourceRightConversion = Obj.magic (HxRuntime.hx_null); resultConversion = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (sourceOperator2 : string) in (
       (Obj.magic self : t).sourceOperator <- __assign_1;
@@ -20,15 +20,27 @@ let create = fun sourceOperator2 operatorInfo2 reverseArguments2 requiresWriteba
       (Obj.magic self : t).reverseArguments <- __assign_3;
       __assign_3
     ));
-    let __assign_4 = requiresWriteback2 in (
+    ignore (let __assign_4 = requiresWriteback2 in (
       (Obj.magic self : t).requiresWriteback <- __assign_4;
       __assign_4
+    ));
+    ignore (let __assign_5 = Obj.magic sourceLeftConversion2 in (
+      (Obj.magic self : t).sourceLeftConversion <- __assign_5;
+      __assign_5
+    ));
+    ignore (let __assign_6 = Obj.magic sourceRightConversion2 in (
+      (Obj.magic self : t).sourceRightConversion <- __assign_6;
+      __assign_6
+    ));
+    let __assign_7 = Obj.magic resultConversion2 in (
+      (Obj.magic self : t).resultConversion <- __assign_7;
+      __assign_7
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyBoundAbstractBinaryOperator"; sourceOperator = ""; operatorInfo = Obj.magic (HxRuntime.hx_null); reverseArguments = false; requiresWriteback = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyBoundAbstractBinaryOperator"; sourceOperator = ""; operatorInfo = Obj.magic (HxRuntime.hx_null); reverseArguments = false; requiresWriteback = false; sourceLeftConversion = Obj.magic (HxRuntime.hx_null); sourceRightConversion = Obj.magic (HxRuntime.hx_null); resultConversion = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getSourceOperator = fun self () -> (Obj.magic self : t).sourceOperator
 
@@ -38,24 +50,30 @@ let getReverseArguments = fun self () -> (Obj.magic self : t).reverseArguments
 
 let getRequiresWriteback = fun self () -> (Obj.magic self : t).requiresWriteback
 
+let getSourceLeftConversion = fun self () -> (Obj.magic self : t).sourceLeftConversion
+
+let getSourceRightConversion = fun self () -> (Obj.magic self : t).sourceRightConversion
+
+let getResultConversion = fun self () -> (Obj.magic self : t).resultConversion
+
 let getSourceLeftParameterType = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-  ignore (if (Obj.magic self : t).reverseArguments then let __assign_5 = Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic ((Obj.magic self : t).operatorInfo)) ()) in (
-    tempResult := __assign_5;
-    __assign_5
-  ) else let __assign_6 = Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic ((Obj.magic self : t).operatorInfo)) ()) in (
-    tempResult := __assign_6;
-    __assign_6
+  ignore (if (Obj.magic self : t).reverseArguments then let __assign_8 = Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic ((Obj.magic self : t).operatorInfo)) ()) in (
+    tempResult := __assign_8;
+    __assign_8
+  ) else let __assign_9 = Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic ((Obj.magic self : t).operatorInfo)) ()) in (
+    tempResult := __assign_9;
+    __assign_9
   ));
   !tempResult
 )
 
 let getSourceRightParameterType = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-  ignore (if (Obj.magic self : t).reverseArguments then let __assign_7 = Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic ((Obj.magic self : t).operatorInfo)) ()) in (
-    tempResult := __assign_7;
-    __assign_7
-  ) else let __assign_8 = Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic ((Obj.magic self : t).operatorInfo)) ()) in (
-    tempResult := __assign_8;
-    __assign_8
+  ignore (if (Obj.magic self : t).reverseArguments then let __assign_10 = Obj.magic (TyAbstractBinaryOperatorInfo.getLeftType (Obj.magic ((Obj.magic self : t).operatorInfo)) ()) in (
+    tempResult := __assign_10;
+    __assign_10
+  ) else let __assign_11 = Obj.magic (TyAbstractBinaryOperatorInfo.getRightType (Obj.magic ((Obj.magic self : t).operatorInfo)) ()) in (
+    tempResult := __assign_11;
+    __assign_11
   ));
   !tempResult
 )
