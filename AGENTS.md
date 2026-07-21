@@ -400,6 +400,8 @@ This repo generates large transient artifacts during bootstrap/gate workflows. K
 1. **Before heavy runs**, preview cleanup candidates (largest-first):
    ```bash
    npm run clean:dry-run -- --verbose
+   npm run doctor:git-storage
+   npm run doctor:beads-storage
    ```
 2. **After heavy stage0/stage3/gate runs**, clean stale temp logs:
    ```bash
@@ -420,7 +422,13 @@ This repo generates large transient artifacts during bootstrap/gate workflows. K
 5. **At end of coding session** (if code changed), run:
    ```bash
    npm run clean
+   npm run doctor:git-storage
+   npm run doctor:beads-storage
    ```
+   The two read-only storage checks are required even when ordinary artifact
+   cleanup reports little or nothing to remove. Git objects and Beads history
+   are separate stores, and this rule prevents their byte growth from staying
+   hidden behind a healthy artifact-cleanup result.
 6. **If disk pressure remains high** (or after repeated bootstrap regen), run:
    ```bash
    npm run clean:deep

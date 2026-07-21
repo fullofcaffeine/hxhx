@@ -129,11 +129,17 @@ HXHX_KEEP_LOGS=1 HXHX_LOG_DIR="$PWD/.tmp/hxhx-logs" bash scripts/hxhx/build-hxhx
 
 ## Suggested cadence
 
+- Before a heavy gate or bootstrap run: `npm run clean:dry-run -- --verbose`,
+  `npm run doctor:git-storage`, and `npm run doctor:beads-storage`.
 - After heavy gate/build runs: `npm run clean:tmp` (or `npm run clean:tmp:verbose` when diagnosing disk usage).
-- End of normal dev session: `npm run clean`.
+- End of normal dev session: `npm run clean`, then run both storage doctors.
 - When disk pressure is high: `npm run clean:deep`.
 - If normal cleanup cannot allocate its own inventory: preview with
   `npm run clean:emergency:dry-run`, then run `npm run clean:emergency`.
+
+The storage doctors are deliberately read-only. Requiring them at these
+checkpoints catches growth early without making ordinary cleanup rewrite Git or
+Beads history automatically.
 
 ## Guardrails
 
