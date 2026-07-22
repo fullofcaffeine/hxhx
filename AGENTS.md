@@ -165,6 +165,14 @@ iteration speed while preserving correctness, customizability, and embeddability
 - Treat cold, warm, incremental, one-file, build, test, link, plugin-load, and compiler-server latency as
   product behavior. Measure the relevant path before and after a tooling or architecture change instead of
   assuming that "native" or "parallel" means fast.
+- `hxhx` must support a long-lived Haxe-compatible compilation server for editor and repeated-build
+  workflows. Supporting `--wait` and `--connect` transport alone is not enough: the server must safely reuse
+  unchanged parsed and typed modules, invalidate changed modules and their affected dependents, and isolate
+  request-specific macro, plugin, target, define, and diagnostic state.
+- Prefer the compilation-server path where equivalent-workload measurements show that it improves the real
+  edit-compile-test loop. Make it the default only after clean-process and warm-server compilations produce
+  equivalent diagnostics, generated output, and runtime behavior, including after edits, deletes, moves,
+  define changes, dependency changes, and server resets.
 - A slow serial fallback is useful for diagnosis, but it is not a durable fix for a parallelism, cache,
   scheduling, process-leak, or artifact-ownership defect. Repair the normal fast path or file a concrete
   performance/tooling bead with measurements, ownership, and an acceptance budget.

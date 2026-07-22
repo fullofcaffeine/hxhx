@@ -1,6 +1,6 @@
 # Native Iteration Latency Contract
 
-Last audited: 2026-07-18
+Last audited: 2026-07-22
 
 This document defines the project-level latency north star for native
 `hxhx + reflaxe.ocaml` work. It is a measurement contract, not a claim that the
@@ -165,6 +165,17 @@ performance claim must use measured medians from the relevant runner class.
       ]
     },
     {
+      "id": "native-compilation-server",
+      "purpose": "Reuse unchanged parsing and typing work across repeated native hxhx requests without reusing stale compiler state.",
+      "target": "Warm unchanged and one-module-change requests should be materially faster than equivalent clean-process compilations, while diagnostics, generated output, and runtime behavior remain equivalent.",
+      "evidence": [
+        "packages/hxhx/src/hxhx/Stage3WaitServer.hx",
+        "packages/hxhx/src/hxhx/NativeCompilerServer.hx",
+        "scripts/test-hxhx-targets.sh",
+        "docs/00-project/BOOTSTRAP_BRIDGE_RETIREMENT.md"
+      ]
+    },
+    {
       "id": "full1-evidence-gates",
       "purpose": "Release proof for Haxe 4.3.7 compatibility, macro/eval parity, plugin parity, target parity, and performance parity.",
       "target": "Do not optimize by weakening coverage. Use phase timings to remove avoidable rebuild/setup duplication and to prevent hidden throughput regressions.",
@@ -187,6 +198,71 @@ performance claim must use measured medians from the relevant runner class.
 }
 ```
 <!-- NATIVE_ITERATION_LATENCY_POLICY_JSON_END -->
+
+## Compilation Server And Incremental Reuse
+
+`hxhx` must support the Haxe compilation-server workflow used by editors and
+repeated builds. In plain language, a long-lived compiler should remember work
+from the previous request and redo only the work made unsafe by changed inputs.
+
+The word *incremental* has a precise limit here. Upstream Haxe 4.3.7 reuses
+unchanged parsed files and typed modules. It checks source timestamps,
+class-path and define signatures, module dependencies, and module check
+policies before reusing a module, and it can attempt to retype a module whose
+dependency changed. This is module-level reuse; it does not mean every later
+compiler phase or target generator automatically updates one expression at a
+time. The primary implementation references are Haxe 4.3.7's
+[`server.ml`](https://github.com/HaxeFoundation/haxe/blob/4.3.7/src/compiler/server.ml)
+and
+[`compilationCache.ml`](https://github.com/HaxeFoundation/haxe/blob/4.3.7/src/compiler/compilationCache.ml).
+
+The current native `hxhx` implementation has only the first transport rung:
+
+- `--wait stdio` can keep the process alive and run the ordinary Stage3
+  compilation routine for each request;
+- `--wait <host:port>` and `--connect <host:port>` have a socket round-trip,
+  but the server currently returns placeholder display responses and rejects
+  ordinary compilation requests; and
+- no native Stage3 parser or typed-module cache is shared across requests yet.
+
+Therefore, the existence of `--wait` and `--connect` must not be described as
+completed incremental compilation. The durable implementation needs separate,
+reviewable ownership for transport, request state, cached immutable compiler
+facts, dependency invalidation, macro/plugin lifecycle, and memory cleanup.
+
+The correctness contract is:
+
+1. A clean process and a warm server produce equivalent diagnostics, generated
+   target source, executable behavior, and deterministic reports for the same
+   complete input identity.
+2. Editing, deleting, moving, or shadowing a source module invalidates that
+   module and every cached result that depends on it.
+3. Changing class paths, defines, target/profile options, libraries, standard
+   library identity, compiler build, plugin set, macro implementation, or
+   target-lowering schema cannot reuse an incompatible cached result.
+4. Request-local mutable state never leaks into the next request. In
+   particular, macro callbacks, feature/DCE state, typed-body revisions,
+   diagnostics, target plans, and plugin state must be reset or reused only
+   through an explicit revision-safe contract.
+5. Cache hits, misses, invalidations, retyped modules, elapsed time, memory, and
+   reset reasons are inspectable without changing compiler output.
+6. Server shutdown, failed requests, interrupted clients, and cache reset leave
+   no owned child process or stale lock behind.
+
+Measure at least clean-process cold, server cold, warm unchanged, one-leaf-file
+change, one-shared-dependency change, define/target change, macro/plugin change,
+and explicit reset. Use the server automatically only on workloads where these
+measurements show a practical speed improvement.
+
+Haxe 4.3.7 remains the Full1 behavior and command-protocol oracle. Current
+upstream Haxe is also a useful architecture reference because its HXB work can
+serialize typed module information for later reuse, but HXB is not a Full1
+requirement and must not be copied mechanically into `hxhx`. The native hxhx
+cache boundary needs its own architecture review because it crosses parsing,
+typing, macros, plugins, targets, and long-lived process state. The upstream
+[HXB design discussion](https://github.com/HaxeFoundation/haxe/pull/11504)
+is retained as research evidence, including its explicit warning that this is
+one of the compiler's most deeply integrated and complex subsystems.
 
 ## What Should Get Faster
 
