@@ -2,6 +2,7 @@ import haxe.io.Bytes;
 import hxhx.CompilationRequestContext;
 import hxhx.CompilationRequestOutputEvent;
 import hxhx.CompilationServerReply;
+import hxhx.CompilationServerProtocol;
 import hxhx.CompilationServerRequest;
 import hxhx.CompilationServerRequestCodec;
 import hxhx.CompilationServerRequestDispatcher;
@@ -41,6 +42,13 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 	}
 
 	static function main():Void {
+		assertTrue(CompilationServerProtocol.requestLengthProblem(0) == null, "empty framed request should be representable");
+		assertTrue(CompilationServerProtocol.requestLengthProblem(CompilationServerProtocol.MAX_REQUEST_BYTES) == null,
+			"request at the byte limit should be accepted");
+		assertTrue(CompilationServerProtocol.requestLengthProblem(-1).indexOf("negative") >= 0, "negative request length should be rejected");
+		assertTrue(CompilationServerProtocol.requestLengthProblem(CompilationServerProtocol.MAX_REQUEST_BYTES + 1).indexOf("maximum") >= 0,
+			"request over the byte limit should be rejected");
+
 		final baseArgs = ["--hxhx-no-emit", "--hxhx-out", "out"];
 		final requestArgs = ["-cp", "src", "-main", "Main"];
 		final direct = new CompilationServerRequest(7, baseArgs, requestArgs, Bytes.ofString("original input"));

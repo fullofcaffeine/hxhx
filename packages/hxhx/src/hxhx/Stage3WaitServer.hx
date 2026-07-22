@@ -110,8 +110,11 @@ class Stage3WaitServer {
 				return error("wait-stdio failed to read frame length: " + e);
 			}
 
-			if (frameLen < 0)
-				return error("wait-stdio received negative frame length: " + frameLen);
+			final lengthProblem = CompilationServerProtocol.requestLengthProblem(frameLen);
+			if (lengthProblem != null) {
+				writeWaitStdioReply(CompilationServerReply.message("hxhx(stage3): wait-stdio rejected " + lengthProblem, true));
+				return 2;
+			}
 
 			final frame = try input.read(frameLen) catch (_:Eof) {
 				return error("wait-stdio request frame truncated");
@@ -133,7 +136,7 @@ class Stage3WaitServer {
 			return CompilationServerRequestCodec.encodeSocketReply(reply);
 		};
 		return try {
-			NativeCompilerServer.waitSocket(mode, handleRequest);
+			NativeCompilerServer.waitSocket(mode, CompilationServerProtocol.MAX_REQUEST_BYTES, handleRequest);
 		} catch (e:String) {
 			error("wait socket failed: " + e);
 		}
@@ -163,6 +166,9 @@ class Stage3WaitServer {
 
 		if (frameLen <= 0)
 			return null;
+		final lengthProblem = CompilationServerProtocol.requestLengthProblem(frameLen);
+		if (lengthProblem != null)
+			throw "connect rejected display-stdin " + lengthProblem;
 		final frame = try {
 			input.read(frameLen);
 		} catch (_:Eof) {
@@ -233,6 +239,10 @@ class Stage3WaitServer {
 			argsWithCwd.push(arg);
 
 		final payload = encodeConnectRequest(argsWithCwd, stdinBytes);
+		final payloadBytes = Bytes.ofString(payload).length;
+		final lengthProblem = CompilationServerProtocol.requestLengthProblem(payloadBytes);
+		if (lengthProblem != null)
+			return error("connect rejected " + lengthProblem);
 		try {
 			final response = NativeCompilerServer.connect(connectMode, payload);
 			return processConnectResponse(response) ? 1 : 0;

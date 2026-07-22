@@ -22,6 +22,16 @@ let connect_with_retry endpoint =
   in
   loop 100
 
+let raw_exchange endpoint payload =
+  let host, port = HxHxCompilerServer.split_host_port endpoint in
+  let sock = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
+  Unix.connect sock (Unix.ADDR_INET (HxHxCompilerServer.resolve_host host, port));
+  HxHxCompilerServer.send_all sock payload;
+  Unix.shutdown sock Unix.SHUTDOWN_SEND;
+  let response = HxHxCompilerServer.read_all sock in
+  Unix.close sock;
+  response
+
 let starts_with_control_error response =
   String.length response > 0 && Char.code response.[0] = 0x02
 
@@ -43,8 +53,9 @@ let () =
   in
   if child = 0 then (
     ignore
-      (HxHxCompilerServer.waitSocket endpoint (fun _request ->
-           failwith "fixture-handler-exploded"));
+      (HxHxCompilerServer.waitSocket endpoint 32 (fun request ->
+           if request = "trigger-handler-error" then failwith "fixture-handler-exploded"
+           else "handled:" ^ request));
     exit 2)
   else
     Fun.protect
@@ -59,4 +70,20 @@ let () =
           failwith ("handler exception response lacked context: " ^ response);
         if not (contains response "fixture-handler-exploded") then
           failwith ("handler exception response lacked the original failure: " ^ response);
+
+        let oversized = raw_exchange endpoint (String.make 33 'x' ^ "\000") in
+        if not (starts_with_control_error oversized) then
+          failwith "oversized request did not produce the Haxe error control byte";
+        if not (contains oversized "exceeds 32 bytes") then
+          failwith ("oversized request response lacked its limit: " ^ oversized);
+
+        let truncated = raw_exchange endpoint "unterminated" in
+        if not (starts_with_control_error truncated) then
+          failwith "unterminated request did not produce the Haxe error control byte";
+        if not (contains truncated "before its NUL terminator") then
+          failwith ("unterminated request response lacked context: " ^ truncated);
+
+        let recovered = HxHxCompilerServer.connect endpoint "ok" in
+        if recovered <> "handled:ok" then
+          failwith ("server did not recover after malformed clients: " ^ recovered);
         print_endline "HXHX_COMPILER_SERVER_RUNTIME_FIXTURE:PASS")

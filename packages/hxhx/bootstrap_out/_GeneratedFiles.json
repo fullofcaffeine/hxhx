@@ -58,6 +58,7 @@
 		"hxhx_CompilationServerRequestCodec.ml",
 		"hxhx_CompilationServerRequest.ml",
 		"hxhx_CompilationServerReply.ml",
+		"hxhx_CompilationServerProtocol.ml",
 		"hxhx_CompilationRequestOutputEvent.ml",
 		"hxhx_CompilationRequestOutput.ml",
 		"hxhx_CompilationRequestContext.ml",

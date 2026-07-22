@@ -166,6 +166,7 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.CompilationRequestContext");
   ignore (HxType.class_ "hxhx.CompilationRequestOutput");
   ignore (HxType.class_ "hxhx.CompilationRequestOutputEvent");
+  ignore (HxType.class_ "hxhx.CompilationServerProtocol");
   ignore (HxType.class_ "hxhx.CompilationServerReply");
   ignore (HxType.class_ "hxhx.CompilationServerRequest");
   ignore (HxType.class_ "hxhx.CompilationServerRequestCodec");
@@ -2000,6 +2001,9 @@ let init () : unit =
     let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'isErrorStream' for hxhx.CompilationRequestOutputEvent" in
     Obj.repr (Hxhx_CompilationRequestOutputEvent.create a0 a1)
   );
+  HxType.register_class_ctor "hxhx.CompilationServerProtocol" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_CompilationServerProtocol.create ())
+  );
   HxType.register_class_ctor "hxhx.CompilationServerReply" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'outputEvents' for hxhx.CompilationServerReply" in
@@ -2440,6 +2444,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.CompilationRequestContext" (fun () -> Obj.repr (Hxhx_CompilationRequestContext.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationRequestOutput" (fun () -> Obj.repr (Hxhx_CompilationRequestOutput.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationRequestOutputEvent" (fun () -> Obj.repr (Hxhx_CompilationRequestOutputEvent.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CompilationServerProtocol" (fun () -> Obj.repr (Hxhx_CompilationServerProtocol.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerReply" (fun () -> Obj.repr (Hxhx_CompilationServerReply.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerRequest" (fun () -> Obj.repr (Hxhx_CompilationServerRequest.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerRequestCodec" (fun () -> Obj.repr (Hxhx_CompilationServerRequestCodec.__empty ()));
@@ -2834,6 +2839,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.CompilationRequestOutput" [ "writeStderrLine"; "writeStdoutLine" ];
   HxType.register_class_instance_fields "hxhx.CompilationRequestOutputEvent" [ "isErrorStream"; "text" ];
   HxType.register_class_static_fields "hxhx.CompilationRequestOutputEvent" [];
+  HxType.register_class_instance_fields "hxhx.CompilationServerProtocol" [];
+  HxType.register_class_static_fields "hxhx.CompilationServerProtocol" [ "requestLengthProblem" ];
   HxType.register_class_instance_fields "hxhx.CompilationServerReply" [ "events"; "isError"; "outputEvents" ];
   HxType.register_class_static_fields "hxhx.CompilationServerReply" [ "message" ];
   HxType.register_class_instance_fields "hxhx.CompilationServerRequest" [ "baseArgsValue"; "findFlagValue"; "hasInvocationFlag"; "invocationArgs"; "requestArgs"; "requestArgsValue"; "requestId"; "stdinBytes"; "stdinBytesValue" ];
@@ -3178,6 +3185,7 @@ let init () : unit =
   HxType.register_class_tags "hxhx.CompilationRequestContext" [ "hxhx.CompilationRequestContext" ];
   HxType.register_class_tags "hxhx.CompilationRequestOutput" [ "hxhx.CompilationRequestOutput" ];
   HxType.register_class_tags "hxhx.CompilationRequestOutputEvent" [ "hxhx.CompilationRequestOutputEvent" ];
+  HxType.register_class_tags "hxhx.CompilationServerProtocol" [ "hxhx.CompilationServerProtocol" ];
   HxType.register_class_tags "hxhx.CompilationServerReply" [ "hxhx.CompilationServerReply" ];
   HxType.register_class_tags "hxhx.CompilationServerRequest" [ "hxhx.CompilationServerRequest" ];
   HxType.register_class_tags "hxhx.CompilationServerRequestCodec" [ "hxhx.CompilationServerRequestCodec" ];

@@ -91,6 +91,16 @@ Display remains the bring-up response; cancellation, shutdown, a complete audit
 of mutable request state, transactional output, and clean-process equivalence
 remain; and no semantic result is cached. `haxe_ocaml-850ii.32.1` therefore stays
 open.
+
+Transport input is now bounded before compiler work begins. One request may
+contain at most 64 MiB across its arguments and optional editor input. Stdio
+rejects a negative or larger declared frame with a framed error, then exits
+because it cannot safely find the next frame. The socket bridge rejects input
+larger than the limit or EOF before the required NUL terminator, closes only
+that client, and continues accepting connections. A focused OCaml fixture uses
+a smaller injected limit to prove oversized and unterminated clients cannot
+kill the server; the native hxhx fixture proves the production limit and stdio
+error framing.
 README and North Star readiness percentages remain unchanged.
 
 ## Two Connected Workstreams

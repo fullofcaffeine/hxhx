@@ -123,7 +123,7 @@
     {
       "module": "HxHxCompilerServer",
       "scope": "tooling",
-      "files": [{ "path": "HxHxCompilerServer.ml", "sha256": "5fff94e94c1cd37b2c2c76ce4f9cac71ef60344fbc766ade2a46c3f0ea574499" }],
+      "files": [{ "path": "HxHxCompilerServer.ml", "sha256": "d215f0b8d4476b0969b9ef2547ef5572c28bc48d151bac3d0dea18451b351298" }],
       "dependencies": [],
       "duneLibraries": ["unix"],
       "profiles": ["portable"],

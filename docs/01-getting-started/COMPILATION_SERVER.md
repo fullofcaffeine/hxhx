@@ -140,6 +140,14 @@ zero hits is the expected correct result: hxhx deliberately reparses and
 rechecks every request until cache identities and invalidation rules are proven.
 The report must not be read as evidence that incremental compilation is ready.
 
+The current native transport accepts at most 64 MiB for one complete request,
+including command-line arguments and any unsaved editor buffer. Stdio requests
+whose length prefix is negative or above that limit receive a framed error and
+the server exits because the byte stream cannot be safely resynchronized.
+Socket clients that exceed the limit or disconnect before the required NUL
+terminator receive an error; the server then accepts the next connection. No
+parsing, typing, macro execution, or target output begins for a rejected frame.
+
 ## Current scenario guide
 
 | What you are doing | Recommended workflow today | Server enabled by default? |

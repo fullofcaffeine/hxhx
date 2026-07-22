@@ -5,7 +5,8 @@ The fixture starts one native server, sends editor and compiler requests through
 the public ``--connect`` client, and checks that compiler-owned output returns to
 that client instead of leaking into the server process. A deliberately failing
 compile is followed by another successful compile to prove that request failure
-does not poison the long-lived process.
+does not poison the long-lived process. Separate stdio processes prove that a
+negative or oversized length receives a framed protocol error before allocation.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from __future__ import annotations
 import argparse
 import re
 import socket
+import struct
 import subprocess
 import sys
 import time
@@ -66,6 +68,33 @@ def require_baseline_report(result: subprocess.CompletedProcess[str], label: str
     if match is None:
         raise RuntimeError(f"{label} is missing its request ID: {text!r}")
     return int(match.group(1))
+
+
+def require_rejected_stdio_length(
+    hxhx_bin: Path, output_path: Path, declared_length: int, expected: str
+) -> None:
+    result = subprocess.run(
+        [str(hxhx_bin), "--hxhx-no-run", "--js", str(output_path), "--wait", "stdio"],
+        input=struct.pack("<i", declared_length),
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    if result.returncode == 0:
+        raise RuntimeError(f"invalid stdio frame length {declared_length} unexpectedly succeeded")
+    if result.stdout:
+        raise RuntimeError(f"invalid stdio frame wrote unexpected stdout: {result.stdout!r}")
+    if len(result.stderr) < 4:
+        raise RuntimeError(f"invalid stdio frame omitted its response header: {result.stderr!r}")
+    response_length = struct.unpack("<I", result.stderr[:4])[0]
+    response = result.stderr[4:]
+    if len(response) != response_length:
+        raise RuntimeError(
+            f"invalid stdio response length mismatch: header={response_length}, body={len(response)}"
+        )
+    text = response.decode("utf-8", errors="replace")
+    if expected not in text or "\x02" not in text:
+        raise RuntimeError(f"invalid stdio frame lacked its protocol error: {text!r}")
 
 
 def main() -> int:
@@ -206,6 +235,14 @@ def main() -> int:
             "compiler-owned request output leaked into the server process "
             f"(stdout={server_stdout!r}, stderr={server_stderr!r})"
         )
+
+    invalid_stdio_output = fixture_root / "invalid-stdio.js"
+    require_rejected_stdio_length(hxhx_bin, invalid_stdio_output, -1, "negative request frame length")
+    require_rejected_stdio_length(
+        hxhx_bin, invalid_stdio_output, 64 * 1024 * 1024 + 1, "maximum is 67108864"
+    )
+    if invalid_stdio_output.exists():
+        raise RuntimeError("rejected stdio frame unexpectedly produced target output")
 
     print("HXHX_NATIVE_SERVER_CLIENT_OUTPUT_FIXTURE:PASS")
     return 0
