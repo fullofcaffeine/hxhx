@@ -1,3 +1,10 @@
+## [0.23.15](https://github.com/fullofcaffeine/hxhx/compare/v0.23.14...v0.23.15) (2026-07-22)
+
+
+### Bug Fixes
+
+* **server:** unify native request dispatch ([9ab332f](https://github.com/fullofcaffeine/hxhx/commit/9ab332f6c7e9ff6f52480e6e7c59e45001b7b53a))
+
 ## [0.23.14](https://github.com/fullofcaffeine/hxhx/compare/v0.23.13...v0.23.14) (2026-07-22)
 
 
