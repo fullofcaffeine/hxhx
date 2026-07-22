@@ -5528,4 +5528,9 @@ class HxParser {
 			|| StringTools.startsWith(hint, "haxe.Rest<")
 			|| StringTools.startsWith(hint, "haxe.extern.Rest<");
 	}
+
+	/** Clear the diagnostic label temporarily installed while parsing one body. **/
+	public static function resetRequestState():Void {
+		debugBodyLabel = "";
+	}
 }

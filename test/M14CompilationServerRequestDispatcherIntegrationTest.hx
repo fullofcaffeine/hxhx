@@ -1,6 +1,7 @@
 import haxe.io.Bytes;
 import backend.EmitArtifact;
 import backend.EmitResult;
+import HxParser;
 import hxhx.CompilationRequestContext;
 import hxhx.CompilationRequestOutputEvent;
 import hxhx.CompilationServerReply;
@@ -184,6 +185,9 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertTrue(reportWire.indexOf("hxhx_server_report.cancelled=0") >= 0, "baseline report should say an ordinary request was not cancelled");
 		assertTrue(reportWire.indexOf("hxhx_server_report.output_transaction=not_started") >= 0,
 			"baseline report should say a request that did not compile never started output staging");
+		assertTrue(reportWire.indexOf("hxhx_server_report.phase_count=") >= 0, "baseline report should count its measured phases");
+		assertTrue(reportWire.indexOf("hxhx_server_report.phase[0].name=request-init") >= 0, "baseline report should name phases in first-observed order");
+		assertTrue(reportWire.indexOf("hxhx_server_report.phase[0].elapsed_ms=") >= 0, "baseline report should include a non-negative duration for each phase");
 
 		var timedCompileCalls = 0;
 		final timedReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(12, ["--hxhx-server-report"],
@@ -252,6 +256,7 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertEquals(encodedError, "\x02\n", "socket error encoding should use Haxe's error control line");
 
 		MacroState.setDefine("HXHX_STALE_REQUEST_FIXTURE", "old");
+		HxParser.debugBodyLabel = "stale request body";
 		final realFailure = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(11, ["--hxhx-no-run", "--hxhx-no-emit"], [], null),
 			Stage3Compiler.runRequest);
 		final realFailureWire = CompilationServerRequestCodec.encodeReply(realFailure);
@@ -260,6 +265,7 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertTrue(realFailureWire.indexOf("missing -main <TypeName>") >= 0, "a real Stage3 request should return its specific diagnostic to its client");
 		assertTrue(StringTools.endsWith(realFailureWire, "\x02\n"), "a real Stage3 failure should end with Haxe's failure marker");
 		assertTrue(!MacroState.defined("HXHX_STALE_REQUEST_FIXTURE"), "failed request should clear request-global macro state");
+		assertEquals(HxParser.debugBodyLabel, "", "failed request parser debug state");
 
 		final transactionRoot = ".tmp/m14_compilation_server_output_transaction";
 		final finalDirectory = haxe.io.Path.join([transactionRoot, "directory-output"]);
@@ -415,6 +421,71 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertEquals(File.getContent(realArtifact), realArtifactBeforeFailure, "last good target after a failed request");
 		assertTrue(realEmitFailureWire.indexOf("hxhx_server_report.output_transaction=aborted") >= 0, "failed emitted request should report aborted output");
 		assertTrue(!containsTransactionPath(tmpRoot), "real Stage3 requests should leave no transaction staging or backup path");
+
+		function proveTargetFailureRecovery(label:String, requestId:Int, targetArgs:Array<String>, generatedPath:String):Void {
+			final directContext = new CompilationRequestContext(0, true, false);
+			final directCode = Stage3Compiler.runRequest(targetArgs, directContext);
+			assertTrue(directContext.close(directCode == 0), label + " direct request should clean up");
+			assertTrue(directCode == 0, label + " direct request should compile");
+			assertTrue(FileSystem.exists(generatedPath), label + " direct request should create its target source");
+			final directBytes = File.getBytes(generatedPath);
+
+			final firstServer = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(requestId, targetArgs, [], null),
+				Stage3Compiler.runRequest);
+			assertTrue(!firstServer.isError, label + " first server request should compile");
+			assertTrue(FileSystem.exists(generatedPath), label + " first server request should publish its target source");
+			assertTrue(File.getBytes(generatedPath).compare(directBytes) == 0, label + " direct and first server target bytes should match");
+
+			final failedArgs = targetArgs.copy();
+			final mainIndex = failedArgs.indexOf("Main");
+			assertTrue(mainIndex >= 0, label + " fixture should contain its main type");
+			failedArgs[mainIndex] = "MissingMain";
+			final failedServer = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(requestId + 1, failedArgs, [], null),
+				Stage3Compiler.runRequest);
+			assertTrue(failedServer.isError, label + " missing-main server request should fail");
+			assertTrue(File.getBytes(generatedPath).compare(directBytes) == 0, label + " failed request should retain the last good target bytes");
+
+			final repeatedServer = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(requestId + 2, targetArgs, [], null),
+				Stage3Compiler.runRequest);
+			assertTrue(!repeatedServer.isError, label + " repeated server request should recover");
+			assertTrue(File.getBytes(generatedPath).compare(directBytes) == 0, label + " repeated server target bytes should match a direct request");
+		}
+
+		final phpRoot = haxe.io.Path.join([tmpRoot, "php"]);
+		final phpOutputDir = haxe.io.Path.join([phpRoot, "output"]);
+		final phpOutput = haxe.io.Path.join([phpOutputDir, "index.php"]);
+		proveTargetFailureRecovery("PHP", 300, [
+			"--hxhx-no-run",
+			"--hxhx-backend",
+			"php-native",
+			"--hxhx-out",
+			haxe.io.Path.join([phpRoot, "work"]),
+			"--php",
+			phpOutputDir,
+			"-cp",
+			srcDir,
+			"-main",
+			"Main"
+		], phpOutput);
+
+		final cppRoot = haxe.io.Path.join([tmpRoot, "cpp"]);
+		final cppOutput = haxe.io.Path.join([cppRoot, "src", "Main.cpp"]);
+		proveTargetFailureRecovery("C++", 310, [
+			"--hxhx-no-run",
+			"--hxhx-backend",
+			"cpp-native",
+			"--hxhx-out",
+			cppRoot,
+			"--cpp",
+			cppRoot,
+			"-D",
+			"no-compilation",
+			"-cp",
+			srcDir,
+			"-main",
+			"Main"
+		], cppOutput);
+		assertTrue(!containsTransactionPath(tmpRoot), "cross-target requests should leave no transaction staging or backup path");
 		deleteRecursive(tmpRoot);
 	}
 }

@@ -8895,4 +8895,30 @@ class EmitterStage {
 		final trimmed = StringTools.trim(rawImport == null ? "" : rawImport);
 		return StringTools.endsWith(trimmed, ".*") ? trimmed.substr(0, trimmed.length - 2) : trimmed;
 	}
+
+	/**
+		Clear temporary emission data before or after one compiler request.
+
+		These fields describe the module or function currently being converted to
+		OCaml. They must not become implicit input to the next request when emission
+		stops early because of an error or cancellation.
+	**/
+	public static function resetRequestState():Void {
+		currentOcamlModuleName = null;
+		currentModuleFilePath = null;
+		currentFunctionName = null;
+		currentFunctionLocalTypeHints = null;
+		currentStmtTyEntries = [];
+		currentLocalCallSigCache = null;
+		currentImportInt64 = null;
+		currentModuleNameEntries = [];
+		currentKnownModuleNames = new Map();
+		currentGlobalImportAliasByIdent = new Map();
+		currentInstanceFieldsByTypePath = null;
+		currentInstanceMethodsByTypePath = null;
+		currentMutableLocalRefNames = [];
+		currentOcamlProfile = backend.OcamlProfile.toDefineValue(backend.OcamlProfile.Portable);
+		currentPortableMetalizationPlan = null;
+		currentPortableMetalizationRegionKey = "";
+	}
 }

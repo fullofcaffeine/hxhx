@@ -150070,3 +150070,69 @@ let emit = fun program context -> try let __fallback_result_18 = (
   )
 ) in Obj.magic __fallback_result_18 with
   | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
+
+let resetRequestState = fun () -> ignore ((
+  ignore (HxMap.clear_string inferredSignatureStack);
+  ignore (HxMap.clear_string erasedDynamicReturnStack);
+  ignore (HxMap.clear_string functionScopePrepStack);
+  ignore (let __assign_33032 = Obj.magic (HxMap.create_string ()) in (
+    erasedDynamicReturnCache := __assign_33032;
+    __assign_33032
+  ));
+  ignore (let __assign_33033 = Obj.magic (HxMap.create_string ()) in (
+    functionScopePrepCache := __assign_33033;
+    __assign_33033
+  ));
+  ignore (let __assign_33034 = Obj.magic (HxMap.create_string ()) in (
+    functionArgDeclaredTypeCache := __assign_33034;
+    __assign_33034
+  ));
+  ignore (let __assign_33035 = Obj.magic (HxMap.create_string ()) in (
+    fieldCppTypeCache := __assign_33035;
+    __assign_33035
+  ));
+  ignore (let __assign_33036 = Obj.magic (HxMap.create_string ()) in (
+    functionArgTypesCache := __assign_33036;
+    __assign_33036
+  ));
+  ignore (let __assign_33037 = Obj.magic (HxMap.create_string ()) in (
+    functionReturnTypesCache := __assign_33037;
+    __assign_33037
+  ));
+  ignore (let __place_rhs_33038 = -1 in (
+    traceCppDeepEnabledCache := __place_rhs_33038;
+    __place_rhs_33038
+  ));
+  ignore (let __place_rhs_33039 = -1 in (
+    traceCppTimingsEnabledCache := __place_rhs_33039;
+    __place_rhs_33039
+  ));
+  ignore (let __place_rhs_33040 = -1 in (
+    traceCppLambdaPhasesEnabledCache := __place_rhs_33040;
+    __place_rhs_33040
+  ));
+  ignore (let __place_rhs_33041 = -1 in (
+    traceCppCallArgDetailPhasesEnabledCache := __place_rhs_33041;
+    __place_rhs_33041
+  ));
+  ignore (let __place_rhs_33042 = -1 in (
+    traceCppHelperClassificationDetailsEnabledCache := __place_rhs_33042;
+    __place_rhs_33042
+  ));
+  ignore (let __assign_33043 = Obj.magic (HxRuntime.hx_null) in (
+    traceCppTimingMethodFilterCache := __assign_33043;
+    __assign_33043
+  ));
+  ignore (let __assign_33044 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    traceCppTimingPhaseBuffer := __assign_33044;
+    __assign_33044
+  ));
+  ignore (let __assign_33045 = HxRuntime.hx_null in (
+    cachedLocalTypeInferenceApi := __assign_33045;
+    __assign_33045
+  ));
+  let __assign_33046 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    cachedKnownStdlibSignatures := __assign_33046;
+    __assign_33046
+  )
+))

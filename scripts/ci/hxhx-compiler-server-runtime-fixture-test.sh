@@ -12,10 +12,11 @@ tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
 cp "$ROOT/packages/reflaxe.ocaml/std/runtime/HxHxCompilerServer.ml" "$tmpdir/HxHxCompilerServer.ml"
+cp "$ROOT/packages/reflaxe.ocaml/std/runtime/HxRuntime.ml" "$tmpdir/HxRuntime.ml"
 cp "$ROOT/test/fixtures/hxhx_compiler_server_runtime/Fixture.ml" "$tmpdir/Fixture.ml"
 
 (
 	cd "$tmpdir"
-	ocamlc -I +unix -o fixture.exe unix.cma HxHxCompilerServer.ml Fixture.ml
+	ocamlc -I +unix -o fixture.exe unix.cma HxRuntime.ml HxHxCompilerServer.ml Fixture.ml
 	./fixture.exe
 )

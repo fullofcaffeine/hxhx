@@ -19,6 +19,10 @@ let connect_with_retry endpoint =
     | Unix.Unix_error ((Unix.ECONNREFUSED | Unix.ENOENT), _, _) when attempts > 0 ->
         pause 0.05;
         loop (attempts - 1)
+    | HxRuntime.Hx_exception (_, tags)
+      when attempts > 0 && HxRuntime.tags_has tags "String" ->
+        pause 0.05;
+        loop (attempts - 1)
   in
   loop 100
 
@@ -45,7 +49,43 @@ let contains text needle =
   in
   needle_length = 0 || loop 0
 
+let expect_haxe_string_exception label run required_text =
+  let received = ref None in
+  (try run () with
+  | HxRuntime.Hx_exception (value, tags) ->
+      if not (HxRuntime.tags_has tags "String") then
+        failwith (label ^ " did not carry the Haxe String type tag");
+      received := Some (Obj.obj value : string));
+  match !received with
+  | None -> failwith (label ^ " did not raise a Haxe String exception")
+  | Some message ->
+      if not (contains message required_text) then
+        failwith (label ^ " lacked useful context: " ^ message)
+
+let verify_occupied_endpoint_error () =
+  let owner = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
+  Fun.protect
+    ~finally:(fun () -> try Unix.close owner with _ -> ())
+    (fun () ->
+      Unix.bind owner (Unix.ADDR_INET (Unix.inet_addr_loopback, 0));
+      Unix.listen owner 1;
+      let port =
+        match Unix.getsockname owner with
+        | Unix.ADDR_INET (_, port) -> port
+        | Unix.ADDR_UNIX _ -> failwith "expected a loopback TCP address"
+      in
+      let endpoint = "127.0.0.1:" ^ string_of_int port in
+      expect_haxe_string_exception
+        "occupied wait endpoint"
+        (fun () ->
+          ignore (HxHxCompilerServer.waitSocket endpoint 32 (fun request -> request) (fun () -> false)))
+        "Address already in use";
+      match Unix.getsockname owner with
+      | Unix.ADDR_INET (_, actual_port) when actual_port = port -> ()
+      | _ -> failwith "occupied endpoint owner was disturbed")
+
 let () =
+  verify_occupied_endpoint_error ();
   let port = reserve_loopback_port () in
   let endpoint = "127.0.0.1:" ^ string_of_int port in
   let child_reaped = ref false in

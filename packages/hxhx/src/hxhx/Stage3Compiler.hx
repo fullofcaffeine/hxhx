@@ -254,10 +254,12 @@ class Stage3Compiler {
 
 	static function runOne(args:Array<String>, requestContext:CompilationRequestContext):Int {
 		final requestOutput = requestContext.output;
-		hxhx.macro.MacroState.reset();
+		requestContext.registerCleanup("compiler-static-state", CompilerRequestStaticState.reset);
+		CompilerRequestStaticState.reset();
 		requestContext.registerCleanup("macro-state", hxhx.macro.MacroState.reset);
-		Stage3BackendPluginSupport.resetRequestState();
+		hxhx.macro.MacroState.reset();
 		requestContext.registerCleanup("backend-plugin-state", Stage3BackendPluginSupport.resetRequestState);
+		Stage3BackendPluginSupport.resetRequestState();
 		inline function error(msg:String):Int {
 			requestOutput.stdoutLine("hxhx(stage3): " + msg);
 			return 2;

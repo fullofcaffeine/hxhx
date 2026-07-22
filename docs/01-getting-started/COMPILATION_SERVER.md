@@ -40,8 +40,9 @@ program cannot bypass the client response. Each request now has a cleanup list:
 when the request ends, hxhx closes its macro session and clears request-specific
 macro definitions and backend-plugin registrations before accepting the next
 request. An opt-in `--hxhx-server-report` result identifies the request, reports
-whether cleanup succeeded, measures elapsed time, and explicitly says that the
-semantic cache is disabled with zero entries and zero hits.
+whether cleanup succeeded, measures named compiler phases and total time, and
+explicitly says that the semantic cache is disabled with zero entries and zero
+hits.
 
 Display remains a bring-up response. Explicit shutdown now works for both
 native transports: the requesting client receives a confirmation, request
@@ -49,8 +50,13 @@ cleanup finishes, and only then does the server exit successfully. A client can
 also give one request a deadline. The compiler checks that deadline between
 major phases and while moving through modules, stops at the next safe check,
 and still runs request cleanup. This is cooperative cancellation, not a forced
-thread interruption. Cross-client cancellation, a complete audit of all
-mutable compiler state, and clean-process equivalence are not finished.
+thread interruption. Cross-client cancellation remains deferred. The
+implemented cache-free lifecycle now resets audited process-wide temporary
+state before and after every request. Focused tests compare fresh-process,
+cold-server, failure, and repeated-server output for JavaScript, PHP, and C++;
+the full hxhx target suite also passed before this cache-free foundation was
+closed. The broader incremental-cache acceptance matrix is still required
+before recommending the server as a faster normal workflow.
 Filesystem output now uses success-only publication: a server request writes to
 private paths first, runs its normal cleanup, and replaces the requested output
 only if the whole request succeeded. Later steps complete the remaining
@@ -142,6 +148,9 @@ hxhx_server_report.semantic_cache_entries=0
 hxhx_server_report.cancelled=0
 hxhx_server_report.output_transaction=committed
 hxhx_server_report.cleanup=ok
+hxhx_server_report.phase_count=4
+hxhx_server_report.phase[0].name=request-init
+hxhx_server_report.phase[0].elapsed_ms=2
 hxhx_server_report.elapsed_ms=123
 ```
 
@@ -150,6 +159,13 @@ diagnostic information, not normal compiler output. At this stage, a report of
 zero hits is the expected correct result: hxhx deliberately reparses and
 rechecks every request until cache identities and invalidation rules are proven.
 The report must not be read as evidence that incremental compilation is ready.
+
+A **phase** is one named portion of the compiler request, such as setup,
+parsing, typing, code generation, or cleanup. If the compiler enters the same
+named phase more than once, the report combines those intervals. These timings
+show where a request spends its time before caching exists, so later work can
+demonstrate a real end-to-end improvement instead of only reporting an internal
+cache hit.
 
 The current native transport accepts at most 64 MiB for one complete request,
 including command-line arguments and any unsaved editor buffer. Stdio requests
@@ -285,8 +301,14 @@ fails without stopping the server.
 `--hxhx-server-control` is an hxhx extension, not part of the Haxe 4.3.7
 compiler-server protocol. This is still an implementation/testing interface,
 not a recommendation to enable the native server for normal projects. Endpoint
-ownership, interactive cross-client cancellation, and automatic stale-server
+discovery, interactive cross-client cancellation, and automatic stale-server
 recovery remain unfinished.
+
+If the requested TCP port already belongs to another process, hxhx now returns
+a readable `wait socket failed` diagnostic and leaves that process and listener
+alone. It does not kill by port number or process name. This protects a live
+owner; it is not yet the future PID/start-identity/nonce registry needed for
+automatic server discovery and stale-record cleanup.
 
 ## Current scenario guide
 

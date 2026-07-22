@@ -42658,6 +42658,209 @@ let phpRegistration = fun () -> registration (phpDescriptor ()) (Obj.magic Php)
 
 let luaRegistration = fun () -> registration (luaDescriptor ()) (Obj.magic Lua)
 
+let resetRequestState = fun () -> ignore ((
+  ignore (let __assign_7664 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderLocalTypes := __assign_7664;
+    __assign_7664
+  ));
+  ignore (let __assign_7665 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderLocalInits := __assign_7665;
+    __assign_7665
+  ));
+  ignore (let __assign_7666 = Obj.magic (HxRuntime.hx_null) in (
+    phpRenderCurrentFunctionName := __assign_7666;
+    __assign_7666
+  ));
+  ignore (let __assign_7667 = HxRuntime.hx_null in (
+    phpRenderCurrentInstanceMethodNames := __assign_7667;
+    __assign_7667
+  ));
+  ignore (let __assign_7668 = HxRuntime.hx_null in (
+    phpRenderCurrentInstanceMethodArgs := __assign_7668;
+    __assign_7668
+  ));
+  ignore (let __assign_7669 = HxMap.create_string () in (
+    phpRenderSameClassMethodNames := __assign_7669;
+    __assign_7669
+  ));
+  ignore (let __assign_7670 = HxMap.create_string () in (
+    phpRenderSameClassFieldNames := __assign_7670;
+    __assign_7670
+  ));
+  ignore (let __assign_7671 = HxRuntime.hx_null in (
+    phpRenderSameClassFieldTypeHints := __assign_7671;
+    __assign_7671
+  ));
+  ignore (let __assign_7672 = HxMap.create_string () in (
+    phpRenderSameClassStaticFieldNames := __assign_7672;
+    __assign_7672
+  ));
+  ignore (let __assign_7673 = Obj.magic (HxRuntime.hx_null) in (
+    phpRenderSameClassName := __assign_7673;
+    __assign_7673
+  ));
+  ignore (let __assign_7674 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderSameClassLocals := __assign_7674;
+    __assign_7674
+  ));
+  ignore (let __assign_7675 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderInstanceMethodsByType := __assign_7675;
+    __assign_7675
+  ));
+  ignore (let __assign_7676 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderInstanceMethodArgsByType := __assign_7676;
+    __assign_7676
+  ));
+  ignore (let __assign_7677 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderInstanceFieldsByType := __assign_7677;
+    __assign_7677
+  ));
+  ignore (let __assign_7678 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderInstanceFieldTypeHintsByType := __assign_7678;
+    __assign_7678
+  ));
+  ignore (let __assign_7679 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderDynamicMethodsByType := __assign_7679;
+    __assign_7679
+  ));
+  ignore (let __assign_7680 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderStaticMethodsByType := __assign_7680;
+    __assign_7680
+  ));
+  ignore (let __assign_7681 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderStaticOverloadsByType := __assign_7681;
+    __assign_7681
+  ));
+  ignore (let __assign_7682 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderInstanceOverloadsByType := __assign_7682;
+    __assign_7682
+  ));
+  ignore (let __assign_7683 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderGenericStaticFunctionsByType := __assign_7683;
+    __assign_7683
+  ));
+  ignore (let __assign_7684 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderStaticCallableFieldsByType := __assign_7684;
+    __assign_7684
+  ));
+  ignore (let __assign_7685 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderClassBaseTypes := __assign_7685;
+    __assign_7685
+  ));
+  ignore (let __assign_7686 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderStringExtensionMethodsByClass := __assign_7686;
+    __assign_7686
+  ));
+  ignore (let __assign_7687 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderStringExtensionMethodsByField := __assign_7687;
+    __assign_7687
+  ));
+  ignore (let __assign_7688 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderKnownTypeNames := __assign_7688;
+    __assign_7688
+  ));
+  ignore (let __assign_7689 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderAbstractTypeNames := __assign_7689;
+    __assign_7689
+  ));
+  ignore (let __assign_7690 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderEmittedTypeNames := __assign_7690;
+    __assign_7690
+  ));
+  ignore (let __assign_7691 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderLocalTypeNames := __assign_7691;
+    __assign_7691
+  ));
+  ignore (let __assign_7692 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderDuplicateTypeNames := __assign_7692;
+    __assign_7692
+  ));
+  ignore (let __assign_7693 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderInterfaceTypeNames := __assign_7693;
+    __assign_7693
+  ));
+  ignore (let __assign_7694 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderEnumConstructors := __assign_7694;
+    __assign_7694
+  ));
+  ignore (let __assign_7695 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderAmbiguousEnumConstructors := __assign_7695;
+    __assign_7695
+  ));
+  ignore (let __assign_7696 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderEnumConstructorsByEnum := __assign_7696;
+    __assign_7696
+  ));
+  ignore (let __assign_7697 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderEnumAbstractValues := __assign_7697;
+    __assign_7697
+  ));
+  ignore (let __assign_7698 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderAmbiguousEnumAbstractValues := __assign_7698;
+    __assign_7698
+  ));
+  ignore (let __assign_7699 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderLocalEnumConstructors := __assign_7699;
+    __assign_7699
+  ));
+  ignore (let __assign_7700 = Obj.magic (HxRuntime.hx_null) in (
+    phpRenderPreferredEnumName := __assign_7700;
+    __assign_7700
+  ));
+  ignore (let __assign_7701 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderTypeAliases := __assign_7701;
+    __assign_7701
+  ));
+  ignore (let __assign_7702 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderDynamicCallFieldsByLocal := __assign_7702;
+    __assign_7702
+  ));
+  ignore (let __assign_7703 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderRefCaptureLocals := __assign_7703;
+    __assign_7703
+  ));
+  ignore (let __assign_7704 = false in (
+    phpRenderThisValueSlot := __assign_7704;
+    __assign_7704
+  ));
+  ignore (let __assign_7705 = Obj.magic (HxRuntime.hx_null) in (
+    phpThisValueCaptureName := __assign_7705;
+    __assign_7705
+  ));
+  ignore (let __assign_7706 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderOptionalLambdaArgNamesByLocal := __assign_7706;
+    __assign_7706
+  ));
+  ignore (let __assign_7707 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderOptionalLambdaOptionalArgNamesByLocal := __assign_7707;
+    __assign_7707
+  ));
+  ignore (let __assign_7708 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    phpRenderGenericConstructorSamples := __assign_7708;
+    __assign_7708
+  ));
+  ignore (let __assign_7709 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    csRenderEnumConstructors := __assign_7709;
+    __assign_7709
+  ));
+  ignore (let __assign_7710 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    csRenderAmbiguousEnumConstructors := __assign_7710;
+    __assign_7710
+  ));
+  ignore (let __assign_7711 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    csRenderLocalTypes := __assign_7711;
+    __assign_7711
+  ));
+  ignore (let __assign_7712 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    luaRenderLocalTypes := __assign_7712;
+    __assign_7712
+  ));
+  let __assign_7713 = HxRuntime.hx_null in (
+    luaRenderSameClassStaticFieldTypes := __assign_7713;
+    __assign_7713
+  )
+))
+
 let __init_phpRenderLocalTypes = phpRenderLocalTypes := Obj.magic (Obj.magic (HxRuntime.hx_null))
 
 let __init_phpRenderLocalInits = phpRenderLocalInits := Obj.magic (Obj.magic (HxRuntime.hx_null))

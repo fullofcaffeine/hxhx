@@ -1,0 +1,223 @@
+{
+  "schema": "hxhx-native-server-request-state-audit.v2",
+  "scope": [
+    "packages/hxhx/src",
+    "packages/hxhx-core/src"
+  ],
+  "entries": [
+    {
+      "path": "packages/hxhx-core/src/EmitterStage.hx",
+      "immutable_fields": [
+        "var:moduleInitTrace",
+        "final:backendDialect"
+      ],
+      "request_reset_fields": [
+        "var:currentOcamlModuleName",
+        "var:currentModuleFilePath",
+        "var:currentFunctionName",
+        "var:currentFunctionLocalTypeHints",
+        "var:currentStmtTyEntries",
+        "var:currentLocalCallSigCache",
+        "var:currentImportInt64",
+        "var:currentModuleNameEntries",
+        "var:currentKnownModuleNames",
+        "var:currentGlobalImportAliasByIdent",
+        "var:currentInstanceFieldsByTypePath",
+        "var:currentInstanceMethodsByTypePath",
+        "var:currentMutableLocalRefNames",
+        "var:currentOcamlProfile",
+        "var:currentPortableMetalizationPlan",
+        "var:currentPortableMetalizationRegionKey"
+      ],
+      "reset_owner": "CompilerRequestStaticState.reset -> EmitterStage.resetRequestState",
+      "reason": "The current-module, current-function, lookup, and lowering fields describe one OCaml emission and are cleared per request. The module-init trace and stateless backend dialect are process configuration."
+    },
+    {
+      "path": "packages/hxhx-core/src/HxParser.hx",
+      "immutable_fields": [],
+      "request_reset_fields": [
+        "var:debugBodyLabel"
+      ],
+      "reset_owner": "CompilerRequestStaticState.reset -> HxParser.resetRequestState",
+      "reason": "The debug label identifies the function body currently being parsed and must not survive a failed parse."
+    },
+    {
+      "path": "packages/hxhx-core/src/TyType.hx",
+      "immutable_fields": [
+        "final:KIND_UNKNOWN",
+        "final:KIND_PRIMITIVE",
+        "final:KIND_DYNAMIC",
+        "final:KIND_NULL",
+        "final:KIND_NULLABLE",
+        "final:KIND_NOMINAL",
+        "final:KIND_FUNCTION",
+        "final:KIND_TYPE_PARAMETER",
+        "final:KIND_UNRESOLVED",
+        "final:KIND_NO_NORMAL_COMPLETION"
+      ],
+      "request_reset_fields": [],
+      "reset_owner": null,
+      "reason": "These are fixed text labels for type categories and contain no request or program data."
+    },
+    {
+      "path": "packages/hxhx-core/src/backend/BackendRegistry.hx",
+      "immutable_fields": [
+        "final:builtinRegistrations"
+      ],
+      "request_reset_fields": [
+        "final:dynamicRegistrations"
+      ],
+      "reset_owner": "Stage3BackendPluginSupport.resetRequestState -> BackendRegistry.clearDynamicRegistrations",
+      "reason": "Builtin backend declarations are fixed for the binary. Dynamically loaded provider registrations belong to one request and are cleared at its boundaries."
+    },
+    {
+      "path": "packages/hxhx-core/src/backend/cpp/CppTargetCore.hx",
+      "immutable_fields": [],
+      "request_reset_fields": [
+        "final:inferredSignatureStack",
+        "final:erasedDynamicReturnStack",
+        "var:erasedDynamicReturnCache",
+        "final:functionScopePrepStack",
+        "var:functionScopePrepCache",
+        "var:functionArgDeclaredTypeCache",
+        "var:fieldCppTypeCache",
+        "var:functionArgTypesCache",
+        "var:functionReturnTypesCache",
+        "var:traceCppDeepEnabledCache",
+        "var:traceCppTimingsEnabledCache",
+        "var:traceCppLambdaPhasesEnabledCache",
+        "var:traceCppCallArgDetailPhasesEnabledCache",
+        "var:traceCppHelperClassificationDetailsEnabledCache",
+        "var:traceCppTimingMethodFilterCache",
+        "var:traceCppTimingPhaseBuffer",
+        "var:cachedLocalTypeInferenceApi",
+        "var:cachedKnownStdlibSignatures"
+      ],
+      "reset_owner": "CompilerRequestStaticState.reset -> CppTargetCore.resetRequestState",
+      "reason": "These stacks, lookup caches, service objects, trace buffers, and environment probes are temporary C++ rendering work without a cross-request revision key."
+    },
+    {
+      "path": "packages/hxhx-core/src/backend/source/SourceTargetCommon.hx",
+      "immutable_fields": [],
+      "request_reset_fields": [
+        "var:phpRenderLocalTypes",
+        "var:phpRenderLocalInits",
+        "var:phpRenderCurrentFunctionName",
+        "var:phpRenderCurrentInstanceMethodNames",
+        "var:phpRenderCurrentInstanceMethodArgs",
+        "var:phpRenderSameClassMethodNames",
+        "var:phpRenderSameClassFieldNames",
+        "var:phpRenderSameClassFieldTypeHints",
+        "var:phpRenderSameClassStaticFieldNames",
+        "var:phpRenderSameClassName",
+        "var:phpRenderSameClassLocals",
+        "var:phpRenderInstanceMethodsByType",
+        "var:phpRenderInstanceMethodArgsByType",
+        "var:phpRenderInstanceFieldsByType",
+        "var:phpRenderInstanceFieldTypeHintsByType",
+        "var:phpRenderDynamicMethodsByType",
+        "var:phpRenderStaticMethodsByType",
+        "var:phpRenderStaticOverloadsByType",
+        "var:phpRenderInstanceOverloadsByType",
+        "var:phpRenderGenericStaticFunctionsByType",
+        "var:phpRenderStaticCallableFieldsByType",
+        "var:phpRenderClassBaseTypes",
+        "var:phpRenderStringExtensionMethodsByClass",
+        "var:phpRenderStringExtensionMethodsByField",
+        "var:phpRenderKnownTypeNames",
+        "var:phpRenderAbstractTypeNames",
+        "var:phpRenderEmittedTypeNames",
+        "var:phpRenderLocalTypeNames",
+        "var:phpRenderDuplicateTypeNames",
+        "var:phpRenderInterfaceTypeNames",
+        "var:phpRenderEnumConstructors",
+        "var:phpRenderAmbiguousEnumConstructors",
+        "var:phpRenderEnumConstructorsByEnum",
+        "var:phpRenderEnumAbstractValues",
+        "var:phpRenderAmbiguousEnumAbstractValues",
+        "var:phpRenderLocalEnumConstructors",
+        "var:phpRenderPreferredEnumName",
+        "var:phpRenderTypeAliases",
+        "var:phpRenderDynamicCallFieldsByLocal",
+        "var:phpRenderRefCaptureLocals",
+        "var:phpRenderThisValueSlot",
+        "var:phpThisValueCaptureName",
+        "var:phpRenderOptionalLambdaArgNamesByLocal",
+        "var:phpRenderOptionalLambdaOptionalArgNamesByLocal",
+        "var:phpRenderGenericConstructorSamples",
+        "var:csRenderEnumConstructors",
+        "var:csRenderAmbiguousEnumConstructors",
+        "var:csRenderLocalTypes",
+        "var:luaRenderLocalTypes",
+        "var:luaRenderSameClassStaticFieldTypes"
+      ],
+      "reset_owner": "CompilerRequestStaticState.reset -> SourceTargetCommon.resetRequestState",
+      "reason": "These fields carry the active PHP, C#, or Lua function and program lookups through recursive rendering helpers."
+    },
+    {
+      "path": "packages/hxhx/src/hxhx/CompilationRequestOutputTransaction.hx",
+      "immutable_fields": [
+        "final:PROCESS_TOKEN"
+      ],
+      "request_reset_fields": [],
+      "reset_owner": null,
+      "reason": "The process token only makes private staging names collision-resistant; it contains no compiler result and is intentionally stable for one server process."
+    },
+    {
+      "path": "packages/hxhx/src/hxhx/NativeBackendPluginHost.hx",
+      "immutable_fields": [],
+      "request_reset_fields": [
+        "final:fallbackRows"
+      ],
+      "reset_owner": "Stage3BackendPluginSupport.resetRequestState -> NativeBackendPluginHost.clear",
+      "reason": "The non-native fallback captures provider registrations for the current request and is cleared with the real native host."
+    },
+    {
+      "path": "packages/hxhx/src/hxhx/macro/MacroHostClient.hx",
+      "immutable_fields": [
+        "final:TRACE",
+        "final:TRACE_HOST"
+      ],
+      "request_reset_fields": [],
+      "reset_owner": null,
+      "reason": "These booleans read process-start tracing configuration and contain no compiler or macro result."
+    },
+    {
+      "path": "packages/hxhx/src/hxhx/macro/MacroState.hx",
+      "immutable_fields": [],
+      "request_reset_fields": [
+        "final:defines",
+        "final:ocamlModules",
+        "final:classPaths",
+        "final:includedModules",
+        "final:resources",
+        "final:moduleDependencies",
+        "final:globalMetadataRules",
+        "final:customMetadataEntries",
+        "final:compilerArgs",
+        "final:stdPaths",
+        "var:generatedHxDir",
+        "final:generatedHxModules",
+        "final:buildFieldsByModule",
+        "var:buildFieldsPayload",
+        "final:afterTypingHookIds",
+        "final:onGenerateHookIds",
+        "final:afterGenerateHookIds",
+        "final:onTypeNotFoundHookIds",
+        "final:messages",
+        "var:compilerVersion",
+        "var:debugEnabled",
+        "var:verboseEnabled",
+        "var:optimizeEnabled",
+        "var:compilerTargetName",
+        "var:supportsUnicode",
+        "var:explicitCurrentPos",
+        "var:explicitLocalContext",
+        "var:explicitMainExprText",
+        "var:nextSyntheticLocalTVarId"
+      ],
+      "reset_owner": "Stage3Compiler.runOne -> MacroState.reset",
+      "reason": "Defines, generated modules, resources, hook registrations, diagnostics, compiler settings, and local IDs all belong to one macro request."
+    }
+  ]
+}

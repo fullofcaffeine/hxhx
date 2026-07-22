@@ -41410,3 +41410,8 @@ let parseFunctionBodyTextAt = fun bodySource originalSource bodyStartIndex -> tr
   )
 ) in Obj.magic __fallback_result_5730 with
   | HxRuntime.Hx_return __ret_5729 -> Obj.obj __ret_5729
+
+let resetRequestState = fun () -> ignore (let __assign_6083 = ("" : string) in (
+  debugBodyLabel := __assign_6083;
+  __assign_6083
+))

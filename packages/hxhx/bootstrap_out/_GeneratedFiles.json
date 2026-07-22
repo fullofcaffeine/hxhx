@@ -250,6 +250,7 @@
 		"EmitterStage.ml",
 		"EmitterNumericUpdate.ml",
 		"EmitterCallSigIndex.ml",
+		"CompilerRequestStaticState.ml",
 		"CompilerDriver.ml",
 		"CSharpNoEmitDiagnostics.ml",
 		"Any.ml"

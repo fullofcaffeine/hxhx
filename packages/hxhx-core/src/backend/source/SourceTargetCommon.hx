@@ -18195,4 +18195,64 @@ class SourceTargetCommon {
 		luaRenderSameClassStaticFieldTypes = previousLuaSameClassStaticFieldTypes;
 		return lines.join("\n") + "\n";
 	}
+
+	/**
+		Clear temporary source-target rendering data owned by one request.
+
+		PHP, C#, and Lua rendering currently use these fields to pass the active
+		function and program lookups through recursive helpers. Normal rendering
+		restores them, but request cleanup must also cover exceptions and cancellation.
+	**/
+	public static function resetRequestState():Void {
+		phpRenderLocalTypes = null;
+		phpRenderLocalInits = null;
+		phpRenderCurrentFunctionName = null;
+		phpRenderCurrentInstanceMethodNames = null;
+		phpRenderCurrentInstanceMethodArgs = null;
+		phpRenderSameClassMethodNames = new Map<String, Bool>();
+		phpRenderSameClassFieldNames = new Map<String, Bool>();
+		phpRenderSameClassFieldTypeHints = null;
+		phpRenderSameClassStaticFieldNames = new Map<String, Bool>();
+		phpRenderSameClassName = null;
+		phpRenderSameClassLocals = null;
+		phpRenderInstanceMethodsByType = null;
+		phpRenderInstanceMethodArgsByType = null;
+		phpRenderInstanceFieldsByType = null;
+		phpRenderInstanceFieldTypeHintsByType = null;
+		phpRenderDynamicMethodsByType = null;
+		phpRenderStaticMethodsByType = null;
+		phpRenderStaticOverloadsByType = null;
+		phpRenderInstanceOverloadsByType = null;
+		phpRenderGenericStaticFunctionsByType = null;
+		phpRenderStaticCallableFieldsByType = null;
+		phpRenderClassBaseTypes = null;
+		phpRenderStringExtensionMethodsByClass = null;
+		phpRenderStringExtensionMethodsByField = null;
+		phpRenderKnownTypeNames = null;
+		phpRenderAbstractTypeNames = null;
+		phpRenderEmittedTypeNames = null;
+		phpRenderLocalTypeNames = null;
+		phpRenderDuplicateTypeNames = null;
+		phpRenderInterfaceTypeNames = null;
+		phpRenderEnumConstructors = null;
+		phpRenderAmbiguousEnumConstructors = null;
+		phpRenderEnumConstructorsByEnum = null;
+		phpRenderEnumAbstractValues = null;
+		phpRenderAmbiguousEnumAbstractValues = null;
+		phpRenderLocalEnumConstructors = null;
+		phpRenderPreferredEnumName = null;
+		phpRenderTypeAliases = null;
+		phpRenderDynamicCallFieldsByLocal = null;
+		phpRenderRefCaptureLocals = null;
+		phpRenderThisValueSlot = false;
+		phpThisValueCaptureName = null;
+		phpRenderOptionalLambdaArgNamesByLocal = null;
+		phpRenderOptionalLambdaOptionalArgNamesByLocal = null;
+		phpRenderGenericConstructorSamples = null;
+		csRenderEnumConstructors = null;
+		csRenderAmbiguousEnumConstructors = null;
+		csRenderLocalTypes = null;
+		luaRenderLocalTypes = null;
+		luaRenderSameClassStaticFieldTypes = null;
+	}
 }

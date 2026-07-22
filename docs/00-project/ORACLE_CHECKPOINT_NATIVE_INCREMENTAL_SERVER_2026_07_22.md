@@ -2,10 +2,9 @@
 
 Prepared: 2026-07-22
 
-Status: GPT-5.6 Pro architecture review accepted; transport ownership,
-ordinary client-scoped compiler output, cooperative deadlines, and success-only
-filesystem publication are implemented, while the larger cache-free
-request-lifecycle Bead remains open
+Status: GPT-5.6 Pro architecture review accepted; the cache-free request
+lifecycle is implemented and has focused native plus broad hxhx end-to-end
+proof. Incremental compiler-result reuse remains unimplemented.
 
 Owning Bead: `haxe_ocaml-850ii.32`
 
@@ -98,10 +97,13 @@ advancing through modules. An expired request reports one stable cancellation
 reason, runs the normal cleanup contract, and does not stop the server. This is
 cooperative cancellation: hxhx stops at its next explicit check instead of
 forcibly interrupting arbitrary compiler, macro, plugin, or external-tool code.
-Interactive cancellation from a second client, a complete audit of mutable
-request state, and clean-process equivalence remain; and no semantic result is
-cached.
-`haxe_ocaml-850ii.32.1` therefore stays open.
+Interactive cancellation from a second client remains deferred, and no
+semantic result is cached. The cache-free slice now audits legacy process-wide
+state, resets request-owned fields before and after every compile, reports
+named phase timings, and compares fresh-process, cold-server, failure, and
+repeated-server results. The final broad hxhx target suite passed against the
+same regenerated native compiler in 937 seconds, closing
+`haxe_ocaml-850ii.32.1` without claiming that incremental reuse exists.
 
 Transport input is now bounded before compiler work begins. One request may
 contain at most 64 MiB across its arguments and optional editor input. Stdio
@@ -175,8 +177,54 @@ That recovery problem remains separate from the proven success/error request
 boundary.
 
 README and North Star readiness percentages remain unchanged. The server still
-reuses no compiler facts, and the complete cross-target clean-process versus
-server-output matrix has not passed.
+reuses no compiler facts. Focused JavaScript, PHP, and C++ equivalence has
+passed; this does not make the server a supported incremental workflow.
+
+### Cache-free request-state evidence
+
+The compiler still contains some `static var` fields, meaning values stored on
+the process rather than inside one request object. That shape predates the
+native server and is easy to misunderstand: some fields are immutable tables,
+while others temporarily hold “the function currently being emitted.” A
+long-lived process must clear the temporary fields even when a request fails
+halfway through.
+
+[`NATIVE_SERVER_REQUEST_STATE_AUDIT.json`](NATIVE_SERVER_REQUEST_STATE_AUDIT.json)
+is the executable inventory. It classifies all 132 process-wide declarations
+across the 10 production Haxe files that currently contain them. A repository
+guard checks every field by declaration kind and name. Adding, removing,
+renaming, or changing a field between `static var` and `static final` therefore
+requires an explicit lifecycle review. `CompilerRequestStaticState` clears
+parser diagnostics, OCaml-emitter context, source-target context, and C++
+per-program lookup work at request start and again during cleanup. C++ lookup
+maps are deliberately not kept as a cache because their keys do not yet
+identify the complete source program and configuration.
+
+This reset layer is a safe bridge for the existing compiler. The more elegant
+destination is to pass request-owned render state explicitly instead of using
+process-wide fields; the reset contract must remain until those fields are
+removed. Follow-up Bead `haxe_ocaml-850ii.32.2` owns that incremental migration.
+
+The public native fixture compares one fresh-process JavaScript build with a
+cold request and repeated requests in one server. It requires identical
+compiler output after removing the explicitly diagnostic report rows,
+byte-identical JavaScript and source maps, and identical executable behavior.
+It also checks cancellation, missing-main failure, recovery, multiple further
+successful requests, cleanup, unique increasing request IDs, and absence of
+staging or backup residue. Focused Haxe tests apply the same direct → server →
+failure → repeated sequence to PHP and C++ output.
+
+The report now includes named intervals such as `request-init`, `setup`, and
+`cleanup`, plus total request time. Repeated intervals with the same name are
+combined. These numbers establish the no-cache baseline for later performance
+work; they are not cache-hit evidence.
+
+The socket bridge now converts native OCaml socket failures into ordinary Haxe
+string errors. Attempting to listen on a port already owned by another process
+therefore produces a readable `wait socket failed: bind failed: Address already
+in use` style diagnostic, closes only hxhx's new socket, and leaves the existing
+listener alone. The same boundary also closes client sockets after connect,
+send, or receive failures instead of relying on process exit.
 
 ## Two Connected Workstreams
 

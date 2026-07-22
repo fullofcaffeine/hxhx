@@ -4723,6 +4723,73 @@ let stage3ImportedSignatureModulePath = fun rawImport -> let tempString = ref ("
   )
 )
 
+let resetRequestState = fun () -> ignore ((
+  ignore (let __assign_3307 = Obj.magic (HxRuntime.hx_null) in (
+    currentOcamlModuleName := __assign_3307;
+    __assign_3307
+  ));
+  ignore (let __assign_3308 = Obj.magic (HxRuntime.hx_null) in (
+    currentModuleFilePath := __assign_3308;
+    __assign_3308
+  ));
+  ignore (let __assign_3309 = Obj.magic (HxRuntime.hx_null) in (
+    currentFunctionName := __assign_3309;
+    __assign_3309
+  ));
+  ignore (let __assign_3310 = HxRuntime.hx_null in (
+    currentFunctionLocalTypeHints := __assign_3310;
+    __assign_3310
+  ));
+  ignore (let __assign_3311 = Obj.magic (let __arr_3312 = HxArray.create () in __arr_3312) in (
+    currentStmtTyEntries := __assign_3311;
+    __assign_3311
+  ));
+  ignore (let __assign_3313 = HxRuntime.hx_null in (
+    currentLocalCallSigCache := __assign_3313;
+    __assign_3313
+  ));
+  ignore (let __assign_3314 = Obj.magic (HxRuntime.hx_null) in (
+    currentImportInt64 := __assign_3314;
+    __assign_3314
+  ));
+  ignore (let __assign_3315 = Obj.magic (let __arr_3316 = HxArray.create () in __arr_3316) in (
+    currentModuleNameEntries := __assign_3315;
+    __assign_3315
+  ));
+  ignore (let __assign_3317 = HxMap.create_string () in (
+    currentKnownModuleNames := __assign_3317;
+    __assign_3317
+  ));
+  ignore (let __assign_3318 = HxMap.create_string () in (
+    currentGlobalImportAliasByIdent := __assign_3318;
+    __assign_3318
+  ));
+  ignore (let __assign_3319 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    currentInstanceFieldsByTypePath := __assign_3319;
+    __assign_3319
+  ));
+  ignore (let __assign_3320 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    currentInstanceMethodsByTypePath := __assign_3320;
+    __assign_3320
+  ));
+  ignore (let __assign_3321 = Obj.magic (let __arr_3322 = HxArray.create () in __arr_3322) in (
+    currentMutableLocalRefNames := __assign_3321;
+    __assign_3321
+  ));
+  ignore (let __assign_3323 = ("portable" : string) in (
+    currentOcamlProfile := __assign_3323;
+    __assign_3323
+  ));
+  ignore (let __assign_3324 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    currentPortableMetalizationPlan := __assign_3324;
+    __assign_3324
+  ));
+  let __assign_3325 = ("" : string) in (
+    currentPortableMetalizationRegionKey := __assign_3325;
+    __assign_3325
+  )
+))
+
 let __init_moduleInitTrace = moduleInitTrace := traceModuleInit ()
 
 let __init_currentOcamlModuleName = currentOcamlModuleName := Obj.magic (HxRuntime.hx_null)
@@ -4733,13 +4800,13 @@ let __init_currentFunctionName = currentFunctionName := Obj.magic (HxRuntime.hx_
 
 let __init_currentFunctionLocalTypeHints = currentFunctionLocalTypeHints := Obj.magic (HxRuntime.hx_null)
 
-let __init_currentStmtTyEntries = currentStmtTyEntries := Obj.magic (let __arr_3307 = HxArray.create () in __arr_3307)
+let __init_currentStmtTyEntries = currentStmtTyEntries := Obj.magic (let __arr_3326 = HxArray.create () in __arr_3326)
 
 let __init_currentLocalCallSigCache = currentLocalCallSigCache := Obj.magic (HxRuntime.hx_null)
 
 let __init_currentImportInt64 = currentImportInt64 := Obj.magic (HxRuntime.hx_null)
 
-let __init_currentModuleNameEntries = currentModuleNameEntries := Obj.magic (let __arr_3308 = HxArray.create () in __arr_3308)
+let __init_currentModuleNameEntries = currentModuleNameEntries := Obj.magic (let __arr_3327 = HxArray.create () in __arr_3327)
 
 let __init_currentKnownModuleNames = currentKnownModuleNames := HxMap.create_string ()
 
@@ -4749,7 +4816,7 @@ let __init_currentInstanceFieldsByTypePath = currentInstanceFieldsByTypePath := 
 
 let __init_currentInstanceMethodsByTypePath = currentInstanceMethodsByTypePath := Obj.magic (Obj.magic (HxRuntime.hx_null))
 
-let __init_currentMutableLocalRefNames = currentMutableLocalRefNames := Obj.magic (let __arr_3309 = HxArray.create () in __arr_3309)
+let __init_currentMutableLocalRefNames = currentMutableLocalRefNames := Obj.magic (let __arr_3328 = HxArray.create () in __arr_3328)
 
 let currentAllowedValueIdentNames = ref (Obj.magic (HxRuntime.hx_null) : bool HxMap.string_map)
 

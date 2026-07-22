@@ -12,10 +12,37 @@
    - [connect mode request]:
        send one null-terminated request frame and return the raw response bytes.
 
+   Native socket failures are converted to Haxe String exceptions at this
+   boundary. This lets the Haxe caller give users one consistent, readable
+   error instead of leaking an OCaml Unix exception and backtrace.
+
    Scope
    - This bridge owns socket/process operations only. It does not decide whether
      a request compiles code, serves editor data, succeeds, or fails.
 *)
+
+let transport_error_message (exn : exn) : string =
+  match exn with
+  | Unix.Unix_error (error, operation, argument) ->
+      let attempted =
+        if argument = "" then operation else operation ^ " " ^ argument
+      in
+      attempted ^ " failed: " ^ Unix.error_message error
+  | Failure message | Invalid_argument message | Sys_error message -> message
+  | exn -> Printexc.to_string exn
+
+let raise_haxe_string (exn : exn) : 'a =
+  HxRuntime.hx_throw_typed
+    (Obj.repr (transport_error_message exn))
+    [ "Dynamic"; "String" ]
+
+let protect_transport (run : unit -> 'a) : 'a =
+  try run () with
+  | HxRuntime.Hx_exception _ as exn -> raise exn
+  | HxRuntime.Hx_break -> raise HxRuntime.Hx_break
+  | HxRuntime.Hx_continue -> raise HxRuntime.Hx_continue
+  | HxRuntime.Hx_return value -> raise (HxRuntime.Hx_return value)
+  | exn -> raise_haxe_string exn
 
 let split_host_port (mode : string) : string * int =
   let trimmed = Stdlib.String.trim mode in
@@ -103,45 +130,51 @@ let waitSocket
     (max_request_bytes : int)
     (handle_request : string -> string)
     (should_stop : unit -> bool) : int =
-  let host, port = split_host_port mode in
-  let addr = resolve_host host in
-  let listener = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
-  (try Unix.setsockopt listener Unix.SO_REUSEADDR true with _ -> ());
-  Unix.bind listener (Unix.ADDR_INET (addr, port));
-  Unix.listen listener 10;
-  let running = ref true in
-  while !running do
-    let client, _ = Unix.accept listener in
-    (try
-       let reply =
-         try
-           let request = read_until_nul client max_request_bytes in
-           (try handle_request request
-            with exn ->
-              error_reply
-                ("hxhx(stage3): socket request handler failed: "
-                ^ Printexc.to_string exn))
-         with exn -> protocol_error (Printexc.to_string exn)
-       in
-       let response_delivered =
-         try
-           send_all client reply;
-           true
-         with _ -> false
-       in
-       let stop_requested = should_stop () in
-       if response_delivered && stop_requested then running := false
-     with _ -> ());
-    (try Unix.close client with _ -> ())
-  done;
-  0
+  protect_transport (fun () ->
+      let host, port = split_host_port mode in
+      let addr = resolve_host host in
+      let listener = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
+      Fun.protect
+        ~finally:(fun () -> try Unix.close listener with _ -> ())
+        (fun () ->
+          (try Unix.setsockopt listener Unix.SO_REUSEADDR true with _ -> ());
+          Unix.bind listener (Unix.ADDR_INET (addr, port));
+          Unix.listen listener 10;
+          let running = ref true in
+          while !running do
+            let client, _ = Unix.accept listener in
+            (try
+               let reply =
+                 try
+                   let request = read_until_nul client max_request_bytes in
+                   (try handle_request request
+                    with exn ->
+                      error_reply
+                        ("hxhx(stage3): socket request handler failed: "
+                        ^ Printexc.to_string exn))
+                 with exn -> protocol_error (Printexc.to_string exn)
+               in
+               let response_delivered =
+                 try
+                   send_all client reply;
+                   true
+                 with _ -> false
+               in
+               let stop_requested = should_stop () in
+               if response_delivered && stop_requested then running := false
+             with _ -> ());
+            (try Unix.close client with _ -> ())
+          done;
+          0))
 
 let connect (mode : string) (request : string) : string =
-  let host, port = split_host_port mode in
-  let addr = resolve_host host in
-  let sock = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
-  Unix.connect sock (Unix.ADDR_INET (addr, port));
-  send_all sock (request ^ "\000");
-  let response = read_all sock in
-  Unix.close sock;
-  response
+  protect_transport (fun () ->
+      let host, port = split_host_port mode in
+      let addr = resolve_host host in
+      let sock = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
+      Fun.protect
+        ~finally:(fun () -> try Unix.close sock with _ -> ())
+        (fun () ->
+          Unix.connect sock (Unix.ADDR_INET (addr, port));
+          send_all sock (request ^ "\000");
+          read_all sock))

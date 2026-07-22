@@ -25,6 +25,8 @@ class CompilationRequestContext {
 
 	final cleanupActions:Array<CompilationRequestCleanup>;
 	final startedAtSeconds:Float;
+	final phaseElapsedSeconds:haxe.ds.StringMap<Float>;
+	final phaseOrder:Array<String>;
 	var closed:Bool;
 	var cleanupSucceeded:Bool;
 	var baselineReportEnabled:Bool;
@@ -34,6 +36,8 @@ class CompilationRequestContext {
 	var cancellationReported:Bool;
 	var outputTransaction:Null<CompilationRequestOutputTransaction>;
 	var stagedEmitResult:Null<EmitResult>;
+	var activePhase:String;
+	var activePhaseStartedAtSeconds:Float;
 
 	public function new(requestId:Int, bufferOutput:Bool, isServerRequest:Bool) {
 		this.requestId = requestId;
@@ -41,6 +45,8 @@ class CompilationRequestContext {
 		this.isServerRequest = isServerRequest;
 		this.cleanupActions = [];
 		this.startedAtSeconds = haxe.Timer.stamp();
+		this.phaseElapsedSeconds = new haxe.ds.StringMap<Float>();
+		this.phaseOrder = [];
 		this.closed = false;
 		this.cleanupSucceeded = true;
 		this.baselineReportEnabled = false;
@@ -50,6 +56,8 @@ class CompilationRequestContext {
 		this.cancellationReported = false;
 		this.outputTransaction = null;
 		this.stagedEmitResult = null;
+		this.activePhase = "request-init";
+		this.activePhaseStartedAtSeconds = startedAtSeconds;
 	}
 
 	public static function direct():CompilationRequestContext {
@@ -94,6 +102,7 @@ class CompilationRequestContext {
 	**/
 	public function checkpoint(stage:String):Bool {
 		ensureOpen();
+		beginPhase(stage);
 		if (cancellationReason == null && deadlineAtSeconds != null && haxe.Timer.stamp() >= deadlineAtSeconds)
 			requestCancellation("deadline-exceeded");
 		if (cancellationReason == null)
@@ -166,6 +175,7 @@ class CompilationRequestContext {
 	public function close(requestSucceeded:Bool = true):Bool {
 		if (closed)
 			return cleanupSucceeded;
+		beginPhase("cleanup");
 		closed = true;
 		var index = cleanupActions.length;
 		while (index > 0) {
@@ -202,6 +212,7 @@ class CompilationRequestContext {
 				reportCleanupFailure("output-transaction", error);
 			}
 		}
+		finishActivePhase();
 		if (baselineReportEnabled)
 			emitBaselineReport();
 		output.close();
@@ -228,6 +239,28 @@ class CompilationRequestContext {
 		output.stderrLine("hxhx(stage3): request cleanup failed [" + name + "]: " + message);
 	}
 
+	function beginPhase(name:String):Void {
+		final now = haxe.Timer.stamp();
+		recordActivePhase(now);
+		final normalized = normalizeLabel(name);
+		activePhase = normalized.length == 0 ? "unspecified" : normalized;
+		activePhaseStartedAtSeconds = now;
+	}
+
+	function finishActivePhase():Void {
+		final now = haxe.Timer.stamp();
+		recordActivePhase(now);
+		activePhaseStartedAtSeconds = now;
+	}
+
+	function recordActivePhase(now:Float):Void {
+		final elapsed = Math.max(0, now - activePhaseStartedAtSeconds);
+		final previous = phaseElapsedSeconds.get(activePhase);
+		if (previous == null)
+			phaseOrder.push(activePhase);
+		phaseElapsedSeconds.set(activePhase, (previous == null ? 0.0 : previous) + elapsed);
+	}
+
 	function emitBaselineReport():Void {
 		final elapsedMs = Std.int(Math.max(0, (haxe.Timer.stamp() - startedAtSeconds) * 1000));
 		output.stdoutLine("hxhx_server_report.request_id=" + requestId);
@@ -242,6 +275,14 @@ class CompilationRequestContext {
 		}
 		output.stdoutLine("hxhx_server_report.output_transaction=" + (outputTransaction == null ? "not_started" : outputTransaction.status()));
 		output.stdoutLine("hxhx_server_report.cleanup=" + (cleanupSucceeded ? "ok" : "failed"));
+		output.stdoutLine("hxhx_server_report.phase_count=" + phaseOrder.length);
+		for (index in 0...phaseOrder.length) {
+			final phase = phaseOrder[index];
+			final seconds = phaseElapsedSeconds.get(phase);
+			final phaseMs = Std.int(Math.max(0, (seconds == null ? 0.0 : seconds) * 1000));
+			output.stdoutLine('hxhx_server_report.phase[$index].name=$phase');
+			output.stdoutLine('hxhx_server_report.phase[$index].elapsed_ms=$phaseMs');
+		}
 		output.stdoutLine("hxhx_server_report.elapsed_ms=" + elapsedMs);
 	}
 }

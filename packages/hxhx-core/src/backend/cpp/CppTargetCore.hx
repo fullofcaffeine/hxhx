@@ -25269,4 +25269,33 @@ class CppTargetCore {
 		final fieldType = cppTypeHint(raw, scope, classLookup);
 		return isScopeTypeParam(fieldType, scope) || isBareCppTypeParamName(fieldType) ? "std::string" : fieldType;
 	}
+
+	/**
+		Discard C++ lowering work that belongs to one compiler request.
+
+		The maps below speed up repeated questions while rendering one program. Their
+		keys do not yet include a stable program revision, so keeping them for the next
+		server request would be an unsafe semantic cache. Trace-option memoization is
+		also cleared so each request observes its own environment consistently.
+	**/
+	public static function resetRequestState():Void {
+		inferredSignatureStack.clear();
+		erasedDynamicReturnStack.clear();
+		functionScopePrepStack.clear();
+		erasedDynamicReturnCache = new haxe.ds.StringMap<Bool>();
+		functionScopePrepCache = new haxe.ds.StringMap<CppFunctionScopePrep>();
+		functionArgDeclaredTypeCache = new haxe.ds.StringMap<String>();
+		fieldCppTypeCache = new haxe.ds.StringMap<String>();
+		functionArgTypesCache = new haxe.ds.StringMap<Array<String>>();
+		functionReturnTypesCache = new haxe.ds.StringMap<String>();
+		traceCppDeepEnabledCache = -1;
+		traceCppTimingsEnabledCache = -1;
+		traceCppLambdaPhasesEnabledCache = -1;
+		traceCppCallArgDetailPhasesEnabledCache = -1;
+		traceCppHelperClassificationDetailsEnabledCache = -1;
+		traceCppTimingMethodFilterCache = null;
+		traceCppTimingPhaseBuffer = null;
+		cachedLocalTypeInferenceApi = null;
+		cachedKnownStdlibSignatures = null;
+	}
 }

@@ -136,10 +136,12 @@ let collectBuildMacroExprs = fun source modulePath -> Hxhx_Stage3BuildMacroSuppo
 let dispatchOnTypeNotFoundHooks = fun macroSession typePath output -> Hxhx_Stage3BuildMacroSupport.dispatchOnTypeNotFoundHooks macroSession (typePath : string) (Obj.magic output)
 
 let runOne = fun args requestContext -> try let __fallback_result_199 = let requestOutput = Obj.magic ((Obj.magic requestContext : Hxhx_CompilationRequestContext.t).output) in (
-  ignore (Hxhx_macro_MacroState.reset ());
+  ignore (Hxhx_CompilationRequestContext.registerCleanup (Obj.magic requestContext) ("compiler-static-state" : string) (CompilerRequestStaticState.reset));
+  ignore (CompilerRequestStaticState.reset ());
   ignore (Hxhx_CompilationRequestContext.registerCleanup (Obj.magic requestContext) ("macro-state" : string) (Hxhx_macro_MacroState.reset));
-  ignore (Hxhx_Stage3BackendPluginSupport.resetRequestState ());
+  ignore (Hxhx_macro_MacroState.reset ());
   ignore (Hxhx_CompilationRequestContext.registerCleanup (Obj.magic requestContext) ("backend-plugin-state" : string) (Hxhx_Stage3BackendPluginSupport.resetRequestState));
+  ignore (Hxhx_Stage3BackendPluginSupport.resetRequestState ());
   let tempStruct = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
     ignore (try let __assign_15 = Obj.magic (parseGlobalStage3Flags (Obj.magic args)) in (
       tempStruct := __assign_15;

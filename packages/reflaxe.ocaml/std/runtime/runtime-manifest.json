@@ -123,8 +123,8 @@
     {
       "module": "HxHxCompilerServer",
       "scope": "tooling",
-      "files": [{ "path": "HxHxCompilerServer.ml", "sha256": "d5f4c70fd17fa0412590f301a1d1c46ca52b6cbdb376dde2cbe1524957773c48" }],
-      "dependencies": [],
+      "files": [{ "path": "HxHxCompilerServer.ml", "sha256": "15ee002a5f583050a5cfdf6c9b7b2f6309bd3205317751459f1be4707fbb99ea" }],
+      "dependencies": ["HxRuntime"],
       "duneLibraries": ["unix"],
       "profiles": ["portable"],
       "license": "MIT"
