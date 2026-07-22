@@ -1,3 +1,10 @@
+# [0.26.0](https://github.com/fullofcaffeine/hxhx/compare/v0.25.0...v0.26.0) (2026-07-22)
+
+
+### Features
+
+* **server:** publish output only after request success ([2daa775](https://github.com/fullofcaffeine/hxhx/commit/2daa775eec488f24361c5f201f8e517f4331b952))
+
 # [0.25.0](https://github.com/fullofcaffeine/hxhx/compare/v0.24.0...v0.25.0) (2026-07-22)
 
 

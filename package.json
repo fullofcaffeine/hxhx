@@ -1,6 +1,6 @@
 {
   "name": "reflaxe-ocaml-dev",
-  "version": "0.25.0",
+  "version": "0.26.0",
   "private": true,
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
