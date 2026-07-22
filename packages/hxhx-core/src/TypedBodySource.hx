@@ -110,7 +110,7 @@ class TypedBodySource {
 						throw "typed variable declaration list contains a non-declaration child";
 					final declarationTexts = declaration.getTexts();
 					final declarationValues = declaration.getExpressions();
-					declarations.push(HxExprVarDecl.create(declarationTexts[0], declarationTexts[1],
+					declarations.push(HxExprVarDecl.make(declarationTexts[0], declarationTexts[1],
 						declarationValues.length == 0 ? null : expression(declarationValues[0]), sourcePosition(declaration.getPosition()),
 						declaration.getVariableIsFinal(), declaration.getVariableIsStatic()));
 				}

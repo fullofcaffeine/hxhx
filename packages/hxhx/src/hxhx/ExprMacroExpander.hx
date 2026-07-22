@@ -249,14 +249,14 @@ class ExprMacroExpander {
 						onExpand);
 					if (rewritten != initializer)
 						changed = true;
-					rewrittenDeclarations.push(HxExprVarDecl.create(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration), rewritten,
+					rewrittenDeclarations.push(HxExprVarDecl.make(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration), rewritten,
 						HxExprVarDecl.getPosition(declaration), HxExprVarDecl.getIsFinal(declaration), HxExprVarDecl.getIsStatic(declaration)));
 				}
 				changed ? EVars(rewrittenDeclarations) : e;
 			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
 				final rewritten = initializer == null ? null : rewriteExpr(initializer, session, allowed, allowKeys, importMap, modulePkg, trace, depth,
 					onExpand);
-				rewritten != initializer ? HxExprVarDecl.create(name, typeHint, rewritten, position, isFinal, isStatic) : e;
+				rewritten != initializer ? HxExprVarDecl.make(name, typeHint, rewritten, position, isFinal, isStatic) : e;
 			case EField(obj, field):
 				final ro = rewriteExpr(obj, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				ro != obj ? EField(ro, field) : e;

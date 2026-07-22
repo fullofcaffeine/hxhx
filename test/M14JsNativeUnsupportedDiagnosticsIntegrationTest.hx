@@ -43,7 +43,7 @@ class M14JsNativeUnsupportedDiagnosticsIntegrationTest {
 		assertContains(returnError, "kind=EReturn", "unexpanded return kind");
 		assertContains(returnError, "macro expansion", "unexpanded return guidance");
 
-		final declarationError = captureUnsupported(EVars([HxExprVarDecl.create("value", "String", ENull, new HxPos(0, 1, 1))]));
+		final declarationError = captureUnsupported(EVars([HxExprVarDecl.make("value", "String", ENull, new HxPos(0, 1, 1))]));
 		assertContains(declarationError, "[js-native:unsupported_expr]", "unexpanded variable declaration prefix");
 		assertContains(declarationError, "kind=EVars", "unexpanded variable declaration kind");
 		assertContains(declarationError, "macro expansion", "unexpanded variable declaration guidance");

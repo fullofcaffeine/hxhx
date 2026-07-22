@@ -11,8 +11,8 @@
 	constructor. These helpers keep callers readable and fail immediately if an
 	invalid child is ever placed inside `EVars`.
 **/
-class HxExprVarDecl {
-	public static function create(name:String, typeHint:String, initializer:Null<HxExpr>, position:HxPos, isFinal:Bool = false, isStatic:Bool = false):HxExpr {
+abstract HxExprVarDecl(HxExpr) {
+	public static function make(name:String, typeHint:String, initializer:Null<HxExpr>, position:HxPos, isFinal:Bool = false, isStatic:Bool = false):HxExpr {
 		return EVariableDeclaration(name == null ? "" : name, typeHint == null ? "" : typeHint, initializer, position == null ? HxPos.unknown() : position,
 			isFinal, isStatic);
 	}

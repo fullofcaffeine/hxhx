@@ -473,14 +473,14 @@ class HxParser {
 			case EVars(declarations):
 				EVars([
 					for (declaration in declarations)
-						HxExprVarDecl.create(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
+						HxExprVarDecl.make(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
 							HxExprVarDecl.getInitializer(declaration) == null ? null : rebaseFunctionBodyExprValue(HxExprVarDecl.getInitializer(declaration),
 								base, bodyStartIndex),
 							rebaseFunctionBodyPos(HxExprVarDecl.getPosition(declaration), base, bodyStartIndex), HxExprVarDecl.getIsFinal(declaration),
 							HxExprVarDecl.getIsStatic(declaration))
 				]);
 			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
-				HxExprVarDecl.create(name, typeHint, initializer == null ? null : rebaseFunctionBodyExprValue(initializer, base, bodyStartIndex),
+				HxExprVarDecl.make(name, typeHint, initializer == null ? null : rebaseFunctionBodyExprValue(initializer, base, bodyStartIndex),
 					rebaseFunctionBodyPos(position, base, bodyStartIndex), isFinal, isStatic);
 			case EField(obj, field):
 				EField(rebaseFunctionBodyExprValue(obj, base, bodyStartIndex), field);
@@ -531,13 +531,13 @@ class HxParser {
 			case EVars(declarations):
 				EVars([
 					for (declaration in declarations)
-						HxExprVarDecl.create(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
+						HxExprVarDecl.make(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
 							offsetFunctionBodyExprColumns(HxExprVarDecl.getInitializer(declaration), delta),
 							offsetFunctionBodyPosColumn(HxExprVarDecl.getPosition(declaration), delta), HxExprVarDecl.getIsFinal(declaration),
 							HxExprVarDecl.getIsStatic(declaration))
 				]);
 			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
-				HxExprVarDecl.create(name, typeHint, offsetFunctionBodyExprColumns(initializer, delta), offsetFunctionBodyPosColumn(position, delta), isFinal,
+				HxExprVarDecl.make(name, typeHint, offsetFunctionBodyExprColumns(initializer, delta), offsetFunctionBodyPosColumn(position, delta), isFinal,
 					isStatic);
 			case EField(object, field):
 				EField(offsetFunctionBodyExprColumns(object, delta), field);
@@ -1915,12 +1915,12 @@ class HxParser {
 				case EVars(declarations):
 					EVars([
 						for (declaration in declarations)
-							HxExprVarDecl.create(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
+							HxExprVarDecl.make(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
 								HxExprVarDecl.getInitializer(declaration) == null ? null : applyDefaultedArgs(HxExprVarDecl.getInitializer(declaration)),
 								HxExprVarDecl.getPosition(declaration), HxExprVarDecl.getIsFinal(declaration), HxExprVarDecl.getIsStatic(declaration))
 					]);
 				case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
-					HxExprVarDecl.create(name, typeHint, initializer == null ? null : applyDefaultedArgs(initializer), position, isFinal, isStatic);
+					HxExprVarDecl.make(name, typeHint, initializer == null ? null : applyDefaultedArgs(initializer), position, isFinal, isStatic);
 				case EField(receiver, field):
 					EField(applyDefaultedArgs(receiver), field);
 				case ENullSafeField(receiver, field):
@@ -2061,12 +2061,12 @@ class HxParser {
 				case EVars(declarations):
 					EVars([
 						for (declaration in declarations)
-							HxExprVarDecl.create(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
+							HxExprVarDecl.make(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
 								HxExprVarDecl.getInitializer(declaration) == null ? null : applyDefaultedArgs(HxExprVarDecl.getInitializer(declaration)),
 								HxExprVarDecl.getPosition(declaration), HxExprVarDecl.getIsFinal(declaration), HxExprVarDecl.getIsStatic(declaration))
 					]);
 				case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
-					HxExprVarDecl.create(name, typeHint, initializer == null ? null : applyDefaultedArgs(initializer), position, isFinal, isStatic);
+					HxExprVarDecl.make(name, typeHint, initializer == null ? null : applyDefaultedArgs(initializer), position, isFinal, isStatic);
 				case EField(receiver, field):
 					EField(applyDefaultedArgs(receiver), field);
 				case ENullSafeField(receiver, field):
@@ -2641,7 +2641,7 @@ class HxParser {
 			if (acceptOtherChar("="))
 				initializer = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace)
 					|| cur.kind.match(TEof));
-			declarations.push(HxExprVarDecl.create(name, typeHint, initializer, position, isFinal, isStatic));
+			declarations.push(HxExprVarDecl.make(name, typeHint, initializer, position, isFinal, isStatic));
 			if (!cur.kind.match(TComma))
 				break;
 			bump();
