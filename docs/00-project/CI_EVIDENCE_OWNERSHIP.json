@@ -627,6 +627,35 @@
       }
     },
     {
+      "id": "kpi-manual-stale-20260722",
+      "checkId": "kpi-manual-weekly",
+      "state": "resolved",
+      "evidenceState": "stale-success",
+      "failureClass": "repository-policy",
+      "bead": "haxe_ocaml-850ii.34",
+      "recordedAt": "2026-07-22T21:16:39Z",
+      "run": {
+        "id": 29290477540,
+        "attempt": 1,
+        "headSha": "22385df152af259494c10df72cc1b62deeee1054",
+        "event": "workflow_dispatch",
+        "conclusion": "success",
+        "createdAt": "2026-07-13T22:37:26Z",
+        "updatedAt": "2026-07-13T22:43:25Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29290477540"
+      },
+      "reproductionOrEvidence": "The newest manually triggered KPI report passed, but it is older than the required 192-hour freshness window. Newer push-triggered reports do not satisfy this check because the weekly evidence contract deliberately requires a workflow_dispatch run.",
+      "closureGate": "A new workflow_dispatch run on the intended current main commit must finish successfully and publish a valid self-describing KPI report; record that exact successor before resolving this incident.",
+      "resolution": {
+        "runId": 29958906721,
+        "runAttempt": 1,
+        "headSha": "6e5341d2adaf41801495d5999d5023dd04b9a23d",
+        "conclusion": "success",
+        "resolvedAt": "2026-07-22T21:28:19Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/29958906721"
+      }
+    },
+    {
       "id": "kpi-manual-missing-20260713",
       "checkId": "kpi-manual-weekly",
       "state": "superseded",
