@@ -24,6 +24,8 @@ class CompilationRequestContext {
 	public final isServerRequest:Bool;
 	public final sourceProvider:CompilerSourceProvider;
 
+	final dependencyRequest:Null<CompilationServerDependencyRequest>;
+
 	final cleanupActions:Array<CompilationRequestCleanup>;
 	final startedAtSeconds:Float;
 	final phaseElapsedSeconds:haxe.ds.StringMap<Float>;
@@ -40,11 +42,13 @@ class CompilationRequestContext {
 	var activePhase:String;
 	var activePhaseStartedAtSeconds:Float;
 
-	public function new(requestId:Int, bufferOutput:Bool, isServerRequest:Bool, ?sourceProvider:CompilerSourceProvider) {
+	public function new(requestId:Int, bufferOutput:Bool, isServerRequest:Bool, ?sourceProvider:CompilerSourceProvider,
+			?dependencyRequest:CompilationServerDependencyRequest) {
 		this.requestId = requestId;
 		this.output = new CompilationRequestOutput(bufferOutput);
 		this.isServerRequest = isServerRequest;
 		this.sourceProvider = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
+		this.dependencyRequest = dependencyRequest;
 		this.cleanupActions = [];
 		this.startedAtSeconds = haxe.Timer.stamp();
 		this.phaseElapsedSeconds = new haxe.ds.StringMap<Float>();
@@ -66,8 +70,28 @@ class CompilationRequestContext {
 		return new CompilationRequestContext(0, false, false);
 	}
 
-	public static function server(requestId:Int, ?sourceProvider:CompilerSourceProvider):CompilationRequestContext {
-		return new CompilationRequestContext(requestId, true, true, sourceProvider);
+	public static function server(requestId:Int, ?sourceProvider:CompilerSourceProvider,
+			?dependencyRequest:CompilationServerDependencyRequest):CompilationRequestContext {
+		return new CompilationRequestContext(requestId, true, true, sourceProvider, dependencyRequest);
+	}
+
+	/**
+		Record the sealed typed program for dependency observation.
+
+		This computes a report only. It never returns a typed cache hit or suppresses
+		typing, and failed requests discard the observation during `close`.
+	**/
+	public function recordDependencySnapshot(modules:Array<TypedModule>, index:TyperIndex):Void {
+		ensureOpen();
+		if (dependencyRequest != null)
+			dependencyRequest.record(CompilerDependencyCollector.collect(modules, index));
+	}
+
+	/** Declare that a rooted compile, rather than a command/control/display request, is about to type a program. **/
+	public function requireDependencySnapshot():Void {
+		ensureOpen();
+		if (dependencyRequest != null)
+			dependencyRequest.requireSnapshot();
 	}
 
 	/** Enable the opt-in report for request phases and any validated cache reuse. **/
@@ -201,6 +225,15 @@ class CompilationRequestContext {
 		} catch (error:String) {
 			reportCleanupFailure("source-provider-validation", error);
 		}
+		if (dependencyRequest != null) {
+			try {
+				dependencyRequest.prepareFinish(requestSucceeded && cleanupSucceeded);
+			} catch (error:haxe.Exception) {
+				reportCleanupFailure("dependency-observation-validation", error.message);
+			} catch (error:String) {
+				reportCleanupFailure("dependency-observation-validation", error);
+			}
+		}
 		if (outputTransaction != null) {
 			if (requestSucceeded && cleanupSucceeded && stagedEmitResult != null) {
 				try {
@@ -231,6 +264,15 @@ class CompilationRequestContext {
 			reportCleanupFailure("source-provider-publication", error.message);
 		} catch (error:String) {
 			reportCleanupFailure("source-provider-publication", error);
+		}
+		if (dependencyRequest != null) {
+			try {
+				dependencyRequest.finish(requestSucceeded && cleanupSucceeded);
+			} catch (error:haxe.Exception) {
+				reportCleanupFailure("dependency-observation-publication", error.message);
+			} catch (error:String) {
+				reportCleanupFailure("dependency-observation-publication", error);
+			}
 		}
 		finishActivePhase();
 		if (baselineReportEnabled)
@@ -299,6 +341,24 @@ class CompilationRequestContext {
 		output.stdoutLine("hxhx_server_report.parser_hits=" + sourceReport.parserHits);
 		output.stdoutLine("hxhx_server_report.parser_misses=" + sourceReport.parserMisses);
 		output.stdoutLine("hxhx_server_report.cache_evictions=" + sourceReport.evictions);
+		final dependencyReport = dependencyRequest == null ? new CompilationServerDependencyReport(false) : dependencyRequest.report();
+		output.stdoutLine("hxhx_server_report.dependency_observation=" + (dependencyReport.enabled ? "enabled" : "disabled"));
+		output.stdoutLine("hxhx_server_report.dependency_previous_snapshot=" + (dependencyReport.hasPrevious ? "1" : "0"));
+		output.stdoutLine("hxhx_server_report.dependency_modules=" + dependencyReport.moduleCount);
+		output.stdoutLine("hxhx_server_report.dependency_edges=" + dependencyReport.edgeCount);
+		output.stdoutLine("hxhx_server_report.dependency_snapshot=" + dependencyReport.snapshotFingerprint);
+		final dependencyComparison = dependencyReport.comparison;
+		final publicChanges = dependencyComparison == null ? [] : dependencyComparison.getPublicInterfaceChanges();
+		final implementationChanges = dependencyComparison == null ? [] : dependencyComparison.getImplementationChanges();
+		final invalidations = dependencyComparison == null ? [] : dependencyComparison.getInvalidations();
+		output.stdoutLine("hxhx_server_report.dependency_public_changes=" + publicChanges.length);
+		output.stdoutLine("hxhx_server_report.dependency_implementation_changes=" + implementationChanges.length);
+		output.stdoutLine("hxhx_server_report.dependency_predicted_invalidations=" + invalidations.length);
+		for (index in 0...invalidations.length) {
+			final invalidation = invalidations[index];
+			output.stdoutLine('hxhx_server_report.dependency_invalidation[$index].module=${invalidation.modulePath}');
+			output.stdoutLine('hxhx_server_report.dependency_invalidation[$index].reason=${invalidation.reasonPath.join(" -> ")}');
+		}
 		final missReasons = sourceReport.sortedMissReasons();
 		output.stdoutLine("hxhx_server_report.cache_miss_reason_count=" + missReasons.length);
 		for (index in 0...missReasons.length) {

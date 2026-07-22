@@ -271,7 +271,16 @@ class TyperIndex {
 
 	static function declarationSignatureKey(signature:TyFunSig):String {
 		final form = signature.getIsStatic() ? "static" : "instance";
-		final args = [for (arg in signature.getArgs()) arg.getSemanticKey()].join(",");
+		final optional = signature.getArgOptional();
+		final rest = signature.getArgRest();
+		final signatureArgs = signature.getArgs();
+		final args = [
+			for (index in 0...signatureArgs.length) {
+				final argumentForm = index < rest.length
+					&& rest[index] ? "rest" : (index < optional.length && optional[index] ? "optional" : "required");
+				argumentForm + ":" + signatureArgs[index].getSemanticKey();
+			}
+		].join(",");
 		return form + ":" + signature.getName() + "(" + args + ")->" + signature.getReturnType().getSemanticKey();
 	}
 

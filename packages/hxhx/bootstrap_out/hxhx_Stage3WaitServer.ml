@@ -87,7 +87,7 @@ let writeWaitStdioReply = fun reply -> ignore (let payload = (Hxhx_CompilationSe
 
 let runWaitStdio = fun baseArgs runOne error -> try let __fallback_result_18 = let input = Obj.magic (Sys_io_Stdio.stdin ()) in (
   ignore ((Obj.magic input : Haxe_io_Input.t).set_bigEndian (Obj.magic input) false);
-  let serverCache = Obj.magic (Hxhx_CompilationServerSourceCache.create (HxRuntime.hx_null)) in let requestId = ref 0 in while true do ignore (let frameLen = ref 0 in (
+  let serverCache = Obj.magic (Hxhx_CompilationServerSourceCache.create (HxRuntime.hx_null)) in let dependencyCatalog = Obj.magic (Hxhx_CompilationServerDependencyCatalog.create (HxRuntime.hx_null)) in let requestId = ref 0 in while true do ignore (let frameLen = ref 0 in (
     ignore (try let __assign_7 = (Obj.magic input : Haxe_io_Input.t).readInt32 (Obj.magic input) () in (
       frameLen := __assign_7;
       __assign_7
@@ -138,7 +138,7 @@ let runWaitStdio = fun baseArgs runOne error -> try let __fallback_result_18 = l
           ) else raise (__exn_16));
         let frame = Obj.magic (!tempBytes) in (
           ignore (requestId := HxInt.add (!requestId) 1);
-          let request = Obj.magic (Hxhx_CompilationServerRequestCodec.decode (!requestId) (Obj.magic baseArgs) (Obj.magic frame)) in let reply = Obj.magic (Hxhx_CompilationServerRequestDispatcher.dispatch (Obj.magic request) runOne (Obj.magic serverCache)) in (
+          let request = Obj.magic (Hxhx_CompilationServerRequestCodec.decode (!requestId) (Obj.magic baseArgs) (Obj.magic frame)) in let reply = Obj.magic (Hxhx_CompilationServerRequestDispatcher.dispatch (Obj.magic request) runOne (Obj.magic serverCache) (Obj.magic dependencyCatalog)) in (
             ignore (writeWaitStdioReply (Obj.magic reply));
             if (Obj.magic reply : Hxhx_CompilationServerReply.t).stopServer then raise (HxRuntime.Hx_return (Obj.repr 0)) else ()
           )
@@ -149,9 +149,9 @@ let runWaitStdio = fun baseArgs runOne error -> try let __fallback_result_18 = l
 ) in Obj.magic __fallback_result_18 with
   | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let runWaitSocket = fun mode baseArgs runOne error -> let requestId = ref 0 in let serverCache = Obj.magic (Hxhx_CompilationServerSourceCache.create (HxRuntime.hx_null)) in let stopAfterReply = Obj.magic (Hxhx_CompilationServerStopSignal.create ()) in let handleRequest = fun payload -> (
+let runWaitSocket = fun mode baseArgs runOne error -> let requestId = ref 0 in let serverCache = Obj.magic (Hxhx_CompilationServerSourceCache.create (HxRuntime.hx_null)) in let dependencyCatalog = Obj.magic (Hxhx_CompilationServerDependencyCatalog.create (HxRuntime.hx_null)) in let stopAfterReply = Obj.magic (Hxhx_CompilationServerStopSignal.create ()) in let handleRequest = fun payload -> (
   ignore (requestId := HxInt.add (!requestId) 1);
-  let request = Obj.magic (Hxhx_CompilationServerRequestCodec.decodeString (!requestId) (Obj.magic baseArgs) (payload : string)) in let reply = Obj.magic (Hxhx_CompilationServerRequestDispatcher.dispatch (Obj.magic request) runOne (Obj.magic serverCache)) in (
+  let request = Obj.magic (Hxhx_CompilationServerRequestCodec.decodeString (!requestId) (Obj.magic baseArgs) (payload : string)) in let reply = Obj.magic (Hxhx_CompilationServerRequestDispatcher.dispatch (Obj.magic request) runOne (Obj.magic serverCache) (Obj.magic dependencyCatalog)) in (
     ignore (Hxhx_CompilationServerStopSignal.record (Obj.magic stopAfterReply) ((Obj.magic reply : Hxhx_CompilationServerReply.t).stopServer));
     Hxhx_CompilationServerRequestCodec.encodeSocketReply (Obj.magic reply)
   )

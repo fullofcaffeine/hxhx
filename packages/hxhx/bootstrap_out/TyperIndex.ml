@@ -603,13 +603,22 @@ let declarationSignatureKey = fun signature -> let tempString = ref ("" : string
     tempString := __assign_241;
     __assign_241
   ));
-  let _g = Obj.magic (let __arr_242 = HxArray.create () in __arr_242) in let _g1 = ref 0 in let _g2 = Obj.magic (TyFunSig.getArgs (Obj.magic signature) ()) in (
-    ignore (while !_g1 < HxArray.length _g2 do ignore (let arg = Obj.magic (HxArray.get (Obj.magic _g2) (!_g1)) in (
-      ignore (let __old_243 = !_g1 in let __new_244 = HxInt.add __old_243 1 in (
-        ignore (_g1 := __new_244);
-        __new_244
+  let optional = Obj.magic (TyFunSig.getArgOptional (Obj.magic signature) ()) in let rest = Obj.magic (TyFunSig.getArgRest (Obj.magic signature) ()) in let signatureArgs = Obj.magic (TyFunSig.getArgs (Obj.magic signature) ()) in let _g = Obj.magic (let __arr_242 = HxArray.create () in __arr_242) in let _g1 = ref 0 in let _g2 = HxArray.length signatureArgs in (
+    ignore (while !_g1 < _g2 do ignore (let index = let __old_243 = !_g1 in let __new_244 = HxInt.add __old_243 1 in (
+      ignore (_g1 := __new_244);
+      __old_243
+    ) in let tempString1 = ref ("" : string) in (
+      ignore (if index < HxArray.length rest && HxArray.get (Obj.magic rest) index then let __assign_245 = ("rest" : string) in (
+        tempString1 := __assign_245;
+        __assign_245
+      ) else if index < HxArray.length optional && HxArray.get (Obj.magic optional) index then let __assign_246 = ("optional" : string) in (
+        tempString1 := __assign_246;
+        __assign_246
+      ) else let __assign_247 = ("required" : string) in (
+        tempString1 := __assign_247;
+        __assign_247
       ));
-      HxArray.push _g (TyType.getSemanticKey (Obj.magic arg) ())
+      let argumentForm = (!tempString1 : string) in HxArray.push _g ((HxString.toStdString argumentForm ^ ":") ^ HxString.toStdString (TyType.getSemanticKey (Obj.magic (HxArray.get (Obj.magic signatureArgs) index)) ()))
     )) done);
     let args = (HxArray.join _g "," (fun x -> x) : string) in (((((HxString.toStdString (!tempString) ^ ":") ^ HxString.toStdString (TyFunSig.getName (Obj.magic signature) ())) ^ "(") ^ HxString.toStdString args) ^ ")->") ^ HxString.toStdString (TyType.getSemanticKey (Obj.magic (TyFunSig.getReturnType (Obj.magic signature) ())) ())
   )
@@ -622,39 +631,39 @@ let classifyOperatorExpression = fun expression filePath position metadata -> le
     | HxExpr.EField (_p0, _p1) -> (
       ignore _p0;
       ignore _p1;
-      let __assign_245 = Obj.magic (let __anon_246 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_246 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null))));
-        ignore (HxAnon.set __anon_246 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null))));
-        ignore (HxAnon.set __anon_246 "binaryOperator" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-        __anon_246
+      let __assign_248 = Obj.magic (let __anon_249 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_249 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null))));
+        ignore (HxAnon.set __anon_249 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null))));
+        ignore (HxAnon.set __anon_249 "binaryOperator" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+        __anon_249
       )) in (
-        tempResult := __assign_245;
-        __assign_245
+        tempResult := __assign_248;
+        __assign_248
       )
     )
     | HxExpr.ECall (_p0, _p1) -> (
       ignore _p0;
       ignore _p1;
-      let __assign_247 = Obj.magic (let __anon_248 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_248 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null))));
-        ignore (HxAnon.set __anon_248 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null))));
-        ignore (HxAnon.set __anon_248 "binaryOperator" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-        __anon_248
+      let __assign_250 = Obj.magic (let __anon_251 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_251 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null))));
+        ignore (HxAnon.set __anon_251 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null))));
+        ignore (HxAnon.set __anon_251 "binaryOperator" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+        __anon_251
       )) in (
-        tempResult := __assign_247;
-        __assign_247
+        tempResult := __assign_250;
+        __assign_250
       )
     )
     | HxExpr.EUnop (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
       ignore _p2;
-      let op = Obj.magic _g in let fixity = Obj.magic _g1 in let __assign_249 = Obj.magic (let __anon_250 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_250 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.repr op)));
-        ignore (HxAnon.set __anon_250 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.repr fixity)));
-        ignore (HxAnon.set __anon_250 "binaryOperator" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-        __anon_250
+      let op = Obj.magic _g in let fixity = Obj.magic _g1 in let __assign_252 = Obj.magic (let __anon_253 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_253 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.repr op)));
+        ignore (HxAnon.set __anon_253 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.repr fixity)));
+        ignore (HxAnon.set __anon_253 "binaryOperator" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+        __anon_253
       )) in (
-        tempResult := __assign_249;
-        __assign_249
+        tempResult := __assign_252;
+        __assign_252
       )
     )
     | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in if (match _g1 with
@@ -695,7 +704,7 @@ let classifyOperatorExpression = fun expression filePath position metadata -> le
       | HxExpr.EBreak _ -> 34
       | HxExpr.EContinue _ -> 35) = 8 then (
       ignore (match _g1 with
-        | HxExpr.EIdent __enum_param_251 -> __enum_param_251
+        | HxExpr.EIdent __enum_param_254 -> __enum_param_254
         | _ -> failwith "Unexpected enum parameter");
       if (match _g2 with
         | HxExpr.ENull -> 0
@@ -735,59 +744,59 @@ let classifyOperatorExpression = fun expression filePath position metadata -> le
         | HxExpr.EBreak _ -> 34
         | HxExpr.EContinue _ -> 35) = 8 then (
         ignore (match _g2 with
-          | HxExpr.EIdent __enum_param_252 -> __enum_param_252
+          | HxExpr.EIdent __enum_param_255 -> __enum_param_255
           | _ -> failwith "Unexpected enum parameter");
-        let op = (_g : string) in if HxBinaryOperatorTools.isAbstractOverloadable (op : string) then let __assign_253 = Obj.magic (let __anon_254 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_254 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null))));
-          ignore (HxAnon.set __anon_254 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null))));
-          ignore (HxAnon.set __anon_254 "binaryOperator" (Obj.repr op));
-          __anon_254
+        let op = (_g : string) in if HxBinaryOperatorTools.isAbstractOverloadable (op : string) then let __assign_256 = Obj.magic (let __anon_257 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_257 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null))));
+          ignore (HxAnon.set __anon_257 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null))));
+          ignore (HxAnon.set __anon_257 "binaryOperator" (Obj.repr op));
+          __anon_257
         )) in (
-          tempResult := __assign_253;
-          __assign_253
+          tempResult := __assign_256;
+          __assign_256
         ) else HxType.hx_throw_typed_rtti (Obj.repr (malformedOperator (filePath : string) (Obj.magic position) (metadata : string))) ["Dynamic"; "TyperError"]
       ) else HxType.hx_throw_typed_rtti (Obj.repr (malformedOperator (filePath : string) (Obj.magic position) (metadata : string))) ["Dynamic"; "TyperError"]
     ) else HxType.hx_throw_typed_rtti (Obj.repr (malformedOperator (filePath : string) (Obj.magic position) (metadata : string))) ["Dynamic"; "TyperError"]
     | HxExpr.EArrayDecl _p0 -> (
       ignore _p0;
-      let __assign_255 = Obj.magic (let __anon_256 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_256 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null))));
-        ignore (HxAnon.set __anon_256 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null))));
-        ignore (HxAnon.set __anon_256 "binaryOperator" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-        __anon_256
+      let __assign_258 = Obj.magic (let __anon_259 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_259 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null))));
+        ignore (HxAnon.set __anon_259 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null))));
+        ignore (HxAnon.set __anon_259 "binaryOperator" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+        __anon_259
       )) in (
-        tempResult := __assign_255;
-        __assign_255
+        tempResult := __assign_258;
+        __assign_258
       )
     )
     | HxExpr.EArrayAccess (_p0, _p1) -> (
       ignore _p0;
       ignore _p1;
-      let __assign_257 = Obj.magic (let __anon_258 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_258 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null))));
-        ignore (HxAnon.set __anon_258 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null))));
-        ignore (HxAnon.set __anon_258 "binaryOperator" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-        __anon_258
+      let __assign_260 = Obj.magic (let __anon_261 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_261 "unaryOperator" (HxEnum.box_if_needed "HxUnaryOperator" (Obj.magic (HxRuntime.hx_null))));
+        ignore (HxAnon.set __anon_261 "unaryFixity" (HxEnum.box_if_needed "HxUnaryFixity" (Obj.magic (HxRuntime.hx_null))));
+        ignore (HxAnon.set __anon_261 "binaryOperator" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+        __anon_261
       )) in (
-        tempResult := __assign_257;
-        __assign_257
+        tempResult := __assign_260;
+        __assign_260
       )
     )
     | _ -> HxType.hx_throw_typed_rtti (Obj.repr (malformedOperator (filePath : string) (Obj.magic position) (metadata : string))) ["Dynamic"; "TyperError"]);
   Obj.magic (!tempResult)
 )
 
-let parseOperatorMetadata = fun metadata filePath position -> try let __fallback_result_267 = let tempString = ref ("" : string) in (
-  ignore (if metadata == Obj.magic (HxRuntime.hx_null) then let __assign_259 = ("" : string) in (
-    tempString := __assign_259;
-    __assign_259
-  ) else let __assign_260 = (StringTools.trim (metadata : string) : string) in (
-    tempString := __assign_260;
-    __assign_260
+let parseOperatorMetadata = fun metadata filePath position -> try let __fallback_result_270 = let tempString = ref ("" : string) in (
+  ignore (if metadata == Obj.magic (HxRuntime.hx_null) then let __assign_262 = ("" : string) in (
+    tempString := __assign_262;
+    __assign_262
+  ) else let __assign_263 = (StringTools.trim (metadata : string) : string) in (
+    tempString := __assign_263;
+    __assign_263
   ));
-  ignore (while StringTools.startsWith (!tempString : string) ("@" : string) || StringTools.startsWith (!tempString : string) (":" : string) do ignore (let __assign_261 = (HxString.substr (!tempString) 1 (-1) : string) in (
-    tempString := __assign_261;
-    __assign_261
+  ignore (while StringTools.startsWith (!tempString : string) ("@" : string) || StringTools.startsWith (!tempString : string) (":" : string) do ignore (let __assign_264 = (HxString.substr (!tempString) 1 (-1) : string) in (
+    tempString := __assign_264;
+    __assign_264
   )) done);
   ignore (if not (HxString.equals (!tempString) "op") && not (StringTools.startsWith (!tempString : string) ("op(" : string)) then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   ignore (if HxString.length (!tempString) <= 2 || not (HxString.equals (HxString.charAt (!tempString) 2) "(") || not (StringTools.endsWith (!tempString : string) (")" : string)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (malformedOperator (filePath : string) (Obj.magic position) (metadata : string))) ["Dynamic"; "TyperError"]) else ());
@@ -796,18 +805,18 @@ let parseOperatorMetadata = fun metadata filePath position -> try let __fallback
     try raise (HxRuntime.Hx_return (Obj.repr (classifyOperatorExpression (Obj.magic (HxParser.parseCompleteExprText (payload : string))) (filePath : string) (Obj.magic position) (metadata : string)))) with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_262 -> raise (HxRuntime.Hx_return __ret_262)
-      | HxRuntime.Hx_exception (__exn_v_263, __exn_tags_264) -> if HxRuntime.tags_has __exn_tags_264 "HxParseError" then let _hx = (Obj.obj __exn_v_263 : HxParseError.t) in (
+      | HxRuntime.Hx_return __ret_265 -> raise (HxRuntime.Hx_return __ret_265)
+      | HxRuntime.Hx_exception (__exn_v_266, __exn_tags_267) -> if HxRuntime.tags_has __exn_tags_267 "HxParseError" then let _hx = (Obj.obj __exn_v_266 : HxParseError.t) in (
         ignore _hx;
         HxType.hx_throw_typed_rtti (Obj.repr (malformedOperator (filePath : string) (Obj.magic position) (metadata : string))) ["Dynamic"; "TyperError"]
-      ) else HxRuntime.hx_throw_typed __exn_v_263 __exn_tags_264
-      | __exn_265 -> if HxRuntime.tags_has ["OcamlExn"] "HxParseError" then let _hx = (Obj.obj (Obj.repr __exn_265) : HxParseError.t) in (
+      ) else HxRuntime.hx_throw_typed __exn_v_266 __exn_tags_267
+      | __exn_268 -> if HxRuntime.tags_has ["OcamlExn"] "HxParseError" then let _hx = (Obj.obj (Obj.repr __exn_268) : HxParseError.t) in (
         ignore _hx;
         HxType.hx_throw_typed_rtti (Obj.repr (malformedOperator (filePath : string) (Obj.magic position) (metadata : string))) ["Dynamic"; "TyperError"]
-      ) else raise (__exn_265)
+      ) else raise (__exn_268)
   )
-) in Obj.magic __fallback_result_267 with
-  | HxRuntime.Hx_return __ret_266 -> Obj.magic __ret_266
+) in Obj.magic __fallback_result_270 with
+  | HxRuntime.Hx_return __ret_269 -> Obj.magic __ret_269
 
 let catalogOperators = fun self (info : TyAbstractInfo.t) (filePath : string) -> ignore ((
   ignore self;
@@ -1084,15 +1093,15 @@ let build = fun resolved -> let index = Obj.magic (create ()) in (
 )
 
 let compareText = fun left right -> let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_268 = -1 in (
-    tempResult := __assign_268;
-    __assign_268
-  ) else if left > right then let __assign_269 = 1 in (
-    tempResult := __assign_269;
-    __assign_269
-  ) else let __assign_270 = 0 in (
-    tempResult := __assign_270;
-    __assign_270
+  ignore (if left < right then let __assign_271 = -1 in (
+    tempResult := __assign_271;
+    __assign_271
+  ) else if left > right then let __assign_272 = 1 in (
+    tempResult := __assign_272;
+    __assign_272
+  ) else let __assign_273 = 0 in (
+    tempResult := __assign_273;
+    __assign_273
   ));
   !tempResult
 )

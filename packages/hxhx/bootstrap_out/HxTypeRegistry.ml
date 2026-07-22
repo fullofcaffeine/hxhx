@@ -5,12 +5,22 @@
 let init () : unit =
   ignore (HxType.class_ "CSharpNoEmitDiagnostics");
   ignore (HxType.class_ "CompilerCacheIdentity");
+  ignore (HxType.class_ "CompilerDependencyCollector");
+  ignore (HxType.class_ "CompilerDependencyComparison");
+  ignore (HxType.class_ "CompilerDependencyEdge");
+  ignore (HxType.class_ "CompilerDependencyInvalidation");
+  ignore (HxType.class_ "CompilerDependencyInvalidator");
+  ignore (HxType.class_ "CompilerDependencyKindTools");
+  ignore (HxType.class_ "CompilerDependencyPhaseTools");
+  ignore (HxType.class_ "CompilerDependencySnapshot");
   ignore (HxType.class_ "CompilerDriver");
   ignore (HxType.class_ "CompilerModuleResolution");
+  ignore (HxType.class_ "CompilerObservationFingerprint");
   ignore (HxType.class_ "CompilerRequestStaticState");
   ignore (HxType.class_ "CompilerSourceProvider");
   ignore (HxType.class_ "CompilerSourceProviderReport");
   ignore (HxType.class_ "CompilerSourceResolver");
+  ignore (HxType.class_ "CompilerTypedModuleRevision");
   ignore (HxType.class_ "EmitterCallSigIndex");
   ignore (HxType.class_ "EmitterNumericUpdate");
   ignore (HxType.class_ "EmitterStage");
@@ -179,6 +189,9 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.CompilationServerCachedParse");
   ignore (HxType.class_ "hxhx.CompilationServerCachedResolution");
   ignore (HxType.class_ "hxhx.CompilationServerCachedSource");
+  ignore (HxType.class_ "hxhx.CompilationServerDependencyCatalog");
+  ignore (HxType.class_ "hxhx.CompilationServerDependencyReport");
+  ignore (HxType.class_ "hxhx.CompilationServerDependencyRequest");
   ignore (HxType.class_ "hxhx.CompilationServerProtocol");
   ignore (HxType.class_ "hxhx.CompilationServerReply");
   ignore (HxType.class_ "hxhx.CompilationServerRequest");
@@ -252,6 +265,8 @@ let init () : unit =
   ignore (HxType.class_ "sys.thread.NoEventLoopException");
   ignore (HxType.class_ "sys.thread.RegularEvent");
   ignore (HxType.class_ "sys.thread.Thread");
+  ignore (HxType.enum_ "CompilerDependencyKind");
+  ignore (HxType.enum_ "CompilerDependencyPhase");
   ignore (HxType.enum_ "HxDefaultValue");
   ignore (HxType.enum_ "HxExpr");
   ignore (HxType.enum_ "HxKeyword");
@@ -270,6 +285,8 @@ let init () : unit =
   ignore (HxType.enum_ "haxe.StackItem");
   ignore (HxType.enum_ "hxhx.macro._MacroHostClient.MacroHostReadResult");
   ignore (HxType.enum_ "sys.thread.NextEventTime");
+  HxType.register_enum_ctors "CompilerDependencyKind" [ "ModuleResolution"; "PublicInterface"; "InlineImplementation"; "GeneratedDeclaration"; "StaticInitialization"; "FeatureSelection"; "TargetNeutralProgram" ];
+  HxType.register_enum_ctors "CompilerDependencyPhase" [ "ModuleResolution"; "SharedTyping" ];
   HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
   HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ENullSafeField"; "ECall"; "EMacroExpr"; "EMacroType"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported"; "EReturn"; "EVars"; "EVariableDeclaration"; "EWhile"; "EBreak"; "EContinue" ];
   HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KInline"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KIn"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
@@ -288,6 +305,33 @@ let init () : unit =
   HxType.register_enum_ctors "haxe.StackItem" [ "CFunction"; "Module"; "FilePos"; "Method"; "LocalFunction" ];
   HxType.register_enum_ctors "hxhx.macro._MacroHostClient.MacroHostReadResult" [ "ReadLine"; "ReadEof"; "ReadError" ];
   HxType.register_enum_ctors "sys.thread.NextEventTime" [ "Now"; "Never"; "AnyTime"; "At" ];
+  HxType.register_enum_ctor "CompilerDependencyKind" "ModuleResolution" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyKind.ModuleResolution)
+  );
+  HxType.register_enum_ctor "CompilerDependencyKind" "PublicInterface" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyKind.PublicInterface)
+  );
+  HxType.register_enum_ctor "CompilerDependencyKind" "InlineImplementation" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyKind.InlineImplementation)
+  );
+  HxType.register_enum_ctor "CompilerDependencyKind" "GeneratedDeclaration" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyKind.GeneratedDeclaration)
+  );
+  HxType.register_enum_ctor "CompilerDependencyKind" "StaticInitialization" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyKind.StaticInitialization)
+  );
+  HxType.register_enum_ctor "CompilerDependencyKind" "FeatureSelection" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyKind.FeatureSelection)
+  );
+  HxType.register_enum_ctor "CompilerDependencyKind" "TargetNeutralProgram" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyKind.TargetNeutralProgram)
+  );
+  HxType.register_enum_ctor "CompilerDependencyPhase" "ModuleResolution" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyPhase.ModuleResolution)
+  );
+  HxType.register_enum_ctor "CompilerDependencyPhase" "SharedTyping" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyPhase.SharedTyping)
+  );
   HxType.register_enum_ctor "HxDefaultValue" "NoDefault" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (HxDefaultValue.NoDefault)
   );
@@ -1198,6 +1242,46 @@ let init () : unit =
   HxType.register_class_ctor "CompilerCacheIdentity" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerCacheIdentity.create ())
   );
+  HxType.register_class_ctor "CompilerDependencyCollector" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyCollector.create ())
+  );
+  HxType.register_class_ctor "CompilerDependencyComparison" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'publicInterfaceChanges' for CompilerDependencyComparison" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'implementationChanges' for CompilerDependencyComparison" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'invalidations' for CompilerDependencyComparison" in
+    Obj.repr (CompilerDependencyComparison.create a0 a1 a2)
+  );
+  HxType.register_class_ctor "CompilerDependencyEdge" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'consumerModule' for CompilerDependencyEdge" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'providerModule' for CompilerDependencyEdge" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'phase' for CompilerDependencyEdge" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'kind' for CompilerDependencyEdge" in
+    let a4 = if len > 4 then Obj.obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'factIdentity' for CompilerDependencyEdge" in
+    Obj.repr (CompilerDependencyEdge.create a0 a1 a2 a3 a4)
+  );
+  HxType.register_class_ctor "CompilerDependencyInvalidation" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'modulePath' for CompilerDependencyInvalidation" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'reasonPath' for CompilerDependencyInvalidation" in
+    Obj.repr (CompilerDependencyInvalidation.create a0 a1)
+  );
+  HxType.register_class_ctor "CompilerDependencyInvalidator" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyInvalidator.create ())
+  );
+  HxType.register_class_ctor "CompilerDependencyKindTools" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyKindTools.create ())
+  );
+  HxType.register_class_ctor "CompilerDependencyPhaseTools" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyPhaseTools.create ())
+  );
+  HxType.register_class_ctor "CompilerDependencySnapshot" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'modules' for CompilerDependencySnapshot" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'edges' for CompilerDependencySnapshot" in
+    Obj.repr (CompilerDependencySnapshot.create a0 a1)
+  );
   HxType.register_class_ctor "CompilerDriver" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerDriver.create ())
   );
@@ -1209,6 +1293,9 @@ let init () : unit =
     let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'selectedClassPathIndex' for CompilerModuleResolution" in
     let a4 = if len > 4 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'usedSecondaryTypeFallback' for CompilerModuleResolution" in
     Obj.repr (CompilerModuleResolution.create a0 a1 a2 a3 a4)
+  );
+  HxType.register_class_ctor "CompilerObservationFingerprint" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerObservationFingerprint.create ())
   );
   HxType.register_class_ctor "CompilerRequestStaticState" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerRequestStaticState.create ())
@@ -1223,6 +1310,14 @@ let init () : unit =
   );
   HxType.register_class_ctor "CompilerSourceResolver" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerSourceResolver.create ())
+  );
+  HxType.register_class_ctor "CompilerTypedModuleRevision" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'modulePath' for CompilerTypedModuleRevision" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'publicInterfaceRevision' for CompilerTypedModuleRevision" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'implementationRevision' for CompilerTypedModuleRevision" in
+    let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (CompilerTypedModuleRevision.create a0 a1 a2 a3)
   );
   HxType.register_class_ctor "EmitterCallSigIndex" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (EmitterCallSigIndex.create ())
@@ -2038,7 +2133,8 @@ let init () : unit =
     let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'bufferOutput' for hxhx.CompilationRequestContext" in
     let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'isServerRequest' for hxhx.CompilationRequestContext" in
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (Hxhx_CompilationRequestContext.create a0 a1 a2 a3)
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (Hxhx_CompilationRequestContext.create a0 a1 a2 a3 a4)
   );
   HxType.register_class_ctor "hxhx.CompilationRequestOutput" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -2096,6 +2192,23 @@ let init () : unit =
     let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'source' for hxhx.CompilationServerCachedSource" in
     let a4 = if len > 4 then Obj.obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'retainedBytesEstimate' for hxhx.CompilationServerCachedSource" in
     Obj.repr (Hxhx_CompilationServerCachedSource.create a0 a1 a2 a3 a4)
+  );
+  HxType.register_class_ctor "hxhx.CompilationServerDependencyCatalog" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else HxRuntime.hx_null in
+    Obj.repr (Hxhx_CompilationServerDependencyCatalog.create a0)
+  );
+  HxType.register_class_ctor "hxhx.CompilationServerDependencyReport" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'enabled' for hxhx.CompilationServerDependencyReport" in
+    Obj.repr (Hxhx_CompilationServerDependencyReport.create a0)
+  );
+  HxType.register_class_ctor "hxhx.CompilationServerDependencyRequest" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'invocationIdentity' for hxhx.CompilationServerDependencyRequest" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'previousSnapshot' for hxhx.CompilationServerDependencyRequest" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'publish' for hxhx.CompilationServerDependencyRequest" in
+    Obj.repr (Hxhx_CompilationServerDependencyRequest.create a0 a1 a2)
   );
   HxType.register_class_ctor "hxhx.CompilationServerProtocol" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_CompilationServerProtocol.create ())
@@ -2405,12 +2518,22 @@ let init () : unit =
   );
   HxType.register_class_empty_ctor "CSharpNoEmitDiagnostics" (fun () -> Obj.repr (CSharpNoEmitDiagnostics.__empty ()));
   HxType.register_class_empty_ctor "CompilerCacheIdentity" (fun () -> Obj.repr (CompilerCacheIdentity.__empty ()));
+  HxType.register_class_empty_ctor "CompilerDependencyCollector" (fun () -> Obj.repr (CompilerDependencyCollector.__empty ()));
+  HxType.register_class_empty_ctor "CompilerDependencyComparison" (fun () -> Obj.repr (CompilerDependencyComparison.__empty ()));
+  HxType.register_class_empty_ctor "CompilerDependencyEdge" (fun () -> Obj.repr (CompilerDependencyEdge.__empty ()));
+  HxType.register_class_empty_ctor "CompilerDependencyInvalidation" (fun () -> Obj.repr (CompilerDependencyInvalidation.__empty ()));
+  HxType.register_class_empty_ctor "CompilerDependencyInvalidator" (fun () -> Obj.repr (CompilerDependencyInvalidator.__empty ()));
+  HxType.register_class_empty_ctor "CompilerDependencyKindTools" (fun () -> Obj.repr (CompilerDependencyKindTools.__empty ()));
+  HxType.register_class_empty_ctor "CompilerDependencyPhaseTools" (fun () -> Obj.repr (CompilerDependencyPhaseTools.__empty ()));
+  HxType.register_class_empty_ctor "CompilerDependencySnapshot" (fun () -> Obj.repr (CompilerDependencySnapshot.__empty ()));
   HxType.register_class_empty_ctor "CompilerDriver" (fun () -> Obj.repr (CompilerDriver.__empty ()));
   HxType.register_class_empty_ctor "CompilerModuleResolution" (fun () -> Obj.repr (CompilerModuleResolution.__empty ()));
+  HxType.register_class_empty_ctor "CompilerObservationFingerprint" (fun () -> Obj.repr (CompilerObservationFingerprint.__empty ()));
   HxType.register_class_empty_ctor "CompilerRequestStaticState" (fun () -> Obj.repr (CompilerRequestStaticState.__empty ()));
   HxType.register_class_empty_ctor "CompilerSourceProvider" (fun () -> Obj.repr (CompilerSourceProvider.__empty ()));
   HxType.register_class_empty_ctor "CompilerSourceProviderReport" (fun () -> Obj.repr (CompilerSourceProviderReport.__empty ()));
   HxType.register_class_empty_ctor "CompilerSourceResolver" (fun () -> Obj.repr (CompilerSourceResolver.__empty ()));
+  HxType.register_class_empty_ctor "CompilerTypedModuleRevision" (fun () -> Obj.repr (CompilerTypedModuleRevision.__empty ()));
   HxType.register_class_empty_ctor "EmitterCallSigIndex" (fun () -> Obj.repr (EmitterCallSigIndex.__empty ()));
   HxType.register_class_empty_ctor "EmitterNumericUpdate" (fun () -> Obj.repr (EmitterNumericUpdate.__empty ()));
   HxType.register_class_empty_ctor "EmitterStage" (fun () -> Obj.repr (EmitterStage.__empty ()));
@@ -2575,6 +2698,9 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.CompilationServerCachedParse" (fun () -> Obj.repr (Hxhx_CompilationServerCachedParse.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerCachedResolution" (fun () -> Obj.repr (Hxhx_CompilationServerCachedResolution.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerCachedSource" (fun () -> Obj.repr (Hxhx_CompilationServerCachedSource.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CompilationServerDependencyCatalog" (fun () -> Obj.repr (Hxhx_CompilationServerDependencyCatalog.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CompilationServerDependencyReport" (fun () -> Obj.repr (Hxhx_CompilationServerDependencyReport.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CompilationServerDependencyRequest" (fun () -> Obj.repr (Hxhx_CompilationServerDependencyRequest.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerProtocol" (fun () -> Obj.repr (Hxhx_CompilationServerProtocol.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerReply" (fun () -> Obj.repr (Hxhx_CompilationServerReply.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerRequest" (fun () -> Obj.repr (Hxhx_CompilationServerRequest.__empty ()));
@@ -2651,10 +2777,28 @@ let init () : unit =
   HxType.register_class_static_fields "CSharpNoEmitDiagnostics" [ "appendAssemblyMetadataDiagnostics"; "appendIncompatibleConstraintDiagnostics"; "appendUsingMetadataDiagnostics"; "assemblyMetadataDiagnostic"; "diagnosticFileName"; "diagnosticForParsed"; "diagnosticForResolved"; "diagnosticPath"; "hasNamedPackage"; "incompatibleConstraintDiagnosticForLine"; "incompatibleConstraintDiagnosticForParsed"; "incompatibleConstraintDiagnosticForResolved"; "isTypeDeclarationLine"; "nextSignificantTypeLineIndex"; "usingMetadataDiagnostic" ];
   HxType.register_class_instance_fields "CompilerCacheIdentity" [];
   HxType.register_class_static_fields "CompilerCacheIdentity" [ "encode" ];
+  HxType.register_class_instance_fields "CompilerDependencyCollector" [];
+  HxType.register_class_static_fields "CompilerDependencyCollector" [ "addEdge"; "collect"; "collectExpression"; "collectModuleEdges"; "collectResolvedPath"; "collectStatement"; "collectType"; "compareText"; "normalizeImport" ];
+  HxType.register_class_instance_fields "CompilerDependencyComparison" [ "getImplementationChanges"; "getInvalidations"; "getPublicInterfaceChanges"; "implementationChanges"; "invalidations"; "isAffected"; "publicInterfaceChanges"; "reasonFor" ];
+  HxType.register_class_static_fields "CompilerDependencyComparison" [ "compareInvalidations"; "compareText"; "sortedCopy" ];
+  HxType.register_class_instance_fields "CompilerDependencyEdge" [ "canonicalKey"; "consumerModule"; "describe"; "factIdentity"; "kind"; "phase"; "providerModule" ];
+  HxType.register_class_static_fields "CompilerDependencyEdge" [ "normalize" ];
+  HxType.register_class_instance_fields "CompilerDependencyInvalidation" [ "describe"; "modulePath"; "reasonPath" ];
+  HxType.register_class_static_fields "CompilerDependencyInvalidation" [];
+  HxType.register_class_instance_fields "CompilerDependencyInvalidator" [];
+  HxType.register_class_static_fields "CompilerDependencyInvalidator" [ "compare"; "compareEdges"; "compareText"; "mark"; "moduleMap"; "reverseEdgeMap"; "unionModuleNames" ];
+  HxType.register_class_instance_fields "CompilerDependencyKindTools" [];
+  HxType.register_class_static_fields "CompilerDependencyKindTools" [ "consumesImplementation"; "name" ];
+  HxType.register_class_instance_fields "CompilerDependencyPhaseTools" [];
+  HxType.register_class_static_fields "CompilerDependencyPhaseTools" [ "name" ];
+  HxType.register_class_instance_fields "CompilerDependencySnapshot" [ "canonicalIdentity"; "edges"; "findModule"; "getCanonicalIdentity"; "getEdges"; "getModules"; "modules" ];
+  HxType.register_class_static_fields "CompilerDependencySnapshot" [ "buildCanonicalIdentity"; "compareEdges"; "compareModules"; "compareText"; "normalizeModules" ];
   HxType.register_class_instance_fields "CompilerDriver" [];
   HxType.register_class_static_fields "CompilerDriver" [ "run" ];
   HxType.register_class_instance_fields "CompilerModuleResolution" [ "filePath"; "lookupIdentity"; "observationRevision"; "selectedClassPathIndex"; "usedSecondaryTypeFallback" ];
   HxType.register_class_static_fields "CompilerModuleResolution" [];
+  HxType.register_class_instance_fields "CompilerObservationFingerprint" [];
+  HxType.register_class_static_fields "CompilerObservationFingerprint" [ "display" ];
   HxType.register_class_instance_fields "CompilerRequestStaticState" [];
   HxType.register_class_static_fields "CompilerRequestStaticState" [ "reset" ];
   HxType.register_class_instance_fields "CompilerSourceProvider" [ "finish"; "finishCallback"; "isFile"; "isFileCallback"; "parseFilteredSource"; "parseFilteredSourceCallback"; "prepareFinish"; "prepareFinishCallback"; "readDirectory"; "readDirectoryCallback"; "readSource"; "readSourceCallback"; "report"; "reportCallback"; "resolveModuleFile"; "resolveModuleFileCallback" ];
@@ -2663,6 +2807,8 @@ let init () : unit =
   HxType.register_class_static_fields "CompilerSourceProviderReport" [ "compareStrings" ];
   HxType.register_class_instance_fields "CompilerSourceResolver" [];
   HxType.register_class_static_fields "CompilerSourceResolver" [ "compareStrings"; "contains"; "find"; "missing"; "normalizePath"; "observationRevision"; "resolve" ];
+  HxType.register_class_instance_fields "CompilerTypedModuleRevision" [ "implementationRevision"; "modulePath"; "publicInterfaceRevision"; "sourceRevision" ];
+  HxType.register_class_static_fields "CompilerTypedModuleRevision" [ "addBools"; "addPattern"; "addPublicClassFacts"; "addResolvedTypePath"; "addStrings"; "addTypedExpression"; "addTypedStatement"; "addTypes"; "compareText"; "expressionTagName"; "fromTypedModule"; "mergeContributions"; "normalize"; "opaqueKindName"; "semanticModulePath"; "statementTagName"; "unaryFixityName"; "unaryOperatorName"; "uniqueSorted" ];
   HxType.register_class_instance_fields "EmitterCallSigIndex" [];
   HxType.register_class_static_fields "EmitterCallSigIndex" [ "get" ];
   HxType.register_class_instance_fields "EmitterNumericUpdate" [];
@@ -2983,7 +3129,7 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.BuildMetadataCollector" [ "collectBuildMacroExprs"; "findBuildMacroExprs"; "matchesMetadataPathFilter"; "trim" ];
   HxType.register_class_instance_fields "hxhx.CliRouting" [];
   HxType.register_class_static_fields "hxhx.CliRouting" [ "addDefineIfMissing"; "addDefineIfMissingForPlanning"; "addLibraryIfMissing"; "addLibraryIfMissingForPlanning"; "addMacroIfMissing"; "canRouteCommandOnlyUnitsAsStage3"; "canRouteMixedUnitsAsNativeJs"; "canRouteMixedUnitsAsNativeSource"; "canRouteUnitsAsNativeCpp"; "consumesStandardTargetValue"; "findFlagValue"; "findSourceHostReflaxeTarget"; "findUnsupportedLegacyTarget"; "flattenUnits"; "getDefineValue"; "hasCommandHook"; "hasCppTargetFlag"; "hasDefine"; "hasFlag"; "hasHlTargetFlag"; "hasLibrary"; "hasMacro"; "hasNekoTargetFlag"; "hasNonCppStandardTargetFlag"; "hasNonHlStandardTargetFlag"; "hasNonNekoStandardTargetFlag"; "hasNonSourceStandardTargetFlag"; "hasSourceTargetFlag"; "hasStandardJsTargetFlag"; "isJsNativeHelperUnit"; "isNativeNekoCommandHelperUnit"; "listLaneSelectors"; "plan"; "planningTargetArgs"; "planningTargetUnits"; "pureSourceTarget"; "scanStandardTargetFlags"; "sourceTargetCandidates"; "sourceTargetForUnits"; "stripRoutingFlags" ];
-  HxType.register_class_instance_fields "hxhx.CompilationRequestContext" [ "activePhase"; "activePhaseStartedAtSeconds"; "baselineReportEnabled"; "beginPhase"; "cancellationReason"; "cancellationReported"; "cancellationStage"; "checkpoint"; "cleanupActions"; "cleanupSucceeded"; "close"; "closed"; "configureTimeoutMs"; "deadlineAtSeconds"; "emitBaselineReport"; "enableBaselineReport"; "ensureOpen"; "finishActivePhase"; "isCancelled"; "isClosed"; "isServerRequest"; "output"; "outputTransaction"; "phaseElapsedSeconds"; "phaseOrder"; "prepareOutput"; "recordActivePhase"; "registerCleanup"; "reportCleanupFailure"; "requestCancellation"; "requestId"; "sealOutput"; "sourceProvider"; "stagedEmitResult"; "startedAtSeconds" ];
+  HxType.register_class_instance_fields "hxhx.CompilationRequestContext" [ "activePhase"; "activePhaseStartedAtSeconds"; "baselineReportEnabled"; "beginPhase"; "cancellationReason"; "cancellationReported"; "cancellationStage"; "checkpoint"; "cleanupActions"; "cleanupSucceeded"; "close"; "closed"; "configureTimeoutMs"; "deadlineAtSeconds"; "dependencyRequest"; "emitBaselineReport"; "enableBaselineReport"; "ensureOpen"; "finishActivePhase"; "isCancelled"; "isClosed"; "isServerRequest"; "output"; "outputTransaction"; "phaseElapsedSeconds"; "phaseOrder"; "prepareOutput"; "recordActivePhase"; "recordDependencySnapshot"; "registerCleanup"; "reportCleanupFailure"; "requestCancellation"; "requestId"; "requireDependencySnapshot"; "sealOutput"; "sourceProvider"; "stagedEmitResult"; "startedAtSeconds" ];
   HxType.register_class_static_fields "hxhx.CompilationRequestContext" [ "direct"; "normalizeLabel"; "server" ];
   HxType.register_class_instance_fields "hxhx.CompilationRequestOutput" [ "buffered"; "captured"; "close"; "closed"; "events"; "stderrLine"; "stdoutLine"; "write" ];
   HxType.register_class_static_fields "hxhx.CompilationRequestOutput" [ "writeStderrLine"; "writeStdoutLine" ];
@@ -2999,6 +3145,12 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.CompilationServerCachedResolution" [];
   HxType.register_class_instance_fields "hxhx.CompilationServerCachedSource" [ "contentRevision"; "key"; "logicalPath"; "retainedBytesEstimate"; "source" ];
   HxType.register_class_static_fields "hxhx.CompilationServerCachedSource" [];
+  HxType.register_class_instance_fields "hxhx.CompilationServerDependencyCatalog" [ "invocationOrder"; "maxInvocations"; "openRequest"; "publish"; "reset"; "snapshotByInvocation"; "touch" ];
+  HxType.register_class_static_fields "hxhx.CompilationServerDependencyCatalog" [];
+  HxType.register_class_instance_fields "hxhx.CompilationServerDependencyReport" [ "comparison"; "edgeCount"; "enabled"; "hasPrevious"; "moduleCount"; "record"; "snapshotFingerprint" ];
+  HxType.register_class_static_fields "hxhx.CompilationServerDependencyReport" [];
+  HxType.register_class_instance_fields "hxhx.CompilationServerDependencyRequest" [ "ensureOpen"; "finish"; "finished"; "invocationIdentity"; "prepareFinish"; "preparedForSuccess"; "previousSnapshot"; "publishCallback"; "record"; "report"; "reportState"; "requireSnapshot"; "snapshotRequired"; "stagedSnapshot" ];
+  HxType.register_class_static_fields "hxhx.CompilationServerDependencyRequest" [];
   HxType.register_class_instance_fields "hxhx.CompilationServerProtocol" [];
   HxType.register_class_static_fields "hxhx.CompilationServerProtocol" [ "parseRequestTimeoutMs"; "requestLengthProblem" ];
   HxType.register_class_instance_fields "hxhx.CompilationServerReply" [ "events"; "isError"; "outputEvents"; "stopServer" ];
@@ -3158,12 +3310,22 @@ let init () : unit =
   HxType.register_class_super "sys.thread.NoEventLoopException" (HxType.class_ "haxe.Exception");
   HxType.register_class_tags "CSharpNoEmitDiagnostics" [ "CSharpNoEmitDiagnostics" ];
   HxType.register_class_tags "CompilerCacheIdentity" [ "CompilerCacheIdentity" ];
+  HxType.register_class_tags "CompilerDependencyCollector" [ "CompilerDependencyCollector" ];
+  HxType.register_class_tags "CompilerDependencyComparison" [ "CompilerDependencyComparison" ];
+  HxType.register_class_tags "CompilerDependencyEdge" [ "CompilerDependencyEdge" ];
+  HxType.register_class_tags "CompilerDependencyInvalidation" [ "CompilerDependencyInvalidation" ];
+  HxType.register_class_tags "CompilerDependencyInvalidator" [ "CompilerDependencyInvalidator" ];
+  HxType.register_class_tags "CompilerDependencyKindTools" [ "CompilerDependencyKindTools" ];
+  HxType.register_class_tags "CompilerDependencyPhaseTools" [ "CompilerDependencyPhaseTools" ];
+  HxType.register_class_tags "CompilerDependencySnapshot" [ "CompilerDependencySnapshot" ];
   HxType.register_class_tags "CompilerDriver" [ "CompilerDriver" ];
   HxType.register_class_tags "CompilerModuleResolution" [ "CompilerModuleResolution" ];
+  HxType.register_class_tags "CompilerObservationFingerprint" [ "CompilerObservationFingerprint" ];
   HxType.register_class_tags "CompilerRequestStaticState" [ "CompilerRequestStaticState" ];
   HxType.register_class_tags "CompilerSourceProvider" [ "CompilerSourceProvider" ];
   HxType.register_class_tags "CompilerSourceProviderReport" [ "CompilerSourceProviderReport" ];
   HxType.register_class_tags "CompilerSourceResolver" [ "CompilerSourceResolver" ];
+  HxType.register_class_tags "CompilerTypedModuleRevision" [ "CompilerTypedModuleRevision" ];
   HxType.register_class_tags "EmitterCallSigIndex" [ "EmitterCallSigIndex" ];
   HxType.register_class_tags "EmitterNumericUpdate" [ "EmitterNumericUpdate" ];
   HxType.register_class_tags "EmitterStage" [ "EmitterStage" ];
@@ -3364,6 +3526,9 @@ let init () : unit =
   HxType.register_class_tags "hxhx.CompilationServerCachedParse" [ "hxhx.CompilationServerCachedParse" ];
   HxType.register_class_tags "hxhx.CompilationServerCachedResolution" [ "hxhx.CompilationServerCachedResolution" ];
   HxType.register_class_tags "hxhx.CompilationServerCachedSource" [ "hxhx.CompilationServerCachedSource" ];
+  HxType.register_class_tags "hxhx.CompilationServerDependencyCatalog" [ "hxhx.CompilationServerDependencyCatalog" ];
+  HxType.register_class_tags "hxhx.CompilationServerDependencyReport" [ "hxhx.CompilationServerDependencyReport" ];
+  HxType.register_class_tags "hxhx.CompilationServerDependencyRequest" [ "hxhx.CompilationServerDependencyRequest" ];
   HxType.register_class_tags "hxhx.CompilationServerProtocol" [ "hxhx.CompilationServerProtocol" ];
   HxType.register_class_tags "hxhx.CompilationServerReply" [ "hxhx.CompilationServerReply" ];
   HxType.register_class_tags "hxhx.CompilationServerRequest" [ "hxhx.CompilationServerRequest" ];

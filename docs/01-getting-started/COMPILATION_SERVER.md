@@ -15,9 +15,12 @@ This guide explains Haxe's compilation server, how it relates to
   producing a valid OCaml build.
 - Native `hxhx` now has its first in-memory reuse layer: successful requests
   can reuse exact source text, checked module-file lookup results, and parsed
-  Haxe modules. It does not yet reuse type-checking, macros, target generation,
-  or native build results, so it is still an experimental server rather than a
-  complete incremental compiler.
+  Haxe modules. Its opt-in report can also compare an initial set of
+  typed-module dependencies and predict which modules a future cache would
+  need to check again for the currently covered imports, types, and calls. It
+  does not yet reuse type-checking, macros, target generation, or native build
+  results, so it is still an experimental server rather than a complete
+  incremental compiler.
 - For safe iteration today, use fresh-Haxe `reflaxe.ocaml` generation plus
   Dune's incremental OCaml build, or build `hxhx` from the committed bootstrap
   snapshot. Use the documented fingerprint skip when the inputs are unchanged.
@@ -47,7 +50,10 @@ when the request ends, hxhx closes its macro session and clears request-specific
 macro definitions and backend-plugin registrations before accepting the next
 request. An opt-in `--hxhx-server-report` result identifies the request, reports
 whether cleanup succeeded, measures named compiler phases and total time, and
-shows source, module-lookup, and parser cache decisions.
+shows source, module-lookup, and parser cache decisions. It also enables the
+initial dependency observer: hxhx still type checks every module, then reports
+which covered module facts changed and which callers would need to be checked
+again if typed results were reusable.
 
 Display remains a bring-up response. Explicit shutdown now works for both
 native transports: the requesting client receives a confirmation, request
@@ -136,14 +142,14 @@ These are different products and should not be confused:
 | Server | What runs | Current purpose | Incremental status |
 | --- | --- | --- | --- |
 | Upstream Haxe server | Haxe 4.3.7 started with `--wait` | Upstream compilation and editor/display requests | Haxe owns real parsed/typed module reuse. Warm Reflaxe target output is not yet supported here. |
-| Native `hxhx` server | A compiled `hxhx` process | Protocol, compiler bring-up, and measured incremental-cache development | Exact source/module-lookup/parser reuse exists. Typing and later compiler stages still rerun, so complete dependency-aware reuse is not delivered yet. |
+| Native `hxhx` server | A compiled `hxhx` process | Protocol, compiler bring-up, and measured incremental-cache development | Exact source/module-lookup/parser reuse exists. Initial opt-in dependency observation covers imports, resolved types, and ordinary/inline calls, but typing and later compiler stages still rerun. |
 
 **Transport** means how a request reaches a long-lived process. **Incremental
 compilation** means the compiler also knows exactly which previous results are
 safe to reuse and what must be rebuilt. The native `hxhx` work is not complete
 until both parts work together.
 
-### Current source, module-lookup, and parser report
+### Current cache and dependency report
 
 The in-development native server accepts `--hxhx-server-report` as a base or
 request argument. It adds lines like these to that client's response:
@@ -164,6 +170,16 @@ hxhx_server_report.resolution_misses=0
 hxhx_server_report.parser_hits=1
 hxhx_server_report.parser_misses=0
 hxhx_server_report.cache_evictions=0
+hxhx_server_report.dependency_observation=enabled
+hxhx_server_report.dependency_previous_snapshot=1
+hxhx_server_report.dependency_modules=2
+hxhx_server_report.dependency_edges=3
+hxhx_server_report.dependency_snapshot=display31-v1:4821:-120039371
+hxhx_server_report.dependency_public_changes=0
+hxhx_server_report.dependency_implementation_changes=1
+hxhx_server_report.dependency_predicted_invalidations=1
+hxhx_server_report.dependency_invalidation[0].module=Api
+hxhx_server_report.dependency_invalidation[0].reason=implementation-changed:Api
 hxhx_server_report.cache_miss_reason_count=0
 hxhx_server_report.cancelled=0
 hxhx_server_report.output_transaction=committed
@@ -181,6 +197,38 @@ A **miss** means hxhx safely recomputed that work. Miss reasons include
 `cold`, `source-changed`, `parser-input-changed`, `origin-shadowed`, and
 `evicted`. These names explain performance; they do not change compiler
 behavior.
+
+The dependency fields are a rehearsal for typed-module caching. A **public
+interface** is the part of a module another module can compile against, such as
+a public function's argument and return types. An **implementation** is the
+function body and other private work behind that interface. A **dependency
+edge** records why one module used another, such as importing it or calling one
+of its functions.
+
+For example, changing only `Api.answer()`'s ordinary function body reports an
+implementation change for `Api` but does not predict that a signature-only
+caller must be type checked again. Changing `answer()`'s return type reports a
+public-interface change and predicts that the caller must be checked again.
+Changing an inline body affects only callers that actually use that inline
+function, because the compiler may embed the body into those callers. A module
+that only imports the provider does not need to be rechecked for that edit. The
+current focused tests build both program versions from scratch and assert these
+initial predictions. They do not yet independently derive the complete
+affected-module set for every Haxe feature, and the
+predictions do not currently skip typing.
+
+The observer is not yet a complete typed-cache safety proof. It still needs
+coverage for constants, generated declarations, macro observations,
+feature/DCE state, static initialization, target/profile changes, and source
+origin changes such as class-path shadowing. Until those cases and their edit
+sequences pass clean-versus-warm comparison, hxhx must continue type checking
+every module.
+
+Dependency observation runs only when `--hxhx-server-report` is present. This
+keeps ordinary experimental requests from paying its current full-program
+recording cost. The readable dependency fingerprint detects accidental report
+nondeterminism, but it is not a cache key and cannot make a request reuse typed
+work.
 
 The current layer works as follows:
 

@@ -401,6 +401,9 @@ class Stage3Compiler {
 				return error(commandOnlyError);
 			return 0;
 		}
+		// This request has selected compiler roots and will enter shared typing.
+		// Command-only, display, and server-control requests never make this promise.
+		requestContext.requireDependencySnapshot();
 
 		final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
 		final finalOutputFileHint = if (targetOutputHintRaw != null && targetOutputHintRaw.length > 0) {
@@ -794,6 +797,7 @@ class Stage3Compiler {
 				closeMacroSession();
 				return error(typeOnlyHookError);
 			}
+			requestContext.recordDependencySnapshot(sealedTypedModules, typerIndex);
 
 			closeMacroSession();
 			requestOutput.stdoutLine("typed_modules=" + typedCount);
@@ -878,6 +882,7 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error(hookError);
 		}
+		requestContext.recordDependencySnapshot(typedModules, typerIndex);
 
 		final providerDefines = Stage3BackendPluginSupport.buildProviderDefines(allDefines);
 		final backendSelection = try {

@@ -97,6 +97,7 @@ class Stage3WaitServer {
 		final input = Sys.stdin();
 		input.bigEndian = false;
 		final serverCache = new CompilationServerSourceCache();
+		final dependencyCatalog = new CompilationServerDependencyCatalog();
 		var requestId = 0;
 
 		while (true) {
@@ -122,7 +123,7 @@ class Stage3WaitServer {
 			};
 			requestId += 1;
 			final request = CompilationServerRequestCodec.decode(requestId, baseArgs, frame);
-			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne, serverCache);
+			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne, serverCache, dependencyCatalog);
 			writeWaitStdioReply(reply);
 			if (reply.stopServer)
 				return 0;
@@ -133,11 +134,12 @@ class Stage3WaitServer {
 			error:String->Int):Int {
 		var requestId = 0;
 		final serverCache = new CompilationServerSourceCache();
+		final dependencyCatalog = new CompilationServerDependencyCatalog();
 		final stopAfterReply = new CompilationServerStopSignal();
 		final handleRequest = function(payload:String):String {
 			requestId += 1;
 			final request = CompilationServerRequestCodec.decodeString(requestId, baseArgs, payload);
-			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne, serverCache);
+			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne, serverCache, dependencyCatalog);
 			stopAfterReply.record(reply.stopServer);
 			return CompilationServerRequestCodec.encodeSocketReply(reply);
 		};

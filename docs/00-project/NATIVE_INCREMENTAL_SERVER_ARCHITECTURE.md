@@ -1,6 +1,7 @@
 # Native hxhx incremental server architecture
 
-Status: implemented source/module-lookup/parser layer; experimental user route.
+Status: implemented source/module-lookup/parser reuse and initial dependency
+observation; experimental user route.
 
 This is the living implementation contract for `haxe_ocaml-850ii.32`. The
 independent design review and its wider roadmap remain in
@@ -27,6 +28,11 @@ complete input so a hash collision cannot produce a false match. A result is
 
 This is not yet a complete incremental compiler. Type checking, macros,
 whole-program analysis, target generation, and native building still rerun.
+With `--hxhx-server-report`, hxhx now also records an initial set of reasons
+that typed modules used other modules and predicts which modules a future typed
+cache would need to check again after those covered facts change. This is
+deliberately an **observation**, not a cache hit: every module is still type
+checked normally.
 
 ## Small mental model
 
@@ -39,10 +45,11 @@ socket or stdio request
        -> recheck and validate/reuse module lookup
   -> validate/reuse parsed module
   -> fresh resolver, typer, macro session, target builder
+  -> optionally observe typed-module revisions and dependency edges
   -> successful cleanup
   -> validate new read-only cache entries
   -> publish generated output
-  -> publish new read-only cache entries
+  -> publish new read-only cache entries and successful observations
 ```
 
 The long-lived cache stores data. It does not decide Haxe typing, macro, or
@@ -58,6 +65,9 @@ target behavior. `Stage3Compiler` remains the one compiler owner.
 | `CompilerSourceProvider` | The request API for lookup, reads, parsing, reporting, and success-only publication | Haxe dependency or target semantics |
 | `CompilerSourceResolver` | Exact-case lookup order and the observations that prove its answer | Cache storage |
 | `CompilationServerSourceCache` | In-memory entries, hit/miss facts, staged publication, reset, and estimated-size eviction | Mutable request compiler state |
+| `CompilerDependencyCollector` | Read-only facts about module interfaces, typed bodies, imports, types, and resolved calls | Reusing a typed module or deciding target behavior |
+| `CompilationServerDependencyCatalog` | The last successful dependency snapshot for each exact reported invocation | Typed module storage or type checking |
+| `CompilerDependencyInvalidator` | A prediction of affected modules from two complete clean observations | Skipping compiler work |
 | `ResolverStage` and `ModuleLoader` | Which modules the current request needs | Persistent storage or eviction |
 | `ParserStage` | Turning filtered source into the Haxe parser model | Cross-request publication |
 
@@ -138,6 +148,56 @@ hxhx therefore records a deterministic structural description after parsing,
 checks it again before publication, and checks it on every reuse. A changed tree
 fails the request instead of becoming a stale hit.
 
+### Typed-module and dependency observations
+
+When `--hxhx-server-report` is present, hxhx observes the complete typed program
+after typing and generation hooks have finished. It records two identities for
+each module:
+
+- the **public-interface revision** describes declarations another module can
+  use, such as public function signatures; and
+- the **implementation revision** additionally describes the complete source
+  and target-neutral typed statements and expressions, including inline bodies.
+
+This split matters because changing a function body should not force every
+importer to be type checked again when its public signature is unchanged.
+Changing an inline function affects only callers with an explicit inline-call
+edge, because those callers may embed its body.
+
+A **dependency edge** is a plain record saying why one module used another.
+For example, `Main` may depend on `Api` because it imported `Api`, mentioned an
+`Api` type, called an ordinary public function, or called an inline function.
+The last case consumes both the public declaration and its implementation.
+
+The current collector covers those import, resolved-type, ordinary-call, and
+inline-call relationships. It does not yet prove complete invalidation for
+constants, generated declarations, macro observations, feature/DCE state,
+static initialization, target/profile changes, or module-origin changes such
+as class-path shadowing. The enum names for those future edge families reserve
+typed vocabulary; they are not a claim that collection is already complete.
+
+The observer compares the current successful snapshot with the previous
+successful snapshot for the exact compiler argument list. Public-interface
+changes propagate through all recorded callers. Body-only changes propagate
+only through edges that consume the implementation, such as inline calls.
+Reports are sorted and path-neutral. The short `display31-v1` fingerprint shown
+to a user is only a readable nondeterminism check; it is not collision-resistant
+and never authorizes reuse.
+
+Observation is opt-in so an ordinary server request does not pay this graph
+construction cost before typed-module reuse exists. Failed, cancelled, or
+output-publication-failed requests do not replace the previous successful
+snapshot. `reset` clears both the reusable source/parser entries and dependency
+history. The observer retains at most eight command-line variants. This is a
+temporary memory bound while exact observation identities still contain large
+source and typed representations; a future cache needs measured byte accounting
+and compact native digests before it can retain more.
+
+Only an ordinary compile promises a complete typed-program snapshot. Display,
+reset, and shutdown requests may still ask for the general server report, but
+they do not type a complete program and therefore neither publish an empty
+dependency snapshot nor fail for omitting one.
+
 ## Publication and failure behavior
 
 New results stay private to the request while compilation runs. The request
@@ -200,9 +260,19 @@ implemented.
   previous bytes when the previous source wins again; and
 - forced eviction followed by correct recomputation.
 
-Bootstrap regeneration, the generated OCaml build, and the public socket/stdio
-fixture pass for this implementation. The wider hxhx target suite remains a
-critical-phase closure gate rather than an every-edit inner-loop command.
+`npm run test:m14:compiler-dependency-observation` and
+`npm run test:m14:compilation-server-dependency-observation` cover:
+
+- deterministic dependency order independent of module input order;
+- imports, ordinary public calls, and inline calls;
+- ordinary body edits versus public-signature and inline-body edits;
+- predicted caller invalidation without skipping normal typing;
+- opt-in reporting, successful publication, failure discard, and reset.
+
+Bootstrap regeneration, the generated OCaml build, the public socket/stdio
+fixture, and the wider hxhx target/macro/plugin suite pass for this observer
+slice. The wider suite remains a critical-phase closure gate rather than an
+every-edit inner-loop command.
 
 ## Performance contract
 
@@ -233,11 +303,13 @@ representative-workload win.
 
 ## Next layers and hard boundaries
 
-The next planned steps are dependency-edge observation and sealed typed-module
-reuse. A **sealed typed module** means a completed, validated type-checking
-result that later requests can read but not mutate. It needs deterministic
-public-API, implementation, body, configuration, macro, and dependency
-revisions before admission.
+Initial dependency-edge observation is implemented. The next planned step is
+to cover the remaining compiler facts and prove the predicted affected-module
+set against clean recompilation across the full edit matrix. Only then may the
+project admit sealed typed-module reuse. A **sealed typed module** means a
+completed, validated type-checking result that later requests can read but not
+mutate. It needs deterministic public-API, implementation, body,
+configuration, macro, and dependency revisions before admission.
 
 Macros, compiler transforms, native plugins, target plans, display recovery,
 parallel requests, and persistent storage remain outside this first cache.

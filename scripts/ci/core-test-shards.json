@@ -152,6 +152,8 @@
     "test:m14:hxhx-display-exproft-completion": "compiler",
     "test:m14:compilation-server-request-dispatcher": "compiler",
     "test:m14:compilation-server-source-cache": "compiler",
+    "test:m14:compiler-dependency-observation": "compiler",
+    "test:m14:compilation-server-dependency-observation": "compiler",
     "test:m14:hxhx-compiler-server-runtime": "compiler",
     "test:portable": "target-packages",
     "test:snapshot": "target-packages",

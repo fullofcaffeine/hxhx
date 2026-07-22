@@ -1,0 +1,151 @@
+/**
+	Collects module dependency facts from the sealed target-neutral typed program.
+
+	Exact call nodes already retain the declaration chosen by typing, and semantic
+	types already retain canonical nominal identities. This collector walks those
+	facts after shared typing. Several typed contributions from secondary types in
+	one Haxe source module are merged before the graph is sealed. The collector does
+	not inspect generated target code and does not decide whether a typed module may
+	be reused.
+**/
+class CompilerDependencyCollector {
+	public static function collect(modules:Array<TypedModule>, index:TyperIndex):CompilerDependencySnapshot {
+		final contributionsByModule = new haxe.ds.StringMap<Array<CompilerTypedModuleRevision>>();
+		final edgeByKey = new haxe.ds.StringMap<CompilerDependencyEdge>();
+		if (modules != null) {
+			for (module in modules) {
+				if (module == null)
+					continue;
+				final contribution = CompilerTypedModuleRevision.fromTypedModule(module, index);
+				final existing = contributionsByModule.get(contribution.modulePath);
+				if (existing == null)
+					contributionsByModule.set(contribution.modulePath, [contribution]);
+				else
+					existing.push(contribution);
+				collectModuleEdges(module, contribution.modulePath, index, edgeByKey);
+			}
+		}
+		final modulePaths = [for (modulePath in contributionsByModule.keys()) modulePath];
+		modulePaths.sort(compareText);
+		final revisions = [
+			for (modulePath in modulePaths)
+				CompilerTypedModuleRevision.mergeContributions(modulePath, contributionsByModule.get(modulePath))
+		];
+		final edges = new Array<CompilerDependencyEdge>();
+		for (edge in edgeByKey)
+			edges.push(edge);
+		return new CompilerDependencySnapshot(revisions, edges);
+	}
+
+	static function collectModuleEdges(module:TypedModule, consumerModule:String, index:TyperIndex, edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>):Void {
+		final parsedDeclaration = module.getParsed().getDecl();
+		final packagePath = HxModuleDecl.getPackagePath(parsedDeclaration);
+		final imports = HxModuleDecl.getImports(parsedDeclaration);
+		for (rawImport in imports) {
+			final importPath = normalizeImport(rawImport);
+			if (importPath.length == 0 || StringTools.endsWith(importPath, ".*"))
+				continue;
+			final provider = index == null ? null : index.getByFullName(importPath);
+			if (provider != null)
+				addEdge(edgeByKey, consumerModule, provider.getModulePath(), CompilerDependencyPhase.ModuleResolution,
+					CompilerDependencyKind.ModuleResolution, "import:" + importPath);
+		}
+
+		for (typedClass in module.getTypedClasses()) {
+			final sourceClass = typedClass.getSourceDeclaration();
+			collectResolvedPath(edgeByKey, consumerModule, index, HxClassDecl.getExtendsPath(sourceClass), packagePath, imports, "extends");
+			for (implemented in HxClassDecl.getImplementsPaths(sourceClass))
+				collectResolvedPath(edgeByKey, consumerModule, index, implemented, packagePath, imports, "implements");
+			final semanticInfo = typedClass.getSemanticInfo();
+			if (semanticInfo != null)
+				for (declaration in semanticInfo.getDeclarations()) {
+					for (argument in declaration.getSignature().getArgs())
+						collectType(edgeByKey, consumerModule, index, argument, "signature:" + declaration.getIdentity().getCanonicalKey());
+					collectType(edgeByKey, consumerModule, index, declaration.getSignature().getReturnType(),
+						"signature:" + declaration.getIdentity().getCanonicalKey());
+				}
+			for (typedFunction in typedClass.getFunctions())
+				for (statement in typedFunction.getBody().getStatements())
+					collectStatement(edgeByKey, consumerModule, index, statement);
+		}
+	}
+
+	static function collectStatement(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex, statement:TypedStmt):Void {
+		if (statement == null)
+			return;
+		for (expression in statement.getExpressions())
+			collectExpression(edgeByKey, consumerModule, index, expression);
+		for (child in statement.getStatements())
+			collectStatement(edgeByKey, consumerModule, index, child);
+	}
+
+	static function collectExpression(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex, expression:TypedExpr):Void {
+		if (expression == null)
+			return;
+		collectType(edgeByKey, consumerModule, index, expression.getType(), "expression-type");
+		final declaration = expression.getDeclaration();
+		if (declaration != null) {
+			final provider = index == null ? null : index.getByFullName(declaration.getOwner().getCanonicalName());
+			if (provider != null) {
+				final kind = declaration.getIsInline() ? CompilerDependencyKind.InlineImplementation : CompilerDependencyKind.PublicInterface;
+				addEdge(edgeByKey, consumerModule, provider.getModulePath(), CompilerDependencyPhase.SharedTyping, kind,
+					"declaration:" + declaration.getIdentity().getCanonicalKey());
+			}
+		}
+		for (child in expression.getExpressions())
+			collectExpression(edgeByKey, consumerModule, index, child);
+	}
+
+	static function collectType(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex, type:TyType,
+			factIdentity:String):Void {
+		if (type == null)
+			return;
+		final identity = type.getNominalIdentity();
+		if (identity != null) {
+			final provider = index == null ? null : index.getByFullName(identity.getCanonicalName());
+			if (provider != null)
+				addEdge(edgeByKey, consumerModule, provider.getModulePath(), CompilerDependencyPhase.SharedTyping, CompilerDependencyKind.PublicInterface,
+					factIdentity + ":" + identity.getCanonicalName());
+		}
+		for (argument in type.getTypeArguments())
+			collectType(edgeByKey, consumerModule, index, argument, factIdentity);
+		if (type.isNullable())
+			collectType(edgeByKey, consumerModule, index, type.getNullableInner(), factIdentity);
+		if (type.isFunction()) {
+			for (argument in type.getFunctionArguments())
+				collectType(edgeByKey, consumerModule, index, argument, factIdentity);
+			collectType(edgeByKey, consumerModule, index, type.getFunctionReturn(), factIdentity);
+		}
+	}
+
+	static function collectResolvedPath(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex, typePath:String,
+			packagePath:String, imports:Array<String>, label:String):Void {
+		if (index == null || typePath == null || StringTools.trim(typePath).length == 0)
+			return;
+		final provider = index.resolveTypePath(typePath, packagePath, imports);
+		if (provider != null)
+			addEdge(edgeByKey, consumerModule, provider.getModulePath(), CompilerDependencyPhase.ModuleResolution, CompilerDependencyKind.PublicInterface,
+				label + ":" + provider.getIdentity().getCanonicalName());
+	}
+
+	static function addEdge(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, providerModule:String, phase:CompilerDependencyPhase,
+			kind:CompilerDependencyKind, factIdentity:String):Void {
+		if (providerModule == null || StringTools.trim(providerModule).length == 0 || consumerModule == providerModule)
+			return;
+		final edge = new CompilerDependencyEdge(consumerModule, providerModule, phase, kind, factIdentity);
+		edgeByKey.set(edge.canonicalKey(), edge);
+	}
+
+	static function normalizeImport(raw:String):String {
+		var value = raw == null ? "" : StringTools.trim(raw);
+		if (StringTools.startsWith(value, "using "))
+			value = StringTools.trim(value.substr("using ".length));
+		final aliasIndex = value.indexOf(" as ");
+		if (aliasIndex >= 0)
+			value = StringTools.trim(value.substr(0, aliasIndex));
+		return value;
+	}
+
+	static function compareText(left:String, right:String):Int
+		return left < right ? -1 : (left > right ? 1 : 0);
+}

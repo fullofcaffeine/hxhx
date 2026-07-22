@@ -276,6 +276,7 @@ let runOne = fun args requestContext -> try let __fallback_result_199 = let requ
                           )) else ());
                           raise (HxRuntime.Hx_return (Obj.repr 0))
                         )) else ());
+                        ignore (Hxhx_CompilationRequestContext.requireDependencySnapshot (Obj.magic requestContext) ());
                         let tempString2 = ref ("" : string) in (
                           ignore (if HxString.length outDir > 0 then let __assign_42 = (outDir : string) in (
                             tempString2 := __assign_42;
@@ -968,6 +969,7 @@ let runOne = fun args requestContext -> try let __fallback_result_199 = let requ
                                                                     ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic requestOutput) ("hxhx(stage3): " ^ HxString.toStdString typeOnlyHookError : string));
                                                                     let tempResult30 = 2 in raise (HxRuntime.Hx_return (Obj.repr tempResult30))
                                                                   )) else ());
+                                                                  ignore (Hxhx_CompilationRequestContext.recordDependencySnapshot (Obj.magic requestContext) (Obj.magic sealedTypedModules) (Obj.magic typerIndex));
                                                                   ignore (closeMacroSession ());
                                                                   ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic requestOutput) ("typed_modules=" ^ string_of_int (!typedCount) : string));
                                                                   ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic requestOutput) ("header_only_modules=" ^ string_of_int (!headerOnlyCount) : string));
@@ -1169,6 +1171,7 @@ let runOne = fun args requestContext -> try let __fallback_result_199 = let requ
                                                                     ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic requestOutput) ("hxhx(stage3): " ^ HxString.toStdString hookError : string));
                                                                     let tempResult37 = 2 in raise (HxRuntime.Hx_return (Obj.repr tempResult37))
                                                                   )) else ());
+                                                                  ignore (Hxhx_CompilationRequestContext.recordDependencySnapshot (Obj.magic requestContext) (Obj.magic typedModules) (Obj.magic typerIndex));
                                                                   let providerDefines = Obj.magic (Hxhx_Stage3BackendPluginSupport.buildProviderDefines (Obj.magic allDefines)) in let tempStage3BackendSelection = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
                                                                     ignore (try let __assign_173 = Obj.magic (Hxhx_Stage3BackendPluginSupport.selectBackend (backendId : string) (Obj.magic providerDefines) (Obj.magic requestOutput)) in (
                                                                       tempStage3BackendSelection := __assign_173;

@@ -11,9 +11,11 @@ package hxhx;
 **/
 class CompilationServerRequestDispatcher {
 	public static function dispatch(request:CompilationServerRequest, runOne:(args:Array<String>, context:CompilationRequestContext) -> Int,
-			?serverCache:CompilationServerSourceCache):CompilationServerReply {
-		final context = CompilationRequestContext.server(request.requestId, serverCache == null ? null : serverCache.openRequest());
-		if (request.hasInvocationFlag("--hxhx-server-report"))
+			?serverCache:CompilationServerSourceCache, ?dependencyCatalog:CompilationServerDependencyCatalog):CompilationServerReply {
+		final reportEnabled = request.hasInvocationFlag("--hxhx-server-report");
+		final context = CompilationRequestContext.server(request.requestId,
+			serverCache == null ? null : serverCache.openRequest(), dependencyCatalog == null || !reportEnabled ? null : dependencyCatalog.openRequest(request.compilerArgs()));
+		if (reportEnabled)
 			context.enableBaselineReport();
 		if (request.hasRequestFlag(CompilationServerProtocol.REQUEST_TIMEOUT_FLAG)) {
 			final timeoutText = request.findFlagValue(CompilationServerProtocol.REQUEST_TIMEOUT_FLAG);
@@ -33,11 +35,14 @@ class CompilationServerRequestDispatcher {
 				return finish(context, false, true);
 			}
 			if (control == "reset") {
-				if (serverCache == null) {
-					context.output.stderrLine("hxhx(stage3): cache reset is unavailable because this server has no reusable source cache");
+				if (serverCache == null && dependencyCatalog == null) {
+					context.output.stderrLine("hxhx(stage3): cache reset is unavailable because this server has no reusable compiler state");
 					return finish(context, true);
 				}
-				serverCache.reset();
+				if (serverCache != null)
+					serverCache.reset();
+				if (dependencyCatalog != null)
+					dependencyCatalog.reset();
 				context.output.stdoutLine("hxhx_server_control.reset=ok");
 				return finish(context, false);
 			}
