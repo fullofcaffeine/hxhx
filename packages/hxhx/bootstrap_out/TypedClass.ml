@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable sourceDeclaration : HxClassDecl.t; mutable semanticInfo : TyNominalInfo.t; mutable functions : TypedFunction.t HxArray.t }
+type t = { __hx_type : Obj.t; mutable sourceDeclaration : HxClassDecl.t; mutable semanticInfo : TyNominalInfo.t; mutable functions : TypedFunction.t HxArray.t; mutable fieldInitializers : TypedFieldInitializer.t HxArray.t }
 
-let create = fun sourceDeclaration2 semanticInfo2 functions2 -> let self = ({ __hx_type = HxType.class_ "TypedClass"; sourceDeclaration = Obj.magic (HxRuntime.hx_null); semanticInfo = Obj.magic (HxRuntime.hx_null); functions = Obj.magic (HxRuntime.hx_null) } : t) in (
+let create = fun sourceDeclaration2 semanticInfo2 functions2 fieldInitializers2 -> let self = ({ __hx_type = HxType.class_ "TypedClass"; sourceDeclaration = Obj.magic (HxRuntime.hx_null); semanticInfo = Obj.magic (HxRuntime.hx_null); functions = Obj.magic (HxRuntime.hx_null); fieldInitializers = Obj.magic (HxRuntime.hx_null) } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic sourceDeclaration2 in (
       (Obj.magic self : t).sourceDeclaration <- __assign_1;
@@ -24,16 +24,29 @@ let create = fun sourceDeclaration2 semanticInfo2 functions2 -> let self = ({ __
         tempRight := __assign_5;
         __assign_5
       ));
-      let __assign_6 = Obj.magic (!tempRight) in (
+      ignore (let __assign_6 = Obj.magic (!tempRight) in (
         (Obj.magic self : t).functions <- __assign_6;
         __assign_6
+      ));
+      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : TypedFieldInitializer.t HxArray.t) in (
+        ignore (if fieldInitializers2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (let __arr_8 = HxArray.create () in __arr_8) in (
+          tempRight1 := __assign_7;
+          __assign_7
+        ) else let __assign_9 = Obj.magic (HxArray.copy fieldInitializers2) in (
+          tempRight1 := __assign_9;
+          __assign_9
+        ));
+        let __assign_10 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).fieldInitializers <- __assign_10;
+          __assign_10
+        )
       )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedClass"; sourceDeclaration = Obj.magic (HxRuntime.hx_null); semanticInfo = Obj.magic (HxRuntime.hx_null); functions = Obj.magic (HxRuntime.hx_null) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedClass"; sourceDeclaration = Obj.magic (HxRuntime.hx_null); semanticInfo = Obj.magic (HxRuntime.hx_null); functions = Obj.magic (HxRuntime.hx_null); fieldInitializers = Obj.magic (HxRuntime.hx_null) } : t)
 
 let getSourceDeclaration = fun self () -> (Obj.magic self : t).sourceDeclaration
 
@@ -41,4 +54,6 @@ let getSemanticInfo = fun self () -> (Obj.magic self : t).semanticInfo
 
 let getFunctions = fun self () -> HxArray.copy ((Obj.magic self : t).functions)
 
-let withFunctions = fun self (loweredFunctions : TypedFunction.t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).sourceDeclaration)) (Obj.magic ((Obj.magic self : t).semanticInfo)) (Obj.magic loweredFunctions)
+let getFieldInitializers = fun self () -> HxArray.copy ((Obj.magic self : t).fieldInitializers)
+
+let withFunctions = fun self (loweredFunctions : TypedFunction.t HxArray.t) -> create (Obj.magic ((Obj.magic self : t).sourceDeclaration)) (Obj.magic ((Obj.magic self : t).semanticInfo)) (Obj.magic loweredFunctions) (Obj.magic ((Obj.magic self : t).fieldInitializers))

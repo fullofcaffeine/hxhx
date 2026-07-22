@@ -142,7 +142,7 @@ class TypedAbstractUnaryLowering {
 				final temporary = TypedExpr.temporary(temporaryName, receiver.getType().getDisplay(), receiver, voidType(), receiver.getPosition());
 				function field(type:TyType):TypedExpr {
 					final receiverRead = TypedExpr.localRead(temporaryName, receiver.getType(), receiver.getPosition());
-					return TypedExpr.fieldRead(receiverRead, texts[0], type, target.getPosition());
+					return TypedExpr.fieldRead(receiverRead, texts[0], type, target.getPosition(), target.getFieldInfo());
 				}
 				{
 					prefix: [temporary],

@@ -16,7 +16,7 @@ class TyAbstractInfo extends TyNominalInfo {
 	final unaryOperators:haxe.ds.StringMap<Array<TyAbstractOperatorInfo>>;
 	final binaryOperators:haxe.ds.StringMap<Array<TyAbstractBinaryOperatorInfo>>;
 
-	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyType>,
+	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
 			declarations:Array<TyDeclarationInfo>, underlyingType:TyType, typeParameters:Array<String>, implicitFromTypes:Array<TyType>,

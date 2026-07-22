@@ -1,13 +1,16 @@
-/** A source class/abstract declaration paired with all of its typed functions. **/
+/** A source class/abstract declaration paired with its typed functions and field initializers. **/
 class TypedClass {
 	final sourceDeclaration:HxClassDecl;
 	final semanticInfo:Null<TyNominalInfo>;
 	final functions:Array<TypedFunction>;
+	final fieldInitializers:Array<TypedFieldInitializer>;
 
-	public function new(sourceDeclaration:HxClassDecl, semanticInfo:Null<TyNominalInfo>, functions:Array<TypedFunction>) {
+	public function new(sourceDeclaration:HxClassDecl, semanticInfo:Null<TyNominalInfo>, functions:Array<TypedFunction>,
+			?fieldInitializers:Array<TypedFieldInitializer>) {
 		this.sourceDeclaration = sourceDeclaration;
 		this.semanticInfo = semanticInfo;
 		this.functions = functions == null ? [] : functions.copy();
+		this.fieldInitializers = fieldInitializers == null ? [] : fieldInitializers.copy();
 	}
 
 	public function getSourceDeclaration():HxClassDecl
@@ -19,7 +22,10 @@ class TypedClass {
 	public function getFunctions():Array<TypedFunction>
 		return functions.copy();
 
+	public function getFieldInitializers():Array<TypedFieldInitializer>
+		return fieldInitializers.copy();
+
 	/** Return the same source/semantic class paired with rewritten typed functions. **/
 	public function withFunctions(loweredFunctions:Array<TypedFunction>):TypedClass
-		return new TypedClass(sourceDeclaration, semanticInfo, loweredFunctions);
+		return new TypedClass(sourceDeclaration, semanticInfo, loweredFunctions, fieldInitializers);
 }

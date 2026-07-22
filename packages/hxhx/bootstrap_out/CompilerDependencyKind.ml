@@ -6,6 +6,7 @@ type compilerdependencykind =
 | ModuleResolution
 | PublicInterface
 | InlineImplementation
+| ConstantValue
 | GeneratedDeclaration
 | StaticInitialization
 | FeatureSelection

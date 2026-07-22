@@ -27,54 +27,62 @@ let name = fun kind -> let tempResult = ref ("" : string) in (
       tempResult := __assign_3;
       __assign_3
     )
-    | CompilerDependencyKind.GeneratedDeclaration -> let __assign_4 = ("generated-declaration" : string) in (
+    | CompilerDependencyKind.ConstantValue -> let __assign_4 = ("constant-value" : string) in (
       tempResult := __assign_4;
       __assign_4
     )
-    | CompilerDependencyKind.StaticInitialization -> let __assign_5 = ("static-initialization" : string) in (
+    | CompilerDependencyKind.GeneratedDeclaration -> let __assign_5 = ("generated-declaration" : string) in (
       tempResult := __assign_5;
       __assign_5
     )
-    | CompilerDependencyKind.FeatureSelection -> let __assign_6 = ("feature-selection" : string) in (
+    | CompilerDependencyKind.StaticInitialization -> let __assign_6 = ("static-initialization" : string) in (
       tempResult := __assign_6;
       __assign_6
     )
-    | CompilerDependencyKind.TargetNeutralProgram -> let __assign_7 = ("target-neutral-program" : string) in (
+    | CompilerDependencyKind.FeatureSelection -> let __assign_7 = ("feature-selection" : string) in (
       tempResult := __assign_7;
       __assign_7
+    )
+    | CompilerDependencyKind.TargetNeutralProgram -> let __assign_8 = ("target-neutral-program" : string) in (
+      tempResult := __assign_8;
+      __assign_8
     ));
   !tempResult
 )
 
 let consumesImplementation = fun kind -> let tempResult = ref (false : bool) in (
   ignore (match kind with
-    | CompilerDependencyKind.ModuleResolution -> let __assign_8 = false in (
-      tempResult := __assign_8;
-      __assign_8
-    )
-    | CompilerDependencyKind.PublicInterface -> let __assign_9 = false in (
+    | CompilerDependencyKind.ModuleResolution -> let __assign_9 = false in (
       tempResult := __assign_9;
       __assign_9
     )
-    | CompilerDependencyKind.InlineImplementation -> let __assign_10 = true in (
+    | CompilerDependencyKind.PublicInterface -> let __assign_10 = false in (
       tempResult := __assign_10;
       __assign_10
     )
-    | CompilerDependencyKind.GeneratedDeclaration -> let __assign_11 = true in (
+    | CompilerDependencyKind.InlineImplementation -> let __assign_11 = true in (
       tempResult := __assign_11;
       __assign_11
     )
-    | CompilerDependencyKind.StaticInitialization -> let __assign_12 = true in (
+    | CompilerDependencyKind.ConstantValue -> let __assign_12 = true in (
       tempResult := __assign_12;
       __assign_12
     )
-    | CompilerDependencyKind.FeatureSelection -> let __assign_13 = true in (
+    | CompilerDependencyKind.GeneratedDeclaration -> let __assign_13 = true in (
       tempResult := __assign_13;
       __assign_13
     )
-    | CompilerDependencyKind.TargetNeutralProgram -> let __assign_14 = true in (
+    | CompilerDependencyKind.StaticInitialization -> let __assign_14 = true in (
       tempResult := __assign_14;
       __assign_14
+    )
+    | CompilerDependencyKind.FeatureSelection -> let __assign_15 = true in (
+      tempResult := __assign_15;
+      __assign_15
+    )
+    | CompilerDependencyKind.TargetNeutralProgram -> let __assign_16 = true in (
+      tempResult := __assign_16;
+      __assign_16
     ));
   !tempResult
 )

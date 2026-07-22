@@ -9,7 +9,7 @@ class TyNominalInfo {
 	final identity:TyNominalTypeId;
 	final shortName:String;
 	final modulePath:String;
-	final fields:haxe.ds.StringMap<TyType>;
+	final fields:haxe.ds.StringMap<TyFieldInfo>;
 	final properties:haxe.ds.StringMap<TyPropertyInfo>;
 	final staticMethods:haxe.ds.StringMap<TyFunSig>;
 	final instanceMethods:haxe.ds.StringMap<TyFunSig>;
@@ -17,7 +17,7 @@ class TyNominalInfo {
 	final instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>;
 	final declarations:Array<TyDeclarationInfo>;
 
-	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyType>,
+	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
 			declarations:Array<TyDeclarationInfo>) {
@@ -74,6 +74,10 @@ class TyNominalInfo {
 		return fields.exists(name);
 
 	public function fieldType(name:String):Null<TyType>
+		return fields.exists(name) ? fields.get(name).getType() : null;
+
+	/** Return the exact declared field selected by the semantic owner. **/
+	public function fieldInfo(name:String):Null<TyFieldInfo>
 		return fields.exists(name) ? fields.get(name) : null;
 
 	public function propertyInfo(name:String):Null<TyPropertyInfo>

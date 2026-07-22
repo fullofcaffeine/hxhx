@@ -186,25 +186,39 @@ class TyperStage {
 				+ className) : semanticInfo.getFullName();
 			final context = new TyperContext(index, parsed.getFilePath(), modulePath, packagePath, imports, classFullName, loader);
 			final typedFunctions = new Array<TypedFunction>();
+			final typedFieldInitializers = new Array<TypedFieldInitializer>();
 			final functionEnvironments = new Array<TyFunctionEnv>();
+			final typeResolver:TypedExprTypeResolver = function(expression, position, lexicalEnvironment) {
+				return inferExprType(expression, lexicalEnvironment.copyForInference(), context, position);
+			};
+			final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment) {
+				return resolveCallDeclaration(callee, arguments, lexicalEnvironment.copyForInference(), context, position);
+			};
+			final fieldResolver:TypedFieldDeclarationResolver = function(expression, position, lexicalEnvironment) {
+				return resolveFieldDeclaration(expression, lexicalEnvironment.copyForInference(), context, position);
+			};
+			for (field in HxClassDecl.getFields(classDeclaration)) {
+				final initializer = HxFieldDecl.getInit(field);
+				final fieldInfo = semanticInfo == null ? null : semanticInfo.fieldInfo(HxFieldDecl.getName(field));
+				if (initializer == null || fieldInfo == null)
+					continue;
+				final fieldType = fieldInfo.getType();
+				final fieldEnvironment = new TyFunctionEnv("<field-initializer:" + fieldInfo.getName() + ">", [], [], fieldType, fieldType);
+				typedFieldInitializers.push(new TypedFieldInitializer(fieldInfo,
+					TypedBodyBuilder.buildExpression(initializer, HxFieldDecl.getPos(field), fieldEnvironment, typeResolver, callResolver, fieldResolver)));
+			}
 			final sourceFunctions = HxClassDecl.getFunctions(classDeclaration);
 			for (functionIndex in 0...sourceFunctions.length) {
 				final sourceFunction = sourceFunctions[functionIndex];
 				final functionEnvironment = typeFunction(sourceFunction, context);
 				functionEnvironments.push(functionEnvironment);
 				final semanticDeclaration = semanticInfo == null ? null : semanticInfo.declarationForSource(sourceFunction);
-				final typeResolver:TypedExprTypeResolver = function(expression, position, lexicalEnvironment) {
-					return inferExprType(expression, lexicalEnvironment.copyForInference(), context, position);
-				};
-				final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment) {
-					return resolveCallDeclaration(callee, arguments, lexicalEnvironment.copyForInference(), context, position);
-				};
 				typedFunctions.push(TypedBodyBuilder.buildFunction(className, functionIndex, sourceFunction, semanticDeclaration, functionEnvironment,
-					typeResolver, callResolver));
+					typeResolver, callResolver, fieldResolver));
 			}
 			if (classDeclaration == mainClass)
 				mainFunctions = functionEnvironments;
-			typedClasses.push(new TypedClass(classDeclaration, semanticInfo, typedFunctions));
+			typedClasses.push(new TypedClass(classDeclaration, semanticInfo, typedFunctions, typedFieldInitializers));
 		}
 
 		final loweredClasses = index == null
@@ -850,6 +864,39 @@ class TyperStage {
 	static function currentFieldReferenceType(name:String, ctx:TyperContext):Null<TyType> {
 		final current = ctx.currentClass();
 		return current == null ? null : current.fieldType(name);
+	}
+
+	/**
+		Resolve the exact field declaration selected by the current typed subset.
+
+		This follows the same current-class, fully qualified static, and typed receiver
+		paths as expression typing. The immutable field record then travels with the
+		typed read so later analyses do not have to reconstruct the receiver path.
+	**/
+	static function resolveFieldDeclaration(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<TyFieldInfo> {
+		return switch (expression) {
+			case EIdent(name): scope.resolveSymbol(name) != null || ctx.currentClass() == null ? null : ctx.currentClass().fieldInfo(name);
+			case EField(object, field):
+				final dotted = dottedFieldPath(object);
+				final dottedParts = dotted.split(".");
+				final dottedLast = dottedParts.length == 0 ? "" : dottedParts[dottedParts.length - 1];
+				final staticOwner = dotted.length == 0 || !isUpperStartName(dottedLast) ? null : ctx.resolveType(dotted);
+				if (staticOwner != null) {
+					final selected = staticOwner.fieldInfo(field);
+					selected != null
+					&& selected.getIsStatic() ? selected : null;
+				} else {
+					final owner = switch (object) {
+						case EThis: ctx.currentClass();
+						case _: nominalInfoForType(ctx.getIndex(), inferExprType(object, scope.copyForInference(), ctx, pos));
+					};
+					owner == null ? null : owner.fieldInfo(field);
+				}
+			case ENullSafeField(object, field):
+				resolveFieldDeclaration(EField(object, field), scope, ctx, pos);
+			case _:
+				null;
+		};
 	}
 
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {

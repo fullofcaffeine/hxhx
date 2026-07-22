@@ -12,9 +12,10 @@ import TypedStmt.TypedStmtTag;
 	The public-interface revision contains the resolved class and member signatures
 	that another module can consume. The implementation revision additionally
 	contains the complete parsed source and every typed statement and expression,
-	including inline function bodies. An explicit inline-call edge decides which
-	consumers receive an implementation change; an importer that never calls the
-	inline function should not be invalidated merely because the function is public.
+	including inline function bodies and field initializers. Explicit inline-call
+	and constant-value edges decide which consumers receive an implementation
+	change. An importer that never uses either implementation detail should not be
+	invalidated merely because the declaration is public.
 
 	These are exact in-memory identities, not a persistent cache format. A future
 	typed-module cache must replace the large implementation identity with a measured
@@ -141,10 +142,18 @@ class CompilerTypedModuleRevision {
 			out.push(HxFieldDecl.getPropertyGet(field));
 			out.push(HxFieldDecl.getPropertySet(field));
 			addStrings(out, HxFieldDecl.getMetadata(field));
-			// Public constants and inline-like fields can be embedded by a consumer.
-			// Keep the exact initializer text: the lifecycle fingerprint is only a
-			// 32-bit mutation guard and is not safe as a compiler cache identity.
-			out.push(HxFieldDecl.getInitText(field));
+			// Initializer values belong to the implementation revision. A caller that
+			// may embed a final/inline value carries an explicit constant-value edge.
+			// Keeping the value out of this module-wide public identity prevents an
+			// import-only module from looking like it consumed every public constant.
+			// When the field has no trustworthy written/resolved type, retain the
+			// initializer as a conservative fallback because changing it may change the
+			// public type that callers see.
+			final writtenType = StringTools.trim(HxFieldDecl.getTypeHint(field));
+			if (writtenType.length == 0 || resolvedFieldType == null || resolvedFieldType.isUnknown()) {
+				out.push("public-field-inferred-type-fallback");
+				out.push(HxFieldDecl.getInitText(field));
+			}
 		}
 
 		for (typedFunction in typedClass.getFunctions()) {
@@ -227,6 +236,8 @@ class CompilerTypedModuleRevision {
 		out.push(Std.string(expression.getFloatValue()));
 		final declaration = expression.getDeclaration();
 		out.push(declaration == null ? null : declaration.getIdentity().getCanonicalKey());
+		final fieldInfo = expression.getFieldInfo();
+		out.push(fieldInfo == null ? null : fieldInfo.getCanonicalKey());
 		out.push(unaryOperatorName(expression.getUnaryOperator()));
 		out.push(unaryFixityName(expression.getUnaryFixity()));
 		out.push(opaqueKindName(expression.getOpaqueKind()));

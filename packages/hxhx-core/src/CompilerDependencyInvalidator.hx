@@ -8,8 +8,9 @@
 
 	Public-interface changes propagate through every reverse dependency. A body-only
 	change propagates only through edges that explicitly consume implementation,
-	such as an inline call. When a consumer's own public interface also changed, the
-	stronger public change continues outward. This mirrors the fixed-point shape a
+	such as an inline call or an embeddable constant read. When a consumer's own
+	public interface also changed, the stronger public change continues outward.
+	This mirrors the fixed-point shape a
 	future typed-module cache needs while observation mode continues to type all
 	modules normally. Configuration, macro, generated, and target-owned causes need
 	their own future direct-change revisions before this model can authorize reuse.

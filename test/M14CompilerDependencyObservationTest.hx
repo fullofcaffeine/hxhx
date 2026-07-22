@@ -9,9 +9,9 @@ private typedef DependencyTestSource = {
 /**
 	Focused proof that dependency observation uses sealed target-neutral typed facts.
 
-	The fixture checks ordinary signature use, inline-body use, deterministic graph
-	ordering, and the public-interface versus implementation revision split. It does
-	not enable typed-module reuse.
+	The fixture checks ordinary signature use, inline bodies, embeddable constants,
+	deterministic graph ordering, and the public-interface versus implementation
+	revision split. It does not enable typed-module reuse.
 **/
 class M14CompilerDependencyObservationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
@@ -218,8 +218,56 @@ class M14CompilerDependencyObservationTest {
 
 		final constantAa = typedProgram('class Api { public static final label:String = "Aa"; }', mainSource);
 		final constantBB = typedProgram('class Api { public static final label:String = "BB"; }', mainSource);
-		assertTrue(moduleRevision(constantAa, "Api").publicInterfaceRevision != moduleRevision(constantBB, "Api").publicInterfaceRevision,
-			"different public constant text must not collide through the 32-bit lifecycle fingerprint");
+		assertTrue(moduleRevision(constantAa, "Api").publicInterfaceRevision == moduleRevision(constantBB, "Api").publicInterfaceRevision,
+			"a constant value edit should not change the module-wide field name and type interface");
+		assertTrue(moduleRevision(constantAa, "Api").implementationRevision != moduleRevision(constantBB, "Api").implementationRevision,
+			"different constant text must remain distinct implementation input without the 32-bit lifecycle fingerprint");
+		final constantReader = typedSources([
+			{modulePath: "Api", filePath: "Api.hx", source: 'class Api { public static final label:String = "Aa"; }'},
+			{modulePath: "Main", filePath: "Main.hx", source: "class Main { public static function value():String return Api.label; }"}
+		]);
+		final constantReaderSnapshot = CompilerDependencyCollector.collect(constantReader.modules, constantReader.index);
+		assertTrue(hasEdge(constantReaderSnapshot, CompilerDependencyKind.ConstantValue, "field:Api#static#label"),
+			"a qualified static final read should record the exact embeddable field identity");
+		assertTrue(edgePhase(constantReaderSnapshot, CompilerDependencyKind.ConstantValue, "field:Api#static#label") == "shared-typing",
+			"a selected constant field should name shared typing as its owning compiler phase");
+		final qualifiedConstantReader = typedSources([
+			{modulePath: "pkg.Api", filePath: "pkg/Api.hx", source: 'package pkg; class Api { public static final label:String = "Aa"; }'},
+			{modulePath: "Main", filePath: "Main.hx", source: "class Main { public static function value():String return pkg.Api.label; }"}
+		]);
+		assertTrue(hasEdgeBetween(CompilerDependencyCollector.collect(qualifiedConstantReader.modules, qualifiedConstantReader.index), "Main", "pkg.Api",
+			CompilerDependencyKind.ConstantValue, "field:pkg.Api#static#label"),
+			"a fully qualified static constant read should retain the exact selected field even when its receiver child is not independently typable");
+		final inlineFieldReader = typedSources([
+			{modulePath: "Api", filePath: "Api.hx", source: 'class Api { public static inline var label:String = "Aa"; }'},
+			{modulePath: "Main", filePath: "Main.hx", source: "class Main { public static function value():String return Api.label; }"}
+		]);
+		assertTrue(hasEdge(CompilerDependencyCollector.collect(inlineFieldReader.modules, inlineFieldReader.index), CompilerDependencyKind.ConstantValue,
+			"field:Api#static#label"),
+			"a qualified static inline field read should record the exact embeddable field identity");
+		final mutableFieldReader = typedSources([
+			{modulePath: "Api", filePath: "Api.hx", source: "class Api { public static var mutable:Int = 1; }"},
+			{modulePath: "Main", filePath: "Main.hx", source: "class Main { public static function value():Int return Api.mutable; }"}
+		]);
+		final mutableFieldSnapshot = CompilerDependencyCollector.collect(mutableFieldReader.modules, mutableFieldReader.index);
+		assertTrue(hasEdge(mutableFieldSnapshot, CompilerDependencyKind.PublicInterface, "expression-type:Api"),
+			"a qualified mutable field read should retain a public-interface dependency on its resolved owner type");
+		assertTrue(!hasEdge(mutableFieldSnapshot, CompilerDependencyKind.ConstantValue, "field:Api#static#mutable"),
+			"a mutable field read should not claim that its initializer value was embedded");
+		final sameClassReader = typedSources([
+			{
+				modulePath: "Api",
+				filePath: "Api.hx",
+				source: 'class Api { public static final label:String = "Aa"; public static function own():String return label; }'
+			}
+		]);
+		final sameClassSnapshot = CompilerDependencyCollector.collect(sameClassReader.modules, sameClassReader.index);
+		assertTrue(!hasEdgeBetween(sameClassSnapshot, "Api", "Api", CompilerDependencyKind.ConstantValue, "field:Api#static#label"),
+			"a same-class constant read should resolve safely without creating a redundant self-dependency");
+		final inferredInt = typedProgram("class Api { public static var value = 1; }", mainSource);
+		final inferredString = typedProgram('class Api { public static var value = "one"; }', mainSource);
+		assertTrue(moduleRevision(inferredInt, "Api").publicInterfaceRevision != moduleRevision(inferredString, "Api").publicInterfaceRevision,
+			"an initializer change must conservatively change the public identity while a field's inferred type is not represented exactly");
 
 		final inlineAa = typedProgram('class Api { public static inline function label():String return "Aa"; }', mainSource);
 		final inlineBB = typedProgram('class Api { public static inline function label():String return "BB"; }', mainSource);

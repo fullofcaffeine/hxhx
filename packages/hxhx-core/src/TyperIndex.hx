@@ -464,12 +464,16 @@ class TyperIndex {
 			final classMetadata = HxClassDecl.getMetadata(classDeclaration);
 			final params = typeParameters(classMetadata);
 
-			final fields = new StringMap<TyType>();
+			final fields = new StringMap<TyFieldInfo>();
 			final properties = new StringMap<TyPropertyInfo>();
 			for (field in HxClassDecl.getFields(classDeclaration)) {
 				final fieldType = semanticType(HxFieldDecl.getTypeHint(field), packagePath, moduleName, imports, params);
 				final fieldName = HxFieldDecl.getName(field);
-				fields.set(fieldName, fieldType);
+				fields.set(fieldName,
+					new TyFieldInfo(identity, semanticModulePath, fieldName, fieldType, HxFieldDecl.getIsStatic(field),
+						HxFieldDecl.getVisibility(field) == HxVisibility.Public, HxFieldDecl.getIsFinal(field),
+						hasMetadata(HxFieldDecl.getMetadata(field), "inline"), HxFieldDecl.getInit(field) != null || StringTools.trim(HxFieldDecl.getInitText(field))
+						.length > 0));
 				final getter = HxFieldDecl.getPropertyGet(field);
 				final setter = HxFieldDecl.getPropertySet(field);
 				if (getter.length > 0 || setter.length > 0)

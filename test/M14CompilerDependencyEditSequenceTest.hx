@@ -92,6 +92,52 @@ class M14CompilerDependencyEditSequenceTest {
 		];
 	}
 
+	static function constantSources(apiSource:String):Array<DependencyEditSource> {
+		return [
+			{modulePath: "Api", filePath: "Api.hx", source: apiSource},
+			{
+				modulePath: "Main",
+				filePath: "Main.hx",
+				source: "class Main { public static function value():String return Api.label; }"
+			},
+			{
+				modulePath: "ImportOnly",
+				filePath: "ImportOnly.hx",
+				source: "import Api; class ImportOnly { public static function value():Int return 0; }"
+			},
+			{
+				modulePath: "MutableReader",
+				filePath: "MutableReader.hx",
+				source: "class MutableReader { public static function value():Int return Api.mutable; }"
+			},
+			{
+				modulePath: "FieldReader",
+				filePath: "FieldReader.hx",
+				source: "class FieldReader { public static final copy:String = Api.label; }"
+			}
+		];
+	}
+
+	static function qualifiedConstantSources(value:String):Array<DependencyEditSource> {
+		return [
+			{
+				modulePath: "pkg.Api",
+				filePath: "pkg/Api.hx",
+				source: 'package pkg; class Api { public static final label:String = "$value"; }'
+			},
+			{
+				modulePath: "QualifiedReader",
+				filePath: "QualifiedReader.hx",
+				source: "class QualifiedReader { public static function value():String return pkg.Api.label; }"
+			},
+			{
+				modulePath: "QualifiedFieldReader",
+				filePath: "QualifiedFieldReader.hx",
+				source: "class QualifiedFieldReader { public static final copy:String = pkg.Api.label; }"
+			}
+		];
+	}
+
 	static function affected(comparison:CompilerDependencyComparison):String
 		return [for (invalidation in comparison.getInvalidations()) invalidation.modulePath].join(",");
 
@@ -133,6 +179,36 @@ class M14CompilerDependencyEditSequenceTest {
 			&& inlineMainReason.describe().indexOf("inline-implementation:Left->Shared") >= 0
 			&& inlineMainReason.describe().indexOf("inline-implementation:Main->Left") >= 0,
 			"the inline reason should name both implementation-consuming edges");
+
+		final constantA = snapshot(constantSources('class Api { public static final label:String = "A"; public static var mutable:Int = 1; }'));
+		final constantB = snapshot(constantSources('class Api { public static final label:String = "B"; public static var mutable:Int = 1; }'));
+		final constantComparison = CompilerDependencyInvalidator.compare(constantA, constantB);
+		assertTrue(affected(constantComparison) == "Api,FieldReader,Main",
+			"a constant value edit should reach function-body and field-initializer readers without invalidating import-only or mutable-field readers");
+		final constantMainReason = constantComparison.reasonFor("Main");
+		assertTrue(constantMainReason != null
+			&& constantMainReason.describe().indexOf("constant-value:Main->Api:field:Api#static#label") >= 0,
+			"the constant reader should name the exact implementation-consuming field edge");
+		assertTrue(!constantComparison.isAffected("ImportOnly"), "an import alone should not claim that it embedded a constant value");
+		assertTrue(!constantComparison.isAffected("MutableReader"), "an ordinary mutable field read should not claim an embedded constant value");
+		final constantFieldReason = constantComparison.reasonFor("FieldReader");
+		assertTrue(constantFieldReason != null
+			&& constantFieldReason.describe().indexOf("constant-value:FieldReader->Api:field:Api#static#label") >= 0,
+			"a field initializer should name the exact constant value that it embeds");
+		final constantAAgain = snapshot(constantSources('class Api { public static final label:String = "A"; public static var mutable:Int = 1; }'));
+		assertTrue(constantA.getCanonicalIdentity() == constantAAgain.getCanonicalIdentity(),
+			"returning to the exact constant value should reproduce the original dependency snapshot");
+		final constantReverse = CompilerDependencyInvalidator.compare(constantB, constantAAgain);
+		assertTrue(affected(constantReverse) == affected(constantComparison) && reasons(constantReverse) == reasons(constantComparison),
+			"constant A-to-B-to-A should reproduce affected modules and reason paths");
+		final qualifiedConstantComparison = CompilerDependencyInvalidator.compare(snapshot(qualifiedConstantSources("A")),
+			snapshot(qualifiedConstantSources("B")));
+		assertTrue(affected(qualifiedConstantComparison) == "QualifiedFieldReader,QualifiedReader,pkg.Api",
+			"a fully qualified constant edit should reach both function-body and field-initializer readers");
+		final qualifiedReaderReason = qualifiedConstantComparison.reasonFor("QualifiedReader");
+		assertTrue(qualifiedReaderReason != null
+			&& qualifiedReaderReason.describe().indexOf("constant-value:QualifiedReader->pkg.Api:field:pkg.Api#static#label") >= 0,
+			"the fully qualified reader should retain the exact selected field identity");
 
 		final publicAAgain = snapshot(sharedSources(sharedA));
 		assertTrue(publicA.getCanonicalIdentity() == publicAAgain.getCanonicalIdentity(),

@@ -166,15 +166,55 @@ edge, because those callers may embed its body.
 
 A **dependency edge** is a plain record saying why one module used another.
 For example, `Main` may depend on `Api` because it imported `Api`, mentioned an
-`Api` type, called an ordinary public function, or called an inline function.
-The last case consumes both the public declaration and its implementation.
+`Api` type, called an ordinary public function, called an inline function, or
+read a `static final`/`static inline` field whose value may be copied into
+`Main`. Inline calls and embeddable constant reads consume implementation as
+well as the public declaration.
 
-The current collector covers those import, resolved-type, ordinary-call, and
-inline-call relationships. It does not yet prove complete invalidation for
-constants, generated declarations, macro observations, feature/DCE state,
-static initialization, target/profile changes, or module-origin changes such
-as class-path shadowing. The enum names for those future edge families reserve
+The current collector covers those import, resolved-type, ordinary-call,
+inline-call, and embeddable-constant relationships. A target-neutral typed
+field record identifies the selected owner, module, name, type, visibility,
+static/final/inline form, and initializer presence; the collector does not guess
+from generated code or capitalization. The typed field-read node also carries
+that selected record, so fully qualified paths such as `pkg.Api.label` do not
+depend on retyping the intermediate `pkg.Api` child. Function bodies and
+structurally typed field initializers both contribute exact constant-read edges.
+Constant initializer text belongs to the implementation revision when the public field
+type is written and resolved. If that type is absent or still unknown, the
+public identity conservatively retains the initializer because changing it may
+also change the type callers see. It does not yet prove complete invalidation
+for generated declarations, macro observations, feature/DCE state, static
+initialization, target/profile changes, inherited or abstract-forwarded fields,
+enum-abstract values, unsupported initializer structures, or module-origin
+changes such as class-path shadowing. Imported static fields such as
+`import Api.label; ... label` also remain deferred until the typer carries an
+exact import binding. The enum names for those future edge families reserve
 typed vocabulary; they are not a claim that collection is already complete.
+
+A small example shows why the field-specific record matters:
+
+```haxe
+class Api {
+  public static final label:String = "A";
+}
+
+class Reader {
+  public static function value():String return Api.label;
+}
+
+import Api;
+class ImportOnly {
+  public static function value():Int return 0;
+}
+```
+
+Previously, changing `"A"` to `"B"` changed `Api`'s module-wide public
+identity. That broad signal could make both `Reader` and `ImportOnly` look
+affected, without saying which field value was actually used. The observer now
+keeps `Api`'s field name and type stable, marks its implementation as changed,
+and follows a `constant-value` edge only to `Reader`. This changes the diagnostic
+dependency report only; every module is still typed normally, and generated
+target code is unchanged by this observation-only slice.
 
 The observer compares the current successful snapshot with the previous
 successful snapshot for the exact compiler argument list. Public-interface

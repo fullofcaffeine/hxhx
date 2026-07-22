@@ -1,3 +1,5 @@
+import TypedExpr.TypedExprTag;
+
 /**
 	Collects module dependency facts from the sealed target-neutral typed program.
 
@@ -64,25 +66,30 @@ class CompilerDependencyCollector {
 					collectType(edgeByKey, consumerModule, index, declaration.getSignature().getReturnType(),
 						"signature:" + declaration.getIdentity().getCanonicalKey());
 				}
+			for (fieldInitializer in typedClass.getFieldInitializers())
+				collectExpression(edgeByKey, consumerModule, index, semanticInfo, fieldInitializer.getExpression());
 			for (typedFunction in typedClass.getFunctions())
 				for (statement in typedFunction.getBody().getStatements())
-					collectStatement(edgeByKey, consumerModule, index, statement);
+					collectStatement(edgeByKey, consumerModule, index, semanticInfo, statement);
 		}
 	}
 
-	static function collectStatement(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex, statement:TypedStmt):Void {
+	static function collectStatement(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex,
+			currentOwner:Null<TyNominalInfo>, statement:TypedStmt):Void {
 		if (statement == null)
 			return;
 		for (expression in statement.getExpressions())
-			collectExpression(edgeByKey, consumerModule, index, expression);
+			collectExpression(edgeByKey, consumerModule, index, currentOwner, expression);
 		for (child in statement.getStatements())
-			collectStatement(edgeByKey, consumerModule, index, child);
+			collectStatement(edgeByKey, consumerModule, index, currentOwner, child);
 	}
 
-	static function collectExpression(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex, expression:TypedExpr):Void {
+	static function collectExpression(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex,
+			currentOwner:Null<TyNominalInfo>, expression:TypedExpr):Void {
 		if (expression == null)
 			return;
 		collectType(edgeByKey, consumerModule, index, expression.getType(), "expression-type");
+		collectConstantRead(edgeByKey, consumerModule, index, currentOwner, expression);
 		final declaration = expression.getDeclaration();
 		if (declaration != null) {
 			final provider = index == null ? null : index.getByFullName(declaration.getOwner().getCanonicalName());
@@ -93,7 +100,103 @@ class CompilerDependencyCollector {
 			}
 		}
 		for (child in expression.getExpressions())
-			collectExpression(edgeByKey, consumerModule, index, child);
+			collectExpression(edgeByKey, consumerModule, index, currentOwner, child);
+	}
+
+	/** Record only fields whose resolved declaration says callers may embed the initializer value. **/
+	static function collectConstantRead(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex,
+			currentOwner:Null<TyNominalInfo>, expression:TypedExpr):Void {
+		final texts = expression.getTexts();
+		final selectedField = expression.getFieldInfo();
+		final field = selectedField != null ? selectedField : switch (expression.getTag()) {
+			case NameRead: texts.length == 0 || currentOwner == null ? null : currentOwner.fieldInfo(texts[0]);
+			case FieldRead:
+				final children = expression.getExpressions();
+				if (texts.length == 0 || children.length == 0 || index == null) {
+					null;
+				} else {
+					final receiverIdentity = children[0].getType().getNominalIdentity();
+					final owner = receiverIdentity == null ? null : index.getByFullName(receiverIdentity.getCanonicalName());
+					owner == null ? null : owner.fieldInfo(texts[0]);
+				}
+			case NullValue:
+				null;
+			case BoolValue:
+				null;
+			case StringValue:
+				null;
+			case IntValue:
+				null;
+			case FloatValue:
+				null;
+			case EnumValue:
+				null;
+			case ThisValue:
+				null;
+			case SuperValue:
+				null;
+			case LocalRead:
+				null;
+			case NullSafeFieldRead:
+				null;
+			case Call:
+				null;
+			case MacroExpr:
+				null;
+			case MacroType:
+				null;
+			case Lambda:
+				null;
+			case SwitchExpr:
+				null;
+			case NewValue:
+				null;
+			case Unary:
+				null;
+			case Binary:
+				null;
+			case Assign:
+				null;
+			case CompoundAssign:
+				null;
+			case Ternary:
+				null;
+			case Anonymous:
+				null;
+			case ArrayComprehension:
+				null;
+			case ArrayDecl:
+				null;
+			case ArrayAccess:
+				null;
+			case Range:
+				null;
+			case Cast:
+				null;
+			case Untyped:
+				null;
+			case Opaque:
+				null;
+			case Block:
+				null;
+			case Temporary:
+				null;
+			case ReturnExpr:
+				null;
+			case VariableDeclarations:
+				null;
+			case VariableDeclaration:
+				null;
+			case WhileExpr:
+				null;
+			case BreakExpr:
+				null;
+			case ContinueExpr:
+				null;
+		};
+		if (field != null && field.canEmbedCrossModuleValue())
+			addEdge(edgeByKey, consumerModule, field.getModulePath(), CompilerDependencyPhase.SharedTyping, CompilerDependencyKind.ConstantValue,
+				"field:" + field.getCanonicalKey());
 	}
 
 	static function collectType(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex, type:TyType,

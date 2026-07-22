@@ -74,10 +74,11 @@ class TypedExpr {
 	final unaryOperator:Null<HxUnaryOperator>;
 	final unaryFixity:Null<HxUnaryFixity>;
 	final opaqueKind:Null<TypedOpaqueExprKind>;
+	final fieldInfo:Null<TyFieldInfo>;
 
 	function new(tag:TypedExprTag, type:TyType, position:Null<HxPos>, ?texts:Array<String>, ?expressions:Array<TypedExpr>, ?patterns:Array<HxSwitchPattern>,
 			boolValue:Bool = false, intValue:Int = 0, floatValue:Float = 0.0, ?declaration:TyDeclarationInfo, ?unaryOperator:HxUnaryOperator,
-			?unaryFixity:HxUnaryFixity, ?opaqueKind:TypedOpaqueExprKind) {
+			?unaryFixity:HxUnaryFixity, ?opaqueKind:TypedOpaqueExprKind, ?fieldInfo:TyFieldInfo) {
 		this.tag = tag;
 		this.type = type == null ? TyType.unknown() : type;
 		this.position = position;
@@ -91,6 +92,7 @@ class TypedExpr {
 		this.unaryOperator = unaryOperator;
 		this.unaryFixity = unaryFixity;
 		this.opaqueKind = opaqueKind;
+		this.fieldInfo = fieldInfo;
 	}
 
 	public static function nullValue(type:TyType, position:Null<HxPos>):TypedExpr
@@ -123,8 +125,8 @@ class TypedExpr {
 	public static function nameRead(name:String, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(NameRead, type, position, [name]);
 
-	public static function fieldRead(object:TypedExpr, field:String, type:TyType, position:Null<HxPos>):TypedExpr
-		return new TypedExpr(FieldRead, type, position, [field], [object]);
+	public static function fieldRead(object:TypedExpr, field:String, type:TyType, position:Null<HxPos>, ?fieldInfo:TyFieldInfo):TypedExpr
+		return new TypedExpr(FieldRead, type, position, [field], [object], null, false, 0, 0.0, null, null, null, null, fieldInfo);
 
 	/** Preserve a null-safe field read until shared target lowering selects its evaluation schedule. **/
 	public static function nullSafeFieldRead(object:TypedExpr, field:String, type:TyType, position:Null<HxPos>):TypedExpr
@@ -275,13 +277,17 @@ class TypedExpr {
 	public function getOpaqueKind():Null<TypedOpaqueExprKind>
 		return opaqueKind;
 
+	/** Exact declaration selected by typing for a field read, when the current typed subset can resolve it. **/
+	public function getFieldInfo():Null<TyFieldInfo>
+		return fieldInfo;
+
 	/** Rebuild this immutable node with new children while preserving its exact semantic payload. **/
 	public function withExpressions(children:Array<TypedExpr>):TypedExpr
 		return new TypedExpr(tag, type, position, texts, children, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
-			opaqueKind);
+			opaqueKind, fieldInfo);
 
 	/** Re-label one structurally identical expression for a shared semantic view such as abstract `this`. **/
 	public function withType(semanticType:TyType):TypedExpr
 		return new TypedExpr(tag, semanticType, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator,
-			unaryFixity, opaqueKind);
+			unaryFixity, opaqueKind, fieldInfo);
 }

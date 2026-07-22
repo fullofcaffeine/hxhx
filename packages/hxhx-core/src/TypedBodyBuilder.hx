@@ -328,7 +328,8 @@ class TypedBodyBuilder {
 		the typed expression spine can represent their control flow without guessing.
 	**/
 	static function structuralOpaqueBlock(raw:String, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
-			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>):Null<TypedExpr> {
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			fieldResolver:Null<TypedFieldDeclarationResolver>):Null<TypedExpr> {
 		final statements = parsedOpaqueBlockStatements(raw);
 		if (statements == null)
 			return null;
@@ -364,10 +365,12 @@ class TypedBodyBuilder {
 					if (lexicalEnvironment != null)
 						lexicalEnvironment.declareLocal(name, localType);
 					final typedInitializer = initializer == null ? TypedExpr.nullValue(localType,
-						storedPosition) : buildExpr(initializer, storedPosition, exactDiagnosticPosition, lexicalEnvironment, typeResolver, callResolver);
+						storedPosition) : buildExpr(initializer, storedPosition, exactDiagnosticPosition, lexicalEnvironment, typeResolver, callResolver,
+							fieldResolver);
 					expressions.push(TypedExpr.temporary(name, cleanHint, typedInitializer, TyType.fromHintText("Void"), storedPosition));
 				case SExpr(expression, _):
-					expressions.push(buildExpr(expression, storedPosition, exactDiagnosticPosition, lexicalEnvironment, typeResolver, callResolver));
+					expressions.push(buildExpr(expression, storedPosition, exactDiagnosticPosition, lexicalEnvironment, typeResolver, callResolver,
+						fieldResolver));
 				case _:
 			}
 		}
@@ -376,7 +379,8 @@ class TypedBodyBuilder {
 	}
 
 	static function structuralTryCatch(raw:String, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
-			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>):Null<TypedExpr> {
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			fieldResolver:Null<TypedFieldDeclarationResolver>):Null<TypedExpr> {
 		if (raw == null || !StringTools.startsWith(StringTools.trim(raw), "try"))
 			return null;
 		final parsed = try {
@@ -388,22 +392,24 @@ class TypedBodyBuilder {
 		};
 		return switch (parsed) {
 			case null | ETryCatchRaw(_): null;
-			case expression: buildExpr(expression, position, diagnosticPosition, environment, typeResolver, callResolver);
+			case expression: buildExpr(expression, position, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 		};
 	}
 
 	static function buildExpressions(expressions:Array<HxExpr>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
-			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>):Array<TypedExpr> {
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			fieldResolver:Null<TypedFieldDeclarationResolver>):Array<TypedExpr> {
 		if (expressions == null)
 			return [];
 		return [
 			for (expression in expressions)
-				buildExpr(expression, null, diagnosticPosition, environment, typeResolver, callResolver)
+				buildExpr(expression, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver)
 		];
 	}
 
 	static function buildExpr(expression:HxExpr, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
-			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>):TypedExpr {
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			fieldResolver:Null<TypedFieldDeclarationResolver>):TypedExpr {
 		final nodeType = expressionType(expression, diagnosticPosition, environment, typeResolver);
 		return switch (expression) {
 			case ENull:
@@ -426,9 +432,13 @@ class TypedBodyBuilder {
 				if (environment != null && environment.resolveSymbol(name) != null) TypedExpr.localRead(name, nodeType,
 					position) else TypedExpr.nameRead(name, nodeType, position);
 			case EField(object, field):
-				TypedExpr.fieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver), field, nodeType, position);
+				final fieldInfo = fieldResolver == null
+					|| environment == null ? null : fieldResolver(expression, diagnosticPosition, environment);
+				TypedExpr.fieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), field, nodeType,
+					position, fieldInfo);
 			case ENullSafeField(object, field):
-				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver), field, nodeType, position);
+				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), field,
+					nodeType, position);
 			case ECall(callee, arguments):
 				final loweredProbe = compileTimeProbe(callee, arguments, position, diagnosticPosition, environment, typeResolver);
 				if (loweredProbe != null) {
@@ -436,11 +446,13 @@ class TypedBodyBuilder {
 				} else {
 					final declaration = callResolver == null
 						|| environment == null ? null : callResolver(callee, arguments, diagnosticPosition, environment);
-					TypedExpr.call(buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver),
-						buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver), declaration, nodeType, position);
+					TypedExpr.call(buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+						buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), declaration, nodeType,
+						position);
 				}
 			case EReturn(inner):
-				TypedExpr.returnExpr(inner == null ? null : buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType,
+				TypedExpr.returnExpr(inner == null ? null : buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver,
+					fieldResolver), nodeType,
 					position);
 			case EVars(declarations):
 				final typedDeclarations = new Array<TypedExpr>();
@@ -448,7 +460,7 @@ class TypedBodyBuilder {
 					final declarationPosition = exactPosition(HxExprVarDecl.getPosition(declaration));
 					final initializer = HxExprVarDecl.getInitializer(declaration);
 					final typedInitializer = initializer == null ? null : buildExpr(initializer, null, HxExprVarDecl.getPosition(declaration), environment,
-						typeResolver, callResolver);
+						typeResolver, callResolver, fieldResolver);
 					final writtenType = StringTools.trim(HxExprVarDecl.getTypeHint(declaration));
 					final declarationType = writtenType.length > 0 ? TyType.fromHintText(writtenType) : (typedInitializer == null ? TyType.unknown() : typedInitializer.getType());
 					typedDeclarations.push(TypedExpr.variableDeclaration(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
@@ -458,77 +470,95 @@ class TypedBodyBuilder {
 			case EVariableDeclaration(_, _, _, _, _, _):
 				throw "expression-level variable declaration must be nested inside EVars";
 			case EWhile(condition, body, bodyIsBlock, loopPosition):
-				TypedExpr.whileExpr(buildExpr(condition, null, loopPosition, environment, typeResolver, callResolver),
-					buildExpressions(body, loopPosition, environment, typeResolver, callResolver), bodyIsBlock, nodeType, exactPosition(loopPosition));
+				TypedExpr.whileExpr(buildExpr(condition, null, loopPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildExpressions(body, loopPosition, environment, typeResolver, callResolver, fieldResolver), bodyIsBlock, nodeType,
+					exactPosition(loopPosition));
 			case EBreak(controlPosition):
 				TypedExpr.breakExpr(exactPosition(controlPosition));
 			case EContinue(controlPosition):
 				TypedExpr.continueExpr(exactPosition(controlPosition));
 			case EMacroExpr(inner, wrappers):
-				TypedExpr.macroExpr(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver),
+				TypedExpr.macroExpr(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
 					wrappers == null ? [] : wrappers.copy(), nodeType, position);
 			case EMacroType(typeText):
 				TypedExpr.macroType(typeText, nodeType, position);
 			case ELambda(arguments, body):
 				TypedExpr.lambda(arguments == null ? [] : arguments.copy(),
-					buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+					buildExpr(body, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case ETryCatchRaw(raw):
-				final block = structuralOpaqueBlock(raw, position, diagnosticPosition, environment, typeResolver, callResolver);
+				final block = structuralOpaqueBlock(raw, position, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 				if (block != null) {
 					block;
 				} else {
-					final tryCatch = structuralTryCatch(raw, position, diagnosticPosition, environment, typeResolver, callResolver);
+					final tryCatch = structuralTryCatch(raw, position, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver);
 					tryCatch == null ? TypedExpr.opaque(TypedOpaqueExprKind.TryCatch, raw, nodeType, position) : tryCatch;
 				}
 			case ESwitchRaw(raw):
 				TypedExpr.opaque(TypedOpaqueExprKind.Switch, raw, nodeType, position);
 			case ESwitch(scrutinee, patterns, expressions):
-				TypedExpr.switchExpr(buildExpr(scrutinee, null, diagnosticPosition, environment, typeResolver, callResolver),
-					patterns == null ? [] : patterns.copy(), buildExpressions(expressions, diagnosticPosition, environment, typeResolver, callResolver),
-					nodeType, position);
+				TypedExpr.switchExpr(buildExpr(scrutinee, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					patterns == null ? [] : patterns.copy(),
+					buildExpressions(expressions, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case ENew(typePath, arguments):
-				TypedExpr.newValue(typePath, buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.newValue(typePath, buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					nodeType, position);
 			case EUnop(op, fixity, inner):
-				TypedExpr.unary(op, fixity, buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.unary(op, fixity, buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType,
+					position);
 			case EBinop("=", left, right):
-				TypedExpr.assign(buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver),
-					buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.assign(buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case EBinop(op, left, right) if (isCompoundAssignment(op)):
-				TypedExpr.compoundAssign(op, buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver),
-					buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.compoundAssign(op, buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case EBinop(op, left, right):
-				TypedExpr.binary(op, buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver),
-					buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.binary(op, buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case ETernary(condition, whenTrue, whenFalse):
-				TypedExpr.ternary(buildExpr(condition, null, diagnosticPosition, environment, typeResolver, callResolver),
-					buildExpr(whenTrue, null, diagnosticPosition, environment, typeResolver, callResolver),
-					buildExpr(whenFalse, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.ternary(buildExpr(condition, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildExpr(whenTrue, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildExpr(whenFalse, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case EAnon(fieldNames, fieldValues):
 				TypedExpr.anonymous(fieldNames == null ? [] : fieldNames.copy(),
-					buildExpressions(fieldValues, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+					buildExpressions(fieldValues, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case EArrayComprehension(name, iterable, guard, value):
-				TypedExpr.arrayComprehension(name, buildExpr(iterable, null, diagnosticPosition, environment, typeResolver, callResolver),
-					guard == null ? null : buildExpr(guard, null, diagnosticPosition, environment, typeResolver, callResolver),
-					buildExpr(value, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.arrayComprehension(name, buildExpr(iterable, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					guard == null ? null : buildExpr(guard, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildExpr(value, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case EArrayDecl(values):
-				TypedExpr.arrayDecl(buildExpressions(values, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.arrayDecl(buildExpressions(values, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case EArrayAccess(array, index):
-				TypedExpr.arrayAccess(buildExpr(array, null, diagnosticPosition, environment, typeResolver, callResolver),
-					buildExpr(index, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.arrayAccess(buildExpr(array, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildExpr(index, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case ERange(start, end):
-				TypedExpr.range(buildExpr(start, null, diagnosticPosition, environment, typeResolver, callResolver),
-					buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.range(buildExpr(start, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case ECast(inner, typeHint):
-				TypedExpr.castValue(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver), typeHint, nodeType, position);
+				TypedExpr.castValue(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), typeHint, nodeType,
+					position);
 			case EUntyped(inner):
-				TypedExpr.untypedValue(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver), nodeType, position);
+				TypedExpr.untypedValue(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), nodeType, position);
 			case EUnsupported(raw):
 				TypedExpr.opaque(TypedOpaqueExprKind.Unsupported, raw, nodeType, position);
 		};
 	}
 
+	/**
+		Build one expression that lives outside an ordinary function body.
+
+		Field initializers use this entry point with a fresh lexical environment and
+		the same semantic resolvers as methods in the owning class.
+	**/
+	public static function buildExpression(expression:HxExpr, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>, ?typeResolver:TypedExprTypeResolver,
+			?callResolver:TypedCallDeclarationResolver, ?fieldResolver:TypedFieldDeclarationResolver):TypedExpr {
+		if (expression == null)
+			throw "cannot build a null typed expression";
+		final position = diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition;
+		return buildExpr(expression, exactPosition(position), position, environment, typeResolver, callResolver, fieldResolver);
+	}
+
 	static function buildStmt(statement:HxStmt, environment:Null<TyFunctionEnv>, typeResolver:Null<TypedExprTypeResolver>,
-			callResolver:Null<TypedCallDeclarationResolver>):TypedStmt {
+			callResolver:Null<TypedCallDeclarationResolver>, fieldResolver:Null<TypedFieldDeclarationResolver>):TypedStmt {
 		final sourcePosition = switch (statement) {
 			case SBlock(_, position) | SVar(_, _, _, position) | SIf(_, _, _, position) | SForIn(_, _, _, position) | SForKeyValue(_, _, _, _, position) |
 				SWhile(_, _, position) | SDoWhile(_, _, position) | SSwitch(_, _, _, position) | STry(_, _, position) | SBreak(position) |
@@ -538,30 +568,32 @@ class TypedBodyBuilder {
 		final diagnosticPosition = sourcePosition == null ? HxPos.unknown() : sourcePosition;
 		return switch (statement) {
 			case SBlock(statements, _):
-				TypedStmt.block(buildStatements(statements, environment, typeResolver, callResolver), storedPosition);
+				TypedStmt.block(buildStatements(statements, environment, typeResolver, callResolver, fieldResolver), storedPosition);
 			case SVar(name, typeHint, initializer, _, metadata):
 				TypedStmt.variable(name, typeHint,
-					initializer == null ? null : buildExpr(initializer, storedPosition, diagnosticPosition, environment, typeResolver, callResolver),
+					initializer == null ? null : buildExpr(initializer, storedPosition, diagnosticPosition, environment, typeResolver, callResolver,
+						fieldResolver),
 					storedPosition, metadata == null ? [] : metadata);
 			case SIf(condition, whenTrue, whenFalse, _):
-				TypedStmt.ifStmt(buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver),
-					buildStmt(whenTrue, environment, typeResolver, callResolver),
-					whenFalse == null ? null : buildStmt(whenFalse, environment, typeResolver, callResolver), storedPosition);
+				TypedStmt.ifStmt(buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildStmt(whenTrue, environment, typeResolver, callResolver, fieldResolver),
+					whenFalse == null ? null : buildStmt(whenFalse, environment, typeResolver, callResolver, fieldResolver), storedPosition);
 			case SForIn(name, iterable, body, _):
-				TypedStmt.forIn(name, buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver),
-					buildStmt(body, environment, typeResolver, callResolver), storedPosition);
+				TypedStmt.forIn(name, buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildStmt(body, environment, typeResolver, callResolver, fieldResolver), storedPosition);
 			case SForKeyValue(keyName, valueName, iterable, body, _):
-				TypedStmt.forKeyValue(keyName, valueName, buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver),
-					buildStmt(body, environment, typeResolver, callResolver), storedPosition);
+				TypedStmt.forKeyValue(keyName, valueName,
+					buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildStmt(body, environment, typeResolver, callResolver, fieldResolver), storedPosition);
 			case SWhile(condition, body, _):
-				TypedStmt.whileStmt(buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver),
-					buildStmt(body, environment, typeResolver, callResolver), storedPosition);
+				TypedStmt.whileStmt(buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					buildStmt(body, environment, typeResolver, callResolver, fieldResolver), storedPosition);
 			case SDoWhile(body, condition, _):
-				TypedStmt.doWhile(buildStmt(body, environment, typeResolver, callResolver),
-					buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver), storedPosition);
+				TypedStmt.doWhile(buildStmt(body, environment, typeResolver, callResolver, fieldResolver),
+					buildExpr(condition, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver), storedPosition);
 			case SSwitch(scrutinee, patterns, bodies, _):
-				TypedStmt.switchStmt(buildExpr(scrutinee, storedPosition, diagnosticPosition, environment, typeResolver, callResolver),
-					patterns == null ? [] : patterns.copy(), buildStatements(bodies, environment, typeResolver, callResolver), storedPosition);
+				TypedStmt.switchStmt(buildExpr(scrutinee, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					patterns == null ? [] : patterns.copy(), buildStatements(bodies, environment, typeResolver, callResolver, fieldResolver), storedPosition);
 			case STry(body, catches, _):
 				final catchNames = new Array<String>();
 				final catchTypeHints = new Array<String>();
@@ -570,39 +602,44 @@ class TypedBodyBuilder {
 					for (entry in catches) {
 						catchNames.push(entry.name);
 						catchTypeHints.push(entry.typeHint);
-						catchBodies.push(buildStmt(entry.body, environment, typeResolver, callResolver));
+						catchBodies.push(buildStmt(entry.body, environment, typeResolver, callResolver, fieldResolver));
 					}
-				TypedStmt.tryStmt(buildStmt(body, environment, typeResolver, callResolver), catchNames, catchTypeHints, catchBodies, storedPosition);
+				TypedStmt.tryStmt(buildStmt(body, environment, typeResolver, callResolver, fieldResolver), catchNames, catchTypeHints, catchBodies,
+					storedPosition);
 			case SBreak(_):
 				TypedStmt.breakStmt(storedPosition);
 			case SContinue(_):
 				TypedStmt.continueStmt(storedPosition);
 			case SThrow(expression, _):
-				TypedStmt.throwStmt(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver), storedPosition);
+				TypedStmt.throwStmt(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					storedPosition);
 			case SReturnVoid(_):
 				TypedStmt.returnVoid(storedPosition);
 			case SReturn(expression, _):
-				TypedStmt.returnValue(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver), storedPosition);
+				TypedStmt.returnValue(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					storedPosition);
 			case SExpr(expression, _):
-				TypedStmt.expressionStmt(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver), storedPosition);
+				TypedStmt.expressionStmt(buildExpr(expression, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, fieldResolver),
+					storedPosition);
 		};
 	}
 
 	static function buildStatements(statements:Array<HxStmt>, environment:Null<TyFunctionEnv>, typeResolver:Null<TypedExprTypeResolver>,
-			callResolver:Null<TypedCallDeclarationResolver>):Array<TypedStmt> {
+			callResolver:Null<TypedCallDeclarationResolver>, fieldResolver:Null<TypedFieldDeclarationResolver>):Array<TypedStmt> {
 		if (statements == null)
 			return [];
 		return [
 			for (statement in statements)
-				buildStmt(statement, environment, typeResolver, callResolver)
+				buildStmt(statement, environment, typeResolver, callResolver, fieldResolver)
 		];
 	}
 
 	public static function buildFunction(ownerName:String, sourceOrdinal:Int, declaration:HxFunctionDecl, semanticDeclaration:Null<TyDeclarationInfo>,
-			environment:Null<TyFunctionEnv>, ?typeResolver:TypedExprTypeResolver, ?callResolver:TypedCallDeclarationResolver):TypedFunction {
+			environment:Null<TyFunctionEnv>, ?typeResolver:TypedExprTypeResolver, ?callResolver:TypedCallDeclarationResolver,
+			?fieldResolver:TypedFieldDeclarationResolver):TypedFunction {
 		final sourceBody = HxFunctionDecl.getBody(declaration);
 		final semanticBody = expandStructuralStatements(sourceBody);
-		final typedBody = new TypedFunctionBody(buildStatements(semanticBody, environment, typeResolver, callResolver),
+		final typedBody = new TypedFunctionBody(buildStatements(semanticBody, environment, typeResolver, callResolver, fieldResolver),
 			TypedBodyFingerprint.forStatements(sourceBody));
 		return new TypedFunction(ownerName, sourceOrdinal, declaration, semanticDeclaration, environment, typedBody);
 	}

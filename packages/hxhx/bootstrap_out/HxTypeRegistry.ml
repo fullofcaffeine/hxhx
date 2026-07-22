@@ -72,6 +72,7 @@ let init () : unit =
   ignore (HxType.class_ "TyClassInfo");
   ignore (HxType.class_ "TyDeclarationId");
   ignore (HxType.class_ "TyDeclarationInfo");
+  ignore (HxType.class_ "TyFieldInfo");
   ignore (HxType.class_ "TyFunSig");
   ignore (HxType.class_ "TyFunctionEnv");
   ignore (HxType.class_ "TyImplicitConversionPlan");
@@ -92,6 +93,7 @@ let init () : unit =
   ignore (HxType.class_ "TypedClass");
   ignore (HxType.class_ "TypedExactCallSource");
   ignore (HxType.class_ "TypedExpr");
+  ignore (HxType.class_ "TypedFieldInitializer");
   ignore (HxType.class_ "TypedFunction");
   ignore (HxType.class_ "TypedFunctionBody");
   ignore (HxType.class_ "TypedModule");
@@ -285,7 +287,7 @@ let init () : unit =
   ignore (HxType.enum_ "haxe.StackItem");
   ignore (HxType.enum_ "hxhx.macro._MacroHostClient.MacroHostReadResult");
   ignore (HxType.enum_ "sys.thread.NextEventTime");
-  HxType.register_enum_ctors "CompilerDependencyKind" [ "ModuleResolution"; "PublicInterface"; "InlineImplementation"; "GeneratedDeclaration"; "StaticInitialization"; "FeatureSelection"; "TargetNeutralProgram" ];
+  HxType.register_enum_ctors "CompilerDependencyKind" [ "ModuleResolution"; "PublicInterface"; "InlineImplementation"; "ConstantValue"; "GeneratedDeclaration"; "StaticInitialization"; "FeatureSelection"; "TargetNeutralProgram" ];
   HxType.register_enum_ctors "CompilerDependencyPhase" [ "ModuleResolution"; "SharedTyping" ];
   HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
   HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ENullSafeField"; "ECall"; "EMacroExpr"; "EMacroType"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported"; "EReturn"; "EVars"; "EVariableDeclaration"; "EWhile"; "EBreak"; "EContinue" ];
@@ -313,6 +315,9 @@ let init () : unit =
   );
   HxType.register_enum_ctor "CompilerDependencyKind" "InlineImplementation" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerDependencyKind.InlineImplementation)
+  );
+  HxType.register_enum_ctor "CompilerDependencyKind" "ConstantValue" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (CompilerDependencyKind.ConstantValue)
   );
   HxType.register_enum_ctor "CompilerDependencyKind" "GeneratedDeclaration" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (CompilerDependencyKind.GeneratedDeclaration)
@@ -1624,6 +1629,19 @@ let init () : unit =
     let a6 = if len > 6 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'isInline' for TyDeclarationInfo" in
     Obj.repr (TyDeclarationInfo.create a0 a1 a2 a3 a4 a5 a6)
   );
+  HxType.register_class_ctor "TyFieldInfo" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'owner' for TyFieldInfo" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'modulePath' for TyFieldInfo" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'name' for TyFieldInfo" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'type' for TyFieldInfo" in
+    let a4 = if len > 4 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'isStatic' for TyFieldInfo" in
+    let a5 = if len > 5 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'isPublic' for TyFieldInfo" in
+    let a6 = if len > 6 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'isFinal' for TyFieldInfo" in
+    let a7 = if len > 7 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 7)) else failwith "Type.createInstance: missing ctor arg 'isInline' for TyFieldInfo" in
+    let a8 = if len > 8 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 8)) else failwith "Type.createInstance: missing ctor arg 'hasInitializer' for TyFieldInfo" in
+    Obj.repr (TyFieldInfo.create a0 a1 a2 a3 a4 a5 a6 a7 a8)
+  );
   HxType.register_class_ctor "TyFunSig" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for TyFunSig" in
@@ -1736,7 +1754,8 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'sourceDeclaration' for TypedClass" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'semanticInfo' for TypedClass" in
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'functions' for TypedClass" in
-    Obj.repr (TypedClass.create a0 a1 a2)
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (TypedClass.create a0 a1 a2 a3)
   );
   HxType.register_class_ctor "TypedExactCallSource" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TypedExactCallSource.create ())
@@ -1756,7 +1775,14 @@ let init () : unit =
     let a10 = if len > 10 then (HxArray.get args 10) else HxRuntime.hx_null in
     let a11 = if len > 11 then (HxArray.get args 11) else HxRuntime.hx_null in
     let a12 = if len > 12 then (HxArray.get args 12) else HxRuntime.hx_null in
-    Obj.repr (TypedExpr.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+    let a13 = if len > 13 then Obj.magic ((HxArray.get args 13)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (TypedExpr.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13)
+  );
+  HxType.register_class_ctor "TypedFieldInitializer" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'field' for TypedFieldInitializer" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'expression' for TypedFieldInitializer" in
+    Obj.repr (TypedFieldInitializer.create a0 a1)
   );
   HxType.register_class_ctor "TypedFunction" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -2584,6 +2610,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "TyClassInfo" (fun () -> Obj.repr (TyClassInfo.__empty ()));
   HxType.register_class_empty_ctor "TyDeclarationId" (fun () -> Obj.repr (TyDeclarationId.__empty ()));
   HxType.register_class_empty_ctor "TyDeclarationInfo" (fun () -> Obj.repr (TyDeclarationInfo.__empty ()));
+  HxType.register_class_empty_ctor "TyFieldInfo" (fun () -> Obj.repr (TyFieldInfo.__empty ()));
   HxType.register_class_empty_ctor "TyFunSig" (fun () -> Obj.repr (TyFunSig.__empty ()));
   HxType.register_class_empty_ctor "TyFunctionEnv" (fun () -> Obj.repr (TyFunctionEnv.__empty ()));
   HxType.register_class_empty_ctor "TyImplicitConversionPlan" (fun () -> Obj.repr (TyImplicitConversionPlan.__empty ()));
@@ -2604,6 +2631,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "TypedClass" (fun () -> Obj.repr (TypedClass.__empty ()));
   HxType.register_class_empty_ctor "TypedExactCallSource" (fun () -> Obj.repr (TypedExactCallSource.__empty ()));
   HxType.register_class_empty_ctor "TypedExpr" (fun () -> Obj.repr (TypedExpr.__empty ()));
+  HxType.register_class_empty_ctor "TypedFieldInitializer" (fun () -> Obj.repr (TypedFieldInitializer.__empty ()));
   HxType.register_class_empty_ctor "TypedFunction" (fun () -> Obj.repr (TypedFunction.__empty ()));
   HxType.register_class_empty_ctor "TypedFunctionBody" (fun () -> Obj.repr (TypedFunctionBody.__empty ()));
   HxType.register_class_empty_ctor "TypedModule" (fun () -> Obj.repr (TypedModule.__empty ()));
@@ -2778,7 +2806,7 @@ let init () : unit =
   HxType.register_class_instance_fields "CompilerCacheIdentity" [];
   HxType.register_class_static_fields "CompilerCacheIdentity" [ "encode" ];
   HxType.register_class_instance_fields "CompilerDependencyCollector" [];
-  HxType.register_class_static_fields "CompilerDependencyCollector" [ "addEdge"; "collect"; "collectExpression"; "collectModuleEdges"; "collectResolvedPath"; "collectStatement"; "collectType"; "compareText"; "normalizeImport" ];
+  HxType.register_class_static_fields "CompilerDependencyCollector" [ "addEdge"; "collect"; "collectConstantRead"; "collectExpression"; "collectModuleEdges"; "collectResolvedPath"; "collectStatement"; "collectType"; "compareText"; "normalizeImport" ];
   HxType.register_class_instance_fields "CompilerDependencyComparison" [ "getImplementationChanges"; "getInvalidations"; "getPublicInterfaceChanges"; "implementationChanges"; "invalidations"; "isAffected"; "publicInterfaceChanges"; "reasonFor" ];
   HxType.register_class_static_fields "CompilerDependencyComparison" [ "compareInvalidations"; "compareText"; "sortedCopy" ];
   HxType.register_class_instance_fields "CompilerDependencyEdge" [ "canonicalKey"; "consumerModule"; "describe"; "factIdentity"; "kind"; "phase"; "providerModule" ];
@@ -2893,7 +2921,7 @@ let init () : unit =
   HxType.register_class_static_fields "TyAbstractBinaryBinding" [ "best"; "collect"; "containsTypeParameter"; "ensureNonGeneric"; "hasAbstractOperand"; "matches"; "noApplicable"; "permitsOrdinaryFallback"; "select"; "validateBodyless" ];
   HxType.register_class_instance_fields "TyAbstractBinaryOperatorInfo" [ "commutative"; "declaration"; "getDeclaration"; "getIsCommutative"; "getLeftType"; "getOperator"; "getResultType"; "getRightType"; "leftType"; "op"; "resultType"; "rightType" ];
   HxType.register_class_static_fields "TyAbstractBinaryOperatorInfo" [];
-  HxType.register_class_instance_fields "TyAbstractInfo" [ "addBinaryOperator"; "addUnaryOperator"; "binaryOperators"; "declarationForSignature"; "declarationForSource"; "declarations"; "fieldType"; "fields"; "getAllBinaryOperators"; "getAllUnaryOperators"; "getBinaryOperators"; "getDeclarations"; "getFullName"; "getIdentity"; "getImplicitFromTypes"; "getImplicitToTypes"; "getModulePath"; "getShortName"; "getTypeParameters"; "getUnaryOperators"; "getUnderlyingType"; "hasField"; "identity"; "implicitFromTypes"; "implicitToTypes"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "modulePath"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods"; "typeParameters"; "unaryOperators"; "underlyingType" ];
+  HxType.register_class_instance_fields "TyAbstractInfo" [ "addBinaryOperator"; "addUnaryOperator"; "binaryOperators"; "declarationForSignature"; "declarationForSource"; "declarations"; "fieldInfo"; "fieldType"; "fields"; "getAllBinaryOperators"; "getAllUnaryOperators"; "getBinaryOperators"; "getDeclarations"; "getFullName"; "getIdentity"; "getImplicitFromTypes"; "getImplicitToTypes"; "getModulePath"; "getShortName"; "getTypeParameters"; "getUnaryOperators"; "getUnderlyingType"; "hasField"; "identity"; "implicitFromTypes"; "implicitToTypes"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "modulePath"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods"; "typeParameters"; "unaryOperators"; "underlyingType" ];
   HxType.register_class_static_fields "TyAbstractInfo" [ "unaryKey" ];
   HxType.register_class_instance_fields "TyAbstractNativeBinaryOperation" [];
   HxType.register_class_static_fields "TyAbstractNativeBinaryOperation" [ "carrierType"; "operationType"; "permitsResultConversion"; "validate" ];
@@ -2905,12 +2933,14 @@ let init () : unit =
   HxType.register_class_static_fields "TyBoundAbstractBinaryOperator" [];
   HxType.register_class_instance_fields "TyClassEnv" [ "functions"; "getFunctions"; "getName"; "name" ];
   HxType.register_class_static_fields "TyClassEnv" [];
-  HxType.register_class_instance_fields "TyClassInfo" [ "declarationForSignature"; "declarationForSource"; "declarations"; "fieldType"; "fields"; "getDeclarations"; "getFullName"; "getIdentity"; "getModulePath"; "getShortName"; "hasField"; "identity"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "modulePath"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods" ];
+  HxType.register_class_instance_fields "TyClassInfo" [ "declarationForSignature"; "declarationForSource"; "declarations"; "fieldInfo"; "fieldType"; "fields"; "getDeclarations"; "getFullName"; "getIdentity"; "getModulePath"; "getShortName"; "hasField"; "identity"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "modulePath"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods" ];
   HxType.register_class_static_fields "TyClassInfo" [];
   HxType.register_class_instance_fields "TyDeclarationId" [ "canonicalKey"; "equals"; "getCanonicalKey"; "toString" ];
   HxType.register_class_static_fields "TyDeclarationId" [];
   HxType.register_class_instance_fields "TyDeclarationInfo" [ "getHasBody"; "getIdentity"; "getIsInline"; "getIsStatic"; "getMetadata"; "getOwner"; "getPosition"; "getSignature"; "getSourceDeclaration"; "getTypeParameterConstraints"; "getTypeParameters"; "identity"; "isInline"; "metadata"; "owner"; "position"; "signature"; "sourceDeclaration" ];
   HxType.register_class_static_fields "TyDeclarationInfo" [];
+  HxType.register_class_instance_fields "TyFieldInfo" [ "canEmbedCrossModuleValue"; "canonicalKey"; "getCanonicalKey"; "getHasInitializer"; "getIsFinal"; "getIsInline"; "getIsPublic"; "getIsStatic"; "getModulePath"; "getName"; "getOwner"; "getType"; "hasInitializer"; "isFinal"; "isInline"; "isPublic"; "isStatic"; "modulePath"; "name"; "owner"; "type" ];
+  HxType.register_class_static_fields "TyFieldInfo" [];
   HxType.register_class_instance_fields "TyFunSig" [ "acceptsArity"; "argNames"; "argOptional"; "argRest"; "args"; "getArgNames"; "getArgOptional"; "getArgRest"; "getArgs"; "getIsStatic"; "getName"; "getPos"; "getReturnType"; "isStatic"; "name"; "pos"; "returnType" ];
   HxType.register_class_static_fields "TyFunSig" [];
   HxType.register_class_instance_fields "TyFunctionEnv" [ "copyForInference"; "declareLocal"; "getLocals"; "getName"; "getParams"; "getReturnExprType"; "getReturnType"; "locals"; "name"; "params"; "resolveLocal"; "resolveSymbol"; "returnExprType"; "returnType" ];
@@ -2921,7 +2951,7 @@ let init () : unit =
   HxType.register_class_static_fields "TyMethodGenericBinding" [ "argumentsAreConsistent"; "bindings"; "collect"; "hasUnbound"; "inferableTypeParameters"; "isInferableParameter"; "parameterName"; "sameTypeConstructor"; "specializeResult"; "substitute"; "substitutedGenericDisplay" ];
   HxType.register_class_instance_fields "TyModuleEnv" [ "getImports"; "getMainClass"; "getPackagePath"; "imports"; "mainClass"; "packagePath" ];
   HxType.register_class_static_fields "TyModuleEnv" [];
-  HxType.register_class_instance_fields "TyNominalInfo" [ "declarationForSignature"; "declarationForSource"; "declarations"; "fieldType"; "fields"; "getDeclarations"; "getFullName"; "getIdentity"; "getModulePath"; "getShortName"; "hasField"; "identity"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "modulePath"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods" ];
+  HxType.register_class_instance_fields "TyNominalInfo" [ "declarationForSignature"; "declarationForSource"; "declarations"; "fieldInfo"; "fieldType"; "fields"; "getDeclarations"; "getFullName"; "getIdentity"; "getModulePath"; "getShortName"; "hasField"; "identity"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "modulePath"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods" ];
   HxType.register_class_static_fields "TyNominalInfo" [];
   HxType.register_class_instance_fields "TyNominalTypeId" [ "canonicalName"; "equals"; "getCanonicalName"; "toString" ];
   HxType.register_class_static_fields "TyNominalTypeId" [];
@@ -2938,19 +2968,21 @@ let init () : unit =
   HxType.register_class_instance_fields "TypedAbstractUnaryLowering" [];
   HxType.register_class_static_fields "TypedAbstractUnaryLowering" [ "accessorDeclaration"; "assertNoAbstractUnary"; "assertNoAbstractUnaryExpression"; "assertNoAbstractUnaryStatements"; "collectHelpers"; "directPlace"; "freshName"; "helperKey"; "inlineCall"; "instanceCall"; "lowerClasses"; "lowerClassesWithHelpers"; "lowerExpression"; "lowerInlineStatements"; "lowerModules"; "lowerStatement"; "nativeBodylessOperation"; "placeFor"; "propertyPlaceFor"; "propertyUpdate"; "staticCall"; "substituteExpression"; "voidType" ];
   HxType.register_class_instance_fields "TypedBodyBuilder" [];
-  HxType.register_class_static_fields "TypedBodyBuilder" [ "buildExpr"; "buildExpressions"; "buildFallbackModule"; "buildFunction"; "buildStatements"; "buildStmt"; "compileTimeProbe"; "exactPosition"; "expandStatement"; "expandStructuralStatements"; "expressionPath"; "expressionType"; "fallbackType"; "isCompoundAssignment"; "normalizeProbeText"; "opaqueBlockBody"; "opaqueBlockProbeResult"; "parsedOpaqueBlockStatements"; "statementAlwaysExits"; "structuralOpaqueBlock"; "structuralTryCatch"; "untypedExpression"; "untypedStatement" ];
+  HxType.register_class_static_fields "TypedBodyBuilder" [ "buildExpr"; "buildExpression"; "buildExpressions"; "buildFallbackModule"; "buildFunction"; "buildStatements"; "buildStmt"; "compileTimeProbe"; "exactPosition"; "expandStatement"; "expandStructuralStatements"; "expressionPath"; "expressionType"; "fallbackType"; "isCompoundAssignment"; "normalizeProbeText"; "opaqueBlockBody"; "opaqueBlockProbeResult"; "parsedOpaqueBlockStatements"; "statementAlwaysExits"; "structuralOpaqueBlock"; "structuralTryCatch"; "untypedExpression"; "untypedStatement" ];
   HxType.register_class_instance_fields "TypedBodyFingerprint" [];
   HxType.register_class_static_fields "TypedBodyFingerprint" [ "addExpression"; "addExpressions"; "addInt"; "addPattern"; "addPatterns"; "addPosition"; "addStatement"; "addStatements"; "addString"; "addStrings"; "addUnaryFixity"; "addUnaryOperator"; "forExpression"; "forStatements" ];
   HxType.register_class_instance_fields "TypedBodyInvariant" [];
   HxType.register_class_static_fields "TypedBodyInvariant" [ "assertClasses"; "assertExpr"; "assertFunction"; "assertStmt"; "opaqueContainsSemanticSyntax"; "scrubQuotedAndCommentText" ];
   HxType.register_class_instance_fields "TypedBodySource" [];
   HxType.register_class_static_fields "TypedBodySource" [ "blockExpression"; "classDeclaration"; "expression"; "expressionTail"; "functionDeclaration"; "moduleDeclaration"; "sourcePosition"; "statement"; "statements"; "variableTypeHint" ];
-  HxType.register_class_instance_fields "TypedClass" [ "functions"; "getFunctions"; "getSemanticInfo"; "getSourceDeclaration"; "semanticInfo"; "sourceDeclaration"; "withFunctions" ];
+  HxType.register_class_instance_fields "TypedClass" [ "fieldInitializers"; "functions"; "getFieldInitializers"; "getFunctions"; "getSemanticInfo"; "getSourceDeclaration"; "semanticInfo"; "sourceDeclaration"; "withFunctions" ];
   HxType.register_class_static_fields "TypedClass" [];
   HxType.register_class_instance_fields "TypedExactCallSource" [];
   HxType.register_class_static_fields "TypedExactCallSource" [ "decodeInstance"; "encodeInstance"; "ordinaryInstanceCall" ];
-  HxType.register_class_instance_fields "TypedExpr" [ "boolValue"; "declaration"; "expressions"; "floatValue"; "getBoolValue"; "getDeclaration"; "getExpressions"; "getFloatValue"; "getIntValue"; "getOpaqueKind"; "getPatterns"; "getPosition"; "getTag"; "getTexts"; "getType"; "getUnaryFixity"; "getUnaryOperator"; "getVariableIsFinal"; "getVariableIsStatic"; "intValue"; "opaqueKind"; "patterns"; "position"; "tag"; "texts"; "type"; "unaryFixity"; "unaryOperator"; "withExpressions"; "withType" ];
+  HxType.register_class_instance_fields "TypedExpr" [ "boolValue"; "declaration"; "expressions"; "fieldInfo"; "floatValue"; "getBoolValue"; "getDeclaration"; "getExpressions"; "getFieldInfo"; "getFloatValue"; "getIntValue"; "getOpaqueKind"; "getPatterns"; "getPosition"; "getTag"; "getTexts"; "getType"; "getUnaryFixity"; "getUnaryOperator"; "getVariableIsFinal"; "getVariableIsStatic"; "intValue"; "opaqueKind"; "patterns"; "position"; "tag"; "texts"; "type"; "unaryFixity"; "unaryOperator"; "withExpressions"; "withType" ];
   HxType.register_class_static_fields "TypedExpr" [ "anonymous"; "arrayAccess"; "arrayComprehension"; "arrayDecl"; "assign"; "binary"; "block"; "boolLiteral"; "breakExpr"; "call"; "castValue"; "compoundAssign"; "continueExpr"; "enumValue"; "fieldRead"; "floatLiteral"; "intLiteral"; "lambda"; "localRead"; "macroExpr"; "macroType"; "nameRead"; "newValue"; "nullSafeFieldRead"; "nullValue"; "opaque"; "range"; "returnExpr"; "stringLiteral"; "superValue"; "switchExpr"; "temporary"; "ternary"; "thisValue"; "unary"; "untypedValue"; "variableDeclaration"; "variableDeclarations"; "whileExpr" ];
+  HxType.register_class_instance_fields "TypedFieldInitializer" [ "expression"; "field"; "getExpression"; "getField" ];
+  HxType.register_class_static_fields "TypedFieldInitializer" [];
   HxType.register_class_instance_fields "TypedFunction" [ "assertParsedBodyCurrent"; "body"; "declaration"; "environment"; "getBody"; "getDeclaration"; "getEnvironment"; "getOwnerName"; "getSourceDeclaration"; "getSourceOrdinal"; "getStableIdentity"; "ownerName"; "sourceDeclaration"; "sourceOrdinal"; "withBody" ];
   HxType.register_class_static_fields "TypedFunction" [];
   HxType.register_class_instance_fields "TypedFunctionBody" [ "getSourceFingerprint"; "getStatements"; "sourceFingerprint"; "statements" ];
@@ -2966,7 +2998,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TyperIndex" [ "addNominal"; "addResolvedModule"; "addResolvedModules"; "byFullName"; "byShortName"; "catalogOperators"; "getAbstractByFullName"; "getBinaryOperators"; "getByFullName"; "getByShortName"; "getForSourceClass"; "getUnaryOperators"; "identityByFullName"; "identityByShortName"; "indexModule"; "registerIdentity"; "registerModuleIdentities"; "resolveIdentity"; "resolveSemanticType"; "resolveTypePath"; "semanticDump"; "semanticType" ];
   HxType.register_class_static_fields "TyperIndex" [ "addMethod"; "build"; "canonicalModulePath"; "classFullNameInModule"; "classifyOperatorExpression"; "compareText"; "declarationSignatureKey"; "expectedModuleNameFromFile"; "hasMetadata"; "malformedOperator"; "metadataValue"; "metadataValues"; "parseOperatorMetadata"; "typeParameters" ];
   HxType.register_class_instance_fields "TyperStage" [];
-  HxType.register_class_static_fields "TyperStage" [ "accessorPropertyForAccess"; "arrayElementType"; "buildTypedClasses"; "callRange"; "currentFieldReferenceType"; "currentStaticMethodReferenceType"; "currentThisType"; "declarationLineRange"; "declarePatternBindings"; "declaredMemberReadType"; "diagnosticFileName"; "dottedFieldPath"; "extractRawDiagnostic"; "flatOverloadTypeScore"; "functionNameRange"; "functionOverloadTypeScore"; "functionReferenceType"; "functionTypeSegments"; "inferExprType"; "inferFunctionValueCall"; "inferNullCoalesceType"; "inferReturnType"; "isRangeIdentCode"; "isStrict"; "isTypeErrorProbeCallee"; "isUpperStartName"; "nominalInfoForType"; "normalizeFunctionTypeSegment"; "normalizeOverloadTypeName"; "overloadArgScore"; "overloadCandidateScore"; "renderArgType"; "renderOverloadCandidate"; "resolveCallDeclaration"; "resolveMethodCall"; "resolveTypeInContext"; "selectedMethodCallResolution"; "sourceLine"; "typeErrorProbe"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
+  HxType.register_class_static_fields "TyperStage" [ "accessorPropertyForAccess"; "arrayElementType"; "buildTypedClasses"; "callRange"; "currentFieldReferenceType"; "currentStaticMethodReferenceType"; "currentThisType"; "declarationLineRange"; "declarePatternBindings"; "declaredMemberReadType"; "diagnosticFileName"; "dottedFieldPath"; "extractRawDiagnostic"; "flatOverloadTypeScore"; "functionNameRange"; "functionOverloadTypeScore"; "functionReferenceType"; "functionTypeSegments"; "inferExprType"; "inferFunctionValueCall"; "inferNullCoalesceType"; "inferReturnType"; "isRangeIdentCode"; "isStrict"; "isTypeErrorProbeCallee"; "isUpperStartName"; "nominalInfoForType"; "normalizeFunctionTypeSegment"; "normalizeOverloadTypeName"; "overloadArgScore"; "overloadCandidateScore"; "renderArgType"; "renderOverloadCandidate"; "resolveCallDeclaration"; "resolveFieldDeclaration"; "resolveMethodCall"; "resolveTypeInContext"; "selectedMethodCallResolution"; "sourceLine"; "typeErrorProbe"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
   HxType.register_class_instance_fields "_EmitterStage._InstanceFieldEntry" [ "fields"; "key" ];
   HxType.register_class_static_fields "_EmitterStage._InstanceFieldEntry" [];
   HxType.register_class_instance_fields "_EmitterStage._InstanceMethodEntry" [ "key"; "methodNames" ];
@@ -3378,6 +3410,7 @@ let init () : unit =
   HxType.register_class_tags "TyClassInfo" [ "TyClassInfo"; "TyNominalInfo" ];
   HxType.register_class_tags "TyDeclarationId" [ "TyDeclarationId" ];
   HxType.register_class_tags "TyDeclarationInfo" [ "TyDeclarationInfo" ];
+  HxType.register_class_tags "TyFieldInfo" [ "TyFieldInfo" ];
   HxType.register_class_tags "TyFunSig" [ "TyFunSig" ];
   HxType.register_class_tags "TyFunctionEnv" [ "TyFunctionEnv" ];
   HxType.register_class_tags "TyImplicitConversionPlan" [ "TyImplicitConversionPlan" ];
@@ -3398,6 +3431,7 @@ let init () : unit =
   HxType.register_class_tags "TypedClass" [ "TypedClass" ];
   HxType.register_class_tags "TypedExactCallSource" [ "TypedExactCallSource" ];
   HxType.register_class_tags "TypedExpr" [ "TypedExpr" ];
+  HxType.register_class_tags "TypedFieldInitializer" [ "TypedFieldInitializer" ];
   HxType.register_class_tags "TypedFunction" [ "TypedFunction" ];
   HxType.register_class_tags "TypedFunctionBody" [ "TypedFunctionBody" ];
   HxType.register_class_tags "TypedModule" [ "TypedModule" ];

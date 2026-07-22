@@ -182,7 +182,7 @@ class TypedAbstractBinaryLowering {
 				];
 				function field(type:TyType):TypedExpr {
 					final receiverRead = TypedExpr.localRead(receiverName, receiver.getType(), receiver.getPosition());
-					return TypedExpr.fieldRead(receiverRead, texts[0], type, target.getPosition());
+					return TypedExpr.fieldRead(receiverRead, texts[0], type, target.getPosition(), target.getFieldInfo());
 				}
 				{
 					prefix: prefix,

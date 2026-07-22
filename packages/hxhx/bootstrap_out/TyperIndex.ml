@@ -952,7 +952,7 @@ let indexModule = fun self (hx_module : ResolvedModule.t) -> ignore (ignore (try
             __new_95
           ));
           let fieldType = Obj.magic (semanticType (Obj.magic self) (HxFieldDecl.getTypeHint (Obj.magic field) : string) (packagePath : string) (moduleName : string) (Obj.magic imports) (Obj.magic params)) in let fieldName = (HxFieldDecl.getName (Obj.magic field) : string) in (
-            ignore (HxMap.set_string fields fieldName fieldType);
+            ignore (HxMap.set_string fields fieldName (TyFieldInfo.create (Obj.magic identity) (semanticModulePath : string) (fieldName : string) (Obj.magic fieldType) (HxFieldDecl.getIsStatic (Obj.magic field)) (HxFieldDecl.getVisibility (Obj.magic field) = HxVisibility.Public) (HxFieldDecl.getIsFinal (Obj.magic field)) (hasMetadata (Obj.magic (HxFieldDecl.getMetadata (Obj.magic field))) ("inline" : string)) (HxFieldDecl.getInit (Obj.magic field) != Obj.magic (HxRuntime.hx_null) || HxString.length (StringTools.trim (HxFieldDecl.getInitText (Obj.magic field) : string)) > 0)));
             let getter = (HxFieldDecl.getPropertyGet (Obj.magic field) : string) in let setter = (HxFieldDecl.getPropertySet (Obj.magic field) : string) in if HxString.length getter > 0 || HxString.length setter > 0 then ignore (HxMap.set_string properties fieldName (TyPropertyInfo.create (fieldName : string) (Obj.magic fieldType) (HxFieldDecl.getIsStatic (Obj.magic field)) (getter : string) (setter : string))) else ()
           )
         )) done);
