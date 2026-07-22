@@ -60,6 +60,8 @@
 		"hxhx_CompilationServerRequest.ml",
 		"hxhx_CompilationServerReply.ml",
 		"hxhx_CompilationServerProtocol.ml",
+		"hxhx_CompilationRequestOutputTransaction.ml",
+		"hxhx_CompilationRequestOutputPaths.ml",
 		"hxhx_CompilationRequestOutputEvent.ml",
 		"hxhx_CompilationRequestOutput.ml",
 		"hxhx_CompilationRequestContext.ml",

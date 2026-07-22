@@ -65,7 +65,7 @@ class CompilationServerRequestDispatcher {
 	}
 
 	static function finish(context:CompilationRequestContext, isError:Bool, stopServer:Bool = false):CompilationServerReply {
-		final cleanupSucceeded = context.close();
+		final cleanupSucceeded = context.close(!isError);
 		final events = context.output.events();
 		return new CompilationServerReply(events, isError || !cleanupSucceeded, stopServer && cleanupSucceeded);
 	}

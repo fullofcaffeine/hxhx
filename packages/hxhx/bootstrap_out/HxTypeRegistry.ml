@@ -166,6 +166,8 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.CompilationRequestContext");
   ignore (HxType.class_ "hxhx.CompilationRequestOutput");
   ignore (HxType.class_ "hxhx.CompilationRequestOutputEvent");
+  ignore (HxType.class_ "hxhx.CompilationRequestOutputPaths");
+  ignore (HxType.class_ "hxhx.CompilationRequestOutputTransaction");
   ignore (HxType.class_ "hxhx.CompilationServerProtocol");
   ignore (HxType.class_ "hxhx.CompilationServerReply");
   ignore (HxType.class_ "hxhx.CompilationServerRequest");
@@ -2002,6 +2004,24 @@ let init () : unit =
     let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'isErrorStream' for hxhx.CompilationRequestOutputEvent" in
     Obj.repr (Hxhx_CompilationRequestOutputEvent.create a0 a1)
   );
+  HxType.register_class_ctor "hxhx.CompilationRequestOutputPaths" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'finalOutDir' for hxhx.CompilationRequestOutputPaths" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'workingOutDir' for hxhx.CompilationRequestOutputPaths" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'finalBackendOutputDir' for hxhx.CompilationRequestOutputPaths" in
+    let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'workingBackendOutputDir' for hxhx.CompilationRequestOutputPaths" in
+    let a4 = if len > 4 then Obj.obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'finalOutputFileHint' for hxhx.CompilationRequestOutputPaths" in
+    let a5 = if len > 5 then Obj.obj ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'workingOutputFileHint' for hxhx.CompilationRequestOutputPaths" in
+    Obj.repr (Hxhx_CompilationRequestOutputPaths.create a0 a1 a2 a3 a4 a5)
+  );
+  HxType.register_class_ctor "hxhx.CompilationRequestOutputTransaction" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'requestId' for hxhx.CompilationRequestOutputTransaction" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'outDir' for hxhx.CompilationRequestOutputTransaction" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'backendOutputDir' for hxhx.CompilationRequestOutputTransaction" in
+    let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'outputFileHint' for hxhx.CompilationRequestOutputTransaction" in
+    Obj.repr (Hxhx_CompilationRequestOutputTransaction.create a0 a1 a2 a3)
+  );
   HxType.register_class_ctor "hxhx.CompilationServerProtocol" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_CompilationServerProtocol.create ())
   );
@@ -2449,6 +2469,8 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.CompilationRequestContext" (fun () -> Obj.repr (Hxhx_CompilationRequestContext.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationRequestOutput" (fun () -> Obj.repr (Hxhx_CompilationRequestOutput.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationRequestOutputEvent" (fun () -> Obj.repr (Hxhx_CompilationRequestOutputEvent.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CompilationRequestOutputPaths" (fun () -> Obj.repr (Hxhx_CompilationRequestOutputPaths.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CompilationRequestOutputTransaction" (fun () -> Obj.repr (Hxhx_CompilationRequestOutputTransaction.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerProtocol" (fun () -> Obj.repr (Hxhx_CompilationServerProtocol.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerReply" (fun () -> Obj.repr (Hxhx_CompilationServerReply.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerRequest" (fun () -> Obj.repr (Hxhx_CompilationServerRequest.__empty ()));
@@ -2839,12 +2861,16 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.BuildMetadataCollector" [ "collectBuildMacroExprs"; "findBuildMacroExprs"; "matchesMetadataPathFilter"; "trim" ];
   HxType.register_class_instance_fields "hxhx.CliRouting" [];
   HxType.register_class_static_fields "hxhx.CliRouting" [ "addDefineIfMissing"; "addDefineIfMissingForPlanning"; "addLibraryIfMissing"; "addLibraryIfMissingForPlanning"; "addMacroIfMissing"; "canRouteCommandOnlyUnitsAsStage3"; "canRouteMixedUnitsAsNativeJs"; "canRouteMixedUnitsAsNativeSource"; "canRouteUnitsAsNativeCpp"; "consumesStandardTargetValue"; "findFlagValue"; "findSourceHostReflaxeTarget"; "findUnsupportedLegacyTarget"; "flattenUnits"; "getDefineValue"; "hasCommandHook"; "hasCppTargetFlag"; "hasDefine"; "hasFlag"; "hasHlTargetFlag"; "hasLibrary"; "hasMacro"; "hasNekoTargetFlag"; "hasNonCppStandardTargetFlag"; "hasNonHlStandardTargetFlag"; "hasNonNekoStandardTargetFlag"; "hasNonSourceStandardTargetFlag"; "hasSourceTargetFlag"; "hasStandardJsTargetFlag"; "isJsNativeHelperUnit"; "isNativeNekoCommandHelperUnit"; "listLaneSelectors"; "plan"; "planningTargetArgs"; "planningTargetUnits"; "pureSourceTarget"; "scanStandardTargetFlags"; "sourceTargetCandidates"; "sourceTargetForUnits"; "stripRoutingFlags" ];
-  HxType.register_class_instance_fields "hxhx.CompilationRequestContext" [ "baselineReportEnabled"; "cancellationReason"; "cancellationReported"; "cancellationStage"; "checkpoint"; "cleanupActions"; "cleanupSucceeded"; "close"; "closed"; "configureTimeoutMs"; "deadlineAtSeconds"; "emitBaselineReport"; "enableBaselineReport"; "ensureOpen"; "isCancelled"; "isClosed"; "isServerRequest"; "output"; "registerCleanup"; "reportCleanupFailure"; "requestCancellation"; "requestId"; "startedAtSeconds" ];
+  HxType.register_class_instance_fields "hxhx.CompilationRequestContext" [ "baselineReportEnabled"; "cancellationReason"; "cancellationReported"; "cancellationStage"; "checkpoint"; "cleanupActions"; "cleanupSucceeded"; "close"; "closed"; "configureTimeoutMs"; "deadlineAtSeconds"; "emitBaselineReport"; "enableBaselineReport"; "ensureOpen"; "isCancelled"; "isClosed"; "isServerRequest"; "output"; "outputTransaction"; "prepareOutput"; "registerCleanup"; "reportCleanupFailure"; "requestCancellation"; "requestId"; "sealOutput"; "stagedEmitResult"; "startedAtSeconds" ];
   HxType.register_class_static_fields "hxhx.CompilationRequestContext" [ "direct"; "normalizeLabel"; "server" ];
   HxType.register_class_instance_fields "hxhx.CompilationRequestOutput" [ "buffered"; "captured"; "close"; "closed"; "events"; "stderrLine"; "stdoutLine"; "write" ];
   HxType.register_class_static_fields "hxhx.CompilationRequestOutput" [ "writeStderrLine"; "writeStdoutLine" ];
   HxType.register_class_instance_fields "hxhx.CompilationRequestOutputEvent" [ "isErrorStream"; "text" ];
   HxType.register_class_static_fields "hxhx.CompilationRequestOutputEvent" [];
+  HxType.register_class_instance_fields "hxhx.CompilationRequestOutputPaths" [ "finalBackendOutputDir"; "finalOutDir"; "finalOutputFileHint"; "workingBackendOutputDir"; "workingOutDir"; "workingOutputFileHint" ];
+  HxType.register_class_static_fields "hxhx.CompilationRequestOutputPaths" [ "direct" ];
+  HxType.register_class_instance_fields "hxhx.CompilationRequestOutputTransaction" [ "cleanupRetainedBackups"; "close"; "collectPublications"; "createRoot"; "createStagingPath"; "directoryRoots"; "fileBundleRoot"; "finalEmitResult"; "findContainingRoot"; "mapDirectory"; "mapFile"; "outputPaths"; "outputPathsValue"; "publication"; "publish"; "removeEmptyFileBundle"; "requestId"; "retainedBackups"; "rollback"; "state"; "status"; "toFinalPath" ];
+  HxType.register_class_static_fields "hxhx.CompilationRequestOutputTransaction" [ "PROCESS_TOKEN"; "absolute"; "appendProblem"; "appendRelative"; "captureProblem"; "comparePathNames"; "compareShortestPathFirst"; "comparisonPath"; "deleteTree"; "ensureDirectory"; "isWindowsDriveRoot"; "isWithin"; "nearestExistingDirectory"; "normalizedParent"; "pathToken"; "relativeTo"; "removeCreatedParents" ];
   HxType.register_class_instance_fields "hxhx.CompilationServerProtocol" [];
   HxType.register_class_static_fields "hxhx.CompilationServerProtocol" [ "parseRequestTimeoutMs"; "requestLengthProblem" ];
   HxType.register_class_instance_fields "hxhx.CompilationServerReply" [ "events"; "isError"; "outputEvents"; "stopServer" ];
@@ -3193,6 +3219,8 @@ let init () : unit =
   HxType.register_class_tags "hxhx.CompilationRequestContext" [ "hxhx.CompilationRequestContext" ];
   HxType.register_class_tags "hxhx.CompilationRequestOutput" [ "hxhx.CompilationRequestOutput" ];
   HxType.register_class_tags "hxhx.CompilationRequestOutputEvent" [ "hxhx.CompilationRequestOutputEvent" ];
+  HxType.register_class_tags "hxhx.CompilationRequestOutputPaths" [ "hxhx.CompilationRequestOutputPaths" ];
+  HxType.register_class_tags "hxhx.CompilationRequestOutputTransaction" [ "hxhx.CompilationRequestOutputTransaction" ];
   HxType.register_class_tags "hxhx.CompilationServerProtocol" [ "hxhx.CompilationServerProtocol" ];
   HxType.register_class_tags "hxhx.CompilationServerReply" [ "hxhx.CompilationServerReply" ];
   HxType.register_class_tags "hxhx.CompilationServerRequest" [ "hxhx.CompilationServerRequest" ];

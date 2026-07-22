@@ -1,5 +1,7 @@
 package hxhx;
 
+import backend.EmitResult;
+
 private typedef CompilationRequestCleanup = {
 	final name:String;
 	final action:() -> Void;
@@ -8,14 +10,11 @@ private typedef CompilationRequestCleanup = {
 /**
 	Mutable working state that belongs to exactly one compiler request.
 
-	The context owns ordered output, a cooperative cancellation deadline, and a
-	reverse-order cleanup ledger. Compiler stages ask whether the request may
-	continue at safe boundaries. Closing the context runs every cleanup even when
-	an earlier one fails, reports those failures through the same request output,
-	and rejects any later output writes.
-
-	A later `.32.1` slice adds staged filesystem output to this same request
-	boundary instead of retaining it on the server process.
+	The context owns ordered output, a cooperative cancellation deadline, staged
+	filesystem output, and a reverse-order cleanup ledger. Compiler stages ask
+	whether the request may continue at safe boundaries. Closing the context runs
+	every cleanup even when an earlier one fails, reports those failures through
+	the same request output, and rejects any later output writes.
 **/
 class CompilationRequestContext {
 	public static inline final CANCELLED_EXIT_CODE:Int = 130;
@@ -33,6 +32,8 @@ class CompilationRequestContext {
 	var cancellationReason:Null<String>;
 	var cancellationStage:Null<String>;
 	var cancellationReported:Bool;
+	var outputTransaction:Null<CompilationRequestOutputTransaction>;
+	var stagedEmitResult:Null<EmitResult>;
 
 	public function new(requestId:Int, bufferOutput:Bool, isServerRequest:Bool) {
 		this.requestId = requestId;
@@ -47,6 +48,8 @@ class CompilationRequestContext {
 		this.cancellationReason = null;
 		this.cancellationStage = null;
 		this.cancellationReported = false;
+		this.outputTransaction = null;
+		this.stagedEmitResult = null;
 	}
 
 	public static function direct():CompilationRequestContext {
@@ -111,6 +114,35 @@ class CompilationRequestContext {
 	}
 
 	/**
+		Choose working paths for target output owned by this request.
+
+		Direct commands keep their requested paths. Server requests receive private
+		staging paths. Closing the request either publishes those paths after all
+		other cleanup succeeds or removes them without changing prior output.
+	**/
+	public function prepareOutput(outDir:String, backendOutputDir:String, outputFileHint:Null<String>):CompilationRequestOutputPaths {
+		ensureOpen();
+		if (!isServerRequest)
+			return CompilationRequestOutputPaths.direct(outDir, backendOutputDir, outputFileHint);
+		if (outputTransaction != null)
+			throw "compiler request output transaction is already prepared";
+		final transaction = new CompilationRequestOutputTransaction(requestId, outDir, backendOutputDir, outputFileHint);
+		outputTransaction = transaction;
+		return transaction.outputPaths();
+	}
+
+	/** Seal completed server output for success-only publication during request close. **/
+	public function sealOutput(result:EmitResult):EmitResult {
+		ensureOpen();
+		if (outputTransaction == null)
+			return result;
+		if (stagedEmitResult != null)
+			throw "compiler request output is already sealed";
+		stagedEmitResult = result;
+		return outputTransaction.finalEmitResult(result);
+	}
+
+	/**
 		Register one cleanup before exposing the acquired state to later stages.
 
 		Cleanups run in reverse registration order, matching nested acquisition.
@@ -131,7 +163,7 @@ class CompilationRequestContext {
 		The method is idempotent. A repeated close returns the result from the first
 		close without running any action twice.
 	**/
-	public function close():Bool {
+	public function close(requestSucceeded:Bool = true):Bool {
 		if (closed)
 			return cleanupSucceeded;
 		closed = true;
@@ -148,6 +180,28 @@ class CompilationRequestContext {
 			}
 		}
 		cleanupActions.resize(0);
+		if (outputTransaction != null) {
+			if (requestSucceeded && cleanupSucceeded && stagedEmitResult != null) {
+				try {
+					outputTransaction.publish();
+				} catch (error:haxe.io.Error) {
+					reportCleanupFailure("output-publication", Std.string(error));
+				} catch (error:haxe.Exception) {
+					reportCleanupFailure("output-publication", error.message);
+				} catch (error:String) {
+					reportCleanupFailure("output-publication", error);
+				}
+			}
+			try {
+				outputTransaction.close();
+			} catch (error:haxe.io.Error) {
+				reportCleanupFailure("output-transaction", Std.string(error));
+			} catch (error:haxe.Exception) {
+				reportCleanupFailure("output-transaction", error.message);
+			} catch (error:String) {
+				reportCleanupFailure("output-transaction", error);
+			}
+		}
 		if (baselineReportEnabled)
 			emitBaselineReport();
 		output.close();
@@ -186,6 +240,7 @@ class CompilationRequestContext {
 			output.stdoutLine("hxhx_server_report.cancellation_reason=" + cancellationReason);
 			output.stdoutLine("hxhx_server_report.cancellation_stage=" + cancellationStage);
 		}
+		output.stdoutLine("hxhx_server_report.output_transaction=" + (outputTransaction == null ? "not_started" : outputTransaction.status()));
 		output.stdoutLine("hxhx_server_report.cleanup=" + (cleanupSucceeded ? "ok" : "failed"));
 		output.stdoutLine("hxhx_server_report.elapsed_ms=" + elapsedMs);
 	}

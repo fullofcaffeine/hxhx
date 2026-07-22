@@ -401,6 +401,25 @@ class Stage3Compiler {
 		}
 
 		final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
+		final finalOutputFileHint = if (targetOutputHintRaw != null && targetOutputHintRaw.length > 0) {
+			haxe.io.Path.isAbsolute(targetOutputHintRaw) ? haxe.io.Path.normalize(targetOutputHintRaw) : absFromCwd(cwd, targetOutputHintRaw);
+		} else {
+			null;
+		}
+		final finalBackendOutputDir = if (targetOutputDirHintRaw != null && targetOutputDirHintRaw.length > 0) {
+			haxe.io.Path.isAbsolute(targetOutputDirHintRaw) ? haxe.io.Path.normalize(targetOutputDirHintRaw) : absFromCwd(cwd, targetOutputDirHintRaw);
+		} else {
+			outAbs;
+		}
+		final outputPaths = try {
+			requestContext.prepareOutput(outAbs, finalBackendOutputDir, finalOutputFileHint);
+		} catch (e:haxe.io.Error) {
+			return error("could not prepare request output: " + Std.string(e));
+		} catch (e:String) {
+			return error("could not prepare request output: " + e);
+		} catch (e:haxe.Exception) {
+			return error("could not prepare request output: " + formatDynamicException(e));
+		}
 		final backendResources = try {
 			collectBackendResources(parsedResourceSpecs, cwd);
 		} catch (e:String) {
@@ -423,7 +442,7 @@ class Stage3Compiler {
 		final macroStdPaths = Stage3SetupSupport.collectMacroStdPaths(cwd);
 		final backendTargetDefine = targetDefineForBackend(backendId);
 		hxhx.macro.MacroState.seedCompilerConfiguration(args, macroStdPaths, backendTargetDefine);
-		hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
+		hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outputPaths.workingOutDir, "_gen_hx"]));
 
 		final libMacros = Stage3SetupSupport.collectLibraryMacros(libsResolved);
 		final runHaxelibMacros = isTrueEnv("HXHX_RUN_HAXELIB_MACROS");
@@ -952,9 +971,10 @@ class Stage3Compiler {
 		}
 		if (!requestContext.checkpoint("emission"))
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
-		final emitted = try {
-			Stage3EmitSupport.emitWithBackend(backend, expanded, backendId, typedModules.length, cwd, outAbs, targetOutputHintRaw, targetOutputDirHintRaw,
-				parsedMain, emitFullBodies, supportsCustomOutputFile, supportsBuildExecutable, definesMap, backendResources, nekoNdllPaths, requestOutput);
+		final stagedEmitted = try {
+			Stage3EmitSupport.emitWithBackend(backend, expanded, backendId, typedModules.length, outputPaths.workingBackendOutputDir,
+				outputPaths.workingOutputFileHint, outputPaths.finalBackendOutputDir, parsedMain, emitFullBodies, supportsCustomOutputFile,
+				supportsBuildExecutable, definesMap, backendResources, nekoNdllPaths, requestOutput);
 		} catch (e:String) {
 			closeMacroSession();
 			return error("emit failed: " + e);
@@ -967,8 +987,20 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error("emit failed: " + formatDynamicException(e));
 		}
-		if (!requestContext.checkpoint("publication"))
+		if (!requestContext.checkpoint("output-seal"))
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
+		final emitted = try {
+			requestContext.sealOutput(stagedEmitted);
+		} catch (e:haxe.io.Error) {
+			closeMacroSession();
+			return error("output sealing failed: " + Std.string(e));
+		} catch (e:String) {
+			closeMacroSession();
+			return error("output sealing failed: " + e);
+		} catch (e:haxe.Exception) {
+			closeMacroSession();
+			return error("output sealing failed: " + formatDynamicException(e));
+		}
 
 		requestOutput.stdoutLine("stage3=ok");
 		requestOutput.stdoutLine("outDir=" + outAbs);
@@ -1006,7 +1038,7 @@ class Stage3Compiler {
 	}
 
 	static function finishRequest(code:Int, context:CompilationRequestContext):Int {
-		final cleanupSucceeded = context.close();
+		final cleanupSucceeded = context.close(code == 0);
 		return code == 0 && !cleanupSucceeded ? 2 : code;
 	}
 

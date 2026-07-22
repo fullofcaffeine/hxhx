@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Compilation
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerRequestDispatcher" } : t)
 
-let finish = fun context isError stopServer -> let stopServer = if Obj.repr stopServer == HxRuntime.hx_null then false else stopServer in let cleanupSucceeded = Hxhx_CompilationRequestContext.close (Obj.magic context) () in let events = Obj.magic (Hxhx_CompilationRequestOutput.events (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ()) in Hxhx_CompilationServerReply.create (Obj.magic events) (isError || not (cleanupSucceeded)) (stopServer && cleanupSucceeded)
+let finish = fun context isError stopServer -> let stopServer = if Obj.repr stopServer == HxRuntime.hx_null then false else stopServer in let cleanupSucceeded = Hxhx_CompilationRequestContext.close (Obj.magic context) (not (isError)) in let events = Obj.magic (Hxhx_CompilationRequestOutput.events (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ()) in Hxhx_CompilationServerReply.create (Obj.magic events) (isError || not (cleanupSucceeded)) (stopServer && cleanupSucceeded)
 
 let dispatch = fun request runOne -> try let __fallback_result_14 = let context = Obj.magic (Hxhx_CompilationRequestContext.server ((Obj.magic request : Hxhx_CompilationServerRequest.t).requestId)) in (
   ignore (if Hxhx_CompilationServerRequest.hasInvocationFlag (Obj.magic request) ("--hxhx-server-report" : string) then ignore (Hxhx_CompilationRequestContext.enableBaselineReport (Obj.magic context) ()) else ());

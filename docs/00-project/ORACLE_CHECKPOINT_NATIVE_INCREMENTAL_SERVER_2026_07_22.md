@@ -2,9 +2,10 @@
 
 Prepared: 2026-07-22
 
-Status: GPT-5.6 Pro architecture review accepted; transport ownership and
-ordinary client-scoped compiler output are implemented, while the larger
-cache-free request-lifecycle Bead remains open
+Status: GPT-5.6 Pro architecture review accepted; transport ownership,
+ordinary client-scoped compiler output, cooperative deadlines, and success-only
+filesystem publication are implemented, while the larger cache-free
+request-lifecycle Bead remains open
 
 Owning Bead: `haxe_ocaml-850ii.32`
 
@@ -75,8 +76,9 @@ future request.
 
 A native socket fixture sends success → missing-module failure → success to one
 server. Each client receives the expected result, both successful requests
-produce runnable JavaScript, the failed request produces no target file, and
-the server process itself receives no compiler-owned output.
+produce runnable JavaScript, the failed request preserves the previous target
+file byte-for-byte, and the server process itself receives no compiler-owned
+output.
 
 This is still not incremental compilation. Server requests temporarily require
 `--hxhx-no-run` so output from the compiled program cannot escape the response.
@@ -97,8 +99,8 @@ reason, runs the normal cleanup contract, and does not stop the server. This is
 cooperative cancellation: hxhx stops at its next explicit check instead of
 forcibly interrupting arbitrary compiler, macro, plugin, or external-tool code.
 Interactive cancellation from a second client, a complete audit of mutable
-request state, transactional output, and clean-process equivalence remain; and
-no semantic result is cached.
+request state, and clean-process equivalence remain; and no semantic result is
+cached.
 `haxe_ocaml-850ii.32.1` therefore stays open.
 
 Transport input is now bounded before compiler work begins. One request may
@@ -145,12 +147,36 @@ second client's cancellation request while the first compile is executing, so
 the implemented user control is a per-request deadline rather than interactive
 cross-client cancellation.
 
-This slice does not make filesystem output transactional. The zero-deadline
-native fixture proves no new output and proves that an earlier successful
-artifact remains byte-for-byte unchanged. A deadline observed after emission
-has started may still leave files written by that request. The next lifecycle
-slice must stage target output and publish it only after successful completion.
-README and North Star readiness percentages remain unchanged.
+Filesystem output now follows the accepted success-only boundary. A server
+request gives its target private same-filesystem paths, keeps the previous
+successful files untouched during generation, and records the target's final
+file list without publishing it. The dispatcher performs its final deadline
+check, then request close runs macro, plugin, and other cleanup. Only a request
+that succeeded and cleaned up successfully publishes the staged output. An
+error, cancellation, or cleanup failure deletes staging and retains the prior
+output.
+
+The target does not need to understand this lifecycle. It receives ordinary
+output-directory and output-file paths; the request context owns whether those
+paths are private working paths or the direct command-line paths. Before
+publication, hxhx also rejects a target result that names a file outside the
+request's private staging roots. This makes a target that ignores the output
+contract fail visibly instead of silently escaping success-only publication.
+
+The focused test covers a directory tree, a standalone JavaScript-style file
+plus source-map sidecar, explicit abort, cleanup failure after generation, and
+an escaped target path. The native public-transport fixture covers successful
+JavaScript publication, cancellation before output, failure after output setup,
+preservation of the previous JavaScript bytes, and removal of private staging
+and backup paths. Directory output is moved as one staged root. Several
+unrelated files still require several filesystem renames, so this is not a
+claim of crash-atomic multi-file replacement during power or process failure.
+That recovery problem remains separate from the proven success/error request
+boundary.
+
+README and North Star readiness percentages remain unchanged. The server still
+reuses no compiler facts, and the complete cross-target clean-process versus
+server-output matrix has not passed.
 
 ## Two Connected Workstreams
 

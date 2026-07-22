@@ -5,8 +5,9 @@ The fixture starts one native server, sends editor and compiler requests through
 the public ``--connect`` client, and checks that compiler-owned output returns to
 that client instead of leaking into the server process. A deliberately failing
 compile is followed by another successful compile to prove that request failure
-does not poison the long-lived process. Separate stdio processes prove that a
-negative or oversized length receives a framed protocol error before allocation.
+does not poison the long-lived process or replace the last good target file.
+Separate stdio processes prove that a negative or oversized length receives a
+framed protocol error before allocation.
 Both transports prove that an expired request returns a cancellation response
 without stopping the server, then prove that an explicit shutdown response is
 sent before the server exits successfully.
@@ -62,6 +63,7 @@ def require_baseline_report(result: subprocess.CompletedProcess[str], label: str
         "hxhx_server_report.semantic_cache_hits=0",
         "hxhx_server_report.semantic_cache_entries=0",
         "hxhx_server_report.cancelled=",
+        "hxhx_server_report.output_transaction=",
         "hxhx_server_report.cleanup=ok",
         "hxhx_server_report.elapsed_ms=",
     ]
@@ -72,6 +74,15 @@ def require_baseline_report(result: subprocess.CompletedProcess[str], label: str
     if match is None:
         raise RuntimeError(f"{label} is missing its request ID: {text!r}")
     return int(match.group(1))
+
+
+def require_output_transaction(
+    result: subprocess.CompletedProcess[str], label: str, expected: str
+) -> None:
+    marker = f"hxhx_server_report.output_transaction={expected}"
+    text = result.stdout + result.stderr
+    if marker not in text:
+        raise RuntimeError(f"{label} is missing output transaction marker {marker!r}: {text!r}")
 
 
 def require_cancellation_report(result: subprocess.CompletedProcess[str], label: str) -> int:
@@ -86,6 +97,7 @@ def require_cancellation_report(result: subprocess.CompletedProcess[str], label:
     for marker in required:
         if marker not in text:
             raise RuntimeError(f"{label} is missing cancellation marker {marker!r}: {text!r}")
+    require_output_transaction(result, label, "not_started")
     return request_id
 
 
@@ -175,6 +187,7 @@ def require_stdio_cancellation(hxhx_bin: Path, output_path: Path) -> None:
     required = [
         b"request cancelled [deadline-exceeded] at request-dispatch",
         b"hxhx_server_report.cancelled=1",
+        b"hxhx_server_report.output_transaction=not_started",
         b"hxhx_server_report.cleanup=ok",
         b"\x02",
     ]
@@ -235,6 +248,7 @@ def main() -> int:
                     if '[{"diagnostics":[]}]' not in last.stderr:
                         raise RuntimeError(f"unexpected display response: {last.stderr!r}")
                     request_ids.append(require_baseline_report(last, "display request"))
+                    require_output_transaction(last, "display request", "not_started")
                     break
             else:
                 raise RuntimeError(
@@ -250,6 +264,7 @@ def main() -> int:
             )
             require_success(first_success, "first ordinary socket compile")
             request_ids.append(require_baseline_report(first_success, "first ordinary socket compile"))
+            require_output_transaction(first_success, "first ordinary socket compile", "committed")
             if "resolved_modules=" not in first_success.stdout or "stage3=ok" not in first_success.stdout:
                 raise RuntimeError(f"compiler progress did not reach the first client: {first_success.stdout!r}")
             if not artifact.is_file():
@@ -282,7 +297,6 @@ def main() -> int:
             if not artifact.is_file() or artifact.read_bytes() != first_artifact_bytes:
                 raise RuntimeError("expired socket request changed the last successful target artifact")
 
-            artifact.unlink()
             expected_failure = run_client(
                 hxhx_bin,
                 base_args,
@@ -292,11 +306,12 @@ def main() -> int:
             if expected_failure.returncode == 0:
                 raise RuntimeError("missing-main socket request unexpectedly succeeded")
             request_ids.append(require_baseline_report(expected_failure, "missing-main socket request"))
+            require_output_transaction(expected_failure, "missing-main socket request", "aborted")
             failure_text = expected_failure.stdout + expected_failure.stderr
             if "resolve failed" not in failure_text or "MissingSocketMain" not in failure_text:
                 raise RuntimeError(f"missing-main diagnostic did not reach its client: {failure_text!r}")
-            if artifact.exists():
-                raise RuntimeError("failed socket request unexpectedly produced the target artifact")
+            if not artifact.is_file() or artifact.read_bytes() != first_artifact_bytes:
+                raise RuntimeError("failed socket request changed the last successful target artifact")
 
             second_success = run_client(
                 hxhx_bin,
@@ -306,6 +321,7 @@ def main() -> int:
             )
             require_success(second_success, "second ordinary socket compile")
             request_ids.append(require_baseline_report(second_success, "second ordinary socket compile"))
+            require_output_transaction(second_success, "second ordinary socket compile", "committed")
             if "resolved_modules=" not in second_success.stdout or "stage3=ok" not in second_success.stdout:
                 raise RuntimeError(f"compiler progress did not reach the second client: {second_success.stdout!r}")
             if not artifact.is_file():
@@ -326,6 +342,7 @@ def main() -> int:
             )
             require_success(shutdown, "socket server shutdown")
             request_ids.append(require_baseline_report(shutdown, "socket server shutdown"))
+            require_output_transaction(shutdown, "socket server shutdown", "not_started")
             if "hxhx_server_control.shutdown=ok" not in shutdown.stdout:
                 raise RuntimeError(f"socket shutdown did not confirm the control request: {shutdown.stdout!r}")
             if request_ids != sorted(set(request_ids)):
@@ -357,6 +374,14 @@ def main() -> int:
             "compiler-owned request output leaked into the server process "
             f"(stdout={server_stdout!r}, stderr={server_stderr!r})"
         )
+    transaction_residue = sorted(
+        str(path)
+        for path in fixture_root.rglob("*")
+        if path.name.startswith(".hxhx-server-stage-")
+        or path.name.startswith(".hxhx-server-backup-")
+    )
+    if transaction_residue:
+        raise RuntimeError(f"native server left output transaction residue: {transaction_residue!r}")
 
     invalid_stdio_output = fixture_root / "invalid-stdio.js"
     require_rejected_stdio_length(hxhx_bin, invalid_stdio_output, -1, "negative request frame length")

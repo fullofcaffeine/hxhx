@@ -50,10 +50,13 @@ also give one request a deadline. The compiler checks that deadline between
 major phases and while moving through modules, stops at the next safe check,
 and still runs request cleanup. This is cooperative cancellation, not a forced
 thread interruption. Cross-client cancellation, a complete audit of all
-mutable compiler state, transactional file output, and clean-process
-equivalence are not finished. Later steps add those lifecycle guarantees, then
-reusable source, parser, typed-module, display, plugin, and target facts only
-after each layer passes clean-versus-warm correctness tests.
+mutable compiler state, and clean-process equivalence are not finished.
+Filesystem output now uses success-only publication: a server request writes to
+private paths first, runs its normal cleanup, and replaces the requested output
+only if the whole request succeeded. Later steps complete the remaining
+lifecycle guarantees, then add reusable source, parser, typed-module, display,
+plugin, and target facts only after each layer passes clean-versus-warm
+correctness tests.
 
 There are two connected implementation tracks. `haxe_ocaml-850ii.33` makes
 upstream Haxe 4.3.7's already-incremental compiler feed complete, safe Reflaxe
@@ -137,6 +140,7 @@ hxhx_server_report.semantic_cache=disabled
 hxhx_server_report.semantic_cache_hits=0
 hxhx_server_report.semantic_cache_entries=0
 hxhx_server_report.cancelled=0
+hxhx_server_report.output_transaction=committed
 hxhx_server_report.cleanup=ok
 hxhx_server_report.elapsed_ms=123
 ```
@@ -199,14 +203,60 @@ not interactive cross-client cancellation.
 
 Request cleanup still runs, the deadline failure is returned only to that
 client, and the server can accept another request. A request cancelled before
-compilation creates no output. However, target files are not transactional yet:
-if a later deadline expires after code generation has started writing files,
-those files may already have changed. Do not use the deadline as an atomic-build
-guarantee. Staging output and replacing it only after success is the next
-lifecycle slice.
+compilation creates no output. If a later deadline expires after code generation
+has started, the generated files are still in the request's private staging
+area. They are discarded during cleanup, so the last successful output remains
+in place.
 
 `--hxhx-server-timeout-ms` is not part of the upstream Haxe 4.3.7 protocol and
 is not yet a recommended production interface.
+
+### Current native success-only output publication
+
+A long-lived compiler must not leave half of a failed build in the project's
+real output directory. For example, JavaScript generation commonly produces
+both `out/app.js` and `out/app.js.map`. If generation fails after writing the
+first file, replacing only that file would mix a new program with an old source
+map.
+
+Native server requests therefore use this order:
+
+1. Resolve the output paths requested by the client.
+2. Give the target private sibling paths on the same filesystem.
+3. Generate the target files there while the previous successful output stays
+   untouched.
+4. Check the request deadline and finish macro, plugin, and other request
+   cleanup.
+5. Replace the requested files only when every earlier step succeeded. On a
+   compiler error, cancellation, or cleanup error, delete the private files.
+
+This is called an **output transaction** in the code. Here, “transaction” means
+that hxhx owns the prepare, publish, rollback, and cleanup sequence; it does not
+mean that every operating system can replace several unrelated files in one
+indivisible instruction. Directory-based target output is moved as one staged
+directory. A standalone output file and its sidecars are replaced with backups
+and rollback on an ordinary publication failure. A process or machine crash in
+the middle of several filesystem renames still needs separate recovery design
+and evidence.
+
+With `--hxhx-server-report`, the output state is one of:
+
+```text
+hxhx_server_report.output_transaction=not_started
+hxhx_server_report.output_transaction=committed
+hxhx_server_report.output_transaction=aborted
+```
+
+`not_started` means the request stopped before target output was prepared.
+`committed` means staged output replaced the requested paths after successful
+cleanup. `aborted` means staging was prepared but discarded, so prior output
+was retained. The focused JavaScript fixture proves the main file and source
+map move together, a later missing-module request preserves their prior bytes,
+and no private staging or backup path remains.
+
+This is still an implementation milestone, not a claim that every target has
+passed clean-process versus server-output equivalence. That broader matrix
+remains a gate before the native server becomes a recommended workflow.
 
 ### Current native shutdown control
 

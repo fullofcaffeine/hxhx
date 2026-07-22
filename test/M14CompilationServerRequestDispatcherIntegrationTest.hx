@@ -1,4 +1,6 @@
 import haxe.io.Bytes;
+import backend.EmitArtifact;
+import backend.EmitResult;
 import hxhx.CompilationRequestContext;
 import hxhx.CompilationRequestOutputEvent;
 import hxhx.CompilationServerReply;
@@ -40,6 +42,27 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		} else {
 			FileSystem.deleteFile(path);
 		}
+	}
+
+	static function ensureDirectory(path:String):Void {
+		if (FileSystem.exists(path))
+			return;
+		final parent = haxe.io.Path.directory(path);
+		if (parent != null && parent.length > 0 && parent != path)
+			ensureDirectory(parent);
+		FileSystem.createDirectory(path);
+	}
+
+	static function containsTransactionPath(path:String):Bool {
+		if (!FileSystem.exists(path) || !FileSystem.isDirectory(path))
+			return false;
+		for (entry in FileSystem.readDirectory(path)) {
+			if (StringTools.startsWith(entry, ".hxhx-server-stage-") || StringTools.startsWith(entry, ".hxhx-server-backup-"))
+				return true;
+			if (containsTransactionPath(haxe.io.Path.join([path, entry])))
+				return true;
+		}
+		return false;
 	}
 
 	static function main():Void {
@@ -159,6 +182,8 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertTrue(reportWire.indexOf("hxhx_server_report.semantic_cache_hits=0") >= 0, "baseline report should report zero semantic cache hits");
 		assertTrue(reportWire.indexOf("hxhx_server_report.cleanup=ok") >= 0, "baseline report should include cleanup status");
 		assertTrue(reportWire.indexOf("hxhx_server_report.cancelled=0") >= 0, "baseline report should say an ordinary request was not cancelled");
+		assertTrue(reportWire.indexOf("hxhx_server_report.output_transaction=not_started") >= 0,
+			"baseline report should say a request that did not compile never started output staging");
 
 		var timedCompileCalls = 0;
 		final timedReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(12, ["--hxhx-server-report"],
@@ -236,6 +261,108 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertTrue(StringTools.endsWith(realFailureWire, "\x02\n"), "a real Stage3 failure should end with Haxe's failure marker");
 		assertTrue(!MacroState.defined("HXHX_STALE_REQUEST_FIXTURE"), "failed request should clear request-global macro state");
 
+		final transactionRoot = ".tmp/m14_compilation_server_output_transaction";
+		final finalDirectory = haxe.io.Path.join([transactionRoot, "directory-output"]);
+		final finalFileParent = haxe.io.Path.join([transactionRoot, "file-output"]);
+		final finalFile = haxe.io.Path.join([finalFileParent, "app.js"]);
+		deleteRecursive(transactionRoot);
+		ensureDirectory(finalDirectory);
+		ensureDirectory(finalFileParent);
+		File.saveContent(haxe.io.Path.join([finalDirectory, "old.txt"]), "old directory output");
+		File.saveContent(finalFile, "old file output");
+		File.saveContent(finalFile + ".map", "old source map");
+
+		final transactionContext = CompilationRequestContext.server(200);
+		transactionContext.enableBaselineReport();
+		final transactionPaths = transactionContext.prepareOutput(finalDirectory, finalDirectory, finalFile);
+		assertTrue(transactionPaths.workingOutDir != transactionPaths.finalOutDir, "server directory output should use a private working path");
+		assertTrue(transactionPaths.workingOutputFileHint != transactionPaths.finalOutputFileHint, "server file output should use a private working path");
+		ensureDirectory(transactionPaths.workingOutDir);
+		File.saveContent(haxe.io.Path.join([transactionPaths.workingOutDir, "new.txt"]), "new directory output");
+		final stagedFile = transactionPaths.workingOutputFileHint;
+		assertTrue(stagedFile != null, "file transaction should provide a working file path");
+		ensureDirectory(haxe.io.Path.directory(stagedFile));
+		File.saveContent(stagedFile, "new file output");
+		File.saveContent(stagedFile + ".map", "new source map");
+		assertEquals(File.getContent(haxe.io.Path.join([finalDirectory, "old.txt"])), "old directory output", "previous directory while output is staged");
+		assertEquals(File.getContent(finalFile), "old file output", "previous file while output is staged");
+		final finalResult = transactionContext.sealOutput(new EmitResult(stagedFile, [
+			new EmitArtifact("entry_js", stagedFile),
+			new EmitArtifact("source_map", stagedFile + ".map")
+		], false));
+		assertEquals(finalResult.entryPath, FileSystem.absolutePath(finalFile), "client entry path after sealing");
+		assertEquals(finalResult.artifacts[1].path, FileSystem.absolutePath(finalFile + ".map"), "client sidecar path after sealing");
+		assertEquals(File.getContent(finalFile), "old file output", "sealing should not publish before request cleanup");
+		transactionContext.registerCleanup("publication-order", () -> {
+			assertEquals(File.getContent(finalFile), "old file output", "request cleanup should run before output publication");
+		});
+		assertTrue(transactionContext.close(), "published output transaction should close cleanly");
+		assertTrue(!FileSystem.exists(haxe.io.Path.join([finalDirectory, "old.txt"])), "successful publish should replace the old directory tree");
+		assertEquals(File.getContent(haxe.io.Path.join([finalDirectory, "new.txt"])), "new directory output", "published directory output");
+		assertEquals(File.getContent(finalFile), "new file output", "published file output");
+		assertEquals(File.getContent(finalFile + ".map"), "new source map", "published file sidecar");
+		assertTrue(!containsTransactionPath(transactionRoot), "successful publish should leave no staging or backup path");
+		assertTrue(transactionContext.output.events()
+			.map(event -> event.text)
+			.join("")
+			.indexOf("hxhx_server_report.output_transaction=committed") >= 0,
+			"successful request report should identify committed output");
+
+		final abortDirectory = haxe.io.Path.join([transactionRoot, "abort-output"]);
+		ensureDirectory(abortDirectory);
+		File.saveContent(haxe.io.Path.join([abortDirectory, "old.txt"]), "keep me");
+		final abortContext = CompilationRequestContext.server(201);
+		abortContext.enableBaselineReport();
+		final abortPaths = abortContext.prepareOutput(abortDirectory, abortDirectory, null);
+		ensureDirectory(abortPaths.workingOutDir);
+		File.saveContent(haxe.io.Path.join([abortPaths.workingOutDir, "partial.txt"]), "discard me");
+		assertTrue(abortContext.close(false), "aborted output transaction should clean its staging tree");
+		assertEquals(File.getContent(haxe.io.Path.join([abortDirectory, "old.txt"])), "keep me", "previous output after abort");
+		assertTrue(!FileSystem.exists(haxe.io.Path.join([abortDirectory, "partial.txt"])), "aborted request must not publish partial output");
+		assertTrue(!containsTransactionPath(transactionRoot), "aborted request should leave no staging or backup path");
+		assertTrue(abortContext.output.events()
+			.map(event -> event.text)
+			.join("")
+			.indexOf("hxhx_server_report.output_transaction=aborted") >= 0,
+			"aborted request report should identify discarded output");
+
+		final cleanupFailureDirectory = haxe.io.Path.join([transactionRoot, "cleanup-failure-output"]);
+		ensureDirectory(cleanupFailureDirectory);
+		File.saveContent(haxe.io.Path.join([cleanupFailureDirectory, "old.txt"]), "keep after cleanup failure");
+		final cleanupFailureContext = CompilationRequestContext.server(202);
+		cleanupFailureContext.enableBaselineReport();
+		final cleanupFailurePaths = cleanupFailureContext.prepareOutput(cleanupFailureDirectory, cleanupFailureDirectory, null);
+		ensureDirectory(cleanupFailurePaths.workingOutDir);
+		final cleanupFailureStagedFile = haxe.io.Path.join([cleanupFailurePaths.workingOutDir, "new.txt"]);
+		File.saveContent(cleanupFailureStagedFile, "must not publish");
+		cleanupFailureContext.sealOutput(new EmitResult(cleanupFailureStagedFile, [new EmitArtifact("generated", cleanupFailureStagedFile)], false));
+		cleanupFailureContext.registerCleanup("deliberate-fixture-failure", () -> throw "cleanup failed for fixture");
+		assertTrue(!cleanupFailureContext.close(true), "cleanup failure should fail the request and prevent output publication");
+		assertEquals(File.getContent(haxe.io.Path.join([cleanupFailureDirectory, "old.txt"])), "keep after cleanup failure",
+			"previous output after cleanup failure");
+		assertTrue(!FileSystem.exists(haxe.io.Path.join([cleanupFailureDirectory, "new.txt"])), "cleanup failure must not publish staged output");
+		final cleanupFailureReport = cleanupFailureContext.output.events().map(event -> event.text).join("");
+		assertTrue(cleanupFailureReport.indexOf("request cleanup failed [deliberate-fixture-failure]") >= 0, "cleanup failure should name the failing cleanup");
+		assertTrue(cleanupFailureReport.indexOf("hxhx_server_report.output_transaction=aborted") >= 0,
+			"cleanup failure report should identify discarded output");
+		assertTrue(!containsTransactionPath(transactionRoot), "cleanup failure should leave no staging or backup path");
+
+		final escapedOutputContext = CompilationRequestContext.server(203);
+		final escapedOutputPaths = escapedOutputContext.prepareOutput(haxe.io.Path.join([transactionRoot, "escaped-output"]),
+			haxe.io.Path.join([transactionRoot, "escaped-output"]), null);
+		ensureDirectory(escapedOutputPaths.workingOutDir);
+		final escapedPath = haxe.io.Path.join([transactionRoot, "outside-staging.txt"]);
+		var escapedOutputRejected = false;
+		try {
+			escapedOutputContext.sealOutput(new EmitResult(escapedPath, [new EmitArtifact("escaped", escapedPath)], false));
+		} catch (error:String) {
+			escapedOutputRejected = error.indexOf("outside request staging") >= 0;
+		}
+		assertTrue(escapedOutputRejected, "server output outside private staging should fail before publication");
+		assertTrue(escapedOutputContext.close(false), "rejected escaped output should abort its staging tree cleanly");
+		assertTrue(!containsTransactionPath(transactionRoot), "rejected escaped output should leave no staging or backup path");
+		deleteRecursive(transactionRoot);
+
 		final tmpRoot = ".tmp/m14_compilation_server_request_dispatcher";
 		final srcDir = haxe.io.Path.join([tmpRoot, "src"]);
 		deleteRecursive(tmpRoot);
@@ -245,10 +372,49 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		final realSuccess = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(12,
 			["--hxhx-no-run", "--hxhx-no-emit", "-cp", srcDir, "-main", "Main"], [], null), Stage3Compiler.runRequest);
 		final realSuccessWire = CompilationServerRequestCodec.encodeReply(realSuccess);
-		deleteRecursive(tmpRoot);
 		assertTrue(!realSuccess.isError, "a real Stage3 no-emit request should succeed");
 		assertTrue(realSuccessWire.indexOf("resolved_modules=1") >= 0, "a real successful request should return compiler progress to its client");
 		assertTrue(realSuccessWire.indexOf("stage3=no_emit_ok") >= 0, "a real successful request should return its completion marker to its client");
 		assertTrue(realSuccessWire.indexOf("\x02") == -1, "a successful request should not contain Haxe's failure marker");
+
+		final realArtifact = haxe.io.Path.join([tmpRoot, "out", "main.js"]);
+		final realEmit = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(13, [
+			"--hxhx-no-run",
+			"--hxhx-server-report",
+			"--hxhx-backend",
+			"js-native",
+			"--js",
+			realArtifact,
+			"-cp",
+			srcDir,
+			"-main",
+			"Main"
+		], [], null), Stage3Compiler.runRequest);
+		final realEmitWire = CompilationServerRequestCodec.encodeReply(realEmit);
+		assertTrue(!realEmit.isError, "a real Stage3 server emission should publish successfully");
+		assertTrue(FileSystem.exists(realArtifact), "a real Stage3 server emission should publish its requested target file: " + realEmitWire);
+		assertTrue(FileSystem.exists(realArtifact + ".map"), "a real Stage3 server emission should publish its target sidecar");
+		assertTrue(realEmitWire.indexOf("hxhx_server_report.output_transaction=committed") >= 0, "a real emitted request should report committed output");
+		assertTrue(realEmitWire.indexOf(".hxhx-server-stage-") == -1, "private staging names must not reach compiler output");
+		final realArtifactBeforeFailure = File.getContent(realArtifact);
+
+		final realEmitFailure = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(14, [
+			"--hxhx-no-run",
+			"--hxhx-server-report",
+			"--hxhx-backend",
+			"js-native",
+			"--js",
+			realArtifact,
+			"-cp",
+			srcDir,
+			"-main",
+			"MissingMain"
+		], [], null), Stage3Compiler.runRequest);
+		final realEmitFailureWire = CompilationServerRequestCodec.encodeReply(realEmitFailure);
+		assertTrue(realEmitFailure.isError, "a real Stage3 failure should not publish staged output");
+		assertEquals(File.getContent(realArtifact), realArtifactBeforeFailure, "last good target after a failed request");
+		assertTrue(realEmitFailureWire.indexOf("hxhx_server_report.output_transaction=aborted") >= 0, "failed emitted request should report aborted output");
+		assertTrue(!containsTransactionPath(tmpRoot), "real Stage3 requests should leave no transaction staging or backup path");
+		deleteRecursive(tmpRoot);
 	}
 }
