@@ -1,3 +1,10 @@
+# [0.28.0](https://github.com/fullofcaffeine/hxhx/compare/v0.27.0...v0.28.0) (2026-07-22)
+
+
+### Features
+
+* **hxhx:** cache source and parser work in native server ([86fc570](https://github.com/fullofcaffeine/hxhx/commit/86fc570d8fdbc37bc680fdf8562a786dc797a818))
+
 # [0.27.0](https://github.com/fullofcaffeine/hxhx/compare/v0.26.0...v0.27.0) (2026-07-22)
 
 
