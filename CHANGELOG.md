@@ -1,3 +1,10 @@
+# [0.29.0](https://github.com/fullofcaffeine/hxhx/compare/v0.28.0...v0.29.0) (2026-07-22)
+
+
+### Features
+
+* **hxhx:** observe initial typed module dependencies ([eb023c4](https://github.com/fullofcaffeine/hxhx/commit/eb023c45e29750f5f8ea00aa32f721705a38a687))
+
 # [0.28.0](https://github.com/fullofcaffeine/hxhx/compare/v0.27.0...v0.28.0) (2026-07-22)
 
 
