@@ -704,6 +704,16 @@ read_repo_server_pid() {
   return 1
 }
 
+read_repo_server_pids() {
+  if [ "$HXHX_STAGE0_USE_REPO_SERVER" != "1" ]; then
+    return 1
+  fi
+  if [ ! -x "$HAXE_SERVER_HELPER" ]; then
+    return 1
+  fi
+  "$HAXE_SERVER_HELPER" owned-pids 2>/dev/null || true
+}
+
 read_pid_cpu_pct() {
   local pid="${1:-}"
   if [ -z "$pid" ]; then
@@ -949,7 +959,16 @@ resolve_stage0_connect
     local client_idle=0
     local server_idle=0
     local repo_server_pid=""
+    local repo_server_pids=""
+    local repo_server_tree_pid=""
     local repo_server_cpu=""
+    local repo_server_tree_cpu=""
+    local repo_server_tree_rss_kb=0
+    local repo_server_tree_rss_mb=0
+    local repo_server_worker_pid=""
+    local repo_server_worker_cpu=""
+    local repo_server_worker_rss_kb=0
+    local repo_server_pid_rss_kb=""
     local tree_cpu_pct=""
     local code=0
 
@@ -970,7 +989,10 @@ resolve_stage0_connect
     if [ -n "$resolved_haxe_connect" ] && [ "$HXHX_STAGE0_CONNECT_IDLE_SECS" != "0" ]; then
       connect_watch_enabled=1
       repo_server_pid="$(read_repo_server_pid || true)"
-      if [ -n "$repo_server_pid" ]; then
+      repo_server_pids="$(read_repo_server_pids || true)"
+      if [ -n "$repo_server_pids" ]; then
+        echo "== Stage0 connect watch: idle=${HXHX_STAGE0_CONNECT_IDLE_SECS}s endpoint=$resolved_haxe_connect server_pids=$(printf '%s' "$repo_server_pids" | tr '\n' ',')" >&2
+      elif [ -n "$repo_server_pid" ]; then
         echo "== Stage0 connect watch: idle=${HXHX_STAGE0_CONNECT_IDLE_SECS}s endpoint=$resolved_haxe_connect server_pid=$repo_server_pid" >&2
       else
         echo "== Stage0 connect watch: idle=${HXHX_STAGE0_CONNECT_IDLE_SECS}s endpoint=$resolved_haxe_connect (server pid unavailable)" >&2
@@ -1020,16 +1042,47 @@ resolve_stage0_connect
           fi
         done
 
-        if [ -z "$repo_server_pid" ] || ! kill -0 "$repo_server_pid" >/dev/null 2>&1; then
-          repo_server_pid="$(read_repo_server_pid || true)"
-        fi
+        repo_server_pids="$(read_repo_server_pids || true)"
+        repo_server_pid="$(printf '%s\n' "$repo_server_pids" | awk 'NF { print; exit }')"
         server_idle=1
         repo_server_cpu=""
-        if [ -n "$repo_server_pid" ]; then
-          repo_server_cpu="$(read_pid_cpu_pct "$repo_server_pid")"
-          if [ -n "$repo_server_cpu" ] && ! cpu_is_idle "$repo_server_cpu"; then
-            server_idle=0
+        repo_server_tree_cpu=""
+        repo_server_tree_rss_kb=0
+        repo_server_tree_rss_mb=0
+        repo_server_worker_pid=""
+        repo_server_worker_cpu=""
+        repo_server_worker_rss_kb=0
+        for repo_server_tree_pid in $repo_server_pids; do
+          repo_server_cpu="$(read_pid_cpu_pct "$repo_server_tree_pid")"
+          repo_server_pid_rss_kb="$(ps -o rss= -p "$repo_server_tree_pid" 2>/dev/null | tr -d ' ' || true)"
+          if [ -n "$repo_server_cpu" ]; then
+            repo_server_tree_cpu="$(awk -v total="${repo_server_tree_cpu:-0}" -v value="$repo_server_cpu" 'BEGIN { printf "%.1f", total + value }')"
+            if ! cpu_is_idle "$repo_server_cpu"; then
+              server_idle=0
+            fi
+            if [ -z "$repo_server_worker_cpu" ] || awk -v current="$repo_server_worker_cpu" -v candidate="$repo_server_cpu" 'BEGIN { exit (candidate > current ? 0 : 1) }'; then
+              repo_server_worker_cpu="$repo_server_cpu"
+              repo_server_worker_pid="$repo_server_tree_pid"
+              repo_server_worker_rss_kb="${repo_server_pid_rss_kb:-0}"
+            fi
           fi
+          if [ -n "$repo_server_pid_rss_kb" ]; then
+            repo_server_tree_rss_kb="$((repo_server_tree_rss_kb + repo_server_pid_rss_kb))"
+            if [ -z "$repo_server_worker_pid" ] || { [ "${repo_server_worker_cpu:-0}" = "0.0" ] && [ "$repo_server_pid_rss_kb" -gt "$repo_server_worker_rss_kb" ]; }; then
+              repo_server_worker_rss_kb="$repo_server_pid_rss_kb"
+              repo_server_worker_pid="$repo_server_tree_pid"
+            fi
+          fi
+        done
+        if [ "$repo_server_tree_rss_kb" -gt 0 ]; then
+          repo_server_tree_rss_mb="$((repo_server_tree_rss_kb / 1024))"
+        fi
+        if [ -z "$repo_server_pids" ]; then
+          # Losing the verified server identity while the client is still
+          # waiting is not evidence that the server is healthy and busy.
+          server_idle=1
+        elif [ -n "$repo_server_tree_cpu" ]; then
+          repo_server_cpu="$repo_server_tree_cpu"
         fi
 
         if [ "$connect_log_static" = "1" ] && [ "$client_idle" = "1" ] && [ "$server_idle" = "1" ]; then
@@ -1097,8 +1150,14 @@ resolve_stage0_connect
       if [ -n "$repo_server_pid" ]; then
         heartbeat_suffix="$heartbeat_suffix server_pid=${repo_server_pid}"
       fi
+      if [ -n "$repo_server_worker_pid" ]; then
+        heartbeat_suffix="$heartbeat_suffix server_worker_pid=${repo_server_worker_pid}"
+      fi
       if [ -n "$repo_server_cpu" ]; then
-        heartbeat_suffix="$heartbeat_suffix server_cpu=${repo_server_cpu}%"
+        heartbeat_suffix="$heartbeat_suffix server_tree_cpu=${repo_server_cpu}%"
+      fi
+      if [ "$repo_server_tree_rss_mb" != "0" ]; then
+        heartbeat_suffix="$heartbeat_suffix server_tree_rss=${repo_server_tree_rss_mb}MB"
       fi
       if [ -n "$rss_kb" ]; then
         rss_mb="$((rss_kb / 1024))"

@@ -95,8 +95,26 @@ Notes:
   - Optional skip when inputs are unchanged:
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
   - Repo-owned server helper:
-    - `bash scripts/hxhx/haxe-server.sh start|status|stop`
+    - `bash scripts/hxhx/haxe-server.sh start|status|owned-pids|stop`
     - The helper records wrapper descendants with process-start identities and stops the whole owned tree, so a Node/Lix launcher cannot leave its native `haxe --wait` child behind after stop, interruption, or launcher exit—even when the child uses a different internal port.
+  - Server-mode progress distinguishes the waiting client from the process that
+    performs compilation:
+    - the foreground `--connect` client remains the source of truth for build
+      success, failure, and timeout;
+    - `server_pid` is the first verified process owned by this repository's
+      server, often a small Lix/Node launcher;
+    - `server_worker_pid` is the owned descendant using the most CPU in the
+      current sample, normally the native Haxe process doing the real work;
+    - `server_tree_cpu` and `server_tree_rss` summarize the verified server
+      process tree, so a quiet launcher does not make a healthy compile look
+      stalled; and
+    - the idle-handoff retry starts only when the client and the complete
+      verified server tree are quiet while the compiler log is unchanged.
+  - This helper accelerates only the **stage0 upstream-Haxe** development lane.
+    It is not the future native hxhx incremental server. Upstream Haxe may reuse
+    parsing and typing, while Reflaxe target generation can still dominate a
+    large rebuild; use the benchmark commands and `--skip-if-unchanged` rather
+    than assuming every `--connect` build is faster.
 - For progress logs from `reflaxe.ocaml`, set `HXHX_STAGE0_PROGRESS=1` (emits periodic `Context.warning(...)` markers during the stage0 build).
 - For more detailed progress (per-class begin markers in the log file), set `HXHX_STAGE0_TELEMETRY=1` (adds `-D reflaxe_ocaml_telemetry`).
 - For profiling, set `HXHX_BOOTSTRAP_DEBUG=1` to print `--times` output.

@@ -24,6 +24,7 @@ Commands:
   start             Start/reuse a matching repo-owned haxe --wait server.
   stop              Stop repo-owned haxe --wait server if running.
   status            Print server status (running/not-running).
+  owned-pids        Print the verified PIDs owned by this server, one per line.
   port              Print resolved server port.
   connect-arg       Print a ready-to-use "--connect <port>" argument.
 
@@ -359,6 +360,17 @@ status_server() {
 	return 1
 }
 
+print_owned_pids() {
+	local port
+	port="$(resolve_port)"
+	local pids
+	pids="$(collect_owned_process_pids "$port")"
+	if [ -z "$pids" ]; then
+		return 1
+	fi
+	printf '%s\n' "$pids"
+}
+
 print_port() {
 	resolve_port
 }
@@ -397,6 +409,9 @@ case "$1" in
 		;;
 	status)
 		status_server
+		;;
+	owned-pids)
+		print_owned_pids
 		;;
 	port)
 		print_port

@@ -140,6 +140,12 @@ case "$status" in
 		;;
 esac
 
+owned_pids="$(run_helper "$TMP_DIR/fake-haxe-b" owned-pids)"
+printf '%s\n' "$owned_pids" | grep -Fx "$replacement_pid" >/dev/null \
+	|| fail "owned-pids omitted the verified wrapper process"
+printf '%s\n' "$owned_pids" | grep -Fx "$replacement_child_pid" >/dev/null \
+	|| fail "owned-pids omitted the verified native server child"
+
 # Model a launcher crash after readiness. The child uses a different internal
 # wait port, just like the real Lix wrapper, so cleanup must trust the recorded
 # process identity rather than rediscovering it from the public port.

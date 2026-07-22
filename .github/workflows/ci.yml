@@ -229,6 +229,8 @@ jobs:
           retention-days: 14
       - name: Validate build-hxhx connect retry smoke
         run: npm run test:hxhx:build-connect-retry-smoke
+      - name: Validate build-hxhx server worker smoke
+        run: npm run test:hxhx:build-connect-worker-smoke
       - name: Validate hxhx direct-flag CLI contract
         run: npm run test:hxhx:cli-contract
 
