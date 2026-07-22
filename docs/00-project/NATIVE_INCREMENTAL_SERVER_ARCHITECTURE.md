@@ -261,11 +261,16 @@ implemented.
 - forced eviction followed by correct recomputation.
 
 `npm run test:m14:compiler-dependency-observation` and
-`npm run test:m14:compilation-server-dependency-observation` cover:
+`npm run test:m14:compilation-server-dependency-observation` cover the direct
+observer and server lifecycle. `npm run
+test:m14:compiler-dependency-edit-sequence` covers the multi-module edit
+sequences. Together they cover:
 
 - deterministic dependency order independent of module input order;
 - imports, ordinary public calls, and inline calls;
 - ordinary body edits versus public-signature and inline-body edits;
+- shared providers with several callers and a two-hop inline consumer;
+- exact A to B to A snapshot and reason-path reproduction;
 - predicted caller invalidation without skipping normal typing;
 - opt-in reporting, successful publication, failure discard, and reset.
 
