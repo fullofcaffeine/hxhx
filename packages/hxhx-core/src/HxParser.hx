@@ -487,6 +487,10 @@ class HxParser {
 				EWhile(rebaseFunctionBodyExprValue(condition, base, bodyStartIndex),
 					[for (entry in body) rebaseFunctionBodyExprValue(entry, base, bodyStartIndex)], bodyIsBlock,
 					rebaseFunctionBodyPos(position, base, bodyStartIndex));
+			case EBreak(position):
+				EBreak(rebaseFunctionBodyPos(position, base, bodyStartIndex));
+			case EContinue(position):
+				EContinue(rebaseFunctionBodyPos(position, base, bodyStartIndex));
 			case EField(obj, field):
 				EField(rebaseFunctionBodyExprValue(obj, base, bodyStartIndex), field);
 			case ENullSafeField(obj, field):
@@ -547,6 +551,10 @@ class HxParser {
 			case EWhile(condition, body, bodyIsBlock, position):
 				EWhile(offsetFunctionBodyExprColumns(condition, delta), [for (entry in body) offsetFunctionBodyExprColumns(entry, delta)], bodyIsBlock,
 					offsetFunctionBodyPosColumn(position, delta));
+			case EBreak(position):
+				EBreak(offsetFunctionBodyPosColumn(position, delta));
+			case EContinue(position):
+				EContinue(offsetFunctionBodyPosColumn(position, delta));
 			case EField(object, field):
 				EField(offsetFunctionBodyExprColumns(object, delta), field);
 			case ENullSafeField(object, field):
@@ -2954,6 +2962,14 @@ class HxParser {
 			case TIdent(name) if (name == "macro"):
 				bump();
 				parseMacroQuoteExpr(stop);
+			case TKeyword(k) if (k == KBreak):
+				final position = cur.getPos();
+				bump();
+				EBreak(position);
+			case TKeyword(k) if (k == KContinue):
+				final position = cur.getPos();
+				bump();
+				EContinue(position);
 			case TKeyword(k) if (k == KWhile):
 				parseWhileExpr(stop);
 			case TKeyword(k) if (k == KIf):

@@ -100,6 +100,8 @@ class TypedBodyInvariant {
 			throw "typed while expression is missing its condition in " + owner;
 		if (expression.getTag() == WhileExpr && !expression.getBoolValue() && expression.getExpressions().length != 2)
 			throw "typed while expression without braces must have exactly one body expression in " + owner;
+		if ((expression.getTag() == BreakExpr || expression.getTag() == ContinueExpr) && !expression.getType().isNoNormalCompletion())
+			throw "typed loop-control expression must not claim to produce a runtime value in " + owner;
 		if (expression.getTag() == VariableDeclarations)
 			for (declaration in expression.getExpressions())
 				if (declaration.getTag() != VariableDeclaration)

@@ -65,6 +65,16 @@ class M14RuntimeTypedLambdaIntegrationTest {
 			case _:
 				fail("expected a non-empty macro while body to preserve its nested call");
 		}
+		switch (RuntimeMacroExprs.parseInlineString("break", pos).expr) {
+			case EBreak:
+			case _:
+				fail("expected expression-position break to reach the macro API as EBreak");
+		}
+		switch (RuntimeMacroExprs.parseInlineString("continue", pos).expr) {
+			case EContinue:
+			case _:
+				fail("expected expression-position continue to reach the macro API as EContinue");
+		}
 		final parsed = RuntimeMacroExprs.parseInlineString("(item) -> item.name", pos);
 		switch (parsed.expr) {
 			case EFunction(FArrow, fn):

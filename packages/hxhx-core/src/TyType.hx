@@ -3,7 +3,7 @@
 
 	`display` remains available for existing diagnostics and target hints, while
 	the semantic key records primitives, functions, type parameters, nullable
-	types, and canonical nominal identities structurally. In particular, an abstract never
+	types, control flow that does not return normally, and canonical nominal identities structurally. In particular, an abstract never
 	becomes its primitive carrier merely because a backend may erase it later.
 
 	This is intentionally not the complete Haxe type system. Unresolved or
@@ -20,6 +20,7 @@ class TyType {
 	static final KIND_FUNCTION = "function";
 	static final KIND_TYPE_PARAMETER = "type-parameter";
 	static final KIND_UNRESOLVED = "unresolved";
+	static final KIND_NO_NORMAL_COMPLETION = "no-normal-completion";
 
 	public final display:String;
 
@@ -45,6 +46,18 @@ class TyType {
 
 	public static function unknown():TyType {
 		return new TyType("Unknown", KIND_UNKNOWN, null, [], null, "");
+	}
+
+	/**
+		Describe an expression that changes control flow instead of producing a value.
+
+		Examples are `break`, `continue`, and a future expression-position `throw`.
+		This is an internal typing fact, not a fake runtime value and not `Dynamic`.
+		When one branch has this type, the type of a normally completing branch can
+		remain the result of the surrounding expression.
+	**/
+	public static function noNormalCompletion():TyType {
+		return new TyType("NoNormalCompletion", KIND_NO_NORMAL_COMPLETION, null, [], null, "");
 	}
 
 	static function primitive(name:String):TyType {
@@ -108,6 +121,9 @@ class TyType {
 	public function isUnknown():Bool
 		return kind == KIND_UNKNOWN;
 
+	public function isNoNormalCompletion():Bool
+		return kind == KIND_NO_NORMAL_COMPLETION;
+
 	public function isVoid():Bool
 		return kind == KIND_PRIMITIVE && display == "Void";
 
@@ -163,6 +179,8 @@ class TyType {
 			return "null";
 		if (kind == KIND_UNKNOWN)
 			return "unknown";
+		if (kind == KIND_NO_NORMAL_COMPLETION)
+			return "no-normal-completion";
 		if (kind == KIND_TYPE_PARAMETER)
 			return "type-parameter:" + unresolvedPath;
 		if (kind == KIND_NULLABLE)
@@ -417,6 +435,10 @@ class TyType {
 	public static function unify(a:TyType, b:TyType):Null<TyType> {
 		if (a == null || b == null)
 			return null;
+		if (a.isNoNormalCompletion())
+			return b;
+		if (b.isNoNormalCompletion())
+			return a;
 		if (a.isUnknown())
 			return b;
 		if (b.isUnknown())

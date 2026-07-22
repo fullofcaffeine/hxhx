@@ -827,6 +827,8 @@ class TyperStage {
 	}
 
 	static function inferNullCoalesceType(left:TyType, right:TyType):TyType {
+		if (right != null && right.isNoNormalCompletion())
+			return left == null || left.isUnknown() ? TyType.unknown() : (left.isNullWrapped() ? left.unwrapNull() : left);
 		if (right != null && !right.isUnknown())
 			return right;
 		if (left != null && !left.isUnknown())
@@ -1138,6 +1140,8 @@ class TyperStage {
 				for (entry in body)
 					inferExprType(entry, scope, ctx, loopPosition);
 				TyType.fromHintText("Void");
+			case EBreak(_) | EContinue(_):
+				TyType.noNormalCompletion();
 			case ELambda(argNames, body):
 				// Stage 3 bring-up: type the body in a nested scope that:
 				// - introduces lambda args (shadowing outer locals/params),

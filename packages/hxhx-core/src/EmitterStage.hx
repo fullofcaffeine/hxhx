@@ -2695,6 +2695,10 @@ class EmitterStage {
 				throw "stage3 emitter: expression-position return must be consumed by macro expansion before OCaml emission";
 			case EWhile(_, _, _, _):
 				throw "stage3 emitter: expression-position while must be consumed by macro expansion before OCaml emission";
+			case EBreak(_):
+				throw "stage3 emitter: expression-position break needs shared loop-control lowering before OCaml emission";
+			case EContinue(_):
+				throw "stage3 emitter: expression-position continue needs shared loop-control lowering before OCaml emission";
 			case EVars(_):
 				throw "stage3 emitter: expression-position variable declarations must be consumed by macro expansion before OCaml emission";
 			case EVariableDeclaration(_, _, _, _, _, _):

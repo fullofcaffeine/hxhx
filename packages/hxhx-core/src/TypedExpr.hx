@@ -43,6 +43,8 @@ enum TypedExprTag {
 	VariableDeclarations;
 	VariableDeclaration;
 	WhileExpr;
+	BreakExpr;
+	ContinueExpr;
 }
 
 /**
@@ -148,6 +150,14 @@ class TypedExpr {
 	/** Preserve an expression-position while loop until macro expansion consumes it or emission rejects it. **/
 	public static function whileExpr(condition:TypedExpr, body:Array<TypedExpr>, bodyIsBlock:Bool, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(WhileExpr, type, position, null, [condition].concat(body == null ? [] : body), null, bodyIsBlock);
+
+	/** Preserve nested loop exit as an explicit no-normal-completion expression. **/
+	public static function breakExpr(position:Null<HxPos>):TypedExpr
+		return new TypedExpr(BreakExpr, TyType.noNormalCompletion(), position);
+
+	/** Preserve nested loop continuation as an explicit no-normal-completion expression. **/
+	public static function continueExpr(position:Null<HxPos>):TypedExpr
+		return new TypedExpr(ContinueExpr, TyType.noNormalCompletion(), position);
 
 	public static function macroExpr(expression:TypedExpr, wrappers:Array<String>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(MacroExpr, type, position, wrappers, [expression]);

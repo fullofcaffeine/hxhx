@@ -461,4 +461,21 @@ enum HxExpr {
 		position from their parent call.
 	**/
 	EWhile(condition:HxExpr, body:Array<HxExpr>, bodyIsBlock:Bool, position:HxPos);
+
+	/**
+		Exit the nearest loop from a position where Haxe expects an expression.
+
+		For example, `value ?? break` does not produce a fallback value: it exits
+		the loop when `value` is null. Ordinary standalone `break` remains
+		`HxStmt.SBreak`.
+	**/
+	EBreak(position:HxPos);
+
+	/**
+		Continue the nearest loop from a position where Haxe expects an expression.
+
+		For example, `value ?? continue` advances the loop when `value` is null.
+		Ordinary standalone `continue` remains `HxStmt.SContinue`.
+	**/
+	EContinue(position:HxPos);
 }

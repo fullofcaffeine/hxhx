@@ -2505,6 +2505,7 @@ class ParserStageScanHelpers {
 							found = true;
 					found;
 				}
+			case EBreak(_) | EContinue(_): false;
 			case EBinop(_, left, right), EArrayAccess(left, right), ERange(left, right): hasUnsupportedExpr(left) || hasUnsupportedExpr(right);
 			case ETernary(cond, thenExpr, elseExpr): hasUnsupportedExpr(cond) || hasUnsupportedExpr(thenExpr) || hasUnsupportedExpr(elseExpr);
 			case EAnon(_, values) | EArrayDecl(values):

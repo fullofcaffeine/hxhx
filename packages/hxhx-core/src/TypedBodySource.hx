@@ -120,6 +120,8 @@ class TypedBodySource {
 			case WhileExpr:
 				EWhile(expression(expressions[0]), expressionTail(expressions, 1), typedExpression.getBoolValue(),
 					sourcePosition(typedExpression.getPosition()));
+			case BreakExpr: EBreak(sourcePosition(typedExpression.getPosition()));
+			case ContinueExpr: EContinue(sourcePosition(typedExpression.getPosition()));
 			case MacroExpr: EMacroExpr(expression(expressions[0]), texts.copy());
 			case MacroType: EMacroType(texts[0]);
 			case Lambda: ELambda(texts.copy(), expression(expressions[0]));

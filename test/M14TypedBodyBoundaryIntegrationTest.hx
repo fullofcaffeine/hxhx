@@ -265,6 +265,62 @@ class M14TypedBodyBoundaryIntegrationTest {
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
 	}
 
+	static function assertNullCoalescingLoopControlStructure():Void {
+		final filePath = "checks/NullCoalescingLoopControl.hx";
+		final source = [
+			"class NullCoalescingLoopControl {",
+			"  static var fallback:Null<String>;",
+			"  static function check():Void {",
+			"    for (i in 0...1) {",
+			"      var value:String = fallback ?? continue;",
+			"      var other:String = fallback ?? break;",
+			"    }",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(source, filePath);
+		final resolved = new ResolvedModule("NullCoalescingLoopControl", filePath, parsed);
+		final index = TyperIndex.build([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index);
+		final body = findFunction(findClass(typed, "NullCoalescingLoopControl"), "check").getBody();
+		final loop = body.getStatements()[0];
+		assertTrue(loop.getTag() == TypedStmtTag.ForIn, "loop-control fixture lost its for loop");
+		final block = loop.getStatements()[0];
+		assertTrue(block.getTag() == TypedStmtTag.Block
+			&& block.getStatements().length == 2, "loop-control fixture lost its local declarations");
+		final continueInitializer = block.getStatements()[0].getExpressions()[0];
+		final breakInitializer = block.getStatements()[1].getExpressions()[0];
+		assertTrue(continueInitializer.getTag() == TypedExprTag.Binary && continueInitializer.getTexts()[0] == "??",
+			"continue fixture lost its null-coalescing expression");
+		assertTrue(breakInitializer.getTag() == TypedExprTag.Binary && breakInitializer.getTexts()[0] == "??",
+			"break fixture lost its null-coalescing expression");
+		final typedContinue = continueInitializer.getExpressions()[1];
+		final typedBreak = breakInitializer.getExpressions()[1];
+		assertTrue(typedContinue.getTag() == TypedExprTag.ContinueExpr && typedContinue.getType().isNoNormalCompletion(),
+			"typed continue was given a fake runtime value");
+		assertTrue(typedBreak.getTag() == TypedExprTag.BreakExpr
+			&& typedBreak.getType().isNoNormalCompletion(), "typed break was given a fake runtime value");
+		assertTrue(continueInitializer.getType().getSemanticKey() == "primitive:String"
+			&& breakInitializer.getType().getSemanticKey() == "primitive:String",
+			"loop control changed the value type of the non-null branch");
+		switch (TypedBodySource.statements(body)[0]) {
+			case SForIn(_, _, SBlock([
+				SVar("value", "String", EBinop("??", _, EContinue(continuePosition)), _, _),
+				SVar("other", "String", EBinop("??", _, EBreak(breakPosition)), _, _)
+			], _), _):
+				assertTrue(continuePosition.getLine() == 5 && breakPosition.getLine() == 6, "typed-body source projection changed loop-control positions");
+			case _:
+				throw "typed-body source projection changed null-coalescing loop control";
+		}
+		final position = new HxPos(0, 1, 1);
+		final continueFingerprint = TypedBodyFingerprint.forStatements([SExpr(EContinue(position), position)]);
+		final breakFingerprint = TypedBodyFingerprint.forStatements([SExpr(EBreak(position), position)]);
+		assertTrue(continueFingerprint != breakFingerprint, "body fingerprint confused continue with break");
+		assertTrue(TyType.unify(TyType.noNormalCompletion(), TyType.fromHintText("String")).getSemanticKey() == "primitive:String",
+			"no-normal-completion did not preserve the normally completing branch type");
+		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
+	}
+
 	static function assertLoweringNodeSet():Void {
 		final position = new HxPos(0, 1, 1);
 		final intType = TyType.fromHintText("Int");
@@ -735,6 +791,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertVariableDeclarationMacroArgumentStructure();
 		assertLocalVariableMetadataStructure();
 		assertWhileMacroArgumentStructure();
+		assertNullCoalescingLoopControlStructure();
 		assertLifecycleGuard(typed, mainFunction);
 	}
 }

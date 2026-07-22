@@ -1331,6 +1331,10 @@ class SourceTargetCommon {
 				throw targetLabel(target) + " source backend: expression-position return must be consumed by macro expansion before emission";
 			case EWhile(_, _, _, _):
 				throw targetLabel(target) + " source backend: expression-position while must be consumed by macro expansion before emission";
+			case EBreak(_):
+				throw targetLabel(target) + " source backend: expression-position break needs shared loop-control lowering before emission";
+			case EContinue(_):
+				throw targetLabel(target) + " source backend: expression-position continue needs shared loop-control lowering before emission";
 			case EVars(_):
 				throw targetLabel(target) + " source backend: expression-position variable declarations must be consumed by macro expansion before emission";
 			case EVariableDeclaration(_, _, _, _, _, _):
@@ -1368,6 +1372,8 @@ class SourceTargetCommon {
 			case ECall(_, _): "ECall";
 			case EReturn(_): "EReturn";
 			case EWhile(_, _, _, _): "EWhile";
+			case EBreak(_): "EBreak";
+			case EContinue(_): "EContinue";
 			case EVars(_): "EVars";
 			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";
@@ -12872,6 +12878,7 @@ class SourceTargetCommon {
 				phpRecordReferencedMemberExpr(condition, names);
 				for (entry in body)
 					phpRecordReferencedMemberExpr(entry, names);
+			case EBreak(_) | EContinue(_):
 			case EVars(declarations):
 				for (declaration in declarations) {
 					final initializer = HxExprVarDecl.getInitializer(declaration);

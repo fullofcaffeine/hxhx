@@ -165,6 +165,26 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("malformed while macro expression should become one precise parser diagnostic");
 		}
+		final controlSource = [
+			"var value:String = fallback ?? continue;",
+			"var other:String = fallback ?? break;",
+			"continue;",
+			"break;",
+		].join("\n");
+		final controlStatements = HxParser.parseFunctionBodyTextAt(controlSource, controlSource, 0);
+		switch (controlStatements) {
+			case [
+				SVar("value", "String", EBinop("??", EIdent("fallback"), EContinue(continuePosition)), _, _),
+				SVar("other", "String", EBinop("??", EIdent("fallback"), EBreak(breakPosition)), _, _),
+				SContinue(_),
+				SBreak(_)
+			]:
+				assertTrue(continuePosition.getLine() == 1 && continuePosition.getColumn() == 32,
+					"expression-position continue lost its exact source position");
+				assertTrue(breakPosition.getLine() == 2 && breakPosition.getColumn() == 32, "expression-position break lost its exact source position");
+			case _:
+				fail("null-coalescing loop control was not distinguished from ordinary control statements");
+		}
 		var spacedQuestionDotFailure:Null<String> = null;
 		try {
 			HxParser.parseExprText("unexpectedStrings ? .copy()");

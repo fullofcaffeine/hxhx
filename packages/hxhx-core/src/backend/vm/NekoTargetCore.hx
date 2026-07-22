@@ -535,6 +535,7 @@ class NekoTargetCore {
 				collectExprRefs(context, condition, addConstructor, addStatic);
 				for (entry in body)
 					collectExprRefs(context, entry, addConstructor, addStatic);
+			case EBreak(_) | EContinue(_):
 			case EVars(declarations):
 				for (declaration in declarations) {
 					final initializer = HxExprVarDecl.getInitializer(declaration);
@@ -1199,6 +1200,10 @@ class NekoTargetCore {
 				unsupportedExpr("expression-position return must be consumed by macro expansion before Neko emission");
 			case EWhile(_, _, _, _):
 				unsupportedExpr("expression-position while must be consumed by macro expansion before Neko emission");
+			case EBreak(_):
+				unsupportedExpr("expression-position break needs shared loop-control lowering before Neko emission");
+			case EContinue(_):
+				unsupportedExpr("expression-position continue needs shared loop-control lowering before Neko emission");
 			case EVars(_):
 				unsupportedExpr("expression-position variable declarations must be consumed by macro expansion before Neko emission");
 			case EVariableDeclaration(_, _, _, _, _, _):
@@ -1463,6 +1468,8 @@ class NekoTargetCore {
 			case ECall(_, _): "ECall";
 			case EReturn(_): "EReturn";
 			case EWhile(_, _, _, _): "EWhile";
+			case EBreak(_): "EBreak";
+			case EContinue(_): "EContinue";
 			case EVars(_): "EVars";
 			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";

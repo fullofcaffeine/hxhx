@@ -203,6 +203,14 @@ class MetalProfileVerifier {
 				verifyExpr(filePath, className, fnName, stmtPos, condition, violations);
 				for (entry in body)
 					verifyExpr(filePath, className, fnName, stmtPos, entry, violations);
+			case EBreak(_):
+				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "expression-position break",
+					"a nested break needs shared loop-control lowering before metal emission",
+					"rewrite the source so break is a statement, or use a target profile that supports the completed shared lowering");
+			case EContinue(_):
+				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "expression-position continue",
+					"a nested continue needs shared loop-control lowering before metal emission",
+					"rewrite the source so continue is a statement, or use a target profile that supports the completed shared lowering");
 			case EVars(declarations):
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "expression-position variable declaration",
 					"a variable declaration passed as source syntax must be handled by macro expansion before metal emission",

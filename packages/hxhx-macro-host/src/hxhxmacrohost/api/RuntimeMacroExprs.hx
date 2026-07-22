@@ -24,6 +24,7 @@ import haxe.macro.Expr;
 	  - ordinary and null-safe field access and call chains
 	  - narrow arrow lambdas (`(arg0, arg1) -> expr`)
 	  - `while` syntax passed to a macro, including its structured condition and block
+	  - expression-position `break` and `continue` control syntax
 	  - unary / binary / ternary expressions
 	  - `new TypePath(...)`
 	  - array literals and array access
@@ -690,6 +691,10 @@ class RuntimeMacroExprs {
 					convert(body[0], usePos);
 				}
 				EWhile(convert(condition, usePos), convertedBody, true);
+			case EBreak(_):
+				EBreak;
+			case EContinue(_):
+				EContinue;
 			case EMacroExpr(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) | ERange(_, _) |
 				EUnsupported(_):
 				throw "runtime macro parse: unsupported parsed expression shape";

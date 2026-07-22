@@ -268,6 +268,7 @@ class ExprMacroExpander {
 					rewrittenBody.push(rewritten);
 				}
 				changed ? EWhile(rewrittenCondition, rewrittenBody, bodyIsBlock, position) : e;
+			case EBreak(_) | EContinue(_): e;
 			case EField(obj, field):
 				final ro = rewriteExpr(obj, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				ro != obj ? EField(ro, field) : e;
@@ -412,6 +413,8 @@ class ExprMacroExpander {
 			case EVars(_): "Vars";
 			case EVariableDeclaration(_, _, _, _, _, _): "VariableDeclaration";
 			case EWhile(_, _, _, _): "While";
+			case EBreak(_): "Break";
+			case EContinue(_): "Continue";
 			case EUnop(_, _, _): "Unop";
 			case EBinop(_, _, _): "Binop";
 			case ETernary(_, _, _): "Ternary";

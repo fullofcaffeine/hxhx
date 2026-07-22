@@ -11836,6 +11836,10 @@ class CppTargetCore {
 				throw "C++ backend: expression-position return must be consumed by macro expansion before emission";
 			case EWhile(_, _, _, _):
 				throw "C++ backend: expression-position while must be consumed by macro expansion before emission";
+			case EBreak(_):
+				throw "C++ backend: expression-position break needs shared loop-control lowering before emission";
+			case EContinue(_):
+				throw "C++ backend: expression-position continue needs shared loop-control lowering before emission";
 			case EVars(_):
 				throw "C++ backend: expression-position variable declarations must be consumed by macro expansion before emission";
 			case EVariableDeclaration(_, _, _, _, _, _):
@@ -22368,6 +22372,8 @@ class CppTargetCore {
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
 			case EReturn(_): "EReturn";
 			case EWhile(_, _, _, _): "EWhile";
+			case EBreak(_): "EBreak";
+			case EContinue(_): "EContinue";
 			case EVars(_): "EVars";
 			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";

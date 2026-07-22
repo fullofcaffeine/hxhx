@@ -211,6 +211,12 @@ class TypedBodyFingerprint {
 				addExpressions(state, body);
 				addInt(state, bodyIsBlock ? 1 : 0);
 				addPosition(state, position);
+			case EBreak(position):
+				addString(state, "expr-break");
+				addPosition(state, position);
+			case EContinue(position):
+				addString(state, "expr-continue");
+				addPosition(state, position);
 			case EMacroExpr(inner, wrappers):
 				addString(state, "expr-macro");
 				addExpression(state, inner);

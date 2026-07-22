@@ -56,6 +56,7 @@ class Stage3DiagnosticsSupport {
 				for (entry in body)
 					count += countUnsupportedExprsInExpr(entry);
 				count;
+			case EBreak(_) | EContinue(_): 0;
 			case ELambda(_args, body):
 				countUnsupportedExprsInExpr(body);
 			case ETryCatchRaw(_raw):
@@ -115,6 +116,7 @@ class Stage3DiagnosticsSupport {
 				collectUnsupportedExprRawInExpr(condition, out, max);
 				for (entry in body)
 					collectUnsupportedExprRawInExpr(entry, out, max);
+			case EBreak(_) | EContinue(_):
 			case ELambda(_args, body):
 				collectUnsupportedExprRawInExpr(body, out, max);
 			case ETryCatchRaw(_raw):

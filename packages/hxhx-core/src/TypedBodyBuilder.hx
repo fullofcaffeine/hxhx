@@ -32,6 +32,7 @@ class TypedBodyBuilder {
 			case EReturn(_): TyType.fromHintText("Void");
 			case EVars(_): TyType.fromHintText("Void");
 			case EWhile(_, _, _, _): TyType.fromHintText("Void");
+			case EBreak(_) | EContinue(_): TyType.noNormalCompletion();
 			case _: TyType.unknown();
 		};
 	}
@@ -459,6 +460,10 @@ class TypedBodyBuilder {
 			case EWhile(condition, body, bodyIsBlock, loopPosition):
 				TypedExpr.whileExpr(buildExpr(condition, null, loopPosition, environment, typeResolver, callResolver),
 					buildExpressions(body, loopPosition, environment, typeResolver, callResolver), bodyIsBlock, nodeType, exactPosition(loopPosition));
+			case EBreak(controlPosition):
+				TypedExpr.breakExpr(exactPosition(controlPosition));
+			case EContinue(controlPosition):
+				TypedExpr.continueExpr(exactPosition(controlPosition));
 			case EMacroExpr(inner, wrappers):
 				TypedExpr.macroExpr(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver),
 					wrappers == null ? [] : wrappers.copy(), nodeType, position);

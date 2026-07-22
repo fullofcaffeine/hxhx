@@ -52,5 +52,15 @@ class M14JsNativeUnsupportedDiagnosticsIntegrationTest {
 		assertContains(whileError, "[js-native:unsupported_expr]", "unexpanded while prefix");
 		assertContains(whileError, "kind=EWhile", "unexpanded while kind");
 		assertContains(whileError, "macro expansion", "unexpanded while guidance");
+
+		final breakError = captureUnsupported(EBreak(new HxPos(0, 1, 1)));
+		assertContains(breakError, "[js-native:unsupported_expr]", "unlowered break prefix");
+		assertContains(breakError, "kind=EBreak", "unlowered break kind");
+		assertContains(breakError, "loop-control lowering", "unlowered break guidance");
+
+		final continueError = captureUnsupported(EContinue(new HxPos(0, 1, 1)));
+		assertContains(continueError, "[js-native:unsupported_expr]", "unlowered continue prefix");
+		assertContains(continueError, "kind=EContinue", "unlowered continue kind");
+		assertContains(continueError, "loop-control lowering", "unlowered continue guidance");
 	}
 }
