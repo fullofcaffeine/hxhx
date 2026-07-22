@@ -1,3 +1,10 @@
+## [0.23.18](https://github.com/fullofcaffeine/hxhx/compare/v0.23.17...v0.23.18) (2026-07-22)
+
+
+### Bug Fixes
+
+* **server:** bound native request frames ([43b6d2b](https://github.com/fullofcaffeine/hxhx/commit/43b6d2bfac9906d4d417827b47c5ab10db7a6b0e))
+
 ## [0.23.17](https://github.com/fullofcaffeine/hxhx/compare/v0.23.16...v0.23.17) (2026-07-22)
 
 
