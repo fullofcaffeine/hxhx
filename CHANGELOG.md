@@ -1,3 +1,10 @@
+## [0.23.16](https://github.com/fullofcaffeine/hxhx/compare/v0.23.15...v0.23.16) (2026-07-22)
+
+
+### Bug Fixes
+
+* **server:** return compiler output to requesting clients ([38941de](https://github.com/fullofcaffeine/hxhx/commit/38941debbe9c48635782759bae2aa025a7027e7d))
+
 ## [0.23.15](https://github.com/fullofcaffeine/hxhx/compare/v0.23.14...v0.23.15) (2026-07-22)
 
 

@@ -10,9 +10,9 @@
     "macro"
   ],
   "description": "A Haxe compilation target for OCaml (via Reflaxe), enabling native OCaml output, OCaml interop, and a path toward Haxe-in-Haxe bootstrapping.",
-  "version": "0.23.15",
+  "version": "0.23.16",
   "classPath": "src/",
-  "releasenote": "v0.23.15: See CHANGELOG.md",
+  "releasenote": "v0.23.16: See CHANGELOG.md",
   "contributors": [
     "fullofcaffeine"
   ],
