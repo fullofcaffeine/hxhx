@@ -1,3 +1,18 @@
+## [0.23.12](https://github.com/fullofcaffeine/hxhx/compare/v0.23.11...v0.23.12) (2026-07-22)
+
+
+### Bug Fixes
+
+* **ast:** keep macro declarations in one recursive type ([bd2ca56](https://github.com/fullofcaffeine/hxhx/commit/bd2ca56829caa53ac2af5eceaa4f647079e158a0))
+* **codegen:** avoid helper constructor collision ([5df842a](https://github.com/fullofcaffeine/hxhx/commit/5df842a208e9c14bc6a5434d4d425e4e5de03d79))
+* **macros:** traverse return expression values ([a19f264](https://github.com/fullofcaffeine/hxhx/commit/a19f264fca0c74975cbcc291a98ac9e05d3e055e))
+* **parser:** preserve local declaration metadata ([fd2cd24](https://github.com/fullofcaffeine/hxhx/commit/fd2cd240460aa86262042bc3f38a483aac567739))
+* **parser:** preserve macro variable declarations ([d49a73f](https://github.com/fullofcaffeine/hxhx/commit/d49a73f22bc90341a7b6a9a115d2b70ac85d2986))
+* **parser:** preserve return macro arguments ([c2169a5](https://github.com/fullofcaffeine/hxhx/commit/c2169a52ed483741d4756842102d87c2fe285886))
+* **parser:** preserve while syntax passed to macros ([7179eb9](https://github.com/fullofcaffeine/hxhx/commit/7179eb92012ffa543d9facc0456c2929c7127c65))
+* **typer:** bind nullable abstract conversions ([413d58f](https://github.com/fullofcaffeine/hxhx/commit/413d58f8dcddd5b57e6f1f311d3d2489d1335183))
+* **typer:** preserve nested loop control ([a17629e](https://github.com/fullofcaffeine/hxhx/commit/a17629ea85ba87a35ffa95ac7bf96d6e75a2a023))
+
 ## [0.23.11](https://github.com/fullofcaffeine/hxhx/compare/v0.23.10...v0.23.11) (2026-07-21)
 
 
