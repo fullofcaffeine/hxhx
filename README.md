@@ -143,6 +143,7 @@ of the public quickstart:
 
 - `docs/01-getting-started/TESTING.md`
 - `docs/01-getting-started/FAST_LOCAL_VALIDATION.md`
+- `docs/01-getting-started/COMPILATION_SERVER.md`
 - `docs/00-project/CI_GATES.md`
 - `docs/00-project/STAGE0_POLICY.md`
 - `docs/benchmarks/HXHX_KPI_BASELINE.md`

@@ -90,11 +90,14 @@ reshards large modules before the verify build.
 Notes:
 
 - This can take several minutes because it runs stage0 Haxe macros for codegen.
-- For faster repeated loops, use a repo-owned Haxe server + incremental emit:
-  - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --use-repo-server --keep-repo-server --incremental --no-verify`
-  - Optional skip when inputs are unchanged:
-    - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
-  - Repo-owned server helper:
+- For faster repeated loops, use the input fingerprint when the sources are
+  unchanged:
+  - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
+  - Warm Reflaxe generation through `--use-repo-server` is temporarily blocked.
+    A measured warm request reused Haxe typing work but did not reconstruct
+    complete target-wide module/runtime state. See
+    `docs/01-getting-started/COMPILATION_SERVER.md`.
+  - The server helper remains available for process-lifecycle diagnostics:
     - `bash scripts/hxhx/haxe-server.sh start|status|owned-pids|stop`
     - The helper records wrapper descendants with process-start identities and stops the whole owned tree, so a Node/Lix launcher cannot leave its native `haxe --wait` child behind after stop, interruption, or launcher exit—even when the child uses a different internal port.
   - Server-mode progress distinguishes the waiting client from the process that
@@ -110,11 +113,9 @@ Notes:
       stalled; and
     - the idle-handoff retry starts only when the client and the complete
       verified server tree are quiet while the compiler log is unchanged.
-  - This helper accelerates only the **stage0 upstream-Haxe** development lane.
-    It is not the future native hxhx incremental server. Upstream Haxe may reuse
-    parsing and typing, while Reflaxe target generation can still dominate a
-    large rebuild; use the benchmark commands and `--skip-if-unchanged` rather
-    than assuming every `--connect` build is faster.
+  - This is the **stage0 upstream-Haxe** server, not the future native hxhx
+    incremental server. The helper's lifecycle behavior is tested, but its warm
+    Reflaxe target output is not currently a supported build path.
 - For progress logs from `reflaxe.ocaml`, set `HXHX_STAGE0_PROGRESS=1` (emits periodic `Context.warning(...)` markers during the stage0 build).
 - For more detailed progress (per-class begin markers in the log file), set `HXHX_STAGE0_TELEMETRY=1` (adds `-D reflaxe_ocaml_telemetry`).
 - For profiling, set `HXHX_BOOTSTRAP_DEBUG=1` to print `--times` output.
@@ -123,10 +124,11 @@ Notes:
 - If your terminal/CI truncates logs, you can also capture progress markers to a file by setting `REFLAXE_OCAML_PROGRESS_FILE=/path/to/log.txt`.
 - If you suspect stage0 performance issues are caused by output-shaping prepasses, you can try `HXHX_STAGE0_DISABLE_PREPASSES=1` (disables reflaxe.ocaml expression preprocessors for this stage0 run).
 - For profiling-only display graph trimming, set `HXHX_STAGE0_NO_DISPLAY=1` or use `scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-no-display`; do not use this for release snapshots unless display parity is explicitly reviewed.
-- Stage0 source builds support two `--connect` paths:
-  - explicit override: `HAXE_CONNECT=<port>` (highest precedence)
-  - helper-backed reuse: `HXHX_STAGE0_USE_REPO_SERVER=1` (starts/reuses `scripts/hxhx/haxe-server.sh` and injects `--connect <port>`)
-  - optional helper cleanup policy: `HXHX_STAGE0_KEEP_REPO_SERVER=1` keeps a helper-started server alive after build (default is auto-stop if started by this build).
+- Stage0 source builds reject both explicit `HAXE_CONNECT=<port>` and
+  helper-backed `HXHX_STAGE0_USE_REPO_SERVER=1` until complete warm Reflaxe
+  target state is implemented. The maintainer-only
+  `HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE=1` override exists for focused
+  lifecycle tests; its output is not correctness or release evidence.
 - For targeted cleanup when haxe servers pile up:
   - `--kill-repo-server` (safe: only repo-owned server)
   - `--kill-all-haxe-servers` (unsafe: kills all local haxe servers)
@@ -136,9 +138,6 @@ If you need to rebuild `hxhx` from stage0 source (instead of the committed `boot
 
 ```bash
 HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" HXHX_FORCE_STAGE0=1 HXHX_STAGE0_PROGRESS=1 HXHX_STAGE0_TIMES=1 HXHX_STAGE0_VERBOSE=1 bash scripts/hxhx/build-hxhx.sh
-
-# same, but with helper-managed --connect reuse
-HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" HXHX_FORCE_STAGE0=1 HXHX_STAGE0_USE_REPO_SERVER=1 HXHX_STAGE0_KEEP_REPO_SERVER=1 bash scripts/hxhx/build-hxhx.sh
 ```
 
 ## Run

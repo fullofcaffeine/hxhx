@@ -17,6 +17,7 @@ Canonical definitions for all paths:
 - Gate/workflow meanings: `docs/00-project/CI_GATES.md`
 - Beginner status snapshot: `docs/01-getting-started/WHAT_WORKS_TODAY.md`
 - Dedicated lane chooser page: `docs/01-getting-started/CHOOSE_YOUR_LANE.md`
+- Compilation-server support and safe setup: `docs/01-getting-started/COMPILATION_SERVER.md`
 
 ## CLI Cutover Rules (Beginner)
 

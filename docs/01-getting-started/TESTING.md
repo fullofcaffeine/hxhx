@@ -553,10 +553,12 @@ Use this when you want the repo to function as a compiler-bootstrap example:
       mentions `haxe --wait` is not treated as a server and is never signalled by global cleanup.
     - Opt-in safe cleanup (repo-owned only): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-repo-server`
     - Opt-in global cleanup (unsafe): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-all-haxe-servers`
-  - Optional repo-owned server reuse:
-    - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --use-repo-server --keep-repo-server --incremental --no-verify`
-    - Direct helper: `bash scripts/hxhx/haxe-server.sh start|status|stop`
+  - Repo-owned server process-lifecycle diagnostics:
+    - Direct helper: `bash scripts/hxhx/haxe-server.sh start|status|owned-pids|stop`
     - The helper records the launcher and descendants with stable process-start identities. `stop`, failed startup, launcher exit, and interrupted startup terminate the complete recorded tree, including a native Haxe child whose Node/Lix wrapper used a different internal port.
+    - Warm Reflaxe generation through `--use-repo-server` is temporarily blocked
+      because a measured cached request lost complete target-wide state. See
+      `docs/01-getting-started/COMPILATION_SERVER.md`.
   - Optional skip-if-unchanged:
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
   - Faster local iteration (reuse previous emit output + skip verify):
@@ -569,10 +571,11 @@ Use this when you want the repo to function as a compiler-bootstrap example:
 - **Stage1**: build `hxhx` from committed bootstrap snapshot (`out.bc` / native fallback).
   - Command: `bash scripts/hxhx/build-hxhx.sh`
   - Autocreated `.tmp/hxhx-bootstrap-build.*` workdirs are pruned on later runs; tune with `HXHX_BOOTSTRAP_BUILD_RETAIN=<n>` or disable with `HXHX_BOOTSTRAP_BUILD_PRUNE=0`.
-  - Stage0 source lane connect options (used when `HXHX_FORCE_STAGE0=1`):
-    - explicit `HAXE_CONNECT=<port>` override (highest precedence)
-    - helper-managed reuse: `HXHX_STAGE0_USE_REPO_SERVER=1` (with optional `HXHX_STAGE0_KEEP_REPO_SERVER=1`)
-    - stuck connect handoff detector: `HXHX_STAGE0_CONNECT_IDLE_SECS=<seconds>` (default `180`; `0` disables auto-retry without `--connect`)
+  - Stage0 source lane server reuse (used when `HXHX_FORCE_STAGE0=1`) is
+    temporarily blocked for correctness. Both explicit `HAXE_CONNECT=<port>`
+    and helper-managed `HXHX_STAGE0_USE_REPO_SERVER=1` fail before generation.
+    The internal `HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE=1` override is only
+    for lifecycle fixtures and does not produce release evidence.
   - Observability knobs: `HXHX_BOOTSTRAP_HEARTBEAT=20` (default; set `0` to disable) and `HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS=0` (optional timeout).
   - Dune worker knob: `HXHX_DUNE_JOBS=auto|<N>` (defaults to `auto`; set `HXHX_DUNE_JOBS=4` for a fixed worker cap when tuning memory/throughput).
 - **Stage2**: stage1 builds stage2; compare behavior/codegen stability.

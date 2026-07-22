@@ -5,6 +5,7 @@ HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXE_CONNECT="${HAXE_CONNECT:-}"
 HXHX_STAGE0_USE_REPO_SERVER="${HXHX_STAGE0_USE_REPO_SERVER:-0}"
 HXHX_STAGE0_KEEP_REPO_SERVER="${HXHX_STAGE0_KEEP_REPO_SERVER:-0}"
+HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE="${HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE:-0}"
 HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-0}"
 HXHX_FORBID_STAGE0="${HXHX_FORBID_STAGE0:-0}"
 HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
@@ -459,6 +460,14 @@ case "$HXHX_STAGE0_KEEP_REPO_SERVER" in
     ;;
 esac
 
+case "$HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE" in
+  0|1) ;;
+  *)
+    echo "Invalid HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE: $HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE (expected 0 or 1)." >&2
+    exit 2
+    ;;
+esac
+
 case "$HXHX_FORBID_STAGE0" in
   0|1|true|false|yes|no|on|off) ;;
   *)
@@ -754,6 +763,18 @@ on_script_exit() {
 }
 
 resolve_stage0_connect() {
+  if { [ -n "$resolved_haxe_connect" ] || [ "$HXHX_STAGE0_USE_REPO_SERVER" = "1" ]; } \
+    && [ "$HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE" != "1" ]; then
+    echo "Stage0 Reflaxe compilation-server reuse is temporarily disabled for correctness." >&2
+    echo "A measured unchanged warm request reused Haxe typing work but lost complete target module/runtime ownership." >&2
+    echo "Use the normal direct source build, or the committed bootstrap snapshot, until haxe_ocaml-850ii.33 is resolved." >&2
+    echo "Maintainer-only lifecycle tests may set HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE=1; its output is not release evidence." >&2
+    exit 2
+  fi
+  if { [ -n "$resolved_haxe_connect" ] || [ "$HXHX_STAGE0_USE_REPO_SERVER" = "1" ]; } \
+    && [ "$HXHX_ALLOW_INCOMPLETE_REFLAXE_SERVER_REUSE" = "1" ]; then
+    echo "== Stage0 Reflaxe server reuse: diagnostic-only incomplete-state experiment" >&2
+  fi
   if [ -n "$resolved_haxe_connect" ]; then
     if [ "$HXHX_STAGE0_USE_REPO_SERVER" = "1" ]; then
       echo "== Stage0 source build: using explicit HAXE_CONNECT=$resolved_haxe_connect (helper opt-in ignored)." >&2

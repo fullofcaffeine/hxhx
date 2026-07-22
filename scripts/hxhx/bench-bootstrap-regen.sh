@@ -8,7 +8,7 @@ REPORT_BUILDER="$ROOT/scripts/ci/bootstrap-regen-benchmark-report.js"
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 REPS="${HXHX_BOOTSTRAP_BENCH_REPS:-1}"
-SCENARIOS_RAW="${HXHX_BOOTSTRAP_BENCH_SCENARIOS:-cold,warm,skip}"
+SCENARIOS_RAW="${HXHX_BOOTSTRAP_BENCH_SCENARIOS:-cold,skip,select}"
 VERIFY_FLAG="${HXHX_BOOTSTRAP_BENCH_VERIFY:-0}"
 STAGE0_POLICY="${HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY:-}"
 STAGE0_NATIVE_BIN="${HXHX_BOOTSTRAP_BENCH_STAGE0_NATIVE_HAXE_BIN:-}"
@@ -37,7 +37,7 @@ Usage: bash scripts/hxhx/bench-bootstrap-regen.sh
 Environment knobs:
   HAXE_BIN                             Haxe executable path (default: haxe)
   HXHX_BOOTSTRAP_BENCH_REPS           Repetitions per scenario (default: 1)
-  HXHX_BOOTSTRAP_BENCH_SCENARIOS      Comma list: cold,warm,skip,select (default: cold,warm,skip)
+  HXHX_BOOTSTRAP_BENCH_SCENARIOS      Comma list: cold,skip,select (default: cold,skip,select)
   HXHX_BOOTSTRAP_BENCH_VERIFY         0/1 run snapshot verify step (default: 0)
   HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY
                                       Stage0 haxe policy override for all runs
@@ -64,19 +64,19 @@ Outputs:
   <scenario>.<policy>.*.json          Low-level regeneration reports
   report.json                         Self-describing report with medians and provenance
 
-Warm means the generated output directory is primed once and reused. Every
-measured warm sample gets a fresh repo Haxe server that matches its selected
-wrapper/direct-Haxe policy; compiler-server state is not shared across samples.
+The former warm scenario is temporarily unavailable. Haxe can reuse its typed
+modules, but Reflaxe does not yet reconstruct every unchanged target module and
+runtime dependency. See haxe_ocaml-850ii.33 and the compilation-server guide.
 
 Examples:
-  # Run warm + skip only (faster local loop)
-  HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm,skip bash scripts/hxhx/bench-bootstrap-regen.sh
+  # Measure the unchanged-input fingerprint and compiler selection only
+  HXHX_BOOTSTRAP_BENCH_SCENARIOS=skip,select bash scripts/hxhx/bench-bootstrap-regen.sh
 
   # Include verify and 2 reps
   HXHX_BOOTSTRAP_BENCH_VERIFY=1 HXHX_BOOTSTRAP_BENCH_REPS=2 bash scripts/hxhx/bench-bootstrap-regen.sh
 
-  # Compare wrapper vs native stage0 policy on warm path
-  HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 \
+  # Compare wrapper vs native stage0 policy on a full cold regeneration
+  HXHX_BOOTSTRAP_BENCH_SCENARIOS=cold HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 \
     bash scripts/hxhx/bench-bootstrap-regen.sh
 USAGE
 }
@@ -213,6 +213,23 @@ if [ "${#DUNE_JOBS_LIST[@]}" -eq 0 ]; then
 	echo "HXHX_BOOTSTRAP_BENCH_DUNE_JOBS produced no valid values." >&2
 	exit 1
 fi
+
+IFS=',' read -r -a scenarios <<<"$SCENARIOS_RAW"
+for scenario in "${scenarios[@]}"; do
+	case "$scenario" in
+		cold|skip|select|'')
+			;;
+		warm)
+			echo "The warm bootstrap benchmark is temporarily disabled because cached Reflaxe requests can omit unchanged target modules and runtime dependencies." >&2
+			echo "Use cold, skip, or select until haxe_ocaml-850ii.33 is resolved; see docs/01-getting-started/COMPILATION_SERVER.md." >&2
+			exit 2
+			;;
+		*)
+			echo "Unknown scenario '$scenario'. Allowed values: cold,skip,select." >&2
+			exit 1
+			;;
+	esac
+done
 
 mkdir -p "$REPORT_DIR"
 RESULTS_TSV="$REPORT_DIR/results.tsv"
@@ -381,35 +398,14 @@ run_scenario_cold() {
 	done
 }
 
-run_scenario_warm() {
-	local prime_policy="$STAGE0_POLICY"
-	local prime_label="${STAGE0_POLICY:-default}"
-	if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
-		prime_policy="prefer-native"
-		prime_label="native"
-	fi
-	local prime_jobs="${DUNE_JOBS_LIST[0]}"
-	local prime_report="$REPORT_DIR/warm.prime.${prime_label}.jobs${prime_jobs}.json"
-	echo "Priming generated output for warm samples policy=$prime_label jobs=$prime_jobs (not measured)..."
-	bash "$SERVER_HELPER" stop >/dev/null 2>&1 || true
-	run_regen_with_policy "$prime_policy" "$prime_jobs" "$prime_report" --incremental --use-repo-server --force --no-verify >/dev/null
-
-	local rep
-	for rep in $(seq 1 "$REPS"); do
-		# A fresh server keeps each sample independent and makes the policy label
-		# describe the compiler server that actually performs the work.
-		run_once_for_active_policies "warm" "$rep" --incremental --use-repo-server --force
-	done
-}
-
 run_skip_for_policy() {
 	local rep="$1"
 	local policy_label="$2"
 	local policy_value="$3"
 	local dune_jobs="$4"
 	echo "Priming fingerprint for skip scenario policy=$policy_label (not measured)..."
-	run_regen_with_policy "$policy_value" "$dune_jobs" "" --incremental --use-repo-server --keep-repo-server --force --no-verify >/dev/null
-	run_once "skip" "$rep" "$policy_label" "$policy_value" "$dune_jobs" --incremental --use-repo-server --keep-repo-server --skip-if-unchanged
+	run_regen_with_policy "$policy_value" "$dune_jobs" "" --incremental --force --no-verify >/dev/null
+	run_once "skip" "$rep" "$policy_label" "$policy_value" "$dune_jobs" --incremental --skip-if-unchanged
 }
 
 run_scenario_skip() {
@@ -438,16 +434,11 @@ run_scenario_select() {
 	done
 }
 
-IFS=',' read -r -a scenarios <<<"$SCENARIOS_RAW"
 for scenario in "${scenarios[@]}"; do
 	case "$scenario" in
 		cold)
 			echo "-- scenario=cold"
 			run_scenario_cold
-			;;
-		warm)
-			echo "-- scenario=warm"
-			run_scenario_warm
 			;;
 		skip)
 			echo "-- scenario=skip"
@@ -460,7 +451,7 @@ for scenario in "${scenarios[@]}"; do
 		'')
 			;;
 		*)
-			echo "Unknown scenario '$scenario'. Allowed values: cold,warm,skip,select." >&2
+			echo "Internal error: scenario '$scenario' passed validation but has no runner." >&2
 			exit 1
 			;;
 	esac

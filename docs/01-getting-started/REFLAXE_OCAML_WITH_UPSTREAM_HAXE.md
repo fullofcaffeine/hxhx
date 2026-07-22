@@ -96,6 +96,10 @@ output incomplete. Fast native iteration instead comes from Reflaxe avoiding
 unchanged file rewrites and Dune reusing its incremental build cache. Generated
 output and normal cache/build directories do not trigger rebuild loops.
 
+For the measured failure, current defaults, server/editor/CI scenarios, and the
+criteria for enabling a supported warm path, read
+`docs/01-getting-started/COMPILATION_SERVER.md`.
+
 Each authoring build requests a receipt-linked native timing report. Console
 output separates the total Haxe child from measured target subprocesses and the
 Dune build itself. Dune typechecking, compilation, and linking remain one

@@ -22,7 +22,7 @@ const gitMaxBuffer = 256 * 1024 * 1024
 
 const scenarioDefinitions = {
   cold: 'full regeneration after removing prior generated output',
-  warm: 'forced incremental regeneration with primed generated output and a fresh policy-matched repository Haxe server for each sample',
+  warm: 'reserved historical scenario; new warm measurements are blocked until Reflaxe reconstructs the complete target program from cached Haxe requests',
   skip: 'unchanged-input check after one unmeasured fingerprint-priming regeneration',
   select: 'stage0 compiler selection only; no snapshot regeneration'
 }
@@ -436,7 +436,7 @@ function buildReport(args) {
       scenario_definitions: scenarioDefinitions,
       warmup_rules: {
         cold: 'none',
-        warm: 'one unmeasured forced incremental regeneration primes generated output; every measured sample starts and stops a fresh policy-matched repository Haxe server',
+        warm: 'not available for new reports; retained so version-1 reports remain self-describing and validatable',
         skip: 'one unmeasured forced incremental regeneration before each measured unchanged-input check',
         select: 'none'
       }

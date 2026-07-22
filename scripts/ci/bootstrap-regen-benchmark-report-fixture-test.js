@@ -115,13 +115,13 @@ function validReport() {
       peak_rss_scope: 'focused stage0 client process only; the repository Haxe server and total job memory are not included',
       scenario_definitions: {
         cold: 'full regeneration after removing prior generated output',
-        warm: 'forced incremental regeneration with primed generated output and a fresh policy-matched repository Haxe server for each sample',
+        warm: 'reserved historical scenario; new warm measurements are blocked until Reflaxe reconstructs the complete target program from cached Haxe requests',
         skip: 'unchanged-input check after one unmeasured fingerprint-priming regeneration',
         select: 'stage0 compiler selection only; no snapshot regeneration'
       },
       warmup_rules: {
         cold: 'none',
-        warm: 'one unmeasured forced incremental regeneration primes generated output; every measured sample starts and stops a fresh policy-matched repository Haxe server',
+        warm: 'not available for new reports; retained so version-1 reports remain self-describing and validatable',
         skip: 'one unmeasured forced incremental regeneration before each measured unchanged-input check',
         select: 'none'
       }
@@ -207,13 +207,24 @@ function assertWorktreeChangeCollection(tmpDir) {
 
 function main() {
   const runnerSource = fs.readFileSync(runner, 'utf8')
-  const warmRunner = runnerSource.match(/run_scenario_warm\(\) \{([\s\S]*?)\n\}/)
-  if (!warmRunner) fail('could not locate run_scenario_warm in the benchmark runner')
-  if (!warmRunner[1].includes('--incremental --use-repo-server --force')) {
-    fail('warm samples must use incremental output with a policy-matched repo server')
+  if (runnerSource.includes('--use-repo-server') || runnerSource.includes('--keep-repo-server')) {
+    fail('the benchmark runner must not enable incomplete Reflaxe server reuse')
   }
-  if (warmRunner[1].includes('--keep-repo-server')) {
-    fail('warm samples must not share one Haxe server across measurements')
+  if (!runnerSource.includes("SCENARIOS_RAW=\"${HXHX_BOOTSTRAP_BENCH_SCENARIOS:-cold,skip,select}\"")) {
+    fail('the benchmark default must contain only supported scenarios')
+  }
+  const blockedWarm = childProcess.spawnSync('bash', [runner], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HAXE_BIN: 'true',
+      HXHX_BOOTSTRAP_BENCH_SCENARIOS: 'warm',
+      HXHX_BOOTSTRAP_BENCH_REPORT_DIR: path.join(os.tmpdir(), 'hxhx-blocked-warm-report')
+    }
+  })
+  if (blockedWarm.status !== 2 || !blockedWarm.stderr.includes('warm bootstrap benchmark is temporarily disabled')) {
+    fail(`warm scenario must fail before measurement with an actionable diagnostic\nstdout:\n${blockedWarm.stdout}\nstderr:\n${blockedWarm.stderr}`)
   }
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hxhx-bootstrap-regen-report-fixtures-'))

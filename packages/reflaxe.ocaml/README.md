@@ -108,6 +108,11 @@ incremental native build cache. `--max-builds` provides a deterministic stopping
 point for tests and automation; run `haxelib run reflaxe.ocaml watch --help` for
 all options.
 
+For a plain-language explanation of compilation servers, upstream Haxe setup,
+the current `reflaxe.ocaml` and `hxhx` defaults, editor and CI scenarios, memory
+guidance, and troubleshooting, read
+[`COMPILATION_SERVER.md`](../../docs/01-getting-started/COMPILATION_SERVER.md).
+
 The command requests `ocaml_build_timing_report.json` and reports three honest
 boundaries: total Haxe-child time, target-owned subprocess time, and the Dune
 build duration. Dune currently combines OCaml typechecking, compilation, and

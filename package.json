@@ -396,6 +396,7 @@
     "test:hxhx:builtin-target-smoke": "bash scripts/hxhx/run-builtin-target-smoke.sh",
     "test:hxhx:build-connect-retry-smoke": "bash scripts/hxhx/test-build-hxhx-connect-retry.sh",
     "test:hxhx:build-connect-worker-smoke": "bash scripts/hxhx/test-build-hxhx-connect-worker.sh",
+    "test:hxhx:reflaxe-server-safety": "bash scripts/hxhx/test-reflaxe-server-safety-gate.sh",
     "test:hxhx:build-bootstrap-ocaml-eval-hxml-smoke": "bash scripts/hxhx/test-build-hxhx-bootstrap-ocaml-eval-hxml-smoke.sh",
     "test:hxhx:native-plugin-build-smoke": "bash scripts/hxhx/run-native-plugin-build-smoke.sh",
     "test:hxhx:plugin-init-scaffold-smoke": "bash scripts/hxhx/run-plugin-init-scaffold-smoke.sh",

@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       scenarios:
-        description: "Comma-separated scenarios (cold,warm,skip,select)"
+        description: "Comma-separated scenarios (cold,skip,select; warm is blocked until Reflaxe target reuse is complete)"
         required: true
-        default: "warm,skip"
+        default: "skip,select"
       reps:
         description: "Repetitions per scenario"
         required: true

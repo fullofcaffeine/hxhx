@@ -8,6 +8,8 @@ Short version:
 - use upstream `haxe + reflaxe.ocaml` for the production-candidate OCaml output path today
 - use `hxhx + reflaxe.ocaml` when you are validating native `hxhx` compiler behavior, plugin hosting, or promotion infrastructure
 - do not treat `hxhx + reflaxe.ocaml` as the default production route until the Full 1.0 gates pass
+- do not enable warm Reflaxe compilation-server reuse; see
+  `docs/01-getting-started/COMPILATION_SERVER.md` for the current safe workflows
 
 ## What is supported today
 
