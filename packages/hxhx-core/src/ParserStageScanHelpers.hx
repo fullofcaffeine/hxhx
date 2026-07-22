@@ -2497,6 +2497,14 @@ class ParserStageScanHelpers {
 						return true;
 				false;
 			case EVariableDeclaration(_, _, initializer, _, _, _): hasUnsupportedExpr(initializer);
+			case EWhile(condition, body, _, _):
+				if (hasUnsupportedExpr(condition)) true; else {
+					var found = false;
+					for (entry in body)
+						if (hasUnsupportedExpr(entry))
+							found = true;
+					found;
+				}
 			case EBinop(_, left, right), EArrayAccess(left, right), ERange(left, right): hasUnsupportedExpr(left) || hasUnsupportedExpr(right);
 			case ETernary(cond, thenExpr, elseExpr): hasUnsupportedExpr(cond) || hasUnsupportedExpr(thenExpr) || hasUnsupportedExpr(elseExpr);
 			case EAnon(_, values) | EArrayDecl(values):

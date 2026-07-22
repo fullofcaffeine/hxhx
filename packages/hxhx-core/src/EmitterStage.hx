@@ -2693,6 +2693,8 @@ class EmitterStage {
 				"(Obj.magic 0)";
 			case EReturn(_):
 				throw "stage3 emitter: expression-position return must be consumed by macro expansion before OCaml emission";
+			case EWhile(_, _, _, _):
+				throw "stage3 emitter: expression-position while must be consumed by macro expansion before OCaml emission";
 			case EVars(_):
 				throw "stage3 emitter: expression-position variable declarations must be consumed by macro expansion before OCaml emission";
 			case EVariableDeclaration(_, _, _, _, _, _):

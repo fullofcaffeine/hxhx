@@ -225,6 +225,46 @@ class M14TypedBodyBoundaryIntegrationTest {
 		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
 	}
 
+	static function assertWhileMacroArgumentStructure():Void {
+		final filePath = "checks/WhileMacroArgument.hx";
+		final source = [
+			"class WhileMacroArgument {",
+			"  static function shouldFail(value:Dynamic):Void {}",
+			"  static function tick(value:Bool):Void {}",
+			"  static function check(a:Bool):Void {",
+			"    shouldFail(while (a) { tick(a); });",
+			"  }",
+			"}",
+		].join("\n");
+		final parsed = ParserStage.parse(source, filePath);
+		final resolved = new ResolvedModule("WhileMacroArgument", filePath, parsed);
+		final index = TyperIndex.build([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index);
+		final body = findFunction(findClass(typed, "WhileMacroArgument"), "check").getBody();
+		final call = body.getStatements()[0].getExpressions()[0];
+		assertTrue(call.getTag() == TypedExprTag.Call, "while macro fixture lost its outer call");
+		final loop = call.getExpressions()[1];
+		assertTrue(loop.getTag() == TypedExprTag.WhileExpr, "while macro argument did not become a typed loop expression");
+		assertTrue(loop.getBoolValue(), "while macro block lost its brace-block identity");
+		assertTrue(loop.getExpressions().length == 2, "typed while macro argument lost its condition or body expression");
+		assertTrue(loop.getExpressions()[0].getTag() == TypedExprTag.LocalRead && loop.getExpressions()[0].getTexts()[0] == "a",
+			"typed while macro condition was not resolved as the function parameter");
+		assertTrue(loop.getPosition() != null && loop.getPosition().getLine() == 5, "typed while macro argument lost the loop's exact source line");
+		switch (TypedBodySource.statements(body)[0]) {
+			case SExpr(ECall(EIdent("shouldFail"), [EWhile(EIdent("a"), [ECall(EIdent("tick"), [EIdent("a")])], true, position)]), _):
+				assertTrue(position.getLine() == 5, "typed-body source projection changed the while position");
+			case _:
+				throw "typed-body source projection changed the while macro argument";
+		}
+		final position = new HxPos(0, 1, 1);
+		final emptyFingerprint = TypedBodyFingerprint.forStatements([SExpr(EWhile(EIdent("a"), [], true, position), position)]);
+		final bodyFingerprint = TypedBodyFingerprint.forStatements([
+			SExpr(EWhile(EIdent("a"), [ECall(EIdent("tick"), [])], true, position), position)
+		]);
+		assertTrue(emptyFingerprint != bodyFingerprint, "body fingerprint ignored the while macro body");
+		TypedBodyInvariant.assertClasses(typed.getTypedClasses());
+	}
+
 	static function assertLoweringNodeSet():Void {
 		final position = new HxPos(0, 1, 1);
 		final intType = TyType.fromHintText("Int");
@@ -694,6 +734,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertReturnMacroArgumentStructure();
 		assertVariableDeclarationMacroArgumentStructure();
 		assertLocalVariableMetadataStructure();
+		assertWhileMacroArgumentStructure();
 		assertLifecycleGuard(typed, mainFunction);
 	}
 }

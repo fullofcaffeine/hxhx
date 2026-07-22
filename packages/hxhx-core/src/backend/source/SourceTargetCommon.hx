@@ -1329,6 +1329,8 @@ class SourceTargetCommon {
 				}
 			case EReturn(_):
 				throw targetLabel(target) + " source backend: expression-position return must be consumed by macro expansion before emission";
+			case EWhile(_, _, _, _):
+				throw targetLabel(target) + " source backend: expression-position while must be consumed by macro expansion before emission";
 			case EVars(_):
 				throw targetLabel(target) + " source backend: expression-position variable declarations must be consumed by macro expansion before emission";
 			case EVariableDeclaration(_, _, _, _, _, _):
@@ -1365,6 +1367,7 @@ class SourceTargetCommon {
 			case ENullSafeField(_, _): "ENullSafeField";
 			case ECall(_, _): "ECall";
 			case EReturn(_): "EReturn";
+			case EWhile(_, _, _, _): "EWhile";
 			case EVars(_): "EVars";
 			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";
@@ -12865,6 +12868,10 @@ class SourceTargetCommon {
 			case EReturn(value):
 				if (value != null)
 					phpRecordReferencedMemberExpr(value, names);
+			case EWhile(condition, body, _, _):
+				phpRecordReferencedMemberExpr(condition, names);
+				for (entry in body)
+					phpRecordReferencedMemberExpr(entry, names);
 			case EVars(declarations):
 				for (declaration in declarations) {
 					final initializer = HxExprVarDecl.getInitializer(declaration);

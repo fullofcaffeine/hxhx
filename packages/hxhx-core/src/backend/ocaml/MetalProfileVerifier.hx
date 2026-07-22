@@ -196,6 +196,13 @@ class MetalProfileVerifier {
 					"expand the macro or move the return to statement position before selecting metal profile");
 				if (value != null)
 					verifyExpr(filePath, className, fnName, stmtPos, value, violations);
+			case EWhile(condition, body, _, _):
+				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "expression-position while",
+					"a while loop nested inside another expression must be handled by macro expansion before metal emission",
+					"expand the macro or move the loop to statement position before selecting metal profile");
+				verifyExpr(filePath, className, fnName, stmtPos, condition, violations);
+				for (entry in body)
+					verifyExpr(filePath, className, fnName, stmtPos, entry, violations);
 			case EVars(declarations):
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "expression-position variable declaration",
 					"a variable declaration passed as source syntax must be handled by macro expansion before metal emission",

@@ -117,6 +117,9 @@ class TypedBodySource {
 				EVars(declarations);
 			case VariableDeclaration:
 				throw "typed variable declaration must be nested inside a declaration list";
+			case WhileExpr:
+				EWhile(expression(expressions[0]), expressionTail(expressions, 1), typedExpression.getBoolValue(),
+					sourcePosition(typedExpression.getPosition()));
 			case MacroExpr: EMacroExpr(expression(expressions[0]), texts.copy());
 			case MacroType: EMacroType(texts[0]);
 			case Lambda: ELambda(texts.copy(), expression(expressions[0]));

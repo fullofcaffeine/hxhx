@@ -279,6 +279,7 @@ class CppMacroExpr {
 			case ENullSafeField(receiver, field): "ENullSafeField(" + exprKind(receiver) + "?." + field + ")";
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
 			case EReturn(_): "EReturn";
+			case EWhile(_, _, _, _): "EWhile";
 			case EVars(_): "EVars";
 			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";

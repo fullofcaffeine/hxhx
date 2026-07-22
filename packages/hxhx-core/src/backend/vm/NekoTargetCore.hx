@@ -531,6 +531,10 @@ class NekoTargetCore {
 			case EReturn(value):
 				if (value != null)
 					collectExprRefs(context, value, addConstructor, addStatic);
+			case EWhile(condition, body, _, _):
+				collectExprRefs(context, condition, addConstructor, addStatic);
+				for (entry in body)
+					collectExprRefs(context, entry, addConstructor, addStatic);
 			case EVars(declarations):
 				for (declaration in declarations) {
 					final initializer = HxExprVarDecl.getInitializer(declaration);
@@ -1193,6 +1197,8 @@ class NekoTargetCore {
 				renderCall(context, callee, args);
 			case EReturn(_):
 				unsupportedExpr("expression-position return must be consumed by macro expansion before Neko emission");
+			case EWhile(_, _, _, _):
+				unsupportedExpr("expression-position while must be consumed by macro expansion before Neko emission");
 			case EVars(_):
 				unsupportedExpr("expression-position variable declarations must be consumed by macro expansion before Neko emission");
 			case EVariableDeclaration(_, _, _, _, _, _):
@@ -1456,6 +1462,7 @@ class NekoTargetCore {
 			case ENullSafeField(_, _): "ENullSafeField";
 			case ECall(_, _): "ECall";
 			case EReturn(_): "EReturn";
+			case EWhile(_, _, _, _): "EWhile";
 			case EVars(_): "EVars";
 			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";

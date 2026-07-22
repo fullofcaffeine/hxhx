@@ -52,6 +52,19 @@ class M14RuntimeTypedLambdaIntegrationTest {
 			case _:
 				fail("expected typed prefix decrement round-trip to preserve its operator and postFix=false");
 		}
+		final emptyWhile = RuntimeMacroExprs.parseInlineString("while (ready) {}", pos);
+		switch (emptyWhile.expr) {
+			case EWhile({expr: EConst(CIdent("ready"))}, {expr: EBlock(body)}, true):
+				assertTrue(body.length == 0, "expected the macro while body to remain an empty block");
+			case _:
+				fail("expected an expression-position while loop to reach the macro API as EWhile");
+		}
+		final populatedWhile = RuntimeMacroExprs.parseInlineString("while (ready) { ping(); }", pos);
+		switch (populatedWhile.expr) {
+			case EWhile({expr: EConst(CIdent("ready"))}, {expr: EBlock([{expr: ECall({expr: EConst(CIdent("ping"))}, [])}])}, true):
+			case _:
+				fail("expected a non-empty macro while body to preserve its nested call");
+		}
 		final parsed = RuntimeMacroExprs.parseInlineString("(item) -> item.name", pos);
 		switch (parsed.expr) {
 			case EFunction(FArrow, fn):

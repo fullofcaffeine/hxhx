@@ -90,6 +90,7 @@ class ParserStage {
 				found;
 			case EVariableDeclaration(_, _, initializer, _, _, _):
 				initHasMergedReturnIdentifier(initializer);
+			case EWhile(condition, body, _, _): initHasMergedReturnIdentifier(condition) || initListHasMergedReturnIdentifier(body);
 			case EMacroExpr(inner, _):
 				initHasMergedReturnIdentifier(inner);
 			case ELambda(_, body):
@@ -3275,6 +3276,14 @@ class ParserStage {
 						return true;
 				false;
 			case EVariableDeclaration(_, _, initializer, _, _, _): hasUnsupportedExpr(initializer);
+			case EWhile(condition, body, _, _):
+				if (hasUnsupportedExpr(condition)) true; else {
+					var found = false;
+					for (entry in body)
+						if (hasUnsupportedExpr(entry))
+							found = true;
+					found;
+				}
 			case EBinop(_, left, right), EArrayAccess(left, right), ERange(left, right): hasUnsupportedExpr(left) || hasUnsupportedExpr(right);
 			case ETernary(cond, thenExpr, elseExpr): hasUnsupportedExpr(cond) || hasUnsupportedExpr(thenExpr) || hasUnsupportedExpr(elseExpr);
 			case EAnon(_, values) | EArrayDecl(values):

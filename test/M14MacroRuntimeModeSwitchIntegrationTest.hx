@@ -167,6 +167,25 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 			case body:
 				fail("expression macro expansion lost the declaration wrapper around its expanded child: " + Std.string(body));
 		}
+		final nestedWhileSource = [
+			"class NestedWhileMacroArgument {",
+			"  function run(ready:Bool):Void {",
+			"    shouldFail(while (ready) { hxhxmacros.ExprMacroShim.hello(); });",
+			"  }",
+			"}",
+		].join("\n");
+		final nestedWhileParsed = ParserStage.parse(nestedWhileSource, "NestedWhileMacroArgument.hx");
+		final nestedWhileResolved = new ResolvedModule("NestedWhileMacroArgument", "NestedWhileMacroArgument.hx", nestedWhileParsed);
+		final nestedWhileExpansion = ExprMacroExpander.expandResolvedModules([nestedWhileResolved], generated, ["hxhxmacros.ExprMacroShim.hello()"]);
+		assertIntEq("nested while body macro expansion count", nestedWhileExpansion.expandedCount, 1);
+		final nestedWhileClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(nestedWhileExpansion.modules[0]).getDecl());
+		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(nestedWhileClass)[0])) {
+			case [
+				SExpr(ECall(EIdent("shouldFail"), [EWhile(EIdent("ready"), [EString("HELLO")], true, _)]), _)
+			]:
+			case body:
+				fail("expression macro expansion lost the while loop around its expanded body: " + Std.string(body));
+		}
 		final annotatedLocalSource = [
 			"class AnnotatedLocalMacroInitializer {",
 			"  function run():Void {",

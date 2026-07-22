@@ -483,6 +483,10 @@ class HxParser {
 			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
 				HxExprVarDecl.make(name, typeHint, initializer == null ? null : rebaseFunctionBodyExprValue(initializer, base, bodyStartIndex),
 					rebaseFunctionBodyPos(position, base, bodyStartIndex), isFinal, isStatic);
+			case EWhile(condition, body, bodyIsBlock, position):
+				EWhile(rebaseFunctionBodyExprValue(condition, base, bodyStartIndex),
+					[for (entry in body) rebaseFunctionBodyExprValue(entry, base, bodyStartIndex)], bodyIsBlock,
+					rebaseFunctionBodyPos(position, base, bodyStartIndex));
 			case EField(obj, field):
 				EField(rebaseFunctionBodyExprValue(obj, base, bodyStartIndex), field);
 			case ENullSafeField(obj, field):
@@ -540,6 +544,9 @@ class HxParser {
 			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
 				HxExprVarDecl.make(name, typeHint, offsetFunctionBodyExprColumns(initializer, delta), offsetFunctionBodyPosColumn(position, delta), isFinal,
 					isStatic);
+			case EWhile(condition, body, bodyIsBlock, position):
+				EWhile(offsetFunctionBodyExprColumns(condition, delta), [for (entry in body) offsetFunctionBodyExprColumns(entry, delta)], bodyIsBlock,
+					offsetFunctionBodyPosColumn(position, delta));
 			case EField(object, field):
 				EField(offsetFunctionBodyExprColumns(object, delta), field);
 			case ENullSafeField(object, field):
@@ -1766,6 +1773,42 @@ class HxParser {
 		return ECall(EIdent("__hxhx_do_while"), [ELambda([], bodyExpression), ELambda([], condition)]);
 	}
 
+	/**
+		Preserve a while loop passed to a macro as source expression syntax.
+
+		The outer expression parser owns commas and closing call parentheses. A brace
+		body is parsed into an ordered expression list so the macro bridge can rebuild
+		an actual Haxe `EBlock`; an empty block is therefore not confused with `{}` as
+		an anonymous-object value.
+	**/
+	function parseWhileExpr(stop:() -> Bool):HxExpr {
+		final position = cur.getPos();
+		bump(); // `while`
+		expect(TLParen, "'(' after while");
+		final condition = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+		expect(TRParen, "')' after while condition");
+
+		final body = new Array<HxExpr>();
+		final bodyIsBlock = cur.kind.match(TLBrace);
+		if (bodyIsBlock) {
+			bump(); // '{'
+			while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+				body.push(parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+				if (cur.kind.match(TSemicolon)) {
+					bump();
+				} else if (!cur.kind.match(TRBrace)) {
+					fail("Expected ';' or '}' after while body expression");
+				}
+			}
+			expect(TRBrace, "'}' after while body");
+		} else {
+			if (stop() || cur.kind.match(TEof))
+				fail("Expected while body");
+			body.push(parseExpr(stop));
+		}
+		return EWhile(condition, body, bodyIsBlock, position);
+	}
+
 	function parseMacroReificationExpr():HxExpr {
 		// Macro reification splice: `$i{name}`, `$e{expr}`, `$b{expr}`, ...
 		//
@@ -1923,6 +1966,8 @@ class HxParser {
 					]);
 				case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
 					HxExprVarDecl.make(name, typeHint, initializer == null ? null : applyDefaultedArgs(initializer), position, isFinal, isStatic);
+				case EWhile(condition, body, bodyIsBlock, position):
+					EWhile(applyDefaultedArgs(condition), [for (entry in body) applyDefaultedArgs(entry)], bodyIsBlock, position);
 				case EField(receiver, field):
 					EField(applyDefaultedArgs(receiver), field);
 				case ENullSafeField(receiver, field):
@@ -2069,6 +2114,8 @@ class HxParser {
 					]);
 				case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
 					HxExprVarDecl.make(name, typeHint, initializer == null ? null : applyDefaultedArgs(initializer), position, isFinal, isStatic);
+				case EWhile(condition, body, bodyIsBlock, position):
+					EWhile(applyDefaultedArgs(condition), [for (entry in body) applyDefaultedArgs(entry)], bodyIsBlock, position);
 				case EField(receiver, field):
 					EField(applyDefaultedArgs(receiver), field);
 				case ENullSafeField(receiver, field):
@@ -2907,6 +2954,8 @@ class HxParser {
 			case TIdent(name) if (name == "macro"):
 				bump();
 				parseMacroQuoteExpr(stop);
+			case TKeyword(k) if (k == KWhile):
+				parseWhileExpr(stop);
 			case TKeyword(k) if (k == KIf):
 				parseIfExpr(stop);
 			case TKeyword(k) if (k == KSwitch):
@@ -3528,6 +3577,9 @@ class HxParser {
 				ECall(applyDefaultedLambdaArgs(callee, defaultedArgs), [for (arg in callArgs) applyDefaultedLambdaArgs(arg, defaultedArgs)]);
 			case EReturn(value):
 				EReturn(value == null ? null : applyDefaultedLambdaArgs(value, defaultedArgs));
+			case EWhile(condition, body, bodyIsBlock, position):
+				EWhile(applyDefaultedLambdaArgs(condition, defaultedArgs), [for (entry in body) applyDefaultedLambdaArgs(entry, defaultedArgs)], bodyIsBlock,
+					position);
 			case EField(receiver, field):
 				EField(applyDefaultedLambdaArgs(receiver, defaultedArgs), field);
 			case ENullSafeField(receiver, field):

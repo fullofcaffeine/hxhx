@@ -205,6 +205,12 @@ class TypedBodyFingerprint {
 				addInt(state, initializer == null ? 0 : 1);
 				if (initializer != null)
 					addExpression(state, initializer);
+			case EWhile(condition, body, bodyIsBlock, position):
+				addString(state, "expr-while");
+				addExpression(state, condition);
+				addExpressions(state, body);
+				addInt(state, bodyIsBlock ? 1 : 0);
+				addPosition(state, position);
 			case EMacroExpr(inner, wrappers):
 				addString(state, "expr-macro");
 				addExpression(state, inner);

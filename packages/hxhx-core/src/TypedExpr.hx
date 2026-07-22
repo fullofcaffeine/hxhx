@@ -42,6 +42,7 @@ enum TypedExprTag {
 	ReturnExpr;
 	VariableDeclarations;
 	VariableDeclaration;
+	WhileExpr;
 }
 
 /**
@@ -143,6 +144,10 @@ class TypedExpr {
 	/** Preserve the ordered declarations from one expression-level `var` or `final` form. **/
 	public static function variableDeclarations(declarations:Array<TypedExpr>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(VariableDeclarations, type, position, null, declarations);
+
+	/** Preserve an expression-position while loop until macro expansion consumes it or emission rejects it. **/
+	public static function whileExpr(condition:TypedExpr, body:Array<TypedExpr>, bodyIsBlock:Bool, type:TyType, position:Null<HxPos>):TypedExpr
+		return new TypedExpr(WhileExpr, type, position, null, [condition].concat(body == null ? [] : body), null, bodyIsBlock);
 
 	public static function macroExpr(expression:TypedExpr, wrappers:Array<String>, type:TyType, position:Null<HxPos>):TypedExpr
 		return new TypedExpr(MacroExpr, type, position, wrappers, [expression]);

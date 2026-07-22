@@ -11834,6 +11834,8 @@ class CppTargetCore {
 				macroTypeExpr(typeText);
 			case EReturn(_):
 				throw "C++ backend: expression-position return must be consumed by macro expansion before emission";
+			case EWhile(_, _, _, _):
+				throw "C++ backend: expression-position while must be consumed by macro expansion before emission";
 			case EVars(_):
 				throw "C++ backend: expression-position variable declarations must be consumed by macro expansion before emission";
 			case EVariableDeclaration(_, _, _, _, _, _):
@@ -22365,6 +22367,7 @@ class CppTargetCore {
 			case ENullSafeField(receiver, field): "ENullSafeField(" + exprKind(receiver) + "?." + field + ")";
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
 			case EReturn(_): "EReturn";
+			case EWhile(_, _, _, _): "EWhile";
 			case EVars(_): "EVars";
 			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";

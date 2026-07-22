@@ -96,6 +96,10 @@ class TypedBodyInvariant {
 		}
 		if (expression.getTag() == ReturnExpr && expression.getExpressions().length > 1)
 			throw "typed return expression has more than one value in " + owner;
+		if (expression.getTag() == WhileExpr && expression.getExpressions().length < 1)
+			throw "typed while expression is missing its condition in " + owner;
+		if (expression.getTag() == WhileExpr && !expression.getBoolValue() && expression.getExpressions().length != 2)
+			throw "typed while expression without braces must have exactly one body expression in " + owner;
 		if (expression.getTag() == VariableDeclarations)
 			for (declaration in expression.getExpressions())
 				if (declaration.getTag() != VariableDeclaration)

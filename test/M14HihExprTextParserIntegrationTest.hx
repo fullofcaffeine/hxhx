@@ -134,6 +134,37 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("malformed local metadata should become one precise parser diagnostic");
 		}
+		final whileMacroSource = "shouldFail(while (a) {});";
+		final whileMacroArgument = HxParser.parseFunctionBodyTextAt(whileMacroSource, whileMacroSource, 0);
+		switch (whileMacroArgument) {
+			case [
+				SExpr(ECall(EIdent("shouldFail"), [EWhile(EIdent("a"), body, true, position)]), _)
+			]:
+				assertTrue(body.length == 0, "empty while macro body gained a synthetic expression");
+				assertTrue(position.getLine() == 1 && position.getColumn() == 12, "while macro expression lost its source position");
+			case _:
+				fail("while loop used as a macro argument was not preserved structurally");
+		}
+		final nonEmptyWhileMacroArgument = HxParser.parseFunctionBodyText("shouldFail(while (ready()) { ping(); var value:Int = 1; });");
+		switch (nonEmptyWhileMacroArgument) {
+			case [
+				SExpr(ECall(EIdent("shouldFail"), [
+					EWhile(ECall(EIdent("ready"), []), [ECall(EIdent("ping"), []), EVars(declarations)], true, _)
+				]), _)
+			]:
+				assertTrue(declarations.length == 1 && HxExprVarDecl.getName(declarations[0]) == "value",
+					"non-empty while macro body lost its local declaration");
+			case _:
+				fail("non-empty while macro body lost its ordered expressions");
+		}
+		final malformedWhileMacroArgument = HxParser.parseFunctionBodyText("shouldFail(while (a {});");
+		switch (malformedWhileMacroArgument) {
+			case [SExpr(EUnsupported(raw), _)]:
+				assertTrue(raw.indexOf("body_parse_error") == 0 && raw.indexOf("err=Expected ')' after while condition") >= 0,
+					"malformed while macro condition should name its missing parenthesis, got: " + raw);
+			case _:
+				fail("malformed while macro expression should become one precise parser diagnostic");
+		}
 		var spacedQuestionDotFailure:Null<String> = null;
 		try {
 			HxParser.parseExprText("unexpectedStrings ? .copy()");

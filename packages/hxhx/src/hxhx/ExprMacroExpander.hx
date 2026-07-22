@@ -257,6 +257,17 @@ class ExprMacroExpander {
 				final rewritten = initializer == null ? null : rewriteExpr(initializer, session, allowed, allowKeys, importMap, modulePkg, trace, depth,
 					onExpand);
 				rewritten != initializer ? HxExprVarDecl.make(name, typeHint, rewritten, position, isFinal, isStatic) : e;
+			case EWhile(condition, body, bodyIsBlock, position):
+				final rewrittenCondition = rewriteExpr(condition, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				var changed = rewrittenCondition != condition;
+				final rewrittenBody = new Array<HxExpr>();
+				for (entry in body) {
+					final rewritten = rewriteExpr(entry, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					if (rewritten != entry)
+						changed = true;
+					rewrittenBody.push(rewritten);
+				}
+				changed ? EWhile(rewrittenCondition, rewrittenBody, bodyIsBlock, position) : e;
 			case EField(obj, field):
 				final ro = rewriteExpr(obj, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				ro != obj ? EField(ro, field) : e;
@@ -400,6 +411,7 @@ class ExprMacroExpander {
 			case EReturn(_): "Return";
 			case EVars(_): "Vars";
 			case EVariableDeclaration(_, _, _, _, _, _): "VariableDeclaration";
+			case EWhile(_, _, _, _): "While";
 			case EUnop(_, _, _): "Unop";
 			case EBinop(_, _, _): "Binop";
 			case ETernary(_, _, _): "Ternary";

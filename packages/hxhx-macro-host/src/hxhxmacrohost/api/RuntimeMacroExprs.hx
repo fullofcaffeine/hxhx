@@ -23,6 +23,7 @@ import haxe.macro.Expr;
 	  - identifiers / bare enum-like values / `this` / `super`
 	  - ordinary and null-safe field access and call chains
 	  - narrow arrow lambdas (`(arg0, arg1) -> expr`)
+	  - `while` syntax passed to a macro, including its structured condition and block
 	  - unary / binary / ternary expressions
 	  - `new TypePath(...)`
 	  - array literals and array access
@@ -662,6 +663,33 @@ class RuntimeMacroExprs {
 				EUnop(macroUnop(op), fixity == HxUnaryFixity.Postfix, convert(inner, pos));
 			case EBinop(op, left, right):
 				EBinop(parseBinop(op), convert(left, pos), convert(right, pos));
+			case EReturn(value):
+				EReturn(value == null ? null : convert(value, pos));
+			case EVars(declarations):
+				EVars([
+					for (declaration in declarations)
+						{
+							name: HxExprVarDecl.getName(declaration),
+							namePos: pos,
+							type: parseOptionalComplexType(HxExprVarDecl.getTypeHint(declaration)),
+							expr: HxExprVarDecl.getInitializer(declaration) == null ? null : convert(HxExprVarDecl.getInitializer(declaration), pos),
+							isFinal: HxExprVarDecl.getIsFinal(declaration),
+							isStatic: HxExprVarDecl.getIsStatic(declaration),
+							meta: []
+						}
+				]);
+			case EVariableDeclaration(_, _, _, _, _, _):
+				throw "runtime macro parse: variable declaration must be nested inside EVars";
+			case EWhile(condition, body, bodyIsBlock, _position):
+				final usePos = pos == null ? defaultPos() : pos;
+				final convertedBody:Expr = if (bodyIsBlock) {
+					{expr: EBlock([for (entry in body) convert(entry, usePos)]), pos: usePos};
+				} else {
+					if (body.length != 1)
+						throw "runtime macro parse: non-block while body must contain exactly one expression";
+					convert(body[0], usePos);
+				}
+				EWhile(convert(condition, usePos), convertedBody, true);
 			case EMacroExpr(_, _) | EMacroType(_) | ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) | ERange(_, _) |
 				EUnsupported(_):
 				throw "runtime macro parse: unsupported parsed expression shape";

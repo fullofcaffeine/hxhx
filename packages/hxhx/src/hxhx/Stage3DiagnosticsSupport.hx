@@ -51,6 +51,11 @@ class Stage3DiagnosticsSupport {
 					count += countUnsupportedExprsInExpr(HxExprVarDecl.getInitializer(declaration));
 				count;
 			case EVariableDeclaration(_, _, initializer, _, _, _): countUnsupportedExprsInExpr(initializer);
+			case EWhile(condition, body, _, _):
+				var count = countUnsupportedExprsInExpr(condition);
+				for (entry in body)
+					count += countUnsupportedExprsInExpr(entry);
+				count;
 			case ELambda(_args, body):
 				countUnsupportedExprsInExpr(body);
 			case ETryCatchRaw(_raw):
@@ -106,6 +111,10 @@ class Stage3DiagnosticsSupport {
 					collectUnsupportedExprRawInExpr(HxExprVarDecl.getInitializer(declaration), out, max);
 			case EVariableDeclaration(_, _, initializer, _, _, _):
 				collectUnsupportedExprRawInExpr(initializer, out, max);
+			case EWhile(condition, body, _, _):
+				collectUnsupportedExprRawInExpr(condition, out, max);
+				for (entry in body)
+					collectUnsupportedExprRawInExpr(entry, out, max);
 			case ELambda(_args, body):
 				collectUnsupportedExprRawInExpr(body, out, max);
 			case ETryCatchRaw(_raw):

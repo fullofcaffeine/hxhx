@@ -3,9 +3,10 @@
 
 	The builder owns the one syntax-to-typed-tree conversion. TyperStage supplies
 	type and exact-call resolvers; synthetic test modules may use the conservative
-	fallback resolver. Most nested `HxExpr` nodes do not yet retain exact positions;
-	expression-level variable declarations are an explicit exception because macro
-	diagnostics need their declaration location.
+	fallback resolver. Most nested `HxExpr` nodes do not yet retain exact positions.
+	Expression-level variable declarations and loops written where a macro expects
+	source syntax are explicit exceptions because macro diagnostics need the source
+	location of the complete construct.
 **/
 class TypedBodyBuilder {
 	static function exactPosition(position:HxPos):Null<HxPos> {
@@ -30,6 +31,7 @@ class TypedBodyBuilder {
 			case EMacroType(_): TyType.fromHintText("haxe.macro.ComplexType");
 			case EReturn(_): TyType.fromHintText("Void");
 			case EVars(_): TyType.fromHintText("Void");
+			case EWhile(_, _, _, _): TyType.fromHintText("Void");
 			case _: TyType.unknown();
 		};
 	}
@@ -454,6 +456,9 @@ class TypedBodyBuilder {
 				TypedExpr.variableDeclarations(typedDeclarations, nodeType, position);
 			case EVariableDeclaration(_, _, _, _, _, _):
 				throw "expression-level variable declaration must be nested inside EVars";
+			case EWhile(condition, body, bodyIsBlock, loopPosition):
+				TypedExpr.whileExpr(buildExpr(condition, null, loopPosition, environment, typeResolver, callResolver),
+					buildExpressions(body, loopPosition, environment, typeResolver, callResolver), bodyIsBlock, nodeType, exactPosition(loopPosition));
 			case EMacroExpr(inner, wrappers):
 				TypedExpr.macroExpr(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver),
 					wrappers == null ? [] : wrappers.copy(), nodeType, position);

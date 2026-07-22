@@ -445,4 +445,20 @@ enum HxExpr {
 		`EVars`; `HxExprVarDecl` provides checked construction and field access.
 	**/
 	EVariableDeclaration(name:String, typeHint:String, initializer:Null<HxExpr>, position:HxPos, isFinal:Bool, isStatic:Bool);
+
+	/**
+		A `while` loop used where Haxe expects source expression syntax.
+
+		Macro arguments can contain syntax that would not be a normal runtime call
+		argument. For example, `shouldFail(while (condition) {})` passes the loop to
+		a macro for inspection. `body` stores the ordered expressions inside a brace
+		block, or one expression when `bodyIsBlock` is false. Keeping that distinction
+		lets the macro bridge reconstruct Haxe's `EBlock` instead of confusing an
+		empty loop body with an empty anonymous object.
+
+		Ordinary function-body loops remain `HxStmt.SWhile`. The loop position is
+		stored because nested expression nodes do not otherwise inherit a precise
+		position from their parent call.
+	**/
+	EWhile(condition:HxExpr, body:Array<HxExpr>, bodyIsBlock:Bool, position:HxPos);
 }
