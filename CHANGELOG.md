@@ -1,3 +1,10 @@
+# [0.27.0](https://github.com/fullofcaffeine/hxhx/compare/v0.26.0...v0.27.0) (2026-07-22)
+
+
+### Features
+
+* **hxhx:** seal cache-free server request state ([58a99b2](https://github.com/fullofcaffeine/hxhx/commit/58a99b2d70d0a52466e83e62210166753788d637))
+
 # [0.26.0](https://github.com/fullofcaffeine/hxhx/compare/v0.25.0...v0.26.0) (2026-07-22)
 
 
