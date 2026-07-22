@@ -13,11 +13,11 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Me
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.MetalProfileVerifier" } : t)
 
-let normalizeTypeHint = fun rawTypeHint -> try let __fallback_result_36 = (
+let normalizeTypeHint = fun rawTypeHint -> try let __fallback_result_38 = (
   ignore (if rawTypeHint == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   StringTools.replace (StringTools.replace (StringTools.replace (StringTools.trim (rawTypeHint : string) : string) (" " : string) ("" : string) : string) ("\t" : string) ("" : string) : string) ("\n" : string) ("" : string)
-) in Obj.magic __fallback_result_36 with
-  | HxRuntime.Hx_return __ret_35 -> Obj.obj __ret_35
+) in Obj.magic __fallback_result_38 with
+  | HxRuntime.Hx_return __ret_37 -> Obj.obj __ret_37
 
 let isDynamicTypeHint = fun rawTypeHint -> let normalized = (HxString.toLowerCase (normalizeTypeHint (rawTypeHint : string)) () : string) in HxString.equals normalized "dynamic" || HxString.equals normalized "null<dynamic>" || HxString.equals normalized "array<dynamic>"
 
@@ -55,10 +55,11 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.EUnsupported _ -> 29
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
-    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 9 then let _g = Obj.magic (match callee with
-    | HxExpr.EField (__enum_param_37, _) -> __enum_param_37
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g = Obj.magic (match callee with
+    | HxExpr.EField (__enum_param_39, _) -> __enum_param_39
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
-    | HxExpr.EField (_, __enum_param_38) -> __enum_param_38
+    | HxExpr.EField (_, __enum_param_40) -> __enum_param_40
     | _ -> failwith "Unexpected enum parameter" : string) in if (match _g with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -92,90 +93,91 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.EUnsupported _ -> 29
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
-    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then let _g2 = (match _g with
-    | HxExpr.EIdent __enum_param_39 -> __enum_param_39
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g2 = (match _g with
+    | HxExpr.EIdent __enum_param_41 -> __enum_param_41
     | _ -> failwith "Unexpected enum parameter" : string) in match _g2 with
-    | "Reflect" -> let field = (_g1 : string) in let __assign_41 = Obj.magic ("Reflect." ^ HxString.toStdString field : string) in (
-      tempResult := __assign_41;
-      __assign_41
+    | "Reflect" -> let field = (_g1 : string) in let __assign_43 = Obj.magic ("Reflect." ^ HxString.toStdString field : string) in (
+      tempResult := __assign_43;
+      __assign_43
     )
-    | "Type" -> let field = (_g1 : string) in let __assign_42 = Obj.magic ("Type." ^ HxString.toStdString field : string) in (
+    | "Type" -> let field = (_g1 : string) in let __assign_44 = Obj.magic ("Type." ^ HxString.toStdString field : string) in (
+      tempResult := __assign_44;
+      __assign_44
+    )
+    | _ -> let __assign_42 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_42;
       __assign_42
-    )
-    | _ -> let __assign_40 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempResult := __assign_40;
-      __assign_40
-    ) else let __assign_43 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_43;
-    __assign_43
-  ) else let __assign_44 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_44;
-    __assign_44
+    ) else let __assign_45 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_45;
+    __assign_45
+  ) else let __assign_46 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_46;
+    __assign_46
   ));
   !tempResult
 )
 
-let summarizeRaw = fun raw -> try let __fallback_result_48 = (
+let summarizeRaw = fun raw -> try let __fallback_result_50 = (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("<unknown>" : string))) else ());
   let oneLine = (StringTools.replace (StringTools.replace (StringTools.replace (raw : string) ("\r" : string) (" " : string) : string) ("\n" : string) (" " : string) : string) ("\t" : string) (" " : string) : string) in let trimmed = (StringTools.trim (oneLine : string) : string) in let tempResult = ref ("" : string) in (
-    ignore (if HxString.length trimmed > 80 then let __assign_45 = (HxString.toStdString (HxString.substr trimmed 0 80) ^ "..." : string) in (
-      tempResult := __assign_45;
-      __assign_45
-    ) else let __assign_46 = (trimmed : string) in (
-      tempResult := __assign_46;
-      __assign_46
+    ignore (if HxString.length trimmed > 80 then let __assign_47 = (HxString.toStdString (HxString.substr trimmed 0 80) ^ "..." : string) in (
+      tempResult := __assign_47;
+      __assign_47
+    ) else let __assign_48 = (trimmed : string) in (
+      tempResult := __assign_48;
+      __assign_48
     ));
     !tempResult
   )
-) in Obj.magic __fallback_result_48 with
-  | HxRuntime.Hx_return __ret_47 -> Obj.obj __ret_47
+) in Obj.magic __fallback_result_50 with
+  | HxRuntime.Hx_return __ret_49 -> Obj.obj __ret_49
 
 let formatContext = fun className fnName -> let tempResult = ref ("" : string) in (
-  ignore (if fnName == Obj.magic (HxRuntime.hx_null) then let __assign_49 = (className : string) in (
-    tempResult := __assign_49;
-    __assign_49
-  ) else let __assign_50 = ((HxString.toStdString className ^ ".") ^ HxString.toStdString fnName : string) in (
-    tempResult := __assign_50;
-    __assign_50
+  ignore (if fnName == Obj.magic (HxRuntime.hx_null) then let __assign_51 = (className : string) in (
+    tempResult := __assign_51;
+    __assign_51
+  ) else let __assign_52 = ((HxString.toStdString className ^ ".") ^ HxString.toStdString fnName : string) in (
+    tempResult := __assign_52;
+    __assign_52
   ));
   !tempResult
 )
 
 let addViolation = fun violations filePath className fnName pos code construct reason migrationHint -> ignore (let tempNumber = ref (0 : int) in (
-  ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_51 = 0 in (
-    tempNumber := __assign_51;
-    __assign_51
-  ) else let __assign_52 = HxPos.getLine (Obj.magic pos) () in (
-    tempNumber := __assign_52;
-    __assign_52
+  ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_53 = 0 in (
+    tempNumber := __assign_53;
+    __assign_53
+  ) else let __assign_54 = HxPos.getLine (Obj.magic pos) () in (
+    tempNumber := __assign_54;
+    __assign_54
   ));
   let line = !tempNumber in let tempNumber1 = ref (0 : int) in (
-    ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_53 = 0 in (
-      tempNumber1 := __assign_53;
-      __assign_53
-    ) else let __assign_54 = HxPos.getColumn (Obj.magic pos) () in (
-      tempNumber1 := __assign_54;
-      __assign_54
+    ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_55 = 0 in (
+      tempNumber1 := __assign_55;
+      __assign_55
+    ) else let __assign_56 = HxPos.getColumn (Obj.magic pos) () in (
+      tempNumber1 := __assign_56;
+      __assign_56
     ));
     let column = !tempNumber1 in let tempString = ref ("" : string) in (
-      ignore (if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then let __assign_55 = ("<unknown>" : string) in (
-        tempString := __assign_55;
-        __assign_55
-      ) else let __assign_56 = (filePath : string) in (
-        tempString := __assign_56;
-        __assign_56
+      ignore (if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then let __assign_57 = ("<unknown>" : string) in (
+        tempString := __assign_57;
+        __assign_57
+      ) else let __assign_58 = (filePath : string) in (
+        tempString := __assign_58;
+        __assign_58
       ));
-      HxArray.push violations (let __anon_57 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_57 "filePath" (Obj.repr (!tempString)));
-        ignore (HxAnon.set __anon_57 "line" (Obj.repr line));
-        ignore (HxAnon.set __anon_57 "column" (Obj.repr column));
-        ignore (HxAnon.set __anon_57 "code" (Obj.repr code));
-        ignore (HxAnon.set __anon_57 "construct" (Obj.repr construct));
-        ignore (HxAnon.set __anon_57 "context" (Obj.repr (formatContext (className : string) (fnName : string))));
-        ignore (HxAnon.set __anon_57 "reason" (Obj.repr reason));
-        ignore (HxAnon.set __anon_57 "migrationHint" (Obj.repr migrationHint));
-        __anon_57
+      HxArray.push violations (let __anon_59 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_59 "filePath" (Obj.repr (!tempString)));
+        ignore (HxAnon.set __anon_59 "line" (Obj.repr line));
+        ignore (HxAnon.set __anon_59 "column" (Obj.repr column));
+        ignore (HxAnon.set __anon_59 "code" (Obj.repr code));
+        ignore (HxAnon.set __anon_59 "construct" (Obj.repr construct));
+        ignore (HxAnon.set __anon_59 "context" (Obj.repr (formatContext (className : string) (fnName : string))));
+        ignore (HxAnon.set __anon_59 "reason" (Obj.repr reason));
+        ignore (HxAnon.set __anon_59 "migrationHint" (Obj.repr migrationHint));
+        __anon_59
       ))
     )
   )
@@ -185,7 +187,7 @@ let verifyExplicitDynamicTypeHint = fun filePath className fnName pos label rawT
   ignore (if not (isDynamicTypeHint (rawTypeHint : string)) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic pos) ("dynamic_type_hint" : string) (label : string) ("`Dynamic` type hints disable metal-profile specialization and deterministic native typing" : string) ("replace `Dynamic` with a concrete type" : string)
 ) with
-  | HxRuntime.Hx_return __ret_34 -> Obj.obj __ret_34)
+  | HxRuntime.Hx_return __ret_36 -> Obj.obj __ret_36)
 
 let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ignore (match expr with
   | HxExpr.ENull -> ignore ()
@@ -355,6 +357,21 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
         ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("detached expression variable declaration" : string) ("an expression variable declaration must remain inside its declaration list" : string) ("report the compiler invariant failure before selecting metal profile" : string));
         if hx_initializer != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer)) (Obj.magic violations)) else ()
       )
+    )
+  ))
+  | HxExpr.EWhile (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
+    ignore _p2;
+    ignore _p3;
+    let condition = Obj.magic _g in let body = Obj.magic _g1 in (
+      ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position while" : string) ("a while loop nested inside another expression must be handled by macro expansion before metal emission" : string) ("expand the macro or move the loop to statement position before selecting metal profile" : string));
+      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic condition) (Obj.magic violations));
+      let _g4 = ref 0 in while !_g4 < HxArray.length body do ignore (let entry = Obj.magic (HxArray.get (Obj.magic body) (!_g4)) in (
+        ignore (let __old_34 = !_g4 in let __new_35 = HxInt.add __old_34 1 in (
+          ignore (_g4 := __new_35);
+          __new_35
+        ));
+        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic entry) (Obj.magic violations)
+      )) done
     )
   )))
 
@@ -526,17 +543,17 @@ let formatViolations = fun violations -> let lines = Obj.magic (HxArray.create (
   ignore (HxArray.push lines (("metal profile verification failed: " ^ string_of_int (HxArray.length violations)) ^ " issue(s)"));
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length violations do ignore (let v = HxArray.get (Obj.magic violations) (!_g) in (
-      ignore (let __old_58 = !_g in let __new_59 = HxInt.add __old_58 1 in (
-        ignore (_g := __new_59);
-        __new_59
+      ignore (let __old_60 = !_g in let __new_61 = HxInt.add __old_60 1 in (
+        ignore (_g := __new_61);
+        __new_61
       ));
       let tempString = ref ("" : string) in (
-        ignore (if Obj.obj (HxAnon.get v "line") > 0 && Obj.obj (HxAnon.get v "column") > 0 then let __assign_60 = (((":" ^ string_of_int (Obj.obj (HxAnon.get v "line"))) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get v "column")) : string) in (
-          tempString := __assign_60;
-          __assign_60
-        ) else let __assign_61 = ("" : string) in (
-          tempString := __assign_61;
-          __assign_61
+        ignore (if Obj.obj (HxAnon.get v "line") > 0 && Obj.obj (HxAnon.get v "column") > 0 then let __assign_62 = (((":" ^ string_of_int (Obj.obj (HxAnon.get v "line"))) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get v "column")) : string) in (
+          tempString := __assign_62;
+          __assign_62
+        ) else let __assign_63 = ("" : string) in (
+          tempString := __assign_63;
+          __assign_63
         ));
         let lineCol = (!tempString : string) in (
           ignore (HxArray.push lines ((((((((("- " ^ HxString.toStdString (Obj.obj (HxAnon.get v "filePath"))) ^ HxString.toStdString lineCol) ^ " [") ^ HxString.toStdString (Obj.obj (HxAnon.get v "code"))) ^ "] construct: ") ^ HxString.toStdString (Obj.obj (HxAnon.get v "construct"))) ^ " (context: ") ^ HxString.toStdString (Obj.obj (HxAnon.get v "context"))) ^ ")"));

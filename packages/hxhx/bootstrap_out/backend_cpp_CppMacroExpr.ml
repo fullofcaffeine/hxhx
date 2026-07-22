@@ -437,6 +437,16 @@ let rec exprKind = fun expr -> let tempResult = ref ("" : string) in (
         tempResult := __assign_124;
         __assign_124
       )
+    )
+    | HxExpr.EWhile (_p0, _p1, _p2, _p3) -> (
+      ignore _p0;
+      ignore _p1;
+      ignore _p2;
+      ignore _p3;
+      let __assign_125 = ("EWhile" : string) in (
+        tempResult := __assign_125;
+        __assign_125
+      )
     ));
   !tempResult
 )

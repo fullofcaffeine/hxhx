@@ -49,7 +49,8 @@ let markErasedDynamicArgIdent = fun self (expr : HxExpr.hxexpr) (dynamicArgs : b
   | HxExpr.EUnsupported _ -> 29
   | HxExpr.EReturn _ -> 30
   | HxExpr.EVars _ -> 31
-  | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then ignore (let _g = (match expr with
+  | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+  | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g = (match expr with
   | HxExpr.EIdent __enum_param_41 -> __enum_param_41
   | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in let local = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string) : string) in if HxMap.exists_string dynamicArgs local then ignore (HxMap.set_string used local true) else ()) else ignore ()))
 
@@ -91,7 +92,8 @@ let rec collectErasedDynamicArgUsageNamesFromExpr = fun self (expr : HxExpr.hxex
     | HxExpr.EUnsupported _ -> 29
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
-    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 9 then ignore (let _g2 = Obj.magic (match _g with
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_14, _) -> __enum_param_14
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_15) -> __enum_param_15
@@ -128,7 +130,8 @@ let rec collectErasedDynamicArgUsageNamesFromExpr = fun self (expr : HxExpr.hxex
     | HxExpr.EUnsupported _ -> 29
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
-    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then ignore (let _g4 = (match _g2 with
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
     | HxExpr.EIdent __enum_param_16 -> __enum_param_16
     | _ -> failwith "Unexpected enum parameter" : string) in match _g4 with
     | "Std" -> ignore (let hx_method = (_g3 : string) in let args = Obj.magic _g1 in if (HxString.equals hx_method "isOfType" || HxString.equals hx_method "is") && HxArray.length args > 0 then ignore ((
@@ -449,7 +452,8 @@ let rec collectClosureVectorEvidenceFromExpr = fun self (expr : HxExpr.hxexpr) (
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then ignore (let _g4 = (match _g2 with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_79 -> __enum_param_79
       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g3 "push" then ignore (if HxArray.length _g1 = 1 then ignore (let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let value = Obj.magic _g5 in let name = (_g4 : string) in if HxMap.exists_string candidates (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string)) then ignore (let local = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string) : string) in (
       ignore (if not (HxMap.exists_string pushedValues local) then ignore (HxMap.set_string pushedValues local (let __arr_80 = HxArray.create () in __arr_80)) else ());
@@ -525,7 +529,8 @@ let rec collectClosureVectorEvidenceFromExpr = fun self (expr : HxExpr.hxexpr) (
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then ignore (let _g4 = (match _g2 with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_89 -> __enum_param_89
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g4 : string) in let index = Obj.magic _g3 in let args = Obj.magic _g1 in if HxMap.exists_string candidates (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string)) then ignore (let local = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string) : string) in (
       ignore (if not (HxMap.exists_string callArgTypes local) then ignore (HxMap.set_string callArgTypes local (let __arr_90 = HxArray.create () in __arr_90)) else ());
@@ -734,7 +739,8 @@ let closureVectorPushedValueType = fun self (value : HxExpr.hxexpr) (callShapes 
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then let _g2 = (match _g with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_140 -> __enum_param_140
       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "__hxhx_optional_lambda" then if HxArray.length _g1 = 2 then let _g3 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g4 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in if (match _g3 with
       | HxExpr.ENull -> 0
@@ -769,7 +775,8 @@ let closureVectorPushedValueType = fun self (value : HxExpr.hxexpr) (callShapes 
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 14 then let _g5 = Obj.magic (match _g3 with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 14 then let _g5 = Obj.magic (match _g3 with
       | HxExpr.ELambda (__enum_param_141, _) -> __enum_param_141
       | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
       | HxExpr.ELambda (_, __enum_param_142) -> __enum_param_142
@@ -806,7 +813,8 @@ let closureVectorPushedValueType = fun self (value : HxExpr.hxexpr) (callShapes 
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 24 then (
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 24 then (
       ignore (match _g4 with
         | HxExpr.EArrayDecl __enum_param_143 -> __enum_param_143
         | _ -> failwith "Unexpected enum parameter");
@@ -883,7 +891,8 @@ let rec collectClosureVectorPushedTypesFromExpr = fun self (expr : HxExpr.hxexpr
     | HxExpr.EUnsupported _ -> 29
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
-    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 9 then ignore (let _g2 = Obj.magic (match _g with
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_114, _) -> __enum_param_114
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_115) -> __enum_param_115
@@ -920,7 +929,8 @@ let rec collectClosureVectorPushedTypesFromExpr = fun self (expr : HxExpr.hxexpr
     | HxExpr.EUnsupported _ -> 29
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
-    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then ignore (let _g4 = (match _g2 with
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
     | HxExpr.EIdent __enum_param_116 -> __enum_param_116
     | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g3 "push" then ignore (if HxArray.length _g1 = 1 then ignore (let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let value = Obj.magic _g5 in let name = (_g4 : string) in if HxMap.exists_string candidates (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string)) then ignore (let local = (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string) : string) in (
     ignore (if not (HxMap.exists_string pushedTypes local) then ignore (HxMap.set_string pushedTypes local (let __arr_117 = HxArray.create () in __arr_117)) else ());
@@ -1111,7 +1121,8 @@ let closureVectorElementType = fun self (values : HxExpr.hxexpr HxArray.t) (call
             | HxExpr.EUnsupported _ -> 29
             | HxExpr.EReturn _ -> 30
             | HxExpr.EVars _ -> 31
-            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then let _g3 = (match _g2 with
+            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+            | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g3 = (match _g2 with
             | HxExpr.EIdent __enum_param_162 -> __enum_param_162
             | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g3 "__hxhx_optional_lambda" then if HxArray.length _g1 = 2 then let _g4 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in if (match _g4 with
             | HxExpr.ENull -> 0
@@ -1146,7 +1157,8 @@ let closureVectorElementType = fun self (values : HxExpr.hxexpr HxArray.t) (call
             | HxExpr.EUnsupported _ -> 29
             | HxExpr.EReturn _ -> 30
             | HxExpr.EVars _ -> 31
-            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 14 then let _g6 = Obj.magic (match _g4 with
+            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+            | HxExpr.EWhile (_, _, _, _) -> 33) = 14 then let _g6 = Obj.magic (match _g4 with
             | HxExpr.ELambda (__enum_param_163, _) -> __enum_param_163
             | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g4 with
             | HxExpr.ELambda (_, __enum_param_164) -> __enum_param_164
@@ -1183,7 +1195,8 @@ let closureVectorElementType = fun self (values : HxExpr.hxexpr HxArray.t) (call
             | HxExpr.EUnsupported _ -> 29
             | HxExpr.EReturn _ -> 30
             | HxExpr.EVars _ -> 31
-            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 24 then (
+            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+            | HxExpr.EWhile (_, _, _, _) -> 33) = 24 then (
             ignore (match _g5 with
               | HxExpr.EArrayDecl __enum_param_165 -> __enum_param_165
               | _ -> failwith "Unexpected enum parameter");
@@ -1312,7 +1325,8 @@ let isEmptyArrayExpr = fun self (init : Obj.t) -> (
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32 with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33 with
       | 18 -> let _g = (let __enum_param_197 = init in if __enum_param_197 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_197 with
         | HxExpr.ENew (__enum_param_196, _) -> __enum_param_196
         | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (let __enum_param_199 = init in if __enum_param_199 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_199 with
@@ -1487,7 +1501,8 @@ let rec collectClosureVectorLocalCandidatesFromStmt = fun self (stmt : HxStmt.hx
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 20 then ignore (let _g2 = (match _g with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 20 then ignore (let _g2 = (match _g with
       | HxExpr.EBinop (__enum_param_67, _, _) -> __enum_param_67
       | _ -> failwith "Unexpected enum parameter" : string) in let _g3 = Obj.magic (match _g with
       | HxExpr.EBinop (_, __enum_param_68, _) -> __enum_param_68
@@ -1526,7 +1541,8 @@ let rec collectClosureVectorLocalCandidatesFromStmt = fun self (stmt : HxStmt.hx
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then ignore (let _g5 = (match _g3 with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g5 = (match _g3 with
       | HxExpr.EIdent __enum_param_70 -> __enum_param_70
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g5 : string) in let init = Obj.magic _g4 in if isEmptyArrayExpr (Obj.magic self) (HxEnum.box_if_needed "HxExpr" (Obj.repr init)) then ignore (HxMap.set_string candidates (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "sanitizeIdentifier") (name : string)) true) else ignore ()) else ignore ()) else ignore ()) else ignore ()
   ))))
@@ -1937,7 +1953,8 @@ let mapClassNameFromNewExpr = fun self (expr : Obj.t) -> let tempResult = ref ("
     | HxExpr.EUnsupported _ -> 29
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
-    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 18 then let _g = (let __enum_param_258 = expr in if __enum_param_258 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_258 with
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+    | HxExpr.EWhile (_, _, _, _) -> 33) = 18 then let _g = (let __enum_param_258 = expr in if __enum_param_258 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_258 with
     | HxExpr.ENew (__enum_param_257, _) -> __enum_param_257
     | _ -> failwith "Unexpected enum parameter" : string) in (
     ignore (let __enum_param_260 = expr in if __enum_param_260 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_260 with
@@ -2119,7 +2136,8 @@ let rec collectStringMapLocalTypeOverridesFromExpr = fun self (expr : HxExpr.hxe
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 9 then ignore (let _g2 = Obj.magic (match _g with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_224, _) -> __enum_param_224
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_225) -> __enum_param_225
@@ -2156,7 +2174,8 @@ let rec collectStringMapLocalTypeOverridesFromExpr = fun self (expr : HxExpr.hxe
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then ignore (let _g4 = (match _g2 with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_226 -> __enum_param_226
       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g3 "set" then ignore (if HxArray.length _g1 = 2 then ignore (let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g6 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in let key = Obj.magic _g5 in let value = Obj.magic _g6 in let name = (_g4 : string) in if HxMap.exists_string candidates (Obj.obj (HxAnon.get ((Obj.magic self : t).api) "localCppName") (name : string) scope) then ignore ((
       ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic key) scope (Obj.magic candidates));
@@ -2538,7 +2557,8 @@ let rec qualifiedEnumCarrierCppTypeImpl = fun expr scope api2 -> let tempResult 
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 9 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_299, _) -> __enum_param_299
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_300) -> __enum_param_300

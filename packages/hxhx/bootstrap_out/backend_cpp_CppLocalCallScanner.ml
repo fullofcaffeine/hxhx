@@ -52,7 +52,8 @@ let rec exprCallsLocal = fun expr local sanitizeIdentifier -> try let __fallback
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32 with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33 with
       | 9 -> let _g = Obj.magic (let __enum_param_29 = expr in if __enum_param_29 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_29 with
         | HxExpr.EField (__enum_param_28, _) -> __enum_param_28
         | _ -> failwith "Unexpected enum parameter") in (
@@ -101,7 +102,8 @@ let rec exprCallsLocal = fun expr local sanitizeIdentifier -> try let __fallback
         | HxExpr.EUnsupported _ -> 29
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
-        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then let _g2 = (match _g with
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+        | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g2 = (match _g with
         | HxExpr.EIdent __enum_param_37 -> __enum_param_37
         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let args = Obj.magic _g1 in let __assign_38 = HxString.equals (sanitizeIdentifier (name : string)) local || exprListCallsLocal (Obj.magic args) (local : string) sanitizeIdentifier in (
         tempResult := __assign_38;

@@ -250,7 +250,8 @@ and emitStmt = fun writer stmt scope -> ignore (match stmt with
       | HxExpr.EUnsupported _ -> 29
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 11 then ignore (let _g2 = Obj.magic (match _g with
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g2 = Obj.magic (match _g with
       | HxExpr.ECall (__enum_param_9, _) -> __enum_param_9
       | _ -> failwith "Unexpected enum parameter") in (
       ignore (match _g with
@@ -289,7 +290,8 @@ and emitStmt = fun writer stmt scope -> ignore (match stmt with
         | HxExpr.EUnsupported _ -> 29
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
-        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 7 then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("/* base constructor call omitted */" : string)) else ignore (let expr = Obj.magic _g in Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.magic expr) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) ())) ^ ";" : string))
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+        | HxExpr.EWhile (_, _, _, _) -> 33) = 7 then ignore (Backend_js_JsWriter.writeln (Obj.magic writer) ("/* base constructor call omitted */" : string)) else ignore (let expr = Obj.magic _g in Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.magic expr) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) ())) ^ ";" : string))
     )) else ignore (let expr = Obj.magic _g in Backend_js_JsWriter.writeln (Obj.magic writer) (HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.magic expr) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) ())) ^ ";" : string))
   )))
 and emitTry = fun writer tryBody catches scope -> ignore ((
@@ -364,7 +366,8 @@ and emitForIn = fun writer name iterable body scope -> ignore (if (match iterabl
   | HxExpr.EUnsupported _ -> 29
   | HxExpr.EReturn _ -> 30
   | HxExpr.EVars _ -> 31
-  | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 26 then ignore (let _g = Obj.magic (match iterable with
+  | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
+  | HxExpr.EWhile (_, _, _, _) -> 33) = 26 then ignore (let _g = Obj.magic (match iterable with
   | HxExpr.ERange (__enum_param_33, _) -> __enum_param_33
   | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match iterable with
   | HxExpr.ERange (_, __enum_param_34) -> __enum_param_34

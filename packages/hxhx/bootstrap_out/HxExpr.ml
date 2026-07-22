@@ -36,3 +36,4 @@ type hxexpr =
 | EReturn of Obj.t
 | EVars of hxexpr HxArray.t
 | EVariableDeclaration of string * string * Obj.t * HxPos.t * bool * bool
+| EWhile of hxexpr * hxexpr HxArray.t * bool * HxPos.t
