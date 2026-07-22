@@ -6,6 +6,7 @@ import hxhx.CompilationServerProtocol;
 import hxhx.CompilationServerRequest;
 import hxhx.CompilationServerRequestCodec;
 import hxhx.CompilationServerRequestDispatcher;
+import hxhx.CompilationServerStopSignal;
 import hxhx.Stage3Compiler;
 import hxhx.macro.MacroState;
 import sys.FileSystem;
@@ -132,6 +133,25 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertTrue(reportWire.indexOf("hxhx_server_report.semantic_cache=disabled") >= 0, "baseline report should say semantic caching is disabled");
 		assertTrue(reportWire.indexOf("hxhx_server_report.semantic_cache_hits=0") >= 0, "baseline report should report zero semantic cache hits");
 		assertTrue(reportWire.indexOf("hxhx_server_report.cleanup=ok") >= 0, "baseline report should include cleanup status");
+
+		final shutdownReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(13, [], ["--hxhx-server-control", "shutdown"], null),
+			(_, _) -> throw "shutdown must not compile");
+		assertTrue(!shutdownReply.isError, "shutdown control should succeed");
+		assertTrue(shutdownReply.stopServer, "shutdown control should ask its transport to stop");
+		assertTrue(CompilationServerRequestCodec.encodeReply(shutdownReply).indexOf("hxhx_server_control.shutdown=ok") >= 0,
+			"shutdown response should confirm the requested control");
+
+		final unknownControlReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(14, [], ["--hxhx-server-control", "restart"],
+			null), (_, _) -> throw "unknown control must not compile");
+		assertTrue(unknownControlReply.isError, "unknown server control should fail");
+		assertTrue(!unknownControlReply.stopServer, "unknown server control should keep the transport running");
+
+		final stopSignal = new CompilationServerStopSignal();
+		stopSignal.record(true);
+		assertTrue(stopSignal.take(), "a recorded stop decision should be returned once");
+		assertTrue(!stopSignal.take(), "taking a stop decision should clear it for later connections");
+		stopSignal.record(false);
+		assertTrue(!stopSignal.take(), "recording an ordinary reply should not request shutdown");
 
 		final displayReply = CompilationServerRequestDispatcher.dispatch(decoded, (_, _) -> {
 			throw "display request must not invoke the ordinary compile callback";

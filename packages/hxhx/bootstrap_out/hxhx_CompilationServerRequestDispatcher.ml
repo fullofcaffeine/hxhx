@@ -13,66 +13,83 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Compilation
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerRequestDispatcher" } : t)
 
-let finish = fun context isError -> let cleanupSucceeded = Hxhx_CompilationRequestContext.close (Obj.magic context) () in let events = Obj.magic (Hxhx_CompilationRequestOutput.events (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ()) in Hxhx_CompilationServerReply.create (Obj.magic events) (isError || not (cleanupSucceeded))
+let finish = fun context isError stopServer -> let stopServer = if Obj.repr stopServer == HxRuntime.hx_null then false else stopServer in let cleanupSucceeded = Hxhx_CompilationRequestContext.close (Obj.magic context) () in let events = Obj.magic (Hxhx_CompilationRequestOutput.events (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ()) in Hxhx_CompilationServerReply.create (Obj.magic events) (isError || not (cleanupSucceeded)) (stopServer && cleanupSucceeded)
 
-let dispatch = fun request runOne -> try let __fallback_result_11 = let context = Obj.magic (Hxhx_CompilationRequestContext.server ((Obj.magic request : Hxhx_CompilationServerRequest.t).requestId)) in (
+let dispatch = fun request runOne -> try let __fallback_result_13 = let context = Obj.magic (Hxhx_CompilationRequestContext.server ((Obj.magic request : Hxhx_CompilationServerRequest.t).requestId)) in (
   ignore (if Hxhx_CompilationServerRequest.hasInvocationFlag (Obj.magic request) ("--hxhx-server-report" : string) then ignore (Hxhx_CompilationRequestContext.enableBaselineReport (Obj.magic context) ()) else ());
+  ignore (if Hxhx_CompilationServerRequest.hasRequestFlag (Obj.magic request) ("--hxhx-server-control" : string) then ignore (let control = (Hxhx_CompilationServerRequest.findFlagValue (Obj.magic request) ("--hxhx-server-control" : string) : string) in (
+    ignore (if HxString.equals control "shutdown" then ignore ((
+      ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx_server_control.shutdown=ok" : string));
+      raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) false true)))
+    )) else ());
+    let tempString = ref ("" : string) in (
+      ignore (if control == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("hxhx(stage3): missing value after --hxhx-server-control" : string) in (
+        tempString := __assign_1;
+        __assign_1
+      ) else let __assign_2 = (("hxhx(stage3): unsupported server control \"" ^ HxString.toStdString control) ^ "\"" : string) in (
+        tempString := __assign_2;
+        __assign_2
+      ));
+      ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) (!tempString : string));
+      raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) true (Obj.magic (HxRuntime.hx_null)))))
+    )
+  )) else ());
   let displayRequest = (Hxhx_CompilationServerRequest.findFlagValue (Obj.magic request) ("--display" : string) : string) in (
     ignore (if displayRequest != Obj.magic (HxRuntime.hx_null) then ignore (let displaySource = (Hxhx_DisplayResponseSynthesizer.readDisplaySource (displayRequest : string) (Obj.magic (Hxhx_CompilationServerRequest.stdinBytes (Obj.magic request) ())) : string) in (
       ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) (Hxhx_DisplayResponseSynthesizer.synthesize (displayRequest : string) (displaySource : string) : string));
-      raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) false)))
+      raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) false (Obj.magic (HxRuntime.hx_null)))))
     )) else ());
     let tempNumber = ref (0 : int) in (
-      ignore (try let __assign_1 = runOne (Obj.magic (Hxhx_CompilationServerRequest.invocationArgs (Obj.magic request) ())) (Obj.magic context) in (
-        tempNumber := __assign_1;
-        __assign_1
+      ignore (try let __assign_3 = runOne (Obj.magic (Hxhx_CompilationServerRequest.invocationArgs (Obj.magic request) ())) (Obj.magic context) in (
+        tempNumber := __assign_3;
+        __assign_3
       ) with
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_2 -> raise (HxRuntime.Hx_return __ret_2)
-        | HxRuntime.Hx_exception (__exn_v_3, __exn_tags_4) -> if true then let error = (if HxRuntime.tags_has __exn_tags_4 "haxe.Exception" then Obj.obj __exn_v_3 else Obj.magic (Haxe_ValueException.create __exn_v_3 (Obj.magic (HxRuntime.hx_null)) __exn_v_3) : Haxe_Exception.t) in (
+        | HxRuntime.Hx_return __ret_4 -> raise (HxRuntime.Hx_return __ret_4)
+        | HxRuntime.Hx_exception (__exn_v_5, __exn_tags_6) -> if true then let error = (if HxRuntime.tags_has __exn_tags_6 "haxe.Exception" then Obj.obj __exn_v_5 else Obj.magic (Haxe_ValueException.create __exn_v_5 (Obj.magic (HxRuntime.hx_null)) __exn_v_5) : Haxe_Exception.t) in (
           ignore error;
           (
             ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx(stage3): server request handler failed: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) : string));
-            let __assign_6 = 2 in (
-              tempNumber := __assign_6;
-              __assign_6
-            )
-          )
-        ) else if HxRuntime.tags_has __exn_tags_4 "String" then let error = (Obj.obj __exn_v_3 : string) in (
-          ignore error;
-          (
-            ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx(stage3): server request handler failed: " ^ HxString.toStdString error : string));
-            let __assign_5 = 2 in (
-              tempNumber := __assign_5;
-              __assign_5
-            )
-          )
-        ) else HxRuntime.hx_throw_typed __exn_v_3 __exn_tags_4
-        | __exn_7 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_7) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_7) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_7)) : Haxe_Exception.t) in (
-          ignore error;
-          (
-            ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx(stage3): server request handler failed: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) : string));
-            let __assign_9 = 2 in (
-              tempNumber := __assign_9;
-              __assign_9
-            )
-          )
-        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_7) : string) in (
-          ignore error;
-          (
-            ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx(stage3): server request handler failed: " ^ HxString.toStdString error : string));
             let __assign_8 = 2 in (
               tempNumber := __assign_8;
               __assign_8
             )
           )
-        ) else raise (__exn_7));
+        ) else if HxRuntime.tags_has __exn_tags_6 "String" then let error = (Obj.obj __exn_v_5 : string) in (
+          ignore error;
+          (
+            ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx(stage3): server request handler failed: " ^ HxString.toStdString error : string));
+            let __assign_7 = 2 in (
+              tempNumber := __assign_7;
+              __assign_7
+            )
+          )
+        ) else HxRuntime.hx_throw_typed __exn_v_5 __exn_tags_6
+        | __exn_9 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_9) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_9) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_9)) : Haxe_Exception.t) in (
+          ignore error;
+          (
+            ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx(stage3): server request handler failed: " ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) : string));
+            let __assign_11 = 2 in (
+              tempNumber := __assign_11;
+              __assign_11
+            )
+          )
+        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_9) : string) in (
+          ignore error;
+          (
+            ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx(stage3): server request handler failed: " ^ HxString.toStdString error : string));
+            let __assign_10 = 2 in (
+              tempNumber := __assign_10;
+              __assign_10
+            )
+          )
+        ) else raise (__exn_9));
       let code = !tempNumber in (
         ignore (if code <> 0 && HxArray.length (Hxhx_CompilationRequestOutput.events (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ()) = 0 then ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx(stage3): server request failed" : string)) else ());
-        finish (Obj.magic context) (code <> 0)
+        finish (Obj.magic context) (code <> 0) (Obj.magic (HxRuntime.hx_null))
       )
     )
   )
-) in Obj.magic __fallback_result_11 with
-  | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
+) in Obj.magic __fallback_result_13 with
+  | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12

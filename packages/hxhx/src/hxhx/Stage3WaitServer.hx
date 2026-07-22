@@ -123,20 +123,25 @@ class Stage3WaitServer {
 			final request = CompilationServerRequestCodec.decode(requestId, baseArgs, frame);
 			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne);
 			writeWaitStdioReply(reply);
+			if (reply.stopServer)
+				return 0;
 		}
 	}
 
 	public static function runWaitSocket(mode:String, baseArgs:Array<String>, runOne:(args:Array<String>, context:CompilationRequestContext) -> Int,
 			error:String->Int):Int {
 		var requestId = 0;
+		final stopAfterReply = new CompilationServerStopSignal();
 		final handleRequest = function(payload:String):String {
 			requestId += 1;
 			final request = CompilationServerRequestCodec.decodeString(requestId, baseArgs, payload);
 			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne);
+			stopAfterReply.record(reply.stopServer);
 			return CompilationServerRequestCodec.encodeSocketReply(reply);
 		};
+		final shouldStop = () -> stopAfterReply.take();
 		return try {
-			NativeCompilerServer.waitSocket(mode, CompilationServerProtocol.MAX_REQUEST_BYTES, handleRequest);
+			NativeCompilerServer.waitSocket(mode, CompilationServerProtocol.MAX_REQUEST_BYTES, handleRequest, shouldStop);
 		} catch (e:String) {
 			error("wait socket failed: " + e);
 		}

@@ -10,9 +10,10 @@ package hxhx;
 	  and `--connect <host:port>`) for upstream-style workflows.
 
 	What
-	- `waitSocket(mode, maxRequestBytes, handleRequest)` starts a socket server
+	- `waitSocket(mode, maxRequestBytes, handleRequest, shouldStop)` starts a socket server
 	  (`<port>` or `<host>:<port>`), rejects an unterminated or oversized request,
-	  and passes each valid payload to the Haxe-owned shared dispatcher callback.
+	  passes each valid payload to the Haxe-owned shared dispatcher callback, and
+	  asks Haxe whether to stop after the response has been sent.
 	- `connect(mode, request)` sends one request frame to a socket server and returns the raw
 	  response bytes as a string.
 
@@ -32,7 +33,7 @@ package hxhx;
 // Real socket transport still requires the native implementation below.
 #if interp
 class NativeCompilerServer {
-	public static function waitSocket(_mode:String, _maxRequestBytes:Int, _handleRequest:String->String):Int {
+	public static function waitSocket(_mode:String, _maxRequestBytes:Int, _handleRequest:String->String, _shouldStop:Void->Bool):Int {
 		throw "NativeCompilerServer.waitSocket is only available in the native hxhx runtime";
 	}
 
@@ -43,7 +44,7 @@ class NativeCompilerServer {
 #else
 @:native("HxHxCompilerServer")
 extern class NativeCompilerServer {
-	public static function waitSocket(mode:String, maxRequestBytes:Int, handleRequest:String->String):Int;
+	public static function waitSocket(mode:String, maxRequestBytes:Int, handleRequest:String->String, shouldStop:Void->Bool):Int;
 	public static function connect(mode:String, request:String):String;
 }
 #end

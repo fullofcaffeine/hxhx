@@ -5,9 +5,10 @@
      but bootstrap codegen does not yet reliably access `sys.net.Socket.input/output` from Haxe.
 
    What
-   - [waitSocket mode max_request_bytes handle_request]:
+   - [waitSocket mode max_request_bytes handle_request should_stop]:
        start a socket server, read bounded null-terminated request frames, and
        pass each valid payload to the Haxe-owned shared request dispatcher.
+       After sending a reply, ask the Haxe owner whether the server should stop.
    - [connect mode request]:
        send one null-terminated request frame and return the raw response bytes.
 
@@ -100,14 +101,16 @@ let read_all (sock : Unix.file_descr) : string =
 let waitSocket
     (mode : string)
     (max_request_bytes : int)
-    (handle_request : string -> string) : int =
+    (handle_request : string -> string)
+    (should_stop : unit -> bool) : int =
   let host, port = split_host_port mode in
   let addr = resolve_host host in
   let listener = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
   (try Unix.setsockopt listener Unix.SO_REUSEADDR true with _ -> ());
   Unix.bind listener (Unix.ADDR_INET (addr, port));
   Unix.listen listener 10;
-  while true do
+  let running = ref true in
+  while !running do
     let client, _ = Unix.accept listener in
     (try
        let reply =
@@ -120,7 +123,14 @@ let waitSocket
                 ^ Printexc.to_string exn))
          with exn -> protocol_error (Printexc.to_string exn)
        in
-       send_all client reply
+       let response_delivered =
+         try
+           send_all client reply;
+           true
+         with _ -> false
+       in
+       let stop_requested = should_stop () in
+       if response_delivered && stop_requested then running := false
      with _ -> ());
     (try Unix.close client with _ -> ())
   done;

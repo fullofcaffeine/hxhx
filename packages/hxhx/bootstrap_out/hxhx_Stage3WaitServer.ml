@@ -117,7 +117,7 @@ let runWaitStdio = fun baseArgs runOne error -> try let __fallback_result_18 = l
       ) else raise (__exn_11));
     let lengthProblem = (Hxhx_CompilationServerProtocol.requestLengthProblem (!frameLen) : string) in (
       ignore (if lengthProblem != Obj.magic (HxRuntime.hx_null) then ignore ((
-        ignore (writeWaitStdioReply (Obj.magic (Hxhx_CompilationServerReply.message ("hxhx(stage3): wait-stdio rejected " ^ HxString.toStdString lengthProblem : string) true)));
+        ignore (writeWaitStdioReply (Obj.magic (Hxhx_CompilationServerReply.message ("hxhx(stage3): wait-stdio rejected " ^ HxString.toStdString lengthProblem : string) true (Obj.magic (HxRuntime.hx_null)))));
         raise (HxRuntime.Hx_return (Obj.repr 2))
       )) else ());
       let tempBytes = ref (Obj.magic (HxRuntime.hx_null) : HxBytes.t) in (
@@ -138,7 +138,10 @@ let runWaitStdio = fun baseArgs runOne error -> try let __fallback_result_18 = l
           ) else raise (__exn_16));
         let frame = Obj.magic (!tempBytes) in (
           ignore (requestId := HxInt.add (!requestId) 1);
-          let request = Obj.magic (Hxhx_CompilationServerRequestCodec.decode (!requestId) (Obj.magic baseArgs) (Obj.magic frame)) in let reply = Obj.magic (Hxhx_CompilationServerRequestDispatcher.dispatch (Obj.magic request) runOne) in writeWaitStdioReply (Obj.magic reply)
+          let request = Obj.magic (Hxhx_CompilationServerRequestCodec.decode (!requestId) (Obj.magic baseArgs) (Obj.magic frame)) in let reply = Obj.magic (Hxhx_CompilationServerRequestDispatcher.dispatch (Obj.magic request) runOne) in (
+            ignore (writeWaitStdioReply (Obj.magic reply));
+            if (Obj.magic reply : Hxhx_CompilationServerReply.t).stopServer then raise (HxRuntime.Hx_return (Obj.repr 0)) else ()
+          )
         )
       )
     )
@@ -146,11 +149,14 @@ let runWaitStdio = fun baseArgs runOne error -> try let __fallback_result_18 = l
 ) in Obj.magic __fallback_result_18 with
   | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let runWaitSocket = fun mode baseArgs runOne error -> let requestId = ref 0 in let handleRequest = fun payload -> (
+let runWaitSocket = fun mode baseArgs runOne error -> let requestId = ref 0 in let stopAfterReply = Obj.magic (Hxhx_CompilationServerStopSignal.create ()) in let handleRequest = fun payload -> (
   ignore (requestId := HxInt.add (!requestId) 1);
-  let request = Obj.magic (Hxhx_CompilationServerRequestCodec.decodeString (!requestId) (Obj.magic baseArgs) (payload : string)) in let reply = Obj.magic (Hxhx_CompilationServerRequestDispatcher.dispatch (Obj.magic request) runOne) in Hxhx_CompilationServerRequestCodec.encodeSocketReply (Obj.magic reply)
-) in let tempResult = ref (0 : int) in (
-  ignore (try let __assign_19 = HxHxCompilerServer.waitSocket (mode : string) 67108864 handleRequest in (
+  let request = Obj.magic (Hxhx_CompilationServerRequestCodec.decodeString (!requestId) (Obj.magic baseArgs) (payload : string)) in let reply = Obj.magic (Hxhx_CompilationServerRequestDispatcher.dispatch (Obj.magic request) runOne) in (
+    ignore (Hxhx_CompilationServerStopSignal.record (Obj.magic stopAfterReply) ((Obj.magic reply : Hxhx_CompilationServerReply.t).stopServer));
+    Hxhx_CompilationServerRequestCodec.encodeSocketReply (Obj.magic reply)
+  )
+) in let shouldStop = fun () -> Hxhx_CompilationServerStopSignal.take (Obj.magic stopAfterReply) () in let tempResult = ref (0 : int) in (
+  ignore (try let __assign_19 = HxHxCompilerServer.waitSocket (mode : string) 67108864 handleRequest shouldStop in (
     tempResult := __assign_19;
     __assign_19
   ) with

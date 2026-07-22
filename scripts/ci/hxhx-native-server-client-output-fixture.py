@@ -7,6 +7,8 @@ that client instead of leaking into the server process. A deliberately failing
 compile is followed by another successful compile to prove that request failure
 does not poison the long-lived process. Separate stdio processes prove that a
 negative or oversized length receives a framed protocol error before allocation.
+Both transports then prove that an explicit shutdown response is sent before the
+server exits successfully.
 """
 
 from __future__ import annotations
@@ -95,6 +97,33 @@ def require_rejected_stdio_length(
     text = response.decode("utf-8", errors="replace")
     if expected not in text or "\x02" not in text:
         raise RuntimeError(f"invalid stdio frame lacked its protocol error: {text!r}")
+
+
+def require_stdio_shutdown(hxhx_bin: Path, output_path: Path) -> None:
+    payload = b"--hxhx-server-control\nshutdown\n"
+    result = subprocess.run(
+        [str(hxhx_bin), "--hxhx-no-run", "--js", str(output_path), "--wait", "stdio"],
+        input=struct.pack("<I", len(payload)) + payload,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    if result.returncode != 0 or result.stdout:
+        raise RuntimeError(
+            f"stdio shutdown failed (rc={result.returncode}, stdout={result.stdout!r}, stderr={result.stderr!r})"
+        )
+    if len(result.stderr) < 4:
+        raise RuntimeError(f"stdio shutdown omitted its response header: {result.stderr!r}")
+    response_length = struct.unpack("<I", result.stderr[:4])[0]
+    response = result.stderr[4:]
+    if len(response) != response_length:
+        raise RuntimeError(
+            f"stdio shutdown response length mismatch: header={response_length}, body={len(response)}"
+        )
+    if b"hxhx_server_control.shutdown=ok" not in response or b"\x02" in response:
+        raise RuntimeError(f"stdio shutdown returned an unexpected response: {response!r}")
+    if output_path.exists():
+        raise RuntimeError("stdio shutdown unexpectedly produced target output")
 
 
 def main() -> int:
@@ -209,8 +238,22 @@ def main() -> int:
             require_success(second_run, "second socket-generated program")
             if second_run.stdout.strip() != "socket-compile-ok":
                 raise RuntimeError(f"unexpected second generated-program output: {second_run.stdout!r}")
+
+            shutdown = run_client(
+                hxhx_bin,
+                base_args,
+                endpoint,
+                ["--hxhx-server-control", "shutdown"],
+            )
+            require_success(shutdown, "socket server shutdown")
+            request_ids.append(require_baseline_report(shutdown, "socket server shutdown"))
+            if "hxhx_server_control.shutdown=ok" not in shutdown.stdout:
+                raise RuntimeError(f"socket shutdown did not confirm the control request: {shutdown.stdout!r}")
             if request_ids != sorted(set(request_ids)):
                 raise RuntimeError(f"server request IDs were not unique and increasing: {request_ids!r}")
+            server.wait(timeout=5)
+            if server.returncode != 0:
+                raise RuntimeError(f"socket server exited with {server.returncode} after graceful shutdown")
         except BaseException as error:
             test_error = error
         finally:
@@ -243,6 +286,7 @@ def main() -> int:
     )
     if invalid_stdio_output.exists():
         raise RuntimeError("rejected stdio frame unexpectedly produced target output")
+    require_stdio_shutdown(hxhx_bin, fixture_root / "shutdown-stdio.js")
 
     print("HXHX_NATIVE_SERVER_CLIENT_OUTPUT_FIXTURE:PASS")
     return 0

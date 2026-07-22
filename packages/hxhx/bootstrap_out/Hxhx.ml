@@ -15,6 +15,7 @@ module CompilationServerReply = Hxhx_CompilationServerReply
 module CompilationServerRequest = Hxhx_CompilationServerRequest
 module CompilationServerRequestCodec = Hxhx_CompilationServerRequestCodec
 module CompilationServerRequestDispatcher = Hxhx_CompilationServerRequestDispatcher
+module CompilationServerStopSignal = Hxhx_CompilationServerStopSignal
 module CompilerJsonArray = Hxhx_CompilerJsonArray
 module CompilerJsonParser = Hxhx_CompilerJsonParser
 module DisplayResponseSynthesizer = Hxhx_DisplayResponseSynthesizer

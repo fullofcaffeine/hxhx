@@ -87,10 +87,13 @@ plugin registration state. The opt-in `--hxhx-server-report` response identifies
 the request, includes elapsed time and cleanup status, and truthfully reports
 that semantic caching is disabled with zero entries and zero hits.
 
-Display remains the bring-up response; cancellation, shutdown, a complete audit
-of mutable request state, transactional output, and clean-process equivalence
-remain; and no semantic result is cached. `haxe_ocaml-850ii.32.1` therefore stays
-open.
+Display remains the bring-up response. Both transports now support an explicit,
+hxhx-specific shutdown request. The server sends a confirmation to the client,
+runs the request cleanup contract, and exits successfully only when cleanup
+succeeds. Unknown controls fail without stopping the process. Cancellation, a
+complete audit of mutable request state, transactional output, and clean-process
+equivalence remain; and no semantic result is cached.
+`haxe_ocaml-850ii.32.1` therefore stays open.
 
 Transport input is now bounded before compiler work begins. One request may
 contain at most 64 MiB across its arguments and optional editor input. Stdio
@@ -101,6 +104,20 @@ that client, and continues accepting connections. A focused OCaml fixture uses
 a smaller injected limit to prove oversized and unterminated clients cannot
 kill the server; the native hxhx fixture proves the production limit and stdio
 error framing.
+
+Graceful shutdown is now proven at the public transport boundary as well. A
+request containing `--hxhx-server-control shutdown` never enters the compiler.
+The Haxe-owned dispatcher creates and closes the normal request context, returns
+`hxhx_server_control.shutdown=ok`, and marks the reply for transport shutdown
+only if cleanup succeeded. Stdio writes its length-framed reply before leaving
+the request loop. The OCaml socket bridge sends the socket response and then
+asks a Haxe callback whether it should stop, so the bridge transports the
+decision without owning shutdown policy. The callback consumes the decision
+exactly once, and the bridge stops only when that same reply was delivered; a
+failed socket write cannot leak the stop decision into a later connection. The
+native fixture observes the confirmation and exit status 0 for both transports;
+the direct OCaml fixture also proves that the socket child exits normally
+instead of being terminated by the test harness.
 README and North Star readiness percentages remain unchanged.
 
 ## Two Connected Workstreams

@@ -54,6 +54,7 @@
 		"hxhx_DisplayResponseSynthesizer.ml",
 		"hxhx_CompilerJsonParser.ml",
 		"hxhx_CompilerJsonArray.ml",
+		"hxhx_CompilationServerStopSignal.ml",
 		"hxhx_CompilationServerRequestDispatcher.ml",
 		"hxhx_CompilationServerRequestCodec.ml",
 		"hxhx_CompilationServerRequest.ml",

@@ -48,20 +48,30 @@ let contains text needle =
 let () =
   let port = reserve_loopback_port () in
   let endpoint = "127.0.0.1:" ^ string_of_int port in
+  let child_reaped = ref false in
   let child =
     Unix.fork ()
   in
   if child = 0 then (
+    let stop = ref false in
     ignore
       (HxHxCompilerServer.waitSocket endpoint 32 (fun request ->
            if request = "trigger-handler-error" then failwith "fixture-handler-exploded"
-           else "handled:" ^ request));
-    exit 2)
+           else if request = "shutdown" then (
+             stop := true;
+             "stopping")
+           else "handled:" ^ request)
+         (fun () ->
+           let requested = !stop in
+           stop := false;
+           requested));
+    exit 0)
   else
     Fun.protect
       ~finally:(fun () ->
-        (try Unix.kill child Sys.sigterm with Unix.Unix_error (Unix.ESRCH, _, _) -> ());
-        ignore (Unix.waitpid [] child))
+        if not !child_reaped then (
+          (try Unix.kill child Sys.sigterm with Unix.Unix_error (Unix.ESRCH, _, _) -> ());
+          try ignore (Unix.waitpid [] child) with Unix.Unix_error (Unix.ECHILD, _, _) -> ()))
       (fun () ->
         let response = connect_with_retry endpoint in
         if not (starts_with_control_error response) then
@@ -86,4 +96,13 @@ let () =
         let recovered = HxHxCompilerServer.connect endpoint "ok" in
         if recovered <> "handled:ok" then
           failwith ("server did not recover after malformed clients: " ^ recovered);
+
+        let shutdown = HxHxCompilerServer.connect endpoint "shutdown" in
+        if shutdown <> "stopping" then
+          failwith ("shutdown response was not sent before exit: " ^ shutdown);
+        let _, status = Unix.waitpid [] child in
+        child_reaped := true;
+        (match status with
+        | Unix.WEXITED 0 -> ()
+        | _ -> failwith "socket server did not exit cleanly after shutdown");
         print_endline "HXHX_COMPILER_SERVER_RUNTIME_FIXTURE:PASS")

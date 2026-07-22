@@ -43,8 +43,10 @@ request. An opt-in `--hxhx-server-report` result identifies the request, reports
 whether cleanup succeeded, measures elapsed time, and explicitly says that the
 semantic cache is disabled with zero entries and zero hits.
 
-Display remains a bring-up response, and cancellation, shutdown, a complete
-audit of all mutable compiler state, transactional file output, and
+Display remains a bring-up response. Explicit shutdown now works for both
+native transports: the requesting client receives a confirmation, request
+cleanup finishes, and only then does the server exit successfully. Cancellation,
+a complete audit of all mutable compiler state, transactional file output, and
 clean-process equivalence are not finished. Later steps add those lifecycle
 guarantees, then reusable source, parser, typed-module, display, plugin, and
 target facts only after each layer passes clean-versus-warm correctness tests.
@@ -147,6 +149,35 @@ the server exits because the byte stream cannot be safely resynchronized.
 Socket clients that exceed the limit or disconnect before the required NUL
 terminator receive an error; the server then accepts the next connection. No
 parsing, typing, macro execution, or target output begins for a rejected frame.
+
+### Current native shutdown control
+
+The in-development native server has an hxhx-specific shutdown request. For a
+socket server listening on port 6000, send:
+
+```bash
+hxhx --connect 6000 --hxhx-server-control shutdown
+```
+
+The client receives this confirmation before the server exits:
+
+```text
+hxhx_server_control.shutdown=ok
+```
+
+This ordering matters because a shutdown command should not make the client
+guess whether the server received it. hxhx first closes the current request,
+including its registered cleanup work. If cleanup fails, the request fails and
+the server stays alive so the failure is visible instead of being hidden by an
+exit. The transport consumes that stop decision once and exits only when the
+matching response was delivered, so a disconnected shutdown client cannot make
+a later unrelated connection stop the server. An unknown control name also
+fails without stopping the server.
+
+`--hxhx-server-control` is an hxhx extension, not part of the Haxe 4.3.7
+compiler-server protocol. This is still an implementation/testing interface,
+not a recommendation to enable the native server for normal projects. Endpoint
+ownership, cancellation, and automatic stale-server recovery remain unfinished.
 
 ## Current scenario guide
 

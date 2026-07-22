@@ -15,6 +15,15 @@ class CompilationServerRequestDispatcher {
 		final context = CompilationRequestContext.server(request.requestId);
 		if (request.hasInvocationFlag("--hxhx-server-report"))
 			context.enableBaselineReport();
+		if (request.hasRequestFlag("--hxhx-server-control")) {
+			final control = request.findFlagValue("--hxhx-server-control");
+			if (control == "shutdown") {
+				context.output.stdoutLine("hxhx_server_control.shutdown=ok");
+				return finish(context, false, true);
+			}
+			context.output.stderrLine(control == null ? "hxhx(stage3): missing value after --hxhx-server-control" : 'hxhx(stage3): unsupported server control "$control"');
+			return finish(context, true);
+		}
 		final displayRequest = request.findFlagValue("--display");
 		#if hxhx_stage0_no_display
 		if (displayRequest != null) {
@@ -43,9 +52,9 @@ class CompilationServerRequestDispatcher {
 		return finish(context, code != 0);
 	}
 
-	static function finish(context:CompilationRequestContext, isError:Bool):CompilationServerReply {
+	static function finish(context:CompilationRequestContext, isError:Bool, stopServer:Bool = false):CompilationServerReply {
 		final cleanupSucceeded = context.close();
 		final events = context.output.events();
-		return new CompilationServerReply(events, isError || !cleanupSucceeded);
+		return new CompilationServerReply(events, isError || !cleanupSucceeded, stopServer && cleanupSucceeded);
 	}
 }

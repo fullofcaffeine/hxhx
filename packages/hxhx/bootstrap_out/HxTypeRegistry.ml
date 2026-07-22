@@ -171,6 +171,7 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.CompilationServerRequest");
   ignore (HxType.class_ "hxhx.CompilationServerRequestCodec");
   ignore (HxType.class_ "hxhx.CompilationServerRequestDispatcher");
+  ignore (HxType.class_ "hxhx.CompilationServerStopSignal");
   ignore (HxType.class_ "hxhx.CompilerJsonArray");
   ignore (HxType.class_ "hxhx.CompilerJsonParser");
   ignore (HxType.class_ "hxhx.DisplayResponseSynthesizer");
@@ -2008,7 +2009,8 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'outputEvents' for hxhx.CompilationServerReply" in
     let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'isError' for hxhx.CompilationServerReply" in
-    Obj.repr (Hxhx_CompilationServerReply.create a0 a1)
+    let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (Hxhx_CompilationServerReply.create a0 a1 a2)
   );
   HxType.register_class_ctor "hxhx.CompilationServerRequest" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -2023,6 +2025,9 @@ let init () : unit =
   );
   HxType.register_class_ctor "hxhx.CompilationServerRequestDispatcher" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_CompilationServerRequestDispatcher.create ())
+  );
+  HxType.register_class_ctor "hxhx.CompilationServerStopSignal" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_CompilationServerStopSignal.create ())
   );
   HxType.register_class_ctor "hxhx.CompilerJsonArray" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -2449,6 +2454,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.CompilationServerRequest" (fun () -> Obj.repr (Hxhx_CompilationServerRequest.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerRequestCodec" (fun () -> Obj.repr (Hxhx_CompilationServerRequestCodec.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerRequestDispatcher" (fun () -> Obj.repr (Hxhx_CompilationServerRequestDispatcher.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CompilationServerStopSignal" (fun () -> Obj.repr (Hxhx_CompilationServerStopSignal.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilerJsonArray" (fun () -> Obj.repr (Hxhx_CompilerJsonArray.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilerJsonParser" (fun () -> Obj.repr (Hxhx_CompilerJsonParser.__empty ()));
   HxType.register_class_empty_ctor "hxhx.DisplayResponseSynthesizer" (fun () -> Obj.repr (Hxhx_DisplayResponseSynthesizer.__empty ()));
@@ -2841,14 +2847,16 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.CompilationRequestOutputEvent" [];
   HxType.register_class_instance_fields "hxhx.CompilationServerProtocol" [];
   HxType.register_class_static_fields "hxhx.CompilationServerProtocol" [ "requestLengthProblem" ];
-  HxType.register_class_instance_fields "hxhx.CompilationServerReply" [ "events"; "isError"; "outputEvents" ];
+  HxType.register_class_instance_fields "hxhx.CompilationServerReply" [ "events"; "isError"; "outputEvents"; "stopServer" ];
   HxType.register_class_static_fields "hxhx.CompilationServerReply" [ "message" ];
-  HxType.register_class_instance_fields "hxhx.CompilationServerRequest" [ "baseArgsValue"; "findFlagValue"; "hasInvocationFlag"; "invocationArgs"; "requestArgs"; "requestArgsValue"; "requestId"; "stdinBytes"; "stdinBytesValue" ];
+  HxType.register_class_instance_fields "hxhx.CompilationServerRequest" [ "baseArgsValue"; "findFlagValue"; "hasInvocationFlag"; "hasRequestFlag"; "invocationArgs"; "requestArgs"; "requestArgsValue"; "requestId"; "stdinBytes"; "stdinBytesValue" ];
   HxType.register_class_static_fields "hxhx.CompilationServerRequest" [ "copyBytes" ];
   HxType.register_class_instance_fields "hxhx.CompilationServerRequestCodec" [];
   HxType.register_class_static_fields "hxhx.CompilationServerRequestCodec" [ "decode"; "decodeString"; "encodeReply"; "encodeSocketReply" ];
   HxType.register_class_instance_fields "hxhx.CompilationServerRequestDispatcher" [];
   HxType.register_class_static_fields "hxhx.CompilationServerRequestDispatcher" [ "dispatch"; "finish" ];
+  HxType.register_class_instance_fields "hxhx.CompilationServerStopSignal" [ "record"; "requested"; "take" ];
+  HxType.register_class_static_fields "hxhx.CompilationServerStopSignal" [];
   HxType.register_class_instance_fields "hxhx.CompilerJsonArray" [ "values" ];
   HxType.register_class_static_fields "hxhx.CompilerJsonArray" [];
   HxType.register_class_instance_fields "hxhx.CompilerJsonParser" [ "consumeIf"; "expectCode"; "expectKeyword"; "fail"; "index"; "input"; "isEof"; "length"; "nextCode"; "parseArray"; "parseDigits"; "parseDocument"; "parseNumber"; "parseObject"; "parseString"; "parseUnicodeEscape"; "parseValue"; "peekCode"; "skipWhitespace" ];
@@ -3190,6 +3198,7 @@ let init () : unit =
   HxType.register_class_tags "hxhx.CompilationServerRequest" [ "hxhx.CompilationServerRequest" ];
   HxType.register_class_tags "hxhx.CompilationServerRequestCodec" [ "hxhx.CompilationServerRequestCodec" ];
   HxType.register_class_tags "hxhx.CompilationServerRequestDispatcher" [ "hxhx.CompilationServerRequestDispatcher" ];
+  HxType.register_class_tags "hxhx.CompilationServerStopSignal" [ "hxhx.CompilationServerStopSignal" ];
   HxType.register_class_tags "hxhx.CompilerJsonArray" [ "hxhx.CompilerJsonArray" ];
   HxType.register_class_tags "hxhx.CompilerJsonParser" [ "hxhx.CompilerJsonParser" ];
   HxType.register_class_tags "hxhx.DisplayResponseSynthesizer" [ "hxhx.DisplayResponseSynthesizer" ];
