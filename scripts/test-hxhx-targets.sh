@@ -1085,8 +1085,15 @@ PY
     echo "Skipping wait stdio regression: python3 not found on PATH."
   fi
 
-  echo "== Stage3 regression: --wait socket + --connect roundtrip"
+  echo "== Stage3 regression: --wait socket + --connect display and ordinary compile"
   if command -v python3 >/dev/null 2>&1; then
+    cat >"$tmpdir/src/SocketCompileMain.hx" <<'HX'
+class SocketCompileMain {
+  static function main() {
+    Sys.println("socket-compile-ok");
+  }
+}
+HX
     HXHX_BIN_FOR_PY="$HXHX_BIN" TMPDIR_FOR_PY="$tmpdir" python3 - <<'PY'
 import os
 import socket
@@ -1098,6 +1105,8 @@ tmpdir = os.environ["TMPDIR_FOR_PY"]
 source = os.path.join(tmpdir, "src", "DisplayMain.hx")
 classpath = os.path.join(tmpdir, "src")
 out_dir = os.path.join(tmpdir, "out_stage3_wait_socket")
+artifact = os.path.join(out_dir, "main.js")
+base_args = ["--hxhx-no-run", "--js", artifact]
 
 probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 probe.bind(("127.0.0.1", 0))
@@ -1106,7 +1115,7 @@ probe.close()
 
 endpoint = f"127.0.0.1:{port}"
 server = subprocess.Popen(
-    [hxhx_bin, "--hxhx-stage3", "--hxhx-no-emit", "--hxhx-out", out_dir, "--wait", endpoint],
+    [hxhx_bin, *base_args, "--wait", endpoint],
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
     text=True,
@@ -1119,10 +1128,7 @@ try:
         result = subprocess.run(
             [
                 hxhx_bin,
-                "--hxhx-stage3",
-                "--hxhx-no-emit",
-                "--hxhx-out",
-                out_dir,
+                *base_args,
                 "--connect",
                 endpoint,
                 "--display",
@@ -1143,6 +1149,34 @@ try:
         raise RuntimeError(
             "connect request never succeeded (last rc=%s, stderr=%s)"
             % (last.returncode if last else "?", last.stderr if last else "")
+        )
+
+    compile_result = subprocess.run(
+        [
+            hxhx_bin,
+            *base_args,
+            "--connect",
+            endpoint,
+            "-cp",
+            classpath,
+            "-main",
+            "SocketCompileMain",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if compile_result.returncode != 0:
+        raise RuntimeError(
+            "ordinary socket compile failed (rc=%s, stdout=%s, stderr=%s)"
+            % (compile_result.returncode, compile_result.stdout, compile_result.stderr)
+        )
+    if not os.path.isfile(artifact):
+        raise RuntimeError("ordinary socket compile did not create " + artifact)
+    run_result = subprocess.run(["node", artifact], capture_output=True, text=True)
+    if run_result.returncode != 0 or run_result.stdout.strip() != "socket-compile-ok":
+        raise RuntimeError(
+            "socket-generated program failed (rc=%s, stdout=%s, stderr=%s)"
+            % (run_result.returncode, run_result.stdout, run_result.stderr)
         )
 finally:
     server.terminate()

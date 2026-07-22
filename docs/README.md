@@ -40,6 +40,10 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - Accepted GPT-5.6 Pro diagnosis and migration boundary for feature-gated
   typed-body lifecycle ownership:
   `docs/00-project/ORACLE_CHECKPOINT_FEATURE_GATED_TYPED_BODY_LIFECYCLE_2026_07_19.md`
+- Accepted GPT-5.6 Pro architecture for the native incremental compilation
+  server, including request isolation, cache revisions, invalidation, plugins,
+  performance, and documentation gates:
+  `docs/00-project/ORACLE_CHECKPOINT_NATIVE_INCREMENTAL_SERVER_2026_07_22.md`
 - Maintained Reflaxe fork, upstream-sync, PR, CI, and pin policy:
   `docs/00-project/REFLAXE_INTEGRATION_FORK_POLICY.md`
 - First place/assignment lowering inventory and upstream evaluation oracle:

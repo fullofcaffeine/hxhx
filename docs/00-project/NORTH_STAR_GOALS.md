@@ -59,6 +59,18 @@ Current planning owners:
   This planning work adds no current capability or readiness.
 - public status board: README `Goals status` table
 
+Native incremental compilation is owned by `haxe_ocaml-850ii.32`. The accepted
+architecture keeps one long-lived server and reusable immutable facts while
+creating fresh mutable compiler state for each request. Stdio and socket must
+first share one cache-free request compiler; later evidence-gated slices add
+source/parser reuse, dependency observation, sealed typed modules, display,
+macro/plugin workers, target units, and bounded memory. The product goal is an
+edit-to-runnable-result loop competitive with or better than mature
+TypeScript/Go-style workflows on representative workloads, measured together
+with Dune's native artifact reuse. Architecture and cache hits alone do not
+move readiness. See
+`docs/00-project/ORACLE_CHECKPOINT_NATIVE_INCREMENTAL_SERVER_2026_07_22.md`.
+
 ### AI-assisted native promotion for any Haxe software
 
 The broader product thesis is not limited to compilers. A Haxe application,

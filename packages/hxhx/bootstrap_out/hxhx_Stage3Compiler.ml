@@ -40,11 +40,6 @@ let findTargetOutputFileHint = fun args backendId -> Hxhx_Stage3Args.findTargetO
 
 let findTargetOutputDirectoryHint = fun args backendId -> Hxhx_Stage3Args.findTargetOutputDirectoryHint (Obj.magic args) (backendId : string)
 
-let runWaitSocket = fun mode _baseArgs -> (
-  ignore _baseArgs;
-  Hxhx_Stage3WaitServer.runWaitSocket (mode : string) error
-)
-
 let runConnect = fun connectMode requestArgs -> Hxhx_Stage3WaitServer.runConnect (connectMode : string) (Obj.magic requestArgs) error
 
 let formatException = fun e -> Hxhx_Stage3DiagnosticsSupport.formatException (Obj.magic e)
@@ -1355,6 +1350,8 @@ let runOne = fun args -> try let __fallback_result_216 = let tempStruct = ref (O
   | HxRuntime.Hx_return __ret_215 -> Obj.obj __ret_215
 
 let runWaitStdio = fun baseArgs -> Hxhx_Stage3WaitServer.runWaitStdio (Obj.magic baseArgs) runOne error
+
+let runWaitSocket = fun mode baseArgs -> Hxhx_Stage3WaitServer.runWaitSocket (mode : string) (Obj.magic baseArgs) runOne error
 
 let run = fun args -> try let __fallback_result_241 = let tempStruct = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (try let __assign_217 = Obj.magic (parseWaitMode (Obj.magic args)) in (

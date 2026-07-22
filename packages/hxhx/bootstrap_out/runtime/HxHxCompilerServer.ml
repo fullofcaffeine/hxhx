@@ -5,14 +5,15 @@
      but bootstrap codegen does not yet reliably access `sys.net.Socket.input/output` from Haxe.
 
    What
-   - [waitSocket mode]:
-       start a socket server and answer null-terminated request frames.
+   - [waitSocket mode handle_request]:
+       start a socket server, read null-terminated request frames, and pass each
+       payload to the Haxe-owned shared request dispatcher.
    - [connect mode request]:
        send one null-terminated request frame and return the raw response bytes.
 
    Scope
-   - This bridge currently focuses on display-style requests used by Stage3 bring-up.
-   - Non-display requests return an error-prefixed response (`0x02...`).
+   - This bridge owns socket/process operations only. It does not decide whether
+     a request compiles code, serves editor data, succeeds, or fails.
 *)
 
 let split_host_port (mode : string) : string * int =
@@ -83,49 +84,7 @@ let read_all (sock : Unix.file_descr) : string =
   in
   loop ()
 
-let trim_cr (s : string) : string =
-  let len = Stdlib.String.length s in
-  if len > 0 && (Stdlib.String.get s (len - 1)) = '\r' then Stdlib.String.sub s 0 (len - 1) else s
-
-let parse_args (request : string) : string list =
-  let before_stdin =
-    match Stdlib.String.index_opt request '\001' with
-    | None -> request
-    | Some idx -> Stdlib.String.sub request 0 idx
-  in
-  request |> (fun _ -> before_stdin)
-  |> Stdlib.String.split_on_char '\n'
-  |> Stdlib.List.map trim_cr
-  |> Stdlib.List.filter (fun s -> s <> "")
-
-let rec find_display_arg = function
-  | "--display" :: value :: _ -> Some value
-  | _ :: tl -> find_display_arg tl
-  | [] -> None
-
-let synthesize_display_response (display_request : string) : string =
-  let ends_with suffix =
-    let sl = Stdlib.String.length suffix in
-    let dl = Stdlib.String.length display_request in
-    dl >= sl && Stdlib.String.sub display_request (dl - sl) sl = suffix
-  in
-  if ends_with "@diagnostics" then "[{\"diagnostics\":[]}]"
-  else if ends_with "@module-symbols" then "[{\"symbols\":[]}]"
-  else if ends_with "@signature" then
-    "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}"
-  else if ends_with "@toplevel" then "<il></il>"
-  else if ends_with "@type" then "<type>Dynamic</type>"
-  else if ends_with "@position" then "<list></list>"
-  else if ends_with "@usage" then "<list></list>"
-  else "<list></list>"
-
-let handle_request (request : string) : string =
-  let args = parse_args request in
-  match find_display_arg args with
-  | Some display_request -> synthesize_display_response display_request
-  | None -> "\002hxhx(stage3): wait socket request failed"
-
-let waitSocket (mode : string) : int =
+let waitSocket (mode : string) (handle_request : string -> string) : int =
   let host, port = split_host_port mode in
   let addr = resolve_host host in
   let listener = Unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
@@ -136,7 +95,11 @@ let waitSocket (mode : string) : int =
     let client, _ = Unix.accept listener in
     (try
        let request = read_until_nul client in
-       let reply = handle_request request in
+       let reply =
+         try handle_request request
+         with exn ->
+           "\002hxhx(stage3): socket request handler failed: " ^ Printexc.to_string exn
+       in
        send_all client reply
      with _ -> ());
     (try Unix.close client with _ -> ())

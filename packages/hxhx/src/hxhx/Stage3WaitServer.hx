@@ -3,16 +3,6 @@ package hxhx;
 import haxe.io.Bytes;
 import haxe.io.Eof;
 
-private typedef WaitStdioRequest = {
-	final args:Array<String>;
-	final stdinBytes:Null<Bytes>;
-};
-
-private typedef WaitStdioReply = {
-	final payload:String;
-	final isError:Bool;
-};
-
 /**
 	Wait/connect transport helpers for Stage3 compiler-server flows.
 
@@ -75,16 +65,6 @@ class Stage3WaitServer {
 		return {connectMode: connectMode, rest: rest};
 	}
 
-	static function findSingleFlagValue(args:Array<String>, flag:String):Null<String> {
-		var i = 0;
-		while (i < args.length) {
-			if (args[i] == flag && i + 1 < args.length)
-				return args[i + 1];
-			i += 1;
-		}
-		return null;
-	}
-
 	static function hasDefineFlag(args:Array<String>, name:String):Bool {
 		var i = 0;
 		while (i < args.length) {
@@ -100,60 +80,7 @@ class Stage3WaitServer {
 		return false;
 	}
 
-	static function decodeWaitStdioRequest(frame:Bytes):WaitStdioRequest {
-		var sep = -1;
-		for (i in 0...frame.length) {
-			if (frame.get(i) == 0x01) {
-				sep = i;
-				break;
-			}
-		}
-
-		final argsBytes = sep == -1 ? frame : frame.sub(0, sep);
-		final stdinBytes = sep == -1 ? null : frame.sub(sep + 1, frame.length - (sep + 1));
-
-		final rawArgs = argsBytes.getString(0, argsBytes.length);
-		final args = new Array<String>();
-		for (line0 in rawArgs.split("\n")) {
-			var line = line0;
-			if (line.length == 0)
-				continue;
-			if (line.charCodeAt(line.length - 1) == 13)
-				line = line.substr(0, line.length - 1);
-			if (line.length == 0)
-				continue;
-			args.push(line);
-		}
-
-		return {args: args, stdinBytes: stdinBytes};
-	}
-
-	#if !hxhx_stage0_no_display
-	static function synthesizeDisplayResponse(displayRequest:String, displaySource:String):String {
-		return DisplayResponseSynthesizer.synthesize(displayRequest, displaySource);
-	}
-	#end
-
-	static function runWaitStdioRequest(baseArgs:Array<String>, request:WaitStdioRequest, runOne:Array<String>->Int):WaitStdioReply {
-		final displayRequest = findSingleFlagValue(request.args, "--display");
-		#if hxhx_stage0_no_display
-		if (displayRequest != null)
-			return {payload: "hxhx(stage3): display unavailable in stage0 no-display profiling lane", isError: true};
-		#else
-		if (displayRequest != null) {
-			final displaySource = DisplayResponseSynthesizer.readDisplaySource(displayRequest, request.stdinBytes);
-			return {payload: synthesizeDisplayResponse(displayRequest, displaySource), isError: false};
-		}
-		#end
-
-		final invocation = baseArgs.concat(request.args);
-		final code = runOne(invocation);
-		if (code == 0)
-			return {payload: "OK", isError: false};
-		return {payload: "hxhx(stage3): wait stdio request failed", isError: true};
-	}
-
-	static function writeWaitStdioReply(reply:WaitStdioReply):Void {
+	static function writeWaitStdioReply(reply:CompilationServerReply):Void {
 		var payload = "";
 		if (reply.isError)
 			payload += String.fromCharCode(0x02);
@@ -173,6 +100,7 @@ class Stage3WaitServer {
 	public static function runWaitStdio(baseArgs:Array<String>, runOne:Array<String>->Int, error:String->Int):Int {
 		final input = Sys.stdin();
 		input.bigEndian = false;
+		var requestId = 0;
 
 		while (true) {
 			var frameLen = 0;
@@ -192,15 +120,23 @@ class Stage3WaitServer {
 			final frame = try input.read(frameLen) catch (_:Eof) {
 				return error("wait-stdio request frame truncated");
 			};
-			final request = decodeWaitStdioRequest(frame);
-			final reply = runWaitStdioRequest(baseArgs, request, runOne);
+			requestId += 1;
+			final request = CompilationServerRequestCodec.decode(requestId, baseArgs, frame);
+			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne);
 			writeWaitStdioReply(reply);
 		}
 	}
 
-	public static function runWaitSocket(mode:String, error:String->Int):Int {
+	public static function runWaitSocket(mode:String, baseArgs:Array<String>, runOne:Array<String>->Int, error:String->Int):Int {
+		var requestId = 0;
+		final handleRequest = function(payload:String):String {
+			requestId += 1;
+			final request = CompilationServerRequestCodec.decodeString(requestId, baseArgs, payload);
+			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne);
+			return CompilationServerRequestCodec.encodeSocketReply(reply);
+		};
 		return try {
-			NativeCompilerServer.waitSocket(mode);
+			NativeCompilerServer.waitSocket(mode, handleRequest);
 		} catch (e:String) {
 			error("wait socket failed: " + e);
 		}

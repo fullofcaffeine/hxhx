@@ -136,10 +136,11 @@ class Stage3Compiler {
 		- This path uses a small OCaml runtime bridge (`HxHxCompilerServer`) because the current
 		  bootstrap codegen does not yet support `sys.net.Socket` property access (`input`/`output`)
 		  from Stage3 Haxe code.
-		- The bridge currently focuses on display-style compiler-server requests.
+		- The bridge only accepts socket frames and returns response bytes. Haxe decodes every
+		  ordinary compile or display request and sends it through the shared dispatcher.
 	**/
-	static function runWaitSocket(mode:String, _baseArgs:Array<String>):Int {
-		return Stage3WaitServer.runWaitSocket(mode, error);
+	static function runWaitSocket(mode:String, baseArgs:Array<String>):Int {
+		return Stage3WaitServer.runWaitSocket(mode, baseArgs, runOne, error);
 	}
 
 	/**

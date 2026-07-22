@@ -150,6 +150,8 @@
     "test:m14:js-expr-switch": "compiler",
     "test:m14:hih-emitter-receiver-call": "compiler",
     "test:m14:hxhx-display-exproft-completion": "compiler",
+    "test:m14:compilation-server-request-dispatcher": "compiler",
+    "test:m14:hxhx-compiler-server-runtime": "compiler",
     "test:portable": "target-packages",
     "test:snapshot": "target-packages",
     "test:examples": "target-packages",

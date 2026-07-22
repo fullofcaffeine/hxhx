@@ -23,6 +23,25 @@ This guide explains Haxe's compilation server, how it relates to
 Server reuse will become a normal recommendation only after clean and warm
 builds are proven equivalent and warm builds are measurably faster.
 
+The accepted native architecture and evidence gates are recorded in
+[`ORACLE_CHECKPOINT_NATIVE_INCREMENTAL_SERVER_2026_07_22.md`](../00-project/ORACLE_CHECKPOINT_NATIVE_INCREMENTAL_SERVER_2026_07_22.md).
+The first implementation sub-slice now sends stdio and socket requests through
+the same Haxe decoder and compile-or-display dispatcher. This removes the old
+socket-only placeholder that rejected ordinary compilation. It deliberately
+adds no semantic cache. It also does not yet capture all compiler output for
+the requesting client or provide the complete fresh request context,
+cancellation, shutdown, and output transaction required by the first Bead.
+Later steps add those lifecycle guarantees, then reusable source, parser,
+typed-module, display, plugin, and target facts only after each layer passes
+clean-versus-warm correctness tests.
+
+There are two connected implementation tracks. `haxe_ocaml-850ii.33` makes
+upstream Haxe 4.3.7's already-incremental compiler feed complete, safe Reflaxe
+target state. `haxe_ocaml-850ii.32` implements the compatible native hxhx
+incremental compiler. The hosts keep separate compiler caches, but their
+Reflaxe target/plugin boundary should converge on the same complete,
+revisioned program and output-ownership contract.
+
 ## What a compilation server does
 
 A normal compiler command starts a process, reads the project, checks it,
@@ -210,6 +229,14 @@ whether it is enabled by default, its `--wait`/`--connect` compatibility,
 project configuration, plugin/target behavior, reset and inspection commands,
 and clean-build comparison. A test-only protocol command is not presented as a
 user workflow.
+
+The performance goal is stronger than “the cache reported a hit.” On
+representative projects, the complete edit-to-diagnostics and
+edit-to-runnable-result loop should be competitive with, and where the
+workloads permit, better than mature TypeScript incremental and Go build-cache
+workflows. Measurements must separate hxhx front-end reuse, target generation,
+file writes, Dune compilation/linking, and program load so a fast internal
+phase cannot hide a slow developer workflow.
 
 ## CI, containers, and remote development
 
