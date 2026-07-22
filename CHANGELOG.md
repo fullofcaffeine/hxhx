@@ -1,3 +1,10 @@
+# [0.25.0](https://github.com/fullofcaffeine/hxhx/compare/v0.24.0...v0.25.0) (2026-07-22)
+
+
+### Features
+
+* **server:** add cooperative request deadlines ([e7f09fb](https://github.com/fullofcaffeine/hxhx/commit/e7f09fbde7d36515eab447398b5f82403612eaa6))
+
 # [0.24.0](https://github.com/fullofcaffeine/hxhx/compare/v0.23.18...v0.24.0) (2026-07-22)
 
 
