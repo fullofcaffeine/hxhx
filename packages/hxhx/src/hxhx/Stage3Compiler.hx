@@ -254,6 +254,10 @@ class Stage3Compiler {
 
 	static function runOne(args:Array<String>, requestContext:CompilationRequestContext):Int {
 		final requestOutput = requestContext.output;
+		hxhx.macro.MacroState.reset();
+		requestContext.registerCleanup("macro-state", hxhx.macro.MacroState.reset);
+		Stage3BackendPluginSupport.resetRequestState();
+		requestContext.registerCleanup("backend-plugin-state", Stage3BackendPluginSupport.resetRequestState);
 		inline function error(msg:String):Int {
 			requestOutput.stdoutLine("hxhx(stage3): " + msg);
 			return 2;
@@ -365,12 +369,6 @@ class Stage3Compiler {
 		final exprMacros = Stage3MacroHostSupport.exprMacroAllowlistFromEnv();
 
 		var macroSession:Null<MacroRuntimeSession> = null;
-		inline function closeMacroSession():Void {
-			if (macroSession != null) {
-				macroSession.close();
-				macroSession = null;
-			}
-		}
 
 		final hostCwd = try Sys.getCwd() catch (_:String) ".";
 		final cwd = absFromCwd(hostCwd, parsedCwd);
@@ -408,7 +406,6 @@ class Stage3Compiler {
 		}
 
 		// Macro state exists even in non-macro runs; it is a no-op unless the macro host calls back.
-		hxhx.macro.MacroState.reset();
 		final libsResolved = Stage3SetupSupport.resolveLibraries(parsedLibs, cwd);
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 			requestOutput.stdoutLine("stage3_driver=libs_resolved count=" + libsResolved.length);
@@ -434,10 +431,16 @@ class Stage3Compiler {
 		final cliMacroRun = Stage3MacroHostSupport.runCliMacrosIfNeeded(macroRuntimeMode, typeOnly, hasConfiguredExternalMacroHostExe(), parsedMacros,
 			exprMacros, runHaxelibMacros, libMacros, macroHostClassPaths, requestOutput);
 		if (cliMacroRun.error != null) {
-			closeMacroSession();
 			return error(cliMacroRun.error);
 		}
 		macroSession = cliMacroRun.session;
+		function closeMacroSession():Void {
+			if (macroSession != null) {
+				macroSession.close();
+				macroSession = null;
+			}
+		}
+		requestContext.registerCleanup("macro-session", closeMacroSession);
 
 		final classPaths = Stage3SetupSupport.projectClassPaths(parsedClassPaths, libsResolved, cwd);
 
@@ -974,6 +977,11 @@ class Stage3Compiler {
 		return runOne(args, requestContext);
 	}
 
+	static function finishRequest(code:Int, context:CompilationRequestContext):Int {
+		final cleanupSucceeded = context.close();
+		return code == 0 && !cleanupSucceeded ? 2 : code;
+	}
+
 	public static function run(args:Array<String>):Int {
 		final wait = try {
 			parseWaitMode(args);
@@ -1010,9 +1018,10 @@ class Stage3Compiler {
 		// Single-unit fast path: keep logs identical for the common bring-up case.
 		if (units.length <= 1) {
 			final context = CompilationRequestContext.direct();
+			if (global.serverReport)
+				context.enableBaselineReport();
 			final code = runRequest(connect.rest, context);
-			context.close();
-			return code;
+			return finishRequest(code, context);
 		}
 
 		// Multi-unit `.hxml` support: run each unit sequentially.
@@ -1045,6 +1054,8 @@ class Stage3Compiler {
 				unitArgs.push("--hxhx-no-emit");
 			if (global.noRun)
 				unitArgs.push("--hxhx-no-run");
+			if (global.serverReport)
+				unitArgs.push("--hxhx-server-report");
 			if (global.emitFullBodies)
 				unitArgs.push("--hxhx-emit-full-bodies");
 
@@ -1063,10 +1074,12 @@ class Stage3Compiler {
 			}
 
 			final context = CompilationRequestContext.direct();
+			if (global.serverReport)
+				context.enableBaselineReport();
 			final code = runRequest(unitArgs, context);
-			context.close();
-			if (code != 0)
-				return code;
+			final finishedCode = finishRequest(code, context);
+			if (finishedCode != 0)
+				return finishedCode;
 		}
 		return 0;
 	}

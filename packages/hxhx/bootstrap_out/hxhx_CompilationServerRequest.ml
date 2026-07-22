@@ -21,6 +21,8 @@ let findFlagValue = fun self (flag : string) -> try let __fallback_result_7 = le
 ) in Obj.magic __fallback_result_7 with
   | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6
 
+let hasInvocationFlag = fun self (flag : string) -> HxArray.indexOf ((Obj.magic self : t).baseArgsValue) flag 0 >= 0 || HxArray.indexOf ((Obj.magic self : t).requestArgsValue) flag 0 >= 0
+
 let copyBytes = fun value -> try let __fallback_result_9 = (
   ignore (if value == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
   HxBytes.sub value 0 (HxBytes.length value)

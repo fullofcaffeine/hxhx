@@ -6,6 +6,7 @@ import hxhx.CompilationServerRequest;
 import hxhx.CompilationServerRequestCodec;
 import hxhx.CompilationServerRequestDispatcher;
 import hxhx.Stage3Compiler;
+import hxhx.macro.MacroState;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -92,6 +93,38 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertTrue(CompilationServerRequestCodec.encodeReply(thrownReply).indexOf("request exploded") >= 0,
 			"thrown compiler request should preserve the original failure");
 
+		final cleanupContext = CompilationRequestContext.server(9);
+		final cleanupOrder = new Array<String>();
+		cleanupContext.registerCleanup("first", () -> cleanupOrder.push("first"));
+		cleanupContext.registerCleanup("second", () -> cleanupOrder.push("second"));
+		assertTrue(cleanupContext.close(), "successful cleanup should report success");
+		assertEquals(cleanupOrder.join(","), "second,first", "request cleanup order");
+		assertTrue(cleanupContext.close(), "a repeated close should retain the first cleanup result");
+		var lateWriteRejected = false;
+		try {
+			cleanupContext.output.stdoutLine("too late");
+		} catch (_:String) {
+			lateWriteRejected = true;
+		}
+		assertTrue(lateWriteRejected, "closed request output should reject a late write");
+
+		final cleanupFailureReply = CompilationServerRequestDispatcher.dispatch(direct, (_, context) -> {
+			context.registerCleanup("broken-fixture", () -> throw "cleanup exploded");
+			return 0;
+		});
+		final cleanupFailureWire = CompilationServerRequestCodec.encodeReply(cleanupFailureReply);
+		assertTrue(cleanupFailureReply.isError, "cleanup failure should fail an otherwise successful request");
+		assertTrue(cleanupFailureWire.indexOf("request cleanup failed [broken-fixture]: cleanup exploded") >= 0,
+			"cleanup failure should reach the requesting client");
+
+		final reportReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(10, ["--hxhx-server-report"], [], null), (_, _) -> 0);
+		final reportWire = CompilationServerRequestCodec.encodeReply(reportReply);
+		assertTrue(!reportReply.isError, "zero-cache baseline report should not fail the request");
+		assertTrue(reportWire.indexOf("hxhx_server_report.request_id=10") >= 0, "baseline report should identify its request");
+		assertTrue(reportWire.indexOf("hxhx_server_report.semantic_cache=disabled") >= 0, "baseline report should say semantic caching is disabled");
+		assertTrue(reportWire.indexOf("hxhx_server_report.semantic_cache_hits=0") >= 0, "baseline report should report zero semantic cache hits");
+		assertTrue(reportWire.indexOf("hxhx_server_report.cleanup=ok") >= 0, "baseline report should include cleanup status");
+
 		final displayReply = CompilationServerRequestDispatcher.dispatch(decoded, (_, _) -> {
 			throw "display request must not invoke the ordinary compile callback";
 		});
@@ -104,13 +137,15 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		final encodedError = CompilationServerRequestCodec.encodeSocketReply(reply([], true));
 		assertEquals(encodedError, "\x02\n", "socket error encoding should use Haxe's error control line");
 
-		final realFailure = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(9, ["--hxhx-no-run", "--hxhx-no-emit"], [], null),
+		MacroState.setDefine("HXHX_STALE_REQUEST_FIXTURE", "old");
+		final realFailure = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(11, ["--hxhx-no-run", "--hxhx-no-emit"], [], null),
 			Stage3Compiler.runRequest);
 		final realFailureWire = CompilationServerRequestCodec.encodeReply(realFailure);
 		assertTrue(realFailure.isError, "a real Stage3 missing-main request should fail");
 		assertTrue(realFailureWire.indexOf("hxhx_macro_runtime_mode=inproc") >= 0, "a real Stage3 request should return normal compiler output to its client");
 		assertTrue(realFailureWire.indexOf("missing -main <TypeName>") >= 0, "a real Stage3 request should return its specific diagnostic to its client");
 		assertTrue(StringTools.endsWith(realFailureWire, "\x02\n"), "a real Stage3 failure should end with Haxe's failure marker");
+		assertTrue(!MacroState.defined("HXHX_STALE_REQUEST_FIXTURE"), "failed request should clear request-global macro state");
 
 		final tmpRoot = ".tmp/m14_compilation_server_request_dispatcher";
 		final srcDir = haxe.io.Path.join([tmpRoot, "src"]);
@@ -118,7 +153,7 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		FileSystem.createDirectory(tmpRoot);
 		FileSystem.createDirectory(srcDir);
 		File.saveContent(haxe.io.Path.join([srcDir, "Main.hx"]), "class Main { static function main():Void {} }\n");
-		final realSuccess = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(10,
+		final realSuccess = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(12,
 			["--hxhx-no-run", "--hxhx-no-emit", "-cp", srcDir, "-main", "Main"], [], null), Stage3Compiler.runRequest);
 		final realSuccessWire = CompilationServerRequestCodec.encodeReply(realSuccess);
 		deleteRecursive(tmpRoot);

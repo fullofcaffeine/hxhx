@@ -12,18 +12,23 @@ package hxhx;
 class CompilationServerRequestDispatcher {
 	public static function dispatch(request:CompilationServerRequest,
 			runOne:(args:Array<String>, context:CompilationRequestContext) -> Int):CompilationServerReply {
+		final context = CompilationRequestContext.server(request.requestId);
+		if (request.hasInvocationFlag("--hxhx-server-report"))
+			context.enableBaselineReport();
 		final displayRequest = request.findFlagValue("--display");
 		#if hxhx_stage0_no_display
-		if (displayRequest != null)
-			return CompilationServerReply.message("hxhx(stage3): display unavailable in stage0 no-display profiling lane", true);
+		if (displayRequest != null) {
+			context.output.stderrLine("hxhx(stage3): display unavailable in stage0 no-display profiling lane");
+			return finish(context, true);
+		}
 		#else
 		if (displayRequest != null) {
 			final displaySource = DisplayResponseSynthesizer.readDisplaySource(displayRequest, request.stdinBytes());
-			return CompilationServerReply.message(DisplayResponseSynthesizer.synthesize(displayRequest, displaySource), false);
+			context.output.stderrLine(DisplayResponseSynthesizer.synthesize(displayRequest, displaySource));
+			return finish(context, false);
 		}
 		#end
 
-		final context = CompilationRequestContext.server(request.requestId);
 		final code = try {
 			runOne(request.invocationArgs(), context);
 		} catch (error:haxe.Exception) {
@@ -35,8 +40,12 @@ class CompilationServerRequestDispatcher {
 		}
 		if (code != 0 && context.output.events().length == 0)
 			context.output.stderrLine("hxhx(stage3): server request failed");
+		return finish(context, code != 0);
+	}
+
+	static function finish(context:CompilationRequestContext, isError:Bool):CompilationServerReply {
+		final cleanupSucceeded = context.close();
 		final events = context.output.events();
-		context.close();
-		return new CompilationServerReply(events, code != 0);
+		return new CompilationServerReply(events, isError || !cleanupSucceeded);
 	}
 }

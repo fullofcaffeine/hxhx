@@ -47,6 +47,10 @@ class CompilationServerRequest {
 		return null;
 	}
 
+	public function hasInvocationFlag(flag:String):Bool {
+		return baseArgsValue.indexOf(flag) >= 0 || requestArgsValue.indexOf(flag) >= 0;
+	}
+
 	static function copyBytes(value:Null<Bytes>):Null<Bytes> {
 		if (value == null)
 			return null;

@@ -13,6 +13,11 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3Backe
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3BackendPluginSupport" } : t)
 
+let resetRequestState = fun () -> ignore ((
+  ignore (Backend_BackendRegistry.clearDynamicRegistrations ());
+  HxHxBackendPluginHost.clear ()
+))
+
 let trim = fun value -> let tempResult = ref ("" : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
     tempMaybeString := __assign_1;
@@ -291,7 +296,7 @@ let appendManifestRequests = fun out source manifestPaths trace output -> ignore
 )) done)
 
 let loadDynamicBackendProviders = fun rawDefines output -> ignore (try (
-  ignore (Backend_BackendRegistry.clearDynamicRegistrations ());
+  ignore (resetRequestState ());
   let trace = isTrueEnv ("HXHX_TRACE_BACKEND_PROVIDERS" : string) in let requests = Obj.magic (HxArray.create ()) in (
     ignore (appendProviderRequests (Obj.magic requests) ("bundled" : string) (Obj.magic (collectBundledBackendProviderTypeNames (Obj.magic rawDefines))) ("bundled-provider" : string));
     ignore (appendManifestRequests (Obj.magic requests) ("bundled" : string) (Obj.magic (collectBundledBackendPluginManifestPaths (Obj.magic rawDefines))) trace (Obj.magic output));

@@ -12,6 +12,8 @@ import hxhx.Stage1Compiler.Stage1Args;
 
 	What
 	- Parses `--hxhx-*` Stage3 control flags.
+	- Removes the opt-in `--hxhx-server-report` flag before ordinary Haxe argument
+	  parsing; the request context owns that lifecycle report.
 	- Maps backend IDs to target define/output hint behavior.
 	- Summarizes per-unit forwarded arguments for trace logging.
 	- Detects whether a flag is already present in a forwarded arg vector.
@@ -39,6 +41,7 @@ class Stage3Args {
 		var emitFullBodies = false;
 		var noEmit = false;
 		var noRun = false;
+		var serverReport = false;
 		final customizations = new Array<String>();
 		final rest = new Array<String>();
 
@@ -75,6 +78,9 @@ class Stage3Args {
 				case "--hxhx-no-run":
 					noRun = true;
 					i += 1;
+				case "--hxhx-server-report":
+					serverReport = true;
+					i += 1;
 				case "--hxhx-emit-full-bodies":
 					emitFullBodies = true;
 					i += 1;
@@ -92,6 +98,7 @@ class Stage3Args {
 			emitFullBodies: emitFullBodies,
 			noEmit: noEmit,
 			noRun: noRun,
+			serverReport: serverReport,
 			customizations: customizations,
 			rest: rest
 		};

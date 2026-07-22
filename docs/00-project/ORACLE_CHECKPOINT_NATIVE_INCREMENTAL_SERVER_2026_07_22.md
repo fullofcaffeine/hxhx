@@ -79,10 +79,18 @@ produce runnable JavaScript, the failed request produces no target file, and
 the server process itself receives no compiler-owned output.
 
 This is still not incremental compilation. Server requests temporarily require
-`--hxhx-no-run` so output from the compiled program cannot escape the response;
-display remains the bring-up response; cancellation, shutdown, complete cleanup
-registration, transactional output, and zero-cache timing reports remain; and
-no semantic result is cached. `haxe_ocaml-850ii.32.1` therefore stays open.
+`--hxhx-no-run` so output from the compiled program cannot escape the response.
+The request context now runs registered cleanup actions in reverse order,
+continues after a cleanup failure, reports that failure to the requesting
+client, closes macro sessions, and clears request-specific macro and backend
+plugin registration state. The opt-in `--hxhx-server-report` response identifies
+the request, includes elapsed time and cleanup status, and truthfully reports
+that semantic caching is disabled with zero entries and zero hits.
+
+Display remains the bring-up response; cancellation, shutdown, a complete audit
+of mutable request state, transactional output, and clean-process equivalence
+remain; and no semantic result is cached. `haxe_ocaml-850ii.32.1` therefore stays
+open.
 README and North Star readiness percentages remain unchanged.
 
 ## Two Connected Workstreams

@@ -32,6 +32,12 @@ typedef Stage3BackendSelection = {
 	- Restrict the helper surface to the one entrypoint `Stage3Compiler` already needs.
 **/
 class Stage3BackendPluginSupport {
+	/** Clear plugin registrations and native-host rows owned by one request. **/
+	public static function resetRequestState():Void {
+		BackendRegistry.clearDynamicRegistrations();
+		NativeBackendPluginHost.clear();
+	}
+
 	static inline function trim(value:String):String {
 		return NullableRuntimeString.trimToEmpty(value);
 	}
@@ -159,7 +165,7 @@ class Stage3BackendPluginSupport {
 		- plugin sources override builtin registrations through source priority bands.
 	**/
 	public static function loadDynamicBackendProviders(rawDefines:Array<String>, ?output:CompilationRequestOutput):Void {
-		BackendRegistry.clearDynamicRegistrations();
+		resetRequestState();
 		final trace = isTrueEnv("HXHX_TRACE_BACKEND_PROVIDERS");
 		final requests = new Array<BackendPluginLoadRequest>();
 

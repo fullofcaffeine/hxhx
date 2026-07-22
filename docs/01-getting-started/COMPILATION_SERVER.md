@@ -36,12 +36,18 @@ three clients receive their own result and the server process stays silent.
 
 This is still an implementation test, not a recommended project workflow.
 Server requests currently require `--hxhx-no-run` so output from the compiled
-program cannot bypass the client response. Display remains a bring-up response,
-and cancellation, shutdown, complete cleanup registration, transactional file
-output, and zero-cache timing reports are not finished. Later steps add those
-lifecycle guarantees, then reusable source, parser, typed-module, display,
-plugin, and target facts only after each layer passes clean-versus-warm
-correctness tests.
+program cannot bypass the client response. Each request now has a cleanup list:
+when the request ends, hxhx closes its macro session and clears request-specific
+macro definitions and backend-plugin registrations before accepting the next
+request. An opt-in `--hxhx-server-report` result identifies the request, reports
+whether cleanup succeeded, measures elapsed time, and explicitly says that the
+semantic cache is disabled with zero entries and zero hits.
+
+Display remains a bring-up response, and cancellation, shutdown, a complete
+audit of all mutable compiler state, transactional file output, and
+clean-process equivalence are not finished. Later steps add those lifecycle
+guarantees, then reusable source, parser, typed-module, display, plugin, and
+target facts only after each layer passes clean-versus-warm correctness tests.
 
 There are two connected implementation tracks. `haxe_ocaml-850ii.33` makes
 upstream Haxe 4.3.7's already-incremental compiler feed complete, safe Reflaxe
@@ -112,6 +118,27 @@ These are different products and should not be confused:
 compilation** means the compiler also knows exactly which previous results are
 safe to reuse and what must be rebuilt. The native `hxhx` work is not complete
 until both parts work together.
+
+### Current no-cache diagnostic report
+
+The in-development native server accepts `--hxhx-server-report` as a base or
+request argument. It adds lines like these to that client's response:
+
+```text
+hxhx_server_report.request_id=3
+hxhx_server_report.server_request=1
+hxhx_server_report.semantic_cache=disabled
+hxhx_server_report.semantic_cache_hits=0
+hxhx_server_report.semantic_cache_entries=0
+hxhx_server_report.cleanup=ok
+hxhx_server_report.elapsed_ms=123
+```
+
+This report is opt-in because elapsed time and internal lifecycle details are
+diagnostic information, not normal compiler output. At this stage, a report of
+zero hits is the expected correct result: hxhx deliberately reparses and
+rechecks every request until cache identities and invalidation rules are proven.
+The report must not be read as evidence that incremental compilation is ready.
 
 ## Current scenario guide
 

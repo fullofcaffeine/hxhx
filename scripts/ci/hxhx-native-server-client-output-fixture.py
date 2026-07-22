@@ -11,7 +11,7 @@ does not poison the long-lived process.
 from __future__ import annotations
 
 import argparse
-import os
+import re
 import socket
 import subprocess
 import sys
@@ -50,6 +50,24 @@ def require_success(result: subprocess.CompletedProcess[str], label: str) -> Non
         )
 
 
+def require_baseline_report(result: subprocess.CompletedProcess[str], label: str) -> int:
+    text = result.stdout + result.stderr
+    required = [
+        "hxhx_server_report.semantic_cache=disabled",
+        "hxhx_server_report.semantic_cache_hits=0",
+        "hxhx_server_report.semantic_cache_entries=0",
+        "hxhx_server_report.cleanup=ok",
+        "hxhx_server_report.elapsed_ms=",
+    ]
+    for marker in required:
+        if marker not in text:
+            raise RuntimeError(f"{label} is missing baseline report marker {marker!r}: {text!r}")
+    match = re.search(r"hxhx_server_report\.request_id=(\d+)", text)
+    if match is None:
+        raise RuntimeError(f"{label} is missing its request ID: {text!r}")
+    return int(match.group(1))
+
+
 def main() -> int:
     args = parse_args()
     hxhx_bin = args.hxhx_bin.resolve()
@@ -71,7 +89,8 @@ def main() -> int:
     server_stderr_path = fixture_root / "server.stderr"
 
     endpoint = f"127.0.0.1:{reserve_port()}"
-    base_args = ["--hxhx-no-run", "--js", str(artifact)]
+    base_args = ["--hxhx-no-run", "--hxhx-server-report", "--js", str(artifact)]
+    request_ids: List[int] = []
 
     test_error: Optional[BaseException] = None
     server_stdout = ""
@@ -98,6 +117,7 @@ def main() -> int:
                 if last.returncode == 0:
                     if '[{"diagnostics":[]}]' not in last.stderr:
                         raise RuntimeError(f"unexpected display response: {last.stderr!r}")
+                    request_ids.append(require_baseline_report(last, "display request"))
                     break
             else:
                 raise RuntimeError(
@@ -112,6 +132,7 @@ def main() -> int:
                 ["-cp", str(classpath), "-main", "SocketCompileMain"],
             )
             require_success(first_success, "first ordinary socket compile")
+            request_ids.append(require_baseline_report(first_success, "first ordinary socket compile"))
             if "resolved_modules=" not in first_success.stdout or "stage3=ok" not in first_success.stdout:
                 raise RuntimeError(f"compiler progress did not reach the first client: {first_success.stdout!r}")
             if not artifact.is_file():
@@ -133,6 +154,7 @@ def main() -> int:
             )
             if expected_failure.returncode == 0:
                 raise RuntimeError("missing-main socket request unexpectedly succeeded")
+            request_ids.append(require_baseline_report(expected_failure, "missing-main socket request"))
             failure_text = expected_failure.stdout + expected_failure.stderr
             if "resolve failed" not in failure_text or "MissingSocketMain" not in failure_text:
                 raise RuntimeError(f"missing-main diagnostic did not reach its client: {failure_text!r}")
@@ -146,6 +168,7 @@ def main() -> int:
                 ["-cp", str(classpath), "-main", "SocketCompileMain"],
             )
             require_success(second_success, "second ordinary socket compile")
+            request_ids.append(require_baseline_report(second_success, "second ordinary socket compile"))
             if "resolved_modules=" not in second_success.stdout or "stage3=ok" not in second_success.stdout:
                 raise RuntimeError(f"compiler progress did not reach the second client: {second_success.stdout!r}")
             if not artifact.is_file():
@@ -157,6 +180,8 @@ def main() -> int:
             require_success(second_run, "second socket-generated program")
             if second_run.stdout.strip() != "socket-compile-ok":
                 raise RuntimeError(f"unexpected second generated-program output: {second_run.stdout!r}")
+            if request_ids != sorted(set(request_ids)):
+                raise RuntimeError(f"server request IDs were not unique and increasing: {request_ids!r}")
         except BaseException as error:
             test_error = error
         finally:
