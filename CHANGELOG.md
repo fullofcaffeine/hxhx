@@ -1,3 +1,10 @@
+## [0.23.17](https://github.com/fullofcaffeine/hxhx/compare/v0.23.16...v0.23.17) (2026-07-22)
+
+
+### Bug Fixes
+
+* **server:** clean state after each native request ([551f25b](https://github.com/fullofcaffeine/hxhx/commit/551f25b8ac15e05b6145c27a03fba602944d3c1e))
+
 ## [0.23.16](https://github.com/fullofcaffeine/hxhx/compare/v0.23.15...v0.23.16) (2026-07-22)
 
 
