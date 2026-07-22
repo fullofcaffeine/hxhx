@@ -1,3 +1,10 @@
+# [0.24.0](https://github.com/fullofcaffeine/hxhx/compare/v0.23.18...v0.24.0) (2026-07-22)
+
+
+### Features
+
+* **server:** add acknowledged native shutdown ([4324f39](https://github.com/fullofcaffeine/hxhx/commit/4324f391f1de32ca5e7025006f7d368c7894e56e))
+
 ## [0.23.18](https://github.com/fullofcaffeine/hxhx/compare/v0.23.17...v0.23.18) (2026-07-22)
 
 
