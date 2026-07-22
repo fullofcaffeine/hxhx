@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable requestId : int; mutable output : Hxhx_CompilationRequestOutput.t; mutable isServerRequest : bool; mutable cleanupActions : Obj.t HxArray.t; mutable startedAtSeconds : float; mutable closed : bool; mutable cleanupSucceeded : bool; mutable baselineReportEnabled : bool }
+type t = { __hx_type : Obj.t; mutable requestId : int; mutable output : Hxhx_CompilationRequestOutput.t; mutable isServerRequest : bool; mutable cleanupActions : Obj.t HxArray.t; mutable startedAtSeconds : float; mutable closed : bool; mutable cleanupSucceeded : bool; mutable baselineReportEnabled : bool; mutable deadlineAtSeconds : Obj.t; mutable cancellationReason : string; mutable cancellationStage : string; mutable cancellationReported : bool }
 
-let create = fun requestId2 bufferOutput isServerRequest2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestContext"; requestId = 0; output = Obj.magic (HxRuntime.hx_null); isServerRequest = false; cleanupActions = Obj.magic (HxRuntime.hx_null); startedAtSeconds = 0.; closed = false; cleanupSucceeded = false; baselineReportEnabled = false } : t) in (
+let create = fun requestId2 bufferOutput isServerRequest2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestContext"; requestId = 0; output = Obj.magic (HxRuntime.hx_null); isServerRequest = false; cleanupActions = Obj.magic (HxRuntime.hx_null); startedAtSeconds = 0.; closed = false; cleanupSucceeded = false; baselineReportEnabled = false; deadlineAtSeconds = HxRuntime.hx_null; cancellationReason = Obj.magic (HxRuntime.hx_null); cancellationStage = Obj.magic (HxRuntime.hx_null); cancellationReported = false } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = requestId2 in (
       (__place_receiver_1 : t).requestId <- __place_rhs_2;
@@ -36,41 +36,70 @@ let create = fun requestId2 bufferOutput isServerRequest2 -> let self = ({ __hx_
       (Obj.magic self : t).cleanupSucceeded <- __assign_9;
       __assign_9
     ));
-    let __assign_10 = false in (
+    ignore (let __assign_10 = false in (
       (Obj.magic self : t).baselineReportEnabled <- __assign_10;
       __assign_10
+    ));
+    ignore (let __assign_11 = Obj.magic (HxRuntime.hx_null) in (
+      (Obj.magic self : t).deadlineAtSeconds <- __assign_11;
+      __assign_11
+    ));
+    ignore (let __assign_12 = Obj.magic (HxRuntime.hx_null) in (
+      (Obj.magic self : t).cancellationReason <- __assign_12;
+      __assign_12
+    ));
+    ignore (let __assign_13 = Obj.magic (HxRuntime.hx_null) in (
+      (Obj.magic self : t).cancellationStage <- __assign_13;
+      __assign_13
+    ));
+    let __assign_14 = false in (
+      (Obj.magic self : t).cancellationReported <- __assign_14;
+      __assign_14
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestContext"; requestId = 0; output = Obj.magic (HxRuntime.hx_null); isServerRequest = false; cleanupActions = Obj.magic (HxRuntime.hx_null); startedAtSeconds = 0.; closed = false; cleanupSucceeded = false; baselineReportEnabled = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestContext"; requestId = 0; output = Obj.magic (HxRuntime.hx_null); isServerRequest = false; cleanupActions = Obj.magic (HxRuntime.hx_null); startedAtSeconds = 0.; closed = false; cleanupSucceeded = false; baselineReportEnabled = false; deadlineAtSeconds = HxRuntime.hx_null; cancellationReason = Obj.magic (HxRuntime.hx_null); cancellationStage = Obj.magic (HxRuntime.hx_null); cancellationReported = false } : t)
 
 let enableBaselineReport = fun self () -> ignore (ignore ((
   ignore (if (Obj.magic self : t).closed then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request context is already closed") ["Dynamic"; "String"]) else ());
-  let __assign_11 = true in (
-    (Obj.magic self : t).baselineReportEnabled <- __assign_11;
-    __assign_11
+  let __assign_15 = true in (
+    (Obj.magic self : t).baselineReportEnabled <- __assign_15;
+    __assign_15
   )
 )))
+
+let isCancelled = fun self () -> (Obj.magic self : t).cancellationReason != Obj.magic (HxRuntime.hx_null)
 
 let registerCleanup = fun self (name : string) (action : unit -> unit) -> ignore (ignore ((
   ignore (if (Obj.magic self : t).closed then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request context is already closed") ["Dynamic"; "String"]) else ());
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length (StringTools.trim (name : string)) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request cleanup name is required") ["Dynamic"; "String"]) else ());
   ignore (if action == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request cleanup action is required") ["Dynamic"; "String"]) else ());
-  HxArray.push ((Obj.magic self : t).cleanupActions) (let __anon_12 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_12 "name" (Obj.repr (StringTools.trim (name : string))));
-    ignore (HxAnon.set __anon_12 "action" (Obj.repr action));
-    __anon_12
+  HxArray.push ((Obj.magic self : t).cleanupActions) (let __anon_27 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_27 "name" (Obj.repr (StringTools.trim (name : string))));
+    ignore (HxAnon.set __anon_27 "action" (Obj.repr action));
+    __anon_27
   ))
 )))
 
 let isClosed = fun self () -> (Obj.magic self : t).closed
 
+let ensureOpen = fun self () -> ignore (ignore (if (Obj.magic self : t).closed then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request context is already closed") ["Dynamic"; "String"]) else ()))
+
+let configureTimeoutMs = fun self (timeoutMs : int) -> ignore (ignore ((
+  ignore (ensureOpen (Obj.magic self) ());
+  ignore (if timeoutMs < 0 || timeoutMs > 86400000 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request timeout is outside the supported range") ["Dynamic"; "String"]) else ());
+  let __assign_16 = Obj.magic (Obj.repr ((Obj.magic self : t).startedAtSeconds +. float_of_int timeoutMs /. 1000.0)) in (
+    (Obj.magic self : t).deadlineAtSeconds <- __assign_16;
+    __assign_16
+  )
+)))
+
 let reportCleanupFailure = fun self (name : string) (message : string) -> ignore (ignore ((
-  ignore (let __assign_20 = false in (
-    (Obj.magic self : t).cleanupSucceeded <- __assign_20;
-    __assign_20
+  ignore (let __assign_35 = false in (
+    (Obj.magic self : t).cleanupSucceeded <- __assign_35;
+    __assign_35
   ));
   Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx(stage3): request cleanup failed [" ^ HxString.toStdString name) ^ "]: ") ^ HxString.toStdString message : string)
 )))
@@ -78,36 +107,50 @@ let reportCleanupFailure = fun self (name : string) (message : string) -> ignore
 let emitBaselineReport = fun self () -> ignore (ignore (let elapsedMs = int_of_float (Math.max (float_of_int 0) ((HxSys.time () -. (Obj.magic self : t).startedAtSeconds) *. float_of_int 1000)) in (
   ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.request_id=" ^ string_of_int ((Obj.magic self : t).requestId) : string));
   let tempString = ref ("" : string) in (
-    ignore (if (Obj.magic self : t).isServerRequest then let __assign_21 = ("1" : string) in (
-      tempString := __assign_21;
-      __assign_21
-    ) else let __assign_22 = ("0" : string) in (
-      tempString := __assign_22;
-      __assign_22
+    ignore (if (Obj.magic self : t).isServerRequest then let __assign_36 = ("1" : string) in (
+      tempString := __assign_36;
+      __assign_36
+    ) else let __assign_37 = ("0" : string) in (
+      tempString := __assign_37;
+      __assign_37
     ));
     ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.server_request=" ^ HxString.toStdString (!tempString) : string));
     ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.semantic_cache=disabled" : string));
     ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.semantic_cache_hits=0" : string));
     ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.semantic_cache_entries=0" : string));
     let tempString1 = ref ("" : string) in (
-      ignore (if (Obj.magic self : t).cleanupSucceeded then let __assign_23 = ("ok" : string) in (
-        tempString1 := __assign_23;
-        __assign_23
-      ) else let __assign_24 = ("failed" : string) in (
-        tempString1 := __assign_24;
-        __assign_24
+      ignore (if isCancelled (Obj.magic self) () then let __assign_38 = ("1" : string) in (
+        tempString1 := __assign_38;
+        __assign_38
+      ) else let __assign_39 = ("0" : string) in (
+        tempString1 := __assign_39;
+        __assign_39
       ));
-      ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cleanup=" ^ HxString.toStdString (!tempString1) : string));
-      Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.elapsed_ms=" ^ string_of_int elapsedMs : string)
+      ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cancelled=" ^ HxString.toStdString (!tempString1) : string));
+      ignore (if (Obj.magic self : t).cancellationReason != Obj.magic (HxRuntime.hx_null) then ignore ((
+        ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cancellation_reason=" ^ HxString.toStdString ((Obj.magic self : t).cancellationReason) : string));
+        Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cancellation_stage=" ^ HxString.toStdString ((Obj.magic self : t).cancellationStage) : string)
+      )) else ());
+      let tempString2 = ref ("" : string) in (
+        ignore (if (Obj.magic self : t).cleanupSucceeded then let __assign_40 = ("ok" : string) in (
+          tempString2 := __assign_40;
+          __assign_40
+        ) else let __assign_41 = ("failed" : string) in (
+          tempString2 := __assign_41;
+          __assign_41
+        ));
+        ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.cleanup=" ^ HxString.toStdString (!tempString2) : string));
+        Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ("hxhx_server_report.elapsed_ms=" ^ string_of_int elapsedMs : string)
+      )
     )
   )
 )))
 
-let close = fun self () -> try let __fallback_result_19 = (
+let close = fun self () -> try let __fallback_result_34 = (
   ignore (if (Obj.magic self : t).closed then raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic self : t).cleanupSucceeded))) else ());
-  ignore (let __assign_13 = true in (
-    (Obj.magic self : t).closed <- __assign_13;
-    __assign_13
+  ignore (let __assign_28 = true in (
+    (Obj.magic self : t).closed <- __assign_28;
+    __assign_28
   ));
   let index = ref (HxArray.length ((Obj.magic self : t).cleanupActions)) in (
     ignore (while !index > 0 do ignore ((
@@ -115,30 +158,77 @@ let close = fun self () -> try let __fallback_result_19 = (
       let cleanup = HxArray.get (Obj.magic ((Obj.magic self : t).cleanupActions)) (!index) in try Obj.obj (HxAnon.get cleanup "action") () with
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_14 -> raise (HxRuntime.Hx_return __ret_14)
-        | HxRuntime.Hx_exception (__exn_v_15, __exn_tags_16) -> if true then let error = (if HxRuntime.tags_has __exn_tags_16 "haxe.Exception" then Obj.obj __exn_v_15 else Obj.magic (Haxe_ValueException.create __exn_v_15 (Obj.magic (HxRuntime.hx_null)) __exn_v_15) : Haxe_Exception.t) in (
+        | HxRuntime.Hx_return __ret_29 -> raise (HxRuntime.Hx_return __ret_29)
+        | HxRuntime.Hx_exception (__exn_v_30, __exn_tags_31) -> if true then let error = (if HxRuntime.tags_has __exn_tags_31 "haxe.Exception" then Obj.obj __exn_v_30 else Obj.magic (Haxe_ValueException.create __exn_v_30 (Obj.magic (HxRuntime.hx_null)) __exn_v_30) : Haxe_Exception.t) in (
           ignore error;
           reportCleanupFailure (Obj.magic self) (Obj.obj (HxAnon.get cleanup "name") : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string)
-        ) else if HxRuntime.tags_has __exn_tags_16 "String" then let error = (Obj.obj __exn_v_15 : string) in (
+        ) else if HxRuntime.tags_has __exn_tags_31 "String" then let error = (Obj.obj __exn_v_30 : string) in (
           ignore error;
           reportCleanupFailure (Obj.magic self) (Obj.obj (HxAnon.get cleanup "name") : string) (error : string)
-        ) else HxRuntime.hx_throw_typed __exn_v_15 __exn_tags_16
-        | __exn_17 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_17) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_17) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_17)) : Haxe_Exception.t) in (
+        ) else HxRuntime.hx_throw_typed __exn_v_30 __exn_tags_31
+        | __exn_32 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_32) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_32) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_32)) : Haxe_Exception.t) in (
           ignore error;
           reportCleanupFailure (Obj.magic self) (Obj.obj (HxAnon.get cleanup "name") : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string)
-        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_17) : string) in (
+        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_32) : string) in (
           ignore error;
           reportCleanupFailure (Obj.magic self) (Obj.obj (HxAnon.get cleanup "name") : string) (error : string)
-        ) else raise (__exn_17)
+        ) else raise (__exn_32)
     )) done);
     ignore (HxArray.resize ((Obj.magic self : t).cleanupActions) 0);
     ignore (if (Obj.magic self : t).baselineReportEnabled then ignore (emitBaselineReport (Obj.magic self) ()) else ());
     ignore (Hxhx_CompilationRequestOutput.close (Obj.magic ((Obj.magic self : t).output)) ());
     (Obj.magic self : t).cleanupSucceeded
   )
-) in Obj.magic __fallback_result_19 with
-  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
+) in Obj.magic __fallback_result_34 with
+  | HxRuntime.Hx_return __ret_33 -> Obj.obj __ret_33
 
 let direct = fun () -> create 0 false false
 
 let server = fun requestId2 -> create requestId2 true true
+
+let normalizeLabel = fun value -> try let __fallback_result_43 = (
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  HxArray.join (HxString.split (HxArray.join (HxString.split (StringTools.trim (value : string)) "\r") " " (fun x -> x)) "\n") " " (fun x -> x)
+) in Obj.magic __fallback_result_43 with
+  | HxRuntime.Hx_return __ret_42 -> Obj.obj __ret_42
+
+let requestCancellation = fun self (reason : string) -> ignore (ignore (try (
+  ignore (ensureOpen (Obj.magic self) ());
+  ignore (if (Obj.magic self : t).cancellationReason != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  let normalized = (normalizeLabel (reason : string) : string) in (
+    ignore (if HxString.length normalized = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "compiler request cancellation reason is required") ["Dynamic"; "String"]) else ());
+    let __assign_17 = (normalized : string) in (
+      (Obj.magic self : t).cancellationReason <- __assign_17;
+      __assign_17
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18))
+
+let checkpoint = fun self (stage : string) -> try let __fallback_result_26 = (
+  ignore (ensureOpen (Obj.magic self) ());
+  ignore (if (Obj.magic self : t).cancellationReason == Obj.magic (HxRuntime.hx_null) && (Obj.magic self : t).deadlineAtSeconds != HxRuntime.hx_null && (let __nullable_19 = HxSys.time () in let __nullable_20 = (Obj.magic self : t).deadlineAtSeconds in if __nullable_20 == HxRuntime.hx_null then false else __nullable_19 >= Obj.obj __nullable_20) then ignore (requestCancellation (Obj.magic self) ("deadline-exceeded" : string)) else ());
+  ignore (if (Obj.magic self : t).cancellationReason == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if (Obj.magic self : t).cancellationStage == Obj.magic (HxRuntime.hx_null) then ignore (let normalizedStage = (normalizeLabel (stage : string) : string) in let tempRight = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if HxString.length normalizedStage = 0 then let __assign_21 = Obj.magic ("unspecified" : string) in (
+      tempRight := __assign_21;
+      __assign_21
+    ) else let __assign_22 = Obj.magic (normalizedStage : string) in (
+      tempRight := __assign_22;
+      __assign_22
+    ));
+    let __assign_23 = (!tempRight : string) in (
+      (Obj.magic self : t).cancellationStage <- __assign_23;
+      __assign_23
+    )
+  )) else ());
+  ignore (if not ((Obj.magic self : t).cancellationReported) then ignore ((
+    ignore (let __assign_24 = true in (
+      (Obj.magic self : t).cancellationReported <- __assign_24;
+      __assign_24
+    ));
+    Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx(stage3): request cancelled [" ^ HxString.toStdString ((Obj.magic self : t).cancellationReason)) ^ "] at ") ^ HxString.toStdString ((Obj.magic self : t).cancellationStage) : string)
+  )) else ());
+  false
+) in Obj.magic __fallback_result_26 with
+  | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25

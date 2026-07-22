@@ -12,6 +12,20 @@ let requestArgs = fun self () -> HxArray.copy ((Obj.magic self : t).requestArgsV
 
 let invocationArgs = fun self () -> HxArray.concat ((Obj.magic self : t).baseArgsValue) ((Obj.magic self : t).requestArgsValue)
 
+let compilerArgs = fun self () -> let filteredRequestArgs = Obj.magic (HxArray.create ()) in let index = ref 0 in (
+  ignore (try while !index < HxArray.length ((Obj.magic self : t).requestArgsValue) do try ignore ((
+    ignore (if HxString.equals (HxArray.get (Obj.magic ((Obj.magic self : t).requestArgsValue)) (!index)) "--hxhx-server-timeout-ms" then ignore ((
+      ignore (index := HxInt.add (!index) 2);
+      raise (HxRuntime.Hx_continue)
+    )) else ());
+    ignore (HxArray.push filteredRequestArgs (HxArray.get (Obj.magic ((Obj.magic self : t).requestArgsValue)) (!index)));
+    index := HxInt.add (!index) 1
+  )) with
+    | HxRuntime.Hx_continue -> () done with
+    | HxRuntime.Hx_break -> ());
+  HxArray.concat ((Obj.magic self : t).baseArgsValue) filteredRequestArgs
+)
+
 let findFlagValue = fun self (flag : string) -> try let __fallback_result_7 = let i = ref 0 in (
   ignore (while !i < HxArray.length ((Obj.magic self : t).requestArgsValue) do ignore ((
     ignore (if HxString.equals (HxArray.get (Obj.magic ((Obj.magic self : t).requestArgsValue)) (!i)) flag && HxInt.add (!i) 1 < HxArray.length ((Obj.magic self : t).requestArgsValue) then raise (HxRuntime.Hx_return (Obj.repr (HxArray.get (Obj.magic ((Obj.magic self : t).requestArgsValue)) (HxInt.add (!i) 1) : string))) else ());

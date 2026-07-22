@@ -292,6 +292,8 @@ class Stage3Compiler {
 			return error(e);
 		}
 		final rest = g.rest;
+		if (!requestContext.checkpoint("setup"))
+			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		MacroRuntimeMode.emitMarker(macroRuntimeMode, requestOutput);
 		final targetOutputHintRaw = findTargetOutputFileHint(rest, backendId);
 		final targetOutputDirHintRaw = findTargetOutputDirectoryHint(rest, backendId);
@@ -428,6 +430,8 @@ class Stage3Compiler {
 
 		final macroHostClassPaths = Stage3SetupSupport.macroHostClassPaths(parsedClassPaths, libsResolved, cwd);
 
+		if (!requestContext.checkpoint("macros"))
+			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final cliMacroRun = Stage3MacroHostSupport.runCliMacrosIfNeeded(macroRuntimeMode, typeOnly, hasConfiguredExternalMacroHostExe(), parsedMacros,
 			exprMacros, runHaxelibMacros, libMacros, macroHostClassPaths, requestOutput);
 		if (cliMacroRun.error != null) {
@@ -458,6 +462,8 @@ class Stage3Compiler {
 		}
 
 		final roots = roots0.concat(hxhx.macro.MacroState.listIncludedModules());
+		if (!requestContext.checkpoint("resolution"))
+			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final resolved = try {
 			if (noEmit && !typeOnly)
 				ResolverStage.parseProjectRootsShallow(classPaths, roots, definesMap)
@@ -472,6 +478,8 @@ class Stage3Compiler {
 		}
 		if (resolved.length == 0)
 			return error("resolver returned an empty module graph");
+		if (!requestContext.checkpoint("typing"))
+			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		requestOutput.stdoutLine("resolved_modules=" + resolved.length);
 		if (backendId == "java-native") {
 			final overloadDiagnostic = JavaNoEmitDiagnostics.overloadCollisionDiagnosticForResolved(resolved);
@@ -552,6 +560,8 @@ class Stage3Compiler {
 				hxhx.macro.MacroState.setBuildFieldsPayload(buildFieldsPayloadForParsed(pm));
 
 				for (i in 0...exprs.length) {
+					if (!requestContext.checkpoint("macros"))
+						return CompilationRequestContext.CANCELLED_EXIT_CODE;
 					final expr = exprs[i];
 					requestOutput.stdoutLine("build_macro[" + modulePath + "][" + i + "]=" + expr);
 					try {
@@ -696,6 +706,8 @@ class Stage3Compiler {
 			final toType = resolvedForTyping.copy();
 			var cursor = 0;
 			while (cursor < toType.length) {
+				if (!requestContext.checkpoint("typing"))
+					return CompilationRequestContext.CANCELLED_EXIT_CODE;
 				final m = toType[cursor];
 				cursor += 1;
 				try {
@@ -754,6 +766,8 @@ class Stage3Compiler {
 			if (rootTyped != null)
 				Stage3DiagnosticsSupport.printTypedFunctionSummary(rootTyped, requestOutput);
 
+			if (!requestContext.checkpoint("hooks"))
+				return CompilationRequestContext.CANCELLED_EXIT_CODE;
 			final typeOnlyHookError = Stage3HookSupport.runStandardMacroHooks(macroSession, requestOutput);
 			if (typeOnlyHookError != null) {
 				closeMacroSession();
@@ -802,6 +816,8 @@ class Stage3Compiler {
 		final toType = initialModulesToType.copy();
 		var cursor = 0;
 		while (cursor < toType.length) {
+			if (!requestContext.checkpoint("typing"))
+				return CompilationRequestContext.CANCELLED_EXIT_CODE;
 			final m = toType[cursor];
 			cursor += 1;
 			try {
@@ -834,6 +850,8 @@ class Stage3Compiler {
 			return error("type failed during shared operator lowering: " + e);
 		}
 
+		if (!requestContext.checkpoint("hooks"))
+			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final hookError = Stage3HookSupport.runStandardMacroHooks(macroSession, requestOutput);
 		if (hookError != null) {
 			closeMacroSession();
@@ -916,6 +934,8 @@ class Stage3Compiler {
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 			requestOutput.stdoutLine("stage3_driver=before_expand typed_modules=" + typedModules.length + " generated_modules=" + generated.length);
 		}
+		if (!requestContext.checkpoint("normalization"))
+			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final expanded = MacroStage.expandProgram(typedModules, generated);
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 			requestOutput.stdoutLine("stage3_driver=after_expand");
@@ -930,6 +950,8 @@ class Stage3Compiler {
 			for (i in 0...nekoNdllPaths.length)
 				requestOutput.stdoutLine("stage3_driver=neko_ndll_path[" + i + "]=" + nekoNdllPaths[i]);
 		}
+		if (!requestContext.checkpoint("emission"))
+			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final emitted = try {
 			Stage3EmitSupport.emitWithBackend(backend, expanded, backendId, typedModules.length, cwd, outAbs, targetOutputHintRaw, targetOutputDirHintRaw,
 				parsedMain, emitFullBodies, supportsCustomOutputFile, supportsBuildExecutable, definesMap, backendResources, nekoNdllPaths, requestOutput);
@@ -945,6 +967,8 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error("emit failed: " + formatDynamicException(e));
 		}
+		if (!requestContext.checkpoint("publication"))
+			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 
 		requestOutput.stdoutLine("stage3=ok");
 		requestOutput.stdoutLine("outDir=" + outAbs);
@@ -956,6 +980,8 @@ class Stage3Compiler {
 
 		closeMacroSession();
 
+		if (!requestContext.checkpoint("execution"))
+			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final runError = Stage3RunSupport.runEmittedArtifact(backendId, parsedHadCmd, parsedCmdCommands, parsedHadRun, parsedRunArgs, cwd, emitted, noRun,
 			nekoNdllPaths, requestOutput);
 		if (runError != null)
@@ -974,6 +1000,8 @@ class Stage3Compiler {
 	public static function runRequest(args:Array<String>, requestContext:CompilationRequestContext):Int {
 		if (requestContext == null || requestContext.isClosed())
 			throw "compiler request context must be open";
+		if (!requestContext.checkpoint("compiler-start"))
+			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		return runOne(args, requestContext);
 	}
 

@@ -49,6 +49,12 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertTrue(CompilationServerProtocol.requestLengthProblem(-1).indexOf("negative") >= 0, "negative request length should be rejected");
 		assertTrue(CompilationServerProtocol.requestLengthProblem(CompilationServerProtocol.MAX_REQUEST_BYTES + 1).indexOf("maximum") >= 0,
 			"request over the byte limit should be rejected");
+		assertTrue(CompilationServerProtocol.parseRequestTimeoutMs("0") == 0, "zero timeout should request cancellation at the first checkpoint");
+		assertTrue(CompilationServerProtocol.parseRequestTimeoutMs("250") == 250, "decimal timeout should be accepted");
+		assertTrue(CompilationServerProtocol.parseRequestTimeoutMs("-1") == null, "negative timeout should be rejected");
+		assertTrue(CompilationServerProtocol.parseRequestTimeoutMs("1ms") == null, "timeout units should not be accepted inside the numeric value");
+		assertTrue(CompilationServerProtocol.parseRequestTimeoutMs(Std.string(CompilationServerProtocol.MAX_REQUEST_TIMEOUT_MS + 1)) == null,
+			"timeout above the protocol maximum should be rejected");
 
 		final baseArgs = ["--hxhx-no-emit", "--hxhx-out", "out"];
 		final requestArgs = ["-cp", "src", "-main", "Main"];
@@ -56,6 +62,15 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		baseArgs[0] = "mutated base";
 		requestArgs[0] = "mutated request";
 		assertArgs(direct.invocationArgs(), ["--hxhx-no-emit", "--hxhx-out", "out", "-cp", "src", "-main", "Main"], "request constructor copy");
+		final timedArgs = new CompilationServerRequest(70, ["--hxhx-no-run"], [
+			"-main",
+			"Main",
+			CompilationServerProtocol.REQUEST_TIMEOUT_FLAG,
+			"25",
+			"-cp",
+			"src"
+		], null);
+		assertArgs(timedArgs.compilerArgs(), ["--hxhx-no-run", "-main", "Main", "-cp", "src"], "server timeout removal from compiler arguments");
 
 		final firstInput = direct.stdinBytes();
 		assertTrue(firstInput != null, "request should return copied display input");
@@ -117,6 +132,16 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		}
 		assertTrue(lateWriteRejected, "closed request output should reject a late write");
 
+		final cancelledContext = CompilationRequestContext.server(90);
+		cancelledContext.requestCancellation("fixture-request");
+		assertTrue(!cancelledContext.checkpoint("fixture-stage"), "cancelled request should stop at its next checkpoint");
+		assertTrue(!cancelledContext.checkpoint("later-stage"), "cancelled request should remain cancelled");
+		final cancellationEvents = cancelledContext.output.events();
+		assertTrue(cancellationEvents.length == 1, "cancellation should emit one diagnostic even across repeated checkpoints");
+		assertTrue(cancellationEvents[0].text.indexOf("request cancelled [fixture-request] at fixture-stage") >= 0,
+			"cancellation diagnostic should identify its reason and first observed stage");
+		assertTrue(cancelledContext.close(), "cancelled request should still close cleanly");
+
 		final cleanupFailureReply = CompilationServerRequestDispatcher.dispatch(direct, (_, context) -> {
 			context.registerCleanup("broken-fixture", () -> throw "cleanup exploded");
 			return 0;
@@ -133,15 +158,51 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		assertTrue(reportWire.indexOf("hxhx_server_report.semantic_cache=disabled") >= 0, "baseline report should say semantic caching is disabled");
 		assertTrue(reportWire.indexOf("hxhx_server_report.semantic_cache_hits=0") >= 0, "baseline report should report zero semantic cache hits");
 		assertTrue(reportWire.indexOf("hxhx_server_report.cleanup=ok") >= 0, "baseline report should include cleanup status");
+		assertTrue(reportWire.indexOf("hxhx_server_report.cancelled=0") >= 0, "baseline report should say an ordinary request was not cancelled");
 
-		final shutdownReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(13, [], ["--hxhx-server-control", "shutdown"], null),
+		var timedCompileCalls = 0;
+		final timedReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(12, ["--hxhx-server-report"],
+			[CompilationServerProtocol.REQUEST_TIMEOUT_FLAG, "0", "-main", "Main"], null),
+			(_, _) -> {
+				timedCompileCalls += 1;
+				return 0;
+			});
+		final timedWire = CompilationServerRequestCodec.encodeReply(timedReply);
+		assertTrue(timedCompileCalls == 0, "an expired request should stop before calling the compiler");
+		assertTrue(timedReply.isError, "an expired request should return an error reply");
+		assertTrue(timedWire.indexOf("request cancelled [deadline-exceeded] at request-dispatch") >= 0,
+			"expired request should identify its cancellation boundary");
+		assertTrue(timedWire.indexOf("hxhx_server_report.cancelled=1") >= 0, "expired request report should record cancellation");
+		assertTrue(timedWire.indexOf("hxhx_server_report.cancellation_reason=deadline-exceeded") >= 0, "expired request report should record its reason");
+
+		var invalidTimeoutCompileCalls = 0;
+		final invalidTimeoutReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(13, [],
+			[CompilationServerProtocol.REQUEST_TIMEOUT_FLAG, "soon"], null), (_, _) -> {
+				invalidTimeoutCompileCalls += 1;
+				return 0;
+			});
+		assertTrue(invalidTimeoutCompileCalls == 0, "invalid timeout should fail before calling the compiler");
+		assertTrue(invalidTimeoutReply.isError, "invalid timeout should return an error reply");
+		assertTrue(CompilationServerRequestCodec.encodeReply(invalidTimeoutReply).indexOf("must be a decimal integer") >= 0,
+			"invalid timeout should explain the accepted format");
+
+		final cooperativeCancellationReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(131, [], [], null), (_, context) -> {
+			context.requestCancellation("fixture-mid-request");
+			return context.checkpoint("fixture-compiler-stage") ? 0 : CompilationRequestContext.CANCELLED_EXIT_CODE;
+		});
+		final cooperativeCancellationWire = CompilationServerRequestCodec.encodeReply(cooperativeCancellationReply);
+		assertTrue(cooperativeCancellationReply.isError, "compiler-stage cancellation should fail only its request");
+		assertTrue(cooperativeCancellationWire.indexOf("request cancelled [fixture-mid-request] at fixture-compiler-stage") >= 0,
+			"compiler-stage cancellation should preserve its first observed stage");
+
+		final shutdownReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(14, [], ["--hxhx-server-control", "shutdown"], null),
 			(_, _) -> throw "shutdown must not compile");
 		assertTrue(!shutdownReply.isError, "shutdown control should succeed");
 		assertTrue(shutdownReply.stopServer, "shutdown control should ask its transport to stop");
 		assertTrue(CompilationServerRequestCodec.encodeReply(shutdownReply).indexOf("hxhx_server_control.shutdown=ok") >= 0,
 			"shutdown response should confirm the requested control");
 
-		final unknownControlReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(14, [], ["--hxhx-server-control", "restart"],
+		final unknownControlReply = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(15, [], ["--hxhx-server-control", "restart"],
 			null), (_, _) -> throw "unknown control must not compile");
 		assertTrue(unknownControlReply.isError, "unknown server control should fail");
 		assertTrue(!unknownControlReply.stopServer, "unknown server control should keep the transport running");

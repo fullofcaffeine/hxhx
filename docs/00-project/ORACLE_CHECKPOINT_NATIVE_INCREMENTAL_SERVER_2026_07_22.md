@@ -90,9 +90,15 @@ that semantic caching is disabled with zero entries and zero hits.
 Display remains the bring-up response. Both transports now support an explicit,
 hxhx-specific shutdown request. The server sends a confirmation to the client,
 runs the request cleanup contract, and exits successfully only when cleanup
-succeeds. Unknown controls fail without stopping the process. Cancellation, a
-complete audit of mutable request state, transactional output, and clean-process
-equivalence remain; and no semantic result is cached.
+succeeds. Unknown controls fail without stopping the process. Requests may now
+carry a deadline, which the compiler checks between major phases and while
+advancing through modules. An expired request reports one stable cancellation
+reason, runs the normal cleanup contract, and does not stop the server. This is
+cooperative cancellation: hxhx stops at its next explicit check instead of
+forcibly interrupting arbitrary compiler, macro, plugin, or external-tool code.
+Interactive cancellation from a second client, a complete audit of mutable
+request state, transactional output, and clean-process equivalence remain; and
+no semantic result is cached.
 `haxe_ocaml-850ii.32.1` therefore stays open.
 
 Transport input is now bounded before compiler work begins. One request may
@@ -118,6 +124,32 @@ failed socket write cannot leak the stop decision into a later connection. The
 native fixture observes the confirmation and exit status 0 for both transports;
 the direct OCaml fixture also proves that the socket child exits normally
 instead of being terminated by the test harness.
+
+Request deadlines are now proven through both public transports. The
+hxhx-specific `--hxhx-server-timeout-ms` option accepts a decimal value from
+zero through 24 hours and is removed before ordinary compiler argument parsing.
+Zero means “already expired,” so a fixture can prove that cancellation occurs
+at request dispatch before compiler work or output begins. The response names
+`deadline-exceeded` and the first checkpoint that observed it, reports
+`cancelled=1`, completes cleanup, and leaves the server available for later
+requests. Focused tests also request cancellation from inside a compiler
+callback and prove that repeated checkpoints do not duplicate the diagnostic.
+
+The compiler checks before setup, macro work, resolution, typing, hooks,
+normalization, emission, publication, and execution, plus inside module and
+build-macro loops. These checks bound ordinary Haxe-authored work without
+pretending that a synchronous operation can always be interrupted safely. A
+macro/plugin/native child already blocked in an external call may run until its
+own timeout or return to a checkpoint. The serialized server also cannot read a
+second client's cancellation request while the first compile is executing, so
+the implemented user control is a per-request deadline rather than interactive
+cross-client cancellation.
+
+This slice does not make filesystem output transactional. The zero-deadline
+native fixture proves no new output and proves that an earlier successful
+artifact remains byte-for-byte unchanged. A deadline observed after emission
+has started may still leave files written by that request. The next lifecycle
+slice must stage target output and publish it only after successful completion.
 README and North Star readiness percentages remain unchanged.
 
 ## Two Connected Workstreams

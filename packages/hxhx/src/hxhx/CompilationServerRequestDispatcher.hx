@@ -15,6 +15,17 @@ class CompilationServerRequestDispatcher {
 		final context = CompilationRequestContext.server(request.requestId);
 		if (request.hasInvocationFlag("--hxhx-server-report"))
 			context.enableBaselineReport();
+		if (request.hasRequestFlag(CompilationServerProtocol.REQUEST_TIMEOUT_FLAG)) {
+			final timeoutText = request.findFlagValue(CompilationServerProtocol.REQUEST_TIMEOUT_FLAG);
+			final timeoutMs = CompilationServerProtocol.parseRequestTimeoutMs(timeoutText);
+			if (timeoutMs == null) {
+				context.output.stderrLine('hxhx(stage3): ${CompilationServerProtocol.REQUEST_TIMEOUT_FLAG} must be a decimal integer from 0 to ${CompilationServerProtocol.MAX_REQUEST_TIMEOUT_MS}');
+				return finish(context, true);
+			}
+			context.configureTimeoutMs(timeoutMs);
+		}
+		if (!context.checkpoint("request-dispatch"))
+			return finish(context, true);
 		if (request.hasRequestFlag("--hxhx-server-control")) {
 			final control = request.findFlagValue("--hxhx-server-control");
 			if (control == "shutdown") {
@@ -39,7 +50,7 @@ class CompilationServerRequestDispatcher {
 		#end
 
 		final code = try {
-			runOne(request.invocationArgs(), context);
+			runOne(request.compilerArgs(), context);
 		} catch (error:haxe.Exception) {
 			context.output.stderrLine("hxhx(stage3): server request handler failed: " + error.message);
 			2;
@@ -47,9 +58,10 @@ class CompilationServerRequestDispatcher {
 			context.output.stderrLine("hxhx(stage3): server request handler failed: " + error);
 			2;
 		}
+		final completedWithinDeadline = context.checkpoint("request-complete");
 		if (code != 0 && context.output.events().length == 0)
 			context.output.stderrLine("hxhx(stage3): server request failed");
-		return finish(context, code != 0);
+		return finish(context, code != 0 || !completedWithinDeadline);
 	}
 
 	static function finish(context:CompilationRequestContext, isError:Bool, stopServer:Bool = false):CompilationServerReply {

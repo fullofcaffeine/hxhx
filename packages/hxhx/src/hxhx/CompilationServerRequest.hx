@@ -33,6 +33,21 @@ class CompilationServerRequest {
 		return baseArgsValue.concat(requestArgsValue);
 	}
 
+	/** Return compiler arguments without request-lifecycle options owned by the server. **/
+	public function compilerArgs():Array<String> {
+		final filteredRequestArgs = new Array<String>();
+		var index = 0;
+		while (index < requestArgsValue.length) {
+			if (requestArgsValue[index] == CompilationServerProtocol.REQUEST_TIMEOUT_FLAG) {
+				index += 2;
+				continue;
+			}
+			filteredRequestArgs.push(requestArgsValue[index]);
+			index += 1;
+		}
+		return baseArgsValue.concat(filteredRequestArgs);
+	}
+
 	public function stdinBytes():Null<Bytes> {
 		return copyBytes(stdinBytesValue);
 	}

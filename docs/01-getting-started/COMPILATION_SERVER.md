@@ -45,11 +45,15 @@ semantic cache is disabled with zero entries and zero hits.
 
 Display remains a bring-up response. Explicit shutdown now works for both
 native transports: the requesting client receives a confirmation, request
-cleanup finishes, and only then does the server exit successfully. Cancellation,
-a complete audit of all mutable compiler state, transactional file output, and
-clean-process equivalence are not finished. Later steps add those lifecycle
-guarantees, then reusable source, parser, typed-module, display, plugin, and
-target facts only after each layer passes clean-versus-warm correctness tests.
+cleanup finishes, and only then does the server exit successfully. A client can
+also give one request a deadline. The compiler checks that deadline between
+major phases and while moving through modules, stops at the next safe check,
+and still runs request cleanup. This is cooperative cancellation, not a forced
+thread interruption. Cross-client cancellation, a complete audit of all
+mutable compiler state, transactional file output, and clean-process
+equivalence are not finished. Later steps add those lifecycle guarantees, then
+reusable source, parser, typed-module, display, plugin, and target facts only
+after each layer passes clean-versus-warm correctness tests.
 
 There are two connected implementation tracks. `haxe_ocaml-850ii.33` makes
 upstream Haxe 4.3.7's already-incremental compiler feed complete, safe Reflaxe
@@ -132,6 +136,7 @@ hxhx_server_report.server_request=1
 hxhx_server_report.semantic_cache=disabled
 hxhx_server_report.semantic_cache_hits=0
 hxhx_server_report.semantic_cache_entries=0
+hxhx_server_report.cancelled=0
 hxhx_server_report.cleanup=ok
 hxhx_server_report.elapsed_ms=123
 ```
@@ -149,6 +154,59 @@ the server exits because the byte stream cannot be safely resynchronized.
 Socket clients that exceed the limit or disconnect before the required NUL
 terminator receive an error; the server then accepts the next connection. No
 parsing, typing, macro execution, or target output begins for a rejected frame.
+
+### Current native request deadlines
+
+The in-development native server accepts an hxhx-specific deadline for one
+request. The value is a decimal number of milliseconds from `0` through
+`86400000` (24 hours). For example, this gives a socket request five seconds:
+
+```bash
+hxhx --connect 6000 \
+  --hxhx-server-timeout-ms 5000 \
+  --hxhx-no-run --js out/app.js -main Main
+```
+
+The deadline option controls the server request and is removed before normal
+compiler argument parsing. A value of `0` means the deadline has already
+expired, so the request stops at its first safe check. This is useful for
+testing the failure path:
+
+```text
+hxhx(stage3): request cancelled [deadline-exceeded] at request-dispatch
+```
+
+With `--hxhx-server-report`, the same response also includes:
+
+```text
+hxhx_server_report.cancelled=1
+hxhx_server_report.cancellation_reason=deadline-exceeded
+hxhx_server_report.cancellation_stage=request-dispatch
+hxhx_server_report.cleanup=ok
+```
+
+“Cooperative” means hxhx asks whether it should continue at named boundaries
+such as setup, parsing and resolution, typing, hooks, code generation, and
+execution. It also checks while advancing through modules. It does not kill the
+compiler thread in the middle of an operation. A macro, plugin, target, or
+external tool that is already blocked may therefore continue until its own
+timeout fires or it returns control to hxhx.
+
+The current server handles compiler requests one at a time. While one request
+is running, it cannot process a second client's “cancel this request” command.
+This slice therefore provides a deadline supplied with the original request,
+not interactive cross-client cancellation.
+
+Request cleanup still runs, the deadline failure is returned only to that
+client, and the server can accept another request. A request cancelled before
+compilation creates no output. However, target files are not transactional yet:
+if a later deadline expires after code generation has started writing files,
+those files may already have changed. Do not use the deadline as an atomic-build
+guarantee. Staging output and replacing it only after success is the next
+lifecycle slice.
+
+`--hxhx-server-timeout-ms` is not part of the upstream Haxe 4.3.7 protocol and
+is not yet a recommended production interface.
 
 ### Current native shutdown control
 
@@ -177,7 +235,8 @@ fails without stopping the server.
 `--hxhx-server-control` is an hxhx extension, not part of the Haxe 4.3.7
 compiler-server protocol. This is still an implementation/testing interface,
 not a recommendation to enable the native server for normal projects. Endpoint
-ownership, cancellation, and automatic stale-server recovery remain unfinished.
+ownership, interactive cross-client cancellation, and automatic stale-server
+recovery remain unfinished.
 
 ## Current scenario guide
 

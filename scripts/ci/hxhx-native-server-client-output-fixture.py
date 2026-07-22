@@ -7,8 +7,9 @@ that client instead of leaking into the server process. A deliberately failing
 compile is followed by another successful compile to prove that request failure
 does not poison the long-lived process. Separate stdio processes prove that a
 negative or oversized length receives a framed protocol error before allocation.
-Both transports then prove that an explicit shutdown response is sent before the
-server exits successfully.
+Both transports prove that an expired request returns a cancellation response
+without stopping the server, then prove that an explicit shutdown response is
+sent before the server exits successfully.
 """
 
 from __future__ import annotations
@@ -60,6 +61,7 @@ def require_baseline_report(result: subprocess.CompletedProcess[str], label: str
         "hxhx_server_report.semantic_cache=disabled",
         "hxhx_server_report.semantic_cache_hits=0",
         "hxhx_server_report.semantic_cache_entries=0",
+        "hxhx_server_report.cancelled=",
         "hxhx_server_report.cleanup=ok",
         "hxhx_server_report.elapsed_ms=",
     ]
@@ -70,6 +72,21 @@ def require_baseline_report(result: subprocess.CompletedProcess[str], label: str
     if match is None:
         raise RuntimeError(f"{label} is missing its request ID: {text!r}")
     return int(match.group(1))
+
+
+def require_cancellation_report(result: subprocess.CompletedProcess[str], label: str) -> int:
+    request_id = require_baseline_report(result, label)
+    text = result.stdout + result.stderr
+    required = [
+        "request cancelled [deadline-exceeded] at request-dispatch",
+        "hxhx_server_report.cancelled=1",
+        "hxhx_server_report.cancellation_reason=deadline-exceeded",
+        "hxhx_server_report.cancellation_stage=request-dispatch",
+    ]
+    for marker in required:
+        if marker not in text:
+            raise RuntimeError(f"{label} is missing cancellation marker {marker!r}: {text!r}")
+    return request_id
 
 
 def require_rejected_stdio_length(
@@ -124,6 +141,48 @@ def require_stdio_shutdown(hxhx_bin: Path, output_path: Path) -> None:
         raise RuntimeError(f"stdio shutdown returned an unexpected response: {response!r}")
     if output_path.exists():
         raise RuntimeError("stdio shutdown unexpectedly produced target output")
+
+
+def require_stdio_cancellation(hxhx_bin: Path, output_path: Path) -> None:
+    payload = b"--hxhx-server-timeout-ms\n0\n-main\nNeverCompiled\n"
+    result = subprocess.run(
+        [
+            str(hxhx_bin),
+            "--hxhx-no-run",
+            "--hxhx-server-report",
+            "--js",
+            str(output_path),
+            "--wait",
+            "stdio",
+        ],
+        input=struct.pack("<I", len(payload)) + payload,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    if result.returncode != 0 or result.stdout:
+        raise RuntimeError(
+            f"stdio cancellation failed (rc={result.returncode}, stdout={result.stdout!r}, stderr={result.stderr!r})"
+        )
+    if len(result.stderr) < 4:
+        raise RuntimeError(f"stdio cancellation omitted its response header: {result.stderr!r}")
+    response_length = struct.unpack("<I", result.stderr[:4])[0]
+    response = result.stderr[4:]
+    if len(response) != response_length:
+        raise RuntimeError(
+            f"stdio cancellation response length mismatch: header={response_length}, body={len(response)}"
+        )
+    required = [
+        b"request cancelled [deadline-exceeded] at request-dispatch",
+        b"hxhx_server_report.cancelled=1",
+        b"hxhx_server_report.cleanup=ok",
+        b"\x02",
+    ]
+    for marker in required:
+        if marker not in response:
+            raise RuntimeError(f"stdio cancellation omitted {marker!r}: {response!r}")
+    if output_path.exists():
+        raise RuntimeError("stdio cancellation unexpectedly produced target output")
 
 
 def main() -> int:
@@ -202,6 +261,26 @@ def main() -> int:
             require_success(first_run, "first socket-generated program")
             if first_run.stdout.strip() != "socket-compile-ok":
                 raise RuntimeError(f"unexpected first generated-program output: {first_run.stdout!r}")
+
+            first_artifact_bytes = artifact.read_bytes()
+            cancelled = run_client(
+                hxhx_bin,
+                base_args,
+                endpoint,
+                [
+                    "--hxhx-server-timeout-ms",
+                    "0",
+                    "-cp",
+                    str(classpath),
+                    "-main",
+                    "SocketCompileMain",
+                ],
+            )
+            if cancelled.returncode == 0:
+                raise RuntimeError("expired socket request unexpectedly succeeded")
+            request_ids.append(require_cancellation_report(cancelled, "expired socket request"))
+            if not artifact.is_file() or artifact.read_bytes() != first_artifact_bytes:
+                raise RuntimeError("expired socket request changed the last successful target artifact")
 
             artifact.unlink()
             expected_failure = run_client(
@@ -286,6 +365,7 @@ def main() -> int:
     )
     if invalid_stdio_output.exists():
         raise RuntimeError("rejected stdio frame unexpectedly produced target output")
+    require_stdio_cancellation(hxhx_bin, fixture_root / "cancelled-stdio.js")
     require_stdio_shutdown(hxhx_bin, fixture_root / "shutdown-stdio.js")
 
     print("HXHX_NATIVE_SERVER_CLIENT_OUTPUT_FIXTURE:PASS")

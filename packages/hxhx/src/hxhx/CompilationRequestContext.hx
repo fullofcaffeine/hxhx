@@ -8,16 +8,18 @@ private typedef CompilationRequestCleanup = {
 /**
 	Mutable working state that belongs to exactly one compiler request.
 
-	The context owns ordered output and a reverse-order cleanup ledger. Compiler
-	stages register resources or request-global compatibility state as soon as
-	they acquire it. Closing the context runs every cleanup even when an earlier
-	one fails, reports those failures through the same request output, and rejects
-	any later output writes.
+	The context owns ordered output, a cooperative cancellation deadline, and a
+	reverse-order cleanup ledger. Compiler stages ask whether the request may
+	continue at safe boundaries. Closing the context runs every cleanup even when
+	an earlier one fails, reports those failures through the same request output,
+	and rejects any later output writes.
 
-	Later `.32.1` slices add cancellation and staged filesystem output to this
-	same request boundary instead of retaining them on the server process.
+	A later `.32.1` slice adds staged filesystem output to this same request
+	boundary instead of retaining it on the server process.
 **/
 class CompilationRequestContext {
+	public static inline final CANCELLED_EXIT_CODE:Int = 130;
+
 	public final requestId:Int;
 	public final output:CompilationRequestOutput;
 	public final isServerRequest:Bool;
@@ -27,6 +29,10 @@ class CompilationRequestContext {
 	var closed:Bool;
 	var cleanupSucceeded:Bool;
 	var baselineReportEnabled:Bool;
+	var deadlineAtSeconds:Null<Float>;
+	var cancellationReason:Null<String>;
+	var cancellationStage:Null<String>;
+	var cancellationReported:Bool;
 
 	public function new(requestId:Int, bufferOutput:Bool, isServerRequest:Bool) {
 		this.requestId = requestId;
@@ -37,6 +43,10 @@ class CompilationRequestContext {
 		this.closed = false;
 		this.cleanupSucceeded = true;
 		this.baselineReportEnabled = false;
+		this.deadlineAtSeconds = null;
+		this.cancellationReason = null;
+		this.cancellationStage = null;
+		this.cancellationReported = false;
 	}
 
 	public static function direct():CompilationRequestContext {
@@ -52,6 +62,52 @@ class CompilationRequestContext {
 		if (closed)
 			throw "compiler request context is already closed";
 		baselineReportEnabled = true;
+	}
+
+	/** Set the maximum elapsed time for this request. Zero cancels at the next checkpoint. **/
+	public function configureTimeoutMs(timeoutMs:Int):Void {
+		ensureOpen();
+		if (timeoutMs < 0 || timeoutMs > CompilationServerProtocol.MAX_REQUEST_TIMEOUT_MS)
+			throw "compiler request timeout is outside the supported range";
+		deadlineAtSeconds = startedAtSeconds + timeoutMs / 1000.0;
+	}
+
+	/** Ask cooperative compiler stages to stop this request at their next checkpoint. **/
+	public function requestCancellation(reason:String):Void {
+		ensureOpen();
+		if (cancellationReason != null)
+			return;
+		final normalized = normalizeLabel(reason);
+		if (normalized.length == 0)
+			throw "compiler request cancellation reason is required";
+		cancellationReason = normalized;
+	}
+
+	/**
+		Return whether work may continue at a named safe boundary.
+
+		The first failed checkpoint emits one stable diagnostic. Later checkpoints
+		stay false without repeating it, while request cleanup still runs normally.
+	**/
+	public function checkpoint(stage:String):Bool {
+		ensureOpen();
+		if (cancellationReason == null && deadlineAtSeconds != null && haxe.Timer.stamp() >= deadlineAtSeconds)
+			requestCancellation("deadline-exceeded");
+		if (cancellationReason == null)
+			return true;
+		if (cancellationStage == null) {
+			final normalizedStage = normalizeLabel(stage);
+			cancellationStage = normalizedStage.length == 0 ? "unspecified" : normalizedStage;
+		}
+		if (!cancellationReported) {
+			cancellationReported = true;
+			output.stderrLine('hxhx(stage3): request cancelled [$cancellationReason] at $cancellationStage');
+		}
+		return false;
+	}
+
+	public function isCancelled():Bool {
+		return cancellationReason != null;
 	}
 
 	/**
@@ -102,6 +158,17 @@ class CompilationRequestContext {
 		return closed;
 	}
 
+	function ensureOpen():Void {
+		if (closed)
+			throw "compiler request context is already closed";
+	}
+
+	static function normalizeLabel(value:String):String {
+		if (value == null)
+			return "";
+		return StringTools.trim(value).split("\r").join(" ").split("\n").join(" ");
+	}
+
 	function reportCleanupFailure(name:String, message:String):Void {
 		cleanupSucceeded = false;
 		output.stderrLine("hxhx(stage3): request cleanup failed [" + name + "]: " + message);
@@ -114,6 +181,11 @@ class CompilationRequestContext {
 		output.stdoutLine("hxhx_server_report.semantic_cache=disabled");
 		output.stdoutLine("hxhx_server_report.semantic_cache_hits=0");
 		output.stdoutLine("hxhx_server_report.semantic_cache_entries=0");
+		output.stdoutLine("hxhx_server_report.cancelled=" + (isCancelled() ? "1" : "0"));
+		if (cancellationReason != null) {
+			output.stdoutLine("hxhx_server_report.cancellation_reason=" + cancellationReason);
+			output.stdoutLine("hxhx_server_report.cancellation_stage=" + cancellationStage);
+		}
 		output.stdoutLine("hxhx_server_report.cleanup=" + (cleanupSucceeded ? "ok" : "failed"));
 		output.stdoutLine("hxhx_server_report.elapsed_ms=" + elapsedMs);
 	}
