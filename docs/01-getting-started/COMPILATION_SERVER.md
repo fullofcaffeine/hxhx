@@ -25,6 +25,11 @@ This guide explains Haxe's compilation server, how it relates to
 Server reuse will become a normal recommendation only after clean and warm
 builds are proven equivalent and warm builds are measurably faster.
 
+There is intentionally no recommended native `hxhx` server setup command for
+production use yet. The experimental commands later in this guide are for
+testing the implemented source/parser cache and comparing it with a clean
+one-shot build; they are not a default project or editor configuration.
+
 The accepted native architecture and evidence gates are recorded in
 [`ORACLE_CHECKPOINT_NATIVE_INCREMENTAL_SERVER_2026_07_22.md`](../00-project/ORACLE_CHECKPOINT_NATIVE_INCREMENTAL_SERVER_2026_07_22.md).
 The shorter living implementation contract is
