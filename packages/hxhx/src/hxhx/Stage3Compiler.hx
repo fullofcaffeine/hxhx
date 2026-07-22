@@ -126,7 +126,7 @@ class Stage3Compiler {
 	}
 
 	static function runWaitStdio(baseArgs:Array<String>):Int {
-		return Stage3WaitServer.runWaitStdio(baseArgs, runOne, error);
+		return Stage3WaitServer.runWaitStdio(baseArgs, runRequest, error);
 	}
 
 	/**
@@ -140,7 +140,7 @@ class Stage3Compiler {
 		  ordinary compile or display request and sends it through the shared dispatcher.
 	**/
 	static function runWaitSocket(mode:String, baseArgs:Array<String>):Int {
-		return Stage3WaitServer.runWaitSocket(mode, baseArgs, runOne, error);
+		return Stage3WaitServer.runWaitSocket(mode, baseArgs, runRequest, error);
 	}
 
 	/**
@@ -248,11 +248,21 @@ class Stage3Compiler {
 		return Stage3BuildMacroSupport.collectBuildMacroExprs(source, modulePath);
 	}
 
-	static function dispatchOnTypeNotFoundHooks(macroSession:Null<MacroRuntimeSession>, typePath:String):Bool {
-		return Stage3BuildMacroSupport.dispatchOnTypeNotFoundHooks(macroSession, typePath);
+	static function dispatchOnTypeNotFoundHooks(macroSession:Null<MacroRuntimeSession>, typePath:String, ?output:CompilationRequestOutput):Bool {
+		return Stage3BuildMacroSupport.dispatchOnTypeNotFoundHooks(macroSession, typePath, output);
 	}
 
-	static function runOne(args:Array<String>):Int {
+	static function runOne(args:Array<String>, requestContext:CompilationRequestContext):Int {
+		final requestOutput = requestContext.output;
+		inline function error(msg:String):Int {
+			requestOutput.stdoutLine("hxhx(stage3): " + msg);
+			return 2;
+		}
+		inline function haxeDiagnosticError(msg:String):Int {
+			requestOutput.stderrLine(msg);
+			return 1;
+		}
+
 		// Extract stage3-only flags before passing the remainder to `Stage1Args`.
 		final g = try {
 			parseGlobalStage3Flags(args);
@@ -270,13 +280,15 @@ class Stage3Compiler {
 		var emitFullBodies = g.emitFullBodies;
 		var noEmit = g.noEmit;
 		var noRun = g.noRun;
+		if (requestContext.isServerRequest && !noRun)
+			return error("server compile requests must currently include --hxhx-no-run so target program output cannot escape the client response");
 		final customizations = try {
 			Stage3CustomizationSupport.normalize(g.customizations);
 		} catch (e:String) {
 			return error(e);
 		}
 		final rest = g.rest;
-		MacroRuntimeMode.emitMarker(macroRuntimeMode);
+		MacroRuntimeMode.emitMarker(macroRuntimeMode, requestOutput);
 		final targetOutputHintRaw = findTargetOutputFileHint(rest, backendId);
 		final targetOutputDirHintRaw = findTargetOutputDirectoryHint(rest, backendId);
 
@@ -342,7 +354,7 @@ class Stage3Compiler {
 		// require real macro execution; type-only is only for diagnostics.
 		if (typeOnly && parsedMacros.length > 0) {
 			for (i in 0...parsedMacros.length) {
-				Sys.println("macro_skipped[" + i + "]=" + parsedMacros[i]);
+				requestOutput.stdoutLine("macro_skipped[" + i + "]=" + parsedMacros[i]);
 			}
 		}
 
@@ -382,7 +394,7 @@ class Stage3Compiler {
 			//
 			// For Stage3 bring-up we do not execute `-cmd`/`--cmd`; treat these units as skipped so
 			// diagnostic runners can still traverse the rest of the multi-unit file.
-			final commandOnlyError = Stage3RunSupport.runCommandOnlyUnit(parsedHadCmd, parsedCmdCommands, cwd);
+			final commandOnlyError = Stage3RunSupport.runCommandOnlyUnit(parsedHadCmd, parsedCmdCommands, cwd, requestOutput);
 			if (commandOnlyError != null)
 				return error(commandOnlyError);
 			return 0;
@@ -399,11 +411,11 @@ class Stage3Compiler {
 		hxhx.macro.MacroState.reset();
 		final libsResolved = Stage3SetupSupport.resolveLibraries(parsedLibs, cwd);
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=libs_resolved count=" + libsResolved.length);
+			requestOutput.stdoutLine("stage3_driver=libs_resolved count=" + libsResolved.length);
 			for (i in 0...libsResolved.length) {
 				final spec = libsResolved[i];
-				Sys.println("stage3_driver=lib[" + i + "].class_paths=" + spec.classPaths.join("|"));
-				Sys.println("stage3_driver=lib[" + i + "].unknown_args=" + spec.unknownArgs.join("|"));
+				requestOutput.stdoutLine("stage3_driver=lib[" + i + "].class_paths=" + spec.classPaths.join("|"));
+				requestOutput.stdoutLine("stage3_driver=lib[" + i + "].unknown_args=" + spec.unknownArgs.join("|"));
 			}
 		}
 		final libDefines = Stage3SetupSupport.collectLibraryDefines(libsResolved);
@@ -420,7 +432,7 @@ class Stage3Compiler {
 		final macroHostClassPaths = Stage3SetupSupport.macroHostClassPaths(parsedClassPaths, libsResolved, cwd);
 
 		final cliMacroRun = Stage3MacroHostSupport.runCliMacrosIfNeeded(macroRuntimeMode, typeOnly, hasConfiguredExternalMacroHostExe(), parsedMacros,
-			exprMacros, runHaxelibMacros, libMacros, macroHostClassPaths);
+			exprMacros, runHaxelibMacros, libMacros, macroHostClassPaths, requestOutput);
 		if (cliMacroRun.error != null) {
 			closeMacroSession();
 			return error(cliMacroRun.error);
@@ -457,7 +469,7 @@ class Stage3Compiler {
 		}
 		if (resolved.length == 0)
 			return error("resolver returned an empty module graph");
-		Sys.println("resolved_modules=" + resolved.length);
+		requestOutput.stdoutLine("resolved_modules=" + resolved.length);
 		if (backendId == "java-native") {
 			final overloadDiagnostic = JavaNoEmitDiagnostics.overloadCollisionDiagnosticForResolved(resolved);
 			if (overloadDiagnostic != null) {
@@ -538,10 +550,10 @@ class Stage3Compiler {
 
 				for (i in 0...exprs.length) {
 					final expr = exprs[i];
-					Sys.println("build_macro[" + modulePath + "][" + i + "]=" + expr);
+					requestOutput.stdoutLine("build_macro[" + modulePath + "][" + i + "]=" + expr);
 					try {
 						// The macro effect is communicated via reverse RPC `compiler.emitBuildFields`.
-						Sys.println("build_macro_run[" + modulePath + "][" + i + "]=" + macroSession.run(expr));
+						requestOutput.stdoutLine("build_macro_run[" + modulePath + "][" + i + "]=" + macroSession.run(expr));
 					} catch (e:String) {
 						closeMacroSession();
 						return error("build macro failed: " + modulePath + ": " + e);
@@ -549,7 +561,7 @@ class Stage3Compiler {
 				}
 
 				final snippets = hxhx.macro.MacroState.listBuildFields(modulePath);
-				Sys.println("build_fields[" + modulePath + "]=" + snippets.length);
+				requestOutput.stdoutLine("build_fields[" + modulePath + "]=" + snippets.length);
 				if (snippets.length == 0) {
 					out2.push(m);
 					continue;
@@ -625,7 +637,7 @@ class Stage3Compiler {
 				final pm = ResolvedModule.getParsed(m);
 				final exprs = collectBuildMacroExprs(pm.getSource(), ResolvedModule.getModulePath(m));
 				for (e in exprs) {
-					Sys.println("build_macro_skipped[" + i + "]=" + ResolvedModule.getModulePath(m) + ":" + e);
+					requestOutput.stdoutLine("build_macro_skipped[" + i + "]=" + ResolvedModule.getModulePath(m) + ":" + e);
 					i += 1;
 				}
 			}
@@ -646,13 +658,13 @@ class Stage3Compiler {
 			#else
 			final exp = ExprMacroExpander.expandResolvedModules(resolvedForTyping, macroSession, exprMacros);
 			resolvedForTyping = exp.modules;
-			Sys.println("expr_macros_expanded=" + exp.expandedCount);
+			requestOutput.stdoutLine("expr_macros_expanded=" + exp.expandedCount);
 			#end
 		}
 
 		final typerIndex = TyperIndex.build(resolvedForTyping);
 		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex, function(typePath:String):Bool {
-			return dispatchOnTypeNotFoundHooks(macroSession, typePath);
+			return dispatchOnTypeNotFoundHooks(macroSession, typePath, requestOutput);
 		}, !noEmit);
 		moduleLoader.markResolvedAlready(resolvedForTyping);
 
@@ -686,12 +698,12 @@ class Stage3Compiler {
 				try {
 					final pm = ResolvedModule.getParsed(m);
 					final unsupportedInFile = Stage3DiagnosticsSupport.reportUnsupportedForParsedModule(pm, ResolvedModule.getFilePath(m),
-						unsupportedFilesCount, traceUnsupported, unsupportedTraceCounters);
+						unsupportedFilesCount, traceUnsupported, unsupportedTraceCounters, requestOutput);
 					unsupportedExprsTotal += unsupportedInFile;
 					if (unsupportedInFile > 0)
 						unsupportedFilesCount += 1;
 					if (HxModuleDecl.getHeaderOnly(pm.getDecl())) {
-						Sys.println("header_only_file[" + headerOnlyCount + "]=" + ResolvedModule.getFilePath(m));
+						requestOutput.stdoutLine("header_only_file[" + headerOnlyCount + "]=" + ResolvedModule.getFilePath(m));
 						headerOnlyCount += 1;
 					}
 					parsedMethodsTotal += Stage3DiagnosticsSupport.parsedMethodCount(pm);
@@ -737,23 +749,23 @@ class Stage3Compiler {
 
 			// Deterministic typer summary for the root module (bring-up diagnostics).
 			if (rootTyped != null)
-				Stage3DiagnosticsSupport.printTypedFunctionSummary(rootTyped);
+				Stage3DiagnosticsSupport.printTypedFunctionSummary(rootTyped, requestOutput);
 
-			final typeOnlyHookError = Stage3HookSupport.runStandardMacroHooks(macroSession);
+			final typeOnlyHookError = Stage3HookSupport.runStandardMacroHooks(macroSession, requestOutput);
 			if (typeOnlyHookError != null) {
 				closeMacroSession();
 				return error(typeOnlyHookError);
 			}
 
 			closeMacroSession();
-			Sys.println("typed_modules=" + typedCount);
-			Sys.println("header_only_modules=" + headerOnlyCount);
-			Sys.println("parsed_methods_total=" + parsedMethodsTotal);
-			Sys.println("unsupported_exprs_total=" + unsupportedExprsTotal);
-			Sys.println("unsupported_files=" + unsupportedFilesCount);
+			requestOutput.stdoutLine("typed_modules=" + typedCount);
+			requestOutput.stdoutLine("header_only_modules=" + headerOnlyCount);
+			requestOutput.stdoutLine("parsed_methods_total=" + parsedMethodsTotal);
+			requestOutput.stdoutLine("unsupported_exprs_total=" + unsupportedExprsTotal);
+			requestOutput.stdoutLine("unsupported_files=" + unsupportedFilesCount);
 			Stage3CustomizationSupport.emitTypedSummaryReport(customizations, "type_only", backendId, typedCount, headerOnlyCount, unsupportedExprsTotal,
-				unsupportedFilesCount);
-			Sys.println("stage3=type_only_ok");
+				unsupportedFilesCount, requestOutput);
+			requestOutput.stdoutLine("stage3=type_only_ok");
 			return 0;
 		}
 
@@ -819,7 +831,7 @@ class Stage3Compiler {
 			return error("type failed during shared operator lowering: " + e);
 		}
 
-		final hookError = Stage3HookSupport.runStandardMacroHooks(macroSession);
+		final hookError = Stage3HookSupport.runStandardMacroHooks(macroSession, requestOutput);
 		if (hookError != null) {
 			closeMacroSession();
 			return error(hookError);
@@ -827,7 +839,7 @@ class Stage3Compiler {
 
 		final providerDefines = Stage3BackendPluginSupport.buildProviderDefines(allDefines);
 		final backendSelection = try {
-			Stage3BackendPluginSupport.selectBackend(backendId, providerDefines);
+			Stage3BackendPluginSupport.selectBackend(backendId, providerDefines, requestOutput);
 		} catch (e:String) {
 			closeMacroSession();
 			return error(e);
@@ -862,7 +874,7 @@ class Stage3Compiler {
 				}
 			}
 
-			Stage3DiagnosticsSupport.printHxMacroDefines("macro_define2");
+			Stage3DiagnosticsSupport.printHxMacroDefines("macro_define2", requestOutput);
 
 			var headerOnlyCount = 0;
 			var unsupportedExprsTotal = 0;
@@ -875,7 +887,7 @@ class Stage3Compiler {
 				if (HxModuleDecl.getHeaderOnly(pm.getDecl()))
 					headerOnlyCount += 1;
 				final unsupportedInFile = Stage3DiagnosticsSupport.reportUnsupportedForParsedModule(pm, pm.getFilePath(), unsupportedFileIndex,
-					traceUnsupported, unsupportedTraceCounters);
+					traceUnsupported, unsupportedTraceCounters, requestOutput);
 				unsupportedExprsTotal += unsupportedInFile;
 				if (unsupportedInFile > 0) {
 					unsupportedFilesCount += 1;
@@ -883,13 +895,13 @@ class Stage3Compiler {
 				}
 			}
 			closeMacroSession();
-			Sys.println("typed_modules=" + typedModules.length);
-			Sys.println("header_only_modules=" + headerOnlyCount);
-			Sys.println("unsupported_exprs_total=" + unsupportedExprsTotal);
-			Sys.println("unsupported_files=" + unsupportedFilesCount);
+			requestOutput.stdoutLine("typed_modules=" + typedModules.length);
+			requestOutput.stdoutLine("header_only_modules=" + headerOnlyCount);
+			requestOutput.stdoutLine("unsupported_exprs_total=" + unsupportedExprsTotal);
+			requestOutput.stdoutLine("unsupported_files=" + unsupportedFilesCount);
 			Stage3CustomizationSupport.emitTypedSummaryReport(customizations, "no_emit", backendId, typedModules.length, headerOnlyCount,
-				unsupportedExprsTotal, unsupportedFilesCount);
-			Sys.println("stage3=no_emit_ok");
+				unsupportedExprsTotal, unsupportedFilesCount, requestOutput);
+			requestOutput.stdoutLine("stage3=no_emit_ok");
 			return 0;
 		}
 
@@ -899,25 +911,25 @@ class Stage3Compiler {
 			generated.push({name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name)});
 		}
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=before_expand typed_modules=" + typedModules.length + " generated_modules=" + generated.length);
+			requestOutput.stdoutLine("stage3_driver=before_expand typed_modules=" + typedModules.length + " generated_modules=" + generated.length);
 		}
 		final expanded = MacroStage.expandProgram(typedModules, generated);
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=after_expand");
+			requestOutput.stdoutLine("stage3_driver=after_expand");
 		}
 
 		// Bring-up diagnostics: dump HXHX_* defines again after hooks.
-		Stage3DiagnosticsSupport.printHxMacroDefines("macro_define2");
+		Stage3DiagnosticsSupport.printHxMacroDefines("macro_define2", requestOutput);
 
 		final nekoNdllPaths = backendId == "neko-native" ? Stage3SetupSupport.collectNekoNdllPaths(libsResolved, cwd) : [];
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=neko_ndll_paths count=" + nekoNdllPaths.length);
+			requestOutput.stdoutLine("stage3_driver=neko_ndll_paths count=" + nekoNdllPaths.length);
 			for (i in 0...nekoNdllPaths.length)
-				Sys.println("stage3_driver=neko_ndll_path[" + i + "]=" + nekoNdllPaths[i]);
+				requestOutput.stdoutLine("stage3_driver=neko_ndll_path[" + i + "]=" + nekoNdllPaths[i]);
 		}
 		final emitted = try {
 			Stage3EmitSupport.emitWithBackend(backend, expanded, backendId, typedModules.length, cwd, outAbs, targetOutputHintRaw, targetOutputDirHintRaw,
-				parsedMain, emitFullBodies, supportsCustomOutputFile, supportsBuildExecutable, definesMap, backendResources, nekoNdllPaths);
+				parsedMain, emitFullBodies, supportsCustomOutputFile, supportsBuildExecutable, definesMap, backendResources, nekoNdllPaths, requestOutput);
 		} catch (e:String) {
 			closeMacroSession();
 			return error("emit failed: " + e);
@@ -931,21 +943,35 @@ class Stage3Compiler {
 			return error("emit failed: " + formatDynamicException(e));
 		}
 
-		Sys.println("stage3=ok");
-		Sys.println("outDir=" + outAbs);
+		requestOutput.stdoutLine("stage3=ok");
+		requestOutput.stdoutLine("outDir=" + outAbs);
 		if (emitted.builtExecutable) {
-			Sys.println("exe=" + emitted.entryPath);
+			requestOutput.stdoutLine("exe=" + emitted.entryPath);
 		} else {
-			Sys.println("artifact=" + emitted.entryPath);
+			requestOutput.stdoutLine("artifact=" + emitted.entryPath);
 		}
 
 		closeMacroSession();
 
 		final runError = Stage3RunSupport.runEmittedArtifact(backendId, parsedHadCmd, parsedCmdCommands, parsedHadRun, parsedRunArgs, cwd, emitted, noRun,
-			nekoNdllPaths);
+			nekoNdllPaths, requestOutput);
 		if (runError != null)
 			return error(runError);
 		return 0;
+	}
+
+	/**
+		Compile one already-decoded request using state owned by that request.
+
+		Server transports and focused lifecycle tests use this boundary. It does not
+		retain compiler results between requests; later incremental slices may read
+		immutable reusable facts through the context after their identities and
+		invalidation rules are proven.
+	**/
+	public static function runRequest(args:Array<String>, requestContext:CompilationRequestContext):Int {
+		if (requestContext == null || requestContext.isClosed())
+			throw "compiler request context must be open";
+		return runOne(args, requestContext);
 	}
 
 	public static function run(args:Array<String>):Int {
@@ -983,7 +1009,10 @@ class Stage3Compiler {
 
 		// Single-unit fast path: keep logs identical for the common bring-up case.
 		if (units.length <= 1) {
-			return runOne(connect.rest);
+			final context = CompilationRequestContext.direct();
+			final code = runRequest(connect.rest, context);
+			context.close();
+			return code;
 		}
 
 		// Multi-unit `.hxml` support: run each unit sequentially.
@@ -1033,7 +1062,9 @@ class Stage3Compiler {
 					+ Stage3Args.summarizeArgs(u));
 			}
 
-			final code = runOne(unitArgs);
+			final context = CompilationRequestContext.direct();
+			final code = runRequest(unitArgs, context);
+			context.close();
 			if (code != 0)
 				return code;
 		}

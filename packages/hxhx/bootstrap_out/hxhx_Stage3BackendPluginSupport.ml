@@ -273,7 +273,7 @@ let appendProviderRequests = fun out source providerTypes originPrefix -> ignore
   appendPluginLoadRequest (Obj.magic out) (source : string) (providerType : string) ((HxString.toStdString originPrefix ^ ":") ^ HxString.toStdString providerType : string)
 )) done)
 
-let appendManifestRequests = fun out source manifestPaths trace -> ignore (let _g = ref 0 in while !_g < HxArray.length manifestPaths do ignore (let manifestPath = (HxArray.get (Obj.magic manifestPaths) (!_g) : string) in (
+let appendManifestRequests = fun out source manifestPaths trace output -> ignore (let _g = ref 0 in while !_g < HxArray.length manifestPaths do ignore (let manifestPath = (HxArray.get (Obj.magic manifestPaths) (!_g) : string) in (
   ignore (let __old_58 = !_g in let __new_59 = HxInt.add __old_58 1 in (
     ignore (_g := __new_59);
     __new_59
@@ -286,21 +286,21 @@ let appendManifestRequests = fun out source manifestPaths trace -> ignore (let _
       ));
       appendPluginLoadRequest (Obj.magic out) (source : string) (providerType : string) ("manifest:" ^ HxString.toStdString manifestPath : string)
     )) done);
-    if trace then ignore (print_endline ((((("backend_plugin_manifest[" ^ "<unsupported>") ^ "][") ^ HxString.toStdString manifestPath) ^ "]=") ^ string_of_int (HxArray.length providers))) else ()
+    if trace then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((((("backend_plugin_manifest[" ^ "<unsupported>") ^ "][") ^ HxString.toStdString manifestPath) ^ "]=") ^ string_of_int (HxArray.length providers) : string)) else ()
   )
 )) done)
 
-let loadDynamicBackendProviders = fun rawDefines -> ignore (try (
+let loadDynamicBackendProviders = fun rawDefines output -> ignore (try (
   ignore (Backend_BackendRegistry.clearDynamicRegistrations ());
   let trace = isTrueEnv ("HXHX_TRACE_BACKEND_PROVIDERS" : string) in let requests = Obj.magic (HxArray.create ()) in (
     ignore (appendProviderRequests (Obj.magic requests) ("bundled" : string) (Obj.magic (collectBundledBackendProviderTypeNames (Obj.magic rawDefines))) ("bundled-provider" : string));
-    ignore (appendManifestRequests (Obj.magic requests) ("bundled" : string) (Obj.magic (collectBundledBackendPluginManifestPaths (Obj.magic rawDefines))) trace);
+    ignore (appendManifestRequests (Obj.magic requests) ("bundled" : string) (Obj.magic (collectBundledBackendPluginManifestPaths (Obj.magic rawDefines))) trace (Obj.magic output));
     ignore (appendProviderRequests (Obj.magic requests) ("explicit" : string) (Obj.magic (collectExplicitBackendProviderTypeNames (Obj.magic rawDefines))) ("explicit-provider" : string));
-    ignore (appendManifestRequests (Obj.magic requests) ("explicit" : string) (Obj.magic (collectExplicitBackendPluginManifestPaths (Obj.magic rawDefines))) trace);
+    ignore (appendManifestRequests (Obj.magic requests) ("explicit" : string) (Obj.magic (collectExplicitBackendPluginManifestPaths (Obj.magic rawDefines))) trace (Obj.magic output));
     ignore (if HxArray.length requests = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
     let registrations = Obj.magic (Hxhx_BackendPluginLoader.registrationsForRequests (Obj.magic requests)) in let registered = Backend_BackendRegistry.registerProvider (Obj.magic registrations) in if trace then ignore ((
-      ignore (print_endline ("backend_provider_requests=" ^ string_of_int (HxArray.length requests)));
-      print_endline ("backend_provider_total=" ^ string_of_int registered)
+      ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("backend_provider_requests=" ^ string_of_int (HxArray.length requests) : string));
+      Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("backend_provider_total=" ^ string_of_int registered : string)
     )) else ()
   )
 ) with
@@ -317,11 +317,11 @@ let buildProviderDefines = fun allDefines -> let providerDefines = Obj.magic (Hx
   providerDefines
 )
 
-let selectBackend = fun backendId providerDefines -> (
+let selectBackend = fun backendId providerDefines output -> (
   ignore (try (
-    ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline "stage3_driver=before_load_dynamic_backend_providers") else ());
-    ignore (loadDynamicBackendProviders (Obj.magic providerDefines));
-    if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline "stage3_driver=after_load_dynamic_backend_providers") else ()
+    ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_load_dynamic_backend_providers" : string)) else ());
+    ignore (loadDynamicBackendProviders (Obj.magic providerDefines) (Obj.magic output));
+    if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_load_dynamic_backend_providers" : string)) else ()
   ) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
@@ -336,7 +336,7 @@ let selectBackend = fun backendId providerDefines -> (
     ) else raise (__exn_68));
   let tempIBackend = ref (Obj.magic (HxRuntime.hx_null) : Backend_IBackend.t) in (
     ignore (try (
-      ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline ("stage3_driver=before_resolve_builtin_backend id=" ^ HxString.toStdString backendId)) else ());
+      ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_resolve_builtin_backend id=" ^ HxString.toStdString backendId : string)) else ());
       let __assign_69 = Obj.magic (Backend_BackendRegistry.requireForTarget (backendId : string)) in (
         tempIBackend := __assign_69;
         __assign_69
@@ -353,9 +353,9 @@ let selectBackend = fun backendId providerDefines -> (
         ignore e;
         HxType.hx_throw_typed_rtti (Obj.repr ("backend setup failed: " ^ HxString.toStdString e)) ["Dynamic"; "String"]
       ) else raise (__exn_73));
-    ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline "stage3_driver=after_resolve_builtin_backend") else ());
+    ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_resolve_builtin_backend" : string)) else ());
     let selected = Backend_BackendRegistry.descriptorForTarget (backendId : string) in (
-      ignore (if isTrueEnv ("HXHX_TRACE_BACKEND_SELECTION" : string) then ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore (print_endline "backend_selected_impl=<unknown>") else ignore (print_endline ("backend_selected_impl=" ^ HxString.toStdString (Obj.obj (HxAnon.get selected "implId"))))) else ());
+      ignore (if isTrueEnv ("HXHX_TRACE_BACKEND_SELECTION" : string) then ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("backend_selected_impl=<unknown>" : string)) else ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("backend_selected_impl=" ^ HxString.toStdString (Obj.obj (HxAnon.get selected "implId")) : string))) else ());
       ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("backend descriptor not found after selection: " ^ HxString.toStdString backendId)) ["Dynamic"; "String"]) else ());
       let backendCaps = Obj.obj (HxAnon.get selected "capabilities") in let __anon_74 = HxAnon.create () in (
         ignore (HxAnon.set __anon_74 "backend" (Obj.repr (!tempIBackend)));

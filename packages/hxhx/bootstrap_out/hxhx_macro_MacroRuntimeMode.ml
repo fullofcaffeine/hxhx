@@ -58,7 +58,7 @@ let openSession = fun mode -> try let __fallback_result_11 = match mode with
   | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr (("invalid macro runtime mode `" ^ HxString.toStdString mode) ^ "` (expected inproc|external-host)")) ["Dynamic"; "String"]) in Obj.magic __fallback_result_11 with
   | HxRuntime.Hx_return __ret_10 -> Obj.magic __ret_10
 
-let emitMarker = fun mode -> ignore (print_endline ("hxhx_macro_runtime_mode=" ^ HxString.toStdString mode))
+let emitMarker = fun mode output -> ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("hxhx_macro_runtime_mode=" ^ HxString.toStdString mode : string))
 
 let normalize = fun raw -> try let __fallback_result_18 = let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (

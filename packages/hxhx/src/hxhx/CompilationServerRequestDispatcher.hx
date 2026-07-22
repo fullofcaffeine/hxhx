@@ -10,21 +10,33 @@ package hxhx;
 	shared request compiler.
 **/
 class CompilationServerRequestDispatcher {
-	public static function dispatch(request:CompilationServerRequest, runOne:Array<String>->Int):CompilationServerReply {
+	public static function dispatch(request:CompilationServerRequest,
+			runOne:(args:Array<String>, context:CompilationRequestContext) -> Int):CompilationServerReply {
 		final displayRequest = request.findFlagValue("--display");
 		#if hxhx_stage0_no_display
 		if (displayRequest != null)
-			return new CompilationServerReply("hxhx(stage3): display unavailable in stage0 no-display profiling lane", true);
+			return CompilationServerReply.message("hxhx(stage3): display unavailable in stage0 no-display profiling lane", true);
 		#else
 		if (displayRequest != null) {
 			final displaySource = DisplayResponseSynthesizer.readDisplaySource(displayRequest, request.stdinBytes());
-			return new CompilationServerReply(DisplayResponseSynthesizer.synthesize(displayRequest, displaySource), false);
+			return CompilationServerReply.message(DisplayResponseSynthesizer.synthesize(displayRequest, displaySource), false);
 		}
 		#end
 
-		final code = runOne(request.invocationArgs());
-		if (code == 0)
-			return new CompilationServerReply("OK", false);
-		return new CompilationServerReply("hxhx(stage3): server request failed", true);
+		final context = CompilationRequestContext.server(request.requestId);
+		final code = try {
+			runOne(request.invocationArgs(), context);
+		} catch (error:haxe.Exception) {
+			context.output.stderrLine("hxhx(stage3): server request handler failed: " + error.message);
+			2;
+		} catch (error:String) {
+			context.output.stderrLine("hxhx(stage3): server request handler failed: " + error);
+			2;
+		}
+		if (code != 0 && context.output.events().length == 0)
+			context.output.stderrLine("hxhx(stage3): server request failed");
+		final events = context.output.events();
+		context.close();
+		return new CompilationServerReply(events, code != 0);
 	}
 }

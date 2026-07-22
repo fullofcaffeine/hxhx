@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3HookS
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3HookSupport" } : t)
 
-let runHookPhase = fun session phase hookIds -> try let __fallback_result_8 = let _g = ref 0 in let _g1 = HxArray.length hookIds in (
+let runHookPhase = fun session phase hookIds output -> try let __fallback_result_8 = let _g = ref 0 in let _g1 = HxArray.length hookIds in (
   ignore (while !_g < _g1 do ignore (let i = let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
     ignore (_g := __new_2);
     __old_1
@@ -30,19 +30,19 @@ let runHookPhase = fun session phase hookIds -> try let __fallback_result_8 = le
         ignore e;
         raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString phase ^ " hook failed: ") ^ HxString.toStdString e : string)))
       ) else raise (__exn_6));
-    print_endline (((("hook_" ^ HxString.toStdString phase) ^ "[") ^ string_of_int i) ^ "]=ok")
+    Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (((("hook_" ^ HxString.toStdString phase) ^ "[") ^ string_of_int i) ^ "]=ok" : string)
   )) done);
   Obj.magic (HxRuntime.hx_null)
 ) in Obj.magic __fallback_result_8 with
   | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
 
-let runStandardMacroHooks = fun session -> try let __fallback_result_10 = (
+let runStandardMacroHooks = fun session output -> try let __fallback_result_10 = (
   ignore (if session == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let afterTypingError = (runHookPhase session ("afterTyping" : string) (Obj.magic (Hxhx_macro_MacroState.listAfterTypingHookIds ())) : string) in (
+  let afterTypingError = (runHookPhase session ("afterTyping" : string) (Obj.magic (Hxhx_macro_MacroState.listAfterTypingHookIds ())) (Obj.magic output) : string) in (
     ignore (if afterTypingError != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (afterTypingError : string))) else ());
-    let onGenerateError = (runHookPhase session ("onGenerate" : string) (Obj.magic (Hxhx_macro_MacroState.listOnGenerateHookIds ())) : string) in (
+    let onGenerateError = (runHookPhase session ("onGenerate" : string) (Obj.magic (Hxhx_macro_MacroState.listOnGenerateHookIds ())) (Obj.magic output) : string) in (
       ignore (if onGenerateError != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (onGenerateError : string))) else ());
-      runHookPhase session ("afterGenerate" : string) (Obj.magic (Hxhx_macro_MacroState.listAfterGenerateHookIds ()))
+      runHookPhase session ("afterGenerate" : string) (Obj.magic (Hxhx_macro_MacroState.listAfterGenerateHookIds ())) (Obj.magic output)
     )
   )
 ) in Obj.magic __fallback_result_10 with

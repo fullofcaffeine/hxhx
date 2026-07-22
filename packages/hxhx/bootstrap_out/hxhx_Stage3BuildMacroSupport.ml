@@ -31,7 +31,7 @@ let buildFieldsPayloadForParsed = fun pm -> Hxhx_macro_BuildFieldSnapshotPayload
 
 let collectBuildMacroExprs = fun source modulePath -> Hxhx_BuildMetadataCollector.collectBuildMacroExprs (source : string) (modulePath : string)
 
-let dispatchOnTypeNotFoundHooks = fun macroSession typePath -> try let __fallback_result_10 = (
+let dispatchOnTypeNotFoundHooks = fun macroSession typePath output -> try let __fallback_result_10 = (
   ignore (if macroSession == Obj.magic (HxRuntime.hx_null) || typePath == Obj.magic (HxRuntime.hx_null) || HxString.length typePath = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let hooks = Obj.magic (Hxhx_macro_MacroState.listOnTypeNotFoundHookIds ()) in (
     ignore (if HxArray.length hooks = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
@@ -40,7 +40,7 @@ let dispatchOnTypeNotFoundHooks = fun macroSession typePath -> try let __fallbac
         ignore (_g := __new_8);
         __old_7
       ) in if Obj.obj (HxAnon.get macroSession "runTypeNotFoundHook") (HxArray.get (Obj.magic hooks) i) (typePath : string) then ignore ((
-        ignore (print_endline ((("hook_onTypeNotFound[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString typePath));
+        ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hook_onTypeNotFound[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString typePath : string));
         raise (HxRuntime.Hx_return (Obj.repr true))
       )) else ()) done);
       false

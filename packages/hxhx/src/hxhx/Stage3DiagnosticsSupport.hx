@@ -285,13 +285,20 @@ class Stage3DiagnosticsSupport {
 	}
 
 	public static function reportUnsupportedForParsedModule(pm:ParsedModule, filePath:String, unsupportedFileIndex:Int, traceUnsupported:Bool,
-			counters:UnsupportedTraceCounters):Int {
+			counters:UnsupportedTraceCounters, ?output:CompilationRequestOutput):Int {
 		final unsupportedInFile = countUnsupportedExprsInModule(pm);
 		if (unsupportedInFile <= 0)
 			return 0;
 
-		Sys.println("unsupported_file[" + unsupportedFileIndex + "]=" + filePath + " header_only=" + bool01(HxModuleDecl.getHeaderOnly(pm.getDecl()))
-			+ " unsupported_exprs=" + unsupportedInFile);
+		CompilationRequestOutput.writeStdoutLine(output,
+			"unsupported_file["
+			+ unsupportedFileIndex
+			+ "]="
+			+ filePath
+			+ " header_only="
+			+ bool01(HxModuleDecl.getHeaderOnly(pm.getDecl()))
+			+ " unsupported_exprs="
+			+ unsupportedInFile);
 
 		if (traceUnsupported) {
 			final cls = HxModuleDecl.getMainClass(pm.getDecl());
@@ -299,7 +306,8 @@ class Stage3DiagnosticsSupport {
 				final fnUnsupported = countUnsupportedExprsInFunction(fn);
 				if (fnUnsupported <= 0)
 					continue;
-				Sys.println("unsupported_fn["
+				CompilationRequestOutput.writeStdoutLine(output,
+					"unsupported_fn["
 					+ counters.fnCount
 					+ "]="
 					+ filePath
@@ -313,7 +321,15 @@ class Stage3DiagnosticsSupport {
 			}
 			for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
 				final escaped = escapeOneLine(raw);
-				Sys.println("unsupported_expr[" + counters.rawCount + "]=" + filePath + ":raw=" + escaped + " len=" + (raw == null ? 0 : raw.length));
+				CompilationRequestOutput.writeStdoutLine(output,
+					"unsupported_expr["
+					+ counters.rawCount
+					+ "]="
+					+ filePath
+					+ ":raw="
+					+ escaped
+					+ " len="
+					+ (raw == null ? 0 : raw.length));
 				counters.rawCount += 1;
 				if (counters.rawCount >= 50)
 					break;
@@ -327,7 +343,7 @@ class Stage3DiagnosticsSupport {
 		return HxClassDecl.getFunctions(HxModuleDecl.getMainClass(pm.getDecl())).length;
 	}
 
-	public static function printTypedFunctionSummary(rootTyped:TypedModule):Void {
+	public static function printTypedFunctionSummary(rootTyped:TypedModule, ?output:CompilationRequestOutput):Void {
 		final fns = rootTyped.getEnv().getMainClass().getFunctions();
 		for (i in 0...fns.length) {
 			final tf = fns[i];
@@ -339,15 +355,26 @@ class Stage3DiagnosticsSupport {
 			final paramParts = new Array<String>();
 			for (p in params)
 				paramParts.push(p.getName() + ":" + p.getType().toString());
-			Sys.println("typed_fn[" + i + "]=" + tf.getName() + " args=" + paramParts.join(",") + " locals=" + localsParts.join(",") + " ret="
-				+ tf.getReturnType().toString() + " inferred=" + tf.getReturnExprType().toString());
+			CompilationRequestOutput.writeStdoutLine(output,
+				"typed_fn["
+				+ i
+				+ "]="
+				+ tf.getName()
+				+ " args="
+				+ paramParts.join(",")
+				+ " locals="
+				+ localsParts.join(",")
+				+ " ret="
+				+ tf.getReturnType().toString()
+				+ " inferred="
+				+ tf.getReturnExprType().toString());
 		}
 	}
 
-	public static function printHxMacroDefines(prefix:String):Void {
+	public static function printHxMacroDefines(prefix:String, ?output:CompilationRequestOutput):Void {
 		for (name in hxhx.macro.MacroState.listDefineNames()) {
 			if (StringTools.startsWith(name, "HXHX_")) {
-				Sys.println(prefix + "[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
+				CompilationRequestOutput.writeStdoutLine(output, prefix + "[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
 			}
 		}
 	}

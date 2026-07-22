@@ -162,7 +162,8 @@ class Stage3MacroHostSupport {
 	}
 
 	public static function runCliMacrosIfNeeded(macroRuntimeMode:String, typeOnly:Bool, hasConfiguredExternalMacroHostExe:Bool, parsedMacros:Array<String>,
-			exprMacros:Array<String>, runHaxelibMacros:Bool, libMacros:Array<String>, macroHostClassPaths:Array<String>):Stage3CliMacroRunResult {
+			exprMacros:Array<String>, runHaxelibMacros:Bool, libMacros:Array<String>, macroHostClassPaths:Array<String>,
+			?output:CompilationRequestOutput):Stage3CliMacroRunResult {
 		if (typeOnly || !(parsedMacros.length > 0 || exprMacros.length > 0 || (runHaxelibMacros && libMacros.length > 0)))
 			return {session: null, error: null};
 
@@ -184,16 +185,16 @@ class Stage3MacroHostSupport {
 			final macroSession = MacroRuntimeMode.openSession(macroRuntimeMode);
 			if (runHaxelibMacros) {
 				for (i in 0...libMacros.length)
-					Sys.println("lib_macro_run[" + i + "]=" + macroSession.run(libMacros[i]));
+					CompilationRequestOutput.writeStdoutLine(output, "lib_macro_run[" + i + "]=" + macroSession.run(libMacros[i]));
 			}
 			for (i in 0...parsedMacros.length)
-				Sys.println("macro_run[" + i + "]=" + macroSession.run(parsedMacros[i]));
+				CompilationRequestOutput.writeStdoutLine(output, "macro_run[" + i + "]=" + macroSession.run(parsedMacros[i]));
 			macroSession;
 		} catch (e:String) {
 			return {session: null, error: "macro failed: " + e};
 		}
 
-		Stage3DiagnosticsSupport.printHxMacroDefines("macro_define");
+		Stage3DiagnosticsSupport.printHxMacroDefines("macro_define", output);
 		return {session: session, error: null};
 	}
 }

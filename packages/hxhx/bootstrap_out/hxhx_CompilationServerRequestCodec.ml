@@ -67,8 +67,20 @@ let decode = fun requestId baseArgs payload -> let sep = ref (-1) in let _g = re
 
 let decodeString = fun requestId baseArgs payload -> decode requestId (Obj.magic baseArgs) (Obj.magic (HxBytes.ofString payload ()))
 
-let encodeSocketReply = fun reply -> try let __fallback_result_13 = (
-  ignore (if (Obj.magic reply : Hxhx_CompilationServerReply.t).isError then raise (HxRuntime.Hx_return (Obj.repr ("" ^ HxString.toStdString ((Obj.magic reply : Hxhx_CompilationServerReply.t).payload) : string))) else ());
-  (Obj.magic reply : Hxhx_CompilationServerReply.t).payload
-) in Obj.magic __fallback_result_13 with
-  | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12
+let encodeReply = fun reply -> let out = Obj.magic (StringBuf.create ()) in let _g = ref 0 in let _g1 = Obj.magic (Hxhx_CompilationServerReply.events (Obj.magic reply) ()) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let event = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
+    ignore (let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
+      ignore (_g := __new_13);
+      __new_13
+    ));
+    if (Obj.magic event : Hxhx_CompilationRequestOutputEvent.t).isErrorStream then ignore (StringBuf.add (Obj.magic out) (Obj.repr ((Obj.magic event : Hxhx_CompilationRequestOutputEvent.t).text))) else ignore ((
+      ignore (StringBuf.addChar (Obj.magic out) 1);
+      ignore (StringBuf.add (Obj.magic out) (Obj.repr (HxArray.join (HxString.split ((Obj.magic event : Hxhx_CompilationRequestOutputEvent.t).text) "\n") "" (fun x -> x))));
+      StringBuf.add (Obj.magic out) (Obj.repr "\n")
+    ))
+  )) done);
+  ignore (if (Obj.magic reply : Hxhx_CompilationServerReply.t).isError then ignore (StringBuf.add (Obj.magic out) (Obj.repr ("" ^ "\n"))) else ());
+  StringBuf.toString (Obj.magic out) ()
+)
+
+let encodeSocketReply = fun reply -> encodeReply (Obj.magic reply)

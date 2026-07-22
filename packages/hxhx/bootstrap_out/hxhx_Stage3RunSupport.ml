@@ -296,15 +296,15 @@ let runSafeCommandOnlyHooks = fun commands cwd -> try let __fallback_result_20 =
 ) in Obj.magic __fallback_result_20 with
   | HxRuntime.Hx_return __ret_19 -> Obj.magic __ret_19
 
-let runCommandOnlyUnit = fun parsedHadCmd parsedCmdCommands cwd -> try let __fallback_result_23 = (
+let runCommandOnlyUnit = fun parsedHadCmd parsedCmdCommands cwd output -> try let __fallback_result_23 = (
   ignore (if not (parsedHadCmd) then raise (HxRuntime.Hx_return (Obj.repr ("missing -main <TypeName>" : string))) else ());
   let cmdCode = runSafeCommandOnlyHooks (Obj.magic parsedCmdCommands) (cwd : string) in (
     ignore (if cmdCode != HxRuntime.hx_null then ignore ((
       ignore (if not (let __nullable_21 = cmdCode in if __nullable_21 == HxRuntime.hx_null then false else Obj.obj __nullable_21 = 0) then raise (HxRuntime.Hx_return (Obj.repr ("command hook failed with exit code " ^ HxString.toStdString (HxRuntime.nullable_int_toStdString cmdCode) : string))) else ());
-      ignore (print_endline "stage3=cmd_ok");
+      ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3=cmd_ok" : string));
       raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
     )) else ());
-    ignore (print_endline "stage3=skipped_cmd_only");
+    ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3=skipped_cmd_only" : string));
     Obj.magic (HxRuntime.hx_null)
   )
 ) in Obj.magic __fallback_result_23 with
@@ -475,20 +475,20 @@ let runSafeNekoHookForArtifact = fun commands cwd artifactPath nekoPathEntries -
 ) in Obj.magic __fallback_result_41 with
   | HxRuntime.Hx_return __ret_40 -> Obj.magic __ret_40
 
-let runEmittedArtifact = fun backendId parsedHadCmd parsedCmdCommands parsedHadRun parsedRunArgs cwd emitted noRun nekoPathEntries -> try let __fallback_result_60 = (
+let runEmittedArtifact = fun backendId parsedHadCmd parsedCmdCommands parsedHadRun parsedRunArgs cwd emitted noRun nekoPathEntries output -> try let __fallback_result_60 = (
   ignore (if noRun then ignore ((
-    ignore (print_endline "run=skipped");
+    ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("run=skipped" : string));
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
   )) else ());
   ignore (if not ((Obj.magic emitted : Backend_EmitResult.t).builtExecutable) then ignore ((
     ignore (if HxString.equals backendId "java-native" && parsedHadCmd then ignore (let cmdCode = runSafeJavaJarHookForArtifact (Obj.magic parsedCmdCommands) (cwd : string) ((Obj.magic emitted : Backend_EmitResult.t).entryPath : string) in if cmdCode != HxRuntime.hx_null then ignore ((
       ignore (if not (let __nullable_49 = cmdCode in if __nullable_49 == HxRuntime.hx_null then false else Obj.obj __nullable_49 = 0) then raise (HxRuntime.Hx_return (Obj.repr ("command hook failed with exit code " ^ HxString.toStdString (HxRuntime.nullable_int_toStdString cmdCode) : string))) else ());
-      ignore (print_endline "stage3=cmd_ok");
+      ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3=cmd_ok" : string));
       raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
     )) else ()) else ());
     ignore (if HxString.equals backendId "python-native" && parsedHadCmd then ignore (let cmdCode = runSafePythonHookForArtifact (Obj.magic parsedCmdCommands) (cwd : string) ((Obj.magic emitted : Backend_EmitResult.t).entryPath : string) in if cmdCode != HxRuntime.hx_null then ignore ((
       ignore (if not (let __nullable_50 = cmdCode in if __nullable_50 == HxRuntime.hx_null then false else Obj.obj __nullable_50 = 0) then raise (HxRuntime.Hx_return (Obj.repr ("command hook failed with exit code " ^ HxString.toStdString (HxRuntime.nullable_int_toStdString cmdCode) : string))) else ());
-      ignore (print_endline "stage3=cmd_ok");
+      ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3=cmd_ok" : string));
       raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
     )) else ()) else ());
     ignore (if HxString.equals backendId "neko-native" && parsedHadCmd then ignore (let cmdCode = runSafeNekoHookForArtifact (Obj.magic parsedCmdCommands) (cwd : string) ((Obj.magic emitted : Backend_EmitResult.t).entryPath : string) (Obj.magic nekoPathEntries) in if cmdCode != HxRuntime.hx_null then ignore ((
@@ -519,7 +519,7 @@ let runEmittedArtifact = fun backendId parsedHadCmd parsedCmdCommands parsedHadR
     )) else ());
     ignore (if HxString.equals backendId "js-native" then ignore ((
       ignore (if not (canRunNode ()) then ignore ((
-        ignore (print_endline "run=skipped_node_missing");
+        ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("run=skipped_node_missing" : string));
         raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
       )) else ());
       let jsCode = HxSys.command "node" (Some (let __arr_57 = HxArray.create () in (
@@ -527,16 +527,16 @@ let runEmittedArtifact = fun backendId parsedHadCmd parsedCmdCommands parsedHadR
         __arr_57
       ))) in (
         ignore (if jsCode <> 0 then raise (HxRuntime.Hx_return (Obj.repr ("node run failed with exit code " ^ string_of_int jsCode : string))) else ());
-        ignore (print_endline "run=ok");
+        ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("run=ok" : string));
         raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
       )
     )) else ());
-    ignore (print_endline "run=skipped_non_executable_backend");
+    ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("run=skipped_non_executable_backend" : string));
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
   )) else ());
   let code = HxSys.command ((Obj.magic emitted : Backend_EmitResult.t).entryPath) (Some (let __arr_58 = HxArray.create () in __arr_58)) in (
     ignore (if code <> 0 then raise (HxRuntime.Hx_return (Obj.repr ("built executable failed with exit code " ^ string_of_int code : string))) else ());
-    ignore (print_endline "run=ok");
+    ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("run=ok" : string));
     Obj.magic (HxRuntime.hx_null)
   )
 ) in Obj.magic __fallback_result_60 with

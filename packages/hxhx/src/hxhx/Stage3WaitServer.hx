@@ -81,11 +81,7 @@ class Stage3WaitServer {
 	}
 
 	static function writeWaitStdioReply(reply:CompilationServerReply):Void {
-		var payload = "";
-		if (reply.isError)
-			payload += String.fromCharCode(0x02);
-		if (reply.payload != null && reply.payload.length > 0)
-			payload += reply.payload;
+		final payload = CompilationServerRequestCodec.encodeReply(reply);
 
 		final out = Sys.stderr();
 		final value = payload.length;
@@ -97,7 +93,7 @@ class Stage3WaitServer {
 		out.flush();
 	}
 
-	public static function runWaitStdio(baseArgs:Array<String>, runOne:Array<String>->Int, error:String->Int):Int {
+	public static function runWaitStdio(baseArgs:Array<String>, runOne:(args:Array<String>, context:CompilationRequestContext) -> Int, error:String->Int):Int {
 		final input = Sys.stdin();
 		input.bigEndian = false;
 		var requestId = 0;
@@ -127,7 +123,8 @@ class Stage3WaitServer {
 		}
 	}
 
-	public static function runWaitSocket(mode:String, baseArgs:Array<String>, runOne:Array<String>->Int, error:String->Int):Int {
+	public static function runWaitSocket(mode:String, baseArgs:Array<String>, runOne:(args:Array<String>, context:CompilationRequestContext) -> Int,
+			error:String->Int):Int {
 		var requestId = 0;
 		final handleRequest = function(payload:String):String {
 			requestId += 1;

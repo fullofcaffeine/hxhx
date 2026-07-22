@@ -2,9 +2,9 @@
 
 Prepared: 2026-07-22
 
-Status: GPT-5.6 Pro architecture review accepted; the first transport-ownership
-sub-slice is implemented, while the larger cache-free request-lifecycle Bead
-remains open
+Status: GPT-5.6 Pro architecture review accepted; transport ownership and
+ordinary client-scoped compiler output are implemented, while the larger
+cache-free request-lifecycle Bead remains open
 
 Owning Bead: `haxe_ocaml-850ii.32`
 
@@ -65,11 +65,24 @@ calls the Haxe function it was given, and returns the reply bytes. A native
 socket request now compiles an ordinary Haxe program and can produce a runnable
 target artifact.
 
-That is a bounded transport capability, not incremental compilation. The
-current dispatcher still calls the existing `runOne` routine, compiler output
-is not yet captured per client request, display remains the bring-up response,
-there is no explicit request context or cancellation transaction, and no
-semantic result is cached. `haxe_ocaml-850ii.32.1` therefore remains open.
+That transport capability is now followed by a second bounded step. The shared
+dispatcher creates an explicit request context whose output owner records
+ordinary compiler progress and diagnostics in order. Direct command-line
+requests still write immediately; server requests buffer copied output events
+and encode them for the requesting client. Closing the context rejects later
+writes, which exposes a request-state leak instead of silently writing into a
+future request.
+
+A native socket fixture sends success → missing-module failure → success to one
+server. Each client receives the expected result, both successful requests
+produce runnable JavaScript, the failed request produces no target file, and
+the server process itself receives no compiler-owned output.
+
+This is still not incremental compilation. Server requests temporarily require
+`--hxhx-no-run` so output from the compiled program cannot escape the response;
+display remains the bring-up response; cancellation, shutdown, complete cleanup
+registration, transactional output, and zero-cache timing reports remain; and
+no semantic result is cached. `haxe_ocaml-850ii.32.1` therefore stays open.
 README and North Star readiness percentages remain unchanged.
 
 ## Two Connected Workstreams

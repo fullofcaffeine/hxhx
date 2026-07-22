@@ -1,6 +1,7 @@
 package hxhx.macro;
 
 import hxhx.runtime.NullableRuntimeString;
+import hxhx.CompilationRequestOutput;
 #if !hxhx_stage0_no_external_macro_host
 import hxhx.macro.MacroHostClient;
 #end
@@ -56,8 +57,8 @@ class MacroRuntimeMode {
 		}
 	}
 
-	public static function emitMarker(mode:String):Void {
-		Sys.println("hxhx_macro_runtime_mode=" + mode);
+	public static function emitMarker(mode:String, ?output:CompilationRequestOutput):Void {
+		CompilationRequestOutput.writeStdoutLine(output, "hxhx_macro_runtime_mode=" + mode);
 	}
 
 	static function normalize(raw:Null<String>):Null<String> {

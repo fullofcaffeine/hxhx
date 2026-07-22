@@ -39,9 +39,9 @@ class Stage3EmitSupport {
 	public static function emitWithBackend(backend:IBackend, expanded:MacroExpandedProgram, backendId:String, typedModuleCount:Int, cwd:String, outAbs:String,
 			targetOutputHintRaw:Null<String>, targetOutputDirHintRaw:Null<String>, parsedMain:Null<String>, emitFullBodies:Bool,
 			supportsCustomOutputFile:Bool, supportsBuildExecutable:Bool, definesMap:haxe.ds.StringMap<String>, resources:Array<backend.BackendResource>,
-			?nativeLibraryPaths:Array<String>):EmitResult {
+			?nativeLibraryPaths:Array<String>, ?output:CompilationRequestOutput):EmitResult {
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=before_output_file_hint");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=before_output_file_hint");
 		}
 		final outputFileHint = if (supportsCustomOutputFile && targetOutputHintRaw != null && targetOutputHintRaw.length > 0) {
 			Path.isAbsolute(targetOutputHintRaw) ? Path.normalize(targetOutputHintRaw) : Stage3PathSupport.absFromCwd(cwd, targetOutputHintRaw);
@@ -49,8 +49,8 @@ class Stage3EmitSupport {
 			null;
 		}
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=after_output_file_hint");
-			Sys.println("stage3_driver=before_backend_context");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=after_output_file_hint");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=before_backend_context");
 		}
 		final outputDirAbs = if (targetOutputDirHintRaw != null && targetOutputDirHintRaw.length > 0) {
 			Path.isAbsolute(targetOutputDirHintRaw) ? Path.normalize(targetOutputDirHintRaw) : Stage3PathSupport.absFromCwd(cwd, targetOutputDirHintRaw);
@@ -60,27 +60,29 @@ class Stage3EmitSupport {
 		final context = new BackendContext(outputDirAbs, outputFileHint, parsedMain, emitFullBodies, supportsBuildExecutable, definesMap, resources,
 			nativeLibraryPaths);
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=after_backend_context");
-			Sys.println("stage3_driver=before_emit_trace_backend_id");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=after_backend_context");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=before_emit_trace_backend_id");
 		}
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=after_emit_trace_backend_id");
-			Sys.println("stage3_driver=before_emit backend=" + backendId + " typed_modules=" + typedModuleCount + " out=" + outputDirAbs);
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=after_emit_trace_backend_id");
+			CompilationRequestOutput.writeStdoutLine(output,
+				"stage3_driver=before_emit backend=" + backendId + " typed_modules=" + typedModuleCount + " out=" + outputDirAbs);
 		}
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=emitWithBackend_before_genir_boundary");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=emitWithBackend_before_genir_boundary");
 		}
 		final expandedProgram = GenIrBoundary.fromDynamic(cast expanded);
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=emitWithBackend_after_genir_boundary");
-			Sys.println("stage3_driver=emitWithBackend_before_dispatch_boundary");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=emitWithBackend_after_genir_boundary");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=emitWithBackend_before_dispatch_boundary");
 		}
 		final emitted = BackendDispatchBoundary.emit(backend, expandedProgram, context);
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=emitWithBackend_after_dispatch_boundary");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=emitWithBackend_after_dispatch_boundary");
 		}
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=after_emit entry=" + emitted.entryPath + " built_executable=" + bool01(emitted.builtExecutable));
+			CompilationRequestOutput.writeStdoutLine(output,
+				"stage3_driver=after_emit entry=" + emitted.entryPath + " built_executable=" + bool01(emitted.builtExecutable));
 		}
 		return emitted;
 	}

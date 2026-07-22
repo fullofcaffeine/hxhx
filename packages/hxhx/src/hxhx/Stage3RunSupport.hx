@@ -60,17 +60,17 @@ class Stage3RunSupport {
 		return ran ? 0 : null;
 	}
 
-	public static function runCommandOnlyUnit(parsedHadCmd:Bool, parsedCmdCommands:Array<String>, cwd:String):Null<String> {
+	public static function runCommandOnlyUnit(parsedHadCmd:Bool, parsedCmdCommands:Array<String>, cwd:String, ?output:CompilationRequestOutput):Null<String> {
 		if (!parsedHadCmd)
 			return "missing -main <TypeName>";
 		final cmdCode = runSafeCommandOnlyHooks(parsedCmdCommands, cwd);
 		if (cmdCode != null) {
 			if (cmdCode != 0)
 				return "command hook failed with exit code " + Std.string(cmdCode);
-			Sys.println("stage3=cmd_ok");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3=cmd_ok");
 			return null;
 		}
-		Sys.println("stage3=skipped_cmd_only");
+		CompilationRequestOutput.writeStdoutLine(output, "stage3=skipped_cmd_only");
 		return null;
 	}
 
@@ -151,9 +151,10 @@ class Stage3RunSupport {
 	}
 
 	public static function runEmittedArtifact(backendId:String, parsedHadCmd:Bool, parsedCmdCommands:Array<String>, parsedHadRun:Bool,
-			parsedRunArgs:Array<String>, cwd:String, emitted:EmitResult, noRun:Bool, ?nekoPathEntries:Array<String>):Null<String> {
+			parsedRunArgs:Array<String>, cwd:String, emitted:EmitResult, noRun:Bool, ?nekoPathEntries:Array<String>,
+			?output:CompilationRequestOutput):Null<String> {
 		if (noRun) {
-			Sys.println("run=skipped");
+			CompilationRequestOutput.writeStdoutLine(output, "run=skipped");
 			return null;
 		}
 
@@ -163,7 +164,7 @@ class Stage3RunSupport {
 				if (cmdCode != null) {
 					if (cmdCode != 0)
 						return "command hook failed with exit code " + Std.string(cmdCode);
-					Sys.println("stage3=cmd_ok");
+					CompilationRequestOutput.writeStdoutLine(output, "stage3=cmd_ok");
 					return null;
 				}
 			}
@@ -172,7 +173,7 @@ class Stage3RunSupport {
 				if (cmdCode != null) {
 					if (cmdCode != 0)
 						return "command hook failed with exit code " + Std.string(cmdCode);
-					Sys.println("stage3=cmd_ok");
+					CompilationRequestOutput.writeStdoutLine(output, "stage3=cmd_ok");
 					return null;
 				}
 			}
@@ -202,23 +203,23 @@ class Stage3RunSupport {
 			}
 			if (backendId == "js-native") {
 				if (!canRunNode()) {
-					Sys.println("run=skipped_node_missing");
+					CompilationRequestOutput.writeStdoutLine(output, "run=skipped_node_missing");
 					return null;
 				}
 				final jsCode = Sys.command("node", [emitted.entryPath]);
 				if (jsCode != 0)
 					return "node run failed with exit code " + jsCode;
-				Sys.println("run=ok");
+				CompilationRequestOutput.writeStdoutLine(output, "run=ok");
 				return null;
 			}
-			Sys.println("run=skipped_non_executable_backend");
+			CompilationRequestOutput.writeStdoutLine(output, "run=skipped_non_executable_backend");
 			return null;
 		}
 
 		final code = Sys.command(emitted.entryPath, []);
 		if (code != 0)
 			return "built executable failed with exit code " + code;
-		Sys.println("run=ok");
+		CompilationRequestOutput.writeStdoutLine(output, "run=ok");
 		return null;
 	}
 

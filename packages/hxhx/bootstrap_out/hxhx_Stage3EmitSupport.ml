@@ -45,8 +45,8 @@ let isTrueEnv = fun name -> let tempString = ref ("" : string) in let s = (HxSys
   HxString.equals (!tempString) "1" || HxString.equals (!tempString) "true" || HxString.equals (!tempString) "yes"
 )
 
-let emitWithBackend = fun backend expanded backendId typedModuleCount cwd outAbs targetOutputHintRaw targetOutputDirHintRaw parsedMain emitFullBodies supportsCustomOutputFile supportsBuildExecutable definesMap resources nativeLibraryPaths -> (
-  ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline "stage3_driver=before_output_file_hint") else ());
+let emitWithBackend = fun backend expanded backendId typedModuleCount cwd outAbs targetOutputHintRaw targetOutputDirHintRaw parsedMain emitFullBodies supportsCustomOutputFile supportsBuildExecutable definesMap resources nativeLibraryPaths output -> (
+  ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_output_file_hint" : string)) else ());
   let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (if supportsCustomOutputFile && targetOutputHintRaw != Obj.magic (HxRuntime.hx_null) && HxString.length targetOutputHintRaw > 0 then if Haxe_io_Path.isAbsolute (targetOutputHintRaw : string) then let __assign_8 = Obj.magic (Haxe_io_Path.normalize (targetOutputHintRaw : string) : string) in (
       tempMaybeString := __assign_8;
@@ -60,8 +60,8 @@ let emitWithBackend = fun backend expanded backendId typedModuleCount cwd outAbs
     ));
     let outputFileHint = (!tempMaybeString : string) in (
       ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore ((
-        ignore (print_endline "stage3_driver=after_output_file_hint");
-        print_endline "stage3_driver=before_backend_context"
+        ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_output_file_hint" : string));
+        Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_backend_context" : string)
       )) else ());
       let tempString = ref ("" : string) in (
         ignore (if targetOutputDirHintRaw != Obj.magic (HxRuntime.hx_null) && HxString.length targetOutputDirHintRaw > 0 then if Haxe_io_Path.isAbsolute (targetOutputDirHintRaw : string) then let __assign_11 = (Haxe_io_Path.normalize (targetOutputDirHintRaw : string) : string) in (
@@ -76,22 +76,22 @@ let emitWithBackend = fun backend expanded backendId typedModuleCount cwd outAbs
         ));
         let context = Obj.magic (Backend_BackendContext.create (!tempString : string) (outputFileHint : string) (parsedMain : string) emitFullBodies supportsBuildExecutable (Obj.magic definesMap) (Obj.magic resources) (Obj.magic nativeLibraryPaths)) in (
           ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore ((
-            ignore (print_endline "stage3_driver=after_backend_context");
-            print_endline "stage3_driver=before_emit_trace_backend_id"
+            ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_backend_context" : string));
+            Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_emit_trace_backend_id" : string)
           )) else ());
           ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore ((
-            ignore (print_endline "stage3_driver=after_emit_trace_backend_id");
-            print_endline ((((("stage3_driver=before_emit backend=" ^ HxString.toStdString backendId) ^ " typed_modules=") ^ string_of_int typedModuleCount) ^ " out=") ^ HxString.toStdString (!tempString))
+            ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_emit_trace_backend_id" : string));
+            Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((((("stage3_driver=before_emit backend=" ^ HxString.toStdString backendId) ^ " typed_modules=") ^ string_of_int typedModuleCount) ^ " out=") ^ HxString.toStdString (!tempString) : string)
           )) else ());
-          ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline "stage3_driver=emitWithBackend_before_genir_boundary") else ());
+          ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=emitWithBackend_before_genir_boundary" : string)) else ());
           let expandedProgram = Obj.magic (Obj.obj expanded) in (
             ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore ((
-              ignore (print_endline "stage3_driver=emitWithBackend_after_genir_boundary");
-              print_endline "stage3_driver=emitWithBackend_before_dispatch_boundary"
+              ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=emitWithBackend_after_genir_boundary" : string));
+              Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=emitWithBackend_before_dispatch_boundary" : string)
             )) else ());
             let emitted = Obj.magic (Backend_BackendDispatchBoundary.emit (Obj.magic backend) (Obj.magic expandedProgram) (Obj.magic context)) in (
-              ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline "stage3_driver=emitWithBackend_after_dispatch_boundary") else ());
-              ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (print_endline ((("stage3_driver=after_emit entry=" ^ HxString.toStdString ((Obj.magic emitted : Backend_EmitResult.t).entryPath)) ^ " built_executable=") ^ HxString.toStdString (bool01 ((Obj.magic emitted : Backend_EmitResult.t).builtExecutable)))) else ());
+              ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=emitWithBackend_after_dispatch_boundary" : string)) else ());
+              ignore (if isTrueEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("stage3_driver=after_emit entry=" ^ HxString.toStdString ((Obj.magic emitted : Backend_EmitResult.t).entryPath)) ^ " built_executable=") ^ HxString.toStdString (bool01 ((Obj.magic emitted : Backend_EmitResult.t).builtExecutable)) : string)) else ());
               emitted
             )
           )

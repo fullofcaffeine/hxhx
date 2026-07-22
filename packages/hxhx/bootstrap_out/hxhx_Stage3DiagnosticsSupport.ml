@@ -985,9 +985,9 @@ let newUnsupportedTraceCounters = fun () -> let __anon_291 = HxAnon.create () in
   __anon_291
 )
 
-let reportUnsupportedForParsedModule = fun pm filePath unsupportedFileIndex traceUnsupported counters -> try let __fallback_result_299 = let unsupportedInFile = countUnsupportedExprsInModule (Obj.magic pm) in (
+let reportUnsupportedForParsedModule = fun pm filePath unsupportedFileIndex traceUnsupported counters output -> try let __fallback_result_299 = let unsupportedInFile = countUnsupportedExprsInModule (Obj.magic pm) in (
   ignore (if unsupportedInFile <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
-  ignore (print_endline ((((((("unsupported_file[" ^ string_of_int unsupportedFileIndex) ^ "]=") ^ HxString.toStdString filePath) ^ " header_only=") ^ HxString.toStdString (bool01 (HxModuleDecl.getHeaderOnly (Obj.magic (ParsedModule.getDecl (Obj.magic pm) ()))))) ^ " unsupported_exprs=") ^ string_of_int unsupportedInFile));
+  ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((((((("unsupported_file[" ^ string_of_int unsupportedFileIndex) ^ "]=") ^ HxString.toStdString filePath) ^ " header_only=") ^ HxString.toStdString (bool01 (HxModuleDecl.getHeaderOnly (Obj.magic (ParsedModule.getDecl (Obj.magic pm) ()))))) ^ " unsupported_exprs=") ^ string_of_int unsupportedInFile : string));
   ignore (if traceUnsupported then ignore (let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic (ParsedModule.getDecl (Obj.magic pm) ()))) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
     ignore (try while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
       ignore (let __old_292 = !_g in let __new_293 = HxInt.add __old_292 1 in (
@@ -996,7 +996,7 @@ let reportUnsupportedForParsedModule = fun pm filePath unsupportedFileIndex trac
       ));
       let fnUnsupported = countUnsupportedExprsInFunction (Obj.magic fn) in (
         ignore (if fnUnsupported <= 0 then raise (HxRuntime.Hx_continue) else ());
-        ignore (print_endline ((((((("unsupported_fn[" ^ string_of_int (Obj.obj (HxAnon.get counters "fnCount"))) ^ "]=") ^ HxString.toStdString filePath) ^ ":") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn))) ^ " unsupported_exprs=") ^ string_of_int fnUnsupported));
+        ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((((((("unsupported_fn[" ^ string_of_int (Obj.obj (HxAnon.get counters "fnCount"))) ^ "]=") ^ HxString.toStdString filePath) ^ ":") ^ HxString.toStdString (HxFunctionDecl.getName (Obj.magic fn))) ^ " unsupported_exprs=") ^ string_of_int fnUnsupported : string));
         ignore ();
         if Obj.obj (HxAnon.get counters "fnCount") >= 50 then raise (HxRuntime.Hx_break) else ()
       )
@@ -1016,7 +1016,7 @@ let reportUnsupportedForParsedModule = fun pm filePath unsupportedFileIndex trac
           tempNumber := __assign_297;
           __assign_297
         ));
-        ignore (print_endline ((((((("unsupported_expr[" ^ string_of_int (Obj.obj (HxAnon.get counters "rawCount"))) ^ "]=") ^ HxString.toStdString filePath) ^ ":raw=") ^ HxString.toStdString escaped) ^ " len=") ^ string_of_int (!tempNumber)));
+        ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((((((("unsupported_expr[" ^ string_of_int (Obj.obj (HxAnon.get counters "rawCount"))) ^ "]=") ^ HxString.toStdString filePath) ^ ":raw=") ^ HxString.toStdString escaped) ^ " len=") ^ string_of_int (!tempNumber) : string));
         ignore ();
         if Obj.obj (HxAnon.get counters "rawCount") >= 50 then raise (HxRuntime.Hx_break) else ()
       )
@@ -1030,7 +1030,7 @@ let reportUnsupportedForParsedModule = fun pm filePath unsupportedFileIndex trac
 
 let parsedMethodCount = fun pm -> HxArray.length (HxClassDecl.getFunctions (Obj.magic (HxModuleDecl.getMainClass (Obj.magic (ParsedModule.getDecl (Obj.magic pm) ())))))
 
-let printTypedFunctionSummary = fun rootTyped -> ignore (let fns = Obj.magic (TyClassEnv.getFunctions (Obj.magic (TyModuleEnv.getMainClass (Obj.magic (TypedModule.getEnv (Obj.magic rootTyped) ())) ())) ()) in let _g = ref 0 in let _g1 = HxArray.length fns in while !_g < _g1 do ignore (let i = let __old_300 = !_g in let __new_301 = HxInt.add __old_300 1 in (
+let printTypedFunctionSummary = fun rootTyped output -> ignore (let fns = Obj.magic (TyClassEnv.getFunctions (Obj.magic (TyModuleEnv.getMainClass (Obj.magic (TypedModule.getEnv (Obj.magic rootTyped) ())) ())) ()) in let _g = ref 0 in let _g1 = HxArray.length fns in while !_g < _g1 do ignore (let i = let __old_300 = !_g in let __new_301 = HxInt.add __old_300 1 in (
   ignore (_g := __new_301);
   __old_300
 ) in let tf = Obj.magic (HxArray.get (Obj.magic fns) i) in let locals = Obj.magic (TyFunctionEnv.getLocals (Obj.magic tf) ()) in let localsParts = Obj.magic (HxArray.create ()) in let _g2 = ref 0 in (
@@ -1049,16 +1049,16 @@ let printTypedFunctionSummary = fun rootTyped -> ignore (let fns = Obj.magic (Ty
       ));
       HxArray.push paramParts ((HxString.toStdString (TySymbol.getName (Obj.magic p) ()) ^ ":") ^ HxString.toStdString (TyType.toString (Obj.magic (TySymbol.getType (Obj.magic p) ())) ()))
     )) done);
-    print_endline ((((((((((("typed_fn[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (TyFunctionEnv.getName (Obj.magic tf) ())) ^ " args=") ^ HxString.toStdString (HxArray.join paramParts "," (fun x -> x))) ^ " locals=") ^ HxString.toStdString (HxArray.join localsParts "," (fun x -> x))) ^ " ret=") ^ HxString.toStdString (TyType.toString (Obj.magic (TyFunctionEnv.getReturnType (Obj.magic tf) ())) ())) ^ " inferred=") ^ HxString.toStdString (TyType.toString (Obj.magic (TyFunctionEnv.getReturnExprType (Obj.magic tf) ())) ()))
+    Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((((((((((("typed_fn[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (TyFunctionEnv.getName (Obj.magic tf) ())) ^ " args=") ^ HxString.toStdString (HxArray.join paramParts "," (fun x -> x))) ^ " locals=") ^ HxString.toStdString (HxArray.join localsParts "," (fun x -> x))) ^ " ret=") ^ HxString.toStdString (TyType.toString (Obj.magic (TyFunctionEnv.getReturnType (Obj.magic tf) ())) ())) ^ " inferred=") ^ HxString.toStdString (TyType.toString (Obj.magic (TyFunctionEnv.getReturnExprType (Obj.magic tf) ())) ()) : string)
   )
 )) done)
 
-let printHxMacroDefines = fun prefix -> ignore (let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefineNames ()) in while !_g < HxArray.length _g1 do ignore (let name = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+let printHxMacroDefines = fun prefix output -> ignore (let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefineNames ()) in while !_g < HxArray.length _g1 do ignore (let name = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
   ignore (let __old_306 = !_g in let __new_307 = HxInt.add __old_306 1 in (
     ignore (_g := __new_307);
     __new_307
   ));
-  if StringTools.startsWith (name : string) ("HXHX_" : string) then ignore (print_endline ((((HxString.toStdString prefix ^ "[") ^ HxString.toStdString name) ^ "]=") ^ HxString.toStdString (Hxhx_macro_MacroState.definedValue (name : string)))) else ()
+  if StringTools.startsWith (name : string) ("HXHX_" : string) then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((((HxString.toStdString prefix ^ "[") ^ HxString.toStdString name) ^ "]=") ^ HxString.toStdString (Hxhx_macro_MacroState.definedValue (name : string)) : string)) else ()
 )) done)
 
 let formatException = fun e -> let pos = Obj.magic (TyperError.getPos (Obj.magic e) ()) in let tempNumber = ref (0 : int) in (

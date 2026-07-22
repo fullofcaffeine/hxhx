@@ -4,12 +4,12 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable payload : string; mutable isError : bool }
+type t = { __hx_type : Obj.t; mutable outputEvents : Hxhx_CompilationRequestOutputEvent.t HxArray.t; mutable isError : bool }
 
-let create = fun payload2 isError2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerReply"; payload = ""; isError = false } : t) in (
+let create = fun outputEvents2 isError2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerReply"; outputEvents = Obj.magic (HxRuntime.hx_null); isError = false } : t) in (
   ignore (ignore ((
-    ignore (let __assign_1 = (payload2 : string) in (
-      (Obj.magic self : t).payload <- __assign_1;
+    ignore (let __assign_1 = Obj.magic (HxArray.copy outputEvents2) in (
+      (Obj.magic self : t).outputEvents <- __assign_1;
       __assign_1
     ));
     let __assign_2 = isError2 in (
@@ -20,4 +20,11 @@ let create = fun payload2 isError2 -> let self = ({ __hx_type = HxType.class_ "h
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerReply"; payload = ""; isError = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerReply"; outputEvents = Obj.magic (HxRuntime.hx_null); isError = false } : t)
+
+let events = fun self () -> HxArray.copy ((Obj.magic self : t).outputEvents)
+
+let message = fun text isError2 -> create (Obj.magic (let __arr_3 = HxArray.create () in (
+  ignore (HxArray.push __arr_3 (Hxhx_CompilationRequestOutputEvent.create (HxString.toStdString text ^ "\n" : string) true));
+  __arr_3
+))) isError2

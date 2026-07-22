@@ -1,8 +1,13 @@
 import haxe.io.Bytes;
+import hxhx.CompilationRequestContext;
+import hxhx.CompilationRequestOutputEvent;
 import hxhx.CompilationServerReply;
 import hxhx.CompilationServerRequest;
 import hxhx.CompilationServerRequestCodec;
 import hxhx.CompilationServerRequestDispatcher;
+import hxhx.Stage3Compiler;
+import sys.FileSystem;
+import sys.io.File;
 
 class M14CompilationServerRequestDispatcherIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
@@ -16,6 +21,22 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 
 	static function assertArgs(actual:Array<String>, expected:Array<String>, label:String):Void {
 		assertEquals(actual.join("\n"), expected.join("\n"), label);
+	}
+
+	static function reply(events:Array<CompilationRequestOutputEvent>, isError:Bool):CompilationServerReply {
+		return new CompilationServerReply(events, isError);
+	}
+
+	static function deleteRecursive(path:String):Void {
+		if (!FileSystem.exists(path))
+			return;
+		if (FileSystem.isDirectory(path)) {
+			for (entry in FileSystem.readDirectory(path))
+				deleteRecursive(haxe.io.Path.join([path, entry]));
+			FileSystem.deleteDirectory(path);
+		} else {
+			FileSystem.deleteFile(path);
+		}
 	}
 
 	static function main():Void {
@@ -43,29 +64,67 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 
 		var compileCalls = 0;
 		var compiledArgs = new Array<String>();
-		final compileReply = CompilationServerRequestDispatcher.dispatch(direct, args -> {
+		final compileReply = CompilationServerRequestDispatcher.dispatch(direct, (args, context) -> {
 			compileCalls += 1;
 			compiledArgs = args;
+			context.output.stdoutLine("compiled");
 			return 0;
 		});
 		assertTrue(compileCalls == 1, "ordinary request should call the shared compiler exactly once");
 		assertArgs(compiledArgs, direct.invocationArgs(), "shared compile invocation");
 		assertTrue(!compileReply.isError, "successful compile should not be an error reply");
-		assertEquals(compileReply.payload, "OK", "successful compile reply");
+		assertEquals(CompilationServerRequestCodec.encodeReply(compileReply), "\x01compiled\x01\n", "successful compile reply");
 
-		final failedReply = CompilationServerRequestDispatcher.dispatch(direct, _ -> 1);
+		final failedReply = CompilationServerRequestDispatcher.dispatch(direct, (_, context) -> {
+			context.output.stderrLine("specific failure");
+			return 1;
+		});
 		assertTrue(failedReply.isError, "failed compile should return an error reply");
-		assertEquals(failedReply.payload, "hxhx(stage3): server request failed", "failed compile reply");
+		assertEquals(CompilationServerRequestCodec.encodeReply(failedReply), "specific failure\n\x02\n", "failed compile reply");
 
-		final displayReply = CompilationServerRequestDispatcher.dispatch(decoded, _ -> {
+		var escapedContext:Null<CompilationRequestContext> = null;
+		final thrownReply = CompilationServerRequestDispatcher.dispatch(direct, (_, context) -> {
+			escapedContext = context;
+			throw "request exploded";
+		});
+		assertTrue(thrownReply.isError, "thrown compiler request should return an error reply");
+		assertTrue(escapedContext != null && escapedContext.isClosed(), "thrown compiler request should close its request context");
+		assertTrue(CompilationServerRequestCodec.encodeReply(thrownReply).indexOf("request exploded") >= 0,
+			"thrown compiler request should preserve the original failure");
+
+		final displayReply = CompilationServerRequestDispatcher.dispatch(decoded, (_, _) -> {
 			throw "display request must not invoke the ordinary compile callback";
 		});
 		assertTrue(!displayReply.isError, "supported display request should not be an error reply");
-		assertTrue(displayReply.payload.indexOf("diagnostics") >= 0, "display response should come from the shared dispatcher");
+		assertTrue(CompilationServerRequestCodec.encodeReply(displayReply).indexOf("diagnostics") >= 0,
+			"display response should come from the shared dispatcher");
 
-		assertEquals(CompilationServerRequestCodec.encodeSocketReply(new CompilationServerReply("plain", false)), "plain", "socket success encoding");
-		final encodedError = CompilationServerRequestCodec.encodeSocketReply(new CompilationServerReply("failed", true));
-		assertTrue(encodedError.length > 0 && encodedError.charCodeAt(0) == 0x02, "socket error encoding should use Haxe's error control byte");
-		assertEquals(encodedError.substr(1), "failed", "socket error payload");
+		assertEquals(CompilationServerRequestCodec.encodeSocketReply(reply([new CompilationRequestOutputEvent("plain\n", true)], false)), "plain\n",
+			"socket stderr encoding");
+		final encodedError = CompilationServerRequestCodec.encodeSocketReply(reply([], true));
+		assertEquals(encodedError, "\x02\n", "socket error encoding should use Haxe's error control line");
+
+		final realFailure = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(9, ["--hxhx-no-run", "--hxhx-no-emit"], [], null),
+			Stage3Compiler.runRequest);
+		final realFailureWire = CompilationServerRequestCodec.encodeReply(realFailure);
+		assertTrue(realFailure.isError, "a real Stage3 missing-main request should fail");
+		assertTrue(realFailureWire.indexOf("hxhx_macro_runtime_mode=inproc") >= 0, "a real Stage3 request should return normal compiler output to its client");
+		assertTrue(realFailureWire.indexOf("missing -main <TypeName>") >= 0, "a real Stage3 request should return its specific diagnostic to its client");
+		assertTrue(StringTools.endsWith(realFailureWire, "\x02\n"), "a real Stage3 failure should end with Haxe's failure marker");
+
+		final tmpRoot = ".tmp/m14_compilation_server_request_dispatcher";
+		final srcDir = haxe.io.Path.join([tmpRoot, "src"]);
+		deleteRecursive(tmpRoot);
+		FileSystem.createDirectory(tmpRoot);
+		FileSystem.createDirectory(srcDir);
+		File.saveContent(haxe.io.Path.join([srcDir, "Main.hx"]), "class Main { static function main():Void {} }\n");
+		final realSuccess = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(10,
+			["--hxhx-no-run", "--hxhx-no-emit", "-cp", srcDir, "-main", "Main"], [], null), Stage3Compiler.runRequest);
+		final realSuccessWire = CompilationServerRequestCodec.encodeReply(realSuccess);
+		deleteRecursive(tmpRoot);
+		assertTrue(!realSuccess.isError, "a real Stage3 no-emit request should succeed");
+		assertTrue(realSuccessWire.indexOf("resolved_modules=1") >= 0, "a real successful request should return compiler progress to its client");
+		assertTrue(realSuccessWire.indexOf("stage3=no_emit_ok") >= 0, "a real successful request should return its completion marker to its client");
+		assertTrue(realSuccessWire.indexOf("\x02") == -1, "a successful request should not contain Haxe's failure marker");
 	}
 }

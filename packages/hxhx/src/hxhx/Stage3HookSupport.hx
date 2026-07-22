@@ -24,30 +24,30 @@ import hxhx.macro.MacroRuntimeSession;
 	  existing close-and-return behavior.
 **/
 class Stage3HookSupport {
-	static function runHookPhase(session:MacroRuntimeSession, phase:String, hookIds:Array<Int>):Null<String> {
+	static function runHookPhase(session:MacroRuntimeSession, phase:String, hookIds:Array<Int>, output:Null<CompilationRequestOutput>):Null<String> {
 		for (i in 0...hookIds.length) {
 			try {
 				session.runHook(phase, hookIds[i]);
 			} catch (e:String) {
 				return phase + " hook failed: " + e;
 			}
-			Sys.println("hook_" + phase + "[" + i + "]=ok");
+			CompilationRequestOutput.writeStdoutLine(output, "hook_" + phase + "[" + i + "]=ok");
 		}
 		return null;
 	}
 
-	public static function runStandardMacroHooks(session:Null<MacroRuntimeSession>):Null<String> {
+	public static function runStandardMacroHooks(session:Null<MacroRuntimeSession>, ?output:CompilationRequestOutput):Null<String> {
 		if (session == null)
 			return null;
 
-		final afterTypingError = runHookPhase(session, "afterTyping", hxhx.macro.MacroState.listAfterTypingHookIds());
+		final afterTypingError = runHookPhase(session, "afterTyping", hxhx.macro.MacroState.listAfterTypingHookIds(), output);
 		if (afterTypingError != null)
 			return afterTypingError;
 
-		final onGenerateError = runHookPhase(session, "onGenerate", hxhx.macro.MacroState.listOnGenerateHookIds());
+		final onGenerateError = runHookPhase(session, "onGenerate", hxhx.macro.MacroState.listOnGenerateHookIds(), output);
 		if (onGenerateError != null)
 			return onGenerateError;
 
-		return runHookPhase(session, "afterGenerate", hxhx.macro.MacroState.listAfterGenerateHookIds());
+		return runHookPhase(session, "afterGenerate", hxhx.macro.MacroState.listAfterGenerateHookIds(), output);
 	}
 }

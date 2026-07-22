@@ -49,7 +49,7 @@ class Stage3BuildMacroSupport {
 		return BuildMetadataCollector.collectBuildMacroExprs(source, modulePath);
 	}
 
-	public static function dispatchOnTypeNotFoundHooks(macroSession:Null<MacroRuntimeSession>, typePath:String):Bool {
+	public static function dispatchOnTypeNotFoundHooks(macroSession:Null<MacroRuntimeSession>, typePath:String, ?output:CompilationRequestOutput):Bool {
 		if (macroSession == null || typePath == null || typePath.length == 0)
 			return false;
 		final hooks = hxhx.macro.MacroState.listOnTypeNotFoundHookIds();
@@ -57,7 +57,7 @@ class Stage3BuildMacroSupport {
 			return false;
 		for (i in 0...hooks.length) {
 			if (macroSession.runTypeNotFoundHook(hooks[i], typePath)) {
-				Sys.println("hook_onTypeNotFound[" + i + "]=" + typePath);
+				CompilationRequestOutput.writeStdoutLine(output, "hook_onTypeNotFound[" + i + "]=" + typePath);
 				return true;
 			}
 		}

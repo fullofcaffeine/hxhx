@@ -28,12 +28,20 @@ The accepted native architecture and evidence gates are recorded in
 The first implementation sub-slice now sends stdio and socket requests through
 the same Haxe decoder and compile-or-display dispatcher. This removes the old
 socket-only placeholder that rejected ordinary compilation. It deliberately
-adds no semantic cache. It also does not yet capture all compiler output for
-the requesting client or provide the complete fresh request context,
-cancellation, shutdown, and output transaction required by the first Bead.
-Later steps add those lifecycle guarantees, then reusable source, parser,
-typed-module, display, plugin, and target facts only after each layer passes
-clean-versus-warm correctness tests.
+adds no semantic cache. Ordinary compiler progress and diagnostics are now
+collected by a request-owned output object and returned to the correct client
+using Haxe's output/error protocol. A native test sends a successful compile,
+a missing-module failure, and another successful compile to one server; all
+three clients receive their own result and the server process stays silent.
+
+This is still an implementation test, not a recommended project workflow.
+Server requests currently require `--hxhx-no-run` so output from the compiled
+program cannot bypass the client response. Display remains a bring-up response,
+and cancellation, shutdown, complete cleanup registration, transactional file
+output, and zero-cache timing reports are not finished. Later steps add those
+lifecycle guarantees, then reusable source, parser, typed-module, display,
+plugin, and target facts only after each layer passes clean-versus-warm
+correctness tests.
 
 There are two connected implementation tracks. `haxe_ocaml-850ii.33` makes
 upstream Haxe 4.3.7's already-incremental compiler feed complete, safe Reflaxe

@@ -163,6 +163,9 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.BackendProviderResolver");
   ignore (HxType.class_ "hxhx.BuildMetadataCollector");
   ignore (HxType.class_ "hxhx.CliRouting");
+  ignore (HxType.class_ "hxhx.CompilationRequestContext");
+  ignore (HxType.class_ "hxhx.CompilationRequestOutput");
+  ignore (HxType.class_ "hxhx.CompilationRequestOutputEvent");
   ignore (HxType.class_ "hxhx.CompilationServerReply");
   ignore (HxType.class_ "hxhx.CompilationServerRequest");
   ignore (HxType.class_ "hxhx.CompilationServerRequestCodec");
@@ -1979,9 +1982,27 @@ let init () : unit =
   HxType.register_class_ctor "hxhx.CliRouting" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_CliRouting.create ())
   );
+  HxType.register_class_ctor "hxhx.CompilationRequestContext" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'requestId' for hxhx.CompilationRequestContext" in
+    let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'bufferOutput' for hxhx.CompilationRequestContext" in
+    let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'isServerRequest' for hxhx.CompilationRequestContext" in
+    Obj.repr (Hxhx_CompilationRequestContext.create a0 a1 a2)
+  );
+  HxType.register_class_ctor "hxhx.CompilationRequestOutput" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'buffered' for hxhx.CompilationRequestOutput" in
+    Obj.repr (Hxhx_CompilationRequestOutput.create a0)
+  );
+  HxType.register_class_ctor "hxhx.CompilationRequestOutputEvent" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'text' for hxhx.CompilationRequestOutputEvent" in
+    let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'isErrorStream' for hxhx.CompilationRequestOutputEvent" in
+    Obj.repr (Hxhx_CompilationRequestOutputEvent.create a0 a1)
+  );
   HxType.register_class_ctor "hxhx.CompilationServerReply" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
-    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'payload' for hxhx.CompilationServerReply" in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'outputEvents' for hxhx.CompilationServerReply" in
     let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'isError' for hxhx.CompilationServerReply" in
     Obj.repr (Hxhx_CompilationServerReply.create a0 a1)
   );
@@ -2416,6 +2437,9 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.BackendProviderResolver" (fun () -> Obj.repr (Hxhx_BackendProviderResolver.__empty ()));
   HxType.register_class_empty_ctor "hxhx.BuildMetadataCollector" (fun () -> Obj.repr (Hxhx_BuildMetadataCollector.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CliRouting" (fun () -> Obj.repr (Hxhx_CliRouting.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CompilationRequestContext" (fun () -> Obj.repr (Hxhx_CompilationRequestContext.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CompilationRequestOutput" (fun () -> Obj.repr (Hxhx_CompilationRequestOutput.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CompilationRequestOutputEvent" (fun () -> Obj.repr (Hxhx_CompilationRequestOutputEvent.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerReply" (fun () -> Obj.repr (Hxhx_CompilationServerReply.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerRequest" (fun () -> Obj.repr (Hxhx_CompilationServerRequest.__empty ()));
   HxType.register_class_empty_ctor "hxhx.CompilationServerRequestCodec" (fun () -> Obj.repr (Hxhx_CompilationServerRequestCodec.__empty ()));
@@ -2804,12 +2828,18 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.BuildMetadataCollector" [ "collectBuildMacroExprs"; "findBuildMacroExprs"; "matchesMetadataPathFilter"; "trim" ];
   HxType.register_class_instance_fields "hxhx.CliRouting" [];
   HxType.register_class_static_fields "hxhx.CliRouting" [ "addDefineIfMissing"; "addDefineIfMissingForPlanning"; "addLibraryIfMissing"; "addLibraryIfMissingForPlanning"; "addMacroIfMissing"; "canRouteCommandOnlyUnitsAsStage3"; "canRouteMixedUnitsAsNativeJs"; "canRouteMixedUnitsAsNativeSource"; "canRouteUnitsAsNativeCpp"; "consumesStandardTargetValue"; "findFlagValue"; "findSourceHostReflaxeTarget"; "findUnsupportedLegacyTarget"; "flattenUnits"; "getDefineValue"; "hasCommandHook"; "hasCppTargetFlag"; "hasDefine"; "hasFlag"; "hasHlTargetFlag"; "hasLibrary"; "hasMacro"; "hasNekoTargetFlag"; "hasNonCppStandardTargetFlag"; "hasNonHlStandardTargetFlag"; "hasNonNekoStandardTargetFlag"; "hasNonSourceStandardTargetFlag"; "hasSourceTargetFlag"; "hasStandardJsTargetFlag"; "isJsNativeHelperUnit"; "isNativeNekoCommandHelperUnit"; "listLaneSelectors"; "plan"; "planningTargetArgs"; "planningTargetUnits"; "pureSourceTarget"; "scanStandardTargetFlags"; "sourceTargetCandidates"; "sourceTargetForUnits"; "stripRoutingFlags" ];
-  HxType.register_class_instance_fields "hxhx.CompilationServerReply" [ "isError"; "payload" ];
-  HxType.register_class_static_fields "hxhx.CompilationServerReply" [];
+  HxType.register_class_instance_fields "hxhx.CompilationRequestContext" [ "close"; "closed"; "isClosed"; "isServerRequest"; "output"; "requestId" ];
+  HxType.register_class_static_fields "hxhx.CompilationRequestContext" [ "direct"; "server" ];
+  HxType.register_class_instance_fields "hxhx.CompilationRequestOutput" [ "buffered"; "captured"; "close"; "closed"; "events"; "stderrLine"; "stdoutLine"; "write" ];
+  HxType.register_class_static_fields "hxhx.CompilationRequestOutput" [ "writeStderrLine"; "writeStdoutLine" ];
+  HxType.register_class_instance_fields "hxhx.CompilationRequestOutputEvent" [ "isErrorStream"; "text" ];
+  HxType.register_class_static_fields "hxhx.CompilationRequestOutputEvent" [];
+  HxType.register_class_instance_fields "hxhx.CompilationServerReply" [ "events"; "isError"; "outputEvents" ];
+  HxType.register_class_static_fields "hxhx.CompilationServerReply" [ "message" ];
   HxType.register_class_instance_fields "hxhx.CompilationServerRequest" [ "baseArgsValue"; "findFlagValue"; "invocationArgs"; "requestArgs"; "requestArgsValue"; "requestId"; "stdinBytes"; "stdinBytesValue" ];
   HxType.register_class_static_fields "hxhx.CompilationServerRequest" [ "copyBytes" ];
   HxType.register_class_instance_fields "hxhx.CompilationServerRequestCodec" [];
-  HxType.register_class_static_fields "hxhx.CompilationServerRequestCodec" [ "decode"; "decodeString"; "encodeSocketReply" ];
+  HxType.register_class_static_fields "hxhx.CompilationServerRequestCodec" [ "decode"; "decodeString"; "encodeReply"; "encodeSocketReply" ];
   HxType.register_class_instance_fields "hxhx.CompilationServerRequestDispatcher" [];
   HxType.register_class_static_fields "hxhx.CompilationServerRequestDispatcher" [ "dispatch" ];
   HxType.register_class_instance_fields "hxhx.CompilerJsonArray" [ "values" ];
@@ -2847,7 +2877,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.Stage3BuildMacroSupport" [];
   HxType.register_class_static_fields "hxhx.Stage3BuildMacroSupport" [ "buildFieldsPayloadForParsed"; "collectBuildMacroExprs"; "dispatchOnTypeNotFoundHooks"; "parseGeneratedMembers" ];
   HxType.register_class_instance_fields "hxhx.Stage3Compiler" [];
-  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "collectBackendResources"; "collectBuildMacroExprs"; "dispatchOnTypeNotFoundHooks"; "error"; "findTargetOutputDirectoryHint"; "findTargetOutputFileHint"; "formatDynamicException"; "formatException"; "hasConfiguredExternalMacroHostExe"; "hasFlag"; "haxeDiagnosticError"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "rawTyperDiagnostic"; "run"; "runConnect"; "runOne"; "runWaitSocket"; "runWaitStdio"; "shouldAutoBuildMacroHost"; "targetDefineForBackend"; "trim" ];
+  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "collectBackendResources"; "collectBuildMacroExprs"; "dispatchOnTypeNotFoundHooks"; "error"; "findTargetOutputDirectoryHint"; "findTargetOutputFileHint"; "formatDynamicException"; "formatException"; "hasConfiguredExternalMacroHostExe"; "hasFlag"; "haxeDiagnosticError"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "rawTyperDiagnostic"; "run"; "runConnect"; "runOne"; "runRequest"; "runWaitSocket"; "runWaitStdio"; "shouldAutoBuildMacroHost"; "targetDefineForBackend"; "trim" ];
   HxType.register_class_instance_fields "hxhx.Stage3CustomizationSupport" [];
   HxType.register_class_static_fields "hxhx.Stage3CustomizationSupport" [ "emitTypedSummaryReport"; "has"; "normalize"; "splitRawValue"; "trim" ];
   HxType.register_class_instance_fields "hxhx.Stage3DiagnosticsSupport" [];
@@ -3145,6 +3175,9 @@ let init () : unit =
   HxType.register_class_tags "hxhx.BackendProviderResolver" [ "hxhx.BackendProviderResolver" ];
   HxType.register_class_tags "hxhx.BuildMetadataCollector" [ "hxhx.BuildMetadataCollector" ];
   HxType.register_class_tags "hxhx.CliRouting" [ "hxhx.CliRouting" ];
+  HxType.register_class_tags "hxhx.CompilationRequestContext" [ "hxhx.CompilationRequestContext" ];
+  HxType.register_class_tags "hxhx.CompilationRequestOutput" [ "hxhx.CompilationRequestOutput" ];
+  HxType.register_class_tags "hxhx.CompilationRequestOutputEvent" [ "hxhx.CompilationRequestOutputEvent" ];
   HxType.register_class_tags "hxhx.CompilationServerReply" [ "hxhx.CompilationServerReply" ];
   HxType.register_class_tags "hxhx.CompilationServerRequest" [ "hxhx.CompilationServerRequest" ];
   HxType.register_class_tags "hxhx.CompilationServerRequestCodec" [ "hxhx.CompilationServerRequestCodec" ];

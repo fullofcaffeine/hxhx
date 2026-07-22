@@ -76,17 +76,13 @@ let hasDefineFlag = fun args name -> try let __fallback_result_6 = let i = ref 0
 ) in Obj.magic __fallback_result_6 with
   | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
 
-let writeWaitStdioReply = fun reply -> ignore (let payload = ref ("" : string) in (
-  ignore (if (Obj.magic reply : Hxhx_CompilationServerReply.t).isError then ignore (payload := HxString.toStdString (!payload) ^ "") else ());
-  ignore (if (Obj.magic reply : Hxhx_CompilationServerReply.t).payload != Obj.magic (HxRuntime.hx_null) && HxString.length ((Obj.magic reply : Hxhx_CompilationServerReply.t).payload) > 0 then ignore (payload := HxString.toStdString (!payload) ^ HxString.toStdString ((Obj.magic reply : Hxhx_CompilationServerReply.t).payload)) else ());
-  let out = Obj.magic (Sys_io_Stdio.stderr ()) in let value = HxString.length (!payload) in (
-    ignore ((Obj.magic out : Haxe_io_Output.t).writeByte (Obj.magic out) (HxInt.logand value 255));
-    ignore ((Obj.magic out : Haxe_io_Output.t).writeByte (Obj.magic out) (HxInt.logand (HxInt.shr value 8) 255));
-    ignore ((Obj.magic out : Haxe_io_Output.t).writeByte (Obj.magic out) (HxInt.logand (HxInt.shr value 16) 255));
-    ignore ((Obj.magic out : Haxe_io_Output.t).writeByte (Obj.magic out) (HxInt.ushr value 24));
-    ignore ((Obj.magic out : Haxe_io_Output.t).writeString (Obj.magic out) (!payload : string) (Obj.magic (HxRuntime.hx_null)));
-    (Obj.magic out : Haxe_io_Output.t).flush (Obj.magic out) ()
-  )
+let writeWaitStdioReply = fun reply -> ignore (let payload = (Hxhx_CompilationServerRequestCodec.encodeReply (Obj.magic reply) : string) in let out = Obj.magic (Sys_io_Stdio.stderr ()) in let value = HxString.length payload in (
+  ignore ((Obj.magic out : Haxe_io_Output.t).writeByte (Obj.magic out) (HxInt.logand value 255));
+  ignore ((Obj.magic out : Haxe_io_Output.t).writeByte (Obj.magic out) (HxInt.logand (HxInt.shr value 8) 255));
+  ignore ((Obj.magic out : Haxe_io_Output.t).writeByte (Obj.magic out) (HxInt.logand (HxInt.shr value 16) 255));
+  ignore ((Obj.magic out : Haxe_io_Output.t).writeByte (Obj.magic out) (HxInt.ushr value 24));
+  ignore ((Obj.magic out : Haxe_io_Output.t).writeString (Obj.magic out) (payload : string) (Obj.magic (HxRuntime.hx_null)));
+  (Obj.magic out : Haxe_io_Output.t).flush (Obj.magic out) ()
 ))
 
 let runWaitStdio = fun baseArgs runOne error -> try let __fallback_result_18 = let input = Obj.magic (Sys_io_Stdio.stdin ()) in (

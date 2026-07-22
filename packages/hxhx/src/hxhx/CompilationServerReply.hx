@@ -7,11 +7,20 @@ package hxhx;
 	whether the compiler request succeeded or failed.
 **/
 class CompilationServerReply {
-	public final payload:String;
+	final outputEvents:Array<CompilationRequestOutputEvent>;
+
 	public final isError:Bool;
 
-	public function new(payload:String, isError:Bool) {
-		this.payload = payload;
+	public function new(outputEvents:Array<CompilationRequestOutputEvent>, isError:Bool) {
+		this.outputEvents = outputEvents.copy();
 		this.isError = isError;
+	}
+
+	public static function message(text:String, isError:Bool):CompilationServerReply {
+		return new CompilationServerReply([new CompilationRequestOutputEvent(text + "\n", true)], isError);
+	}
+
+	public function events():Array<CompilationRequestOutputEvent> {
+		return outputEvents.copy();
 	}
 }

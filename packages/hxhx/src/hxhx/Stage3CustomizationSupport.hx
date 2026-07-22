@@ -68,15 +68,16 @@ class Stage3CustomizationSupport {
 		compiler configuration.
 	**/
 	public static function emitTypedSummaryReport(customizations:Array<String>, phase:String, backendId:String, typedModules:Int, headerOnlyModules:Int,
-			unsupportedExprsTotal:Int, unsupportedFiles:Int):Void {
+			unsupportedExprsTotal:Int, unsupportedFiles:Int, ?output:CompilationRequestOutput):Void {
 		if (!has(customizations, REPORT_TYPED_SUMMARY))
 			return;
-		Sys.println("hxhx_customization[" + REPORT_TYPED_SUMMARY + "]=enabled");
-		Sys.println("hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].phase=" + phase);
-		Sys.println("hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].backend=" + backendId);
-		Sys.println("hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].typed_modules=" + typedModules);
-		Sys.println("hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].header_only_modules=" + headerOnlyModules);
-		Sys.println("hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].unsupported_exprs_total=" + unsupportedExprsTotal);
-		Sys.println("hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].unsupported_files=" + unsupportedFiles);
+		CompilationRequestOutput.writeStdoutLine(output, "hxhx_customization[" + REPORT_TYPED_SUMMARY + "]=enabled");
+		CompilationRequestOutput.writeStdoutLine(output, "hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].phase=" + phase);
+		CompilationRequestOutput.writeStdoutLine(output, "hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].backend=" + backendId);
+		CompilationRequestOutput.writeStdoutLine(output, "hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].typed_modules=" + typedModules);
+		CompilationRequestOutput.writeStdoutLine(output, "hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].header_only_modules=" + headerOnlyModules);
+		CompilationRequestOutput.writeStdoutLine(output,
+			"hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].unsupported_exprs_total=" + unsupportedExprsTotal);
+		CompilationRequestOutput.writeStdoutLine(output, "hxhx_customization_report[" + REPORT_TYPED_SUMMARY + "].unsupported_files=" + unsupportedFiles);
 	}
 }

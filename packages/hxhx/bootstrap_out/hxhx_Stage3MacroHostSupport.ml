@@ -308,7 +308,7 @@ let buildMacroHostExe = fun repoRoot extraCp entrypoints -> let script = (Haxe_i
   )
 )
 
-let runCliMacrosIfNeeded = fun macroRuntimeMode typeOnly hasConfiguredExternalMacroHostExe parsedMacros exprMacros runHaxelibMacros libMacros macroHostClassPaths -> try let __fallback_result_87 = (
+let runCliMacrosIfNeeded = fun macroRuntimeMode typeOnly hasConfiguredExternalMacroHostExe parsedMacros exprMacros runHaxelibMacros libMacros macroHostClassPaths output -> try let __fallback_result_87 = (
   ignore (if typeOnly || not (HxArray.length parsedMacros > 0 || HxArray.length exprMacros > 0 || runHaxelibMacros && HxArray.length libMacros > 0) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_66 = HxAnon.create () in (
     ignore (HxAnon.set __anon_66 "session" (Obj.magic (HxRuntime.hx_null)));
     ignore (HxAnon.set __anon_66 "error" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
@@ -346,12 +346,12 @@ let runCliMacrosIfNeeded = fun macroRuntimeMode typeOnly hasConfiguredExternalMa
       ignore (if runHaxelibMacros then ignore (let _g = ref 0 in let _g1 = HxArray.length libMacros in while !_g < _g1 do ignore (let i = let __old_74 = !_g in let __new_75 = HxInt.add __old_74 1 in (
         ignore (_g := __new_75);
         __old_74
-      ) in print_endline ((("lib_macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (Obj.obj (HxAnon.get macroSession "run") (HxArray.get (Obj.magic libMacros) i : string)))) done) else ());
+      ) in Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("lib_macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (Obj.obj (HxAnon.get macroSession "run") (HxArray.get (Obj.magic libMacros) i : string)) : string)) done) else ());
       let _g = ref 0 in let _g1 = HxArray.length parsedMacros in (
         ignore (while !_g < _g1 do ignore (let i = let __old_76 = !_g in let __new_77 = HxInt.add __old_76 1 in (
           ignore (_g := __new_77);
           __old_76
-        ) in print_endline ((("macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (Obj.obj (HxAnon.get macroSession "run") (HxArray.get (Obj.magic parsedMacros) i : string)))) done);
+        ) in Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (Obj.obj (HxAnon.get macroSession "run") (HxArray.get (Obj.magic parsedMacros) i : string)) : string)) done);
         let __assign_78 = Obj.magic macroSession in (
           tempMacroRuntimeSession := __assign_78;
           __assign_78
@@ -378,7 +378,7 @@ let runCliMacrosIfNeeded = fun macroRuntimeMode typeOnly hasConfiguredExternalMa
         ))))
       ) else raise (__exn_83));
     let session = Obj.magic (!tempMacroRuntimeSession) in (
-      ignore (Hxhx_Stage3DiagnosticsSupport.printHxMacroDefines ("macro_define" : string));
+      ignore (Hxhx_Stage3DiagnosticsSupport.printHxMacroDefines ("macro_define" : string) (Obj.magic output));
       let __anon_85 = HxAnon.create () in (
         ignore (HxAnon.set __anon_85 "session" session);
         ignore (HxAnon.set __anon_85 "error" (Obj.repr (Obj.magic (HxRuntime.hx_null))));

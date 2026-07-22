@@ -41,8 +41,22 @@ class CompilationServerRequestCodec {
 	}
 
 	public static function encodeSocketReply(reply:CompilationServerReply):String {
+		return encodeReply(reply);
+	}
+
+	public static function encodeReply(reply:CompilationServerReply):String {
+		final out = new StringBuf();
+		for (event in reply.events()) {
+			if (event.isErrorStream) {
+				out.add(event.text);
+			} else {
+				out.addChar(0x01);
+				out.add(event.text.split("\n").join(String.fromCharCode(0x01)));
+				out.add("\n");
+			}
+		}
 		if (reply.isError)
-			return String.fromCharCode(0x02) + reply.payload;
-		return reply.payload;
+			out.add(String.fromCharCode(0x02) + "\n");
+		return out.toString();
 	}
 }

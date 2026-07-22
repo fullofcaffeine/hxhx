@@ -81,14 +81,14 @@ let normalize = fun raw -> try let __fallback_result_17 = let out = Obj.magic (H
 
 let has = fun customizations id -> customizations != Obj.magic (HxRuntime.hx_null) && HxArray.indexOf customizations id 0 <> -1
 
-let emitTypedSummaryReport = fun customizations phase backendId typedModules headerOnlyModules unsupportedExprsTotal unsupportedFiles -> ignore (try (
+let emitTypedSummaryReport = fun customizations phase backendId typedModules headerOnlyModules unsupportedExprsTotal unsupportedFiles output -> ignore (try (
   ignore (if not (has (Obj.magic customizations) ("report-typed-summary" : string)) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  ignore (print_endline (("hxhx_customization[" ^ "report-typed-summary") ^ "]=enabled"));
-  ignore (print_endline ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].phase=") ^ HxString.toStdString phase));
-  ignore (print_endline ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].backend=") ^ HxString.toStdString backendId));
-  ignore (print_endline ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].typed_modules=") ^ string_of_int typedModules));
-  ignore (print_endline ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].header_only_modules=") ^ string_of_int headerOnlyModules));
-  ignore (print_endline ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].unsupported_exprs_total=") ^ string_of_int unsupportedExprsTotal));
-  print_endline ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].unsupported_files=") ^ string_of_int unsupportedFiles)
+  ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (("hxhx_customization[" ^ "report-typed-summary") ^ "]=enabled" : string));
+  ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].phase=") ^ HxString.toStdString phase : string));
+  ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].backend=") ^ HxString.toStdString backendId : string));
+  ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].typed_modules=") ^ string_of_int typedModules : string));
+  ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].header_only_modules=") ^ string_of_int headerOnlyModules : string));
+  ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].unsupported_exprs_total=") ^ string_of_int unsupportedExprsTotal : string));
+  Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].unsupported_files=") ^ string_of_int unsupportedFiles : string)
 ) with
   | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18)

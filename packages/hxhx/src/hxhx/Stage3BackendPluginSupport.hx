@@ -140,13 +140,14 @@ class Stage3BackendPluginSupport {
 			appendPluginLoadRequest(out, source, providerType, originPrefix + ":" + providerType);
 	}
 
-	static function appendManifestRequests(out:Array<BackendPluginLoadRequest>, source:BackendPluginSource, manifestPaths:Array<String>, trace:Bool):Void {
+	static function appendManifestRequests(out:Array<BackendPluginLoadRequest>, source:BackendPluginSource, manifestPaths:Array<String>, trace:Bool,
+			output:Null<CompilationRequestOutput>):Void {
 		for (manifestPath in manifestPaths) {
 			final providers = BackendPluginManifestResolver.providerTypeNamesForManifestPath(manifestPath);
 			for (providerType in providers)
 				appendPluginLoadRequest(out, source, providerType, "manifest:" + manifestPath);
 			if (trace)
-				Sys.println("backend_plugin_manifest[" + source + "][" + manifestPath + "]=" + providers.length);
+				CompilationRequestOutput.writeStdoutLine(output, "backend_plugin_manifest[" + source + "][" + manifestPath + "]=" + providers.length);
 		}
 	}
 
@@ -157,15 +158,15 @@ class Stage3BackendPluginSupport {
 		- `explicit` providers/manifests override `bundled` providers/manifests.
 		- plugin sources override builtin registrations through source priority bands.
 	**/
-	public static function loadDynamicBackendProviders(rawDefines:Array<String>):Void {
+	public static function loadDynamicBackendProviders(rawDefines:Array<String>, ?output:CompilationRequestOutput):Void {
 		BackendRegistry.clearDynamicRegistrations();
 		final trace = isTrueEnv("HXHX_TRACE_BACKEND_PROVIDERS");
 		final requests = new Array<BackendPluginLoadRequest>();
 
 		appendProviderRequests(requests, BackendPluginSource.Bundled, collectBundledBackendProviderTypeNames(rawDefines), "bundled-provider");
-		appendManifestRequests(requests, BackendPluginSource.Bundled, collectBundledBackendPluginManifestPaths(rawDefines), trace);
+		appendManifestRequests(requests, BackendPluginSource.Bundled, collectBundledBackendPluginManifestPaths(rawDefines), trace, output);
 		appendProviderRequests(requests, BackendPluginSource.Explicit, collectExplicitBackendProviderTypeNames(rawDefines), "explicit-provider");
-		appendManifestRequests(requests, BackendPluginSource.Explicit, collectExplicitBackendPluginManifestPaths(rawDefines), trace);
+		appendManifestRequests(requests, BackendPluginSource.Explicit, collectExplicitBackendPluginManifestPaths(rawDefines), trace, output);
 
 		if (requests.length == 0)
 			return;
@@ -173,8 +174,8 @@ class Stage3BackendPluginSupport {
 		final registrations = BackendPluginLoader.registrationsForRequests(requests);
 		final registered = BackendRegistry.registerProvider(registrations);
 		if (trace) {
-			Sys.println("backend_provider_requests=" + requests.length);
-			Sys.println("backend_provider_total=" + registered);
+			CompilationRequestOutput.writeStdoutLine(output, "backend_provider_requests=" + requests.length);
+			CompilationRequestOutput.writeStdoutLine(output, "backend_provider_total=" + registered);
 		}
 	}
 
@@ -191,14 +192,14 @@ class Stage3BackendPluginSupport {
 		return providerDefines;
 	}
 
-	public static function selectBackend(backendId:String, providerDefines:Array<String>):Stage3BackendSelection {
+	public static function selectBackend(backendId:String, providerDefines:Array<String>, ?output:CompilationRequestOutput):Stage3BackendSelection {
 		try {
 			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=before_load_dynamic_backend_providers");
+				CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=before_load_dynamic_backend_providers");
 			}
-			loadDynamicBackendProviders(providerDefines);
+			loadDynamicBackendProviders(providerDefines, output);
 			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=after_load_dynamic_backend_providers");
+				CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=after_load_dynamic_backend_providers");
 			}
 		} catch (e:String) {
 			throw "backend provider setup failed: " + e;
@@ -206,22 +207,22 @@ class Stage3BackendPluginSupport {
 
 		final backend = try {
 			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-				Sys.println("stage3_driver=before_resolve_builtin_backend id=" + backendId);
+				CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=before_resolve_builtin_backend id=" + backendId);
 			}
 			BackendRegistry.requireForTarget(backendId);
 		} catch (e:String) {
 			throw "backend setup failed: " + e;
 		}
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
-			Sys.println("stage3_driver=after_resolve_builtin_backend");
+			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=after_resolve_builtin_backend");
 		}
 
 		final selected = BackendRegistry.descriptorForTarget(backendId);
 		if (isTrueEnv("HXHX_TRACE_BACKEND_SELECTION")) {
 			if (selected == null) {
-				Sys.println("backend_selected_impl=<unknown>");
+				CompilationRequestOutput.writeStdoutLine(output, "backend_selected_impl=<unknown>");
 			} else {
-				Sys.println("backend_selected_impl=" + selected.implId);
+				CompilationRequestOutput.writeStdoutLine(output, "backend_selected_impl=" + selected.implId);
 			}
 		}
 		if (selected == null)
