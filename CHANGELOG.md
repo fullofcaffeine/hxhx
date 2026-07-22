@@ -1,3 +1,10 @@
+# [0.30.0](https://github.com/fullofcaffeine/hxhx/compare/v0.29.0...v0.30.0) (2026-07-22)
+
+
+### Features
+
+* **hxhx:** observe embedded constant dependencies ([c3f99d1](https://github.com/fullofcaffeine/hxhx/commit/c3f99d138a65d190ce82d9b4546cfd4c543270a9))
+
 # [0.29.0](https://github.com/fullofcaffeine/hxhx/compare/v0.28.0...v0.29.0) (2026-07-22)
 
 
