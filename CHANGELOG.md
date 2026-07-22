@@ -1,3 +1,10 @@
+## [0.23.14](https://github.com/fullofcaffeine/hxhx/compare/v0.23.13...v0.23.14) (2026-07-22)
+
+
+### Bug Fixes
+
+* **tooling:** block incomplete warm Reflaxe builds ([6ee781e](https://github.com/fullofcaffeine/hxhx/commit/6ee781e3b221b3e33b99937f6c8ffc641daec451))
+
 ## [0.23.13](https://github.com/fullofcaffeine/hxhx/compare/v0.23.12...v0.23.13) (2026-07-22)
 
 
