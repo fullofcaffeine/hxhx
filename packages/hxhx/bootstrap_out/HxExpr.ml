@@ -37,3 +37,5 @@ type hxexpr =
 | EVars of hxexpr HxArray.t
 | EVariableDeclaration of string * string * Obj.t * HxPos.t * bool * bool
 | EWhile of hxexpr * hxexpr HxArray.t * bool * HxPos.t
+| EBreak of HxPos.t
+| EContinue of HxPos.t

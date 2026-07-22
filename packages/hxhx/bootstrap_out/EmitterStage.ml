@@ -733,7 +733,9 @@ let isRootSysReceiverExpr = fun e -> let tempResult = ref (false : bool) in (
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g = (match e with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 8 then let _g = (match e with
     | HxExpr.EIdent __enum_param_150 -> __enum_param_150
     | _ -> failwith "Unexpected enum parameter" : string) in match _g with
     | "Haxe_Sys" | "Sys" -> let __assign_152 = true in (
@@ -1486,7 +1488,9 @@ let tryExprToOcamlStage3StaticField = fun obj field staticImportByIdent currentP
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g = (match obj with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g = (match obj with
     | HxExpr.EIdent __enum_param_355 -> __enum_param_355
     | _ -> failwith "Unexpected enum parameter" : string) in let typeName = (_g : string) in let importedModule = (staticImportModuleForStage3 (typeName : string) (Obj.repr staticImportByIdent) : string) in (
     ignore (if importedModule != Obj.magic (HxRuntime.hx_null) && HxString.length importedModule > 0 then ignore (let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
@@ -1745,7 +1749,9 @@ let rec stage3IsInt64Expr = fun expr tyByIdent -> let tempResult = ref (false : 
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 9 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_439, _) -> __enum_param_439
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_440) -> __enum_param_440
@@ -1783,7 +1789,9 @@ let rec stage3IsInt64Expr = fun expr tyByIdent -> let tempResult = ref (false : 
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g4 = (match _g2 with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_441 -> __enum_param_441
       | _ -> failwith "Unexpected enum parameter" : string) in let owner = (_g4 : string) in let field = (_g3 : string) in (
       ignore _g1;
@@ -2037,7 +2045,9 @@ let rec stage3IsStringExpr = fun expr tyByIdent -> let tempResult = ref (false :
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 9 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_483, _) -> __enum_param_483
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_484) -> __enum_param_484
@@ -2075,7 +2085,9 @@ let rec stage3IsStringExpr = fun expr tyByIdent -> let tempResult = ref (false :
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g4 = (match _g2 with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_485 -> __enum_param_485
       | _ -> failwith "Unexpected enum parameter" : string) in match _g4 with
       | "Std" -> (match _g3 with
@@ -2242,7 +2254,9 @@ let stage3IsUnknownNumericIdent = fun expr tyByIdent -> let tempResult = ref (fa
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g = (match expr with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 8 then let _g = (match expr with
     | HxExpr.EIdent __enum_param_511 -> __enum_param_511
     | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in let t = (stage3TyForIdent (name : string) (Obj.repr tyByIdent) : string) in let __assign_512 = HxString.equals t "" || HxString.equals t "Dynamic" || HxString.equals t "Unknown" || HxString.equals t "Array" || isMutableLocalRefIdent (name : string) in (
     tempResult := __assign_512;
@@ -2294,7 +2308,9 @@ let rec stage3IsNullableIntExpr = fun expr -> let tempResult = ref (false : bool
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 9 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_516, _) -> __enum_param_516
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_517) -> __enum_param_517
@@ -2332,7 +2348,9 @@ let rec stage3IsNullableIntExpr = fun expr -> let tempResult = ref (false : bool
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g4 = (match _g2 with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_518 -> __enum_param_518
       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "Std" then if HxString.equals _g3 "parseInt" then if HxArray.length _g1 = 1 then (
       ignore (HxArray.get (Obj.magic _g1) 0);
@@ -2457,7 +2475,9 @@ let rec stage3IsLikelyArrayExpr = fun expr tyByIdent -> let tempResult = ref (fa
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 9 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_545, _) -> __enum_param_545
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_546) -> __enum_param_546
@@ -2563,7 +2583,9 @@ let rec stage3IsLikelyStringArrayExpr = fun expr tyByIdent -> let tempResult = r
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 9 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_562, _) -> __enum_param_562
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_563) -> __enum_param_563
@@ -2682,7 +2704,9 @@ let stage3RootCallArgs = fun e owner field arity -> let tempResult = ref (Obj.ma
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then let _g = Obj.magic (match e with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 11 then let _g = Obj.magic (match e with
     | HxExpr.ECall (__enum_param_600, _) -> __enum_param_600
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match e with
     | HxExpr.ECall (_, __enum_param_601) -> __enum_param_601
@@ -2720,7 +2744,9 @@ let stage3RootCallArgs = fun e owner field arity -> let tempResult = ref (Obj.ma
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g2 = Obj.magic (match _g with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 9 then let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_602, _) -> __enum_param_602
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_603) -> __enum_param_603
@@ -2758,7 +2784,9 @@ let stage3RootCallArgs = fun e owner field arity -> let tempResult = ref (Obj.ma
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g4 = (match _g2 with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 8 then let _g4 = (match _g2 with
     | HxExpr.EIdent __enum_param_604 -> __enum_param_604
     | _ -> failwith "Unexpected enum parameter" : string) in let actualOwner = (_g4 : string) in let actualField = (_g3 : string) in let args = Obj.magic _g1 in if HxString.equals actualOwner owner && HxString.equals actualField field && HxArray.length args = arity then let __assign_605 = Obj.magic (Obj.magic args) in (
     tempResult := __assign_605;
@@ -2814,7 +2842,9 @@ let stage3RootField = fun e owner field -> let tempResult = ref (false : bool) i
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g = Obj.magic (match e with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 9 then let _g = Obj.magic (match e with
     | HxExpr.EField (__enum_param_610, _) -> __enum_param_610
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match e with
     | HxExpr.EField (_, __enum_param_611) -> __enum_param_611
@@ -2852,7 +2882,9 @@ let stage3RootField = fun e owner field -> let tempResult = ref (false : bool) i
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g2 = (match _g with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match _g with
     | HxExpr.EIdent __enum_param_612 -> __enum_param_612
     | _ -> failwith "Unexpected enum parameter" : string) in let actualOwner = (_g2 : string) in let actualField = (_g1 : string) in let __assign_613 = HxString.equals actualOwner owner && HxString.equals actualField field in (
     tempResult := __assign_613;
@@ -2923,7 +2955,9 @@ let tryExprToOcamlStage3ReflectTypeIntrinsic = fun e arityByIdent tyByIdent stat
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g = Obj.magic (match e with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g = Obj.magic (match e with
                 | HxExpr.ECall (__enum_param_657, _) -> __enum_param_657
                 | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match e with
                 | HxExpr.ECall (_, __enum_param_658) -> __enum_param_658
@@ -2961,7 +2995,9 @@ let tryExprToOcamlStage3ReflectTypeIntrinsic = fun e arityByIdent tyByIdent stat
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g2 = Obj.magic (match _g with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g2 = Obj.magic (match _g with
                 | HxExpr.EField (__enum_param_659, _) -> __enum_param_659
                 | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
                 | HxExpr.EField (_, __enum_param_660) -> __enum_param_660
@@ -2999,7 +3035,9 @@ let tryExprToOcamlStage3ReflectTypeIntrinsic = fun e arityByIdent tyByIdent stat
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g4 = (match _g2 with
                 | HxExpr.EIdent __enum_param_661 -> __enum_param_661
                 | _ -> failwith "Unexpected enum parameter" : string) in match _g4 with
                 | "Reflect" -> ignore (match _g3 with
@@ -3159,7 +3197,9 @@ let rec collectAssignedNamesInExprRec = fun e out -> ignore (try (
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g3 = (match _g2 with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g3 = (match _g2 with
       | HxExpr.EIdent __enum_param_1627 -> __enum_param_1627
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in let op = Obj.magic _g in if op = HxUnaryOperator.Increment || op = HxUnaryOperator.Decrement then ignore (if name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 then ignore (HxMap.set_string out name true) else ()) else ignore (let inner = Obj.magic _g2 in (
       ignore _g1;
@@ -3204,7 +3244,9 @@ let rec collectAssignedNamesInExprRec = fun e out -> ignore (try (
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g3 = (match _g1 with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g3 = (match _g1 with
       | HxExpr.EIdent __enum_param_1628 -> __enum_param_1628
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in let op = (_g : string) in let rhs = Obj.magic _g2 in let tempLeft = ref (false : bool) in (
       ignore (match op with
@@ -3471,7 +3513,9 @@ let rec scanExprForPreludeDepsRec = fun e locals calls idents -> ignore (try (
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33 with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35 with
     | 8 -> ignore (let _g = (let __enum_param_1647 = e in if __enum_param_1647 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_1647 with
       | HxExpr.EIdent __enum_param_1646 -> __enum_param_1646
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in if name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 && not (HxMap.exists_string locals name) then ignore (HxMap.set_string idents name true) else ())
@@ -4857,7 +4901,9 @@ let rec exprToOcamlString = fun e tyByIdent arityByIdent staticImportByIdent cur
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g2 = Obj.magic (match _g with
+        | HxExpr.EWhile (_, _, _, _) -> 33
+        | HxExpr.EBreak _ -> 34
+        | HxExpr.EContinue _ -> 35) = 9 then let _g2 = Obj.magic (match _g with
         | HxExpr.EField (__enum_param_236, _) -> __enum_param_236
         | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
         | HxExpr.EField (_, __enum_param_237) -> __enum_param_237
@@ -4895,7 +4941,9 @@ let rec exprToOcamlString = fun e tyByIdent arityByIdent staticImportByIdent cur
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g4 = (match _g2 with
+        | HxExpr.EWhile (_, _, _, _) -> 33
+        | HxExpr.EBreak _ -> 34
+        | HxExpr.EContinue _ -> 35) = 8 then let _g4 = (match _g2 with
         | HxExpr.EIdent __enum_param_238 -> __enum_param_238
         | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "Std" then match _g3 with
         | "join" -> if HxArray.length _g1 = 1 then let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in (
@@ -5079,7 +5127,9 @@ and exprToOcamlArrayComprehension = fun name iterable guardExpr yieldExpr arityB
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 26 then (
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 26 then (
     ignore (match iterable with
       | HxExpr.ERange (__enum_param_379, _) -> __enum_param_379
       | _ -> failwith "Unexpected enum parameter");
@@ -5145,7 +5195,9 @@ and exprToOcamlArrayComprehension = fun name iterable guardExpr yieldExpr arityB
           | HxExpr.EReturn _ -> 30
           | HxExpr.EVars _ -> 31
           | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-          | HxExpr.EWhile (_, _, _, _) -> 33) = 26 then let _g = Obj.magic (match iterable with
+          | HxExpr.EWhile (_, _, _, _) -> 33
+          | HxExpr.EBreak _ -> 34
+          | HxExpr.EContinue _ -> 35) = 26 then let _g = Obj.magic (match iterable with
           | HxExpr.ERange (__enum_param_387, _) -> __enum_param_387
           | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match iterable with
           | HxExpr.ERange (_, __enum_param_388) -> __enum_param_388
@@ -5225,7 +5277,9 @@ and exprToOcamlNewStage3 = fun typePath args arityByIdent tyByIdent staticImport
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g = (match a with
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 8 then let _g = (match a with
               | HxExpr.EIdent __enum_param_400 -> __enum_param_400
               | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in if stage3HasTyIdent (name : string) (Obj.repr tyByIdent) || stage3HasStmtValueIdent (name : string) || stage3HasLocalValueIdent (name : string) || isMutableLocalRefIdent (name : string) then let __assign_401 = (ocamlReadValueIdent (name : string) : string) in (
               tempResult := __assign_401;
@@ -5426,7 +5480,9 @@ and tryExprToOcamlStage3NumericStringIntrinsic = fun e arityByIdent tyByIdent st
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g = Obj.magic (match e with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g = Obj.magic (match e with
     | HxExpr.ECall (__enum_param_590, _) -> __enum_param_590
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match e with
     | HxExpr.ECall (_, __enum_param_591) -> __enum_param_591
@@ -5464,7 +5520,9 @@ and tryExprToOcamlStage3NumericStringIntrinsic = fun e arityByIdent tyByIdent st
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g2 = Obj.magic (match _g with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_592, _) -> __enum_param_592
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_593) -> __enum_param_593
@@ -5502,7 +5560,9 @@ and tryExprToOcamlStage3NumericStringIntrinsic = fun e arityByIdent tyByIdent st
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g4 = (match _g2 with
     | HxExpr.EIdent __enum_param_594 -> __enum_param_594
     | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "Math" then ignore (match _g3 with
     | "abs" -> ignore (if HxArray.length _g1 = 1 then ignore (let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let arg = Obj.magic _g5 in let tempString = ref ("" : string) in (
@@ -5577,7 +5637,9 @@ and tryExprToOcamlStage3MathCallIntrinsic = fun e arityByIdent tyByIdent staticI
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g = Obj.magic (match e with
+        | HxExpr.EWhile (_, _, _, _) -> 33
+        | HxExpr.EBreak _ -> 34
+        | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g = Obj.magic (match e with
         | HxExpr.ECall (__enum_param_618, _) -> __enum_param_618
         | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match e with
         | HxExpr.ECall (_, __enum_param_619) -> __enum_param_619
@@ -5615,7 +5677,9 @@ and tryExprToOcamlStage3MathCallIntrinsic = fun e arityByIdent tyByIdent staticI
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g2 = Obj.magic (match _g with
+        | HxExpr.EWhile (_, _, _, _) -> 33
+        | HxExpr.EBreak _ -> 34
+        | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g2 = Obj.magic (match _g with
         | HxExpr.EField (__enum_param_620, _) -> __enum_param_620
         | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
         | HxExpr.EField (_, __enum_param_621) -> __enum_param_621
@@ -5653,7 +5717,9 @@ and tryExprToOcamlStage3MathCallIntrinsic = fun e arityByIdent tyByIdent staticI
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
+        | HxExpr.EWhile (_, _, _, _) -> 33
+        | HxExpr.EBreak _ -> 34
+        | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g4 = (match _g2 with
         | HxExpr.EIdent __enum_param_622 -> __enum_param_622
         | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "DateTools" then ignore (if HxArray.length _g1 = 1 then ignore (let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let arg = Obj.magic _g5 in let field = (_g3 : string) in if HxString.equals field "seconds" || HxString.equals field "minutes" || HxString.equals field "hours" || HxString.equals field "days" then raise (HxRuntime.Hx_return (Obj.repr (((("DateTools." ^ HxString.toStdString (ocamlValueIdent (field : string))) ^ " (") ^ HxString.toStdString (exprToOcamlAsFloatValueStage3 (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.magic (HxRuntime.hx_null)))) ^ ")" : string))) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ());
       Obj.magic (HxRuntime.hx_null)
@@ -5698,7 +5764,9 @@ and tryExprToOcamlStage3Int64Intrinsic = fun e arityByIdent tyByIdent staticImpo
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g = Obj.magic (match e with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g = Obj.magic (match e with
       | HxExpr.ECall (__enum_param_627, _) -> __enum_param_627
       | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match e with
       | HxExpr.ECall (_, __enum_param_628) -> __enum_param_628
@@ -5736,7 +5804,9 @@ and tryExprToOcamlStage3Int64Intrinsic = fun e arityByIdent tyByIdent staticImpo
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g2 = Obj.magic (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_629, _) -> __enum_param_629
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_630) -> __enum_param_630
@@ -5774,7 +5844,9 @@ and tryExprToOcamlStage3Int64Intrinsic = fun e arityByIdent tyByIdent staticImpo
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_631 -> __enum_param_631
       | _ -> failwith "Unexpected enum parameter" : string) in match _g4 with
       | "Int64" -> ignore (match _g3 with
@@ -5826,7 +5898,9 @@ and tryExprToOcamlStage3LambdaTryIntrinsic = fun e arityByIdent tyByIdent static
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g2 = (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_634 -> __enum_param_634
       | _ -> failwith "Unexpected enum parameter" : string) in match _g2 with
       | "__hxhx_throw" -> ignore (if HxArray.length _g1 = 1 then ignore (let _g3 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let value = Obj.magic _g3 in raise (HxRuntime.Hx_return (Obj.repr (("HxRuntime.hx_throw (Obj.repr (" ^ HxString.toStdString (exprToOcaml (Obj.magic value) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee))) ^ "))")))) else ignore (HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: malformed structural __hxhx_throw expression") ["Dynamic"; "String"]))
@@ -5866,7 +5940,9 @@ and tryExprToOcamlStage3LambdaTryIntrinsic = fun e arityByIdent tyByIdent static
           | HxExpr.EReturn _ -> 30
           | HxExpr.EVars _ -> 31
           | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-          | HxExpr.EWhile (_, _, _, _) -> 33) = 14 then ignore (let _g6 = Obj.magic (match _g3 with
+          | HxExpr.EWhile (_, _, _, _) -> 33
+          | HxExpr.EBreak _ -> 34
+          | HxExpr.EContinue _ -> 35) = 14 then ignore (let _g6 = Obj.magic (match _g3 with
           | HxExpr.ELambda (__enum_param_635, _) -> __enum_param_635
           | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g3 with
           | HxExpr.ELambda (_, __enum_param_636) -> __enum_param_636
@@ -5904,7 +5980,9 @@ and tryExprToOcamlStage3LambdaTryIntrinsic = fun e arityByIdent tyByIdent static
           | HxExpr.EReturn _ -> 30
           | HxExpr.EVars _ -> 31
           | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-          | HxExpr.EWhile (_, _, _, _) -> 33) = 24 then ignore (let _g8 = Obj.magic (match _g4 with
+          | HxExpr.EWhile (_, _, _, _) -> 33
+          | HxExpr.EBreak _ -> 34
+          | HxExpr.EContinue _ -> 35) = 24 then ignore (let _g8 = Obj.magic (match _g4 with
           | HxExpr.EArrayDecl __enum_param_637 -> __enum_param_637
           | _ -> failwith "Unexpected enum parameter") in let catches = Obj.magic _g8 in let tryBody = Obj.magic _g7 in let tryArgs = Obj.magic _g6 in if HxArray.length tryArgs = 0 then ignore (let tryCode = (exprToOcaml (Obj.magic tryBody) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
           ignore (if HxArray.length catches = 0 then raise (HxRuntime.Hx_return (Obj.repr (("HxRuntime.hx_try (fun () -> " ^ HxString.toStdString tryCode) ^ ") (fun __hxhx_e -> HxRuntime.hx_throw __hxhx_e)" : string))) else ());
@@ -5943,7 +6021,9 @@ and tryExprToOcamlStage3LambdaTryIntrinsic = fun e arityByIdent tyByIdent static
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 24 then let _g10 = Obj.magic (match _g9 with
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 24 then let _g10 = Obj.magic (match _g9 with
               | HxExpr.EArrayDecl __enum_param_638 -> __enum_param_638
               | _ -> failwith "Unexpected enum parameter") in if HxArray.length _g10 = 3 then let _g11 = Obj.magic (HxArray.get (Obj.magic _g10) 0) in let _g12 = Obj.magic (HxArray.get (Obj.magic _g10) 1) in let _g13 = Obj.magic (HxArray.get (Obj.magic _g10) 2) in if (match _g11 with
               | HxExpr.ENull -> 0
@@ -5979,7 +6059,9 @@ and tryExprToOcamlStage3LambdaTryIntrinsic = fun e arityByIdent tyByIdent static
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 2 then let _g14 = (match _g11 with
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 2 then let _g14 = (match _g11 with
               | HxExpr.EString __enum_param_639 -> __enum_param_639
               | _ -> failwith "Unexpected enum parameter" : string) in if (match _g12 with
               | HxExpr.ENull -> 0
@@ -6015,7 +6097,9 @@ and tryExprToOcamlStage3LambdaTryIntrinsic = fun e arityByIdent tyByIdent static
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 2 then (
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 2 then (
               ignore (match _g12 with
                 | HxExpr.EString __enum_param_640 -> __enum_param_640
                 | _ -> failwith "Unexpected enum parameter");
@@ -6053,7 +6137,9 @@ and tryExprToOcamlStage3LambdaTryIntrinsic = fun e arityByIdent tyByIdent static
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 14 then let _g16 = Obj.magic (match _g13 with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 14 then let _g16 = Obj.magic (match _g13 with
                 | HxExpr.ELambda (__enum_param_641, _) -> __enum_param_641
                 | _ -> failwith "Unexpected enum parameter") in let _g17 = Obj.magic (match _g13 with
                 | HxExpr.ELambda (_, __enum_param_642) -> __enum_param_642
@@ -6127,7 +6213,9 @@ and tryExprToOcamlStage3LambdaTryIntrinsic = fun e arityByIdent tyByIdent static
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 14 then ignore (let _g2 = Obj.magic (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 14 then ignore (let _g2 = Obj.magic (match _g with
       | HxExpr.ELambda (__enum_param_649, _) -> __enum_param_649
       | _ -> failwith "Unexpected enum parameter") in let _g3 = Obj.magic (match _g with
       | HxExpr.ELambda (_, __enum_param_650) -> __enum_param_650
@@ -6187,7 +6275,9 @@ and tryExprToOcamlStage3StdStringIntrinsic = fun e arityByIdent tyByIdent static
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g2 = (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_664 -> __enum_param_664
       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "String" then ignore (if HxString.equals _g1 "fromCharCode" then raise (HxRuntime.Hx_return (Obj.repr ("(fun i -> Stdlib.String.make 1 (Char.chr i))" : string))) else ignore ()) else ignore ()) else ignore ())
     | HxExpr.ECall (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in if (match _g with
@@ -6224,7 +6314,9 @@ and tryExprToOcamlStage3StdStringIntrinsic = fun e arityByIdent tyByIdent static
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g2 = Obj.magic (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_665, _) -> __enum_param_665
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_666) -> __enum_param_666
@@ -6262,7 +6354,9 @@ and tryExprToOcamlStage3StdStringIntrinsic = fun e arityByIdent tyByIdent static
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_667 -> __enum_param_667
       | _ -> failwith "Unexpected enum parameter" : string) in match _g4 with
       | "Array" -> ignore (match _g3 with
@@ -6341,7 +6435,9 @@ and tryExprToOcamlStage3StdStringIntrinsic = fun e arityByIdent tyByIdent static
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 0 then let __assign_668 = ("0" : string) in (
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 0 then let __assign_668 = ("0" : string) in (
               tempString := __assign_668;
               __assign_668
             ) else let __assign_669 = (exprToOcaml (Obj.magic digits) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
@@ -6431,7 +6527,9 @@ and tryExprToOcamlStage3FsPrintIntrinsic = fun e arityByIdent tyByIdent staticIm
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g = Obj.magic (match e with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g = Obj.magic (match e with
     | HxExpr.ECall (__enum_param_672, _) -> __enum_param_672
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match e with
     | HxExpr.ECall (_, __enum_param_673) -> __enum_param_673
@@ -6480,7 +6578,9 @@ and tryExprToOcamlStage3FsPrintIntrinsic = fun e arityByIdent tyByIdent staticIm
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
+        | HxExpr.EWhile (_, _, _, _) -> 33
+        | HxExpr.EBreak _ -> 34
+        | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g4 = (match _g2 with
         | HxExpr.EIdent __enum_param_674 -> __enum_param_674
         | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "Sys" then ignore (if HxArray.length _g1 = 1 then ignore (let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let arg = Obj.magic _g5 in raise (HxRuntime.Hx_return (Obj.repr (("print_string (" ^ HxString.toStdString (exprToOcamlString (Obj.magic arg) (Obj.repr tyByIdent) (Obj.repr arityByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee))) ^ ")")))) else ignore ()) else ignore ()) else ignore ())
       | "println" -> ignore (if (match _g2 with
@@ -6517,7 +6617,9 @@ and tryExprToOcamlStage3FsPrintIntrinsic = fun e arityByIdent tyByIdent staticIm
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match _g2 with
+        | HxExpr.EWhile (_, _, _, _) -> 33
+        | HxExpr.EBreak _ -> 34
+        | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g4 = (match _g2 with
         | HxExpr.EIdent __enum_param_675 -> __enum_param_675
         | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "Sys" then ignore (if HxArray.length _g1 = 1 then ignore (let _g5 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let arg = Obj.magic _g5 in raise (HxRuntime.Hx_return (Obj.repr (("print_endline (" ^ HxString.toStdString (exprToOcamlString (Obj.magic arg) (Obj.repr tyByIdent) (Obj.repr arityByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee))) ^ ")")))) else ignore ()) else ignore ()) else ignore ())
       | "readDirectory" -> ignore (if HxArray.length _g1 = 0 then ignore ((
@@ -6563,7 +6665,9 @@ and tryExprToOcamlStage3FsPrintIntrinsic = fun e arityByIdent tyByIdent staticIm
           | HxExpr.EReturn _ -> 30
           | HxExpr.EVars _ -> 31
           | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-          | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g6 = (match _g4 with
+          | HxExpr.EWhile (_, _, _, _) -> 33
+          | HxExpr.EBreak _ -> 34
+          | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g6 = (match _g4 with
           | HxExpr.EIdent __enum_param_676 -> __enum_param_676
           | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g6 "haxe" then ignore (if HxString.equals _g5 "Log" then ignore (if HxArray.length _g1 = 1 then ignore (let _g7 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let arg = Obj.magic _g7 in raise (HxRuntime.Hx_return (Obj.repr (("Haxe_Log.trace (" ^ HxString.toStdString (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee))) ^ ") ((Obj.magic HxRuntime.hx_null))")))) else ignore ()) else ignore ()) else ignore ()) else ignore ())
         | _ -> ignore ())
@@ -6629,7 +6733,9 @@ and tryExprToOcamlStage3RuntimeIntrinsic = fun callee args arityByIdent tyByIden
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g2 = (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_681 -> __enum_param_681
       | _ -> failwith "Unexpected enum parameter" : string) in match _g2 with
       | "Config" -> ignore (if HxString.equals _g1 "isCi" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr ("((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")" : string))) else ignore ()) else ignore ())
@@ -6698,7 +6804,9 @@ and tryExprToOcamlStage3StringCallIntrinsic = fun callee args arityByIdent tyByI
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g = Obj.magic (match callee with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g = Obj.magic (match callee with
     | HxExpr.EField (__enum_param_684, _) -> __enum_param_684
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
     | HxExpr.EField (_, __enum_param_685) -> __enum_param_685
@@ -6745,7 +6853,9 @@ and tryExprToOcamlStage3StringCallIntrinsic = fun callee args arityByIdent tyByI
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g2 = (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_686 -> __enum_param_686
       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "StringTools" then ignore (if HxArray.length args = 1 then ignore (let value = (exprToOcaml (Obj.magic (HxArray.get (Obj.magic args) 0)) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.magic (HxRuntime.hx_null)) : string) in raise (HxRuntime.Hx_return (Obj.repr (stage3OcamlCall1 ("Stdlib.String.trim" : string) (value : string))))) else ignore ()) else ignore ()) else ignore ()))
     | _ -> ignore ()) else ignore ());
@@ -6845,7 +6955,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
             | HxExpr.EReturn _ -> 30
             | HxExpr.EVars _ -> 31
             | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-            | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g2 = (match _g with
+            | HxExpr.EWhile (_, _, _, _) -> 33
+            | HxExpr.EBreak _ -> 34
+            | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match _g with
             | HxExpr.EIdent __enum_param_701 -> __enum_param_701
             | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "__ocaml__" then if HxArray.length _g1 = 1 then let _g3 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let arg = Obj.magic _g3 in let code = (constFoldString (Obj.magic arg) : string) in if code == Obj.magic (HxRuntime.hx_null) then let __assign_702 = ("(Obj.magic 0)" : string) in (
             tempResult := __assign_702;
@@ -6888,7 +7000,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 5 then ignore ((
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 5 then ignore ((
               ignore (match callee with
                 | HxExpr.EEnumValue __enum_param_704 -> __enum_param_704
                 | _ -> failwith "Unexpected enum parameter");
@@ -6972,7 +7086,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                   | HxExpr.EReturn _ -> 30
                   | HxExpr.EVars _ -> 31
                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                  | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then let name = (_g4 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then let expectedRaw = stage3ArityFor (name : string) (Obj.repr arityByIdent) in let tempRight1 = ref (false : bool) in let expr = Obj.magic (HxArray.get (Obj.magic args) 0) in (
+                  | HxExpr.EWhile (_, _, _, _) -> 33
+                  | HxExpr.EBreak _ -> 34
+                  | HxExpr.EContinue _ -> 35) = 6 then let name = (_g4 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then let expectedRaw = stage3ArityFor (name : string) (Obj.repr arityByIdent) in let tempRight1 = ref (false : bool) in let expr = Obj.magic (HxArray.get (Obj.magic args) 0) in (
                   ignore (match expr with
                     | HxExpr.EThis -> let __assign_716 = true in (
                       tempRight1 := __assign_716;
@@ -7059,7 +7175,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                     | HxExpr.EReturn _ -> 30
                     | HxExpr.EVars _ -> 31
                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g3 = Obj.magic (match callee with
+                    | HxExpr.EWhile (_, _, _, _) -> 33
+                    | HxExpr.EBreak _ -> 34
+                    | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g3 = Obj.magic (match callee with
                     | HxExpr.EField (__enum_param_725, _) -> __enum_param_725
                     | _ -> failwith "Unexpected enum parameter") in let _g4 = (match callee with
                     | HxExpr.EField (_, __enum_param_726) -> __enum_param_726
@@ -7118,7 +7236,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g5 = Obj.magic (match _g3 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g5 = Obj.magic (match _g3 with
                       | HxExpr.ECall (__enum_param_727, _) -> __enum_param_727
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
                       | HxExpr.ECall (_, __enum_param_728) -> __enum_param_728
@@ -7156,7 +7276,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
                       | HxExpr.EField (__enum_param_729, _) -> __enum_param_729
                       | _ -> failwith "Unexpected enum parameter") in let _g8 = (match _g5 with
                       | HxExpr.EField (_, __enum_param_730) -> __enum_param_730
@@ -7232,7 +7354,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g5 = Obj.magic (match _g3 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g5 = Obj.magic (match _g3 with
                       | HxExpr.EField (__enum_param_731, _) -> __enum_param_731
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
                       | HxExpr.EField (_, __enum_param_732) -> __enum_param_732
@@ -7274,7 +7398,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g5 = Obj.magic (match _g3 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g5 = Obj.magic (match _g3 with
                       | HxExpr.EField (__enum_param_733, _) -> __enum_param_733
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
                       | HxExpr.EField (_, __enum_param_734) -> __enum_param_734
@@ -7330,7 +7456,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g5 = Obj.magic (match obj with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g5 = Obj.magic (match obj with
                       | HxExpr.ECall (__enum_param_735, _) -> __enum_param_735
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match obj with
                       | HxExpr.ECall (_, __enum_param_736) -> __enum_param_736
@@ -7368,7 +7496,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
                       | HxExpr.EField (__enum_param_737, _) -> __enum_param_737
                       | _ -> failwith "Unexpected enum parameter") in let _g8 = (match _g5 with
                       | HxExpr.EField (_, __enum_param_738) -> __enum_param_738
@@ -7406,7 +7536,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g9 = Obj.magic (match _g7 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g9 = Obj.magic (match _g7 with
                       | HxExpr.EField (__enum_param_739, _) -> __enum_param_739
                       | _ -> failwith "Unexpected enum parameter") in let _g10 = (match _g7 with
                       | HxExpr.EField (_, __enum_param_740) -> __enum_param_740
@@ -7448,7 +7580,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g5 = Obj.magic (match _g3 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g5 = Obj.magic (match _g3 with
                       | HxExpr.ECall (__enum_param_741, _) -> __enum_param_741
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
                       | HxExpr.ECall (_, __enum_param_742) -> __enum_param_742
@@ -7486,7 +7620,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
                       | HxExpr.EField (__enum_param_743, _) -> __enum_param_743
                       | _ -> failwith "Unexpected enum parameter") in let _g8 = (match _g5 with
                       | HxExpr.EField (_, __enum_param_744) -> __enum_param_744
@@ -7529,7 +7665,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                     | HxExpr.EReturn _ -> 30
                     | HxExpr.EVars _ -> 31
                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g3 = Obj.magic (match callee with
+                    | HxExpr.EWhile (_, _, _, _) -> 33
+                    | HxExpr.EBreak _ -> 34
+                    | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g3 = Obj.magic (match callee with
                     | HxExpr.EField (__enum_param_745, _) -> __enum_param_745
                     | _ -> failwith "Unexpected enum parameter") in let _g4 = (match callee with
                     | HxExpr.EField (_, __enum_param_746) -> __enum_param_746
@@ -7589,7 +7727,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                         | HxExpr.EReturn _ -> 30
                         | HxExpr.EVars _ -> 31
                         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                        | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then let name = (_g4 : string) in if hasCurrentInstanceMethod (name : string) then let __assign_752 = Obj.magic (name : string) in (
+                        | HxExpr.EWhile (_, _, _, _) -> 33
+                        | HxExpr.EBreak _ -> 34
+                        | HxExpr.EContinue _ -> 35) = 6 then let name = (_g4 : string) in if hasCurrentInstanceMethod (name : string) then let __assign_752 = Obj.magic (name : string) in (
                         tempMaybeString := __assign_752;
                         __assign_752
                       ) else let __assign_753 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -7710,7 +7850,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                               | HxExpr.EReturn _ -> 30
                               | HxExpr.EVars _ -> 31
                               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                              | HxExpr.EWhile (_, _, _, _) -> 33) = 1 then let _g4 = match _g3 with
+                              | HxExpr.EWhile (_, _, _, _) -> 33
+                              | HxExpr.EBreak _ -> 34
+                              | HxExpr.EContinue _ -> 35) = 1 then let _g4 = match _g3 with
                               | HxExpr.EBool __enum_param_770 -> __enum_param_770
                               | _ -> failwith "Unexpected enum parameter" in if _g4 = true then let __assign_771 = true in (
                               tempBool1 := __assign_771;
@@ -7781,7 +7923,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                   | HxExpr.EReturn _ -> 30
                                   | HxExpr.EVars _ -> 31
                                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                  | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g5 = (match obj with
+                                  | HxExpr.EWhile (_, _, _, _) -> 33
+                                  | HxExpr.EBreak _ -> 34
+                                  | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g5 = (match obj with
                                   | HxExpr.EIdent __enum_param_780 -> __enum_param_780
                                   | _ -> failwith "Unexpected enum parameter" : string) in let typeName = (_g5 : string) in let importedModule = (staticImportModuleForStage3 (typeName : string) (Obj.repr staticImportByIdent) : string) in if importedModule != Obj.magic (HxRuntime.hx_null) && HxString.length importedModule > 0 then ignore ((
                                   ignore (let __assign_781 = Obj.magic (callSigForStage3 ((HxString.toStdString importedModule ^ ".") ^ HxString.toStdString lowered : string) (Obj.repr callSigByCallee)) in (
@@ -7988,7 +8132,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                 | HxExpr.EReturn _ -> 30
                                 | HxExpr.EVars _ -> 31
                                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g3 = (match callee with
+                                | HxExpr.EWhile (_, _, _, _) -> 33
+                                | HxExpr.EBreak _ -> 34
+                                | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g3 = (match callee with
                                 | HxExpr.EIdent __enum_param_814 -> __enum_param_814
                                 | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in let __assign_815 = Obj.magic (fallbackLocalFunctionSig (name : string)) in (
                                 hx_sig := __assign_815;
@@ -8040,7 +8186,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                   | HxExpr.EReturn _ -> 30
                                   | HxExpr.EVars _ -> 31
                                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                  | HxExpr.EWhile (_, _, _, _) -> 33) = 0 then let __assign_818 = (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
+                                  | HxExpr.EWhile (_, _, _, _) -> 33
+                                  | HxExpr.EBreak _ -> 34
+                                  | HxExpr.EContinue _ -> 35) = 0 then let __assign_818 = (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
                                   tempResult2 := __assign_818;
                                   __assign_818
                                 ) else if stage3IsFloatParamHint (hint : string) then let __assign_819 = (exprToOcamlAsFloatValueStage3 (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
@@ -8135,7 +8283,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                   | HxExpr.EReturn _ -> 30
                                   | HxExpr.EVars _ -> 31
                                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                  | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then let name = (_g4 : string) in let __assign_835 = stage3HasArity (name : string) (Obj.repr arityByIdent) && HxInt.add (HxArray.length args) 1 = stage3ArityFor (name : string) (Obj.repr arityByIdent) in (
+                                  | HxExpr.EWhile (_, _, _, _) -> 33
+                                  | HxExpr.EBreak _ -> 34
+                                  | HxExpr.EContinue _ -> 35) = 6 then let name = (_g4 : string) in let __assign_835 = stage3HasArity (name : string) (Obj.repr arityByIdent) && HxInt.add (HxArray.length args) 1 = stage3ArityFor (name : string) (Obj.repr arityByIdent) in (
                                   tempBool2 := __assign_835;
                                   __assign_835
                                 ) else let __assign_836 = false in (
@@ -8211,7 +8361,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                       | HxExpr.EReturn _ -> 30
                                       | HxExpr.EVars _ -> 31
                                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g3 = (match last with
+                                      | HxExpr.EWhile (_, _, _, _) -> 33
+                                      | HxExpr.EBreak _ -> 34
+                                      | HxExpr.EContinue _ -> 35) = 8 then let _g3 = (match last with
                                       | HxExpr.EIdent __enum_param_842 -> __enum_param_842
                                       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g3 "pos" then let __assign_843 = true in (
                                       tempBool3 := __assign_843;
@@ -8282,7 +8434,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                     | HxExpr.EReturn _ -> 30
                                     | HxExpr.EVars _ -> 31
                                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                    | HxExpr.EWhile (_, _, _, _) -> 33) = 1 then ignore ((
+                                    | HxExpr.EWhile (_, _, _, _) -> 33
+                                    | HxExpr.EBreak _ -> 34
+                                    | HxExpr.EContinue _ -> 35) = 1 then ignore ((
                                     ignore (match _g3 with
                                       | HxExpr.EBool __enum_param_852 -> __enum_param_852
                                       | _ -> failwith "Unexpected enum parameter");
@@ -8596,7 +8750,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                             | HxExpr.EReturn _ -> 30
                                             | HxExpr.EVars _ -> 31
                                             | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                            | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then ignore (let name = (_g4 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then ignore (if stage3ArityFor (name : string) (Obj.repr arityByIdent) <= 1 then ignore (let __assign_891 = false in (
+                                            | HxExpr.EWhile (_, _, _, _) -> 33
+                                            | HxExpr.EBreak _ -> 34
+                                            | HxExpr.EContinue _ -> 35) = 6 then ignore (let name = (_g4 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then ignore (if stage3ArityFor (name : string) (Obj.repr arityByIdent) <= 1 then ignore (let __assign_891 = false in (
                                             appendUnit := __assign_891;
                                             __assign_891
                                           )) else ()) else ignore ()) else ignore ())
@@ -8666,7 +8822,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 5 then ignore ((
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 5 then ignore ((
               ignore (match callee with
                 | HxExpr.EEnumValue __enum_param_898 -> __enum_param_898
                 | _ -> failwith "Unexpected enum parameter");
@@ -8750,7 +8908,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                   | HxExpr.EReturn _ -> 30
                   | HxExpr.EVars _ -> 31
                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                  | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then let name = (_g4 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then let expectedRaw = stage3ArityFor (name : string) (Obj.repr arityByIdent) in let tempRight9 = ref (false : bool) in let expr = Obj.magic (HxArray.get (Obj.magic args) 0) in (
+                  | HxExpr.EWhile (_, _, _, _) -> 33
+                  | HxExpr.EBreak _ -> 34
+                  | HxExpr.EContinue _ -> 35) = 6 then let name = (_g4 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then let expectedRaw = stage3ArityFor (name : string) (Obj.repr arityByIdent) in let tempRight9 = ref (false : bool) in let expr = Obj.magic (HxArray.get (Obj.magic args) 0) in (
                   ignore (match expr with
                     | HxExpr.EThis -> let __assign_910 = true in (
                       tempRight9 := __assign_910;
@@ -8837,7 +8997,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                     | HxExpr.EReturn _ -> 30
                     | HxExpr.EVars _ -> 31
                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g3 = Obj.magic (match callee with
+                    | HxExpr.EWhile (_, _, _, _) -> 33
+                    | HxExpr.EBreak _ -> 34
+                    | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g3 = Obj.magic (match callee with
                     | HxExpr.EField (__enum_param_919, _) -> __enum_param_919
                     | _ -> failwith "Unexpected enum parameter") in let _g4 = (match callee with
                     | HxExpr.EField (_, __enum_param_920) -> __enum_param_920
@@ -8896,7 +9058,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g5 = Obj.magic (match _g3 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g5 = Obj.magic (match _g3 with
                       | HxExpr.ECall (__enum_param_921, _) -> __enum_param_921
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
                       | HxExpr.ECall (_, __enum_param_922) -> __enum_param_922
@@ -8934,7 +9098,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
                       | HxExpr.EField (__enum_param_923, _) -> __enum_param_923
                       | _ -> failwith "Unexpected enum parameter") in let _g8 = (match _g5 with
                       | HxExpr.EField (_, __enum_param_924) -> __enum_param_924
@@ -9010,7 +9176,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g5 = Obj.magic (match _g3 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g5 = Obj.magic (match _g3 with
                       | HxExpr.EField (__enum_param_925, _) -> __enum_param_925
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
                       | HxExpr.EField (_, __enum_param_926) -> __enum_param_926
@@ -9052,7 +9220,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g5 = Obj.magic (match _g3 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g5 = Obj.magic (match _g3 with
                       | HxExpr.EField (__enum_param_927, _) -> __enum_param_927
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
                       | HxExpr.EField (_, __enum_param_928) -> __enum_param_928
@@ -9108,7 +9278,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g5 = Obj.magic (match obj with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g5 = Obj.magic (match obj with
                       | HxExpr.ECall (__enum_param_929, _) -> __enum_param_929
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match obj with
                       | HxExpr.ECall (_, __enum_param_930) -> __enum_param_930
@@ -9146,7 +9318,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
                       | HxExpr.EField (__enum_param_931, _) -> __enum_param_931
                       | _ -> failwith "Unexpected enum parameter") in let _g8 = (match _g5 with
                       | HxExpr.EField (_, __enum_param_932) -> __enum_param_932
@@ -9184,7 +9358,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g9 = Obj.magic (match _g7 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g9 = Obj.magic (match _g7 with
                       | HxExpr.EField (__enum_param_933, _) -> __enum_param_933
                       | _ -> failwith "Unexpected enum parameter") in let _g10 = (match _g7 with
                       | HxExpr.EField (_, __enum_param_934) -> __enum_param_934
@@ -9226,7 +9402,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g5 = Obj.magic (match _g3 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g5 = Obj.magic (match _g3 with
                       | HxExpr.ECall (__enum_param_935, _) -> __enum_param_935
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
                       | HxExpr.ECall (_, __enum_param_936) -> __enum_param_936
@@ -9264,7 +9442,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g7 = Obj.magic (match _g5 with
                       | HxExpr.EField (__enum_param_937, _) -> __enum_param_937
                       | _ -> failwith "Unexpected enum parameter") in let _g8 = (match _g5 with
                       | HxExpr.EField (_, __enum_param_938) -> __enum_param_938
@@ -9307,7 +9487,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                     | HxExpr.EReturn _ -> 30
                     | HxExpr.EVars _ -> 31
                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g3 = Obj.magic (match callee with
+                    | HxExpr.EWhile (_, _, _, _) -> 33
+                    | HxExpr.EBreak _ -> 34
+                    | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g3 = Obj.magic (match callee with
                     | HxExpr.EField (__enum_param_939, _) -> __enum_param_939
                     | _ -> failwith "Unexpected enum parameter") in let _g4 = (match callee with
                     | HxExpr.EField (_, __enum_param_940) -> __enum_param_940
@@ -9367,7 +9549,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                         | HxExpr.EReturn _ -> 30
                         | HxExpr.EVars _ -> 31
                         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                        | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then let name = (_g4 : string) in if hasCurrentInstanceMethod (name : string) then let __assign_946 = Obj.magic (name : string) in (
+                        | HxExpr.EWhile (_, _, _, _) -> 33
+                        | HxExpr.EBreak _ -> 34
+                        | HxExpr.EContinue _ -> 35) = 6 then let name = (_g4 : string) in if hasCurrentInstanceMethod (name : string) then let __assign_946 = Obj.magic (name : string) in (
                         tempMaybeString1 := __assign_946;
                         __assign_946
                       ) else let __assign_947 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -9488,7 +9672,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                               | HxExpr.EReturn _ -> 30
                               | HxExpr.EVars _ -> 31
                               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                              | HxExpr.EWhile (_, _, _, _) -> 33) = 1 then let _g4 = match _g3 with
+                              | HxExpr.EWhile (_, _, _, _) -> 33
+                              | HxExpr.EBreak _ -> 34
+                              | HxExpr.EContinue _ -> 35) = 1 then let _g4 = match _g3 with
                               | HxExpr.EBool __enum_param_964 -> __enum_param_964
                               | _ -> failwith "Unexpected enum parameter" in if _g4 = true then let __assign_965 = true in (
                               tempBool5 := __assign_965;
@@ -9559,7 +9745,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                   | HxExpr.EReturn _ -> 30
                                   | HxExpr.EVars _ -> 31
                                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                  | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g5 = (match obj with
+                                  | HxExpr.EWhile (_, _, _, _) -> 33
+                                  | HxExpr.EBreak _ -> 34
+                                  | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g5 = (match obj with
                                   | HxExpr.EIdent __enum_param_974 -> __enum_param_974
                                   | _ -> failwith "Unexpected enum parameter" : string) in let typeName = (_g5 : string) in let importedModule = (staticImportModuleForStage3 (typeName : string) (Obj.repr staticImportByIdent) : string) in if importedModule != Obj.magic (HxRuntime.hx_null) && HxString.length importedModule > 0 then ignore ((
                                   ignore (let __assign_975 = Obj.magic (callSigForStage3 ((HxString.toStdString importedModule ^ ".") ^ HxString.toStdString lowered : string) (Obj.repr callSigByCallee)) in (
@@ -9766,7 +9954,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                 | HxExpr.EReturn _ -> 30
                                 | HxExpr.EVars _ -> 31
                                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g3 = (match callee with
+                                | HxExpr.EWhile (_, _, _, _) -> 33
+                                | HxExpr.EBreak _ -> 34
+                                | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g3 = (match callee with
                                 | HxExpr.EIdent __enum_param_1008 -> __enum_param_1008
                                 | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in let __assign_1009 = Obj.magic (fallbackLocalFunctionSig (name : string)) in (
                                 hx_sig := __assign_1009;
@@ -9818,7 +10008,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                   | HxExpr.EReturn _ -> 30
                                   | HxExpr.EVars _ -> 31
                                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                  | HxExpr.EWhile (_, _, _, _) -> 33) = 0 then let __assign_1012 = (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
+                                  | HxExpr.EWhile (_, _, _, _) -> 33
+                                  | HxExpr.EBreak _ -> 34
+                                  | HxExpr.EContinue _ -> 35) = 0 then let __assign_1012 = (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
                                   tempResult4 := __assign_1012;
                                   __assign_1012
                                 ) else if stage3IsFloatParamHint (hint : string) then let __assign_1013 = (exprToOcamlAsFloatValueStage3 (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
@@ -9913,7 +10105,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                   | HxExpr.EReturn _ -> 30
                                   | HxExpr.EVars _ -> 31
                                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                  | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then let name = (_g4 : string) in let __assign_1029 = stage3HasArity (name : string) (Obj.repr arityByIdent) && HxInt.add (HxArray.length args) 1 = stage3ArityFor (name : string) (Obj.repr arityByIdent) in (
+                                  | HxExpr.EWhile (_, _, _, _) -> 33
+                                  | HxExpr.EBreak _ -> 34
+                                  | HxExpr.EContinue _ -> 35) = 6 then let name = (_g4 : string) in let __assign_1029 = stage3HasArity (name : string) (Obj.repr arityByIdent) && HxInt.add (HxArray.length args) 1 = stage3ArityFor (name : string) (Obj.repr arityByIdent) in (
                                   tempBool6 := __assign_1029;
                                   __assign_1029
                                 ) else let __assign_1030 = false in (
@@ -9989,7 +10183,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                       | HxExpr.EReturn _ -> 30
                                       | HxExpr.EVars _ -> 31
                                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g3 = (match last with
+                                      | HxExpr.EWhile (_, _, _, _) -> 33
+                                      | HxExpr.EBreak _ -> 34
+                                      | HxExpr.EContinue _ -> 35) = 8 then let _g3 = (match last with
                                       | HxExpr.EIdent __enum_param_1036 -> __enum_param_1036
                                       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g3 "pos" then let __assign_1037 = true in (
                                       tempBool7 := __assign_1037;
@@ -10060,7 +10256,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                     | HxExpr.EReturn _ -> 30
                                     | HxExpr.EVars _ -> 31
                                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                    | HxExpr.EWhile (_, _, _, _) -> 33) = 1 then ignore ((
+                                    | HxExpr.EWhile (_, _, _, _) -> 33
+                                    | HxExpr.EBreak _ -> 34
+                                    | HxExpr.EContinue _ -> 35) = 1 then ignore ((
                                     ignore (match _g3 with
                                       | HxExpr.EBool __enum_param_1046 -> __enum_param_1046
                                       | _ -> failwith "Unexpected enum parameter");
@@ -10374,7 +10572,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                             | HxExpr.EReturn _ -> 30
                                             | HxExpr.EVars _ -> 31
                                             | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                            | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then ignore (let name = (_g4 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then ignore (if stage3ArityFor (name : string) (Obj.repr arityByIdent) <= 1 then ignore (let __assign_1085 = false in (
+                                            | HxExpr.EWhile (_, _, _, _) -> 33
+                                            | HxExpr.EBreak _ -> 34
+                                            | HxExpr.EContinue _ -> 35) = 6 then ignore (let name = (_g4 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then ignore (if stage3ArityFor (name : string) (Obj.repr arityByIdent) <= 1 then ignore (let __assign_1085 = false in (
                                             appendUnit := __assign_1085;
                                             __assign_1085
                                           )) else ()) else ignore ()) else ignore ())
@@ -10444,7 +10644,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 5 then ignore ((
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 5 then ignore ((
               ignore (match callee with
                 | HxExpr.EEnumValue __enum_param_1092 -> __enum_param_1092
                 | _ -> failwith "Unexpected enum parameter");
@@ -10528,7 +10730,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                   | HxExpr.EReturn _ -> 30
                   | HxExpr.EVars _ -> 31
                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                  | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then let name = (_g3 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then let expectedRaw = stage3ArityFor (name : string) (Obj.repr arityByIdent) in let tempRight17 = ref (false : bool) in let expr = Obj.magic (HxArray.get (Obj.magic args) 0) in (
+                  | HxExpr.EWhile (_, _, _, _) -> 33
+                  | HxExpr.EBreak _ -> 34
+                  | HxExpr.EContinue _ -> 35) = 6 then let name = (_g3 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then let expectedRaw = stage3ArityFor (name : string) (Obj.repr arityByIdent) in let tempRight17 = ref (false : bool) in let expr = Obj.magic (HxArray.get (Obj.magic args) 0) in (
                   ignore (match expr with
                     | HxExpr.EThis -> let __assign_1104 = true in (
                       tempRight17 := __assign_1104;
@@ -10615,7 +10819,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                     | HxExpr.EReturn _ -> 30
                     | HxExpr.EVars _ -> 31
                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g2 = Obj.magic (match callee with
+                    | HxExpr.EWhile (_, _, _, _) -> 33
+                    | HxExpr.EBreak _ -> 34
+                    | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g2 = Obj.magic (match callee with
                     | HxExpr.EField (__enum_param_1113, _) -> __enum_param_1113
                     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match callee with
                     | HxExpr.EField (_, __enum_param_1114) -> __enum_param_1114
@@ -10674,7 +10880,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g4 = Obj.magic (match _g2 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g4 = Obj.magic (match _g2 with
                       | HxExpr.ECall (__enum_param_1115, _) -> __enum_param_1115
                       | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match _g2 with
                       | HxExpr.ECall (_, __enum_param_1116) -> __enum_param_1116
@@ -10712,7 +10920,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g6 = Obj.magic (match _g4 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g6 = Obj.magic (match _g4 with
                       | HxExpr.EField (__enum_param_1117, _) -> __enum_param_1117
                       | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
                       | HxExpr.EField (_, __enum_param_1118) -> __enum_param_1118
@@ -10788,7 +10998,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g4 = Obj.magic (match _g2 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g4 = Obj.magic (match _g2 with
                       | HxExpr.EField (__enum_param_1119, _) -> __enum_param_1119
                       | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
                       | HxExpr.EField (_, __enum_param_1120) -> __enum_param_1120
@@ -10830,7 +11042,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g4 = Obj.magic (match _g2 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g4 = Obj.magic (match _g2 with
                       | HxExpr.EField (__enum_param_1121, _) -> __enum_param_1121
                       | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
                       | HxExpr.EField (_, __enum_param_1122) -> __enum_param_1122
@@ -10886,7 +11100,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g4 = Obj.magic (match obj with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g4 = Obj.magic (match obj with
                       | HxExpr.ECall (__enum_param_1123, _) -> __enum_param_1123
                       | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match obj with
                       | HxExpr.ECall (_, __enum_param_1124) -> __enum_param_1124
@@ -10924,7 +11140,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g6 = Obj.magic (match _g4 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g6 = Obj.magic (match _g4 with
                       | HxExpr.EField (__enum_param_1125, _) -> __enum_param_1125
                       | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
                       | HxExpr.EField (_, __enum_param_1126) -> __enum_param_1126
@@ -10962,7 +11180,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g8 = Obj.magic (match _g6 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g8 = Obj.magic (match _g6 with
                       | HxExpr.EField (__enum_param_1127, _) -> __enum_param_1127
                       | _ -> failwith "Unexpected enum parameter") in let _g9 = (match _g6 with
                       | HxExpr.EField (_, __enum_param_1128) -> __enum_param_1128
@@ -11004,7 +11224,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 11 then ignore (let _g4 = Obj.magic (match _g2 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 11 then ignore (let _g4 = Obj.magic (match _g2 with
                       | HxExpr.ECall (__enum_param_1129, _) -> __enum_param_1129
                       | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match _g2 with
                       | HxExpr.ECall (_, __enum_param_1130) -> __enum_param_1130
@@ -11042,7 +11264,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                       | HxExpr.EReturn _ -> 30
                       | HxExpr.EVars _ -> 31
                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                      | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g6 = Obj.magic (match _g4 with
+                      | HxExpr.EWhile (_, _, _, _) -> 33
+                      | HxExpr.EBreak _ -> 34
+                      | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g6 = Obj.magic (match _g4 with
                       | HxExpr.EField (__enum_param_1131, _) -> __enum_param_1131
                       | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
                       | HxExpr.EField (_, __enum_param_1132) -> __enum_param_1132
@@ -11085,7 +11309,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                     | HxExpr.EReturn _ -> 30
                     | HxExpr.EVars _ -> 31
                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then ignore (let _g2 = Obj.magic (match callee with
+                    | HxExpr.EWhile (_, _, _, _) -> 33
+                    | HxExpr.EBreak _ -> 34
+                    | HxExpr.EContinue _ -> 35) = 9 then ignore (let _g2 = Obj.magic (match callee with
                     | HxExpr.EField (__enum_param_1133, _) -> __enum_param_1133
                     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match callee with
                     | HxExpr.EField (_, __enum_param_1134) -> __enum_param_1134
@@ -11145,7 +11371,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                         | HxExpr.EReturn _ -> 30
                         | HxExpr.EVars _ -> 31
                         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                        | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then let name = (_g3 : string) in if hasCurrentInstanceMethod (name : string) then let __assign_1140 = Obj.magic (name : string) in (
+                        | HxExpr.EWhile (_, _, _, _) -> 33
+                        | HxExpr.EBreak _ -> 34
+                        | HxExpr.EContinue _ -> 35) = 6 then let name = (_g3 : string) in if hasCurrentInstanceMethod (name : string) then let __assign_1140 = Obj.magic (name : string) in (
                         tempMaybeString2 := __assign_1140;
                         __assign_1140
                       ) else let __assign_1141 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -11266,7 +11494,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                               | HxExpr.EReturn _ -> 30
                               | HxExpr.EVars _ -> 31
                               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                              | HxExpr.EWhile (_, _, _, _) -> 33) = 1 then let _g3 = match _g2 with
+                              | HxExpr.EWhile (_, _, _, _) -> 33
+                              | HxExpr.EBreak _ -> 34
+                              | HxExpr.EContinue _ -> 35) = 1 then let _g3 = match _g2 with
                               | HxExpr.EBool __enum_param_1158 -> __enum_param_1158
                               | _ -> failwith "Unexpected enum parameter" in if _g3 = true then let __assign_1159 = true in (
                               tempBool9 := __assign_1159;
@@ -11337,7 +11567,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                   | HxExpr.EReturn _ -> 30
                                   | HxExpr.EVars _ -> 31
                                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                  | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g4 = (match obj with
+                                  | HxExpr.EWhile (_, _, _, _) -> 33
+                                  | HxExpr.EBreak _ -> 34
+                                  | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g4 = (match obj with
                                   | HxExpr.EIdent __enum_param_1168 -> __enum_param_1168
                                   | _ -> failwith "Unexpected enum parameter" : string) in let typeName = (_g4 : string) in let importedModule = (staticImportModuleForStage3 (typeName : string) (Obj.repr staticImportByIdent) : string) in if importedModule != Obj.magic (HxRuntime.hx_null) && HxString.length importedModule > 0 then ignore ((
                                   ignore (let __assign_1169 = Obj.magic (callSigForStage3 ((HxString.toStdString importedModule ^ ".") ^ HxString.toStdString lowered : string) (Obj.repr callSigByCallee)) in (
@@ -11544,7 +11776,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                 | HxExpr.EReturn _ -> 30
                                 | HxExpr.EVars _ -> 31
                                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g2 = (match callee with
+                                | HxExpr.EWhile (_, _, _, _) -> 33
+                                | HxExpr.EBreak _ -> 34
+                                | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g2 = (match callee with
                                 | HxExpr.EIdent __enum_param_1202 -> __enum_param_1202
                                 | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let __assign_1203 = Obj.magic (fallbackLocalFunctionSig (name : string)) in (
                                 hx_sig := __assign_1203;
@@ -11596,7 +11830,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                   | HxExpr.EReturn _ -> 30
                                   | HxExpr.EVars _ -> 31
                                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                  | HxExpr.EWhile (_, _, _, _) -> 33) = 0 then let __assign_1206 = (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
+                                  | HxExpr.EWhile (_, _, _, _) -> 33
+                                  | HxExpr.EBreak _ -> 34
+                                  | HxExpr.EContinue _ -> 35) = 0 then let __assign_1206 = (exprToOcaml (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
                                   tempResult6 := __assign_1206;
                                   __assign_1206
                                 ) else if stage3IsFloatParamHint (hint : string) then let __assign_1207 = (exprToOcamlAsFloatValueStage3 (Obj.magic arg) (Obj.repr arityByIdent) (Obj.repr tyByIdent) (Obj.repr staticImportByIdent) (currentPackagePath : string) (Obj.repr moduleNameByPkgAndClass) (Obj.repr callSigByCallee) : string) in (
@@ -11691,7 +11927,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                   | HxExpr.EReturn _ -> 30
                                   | HxExpr.EVars _ -> 31
                                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                  | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then let name = (_g3 : string) in let __assign_1223 = stage3HasArity (name : string) (Obj.repr arityByIdent) && HxInt.add (HxArray.length args) 1 = stage3ArityFor (name : string) (Obj.repr arityByIdent) in (
+                                  | HxExpr.EWhile (_, _, _, _) -> 33
+                                  | HxExpr.EBreak _ -> 34
+                                  | HxExpr.EContinue _ -> 35) = 6 then let name = (_g3 : string) in let __assign_1223 = stage3HasArity (name : string) (Obj.repr arityByIdent) && HxInt.add (HxArray.length args) 1 = stage3ArityFor (name : string) (Obj.repr arityByIdent) in (
                                   tempBool10 := __assign_1223;
                                   __assign_1223
                                 ) else let __assign_1224 = false in (
@@ -11767,7 +12005,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                       | HxExpr.EReturn _ -> 30
                                       | HxExpr.EVars _ -> 31
                                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g2 = (match last with
+                                      | HxExpr.EWhile (_, _, _, _) -> 33
+                                      | HxExpr.EBreak _ -> 34
+                                      | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match last with
                                       | HxExpr.EIdent __enum_param_1230 -> __enum_param_1230
                                       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "pos" then let __assign_1231 = true in (
                                       tempBool11 := __assign_1231;
@@ -11838,7 +12078,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                     | HxExpr.EReturn _ -> 30
                                     | HxExpr.EVars _ -> 31
                                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                    | HxExpr.EWhile (_, _, _, _) -> 33) = 1 then ignore ((
+                                    | HxExpr.EWhile (_, _, _, _) -> 33
+                                    | HxExpr.EBreak _ -> 34
+                                    | HxExpr.EContinue _ -> 35) = 1 then ignore ((
                                     ignore (match _g2 with
                                       | HxExpr.EBool __enum_param_1240 -> __enum_param_1240
                                       | _ -> failwith "Unexpected enum parameter");
@@ -12152,7 +12394,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                                             | HxExpr.EReturn _ -> 30
                                             | HxExpr.EVars _ -> 31
                                             | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                            | HxExpr.EWhile (_, _, _, _) -> 33) = 6 then ignore (let name = (_g3 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then ignore (if stage3ArityFor (name : string) (Obj.repr arityByIdent) <= 1 then ignore (let __assign_1279 = false in (
+                                            | HxExpr.EWhile (_, _, _, _) -> 33
+                                            | HxExpr.EBreak _ -> 34
+                                            | HxExpr.EContinue _ -> 35) = 6 then ignore (let name = (_g3 : string) in if stage3HasArity (name : string) (Obj.repr arityByIdent) then ignore (if stage3ArityFor (name : string) (Obj.repr arityByIdent) <= 1 then ignore (let __assign_1279 = false in (
                                             appendUnit := __assign_1279;
                                             __assign_1279
                                           )) else ()) else ignore ()) else ignore ())
@@ -12545,7 +12789,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g3 = (match expr with
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 8 then let _g3 = (match expr with
               | HxExpr.EIdent __enum_param_1337 -> __enum_param_1337
               | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in if isMutableLocalRefIdent (name : string) then let ident = (ocamlValueIdent (name : string) : string) in let isInt64 = stage3IsInt64Expr (Obj.magic expr) (Obj.repr tyByIdent) in let tempString25 = ref ("" : string) in (
               ignore (if op = HxUnaryOperator.Increment then let __assign_1338 = (EmitterNumericUpdate.operation isInt64 true : string) in (
@@ -12614,7 +12860,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g3 = Obj.magic (match expr with
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 9 then let _g3 = Obj.magic (match expr with
               | HxExpr.EField (__enum_param_1347, _) -> __enum_param_1347
               | _ -> failwith "Unexpected enum parameter") in let _g4 = (match expr with
               | HxExpr.EField (_, __enum_param_1348) -> __enum_param_1348
@@ -12652,7 +12900,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g5 = (match _g3 with
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 8 then let _g5 = (match _g3 with
               | HxExpr.EIdent __enum_param_1349 -> __enum_param_1349
               | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g5 "Math" then if HxString.equals _g4 "POSITIVE_INFINITY" then let __assign_1350 = ("neg_infinity" : string) in (
               tempResult := __assign_1350;
@@ -12692,7 +12942,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g6 = Obj.magic (match expr with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 9 then let _g6 = Obj.magic (match expr with
                 | HxExpr.EField (__enum_param_1351, _) -> __enum_param_1351
                 | _ -> failwith "Unexpected enum parameter") in let _g7 = (match expr with
                 | HxExpr.EField (_, __enum_param_1352) -> __enum_param_1352
@@ -12730,7 +12982,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g8 = (match _g6 with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 8 then let _g8 = (match _g6 with
                 | HxExpr.EIdent __enum_param_1353 -> __enum_param_1353
                 | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g8 "Math" then match _g7 with
                 | "NEGATIVE_INFINITY" | "NaN" | "POSITIVE_INFINITY" -> let __assign_1355 = true in (
@@ -12795,7 +13049,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g6 = Obj.magic (match expr with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 9 then let _g6 = Obj.magic (match expr with
                 | HxExpr.EField (__enum_param_1362, _) -> __enum_param_1362
                 | _ -> failwith "Unexpected enum parameter") in let _g7 = (match expr with
                 | HxExpr.EField (_, __enum_param_1363) -> __enum_param_1363
@@ -12833,7 +13089,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g8 = (match _g6 with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 8 then let _g8 = (match _g6 with
                 | HxExpr.EIdent __enum_param_1364 -> __enum_param_1364
                 | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g8 "Math" then match _g7 with
                 | "NEGATIVE_INFINITY" | "NaN" | "POSITIVE_INFINITY" -> let __assign_1366 = true in (
@@ -12898,7 +13156,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g5 = Obj.magic (match expr with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 9 then let _g5 = Obj.magic (match expr with
                 | HxExpr.EField (__enum_param_1373, _) -> __enum_param_1373
                 | _ -> failwith "Unexpected enum parameter") in let _g6 = (match expr with
                 | HxExpr.EField (_, __enum_param_1374) -> __enum_param_1374
@@ -12936,7 +13196,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g7 = (match _g5 with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 8 then let _g7 = (match _g5 with
                 | HxExpr.EIdent __enum_param_1375 -> __enum_param_1375
                 | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g7 "Math" then match _g6 with
                 | "NEGATIVE_INFINITY" | "NaN" | "POSITIVE_INFINITY" -> let __assign_1377 = true in (
@@ -13001,7 +13263,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g3 = Obj.magic (match expr with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 9 then let _g3 = Obj.magic (match expr with
                 | HxExpr.EField (__enum_param_1384, _) -> __enum_param_1384
                 | _ -> failwith "Unexpected enum parameter") in let _g4 = (match expr with
                 | HxExpr.EField (_, __enum_param_1385) -> __enum_param_1385
@@ -13039,7 +13303,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g5 = (match _g3 with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 8 then let _g5 = (match _g3 with
                 | HxExpr.EIdent __enum_param_1386 -> __enum_param_1386
                 | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g5 "Math" then match _g4 with
                 | "NEGATIVE_INFINITY" | "NaN" | "POSITIVE_INFINITY" -> let __assign_1388 = true in (
@@ -13152,7 +13418,9 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
                 | HxExpr.EReturn _ -> 30
                 | HxExpr.EVars _ -> 31
                 | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g3 = (match expr with
+                | HxExpr.EWhile (_, _, _, _) -> 33
+                | HxExpr.EBreak _ -> 34
+                | HxExpr.EContinue _ -> 35) = 8 then let _g3 = (match expr with
                 | HxExpr.EIdent __enum_param_1406 -> __enum_param_1406
                 | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in if not (isMutableLocalRefIdent (name : string)) then let __assign_1407 = (rendered : string) in (
                 tempResult9 := __assign_1407;
@@ -13607,6 +13875,14 @@ and exprToOcaml = fun e arityByIdent tyByIdent staticImportByIdent currentPackag
             ignore _p2;
             ignore _p3;
             HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: expression-position while must be consumed by macro expansion before OCaml emission") ["Dynamic"; "String"]
+          )
+          | HxExpr.EBreak _p0 -> (
+            ignore _p0;
+            HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: expression-position break needs shared loop-control lowering before OCaml emission") ["Dynamic"; "String"]
+          )
+          | HxExpr.EContinue _p0 -> (
+            ignore _p0;
+            HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: expression-position continue needs shared loop-control lowering before OCaml emission") ["Dynamic"; "String"]
           ));
         !tempResult
       )
@@ -13805,7 +14081,9 @@ let returnExprToOcaml = fun expr allowedValueIdents expectedReturnType arityById
             | HxExpr.EReturn _ -> 30
             | HxExpr.EVars _ -> 31
             | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-            | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g2 = (match _g with
+            | HxExpr.EWhile (_, _, _, _) -> 33
+            | HxExpr.EBreak _ -> 34
+            | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match _g with
             | HxExpr.EIdent __enum_param_1558 -> __enum_param_1558
             | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "__ocaml__" then if HxArray.length _g1 = 1 then let _g3 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let arg = Obj.magic _g3 in if constFoldString (Obj.magic arg) != Obj.magic (HxRuntime.hx_null) then let __assign_1559 = false in (
             tempResult := __assign_1559;
@@ -13983,7 +14261,9 @@ let returnExprToOcaml = fun expr allowedValueIdents expectedReturnType arityById
               | HxExpr.EReturn _ -> 30
               | HxExpr.EVars _ -> 31
               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-              | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g3 = Obj.magic (match a with
+              | HxExpr.EWhile (_, _, _, _) -> 33
+              | HxExpr.EBreak _ -> 34
+              | HxExpr.EContinue _ -> 35) = 9 then let _g3 = Obj.magic (match a with
               | HxExpr.EField (__enum_param_1590, _) -> __enum_param_1590
               | _ -> failwith "Unexpected enum parameter") in (
               ignore (match a with
@@ -14092,7 +14372,9 @@ let returnExprToOcaml = fun expr allowedValueIdents expectedReturnType arityById
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33) = 21 then ignore (let _g = Obj.magic (match expr with
+        | HxExpr.EWhile (_, _, _, _) -> 33
+        | HxExpr.EBreak _ -> 34
+        | HxExpr.EContinue _ -> 35) = 21 then ignore (let _g = Obj.magic (match expr with
         | HxExpr.ETernary (__enum_param_1604, _, _) -> __enum_param_1604
         | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
         | HxExpr.ETernary (_, __enum_param_1605, _) -> __enum_param_1605
@@ -14363,7 +14645,9 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                     | HxExpr.EReturn _ -> 30
                     | HxExpr.EVars _ -> 31
                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g2 = (match _g with
+                    | HxExpr.EWhile (_, _, _, _) -> 33
+                    | HxExpr.EBreak _ -> 34
+                    | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match _g with
                     | HxExpr.EIdent __enum_param_1788 -> __enum_param_1788
                     | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "Math" then match _g1 with
                     | "NEGATIVE_INFINITY" | "NaN" | "PI" | "POSITIVE_INFINITY" -> let __assign_1790 = Obj.magic (TyType.fromHintText ("Float" : string)) in (
@@ -15122,7 +15406,9 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                           | HxExpr.EReturn _ -> 30
                           | HxExpr.EVars _ -> 31
                           | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                          | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then ignore (let _g = (match rhs with
+                          | HxExpr.EWhile (_, _, _, _) -> 33
+                          | HxExpr.EBreak _ -> 34
+                          | HxExpr.EContinue _ -> 35) = 8 then ignore (let _g = (match rhs with
                           | HxExpr.EIdent __enum_param_1952 -> __enum_param_1952
                           | _ -> failwith "Unexpected enum parameter" : string) in let rhsName = (_g : string) in let lowered = (ocamlValueIdent (rhsName : string) : string) in let hasTypedLocal = mapGetRaw (Obj.repr tyCtx) (rhsName : string) != Obj.magic (HxRuntime.hx_null) || not (HxString.equals lowered rhsName) && mapGetRaw (Obj.repr tyCtx) (lowered : string) != Obj.magic (HxRuntime.hx_null) in let hasHintedLocal = HxMap.get_string localHints rhsName != Obj.magic (HxRuntime.hx_null) || not (HxString.equals lowered rhsName) && HxMap.get_string localHints lowered != Obj.magic (HxRuntime.hx_null) in let hasAllowedLocal = allowedValueIdents != Obj.magic (HxRuntime.hx_null) && (let __nullable_1953 = HxMap.get_string allowedValueIdents rhsName in if __nullable_1953 == HxRuntime.hx_null then false else Obj.obj __nullable_1953 = true) || allowedValueIdents != Obj.magic (HxRuntime.hx_null) && not (HxString.equals lowered rhsName) && (let __nullable_1954 = HxMap.get_string allowedValueIdents lowered in if __nullable_1954 == HxRuntime.hx_null then false else Obj.obj __nullable_1954 = true) in if hasTypedLocal || hasHintedLocal || hasAllowedLocal || isMutableLocalRefIdent (rhsName : string) then ignore (let __assign_1955 = (ocamlReadValueIdent (rhsName : string) : string) in (
                           rhsRaw := __assign_1955;
@@ -15831,7 +16117,9 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                                       | HxExpr.EReturn _ -> 30
                                       | HxExpr.EVars _ -> 31
                                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                      | HxExpr.EWhile (_, _, _, _) -> 33) = 26 then let _g4 = Obj.magic (match iterable with
+                                      | HxExpr.EWhile (_, _, _, _) -> 33
+                                      | HxExpr.EBreak _ -> 34
+                                      | HxExpr.EContinue _ -> 35) = 26 then let _g4 = Obj.magic (match iterable with
                                       | HxExpr.ERange (__enum_param_2085, _) -> __enum_param_2085
                                       | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match iterable with
                                       | HxExpr.ERange (_, __enum_param_2086) -> __enum_param_2086
@@ -16238,7 +16526,9 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                               | HxExpr.EReturn _ -> 30
                               | HxExpr.EVars _ -> 31
                               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                              | HxExpr.EWhile (_, _, _, _) -> 33) = 20 then let _g2 = (match expr with
+                              | HxExpr.EWhile (_, _, _, _) -> 33
+                              | HxExpr.EBreak _ -> 34
+                              | HxExpr.EContinue _ -> 35) = 20 then let _g2 = (match expr with
                               | HxExpr.EBinop (__enum_param_2144, _, _) -> __enum_param_2144
                               | _ -> failwith "Unexpected enum parameter" : string) in let _g3 = Obj.magic (match expr with
                               | HxExpr.EBinop (_, __enum_param_2145, _) -> __enum_param_2145
@@ -16350,7 +16640,9 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                                       | HxExpr.EReturn _ -> 30
                                       | HxExpr.EVars _ -> 31
                                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g7 = (let __enum_param_2165 = init in if __enum_param_2165 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2165 with
+                                      | HxExpr.EWhile (_, _, _, _) -> 33
+                                      | HxExpr.EBreak _ -> 34
+                                      | HxExpr.EContinue _ -> 35) = 8 then let _g7 = (let __enum_param_2165 = init in if __enum_param_2165 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2165 with
                                       | HxExpr.EIdent __enum_param_2164 -> __enum_param_2164
                                       | _ -> failwith "Unexpected enum parameter" : string) in let n = (_g7 : string) in if HxString.equals n name then let __assign_2166 = ("(Obj.magic 0)" : string) in (
                                       tempString3 := __assign_2166;
@@ -16424,7 +16716,9 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                                         | HxExpr.EReturn _ -> 30
                                         | HxExpr.EVars _ -> 31
                                         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                        | HxExpr.EWhile (_, _, _, _) -> 33) = 20 then let _g8 = (match _g6 with
+                                        | HxExpr.EWhile (_, _, _, _) -> 33
+                                        | HxExpr.EBreak _ -> 34
+                                        | HxExpr.EContinue _ -> 35) = 20 then let _g8 = (match _g6 with
                                         | HxExpr.EBinop (__enum_param_2173, _, _) -> __enum_param_2173
                                         | _ -> failwith "Unexpected enum parameter" : string) in let _g9 = Obj.magic (match _g6 with
                                         | HxExpr.EBinop (_, __enum_param_2174, _) -> __enum_param_2174
@@ -16464,7 +16758,9 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                                         | HxExpr.EReturn _ -> 30
                                         | HxExpr.EVars _ -> 31
                                         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                        | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g11 = (match _g9 with
+                                        | HxExpr.EWhile (_, _, _, _) -> 33
+                                        | HxExpr.EBreak _ -> 34
+                                        | HxExpr.EContinue _ -> 35) = 8 then let _g11 = (match _g9 with
                                         | HxExpr.EIdent __enum_param_2176 -> __enum_param_2176
                                         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g11 : string) in let rhs = Obj.magic _g10 in let __assign_2177 = Obj.magic (let __anon_2178 = HxAnon.create () in (
                                         ignore (HxAnon.set __anon_2178 "name" (Obj.repr name));
@@ -16528,7 +16824,9 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                                     | HxExpr.EReturn _ -> 30
                                     | HxExpr.EVars _ -> 31
                                     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                    | HxExpr.EWhile (_, _, _, _) -> 33) = 20 then let _g6 = (match c with
+                                    | HxExpr.EWhile (_, _, _, _) -> 33
+                                    | HxExpr.EBreak _ -> 34
+                                    | HxExpr.EContinue _ -> 35) = 20 then let _g6 = (match c with
                                     | HxExpr.EBinop (__enum_param_2182, _, _) -> __enum_param_2182
                                     | _ -> failwith "Unexpected enum parameter" : string) in let _g7 = Obj.magic (match c with
                                     | HxExpr.EBinop (_, __enum_param_2183, _) -> __enum_param_2183
@@ -16569,7 +16867,9 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                                       | HxExpr.EReturn _ -> 30
                                       | HxExpr.EVars _ -> 31
                                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g9 = (match _g8 with
+                                      | HxExpr.EWhile (_, _, _, _) -> 33
+                                      | HxExpr.EBreak _ -> 34
+                                      | HxExpr.EContinue _ -> 35) = 8 then let _g9 = (match _g8 with
                                       | HxExpr.EIdent __enum_param_2186 -> __enum_param_2186
                                       | _ -> failwith "Unexpected enum parameter" : string) in let n = (_g9 : string) in let __assign_2187 = HxString.equals n name in (
                                       tempResult12 := __assign_2187;
@@ -16612,7 +16912,9 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                                       | HxExpr.EReturn _ -> 30
                                       | HxExpr.EVars _ -> 31
                                       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                      | HxExpr.EWhile (_, _, _, _) -> 33) = 0 then let n = (_g9 : string) in let __assign_2189 = HxString.equals n name in (
+                                      | HxExpr.EWhile (_, _, _, _) -> 33
+                                      | HxExpr.EBreak _ -> 34
+                                      | HxExpr.EContinue _ -> 35) = 0 then let n = (_g9 : string) in let __assign_2189 = HxString.equals n name in (
                                       tempResult12 := __assign_2189;
                                       __assign_2189
                                     ) else let __assign_2190 = false in (
@@ -17516,7 +17818,9 @@ let emitToDir = fun p outDir emitFullBodies buildExecutable ocamlProfile -> let 
                                                                                                                   | HxExpr.EReturn _ -> 30
                                                                                                                   | HxExpr.EVars _ -> 31
                                                                                                                   | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                                                                                                  | HxExpr.EWhile (_, _, _, _) -> 33 with
+                                                                                                                  | HxExpr.EWhile (_, _, _, _) -> 33
+                                                                                                                  | HxExpr.EBreak _ -> 34
+                                                                                                                  | HxExpr.EContinue _ -> 35 with
                                                                                                                   | 1 -> (
                                                                                                                     ignore (let __enum_param_2505 = expr in if __enum_param_2505 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2505 with
                                                                                                                       | HxExpr.EBool __enum_param_2504 -> __enum_param_2504
@@ -18564,7 +18868,9 @@ let emitToDir = fun p outDir emitFullBodies buildExecutable ocamlProfile -> let 
                                                                                                                                           | HxExpr.EReturn _ -> 30
                                                                                                                                           | HxExpr.EVars _ -> 31
                                                                                                                                           | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                                                                                                                          | HxExpr.EWhile (_, _, _, _) -> 33 with
+                                                                                                                                          | HxExpr.EWhile (_, _, _, _) -> 33
+                                                                                                                                          | HxExpr.EBreak _ -> 34
+                                                                                                                                          | HxExpr.EContinue _ -> 35 with
                                                                                                                                           | 9 -> ignore (let _g = Obj.magic (let __enum_param_2722 = e in if __enum_param_2722 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2722 with
                                                                                                                                             | HxExpr.EField (__enum_param_2721, _) -> __enum_param_2721
                                                                                                                                             | _ -> failwith "Unexpected enum parameter") in (
@@ -19537,7 +19843,9 @@ let emitToDir = fun p outDir emitFullBodies buildExecutable ocamlProfile -> let 
                                                                                                                                                                               | HxExpr.EReturn _ -> 30
                                                                                                                                                                               | HxExpr.EVars _ -> 31
                                                                                                                                                                               | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-                                                                                                                                                                              | HxExpr.EWhile (_, _, _, _) -> 33 with
+                                                                                                                                                                              | HxExpr.EWhile (_, _, _, _) -> 33
+                                                                                                                                                                              | HxExpr.EBreak _ -> 34
+                                                                                                                                                                              | HxExpr.EContinue _ -> 35 with
                                                                                                                                                                               | 8 -> ignore (let _g2 = (let __enum_param_3016 = e in if __enum_param_3016 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_3016 with
                                                                                                                                                                                 | HxExpr.EIdent __enum_param_3015 -> __enum_param_3015
                                                                                                                                                                                 | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in if name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 && HxMap.exists_string restIndexByName name then ignore (let j = HxMap.get_string restIndexByName name in if j != HxRuntime.hx_null && not (let __nullable_3017 = j in if __nullable_3017 == HxRuntime.hx_null then false else Obj.obj __nullable_3017 = i) && HxArray.get (Obj.magic seenStamp) j <> stamp then ignore ((

@@ -473,6 +473,14 @@ and addExpression = fun state expression -> ignore (match expression with
       ignore (addInt (Obj.magic state) (!tempNumber7));
       addPosition (Obj.magic state) (Obj.magic position)
     )
+  ))
+  | HxExpr.EBreak _p0 -> ignore (let _g = Obj.magic _p0 in let position = Obj.magic _g in (
+    ignore (addString (Obj.magic state) ("expr-break" : string));
+    addPosition (Obj.magic state) (Obj.magic position)
+  ))
+  | HxExpr.EContinue _p0 -> ignore (let _g = Obj.magic _p0 in let position = Obj.magic _g in (
+    ignore (addString (Obj.magic state) ("expr-continue" : string));
+    addPosition (Obj.magic state) (Obj.magic position)
   )))
 
 let rec addStatements = fun state statements -> ignore (let tempNumber = ref (0 : int) in (

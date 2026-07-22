@@ -55,7 +55,9 @@ let entriesFromElements = fun elements -> try let __fallback_result_22 = (
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33) = 20 then ignore (let _g2 = (match element with
+        | HxExpr.EWhile (_, _, _, _) -> 33
+        | HxExpr.EBreak _ -> 34
+        | HxExpr.EContinue _ -> 35) = 20 then ignore (let _g2 = (match element with
         | HxExpr.EBinop (__enum_param_17, _, _) -> __enum_param_17
         | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (match element with
         | HxExpr.EBinop (_, __enum_param_18, _) -> __enum_param_18

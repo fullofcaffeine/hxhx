@@ -258,7 +258,9 @@ let rec nekomacroexprbuilder_macroExprDef = fun self (expr : HxExpr.hxexpr) -> l
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g2 = (match _g with
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_35 -> __enum_param_35
       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "__hxhx_macro_if" then let args = Obj.magic _g1 in let tempHxExpr = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
       ignore (if HxArray.length args > 0 then let __assign_36 = Obj.magic (HxArray.get (Obj.magic args) 0) in (
@@ -311,7 +313,9 @@ let rec nekomacroexprbuilder_macroExprDef = fun self (expr : HxExpr.hxexpr) -> l
             | HxExpr.EReturn _ -> 30
             | HxExpr.EVars _ -> 31
             | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-            | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g4 = (match _g3 with
+            | HxExpr.EWhile (_, _, _, _) -> 33
+            | HxExpr.EBreak _ -> 34
+            | HxExpr.EContinue _ -> 35) = 8 then let _g4 = (match _g3 with
             | HxExpr.EIdent __enum_param_40 -> __enum_param_40
             | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "__hxhx_macro_missing_else" then let __assign_41 = ("null" : string) in (
             tempString := __assign_41;

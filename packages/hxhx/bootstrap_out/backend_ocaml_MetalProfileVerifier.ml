@@ -56,7 +56,9 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 9 then let _g = Obj.magic (match callee with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 9 then let _g = Obj.magic (match callee with
     | HxExpr.EField (__enum_param_39, _) -> __enum_param_39
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
     | HxExpr.EField (_, __enum_param_40) -> __enum_param_40
@@ -94,7 +96,9 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then let _g2 = (match _g with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match _g with
     | HxExpr.EIdent __enum_param_41 -> __enum_param_41
     | _ -> failwith "Unexpected enum parameter" : string) in match _g2 with
     | "Reflect" -> let field = (_g1 : string) in let __assign_43 = Obj.magic ("Reflect." ^ HxString.toStdString field : string) in (
@@ -373,6 +377,14 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
         verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic entry) (Obj.magic violations)
       )) done
     )
+  ))
+  | HxExpr.EBreak _p0 -> ignore ((
+    ignore _p0;
+    addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position break" : string) ("a nested break needs shared loop-control lowering before metal emission" : string) ("rewrite the source so break is a statement, or use a target profile that supports the completed shared lowering" : string)
+  ))
+  | HxExpr.EContinue _p0 -> ignore ((
+    ignore _p0;
+    addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position continue" : string) ("a nested continue needs shared loop-control lowering before metal emission" : string) ("rewrite the source so continue is a statement, or use a target profile that supports the completed shared lowering" : string)
   )))
 
 let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (match stmt with

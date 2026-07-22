@@ -447,6 +447,20 @@ let rec exprKind = fun expr -> let tempResult = ref ("" : string) in (
         tempResult := __assign_125;
         __assign_125
       )
+    )
+    | HxExpr.EBreak _p0 -> (
+      ignore _p0;
+      let __assign_126 = ("EBreak" : string) in (
+        tempResult := __assign_126;
+        __assign_126
+      )
+    )
+    | HxExpr.EContinue _p0 -> (
+      ignore _p0;
+      let __assign_127 = ("EContinue" : string) in (
+        tempResult := __assign_127;
+        __assign_127
+      )
     ));
   !tempResult
 )

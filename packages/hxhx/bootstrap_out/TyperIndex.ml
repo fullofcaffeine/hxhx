@@ -691,7 +691,9 @@ let classifyOperatorExpression = fun expression filePath position metadata -> le
       | HxExpr.EReturn _ -> 30
       | HxExpr.EVars _ -> 31
       | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then (
+      | HxExpr.EWhile (_, _, _, _) -> 33
+      | HxExpr.EBreak _ -> 34
+      | HxExpr.EContinue _ -> 35) = 8 then (
       ignore (match _g1 with
         | HxExpr.EIdent __enum_param_251 -> __enum_param_251
         | _ -> failwith "Unexpected enum parameter");
@@ -729,7 +731,9 @@ let classifyOperatorExpression = fun expression filePath position metadata -> le
         | HxExpr.EReturn _ -> 30
         | HxExpr.EVars _ -> 31
         | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33) = 8 then (
+        | HxExpr.EWhile (_, _, _, _) -> 33
+        | HxExpr.EBreak _ -> 34
+        | HxExpr.EContinue _ -> 35) = 8 then (
         ignore (match _g2 with
           | HxExpr.EIdent __enum_param_252 -> __enum_param_252
           | _ -> failwith "Unexpected enum parameter");

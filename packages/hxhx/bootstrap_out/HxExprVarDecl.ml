@@ -79,7 +79,9 @@ let getName = fun declaration -> let tempResult = ref ("" : string) in (
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 32 then let _g = (match declaration with
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 32 then let _g = (match declaration with
     | HxExpr.EVariableDeclaration (__enum_param_7, _, _, _, _, _) -> __enum_param_7
     | _ -> failwith "Unexpected enum parameter" : string) in (
     ignore (match declaration with
@@ -140,7 +142,9 @@ let getTypeHint = fun declaration -> let tempResult = ref ("" : string) in (
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 32 then (
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 32 then (
     ignore (match declaration with
       | HxExpr.EVariableDeclaration (__enum_param_14, _, _, _, _, _) -> __enum_param_14
       | _ -> failwith "Unexpected enum parameter");
@@ -203,7 +207,9 @@ let getInitializer = fun declaration -> let tempResult = ref (Obj.magic (HxRunti
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 32 then (
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 32 then (
     ignore (match declaration with
       | HxExpr.EVariableDeclaration (__enum_param_21, _, _, _, _, _) -> __enum_param_21
       | _ -> failwith "Unexpected enum parameter");
@@ -266,7 +272,9 @@ let getPosition = fun declaration -> let tempResult = ref (Obj.magic (HxRuntime.
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 32 then (
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 32 then (
     ignore (match declaration with
       | HxExpr.EVariableDeclaration (__enum_param_28, _, _, _, _, _) -> __enum_param_28
       | _ -> failwith "Unexpected enum parameter");
@@ -329,7 +337,9 @@ let getIsFinal = fun declaration -> let tempResult = ref (false : bool) in (
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 32 then (
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 32 then (
     ignore (match declaration with
       | HxExpr.EVariableDeclaration (__enum_param_35, _, _, _, _, _) -> __enum_param_35
       | _ -> failwith "Unexpected enum parameter");
@@ -392,7 +402,9 @@ let getIsStatic = fun declaration -> let tempResult = ref (false : bool) in (
     | HxExpr.EReturn _ -> 30
     | HxExpr.EVars _ -> 31
     | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33) = 32 then (
+    | HxExpr.EWhile (_, _, _, _) -> 33
+    | HxExpr.EBreak _ -> 34
+    | HxExpr.EContinue _ -> 35) = 32 then (
     ignore (match declaration with
       | HxExpr.EVariableDeclaration (__enum_param_42, _, _, _, _, _) -> __enum_param_42
       | _ -> failwith "Unexpected enum parameter");

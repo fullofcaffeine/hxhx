@@ -247,7 +247,7 @@ let init () : unit =
   ignore (HxType.enum_ "hxhx.macro._MacroHostClient.MacroHostReadResult");
   ignore (HxType.enum_ "sys.thread.NextEventTime");
   HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
-  HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ENullSafeField"; "ECall"; "EMacroExpr"; "EMacroType"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported"; "EReturn"; "EVars"; "EVariableDeclaration"; "EWhile" ];
+  HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ENullSafeField"; "ECall"; "EMacroExpr"; "EMacroType"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported"; "EReturn"; "EVars"; "EVariableDeclaration"; "EWhile"; "EBreak"; "EContinue" ];
   HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KInline"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KIn"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
   HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SForKeyValue"; "SWhile"; "SDoWhile"; "SSwitch"; "STry"; "SBreak"; "SContinue"; "SThrow"; "SReturnVoid"; "SReturn"; "SExpr" ];
   HxType.register_enum_ctors "HxSwitchPattern" [ "PNull"; "PWildcard"; "PBool"; "PString"; "PInt"; "PEnumValue"; "PEnumExtract"; "PObject"; "PCapture"; "PArray"; "PExtractor"; "PLengthGuard"; "PStartsWithGuard"; "PIntEqualsGuard"; "PIntCompareGuard"; "PParsedIntSwitchGuard"; "PUnsupportedGuard"; "PBind"; "POr" ];
@@ -255,7 +255,7 @@ let init () : unit =
   HxType.register_enum_ctors "HxUnaryFixity" [ "Prefix"; "Postfix" ];
   HxType.register_enum_ctors "HxUnaryOperator" [ "Increment"; "Decrement"; "Negate"; "LogicalNot"; "BitwiseNot" ];
   HxType.register_enum_ctors "HxVisibility" [ "Public"; "Private" ];
-  HxType.register_enum_ctors "TypedExprTag" [ "NullValue"; "BoolValue"; "StringValue"; "IntValue"; "FloatValue"; "EnumValue"; "ThisValue"; "SuperValue"; "LocalRead"; "NameRead"; "FieldRead"; "NullSafeFieldRead"; "Call"; "MacroExpr"; "MacroType"; "Lambda"; "SwitchExpr"; "NewValue"; "Unary"; "Binary"; "Assign"; "CompoundAssign"; "Ternary"; "Anonymous"; "ArrayComprehension"; "ArrayDecl"; "ArrayAccess"; "Range"; "Cast"; "Untyped"; "Opaque"; "Block"; "Temporary"; "ReturnExpr"; "VariableDeclarations"; "VariableDeclaration"; "WhileExpr" ];
+  HxType.register_enum_ctors "TypedExprTag" [ "NullValue"; "BoolValue"; "StringValue"; "IntValue"; "FloatValue"; "EnumValue"; "ThisValue"; "SuperValue"; "LocalRead"; "NameRead"; "FieldRead"; "NullSafeFieldRead"; "Call"; "MacroExpr"; "MacroType"; "Lambda"; "SwitchExpr"; "NewValue"; "Unary"; "Binary"; "Assign"; "CompoundAssign"; "Ternary"; "Anonymous"; "ArrayComprehension"; "ArrayDecl"; "ArrayAccess"; "Range"; "Cast"; "Untyped"; "Opaque"; "Block"; "Temporary"; "ReturnExpr"; "VariableDeclarations"; "VariableDeclaration"; "WhileExpr"; "BreakExpr"; "ContinueExpr" ];
   HxType.register_enum_ctors "TypedOpaqueExprKind" [ "TryCatch"; "Switch"; "Unsupported" ];
   HxType.register_enum_ctors "TypedStmtTag" [ "Block"; "Var"; "If"; "ForIn"; "ForKeyValue"; "While"; "DoWhile"; "Switch"; "Try"; "Break"; "Continue"; "Throw"; "ReturnVoid"; "Return"; "Expression" ];
   HxType.register_enum_ctors "_HxConditionalCompilation.Token" [ "TIdent"; "TString"; "TNot"; "TAnd"; "TOr"; "TLParen"; "TRParen"; "TEq"; "TNeq"; "TEof" ];
@@ -464,6 +464,16 @@ let init () : unit =
     let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'bodyIsBlock' for HxExpr.EWhile" in
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'position' for HxExpr.EWhile" in
     Obj.repr (HxExpr.EWhile (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "HxExpr" "EBreak" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'position' for HxExpr.EBreak" in
+    Obj.repr (HxExpr.EBreak a0)
+  );
+  HxType.register_enum_ctor "HxExpr" "EContinue" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'position' for HxExpr.EContinue" in
+    Obj.repr (HxExpr.EContinue a0)
   );
   HxType.register_enum_ctor "HxKeyword" "KPackage" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (HxKeyword.KPackage)
@@ -980,6 +990,12 @@ let init () : unit =
   );
   HxType.register_enum_ctor "TypedExprTag" "WhileExpr" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TypedExpr.WhileExpr)
+  );
+  HxType.register_enum_ctor "TypedExprTag" "BreakExpr" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TypedExpr.BreakExpr)
+  );
+  HxType.register_enum_ctor "TypedExprTag" "ContinueExpr" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TypedExpr.ContinueExpr)
   );
   HxType.register_enum_ctor "TypedOpaqueExprKind" "TryCatch" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TypedOpaqueExprKind.TryCatch)
@@ -2560,8 +2576,8 @@ let init () : unit =
   HxType.register_class_static_fields "TyPropertyInfo" [];
   HxType.register_class_instance_fields "TySymbol" [ "getName"; "getType"; "name"; "setType"; "ty" ];
   HxType.register_class_static_fields "TySymbol" [];
-  HxType.register_class_instance_fields "TyType" [ "display"; "functionArguments"; "functionReturn"; "getDisplay"; "getFunctionArguments"; "getFunctionReturn"; "getNominalIdentity"; "getNullableInner"; "getSemanticKey"; "getTypeArguments"; "getUnresolvedPath"; "isDynamic"; "isFunction"; "isNullWrapped"; "isNullable"; "isNumeric"; "isTypeParameter"; "isUnknown"; "isUnresolved"; "isVoid"; "kind"; "nominalIdentity"; "nullableInner"; "toString"; "typeArguments"; "unresolvedPath"; "unwrapNull" ];
-  HxType.register_class_static_fields "TyType" [ "KIND_DYNAMIC"; "KIND_FUNCTION"; "KIND_NOMINAL"; "KIND_NULL"; "KIND_NULLABLE"; "KIND_PRIMITIVE"; "KIND_TYPE_PARAMETER"; "KIND_UNKNOWN"; "KIND_UNRESOLVED"; "dynamicType"; "fromHintText"; "functionArgumentTypeText"; "functionType"; "genericStart"; "hasWrappingParentheses"; "nominal"; "nullType"; "nullable"; "parseFunctionType"; "primitive"; "splitFunctionSegments"; "splitTopLevel"; "splitTypeArguments"; "typeParameter"; "unify"; "unknown"; "unresolved" ];
+  HxType.register_class_instance_fields "TyType" [ "display"; "functionArguments"; "functionReturn"; "getDisplay"; "getFunctionArguments"; "getFunctionReturn"; "getNominalIdentity"; "getNullableInner"; "getSemanticKey"; "getTypeArguments"; "getUnresolvedPath"; "isDynamic"; "isFunction"; "isNoNormalCompletion"; "isNullWrapped"; "isNullable"; "isNumeric"; "isTypeParameter"; "isUnknown"; "isUnresolved"; "isVoid"; "kind"; "nominalIdentity"; "nullableInner"; "toString"; "typeArguments"; "unresolvedPath"; "unwrapNull" ];
+  HxType.register_class_static_fields "TyType" [ "KIND_DYNAMIC"; "KIND_FUNCTION"; "KIND_NOMINAL"; "KIND_NO_NORMAL_COMPLETION"; "KIND_NULL"; "KIND_NULLABLE"; "KIND_PRIMITIVE"; "KIND_TYPE_PARAMETER"; "KIND_UNKNOWN"; "KIND_UNRESOLVED"; "dynamicType"; "fromHintText"; "functionArgumentTypeText"; "functionType"; "genericStart"; "hasWrappingParentheses"; "noNormalCompletion"; "nominal"; "nullType"; "nullable"; "parseFunctionType"; "primitive"; "splitFunctionSegments"; "splitTopLevel"; "splitTypeArguments"; "typeParameter"; "unify"; "unknown"; "unresolved" ];
   HxType.register_class_instance_fields "TypedAbstractBinaryLowering" [];
   HxType.register_class_static_fields "TypedAbstractBinaryLowering" [ "accessorDeclaration"; "assertNoAbstractBinary"; "assertNoAbstractBinaryExpression"; "assertNoAbstractBinaryStatements"; "callArguments"; "carrierType"; "carrierValue"; "collectHelpers"; "convert"; "directPlace"; "fallbackWriteback"; "freshName"; "helperKey"; "inlineCall"; "instanceCall"; "lowerClasses"; "lowerClassesWithHelpers"; "lowerExpression"; "lowerInlineStatements"; "lowerModules"; "lowerStatement"; "nativeBodylessCompound"; "nativeBodylessValue"; "nativeOperand"; "orderedValues"; "placeFor"; "propertyPlaceFor"; "semanticResult"; "staticCall"; "substituteExpression"; "voidType" ];
   HxType.register_class_instance_fields "TypedAbstractOperatorLowering" [];
@@ -2581,7 +2597,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TypedExactCallSource" [];
   HxType.register_class_static_fields "TypedExactCallSource" [ "decodeInstance"; "encodeInstance"; "ordinaryInstanceCall" ];
   HxType.register_class_instance_fields "TypedExpr" [ "boolValue"; "declaration"; "expressions"; "floatValue"; "getBoolValue"; "getDeclaration"; "getExpressions"; "getFloatValue"; "getIntValue"; "getOpaqueKind"; "getPatterns"; "getPosition"; "getTag"; "getTexts"; "getType"; "getUnaryFixity"; "getUnaryOperator"; "getVariableIsFinal"; "getVariableIsStatic"; "intValue"; "opaqueKind"; "patterns"; "position"; "tag"; "texts"; "type"; "unaryFixity"; "unaryOperator"; "withExpressions"; "withType" ];
-  HxType.register_class_static_fields "TypedExpr" [ "anonymous"; "arrayAccess"; "arrayComprehension"; "arrayDecl"; "assign"; "binary"; "block"; "boolLiteral"; "call"; "castValue"; "compoundAssign"; "enumValue"; "fieldRead"; "floatLiteral"; "intLiteral"; "lambda"; "localRead"; "macroExpr"; "macroType"; "nameRead"; "newValue"; "nullSafeFieldRead"; "nullValue"; "opaque"; "range"; "returnExpr"; "stringLiteral"; "superValue"; "switchExpr"; "temporary"; "ternary"; "thisValue"; "unary"; "untypedValue"; "variableDeclaration"; "variableDeclarations"; "whileExpr" ];
+  HxType.register_class_static_fields "TypedExpr" [ "anonymous"; "arrayAccess"; "arrayComprehension"; "arrayDecl"; "assign"; "binary"; "block"; "boolLiteral"; "breakExpr"; "call"; "castValue"; "compoundAssign"; "continueExpr"; "enumValue"; "fieldRead"; "floatLiteral"; "intLiteral"; "lambda"; "localRead"; "macroExpr"; "macroType"; "nameRead"; "newValue"; "nullSafeFieldRead"; "nullValue"; "opaque"; "range"; "returnExpr"; "stringLiteral"; "superValue"; "switchExpr"; "temporary"; "ternary"; "thisValue"; "unary"; "untypedValue"; "variableDeclaration"; "variableDeclarations"; "whileExpr" ];
   HxType.register_class_instance_fields "TypedFunction" [ "assertParsedBodyCurrent"; "body"; "declaration"; "environment"; "getBody"; "getDeclaration"; "getEnvironment"; "getOwnerName"; "getSourceDeclaration"; "getSourceOrdinal"; "getStableIdentity"; "ownerName"; "sourceDeclaration"; "sourceOrdinal"; "withBody" ];
   HxType.register_class_static_fields "TypedFunction" [];
   HxType.register_class_instance_fields "TypedFunctionBody" [ "getSourceFingerprint"; "getStatements"; "sourceFingerprint"; "statements" ];
