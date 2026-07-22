@@ -13,19 +13,18 @@ MEGA_FILE_GRAVITY_WATCH:PASS
 
 ## Current Hotspots
 
-Measured on July 14, 2026, with the HxParser baseline refreshed on July 15 and
-the CppTargetCore baseline refreshed on July 18. The guard allows small drift
+Measured on July 22, 2026, at commit `4511d087d`. The guard allows small drift
 but asks for this table to be refreshed when a watched file moves by more than
 250 lines.
 
 | File | Lines | Risk |
 | --- | ---: | --- |
-| `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,180 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
-| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,251 | Fixed prelude assembly lives in `CppProgramPrelude`, and known standard-library carrier signatures live in `CppKnownStdlibSignatures`; rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support still make this a red hotspot. |
-| `packages/hxhx-core/src/EmitterStage.hx` | 8,659 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
-| `packages/hxhx-core/src/HxParser.hx` | 5,285 | Parser behavior is central and easy to destabilize with local workarounds. |
-| `packages/hxhx-core/src/ParserStage.hx` | 4,455 | Stage-level parsing and protocol behavior can collect unrelated adapters. |
-| `packages/hxhx/src/hxhx/Stage3Compiler.hx` | 996 | Keep orchestration-only; do not let it become a target/runtime implementation surface. |
+| `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 18,184 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
+| `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,263 | Fixed prelude assembly lives in `CppProgramPrelude`, and known standard-library carrier signatures live in `CppKnownStdlibSignatures`; rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support still make this a red hotspot. |
+| `packages/hxhx-core/src/EmitterStage.hx` | 8,892 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
+| `packages/hxhx-core/src/HxParser.hx` | 5,456 | Parser behavior is central and easy to destabilize with local workarounds. |
+| `packages/hxhx-core/src/ParserStage.hx` | 4,721 | Stage-level parsing and protocol behavior can collect unrelated adapters. The normal path delegates scanning and native-protocol decoding, but profiling-only switches still retain full inline comparison copies. |
+| `packages/hxhx/src/hxhx/Stage3Compiler.hx` | 1,041 | Keep orchestration-only; do not let it become a target/runtime implementation surface. |
 
 ## Thresholds
 
@@ -80,9 +79,23 @@ Pause for an extraction note or follow-up bead when a change would:
 - `haxe_ocaml-ejja`: Cpp compact primitive helper oracle freeze.
 - `haxe_ocaml-zo90`: Cpp sys/event-loop smoke scaffolding audit.
 - `haxe_ocaml-cy8e`: SourceTargetCommon target-family extraction plan.
+- `haxe_ocaml-cvn2v`: stop hand-maintaining full ParserStage helper copies kept
+  only for old-layout performance comparisons.
 
 Source/native target-family extraction should be filed before adding more broad
 target-specific runtime/API support to `SourceTargetCommon.hx`.
+
+2026-07-22 checkpoint: the watched inventory was refreshed at commit
+`4511d087d`. `ParserStage.hx` crossed the 250-line refresh threshold, growing
+from the recorded 4,455 lines to 4,721. The normal compiler path did not absorb
+a new decoder or scanner responsibility: it already delegates those jobs to
+`ParserStageNativeDecode` and `ParserStageScanHelpers`, created under
+`haxe.ocaml-a0pt.1.6` and `haxe.ocaml-a0pt.1.7`. The growth includes correctness
+updates repeated in full inline copies that remain behind profiling-only
+switches. `haxe_ocaml-cvn2v` owns removing that manual duplication or replacing
+it with a mechanically maintained comparison route, after measuring whether the
+old-layout experiment is still useful. This refresh updates evidence only; it
+does not claim that `ParserStage` is small enough or that the follow-up is done.
 
 2026-07-18 checkpoint: `haxe_ocaml-850ii.13` moves the existing known
 standard-library method argument and return carrier tables out of
