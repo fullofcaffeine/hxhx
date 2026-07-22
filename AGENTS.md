@@ -56,20 +56,40 @@ Use a `thinking:*` label on active beads so execution effort matches task risk.
 - `thinking:high`
   - Parity contracts, gate semantics, dependency graph changes, perf-policy changes, plugin/macro architecture decisions.
 - `thinking:xhigh`
-  - Scope-definition changes, release enforcement, provenance-sensitive implementation strategy, or any task where a wrong decision would create misleading 1.0 evidence.
+  - Semantic reuse, cache invalidation that can skip compiler work, broad compatibility boundaries, or other tasks where a subtle mistake can produce believable but incorrect output.
+- `thinking:max`
+  - The hardest quality-first single-agent work: project-wide architecture or release decisions, provenance-sensitive implementation strategy, and changes where a wrong decision could create misleading 1.0 evidence or require expensive reversal.
+- `thinking:ultra`
+  - Complex work that can be divided into meaningful independent investigations or implementation streams and then synthesized. Ultra is a parallel multi-agent mode, not simply a reasoning level above `max`; use `max` when the work cannot be split safely.
 
 Agent policy:
 
+- Before starting substantial work on a newly selected task, use the globally
+  installed `$calibrate-reasoning-effort` skill when it is available. Tell the
+  user the recommended `thinking:*` level and give a brief plain-language
+  reason. Treat this as a visible calibration, not an approval request;
+  continue normally unless the task reaches a separate user-requested stop
+  threshold below.
+- A `thinking:*` label records the level the task warrants; it does not prove
+  that the active Codex runtime changed its reasoning setting. If no current
+  tool can apply the setting, recommend it clearly and never claim an automatic
+  switch occurred.
+- App Server integrations may apply the recommendation to a new turn through
+  the turn-start effort override. They cannot retroactively change reasoning
+  already spent in the active turn; any automatic retry must be explicit and
+  must preserve the original task, permissions, and evidence.
 - When a bead has a `thinking:*` label, match reasoning depth to that label automatically.
 - If a claimed bead has no `thinking:*` label, infer one immediately and add it before substantial work.
-- `thinking:xhigh` should get a second-pass review before closure.
+- `thinking:xhigh`, `thinking:max`, and `thinking:ultra` should get a second-pass review before closure.
   - Preferred: an Oracle checkpoint/review.
   - Acceptable fallback: an explicit written second-pass design review recorded in the bead comments.
-- Oracle is a review/escalation tool for `thinking:xhigh`; it is not a substitute for implementation, tests, or CI evidence.
+- Use GPT-5.6 Sol for repository work and Oracle reviews while this policy remains current. If the active environment cannot honor that model choice, say so instead of silently claiming it did.
+- Oracle is a review/escalation tool for `thinking:xhigh` and above; it is not a substitute for implementation, tests, or CI evidence.
 - Do not escalate to extended reasoning or Oracle review by default.
   - Use the current bead thinking level first.
-  - Escalate only when the task crosses the documented threshold, usually `thinking:xhigh`, or when a `thinking:high` task turns into scope, release, or provenance policy work.
+  - Escalate only when the task crosses the documented threshold, usually `thinking:xhigh` or above, or when a lower-level task turns into scope, release, or provenance policy work.
   - When escalation becomes necessary, state that explicitly in the session hand-off or work log so the threshold is visible instead of assumed.
+- Use `max` for deeper single-agent reasoning only when representative work justifies its extra latency. Use `ultra` only when there are concrete, bounded workstreams that can run independently; name those workstreams before delegating and synthesize their evidence before deciding.
 - If implementation/debugging gets stuck for too long without a credible local next step, escalate to Oracle explicitly instead of grinding indefinitely.
   - Use Oracle to unblock strategy, seam selection, or closure criteria.
   - Do not use Oracle as a substitute for implementation, tests, or CI evidence once the next step is clear.
@@ -78,12 +98,12 @@ Agent policy:
   - Add function/method documentation once behavior, invariants, side effects, target semantics, or call contracts exceed what a reader can reasonably infer from the name and type.
   - Keep documentation behavior-level and maintenance-oriented; describe what callers can rely on, not a line-by-line narration of the implementation.
 - If a compiler/runtime issue starts feeling circular, fragile, architecture-heavy, or likely to invite another local patch without fixing the model, stop grinding before implementation.
-  - The plain rule: if the agent is running in circles, the fix boundary is unclear, or the next patch feels like a band-aid, pause and propose an external GPT 5.5 Pro design review instead of stacking more local guesses.
-  - This should be rare. Upstream Haxe 4.3.7 remains the primary behavior oracle, and local tests/CI remain the proof. GPT 5.5 Pro is only for finding a safe way forward when the seam/model is unclear.
+  - The plain rule: if the agent is running in circles, the fix boundary is unclear, or the next patch feels like a band-aid, pause and propose an external GPT-5.6 Sol design review instead of stacking more local guesses.
+  - This should be rare. Upstream Haxe 4.3.7 remains the primary behavior oracle, and local tests/CI remain the proof. GPT-5.6 Sol is only for finding a safe way forward when the seam/model is unclear.
   - Do not escalate merely because a gate is red, a fix is tedious, or the next failing target is unfamiliar.
     If upstream behavior is clear and there is a bounded repo-local seam, implement the seam, add focused coverage, and validate normally.
   - Use this escalation when repeated local attempts fail to produce a credible next step, when upstream-oracle evidence confirms behavior but not a safe implementation boundary, or when the fix touches broad semantics across multiple compiler/runtime layers.
-  - Do not use GPT 5.5 Pro to replace upstream oracle evidence, write implementation code for direct transcription, rubber-stamp a local workaround, or avoid running the required tests and gates.
+  - Do not use GPT-5.6 Sol to replace upstream oracle evidence, write implementation code for direct transcription, rubber-stamp a local workaround, or avoid running the required tests and gates.
   - Good escalation candidates include:
     - closure capture, receiver/state threading, AST lowering, or expression-to-statement lowering that affects multiple target backends,
     - Haxe stdlib semantics that do not map cleanly to OCaml output or source-native targets,
@@ -94,11 +114,11 @@ Agent policy:
   - For NaN/Infinity/Math-style issues, escalate before implementation because semantics can affect `Math`, `Float`, comparisons, parsing, JSON, binary float encoding, OCaml output/runtime behavior, source-native target behavior, and upstream Haxe 4.3.7 runtime conformance.
     Use `docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md` to identify trigger surfaces, oracle cases, and local validation before changing behavior.
   - The escalation proposal should include a concrete prompt, the whole-repo review request, the relevant beads, observed failing gates, local evidence, upstream oracle expectations, constraints about MIT/provenance, and a request for architecture guidance rather than code transcription.
-  - Ask GPT 5.5 Pro for a way forward: the desired output is a seam recommendation, tradeoff analysis, invariants, and validation plan, not pasted implementation code.
+  - Ask GPT-5.6 Sol for a way forward: the desired output is a seam recommendation, tradeoff analysis, invariants, and validation plan, not pasted implementation code.
   - If adapting this rule from another project, translate examples to this repo before committing them. Avoid irrelevant project-specific terms; use `hxhx`, `reflaxe.ocaml`, upstream Haxe 4.3.7 parity, source-native targets, native plugin boundaries, and bootstrap snapshot risk as the frame.
-  - In the bead/checkpoint note, record whether the GPT 5.5 Pro path was used, deliberately skipped because a bounded seam existed, or deferred to a follow-up architecture bead.
-- If the user says to stop on `thinking:xhigh`, stop immediately when that threshold is reached and ask the user before continuing.
-  - Do not silently continue `thinking:xhigh` implementation work.
+  - In the bead/checkpoint note, record whether the GPT-5.6 Sol path was used, deliberately skipped because a bounded seam existed, or deferred to a follow-up architecture bead.
+- If the user says to stop at a particular thinking threshold, stop immediately when that level or any higher level is reached and ask the user before continuing.
+  - Do not silently continue implementation work at or above the requested stop threshold.
   - Do not substitute Oracle or extended reasoning for that approval; ask first.
 - For long-running local commands that are the gate to the next engineering step, keep one attached or explicitly resumable session as the source of truth.
   - Do not substitute indirect `ps`/artifact polling for actual session completion.
