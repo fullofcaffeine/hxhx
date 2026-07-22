@@ -4729,4 +4729,22 @@ class ParserStage {
 	}
 	#end
 	#end
+
+	/**
+		Identify parser choices that can change the tree produced from equal source.
+
+		The native server includes this value in parser cache keys. Compile-time
+		frontend choices are fixed for one binary, while the two environment flags
+		can change between requests handled by the same process.
+	**/
+	public static function cacheConfigurationRevision():String {
+		final compiledFrontend = #if (hih_native_parser && !hxhx_stage0_no_native_parser) "native-capable" #else "pure-haxe" #end;
+		return "hxhx-parser-schema-v1" + "|frontend=" + compiledFrontend + "|force-haxe=" + normalizedEnvironmentValue("HIH_FORCE_HX_PARSER")
+			+ "|native-strict=" + normalizedEnvironmentValue("HIH_NATIVE_PARSER_STRICT");
+	}
+
+	static function normalizedEnvironmentValue(name:String):String {
+		final value = Sys.getEnv(name);
+		return value == null ? "" : StringTools.trim(value).toLowerCase();
+	}
 }

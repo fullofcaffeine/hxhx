@@ -15,6 +15,54 @@ import hxhx.macro.MacroState;
 import sys.FileSystem;
 import sys.io.File;
 
+private class RecordingCompilerSourceProvider {
+	public var resolveCalls(default, null):Int = 0;
+	public var readCalls(default, null):Int = 0;
+	public var parseCalls(default, null):Int = 0;
+	public var directoryCalls(default, null):Int = 0;
+
+	final delegate:CompilerSourceProvider;
+
+	public function new() {
+		delegate = new CompilerSourceProvider();
+	}
+
+	public function provider():CompilerSourceProvider
+		return CompilerSourceProvider.fromCallbacks(resolveModuleFile, readSource, parseFilteredSource, readDirectory, isFile, prepareFinish, finish, report);
+
+	public function resolveModuleFile(classPaths:Array<String>, modulePath:String):Null<String> {
+		resolveCalls += 1;
+		return delegate.resolveModuleFile(classPaths, modulePath);
+	}
+
+	public function readSource(filePath:String):Null<String> {
+		readCalls += 1;
+		return delegate.readSource(filePath);
+	}
+
+	public function parseFilteredSource(filteredSource:String, filePath:String):ParsedModule {
+		parseCalls += 1;
+		return delegate.parseFilteredSource(filteredSource, filePath);
+	}
+
+	public function readDirectory(path:String):Array<String> {
+		directoryCalls += 1;
+		return delegate.readDirectory(path);
+	}
+
+	public function isFile(path:String):Bool
+		return delegate.isFile(path);
+
+	public function prepareFinish(requestSucceeded:Bool):Void
+		delegate.prepareFinish(requestSucceeded);
+
+	public function finish(requestSucceeded:Bool):Void
+		delegate.finish(requestSucceeded);
+
+	public function report():CompilerSourceProviderReport
+		return delegate.report();
+}
+
 class M14CompilationServerRequestDispatcherIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -374,7 +422,17 @@ class M14CompilationServerRequestDispatcherIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		FileSystem.createDirectory(srcDir);
-		File.saveContent(haxe.io.Path.join([srcDir, "Main.hx"]), "class Main { static function main():Void {} }\n");
+		final mainPath = haxe.io.Path.join([srcDir, "Main.hx"]);
+		final sourceA = "class Main { static function main():Void {} }\n";
+		File.saveContent(mainPath, sourceA);
+		final recordingSources = new RecordingCompilerSourceProvider();
+		final sourceOwnedContext = new CompilationRequestContext(0, true, false, recordingSources.provider());
+		final sourceOwnedCode = Stage3Compiler.runRequest(["--hxhx-no-run", "--hxhx-no-emit", "-cp", srcDir, "-main", "Main"], sourceOwnedContext);
+		assertTrue(sourceOwnedContext.close(sourceOwnedCode == 0), "source-provider request should clean up");
+		assertTrue(sourceOwnedCode == 0, "source-provider request should compile");
+		assertTrue(recordingSources.resolveCalls > 0, "Stage3 resolution should use the request-owned source provider");
+		assertTrue(recordingSources.readCalls > 0, "Stage3 source reads should use the request-owned source provider");
+		assertTrue(recordingSources.parseCalls > 0, "Stage3 parsing should use the request-owned source provider");
 		final realSuccess = CompilationServerRequestDispatcher.dispatch(new CompilationServerRequest(12,
 			["--hxhx-no-run", "--hxhx-no-emit", "-cp", srcDir, "-main", "Main"], [], null), Stage3Compiler.runRequest);
 		final realSuccessWire = CompilationServerRequestCodec.encodeReply(realSuccess);

@@ -10,9 +10,9 @@ package hxhx;
 	shared request compiler.
 **/
 class CompilationServerRequestDispatcher {
-	public static function dispatch(request:CompilationServerRequest,
-			runOne:(args:Array<String>, context:CompilationRequestContext) -> Int):CompilationServerReply {
-		final context = CompilationRequestContext.server(request.requestId);
+	public static function dispatch(request:CompilationServerRequest, runOne:(args:Array<String>, context:CompilationRequestContext) -> Int,
+			?serverCache:CompilationServerSourceCache):CompilationServerReply {
+		final context = CompilationRequestContext.server(request.requestId, serverCache == null ? null : serverCache.openRequest());
 		if (request.hasInvocationFlag("--hxhx-server-report"))
 			context.enableBaselineReport();
 		if (request.hasRequestFlag(CompilationServerProtocol.REQUEST_TIMEOUT_FLAG)) {
@@ -31,6 +31,15 @@ class CompilationServerRequestDispatcher {
 			if (control == "shutdown") {
 				context.output.stdoutLine("hxhx_server_control.shutdown=ok");
 				return finish(context, false, true);
+			}
+			if (control == "reset") {
+				if (serverCache == null) {
+					context.output.stderrLine("hxhx(stage3): cache reset is unavailable because this server has no reusable source cache");
+					return finish(context, true);
+				}
+				serverCache.reset();
+				context.output.stdoutLine("hxhx_server_control.reset=ok");
+				return finish(context, false);
 			}
 			context.output.stderrLine(control == null ? "hxhx(stage3): missing value after --hxhx-server-control" : 'hxhx(stage3): unsupported server control "$control"');
 			return finish(context, true);

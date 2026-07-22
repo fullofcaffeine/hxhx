@@ -598,6 +598,12 @@ Notes:
 - It also includes a `--wait stdio` framed-protocol smoke check (non-delegating server lifecycle).
 - It intentionally does **not** require full upstream display semantic parity yet.
 - Socket server/client protocol regression coverage lives in `npm run test:hxhx-targets`
+- Source, exact module-lookup, and parser cache invalidation coverage lives in
+  `npm run test:m14:compilation-server-source-cache`. It includes same-byte
+  rewrites, A-to-B-to-A edits, failed requests, reset, changed defines,
+  class-path shadowing, cancellation, parser-tree mutation, exact-key boundary
+  checks, and eviction. The public native client fixture also prints direct,
+  cold, warm, stability, and post-reset request timings as report-only evidence.
 - Stage3 receiver-call over-application regression (`other.add(n)` should not become `add (this_) (other) (n)`) is covered by `npm run test:m14:hih-emitter-receiver-call` (source-level, no Stage0 rebuild needed).
 - Backend registry descriptor/selection regression coverage is in `npm run test:m14:backend-registry`.
 - Neko native backend smoke coverage is in `npm run test:m14:neko-native-backend-smoke`.

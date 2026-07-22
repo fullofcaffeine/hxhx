@@ -214,7 +214,7 @@ class ResolverStage {
 		- Includes existing `Test*.hx` modules directly under that package directory.
 		- Does not act like a broad package wildcard import.
 	**/
-	static function implicitUtestAddCasesDeps(source:String, classPaths:Array<String>):Array<String> {
+	static function implicitUtestAddCasesDeps(source:String, classPaths:Array<String>, sourceProvider:CompilerSourceProvider):Array<String> {
 		final outSet = new Map<String, Bool>();
 		if (source == null || source.length == 0 || classPaths == null || classPaths.length == 0)
 			return [];
@@ -227,17 +227,13 @@ class ResolverStage {
 				final relDir = packageName.split(".").join("/");
 				for (cp in classPaths) {
 					final dir = Path.join([cp, relDir]);
-					if (!sys.FileSystem.exists(dir) || !sys.FileSystem.isDirectory(dir))
-						continue;
-					try {
-						for (name in sys.FileSystem.readDirectory(dir)) {
-							if (!StringTools.startsWith(name, "Test") || !StringTools.endsWith(name, ".hx"))
-								continue;
-							final moduleName = name.substr(0, name.length - ".hx".length);
-							if (moduleName.length > 0)
-								outSet.set(packageName + "." + moduleName, true);
-						}
-					} catch (_:haxe.io.Error) {} catch (_:String) {}
+					for (name in sourceProvider.readDirectory(dir)) {
+						if (!StringTools.startsWith(name, "Test") || !StringTools.endsWith(name, ".hx"))
+							continue;
+						final moduleName = name.substr(0, name.length - ".hx".length);
+						if (moduleName.length > 0)
+							outSet.set(packageName + "." + moduleName, true);
+					}
 				}
 			}
 			final mp = re.matchedPos();
@@ -251,8 +247,8 @@ class ResolverStage {
 		return out;
 	}
 
-	public static function parseProject(classPaths:Array<String>, mainModule:String):Array<ResolvedModule> {
-		return parseProjectRoots(classPaths, [mainModule], null);
+	public static function parseProject(classPaths:Array<String>, mainModule:String, ?sourceProvider:CompilerSourceProvider):Array<ResolvedModule> {
+		return parseProjectRoots(classPaths, [mainModule], null, sourceProvider);
 	}
 
 	/**
@@ -269,10 +265,12 @@ class ResolverStage {
 		- Do not enqueue imports, same-package heuristics, or qualified type-path heuristics.
 		- `ModuleLoader` can still load dependencies on demand while typing the root surface.
 	**/
-	public static function parseProjectRootsShallow(classPaths:Array<String>, roots:Array<String>, ?defines:haxe.ds.StringMap<String>):Array<ResolvedModule> {
+	public static function parseProjectRootsShallow(classPaths:Array<String>, roots:Array<String>, ?defines:haxe.ds.StringMap<String>,
+			?sourceProvider:CompilerSourceProvider):Array<ResolvedModule> {
 		final out = new Array<ResolvedModule>();
 		final visited = new Map<String, Bool>();
 		final definesMap = defines == null ? new haxe.ds.StringMap<String>() : defines;
+		final sources = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
 
 		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
 			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro."))
@@ -300,17 +298,11 @@ class ResolverStage {
 				continue;
 			visited.set(modulePath, true);
 
-			final filePath = resolveModuleFile(classPaths, modulePath);
+			final filePath = sources.resolveModuleFile(classPaths, modulePath);
 			if (filePath == null)
 				throw "import_missing " + modulePath;
 
-			final source = try {
-				sys.io.File.getContent(filePath);
-			} catch (_:haxe.io.Error) {
-				null;
-			} catch (_:String) {
-				null;
-			}
+			final source = sources.readSource(filePath);
 			if (source == null)
 				throw "import_unreadable " + filePath;
 
@@ -324,7 +316,7 @@ class ResolverStage {
 			})() : definesMap;
 			final filteredSource = HxConditionalCompilation.filterSource(source, effectiveDefines);
 			final parsed = try {
-				ParserStage.parse(filteredSource, filePath);
+				sources.parseFilteredSource(filteredSource, filePath);
 			} catch (e:HxParseError) {
 				throw "parse_failed " + filePath + ": " + e.message;
 			} catch (e:String) {
@@ -344,10 +336,12 @@ class ResolverStage {
 		- Stage3 bring-up models this as "additional resolver roots" so we can validate that
 		  macros can affect the module graph without implementing full DCE/analyzer semantics yet.
 	**/
-	public static function parseProjectRoots(classPaths:Array<String>, roots:Array<String>, ?defines:haxe.ds.StringMap<String>):Array<ResolvedModule> {
+	public static function parseProjectRoots(classPaths:Array<String>, roots:Array<String>, ?defines:haxe.ds.StringMap<String>,
+			?sourceProvider:CompilerSourceProvider):Array<ResolvedModule> {
 		final out = new Array<ResolvedModule>();
 		final visited = new Map<String, Bool>();
 		final definesMap = defines == null ? new haxe.ds.StringMap<String>() : defines;
+		final sources = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
 
 		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
 			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro."))
@@ -387,17 +381,11 @@ class ResolverStage {
 				continue;
 			visited.set(modulePath, true);
 
-			final filePath = resolveModuleFile(classPaths, modulePath);
+			final filePath = sources.resolveModuleFile(classPaths, modulePath);
 			if (filePath == null)
 				throw "import_missing " + modulePath;
 
-			final source = try {
-				sys.io.File.getContent(filePath);
-			} catch (_:haxe.io.Error) {
-				null;
-			} catch (_:String) {
-				null;
-			}
+			final source = sources.readSource(filePath);
 			if (source == null)
 				throw "import_unreadable " + filePath;
 
@@ -425,7 +413,7 @@ class ResolverStage {
 			final filteredSource = HxConditionalCompilation.filterSource(source, effectiveDefines);
 
 			final parsed = try {
-				ParserStage.parse(filteredSource, filePath);
+				sources.parseFilteredSource(filteredSource, filePath);
 			} catch (e:HxParseError) {
 				throw "parse_failed " + filePath + ": " + e.message;
 			} catch (e:String) {
@@ -448,7 +436,7 @@ class ResolverStage {
 				// resolves to `unit.MyType` / `unit.MyMod.SubType` if present.
 				//
 				// Bootstrap rule: try the raw import first, then fall back to a same-package prefix.
-				final existsDirect = resolveModuleFile(classPaths, imp) != null;
+				final existsDirect = sources.resolveModuleFile(classPaths, imp) != null;
 				if (!existsDirect
 					&& (HxConditionalCompilation.isActiveTargetNativeExternPath(imp, definesMap)
 						|| HxConditionalCompilation.isActiveNativeLibraryExternPath(imp, definesMap)))
@@ -476,7 +464,7 @@ class ResolverStage {
 					final base = resolvedImp.substr(0, resolvedImp.length - 2);
 					// If the base module doesn't exist as a file, treat this as a package-wildcard import
 					// (`import pack.*`) and ignore it for graph traversal.
-					if (resolveModuleFile(classPaths, base) != null)
+					if (sources.resolveModuleFile(classPaths, base) != null)
 						deps.push(base);
 					continue;
 				}
@@ -492,7 +480,7 @@ class ResolverStage {
 			final traceDeps = traceResolverDepsEnabled();
 			if (resolveImplicitSamePackageTypesEnabled()) {
 				for (dep in implicitSamePackageDeps(filteredSource, modulePath, decl)) {
-					final exists = resolveModuleFile(classPaths, dep) != null;
+					final exists = sources.resolveModuleFile(classPaths, dep) != null;
 					if (traceDeps)
 						Sys.println("resolver_samepkg_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
 					if (exists)
@@ -501,15 +489,15 @@ class ResolverStage {
 			}
 
 			for (dep in implicitQualifiedTypeDeps(filteredSource, effectiveDefines)) {
-				final exists = resolveModuleFile(classPaths, dep) != null;
+				final exists = sources.resolveModuleFile(classPaths, dep) != null;
 				if (traceDeps)
 					Sys.println("resolver_qualified_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
 				if (exists)
 					deps.push(dep);
 			}
 
-			for (dep in implicitUtestAddCasesDeps(filteredSource, classPaths)) {
-				final exists = resolveModuleFile(classPaths, dep) != null;
+			for (dep in implicitUtestAddCasesDeps(filteredSource, classPaths, sources)) {
+				final exists = sources.resolveModuleFile(classPaths, dep) != null;
 				if (traceDeps)
 					Sys.println("resolver_utest_addcases_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
 				if (exists)
@@ -546,50 +534,5 @@ class ResolverStage {
 			s = StringTools.trim(s.substr(0, asIdx));
 
 		return s;
-	}
-
-	static function resolveModuleFile(classPaths:Array<String>, modulePath:String):Null<String> {
-		function fileExistsExactCase(path:String):Bool {
-			if (path == null || path.length == 0)
-				return false;
-			if (!sys.FileSystem.exists(path) || sys.FileSystem.isDirectory(path))
-				return false;
-			final dir = Path.directory(path);
-			if (dir == null || dir.length == 0)
-				return true;
-			final base = Path.withoutDirectory(path);
-			try {
-				for (name in sys.FileSystem.readDirectory(dir))
-					if (name == base)
-						return true;
-			} catch (_:haxe.io.Error) {} catch (_:String) {}
-			return false;
-		}
-
-		final parts = modulePath.split(".");
-		if (parts.length == 0)
-			return null;
-
-		final direct = parts.join("/") + ".hx";
-		for (cp in classPaths) {
-			final candidate = Path.join([cp, direct]);
-			if (fileExistsExactCase(candidate))
-				return candidate;
-		}
-
-		// Heuristic: allow import of a type defined in its module file:
-		//   import pack.Mod.SubType
-		// and fall back to pack/Mod.hx when pack/Mod/SubType.hx doesn't exist.
-		if (parts.length >= 2) {
-			final fallbackParts = parts.slice(0, parts.length - 1);
-			final fallback = fallbackParts.join("/") + ".hx";
-			for (cp in classPaths) {
-				final candidate = Path.join([cp, fallback]);
-				if (fileExistsExactCase(candidate))
-					return candidate;
-			}
-		}
-
-		return null;
 	}
 }

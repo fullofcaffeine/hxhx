@@ -22,6 +22,7 @@ class CompilationRequestContext {
 	public final requestId:Int;
 	public final output:CompilationRequestOutput;
 	public final isServerRequest:Bool;
+	public final sourceProvider:CompilerSourceProvider;
 
 	final cleanupActions:Array<CompilationRequestCleanup>;
 	final startedAtSeconds:Float;
@@ -39,10 +40,11 @@ class CompilationRequestContext {
 	var activePhase:String;
 	var activePhaseStartedAtSeconds:Float;
 
-	public function new(requestId:Int, bufferOutput:Bool, isServerRequest:Bool) {
+	public function new(requestId:Int, bufferOutput:Bool, isServerRequest:Bool, ?sourceProvider:CompilerSourceProvider) {
 		this.requestId = requestId;
 		this.output = new CompilationRequestOutput(bufferOutput);
 		this.isServerRequest = isServerRequest;
+		this.sourceProvider = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
 		this.cleanupActions = [];
 		this.startedAtSeconds = haxe.Timer.stamp();
 		this.phaseElapsedSeconds = new haxe.ds.StringMap<Float>();
@@ -64,11 +66,11 @@ class CompilationRequestContext {
 		return new CompilationRequestContext(0, false, false);
 	}
 
-	public static function server(requestId:Int):CompilationRequestContext {
-		return new CompilationRequestContext(requestId, true, true);
+	public static function server(requestId:Int, ?sourceProvider:CompilerSourceProvider):CompilationRequestContext {
+		return new CompilationRequestContext(requestId, true, true, sourceProvider);
 	}
 
-	/** Enable the opt-in report that proves this request reused no compiler facts. **/
+	/** Enable the opt-in report for request phases and any validated cache reuse. **/
 	public function enableBaselineReport():Void {
 		if (closed)
 			throw "compiler request context is already closed";
@@ -190,6 +192,15 @@ class CompilationRequestContext {
 			}
 		}
 		cleanupActions.resize(0);
+		try {
+			sourceProvider.prepareFinish(requestSucceeded && cleanupSucceeded);
+		} catch (error:haxe.io.Error) {
+			reportCleanupFailure("source-provider-validation", Std.string(error));
+		} catch (error:haxe.Exception) {
+			reportCleanupFailure("source-provider-validation", error.message);
+		} catch (error:String) {
+			reportCleanupFailure("source-provider-validation", error);
+		}
 		if (outputTransaction != null) {
 			if (requestSucceeded && cleanupSucceeded && stagedEmitResult != null) {
 				try {
@@ -211,6 +222,15 @@ class CompilationRequestContext {
 			} catch (error:String) {
 				reportCleanupFailure("output-transaction", error);
 			}
+		}
+		try {
+			sourceProvider.finish(requestSucceeded && cleanupSucceeded);
+		} catch (error:haxe.io.Error) {
+			reportCleanupFailure("source-provider-publication", Std.string(error));
+		} catch (error:haxe.Exception) {
+			reportCleanupFailure("source-provider-publication", error.message);
+		} catch (error:String) {
+			reportCleanupFailure("source-provider-publication", error);
 		}
 		finishActivePhase();
 		if (baselineReportEnabled)
@@ -263,11 +283,29 @@ class CompilationRequestContext {
 
 	function emitBaselineReport():Void {
 		final elapsedMs = Std.int(Math.max(0, (haxe.Timer.stamp() - startedAtSeconds) * 1000));
+		final sourceReport = sourceProvider.report();
 		output.stdoutLine("hxhx_server_report.request_id=" + requestId);
 		output.stdoutLine("hxhx_server_report.server_request=" + (isServerRequest ? "1" : "0"));
-		output.stdoutLine("hxhx_server_report.semantic_cache=disabled");
-		output.stdoutLine("hxhx_server_report.semantic_cache_hits=0");
-		output.stdoutLine("hxhx_server_report.semantic_cache_entries=0");
+		output.stdoutLine("hxhx_server_report.semantic_cache=" + (sourceReport.cacheEnabled ? "source-resolution-parser" : "disabled"));
+		output.stdoutLine("hxhx_server_report.semantic_cache_hits=" + sourceReport.totalHits());
+		output.stdoutLine("hxhx_server_report.semantic_cache_misses=" + sourceReport.totalMisses());
+		output.stdoutLine("hxhx_server_report.semantic_cache_entries=" + sourceReport.retainedEntries);
+		output.stdoutLine("hxhx_server_report.semantic_cache_bytes_estimate=" + sourceReport.retainedBytesEstimate);
+		output.stdoutLine("hxhx_server_report.source_hits=" + sourceReport.sourceHits);
+		output.stdoutLine("hxhx_server_report.source_misses=" + sourceReport.sourceMisses);
+		output.stdoutLine("hxhx_server_report.source_bytes_read=" + sourceReport.sourceBytesRead);
+		output.stdoutLine("hxhx_server_report.resolution_hits=" + sourceReport.resolutionHits);
+		output.stdoutLine("hxhx_server_report.resolution_misses=" + sourceReport.resolutionMisses);
+		output.stdoutLine("hxhx_server_report.parser_hits=" + sourceReport.parserHits);
+		output.stdoutLine("hxhx_server_report.parser_misses=" + sourceReport.parserMisses);
+		output.stdoutLine("hxhx_server_report.cache_evictions=" + sourceReport.evictions);
+		final missReasons = sourceReport.sortedMissReasons();
+		output.stdoutLine("hxhx_server_report.cache_miss_reason_count=" + missReasons.length);
+		for (index in 0...missReasons.length) {
+			final reason = missReasons[index];
+			output.stdoutLine('hxhx_server_report.cache_miss_reason[$index].name=$reason');
+			output.stdoutLine('hxhx_server_report.cache_miss_reason[$index].count=${sourceReport.missReasonCount(reason)}');
+		}
 		output.stdoutLine("hxhx_server_report.cancelled=" + (isCancelled() ? "1" : "0"));
 		if (cancellationReason != null) {
 			output.stdoutLine("hxhx_server_report.cancellation_reason=" + cancellationReason);

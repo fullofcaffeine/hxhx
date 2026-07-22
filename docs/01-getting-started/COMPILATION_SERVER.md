@@ -13,9 +13,11 @@ This guide explains Haxe's compilation server, how it relates to
   for each normal build. This is deliberate: an unchanged warm-server request
   was much faster, but it lost complete target-wide state and stopped before
   producing a valid OCaml build.
-- Native `hxhx` accepts some `--wait`/`--connect` shapes, but it does not yet
-  provide a complete incremental compiler. Keeping a process open is not the
-  same as safely reusing parsing and typing.
+- Native `hxhx` now has its first in-memory reuse layer: successful requests
+  can reuse exact source text, checked module-file lookup results, and parsed
+  Haxe modules. It does not yet reuse type-checking, macros, target generation,
+  or native build results, so it is still an experimental server rather than a
+  complete incremental compiler.
 - For safe iteration today, use fresh-Haxe `reflaxe.ocaml` generation plus
   Dune's incremental OCaml build, or build `hxhx` from the committed bootstrap
   snapshot. Use the documented fingerprint skip when the inputs are unchanged.
@@ -25,14 +27,13 @@ builds are proven equivalent and warm builds are measurably faster.
 
 The accepted native architecture and evidence gates are recorded in
 [`ORACLE_CHECKPOINT_NATIVE_INCREMENTAL_SERVER_2026_07_22.md`](../00-project/ORACLE_CHECKPOINT_NATIVE_INCREMENTAL_SERVER_2026_07_22.md).
-The first implementation sub-slice now sends stdio and socket requests through
-the same Haxe decoder and compile-or-display dispatcher. This removes the old
-socket-only placeholder that rejected ordinary compilation. It deliberately
-adds no semantic cache. Ordinary compiler progress and diagnostics are now
-collected by a request-owned output object and returned to the correct client
-using Haxe's output/error protocol. A native test sends a successful compile,
-a missing-module failure, and another successful compile to one server; all
-three clients receive their own result and the server process stays silent.
+The shorter living implementation contract is
+[`NATIVE_INCREMENTAL_SERVER_ARCHITECTURE.md`](../00-project/NATIVE_INCREMENTAL_SERVER_ARCHITECTURE.md).
+The native implementation sends stdio and socket requests through the same
+Haxe decoder and compile-or-display dispatcher. This removes the old
+socket-only placeholder that rejected ordinary compilation. Ordinary compiler
+progress and diagnostics are collected by a request-owned output object and
+returned to the correct client using Haxe's output/error protocol.
 
 This is still an implementation test, not a recommended project workflow.
 Server requests currently require `--hxhx-no-run` so output from the compiled
@@ -41,8 +42,7 @@ when the request ends, hxhx closes its macro session and clears request-specific
 macro definitions and backend-plugin registrations before accepting the next
 request. An opt-in `--hxhx-server-report` result identifies the request, reports
 whether cleanup succeeded, measures named compiler phases and total time, and
-explicitly says that the semantic cache is disabled with zero entries and zero
-hits.
+shows source, module-lookup, and parser cache decisions.
 
 Display remains a bring-up response. Explicit shutdown now works for both
 native transports: the requesting client receives a confirmation, request
@@ -51,17 +51,21 @@ also give one request a deadline. The compiler checks that deadline between
 major phases and while moving through modules, stops at the next safe check,
 and still runs request cleanup. This is cooperative cancellation, not a forced
 thread interruption. Cross-client cancellation remains deferred. The
-implemented cache-free lifecycle now resets audited process-wide temporary
-state before and after every request. Focused tests compare fresh-process,
+implemented request lifecycle resets audited process-wide temporary state
+before and after every request. Focused tests compare fresh-process,
 cold-server, failure, and repeated-server output for JavaScript, PHP, and C++;
-the full hxhx target suite also passed before this cache-free foundation was
-closed. The broader incremental-cache acceptance matrix is still required
-before recommending the server as a faster normal workflow.
+the full hxhx target suite passed before reuse was enabled. The first cache
+tests now cover unchanged files, same-byte rewrites, edits, A-to-B-to-A changes,
+failed parsing, cancellation, reset, changed defines, class-path shadowing, and
+eviction. The broader typed-module, macro, plugin, display, target, and
+performance matrix is still required before recommending the server as a
+normal workflow.
 Filesystem output now uses success-only publication: a server request writes to
 private paths first, runs its normal cleanup, and replaces the requested output
 only if the whole request succeeded. Later steps complete the remaining
-lifecycle guarantees, then add reusable source, parser, typed-module, display,
-plugin, and target facts only after each layer passes clean-versus-warm
+lifecycle guarantees. The current source/module-lookup/parser layer publishes
+entries only after successful cleanup. Later layers add typed-module, display,
+plugin, and target reuse only after each one passes clean-versus-warm
 correctness tests.
 
 There are two connected implementation tracks. `haxe_ocaml-850ii.33` makes
@@ -127,14 +131,14 @@ These are different products and should not be confused:
 | Server | What runs | Current purpose | Incremental status |
 | --- | --- | --- | --- |
 | Upstream Haxe server | Haxe 4.3.7 started with `--wait` | Upstream compilation and editor/display requests | Haxe owns real parsed/typed module reuse. Warm Reflaxe target output is not yet supported here. |
-| Native `hxhx` server | A compiled `hxhx` process | Protocol, display, and compiler bring-up | Transport exists in selected lanes, but complete dependency-aware compiler reuse is not delivered yet. |
+| Native `hxhx` server | A compiled `hxhx` process | Protocol, compiler bring-up, and measured incremental-cache development | Exact source/module-lookup/parser reuse exists. Typing and later compiler stages still rerun, so complete dependency-aware reuse is not delivered yet. |
 
 **Transport** means how a request reaches a long-lived process. **Incremental
 compilation** means the compiler also knows exactly which previous results are
 safe to reuse and what must be rebuilt. The native `hxhx` work is not complete
 until both parts work together.
 
-### Current no-cache diagnostic report
+### Current source, module-lookup, and parser report
 
 The in-development native server accepts `--hxhx-server-report` as a base or
 request argument. It adds lines like these to that client's response:
@@ -142,9 +146,20 @@ request argument. It adds lines like these to that client's response:
 ```text
 hxhx_server_report.request_id=3
 hxhx_server_report.server_request=1
-hxhx_server_report.semantic_cache=disabled
-hxhx_server_report.semantic_cache_hits=0
-hxhx_server_report.semantic_cache_entries=0
+hxhx_server_report.semantic_cache=source-resolution-parser
+hxhx_server_report.semantic_cache_hits=3
+hxhx_server_report.semantic_cache_misses=0
+hxhx_server_report.semantic_cache_entries=4
+hxhx_server_report.semantic_cache_bytes_estimate=2142
+hxhx_server_report.source_hits=1
+hxhx_server_report.source_misses=0
+hxhx_server_report.source_bytes_read=46
+hxhx_server_report.resolution_hits=1
+hxhx_server_report.resolution_misses=0
+hxhx_server_report.parser_hits=1
+hxhx_server_report.parser_misses=0
+hxhx_server_report.cache_evictions=0
+hxhx_server_report.cache_miss_reason_count=0
 hxhx_server_report.cancelled=0
 hxhx_server_report.output_transaction=committed
 hxhx_server_report.cleanup=ok
@@ -155,17 +170,100 @@ hxhx_server_report.elapsed_ms=123
 ```
 
 This report is opt-in because elapsed time and internal lifecycle details are
-diagnostic information, not normal compiler output. At this stage, a report of
-zero hits is the expected correct result: hxhx deliberately reparses and
-rechecks every request until cache identities and invalidation rules are proven.
-The report must not be read as evidence that incremental compilation is ready.
+diagnostic information, not normal compiler output. A **hit** means the current
+request exactly matched an entry that a previous successful request published.
+A **miss** means hxhx safely recomputed that work. Miss reasons include
+`cold`, `source-changed`, `parser-input-changed`, `origin-shadowed`, and
+`evicted`. These names explain performance; they do not change compiler
+behavior.
+
+The current layer works as follows:
+
+- hxhx reads each selected source file on every request and compares the exact
+  path and content through a length-prefixed in-memory identity. It does not
+  yet rely on filesystem timestamps or watchers to skip the read.
+- Module lookup rechecks the requested exact filename at each relevant
+  class-path position. A new higher-priority file, deletion, rename, or case
+  change therefore changes the lookup result.
+- Parsed modules are reused only when the logical file path, source after
+  `#if` filtering, and parser configuration all match. hxhx checks that the
+  stored parse tree was not accidentally changed before publishing or reusing
+  it.
+- Failed and cancelled requests publish nothing. `reset` discards every entry.
+- Entries live only in the current process. A server restart is a cold cache.
+- The default retained-size estimate is 64 MiB and can be changed with
+  `HXHX_NATIVE_SERVER_SOURCE_CACHE_BYTES`. This bounds the cache's own estimate,
+  not the whole compiler process's resident memory.
+
+Type checking, macro execution, feature/DCE analysis, target generation, file
+emission, Dune compilation, and linking still run normally. A parser hit is
+therefore a real but deliberately limited improvement, not evidence that the
+complete incremental compiler is ready.
+
+Across two final local macOS runs of the generated OCaml bytecode compiler,
+direct compiles took 11,134–12,196 ms, cold server compiles took
+10,606–10,859 ms, first warm compiles took 3,654–3,773 ms, and the repeated
+warm stability requests took 3,648–3,789 ms. Reset made the next request cold
+again at 10,677–10,838 ms. These numbers show that the current parser cache has
+a real effect on this fixture. They are not a cross-machine benchmark, a
+TypeScript/Go comparison, or evidence that the unfinished server should be
+enabled by default.
 
 A **phase** is one named portion of the compiler request, such as setup,
 parsing, typing, code generation, or cleanup. If the compiler enters the same
 named phase more than once, the report combines those intervals. These timings
-show where a request spends its time before caching exists, so later work can
-demonstrate a real end-to-end improvement instead of only reporting an internal
-cache hit.
+show where a request spends its time, so later work can demonstrate a real
+end-to-end improvement instead of only reporting an internal cache hit.
+
+### Experimental native setup
+
+The native server is opt-in. Running `hxhx` normally starts one compiler
+process for one command and does not leave a server behind.
+
+For an experimental local socket server, start the exact `hxhx` binary you want
+to test in one terminal:
+
+```bash
+hxhx --wait 6000
+```
+
+Send a compile request from another terminal. The current server route requires
+`--hxhx-no-run`; run the produced program yourself after the request succeeds.
+
+```bash
+hxhx --connect 6000 \
+  --hxhx-no-run \
+  --hxhx-server-report \
+  --hxhx-backend js-native \
+  --js out/app.js \
+  -cp src -main Main
+```
+
+Run the same command again to inspect warm parser reuse. Edit a file and repeat
+the command to inspect the miss reason and verify the new output. To discard
+all reusable entries without stopping the process:
+
+```bash
+hxhx --connect 6000 --hxhx-server-control reset
+```
+
+To stop it cleanly:
+
+```bash
+hxhx --connect 6000 --hxhx-server-control shutdown
+```
+
+`--wait stdio` exposes the same compiler owner through Haxe's length-framed
+standard-input protocol. It is intended for an editor, build tool, or test
+harness that implements the protocol; it is not an interactive shell command.
+Socket and stdio requests are processed one at a time and share cache entries
+only within that server process.
+
+Use a dedicated loopback port and exact compiler/toolchain per project while
+this remains experimental. There is no automatic background daemon, endpoint
+discovery, health command, or default editor configuration yet. Keep a direct
+one-shot command available as the comparison path when investigating a
+suspected cache problem.
 
 The current native transport accepts at most 64 MiB for one complete request,
 including command-line arguments and any unsaved editor buffer. Stdio requests
@@ -276,8 +374,21 @@ remains a gate before the native server becomes a recommended workflow.
 
 ### Current native shutdown control
 
-The in-development native server has an hxhx-specific shutdown request. For a
-socket server listening on port 6000, send:
+The in-development native server has hxhx-specific reset and shutdown requests.
+Reset removes source, module-lookup, and parser entries but keeps the process
+available:
+
+```bash
+hxhx --connect 6000 --hxhx-server-control reset
+```
+
+The client receives:
+
+```text
+hxhx_server_control.reset=ok
+```
+
+For a socket server listening on port 6000, stop the process with:
 
 ```bash
 hxhx --connect 6000 --hxhx-server-control shutdown
@@ -319,7 +430,8 @@ automatic server discovery and stale-record cleanup.
 | Rebuild `hxhx` from committed OCaml snapshots | Run `bash scripts/hxhx/build-hxhx.sh`; no stage0 Haxe server is needed. | No |
 | Force a fresh stage0 source rebuild of `hxhx` | Run with `HXHX_FORCE_STAGE0=1` and no `HAXE_CONNECT`/repo-server flag. | No |
 | Regenerate committed `hxhx` bootstrap sources | Use a clean or incremental output directory without server reuse; use `--skip-if-unchanged` where applicable. | No |
-| Use native `hxhx` for editor/display experiments | Use only the explicitly documented test lane; do not infer full compile-cache support. | No |
+| Measure native `hxhx` source/parser reuse locally | Use the experimental socket commands above, keep `--hxhx-no-run`, inspect `--hxhx-server-report`, and compare with a direct one-shot build. | No |
+| Use native `hxhx` for editor/display experiments | Use only the explicitly documented test lane; display recovery and typed-result caching are not implemented. | No |
 | Build an `hxhx` plugin or target | Use the current one-shot build/test commands. Plugin/target cache reuse is not a shipped contract. | No |
 | Reproduce the known Reflaxe warm-cache failure | Maintainers may use the diagnostic override described below in an isolated test. | Never automatically |
 
@@ -424,16 +536,16 @@ parsed and typed modules. That editor use does not automatically make a
 Reflaxe target generation request safe: completion/display and whole-program
 target output have different state requirements.
 
-Native `hxhx` display and protocol tests cover selected bring-up paths. Until
-the native incremental-server acceptance matrix passes, configure production
-editors around upstream Haxe and treat `hxhx` server use as an explicit test.
+Native `hxhx` display and protocol tests cover selected bring-up paths. The
+experimental setup above is suitable for measuring ordinary compile requests,
+but display still returns a bring-up response and does not publish typed editor
+state. Until the display acceptance matrix passes, configure production editors
+around upstream Haxe.
 
-There is intentionally no recommended native `hxhx` server setup command for
-ordinary project compilation yet. Once implemented, this guide will document
-whether it is enabled by default, its `--wait`/`--connect` compatibility,
-project configuration, plugin/target behavior, reset and inspection commands,
-and clean-build comparison. A test-only protocol command is not presented as a
-user workflow.
+The native setup is documented so contributors can test it without guessing;
+it is not enabled by default or recommended for production projects. Plugin and
+macro realm isolation, typed-module reuse, endpoint discovery, health/status,
+and clean-build comparison tooling remain unfinished shipping gates.
 
 The performance goal is stronger than “the cache reported a hit.” On
 representative projects, the complete edit-to-diagnostics and

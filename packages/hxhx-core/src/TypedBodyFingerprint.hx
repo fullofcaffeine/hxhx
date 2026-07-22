@@ -396,4 +396,14 @@ class TypedBodyFingerprint {
 		addStatements(state, statements);
 		return state[1] + ":" + state[0];
 	}
+
+	/** Fingerprint one parsed expression for enclosing immutable-artifact checks. **/
+	public static function forExpression(expression:Null<HxExpr>):String {
+		final state = [17, 0];
+		if (expression == null)
+			addInt(state, -1);
+		else
+			addExpression(state, expression);
+		return state[1] + ":" + state[0];
+	}
 }

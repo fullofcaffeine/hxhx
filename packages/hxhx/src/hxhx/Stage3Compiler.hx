@@ -487,9 +487,9 @@ class Stage3Compiler {
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final resolved = try {
 			if (noEmit && !typeOnly)
-				ResolverStage.parseProjectRootsShallow(classPaths, roots, definesMap)
+				ResolverStage.parseProjectRootsShallow(classPaths, roots, definesMap, requestContext.sourceProvider)
 			else
-				ResolverStage.parseProjectRoots(classPaths, roots, definesMap);
+				ResolverStage.parseProjectRoots(classPaths, roots, definesMap, requestContext.sourceProvider);
 		} catch (e:TyperError) {
 			closeMacroSession();
 			return error("resolve failed: " + formatException(e));
@@ -699,7 +699,7 @@ class Stage3Compiler {
 		final typerIndex = TyperIndex.build(resolvedForTyping);
 		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex, function(typePath:String):Bool {
 			return dispatchOnTypeNotFoundHooks(macroSession, typePath, requestOutput);
-		}, !noEmit);
+		}, !noEmit, requestContext.sourceProvider);
 		moduleLoader.markResolvedAlready(resolvedForTyping);
 
 		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.

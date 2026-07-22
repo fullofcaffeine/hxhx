@@ -2231,3 +2231,16 @@ let scanHelperEnums = fun source mainTypeName -> ParserStageScanHelpers.scanModu
 let scanHelperTypedefs = fun source mainTypeName -> ParserStageScanHelpers.scanModuleLocalHelperTypedefs (source : string) (mainTypeName : string)
 
 let scanHelperAbstracts = fun source mainTypeName -> ParserStageScanHelpers.scanModuleLocalHelperAbstracts (source : string) (mainTypeName : string)
+
+let normalizedEnvironmentValue = fun name -> let value = (HxSys.getEnv name : string) in let tempResult = ref ("" : string) in (
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_544 = ("" : string) in (
+    tempResult := __assign_544;
+    __assign_544
+  ) else let __assign_545 = (HxString.toLowerCase (StringTools.trim (value : string)) () : string) in (
+    tempResult := __assign_545;
+    __assign_545
+  ));
+  !tempResult
+)
+
+let cacheConfigurationRevision = fun () -> let compiledFrontend = ("native-capable" : string) in ((((("hxhx-parser-schema-v1" ^ "|frontend=") ^ HxString.toStdString compiledFrontend) ^ "|force-haxe=") ^ HxString.toStdString (normalizedEnvironmentValue ("HIH_FORCE_HX_PARSER" : string))) ^ "|native-strict=") ^ HxString.toStdString (normalizedEnvironmentValue ("HIH_NATIVE_PARSER_STRICT" : string))

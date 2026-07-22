@@ -96,6 +96,7 @@ class Stage3WaitServer {
 	public static function runWaitStdio(baseArgs:Array<String>, runOne:(args:Array<String>, context:CompilationRequestContext) -> Int, error:String->Int):Int {
 		final input = Sys.stdin();
 		input.bigEndian = false;
+		final serverCache = new CompilationServerSourceCache();
 		var requestId = 0;
 
 		while (true) {
@@ -121,7 +122,7 @@ class Stage3WaitServer {
 			};
 			requestId += 1;
 			final request = CompilationServerRequestCodec.decode(requestId, baseArgs, frame);
-			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne);
+			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne, serverCache);
 			writeWaitStdioReply(reply);
 			if (reply.stopServer)
 				return 0;
@@ -131,11 +132,12 @@ class Stage3WaitServer {
 	public static function runWaitSocket(mode:String, baseArgs:Array<String>, runOne:(args:Array<String>, context:CompilationRequestContext) -> Int,
 			error:String->Int):Int {
 		var requestId = 0;
+		final serverCache = new CompilationServerSourceCache();
 		final stopAfterReply = new CompilationServerStopSignal();
 		final handleRequest = function(payload:String):String {
 			requestId += 1;
 			final request = CompilationServerRequestCodec.decodeString(requestId, baseArgs, payload);
-			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne);
+			final reply = CompilationServerRequestDispatcher.dispatch(request, runOne, serverCache);
 			stopAfterReply.record(reply.stopServer);
 			return CompilationServerRequestCodec.encodeSocketReply(reply);
 		};

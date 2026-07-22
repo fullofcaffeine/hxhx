@@ -655,3 +655,12 @@ let forStatements = fun statements -> let state = Obj.magic (let __arr_69 = HxAr
   ignore (addStatements (Obj.magic state) (Obj.magic statements));
   (string_of_int (HxArray.get (Obj.magic state) 1) ^ ":") ^ string_of_int (HxArray.get (Obj.magic state) 0)
 )
+
+let forExpression = fun expression -> let state = Obj.magic (let __arr_70 = HxArray.create () in (
+  ignore (HxArray.push __arr_70 17);
+  ignore (HxArray.push __arr_70 0);
+  __arr_70
+)) in (
+  ignore (if expression == Obj.magic (HxRuntime.hx_null) then ignore (addInt (Obj.magic state) (-1)) else ignore (addExpression (Obj.magic state) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" expression))));
+  (string_of_int (HxArray.get (Obj.magic state) 1) ^ ":") ^ string_of_int (HxArray.get (Obj.magic state) 0)
+)

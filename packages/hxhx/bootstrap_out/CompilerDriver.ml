@@ -24,7 +24,7 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
   let classPaths = Obj.magic (let __arr_3 = HxArray.create () in (
     ignore (HxArray.push __arr_3 (!tempString));
     __arr_3
-  )) in let mainModule = ("demo.A" : string) in let resolved = Obj.magic (ResolverStage.parseProject (Obj.magic classPaths) (mainModule : string)) in (
+  )) in let mainModule = ("demo.A" : string) in let resolved = Obj.magic (ResolverStage.parseProject (Obj.magic classPaths) (mainModule : string) (Obj.magic (HxRuntime.hx_null))) in (
     ignore (ResolvedModule.getParsed);
     let root = Obj.magic (HxArray.get (Obj.magic resolved) 0) in let ast = Obj.magic (ResolvedModule.getParsed (Obj.magic root)) in let decl = Obj.magic (ParsedModule.getDecl (Obj.magic ast) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let imports = Obj.magic (HxModuleDecl.getImports (Obj.magic decl)) in let mainClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in (
       ignore (print_endline "parse=ok");
@@ -100,7 +100,7 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
                 )
               )) done);
               ignore (try (
-                ignore (ResolverStage.parseProject (Obj.magic classPaths) ("demo.B" : string));
+                ignore (ResolverStage.parseProject (Obj.magic classPaths) ("demo.B" : string) (Obj.magic (HxRuntime.hx_null)));
                 print_endline "missing_import=fail"
               ) with
                 | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)

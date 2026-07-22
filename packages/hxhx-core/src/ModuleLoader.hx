@@ -1,5 +1,3 @@
-import haxe.io.Path;
-
 private typedef MissingTypeHook = {
 	function invoke(modulePath:String):Bool;
 }
@@ -44,6 +42,7 @@ class ModuleLoader extends LazyTypeLoader {
 	final defines:haxe.ds.StringMap<String>;
 	final index:TyperIndex;
 	final onMissingType:Null<MissingTypeHook>;
+	final sourceProvider:CompilerSourceProvider;
 
 	/**
 		Whether lazily loaded modules should recursively pull their direct dependencies.
@@ -55,9 +54,6 @@ class ModuleLoader extends LazyTypeLoader {
 	**/
 	final expandDependencies:Bool;
 
-	// Directory listing cache used for exact-case path checks on case-insensitive filesystems.
-	final dirEntryCache:haxe.ds.StringMap<haxe.ds.StringMap<Bool>>;
-
 	// Module-path based cycle/dup guard.
 	final visited:haxe.ds.StringMap<Bool>;
 	final typeNotFoundTried:haxe.ds.StringMap<Bool>;
@@ -66,14 +62,14 @@ class ModuleLoader extends LazyTypeLoader {
 	final pending:Array<ResolvedModule>;
 
 	public function new(classPaths:Array<String>, defines:haxe.ds.StringMap<String>, index:TyperIndex, ?onMissingType:String->Bool,
-			?expandDependencies:Bool = true) {
+			?expandDependencies:Bool = true, ?sourceProvider:CompilerSourceProvider) {
 		super();
 		this.classPaths = classPaths == null ? [] : classPaths;
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		this.index = index;
 		this.onMissingType = onMissingType == null ? null : {invoke: onMissingType};
 		this.expandDependencies = expandDependencies;
-		this.dirEntryCache = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
+		this.sourceProvider = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
 		this.visited = new haxe.ds.StringMap<Bool>();
 		this.typeNotFoundTried = new haxe.ds.StringMap<Bool>();
 		this.pending = [];
@@ -242,13 +238,7 @@ class ModuleLoader extends LazyTypeLoader {
 			return;
 		}
 
-		final source = try {
-			sys.io.File.getContent(filePath);
-		} catch (_:haxe.io.Error) {
-			null;
-		} catch (_:String) {
-			null;
-		}
+		final source = sourceProvider.readSource(filePath);
 		if (source == null) {
 			if (trace)
 				Sys.println("loader_load read_failed module=" + modulePath + " file=" + filePath);
@@ -282,7 +272,7 @@ class ModuleLoader extends LazyTypeLoader {
 		})() : defines;
 		final filtered = HxConditionalCompilation.filterSource(source, effectiveDefines);
 		final parsed = try {
-			ParserStage.parse(filtered, filePath);
+			sourceProvider.parseFilteredSource(filtered, filePath);
 		} catch (_:HxParseError) {
 			null;
 		} catch (_:String) {
@@ -422,51 +412,6 @@ class ModuleLoader extends LazyTypeLoader {
 	}
 
 	function resolveModuleFile(modulePath:String):Null<String> {
-		inline function fileExistsExactCase(path:String):Bool {
-			if (path == null || path.length == 0)
-				return false;
-			if (!sys.FileSystem.exists(path) || sys.FileSystem.isDirectory(path))
-				return false;
-			final dir = Path.directory(path);
-			if (dir == null || dir.length == 0)
-				return true;
-			final base = Path.withoutDirectory(path);
-			var entries = dirEntryCache.get(dir);
-			if (entries == null) {
-				entries = new haxe.ds.StringMap<Bool>();
-				try {
-					for (name in sys.FileSystem.readDirectory(dir)) {
-						if (name != null && name.length > 0)
-							entries.set(name, true);
-					}
-				} catch (_:haxe.io.Error) {} catch (_:String) {}
-				dirEntryCache.set(dir, entries);
-			}
-			return entries.exists(base);
-		}
-
-		final parts = modulePath.split(".");
-		if (parts.length == 0)
-			return null;
-
-		final direct = parts.join("/") + ".hx";
-		for (cp in classPaths) {
-			final candidate = Path.join([cp, direct]);
-			if (fileExistsExactCase(candidate))
-				return candidate;
-		}
-
-		// Sub-type fallback: pack.Mod.SubType -> pack/Mod.hx
-		if (parts.length >= 2) {
-			final fallbackParts = parts.slice(0, parts.length - 1);
-			final fallback = fallbackParts.join("/") + ".hx";
-			for (cp in classPaths) {
-				final candidate = Path.join([cp, fallback]);
-				if (fileExistsExactCase(candidate))
-					return candidate;
-			}
-		}
-
-		return null;
+		return sourceProvider.resolveModuleFile(classPaths, modulePath);
 	}
 }
