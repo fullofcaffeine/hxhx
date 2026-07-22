@@ -713,7 +713,10 @@ let isSuperConstructorCall = fun stmt -> let tempResult = ref (false : bool) in 
       | HxExpr.ERange (_, _) -> 26
       | HxExpr.ECast (_, _) -> 27
       | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29) = 11 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EUnsupported _ -> 29
+      | HxExpr.EReturn _ -> 30
+      | HxExpr.EVars _ -> 31
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 11 then let _g2 = Obj.magic (match _g with
       | HxExpr.ECall (__enum_param_148, _) -> __enum_param_148
       | _ -> failwith "Unexpected enum parameter") in (
       ignore (match _g with
@@ -749,7 +752,10 @@ let isSuperConstructorCall = fun stmt -> let tempResult = ref (false : bool) in 
         | HxExpr.ERange (_, _) -> 26
         | HxExpr.ECast (_, _) -> 27
         | HxExpr.EUntyped _ -> 28
-        | HxExpr.EUnsupported _ -> 29) = 7 then let __assign_150 = true in (
+        | HxExpr.EUnsupported _ -> 29
+        | HxExpr.EReturn _ -> 30
+        | HxExpr.EVars _ -> 31
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 7 then let __assign_150 = true in (
         tempResult := __assign_150;
         __assign_150
       ) else let __assign_151 = false in (

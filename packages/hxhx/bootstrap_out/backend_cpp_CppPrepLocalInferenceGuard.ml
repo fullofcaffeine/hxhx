@@ -234,7 +234,10 @@ let localDeclHasGenericFactoryLocalInferenceEvidence = fun _hx typeHint init -> 
         | HxExpr.ERange (_, _) -> 26
         | HxExpr.ECast (_, _) -> 27
         | HxExpr.EUntyped _ -> 28
-        | HxExpr.EUnsupported _ -> 29) = 18 then (
+        | HxExpr.EUnsupported _ -> 29
+        | HxExpr.EReturn _ -> 30
+        | HxExpr.EVars _ -> 31
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 18 then (
         ignore (let __enum_param_51 = init in if __enum_param_51 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_51 with
           | HxExpr.ENew (__enum_param_50, _) -> __enum_param_50
           | _ -> failwith "Unexpected enum parameter");
@@ -323,7 +326,10 @@ let localDeclHasStringMapLocalInferenceEvidence = fun _hx typeHint init -> (
         | HxExpr.ERange (_, _) -> 26
         | HxExpr.ECast (_, _) -> 27
         | HxExpr.EUntyped _ -> 28
-        | HxExpr.EUnsupported _ -> 29 with
+        | HxExpr.EUnsupported _ -> 29
+        | HxExpr.EReturn _ -> 30
+        | HxExpr.EVars _ -> 31
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32 with
         | 18 -> let _g = (let __enum_param_37 = init in if __enum_param_37 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_37 with
           | HxExpr.ENew (__enum_param_36, _) -> __enum_param_36
           | _ -> failwith "Unexpected enum parameter" : string) in (
@@ -392,7 +398,10 @@ let isEmptyArrayExpr = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.ERange (_, _) -> 26
     | HxExpr.ECast (_, _) -> 27
     | HxExpr.EUntyped _ -> 28
-    | HxExpr.EUnsupported _ -> 29) = 24 then let _g = Obj.magic (let __enum_param_71 = expr in if __enum_param_71 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_71 with
+    | HxExpr.EUnsupported _ -> 29
+    | HxExpr.EReturn _ -> 30
+    | HxExpr.EVars _ -> 31
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 24 then let _g = Obj.magic (let __enum_param_71 = expr in if __enum_param_71 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_71 with
     | HxExpr.EArrayDecl __enum_param_70 -> __enum_param_70
     | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g in let __assign_72 = HxArray.length values = 0 in (
     tempResult := __assign_72;
@@ -438,7 +447,10 @@ let isNullExpr = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.ERange (_, _) -> 26
     | HxExpr.ECast (_, _) -> 27
     | HxExpr.EUntyped _ -> 28
-    | HxExpr.EUnsupported _ -> 29) = 0 then let __assign_76 = true in (
+    | HxExpr.EUnsupported _ -> 29
+    | HxExpr.EReturn _ -> 30
+    | HxExpr.EVars _ -> 31
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 0 then let __assign_76 = true in (
     tempResult := __assign_76;
     __assign_76
   ) else let __assign_77 = false in (
@@ -482,7 +494,10 @@ let isOptionalLambdaLocalInit = fun expr -> let tempResult = ref (false : bool) 
     | HxExpr.ERange (_, _) -> 26
     | HxExpr.ECast (_, _) -> 27
     | HxExpr.EUntyped _ -> 28
-    | HxExpr.EUnsupported _ -> 29) = 11 then let _g = Obj.magic (let __enum_param_99 = expr in if __enum_param_99 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_99 with
+    | HxExpr.EUnsupported _ -> 29
+    | HxExpr.EReturn _ -> 30
+    | HxExpr.EVars _ -> 31
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 11 then let _g = Obj.magic (let __enum_param_99 = expr in if __enum_param_99 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_99 with
     | HxExpr.ECall (__enum_param_98, _) -> __enum_param_98
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_101 = expr in if __enum_param_101 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_101 with
     | HxExpr.ECall (_, __enum_param_100) -> __enum_param_100
@@ -516,7 +531,10 @@ let isOptionalLambdaLocalInit = fun expr -> let tempResult = ref (false : bool) 
     | HxExpr.ERange (_, _) -> 26
     | HxExpr.ECast (_, _) -> 27
     | HxExpr.EUntyped _ -> 28
-    | HxExpr.EUnsupported _ -> 29) = 8 then let _g2 = (match _g with
+    | HxExpr.EUnsupported _ -> 29
+    | HxExpr.EReturn _ -> 30
+    | HxExpr.EVars _ -> 31
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then let _g2 = (match _g with
     | HxExpr.EIdent __enum_param_102 -> __enum_param_102
     | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "__hxhx_optional_lambda" then if HxArray.length _g1 = 2 then let _g3 = Obj.magic (HxArray.get (Obj.magic _g1) 0) in let _g4 = Obj.magic (HxArray.get (Obj.magic _g1) 1) in if (match _g3 with
     | HxExpr.ENull -> 0
@@ -548,7 +566,10 @@ let isOptionalLambdaLocalInit = fun expr -> let tempResult = ref (false : bool) 
     | HxExpr.ERange (_, _) -> 26
     | HxExpr.ECast (_, _) -> 27
     | HxExpr.EUntyped _ -> 28
-    | HxExpr.EUnsupported _ -> 29) = 14 then (
+    | HxExpr.EUnsupported _ -> 29
+    | HxExpr.EReturn _ -> 30
+    | HxExpr.EVars _ -> 31
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 14 then (
     ignore (match _g3 with
       | HxExpr.ELambda (__enum_param_103, _) -> __enum_param_103
       | _ -> failwith "Unexpected enum parameter");
@@ -585,7 +606,10 @@ let isOptionalLambdaLocalInit = fun expr -> let tempResult = ref (false : bool) 
       | HxExpr.ERange (_, _) -> 26
       | HxExpr.ECast (_, _) -> 27
       | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29) = 24 then (
+      | HxExpr.EUnsupported _ -> 29
+      | HxExpr.EReturn _ -> 30
+      | HxExpr.EVars _ -> 31
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 24 then (
       ignore (match _g4 with
         | HxExpr.EArrayDecl __enum_param_105 -> __enum_param_105
         | _ -> failwith "Unexpected enum parameter");
@@ -674,7 +698,10 @@ let isLocalCallableInit = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.ERange (_, _) -> 26
     | HxExpr.ECast (_, _) -> 27
     | HxExpr.EUntyped _ -> 28
-    | HxExpr.EUnsupported _ -> 29 with
+    | HxExpr.EUnsupported _ -> 29
+    | HxExpr.EReturn _ -> 30
+    | HxExpr.EVars _ -> 31
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32 with
     | 11 -> (let _g = Obj.magic (let __enum_param_81 = expr in if __enum_param_81 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_81 with
       | HxExpr.ECall (__enum_param_80, _) -> __enum_param_80
       | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_83 = expr in if __enum_param_83 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_83 with
@@ -773,7 +800,10 @@ let rec exprHasBindCallableEvidence = fun expr -> try let __fallback_result_237 
       | HxExpr.ERange (_, _) -> 26
       | HxExpr.ECast (_, _) -> 27
       | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29 with
+      | HxExpr.EUnsupported _ -> 29
+      | HxExpr.EReturn _ -> 30
+      | HxExpr.EVars _ -> 31
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32 with
       | 9 -> let _g = Obj.magic (let __enum_param_144 = expr in if __enum_param_144 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_144 with
         | HxExpr.EField (__enum_param_143, _) -> __enum_param_143
         | _ -> failwith "Unexpected enum parameter") in (
@@ -819,7 +849,10 @@ let rec exprHasBindCallableEvidence = fun expr -> try let __fallback_result_237 
         | HxExpr.ERange (_, _) -> 26
         | HxExpr.ECast (_, _) -> 27
         | HxExpr.EUntyped _ -> 28
-        | HxExpr.EUnsupported _ -> 29) = 9 then (
+        | HxExpr.EUnsupported _ -> 29
+        | HxExpr.EReturn _ -> 30
+        | HxExpr.EVars _ -> 31
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 9 then (
         ignore (match _g with
           | HxExpr.EField (__enum_param_152, _) -> __enum_param_152
           | _ -> failwith "Unexpected enum parameter");
@@ -1220,7 +1253,10 @@ let isHelperTypedAsCallee = fun callee -> let tempResult = ref (false : bool) in
         | HxExpr.ERange (_, _) -> 26
         | HxExpr.ECast (_, _) -> 27
         | HxExpr.EUntyped _ -> 28
-        | HxExpr.EUnsupported _ -> 29) = 8 then let _g4 = (match _g2 with
+        | HxExpr.EUnsupported _ -> 29
+        | HxExpr.EReturn _ -> 30
+        | HxExpr.EVars _ -> 31
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then let _g4 = (match _g2 with
         | HxExpr.EIdent __enum_param_371 -> __enum_param_371
         | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g4 "unit" then if HxString.equals _g3 "HelperMacros" then if HxString.equals _g1 "typedAs" then let __assign_372 = true in (
         tempResult := __assign_372;
@@ -1285,7 +1321,10 @@ let rec exprHasHelperTypedAsEvidence = fun expr -> try let __fallback_result_359
       | HxExpr.ERange (_, _) -> 26
       | HxExpr.ECast (_, _) -> 27
       | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29 with
+      | HxExpr.EUnsupported _ -> 29
+      | HxExpr.EReturn _ -> 30
+      | HxExpr.EVars _ -> 31
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32 with
       | 9 -> let _g = Obj.magic (let __enum_param_270 = expr in if __enum_param_270 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_270 with
         | HxExpr.EField (__enum_param_269, _) -> __enum_param_269
         | _ -> failwith "Unexpected enum parameter") in (

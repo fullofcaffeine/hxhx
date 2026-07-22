@@ -223,6 +223,7 @@
 		"HxFunctionDecl.ml",
 		"HxFunctionArg.ml",
 		"HxFieldDecl.ml",
+		"HxExprVarDecl.ml",
 		"HxExpr.ml",
 		"HxDefineMap.ml",
 		"HxDefaultValue.ml",

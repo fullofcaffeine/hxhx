@@ -79,7 +79,10 @@ let rec primitiveLiteralExprCppType = fun expr -> let tempResult = ref (Obj.magi
     | HxExpr.ERange (_, _) -> 26
     | HxExpr.ECast (_, _) -> 27
     | HxExpr.EUntyped _ -> 28
-    | HxExpr.EUnsupported _ -> 29 with
+    | HxExpr.EUnsupported _ -> 29
+    | HxExpr.EReturn _ -> 30
+    | HxExpr.EVars _ -> 31
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32 with
     | 1 -> (
       ignore (let __enum_param_29 = expr in if __enum_param_29 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_29 with
         | HxExpr.EBool __enum_param_28 -> __enum_param_28

@@ -33,3 +33,6 @@ type hxexpr =
 | ECast of hxexpr * string
 | EUntyped of hxexpr
 | EUnsupported of string
+| EReturn of Obj.t
+| EVars of hxexpr HxArray.t
+| EVariableDeclaration of string * string * Obj.t * HxPos.t * bool * bool

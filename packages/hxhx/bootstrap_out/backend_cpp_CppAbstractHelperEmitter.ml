@@ -140,7 +140,10 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
           | HxExpr.ERange (_, _) -> 26
           | HxExpr.ECast (_, _) -> 27
           | HxExpr.EUntyped _ -> 28
-          | HxExpr.EUnsupported _ -> 29) = 6 then let op = (_g4 : string) in let right = Obj.magic _g6 in if isInlineBinaryOperator (op : string) then let __assign_17 = Obj.magic (((((("(" ^ HxString.toStdString receiver) ^ " ") ^ HxString.toStdString op) ^ " ") ^ HxString.toStdString (renderExpression (Obj.magic right))) ^ ")" : string) in (
+          | HxExpr.EUnsupported _ -> 29
+          | HxExpr.EReturn _ -> 30
+          | HxExpr.EVars _ -> 31
+          | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 6 then let op = (_g4 : string) in let right = Obj.magic _g6 in if isInlineBinaryOperator (op : string) then let __assign_17 = Obj.magic (((((("(" ^ HxString.toStdString receiver) ^ " ") ^ HxString.toStdString op) ^ " ") ^ HxString.toStdString (renderExpression (Obj.magic right))) ^ ")" : string) in (
           tempResult := __assign_17;
           __assign_17
         ) else let __assign_18 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -182,7 +185,10 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
             | HxExpr.ERange (_, _) -> 26
             | HxExpr.ECast (_, _) -> 27
             | HxExpr.EUntyped _ -> 28
-            | HxExpr.EUnsupported _ -> 29) = 6 then let __assign_20 = Obj.magic (receiver : string) in (
+            | HxExpr.EUnsupported _ -> 29
+            | HxExpr.EReturn _ -> 30
+            | HxExpr.EVars _ -> 31
+            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 6 then let __assign_20 = Obj.magic (receiver : string) in (
             tempResult := __assign_20;
             __assign_20
           ) else let __assign_21 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -228,7 +234,10 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
           | HxExpr.ERange (_, _) -> 26
           | HxExpr.ECast (_, _) -> 27
           | HxExpr.EUntyped _ -> 28
-          | HxExpr.EUnsupported _ -> 29) = 6 then let fixity = Obj.magic _g5 in let op = Obj.magic _g4 in if op = HxUnaryOperator.Increment || op = HxUnaryOperator.Decrement then let token = (HxUnaryOperatorTools.sourceToken (Obj.magic op) : string) in if fixity = HxUnaryFixity.Postfix then let __assign_23 = Obj.magic ((("(" ^ HxString.toStdString receiver) ^ HxString.toStdString token) ^ ")" : string) in (
+          | HxExpr.EUnsupported _ -> 29
+          | HxExpr.EReturn _ -> 30
+          | HxExpr.EVars _ -> 31
+          | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 6 then let fixity = Obj.magic _g5 in let op = Obj.magic _g4 in if op = HxUnaryOperator.Increment || op = HxUnaryOperator.Decrement then let token = (HxUnaryOperatorTools.sourceToken (Obj.magic op) : string) in if fixity = HxUnaryFixity.Postfix then let __assign_23 = Obj.magic ((("(" ^ HxString.toStdString receiver) ^ HxString.toStdString token) ^ ")" : string) in (
           tempResult := __assign_23;
           __assign_23
         ) else let __assign_24 = Obj.magic ((("(" ^ HxString.toStdString token) ^ HxString.toStdString receiver) ^ ")" : string) in (
@@ -272,7 +281,10 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
             | HxExpr.ERange (_, _) -> 26
             | HxExpr.ECast (_, _) -> 27
             | HxExpr.EUntyped _ -> 28
-            | HxExpr.EUnsupported _ -> 29) = 6 then let right = Obj.magic _g6 in let __assign_28 = Obj.magic ((HxString.toStdString receiver ^ " += ") ^ HxString.toStdString (renderExpression (Obj.magic right)) : string) in (
+            | HxExpr.EUnsupported _ -> 29
+            | HxExpr.EReturn _ -> 30
+            | HxExpr.EVars _ -> 31
+            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 6 then let right = Obj.magic _g6 in let __assign_28 = Obj.magic ((HxString.toStdString receiver ^ " += ") ^ HxString.toStdString (renderExpression (Obj.magic right)) : string) in (
             tempResult := __assign_28;
             __assign_28
           ) else let __assign_29 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -309,7 +321,10 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
             | HxExpr.ERange (_, _) -> 26
             | HxExpr.ECast (_, _) -> 27
             | HxExpr.EUntyped _ -> 28
-            | HxExpr.EUnsupported _ -> 29) = 6 then let right = Obj.magic _g6 in let __assign_30 = Obj.magic ((HxString.toStdString receiver ^ " -= ") ^ HxString.toStdString (renderExpression (Obj.magic right)) : string) in (
+            | HxExpr.EUnsupported _ -> 29
+            | HxExpr.EReturn _ -> 30
+            | HxExpr.EVars _ -> 31
+            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 6 then let right = Obj.magic _g6 in let __assign_30 = Obj.magic ((HxString.toStdString receiver ^ " -= ") ^ HxString.toStdString (renderExpression (Obj.magic right)) : string) in (
             tempResult := __assign_30;
             __assign_30
           ) else let __assign_31 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (

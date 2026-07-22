@@ -52,7 +52,10 @@ let isStandardInt64Provider = fun owner -> let tempResult = ref (false : bool) i
       | HxExpr.ERange (_, _) -> 26
       | HxExpr.ECast (_, _) -> 27
       | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29) = 8 then let _g2 = (match _g with
+      | HxExpr.EUnsupported _ -> 29
+      | HxExpr.EReturn _ -> 30
+      | HxExpr.EVars _ -> 31
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32) = 8 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_4 -> __enum_param_4
       | _ -> failwith "Unexpected enum parameter" : string) in if HxString.equals _g2 "haxe" then if HxString.equals _g1 "Int64" then let __assign_5 = true in (
       tempResult := __assign_5;

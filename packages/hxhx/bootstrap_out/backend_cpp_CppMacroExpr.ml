@@ -411,6 +411,32 @@ let rec exprKind = fun expr -> let tempResult = ref ("" : string) in (
         tempResult := __assign_121;
         __assign_121
       )
+    )
+    | HxExpr.EReturn _p0 -> (
+      ignore _p0;
+      let __assign_122 = ("EReturn" : string) in (
+        tempResult := __assign_122;
+        __assign_122
+      )
+    )
+    | HxExpr.EVars _p0 -> (
+      ignore _p0;
+      let __assign_123 = ("EVars" : string) in (
+        tempResult := __assign_123;
+        __assign_123
+      )
+    )
+    | HxExpr.EVariableDeclaration (_p0, _p1, _p2, _p3, _p4, _p5) -> (
+      ignore _p0;
+      ignore _p1;
+      ignore _p2;
+      ignore _p3;
+      ignore _p4;
+      ignore _p5;
+      let __assign_124 = ("EVariableDeclaration" : string) in (
+        tempResult := __assign_124;
+        __assign_124
+      )
     ));
   !tempResult
 )
