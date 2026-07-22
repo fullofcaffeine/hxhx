@@ -1,3 +1,10 @@
+## [0.23.13](https://github.com/fullofcaffeine/hxhx/compare/v0.23.12...v0.23.13) (2026-07-22)
+
+
+### Bug Fixes
+
+* **tooling:** monitor the real Haxe server worker ([e96e5be](https://github.com/fullofcaffeine/hxhx/commit/e96e5be5ad15da48421e5f570e1d986a253d0197))
+
 ## [0.23.12](https://github.com/fullofcaffeine/hxhx/compare/v0.23.11...v0.23.12) (2026-07-22)
 
 
