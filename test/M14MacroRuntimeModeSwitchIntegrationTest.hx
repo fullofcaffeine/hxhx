@@ -156,8 +156,10 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 		assertIntEq("nested variable initializer macro expansion count", nestedVariableExpansion.expandedCount, 1);
 		final nestedVariableClass = HxModuleDecl.getMainClass(ResolvedModule.getParsed(nestedVariableExpansion.modules[0]).getDecl());
 		switch (HxFunctionDecl.getBody(HxClassDecl.getFunctions(nestedVariableClass)[0])) {
-			case [SExpr(ECall(EIdent("shouldFail"), [EVars([declaration])]), _)]:
-				switch (declaration.getInitializer()) {
+			case [
+				SExpr(ECall(EIdent("shouldFail"), [EVars([EVariableDeclaration(_, _, initializer, _, _, _)])]), _)
+			]:
+				switch (initializer) {
 					case EString("HELLO"):
 					case _:
 						fail("expression macro expansion did not rewrite the declaration initializer");

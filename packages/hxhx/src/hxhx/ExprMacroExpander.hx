@@ -242,17 +242,21 @@ class ExprMacroExpander {
 				}
 			case EVars(declarations):
 				var changed = false;
-				final rewrittenDeclarations = new Array<HxExprVarDecl>();
+				final rewrittenDeclarations = new Array<HxExpr>();
 				for (declaration in declarations) {
-					final initializer = declaration.getInitializer();
+					final initializer = HxExprVarDecl.getInitializer(declaration);
 					final rewritten = initializer == null ? null : rewriteExpr(initializer, session, allowed, allowKeys, importMap, modulePkg, trace, depth,
 						onExpand);
 					if (rewritten != initializer)
 						changed = true;
-					rewrittenDeclarations.push(new HxExprVarDecl(declaration.getName(), declaration.getTypeHint(), rewritten, declaration.getPosition(),
-						declaration.getIsFinal(), declaration.getIsStatic()));
+					rewrittenDeclarations.push(HxExprVarDecl.create(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration), rewritten,
+						HxExprVarDecl.getPosition(declaration), HxExprVarDecl.getIsFinal(declaration), HxExprVarDecl.getIsStatic(declaration)));
 				}
 				changed ? EVars(rewrittenDeclarations) : e;
+			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
+				final rewritten = initializer == null ? null : rewriteExpr(initializer, session, allowed, allowKeys, importMap, modulePkg, trace, depth,
+					onExpand);
+				rewritten != initializer ? HxExprVarDecl.create(name, typeHint, rewritten, position, isFinal, isStatic) : e;
 			case EField(obj, field):
 				final ro = rewriteExpr(obj, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				ro != obj ? EField(ro, field) : e;
@@ -395,6 +399,7 @@ class ExprMacroExpander {
 			case ECall(_, _): "Call";
 			case EReturn(_): "Return";
 			case EVars(_): "Vars";
+			case EVariableDeclaration(_, _, _, _, _, _): "VariableDeclaration";
 			case EUnop(_, _, _): "Unop";
 			case EBinop(_, _, _): "Binop";
 			case ETernary(_, _, _): "Ternary";

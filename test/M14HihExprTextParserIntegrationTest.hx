@@ -72,12 +72,11 @@ class M14HihExprTextParserIntegrationTest {
 				fail("ordinary variable declaration no longer uses the statement representation");
 		}
 		switch (variableDeclarationMacroArguments[1]) {
-			case SExpr(ECall(EIdent("shouldFail"), [EVars([declaration])]), _):
-				assertTrue(declaration.getName() == "value", "macro declaration lost its name");
-				assertTrue(declaration.getTypeHint() == "String", "macro declaration lost its written type");
-				assertTrue(declaration.getPosition().getLine() == 3,
-					"macro declaration lost its wrapped body source line: " + declaration.getPosition().getLine());
-				switch (declaration.getInitializer()) {
+			case SExpr(ECall(EIdent("shouldFail"), [EVars([EVariableDeclaration(name, typeHint, initializer, position, _, _)])]), _):
+				assertTrue(name == "value", "macro declaration lost its name");
+				assertTrue(typeHint == "String", "macro declaration lost its written type");
+				assertTrue(position.getLine() == 3, "macro declaration lost its wrapped body source line: " + position.getLine());
+				switch (initializer) {
 					case EIdent("nullable"):
 					case _:
 						fail("macro declaration lost its identifier initializer");
@@ -86,8 +85,8 @@ class M14HihExprTextParserIntegrationTest {
 				fail("variable declaration macro argument was not preserved structurally");
 		}
 		switch (variableDeclarationMacroArguments[2]) {
-			case SExpr(ECall(EIdent("shouldFail"), [EVars([declaration])]), _):
-				switch (declaration.getInitializer()) {
+			case SExpr(ECall(EIdent("shouldFail"), [EVars([EVariableDeclaration(_, _, initializer, _, _, _)])]), _):
+				switch (initializer) {
 					case ENull:
 					case _:
 						fail("macro declaration lost its null initializer");
@@ -99,8 +98,9 @@ class M14HihExprTextParserIntegrationTest {
 		switch (groupedFinalDeclarations) {
 			case [SExpr(ECall(EIdent("shouldFail"), [EVars(declarations)]), _)]:
 				assertTrue(declarations.length == 2, "grouped macro declarations lost a trailing declaration");
-				assertTrue(declarations[0].getIsFinal() && declarations[1].getIsFinal(), "grouped final declarations lost their modifier");
-				assertTrue(declarations[1].getName() == "second" && declarations[1].getTypeHint() == "String",
+				assertTrue(HxExprVarDecl.getIsFinal(declarations[0]) && HxExprVarDecl.getIsFinal(declarations[1]),
+					"grouped final declarations lost their modifier");
+				assertTrue(HxExprVarDecl.getName(declarations[1]) == "second" && HxExprVarDecl.getTypeHint(declarations[1]) == "String",
 					"grouped macro declaration lost its name or type");
 			case _:
 				fail("grouped final declarations were not preserved as one expression");

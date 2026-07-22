@@ -2493,9 +2493,10 @@ class ParserStageScanHelpers {
 				}
 			case EVars(declarations):
 				for (declaration in declarations)
-					if (hasUnsupportedExpr(declaration.getInitializer()))
+					if (hasUnsupportedExpr(HxExprVarDecl.getInitializer(declaration)))
 						return true;
 				false;
+			case EVariableDeclaration(_, _, initializer, _, _, _): hasUnsupportedExpr(initializer);
 			case EBinop(_, left, right), EArrayAccess(left, right), ERange(left, right): hasUnsupportedExpr(left) || hasUnsupportedExpr(right);
 			case ETernary(cond, thenExpr, elseExpr): hasUnsupportedExpr(cond) || hasUnsupportedExpr(thenExpr) || hasUnsupportedExpr(elseExpr);
 			case EAnon(_, values) | EArrayDecl(values):

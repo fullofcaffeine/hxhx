@@ -185,9 +185,8 @@ class M14TypedBodyBoundaryIntegrationTest {
 			&& declaration.getPosition().getLine() == 3, "typed variable declaration lost its exact source line");
 		assertTrue(declaration.getExpressions()[0].getTag() == TypedExprTag.LocalRead, "typed variable declaration lost its recursive initializer child");
 		switch (TypedBodySource.expression(declarationList)) {
-			case EVars([projected]):
-				assertTrue(projected.getName() == "value" && projected.getTypeHint() == "String",
-					"typed-body source projection changed the variable declaration");
+			case EVars([EVariableDeclaration(name, typeHint, _, _, _, _)]):
+				assertTrue(name == "value" && typeHint == "String", "typed-body source projection changed the variable declaration");
 			case _:
 				throw "typed-body source projection lost the expression-level declaration list";
 		}

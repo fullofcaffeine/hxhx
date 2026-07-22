@@ -1331,6 +1331,8 @@ class SourceTargetCommon {
 				throw targetLabel(target) + " source backend: expression-position return must be consumed by macro expansion before emission";
 			case EVars(_):
 				throw targetLabel(target) + " source backend: expression-position variable declarations must be consumed by macro expansion before emission";
+			case EVariableDeclaration(_, _, _, _, _, _):
+				throw targetLabel(target) + " source backend: a variable declaration must remain inside its expression declaration list";
 			case EArrayDecl(items):
 				arrayLiteral(target, items);
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
@@ -1364,6 +1366,7 @@ class SourceTargetCommon {
 			case ECall(_, _): "ECall";
 			case EReturn(_): "EReturn";
 			case EVars(_): "EVars";
+			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(_): "EMacroType";
 			case ELambda(_, _): "ELambda";
@@ -12864,10 +12867,13 @@ class SourceTargetCommon {
 					phpRecordReferencedMemberExpr(value, names);
 			case EVars(declarations):
 				for (declaration in declarations) {
-					final initializer = declaration.getInitializer();
+					final initializer = HxExprVarDecl.getInitializer(declaration);
 					if (initializer != null)
 						phpRecordReferencedMemberExpr(initializer, names);
 				}
+			case EVariableDeclaration(_, _, initializer, _, _, _):
+				if (initializer != null)
+					phpRecordReferencedMemberExpr(initializer, names);
 			case EMacroExpr(inner, _):
 				phpRecordReferencedMemberExpr(inner, names);
 			case ELambda(_, body):

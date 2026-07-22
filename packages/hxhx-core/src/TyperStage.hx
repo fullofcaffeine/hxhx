@@ -1126,11 +1126,13 @@ class TyperStage {
 				TyType.fromHintText("Void");
 			case EVars(declarations):
 				for (declaration in declarations) {
-					final initializer = declaration.getInitializer();
+					final initializer = HxExprVarDecl.getInitializer(declaration);
 					if (initializer != null)
-						inferExprType(initializer, scope, ctx, declaration.getPosition());
+						inferExprType(initializer, scope, ctx, HxExprVarDecl.getPosition(declaration));
 				}
 				TyType.fromHintText("Void");
+			case EVariableDeclaration(_, _, _, _, _, _):
+				throw new TyperError(ctx.getFilePath(), pos, "expression-level variable declaration must be nested inside EVars");
 			case ELambda(argNames, body):
 				// Stage 3 bring-up: type the body in a nested scope that:
 				// - introduces lambda args (shadowing outer locals/params),

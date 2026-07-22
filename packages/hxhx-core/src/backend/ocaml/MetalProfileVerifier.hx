@@ -201,10 +201,16 @@ class MetalProfileVerifier {
 					"a variable declaration passed as source syntax must be handled by macro expansion before metal emission",
 					"expand the macro or move the declaration to statement position before selecting metal profile");
 				for (declaration in declarations) {
-					final initializer = declaration.getInitializer();
+					final initializer = HxExprVarDecl.getInitializer(declaration);
 					if (initializer != null)
 						verifyExpr(filePath, className, fnName, stmtPos, initializer, violations);
 				}
+			case EVariableDeclaration(_, _, initializer, _, _, _):
+				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "detached expression variable declaration",
+					"an expression variable declaration must remain inside its declaration list",
+					"report the compiler invariant failure before selecting metal profile");
+				if (initializer != null)
+					verifyExpr(filePath, className, fnName, stmtPos, initializer, violations);
 			case EMacroExpr(inner, _wrappers):
 				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);
 			case EMacroType(_):

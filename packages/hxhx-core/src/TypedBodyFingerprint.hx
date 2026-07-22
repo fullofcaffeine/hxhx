@@ -193,17 +193,18 @@ class TypedBodyFingerprint {
 				addString(state, "expr-variable-declarations");
 				addInt(state, declarations == null ? -1 : declarations.length);
 				if (declarations != null)
-					for (declaration in declarations) {
-						addString(state, declaration.getName());
-						addString(state, declaration.getTypeHint());
-						addInt(state, declaration.getIsFinal() ? 1 : 0);
-						addInt(state, declaration.getIsStatic() ? 1 : 0);
-						addPosition(state, declaration.getPosition());
-						final initializer = declaration.getInitializer();
-						addInt(state, initializer == null ? 0 : 1);
-						if (initializer != null)
-							addExpression(state, initializer);
-					}
+					for (declaration in declarations)
+						addExpression(state, declaration);
+			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
+				addString(state, "expr-variable-declaration");
+				addString(state, name);
+				addString(state, typeHint);
+				addInt(state, isFinal ? 1 : 0);
+				addInt(state, isStatic ? 1 : 0);
+				addPosition(state, position);
+				addInt(state, initializer == null ? 0 : 1);
+				if (initializer != null)
+					addExpression(state, initializer);
 			case EMacroExpr(inner, wrappers):
 				addString(state, "expr-macro");
 				addExpression(state, inner);

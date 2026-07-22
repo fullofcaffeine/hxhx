@@ -365,16 +365,15 @@ class M14HxhxStage3GenericFunctionArityIntegrationTest {
 		final body = "shouldFail(var value:String = nullable);";
 		final fn = @:privateAccess ParserStageNativeDecode.decodeMethodPayload("check|private|0||Void||||", body, source.indexOf(body), source);
 		switch (HxFunctionDecl.getBody(fn)) {
-			case [SExpr(ECall(EIdent("shouldFail"), [EVars([declaration])]), _)]:
-				if (declaration.getName() != "value"
-					|| declaration.getTypeHint() != "String"
-					|| declaration.getPosition().getLine() != 3
-					|| declaration.getPosition().getColumn() != 20)
+			case [
+				SExpr(ECall(EIdent("shouldFail"), [EVars([EVariableDeclaration(name, typeHint, initializer, position, _, _)])]), _)
+			]:
+				if (name != "value" || typeHint != "String" || position.getLine() != 3 || position.getColumn() != 20)
 					fail("native decode changed the variable declaration fields or source position: "
-						+ declaration.getPosition().getLine()
+						+ position.getLine()
 						+ ":"
-						+ declaration.getPosition().getColumn());
-				switch (declaration.getInitializer()) {
+						+ position.getColumn());
+				switch (initializer) {
 					case EIdent("nullable"):
 					case _:
 						fail("native decode lost the variable declaration initializer");

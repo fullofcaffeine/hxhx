@@ -280,6 +280,7 @@ class CppMacroExpr {
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
 			case EReturn(_): "EReturn";
 			case EVars(_): "EVars";
+			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(_): "EMacroType";
 			case ELambda(_, _): "ELambda";

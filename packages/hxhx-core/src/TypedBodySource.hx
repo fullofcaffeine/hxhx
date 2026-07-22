@@ -104,13 +104,13 @@ class TypedBodySource {
 				}
 			case ReturnExpr: EReturn(expressions.length == 0 ? null : expression(expressions[0]));
 			case VariableDeclarations:
-				final declarations = new Array<HxExprVarDecl>();
+				final declarations = new Array<HxExpr>();
 				for (declaration in expressions) {
 					if (declaration.getTag() != VariableDeclaration)
 						throw "typed variable declaration list contains a non-declaration child";
 					final declarationTexts = declaration.getTexts();
 					final declarationValues = declaration.getExpressions();
-					declarations.push(new HxExprVarDecl(declarationTexts[0], declarationTexts[1],
+					declarations.push(HxExprVarDecl.create(declarationTexts[0], declarationTexts[1],
 						declarationValues.length == 0 ? null : expression(declarationValues[0]), sourcePosition(declaration.getPosition()),
 						declaration.getVariableIsFinal(), declaration.getVariableIsStatic()));
 				}

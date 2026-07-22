@@ -434,52 +434,15 @@ enum HxExpr {
 		Ordinary function-body declarations remain `HxStmt.SVar`. This constructor is
 		appended so older generated enum identities remain stable.
 	**/
-	EVars(declarations:Array<HxExprVariableDeclaration>);
-}
+	EVars(declarations:Array<HxExpr>);
 
-/**
-	One variable declaration preserved inside an expression.
+	/**
+		One declaration inside `EVars`.
 
-	This type lives in the same module as `HxExpr` because it contains an optional
-	`HxExpr` initializer and `HxExpr.EVars` contains these declarations. Keeping
-	both recursive types in one module avoids a circular module dependency in the
-	generated OCaml compiler.
-
-	Statement-level declarations continue to use `HxStmt.SVar`; this record is
-	only used for declarations passed to macros as source syntax.
-**/
-class HxExprVariableDeclaration {
-	final name:String;
-	final typeHint:String;
-	final initializer:Null<HxExpr>;
-	final position:HxPos;
-	final isFinal:Bool;
-	final isStatic:Bool;
-
-	public function new(name:String, typeHint:String, initializer:Null<HxExpr>, position:HxPos, isFinal:Bool = false, isStatic:Bool = false) {
-		this.name = name == null ? "" : name;
-		this.typeHint = typeHint == null ? "" : typeHint;
-		this.initializer = initializer;
-		this.position = position == null ? HxPos.unknown() : position;
-		this.isFinal = isFinal;
-		this.isStatic = isStatic;
-	}
-
-	public function getName():String
-		return name;
-
-	public function getTypeHint():String
-		return typeHint;
-
-	public function getInitializer():Null<HxExpr>
-		return initializer;
-
-	public function getPosition():HxPos
-		return position;
-
-	public function getIsFinal():Bool
-		return isFinal;
-
-	public function getIsStatic():Bool
-		return isStatic;
+		The declaration is another `HxExpr` node so its initializer can refer back to
+		the same expression type without creating two generated OCaml modules that
+		depend on each other. The parser only places this node directly inside
+		`EVars`; `HxExprVarDecl` provides checked construction and field access.
+	**/
+	EVariableDeclaration(name:String, typeHint:String, initializer:Null<HxExpr>, position:HxPos, isFinal:Bool, isStatic:Bool);
 }

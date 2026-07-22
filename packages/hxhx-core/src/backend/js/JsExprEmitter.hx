@@ -64,6 +64,8 @@ class JsExprEmitter {
 				unsupported("EReturn", "expression-position return must be consumed by macro expansion before JS emission");
 			case EVars(_):
 				unsupported("EVars", "expression-position variable declarations must be consumed by macro expansion before JS emission");
+			case EVariableDeclaration(_, _, _, _, _, _):
+				unsupported("EVariableDeclaration", "a variable declaration must remain inside its expression declaration list");
 			case EMacroExpr(inner, wrappers):
 				emitMacroExpr(inner, wrappers, scope);
 			case EMacroType(typeText):

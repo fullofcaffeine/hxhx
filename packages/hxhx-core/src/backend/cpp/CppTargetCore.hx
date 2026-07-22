@@ -11836,6 +11836,8 @@ class CppTargetCore {
 				throw "C++ backend: expression-position return must be consumed by macro expansion before emission";
 			case EVars(_):
 				throw "C++ backend: expression-position variable declarations must be consumed by macro expansion before emission";
+			case EVariableDeclaration(_, _, _, _, _, _):
+				throw "C++ backend: a variable declaration must remain inside its expression declaration list";
 			case ESwitch(scrutinee, patterns, exprs):
 				switchExpr(scrutinee, patterns, exprs, scope);
 			case ELambda(args, body):
@@ -22364,6 +22366,7 @@ class CppTargetCore {
 			case ECall(callee, _): "ECall(" + exprKind(callee) + ")";
 			case EReturn(_): "EReturn";
 			case EVars(_): "EVars";
+			case EVariableDeclaration(_, _, _, _, _, _): "EVariableDeclaration";
 			case EMacroExpr(_, _): "EMacroExpr";
 			case EMacroType(_): "EMacroType";
 			case ELambda(_, _): "ELambda";

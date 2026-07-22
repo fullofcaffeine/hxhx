@@ -83,11 +83,13 @@ class ParserStage {
 			case EVars(declarations):
 				var found = false;
 				for (declaration in declarations)
-					if (initHasMergedReturnIdentifier(declaration.getInitializer())) {
+					if (initHasMergedReturnIdentifier(HxExprVarDecl.getInitializer(declaration))) {
 						found = true;
 						break;
 					}
 				found;
+			case EVariableDeclaration(_, _, initializer, _, _, _):
+				initHasMergedReturnIdentifier(initializer);
 			case EMacroExpr(inner, _):
 				initHasMergedReturnIdentifier(inner);
 			case ELambda(_, body):
@@ -3269,9 +3271,10 @@ class ParserStage {
 				}
 			case EVars(declarations):
 				for (declaration in declarations)
-					if (hasUnsupportedExpr(declaration.getInitializer()))
+					if (hasUnsupportedExpr(HxExprVarDecl.getInitializer(declaration)))
 						return true;
 				false;
+			case EVariableDeclaration(_, _, initializer, _, _, _): hasUnsupportedExpr(initializer);
 			case EBinop(_, left, right), EArrayAccess(left, right), ERange(left, right): hasUnsupportedExpr(left) || hasUnsupportedExpr(right);
 			case ETernary(cond, thenExpr, elseExpr): hasUnsupportedExpr(cond) || hasUnsupportedExpr(thenExpr) || hasUnsupportedExpr(elseExpr);
 			case EAnon(_, values) | EArrayDecl(values):

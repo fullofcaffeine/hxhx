@@ -442,16 +442,18 @@ class TypedBodyBuilder {
 			case EVars(declarations):
 				final typedDeclarations = new Array<TypedExpr>();
 				for (declaration in declarations) {
-					final declarationPosition = exactPosition(declaration.getPosition());
-					final initializer = declaration.getInitializer();
-					final typedInitializer = initializer == null ? null : buildExpr(initializer, null, declaration.getPosition(), environment, typeResolver,
-						callResolver);
-					final writtenType = StringTools.trim(declaration.getTypeHint());
+					final declarationPosition = exactPosition(HxExprVarDecl.getPosition(declaration));
+					final initializer = HxExprVarDecl.getInitializer(declaration);
+					final typedInitializer = initializer == null ? null : buildExpr(initializer, null, HxExprVarDecl.getPosition(declaration), environment,
+						typeResolver, callResolver);
+					final writtenType = StringTools.trim(HxExprVarDecl.getTypeHint(declaration));
 					final declarationType = writtenType.length > 0 ? TyType.fromHintText(writtenType) : (typedInitializer == null ? TyType.unknown() : typedInitializer.getType());
-					typedDeclarations.push(TypedExpr.variableDeclaration(declaration.getName(), declaration.getTypeHint(), typedInitializer,
-						declaration.getIsFinal(), declaration.getIsStatic(), declarationType, declarationPosition));
+					typedDeclarations.push(TypedExpr.variableDeclaration(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration),
+						typedInitializer, HxExprVarDecl.getIsFinal(declaration), HxExprVarDecl.getIsStatic(declaration), declarationType, declarationPosition));
 				}
 				TypedExpr.variableDeclarations(typedDeclarations, nodeType, position);
+			case EVariableDeclaration(_, _, _, _, _, _):
+				throw "expression-level variable declaration must be nested inside EVars";
 			case EMacroExpr(inner, wrappers):
 				TypedExpr.macroExpr(buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver),
 					wrappers == null ? [] : wrappers.copy(), nodeType, position);
